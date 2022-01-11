@@ -255,9 +255,10 @@ define <WIDTH x double> @__max_varying_double(<WIDTH x double>, <WIDTH x double>
 ;; Generates rdregion intrinsics needed for reductions
 ;; $1 LLVM IR type
 define(`xe_rdregion', `
-  declare <HALF_WIDTH x $1> @llvm.genx.$2.XE_SUFFIXN($1,HALF_WIDTH).XE_SUFFIX($1).i16(<WIDTH x $1>, i32, i32, i32, i16, i32)
-  declare <QUARTER_WIDTH x $1> @llvm.genx.$2.XE_SUFFIXN($1,QUARTER_WIDTH).XE_SUFFIXN($1, HALF_WIDTH).i16(<HALF_WIDTH x $1>, i32, i32, i32, i16, i32)
-  declare <QUAVER_WIDTH x $1> @llvm.genx.$2.XE_SUFFIXN($1,QUAVER_WIDTH).XE_SUFFIXN($1, QUARTER_WIDTH).i16(<QUARTER_WIDTH x $1>, i32, i32, i32, i16, i32)
+  declare <16 x $1> @llvm.genx.$2.XE_SUFFIXN($1,16).XE_SUFFIXN($1,32).i16(<32 x $1>, i32, i32, i32, i16, i32)
+  declare <8 x $1> @llvm.genx.$2.XE_SUFFIXN($1,8).XE_SUFFIXN($1,16).i16(<16 x $1>, i32, i32, i32, i16, i32)
+  declare <4 x $1> @llvm.genx.$2.XE_SUFFIXN($1,4).XE_SUFFIXN($1,8).i16(<8 x $1>, i32, i32, i32, i16, i32)
+  declare <2 x $1> @llvm.genx.$2.XE_SUFFIXN($1,2).XE_SUFFIXN($1,4).i16(<4 x $1>, i32, i32, i32, i16, i32)
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -269,16 +270,17 @@ define(`xe_rdregion', `
 define(`xe_maxmin', `
 declare $1 @llvm.genx.$2.XE_TYPE($1).XE_TYPE($1)($1, $1)
 declare $1 @llvm.genx.$3.XE_TYPE($1).XE_TYPE($1)($1, $1)
-declare <WIDTH x $1> @llvm.genx.$2.XE_SUFFIX($1).XE_SUFFIX($1)(<WIDTH x $1>, <WIDTH x $1>)
-declare <HALF_WIDTH x $1> @llvm.genx.$2.XE_SUFFIXN($1, HALF_WIDTH).XE_SUFFIXN($1, HALF_WIDTH)(<HALF_WIDTH x $1>, <HALF_WIDTH x $1>)
-declare <QUARTER_WIDTH x $1> @llvm.genx.$2.XE_SUFFIXN($1, QUARTER_WIDTH).XE_SUFFIXN($1, QUARTER_WIDTH)(<QUARTER_WIDTH x $1>, <QUARTER_WIDTH x $1>)
-declare <QUAVER_WIDTH x $1> @llvm.genx.$2.XE_SUFFIXN($1, QUAVER_WIDTH).XE_SUFFIXN($1, QUAVER_WIDTH)(<QUAVER_WIDTH x $1>, <QUAVER_WIDTH x $1>)
+declare <32 x $1> @llvm.genx.$2.XE_SUFFIXN($1, 32).XE_SUFFIXN($1, 32)(<32 x $1>, <32 x $1>)
+declare <16 x $1> @llvm.genx.$2.XE_SUFFIXN($1, 16).XE_SUFFIXN($1, 16)(<16 x $1>, <16 x $1>)
+declare <8 x $1> @llvm.genx.$2.XE_SUFFIXN($1, 8).XE_SUFFIXN($1, 8)(<8 x $1>, <8 x $1>)
+declare <4 x $1> @llvm.genx.$2.XE_SUFFIXN($1, 4).XE_SUFFIXN($1, 4)(<4 x $1>, <4 x $1>)
+declare <2 x $1> @llvm.genx.$2.XE_SUFFIXN($1, 2).XE_SUFFIXN($1, 2)(<2 x $1>, <2 x $1>)
 
-declare <WIDTH x $1> @llvm.genx.$3.XE_SUFFIX($1).XE_SUFFIX($1)(<WIDTH x $1>, <WIDTH x $1>)
-declare <HALF_WIDTH x $1> @llvm.genx.$3.XE_SUFFIXN($1, HALF_WIDTH).XE_SUFFIXN($1, HALF_WIDTH)(<HALF_WIDTH x $1>, <HALF_WIDTH x $1>)
-declare <QUARTER_WIDTH x $1> @llvm.genx.$3.XE_SUFFIXN($1, QUARTER_WIDTH).XE_SUFFIXN($1, QUARTER_WIDTH)(<QUARTER_WIDTH x $1>, <QUARTER_WIDTH x $1>)
-declare <QUAVER_WIDTH x $1> @llvm.genx.$3.XE_SUFFIXN($1, QUAVER_WIDTH).XE_SUFFIXN($1, QUAVER_WIDTH)(<QUAVER_WIDTH x $1>, <QUAVER_WIDTH x $1>)
-
+declare <32 x $1> @llvm.genx.$3.XE_SUFFIXN($1, 32).XE_SUFFIXN($1, 32)(<32 x $1>, <32 x $1>)
+declare <16 x $1> @llvm.genx.$3.XE_SUFFIXN($1, 16).XE_SUFFIXN($1, 16)(<16 x $1>, <16 x $1>)
+declare <8 x $1> @llvm.genx.$3.XE_SUFFIXN($1, 8).XE_SUFFIXN($1, 8)(<8 x $1>, <8 x $1>)
+declare <4 x $1> @llvm.genx.$3.XE_SUFFIXN($1, 4).XE_SUFFIXN($1, 4)(<4 x $1>, <4 x $1>)
+declare <2 x $1> @llvm.genx.$3.XE_SUFFIXN($1, 2).XE_SUFFIXN($1, 2)(<2 x $1>, <2 x $1>)
 
 define $1 @__max_uniform_$4($1, $1) nounwind readonly alwaysinline {
   %res = call $1 @llvm.genx.$3.XE_TYPE($1).XE_TYPE($1)($1 %0, $1 %1)
@@ -300,6 +302,7 @@ define <WIDTH x $1> @__min_varying_$4(<WIDTH x $1>, <WIDTH x $1>) nounwind reado
   ret <WIDTH x $1> %res
 }
 ')
+
 xe_maxmin(half, fmin, fmax, half)
 xe_maxmin(float, fmin, fmax, float)
 xe_maxmin(i32, smin, smax, int32)
@@ -312,14 +315,35 @@ xe_rdregion(i32, rdregioni)
 xe_rdregion(i64, rdregioni)
 
 ;; int8 and int16 types are processed differently so declare them in advance
-declare <WIDTH x i8> @llvm.genx.rdregioni.XE_SUFFIX(i8).XE_SUFFIXN(i8, WIDTH_X4).i16(<WIDTH_X4 x i8>, i32, i32, i32, i16, i32)
-declare <WIDTH x i16> @llvm.genx.rdregioni.XE_SUFFIX(i16).XE_SUFFIXN(i16, WIDTH_X2).i16(<WIDTH_X2 x i16>, i32, i32, i32, i16, i32)
-declare <WIDTH_X4 x i8> @llvm.genx.svm.gather.XE_SUFFIXN(i8, WIDTH_X4).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x i8>)
-declare <WIDTH_X2 x i16> @llvm.genx.svm.gather.XE_SUFFIXN(i16, WIDTH_X2).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x i16>)
-declare <WIDTH_X4 x i8> @llvm.genx.wrregioni.XE_SUFFIXN(i8, WIDTH_X4).XE_SUFFIX(i8).i16.XE_SUFFIX(i1)(<WIDTH_X4 x i8>, <WIDTH x i8>, i32, i32, i32, i16, i32, <WIDTH x MASK>)
-declare <WIDTH_X2 x i16> @llvm.genx.wrregioni.XE_SUFFIXN(i16, WIDTH_X2).XE_SUFFIX(i16).i16.XE_SUFFIX(i1)(<WIDTH_X2 x i16>, <WIDTH x i16>, i32, i32, i32, i16, i32, <WIDTH x MASK>)
-declare void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIXN(i8, WIDTH_X4)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH_X4 x i8>)
-declare void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIXN(i16, WIDTH_X2)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH_X2 x i16>)
+declare <32 x i8> @llvm.genx.rdregioni.XE_SUFFIXN(i8,32).XE_SUFFIXN(i8, 128).i16(<128 x i8>, i32, i32, i32, i16, i32)
+declare <32 x i16> @llvm.genx.rdregioni.XE_SUFFIX(i16,32).XE_SUFFIXN(i16, 64).i16(<64 x i16>, i32, i32, i32, i16, i32)
+declare <16 x i8> @llvm.genx.rdregioni.XE_SUFFIXN(i8,16).XE_SUFFIXN(i8, 64).i16(<64 x i8>, i32, i32, i32, i16, i32)
+declare <16 x i16> @llvm.genx.rdregioni.XE_SUFFIXN(i16,16).XE_SUFFIXN(i16,32).i16(<32 x i16>, i32, i32, i32, i16, i32)
+declare <8 x i8> @llvm.genx.rdregioni.XE_SUFFIXN(i8,8).XE_SUFFIXN(i8, 32).i16(<32 x i8>, i32, i32, i32, i16, i32)
+declare <8 x i16> @llvm.genx.rdregioni.XE_SUFFIX(i16,8).XE_SUFFIXN(i16, 16).i16(<16 x i16>, i32, i32, i32, i16, i32)
+
+declare void @llvm.genx.svm.scatter.XE_SUFFIXN(i1,32).XE_SUFFIXN(i64,32).XE_SUFFIXN(i16, 64)(<32 x MASK>, i32, <32 x i64>, <64 x i16>)
+declare void @llvm.genx.svm.scatter.XE_SUFFIXN(i1,32).XE_SUFFIXN(i64,32).XE_SUFFIXN(i8, 128)(<32 x MASK>, i32, <32 x i64>, <128 x i8>)
+declare void @llvm.genx.svm.scatter.XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16).XE_SUFFIXN(i16, 32)(<16 x MASK>, i32, <16 x i64>, <32 x i16>)
+declare void @llvm.genx.svm.scatter.XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16).XE_SUFFIXN(i8, 64)(<16 x MASK>, i32, <16 x i64>, <64 x i8>)
+declare void @llvm.genx.svm.scatter.XE_SUFFIXN(i1,8).XE_SUFFIXN(i64,8).XE_SUFFIXN(i16, 16)(<8 x MASK>, i32, <8 x i64>, <16 x i16>)
+declare void @llvm.genx.svm.scatter.XE_SUFFIXN(i1,8).XE_SUFFIXN(i64,8).XE_SUFFIXN(i8, 32)(<8 x MASK>, i32, <8 x i64>, <32 x i8>)
+
+declare <128 x i8> @llvm.genx.svm.gather.XE_SUFFIXN(i8, 128).XE_SUFFIXN(i1,32).XE_SUFFIXN(i64,32)(<32 x MASK>, i32, <32 x i64>, <32 x i8>)
+declare <64 x i16> @llvm.genx.svm.gather.XE_SUFFIXN(i16, 64).XE_SUFFIXN(i1,32).XE_SUFFIXN(i64,32)(<32 x MASK>, i32, <32 x i64>, <32 x i16>)
+declare <64 x i8> @llvm.genx.svm.gather.XE_SUFFIXN(i8, 64).XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16)(<16 x MASK>, i32, <16 x i64>, <16 x i8>)
+declare <32 x i16> @llvm.genx.svm.gather.XE_SUFFIXN(i16, 32).XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16)(<16 x MASK>, i32, <16 x i64>, <16 x i16>)
+declare <32 x i8> @llvm.genx.svm.gather.XE_SUFFIXN(i8, 32).XE_SUFFIXN(i1,8).XE_SUFFIXN(i64,8)(<8 x MASK>, i32, <8 x i64>, <8 x i8>)
+declare <16 x i16> @llvm.genx.svm.gather.XE_SUFFIXN(i16, 16).XE_SUFFIXN(i1,8).XE_SUFFIXN(i64,8)(<8 x MASK>, i32, <8 x i64>, <8 x i16>)
+
+declare <128 x i8> @llvm.genx.wrregioni.XE_SUFFIXN(i8, 128).XE_SUFFIXN(i8,32).i16.XE_SUFFIXN(i1,32)(<128 x i8>, <32 x i8>, i32, i32, i32, i16, i32, <32 x MASK>)
+declare <64 x i16> @llvm.genx.wrregioni.XE_SUFFIXN(i16, 64).XE_SUFFIXN(i16,32).i16.XE_SUFFIXN(i1,32)(<64 x i16>, <32 x i16>, i32, i32, i32, i16, i32, <32 x MASK>)
+declare <64 x i8> @llvm.genx.wrregioni.XE_SUFFIXN(i8, 64).XE_SUFFIXN(i8,16).i16.XE_SUFFIXN(i1,16)(<64 x i8>, <16 x i8>, i32, i32, i32, i16, i32, <16 x MASK>)
+declare <32 x i16> @llvm.genx.wrregioni.XE_SUFFIXN(i16, 32).XE_SUFFIXN(i16,16).i16.XE_SUFFIXN(i1,16)(<32 x i16>, <16 x i16>, i32, i32, i32, i16, i32, <16 x MASK>)
+declare <32 x i8> @llvm.genx.wrregioni.XE_SUFFIXN(i8, 32).XE_SUFFIXN(i8,8).i16.XE_SUFFIXN(i1,8)(<32 x i8>, <8 x i8>, i32, i32, i32, i16, i32, <8 x MASK>)
+declare <16 x i16> @llvm.genx.wrregioni.XE_SUFFIXN(i16, 16).XE_SUFFIXN(i16,8).i16.XE_SUFFIXN(i1,8)(<16 x i16>, <8 x i16>, i32, i32, i32, i16, i32, <8 x MASK>)
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal ops / reductions
 
@@ -703,7 +727,7 @@ xe_fadd(float)
 xe_fadd(double)
 
 define(`reduce_func',
-`ifelse(WIDTH, `32', `reduce16($1, $2, $3, $4)',
+`ifelse(WIDTH, `32', `reduce32($1, $2, $3, $4)',
         WIDTH, `16', `reduce16($1, $2, $3, $4)',
                      `reduce8($1, $2, $3, $4)')')
 
@@ -886,10 +910,25 @@ vload:
     %res = call <WIDTH x $1> @__masked_load_blend_$1(i8* %0, <WIDTH x MASK> %mask)
     ret <WIDTH x $1> %res
     ')
+  ', $1,i64, `
+    ifelse(WIDTH,32, `
+      br label %vgather
+    ',`
+      %res = call <WIDTH x $1> @__masked_load_blend_$1(i8* %0, <WIDTH x MASK> %mask)
+      ret <WIDTH x $1> %res
+    ')
+  ', $1,double, `
+    ifelse(WIDTH,32, `
+      br label %vgather
+    ',`
+      %res = call <WIDTH x $1> @__masked_load_blend_$1(i8* %0, <WIDTH x MASK> %mask)
+      ret <WIDTH x $1> %res
+    ')
   ',`
     %res = call <WIDTH x $1> @__masked_load_blend_$1(i8* %0, <WIDTH x MASK> %mask)
     ret <WIDTH x $1> %res
   ')
+
 
 vgather:
   %broadcast_init = insertelement <WIDTH x i32> undef, i32 SIZEOF($1), i32 0
@@ -922,7 +961,12 @@ xe_masked_load(i64)
 ;; gather/scatter
 ;; TODO_GEN: add computation of the block size and the number of blocks for svm gather/scatter.
 define(`xe_gather', `
-declare <WIDTH x $1> @llvm.genx.svm.gather.XE_SUFFIX($1).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x $1>)
+ifelse(WIDTH, 32,`
+  declare <16 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1,16).XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16)(<16 x MASK>, i32, <16 x i64>, <16 x $1>)
+',`
+  declare <WIDTH x $1> @llvm.genx.svm.gather.XE_SUFFIX($1).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x $1>)
+')
+
 
 define <WIDTH x $1>
 @__gather_base_offsets32_$1(i8 * %ptr, i32 %offset_scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
@@ -954,30 +998,47 @@ define <WIDTH x $1>
 define <WIDTH x $1>
 @__gather32_$1(<WIDTH x i32> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
   %offsets64 = zext <WIDTH x i32> %offsets to <WIDTH x i64>
-  ifelse($1, i8,`
-    %res64 = call <WIDTH_X4 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, WIDTH_X4).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH x $1> undef)
-    %res = call <WIDTH x $1> @llvm.genx.rdregioni.XE_SUFFIX($1).XE_SUFFIXN($1, WIDTH_X4).i16(<WIDTH_X4 x $1> %res64, i32 0, i32 WIDTH, i32 4, i16 0, i32 undef)
-  ', $1,i16, `
-    %res64 = call <WIDTH_X2 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, WIDTH_X2).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 1, <WIDTH x i64> %offsets64, <WIDTH x $1> undef)
-    %res = call <WIDTH x $1> @llvm.genx.rdregioni.XE_SUFFIX($1).XE_SUFFIXN($1, WIDTH_X2).i16(<WIDTH_X2 x $1> %res64, i32 0, i32 WIDTH, i32 2, i16 0, i32 undef)
-  ',`
-    %res = call <WIDTH x $1> @llvm.genx.svm.gather.XE_SUFFIX($1).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH x $1> undef)
-  ')
+  %res = call <WIDTH x $1> @__gather64_$1(<WIDTH x i64> %offsets64, <WIDTH x MASK> %vecmask)
   ret <WIDTH x $1> %res
 }
 
 define <WIDTH x $1>
 @__gather64_$1(<WIDTH x i64> %offsets, <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
-ifelse($1, i8,`
-    %res64 = call <WIDTH_X4 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, WIDTH_X4).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
-    %res = call <WIDTH x $1> @llvm.genx.rdregioni.XE_SUFFIX($1).XE_SUFFIXN($1, WIDTH_X4).i16(<WIDTH_X4 x $1> %res64, i32 0, i32 WIDTH, i32 4, i16 0, i32 undef)
-  ', $1,i16, `
-    %res64 = call <WIDTH_X2 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, WIDTH_X2).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 1, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
-    %res = call <WIDTH x $1> @llvm.genx.rdregioni.XE_SUFFIX($1).XE_SUFFIXN($1, WIDTH_X2).i16(<WIDTH_X2 x $1> %res64, i32 0, i32 WIDTH, i32 2, i16 0, i32 undef)
+  ifelse(WIDTH,32,`
+   %offsets1 = shufflevector <WIDTH x i64> %offsets, <WIDTH x i64> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+   %offsets2 = shufflevector <WIDTH x i64> %offsets, <WIDTH x i64> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+   %vecmask1 = shufflevector <WIDTH x MASK> %vecmask, <WIDTH x MASK> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+   %vecmask2 = shufflevector <WIDTH x MASK> %vecmask, <WIDTH x MASK> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+   ifelse($1, i8,`
+      %res64_1 = call <64 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, 64).XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16)(<16 x MASK> %vecmask1, i32 0, <16 x i64> %offsets1, <16 x $1> undef)
+      %res_1 = call <16 x $1> @llvm.genx.rdregioni.XE_SUFFIXN($1,16).XE_SUFFIXN($1, 64).i16(<64 x $1> %res64_1, i32 0, i32 16, i32 4, i16 0, i32 undef)
+      %res64_2 = call <64 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, 64).XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16)(<16 x MASK> %vecmask2, i32 0, <16 x i64> %offsets2, <16 x $1> undef)
+      %res_2 = call <16 x $1> @llvm.genx.rdregioni.XE_SUFFIXN($1,16).XE_SUFFIXN($1, 64).i16(<64 x $1> %res64_2, i32 0, i32 16, i32 4, i16 0, i32 undef)
+      %res = shufflevector <16 x $1> %res_1, <16 x $1> %res_2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+    ', $1,i16, `
+      %res64_1 = call <32 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, 32).XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16)(<16 x MASK> %vecmask1, i32 1, <16 x i64> %offsets1, <16 x $1> undef)
+      %res_1 = call <16 x $1> @llvm.genx.rdregioni.XE_SUFFIXN($1,16).XE_SUFFIXN($1, 32).i16(<32 x $1> %res64_1, i32 0, i32 16, i32 2, i16 0, i32 undef)
+      %res64_2 = call <32 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, 32).XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16)(<16 x MASK> %vecmask2, i32 1, <16 x i64> %offsets2, <16 x $1> undef)
+      %res_2 = call <16 x $1> @llvm.genx.rdregioni.XE_SUFFIXN($1,16).XE_SUFFIXN($1, 32).i16(<32 x $1> %res64_2, i32 0, i32 16, i32 2, i16 0, i32 undef)
+      %res = shufflevector <16 x $1> %res_1, <16 x $1> %res_2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+    ',`
+      %res1 = call <16 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1,16).XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16)(<16 x MASK> %vecmask1, i32 0, <16 x i64> %offsets1, <16 x $1> undef)
+      %res2 = call <16 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1,16).XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16)(<16 x MASK> %vecmask2, i32 0, <16 x i64> %offsets2, <16 x $1> undef)
+      %res = shufflevector <16 x $1> %res1, <16 x $1> %res2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+    ')
+      ret <WIDTH x $1> %res
   ',`
-    %res = call <WIDTH x $1> @llvm.genx.svm.gather.XE_SUFFIX($1).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
+    ifelse($1, i8,`
+        %res64 = call <WIDTH_X4 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, WIDTH_X4).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
+        %res = call <WIDTH x $1> @llvm.genx.rdregioni.XE_SUFFIX($1).XE_SUFFIXN($1, WIDTH_X4).i16(<WIDTH_X4 x $1> %res64, i32 0, i32 WIDTH, i32 4, i16 0, i32 undef)
+      ', $1,i16, `
+        %res64 = call <WIDTH_X2 x $1> @llvm.genx.svm.gather.XE_SUFFIXN($1, WIDTH_X2).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 1, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
+        %res = call <WIDTH x $1> @llvm.genx.rdregioni.XE_SUFFIX($1).XE_SUFFIXN($1, WIDTH_X2).i16(<WIDTH_X2 x $1> %res64, i32 0, i32 WIDTH, i32 2, i16 0, i32 undef)
+      ',`
+        %res = call <WIDTH x $1> @llvm.genx.svm.gather.XE_SUFFIX($1).XE_SUFFIX(i1).XE_SUFFIX(i64)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets, <WIDTH x $1> undef)
+      ')
+      ret <WIDTH x $1> %res
   ')
-  ret <WIDTH x $1> %res
 }
 
 ')
@@ -990,8 +1051,11 @@ xe_gather(i64)
 xe_gather(double)
 
 define(`xe_scatter', `
-declare void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIX($1)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x $1>)
-
+ifelse(WIDTH, 32,`
+  declare void @llvm.genx.svm.scatter.XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16).XE_SUFFIXN($1,16)(<16 x MASK>, i32, <16 x i64>, <16 x $1>)
+',`
+  declare void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIX($1)(<WIDTH x MASK>, i32, <WIDTH x i64>, <WIDTH x $1>)
+')
 define void
 @__scatter_base_offsets32_$1(i8* %ptr, i32 %offset_scale, <WIDTH x i32> %offsets, <WIDTH x $1> %vals, <WIDTH x MASK> %vecmask) nounwind {
   %scale = insertelement <WIDTH x i32> undef, i32 %offset_scale, i32 0
@@ -1022,28 +1086,43 @@ define void
 define void
 @__scatter32_$1(<WIDTH x i32> %ptrs, <WIDTH x $1> %values, <WIDTH x MASK> %vecmask) nounwind alwaysinline {
   %offsets64 = zext <WIDTH x i32> %ptrs to <WIDTH x i64>
-  ifelse($1,i8, `
-    %res = tail call <WIDTH_X4 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, WIDTH_X4).XE_SUFFIX($1).i16.XE_SUFFIX(i1)(<WIDTH_X4 x $1> undef, <WIDTH x $1> %values, i32 0, i32 WIDTH, i32 4, i16 0, i32 0, <WIDTH x MASK> %vecmask)
-    call void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIXN($1, WIDTH_X4)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH_X4 x $1> %res)
-  ', $1,i16, `
-    %res = tail call <WIDTH_X2 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, WIDTH_X2).XE_SUFFIX($1).i16.XE_SUFFIX(i1)(<WIDTH_X2 x $1> undef, <WIDTH x $1> %values, i32 0, i32 WIDTH, i32 2, i16 0, i32 0, <WIDTH x MASK> %vecmask)
-    call void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIXN($1, WIDTH_X2)(<WIDTH x MASK> %vecmask, i32 1, <WIDTH x i64> %offsets64, <WIDTH_X2 x $1> %res)
-  ',`
-    call void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIX($1)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %offsets64, <WIDTH x $1> %values)
-  ')
+  call void @__scatter64_$1(<WIDTH x i64> %offsets64, <WIDTH x $1> %values, <WIDTH x MASK> %vecmask)
   ret void
 }
 
 define void
 @__scatter64_$1(<WIDTH x i64> %ptrs, <WIDTH x $1> %values, <WIDTH x MASK> %vecmask) nounwind alwaysinline {
-  ifelse($1,i8, `
-    %res = tail call <WIDTH_X4 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, WIDTH_X4).XE_SUFFIX($1).i16.XE_SUFFIX(i1)(<WIDTH_X4 x $1> undef, <WIDTH x $1> %values, i32 0, i32 WIDTH, i32 4, i16 0, i32 0, <WIDTH x MASK> %vecmask)
-    call void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIXN(i8, WIDTH_X4)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %ptrs, <WIDTH_X4 x $1> %res)
-  ', $1,i16, `
-    %res = tail call <WIDTH_X2 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, WIDTH_X2).XE_SUFFIX($1).i16.XE_SUFFIX(i1)(<WIDTH_X2 x $1> undef, <WIDTH x $1> %values, i32 0, i32 WIDTH, i32 2, i16 0, i32 0, <WIDTH x MASK> %vecmask)
-    call void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIXN($1, WIDTH_X2)(<WIDTH x MASK> %vecmask, i32 1, <WIDTH x i64> %ptrs, <WIDTH_X2 x $1> %res)
+   ifelse(WIDTH,32,`
+    %ptrs1 = shufflevector <WIDTH x i64> %ptrs, <WIDTH x i64> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+    %ptrs2 = shufflevector <WIDTH x i64> %ptrs, <WIDTH x i64> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+    %values1 = shufflevector <WIDTH x $1> %values, <WIDTH x $1> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+    %values2 = shufflevector <WIDTH x $1> %values, <WIDTH x $1> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+    %vecmask1 = shufflevector <WIDTH x MASK> %vecmask, <WIDTH x MASK> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+    %vecmask2 = shufflevector <WIDTH x MASK> %vecmask, <WIDTH x MASK> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+    ifelse($1,i8, `
+      %res1 = tail call <64 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, 64).XE_SUFFIXN($1,16).i16.XE_SUFFIXN(i1,16)(<64 x $1> undef, <16 x $1> %values1, i32 0, i32 16, i32 4, i16 0, i32 0, <16 x MASK> %vecmask1)
+      call void @llvm.genx.svm.scatter.XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16).XE_SUFFIXN($1, 64)(<16 x MASK> %vecmask1, i32 0, <16 x i64> %ptrs1, <64 x $1> %res1)
+      %res2 = tail call <64 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, 64).XE_SUFFIXN($1,16).i16.XE_SUFFIXN(i1,16)(<64 x $1> undef, <16 x $1> %values2, i32 0, i32 16, i32 4, i16 0, i32 0, <16 x MASK> %vecmask2)
+      call void @llvm.genx.svm.scatter.XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16).XE_SUFFIXN($1, 64)(<16 x MASK> %vecmask2, i32 0, <16 x i64> %ptrs2, <64 x $1> %res2)
+    ', $1,i16, `
+      %res1 = tail call <32 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, 32).XE_SUFFIXN($1,16).i16.XE_SUFFIXN(i1,16)(<32 x $1> undef, <16 x $1> %values1, i32 0, i32 16, i32 2, i16 0, i32 0, <16 x MASK> %vecmask1)
+      call void @llvm.genx.svm.scatter.XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16).XE_SUFFIXN($1, 32)(<16 x MASK> %vecmask1, i32 1, <16 x i64> %ptrs1, <32 x $1> %res1)
+      %res2 = tail call <32 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, 32).XE_SUFFIXN($1,16).i16.XE_SUFFIXN(i1,16)(<32 x $1> undef, <16 x $1> %values2, i32 0, i32 16, i32 2, i16 0, i32 0, <16 x MASK> %vecmask2)
+      call void @llvm.genx.svm.scatter.XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16).XE_SUFFIXN($1, 32)(<16 x MASK> %vecmask2, i32 1, <16 x i64> %ptrs2, <32 x $1> %res2)
+    ',`
+      call void @llvm.genx.svm.scatter.XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16).XE_SUFFIXN($1,16)(<16 x MASK> %vecmask1, i32 0, <16 x i64> %ptrs1, <16 x $1> %values1)
+      call void @llvm.genx.svm.scatter.XE_SUFFIXN(i1,16).XE_SUFFIXN(i64,16).XE_SUFFIXN($1,16)(<16 x MASK> %vecmask2, i32 0, <16 x i64> %ptrs2, <16 x $1> %values2)
+    ')
   ',`
-    call void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIX($1)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %ptrs, <WIDTH x $1> %values)
+    ifelse($1,i8, `
+      %res = tail call <WIDTH_X4 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, WIDTH_X4).XE_SUFFIX($1).i16.XE_SUFFIX(i1)(<WIDTH_X4 x $1> undef, <WIDTH x $1> %values, i32 0, i32 WIDTH, i32 4, i16 0, i32 0, <WIDTH x MASK> %vecmask)
+      call void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIXN(i8, WIDTH_X4)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %ptrs, <WIDTH_X4 x $1> %res)
+    ', $1,i16, `
+      %res = tail call <WIDTH_X2 x $1> @llvm.genx.wrregioni.XE_SUFFIXN($1, WIDTH_X2).XE_SUFFIX($1).i16.XE_SUFFIX(i1)(<WIDTH_X2 x $1> undef, <WIDTH x $1> %values, i32 0, i32 WIDTH, i32 2, i16 0, i32 0, <WIDTH x MASK> %vecmask)
+      call void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIXN($1, WIDTH_X2)(<WIDTH x MASK> %vecmask, i32 1, <WIDTH x i64> %ptrs, <WIDTH_X2 x $1> %res)
+    ',`
+      call void @llvm.genx.svm.scatter.XE_SUFFIX(i1).XE_SUFFIX(i64).XE_SUFFIX($1)(<WIDTH x MASK> %vecmask, i32 0, <WIDTH x i64> %ptrs, <WIDTH x $1> %values)
+    ')
   ')
   ret void
 }
@@ -1169,9 +1248,21 @@ define double @__$1_uniform_double(double) nounwind readnone {
   ret double %res
 }
 
-declare <WIDTH x double> @__spirv_ocl_$1_DvWIDTH(<WIDTH x double>) nounwind readnone
+ifelse(WIDTH,32,`
+  declare <16 x double> @__spirv_ocl_$1_DvWIDTH(<16 x double>)
+',`
+  declare <WIDTH x double> @__spirv_ocl_$1_DvWIDTH(<WIDTH x double>)
+')
 define <WIDTH x double> @__$1_varying_double(<WIDTH x double>) nounwind readnone {
-  %res = call <WIDTH x double> @__spirv_ocl_$1_DvWIDTH(<WIDTH x double> %0)
+  ifelse(WIDTH,32,`
+    %in1 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+    %in2 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+    %res1 = call <16 x double> @__spirv_ocl_$1_DvWIDTH(<16 x double> %in1)
+    %res2 = call <16 x double> @__spirv_ocl_$1_DvWIDTH(<16 x double> %in2)
+    %res = shufflevector <16 x double> %res1, <16 x double> %res2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  ',`
+    %res = call <WIDTH x double> @__spirv_ocl_$1_DvWIDTH(<WIDTH x double> %0)
+  ')
   ret <WIDTH x double> %res
 }
 ')
@@ -1194,9 +1285,26 @@ define void @__sincos_uniform_double(double, double*, double*) nounwind {
   ret void
 }
 
-declare <WIDTH x double> @__spirv_ocl_sincos_DvWIDTH(<WIDTH x double>, <WIDTH x double>*) nounwind
+ifelse(WIDTH,32,`
+  declare <16 x double> @__spirv_ocl_sincos_DvWIDTH(<16 x double>, <16 x double>*) nounwind
+',`
+  declare <WIDTH x double> @__spirv_ocl_sincos_DvWIDTH(<WIDTH x double>, <WIDTH x double>*) nounwind
+')
+
 define void @__sincos_varying_double(<WIDTH x double>, <WIDTH x double>*, <WIDTH x double>*) nounwind {
-  %sin = call <WIDTH x double> @__spirv_ocl_sincos_DvWIDTH(<WIDTH x double> %0, <WIDTH x double>* %2)
+  ifelse(WIDTH,32,`
+    %in0_1 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+    %in0_2 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+    %ptr1 = bitcast <32 x double>* %2 to <16 x double>*
+    %ptrtoint = ptrtoint <32 x double>* %2 to i64
+    %ptrtoint_add = add i64 %ptrtoint, 128
+    %ptr2 = inttoptr i64 %ptrtoint_add to <16 x double>*
+    %sin1 = call <16 x double> @__spirv_ocl_sincos_DvWIDTH(<16 x double> %in0_1, <16 x double>* %ptr1)
+    %sin2 = call <16 x double> @__spirv_ocl_sincos_DvWIDTH(<16 x double> %in0_2, <16 x double>* %ptr2)
+    %sin = shufflevector <16 x double> %sin1, <16 x double> %sin2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  ',`
+    %sin = call <WIDTH x double> @__spirv_ocl_sincos_DvWIDTH(<WIDTH x double> %0, <WIDTH x double>* %2)
+  ')
   store <WIDTH x double> %sin, <WIDTH x double>* %1
   ret void
 }
@@ -1207,9 +1315,24 @@ define double @__pow_uniform_double(double, double) nounwind {
   ret double %res
 }
 
-declare <WIDTH x double> @__spirv_ocl_pow_DvWIDTH(<WIDTH x double>, <WIDTH x double>) nounwind readnone
+ifelse(WIDTH,32,`
+  declare <16 x double> @__spirv_ocl_pow_DvWIDTH(<16 x double>, <16 x double>) nounwind readnone
+',`
+  declare <WIDTH x double> @__spirv_ocl_pow_DvWIDTH(<WIDTH x double>, <WIDTH x double>) nounwind readnone
+')
 define <WIDTH x double> @__pow_varying_double(<WIDTH x double>, <WIDTH x double>) nounwind {
-  %res = call <WIDTH x double> @__spirv_ocl_pow_DvWIDTH(<WIDTH x double> %0, <WIDTH x double> %1)
+  ifelse(WIDTH,32,`
+    %in1_1 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+    %in1_2 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+    %in2_1 = shufflevector <32 x double> %1, <32 x double> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+    %in2_2 = shufflevector <32 x double> %1, <32 x double> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+    %res1 = call <16 x double> @__spirv_ocl_pow_DvWIDTH(<16 x double> %in1_1, <16 x double> %in2_1)
+    %res2 = call <16 x double> @__spirv_ocl_pow_DvWIDTH(<16 x double> %in1_2, <16 x double> %in2_2)
+    %res = shufflevector <16 x double> %res1, <16 x double> %res2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  ',`
+    %res = call <WIDTH x double> @__spirv_ocl_pow_DvWIDTH(<WIDTH x double> %0, <WIDTH x double> %1)
+  ')
+
   ret <WIDTH x double> %res
 }
 
@@ -1219,9 +1342,25 @@ define double @__atan2_uniform_double(double, double) nounwind {
   ret double %res
 }
 
-declare <WIDTH x double> @__spirv_ocl_atan2_DvWIDTH(<WIDTH x double>, <WIDTH x double>) nounwind readnone
+ifelse(WIDTH,32,`
+  declare <16 x double> @__spirv_ocl_atan2_DvWIDTH(<16 x double>, <16 x double>) nounwind readnone
+',`
+  declare <WIDTH x double> @__spirv_ocl_atan2_DvWIDTH(<WIDTH x double>, <WIDTH x double>) nounwind readnone
+')
+
 define <WIDTH x double> @__atan2_varying_double(<WIDTH x double>, <WIDTH x double>) nounwind {
-  %res = call <WIDTH x double> @__spirv_ocl_atan2_DvWIDTH(<WIDTH x double> %0, <WIDTH x double> %1)
+  ifelse(WIDTH,32,`
+    %in1_1 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+    %in1_2 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+    %in2_1 = shufflevector <32 x double> %1, <32 x double> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+    %in2_2 = shufflevector <32 x double> %1, <32 x double> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+    %res1 = call <16 x double> @__spirv_ocl_atan2_DvWIDTH(<16 x double> %in1_1, <16 x double> %in2_1)
+    %res2 = call <16 x double> @__spirv_ocl_atan2_DvWIDTH(<16 x double> %in1_2, <16 x double> %in2_2)
+    %res = shufflevector <16 x double> %res1, <16 x double> %res2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  ',`
+    %res = call <WIDTH x double> @__spirv_ocl_atan2_DvWIDTH(<WIDTH x double> %0, <WIDTH x double> %1)
+  ')
+
   ret <WIDTH x double> %res
 }
 

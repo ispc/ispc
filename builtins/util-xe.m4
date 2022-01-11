@@ -499,6 +499,47 @@ define(`reduce16', `
 '
 )
 
+;; Do a reduction over a 32-wide vector
+;; $1: type of final scalar result
+;; $2: 32-wide function that takes 2 32-wide operands and returns the
+;;     element-wise reduction
+;; $3: scalar function that takes two scalar operands and returns
+;;     the final reduction
+;; $4: input vector
+
+define(`reduce32', `
+  %v0 = shufflevector <32 x $1> $4, <32 x $1> undef,
+        <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23,
+                    i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %m0 = call <32 x $1> $2(<32 x $1> %v0, <32 x $1> $4)
+  %v1 = shufflevector <32 x $1> %m0, <32 x $1> undef,
+        <32 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %m1 = call <32 x $1> $2(<32 x $1> %v1, <32 x $1> %m0)
+  %v2 = shufflevector <32 x $1> %m1, <32 x $1> undef,
+        <32 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %m2 = call <32 x $1> $2(<32 x $1> %v2, <32 x $1> %m1)
+  %v3 = shufflevector <32 x $1> %m2, <32 x $1> undef,
+        <32 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %m3 = call <32 x $1> $2(<32 x $1> %v3, <32 x $1> %m2)
+
+  %m3a = extractelement <32 x $1> %m3, i32 0
+  %m3b = extractelement <32 x $1> %m3, i32 1
+  %m = call $1 $3($1 %m3a, $1 %m3b)
+  ret $1 %m
+'
+)
+
 ;; Do an optimized for Xe reduction over a 8-wide vector
 ;; $1: type of final scalar result
 ;; $2: genx reduction intrinsic name
@@ -543,6 +584,36 @@ define(`reducexe16', `
   %m3a = extractelement <2 x $1> %m3, i32 0
   %m3b = extractelement <2 x $1> %m3, i32 1
   %m = call $1 @llvm.genx.$2.XE_TYPE($1).XE_TYPE($1)($1 %m3a, $1 %m3b)
+  ret $1 %m
+'
+)
+
+;; Do an optimized for Xe reduction over a 32-wide vector
+;; $1: type of final scalar result
+;; $2: genx reduction intrinsic name
+;; $3: rdregioni or rdregionf
+;; $4: input vector
+;; $5: scale
+define(`reducexe32', `
+  %scale1 = mul i16 $5, 16
+  %v1 = call <16 x $1> @llvm.genx.$3.XE_SUFFIXN($1, 16).XE_SUFFIX($1).i16(<32 x $1> $4, i32 0, i32 16, i32 1, i16 0, i32 undef)
+  %v2 = call <16 x $1> @llvm.genx.$3.XE_SUFFIXN($1, 16).XE_SUFFIX($1).i16(<32 x $1> $4, i32 0, i32 16, i32 1, i16 %scale1, i32 undef)
+  %m1 = call <16 x $1> @llvm.genx.$2.XE_SUFFIXN($1, 16).XE_SUFFIXN($1, 16)(<16 x $1> %v1, <16 x $1> %v2)
+  %scale2 = mul i16 $5, 8
+  %v3 = call <8 x $1> @llvm.genx.$3.XE_SUFFIXN($1, 8).XE_SUFFIXN($1, 16).i16(<16 x $1> %m1, i32 0, i32 8, i32 1, i16 0, i32 undef)
+  %v4 = call <8 x $1> @llvm.genx.$3.XE_SUFFIXN($1, 8).XE_SUFFIXN($1, 16).i16(<16 x $1> %m1, i32 0, i32 8, i32 1, i16 %scale2, i32 undef)
+  %m2 = call <8 x $1> @llvm.genx.$2.XE_SUFFIXN($1, 8).XE_SUFFIXN($1, 8)(<8 x $1> %v3, <8 x $1> %v4)
+  %scale3 = mul i16 $5, 4
+  %v5 = call <4 x $1> @llvm.genx.$3.XE_SUFFIXN($1, 4).XE_SUFFIXN($1, 8).i16(<8 x $1> %m2, i32 0, i32 4, i32 1, i16 0, i32 undef)
+  %v6 = call <4 x $1> @llvm.genx.$3.XE_SUFFIXN($1, 4).XE_SUFFIXN($1, 8).i16(<8 x $1> %m2, i32 0, i32 4, i32 1, i16 %scale3, i32 undef)
+  %m3 = call <4 x $1> @llvm.genx.$2.XE_SUFFIXN($1, 4).XE_SUFFIXN($1, 4)(<4 x $1> %v5, <4 x $1> %v6)
+  %scale4 = mul i16 $5, 2
+  %v7 = call <2 x $1> @llvm.genx.$3.XE_SUFFIXN($1, 2).XE_SUFFIXN($1, 4).i16(<4 x $1> %m3, i32 0, i32 2, i32 1, i16 0, i32 undef)
+  %v8 = call <2 x $1> @llvm.genx.$3.XE_SUFFIXN($1, 2).XE_SUFFIXN($1, 4).i16(<4 x $1> %m3, i32 0, i32 2, i32 1, i16 %scale4, i32 undef)
+  %m4 = call <2 x $1> @llvm.genx.$2.XE_SUFFIXN($1, 2).XE_SUFFIXN($1, 2)(<2 x $1> %v7, <2 x $1> %v8)
+  %m4a = extractelement <2 x $1> %m4, i32 0
+  %m4b = extractelement <2 x $1> %m4, i32 1
+  %m = call $1 @llvm.genx.$2.XE_TYPE($1).XE_TYPE($1)($1 %m4a, $1 %m4b)
   ret $1 %m
 '
 )
