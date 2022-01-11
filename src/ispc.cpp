@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -1444,7 +1444,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_is32Bit = (getDataLayout()->getPointerSize() == 4);
 
         // TO-DO : Revisit addition of "target-features" and "target-cpu" for ARM support.
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
+        llvm::AttrBuilder *fattrBuilder = new llvm::AttrBuilder(*g->ctx);
+#else
         llvm::AttrBuilder *fattrBuilder = new llvm::AttrBuilder();
+#endif
 #ifdef ISPC_ARM_ENABLED
         if (m_isa == Target::NEON)
             fattrBuilder->addAttribute("target-cpu", this->m_cpu);
