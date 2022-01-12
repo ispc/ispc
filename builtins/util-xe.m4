@@ -1620,6 +1620,21 @@ define void @__prefetch_read_uniform_nt(i8 *) alwaysinline {
   ret void
 }
 
+define void @__prefetch_write_uniform_1(i8 *) alwaysinline {
+  call void @llvm.prefetch(i8 * %0, i32 1, i32 3, i32 1)
+  ret void
+}
+
+define void @__prefetch_write_uniform_2(i8 *) alwaysinline {
+  call void @llvm.prefetch(i8 * %0, i32 1, i32 2, i32 1)
+  ret void
+}
+
+define void @__prefetch_write_uniform_3(i8 *) alwaysinline {
+  call void @llvm.prefetch(i8 * %0, i32 1, i32 1, i32 1)
+  ret void
+}
+
 define void @__prefetch_read_varying_1(<WIDTH x i64> %addr, <WIDTH x MASK> %mask) alwaysinline {
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
   %iptr_LANE_ID = extractelement <WIDTH x i64> %addr, i32 LANE
@@ -1663,6 +1678,39 @@ define void @__prefetch_read_varying_nt(<WIDTH x i64> %addr, <WIDTH x MASK> %mas
 }
 
 declare void @__prefetch_read_varying_nt_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
+
+define void @__prefetch_write_varying_1(<WIDTH x i64> %addr, <WIDTH x MASK> %mask) alwaysinline {
+  per_lane(WIDTH, <WIDTH x MASK> %mask, `
+  %iptr_LANE_ID = extractelement <WIDTH x i64> %addr, i32 LANE
+  %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to i8*
+  call void @llvm.prefetch(i8 * %ptr_LANE_ID, i32 1, i32 3, i32 1)
+  ')
+  ret void
+}
+
+declare void @__prefetch_write_varying_1_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
+
+define void @__prefetch_write_varying_2(<WIDTH x i64> %addr, <WIDTH x MASK> %mask) alwaysinline {
+  per_lane(WIDTH, <WIDTH x MASK> %mask, `
+  %iptr_LANE_ID = extractelement <WIDTH x i64> %addr, i32 LANE
+  %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to i8*
+  call void @llvm.prefetch(i8 * %ptr_LANE_ID, i32 1, i32 3, i32 1)
+  ')
+  ret void
+}
+
+declare void @__prefetch_write_varying_2_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
+
+define void @__prefetch_write_varying_3(<WIDTH x i64> %addr, <WIDTH x MASK> %mask) alwaysinline {
+  per_lane(WIDTH, <WIDTH x MASK> %mask, `
+  %iptr_LANE_ID = extractelement <WIDTH x i64> %addr, i32 LANE
+  %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to i8*
+  call void @llvm.prefetch(i8 * %ptr_LANE_ID, i32 1, i32 3, i32 1)
+  ')
+  ret void
+}
+
+declare void @__prefetch_write_varying_3_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -3382,7 +3430,23 @@ declare void @__pseudo_prefetch_read_varying_nt(<WIDTH x i64>, <WIDTH x MASK>) n
 declare void
 @__pseudo_prefetch_read_varying_nt_native(i8 *, i32, <WIDTH x i32>,
                                          <WIDTH x MASK>) nounwind
+declare void @__pseudo_prefetch_write_varying_1(<WIDTH x i64>, <WIDTH x MASK>) nounwind
 
+declare void
+@__pseudo_prefetch_write_varying_1_native(i8 *, i32, <WIDTH x i32>,
+                                         <WIDTH x MASK>) nounwind
+
+declare void @__pseudo_prefetch_write_varying_2(<WIDTH x i64>, <WIDTH x MASK>) nounwind
+
+declare void
+@__pseudo_prefetch_write_varying_2_native(i8 *, i32, <WIDTH x i32>,
+                                         <WIDTH x MASK>) nounwind
+
+declare void @__pseudo_prefetch_write_varying_3(<WIDTH x i64>, <WIDTH x MASK>) nounwind
+
+declare void
+@__pseudo_prefetch_write_varying_3_native(i8 *, i32, <WIDTH x i32>,
+                                         <WIDTH x MASK>) nounwind
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 declare void @__use_vi8(<WIDTH x i8>)
@@ -4007,6 +4071,30 @@ ifelse(HAVE_SCATTER, `1',
   call void @__prefetch_read_varying_nt_native(i8 * %ptr, i32 0,
                                               <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
   call void @__prefetch_read_varying_nt(<WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+
+  call void @__pseudo_prefetch_write_varying_1(<WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+
+  call void @__pseudo_prefetch_write_varying_1_native(i8 * %ptr, i32 0,
+                                                     <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__prefetch_write_varying_1_native(i8 * %ptr, i32 0,
+                                              <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__prefetch_write_varying_1(<WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+
+  call void @__pseudo_prefetch_write_varying_2(<WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+
+  call void @__pseudo_prefetch_write_varying_2_native(i8 * %ptr, i32 0,
+                                                     <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__prefetch_write_varying_2_native(i8 * %ptr, i32 0,
+                                              <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__prefetch_write_varying_2(<WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+
+  call void @__pseudo_prefetch_write_varying_3(<WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+
+  call void @__pseudo_prefetch_write_varying_3_native(i8 * %ptr, i32 0,
+                                                     <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__prefetch_write_varying_3_native(i8 * %ptr, i32 0,
+                                              <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__prefetch_write_varying_3(<WIDTH x i64> %v64, <WIDTH x MASK> %mask)
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; movmsk
