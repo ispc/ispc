@@ -5096,6 +5096,13 @@ pointer types.
     void prefetch_{l1,l2,l3,nt}(void * uniform ptr)
     void prefetch_{l1,l2,l3,nt}(void * varying ptr)
 
+The standard library also has routines to prefetch to the L1, L2, and L3
+caches in anticipation of a write:
+
+::
+
+    void prefetchw_{l1,l2,l3}(void * uniform ptr)
+    void prefetchw_{l1,l2,l3}(void * varying ptr)
 
 System Information
 ------------------
