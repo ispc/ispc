@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2021, Intel Corporation
+;;  Copyright (c) 2010-2022, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -6020,12 +6020,16 @@ define_down_avgs()
 ')
 
 define(`rsqrtd_decl', `
+declare double @__rsqrt_fast_uniform_double(double)
 declare  double @__rsqrt_uniform_double(double)
+declare <WIDTH x double> @__rsqrt_fast_varying_double(<WIDTH x double>)
 declare <WIDTH x double> @__rsqrt_varying_double(<WIDTH x double>)
 ')
 
 define(`rcpd_decl', `
+declare double @__rcp_fast_uniform_double(double)
 declare  double @__rcp_uniform_double(double)
+declare <WIDTH x double> @__rcp_fast_varying_double(<WIDTH x double>)
 declare <WIDTH x double> @__rcp_varying_double(<WIDTH x double>)
 ')
 
