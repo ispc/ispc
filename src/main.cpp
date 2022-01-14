@@ -69,7 +69,6 @@ using namespace ispc;
 #ifndef BUILD_DATE
 #define BUILD_DATE __DATE__
 #endif
-#define BUILD_VERSION ""
 #if _MSC_VER >= 1900
 #define ISPC_VS_VERSION "Visual Studio 2015 and later"
 #else
