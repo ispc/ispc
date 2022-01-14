@@ -94,6 +94,11 @@ macro(build_ispcrt SHARED_OR_STATIC TARGET_NAME)
     $<$<BOOL:${ISPCRT_BUILD_TASKING}>:ispcrt_tasking>
   )
 
+  # Security options
+  if (UNIX)
+    target_compile_options(${TARGET_NAME} PRIVATE -fstack-protector-strong)
+  endif()
+
   ## Install targets + exports ##
 
   set_target_properties(${TARGET_NAME}
