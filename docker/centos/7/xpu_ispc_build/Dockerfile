@@ -6,7 +6,7 @@ ARG REPO=ispc/ispc
 ARG SHA=main
 ARG LLVM_VERSION=12.0
 ARG L0L_VER=1.7.4
-ARG VC_INTRINSICS_COMMIT_SHA="753ad5002af5a5e467b3a0194a2b0e9a3243059e"
+ARG VC_INTRINSICS_COMMIT_SHA="3a5f4b4608f0e18fcdc04d851568f3aab4651545"
 ARG SPIRV_TRANSLATOR_COMMIT_SHA="ed25f1b236320fbeeec4ccf055cd3cd698843e16"
 
 # !!! Make sure that your docker config provides enough memory to the container,
