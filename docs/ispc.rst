@@ -64,6 +64,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.14.1`_
   + `Updating ISPC Programs For Changes In ISPC 1.15.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.16.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.17.0`_
 
 * `Getting Started with ISPC`_
 
@@ -471,6 +472,25 @@ affect compatibility:
 The language got experimental feature for calling LLVM intrinsics. This
 should not affect compatibility with existing programs.
 See `LLVM Intrinsic Functions`_ for more details.
+
+Updating ISPC Programs For Changes In ISPC 1.17.0
+-------------------------------------------------
+
+The release introduces new data type ``float16`` and floating point literals
+with ``f16`` suffix.
+
+For the sake of unification with C/C++, capital letter X may be used in
+hexadecimal prefix (``0X``) and capital letter P as a separator for exponent in
+hexadecimal floating point. For example: ``0X1P16``.
+
+The naming of Xe targets, architectures, device names has changed.
+
+Standard library library got new ``prefetchw_{l1,l2,l3}()`` intrinsics for
+prefetching in anticipation of write.
+
+The algorithms used for implementation of ``rsqrt(double)`` and ``rcp(double)``
+standard library functions have changed on AVX512 and may affect the existing
+code.
 
 
 Getting Started with ISPC
