@@ -410,7 +410,7 @@ function (generate_common_builtins resultList)
     if (ISPC_IOS_TARGET)
         list (APPEND supported_oses "ios")
     endif()
-    if (ISPC_PS4_TARGET)
+    if (ISPC_PS_TARGET)
         list (APPEND supported_oses "ps4")
     endif()
 
