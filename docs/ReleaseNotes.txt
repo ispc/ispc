@@ -1,3 +1,103 @@
+=== v1.17.0 === (14 January 2022)
+
+An ISPC release with massive update of Xe targets, including support for
+forthcoming XeHPG GPUs, improvements for `double` type on AVX512 targets, and
+multiple standard library improvements. Windows and Linux binaries in this
+release support both CPU and GPU targets, while macOS binary supports only CPU.
+This release is based on patched LLVM 12.0.1.
+
+Improvements for CPU targets:
+- Performance improvements for `double` type on AVX512 targets - better use of
+  gather/scatter instructions, 2-5x improvements for `rsqrt()` and `rcp()`
+  standard library functions.
+- New `avx512skx-i32x4` target.
+- `aos_to_soa` and `soa_to_aos` performance improvements for `-x8` and `-x16`
+  targets on CPU.
+- `--math-lib=svml` mode was fixed and extended - it requires Intel® C++
+  Compiler (`icc` or `icx`) to link the binary.
+- `zen1`, `zen2`, and `zen3` CPU definitions were added.
+- Added experimental support for PS5 platform.
+
+ISPC language got experimental support for IEEE 754 half-precision data type -
+`float16`. Not all library functions are supported yet with this type. The key
+focus in this release was on hardware natively supporting this type.
+
+This update includes breaking changes in compiler switches for Xe targets:
+- Graphics targets `genx-x8` and `genx-x16` were renamed to `gen9-x8` and
+  `gen9-x16`.
+- Compiler architectures for graphics target were renamed from `genx32` and
+  `genx64` to `xe32` and `xe64`.
+- Xe targets were renamed from uppercase to lowercase (so instead of SKL/TGLLP
+  it is now skl/tgllp).
+- A new `--device` switch (which is an alias for the existing `--cpu` switch)
+  was introduced. Now the recommended way to specify the required platform for
+  CPU and GPU is: `--device=<platform>`
+
+Also this release changes `export` and `task` functions definition on GPU.  Now
+GPU kernel is ISPC `task` function only, `export` functions cannot be invoked
+from host (i.e. called from ISPC Runtime/L0 Runtime) anymore. `export`
+functions are ready to be linked with and called from other GPU modules.
+Currently, ISPC experimentally supports such interoperability with Explicit
+SIMD SYCL* Extension (ESIMD).
+
+New Xe targets were added:
+- `xelp-x8` and `xelp-x16`. XeLP refers to XeLP generation of hardware
+  (TigerLake chips and alike).
+- `xehpg-x8` and `xehpg-x16`. XeHPG is the architecture name for the
+  forthcoming Intel® Arc™ GPUs codename Alchemist..
+
+GPU part has a bunch of stability, performance, and usability improvements
+including but not limited to `alloca()` with constant parameter support,
+`assume()` support, improved performance for double math functions and integer
+division.
+
+`ISPC Runtime` performance was improved several times by fixing the setting of
+local group size for kernels, using events as a synchronization mechanism, and
+utilizing HW compute and copy engines. There is also a new structure
+`ISPCRTModuleOptions` to pass additional options to VC backend if needed.
+Currently, `ISPCRTModuleOptions` allows setting of stack size for VC backend
+which is used to compile SPIR-V.
+
+Runtime Dependencies when targeting GPU:
+
+Linux:
+
+- Intel(R) Graphics Compute Runtime
+  https://github.com/intel/compute-runtime/releases/tag/22.02.22151
+- Level Zero Loader
+  https://github.com/oneapi-src/level-zero/releases/tag/v1.7.4
+- OpenMP Runtime. Consult your Linux distribution documentation for the
+  installation of OpenMP runtime instructions. No specific version is required.
+
+Windows:
+
+- Intel(R) Graphics Windows(R) DCH Drivers 30.0.101.1191
+  https://www.intel.com/content/www/us/en/download/19344/intel-graphics-windows-dch-drivers.html
+- Level Zero Loader
+  https://github.com/oneapi-src/level-zero/releases/tag/v1.7.4
+- OpenCL™ Offline Compiler (OCLOC)
+  https://software.intel.com/sites/downloads/ocloc/ocloc_win_101.1191.zip (this
+  is needed for AoT compilation on Windows only)
+
+Components revisions used in GPU-enabled build:
+
+KhronosGroup/SPIRV-LLVM-Translator@ed25f1b intel/vc-intrinsics@3a5f4b4
+oneapi-src/level-zero@2824c1f (v1.7.4) llvm/llvm-project@fed4134 (llvmorg-12.0.1) + patches from llvm_patches folder
+
+=== v1.16.1 === (15 July 2021)
+
+A minor ISPC update, which has a bug fix for [issue
+#2111](https://github.com/ispc/ispc/issues/2111) and is based on patched
+version of LLVM 12.0.1.
+
+The bug fix affects x86 targets only and shows up as incorrect code generation
+for the sequence of `shuffle()` and `reduce_add()` stdlib functions.
+
+If you are building `ispc` from the sources, note that the fix is implemented
+as a patch for LLVM backend and LLVM must be built with this patch applied in
+order for this fix to take an effect. Stock build of LLVM 12.0.1 will not
+contain this bug fix.
+
 === v1.16.0 === (11 June 2021)
 
 An ISPC release with language extensions for performance fine tuning, cpu
