@@ -47,9 +47,11 @@ There are a few key principles in the design of ``ispc``:
 ``ispc`` is an open source compiler with the BSD license.  It uses the
 remarkable [LLVM Compiler Infrastructure](http://llvm.org) for back-end
 code generation and optimization and is [hosted on
-github](http://github.com/ispc/ispc). It supports Windows, Mac, and
-Linux, with both x86 and x86-64 targets.  It currently supports the SSE2,
-SSE4, AVX, AVX2, and AVX512 instruction sets.
+github](http://github.com/ispc/ispc). It supports Windows, macOS, and
+Linux as a host operating system and also capable to target Android, iOS,
+and PS4/PS5.  It currently supports multiple flavours of x86 (SSE2,
+SSE4, AVX, AVX2, and AVX512), ARM (NEON), and Intel® GPU architectures
+(Gen9 and Xe family).
 
 Features
 --------
@@ -71,8 +73,9 @@ Features
     with application data structures.
             
   * Portability across over a decade of CPU
-    generations: ``ispc`` has targets for SSE2, SSE4, AVX, AVX2, and AVX512 and
-    recent Intel GPUs.
+    generations: ``ispc`` has targets for x86 SSE2, SSE4, AVX,
+    AVX2, and AVX512, as well as ARM NEON and
+    recent Intel® GPUs.
 
   * Portability across operating systems: Microsoft
     Windows, macOS, Linux, and FreeBSD are all supported
@@ -91,3 +94,4 @@ from Appveyor for [Linux](https://ci.appveyor.com/api/projects/ispc/ispc/artifac
 See also additional
 [documentation](https://ispc.github.io/documentation.html) and additional
 [performance information](https://ispc.github.io/perf.html).
+If you have a bug report and have a question, you are welcome to open an [issue](https://github.com/ispc/ispc/issues) or start a [discussion](https://github.com/ispc/ispc/discussions) on GitHub.
