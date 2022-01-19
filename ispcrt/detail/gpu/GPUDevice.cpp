@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Intel Corporation
+// Copyright 2020-2022 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "GPUDevice.h"
@@ -197,7 +197,7 @@ struct Future : public ispcrt::base::Future {
     bool valid() override { return m_valid; }
     uint64_t time() override { return m_time; }
 
-    friend class TaskQueue;
+    friend struct TaskQueue;
 
   private:
     uint64_t m_time{0};
@@ -765,7 +765,8 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
             waitEvents.push_back(ev.first->handle());
         }
         L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl_mem_d2h->handle(), view.hostPtr(), view.devicePtr(),
-                                                   view.numBytes(), nullptr, waitEvents.size(), waitEvents.data()));
+                                                   view.numBytes(), nullptr, (uint32_t)waitEvents.size(),
+                                                   waitEvents.data()));
 
         m_cl_mem_d2h->inc();
     }
@@ -794,8 +795,8 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         }
 
         std::array<uint32_t, 3> suggestedGroupSize = {0};
-        L0_SAFE_CALL(zeKernelSuggestGroupSize(kernel.handle(), dim0, dim1, dim2, &suggestedGroupSize[0],
-                                              &suggestedGroupSize[1], &suggestedGroupSize[2]));
+        L0_SAFE_CALL(zeKernelSuggestGroupSize(kernel.handle(), uint32_t(dim0), uint32_t(dim1), uint32_t(dim2),
+                                              &suggestedGroupSize[0], &suggestedGroupSize[1], &suggestedGroupSize[2]));
         // TODO: Is this needed? Didn't find info in spec on the valid values that zeKernelSuggestGroupSize will return
         suggestedGroupSize[0] = std::max(suggestedGroupSize[0], uint32_t(1));
         suggestedGroupSize[1] = std::max(suggestedGroupSize[1], uint32_t(1));
@@ -811,9 +812,9 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         if (event == nullptr)
             throw std::runtime_error("Failed to create event!");
         try {
-            L0_SAFE_CALL(zeCommandListAppendLaunchKernel(m_cl_compute->handle(), kernel.handle(), &dispatchTraits,
-                                                         event->handle(), m_cl_mem_h2d->getEventHandlers().size(),
-                                                         m_cl_mem_h2d->getEventHandlers().data()));
+            L0_SAFE_CALL(zeCommandListAppendLaunchKernel(
+                m_cl_compute->handle(), kernel.handle(), &dispatchTraits, event->handle(),
+                (uint32_t)m_cl_mem_h2d->getEventHandlers().size(), m_cl_mem_h2d->getEventHandlers().data()));
             m_cl_compute->inc();
         } catch (ispcrt::base::ispcrt_runtime_error &e) {
             // cleanup and rethrow
@@ -989,7 +990,7 @@ static ze_driver_handle_t deviceDiscovery(bool *p_is_mock) {
 
 uint32_t deviceCount() {
     deviceDiscovery(nullptr);
-    return g_deviceList.size();
+    return (uint32_t)g_deviceList.size();
 }
 
 ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx) {
