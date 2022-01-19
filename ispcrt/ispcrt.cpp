@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Intel Corporation
+// Copyright 2020-2022 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "ispcrt.h"
@@ -38,6 +38,25 @@ static OBJECT_T &referenceFromHandle(HANDLE_T handle) {
 }
 
 #define ISPCRT_CATCH_BEGIN try {
+#define ISPCRT_CATCH_END_NO_RETURN()                                                                                   \
+    }                                                                                                                  \
+    catch (const ispcrt::base::ispcrt_runtime_error &e) {                                                              \
+        handleError(e.e, e.what());                                                                                    \
+        return;                                                                                                        \
+    }                                                                                                                  \
+    catch (const std::logic_error &e) {                                                                                \
+        handleError(ISPCRT_INVALID_OPERATION, e.what());                                                               \
+        return;                                                                                                        \
+    }                                                                                                                  \
+    catch (const std::exception &e) {                                                                                  \
+        handleError(ISPCRT_UNKNOWN_ERROR, e.what());                                                                   \
+        return;                                                                                                        \
+    }                                                                                                                  \
+    catch (...) {                                                                                                      \
+        handleError(ISPCRT_UNKNOWN_ERROR, "an unrecognized exception was caught");                                     \
+        return;                                                                                                        \
+    }
+
 #define ISPCRT_CATCH_END(a)                                                                                            \
     }                                                                                                                  \
     catch (const ispcrt::base::ispcrt_runtime_error &e) {                                                              \
@@ -73,13 +92,13 @@ void ispcrtRelease(ISPCRTGenericHandle h) ISPCRT_CATCH_BEGIN {
     auto &obj = referenceFromHandle(h);
     obj.refDec();
 }
-ISPCRT_CATCH_END()
+ISPCRT_CATCH_END_NO_RETURN()
 
 void ispcrtRetain(ISPCRTGenericHandle h) ISPCRT_CATCH_BEGIN {
     auto &obj = referenceFromHandle(h);
     obj.refInc();
 }
-ISPCRT_CATCH_END()
+ISPCRT_CATCH_END_NO_RETURN()
 
 ///////////////////////////////////////////////////////////////////////////////
 // Device initialization //////////////////////////////////////////////////////
@@ -154,7 +173,8 @@ uint32_t ispcrtGetDeviceCount(ISPCRTDeviceType type) ISPCRT_CATCH_BEGIN {
     }
 
     return devices;
-} ISPCRT_CATCH_END(0)
+}
+ISPCRT_CATCH_END(0)
 
 void ispcrtGetDeviceInfo(ISPCRTDeviceType type, uint32_t deviceIdx, ISPCRTDeviceInfo *info) ISPCRT_CATCH_BEGIN {
     if (info == nullptr)
@@ -181,7 +201,8 @@ void ispcrtGetDeviceInfo(ISPCRTDeviceType type, uint32_t deviceIdx, ISPCRTDevice
     default:
         throw std::runtime_error("Unknown device type queried!");
     }
-} ISPCRT_CATCH_END()
+}
+ISPCRT_CATCH_END_NO_RETURN()
 
 ///////////////////////////////////////////////////////////////////////////////
 // MemoryViews ////////////////////////////////////////////////////////////////
@@ -222,7 +243,8 @@ ISPCRT_CATCH_END(nullptr)
 // Kernels ////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-ISPCRTModule ispcrtLoadModule(ISPCRTDevice d, const char *moduleFile, ISPCRTModuleOptions moduleOpts) ISPCRT_CATCH_BEGIN {
+ISPCRTModule ispcrtLoadModule(ISPCRTDevice d, const char *moduleFile,
+                              ISPCRTModuleOptions moduleOpts) ISPCRT_CATCH_BEGIN {
     const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
     return (ISPCRTModule)device.newModule(moduleFile, moduleOpts);
 }
@@ -249,21 +271,21 @@ void ispcrtDeviceBarrier(ISPCRTTaskQueue q) ISPCRT_CATCH_BEGIN {
     auto &queue = referenceFromHandle<ispcrt::base::TaskQueue>(q);
     queue.barrier();
 }
-ISPCRT_CATCH_END()
+ISPCRT_CATCH_END_NO_RETURN()
 
 void ispcrtCopyToDevice(ISPCRTTaskQueue q, ISPCRTMemoryView mv) ISPCRT_CATCH_BEGIN {
     auto &queue = referenceFromHandle<ispcrt::base::TaskQueue>(q);
     auto &view = referenceFromHandle<ispcrt::base::MemoryView>(mv);
     queue.copyToDevice(view);
 }
-ISPCRT_CATCH_END()
+ISPCRT_CATCH_END_NO_RETURN()
 
 void ispcrtCopyToHost(ISPCRTTaskQueue q, ISPCRTMemoryView mv) ISPCRT_CATCH_BEGIN {
     auto &queue = referenceFromHandle<ispcrt::base::TaskQueue>(q);
     auto &view = referenceFromHandle<ispcrt::base::MemoryView>(mv);
     queue.copyToHost(view);
 }
-ISPCRT_CATCH_END()
+ISPCRT_CATCH_END_NO_RETURN()
 
 ISPCRTFuture ispcrtLaunch1D(ISPCRTTaskQueue q, ISPCRTKernel k, ISPCRTMemoryView p, size_t dim0) ISPCRT_CATCH_BEGIN {
     return ispcrtLaunch3D(q, k, p, dim0, 1, 1);
@@ -294,7 +316,7 @@ void ispcrtSync(ISPCRTTaskQueue q) ISPCRT_CATCH_BEGIN {
     auto &queue = referenceFromHandle<ispcrt::base::TaskQueue>(q);
     queue.sync();
 }
-ISPCRT_CATCH_END()
+ISPCRT_CATCH_END_NO_RETURN()
 
 uint64_t ispcrtFutureGetTimeNs(ISPCRTFuture f) ISPCRT_CATCH_BEGIN {
     if (!f)
@@ -342,6 +364,5 @@ ISPCRTGenericHandle ispcrtTaskQueueNativeHandle(ISPCRTTaskQueue q) ISPCRT_CATCH_
     return queue.taskQueueNativeHandle();
 }
 ISPCRT_CATCH_END(nullptr)
-
 
 } // extern "C"

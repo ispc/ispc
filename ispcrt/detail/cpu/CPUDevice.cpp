@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Intel Corporation
+// Copyright 2020-2022 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "CPUDevice.h"
@@ -24,7 +24,7 @@ struct Future : public ispcrt::base::Future {
     bool valid() override { return m_valid; }
     uint64_t time() override { return m_time; }
 
-    friend class TaskQueue;
+    friend struct TaskQueue;
 
   private:
     uint64_t m_time{0};
@@ -34,8 +34,7 @@ struct Future : public ispcrt::base::Future {
 using CPUKernelEntryPoint = void (*)(void *, size_t, size_t, size_t);
 
 struct MemoryView : public ispcrt::base::MemoryView {
-    MemoryView(void *appMem, size_t numBytes, bool shared) :
-            m_mem(appMem), m_size(numBytes), m_shared(shared) {
+    MemoryView(void *appMem, size_t numBytes, bool shared) : m_mem(appMem), m_size(numBytes), m_shared(shared) {
         if (m_shared) {
             m_mem = malloc(m_size);
             if (!m_mem)
@@ -105,7 +104,7 @@ struct Kernel : public ispcrt::base::Kernel {
 
         auto name = std::string(_name) + "_cpu_entry_point";
 #if defined(_WIN32) || defined(_WIN64)
-        void* fcn = GetProcAddress((HMODULE)module.lib(), name.c_str());
+        void *fcn = GetProcAddress((HMODULE)module.lib(), name.c_str());
 #else
         void *fcn = dlsym(module.lib() ? module.lib() : RTLD_DEFAULT, name.c_str());
 #endif
@@ -176,14 +175,10 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         // no-op
     }
 
-    void* taskQueueNativeHandle() const override {
-        return nullptr;
-    }
+    void *taskQueueNativeHandle() const override { return nullptr; }
 };
 
-uint32_t deviceCount() {
-    return 1;
-}
+uint32_t deviceCount() { return 1; }
 
 ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx) {
     ISPCRTDeviceInfo info;
@@ -200,7 +195,9 @@ ispcrt::base::MemoryView *CPUDevice::newMemoryView(void *appMem, size_t numBytes
 
 ispcrt::base::TaskQueue *CPUDevice::newTaskQueue() const { return new cpu::TaskQueue(); }
 
-ispcrt::base::Module *CPUDevice::newModule(const char *moduleFile, const ISPCRTModuleOptions &moduleOpts) const { return new cpu::Module(moduleFile); }
+ispcrt::base::Module *CPUDevice::newModule(const char *moduleFile, const ISPCRTModuleOptions &moduleOpts) const {
+    return new cpu::Module(moduleFile);
+}
 
 ispcrt::base::Kernel *CPUDevice::newKernel(const ispcrt::base::Module &module, const char *name) const {
     return new cpu::Kernel(module, name);
