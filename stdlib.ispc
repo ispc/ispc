@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -2120,7 +2120,7 @@ static inline QUAL double __rcp_iterate_##QUAL##_double(QUAL double v, QUAL doub
 __declspec(safe)  \
 static inline QUAL double __rcp_safe_##QUAL##_double(QUAL double x) \
 { \
-  if (x <= 1.0d+33 && x >= 1.0d-33) \
+  if (x <= 1.0e+33d && x >= 1.0e-33d) \
     return __rcp_iterate_##QUAL##_double(x, rcp((QUAL float)x)); \
   QUAL int64  ex   = intbits(x) & 0x7fe0000000000000; \
   QUAL double exp  = doublebits(  0x7fd0000000000000 + ~ex      );   \
@@ -4465,14 +4465,14 @@ __declspec(safe)    \
 static inline QUAL double __rsqrt_iterate_##QUAL##_double(QUAL double x, QUAL double y)   \
 {   \
   QUAL double xh = x*0.5d;    \
-  y += y*(0.5d0 - xh*y*y);    \
-  y += y*(0.5d0 - xh*y*y);    \
+  y += y*(0.5d - xh*y*y);    \
+  y += y*(0.5d - xh*y*y);    \
   return y;   \
 }   \
 __declspec(safe)    \
 static inline QUAL double __rsqrt_safe_##QUAL##_double (QUAL double x)    \
 {   \
-  if (x <= 1.0d+33 && x >= 1.0d-33)   \
+  if (x <= 1.0e+33d && x >= 1.0e-33d)   \
     return __rsqrt_iterate_##QUAL##_double(x, rsqrt((QUAL float)x));   \
   QUAL int64  ex   = intbits(x) & 0x7fe0000000000000;                 \
   QUAL double exp  = doublebits(  0x7fd0000000000000 -  ex      );   /* 1.0d/exponent  */   \
@@ -4663,7 +4663,7 @@ static inline double acos(const double v) {
     } else if (__math_lib == __math_lib_svml) {
         return __svml_acosd(v);
     } else {
-        return 1.57079637050628662109375d0 - asin(v);
+        return 1.57079637050628662109375d - asin(v);
     }
 }
 
@@ -4672,7 +4672,7 @@ static inline uniform double acos(const uniform double v) {
   if (__have_native_trigonometry)
     return __acos_uniform_double(v);
   else
-    return 1.57079637050628662109375d0 - asin(v);
+    return 1.57079637050628662109375d - asin(v);
 }
 
 __declspec(safe)
