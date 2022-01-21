@@ -12,8 +12,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Building LLVM in docker, as using native Ubuntu 16.04 github-hosted image contains newer-than-expected libs and
-  # makes the resulting build not usable on other Ubuntu 16.04 images.
+  # Building LLVM in docker, as using native Ubuntu 18.04 github-hosted image contains newer-than-expected libs and
+  # makes the resulting build not usable on other Ubuntu 18.04 images.
   # Doing Linux build in two stages, as self-build is required, but Github Action runners are not always capable
   # to finish the full job in less than 6 hours.
   linux-build-1:
@@ -30,15 +30,15 @@ jobs:
 
     - name: Build LLVM
       run: |
-        cd docker/ubuntu/16.04/cpu_ispc_build
+        cd docker/ubuntu/18.04/cpu_ispc_build
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu16.04:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=12.0 .
+        docker buildx build --tag ispc/ubuntu18.04:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=12.0 .
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm12_linux_stage1_cache
-        path: docker/ubuntu/16.04/cpu_ispc_build/cache.local
+        path: docker/ubuntu/18.04/cpu_ispc_build/cache.local
 
   linux-build-2:
     needs: [linux-build-1]
@@ -57,27 +57,27 @@ jobs:
       uses: actions/download-artifact@v2
       with:
         name: llvm12_linux_stage1_cache
-        path: docker/ubuntu/16.04/cpu_ispc_build/cache.local
+        path: docker/ubuntu/18.04/cpu_ispc_build/cache.local
 
     - name: Build LLVM
       run: |
-        cd docker/ubuntu/16.04/cpu_ispc_build
+        cd docker/ubuntu/18.04/cpu_ispc_build
         ls -al
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu16.04:stage2 --target=llvm_build_step2 --cache-from=type=local,src=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=12.0 --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu18.04:stage2 --target=llvm_build_step2 --cache-from=type=local,src=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=12.0 --output=type=tar,dest=result.tar .
 
     - name: Pack LLVM
       run: |
-        cd docker/ubuntu/16.04/cpu_ispc_build
+        cd docker/ubuntu/18.04/cpu_ispc_build
         tar xvf result.tar usr/local/src/llvm
         mv usr/local/src/llvm/bin-12.0 .
-        tar cJvf llvm-12.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz bin-12.0
+        tar cJvf llvm-12.0.1-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz bin-12.0
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm12_linux
-        path: docker/ubuntu/16.04/cpu_ispc_build/llvm-12.0.1-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+        path: docker/ubuntu/18.04/cpu_ispc_build/llvm-12.0.1-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
 
   linux-build-release-1:
     runs-on: ubuntu-latest
@@ -93,15 +93,15 @@ jobs:
 
     - name: Build LLVM
       run: |
-        cd docker/ubuntu/16.04/cpu_ispc_build
+        cd docker/ubuntu/18.04/cpu_ispc_build
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu16.04:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=12.0 --build-arg EXTRA_BUILD_ARG="--llvm-disable-assertions" .
+        docker buildx build --tag ispc/ubuntu18.04:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=12.0 --build-arg EXTRA_BUILD_ARG="--llvm-disable-assertions" .
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm12rel_linux_stage1_cache
-        path: docker/ubuntu/16.04/cpu_ispc_build/cache.local
+        path: docker/ubuntu/18.04/cpu_ispc_build/cache.local
 
   linux-build-release-2:
     needs: [linux-build-release-1]
@@ -120,27 +120,27 @@ jobs:
       uses: actions/download-artifact@v2
       with:
         name: llvm12rel_linux_stage1_cache
-        path: docker/ubuntu/16.04/cpu_ispc_build/cache.local
+        path: docker/ubuntu/18.04/cpu_ispc_build/cache.local
 
     - name: Build LLVM
       run: |
-        cd docker/ubuntu/16.04/cpu_ispc_build
+        cd docker/ubuntu/18.04/cpu_ispc_build
         ls -al
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu16.04:stage2 --target=llvm_build_step2 --cache-from=type=local,src=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=12.0 --build-arg EXTRA_BUILD_ARG="--llvm-disable-assertions" --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu18.04:stage2 --target=llvm_build_step2 --cache-from=type=local,src=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=12.0 --build-arg EXTRA_BUILD_ARG="--llvm-disable-assertions" --output=type=tar,dest=result.tar .
 
     - name: Pack LLVM
       run: |
-        cd docker/ubuntu/16.04/cpu_ispc_build
+        cd docker/ubuntu/18.04/cpu_ispc_build
         tar xvf result.tar usr/local/src/llvm
         mv usr/local/src/llvm/bin-12.0 .
-        tar cJvf llvm-12.0.1-ubuntu16.04-Release-x86.arm.wasm.tar.xz bin-12.0
+        tar cJvf llvm-12.0.1-ubuntu18.04-Release-x86.arm.wasm.tar.xz bin-12.0
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm12rel_linux
-        path: docker/ubuntu/16.04/cpu_ispc_build/llvm-12.0.1-ubuntu16.04-Release-x86.arm.wasm.tar.xz
+        path: docker/ubuntu/18.04/cpu_ispc_build/llvm-12.0.1-ubuntu18.04-Release-x86.arm.wasm.tar.xz
 
   win-build:
     runs-on: windows-latest
