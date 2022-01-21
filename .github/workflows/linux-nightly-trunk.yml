@@ -15,8 +15,8 @@ env:
   SDE_TAR_NAME: sde-external-8.69.1-2021-07-18
 
 jobs:
-  # Building LLVM in docker, as using native Ubuntu 16.04 github-hosted image contains newer-than-expected libs and
-  # makes the resulting build not usable on other Ubuntu 16.04 images.
+  # Building LLVM in docker, as using native Ubuntu 18.04 github-hosted image contains newer-than-expected libs and
+  # makes the resulting build not usable on other Ubuntu 18.04 images.
   # Doing Linux build in two stages, as self-build is required, but Github Action runners are not always capable
   # to finish the full job in less than 6 hours.
   linux-build-llvm-trunk-1:
@@ -33,15 +33,15 @@ jobs:
 
     - name: Build LLVM
       run: |
-        cd docker/ubuntu/16.04/cpu_ispc_build
+        cd docker/ubuntu/18.04/cpu_ispc_build
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu16.04:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=trunk .
+        docker buildx build --tag ispc/ubuntu18.04:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=trunk .
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm_trunk_linux_stage1_cache
-        path: docker/ubuntu/16.04/cpu_ispc_build/cache.local
+        path: docker/ubuntu/18.04/cpu_ispc_build/cache.local
 
   linux-build-llvm-trunk-2:
     needs: [linux-build-llvm-trunk-1]
@@ -60,35 +60,35 @@ jobs:
       uses: actions/download-artifact@v2
       with:
         name: llvm_trunk_linux_stage1_cache
-        path: docker/ubuntu/16.04/cpu_ispc_build/cache.local
+        path: docker/ubuntu/18.04/cpu_ispc_build/cache.local
 
     - name: Build LLVM
       run: |
-        cd docker/ubuntu/16.04/cpu_ispc_build
+        cd docker/ubuntu/18.04/cpu_ispc_build
         ls -al
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu16.04:stage2 --target=llvm_build_step2 --cache-from=type=local,src=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=trunk --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu18.04:stage2 --target=llvm_build_step2 --cache-from=type=local,src=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=trunk --output=type=tar,dest=result.tar .
 
     - name: Pack LLVM
       run: |
-        cd docker/ubuntu/16.04/cpu_ispc_build
+        cd docker/ubuntu/18.04/cpu_ispc_build
         tar xvf result.tar usr/local/src/llvm
         mv usr/local/src/llvm/bin-trunk .
         # Note using gzip here, instead of xz - trading of space for speed, as it's just for passing to another stage.
-        tar czvf llvm-trunk-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.gz bin-trunk
+        tar czvf llvm-trunk-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz bin-trunk
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm_trunk_linux
-        path: docker/ubuntu/16.04/cpu_ispc_build/llvm-trunk-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.gz
+        path: docker/ubuntu/18.04/cpu_ispc_build/llvm-trunk-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz
 
   linux-build-ispc-llvm-trunk:
     needs: [linux-build-llvm-trunk-2]
     runs-on: ubuntu-latest
     env:
       LLVM_VERSION: "trunk"
-      LLVM_TAR: llvm-trunk-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.gz
+      LLVM_TAR: llvm-trunk-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz
 
     steps:
     - uses: actions/checkout@v2
