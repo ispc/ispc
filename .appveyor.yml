@@ -1,4 +1,4 @@
-#  Copyright (c) 2018-2021, Intel Corporation
+#  Copyright (c) 2018-2022, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@ environment:
   LLVM_LATEST: 13.0
   DOCKER_PATH: "ispc/test_repo"
   matrix:
-    - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1604
+    - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
       LLVM_VERSION: latest
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       LLVM_VERSION: latest
@@ -103,14 +103,14 @@ for:
 -
   matrix:
     only:
-      - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1604
+      - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
   init:
     - sh: |-
         export ISPC_HOME=$APPVEYOR_BUILD_FOLDER
         export LLVM_HOME=$APPVEYOR_BUILD_FOLDER/llvm
         export CROSS_TOOLS=/usr/local/src/cross
         export WASM=OFF
-        export LLVM_TAR=llvm-13.0.0-ubuntu16.04-Release+Asserts-x86.arm.wasm.tar.xz
+        export LLVM_TAR=llvm-13.0.0-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
   install:
     - sh: |-
         sudo apt-get update
