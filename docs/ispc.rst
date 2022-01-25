@@ -1660,15 +1660,15 @@ For example:
 
 ::
 
-  float16 two_f16   = 2.0f16;               // 2.0
-  float16 pi_f16    = 0x1.92p+1f16;         // 3.1406
-  float16 neg_f16   = -65520.f16;           // -Inf
-  float   two_f     = 0x1p+1;               // 2.0
-  float   pi_f      = 0x1.921fb6p+1;        // 3.14159274
-  float   neg_f     = -0x1.ffep+11;         // -4095.0
-  double  two_d     = 2.0d;                 // 2.0
-  double  pi_d      = 0x1.921fb54442d18p+1; // 3.1415926535897931
-  double  neg_d     = -0.3333333333333333d; // -1/3
+  float16 two_f16   = 2.0f16;                // 2.0
+  float16 pi_f16    = 0x1.92p+1f16;          // 3.1406
+  float16 neg_f16   = -65520.f16;            // -Inf
+  float   two_f     = 0x1p+1;                // 2.0
+  float   pi_f      = 0x1.921fb6p+1;         // 3.14159274
+  float   neg_f     = -0x1.ffep+11;          // -4095.0
+  double  two_d     = 2.0d;                  // 2.0
+  double  pi_d      = 0x1.921fb54442d18p+1d; // 3.1415926535897931
+  double  neg_d     = -0.3333333333333333d;  // -1/3
 
 
 Also, "Fortran double" format is accepted - a scientific notation with a literal
