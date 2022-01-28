@@ -322,7 +322,9 @@ typedef enum {
 #ifdef ISPC_XE_ENABLED
     GPU_SKL,
     GPU_TGLLP,
-    GPU_XEHPG,
+    GPU_ACM_G10,
+    GPU_ACM_G11,
+    GPU_ACM_G12,
     GPU_PVC,
 #endif
     sizeofDeviceType
@@ -381,7 +383,9 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
 #ifdef ISPC_XE_ENABLED
     {GPU_SKL, {}},
     {GPU_TGLLP, {}},
-    {GPU_XEHPG, {}},
+    {GPU_ACM_G10, {}},
+    {GPU_ACM_G11, {}},
+    {GPU_ACM_G12, {}},
     {GPU_PVC, {}},
 #endif
 };
@@ -488,7 +492,13 @@ class AllCPUs {
         names[GPU_SKL].push_back("skl");
         names[GPU_TGLLP].push_back("tgllp");
         names[GPU_TGLLP].push_back("dg1");
-        names[GPU_XEHPG].push_back("dg2");
+        // ACM 512EU version
+        names[GPU_ACM_G10].push_back("acm-g10");
+        // ACM 128EU version
+        names[GPU_ACM_G11].push_back("acm-g11");
+        names[GPU_ACM_G11].push_back("dg2"); // It's here just for backward compatibility
+        // ACM 256EU version
+        names[GPU_ACM_G12].push_back("acm-g12");
         names[GPU_PVC].push_back("pvc");
 #endif
 
@@ -570,7 +580,9 @@ class AllCPUs {
 #ifdef ISPC_XE_ENABLED
         compat[GPU_SKL] = Set(GPU_SKL, CPU_None);
         compat[GPU_TGLLP] = Set(GPU_TGLLP, GPU_SKL, CPU_None);
-        compat[GPU_XEHPG] = Set(GPU_XEHPG, GPU_TGLLP, GPU_SKL, CPU_None);
+        compat[GPU_ACM_G10] = Set(GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_TGLLP, GPU_SKL, CPU_None);
+        compat[GPU_ACM_G11] = Set(GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_TGLLP, GPU_SKL, CPU_None);
+        compat[GPU_ACM_G12] = Set(GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_TGLLP, GPU_SKL, CPU_None);
         compat[GPU_PVC] = Set(GPU_PVC, GPU_SKL, CPU_None);
 #endif
     }
@@ -677,7 +689,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         case GPU_TGLLP:
             m_ispc_target = ISPCTarget::xelp_x16;
             break;
-        case GPU_XEHPG:
+        case GPU_ACM_G10:
+        case GPU_ACM_G11:
+        case GPU_ACM_G12:
             m_ispc_target = ISPCTarget::xehpg_x16;
             break;
         case GPU_PVC:
@@ -806,7 +820,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
     }
 
 #ifdef ISPC_XE_ENABLED
-    if ((ISPCTargetIsGen(m_ispc_target)) && (CPUID == GPU_TGLLP || CPUID == GPU_XEHPG)) {
+    if ((ISPCTargetIsGen(m_ispc_target)) &&
+        (CPUID == GPU_TGLLP || CPUID == GPU_ACM_G10 || CPUID == GPU_ACM_G11 || CPUID == GPU_ACM_G12)) {
         m_hasFp64Support = false;
     }
 
@@ -1298,7 +1313,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasTranscendentals = true;
         this->m_hasTrigonometry = true;
         this->m_hasGather = this->m_hasScatter = true;
-        CPUfromISA = GPU_XEHPG;
+        CPUfromISA = GPU_ACM_G11;
         break;
     case ISPCTarget::xehpg_x16:
         this->m_isa = Target::XEHPG;
@@ -1313,7 +1328,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasTranscendentals = true;
         this->m_hasTrigonometry = true;
         this->m_hasGather = this->m_hasScatter = true;
-        CPUfromISA = GPU_XEHPG;
+        CPUfromISA = GPU_ACM_G11;
         break;
     case ISPCTarget::xehpc_x16:
         this->m_isa = Target::XEHPC;
@@ -1937,7 +1952,9 @@ Target::XePlatform Target::getXePlatform() const {
         return XePlatform::gen9;
     case GPU_TGLLP:
         return XePlatform::xe_lp;
-    case GPU_XEHPG:
+    case GPU_ACM_G10:
+    case GPU_ACM_G11:
+    case GPU_ACM_G12:
         return XePlatform::xe_hpg;
     case GPU_PVC:
         return XePlatform::xe_hpc;
