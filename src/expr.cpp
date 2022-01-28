@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -7604,8 +7604,8 @@ llvm::Value *AllocaExpr::GetValue(FunctionEmitContext *ctx) const {
     llvm::Value *llvmValue = expr->GetValue(ctx);
     if (llvmValue == NULL)
         return NULL;
-    llvm::Value *resultPtr = ctx->AllocaInst((LLVMTypes::VoidPointerType)->getElementType(), llvmValue, "allocaExpr",
-                                             16, false); // 16 byte stack alignment.
+    llvm::Value *resultPtr = ctx->AllocaInst((LLVMTypes::VoidPointerType)->PTR_ELT_TYPE(), llvmValue, "allocaExpr", 16,
+                                             false); // 16 byte stack alignment.
     return resultPtr;
 }
 

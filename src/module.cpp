@@ -2748,7 +2748,7 @@ static void lExtractOrCheckGlobals(llvm::Module *msrc, llvm::Module *mdst, bool 
         llvm::GlobalVariable *gv = &*iter;
         // Is it a global definition?
         if (gv->getLinkage() == llvm::GlobalValue::ExternalLinkage && gv->hasInitializer()) {
-            llvm::Type *type = gv->getType()->getElementType();
+            llvm::Type *type = gv->getType()->PTR_ELT_TYPE();
             Symbol *sym = m->symbolTable->LookupVariable(gv->getName().str().c_str());
             Assert(sym != NULL);
 
