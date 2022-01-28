@@ -4327,7 +4327,7 @@ static bool lIsSafeToBlend(llvm::Value *lvalue) {
             llvm::Type *type = ai->getType();
             llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(type);
             Assert(pt != NULL);
-            type = pt->getElementType();
+            type = pt->PTR_ELT_TYPE();
             llvm::ArrayType *at;
             while ((at = llvm::dyn_cast<llvm::ArrayType>(type))) {
                 type = at->getElementType();

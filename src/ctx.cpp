@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -2150,7 +2150,7 @@ llvm::Value *FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int
 
     llvm::PointerType *llvmPtrType = llvm::dyn_cast<llvm::PointerType>(fullBasePtr->getType());
     if (llvmPtrType != NULL) {
-        llvm::StructType *llvmStructType = llvm::dyn_cast<llvm::StructType>(llvmPtrType->getElementType());
+        llvm::StructType *llvmStructType = llvm::dyn_cast<llvm::StructType>(llvmPtrType->PTR_ELT_TYPE());
         if (llvmStructType != NULL && llvmStructType->isSized() == false) {
             AssertPos(currentPos, m->errorCount > 0);
             return NULL;
@@ -2283,7 +2283,7 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, const Type *type, c
         new llvm::LoadInst(ptr, name.isTriviallyEmpty() ? (llvm::Twine(ptr->getName()) + "_load") : name, bblock);
 #endif
 
-    if (g->opt.forceAlignedMemory && llvm::dyn_cast<llvm::VectorType>(pt->getElementType())) {
+    if (g->opt.forceAlignedMemory && llvm::dyn_cast<llvm::VectorType>(pt->PTR_ELT_TYPE())) {
         inst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne());
     }
 
@@ -2972,7 +2972,7 @@ void FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr, const 
 
     llvm::StoreInst *inst = new llvm::StoreInst(value, ptr, bblock);
 
-    if (g->opt.forceAlignedMemory && llvm::dyn_cast<llvm::VectorType>(pt->getElementType())) {
+    if (g->opt.forceAlignedMemory && llvm::dyn_cast<llvm::VectorType>(pt->PTR_ELT_TYPE())) {
         inst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne());
     }
 
@@ -3271,7 +3271,7 @@ static unsigned int lCalleeArgCount(llvm::Value *callee, const FunctionType *fun
             // function that takes a mask
             return funcType->GetNumParameters() + 1;
         }
-        ft = llvm::dyn_cast<llvm::FunctionType>(pt->getElementType());
+        ft = llvm::dyn_cast<llvm::FunctionType>(pt->PTR_ELT_TYPE());
     }
 
     Assert(ft != NULL);
@@ -3617,8 +3617,8 @@ llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<ll
 
     llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(argType);
     AssertPos(currentPos, pt);
-    AssertPos(currentPos, llvm::StructType::classof(pt->getElementType()));
-    llvm::StructType *argStructType = static_cast<llvm::StructType *>(pt->getElementType());
+    AssertPos(currentPos, llvm::StructType::classof(pt->PTR_ELT_TYPE()));
+    llvm::StructType *argStructType = static_cast<llvm::StructType *>(pt->PTR_ELT_TYPE());
 
     llvm::Function *falloc = m->module->getFunction("ISPCAlloc");
     AssertPos(currentPos, falloc != NULL);

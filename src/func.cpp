@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2021, Intel Corporation
+  Copyright (c) 2011-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -175,7 +175,7 @@ static void lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const std::ve
     Assert(llvm::isa<llvm::PointerType>(structArgType));
     const llvm::PointerType *pt = llvm::dyn_cast<const llvm::PointerType>(structArgType);
     Assert(pt);
-    Assert(llvm::isa<llvm::StructType>(pt->getElementType()));
+    Assert(llvm::isa<llvm::StructType>(pt->PTR_ELT_TYPE()));
 
     // Get the type of the argument we're copying in and its Symbol pointer
     Symbol *sym = args[i];
