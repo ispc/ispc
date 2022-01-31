@@ -18,9 +18,10 @@ RUN uname -a
 RUN apt-get -y update && apt-get install -y wget build-essential gcc g++ git python3 ncurses-dev libtinfo-dev && \
     rm -rf /var/lib/apt/lists/*
 
-# Download and install required version of cmake (3.13) for ISPC build
-RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/Kitware/CMake/releases/download/v3.13.5/cmake-3.13.5-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.13.5-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && \
-    ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm cmake-3.13.5-Linux-x86_64.sh
+# Download and install required version of cmake (3.14 for x86, 3.20 for aarch64, as earlier versions are not available as binary distribution) for ISPC build
+RUN if [[ `uname -m` =~ "x86" ]]; then export CMAKE_URL="https://cmake.org/files/v3.14/cmake-3.14.0-Linux-x86_64.sh"; else export CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v3.20.3/cmake-3.20.3-linux-aarch64.sh"; fi && \
+    wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 $CMAKE_URL && mkdir /opt/cmake && sh cmake-*.sh --prefix=/opt/cmake --skip-license && \
+    ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm -rf cmake-*.sh
 
 # If you are behind a proxy, you need to configure git.
 RUN if [ -v "$http_proxy" ]; then git config --global --add http.proxy "$http_proxy"; fi
@@ -65,16 +66,17 @@ ARG LLVM_VERSION
 
 # ISPC builds in C++17 mode and will fail without modern libstdc++
 # Also install regular ISPC dependencies
-RUN apt-get -y update && apt-get install -y software-properties-common && \
+RUN if [[ `uname -m` =~ "x86" ]]; then export CROSS_LIBS="libc6-dev-i386"; else export CROSS_LIBS="libc6-dev-armhf-cross"; fi && \
+    apt-get -y update && apt-get install -y software-properties-common && \
     add-apt-repository ppa:ubuntu-toolchain-r/test -y && apt-get -y update && \
     apt-get -y update && apt-get install -y libstdc++-9-dev && \
-    apt-get install -y m4 bison flex zlib1g-dev libc6-dev-i386 && \
+    apt-get install -y m4 bison flex zlib1g-dev $CROSS_LIBS && \
     rm -rf /var/lib/apt/lists/*
 
 # Configure ISPC build
 RUN mkdir build_$LLVM_VERSION
 WORKDIR build_$LLVM_VERSION
-RUN cmake ../ -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_INSTALL_PREFIX=/usr/local/src/ispc/bin-$LLVM_VERSION -DCMAKE_CXX_FLAGS=-Werror
+RUN cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/src/ispc/bin-$LLVM_VERSION -DCMAKE_CXX_FLAGS=-Werror
 
 # Build ISPC
 RUN make ispc -j8 && make check-all && make install
