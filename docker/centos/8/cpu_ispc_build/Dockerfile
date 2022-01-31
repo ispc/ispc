@@ -17,9 +17,12 @@ RUN dnf -y update && dnf install -y wget yum-utils gcc gcc-c++ git python3 make 
     dnf clean -y all
 
 # These packages are required if you need to link IPSC with -static.
-# TODO: build ncurses static version manually.
 RUN dnf -y --enablerepo=powertools install libstdc++-static zlib-static && \
     dnf clean -y all
+
+# Ncurses for g++ --static -lcurses -ltinfo. Despite setting --enable-overwrite it doesn't link(only static not linked?) libncurses as libcurses so symlinked manually
+RUN git clone https://github.com/ThomasDickey/ncurses-snapshots.git --depth=1 && cd ncurses-snapshots && ./configure --with-termlib --with-libtool --with-libtool-opts=-static --enable-static --enable-overwrite && make -j8 && make install && \
+  ln -s /usr/lib/libncurses.a /usr/lib/libcurses.a && ln -s /usr/lib/libncurses++.a /usr/lib/libcurses++.a
 
 # Download and install required version of cmake (3.14 for x86, 3.20 for aarch64, as earlier versions are not available as binary distribution) for ISPC build
 RUN if [[ `uname -m` =~ "x86" ]]; then export CMAKE_URL="https://cmake.org/files/v3.14/cmake-3.14.0-Linux-x86_64.sh"; else export CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v3.20.3/cmake-3.20.3-linux-aarch64.sh"; fi && \
