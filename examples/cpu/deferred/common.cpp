@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011, Intel Corporation
+  Copyright (c) 2011-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -34,10 +34,12 @@
 #ifdef _MSC_VER
 #define _CRT_SECURE_NO_WARNINGS
 #define ISPC_IS_WINDOWS
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__FreeBSD__)
 #define ISPC_IS_LINUX
 #elif defined(__APPLE__)
 #define ISPC_IS_APPLE
+#else
+#error "Host OS was not detected"
 #endif
 
 #include <algorithm>
@@ -66,28 +68,28 @@
 static void *lAlignedMalloc(size_t size, int32_t alignment) {
 #ifdef ISPC_IS_WINDOWS
     return _aligned_malloc(size, alignment);
-#endif
-#ifdef ISPC_IS_LINUX
+#elif defined ISPC_IS_LINUX
     return memalign(alignment, size);
-#endif
-#ifdef ISPC_IS_APPLE
+#elif defined ISPC_IS_APPLE
     void *mem = malloc(size + (alignment - 1) + sizeof(void *));
     char *amem = ((char *)mem) + sizeof(void *);
     amem = amem + uint32_t(alignment - (reinterpret_cast<uint64_t>(amem) & (alignment - 1)));
     ((void **)amem)[-1] = mem;
     return amem;
+#else
+#error "Host OS was not detected"
 #endif
 }
 
 static void lAlignedFree(void *ptr) {
 #ifdef ISPC_IS_WINDOWS
     _aligned_free(ptr);
-#endif
-#ifdef ISPC_IS_LINUX
+#elif defined ISPC_IS_LINUX
     free(ptr);
-#endif
-#ifdef ISPC_IS_APPLE
+#elif defined ISPC_IS_APPLE
     free(((void **)ptr)[-1]);
+#else
+#error "Host OS was not detected"
 #endif
 }
 
