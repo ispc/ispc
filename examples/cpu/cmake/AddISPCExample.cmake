@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2020, Intel Corporation
+#  Copyright (c) 2018-2022, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -38,7 +38,7 @@ include_guard(DIRECTORY)
 
 if (UNIX)
     if(NOT ISPC_ARCH)
-        execute_process( COMMAND bash "-c" "uname -m | sed -e s/x86_64/x86/ -e s/amd64/x86/ -e s/i686/x86/ -e s/arm64/aarch64/ -e s/arm.*/arm/ -e s/sa110/arm/" OUTPUT_VARIABLE ARCH)
+        execute_process( COMMAND sh "-c" "uname -m | sed -e s/x86_64/x86/ -e s/amd64/x86/ -e s/i686/x86/ -e s/arm64/aarch64/ -e s/arm.*/arm/ -e s/sa110/arm/" OUTPUT_VARIABLE ARCH)
 
         string(STRIP ${ARCH} ARCH)
         execute_process( COMMAND getconf LONG_BIT OUTPUT_VARIABLE ARCH_BIT)
