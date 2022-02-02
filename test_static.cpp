@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -35,10 +35,12 @@
 #define ISPC_IS_WASM
 #elif defined(_WIN32) || defined(_WIN64)
 #define ISPC_IS_WINDOWS
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__FreeBSD__)
 #define ISPC_IS_LINUX
 #elif defined(__APPLE__)
 #define ISPC_IS_APPLE
+#else
+#error "Host OS was not detected"
 #endif
 
 #if defined(_WIN64)
@@ -53,10 +55,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#ifdef ISPC_IS_LINUX
-#include <malloc.h>
-#endif
-#ifdef ISPC_IS_WASM
+#if defined ISPC_IS_LINUX || defined ISPC_IS_WASM
 #include <malloc.h>
 #endif
 
@@ -127,23 +126,16 @@ void *ISPCAlloc(void **handle, int64_t size, int32_t alignment) {
     // and now, we leak...
 #ifdef ISPC_IS_WINDOWS
     return _aligned_malloc(size, alignment);
-#endif
-#ifdef ISPC_IS_LINUX
+#elif defined ISPC_IS_LINUX
     return memalign(alignment, size);
-#endif
-#ifdef ISPC_IS_APPLE
+#elif defined ISPC_IS_APPLE || defined ISPC_IS_WASM
     void *mem = malloc(size + (alignment - 1) + sizeof(void *));
     char *amem = ((char *)mem) + sizeof(void *);
     amem = amem + uint32_t(alignment - (reinterpret_cast<uint64_t>(amem) & (alignment - 1)));
     ((void **)amem)[-1] = mem;
     return amem;
-#endif
-#ifdef ISPC_IS_WASM
-    void *mem = malloc(size + (alignment - 1) + sizeof(void *));
-    char *amem = ((char *)mem) + sizeof(void *);
-    amem = amem + uint32_t(alignment - (reinterpret_cast<uint64_t>(amem) & (alignment - 1)));
-    ((void **)amem)[-1] = mem;
-    return amem;
+#else
+#error "Host OS was not detected"
 #endif
 }
 
