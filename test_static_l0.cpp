@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019-2021, Intel Corporation
+  Copyright (c) 2019-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -36,7 +36,11 @@
 #elif defined(__linux__)
 #define ISPC_IS_LINUX
 #elif defined(__APPLE__)
-#define ISPC_IS_APPLE
+#error "L0 is not supported on macOS"
+#elif defined(__FreeBSD__)
+#error "L0 is not supported on FreeBSD"
+#else
+#error "Host OS was not detected"
 #endif
 
 #ifdef ISPC_IS_WINDOWS
