@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 #include "target_registry.h"
 
 #if ISPC_LLVM_VERSION < OLDEST_SUPPORTED_LLVM || ISPC_LLVM_VERSION > LATEST_SUPPORTED_LLVM
-#error "Only LLVM 11.0 - 13.0 and 14.0 development branch are supported"
+#error "Only LLVM 11.0 - 14.0 and 15.0 development branch are supported"
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
