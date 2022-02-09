@@ -1,6 +1,6 @@
 ARG LLVM_VERSION=12.0
 
-FROM centos:8 AS llvm_only
+FROM rockylinux:8 AS llvm_only
 MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
 SHELL ["/bin/bash", "-c"]
 
@@ -21,7 +21,7 @@ RUN dnf -y --enablerepo=powertools install libstdc++-static zlib-static && \
     dnf clean -y all
 
 # Ncurses for g++ --static -lcurses -ltinfo. Despite setting --enable-overwrite it doesn't link(only static not linked?) libncurses as libcurses so symlinked manually
-RUN git clone https://github.com/ThomasDickey/ncurses-snapshots.git --depth=1 && cd ncurses-snapshots && ./configure --with-termlib --with-libtool --with-libtool-opts=-static --enable-static --enable-overwrite && make -j8 && make install && \
+RUN git clone https://github.com/ThomasDickey/ncurses-snapshots.git --depth=1 --branch=v6_3 && cd ncurses-snapshots && ./configure --with-termlib --with-libtool --with-libtool-opts=-static --enable-static --enable-overwrite && make -j8 && make install && \
   ln -s /usr/lib/libncurses.a /usr/lib/libcurses.a && ln -s /usr/lib/libncurses++.a /usr/lib/libcurses++.a
 
 # Download and install required version of cmake (3.14 for x86, 3.20 for aarch64, as earlier versions are not available as binary distribution) for ISPC build
