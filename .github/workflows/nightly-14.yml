@@ -175,7 +175,7 @@ jobs:
 
 
   win-build-llvm-14:
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
     - uses: actions/checkout@v2
@@ -220,7 +220,7 @@ jobs:
 
   win-build-ispc-llvm-14:
     needs: [win-build-llvm-14]
-    runs-on: windows-latest
+    runs-on: windows-2022
     env:
       LLVM_VERSION: "14.0"
       LLVM_TAR: llvm-14.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
@@ -270,7 +270,7 @@ jobs:
     needs: [win-build-ispc-llvm-14]
     env:
       LLVM_HOME: "C:\\projects\\llvm"
-    runs-on: windows-latest
+    runs-on: windows-2022
     continue-on-error: false
     strategy:
       fail-fast: false
