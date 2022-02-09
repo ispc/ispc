@@ -31,7 +31,7 @@ do
 done
 
 find /usr -name cdefs.h || echo "Find errors were ignored"
-wget -U "$USER_AGENT" --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://software.intel.com/content/dam/develop/external/us/en/documents/downloads/"$SDE_TAR_NAME"-lin.tar.bz2
+wget -U "$USER_AGENT" --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://downloadmirror.intel.com/"$SDE_MIRROR_ID"/"$SDE_TAR_NAME"-lin.tar.xz
 tar xf "$SDE_TAR_NAME"-lin.tar.bz2
 tar xf ispc-trunk-linux.tar.gz
 
