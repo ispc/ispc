@@ -143,7 +143,7 @@ jobs:
         path: docker/ubuntu/18.04/cpu_ispc_build/llvm-13.0.1-ubuntu18.04-Release-x86.arm.wasm.tar.xz
 
   win-build:
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
     - uses: actions/checkout@v2
@@ -186,7 +186,7 @@ jobs:
         path: llvm/llvm-13.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
 
   win-build-release:
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
     - uses: actions/checkout@v2
