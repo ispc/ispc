@@ -11,8 +11,8 @@ ARG LLVM_VERSION
 # !!! Make sure that your docker config provides enough memory to the container,
 # otherwise LLVM build may fail, as it will use all the cores available to container.
 
-# Packages required to build ISPC and Clang.
-RUN dnf -y update && dnf install -y wget yum-utils gcc gcc-c++ git python3 make ncurses-devel zlib-devel xz && \
+# Packages required to build ISPC and Clang. libtool is needed to build ncurses.
+RUN dnf -y update && dnf install -y wget yum-utils gcc gcc-c++ git python3 make ncurses-devel zlib-devel xz libtool && \
 #    yum install -y libtool autopoint gettext-devel texinfo help2man && \
     dnf clean -y all
 
