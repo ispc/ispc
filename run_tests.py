@@ -101,6 +101,9 @@ class TargetConfig(object):
             # Alias all of acm-* devices to dg2.
             if cpu.startswith("acm-"):
                 self.cpu = "dg2"
+            # Alias all of mtl-* devices to mtl.
+            if cpu.startswith("mtl-"):
+                self.cpu = "mtl"
         else:
             self.cpu = "unspec"
 
