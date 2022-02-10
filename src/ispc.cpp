@@ -347,6 +347,8 @@ typedef enum {
     GPU_ACM_G11,
     GPU_ACM_G12,
     GPU_PVC,
+    GPU_MTL_M,
+    GPU_MTL_P,
 #endif
     sizeofDeviceType
 } DeviceType;
@@ -407,6 +409,8 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {GPU_ACM_G11, {}},
     {GPU_ACM_G12, {}},
     {GPU_PVC, {}},
+    {GPU_MTL_M, {}},
+    {GPU_MTL_P, {}},
 #endif
 };
 
@@ -521,6 +525,8 @@ class AllCPUs {
         // ACM 256EU version
         names[GPU_ACM_G12].push_back("acm-g12");
         names[GPU_PVC].push_back("pvc");
+        names[GPU_MTL_M].push_back("mtl-m");
+        names[GPU_MTL_P].push_back("mtl-p");
 #endif
 
         Assert(names.size() == sizeofDeviceType);
@@ -606,6 +612,10 @@ class AllCPUs {
         compat[GPU_ACM_G11] = Set(GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_TGLLP, GPU_SKL, CPU_None);
         compat[GPU_ACM_G12] = Set(GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_TGLLP, GPU_SKL, CPU_None);
         compat[GPU_PVC] = Set(GPU_PVC, GPU_SKL, CPU_None);
+        compat[GPU_MTL_M] =
+            Set(GPU_MTL_M, GPU_MTL_P, GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_ACM_G11, GPU_TGLLP, GPU_SKL, CPU_None);
+        compat[GPU_MTL_P] =
+            Set(GPU_MTL_M, GPU_MTL_P, GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_ACM_G11, GPU_TGLLP, GPU_SKL, CPU_None);
 #endif
     }
 
@@ -717,6 +727,10 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
             break;
         case GPU_PVC:
             m_ispc_target = ISPCTarget::xehpc_x16;
+            break;
+        case GPU_MTL_M:
+        case GPU_MTL_P:
+            m_ispc_target = ISPCTarget::xelpg_x16;
             break;
 #endif
 
@@ -1497,6 +1511,38 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         this->m_hasGather = this->m_hasScatter = true;
         CPUfromISA = GPU_PVC;
         break;
+    case ISPCTarget::xelpg_x8:
+        this->m_isa = Target::XELPG;
+        this->m_nativeVectorWidth = 8;
+        this->m_nativeVectorAlignment = 64;
+        this->m_vectorWidth = 8;
+        this->m_dataTypeWidth = 32;
+        this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasSaturatingArithmetic = true;
+        this->m_hasTranscendentals = true;
+        this->m_hasTrigonometry = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        CPUfromISA = GPU_MTL_P;
+        break;
+    case ISPCTarget::xelpg_x16:
+        this->m_isa = Target::XELPG;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 64;
+        this->m_vectorWidth = 16;
+        this->m_dataTypeWidth = 32;
+        this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasSaturatingArithmetic = true;
+        this->m_hasTranscendentals = true;
+        this->m_hasTrigonometry = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        CPUfromISA = GPU_MTL_P;
+        break;
 #else
     case ISPCTarget::gen9_x8:
     case ISPCTarget::gen9_x16:
@@ -1506,6 +1552,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
     case ISPCTarget::xehpg_x16:
     case ISPCTarget::xehpc_x16:
     case ISPCTarget::xehpc_x32:
+    case ISPCTarget::xelpg_x8:
+    case ISPCTarget::xelpg_x16:
         unsupported_target = true;
         break;
 #endif
@@ -1981,6 +2029,8 @@ const char *Target::ISAToString(ISA isa) {
         return "xehpg";
     case Target::XEHPC:
         return "xehpc";
+    case Target::XELPG:
+        return "xelpg";
 #endif
     default:
         FATAL("Unhandled target in ISAToString()");
@@ -2012,6 +2062,8 @@ const char *Target::ISAToTargetString(ISA isa) {
         return "xehpg-x16";
     case Target::XEHPC:
         return "xehpc-x16";
+    case Target::XELPG:
+        return "xelpg-x16";
 #endif
     case Target::SSE2:
         return "sse2-i32x4";
@@ -2148,6 +2200,9 @@ Target::XePlatform Target::getXePlatform() const {
         return XePlatform::xe_hpg;
     case GPU_PVC:
         return XePlatform::xe_hpc;
+    case GPU_MTL_M:
+    case GPU_MTL_P:
+        return XePlatform::xe_lpg;
     default:
         return XePlatform::gen9;
     }
@@ -2159,6 +2214,8 @@ uint32_t Target::getXeGrfSize() const {
     case XePlatform::gen9:
     case XePlatform::xe_lp:
     case XePlatform::xe_hpg:
+        return 32;
+    case XePlatform::xe_lpg:
         return 32;
     case XePlatform::xe_hpc:
         return 64;

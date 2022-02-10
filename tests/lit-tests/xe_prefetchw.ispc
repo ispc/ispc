@@ -4,6 +4,7 @@
 // RUN: %{ispc} %s --target=xelp-x16 --arch=xe64 --emit-llvm-text --nowrap -o - | FileCheck -check-prefix=CHECK_NO_PREFETCH %s
 // RUN: %{ispc} %s --target=xehpg-x16 --arch=xe64 --emit-llvm-text --nowrap -o - | FileCheck -check-prefix=CHECK_NO_PREFETCH %s
 // RUN: %{ispc} %s --target=xehpc-x16 --arch=xe64 --emit-llvm-text --nowrap -o - | FileCheck -check-prefix=CHECK_NO_PREFETCH %s
+// RUN: %{ispc} %s --target=xelpg-x16 --arch=xe64 --emit-llvm-text --nowrap -o - | FileCheck -check-prefix=CHECK_NO_PREFETCH %s
 
 // REQUIRES: XE_ENABLED
 
