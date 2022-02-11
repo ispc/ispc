@@ -168,14 +168,14 @@ jobs:
     - name: Build LLVM
       shell: cmd
       run: |
-        python ./alloy.py -b --version=13.0 --verbose
+        python ./alloy.py -b --version=13.0 --verbose --generator="Visual Studio 17 2022"
         cd alloy_results* && type alloy_build.log
 
     - name: Pack LLVM
       shell: cmd
       run: |
         cd llvm
-        set TAR_BASE_NAME=llvm-13.0.1-win.vs2019-Release+Asserts-x86.arm.wasm
+        set TAR_BASE_NAME=llvm-13.0.1-win.vs2022-Release+Asserts-x86.arm.wasm
         7z.exe a -ttar -snl %TAR_BASE_NAME%.tar bin-13.0
         7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
 
@@ -183,7 +183,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: llvm13_win
-        path: llvm/llvm-13.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+        path: llvm/llvm-13.0.1-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z
 
   win-build-release:
     runs-on: windows-2022
@@ -211,14 +211,14 @@ jobs:
     - name: Build LLVM
       shell: cmd
       run: |
-        python ./alloy.py -b --version=13.0 --verbose --llvm-disable-assertions
+        python ./alloy.py -b --version=13.0 --verbose --llvm-disable-assertions --generator="Visual Studio 17 2022"
         cd alloy_results* && type alloy_build.log
 
     - name: Pack LLVM
       shell: cmd
       run: |
         cd llvm
-        set TAR_BASE_NAME=llvm-13.0.1-win.vs2019-Release-x86.arm.wasm
+        set TAR_BASE_NAME=llvm-13.0.1-win.vs2022-Release-x86.arm.wasm
         7z.exe a -ttar -snl %TAR_BASE_NAME%.tar bin-13.0
         7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
 
@@ -226,7 +226,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: llvm13rel_win
-        path: llvm/llvm-13.0.1-win.vs2019-Release-x86.arm.wasm.tar.7z
+        path: llvm/llvm-13.0.1-win.vs2022-Release-x86.arm.wasm.tar.7z
 
   mac-build:
     runs-on: macos-10.15
