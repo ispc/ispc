@@ -30,6 +30,8 @@ struct GPUDevice : public base::Device {
 
     base::Module *newModule(const char *moduleFile, const ISPCRTModuleOptions &opts) const override;
 
+    void linkModules(base::Module **modules, const uint32_t numModules) const override;
+
     base::Kernel *newKernel(const base::Module &module, const char *name) const override;
 
     void *platformNativeHandle() const override;

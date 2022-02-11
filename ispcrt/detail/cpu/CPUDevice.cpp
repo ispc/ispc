@@ -221,6 +221,8 @@ ispcrt::base::Module *CPUDevice::newModule(const char *moduleFile, const ISPCRTM
     return new cpu::Module(moduleFile);
 }
 
+void CPUDevice::linkModules(base::Module **modules, const uint32_t numModules) const {}
+
 ispcrt::base::Kernel *CPUDevice::newKernel(const ispcrt::base::Module &module, const char *name) const {
     return new cpu::Kernel(module, name);
 }

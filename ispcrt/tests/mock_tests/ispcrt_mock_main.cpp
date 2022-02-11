@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Intel Corporation
+// Copyright 2020-2022 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "ispcrt.hpp"
@@ -174,6 +174,33 @@ TEST_F(MockTestWithDevice, Module_Constructor_zeModuleCreate) {
     // Check if error is reported from module constructor
     Config::setRetValue("zeModuleCreate", ZE_RESULT_ERROR_DEVICE_LOST);
     ispcrt::Module m(m_device, "");
+    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+}
+
+/////////////////////////////////////////////////////////////////////
+// Dynamic binary linking tests
+
+TEST_F(MockTestWithDevice, Module_DynamicLink) {
+    // Create 2 modules and link them
+    ASSERT_NE(m_device, 0);
+    ispcrt::Module m1(m_device, "");
+    ispcrt::Module m2(m_device, "");
+    Config::setRetValue("zeModuleBuildLogDestroy", ZE_RESULT_SUCCESS);
+    std::array<ISPCRTModule, 2> modules = {
+        (ISPCRTModule)m1.handle(), (ISPCRTModule)m2.handle()};
+    m_device.linkModules(modules.data(), modules.size());
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTestWithDevice, Module_DynamicLink_zeModuleDynamicLink) {
+    // Check if error is reported when zeModuleDynamicLink is not successful
+    ASSERT_NE(m_device, 0);
+    ispcrt::Module m1(m_device, "");
+    ispcrt::Module m2(m_device, "");
+    Config::setRetValue("zeModuleDynamicLink", ZE_RESULT_ERROR_DEVICE_LOST);
+    std::array<ISPCRTModule, 2> modules = {
+        (ISPCRTModule)m1.handle(), (ISPCRTModule)m2.handle()};
+    m_device.linkModules(modules.data(), modules.size());
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
 }
 

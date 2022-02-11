@@ -256,15 +256,23 @@ void *ispcrtSharedPtr(ISPCRTMemoryView h) ISPCRT_CATCH_BEGIN {
 ISPCRT_CATCH_END(nullptr)
 
 ///////////////////////////////////////////////////////////////////////////////
-// Kernels ////////////////////////////////////////////////////////////////////
+// Modules ////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
 ISPCRTModule ispcrtLoadModule(ISPCRTDevice d, const char *moduleFile,
                               ISPCRTModuleOptions moduleOpts) ISPCRT_CATCH_BEGIN {
     const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
-    return (ISPCRTModule)device.newModule(moduleFile, moduleOpts);
+    auto module = (ISPCRTModule)device.newModule(moduleFile, moduleOpts);
+    return module;
+
 }
 ISPCRT_CATCH_END(nullptr)
+
+void ispcrtLinkModules(ISPCRTDevice d, ISPCRTModule *modules, const uint32_t numModules) ISPCRT_CATCH_BEGIN {
+    const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
+    device.linkModules((ispcrt::base::Module **)modules, numModules);
+}
+ISPCRT_CATCH_END()
 
 ISPCRTKernel ispcrtNewKernel(ISPCRTDevice d, ISPCRTModule m, const char *name) ISPCRT_CATCH_BEGIN {
     const auto &device = referenceFromHandle<ispcrt::base::Device>(d);

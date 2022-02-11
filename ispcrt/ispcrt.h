@@ -113,12 +113,23 @@ size_t ispcrtSize(ISPCRTMemoryView);
 ISPCRTAllocationType ispcrtGetMemoryViewAllocType(ISPCRTMemoryView);
 ISPCRTAllocationType ispcrtGetMemoryAllocType(ISPCRTDevice d, void* memBuffer);
 
-// Kernels ////////////////////////////////////////////////////////////////////
-typedef struct {
-    uint32_t stackSize;
-} ISPCRTModuleOptions;
+// Modules ////////////////////////////////////////////////////////////////////
+typedef enum {
+    // Module using IGC VC backend
+    ISPCRT_VECTOR_MODULE = 0,
+    // Module using IGC scalar backend
+    ISPCRT_SCALAR_MODULE,
+} ISPCRTModuleType;
+
+struct ISPCRTModuleOptions_ {
+    uint32_t stackSize{0};
+    bool libraryCompilation{false};
+    ISPCRTModuleType moduleType{ISPCRTModuleType::ISPCRT_VECTOR_MODULE};
+};
+typedef struct ISPCRTModuleOptions_ ISPCRTModuleOptions;
 
 ISPCRTModule ispcrtLoadModule(ISPCRTDevice, const char *moduleFile, ISPCRTModuleOptions);
+void ispcrtLinkModules(ISPCRTDevice, ISPCRTModule *modules, uint32_t numModules);
 ISPCRTKernel ispcrtNewKernel(ISPCRTDevice, ISPCRTModule, const char *name);
 
 // Task queues ////////////////////////////////////////////////////////////////

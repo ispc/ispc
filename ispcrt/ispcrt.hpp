@@ -102,7 +102,6 @@ inline uint64_t Future::time() const { return ispcrtFutureGetTimeNs(handle()); }
 /////////////////////////////////////////////////////////////////////////////
 // Device wrapper ///////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
-
 class Device : public GenericObject<ISPCRTDevice> {
   public:
     Device() = default;
@@ -119,6 +118,8 @@ class Device : public GenericObject<ISPCRTDevice> {
     static uint32_t deviceCount(ISPCRTDeviceType type);
     static ISPCRTDeviceInfo deviceInformation(ISPCRTDeviceType type, uint32_t deviceIdx);
     static std::vector<ISPCRTDeviceInfo> allDevicesInformation(ISPCRTDeviceType type);
+    // link modules
+    void linkModules(ISPCRTModule* modules, const uint32_t num);
 };
 
 // Inlined definitions //
@@ -147,6 +148,10 @@ inline std::vector<ISPCRTDeviceInfo> Device::allDevicesInformation(ISPCRTDeviceT
         ispcrtGetDeviceInfo(type, i, &devInfo[i]);
     }
     return devInfo;
+}
+
+inline void Device::linkModules(ISPCRTModule* modules, const uint32_t num) {
+    ispcrtLinkModules(handle(), (ISPCRTModule*)modules, num);
 }
 
 /////////////////////////////////////////////////////////////////////////////
