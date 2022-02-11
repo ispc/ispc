@@ -1,18 +1,18 @@
-## Copyright 2021 Intel Corporation
+## Copyright 2021-2022 Intel Corporation
 ## SPDX-License-Identifier: BSD-3-Clause
 
 ###############################################################################
-## Definititions for ISPC/ESIMD interoperability ##############################
+## Definititions for ISPC/ESIMD and ISPC/DPC++ interoperability ###############
 ###############################################################################
 
 # This module contains helper functions allowing to link several modules on
 # LLVM IR level and translate final module to SPIR-V format.
-# For ISPC the workflow is easy:
+# For ISPC and DPC++ SYCL the workflow is easy:
 #   1. compile to bitcode
 # This bitcode file is ready to be linked with others and translated to .spv.
-# For DPC++:
+# For DPC++ ESIMD:
 #   1. extract ESIMD bitcode using clang-offload-bundler from DPC++ library
-#   3. lower extracted bitcode to real VC backend intrinsics using sycl-post-link
+#   2. lower extracted bitcode to real VC backend intrinsics using sycl-post-link
 # Lowered bitcode file can be linked with ISPC bitcode using llvm-link and
 # translated then to .spv with llvm-spirv.
 
@@ -23,10 +23,11 @@ find_package(dpcpp_compiler REQUIRED)
 set(CMAKE_MODULE_PATH ${OLD_CMAKE_MODULE_PATH})
 unset(OLD_CMAKE_MODULE_PATH)
 
-# Create DPCPP library
+# Create DPCPP library or SPIR-V file
 # target_name: name of the target to use for the created library
 # ARGN: DPCPP source files
 function (add_dpcpp_library target_name)
+    cmake_parse_arguments(PARSE_ARGV 1 DPCPP "SPV" "" "")
     set(outdir ${CMAKE_CURRENT_BINARY_DIR})
 
     set(DPCPP_CXX_FLAGS "")
@@ -35,14 +36,14 @@ function (add_dpcpp_library target_name)
     elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
         set(DPCPP_CXX_FLAGS "-g")
     elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo")
-        set(DPCPP_CXX_FLAGS "-O2 -g")
+        set(DPCPP_CXX_FLAGS "-O2" "-g")
     else()
         message(FATAL_ERROR "add_dpcpp_library only supports Debug;Release;RelWithDebInfo build configs")
     endif()
 
     # Compile each DPCPP file
-    set(DPCPP_OBJECTS "")
-    foreach(src ${ARGN})
+    set(DPCPP_RESULTS "")
+    foreach(src ${DPCPP_UNPARSED_ARGUMENTS})
         get_filename_component(fname ${src} NAME_WE)
 
         # If input path is not absolute, prepend ${CMAKE_CURRENT_LIST_DIR}
@@ -51,8 +52,11 @@ function (add_dpcpp_library target_name)
         else()
             set(input ${src})
         endif()
-
-        set(result "${outdir}/${fname}.o")
+        if (DPCPP_SPV)
+            set(result "${outdir}/${fname}.spv")
+        else()
+            set(result "${outdir}/${fname}.o")
+        endif()
 
         if(DPCPP_CUSTOM_INCLUDE_DIR)
             string(REPLACE ";" ";-I;" DPCPP_CUSTOM_INCLUDE_DIR_PARMS "${DPCPP_CUSTOM_INCLUDE_DIR}")
@@ -60,7 +64,14 @@ function (add_dpcpp_library target_name)
         endif()
 
         if (NOT DPCPP_CUSTOM_FLAGS)
-            set (DPCPP_CUSTOM_FLAGS "")
+            if (DPCPP_SPV)
+                # Get only SYCL device code to SPIR-V
+                # WA: SYCL assert implementation should be treated separately.
+                # Disable usage of asserts for now with "-DSYCL_DISABLE_FALLBACK_ASSERT=1"
+                set (DPCPP_CUSTOM_FLAGS "-fsycl-device-only" "-fno-sycl-use-bitcode" "-DSYCL_DISABLE_FALLBACK_ASSERT=1")
+            else()
+                set (DPCPP_CUSTOM_FLAGS "")
+            endif()
         endif()
 
         add_custom_command(
@@ -79,13 +90,16 @@ function (add_dpcpp_library target_name)
             COMMENT "Building DPCPP object ${result}"
         )
 
-        list(APPEND DPCPP_OBJECTS ${result})
+        list(APPEND DPCPP_RESULTS ${result})
     endforeach()
-
-    add_library(${target_name} STATIC)
-    set_target_properties(${target_name} PROPERTIES
-        LINKER_LANGUAGE CXX
-        SOURCES "${DPCPP_OBJECTS}")
+    if (DPCPP_SPV)
+        add_custom_target(${target_name} DEPENDS ${DPCPP_RESULTS})
+    else()
+        add_library(${target_name} STATIC)
+        set_target_properties(${target_name} PROPERTIES
+            LINKER_LANGUAGE CXX
+            SOURCES "${DPCPP_RESULTS}")
+    endif()
 endfunction()
 
 # Extract esimd bitcode
