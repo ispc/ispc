@@ -560,11 +560,20 @@ struct Module : public ispcrt::base::Module {
         // + or = sign. '+' means that the content of the variable should
         // be added to the default igc options, while '=' will replace
         // the options with the content of the env var.
-        std::string igcOptions = "-vc-codegen -no-optimize -Xfinalizer '-presched'";
+        std::string igcOptions;
+        // If scalar module is passed to ISPC Runtime, do not use VC backend
+        // options on it
+        if (opts.moduleType != ISPCRTModuleType::ISPCRT_SCALAR_MODULE) {
+            igcOptions += "-vc-codegen -no-optimize -Xfinalizer '-presched'";
+        }
         // If stackSize has default value 0, do not set -stateless-stack-mem-size,
         // it will be set to 8192 in VC backend by default.
         if (opts.stackSize > 0) {
             igcOptions += " -stateless-stack-mem-size=" + std::to_string(opts.stackSize);
+        }
+        // If module is a library for the kernel, add " -library-compilation"
+        if (opts.libraryCompilation) {
+            igcOptions += " -library-compilation";
         }
         constexpr auto MAX_ISPCRT_IGC_OPTIONS = 2000UL;
 #if defined(_WIN32) || defined(_WIN64)
@@ -1027,6 +1036,30 @@ ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx) {
     return info;
 }
 
+void linkModules(gpu::Module **modules, const uint32_t numModules) {
+    std::vector<ze_module_handle_t> moduleHandles;
+    for (int i = 0; i< numModules; i++) {
+        moduleHandles.push_back(modules[i]->handle());
+    }
+
+    ze_module_build_log_handle_t linkLog;
+    L0_SAFE_CALL(zeModuleDynamicLink(numModules, moduleHandles.data(), &linkLog));
+
+    size_t buildLogSize;
+    L0_SAFE_CALL(zeModuleBuildLogGetString(linkLog, &buildLogSize, nullptr));
+    char *dynLogBuffer = new char[buildLogSize]();
+    L0_SAFE_CALL(zeModuleBuildLogGetString(linkLog, &buildLogSize, dynLogBuffer));
+
+    // For now always print dynamic linking log.
+    // TODO: introduce verbose mode to ISPCRT
+    std::cout << dynLogBuffer << "\n";
+    delete[] dynLogBuffer;
+    if (linkLog)
+        L0_SAFE_CALL_NOEXCEPT(zeModuleBuildLogDestroy(linkLog));
+
+}
+
+
 } // namespace gpu
 
 // Use the first available device by default for now.
@@ -1080,6 +1113,10 @@ base::TaskQueue *GPUDevice::newTaskQueue() const {
 
 base::Module *GPUDevice::newModule(const char *moduleFile, const ISPCRTModuleOptions &opts) const {
     return new gpu::Module((ze_device_handle_t)m_device, (ze_context_handle_t)m_context, moduleFile, m_is_mock, opts);
+}
+
+void GPUDevice::linkModules(base::Module **modules, const uint32_t numModules) const {
+    gpu::linkModules((gpu::Module **)modules, numModules);
 }
 
 base::Kernel *GPUDevice::newKernel(const base::Module &module, const char *name) const {

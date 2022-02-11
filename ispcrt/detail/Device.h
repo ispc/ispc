@@ -24,6 +24,8 @@ struct Device : public RefCounted {
 
     virtual Module *newModule(const char *moduleFile, const ISPCRTModuleOptions &opts) const = 0;
 
+    virtual void linkModules(Module **modules, uint32_t numModules) const = 0;
+
     virtual Kernel *newKernel(const Module &module, const char *name) const = 0;
 
     virtual void *platformNativeHandle() const = 0;
