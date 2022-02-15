@@ -1,12 +1,12 @@
-// This test checks that avx512skx-i32x16:
+// This test checks that avx512skx-x16:
 // - uses only zmm registers by default (for 512 bit vectors)
 // - uses only ymm registers when --opt=disable-zmm is passed.
 //
 // This code is especially problematic, as shuffle generates a sequence of gep
 // instructions, which are later combined to shuffle by code gen.
 
-// RUN: %{ispc} %s --emit-asm --target=avx512skx-i32x16 -o - 2>&1 | FileCheck %s -check-prefix=ZMM
-// RUN: %{ispc} %s --emit-asm --target=avx512skx-i32x16 --opt=disable-zmm -o - 2>&1 | FileCheck %s -check-prefix=YMM
+// RUN: %{ispc} %s --emit-asm --target=avx512skx-x16 -o - 2>&1 | FileCheck %s -check-prefix=ZMM
+// RUN: %{ispc} %s --emit-asm --target=avx512skx-x16 --opt=disable-zmm -o - 2>&1 | FileCheck %s -check-prefix=YMM
 
 // REQUIRES: X86_ENABLED
 

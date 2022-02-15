@@ -1,13 +1,13 @@
-// This test checks 'packed_load_active' implementation for int64 on avx512skx-i32x8.
+// This test checks 'packed_load_active' implementation for int64 on avx512skx-x8.
 // A LLVM patch(https://reviews.llvm.org/D91294) is required for 'packed_load_active'
-// and 'packed_store_active' on avx512skx-i32x8 for llvm 11.0. This test will fail
+// and 'packed_store_active' on avx512skx-x8 for llvm 11.0. This test will fail
 // without that patch. But the test is valid for later llvm versions too.
 // In case of failure, run the following runtime test to confirm it's a
 // legitimate ISPC bug(remove `--wrap-exe="sde -skx -- "` if sde is not
-// required for avx512skx-i32x8 support) :
-// python3 run_tests.py --target=avx512skx-i32x8 --wrap-exe="sde -skx -- " ./tests/packed-load-64-1.ispc
+// required for avx512skx-x8 support) :
+// python3 run_tests.py --target=avx512skx-x8 --wrap-exe="sde -skx -- " ./tests/packed-load-64-1.ispc
 
-// RUN: %{ispc} %s --emit-asm --nowrap --target=avx512skx-i32x8 -o - | FileCheck %s
+// RUN: %{ispc} %s --emit-asm --nowrap --target=avx512skx-x8 -o - | FileCheck %s
 
 // REQUIRES: X86_ENABLED
 

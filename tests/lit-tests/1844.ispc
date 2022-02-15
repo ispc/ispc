@@ -1,6 +1,6 @@
-// RUN: %{ispc} %s -o %t.o --arch=x86-64 --target=avx512skx-i8x64
-// RUN: %{ispc} %s -o %t.o --arch=x86-64 --target=avx512skx-i16x32
-// RUN: %{ispc} %s -o %t.o --arch=x86-64 --target=avx512skx-i32x16
+// RUN: %{ispc} %s -o %t.o --arch=x86-64 --target=avx512skx-x64
+// RUN: %{ispc} %s -o %t.o --arch=x86-64 --target=avx512skx-x32
+// RUN: %{ispc} %s -o %t.o --arch=x86-64 --target=avx512skx-x16
 // RUN: %{ispc} %s -o %t.o --arch=x86-64 --target=avx2-i8x32
 // RUN: %{ispc} %s -o %t.o --target=host
 

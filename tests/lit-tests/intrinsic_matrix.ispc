@@ -1,6 +1,6 @@
 //; RUN: %{ispc} %s --target=sse4-i32x4 --enable-llvm-intrinsics
 //; RUN: %{ispc} %s --target=avx2-i32x8 --enable-llvm-intrinsics
-//; RUN: %{ispc} %s --target=avx512skx-i32x16 --enable-llvm-intrinsics
+//; RUN: %{ispc} %s --target=avx512skx-x16 --enable-llvm-intrinsics
 
 // REQUIRES: X86_ENABLED
 

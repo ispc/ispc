@@ -7,10 +7,10 @@
 // RUN: llvm-dis %t.bc -o - | FileCheck %s -check-prefix=CHECK_AVX2_I32X8 --implicit-check-not "switch"
 // RUN: %{ispc} %s --target=avx2-i32x16 -h %t.h --emit-llvm -o %t.bc
 // RUN: llvm-dis %t.bc -o - | FileCheck %s -check-prefix=CHECK_AVX2_I32X16 --implicit-check-not "switch"
-// RUN: %{ispc} %s --target=avx512knl-i32x16 -h %t.h --emit-llvm -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s -check-prefix=CHECK_AVX512KNL_I32X16 --implicit-check-not "switch"
-// RUN: %{ispc} %s --target=avx512skx-i32x16 -h %t.h --emit-llvm -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s -check-prefix=CHECK_AVX512SKX_I32X16 --implicit-check-not "switch"
+// RUN: %{ispc} %s --target=avx512knl-x16 -h %t.h --emit-llvm -o %t.bc
+// RUN: llvm-dis %t.bc -o - | FileCheck %s -check-prefix=CHECK_AVX512KNL_X16 --implicit-check-not "switch"
+// RUN: %{ispc} %s --target=avx512skx-x16 -h %t.h --emit-llvm -o %t.bc
+// RUN: llvm-dis %t.bc -o - | FileCheck %s -check-prefix=CHECK_AVX512SKX_X16 --implicit-check-not "switch"
 
 // REQUIRES: X86_ENABLED
 
@@ -20,9 +20,9 @@
 
 //; CHECK_AVX2_I32X16: llvm.x86.avx2.gather.d.ps.256
 
-//; CHECK_AVX512KNL_I32X16: llvm.x86.avx512.mask.gather.dps.512
+//; CHECK_AVX512KNL_X16: llvm.x86.avx512.mask.gather.dps.512
 
-//; CHECK_AVX512SKX_I32X16: llvm.x86.avx512.mask.gather.dps.512
+//; CHECK_AVX512SKX_X16: llvm.x86.avx512.mask.gather.dps.512
 struct Foo {
     uniform float x[programCount + 1];
 };
@@ -47,11 +47,11 @@ void f_fu(uniform float RET[], uniform float aFOO[]) {
 //; CHECK_AVX2_I32X16: llvm.x86.avx2.gather.d.ps.256
 //; CHECK_AVX2_I32X16-NOT: llvm.x86.avx2.gather.d.ps.256
 
-//; CHECK_AVX512KNL_I32X16: llvm.x86.avx512.mask.gather.dps.512
-//; CHECK_AVX512KNL_I32X16-NOT: llvm.x86.avx512.mask.gather.dps.512
+//; CHECK_AVX512KNL_X16: llvm.x86.avx512.mask.gather.dps.512
+//; CHECK_AVX512KNL_X16-NOT: llvm.x86.avx512.mask.gather.dps.512
 
-//; CHECK_AVX512SKX_I32X16: llvm.x86.avx512.mask.gather.dps.512
-//; CHECK_AVX512SKX_I32X16-NOT: llvm.x86.avx512.mask.gather.dps.512
+//; CHECK_AVX512SKX_X16: llvm.x86.avx512.mask.gather.dps.512
+//; CHECK_AVX512SKX_X16-NOT: llvm.x86.avx512.mask.gather.dps.512
     if ((int)a & 1) {
 #pragma ignore warning(perf)
         RET[programIndex] = foo.x[a - 1];
