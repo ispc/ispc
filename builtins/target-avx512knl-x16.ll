@@ -1,4 +1,4 @@
-;;  Copyright (c) 2015-2021, Intel Corporation
+;;  Copyright (c) 2015-2022, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -32,7 +32,7 @@
 define(`WIDTH',`16')
 define(`ISA',`AVX512KNL')
 
-include(`target-avx512-common.ll')
+include(`target-avx512-common-16.ll')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; svml

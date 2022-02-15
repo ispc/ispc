@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2021, Intel Corporation
+;;  Copyright (c) 2010-2022, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -41,7 +41,7 @@ packed_load_and_store(FALSE)
 scans()
 int64minmax()
 
-include(`target-avx-common.ll')
+include(`target-avx-utils.ll')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp

@@ -42,7 +42,7 @@ scans()
 int64minmax()
 saturation_arithmetic()
 
-include(`target-avx-common.ll')
+include(`target-avx-utils.ll')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp

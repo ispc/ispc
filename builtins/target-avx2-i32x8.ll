@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2021, Intel Corporation
+;;  Copyright (c) 2010-2022, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -32,7 +32,7 @@
 define(`HAVE_GATHER', `1')
 define(`ISA',`AVX2')
 
-include(`target-avx.ll')
+include(`target-avx-common-8.ll')
 
 rdrand_definition()
 saturation_arithmetic()

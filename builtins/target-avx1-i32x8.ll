@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2021, Intel Corporation
+;;  Copyright (c) 2010-2022, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -30,7 +30,7 @@
 ;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 
 define(`ISA',`AVX1')
-include(`target-avx.ll')
+include(`target-avx-common-8.ll')
 
 rdrand_decls()
 saturation_arithmetic()

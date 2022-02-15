@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2020, Intel Corporation
+#  Copyright (c) 2018-2022, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -53,13 +53,13 @@ list(APPEND M4_IMPLICIT_DEPENDENCIES
     builtins/builtins-cm-32.ll
     builtins/builtins-cm-64.ll
     builtins/svml.m4
-    builtins/target-avx-common.ll
-    builtins/target-avx-x2.ll
-    builtins/target-avx.ll
+    builtins/target-avx-utils.ll
+    builtins/target-avx-common-8.ll
+    builtins/target-avx-common-16.ll
     builtins/target-avx1-i64x4base.ll
     builtins/target-avx512-common-4.ll
     builtins/target-avx512-common-8.ll
-    builtins/target-avx512-common.ll
+    builtins/target-avx512-common-16.ll
     builtins/target-avx512-utils.ll
     builtins/target-neon-common.ll
     builtins/target-sse2-common.ll
