@@ -37,9 +37,9 @@
 // RUN: %{ispc}  %s --emit-llvm -h %t.h --target=avx2-i64x4 -o %t.bc
 // RUN: llvm-dis %t.bc -o - | FileCheck %s
 
-// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=avx512knl-i32x16 -o %t.bc
+// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=avx512knl-x16 -o %t.bc
 // RUN: llvm-dis %t.bc -o - | FileCheck %s
-// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=avx512skx-i32x16 -o %t.bc
+// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=avx512skx-x16 -o %t.bc
 // RUN: llvm-dis %t.bc -o - | FileCheck %s
 
 // REQUIRES: X86_ENABLED

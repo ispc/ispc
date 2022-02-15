@@ -1,4 +1,4 @@
-// RUN: %{ispc} %s --cpu=icelake-client --target=avx512skx-i32x8 --emit-llvm-text --enable-llvm-intrinsics -o - | FileCheck %s
+// RUN: %{ispc} %s --cpu=icelake-client --target=avx512skx-x8 --emit-llvm-text --enable-llvm-intrinsics -o - | FileCheck %s
 
 // REQUIRES: X86_ENABLED
 

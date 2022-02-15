@@ -1,6 +1,6 @@
 // RUN: %{ispc} %s --target=avx2-i32x4 --emit-asm -o - | FileCheck %s
 // RUN: %{ispc} %s --target=avx2-i32x8 --emit-asm -o - | FileCheck %s
-// RUN: %{ispc} %s --target=avx512skx-i32x16 --emit-asm -o - | FileCheck %s
+// RUN: %{ispc} %s --target=avx512skx-x16 --emit-asm -o - | FileCheck %s
 
 // REQUIRES: X86_ENABLED
 

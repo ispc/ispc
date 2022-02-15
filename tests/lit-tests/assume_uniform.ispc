@@ -1,6 +1,6 @@
 //; RUN: %{ispc} --emit-asm --target=avx2 %s -o - | FileCheck %s -check-prefix=CHECK_AVX2
 //; RUN: %{ispc} --emit-asm --target=sse2 %s -o - | FileCheck %s -check-prefix=CHECK_SSE2
-//; RUN: %{ispc} --emit-asm --target=avx512skx-i32x16 %s -o - | FileCheck %s -check-prefix=CHECK_AVX512
+//; RUN: %{ispc} --emit-asm --target=avx512skx-x16 %s -o - | FileCheck %s -check-prefix=CHECK_AVX512
 // REQUIRES: X86_ENABLED
 
 //; CHECK_SSE2: foo1

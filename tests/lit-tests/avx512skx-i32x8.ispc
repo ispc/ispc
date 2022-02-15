@@ -1,17 +1,17 @@
-// Case 1: Checks avx512skx-i32x16 assembly output for zmm registers.
-//; RUN: %{ispc} %s --target=avx512skx-i32x16 --emit-asm -o - | FileCheck %s -check-prefix=CHECK_ZMM_32x16
-// Case 2a: Checks avx512skx-i32x4 assembly output to ensure there are no zmm registers.
-//; RUN: %{ispc} %s --target=avx512skx-i32x4 --emit-asm -o - | FileCheck %s --implicit-check-not "zmm"
-// Case 2b: Checks avx512skx-i32x8 assembly output to ensure there are no zmm registers.
-//; RUN: %{ispc} %s --target=avx512skx-i32x8 --emit-asm -o - | FileCheck %s --implicit-check-not "zmm"
-// Case 3: Checks avx512skx-i32x16 LLVM IR to ensure avx512skx-i32x8 func attributes are not present.
-//; RUN: %{ispc} %s --target=avx512skx-i32x16 --emit-llvm -o %t_8.bc
+// Case 1: Checks avx512skx-x16 assembly output for zmm registers.
+//; RUN: %{ispc} %s --target=avx512skx-x16 --emit-asm -o - | FileCheck %s -check-prefix=CHECK_ZMM_32x16
+// Case 2a: Checks avx512skx-x4 assembly output to ensure there are no zmm registers.
+//; RUN: %{ispc} %s --target=avx512skx-x4 --emit-asm -o - | FileCheck %s --implicit-check-not "zmm"
+// Case 2b: Checks avx512skx-x8 assembly output to ensure there are no zmm registers.
+//; RUN: %{ispc} %s --target=avx512skx-x8 --emit-asm -o - | FileCheck %s --implicit-check-not "zmm"
+// Case 3: Checks avx512skx-x16 LLVM IR to ensure avx512skx-x8 func attributes are not present.
+//; RUN: %{ispc} %s --target=avx512skx-x16 --emit-llvm -o %t_8.bc
 //; RUN: llvm-dis %t_8.bc -o - | FileCheck %s --implicit-check-not ""min-legal-vector-width"="256"" --implicit-check-not ""prefer-vector-width"="256""
-// Case 4a: Checks avx512skx-i32x4 LLVM IR to ensure avx512skx-i32x4 func attributes are present (same as for x8).
-//; RUN: %{ispc} %s --target=avx512skx-i32x4 --emit-llvm -o %t_4.bc
+// Case 4a: Checks avx512skx-x4 LLVM IR to ensure avx512skx-x4 func attributes are present (same as for x8).
+//; RUN: %{ispc} %s --target=avx512skx-x4 --emit-llvm -o %t_4.bc
 //; RUN: llvm-dis %t_4.bc -o - | FileCheck %s -check-prefix=CHECK_ATTR_8
-// Case 4b: Checks avx512skx-i32x8 LLVM IR to ensure avx512skx-i32x8 func attributes are present.
-//; RUN: %{ispc} %s --target=avx512skx-i32x8 --emit-llvm -o %t_8.bc
+// Case 4b: Checks avx512skx-x8 LLVM IR to ensure avx512skx-x8 func attributes are present.
+//; RUN: %{ispc} %s --target=avx512skx-x8 --emit-llvm -o %t_8.bc
 //; RUN: llvm-dis %t_8.bc -o - | FileCheck %s -check-prefix=CHECK_ATTR_8
 
 // REQUIRES: X86_ENABLED
@@ -37,7 +37,7 @@ export void infoo(uniform double afoo1[], uniform double afoo2[], uniform double
 //; CHECK_ZMM_32x16: zmm
     afoo3[programIndex] = c;
 }
-// The avx512skx-i32x8 specific function attribute list will be present at 2 places.
+// The avx512skx-x8 specific function attribute list will be present at 2 places.
 // Once where function attributes for exported functions are aggregated and
 // again where function attributes for non-exported functions are aggregated.
 //; CHECK_ATTR_8: "min-legal-vector-width"="256"

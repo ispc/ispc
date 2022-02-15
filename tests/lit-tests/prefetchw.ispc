@@ -1,6 +1,6 @@
 // Check that prefetchw instruction is generated.
 // RUN: %{ispc} %s --emit-asm --cpu=broadwell --target=avx2-i32x8 -o - | FileCheck %s -check-prefix=CHECK_PREFETCHW
-// RUN: %{ispc} %s --emit-asm --target=avx512skx-i32x8 -o - | FileCheck %s -check-prefix=CHECK_PREFETCHW
+// RUN: %{ispc} %s --emit-asm --target=avx512skx-x8 -o - | FileCheck %s -check-prefix=CHECK_PREFETCHW
 
 // REQUIRES: X86_ENABLED
 

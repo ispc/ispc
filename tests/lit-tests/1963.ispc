@@ -5,9 +5,9 @@
 //; RUN: FileCheck --input-file=%t.sse2.s -check-prefix=CHECK_SSE2_ASM %s
 //; RUN: %{ispc} %s --emit-asm -o %t.avx2.s --nowrap --target=avx2-i32x8 2>&1 | FileCheck %s -check-prefix=CHECK_AVX2_WARNING
 //; RUN: FileCheck --input-file=%t.avx2.s -check-prefix=CHECK_AVX2_ASM %s
-//; RUN: %{ispc} %s --emit-asm -o %t.avx512skx.s --nowrap --target=avx512skx-i32x16 2>&1 | FileCheck %s --allow-empty -check-prefix=CHECK_AVX512SKX_WARNING
+//; RUN: %{ispc} %s --emit-asm -o %t.avx512skx.s --nowrap --target=avx512skx-x16 2>&1 | FileCheck %s --allow-empty -check-prefix=CHECK_AVX512SKX_WARNING
 //; RUN: FileCheck --input-file=%t.avx512skx.s -check-prefix=CHECK_AVX512SKX_ASM %s
-//; RUN: %{ispc} %s --emit-asm -o %t.avx512knl.s --nowrap --target=avx512knl-i32x16 2>&1 | FileCheck %s --allow-empty -check-prefix=CHECK_AVX512KNL_WARNING
+//; RUN: %{ispc} %s --emit-asm -o %t.avx512knl.s --nowrap --target=avx512knl-x16 2>&1 | FileCheck %s --allow-empty -check-prefix=CHECK_AVX512KNL_WARNING
 //; RUN: FileCheck --input-file=%t.avx512knl.s -check-prefix=CHECK_AVX512KNL_ASM %s
 
 //; REQUIRES: X86_ENABLED

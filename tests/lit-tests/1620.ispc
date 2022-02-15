@@ -3,7 +3,7 @@
 // RUN: %{ispc} --target=sse4-i8x16 %s > %t 2>&1
 // RUN: %{ispc} --target=avx1-i32x4 %s > %t 2>&1
 // RUN: %{ispc} --target=avx2-i64x4 %s > %t 2>&1
-// RUN: %{ispc} --target=avx512skx-i32x16 %s > %t 2>&1
+// RUN: %{ispc} --target=avx512skx-x16 %s > %t 2>&1
 // REQUIRES: X86_ENABLED
 void test_crash()
 {

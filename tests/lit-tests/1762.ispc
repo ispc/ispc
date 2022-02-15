@@ -1,4 +1,4 @@
-// RUN: %{ispc} --target=avx512skx-i32x16 %s > %t 2>&1
+// RUN: %{ispc} --target=avx512skx-x16 %s > %t 2>&1
 // REQUIRES: X86_ENABLED
 bool e[4][20][16];
 void a() {
