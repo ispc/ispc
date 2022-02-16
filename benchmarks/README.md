@@ -14,7 +14,7 @@ For some features it also makes sense to compare with alternative implementation
 
 Use ``-DISPC_INCLUDE_BENCHMARKS=ON`` in your CMake configuration flags to enable building benchmarks. If ``--recurse-submodules`` was not used during repo cloning, CMake will fetch [Google Benchmark](https://github.com/google/benchmark) submodule. By default ISPC built from sources will used for building benchmarks. If you need to use pre-build ISPC binary, you can turn off building ISPC by setting ``-DISPC_BUILD=OFF`` and provide ISPC in your `PATH` environment variable.
 
-You can use CMake options ``BENCHMARKS_ISPC_TARGETS`` and ``BENCHMARKS_ISPC_FLAGS`` to set specific target or ISPC compilation switches. For example, ``-DBENCHMARKS_ISPC_TARGETS=avx512skx-i32x8,avx2-i32x8 -DBENCHMARKS_ISPC_FLAGS="-O3 --woff"``. Note that using auto-dispatch (i.e. specifying more than one target on the command line) will noticeably affect short benchmark runs.
+You can use CMake options ``BENCHMARKS_ISPC_TARGETS`` and ``BENCHMARKS_ISPC_FLAGS`` to set specific target or ISPC compilation switches. For example, ``-DBENCHMARKS_ISPC_TARGETS=avx512skx-x8,avx2-i32x8 -DBENCHMARKS_ISPC_FLAGS="-O3 --woff"``. Note that using auto-dispatch (i.e. specifying more than one target on the command line) will noticeably affect short benchmark runs.
 
 To run benchmarks, you need to execute them individually. They will be located in `benchmarks` folder of your install location. You can also run `make test` to verify that benchmarks are built correctly and executed successfully.
 

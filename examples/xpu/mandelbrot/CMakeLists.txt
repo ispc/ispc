@@ -39,7 +39,7 @@ cmake_minimum_required(VERSION 3.13)
 set(TEST_NAME "mandelbrot")
 set(ISPC_SRC_NAME "mandelbrot.ispc")
 set(ISPC_TARGET_XE "gen9-x16")
-set(ISPC_TARGET_CPU "sse4-i8x16;avx1-i32x16;avx2-i32x16;avx512knl-i32x16;avx512skx-i32x16")
+set(ISPC_TARGET_CPU "sse4-i8x16;avx1-i32x16;avx2-i32x16;avx512knl-x16;avx512skx-x16")
 set(HOST_SOURCES mandelbrot.cpp mandelbrot_serial.cpp)
 
 add_perf_example(
