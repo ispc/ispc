@@ -846,7 +846,7 @@ def Main():
         generator = options.generator
     else:
         if current_OS == "Windows":
-            generator = "Visual Studio 16"
+            generator = "Visual Studio 17 2022"
         else:
             generator = "Unix Makefiles"
     try:

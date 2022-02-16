@@ -168,7 +168,7 @@ jobs:
     - name: Build LLVM
       shell: cmd
       run: |
-        python ./alloy.py -b --version=12.0 --verbose
+        python ./alloy.py -b --version=12.0 --verbose --generator="Visual Studio 16 2019"
         cd alloy_results* && type alloy_build.log
 
     - name: Pack LLVM
@@ -211,7 +211,7 @@ jobs:
     - name: Build LLVM
       shell: cmd
       run: |
-        python ./alloy.py -b --version=12.0 --verbose --llvm-disable-assertions
+        python ./alloy.py -b --version=12.0 --verbose --llvm-disable-assertions --generator="Visual Studio 16 2019"
         cd alloy_results* && type alloy_build.log
 
     - name: Pack LLVM
