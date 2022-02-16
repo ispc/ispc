@@ -448,7 +448,7 @@ Here are example commands for Linux:
   .. code-block:: console
 
     ispc -I /home/ispc_package/include/ispcrt --arch=x86-64
-    --target=sse4-i32x4,avx1-i32x8,avx2-i32x8,avx512knl-i32x16,avx512skx-i32x16
+    --target=sse4-i32x4,avx1-i32x8,avx2-i32x8,avx512knl-x16,avx512skx-x16
     --woff --pic --opt=disable-assertions
     -h /home/ispc_package/examples/xpu/simple/simple_ispc.h
     -o /home/ispc_package/examples/xpu/simple/simple.dev.o

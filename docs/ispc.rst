@@ -65,6 +65,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.15.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.16.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.17.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.18.0`_
 
 * `Getting Started with ISPC`_
 
@@ -491,6 +492,13 @@ prefetching in anticipation of write.
 The algorithms used for implementation of ``rsqrt(double)`` and ``rcp(double)``
 standard library functions have changed on AVX512 and may affect the existing
 code.
+
+Updating ISPC Programs For Changes In ISPC 1.18.0
+-------------------------------------------------
+
+AVX512 targets were renamed to drop "base type", old naming is accepted for
+compatibility. New names are `avx512skx-x4`, `avx512skx-x8`, `avx512skx-x16`,
+`avx512skx-x32`, `avx512skx-x64`, and `avx512knl-x16`.
 
 
 Getting Started with ISPC
