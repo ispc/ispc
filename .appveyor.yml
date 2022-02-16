@@ -37,7 +37,7 @@ environment:
   matrix:
     - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
       LLVM_VERSION: latest
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
       LLVM_VERSION: latest
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       LLVM_VERSION: 12.0
@@ -46,8 +46,8 @@ for:
 -
   matrix:
     only:
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
   init:
     - cmd: |-
         set ISPC_HOME=%APPVEYOR_BUILD_FOLDER%
@@ -56,9 +56,9 @@ for:
         set CHOCO_DIR=%ProgramData%\chocolatey
         set WASM=OFF
         if "%LLVM_VERSION%"=="latest" (set WASM=ON)
-        if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2017" ( (set generator="Visual Studio 15 Win64") & (set vsversion=2017))
-        if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2019" ( (set generator="Visual Studio 16") & (set vsversion=2019))
-        set LLVM_TAR=llvm-13.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+        if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2019" ( (set generator="Visual Studio 16") & (set vspath="C:\Program Files (x86)\Microsoft Visual Studio\2019"))
+        if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2022" ( (set generator="Visual Studio 17") & (set vspath="C:\Program Files\Microsoft Visual Studio\2022"))
+        set LLVM_TAR=llvm-13.0.1-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z
         if "%LLVM_VERSION%"=="12.0" (set LLVM_TAR=llvm-12.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z)
         if "%LLVM_VERSION%"=="11.1" (set LLVM_TAR=llvm-11.1.0-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z)
   install:
@@ -83,7 +83,7 @@ for:
         set PATH=%LLVM_HOME%\bin-%LLVM_VERSION%\bin;%PATH%
   before_build:
     - cmd: |-
-        call "C:\Program Files (x86)\Microsoft Visual Studio\%vsversion%\Community\VC\Auxiliary\Build\vcvars64.bat"
+        call %vspath%\Community\VC\Auxiliary\Build\vcvars64.bat
         cd %ISPC_HOME%
         check_env.py
         mkdir build && cd build
