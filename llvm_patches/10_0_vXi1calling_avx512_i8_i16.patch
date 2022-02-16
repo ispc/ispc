@@ -1,4 +1,4 @@
-# This patch is needed for avx512skx-i8x64 and avx512skx-i16x32 targets.
+# This patch is needed for avx512skx-x64 and avx512skx-x32 targets.
 
 commit eadea7868f5b7542ee6bdcd9a975697a0c919ffc
 Author: Craig Topper <craig.topper@intel.com>

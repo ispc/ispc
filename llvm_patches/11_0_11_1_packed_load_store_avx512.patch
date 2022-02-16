@@ -1,5 +1,5 @@
 # This patch is required for llvm.expandload/compressstore intrinsiscs to work
-# correctly for i64 types on avx512skx-i32x8
+# correctly for i64 types on avx512skx-x8
 Commit a4124e455e641db1e18d4221d2dacb31953fd13b Mon Sep 17 00:00:00 2001
 Author: Craig Topper <craig.topper@sifive.com>
 Date: Thu, 12 Nov 2020 20:18:50 -0800

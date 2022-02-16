@@ -340,10 +340,10 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
 
 
 def unsupported_llvm_targets(LLVM_VERSION):
-    prohibited_list = {"6.0":["avx512skx-i32x8", "avx512skx-i32x4", "avx512skx-i8x64", "avx512skx-i16x32"],
-                       "7.0":["avx512skx-i32x8", "avx512skx-i32x4", "avx512skx-i8x64", "avx512skx-i16x32"],
-                       "8.0":["avx512skx-i8x64", "avx512skx-i16x32"],
-                       "9.0":["avx512skx-i8x64", "avx512skx-i16x32"]
+    prohibited_list = {"6.0":["avx512skx-x8", "avx512skx-x4", "avx512skx-x64", "avx512skx-x32"],
+                       "7.0":["avx512skx-x8", "avx512skx-x4", "avx512skx-x64", "avx512skx-x32"],
+                       "8.0":["avx512skx-x64", "avx512skx-x32"],
+                       "9.0":["avx512skx-x64", "avx512skx-x32"]
                        }
     if LLVM_VERSION in prohibited_list:
         return prohibited_list[LLVM_VERSION]
@@ -384,9 +384,9 @@ def check_targets():
                  ["SSE2", "SSE4", "AVX"], "-snb", False]),
       ("AVX2",   [["avx2-i32x4", "avx2-i32x8",  "avx2-i32x16",  "avx2-i64x4", "avx2-i8x32", "avx2-i16x16"],
                  ["SSE2", "SSE4", "AVX", "AVX2"], "-hsw", False]),
-      ("KNL",    [["avx512knl-i32x16"],
+      ("KNL",    [["avx512knl-x16"],
                  ["SSE2", "SSE4", "AVX", "AVX2", "KNL"], "-knl", False]),
-      ("SKX",    [["avx512skx-i32x16", "avx512skx-i32x8", "avx512skx-i32x4", "avx512skx-i8x64", "avx512skx-i16x32"],
+      ("SKX",    [["avx512skx-x16", "avx512skx-x8", "avx512skx-x4", "avx512skx-x64", "avx512skx-x32"],
                  ["SSE2", "SSE4", "AVX", "AVX2", "SKX"], "-skx", False])
     ])
 
@@ -923,7 +923,7 @@ if __name__ == '__main__':
     "Try to build compiler with all LLVM\n\talloy.py -r --only=build\n" +
     "Performance validation run with 10 runs of each test and comparing to branch 'old'\n\talloy.py -r --only=performance --compare-with=old --number=10\n" +
     "Validation run. Update fail_db.txt with new fails\n\talloy.py -r --update-errors=F\n" +
-    "Test KNL target (requires sde)\n\talloy.py -r --only='stability' --only-targets='avx512knl-i32x16'\n")
+    "Test KNL target (requires sde)\n\talloy.py -r --only='stability' --only-targets='avx512knl-x16'\n")
 
     num_threads="%s" % multiprocessing.cpu_count()
     parser = MyParser(usage="Usage: alloy.py -r/-b [options]", epilog=examples)

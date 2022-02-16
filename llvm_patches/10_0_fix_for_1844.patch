@@ -1,4 +1,4 @@
-# Fix for #1844, affects avx512skx-i8x64 and avx512skx-i16x32.
+# Fix for #1844, affects avx512skx-x64 and avx512skx-x32.
 # It's a port of 11.0 commit edcfb47ff6d5562e22207f364c65f84302aa346b
 # https://reviews.llvm.org/D76312
 diff --git a/llvm/lib/CodeGen/SelectionDAG/DAGCombiner.cpp b/llvm/lib/CodeGen/SelectionDAG/DAGCombiner.cpp

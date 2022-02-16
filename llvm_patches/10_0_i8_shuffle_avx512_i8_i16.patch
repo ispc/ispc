@@ -1,4 +1,4 @@
-# This patch is needed for avx512skx-i8x64 and avx512skx-i16x32 targets.
+# This patch is needed for avx512skx-x64 and avx512skx-x32 targets.
 
 commit 6bdd63dc28208a597542b0c6bc41093f32417804
 Author: Simon Pilgrim <llvm-dev@redking.me.uk>

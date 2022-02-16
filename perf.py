@@ -329,8 +329,8 @@ def perf(options1, args):
                         sse4-i32x4 sse4-i32x8 sse4-i16x8 sse4-i8x16 \
                         avx1-i32x4 avx1-i32x8 avx1-i32x16 avx1-i64x4 \
                         avx2-i32x4 avx2-i32x8 avx2-i32x16 avx2-i64x4 \
-                        avx512knl-i32x16 \
-                        avx512skx-i32x16 avx512skx-i32x8 avx512skx-i32x4 avx512skx-i8x64 avx512skx-i16x32"
+                        avx512knl-x16 \
+                        avx512skx-x16 avx512skx-x8 avx512skx-x4 avx512skx-x64 avx512skx-x32"
         test_only = options.perf_target.split(",")
         for iterator in test_only:
             if not (" " + iterator + " " in test_only_r):
