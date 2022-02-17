@@ -1,4 +1,4 @@
-## Copyright 2020 Intel Corporation
+## Copyright 2020-2022 Intel Corporation
 ## SPDX-License-Identifier: BSD-3-Clause
 
 ###############################################################################
@@ -127,7 +127,7 @@ macro (ispc_compile)
   mark_as_advanced(ISPC_FLAGS_RELEASE)
   set(ISPC_FLAGS_RELWITHDEBINFO "-O2 -g" CACHE STRING "ISPC Release with Debug symbols flags")
   mark_as_advanced(ISPC_FLAGS_RELWITHDEBINFO)
-  if (WIN32 OR "${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+  if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
     set(ISPC_OPT_FLAGS ${ISPC_FLAGS_RELEASE})
   elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     set(ISPC_OPT_FLAGS ${ISPC_FLAGS_DEBUG})
