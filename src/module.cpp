@@ -1431,20 +1431,22 @@ static void lEmitStructDecl(const StructType *st, std::vector<const StructType *
     llvm::Type *stype = st->LLVMType(g->ctx);
     const llvm::DataLayout *DL = g->target->getDataLayout();
 
-    if (!(pack = llvm::dyn_cast<llvm::StructType>(stype)->isPacked()))
+    if (!(pack = llvm::dyn_cast<llvm::StructType>(stype)->isPacked())) {
         for (int i = 0; !needsAlign && (i < st->GetElementCount()); ++i) {
             const Type *ftype = st->GetElementType(i)->GetAsNonConstType();
             needsAlign |= ftype->IsVaryingType() && (CastType<StructType>(ftype) == NULL);
         }
-    if (st->GetSOAWidth() > 0)
+    }
+    if (st->GetSOAWidth() > 0) {
         // This has to match the naming scheme in
         // StructType::GetCDeclaration().
         snprintf(sSOA, sizeof(sSOA), "_SOA%d", st->GetSOAWidth());
-    else
+    } else {
         *sSOA = '\0';
-    if (!needsAlign)
+    }
+    if (!needsAlign) {
         fprintf(file, "%sstruct %s%s {\n", (pack) ? "packed " : "", st->GetCStructName().c_str(), sSOA);
-    else {
+    } else {
         unsigned uABI = DL->getABITypeAlignment(stype);
         fprintf(file, "__ISPC_ALIGNED_STRUCT__(%u) %s%s {\n", uABI, st->GetCStructName().c_str(), sSOA);
     }
@@ -1454,7 +1456,7 @@ static void lEmitStructDecl(const StructType *st, std::vector<const StructType *
 
         fprintf(file, "    ");
         if (needsAlign && ftype->IsVaryingType() && (CastType<StructType>(ftype) == NULL)) {
-            unsigned uABI = DL->getABITypeAlignment(ftype->LLVMType(g->ctx));
+            unsigned uABI = DL->getABITypeAlignment(ftype->LLVMStorageType(g->ctx));
             fprintf(file, "__ISPC_ALIGN__(%u) ", uABI);
         }
         // Don't expand arrays, pointers and structures:
@@ -1551,7 +1553,7 @@ static void lEmitVectorTypedefs(const std::vector<const VectorType *> &types, FI
 
         int size = vt->GetElementCount();
 
-        llvm::Type *ty = vt->LLVMType(g->ctx);
+        llvm::Type *ty = vt->LLVMStorageType(g->ctx);
         int align = g->target->getDataLayout()->getABITypeAlignment(ty);
         baseDecl = vt->GetBaseType()->GetCDeclaration("");
         fprintf(file, "#ifndef __ISPC_VECTOR_%s%d__\n", baseDecl.c_str(), size);
