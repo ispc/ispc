@@ -436,40 +436,15 @@ def run_test(testname, host, target):
 
         # Figure out target width
         width = -1
-        target_match = re.match('(.*-i[0-9]*x)([0-9]*)', options.target)
+        target_match = re.match('.*-(i[0-9]*)?x([0-9]*)', options.target)
         # If target does not contain width in a standard way:
         if target_match == None:
-            if re.match('(sse[0-9]*-x2)', options.target) != None:
-                width = 8
-            elif re.match('(sse[0-9]*)', options.target) != None:
-                width = 4
-            elif re.match('(avx[0-9]*-x2)', options.target) != None:
-                width = 16
-            elif re.match('(avx[0-9]*)', options.target) != None:
-                width = 8
-            elif options.target == "neon":
-                width = 4
-            elif re.search('gen9', options.target) != None:
-                width = 16
-                target_match = re.match('(gen9-x)([0-9]*)', options.target)
-                if target_match != None:
-                    width = int(target_match.group(2))
-                else:
-                    width = 16
-            elif re.search('xe', options.target) != None:
-                width = 16
-                target_match = re.match('(xe.*-x)([0-9]*)', options.target)
-                if target_match != None:
-                    width = int(target_match.group(2))
-                else:
-                    width = 16
-        else:
-            width = int(target_match.group(2))
-        if width == -1:
-            error("unable to determine target width for target %s\n" % options.target, 0)
+            error("Unable to detect the target width for target %s\nOnly canonical form of the target names is supported, depricated forms are not supported" % options.target, 0)
             return Status.Compfail
+        width = int(target_match.group(2))
+
         if match == -1:
-            error("unable to find function signature in test %s\n" % testname, 0)
+            error("Unable to find function signature in test %s\n" % testname, 0)
             return Status.Compfail
         else:
             xe_target = options.target
