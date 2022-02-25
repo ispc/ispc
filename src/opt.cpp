@@ -5793,9 +5793,10 @@ MemoryCoalescing::BasePtrInfo MemoryCoalescing::analyseVarOffsetGEP(llvm::GetEle
         std::vector<llvm::Value *> PartialIdxs;
         for (unsigned i = 1; i < FirstConstIdx; ++i)
             PartialIdxs.push_back(GEP->getOperand(i));
+        llvm::Value *tPtr = GEP->getPointerOperand();
+        llvm::Type *tType = llvm::cast<llvm::PointerType>(tPtr->getType()->getScalarType())->getElementType();
         auto ret = ComplexGEPsInfoCache.insert(
-            {GEPVarOffsetData,
-             llvm::GetElementPtrInst::Create(nullptr, GEP->getPointerOperand(), PartialIdxs, "partial_gep")});
+            {GEPVarOffsetData, llvm::GetElementPtrInst::Create(tType, tPtr, PartialIdxs, "partial_gep")});
         DanglingGEP_it = ret.first;
     }
     llvm::Value *DanglingGEP = DanglingGEP_it->second;
@@ -5808,8 +5809,9 @@ MemoryCoalescing::BasePtrInfo MemoryCoalescing::analyseVarOffsetGEP(llvm::GetEle
     // Get partial GEP type
     llvm::PointerType *PartialType = llvm::cast<llvm::PointerType>(DanglingGEP->getType());
     // Create temporary GEP that will help us to get some useful info
-    llvm::GetElementPtrInst *GEPHelper =
-        llvm::GetElementPtrInst::Create(nullptr, llvm::ConstantPointerNull::get(PartialType), Idxs);
+    llvm::Value *tPtr = llvm::ConstantPointerNull::get(PartialType);
+    llvm::Type *tType = llvm::cast<llvm::PointerType>(tPtr->getType()->getScalarType())->getElementType();
+    llvm::GetElementPtrInst *GEPHelper = llvm::GetElementPtrInst::Create(tType, tPtr, Idxs);
     // Accumulate offset from helper
     llvm::APInt acc(g->target->is32Bit() ? 32 : 64, 0, true);
     bool checker = GEPHelper->accumulateConstantOffset(GEP->getModule()->getDataLayout(), acc);
