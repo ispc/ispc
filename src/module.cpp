@@ -415,6 +415,12 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
         return;
     }
 
+    if (storageClass == SC_EXTERN_SYCL) {
+        Error(pos, "extern \"SYCL\" qualifier can only be used for "
+                   "functions.");
+        return;
+    }
+
     if (type->IsVoidType()) {
         Error(pos, "\"void\" type global variable is illegal.");
         return;
@@ -512,7 +518,8 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
 
         // If the type doesn't match with the previous one, issue an error.
         if (!Type::Equal(sym->type, type) ||
-            (sym->storageClass != SC_EXTERN && sym->storageClass != SC_EXTERN_C && sym->storageClass != storageClass)) {
+            (sym->storageClass != SC_EXTERN && sym->storageClass != SC_EXTERN_C &&
+             sym->storageClass != SC_EXTERN_SYCL && sym->storageClass != storageClass)) {
             Error(pos,
                   "Definition of variable \"%s\" conflicts with "
                   "definition at %s:%d.",
@@ -524,7 +531,8 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
         Assert(gv != NULL);
 
         // And issue an error if this is a redefinition of a variable
-        if (gv->hasInitializer() && sym->storageClass != SC_EXTERN && sym->storageClass != SC_EXTERN_C) {
+        if (gv->hasInitializer() && sym->storageClass != SC_EXTERN && sym->storageClass != SC_EXTERN_C &&
+            sym->storageClass != SC_EXTERN_SYCL) {
             Error(pos,
                   "Redefinition of variable \"%s\" is illegal. "
                   "(Previous definition at %s:%d.)",
@@ -785,7 +793,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         }
     }
 
-    if (storageClass == SC_EXTERN_C) {
+    if (storageClass == SC_EXTERN_C || storageClass == SC_EXTERN_SYCL) {
         // Make sure the user hasn't supplied both an 'extern "C"' and a
         // 'task' qualifier with the function
         if (functionType->isTask) {
@@ -821,7 +829,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     }
 
     // Get the LLVM FunctionType
-    bool disableMask = (storageClass == SC_EXTERN_C);
+    bool disableMask = (storageClass == SC_EXTERN_C || storageClass == SC_EXTERN_SYCL);
     llvm::FunctionType *llvmFunctionType = functionType->LLVMFunctionType(g->ctx, disableMask);
     if (llvmFunctionType == NULL)
         return;
@@ -855,7 +863,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     }
     // Set function attributes: we never throw exceptions
     function->setDoesNotThrow();
-    if (storageClass != SC_EXTERN_C && isInline) {
+    if ((storageClass != SC_EXTERN_C) && (storageClass != SC_EXTERN_SYCL) && isInline) {
         function->addFnAttr(llvm::Attribute::AlwaysInline);
     }
 
@@ -872,7 +880,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     }
 
     if (isRegCall) {
-        if ((storageClass != SC_EXTERN_C)) {
+        if ((storageClass != SC_EXTERN_C) && (storageClass != SC_EXTERN_SYCL)) {
             Error(pos, "Illegal to use \"__regcall\" qualifier on non-extern function \"%s\".", name.c_str());
             return;
         }
@@ -903,8 +911,8 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     if (functionType->isTask && functionType->GetReturnType()->IsVoidType() == false)
         Error(pos, "Task-qualified functions must have void return type.");
 
-    if (functionType->isExported || functionType->isExternC || functionType->IsISPCExternal() ||
-        functionType->IsISPCKernel()) {
+    if (functionType->isExported || functionType->isExternC || functionType->isExternSYCL ||
+        functionType->IsISPCExternal() || functionType->IsISPCKernel()) {
         lCheckForStructParameters(functionType, pos);
     }
 
@@ -941,12 +949,13 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         // specify when this is not the case, but this should be the
         // default.)  Set parameter attributes accordingly.  (Only for
         // uniform pointers, since varying pointers are int vectors...)
-        if (!functionType->isTask && ((CastType<PointerType>(argType) != NULL && argType->IsUniformType() &&
-                                       // Exclude SOA argument because it is a pair {struct *, int}
-                                       // instead of pointer
-                                       !CastType<PointerType>(argType)->IsSlice()) ||
+        if (!functionType->isTask && !functionType->isExternSYCL &&
+            ((CastType<PointerType>(argType) != NULL && argType->IsUniformType() &&
+              // Exclude SOA argument because it is a pair {struct *, int}
+              // instead of pointer
+              !CastType<PointerType>(argType)->IsSlice()) ||
 
-                                      CastType<ReferenceType>(argType) != NULL)) {
+             CastType<ReferenceType>(argType) != NULL)) {
 
             function->addParamAttr(i, llvm::Attribute::NoAlias);
 #if 0
@@ -954,7 +963,6 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
             function->addAttribute(i+1, llvm::Attribute::constructAlignmentFromInt(align));
 #endif
         }
-
         if (symbolTable->LookupFunction(argName.c_str()))
             Warning(argPos,
                     "Function parameter \"%s\" shadows a function "
