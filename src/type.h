@@ -843,7 +843,7 @@ class FunctionType : public Type {
     FunctionType(const Type *returnType, const llvm::SmallVector<const Type *, 8> &argTypes,
                  const llvm::SmallVector<std::string, 8> &argNames, const llvm::SmallVector<Expr *, 8> &argDefaults,
                  const llvm::SmallVector<SourcePos, 8> &argPos, bool isTask, bool isExported, bool isExternC,
-                 bool isUnmasked, bool isVectorCall, bool isRegCall);
+                 bool isExternSYCL, bool isUnmasked, bool isVectorCall, bool isRegCall);
     // Structure holding the mangling suffix and prefix for function
     struct FunctionMangledName {
         std::string prefix;
@@ -917,6 +917,10 @@ class FunctionType : public Type {
     /** This value is true if the function was declared as an 'extern "C"'
         function in the source program. */
     const bool isExternC;
+
+    /** This value is true if the function was declared as an 'extern "SYCL"'
+    function in the source program. */
+    const bool isExternSYCL;
 
     /** Indicates whether the function doesn't take an implicit mask
         parameter (and thus should start execution with an "all on"

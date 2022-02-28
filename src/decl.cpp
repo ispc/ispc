@@ -218,6 +218,8 @@ static const char *lGetStorageClassName(StorageClass storageClass) {
         return "extern";
     case SC_EXTERN_C:
         return "extern \"C\"";
+    case SC_EXTERN_SYCL:
+        return "extern \"SYCL\"";
     case SC_STATIC:
         return "static";
     case SC_TYPEDEF:
@@ -554,6 +556,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         returnType = returnType->ResolveUnboundVariability(Variability::Varying);
 
         bool isExternC = ds && (ds->storageClass == SC_EXTERN_C);
+        bool isExternSYCL = ds && (ds->storageClass == SC_EXTERN_SYCL);
         bool isExported = ds && ((ds->typeQualifiers & TYPEQUAL_EXPORT) != 0);
         bool isTask = ds && ((ds->typeQualifiers & TYPEQUAL_TASK) != 0);
         bool isUnmasked = ds && ((ds->typeQualifiers & TYPEQUAL_UNMASKED) != 0);
@@ -575,6 +578,16 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                        "qualifiers");
             return;
         }
+        if (isExternSYCL && isTask) {
+            Error(pos, "Function can't have both \"extern \"SYCL\"\" and \"task\" "
+                       "qualifiers");
+            return;
+        }
+        if (isExternSYCL && isExported) {
+            Error(pos, "Function can't have both \"extern \"SYCL\"\" and \"export\" "
+                       "qualifiers");
+            return;
+        }
         if (isUnmasked && isExported)
             Warning(pos, "\"unmasked\" qualifier is redundant for exported "
                          "functions.");
@@ -584,8 +597,9 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             return;
         }
 
-        const FunctionType *functionType = new FunctionType(returnType, args, argNames, argDefaults, argPos, isTask,
-                                                            isExported, isExternC, isUnmasked, isVectorCall, isRegCall);
+        const FunctionType *functionType =
+            new FunctionType(returnType, args, argNames, argDefaults, argPos, isTask, isExported, isExternC,
+                             isExternSYCL, isUnmasked, isVectorCall, isRegCall);
 
         // handle any explicit __declspecs on the function
         if (ds != NULL) {

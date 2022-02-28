@@ -197,7 +197,7 @@ struct ForeachDimension {
 %token TOKEN_INT64_CONSTANT TOKEN_UINT64_CONSTANT
 %token TOKEN_INT32DOTDOTDOT_CONSTANT TOKEN_UINT32DOTDOTDOT_CONSTANT
 %token TOKEN_INT64DOTDOTDOT_CONSTANT TOKEN_UINT64DOTDOTDOT_CONSTANT
-%token TOKEN_FLOAT16_CONSTANT TOKEN_FLOAT_CONSTANT TOKEN_DOUBLE_CONSTANT TOKEN_STRING_C_LITERAL
+%token TOKEN_FLOAT16_CONSTANT TOKEN_FLOAT_CONSTANT TOKEN_DOUBLE_CONSTANT TOKEN_STRING_C_LITERAL TOKEN_STRING_SYCL_LITERAL
 %token TOKEN_IDENTIFIER TOKEN_STRING_LITERAL TOKEN_TYPE_NAME TOKEN_PRAGMA TOKEN_NULL
 %token TOKEN_PTR_OP TOKEN_INC_OP TOKEN_DEC_OP TOKEN_LEFT_OP TOKEN_RIGHT_OP
 %token TOKEN_LE_OP TOKEN_GE_OP TOKEN_EQ_OP TOKEN_NE_OP
@@ -962,6 +962,7 @@ storage_class_specifier
     : TOKEN_TYPEDEF { $$ = SC_TYPEDEF; }
     | TOKEN_EXTERN { $$ = SC_EXTERN; }
     | TOKEN_EXTERN TOKEN_STRING_C_LITERAL  { $$ = SC_EXTERN_C; }
+    | TOKEN_EXTERN TOKEN_STRING_SYCL_LITERAL  { $$ = SC_EXTERN_SYCL; }
     | TOKEN_STATIC { $$ = SC_STATIC; }
     ;
 
@@ -2115,6 +2116,7 @@ translation_unit
 external_declaration
     : function_definition
     | TOKEN_EXTERN TOKEN_STRING_C_LITERAL '{' declaration '}'
+    | TOKEN_EXTERN TOKEN_STRING_SYCL_LITERAL '{' declaration '}'
     | TOKEN_EXPORT '{' type_specifier_list '}' ';'
     {
         if ($3 != NULL)
@@ -2425,6 +2427,8 @@ lGetStorageClassString(StorageClass sc) {
         return "typedef";
     case SC_EXTERN_C:
         return "extern \"C\"";
+    case SC_EXTERN_SYCL:
+        return "extern \"SYCL\"";
     default:
         Assert(!"logic error in lGetStorageClassString()");
         return "";

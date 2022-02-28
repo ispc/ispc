@@ -115,7 +115,7 @@ class SymbolTable;
 class Type;
 struct VariableDeclaration;
 
-enum StorageClass { SC_NONE, SC_EXTERN, SC_STATIC, SC_TYPEDEF, SC_EXTERN_C };
+enum StorageClass { SC_NONE, SC_EXTERN, SC_STATIC, SC_TYPEDEF, SC_EXTERN_C, SC_EXTERN_SYCL };
 
 // Enumerant for address spaces.
 enum class AddressSpace {
