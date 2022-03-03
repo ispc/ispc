@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -182,6 +182,16 @@ class Module {
     llvm::DIBuilder *diBuilder;
 
     llvm::DICompileUnit *diCompileUnit;
+
+    /** StructType cache.  This needs to be in the context of Module, so it's reset for
+        any new Module in multi-target compilation.
+
+        We maintain a map from struct names to LLVM struct types so that we can
+        uniquely get the llvm::StructType * for a given ispc struct type.  Note
+        that we need to mangle the name a bit so that we can e.g. differentiate
+        between the uniform and varying variants of a given struct type.  This
+        is handled by lMangleStructName() below. */
+    std::map<std::string, llvm::StructType *> structTypeMap;
 
   private:
     const char *filename;
