@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -1521,16 +1521,9 @@ int VectorType::getVectorMemoryCount() const {
 ///////////////////////////////////////////////////////////////////////////
 // StructType
 
-// We maintain a map from struct names to LLVM struct types so that we can
-// uniquely get the llvm::StructType * for a given ispc struct type.  Note
-// that we need to mangle the name a bit so that we can e.g. differentiate
-// between the uniform and varying variants of a given struct type.  This
-// is handled by lMangleStructName() below.
-static std::map<std::string, llvm::StructType *> lStructTypeMap;
-
 /** Using a struct's name, its variability, and the vector width for the
     current compilation target, this function generates a string that
-    encodes that full structure type, for use in the lStructTypeMap.  Note
+    encodes that full structure type, for use in the structTypeMap.  Note
     that the vector width is needed in order to differentiate between
     'varying' structs with different compilation targets, which have
     different memory layouts...
@@ -1592,7 +1585,7 @@ StructType::StructType(const std::string &n, const llvm::SmallVector<const Type 
         // created, we're done.  For an opaque struct type, we'll override
         // the old definition now that we have a full definition.
         std::string mname = lMangleStructName(name, variability);
-        if (lStructTypeMap.find(mname) != lStructTypeMap.end() && lStructTypeMap[mname]->isOpaque() == false)
+        if (m->structTypeMap.find(mname) != m->structTypeMap.end() && m->structTypeMap[mname]->isOpaque() == false)
             return;
 
         // Actually make the LLVM struct
@@ -1615,13 +1608,13 @@ StructType::StructType(const std::string &n, const llvm::SmallVector<const Type 
             }
         }
 
-        if (lStructTypeMap.find(mname) == lStructTypeMap.end()) {
+        if (m->structTypeMap.find(mname) == m->structTypeMap.end()) {
             // New struct definition
             llvm::StructType *st = llvm::StructType::create(*g->ctx, elementTypes, mname);
-            lStructTypeMap[mname] = st;
+            m->structTypeMap[mname] = st;
         } else {
             // Definition for what was before just a declaration
-            lStructTypeMap[mname]->setBody(elementTypes);
+            m->structTypeMap[mname]->setBody(elementTypes);
         }
     }
     // Create a unique anonymous struct name if we have an anonymous struct (name == "")
@@ -1818,11 +1811,11 @@ std::string StructType::GetCDeclaration(const std::string &n) const {
 llvm::Type *StructType::LLVMType(llvm::LLVMContext *ctx) const {
     Assert(variability != Variability::Unbound);
     std::string mname = lMangleStructName(name, variability);
-    if (lStructTypeMap.find(mname) == lStructTypeMap.end()) {
+    if (m->structTypeMap.find(mname) == m->structTypeMap.end()) {
         Assert(m->errorCount > 0);
         return NULL;
     }
-    return lStructTypeMap[mname];
+    return m->structTypeMap[mname];
 }
 
 // Versioning of this function becomes really messy, so versioning the whole function.
@@ -1934,8 +1927,8 @@ UndefinedStructType::UndefinedStructType(const std::string &n, const Variability
     if (variability != Variability::Unbound) {
         // Create a new opaque LLVM struct type for this struct name
         std::string mname = lMangleStructName(name, variability);
-        if (lStructTypeMap.find(mname) == lStructTypeMap.end())
-            lStructTypeMap[mname] = llvm::StructType::create(*g->ctx, mname);
+        if (m->structTypeMap.find(mname) == m->structTypeMap.end())
+            m->structTypeMap[mname] = llvm::StructType::create(*g->ctx, mname);
     }
 }
 
@@ -2019,11 +2012,11 @@ std::string UndefinedStructType::GetCDeclaration(const std::string &n) const {
 llvm::Type *UndefinedStructType::LLVMType(llvm::LLVMContext *ctx) const {
     Assert(variability != Variability::Unbound);
     std::string mname = lMangleStructName(name, variability);
-    if (lStructTypeMap.find(mname) == lStructTypeMap.end()) {
+    if (m->structTypeMap.find(mname) == m->structTypeMap.end()) {
         Assert(m->errorCount > 0);
         return NULL;
     }
-    return lStructTypeMap[mname];
+    return m->structTypeMap[mname];
 }
 
 llvm::DIType *UndefinedStructType::GetDIType(llvm::DIScope *scope) const {
