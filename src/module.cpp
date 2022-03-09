@@ -258,6 +258,7 @@ int Module::CompileFile() {
     }
 
     bool runPreprocessor = g->runCPP;
+    const bool onlyPreprocessor = g->onlyCPP;
 
     if (runPreprocessor) {
         llvm::TimeTraceScope TimeScope("Frontend parser");
@@ -295,6 +296,10 @@ int Module::CompileFile() {
         yy_switch_to_buffer(yy_create_buffer(yyin, 4096));
         yyparse();
         fclose(f);
+    }
+
+    if (onlyPreprocessor) {
+        return errorCount; // Return early
     }
 
     if (g->NoOmitFramePointer)
@@ -2805,55 +2810,62 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             return 1;
 
         m = new Module(srcFile);
-        if (m->CompileFile() == 0) {
-            llvm::TimeTraceScope TimeScope("Backend");
+        const int compileResult = m->CompileFile();
+
+        llvm::TimeTraceScope TimeScope("Backend");
+
+        if (compileResult == 0) {
+            // Only perform backend tasks if enabled
+            if (!g->onlyCPP) {
 #ifdef ISPC_XE_ENABLED
-            if (outputType == Asm || outputType == Object) {
-                if (g->target->isXeTarget()) {
-                    Error(SourcePos(), "%s output is not supported yet for Xe targets. ",
-                          (outputType == Asm) ? "assembly" : "binary");
+                if (outputType == Asm || outputType == Object) {
+                    if (g->target->isXeTarget()) {
+                        Error(SourcePos(), "%s output is not supported yet for Xe targets. ",
+                              (outputType == Asm) ? "assembly" : "binary");
+                        return 1;
+                    }
+                }
+                if (g->target->isXeTarget() && outputType == OutputType::Object) {
+                    outputType = OutputType::ZEBIN;
+                }
+                if (!g->target->isXeTarget() && (outputType == OutputType::ZEBIN || outputType == OutputType::SPIRV)) {
+                    Error(SourcePos(), "SPIR-V and L0 binary formats are supported for Xe target only");
                     return 1;
                 }
-            }
-            if (g->target->isXeTarget() && outputType == OutputType::Object) {
-                outputType = OutputType::ZEBIN;
-            }
-            if (!g->target->isXeTarget() && (outputType == OutputType::ZEBIN || outputType == OutputType::SPIRV)) {
-                Error(SourcePos(), "SPIR-V and L0 binary formats are supported for Xe target only");
-                return 1;
-            }
 #endif
-            if (outFileName != NULL)
-                if (!m->writeOutput(outputType, outputFlags, outFileName))
-                    return 1;
-            if (headerFileName != NULL)
-                if (!m->writeOutput(Module::Header, outputFlags, headerFileName))
-                    return 1;
-            if (depsFileName != NULL || (outputFlags & Module::OutputDepsToStdout)) {
-                std::string targetName;
-                if (depsTargetName)
-                    targetName = depsTargetName;
-                else if (outFileName)
-                    targetName = outFileName;
-                else if (!IsStdin(srcFile)) {
-                    targetName = srcFile;
-                    size_t dot = targetName.find_last_of('.');
-                    if (dot != std::string::npos)
-                        targetName.erase(dot, std::string::npos);
-                    targetName.append(".o");
-                } else
-                    targetName = "a.out";
-                if (!m->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile))
-                    return 1;
+                if (outFileName != NULL)
+                    if (!m->writeOutput(outputType, outputFlags, outFileName))
+                        return 1;
+                if (headerFileName != NULL)
+                    if (!m->writeOutput(Module::Header, outputFlags, headerFileName))
+                        return 1;
+                if (depsFileName != NULL || (outputFlags & Module::OutputDepsToStdout)) {
+                    std::string targetName;
+                    if (depsTargetName)
+                        targetName = depsTargetName;
+                    else if (outFileName)
+                        targetName = outFileName;
+                    else if (!IsStdin(srcFile)) {
+                        targetName = srcFile;
+                        size_t dot = targetName.find_last_of('.');
+                        if (dot != std::string::npos)
+                            targetName.erase(dot, std::string::npos);
+                        targetName.append(".o");
+                    } else
+                        targetName = "a.out";
+                    if (!m->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile))
+                        return 1;
+                }
+                if (hostStubFileName != NULL)
+                    if (!m->writeOutput(Module::HostStub, outputFlags, hostStubFileName))
+                        return 1;
+                if (devStubFileName != NULL)
+                    if (!m->writeOutput(Module::DevStub, outputFlags, devStubFileName))
+                        return 1;
             }
-            if (hostStubFileName != NULL)
-                if (!m->writeOutput(Module::HostStub, outputFlags, hostStubFileName))
-                    return 1;
-            if (devStubFileName != NULL)
-                if (!m->writeOutput(Module::DevStub, outputFlags, devStubFileName))
-                    return 1;
-        } else
+        } else {
             ++m->errorCount;
+        }
 
         int errorCount = m->errorCount;
         delete m;
@@ -2936,27 +2948,32 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             targetMachines[g->target->getISA()] = g->target->GetTargetMachine();
 
             m = new Module(srcFile);
-            int compileFileError = m->CompileFile();
+            const int compileResult = m->CompileFile();
+
             llvm::TimeTraceScope TimeScope("Backend");
-            if (compileFileError == 0) {
-                // Create the dispatch module, unless already created;
-                // in the latter case, just do the checking
-                bool check = (dispatchModule != NULL);
-                if (!check)
-                    dispatchModule = lInitDispatchModule();
-                lExtractOrCheckGlobals(m->module, dispatchModule, check);
 
-                // Grab pointers to the exported functions from the module we
-                // just compiled, for use in generating the dispatch function
-                // later.
-                lGetExportedFunctions(m->symbolTable, exportedFunctions);
+            if (compileResult == 0) {
+                // Only perform backend tasks if enabled
+                if (!g->onlyCPP) {
+                    // Create the dispatch module, unless already created;
+                    // in the latter case, just do the checking
+                    bool check = (dispatchModule != NULL);
+                    if (!check)
+                        dispatchModule = lInitDispatchModule();
+                    lExtractOrCheckGlobals(m->module, dispatchModule, check);
 
-                if (outFileName != NULL) {
-                    std::string targetOutFileName;
-                    const char *isaName = g->target->GetISAString();
-                    targetOutFileName = lGetTargetFileName(outFileName, isaName);
-                    if (!m->writeOutput(outputType, outputFlags, targetOutFileName.c_str())) {
-                        return 1;
+                    // Grab pointers to the exported functions from the module we
+                    // just compiled, for use in generating the dispatch function
+                    // later.
+                    lGetExportedFunctions(m->symbolTable, exportedFunctions);
+
+                    if (outFileName != NULL) {
+                        std::string targetOutFileName;
+                        const char *isaName = g->target->GetISAString();
+                        targetOutFileName = lGetTargetFileName(outFileName, isaName);
+                        if (!m->writeOutput(outputType, outputFlags, targetOutFileName.c_str())) {
+                            return 1;
+                        }
                     }
                 }
             } else {

@@ -62,6 +62,8 @@
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/ToolOutputFile.h>
 
+#include <string_view>
+
 using namespace ispc;
 
 #ifdef ISPC_HOST_IS_WINDOWS
@@ -91,6 +93,14 @@ static void lPrintVersion() {
            "http://ispc.github.io/downloads.html");
 #endif
 }
+
+
+// Command line argument constants
+static constexpr std::string_view ARG_NAME_ONLY_PREPROCESSOR{"--onlycpp"};
+static constexpr std::string_view ARG_DESC_ONLY_PREPROCESSOR{"Run only the preprocessor (if enabled)"};
+static constexpr std::string_view ARG_NAME_ONLY_PREPROCESSOR_SHORT{"-E"};
+static constexpr std::string_view ARG_DESC_ONLY_PREPROCESSOR_SHORT{"An alias for [--onlycpp]"};
+
 
 [[noreturn]] static void usage(int ret) {
     lPrintVersion();
@@ -127,6 +137,7 @@ static void lPrintVersion() {
     printf("    [--enable-llvm-intrinsics]\t\tEnable experimental feature to call LLVM intrinsics from ISPC "
            "source code\n");
     printf("    [--error-limit=<value>]\t\tLimit maximum number of errors emitting by ISPC to <value>\n");
+    printf("    [%s]\t\t\t\t%s\n", ARG_NAME_ONLY_PREPROCESSOR_SHORT.data(), ARG_DESC_ONLY_PREPROCESSOR_SHORT.data());
     printf("    [--force-alignment=<value>]\t\tForce alignment in memory allocations routine to be <value>\n");
     printf("    [-g]\t\t\t\tGenerate source-level debug information\n");
     printf("    [--help]\t\t\t\tPrint help\n");
@@ -155,6 +166,7 @@ static void lPrintVersion() {
     printf("        -O0\t\t\t\tOptimizations disabled.\n");
     printf("        -O1\t\t\t\tOptimization for size.\n");
     printf("        -O2/O3\t\t\t\tOptimization for speed.\n");
+    printf("    [%s]\t\t%s\n", ARG_NAME_ONLY_PREPROCESSOR.data(), ARG_DESC_ONLY_PREPROCESSOR.data());
     printf("    [--opt=<option>]\t\t\tSet optimization option\n");
     printf("        disable-assertions\t\tRemove assertion statements from final code.\n");
     printf("        disable-fma\t\t\tDisable 'fused multiply-add' instructions (on targets that support them)\n");
@@ -703,6 +715,8 @@ int main(int Argc, char *Argv[]) {
 #endif
         else if (!strcmp(argv[i], "--enable-llvm-intrinsics")) {
             g->enableLLVMIntrinsics = true;
+        } else if (!strncmp(argv[i], ARG_NAME_ONLY_PREPROCESSOR_SHORT.data(), ARG_NAME_ONLY_PREPROCESSOR_SHORT.size())) { // -E
+            g->onlyCPP = true;
         } else if (!strcmp(argv[i], "-I")) {
             if (++i != argc) {
                 lParseInclude(argv[i]);
@@ -757,6 +771,8 @@ int main(int Argc, char *Argv[]) {
             else {
                 errorHandler.AddError("Unknown --math-lib= option \"%s\".", lib);
             }
+        } else if (!strncmp(argv[i], ARG_NAME_ONLY_PREPROCESSOR.data(), ARG_NAME_ONLY_PREPROCESSOR.size())) { // --only-preprocessor
+            g->onlyCPP = true;
         } else if (!strncmp(argv[i], "--opt=", 6)) {
             const char *opt = argv[i] + 6;
             if (!strcmp(opt, "fast-math"))
