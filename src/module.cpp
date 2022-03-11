@@ -258,7 +258,6 @@ int Module::CompileFile() {
     }
 
     bool runPreprocessor = g->runCPP;
-    const bool onlyPreprocessor = g->onlyCPP;
 
     if (runPreprocessor) {
         llvm::TimeTraceScope TimeScope("Frontend parser");
@@ -275,7 +274,7 @@ int Module::CompileFile() {
 
         std::string buffer;
         llvm::raw_string_ostream os(buffer);
-        execPreprocessor(!IsStdin(filename) ? filename : "-", &os);
+        errorCount += execPreprocessor(!IsStdin(filename) ? filename : "-", &os);
         YY_BUFFER_STATE strbuf = yy_scan_string(os.str().c_str());
         yyparse();
         yy_delete_buffer(strbuf);
@@ -298,7 +297,7 @@ int Module::CompileFile() {
         fclose(f);
     }
 
-    if (onlyPreprocessor) {
+    if (g->onlyCPP) {
         return errorCount; // Return early
     }
 
@@ -2280,7 +2279,7 @@ bool Module::writeDispatchHeader(DispatchHeaderInfo *DHI) {
     return true;
 }
 
-void Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostream) const {
+int Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostream) const {
     clang::CompilerInstance inst;
 
     llvm::raw_fd_ostream stderrRaw(2, false);
@@ -2415,12 +2414,14 @@ void Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *
     }
 
     inst.getLangOpts().LineComment = 1;
-
     inst.createPreprocessor(clang::TU_Complete);
 
     diagPrinter->BeginSourceFile(inst.getLangOpts(), &inst.getPreprocessor());
     clang::DoPrintPreprocessedInput(inst.getPreprocessor(), ostream, inst.getPreprocessorOutputOpts());
     diagPrinter->EndSourceFile();
+
+    // Return preprocessor diagnostic errors after processing
+    return diagEngine->getNumErrors();
 }
 
 // Given an output filename of the form "foo.obj", and an ISA name like

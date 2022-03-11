@@ -220,7 +220,10 @@ class Module {
     static bool writeSPIRV(llvm::Module *module, const char *outFileName);
     static bool writeZEBin(llvm::Module *module, const char *outFileName);
 #endif
-    void execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostream) const;
+
+    /** Run the preprocessor on the given file, writing to the output stream. 
+        Returns the number of diagnostic errors encountered. */
+    int execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostream) const;
 };
 
 inline Module::OutputFlags &operator|=(Module::OutputFlags &lhs, const __underlying_type(Module::OutputFlags) rhs) {
