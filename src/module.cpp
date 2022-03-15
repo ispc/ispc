@@ -2421,7 +2421,7 @@ int Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *o
     diagPrinter->EndSourceFile();
 
     // Return preprocessor diagnostic errors after processing
-    return diagEngine->getNumErrors();
+    return static_cast<int>(diagEngine->hasErrorOccurred());
 }
 
 // Given an output filename of the form "foo.obj", and an ISA name like
