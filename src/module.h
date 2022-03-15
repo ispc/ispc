@@ -221,7 +221,7 @@ class Module {
     static bool writeZEBin(llvm::Module *module, const char *outFileName);
 #endif
 
-    /** Run the preprocessor on the given file, writing to the output stream. 
+    /** Run the preprocessor on the given file, writing to the output stream.
         Returns the number of diagnostic errors encountered. */
     int execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostream) const;
 };

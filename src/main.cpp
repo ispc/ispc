@@ -94,13 +94,11 @@ static void lPrintVersion() {
 #endif
 }
 
-
 // Command line argument constants
 static constexpr std::string_view ARG_NAME_ONLY_PREPROCESSOR{"--onlycpp"};
 static constexpr std::string_view ARG_DESC_ONLY_PREPROCESSOR{"Run only the preprocessor (if enabled)"};
 static constexpr std::string_view ARG_NAME_ONLY_PREPROCESSOR_SHORT{"-E"};
 static constexpr std::string_view ARG_DESC_ONLY_PREPROCESSOR_SHORT{"An alias for [--onlycpp]"};
-
 
 [[noreturn]] static void usage(int ret) {
     lPrintVersion();
@@ -715,7 +713,8 @@ int main(int Argc, char *Argv[]) {
 #endif
         else if (!strcmp(argv[i], "--enable-llvm-intrinsics")) {
             g->enableLLVMIntrinsics = true;
-        } else if (!strncmp(argv[i], ARG_NAME_ONLY_PREPROCESSOR_SHORT.data(), ARG_NAME_ONLY_PREPROCESSOR_SHORT.size())) { // -E
+        } else if (!strncmp(argv[i], ARG_NAME_ONLY_PREPROCESSOR_SHORT.data(),
+                            ARG_NAME_ONLY_PREPROCESSOR_SHORT.size())) { // -E
             g->onlyCPP = true;
         } else if (!strcmp(argv[i], "-I")) {
             if (++i != argc) {
@@ -771,7 +770,8 @@ int main(int Argc, char *Argv[]) {
             else {
                 errorHandler.AddError("Unknown --math-lib= option \"%s\".", lib);
             }
-        } else if (!strncmp(argv[i], ARG_NAME_ONLY_PREPROCESSOR.data(), ARG_NAME_ONLY_PREPROCESSOR.size())) { // --only-preprocessor
+        } else if (!strncmp(argv[i], ARG_NAME_ONLY_PREPROCESSOR.data(),
+                            ARG_NAME_ONLY_PREPROCESSOR.size())) { // --only-preprocessor
             g->onlyCPP = true;
         } else if (!strncmp(argv[i], "--opt=", 6)) {
             const char *opt = argv[i] + 6;
