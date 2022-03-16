@@ -274,7 +274,8 @@ int Module::CompileFile() {
 
         std::string buffer;
         llvm::raw_string_ostream os(buffer);
-        errorCount += execPreprocessor(!IsStdin(filename) ? filename : "-", &os);
+        const int numErrors = execPreprocessor(!IsStdin(filename) ? filename : "-", &os);
+        errorCount += (g->ignoreCPP) ? 0 : numErrors;
         YY_BUFFER_STATE strbuf = yy_scan_string(os.str().c_str());
         yyparse();
         yy_delete_buffer(strbuf);
@@ -2289,6 +2290,7 @@ int Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *o
 
     llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagIDs(new clang::DiagnosticIDs);
     clang::DiagnosticsEngine *diagEngine = new clang::DiagnosticsEngine(diagIDs, diagOptions, diagPrinter);
+    diagEngine->setSuppressAllDiagnostics(g->ignoreCPP);
 
     inst.setDiagnostics(diagEngine);
 

@@ -618,6 +618,10 @@ struct Globals {
         dumping its output. (Default is false.) */
     bool onlyCPP;
 
+    /** If enabled, suppresses errors C pre-processor (if enabled)
+        (Default is false.) */
+    bool ignoreCPP;
+
     /** When \c true, voluminous debugging output will be printed during
         ispc's execution. */
     bool debugPrint;
