@@ -3,7 +3,7 @@
 rst2html=rst2html
 
 exit_status=0
-for i in ispc ispc_for_xe perfguide faq invoke_sycl; do
+for i in ispc ispc_for_xe perfguide faq design/invoke_sycl; do
     $rst2html --template=template.txt --link-stylesheet \
         --stylesheet-path=css/style.css --exit-status=2 $i.rst > $i.html
     (( exit_status = exit_status || $? ))
