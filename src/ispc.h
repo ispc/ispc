@@ -614,13 +614,12 @@ struct Globals {
         program source before compiling it.  (Default is true.) */
     bool runCPP;
 
-    /** If enabled, only runs the C pre-processor (if enabled),
-        dumping its output. (Default is false.) */
+    /** When \c true, only runs the C pre-processor. (Default is false.) */
     bool onlyCPP;
 
-    /** If enabled, suppresses errors C pre-processor (if enabled)
+    /** When \c true, suppresses errors from the C pre-processor.
         (Default is false.) */
-    bool ignoreCPP;
+    bool ignoreCPPErrors;
 
     /** When \c true, voluminous debugging output will be printed during
         ispc's execution. */

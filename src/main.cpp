@@ -62,8 +62,6 @@
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/ToolOutputFile.h>
 
-#include <string_view>
-
 using namespace ispc;
 
 #ifdef ISPC_HOST_IS_WINDOWS
@@ -115,7 +113,7 @@ static void lPrintVersion() {
     printf("    [--dllexport]\t\t\tMake non-static functions DLL exported.  Windows target only\n");
     printf("    [--dwarf-version={2,3,4}]\t\tGenerate source-level debug information with given DWARF version "
            "(triggers -g).  Ignored for Windows target\n");
-    printf("    [-E]\t\t\t\tRun only the preprocessor (if enabled)\n");
+    printf("    [-E]\t\t\t\tRun only the preprocessor\n");
     printf("    [--emit-asm]\t\t\tGenerate assembly language file as output\n");
     printf("    [--emit-llvm]\t\t\tEmit LLVM bitcode file as output\n");
     printf("    [--emit-llvm-text]\t\t\tEmit LLVM bitcode file as output in textual form\n");
@@ -137,7 +135,7 @@ static void lPrintVersion() {
     printf("    [--host-stub <filename>]\t\tEmit host-side offload stub functions to file\n");
     printf("    [-h <name>/--header-outfile=<name>]\tOutput filename for header\n");
     printf("    [-I <path>]\t\t\t\tAdd <path> to #include file search path\n");
-    printf("    [--ignorecpp]\t\t\tSuppress errors from the preprocessor (if enabled)\n");
+    printf("    [--ignore-preprocessor-errors]\t\t\tSuppress errors from the preprocessor\n");
     printf("    [--instrument]\t\t\tEmit instrumentation to gather performance data\n");
     printf("    [--math-lib=<option>]\t\tSelect math library\n");
     printf("        default\t\t\t\tUse ispc's built-in math functions\n");
@@ -717,8 +715,8 @@ int main(int Argc, char *Argv[]) {
             }
         } else if (!strncmp(argv[i], "-I", 2)) {
             lParseInclude(argv[i] + 2);
-        } else if (!strcmp(argv[i], "--ignorecpp")) {
-            g->ignoreCPP = true;
+        } else if (!strcmp(argv[i], "--ignore-preprocessor-errors")) {
+            g->ignoreCPPErrors = true;
         } else if (!strcmp(argv[i], "--fuzz-test"))
             g->enableFuzzTest = true;
         else if (!strncmp(argv[i], "--fuzz-seed=", 12))
