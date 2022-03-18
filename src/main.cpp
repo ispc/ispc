@@ -691,6 +691,7 @@ int main(int Argc, char *Argv[]) {
             g->generateDebuggingSymbols = true;
         } else if (!strcmp(argv[i], "-E")) {
             g->onlyCPP = true;
+            ot = Module::CPPStub;
         } else if (!strcmp(argv[i], "--emit-asm"))
             ot = Module::Asm;
         else if (!strcmp(argv[i], "--emit-llvm"))
@@ -1025,6 +1026,10 @@ int main(int Argc, char *Argv[]) {
         Warning(SourcePos(), "Both -M and -MMM specified on the command line. "
                              "-MMM takes precedence.");
         flags &= Module::GenerateMakeRuleForDeps;
+    }
+
+    if (g->onlyCPP && outFileName == nullptr) {
+        outFileName = "-"; // Assume stdout by default (-E mode)
     }
 
     if (outFileName == NULL && headerFileName == NULL &&

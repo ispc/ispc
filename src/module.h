@@ -123,6 +123,7 @@ class Module {
         Deps,        /** generate dependencies */
         DevStub,     /** generate device-side offload stubs */
         HostStub,    /** generate host-side offload stubs */
+        CPPStub,     /** generate preprocessed stubs (-E mode) */
 #ifdef ISPC_XE_ENABLED
         ZEBIN, /** generate L0 binary file */
         SPIRV, /** generate spir-v file */
@@ -197,6 +198,9 @@ class Module {
     const char *filename;
     AST *ast;
 
+    std::string CPPBuffer;
+    llvm::raw_string_ostream CPPStream;
+
     std::vector<std::pair<const Type *, SourcePos>> exportedTypes;
 
     /** Write the corresponding output type to the given file.  Returns
@@ -211,7 +215,9 @@ class Module {
                    const char *srcFilename = NULL);
     bool writeDevStub(const char *filename);
     bool writeHostStub(const char *filename);
+    bool writeCPPStub(const char *outFileName);
     bool writeObjectFileOrAssembly(OutputType outputType, const char *filename);
+    static bool writeCPPStub(Module *module, const char *outFileName);
     static bool writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm::Module *module,
                                           OutputType outputType, const char *outFileName);
     static bool writeBitcode(llvm::Module *module, const char *outFileName, OutputType outputType);

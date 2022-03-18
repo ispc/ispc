@@ -160,7 +160,7 @@ static void lStripUnusedDebugInfo(llvm::Module *module) { return; }
 ///////////////////////////////////////////////////////////////////////////
 // Module
 
-Module::Module(const char *fn) {
+Module::Module(const char *fn) : CPPBuffer{}, CPPStream{CPPBuffer} {
     // It's a hack to do this here, but it must be done after the target
     // information has been set (so e.g. the vector width is known...)  In
     // particular, if we're compiling to multiple targets with different
@@ -272,11 +272,14 @@ int Module::CompileFile() {
             fclose(f);
         }
 
-        std::string buffer;
-        llvm::raw_string_ostream os(buffer);
-        const int numErrors = execPreprocessor(!IsStdin(filename) ? filename : "-", &os);
+        const int numErrors = execPreprocessor(!IsStdin(filename) ? filename : "-", &CPPStream);
         errorCount += (g->ignoreCPPErrors) ? 0 : numErrors;
-        YY_BUFFER_STATE strbuf = yy_scan_string(os.str().c_str());
+
+        if (g->onlyCPP) {
+            return errorCount; // Return early
+        }
+
+        YY_BUFFER_STATE strbuf = yy_scan_string(CPPStream.str().c_str());
         yyparse();
         yy_delete_buffer(strbuf);
     } else {
@@ -296,10 +299,6 @@ int Module::CompileFile() {
         yy_switch_to_buffer(yy_create_buffer(yyin, 4096));
         yyparse();
         fclose(f);
-    }
-
-    if (g->onlyCPP) {
-        return errorCount; // Return early
     }
 
     if (g->NoOmitFramePointer)
@@ -1095,6 +1094,10 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
                     strcasecmp(suffix, "cxx") && strcasecmp(suffix, "cpp"))
                     fileType = "host-side offload stub";
                 break;
+            case CPPStub:
+                if (strcasecmp(suffix, "ispi") && strcasecmp(suffix, "i"))
+                    fileType = "preprocessed stub";
+                break;
             default:
                 Assert(0 /* swtich case not handled */);
                 return 1;
@@ -1113,6 +1116,8 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
             return writeHeader(outFileName);
     } else if (outputType == Deps)
         return writeDeps(outFileName, 0 != (flags & GenerateMakeRuleForDeps), depTargetFileName, sourceFileName);
+    else if (outputType == CPPStub)
+        return writeCPPStub(outFileName);
     else if (outputType == HostStub)
         return writeHostStub(outFileName);
     else if (outputType == DevStub)
@@ -1927,6 +1932,39 @@ bool Module::writeDevStub(const char *fn) {
     fprintf(file, "}/* end extern C */\n");
 
     fclose(file);
+    return true;
+}
+
+bool Module::writeCPPStub(const char *outFileName) { return writeCPPStub(this, outFileName); }
+
+bool Module::writeCPPStub(Module *module, const char *outFileName) {
+    // Get a file descriptor corresponding to where we want the output to
+    // go.  If we open it, it'll be closed by the llvm::raw_fd_ostream
+    // destructor.
+    //
+    int fd;
+    int flags = O_CREAT | O_WRONLY | O_TRUNC;
+
+    if (!outFileName) {
+        return false;
+    } else if (!strcmp("-", outFileName)) {
+        fd = 1;
+    } else {
+#ifdef ISPC_HOST_IS_WINDOWS
+        flags |= O_BINARY;
+        fd = _open(outFileName, flags, 0644);
+#else
+        fd = open(outFileName, flags, 0644);
+#endif // ISPC_HOST_IS_WINDOWS
+        if (fd == -1) {
+            perror(outFileName);
+            return false;
+        }
+    }
+
+    llvm::raw_fd_ostream fos(fd, (fd != 1), false);
+    fos << module->CPPStream.str();
+
     return true;
 }
 
@@ -2818,54 +2856,51 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         llvm::TimeTraceScope TimeScope("Backend");
 
         if (compileResult == 0) {
-            // Only perform backend tasks if enabled
-            if (!g->onlyCPP) {
 #ifdef ISPC_XE_ENABLED
-                if (outputType == Asm || outputType == Object) {
-                    if (g->target->isXeTarget()) {
-                        Error(SourcePos(), "%s output is not supported yet for Xe targets. ",
-                              (outputType == Asm) ? "assembly" : "binary");
-                        return 1;
-                    }
-                }
-                if (g->target->isXeTarget() && outputType == OutputType::Object) {
-                    outputType = OutputType::ZEBIN;
-                }
-                if (!g->target->isXeTarget() && (outputType == OutputType::ZEBIN || outputType == OutputType::SPIRV)) {
-                    Error(SourcePos(), "SPIR-V and L0 binary formats are supported for Xe target only");
+            if (outputType == Asm || outputType == Object) {
+                if (g->target->isXeTarget()) {
+                    Error(SourcePos(), "%s output is not supported yet for Xe targets. ",
+                          (outputType == Asm) ? "assembly" : "binary");
                     return 1;
                 }
-#endif
-                if (outFileName != NULL)
-                    if (!m->writeOutput(outputType, outputFlags, outFileName))
-                        return 1;
-                if (headerFileName != NULL)
-                    if (!m->writeOutput(Module::Header, outputFlags, headerFileName))
-                        return 1;
-                if (depsFileName != NULL || (outputFlags & Module::OutputDepsToStdout)) {
-                    std::string targetName;
-                    if (depsTargetName)
-                        targetName = depsTargetName;
-                    else if (outFileName)
-                        targetName = outFileName;
-                    else if (!IsStdin(srcFile)) {
-                        targetName = srcFile;
-                        size_t dot = targetName.find_last_of('.');
-                        if (dot != std::string::npos)
-                            targetName.erase(dot, std::string::npos);
-                        targetName.append(".o");
-                    } else
-                        targetName = "a.out";
-                    if (!m->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile))
-                        return 1;
-                }
-                if (hostStubFileName != NULL)
-                    if (!m->writeOutput(Module::HostStub, outputFlags, hostStubFileName))
-                        return 1;
-                if (devStubFileName != NULL)
-                    if (!m->writeOutput(Module::DevStub, outputFlags, devStubFileName))
-                        return 1;
             }
+            if (g->target->isXeTarget() && outputType == OutputType::Object) {
+                outputType = OutputType::ZEBIN;
+            }
+            if (!g->target->isXeTarget() && (outputType == OutputType::ZEBIN || outputType == OutputType::SPIRV)) {
+                Error(SourcePos(), "SPIR-V and L0 binary formats are supported for Xe target only");
+                return 1;
+            }
+#endif
+            if (outFileName != NULL)
+                if (!m->writeOutput(outputType, outputFlags, outFileName))
+                    return 1;
+            if (headerFileName != NULL)
+                if (!m->writeOutput(Module::Header, outputFlags, headerFileName))
+                    return 1;
+            if (depsFileName != NULL || (outputFlags & Module::OutputDepsToStdout)) {
+                std::string targetName;
+                if (depsTargetName)
+                    targetName = depsTargetName;
+                else if (outFileName)
+                    targetName = outFileName;
+                else if (!IsStdin(srcFile)) {
+                    targetName = srcFile;
+                    size_t dot = targetName.find_last_of('.');
+                    if (dot != std::string::npos)
+                        targetName.erase(dot, std::string::npos);
+                    targetName.append(".o");
+                } else
+                    targetName = "a.out";
+                if (!m->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile))
+                    return 1;
+            }
+            if (hostStubFileName != NULL)
+                if (!m->writeOutput(Module::HostStub, outputFlags, hostStubFileName))
+                    return 1;
+            if (devStubFileName != NULL)
+                if (!m->writeOutput(Module::DevStub, outputFlags, devStubFileName))
+                    return 1;
         } else {
             ++m->errorCount;
         }
@@ -2956,27 +2991,24 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             llvm::TimeTraceScope TimeScope("Backend");
 
             if (compileResult == 0) {
-                // Only perform backend tasks if enabled
-                if (!g->onlyCPP) {
-                    // Create the dispatch module, unless already created;
-                    // in the latter case, just do the checking
-                    bool check = (dispatchModule != NULL);
-                    if (!check)
-                        dispatchModule = lInitDispatchModule();
-                    lExtractOrCheckGlobals(m->module, dispatchModule, check);
+                // Create the dispatch module, unless already created;
+                // in the latter case, just do the checking
+                bool check = (dispatchModule != NULL);
+                if (!check)
+                    dispatchModule = lInitDispatchModule();
+                lExtractOrCheckGlobals(m->module, dispatchModule, check);
 
-                    // Grab pointers to the exported functions from the module we
-                    // just compiled, for use in generating the dispatch function
-                    // later.
-                    lGetExportedFunctions(m->symbolTable, exportedFunctions);
+                // Grab pointers to the exported functions from the module we
+                // just compiled, for use in generating the dispatch function
+                // later.
+                lGetExportedFunctions(m->symbolTable, exportedFunctions);
 
-                    if (outFileName != NULL) {
-                        std::string targetOutFileName;
-                        const char *isaName = g->target->GetISAString();
-                        targetOutFileName = lGetTargetFileName(outFileName, isaName);
-                        if (!m->writeOutput(outputType, outputFlags, targetOutFileName.c_str())) {
-                            return 1;
-                        }
+                if (outFileName != NULL) {
+                    std::string targetOutFileName;
+                    const char *isaName = g->target->GetISAString();
+                    targetOutFileName = lGetTargetFileName(outFileName, isaName);
+                    if (!m->writeOutput(outputType, outputFlags, targetOutFileName.c_str())) {
+                        return 1;
                     }
                 }
             } else {
@@ -3049,10 +3081,22 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         lEmitDispatchModule(dispatchModule, exportedFunctions);
 
         if (outFileName != NULL) {
-            if ((outputType == Bitcode) || (outputType == BitcodeText))
+            switch (outputType) {
+            case Bitcode:
+            case BitcodeText:
                 writeBitcode(dispatchModule, outFileName, outputType);
-            else
+                break;
+
+            case CPPStub:
+                fprintf(stderr, "Entering CPPStub function\n");
+                assert(m && "ISPC module `m` should exist");
+                writeCPPStub(m, outFileName);
+                break;
+
+            default:
+                assert((outputType == Module::Object || outputType == Module::Asm) && "Unexpected `outputType`");
                 writeObjectFileOrAssembly(firstTargetMachine, dispatchModule, outputType, outFileName);
+            }
         }
 
         if (depsFileName != NULL || (outputFlags & Module::OutputDepsToStdout)) {
