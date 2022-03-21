@@ -1039,7 +1039,7 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
 
     // SIC! (verifyModule() == TRUE) means "failed", see llvm-link code.
     if ((outputType != Header) && (outputType != Deps) && (outputType != HostStub) && (outputType != DevStub) &&
-        llvm::verifyModule(*module)) {
+        (outputType != CPPStub) && llvm::verifyModule(*module)) {
         FATAL("Resulting module verification failed!");
     }
 

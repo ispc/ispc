@@ -1,12 +1,12 @@
-// RUN:     %{ispc} %s -o - --target=host --nostdlib --emit-llvm-text -E                                             | grep -v -e '^// ' | FileCheck %s -check-prefix=CHECK_PASS_0
-// RUN:     %{ispc} %s -o - --target=host --nostdlib --emit-llvm-text                                                                    | FileCheck %s -check-prefix=CHECK_PASS_1
-// RUN: not %{ispc} %s -o - --target=host --nostdlib --emit-llvm-text -E                              -DDO_ELSE 2>&1 | grep -v -e '^// ' | FileCheck %s -check-prefix=CHECK_ERROR
-// RUN: not %{ispc} %s -o - --target=host --nostdlib --emit-llvm-text                                 -DDO_ELSE 2>&1                     | FileCheck %s -check-prefix=CHECK_ERROR
+// RUN:     %{ispc} %s      --target=host --nostdlib -E                                                              | grep -v -e '^// ' | FileCheck %s -check-prefix=CHECK_PASS_0
+// RUN:     %{ispc} %s -o - --target=host --nostdlib    --emit-llvm-text                                                                 | FileCheck %s -check-prefix=CHECK_PASS_1
+// RUN: not %{ispc} %s      --target=host --nostdlib -E                                               -DDO_ELSE 2>&1 | grep -v -e '^// ' | FileCheck %s -check-prefix=CHECK_ERROR
+// RUN: not %{ispc} %s -o - --target=host --nostdlib    --emit-llvm-text                              -DDO_ELSE 2>&1                     | FileCheck %s -check-prefix=CHECK_ERROR
 
-// RUN:     %{ispc} %s -o - --target=host --nostdlib --emit-llvm-text -E --ignore-preprocessor-errors                | grep -v -e '^// ' | FileCheck %s -check-prefix=CHECK_PASS_0
-// RUN:     %{ispc} %s -o - --target=host --nostdlib --emit-llvm-text    --ignore-preprocessor-errors                                    | FileCheck %s -check-prefix=CHECK_PASS_1
-// RUN:     %{ispc} %s -o - --target=host --nostdlib --emit-llvm-text -E --ignore-preprocessor-errors -DDO_ELSE      | grep -v -e '^// ' | FileCheck %s -check-prefix=CHECK_PASS_2
-// RUN:     %{ispc} %s -o - --target=host --nostdlib --emit-llvm-text    --ignore-preprocessor-errors -DDO_ELSE                          | FileCheck %s -check-prefix=CHECK_PASS_3
+// RUN:     %{ispc} %s      --target=host --nostdlib -E                  --ignore-preprocessor-errors                | grep -v -e '^// ' | FileCheck %s -check-prefix=CHECK_PASS_0
+// RUN:     %{ispc} %s -o - --target=host --nostdlib    --emit-llvm-text --ignore-preprocessor-errors                                    | FileCheck %s -check-prefix=CHECK_PASS_1
+// RUN:     %{ispc} %s      --target=host --nostdlib -E                  --ignore-preprocessor-errors -DDO_ELSE      | grep -v -e '^// ' | FileCheck %s -check-prefix=CHECK_PASS_2
+// RUN:     %{ispc} %s -o - --target=host --nostdlib    --emit-llvm-text --ignore-preprocessor-errors -DDO_ELSE                          | FileCheck %s -check-prefix=CHECK_PASS_3
 
 
 // CHECK_PASS_0: return 1337;
