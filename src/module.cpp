@@ -1951,7 +1951,6 @@ bool Module::writeCPPStub(Module *module, const char *outFileName) {
         fd = 1;
     } else {
 #ifdef ISPC_HOST_IS_WINDOWS
-        flags |= O_BINARY;
         fd = _open(outFileName, flags, 0644);
 #else
         fd = open(outFileName, flags, 0644);
