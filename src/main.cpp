@@ -135,7 +135,7 @@ static void lPrintVersion() {
     printf("    [--host-stub <filename>]\t\tEmit host-side offload stub functions to file\n");
     printf("    [-h <name>/--header-outfile=<name>]\tOutput filename for header\n");
     printf("    [-I <path>]\t\t\t\tAdd <path> to #include file search path\n");
-    printf("    [--ignore-preprocessor-errors]\t\t\tSuppress errors from the preprocessor\n");
+    printf("    [--ignore-preprocessor-errors]\tSuppress errors from the preprocessor\n");
     printf("    [--instrument]\t\t\tEmit instrumentation to gather performance data\n");
     printf("    [--math-lib=<option>]\t\tSelect math library\n");
     printf("        default\t\t\t\tUse ispc's built-in math functions\n");
