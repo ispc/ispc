@@ -3088,7 +3088,6 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
                 break;
 
             case CPPStub:
-                fprintf(stderr, "Entering CPPStub function\n");
                 assert(m && "ISPC module `m` should exist");
                 writeCPPStub(m, outFileName);
                 break;
