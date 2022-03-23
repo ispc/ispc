@@ -160,7 +160,7 @@ static void lStripUnusedDebugInfo(llvm::Module *module) { return; }
 ///////////////////////////////////////////////////////////////////////////
 // Module
 
-Module::Module(const char *fn) : CPPBuffer{}, CPPStream{CPPBuffer} {
+Module::Module(const char *fn) : bufferCPP{nullptr} {
     // It's a hack to do this here, but it must be done after the target
     // information has been set (so e.g. the vector width is known...)  In
     // particular, if we're compiling to multiple targets with different
@@ -272,14 +272,23 @@ int Module::CompileFile() {
             fclose(f);
         }
 
-        const int numErrors = execPreprocessor(!IsStdin(filename) ? filename : "-", &CPPStream);
+        // If the CPP stream has been initialized, we have unexpected behavior.
+        if (bufferCPP) {
+            perror(filename);
+            return 1;
+        }
+
+        // Replace the CPP stream with a newly allocated one.
+        bufferCPP.reset(new CPPBuffer{});
+
+        const int numErrors = execPreprocessor(!IsStdin(filename) ? filename : "-", bufferCPP->os.get());
         errorCount += (g->ignoreCPPErrors) ? 0 : numErrors;
 
         if (g->onlyCPP) {
             return errorCount; // Return early
         }
 
-        YY_BUFFER_STATE strbuf = yy_scan_string(CPPStream.str().c_str());
+        YY_BUFFER_STATE strbuf = yy_scan_string(bufferCPP->str.c_str());
         yyparse();
         yy_delete_buffer(strbuf);
     } else {
@@ -1961,8 +1970,15 @@ bool Module::writeCPPStub(Module *module, const char *outFileName) {
         }
     }
 
-    llvm::raw_fd_ostream fos(fd, (fd != 1), false);
-    fos << module->CPPStream.str();
+    // The CPP stream should have been initialized: print and clean it up.
+    if (module->bufferCPP) {
+        llvm::raw_fd_ostream fos(fd, (fd != 1), false);
+        fos << module->bufferCPP->str;
+        module->bufferCPP.reset();
+    } else {
+        perror("Unexpected empty/null `CPPStream`");
+        return false;
+    }
 
     return true;
 }

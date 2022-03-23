@@ -198,8 +198,16 @@ class Module {
     const char *filename;
     AST *ast;
 
-    std::string CPPBuffer;
-    llvm::raw_string_ostream CPPStream;
+    // Definition and member object capturing preprocessing stream during Module lifetime.
+    struct CPPBuffer {
+        CPPBuffer() : str{}, os{std::make_unique<llvm::raw_string_ostream>(str)} {}
+        CPPBuffer(CPPBuffer &&o) : str{std::move(o.str)}, os{std::move(o.os)} {}
+        ~CPPBuffer() = default;
+        std::string str;
+        std::unique_ptr<llvm::raw_string_ostream> os;
+    };
+
+    std::unique_ptr<CPPBuffer> bufferCPP;
 
     std::vector<std::pair<const Type *, SourcePos>> exportedTypes;
 
