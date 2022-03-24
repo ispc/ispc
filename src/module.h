@@ -241,10 +241,6 @@ class Module {
 
     /** Helper function to clean internal CPP buffer. **/
     void clearCPPBuffer();
-
-    /** Wrapper aronud `writeOutput` to manage `CPPBuffer` lifetime. **/
-    bool writeOutputPPWrap(OutputType ot, OutputFlags flags, const char *filename, const char *depTargetFileName = NULL,
-                           const char *sourceFileName = NULL, DispatchHeaderInfo *DHI = 0);
 };
 
 inline Module::OutputFlags &operator|=(Module::OutputFlags &lhs, const __underlying_type(Module::OutputFlags) rhs) {

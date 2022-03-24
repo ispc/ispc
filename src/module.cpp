@@ -291,6 +291,7 @@ int Module::CompileFile() {
         YY_BUFFER_STATE strbuf = yy_scan_string(bufferCPP->str.c_str());
         yyparse();
         yy_delete_buffer(strbuf);
+        clearCPPBuffer();
     } else {
         llvm::TimeTraceScope TimeScope("Frontend parser");
         // No preprocessor, just open up the file if it's not stdin..
@@ -1950,7 +1951,6 @@ bool Module::writeCPPStub(Module *module, const char *outFileName) {
     // Get a file descriptor corresponding to where we want the output to
     // go.  If we open it, it'll be closed by the llvm::raw_fd_ostream
     // destructor.
-    //
     int fd;
     int flags = O_CREAT | O_WRONLY | O_TRUNC;
 
@@ -2888,7 +2888,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             }
 #endif
             if (outFileName != NULL)
-                if (!m->writeOutputPPWrap(outputType, outputFlags, outFileName))
+                if (!m->writeOutput(outputType, outputFlags, outFileName))
                     return 1;
             if (headerFileName != NULL)
                 if (!m->writeOutput(Module::Header, outputFlags, headerFileName))
@@ -3022,7 +3022,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
                     std::string targetOutFileName;
                     const char *isaName = g->target->GetISAString();
                     targetOutFileName = lGetTargetFileName(outFileName, isaName);
-                    if (!m->writeOutputPPWrap(outputType, outputFlags, targetOutFileName.c_str())) {
+                    if (!m->writeOutput(outputType, outputFlags, targetOutFileName.c_str())) {
                         return 1;
                     }
                 }
@@ -3141,11 +3141,4 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
 void Module::clearCPPBuffer() {
     if (bufferCPP)
         bufferCPP.reset();
-}
-
-bool Module::writeOutputPPWrap(OutputType ot, OutputFlags flags, const char *filename, const char *depTargetFileName,
-                               const char *sourceFileName, DispatchHeaderInfo *DHI) {
-    const bool result = writeOutput(ot, flags, filename, depTargetFileName, sourceFileName, DHI);
-    clearCPPBuffer();
-    return result;
 }
