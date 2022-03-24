@@ -33,7 +33,12 @@ find_program(ISPC_EXECUTABLE ispc HINTS ${ISPC_DIR_HINT} DOC "Path to the ISPC e
 if (NOT ISPC_EXECUTABLE)
   message(FATAL_ERROR "Could not find ISPC. Exiting.")
 else()
-  message(STATUS "Found Intel(r) Implicit SPMD Compiler (Intel(r) ISPC): ${ISPC_EXECUTABLE}")
+  # Execute "ispc --version" and parse the version
+  execute_process(COMMAND ${ISPC_EXECUTABLE} "--version"
+                  OUTPUT_VARIABLE ISPC_INFO)
+  string(REGEX MATCH "(.*), ([0-9]*\.[0-9]*\.[0-9]*[a-z]*) (.*)" _ ${ISPC_INFO})
+  set(ISPC_VERSION ${CMAKE_MATCH_2})
+  message(STATUS "Found ISPC v${ISPC_VERSION}: ${ISPC_EXECUTABLE}")
 endif()
 
 ## ISPC config options ##
