@@ -1,4 +1,4 @@
-## Copyright 2020-2021 Intel Corporation
+## Copyright 2020-2022 Intel Corporation
 ## SPDX-License-Identifier: BSD-3-Clause
 
 cmake_minimum_required(VERSION 3.1)
@@ -166,6 +166,7 @@ write_basic_package_version_file(
 
 install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake
   cmake/Findlevel_zero.cmake
   cmake/Finddpcpp_compiler.cmake
   cmake/ispc.cmake

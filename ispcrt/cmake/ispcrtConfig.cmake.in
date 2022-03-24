@@ -1,4 +1,4 @@
-## Copyright 2020 Intel Corporation
+## Copyright 2020-2022 Intel Corporation
 ## SPDX-License-Identifier: BSD-3-Clause
 
 @PACKAGE_INIT@
@@ -29,6 +29,9 @@ if(@ISPCRT_BUILD_GPU@)
   unset(OLD_CMAKE_MODULE_PATH)
 endif()
 
-## Standard signal that the package was found ##
+## Print info about found ISPCRT version
+include(FindPackageMessage)
+find_package_MESSAGE(@PROJECT_NAME@ "Found ispcrt: ${ISPCRT_DIR}" "[${ISPCRT_DIR}]")
 
+## Standard signal that the package was found ##
 set(ISPCRT_FOUND TRUE)
