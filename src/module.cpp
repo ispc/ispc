@@ -2888,7 +2888,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             }
 #endif
             if (outFileName != NULL)
-                if (!m->writeOutput(outputType, outputFlags, outFileName))
+                if (!m->writeOutputPPWrap(outputType, outputFlags, outFileName))
                     return 1;
             if (headerFileName != NULL)
                 if (!m->writeOutput(Module::Header, outputFlags, headerFileName))
@@ -3022,7 +3022,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
                     std::string targetOutFileName;
                     const char *isaName = g->target->GetISAString();
                     targetOutFileName = lGetTargetFileName(outFileName, isaName);
-                    if (!m->writeOutput(outputType, outputFlags, targetOutFileName.c_str())) {
+                    if (!m->writeOutputPPWrap(outputType, outputFlags, targetOutFileName.c_str())) {
                         return 1;
                     }
                 }
@@ -3111,6 +3111,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
                 assert((outputType == Module::Object || outputType == Module::Asm) && "Unexpected `outputType`");
                 writeObjectFileOrAssembly(firstTargetMachine, dispatchModule, outputType, outFileName);
             }
+            m->clearCPPBuffer();
         }
 
         if (depsFileName != NULL || (outputFlags & Module::OutputDepsToStdout)) {
@@ -3135,4 +3136,16 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         g->target = NULL;
         return errorCount > 0;
     }
+}
+
+void Module::clearCPPBuffer() {
+    if (bufferCPP)
+        bufferCPP.reset();
+}
+
+bool Module::writeOutputPPWrap(OutputType ot, OutputFlags flags, const char *filename, const char *depTargetFileName,
+                               const char *sourceFileName, DispatchHeaderInfo *DHI) {
+    const bool result = writeOutput(ot, flags, filename, depTargetFileName, sourceFileName, DHI);
+    clearCPPBuffer();
+    return result;
 }
