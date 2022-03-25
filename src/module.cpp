@@ -3094,6 +3094,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         if (outFileName != NULL) {
             switch (outputType) {
             case CPPStub:
+                // No preprocessor output for dispatch module.
                 break;
 
             case Bitcode:
