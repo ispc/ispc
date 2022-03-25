@@ -3101,9 +3101,13 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
                 writeBitcode(dispatchModule, outFileName, outputType);
                 break;
 
-            default:
-                Assert((outputType == Module::Object || outputType == Module::Asm) && "Unexpected `outputType`");
+            case Asm:
+            case Object:
                 writeObjectFileOrAssembly(firstTargetMachine, dispatchModule, outputType, outFileName);
+                break;
+
+            default:
+                Assert(false && "Unexpected `outputType`");
             }
         }
 
