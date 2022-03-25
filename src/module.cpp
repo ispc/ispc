@@ -3107,7 +3107,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
                 break;
 
             default:
-                Assert(false && "Unexpected `outputType`");
+                FATAL("Unexpected `outputType`");
             }
         }
 
