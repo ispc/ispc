@@ -1971,7 +1971,7 @@ bool Module::writeCPPStub(Module *module, const char *outFileName) {
     }
 
     // The CPP stream should have been initialized: print and clean it up.
-    assert(module->bufferCPP && "`bufferCPP` should not be null");
+    Assert(module->bufferCPP && "`bufferCPP` should not be null");
     llvm::raw_fd_ostream fos(fd, (fd != 1), false);
     fos << module->bufferCPP->str;
     module->bufferCPP.reset();
@@ -3093,22 +3093,18 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
 
         if (outFileName != NULL) {
             switch (outputType) {
-            case Bitcode:
-            case BitcodeText:
-                errorCount += static_cast<int>(writeBitcode(dispatchModule, outFileName, outputType));
+            case CPPStub:
                 break;
 
-            case CPPStub:
-                assert(m && "ISPC module `m` should exist");
-                errorCount += static_cast<int>(writeCPPStub(m, outFileName));
+            case Bitcode:
+            case BitcodeText:
+                writeBitcode(dispatchModule, outFileName, outputType);
                 break;
 
             default:
-                assert((outputType == Module::Object || outputType == Module::Asm) && "Unexpected `outputType`");
-                errorCount += static_cast<int>(
-                    writeObjectFileOrAssembly(firstTargetMachine, dispatchModule, outputType, outFileName));
+                Assert((outputType == Module::Object || outputType == Module::Asm) && "Unexpected `outputType`");
+                writeObjectFileOrAssembly(firstTargetMachine, dispatchModule, outputType, outFileName);
             }
-            m->clearCPPBuffer();
         }
 
         if (depsFileName != NULL || (outputFlags & Module::OutputDepsToStdout)) {
