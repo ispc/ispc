@@ -3098,12 +3098,14 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
 
             case Bitcode:
             case BitcodeText:
-                writeBitcode(dispatchModule, outFileName, outputType);
+                if (!writeBitcode(dispatchModule, outFileName, outputType))
+                    return 1;
                 break;
 
             case Asm:
             case Object:
-                writeObjectFileOrAssembly(firstTargetMachine, dispatchModule, outputType, outFileName);
+                if (!writeObjectFileOrAssembly(firstTargetMachine, dispatchModule, outputType, outFileName))
+                    return 1;
                 break;
 
             default:
