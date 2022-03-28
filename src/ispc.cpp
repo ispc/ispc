@@ -1959,6 +1959,8 @@ Globals::Globals() {
 
     includeStdlib = true;
     runCPP = true;
+    onlyCPP = false;
+    ignoreCPPErrors = false;
     debugPrint = false;
     dumpFile = false;
     printTarget = false;

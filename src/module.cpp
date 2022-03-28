@@ -160,7 +160,7 @@ static void lStripUnusedDebugInfo(llvm::Module *module) { return; }
 ///////////////////////////////////////////////////////////////////////////
 // Module
 
-Module::Module(const char *fn) {
+Module::Module(const char *fn) : bufferCPP{nullptr} {
     // It's a hack to do this here, but it must be done after the target
     // information has been set (so e.g. the vector width is known...)  In
     // particular, if we're compiling to multiple targets with different
@@ -272,12 +272,26 @@ int Module::CompileFile() {
             fclose(f);
         }
 
-        std::string buffer;
-        llvm::raw_string_ostream os(buffer);
-        execPreprocessor(!IsStdin(filename) ? filename : "-", &os);
-        YY_BUFFER_STATE strbuf = yy_scan_string(os.str().c_str());
+        // If the CPP stream has been initialized, we have unexpected behavior.
+        if (bufferCPP) {
+            perror(filename);
+            return 1;
+        }
+
+        // Replace the CPP stream with a newly allocated one.
+        bufferCPP.reset(new CPPBuffer{});
+
+        const int numErrors = execPreprocessor(!IsStdin(filename) ? filename : "-", bufferCPP->os.get());
+        errorCount += (g->ignoreCPPErrors) ? 0 : numErrors;
+
+        if (g->onlyCPP) {
+            return errorCount; // Return early
+        }
+
+        YY_BUFFER_STATE strbuf = yy_scan_string(bufferCPP->str.c_str());
         yyparse();
         yy_delete_buffer(strbuf);
+        clearCPPBuffer();
     } else {
         llvm::TimeTraceScope TimeScope("Frontend parser");
         // No preprocessor, just open up the file if it's not stdin..
@@ -1035,7 +1049,7 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
 
     // SIC! (verifyModule() == TRUE) means "failed", see llvm-link code.
     if ((outputType != Header) && (outputType != Deps) && (outputType != HostStub) && (outputType != DevStub) &&
-        llvm::verifyModule(*module)) {
+        (outputType != CPPStub) && llvm::verifyModule(*module)) {
         FATAL("Resulting module verification failed!");
     }
 
@@ -1090,6 +1104,10 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
                     strcasecmp(suffix, "cxx") && strcasecmp(suffix, "cpp"))
                     fileType = "host-side offload stub";
                 break;
+            case CPPStub:
+                if (strcasecmp(suffix, "ispi") && strcasecmp(suffix, "i"))
+                    fileType = "preprocessed stub";
+                break;
             default:
                 Assert(0 /* swtich case not handled */);
                 return 1;
@@ -1108,6 +1126,8 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
             return writeHeader(outFileName);
     } else if (outputType == Deps)
         return writeDeps(outFileName, 0 != (flags & GenerateMakeRuleForDeps), depTargetFileName, sourceFileName);
+    else if (outputType == CPPStub)
+        return writeCPPStub(outFileName);
     else if (outputType == HostStub)
         return writeHostStub(outFileName);
     else if (outputType == DevStub)
@@ -1925,6 +1945,40 @@ bool Module::writeDevStub(const char *fn) {
     return true;
 }
 
+bool Module::writeCPPStub(const char *outFileName) { return writeCPPStub(this, outFileName); }
+
+bool Module::writeCPPStub(Module *module, const char *outFileName) {
+    // Get a file descriptor corresponding to where we want the output to
+    // go.  If we open it, it'll be closed by the llvm::raw_fd_ostream
+    // destructor.
+    int fd;
+    int flags = O_CREAT | O_WRONLY | O_TRUNC;
+
+    if (!outFileName) {
+        return false;
+    } else if (!strcmp("-", outFileName)) {
+        fd = 1;
+    } else {
+#ifdef ISPC_HOST_IS_WINDOWS
+        fd = _open(outFileName, flags, 0644);
+#else
+        fd = open(outFileName, flags, 0644);
+#endif // ISPC_HOST_IS_WINDOWS
+        if (fd == -1) {
+            perror(outFileName);
+            return false;
+        }
+    }
+
+    // The CPP stream should have been initialized: print and clean it up.
+    Assert(module->bufferCPP && "`bufferCPP` should not be null");
+    llvm::raw_fd_ostream fos(fd, (fd != 1), false);
+    fos << module->bufferCPP->str;
+    module->bufferCPP.reset();
+
+    return true;
+}
+
 bool Module::writeHostStub(const char *fn) {
     FILE *file = fopen(fn, "w");
     if (!file) {
@@ -2275,7 +2329,7 @@ bool Module::writeDispatchHeader(DispatchHeaderInfo *DHI) {
     return true;
 }
 
-void Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostream) const {
+int Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostream) const {
     clang::CompilerInstance inst;
 
     llvm::raw_fd_ostream stderrRaw(2, false);
@@ -2285,6 +2339,7 @@ void Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *
 
     llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagIDs(new clang::DiagnosticIDs);
     clang::DiagnosticsEngine *diagEngine = new clang::DiagnosticsEngine(diagIDs, diagOptions, diagPrinter);
+    diagEngine->setSuppressAllDiagnostics(g->ignoreCPPErrors);
 
     inst.setDiagnostics(diagEngine);
 
@@ -2410,12 +2465,14 @@ void Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *
     }
 
     inst.getLangOpts().LineComment = 1;
-
     inst.createPreprocessor(clang::TU_Complete);
 
     diagPrinter->BeginSourceFile(inst.getLangOpts(), &inst.getPreprocessor());
     clang::DoPrintPreprocessedInput(inst.getPreprocessor(), ostream, inst.getPreprocessorOutputOpts());
     diagPrinter->EndSourceFile();
+
+    // Return preprocessor diagnostic errors after processing
+    return static_cast<int>(diagEngine->hasErrorOccurred());
 }
 
 // Given an output filename of the form "foo.obj", and an ISA name like
@@ -2805,8 +2862,11 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             return 1;
 
         m = new Module(srcFile);
-        if (m->CompileFile() == 0) {
-            llvm::TimeTraceScope TimeScope("Backend");
+        const int compileResult = m->CompileFile();
+
+        llvm::TimeTraceScope TimeScope("Backend");
+
+        if (compileResult == 0) {
 #ifdef ISPC_XE_ENABLED
             if (outputType == Asm || outputType == Object) {
                 if (g->target->isXeTarget()) {
@@ -2852,8 +2912,9 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             if (devStubFileName != NULL)
                 if (!m->writeOutput(Module::DevStub, outputFlags, devStubFileName))
                     return 1;
-        } else
+        } else {
             ++m->errorCount;
+        }
 
         int errorCount = m->errorCount;
         delete m;
@@ -2936,9 +2997,11 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             targetMachines[g->target->getISA()] = g->target->GetTargetMachine();
 
             m = new Module(srcFile);
-            int compileFileError = m->CompileFile();
+            const int compileResult = m->CompileFile();
+
             llvm::TimeTraceScope TimeScope("Backend");
-            if (compileFileError == 0) {
+
+            if (compileResult == 0) {
                 // Create the dispatch module, unless already created;
                 // in the latter case, just do the checking
                 bool check = (dispatchModule != NULL);
@@ -3029,10 +3092,26 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         lEmitDispatchModule(dispatchModule, exportedFunctions);
 
         if (outFileName != NULL) {
-            if ((outputType == Bitcode) || (outputType == BitcodeText))
-                writeBitcode(dispatchModule, outFileName, outputType);
-            else
-                writeObjectFileOrAssembly(firstTargetMachine, dispatchModule, outputType, outFileName);
+            switch (outputType) {
+            case CPPStub:
+                // No preprocessor output for dispatch module.
+                break;
+
+            case Bitcode:
+            case BitcodeText:
+                if (!writeBitcode(dispatchModule, outFileName, outputType))
+                    return 1;
+                break;
+
+            case Asm:
+            case Object:
+                if (!writeObjectFileOrAssembly(firstTargetMachine, dispatchModule, outputType, outFileName))
+                    return 1;
+                break;
+
+            default:
+                FATAL("Unexpected `outputType`");
+            }
         }
 
         if (depsFileName != NULL || (outputFlags & Module::OutputDepsToStdout)) {
@@ -3057,4 +3136,9 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         g->target = NULL;
         return errorCount > 0;
     }
+}
+
+void Module::clearCPPBuffer() {
+    if (bufferCPP)
+        bufferCPP.reset();
 }

@@ -113,6 +113,7 @@ static void lPrintVersion() {
     printf("    [--dllexport]\t\t\tMake non-static functions DLL exported.  Windows target only\n");
     printf("    [--dwarf-version={2,3,4}]\t\tGenerate source-level debug information with given DWARF version "
            "(triggers -g).  Ignored for Windows target\n");
+    printf("    [-E]\t\t\t\tRun only the preprocessor\n");
     printf("    [--emit-asm]\t\t\tGenerate assembly language file as output\n");
     printf("    [--emit-llvm]\t\t\tEmit LLVM bitcode file as output\n");
     printf("    [--emit-llvm-text]\t\t\tEmit LLVM bitcode file as output in textual form\n");
@@ -134,6 +135,7 @@ static void lPrintVersion() {
     printf("    [--host-stub <filename>]\t\tEmit host-side offload stub functions to file\n");
     printf("    [-h <name>/--header-outfile=<name>]\tOutput filename for header\n");
     printf("    [-I <path>]\t\t\t\tAdd <path> to #include file search path\n");
+    printf("    [--ignore-preprocessor-errors]\tSuppress errors from the preprocessor\n");
     printf("    [--instrument]\t\t\tEmit instrumentation to gather performance data\n");
     printf("    [--math-lib=<option>]\t\tSelect math library\n");
     printf("        default\t\t\t\tUse ispc's built-in math functions\n");
@@ -687,6 +689,9 @@ int main(int Argc, char *Argv[]) {
             g->noPragmaOnce = true;
         else if (!strcmp(argv[i], "-g")) {
             g->generateDebuggingSymbols = true;
+        } else if (!strcmp(argv[i], "-E")) {
+            g->onlyCPP = true;
+            ot = Module::CPPStub;
         } else if (!strcmp(argv[i], "--emit-asm"))
             ot = Module::Asm;
         else if (!strcmp(argv[i], "--emit-llvm"))
@@ -709,9 +714,11 @@ int main(int Argc, char *Argv[]) {
             } else {
                 errorHandler.AddError("No path specified after -I option.");
             }
-        } else if (!strncmp(argv[i], "-I", 2))
+        } else if (!strncmp(argv[i], "-I", 2)) {
             lParseInclude(argv[i] + 2);
-        else if (!strcmp(argv[i], "--fuzz-test"))
+        } else if (!strcmp(argv[i], "--ignore-preprocessor-errors")) {
+            g->ignoreCPPErrors = true;
+        } else if (!strcmp(argv[i], "--fuzz-test"))
             g->enableFuzzTest = true;
         else if (!strncmp(argv[i], "--fuzz-seed=", 12))
             g->fuzzTestSeed = atoi(argv[i] + 12);
@@ -1019,6 +1026,10 @@ int main(int Argc, char *Argv[]) {
         Warning(SourcePos(), "Both -M and -MMM specified on the command line. "
                              "-MMM takes precedence.");
         flags &= Module::GenerateMakeRuleForDeps;
+    }
+
+    if (g->onlyCPP && outFileName == nullptr) {
+        outFileName = "-"; // Assume stdout by default (-E mode)
     }
 
     if (outFileName == NULL && headerFileName == NULL &&
