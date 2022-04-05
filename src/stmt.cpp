@@ -2302,7 +2302,6 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         return;
     }
     ctx->SetDebugPos(pos);
-    const Type *exprPtrType = PointerType::GetUniform(exprType);
     llvm::Value *exprMem = ctx->AllocaInst(exprType, "expr_mem");
     ctx->StoreInst(exprValue, exprMem, exprType);
 
@@ -2322,9 +2321,13 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         // And load the corresponding element value from the temporary
         // memory storing the value of the varying expr.
         llvm::Value *uniqueValue;
-        llvm::Value *uniqueValuePtr =
-            ctx->GetElementPtrInst(exprMem, LLVMInt64(0), firstSet, exprPtrType, "unique_index_ptr");
-        uniqueValue = ctx->LoadInst(uniqueValuePtr, exprType, "unique_value");
+        // Load plus EEI is more preferable way to get unique value than GEP + load.
+        // It allows better register utilization for Xe targets and reduces allocas
+        // number for both CPU and Xe.
+        llvm::Value *uniqueValueVec = ctx->LoadInst(exprMem, exprType, "unique_value_vec");
+        Assert(llvm::dyn_cast<llvm::VectorType>(uniqueValueVec->getType()) != NULL);
+        uniqueValue =
+            llvm::ExtractElementInst::Create(uniqueValueVec, firstSet, "unique_value", ctx->GetCurrentBasicBlock());
         // If it's a varying pointer type, need to convert from the int
         // type we store in the vector to the actual pointer type
         if (llvm::dyn_cast<llvm::PointerType>(symType) != NULL)
