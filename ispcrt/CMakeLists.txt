@@ -21,7 +21,8 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 ## Establish project ##########################################################
 
-# set (REPO_TAG "v${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}.${ISPC_VERSION_PATCH}${ISPC_VERSION_SUFFIX}")
+include(${CMAKE_CURRENT_LIST_DIR}/../cmake/Version.cmake)
+get_ispc_version("${CMAKE_CURRENT_LIST_DIR}/../src/ispc_version.h")
 project(ispcrt VERSION ${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}.${ISPC_VERSION_PATCH} LANGUAGES CXX)
 
 include(GNUInstallDirs)
