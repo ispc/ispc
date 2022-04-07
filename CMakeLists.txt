@@ -119,19 +119,6 @@ else()
     endif()
 endif()
 
-# Get ispc version
-file(READ "${CMAKE_CURRENT_SOURCE_DIR}/src/ispc_version.h" ispc_ver)
-string(REGEX MATCH "ISPC_VERSION \"([0-9]*)\.([0-9]*)\.([0-9]*)([a-z]*)" _ ${ispc_ver})
-set(ISPC_VERSION_MAJOR ${CMAKE_MATCH_1})
-set(ISPC_VERSION_MINOR ${CMAKE_MATCH_2})
-set(ISPC_VERSION_PATCH ${CMAKE_MATCH_3})
-set(ISPC_VERSION_SUFFIX ${CMAKE_MATCH_4})
-if (${ISPC_VERSION_SUFFIX} MATCHES ".*dev")
-    set (REPO_TAG "main")
-else()
-    set (REPO_TAG "v${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}.${ISPC_VERSION_PATCH}${ISPC_VERSION_SUFFIX}")
-endif()
-
 if (APPLE)
     # Use standard macOS SDK location if this is not specified.
     if (NOT ISPC_MACOS_SDK_PATH)
@@ -228,6 +215,10 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindLLVM.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Git.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateBuiltins.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Stdlib.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Version.cmake)
+
+# Get ispc version
+get_ispc_version("${CMAKE_CURRENT_SOURCE_DIR}/src/ispc_version.h")
 
 find_package(Python3 REQUIRED)
     if (NOT Python3_Interpreter_FOUND)
@@ -649,7 +640,7 @@ if (ISPC_PREPARE_PACKAGE)
     include(ExternalProject)
     ExternalProject_Add(ispc_web
       GIT_REPOSITORY    https://github.com/ispc/ispc.github.com.git
-      GIT_TAG ${REPO_TAG}
+      GIT_TAG ${ISPC_DOC_REPO_TAG}
       PREFIX ispc_web
       SOURCE_DIR ispc_web/repo
       CONFIGURE_COMMAND cmake -E echo "Skipping configure step."
