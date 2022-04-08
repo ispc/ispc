@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015-2022, Intel Corporation
+  Copyright (c) 2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -31,41 +31,13 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file ispc_version.h
+/** @file version.h
     @brief defines the ISPC version
 */
 
 #pragma once
 
-#include "../common/version.h"
-#include <llvm/Config/llvm-config.h>
-
-#define ISPC_LLVM_VERSION (LLVM_VERSION_MAJOR * 10000 + LLVM_VERSION_MINOR * 100)
-
-#define ISPC_LLVM_10_0 100000
-#define ISPC_LLVM_11_0 110000
-#define ISPC_LLVM_11_1 110100
-#define ISPC_LLVM_12_0 120000
-#define ISPC_LLVM_13_0 130000
-#define ISPC_LLVM_14_0 140000
-#define ISPC_LLVM_15_0 150000
-
-#define OLDEST_SUPPORTED_LLVM ISPC_LLVM_10_0
-#define LATEST_SUPPORTED_LLVM ISPC_LLVM_15_0
-
-#ifdef __ispc__xstr
-#undef __ispc__xstr
-#endif
-#define __ispc__xstr(s) __ispc__str(s)
-#define __ispc__str(s) #s
-
-#define ISPC_LLVM_VERSION_STRING                                                                                       \
-    __ispc__xstr(LLVM_VERSION_MAJOR) "." __ispc__xstr(LLVM_VERSION_MINOR) "." __ispc__xstr(LLVM_VERSION_PATCH)
-
-#if ISPC_LLVM_VERSION < OLDEST_SUPPORTED_LLVM || ISPC_LLVM_VERSION > LATEST_SUPPORTED_LLVM
-#error "Unhandled LLVM version"
-#endif
-
-#define ISPC_VERSION_STRING                                                                                            \
-    "Intel(r) Implicit SPMD Program Compiler (Intel(r) ISPC), " ISPC_VERSION " (build " BUILD_VERSION " @ " BUILD_DATE \
-    ", LLVM " ISPC_LLVM_VERSION_STRING ")"
+#define ISPC_VERSION_MAJOR 1
+#define ISPC_VERSION_MINOR 18
+#define ISPC_VERSION_PATCH 0
+#define ISPC_VERSION "1.18.0dev"

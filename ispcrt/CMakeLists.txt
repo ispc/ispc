@@ -22,7 +22,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 ## Establish project ##########################################################
 
 include(${CMAKE_CURRENT_LIST_DIR}/../cmake/Version.cmake)
-get_ispc_version("${CMAKE_CURRENT_LIST_DIR}/../src/ispc_version.h")
+get_ispc_version("${CMAKE_CURRENT_LIST_DIR}/../common/version.h")
 project(ispcrt VERSION ${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}.${ISPC_VERSION_PATCH} LANGUAGES CXX)
 
 include(GNUInstallDirs)
@@ -69,6 +69,7 @@ macro(build_ispcrt SHARED_OR_STATIC TARGET_NAME)
     $<$<BOOL:${ISPCRT_BUILD_TASKING}>:ispc_tasking.cpp>
 
     ispcrt.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/../common/version.rc
     $<$<BOOL:${ISPCRT_BUILD_CPU}>:detail/cpu/CPUDevice.cpp>
     $<$<BOOL:${ISPCRT_BUILD_GPU}>:detail/gpu/GPUDevice.cpp>
   )
@@ -83,6 +84,7 @@ macro(build_ispcrt SHARED_OR_STATIC TARGET_NAME)
 
   target_include_directories(${TARGET_NAME}
   PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/../common>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>
     $<BUILD_INTERFACE:${LEVEL_ZERO_INCLUDE_DIR}>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/ispcrt>
