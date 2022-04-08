@@ -754,13 +754,13 @@ int main(int Argc, char *Argv[]) {
         } else if (!strncmp(argv[i], "--math-lib=", 11)) {
             const char *lib = argv[i] + 11;
             if (!strcmp(lib, "default"))
-                g->mathLib = Globals::Math_ISPC;
+                g->mathLib = Globals::MathLib::Math_ISPC;
             else if (!strcmp(lib, "fast"))
-                g->mathLib = Globals::Math_ISPCFast;
+                g->mathLib = Globals::MathLib::Math_ISPCFast;
             else if (!strcmp(lib, "svml"))
-                g->mathLib = Globals::Math_SVML;
+                g->mathLib = Globals::MathLib::Math_SVML;
             else if (!strcmp(lib, "system"))
-                g->mathLib = Globals::Math_System;
+                g->mathLib = Globals::MathLib::Math_System;
             else {
                 errorHandler.AddError("Unknown --math-lib= option \"%s\".", lib);
             }

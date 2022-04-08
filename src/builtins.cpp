@@ -1170,10 +1170,11 @@ void ispc::DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::
     // Define __math_lib stuff.  This is used by stdlib.ispc, for example, to
     // figure out which math routines to end up calling...
     lDefineConstantInt("__math_lib", (int)g->mathLib, module, symbolTable, debug_symbols);
-    lDefineConstantInt("__math_lib_ispc", (int)Globals::Math_ISPC, module, symbolTable, debug_symbols);
-    lDefineConstantInt("__math_lib_ispc_fast", (int)Globals::Math_ISPCFast, module, symbolTable, debug_symbols);
-    lDefineConstantInt("__math_lib_svml", (int)Globals::Math_SVML, module, symbolTable, debug_symbols);
-    lDefineConstantInt("__math_lib_system", (int)Globals::Math_System, module, symbolTable, debug_symbols);
+    lDefineConstantInt("__math_lib_ispc", (int)Globals::MathLib::Math_ISPC, module, symbolTable, debug_symbols);
+    lDefineConstantInt("__math_lib_ispc_fast", (int)Globals::MathLib::Math_ISPCFast, module, symbolTable,
+                       debug_symbols);
+    lDefineConstantInt("__math_lib_svml", (int)Globals::MathLib::Math_SVML, module, symbolTable, debug_symbols);
+    lDefineConstantInt("__math_lib_system", (int)Globals::MathLib::Math_System, module, symbolTable, debug_symbols);
     lDefineConstantIntFunc("__fast_masked_vload", (int)g->opt.fastMaskedVload, module, symbolTable, debug_symbols);
 
     lDefineConstantInt("__have_native_half", g->target->hasHalf(), module, symbolTable, debug_symbols);
