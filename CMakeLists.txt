@@ -57,6 +57,7 @@ option(ISPC_INCLUDE_EXAMPLES "Generate build targets for the ISPC examples" ON)
 option(ISPC_INCLUDE_DPCPP_EXAMPLES "Generate build targets for the ISPC/DPCPP interoperability examples" OFF)
 option(ISPC_INCLUDE_TESTS "Generate build targets for the ISPC tests." ON)
 option(ISPC_INCLUDE_BENCHMARKS "Generate build targets for the ISPC tests." OFF)
+option(ISPC_INCLUDE_RT "Generate build targets for ISPC runtime." ON)
 option(ISPC_INCLUDE_UTILS "Generate build targets for the utils." ON)
 option(ISPC_PREPARE_PACKAGE "Generate build targets for ispc package" OFF)
 option(ISPC_NO_DUMPS "Turn off functionality, which requires LLVM dump() functions" OFF)
@@ -175,7 +176,6 @@ endif()
 
 # If Xe target is enabled, generate build targets for Xe examples and ISPCRT on Linux
 if (XE_ENABLED)
-    option(ISPC_INCLUDE_RT "Generate build targets for ISPC runtime." ON)
     option(ISPC_INCLUDE_XE_EXAMPLES "Generate build targets for the ISPC Xe examples" ON)
 endif()
 
