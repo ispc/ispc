@@ -218,7 +218,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Stdlib.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Version.cmake)
 
 # Get ispc version
-get_ispc_version("${CMAKE_CURRENT_SOURCE_DIR}/src/ispc_version.h")
+get_ispc_version("${CMAKE_CURRENT_SOURCE_DIR}/common/version.h")
 
 find_package(Python3 REQUIRED)
     if (NOT Python3_Interpreter_FOUND)
@@ -321,7 +321,8 @@ generate_stdlib(STDLIB_FILES ${ISPC_MASKS})
 
 add_executable(${PROJECT_NAME} ${BUILTIN_FILES} ${BUILTIN_CPP_FILES}
                ${STDLIB_FILES} ${BISON_CPP_OUTPUT} ${FLEX_OUTPUT}
-               ${CMAKE_CURRENT_SOURCE_DIR}/stdlib.ispc)
+               ${CMAKE_CURRENT_SOURCE_DIR}/stdlib.ispc
+               ${CMAKE_CURRENT_SOURCE_DIR}/common/version.rc)
 
 target_sources(${PROJECT_NAME}
     PRIVATE
@@ -363,6 +364,7 @@ target_sources(${PROJECT_NAME}
         "src/util.h"
         "src/parse.yy"
         "src/lex.ll"
+        "common/version.h"
 )
 
 if (XE_ENABLED)
@@ -437,6 +439,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
                            ${LLVM_INCLUDE_DIRS}
                            ${XE_DEPS_DIR}/include
                            ${CMAKE_CURRENT_SOURCE_DIR}/src
+                           ${CMAKE_CURRENT_SOURCE_DIR}/common
                            ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
 
 # Compile options
