@@ -806,7 +806,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
 #endif
 
     // Check math library
-    if (g->mathLib == Globals::Math_SVML && !ISPCTargetIsX86(m_ispc_target)) {
+    if (g->mathLib == Globals::MathLib::Math_SVML && !ISPCTargetIsX86(m_ispc_target)) {
         Error(SourcePos(), "SVML math library is supported for x86 targets only.");
         return;
     }
@@ -1954,8 +1954,8 @@ Opt::Opt() {
 Globals::Globals() {
     target_registry = TargetLibRegistry::getTargetLibRegistry();
 
-    mathLib = Globals::Math_ISPC;
-    codegenOptLevel = Globals::Aggressive;
+    mathLib = Globals::MathLib::Math_ISPC;
+    codegenOptLevel = Globals::CodegenOptLevel::Aggressive;
 
     includeStdlib = true;
     runCPP = true;
