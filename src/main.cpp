@@ -210,6 +210,8 @@ static void lPrintVersion() {
 [[noreturn]] static void devUsage(int ret) {
     lPrintVersion();
     printf("\nusage (developer options): ispc\n");
+    printf("    [--ast-dump=user|all]\t\tDump AST for user code or all the code including stdlib. If no argument is "
+           "given, dump AST for user code only\n");
     printf("    [--debug]\t\t\t\tPrint information useful for debugging ispc\n");
     printf("    [--debug-llvm]\t\t\tEnable LLVM debugging information (dumps to stderr)\n");
 #ifndef ISPC_NO_DUMPS
@@ -641,6 +643,17 @@ int main(int Argc, char *Argv[]) {
                 std::string arch_str = ArchToString(arch);
                 errorHandler.AddWarning("Overwriting --arch=%s with --arch=%s", prev_arch_str.c_str(),
                                         arch_str.c_str());
+            }
+        } else if (!strcmp(argv[i], "--ast-dump")) {
+            g->astDump = Globals::ASTDumpKind::User;
+        } else if (!strncmp(argv[i], "--ast-dump=", 11)) {
+            const char *ast = argv[i] + 11;
+            if (!strcmp(ast, "user"))
+                g->astDump = Globals::ASTDumpKind::User;
+            else if (!strcmp(ast, "all"))
+                g->astDump = Globals::ASTDumpKind::All;
+            else {
+                errorHandler.AddError("Unknown --ast-dump= value \"%s\".", ast);
             }
         } else if (!strncmp(argv[i], "--x86-asm-syntax=", 17)) {
             intelAsmSyntax = argv[i] + 17;

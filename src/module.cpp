@@ -311,6 +311,8 @@ int Module::CompileFile() {
         fclose(f);
     }
 
+    ast->Print(g->astDump);
+
     if (g->NoOmitFramePointer)
         for (llvm::Function &f : *module)
             f.addFnAttr("no-frame-pointer-elim", "true");

@@ -203,6 +203,8 @@ class AST {
         module. */
     void GenerateIR();
 
+    void Print(Globals::ASTDumpKind printKind = Globals::ASTDumpKind::User) const;
+
   private:
     std::vector<Function *> functions;
 };

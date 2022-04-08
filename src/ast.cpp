@@ -147,6 +147,36 @@ void AST::GenerateIR() {
         functions[i]->GenerateIR();
 }
 
+void AST::Print(Globals::ASTDumpKind printKind) const {
+    if (printKind == Globals::ASTDumpKind::None) {
+        return;
+    }
+
+    printf("AST\n");
+    Indent indent;
+
+    int funcsToPrint = 0;
+    if (printKind == Globals::ASTDumpKind::All) {
+        funcsToPrint = functions.size();
+    } else if (printKind == Globals::ASTDumpKind::User) {
+        for (unsigned int i = 0; i < functions.size(); ++i) {
+            if (!functions[i]->IsStdlibSymbol()) {
+                funcsToPrint++;
+            }
+        }
+    }
+
+    indent.pushList(funcsToPrint);
+    for (unsigned int i = 0; i < functions.size(); ++i) {
+        if (printKind == Globals::ASTDumpKind::All ||
+            (printKind == Globals::ASTDumpKind::User && !functions[i]->IsStdlibSymbol())) {
+            functions[i]->Print(indent);
+        }
+    }
+
+    fflush(stdout);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 
 ASTNode *ispc::WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc, void *data) {

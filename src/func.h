@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2021, Intel Corporation
+  Copyright (c) 2011-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -37,6 +37,7 @@
 
 #pragma once
 
+#include "ast.h"
 #include "ispc.h"
 
 #include <vector>
@@ -53,7 +54,14 @@ class Function {
     /** Generate LLVM IR for the function into the current module. */
     void GenerateIR();
 
+    void Print() const;
+    void Print(Indent &indent) const;
+    bool IsStdlibSymbol() const;
+
   private:
+    enum class DebugPrintPoint { Initial, AfterTypeChecking, AfterOptimization };
+    void debugPrintHelper(DebugPrintPoint dumpPoint);
+
     void emitCode(FunctionEmitContext *ctx, llvm::Function *function, SourcePos firstStmtPos);
 
     Symbol *sym;
