@@ -71,6 +71,90 @@
 
 using namespace ispc;
 
+bool Function::IsStdlibSymbol() const {
+    if (sym == nullptr) {
+        return false;
+    }
+
+    if (sym->pos.name != nullptr && !strcmp(sym->pos.name, "stdlib.ispc")) {
+        return true;
+    }
+    return false;
+}
+
+void Function::debugPrintHelper(DebugPrintPoint dumpPoint) {
+    if (code == nullptr || sym == nullptr) {
+        return;
+    }
+
+    if (!g->debugPrint) {
+        return;
+    }
+
+    // With debug prints enabled we will dump AST on several stages, so need annotation.
+    if (g->debugPrint) {
+        switch (dumpPoint) {
+        case DebugPrintPoint::Initial:
+            printf("Initial AST\n");
+            break;
+        case DebugPrintPoint::AfterTypeChecking:
+            printf("AST after after typechecking\n");
+            break;
+        case DebugPrintPoint::AfterOptimization:
+            printf("AST after optimization\n");
+            break;
+        }
+    }
+
+    Print();
+    printf("\n");
+}
+
+void Function::Print() const {
+    Indent indent;
+    indent.pushSingle();
+    Print(indent);
+    fflush(stdout);
+}
+
+void Function::Print(Indent &indent) const {
+    indent.Print("Function");
+    if (sym) {
+        sym->pos.Print();
+        printf(" \"%s\"\n", sym->name.c_str());
+    } else {
+        printf("<NULL>");
+    }
+
+    indent.pushList(args.size() + 1);
+    if (args.size() > 0) {
+        for (int i = 0; i < args.size(); i++) {
+            char buffer[15];
+            snprintf(buffer, 15, "param %d", i);
+            indent.setNextLabel(buffer);
+            if (args[i]) {
+                indent.Print();
+                if (args[i]->type != nullptr) {
+                    printf("[%s] ", args[i]->type->GetString().c_str());
+                }
+                printf("%s\n", args[i]->name.c_str());
+                indent.Done();
+            } else {
+                indent.Print("<NULL>");
+                indent.Done();
+            }
+        }
+    }
+
+    indent.setNextLabel("body");
+    if (code != nullptr) {
+        code->Print(indent);
+    } else {
+        printf("<CODE is missing>\n");
+    }
+    indent.Done();
+}
+
 Function::Function(Symbol *s, Stmt *c) {
     sym = s;
     code = c;
@@ -79,30 +163,17 @@ Function::Function(Symbol *s, Stmt *c) {
     Assert(maskSymbol != NULL);
 
     if (code != NULL) {
+        debugPrintHelper(DebugPrintPoint::Initial);
+
         code = TypeCheck(code);
 
-        if (code != NULL && g->debugPrint) {
-            printf("After typechecking function \"%s\":\n", sym->name.c_str());
-            code->Print(0);
-            printf("---------------------\n");
-        }
+        debugPrintHelper(DebugPrintPoint::AfterTypeChecking);
 
         if (code != NULL) {
             code = Optimize(code);
-            if (g->debugPrint) {
-                printf("After optimizing function \"%s\":\n", sym->name.c_str());
-                code->Print(0);
-                printf("---------------------\n");
-            }
-        }
-    }
 
-    if (g->debugPrint) {
-        printf("Add Function %s\n", sym->name.c_str());
-        if (code != NULL) {
-            code->Print(0);
+            debugPrintHelper(DebugPrintPoint::AfterOptimization);
         }
-        printf("\n\n\n");
     }
 
     const FunctionType *type = CastType<FunctionType>(sym->type);

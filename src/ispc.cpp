@@ -1962,6 +1962,7 @@ Globals::Globals() {
     onlyCPP = false;
     ignoreCPPErrors = false;
     debugPrint = false;
+    astDump = Globals::ASTDumpKind::None;
     dumpFile = false;
     printTarget = false;
     NoOmitFramePointer = false;
