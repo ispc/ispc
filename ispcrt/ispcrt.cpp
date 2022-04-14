@@ -233,6 +233,13 @@ size_t ispcrtSize(ISPCRTMemoryView h) ISPCRT_CATCH_BEGIN {
 }
 ISPCRT_CATCH_END(0)
 
+ISPCRTAllocationType ispcrtGetMemoryViewAllocType(ISPCRTMemoryView h) ISPCRT_CATCH_BEGIN {
+    auto &mv = referenceFromHandle<ispcrt::base::MemoryView>(h);
+    return mv.isShared() ? ISPCRTAllocationType::ISPCRT_ALLOC_TYPE_SHARED
+                         : ISPCRTAllocationType::ISPCRT_ALLOC_TYPE_DEVICE;
+}
+ISPCRT_CATCH_END(ISPCRTAllocationType::ISPCRT_ALLOC_TYPE_UNKNOWN)
+
 void *ispcrtSharedPtr(ISPCRTMemoryView h) ISPCRT_CATCH_BEGIN {
     auto &mv = referenceFromHandle<ispcrt::base::MemoryView>(h);
     return mv.devicePtr();

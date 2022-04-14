@@ -105,6 +105,7 @@ void *ispcrtDevicePtr(ISPCRTMemoryView);
 void *ispcrtSharedPtr(ISPCRTMemoryView);
 
 size_t ispcrtSize(ISPCRTMemoryView);
+ISPCRTAllocationType ispcrtGetMemoryViewAllocType(ISPCRTMemoryView h);
 
 // Kernels ////////////////////////////////////////////////////////////////////
 typedef struct {
