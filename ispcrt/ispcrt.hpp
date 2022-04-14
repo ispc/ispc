@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Intel Corporation
+// Copyright 2020-2022 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
@@ -205,6 +205,7 @@ template <typename T, AllocType AT = AllocType::Device> class Array : public Gen
     //////// Methods for all types of memory allocations ////////
 
     size_t size() const;
+    AllocType type() const;
 };
 
 // Inlined definitions //
@@ -267,6 +268,9 @@ template<AllocType alloc>
 
 template <typename T, AllocType AT>
     inline size_t Array<T,AT>::size() const { return ispcrtSize(handle()) / sizeof(T); }
+
+template <typename T, AllocType AT>
+    inline AllocType Array<T,AT>::type() const { return AT; }
 
 /////////////////////////////////////////////////////////////////////////////
 // Shared Memory Allocator //////////////////////////////////////////////////
