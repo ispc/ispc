@@ -17,6 +17,7 @@ include_directories_ispc(${ISPCRT_INCLUDE_DIR})
 ## Set the variable regarding pre-built tasking support
 if (@ISPCRT_BUILD_TASKING@)
   set(ISPCRT_TASKING_ENABLED TRUE)
+  set(ISPCRT_TASKING_MODEL @ISPCRT_BUILD_TASK_MODEL@)
 else()
   set(ISPCRT_TASKING_ENABLED FALSE)
 endif()

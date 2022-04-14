@@ -48,17 +48,52 @@ endif()
 
 if (ISPCRT_BUILD_GPU)
   find_package(level_zero REQUIRED)
+  message(STATUS "ISPC Runtime will be built with GPU support")
 endif()
 
+set(ISPCRT_BUILD_TASK_MODELS "OpenMP;TBB;Threads")
+
 if (ISPCRT_BUILD_TASKING)
+  # Set default value for ISPCRT_BUILD_TASK_MODEL if it is not set externally
+  if (NOT ISPCRT_BUILD_TASK_MODEL)
+      if (WIN32 OR APPLE)
+        set (ISPCRT_BUILD_TASK_MODEL "Threads")
+      else()
+        set (ISPCRT_BUILD_TASK_MODEL "OpenMP")
+      endif()
+  endif()
+
+  # Report error if unsupported thread model is requested.
+  string(FIND "${ISPCRT_BUILD_TASK_MODELS}" "${ISPCRT_BUILD_TASK_MODEL}" MATCHED_TASK_MODEL)
+
+  if (${MATCHED_TASK_MODEL} EQUAL -1)
+    message(FATAL_ERROR "ISPCRT_BUILD_TASK_MODEL (${ISPCRT_BUILD_TASK_MODEL}) allows only the following values: ${ISPCRT_BUILD_TASK_MODELS}")
+  endif()
+
+  message(STATUS "ISPC Runtime will be built with support of " ${ISPCRT_BUILD_TASK_MODEL} " tasking model on CPU")
+
   add_library(ispcrt_tasking INTERFACE)
-  if (WIN32)
-    find_package(Threads REQUIRED)
-    target_link_libraries(ispcrt_tasking INTERFACE Threads::Threads)
-  else()
+
+  if (ISPCRT_BUILD_TASK_MODEL STREQUAL "OpenMP")
     find_package(OpenMP REQUIRED)
-    target_link_libraries(ispcrt_tasking INTERFACE OpenMP::OpenMP_CXX)
-    target_compile_definitions(ispcrt_tasking INTERFACE ISPC_USE_OMP)
+    if (OpenMP_FOUND)
+      target_link_libraries(ispcrt_tasking INTERFACE OpenMP::OpenMP_CXX)
+      target_compile_definitions(ispcrt_tasking INTERFACE ISPC_USE_OMP)
+    endif()
+  elseif (ISPCRT_BUILD_TASK_MODEL STREQUAL "TBB")
+      find_package(TBB REQUIRED COMPONENTS tbb)
+      if (TBB_FOUND)
+        # TBB package does not produce any info when found, so print it here.
+        message(STATUS "Found TBB: ${TBB_VERSION} at ${TBB_DIR}")
+        target_link_libraries(ispcrt_tasking INTERFACE TBB::tbb)
+        target_compile_definitions(ispcrt_tasking INTERFACE ISPC_USE_TBB_PARALLEL_FOR)
+      endif()
+  else()
+    find_package(Threads REQUIRED)
+    if (Threads_FOUND)
+      # Use default compile definitions from ispc_tasking.cpp
+      target_link_libraries(ispcrt_tasking INTERFACE Threads::Threads)
+    endif()
   endif()
 endif()
 
