@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2021, Intel Corporation
+  Copyright (c) 2011-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -38,9 +38,58 @@
 #pragma once
 
 #include "ispc.h"
+#include <string>
 #include <vector>
 
 namespace ispc {
+
+/** @brief Helper class for printing AST.
+
+    This class keeps track of indentation when printing AST.
+    Before anything is printed, pushSingle() or pushList(int) methods need to be
+    invoked to declare how the following node(s) are going to be printed - as
+    a single nested node or a list of nested items. For example:
+
+    Parent Node
+    `-Single Nested Node
+
+    Parent Node
+    |-List Node #1
+    |-List Node #2
+    `-List Node #3
+
+    If the nested node needs to be annotated, setNextLabel(string) should be called
+    before recusing to the nested node.
+
+    Parent Node
+    |-(annotation 1) List Node #1
+    |-(annotation 2) List Node #2
+    `-(annotation 3) List Node #3
+
+    The call to any of Print()/PrintLn() methods does the indentation. Every such
+    call must be paired by Done() call when the node is printed.
+ */
+class Indent {
+    std::string label;
+    std::vector<int> stack;
+    int printCalls = 0;
+    int doneCalls = 0;
+
+  public:
+    Indent() {}
+    ~Indent();
+
+    void pushSingle();
+    void pushList(int i);
+
+    void setNextLabel(std::string s);
+
+    void Print();
+    void Print(const char *title);
+    void Print(const char *title, const SourcePos &pos);
+    void PrintLn(const char *title, const SourcePos &pos);
+    void Done();
+};
 
 /** @brief Abstract base class for nodes in the abstract syntax tree (AST).
 

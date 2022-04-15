@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2021, Intel Corporation
+  Copyright (c) 2011-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -47,6 +47,78 @@
 #include <llvm/Support/TimeProfiler.h>
 
 using namespace ispc;
+
+///////////////////////////////////////////////////////////////////////////
+// Indent
+
+Indent::~Indent() {
+    Assert(stack.empty() && "Indent stack is not empty on destruction");
+    // Any Print() call must be paired by Done() call
+    Assert(printCalls == doneCalls && "AST dump has encountered a bug");
+};
+
+void Indent::pushSingle() { stack.push_back(1); }
+void Indent::pushList(int i) {
+    if (i > 0) {
+        stack.push_back(i);
+    }
+}
+
+void Indent::setNextLabel(std::string s) { label = s; }
+
+void Indent::Print() {
+    printCalls++;
+    Assert(!stack.empty());
+    int &top = stack.back();
+    Assert(top > 0);
+
+    for (int i = 0; i < (stack.size() - 1); i++) {
+        if (stack[i] == 0) {
+            printf("  ");
+        } else {
+            printf("| ");
+        }
+    }
+
+    if (top == 1) {
+        printf("`-");
+    } else {
+        printf("|-");
+    }
+    top--;
+
+    if (!label.empty()) {
+        printf("(%s) ", label.c_str());
+        label.clear();
+    }
+}
+
+void Indent::Print(const char *title) {
+    Print();
+    if (title != nullptr) {
+        printf("%s", title);
+    }
+}
+
+void Indent::Print(const char *title, const SourcePos &pos) {
+    Print(title);
+    pos.Print();
+}
+
+void Indent::PrintLn(const char *title, const SourcePos &pos) {
+    Print(title, pos);
+    printf("\n");
+}
+
+void Indent::Done() {
+    doneCalls++;
+    Assert(!stack.empty());
+    int &top = stack.back();
+    Assert(top >= 0);
+    if (top == 0) {
+        stack.pop_back();
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////
 // ASTNode
