@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -90,15 +90,18 @@ void ExprStmt::EmitCode(FunctionEmitContext *ctx) const {
 
 Stmt *ExprStmt::TypeCheck() { return this; }
 
-void ExprStmt::Print(int indent) const {
-    if (!expr)
-        return;
+void ExprStmt::Print(Indent &indent) const {
+    indent.PrintLn("ExprStmt", pos);
+    indent.pushSingle();
 
-    printf("%*c", indent, ' ');
-    printf("Expr stmt: ");
-    pos.Print();
-    expr->Print();
-    printf("\n");
+    if (expr != nullptr) {
+        expr->Print(indent);
+    } else {
+        indent.Print("<NULL EXPR>\n");
+        indent.Done();
+    }
+
+    indent.Done();
 }
 
 int ExprStmt::EstimateCost() const { return 0; }
@@ -321,19 +324,20 @@ Stmt *DeclStmt::TypeCheck() {
     return encounteredError ? NULL : this;
 }
 
-void DeclStmt::Print(int indent) const {
-    printf("%*cDecl Stmt:", indent, ' ');
-    pos.Print();
+void DeclStmt::Print(Indent &indent) const {
+    indent.PrintLn("DeclStmt", pos);
+    indent.pushList(vars.size());
     for (unsigned int i = 0; i < vars.size(); ++i) {
-        printf("%*cVariable %s (%s)", indent + 4, ' ', vars[i].sym->name.c_str(),
-               vars[i].sym->type->GetString().c_str());
+        indent.Print();
+        printf("Variable %s (%s)\n", vars[i].sym->name.c_str(), vars[i].sym->type->GetString().c_str());
         if (vars[i].init != NULL) {
-            printf(" = ");
-            vars[i].init->Print();
+            indent.pushSingle();
+            indent.setNextLabel("init");
+            vars[i].init->Print(indent);
         }
-        printf("\n");
+        indent.Done();
     }
-    printf("\n");
+    indent.Done();
 }
 
 int DeclStmt::EstimateCost() const { return 0; }
@@ -484,20 +488,24 @@ int IfStmt::EstimateCost() const {
     return type->IsUniformType() ? COST_UNIFORM_IF : COST_VARYING_IF;
 }
 
-void IfStmt::Print(int indent) const {
-    printf("%*cIf Stmt %s", indent, ' ', doAllCheck ? "DO ALL CHECK" : "");
-    pos.Print();
-    printf("\n%*cTest: ", indent + 4, ' ');
-    test->Print();
-    printf("\n");
+void IfStmt::Print(Indent &indent) const {
+    indent.PrintLn(doAllCheck ? "IfStmt DO ALL CHECK" : "IfStmt", pos);
+
+    int totalChildren = 1 + (trueStmts ? 1 : 0) + (falseStmts ? 1 : 0);
+    indent.pushList(totalChildren);
+
+    indent.setNextLabel("test");
+    test->Print(indent);
     if (trueStmts) {
-        printf("%*cTrue:\n", indent + 4, ' ');
-        trueStmts->Print(indent + 8);
+        indent.setNextLabel("true");
+        trueStmts->Print(indent);
     }
     if (falseStmts) {
-        printf("%*cFalse:\n", indent + 4, ' ');
-        falseStmts->Print(indent + 8);
+        indent.setNextLabel("false");
+        falseStmts->Print(indent);
     }
+
+    indent.Done();
 }
 
 /** Emit code to run both the true and false statements for the if test,
@@ -949,18 +957,20 @@ int DoStmt::EstimateCost() const {
     return uniformTest ? COST_UNIFORM_LOOP : COST_VARYING_LOOP;
 }
 
-void DoStmt::Print(int indent) const {
-    printf("%*cDo Stmt", indent, ' ');
-    pos.Print();
-    printf(":\n");
-    printf("%*cTest: ", indent + 4, ' ');
-    if (testExpr)
-        testExpr->Print();
-    printf("\n");
-    if (bodyStmts) {
-        printf("%*cStmts:\n", indent + 4, ' ');
-        bodyStmts->Print(indent + 8);
+void DoStmt::Print(Indent &indent) const {
+    indent.PrintLn("DoStmt", pos);
+    int totalChildren = (testExpr ? 1 : 0) + (bodyStmts ? 1 : 0);
+    indent.pushList(totalChildren);
+
+    if (testExpr) {
+        indent.setNextLabel("test");
+        testExpr->Print(indent);
     }
+    if (bodyStmts) {
+        indent.setNextLabel("body");
+        bodyStmts->Print(indent);
+    }
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1152,27 +1162,30 @@ int ForStmt::EstimateCost() const {
     return uniformTest ? COST_UNIFORM_LOOP : COST_VARYING_LOOP;
 }
 
-void ForStmt::Print(int indent) const {
-    printf("%*cFor Stmt", indent, ' ');
-    pos.Print();
-    printf("\n");
+void ForStmt::Print(Indent &indent) const {
+    indent.PrintLn("ForStmt", pos);
+
+    int totalChildren = (init ? 1 : 0) + (test ? 1 : 0) + (step ? 1 : 0) + (stmts ? 1 : 0);
+    indent.pushList(totalChildren);
+
     if (init) {
-        printf("%*cInit:\n", indent + 4, ' ');
-        init->Print(indent + 8);
+        indent.setNextLabel("init");
+        init->Print(indent);
     }
     if (test) {
-        printf("%*cTest: ", indent + 4, ' ');
-        test->Print();
-        printf("\n");
+        indent.setNextLabel("test");
+        test->Print(indent);
     }
     if (step) {
-        printf("%*cStep:\n", indent + 4, ' ');
-        step->Print(indent + 8);
+        indent.setNextLabel("step");
+        step->Print(indent);
     }
     if (stmts) {
-        printf("%*cStmts:\n", indent + 4, ' ');
-        stmts->Print(indent + 8);
+        indent.setNextLabel("stmts");
+        stmts->Print(indent);
     }
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1192,10 +1205,9 @@ Stmt *BreakStmt::TypeCheck() { return this; }
 
 int BreakStmt::EstimateCost() const { return COST_BREAK_CONTINUE; }
 
-void BreakStmt::Print(int indent) const {
-    printf("%*cBreak Stmt", indent, ' ');
-    pos.Print();
-    printf("\n");
+void BreakStmt::Print(Indent &indent) const {
+    indent.PrintLn("BreakStmt", pos);
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1215,10 +1227,9 @@ Stmt *ContinueStmt::TypeCheck() { return this; }
 
 int ContinueStmt::EstimateCost() const { return COST_BREAK_CONTINUE; }
 
-void ContinueStmt::Print(int indent) const {
-    printf("%*cContinue Stmt", indent, ' ');
-    pos.Print();
-    printf("\n");
+void ContinueStmt::Print(Indent &indent) const {
+    indent.PrintLn("ContinueStmt", pos);
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1972,45 +1983,54 @@ void ForeachStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAt
 
 int ForeachStmt::EstimateCost() const { return dimVariables.size() * (COST_UNIFORM_LOOP + COST_SIMPLE_ARITH_LOGIC_OP); }
 
-void ForeachStmt::Print(int indent) const {
-    printf("%*cForeach Stmt", indent, ' ');
-    pos.Print();
-    printf("\n");
+void ForeachStmt::Print(Indent &indent) const {
+    indent.PrintLn("ForeachStmt", pos);
 
-    for (unsigned int i = 0; i < dimVariables.size(); ++i)
-        if (dimVariables[i] != NULL)
-            printf("%*cVar %d: %s\n", indent + 4, ' ', i, dimVariables[i]->name.c_str());
-        else
-            printf("%*cVar %d: NULL\n", indent + 4, ' ', i);
+    int totalChildren = dimVariables.size() + (stmts ? 1 : 0);
+    indent.pushList(totalChildren);
 
-    printf("Start values:\n");
-    for (unsigned int i = 0; i < startExprs.size(); ++i) {
-        if (startExprs[i] != NULL)
-            startExprs[i]->Print();
-        else
-            printf("NULL");
-        if (i != startExprs.size() - 1)
-            printf(", ");
-        else
-            printf("\n");
-    }
+    for (unsigned int i = 0; i < dimVariables.size(); ++i) {
+        char buffer[15];
+        snprintf(buffer, 15, "index var %d\n", i);
+        indent.Print(buffer);
 
-    printf("End values:\n");
-    for (unsigned int i = 0; i < endExprs.size(); ++i) {
-        if (endExprs[i] != NULL)
-            endExprs[i]->Print();
-        else
-            printf("NULL");
-        if (i != endExprs.size() - 1)
-            printf(", ");
-        else
-            printf("\n");
+        {
+            indent.pushList(3);
+            indent.setNextLabel("var");
+            indent.Print();
+            if (dimVariables[i] != NULL) {
+                printf("%s\n", dimVariables[i]->name.c_str());
+            } else {
+                printf("<NULL>\n");
+            }
+            indent.Done();
+
+            indent.setNextLabel("start value");
+            if (i < startExprs.size() && startExprs[i] != nullptr) {
+                startExprs[i]->Print(indent);
+            } else {
+                indent.Print("<NULL>");
+                indent.Done();
+            }
+
+            indent.setNextLabel("end value");
+            if (i < endExprs.size() && endExprs[i] != nullptr) {
+                endExprs[i]->Print(indent);
+            } else {
+                indent.Print("<NULL>");
+                indent.Done();
+            }
+        }
+
+        indent.Done();
     }
 
     if (stmts != NULL) {
-        printf("%*cStmts:\n", indent + 4, ' ');
-        stmts->Print(indent + 8);
+        indent.setNextLabel("body");
+        stmts->Print(indent);
     }
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -2161,26 +2181,32 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->EndScope();
 }
 
-void ForeachActiveStmt::Print(int indent) const {
-    printf("%*cForeach_active Stmt", indent, ' ');
-    pos.Print();
-    printf("\n");
+void ForeachActiveStmt::Print(Indent &indent) const {
+    indent.PrintLn("ForeachActiveStmt", pos);
 
-    printf("%*cIter symbol: ", indent + 4, ' ');
+    indent.pushList(2);
+
+    indent.setNextLabel("iter symbol");
+    indent.Print();
     if (sym != NULL) {
         printf("%s", sym->name.c_str());
         if (sym->type != NULL)
             printf(" %s", sym->type->GetString().c_str());
-    } else
+    } else {
         printf("NULL");
+    }
     printf("\n");
+    indent.Done();
 
-    printf("%*cStmts:\n", indent + 4, ' ');
-    if (stmts != NULL)
-        stmts->Print(indent + 8);
-    else
-        printf("NULL");
-    printf("\n");
+    indent.setNextLabel("body");
+    if (stmts != NULL) {
+        stmts->Print(indent);
+    } else {
+        indent.Print("<NULL>");
+        indent.Done();
+    }
+
+    indent.Done();
 }
 
 Stmt *ForeachActiveStmt::TypeCheck() {
@@ -2380,33 +2406,40 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->EndScope();
 }
 
-void ForeachUniqueStmt::Print(int indent) const {
-    printf("%*cForeach_unique Stmt", indent, ' ');
-    pos.Print();
-    printf("\n");
+void ForeachUniqueStmt::Print(Indent &indent) const {
+    indent.PrintLn("ForeachUniqueStmt", pos);
 
-    printf("%*cIter symbol: ", indent + 4, ' ');
+    indent.pushList(3);
+
+    indent.setNextLabel("iter symbol");
+    indent.Print();
     if (sym != NULL) {
         printf("%s", sym->name.c_str());
         if (sym->type != NULL)
             printf(" %s", sym->type->GetString().c_str());
-    } else
+    } else {
         printf("NULL");
+    }
     printf("\n");
+    indent.Done();
 
-    printf("%*cIter expr: ", indent + 4, ' ');
-    if (expr != NULL)
-        expr->Print();
-    else
-        printf("NULL");
-    printf("\n");
+    indent.setNextLabel("iter expr");
+    if (expr != NULL) {
+        expr->Print(indent);
+    } else {
+        indent.Print("NULL\n");
+        indent.Done();
+    }
 
-    printf("%*cStmts:\n", indent + 4, ' ');
-    if (stmts != NULL)
-        stmts->Print(indent + 8);
-    else
-        printf("NULL");
-    printf("\n");
+    indent.setNextLabel("body");
+    if (stmts != NULL) {
+        stmts->Print(indent);
+    } else {
+        indent.Print("NULL\n");
+        indent.Done();
+    }
+
+    indent.Done();
 }
 
 Stmt *ForeachUniqueStmt::TypeCheck() {
@@ -2468,11 +2501,12 @@ void CaseStmt::EmitCode(FunctionEmitContext *ctx) const {
         stmts->EmitCode(ctx);
 }
 
-void CaseStmt::Print(int indent) const {
-    printf("%*cCase [%d] label", indent, ' ', value);
-    pos.Print();
-    printf("\n");
-    stmts->Print(indent + 4);
+void CaseStmt::Print(Indent &indent) const {
+    indent.Print("CaseStmt", pos);
+    printf("Value: %d\n", value);
+    indent.pushSingle();
+    stmts->Print(indent);
+    indent.Done();
 }
 
 Stmt *CaseStmt::TypeCheck() { return this; }
@@ -2490,11 +2524,11 @@ void DefaultStmt::EmitCode(FunctionEmitContext *ctx) const {
         stmts->EmitCode(ctx);
 }
 
-void DefaultStmt::Print(int indent) const {
-    printf("%*cDefault Stmt", indent, ' ');
-    pos.Print();
-    printf("\n");
-    stmts->Print(indent + 4);
+void DefaultStmt::Print(Indent &indent) const {
+    indent.PrintLn("DefaultStmt", pos);
+    indent.pushSingle();
+    stmts->Print(indent);
+    indent.Done();
 }
 
 Stmt *DefaultStmt::TypeCheck() { return this; }
@@ -2661,14 +2695,17 @@ void SwitchStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->EndSwitch();
 }
 
-void SwitchStmt::Print(int indent) const {
-    printf("%*cSwitch Stmt", indent, ' ');
-    pos.Print();
-    printf("\n");
-    printf("%*cexpr = ", indent, ' ');
-    expr->Print();
-    printf("\n");
-    stmts->Print(indent + 4);
+void SwitchStmt::Print(Indent &indent) const {
+    indent.PrintLn("SwitchStmt", pos);
+
+    indent.pushList(2);
+    indent.setNextLabel("expr");
+    expr->Print(indent);
+
+    indent.setNextLabel("stmts");
+    stmts->Print(indent);
+
+    indent.Done();
 }
 
 Stmt *SwitchStmt::TypeCheck() {
@@ -2743,17 +2780,18 @@ void UnmaskedStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetFunctionMask(oldFunctionMask);
 }
 
-void UnmaskedStmt::Print(int indent) const {
-    printf("%*cUnmasked Stmt", indent, ' ');
-    pos.Print();
-    printf("\n");
+void UnmaskedStmt::Print(Indent &indent) const {
+    indent.PrintLn("UnmaskedStmt", pos);
 
-    printf("%*cStmts:\n", indent + 4, ' ');
-    if (stmts != NULL)
-        stmts->Print(indent + 8);
-    else
-        printf("NULL");
-    printf("\n");
+    indent.pushSingle();
+    if (stmts != NULL) {
+        stmts->Print(indent);
+    } else {
+        indent.Print("NULL\n");
+        indent.Done();
+    }
+
+    indent.Done();
 }
 
 Stmt *UnmaskedStmt::TypeCheck() { return this; }
@@ -2803,14 +2841,16 @@ Stmt *ReturnStmt::TypeCheck() { return this; }
 
 int ReturnStmt::EstimateCost() const { return COST_RETURN; }
 
-void ReturnStmt::Print(int indent) const {
-    printf("%*cReturn Stmt", indent, ' ');
-    pos.Print();
-    if (expr)
-        expr->Print();
-    else
-        printf("(void)");
-    printf("\n");
+void ReturnStmt::Print(Indent &indent) const {
+    indent.Print("ReturnStmt", pos);
+    if (expr) {
+        printf("\n");
+        indent.pushSingle();
+        expr->Print(indent);
+    } else {
+        printf("(void)\n");
+    }
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -2864,7 +2904,11 @@ void GotoStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetCurrentBasicBlock(NULL);
 }
 
-void GotoStmt::Print(int indent) const { printf("%*cGoto label \"%s\"\n", indent, ' ', label.c_str()); }
+void GotoStmt::Print(Indent &indent) const {
+    indent.Print("GotoStmt", pos);
+    printf("Label: %s\n", label.c_str());
+    indent.Done();
+}
 
 Stmt *GotoStmt::Optimize() { return this; }
 
@@ -2897,10 +2941,19 @@ void LabeledStmt::EmitCode(FunctionEmitContext *ctx) const {
         stmt->EmitCode(ctx);
 }
 
-void LabeledStmt::Print(int indent) const {
-    printf("%*cLabel \"%s\"\n", indent, ' ', name.c_str());
-    if (stmt != NULL)
+void LabeledStmt::Print(Indent &indent) const {
+    indent.Print("LabeledStmt", pos);
+    printf("Label: %s\n", name.c_str());
+
+    indent.pushSingle();
+    if (stmt != NULL) {
         stmt->Print(indent);
+    } else {
+        indent.Print("<NULL STMT>\n");
+        indent.Done();
+    }
+
+    indent.Done();
 }
 
 Stmt *LabeledStmt::Optimize() { return this; }
@@ -2937,13 +2990,18 @@ Stmt *StmtList::TypeCheck() { return this; }
 
 int StmtList::EstimateCost() const { return 0; }
 
-void StmtList::Print(int indent) const {
-    printf("%*cStmt List", indent, ' ');
-    pos.Print();
-    printf(":\n");
-    for (unsigned int i = 0; i < stmts.size(); ++i)
-        if (stmts[i])
-            stmts[i]->Print(indent + 4);
+void StmtList::Print(Indent &indent) const {
+    indent.PrintLn("StmtList", pos);
+    indent.pushList(stmts.size());
+    for (unsigned int i = 0; i < stmts.size(); ++i) {
+        if (stmts[i]) {
+            stmts[i]->Print(indent);
+        } else {
+            indent.Print("<NULL STMT>\n");
+            indent.Done();
+        }
+    }
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -3533,7 +3591,21 @@ void PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->CallInst(printImplFunc, NULL, printImplArgs, "");
 }
 
-void PrintStmt::Print(int indent) const { printf("%*cPrint Stmt (%s)", indent, ' ', format.c_str()); }
+void PrintStmt::Print(Indent &indent) const {
+    indent.Print("PrintStmt", pos);
+    printf("Format string: \"%s\"\n", format.c_str());
+
+    indent.pushSingle();
+    indent.setNextLabel("args");
+    if (values) {
+        values->Print(indent);
+    } else {
+        indent.Print("<NULL / NO ARGS>\n");
+        indent.Done();
+    }
+
+    indent.Done();
+}
 
 Stmt *PrintStmt::TypeCheck() { return this; }
 
@@ -3626,7 +3698,17 @@ void AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
     }
 }
 
-void AssertStmt::Print(int indent) const { printf("%*cAssert Stmt (%s)", indent, ' ', message.c_str()); }
+void AssertStmt::Print(Indent &indent) const {
+    indent.Print("AssertStmt", pos);
+    printf("Message: %s\n", message.c_str());
+    indent.pushSingle();
+    if (expr) {
+        expr->Print(indent);
+    } else {
+        indent.Print("<NULL>\n");
+    }
+    indent.Done();
+}
 
 Stmt *AssertStmt::TypeCheck() {
     const Type *type;
@@ -3703,7 +3785,17 @@ void DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
     }
 }
 
-void DeleteStmt::Print(int indent) const { printf("%*cDelete Stmt", indent, ' '); }
+void DeleteStmt::Print(Indent &indent) const {
+    indent.PrintLn("DeleteStmt", pos);
+    indent.pushSingle();
+    if (expr) {
+        expr->Print(indent);
+    } else {
+        indent.Print("<NULL>\n");
+        indent.Done();
+    }
+    indent.Done();
+}
 
 Stmt *DeleteStmt::TypeCheck() {
     const Type *exprType;

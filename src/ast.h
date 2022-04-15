@@ -184,6 +184,12 @@ class ASTNode {
         other purpose, as the values may change as ISPC evolves */
     unsigned getValueID() const { return SubclassID; }
 
+    /** A function for interactive debugging */
+    void Print() const;
+
+    /** A function that should be used for hierarchical AST dump. */
+    virtual void Print(Indent &indent) const = 0;
+
     static inline bool classof(ASTNode const *) { return true; }
 };
 

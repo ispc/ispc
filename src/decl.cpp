@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -273,10 +273,17 @@ void Declarator::InitFromDeclSpecs(DeclSpecs *ds) {
     }
 }
 
-void Declarator::Print(int indent) const {
-    printf("%*cdeclarator: [", indent, ' ');
-    pos.Print();
+void Declarator::Print() const {
+    Indent indent;
+    indent.pushSingle();
+    Print(indent);
+    fflush(stdout);
+}
 
+void Declarator::Print(Indent &indent) const {
+    indent.Print("Declarator", pos);
+
+    printf("[");
     lPrintTypeQualifiers(typeQualifiers);
     printf("%s ", lGetStorageClassName(storageClass));
     if (name.size() > 0)
@@ -307,23 +314,31 @@ void Declarator::Print(int indent) const {
         FATAL("Unhandled declarator kind");
     }
 
-    if (initExpr != NULL) {
-        printf(" = (");
-        initExpr->Print();
-        printf(")");
+    printf("]\n");
+
+    int kids = (initExpr ? 1 : 0) + functionParams.size() + (child ? 1 : 0);
+    indent.pushList(kids);
+
+    if (initExpr != nullptr) {
+        indent.setNextLabel("init");
+        initExpr->Print(indent);
     }
 
     if (functionParams.size() > 0) {
         for (unsigned int i = 0; i < functionParams.size(); ++i) {
-            printf("\n%*cfunc param %d:\n", indent, ' ', i);
-            functionParams[i]->Print(indent + 4);
+            char buffer[20];
+            snprintf(buffer, 20, "func param %d", i);
+            indent.setNextLabel(buffer);
+            functionParams[i]->Print(indent);
         }
     }
 
-    if (child != NULL)
-        child->Print(indent + 4);
+    if (child != nullptr) {
+        indent.setNextLabel("child");
+        child->Print(indent);
+    }
 
-    printf("]\n");
+    indent.Done();
 }
 
 void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
@@ -660,12 +675,24 @@ void Declaration::DeclareFunctions() {
     }
 }
 
-void Declaration::Print(int indent) const {
-    printf("%*cDeclaration: specs [", indent, ' ');
+void Declaration::Print() const {
+    Indent indent;
+    indent.pushSingle();
+    Print(indent);
+    fflush(stdout);
+}
+
+void Declaration::Print(Indent &indent) const {
+    indent.Print("Declaration: specs [");
     declSpecs->Print();
     printf("], declarators:\n");
-    for (unsigned int i = 0; i < declarators.size(); ++i)
-        declarators[i]->Print(indent + 4);
+
+    indent.pushList(declarators.size());
+    for (unsigned int i = 0; i < declarators.size(); ++i) {
+        declarators[i]->Print(indent);
+    }
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
