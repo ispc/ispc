@@ -5917,9 +5917,16 @@ void ConstExpr::Print(Indent &indent) const {
         case AtomicType::TYPE_UINT64:
             printf("%" PRIu64, uint64Val[i]);
             break;
-        case AtomicType::TYPE_FLOAT16:
-            printf("%f", fpVal[i].convertToFloat());
+        case AtomicType::TYPE_FLOAT16: {
+            llvm::APFloat V(fpVal[i]);
+#if ISPC_LLVM_VERSION < ISPC_LLVM_13_0
+            // Starting from LLVM 13, this is done by convertToFloat() implicitly.
+            bool ignored;
+            V.convert(llvm::APFloat::IEEEsingle(), llvm::APFloat::rmNearestTiesToEven, &ignored);
+#endif
+            printf("%f", V.convertToFloat());
             break;
+        }
         case AtomicType::TYPE_FLOAT:
             printf("%f", fpVal[i].convertToFloat());
             break;
