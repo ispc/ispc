@@ -2043,7 +2043,7 @@ llvm::DINamespace *SourcePos::GetDINamespace() const {
 }
 
 void SourcePos::Print() const {
-    printf(" @ [%s:%d.%d - %d.%d] ", name, first_line, first_column, last_line, last_column);
+    printf(" <%s:%d.%d - %d.%d> ", name, first_line, first_column, last_line, last_column);
 }
 
 bool SourcePos::operator==(const SourcePos &p2) const {
