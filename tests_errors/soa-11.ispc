@@ -1,4 +1,4 @@
-// Type conversion from "const uniform int[0-9]*" to "soa<4> struct Foo" for assignment operator is not possible
+// Type conversion from "const uniform int[0-9]*" to "soa<4> struct Foo" for = is not possible
 
 struct Pt { float x, y, z; };
 
