@@ -125,6 +125,13 @@ void Indent::Done() {
 
 ASTNode::~ASTNode() {}
 
+void ASTNode::Print() const {
+    Indent indent;
+    indent.pushSingle();
+    Print(indent);
+    fflush(stdout);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // AST
 

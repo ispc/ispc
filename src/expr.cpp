@@ -1315,30 +1315,47 @@ int UnaryExpr::EstimateCost() const {
     return COST_SIMPLE_ARITH_LOGIC_OP;
 }
 
-void UnaryExpr::Print() const {
-    if (!expr || !GetType())
+void UnaryExpr::Print(Indent &indent) const {
+    if (!expr || !GetType()) {
+        indent.Print("UnaryExpr: <NULL EXPR>\n");
+        indent.Done();
         return;
+    }
 
-    printf("[ %s ] (", GetType()->GetString().c_str());
-    if (op == PreInc)
-        printf("++");
-    if (op == PreDec)
-        printf("--");
-    if (op == Negate)
-        printf("-");
-    if (op == LogicalNot)
-        printf("!");
-    if (op == BitNot)
-        printf("~");
-    printf("(");
-    expr->Print();
-    printf(")");
-    if (op == PostInc)
-        printf("++");
-    if (op == PostDec)
-        printf("--");
-    printf(")");
-    pos.Print();
+    indent.Print("UnaryExpr", pos);
+
+    printf("[ %s ] ", GetType()->GetString().c_str());
+    switch (op) {
+    case PreInc: ///< Pre-increment
+        printf("prefix '++'");
+        break;
+    case PreDec: ///< Pre-decrement
+        printf("prefix '--'");
+        break;
+    case PostInc: ///< Post-increment
+        printf("postfix '++'");
+        break;
+    case PostDec: ///< Post-decrement
+        printf("postfix '++'");
+        break;
+    case Negate: ///< Negation
+        printf("prefix '-'");
+        break;
+    case LogicalNot: ///< Logical not
+        printf("prefix '!'");
+        break;
+    case BitNot:
+        printf("prefix '~'");
+        break;
+    default:
+        printf("<ILLEGAL OP");
+        break;
+    }
+    printf("\n");
+    indent.pushSingle();
+    expr->Print(indent);
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -2800,16 +2817,21 @@ int BinaryExpr::EstimateCost() const {
     return (op == Div || op == Mod) ? COST_COMPLEX_ARITH_OP : COST_SIMPLE_ARITH_LOGIC_OP;
 }
 
-void BinaryExpr::Print() const {
-    if (!arg0 || !arg1 || !GetType())
+void BinaryExpr::Print(Indent &indent) const {
+    if (!arg0 || !arg1 || !GetType()) {
+        indent.Print("BinaryExpr: <NULL EXPR>\n");
+        indent.Done();
         return;
+    }
 
-    printf("[ %s ] (", GetType()->GetString().c_str());
-    arg0->Print();
-    printf(" %s ", lOpString(op));
-    arg1->Print();
-    printf(")");
-    pos.Print();
+    indent.Print("BinaryExpr", pos);
+
+    printf("[ %s ], '%s'\n", GetType()->GetString().c_str(), lOpString(op));
+    indent.pushList(2);
+    arg0->Print(indent);
+    arg1->Print(indent);
+
+    indent.Done();
 }
 
 static std::pair<llvm::Constant *, bool> lGetBinaryExprStorageConstant(const Type *type, const BinaryExpr *bExpr,
@@ -2910,13 +2932,13 @@ std::pair<llvm::Constant *, bool> BinaryExpr::GetConstant(const Type *type) cons
 static const char *lOpString(AssignExpr::Op op) {
     switch (op) {
     case AssignExpr::Assign:
-        return "assignment operator";
+        return "=";
     case AssignExpr::MulAssign:
         return "*=";
     case AssignExpr::DivAssign:
         return "/=";
     case AssignExpr::ModAssign:
-        return "%%=";
+        return "%=";
     case AssignExpr::AddAssign:
         return "+=";
     case AssignExpr::SubAssign:
@@ -3215,16 +3237,21 @@ int AssignExpr::EstimateCost() const {
         return COST_ASSIGN + COST_SIMPLE_ARITH_LOGIC_OP;
 }
 
-void AssignExpr::Print() const {
-    if (!lvalue || !rvalue || !GetType())
+void AssignExpr::Print(Indent &indent) const {
+    if (!lvalue || !rvalue || !GetType()) {
+        indent.Print("AssignExpr: <NULL EXPR>\n");
+        indent.Done();
         return;
+    }
 
-    printf("[%s] assign (", GetType()->GetString().c_str());
-    lvalue->Print();
-    printf(" %s ", lOpString(op));
-    rvalue->Print();
-    printf(")");
-    pos.Print();
+    indent.Print("AssignExpr", pos);
+
+    printf("[%s], '%s'\n", GetType()->GetString().c_str(), lOpString(op));
+    indent.pushList(2);
+    lvalue->Print(indent);
+    rvalue->Print(indent);
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -3595,18 +3622,22 @@ Expr *SelectExpr::TypeCheck() {
 
 int SelectExpr::EstimateCost() const { return COST_SELECT; }
 
-void SelectExpr::Print() const {
-    if (!test || !expr1 || !expr2 || !GetType())
+void SelectExpr::Print(Indent &indent) const {
+    if (!test || !expr1 || !expr2 || !GetType()) {
+        indent.Print("SelectExpr: <NULL EXPR>\n");
+        indent.Done();
         return;
+    }
 
-    printf("[%s] (", GetType()->GetString().c_str());
-    test->Print();
-    printf(" ? ");
-    expr1->Print();
-    printf(" : ");
-    expr2->Print();
-    printf(")");
-    pos.Print();
+    indent.Print("SelectExpr", pos);
+
+    printf("[%s]\n", GetType()->GetString().c_str());
+    indent.pushList(3);
+    test->Print(indent);
+    expr1->Print(indent);
+    expr2->Print(indent);
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -3956,16 +3987,23 @@ int FunctionCallExpr::EstimateCost() const {
         return COST_FUNCALL;
 }
 
-void FunctionCallExpr::Print() const {
-    if (!func || !args || !GetType())
+void FunctionCallExpr::Print(Indent &indent) const {
+    if (!func || !args || !GetType()) {
+        indent.Print("FunctionCallExpr: <NULL EXPR>\n");
+        indent.Done();
         return;
+    }
 
-    printf("[%s] funcall %s ", GetType()->GetString().c_str(), isLaunch ? "launch" : "");
-    func->Print();
-    printf(" args (");
-    args->Print();
-    printf(")");
-    pos.Print();
+    indent.Print("FunctionCallExpr", pos);
+
+    printf("[%s] %s\n", GetType()->GetString().c_str(), isLaunch ? "launch" : "");
+    indent.pushList(2);
+    indent.setNextLabel("func");
+    func->Print(indent);
+    indent.setNextLabel("args");
+    args->Print(indent);
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -4152,14 +4190,20 @@ std::pair<llvm::Constant *, bool> ExprList::GetConstant(const Type *type) const 
 
 int ExprList::EstimateCost() const { return 0; }
 
-void ExprList::Print() const {
-    printf("expr list (");
+void ExprList::Print(Indent &indent) const {
+    indent.PrintLn("ExprList", pos);
+
+    indent.pushList(exprs.size());
     for (unsigned int i = 0; i < exprs.size(); ++i) {
-        if (exprs[i] != NULL)
-            exprs[i]->Print();
-        printf("%s", (i == exprs.size() - 1) ? ")" : ", ");
+        if (exprs[i] != NULL) {
+            exprs[i]->Print(indent);
+        } else {
+            indent.Print("<NULL");
+            indent.Done();
+        }
     }
-    pos.Print();
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -4655,16 +4699,21 @@ int IndexExpr::EstimateCost() const {
         return COST_LOAD;
 }
 
-void IndexExpr::Print() const {
-    if (!baseExpr || !index || !GetType())
+void IndexExpr::Print(Indent &indent) const {
+    if (!baseExpr || !index || !GetType()) {
+        indent.Print("IndexExpr: <NULL EXPR>\n");
+        indent.Done();
         return;
+    }
 
-    printf("[%s] index ", GetType()->GetString().c_str());
-    baseExpr->Print();
-    printf("[");
-    index->Print();
-    printf("]");
-    pos.Print();
+    indent.Print("IndexExpr", pos);
+
+    printf("[%s]\n", GetType()->GetString().c_str());
+    indent.pushList(2);
+    baseExpr->Print(indent);
+    index->Print(indent);
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -5199,14 +5248,20 @@ int MemberExpr::EstimateCost() const {
         return COST_SIMPLE_ARITH_LOGIC_OP;
 }
 
-void MemberExpr::Print() const {
-    if (!expr || !GetType())
+void MemberExpr::Print(Indent &indent) const {
+    if (!expr || !GetType()) {
+        indent.Print("MemberExpr: <NULL EXPR>\n");
+        indent.Done();
         return;
+    }
 
-    printf("[%s] member (", GetType()->GetString().c_str());
-    expr->Print();
-    printf(" . %s)", identifier.c_str());
-    pos.Print();
+    indent.Print("MemberExpr", pos);
+
+    printf("[%s] .%s\n", GetType()->GetString().c_str(), identifier.c_str());
+    indent.pushSingle();
+    expr->Print(indent);
+
+    indent.Done();
 }
 
 /** There is no structure member with the name we've got in "identifier".
@@ -5829,7 +5884,9 @@ Expr *ConstExpr::TypeCheck() { return this; }
 
 int ConstExpr::EstimateCost() const { return 0; }
 
-void ConstExpr::Print() const {
+void ConstExpr::Print(Indent &indent) const {
+    indent.Print("ConstExpr", pos);
+
     printf("[%s] (", GetType()->GetString().c_str());
     for (int i = 0; i < Count(); ++i) {
         switch (getBasicType()) {
@@ -5875,8 +5932,9 @@ void ConstExpr::Print() const {
         if (i != Count() - 1)
             printf(", ");
     }
-    printf(")");
-    pos.Print();
+    printf(")\n");
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -7068,11 +7126,12 @@ int TypeCastExpr::EstimateCost() const {
     return COST_TYPECAST_SIMPLE;
 }
 
-void TypeCastExpr::Print() const {
-    printf("[%s] type cast (", GetType()->GetString().c_str());
-    expr->Print();
-    printf(")");
-    pos.Print();
+void TypeCastExpr::Print(Indent &indent) const {
+    indent.Print("TypeCastExpr", pos);
+    printf("[%s]\n", GetType()->GetString().c_str());
+    indent.pushSingle();
+    expr->Print(indent);
+    indent.Done();
 }
 
 Symbol *TypeCastExpr::GetBaseSymbol() const { return expr ? expr->GetBaseSymbol() : NULL; }
@@ -7212,14 +7271,20 @@ Expr *ReferenceExpr::TypeCheck() {
 
 int ReferenceExpr::EstimateCost() const { return 0; }
 
-void ReferenceExpr::Print() const {
-    if (expr == NULL || GetType() == NULL)
+void ReferenceExpr::Print(Indent &indent) const {
+    if (expr == NULL || GetType() == NULL) {
+        indent.Print("ReferenceExpr: <NULL EXPR>\n");
+        indent.Done();
         return;
+    }
 
-    printf("[%s] &(", GetType()->GetString().c_str());
-    expr->Print();
-    printf(")");
-    pos.Print();
+    indent.Print("ReferenceExpr", pos);
+
+    printf("[%s]\n", GetType()->GetString().c_str());
+    indent.pushSingle();
+    expr->Print(indent);
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -7324,14 +7389,20 @@ int PtrDerefExpr::EstimateCost() const {
         return COST_DEREF;
 }
 
-void PtrDerefExpr::Print() const {
-    if (expr == NULL || GetType() == NULL)
+void PtrDerefExpr::Print(Indent &indent) const {
+    if (expr == NULL || GetType() == NULL) {
+        indent.Print("PtrDerefExpr: <NULL EXPR>\n");
+        indent.Done();
         return;
+    }
 
-    printf("[%s] *(", GetType()->GetString().c_str());
-    expr->Print();
-    printf(")");
-    pos.Print();
+    indent.Print("PtrDerefExpr", pos);
+
+    printf("[%s]\n", GetType()->GetString().c_str());
+    indent.pushSingle();
+    expr->Print(indent);
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -7372,14 +7443,19 @@ int RefDerefExpr::EstimateCost() const {
     return COST_DEREF;
 }
 
-void RefDerefExpr::Print() const {
-    if (expr == NULL || GetType() == NULL)
+void RefDerefExpr::Print(Indent &indent) const {
+    if (expr == NULL || GetType() == NULL) {
+        indent.Print("RefDerefExpr: <NULL EXPR>\n");
         return;
+    }
 
-    printf("[%s] deref-reference (", GetType()->GetString().c_str());
-    expr->Print();
-    printf(")");
-    pos.Print();
+    indent.Print("RefDerefExpr", pos);
+
+    printf("[%s]\n", GetType()->GetString().c_str());
+    indent.pushSingle();
+    expr->Print(indent);
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -7433,14 +7509,20 @@ const Type *AddressOfExpr::GetLValueType() const {
 
 Symbol *AddressOfExpr::GetBaseSymbol() const { return expr ? expr->GetBaseSymbol() : NULL; }
 
-void AddressOfExpr::Print() const {
-    printf("&(");
-    if (expr)
-        expr->Print();
-    else
-        printf("NULL expr");
-    printf(")");
-    pos.Print();
+void AddressOfExpr::Print(Indent &indent) const {
+    if (expr == NULL || GetType() == NULL) {
+        indent.Print("AddressOfExpr: <NULL EXPR>\n");
+        indent.Done();
+        return;
+    }
+
+    indent.Print("AddressOfExpr", pos);
+
+    printf("[%s]\n", GetType()->GetString().c_str());
+    indent.pushSingle();
+    expr->Print(indent);
+
+    indent.Done();
 }
 
 Expr *AddressOfExpr::TypeCheck() {
@@ -7546,15 +7628,20 @@ const Type *SizeOfExpr::GetType() const {
                                                                  : AtomicType::UniformUInt64;
 }
 
-void SizeOfExpr::Print() const {
-    printf("Sizeof (");
-    if (expr != NULL)
-        expr->Print();
-    const Type *t = expr ? expr->GetType() : type;
-    if (t != NULL)
-        printf(" [type %s]", t->GetString().c_str());
-    printf(")");
-    pos.Print();
+void SizeOfExpr::Print(Indent &indent) const {
+    indent.Print("SizeOfExpr", pos);
+
+    if (expr != nullptr) {
+        printf("\n");
+        indent.pushSingle();
+        expr->Print(indent);
+    } else if (type != nullptr) {
+        printf("type arg: [%s]\n", type->GetString().c_str());
+    } else {
+        printf("<NULL>\n");
+    }
+
+    indent.Done();
 }
 
 Expr *SizeOfExpr::TypeCheck() {
@@ -7611,15 +7698,19 @@ llvm::Value *AllocaExpr::GetValue(FunctionEmitContext *ctx) const {
 
 const Type *AllocaExpr::GetType() const { return PointerType::Void; }
 
-void AllocaExpr::Print() const {
-    printf("AllocaExpr (");
-    if (expr != NULL)
-        expr->Print();
-    const Type *t = expr ? expr->GetType() : NULL;
-    if (t != NULL)
-        printf(" [type %s]", t->GetString().c_str());
-    printf(")");
-    pos.Print();
+void AllocaExpr::Print(Indent &indent) const {
+    if (expr == nullptr) {
+        indent.Print("AllocaExpr: <NULL EXPR>\n");
+        indent.Done();
+        return;
+    }
+
+    indent.PrintLn("AllocaExpr", pos);
+
+    indent.pushSingle();
+    expr->Print(indent);
+
+    indent.Done();
 }
 
 Expr *AllocaExpr::TypeCheck() {
@@ -7706,12 +7797,18 @@ int SymbolExpr::EstimateCost() const {
     return 0;
 }
 
-void SymbolExpr::Print() const {
-    if (symbol == NULL || GetType() == NULL)
+void SymbolExpr::Print(Indent &indent) const {
+    if (symbol == NULL || GetType() == NULL) {
+        indent.Print("SymbolExpr: <NULL EXPR>\n");
+        indent.Done();
         return;
+    }
 
-    printf("[%s] sym: (%s)", GetType()->GetString().c_str(), symbol->name.c_str());
-    pos.Print();
+    indent.Print("SymbolExpr", pos);
+
+    printf("[%s] symbol name: %s\n", GetType()->GetString().c_str(), symbol->name.c_str());
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -7746,12 +7843,18 @@ Expr *FunctionSymbolExpr::Optimize() { return this; }
 
 int FunctionSymbolExpr::EstimateCost() const { return 0; }
 
-void FunctionSymbolExpr::Print() const {
-    if (!matchingFunc || !GetType())
+void FunctionSymbolExpr::Print(Indent &indent) const {
+    if (!matchingFunc || !GetType()) {
+        indent.Print("FunctionSymbolExpr: <NULL EXPR>\n");
+        indent.Done();
         return;
+    }
 
-    printf("[%s] fun sym (%s)", GetType()->GetString().c_str(), matchingFunc->name.c_str());
-    pos.Print();
+    indent.Print("FunctionSymbolExpr", pos);
+
+    printf("[%s] function name: %s\n", GetType()->GetString().c_str(), matchingFunc->name.c_str());
+
+    indent.Done();
 }
 
 std::pair<llvm::Constant *, bool> FunctionSymbolExpr::GetConstant(const Type *type) const {
@@ -8115,9 +8218,9 @@ llvm::Value *SyncExpr::GetValue(FunctionEmitContext *ctx) const {
 
 int SyncExpr::EstimateCost() const { return COST_SYNC; }
 
-void SyncExpr::Print() const {
-    printf("sync");
-    pos.Print();
+void SyncExpr::Print(Indent &indent) const {
+    indent.PrintLn("SyncExpr", pos);
+    indent.Done();
 }
 
 Expr *SyncExpr::TypeCheck() { return this; }
@@ -8151,9 +8254,9 @@ std::pair<llvm::Constant *, bool> NullPointerExpr::GetConstant(const Type *type)
     return std::pair<llvm::Constant *, bool>(llvm::Constant::getNullValue(llvmType), false);
 }
 
-void NullPointerExpr::Print() const {
-    printf("NULL");
-    pos.Print();
+void NullPointerExpr::Print(Indent &indent) const {
+    indent.PrintLn("NullPointerExpr", pos);
+    indent.Done();
 }
 
 int NullPointerExpr::EstimateCost() const { return 0; }
@@ -8368,6 +8471,26 @@ Expr *NewExpr::TypeCheck() {
 
 Expr *NewExpr::Optimize() { return this; }
 
-void NewExpr::Print() const { printf("new (%s)", allocType ? allocType->GetString().c_str() : "NULL"); }
+void NewExpr::Print(Indent &indent) const {
+    indent.Print("NewExpr", pos);
+
+    printf("[%s] isVarying: %s\n", allocType ? allocType->GetString().c_str() : "<NULL allocType>",
+           isVarying ? "true" : "false");
+
+    if (countExpr || initExpr) {
+        int kids = (countExpr ? 1 : 0) + (initExpr ? 1 : 0);
+        indent.pushList(kids);
+        if (countExpr) {
+            indent.setNextLabel("count");
+            countExpr->Print(indent);
+        }
+        if (initExpr) {
+            indent.setNextLabel("init");
+            initExpr->Print(indent);
+        }
+    }
+
+    indent.Done();
+}
 
 int NewExpr::EstimateCost() const { return COST_NEW; }
