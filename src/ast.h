@@ -68,6 +68,10 @@ namespace ispc {
 
     The call to any of Print()/PrintLn() methods does the indentation. Every such
     call must be paired by Done() call when the node is printed.
+
+    Note that this class is not assumed to encapsulate all printing functionality -
+    Print() member function is responsible for printing indented beginning of the
+    string, but the rest of the string needs to be printed with printf().
  */
 class Indent {
     std::string label;
