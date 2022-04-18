@@ -59,7 +59,7 @@ namespace ispc {
     `-List Node #3
 
     If the nested node needs to be annotated, setNextLabel(string) should be called
-    before recusing to the nested node.
+    before recursing to the nested node.
 
     Parent Node
     |-(annotation 1) List Node #1
