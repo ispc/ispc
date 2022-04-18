@@ -175,6 +175,7 @@ jobs:
       shell: cmd
       run: |
         cd llvm
+        rmdir /s /q build-14.0
         set TAR_BASE_NAME=llvm-14.0.1-win.vs2022-Release+Asserts-x86.arm.wasm
         7z.exe a -ttar -snl %TAR_BASE_NAME%.tar bin-14.0
         7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
@@ -218,6 +219,7 @@ jobs:
       shell: cmd
       run: |
         cd llvm
+        rmdir /s /q build-14.0
         set TAR_BASE_NAME=llvm-14.0.1-win.vs2022-Release-x86.arm.wasm
         7z.exe a -ttar -snl %TAR_BASE_NAME%.tar bin-14.0
         7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
