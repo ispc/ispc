@@ -129,8 +129,9 @@ void Function::Print(Indent &indent) const {
     indent.pushList(args.size() + 1);
     if (args.size() > 0) {
         for (int i = 0; i < args.size(); i++) {
-            char buffer[15];
-            snprintf(buffer, 15, "param %d", i);
+            static constexpr std::size_t BUFSIZE{15};
+            char buffer[BUFSIZE];
+            snprintf(buffer, BUFSIZE, "param %d", i);
             indent.setNextLabel(buffer);
             if (args[i]) {
                 indent.Print();

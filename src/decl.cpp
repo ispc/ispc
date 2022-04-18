@@ -326,8 +326,9 @@ void Declarator::Print(Indent &indent) const {
 
     if (functionParams.size() > 0) {
         for (unsigned int i = 0; i < functionParams.size(); ++i) {
-            char buffer[20];
-            snprintf(buffer, 20, "func param %d", i);
+            static constexpr std::size_t BUFSIZE{20};
+            char buffer[BUFSIZE];
+            snprintf(buffer, BUFSIZE, "func param %d", i);
             indent.setNextLabel(buffer);
             functionParams[i]->Print(indent);
         }

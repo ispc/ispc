@@ -1336,7 +1336,7 @@ void UnaryExpr::Print(Indent &indent) const {
         printf("postfix '++'");
         break;
     case PostDec: ///< Post-decrement
-        printf("postfix '++'");
+        printf("postfix '--'");
         break;
     case Negate: ///< Negation
         printf("prefix '-'");
