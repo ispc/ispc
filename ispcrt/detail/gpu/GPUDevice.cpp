@@ -1070,4 +1070,25 @@ void *GPUDevice::deviceNativeHandle() const { return m_device; }
 
 void *GPUDevice::contextNativeHandle() const { return m_context; }
 
+ISPCRTAllocationType GPUDevice::getMemAllocType(void* appMemory) const {
+    ze_memory_allocation_properties_t memProperties = {ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES};
+    ze_device_handle_t gpuDevice = (ze_device_handle_t)m_device;
+    L0_SAFE_CALL(zeMemGetAllocProperties((ze_context_handle_t)m_context, appMemory, &memProperties, &gpuDevice));
+    switch (memProperties.type) {
+        case ZE_MEMORY_TYPE_UNKNOWN:
+            return ISPCRT_ALLOC_TYPE_UNKNOWN;
+        case ZE_MEMORY_TYPE_HOST:
+            return ISPCRT_ALLOC_TYPE_HOST;
+        case ZE_MEMORY_TYPE_DEVICE:
+            return ISPCRT_ALLOC_TYPE_DEVICE;
+        case ZE_MEMORY_TYPE_SHARED:
+            return ISPCRT_ALLOC_TYPE_SHARED;
+        case ZE_MEMORY_TYPE_FORCE_UINT32:
+            return ISPCRT_ALLOC_TYPE_FORCE_UINT32;
+        default:
+            return ISPCRT_ALLOC_TYPE_UNKNOWN;
+    }
+    return ISPCRT_ALLOC_TYPE_UNKNOWN;
+}
+
 } // namespace ispcrt

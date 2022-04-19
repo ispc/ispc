@@ -211,6 +211,9 @@ ISPCRT_CATCH_END_NO_RETURN()
 ISPCRTMemoryView ispcrtNewMemoryView(ISPCRTDevice d, void *appMemory, size_t numBytes,
                                      ISPCRTNewMemoryViewFlags *flags) ISPCRT_CATCH_BEGIN {
     const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
+    if (flags->allocType != ISPCRT_ALLOC_TYPE_SHARED && flags->allocType != ISPCRT_ALLOC_TYPE_DEVICE) {
+        throw std::runtime_error("Unsupported memory allocation type requested!");
+    }
     return (ISPCRTMemoryView)device.newMemoryView(appMemory, numBytes, flags->allocType == ISPCRT_ALLOC_TYPE_SHARED);
 }
 ISPCRT_CATCH_END(nullptr)
@@ -237,6 +240,12 @@ ISPCRTAllocationType ispcrtGetMemoryViewAllocType(ISPCRTMemoryView h) ISPCRT_CAT
     auto &mv = referenceFromHandle<ispcrt::base::MemoryView>(h);
     return mv.isShared() ? ISPCRTAllocationType::ISPCRT_ALLOC_TYPE_SHARED
                          : ISPCRTAllocationType::ISPCRT_ALLOC_TYPE_DEVICE;
+}
+ISPCRT_CATCH_END(ISPCRTAllocationType::ISPCRT_ALLOC_TYPE_UNKNOWN)
+
+ISPCRTAllocationType ispcrtGetMemoryAllocType(ISPCRTDevice d, void* memBuffer) ISPCRT_CATCH_BEGIN {
+    const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
+    return device.getMemAllocType(memBuffer);
 }
 ISPCRT_CATCH_END(ISPCRTAllocationType::ISPCRT_ALLOC_TYPE_UNKNOWN)
 

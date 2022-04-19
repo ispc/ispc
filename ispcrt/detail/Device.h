@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Intel Corporation
+// Copyright 2020-2022 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
@@ -29,6 +29,8 @@ struct Device : public RefCounted {
     virtual void *platformNativeHandle() const = 0;
     virtual void *deviceNativeHandle() const = 0;
     virtual void *contextNativeHandle() const = 0;
+
+    virtual ISPCRTAllocationType getMemAllocType(void* appMemory) const = 0;
 };
 
 } // namespace base
