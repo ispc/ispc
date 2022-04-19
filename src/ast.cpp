@@ -66,7 +66,8 @@ void Indent::pushList(int i) {
 
 void Indent::setNextLabel(std::string s) { label = s; }
 
-void Indent::Print() {
+// Print indent and an optional string
+void Indent::Print(const char *title) {
     printCalls++;
     Assert(!stack.empty());
     int &top = stack.back();
@@ -91,22 +92,24 @@ void Indent::Print() {
         printf("(%s) ", label.c_str());
         label.clear();
     }
-}
 
-void Indent::Print(const char *title) {
-    Print();
+    // An optional string
     if (title != nullptr) {
         printf("%s", title);
     }
 }
 
 void Indent::Print(const char *title, const SourcePos &pos) {
+    // Same as previous version
     Print(title);
+    // Plus source position info
     pos.Print();
 }
 
 void Indent::PrintLn(const char *title, const SourcePos &pos) {
+    // Same as previous version
     Print(title, pos);
+    // Plus end of line
     printf("\n");
 }
 
