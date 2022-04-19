@@ -209,4 +209,7 @@ void *CPUDevice::deviceNativeHandle() const { return nullptr; }
 
 void *CPUDevice::contextNativeHandle() const { return nullptr; }
 
+ISPCRTAllocationType CPUDevice::getMemAllocType(void* appMemory) const {
+    return ISPCRT_ALLOC_TYPE_UNKNOWN;
+}
 } // namespace ispcrt

@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Intel Corporation
+// Copyright 2020-2022 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
@@ -92,6 +92,11 @@ typedef enum {
     ISPCRT_ALLOC_TYPE_DEVICE = 0,
     // Allocate in the memory shared between the host and the device (ignore appMemory ptr)
     ISPCRT_ALLOC_TYPE_SHARED,
+    // The following allocation types are not used for allocation of ISPCRuntime objects,
+    // but required to match possible L0 allocation types.
+    ISPCRT_ALLOC_TYPE_HOST,
+    ISPCRT_ALLOC_TYPE_FORCE_UINT32,
+    ISPCRT_ALLOC_TYPE_UNKNOWN,
 } ISPCRTAllocationType;
 
 typedef struct {
@@ -105,7 +110,9 @@ void *ispcrtDevicePtr(ISPCRTMemoryView);
 void *ispcrtSharedPtr(ISPCRTMemoryView);
 
 size_t ispcrtSize(ISPCRTMemoryView);
-ISPCRTAllocationType ispcrtGetMemoryViewAllocType(ISPCRTMemoryView h);
+
+ISPCRTAllocationType ispcrtGetMemoryViewAllocType(ISPCRTMemoryView);
+ISPCRTAllocationType ispcrtGetMemoryAllocType(ISPCRTDevice d, void* memBuffer);
 
 // Kernels ////////////////////////////////////////////////////////////////////
 typedef struct {

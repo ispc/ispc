@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Intel Corporation
+// Copyright 2020-2022 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
@@ -29,6 +29,8 @@ struct CPUDevice : public base::Device {
     void *platformNativeHandle() const override;
     void *deviceNativeHandle() const override;
     void *contextNativeHandle() const override;
+
+    ISPCRTAllocationType getMemAllocType(void* appMemory) const override;
 };
 
 } // namespace ispcrt
