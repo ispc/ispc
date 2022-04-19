@@ -93,10 +93,8 @@ class Indent {
     /** Annotate the next nested node with a label. */
     void setNextLabel(std::string s);
 
-    /** Print indentation. */
-    void Print();
-    /** Print indentation followed by the string. */
-    void Print(const char *title);
+    /** Print indentation followed by an optional string string. */
+    void Print(const char *title = nullptr);
     /** Print indentation followed by the string and source position. */
     void Print(const char *title, const SourcePos &pos);
     /** Print indentation followed by the string, source position and a new line character. */
