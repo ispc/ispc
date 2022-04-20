@@ -111,15 +111,9 @@ __declspec(safe, cost0) static inline uniform int __taskCount() { return __task_
 ///////////////////////////////////////////////////////////////////////////
 // Low level primitives
 
-__declspec(safe, cost0) static inline float16 float16bits(unsigned int16 a) { return __halfbits_varying_int16(a); }
+__declspec(safe, cost0) static inline float16 halfbits(unsigned int16 a) { return __halfbits_varying_int16(a); }
 
-__declspec(safe, cost0) static inline uniform float16 float16bits(uniform unsigned int16 a) {
-    return __halfbits_uniform_int16(a);
-}
-
-__declspec(safe, cost0) static inline float16 float16bits(int16 a) { return __halfbits_varying_int16(a); }
-
-__declspec(safe, cost0) static inline uniform float16 float16bits(uniform int16 a) {
+__declspec(safe, cost0) static inline uniform float16 halfbits(uniform unsigned int16 a) {
     return __halfbits_uniform_int16(a);
 }
 
@@ -128,6 +122,10 @@ __declspec(safe, cost0) static inline float floatbits(unsigned int a) { return _
 __declspec(safe, cost0) static inline uniform float floatbits(uniform unsigned int a) {
     return __floatbits_uniform_int32(a);
 }
+
+__declspec(safe, cost0) static inline float16 halfbits(int16 a) { return __halfbits_varying_int16(a); }
+
+__declspec(safe, cost0) static inline uniform float16 floatbits(uniform int16 a) { return __halfbits_uniform_int16(a); }
 
 __declspec(safe, cost0) static inline float floatbits(int a) { return __floatbits_varying_int32(a); }
 
@@ -256,6 +254,10 @@ __declspec(safe) static inline double shuffle(double v0, double v1, int i) { ret
 __declspec(safe) static inline int64 shuffle(int64 v0, int64 v1, int i) { return __shuffle2_i64(v0, v1, i); }
 
 // x[i]
+__declspec(safe, cost1) static inline uniform float16 extract(float16 x, uniform int i) {
+    return halfbits(__extract_int16((int)intbits(x), i));
+}
+
 __declspec(safe, cost1) static inline uniform float extract(float x, uniform int i) {
     return floatbits(__extract_int32((int)intbits(x), i));
 }
@@ -308,7 +310,7 @@ __declspec(safe, cost1) static inline unsigned int8 insert(unsigned int8 x, unif
 }
 
 __declspec(safe, cost1) static inline float16 insert(float16 x, uniform int i, uniform float16 v) {
-    return float16bits(__insert_int16((int16)intbits(x), i, (uniform int16)intbits(v)));
+    return halfbits(__insert_int16((int16)intbits(x), i, (uniform int16)intbits(v)));
 }
 
 __declspec(safe, cost1) static inline int16 insert(int16 x, uniform int i, uniform int16 v) {
@@ -910,6 +912,14 @@ __declspec(safe, cost1) static inline uniform int64 select(uniform bool cond, un
     return cond ? t : f;
 }
 
+__declspec(safe, cost1) static inline float16 select(bool cond, float16 t, float16 f) { return cond ? t : f; }
+
+__declspec(safe, cost1) static inline float16 select(uniform bool cond, float16 t, float16 f) { return cond ? t : f; }
+
+__declspec(safe, cost1) static inline uniform float16 select(uniform bool cond, uniform float16 t, uniform float16 f) {
+    return cond ? t : f;
+}
+
 __declspec(safe, cost1) static inline float select(bool cond, float t, float f) { return cond ? t : f; }
 
 __declspec(safe, cost1) static inline float select(uniform bool cond, float t, float f) { return cond ? t : f; }
@@ -941,20 +951,49 @@ __declspec(safe) static inline uniform unsigned int32 reduce_add(unsigned int16 
     return __reduce_add_int16(__mask ? x : (int16)0);
 }
 
+__declspec(safe) static inline uniform float16 reduce_add(float16 x) {
+    // zero the lanes where the mask is off
+    return __reduce_add_half(__mask ? x : 0.);
+}
+
 __declspec(safe) static inline uniform float reduce_add(float x) {
     // zero the lanes where the mask is off
     return __reduce_add_float(__mask ? x : 0.);
 }
 
+__declspec(safe) static inline uniform float16 reduce_min(float16 v) {
+    // For the lanes where the mask is off, replace the given value with
+    // infinity, so that it doesn't affect the result.
+    const int16 iflt_max = 0x7f80; // infinity
+    // unmasked block is needed to make sure that argument for unmasked
+    // function __reduce_min_half() are calculated without a mask.
+    bool test = __mask;
+    uniform float16 result;
+    unmasked { result = __reduce_min_half(test ? v : halfbits(iflt_max)); }
+    return result;
+}
+
 __declspec(safe) static inline uniform float reduce_min(float v) {
     // For the lanes where the mask is off, replace the given value with
     // infinity, so that it doesn't affect the result.
-    int iflt_max = 0x7f800000; // infinity
+    const int iflt_max = 0x7f800000; // infinity
     // unmasked block is needed to make sure that argument for unmasked
     // function __reduce_min_float() are calculated without a mask.
     bool test = __mask;
     uniform float result;
     unmasked { result = __reduce_min_float(test ? v : floatbits(iflt_max)); }
+    return result;
+}
+
+__declspec(safe) static inline uniform float16 reduce_max(float16 v) {
+    // For the lanes where the mask is off, replace the given value with
+    // negative infinity, so that it doesn't affect the result.
+    const int16 iflt_neg_max = 0xff80; // -infinity
+    // unmasked block is needed to make sure that argument for unmasked
+    // function __reduce_max_half() are calculated without a mask.
+    bool test = __mask;
+    uniform float16 result;
+    unmasked { result = __reduce_max_half(test ? v : halfbits(iflt_neg_max)); }
     return result;
 }
 
@@ -1083,6 +1122,7 @@ __declspec(safe) static inline uniform unsigned int64 reduce_max(unsigned int64 
 REDUCE_EQUAL(int32, int32, IntMaskType)
 REDUCE_EQUAL(unsigned int32, int32, UIntMaskType)
 REDUCE_EQUAL(float, float, IntMaskType)
+REDUCE_EQUAL(float16, half, IntMaskType)
 REDUCE_EQUAL(int64, int64, IntMaskType)
 REDUCE_EQUAL(unsigned int64, int64, UIntMaskType)
 REDUCE_EQUAL(double, double, IntMaskType)
@@ -1092,6 +1132,8 @@ static int32 exclusive_scan_add(int32 v) { return __exclusive_scan_add_i32(v, (I
 static unsigned int32 exclusive_scan_add(unsigned int32 v) {
     return __exclusive_scan_add_i32((int32)v, (IntMaskType)__mask);
 }
+
+static float16 exclusive_scan_add(float16 v) { return __exclusive_scan_add_half(v, __mask); }
 
 static float exclusive_scan_add(float v) { return __exclusive_scan_add_float(v, __mask); }
 
@@ -1229,6 +1271,10 @@ __declspec(safe, cost1) static inline void streaming_store(uniform int64 a[], in
     __streaming_store_varying_i64(a, vals);
 }
 
+__declspec(safe, cost1) static inline void streaming_store(uniform float16 a[], float16 vals) {
+    __streaming_store_varying_half(a, vals);
+}
+
 __declspec(safe, cost1) static inline void streaming_store(uniform float a[], float vals) {
     __streaming_store_varying_float(a, vals);
 }
@@ -1267,6 +1313,10 @@ __declspec(safe, cost1) static inline void streaming_store(uniform unsigned int6
 
 __declspec(safe, cost1) static inline void streaming_store(uniform int64 a[], uniform int64 vals) {
     __streaming_store_uniform_i64(a, vals);
+}
+
+__declspec(safe, cost1) static inline void streaming_store(uniform float16 a[], uniform float16 vals) {
+    __streaming_store_uniform_half(a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform float a[], uniform float vals) {
@@ -1344,6 +1394,14 @@ __declspec(safe, cost1) static inline uniform int64 streaming_load_uniform(unifo
     return __streaming_load_uniform_i64(a);
 }
 
+__declspec(safe, cost1) static inline varying float16 streaming_load(uniform float16 a[]) {
+    return __streaming_load_varying_half(a);
+}
+
+__declspec(safe, cost1) static inline uniform float16 streaming_load_uniform(uniform float16 a[]) {
+    return __streaming_load_uniform_half(a);
+}
+
 __declspec(safe, cost1) static inline varying float streaming_load(uniform float a[]) {
     return __streaming_load_varying_float(a);
 }
@@ -1402,13 +1460,13 @@ __declspec(safe, cost1) static inline float16 abs(float16 a) {
     // Floating-point hack: zeroing the high bit clears the sign
     unsigned int16 i = intbits(a);
     i &= 0x7fff;
-    return float16bits(i);
+    return halfbits(i);
 }
 
 __declspec(safe, cost1) static inline uniform float16 abs(uniform float16 a) {
     uniform unsigned int16 i = intbits(a);
     i &= 0x7fff;
-    return float16bits(i);
+    return halfbits(i);
 }
 
 __declspec(safe, cost1) static inline float abs(float a) {
@@ -1437,6 +1495,16 @@ __declspec(safe, cost1) static inline uniform double abs(uniform double a) {
     return doublebits(i);
 }
 
+__declspec(safe, cost1) static inline unsigned int signbits(float16 x) {
+    unsigned int i = intbits(x);
+    return (i & 0x8000);
+}
+
+__declspec(safe, cost1) static inline uniform unsigned int signbits(uniform float16 x) {
+    uniform unsigned int i = intbits(x);
+    return (i & 0x8000);
+}
+
 __declspec(safe, cost1) static inline unsigned int signbits(float x) {
     unsigned int i = intbits(x);
     return (i & 0x80000000);
@@ -1457,6 +1525,10 @@ __declspec(safe, cost1) static inline uniform unsigned int64 signbits(uniform do
     return (i & 0x8000000000000000);
 }
 
+__declspec(safe, cost2) static inline float16 round(float16 x) { return __round_varying_half(x); }
+
+__declspec(safe, cost2) static inline uniform float16 round(uniform float16 x) { return __round_uniform_half(x); }
+
 __declspec(safe, cost2) static inline float round(float x) { return __round_varying_float(x); }
 
 __declspec(safe, cost2) static inline uniform float round(uniform float x) { return __round_uniform_float(x); }
@@ -1464,6 +1536,10 @@ __declspec(safe, cost2) static inline uniform float round(uniform float x) { ret
 __declspec(safe, cost2) static inline double round(double x) { return __round_varying_double(x); }
 
 __declspec(safe, cost2) static inline uniform double round(uniform double x) { return __round_uniform_double(x); }
+
+__declspec(safe, cost2) static inline float16 floor(float16 x) { return __floor_varying_half(x); }
+
+__declspec(safe, cost2) static inline uniform float16 floor(uniform float16 x) { return __floor_uniform_half(x); }
 
 __declspec(safe, cost2) static inline float floor(float x) { return __floor_varying_float(x); }
 
@@ -1473,6 +1549,10 @@ __declspec(safe, cost2) static inline double floor(double x) { return __floor_va
 
 __declspec(safe, cost2) static inline uniform double floor(uniform double x) { return __floor_uniform_double(x); }
 
+__declspec(safe, cost2) static inline float16 ceil(float16 x) { return __ceil_varying_half(x); }
+
+__declspec(safe, cost2) static inline uniform float16 ceil(uniform float16 x) { return __ceil_uniform_half(x); }
+
 __declspec(safe, cost2) static inline float ceil(float x) { return __ceil_varying_float(x); }
 
 __declspec(safe, cost2) static inline uniform float ceil(uniform float x) { return __ceil_uniform_float(x); }
@@ -1481,6 +1561,10 @@ __declspec(safe, cost2) static inline double ceil(double x) { return __ceil_vary
 
 __declspec(safe, cost2) static inline uniform double ceil(uniform double x) { return __ceil_uniform_double(x); }
 ///////////////////////////
+__declspec(safe, cost2) static inline float16 trunc(float16 x) { return __trunc_varying_half(x); }
+
+__declspec(safe, cost2) static inline uniform float16 trunc(uniform float16 x) { return __trunc_uniform_half(x); }
+
 __declspec(safe, cost2) static inline float trunc(float x) { return __trunc_varying_float(x); }
 
 __declspec(safe, cost2) static inline uniform float trunc(uniform float x) { return __trunc_uniform_float(x); }
@@ -2199,6 +2283,17 @@ static inline void *atomic_compare_exchange_local(void **ptr, void *oldval, void
 ///////////////////////////////////////////////////////////////////////////
 // Transcendentals (float precision)
 
+__declspec(safe) static inline float16 sqrt(float16 v) {
+    if (__math_lib == __math_lib_svml) {
+        const int16 iflt_neg_max = 0xff80; // -infinity
+        return halfbits(iflt_neg_max);     // FIXME: return __svml_sqrtf(v);
+    } else {
+        return __sqrt_varying_half(v);
+    }
+}
+
+__declspec(safe) static inline uniform float16 sqrt(uniform float16 v) { return __sqrt_uniform_half(v); }
+
 __declspec(safe) static inline float sqrt(float v) {
     if (__math_lib == __math_lib_svml) {
         return __svml_sqrtf(v);
@@ -2208,6 +2303,17 @@ __declspec(safe) static inline float sqrt(float v) {
 }
 
 __declspec(safe) static inline uniform float sqrt(uniform float v) { return __sqrt_uniform_float(v); }
+
+__declspec(safe) static inline float16 rsqrt(float16 v) {
+    if (__math_lib == __math_lib_svml) {
+        const int16 iflt_neg_max = 0xff80; // -infinity
+        return halfbits(iflt_neg_max);     // FIXME: return __svml_invsqrtf(v);
+    } else {
+        return __rsqrt_varying_float(v);
+    }
+}
+
+__declspec(safe) static inline uniform float16 rsqrt(uniform float16 v) { return __rsqrt_uniform_half(v); }
 
 __declspec(safe) static inline float rsqrt(float v) {
     if (__math_lib == __math_lib_svml) {
@@ -2222,6 +2328,26 @@ __declspec(safe) static inline uniform float rsqrt(uniform float v) { return __r
 __declspec(safe) static inline float rsqrt_fast(float v) { return __rsqrt_fast_varying_float(v); }
 
 __declspec(safe) static inline uniform float rsqrt_fast(uniform float v) { return __rsqrt_fast_uniform_float(v); }
+
+__declspec(safe) static inline float16 ldexp(float16 x, int n) {
+    unsigned int16 ex = 0x7F80u;
+    unsigned int16 ix = intbits(x);
+    ex &= ix;           // extract old exponent;
+    ix = ix & ~0x7F80u; // clear exponent
+    n = (n << 10) + ex;
+    ix |= n;            // insert new exponent
+    return halfbits(ix);
+}
+
+__declspec(safe) static inline uniform float16 ldexp(uniform float16 x, uniform int n) {
+    uniform unsigned int16 ex = 0x7F80u;
+    uniform unsigned int16 ix = intbits(x);
+    ex &= ix;               // extract old exponent;
+    ix = ix & ~0x7F800u;    // clear exponent
+    n = (n << 10) + ex;
+    ix |= n;                // insert new exponent
+    return halfbits(ix);
+}
 
 __declspec(safe) static inline float ldexp(float x, int n) {
     unsigned int ex = 0x7F800000u;
@@ -2241,6 +2367,26 @@ __declspec(safe) static inline uniform float ldexp(uniform float x, uniform int 
     n = (n << 23) + ex;
     ix |= n; // insert new exponent
     return floatbits(ix);
+}
+
+__declspec(safe) static inline float16 frexp(float16 x, varying int *uniform pw2) {
+    unsigned int16 ex = 0x7F80u;    // exponent mask
+    unsigned int16 ix = intbits(x);
+    ex &= ix;
+    ix &= ~0x7F80u;                 // clear exponent
+    *pw2 = (int)(ex >> 10) - 14;    // compute exponent
+    ix |= 0x3F00u;                  // insert exponent +1 in x
+    return halfbits(ix);
+}
+
+__declspec(safe) static inline uniform float16 frexp(uniform float16 x, uniform int *uniform pw2) {
+    uniform unsigned int16 ex = 0x7F80u;    // exponent mask
+    uniform unsigned int16 ix = intbits(x);
+    ex &= ix;
+    ix &= ~0x7F80u;                         // clear exponent
+    *pw2 = (uniform int)(ex >> 10) - 14;    // compute exponent
+    ix |= 0x3F00u;                          // insert exponent +1 in x
+    return halfbits(ix);
 }
 
 __declspec(safe) static inline float frexp(float x, varying int *uniform pw2) {
