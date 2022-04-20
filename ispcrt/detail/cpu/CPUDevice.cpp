@@ -34,30 +34,45 @@ struct Future : public ispcrt::base::Future {
 using CPUKernelEntryPoint = void (*)(void *, size_t, size_t, size_t);
 
 struct MemoryView : public ispcrt::base::MemoryView {
-    MemoryView(void *appMem, size_t numBytes, bool shared) : m_mem(appMem), m_size(numBytes), m_shared(shared) {
-        if (m_shared) {
-            m_mem = malloc(m_size);
-            if (!m_mem)
-                throw std::bad_alloc();
-        }
-    }
+    MemoryView(void *appMem, size_t numBytes, bool shared) : m_hostPtr(appMem), m_devicePtr(appMem), m_size(numBytes), m_shared(shared) {}
 
     ~MemoryView() {
-        if (m_shared)
-            free(m_mem);
+        if (!m_external_alloc && m_devicePtr)
+            free(m_devicePtr);
     }
 
     bool isShared() { return m_shared; }
 
-    void *hostPtr() { return m_mem; };
+    void *hostPtr() {
+        if (m_shared) {
+            return devicePtr();
+        }
+        else {
+            if (!m_hostPtr)
+                 throw std::logic_error("pointer to the host memory is NULL");
+            return m_hostPtr;
+        }
+    };
 
-    void *devicePtr() { return m_mem; };
+    void *devicePtr() {
+        if (!m_devicePtr)
+            allocate();
+        return m_devicePtr;
+    };
 
     size_t numBytes() { return m_size; };
 
   private:
+    void allocate() {
+        m_devicePtr = malloc(m_size);
+        if (!m_devicePtr)
+            throw std::bad_alloc();
+        m_external_alloc = false;
+    }
+    bool m_external_alloc{true};
     bool m_shared{false};
-    void *m_mem{nullptr};
+    void *m_hostPtr{nullptr};
+    void *m_devicePtr{nullptr};
     size_t m_size{0};
 };
 
