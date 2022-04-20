@@ -42,7 +42,7 @@ sudo: required
 jobs:
   include:
     # ARM build
-    # LLVM 13.0 + Ubuntu 18.04:
+    # LLVM 14.0 + Ubuntu 18.04:
     #   - ARM only (default): build, lit tests, examples (build)
     #   - ARM + x86: build, lit tests, examples (build), tests (aarch64)
     - stage: test
@@ -50,8 +50,8 @@ jobs:
       arch: arm64
       dist: bionic
       env:
-        - LLVM_VERSION=13.0 OS=Ubuntu18.04aarch64
-        - LLVM_TAR=llvm-13.0.1-ubuntu18.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
+        - LLVM_VERSION=14.0 OS=Ubuntu18.04aarch64
+        - LLVM_TAR=llvm-14.0.1-ubuntu18.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
         - LLVM_REPO=https://github.com/ispc/llvm-project
         - ISPC_HOME=$TRAVIS_BUILD_DIR
       before_install:
