@@ -1083,8 +1083,6 @@ ISPCRTAllocationType GPUDevice::getMemAllocType(void* appMemory) const {
             return ISPCRT_ALLOC_TYPE_DEVICE;
         case ZE_MEMORY_TYPE_SHARED:
             return ISPCRT_ALLOC_TYPE_SHARED;
-        case ZE_MEMORY_TYPE_FORCE_UINT32:
-            return ISPCRT_ALLOC_TYPE_FORCE_UINT32;
         default:
             return ISPCRT_ALLOC_TYPE_UNKNOWN;
     }
