@@ -129,6 +129,7 @@ void ispcrtDeviceBarrier(ISPCRTTaskQueue);
 
 void ispcrtCopyToDevice(ISPCRTTaskQueue, ISPCRTMemoryView);
 void ispcrtCopyToHost(ISPCRTTaskQueue, ISPCRTMemoryView);
+void ispcrtCopyMemoryView(ISPCRTTaskQueue, ISPCRTMemoryView, ISPCRTMemoryView, const size_t size);
 
 // NOTE: 'params' can be a NULL handle (NULL will get passed to the ISPC task as the function parameter)
 ISPCRTFuture ispcrtLaunch1D(ISPCRTTaskQueue, ISPCRTKernel, ISPCRTMemoryView params, size_t dim0);

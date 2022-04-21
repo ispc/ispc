@@ -781,6 +781,28 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         m_cl_mem_h2d->addEvent(copyEvent);
     }
 
+    void copyMemoryView(base::MemoryView &mv_dst, base::MemoryView &mv_src, const size_t size) override {
+        auto &view_dst = (gpu::MemoryView &)mv_dst;
+        auto &view_src = (gpu::MemoryView &)mv_src;
+
+        // Create event and add it to m_cl_compute command list
+        auto event = m_ep_compute.createEvent();
+        if (event == nullptr)
+            throw std::runtime_error("Failed to create event!");
+        try {
+            L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl_compute->handle(), view_dst.devicePtr(), view_src.devicePtr(),
+                                                       size, event->handle(), 0, nullptr));
+            m_cl_compute->inc();
+        } catch (ispcrt::base::ispcrt_runtime_error &e) {
+            // cleanup and rethrow
+            m_ep_compute.deleteEvent(event);
+            throw e;
+        }
+        auto *future = new gpu::Future;
+        assert(future);
+        m_events_compute_list.push_back(std::make_pair(event, future));
+    }
+
     ispcrt::base::Future *launch(ispcrt::base::Kernel &k, ispcrt::base::MemoryView *params, size_t dim0, size_t dim1,
                                  size_t dim2) override {
         auto &kernel = (gpu::Kernel &)k;
