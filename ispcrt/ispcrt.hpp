@@ -363,6 +363,7 @@ class TaskQueue : public GenericObject<ISPCRTTaskQueue> {
 
     template <typename T, AllocType AT> void copyToDevice(const Array<T,AT> &arr) const;
     template <typename T, AllocType AT> void copyToHost(const Array<T,AT> &arr) const;
+    template <typename T, AllocType AT> void copyArray(const Array<T,AT> &arrDst, const Array<T,AT> &arrSrc, const size_t size) const;
 
     Future launch(const Kernel &k, size_t dim0) const;
     Future launch(const Kernel &k, size_t dim0, size_t dim1) const;
@@ -395,6 +396,10 @@ template <typename T, AllocType AT> inline void TaskQueue::copyToDevice(const Ar
 
 template <typename T, AllocType AT> inline void TaskQueue::copyToHost(const Array<T,AT> &arr) const {
     ispcrtCopyToHost(handle(), arr.handle());
+}
+
+template <typename T, AllocType AT> inline void TaskQueue::copyArray(const Array<T,AT> &arrDst, const Array<T,AT> &arrSrc, const size_t size) const {
+    ispcrtCopyMemoryView(handle(), arrDst.handle(), arrSrc.handle(), size * sizeof(T));
 }
 
 inline Future TaskQueue::launch(const Kernel &k, size_t dim0) const {

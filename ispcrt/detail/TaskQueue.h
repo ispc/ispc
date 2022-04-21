@@ -18,6 +18,7 @@ struct TaskQueue : public RefCounted {
 
     virtual void copyToHost(base::MemoryView &mv) = 0;
     virtual void copyToDevice(base::MemoryView &mv) = 0;
+    virtual void copyMemoryView(base::MemoryView &mv_dst, base::MemoryView &mv_src, const size_t size) = 0;
 
     virtual base::Future *launch(Kernel &k, base::MemoryView *params, size_t dim0, size_t dim1, size_t dim2) = 0;
 

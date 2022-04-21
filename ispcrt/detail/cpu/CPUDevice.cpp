@@ -11,6 +11,7 @@
 // std
 #include <cassert>
 #include <chrono>
+#include <cstring>
 #include <exception>
 #include <string>
 
@@ -160,6 +161,12 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
 
     void copyToDevice(ispcrt::base::MemoryView &) override {
         // no-op
+    }
+
+    void copyMemoryView(base::MemoryView &mv_dst, base::MemoryView &mv_src, const size_t size) override {
+        auto &view_dst = (cpu::MemoryView &)mv_dst;
+        auto &view_src = (cpu::MemoryView &)mv_src;
+        memcpy(view_dst.devicePtr(), view_src.devicePtr(), size);
     }
 
     ispcrt::base::Future *launch(ispcrt::base::Kernel &k, ispcrt::base::MemoryView *params, size_t dim0, size_t dim1,

@@ -303,6 +303,20 @@ void ispcrtCopyToHost(ISPCRTTaskQueue q, ISPCRTMemoryView mv) ISPCRT_CATCH_BEGIN
 }
 ISPCRT_CATCH_END_NO_RETURN()
 
+void ispcrtCopyMemoryView(ISPCRTTaskQueue q, ISPCRTMemoryView mvDst, ISPCRTMemoryView mvSrc, const size_t size) ISPCRT_CATCH_BEGIN {
+    auto &queue = referenceFromHandle<ispcrt::base::TaskQueue>(q);
+    auto &viewDst = referenceFromHandle<ispcrt::base::MemoryView>(mvDst);
+    auto &viewSrc = referenceFromHandle<ispcrt::base::MemoryView>(mvSrc);
+    if (size > viewDst.numBytes()) {
+        throw std::runtime_error("Requested copy size is bigger than destination buffer size!");
+    }
+    if (size > viewSrc.numBytes()) {
+        throw std::runtime_error("Requested copy size is bigger than source buffer size!");
+    }
+    queue.copyMemoryView(viewDst, viewSrc, size);
+}
+ISPCRT_CATCH_END_NO_RETURN()
+
 ISPCRTFuture ispcrtLaunch1D(ISPCRTTaskQueue q, ISPCRTKernel k, ISPCRTMemoryView p, size_t dim0) ISPCRT_CATCH_BEGIN {
     return ispcrtLaunch3D(q, k, p, dim0, 1, 1);
 }
