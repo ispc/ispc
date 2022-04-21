@@ -95,7 +95,6 @@ typedef enum {
     // The following allocation types are not used for allocation of ISPCRuntime objects,
     // but required to match possible L0 allocation types.
     ISPCRT_ALLOC_TYPE_HOST,
-    ISPCRT_ALLOC_TYPE_FORCE_UINT32,
     ISPCRT_ALLOC_TYPE_UNKNOWN,
 } ISPCRTAllocationType;
 
