@@ -306,6 +306,47 @@ TEST_F(MockTestWithDevice, TaskQueue_CopyToHost_zeCommandListAppendMemoryCopy) {
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
 }
 
+TEST_F(MockTestWithDevice, TaskQueue_CopyArray) {
+    ispcrt::TaskQueue tq(m_device);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    // Create an allocation
+    std::vector<float> buf(64 * 1024);
+    ispcrt::Array<float> buf_dev(m_device, buf);
+    ispcrt::Array<float> buf_copy(m_device, buf);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    // "copy"
+    tq.copyArray(buf_copy, buf_dev, buf_dev.size());
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_TRUE(Config::checkCmdList({CmdListElem::MemoryCopy}));
+}
+
+TEST_F(MockTestWithDevice, TaskQueue_CopyArray_zeCommandListAppendMemoryCopy) {
+    ispcrt::TaskQueue tq(m_device);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    // Create an allocation
+    std::vector<float> buf(64 * 1024);
+    ispcrt::Array<float> buf_copy(m_device, buf);
+    ispcrt::Array<float> buf_dev(m_device, buf);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    // "copy", but fail
+    Config::setRetValue("zeCommandListAppendMemoryCopy", ZE_RESULT_ERROR_DEVICE_LOST);
+    tq.copyArray(buf_copy, buf_dev, buf_dev.size());
+    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+}
+
+TEST_F(MockTestWithDevice, TaskQueue_CopyArray_InvalidSize) {
+    ispcrt::TaskQueue tq(m_device);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    // Create an allocation
+    std::vector<float> buf(64 * 1024);
+    ispcrt::Array<float> buf_dev(m_device, buf);
+    ispcrt::Array<float> buf_copy(m_device, buf);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    // copy command should return error since the requested size if biffer than buffer size
+    tq.copyArray(buf_copy, buf_dev, buf_dev.size() * 2);
+    ASSERT_EQ(sm_rt_error, ISPCRT_UNKNOWN_ERROR);
+}
+
 TEST_F(MockTestWithDevice, TaskQueue_Barrier_zeCommandListAppendBarrier) {
     ispcrt::TaskQueue tq(m_device);
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
