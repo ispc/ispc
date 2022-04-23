@@ -230,6 +230,31 @@ define i1 @__none(<8 x i32>) nounwind readnone alwaysinline {
 ;; horizontal ops / reductions
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; horizontal half (float16) ops
+
+declare i16 @llvm.convert.to.fp16.fp32(float) nounwind readnone
+
+define half @__reduce_add_half(<8 x half>) nounwind readonly alwaysinline {
+  %v0 = fpext <8 x half> %0 to <8 x float>
+  %v1 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %v0, <8 x float> %v0)
+  %v2 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %v1, <8 x float> %v1)
+  %scalar1 = extractelement <8 x float> %v2, i32 0
+  %scalar2 = extractelement <8 x float> %v2, i32 4
+  %sum = fadd float %scalar1, %scalar2
+  %retint = call i16 @llvm.convert.to.fp16.fp32(float %sum)
+  %ret = bitcast i16 %retint to half
+  ret half %ret
+}
+
+define half @__reduce_min_half(<8 x half>) nounwind readnone alwaysinline {
+  reduce8(half, @__min_varying_half, @__min_uniform_half)
+}
+
+define half @__reduce_max_half(<8 x half>) nounwind readnone alwaysinline {
+  reduce8(half, @__max_varying_half, @__max_uniform_half)
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal float ops
 
 declare <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float>, <8 x float>) nounwind readnone

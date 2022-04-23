@@ -234,6 +234,37 @@ define i1 @__none(<16 x i32>) nounwind readnone alwaysinline {
 }
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; horizontal half (float16) ops
+
+declare i16 @llvm.convert.to.fp16.fp32(float) nounwind readnone
+
+define half @__reduce_add_half(<16 x half>) nounwind readonly alwaysinline {
+  %v0 = fpext <16 x half> %0 to <16 x float>
+  %va = shufflevector <16 x float> %v0, <16 x float> undef,
+          <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %vb = shufflevector <16 x float> %v0, <16 x float> undef,
+          <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %v1 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %va, <8 x float> %vb)
+  %v2 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %v1, <8 x float> %v1)
+  %v3 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %v2, <8 x float> %v2)
+  %scalar1 = extractelement <8 x float> %v3, i32 0
+  %scalar2 = extractelement <8 x float> %v3, i32 4
+  %sum = fadd float %scalar1, %scalar2
+  %retint = call i16 @llvm.convert.to.fp16.fp32(float %sum)
+  %ret = bitcast i16 %retint to half
+  ret half %ret
+}
+
+
+define half @__reduce_min_half(<16 x half>) nounwind readnone alwaysinline {
+  reduce16(half, @__min_varying_half, @__min_uniform_half)
+}
+
+
+define half @__reduce_max_half(<16 x half>) nounwind readnone alwaysinline {
+  reduce16(half, @__max_varying_half, @__max_uniform_half)
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal float ops

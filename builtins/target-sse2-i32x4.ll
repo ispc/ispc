@@ -304,6 +304,21 @@ define i16 @__reduce_add_int16(<4 x i16>) nounwind readnone alwaysinline {
   reduce4(i16, @__add_varying_i16, @__add_uniform_i16)
 }
 
+declare i16 @llvm.convert.to.fp16.fp32(float) nounwind readnone
+
+define half @__reduce_add_half(<4 x half> %v) nounwind readonly alwaysinline {
+  %v0 = fpext <4 x half> %v to <4 x float>
+  %v1 = shufflevector <4 x float> %v0, <4 x float> undef,
+                      <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %m1 = fadd <4 x float> %v1, %v0
+  %m1a = extractelement <4 x float> %m1, i32 0
+  %m1b = extractelement <4 x float> %m1, i32 1
+  %sum = fadd float %m1a, %m1b
+  %retint = call i16 @llvm.convert.to.fp16.fp32(float %sum)
+  %ret = bitcast i16 %retint to half
+  ret half %ret
+}
+
 define float @__reduce_add_float(<4 x float> %v) nounwind readonly alwaysinline {
   %v1 = shufflevector <4 x float> %v, <4 x float> undef,
                       <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>

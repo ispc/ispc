@@ -273,17 +273,20 @@ if (NOT X86_ENABLED AND NOT ARM_ENABLED AND NOT WASM_ENABLED AND NOT XE_ENABLED)
 endif ()
 
 if (X86_ENABLED)
-    list(APPEND ISPC_TARGETS
-        sse2-i32x4 sse2-i32x8
-        sse4-i32x4 sse4-i32x8 sse4-i8x16 sse4-i16x8
-        # Note here that avx1-i32x4 is aliased to sse4-i32x4 plus avx attribute.
-        avx1-i32x8 avx1-i32x16 avx1-i64x4
-        avx2-i8x32 avx2-i16x16
-        avx2-i32x4 avx2-i32x8 avx2-i32x16 avx2-i64x4
-        avx512knl-x16
-        avx512skx-x4 avx512skx-x8 avx512skx-x16
-        avx512skx-x32 avx512skx-x64)
+    list(APPEND ISPC_TARGETS avx1-i32x8 avx1-i32x16 sse2-i32x4)
 endif()
+#if (X86_ENABLED)
+#    list(APPEND ISPC_TARGETS
+#        sse2-i32x4 sse2-i32x8
+#        sse4-i32x4 sse4-i32x8 sse4-i8x16 sse4-i16x8
+#        # Note here that avx1-i32x4 is aliased to sse4-i32x4 plus avx attribute.
+#        avx1-i32x8 avx1-i32x16 avx1-i64x4
+#        avx2-i8x32 avx2-i16x16
+#        avx2-i32x4 avx2-i32x8 avx2-i32x16 avx2-i64x4
+#        avx512knl-x16
+#        avx512skx-x4 avx512skx-x8 avx512skx-x16
+#        avx512skx-x32 avx512skx-x64)
+#endif()
 if (ARM_ENABLED)
     list(APPEND ISPC_TARGETS neon-i8x16 neon-i16x8 neon-i32x4 neon-i32x8)
 endif()
