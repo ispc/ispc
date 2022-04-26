@@ -813,7 +813,7 @@ static inline void soa_to_aos4(int64 v0, int64 v1, int64 v2, int64 v3, uniform i
 // Prefetching
 
 __declspec(safe, cost1) static inline void prefetch_l1(const void *uniform ptr) {
-    if (__is_xe_target) {
+    if (__have_xe_prefetch) {
         __prefetch_read_sized_uniform_1((opaque_ptr_t)ptr, (uniform int8)PREFETCH_DATASIZE_DEFAULT);
     } else {
         __prefetch_read_uniform_1((opaque_ptr_t)ptr);
@@ -821,7 +821,7 @@ __declspec(safe, cost1) static inline void prefetch_l1(const void *uniform ptr) 
 }
 
 __declspec(safe, cost1) static inline void prefetch_l1(const void *uniform ptr, uniform int8 size) {
-    if (__is_xe_target) {
+    if (__have_xe_prefetch) {
         __prefetch_read_sized_uniform_1((opaque_ptr_t)ptr, size);
     } else {
         __prefetch_read_uniform_1((opaque_ptr_t)ptr);
@@ -829,7 +829,7 @@ __declspec(safe, cost1) static inline void prefetch_l1(const void *uniform ptr, 
 }
 
 __declspec(safe, cost1) static inline void prefetch_l2(const void *uniform ptr) {
-    if (__is_xe_target) {
+    if (__have_xe_prefetch) {
         __prefetch_read_sized_uniform_2((opaque_ptr_t)ptr, (uniform int8)PREFETCH_DATASIZE_DEFAULT);
     } else {
         __prefetch_read_uniform_2((opaque_ptr_t)ptr);
@@ -837,7 +837,7 @@ __declspec(safe, cost1) static inline void prefetch_l2(const void *uniform ptr) 
 }
 
 __declspec(safe, cost1) static inline void prefetch_l2(const void *uniform ptr, uniform int8 size) {
-    if (__is_xe_target) {
+    if (__have_xe_prefetch) {
         __prefetch_read_sized_uniform_2((opaque_ptr_t)ptr, size);
     } else {
         __prefetch_read_uniform_2((opaque_ptr_t)ptr);
@@ -845,7 +845,7 @@ __declspec(safe, cost1) static inline void prefetch_l2(const void *uniform ptr, 
 }
 
 __declspec(safe, cost1) static inline void prefetch_l3(const void *uniform ptr) {
-    if (__is_xe_target) {
+    if (__have_xe_prefetch) {
         __prefetch_read_sized_uniform_3((opaque_ptr_t)ptr, (uniform int8)PREFETCH_DATASIZE_DEFAULT);
     } else {
         __prefetch_read_uniform_3((opaque_ptr_t)ptr);
@@ -853,7 +853,7 @@ __declspec(safe, cost1) static inline void prefetch_l3(const void *uniform ptr) 
 }
 
 __declspec(safe, cost1) static inline void prefetch_l3(const void *uniform ptr, uniform int8 size) {
-    if (__is_xe_target) {
+    if (__have_xe_prefetch) {
         __prefetch_read_sized_uniform_3((opaque_ptr_t)ptr, size);
     } else {
         __prefetch_read_uniform_3((opaque_ptr_t)ptr);
@@ -861,7 +861,7 @@ __declspec(safe, cost1) static inline void prefetch_l3(const void *uniform ptr, 
 }
 
 __declspec(safe, cost1) static inline void prefetch_nt(const void *uniform ptr) {
-    if (__is_xe_target) {
+    if (__have_xe_prefetch) {
         __prefetch_read_sized_uniform_nt((opaque_ptr_t)ptr, (uniform int8)PREFETCH_DATASIZE_DEFAULT);
     } else {
         __prefetch_read_uniform_nt((opaque_ptr_t)ptr);
@@ -869,7 +869,7 @@ __declspec(safe, cost1) static inline void prefetch_nt(const void *uniform ptr) 
 }
 
 __declspec(safe, cost1) static inline void prefetch_nt(const void *uniform ptr, uniform int8 size) {
-    if (__is_xe_target) {
+    if (__have_xe_prefetch) {
         __prefetch_read_sized_uniform_nt((opaque_ptr_t)ptr, size);
     } else {
         __prefetch_read_uniform_nt((opaque_ptr_t)ptr);
@@ -889,7 +889,7 @@ __declspec(safe, cost1) static inline void prefetchw_l3(const void *uniform ptr)
 }
 
 static inline void prefetch_l1(const void *varying ptr) {
-    if (__is_xe_target) {
+    if (__have_xe_prefetch) {
         __prefetch_read_sized_varying_1((int64)ptr, (uniform int8)PREFETCH_DATASIZE_DEFAULT, (IntMaskType)__mask);
     } else {
         __pseudo_prefetch_read_varying_1((int64)ptr, (IntMaskType)__mask);
@@ -897,7 +897,7 @@ static inline void prefetch_l1(const void *varying ptr) {
 }
 
 static inline void prefetch_l1(const void *varying ptr, uniform int8 size) {
-    if (__is_xe_target) {
+    if (__have_xe_prefetch) {
         __prefetch_read_sized_varying_1((int64)ptr, size, (IntMaskType)__mask);
     } else {
         __pseudo_prefetch_read_varying_1((int64)ptr, (IntMaskType)__mask);
@@ -905,7 +905,7 @@ static inline void prefetch_l1(const void *varying ptr, uniform int8 size) {
 }
 
 static inline void prefetch_l2(const void *varying ptr) {
-    if (__is_xe_target) {
+    if (__have_xe_prefetch) {
         __prefetch_read_sized_varying_2((int64)ptr, (uniform int8)PREFETCH_DATASIZE_DEFAULT, (IntMaskType)__mask);
     } else {
         __pseudo_prefetch_read_varying_2((int64)ptr, (IntMaskType)__mask);
@@ -913,7 +913,7 @@ static inline void prefetch_l2(const void *varying ptr) {
 }
 
 static inline void prefetch_l2(const void *varying ptr, uniform int8 size) {
-    if (__is_xe_target) {
+    if (__have_xe_prefetch) {
         __prefetch_read_sized_varying_2((int64)ptr, size, (IntMaskType)__mask);
     } else {
         __pseudo_prefetch_read_varying_2((int64)ptr, (IntMaskType)__mask);
@@ -921,7 +921,7 @@ static inline void prefetch_l2(const void *varying ptr, uniform int8 size) {
 }
 
 static inline void prefetch_l3(const void *varying ptr) {
-    if (__is_xe_target) {
+    if (__have_xe_prefetch) {
         __prefetch_read_sized_varying_3((int64)ptr, (uniform int8)PREFETCH_DATASIZE_DEFAULT, (IntMaskType)__mask);
     } else {
         __pseudo_prefetch_read_varying_3((int64)ptr, (IntMaskType)__mask);
@@ -929,7 +929,7 @@ static inline void prefetch_l3(const void *varying ptr) {
 }
 
 static inline void prefetch_l3(const void *varying ptr, uniform int8 size) {
-    if (__is_xe_target) {
+    if (__have_xe_prefetch) {
         __prefetch_read_sized_varying_3((int64)ptr, size, (IntMaskType)__mask);
     } else {
         __pseudo_prefetch_read_varying_3((int64)ptr, (IntMaskType)__mask);
@@ -937,7 +937,7 @@ static inline void prefetch_l3(const void *varying ptr, uniform int8 size) {
 }
 
 static inline void prefetch_nt(const void *varying ptr) {
-    if (__is_xe_target) {
+    if (__have_xe_prefetch) {
         __prefetch_read_sized_varying_nt((int64)ptr, (uniform int8)PREFETCH_DATASIZE_DEFAULT, (IntMaskType)__mask);
     } else {
         __pseudo_prefetch_read_varying_nt((int64)ptr, (IntMaskType)__mask);
@@ -945,7 +945,7 @@ static inline void prefetch_nt(const void *varying ptr) {
 }
 
 static inline void prefetch_nt(const void *varying ptr, uniform int8 size) {
-    if (__is_xe_target) {
+    if (__have_xe_prefetch) {
         __prefetch_read_sized_varying_nt((int64)ptr, size, (IntMaskType)__mask);
     } else {
         __pseudo_prefetch_read_varying_nt((int64)ptr, (IntMaskType)__mask);

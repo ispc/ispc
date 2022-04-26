@@ -1236,7 +1236,11 @@ void ispc::DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::
     lDefineConstantInt("__have_native_rsqrtd", g->target->hasRsqrtd(), module, symbolTable, debug_symbols);
     lDefineConstantInt("__have_native_rcpd", g->target->hasRcpd(), module, symbolTable, debug_symbols);
     lDefineConstantInt("__have_saturating_arithmetic", g->target->hasSatArith(), module, symbolTable, debug_symbols);
-
+#ifdef ISPC_XE_ENABLED
+    lDefineConstantInt("__have_xe_prefetch", g->target->hasXePrefetch(), module, symbolTable, debug_symbols);
+#else
+    lDefineConstantInt("__have_xe_prefetch", false, module, symbolTable, debug_symbols);
+#endif
     lDefineConstantInt("__is_xe_target", (int)(g->target->isXeTarget()), module, symbolTable, debug_symbols);
 
     if (g->forceAlignment != -1) {
