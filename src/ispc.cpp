@@ -1969,7 +1969,7 @@ bool Target::hasXePrefetch() const {
     default:
         return true;
     }
-    return true;
+    return false;
 }
 #endif
 
