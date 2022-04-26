@@ -1,9 +1,12 @@
 // RUN: %{ispc} %s --target=xehpc-x16 --arch=xe64 --emit-llvm-text --nowrap -o - | FileCheck %s
 // RUN: %{ispc} %s --target=xehpg-x16 --arch=xe64 --emit-llvm-text --nowrap -o - | FileCheck %s
+// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 --emit-llvm-text --nowrap -o - | FileCheck -check-prefix=CHECK_NO_PREFETCH %s
+// RUN: %{ispc} %s --target=xelp-x16 --arch=xe64 --emit-llvm-text --nowrap -o - | FileCheck -check-prefix=CHECK_NO_PREFETCH %s
 
 // REQUIRES: XE_ENABLED
 
 // CHECK-NOT: llvm.prefetch
+// CHECK_NO_PREFETCH-NOT: .prefetch
 export void f_uniform(uniform float aFOO[]) {
   // CHECK: call void @llvm.genx.lsc.prefetch.stateless.i1.i64(i1 true, i8 0, i8 2, i8 1, i16 1, i32 0, i8 3, i8 1, i8 1, i8 0, i64 %ptr64.i.i, i32 0)
   // CHECK-NEXT: call void @llvm.genx.lsc.prefetch.stateless.i1.i64(i1 true, i8 0, i8 1, i8 2, i16 1, i32 0, i8 3, i8 1, i8 1, i8 0, i64 %ptr64.i.i, i32 0)
