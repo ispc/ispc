@@ -1686,22 +1686,18 @@ declare void @llvm.prefetch(i8* nocapture %ptr, i32 %readwrite, i32 %locality,
                             i32 %cachetype) ; cachetype == 1 is dcache
 
 define void @__prefetch_read_uniform_1(i8 *) alwaysinline {
-  call void @llvm.prefetch(i8 * %0, i32 0, i32 3, i32 1)
   ret void
 }
 
 define void @__prefetch_read_uniform_2(i8 *) alwaysinline {
-  call void @llvm.prefetch(i8 * %0, i32 0, i32 2, i32 1)
   ret void
 }
 
 define void @__prefetch_read_uniform_3(i8 *) alwaysinline {
-  call void @llvm.prefetch(i8 * %0, i32 0, i32 1, i32 1)
   ret void
 }
 
 define void @__prefetch_read_uniform_nt(i8 *) alwaysinline {
-  call void @llvm.prefetch(i8 * %0, i32 0, i32 0, i32 1)
   ret void
 }
 
@@ -1718,45 +1714,25 @@ define void @__prefetch_write_uniform_3(i8 *) alwaysinline {
   ret void
 }
 
-define void @__prefetch_read_varying_1(<WIDTH x i64> %addr, <WIDTH x MASK> %mask) alwaysinline {
-  per_lane(WIDTH, <WIDTH x MASK> %mask, `
-  %iptr_LANE_ID = extractelement <WIDTH x i64> %addr, i32 LANE
-  %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to i8*
-  call void @llvm.prefetch(i8 * %ptr_LANE_ID, i32 0, i32 3, i32 1)
-  ')
+define void @__prefetch_read_varying_1(<WIDTH x i64>, <WIDTH x MASK>) alwaysinline {
   ret void
 }
 
 declare void @__prefetch_read_varying_1_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
 
-define void @__prefetch_read_varying_2(<WIDTH x i64> %addr, <WIDTH x MASK> %mask) alwaysinline {
-  per_lane(WIDTH, <WIDTH x MASK> %mask, `
-  %iptr_LANE_ID = extractelement <WIDTH x i64> %addr, i32 LANE
-  %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to i8*
-  call void @llvm.prefetch(i8 * %ptr_LANE_ID, i32 0, i32 2, i32 1)
-  ')
+define void @__prefetch_read_varying_2(<WIDTH x i64>, <WIDTH x MASK>) alwaysinline {
   ret void
 }
 
 declare void @__prefetch_read_varying_2_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
 
-define void @__prefetch_read_varying_3(<WIDTH x i64> %addr, <WIDTH x MASK> %mask) alwaysinline {
-  per_lane(WIDTH, <WIDTH x MASK> %mask, `
-  %iptr_LANE_ID = extractelement <WIDTH x i64> %addr, i32 LANE
-  %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to i8*
-  call void @llvm.prefetch(i8 * %ptr_LANE_ID, i32 0, i32 1, i32 1)
-  ')
+define void @__prefetch_read_varying_3(<WIDTH x i64>, <WIDTH x MASK>) alwaysinline {
   ret void
 }
 
 declare void @__prefetch_read_varying_3_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
 
-define void @__prefetch_read_varying_nt(<WIDTH x i64> %addr, <WIDTH x MASK> %mask) alwaysinline {
-  per_lane(WIDTH, <WIDTH x MASK> %mask, `
-  %iptr_LANE_ID = extractelement <WIDTH x i64> %addr, i32 LANE
-  %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to i8*
-  call void @llvm.prefetch(i8 * %ptr_LANE_ID, i32 0, i32 0, i32 1)
-  ')
+define void @__prefetch_read_varying_nt(<WIDTH x i64>, <WIDTH x MASK>) alwaysinline {
   ret void
 }
 
