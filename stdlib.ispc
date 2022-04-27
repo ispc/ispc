@@ -952,6 +952,11 @@ __declspec(safe) static inline uniform unsigned int32 reduce_add(unsigned int16 
     return __reduce_add_int16(__mask ? x : (int16)0);
 }
 
+__declspec(safe) static inline uniform float16 reduce_add(float16 x) {
+    // zero the lanes where the mask is off
+    return __reduce_add_half(__mask ? x : 0.0f16);
+}
+
 __declspec(safe) static inline uniform float reduce_add(float x) {
     // zero the lanes where the mask is off
     return __reduce_add_float(__mask ? x : 0.);

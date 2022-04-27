@@ -61,6 +61,18 @@ define(`MfORi32',
   ``i32''
 )
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Reduce function based on the WIDTH
+define(`reduce_func',
+`ifelse(WIDTH, `64', `reduce64($1, $2, $3)',
+        WIDTH, `32', `reduce32($1, $2, $3)',
+        WIDTH, `16', `reduce16($1, $2, $3)',
+        WIDTH, `8',  `reduce8($1, $2, $3)',
+        WIDTH, `4',  `reduce4($1, $2, $3)',
+                     `errprint(`ERROR: reduce_func() macro called with unsupported width = 'WIDTH
+)
+                      m4exit(`1')')
+')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -6987,6 +6999,24 @@ define <$1 x half> @__pow_varying_half(<$1 x half> %Val1, <$1 x half> %Val2) nou
 }
 ')
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; 16-bit float reduction
+
+define(`halfReduceAdd', `
+define internal <WIDTH x half> @__add_varying_half(<WIDTH x half>,
+                                              <WIDTH x half>) nounwind readnone alwaysinline {
+  %r = fadd <WIDTH x half> %0, %1
+  ret <WIDTH x half> %r
+}
+define internal half @__add_uniform_half(half, half) nounwind readnone alwaysinline {
+  %r = fadd half %0, %1
+  ret half %r
+}
+define half @__reduce_add_half(<WIDTH x half>) nounwind readnone alwaysinline {
+  reduce_func(half, @__add_varying_half, @__add_uniform_half)
+}
+')
+
 ;; this is the function that target .ll files should call; it just takes the target
 ;; vector width as a parameter
 
@@ -6994,6 +7024,7 @@ define(`halfTypeGenericImplementation', `
 halfminmax(WIDTH,min,olt)
 halfminmax(WIDTH,max,ogt)
 halfMath(WIDTH)
+halfReduceAdd(WIDTH)
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

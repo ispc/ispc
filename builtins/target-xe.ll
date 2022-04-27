@@ -723,6 +723,7 @@ define internal $1 @__fadd_uniform_$1($1, $1) nounwind readnone alwaysinline {
 }
 ')
 
+xe_fadd(half)
 xe_fadd(float)
 xe_fadd(double)
 
@@ -744,6 +745,10 @@ define i16 @__reduce_add_int8(<WIDTH x i8>) nounwind readnone alwaysinline {
 define i32 @__reduce_add_int16(<WIDTH x i16>) nounwind readnone alwaysinline {
   %ext = zext <WIDTH x i16> %0 to <WIDTH x i32>
   reduce_func(i32, @__add_varying_int32, @__add_uniform_int32, %ext)
+}
+
+define half @__reduce_add_half(<WIDTH x half>) nounwind readonly alwaysinline {
+  reduce_func(half, @__fadd_varying_half, @__fadd_uniform_half, %0)
 }
 
 define i64 @__reduce_add_int32(<WIDTH x i32>) nounwind readnone {
