@@ -274,6 +274,10 @@ __declspec(safe, cost1) static inline uniform unsigned int16 extract(unsigned in
     return __extract_int16(x, (uniform unsigned int)i);
 }
 
+__declspec(safe, cost1) static inline uniform float16 extract(float16 x, uniform int i) {
+    return float16bits(__extract_int16((int16)intbits(x), i));
+}
+
 __declspec(safe, cost1) static inline uniform int32 extract(int32 x, uniform int i) { return __extract_int32(x, i); }
 
 __declspec(safe, cost1) static inline uniform unsigned int32 extract(unsigned int32 x, uniform int i) {
@@ -289,7 +293,6 @@ __declspec(safe, cost1) static inline uniform int64 extract(int64 x, uniform int
 __declspec(safe, cost1) static inline uniform unsigned int64 extract(unsigned int64 x, uniform int i) {
     return __extract_int64(x, (uniform unsigned int)i);
 }
-
 // x[i] = v
 __declspec(safe, cost1) static inline float insert(float x, uniform int i, uniform float v) {
     return floatbits(__insert_int32((int)intbits(x), i, (uniform int)intbits(v)));
@@ -891,6 +894,14 @@ __declspec(safe, cost1) static inline int16 select(bool cond, int16 t, int16 f) 
 __declspec(safe, cost1) static inline int16 select(uniform bool cond, int16 t, int16 f) { return cond ? t : f; }
 
 __declspec(safe, cost1) static inline uniform int16 select(uniform bool cond, uniform int16 t, uniform int16 f) {
+    return cond ? t : f;
+}
+
+__declspec(safe, cost1) static inline float16 select(bool cond, float16 t, float16 f) { return cond ? t : f; }
+
+__declspec(safe, cost1) static inline float16 select(uniform bool cond, float16 t, float16 f) { return cond ? t : f; }
+
+__declspec(safe, cost1) static inline uniform float16 select(uniform bool cond, uniform float16 t, uniform float16 f) {
     return cond ? t : f;
 }
 
