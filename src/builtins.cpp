@@ -493,6 +493,7 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__doublebits_varying_int64",
         "__exclusive_scan_add_double",
         "__exclusive_scan_add_float",
+        "__exclusive_scan_add_half",
         "__exclusive_scan_add_i32",
         "__exclusive_scan_add_i64",
         "__exclusive_scan_and_i32",

@@ -7615,6 +7615,7 @@ define <$1 x $2> @__exclusive_scan_$6(<$1 x $2> %v,
 ')
 
 define(`scans', `
+exclusive_scan(WIDTH, half, 16, fadd, zeroinitializer, add_half)
 exclusive_scan(WIDTH, i32, 32, add, 0, add_i32)
 exclusive_scan(WIDTH, float, 32, fadd, zeroinitializer, add_float)
 exclusive_scan(WIDTH, i64, 64, add, 0, add_i64)

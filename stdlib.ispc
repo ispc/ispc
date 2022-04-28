@@ -1128,6 +1128,8 @@ REDUCE_EQUAL(int64, int64, IntMaskType)
 REDUCE_EQUAL(unsigned int64, int64, UIntMaskType)
 REDUCE_EQUAL(double, double, IntMaskType)
 
+static float16 exclusive_scan_add(float16 v) { return __exclusive_scan_add_half(v, __mask); }
+
 static int32 exclusive_scan_add(int32 v) { return __exclusive_scan_add_i32(v, (IntMaskType)__mask); }
 
 static unsigned int32 exclusive_scan_add(unsigned int32 v) {
