@@ -7122,6 +7122,7 @@ define(`gen_streaming_stores_metadata', `
 ')
 
 define(`gen_streaming_stores_varying', `
+  gen_streaming_stores_varying_by_type(half)
   gen_streaming_stores_varying_by_type(float)
   gen_streaming_stores_varying_by_type(double)
   gen_streaming_stores_varying_by_type(i8)
@@ -7131,6 +7132,7 @@ define(`gen_streaming_stores_varying', `
 ')
 
 define(`gen_streaming_stores_uniform', `
+  gen_streaming_stores_uniform_by_type(half)
   gen_streaming_stores_uniform_by_type(float)
   gen_streaming_stores_uniform_by_type(double)
   gen_streaming_stores_uniform_by_type(i8)
@@ -7166,6 +7168,7 @@ define $1 @__streaming_load_uniform_$1($1* nocapture) nounwind alwaysinline {
 ')
 
 define(`gen_streaming_loads_varying', `
+  gen_streaming_loads_varying_by_type(half)
   gen_streaming_loads_varying_by_type(float)
   gen_streaming_loads_varying_by_type(double)
   gen_streaming_loads_varying_by_type(i8)
@@ -7175,6 +7178,7 @@ define(`gen_streaming_loads_varying', `
 ')
 
 define(`gen_streaming_loads_uniform', `
+  gen_streaming_loads_uniform_by_type(half)
   gen_streaming_loads_uniform_by_type(float)
   gen_streaming_loads_uniform_by_type(double)
   gen_streaming_loads_uniform_by_type(i8)
