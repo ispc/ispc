@@ -76,8 +76,10 @@ rdrand_decls()
 
 declare float @llvm.genx.rndd.f32(float)
 declare float @llvm.genx.rndu.f32(float)
+declare float @llvm.genx.rnde.f32(float)
 declare <WIDTH x float> @llvm.genx.rndu.XE_SUFFIX(float)(<WIDTH x float>)
 declare <WIDTH x float> @llvm.genx.rndd.XE_SUFFIX(float)(<WIDTH x float>)
+declare <WIDTH x float> @llvm.genx.rnde.XE_SUFFIX(float)(<WIDTH x float>)
 
 
 define float @__floor_uniform_float(float) nounwind readonly alwaysinline {
@@ -91,16 +93,8 @@ define float @__ceil_uniform_float(float) nounwind readonly alwaysinline {
 }
 
 define float @__round_uniform_float(float) nounwind readonly alwaysinline {
-  %float_to_int_bitcast.i.i.i.i = bitcast float %0 to i32
-  %bitop.i.i = and i32 %float_to_int_bitcast.i.i.i.i, -2147483648
-  %bitop.i = xor i32 %float_to_int_bitcast.i.i.i.i, %bitop.i.i
-  %int_to_float_bitcast.i.i40.i = bitcast i32 %bitop.i to float
-  %binop.i = fadd float %int_to_float_bitcast.i.i40.i, 8.388608e+06
-  %binop21.i = fadd float %binop.i, -8.388608e+06
-  %float_to_int_bitcast.i.i.i = bitcast float %binop21.i to i32
-  %bitop31.i = xor i32 %float_to_int_bitcast.i.i.i, %bitop.i.i
-  %int_to_float_bitcast.i.i.i = bitcast i32 %bitop31.i to float
-  ret float %int_to_float_bitcast.i.i.i
+  %res = call float @llvm.genx.rnde.f32(float %0)
+  ret float %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -576,27 +570,9 @@ define <WIDTH x double> @__sqrt_varying_double(<WIDTH x double>) nounwind always
 ;; rounding floats
 
 define <WIDTH x float> @__round_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
-  %float_to_int_bitcast.i.i.i.i = bitcast <WIDTH x float> %0 to <WIDTH x i32>
-  ; create vector of literals
-  %vec_lit.i = insertelement <1 x i32> undef, i32 -2147483648, i32 0
-  %vec_lit = shufflevector <1 x i32> %vec_lit.i, <1 x i32> undef, <WIDTH x i32> zeroinitializer
-  %bitop.i.i = and <WIDTH x i32> %float_to_int_bitcast.i.i.i.i, %vec_lit
-  %bitop.i = xor <WIDTH x i32> %float_to_int_bitcast.i.i.i.i, %bitop.i.i
-  %int_to_float_bitcast.i.i40.i = bitcast <WIDTH x i32> %bitop.i to <WIDTH x float>
-  ; create vector of float literals
-  %vec_lit_pos.i = insertelement <1 x float> undef, float 8.388608e+06, i32 0
-  %vec_lit_pos = shufflevector <1 x float> %vec_lit_pos.i, <1 x float> undef, <WIDTH x i32> zeroinitializer
-  ; create vector of float literals
-  %vec_lit_neg.i = insertelement <1 x float> undef, float -8.388608e+06, i32 0
-  %vec_lit_neg = shufflevector <1 x float> %vec_lit_neg.i, <1 x float> undef, <WIDTH x i32> zeroinitializer
-  %binop.i = fadd <WIDTH x float> %int_to_float_bitcast.i.i40.i, %vec_lit_pos
-  %binop21.i = fadd <WIDTH x float> %binop.i, %vec_lit_neg
-  %float_to_int_bitcast.i.i.i = bitcast <WIDTH x float> %binop21.i to <WIDTH x i32>
-  %bitop31.i = xor <WIDTH x i32> %float_to_int_bitcast.i.i.i, %bitop.i.i
-  %int_to_float_bitcast.i.i.i = bitcast <WIDTH x i32> %bitop31.i to <WIDTH x float>
-  ret <WIDTH x float> %int_to_float_bitcast.i.i.i
+  %res = call <WIDTH x float> @llvm.genx.rnde.XE_SUFFIX(float)(<WIDTH x float> %0)
+  ret <WIDTH x float> %res
 }
-
 
 define <WIDTH x float> @__floor_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
     %res = call <WIDTH x float> @llvm.genx.rndd.XE_SUFFIX(float)(<WIDTH x float> %0)
