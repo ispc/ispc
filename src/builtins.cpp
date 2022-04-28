@@ -670,6 +670,7 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__reduce_add_int64",
         "__reduce_equal_double",
         "__reduce_equal_float",
+        "__reduce_equal_half",
         "__reduce_equal_int32",
         "__reduce_equal_int64",
         "__reduce_max_double",

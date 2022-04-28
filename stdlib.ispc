@@ -1120,6 +1120,7 @@ __declspec(safe) static inline uniform unsigned int64 reduce_max(unsigned int64 
         return __reduce_equal_##FUNCTYPE(v, value, (MASKTYPE)__mask);                                                  \
     }
 
+REDUCE_EQUAL(float16, half, IntMaskType)
 REDUCE_EQUAL(int32, int32, IntMaskType)
 REDUCE_EQUAL(unsigned int32, int32, UIntMaskType)
 REDUCE_EQUAL(float, float, IntMaskType)
