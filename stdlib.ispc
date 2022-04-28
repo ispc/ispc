@@ -1256,6 +1256,10 @@ __declspec(safe, cost1) static inline void streaming_store(uniform int16 a[], in
     __streaming_store_varying_i16(a, vals);
 }
 
+__declspec(safe, cost1) static inline void streaming_store(uniform float16 a[], float16 vals) {
+    __streaming_store_varying_half(a, vals);
+}
+
 __declspec(safe, cost1) static inline void streaming_store(uniform unsigned int a[], unsigned int vals) {
     __streaming_store_varying_i32(a, vals);
 }
@@ -1294,6 +1298,10 @@ __declspec(safe, cost1) static inline void streaming_store(uniform unsigned int1
 
 __declspec(safe, cost1) static inline void streaming_store(uniform int16 a[], uniform int16 vals) {
     __streaming_store_uniform_i16(a, vals);
+}
+
+__declspec(safe, cost1) static inline void streaming_store(uniform float16 a[], uniform float16 vals) {
+    __streaming_store_uniform_half(a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform unsigned int a[], uniform unsigned int vals) {
@@ -1353,6 +1361,14 @@ __declspec(safe, cost1) static inline uniform unsigned int16 streaming_load_unif
 
 __declspec(safe, cost1) static inline uniform int16 streaming_load_uniform(uniform int16 a[]) {
     return __streaming_load_uniform_i16(a);
+}
+
+__declspec(safe, cost1) static inline varying float16 streaming_load(uniform float16 a[]) {
+    return __streaming_load_varying_half(a);
+}
+
+__declspec(safe, cost1) static inline uniform float16 streaming_load_uniform(uniform float16 a[]) {
+    return __streaming_load_uniform_half(a);
 }
 
 __declspec(safe, cost1) static inline varying unsigned int streaming_load(uniform unsigned int a[]) {
