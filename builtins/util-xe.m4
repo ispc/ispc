@@ -1198,6 +1198,20 @@ define <WIDTH x float> @__trunc_varying_float(<WIDTH x float> %val) {
   ret <WIDTH x float> %r
 }
 
+define half @__trunc_uniform_half(half %val) {
+  %conv_f32 = fpext half %val to float
+  %r = call float @llvm.genx.rndz.f32(float %conv_f32)
+  %conv_f16 = fptrunc float %r to half
+  ret half %conv_f16
+}
+
+define <WIDTH x half> @__trunc_varying_half(<WIDTH x half> %val) {
+  %conv_f32 = fpext <WIDTH x half> %val to <WIDTH x float>
+  %r = call <WIDTH x float> @llvm.genx.rndz.v`'WIDTH`'f32(<WIDTH x float> %conv_f32)
+  %conv_f16 = fptrunc <WIDTH x float> %r to <WIDTH x half>
+  ret <WIDTH x half> %conv_f16
+}
+
 ;; Currently, no intrinsic support exists for double. Hence emulating.
 ;; This uses the same logic as libc trunc() implementation.
 define double @__trunc_uniform_double(double %val) nounwind readonly alwaysinline {

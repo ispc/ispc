@@ -98,6 +98,29 @@ define float @__round_uniform_float(float) nounwind readonly alwaysinline {
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; rounding 16-bit floats
+
+define half @__floor_uniform_half(half) nounwind readonly alwaysinline {
+  %conv_fp32 = fpext half %0 to float
+  %res = call float @llvm.genx.rndd.f32(float %conv_fp32)
+  %conv_hf = fptrunc float %res to half
+  ret half %conv_hf
+}
+
+define half @__ceil_uniform_half(half) nounwind readonly alwaysinline {
+  %conv_fp32 = fpext half %0 to float
+  %res = call float @llvm.genx.rndu.f32(float %conv_fp32)
+  %conv_hf = fptrunc float %res to half
+  ret half %conv_hf
+}
+
+define half @__round_uniform_half(half) nounwind readonly alwaysinline {
+  %conv_fp32 = fpext half %0 to float
+  %res = call float @llvm.genx.rnde.f32(float %conv_fp32)
+  %conv_hf = fptrunc float %res to half
+  ret half %conv_hf
+}
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding doubles
 
 define double @__round_uniform_double(double) nounwind readonly alwaysinline {
@@ -196,6 +219,15 @@ declare float @llvm.genx.sqrt.f32(float)
 define float @__sqrt_uniform_float(float) nounwind readonly alwaysinline {
   %res = call float @llvm.genx.sqrt.f32(float %0)
   ret float %res
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; half precision sqrt
+
+declare half @llvm.genx.sqrt.f16(half)
+define half @__sqrt_uniform_half(half) nounwind readonly alwaysinline {
+  %res = call half @llvm.genx.sqrt.f16(half %0)
+  ret half %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -558,12 +590,45 @@ define <WIDTH x float> @__sqrt_varying_float(<WIDTH x float>) nounwind readonly 
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; half precision sqrt
+
+declare <WIDTH x half> @llvm.genx.sqrt.XE_SUFFIX(half)(<WIDTH x half>)
+define <WIDTH x half> @__sqrt_varying_half(<WIDTH x half>) nounwind readonly alwaysinline {
+  %res = call <WIDTH x half> @llvm.genx.sqrt.XE_SUFFIX(half)(<WIDTH x half> %0)
+  ret <WIDTH x half> %res
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision sqrt
 
 declare <WIDTH x double> @llvm.genx.ieee.sqrt.XE_SUFFIX(d64)(<WIDTH x double>)
 define <WIDTH x double> @__sqrt_varying_double(<WIDTH x double>) nounwind alwaysinline {
   %res = call <WIDTH x double> @llvm.genx.ieee.sqrt.XE_SUFFIX(d64)(<WIDTH x double> %0)
   ret <WIDTH x double> %res
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; rounding 16-bit floats
+
+define <WIDTH x half> @__round_varying_half(<WIDTH x half>) nounwind readonly alwaysinline {
+  %conv_fp32 = fpext <WIDTH x half> %0 to <WIDTH x float>
+  %res = call <WIDTH x float> @llvm.genx.rnde.XE_SUFFIX(float)(<WIDTH x float> %conv_fp32)
+  %conv_hf = fptrunc <WIDTH x float> %res to <WIDTH x half>
+  ret <WIDTH x half> %conv_hf
+}
+
+define <WIDTH x half> @__floor_varying_half(<WIDTH x half>) nounwind readonly alwaysinline {
+    %conv_fp32 = fpext <WIDTH x half> %0 to <WIDTH x float>
+    %res = call <WIDTH x float> @llvm.genx.rndd.XE_SUFFIX(float)(<WIDTH x float> %conv_fp32)
+    %conv_hf = fptrunc <WIDTH x float> %res to <WIDTH x half>
+    ret <WIDTH x half> %conv_hf
+}
+
+define <WIDTH x half> @__ceil_varying_half(<WIDTH x half>) nounwind readonly alwaysinline  {
+    %conv_fp32 = fpext <WIDTH x half> %0 to <WIDTH x float>
+    %res = call <WIDTH x float> @llvm.genx.rndu.XE_SUFFIX(float)(<WIDTH x float> %conv_fp32)
+    %conv_hf = fptrunc <WIDTH x float> %res to <WIDTH x half>
+    ret <WIDTH x half> %conv_hf
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

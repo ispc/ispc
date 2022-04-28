@@ -1496,6 +1496,16 @@ __declspec(safe, cost1) static inline uniform double abs(uniform double a) {
     return doublebits(i);
 }
 
+__declspec(safe, cost1) static inline unsigned int16 signbits(float16 x) {
+    unsigned int16 i = intbits(x);
+    return (i & 0x8000);
+}
+
+__declspec(safe, cost1) static inline uniform unsigned int16 signbits(uniform float16 x) {
+    uniform unsigned int16 i = intbits(x);
+    return (i & 0x8000);
+}
+
 __declspec(safe, cost1) static inline unsigned int signbits(float x) {
     unsigned int i = intbits(x);
     return (i & 0x80000000);
@@ -1516,6 +1526,10 @@ __declspec(safe, cost1) static inline uniform unsigned int64 signbits(uniform do
     return (i & 0x8000000000000000);
 }
 
+__declspec(safe, cost2) static inline float16 round(float16 x) { return __round_varying_half(x); }
+
+__declspec(safe, cost2) static inline uniform float16 round(uniform float16 x) { return __round_uniform_half(x); }
+
 __declspec(safe, cost2) static inline float round(float x) { return __round_varying_float(x); }
 
 __declspec(safe, cost2) static inline uniform float round(uniform float x) { return __round_uniform_float(x); }
@@ -1523,6 +1537,10 @@ __declspec(safe, cost2) static inline uniform float round(uniform float x) { ret
 __declspec(safe, cost2) static inline double round(double x) { return __round_varying_double(x); }
 
 __declspec(safe, cost2) static inline uniform double round(uniform double x) { return __round_uniform_double(x); }
+
+__declspec(safe, cost2) static inline float16 floor(float16 x) { return __floor_varying_half(x); }
+
+__declspec(safe, cost2) static inline uniform float16 floor(uniform float16 x) { return __floor_uniform_half(x); }
 
 __declspec(safe, cost2) static inline float floor(float x) { return __floor_varying_float(x); }
 
@@ -1532,6 +1550,10 @@ __declspec(safe, cost2) static inline double floor(double x) { return __floor_va
 
 __declspec(safe, cost2) static inline uniform double floor(uniform double x) { return __floor_uniform_double(x); }
 
+__declspec(safe, cost2) static inline float16 ceil(float16 x) { return __ceil_varying_half(x); }
+
+__declspec(safe, cost2) static inline uniform float16 ceil(uniform float16 x) { return __ceil_uniform_half(x); }
+
 __declspec(safe, cost2) static inline float ceil(float x) { return __ceil_varying_float(x); }
 
 __declspec(safe, cost2) static inline uniform float ceil(uniform float x) { return __ceil_uniform_float(x); }
@@ -1540,6 +1562,10 @@ __declspec(safe, cost2) static inline double ceil(double x) { return __ceil_vary
 
 __declspec(safe, cost2) static inline uniform double ceil(uniform double x) { return __ceil_uniform_double(x); }
 ///////////////////////////
+__declspec(safe, cost2) static inline float16 trunc(float16 x) { return __trunc_varying_half(x); }
+
+__declspec(safe, cost2) static inline uniform float16 trunc(uniform float16 x) { return __trunc_uniform_half(x); }
+
 __declspec(safe, cost2) static inline float trunc(float x) { return __trunc_varying_float(x); }
 
 __declspec(safe, cost2) static inline uniform float trunc(uniform float x) { return __trunc_uniform_float(x); }
@@ -2256,6 +2282,11 @@ static inline void *atomic_compare_exchange_local(void **ptr, void *oldval, void
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// Transcendentals (16-bit float precision)
+__declspec(safe) static inline float16 sqrt(float16 v) { return __sqrt_varying_half(v); }
+
+__declspec(safe) static inline uniform float16 sqrt(uniform float16 v) { return __sqrt_uniform_half(v); }
+
 // Transcendentals (float precision)
 
 __declspec(safe) static inline float sqrt(float v) {
