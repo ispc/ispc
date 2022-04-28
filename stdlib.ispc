@@ -957,6 +957,30 @@ __declspec(safe) static inline uniform float16 reduce_add(float16 x) {
     return __reduce_add_half(__mask ? x : 0.0f16);
 }
 
+__declspec(safe) static inline uniform float16 reduce_min(float16 v) {
+    // For the lanes where the mask is off, replace the given value with
+    // infinity, so that it doesn't affect the result.
+    const int16 iflt_max = 0x7c00; // infinity
+    // unmasked block is needed to make sure that argument for unmasked
+    // function __reduce_min_float() are calculated without a mask.
+    bool test = __mask;
+    uniform float16 result;
+    unmasked { result = __reduce_min_half(test ? v : float16bits(iflt_max)); }
+    return result;
+}
+
+__declspec(safe) static inline uniform float16 reduce_max(float16 v) {
+    // For the lanes where the mask is off, replace the given value with
+    // negative infinity, so that it doesn't affect the result.
+    const int16 iflt_neg_max = 0xfc00; // -infinity
+    // unmasked block is needed to make sure that argument for unmasked
+    // function __reduce_max_half() are calculated without a mask.
+    bool test = __mask;
+    uniform float16 result;
+    unmasked { result = __reduce_max_half(test ? v : float16bits(iflt_neg_max)); }
+    return result;
+}
+
 __declspec(safe) static inline uniform float reduce_add(float x) {
     // zero the lanes where the mask is off
     return __reduce_add_float(__mask ? x : 0.);
