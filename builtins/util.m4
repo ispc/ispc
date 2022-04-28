@@ -6956,12 +6956,59 @@ define <$1 x half> @__$2_varying_half(<$1 x half>,
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; 16-bit float log functions
+;; 16-bit float math functions
 
-;; utility function used by log below.
 ;; $1: target vector width
 
 define(`halfMath', `
+declare half @llvm.round.f16(half)
+define half @__round_uniform_half(half %Val) nounwind readnone alwaysinline {
+  %retVal = call half @llvm.round.f16(half %Val)
+  ret half %retVal
+}
+
+declare <$1 x half> @llvm.round.v$1f16(<$1 x half>)
+define <$1 x half> @__round_varying_half(<$1 x half> %Val) nounwind readnone alwaysinline {
+  %retVal = call <$1 x half> @llvm.round.v$1f16(<$1 x half> %Val)
+  ret <$1 x half> %retVal
+}
+
+declare half @llvm.floor.f16(half)
+define half @__floor_uniform_half(half %Val) nounwind readnone alwaysinline {
+  %retVal = call half @llvm.floor.f16(half %Val)
+  ret half %retVal
+}
+
+declare <$1 x half> @llvm.floor.v$1f16(<$1 x half>)
+define <$1 x half> @__floor_varying_half(<$1 x half> %Val) nounwind readnone alwaysinline {
+  %retVal = call <$1 x half> @llvm.floor.v$1f16(<$1 x half> %Val)
+  ret <$1 x half> %retVal
+}
+
+declare half @llvm.ceil.f16(half)
+define half @__ceil_uniform_half(half %Val) nounwind readnone alwaysinline {
+  %retVal = call half @llvm.ceil.f16(half %Val)
+  ret half %retVal
+}
+
+declare <$1 x half> @llvm.ceil.v$1f16(<$1 x half>)
+define <$1 x half> @__ceil_varying_half(<$1 x half> %Val) nounwind readnone alwaysinline {
+  %retVal = call <$1 x half> @llvm.ceil.v$1f16(<$1 x half> %Val)
+  ret <$1 x half> %retVal
+}
+
+declare half @llvm.trunc.f16(half)
+define half @__trunc_uniform_half(half %Val) nounwind readnone alwaysinline {
+  %retVal = call half @llvm.trunc.f16(half %Val)
+  ret half %retVal
+}
+
+declare <$1 x half> @llvm.trunc.v$1f16(<$1 x half>)
+define <$1 x half> @__trunc_varying_half(<$1 x half> %Val) nounwind readnone alwaysinline {
+  %retVal = call <$1 x half> @llvm.trunc.v$1f16(<$1 x half> %Val)
+  ret <$1 x half> %retVal
+}
+
 declare half @llvm.log.f16(half)
 define half @__log_uniform_half(half %Val) nounwind readnone alwaysinline {
   %retVal = call half @llvm.log.f16(half %Val)
@@ -6995,6 +7042,18 @@ define half @__pow_uniform_half(half %Val1, half %Val2) nounwind readnone always
 declare <$1 x half> @llvm.pow.v$1f16(<$1 x half>, <$1 x half>)
 define <$1 x half> @__pow_varying_half(<$1 x half> %Val1, <$1 x half> %Val2) nounwind readnone alwaysinline {
   %retVal = call <$1 x half> @llvm.pow.v$1f16(<$1 x half> %Val1, <$1 x half> %Val2)
+  ret <$1 x half> %retVal
+}
+
+declare half @llvm.sqrt.f16(half)
+define half @__sqrt_uniform_half(half %Val) nounwind readnone alwaysinline {
+  %retVal = call half @llvm.sqrt.f16(half %Val)
+  ret half %retVal
+}
+
+declare <$1 x half> @llvm.sqrt.v$1f16(<$1 x half>)
+define <$1 x half> @__sqrt_varying_half(<$1 x half> %Val) nounwind readnone alwaysinline {
+  %retVal = call <$1 x half> @llvm.sqrt.v$1f16(<$1 x half> %Val)
   ret <$1 x half> %retVal
 }
 ')
