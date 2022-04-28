@@ -310,6 +310,7 @@ xe_maxmin(i64, smin, smax, int64)
 xe_maxmin(i32, umin, umax, uint32)
 xe_maxmin(i64, umin, umax, uint64)
 
+xe_rdregion(half, rdregionf)
 xe_rdregion(float, rdregionf)
 xe_rdregion(i32, rdregioni)
 xe_rdregion(i64, rdregioni)
@@ -790,6 +791,14 @@ define float @__reduce_min_float(<WIDTH x float>) nounwind readnone {
 
 define float @__reduce_max_float(<WIDTH x float>) nounwind readnone {
   reducexe_func(float, fmax, rdregionf, %0, 4)
+}
+
+define half @__reduce_min_half(<WIDTH x half>) nounwind readnone {
+  reducexe_func(half, fmin, rdregionf, %0, 2)
+}
+
+define half @__reduce_max_half(<WIDTH x half>) nounwind readnone {
+  reducexe_func(half, fmax, rdregionf, %0, 2)
 }
 
 define double @__reduce_min_double(<WIDTH x double>) nounwind readnone {
