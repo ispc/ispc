@@ -7056,6 +7056,18 @@ define <$1 x half> @__sqrt_varying_half(<$1 x half> %Val) nounwind readnone alwa
   %retVal = call <$1 x half> @llvm.sqrt.v$1f16(<$1 x half> %Val)
   ret <$1 x half> %retVal
 }
+
+define half @__rsqrt_uniform_half(half %Val) nounwind readnone alwaysinline {
+  %s = call half @__sqrt_uniform_half(half %Val)
+  %r = call half @__rcp_uniform_half(half %s)
+  ret half %r
+}
+
+define <$1 x half> @__rsqrt_varying_half(<$1 x half> %Val) nounwind readnone alwaysinline {
+  %s = call <WIDTH x half> @__sqrt_varying_half(<WIDTH x half> %Val)
+  %r = call <WIDTH x half> @__rcp_varying_half(<WIDTH x half> %s)
+  ret <$1 x half> %r
+}
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -8206,8 +8218,16 @@ declare <WIDTH x double> @__rsqrt_varying_double(<WIDTH x double>)
 ')
 
 define(`rcph_decl', `
-declare  half @__rcp_uniform_half(half)
-declare <WIDTH x half> @__rcp_varying_half(<WIDTH x half>)
+define half @__rcp_uniform_half(half) nounwind alwaysinline {
+  %div.i = fdiv half 1.0, %0
+  ret half %div.i
+}
+define <WIDTH x half> @__rcp_varying_half(<WIDTH x half>) nounwind alwaysinline {
+  %broadcast_one = insertelement <WIDTH x half> undef, half 1.0, i32 0
+  %broadcast = shufflevector <WIDTH x half> %broadcast_one, <WIDTH x half> undef, <WIDTH x i32> zeroinitializer
+  %div.i = fdiv <WIDTH x half> %broadcast, %0
+  ret <WIDTH x half> %div.i
+}
 ')
 
 define(`rcpd_decl', `

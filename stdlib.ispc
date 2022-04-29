@@ -2283,9 +2283,14 @@ static inline void *atomic_compare_exchange_local(void **ptr, void *oldval, void
 
 ///////////////////////////////////////////////////////////////////////////
 // Transcendentals (16-bit float precision)
+
 __declspec(safe) static inline float16 sqrt(float16 v) { return __sqrt_varying_half(v); }
 
 __declspec(safe) static inline uniform float16 sqrt(uniform float16 v) { return __sqrt_uniform_half(v); }
+
+__declspec(safe) static inline float16 rsqrt(float16 v) { return __rsqrt_varying_half(v); }
+
+__declspec(safe) static inline uniform float16 rsqrt(uniform float16 v) { return __rsqrt_uniform_half(v); }
 
 // Transcendentals (float precision)
 
