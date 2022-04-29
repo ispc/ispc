@@ -296,7 +296,7 @@ class SymbolTable {
     typedef std::map<llvm::Function *, Symbol *> IntrinsicMapType;
     IntrinsicMapType intrinsics;
 
-    /** Type definitions can't currently be scoped.
+    /** Scoped types.
      */
     typedef std::map<std::string, const Type *> TypeMapType;
     std::vector<TypeMapType> types;
