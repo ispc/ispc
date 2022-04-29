@@ -1477,6 +1477,30 @@ define <WIDTH x float> @__tan_varying_float(<WIDTH x float>) nounwind readnone {
   ret <WIDTH x float> %res
 }
 
+declare half @llvm.genx.sin.f16(half) nounwind readnone
+define half @__sin_uniform_half(half) nounwind readnone {
+  %res = call half @llvm.genx.sin.f16(half %0)
+  ret half %res
+}
+
+declare <WIDTH x half> @llvm.genx.sin.XE_SUFFIX(half)(<WIDTH x half>) nounwind readnone
+define <WIDTH x half> @__sin_varying_half(<WIDTH x half>) nounwind readnone {
+  %res = call <WIDTH x half> @llvm.genx.sin.XE_SUFFIX(half)(<WIDTH x half> %0)
+  ret <WIDTH x half> %res
+}
+
+declare half @llvm.genx.cos.f16(half) nounwind readnone
+define half @__cos_uniform_half(half) nounwind readnone {
+  %res = call half @llvm.genx.cos.f16(half %0)
+  ret half %res
+}
+
+declare <WIDTH x half> @llvm.genx.cos.XE_SUFFIX(half)(<WIDTH x half>) nounwind readnone
+define <WIDTH x half> @__cos_varying_half(<WIDTH x half>) nounwind readnone {
+  %res = call <WIDTH x half> @llvm.genx.cos.XE_SUFFIX(half)(<WIDTH x half> %0)
+  ret <WIDTH x half> %res
+}
+
 trigonometry_decl()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

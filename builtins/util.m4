@@ -8326,6 +8326,16 @@ define(`transcendetals_decl',`
 ')
 
 define(`trigonometry_decl',`
+    declare <WIDTH x half> @__sin_varying_half(<WIDTH x half>) nounwind readnone
+    declare <WIDTH x half> @__asin_varying_half(<WIDTH x half>) nounwind readnone
+    declare <WIDTH x half> @__cos_varying_half(<WIDTH x half>) nounwind readnone
+    declare <WIDTH x half> @__acos_varying_half(<WIDTH x half>) nounwind readnone
+
+    declare half @__sin_uniform_half(half) nounwind readnone
+    declare half @__asin_uniform_half(half) nounwind readnone
+    declare half @__cos_uniform_half(half) nounwind readnone
+    declare half @__acos_uniform_half(half) nounwind readnone
+
     declare <WIDTH x float> @__sin_varying_float(<WIDTH x float>) nounwind readnone
     declare <WIDTH x float> @__asin_varying_float(<WIDTH x float>) nounwind readnone
     declare <WIDTH x float> @__cos_varying_float(<WIDTH x float>) nounwind readnone

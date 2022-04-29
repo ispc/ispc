@@ -2292,6 +2292,85 @@ __declspec(safe) static inline float16 rsqrt(float16 v) { return __rsqrt_varying
 
 __declspec(safe) static inline uniform float16 rsqrt(uniform float16 v) { return __rsqrt_uniform_half(v); }
 
+// If no native trigonometry support, convert to float, get asin and convert to half back
+__declspec(safe) static inline float16 sin(float16 x_full) {
+    if (__have_native_trigonometry) {
+        return __sin_varying_half(x_full);
+    } else {
+        return (float16)(sin((float)x_full));
+    }
+}
+
+__declspec(safe) static inline uniform float16 sin(uniform float16 x_full) {
+    if (__have_native_trigonometry) {
+        return __sin_uniform_half(x_full);
+    } else {
+        return (uniform float16)(sin((uniform float)x_full));
+    }
+}
+
+__declspec(safe) static inline float16 asin(float16 x_full) {
+    if (__have_native_trigonometry && !__is_xe_target) {
+        return __asin_varying_half(x_full);
+    } else {
+        return (float16)(asin((float)x_full));
+    }
+}
+
+__declspec(safe) static inline uniform float16 asin(uniform float16 x_full) {
+    if (__have_native_trigonometry && !__is_xe_target) {
+        return __asin_uniform_half(x_full);
+    } else {
+        return (uniform float16)(asin((uniform float)x_full));
+    }
+}
+
+__declspec(safe) static inline float16 cos(float16 x_full) {
+    if (__have_native_trigonometry) {
+        return __cos_varying_half(x_full);
+    } else {
+        return (float16)(cos((float)x_full));
+    }
+}
+
+__declspec(safe) static inline uniform float16 cos(uniform float16 x_full) {
+    if (__have_native_trigonometry) {
+        return __cos_uniform_half(x_full);
+    } else {
+        return (uniform float16)(cos((uniform float)x_full));
+    }
+}
+
+__declspec(safe) static inline float16 acos(float16 x_full) {
+    if (__have_native_trigonometry && !__is_xe_target) {
+        return __acos_varying_half(x_full);
+    } else {
+        return (float16)(acos((float)x_full));
+    }
+}
+
+__declspec(safe) static inline uniform float16 acos(uniform float16 x_full) {
+    if (__have_native_trigonometry && !__is_xe_target) {
+        return __acos_uniform_half(x_full);
+    } else {
+        return (uniform float16)(acos((uniform float)x_full));
+    }
+}
+
+__declspec(safe) static inline float16 exp(float16 x_full) { return __exp_varying_half(x_full); }
+
+__declspec(safe) static inline uniform float16 exp(uniform float16 x_full) { return __exp_uniform_half(x_full); }
+
+__declspec(safe) static inline float16 log(float16 x_full) { return __log_varying_half(x_full); }
+
+__declspec(safe) static inline uniform float16 log(uniform float16 x_full) { return __log_uniform_half(x_full); }
+
+__declspec(safe) static inline float16 pow(float16 a, float16 b) { return __pow_varying_half(a, b); }
+
+__declspec(safe) static inline uniform float16 pow(uniform float16 a, uniform float16 b) {
+    return __pow_uniform_half(a, b);
+}
+
 // Transcendentals (float precision)
 
 __declspec(safe) static inline float sqrt(float v) {
@@ -3149,10 +3228,6 @@ __declspec(safe) static inline uniform float atan2(uniform float y, uniform floa
     }
 }
 
-__declspec(safe) static inline float16 exp(float16 x_full) { return __exp_varying_half(x_full); }
-
-__declspec(safe) static inline uniform float16 exp(uniform float16 x_full) { return __exp_uniform_half(x_full); }
-
 __declspec(safe) static inline float exp(float x_full) {
     if (__have_native_transcendentals) {
         return __exp_varying_float(x_full);
@@ -3355,10 +3430,6 @@ __declspec(safe) static inline void __range_reduce_log(uniform float input, unif
     *reduced = floatbits(blended);
 }
 
-__declspec(safe) static inline float16 log(float16 x_full) { return __log_varying_half(x_full); }
-
-__declspec(safe) static inline uniform float16 log(uniform float16 x_full) { return __log_uniform_half(x_full); }
-
 __declspec(safe) static inline float log(float x_full) {
     if (__have_native_transcendentals) {
         return __log_varying_float(x_full);
@@ -3528,12 +3599,6 @@ __declspec(safe) static inline uniform float log(uniform float x_full) {
 
         return exceptional ? (use_nan ? NaN : neg_inf) : result;
     }
-}
-
-__declspec(safe) static inline float16 pow(float16 a, float16 b) { return __pow_varying_half(a, b); }
-
-__declspec(safe) static inline uniform float16 pow(uniform float16 a, uniform float16 b) {
-    return __pow_uniform_half(a, b);
 }
 
 __declspec(safe) static inline float pow(float a, float b) {
