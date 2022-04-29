@@ -194,9 +194,9 @@ define float @__rcp_fast_uniform_float(float) nounwind readonly alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rsqrt
 
-declare float @llvm.genx.rsqrt.float.f32(float)
+declare float @llvm.genx.rsqrt.f32(float)
 define float @__rsqrt_uniform_float(float %v) nounwind readonly alwaysinline {
-  %r = call float @llvm.genx.rsqrt.float.f32(float %v)
+  %r = call float @llvm.genx.rsqrt.f32(float %v)
   ;; Newton-Raphson iteration to improve precision
   ;;  return 0.5 * r * (3. - (v * r) * r);
   %mult = fmul float %v, %r
@@ -208,8 +208,16 @@ define float @__rsqrt_uniform_float(float %v) nounwind readonly alwaysinline {
 }
 
 define float @__rsqrt_fast_uniform_float(float) nounwind readonly alwaysinline {
-  %res = call float @llvm.genx.rsqrt.float.f32(float %0)
+  %res = call float @llvm.genx.rsqrt.f32(float %0)
   ret float %res
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; half precision rsqrt
+define half @__rsqrt_uniform_half(half %v) nounwind readonly alwaysinline {
+  %s = call half @__sqrt_uniform_half(half %v)
+  %r = call half @__rcp_uniform_half(half %s)
+  ret half %r
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -562,9 +570,9 @@ define <WIDTH x half> @__rcp_fast_varying_half(<WIDTH x half>) nounwind readonly
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; rsqrt
 
-declare <WIDTH x float> @llvm.genx.rsqrt.XE_SUFFIX(f32)(<WIDTH x float>)
+declare <WIDTH x float> @llvm.genx.rsqrt.XE_SUFFIX(float)(<WIDTH x float>)
 define <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float> %v) nounwind readonly alwaysinline {
-  %r = call <WIDTH x float> @llvm.genx.rsqrt.XE_SUFFIX(f32)(<WIDTH x float> %v)
+  %r = call <WIDTH x float> @llvm.genx.rsqrt.XE_SUFFIX(float)(<WIDTH x float> %v)
   ;; Newton-Raphson iteration to improve precision
   ;;  return 0.5 * r * (3. - (v * r) * r);
   %mult = fmul <WIDTH x float> %v, %r
@@ -576,8 +584,17 @@ define <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float> %v) nounwind reado
 }
 
 define <WIDTH x float> @__rsqrt_fast_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
-  %res = call <WIDTH x float> @llvm.genx.rsqrt.XE_SUFFIX(f32)(<WIDTH x float> %0)
+  %res = call <WIDTH x float> @llvm.genx.rsqrt.XE_SUFFIX(float)(<WIDTH x float> %0)
   ret <WIDTH x float> %res
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; half precision rsqrt
+
+define <WIDTH x half> @__rsqrt_varying_half(<WIDTH x half> %v) nounwind readonly alwaysinline {
+  %s = call <WIDTH x half> @__sqrt_varying_half(<WIDTH x half> %v)
+  %r = call <WIDTH x half> @__rcp_varying_half(<WIDTH x half> %s)
+  ret <WIDTH x half> %r
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
