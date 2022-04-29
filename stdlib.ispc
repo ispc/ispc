@@ -2292,6 +2292,46 @@ __declspec(safe) static inline float16 rsqrt(float16 v) { return __rsqrt_varying
 
 __declspec(safe) static inline uniform float16 rsqrt(uniform float16 v) { return __rsqrt_uniform_half(v); }
 
+__declspec(safe) static inline float16 ldexp(float16 x, int n) {
+    unsigned int16 ex = 0x7c00u;
+    unsigned int16 ix = intbits(x);
+    ex &= ix;           // extract old exponent;
+    ix = ix & ~0x7c00u; // clear exponent
+    int16 n16 = ((int16)n << 10) + ex;
+    ix |= n16; // insert new exponent
+    return float16bits(ix);
+}
+
+__declspec(safe) static inline uniform float16 ldexp(uniform float16 x, uniform int n) {
+    uniform unsigned int16 ex = 0x7c00u;
+    uniform unsigned int16 ix = intbits(x);
+    ex &= ix;           // extract old exponent;
+    ix = ix & ~0x7c00u; // clear exponent
+    uniform int16 n16 = ((uniform int16)n << 10) + ex;
+    ix |= n16; // insert new exponent
+    return float16bits(ix);
+}
+
+__declspec(safe) static inline float16 frexp(float16 x, varying int *uniform pw2) {
+    unsigned int16 ex = 0x7c00u; // exponent mask
+    unsigned int16 ix = intbits(x);
+    ex &= ix;
+    ix &= ~0x7c00u;              // clear exponent
+    *pw2 = (int)(ex >> 10) - 14; // compute exponent
+    ix |= 0x3800u;               // insert exponent +1 in x
+    return float16bits(ix);
+}
+
+__declspec(safe) static inline uniform float16 frexp(uniform float16 x, uniform int *uniform pw2) {
+    uniform unsigned int16 ex = 0x7c00u; // exponent mask
+    uniform unsigned int16 ix = intbits(x);
+    ex &= ix;
+    ix &= ~0x7c00u;                      // clear exponent
+    *pw2 = (uniform int)(ex >> 10) - 14; // compute exponent
+    ix |= 0x3800u;                       // insert exponent +1 in x
+    return float16bits(ix);
+}
+
 // If no native trigonometry support, convert to float, get asin and convert to half back
 __declspec(safe) static inline float16 sin(float16 x_full) {
     if (__have_native_trigonometry) {
