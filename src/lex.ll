@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -81,8 +81,8 @@ static int allTokens[] = {
   TOKEN_UINT, TOKEN_UINT8, TOKEN_UINT16, TOKEN_UINT64,
   TOKEN_NEW, TOKEN_NULL, TOKEN_PRINT, TOKEN_RETURN, TOKEN_SOA, TOKEN_SIGNED,
   TOKEN_SIZEOF, TOKEN_ALLOCA, TOKEN_STATIC, TOKEN_STRUCT, TOKEN_SWITCH, TOKEN_SYNC,
-  TOKEN_TASK, TOKEN_TRUE, TOKEN_TYPEDEF, TOKEN_UNIFORM, TOKEN_UNMASKED,
-  TOKEN_UNSIGNED, TOKEN_VARYING, TOKEN_VOID, TOKEN_WHILE,
+  TOKEN_TASK, TOKEN_TEMPLATE, TOKEN_TRUE, TOKEN_TYPEDEF, TOKEN_TYPENAME,
+  TOKEN_UNIFORM, TOKEN_UNMASKED, TOKEN_UNSIGNED, TOKEN_VARYING, TOKEN_VOID, TOKEN_WHILE,
   TOKEN_STRING_C_LITERAL, TOKEN_STRING_SYCL_LITERAL, TOKEN_DOTDOTDOT,
   TOKEN_FLOAT_CONSTANT, TOKEN_FLOAT16_CONSTANT, TOKEN_DOUBLE_CONSTANT,
   TOKEN_INT8_CONSTANT, TOKEN_UINT8_CONSTANT,
@@ -160,8 +160,10 @@ void ParserInit() {
     tokenToName[TOKEN_SWITCH] = "switch";
     tokenToName[TOKEN_SYNC] = "sync";
     tokenToName[TOKEN_TASK] = "task";
+    tokenToName[TOKEN_TEMPLATE] = "template";
     tokenToName[TOKEN_TRUE] = "true";
     tokenToName[TOKEN_TYPEDEF] = "typedef";
+    tokenToName[TOKEN_TYPENAME] = "typename";
     tokenToName[TOKEN_UNIFORM] = "uniform";
     tokenToName[TOKEN_UNMASKED] = "unmasked";
     tokenToName[TOKEN_UNSIGNED] = "unsigned";
@@ -287,8 +289,10 @@ void ParserInit() {
     tokenNameRemap["TOKEN_SWITCH"] = "\'switch\'";
     tokenNameRemap["TOKEN_SYNC"] = "\'sync\'";
     tokenNameRemap["TOKEN_TASK"] = "\'task\'";
+    tokenNameRemap["TOKEN_TEMPLATE"] = "\'template\'";
     tokenNameRemap["TOKEN_TRUE"] = "\'true\'";
     tokenNameRemap["TOKEN_TYPEDEF"] = "\'typedef\'";
+    tokenNameRemap["TOKEN_TYPENAME"] = "\'typename\'";
     tokenNameRemap["TOKEN_UNIFORM"] = "\'uniform\'";
     tokenNameRemap["TOKEN_UNMASKED"] = "\'unmasked\'";
     tokenNameRemap["TOKEN_UNSIGNED"] = "\'unsigned\'";
@@ -462,8 +466,10 @@ struct { RT; return TOKEN_STRUCT; }
 switch { RT; return TOKEN_SWITCH; }
 sync { RT; return TOKEN_SYNC; }
 task { RT; return TOKEN_TASK; }
+template { RT; return TOKEN_TEMPLATE; }
 true { RT; return TOKEN_TRUE; }
 typedef { RT; return TOKEN_TYPEDEF; }
+typename { RT; return TOKEN_TYPENAME; }
 uniform { RT; return TOKEN_UNIFORM; }
 unmasked { RT; return TOKEN_UNMASKED; }
 unsigned { RT; return TOKEN_UNSIGNED; }
@@ -491,6 +497,8 @@ L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERA
     yylval.stringVal = new std::string(yytext);
     if (m->symbolTable->LookupType(yytext) != NULL)
         return TOKEN_TYPE_NAME;
+    else if (m->symbolTable->LookupFunctionTemplate(yytext))
+        return TOKEN_TEMPLATE_NAME;
     else
         return TOKEN_IDENTIFIER;
 }
