@@ -697,7 +697,6 @@ define <16 x double> @__max_varying_double(<16 x double>, <16 x double>) nounwin
 
 rsqrtd_decl()
 rcpd_decl()
-rcph_decl()
 
 transcendetals_decl()
 trigonometry_decl()

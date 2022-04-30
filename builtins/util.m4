@@ -7104,6 +7104,7 @@ halfminmax(WIDTH,min,olt)
 halfminmax(WIDTH,max,ogt)
 halfMath(WIDTH)
 halfReduce(WIDTH)
+rcph_decl()
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

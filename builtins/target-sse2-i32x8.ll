@@ -672,7 +672,6 @@ define <8 x double> @__max_varying_double(<8 x double>, <8 x double>) nounwind r
 
 rsqrtd_decl()
 rcpd_decl()
-rcph_decl()
 
 transcendetals_decl()
 trigonometry_decl()
