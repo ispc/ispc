@@ -539,7 +539,7 @@ define <WIDTH x i16> @__float_to_half_varying(<WIDTH x float> %v) nounwind readn
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp
-declare <WIDTH x float> @llvm.genx.inv.XE_SUFFIX(f32)(<WIDTH x float> %0)
+declare <WIDTH x float> @llvm.genx.inv.XE_SUFFIX(float)(<WIDTH x float> %0)
 define <WIDTH x float> @__rcp_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
   ;; No need to make NR iteration to improve precision since precision
   ;; on Xe is high already (1UP)
@@ -548,7 +548,7 @@ define <WIDTH x float> @__rcp_varying_float(<WIDTH x float>) nounwind readonly a
 }
 
 define <WIDTH x float> @__rcp_fast_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
-  %res = call <WIDTH x float> @llvm.genx.inv.XE_SUFFIX(f32)(<WIDTH x float> %0)
+  %res = call <WIDTH x float> @llvm.genx.inv.XE_SUFFIX(float)(<WIDTH x float> %0)
   ret <WIDTH x float> %res
 }
 
@@ -600,9 +600,9 @@ define <WIDTH x half> @__rsqrt_varying_half(<WIDTH x half> %v) nounwind readonly
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; sqrt
 
-declare <WIDTH x float> @llvm.genx.sqrt.XE_SUFFIX(f32)(<WIDTH x float>)
+declare <WIDTH x float> @llvm.genx.sqrt.XE_SUFFIX(float)(<WIDTH x float>)
 define <WIDTH x float> @__sqrt_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
-  %res = call <WIDTH x float> @llvm.genx.sqrt.XE_SUFFIX(f32)(<WIDTH x float> %0)
+  %res = call <WIDTH x float> @llvm.genx.sqrt.XE_SUFFIX(float)(<WIDTH x float> %0)
   ret <WIDTH x float> %res
 }
 
@@ -1226,9 +1226,9 @@ rcpd_decl()
 define(`EXP', `0x4005BF0A80000000')
 define(`LOG2E', `0x3FF7154760000000') ;; LOG2E = log(2, e)
 
-declare float @llvm.genx.log(float) nounwind readnone
+declare float @llvm.genx.log.f32(float) nounwind readnone
 define float @__log_uniform_float(float) nounwind readnone {
-  %res2base = call float @llvm.genx.log(float %0)
+  %res2base = call float @llvm.genx.log.f32(float %0)
   %res = fdiv float %res2base, LOG2E
   ret float %res
 }
@@ -1261,9 +1261,9 @@ define <WIDTH x half> @__log_varying_half(<WIDTH x half>) nounwind readnone {
   ret <WIDTH x half> %res
 }
 
-declare float @llvm.genx.pow(float, float) nounwind readnone
+declare float @llvm.genx.pow.f32(float, float) nounwind readnone
 define float @__pow_uniform_float(float, float) nounwind readnone {
-  %res = call float @llvm.genx.pow(float %0, float %1)
+  %res = call float @llvm.genx.pow.f32(float %0, float %1)
   ret float %res
 }
 
@@ -1286,7 +1286,7 @@ define <WIDTH x half> @__pow_varying_half(<WIDTH x half>, <WIDTH x half>) nounwi
 }
 
 define float @__exp_uniform_float(float) nounwind readnone {
-  %res = call float @llvm.genx.pow(float EXP, float %0)
+  %res = call float @llvm.genx.pow.f32(float EXP, float %0)
   ret float %res
 }
 
@@ -1439,9 +1439,9 @@ define <WIDTH x double> @__atan2_varying_double(<WIDTH x double>, <WIDTH x doubl
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; native trigonometry
 
-declare float @llvm.genx.sin(float) nounwind readnone
+declare float @llvm.genx.sin.f32(float) nounwind readnone
 define float @__sin_uniform_float(float) nounwind readnone {
-  %res = call float @llvm.genx.sin(float %0)
+  %res = call float @llvm.genx.sin.f32(float %0)
   ret float %res
 }
 
@@ -1451,9 +1451,9 @@ define <WIDTH x float> @__sin_varying_float(<WIDTH x float>) nounwind readnone {
   ret <WIDTH x float> %res
 }
 
-declare float @llvm.genx.cos(float) nounwind readnone
+declare float @llvm.genx.cos.f32(float) nounwind readnone
 define float @__cos_uniform_float(float) nounwind readnone {
-  %res = call float @llvm.genx.cos(float %0)
+  %res = call float @llvm.genx.cos.f32(float %0)
   ret float %res
 }
 
@@ -1464,8 +1464,8 @@ define <WIDTH x float> @__cos_varying_float(<WIDTH x float>) nounwind readnone {
 }
 
 define float @__tan_uniform_float(float) nounwind readnone {
-  %cos = call float @llvm.genx.cos(float %0)
-  %sin = call float @llvm.genx.sin(float %0)
+  %cos = call float @llvm.genx.cos.f32(float %0)
+  %sin = call float @llvm.genx.sin.f32(float %0)
   %res = fdiv float %sin, %cos
   ret float %res
 }
