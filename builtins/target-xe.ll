@@ -1501,6 +1501,20 @@ define <WIDTH x half> @__cos_varying_half(<WIDTH x half>) nounwind readnone {
   ret <WIDTH x half> %res
 }
 
+define half @__tan_uniform_half(half) nounwind readnone {
+  %cos = call half @llvm.genx.cos.f16(half %0)
+  %sin = call half @llvm.genx.sin.f16(half %0)
+  %res = fdiv half %sin, %cos
+  ret half %res
+}
+
+define <WIDTH x half> @__tan_varying_half(<WIDTH x half>) nounwind readnone {
+  %cos = call <WIDTH x half> @llvm.genx.cos.XE_SUFFIX(half)(<WIDTH x half> %0)
+  %sin = call <WIDTH x half> @llvm.genx.sin.XE_SUFFIX(half)(<WIDTH x half> %0)
+  %res = fdiv <WIDTH x half> %sin, %cos
+  ret <WIDTH x half> %res
+}
+
 trigonometry_decl()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
