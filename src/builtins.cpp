@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -920,10 +920,18 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__asin_varying_half",
         "__cos_varying_half",
         "__acos_varying_half",
+        "__sincos_varying_half",
+        "__tan_varying_half",
+        "__atan_varying_half",
+        "__atan2_varying_half",
         "__sin_uniform_half",
         "__asin_uniform_half",
         "__cos_uniform_half",
         "__acos_uniform_half",
+        "__sincos_uniform_half",
+        "__tan_uniform_half",
+        "__atan_uniform_half",
+        "__atan2_uniform_half",
         "__sin_varying_double",
         "__asin_varying_double",
         "__cos_varying_double",
