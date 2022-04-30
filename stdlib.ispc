@@ -2281,206 +2281,6 @@ static inline void *atomic_compare_exchange_local(void **ptr, void *oldval, void
     return (void *)atomic_compare_exchange_local((intptr_t *)ptr, (intptr_t)oldval, (intptr_t)newval);
 }
 
-///////////////////////////////////////////////////////////////////////////
-// Transcendentals (16-bit float precision)
-
-__declspec(safe) static inline float16 sqrt(float16 v) { return __sqrt_varying_half(v); }
-
-__declspec(safe) static inline uniform float16 sqrt(uniform float16 v) { return __sqrt_uniform_half(v); }
-
-__declspec(safe) static inline float16 rsqrt(float16 v) { return __rsqrt_varying_half(v); }
-
-__declspec(safe) static inline uniform float16 rsqrt(uniform float16 v) { return __rsqrt_uniform_half(v); }
-
-__declspec(safe) static inline float16 ldexp(float16 x, int n) {
-    unsigned int16 ex = 0x7c00u;
-    unsigned int16 ix = intbits(x);
-    ex &= ix;           // extract old exponent;
-    ix = ix & ~0x7c00u; // clear exponent
-    int16 n16 = ((int16)n << 10) + ex;
-    ix |= n16; // insert new exponent
-    return float16bits(ix);
-}
-
-__declspec(safe) static inline uniform float16 ldexp(uniform float16 x, uniform int n) {
-    uniform unsigned int16 ex = 0x7c00u;
-    uniform unsigned int16 ix = intbits(x);
-    ex &= ix;           // extract old exponent;
-    ix = ix & ~0x7c00u; // clear exponent
-    uniform int16 n16 = ((uniform int16)n << 10) + ex;
-    ix |= n16; // insert new exponent
-    return float16bits(ix);
-}
-
-__declspec(safe) static inline float16 frexp(float16 x, varying int *uniform pw2) {
-    unsigned int16 ex = 0x7c00u; // exponent mask
-    unsigned int16 ix = intbits(x);
-    ex &= ix;
-    ix &= ~0x7c00u;              // clear exponent
-    *pw2 = (int)(ex >> 10) - 14; // compute exponent
-    ix |= 0x3800u;               // insert exponent +1 in x
-    return float16bits(ix);
-}
-
-__declspec(safe) static inline uniform float16 frexp(uniform float16 x, uniform int *uniform pw2) {
-    uniform unsigned int16 ex = 0x7c00u; // exponent mask
-    uniform unsigned int16 ix = intbits(x);
-    ex &= ix;
-    ix &= ~0x7c00u;                      // clear exponent
-    *pw2 = (uniform int)(ex >> 10) - 14; // compute exponent
-    ix |= 0x3800u;                       // insert exponent +1 in x
-    return float16bits(ix);
-}
-
-// If no native trigonometry support, convert to float, get asin and convert to half back
-__declspec(safe) static inline float16 sin(float16 x_full) {
-    if (__have_native_trigonometry) {
-        return __sin_varying_half(x_full);
-    } else {
-        return (float16)(sin((float)x_full));
-    }
-}
-
-__declspec(safe) static inline uniform float16 sin(uniform float16 x_full) {
-    if (__have_native_trigonometry) {
-        return __sin_uniform_half(x_full);
-    } else {
-        return (uniform float16)(sin((uniform float)x_full));
-    }
-}
-
-__declspec(safe) static inline float16 asin(float16 x_full) {
-    if (__have_native_trigonometry && !__is_xe_target) {
-        return __asin_varying_half(x_full);
-    } else {
-        return (float16)(asin((float)x_full));
-    }
-}
-
-__declspec(safe) static inline uniform float16 asin(uniform float16 x_full) {
-    if (__have_native_trigonometry && !__is_xe_target) {
-        return __asin_uniform_half(x_full);
-    } else {
-        return (uniform float16)(asin((uniform float)x_full));
-    }
-}
-
-__declspec(safe) static inline float16 cos(float16 x_full) {
-    if (__have_native_trigonometry) {
-        return __cos_varying_half(x_full);
-    } else {
-        return (float16)(cos((float)x_full));
-    }
-}
-
-__declspec(safe) static inline uniform float16 cos(uniform float16 x_full) {
-    if (__have_native_trigonometry) {
-        return __cos_uniform_half(x_full);
-    } else {
-        return (uniform float16)(cos((uniform float)x_full));
-    }
-}
-
-__declspec(safe) static inline float16 tan(float16 x_full) {
-    if (__have_native_trigonometry) {
-        return __tan_varying_half(x_full);
-    } else {
-        return (float16)(tan((float)x_full));
-    }
-}
-
-__declspec(safe) static inline uniform float16 tan(uniform float16 x_full) {
-    if (__have_native_trigonometry) {
-        return __tan_uniform_half(x_full);
-    } else {
-        return (uniform float16)(tan((uniform float)x_full));
-    }
-}
-
-__declspec(safe) static inline float16 acos(float16 x_full) {
-    if (__have_native_trigonometry && !__is_xe_target) {
-        return __acos_varying_half(x_full);
-    } else {
-        return (float16)(acos((float)x_full));
-    }
-}
-
-__declspec(safe) static inline uniform float16 acos(uniform float16 x_full) {
-    if (__have_native_trigonometry && !__is_xe_target) {
-        return __acos_uniform_half(x_full);
-    } else {
-        return (uniform float16)(acos((uniform float)x_full));
-    }
-}
-
-__declspec(safe) static inline void sincos(float16 x_full, varying float16 *uniform sin_result,
-                                           varying float16 *uniform cos_result) {
-    if (__have_native_trigonometry && !__is_xe_target) {
-        __sincos_varying_half(x_full, sin_result, cos_result);
-    } else {
-        varying float *uniform sin_result_fp = (varying float *uniform)sin_result;
-        varying float *uniform cos_result_fp = (varying float *uniform)cos_result;
-        sincos((float)x_full, sin_result_fp, cos_result_fp);
-    }
-    return;
-}
-
-__declspec(safe) static inline void sincos(uniform float16 x_full, uniform float16 *uniform sin_result,
-                                           uniform float16 *uniform cos_result) {
-    if (__have_native_trigonometry && !__is_xe_target) {
-        __sincos_uniform_half(x_full, sin_result, cos_result);
-    } else {
-        sincos((uniform float)x_full, (uniform float *uniform)sin_result, (uniform float *uniform)cos_result);
-    }
-    return;
-}
-
-__declspec(safe) static inline float16 atan(float16 x_full) {
-    if (__have_native_trigonometry && !__is_xe_target) {
-        return __atan_varying_half(x_full);
-    } else {
-        return (float16)(atan((float)x_full));
-    }
-}
-
-__declspec(safe) static inline uniform float16 atan(uniform float16 x_full) {
-    if (__have_native_trigonometry && !__is_xe_target) {
-        return __atan_uniform_half(x_full);
-    } else {
-        return (uniform float16)(atan((uniform float)x_full));
-    }
-}
-
-__declspec(safe) static inline float16 atan2(float16 y, float16 x) {
-    if (__have_native_trigonometry && !__is_xe_target) {
-        return __atan2_varying_half(y, x);
-    } else {
-        return (float16)(atan2((float)y, (float)x));
-    }
-}
-
-__declspec(safe) static inline uniform float16 atan2(uniform float16 y, uniform float16 x) {
-    if (__have_native_trigonometry && !__is_xe_target) {
-        return __atan2_uniform_half(y, x);
-    } else {
-        return (uniform float16)(atan2((uniform float)y, (uniform float)x));
-    }
-}
-
-__declspec(safe) static inline float16 exp(float16 x_full) { return __exp_varying_half(x_full); }
-
-__declspec(safe) static inline uniform float16 exp(uniform float16 x_full) { return __exp_uniform_half(x_full); }
-
-__declspec(safe) static inline float16 log(float16 x_full) { return __log_varying_half(x_full); }
-
-__declspec(safe) static inline uniform float16 log(uniform float16 x_full) { return __log_uniform_half(x_full); }
-
-__declspec(safe) static inline float16 pow(float16 a, float16 b) { return __pow_varying_half(a, b); }
-
-__declspec(safe) static inline uniform float16 pow(uniform float16 a, uniform float16 b) {
-    return __pow_uniform_half(a, b);
-}
-
 // Transcendentals (float precision)
 
 __declspec(safe) static inline float sqrt(float v) {
@@ -3737,6 +3537,206 @@ __declspec(safe) static inline uniform float pow(uniform float a, uniform float 
     } else if (__math_lib == __math_lib_ispc || __math_lib == __math_lib_ispc_fast) {
         return exp(b * log(a));
     }
+}
+
+///////////////////////////////////////////////////////////////////////////
+// Transcendentals (16-bit float precision)
+
+__declspec(safe) static inline float16 sqrt(float16 v) { return __sqrt_varying_half(v); }
+
+__declspec(safe) static inline uniform float16 sqrt(uniform float16 v) { return __sqrt_uniform_half(v); }
+
+__declspec(safe) static inline float16 rsqrt(float16 v) { return __rsqrt_varying_half(v); }
+
+__declspec(safe) static inline uniform float16 rsqrt(uniform float16 v) { return __rsqrt_uniform_half(v); }
+
+__declspec(safe) static inline float16 ldexp(float16 x, int n) {
+    unsigned int16 ex = 0x7c00u;
+    unsigned int16 ix = intbits(x);
+    ex &= ix;           // extract old exponent;
+    ix = ix & ~0x7c00u; // clear exponent
+    int16 n16 = ((int16)n << 10) + ex;
+    ix |= n16; // insert new exponent
+    return float16bits(ix);
+}
+
+__declspec(safe) static inline uniform float16 ldexp(uniform float16 x, uniform int n) {
+    uniform unsigned int16 ex = 0x7c00u;
+    uniform unsigned int16 ix = intbits(x);
+    ex &= ix;           // extract old exponent;
+    ix = ix & ~0x7c00u; // clear exponent
+    uniform int16 n16 = ((uniform int16)n << 10) + ex;
+    ix |= n16; // insert new exponent
+    return float16bits(ix);
+}
+
+__declspec(safe) static inline float16 frexp(float16 x, varying int *uniform pw2) {
+    unsigned int16 ex = 0x7c00u; // exponent mask
+    unsigned int16 ix = intbits(x);
+    ex &= ix;
+    ix &= ~0x7c00u;              // clear exponent
+    *pw2 = (int)(ex >> 10) - 14; // compute exponent
+    ix |= 0x3800u;               // insert exponent +1 in x
+    return float16bits(ix);
+}
+
+__declspec(safe) static inline uniform float16 frexp(uniform float16 x, uniform int *uniform pw2) {
+    uniform unsigned int16 ex = 0x7c00u; // exponent mask
+    uniform unsigned int16 ix = intbits(x);
+    ex &= ix;
+    ix &= ~0x7c00u;                      // clear exponent
+    *pw2 = (uniform int)(ex >> 10) - 14; // compute exponent
+    ix |= 0x3800u;                       // insert exponent +1 in x
+    return float16bits(ix);
+}
+
+// If no native trigonometry support, convert to float, get asin and convert to half back
+__declspec(safe) static inline float16 sin(float16 x_full) {
+    if (__have_native_trigonometry) {
+        return __sin_varying_half(x_full);
+    } else {
+        return (float16)(sin((float)x_full));
+    }
+}
+
+__declspec(safe) static inline uniform float16 sin(uniform float16 x_full) {
+    if (__have_native_trigonometry) {
+        return __sin_uniform_half(x_full);
+    } else {
+        return (uniform float16)(sin((uniform float)x_full));
+    }
+}
+
+__declspec(safe) static inline float16 asin(float16 x_full) {
+    if (__have_native_trigonometry && !__is_xe_target) {
+        return __asin_varying_half(x_full);
+    } else {
+        return (float16)(asin((float)x_full));
+    }
+}
+
+__declspec(safe) static inline uniform float16 asin(uniform float16 x_full) {
+    if (__have_native_trigonometry && !__is_xe_target) {
+        return __asin_uniform_half(x_full);
+    } else {
+        return (uniform float16)(asin((uniform float)x_full));
+    }
+}
+
+__declspec(safe) static inline float16 cos(float16 x_full) {
+    if (__have_native_trigonometry) {
+        return __cos_varying_half(x_full);
+    } else {
+        return (float16)(cos((float)x_full));
+    }
+}
+
+__declspec(safe) static inline uniform float16 cos(uniform float16 x_full) {
+    if (__have_native_trigonometry) {
+        return __cos_uniform_half(x_full);
+    } else {
+        return (uniform float16)(cos((uniform float)x_full));
+    }
+}
+
+__declspec(safe) static inline float16 tan(float16 x_full) {
+    if (__have_native_trigonometry) {
+        return __tan_varying_half(x_full);
+    } else {
+        return (float16)(tan((float)x_full));
+    }
+}
+
+__declspec(safe) static inline uniform float16 tan(uniform float16 x_full) {
+    if (__have_native_trigonometry) {
+        return __tan_uniform_half(x_full);
+    } else {
+        return (uniform float16)(tan((uniform float)x_full));
+    }
+}
+
+__declspec(safe) static inline float16 acos(float16 x_full) {
+    if (__have_native_trigonometry && !__is_xe_target) {
+        return __acos_varying_half(x_full);
+    } else {
+        return (float16)(acos((float)x_full));
+    }
+}
+
+__declspec(safe) static inline uniform float16 acos(uniform float16 x_full) {
+    if (__have_native_trigonometry && !__is_xe_target) {
+        return __acos_uniform_half(x_full);
+    } else {
+        return (uniform float16)(acos((uniform float)x_full));
+    }
+}
+
+__declspec(safe) static inline void sincos(float16 x_full, varying float16 *uniform sin_result,
+                                           varying float16 *uniform cos_result) {
+    if (__have_native_trigonometry && !__is_xe_target) {
+        __sincos_varying_half(x_full, sin_result, cos_result);
+    } else {
+        varying float *uniform sin_result_fp = (varying float *uniform)sin_result;
+        varying float *uniform cos_result_fp = (varying float *uniform)cos_result;
+        sincos((float)x_full, sin_result_fp, cos_result_fp);
+    }
+    return;
+}
+
+__declspec(safe) static inline void sincos(uniform float16 x_full, uniform float16 *uniform sin_result,
+                                           uniform float16 *uniform cos_result) {
+    if (__have_native_trigonometry && !__is_xe_target) {
+        __sincos_uniform_half(x_full, sin_result, cos_result);
+    } else {
+        sincos((uniform float)x_full, (uniform float *uniform)sin_result, (uniform float *uniform)cos_result);
+    }
+    return;
+}
+
+__declspec(safe) static inline float16 atan(float16 x_full) {
+    if (__have_native_trigonometry && !__is_xe_target) {
+        return __atan_varying_half(x_full);
+    } else {
+        return (float16)(atan((float)x_full));
+    }
+}
+
+__declspec(safe) static inline uniform float16 atan(uniform float16 x_full) {
+    if (__have_native_trigonometry && !__is_xe_target) {
+        return __atan_uniform_half(x_full);
+    } else {
+        return (uniform float16)(atan((uniform float)x_full));
+    }
+}
+
+__declspec(safe) static inline float16 atan2(float16 y, float16 x) {
+    if (__have_native_trigonometry && !__is_xe_target) {
+        return __atan2_varying_half(y, x);
+    } else {
+        return (float16)(atan2((float)y, (float)x));
+    }
+}
+
+__declspec(safe) static inline uniform float16 atan2(uniform float16 y, uniform float16 x) {
+    if (__have_native_trigonometry && !__is_xe_target) {
+        return __atan2_uniform_half(y, x);
+    } else {
+        return (uniform float16)(atan2((uniform float)y, (uniform float)x));
+    }
+}
+
+__declspec(safe) static inline float16 exp(float16 x_full) { return __exp_varying_half(x_full); }
+
+__declspec(safe) static inline uniform float16 exp(uniform float16 x_full) { return __exp_uniform_half(x_full); }
+
+__declspec(safe) static inline float16 log(float16 x_full) { return __log_varying_half(x_full); }
+
+__declspec(safe) static inline uniform float16 log(uniform float16 x_full) { return __log_uniform_half(x_full); }
+
+__declspec(safe) static inline float16 pow(float16 a, float16 b) { return __pow_varying_half(a, b); }
+
+__declspec(safe) static inline uniform float16 pow(uniform float16 a, uniform float16 b) {
+    return __pow_uniform_half(a, b);
 }
 
 ///////////////////////////////////////////////////////////////////////////
