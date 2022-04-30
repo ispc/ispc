@@ -1057,11 +1057,6 @@ define_prefetches()
 
 define_avgs()
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; reciprocals in double precision, if supported
-
-rcph_decl()
-
 ;; Transcendentals
 
 ;; exponent

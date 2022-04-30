@@ -531,7 +531,6 @@ packed_load_and_store(4)
 define_prefetches()
 popcnt()
 
-
 define i16 @__reduce_add_int8(<4 x i8> %v) {
 entry:
   %vecext = extractelement <4 x i8> %v, i32 0

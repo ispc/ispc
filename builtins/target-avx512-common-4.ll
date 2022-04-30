@@ -822,11 +822,6 @@ define_prefetches()
 
 define_avgs()
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; reciprocals in double precision, if supported
-
-rcph_decl()
-
-transcendetals_decl()
 ;; Trigonometry
+transcendetals_decl()
 trigonometry_decl()
