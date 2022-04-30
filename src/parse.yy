@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -80,6 +80,8 @@ struct PragmaAttributes {
     int count;
 };
 
+typedef std::pair<Declarator *, std::vector<std::pair<const Type *, SourcePos>>*> SimpleTemplateIDType;
+
 }
 
 
@@ -87,6 +89,7 @@ struct PragmaAttributes {
 
 #include "decl.h"
 #include "expr.h"
+#include "func.h"
 #include "ispc.h"
 #include "module.h"
 #include "stmt.h"
@@ -116,6 +119,7 @@ static void lSuggestBuiltinAlternates();
 static void lSuggestParamListAlternates();
 
 static void lAddDeclaration(DeclSpecs *ds, Declarator *decl);
+static void lAddTemplateDeclaration(TemplateParms *templateParmList, DeclSpecs *ds, Declarator *decl);
 static void lAddFunctionParams(Declarator *decl);
 static void lAddMaskToSymbolTable(SourcePos pos);
 static void lAddThreadIndexCountToSymbolTable(SourcePos pos);
@@ -188,6 +192,10 @@ struct ForeachDimension {
     std::pair<std::string, SourcePos> *declspecPair;
     std::vector<std::pair<std::string, SourcePos> > *declspecList;
     PragmaAttributes *pragmaAttributes;
+    const TemplateTypeParmType *templateParm;
+    TemplateParms *templateParmList;
+    TemplateSymbol *functionTemplateSym;
+    SimpleTemplateIDType *simpleTemplateID;
 }
 
 
@@ -199,6 +207,7 @@ struct ForeachDimension {
 %token TOKEN_INT64DOTDOTDOT_CONSTANT TOKEN_UINT64DOTDOTDOT_CONSTANT
 %token TOKEN_FLOAT16_CONSTANT TOKEN_FLOAT_CONSTANT TOKEN_DOUBLE_CONSTANT TOKEN_STRING_C_LITERAL TOKEN_STRING_SYCL_LITERAL
 %token TOKEN_IDENTIFIER TOKEN_STRING_LITERAL TOKEN_TYPE_NAME TOKEN_PRAGMA TOKEN_NULL
+%token TOKEN_TEMPLATE TOKEN_TEMPLATE_NAME TOKEN_TYPENAME
 %token TOKEN_PTR_OP TOKEN_INC_OP TOKEN_DEC_OP TOKEN_LEFT_OP TOKEN_RIGHT_OP
 %token TOKEN_LE_OP TOKEN_GE_OP TOKEN_EQ_OP TOKEN_NE_OP
 %token TOKEN_AND_OP TOKEN_OR_OP TOKEN_MUL_ASSIGN TOKEN_DIV_ASSIGN TOKEN_MOD_ASSIGN
@@ -208,7 +217,7 @@ struct ForeachDimension {
 
 %token TOKEN_EXTERN TOKEN_EXPORT TOKEN_STATIC TOKEN_INLINE TOKEN_NOINLINE TOKEN_VECTORCALL TOKEN_REGCALL TOKEN_TASK TOKEN_DECLSPEC
 %token TOKEN_UNIFORM TOKEN_VARYING TOKEN_TYPEDEF TOKEN_SOA TOKEN_UNMASKED
-%token TOKEN_CHAR TOKEN_INT TOKEN_SIGNED TOKEN_UNSIGNED TOKEN_FLOAT16 TOKEN_FLOAT TOKEN_DOUBLE
+%token TOKEN_INT TOKEN_SIGNED TOKEN_UNSIGNED TOKEN_FLOAT16 TOKEN_FLOAT TOKEN_DOUBLE
 %token TOKEN_INT8 TOKEN_INT16 TOKEN_INT64 TOKEN_CONST TOKEN_VOID TOKEN_BOOL
 %token TOKEN_UINT8 TOKEN_UINT16 TOKEN_UINT TOKEN_UINT64
 %token TOKEN_ENUM TOKEN_STRUCT TOKEN_TRUE TOKEN_FALSE
@@ -274,6 +283,13 @@ struct ForeachDimension {
 
 %type <declspecPair> declspec_item
 %type <declspecList> declspec_specifier declspec_list
+
+%type <constCharPtr> template_identifier
+%type <typeList> template_argument_list
+%type <simpleTemplateID> simple_template_id
+%type <templateParm> template_type_parameter template_int_parameter template_parameter
+%type <templateParmList> template_parameter_list template_head
+%type <functionTemplateSym> template_declaration
 
 %start translation_unit
 %%
@@ -533,6 +549,42 @@ funcall_expression
     | postfix_expression '(' argument_expression_list ')'
       { $$ = new FunctionCallExpr($1, $3, Union(@1,@4)); }
     | postfix_expression '(' error ')'
+      { $$ = NULL; }
+    | simple_template_id '(' ')'
+      {
+          // Create FunctionSymbolExpr with a candidate functions list
+          Expr *functionSymbolExpr = nullptr;
+          std::vector<TemplateSymbol *> funcTempls;
+          const std::string name = $1->first->name;
+          m->symbolTable->LookupFunctionTemplate(name, &funcTempls);
+          if (funcTempls.size() > 0) {
+              std::vector<std::pair<const Type *, SourcePos>> *templArgs = $1->second;
+              Assert(templArgs);
+              functionSymbolExpr = new FunctionSymbolExpr(name.c_str(), funcTempls, *templArgs, @1);
+              $$ = new FunctionCallExpr(functionSymbolExpr, new ExprList(Union(@1,@2)), Union(@1,@3));
+          } else {
+              Error(@1, "No matching template functions were declared.");
+              $$ = nullptr;
+          }
+      }
+    | simple_template_id '(' argument_expression_list ')'
+      {
+          // Create FunctionSymbolExpr with a candidate functions list
+          Expr *functionSymbolExpr = nullptr;
+          std::vector<TemplateSymbol *> funcTempls;
+          const std::string name = $1->first->name;
+          m->symbolTable->LookupFunctionTemplate(name, &funcTempls);
+          if (funcTempls.size() > 0) {
+              std::vector<std::pair<const Type *, SourcePos>> *templArgs = $1->second;
+              Assert(templArgs);
+              functionSymbolExpr = new FunctionSymbolExpr(name.c_str(), funcTempls, *templArgs, @1);
+              $$ = new FunctionCallExpr(functionSymbolExpr, $3, Union(@1,@4));
+          } else {
+              Error(@1, "No matching template functions were declared.");
+              $$ = nullptr;
+          }
+      }
+    | simple_template_id '(' error ')'
       { $$ = NULL; }
     ;
 
@@ -1426,6 +1478,14 @@ direct_declarator
           d->name = yytext;
           $$ = d;
       }
+    // For the purpose of declaration, template_name token is no different from identifier token,
+    // it needs to be processed in the same way. Semantic checks will be done later.
+    | TOKEN_TEMPLATE_NAME
+      {
+          Declarator *d = new Declarator(DK_BASE, @1);
+          d->name = yytext;
+          $$ = d;
+      }
     | '(' declarator ')'
     {
         $$ = $2;
@@ -2130,6 +2190,9 @@ translation_unit
 
 external_declaration
     : function_definition
+    | template_function_declaration_or_definition
+    | template_function_specialization
+    | template_function_instantiation
     | TOKEN_EXTERN TOKEN_STRING_C_LITERAL '{' declaration '}'
     | TOKEN_EXTERN TOKEN_STRING_SYCL_LITERAL '{' declaration '}'
     | TOKEN_EXPORT '{' type_specifier_list '}' ';'
@@ -2150,6 +2213,7 @@ function_definition
     : declaration_specifiers declarator
     {
         lAddDeclaration($1, $2);
+        m->symbolTable->PushScope();
         lAddFunctionParams($2);
         lAddMaskToSymbolTable(@2);
         if ($1->typeQualifiers & TYPEQUAL_TASK)
@@ -2158,6 +2222,7 @@ function_definition
     compound_statement
     {
         if ($2 != NULL) {
+            // FIXME: Next list is redundant, as it's done in lAddDeclaration()
             $2->InitFromDeclSpecs($1);
             const FunctionType *funcType = CastType<FunctionType>($2->type);
             if (funcType == NULL)
@@ -2180,6 +2245,201 @@ func(...)
         m->symbolTable->PopScope(); // push in lAddFunctionParams();
     }
 */
+    ;
+
+template_type_parameter
+    : TOKEN_TYPENAME TOKEN_IDENTIFIER
+      {
+          $$ = new TemplateTypeParmType(*$<stringVal>2, Variability::VarType::Unbound, false, Union(@1, @2));
+      }
+    | TOKEN_TYPENAME TOKEN_IDENTIFIER '=' type_specifier
+      {
+          $$ = new TemplateTypeParmType(*$<stringVal>2, Variability::VarType::Unbound, false, Union(@1, @2));
+          // TODO: implement
+          Error(@4, "Default values for template type parameters are not yet supported.");
+      }
+    ;
+
+template_int_parameter
+    : TOKEN_INT TOKEN_IDENTIFIER
+      {
+          $$ = nullptr;
+          // TODO: implement
+          Error(Union(@1, @2), "Non-type template paramters are not yet supported.");
+      }
+    ;
+
+template_parameter
+    : template_type_parameter
+    | template_int_parameter
+    ;
+
+template_parameter_list
+    : template_parameter
+      {
+          TemplateParms *list = new TemplateParms();
+          if ($1 != nullptr) {
+              list->Add($1);
+          }
+          $$ = list;
+      }
+    | template_parameter_list ',' template_parameter
+      {
+          TemplateParms *list = (TemplateParms *) $1;
+          if (list == NULL) {
+              AssertPos(@1, m->errorCount > 0);
+              list = new TemplateParms();
+          }
+          if ($3 != NULL) {
+              list->Add($3);
+          }
+          $$ = list;
+      }
+    ;
+
+template_head
+    : TOKEN_TEMPLATE '<' template_parameter_list '>'
+      {
+          $$ = $3;
+      }
+    ;
+
+template_declaration
+    : template_head
+      {
+          // Scope for template parameters definition
+          m->symbolTable->PushScope();
+          TemplateParms *list = (TemplateParms *) $1;
+          for(size_t i = 0; i < list->GetCount(); i++) {
+              std::string name = (*list)[i]->GetName();
+              SourcePos pos = (*list)[i]->GetSourcePos();
+              m->AddTypeDef(name, (*list)[i], pos);
+          }
+      }
+      declaration_specifiers declarator
+      {
+          lAddTemplateDeclaration($1, $3, $4);
+          lAddFunctionParams($4);
+          lAddMaskToSymbolTable(@4);
+          if ($3->typeQualifiers & TYPEQUAL_TASK) {
+              Error(@3, "'task' not supported for templates.");
+          }
+          if ($3->typeQualifiers & TYPEQUAL_EXPORT) {
+              Error(@3, "'export' not supported for templates.");
+          }
+          const FunctionType *ft = CastType<FunctionType>($4->type);
+          // Creating a new TemplateSymbol just to pass it further seems to be a waste
+          $$ = new TemplateSymbol($1, $4->name, ft, @4, false /*not used*/, false /*not used*/);
+      }
+    ;
+
+template_function_declaration_or_definition
+    : template_declaration ';'
+      {
+          // End templates parameters definition scope
+          m->symbolTable->PopScope();
+      }
+    | template_declaration compound_statement
+      {
+          if ($1 != NULL) {
+              Stmt *code = $2;
+              if (code == NULL) code = new StmtList(@2);
+              m->AddFunctionTemplateDefinition($1->templateParms, $1->name, $1->type, code);
+          }
+
+          // End templates parameters definition scope
+          m->symbolTable->PopScope();
+      }
+    ;
+
+template_argument_list
+    : rate_qualified_type_specifier
+      {
+          std::vector<std::pair<const Type *, SourcePos>> *vec = new std::vector<std::pair<const Type *, SourcePos>>;
+          vec->push_back(std::make_pair($1, @1));
+          $$ = vec;
+      }
+    | template_argument_list ',' rate_qualified_type_specifier
+      {
+          std::vector<std::pair<const Type *, SourcePos>> *vec = (std::vector<std::pair<const Type *, SourcePos>> *) $1;
+          vec->push_back(std::make_pair($3, @3));
+          $$ = vec;
+      }
+    ;
+
+template_identifier
+    : TOKEN_TEMPLATE_NAME { $$ = strdup(yytext); }
+    ;
+
+simple_template_id
+    : template_identifier '<' template_argument_list '>'
+      {
+          // Template ID declartor
+          Declarator *d = new Declarator(DK_BASE, @1);
+          d->name = $1;
+          // Arguments vector
+          std::vector<std::pair<const Type *, SourcePos>> *vec = (std::vector<std::pair<const Type *, SourcePos>> *) $3;
+          // Bundle template ID declarator and type list.
+          $$ = new std::pair(d, vec);
+      }
+    | template_identifier
+      {
+          // Template ID declartor
+          Declarator *d = new Declarator(DK_BASE, @1);
+          d->name = $1;
+          // Arguments vector
+          std::vector<std::pair<const Type *, SourcePos>> *vec = new std::vector<std::pair<const Type *, SourcePos>>;
+          // Bundle template ID declarator and empty type list.
+          $$ = new std::pair(d, vec);
+      }
+
+    ;
+
+ // template int foo<int>(int);
+template_function_instantiation
+    : TOKEN_TEMPLATE declaration_specifiers simple_template_id '(' parameter_type_list ')' ';'
+      {
+          SimpleTemplateIDType *simpleTemplID = (SimpleTemplateIDType *) $3;
+
+          // Function declarator
+          Declarator *d = new Declarator(DK_FUNCTION, Union(@1, @6));
+          d->child = simpleTemplID->first;
+          if ($5 != NULL) {
+              d->functionParams = *$5;
+          }
+
+          d->InitFromDeclSpecs($2);
+          const FunctionType *ftype = CastType<FunctionType>(d->type);
+
+          m->AddFunctionTemplateInstantiation($3->first->name, *$3->second, ftype, Union(@1, @6));
+      }
+    | TOKEN_TEMPLATE declaration_specifiers simple_template_id '(' ')' ';'
+      {
+          SimpleTemplateIDType *simpleTemplID = (SimpleTemplateIDType *) $3;
+
+          // Function declarator
+          Declarator *d = new Declarator(DK_FUNCTION, Union(@1, @5));
+          d->child = simpleTemplID->first;
+
+          d->InitFromDeclSpecs($2);
+          const FunctionType *ftype = CastType<FunctionType>(d->type);
+
+          m->AddFunctionTemplateInstantiation($3->first->name, *$3->second, ftype, Union(@1, @5));
+      }
+    | TOKEN_TEMPLATE declaration_specifiers simple_template_id '(' error ')' ';'
+    ;
+
+// Template specialization, a-la
+// template <> int foo<int>(int) { ... }
+template_function_specialization
+    : TOKEN_TEMPLATE '<' '>' declaration_specifiers declarator ';'
+      {
+        Error(@$, "Template function specialization not yet supported.");
+      }
+    | TOKEN_TEMPLATE '<' '>' declaration_specifiers declarator compound_statement
+      {
+        Error(@$, "Template function specialization not yet supported.");
+      }
     ;
 
 %%
@@ -2306,14 +2566,48 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
     }
 }
 
+static void
+lAddTemplateDeclaration(TemplateParms *templateParmList, DeclSpecs *ds, Declarator *decl) {
+    if (ds == NULL || decl == NULL)
+        // Error happened earlier during parsing
+        return;
+
+    decl->InitFromDeclSpecs(ds);
+    if (ds->storageClass == SC_TYPEDEF) {
+        // FIXME: source position
+        Error(decl->pos, "Illegal \"typedef\" provided with function template.");
+        return;
+    } else {
+        if (decl->type == NULL) {
+            Assert(m->errorCount > 0);
+            return;
+        }
+
+        //decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
+
+        const FunctionType *ft = CastType<FunctionType>(decl->type);
+        if (ft != NULL) {
+            bool isInline = (ds->typeQualifiers & TYPEQUAL_INLINE);
+            bool isNoInline = (ds->typeQualifiers & TYPEQUAL_NOINLINE);
+            bool isVectorCall = (ds->typeQualifiers & TYPEQUAL_VECTORCALL);
+            m->AddFunctionTemplateDeclaration(templateParmList, decl->name, ft, ds->storageClass,
+                                              isInline, isNoInline, isVectorCall, decl->pos);
+        }
+        else {
+            Error(decl->pos, "Only function templates are supported.");
+        }
+    }
+}
+
 
 /** We're about to start parsing the body of a function; add all of the
     parameters to the symbol table so that they're available.
 */
 static void
 lAddFunctionParams(Declarator *decl) {
-    m->symbolTable->PushScope();
-
+    // It's responsibility of the caller to create a new symbol table scope.
+    // For regular functions, the scope starts before function parameters.
+    // For template functions, the scope starts before template parameters.
     if (decl == NULL) {
         return;
     }
