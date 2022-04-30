@@ -3673,22 +3673,24 @@ __declspec(safe) static inline uniform float16 acos(uniform float16 x_full) {
 
 __declspec(safe) static inline void sincos(float16 x_full, varying float16 *uniform sin_result,
                                            varying float16 *uniform cos_result) {
-    if (__have_native_trigonometry && !__is_xe_target) {
-        __sincos_varying_half(x_full, sin_result, cos_result);
+    if (__have_native_trigonometry) {
+        *sin_result = __sin_varying_half(x_full);
+        *cos_result = __cos_varying_half(x_full);
     } else {
-        varying float *uniform sin_result_fp = (varying float *uniform)sin_result;
-        varying float *uniform cos_result_fp = (varying float *uniform)cos_result;
-        sincos((float)x_full, sin_result_fp, cos_result_fp);
+        *sin_result = (float16)sin((float)x_full);
+        *cos_result = (float16)cos((float)x_full);
     }
     return;
 }
 
 __declspec(safe) static inline void sincos(uniform float16 x_full, uniform float16 *uniform sin_result,
                                            uniform float16 *uniform cos_result) {
-    if (__have_native_trigonometry && !__is_xe_target) {
-        __sincos_uniform_half(x_full, sin_result, cos_result);
+    if (__have_native_trigonometry) {
+        *sin_result = __sin_uniform_half(x_full);
+        *cos_result = __cos_uniform_half(x_full);
     } else {
-        sincos((uniform float)x_full, (uniform float *uniform)sin_result, (uniform float *uniform)cos_result);
+        *sin_result = (uniform float16)sin((uniform float)x_full);
+        *cos_result = (uniform float16)cos((uniform float)x_full);
     }
     return;
 }
