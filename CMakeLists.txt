@@ -454,7 +454,7 @@ else()
     # Security options
     target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector-strong
                            -fdata-sections -ffunction-sections -fno-delete-null-pointer-checks
-                           -Wformat -Wformat-security -fpie -fwrapv)
+                           -Wformat -Wformat-security -fPIE -fwrapv)
 endif()
 
 # Set C++ standard to C++17.
@@ -473,11 +473,15 @@ endif()
 # Link options
 if (WIN32)
     target_link_options(${PROJECT_NAME} PRIVATE /DYNAMICBASE)
+    # Control flow guard
+    target_link_options(${PROJECT_NAME} PRIVATE /GUARD:CF)
     if (MSVC AND NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
         target_link_options(${PROJECT_NAME} PUBLIC /OPT:REF /OPT:ICF)
     endif()
 elseif (APPLE)
 else()
+    # Position independent code
+    target_link_options(${PROJECT_NAME} PRIVATE -pie)
     # Link options for security hardening.
     target_link_options(${PROJECT_NAME}
         PUBLIC "SHELL: -z noexecstack"
