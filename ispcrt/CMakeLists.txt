@@ -135,8 +135,17 @@ macro(build_ispcrt SHARED_OR_STATIC TARGET_NAME)
   )
 
   # Security options
-  if (UNIX)
-    target_compile_options(${TARGET_NAME} PRIVATE -fstack-protector-strong)
+  if (MSVC)
+    # Stack canaries
+    target_compile_options(${TARGET_NAME} PRIVATE /GS)
+    # Control flow guard
+    target_link_options(${TARGET_NAME} PRIVATE /GUARD:CF)
+  elseif (APPLE)
+  else()
+    # Enable stack protector
+    # NOT to assume that null pointer deference does not exist
+    # Assume that signed overflow always wraps
+    target_compile_options(${TARGET_NAME} PRIVATE -fstack-protector-strong -fno-delete-null-pointer-checks -fwrapv)
   endif()
 
   ## Install targets + exports ##
