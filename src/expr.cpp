@@ -3800,8 +3800,8 @@ llvm::Value *FunctionCallExpr::GetLValue(FunctionEmitContext *ctx) const {
     }
 }
 
-bool FullResolveOverloads(Expr *func, ExprList *args, std::vector<const Type *> *argTypes,
-                          std::vector<bool> *argCouldBeNULL, std::vector<bool> *argIsConstant) {
+static bool lFullResolveOverloads(Expr *func, ExprList *args, std::vector<const Type *> *argTypes,
+                                  std::vector<bool> *argCouldBeNULL, std::vector<bool> *argIsConstant) {
     for (unsigned int i = 0; i < args->exprs.size(); ++i) {
         Expr *expr = args->exprs[i];
         if (expr == NULL)
@@ -3821,7 +3821,7 @@ const Type *FunctionCallExpr::GetType() const {
     std::vector<bool> argCouldBeNULL, argIsConstant;
     if (func == NULL || args == NULL)
         return NULL;
-    if (FullResolveOverloads(func, args, &argTypes, &argCouldBeNULL, &argIsConstant) == true) {
+    if (lFullResolveOverloads(func, args, &argTypes, &argCouldBeNULL, &argIsConstant) == true) {
         FunctionSymbolExpr *fse = llvm::dyn_cast<FunctionSymbolExpr>(func);
         if (fse != NULL) {
             fse->ResolveOverloads(args->pos, argTypes, &argCouldBeNULL, &argIsConstant);
@@ -3855,7 +3855,7 @@ Expr *FunctionCallExpr::TypeCheck() {
     std::vector<const Type *> argTypes;
     std::vector<bool> argCouldBeNULL, argIsConstant;
 
-    if (FullResolveOverloads(func, args, &argTypes, &argCouldBeNULL, &argIsConstant) == false) {
+    if (lFullResolveOverloads(func, args, &argTypes, &argCouldBeNULL, &argIsConstant) == false) {
         return NULL;
     }
 
