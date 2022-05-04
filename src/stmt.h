@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -65,6 +65,7 @@ class Stmt : public ASTNode {
     // Stmts don't have anything to do here.
     virtual Stmt *Optimize();
     virtual Stmt *TypeCheck() = 0;
+    virtual Stmt *Instantiate(TemplateInstantiation &templInst) const = 0;
 
     virtual void SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int>);
 };
@@ -82,6 +83,7 @@ class ExprStmt : public Stmt {
 
     Stmt *TypeCheck();
     int EstimateCost() const;
+    ExprStmt *Instantiate(TemplateInstantiation &templInst) const;
 
     Expr *expr;
 };
@@ -110,6 +112,7 @@ class DeclStmt : public Stmt {
     Stmt *Optimize();
     Stmt *TypeCheck();
     int EstimateCost() const;
+    DeclStmt *Instantiate(TemplateInstantiation &templInst) const;
 
     std::vector<VariableDeclaration> vars;
 };
@@ -128,6 +131,7 @@ class IfStmt : public Stmt {
 
     Stmt *TypeCheck();
     int EstimateCost() const;
+    IfStmt *Instantiate(TemplateInstantiation &templInst) const;
 
     // @todo these are only public for lHasVaryingBreakOrContinue(); would
     // be nice to clean that up...
@@ -171,6 +175,7 @@ class DoStmt : public Stmt {
         std::pair<Globals::pragmaUnrollType, int>(Globals::pragmaUnrollType::none, -1);
     void SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int>);
     int EstimateCost() const;
+    DoStmt *Instantiate(TemplateInstantiation &templInst) const;
 
     Expr *testExpr;
     Stmt *bodyStmts;
@@ -197,6 +202,7 @@ class ForStmt : public Stmt {
         std::pair<Globals::pragmaUnrollType, int>(Globals::pragmaUnrollType::none, -1);
     void SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int>);
     int EstimateCost() const;
+    ForStmt *Instantiate(TemplateInstantiation &templInst) const;
 
     /** 'for' statment initializer; may be NULL, indicating no intitializer */
     Stmt *init;
@@ -225,6 +231,7 @@ class BreakStmt : public Stmt {
 
     Stmt *TypeCheck();
     int EstimateCost() const;
+    BreakStmt *Instantiate(TemplateInstantiation &templInst) const;
 };
 
 /** @brief Statement implementation for a continue statement in the
@@ -241,6 +248,7 @@ class ContinueStmt : public Stmt {
 
     Stmt *TypeCheck();
     int EstimateCost() const;
+    ContinueStmt *Instantiate(TemplateInstantiation &templInst) const;
 };
 
 /** @brief Statement implementation for parallel 'foreach' loops.
@@ -264,6 +272,7 @@ class ForeachStmt : public Stmt {
         std::pair<Globals::pragmaUnrollType, int>(Globals::pragmaUnrollType::none, -1);
     void SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int>);
     int EstimateCost() const;
+    ForeachStmt *Instantiate(TemplateInstantiation &templInst) const;
 
     std::vector<Symbol *> dimVariables;
     std::vector<Expr *> startExprs;
@@ -289,6 +298,7 @@ class ForeachActiveStmt : public Stmt {
         std::pair<Globals::pragmaUnrollType, int>(Globals::pragmaUnrollType::none, -1);
     void SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int>);
     int EstimateCost() const;
+    ForeachActiveStmt *Instantiate(TemplateInstantiation &templInst) const;
 
     Symbol *sym;
     Stmt *stmts;
@@ -300,6 +310,7 @@ class ForeachActiveStmt : public Stmt {
 class ForeachUniqueStmt : public Stmt {
   public:
     ForeachUniqueStmt(const char *iterName, Expr *expr, Stmt *stmts, SourcePos pos);
+    ForeachUniqueStmt(Symbol *sym, Expr *expr, Stmt *stmts, SourcePos pos);
 
     static inline bool classof(ForeachUniqueStmt const *) { return true; }
     static inline bool classof(ASTNode const *N) { return N->getValueID() == ForeachUniqueStmtID; }
@@ -312,6 +323,7 @@ class ForeachUniqueStmt : public Stmt {
         std::pair<Globals::pragmaUnrollType, int>(Globals::pragmaUnrollType::none, -1);
     void SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int>);
     int EstimateCost() const;
+    ForeachUniqueStmt *Instantiate(TemplateInstantiation &templInst) const;
 
     Symbol *sym;
     Expr *expr;
@@ -332,6 +344,7 @@ class UnmaskedStmt : public Stmt {
 
     Stmt *TypeCheck();
     int EstimateCost() const;
+    UnmaskedStmt *Instantiate(TemplateInstantiation &templInst) const;
 
     Stmt *stmts;
 };
@@ -350,6 +363,7 @@ class ReturnStmt : public Stmt {
 
     Stmt *TypeCheck();
     int EstimateCost() const;
+    ReturnStmt *Instantiate(TemplateInstantiation &templInst) const;
 
     Expr *expr;
 };
@@ -369,6 +383,7 @@ class CaseStmt : public Stmt {
 
     Stmt *TypeCheck();
     int EstimateCost() const;
+    CaseStmt *Instantiate(TemplateInstantiation &templInst) const;
 
     /** Integer value after the "case" statement */
     const int value;
@@ -389,6 +404,7 @@ class DefaultStmt : public Stmt {
 
     Stmt *TypeCheck();
     int EstimateCost() const;
+    DefaultStmt *Instantiate(TemplateInstantiation &templInst) const;
 
     Stmt *stmts;
 };
@@ -406,6 +422,7 @@ class SwitchStmt : public Stmt {
 
     Stmt *TypeCheck();
     int EstimateCost() const;
+    SwitchStmt *Instantiate(TemplateInstantiation &templInst) const;
 
     /** Expression that is used to determine which label to jump to. */
     Expr *expr;
@@ -427,6 +444,7 @@ class GotoStmt : public Stmt {
     Stmt *Optimize();
     Stmt *TypeCheck();
     int EstimateCost() const;
+    GotoStmt *Instantiate(TemplateInstantiation &templInst) const;
 
     /** Name of the label to jump to when the goto is executed. */
     std::string label;
@@ -448,6 +466,7 @@ class LabeledStmt : public Stmt {
     Stmt *Optimize();
     Stmt *TypeCheck();
     int EstimateCost() const;
+    LabeledStmt *Instantiate(TemplateInstantiation &templInst) const;
 
     /** Name of the label. */
     std::string name;
@@ -469,6 +488,7 @@ class StmtList : public Stmt {
 
     Stmt *TypeCheck();
     int EstimateCost() const;
+    StmtList *Instantiate(TemplateInstantiation &templInst) const;
 
     void Add(Stmt *s) {
         if (s)
@@ -499,6 +519,7 @@ class PrintStmt : public Stmt {
 
     Stmt *TypeCheck();
     int EstimateCost() const;
+    PrintStmt *Instantiate(TemplateInstantiation &templInst) const;
 
     std::vector<llvm::Value *> getDoPrintArgs(FunctionEmitContext *ctx) const;
     std::vector<llvm::Value *> getPrintImplArgs(FunctionEmitContext *ctx) const;
@@ -547,6 +568,7 @@ class AssertStmt : public Stmt {
 
     Stmt *TypeCheck();
     int EstimateCost() const;
+    AssertStmt *Instantiate(TemplateInstantiation &templInst) const;
 
     /** Message to print if the assertion fails. */
     const std::string message;
@@ -568,6 +590,7 @@ class DeleteStmt : public Stmt {
 
     Stmt *TypeCheck();
     int EstimateCost() const;
+    DeleteStmt *Instantiate(TemplateInstantiation &templInst) const;
 
     /** Expression that gives the pointer value to be deleted. */
     Expr *expr;

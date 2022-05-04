@@ -852,13 +852,30 @@ Symbol *TemplateInstantiation::InstantiateSymbol(Symbol *sym) {
     if (sym == nullptr) {
         return nullptr;
     }
+
+    // A note about about global symbols.
+    // In the current state of symbol table there's no clear way to differentiate between global and local symbols.
+    // There's "parentFunction" field, but it's empty for some local symbols and paramters, which prevents using it
+    // for the purpose of differentiation.
+    // There's another possible way to differentiate - "storageInfo" tends to be set only for global symbols, but again
+    // it's inderent and unreliable way to detect what needs to be encoded explicitly.
+    // So we copy all symbols - global and local, while we need not avoid copying globals.
+    // TODO: develop a reliable mechanism to detect global symbols and do not copy them.
+
     auto t = symMap.find(sym);
     if (t != symMap.end()) {
         return t->second;
     }
 
-    // TODO: implement symbol instantiation.
-    return sym;
+    const Type *instType = sym->type->ResolveDependence(*this);
+    Symbol *instSym = new Symbol(sym->name, sym->pos, instType, sym->storageClass);
+    instSym->constValue = sym->constValue ? sym->constValue->Instantiate(*this) : nullptr;
+    instSym->varyingCFDepth = sym->varyingCFDepth;
+    instSym->parentFunction = nullptr;
+    instSym->storageInfo = sym->storageInfo;
+
+    symMap.emplace(std::make_pair(sym, instSym));
+    return instSym;
 }
 
 // After the instance of the template function is created, the symbols should point to the parent function.

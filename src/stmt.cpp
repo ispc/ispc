@@ -106,6 +106,10 @@ void ExprStmt::Print(Indent &indent) const {
 
 int ExprStmt::EstimateCost() const { return 0; }
 
+ExprStmt *ExprStmt::Instantiate(TemplateInstantiation &templInst) const {
+    return new ExprStmt(expr ? expr->Instantiate(templInst) : nullptr, pos);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // DeclStmt
 
@@ -344,6 +348,17 @@ void DeclStmt::Print(Indent &indent) const {
 
 int DeclStmt::EstimateCost() const { return 0; }
 
+DeclStmt *DeclStmt::Instantiate(TemplateInstantiation &templInst) const {
+    std::vector<VariableDeclaration> instVars;
+    for (auto &var : vars) {
+        Expr *instInit = var.init ? var.init->Instantiate(templInst) : nullptr;
+        Symbol *instSym = templInst.InstantiateSymbol(var.sym);
+        VariableDeclaration instDecl(instSym, instInit);
+        instVars.push_back(instDecl);
+    }
+    return new DeclStmt(instVars, pos);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // IfStmt
 
@@ -488,6 +503,13 @@ int IfStmt::EstimateCost() const {
         return 0;
 
     return type->IsUniformType() ? COST_UNIFORM_IF : COST_VARYING_IF;
+}
+
+IfStmt *IfStmt::Instantiate(TemplateInstantiation &templInst) const {
+    Expr *instTestExpr = test ? test->Instantiate(templInst) : nullptr;
+    Stmt *instTrueStmts = trueStmts ? trueStmts->Instantiate(templInst) : nullptr;
+    Stmt *instFalseStmts = falseStmts ? falseStmts->Instantiate(templInst) : nullptr;
+    return new IfStmt(instTestExpr, instTrueStmts, instFalseStmts, doAllCheck, pos);
 }
 
 void IfStmt::Print(Indent &indent) const {
@@ -964,6 +986,12 @@ int DoStmt::EstimateCost() const {
     return lLoopStmtUniformTest(testExpr, bodyStmts) ? COST_UNIFORM_LOOP : COST_VARYING_LOOP;
 }
 
+DoStmt *DoStmt::Instantiate(TemplateInstantiation &templInst) const {
+    Expr *instTestExpr = testExpr ? testExpr->Instantiate(templInst) : nullptr;
+    Stmt *instBodyStmts = bodyStmts ? bodyStmts->Instantiate(templInst) : nullptr;
+    return new DoStmt(instTestExpr, instBodyStmts, doCoherentCheck, pos);
+}
+
 void DoStmt::Print(Indent &indent) const {
     indent.PrintLn("DoStmt", pos);
     int totalChildren = (testExpr ? 1 : 0) + (bodyStmts ? 1 : 0);
@@ -1161,6 +1189,14 @@ void ForStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) 
 
 int ForStmt::EstimateCost() const { return lLoopStmtUniformTest(test, stmts) ? COST_UNIFORM_LOOP : COST_VARYING_LOOP; }
 
+ForStmt *ForStmt::Instantiate(TemplateInstantiation &templInst) const {
+    Expr *instTestExpr = test ? test->Instantiate(templInst) : nullptr;
+    Stmt *instInitStmts = init ? init->Instantiate(templInst) : nullptr;
+    Stmt *instStepStmts = step ? step->Instantiate(templInst) : nullptr;
+    Stmt *instBodyStmts = stmts ? stmts->Instantiate(templInst) : nullptr;
+    return new ForStmt(instInitStmts, instTestExpr, instStepStmts, instBodyStmts, doCoherentCheck, pos);
+}
+
 void ForStmt::Print(Indent &indent) const {
     indent.PrintLn("ForStmt", pos);
 
@@ -1204,6 +1240,8 @@ Stmt *BreakStmt::TypeCheck() { return this; }
 
 int BreakStmt::EstimateCost() const { return COST_BREAK_CONTINUE; }
 
+BreakStmt *BreakStmt::Instantiate(TemplateInstantiation &templInst) const { return new BreakStmt(pos); }
+
 void BreakStmt::Print(Indent &indent) const {
     indent.PrintLn("BreakStmt", pos);
     indent.Done();
@@ -1225,6 +1263,8 @@ void ContinueStmt::EmitCode(FunctionEmitContext *ctx) const {
 Stmt *ContinueStmt::TypeCheck() { return this; }
 
 int ContinueStmt::EstimateCost() const { return COST_BREAK_CONTINUE; }
+
+ContinueStmt *ContinueStmt::Instantiate(TemplateInstantiation &templInst) const { return new ContinueStmt(pos); }
 
 void ContinueStmt::Print(Indent &indent) const {
     indent.PrintLn("ContinueStmt", pos);
@@ -1991,6 +2031,34 @@ void ForeachStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAt
 
 int ForeachStmt::EstimateCost() const { return dimVariables.size() * (COST_UNIFORM_LOOP + COST_SIMPLE_ARITH_LOGIC_OP); }
 
+ForeachStmt *ForeachStmt::Instantiate(TemplateInstantiation &templInst) const {
+    std::vector<Symbol *> instDimVariables;
+    std::vector<Expr *> instStartExprs;
+    std::vector<Expr *> instEndExprs;
+
+    for (auto dimVar : dimVariables) {
+        Symbol *instDimVar = templInst.InstantiateSymbol(dimVar);
+        instDimVariables.push_back(instDimVar);
+    }
+
+    for (auto startExpr : startExprs) {
+        Expr *instStartExpr = startExpr ? startExpr->Instantiate(templInst) : nullptr;
+        instStartExprs.push_back(instStartExpr);
+    }
+
+    for (auto endExpr : endExprs) {
+        Expr *instEndExpr = endExpr ? endExpr->Instantiate(templInst) : nullptr;
+        instEndExprs.push_back(instEndExpr);
+    }
+
+    Stmt *instStmts = stmts ? stmts->Instantiate(templInst) : nullptr;
+
+    ForeachStmt *inst = new ForeachStmt(instDimVariables, instStartExprs, instEndExprs, instStmts, isTiled, pos);
+    inst->loopAttribute = loopAttribute;
+
+    return inst;
+}
+
 void ForeachStmt::Print(Indent &indent) const {
     indent.PrintLn("ForeachStmt", pos);
 
@@ -2230,6 +2298,16 @@ void ForeachActiveStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, in
 
 int ForeachActiveStmt::EstimateCost() const { return COST_VARYING_LOOP; }
 
+ForeachActiveStmt *ForeachActiveStmt::Instantiate(TemplateInstantiation &templInst) const {
+    Symbol *instSym = templInst.InstantiateSymbol(sym);
+    Stmt *instStmts = stmts ? stmts->Instantiate(templInst) : nullptr;
+
+    ForeachActiveStmt *inst = new ForeachActiveStmt(instSym, instStmts, pos);
+    inst->loopAttribute = loopAttribute;
+
+    return inst;
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // ForeachUniqueStmt
 
@@ -2237,6 +2315,9 @@ ForeachUniqueStmt::ForeachUniqueStmt(const char *iterName, Expr *e, Stmt *s, Sou
     : Stmt(pos, ForeachUniqueStmtID), expr(e), stmts(s) {
     sym = m->symbolTable->LookupVariable(iterName);
 }
+
+ForeachUniqueStmt::ForeachUniqueStmt(Symbol *symbol, Expr *e, Stmt *s, SourcePos pos)
+    : Stmt(pos, ForeachUniqueStmtID), sym(symbol), expr(e), stmts(s) {}
 
 void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock())
@@ -2481,6 +2562,17 @@ void ForeachUniqueStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, in
 
 int ForeachUniqueStmt::EstimateCost() const { return COST_VARYING_LOOP; }
 
+ForeachUniqueStmt *ForeachUniqueStmt::Instantiate(TemplateInstantiation &templInst) const {
+    Expr *instExpr = expr ? expr->Instantiate(templInst) : nullptr;
+    Stmt *instStmts = stmts ? stmts->Instantiate(templInst) : nullptr;
+    Symbol *instSym = templInst.InstantiateSymbol(sym);
+
+    ForeachUniqueStmt *inst = new ForeachUniqueStmt(instSym, instExpr, instStmts, pos);
+    inst->loopAttribute = loopAttribute;
+
+    return inst;
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // CaseStmt
 
@@ -2522,6 +2614,11 @@ Stmt *CaseStmt::TypeCheck() { return this; }
 
 int CaseStmt::EstimateCost() const { return 0; }
 
+CaseStmt *CaseStmt::Instantiate(TemplateInstantiation &templInst) const {
+    Stmt *instStmts = stmts ? stmts->Instantiate(templInst) : nullptr;
+    return new CaseStmt(value, instStmts, pos);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // DefaultStmt
 
@@ -2543,6 +2640,11 @@ void DefaultStmt::Print(Indent &indent) const {
 Stmt *DefaultStmt::TypeCheck() { return this; }
 
 int DefaultStmt::EstimateCost() const { return 0; }
+
+DefaultStmt *DefaultStmt::Instantiate(TemplateInstantiation &templInst) const {
+    Stmt *instStmts = stmts ? stmts->Instantiate(templInst) : nullptr;
+    return new DefaultStmt(instStmts, pos);
+}
 
 ///////////////////////////////////////////////////////////////////////////
 // SwitchStmt
@@ -2756,6 +2858,12 @@ int SwitchStmt::EstimateCost() const {
         return COST_UNIFORM_SWITCH;
 }
 
+SwitchStmt *SwitchStmt::Instantiate(TemplateInstantiation &templInst) const {
+    Expr *instExpr = expr ? expr->Instantiate(templInst) : nullptr;
+    Stmt *instStmts = stmts ? stmts->Instantiate(templInst) : nullptr;
+    return new SwitchStmt(instExpr, instStmts, pos);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // UnmaskedStmt
 
@@ -2807,6 +2915,11 @@ Stmt *UnmaskedStmt::TypeCheck() { return this; }
 
 int UnmaskedStmt::EstimateCost() const { return COST_ASSIGN; }
 
+UnmaskedStmt *UnmaskedStmt::Instantiate(TemplateInstantiation &templInst) const {
+    Stmt *instStmts = stmts ? stmts->Instantiate(templInst) : nullptr;
+    return new UnmaskedStmt(instStmts, pos);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // ReturnStmt
 
@@ -2849,6 +2962,11 @@ void ReturnStmt::EmitCode(FunctionEmitContext *ctx) const {
 Stmt *ReturnStmt::TypeCheck() { return this; }
 
 int ReturnStmt::EstimateCost() const { return COST_RETURN; }
+
+ReturnStmt *ReturnStmt::Instantiate(TemplateInstantiation &templInst) const {
+    Expr *instExpr = expr ? expr->Instantiate(templInst) : nullptr;
+    return new ReturnStmt(instExpr, pos);
+}
 
 void ReturnStmt::Print(Indent &indent) const {
     indent.Print("ReturnStmt", pos);
@@ -2925,6 +3043,11 @@ Stmt *GotoStmt::TypeCheck() { return this; }
 
 int GotoStmt::EstimateCost() const { return COST_GOTO; }
 
+GotoStmt *GotoStmt::Instantiate(TemplateInstantiation &templInst) const {
+    return new GotoStmt(label.c_str(), pos, identifierPos);
+    ;
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // LabeledStmt
 
@@ -2983,6 +3106,11 @@ Stmt *LabeledStmt::TypeCheck() {
 
 int LabeledStmt::EstimateCost() const { return 0; }
 
+LabeledStmt *LabeledStmt::Instantiate(TemplateInstantiation &templInst) const {
+    Stmt *instStmt = stmt ? stmt->Instantiate(templInst) : nullptr;
+    return new LabeledStmt(name.c_str(), instStmt, pos);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // StmtList
 
@@ -2998,6 +3126,14 @@ void StmtList::EmitCode(FunctionEmitContext *ctx) const {
 Stmt *StmtList::TypeCheck() { return this; }
 
 int StmtList::EstimateCost() const { return 0; }
+
+StmtList *StmtList::Instantiate(TemplateInstantiation &templInst) const {
+    StmtList *inst = new StmtList(pos);
+    for (auto stmt : stmts) {
+        inst->Add(stmt ? stmt->Instantiate(templInst) : nullptr);
+    }
+    return inst;
+}
 
 void StmtList::Print(Indent &indent) const {
     indent.PrintLn("StmtList", pos);
@@ -3622,6 +3758,11 @@ Stmt *PrintStmt::TypeCheck() { return this; }
 
 int PrintStmt::EstimateCost() const { return COST_FUNCALL; }
 
+PrintStmt *PrintStmt::Instantiate(TemplateInstantiation &templInst) const {
+    Expr *instValues = values ? values->Instantiate(templInst) : nullptr;
+    return new PrintStmt(format, instValues, pos);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // AssertStmt
 
@@ -3735,6 +3876,11 @@ Stmt *AssertStmt::TypeCheck() {
 
 int AssertStmt::EstimateCost() const { return COST_ASSERT; }
 
+AssertStmt *AssertStmt::Instantiate(TemplateInstantiation &templInst) const {
+    Expr *instExpr = expr ? expr->Instantiate(templInst) : nullptr;
+    return new AssertStmt(message, instExpr, pos);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // DeleteStmt
 
@@ -3822,3 +3968,8 @@ Stmt *DeleteStmt::TypeCheck() {
 }
 
 int DeleteStmt::EstimateCost() const { return COST_DELETE; }
+
+DeleteStmt *DeleteStmt::Instantiate(TemplateInstantiation &templInst) const {
+    Expr *instExpr = expr->Instantiate(templInst);
+    return new DeleteStmt(instExpr, pos);
+}
