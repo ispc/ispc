@@ -1,6 +1,6 @@
 #!/bin/bash
 # ##################################################
-#  Copyright (c) 2020, Intel Corporation
+#  Copyright (c) 2020-2022, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -41,7 +41,7 @@ scriptPath="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Default values are below
 ispc_home=${scriptPath}/..
 llvm_dir=${ispc_home}/llvm
-llvm_version=12.0
+llvm_versiion=13.0
 ispc_build=${ispc_home}/build
 ispc_install=${ispc_home}/install
 speed=4
