@@ -134,6 +134,8 @@ class ASTNode : public Traceable {
         enumerant values defined in ispc.h. */
     virtual int EstimateCost() const = 0;
 
+    virtual ASTNode *Instantiate(TemplateInstantiation &templInst) const = 0;
+
     /** All AST nodes must track the file position where they are
         defined. */
     SourcePos pos;

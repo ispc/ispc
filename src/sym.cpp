@@ -36,8 +36,10 @@
 */
 
 #include "sym.h"
+#include "expr.h"
 #include "type.h"
 #include "util.h"
+
 #include <algorithm>
 #include <array>
 #include <iterator>
