@@ -1,4 +1,4 @@
-ARG LLVM_VERSION=12.0
+ARG LLVM_VERSION=13.0
 
 FROM centos:7 AS llvm_only
 MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
