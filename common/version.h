@@ -38,6 +38,6 @@
 #pragma once
 
 #define ISPC_VERSION_MAJOR 1
-#define ISPC_VERSION_MINOR 18
+#define ISPC_VERSION_MINOR 19
 #define ISPC_VERSION_PATCH 0
-#define ISPC_VERSION "1.18.0"
+#define ISPC_VERSION "1.19.0dev"
