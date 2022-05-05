@@ -672,20 +672,24 @@ To generate a text assembly file, pass ``--emit-asm``:
 
 ::
 
-   ispc foo.ispc -o foo.asm --emit-asm
+   ispc foo.ispc -o foo.s --emit-asm
 
 To generate LLVM bitcode, use the ``--emit-llvm`` flag.
 To generate LLVM bitcode in textual form, use the ``--emit-llvm-text`` flag.
 
-To generate a stub after running the preprocessor, use the ``-E`` flag.
+To run only the preprocessor, use the ``-E`` flag.
 
 ::
 
-    ispc foo.ispc -E -o foo.i  OR  ispc foo.ispc -E -o foo.ispi
+    ispc foo.ispc -E -o foo.i
+    ispc foo.ispc -E -o foo.ispi
 
-In this mode, the preprocessor will assume ``stdout`` if no output file is
-specified.
-Both ``.i`` or ``.ispi`` are valid suffixes.
+In this mode, the output will be directed to ``stdout`` if no output file is
+specified.  The standard suffixes ``.i`` or ``.ispi`` are assumed for preprocessor output.
+
+By default the compilation will fail if preprocessor encountered an error.
+To ignore the preprocessor errors and proceed with normal compilation flow,
+``--ignore-preprocessor-errors`` switch may be used.
 
 Optimizations are on by default; they can be turned off with ``-O0``:
 
