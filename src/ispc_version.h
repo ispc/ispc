@@ -51,7 +51,7 @@
 #define ISPC_LLVM_15_0 150000
 
 #define OLDEST_SUPPORTED_LLVM ISPC_LLVM_10_0
-#define LATEST_SUPPORTED_LLVM ISPC_LLVM_14_0
+#define LATEST_SUPPORTED_LLVM ISPC_LLVM_15_0
 
 #ifdef __ispc__xstr
 #undef __ispc__xstr
@@ -63,7 +63,7 @@
     __ispc__xstr(LLVM_VERSION_MAJOR) "." __ispc__xstr(LLVM_VERSION_MINOR) "." __ispc__xstr(LLVM_VERSION_PATCH)
 
 #if ISPC_LLVM_VERSION < OLDEST_SUPPORTED_LLVM || ISPC_LLVM_VERSION > LATEST_SUPPORTED_LLVM
-#error "Only LLVM 11.0 - 14.0 are supported"
+#error "Only LLVM 11.0 - 14.0 and 15.0 development branch are supported"
 #endif
 
 #define ISPC_VERSION_STRING                                                                                            \
