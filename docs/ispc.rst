@@ -496,9 +496,23 @@ code.
 Updating ISPC Programs For Changes In ISPC 1.18.0
 -------------------------------------------------
 
-AVX512 targets were renamed to drop "base type", old naming is accepted for
-compatibility. New names are `avx512skx-x4`, `avx512skx-x8`, `avx512skx-x16`,
-`avx512skx-x32`, `avx512skx-x64`, and `avx512knl-x16`.
+AVX512 targets were renamed to drop "base type" (or "mask size"), old naming is accepted for
+compatibility. New names are avx512skx-x4, avx512skx-x8, avx512skx-x16,
+avx512skx-x32, avx512skx-x64, and avx512knl-x16.
+
+Standard library gained full support for ``float16`` type.  Note that it is
+fully supported only on the targets with native hardware support.
+On the other targets emulation is still not guaranteed, but may work in some cases.
+
+The compiler gained support for ``-E`` switch for running preprocessor only,
+which is similar to the switch of C/C++ compilers.  Also, as a result of bug fix,
+in case of preprocessor error, the compiler will crash now.  It used not to crash and
+produced some output (sometimes correct!).  As it was a convenient feature for some
+users running experiments in isolated environment (like ignoring missing includes
+when compiling of `Compiler Explorer`_), ``--ignore-preprocessor-errors`` switch
+was added to preserve this behavior.
+
+.. _Compiler Explorer: https://godbolt.org/
 
 
 Getting Started with ISPC
