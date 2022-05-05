@@ -756,10 +756,23 @@ on which you're running ``ispc`` is used to determine the target CPU.
 
    ispc foo.ispc -o foo.obj --device=corei7-avx
 
-Next, ``--target`` selects the target instruction set.  The target
-string is of the form ``[ISA]-i[mask size]x[gang size]``.  For example,
-``--target=avx2-i32x16`` specifies a target with the AVX2 instruction set,
-a mask size of 32 bits, and a gang size of 16.
+Next, ``--target`` selects the target instruction set.  For targets without
+hardware support for masking, the target string is of the form ``[ISA]-i[mask size]x[gang size]``.
+For example, ``--target=avx2-i32x16`` specifies a target with the AVX2 instruction set,
+a mask size of 32 bits, and a gang size of 16.  For targets with hardware masking support,
+which are AVX512 and GPU targets, the target string is of the form
+``[ISA]-x[gang size]``.  For example, ``--target=xehpg-x16`` specifies Intel XeHPG
+as a target ISA and defines a gang size of 16.
+
+By default, the target instruction set is chosen based on the most capable
+one supported by the system on which you're running ``ispc``.  In this case a warning
+will be issued noting the target used for compilation.  It is recommended to
+always use ``--target`` switch to explicitly specify the target.
+
+To get the complete list of supported targets, please use ``--help`` switch
+and note the list in the description of ``--target``, or use ``--support-matrix``
+switch, which will give the complete information of supported combinations
+of target, arch and target OS.
 
 The following target ISAs are supported:
 
@@ -774,26 +787,23 @@ neon         ARM NEON
 sse2         SSE2 (early 2000s era x86 CPUs)
 sse4         SSE4 (generally 2008-2010 Intel CPUs)
 gen9         Intel Gen9 GPU
+xehpg        Intel XeHPG GPU
 xelp         Intel XeLP GPU
 ============ =========================================================
 
 Consult your CPU's manual for specifics on which vector instruction set it
 supports.
 
-The mask size may be 8, 16, or 32 bits, though not all combinations of ISAs
-and mask sizes are supported.  For best performance, the best general
+The mask size may be 8, 16, 32, or 64 bits, though not all combinations of ISA
+and mask size are supported.  For best performance, the best general
 approach is to choose a mask size equal to the size of the most common
-datatype in your programs.  For example, if most of your computation is on
+datatype in your programs.  For example, if most of the computations are done using
 32-bit floating-point values, an ``i32`` target is appropriate.  However,
-if you're mostly doing computation on 8-bit images, ``i8`` is a better choice.
+if you're mostly doing computation with 8-bit data types, ``i8`` is a better choice.
 
 See `Basic Concepts: Program Instances and Gangs of Program Instances`_ for
 more discussion of the "gang size" and its implications for program
 execution.
-
-Running ``ispc --help`` and looking at the output for the ``--target``
-option gives the most up-to-date documentation about which targets your
-compiler binary supports.
 
 The naming scheme for compilation targets changed in August 2013; the
 following table shows the relationship between names in the old scheme and
@@ -817,15 +827,8 @@ sse4-i8x16    n/a
 sse4-i16x8    n/a
 ============= ===========
 
-By default, the target instruction set is chosen based on the most capable
-one supported by the system on which you're running ``ispc``.  You can
-override this choice with the ``--target`` flag; for example, to select
-Intel® SSE2 with a 32-bit mask and 4 program instances in a gang, use
-``--target=sse2-i32x4``.  (As with the other options in this section, see
-the output of ``ispc --help`` for a full list of supported targets.)
-
 Finally, ``--target-os`` selects the target operating system. Depending on
-your host ``ispc`` may support Windows, Linux, macOS, Android, iOS and PS4
+your host ``ispc`` may support Windows, Linux, macOS, Android, iOS and PS4/PS5
 targets. Running ``ispc --help`` and looking at the output for the ``--target-os``
 option gives the list of supported targets. By default ``ispc`` produces the
 code for your host operating system.
