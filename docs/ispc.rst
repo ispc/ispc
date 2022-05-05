@@ -3665,8 +3665,8 @@ otherwise ``f``. These are the variants of ``select()`` for the ``int8`` type:
     int8 select(uniform bool cond, int8 t, int8 f)
     uniform int8 select(uniform bool cond, uniform int8 t, uniform int8 f)
 
-There are also variants for ``int16``, ``int32``, ``int64``, ``float``, and
-``double`` types.
+There are also variants for ``int16``, ``int32``, ``int64``, ``float``, ``float16``
+and ``double`` types.
 
 Bit Operations
 --------------
@@ -3710,24 +3710,33 @@ Also it is possible to convert a ``bool`` varying value to an integer using
 
     uniform int packmask(bool value)
 
-The ``intbits()`` and ``floatbits()`` functions can be used to implement
-low-level floating-point bit twiddling.  For example, ``intbits()`` returns
-an ``unsigned int`` that is a bit-for-bit copy of the given ``float``
-value.  (Note: it is **not** the same as ``(int)a``, but corresponds to
-something like ``*((int *)&a)`` in C.
+The ``intbits()``, ``float16bits()``, ``floatbits()`` and ``doublebits()``
+functions can be used to implement low-level floating-point bit twiddling.
+For example, ``intbits()`` returns an ``unsigned int`` that is a bit-for-bit
+copy of the given ``float`` value.  (Note: it is **not** the same as ``(int)a``,
+but corresponds to something like ``*((int *)&a)`` in C.
 
 ::
 
+    float16 float16bits(unsigned int16 a);
+    uniform float16 float16bits(uniform unsigned int16 a);
     float floatbits(unsigned int a);
     uniform float floatbits(uniform unsigned int a);
+    double doublebits(unsigned int64 a);
+    uniform double doublebits(uniform unsigned int64 a);
+    unsigned int16 intbits(float16 a);
+    uniform unsigned int16 intbits(uniform float16 a);
     unsigned int intbits(float a);
     uniform unsigned int intbits(uniform float a);
+    unsigned int64 intbits(double a);
+    uniform unsigned int64 intbits(uniform double a);
 
 
-The ``intbits()`` and ``floatbits()`` functions have no cost at runtime;
-they just let the compiler know how to interpret the bits of the given
-value.  They make it possible to efficiently write functions that take
-advantage of the low-level bit representation of floating-point values.
+The ``intbits()``, ``float16bits()``, ``floatbits()`` and ``doublebits()``
+functions have no cost at runtime; they just let the compiler know how to
+interpret the bits of the given value.  They make it possible to efficiently
+write functions that take advantage of the low-level bit representation of
+floating-point values.
 
 For example, the ``abs()`` function in the standard library is implemented
 as follows:
@@ -3784,6 +3793,8 @@ is on (i.e. the value is negative) and zero if it is off.
 
 ::
 
+    float16 abs(float a)
+    uniform float16 abs(uniform float a)
     float abs(float a)
     uniform float abs(uniform float a)
     double abs(double a)
@@ -3796,11 +3807,16 @@ is on (i.e. the value is negative) and zero if it is off.
     uniform int abs(uniform int a)
     int64 abs(int64 a)
     uniform int64 abs(uniform int64 a)
+    unsigned int16 signbits(float16 x)
+    uniform unsigned int16 signbits(uniform float16 x)
     unsigned int signbits(float x)
+    uniform unsigned int signbits(uniform float x)
+    unsigned int64 signbits(double x)
+    uniform unsigned int64 signbits(uniform double x)
 
-Standard rounding functions are provided.  (On machines that support Intel®
-SSE or Intel® AVX, these functions all map to variants of the ``roundss`` and
-``roundps`` instructions, respectively.)
+Standard rounding functions are provided for ``float16``, ``float`` and ``double``
+types.  (On machines that support Intel®SSE or Intel® AVX, these functions all
+map to variants of the ``roundss`` and ``roundps`` instructions, respectively.)
 
 ::
 
@@ -3830,8 +3846,8 @@ use Newton-Raphson.
     float rcp_fast(float v)
     uniform float rcp_fast(uniform float v)
 
-A standard set of minimum and maximum functions is available.  These
-functions also map to corresponding intrinsic functions.
+A standard set of minimum and maximum functions is available for all ispc
+standard types.  These functions also map to corresponding intrinsic functions.
 
 ::
 
@@ -3981,6 +3997,9 @@ normalized exponent as a power of two in the ``pw2`` parameter.
     uniform float frexp(uniform float x,
                         uniform int * uniform pw2)
 
+
+All transcendental functions are provided for ``float16``, ``float`` and
+``double`` types.
 
 Saturating Arithmetic
 ---------------------
@@ -4260,6 +4279,7 @@ the running program instances.
     int16 broadcast(int16 value, uniform int index)
     int32 broadcast(int32 value, uniform int index)
     int64 broadcast(int64 value, uniform int index)
+    float16 broadcast(float16 value, uniform int index)
     float broadcast(float value, uniform int index)
     double broadcast(double value, uniform int index)
 
@@ -4278,6 +4298,7 @@ the size of the gang (it is masked to ensure valid offsets).
     int16 rotate(int16 value, uniform int offset)
     int32 rotate(int32 value, uniform int offset)
     int64 rotate(int64 value, uniform int offset)
+    float16 rotate(float16 value, uniform int offset)
     float rotate(float value, uniform int offset)
     double rotate(double value, uniform int offset)
 
@@ -4294,6 +4315,7 @@ Instead, zeroes are shifted in where appropriate.
     int16 shift(int16 value, uniform int offset)
     int32 shift(int32 value, uniform int offset)
     int64 shift(int64 value, uniform int offset)
+    float16 shift(float16 value, uniform int offset)
     float shift(float value, uniform int offset)
     double shift(double value, uniform int offset)
 
@@ -4310,6 +4332,7 @@ from which to get the value of ``value``.  The provided values for
     int16 shuffle(int16 value, int permutation)
     int32 shuffle(int32 value, int permutation)
     int64 shuffle(int64 value, int permutation)
+    float16 shuffle(float16 value, int permutation)
     float shuffle(float value, int permutation)
     double shuffle(double value, int permutation)
 
@@ -4326,6 +4349,7 @@ the last element of ``value1``, etc.)
     int16 shuffle(int16 value0, int16 value1, int permutation)
     int32 shuffle(int32 value0, int32 value1, int permutation)
     int64 shuffle(int64 value0, int64 value1, int permutation)
+    float16 shuffle(float16 value0, float16 value1, int permutation)
     float shuffle(float value0, float value1, int permutation)
     double shuffle(double value0, double value1, int permutation)
 
@@ -4344,7 +4368,9 @@ element of it as a single ``uniform`` value.  .
     uniform int16 extract(int16 x, uniform int i)
     uniform int32 extract(int32 x, uniform int i)
     uniform int64 extract(int64 x, uniform int i)
+    uniform float16 extract(float16 x, uniform int i)
     uniform float extract(float x, uniform int i)
+    uniform double extract(double x, uniform int i)
 
 Similarly, ``insert`` returns a new value
 where the ``i`` th element of ``x`` has been replaced with the value ``v``
@@ -4356,7 +4382,9 @@ where the ``i`` th element of ``x`` has been replaced with the value ``v``
     int16 insert(int16 x, uniform int i, uniform int16 v)
     int32 insert(int32 x, uniform int i, uniform int32 v)
     int64 insert(int64 x, uniform int i, uniform int64 v)
+    float16 insert(float16 x, uniform int i, uniform float16 v)
     float insert(float x, uniform int i, uniform float v)
+    double insert(double x, uniform int i, uniform double v)
 
 
 Reductions
@@ -4390,6 +4418,7 @@ instances are added together by the ``reduce_add()`` function.
     uniform int64 reduce_add(int64 x)
     uniform unsigned int64 reduce_add(unsigned int64 x)
 
+    uniform float16 reduce_add(float16 x)
     uniform float reduce_add(float x)
     uniform double reduce_add(double x)
 
@@ -4403,6 +4432,7 @@ across all of the currently-executing program instances.
     uniform int64 reduce_min(int64 a)
     uniform unsigned int64 reduce_min(unsigned int64 a)
 
+    uniform float16 reduce_min(float16 a)
     uniform float reduce_min(float a)
     uniform double reduce_min(double a)
 
@@ -4416,6 +4446,7 @@ varying variable over the active program instances.
     uniform int64 reduce_max(int64 a)
     uniform unsigned int64 reduce_max(unsigned int64 a)
 
+    uniform float16 reduce_max(float16 a)
     uniform float reduce_max(float a)
     uniform double reduce_max(double a)
 
@@ -4429,6 +4460,7 @@ all of the currently-running program instances:
     uniform bool reduce_equal(int64 v)
     uniform bool reduce_equal(unsigned int64 v)
 
+    uniform bool reduce_equal(float16 v)
     uniform bool reduce_equal(float v)
     uniform bool reduce_equal(double)
 
@@ -4448,6 +4480,7 @@ performance in the `Performance Guide`_.
     uniform bool reduce_equal(unsigned int64 v,
                               uniform unsigned int64 * uniform sameval)
 
+    uniform bool reduce_equal(float16 v, uniform float16 * uniform sameval)
     uniform bool reduce_equal(float v, uniform float * uniform sameval)
     uniform bool reduce_equal(double, uniform double * uniform sameval)
 
@@ -4478,6 +4511,7 @@ bitwise-or are available:
 
     int32 exclusive_scan_add(int32 v)
     unsigned int32 exclusive_scan_add(unsigned int32 v)
+    float16 exclusive_scan_add(float16 v)
     float exclusive_scan_add(float v)
     int64 exclusive_scan_add(int64 v)
     unsigned int64 exclusive_scan_add(unsigned int64 v)
@@ -4651,6 +4685,7 @@ For storing to array from varying variable:
     void streaming_store(uniform int a[], int vals)
     void streaming_store(uniform unsigned int64 a[], unsigned int64 vals)
     void streaming_store(uniform int64 a[], int64 vals)
+    void streaming_store(uniform float16 a[], float16 vals)
     void streaming_store(uniform float a[], float vals)
     void streaming_store(uniform double a[], double vals)
 
@@ -4666,6 +4701,7 @@ For storing to array from uniform variable:
     void streaming_store(uniform int a[], uniform int vals)
     void streaming_store(uniform unsigned int64 a[], uniform unsigned int64 vals)
     void streaming_store(uniform int64 a[], uniform int64 vals)
+    void streaming_store(uniform float16 a[], uniform float16 vals)
     void streaming_store(uniform float a[], uniform float vals)
     void streaming_store(uniform double a[], uniform double vals)
 
@@ -4683,6 +4719,7 @@ For loading as varying from array:
     varying int streaming_load(uniform int a[])
     varying unsigned int64 streaming_load(uniform unsigned int64 a[])
     varying int64 streaming_load(uniform int64 a[])
+    varying float16 streaming_load(uniform float16 a[])
     varying float streaming_load(uniform float a[])
     varying double streaming_load(uniform double a[])
 
@@ -4698,6 +4735,7 @@ For loading as uniform from array:
     uniform int streaming_load_uniform(uniform int a[])
     uniform unsigned int64 streaming_load_uniform(uniform unsigned int64 a[])
     uniform int64 streaming_load_uniform(uniform int64 a[])
+    uniform float16 streaming_load_uniform(uniform float16 a[])
     uniform float streaming_load_uniform(uniform float a[])
     uniform double streaming_load_uniform(uniform double a[])
 
