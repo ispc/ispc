@@ -1831,10 +1831,10 @@ basic types:
 * ``int``: 32-bit signed integer; may also be specified as ``int32``.
 * ``unsigned int``: 32-bit unsigned integer; may also be specified as
   ``unsigned int32``, ``uint32`` or ``uint``.
-* ``float16``: 16-bit floating point value
-* ``float``: 32-bit floating point value
 * ``int64``: 64-bit signed integer.
 * ``unsigned int64``: 64-bit unsigned integer; may also be specified as ``uint64``.
+* ``float16``: 16-bit floating point value
+* ``float``: 32-bit floating point value
 * ``double``: 64-bit double-precision floating point value.
 
 There are also a few built-in types related to pointers and memory:
@@ -2371,7 +2371,7 @@ varying.
 
 Here, ``b`` is a ``varying Bar`` (since ``varying`` is the default
 variability).  If ``Bar`` is defined as above, then ``vb.a`` is still a
-``uniform int``, since its varaibility was bound in the original
+``uniform int``, since its variability was bound in the original
 declaration of the ``Bar`` type.  Similarly, ``vb.b`` is ``varying``.  The
 variability of ``vb.c`` is ``varying``, since ``vb`` is ``varying``.
 
@@ -3903,6 +3903,8 @@ The ``isnan()`` functions test whether the given value is a floating-point
 
 ::
 
+    bool isnan(float16 v)
+    uniform bool isnan(uniform float16 v)
     bool isnan(float v)
     uniform bool isnan(uniform float v)
     bool isnan(double v)
@@ -4887,9 +4889,12 @@ Conversions To and From Half-Precision Floats
 ---------------------------------------------
 
 There are functions to convert to and from the IEEE 16-bit floating-point
-format.  Note that there is a ``float16`` data-type in ``ispc`` but with limited
-library support; these functions facilitate converting to and from half-format
-data in memory.
+format.  Note that there is a ``float16`` data-type in ``ispc``, which has
+full language and standard library support, but only on the targets with
+hardware support for this type.
+The following functions facilitate converting to and from half-format
+data in memory and are primarily targeted for the use on the targets
+without native support for ``float16`` in the hardware.
 
 To use them, half-format data should be loaded into an ``int16`` and the
 ``half_to_float()`` function used to convert it to a 32-bit floating point
