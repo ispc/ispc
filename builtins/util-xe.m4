@@ -6731,25 +6731,21 @@ global_atomic_varying(WIDTH, umax, i64, uint64)
 define(`trigonometry_decl',`
     declare <WIDTH x half> @__asin_varying_half(<WIDTH x half>) nounwind readnone
     declare <WIDTH x half> @__acos_varying_half(<WIDTH x half>) nounwind readnone
-    declare void @__sincos_varying_half(<WIDTH x half>, <WIDTH x half>*, <WIDTH x half>*) nounwind
     declare <WIDTH x half> @__atan_varying_half(<WIDTH x half>) nounwind readnone
     declare <WIDTH x half> @__atan2_varying_half(<WIDTH x half>,<WIDTH x half>) nounwind readnone
 
     declare float @__asin_uniform_half(half) nounwind readnone
     declare float @__acos_uniform_half(half) nounwind readnone
-    declare void @__sincos_uniform_half(half, half*, half*) nounwind
     declare half @__atan_uniform_half(half) nounwind readnone
     declare half @__atan2_uniform_half(half,half) nounwind readnone
 
     declare <WIDTH x float> @__asin_varying_float(<WIDTH x float>) nounwind readnone
     declare <WIDTH x float> @__acos_varying_float(<WIDTH x float>) nounwind readnone
-    declare void @__sincos_varying_float(<WIDTH x float>, <WIDTH x float>*, <WIDTH x float>*) nounwind
     declare <WIDTH x float> @__atan_varying_float(<WIDTH x float>) nounwind readnone
     declare <WIDTH x float> @__atan2_varying_float(<WIDTH x float>,<WIDTH x float>) nounwind readnone
 
     declare float @__asin_uniform_float(float) nounwind readnone
     declare float @__acos_uniform_float(float) nounwind readnone
-    declare void @__sincos_uniform_float(float, float*, float*) nounwind
     declare float @__atan_uniform_float(float) nounwind readnone
     declare float @__atan2_uniform_float(float,float) nounwind readnone
 ')

@@ -2720,7 +2720,7 @@ __declspec(safe) static inline uniform float acos(uniform float v) {
 
 __declspec(safe) static inline void sincos(float x_full, varying float *uniform sin_result,
                                            varying float *uniform cos_result) {
-    if (__have_native_trigonometry && !__is_xe_target) {
+    if (__have_native_trigonometry) {
         __sincos_varying_float(x_full, sin_result, cos_result);
         return;
     }
@@ -2789,7 +2789,7 @@ __declspec(safe) static inline void sincos(float x_full, varying float *uniform 
 
 __declspec(safe) static inline void sincos(uniform float x_full, uniform float *uniform sin_result,
                                            uniform float *uniform cos_result) {
-    if (__have_native_trigonometry && !__is_xe_target) {
+    if (__have_native_trigonometry) {
         __sincos_uniform_float(x_full, sin_result, cos_result);
         return;
     }
@@ -3674,8 +3674,7 @@ __declspec(safe) static inline uniform float16 acos(uniform float16 x_full) {
 __declspec(safe) static inline void sincos(float16 x_full, varying float16 *uniform sin_result,
                                            varying float16 *uniform cos_result) {
     if (__have_native_trigonometry) {
-        *sin_result = __sin_varying_half(x_full);
-        *cos_result = __cos_varying_half(x_full);
+        __sincos_varying_half(x_full, sin_result, cos_result);
     } else {
         *sin_result = (float16)sin((float)x_full);
         *cos_result = (float16)cos((float)x_full);
@@ -3686,8 +3685,7 @@ __declspec(safe) static inline void sincos(float16 x_full, varying float16 *unif
 __declspec(safe) static inline void sincos(uniform float16 x_full, uniform float16 *uniform sin_result,
                                            uniform float16 *uniform cos_result) {
     if (__have_native_trigonometry) {
-        *sin_result = __sin_uniform_half(x_full);
-        *cos_result = __cos_uniform_half(x_full);
+        __sincos_uniform_half(x_full, sin_result, cos_result);
     } else {
         *sin_result = (uniform float16)sin((uniform float)x_full);
         *cos_result = (uniform float16)cos((uniform float)x_full);

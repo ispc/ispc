@@ -15,9 +15,7 @@
 ./tests/recursion.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 12.0 clang++12.0 O0 spv *
 ./tests/short-vec-6.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 12.0 clang++12.0 O0 spv *
 ./tests/short-vec-6.ispc runfail    xe64        gen9-x8 unspec   Linux LLVM 13.0 clang++13.0 O0 spv *
-./tests/transcendentals-sincos-varying-float16.ispc runfail    xe64        gen9-x8 unspec   Linux LLVM 13.0 clang++13.0 O0 spv *
 ./tests/short-vec-6.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 13.0 clang++13.0 O0 spv *
-./tests/transcendentals-sincos-varying-float16.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 13.0 clang++13.0 O0 spv *
 ./tests/varying-float16-rsqrt.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 13.0 clang++13.0 O0 spv *
 ./tests/varying-float16-rsqrt.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 13.0 clang++13.0 O2 spv *
 ./tests/varying-float16-rsqrt.ispc runfail    xe64       xelp-x16 tgllp   Linux LLVM 13.0 clang++13.0 O2 spv *
