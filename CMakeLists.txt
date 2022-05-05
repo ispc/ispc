@@ -454,7 +454,7 @@ else()
     # Security options
     target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector-strong
                            -fdata-sections -ffunction-sections -fno-delete-null-pointer-checks
-                           -Wformat -Wformat-security -fPIE -fwrapv)
+                           -Wformat -Wformat-security -fpie -fwrapv)
 endif()
 
 # Set C++ standard to C++17.
@@ -480,8 +480,6 @@ if (WIN32)
     endif()
 elseif (APPLE)
 else()
-    # Position independent code
-    target_link_options(${PROJECT_NAME} PRIVATE -pie)
     # Link options for security hardening.
     target_link_options(${PROJECT_NAME}
         PUBLIC "SHELL: -z noexecstack"
