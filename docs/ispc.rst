@@ -35,10 +35,10 @@ The main goals behind ``ispc`` are to:
 in hearing your experiences using the system.  We are especially interested
 in hearing if you try using ispc but see results that are not as you
 were expecting or hoping for.** We encourage you to send a note with your
-experiences or comments to the `ispc-users`_ mailing list or to file bug or
+experiences or comments to the `GitHub Discussions`_ forum or to file bug or
 feature requests with the ``ispc`` `bug tracker`_. (Thanks!)
 
-.. _ispc-users: http://groups.google.com/group/ispc-users
+.. _GitHub Discussions: https://github.com/ispc/ispc/discussions
 .. _bug tracker: https://github.com/ispc/ispc/issues?state=open
 
 
