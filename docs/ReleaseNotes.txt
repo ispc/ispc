@@ -1,3 +1,77 @@
+=== v1.18.0 === (5 May 2022)
+
+An ISPC release with a bunch of stability and performance fixes, improvements
+for ISPC Runtime, and complete stdlib support for `float16` type. This release
+is based on patched LLVM 13.0.1.
+
+`-E` switch was introduced to run preprocessor only. An old bug preventing the
+compiler to crash in case of preprocessor error was fixed and now the compiler
+will properly crash. As some users considered an old behavior convenient in
+some cases, `--ignore-preprocessor-errors` switch was introduced to maintain
+the old behavior.
+
+Targets naming was changed for the targets with native masking support to drop
+"base type" from the naming scheme, the old naming is accepted for
+compatibility. This affected AVX512 target names, the new names are
+`avx512skx-x4`, `avx512skx-x8`, `avx512skx-x16`, `avx512skx-x32`,
+`avx512skx-x64`, and `avx512knl-x16`.
+
+For debugging and for those, who are interested in understanding compiler
+internals, `--ast-dump` switch was introduced. The produced dump of AST
+(Abstract Syntax Tree) is intentionally made to look like clang AST dump for
+convenience.
+
+Standard library gained full support for `float16` type. Note that it is fully
+supported only on the targets with native hardware support. On the other
+targets emulation is still not guaranteed but may work in some cases.
+
+Among other fixes, it is worth mentioning the following:
+- fixed a bug #1308 affecting multi-target compilation
+- a bunch of fixes to make it easier to build ISPC on FreeBSD, even though
+  FreeBSD is not officially supported
+
+Improvements for the ISPC Runtime in this release:
+- flexible task system selection during build
+- support of ISPCRT build separate from ISPC
+- support of ISPCRT build for CPU only
+- version check in CMake
+- new API to get the type of allocated memory (`ispcrtGetMemoryViewAllocType`
+  and `ispcrtGetMemoryAllocType`)
+- new API for memory copy on device (`ispcrtCopyMemoryView`)
+- support of device-only memory without corresponding application memory.
+
+Performance on Xe targets was significantly improved in this release due to
+optimizations in ISPC and Vector Backend.
+
+Runtime Dependencies when targeting GPU:
+
+Linux:
+
+- Intel(R) Graphics Compute Runtime
+  https://github.com/intel/compute-runtime/releases/tag/22.17.23034
+- Level Zero Loader
+  https://github.com/oneapi-src/level-zero/releases/tag/v1.7.15
+- OpenMP Runtime. Consult your Linux distribution documentation for the
+  installation of OpenMP runtime instructions. No specific version is required.
+
+Windows:
+
+- Intel(R) Graphics Windows(R) DCH Drivers 30.0.101.1660
+  https://www.intel.com/content/www/us/en/download/19344/intel-graphics-windows-dch-drivers.html
+- Level Zero Loader
+  https://github.com/oneapi-src/level-zero/releases/tag/v1.7.15
+- OpenCL™ Offline Compiler (OCLOC)
+  https://registrationcenter-download.intel.com/akdlm/irc_nas/18653/ocloc_win_101.1660.zip
+  (this is needed for AoT compilation on Windows only)
+
+Components revisions used in GPU-enabled build:
+
+- https://github.com/KhronosGroup/SPIRV-LLVM-Translator/commit/d7a0304
+- https://github.com/intel/vc-intrinsics/commit/1e2562d
+- https://github.com/oneapi-src/level-zero/commit/bb7fff0 (v1.7.15)
+- https://github.com/llvm/llvm-project/commit/75e33f7 (llvmorg-13.0.1) +
+  patches from llvm_patches folder
+
 === v1.17.0 === (14 January 2022)
 
 An ISPC release with massive update of Xe targets, including support for
