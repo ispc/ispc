@@ -41,10 +41,6 @@
 #include "target_enums.h"
 #include "target_registry.h"
 
-#if ISPC_LLVM_VERSION < OLDEST_SUPPORTED_LLVM || ISPC_LLVM_VERSION > LATEST_SUPPORTED_LLVM
-#error "Only LLVM 11.0 - 14.0 and 15.0 development branch are supported"
-#endif
-
 #if defined(_WIN32) || defined(_WIN64)
 #define ISPC_HOST_IS_WINDOWS
 #elif defined(__linux__)

@@ -63,7 +63,7 @@
     __ispc__xstr(LLVM_VERSION_MAJOR) "." __ispc__xstr(LLVM_VERSION_MINOR) "." __ispc__xstr(LLVM_VERSION_PATCH)
 
 #if ISPC_LLVM_VERSION < OLDEST_SUPPORTED_LLVM || ISPC_LLVM_VERSION > LATEST_SUPPORTED_LLVM
-#error "Unhandled LLVM version"
+#error "Only LLVM 11.0 - 14.0 are supported"
 #endif
 
 #define ISPC_VERSION_STRING                                                                                            \
