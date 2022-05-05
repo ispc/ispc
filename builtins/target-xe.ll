@@ -1477,6 +1477,22 @@ define <WIDTH x float> @__tan_varying_float(<WIDTH x float>) nounwind readnone {
   ret <WIDTH x float> %res
 }
 
+define void @__sincos_uniform_float(float, float*, float*) nounwind {
+  %cos = call float @llvm.genx.cos.f32(float %0)
+  %sin = call float @llvm.genx.sin.f32(float %0)
+  store float %sin, float* %1
+  store float %cos, float* %2
+  ret void
+}
+
+define void @__sincos_varying_float(<WIDTH x float>, <WIDTH x float>*, <WIDTH x float>*) nounwind {
+  %cos = call <WIDTH x float> @llvm.genx.cos.XE_SUFFIX(float)(<WIDTH x float> %0)
+  %sin = call <WIDTH x float> @llvm.genx.sin.XE_SUFFIX(float)(<WIDTH x float> %0)
+  store <WIDTH x float> %sin, <WIDTH x float>* %1
+  store <WIDTH x float> %cos, <WIDTH x float>* %2
+  ret void
+}
+
 declare half @llvm.genx.sin.f16(half) nounwind readnone
 define half @__sin_uniform_half(half) nounwind readnone {
   %res = call half @llvm.genx.sin.f16(half %0)
@@ -1513,6 +1529,22 @@ define <WIDTH x half> @__tan_varying_half(<WIDTH x half>) nounwind readnone {
   %sin = call <WIDTH x half> @llvm.genx.sin.XE_SUFFIX(half)(<WIDTH x half> %0)
   %res = fdiv <WIDTH x half> %sin, %cos
   ret <WIDTH x half> %res
+}
+
+define void @__sincos_uniform_half(half, half*, half*) nounwind {
+  %cos = call half @llvm.genx.cos.f16(half %0)
+  %sin = call half @llvm.genx.sin.f16(half %0)
+  store half %sin, half* %1
+  store half %cos, half* %2
+  ret void
+}
+
+define void @__sincos_varying_half(<WIDTH x half>, <WIDTH x half>*, <WIDTH x half>*) nounwind {
+  %cos = call <WIDTH x half> @llvm.genx.cos.XE_SUFFIX(half)(<WIDTH x half> %0)
+  %sin = call <WIDTH x half> @llvm.genx.sin.XE_SUFFIX(half)(<WIDTH x half> %0)
+  store <WIDTH x half> %sin, <WIDTH x half>* %1
+  store <WIDTH x half> %cos, <WIDTH x half>* %2
+  ret void
 }
 
 trigonometry_decl()
