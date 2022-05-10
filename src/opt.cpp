@@ -108,7 +108,6 @@
 #include <llvm/Support/Regex.h>
 #endif
 #ifdef ISPC_XE_ENABLED
-#include "xe/GlobalsLocalization.h"
 #include <LLVMSPIRVLib/LLVMSPIRVLib.h>
 #include <llvm/GenXIntrinsics/GenXIntrOpts.h>
 #include <llvm/GenXIntrinsics/GenXIntrinsics.h>
@@ -525,9 +524,6 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 #ifdef ISPC_XE_ENABLED
         if (g->target->isXeTarget()) {
             optPM.add(llvm::createPromoteMemoryToRegisterPass());
-            optPM.add(llvm::createGlobalsLocalizationPass());
-            // Remove dead globals after localization
-            optPM.add(llvm::createGlobalDCEPass());
             // This pass is needed for correct prints work
             optPM.add(llvm::createSROAPass());
             optPM.add(CreateReplaceLLVMIntrinsics());
@@ -674,9 +670,6 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
             optPM.add(llvm::createInstructionCombiningPass());
             optPM.add(llvm::createEarlyCSEPass());
             optPM.add(llvm::createDeadCodeEliminationPass());
-            optPM.add(llvm::createGlobalsLocalizationPass());
-            // remove dead globals after localization
-            optPM.add(llvm::createGlobalDCEPass());
         }
 #endif
         optPM.add(llvm::createTailCallEliminationPass());
