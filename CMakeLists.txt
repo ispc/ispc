@@ -367,10 +367,6 @@ target_sources(${PROJECT_NAME}
         "common/version.h"
 )
 
-if (XE_ENABLED)
-    target_sources(${PROJECT_NAME} PRIVATE "src/xe/GlobalsLocalization.cpp")
-endif()
-
 # To show stdlib.ispc in VS solution:
 if (WIN32)
     set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/stdlib.ispc" PROPERTIES HEADER_FILE_ONLY TRUE)
