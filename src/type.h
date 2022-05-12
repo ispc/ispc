@@ -888,6 +888,9 @@ class FunctionType : public Type {
     /* This method returns appropriate llvm::CallingConv for the function*/
     const unsigned int GetCallingConv() const;
 
+    /* Get string representation of calling convention */
+    const std::string GetNameForCallConv() const;
+
     int GetNumParameters() const { return (int)paramTypes.size(); }
     const Type *GetParameterType(int i) const;
     Expr *GetParameterDefault(int i) const;
