@@ -2349,7 +2349,9 @@ const Type *FunctionType::GetAsConstType() const { return this; }
 const Type *FunctionType::GetAsNonConstType() const { return this; }
 
 std::string FunctionType::GetString() const {
-    std::string ret = GetReturnTypeString();
+    std::string ret = GetNameForCallConv();
+    ret += " ";
+    ret += GetReturnTypeString();
     ret += "(";
     for (unsigned int i = 0; i < paramTypes.size(); ++i) {
         if (paramTypes[i] == NULL)
@@ -2588,6 +2590,21 @@ const unsigned int FunctionType::GetCallingConv() const {
             return (unsigned int)llvm::CallingConv::X86_VectorCall;
     }
     return (unsigned int)llvm::CallingConv::C;
+}
+
+const std::string FunctionType::GetNameForCallConv() const {
+    switch (GetCallingConv()) {
+    case llvm::CallingConv::C:
+        return "";
+    case llvm::CallingConv::X86_VectorCall:
+        return "vectorcall";
+    case llvm::CallingConv::SPIR_FUNC:
+        return "spir_func";
+    case llvm::CallingConv::SPIR_KERNEL:
+        return "spir_kernel";
+    default:
+        return "<unknown>";
+    }
 }
 
 const Type *FunctionType::GetParameterType(int i) const {
