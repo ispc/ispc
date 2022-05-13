@@ -71,13 +71,13 @@ jobs:
         cd docker/ubuntu/18.04/cpu_ispc_build
         tar xvf result.tar usr/local/src/llvm
         mv usr/local/src/llvm/bin-14.0 .
-        tar cJvf llvm-14.0.1-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz bin-14.0
+        tar cJvf llvm-14.0.3-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz bin-14.0
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm14_linux_x86
-        path: docker/ubuntu/18.04/cpu_ispc_build/llvm-14.0.1-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+        path: docker/ubuntu/18.04/cpu_ispc_build/llvm-14.0.3-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
 
   linux-build-release-1:
     runs-on: ubuntu-latest
@@ -134,13 +134,13 @@ jobs:
         cd docker/ubuntu/18.04/cpu_ispc_build
         tar xvf result.tar usr/local/src/llvm
         mv usr/local/src/llvm/bin-14.0 .
-        tar cJvf llvm-14.0.1-ubuntu18.04-Release-x86.arm.wasm.tar.xz bin-14.0
+        tar cJvf llvm-14.0.3-ubuntu18.04-Release-x86.arm.wasm.tar.xz bin-14.0
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm14rel_linux_x86
-        path: docker/ubuntu/18.04/cpu_ispc_build/llvm-14.0.1-ubuntu18.04-Release-x86.arm.wasm.tar.xz
+        path: docker/ubuntu/18.04/cpu_ispc_build/llvm-14.0.3-ubuntu18.04-Release-x86.arm.wasm.tar.xz
 
   linux-arm-build:
     runs-on: [self-hosted, linux, ARM64]
@@ -165,14 +165,14 @@ jobs:
         cd docker/ubuntu/18.04/cpu_ispc_build
         tar xvf result.tar usr/local/src/llvm
         mv usr/local/src/llvm/bin-14.0 .
-        tar cJvf llvm-14.0.1-ubuntu18.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz bin-14.0
+        tar cJvf llvm-14.0.3-ubuntu18.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz bin-14.0
         rm -rf result.tar usr bin-14.0
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm14_linux_aarch64
-        path: docker/ubuntu/18.04/cpu_ispc_build/llvm-14.0.1-ubuntu18.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
+        path: docker/ubuntu/18.04/cpu_ispc_build/llvm-14.0.3-ubuntu18.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
 
   linux-arm-build-release:
     runs-on: [self-hosted, linux, ARM64]
@@ -197,14 +197,14 @@ jobs:
         cd docker/ubuntu/18.04/cpu_ispc_build
         tar xvf result.tar usr/local/src/llvm
         mv usr/local/src/llvm/bin-14.0 .
-        tar cJvf llvm-14.0.1-ubuntu18.04aarch64-Release-x86.arm.wasm.tar.xz bin-14.0
+        tar cJvf llvm-14.0.3-ubuntu18.04aarch64-Release-x86.arm.wasm.tar.xz bin-14.0
         rm -rf result.tar usr bin-14.0
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm14rel_linux_aarch64
-        path: docker/ubuntu/18.04/cpu_ispc_build/llvm-14.0.1-ubuntu18.04aarch64-Release-x86.arm.wasm.tar.xz
+        path: docker/ubuntu/18.04/cpu_ispc_build/llvm-14.0.3-ubuntu18.04aarch64-Release-x86.arm.wasm.tar.xz
 
   win-build:
     runs-on: windows-2022
@@ -240,7 +240,7 @@ jobs:
       run: |
         cd llvm
         rmdir /s /q build-14.0
-        set TAR_BASE_NAME=llvm-14.0.1-win.vs2022-Release+Asserts-x86.arm.wasm
+        set TAR_BASE_NAME=llvm-14.0.3-win.vs2022-Release+Asserts-x86.arm.wasm
         7z.exe a -ttar -snl %TAR_BASE_NAME%.tar bin-14.0
         7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
 
@@ -248,7 +248,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: llvm14_win_x86
-        path: llvm/llvm-14.0.1-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z
+        path: llvm/llvm-14.0.3-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z
 
   win-build-release:
     runs-on: windows-2022
@@ -284,7 +284,7 @@ jobs:
       run: |
         cd llvm
         rmdir /s /q build-14.0
-        set TAR_BASE_NAME=llvm-14.0.1-win.vs2022-Release-x86.arm.wasm
+        set TAR_BASE_NAME=llvm-14.0.3-win.vs2022-Release-x86.arm.wasm
         7z.exe a -ttar -snl %TAR_BASE_NAME%.tar bin-14.0
         7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
 
@@ -292,7 +292,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: llvm14rel_win_x86
-        path: llvm/llvm-14.0.1-win.vs2022-Release-x86.arm.wasm.tar.7z
+        path: llvm/llvm-14.0.3-win.vs2022-Release-x86.arm.wasm.tar.7z
 
   mac-build:
     runs-on: macos-10.15
@@ -329,13 +329,13 @@ jobs:
     - name: Pack LLVM
       run: |
         cd llvm
-        tar cJvf llvm-14.0.1-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz bin-14.0
+        tar cJvf llvm-14.0.3-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz bin-14.0
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm14_macos_x86
-        path: llvm/llvm-14.0.1-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz
+        path: llvm/llvm-14.0.3-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz
 
   mac-build-release:
     runs-on: macos-10.15
@@ -372,11 +372,11 @@ jobs:
     - name: Pack LLVM
       run: |
         cd llvm
-        tar cJvf llvm-14.0.1-macos10.15-Release-x86.arm.wasm.tar.xz bin-14.0
+        tar cJvf llvm-14.0.3-macos10.15-Release-x86.arm.wasm.tar.xz bin-14.0
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm14rel_macos_x86
-        path: llvm/llvm-14.0.1-macos10.15-Release-x86.arm.wasm.tar.xz
+        path: llvm/llvm-14.0.3-macos10.15-Release-x86.arm.wasm.tar.xz
 
