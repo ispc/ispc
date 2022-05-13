@@ -19,7 +19,7 @@
 # Find DPCPP compiler
 set(OLD_CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH})
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
-find_package(dpcpp_compiler)
+find_package(dpcpp_compiler REQUIRED)
 set(CMAKE_MODULE_PATH ${OLD_CMAKE_MODULE_PATH})
 unset(OLD_CMAKE_MODULE_PATH)
 
