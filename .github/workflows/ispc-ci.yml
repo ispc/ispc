@@ -174,7 +174,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       LLVM_VERSION: "14.0"
-      LLVM_TAR: llvm-14.0.1-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-14.0.3-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@v2
@@ -535,7 +535,7 @@ jobs:
     runs-on: windows-2022
     env:
       LLVM_VERSION: "14.0"
-      LLVM_TAR: llvm-14.0.1-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z
+      LLVM_TAR: llvm-14.0.3-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z
       LLVM_HOME: "C:\\projects\\llvm"
       CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       BUILD_TYPE: "Release"
