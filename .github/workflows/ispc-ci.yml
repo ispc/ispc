@@ -409,7 +409,7 @@ jobs:
 
   win-build-ispc-llvm11:
     needs: [define-flow]
-    runs-on: windows-2022
+    runs-on: windows-2019
     env:
       LLVM_VERSION: "11.1"
       LLVM_TAR: llvm-11.1.0-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
@@ -450,7 +450,7 @@ jobs:
 
   win-build-ispc-llvm12:
     needs: [define-flow]
-    runs-on: windows-2022
+    runs-on: windows-2019
     env:
       LLVM_VERSION: "12.0"
       LLVM_TAR: llvm-12.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
@@ -573,6 +573,7 @@ jobs:
 
   win-test-llvm11:
     needs: [define-flow, win-build-ispc-llvm11]
+    # Test vs2019 build on vs2022 worker
     runs-on: windows-2022
     env:
       LLVM_HOME: "C:\\projects\\llvm"
@@ -622,7 +623,8 @@ jobs:
     needs: [define-flow, win-build-ispc-llvm12]
     env:
       LLVM_HOME: "C:\\projects\\llvm"
-    runs-on: windows-2022
+    # Test vs2019 build on vs2019 worker
+    runs-on: windows-2019
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -669,6 +671,7 @@ jobs:
     needs: [define-flow, win-build-ispc-llvm13]
     env:
       LLVM_HOME: "C:\\projects\\llvm"
+    # Test vs2019 build on vs2022 worker
     runs-on: windows-2022
     continue-on-error: false
     strategy:
