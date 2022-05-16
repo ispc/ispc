@@ -241,6 +241,36 @@ jobs:
         name: ispc_llvm14rel_linux
         path: build/ispc-trunk-linux.tar.gz
 
+  linux-build-ispc-llvm14-no-dumps:
+    needs: [define-flow]
+    runs-on: ubuntu-latest
+    env:
+      LLVM_VERSION: "14.0"
+      LLVM_TAR: llvm-14.0.3-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.sh
+
+    - name: Check environment
+      run: |
+        ./check_env.py
+        which -a clang
+        cat /proc/cpuinfo
+
+    - name: Build package
+      run: |
+        .github/workflows/scripts/build-ispc.sh -DISPC_NO_DUMPS=ON
+
+    - name: Sanity testing (make check-all, make test)
+      run: |
+        .github/workflows/scripts/check-ispc.sh
+
   linux-test-llvm11:
     needs: [define-flow, linux-build-ispc-llvm11]
     runs-on: ubuntu-latest
