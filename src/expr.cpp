@@ -5048,7 +5048,9 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
 
         const Type *elementPtrType = NULL;
         if (CastType<ReferenceType>(basePtrType) != NULL)
-            elementPtrType = PointerType::GetUniform(basePtrType->GetReferenceTarget());
+            elementPtrType = PointerType::GetUniform(basePtrType->GetReferenceTarget())->IsUniformType()
+                                 ? PointerType::GetUniform(exprVectorType->GetElementType())
+                                 : PointerType::GetVarying(exprVectorType->GetElementType());
         else
             elementPtrType = basePtrType->IsUniformType() ? PointerType::GetUniform(exprVectorType->GetElementType())
                                                           : PointerType::GetVarying(exprVectorType->GetElementType());
@@ -7762,6 +7764,10 @@ llvm::Value *SymbolExpr::GetValue(FunctionEmitContext *ctx) const {
         return ctx->XeSimdCFPredicate(LLVMMaskAllOn);
     }
 #endif
+    // Mask should be treated using LLVMTypes::MaskType explicitely
+    if (symbol->name.compare("__mask") == 0) {
+        return ctx->LoadInst(symbol->storagePtr, LLVMTypes::MaskType, loadName.c_str());
+    }
     return ctx->LoadInst(symbol->storagePtr, symbol->type, loadName.c_str());
 }
 

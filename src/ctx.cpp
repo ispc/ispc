@@ -331,7 +331,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
             llvm::ReturnInst::Create(*g->ctx, offBB);
         }
 
-        llvm::Value *allOnMask = LoadInst(globalAllOnMaskPtr, NULL, "all_on_mask");
+        llvm::Value *allOnMask = LoadInst(globalAllOnMaskPtr, LLVMTypes::MaskType, "all_on_mask");
         SetInternalMaskAnd(LLVMMaskAllOn, allOnMask);
     }
 
@@ -402,7 +402,9 @@ void FunctionEmitContext::SetCurrentBasicBlock(llvm::BasicBlock *bb) { bblock = 
 
 llvm::Value *FunctionEmitContext::GetFunctionMask() { return fullMaskPointer ? functionMaskValue : LLVMMaskAllOn; }
 
-llvm::Value *FunctionEmitContext::GetInternalMask() { return LoadInst(internalMaskPointer, NULL, "load_mask"); }
+llvm::Value *FunctionEmitContext::GetInternalMask() {
+    return LoadInst(internalMaskPointer, LLVMTypes::MaskType, "load_mask");
+}
 
 llvm::Value *FunctionEmitContext::GetFullMask() {
     return fullMaskPointer ? BinaryOperator(llvm::Instruction::And, GetInternalMask(), functionMaskValue,
@@ -517,12 +519,12 @@ void FunctionEmitContext::EndIf() {
         llvm::Value *bcLanes = NULL;
 
         if (continueLanesPtr != NULL)
-            bcLanes = LoadInst(continueLanesPtr, NULL, "continue_lanes");
+            bcLanes = LoadInst(continueLanesPtr, LLVMTypes::MaskType, "continue_lanes");
         else
             bcLanes = LLVMMaskAllOff;
 
         if (breakLanesPtr != NULL) {
-            llvm::Value *breakLanes = LoadInst(breakLanesPtr, NULL, "break_lanes");
+            llvm::Value *breakLanes = LoadInst(breakLanesPtr, LLVMTypes::MaskType, "break_lanes");
             bcLanes = BinaryOperator(llvm::Instruction::Or, bcLanes, breakLanes, "|break_lanes");
         }
 
@@ -620,7 +622,7 @@ void FunctionEmitContext::restoreMaskGivenReturns(llvm::Value *oldMask) {
     // Restore the mask to the given old mask, but leave off any lanes that
     // executed a return statement.
     // newMask = (oldMask & ~returnedLanes)
-    llvm::Value *returnedLanes = LoadInst(returnedLanesPtr, NULL, "returned_lanes");
+    llvm::Value *returnedLanes = LoadInst(returnedLanesPtr, LLVMTypes::MaskType, "returned_lanes");
     llvm::Value *notReturned = BinaryOperator(llvm::Instruction::Xor, returnedLanes, LLVMMaskAllOn, "~returned_lanes");
     llvm::Value *newMask = BinaryOperator(llvm::Instruction::And, oldMask, notReturned, "new_mask");
     SetInternalMask(newMask);
@@ -677,7 +679,7 @@ void FunctionEmitContext::Break(bool doCoherenceCheck) {
         AssertPos(currentPos, breakLanesPtr != NULL);
 
         llvm::Value *mask = GetInternalMask();
-        llvm::Value *breakMask = LoadInst(breakLanesPtr, NULL, "break_mask");
+        llvm::Value *breakMask = LoadInst(breakLanesPtr, LLVMTypes::MaskType, "break_mask");
         llvm::Value *newMask = BinaryOperator(llvm::Instruction::Or, mask, breakMask, "mask|break_mask");
         StoreInst(newMask, breakLanesPtr);
 
@@ -735,7 +737,7 @@ void FunctionEmitContext::Continue(bool doCoherenceCheck) {
         // continueLanes = continueLanes | mask
         AssertPos(currentPos, continueLanesPtr);
         llvm::Value *mask = GetInternalMask();
-        llvm::Value *continueMask = LoadInst(continueLanesPtr, NULL, "continue_mask");
+        llvm::Value *continueMask = LoadInst(continueLanesPtr, LLVMTypes::MaskType, "continue_mask");
         llvm::Value *newMask = BinaryOperator(llvm::Instruction::Or, mask, continueMask, "mask|continueMask");
         StoreInst(newMask, continueLanesPtr);
 
@@ -774,19 +776,19 @@ void FunctionEmitContext::jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target) {
     llvm::Value *allDone = NULL;
 
     if (breakLanesPtr == NULL) {
-        llvm::Value *continued = LoadInst(continueLanesPtr, NULL, "continue_lanes");
+        llvm::Value *continued = LoadInst(continueLanesPtr, LLVMTypes::MaskType, "continue_lanes");
         continued = BinaryOperator(llvm::Instruction::And, continued, GetFunctionMask(), "continued&func");
         allDone = MasksAllEqual(continued, blockEntryMask);
     } else {
         // Check to see if (returned lanes | continued lanes | break lanes) is
         // equal to the value of mask at the start of the loop iteration.  If
         // so, everyone is done and we can jump to the given target
-        llvm::Value *returned = LoadInst(returnedLanesPtr, NULL, "returned_lanes");
-        llvm::Value *breaked = LoadInst(breakLanesPtr, NULL, "break_lanes");
+        llvm::Value *returned = LoadInst(returnedLanesPtr, LLVMTypes::MaskType, "returned_lanes");
+        llvm::Value *breaked = LoadInst(breakLanesPtr, LLVMTypes::MaskType, "break_lanes");
         llvm::Value *finishedLanes = BinaryOperator(llvm::Instruction::Or, returned, breaked, "returned|breaked");
         if (continueLanesPtr != NULL) {
             // It's NULL for "switch" statements...
-            llvm::Value *continued = LoadInst(continueLanesPtr, NULL, "continue_lanes");
+            llvm::Value *continued = LoadInst(continueLanesPtr, LLVMTypes::MaskType, "continue_lanes");
             finishedLanes =
                 BinaryOperator(llvm::Instruction::Or, finishedLanes, continued, "returned|breaked|continued");
         }
@@ -820,7 +822,7 @@ void FunctionEmitContext::RestoreContinuedLanes() {
 
     // mask = mask & continueFlags
     llvm::Value *mask = GetInternalMask();
-    llvm::Value *continueMask = LoadInst(continueLanesPtr, NULL, "continue_mask");
+    llvm::Value *continueMask = LoadInst(continueLanesPtr, LLVMTypes::MaskType, "continue_mask");
     llvm::Value *orMask = BinaryOperator(llvm::Instruction::Or, mask, continueMask, "mask|continue_mask");
     SetInternalMask(orMask);
 
@@ -1073,7 +1075,7 @@ void FunctionEmitContext::EmitCaseLabel(int value, bool checkMask, SourcePos pos
         llvm::Value *caseTest = NULL;
         if (llvm::isa<llvm::VectorType>(switchExpr->getType())) {
             // Take fall through lanes to turn them on in the next block
-            llvm::Value *fallThroughMask = LoadInst(switchFallThroughMaskPtr, NULL, "fall_through_mask");
+            llvm::Value *fallThroughMask = LoadInst(switchFallThroughMaskPtr, LLVMTypes::MaskType, "fall_through_mask");
             llvm::Value *val =
                 (switchExpr->getType() == LLVMTypes::Int32VectorType) ? LLVMInt32Vector(value) : LLVMInt64Vector(value);
             llvm::Value *cmpVal =
@@ -1275,7 +1277,7 @@ void FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck
     } else {
         // Otherwise we update the returnedLanes value by ANDing it with
         // the current lane mask.
-        llvm::Value *oldReturnedLanes = LoadInst(returnedLanesPtr, NULL, "old_returned_lanes");
+        llvm::Value *oldReturnedLanes = LoadInst(returnedLanesPtr, LLVMTypes::MaskType, "old_returned_lanes");
         llvm::Value *newReturnedLanes =
             BinaryOperator(llvm::Instruction::Or, oldReturnedLanes, GetFullMask(), "old_mask|returned_lanes");
 
@@ -2265,30 +2267,43 @@ llvm::Value *FunctionEmitContext::SwitchBoolSize(llvm::Value *value, llvm::Type 
     return newBool;
 }
 
+llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Type *type, const llvm::Twine &name) {
+    if (ptr == NULL) {
+        AssertPos(currentPos, m->errorCount > 0);
+        return NULL;
+    }
+
+    AssertPos(currentPos, type != NULL);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
+    llvm::LoadInst *inst =
+        new llvm::LoadInst(type, ptr, name.isTriviallyEmpty() ? (llvm::Twine(ptr->getName()) + "_load") : name, bblock);
+#else
+    llvm::LoadInst *inst =
+        new llvm::LoadInst(ptr, name.isTriviallyEmpty() ? (llvm::Twine(ptr->getName()) + "_load") : name, bblock);
+#endif
+    Assert(inst != NULL);
+    if (g->opt.forceAlignedMemory && llvm::dyn_cast<llvm::VectorType>(type)) {
+        inst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne());
+    }
+
+    AddDebugPos(inst);
+
+    return inst;
+}
+
 llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, const Type *type, const llvm::Twine &name) {
     if (ptr == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
     }
 
-    llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
-    AssertPos(currentPos, pt != NULL);
+    AssertPos(currentPos, type != NULL);
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
-    llvm::LoadInst *inst =
-        new llvm::LoadInst(pt->getPointerElementType(), ptr,
-                           name.isTriviallyEmpty() ? (llvm::Twine(ptr->getName()) + "_load") : name, bblock);
-#else
-    llvm::LoadInst *inst =
-        new llvm::LoadInst(ptr, name.isTriviallyEmpty() ? (llvm::Twine(ptr->getName()) + "_load") : name, bblock);
-#endif
+    llvm::Type *ptrType = type->LLVMStorageType(g->ctx);
 
-    if (g->opt.forceAlignedMemory && llvm::dyn_cast<llvm::VectorType>(pt->PTR_ELT_TYPE())) {
-        inst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne());
-    }
+    AssertPos(currentPos, llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType() == ptrType);
 
-    AddDebugPos(inst);
-
+    llvm::Value *inst = LoadInst(ptr, ptrType, name);
     llvm::Value *loadVal = inst;
     // bool type is stored as i8. So, it requires some processing.
     if ((type != NULL) && (type->IsBoolType())) {
@@ -2405,19 +2420,17 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
             // atomic types, we need to make sure that the compiler emits
             // unaligned vector loads, so we specify a reduced alignment here.
             const AtomicType *atomicType = CastType<AtomicType>(ptrType->GetBaseType());
-
 #if ISPC_LLVM_VERSION <= ISPC_LLVM_10_0
             llvm::LoadInst *inst =
                 new llvm::LoadInst(ptr, name.isTriviallyEmpty() ? (llvm::Twine(ptr->getName()) + "_load") : name,
                                    false /* not volatile */, bblock);
 #else // LLVM 11.0+
-            llvm::PointerType *ptr_type = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
-            llvm::LoadInst *inst =
-                new llvm::LoadInst(ptr_type->getPointerElementType(), ptr,
-                                   name.isTriviallyEmpty() ? (llvm::Twine(ptr->getName()) + "_load") : name,
-                                   false /* not volatile */, bblock);
+            llvm::Type *llvmPtrType = ptrType->GetBaseType()->LLVMStorageType(g->ctx);
+            Assert(llvmPtrType != NULL);
+            llvm::LoadInst *inst = new llvm::LoadInst(
+                llvmPtrType, ptr, name.isTriviallyEmpty() ? (llvm::Twine(ptr->getName()) + "_load") : name,
+                false /* not volatile */, bblock);
 #endif
-
             if (atomicType != NULL && atomicType->IsVaryingType()) {
                 // We actually just want to align to the vector element
                 // alignment, but can't easily get that here, so just tell LLVM
@@ -3435,7 +3448,7 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
         // bbCall
         SetCurrentBasicBlock(bbTest);
         {
-            llvm::Value *maskLoad = LoadInst(maskPtr);
+            llvm::Value *maskLoad = LoadInst(maskPtr, LLVMTypes::MaskType);
             llvm::Value *any = Any(maskLoad);
             BranchInst(bbCall, bbDone, any);
         }
@@ -3446,7 +3459,7 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
         {
             // Figure out the first lane that still needs its function
             // pointer to be called.
-            llvm::Value *currentMask = LoadInst(maskPtr);
+            llvm::Value *currentMask = LoadInst(maskPtr, LLVMTypes::MaskType);
             llvm::Function *cttz = m->module->getFunction("__count_trailing_zeros_i64");
             AssertPos(currentPos, cttz != NULL);
             llvm::Value *firstLane64 = CallInst(cttz, NULL, LaneMask(currentMask), "first_lane64");
@@ -3673,7 +3686,7 @@ void FunctionEmitContext::SyncInst() {
         return;
     }
 
-    llvm::Value *launchGroupHandle = LoadInst(launchGroupHandlePtr);
+    llvm::Value *launchGroupHandle = LoadInst(launchGroupHandlePtr, LLVMTypes::VoidPointerType);
     llvm::Value *nullPtrValue = llvm::Constant::getNullValue(LLVMTypes::VoidPointerType);
     llvm::Value *nonNull = CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, launchGroupHandle, nullPtrValue);
     llvm::BasicBlock *bSync = CreateBasicBlock("call_sync");
@@ -3842,7 +3855,7 @@ llvm::Value *FunctionEmitContext::XeStartUnmaskedRegion() {
 }
 
 void FunctionEmitContext::XeEndUnmaskedRegion(llvm::Value *execMask) {
-    llvm::Value *restoredMask = LoadInst(execMask);
+    llvm::Value *restoredMask = LoadInst(execMask, AtomicType::VaryingBool);
     auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_unmask_end);
     llvm::CallInst::Create(Fn, restoredMask, "", bblock);
 }

@@ -446,6 +446,7 @@ class FunctionEmitContext {
      * <WIDTH x MASK>. This is a helper function to match bool size at storage
      * interface. */
     llvm::Value *SwitchBoolSize(llvm::Value *value, llvm::Type *toType, const llvm::Twine &name = "");
+    llvm::Value *LoadInst(llvm::Value *ptr, llvm::Type *type, const llvm::Twine &name = "");
     /** Load from the memory location(s) given by lvalue, using the given
         mask.  The lvalue may be varying, in which case this corresponds to
         a gather from the multiple memory locations given by the array of
@@ -458,7 +459,7 @@ class FunctionEmitContext {
      * 'type' needs to be provided when storage type is different from IR type. For example,
      * 'unform bool' is 'i1' in IR but stored as 'i8'.
      * Otherwise leave this as NULL. */
-    llvm::Value *LoadInst(llvm::Value *ptr, const Type *type = NULL, const llvm::Twine &name = "");
+    llvm::Value *LoadInst(llvm::Value *ptr, const Type *type, const llvm::Twine &name = "");
 
     /** Emits addrspacecast instruction. Depending on atEntryBlock it is generated in
         alloca block or in the current block.

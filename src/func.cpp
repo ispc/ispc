@@ -323,7 +323,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
             int nArgs = (int)args.size();
             // The mask is the last parameter in the argument structure
             llvm::Value *ptr = ctx->AddElementOffset(structParamPtr, nArgs, NULL, "task_struct_mask");
-            llvm::Value *ptrval = ctx->LoadInst(ptr, NULL, "mask");
+            llvm::Value *ptrval = ctx->LoadInst(ptr, LLVMTypes::MaskType, "mask");
             ctx->SetFunctionMask(ptrval);
         }
 
