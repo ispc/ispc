@@ -39,13 +39,12 @@
           <div class="widgetspace">
             <h1>Resources</h1>
             <ul class="menu">
-              <li><a href="http://github.com/ispc/ispc/">ispc page on github</a></li>
-              <li><a href="http://groups.google.com/group/ispc-users/">ispc
-              users mailing list</a></li>
-              <li><a href="http://groups.google.com/group/ispc-dev/">ispc
-              developers mailing list</a></li>
-              <li><a href="http://github.com/ispc/ispc/wiki/">Wiki</a></li>
-              <li><a href="http://github.com/ispc/ispc/issues/">Bug tracking</a></li>
+              <li><a href="http://github.com/ispc/ispc">GitHub page</a></li>
+              <li><a href="https://github.com/ispc/ispc/discussions">Discussions on GitHub</a></li>
+              <li><a href="http://github.com/ispc/ispc/issues">Issues on Github</a></li>
+              <li><a href="https://github.com/orgs/ispc/projects/1">Release planning board</a></li>
+              <li><a href="https://github.com/ispc/ispc/blob/main/CONTRIBUTING.md">Contributing guide</a></li>
+              <li><a href="http://github.com/ispc/ispc/wiki">Wiki on Github</a></li>
             </ul>
         </div>
       </div>
