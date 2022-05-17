@@ -90,7 +90,7 @@ Additional Resources
 Prebuilt ``ispc`` binaries for Windows, macOS and Linux can be downloaded
 from the [ispc downloads page](https://ispc.github.io/downloads.html).
 Latest ``ispc`` binaries corresponding to main branch can be downloaded
-from Appveyor for [Linux](https://ci.appveyor.com/api/projects/ispc/ispc/artifacts/build%2Fispc-trunk-linux.tar.gz?job=Environment%3A%20APPVEYOR_BUILD_WORKER_IMAGE%3DUbuntu1804%2C%20LLVM_VERSION%3Dlatest) and Windows ([msi](https://ci.appveyor.com/api/projects/ispc/ispc/artifacts/build%2Fispc-trunk-windows.msi?job=Environment%3A%20APPVEYOR_BUILD_WORKER_IMAGE%3DVisual%20Studio%202022%2C%20LLVM_VERSION%3Dlatest) or [zip](https://ci.appveyor.com/api/projects/ispc/ispc/artifacts/build%2Fispc-trunk-windows.zip?job=Environment%3A%20APPVEYOR_BUILD_WORKER_IMAGE%3DVisual%20Studio%202022%2C%20LLVM_VERSION%3Dlatest))
+from Appveyor for [Linux](https://ci.appveyor.com/api/projects/ispc/ispc/artifacts/build%2Fispc-trunk-linux.tar.gz?job=Environment%3A%20APPVEYOR_BUILD_WORKER_IMAGE%3DUbuntu1804%2C%20LLVM_VERSION%3Dlatest) and Windows ([msi](https://ci.appveyor.com/api/projects/ispc/ispc/artifacts/build%2Fispc-trunk-windows.msi?job=Environment%3A%20APPVEYOR_BUILD_WORKER_IMAGE%3DVisual%20Studio%202019%2C%20LLVM_VERSION%3Dlatest) or [zip](https://ci.appveyor.com/api/projects/ispc/ispc/artifacts/build%2Fispc-trunk-windows.zip?job=Environment%3A%20APPVEYOR_BUILD_WORKER_IMAGE%3DVisual%20Studio%202019%2C%20LLVM_VERSION%3Dlatest))
 See also additional
 [documentation](https://ispc.github.io/documentation.html) and additional
 [performance information](https://ispc.github.io/perf.html).

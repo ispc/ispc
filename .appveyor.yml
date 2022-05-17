@@ -37,7 +37,7 @@ environment:
   matrix:
     - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
       LLVM_VERSION: latest
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       LLVM_VERSION: latest
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       LLVM_VERSION: 13.0
