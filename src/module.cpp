@@ -2776,18 +2776,14 @@ static bool lCompatibleTypes(llvm::Type *Ty1, llvm::Type *Ty2) {
             Ty2 = Ty2->getArrayElementType();
             break;
 
-        case llvm::ArrayType::PointerTyID:
-            Ty1 = Ty1->getPointerElementType();
-            Ty2 = Ty2->getPointerElementType();
-            break;
-
         case llvm::ArrayType::StructTyID: {
             llvm::StructType *STy1 = llvm::dyn_cast<llvm::StructType>(Ty1);
             llvm::StructType *STy2 = llvm::dyn_cast<llvm::StructType>(Ty2);
             return STy1 && STy2 && STy1->isLayoutIdentical(STy2);
         }
         default:
-            // Pointers for compatible simple types are assumed equal
+            // Pointers for compatible simple types are assumed equal.
+            // Opaque pointers should be compatible?
             return Ty1 == Ty2;
         }
     return false;
@@ -2806,7 +2802,7 @@ static void lExtractOrCheckGlobals(llvm::Module *msrc, llvm::Module *mdst, bool 
         llvm::GlobalVariable *gv = &*iter;
         // Is it a global definition?
         if (gv->getLinkage() == llvm::GlobalValue::ExternalLinkage && gv->hasInitializer()) {
-            llvm::Type *type = gv->getType()->PTR_ELT_TYPE();
+            llvm::Type *type = gv->getValueType();
             Symbol *sym = m->symbolTable->LookupVariable(gv->getName().str().c_str());
             Assert(sym != NULL);
 
