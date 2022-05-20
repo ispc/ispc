@@ -1031,9 +1031,8 @@ restart:
                                        false /* not volatile */, llvm::MaybeAlign(align), (llvm::Instruction *)NULL);
 #else
                 llvm::Instruction *loadInst = new llvm::LoadInst(
-                    llvm::dyn_cast<llvm::PointerType>(castPtr->getType())->getPointerElementType(), castPtr,
-                    llvm::Twine(callInst->getArgOperand(0)->getName()) + "_load", false /* not volatile */,
-                    llvm::MaybeAlign(align).valueOrOne(), (llvm::Instruction *)NULL);
+                    returnType, castPtr, llvm::Twine(callInst->getArgOperand(0)->getName()) + "_load",
+                    false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(), (llvm::Instruction *)NULL);
 #endif
                 lCopyMetadata(loadInst, callInst);
                 llvm::ReplaceInstWithInst(callInst, loadInst);
@@ -2848,9 +2847,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
             lCopyMetadata(ptr, callInst);
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
             Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
-            llvm::Value *scalarValue =
-                new llvm::LoadInst(llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(), ptr,
-                                   callInst->getName(), callInst);
+            llvm::Value *scalarValue = new llvm::LoadInst(scalarType, ptr, callInst->getName(), callInst);
 #else
             llvm::Value *scalarValue = new llvm::LoadInst(ptr, callInst->getName(), callInst);
 #endif
@@ -3256,8 +3253,7 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
 #else // LLVM 11.0+
             Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
             load = new llvm::LoadInst(
-                llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(), ptr, callInst->getName(),
-                false /* not volatile */,
+                callInst->getType(), ptr, callInst->getName(), false /* not volatile */,
                 llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align)
                     .valueOrOne(),
                 (llvm::Instruction *)NULL);
@@ -3611,8 +3607,7 @@ llvm::Value *lGEPAndLoad(llvm::Value *basePtr, int64_t offset, int align, llvm::
     return new llvm::LoadInst(ptr, "gather_load", false /* not volatile */, llvm::MaybeAlign(align), insertBefore);
 #else // LLVM 11.0+
     Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
-    return new llvm::LoadInst(llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(), ptr,
-                              "gather_load", false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(),
+    return new llvm::LoadInst(type, ptr, "gather_load", false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(),
                               insertBefore);
 #endif
 }
@@ -4360,10 +4355,7 @@ static bool lIsSafeToBlend(llvm::Value *lvalue) {
     else {
         llvm::AllocaInst *ai = llvm::dyn_cast<llvm::AllocaInst>(lvalue);
         if (ai) {
-            llvm::Type *type = ai->getType();
-            llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(type);
-            Assert(pt != NULL);
-            type = pt->PTR_ELT_TYPE();
+            llvm::Type *type = ai->getAllocatedType();
             llvm::ArrayType *at;
             while ((at = llvm::dyn_cast<llvm::ArrayType>(type))) {
                 type = at->getElementType();
