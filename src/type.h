@@ -844,9 +844,13 @@ class FunctionType : public Type {
                  const llvm::SmallVector<std::string, 8> &argNames, const llvm::SmallVector<Expr *, 8> &argDefaults,
                  const llvm::SmallVector<SourcePos, 8> &argPos, bool isTask, bool isExported, bool isExternC,
                  bool isUnmasked, bool isVectorCall, bool isRegCall);
+    // Structure holding the mangling suffix and prefix for function
+    struct FunctionMangledName {
+        std::string prefix;
+        std::string suffix;
+    };
 
     Variability GetVariability() const;
-
     bool IsBoolType() const;
     bool IsFloatType() const;
     bool IsIntType() const;
@@ -878,6 +882,11 @@ class FunctionType : public Type {
     const Type *GetReturnType() const { return returnType; }
 
     const std::string GetReturnTypeString() const;
+
+    /** This method returns the FunctionMangledName depending on Function type.
+        The \c appFunction parameter indicates whether the function is generated for
+        internal ISPC call or for external call from application.*/
+    FunctionMangledName GetFunctionMangledName(bool appFunction) const;
 
     /** This method returns the LLVM FunctionType that corresponds to this
         function type.  The \c disableMask parameter indicates whether the

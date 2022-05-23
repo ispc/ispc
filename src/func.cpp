@@ -659,13 +659,8 @@ void Function::GenerateIR() {
         if (type->isExported || type->isExternC || type->IsISPCExternal() || type->IsISPCKernel()) {
             llvm::FunctionType *ftype = type->LLVMFunctionType(g->ctx, true);
             llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
-            std::string functionName = sym->name;
-            if (g->mangleFunctionsWithTarget) {
-                functionName += std::string("_") + g->target->GetISAString();
-            }
-            if (type->isRegCall) {
-                g->target->markFuncNameWithRegCallPrefix(functionName);
-            }
+            auto [name_pref, name_suf] = type->GetFunctionMangledName(true);
+            std::string functionName = name_pref + sym->name + name_suf;
 
             llvm::Function *appFunction = llvm::Function::Create(ftype, linkage, functionName.c_str(), m->module);
             appFunction->setDoesNotThrow();

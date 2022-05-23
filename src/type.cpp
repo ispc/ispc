@@ -2493,6 +2493,25 @@ const std::string FunctionType::GetReturnTypeString() const {
     return ret + returnType->GetString();
 }
 
+FunctionType::FunctionMangledName FunctionType::GetFunctionMangledName(bool appFunction) const {
+    FunctionMangledName mangle = {};
+    // Mangle internal functions name.
+    if (!(isExternC || appFunction)) {
+        mangle.suffix += Mangle();
+    }
+    // Always add target suffix except extern "C" internal cases.
+    if (g->mangleFunctionsWithTarget) {
+        if ((!appFunction && !isExternC) || appFunction) {
+            mangle.suffix += std::string("_") + g->target->GetISAString();
+        }
+    }
+    // If the function is declared as regcall, add __regcall3__ prefix.
+    if (isRegCall) {
+        mangle.prefix += "__regcall3__";
+    }
+    return mangle;
+}
+
 llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
     if (!g->target->isXeTarget() && isTask == true) {
         Assert(removeMask == false);
