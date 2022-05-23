@@ -837,18 +837,8 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         (storageClass != SC_EXTERN))
         linkage = llvm::GlobalValue::InternalLinkage;
 
-    std::string functionName = name;
-    if (storageClass != SC_EXTERN_C) {
-        functionName += functionType->Mangle();
-        // If we treat generic as smth, we should have appropriate mangling
-        if (g->mangleFunctionsWithTarget) {
-            functionName += g->target->GetISAString();
-        }
-    }
-
-    if (isRegCall) {
-        g->target->markFuncNameWithRegCallPrefix(functionName);
-    }
+    auto [name_pref, name_suf] = functionType->GetFunctionMangledName(false);
+    std::string functionName = name_pref + name + name_suf;
 
     llvm::Function *function = llvm::Function::Create(llvmFunctionType, linkage, functionName.c_str(), module);
 
