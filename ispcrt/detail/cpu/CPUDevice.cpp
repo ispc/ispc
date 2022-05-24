@@ -109,6 +109,17 @@ struct Module : public ispcrt::base::Module {
 
     void *lib() const { return m_lib; }
 
+    void *functionPtr(const char *name) const override {
+#if defined(_WIN32) || defined(_WIN64)
+        void *fptr = GetProcAddress((HMODULE)m_lib, name);
+#else
+        void *fptr = dlsym(m_lib ? m_lib : RTLD_DEFAULT, name);
+#endif
+        if (!fptr)
+            throw std::logic_error("could not find CPU function");
+        return fptr;
+    }
+
   private:
     std::string m_file;
     void *m_lib{nullptr};

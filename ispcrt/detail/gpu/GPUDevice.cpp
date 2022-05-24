@@ -622,6 +622,14 @@ struct Module : public ispcrt::base::Module {
 
     ze_module_handle_t handle() const { return m_module; }
 
+    void *functionPtr(const char *name) const override {
+        void *fptr = nullptr;
+        L0_SAFE_CALL(zeModuleGetFunctionPointer(m_module, name, &fptr));
+        if (!fptr)
+            throw std::logic_error("could not find GPU function");
+        return fptr;
+    }
+
   private:
     std::string m_file;
     std::vector<unsigned char> m_code;
