@@ -289,6 +289,18 @@ ze_result_t zeModuleBuildLogDestroy(ze_module_build_log_handle_t hModuleBuildLog
     MOCK_RET;
 }
 
+ze_result_t zeModuleGetFunctionPointer(ze_module_handle_t hModule,
+                                       const char* pFunctionName,
+                                       void** pfnFunction) {
+    MOCK_CNT_CALL;
+    if (hModule != ModuleHandle.get())
+        return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
+    if (pFunctionName == NULL)
+        return ZE_RESULT_ERROR_INVALID_NULL_POINTER;
+    *pfnFunction = malloc(sizeof(void*));
+    MOCK_RET;
+}
+
 ze_result_t zeKernelCreate(ze_module_handle_t hModule, const ze_kernel_desc_t *desc, ze_kernel_handle_t *phKernel) {
     MOCK_CNT_CALL;
     if (hModule != ModuleHandle.get())
@@ -439,6 +451,7 @@ ze_result_t zeGetModuleProcAddrTable(ze_api_version_t version, ze_module_dditabl
     pDdiTable->pfnCreate = ispcrt::testing::mock::driver::zeModuleCreate;
     pDdiTable->pfnDestroy = ispcrt::testing::mock::driver::zeModuleDestroy;
     pDdiTable->pfnDynamicLink = ispcrt::testing::mock::driver::zeModuleDynamicLink;
+    pDdiTable->pfnGetFunctionPointer = ispcrt::testing::mock::driver::zeModuleGetFunctionPointer;
     return ZE_RESULT_SUCCESS;
 }
 

@@ -333,12 +333,17 @@ class Module : public GenericObject<ISPCRTModule> {
   public:
     Module() = default;
     Module(const Device &device, const char *moduleName, const ISPCRTModuleOptions &opts = ISPCRTModuleOptions{});
+    void *functionPtr(const char *functionName);
 };
 
 // Inlined definitions //
 
 inline Module::Module(const Device &device, const char *moduleName, const ISPCRTModuleOptions &opts)
     : GenericObject<ISPCRTModule>(ispcrtLoadModule(device.handle(), moduleName, opts)) {}
+
+inline void* Module::functionPtr(const char *functionName){
+    return ispcrtFunctionPtr(handle(), functionName);
+}
 
 /////////////////////////////////////////////////////////////////////////////
 // Kernel wrapper ///////////////////////////////////////////////////////////

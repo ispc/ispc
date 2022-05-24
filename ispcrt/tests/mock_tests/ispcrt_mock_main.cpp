@@ -204,6 +204,29 @@ TEST_F(MockTestWithDevice, Module_DynamicLink_zeModuleDynamicLink) {
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
 }
 
+TEST_F(MockTestWithModule, Module_FunctionPtr) {
+    // Get function pointer from module
+    ASSERT_NE(m_module, 0);
+    m_module.functionPtr("test");
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTestWithModule, Module_FunctionPtr_zeModuleGetFunctionPointer) {
+    // Check if error is reported when zeModuleGetFunctionPointer is not successful
+    ASSERT_NE(m_module, 0);
+    Config::setRetValue("zeModuleGetFunctionPointer", ZE_RESULT_ERROR_DEVICE_LOST);
+    m_module.functionPtr("test");
+    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+}
+
+TEST_F(MockTestWithModule, Module_FunctionPtr_zeModuleGetFunctionPointer_invalid_fname) {
+    // Check if error is reported when zeModuleGetFunctionPointer is not successful
+    ASSERT_NE(m_module, 0);
+    Config::setRetValue("zeModuleGetFunctionPointer", ZE_RESULT_ERROR_INVALID_FUNCTION_NAME);
+    m_module.functionPtr("test");
+    ASSERT_EQ(sm_rt_error, ISPCRT_INVALID_ARGUMENT);
+}
+
 /////////////////////////////////////////////////////////////////////
 // Kernel tests
 

@@ -274,6 +274,12 @@ void ispcrtLinkModules(ISPCRTDevice d, ISPCRTModule *modules, const uint32_t num
 }
 ISPCRT_CATCH_END()
 
+void *ispcrtFunctionPtr(ISPCRTModule m, const char *name) ISPCRT_CATCH_BEGIN {
+    const auto &module = referenceFromHandle<ispcrt::base::Module>(m);
+    return module.functionPtr(name);
+}
+ISPCRT_CATCH_END(nullptr)
+
 ISPCRTKernel ispcrtNewKernel(ISPCRTDevice d, ISPCRTModule m, const char *name) ISPCRT_CATCH_BEGIN {
     const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
     const auto &module = referenceFromHandle<ispcrt::base::Module>(m);
