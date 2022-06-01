@@ -2642,9 +2642,9 @@ const std::string FunctionType::GetNameForCallConv() const {
     case llvm::CallingConv::C:
         return "";
     case llvm::CallingConv::X86_VectorCall:
-        return "vectorcall";
+        return "__vectorcall";
     case llvm::CallingConv::X86_RegCall:
-        return "regcall";
+        return "__regcall";
     case llvm::CallingConv::SPIR_FUNC:
         return "spir_func";
     case llvm::CallingConv::SPIR_KERNEL:
