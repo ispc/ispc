@@ -34,7 +34,7 @@ Contents:
   + `Performance Guide for GPU Programming`_
   + `Tools for Performance Analysis`_
 
-+ `Interoperability`
++ `Interoperability`_
 
 * `FAQ`_
 
@@ -753,6 +753,23 @@ ISPC experimentally supports interoperability with `Explicit SIMD SYCL* Extensio
 You can call ``ESIMD`` function from ``ISPC`` kernel and vice versa. To experiment with this feature,
 please include ``interop.cmake`` to your CMakeLists.txt and use ``add_ispc_kernel`` and
 ``link_ispc_esimd`` functions. See ``simple-esimd`` example as a reference.
+
+Another experimental ISPC capability is interoperability with `Intel(R) oneAPI DPC++`. You can
+call SYCL/DPC++ device functions from ISPC kernel using `invoke_sycl <https://github.com/ispc/ispc/blob/main/docs/design/invoke_sycl.rst>`_
+construct and call ISPC functions from SYCL kernel using `invoke_simd
+<https://github.com/intel/llvm/blob/1df003896532b3aa4454ea5c061eaf9b25ada045/sycl/doc/extensions/proposed/sycl_ext_oneapi_invoke_simd.asciidoc>`_ construct.
+
+To call SYCL/DPC++ function from ISPC you should declare it as `extern "SYCL"` and
+specify `__regcall` calling convention. And then call it using `invoke_sycl`:
+
+.. code-block:: cpp
+
+  extern "SYCL" __regcall int sycl_func(uniform float arr[], uniform int factor);
+
+  task void ispc_task(uniform float arr[], uniform int factor) {
+    int result = invoke_sycl(sycl_func, arr, factor);
+    ...
+  }
 
 
 FAQ

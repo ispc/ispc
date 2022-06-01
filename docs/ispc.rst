@@ -1767,9 +1767,9 @@ The following identifiers are reserved as language keywords: ``bool``,
 ``enum``, ``export``, ``extern``, ``false``, ``float``, ``float16``, ``for``,
 ``foreach``, ``foreach_active``, ``foreach_tiled``, ``foreach_unique``,
 ``goto``, ``if``, ``in``, ``inline``, ``noinline``, ``int``, ``int8``,
-``int16``, ``int32``, ``int64``, ``launch``, ``NULL``, ``print``, ``return``,
-``signed``, ``sizeof``, ``soa``, ``static``, ``struct``, ``switch``,
-``sync``, ``task``, ``true``, ``typedef``, ``uint``, ``uint8``,
+``int16``, ``int32``, ``int64``, ``invoke_sycl``, ``launch``, ``NULL``,
+``print``, ``return``, ``signed``, ``sizeof``, ``soa``, ``static``, ``struct``,
+``switch``, ``sync``, ``task``, ``true``, ``typedef``, ``uint``, ``uint8``,
 ``uint16``, ``uint32``, ``uint64``, ``uniform``, ``union``, ``unsigned``,
 ``varying``, ``__regcall``, ``__vectorcall``, ``void``, ``volatile``, ``while``.
 
@@ -5403,18 +5403,25 @@ instance's ``result`` value.
 a function (not a kernel!) callable from a different module. On CPU it is not
 advised to have ``extern "C"`` functions with definitions and to use ``export``
 functions instead, which are designed to be entry points from C/C++.
-Below is a comparison between ``export``, ``extern`` and ``extern "C"`` functions.
 
-=============================================== ====================== ========================= ======================
-Feature                                          ``export`` functions   ``extern "C"`` functions  ``extern`` functions
------------------------------------------------ ---------------------- ------------------------- ----------------------
-Varying parameters support                      No                     Yes                       Yes
-Dispatch function for multi-target compilation  Yes                    Yes                       No
-Mangled name                                    No                     No                        Yes
-Mask parameter                                  No                     No                        Yes
-Calling convention specifier support            No                     Yes                       No
-Declaration in header file                      Yes                    No                        No
-=============================================== ====================== ========================= ======================
+On GPU ISPC experimentally supports calls to SYCL/DPC++ device functions using
+`invoke_sycl` construct. `invoke_sycl` accepts only functions declared as ``extern "SYCL"``.
+``extern "SYCL"`` declaration is similar to ``extern "C"``, but in addition it means
+that function signature will be modified if needed to align with SYCL/DPC++ backend (IGC) ABI.
+
+Below is a comparison between ``export``, ``extern``, ``extern "C"`` and ``extern "SYCL"`` functions.
+
+=============================================== ============= =============== ================== ============
+Feature                                          ``export``   ``extern "C"``  ``extern "SYCL"``  ``extern``
+----------------------------------------------- ------------- --------------- ------------------ ------------
+Varying parameters support                      No            Yes             Yes                Yes
+Dispatch function for multi-target compilation  Yes           Yes             Yes                No
+Mangled name                                    No            No              No                 Yes
+Mask parameter                                  No            No              No                 Yes
+Calling convention specifier support            No            Yes             Yes                No
+Declaration in header file                      Yes           No              No                 No
+SYCL/DPC++ backend ABI compliance               No            No              Yes                No
+=============================================== ============= =============== ================== ============
 
 Data Layout
 -----------
