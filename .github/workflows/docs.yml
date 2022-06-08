@@ -2,10 +2,10 @@ name: Docs check
 
 on:
   push:
-    path:
+    paths:
       - "docs/**"
   pull_request:
-    path:
+    paths:
       - "docs/**"
   workflow_dispatch:
 
