@@ -10,7 +10,12 @@ on:
       flow_type:
         description: 'Workflow flow type (full or smoke)'
         required: true
-        default: 'full'
+        default: 'smoke'
+        type: choice
+        options:
+        - 'full'
+        - 'smoke'
+
 env:
   SDE_MIRROR_ID: 684899
   SDE_TAR_NAME: sde-external-9.0.0-2021-11-07
