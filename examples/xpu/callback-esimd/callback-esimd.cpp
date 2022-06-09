@@ -1,12 +1,12 @@
 /*
-  Copyright (c) 2021, Intel Corporation
+  Copyright (c) 2021-2022, Intel Corporation
 */
 
 #include <iostream>
-#include <sycl.hpp>
-#include <sycl/ext/intel/experimental/esimd.hpp>
+#include <CL/sycl.hpp>
+#include <sycl/ext/intel/esimd.hpp>
 
-using namespace sycl::ext::intel::experimental::esimd;
+using namespace sycl::ext::intel::esimd;
 
 typedef float (*CallbackFn)(void *, const float);
 

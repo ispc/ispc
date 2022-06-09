@@ -63,15 +63,13 @@ function (add_dpcpp_library target_name)
             set(DPCPP_CUSTOM_INCLUDE_DIR_PARMS "-I" ${DPCPP_CUSTOM_INCLUDE_DIR_PARMS})
         endif()
 
-        if (NOT DPCPP_CUSTOM_FLAGS)
-            if (DPCPP_SPV)
-                # Get only SYCL device code to SPIR-V
-                # WA: SYCL assert implementation should be treated separately.
-                # Disable usage of asserts for now with "-DSYCL_DISABLE_FALLBACK_ASSERT=1"
-                set (DPCPP_CUSTOM_FLAGS "-fsycl-device-only" "-fno-sycl-use-bitcode" "-DSYCL_DISABLE_FALLBACK_ASSERT=1")
-            else()
-                set (DPCPP_CUSTOM_FLAGS "")
-            endif()
+        if (DPCPP_SPV)
+            # Get only SYCL device code to SPIR-V
+            # WA: SYCL assert implementation should be treated separately.
+            # Disable usage of asserts for now with "-DSYCL_DISABLE_FALLBACK_ASSERT=1"
+            list(APPEND DPCPP_CUSTOM_FLAGS "-fsycl-device-only" "-fno-sycl-use-bitcode" "-DSYCL_DISABLE_FALLBACK_ASSERT=1")
+        else()
+            list(APPEND DPCPP_CUSTOM_FLAGS "-c")
         endif()
 
         add_custom_command(
@@ -80,7 +78,6 @@ function (add_dpcpp_library target_name)
             COMMAND ${DPCPP_COMPILER}
                 -fsycl
                 -fPIE
-                -c
                 ${DPCPP_CXX_FLAGS}
                 ${DPCPP_CUSTOM_INCLUDE_DIR_PARMS}
                 ${DPCPP_CUSTOM_FLAGS}
@@ -121,11 +118,11 @@ function (dpcpp_get_esimd_bitcode target_name library)
         DEPENDS ${library}
         OUTPUT ${lower_post_link} ${post_link_result}
         COMMAND ${DPCPP_CLANG_BUNDLER}
-            --inputs=$<TARGET_FILE:${library}>
+            --input=$<TARGET_FILE:${library}>
             --unbundle
             --targets=sycl-spir64-unknown-unknown-sycldevice
             --type=a
-            --outputs=${bundler_result_tmp}
+            --output=${bundler_result_tmp}
         COMMAND ${DPCPP_LLVM_LINK}
             ${bundler_result_tmp}
             -o ${bundler_result}
@@ -161,11 +158,11 @@ function (dpcpp_get_sycl_bitcode target_name library)
         DEPENDS ${library}
         OUTPUT ${bundler_result}
         COMMAND ${DPCPP_CLANG_BUNDLER}
-            --inputs=$<TARGET_FILE:${library}>
+            --input=$<TARGET_FILE:${library}>
             --unbundle
             --targets=sycl-spir64-unknown-unknown-sycldevice
             --type=a
-            --outputs=${bundler_result_tmp}
+            --output=${bundler_result_tmp}
         COMMAND ${DPCPP_LLVM_LINK}
             ${bundler_result_tmp}
             -o ${bundler_result}
