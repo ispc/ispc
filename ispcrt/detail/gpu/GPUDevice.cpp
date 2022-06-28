@@ -1051,12 +1051,12 @@ void linkModules(gpu::Module **modules, const uint32_t numModules) {
     }
 
     ze_module_build_log_handle_t linkLog;
-    L0_SAFE_CALL(zeModuleDynamicLink(numModules, moduleHandles.data(), &linkLog));
+    L0_SAFE_CALL_NOEXCEPT(zeModuleDynamicLink(numModules, moduleHandles.data(), &linkLog));
 
     size_t buildLogSize;
     L0_SAFE_CALL(zeModuleBuildLogGetString(linkLog, &buildLogSize, nullptr));
     char *dynLogBuffer = new char[buildLogSize]();
-    L0_SAFE_CALL(zeModuleBuildLogGetString(linkLog, &buildLogSize, dynLogBuffer));
+    L0_SAFE_CALL_NOEXCEPT(zeModuleBuildLogGetString(linkLog, &buildLogSize, dynLogBuffer));
 
     // For now always print dynamic linking log.
     // TODO: introduce verbose mode to ISPCRT
