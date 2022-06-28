@@ -157,6 +157,8 @@ jobs:
 
   linux-arm-build:
     runs-on: [self-hosted, linux, ARM64]
+    # Disabling this rebuild for non ispc/ispc repo, as it requires self-hosted runner
+    if: github.repository == 'ispc/ispc'
     steps:
     - uses: actions/checkout@v3
       with:
@@ -189,6 +191,8 @@ jobs:
 
   linux-arm-build-release:
     runs-on: [self-hosted, linux, ARM64]
+    # Disabling this rebuild for non ispc/ispc repo, as it requires self-hosted runner
+    if: github.repository == 'ispc/ispc'
     steps:
     - uses: actions/checkout@v3
       with:
