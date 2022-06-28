@@ -11,6 +11,13 @@ on:
       - ".github/workflows/rebuild-llvm14.yml"
   workflow_dispatch:
 
+env:
+  version: '14.0'
+  full_version: '14.0.6'
+  ubuntu: '18.04'
+  vs_generator: 'Visual Studio 16 2019'
+  vs_version_str: 'vs2019'
+
 jobs:
   # Building LLVM in docker, as using native Ubuntu 18.04 github-hosted image contains newer-than-expected libs and
   # makes the resulting build not usable on other Ubuntu 18.04 images.
@@ -30,15 +37,15 @@ jobs:
 
     - name: Build LLVM
       run: |
-        cd docker/ubuntu/18.04/cpu_ispc_build
+        cd docker/ubuntu/${{ env.ubuntu }}/cpu_ispc_build
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu18.04:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=14.0 .
+        docker buildx build --tag ispc/ubuntu${{ env.ubuntu }}:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=${{ env.version }} .
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm14_linux_x86_stage1_cache
-        path: docker/ubuntu/18.04/cpu_ispc_build/cache.local
+        path: docker/ubuntu/${{ env.ubuntu }}/cpu_ispc_build/cache.local
 
   linux-build-2:
     needs: [linux-build-1]
@@ -57,27 +64,27 @@ jobs:
       uses: actions/download-artifact@v2
       with:
         name: llvm14_linux_x86_stage1_cache
-        path: docker/ubuntu/18.04/cpu_ispc_build/cache.local
+        path: docker/ubuntu/${{ env.ubuntu }}/cpu_ispc_build/cache.local
 
     - name: Build LLVM
       run: |
-        cd docker/ubuntu/18.04/cpu_ispc_build
+        cd docker/ubuntu/${{ env.ubuntu }}/cpu_ispc_build
         ls -al
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu18.04:stage2 --target=llvm_build_step2 --cache-from=type=local,src=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=14.0 --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu${{ env.ubuntu }}:stage2 --target=llvm_build_step2 --cache-from=type=local,src=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=${{ env.version }} --output=type=tar,dest=result.tar .
 
     - name: Pack LLVM
       run: |
-        cd docker/ubuntu/18.04/cpu_ispc_build
+        cd docker/ubuntu/${{ env.ubuntu }}/cpu_ispc_build
         tar xvf result.tar usr/local/src/llvm
-        mv usr/local/src/llvm/bin-14.0 .
-        tar cJvf llvm-14.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz bin-14.0
+        mv usr/local/src/llvm/bin-${{ env.version }} .
+        tar cJvf llvm-${{ env.full_version }}-ubuntu${{ env.ubuntu }}-Release+Asserts-x86.arm.wasm.tar.xz bin-${{ env.version }}
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm14_linux_x86
-        path: docker/ubuntu/18.04/cpu_ispc_build/llvm-14.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+        path: docker/ubuntu/${{ env.ubuntu }}/cpu_ispc_build/llvm-${{ env.full_version }}-ubuntu${{ env.ubuntu }}-Release+Asserts-x86.arm.wasm.tar.xz
 
   linux-build-release-1:
     runs-on: ubuntu-latest
@@ -93,15 +100,15 @@ jobs:
 
     - name: Build LLVM
       run: |
-        cd docker/ubuntu/18.04/cpu_ispc_build
+        cd docker/ubuntu/${{ env.ubuntu }}/cpu_ispc_build
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu18.04:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=14.0 --build-arg EXTRA_BUILD_ARG="--llvm-disable-assertions" .
+        docker buildx build --tag ispc/ubuntu${{ env.ubuntu }}:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=${{ env.version }} --build-arg EXTRA_BUILD_ARG="--llvm-disable-assertions" .
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm14rel_linux_x86_stage1_cache
-        path: docker/ubuntu/18.04/cpu_ispc_build/cache.local
+        path: docker/ubuntu/${{ env.ubuntu }}/cpu_ispc_build/cache.local
 
   linux-build-release-2:
     needs: [linux-build-release-1]
@@ -120,27 +127,27 @@ jobs:
       uses: actions/download-artifact@v2
       with:
         name: llvm14rel_linux_x86_stage1_cache
-        path: docker/ubuntu/18.04/cpu_ispc_build/cache.local
+        path: docker/ubuntu/${{ env.ubuntu }}/cpu_ispc_build/cache.local
 
     - name: Build LLVM
       run: |
-        cd docker/ubuntu/18.04/cpu_ispc_build
+        cd docker/ubuntu/${{ env.ubuntu }}/cpu_ispc_build
         ls -al
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu18.04:stage2 --target=llvm_build_step2 --cache-from=type=local,src=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=14.0 --build-arg EXTRA_BUILD_ARG="--llvm-disable-assertions" --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu${{ env.ubuntu }}:stage2 --target=llvm_build_step2 --cache-from=type=local,src=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=${{ env.version }} --build-arg EXTRA_BUILD_ARG="--llvm-disable-assertions" --output=type=tar,dest=result.tar .
 
     - name: Pack LLVM
       run: |
-        cd docker/ubuntu/18.04/cpu_ispc_build
+        cd docker/ubuntu/${{ env.ubuntu }}/cpu_ispc_build
         tar xvf result.tar usr/local/src/llvm
-        mv usr/local/src/llvm/bin-14.0 .
-        tar cJvf llvm-14.0.6-ubuntu18.04-Release-x86.arm.wasm.tar.xz bin-14.0
+        mv usr/local/src/llvm/bin-${{ env.version }} .
+        tar cJvf llvm-${{ env.full_version }}-ubuntu${{ env.ubuntu }}-Release-x86.arm.wasm.tar.xz bin-${{ env.version }}
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm14rel_linux_x86
-        path: docker/ubuntu/18.04/cpu_ispc_build/llvm-14.0.6-ubuntu18.04-Release-x86.arm.wasm.tar.xz
+        path: docker/ubuntu/${{ env.ubuntu }}/cpu_ispc_build/llvm-${{ env.full_version }}-ubuntu${{ env.ubuntu }}-Release-x86.arm.wasm.tar.xz
 
   linux-arm-build:
     runs-on: [self-hosted, linux, ARM64]
@@ -155,24 +162,24 @@ jobs:
 
     - name: Build LLVM
       run: |
-        cd docker/ubuntu/18.04/cpu_ispc_build
+        cd docker/ubuntu/${{ env.ubuntu }}/cpu_ispc_build
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu18.04 --no-cache --target=llvm_build_step2 --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=14.0 --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu${{ env.ubuntu }} --no-cache --target=llvm_build_step2 --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=${{ env.version }} --output=type=tar,dest=result.tar .
         docker buildx rm
 
     - name: Pack LLVM
       run: |
-        cd docker/ubuntu/18.04/cpu_ispc_build
+        cd docker/ubuntu/${{ env.ubuntu }}/cpu_ispc_build
         tar xvf result.tar usr/local/src/llvm
-        mv usr/local/src/llvm/bin-14.0 .
-        tar cJvf llvm-14.0.6-ubuntu18.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz bin-14.0
-        rm -rf result.tar usr bin-14.0
+        mv usr/local/src/llvm/bin-${{ env.version }} .
+        tar cJvf llvm-${{ env.full_version }}-ubuntu${{ env.ubuntu }}aarch64-Release+Asserts-x86.arm.wasm.tar.xz bin-${{ env.version }}
+        rm -rf result.tar usr bin-${{ env.version }}
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm14_linux_aarch64
-        path: docker/ubuntu/18.04/cpu_ispc_build/llvm-14.0.6-ubuntu18.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
+        path: docker/ubuntu/${{ env.ubuntu }}/cpu_ispc_build/llvm-${{ env.full_version }}-ubuntu${{ env.ubuntu }}aarch64-Release+Asserts-x86.arm.wasm.tar.xz
 
   linux-arm-build-release:
     runs-on: [self-hosted, linux, ARM64]
@@ -187,24 +194,24 @@ jobs:
 
     - name: Build LLVM
       run: |
-        cd docker/ubuntu/18.04/cpu_ispc_build
+        cd docker/ubuntu/${{ env.ubuntu }}/cpu_ispc_build
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu18.04 --no-cache --target=llvm_build_step2 --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=14.0 --build-arg EXTRA_BUILD_ARG="--llvm-disable-assertions" --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu${{ env.ubuntu }} --no-cache --target=llvm_build_step2 --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=${{ env.version }} --build-arg EXTRA_BUILD_ARG="--llvm-disable-assertions" --output=type=tar,dest=result.tar .
         docker buildx rm
 
     - name: Pack LLVM
       run: |
-        cd docker/ubuntu/18.04/cpu_ispc_build
+        cd docker/ubuntu/${{ env.ubuntu }}/cpu_ispc_build
         tar xvf result.tar usr/local/src/llvm
-        mv usr/local/src/llvm/bin-14.0 .
-        tar cJvf llvm-14.0.6-ubuntu18.04aarch64-Release-x86.arm.wasm.tar.xz bin-14.0
-        rm -rf result.tar usr bin-14.0
+        mv usr/local/src/llvm/bin-${{ env.version }} .
+        tar cJvf llvm-${{ env.full_version }}-ubuntu${{ env.ubuntu }}aarch64-Release-x86.arm.wasm.tar.xz bin-${{ env.version }}
+        rm -rf result.tar usr bin-${{ env.version }}
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm14rel_linux_aarch64
-        path: docker/ubuntu/18.04/cpu_ispc_build/llvm-14.0.6-ubuntu18.04aarch64-Release-x86.arm.wasm.tar.xz
+        path: docker/ubuntu/${{ env.ubuntu }}/cpu_ispc_build/llvm-${{ env.full_version }}-ubuntu${{ env.ubuntu }}aarch64-Release-x86.arm.wasm.tar.xz
 
   win-build:
     runs-on: windows-2019
@@ -232,23 +239,23 @@ jobs:
     - name: Build LLVM
       shell: cmd
       run: |
-        python ./alloy.py -b --version=14.0 --verbose --generator="Visual Studio 16 2019"
+        python ./alloy.py -b --version=${{ env.version }} --verbose --generator="${{ env.vs_generator }}"
         cd alloy_results* && type alloy_build.log
 
     - name: Pack LLVM
       shell: cmd
       run: |
         cd llvm
-        rmdir /s /q build-14.0
-        set TAR_BASE_NAME=llvm-14.0.6-win.vs2019-Release+Asserts-x86.arm.wasm
-        7z.exe a -ttar -snl %TAR_BASE_NAME%.tar bin-14.0
+        rmdir /s /q build-${{ env.version }}
+        set TAR_BASE_NAME=llvm-${{ env.full_version }}-win.${{ env.vs_version_str }}-Release+Asserts-x86.arm.wasm
+        7z.exe a -ttar -snl %TAR_BASE_NAME%.tar bin-${{ env.version }}
         7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm14_win_x86
-        path: llvm/llvm-14.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+        path: llvm/llvm-${{ env.full_version }}-win.${{ env.vs_version_str }}-Release+Asserts-x86.arm.wasm.tar.7z
 
   win-build-release:
     runs-on: windows-2019
@@ -276,23 +283,23 @@ jobs:
     - name: Build LLVM
       shell: cmd
       run: |
-        python ./alloy.py -b --version=14.0 --verbose --llvm-disable-assertions --generator="Visual Studio 16 2019"
+        python ./alloy.py -b --version=${{ env.version }} --verbose --llvm-disable-assertions --generator="${{ env.vs_generator }}"
         cd alloy_results* && type alloy_build.log
 
     - name: Pack LLVM
       shell: cmd
       run: |
         cd llvm
-        rmdir /s /q build-14.0
-        set TAR_BASE_NAME=llvm-14.0.6-win.vs2019-Release-x86.arm.wasm
-        7z.exe a -ttar -snl %TAR_BASE_NAME%.tar bin-14.0
+        rmdir /s /q build-${{ env.version }}
+        set TAR_BASE_NAME=llvm-${{ env.full_version }}-win.${{ env.vs_version_str }}-Release-x86.arm.wasm
+        7z.exe a -ttar -snl %TAR_BASE_NAME%.tar bin-${{ env.version }}
         7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm14rel_win_x86
-        path: llvm/llvm-14.0.6-win.vs2019-Release-x86.arm.wasm.tar.7z
+        path: llvm/llvm-${{ env.full_version }}-win.${{ env.vs_version_str }}-Release-x86.arm.wasm.tar.7z
 
   mac-build:
     runs-on: macos-10.15
@@ -324,18 +331,18 @@ jobs:
 
     - name: Build LLVM
       run: |
-        ./alloy.py -b --version=14.0 --selfbuild --verbose
+        ./alloy.py -b --version=${{ env.version }} --selfbuild --verbose
 
     - name: Pack LLVM
       run: |
         cd llvm
-        tar cJvf llvm-14.0.6-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz bin-14.0
+        tar cJvf llvm-${{ env.full_version }}-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz bin-${{ env.version }}
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm14_macos_x86
-        path: llvm/llvm-14.0.6-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz
+        path: llvm/llvm-${{ env.full_version }}-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz
 
   mac-build-release:
     runs-on: macos-10.15
@@ -367,16 +374,16 @@ jobs:
 
     - name: Build LLVM
       run: |
-        ./alloy.py -b --version=14.0 --selfbuild --verbose --llvm-disable-assertions
+        ./alloy.py -b --version=${{ env.version }} --selfbuild --verbose --llvm-disable-assertions
 
     - name: Pack LLVM
       run: |
         cd llvm
-        tar cJvf llvm-14.0.6-macos10.15-Release-x86.arm.wasm.tar.xz bin-14.0
+        tar cJvf llvm-${{ env.full_version }}-macos10.15-Release-x86.arm.wasm.tar.xz bin-${{ env.version }}
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm14rel_macos_x86
-        path: llvm/llvm-14.0.6-macos10.15-Release-x86.arm.wasm.tar.xz
+        path: llvm/llvm-${{ env.full_version }}-macos10.15-Release-x86.arm.wasm.tar.xz
 
