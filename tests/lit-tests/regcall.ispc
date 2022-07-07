@@ -30,6 +30,8 @@
 // CHECK_MULTI_CPU1: call x86_regcallcc <8 x i32> @__regcall3__extern_sycl_decl_r(
 // CHECK_MULTI_CPU1: define x86_regcallcc <8 x i32> @__regcall3__extern_func_def_r_avx(
 
+// REQUIRES: X86_ENABLED
+
 extern "C" __regcall int extern_func_def_r(uniform float RET[], int b) {
   return b*100;
 }
