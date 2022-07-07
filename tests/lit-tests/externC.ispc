@@ -33,6 +33,8 @@
 // CHECK_MULTI_CPU1: call <8 x i32> @extern_func_decl(
 // CHECK_MULTI_CPU1: define <8 x i32> @extern_func_def_avx(
 
+// REQUIRES: X86_ENABLED
+
 extern "C" int extern_func_def(uniform float RET[], int b) {
   return RET[b]*100;
 }
