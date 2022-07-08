@@ -293,7 +293,12 @@ set(CLANG_LIBRARY_LIST clangFrontend clangDriver clangSerialization clangParse c
 if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "15.0.0")
     list(APPEND CLANG_LIBRARY_LIST clangSupport)
 endif()
+
 set(LLVM_COMPONENTS engine ipo bitreader bitwriter instrumentation linker option frontendopenmp)
+if (XE_ENABLED AND ${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "14.0.0")
+    # passes component is required for SPIR-V usage.
+    list(APPEND LLVM_COMPONENTS passes)
+endif()
 if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "15.0.0")
     # windowsdriver is a small library introduced in LLVM 15. While it's targeted at Windows only,
     # it's used in the LLVM code without any ifdef and is needed on all platforms.
