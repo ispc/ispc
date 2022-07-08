@@ -5814,13 +5814,7 @@ MemoryCoalescing::BasePtrInfo MemoryCoalescing::analyseVarOffsetGEP(llvm::GetEle
         for (unsigned i = 1; i < FirstConstIdx; ++i)
             PartialIdxs.push_back(GEP->getOperand(i));
         llvm::Value *tPtr = GEP->getPointerOperand();
-        llvm::Type *const tTypeCasted = llvm::cast<llvm::PointerType>(tPtr->getType()->getScalarType());
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_15_0
-        llvm::Type *tType =
-            (tTypeCasted->isOpaquePointerTy()) ? nullptr : tTypeCasted->getNonOpaquePointerElementType();
-#else
-        llvm::Type *tType = llvm::cast<llvm::PointerType>(tPtr->getType()->getScalarType())->getElementType();
-#endif // ISPC_LLVM_VERSION
+        llvm::Type *tType = GEP->getSourceElementType();
         auto ret = ComplexGEPsInfoCache.insert(
             {GEPVarOffsetData, llvm::GetElementPtrInst::Create(tType, tPtr, PartialIdxs, "partial_gep")});
         DanglingGEP_it = ret.first;
@@ -5834,14 +5828,12 @@ MemoryCoalescing::BasePtrInfo MemoryCoalescing::analyseVarOffsetGEP(llvm::GetEle
     }
     // Get partial GEP type
     llvm::PointerType *PartialType = llvm::cast<llvm::PointerType>(DanglingGEP->getType());
+
     // Create temporary GEP that will help us to get some useful info
     llvm::Value *tPtr = llvm::ConstantPointerNull::get(PartialType);
-    llvm::Type *const tTypeCasted = llvm::cast<llvm::PointerType>(tPtr->getType()->getScalarType());
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_15_0
-    llvm::Type *tType = (tTypeCasted->isOpaquePointerTy()) ? nullptr : tTypeCasted->getNonOpaquePointerElementType();
-#else
-    llvm::Type *tType = llvm::cast<llvm::PointerType>(tPtr->getType()->getScalarType())->getElementType();
-#endif // ISPC_LLVM_VERSION
+    Assert(llvm::cast<llvm::GetElementPtrInst>(DanglingGEP));
+    llvm::Type *tType = llvm::cast<llvm::GetElementPtrInst>(DanglingGEP)->getSourceElementType();
+
     llvm::GetElementPtrInst *GEPHelper = llvm::GetElementPtrInst::Create(tType, tPtr, Idxs);
     // Accumulate offset from helper
     llvm::APInt acc(g->target->is32Bit() ? 32 : 64, 0, true);
@@ -6540,7 +6532,7 @@ bool CheckIRForGenTarget::runOnBasicBlock(llvm::BasicBlock &bb) {
         if (llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst)) {
             if (llvm::GenXIntrinsic::getGenXIntrinsicID(ci) == llvm::GenXIntrinsic::genx_lsc_prefetch_stateless) {
                 // If prefetch is supported, fix data size parameter
-                Assert(ci->arg_size() >= 6);
+                Assert(ci->arg_size() > 6);
                 llvm::Value *dataSizeVal = ci->getArgOperand(6);
                 llvm::ConstantInt *dataSizeConst = llvm::dyn_cast<llvm::ConstantInt>(dataSizeVal);
                 Assert(dataSizeConst && (dataSizeConst->getBitWidth() == 8));
