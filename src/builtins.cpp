@@ -1232,7 +1232,11 @@ void ispc::DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::
         alignment->setInitializer(LLVMInt32(g->forceAlignment));
     }
 
-    if (g->generateDebuggingSymbols) {
+    // IGC cannot deal with global references, so to keep debug capabilities
+    // on Xe target, ISPC should not generate any global relocations.
+    // When llvm.used is not generated, all previously defined global debug contants will be eliminated,
+    // so there will not be any global relocations passed to IGC.
+    if (!g->target->isXeTarget() && g->generateDebuggingSymbols) {
         emitLLVMUsed(*module, debug_symbols);
     }
 
