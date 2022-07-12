@@ -2039,6 +2039,17 @@ llvm::Value *FunctionEmitContext::MakeSlicePointer(llvm::Value *ptr, llvm::Value
     return ret;
 }
 
+const PointerType *FunctionEmitContext::RegularizePointer(const Type *ptrRefType) {
+    const PointerType *ptrType;
+    if (CastType<ReferenceType>(ptrRefType) != NULL)
+        ptrType = PointerType::GetUniform(ptrRefType->GetReferenceTarget());
+    else {
+        ptrType = CastType<PointerType>(ptrRefType);
+    }
+    AssertPos(currentPos, ptrType != NULL);
+    return ptrType;
+}
+
 llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index, const Type *ptrRefType,
                                                     const llvm::Twine &name) {
     if (basePtr == NULL || index == NULL) {
@@ -2047,13 +2058,7 @@ llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::
     }
 
     // Regularize to a standard pointer type for basePtr's type
-    const PointerType *ptrType;
-    if (CastType<ReferenceType>(ptrRefType) != NULL)
-        ptrType = PointerType::GetUniform(ptrRefType->GetReferenceTarget());
-    else {
-        ptrType = CastType<PointerType>(ptrRefType);
-    }
-    AssertPos(currentPos, ptrType != NULL);
+    const PointerType *ptrType = RegularizePointer(ptrRefType);
 
     if (ptrType->IsSlice()) {
         AssertPos(currentPos, llvm::isa<llvm::StructType>(basePtr->getType()));
@@ -2108,14 +2113,8 @@ llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::
         return NULL;
     }
 
-    // Regaularize the pointer type for basePtr
-    const PointerType *ptrType = NULL;
-    if (CastType<ReferenceType>(ptrRefType) != NULL)
-        ptrType = PointerType::GetUniform(ptrRefType->GetReferenceTarget());
-    else {
-        ptrType = CastType<PointerType>(ptrRefType);
-        AssertPos(currentPos, ptrType != NULL);
-    }
+    // Regularize the pointer type for basePtr
+    const PointerType *ptrType = RegularizePointer(ptrRefType);
 
     if (ptrType->IsSlice()) {
         // Similar to the 1D GEP implementation above, for non-frozen slice
@@ -2183,12 +2182,7 @@ llvm::Value *FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int
     // if we have one, regularize into a pointer type.
     const PointerType *ptrType = NULL;
     if (ptrRefType != NULL) {
-        // Normalize references to uniform pointers
-        if (CastType<ReferenceType>(ptrRefType) != NULL)
-            ptrType = PointerType::GetUniform(ptrRefType->GetReferenceTarget());
-        else
-            ptrType = CastType<PointerType>(ptrRefType);
-        AssertPos(currentPos, ptrType != NULL);
+        ptrType = RegularizePointer(ptrRefType);
     }
 
     // Similarly, we have to see if the pointer type is a struct to see if
@@ -2397,14 +2391,11 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
 
     AssertPos(currentPos, ptrRefType != NULL && mask != NULL);
 
-    const PointerType *ptrType;
+    const PointerType *ptrType = RegularizePointer(ptrRefType);
     const Type *elType;
     if (CastType<ReferenceType>(ptrRefType) != NULL) {
-        ptrType = PointerType::GetUniform(ptrRefType->GetReferenceTarget());
         elType = ptrRefType->GetReferenceTarget();
     } else {
-        ptrType = CastType<PointerType>(ptrRefType);
-        AssertPos(currentPos, ptrType != NULL);
         elType = ptrType->GetBaseType();
     }
 
@@ -3019,13 +3010,7 @@ void FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr, llvm::
         return;
     }
 
-    const PointerType *ptrType;
-    if (CastType<ReferenceType>(ptrRefType) != NULL)
-        ptrType = PointerType::GetUniform(ptrRefType->GetReferenceTarget());
-    else {
-        ptrType = CastType<PointerType>(ptrRefType);
-        AssertPos(currentPos, ptrType != NULL);
-    }
+    const PointerType *ptrType = RegularizePointer(ptrRefType);
 
     if (CastType<UndefinedStructType>(ptrType->GetBaseType())) {
         Error(currentPos, "Unable to store to undefined struct type \"%s\".",
