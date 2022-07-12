@@ -421,6 +421,9 @@ class FunctionEmitContext {
         and an integer offset to a slice within that type. */
     llvm::Value *MakeSlicePointer(llvm::Value *ptr, llvm::Value *offset);
 
+    /* Regularize pointer*/
+    const PointerType *RegularizePointer(const Type *ptrRefType);
+
     /** These GEP methods are generalizations of the standard ones in LLVM;
         they support both uniform and varying basePtr values as well as
         uniform and varying index values (arrays of indices).  Varying base
