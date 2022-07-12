@@ -1452,11 +1452,12 @@ static llvm::Value *lGetStringAsValue(llvm::BasicBlock *bblock, const char *s) {
     llvm::Constant *sConstant = llvm::ConstantDataArray::getString(*g->ctx, s, true);
     std::string var_name = "_";
     var_name = var_name + s;
-    llvm::Value *sPtr = new llvm::GlobalVariable(*m->module, sConstant->getType(), true /* const */,
-                                                 llvm::GlobalValue::InternalLinkage, sConstant, var_name.c_str());
+    llvm::GlobalVariable *sPtr =
+        new llvm::GlobalVariable(*m->module, sConstant->getType(), true /* const */, llvm::GlobalValue::InternalLinkage,
+                                 sConstant, var_name.c_str());
     llvm::Value *indices[2] = {LLVMInt32(0), LLVMInt32(0)};
     llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
-    return llvm::GetElementPtrInst::Create(PTYPE(sPtr), sPtr, arrayRef, "sptr", bblock);
+    return llvm::GetElementPtrInst::Create(sPtr->getValueType(), sPtr, arrayRef, "sptr", bblock);
 }
 
 void FunctionEmitContext::AddInstrumentationPoint(const char *note) {
@@ -2019,7 +2020,8 @@ llvm::Value *FunctionEmitContext::MakeSlicePointer(llvm::Value *ptr, llvm::Value
     return ret;
 }
 
-llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index, const Type *ptrRefType,
+llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index,
+                                                    __attribute__((nonnull)) const Type *ptrRefType,
                                                     const llvm::Twine &name) {
     if (basePtr == NULL || index == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
@@ -2073,7 +2075,8 @@ llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::
         // uniform, so just emit the regular LLVM GEP instruction
         llvm::Value *ind[1] = {index};
         llvm::ArrayRef<llvm::Value *> arrayRef(&ind[0], &ind[1]);
-        llvm::Instruction *inst = llvm::GetElementPtrInst::Create(PTYPE(basePtr), basePtr, arrayRef,
+        llvm::Type *basePtrLLVMType = ptrType->GetBaseType()->LLVMStorageType(g->ctx);
+        llvm::Instruction *inst = llvm::GetElementPtrInst::Create(basePtrLLVMType, basePtr, arrayRef,
                                                                   name.isTriviallyEmpty() ? "gep" : name, bblock);
         AddDebugPos(inst);
         return inst;
@@ -2082,7 +2085,8 @@ llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::
 }
 
 llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0, llvm::Value *index1,
-                                                    const Type *ptrRefType, const llvm::Twine &name) {
+                                                    __attribute__((nonnull)) const Type *ptrRefType,
+                                                    const llvm::Twine &name) {
     if (basePtr == NULL || index0 == NULL || index1 == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -2122,7 +2126,8 @@ llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::
         // uniform, so just emit the regular LLVM GEP instruction
         llvm::Value *indices[2] = {index0, index1};
         llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
-        llvm::Instruction *inst = llvm::GetElementPtrInst::Create(PTYPE(basePtr), basePtr, arrayRef,
+        llvm::Type *basePtrLLVMType = ptrType->GetBaseType()->LLVMStorageType(g->ctx);
+        llvm::Instruction *inst = llvm::GetElementPtrInst::Create(basePtrLLVMType, basePtr, arrayRef,
                                                                   name.isTriviallyEmpty() ? "gep" : name, bblock);
         AddDebugPos(inst);
         return inst;
