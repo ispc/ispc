@@ -758,7 +758,7 @@ void ispc::InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, Fun
                 llvm::Value *ep;
 
                 if (CastType<StructType>(symType) != NULL)
-                    ep = ctx->AddElementOffset(ptr, i, NULL, "element");
+                    ep = ctx->AddElementOffset(new AddressInfo(ptr, NULL), i, NULL, "element");
                 else
                     ep = ctx->GetElementPtrInst(ptr, LLVMInt32(0), LLVMInt32(i), PointerType::GetUniform(symType),
                                                 "gep");
@@ -5058,11 +5058,12 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
         ctx->SetDebugPos(pos);
         for (size_t i = 0; i < identifier.size(); ++i) {
             char idStr[2] = {identifier[i], '\0'};
-            llvm::Value *elementPtr =
-                ctx->AddElementOffset(basePtr, indices[i], basePtrType, llvm::Twine(basePtr->getName()) + idStr);
+            llvm::Value *elementPtr = ctx->AddElementOffset(new AddressInfo(basePtr, basePtrType, ctx), indices[i],
+                                                            basePtrType, llvm::Twine(basePtr->getName()) + idStr);
             llvm::Value *elementValue = ctx->LoadInst(elementPtr, elementMask, elementPtrType);
 
-            llvm::Value *ptmp = ctx->AddElementOffset(resultPtr, i, NULL, llvm::Twine(resultPtr->getName()) + idStr);
+            llvm::Value *ptmp = ctx->AddElementOffset(new AddressInfo(resultPtr, NULL), i, NULL,
+                                                      llvm::Twine(resultPtr->getName()) + idStr);
             ctx->StoreInst(elementValue, ptmp, elementPtrType, expr->GetType()->IsUniformType());
         }
 
@@ -5191,7 +5192,8 @@ llvm::Value *MemberExpr::GetValue(FunctionEmitContext *ctx) const {
         if (elementNumber == -1)
             return NULL;
 
-        lvalue = ctx->AddElementOffset(ptr, elementNumber, PointerType::GetUniform(exprType));
+        lvalue = ctx->AddElementOffset(new AddressInfo(ptr, PointerType::GetUniform(exprType), ctx), elementNumber,
+                                       PointerType::GetUniform(exprType));
         lvalueType = PointerType::GetUniform(GetType());
         mask = LLVMMaskAllOn;
     } else {
@@ -5227,7 +5229,8 @@ llvm::Value *MemberExpr::GetLValue(FunctionEmitContext *ctx) const {
 
     const Type *exprLValueType = dereferenceExpr ? exprType : expr->GetLValueType();
     ctx->SetDebugPos(pos);
-    llvm::Value *ptr = ctx->AddElementOffset(basePtr, elementNumber, exprLValueType, basePtr->getName().str().c_str());
+    llvm::Value *ptr = ctx->AddElementOffset(new AddressInfo(basePtr, exprLValueType, ctx), elementNumber,
+                                             exprLValueType, basePtr->getName().str().c_str());
     if (ptr == NULL) {
         AssertPos(pos, m->errorCount > 0);
         return NULL;

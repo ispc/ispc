@@ -3516,7 +3516,7 @@ static bool lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, llvm::Value *
     llvm::Value *ptr = lEmitPrintArgCode(expr, ctx);
     if (!ptr)
         return false;
-    llvm::Value *arrayPtr = ctx->AddElementOffset(argPtrArray, offset, NULL);
+    llvm::Value *arrayPtr = ctx->AddElementOffset(new AddressInfo(argPtrArray, NULL), offset, NULL);
     ctx->StoreInst(ptr, arrayPtr);
     return true;
 }

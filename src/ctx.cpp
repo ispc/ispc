@@ -217,6 +217,20 @@ CFInfo *CFInfo::GetSwitch(bool isUniform, bool isUniformEmulated, llvm::BasicBlo
 }
 
 ///////////////////////////////////////////////////////////////////////////
+
+AddressInfo::AddressInfo(llvm::Value *p, llvm::Type *t) : pointer(p), elementType(t) {
+    Assert(pointer != nullptr && "Pointer cannot be null");
+    // Assert(elementType != nullptr && "Element type cannot be null");
+}
+AddressInfo::AddressInfo(llvm::Value *p, const Type *t, FunctionEmitContext *c) : pointer(p), ispcType(t), ctx(c) {
+    Assert(pointer != nullptr && "Pointer cannot be null");
+    Assert(ispcType != nullptr && "ISPC type cannot be null");
+    const PointerType *pType = ctx->RegularizePointer(ispcType);
+    elementType = pType->GetBaseType()->LLVMStorageType(g->ctx);
+    Assert(elementType != nullptr && "Element type cannot be null");
+}
+
+///////////////////////////////////////////////////////////////////////////
 FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::Function *lf, SourcePos firstStmtPos) {
     function = func;
     llvmFunction = lf;
@@ -2148,8 +2162,9 @@ llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::
     }
 }
 
-llvm::Value *FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int elementNum, const Type *ptrRefType,
+llvm::Value *FunctionEmitContext::AddElementOffset(AddressInfo *fullBaseAddr, int elementNum, const Type *ptrRefType,
                                                    const llvm::Twine &name, const PointerType **resultPtrType) {
+    llvm::Value *fullBasePtr = fullBaseAddr->getPointer();
     if (resultPtrType != NULL)
         AssertPos(currentPos, ptrRefType != NULL);
 
@@ -2364,7 +2379,8 @@ llvm::Value *FunctionEmitContext::loadUniformFromSOA(llvm::Value *ptr, llvm::Val
 
         for (int i = 0; i < ct->GetElementCount(); ++i) {
             const PointerType *eltPtrType;
-            llvm::Value *eltPtr = AddElementOffset(ptr, i, ptrType, "elt_offset", &eltPtrType);
+            llvm::Value *eltPtr =
+                AddElementOffset(new AddressInfo(ptr, ptrType, this), i, ptrType, "elt_offset", &eltPtrType);
             llvm::Value *eltValue = LoadInst(eltPtr, mask, eltPtrType, name);
             retValue = InsertInst(retValue, eltValue, i, "set_value");
         }
@@ -2496,7 +2512,8 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
 
         for (int i = 0; i < collectionType->GetElementCount(); ++i) {
             const PointerType *eltPtrType;
-            llvm::Value *eltPtr = AddElementOffset(ptr, i, ptrType, "gather_elt_ptr", &eltPtrType);
+            llvm::Value *eltPtr =
+                AddElementOffset(new AddressInfo(ptr, ptrType, this), i, ptrType, "gather_elt_ptr", &eltPtrType);
 
             eltPtr = addVaryingOffsetsIfNeeded(eltPtr, eltPtrType);
 
@@ -2754,7 +2771,7 @@ void FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr, cons
                 continue;
             }
             llvm::Value *eltValue = ExtractInst(value, i, "value_member");
-            llvm::Value *eltPtr = AddElementOffset(ptr, i, ptrType, "struct_ptr_ptr");
+            llvm::Value *eltPtr = AddElementOffset(new AddressInfo(ptr, ptrType, this), i, ptrType, "struct_ptr_ptr");
             const Type *eltPtrType = PointerType::GetUniform(eltType);
             StoreInst(eltValue, eltPtr, mask, eltType, eltPtrType);
         }
@@ -2784,12 +2801,12 @@ void FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr, cons
             // First, extract the pointer from the slice struct and masked
             // store that.
             llvm::Value *v0 = ExtractInst(value, 0);
-            llvm::Value *p0 = AddElementOffset(ptr, 0, ptrType);
+            llvm::Value *p0 = AddElementOffset(new AddressInfo(ptr, ptrType, this), 0, ptrType);
             maskedStore(v0, p0, PointerType::GetUniform(pt->GetAsNonSlice()), mask);
 
             // And then do same for the integer offset
             llvm::Value *v1 = ExtractInst(value, 1);
-            llvm::Value *p1 = AddElementOffset(ptr, 1, ptrType);
+            llvm::Value *p1 = AddElementOffset(new AddressInfo(ptr, ptrType, this), 1, ptrType);
             const Type *offsetType = AtomicType::VaryingInt32;
             maskedStore(v1, p1, PointerType::GetUniform(offsetType), mask);
 
@@ -2880,7 +2897,7 @@ void FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr, const Ty
 
             // Get the (varying) pointer to the i'th element of the target
             // collection
-            llvm::Value *eltPtr = AddElementOffset(ptr, i, ptrType);
+            llvm::Value *eltPtr = AddElementOffset(new AddressInfo(ptr, ptrType, this), i, ptrType);
 
             // The destination element type may be uniform (e.g. if we're
             // scattering to an array of uniform structs).  Thus, we need
@@ -3049,7 +3066,8 @@ void FunctionEmitContext::storeUniformToSOA(llvm::Value *value, llvm::Value *ptr
             llvm::Value *eltValue = ExtractInst(value, i);
             const Type *eltType = ct->GetElementType(i);
             const PointerType *dstEltPtrType;
-            llvm::Value *dstEltPtr = AddElementOffset(ptr, i, ptrType, "slice_offset", &dstEltPtrType);
+            llvm::Value *dstEltPtr =
+                AddElementOffset(new AddressInfo(ptr, ptrType, this), i, ptrType, "slice_offset", &dstEltPtrType);
             StoreInst(eltValue, dstEltPtr, mask, eltType, dstEltPtrType);
         }
     } else {
@@ -3641,7 +3659,7 @@ llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<ll
     // Copy the values of the parameters into the appropriate place in
     // the argument block
     for (unsigned int i = 0; i < argVals.size(); ++i) {
-        llvm::Value *ptr = AddElementOffset(argmem, i, NULL, "funarg");
+        llvm::Value *ptr = AddElementOffset(new AddressInfo(argmem, NULL), i, NULL, "funarg");
         // don't need to do masked store here, I think
         StoreInst(argVals[i], ptr);
     }
@@ -3649,7 +3667,7 @@ llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<ll
     if (argStructType->getNumElements() == argVals.size() + 1) {
         // copy in the mask
         llvm::Value *mask = GetFullMask();
-        llvm::Value *ptr = AddElementOffset(argmem, argVals.size(), NULL, "funarg_mask");
+        llvm::Value *ptr = AddElementOffset(new AddressInfo(argmem, NULL), argVals.size(), NULL, "funarg_mask");
         StoreInst(mask, ptr);
     }
 

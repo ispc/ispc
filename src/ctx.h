@@ -50,6 +50,30 @@
 namespace ispc {
 
 struct CFInfo;
+///////////////////////////////////////////////////////////////////////////
+
+class AddressInfo {
+  public:
+    AddressInfo(){};
+    AddressInfo(llvm::Value *p, llvm::Type *t);
+    AddressInfo(llvm::Value *p, const Type *t, FunctionEmitContext *c);
+    llvm::Value *getPointer() const { return pointer; }
+
+    // Return the type of the pointer value.
+    llvm::PointerType *getType() const { return llvm::cast<llvm::PointerType>(getPointer()->getType()); }
+
+    // Return the type of the values stored in this address.
+    llvm::Type *getElementType() const { return elementType; }
+
+    // Return the address space that this address resides in.
+    unsigned getAddressSpace() const { return getType()->getAddressSpace(); }
+
+  private:
+    llvm::Value *pointer;
+    llvm::Type *elementType;
+    const Type *ispcType;
+    FunctionEmitContext *ctx;
+};
 
 /** FunctionEmitContext is one of the key classes in ispc; it is used to
     help with emitting the intermediate representation of a function during
@@ -442,7 +466,7 @@ class FunctionEmitContext {
         pointer must be a pointer to a structure type.  The ptrType gives
         the type of the pointer, though it may be NULL if the base pointer
         is uniform. */
-    llvm::Value *AddElementOffset(llvm::Value *basePtr, int elementNum, const Type *ptrType,
+    llvm::Value *AddElementOffset(AddressInfo *baseAddrInfo, int elementNum, const Type *ptrType,
                                   const llvm::Twine &name = "", const PointerType **resultPtrType = NULL);
 
     /** Bool is stored as i8 and <WIDTH x i8> but represented in IR as i1 and

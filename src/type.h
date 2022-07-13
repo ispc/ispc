@@ -458,7 +458,7 @@ class PointerType : public Type {
     const PointerType *GetAsConstType() const;
     const PointerType *GetAsNonConstType() const;
     const PointerType *GetWithAddrSpace(AddressSpace as) const;
-    
+
     std::string GetString() const;
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &name) const;
