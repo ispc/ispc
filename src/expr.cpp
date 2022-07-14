@@ -756,10 +756,10 @@ void ispc::InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, Fun
                 const Type *elementType =
                     collectionType ? collectionType->GetElementType(i) : symType->GetAsUniformType();
                 llvm::Value *ep;
-
-                if (CastType<StructType>(symType) != NULL)
-                    ep = ctx->AddElementOffset(new AddressInfo(ptr, NULL), i, NULL, "element");
-                else
+                if (CastType<StructType>(symType) != NULL) {
+                    ep = ctx->AddElementOffset(new AddressInfo(ptr, CastType<StructType>(symType), ctx), i, NULL,
+                                               "element");
+                } else
                     ep = ctx->GetElementPtrInst(ptr, LLVMInt32(0), LLVMInt32(i), PointerType::GetUniform(symType),
                                                 "gep");
 
@@ -5061,8 +5061,7 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
             llvm::Value *elementPtr = ctx->AddElementOffset(new AddressInfo(basePtr, basePtrType, ctx), indices[i],
                                                             basePtrType, llvm::Twine(basePtr->getName()) + idStr);
             llvm::Value *elementValue = ctx->LoadInst(elementPtr, elementMask, elementPtrType);
-
-            llvm::Value *ptmp = ctx->AddElementOffset(new AddressInfo(resultPtr, NULL), i, NULL,
+            llvm::Value *ptmp = ctx->AddElementOffset(new AddressInfo(resultPtr, memberType, ctx), i, NULL,
                                                       llvm::Twine(resultPtr->getName()) + idStr);
             ctx->StoreInst(elementValue, ptmp, elementPtrType, expr->GetType()->IsUniformType());
         }

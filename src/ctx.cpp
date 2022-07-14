@@ -225,8 +225,14 @@ AddressInfo::AddressInfo(llvm::Value *p, llvm::Type *t) : pointer(p), elementTyp
 AddressInfo::AddressInfo(llvm::Value *p, const Type *t, FunctionEmitContext *c) : pointer(p), ispcType(t), ctx(c) {
     Assert(pointer != nullptr && "Pointer cannot be null");
     Assert(ispcType != nullptr && "ISPC type cannot be null");
-    const PointerType *pType = ctx->RegularizePointer(ispcType);
-    elementType = pType->GetBaseType()->LLVMStorageType(g->ctx);
+    if (CastType<ReferenceType>(t) != NULL) {
+        PointerType *pType = PointerType::GetUniform(t->GetReferenceTarget());
+        elementType = pType->GetBaseType()->LLVMStorageType(g->ctx);
+    } else if (CastType<PointerType>(t) != NULL) {
+        elementType = t->GetBaseType()->LLVMStorageType(g->ctx);
+    } else {
+        elementType = t->LLVMStorageType(g->ctx);
+    }
     Assert(elementType != nullptr && "Element type cannot be null");
 }
 
@@ -2034,12 +2040,12 @@ llvm::Value *FunctionEmitContext::MakeSlicePointer(llvm::Value *ptr, llvm::Value
 }
 
 const PointerType *FunctionEmitContext::RegularizePointer(const Type *ptrRefType) {
-    const PointerType *ptrType;
+    const PointerType *ptrType = NULL;
+
     if (CastType<ReferenceType>(ptrRefType) != NULL)
         ptrType = PointerType::GetUniform(ptrRefType->GetReferenceTarget());
-    else {
+    else
         ptrType = CastType<PointerType>(ptrRefType);
-    }
     AssertPos(currentPos, ptrType != NULL);
     return ptrType;
 }
@@ -2216,7 +2222,10 @@ llvm::Value *FunctionEmitContext::AddElementOffset(AddressInfo *fullBaseAddr, in
         // If the pointer is uniform, we can use the regular LLVM GEP.
         llvm::Value *offsets[2] = {LLVMInt32(0), LLVMInt32(elementNum)};
         llvm::ArrayRef<llvm::Value *> arrayRef(&offsets[0], &offsets[2]);
-        resultPtr = llvm::GetElementPtrInst::Create(PTYPE(basePtr), basePtr, arrayRef,
+        if (fullBaseAddr->getElementType()) {
+            Assert(fullBaseAddr->getElementType() == PTYPE(basePtr));
+        }
+        resultPtr = llvm::GetElementPtrInst::Create(fullBaseAddr->getElementType(), basePtr, arrayRef,
                                                     name.isTriviallyEmpty() ? "struct_offset" : name, bblock);
     } else {
         // Otherwise do the math to find the offset and add it to the given
@@ -3655,11 +3664,10 @@ llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<ll
     allocArgs.push_back(LLVMInt32(align));
     llvm::Value *voidmem = CallInst(falloc, NULL, allocArgs, "args_ptr");
     llvm::Value *argmem = BitCastInst(voidmem, pt);
-
     // Copy the values of the parameters into the appropriate place in
     // the argument block
     for (unsigned int i = 0; i < argVals.size(); ++i) {
-        llvm::Value *ptr = AddElementOffset(new AddressInfo(argmem, NULL), i, NULL, "funarg");
+        llvm::Value *ptr = AddElementOffset(new AddressInfo(argmem, argStructType), i, NULL, "funarg");
         // don't need to do masked store here, I think
         StoreInst(argVals[i], ptr);
     }
@@ -3667,7 +3675,8 @@ llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<ll
     if (argStructType->getNumElements() == argVals.size() + 1) {
         // copy in the mask
         llvm::Value *mask = GetFullMask();
-        llvm::Value *ptr = AddElementOffset(new AddressInfo(argmem, NULL), argVals.size(), NULL, "funarg_mask");
+        llvm::Value *ptr =
+            AddElementOffset(new AddressInfo(argmem, argStructType), argVals.size(), NULL, "funarg_mask");
         StoreInst(mask, ptr);
     }
 

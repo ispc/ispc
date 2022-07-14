@@ -3503,7 +3503,7 @@ static llvm::Value *lEmitPrintArgCode(Expr *expr, FunctionEmitContext *ctx) {
     return ptr;
 }
 
-static bool lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, llvm::Value *argPtrArray, int offset,
+static bool lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, AddressInfo *argPtrAddr, int offset,
                              std::string &argTypes) {
     if (!expr)
         return false;
@@ -3516,7 +3516,7 @@ static bool lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, llvm::Value *
     llvm::Value *ptr = lEmitPrintArgCode(expr, ctx);
     if (!ptr)
         return false;
-    llvm::Value *arrayPtr = ctx->AddElementOffset(new AddressInfo(argPtrArray, NULL), offset, NULL);
+    llvm::Value *arrayPtr = ctx->AddElementOffset(argPtrAddr, offset, NULL);
     ctx->StoreInst(ptr, arrayPtr);
     return true;
 }
@@ -3552,12 +3552,12 @@ std::vector<llvm::Value *> PrintStmt::getDoPrintArgs(FunctionEmitContext *ctx) c
         if (elist) {
             for (unsigned int i = 0; i < elist->exprs.size(); ++i) {
                 Expr *expr = elist->exprs[i];
-                if (!lProcessPrintArg(expr, ctx, argPtrArray, i, argTypes)) {
+                if (!lProcessPrintArg(expr, ctx, new AddressInfo(argPtrArray, argPtrArrayType), i, argTypes)) {
                     return {};
                 }
             }
         } else {
-            if (lProcessPrintArg(values, ctx, argPtrArray, 0, argTypes)) {
+            if (lProcessPrintArg(values, ctx, new AddressInfo(argPtrArray, argPtrArrayType), 0, argTypes)) {
                 return {};
             }
         }

@@ -879,6 +879,7 @@ class FunctionType : public Type {
 
     const std::string GetReturnTypeString() const;
 
+    std::vector<llvm::Type *> LLVMFunctionArgType(llvm::LLVMContext *ctx, bool disableMask = false) const;
     /** This method returns the LLVM FunctionType that corresponds to this
         function type.  The \c disableMask parameter indicates whether the
         llvm::FunctionType should have the trailing mask parameter, if
