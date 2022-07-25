@@ -1,0 +1,26 @@
+name: (INTERNAL) Check code formatting
+
+on: pull_request
+
+jobs:
+  check-format:
+    runs-on: [Linux, docker]
+    container:
+      image: amr-registry.caas.intel.com/ispc/ubuntu:22.04
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: false
+
+    - name: Install dependencies
+      run: |
+        echo "APT::Acquire::Retries \"3\";" | tee -a /etc/apt/apt.conf.d/80-retries
+        apt-get update
+        apt-get install -y clang-format-12 clang-12
+        ln -sf /usr/bin/clang-12 /usr/bin/clang
+        ln -sf /usr/bin/clang-format-12 /usr/bin/clang-format
+
+    - name: Check format
+      run: |
+        ./check_format.sh

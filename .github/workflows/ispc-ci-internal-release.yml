@@ -1,0 +1,316 @@
+# Copyright (c) 2023, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: (INTERNAL) ISPC release build
+
+on:
+  workflow_dispatch:
+    inputs:
+      core_repo:
+        description: 'Core Repository (default: ispc/ispc)'
+        required: true
+        type: string
+        default: 'ispc/ispc'
+      core_ref:
+        description: 'Core Repository Ref/SHA (default: main)'
+        required: true
+        type: string
+        default: 'main'
+
+env:
+  ARTIFACTORY_ISPC_URL: ${{ secrets.ARTIFACTORY_ISPC_URL }}/superbuild
+  ARTIFACTORY_ISPC_API_KEY: ${{ secrets.ARTIFACTORY_ISPC_API_KEY }}
+  PRESET_TYPE: "os"
+  PIPELINE_ID: ${{ github.run_id }}
+  LLVM_NO_ASSERTIONS: 1
+  REBUILD_LLVM: 1
+  SIGNING_REQUIRED: 1
+
+jobs:
+    define-package-params:
+      runs-on: 'Linux'
+      container: amr-registry.caas.intel.com/ispc/ubuntu:22.04
+      outputs:
+        package_linux_name: ${{ steps.define-package.outputs.package_linux_name }}
+        package_linux_name_oneapi: ${{ steps.define-package.outputs.package_linux_name_oneapi }}
+        package_win_name: ${{ steps.define-package.outputs.package_win_name }}
+        docker_path: ${{ steps.define-package.outputs.docker_path }}
+        docker_path_oneapi: ${{ steps.define-package.outputs.docker_path_oneapi }}
+      steps:
+        - name: Checkout ISPC repo
+          uses: actions/checkout@v3
+          with:
+            repository: ${{ inputs.core_repo }}
+            ref: ${{ inputs.core_ref }}
+            submodules: false
+            fetch-depth: 0
+            path: ispc
+            token: ${{ secrets.ACCESS_TOKEN }}
+
+        - name: Define ISPC package parameters
+          id: define-package
+          run: |
+            PACKAGE_NAME="ispc-trunk"
+            DOCKER_PATH="ispc/docker/centos/7/xpu_ispc_build"
+            DOCKER_PATH_ONEAPI=""
+            if [[ ${{ inputs.core_ref}} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              PACKAGE_NAME="ispc-${{ inputs.core_ref}}"
+              DOCKER_PATH="ispc/docker/${{ inputs.core_ref}}/centos7"
+              if [ -d "ispc/docker/${{ inputs.core_ref}}/centos7_oneapi" ]; then
+                DOCKER_PATH_ONEAPI="ispc/docker/${{ inputs.core_ref}}/centos7_oneapi"
+              else
+                echo "Dockerfile for oneAPI does not exist!" >> $GITHUB_STEP_SUMMARY
+              fi
+            fi
+            echo "package_linux_name=${PACKAGE_NAME}-linux.tar.gz" >> $GITHUB_OUTPUT
+            echo "package_linux_name=${PACKAGE_NAME}-linux.tar.gz" >> $GITHUB_STEP_SUMMARY
+            echo "package_win_name=${PACKAGE_NAME}-windows.zip" >> $GITHUB_OUTPUT
+            echo "package_win_name=${PACKAGE_NAME}-windows.zip" >> $GITHUB_STEP_SUMMARY
+            echo "docker_path=${DOCKER_PATH}" >> $GITHUB_OUTPUT
+            echo "docker_path=${DOCKER_PATH}" >> $GITHUB_STEP_SUMMARY
+            echo "docker_path_oneapi=${DOCKER_PATH_ONEAPI}" >> $GITHUB_OUTPUT
+            echo "docker_path_oneapi=${DOCKER_PATH_ONEAPI}" >> $GITHUB_STEP_SUMMARY
+            if [ "${DOCKER_PATH_ONEAPI}" != "" ]; then
+              echo "package_linux_name_oneapi=${PACKAGE_NAME}-linux-oneapi.tar.gz" >> $GITHUB_OUTPUT
+              echo "package_linux_name_oneapi=${PACKAGE_NAME}-linux-oneapi.tar.gz" >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "signing=${{ env.SIGNING_REQUIRED}}" >> $GITHUB_OUTPUT
+            echo "signing=${{ env.SIGNING_REQUIRED}}" >> $GITHUB_STEP_SUMMARY
+          shell: bash
+
+    define-presets:
+      uses: ./.github/workflows/ispc-ci-internal-preset.yml
+      with:
+        core_repo: ${{ inputs.core_repo }}
+        core_ref: ${{ inputs.core_ref }}
+        preset_type: "os"
+      secrets: inherit
+
+    linux-package:
+        runs-on: ['Linux', 'docker', 'build']
+        container: amr-registry.caas.intel.com/ispc/ubuntu:22.04
+        needs: [define-package-params]
+        steps:
+        - uses: actions/checkout@v3
+          with:
+            repository: ${{ inputs.core_repo }}
+            ref: ${{ inputs.core_ref }}
+            submodules: false
+            fetch-depth: 0
+            path: ispc
+            token: ${{ secrets.ACCESS_TOKEN }}
+
+        - name: Build CentOS 7 docker image
+          run: |
+            cd ${{ needs.define-package-params.outputs.docker_path }}
+            docker build --no-cache --build-arg https_proxy=$https_proxy --build-arg http_proxy=$http_proxy --build-arg no_proxy=$no_proxy --build-arg SHA=${{ inputs.core_ref }} -t centos_7_ispc_xpu -f Dockerfile .
+          shell: bash
+
+        - name: Copy ISPC release package from docker
+          run: |
+            container_id=$(docker create centos_7_ispc_xpu)
+            docker cp $container_id:/usr/local/src/ispc/build/${{ needs.define-package-params.outputs.package_linux_name }} .
+            docker rm -v $container_id
+            docker rmi centos_7_ispc_xpu
+          shell: bash
+
+        - name: Upload package
+          uses: actions/upload-artifact@v3
+          with:
+            name: ispc_linux_package
+            path: ${{ needs.define-package-params.outputs.package_linux_name }}
+
+    linux-package-oneapi:
+      if: ${{ needs.define-package-params.outputs.docker_path_oneapi != '' }}
+      runs-on: ['Linux', 'docker', 'build']
+      container: amr-registry.caas.intel.com/ispc/ubuntu:22.04
+      needs: [define-package-params]
+      steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.core_repo }}
+          ref: ${{ inputs.core_ref }}
+          submodules: false
+          fetch-depth: 0
+          path: ispc
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Build CentOS 7 docker image
+        run: |
+          cd ${{ needs.define-package-params.outputs.docker_path_oneapi }}
+          docker build --no-cache --build-arg https_proxy=$https_proxy --build-arg http_proxy=$http_proxy --build-arg no_proxy=$no_proxy --build-arg SHA=${{ inputs.core_ref }} -t centos_7_ispc_xpu_oneapi -f Dockerfile .
+        shell: bash
+
+      - name: Copy ISPC release package from docker
+        run: |
+          container_id=$(docker create centos_7_ispc_xpu_oneapi)
+          docker cp $container_id:/usr/local/src/ispc/build/${{ needs.define-package-params.outputs.package_linux_name_oneapi }} .
+          docker rm -v $container_id
+          docker rmi centos_7_ispc_xpu_oneapi
+        shell: bash
+
+      - name: Upload package
+        uses: actions/upload-artifact@v3
+        with:
+          name: ispc_linux_package_oneapi
+          path: ${{ needs.define-package-params.outputs.package_linux_name_oneapi }}
+
+    win-llvm:
+      runs-on: ['Windows', 'build']
+      needs: [define-package-params, define-presets]
+      env:
+        LLVM_VER: ${{ needs.define-presets.outputs.LLVM_VER }}
+      steps:
+        - name: Checkout intel-innersource deps ISPC repo
+          uses: actions/checkout@v3
+          with:
+            repository: intel-innersource/applications.compilers.ispc.dependencies
+            path: deps
+            token: ${{ secrets.ACCESS_TOKEN }}
+
+        - name: Checkout ISPC repo
+          uses: actions/checkout@v3
+          with:
+            repository: ${{ inputs.core_repo }}
+            ref: ${{ inputs.core_ref }}
+            path: ispc
+            token: ${{ secrets.ACCESS_TOKEN }}
+
+        - name: (Re)build LLVM
+          shell: cmd
+          run: |
+            echo ### LLVM win build >> %GITHUB_STEP_SUMMARY%
+            set DEPS_SCRIPT_DIR=%GITHUB_WORKSPACE%\deps\scripts-gh
+            deps\scripts-gh\run-vs-win-cmd.bat deps\scripts-gh\build-llvm.bat
+
+    win-build-vc-intrinsics:
+      runs-on: ['Windows', 'build']
+      needs: [define-package-params, define-presets, win-llvm]
+      env:
+        LLVM_VER: ${{ needs.define-presets.outputs.LLVM_VER }}
+      steps:
+        - name: Checkout intel-innersource deps ISPC repo
+          uses: actions/checkout@v3
+          with:
+            repository: intel-innersource/applications.compilers.ispc.dependencies
+            path: deps
+            token: ${{ secrets.ACCESS_TOKEN }}
+
+        - name: Checkout ISPC repo
+          uses: actions/checkout@v3
+          with:
+            repository: ${{ inputs.core_repo }}
+            path: ispc
+            ref: ${{ inputs.core_ref }}
+            token: ${{ secrets.ACCESS_TOKEN }}
+
+        - name: Checkout vc-intrinsics repo
+          uses: actions/checkout@v3
+          with:
+            repository: ${{ needs.define-presets.outputs.VC_INTRINSICS_REPO }}
+            path: vc-intrinsics
+            ref: ${{ needs.define-presets.outputs.VC_INTRINSICS_COMMIT_SHA }}
+            token: ${{ secrets.ACCESS_TOKEN }}
+
+        - name: Build VC intrinsics
+          shell: cmd
+          run: |
+            set DEPS_SCRIPT_DIR=%GITHUB_WORKSPACE%\deps\scripts-gh
+            deps\scripts-gh\run-vs-win-cmd.bat deps\scripts-gh\build-vc-intrinsics.bat ../vc-intrinsics
+
+    win-build-spirv-translator:
+      runs-on: ['Windows', 'build']
+      needs: [define-package-params, define-presets, win-llvm]
+      env:
+        LLVM_VER: ${{ needs.define-presets.outputs.LLVM_VER }}
+      steps:
+        - name: Checkout intel-innersource deps ISPC repo
+          uses: actions/checkout@v3
+          with:
+            repository: intel-innersource/applications.compilers.ispc.dependencies
+            path: deps
+            token: ${{ secrets.ACCESS_TOKEN }}
+
+        - name: Checkout ISPC repo
+          uses: actions/checkout@v3
+          with:
+            repository: ${{ inputs.core_repo }}
+            path: ispc
+            ref: ${{ inputs.core_ref }}
+            token: ${{ secrets.ACCESS_TOKEN }}
+
+        - name: Checkout SPIRV Translator repo
+          uses: actions/checkout@v3
+          with:
+            repository: ${{ needs.define-presets.outputs.SPIRV_TRANSLATOR_REPO }}
+            path: spirv-trans
+            ref: ${{ needs.define-presets.outputs.SPIRV_TRANSLATOR_COMMIT_SHA }}
+            token: ${{ secrets.ACCESS_TOKEN }}
+
+        - name: Build SPIR-V translator
+          shell: cmd
+          run: |
+            set DEPS_SCRIPT_DIR=%GITHUB_WORKSPACE%\deps\scripts-gh
+            deps\scripts-gh\run-vs-win-cmd.bat deps\scripts-gh\build-spirv-translator.bat ../spirv-trans
+
+    win-build-l0-loader:
+      runs-on: ['Windows', 'build']
+      needs: [define-package-params, define-presets, win-llvm]
+      env:
+        LLVM_VER: ${{ needs.define-presets.outputs.LLVM_VER }}
+      steps:
+        - name: Checkout intel-innersource deps ISPC repo
+          uses: actions/checkout@v3
+          with:
+            repository: intel-innersource/applications.compilers.ispc.dependencies
+            path: deps
+            token: ${{ secrets.ACCESS_TOKEN }}
+
+        - name: Checkout ISPC repo
+          uses: actions/checkout@v3
+          with:
+            repository: ${{ inputs.core_repo }}
+            path: ispc
+            ref: ${{ inputs.core_ref }}
+            token: ${{ secrets.ACCESS_TOKEN }}
+
+        - name: Build L0 loader
+          shell: cmd
+          run: |
+            set DEPS_SCRIPT_DIR=%GITHUB_WORKSPACE%\deps\scripts-gh
+            deps\scripts-gh\run-vs-win-cmd.bat deps\scripts-gh\build-l0-loader.bat
+
+    # Build ISPC package and sign binaries
+    win-package:
+      runs-on: ['Windows', 'sign']
+      needs: [define-package-params, define-presets, win-llvm, win-build-vc-intrinsics, win-build-spirv-translator, win-build-l0-loader]
+      timeout-minutes: 10
+      steps:
+        - uses: actions/checkout@v3
+          with:
+            repository: ${{ inputs.core_repo }}
+            ref: ${{ inputs.core_ref }}
+            token: ${{ secrets.access_token }}
+            submodules: true
+        - uses: actions/checkout@v3
+          with:
+            repository: intel-innersource/applications.compilers.ispc.core
+            ref: ${{ github.ref }}
+            token: ${{ secrets.access_token }}
+            submodules: false
+            path: core
+        - name: Build and sign ISPC on Windows
+          env:
+            SIGNING_HASH: ${{ secrets.SIGNING_HASH }}
+            ARTIFACTORY_ISPC_URL: ${{ secrets.artifactory_ispc_url }}/superbuild
+            ARTIFACTORY_ISPC_API_KEY: ${{ secrets.artifactory_ispc_api_key }}
+            SCRIPTS_DIR: ${{ github.workspace }}\core\.github\workflows\scripts\internal
+          shell: cmd
+          run: |
+            "%SCRIPTS_DIR%\run-vs-win-cmd.bat" "%SCRIPTS_DIR%\build-ispc.bat" 'OFF' %ARTIFACTORY_ISPC_URL%/ispc-deps/%PIPELINE_ID% %PIPELINE_ID%
+        - name: Upload artifacts
+          uses: actions/upload-artifact@v3
+          with:
+            name: win-ispc-release
+            path: |
+              build/*.zip

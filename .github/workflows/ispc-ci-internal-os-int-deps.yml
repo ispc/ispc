@@ -1,0 +1,57 @@
+## Copyright 2023 Intel Corporation
+## SPDX-License-Identifier: BSD-3-Clause
+
+name: (INTERNAL) Run os-int deps pipeline
+
+on:
+  push:
+    paths:
+      - 'superbuild/os-intPresets.json'
+  workflow_dispatch:
+    inputs:
+      rebuild_llvm:
+        description: Force rebuild LLVM
+        type: choice
+        default: 'off'
+        options:
+          - 'on'
+          - 'off'
+      llvm_assertions:
+        description: LLVM assertions (Windows only)
+        type: choice
+        default: 'llvm-enable-assertions'
+        options:
+          - 'llvm-disable-assertions'
+          - 'llvm-enable-assertions'
+      core_ref:
+        description: 'Core Repository Ref/SHA (default: gen)'
+        required: true
+        type: string
+        default: 'gen'
+      signing:
+        description: Sign ISPC binaries (Windows only)
+        type: boolean
+        default: false
+
+jobs:
+  deps:
+    if: github.ref_name != 'gen'
+    uses: intel-innersource/applications.compilers.ispc.dependencies/.github/workflows/build-and-test-os-int.yml@master
+    with:
+      rebuild_llvm: ${{ github.event_name == 'workflow_dispatch' && inputs.rebuild_llvm || 'off' }}
+      llvm_assertions: ${{ github.event_name == 'workflow_dispatch' && inputs.llvm_assertions || 'llvm-enable-assertions' }}
+      core_ref: ${{ github.ref }}
+      signing: ${{ github.event_name == 'workflow_dispatch' && inputs.signing || false }}
+      update_deps: false
+    secrets: inherit
+
+  deps-gen:
+    if: github.ref_name == 'gen'
+    uses: intel-innersource/applications.compilers.ispc.dependencies/.github/workflows/build-and-test-os-int.yml@master
+    with:
+      rebuild_llvm: ${{ github.event_name == 'workflow_dispatch' && inputs.rebuild_llvm || 'off' }}
+      llvm_assertions: ${{ github.event_name == 'workflow_dispatch' && inputs.llvm_assertions || 'llvm-enable-assertions' }}
+      core_ref: ${{ github.ref }}
+      signing: ${{ github.event_name == 'workflow_dispatch' && inputs.signing || false }}
+      update_deps: true
+    secrets: inherit

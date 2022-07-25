@@ -1,0 +1,96 @@
+# Copyright (c) 2023, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: (INTERNAL) Reusable workflow to extract dependencies versions from CMake preset files
+
+on:
+  workflow_call:
+    inputs:
+      core_repo:
+        description: 'Core Repository (default: ispc/ispc)'
+        required: true
+        type: string
+        default: 'ispc/ispc'
+      core_ref:
+        description: 'Core Repository Ref/SHA (default: main)'
+        required: true
+        type: string
+        default: 'main'
+      preset_type:
+        description: 'Core Repository Ref/SHA (default: main)'
+        required: true
+        type: string
+        default: 'os'
+    outputs:
+        LLVM_VER:
+            description: "LLVM version"
+            value: ${{ jobs.preset.outputs.LLVM_VER }}
+        L0L_VER:
+            description: "L0 version"
+            value: ${{ jobs.preset.outputs.L0L_VER }}
+        VC_INTRINSICS_URL:
+            description: "VC intrinsics URL"
+            value: ${{ jobs.preset.outputs.VC_INTRINSICS_URL }}
+        VC_INTRINSICS_REPO:
+            description: "VC intrinsics repo"
+            value: ${{ jobs.preset.outputs.VC_INTRINSICS_REPO }}
+        VC_INTRINSICS_COMMIT_SHA:
+            description: "VC intrinsics commit SHA"
+            value: ${{ jobs.preset.outputs.VC_INTRINSICS_COMMIT_SHA }}
+        SPIRV_TRANSLATOR_URL:
+            description: "SPIR-V translator URL"
+            value: ${{ jobs.preset.outputs.SPIRV_TRANSLATOR_URL }}
+        SPIRV_TRANSLATOR_REPO:
+            description: "SPIR-V translator repo"
+            value: ${{ jobs.preset.outputs.SPIRV_TRANSLATOR_REPO }}
+        SPIRV_TRANSLATOR_COMMIT_SHA:
+            description: "SPIR-V translator commit SHA"
+            value: ${{ jobs.preset.outputs.SPIRV_TRANSLATOR_COMMIT_SHA }}
+
+jobs:
+    preset:
+      runs-on: 'Linux'
+      container: amr-registry.caas.intel.com/ispc/ubuntu:22.04
+      outputs:
+        LLVM_VER: ${{ steps.preset.outputs.LLVM_VER }}
+        L0L_VER:  ${{ steps.preset.outputs.L0L_VER }}
+        VC_INTRINSICS_URL: ${{ steps.preset.outputs.VC_INTRINSICS_URL }}
+        VC_INTRINSICS_REPO: ${{ steps.preset.outputs.VC_INTRINSICS_REPO }}
+        VC_INTRINSICS_COMMIT_SHA:  ${{ steps.preset.outputs.VC_INTRINSICS_COMMIT_SHA }}
+        SPIRV_TRANSLATOR_URL: ${{ steps.preset.outputs.SPIRV_TRANSLATOR_URL }}
+        SPIRV_TRANSLATOR_REPO: ${{ steps.preset.outputs.SPIRV_TRANSLATOR_REPO }}
+        SPIRV_TRANSLATOR_COMMIT_SHA:  ${{ steps.preset.outputs.SPIRV_TRANSLATOR_COMMIT_SHA }}
+      steps:
+        - name: Checkout ISPC repo
+          uses: actions/checkout@v3
+          with:
+            repository: ${{ inputs.core_repo }}
+            ref: ${{ inputs.core_ref }}
+            submodules: false
+            fetch-depth: 0
+            path: ispc
+            token: ${{ secrets.ACCESS_TOKEN }}
+
+        - name: Define ISPC deps
+          id: preset
+          run: |
+            echo "### Preset file" >> $GITHUB_STEP_SUMMARY
+            PRESET_FILE="${{ inputs.preset_type }}Presets.json"
+            echo "$PRESET_FILE" >> $GITHUB_STEP_SUMMARY
+            function set_output { v=$(jq -r ".configurePresets[0].cacheVariables.$2" ./ispc/superbuild/$PRESET_FILE); echo "$1=$v" >> $GITHUB_OUTPUT ; echo "$1=$v" >> $GITHUB_STEP_SUMMARY ; }
+            set_output LLVM_VER LLVM_VERSION
+            L0L_VER=$(jq -r .configurePresets[0].cacheVariables.L0_TAG ./ispc/superbuild/$PRESET_FILE)
+            L0L_VER=${L0L_VER#"v"}
+            echo "L0L_VER=$L0L_VER" >> "$GITHUB_OUTPUT"
+            echo "L0L_VER=$L0L_VER" >> "$GITHUB_STEP_SUMMARY"
+            set_output VC_INTRINSICS_COMMIT_SHA VC_INTRINSICS_SHA
+            set_output SPIRV_TRANSLATOR_COMMIT_SHA SPIRV_TRANSLATOR_SHA
+            VC_INTRINSICS_URL=$(jq -r ".configurePresets[0].cacheVariables.VC_INTRINSICS_URL" ./ispc/superbuild/$PRESET_FILE)
+            VC_INTRINSICS_REPO=$(echo $VC_INTRINSICS_URL | sed 's|^.*github.com/||g' | sed 's|.git$||g')
+            echo "VC_INTRINSICS_URL=$VC_INTRINSICS_URL" >> $GITHUB_OUTPUT
+            echo "VC_INTRINSICS_REPO=$VC_INTRINSICS_REPO" >> $GITHUB_OUTPUT
+            SPIRV_TRANSLATOR_URL=$(jq -r ".configurePresets[0].cacheVariables.SPIRV_TRANSLATOR_URL" ./ispc/superbuild/$PRESET_FILE)
+            SPIRV_TRANSLATOR_REPO=$(echo $SPIRV_TRANSLATOR_URL | sed 's|^.*github.com/||g' | sed 's|.git$||g')
+            echo "SPIRV_TRANSLATOR_URL=$SPIRV_TRANSLATOR_URL" >> $GITHUB_OUTPUT
+            echo "SPIRV_TRANSLATOR_REPO=$SPIRV_TRANSLATOR_REPO" >> $GITHUB_OUTPUT
+          shell: bash

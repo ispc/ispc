@@ -1,0 +1,230 @@
+# Copyright (c) 2023, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: (INTERNAL) ISPC testing
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  define-pipeline-params:
+    if: ${{ !startsWith(github.head_ref, 'robotex') }}
+    runs-on: 'Linux'
+    container: amr-registry.caas.intel.com/ispc/ubuntu:22.04
+    outputs:
+      deps_pipeline_id_os: ${{ steps.define-id.outputs.deps_pipeline_id_os }}
+      deps_pipeline_id_os-int: ${{ steps.define-id.outputs.deps_pipeline_id_os-int }}
+      deps_pipeline_id_int: ${{ steps.define-id.outputs.deps_pipeline_id_int }}
+      llvm_ver_os: ${{ steps.define-id.outputs.llvm_ver_os }}
+      llvm_ver_int: ${{ steps.define-id.outputs.llvm_ver_int }}
+      llvm_ver_os_int: ${{ steps.define-id.outputs.llvm_ver_os_int }}
+    steps:
+      - name: Checkout core ISPC repo
+        uses: actions/checkout@v3
+
+      - id: define-id
+        env:
+          ARTIFACTORY_ISPC_URL: ${{ secrets.ARTIFACTORY_ISPC_URL }}/superbuild
+          ARTIFACTORY_ISPC_API_KEY: ${{ secrets.ARTIFACTORY_ISPC_API_KEY }}
+        shell: bash
+        run: |
+            curl --connect-timeout 5 --max-time 3600 --retry 5 --retry-delay 0 --retry-max-time 40 --fail -H "X-JFrog-Art-Api:$ARTIFACTORY_ISPC_API_KEY" "$ARTIFACTORY_ISPC_URL/ispc-deps/latest.os" --output latest.os
+            latest_deps_id_os=$(<latest.os)
+            echo "Latest pipeline ID for os testing: $latest_deps_id_os" >> $GITHUB_STEP_SUMMARY
+            echo "deps_pipeline_id_os=$latest_deps_id_os" >> $GITHUB_OUTPUT
+
+            curl --connect-timeout 5 --max-time 3600 --retry 5 --retry-delay 0 --retry-max-time 40 --fail -H "X-JFrog-Art-Api:$ARTIFACTORY_ISPC_API_KEY" "$ARTIFACTORY_ISPC_URL/ispc-deps/latest.os-int" --output latest.os-int
+            latest_deps_id_os_int=$(<latest.os-int)
+            echo "Latest pipeline ID for os-int testing: $latest_deps_id_os_int" >> $GITHUB_STEP_SUMMARY
+            echo "deps_pipeline_id_os-int=$latest_deps_id_os_int" >> $GITHUB_OUTPUT
+
+            curl --connect-timeout 5 --max-time 3600 --retry 5 --retry-delay 0 --retry-max-time 40 --fail -H "X-JFrog-Art-Api:$ARTIFACTORY_ISPC_API_KEY" "$ARTIFACTORY_ISPC_URL/ispc-deps/latest.int" --output latest.int
+            latest_deps_id_int=$(<latest.int)
+            echo "Latest pipeline ID for int testing: $latest_deps_id_int" >> $GITHUB_STEP_SUMMARY
+            echo "deps_pipeline_id_int=$latest_deps_id_int" >> $GITHUB_OUTPUT
+
+            llvm_ver_os=$(jq -r ".configurePresets[0].cacheVariables.LLVM_VERSION" ./superbuild/osPresets.json)
+            echo "llvm_ver_os=$llvm_ver_os" >> $GITHUB_OUTPUT
+            echo "llvm_ver_os=$llvm_ver_os" >> $GITHUB_STEP_SUMMARY
+            llvm_ver_int=$(jq -r ".configurePresets[0].cacheVariables.LLVM_VERSION" ./superbuild/intPresets.json)
+            echo "llvm_ver_int=$llvm_ver_int" >> $GITHUB_OUTPUT
+            echo "llvm_ver_int=$llvm_ver_int" >> $GITHUB_STEP_SUMMARY
+            llvm_ver_os_int=$(jq -r ".configurePresets[0].cacheVariables.LLVM_VERSION" ./superbuild/os-intPresets.json)
+            echo "llvm_ver_os_int=$llvm_ver_os_int" >> $GITHUB_OUTPUT
+            echo "llvm_ver_os_int=$llvm_ver_os_int" >> $GITHUB_STEP_SUMMARY
+
+  # Linux os build
+  linux-core-build-os:
+    needs: [define-pipeline-params]
+    uses: intel-innersource/applications.compilers.ispc.infrastructure/.github/workflows/build-linux-job.yml@main
+    with:
+      core_ref: ${{ github.ref }}
+      deps_pipeline_id: ${{ needs.define-pipeline-params.outputs.deps_pipeline_id_os }}
+      test_type: 'os'
+      llvm_ver: ${{ needs.define-pipeline-params.outputs.llvm_ver_os }}
+    secrets: inherit
+
+  # Linux os testing
+  linux-core-test-os:
+    needs: [define-pipeline-params, linux-core-build-os]
+    uses: intel-innersource/applications.compilers.ispc.infrastructure/.github/workflows/test-linux-job.yml@main
+    with:
+      core_ref: ${{ github.ref }}
+      ispc_container: ${{ needs.linux-core-build-os.outputs.ispc_container }}
+      ispc_dpcpp_container: ${{ needs.linux-core-build-os.outputs.ispc_dpcpp_container }}
+      ispc_pipeline_id: ${{ needs.linux-core-build-os.outputs.ispc_pipeline_id }}
+      test_type: 'os'
+    secrets: inherit
+
+  # Linux os coverity scans
+  linux-core-cov-os:
+    needs: [linux-core-build-os]
+    uses: intel-innersource/applications.compilers.ispc.infrastructure/.github/workflows/cov-linux-job.yml@main
+    with:
+      core_ref: ${{ github.ref }}
+      ispc_container: ${{ needs.linux-core-build-os.outputs.ispc_container }}
+      ispc_pipeline_id: ${{ needs.linux-core-build-os.outputs.ispc_pipeline_id }}
+      test_type: 'os'
+    secrets: inherit
+
+  # Linux os workloads build and testing
+  linux-workloads-os:
+    needs: [define-pipeline-params, linux-core-build-os]
+    uses: intel-innersource/applications.compilers.ispc.infrastructure/.github/workflows/workloads-build-and-test-linux-job.yml@main
+    with:
+      deps_pipeline_id: ${{ needs.define-pipeline-params.outputs.deps_pipeline_id_os }}
+      ispc_container: ${{ needs.linux-core-build-os.outputs.ispc_container }}
+      ispc_pipeline_id: ${{ needs.linux-core-build-os.outputs.ispc_pipeline_id }}
+      test_type: 'os'
+      llvm_ver: ${{ needs.define-pipeline-params.outputs.llvm_ver_os }}
+    secrets: inherit
+
+  # Windows os build
+  win-core-build-os:
+    needs: [define-pipeline-params]
+    uses: intel-innersource/applications.compilers.ispc.infrastructure/.github/workflows/build-win-job.yml@main
+    with:
+      core_ref: ${{ github.ref }}
+      deps_pipeline_id: ${{ needs.define-pipeline-params.outputs.deps_pipeline_id_os }}
+      test_type: 'os'
+    secrets: inherit
+
+  # Windows os test
+  win-core-test-os:
+    needs: [define-pipeline-params, win-core-build-os]
+    uses: intel-innersource/applications.compilers.ispc.infrastructure/.github/workflows/test-win-job.yml@main
+    with:
+      core_ref: ${{ github.ref }}
+      deps_pipeline_id: ${{ needs.define-pipeline-params.outputs.deps_pipeline_id_os }}
+      test_type: 'os'
+    secrets: inherit
+
+  # Windows os workloads build and testing
+  win-workloads-os:
+    needs: [define-pipeline-params, win-core-build-os]
+    uses: intel-innersource/applications.compilers.ispc.infrastructure/.github/workflows/workloads-build-and-test-win-job.yml@main
+    with:
+      deps_pipeline_id: ${{ needs.define-pipeline-params.outputs.deps_pipeline_id_os }}
+      test_type: 'os'
+    secrets: inherit
+
+  # Linux os-int build
+  linux-core-build-os-int:
+    needs: [define-pipeline-params]
+    uses: intel-innersource/applications.compilers.ispc.infrastructure/.github/workflows/build-linux-job.yml@main
+    with:
+      core_ref: ${{ github.ref }}
+      deps_pipeline_id: ${{ needs.define-pipeline-params.outputs.deps_pipeline_id_os-int }}
+      test_type: 'os-int'
+      llvm_ver: ${{ needs.define-pipeline-params.outputs.llvm_ver_os_int }}
+    secrets: inherit
+
+  # Linux os-int testing
+  linux-core-test-os-int:
+    needs: [define-pipeline-params, linux-core-build-os-int]
+    uses: intel-innersource/applications.compilers.ispc.infrastructure/.github/workflows/test-linux-job.yml@main
+    with:
+      core_ref: ${{ github.ref }}
+      ispc_container: ${{ needs.linux-core-build-os-int.outputs.ispc_container }}
+      ispc_dpcpp_container: ${{ needs.linux-core-build-os-int.outputs.ispc_dpcpp_container }}
+      ispc_pipeline_id: ${{ needs.linux-core-build-os-int.outputs.ispc_pipeline_id }}
+      test_type: 'os-int'
+    secrets: inherit
+
+  # Linux os-int workloads build and testing
+  linux-workloads-os-int:
+    needs: [define-pipeline-params, linux-core-build-os-int]
+    uses: intel-innersource/applications.compilers.ispc.infrastructure/.github/workflows/workloads-build-and-test-linux-job.yml@main
+    with:
+      deps_pipeline_id: ${{ needs.define-pipeline-params.outputs.deps_pipeline_id_os-int }}
+      ispc_container: ${{ needs.linux-core-build-os-int.outputs.ispc_container }}
+      ispc_pipeline_id: ${{ needs.linux-core-build-os-int.outputs.ispc_pipeline_id }}
+      test_type: 'os-int'
+      llvm_ver: ${{ needs.define-pipeline-params.outputs.llvm_ver_os_int }}
+    secrets: inherit
+
+  # Linux int build
+  linux-core-build-int:
+    needs: [define-pipeline-params]
+    uses: intel-innersource/applications.compilers.ispc.infrastructure/.github/workflows/build-linux-job.yml@main
+    with:
+      core_ref: ${{ github.ref }}
+      deps_pipeline_id: ${{ needs.define-pipeline-params.outputs.deps_pipeline_id_int }}
+      test_type: 'int'
+      llvm_ver: ${{ needs.define-pipeline-params.outputs.llvm_ver_int }}
+    secrets: inherit
+
+  # Linux int testing
+  linux-core-test-int:
+    needs: [define-pipeline-params, linux-core-build-int]
+    uses: intel-innersource/applications.compilers.ispc.infrastructure/.github/workflows/test-linux-job.yml@main
+    with:
+      core_ref: ${{ github.ref }}
+      ispc_container: ${{ needs.linux-core-build-int.outputs.ispc_container }}
+      ispc_dpcpp_container: ${{ needs.linux-core-build-int.outputs.ispc_dpcpp_container }}
+      ispc_pipeline_id: ${{ needs.linux-core-build-int.outputs.ispc_pipeline_id }}
+      test_type: 'int'
+    secrets: inherit
+
+  # Linux int workloads build and testing
+  linux-workloads-int:
+    needs: [define-pipeline-params, linux-core-build-int]
+    uses: intel-innersource/applications.compilers.ispc.infrastructure/.github/workflows/workloads-build-and-test-linux-job.yml@main
+    with:
+      deps_pipeline_id: ${{ needs.define-pipeline-params.outputs.deps_pipeline_id_int }}
+      ispc_container: ${{ needs.linux-core-build-int.outputs.ispc_container }}
+      ispc_pipeline_id: ${{ needs.linux-core-build-int.outputs.ispc_pipeline_id }}
+      test_type: 'int'
+      llvm_ver: ${{ needs.define-pipeline-params.outputs.llvm_ver_int }}
+    secrets: inherit
+
+  # Windows int build
+  win-core-build-int:
+    needs: [define-pipeline-params]
+    uses: intel-innersource/applications.compilers.ispc.infrastructure/.github/workflows/build-win-job.yml@main
+    with:
+      core_ref: ${{ github.ref }}
+      deps_pipeline_id: ${{ needs.define-pipeline-params.outputs.deps_pipeline_id_int }}
+      test_type: 'int'
+    secrets: inherit
+
+  # Windows int test
+  win-core-test-int:
+    needs: [define-pipeline-params, win-core-build-int]
+    uses: intel-innersource/applications.compilers.ispc.infrastructure/.github/workflows/test-win-job.yml@main
+    with:
+      core_ref: ${{ github.ref }}
+      deps_pipeline_id: ${{ needs.define-pipeline-params.outputs.deps_pipeline_id_int }}
+      test_type: 'int'
+    secrets: inherit
+
+  # Windows int workloads build and testing
+  win-workloads-int:
+    needs: [define-pipeline-params, win-core-build-int]
+    uses: intel-innersource/applications.compilers.ispc.infrastructure/.github/workflows/workloads-build-and-test-win-job.yml@main
+    with:
+      deps_pipeline_id: ${{ needs.define-pipeline-params.outputs.deps_pipeline_id_int }}
+      test_type: 'int'
+    secrets: inherit
+

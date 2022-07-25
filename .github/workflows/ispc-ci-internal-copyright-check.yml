@@ -1,0 +1,20 @@
+name: (INTERNAL) Check copyright
+
+on: [pull_request]
+
+jobs:
+  check_copyright:
+    runs-on: [Linux, docker]
+    container:
+      image: amr-registry.caas.intel.com/ispc/ubuntu:22.04
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        submodules: false
+
+    - name: Check copyright
+      run: |
+        ./check_copyright.sh "origin/$GITHUB_BASE_REF"
+

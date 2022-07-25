@@ -1,0 +1,29 @@
+name: (INTERNAL) Docs check
+
+on:
+  pull_request:
+    paths:
+      - "docs/**"
+
+jobs:
+  linux-build:
+    runs-on: [Linux, gasp]
+    container:
+      image: amr-registry.caas.intel.com/ispc/ubuntu:22.04
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: false
+
+    - name: Install dependencies
+      run: |
+        echo "APT::Acquire::Retries \"3\";" | tee -a /etc/apt/apt.conf.d/80-retries
+        apt-get update
+        apt-get install -y python3-docutils
+
+    - name: Check docs build
+      run: |
+        cd docs
+        ./build.sh
+

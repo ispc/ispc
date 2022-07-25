@@ -1,0 +1,53 @@
+# Copyright (c) 2023, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: (INTERNAL) ISPC update SPIRV-LLVM-Translator
+
+on:
+  push:
+    paths:
+      - '.github/workflows/scripts/internal/update-spirv-translator.sh'
+      - '.github/workflows/ispc-ci-internal-update-spirv-translator.yml'
+  workflow_dispatch:
+  schedule:
+    # At 9:00pm on the 2nd and 16th
+    - cron: '0 21 2,16 * *'
+
+env:
+  ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+
+jobs:
+  check_version:
+    runs-on: 'Linux'
+    container: amr-registry.caas.intel.com/ispc/ubuntu:22.04
+    steps:
+      - name: Checkout core repo for scripts
+        uses: actions/checkout@v3
+
+      - name: Checkout core repo for creating PR
+        uses: actions/checkout@v3
+        with:
+          repository: intel-innersource/applications.compilers.ispc.core
+          path: ispc
+          fetch-depth: 0
+          ref: gen
+          token: ${{ secrets.ACCESS_TOKEN }}
+
+      - name: Checkout SPIRV-LLVM-Translator
+        uses: actions/checkout@v3
+        with:
+          repository: KhronosGroup/SPIRV-LLVM-Translator
+          path: SPIRV-LLVM-Translator
+          fetch-depth: 0
+
+      - name: Checkout internal SPIRV-LLVM-Translator
+        uses: actions/checkout@v3
+        with:
+          repository: intel-innersource/drivers.gpu.compiler.spirv.llvm-translator
+          path: SPIRV-LLVM-Translator-int
+          token: ${{ secrets.ACCESS_TOKEN }}
+          fetch-depth: 0
+
+      - name: Update SPIRV-LLVM-Translator version
+        run: |
+            ./.github/workflows/scripts/internal/update-spirv-translator.sh

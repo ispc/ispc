@@ -1,0 +1,37 @@
+# Copyright (c) 2023, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: (INTERNAL) Rewrite file in the artifactory
+
+on:
+  workflow_dispatch:
+    inputs:
+      filename:
+        description: 'Filename to rewrite'
+        type: string
+        required: true
+      content:
+        description: 'Content to be written into file'
+        type: string
+        required: true
+
+env:
+  ARTIFACTORY_ISPC_URL: ${{ secrets.ARTIFACTORY_ISPC_URL }}
+  ARTIFACTORY_ISPC_API_KEY: ${{ secrets.ARTIFACTORY_ISPC_API_KEY }}
+
+jobs:
+  rewite:
+    runs-on: 'Linux'
+    steps:
+        - name: Rewrite file content
+          shell: bash
+          run: |
+            if curl --fail -H "X-JFrog-Art-Api:$ARTIFACTORY_ISPC_API_KEY" "$ARTIFACTORY_ISPC_URL/${{ inputs.filename }}" --output ${{ inputs.filename }} ; then
+              echo "### Old content of ${{ inputs.filename }}" >> $GITHUB_STEP_SUMMARY
+              cat ${{ inputs.filename }} >> $GITHUB_STEP_SUMMARY
+            fi
+
+            echo "### New content of ${{ inputs.filename }}" >> $GITHUB_STEP_SUMMARY
+            echo '${{ inputs.content }}' >> $GITHUB_STEP_SUMMARY
+            echo -n '${{ inputs.content }}' > new_content
+            curl --fail-early -H "X-JFrog-Art-Api:$ARTIFACTORY_ISPC_API_KEY" -X PUT "$ARTIFACTORY_ISPC_URL/${{ inputs.filename }}" -T new_content
