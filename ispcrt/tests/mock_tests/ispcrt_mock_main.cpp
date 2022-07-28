@@ -192,18 +192,6 @@ TEST_F(MockTestWithDevice, Module_DynamicLink) {
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
-TEST_F(MockTestWithDevice, Module_DynamicLink_zeModuleDynamicLink) {
-    // Check if error is reported when zeModuleDynamicLink is not successful
-    ASSERT_NE(m_device, 0);
-    ispcrt::Module m1(m_device, "");
-    ispcrt::Module m2(m_device, "");
-    Config::setRetValue("zeModuleDynamicLink", ZE_RESULT_ERROR_DEVICE_LOST);
-    std::array<ISPCRTModule, 2> modules = {
-        (ISPCRTModule)m1.handle(), (ISPCRTModule)m2.handle()};
-    m_device.linkModules(modules.data(), modules.size());
-    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
-}
-
 TEST_F(MockTestWithModule, Module_FunctionPtr) {
     // Get function pointer from module
     ASSERT_NE(m_module, 0);
