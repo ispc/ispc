@@ -33,7 +33,12 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 option(ISPCRT_BUILD_CPU "Enable CPU support in ispcrt" ON)
 option(ISPCRT_BUILD_TASKING "Enable CPU tasking targets in ispcrt" ON)
-if (XE_ENABLED)
+
+# Do not build ISPCRT with GPU support on FreeBSD even if XE_ENABLED is ON.
+# All dependencies, such as L0 and compute-runtime, are theoretically available
+# on FreeBSD, but were never tested. If this switch is enabled, the full recipe to
+# build/test the full stack is needed.
+if (XE_ENABLED AND NOT (CMAKE_SYSTEM_NAME STREQUAL "FreeBSD"))
   option(ISPCRT_BUILD_GPU "Enable Level0 GPU support in ispcrt" ON)
 else()
   option(ISPCRT_BUILD_GPU "Enable Level0 GPU support in ispcrt" OFF)
