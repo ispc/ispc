@@ -469,6 +469,8 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__cast_mask_to_i1",
         "__cast_mask_to_i8",
         "__cast_mask_to_i16",
+        "__cast_mask_to_i32",
+        "__cast_mask_to_i64",
         "__ceil_uniform_double",
         "__ceil_uniform_float",
         "__ceil_uniform_half",
