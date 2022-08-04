@@ -1617,12 +1617,12 @@ llvm::Value *LLVMConcatVectors(llvm::Value *v1, llvm::Value *v2, llvm::Instructi
     result element. */
 llvm::Value *LLVMShuffleVectors(llvm::Value *v1, llvm::Value *v2, int32_t shuf[], int shufSize,
                                 llvm::Instruction *insertBefore) {
-    std::vector<llvm::Constant *> shufVec;
+    llvm::Constant *shufVec[ISPC_MAX_NVEC];
     for (int i = 0; i < shufSize; ++i) {
         if (shuf[i] == -1)
-            shufVec.push_back(llvm::UndefValue::get(LLVMTypes::Int32Type));
+            shufVec[i] = llvm::UndefValue::get(LLVMTypes::Int32Type);
         else
-            shufVec.push_back(LLVMInt32(shuf[i]));
+            shufVec[i] = LLVMInt32(shuf[i]);
     }
 
     llvm::ArrayRef<llvm::Constant *> aref(&shufVec[0], &shufVec[shufSize]);
