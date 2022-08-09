@@ -569,7 +569,7 @@ struct Module : public ispcrt::base::Module {
         // If scalar module is passed to ISPC Runtime, do not use VC backend
         // options on it
         if (opts.moduleType != ISPCRTModuleType::ISPCRT_SCALAR_MODULE) {
-            igcOptions += "-vc-codegen -no-optimize -Xfinalizer '-presched'";
+            igcOptions += "-vc-codegen -no-optimize -Xfinalizer '-presched' -Xfinalizer '-newspillcost'";
         }
         // If stackSize has default value 0, do not set -stateless-stack-mem-size,
         // it will be set to 8192 in VC backend by default.
