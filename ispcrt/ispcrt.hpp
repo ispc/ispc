@@ -100,17 +100,36 @@ inline bool Future::valid() const { return handle() && ispcrtFutureIsValid(handl
 inline uint64_t Future::time() const { return ispcrtFutureGetTimeNs(handle()); }
 
 /////////////////////////////////////////////////////////////////////////////
+// Context wrapper ///////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+
+class Context : public GenericObject<ISPCRTContext> {
+  public:
+    Context() = default;
+    Context(ISPCRTDeviceType);
+    ~Context() = default;
+    void* nativeContextHandle() const;
+};
+
+// Inlined definitions //
+inline Context::Context(ISPCRTDeviceType type)
+    : GenericObject<ISPCRTContext>(ispcrtNewContext(type)) {}
+
+inline void* Context::nativeContextHandle() const { return ispcrtContextNativeHandle(handle()); }
+/////////////////////////////////////////////////////////////////////////////
 // Device wrapper ///////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 class Device : public GenericObject<ISPCRTDevice> {
   public:
     Device() = default;
     Device(ISPCRTDeviceType type);
+    Device(const Context &context);
     // deviceIdx is an index of the device in the list of supported devices
     // The list of the supported devices can be obtained with:
     // - allDevicesInformation() call or
     // - deviceCount() call and a series of deviceInformation() calls
     Device(ISPCRTDeviceType type, uint32_t deviceIdx);
+    Device(const Context &context, uint32_t deviceIdx);
     void* nativePlatformHandle() const;
     void* nativeDeviceHandle() const;
     void* nativeContextHandle() const;
@@ -127,9 +146,13 @@ inline Device::Device(ISPCRTDeviceType type, uint32_t deviceIdx) :
     GenericObject<ISPCRTDevice>(ispcrtGetDevice(type, deviceIdx)) { }
 inline Device::Device(ISPCRTDeviceType type) : Device(type, 0) {}
 
+inline Device::Device(const Context &context, uint32_t deviceIdx) :
+    GenericObject<ISPCRTDevice>(ispcrtGetDeviceFromContext(context.handle(), deviceIdx)) { }
+inline Device::Device(const Context &context) : Device(context, 0) {}
+
 inline void* Device::nativePlatformHandle() const { return ispcrtPlatformNativeHandle(handle()); }
 inline void* Device::nativeDeviceHandle() const { return ispcrtDeviceNativeHandle(handle()); }
-inline void* Device::nativeContextHandle() const { return ispcrtContextNativeHandle(handle()); }
+inline void* Device::nativeContextHandle() const { return ispcrtDeviceContextNativeHandle(handle()); }
 
 inline uint32_t Device::deviceCount(ISPCRTDeviceType type) {
     return ispcrtGetDeviceCount(type);
@@ -190,9 +213,17 @@ template <typename T, AllocType AT = AllocType::Device> class Array : public Gen
     template<AllocType alloc = AT>
         Array(const Device &device, EnableForSharedAllocation<alloc> = 0);
 
+    // Allocate single object in shared memory for context
+    template<AllocType alloc = AT>
+        Array(const Context &context, EnableForSharedAllocation<alloc> = 0);
+
     // Allocate multiple objects in shared memory
     template<AllocType alloc = AT>
         Array(const Device &device, size_t size, EnableForSharedAllocation<alloc> = 0);
+
+    // Allocate multiple objects in shared memory for context
+    template<AllocType alloc = AT>
+        Array(const Context &context, size_t size, EnableForSharedAllocation<alloc> = 0);
 
     //////// Methods valid only for Device memory allocations ////////
 
@@ -246,11 +277,24 @@ template<AllocType alloc>
 
 template<typename T, AllocType AT>
 template<AllocType alloc>
+    inline Array<T, AT>::Array(const Context &context, EnableForSharedAllocation<alloc>) : Array<T, AT>(context, 1) {}
+
+template<typename T, AllocType AT>
+template<AllocType alloc>
     inline Array<T, AT>::Array(const Device &device, size_t size, EnableForSharedAllocation<alloc>) :
         GenericObject<ISPCRTMemoryView>() {
             ISPCRTNewMemoryViewFlags flags;
             flags.allocType = ISPCRT_ALLOC_TYPE_SHARED;
             setHandle(ispcrtNewMemoryView(device.handle(), nullptr, size * sizeof(T), &flags));
+        }
+
+template<typename T, AllocType AT>
+template<AllocType alloc>
+    inline Array<T, AT>::Array(const Context &context, size_t size, EnableForSharedAllocation<alloc>) :
+        GenericObject<ISPCRTMemoryView>() {
+            ISPCRTNewMemoryViewFlags flags;
+            flags.allocType = ISPCRT_ALLOC_TYPE_SHARED;
+            setHandle(ispcrtNewMemoryViewForContext(context.handle(), nullptr, size * sizeof(T), &flags));
         }
 
 // Device-only methods
@@ -286,7 +330,7 @@ template <typename T> class SharedMemoryAllocator {
     using value_type = T;
 
     SharedMemoryAllocator() = delete;
-    SharedMemoryAllocator(const Device &device) : m_device(device) {}
+    SharedMemoryAllocator(const Context &context) : m_context(context) {}
     SharedMemoryAllocator(const SharedMemoryAllocator&) = default;
     ~SharedMemoryAllocator() = default;
     SharedMemoryAllocator& operator=(const SharedMemoryAllocator&) = delete;
@@ -294,7 +338,7 @@ template <typename T> class SharedMemoryAllocator {
     T* allocate(const size_t n);
     void deallocate(T* const p, const size_t n);
 protected:
-    Device m_device;
+    Context m_context;
     std::unordered_map<void*, Array<T, AllocType::Shared>> m_ptrToArray;
 };
 
@@ -303,7 +347,7 @@ protected:
 template <typename T>
 inline T *SharedMemoryAllocator<T>::allocate(const size_t n) {
     // Allocate a memory that can be shared between the host and the device
-    auto a = Array<T, AllocType::Shared>(m_device, n);
+    auto a = Array<T, AllocType::Shared>(m_context, n);
 
     void* ptr = a.sharedPtr();
     if (ptr == nullptr) {

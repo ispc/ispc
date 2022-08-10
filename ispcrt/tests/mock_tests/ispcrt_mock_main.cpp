@@ -145,6 +145,18 @@ TEST_F(MockTest, Device_Constructor_zeContextCreate) {
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
 }
 
+TEST_F(MockTest, Context_Constructor_zeInit) {
+    Config::setRetValue("zeInit", ZE_RESULT_ERROR_DEVICE_LOST);
+    ispcrt::Context c(ISPCRT_DEVICE_TYPE_GPU);
+    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+}
+
+TEST_F(MockTest, Device_Constructor_FromContext) {
+    ispcrt::Context c(ISPCRT_DEVICE_TYPE_GPU);
+    ispcrt::Device d(c);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
 /////////////////////////////////////////////////////////////////////
 // Module tests
 
@@ -256,6 +268,13 @@ TEST_F(MockTestWithDevice, ArrayObj_zeMemAllocDevice) {
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
     // Check that nullptr is returned
     ASSERT_EQ(dev_buf_ptr, nullptr);
+}
+
+TEST_F(MockTest, ArrayObj_contextAlloc) {
+    ispcrt::Context c(ISPCRT_DEVICE_TYPE_GPU);
+    auto buf_dev = ispcrt::Array<float, ispcrt::AllocType::Shared>(c, 64 * 1024);
+    auto dev_buf_ptr = buf_dev.sharedPtr();
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -693,7 +712,7 @@ TEST_F(MockTestWithModuleQueueKernel, TaskQueue_Sync_zeEventQueryKernelTimestamp
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
 }
 
-/// C API
+/// C Device API
 TEST_F(MockTest, C_API_DeviceCount1) {
     // CPU
     uint32_t devCnt = ispcrtGetDeviceCount(ISPCRT_DEVICE_TYPE_CPU);
@@ -755,6 +774,45 @@ TEST_F(MockTest, C_API_DeviceInfoGPU) {
         ASSERT_EQ(dps[d == 0?0:3].deviceId, di.deviceId);
         ASSERT_EQ(dps[d == 0?0:3].vendorId, di.vendorId);
     }
+}
+
+/// C Context API
+TEST_F(MockTest, C_API_CreateDeviceFromContext) {
+    Config::setDeviceCount(2);
+    Config::setDeviceProperties(0, DeviceProperties(VendorId::Intel, DeviceId::Gen9));
+    Config::setDeviceProperties(1, DeviceProperties(VendorId::Intel, DeviceId::Gen12));
+    ISPCRTContext context = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
+    uint32_t ndevices = ispcrtGetDeviceCount(ISPCRT_DEVICE_TYPE_GPU);
+    ISPCRTDevice gpu0 = ispcrtGetDeviceFromContext(context, 0);
+    ISPCRTDevice gpu1 = ispcrtGetDeviceFromContext(context, 1);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTest, C_API_AllocateSharedMemoryForGPU) {
+    ISPCRTContext context = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
+    std::vector<uint8_t> buffer;
+    ISPCRTNewMemoryViewFlags mem_flags;
+    mem_flags.allocType = ISPCRT_ALLOC_TYPE_SHARED;
+    ISPCRTMemoryView mem = ispcrtNewMemoryViewForContext(context, buffer.data(), buffer.size(), &mem_flags);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTest, C_API_AllocateSharedMemoryForCPU) {
+    ISPCRTContext context = ispcrtNewContext(ISPCRT_DEVICE_TYPE_CPU);
+    std::vector<uint8_t> buffer;
+    ISPCRTNewMemoryViewFlags mem_flags;
+    mem_flags.allocType = ISPCRT_ALLOC_TYPE_SHARED;
+    ISPCRTMemoryView mem = ispcrtNewMemoryViewForContext(context, buffer.data(), buffer.size(), &mem_flags);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTest, C_API_AllocateDeviceMemory) {
+    ISPCRTContext context = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
+    std::vector<uint8_t> buffer;
+    ISPCRTNewMemoryViewFlags mem_flags;
+    mem_flags.allocType = ISPCRT_ALLOC_TYPE_DEVICE;
+    ISPCRTMemoryView mem = ispcrtNewMemoryViewForContext(context, buffer.data(), buffer.size(), &mem_flags);
+    ASSERT_EQ(sm_rt_error, ISPCRT_UNKNOWN_ERROR);
 }
 
 /// C++ Device API
@@ -1005,15 +1063,15 @@ TEST_F(MockTest, Device_ManyGPUs_EnvOverride) {
 
 /// Compilation tests
 TEST_F(MockTest, Compilation_SharedArray) {
-    auto d = Device(ISPCRT_DEVICE_TYPE_CPU);
+    auto c = Context(ISPCRT_DEVICE_TYPE_CPU);
     struct Parameters { int i; };
-    auto pmv = ispcrt::Array<Parameters, ispcrt::AllocType::Shared>(d);
+    auto pmv = ispcrt::Array<Parameters, ispcrt::AllocType::Shared>(c);
     auto p = pmv.sharedPtr();
     p->i = 1234;
-    auto pmv2 = ispcrt::Array<Parameters, ispcrt::AllocType::Shared>(d, 2);
+    auto pmv2 = ispcrt::Array<Parameters, ispcrt::AllocType::Shared>(c, 2);
     p = pmv.sharedPtr();
     p->i = 1234;
-    ispcrt::SharedMemoryAllocator<float> sma(d);
+    ispcrt::SharedMemoryAllocator<float> sma(c);
     ispcrt::SharedVector<float> v(16, sma);
 }
 
