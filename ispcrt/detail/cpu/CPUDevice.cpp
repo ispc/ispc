@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "CPUDevice.h"
+#include "CPUContext.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 #include "windows.h"
@@ -247,4 +248,15 @@ void *CPUDevice::contextNativeHandle() const { return nullptr; }
 ISPCRTAllocationType CPUDevice::getMemAllocType(void* appMemory) const {
     return ISPCRT_ALLOC_TYPE_UNKNOWN;
 }
+
+ispcrt::base::MemoryView *CPUContext::newMemoryView(void *appMem, size_t numBytes, bool shared) const {
+    return new cpu::MemoryView(appMem, numBytes, shared);
+}
+
+ISPCRTDeviceType CPUContext::getDeviceType() const {
+    return ISPCRTDeviceType::ISPCRT_DEVICE_TYPE_CPU;
+}
+
+void *CPUContext::contextNativeHandle() const { return nullptr; }
+
 } // namespace ispcrt

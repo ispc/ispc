@@ -88,10 +88,10 @@ bool validate_result(const ispcrt::SharedVector<float>& vec, const std::vector<f
 }
 
 static int run(const ISPCRTDeviceType device_type, const unsigned int SIZE) {
-    ispcrt::Device device(device_type);
+    ispcrt::Context context(device_type);
 
     // Create allocator for USM memory
-    ispcrt::SharedMemoryAllocator<float> sma(device);
+    ispcrt::SharedMemoryAllocator<float> sma(context);
 
     // Allocate a vector of floats in the shared memory
     ispcrt::SharedVector<float> vec(SIZE, sma);
@@ -100,13 +100,15 @@ static int run(const ISPCRTDeviceType device_type, const unsigned int SIZE) {
     std::vector<float> vgold(SIZE);
 
     // Setup parameters structure - in shared memory
-    ispcrt::Array<Parameters, ispcrt::AllocType::Shared> p(device);
+    ispcrt::Array<Parameters, ispcrt::AllocType::Shared> p(context);
     auto pp = p.sharedPtr();
 
     // Pass data pointers to the device
     pp->vec = vec.data();
     pp->count = SIZE;
 
+    // Create device from context
+    ispcrt::Device device(context);
     // Create module and kernel to execute
     ispcrt::Module module(device, "xe_simple-usm");
     ispcrt::Kernel kernel(device, module, "simple_ispc");

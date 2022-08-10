@@ -13,6 +13,7 @@ extern "C" {
 // Opaque handle types ////////////////////////////////////////////////////////
 
 #ifdef __cplusplus
+struct _ISPCRTContext;
 struct _ISPCRTDevice;
 struct _ISPCRTMemoryView;
 struct _ISPCRTTaskQueue;
@@ -20,6 +21,7 @@ struct _ISPCRTModule;
 struct _ISPCRTKernel;
 struct _ISPCRTFuture;
 
+typedef _ISPCRTContext *ISPCRTContext;
 typedef _ISPCRTDevice *ISPCRTDevice;
 typedef _ISPCRTMemoryView *ISPCRTMemoryView;
 typedef _ISPCRTTaskQueue *ISPCRTTaskQueue;
@@ -27,6 +29,7 @@ typedef _ISPCRTModule *ISPCRTModule;
 typedef _ISPCRTKernel *ISPCRTKernel;
 typedef _ISPCRTFuture *ISPCRTFuture;
 #else
+typedef void *ISPCRTContext;
 typedef void *ISPCRTDevice;
 typedef void *ISPCRTMemoryView;
 typedef void *ISPCRTTaskQueue;
@@ -81,8 +84,13 @@ typedef struct {
 // The list of the supported devices can be obtained with a ispcrtGetDeviceCount call
 // and a series of ispcrtGetDeviceInfo calls
 ISPCRTDevice ispcrtGetDevice(ISPCRTDeviceType, uint32_t deviceIdx);
+ISPCRTDevice ispcrtGetDeviceFromContext(ISPCRTContext, uint32_t deviceIdx);
 uint32_t ispcrtGetDeviceCount(ISPCRTDeviceType);
 void ispcrtGetDeviceInfo(ISPCRTDeviceType, uint32_t deviceIdx, ISPCRTDeviceInfo*);
+
+// Context initialization //////////////////////////////////////////////////////
+
+ISPCRTContext ispcrtNewContext(ISPCRTDeviceType);
 
 // MemoryViews ////////////////////////////////////////////////////////////////
 
@@ -103,6 +111,7 @@ typedef struct {
 } ISPCRTNewMemoryViewFlags;
 
 ISPCRTMemoryView ispcrtNewMemoryView(ISPCRTDevice, void *appMemory, size_t numBytes, ISPCRTNewMemoryViewFlags *flags);
+ISPCRTMemoryView ispcrtNewMemoryViewForContext(ISPCRTContext c, void *appMemory, size_t numBytes, ISPCRTNewMemoryViewFlags *flags);
 
 void *ispcrtHostPtr(ISPCRTMemoryView);
 void *ispcrtDevicePtr(ISPCRTMemoryView);
@@ -160,7 +169,8 @@ bool ispcrtFutureIsValid(ISPCRTFuture);
 
 ISPCRTGenericHandle ispcrtPlatformNativeHandle(ISPCRTDevice);
 ISPCRTGenericHandle ispcrtDeviceNativeHandle(ISPCRTDevice);
-ISPCRTGenericHandle ispcrtContextNativeHandle(ISPCRTDevice);
+ISPCRTGenericHandle ispcrtDeviceContextNativeHandle(ISPCRTDevice);
+ISPCRTGenericHandle ispcrtContextNativeHandle(ISPCRTContext);
 ISPCRTGenericHandle ispcrtTaskQueueNativeHandle(ISPCRTTaskQueue);
 
 #ifdef __cplusplus

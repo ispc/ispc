@@ -238,6 +238,17 @@ ze_result_t zeMemAllocDevice(ze_context_handle_t hContext, const ze_device_mem_a
     MOCK_RET;
 }
 
+ze_result_t zeMemAllocShared(ze_context_handle_t hContext, const ze_device_mem_alloc_desc_t *device_desc,
+                             const ze_host_mem_alloc_desc_t *host_desc, size_t size,
+                             size_t alignment, ze_device_handle_t hDevice, void **pptr) {
+    MOCK_CNT_CALL;
+    if (hContext != ContextHandle.get())
+        return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
+    if (MOCK_SHOULD_SUCCEED)
+        *pptr = new uint8_t[size];
+    MOCK_RET;
+}
+
 ze_result_t zeMemFree(ze_context_handle_t hContext, void *ptr) {
     MOCK_CNT_CALL;
     if (hContext != ContextHandle.get() || !ptr)
@@ -443,6 +454,8 @@ ze_result_t zeGetKernelProcAddrTable(ze_api_version_t version, ze_kernel_dditabl
 
 ze_result_t zeGetMemProcAddrTable(ze_api_version_t version, ze_mem_dditable_t *pDdiTable) {
     pDdiTable->pfnAllocDevice = ispcrt::testing::mock::driver::zeMemAllocDevice;
+    pDdiTable->pfnAllocShared = ispcrt::testing::mock::driver::zeMemAllocShared;
+
     pDdiTable->pfnFree = ispcrt::testing::mock::driver::zeMemFree;
     return ZE_RESULT_SUCCESS;
 }

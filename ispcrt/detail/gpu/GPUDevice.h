@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "../Context.h"
 #include "../Device.h"
 #include "../Future.h"
 
@@ -13,6 +14,7 @@
 namespace ispcrt {
 namespace gpu {
 
+// Device discovery
 uint32_t deviceCount();
 ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx);
 
@@ -21,7 +23,7 @@ ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx);
 struct GPUDevice : public base::Device {
 
     GPUDevice();
-    GPUDevice(uint32_t deviceIdx);
+    GPUDevice(void* context, uint32_t deviceIdx);
     ~GPUDevice();
 
     base::MemoryView *newMemoryView(void *appMem, size_t numBytes, bool shared) const override;
@@ -45,6 +47,7 @@ struct GPUDevice : public base::Device {
     void *m_device{nullptr};
     void *m_context{nullptr};
     bool  m_is_mock{false};
+    bool m_retain_context{false};
 };
 
 } // namespace ispcrt

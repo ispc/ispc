@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "GPUDevice.h"
+#include "GPUContext.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 
@@ -490,10 +491,14 @@ struct MemoryView : public ispcrt::base::MemoryView {
         if (m_shared) {
             ze_device_mem_alloc_desc_t device_alloc_desc = {};
             ze_host_mem_alloc_desc_t host_alloc_desc = {};
+            if (!m_context)
+                throw std::runtime_error("Context handle is NULL!");
             status =
                 zeMemAllocShared(m_context, &device_alloc_desc, &host_alloc_desc, m_size, 64, m_device, &m_devicePtr);
         } else {
             ze_device_mem_alloc_desc_t allocDesc = {};
+            if (!m_device)
+                throw std::runtime_error("Device handle is NULL!");
             status = zeMemAllocDevice(m_context, &allocDesc, m_size, m_size, m_device, &m_devicePtr);
         }
         if (status != ZE_RESULT_SUCCESS)
@@ -1073,9 +1078,9 @@ void linkModules(gpu::Module **modules, const uint32_t numModules) {
 // Use the first available device by default for now.
 // Later we may do something more sophisticated (e.g. use the one
 // with most FLOPs or have some kind of load balancing)
-GPUDevice::GPUDevice() : GPUDevice(0) {}
+GPUDevice::GPUDevice() : GPUDevice(nullptr, 0) {}
 
-GPUDevice::GPUDevice(uint32_t deviceIdx) {
+GPUDevice::GPUDevice(void* context, uint32_t deviceIdx) {
     // Find an instance of Intel GPU device
     // User can select particular device using env variable
     // By default first available device is selected
@@ -1099,15 +1104,20 @@ GPUDevice::GPUDevice(uint32_t deviceIdx) {
 
     m_device = gpu::g_deviceList[gpuDeviceToGrab];
 
-    ze_context_desc_t contextDesc = {}; // use default values
-    L0_SAFE_CALL(zeContextCreate((ze_driver_handle_t)m_driver, &contextDesc, (ze_context_handle_t *)&m_context));
-
+    if (context) {
+        m_retain_context = true;
+        m_context = context;
+    } else {
+        ze_context_desc_t contextDesc = {}; // use default values
+        L0_SAFE_CALL(zeContextCreate((ze_driver_handle_t)m_driver, &contextDesc, (ze_context_handle_t *)&m_context));
+    }
     if (!m_context)
         throw std::runtime_error("failed to create GPU context");
 }
 
 GPUDevice::~GPUDevice() {
-    if (m_context)
+    // Destroy context if it was created in GPUDevice.
+    if (m_context && !m_retain_context)
         L0_SAFE_CALL_NOEXCEPT(zeContextDestroy((ze_context_handle_t)m_context));
 }
 
@@ -1155,5 +1165,29 @@ ISPCRTAllocationType GPUDevice::getMemAllocType(void* appMemory) const {
     }
     return ISPCRT_ALLOC_TYPE_UNKNOWN;
 }
+
+GPUContext::GPUContext() {
+    // Perform GPU discovery
+    m_driver = gpu::deviceDiscovery(&m_is_mock);
+    ze_context_desc_t contextDesc = {}; // use default values
+    L0_SAFE_CALL(zeContextCreate((ze_driver_handle_t)m_driver, &contextDesc, (ze_context_handle_t *)&m_context));
+
+    if (!m_context)
+        throw std::runtime_error("failed to create GPU context");
+}
+GPUContext::~GPUContext() {
+    if (m_context)
+        L0_SAFE_CALL_NOEXCEPT(zeContextDestroy((ze_context_handle_t)m_context));
+    }
+
+base::MemoryView *GPUContext::newMemoryView(void *appMem, size_t numBytes, bool shared) const {
+    return new gpu::MemoryView((ze_context_handle_t)m_context, nullptr, appMem, numBytes, shared);
+}
+
+ISPCRTDeviceType GPUContext::getDeviceType() const {
+    return ISPCRTDeviceType::ISPCRT_DEVICE_TYPE_GPU;
+}
+
+void *GPUContext::contextNativeHandle() const { return m_context; }
 
 } // namespace ispcrt
