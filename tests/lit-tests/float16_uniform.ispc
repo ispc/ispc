@@ -9,8 +9,8 @@ uniform float16 foo0(uniform float16 arg0) {
 }
 
 // Tests float16 constant parsing in *.*F16 form.
-//; CHECK: define void @foo1___REFunhun_3C_unh_3E_(half* noalias %arg0, half* noalias %arg1
-//; CHECK: store half 0xH4252, half*
+//; CHECK: define void @foo1___REFunhun_3C_unh_3E_
+//; CHECK: store half 0xH4252,
 //; CHECK: fmul half %arg
 void foo1(uniform float16 &arg0, uniform float16 *uniform arg1) {
     arg0 = 3.16F16;

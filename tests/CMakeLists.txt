@@ -55,7 +55,8 @@ list(APPEND LIT_ARGS "-Dwindows_enabled=$<IF:$<BOOL:${ISPC_WINDOWS_TARGET}>,ON,O
 list(APPEND LIT_ARGS "-Dmacos_arm_enabled=$<IF:$<BOOL:${ISPC_MACOS_ARM_TARGET}>,ON,OFF>")
 # Dumps enabled/disbaled
 list(APPEND LIT_ARGS "-Ddumps_enabled=$<IF:$<BOOL:${ISPC_NO_DUMPS}>,OFF,ON>")
-
+# ISPC opaque pointers
+list(APPEND LIT_ARGS "-Dopaque_mode=$<IF:$<BOOL:${ISPC_OPAQUE_PTR_MODE}>,ON,OFF>")
 add_custom_target(check-all DEPENDS ispc
     COMMAND ${LIT_COMMAND} ${LIT_ARGS}
     COMMENT "Running lit tests"

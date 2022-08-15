@@ -1,13 +1,6 @@
 // RUN: %{ispc} %s --target=sse2-i32x4,sse4-i32x8,avx1-i32x8,avx2-i32x8,avx512knl-x16,avx512skx-x16 -h %t.h --emit-llvm -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s -check-prefix=CHECK_TYPES
 // RUN: FileCheck --input-file=%t.h %s -check-prefix=CHECK_ALIGN
 // REQUIRES: X86_ENABLED
-
-// CHECK_TYPES: type { <4 x float> }
-// CHECK_TYPES-NEXT: type { <8 x i32> }
-// CHECK_TYPES-NEXT: type { <4 x i8> }
-// CHECK_TYPES-NEXT: type { <16 x i64> }
-// CHECK_TYPES-NEXT: type { <4 x i8> }
 
 typedef float<3> float3;
 // CHECK_ALIGN: #ifdef _MSC_VER

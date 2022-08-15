@@ -9,7 +9,7 @@ varying float16 foo0(varying float16 arg0) {
 }
 
 // Tests float16 constant parsing in *.*f16 form.
-//; CHECK: define void @foo1___REFvyhvy_3C_vyh_3E_(<{{[0-9]*}} x half>* noalias %arg0, <{{[0-9]*}} x i64> %arg1
+//; CHECK: define void @foo1___REFvyhvy_3C_vyh_3E_({{.*}} noalias %arg0, <{{[0-9]*}} x i64> %arg1
 //; CHECK: fmul <{{[0-9]*}} x half>
 void foo1(varying float16 &arg0, varying float16 *varying arg1) {
     arg0 = 3.16f16;
