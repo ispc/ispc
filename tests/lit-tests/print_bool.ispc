@@ -1,5 +1,9 @@
+// The test checks correct IR generation for print of bool types.
+// It doesn't make much sense with opaque pointers since the most of the instructions will be optimized.
 // RUN: %{ispc} %s --target=avx2-i32x4 --nowrap -O0 --emit-llvm-text -o - | FileCheck %s
 // REQUIRES: X86_ENABLED
+
+// UNSUPPORTED: OPAQUE_PTRS_ENABLED
 // CHECK: [[PRTARG_PTR_BITCAST:%[a-zA-Z0-9_.]+]] = bitcast [1 x i8*]*  [[PRTARG_PTR:%[a-zA-Z0-9_.]+]] to i8**
 // CHECK: [[PRTARG_BITCAST:%[a-zA-Z0-9_.]+]] = bitcast <4 x i32>* {{%[a-zA-Z0-9_.]+}} to i8*
 // CHECK: [[SCT_OFF:%[a-zA-Z0-9_.]+]] = getelementptr [1 x i8*], [1 x i8*]* [[PRTARG_PTR]], i32 0, i32 0
