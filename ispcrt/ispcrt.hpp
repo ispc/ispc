@@ -253,7 +253,7 @@ template<AllocType alloc>
         : GenericObject<ISPCRTMemoryView>() {
             ISPCRTNewMemoryViewFlags flags;
             flags.allocType = ISPCRT_ALLOC_TYPE_DEVICE;
-            setHandle(ispcrtNewMemoryView(device.handle(), appMemory, size * sizeof(T), &flags));
+            m_handle = ispcrtNewMemoryView(device.handle(), appMemory, size * sizeof(T), &flags);
         }
 
 template<typename T, AllocType AT>
@@ -285,7 +285,7 @@ template<AllocType alloc>
         GenericObject<ISPCRTMemoryView>() {
             ISPCRTNewMemoryViewFlags flags;
             flags.allocType = ISPCRT_ALLOC_TYPE_SHARED;
-            setHandle(ispcrtNewMemoryView(device.handle(), nullptr, size * sizeof(T), &flags));
+            m_handle = ispcrtNewMemoryView(device.handle(), nullptr, size * sizeof(T), &flags);
         }
 
 template<typename T, AllocType AT>
