@@ -1220,7 +1220,7 @@ define double @__trunc_uniform_double(double %val) nounwind readonly alwaysinlin
   %mantissa = and i64 %double_to_int_bitcast, 4503599627370495
   %exp.i.i = lshr i64 %double_to_int_bitcast, 52
   %exp.i = and i64 %exp.i.i, 2047
-  %exp = sub i64 %exp.i, 1023  
+  %exp = sub i64 %exp.i, 1023
   %isZero = icmp sle i64 %exp, -1
   %isInfNan = icmp eq i64 %exp.i, 2047
 
@@ -1235,7 +1235,7 @@ define double @__trunc_uniform_double(double %val) nounwind readonly alwaysinlin
   %ret_non_inf_nan = select i1 %isZero, i64 %ret_0_int, i64 %ret_non0_int
   %ret_int = select i1 %isInfNan, i64 %double_to_int_bitcast, i64 %ret_non_inf_nan
   %ret = bitcast i64 %ret_int to double
-  ret double %ret 
+  ret double %ret
 }
 
 
@@ -1253,14 +1253,14 @@ define <WIDTH x double> @__trunc_varying_double(<WIDTH x double> %val) {
   %mantissa_shr = lshr <WIDTH x i64> %mantissa, %trim_size
   %mantissa_shl = shl <WIDTH x i64> %mantissa_shr, %trim_size
   %ret_non0_int = or <WIDTH x i64> %sign_and_exp, %mantissa_shl
-  
+
   %sign = and <WIDTH x i64> %double_to_int_bitcast, < forloop(i, 0, eval(WIDTH-2), `i64 -9223372036854775808, ') i64 -9223372036854775808 >
   %ret_0_int = and <WIDTH x i64> %sign, < forloop(i, 0, eval(WIDTH-2), `i64 0, ') i64 0 >
 
   %ret_non_inf_nan = select <WIDTH x i1> %isZero, <WIDTH x i64> %ret_0_int, <WIDTH x i64> %ret_non0_int
   %ret_int = select  <WIDTH x i1> %isInfNan, <WIDTH x i64> %double_to_int_bitcast, <WIDTH x i64> %ret_non_inf_nan
   %ret = bitcast <WIDTH x i64> %ret_int to <WIDTH x double>
-  ret <WIDTH x double> %ret  
+  ret <WIDTH x double> %ret
 }
 ')
 
@@ -1491,12 +1491,12 @@ mask_converts(WIDTH)
 ;; $4: return type of the VC atomic type, in ispc naming paralance (e.g. int32)
 
 define(`global_atomic_associative', `
-define <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
+define <$1 x $3> @__atomic_$2_$4_global(i8* %ptr, <$1 x $3> %val,
                                         <$1 x MASK> %m) nounwind alwaysinline {
   ifelse($1, 8,`
     %dst = alloca <$1 x $3>
     %dst_load = load <$1 x $3>, <$1 x $3>* %dst
-    %ptr_to_int = ptrtoint $3* %ptr to i64
+    %ptr_to_int = ptrtoint i8* %ptr to i64
     %base = insertelement <WIDTH x i64> undef, i64 %ptr_to_int, i32 0
     %shuffle = shufflevector <WIDTH x i64> %base, <WIDTH x i64> undef, <WIDTH x i32> zeroinitializer
     %res = call <$1 x $3> @llvm.genx.svm.atomic.$2.XE_SUFFIX($3).XE_SUFFIX(i1).XE_SUFFIX(i64)(<$1 x i1> %m, <$1 x i64> %shuffle, <$1 x $3> %val, <$1 x $3> %dst_load)
@@ -1504,7 +1504,7 @@ define <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
     %ret_ptr = alloca <$1 x $3>
     per_lane($1, <$1 x MASK> %m, `
       %val_LANE_ID = extractelement <$1 x $3> %val, i32 LANE
-      %res_LANE_ID = call $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val_LANE_ID)
+      %res_LANE_ID = call $3 @__atomic_$2_uniform_$4_global(i8 * %ptr, $3 %val_LANE_ID)
       %store_ptr_LANE_ID = getelementptr PTR_OP_ARGS(`<$1 x $3>') %ret_ptr, i32 0, i32 LANE
       store $3 %res_LANE_ID, $3 * %store_ptr_LANE_ID
     ')
@@ -1529,14 +1529,14 @@ define <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
 
 define(`global_atomic_uniform', `
 
-define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinline {
+define $3 @__atomic_$2_uniform_$4_global(i8 * %ptr, $3 %val) nounwind alwaysinline {
   %dst = alloca <1 x $3>
   %dst_load = load <1 x $3>, <1 x $3>* %dst
-  %ptr_to_int = ptrtoint $3* %ptr to i64
+  %ptr_to_int = ptrtoint i8* %ptr to i64
   %ptr_to_int_v = bitcast i64 %ptr_to_int to <1 x i64>
   %val_v = bitcast $3 %val to <1 x $3>
   %res_v = call <1 x $3> @llvm.genx.svm.atomic.$2.XE_SUFFIXN($3, 1).v1i1.v1i64(<1 x i1> <i1 true>, <1 x i64> %ptr_to_int_v, <1 x $3> %val_v, <1 x $3> %dst_load), !ISPC-Uniform !1
-  %res = extractelement <1 x $3> %res_v, i32 0 
+  %res = extractelement <1 x $3> %res_v, i32 0
   ret $3 %res
 }
 ')
@@ -1546,7 +1546,7 @@ define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinli
 ;; Defines the implementation of a function that handles the mapping from
 ;; an ispc atomic function to VC intrinsics for umin/umax.  This variant
 ;; just calls the atomic once, for the given uniform value. For ISPC and VC
-;; name conventions are different for umin/umax that's why it requires separate 
+;; name conventions are different for umin/umax that's why it requires separate
 ;; function.
 ;;
 ;; Takes four parameters:
@@ -1559,14 +1559,14 @@ define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinli
 ;;     (imin, imax...)
 
 define(`global_atomic_uniform_minmax', `
-define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinline {
+define $3 @__atomic_$2_uniform_$4_global(i8 * %ptr, $3 %val) nounwind alwaysinline {
   %dst = alloca <1 x $3>
   %dst_load = load <1 x $3>, <1 x $3>* %dst
-  %ptr_to_int = ptrtoint $3* %ptr to i64
+  %ptr_to_int = ptrtoint i8* %ptr to i64
   %ptr_to_int_v = bitcast i64 %ptr_to_int to <1 x i64>
   %val_v = bitcast $3 %val to <1 x $3>
   %res_v = call <1 x $3> @llvm.genx.svm.atomic.$5.XE_SUFFIXN($3, 1).v1i1.v1i64(<1 x i1> <i1 true>, <1 x i64> %ptr_to_int_v, <1 x $3> %val_v, <1 x $3> %dst_load), !ISPC-Uniform !1
-  %res = extractelement <1 x $3> %res_v, i32 0 
+  %res = extractelement <1 x $3> %res_v, i32 0
   ret $3 %res
 }
 ')
@@ -1578,14 +1578,14 @@ define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinli
 ;; $3: ispc type of the elements (e.g. int32)
 
 define(`global_swap', `
-define $2 @__atomic_swap_uniform_$3_global($2* %ptr, $2 %val) nounwind alwaysinline {
+define $2 @__atomic_swap_uniform_$3_global(i8* %ptr, $2 %val) nounwind alwaysinline {
   %dst = alloca <1 x $2>
   %dst_load = load <1 x $2>, <1 x $2>* %dst
-  %ptr_to_int = ptrtoint $2* %ptr to i64
+  %ptr_to_int = ptrtoint i8* %ptr to i64
   %ptr_to_int_v = bitcast i64 %ptr_to_int to <1 x i64>
   %val_v = bitcast $2 %val to <1 x $2>
   %res_v = call <1 x $2> @llvm.genx.svm.atomic.xchg.XE_SUFFIXN($2, 1).v1i1.v1i64(<1 x i1> <i1 true>, <1 x i64> %ptr_to_int_v, <1 x $2> %val_v, <1 x $2> %dst_load), !ISPC-Uniform !1
-  %res = extractelement <1 x $2> %res_v, i32 0 
+  %res = extractelement <1 x $2> %res_v, i32 0
   ret $2 %res
 }
 ')
@@ -1597,12 +1597,12 @@ define $2 @__atomic_swap_uniform_$3_global($2* %ptr, $2 %val) nounwind alwaysinl
 ;; $3: ispc type of the elements (e.g. int32)
 
 define(`global_atomic_exchange', `
-define <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
+define <$1 x $2> @__atomic_compare_exchange_$3_global(i8* %ptr, <$1 x $2> %cmp,
                                <$1 x $2> %val, <$1 x MASK> %mask) nounwind alwaysinline {
   ifelse($1, 8,`
     %dst = alloca <$1 x $2>
     %dst_load = load <$1 x $2>, <$1 x $2>* %dst
-    %ptr_to_int = ptrtoint $2* %ptr to i64
+    %ptr_to_int = ptrtoint i8* %ptr to i64
     %base = insertelement <WIDTH x i64> undef, i64 %ptr_to_int, i32 0
     %shuffle = shufflevector <WIDTH x i64> %base, <WIDTH x i64> undef, <WIDTH x i32> zeroinitializer
     %res = call <$1 x $2> @llvm.genx.svm.atomic.cmpxchg.XE_SUFFIX($2).XE_SUFFIX(i1).XE_SUFFIX(i64)(<$1 x i1> %mask, <$1 x i64> %shuffle, <$1 x $2> %val, <$1 x $2> %cmp, <$1 x $2> %dst_load)
@@ -1611,7 +1611,7 @@ define <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
       per_lane($1, <$1 x MASK> %mask, `
         %val_LANE_ID = extractelement <$1 x $2> %val, i32 LANE
         %cmp_LANE_ID = extractelement <$1 x $2> %cmp, i32 LANE
-        %res_LANE_ID = call $2 @__atomic_compare_exchange_uniform_$3_global($2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID)
+        %res_LANE_ID = call $2 @__atomic_compare_exchange_uniform_$3_global(i8 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID)
         %store_ptr_LANE_ID = getelementptr PTR_OP_ARGS(`<$1 x $2>') %ret_ptr, i32 0, i32 LANE
         store $2 %res_LANE_ID, $2 * %store_ptr_LANE_ID
     ')
@@ -1620,16 +1620,16 @@ define <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
   ret <$1 x $2> %res
 }
 
-define $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cmp,
+define $2 @__atomic_compare_exchange_uniform_$3_global(i8* %ptr, $2 %cmp,
                                                        $2 %val) nounwind alwaysinline {
   %dst = alloca <1 x $2>
   %dst_load = load <1 x $2>, <1 x $2>* %dst
-  %ptr_to_int = ptrtoint $2* %ptr to i64
+  %ptr_to_int = ptrtoint i8* %ptr to i64
   %ptr_to_int_v = bitcast i64 %ptr_to_int to <1 x i64>
   %val_v = bitcast $2 %val to <1 x $2>
   %cmp_v = bitcast $2 %cmp to <1 x $2>
   %res_v = call <1 x $2> @llvm.genx.svm.atomic.cmpxchg.XE_SUFFIXN($2, 1).v1i1.v1i64(<1 x i1> <i1 true>, <1 x i64> %ptr_to_int_v, <1 x $2> %val_v, <1 x $2> %cmp_v, <1 x $2> %dst_load), !ISPC-Uniform !1
-  %res = extractelement <1 x $2> %res_v, i32 0 
+  %res = extractelement <1 x $2> %res_v, i32 0
   ret $2 %res
 }
 ')
@@ -3552,11 +3552,16 @@ ifelse(WIDTH,  `1', `',
                       m4exit(`1')')
 
 define void
-@__aos_to_soa4_float(float * noalias %p,
-        <WIDTH x float> * noalias %out0, <WIDTH x float> * noalias %out1,
-        <WIDTH x float> * noalias %out2, <WIDTH x float> * noalias %out3)
+@__aos_to_soa4_float(i8 * noalias %p,
+        i8 * noalias %out0, i8 * noalias %out1,
+        i8 * noalias %out2, i8 * noalias %out3)
         nounwind alwaysinline {
-  %p0 = bitcast float * %p to <WIDTH x float> *
+  %p0 = bitcast i8 * %p to <WIDTH x float> *
+  %outptr0 = bitcast i8 * %out0 to <WIDTH x float> *
+  %outptr1 = bitcast i8 * %out1 to <WIDTH x float> *
+  %outptr2 = bitcast i8 * %out2 to <WIDTH x float> *
+  %outptr3 = bitcast i8 * %out3 to <WIDTH x float> *
+
   %v0 = load PTR_OP_ARGS(`<WIDTH x float> ')  %p0, align 4
   %p1 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %p0, i32 1
   %v1 = load PTR_OP_ARGS(`<WIDTH x float> ')  %p1, align 4
@@ -3565,15 +3570,15 @@ define void
   %p3 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %p0, i32 3
   %v3 = load PTR_OP_ARGS(`<WIDTH x float> ')  %p3, align 4
   call void @__aos_to_soa4_float`'WIDTH (<WIDTH x float> %v0, <WIDTH x float> %v1,
-         <WIDTH x float> %v2, <WIDTH x float> %v3, <WIDTH x float> * %out0,
-         <WIDTH x float> * %out1, <WIDTH x float> * %out2, <WIDTH x float> * %out3)
+         <WIDTH x float> %v2, <WIDTH x float> %v3, <WIDTH x float> * %outptr0,
+         <WIDTH x float> * %outptr1, <WIDTH x float> * %outptr2, <WIDTH x float> * %outptr3)
   ret void
 }
 
 define void
 @__soa_to_aos4_float(<WIDTH x float> %v0, <WIDTH x float> %v1, <WIDTH x float> %v2,
-             <WIDTH x float> %v3, float * noalias %p) nounwind alwaysinline {
-  %out0 = bitcast float * %p to <WIDTH x float> *
+             <WIDTH x float> %v3, i8 * noalias %p) nounwind alwaysinline {
+  %out0 = bitcast i8 * %p to <WIDTH x float> *
   %out1 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %out0, i32 1
   %out2 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %out0, i32 2
   %out3 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %out0, i32 3
@@ -3584,11 +3589,15 @@ define void
 }
 
 define void
-@__aos_to_soa4_double(double * noalias %p,
-        <WIDTH x double> * noalias %out0, <WIDTH x double> * noalias %out1,
-        <WIDTH x double> * noalias %out2, <WIDTH x double> * noalias %out3)
+@__aos_to_soa4_double(i8 * noalias %p,
+        i8 * noalias %out0, i8 * noalias %out1,
+        i8 * noalias %out2, i8 * noalias %out3)
         nounwind alwaysinline {
-  %p0 = bitcast double * %p to <WIDTH x double> *
+  %p0 = bitcast i8 * %p to <WIDTH x double> *
+  %outptr0 = bitcast i8 * %out0 to <WIDTH x double> *
+  %outptr1 = bitcast i8 * %out1 to <WIDTH x double> *
+  %outptr2 = bitcast i8 * %out2 to <WIDTH x double> *
+  %outptr3 = bitcast i8 * %out3 to <WIDTH x double> *
   %v0 = load PTR_OP_ARGS(`<WIDTH x double> ')  %p0, align 4
   %p1 = getelementptr PTR_OP_ARGS(`<WIDTH x double>') %p0, i32 1
   %v1 = load PTR_OP_ARGS(`<WIDTH x double> ')  %p1, align 4
@@ -3597,15 +3606,15 @@ define void
   %p3 = getelementptr PTR_OP_ARGS(`<WIDTH x double>') %p0, i32 3
   %v3 = load PTR_OP_ARGS(`<WIDTH x double> ')  %p3, align 4
   call void @__aos_to_soa4_double`'WIDTH (<WIDTH x double> %v0, <WIDTH x double> %v1,
-         <WIDTH x double> %v2, <WIDTH x double> %v3, <WIDTH x double> * %out0,
-         <WIDTH x double> * %out1, <WIDTH x double> * %out2, <WIDTH x double> * %out3)
+         <WIDTH x double> %v2, <WIDTH x double> %v3, <WIDTH x double> * %outptr0,
+         <WIDTH x double> * %outptr1, <WIDTH x double> * %outptr2, <WIDTH x double> * %outptr3)
   ret void
 }
 
 define void
 @__soa_to_aos4_double(<WIDTH x double> %v0, <WIDTH x double> %v1, <WIDTH x double> %v2,
-             <WIDTH x double> %v3, double * noalias %p) nounwind alwaysinline {
-  %out0 = bitcast double * %p to <WIDTH x double> *
+             <WIDTH x double> %v3, i8 * noalias %p) nounwind alwaysinline {
+  %out0 = bitcast i8 * %p to <WIDTH x double> *
   %out1 = getelementptr PTR_OP_ARGS(`<WIDTH x double>') %out0, i32 1
   %out2 = getelementptr PTR_OP_ARGS(`<WIDTH x double>') %out0, i32 2
   %out3 = getelementptr PTR_OP_ARGS(`<WIDTH x double>') %out0, i32 3
@@ -3616,25 +3625,28 @@ define void
 }
 
 define void
-@__aos_to_soa3_float(float * noalias %p,
-        <WIDTH x float> * %out0, <WIDTH x float> * %out1,
-        <WIDTH x float> * %out2) nounwind alwaysinline {
-  %p0 = bitcast float * %p to <WIDTH x float> *
+@__aos_to_soa3_float(i8 * noalias %p,
+        i8 * %out0, i8 * %out1,
+        i8 * %out2) nounwind alwaysinline {
+  %p0 = bitcast i8 * %p to <WIDTH x float> *
+  %outptr0 = bitcast i8 * %out0 to <WIDTH x float> *
+  %outptr1 = bitcast i8 * %out1 to <WIDTH x float> *
+  %outptr2 = bitcast i8 * %out2 to <WIDTH x float> *
   %v0 = load PTR_OP_ARGS(`<WIDTH x float> ')  %p0, align 4
   %p1 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %p0, i32 1
   %v1 = load PTR_OP_ARGS(`<WIDTH x float> ')  %p1, align 4
   %p2 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %p0, i32 2
   %v2 = load PTR_OP_ARGS(`<WIDTH x float> ')  %p2, align 4
   call void @__aos_to_soa3_float`'WIDTH (<WIDTH x float> %v0, <WIDTH x float> %v1,
-         <WIDTH x float> %v2, <WIDTH x float> * %out0, <WIDTH x float> * %out1,
-         <WIDTH x float> * %out2)
+         <WIDTH x float> %v2, <WIDTH x float> * %outptr0, <WIDTH x float> * %outptr1,
+         <WIDTH x float> * %outptr2)
   ret void
 }
 
 define void
 @__soa_to_aos3_float(<WIDTH x float> %v0, <WIDTH x float> %v1, <WIDTH x float> %v2,
-                     float * noalias %p) nounwind alwaysinline {
-  %out0 = bitcast float * %p to <WIDTH x float> *
+                     i8 * noalias %p) nounwind alwaysinline {
+  %out0 = bitcast i8 * %p to <WIDTH x float> *
   %out1 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %out0, i32 1
   %out2 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %out0, i32 2
   call void @__soa_to_aos3_float`'WIDTH (<WIDTH x float> %v0, <WIDTH x float> %v1,
@@ -3644,25 +3656,28 @@ define void
 }
 
 define void
-@__aos_to_soa3_double(double * noalias %p,
-        <WIDTH x double> * %out0, <WIDTH x double> * %out1,
-        <WIDTH x double> * %out2) nounwind alwaysinline {
-  %p0 = bitcast double * %p to <WIDTH x double> *
+@__aos_to_soa3_double(i8 * noalias %p,
+        i8 * %out0, i8 * %out1,
+        i8 * %out2) nounwind alwaysinline {
+  %p0 = bitcast i8 * %p to <WIDTH x double> *
+  %outptr0 = bitcast i8 * %out0 to <WIDTH x double> *
+  %outptr1 = bitcast i8 * %out1 to <WIDTH x double> *
+  %outptr2 = bitcast i8 * %out2 to <WIDTH x double> *
   %v0 = load PTR_OP_ARGS(`<WIDTH x double> ')  %p0, align 4
   %p1 = getelementptr PTR_OP_ARGS(`<WIDTH x double>') %p0, i32 1
   %v1 = load PTR_OP_ARGS(`<WIDTH x double> ')  %p1, align 4
   %p2 = getelementptr PTR_OP_ARGS(`<WIDTH x double>') %p0, i32 2
   %v2 = load PTR_OP_ARGS(`<WIDTH x double> ')  %p2, align 4
   call void @__aos_to_soa3_double`'WIDTH (<WIDTH x double> %v0, <WIDTH x double> %v1,
-         <WIDTH x double> %v2, <WIDTH x double> * %out0, <WIDTH x double> * %out1,
-         <WIDTH x double> * %out2)
+         <WIDTH x double> %v2, <WIDTH x double> * %outptr0, <WIDTH x double> * %outptr1,
+         <WIDTH x double> * %outptr2)
   ret void
 }
 
 define void
 @__soa_to_aos3_double(<WIDTH x double> %v0, <WIDTH x double> %v1, <WIDTH x double> %v2,
-                     double * noalias %p) nounwind alwaysinline {
-  %out0 = bitcast double * %p to <WIDTH x double> *
+                     i8 * noalias %p) nounwind alwaysinline {
+  %out0 = bitcast i8 * %p to <WIDTH x double> *
   %out1 = getelementptr PTR_OP_ARGS(`<WIDTH x double>') %out0, i32 1
   %out2 = getelementptr PTR_OP_ARGS(`<WIDTH x double>') %out0, i32 2
   call void @__soa_to_aos3_double`'WIDTH (<WIDTH x double> %v0, <WIDTH x double> %v1,
@@ -3673,21 +3688,23 @@ define void
 
 
 define void
-@__aos_to_soa2_float(float * noalias %p,
-        <WIDTH x float> * %out0, <WIDTH x float> * %out1) nounwind alwaysinline {
-  %p0 = bitcast float * %p to <WIDTH x float> *
+@__aos_to_soa2_float(i8 * noalias %p,
+        i8 * %out0, i8 * %out1) nounwind alwaysinline {
+  %p0 = bitcast i8 * %p to <WIDTH x float> *
+  %outptr0 = bitcast i8 * %out0 to <WIDTH x float> *
+  %outptr1 = bitcast i8 * %out1 to <WIDTH x float> *
   %v0 = load PTR_OP_ARGS(`<WIDTH x float> ')  %p0, align 4
   %p1 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %p0, i32 1
   %v1 = load PTR_OP_ARGS(`<WIDTH x float> ')  %p1, align 4
   call void @__aos_to_soa2_float`'WIDTH (<WIDTH x float> %v0, <WIDTH x float> %v1,
-         <WIDTH x float> * %out0, <WIDTH x float> * %out1)
+         <WIDTH x float> * %outptr0, <WIDTH x float> * %outptr1)
   ret void
 }
 
 define void
 @__soa_to_aos2_float(<WIDTH x float> %v0, <WIDTH x float> %v1,
-                     float * noalias %p) nounwind alwaysinline {
-  %out0 = bitcast float * %p to <WIDTH x float> *
+                     i8 * noalias %p) nounwind alwaysinline {
+  %out0 = bitcast i8 * %p to <WIDTH x float> *
   %out1 = getelementptr PTR_OP_ARGS(`<WIDTH x float>') %out0, i32 1
   call void @__soa_to_aos2_float`'WIDTH (<WIDTH x float> %v0, <WIDTH x float> %v1,
          <WIDTH x float> * %out0, <WIDTH x float> * %out1)
@@ -3695,21 +3712,23 @@ define void
 }
 
 define void
-@__aos_to_soa2_double(double * noalias %p,
-        <WIDTH x double> * %out0, <WIDTH x double> * %out1) nounwind alwaysinline {
-  %p0 = bitcast double * %p to <WIDTH x double> *
+@__aos_to_soa2_double(i8 * noalias %p,
+        i8 * %out0, i8 * %out1) nounwind alwaysinline {
+  %p0 = bitcast i8 * %p to <WIDTH x double> *
+  %outptr0 = bitcast i8 * %out0 to <WIDTH x double> *
+  %outptr1 = bitcast i8 * %out1 to <WIDTH x double> *
   %v0 = load PTR_OP_ARGS(`<WIDTH x double> ')  %p0, align 4
   %p1 = getelementptr PTR_OP_ARGS(`<WIDTH x double>') %p0, i32 1
   %v1 = load PTR_OP_ARGS(`<WIDTH x double> ')  %p1, align 4
   call void @__aos_to_soa2_double`'WIDTH (<WIDTH x double> %v0, <WIDTH x double> %v1,
-         <WIDTH x double> * %out0, <WIDTH x double> * %out1)
+         <WIDTH x double> * %outptr0, <WIDTH x double> * %outptr1)
   ret void
 }
 
 define void
 @__soa_to_aos2_double(<WIDTH x double> %v0, <WIDTH x double> %v1,
-                     double * noalias %p) nounwind alwaysinline {
-  %out0 = bitcast double * %p to <WIDTH x double> *
+                     i8 * noalias %p) nounwind alwaysinline {
+  %out0 = bitcast i8 * %p to <WIDTH x double> *
   %out1 = getelementptr PTR_OP_ARGS(`<WIDTH x double>') %out0, i32 1
   call void @__soa_to_aos2_double`'WIDTH (<WIDTH x double> %v0, <WIDTH x double> %v1,
          <WIDTH x double> * %out0, <WIDTH x double> * %out1)
@@ -4765,7 +4784,7 @@ define i1 @__extract_bool(<WIDTH x MASK>, i32) nounwind readnone alwaysinline {
   ret i1 %extract
 }
 
-define <WIDTH x MASK> @__insert_bool(<WIDTH x MASK>, i32, 
+define <WIDTH x MASK> @__insert_bool(<WIDTH x MASK>, i32,
                                    i1) nounwind readnone alwaysinline {
   %insert = insertelement <WIDTH x MASK> %0, MASK %2, i32 %1
   ret <WIDTH x MASK> %insert
@@ -5379,8 +5398,10 @@ define float @__stdlib_cosf(float) nounwind readnone alwaysinline {
   ret float %r
 }
 
-define void @__stdlib_sincosf(float, float *, float *) nounwind alwaysinline {
-  call void @sincosf(float %0, float *%1, float *%2)
+define void @__stdlib_sincosf(float, i8 *, i8 *) nounwind alwaysinline {
+  %ptr1 = bitcast i8* %1 to float*
+  %ptr2 = bitcast i8* %2 to float*
+  call void @sincosf(float %0, float *%ptr1, float *%ptr2)
   ret void
 }
 
@@ -5450,8 +5471,10 @@ define double @__stdlib_cos(double) nounwind readnone alwaysinline {
   ret double %r
 }
 
-define void @__stdlib_sincos(double, double *, double *) nounwind alwaysinline {
-  call void @sincos(double %0, double *%1, double *%2)
+define void @__stdlib_sincos(double, i8 *, i8 *) nounwind alwaysinline {
+  %ptr1 = bitcast i8* %1 to double*
+  %ptr2 = bitcast i8* %2 to double*
+  call void @sincos(double %0, double *%ptr1, double *%ptr2)
   ret void
 }
 
@@ -5531,18 +5554,16 @@ global_atomic_uniform_minmax(WIDTH, umax, i64, uint64, max)
 global_swap(WIDTH, i32, int32)
 global_swap(WIDTH, i64, int64)
 
-define float @__atomic_swap_uniform_float_global(float * %ptr, float %val) nounwind alwaysinline {
-  %iptr = bitcast float * %ptr to i32 *
+define float @__atomic_swap_uniform_float_global(i8 * %ptr, float %val) nounwind alwaysinline {
   %ival = bitcast float %val to i32
-  %iret = call i32 @__atomic_swap_uniform_int32_global(i32 * %iptr, i32 %ival)
+  %iret = call i32 @__atomic_swap_uniform_int32_global(i8 * %ptr, i32 %ival)
   %ret = bitcast i32 %iret to float
   ret float %ret
 }
 
-define double @__atomic_swap_uniform_double_global(double * %ptr, double %val) nounwind alwaysinline {
-  %iptr = bitcast double * %ptr to i64 *
+define double @__atomic_swap_uniform_double_global(i8 * %ptr, double %val) nounwind alwaysinline {
   %ival = bitcast double %val to i64
-  %iret = call i64 @__atomic_swap_uniform_int64_global(i64 * %iptr, i64 %ival)
+  %iret = call i64 @__atomic_swap_uniform_int64_global(i8 * %ptr, i64 %ival)
   %ret = bitcast i64 %iret to double
   ret double %ret
 }
@@ -5550,45 +5571,41 @@ define double @__atomic_swap_uniform_double_global(double * %ptr, double %val) n
 global_atomic_exchange(WIDTH, i32, int32)
 global_atomic_exchange(WIDTH, i64, int64)
 
-define <WIDTH x float> @__atomic_compare_exchange_float_global(float * %ptr,
+define <WIDTH x float> @__atomic_compare_exchange_float_global(i8 * %ptr,
                       <WIDTH x float> %cmp, <WIDTH x float> %val, <WIDTH x MASK> %mask) nounwind alwaysinline {
-  %iptr = bitcast float * %ptr to i32 *
   %icmp = bitcast <WIDTH x float> %cmp to <WIDTH x i32>
   %ival = bitcast <WIDTH x float> %val to <WIDTH x i32>
-  %iret = call <WIDTH x i32> @__atomic_compare_exchange_int32_global(i32 * %iptr, <WIDTH x i32> %icmp,
+  %iret = call <WIDTH x i32> @__atomic_compare_exchange_int32_global(i8 * %ptr, <WIDTH x i32> %icmp,
                                                                   <WIDTH x i32> %ival, <WIDTH x MASK> %mask)
   %ret = bitcast <WIDTH x i32> %iret to <WIDTH x float>
   ret <WIDTH x float> %ret
 }
 
-define <WIDTH x double> @__atomic_compare_exchange_double_global(double * %ptr,
+define <WIDTH x double> @__atomic_compare_exchange_double_global(i8 * %ptr,
                       <WIDTH x double> %cmp, <WIDTH x double> %val, <WIDTH x MASK> %mask) nounwind alwaysinline {
-  %iptr = bitcast double * %ptr to i64 *
   %icmp = bitcast <WIDTH x double> %cmp to <WIDTH x i64>
   %ival = bitcast <WIDTH x double> %val to <WIDTH x i64>
-  %iret = call <WIDTH x i64> @__atomic_compare_exchange_int64_global(i64 * %iptr, <WIDTH x i64> %icmp,
+  %iret = call <WIDTH x i64> @__atomic_compare_exchange_int64_global(i8 * %ptr, <WIDTH x i64> %icmp,
                                                                   <WIDTH x i64> %ival, <WIDTH x MASK> %mask)
   %ret = bitcast <WIDTH x i64> %iret to <WIDTH x double>
   ret <WIDTH x double> %ret
 }
 
-define float @__atomic_compare_exchange_uniform_float_global(float * %ptr, float %cmp,
+define float @__atomic_compare_exchange_uniform_float_global(i8 * %ptr, float %cmp,
                                                              float %val) nounwind alwaysinline {
-  %iptr = bitcast float * %ptr to i32 *
   %icmp = bitcast float %cmp to i32
   %ival = bitcast float %val to i32
-  %iret = call i32 @__atomic_compare_exchange_uniform_int32_global(i32 * %iptr, i32 %icmp,
+  %iret = call i32 @__atomic_compare_exchange_uniform_int32_global(i8 * %ptr, i32 %icmp,
                                                                    i32 %ival)
   %ret = bitcast i32 %iret to float
   ret float %ret
 }
 
-define double @__atomic_compare_exchange_uniform_double_global(double * %ptr, double %cmp,
+define double @__atomic_compare_exchange_uniform_double_global(i8 * %ptr, double %cmp,
                                                                double %val) nounwind alwaysinline {
-  %iptr = bitcast double * %ptr to i64 *
   %icmp = bitcast double %cmp to i64
   %ival = bitcast double %val to i64
-  %iret = call i64 @__atomic_compare_exchange_uniform_int64_global(i64 * %iptr, i64 %icmp, i64 %ival)
+  %iret = call i64 @__atomic_compare_exchange_uniform_int64_global(i8 * %ptr, i64 %icmp, i64 %ival)
   %ret = bitcast i64 %iret to double
   ret double %ret
 }
@@ -5663,16 +5680,17 @@ return:
 ;; streaming stores
 
 define(`gen_streaming_stores_varying_by_type', `
-define void @__streaming_store_varying_$1($1* nocapture, <WIDTH x $1>) nounwind alwaysinline {
-  %ptr = bitcast $1* %0 to <WIDTH x $1>*
+define void @__streaming_store_varying_$1(i8* nocapture, <WIDTH x $1>) nounwind alwaysinline {
+  %ptr = bitcast i8* %0 to <WIDTH x $1>*
   store <WIDTH x $1> %1, <WIDTH x $1>* %ptr , !nontemporal !1
   ret void
 }
 ')
 
 define(`gen_streaming_stores_uniform_by_type', `
-define void @__streaming_store_uniform_$1($1* nocapture, $1) nounwind alwaysinline {
-  store $1 %1, $1 * %0 , !nontemporal !1
+define void @__streaming_store_uniform_$1(i8* nocapture, $1) nounwind alwaysinline {
+  %ptr = bitcast i8* %0 to $1*
+  store $1 %1, $1 * %ptr , !nontemporal !1
   ret void
 }
 ')
@@ -5713,16 +5731,17 @@ gen_streaming_stores()
 ;; streaming loads
 
 define(`gen_streaming_loads_varying_by_type', `
-  define <WIDTH x $1> @__streaming_load_varying_$1($1* nocapture) nounwind alwaysinline {
-  %ptr = bitcast $1* %0 to <WIDTH x $1>*
+  define <WIDTH x $1> @__streaming_load_varying_$1(i8* nocapture) nounwind alwaysinline {
+  %ptr = bitcast i8* %0 to <WIDTH x $1>*
   %loadval = load PTR_OP_ARGS(`<WIDTH x $1>') %ptr , !nontemporal !1
   ret <WIDTH x $1> %loadval
 }
 ')
 
 define(`gen_streaming_loads_uniform_by_type', `
-define $1 @__streaming_load_uniform_$1($1* nocapture) nounwind alwaysinline {
-  %loadval = load PTR_OP_ARGS(`$1') %0 , !nontemporal !1
+define $1 @__streaming_load_uniform_$1(i8* nocapture) nounwind alwaysinline {
+  %ptr = bitcast i8* %0 to $1*
+  %loadval = load $1, $1* %ptr, !nontemporal !1
   ret $1 %loadval
 }
 ')
@@ -5878,9 +5897,11 @@ define void @__masked_store_blend_i16(<16 x i16>* nocapture, <16 x i16>,
 ;; FIXME: use the per_lane macro, defined below, to implement these!
 define(`packed_load_and_store_type', `
 
-define i32 @__packed_load_active$1($1 * %startptr, <WIDTH x $1> * %val_ptr,
+define i32 @__packed_load_active$1(i8 * %startptr, i8 * %val_ptr,
                                  <WIDTH x MASK> %full_mask) nounwind alwaysinline {
 entry:
+  %startptr_typed = bitcast i8* %startptr to $1*
+  %val_ptr_typed = bitcast i8* %val_ptr to <WIDTH x $1>*
   %mask = call i64 @__movmsk(<WIDTH x MASK> %full_mask)
   %mask_known = call i1 @__is_compile_time_constant_mask(<WIDTH x MASK> %full_mask)
   br i1 %mask_known, label %known_mask, label %unknown_mask
@@ -5892,9 +5913,9 @@ known_mask:
 all_on:
   ;; everyone wants to load, so just load an entire vector width in a single
   ;; vector load
-  %vecptr = bitcast $1 *%startptr to <WIDTH x $1> *
+  %vecptr = bitcast $1 *%startptr_typed to <WIDTH x $1> *
   %vec_load = load PTR_OP_ARGS(`<WIDTH x $1> ') %vecptr, align $2
-  store <WIDTH x $1> %vec_load, <WIDTH x $1> * %val_ptr, align $2
+  store <WIDTH x $1> %vec_load, <WIDTH x $1> * %val_ptr_typed, align $2
   ret i32 WIDTH
 
 unknown_mask:
@@ -5911,9 +5932,9 @@ loop:
   br i1 %do_load, label %load, label %loopend
 
 load:
-  %loadptr = getelementptr PTR_OP_ARGS(`$1') %startptr, i32 %offset
+  %loadptr = getelementptr PTR_OP_ARGS(`$1') %startptr_typed, i32 %offset
   %loadval = load PTR_OP_ARGS(`$1 ') %loadptr
-  %val_ptr_type = bitcast <WIDTH x $1> * %val_ptr to $1 *
+  %val_ptr_type = bitcast <WIDTH x $1> * %val_ptr_typed to $1 *
   %storeptr = getelementptr PTR_OP_ARGS(`$1') %val_ptr_type, i32 %lane
   store $1 %loadval, $1 *%storeptr
   %offset1 = add i32 %offset, 1
@@ -5932,9 +5953,10 @@ done:
   ret i32 %nextoffset
 }
 
-define i32 @__packed_store_active$1($1 * %startptr, <WIDTH x $1> %vals,
+define i32 @__packed_store_active$1(i8 * %startptr, <WIDTH x $1> %vals,
                                    <WIDTH x MASK> %full_mask) nounwind alwaysinline {
 entry:
+  %startptr_typed = bitcast i8* %startptr to $1*
   %mask = call i64 @__movmsk(<WIDTH x MASK> %full_mask)
   %mask_known = call i1 @__is_compile_time_constant_mask(<WIDTH x MASK> %full_mask)
   br i1 %mask_known, label %known_mask, label %unknown_mask
@@ -5944,7 +5966,7 @@ known_mask:
   br i1 %allon, label %all_on, label %unknown_mask
 
 all_on:
-  %vecptr = bitcast $1 *%startptr to <WIDTH x $1> *
+  %vecptr = bitcast $1 *%startptr_typed to <WIDTH x $1> *
   store <WIDTH x $1> %vals, <WIDTH x $1> * %vecptr, align $2
   ret i32 WIDTH
 
@@ -5963,7 +5985,7 @@ loop:
 
 store:
   %storeval = extractelement <WIDTH x $1> %vals, i32 %lane
-  %storeptr = getelementptr PTR_OP_ARGS(`$1') %startptr, i32 %offset
+  %storeptr = getelementptr PTR_OP_ARGS(`$1') %startptr_typed, i32 %offset
   store $1 %storeval, $1 *%storeptr
   %offset1 = add i32 %offset, 1
   br label %loopend
@@ -5981,9 +6003,9 @@ done:
   ret i32 %nextoffset
 }
 
-define i32 @__packed_store_active2$1($1 * %startptr, <WIDTH x $1> %vals,
+define i32 @__packed_store_active2$1(i8 * %startptr, <WIDTH x $1> %vals,
                                    <WIDTH x MASK> %full_mask) nounwind alwaysinline {
-  %res = call i32 @__packed_store_active$1($1 * %startptr, <WIDTH x $1> %vals,
+  %res = call i32 @__packed_store_active$1(i8 * %startptr, <WIDTH x $1> %vals,
                                    <WIDTH x MASK> %full_mask)
   ret i32 %res
 }
@@ -6027,7 +6049,7 @@ define(`count_zeros_are_defined', true)
 define(`reduce_equal_aux', `
 declare_count_zeros()
 
-define i1 @__reduce_equal_$3(<$1 x $2> %v, $2 * %samevalue,
+define i1 @__reduce_equal_$3(<$1 x $2> %v, i8 * %samevalue,
                              <$1 x MASK> %mask) nounwind alwaysinline {
 entry:
    %ptr = alloca <$1 x $2>
@@ -6092,7 +6114,8 @@ check_neighbors:
 
 all_equal:
   %the_value = extractelement <$1 x $2> %vec, i32 0
-  store $2 %the_value, $2 * %samevalue
+  %samevalue_typed = bitcast i8* %samevalue to $2*
+  store $2 %the_value, $2 * %samevalue_typed
   ret i1 true
 
 not_all_equal:
@@ -6529,9 +6552,9 @@ define void @__scatter64_$1(<WIDTH x i64> %ptrs, <WIDTH x $1> %values,
 ;; rdrand
 
 define(`rdrand_decls', `
-declare i1 @__rdrand_i16(i16 * nocapture)
-declare i1 @__rdrand_i32(i32 * nocapture)
-declare i1 @__rdrand_i64(i64 * nocapture)
+declare i1 @__rdrand_i16(i8 * nocapture)
+declare i1 @__rdrand_i32(i8 * nocapture)
+declare i1 @__rdrand_i64(i8 * nocapture)
 ')
 
 define(`rdrand_definition', `
@@ -6543,28 +6566,31 @@ declare {i32, i32} @llvm.x86.rdrand.32()
 declare {i64, i32} @llvm.x86.rdrand.64()
 
 define i1 @__rdrand_i16(i16 * %ptr) {
+  %ptr_typed = bitcast i8* %ptr to i16*
   %v = call {i16, i32} @llvm.x86.rdrand.16()
   %v0 = extractvalue {i16, i32} %v, 0
   %v1 = extractvalue {i16, i32} %v, 1
-  store i16 %v0, i16 * %ptr
+  store i16 %v0, i16 * %ptr_typed
   %good = icmp ne i32 %v1, 0
   ret i1 %good
 }
 
-define i1 @__rdrand_i32(i32 * %ptr) {
+define i1 @__rdrand_i32(i8 * %ptr) {
+  %ptr_typed = bitcast i8* %ptr to i32*
   %v = call {i32, i32} @llvm.x86.rdrand.32()
   %v0 = extractvalue {i32, i32} %v, 0
   %v1 = extractvalue {i32, i32} %v, 1
-  store i32 %v0, i32 * %ptr
+  store i32 %v0, i32 * %ptr_typed
   %good = icmp ne i32 %v1, 0
   ret i1 %good
 }
 
-define i1 @__rdrand_i64(i64 * %ptr) {
+define i1 @__rdrand_i64(i8 * %ptr) {
+  %ptr_typed = bitcast i8* %ptr to i64*
   %v = call {i64, i32} @llvm.x86.rdrand.64()
   %v0 = extractvalue {i64, i32} %v, 0
   %v1 = extractvalue {i64, i32} %v, 1
-  store i64 %v0, i64 * %ptr
+  store i64 %v0, i64 * %ptr_typed
   %good = icmp ne i32 %v1, 0
   ret i1 %good
 }
