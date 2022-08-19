@@ -27,7 +27,7 @@
 ;;   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
 ;;   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 ;;   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 ;; svml macro
@@ -38,23 +38,23 @@
 ;; $3 - vector width
 define(`svml_stubs',`
   declare <$3 x $1> @__svml_sin$2(<$3 x $1>) nounwind readnone alwaysinline
-  declare <$3 x $1> @__svml_asin$2(<$3 x $1>) nounwind readnone alwaysinline 
-  declare <$3 x $1> @__svml_cos$2(<$3 x $1>) nounwind readnone alwaysinline 
+  declare <$3 x $1> @__svml_asin$2(<$3 x $1>) nounwind readnone alwaysinline
+  declare <$3 x $1> @__svml_cos$2(<$3 x $1>) nounwind readnone alwaysinline
   declare <$3 x $1> @__svml_acos$2(<$3 x $1>) nounwind readnone alwaysinline
-  declare void @__svml_sincos$2(<$3 x $1>, <$3 x $1> *, <$3 x $1> *) nounwind alwaysinline 
-  declare <$3 x $1> @__svml_tan$2(<$3 x $1>) nounwind readnone alwaysinline 
-  declare <$3 x $1> @__svml_atan$2(<$3 x $1>) nounwind readnone alwaysinline 
-  declare <$3 x $1> @__svml_atan2$2(<$3 x $1>, <$3 x $1>) nounwind readnone alwaysinline 
-  declare <$3 x $1> @__svml_exp$2(<$3 x $1>) nounwind readnone alwaysinline 
-  declare <$3 x $1> @__svml_log$2(<$3 x $1>) nounwind readnone alwaysinline 
-  declare <$3 x $1> @__svml_pow$2(<$3 x $1>, <$3 x $1>) nounwind readnone alwaysinline 
+  declare void @__svml_sincos$2(<$3 x $1>, i8 *, i8 *) nounwind alwaysinline
+  declare <$3 x $1> @__svml_tan$2(<$3 x $1>) nounwind readnone alwaysinline
+  declare <$3 x $1> @__svml_atan$2(<$3 x $1>) nounwind readnone alwaysinline
+  declare <$3 x $1> @__svml_atan2$2(<$3 x $1>, <$3 x $1>) nounwind readnone alwaysinline
+  declare <$3 x $1> @__svml_exp$2(<$3 x $1>) nounwind readnone alwaysinline
+  declare <$3 x $1> @__svml_log$2(<$3 x $1>) nounwind readnone alwaysinline
+  declare <$3 x $1> @__svml_pow$2(<$3 x $1>, <$3 x $1>) nounwind readnone alwaysinline
   declare <$3 x $1> @__svml_sqrt$2(<$3 x $1>) nounwind readnone alwaysinline
   declare <$3 x $1> @__svml_invsqrt$2(<$3 x $1>) nounwind readnone alwaysinline
 ')
 
-;; svml_declare : declaration of __svml_* intrinsics 
+;; svml_declare : declaration of __svml_* intrinsics
 ;; $1 - type ("float" or "double")
-;; $2 - __svml_* intrinsic function suffix 
+;; $2 - __svml_* intrinsic function suffix
 ;;      float:  "f4"(sse) "f8"(avx) "f16"(avx512)
 ;;      double:  "2"(sse)  "4"(avx)   "8"(avx512)
 ;; $3 - vector width
@@ -77,7 +77,7 @@ define(`svml_declare',`
 
 ;; defintition of __svml_* internal functions
 ;; $1 - type ("float" or "double")
-;; $2 - __svml_* intrinsic function suffix 
+;; $2 - __svml_* intrinsic function suffix
 ;;      float:  "f4"(xmm) "f8"(ymm) "f16"(zmm)
 ;;      double:  "2"(xmm)  "4"(ymm)   "8"(zmm)
 ;; $3 - vector width
@@ -105,12 +105,14 @@ define(`svml_define',`
     ret <$3 x $1> %ret
   }
 
-  define void @__svml_sincos$4(<$3 x $1>, <$3 x $1> *, <$3 x $1> *) nounwind alwaysinline {
+  define void @__svml_sincos$4(<$3 x $1>, i8 *, i8 *) nounwind alwaysinline {
     %ret = call %struct.__svml_sincos_ret$2 @__svml_sincos$2(<$3 x $1> %0)
     %sin = extractvalue %struct.__svml_sincos_ret$2 %ret, 0
     %cos = extractvalue %struct.__svml_sincos_ret$2 %ret, 1
-    store <$3 x $1> %sin, <$3 x $1> * %1
-    store <$3 x $1> %cos, <$3 x $1> * %2
+    %ptr1 = bitcast i8* %1 to <$3 x $1>*
+    %ptr2 = bitcast i8* %2 to <$3 x $1>*
+    store <$3 x $1> %sin, <$3 x $1> * %ptr1
+    store <$3 x $1> %cos, <$3 x $1> * %ptr2
     ret void
   }
 
@@ -158,7 +160,7 @@ define(`svml_define',`
 
 ;; svml_define_x : defintition of __svml_* internal functions operation on extended width
 ;; $1 - type ("float" or "double")
-;; $2 - __svml_* intrinsic function suffix 
+;; $2 - __svml_* intrinsic function suffix
 ;;      float:  "f4"(xmm) "f8"(ymm) "f16"(zmm)
 ;;      double:  "2"(xmm)  "4"(ymm)   "8"(zmm)
 ;; $3 - vector width
@@ -167,8 +169,8 @@ define(`svml_define',`
 ;;      contigent on existing of unary$3to$5 and binary$3to$5 macros
 
 ;; *todo*: in sincos call use __svml_sincos[f][2,4,8,16] call, e.g.
-;;define void @__svml_sincosf(<8 x float>, <8 x float> *,
-;;                                    <8 x float> *) nounwind alwaysinline {
+;;define void @__svml_sincosf(<8 x float>, i8 *,
+;;                                    i8 *) nounwind alwaysinline {
 ;;  ; call svml_sincosf4 two times with the two 4-wide sub-vectors
 ;;  %a = shufflevector <8 x float> %0, <8 x float> undef,
 ;;         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -184,14 +186,16 @@ define(`svml_define',`
 ;;  %sin = shufflevector <4 x float> %sa, <4 x float> %sb,
 ;;         <8 x i32> <i32 0, i32 1, i32 2, i32 3,
 ;;                    i32 4, i32 5, i32 6, i32 7>
-;;  store <8 x float> %sin, <8 x float> * %1
+;;  %ptr1 = bitcast i8 * %1 <8 x float> *
+;;  store <8 x float> %sin, <8 x float> * %ptr1
 ;;
 ;;  %cosa = load <4 x float> * %cospa
 ;;  %cosb = load <4 x float> * %cospb
 ;;  %cos = shufflevector <4 x float> %cosa, <4 x float> %cosb,
 ;;         <8 x i32> <i32 0, i32 1, i32 2, i32 3,
 ;;                    i32 4, i32 5, i32 6, i32 7>
-;;  store <8 x float> %cos, <8 x float> * %2
+;;  %ptr2 = bitcast i8 * %2 <8 x float> *
+;;  store <8 x float> %cos, <8 x float> * %ptr2
 ;;
 ;;  ret void
 ;;}
@@ -214,12 +218,14 @@ define(`svml_define_x',`
     unary$3to$5(ret, $1, @__svml_acos$2, %0)
     ret <$5 x $1> %ret
   }
-  define void @__svml_sincos$4(<$5 x $1>,<$5 x $1>*,<$5 x $1>*) nounwind alwaysinline 
+  define void @__svml_sincos$4(<$5 x $1>,i8*,i8*) nounwind alwaysinline
   {
+    %ptr1 = bitcast i8* %1 to <$5 x $1>*
+    %ptr2 = bitcast i8* %2 to <$5 x $1>*
     %s = call <$5 x $1> @__svml_sin$4(<$5 x $1> %0)
     %c = call <$5 x $1> @__svml_cos$4(<$5 x $1> %0)
-    store <$5 x $1> %s, <$5 x $1> * %1
-    store <$5 x $1> %c, <$5 x $1> * %2
+    store <$5 x $1> %s, <$5 x $1> * %ptr1
+    store <$5 x $1> %c, <$5 x $1> * %ptr2
     ret void
   }
   define <$5 x $1> @__svml_tan$4(<$5 x $1>) nounwind readnone alwaysinline {

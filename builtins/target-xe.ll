@@ -1351,9 +1351,11 @@ xe_double_math(atan)
 ;; sin is returned value
 ;; cos is returned through pointer
 declare double @__spirv_ocl_sincos(double, double*) nounwind
-define void @__sincos_uniform_double(double, double*, double*) nounwind {
-  %sin = call double @__spirv_ocl_sincos(double %0, double* %2)
-  store double %sin, double* %1
+define void @__sincos_uniform_double(double, i8*, i8*) nounwind {
+  %ptr1 = bitcast i8* %1 to double*
+  %ptr2 = bitcast i8* %2 to double*
+  %sin = call double @__spirv_ocl_sincos(double %0, double* %ptr2)
+  store double %sin, double* %ptr1
   ret void
 }
 
@@ -1363,21 +1365,23 @@ ifelse(WIDTH,32,`
   declare <WIDTH x double> @__spirv_ocl_sincos_DvWIDTH(<WIDTH x double>, <WIDTH x double>*) nounwind
 ')
 
-define void @__sincos_varying_double(<WIDTH x double>, <WIDTH x double>*, <WIDTH x double>*) nounwind {
+define void @__sincos_varying_double(<WIDTH x double>, i8*, i8*) nounwind {
+  %ptr1 = bitcast i8* %1 to <WIDTH x double>*
+  %ptr2 = bitcast i8* %2 to <WIDTH x double>*
   ifelse(WIDTH,32,`
     %in0_1 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
     %in0_2 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-    %ptr1 = bitcast <32 x double>* %2 to <16 x double>*
-    %ptrtoint = ptrtoint <32 x double>* %2 to i64
+    %ptr2_16_1 = bitcast <32 x double>* %ptr2 to <16 x double>*
+    %ptrtoint = ptrtoint <32 x double>* %ptr2 to i64
     %ptrtoint_add = add i64 %ptrtoint, 128
-    %ptr2 = inttoptr i64 %ptrtoint_add to <16 x double>*
-    %sin1 = call <16 x double> @__spirv_ocl_sincos_DvWIDTH(<16 x double> %in0_1, <16 x double>* %ptr1)
-    %sin2 = call <16 x double> @__spirv_ocl_sincos_DvWIDTH(<16 x double> %in0_2, <16 x double>* %ptr2)
+    %ptr2_16_2 = inttoptr i64 %ptrtoint_add to <16 x double>*
+    %sin1 = call <16 x double> @__spirv_ocl_sincos_DvWIDTH(<16 x double> %in0_1, <16 x double>* %ptr2_16_1)
+    %sin2 = call <16 x double> @__spirv_ocl_sincos_DvWIDTH(<16 x double> %in0_2, <16 x double>* %ptr2_16_2)
     %sin = shufflevector <16 x double> %sin1, <16 x double> %sin2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ',`
-    %sin = call <WIDTH x double> @__spirv_ocl_sincos_DvWIDTH(<WIDTH x double> %0, <WIDTH x double>* %2)
+    %sin = call <WIDTH x double> @__spirv_ocl_sincos_DvWIDTH(<WIDTH x double> %0, <WIDTH x double>* %ptr2)
   ')
-  store <WIDTH x double> %sin, <WIDTH x double>* %1
+  store <WIDTH x double> %sin, <WIDTH x double>* %ptr1
   ret void
 }
 
@@ -1477,19 +1481,23 @@ define <WIDTH x float> @__tan_varying_float(<WIDTH x float>) nounwind readnone {
   ret <WIDTH x float> %res
 }
 
-define void @__sincos_uniform_float(float, float*, float*) nounwind {
+define void @__sincos_uniform_float(float, i8*, i8*) nounwind {
+  %ptr1 = bitcast i8* %1 to float*
+  %ptr2 = bitcast i8* %2 to float*
   %cos = call float @llvm.genx.cos.f32(float %0)
   %sin = call float @llvm.genx.sin.f32(float %0)
-  store float %sin, float* %1
-  store float %cos, float* %2
+  store float %sin, float* %ptr1
+  store float %cos, float* %ptr2
   ret void
 }
 
-define void @__sincos_varying_float(<WIDTH x float>, <WIDTH x float>*, <WIDTH x float>*) nounwind {
+define void @__sincos_varying_float(<WIDTH x float>, i8*, i8*) nounwind {
+  %ptr1 = bitcast i8* %1 to <WIDTH x float>*
+  %ptr2 = bitcast i8* %2 to <WIDTH x float>*
   %cos = call <WIDTH x float> @llvm.genx.cos.XE_SUFFIX(float)(<WIDTH x float> %0)
   %sin = call <WIDTH x float> @llvm.genx.sin.XE_SUFFIX(float)(<WIDTH x float> %0)
-  store <WIDTH x float> %sin, <WIDTH x float>* %1
-  store <WIDTH x float> %cos, <WIDTH x float>* %2
+  store <WIDTH x float> %sin, <WIDTH x float>* %ptr1
+  store <WIDTH x float> %cos, <WIDTH x float>* %ptr2
   ret void
 }
 
@@ -1531,19 +1539,23 @@ define <WIDTH x half> @__tan_varying_half(<WIDTH x half>) nounwind readnone {
   ret <WIDTH x half> %res
 }
 
-define void @__sincos_uniform_half(half, half*, half*) nounwind {
+define void @__sincos_uniform_half(half, i8*, i8*) nounwind {
+  %ptr1 = bitcast i8* %1 to half*
+  %ptr2 = bitcast i8* %2 to half*
   %cos = call half @llvm.genx.cos.f16(half %0)
   %sin = call half @llvm.genx.sin.f16(half %0)
-  store half %sin, half* %1
-  store half %cos, half* %2
+  store half %sin, half* %ptr1
+  store half %cos, half* %ptr2
   ret void
 }
 
-define void @__sincos_varying_half(<WIDTH x half>, <WIDTH x half>*, <WIDTH x half>*) nounwind {
+define void @__sincos_varying_half(<WIDTH x half>, i8*, i8*) nounwind {
+  %ptr1 = bitcast i8* %1 to <WIDTH x half>*
+  %ptr2 = bitcast i8* %2 to <WIDTH x half>*
   %cos = call <WIDTH x half> @llvm.genx.cos.XE_SUFFIX(half)(<WIDTH x half> %0)
   %sin = call <WIDTH x half> @llvm.genx.sin.XE_SUFFIX(half)(<WIDTH x half> %0)
-  store <WIDTH x half> %sin, <WIDTH x half>* %1
-  store <WIDTH x half> %cos, <WIDTH x half>* %2
+  store <WIDTH x half> %sin, <WIDTH x half>* %ptr1
+  store <WIDTH x half> %cos, <WIDTH x half>* %ptr2
   ret void
 }
 
