@@ -1,7 +1,0 @@
-variables:
-  RUN_ON_MAIN: "1"
-
-include:
-  - project: 'ispc/ispc'
-    ref: gen 
-    file: '.gitlab/.gitlab-ci.yml'
