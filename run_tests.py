@@ -490,6 +490,11 @@ def run_test(testname, host, target):
                 cc_cmd = "%s -O2 -I. %s test_static.cpp -DTEST_SIG=%d -DTEST_WIDTH=%d %s -o %s" % \
                     (options.compiler_exe, gcc_arch, match, width, obj_name, exe_name)
 
+                # Produce position independent code for both c++ and ispc compilations.
+                # The motivation for this is that Clang 15 changed default
+                # from "-mrelocation-model static" to "-mrelocation-model pic", so
+                # we enable PIC compilation to have it consistently regardless compiler version.
+                cc_cmd += ' -fPIE'
                 if should_fail:
                     cc_cmd += " -DEXPECT_FAILURE"
 
@@ -501,8 +506,7 @@ def run_test(testname, host, target):
                              match, width, exe_name)
                     exe_name = "./" + exe_name
                     cc_cmd += " -DTEST_ZEBIN" if options.ispc_output == "ze" else " -DTEST_SPV"
-
-            ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --target=%s -DTEST_SIG=%d" % \
+            ispc_cmd = ispc_exe_rel + " --pic --woff %s -o %s --arch=%s --target=%s -DTEST_SIG=%d" % \
                         (filename, obj_name, options.arch, xe_target if target.is_xe() else options.target, match)
 
             if target.is_xe():
