@@ -1995,6 +1995,25 @@ Globals::Globals() {
     timeTraceGranularity = 500;
     target = NULL;
     ctx = new llvm::LLVMContext;
+
+// Opaque pointers mode is supported starting from LLVM 14,
+// became default in LLVM 15
+#ifdef ISPC_OPAQUE_PTR_MODE
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_15_0
+// Do nothing, opaque pointers mode is default
+#elif ISPC_LLVM_VERSION == ISPC_LLVM_14_0
+    // Explicitly enable opaque pointers mode for LLVM 14.0
+    ctx->setOpaquePointers(true);
+#else
+    FATAL("Opaque pointers mode is not supported with this LLVM version!");
+#endif
+#else
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_15_0
+    // Explicitly disable opaque pointers starting LLVM 15.0
+    ctx->setOpaquePointers(false);
+#endif
+#endif
+
 #ifdef ISPC_XE_ENABLED
     stackMemSize = 0;
 #endif

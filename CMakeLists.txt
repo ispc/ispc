@@ -62,6 +62,8 @@ option(ISPC_INCLUDE_UTILS "Generate build targets for the utils." ON)
 option(ISPC_PREPARE_PACKAGE "Generate build targets for ispc package" OFF)
 option(ISPC_NO_DUMPS "Turn off functionality, which requires LLVM dump() functions" OFF)
 
+option(ISPC_OPAQUE_PTR_MODE "Build ISPC with usage of opaque pointers" OFF)
+
 option(ISPC_CROSS "Build ISPC with cross compilation support" OFF)
 # Default settings for cross compilation
 if (ISPC_CROSS)
@@ -288,6 +290,9 @@ if (WASM_ENABLED)
 endif()
 
 set(CLANG_LIBRARY_LIST clangFrontend clangDriver clangSerialization clangParse clangSema clangAnalysis clangAST clangBasic clangEdit clangLex)
+if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "15.0.0")
+    list(APPEND CLANG_LIBRARY_LIST clangSupport)
+endif()
 set(LLVM_COMPONENTS engine ipo bitreader bitwriter instrumentation linker option frontendopenmp)
 
 if (X86_ENABLED)
@@ -311,6 +316,25 @@ if (XE_ENABLED)
 
     list(APPEND XE_LIBRARY_LIST LLVMGenXIntrinsics LLVMSPIRVLib)
 endif()
+
+# Set the flag responsible for generation of opaque pointers in builtins
+set(ISPC_OPAQUE_FLAGS)
+if (ISPC_OPAQUE_PTR_MODE)
+    if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "15.0.0")
+    # Do nothing, opaque pointers mode is default
+    elseif (${LLVM_VERSION_NUMBER} VERSION_EQUAL "14.0.0")
+    # Explicitly enable opaque pointers for LLVM 14.0
+        set(ISPC_OPAQUE_FLAGS "-Xclang" "-opaque-pointers")
+    else()
+        message(FATAL_ERROR "ISPC opaque pointers mode is not supported with LLVM " ${LLVM_VERSION_NUMBER})
+    endif()
+else()
+    # Explicitly disable opaque pointers starting LLVM 15.0
+    if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "15.0.0")
+        set(ISPC_OPAQUE_FLAGS "-Xclang" "-no-opaque-pointers")
+    endif()
+endif()
+message(STATUS "ISPC opaque pointers mode is " ${ISPC_OPAQUE_PTR_MODE})
 
 get_llvm_libfiles(LLVM_LIBRARY_LIST ${LLVM_COMPONENTS})
 get_llvm_cppflags(LLVM_CPP_FLAGS)
@@ -395,6 +419,7 @@ endif()
 if (ARM_ENABLED)
     target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_ARM_ENABLED)
 endif()
+
 if (XE_ENABLED)
     target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_XE_ENABLED)
 endif()
@@ -428,6 +453,11 @@ if (NOT ISPC_ANDROID_TARGET)
 endif()
 if (NOT ISPC_PS_TARGET)
     target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_PS_TARGET_OFF)
+endif()
+
+# Compile definition for opaque pointers mode
+if (ISPC_OPAQUE_PTR_MODE)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_OPAQUE_PTR_MODE)
 endif()
 
 # Include directories
