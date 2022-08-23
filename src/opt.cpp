@@ -84,6 +84,9 @@
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Scalar/GVN.h>
 #include <llvm/Transforms/Scalar/InstSimplifyPass.h>
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_15_0
+#include <llvm/Transforms/Scalar/SimpleLoopUnswitch.h>
+#endif
 #include <llvm/Transforms/Utils.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 
@@ -647,7 +650,11 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createCFGSimplificationPass());
 #endif
 
+#if ISPC_LLVM_VERSION < ISPC_LLVM_15_0
+        // Starting LLVM 15.0 this pass is supported with new pass manager only (217e857)
+        // TODO: switch ISPC to new pass manager: https://github.com/ispc/ispc/issues/2359
         optPM.add(llvm::createArgumentPromotionPass());
+#endif
 
         optPM.add(llvm::createAggressiveDCEPass());
         optPM.add(llvm::createInstructionCombiningPass(), 241);
@@ -722,7 +729,11 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateInstructionSimplifyPass());
 
         optPM.add(llvm::createFunctionInliningPass());
+#if ISPC_LLVM_VERSION < ISPC_LLVM_15_0
+        // Starting LLVM 15.0 this pass is supported with new pass manager only (217e857)
+        // TODO: switch ISPC to new pass manager: https://github.com/ispc/ispc/issues/2359
         optPM.add(llvm::createArgumentPromotionPass());
+#endif
 
         optPM.add(llvm::createSROAPass());
 
@@ -736,7 +747,13 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createReassociatePass());
         optPM.add(llvm::createLoopRotatePass());
         optPM.add(llvm::createLICMPass());
+        // Loop unswitch pass was removed in LLVM 15.0 (fb4113).
+        // Recommended replacement: createSimpleLoopUnswitchLegacyPass
+#if ISPC_LLVM_VERSION < ISPC_LLVM_15_0
         optPM.add(llvm::createLoopUnswitchPass(false));
+#else
+        optPM.add(llvm::createSimpleLoopUnswitchLegacyPass(false));
+#endif
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(CreateInstructionSimplifyPass());
         optPM.add(llvm::createIndVarSimplifyPass());
