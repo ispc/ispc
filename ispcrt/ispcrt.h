@@ -85,12 +85,17 @@ typedef struct {
 // and a series of ispcrtGetDeviceInfo calls
 ISPCRTDevice ispcrtGetDevice(ISPCRTDeviceType, uint32_t deviceIdx);
 ISPCRTDevice ispcrtGetDeviceFromContext(ISPCRTContext, uint32_t deviceIdx);
+// Alternatively ISPCRTDevice can be constructed from device native handler
+ISPCRTDevice ispcrtGetDeviceFromNativeHandle(ISPCRTContext context, ISPCRTGenericHandle d);
+
 uint32_t ispcrtGetDeviceCount(ISPCRTDeviceType);
 void ispcrtGetDeviceInfo(ISPCRTDeviceType, uint32_t deviceIdx, ISPCRTDeviceInfo*);
 
 // Context initialization //////////////////////////////////////////////////////
 
 ISPCRTContext ispcrtNewContext(ISPCRTDeviceType);
+// Alternatively ISPCRTContext can be constructed from context native handler
+ISPCRTContext ispcrtGetContextFromNativeHandle(ISPCRTDeviceType, ISPCRTGenericHandle c);
 
 // MemoryViews ////////////////////////////////////////////////////////////////
 

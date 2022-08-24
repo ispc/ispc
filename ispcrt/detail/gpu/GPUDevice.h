@@ -23,7 +23,8 @@ ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx);
 struct GPUDevice : public base::Device {
 
     GPUDevice();
-    GPUDevice(void* context, uint32_t deviceIdx);
+    GPUDevice(void* nativeContext, void* nativeDevice, uint32_t deviceIdx);
+
     ~GPUDevice();
 
     base::MemoryView *newMemoryView(void *appMem, size_t numBytes, bool shared) const override;
@@ -47,7 +48,7 @@ struct GPUDevice : public base::Device {
     void *m_device{nullptr};
     void *m_context{nullptr};
     bool  m_is_mock{false};
-    bool m_retain_context{false};
+    bool  m_has_context_ownership{true};
 };
 
 } // namespace ispcrt

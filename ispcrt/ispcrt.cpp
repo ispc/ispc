@@ -105,7 +105,7 @@ ISPCRT_CATCH_END_NO_RETURN()
 ///////////////////////////////////////////////////////////////////////////////
 // Device initialization //////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
-static ISPCRTDevice getISPCRTDevice(ISPCRTDeviceType type, ISPCRTContext context, uint32_t deviceIdx) ISPCRT_CATCH_BEGIN {
+static ISPCRTDevice getISPCRTDevice(ISPCRTDeviceType type, ISPCRTContext context, ISPCRTGenericHandle d, uint32_t deviceIdx) ISPCRT_CATCH_BEGIN {
     ispcrt::base::Device *device = nullptr;
 
     void* nativeContext = nullptr;
@@ -133,7 +133,7 @@ static ISPCRTDevice getISPCRTDevice(ISPCRTDeviceType type, ISPCRTContext context
     }
     case ISPCRT_DEVICE_TYPE_GPU:
 #ifdef ISPCRT_BUILD_GPU
-        device = new ispcrt::GPUDevice(nativeContext, deviceIdx);
+        device = new ispcrt::GPUDevice(nativeContext, d, deviceIdx);
 #else
         throw std::runtime_error("GPU support not enabled");
 #endif
@@ -154,12 +154,17 @@ static ISPCRTDevice getISPCRTDevice(ISPCRTDeviceType type, ISPCRTContext context
 ISPCRT_CATCH_END(0)
 
 ISPCRTDevice ispcrtGetDevice(ISPCRTDeviceType type, uint32_t deviceIdx) {
-    return getISPCRTDevice(type, nullptr, deviceIdx);
+    return getISPCRTDevice(type, nullptr, nullptr, deviceIdx);
 }
 
 ISPCRTDevice ispcrtGetDeviceFromContext(ISPCRTContext context, uint32_t deviceIdx) {
     auto &c = referenceFromHandle<ispcrt::base::Context>(context);
-    return getISPCRTDevice(c.getDeviceType(), context, deviceIdx);
+    return getISPCRTDevice(c.getDeviceType(), context, nullptr, deviceIdx);
+}
+
+ISPCRTDevice ispcrtGetDeviceFromNativeHandle(ISPCRTContext context, ISPCRTGenericHandle d) {
+    auto &c = referenceFromHandle<ispcrt::base::Context>(context);
+    return getISPCRTDevice(c.getDeviceType(), context, d, 0);
 }
 
 uint32_t ispcrtGetDeviceCount(ISPCRTDeviceType type) ISPCRT_CATCH_BEGIN {
@@ -222,8 +227,7 @@ ISPCRT_CATCH_END_NO_RETURN()
 ///////////////////////////////////////////////////////////////////////////////
 // Context initialization //////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
-
-ISPCRTContext ispcrtNewContext(ISPCRTDeviceType type) ISPCRT_CATCH_BEGIN {
+static ISPCRTContext getISPCRTContext(ISPCRTDeviceType type, ISPCRTGenericHandle c) ISPCRT_CATCH_BEGIN {
     ispcrt::base::Context *context = nullptr;
 
     switch (type) {
@@ -246,7 +250,7 @@ ISPCRTContext ispcrtNewContext(ISPCRTDeviceType type) ISPCRT_CATCH_BEGIN {
     }
     case ISPCRT_DEVICE_TYPE_GPU:
 #ifdef ISPCRT_BUILD_GPU
-        context = new ispcrt::GPUContext();
+        context = new ispcrt::GPUContext(c);
 #else
         throw std::runtime_error("GPU support not enabled");
 #endif
@@ -264,8 +268,15 @@ ISPCRTContext ispcrtNewContext(ISPCRTDeviceType type) ISPCRT_CATCH_BEGIN {
 
     return (ISPCRTContext)context;
 }
-ISPCRT_CATCH_END(nullptr)
+ISPCRT_CATCH_END(0)
 
+ISPCRTContext ispcrtNewContext(ISPCRTDeviceType type) {
+    return getISPCRTContext(type, nullptr);
+}
+
+ISPCRTContext ispcrtGetContextFromNativeHandle(ISPCRTDeviceType type, ISPCRTGenericHandle c){
+    return getISPCRTContext(type, c);
+}
 ///////////////////////////////////////////////////////////////////////////////
 // MemoryViews ////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -486,5 +497,4 @@ ISPCRTGenericHandle ispcrtTaskQueueNativeHandle(ISPCRTTaskQueue q) ISPCRT_CATCH_
     return queue.taskQueueNativeHandle();
 }
 ISPCRT_CATCH_END(nullptr)
-
 } // extern "C"
