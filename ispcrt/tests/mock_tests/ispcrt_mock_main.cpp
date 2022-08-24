@@ -815,6 +815,21 @@ TEST_F(MockTest, C_API_AllocateDeviceMemory) {
     ASSERT_EQ(sm_rt_error, ISPCRT_UNKNOWN_ERROR);
 }
 
+TEST_F(MockTest, C_API_CreateContextFromNativeHandler) {
+    ISPCRTContext context1 = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
+    auto handle = ispcrtContextNativeHandle(context1);
+    ISPCRTContext context2 = ispcrtGetContextFromNativeHandle(ISPCRT_DEVICE_TYPE_GPU, handle);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTest, C_API_CreateDeviceFromNativeHandler) {
+    ISPCRTContext context = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
+    ISPCRTDevice device1 = ispcrtGetDeviceFromContext(context, 0);
+    auto handle = ispcrtDeviceNativeHandle(device1);
+    ISPCRTDevice device2 = ispcrtGetDeviceFromNativeHandle(context, handle);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
 /// C++ Device API
 TEST_F(MockTest, Device_DeviceCount1) {
     // CPU
