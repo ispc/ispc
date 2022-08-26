@@ -106,7 +106,8 @@ inline uint64_t Future::time() const { return ispcrtFutureGetTimeNs(handle()); }
 class Context : public GenericObject<ISPCRTContext> {
   public:
     Context() = default;
-    Context(ISPCRTDeviceType);
+    Context(ISPCRTDeviceType type);
+    Context(ISPCRTDeviceType type, ISPCRTGenericHandle nativeContextHandle);
     ~Context() = default;
     void* nativeContextHandle() const;
 };
@@ -114,6 +115,10 @@ class Context : public GenericObject<ISPCRTContext> {
 // Inlined definitions //
 inline Context::Context(ISPCRTDeviceType type)
     : GenericObject<ISPCRTContext>(ispcrtNewContext(type)) {}
+
+inline Context::Context(ISPCRTDeviceType type, ISPCRTGenericHandle nativeContextHandle)
+    : GenericObject<ISPCRTContext>(ispcrtGetContextFromNativeHandle(type, nativeContextHandle))
+{}
 
 inline void* Context::nativeContextHandle() const { return ispcrtContextNativeHandle(handle()); }
 /////////////////////////////////////////////////////////////////////////////
@@ -130,6 +135,7 @@ class Device : public GenericObject<ISPCRTDevice> {
     // - deviceCount() call and a series of deviceInformation() calls
     Device(ISPCRTDeviceType type, uint32_t deviceIdx);
     Device(const Context &context, uint32_t deviceIdx);
+    Device(const Context &context, ISPCRTGenericHandle nativeDeviceHandle);
     void* nativePlatformHandle() const;
     void* nativeDeviceHandle() const;
     void* nativeContextHandle() const;
@@ -144,11 +150,15 @@ class Device : public GenericObject<ISPCRTDevice> {
 // Inlined definitions //
 inline Device::Device(ISPCRTDeviceType type, uint32_t deviceIdx) :
     GenericObject<ISPCRTDevice>(ispcrtGetDevice(type, deviceIdx)) { }
-inline Device::Device(ISPCRTDeviceType type) : Device(type, 0) {}
+inline Device::Device(ISPCRTDeviceType type) : Device(type, uint32_t(0)) {}
 
 inline Device::Device(const Context &context, uint32_t deviceIdx) :
     GenericObject<ISPCRTDevice>(ispcrtGetDeviceFromContext(context.handle(), deviceIdx)) { }
-inline Device::Device(const Context &context) : Device(context, 0) {}
+inline Device::Device(const Context &context) : Device(context, uint32_t(0)) {}
+
+inline Device::Device(const Context &context, ISPCRTGenericHandle nativeDeviceHandle)
+    : GenericObject<ISPCRTDevice>(ispcrtGetDeviceFromNativeHandle(context.handle(), nativeDeviceHandle))
+{}
 
 inline void* Device::nativePlatformHandle() const { return ispcrtPlatformNativeHandle(handle()); }
 inline void* Device::nativeDeviceHandle() const { return ispcrtDeviceNativeHandle(handle()); }
