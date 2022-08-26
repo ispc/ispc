@@ -295,12 +295,11 @@ static llvm::Instruction *lCallInst(llvm::Function *func, llvm::Value *arg0, llv
     return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
 }
 
-static llvm::Instruction *lGEPInst(llvm::Value *ptr, llvm::Value *offset, const char *name,
+static llvm::Instruction *lGEPInst(llvm::Value *ptr, llvm::Type *ptrType, llvm::Value *offset, const char *name,
                                    llvm::Instruction *insertBefore) {
     llvm::Value *index[1] = {offset};
     llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
-
-    return llvm::GetElementPtrInst::Create(PTYPE(ptr), ptr, arrayRef, name, insertBefore);
+    return llvm::GetElementPtrInst::Create(ptrType, ptr, arrayRef, name, insertBefore);
 }
 
 /** Given a vector of constant values (int, float, or bool) representing an
@@ -1041,9 +1040,8 @@ restart:
                                        false /* not volatile */, llvm::MaybeAlign(align), (llvm::Instruction *)NULL);
 #else
                 llvm::Instruction *loadInst = new llvm::LoadInst(
-                    llvm::dyn_cast<llvm::PointerType>(castPtr->getType())->getPointerElementType(), castPtr,
-                    llvm::Twine(callInst->getArgOperand(0)->getName()) + "_load", false /* not volatile */,
-                    llvm::MaybeAlign(align).valueOrOne(), (llvm::Instruction *)NULL);
+                    returnType, castPtr, llvm::Twine(callInst->getArgOperand(0)->getName()) + "_load",
+                    false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(), (llvm::Instruction *)NULL);
 #endif
                 lCopyMetadata(loadInst, callInst);
                 llvm::ReplaceInstWithInst(callInst, loadInst);
@@ -2617,7 +2615,7 @@ static llvm::Value *lComputeCommonPointer(llvm::Value *base, llvm::Value *offset
                                                    "scaled_offset", insertBefore);
     }
 
-    return lGEPInst(base, firstOffset, "ptr", insertBefore);
+    return lGEPInst(base, LLVMTypes::Int8Type, firstOffset, "ptr", insertBefore);
 }
 
 static llvm::Constant *lGetOffsetScaleVec(llvm::Value *offsetScale, llvm::Type *vecType) {
@@ -2858,9 +2856,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
             lCopyMetadata(ptr, callInst);
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
             Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
-            llvm::Value *scalarValue =
-                new llvm::LoadInst(llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(), ptr,
-                                   callInst->getName(), callInst);
+            llvm::Value *scalarValue = new llvm::LoadInst(scalarType, ptr, callInst->getName(), callInst);
 #else
             llvm::Value *scalarValue = new llvm::LoadInst(ptr, callInst->getName(), callInst);
 #endif
@@ -3266,8 +3262,7 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
 #else // LLVM 11.0+
             Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
             load = new llvm::LoadInst(
-                llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(), ptr, callInst->getName(),
-                false /* not volatile */,
+                callInst->getType(), ptr, callInst->getName(), false /* not volatile */,
                 llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align)
                     .valueOrOne(),
                 (llvm::Instruction *)NULL);
@@ -3615,14 +3610,13 @@ static void lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup
  */
 llvm::Value *lGEPAndLoad(llvm::Value *basePtr, int64_t offset, int align, llvm::Instruction *insertBefore,
                          llvm::Type *type) {
-    llvm::Value *ptr = lGEPInst(basePtr, LLVMInt64(offset), "new_base", insertBefore);
+    llvm::Value *ptr = lGEPInst(basePtr, LLVMTypes::Int8Type, LLVMInt64(offset), "new_base", insertBefore);
     ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(type, 0), "ptr_cast", insertBefore);
 #if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
     return new llvm::LoadInst(ptr, "gather_load", false /* not volatile */, llvm::MaybeAlign(align), insertBefore);
 #else // LLVM 11.0+
     Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
-    return new llvm::LoadInst(llvm::dyn_cast<llvm::PointerType>(ptr->getType())->getPointerElementType(), ptr,
-                              "gather_load", false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(),
+    return new llvm::LoadInst(type, ptr, "gather_load", false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(),
                               insertBefore);
 #endif
 }
@@ -4048,7 +4042,7 @@ static llvm::Value *lComputeBasePtr(llvm::CallInst *gatherInst, llvm::Instructio
     llvm::Value *offset =
         llvm::BinaryOperator::Create(llvm::Instruction::Mul, variable, offsetScale, "offset", insertBefore);
 
-    return lGEPInst(basePtr, offset, "new_base", insertBefore);
+    return lGEPInst(basePtr, LLVMTypes::Int8Type, offset, "new_base", insertBefore);
 }
 
 /** Extract the constant offsets (from the common base pointer) from each
@@ -4370,10 +4364,7 @@ static bool lIsSafeToBlend(llvm::Value *lvalue) {
     else {
         llvm::AllocaInst *ai = llvm::dyn_cast<llvm::AllocaInst>(lvalue);
         if (ai) {
-            llvm::Type *type = ai->getType();
-            llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(type);
-            Assert(pt != NULL);
-            type = pt->PTR_ELT_TYPE();
+            llvm::Type *type = ai->getAllocatedType();
             llvm::ArrayType *at;
             while ((at = llvm::dyn_cast<llvm::ArrayType>(type))) {
                 type = at->getElementType();
