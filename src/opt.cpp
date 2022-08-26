@@ -295,11 +295,11 @@ static llvm::Instruction *lCallInst(llvm::Function *func, llvm::Value *arg0, llv
     return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
 }
 
-static llvm::Instruction *lGEPInst(llvm::Value *ptr, llvm::Type *ptrType, llvm::Value *offset, const char *name,
+static llvm::Instruction *lGEPInst(llvm::Value *ptr, llvm::Type *ptrElType, llvm::Value *offset, const char *name,
                                    llvm::Instruction *insertBefore) {
     llvm::Value *index[1] = {offset};
     llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
-    return llvm::GetElementPtrInst::Create(ptrType, ptr, arrayRef, name, insertBefore);
+    return llvm::GetElementPtrInst::Create(ptrElType, ptr, arrayRef, name, insertBefore);
 }
 
 /** Given a vector of constant values (int, float, or bool) representing an
@@ -2604,11 +2604,12 @@ static bool lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
     return true;
 }
 
-static llvm::Value *lComputeCommonPointer(llvm::Value *base, llvm::Value *offsets, llvm::Instruction *insertBefore) {
+static llvm::Value *lComputeCommonPointer(llvm::Value *base, llvm::Type *baseType, llvm::Value *offsets,
+                                          llvm::Instruction *insertBefore) {
     llvm::Value *firstOffset = LLVMExtractFirstVectorElement(offsets);
     Assert(firstOffset != NULL);
 
-    return lGEPInst(base, LLVMTypes::Int8Type, firstOffset, "ptr", insertBefore);
+    return lGEPInst(base, baseType, firstOffset, "ptr", insertBefore);
 }
 
 static llvm::Constant *lGetOffsetScaleVec(llvm::Value *offsetScale, llvm::Type *vecType) {
@@ -2652,12 +2653,16 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
             blendMaskedFunc = m->module->getFunction(bmName);
             Assert(pseudoFunc != NULL && loadMaskedFunc != NULL);
             scalarType = st;
+            // Pseudo gather base pointer element type (the 1st argument of the intrinsic) is int8
+            // e.g. @__pseudo_gather_base_offsets32_i8(i8 *, i32, <WIDTH x i32>, <WIDTH x MASK>)
+            baseType = LLVMTypes::Int8Type;
         }
 
         llvm::Function *pseudoFunc;
         llvm::Function *loadMaskedFunc;
         llvm::Function *blendMaskedFunc;
         llvm::Type *scalarType;
+        llvm::Type *baseType;
         const int align;
         const bool isFactored;
     };
@@ -2713,11 +2718,16 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
             pseudoFunc = m->module->getFunction(pName);
             maskedStoreFunc = m->module->getFunction(msName);
             vecPtrType = vpt;
+            // Pseudo scatter base pointer element type (the 1st argument of the intrinsic) is int8
+            // e.g. @__pseudo_scatter_base_offsets32_i8(i8 * nocapture, i32, <WIDTH x i32>, <WIDTH x i8>, <WIDTH x
+            // MASK>)
+            baseType = LLVMTypes::Int8Type;
             Assert(pseudoFunc != NULL && maskedStoreFunc != NULL);
         }
         llvm::Function *pseudoFunc;
         llvm::Function *maskedStoreFunc;
         llvm::Type *vecPtrType;
+        llvm::Type *baseType;
         const int align;
         const bool isFactored;
     };
@@ -2833,7 +2843,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
             // handled as a scalar load and broadcast across the lanes.
             Debug(pos, "Transformed gather to scalar load and broadcast!");
             llvm::Value *ptr;
-            ptr = lComputeCommonPointer(base, fullOffsets, callInst);
+            ptr = lComputeCommonPointer(base, gatherInfo->baseType, fullOffsets, callInst);
             ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(scalarType, 0), base->getName(), callInst);
 
             lCopyMetadata(ptr, callInst);
@@ -2897,7 +2907,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
             llvm::Value *ptr;
 
             if (gatherInfo != NULL) {
-                ptr = lComputeCommonPointer(base, fullOffsets, callInst);
+                ptr = lComputeCommonPointer(base, gatherInfo->baseType, fullOffsets, callInst);
                 lCopyMetadata(ptr, callInst);
                 Debug(pos, "Transformed gather to unaligned vector load!");
                 bool doBlendLoad = false;
@@ -2912,7 +2922,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
                 return true;
             } else {
                 Debug(pos, "Transformed scatter to unaligned vector store!");
-                ptr = lComputeCommonPointer(base, fullOffsets, callInst);
+                ptr = lComputeCommonPointer(base, scatterInfo->baseType, fullOffsets, callInst);
                 ptr = new llvm::BitCastInst(ptr, scatterInfo->vecPtrType, "ptrcast", callInst);
                 llvm::Instruction *newCall = lCallInst(scatterInfo->maskedStoreFunc, ptr, storeValue, mask, "");
                 lCopyMetadata(newCall, callInst);
@@ -3331,6 +3341,11 @@ class GatherCoalescePass : public llvm::FunctionPass {
     llvm::StringRef getPassName() const { return "Gather Coalescing"; }
     bool runOnBasicBlock(llvm::BasicBlock &BB);
     bool runOnFunction(llvm::Function &F);
+
+  private:
+    // Type of base pointer element type (the 1st argument of the intrinsic) is i8
+    // e.g. @__pseudo_gather_factored_base_offsets32_i32(i8 *, <WIDTH x i32>, i32, <WIDTH x i32>, <WIDTH x MASK>)
+    llvm::Type *baseType{LLVMTypes::Int8Type};
 };
 
 char GatherCoalescePass::ID = 0;
@@ -3580,9 +3595,9 @@ static void lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup
 
     return *((type *)(basePtr + offset))
  */
-llvm::Value *lGEPAndLoad(llvm::Value *basePtr, int64_t offset, int align, llvm::Instruction *insertBefore,
-                         llvm::Type *type) {
-    llvm::Value *ptr = lGEPInst(basePtr, LLVMTypes::Int8Type, LLVMInt64(offset), "new_base", insertBefore);
+llvm::Value *lGEPAndLoad(llvm::Value *basePtr, llvm::Type *baseType, int64_t offset, int align,
+                         llvm::Instruction *insertBefore, llvm::Type *type) {
+    llvm::Value *ptr = lGEPInst(basePtr, baseType, LLVMInt64(offset), "new_base", insertBefore);
     ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(type, 0), "ptr_cast", insertBefore);
 #if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
     return new llvm::LoadInst(ptr, "gather_load", false /* not volatile */, llvm::MaybeAlign(align), insertBefore);
@@ -3597,8 +3612,8 @@ llvm::Value *lGEPAndLoad(llvm::Value *basePtr, int64_t offset, int align, llvm::
    the loadOps array, this function emits the corresponding load
    instructions.
  */
-static void lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadOps, int elementSize,
-                       llvm::Instruction *insertBefore) {
+static void lEmitLoads(llvm::Value *basePtr, llvm::Type *baseType, std::vector<CoalescedLoadOp> &loadOps,
+                       int elementSize, llvm::Instruction *insertBefore) {
     Debug(SourcePos(), "Coalesce doing %d loads.", (int)loadOps.size());
     for (int i = 0; i < (int)loadOps.size(); ++i) {
         Debug(SourcePos(), "Load #%d @ %" PRId64 ", %d items", i, loadOps[i].start, loadOps[i].count);
@@ -3611,12 +3626,12 @@ static void lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadO
         switch (loadOps[i].count) {
         case 1:
             // Single 32-bit scalar load
-            loadOps[i].load = lGEPAndLoad(basePtr, start, align, insertBefore, LLVMTypes::Int32Type);
+            loadOps[i].load = lGEPAndLoad(basePtr, baseType, start, align, insertBefore, LLVMTypes::Int32Type);
             break;
         case 2: {
             // Emit 2 x i32 loads as i64 loads and then break the result
             // into two 32-bit parts.
-            loadOps[i].load = lGEPAndLoad(basePtr, start, align, insertBefore, LLVMTypes::Int64Type);
+            loadOps[i].load = lGEPAndLoad(basePtr, baseType, start, align, insertBefore, LLVMTypes::Int64Type);
             // element0 = (int32)value;
             loadOps[i].element0 =
                 new llvm::TruncInst(loadOps[i].load, LLVMTypes::Int32Type, "load64_elt0", insertBefore);
@@ -3632,7 +3647,7 @@ static void lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadO
                 align = g->target->getNativeVectorAlignment();
             }
             llvm::VectorType *vt = LLVMVECTOR::get(LLVMTypes::Int32Type, 4);
-            loadOps[i].load = lGEPAndLoad(basePtr, start, align, insertBefore, vt);
+            loadOps[i].load = lGEPAndLoad(basePtr, baseType, start, align, insertBefore, vt);
             break;
         }
         case 8: {
@@ -3641,7 +3656,7 @@ static void lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadO
                 align = g->target->getNativeVectorAlignment();
             }
             llvm::VectorType *vt = LLVMVECTOR::get(LLVMTypes::Int32Type, 8);
-            loadOps[i].load = lGEPAndLoad(basePtr, start, align, insertBefore, vt);
+            loadOps[i].load = lGEPAndLoad(basePtr, baseType, start, align, insertBefore, vt);
             break;
         }
         default:
@@ -3999,11 +4014,10 @@ static void lAssembleResultVectors(const std::vector<CoalescedLoadOp> &loadOps,
     (Thus, this base pointer plus the constant offsets term for each gather
     gives the set of addresses to use for each gather.
  */
-static llvm::Value *lComputeBasePtr(llvm::CallInst *gatherInst, llvm::Instruction *insertBefore) {
+static llvm::Value *lComputeBasePtr(llvm::CallInst *gatherInst, llvm::Type *baseType, llvm::Instruction *insertBefore) {
     llvm::Value *basePtr = gatherInst->getArgOperand(0);
     llvm::Value *variableOffsets = gatherInst->getArgOperand(1);
     llvm::Value *offsetScale = gatherInst->getArgOperand(2);
-
     // All of the variable offsets values should be the same, due to
     // checking for this in GatherCoalescePass::runOnBasicBlock().  Thus,
     // extract the first value and use that as a scalar.
@@ -4014,7 +4028,7 @@ static llvm::Value *lComputeBasePtr(llvm::CallInst *gatherInst, llvm::Instructio
     llvm::Value *offset =
         llvm::BinaryOperator::Create(llvm::Instruction::Mul, variable, offsetScale, "offset", insertBefore);
 
-    return lGEPInst(basePtr, LLVMTypes::Int8Type, offset, "new_base", insertBefore);
+    return lGEPInst(basePtr, baseType, offset, "new_base", insertBefore);
 }
 
 /** Extract the constant offsets (from the common base pointer) from each
@@ -4051,11 +4065,11 @@ static void lExtractConstOffsets(const std::vector<llvm::CallInst *> &coalesceGr
     lanes and where the part in parenthesis has the same value for all of
     the gathers in the group.
  */
-static bool lCoalesceGathers(const std::vector<llvm::CallInst *> &coalesceGroup) {
+static bool lCoalesceGathers(const std::vector<llvm::CallInst *> &coalesceGroup, llvm::Type *baseType) {
     llvm::Instruction *insertBefore = coalesceGroup[0];
 
     // First, compute the shared base pointer for all of the gathers
-    llvm::Value *basePtr = lComputeBasePtr(coalesceGroup[0], insertBefore);
+    llvm::Value *basePtr = lComputeBasePtr(coalesceGroup[0], baseType, insertBefore);
 
     int elementSize = 0;
     if (coalesceGroup[0]->getType() == LLVMTypes::Int32VectorType ||
@@ -4082,7 +4096,7 @@ static bool lCoalesceGathers(const std::vector<llvm::CallInst *> &coalesceGroup)
     lCoalescePerfInfo(coalesceGroup, loadOps);
 
     // Actually emit load instructions for them
-    lEmitLoads(basePtr, loadOps, elementSize, insertBefore);
+    lEmitLoads(basePtr, baseType, loadOps, elementSize, insertBefore);
 
     // Now, for any loads that give us <8 x i32> vectors, split their
     // values into two <4 x i32> vectors; it turns out that LLVM gives us
@@ -4280,7 +4294,7 @@ restart:
 
         // Now that we have a group of gathers, see if we can coalesce them
         // into something more efficient than the original set of gathers.
-        if (lCoalesceGathers(coalesceGroup)) {
+        if (lCoalesceGathers(coalesceGroup, baseType)) {
             modifiedAny = true;
             goto restart;
         }
