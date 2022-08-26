@@ -2604,16 +2604,9 @@ static bool lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
     return true;
 }
 
-static llvm::Value *lComputeCommonPointer(llvm::Value *base, llvm::Value *offsets, llvm::Instruction *insertBefore,
-                                          int typeScale = 1) {
+static llvm::Value *lComputeCommonPointer(llvm::Value *base, llvm::Value *offsets, llvm::Instruction *insertBefore) {
     llvm::Value *firstOffset = LLVMExtractFirstVectorElement(offsets);
     Assert(firstOffset != NULL);
-    llvm::Value *typeScaleValue =
-        firstOffset->getType() == LLVMTypes::Int32Type ? LLVMInt32(typeScale) : LLVMInt64(typeScale);
-    if (g->target->isXeTarget() && typeScale > 1) {
-        firstOffset = llvm::BinaryOperator::Create(llvm::Instruction::SDiv, firstOffset, typeScaleValue,
-                                                   "scaled_offset", insertBefore);
-    }
 
     return lGEPInst(base, LLVMTypes::Int8Type, firstOffset, "ptr", insertBefore);
 }
@@ -2830,8 +2823,6 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
 
     Debug(SourcePos(), "GSToLoadStore: %s.", fullOffsets->getName().str().c_str());
     llvm::Type *scalarType = (gatherInfo != NULL) ? gatherInfo->scalarType : scatterInfo->vecPtrType->getScalarType();
-    int typeScale = g->target->getDataLayout()->getTypeStoreSize(scalarType) /
-                    g->target->getDataLayout()->getTypeStoreSize(base->getType()->getContainedType(0));
 
     if (LLVMVectorValuesAllEqual(fullOffsets)) {
         // If all the offsets are equal, then compute the single
@@ -2842,16 +2833,8 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
             // handled as a scalar load and broadcast across the lanes.
             Debug(pos, "Transformed gather to scalar load and broadcast!");
             llvm::Value *ptr;
-            // For Xe we need to cast the base first and only after that get common pointer otherwise
-            // CM backend will be broken on bitcast i8* to T* instruction with following load.
-            // For this we need to re-calculate the offset basing on type sizes.
-            if (g->target->isXeTarget()) {
-                base = new llvm::BitCastInst(base, llvm::PointerType::get(scalarType, 0), base->getName(), callInst);
-                ptr = lComputeCommonPointer(base, fullOffsets, callInst, typeScale);
-            } else {
-                ptr = lComputeCommonPointer(base, fullOffsets, callInst);
-                ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(scalarType, 0), base->getName(), callInst);
-            }
+            ptr = lComputeCommonPointer(base, fullOffsets, callInst);
+            ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(scalarType, 0), base->getName(), callInst);
 
             lCopyMetadata(ptr, callInst);
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
@@ -2914,18 +2897,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
             llvm::Value *ptr;
 
             if (gatherInfo != NULL) {
-                if (g->target->isXeTarget()) {
-                    // For Xe we need to cast the base first and only after that get common pointer otherwise
-                    // CM backend will be broken on bitcast i8* to T* instruction with following load.
-                    // For this we need to re-calculate the offset basing on type sizes.
-                    // Second bitcast to void* does not cause such problem in backend.
-                    base =
-                        new llvm::BitCastInst(base, llvm::PointerType::get(scalarType, 0), base->getName(), callInst);
-                    ptr = lComputeCommonPointer(base, fullOffsets, callInst, typeScale);
-                    ptr = new llvm::BitCastInst(ptr, LLVMTypes::Int8PointerType, base->getName(), callInst);
-                } else {
-                    ptr = lComputeCommonPointer(base, fullOffsets, callInst);
-                }
+                ptr = lComputeCommonPointer(base, fullOffsets, callInst);
                 lCopyMetadata(ptr, callInst);
                 Debug(pos, "Transformed gather to unaligned vector load!");
                 bool doBlendLoad = false;
