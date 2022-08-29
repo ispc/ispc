@@ -145,6 +145,8 @@ class Device : public GenericObject<ISPCRTDevice> {
     static std::vector<ISPCRTDeviceInfo> allDevicesInformation(ISPCRTDeviceType type);
     // link modules
     void linkModules(ISPCRTModule* modules, const uint32_t num);
+    // check memory type
+    ISPCRTAllocationType getMemoryAllocType(void *memBuffer);
 };
 
 // Inlined definitions //
@@ -185,6 +187,10 @@ inline std::vector<ISPCRTDeviceInfo> Device::allDevicesInformation(ISPCRTDeviceT
 
 inline void Device::linkModules(ISPCRTModule* modules, const uint32_t num) {
     ispcrtLinkModules(handle(), (ISPCRTModule*)modules, num);
+}
+
+inline ISPCRTAllocationType Device::getMemoryAllocType(void *memBuffer) {
+    return ispcrtGetMemoryAllocType(handle(), memBuffer);
 }
 
 /////////////////////////////////////////////////////////////////////////////
