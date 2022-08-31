@@ -530,16 +530,9 @@ void XeGatherCoalescing::optimizePtr(llvm::Value *Ptr, PtrData &PD, llvm::Instru
         llvm::Instruction *Addr = llvm::BinaryOperator::CreateAdd(PtrToInt, Offset, "vectorized_address", InsertPoint);
         llvm::Type *RetType = llvm::FixedVectorType::get(LargestType, ReqSize / LargestTypeSize);
         llvm::Instruction *LD = nullptr;
-        if (g->opt.buildLLVMLoadsOnXeGatherCoalescing) {
-            // Experiment: build standard llvm load instead of block ld
-            llvm::IntToPtrInst *PtrForLd =
-                new llvm::IntToPtrInst(Addr, llvm::PointerType::get(RetType, 0), "vectorized_address_ptr", InsertPoint);
-            LD = new llvm::LoadInst(RetType, PtrForLd, "vectorized_ld_exp", InsertPoint);
-        } else {
-            llvm::Function *Fn = llvm::GenXIntrinsic::getGenXDeclaration(
-                m->module, llvm::GenXIntrinsic::genx_svm_block_ld_unaligned, {RetType, Addr->getType()});
-            LD = llvm::CallInst::Create(Fn, {Addr}, "vectorized_ld", InsertPoint);
-        }
+        llvm::IntToPtrInst *PtrForLd =
+            new llvm::IntToPtrInst(Addr, llvm::PointerType::get(RetType, 0), "vectorized_address_ptr", InsertPoint);
+        LD = new llvm::LoadInst(RetType, PtrForLd, "vectorized_ld_exp", InsertPoint);
         BlockLDs.push_back(LD);
     }
 

@@ -1793,31 +1793,21 @@ static llvm::Value *lImproveMaskedStore(llvm::CallInst *callInst) {
         // The mask is all on, so turn this into a regular store
         llvm::Type *rvalueType = rvalue->getType();
         llvm::Instruction *store = nullptr;
-#ifdef ISPC_XE_ENABLED
-        // InternalLinkage check is to prevent generation of SVM store when the pointer came from caller.
-        // Since it can be allocated in a caller, it may be allocated on register. Possible svm store
-        // is resolved after inlining. TODO: problems can be met here in case of Stack Calls.
-        if (g->target->isXeTarget() && GetAddressSpace(lvalue) == AddressSpace::ispc_global &&
-            callInst->getParent()->getParent()->getLinkage() != llvm::GlobalValue::LinkageTypes::InternalLinkage) {
-            store = lXeStoreInst(rvalue, lvalue, callInst);
-        } else if (!g->target->isXeTarget() ||
-                   (g->target->isXeTarget() && GetAddressSpace(lvalue) == AddressSpace::ispc_default))
-#endif
-        {
-            llvm::Type *ptrType = llvm::PointerType::get(rvalueType, 0);
+        llvm::Type *ptrType = llvm::PointerType::get(rvalueType, 0);
 
-            lvalue = new llvm::BitCastInst(lvalue, ptrType, "lvalue_to_ptr_type", callInst);
-            LLVMCopyMetadata(lvalue, callInst);
-            store = new llvm::StoreInst(
-                rvalue, lvalue, false /* not volatile */,
-                llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align)
-                    .valueOrOne());
-        }
+        lvalue = new llvm::BitCastInst(lvalue, ptrType, "lvalue_to_ptr_type", callInst);
+        LLVMCopyMetadata(lvalue, callInst);
+        store = new llvm::StoreInst(
+            rvalue, lvalue, false /* not volatile */,
+            llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align)
+                .valueOrOne());
+
         if (store != nullptr) {
             LLVMCopyMetadata(store, callInst);
             llvm::ReplaceInstWithInst(callInst, store);
             return store;
         }
+
 #ifdef ISPC_XE_ENABLED
     } else {
         if (g->target->isXeTarget() && GetAddressSpace(lvalue) == AddressSpace::ispc_global) {
@@ -1895,26 +1885,15 @@ static llvm::Value *lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBloc
     } else if (maskStatus == MaskStatus::all_on) {
         // The mask is all on, so turn this into a regular load
         llvm::Instruction *load = nullptr;
-#ifdef ISPC_XE_ENABLED
-        // InternalLinkage check is to prevent generation of SVM load when the pointer came from caller.
-        // Since it can be allocated in a caller, it may be allocated on register. Possible svm load
-        // is resolved after inlining. TODO: problems can be met here in case of Stack Calls.
-        if (g->target->isXeTarget() && GetAddressSpace(ptr) == AddressSpace::ispc_global &&
-            callInst->getParent()->getParent()->getLinkage() != llvm::GlobalValue::LinkageTypes::InternalLinkage) {
-            load = lXeLoadInst(ptr, callInst->getType(), callInst);
-        } else if (!g->target->isXeTarget() ||
-                   (g->target->isXeTarget() && GetAddressSpace(ptr) == AddressSpace::ispc_default))
-#endif
-        {
-            llvm::Type *ptrType = llvm::PointerType::get(callInst->getType(), 0);
-            ptr = new llvm::BitCastInst(ptr, ptrType, "ptr_cast_for_load", callInst);
-            Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
-            load = new llvm::LoadInst(
-                callInst->getType(), ptr, callInst->getName(), false /* not volatile */,
-                llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align)
-                    .valueOrOne(),
-                (llvm::Instruction *)nullptr);
-        }
+        llvm::Type *ptrType = llvm::PointerType::get(callInst->getType(), 0);
+        ptr = new llvm::BitCastInst(ptr, ptrType, "ptr_cast_for_load", callInst);
+        Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
+        load = new llvm::LoadInst(
+            callInst->getType(), ptr, callInst->getName(), false /* not volatile */,
+            llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align)
+                .valueOrOne(),
+            (llvm::Instruction *)NULL);
+
         if (load != nullptr) {
             LLVMCopyMetadata(load, callInst);
             llvm::ReplaceInstWithInst(callInst, load);

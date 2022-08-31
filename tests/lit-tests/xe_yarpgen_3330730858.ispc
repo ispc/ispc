@@ -9,8 +9,6 @@ Invocation: ../../build/yarpgen --std=ispc
 // RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 --emit-spirv -o %t.spv
 // RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 --emit-spirv --opt=disable-xe-gather-coalescing -o %t.spv
 // RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 --emit-spirv --opt=disable-xe-gather-coalescing -o %t.spv
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 --emit-spirv --opt=build-llvm-loads-on-xe-gather-coalescing -o %t.spv
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 --emit-spirv --opt=build-llvm-loads-on-xe-gather-coalescing -o %t.spv
 
 // REQUIRES: XE_ENABLED
 

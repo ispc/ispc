@@ -16,11 +16,6 @@
 // RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 --emit-llvm-text -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s
 
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 --emit-llvm-text -o %t.ll --opt=build-llvm-loads-on-xe-gather-coalescing
-// RUN: FileCheck --input-file=%t.ll %s
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 --emit-llvm-text -o %t.ll --opt=build-llvm-loads-on-xe-gather-coalescing
-// RUN: FileCheck --input-file=%t.ll %s
-
 // REQUIRES: XE_ENABLED
 // XFAIL: XE_ENABLED
 

@@ -594,10 +594,6 @@ struct Opt {
         the default value should be adjusted with some experiments. */
     int thresholdForXeGatherCoalescing;
 
-    /** Experimental: Xe gather coalescing will generate standard
-        vectorized llvm loads instead of block ld intrinsics. */
-    bool buildLLVMLoadsOnXeGatherCoalescing;
-
     /** Enables experimental support of foreach statement inside varying CF.
         Current implementation brings performance degradation due to ineffective
         implementation of unmasked.*/

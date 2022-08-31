@@ -879,8 +879,6 @@ int main(int Argc, char *Argv[]) {
                 g->opt.disableXeGatherCoalescing = true;
             else if (!strncmp(opt, "threshold-for-xe-gather-coalescing=", 37))
                 g->opt.thresholdForXeGatherCoalescing = atoi(opt + 37);
-            else if (!strcmp(opt, "build-llvm-loads-on-xe-gather-coalescing"))
-                g->opt.buildLLVMLoadsOnXeGatherCoalescing = true;
             else if (!strcmp(opt, "emit-xe-hardware-mask"))
                 g->opt.emitXeHardwareMask = true;
             else if (!strcmp(opt, "enable-xe-foreach-varying"))

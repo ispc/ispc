@@ -2199,7 +2199,6 @@ Opt::Opt() {
 #ifdef ISPC_XE_ENABLED
     disableXeGatherCoalescing = false;
     thresholdForXeGatherCoalescing = 0;
-    buildLLVMLoadsOnXeGatherCoalescing = false;
     enableForeachInsideVarying = false;
     emitXeHardwareMask = false;
     enableXeUnsafeMaskedLoad = false;
