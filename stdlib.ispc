@@ -57,6 +57,7 @@
 #error Unknown value of ISPC_MASK_BITS
 #endif
 
+typedef uniform int8 *uniform opaque_ptr_t;
 ///////////////////////////////////////////////////////////////////////////
 // Xe specific primitives
 
@@ -711,31 +712,27 @@ __declspec(safe) static inline int64 count_trailing_zeros(int64 v) {
 // AOS/SOA conversion
 
 static inline void aos_to_soa2(uniform float a[], varying float *uniform v0, varying float *uniform v1) {
-    __aos_to_soa2_float((uniform int8 * uniform) a, (uniform int8 * uniform) v0, (uniform int8 * uniform) v1);
+    __aos_to_soa2_float((opaque_ptr_t)a, (opaque_ptr_t)v0, (opaque_ptr_t)v1);
 }
 
-static inline void soa_to_aos2(float v0, float v1, uniform float a[]) {
-    __soa_to_aos2_float(v0, v1, (uniform int8 * uniform) a);
-}
+static inline void soa_to_aos2(float v0, float v1, uniform float a[]) { __soa_to_aos2_float(v0, v1, (opaque_ptr_t)a); }
 
 static inline void aos_to_soa3(uniform float a[], varying float *uniform v0, varying float *uniform v1,
                                varying float *uniform v2) {
-    __aos_to_soa3_float((uniform int8 * uniform) a, (uniform int8 * uniform) v0, (uniform int8 * uniform) v1,
-                        (uniform int8 * uniform) v2);
+    __aos_to_soa3_float((opaque_ptr_t)a, (opaque_ptr_t)v0, (opaque_ptr_t)v1, (opaque_ptr_t)v2);
 }
 
 static inline void soa_to_aos3(float v0, float v1, float v2, uniform float a[]) {
-    __soa_to_aos3_float(v0, v1, v2, (uniform int8 * uniform) a);
+    __soa_to_aos3_float(v0, v1, v2, (opaque_ptr_t)a);
 }
 
 static inline void aos_to_soa4(uniform float a[], varying float *uniform v0, varying float *uniform v1,
                                varying float *uniform v2, varying float *uniform v3) {
-    __aos_to_soa4_float((uniform int8 * uniform) a, (uniform int8 * uniform) v0, (uniform int8 * uniform) v1,
-                        (uniform int8 * uniform) v2, (uniform int8 * uniform) v3);
+    __aos_to_soa4_float((opaque_ptr_t)a, (opaque_ptr_t)v0, (opaque_ptr_t)v1, (opaque_ptr_t)v2, (opaque_ptr_t)v3);
 }
 
 static inline void soa_to_aos4(float v0, float v1, float v2, float v3, uniform float a[]) {
-    __soa_to_aos4_float(v0, v1, v2, v3, (uniform int8 * uniform) a);
+    __soa_to_aos4_float(v0, v1, v2, v3, (opaque_ptr_t)a);
 }
 
 static inline void aos_to_soa2(uniform int32 a[], varying int32 *uniform v0, varying int32 *uniform v1) {
@@ -767,31 +764,29 @@ static inline void soa_to_aos4(int32 v0, int32 v1, int32 v2, int32 v3, uniform i
 }
 
 static inline void aos_to_soa2(uniform double a[], varying double *uniform v0, varying double *uniform v1) {
-    __aos_to_soa2_double((uniform int8 * uniform) a, (uniform int8 * uniform) v0, (uniform int8 * uniform) v1);
+    __aos_to_soa2_double((opaque_ptr_t)a, (opaque_ptr_t)v0, (opaque_ptr_t)v1);
 }
 
 static inline void soa_to_aos2(double v0, double v1, uniform double a[]) {
-    __soa_to_aos2_double(v0, v1, (uniform int8 * uniform) a);
+    __soa_to_aos2_double(v0, v1, (opaque_ptr_t)a);
 }
 
 static inline void aos_to_soa3(uniform double a[], varying double *uniform v0, varying double *uniform v1,
                                varying double *uniform v2) {
-    __aos_to_soa3_double((uniform int8 * uniform) a, (uniform int8 * uniform) v0, (uniform int8 * uniform) v1,
-                         (uniform int8 * uniform) v2);
+    __aos_to_soa3_double((opaque_ptr_t)a, (opaque_ptr_t)v0, (opaque_ptr_t)v1, (opaque_ptr_t)v2);
 }
 
 static inline void soa_to_aos3(double v0, double v1, double v2, uniform double a[]) {
-    __soa_to_aos3_double(v0, v1, v2, (uniform int8 * uniform) a);
+    __soa_to_aos3_double(v0, v1, v2, (opaque_ptr_t)a);
 }
 
 static inline void aos_to_soa4(uniform double a[], varying double *uniform v0, varying double *uniform v1,
                                varying double *uniform v2, varying double *uniform v3) {
-    __aos_to_soa4_double((uniform int8 * uniform) a, (uniform int8 * uniform) v0, (uniform int8 * uniform) v1,
-                         (uniform int8 * uniform) v2, (uniform int8 * uniform) v3);
+    __aos_to_soa4_double((opaque_ptr_t)a, (opaque_ptr_t)v0, (opaque_ptr_t)v1, (opaque_ptr_t)v2, (opaque_ptr_t)v3);
 }
 
 static inline void soa_to_aos4(double v0, double v1, double v2, double v3, uniform double a[]) {
-    __soa_to_aos4_double(v0, v1, v2, v3, (uniform int8 * uniform) a);
+    __soa_to_aos4_double(v0, v1, v2, v3, (opaque_ptr_t)a);
 }
 
 static inline void aos_to_soa2(uniform int64 a[], varying int64 *uniform v0, varying int64 *uniform v1) {
@@ -825,31 +820,31 @@ static inline void soa_to_aos4(int64 v0, int64 v1, int64 v2, int64 v3, uniform i
 // Prefetching
 
 __declspec(safe, cost1) static inline void prefetch_l1(const void *uniform ptr) {
-    __prefetch_read_uniform_1((uniform int8 * uniform) ptr);
+    __prefetch_read_uniform_1((opaque_ptr_t)ptr);
 }
 
 __declspec(safe, cost1) static inline void prefetch_l2(const void *uniform ptr) {
-    __prefetch_read_uniform_2((uniform int8 * uniform) ptr);
+    __prefetch_read_uniform_2((opaque_ptr_t)ptr);
 }
 
 __declspec(safe, cost1) static inline void prefetch_l3(const void *uniform ptr) {
-    __prefetch_read_uniform_3((uniform int8 * uniform) ptr);
+    __prefetch_read_uniform_3((opaque_ptr_t)ptr);
 }
 
 __declspec(safe, cost1) static inline void prefetch_nt(const void *uniform ptr) {
-    __prefetch_read_uniform_nt((uniform int8 * uniform) ptr);
+    __prefetch_read_uniform_nt((opaque_ptr_t)ptr);
 }
 
 __declspec(safe, cost1) static inline void prefetchw_l1(const void *uniform ptr) {
-    __prefetch_write_uniform_1((uniform int8 * uniform) ptr);
+    __prefetch_write_uniform_1((opaque_ptr_t)ptr);
 }
 
 __declspec(safe, cost1) static inline void prefetchw_l2(const void *uniform ptr) {
-    __prefetch_write_uniform_2((uniform int8 * uniform) ptr);
+    __prefetch_write_uniform_2((opaque_ptr_t)ptr);
 }
 
 __declspec(safe, cost1) static inline void prefetchw_l3(const void *uniform ptr) {
-    __prefetch_write_uniform_3((uniform int8 * uniform) ptr);
+    __prefetch_write_uniform_3((opaque_ptr_t)ptr);
 }
 
 static inline void prefetch_l1(const void *varying ptr) {
@@ -1127,7 +1122,7 @@ __declspec(safe) static inline uniform unsigned int64 reduce_max(unsigned int64 
         return __reduce_equal_##FUNCTYPE(v, &unusedValue, (MASKTYPE)__mask);                                           \
     }                                                                                                                  \
     __declspec(safe) static inline uniform bool reduce_equal(TYPE v, uniform TYPE *uniform value) {                    \
-        return __reduce_equal_##FUNCTYPE(v, (uniform int8 * uniform) value, (MASKTYPE)__mask);                         \
+        return __reduce_equal_##FUNCTYPE(v, (opaque_ptr_t)value, (MASKTYPE)__mask);                                    \
     }
 
 REDUCE_EQUAL(float16, half, IntMaskType)
@@ -1176,257 +1171,257 @@ static unsigned int64 exclusive_scan_or(unsigned int64 v) { return __exclusive_s
 /* unsigned int32 implementations. */
 // unsigned int32 load.
 static inline uniform int packed_load_active(uniform unsigned int a[], varying unsigned int *uniform vals) {
-    return __packed_load_activei32((uniform int8 * uniform) a, (uniform int8 * uniform) vals, (UIntMaskType)__mask);
+    return __packed_load_activei32((opaque_ptr_t)a, (opaque_ptr_t)vals, (UIntMaskType)__mask);
 }
 
 // unsigned int32 store.
 static inline uniform int packed_store_active(uniform unsigned int a[], unsigned int vals) {
-    return __packed_store_activei32((uniform int8 * uniform) a, vals, (UIntMaskType)__mask);
+    return __packed_store_activei32((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
 }
 
 // unsigned int32 store2.
 static inline uniform int packed_store_active2(uniform unsigned int a[], unsigned int vals) {
-    return __packed_store_active2i32((uniform int8 * uniform) a, vals, (UIntMaskType)__mask);
+    return __packed_store_active2i32((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
 }
 
 /* int32 implementations. */
 // int32 load.
 static inline uniform int packed_load_active(uniform int a[], varying int *uniform vals) {
-    return __packed_load_activei32((uniform int8 * uniform) a, (uniform int8 * uniform) vals, (IntMaskType)__mask);
+    return __packed_load_activei32((opaque_ptr_t)a, (opaque_ptr_t)vals, (IntMaskType)__mask);
 }
 
 // int32 store.
 static inline uniform int packed_store_active(uniform int a[], int vals) {
-    return __packed_store_activei32((uniform int8 * uniform) a, vals, (IntMaskType)__mask);
+    return __packed_store_activei32((opaque_ptr_t)a, vals, (IntMaskType)__mask);
 }
 
 // int32 store2.
 static inline uniform int packed_store_active2(uniform int a[], int vals) {
-    return __packed_store_active2i32((uniform int8 * uniform) a, vals, (IntMaskType)__mask);
+    return __packed_store_active2i32((opaque_ptr_t)a, vals, (IntMaskType)__mask);
 }
 
 // int32 store with lanes.
 static inline uniform int packed_store_active(bool active, uniform int a[], int vals) {
-    return __packed_store_activei32((uniform int8 * uniform) a, vals, (IntMaskType)(-(int)active));
+    return __packed_store_activei32((opaque_ptr_t)a, vals, (IntMaskType)(-(int)active));
 }
 
 /* unsigned int64 implementations. */
 // unsigned int64 load.
 static inline uniform int packed_load_active(uniform unsigned int64 a[], varying unsigned int64 *uniform vals) {
-    return __packed_load_activei64((uniform int8 * uniform) a, (uniform int8 * uniform) vals, (UIntMaskType)__mask);
+    return __packed_load_activei64((opaque_ptr_t)a, (opaque_ptr_t)vals, (UIntMaskType)__mask);
 }
 
 // unsigned int64 store.
 static inline uniform int packed_store_active(uniform unsigned int64 a[], unsigned int64 vals) {
-    return __packed_store_activei64((uniform int8 * uniform) a, vals, (UIntMaskType)__mask);
+    return __packed_store_activei64((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
 }
 
 // unsigned int64 store2.
 static inline uniform int packed_store_active2(uniform unsigned int64 a[], unsigned int64 vals) {
-    return __packed_store_active2i64((uniform int8 * uniform) a, vals, (UIntMaskType)__mask);
+    return __packed_store_active2i64((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
 }
 
 /* int64 implementations. */
 // int64 load.
 static inline uniform int packed_load_active(uniform int64 a[], varying int64 *uniform vals) {
-    return __packed_load_activei64((uniform int8 * uniform) a, (uniform int8 * uniform) vals, (IntMaskType)__mask);
+    return __packed_load_activei64((opaque_ptr_t)a, (opaque_ptr_t)vals, (IntMaskType)__mask);
 }
 
 // int64 store.
 static inline uniform int packed_store_active(uniform int64 a[], int64 vals) {
-    return __packed_store_activei64((uniform int8 * uniform) a, vals, (IntMaskType)__mask);
+    return __packed_store_activei64((opaque_ptr_t)a, vals, (IntMaskType)__mask);
 }
 
 // int64 store2.
 static inline uniform int packed_store_active2(uniform int64 a[], int64 vals) {
-    return __packed_store_active2i64((uniform int8 * uniform) a, vals, (IntMaskType)__mask);
+    return __packed_store_active2i64((opaque_ptr_t)a, vals, (IntMaskType)__mask);
 }
 
 // int64 store with lanes.
 static inline uniform int packed_store_active(bool active, uniform int64 a[], int64 vals) {
-    return __packed_store_activei64((uniform int8 * uniform) a, vals, (IntMaskType)(-(int)active));
+    return __packed_store_activei64((opaque_ptr_t)a, vals, (IntMaskType)(-(int)active));
 }
 
 ///////////////////////////////////////////////////////////////////////////
 // streaming store
 
 __declspec(safe, cost1) static inline void streaming_store(uniform unsigned int8 a[], unsigned int8 vals) {
-    __streaming_store_varying_i8((uniform int8 * uniform) a, vals);
+    __streaming_store_varying_i8((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform int8 a[], int8 vals) {
-    __streaming_store_varying_i8((uniform int8 * uniform) a, vals);
+    __streaming_store_varying_i8((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform unsigned int16 a[], unsigned int16 vals) {
-    __streaming_store_varying_i16((uniform int8 * uniform) a, vals);
+    __streaming_store_varying_i16((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform int16 a[], int16 vals) {
-    __streaming_store_varying_i16((uniform int8 * uniform) a, vals);
+    __streaming_store_varying_i16((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform float16 a[], float16 vals) {
-    __streaming_store_varying_half((uniform int8 * uniform) a, vals);
+    __streaming_store_varying_half((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform unsigned int a[], unsigned int vals) {
-    __streaming_store_varying_i32((uniform int8 * uniform) a, vals);
+    __streaming_store_varying_i32((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform int a[], int vals) {
-    __streaming_store_varying_i32((uniform int8 * uniform) a, vals);
+    __streaming_store_varying_i32((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform unsigned int64 a[], unsigned int64 vals) {
-    __streaming_store_varying_i64((uniform int8 * uniform) a, vals);
+    __streaming_store_varying_i64((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform int64 a[], int64 vals) {
-    __streaming_store_varying_i64((uniform int8 * uniform) a, vals);
+    __streaming_store_varying_i64((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform float a[], float vals) {
-    __streaming_store_varying_float((uniform int8 * uniform) a, vals);
+    __streaming_store_varying_float((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform double a[], double vals) {
-    __streaming_store_varying_double((uniform int8 * uniform) a, vals);
+    __streaming_store_varying_double((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform unsigned int8 a[], uniform unsigned int8 vals) {
-    __streaming_store_uniform_i8((uniform int8 * uniform) a, vals);
+    __streaming_store_uniform_i8((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform int8 a[], uniform int8 vals) {
-    __streaming_store_uniform_i8((uniform int8 * uniform) a, vals);
+    __streaming_store_uniform_i8((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform unsigned int16 a[], uniform unsigned int16 vals) {
-    __streaming_store_uniform_i16((uniform int8 * uniform) a, vals);
+    __streaming_store_uniform_i16((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform int16 a[], uniform int16 vals) {
-    __streaming_store_uniform_i16((uniform int8 * uniform) a, vals);
+    __streaming_store_uniform_i16((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform float16 a[], uniform float16 vals) {
-    __streaming_store_uniform_half((uniform int8 * uniform) a, vals);
+    __streaming_store_uniform_half((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform unsigned int a[], uniform unsigned int vals) {
-    __streaming_store_uniform_i32((uniform int8 * uniform) a, vals);
+    __streaming_store_uniform_i32((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform int a[], uniform int vals) {
-    __streaming_store_uniform_i32((uniform int8 * uniform) a, vals);
+    __streaming_store_uniform_i32((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform unsigned int64 a[], uniform unsigned int64 vals) {
-    __streaming_store_uniform_i64((uniform int8 * uniform) a, vals);
+    __streaming_store_uniform_i64((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform int64 a[], uniform int64 vals) {
-    __streaming_store_uniform_i64((uniform int8 * uniform) a, vals);
+    __streaming_store_uniform_i64((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform float a[], uniform float vals) {
-    __streaming_store_uniform_float((uniform int8 * uniform) a, vals);
+    __streaming_store_uniform_float((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform double a[], uniform double vals) {
-    __streaming_store_uniform_double((uniform int8 * uniform) a, vals);
+    __streaming_store_uniform_double((opaque_ptr_t)a, vals);
 }
 
 ///////////////////////////////////////////////////////////////////////////
 // streaming load
 
 __declspec(safe, cost1) static inline varying unsigned int8 streaming_load(uniform unsigned int8 a[]) {
-    return (unsigned int8)__streaming_load_varying_i8((uniform int8 * uniform) a);
+    return (unsigned int8)__streaming_load_varying_i8((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline varying int8 streaming_load(uniform int8 a[]) {
-    return __streaming_load_varying_i8((uniform int8 * uniform) a);
+    return __streaming_load_varying_i8((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline uniform unsigned int8 streaming_load_uniform(uniform unsigned int8 a[]) {
-    return (unsigned int8)__streaming_load_uniform_i8((uniform int8 * uniform) a);
+    return (unsigned int8)__streaming_load_uniform_i8((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline uniform int8 streaming_load_uniform(uniform int8 a[]) {
-    return __streaming_load_uniform_i8((uniform int8 * uniform) a);
+    return __streaming_load_uniform_i8((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline varying unsigned int16 streaming_load(uniform unsigned int16 a[]) {
-    return (unsigned int16)__streaming_load_varying_i16((uniform int8 * uniform) a);
+    return (unsigned int16)__streaming_load_varying_i16((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline varying int16 streaming_load(uniform int16 a[]) {
-    return __streaming_load_varying_i16((uniform int8 * uniform) a);
+    return __streaming_load_varying_i16((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline uniform unsigned int16 streaming_load_uniform(uniform unsigned int16 a[]) {
-    return (unsigned int16)__streaming_load_uniform_i16((uniform int8 * uniform) a);
+    return (unsigned int16)__streaming_load_uniform_i16((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline uniform int16 streaming_load_uniform(uniform int16 a[]) {
-    return __streaming_load_uniform_i16((uniform int8 * uniform) a);
+    return __streaming_load_uniform_i16((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline varying float16 streaming_load(uniform float16 a[]) {
-    return __streaming_load_varying_half((uniform int8 * uniform) a);
+    return __streaming_load_varying_half((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline uniform float16 streaming_load_uniform(uniform float16 a[]) {
-    return __streaming_load_uniform_half((uniform int8 * uniform) a);
+    return __streaming_load_uniform_half((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline varying unsigned int streaming_load(uniform unsigned int a[]) {
-    return (unsigned int)__streaming_load_varying_i32((uniform int8 * uniform) a);
+    return (unsigned int)__streaming_load_varying_i32((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline varying int streaming_load(uniform int a[]) {
-    return __streaming_load_varying_i32((uniform int8 * uniform) a);
+    return __streaming_load_varying_i32((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline uniform unsigned int streaming_load_uniform(uniform unsigned int a[]) {
-    return (unsigned int)__streaming_load_uniform_i32((uniform int8 * uniform) a);
+    return (unsigned int)__streaming_load_uniform_i32((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline uniform int streaming_load_uniform(uniform int a[]) {
-    return __streaming_load_uniform_i32((uniform int8 * uniform) a);
+    return __streaming_load_uniform_i32((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline varying unsigned int64 streaming_load(uniform unsigned int64 a[]) {
-    return (unsigned int64)__streaming_load_varying_i64((uniform int8 * uniform) a);
+    return (unsigned int64)__streaming_load_varying_i64((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline varying int64 streaming_load(uniform int64 a[]) {
-    return __streaming_load_varying_i64((uniform int8 * uniform) a);
+    return __streaming_load_varying_i64((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline uniform unsigned int64 streaming_load_uniform(uniform unsigned int64 a[]) {
-    return (unsigned int64)__streaming_load_uniform_i64((uniform int8 * uniform) a);
+    return (unsigned int64)__streaming_load_uniform_i64((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline uniform int64 streaming_load_uniform(uniform int64 a[]) {
-    return __streaming_load_uniform_i64((uniform int8 * uniform) a);
+    return __streaming_load_uniform_i64((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline varying float streaming_load(uniform float a[]) {
-    return __streaming_load_varying_float((uniform int8 * uniform) a);
+    return __streaming_load_varying_float((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline uniform float streaming_load_uniform(uniform float a[]) {
-    return __streaming_load_uniform_float((uniform int8 * uniform) a);
+    return __streaming_load_uniform_float((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline varying double streaming_load(uniform double a[]) {
-    return __streaming_load_varying_double((uniform int8 * uniform) a);
+    return __streaming_load_varying_double((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline uniform double streaming_load_uniform(uniform double a[]) {
-    return __streaming_load_uniform_double((uniform int8 * uniform) a);
+    return __streaming_load_uniform_double((opaque_ptr_t)a);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1907,11 +1902,11 @@ static inline void memory_barrier() { __memory_barrier(); }
 
 #define DEFINE_ATOMIC_OP(TA, TB, OPA, OPB, MASKTYPE, TC)                                                               \
     static inline TA atomic_##OPA##_global(uniform TA *uniform ptr, TA value) {                                        \
-        TA ret = __atomic_##OPB##_##TB##_global((uniform int8 * uniform) ptr, value, (MASKTYPE)__mask);                \
+        TA ret = __atomic_##OPB##_##TB##_global((opaque_ptr_t)ptr, value, (MASKTYPE)__mask);                           \
         return ret;                                                                                                    \
     }                                                                                                                  \
     static inline uniform TA atomic_##OPA##_global(uniform TA *uniform ptr, uniform TA value) {                        \
-        uniform TA ret = __atomic_##OPB##_uniform_##TB##_global((uniform int8 * uniform) ptr, value);                  \
+        uniform TA ret = __atomic_##OPB##_uniform_##TB##_global((opaque_ptr_t)ptr, value);                             \
         return ret;                                                                                                    \
     }                                                                                                                  \
     static inline TA atomic_##OPA##_global(uniform TA *varying ptr, TA value) {                                        \
@@ -1919,7 +1914,7 @@ static inline void memory_barrier() { __memory_barrier(); }
         ptrArray[programIndex] = ptr;                                                                                  \
         TA ret;                                                                                                        \
         foreach_active(i) {                                                                                            \
-            uniform int8 *uniform p = (uniform int8 * uniform) ptrArray[i];                                            \
+            uniform int8 *uniform p = (opaque_ptr_t)ptrArray[i];                                                       \
             uniform TA v = extract(value, i);                                                                          \
             uniform TA r = __atomic_##OPB##_uniform_##TB##_global(p, v);                                               \
             ret = insert(ret, i, r);                                                                                   \
@@ -1940,7 +1935,7 @@ static inline void memory_barrier() { __memory_barrier(); }
         for (; i < programCount; ++i) {                                                                                \
             if ((mask & (1ull << i)) == 0)                                                                             \
                 continue;                                                                                              \
-            memVal = __atomic_swap_uniform_##TB##_global((uniform int8 * uniform) ptr, extract(value, i));             \
+            memVal = __atomic_swap_uniform_##TB##_global((opaque_ptr_t)ptr, extract(value, i));                        \
             lastSwap = i;                                                                                              \
             break;                                                                                                     \
         }                                                                                                              \
@@ -1961,7 +1956,7 @@ static inline void memory_barrier() { __memory_barrier(); }
         return ret[programIndex];                                                                                      \
     }                                                                                                                  \
     static inline uniform TA atomic_swap_global(uniform TA *uniform ptr, uniform TA value) {                           \
-        uniform TA ret = __atomic_swap_uniform_##TB##_global((uniform int8 * uniform) ptr, value);                     \
+        uniform TA ret = __atomic_swap_uniform_##TB##_global((opaque_ptr_t)ptr, value);                                \
         return ret;                                                                                                    \
     }                                                                                                                  \
     static inline TA atomic_swap_global(uniform TA *varying ptr, TA value) {                                           \
@@ -1969,7 +1964,7 @@ static inline void memory_barrier() { __memory_barrier(); }
         ptrArray[programIndex] = ptr;                                                                                  \
         TA ret;                                                                                                        \
         foreach_active(i) {                                                                                            \
-            uniform int8 *uniform p = (uniform int8 * uniform) ptrArray[i];                                            \
+            uniform int8 *uniform p = (opaque_ptr_t)ptrArray[i];                                                       \
             uniform TA v = extract(value, i);                                                                          \
             uniform TA r = __atomic_swap_uniform_##TB##_global(p, v);                                                  \
             ret = insert(ret, i, r);                                                                                   \
@@ -1982,11 +1977,11 @@ static inline void memory_barrier() { __memory_barrier(); }
         uniform TA oneval = reduce_##OPA(value);                                                                       \
         TA ret;                                                                                                        \
         if (lanemask() != 0)                                                                                           \
-            ret = __atomic_##OPB##_uniform_##TB##_global((uniform int8 * uniform) ptr, oneval);                        \
+            ret = __atomic_##OPB##_uniform_##TB##_global((opaque_ptr_t)ptr, oneval);                                   \
         return ret;                                                                                                    \
     }                                                                                                                  \
     static inline uniform TA atomic_##OPA##_global(uniform TA *uniform ptr, uniform TA value) {                        \
-        uniform TA ret = __atomic_##OPB##_uniform_##TB##_global((uniform int8 * uniform) ptr, value);                  \
+        uniform TA ret = __atomic_##OPB##_uniform_##TB##_global((opaque_ptr_t)ptr, value);                             \
         return ret;                                                                                                    \
     }                                                                                                                  \
     static inline TA atomic_##OPA##_global(uniform TA *varying ptr, TA value) {                                        \
@@ -1994,7 +1989,7 @@ static inline void memory_barrier() { __memory_barrier(); }
         ptrArray[programIndex] = ptr;                                                                                  \
         TA ret;                                                                                                        \
         foreach_active(i) {                                                                                            \
-            uniform int8 *uniform p = (uniform int8 * uniform) ptrArray[i];                                            \
+            uniform int8 *uniform p = (opaque_ptr_t)ptrArray[i];                                                       \
             uniform TA v = extract(value, i);                                                                          \
             uniform TA r = __atomic_##OPB##_uniform_##TB##_global(p, v);                                               \
             ret = insert(ret, i, r);                                                                                   \
@@ -2053,13 +2048,11 @@ DEFINE_ATOMIC_SWAP(double, double, IntMaskType, int64)
 #define ATOMIC_DECL_CMPXCHG(TA, TB, MASKTYPE, TC)                                                                      \
     static inline uniform TA atomic_compare_exchange_global(uniform TA *uniform ptr, uniform TA oldval,                \
                                                             uniform TA newval) {                                       \
-        uniform TA ret =                                                                                               \
-            __atomic_compare_exchange_uniform_##TB##_global((uniform int8 * uniform) ptr, oldval, newval);             \
+        uniform TA ret = __atomic_compare_exchange_uniform_##TB##_global((opaque_ptr_t)ptr, oldval, newval);           \
         return ret;                                                                                                    \
     }                                                                                                                  \
     static inline TA atomic_compare_exchange_global(uniform TA *uniform ptr, TA oldval, TA newval) {                   \
-        TA ret =                                                                                                       \
-            __atomic_compare_exchange_##TB##_global((uniform int8 * uniform) ptr, oldval, newval, (MASKTYPE)__mask);   \
+        TA ret = __atomic_compare_exchange_##TB##_global((opaque_ptr_t)ptr, oldval, newval, (MASKTYPE)__mask);         \
         return ret;                                                                                                    \
     }                                                                                                                  \
     static inline TA atomic_compare_exchange_global(uniform TA *varying ptr, TA oldval, TA newval) {                   \
@@ -2067,7 +2060,7 @@ DEFINE_ATOMIC_SWAP(double, double, IntMaskType, int64)
         ptrArray[programIndex] = ptr;                                                                                  \
         TA ret;                                                                                                        \
         foreach_active(i) {                                                                                            \
-            uniform TA r = __atomic_compare_exchange_uniform_##TB##_global((uniform int8 * uniform) ptrArray[i],       \
+            uniform TA r = __atomic_compare_exchange_uniform_##TB##_global((opaque_ptr_t)ptrArray[i],                  \
                                                                            extract(oldval, i), extract(newval, i));    \
             ret = insert(ret, i, r);                                                                                   \
         }                                                                                                              \
@@ -2733,15 +2726,15 @@ __declspec(safe) static inline uniform float acos(uniform float v) {
 __declspec(safe) static inline void sincos(float x_full, varying float *uniform sin_result,
                                            varying float *uniform cos_result) {
     if (__have_native_trigonometry) {
-        __sincos_varying_float(x_full, (uniform int8 * uniform) sin_result, (uniform int8 * uniform) cos_result);
+        __sincos_varying_float(x_full, (opaque_ptr_t)sin_result, (opaque_ptr_t)cos_result);
         return;
     }
     if (__math_lib == __math_lib_svml) {
-        __svml_sincosf(x_full, (uniform int8 * uniform) sin_result, (uniform int8 * uniform) cos_result);
+        __svml_sincosf(x_full, (opaque_ptr_t)sin_result, (opaque_ptr_t)cos_result);
     } else if (__math_lib == __math_lib_system) {
         foreach_active(i) {
             uniform float s, c;
-            __stdlib_sincosf(extract(x_full, i), (uniform int8 * uniform) & s, (uniform int8 * uniform) & c);
+            __stdlib_sincosf(extract(x_full, i), (opaque_ptr_t)&s, (opaque_ptr_t)&c);
             *sin_result = insert(*sin_result, i, s);
             *cos_result = insert(*cos_result, i, c);
         }
@@ -2802,11 +2795,11 @@ __declspec(safe) static inline void sincos(float x_full, varying float *uniform 
 __declspec(safe) static inline void sincos(uniform float x_full, uniform float *uniform sin_result,
                                            uniform float *uniform cos_result) {
     if (__have_native_trigonometry) {
-        __sincos_uniform_float(x_full, (uniform int8 * uniform) sin_result, (uniform int8 * uniform) cos_result);
+        __sincos_uniform_float(x_full, (opaque_ptr_t)sin_result, (opaque_ptr_t)cos_result);
         return;
     }
     if (__math_lib == __math_lib_system || __math_lib == __math_lib_svml) {
-        __stdlib_sincosf(x_full, (uniform int8 * uniform) sin_result, (uniform int8 * uniform) cos_result);
+        __stdlib_sincosf(x_full, (opaque_ptr_t)sin_result, (opaque_ptr_t)cos_result);
     } else if (__math_lib == __math_lib_ispc || __math_lib == __math_lib_ispc_fast) {
         const uniform float pi_over_two_vec = 1.57079637050628662109375;
         const uniform float two_over_pi_vec = 0.636619746685028076171875;
@@ -3686,7 +3679,7 @@ __declspec(safe) static inline uniform float16 acos(uniform float16 x_full) {
 __declspec(safe) static inline void sincos(float16 x_full, varying float16 *uniform sin_result,
                                            varying float16 *uniform cos_result) {
     if (__have_native_trigonometry) {
-        __sincos_varying_half(x_full, (uniform int8 * uniform) sin_result, (uniform int8 * uniform) cos_result);
+        __sincos_varying_half(x_full, (opaque_ptr_t)sin_result, (opaque_ptr_t)cos_result);
     } else {
         *sin_result = (float16)sin((float)x_full);
         *cos_result = (float16)cos((float)x_full);
@@ -3697,7 +3690,7 @@ __declspec(safe) static inline void sincos(float16 x_full, varying float16 *unif
 __declspec(safe) static inline void sincos(uniform float16 x_full, uniform float16 *uniform sin_result,
                                            uniform float16 *uniform cos_result) {
     if (__have_native_trigonometry) {
-        __sincos_uniform_half(x_full, (uniform int8 * uniform) sin_result, (uniform int8 * uniform) cos_result);
+        __sincos_uniform_half(x_full, (opaque_ptr_t)sin_result, (opaque_ptr_t)cos_result);
     } else {
         *sin_result = (uniform float16)sin((uniform float)x_full);
         *cos_result = (uniform float16)cos((uniform float)x_full);
@@ -3944,15 +3937,15 @@ __declspec(safe) static inline uniform double acos(const uniform double v) {
 __declspec(safe) static inline void sincos(double x, varying double *uniform sin_result,
                                            varying double *uniform cos_result) {
     if (__have_native_trigonometry) {
-        __sincos_varying_double(x, (uniform int8 * uniform) sin_result, (uniform int8 * uniform) cos_result);
+        __sincos_varying_double(x, (opaque_ptr_t)sin_result, (opaque_ptr_t)cos_result);
         return;
     }
     if (__math_lib == __math_lib_svml) {
-        __svml_sincosd(x, (uniform int8 * uniform) sin_result, (uniform int8 * uniform) cos_result);
+        __svml_sincosd(x, (opaque_ptr_t)sin_result, (opaque_ptr_t)cos_result);
     } else {
         foreach_active(i) {
             uniform double sr, cr;
-            __stdlib_sincos(extract(x, i), (uniform int8 * uniform) & sr, (uniform int8 * uniform) & cr);
+            __stdlib_sincos(extract(x, i), (opaque_ptr_t)&sr, (opaque_ptr_t)&cr);
             *sin_result = insert(*sin_result, i, sr);
             *cos_result = insert(*cos_result, i, cr);
         }
@@ -3962,9 +3955,9 @@ __declspec(safe) static inline void sincos(double x, varying double *uniform sin
 __declspec(safe) static inline void sincos(uniform double x, uniform double *uniform sin_result,
                                            uniform double *uniform cos_result) {
     if (__have_native_trigonometry) {
-        __sincos_uniform_double(x, (uniform int8 * uniform) sin_result, (uniform int8 * uniform) cos_result);
+        __sincos_uniform_double(x, (opaque_ptr_t)sin_result, (opaque_ptr_t)cos_result);
     } else
-        __stdlib_sincos(x, (uniform int8 * uniform) sin_result, (uniform int8 * uniform) cos_result);
+        __stdlib_sincos(x, (opaque_ptr_t)sin_result, (opaque_ptr_t)cos_result);
 }
 
 __declspec(safe) static inline double tan(double x) {
@@ -5171,7 +5164,7 @@ static inline uniform bool rdrand(float *uniform ptr) {
         return false;
     else {
         uniform int32 irand;
-        uniform bool success = __rdrand_i32((uniform int8 * uniform) & irand);
+        uniform bool success = __rdrand_i32((opaque_ptr_t)&irand);
         if (success) {
             irand &= (1ul << 23) - 1;
             *ptr = floatbits(0x3F800000 | irand) - 1.0f;
@@ -5187,7 +5180,7 @@ static inline bool rdrand(varying float *uniform ptr) {
         bool success = false;
         foreach_active(index) {
             uniform int32 irand;
-            if (__rdrand_i32((uniform int8 * uniform) & irand)) {
+            if (__rdrand_i32((opaque_ptr_t)&irand)) {
                 // FIXME: it probably would be preferable, here and in the
                 // following rdrand() function, to do the int->float stuff
                 // in vector form.  However, we need to be careful to not
@@ -5212,7 +5205,7 @@ static inline bool rdrand(float *ptr) {
         bool success = false;
         foreach_active(index) {
             uniform int32 irand;
-            if (__rdrand_i32((uniform int8 * uniform) & irand)) {
+            if (__rdrand_i32((opaque_ptr_t)&irand)) {
                 irand &= (1ul << 23) - 1;
                 *ptrs[index] = floatbits(0x3F800000 | irand) - 1.0f;
                 success = true;
@@ -5236,7 +5229,7 @@ static inline bool rdrand(varying int16 *uniform ptr) {
         bool success = false;
         foreach_active(index) {
             uniform int16 irand;
-            if (__rdrand_i16((uniform int8 * uniform) & irand)) {
+            if (__rdrand_i16((opaque_ptr_t)&irand)) {
                 *ptr = irand;
                 success = true;
             }
@@ -5255,7 +5248,7 @@ static inline bool rdrand(int16 *ptr) {
 
         foreach_active(index) {
             uniform int16 irand;
-            if (__rdrand_i16((uniform int8 * uniform) & irand)) {
+            if (__rdrand_i16((opaque_ptr_t)&irand)) {
                 *ptrs[index] = irand;
                 success = true;
             }
@@ -5278,7 +5271,7 @@ static inline bool rdrand(varying int32 *uniform ptr) {
         bool success = false;
         foreach_active(index) {
             uniform int32 irand;
-            if (__rdrand_i32((uniform int8 * uniform) & irand)) {
+            if (__rdrand_i32((opaque_ptr_t)&irand)) {
                 *ptr = irand;
                 success = true;
             }
@@ -5297,7 +5290,7 @@ static inline bool rdrand(int32 *ptr) {
 
         foreach_active(index) {
             uniform int32 irand;
-            if (__rdrand_i32((uniform int8 * uniform) & irand)) {
+            if (__rdrand_i32((opaque_ptr_t)&irand)) {
                 *ptrs[index] = irand;
                 success = true;
             }
@@ -5320,7 +5313,7 @@ static inline bool rdrand(varying int64 *uniform ptr) {
         bool success = false;
         foreach_active(index) {
             uniform int64 irand;
-            if (__rdrand_i64((uniform int8 * uniform) & irand)) {
+            if (__rdrand_i64((opaque_ptr_t)&irand)) {
                 *ptr = irand;
                 success = true;
             }
@@ -5339,7 +5332,7 @@ static inline bool rdrand(int64 *ptr) {
 
         foreach_active(index) {
             uniform int64 irand;
-            if (__rdrand_i64((uniform int8 * uniform) & irand)) {
+            if (__rdrand_i64((opaque_ptr_t)&irand)) {
                 *ptrs[index] = irand;
                 success = true;
             }
