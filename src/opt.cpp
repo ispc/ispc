@@ -5682,7 +5682,7 @@ class MemoryCoalescing : public llvm::FunctionPass {
     // Methods in this block are interface for different coalescing types.
 
     // Return true if coalescing can handle Inst.
-    virtual bool isOptimizationTarget(llvm::Instruction *Inst) const = 0;
+    virtual bool isOptimizationTarget(llvm::Instruction *Inst) = 0;
     // Return pointer value or null if there is no one. This should handle
     // all optimization targets.
     virtual llvm::Value *getPointer(llvm::Instruction *Inst) const = 0;
@@ -6198,7 +6198,7 @@ llvm::Value *MemoryCoalescing::extractValueFromBlock(const MemoryCoalescing::Blo
 
 class XeGatherCoalescing : public MemoryCoalescing {
   private:
-    bool isOptimizationTarget(llvm::Instruction *Inst) const;
+    bool isOptimizationTarget(llvm::Instruction *Inst);
     llvm::Value *getPointer(llvm::Instruction *Inst) const;
     OffsetsVecT getOffset(llvm::Instruction *Inst) const;
     llvm::Value *getStoredValue(llvm::Instruction *Inst) const { return nullptr; }
@@ -6206,6 +6206,7 @@ class XeGatherCoalescing : public MemoryCoalescing {
     void runOnBasicBlock(llvm::BasicBlock &BB);
 
     llvm::CallInst *getPseudoGatherConstOffset(llvm::Instruction *Inst) const;
+    bool isConstOffsetPseudoGather(llvm::CallInst *CI) const;
 
   public:
     static char ID;
@@ -6337,13 +6338,22 @@ llvm::CallInst *XeGatherCoalescing::getPseudoGatherConstOffset(llvm::Instruction
     if (auto CI = llvm::dyn_cast<llvm::CallInst>(Inst)) {
         llvm::Function *Function = CI->getCalledFunction();
         if (Function && Function->getName().startswith("__pseudo_gather_base_offsets"))
-            if (llvm::isa<llvm::ConstantDataVector>(CI->getOperand(2)))
+            if (isConstOffsetPseudoGather(CI))
                 return CI;
     }
     return nullptr;
 }
 
-bool XeGatherCoalescing::isOptimizationTarget(llvm::Instruction *Inst) const {
+bool XeGatherCoalescing::isConstOffsetPseudoGather(llvm::CallInst *CI) const {
+    Assert(CI != nullptr && CI->getCalledFunction() &&
+           CI->getCalledFunction()->getName().startswith("__pseudo_gather_base_offsets"));
+    llvm::Value *opOffset = CI->getOperand(2);
+
+    return (llvm::isa<llvm::ConstantDataVector>(opOffset) || llvm::isa<llvm::ConstantAggregateZero>(opOffset) ||
+            llvm::isa<llvm::ConstantVector>(opOffset));
+}
+
+bool XeGatherCoalescing::isOptimizationTarget(llvm::Instruction *Inst) {
     if (auto LI = llvm::dyn_cast<llvm::LoadInst>(Inst)) {
         if (!LI->getType()->isVectorTy() && !LI->getType()->isAggregateType())
             return GetAddressSpace(LI->getPointerOperand()) == AddrSpace;
@@ -6360,8 +6370,12 @@ MemoryCoalescing::OffsetsVecT XeGatherCoalescing::getOffset(llvm::Instruction *I
     if (llvm::isa<llvm::LoadInst>(Inst))
         Res.push_back(0);
     else if (auto Gather = getPseudoGatherConstOffset(Inst)) {
-        Res = getConstOffsetFromVector(Gather->getOperand(2));
-        applyScale(Res, llvm::cast<llvm::ConstantInt>(Gather->getOperand(1))->getSExtValue());
+        if (llvm::isa<llvm::ConstantAggregateZero>(Gather->getOperand(2))) {
+            Res.push_back(0);
+        } else {
+            Res = getConstOffsetFromVector(Gather->getOperand(2));
+            applyScale(Res, llvm::cast<llvm::ConstantInt>(Gather->getOperand(1))->getSExtValue());
+        }
     }
 
     return Res;
