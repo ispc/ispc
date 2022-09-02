@@ -91,6 +91,7 @@
 #endif
 #include <llvm/Transforms/Utils.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
+#include <llvm/Transforms/Vectorize.h>
 
 #ifdef ISPC_HOST_IS_LINUX
 #include <alloca.h>
@@ -783,6 +784,10 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
                 optPM.add(llvm::createEarlyCSEPass());
                 optPM.add(CreateGatherCoalescePass());
             }
+
+            // Try the llvm provided load/store vectorizer
+            if (!g->opt.disableXeGatherCoalescing)
+                optPM.add(llvm::createLoadStoreVectorizerPass());
         }
 #endif
 
