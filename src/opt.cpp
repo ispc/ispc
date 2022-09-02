@@ -689,10 +689,6 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 
         if (g->opt.disableGatherScatterOptimizations == false && g->target->getVectorWidth() > 1) {
             optPM.add(llvm::createInstructionCombiningPass(), 255);
-#ifdef ISPC_XE_ENABLED
-            if (g->target->isXeTarget() && !g->opt.disableXeGatherCoalescing)
-                optPM.add(CreateXeGatherCoalescingPass());
-#endif
             optPM.add(CreateImproveMemoryOpsPass());
 
             if (g->opt.disableCoalescing == false) {
@@ -772,6 +768,24 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateIsCompileTimeConstantPass(true));
         optPM.add(CreateIntrinsicsOptPass());
         optPM.add(CreateInstructionSimplifyPass());
+
+#ifdef ISPC_XE_ENABLED
+        if (g->target->isXeTarget() && g->opt.disableGatherScatterOptimizations == false &&
+            g->target->getVectorWidth() > 1) {
+            optPM.add(llvm::createInstructionCombiningPass(), 320);
+            if (!g->opt.disableXeGatherCoalescing)
+                optPM.add(CreateXeGatherCoalescingPass());
+            optPM.add(CreateImproveMemoryOpsPass());
+
+            if (g->opt.disableCoalescing == false) {
+                // It is important to run this here to make it easier to
+                // finding matching gathers we can coalesce..
+                optPM.add(llvm::createEarlyCSEPass());
+                optPM.add(CreateGatherCoalescePass());
+            }
+        }
+#endif
+
         // Currently CM does not support memset/memcpy
         // so this pass is temporary disabled for Xe.
         if (!g->target->isXeTarget()) {
