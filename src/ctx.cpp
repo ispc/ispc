@@ -218,6 +218,28 @@ CFInfo *CFInfo::GetSwitch(bool isUniform, bool isUniformEmulated, llvm::BasicBlo
 
 ///////////////////////////////////////////////////////////////////////////
 
+AddressInfo::AddressInfo(llvm::Value *p, llvm::Type *t) : pointer(p), elementType(t), ispcType(nullptr) {
+    Assert(pointer != nullptr && "Pointer cannot be null");
+    Assert(elementType != nullptr && "Element type cannot be null");
+}
+AddressInfo::AddressInfo(llvm::Value *p, const Type *t) : pointer(p), ispcType(t) {
+    Assert(pointer != nullptr && "Pointer cannot be null");
+    Assert(ispcType != nullptr && "ISPC type cannot be null");
+    // Get LLVM pointer element type based on ISPC type.
+    // TODO: need more testing
+    if (CastType<ReferenceType>(t) != nullptr) {
+        PointerType *pType = PointerType::GetUniform(t->GetReferenceTarget());
+        elementType = pType->GetBaseType()->LLVMStorageType(g->ctx);
+    } else if (CastType<PointerType>(t) != nullptr) {
+        elementType = t->GetBaseType()->LLVMStorageType(g->ctx);
+    } else {
+        elementType = t->LLVMStorageType(g->ctx);
+    }
+    Assert(elementType != nullptr && "Element type cannot be null");
+}
+
+///////////////////////////////////////////////////////////////////////////
+
 FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::Function *lf, SourcePos firstStmtPos) {
     function = func;
     llvmFunction = lf;
