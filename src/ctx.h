@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -50,6 +50,31 @@
 namespace ispc {
 
 struct CFInfo;
+
+///////////////////////////////////////////////////////////////////////////
+/** AddressInfo is a helper class to work with pointers.
+    It keeps llvm pointer, llvm element type, and ISPC type.
+*/
+class AddressInfo {
+  public:
+    AddressInfo(llvm::Value *p, llvm::Type *t);
+    AddressInfo(llvm::Value *p, const Type *t);
+    llvm::Value *getPointer() const { return pointer; }
+
+    // Return the type of the pointer value.
+    llvm::PointerType *getType() const { return llvm::cast<llvm::PointerType>(getPointer()->getType()); }
+
+    // Return the type of the values stored in this address.
+    llvm::Type *getElementType() const { return elementType; }
+
+    // Return the address space that this address resides in.
+    unsigned getAddressSpace() const { return getType()->getAddressSpace(); }
+
+  private:
+    llvm::Value *pointer;
+    llvm::Type *elementType;
+    const Type *ispcType;
+};
 
 /** FunctionEmitContext is one of the key classes in ispc; it is used to
     help with emitting the intermediate representation of a function during
