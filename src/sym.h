@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -39,6 +39,7 @@
 
 #pragma once
 
+#include "ctx.h"
 #include "decl.h"
 #include "ispc.h"
 #include <map>
@@ -72,7 +73,12 @@ class Symbol {
     llvm::Value *storagePtr;  /*!< For symbols with storage associated with
                                    them (i.e. variables but not functions),
                                    this member stores a pointer to its
-                                   location in memory.) */
+                                   location in memory.)
+                                   DEPRECATED. Use storageInfo instead. */
+    AddressInfo *storageInfo; /*!< For symbols with storage associated with
+                                   them (i.e. variables but not functions),
+                                   this member stores an address info: pointer to
+                                   its location in memory and its element type.) */
     llvm::Function *function; /*!< For symbols that represent functions,
                                    this stores the LLVM Function value for
                                    the symbol once it has been created. */
