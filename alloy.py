@@ -224,7 +224,7 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
             alloy_error("Can't find XCode (xcrun tool) - it's required on MacOS 10.9 and newer", 1)
 
     # prepare configuration parameters
-    llvm_enable_projects = " -DLLVM_ENABLE_PROJECTS=\"clang"
+    llvm_enable_runtimes = ""
     if current_OS == "MacOS" and int(current_OS_version.split(".")[0]) >= 13:
         # Starting with MacOS 10.9 Maverics, the system doesn't contain headers for standard C++ library and
         # the default library is libc++, bit libstdc++. The headers are part of XCode now. But we are checking out
@@ -238,7 +238,9 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
         # We either need to explicitly opt-out from using libcxxabi from this repo, or build and use it,
         # otherwise a build error will occure (attempt to use just built libcxxabi, which was not built).
         # An option to build seems to be a better one.
-        llvm_enable_projects +=";libcxx;libcxxabi"
+        llvm_enable_runtimes +=" -DLLVM_ENABLE_RUNTIMES=\"libcxx;libcxxabi\""
+
+    llvm_enable_projects = llvm_enable_runtimes + " -DLLVM_ENABLE_PROJECTS=\"clang"
     if current_OS == "Linux":
         # OpenMP is needed for Xe enabled builds.
         # Starting from Ubuntu 20.04 libomp-dev package doesn't install omp.h to default location.
