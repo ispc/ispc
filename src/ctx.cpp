@@ -3637,7 +3637,10 @@ llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<ll
     llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(argType);
     AssertPos(currentPos, pt);
     AssertPos(currentPos, llvm::StructType::classof(pt->PTR_ELT_TYPE()));
-    llvm::StructType *argStructType = static_cast<llvm::StructType *>(pt->PTR_ELT_TYPE());
+
+    std::vector<llvm::Type *> llvmArgTypes = funcType->LLVMFunctionArgTypes(g->ctx);
+    llvm::StructType *argStructType = llvm::StructType::get(*g->ctx, llvmArgTypes);
+    AssertPos(currentPos, argStructType != NULL);
 
     llvm::Function *falloc = m->module->getFunction("ISPCAlloc");
     AssertPos(currentPos, falloc != NULL);

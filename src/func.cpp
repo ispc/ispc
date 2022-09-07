@@ -239,15 +239,15 @@ const FunctionType *Function::GetType() const {
     local stack-allocated variables.  (Which we expect that LLVM's
     'mem2reg' pass will in turn promote to SSA registers..
  */
-static void lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const std::vector<Symbol *> &args,
+static void lCopyInTaskParameter(int i, AddressInfo *structArgPtrInfo, const std::vector<Symbol *> &args,
                                  FunctionEmitContext *ctx) {
     // We expect the argument structure to come in as a poitner to a
     // structure.  Confirm and figure out its type here.
-    const llvm::Type *structArgType = structArgPtr->getType();
+    const llvm::Type *structArgType = structArgPtrInfo->getPointer()->getType();
     Assert(llvm::isa<llvm::PointerType>(structArgType));
     const llvm::PointerType *pt = llvm::dyn_cast<const llvm::PointerType>(structArgType);
     Assert(pt);
-    Assert(llvm::isa<llvm::StructType>(pt->PTR_ELT_TYPE()));
+    Assert(llvm::isa<llvm::StructType>(structArgPtrInfo->getElementType()));
 
     // Get the type of the argument we're copying in and its Symbol pointer
     Symbol *sym = args[i];
@@ -260,7 +260,7 @@ static void lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const std::ve
     sym->storageInfo = ctx->AllocaInst(sym->type, sym->name.c_str());
 
     // get a pointer to the value in the struct
-    llvm::Value *ptr = ctx->AddElementOffset(structArgPtr, i, NULL, sym->name.c_str());
+    llvm::Value *ptr = ctx->AddElementOffset(structArgPtrInfo->getPointer(), i, NULL, sym->name.c_str());
 
     // and copy the value from the struct and into the local alloca'ed
     // memory
@@ -313,10 +313,14 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         llvm::Value *taskCount0 = &*(argIter++);
         llvm::Value *taskCount1 = &*(argIter++);
         llvm::Value *taskCount2 = &*(argIter++);
+
+        std::vector<llvm::Type *> llvmArgTypes = type->LLVMFunctionArgTypes(g->ctx);
+        llvm::Type *st = llvm::StructType::get(*g->ctx, llvmArgTypes);
+
         // Copy the function parameter values from the structure into local
         // storage
         for (unsigned int i = 0; i < args.size(); ++i)
-            lCopyInTaskParameter(i, structParamPtr, args, ctx);
+            lCopyInTaskParameter(i, new AddressInfo(structParamPtr, st), args, ctx);
 
         if (type->isUnmasked == false) {
             // Copy in the mask as well.
