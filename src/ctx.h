@@ -126,9 +126,9 @@ class FunctionEmitContext {
         the function entry mask and the internal mask. */
     llvm::Value *GetFullMask();
 
-    /** Returns a pointer to storage in memory that stores the current full
+    /** Returns an AddressInfo with a pointer to storage in memory that stores the current full
         mask. */
-    llvm::Value *GetFullMaskPointer();
+    AddressInfo *GetFullMaskAddressInfo();
 
     /** Provides the value of the mask at function entry */
     void SetFunctionMask(llvm::Value *val);
@@ -499,7 +499,7 @@ class FunctionEmitContext {
         instruction is added at the start of the function in the entry
         basic block; if it should be added to the current basic block, then
         the atEntryBlock parameter should be false. */
-    llvm::Value *AllocaInst(llvm::Type *llvmType, llvm::Value *size, const llvm::Twine &name = "", int align = 0,
+    AddressInfo *AllocaInst(llvm::Type *llvmType, llvm::Value *size, const llvm::Twine &name = "", int align = 0,
                             bool atEntryBlock = true);
     /** Emits an alloca instruction to allocate stack storage for the given
         type.  If a non-zero alignment is specified, the object is also
@@ -507,7 +507,7 @@ class FunctionEmitContext {
         instruction is added at the start of the function in the entry
         basic block; if it should be added to the current basic block, then
         the atEntryBlock parameter should be false. */
-    llvm::Value *AllocaInst(llvm::Type *llvmType, const llvm::Twine &name = "", int align = 0,
+    AddressInfo *AllocaInst(llvm::Type *llvmType, const llvm::Twine &name = "", int align = 0,
                             bool atEntryBlock = true);
 
     /** Emits an alloca instruction to allocate stack storage for the given
@@ -519,7 +519,7 @@ class FunctionEmitContext {
         This implementation is preferred when possible. It is needed when
         storage type is different from IR type. For example,
         'unform bool' is 'i1' in IR but stored as 'i8'. */
-    llvm::Value *AllocaInst(const Type *ptrType, const llvm::Twine &name = "", int align = 0, bool atEntryBlock = true);
+    AddressInfo *AllocaInst(const Type *ptrType, const llvm::Twine &name = "", int align = 0, bool atEntryBlock = true);
 
     /** Standard store instruction; for this variant, the lvalue must be a
         single pointer, not a varying lvalue.
@@ -666,14 +666,14 @@ class FunctionEmitContext {
         instructions */
     llvm::BasicBlock *bblock;
 
-    /** Pointer to stack-allocated memory that stores the current value of
+    /** AddressInfo with pointer to stack-allocated memory that stores the current value of
         the full program mask. */
-    llvm::Value *fullMaskPointer;
+    AddressInfo *fullMaskAddressInfo;
 
-    /** Pointer to stack-allocated memory that stores the current value of
+    /** AddressInfo with pointer to stack-allocated memory that stores the current value of
         the program mask representing varying control flow within the
         function. */
-    llvm::Value *internalMaskPointer;
+    AddressInfo *internalMaskAddressInfo;
 
     /** Value of the program mask when the function starts execution.  */
     llvm::Value *functionMaskValue;
@@ -691,16 +691,16 @@ class FunctionEmitContext {
         mask at the start of it. */
     llvm::Value *blockEntryMask;
 
-    /** If currently in a loop body or switch statement, this is a pointer
+    /** If currently in a loop body or switch statement, this is an AddressInfo with pointer
         to memory to store a mask value that represents which of the lanes
         have executed a 'break' statement.  If we're not in a loop body or
         switch, this should be NULL. */
-    llvm::Value *breakLanesPtr;
+    AddressInfo *breakLanesAddressInfo;
 
-    /** Similar to breakLanesPtr, if we're inside a loop, this is a pointer
+    /** Similar to breakLanesAddressInfo, if we're inside a loop, this is an AddressInfo with a pointer
         to memory to record which of the program instances have executed a
         'continue' statement. */
-    llvm::Value *continueLanesPtr;
+    AddressInfo *continueLanesAddressInfo;
 
     /** If we're inside a loop or switch statement, this gives the basic
         block immediately after the current loop or switch, which we will
@@ -730,9 +730,9 @@ class FunctionEmitContext {
         statements after the switch to execute. */
     llvm::Value *switchExpr;
 
-    /** A pointer to memory that contains mask for lanes that should be
+    /** An AddressInfo with a pointer to memory that contains mask for lanes that should be
         active in the next block */
-    llvm::Value *switchFallThroughMaskPtr;
+    AddressInfo *switchFallThroughMaskAddressInfo;
 
     /** Map from case label numbers to the basic block that will hold code
         for that case. */
@@ -755,16 +755,16 @@ class FunctionEmitContext {
     bool switchConditionWasUniform;
     /** @} */
 
-    /** A pointer to memory that records which of the program instances
+    /** AddressInfo with a pointer to memory that records which of the program instances
         have executed a 'return' statement (and are thus really truly done
         running any more instructions in this functions. */
-    llvm::Value *returnedLanesPtr;
+    AddressInfo *returnedLanesAddressInfo;
 
-    /** A pointer to memory to store the return value for the function.
+    /** AddressInfo with a pointer to memory to store the return value for the function.
         Since difference program instances may execute 'return' statements
         at different times, we need to accumulate the return values as they
         come in until we return for real. */
-    llvm::Value *returnValuePtr;
+    AddressInfo *returnValueAddressInfo;
 
     /** The CFInfo structure records information about a nesting level of
         control flow.  This vector lets us see what control flow is going
@@ -790,10 +790,10 @@ class FunctionEmitContext {
     /** True if a 'launch' statement has been encountered in the function. */
     bool launchedTasks;
 
-    /** This is a pointer to a void * that is passed to the ISPCLaunch(),
+    /** This is an AddressInfo with a pointer to a void * that is passed to the ISPCLaunch(),
         ISPCAlloc(), and ISPCSync() routines as a handle to the group ot
         tasks launched from the current function. */
-    llvm::Value *launchGroupHandlePtr;
+    AddressInfo *launchGroupHandleAddressInfo;
 
     /** Nesting count of the number of times calling code has disabled (and
         not yet reenabled) gather/scatter performance warnings. */

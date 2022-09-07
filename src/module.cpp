@@ -527,7 +527,7 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
             return;
         }
 
-        llvm::GlobalVariable *gv = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
+        llvm::GlobalVariable *gv = llvm::dyn_cast<llvm::GlobalVariable>(sym->storageInfo->getPointer());
         Assert(gv != NULL);
 
         // And issue an error if this is a redefinition of a variable
@@ -556,21 +556,22 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
     // Note that the NULL llvmInitializer is what leads to "extern"
     // declarations coming up extern and not defining storage (a bit
     // subtle)...
-    sym->storagePtr = new llvm::GlobalVariable(*module, llvmType, isConst, linkage, llvmInitializer, sym->name.c_str());
+    sym->storageInfo = new AddressInfo(
+        new llvm::GlobalVariable(*module, llvmType, isConst, linkage, llvmInitializer, sym->name.c_str()), llvmType);
 
     // Patch up any references to the previous GlobalVariable (e.g. from a
     // declaration of a global that was later defined.)
     if (oldGV != NULL) {
-        oldGV->replaceAllUsesWith(sym->storagePtr);
+        oldGV->replaceAllUsesWith(sym->storageInfo->getPointer());
         oldGV->removeFromParent();
-        sym->storagePtr->setName(sym->name.c_str());
+        sym->storageInfo->getPointer()->setName(sym->name.c_str());
     }
 
     if (diBuilder) {
         llvm::DIFile *file = pos.GetDIFile();
         llvm::DINamespace *diSpace = pos.GetDINamespace();
         // llvm::MDFile *file = pos.GetDIFile();
-        llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
+        llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storageInfo->getPointer());
         Assert(sym_GV_storagePtr);
         llvm::DIGlobalVariableExpression *var = diBuilder->createGlobalVariableExpression(
             diSpace, name, name, file, pos.first_line, sym->type->GetDIType(diSpace), (sym->storageClass == SC_STATIC));
