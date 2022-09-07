@@ -243,7 +243,7 @@ void DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
 
             // And then get it initialized...
             sym->parentFunction = ctx->GetFunction();
-            InitSymbol(sym->storageInfo->getPointer(), sym->type, initExpr, ctx, sym->pos);
+            InitSymbol(sym->storageInfo, sym->type, initExpr, ctx, sym->pos);
         }
     }
 }
@@ -1272,10 +1272,11 @@ static llvm::Constant *lCalculateDeltaForVaryingCounter(int dim, int nDims, cons
    uniformCounterPtr, compute the corresponding set of varying counter
    values for use within the loop body.
  */
-static llvm::Value *lUpdateVaryingCounter(int dim, int nDims, FunctionEmitContext *ctx, llvm::Value *uniformCounterPtr,
-                                          llvm::Value *varyingCounterPtr, const std::vector<int> &spans) {
+static llvm::Value *lUpdateVaryingCounter(int dim, int nDims, FunctionEmitContext *ctx,
+                                          AddressInfo *uniformCounterPtrInfo, AddressInfo *varyingCounterPtrInfo,
+                                          const std::vector<int> &spans) {
     // Smear the uniform counter value out to be varying
-    llvm::Value *counter = ctx->LoadInst(uniformCounterPtr);
+    llvm::Value *counter = ctx->LoadInst(uniformCounterPtrInfo->getPointer());
     llvm::Value *smearCounter = ctx->BroadcastValue(counter, LLVMTypes::Int32VectorType, "smear_counter");
 
     llvm::Constant *delta = lCalculateDeltaForVaryingCounter(dim, nDims, spans);
@@ -1283,7 +1284,7 @@ static llvm::Value *lUpdateVaryingCounter(int dim, int nDims, FunctionEmitContex
     // Add the deltas to compute the varying counter values; store the
     // result to memory and then return it directly as well.
     llvm::Value *varyingCounter = ctx->BinaryOperator(llvm::Instruction::Add, smearCounter, delta, "iter_val");
-    ctx->StoreInst(varyingCounter, varyingCounterPtr);
+    ctx->StoreInst(varyingCounter, varyingCounterPtrInfo);
     return varyingCounter;
 }
 
@@ -1412,7 +1413,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         // dimension.  Its value is only used internally here for looping
         // logic and isn't directly available in the user's program code.
         uniformCounterPtrs.push_back(ctx->AllocaInst(LLVMTypes::Int32Type, "counter"));
-        ctx->StoreInst(startVals[i], uniformCounterPtrs[i]->getPointer());
+        ctx->StoreInst(startVals[i], uniformCounterPtrs[i]);
 
         // There is also a varying variable that holds the set of index
         // values for each dimension in the current loop iteration; this is
@@ -1426,7 +1427,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         // processed.  (i.e. this is used to disable the lanes that have
         // out-of-bounds offsets.)
         extrasMaskPtrs.push_back(ctx->AllocaInst(LLVMTypes::MaskType, "extras mask"));
-        ctx->StoreInst(LLVMMaskAllOn, extrasMaskPtrs[i]->getPointer());
+        ctx->StoreInst(LLVMMaskAllOn, extrasMaskPtrs[i]);
     }
 
     ctx->StartForeach(FunctionEmitContext::FOREACH_REGULAR);
@@ -1443,8 +1444,8 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         if (i == 0)
             ctx->BranchInst(bbExit);
         else {
-            ctx->StoreInst(LLVMMaskAllOn, extrasMaskPtrs[i]->getPointer());
-            ctx->StoreInst(startVals[i], uniformCounterPtrs[i]->getPointer());
+            ctx->StoreInst(LLVMMaskAllOn, extrasMaskPtrs[i]);
+            ctx->StoreInst(startVals[i], uniformCounterPtrs[i]);
             ctx->BranchInst(bbStep[i - 1]);
         }
     }
@@ -1460,7 +1461,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[i]->getPointer());
         llvm::Value *newCounter =
             ctx->BinaryOperator(llvm::Instruction::Add, counter, LLVMInt32(span[i]), "new_counter");
-        ctx->StoreInst(newCounter, uniformCounterPtrs[i]->getPointer());
+        ctx->StoreInst(newCounter, uniformCounterPtrs[i]);
         ctx->BranchInst(bbTest[i]);
     }
 
@@ -1483,8 +1484,8 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         else
             inExtras.push_back(ctx->BinaryOperator(llvm::Instruction::Or, inEx, inExtras[i - 1], "in_extras_all"));
 
-        llvm::Value *varyingCounter = lUpdateVaryingCounter(i, nDims, ctx, uniformCounterPtrs[i]->getPointer(),
-                                                            dimVariables[i]->storageInfo->getPointer(), span);
+        llvm::Value *varyingCounter =
+            lUpdateVaryingCounter(i, nDims, ctx, uniformCounterPtrs[i], dimVariables[i]->storageInfo, span);
 
         llvm::Value *smearEnd = ctx->BroadcastValue(endVals[i], LLVMTypes::Int32VectorType, "smear_end");
 
@@ -1494,11 +1495,11 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         emask = ctx->I1VecToBoolVec(emask);
 
         if (i == 0)
-            ctx->StoreInst(emask, extrasMaskPtrs[i]->getPointer());
+            ctx->StoreInst(emask, extrasMaskPtrs[i]);
         else {
             llvm::Value *oldMask = ctx->LoadInst(extrasMaskPtrs[i - 1]->getPointer());
             llvm::Value *newMask = ctx->BinaryOperator(llvm::Instruction::And, oldMask, emask, "extras_mask");
-            ctx->StoreInst(newMask, extrasMaskPtrs[i]->getPointer());
+            ctx->StoreInst(newMask, extrasMaskPtrs[i]);
         }
 
         llvm::Value *notAtEnd = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT, counter, endVals[i]);
@@ -1569,8 +1570,8 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     {
         // Update the varying counter value here, since all subsequent
         // blocks along this path need it.
-        lUpdateVaryingCounter(nDims - 1, nDims, ctx, uniformCounterPtrs[nDims - 1]->getPointer(),
-                              dimVariables[nDims - 1]->storageInfo->getPointer(), span);
+        lUpdateVaryingCounter(nDims - 1, nDims, ctx, uniformCounterPtrs[nDims - 1],
+                              dimVariables[nDims - 1]->storageInfo, span);
 
         // here we just check to see if counter < alignedEnd
         llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims - 1]->getPointer(), NULL, "counter");
@@ -1585,7 +1586,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     // the innermost dimension but also when outer dimensions have set the
     // mask to be partially on.
     //
-    // The value stored in stepIndexAfterMaskedBodyPtr is used after each
+    // The value stored in stepIndexAfterMaskedBodyPtrInfo is used after each
     // execution of the body code to determine whether the innermost index
     // value should be incremented by the step (we're running the "for"
     // loop of full vectors at the innermost dimension, with outer
@@ -1595,7 +1596,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     // should step the loop counter for the next enclosing dimension
     // instead.
     // Revisit : Should this be an i1.
-    llvm::Value *stepIndexAfterMaskedBodyPtr = ctx->AllocaInst(LLVMTypes::BoolType, "step_index")->getPointer();
+    AddressInfo *stepIndexAfterMaskedBodyPtrInfo = ctx->AllocaInst(LLVMTypes::BoolType, "step_index");
 
     ///////////////////////////////////////////////////////////////////////////
     // We're in the inner loop part where the only masking is due to outer
@@ -1612,7 +1613,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
 
         ctx->SetInternalMask(mask);
 
-        ctx->StoreInst(LLVMTrue, stepIndexAfterMaskedBodyPtr);
+        ctx->StoreInst(LLVMTrue, stepIndexAfterMaskedBodyPtrInfo);
         ctx->BranchInst(bbMaskedBody);
     }
 
@@ -1636,7 +1637,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
             ctx->SetInternalMask(newMask);
         }
 
-        ctx->StoreInst(LLVMFalse, stepIndexAfterMaskedBodyPtr);
+        ctx->StoreInst(LLVMFalse, stepIndexAfterMaskedBodyPtrInfo);
 
         // check to see if counter != end, otherwise, the next step is not necessary
         llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims - 1]->getPointer(), NULL, "counter");
@@ -1677,8 +1678,8 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     {
         ctx->SetInternalMask(LLVMMaskAllOn);
         ctx->SetBlockEntryMask(LLVMMaskAllOn);
-        lUpdateVaryingCounter(nDims - 1, nDims, ctx, uniformCounterPtrs[nDims - 1]->getPointer(),
-                              dimVariables[nDims - 1]->storageInfo->getPointer(), span);
+        lUpdateVaryingCounter(nDims - 1, nDims, ctx, uniformCounterPtrs[nDims - 1],
+                              dimVariables[nDims - 1]->storageInfo, span);
         ctx->SetContinueTarget(bbFullBodyContinue);
         ctx->AddInstrumentationPoint("foreach loop body (all on)");
         stmts->EmitCode(ctx);
@@ -1691,7 +1692,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims - 1]->getPointer());
         llvm::Value *newCounter =
             ctx->BinaryOperator(llvm::Instruction::Add, counter, LLVMInt32(span[nDims - 1]), "new_counter");
-        ctx->StoreInst(newCounter, uniformCounterPtrs[nDims - 1]->getPointer());
+        ctx->StoreInst(newCounter, uniformCounterPtrs[nDims - 1]);
         ctx->BranchInst(bbOuterNotInExtras);
     }
 
@@ -1713,16 +1714,15 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     // mask for the innermost dimension
     ctx->SetCurrentBasicBlock(bbSetInnerMask);
     {
-        llvm::Value *varyingCounter =
-            lUpdateVaryingCounter(nDims - 1, nDims, ctx, uniformCounterPtrs[nDims - 1]->getPointer(),
-                                  dimVariables[nDims - 1]->storageInfo->getPointer(), span);
+        llvm::Value *varyingCounter = lUpdateVaryingCounter(nDims - 1, nDims, ctx, uniformCounterPtrs[nDims - 1],
+                                                            dimVariables[nDims - 1]->storageInfo, span);
         llvm::Value *smearEnd = ctx->BroadcastValue(endVals[nDims - 1], LLVMTypes::Int32VectorType, "smear_end");
         llvm::Value *emask = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT, varyingCounter, smearEnd);
         emask = ctx->I1VecToBoolVec(emask);
         ctx->SetInternalMask(emask);
         ctx->SetBlockEntryMask(emask);
 
-        ctx->StoreInst(LLVMFalse, stepIndexAfterMaskedBodyPtr);
+        ctx->StoreInst(LLVMFalse, stepIndexAfterMaskedBodyPtrInfo);
         ctx->BranchInst(bbMaskedBody);
     }
 
@@ -1747,7 +1747,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetCurrentBasicBlock(bbMaskedBodyContinue);
     {
         ctx->RestoreContinuedLanes();
-        llvm::Value *stepIndex = ctx->LoadInst(stepIndexAfterMaskedBodyPtr);
+        llvm::Value *stepIndex = ctx->LoadInst(stepIndexAfterMaskedBodyPtrInfo->getPointer());
         ctx->BranchInst(bbStepInnerIndex, bbReset[nDims - 1], stepIndex);
     }
 
@@ -1759,7 +1759,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims - 1]->getPointer());
         llvm::Value *newCounter =
             ctx->BinaryOperator(llvm::Instruction::Add, counter, LLVMInt32(span[nDims - 1]), "new_counter");
-        ctx->StoreInst(newCounter, uniformCounterPtrs[nDims - 1]->getPointer());
+        ctx->StoreInst(newCounter, uniformCounterPtrs[nDims - 1]);
         ctx->BranchInst(bbOuterInExtras);
     }
 
@@ -1851,7 +1851,7 @@ void ForeachStmt::EmitCodeForXe(FunctionEmitContext *ctx) const {
         // Init vectorized counters
         dimVariables[i]->storageInfo = ctx->AllocaInst(LLVMTypes::Int32VectorType, dimVariables[i]->name.c_str());
         dimVariables[i]->parentFunction = ctx->GetFunction();
-        ctx->StoreInst(sv, dimVariables[i]->storageInfo->getPointer());
+        ctx->StoreInst(sv, dimVariables[i]->storageInfo);
         ctx->EmitVariableDebugInfo(dimVariables[i]);
     }
 
@@ -1872,7 +1872,7 @@ void ForeachStmt::EmitCodeForXe(FunctionEmitContext *ctx) const {
             ctx->BranchInst(bbExit);
         else {
             // Reset counter for this dimension, iterate over previous one
-            ctx->StoreInst(startVals[i], dimVariables[i]->storageInfo->getPointer());
+            ctx->StoreInst(startVals[i], dimVariables[i]->storageInfo);
             ctx->BranchInst(bbStep[i - 1]);
         }
     }
@@ -1884,7 +1884,7 @@ void ForeachStmt::EmitCodeForXe(FunctionEmitContext *ctx) const {
         ctx->SetCurrentBasicBlock(bbStep[i]);
         llvm::Value *counter = ctx->LoadInst(dimVariables[i]->storageInfo->getPointer());
         llvm::Value *newCounter = ctx->BinaryOperator(llvm::Instruction::Add, counter, steps[i], "new_counter");
-        ctx->StoreInst(newCounter, dimVariables[i]->storageInfo->getPointer());
+        ctx->StoreInst(newCounter, dimVariables[i]->storageInfo);
         ctx->BranchInst(bbTest[i]);
     }
 
@@ -2088,9 +2088,9 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
 #endif
         oldFullMask = ctx->GetFullMask();
 
-    llvm::Value *maskBitsPtr = ctx->AllocaInst(LLVMTypes::Int64Type, "mask_bits")->getPointer();
+    AddressInfo *maskBitsPtrInfo = ctx->AllocaInst(LLVMTypes::Int64Type, "mask_bits");
     llvm::Value *movmsk = ctx->LaneMask(oldFullMask);
-    ctx->StoreInst(movmsk, maskBitsPtr);
+    ctx->StoreInst(movmsk, maskBitsPtrInfo);
 
     // Officially start the loop.
     ctx->StartScope();
@@ -2103,7 +2103,7 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetCurrentBasicBlock(bbFindNext);
     {
         // Load the bitmask of the lanes left to be processed
-        llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtr, NULL, "remaining_bits");
+        llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtrInfo->getPointer(), NULL, "remaining_bits");
 
         // Find the index of the first set bit in the mask
         llvm::Function *ctlzFunc = m->module->getFunction("__count_trailing_zeros_i64");
@@ -2112,7 +2112,7 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
 
         // Store that value into the storage allocated for the iteration
         // variable.
-        ctx->StoreInst(firstSet, sym->storageInfo->getPointer(), sym->type);
+        ctx->StoreInst(firstSet, sym->storageInfo, sym->type);
 
         // Now set the execution mask to be only on for the current program
         // instance.  (TODO: is there a more efficient way to do this? e.g.
@@ -2143,7 +2143,7 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *notSetMask = ctx->NotOperator(setMask);
         llvm::Value *newRemaining =
             ctx->BinaryOperator(llvm::Instruction::And, remainingBits, notSetMask, "new_remaining");
-        ctx->StoreInst(newRemaining, maskBitsPtr);
+        ctx->StoreInst(newRemaining, maskBitsPtrInfo);
 
         // and onward to run the loop body...
         // Set Xe EM through simdcf.goto
@@ -2174,7 +2174,7 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
         // statements normally, or a continue statement in the middle of
         // the loop that jumps to the end, see if there are any lanes left
         // to be processed.
-        llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtr, NULL, "remaining_bits");
+        llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtrInfo->getPointer(), NULL, "remaining_bits");
         llvm::Value *nonZero = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, remainingBits,
                                             LLVMInt64(0), "remaining_ne_zero");
         ctx->BranchInst(bbFindNext, bbDone, nonZero);
@@ -2287,9 +2287,9 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
 #endif
         oldFullMask = ctx->GetFullMask();
 
-    llvm::Value *maskBitsPtr = ctx->AllocaInst(LLVMTypes::Int64Type, "mask_bits")->getPointer();
+    AddressInfo *maskBitsPtrInfo = ctx->AllocaInst(LLVMTypes::Int64Type, "mask_bits");
     llvm::Value *movmsk = ctx->LaneMask(oldFullMask);
-    ctx->StoreInst(movmsk, maskBitsPtr);
+    ctx->StoreInst(movmsk, maskBitsPtrInfo);
 
     // Officially start the loop.
     ctx->StartForeach(FunctionEmitContext::FOREACH_UNIQUE, emulatedUniform);
@@ -2307,7 +2307,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         return;
     }
     ctx->SetDebugPos(pos);
-    llvm::Value *exprMem = ctx->AllocaInst(exprType, "expr_mem")->getPointer();
+    AddressInfo *exprMem = ctx->AllocaInst(exprType, "expr_mem");
     ctx->StoreInst(exprValue, exprMem, exprType);
 
     // Onward to find the first set of lanes to run the loop for
@@ -2316,7 +2316,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetCurrentBasicBlock(bbFindNext);
     {
         // Load the bitmask of the lanes left to be processed
-        llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtr, NULL, "remaining_bits");
+        llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtrInfo->getPointer(), NULL, "remaining_bits");
 
         // Find the index of the first set bit in the mask
         llvm::Function *ctlzFunc = m->module->getFunction("__count_trailing_zeros_i64");
@@ -2329,7 +2329,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         // Load plus EEI is more preferable way to get unique value than GEP + load.
         // It allows better register utilization for Xe targets and reduces allocas
         // number for both CPU and Xe.
-        llvm::Value *uniqueValueVec = ctx->LoadInst(exprMem, exprType, "unique_value_vec");
+        llvm::Value *uniqueValueVec = ctx->LoadInst(exprMem->getPointer(), exprType, "unique_value_vec");
         Assert(llvm::dyn_cast<llvm::VectorType>(uniqueValueVec->getType()) != NULL);
         uniqueValue =
             llvm::ExtractElementInst::Create(uniqueValueVec, firstSet, "unique_value", ctx->GetCurrentBasicBlock());
@@ -2340,7 +2340,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         Assert(uniqueValue != NULL);
         // Store that value in sym's storage so that the iteration variable
         // has the right value inside the loop body
-        ctx->StoreInst(uniqueValue, sym->storageInfo->getPointer(), sym->type);
+        ctx->StoreInst(uniqueValue, sym->storageInfo, sym->type);
 
         // Set the execution mask so that it's on for any lane that a) was
         // running at the start of the foreach loop, and b) where that
@@ -2372,7 +2372,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *notLoopMaskMM = ctx->NotOperator(loopMaskMM);
         llvm::Value *newRemaining =
             ctx->BinaryOperator(llvm::Instruction::And, remainingBits, notLoopMaskMM, "new_remaining");
-        ctx->StoreInst(newRemaining, maskBitsPtr);
+        ctx->StoreInst(newRemaining, maskBitsPtrInfo);
 
         // and onward...
         // Set Xe EM through simdcf.goto
@@ -2402,7 +2402,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         // the loop that jumps to the end, see if there are any lanes left
         // to be processed.
         ctx->RestoreContinuedLanes();
-        llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtr, NULL, "remaining_bits");
+        llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtrInfo->getPointer(), NULL, "remaining_bits");
         llvm::Value *nonZero = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, remainingBits,
                                             LLVMInt64(0), "remaining_ne_zero");
         ctx->BranchInst(bbFindNext, bbDone, nonZero);
@@ -3494,18 +3494,18 @@ void PrintStmt::emitCode4LZ(FunctionEmitContext *ctx) const {
     expression and store the result to alloca's memory.  Update the
     argTypes string with the type encoding for this expression.
  */
-static llvm::Value *lEmitPrintArgCode(Expr *expr, FunctionEmitContext *ctx) {
+static AddressInfo *lEmitPrintArgCode(Expr *expr, FunctionEmitContext *ctx) {
     const Type *type = expr->GetType();
 
     llvm::Type *llvmExprType = type->LLVMType(g->ctx);
-    llvm::Value *ptr = ctx->AllocaInst(llvmExprType, "print_arg")->getPointer();
+    AddressInfo *ptrInfo = ctx->AllocaInst(llvmExprType, "print_arg");
     llvm::Value *val = expr->GetValue(ctx);
     if (!val)
         return NULL;
-    ctx->StoreInst(val, ptr);
+    ctx->StoreInst(val, ptrInfo);
 
-    ptr = ctx->BitCastInst(ptr, LLVMTypes::VoidPointerType);
-    return ptr;
+    llvm::Value *ptr = ctx->BitCastInst(ptrInfo->getPointer(), LLVMTypes::VoidPointerType);
+    return new AddressInfo(ptr, LLVMTypes::VoidPointerType);
 }
 
 static bool lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, llvm::Value *argPtrArray, int offset,
@@ -3518,11 +3518,11 @@ static bool lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, llvm::Value *
     if (!expr)
         return false;
     argTypes.push_back(type);
-    llvm::Value *ptr = lEmitPrintArgCode(expr, ctx);
-    if (!ptr)
+    AddressInfo *ptrInfo = lEmitPrintArgCode(expr, ctx);
+    if (!ptrInfo)
         return false;
     llvm::Value *arrayPtr = ctx->AddElementOffset(argPtrArray, offset, NULL);
-    ctx->StoreInst(ptr, arrayPtr);
+    ctx->StoreInst(ptrInfo->getPointer(), new AddressInfo(arrayPtr, ptrInfo->getElementType()));
     return true;
 }
 

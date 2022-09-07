@@ -525,7 +525,7 @@ class FunctionEmitContext {
         single pointer, not a varying lvalue.
         'ptrType' needs to be provided when storage type is different from IR type. For example,
      * 'unform bool' is 'i1' in IR but stored as 'i8'. */
-    void StoreInst(llvm::Value *value, llvm::Value *ptr, const Type *ptrType = NULL, bool isUniformData = false);
+    void StoreInst(llvm::Value *value, AddressInfo *ptrInfo, const Type *ptrType = NULL, bool isUniformData = false);
 
     /** In this variant of StoreInst(), the lvalue may be varying.  If so,
         this corresponds to a scatter.  Whether the lvalue is uniform of
