@@ -256,7 +256,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
     funcStartPos = funSym->pos;
 
     internalMaskAddressInfo = AllocaInst(LLVMTypes::MaskType, "internal_mask_memory");
-    StoreInst(LLVMMaskAllOn, internalMaskAddressInfo->getPointer());
+    StoreInst(LLVMMaskAllOn, internalMaskAddressInfo);
 
     // If the function doesn't have __mask in parameters, there is no need to
     // have function mask
@@ -268,7 +268,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
     } else {
         functionMaskValue = LLVMMaskAllOn;
         fullMaskAddressInfo = AllocaInst(LLVMTypes::MaskType, "full_mask_memory");
-        StoreInst(LLVMMaskAllOn, fullMaskAddressInfo->getPointer());
+        StoreInst(LLVMMaskAllOn, fullMaskAddressInfo);
     }
 
     blockEntryMask = NULL;
@@ -281,11 +281,11 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
     nextBlocks = NULL;
 
     returnedLanesAddressInfo = AllocaInst(LLVMTypes::MaskType, "returned_lanes_memory");
-    StoreInst(LLVMMaskAllOff, returnedLanesAddressInfo->getPointer());
+    StoreInst(LLVMMaskAllOff, returnedLanesAddressInfo);
 
     launchedTasks = false;
     launchGroupHandleAddressInfo = AllocaInst(LLVMTypes::VoidPointerType, "launch_group_handle");
-    StoreInst(llvm::Constant::getNullValue(LLVMTypes::VoidPointerType), launchGroupHandleAddressInfo->getPointer());
+    StoreInst(llvm::Constant::getNullValue(LLVMTypes::VoidPointerType), launchGroupHandleAddressInfo);
 
     disableGSWarningCount = 0;
 
@@ -444,17 +444,17 @@ void FunctionEmitContext::SetFunctionMask(llvm::Value *value) {
     if (fullMaskAddressInfo != NULL) {
         functionMaskValue = value;
         if (bblock != NULL)
-            StoreInst(GetFullMask(), fullMaskAddressInfo->getPointer());
+            StoreInst(GetFullMask(), fullMaskAddressInfo);
     }
 }
 
 void FunctionEmitContext::SetBlockEntryMask(llvm::Value *value) { blockEntryMask = value; }
 
 void FunctionEmitContext::SetInternalMask(llvm::Value *value) {
-    StoreInst(value, internalMaskAddressInfo->getPointer());
+    StoreInst(value, internalMaskAddressInfo);
     // kludge so that __mask returns the right value in ispc code.
     if (fullMaskAddressInfo)
-        StoreInst(GetFullMask(), fullMaskAddressInfo->getPointer());
+        StoreInst(GetFullMask(), fullMaskAddressInfo);
 }
 
 void FunctionEmitContext::SetInternalMaskAnd(llvm::Value *oldMask, llvm::Value *test) {
@@ -577,9 +577,9 @@ void FunctionEmitContext::StartLoop(llvm::BasicBlock *bt, llvm::BasicBlock *ct, 
         // For loops with varying conditions, allocate space to store masks
         // that record which lanes have done these
         continueLanesAddressInfo = AllocaInst(LLVMTypes::MaskType, "continue_lanes_memory");
-        StoreInst(LLVMMaskAllOff, continueLanesAddressInfo->getPointer());
+        StoreInst(LLVMMaskAllOff, continueLanesAddressInfo);
         breakLanesAddressInfo = AllocaInst(LLVMTypes::MaskType, "break_lanes_memory");
-        StoreInst(LLVMMaskAllOff, breakLanesAddressInfo->getPointer());
+        StoreInst(LLVMMaskAllOff, breakLanesAddressInfo);
     }
 
     breakTarget = bt;
@@ -628,7 +628,7 @@ void FunctionEmitContext::StartForeach(ForeachType ft, bool isEmulatedUniform) {
     continueLanesAddressInfo = NULL;
     if (!isEmulatedUniform) {
         continueLanesAddressInfo = AllocaInst(LLVMTypes::MaskType, "foreach_continue_lanes");
-        StoreInst(LLVMMaskAllOff, continueLanesAddressInfo->getPointer());
+        StoreInst(LLVMMaskAllOff, continueLanesAddressInfo);
     }
 
     continueTarget = NULL; // should be set by SetContinueTarget()
@@ -707,7 +707,7 @@ void FunctionEmitContext::Break(bool doCoherenceCheck) {
         llvm::Value *mask = GetInternalMask();
         llvm::Value *breakMask = LoadInst(breakLanesAddressInfo->getPointer(), NULL, "break_mask");
         llvm::Value *newMask = BinaryOperator(llvm::Instruction::Or, mask, breakMask, "mask|break_mask");
-        StoreInst(newMask, breakLanesAddressInfo->getPointer());
+        StoreInst(newMask, breakLanesAddressInfo);
 
         // Set the current mask to be all off, just in case there are any
         // statements in the same scope after the 'break'.  Most of time
@@ -765,7 +765,7 @@ void FunctionEmitContext::Continue(bool doCoherenceCheck) {
         llvm::Value *mask = GetInternalMask();
         llvm::Value *continueMask = LoadInst(continueLanesAddressInfo->getPointer(), NULL, "continue_mask");
         llvm::Value *newMask = BinaryOperator(llvm::Instruction::Or, mask, continueMask, "mask|continueMask");
-        StoreInst(newMask, continueLanesAddressInfo->getPointer());
+        StoreInst(newMask, continueLanesAddressInfo);
 
         // And set the current mask to be all off in case there are any
         // statements in the same scope after the 'continue'
@@ -853,7 +853,7 @@ void FunctionEmitContext::RestoreContinuedLanes() {
     SetInternalMask(orMask);
 
     // continueLanes = 0
-    StoreInst(LLVMMaskAllOff, continueLanesAddressInfo->getPointer());
+    StoreInst(LLVMMaskAllOff, continueLanesAddressInfo);
 }
 
 void FunctionEmitContext::ClearBreakLanes() {
@@ -861,7 +861,7 @@ void FunctionEmitContext::ClearBreakLanes() {
         return;
 
     // breakLanes = 0
-    StoreInst(LLVMMaskAllOff, breakLanesAddressInfo->getPointer());
+    StoreInst(LLVMMaskAllOff, breakLanesAddressInfo);
 }
 
 void FunctionEmitContext::StartSwitch(bool cfIsUniform, llvm::BasicBlock *bbBreak, bool isEmulatedUniform) {
@@ -872,7 +872,7 @@ void FunctionEmitContext::StartSwitch(bool cfIsUniform, llvm::BasicBlock *bbBrea
                                                 defaultBlock, caseBlocks, nextBlocks, switchConditionWasUniform));
 
     breakLanesAddressInfo = AllocaInst(LLVMTypes::MaskType, "break_lanes_memory");
-    StoreInst(LLVMMaskAllOff, breakLanesAddressInfo->getPointer());
+    StoreInst(LLVMMaskAllOff, breakLanesAddressInfo);
     breakTarget = bbBreak;
 
     continueLanesAddressInfo = NULL;
@@ -1077,7 +1077,7 @@ void FunctionEmitContext::EmitCaseLabel(int value, bool checkMask, SourcePos pos
             // EM will be restored after this branch.
             // We need to skip case check for lanes that are
             // turned on at this point.
-            StoreInst(XeSimdCFPredicate(LLVMMaskAllOn), switchFallThroughMaskAddressInfo->getPointer());
+            StoreInst(XeSimdCFPredicate(LLVMMaskAllOn), switchFallThroughMaskAddressInfo);
         }
 
         if (emitXeHardwareMask() && !inXeSimdCF()) {
@@ -1182,7 +1182,7 @@ void FunctionEmitContext::SwitchInst(llvm::Value *expr, llvm::BasicBlock *bbDefa
         if (emitXeHardwareMask()) {
             // Init fall through mask
             switchFallThroughMaskAddressInfo = AllocaInst(LLVMTypes::MaskType, "fall_through_mask");
-            StoreInst(LLVMMaskAllOff, switchFallThroughMaskAddressInfo->getPointer());
+            StoreInst(LLVMMaskAllOff, switchFallThroughMaskAddressInfo);
         } else {
             // For a varying switch, we first turn off all lanes of the mask
             SetInternalMask(LLVMMaskAllOff);
@@ -1279,7 +1279,7 @@ void FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck
             llvm::Value *retVal = expr->GetValue(this);
             if (retVal != NULL) {
                 if (returnType->IsUniformType() || CastType<ReferenceType>(returnType) != NULL)
-                    StoreInst(retVal, returnValueAddressInfo->getPointer(), returnType, returnType->IsUniformType());
+                    StoreInst(retVal, returnValueAddressInfo, returnType, returnType->IsUniformType());
                 else {
                     // Use a masked store to store the value of the expression
                     // in the return value memory; this preserves the return
@@ -1326,7 +1326,7 @@ void FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck
         // Otherwise update returnedLanesAddressInfo and turn off all of the lanes
         // in the current mask so that any subsequent statements in the
         // same scope after the return have no effect
-        StoreInst(newReturnedLanes, returnedLanesAddressInfo->getPointer());
+        StoreInst(newReturnedLanes, returnedLanesAddressInfo);
         AddInstrumentationPoint("return: some but not all lanes have returned");
         SetInternalMask(LLVMMaskAllOff);
     }
@@ -2819,7 +2819,7 @@ void FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr, cons
         llvm::Value *maskedOld = BinaryOperator(llvm::Instruction::And, old, notMask, "old&~mask");
         llvm::Value *maskedNew = BinaryOperator(llvm::Instruction::And, value, mask, "new&mask");
         llvm::Value *final = BinaryOperator(llvm::Instruction::Or, maskedOld, maskedNew, "old_new_result");
-        StoreInst(final, ptr, valueType);
+        StoreInst(final, new AddressInfo(ptr, llvmValueStorageType), valueType);
         return;
     } else if (llvmValueStorageType == LLVMTypes::DoubleVectorType) {
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_double");
@@ -2970,16 +2970,16 @@ void FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr, const Ty
         addGSMetadata(inst, currentPos);
 }
 
-void FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr, const Type *ptrType, bool isUniformData) {
-    if (value == NULL || ptr == NULL) {
+void FunctionEmitContext::StoreInst(llvm::Value *value, AddressInfo *ptrInfo, const Type *ptrType, bool isUniformData) {
+    if (value == NULL || ptrInfo == NULL) {
         // may happen due to error elsewhere
         AssertPos(currentPos, m->errorCount > 0);
         return;
     }
+    llvm::Value *ptr = ptrInfo->getPointer();
 
     llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
     AssertPos(currentPos, pt != NULL);
-
     if ((ptrType != NULL) && (ptrType->IsBoolType())) {
         if ((CastType<AtomicType>(ptrType) != NULL)) {
             value = SwitchBoolSize(value, ptrType->LLVMStorageType(g->ctx));
@@ -2993,7 +2993,7 @@ void FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr, const 
 
     llvm::StoreInst *inst = new llvm::StoreInst(value, ptr, bblock);
 
-    if (g->opt.forceAlignedMemory && llvm::dyn_cast<llvm::VectorType>(pt->PTR_ELT_TYPE())) {
+    if (g->opt.forceAlignedMemory && llvm::dyn_cast<llvm::VectorType>(ptrInfo->getElementType())) {
         inst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne());
     }
 
@@ -3019,6 +3019,7 @@ void FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr, llvm::
     }
 
     const PointerType *ptrType = RegularizePointer(ptrRefType);
+    AddressInfo *ptrInfo = new AddressInfo(ptr, ptrType);
 
     if (CastType<UndefinedStructType>(ptrType->GetBaseType())) {
         Error(currentPos, "Unable to store to undefined struct type \"%s\".",
@@ -3033,11 +3034,11 @@ void FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr, llvm::
             storeUniformToSOA(value, ptr, mask, valueType, ptrType);
         else if (ptrType->GetBaseType()->IsUniformType())
             // the easy case
-            StoreInst(value, ptr, valueType, true);
+            StoreInst(value, ptrInfo, valueType, true);
         else if (mask == LLVMMaskAllOn && !g->opt.disableMaskAllOnOptimizations)
             // Otherwise it is a masked store unless we can determine that the
             // mask is all on...  (Unclear if this check is actually useful.)
-            StoreInst(value, ptr, valueType, false);
+            StoreInst(value, ptrInfo, valueType, false);
         else {
             maskedStore(value, ptr, ptrType, mask);
         }
@@ -3070,7 +3071,7 @@ void FunctionEmitContext::storeUniformToSOA(llvm::Value *value, llvm::Value *ptr
         // then we can do a final regular store
         AssertPos(currentPos, Type::IsBasicType(valueType));
         ptr = lFinalSliceOffset(this, ptr, &ptrType);
-        StoreInst(value, ptr, valueType, valueType->IsUniformType());
+        StoreInst(value, new AddressInfo(ptr, ptrType), valueType, valueType->IsUniformType());
     }
 }
 
@@ -3422,25 +3423,25 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
         Assert(funcType != NULL);
         const Type *returnType = funcType->GetReturnType();
         llvm::Type *llvmReturnType = returnType->LLVMType(g->ctx);
-        llvm::Value *resultPtr = NULL;
+        AddressInfo *resultPtrInfo = NULL;
         if (llvmReturnType->isVoidTy() == false)
-            resultPtr = AllocaInst(returnType)->getPointer();
+            resultPtrInfo = AllocaInst(returnType);
 
         // The memory pointed to by maskPointer tracks the set of program
         // instances for which we still need to call the function they are
         // pointing to.  It starts out initialized with the mask of
         // currently running program instances.
         llvm::Value *oldFullMask = NULL;
-        llvm::Value *maskPtr = AllocaInst(LLVMTypes::MaskType)->getPointer();
+        AddressInfo *maskPtrInfo = AllocaInst(LLVMTypes::MaskType);
         if (emitXeHardwareMask()) {
 #ifdef ISPC_XE_ENABLED
             // Current mask will be calculated according to EM mask
             oldFullMask = XeSimdCFPredicate(LLVMMaskAllOn);
-            StoreInst(oldFullMask, maskPtr, NULL, true);
+            StoreInst(oldFullMask, maskPtrInfo, NULL, true);
 #endif
         } else {
             oldFullMask = GetFullMask();
-            StoreInst(oldFullMask, maskPtr);
+            StoreInst(oldFullMask, maskPtrInfo);
         }
 
         // Mask wasn't initialized
@@ -3454,7 +3455,7 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
         // bbCall
         SetCurrentBasicBlock(bbTest);
         {
-            llvm::Value *maskLoad = LoadInst(maskPtr);
+            llvm::Value *maskLoad = LoadInst(maskPtrInfo->getPointer());
             llvm::Value *any = Any(maskLoad);
             BranchInst(bbCall, bbDone, any);
         }
@@ -3465,7 +3466,7 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
         {
             // Figure out the first lane that still needs its function
             // pointer to be called.
-            llvm::Value *currentMask = LoadInst(maskPtr);
+            llvm::Value *currentMask = LoadInst(maskPtrInfo->getPointer());
             llvm::Function *cttz = m->module->getFunction("__count_trailing_zeros_i64");
             AssertPos(currentPos, cttz != NULL);
             llvm::Value *firstLane64 = CallInst(cttz, NULL, LaneMask(currentMask), "first_lane64");
@@ -3518,15 +3519,16 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
             // Now, do a masked store into the memory allocated to
             // accumulate the result using the call mask.
             if (callResult != NULL && callResult->getType() != LLVMTypes::VoidType) {
-                AssertPos(currentPos, resultPtr != NULL);
+                AssertPos(currentPos, resultPtrInfo != NULL);
                 if (emitXeHardwareMask()) {
                     // This store will be predicated during SIMD CF Lowering
-                    StoreInst(callResult, resultPtr);
+                    StoreInst(callResult, resultPtrInfo);
                 } else {
-                    StoreInst(callResult, resultPtr, callMask, returnType, PointerType::GetUniform(returnType));
+                    StoreInst(callResult, resultPtrInfo->getPointer(), callMask, returnType,
+                              PointerType::GetUniform(returnType));
                 }
             } else
-                AssertPos(currentPos, resultPtr == NULL);
+                AssertPos(currentPos, resultPtrInfo == NULL);
 
             if (emitXeHardwareMask()) {
                 // Finish SIMDCall BB
@@ -3540,9 +3542,9 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
             llvm::Value *notCallMask = BinaryOperator(llvm::Instruction::Xor, callMask, LLVMMaskAllOn, "~callMask");
             currentMask = BinaryOperator(llvm::Instruction::And, currentMask, notCallMask, "currentMask&~callMask");
             if (emitXeHardwareMask()) {
-                StoreInst(currentMask, maskPtr, NULL, true);
+                StoreInst(currentMask, maskPtrInfo, NULL, true);
             } else {
-                StoreInst(currentMask, maskPtr);
+                StoreInst(currentMask, maskPtrInfo);
             }
 
             // And go back to the test to see if we need to do another
@@ -3554,7 +3556,7 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
         // accumulated in the result memory.
         SetCurrentBasicBlock(bbDone);
         SetInternalMask(origMask);
-        return resultPtr ? LoadInst(resultPtr, funcType->GetReturnType()) : NULL;
+        return resultPtrInfo ? LoadInst(resultPtrInfo->getPointer(), funcType->GetReturnType()) : NULL;
     }
 }
 
@@ -3636,8 +3638,6 @@ llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<ll
 
     llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(argType);
     AssertPos(currentPos, pt);
-    AssertPos(currentPos, llvm::StructType::classof(pt->PTR_ELT_TYPE()));
-
     std::vector<llvm::Type *> llvmArgTypes = funcType->LLVMFunctionArgTypes(g->ctx);
     llvm::StructType *argStructType = llvm::StructType::get(*g->ctx, llvmArgTypes);
     AssertPos(currentPos, argStructType != NULL);
@@ -3663,14 +3663,14 @@ llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<ll
     for (unsigned int i = 0; i < argVals.size(); ++i) {
         llvm::Value *ptr = AddElementOffset(argmem, i, NULL, "funarg");
         // don't need to do masked store here, I think
-        StoreInst(argVals[i], ptr);
+        StoreInst(argVals[i], new AddressInfo(ptr, llvmArgTypes[i]));
     }
 
     if (argStructType->getNumElements() == argVals.size() + 1) {
         // copy in the mask
         llvm::Value *mask = GetFullMask();
         llvm::Value *ptr = AddElementOffset(argmem, argVals.size(), NULL, "funarg_mask");
-        StoreInst(mask, ptr);
+        StoreInst(mask, new AddressInfo(ptr, LLVMTypes::MaskType));
     }
 
     // And emit the call to the user-supplied task launch function, passing
@@ -3710,7 +3710,7 @@ void FunctionEmitContext::SyncInst() {
 
     // zero out the handle so that if ISPCLaunch is called again in this
     // function, it knows it's starting out from scratch
-    StoreInst(nullPtrValue, launchGroupHandleAddressInfo->getPointer());
+    StoreInst(nullPtrValue, launchGroupHandleAddressInfo);
 
     BranchInst(bPostSync);
 
@@ -3857,10 +3857,10 @@ llvm::Value *FunctionEmitContext::XePrepareVectorBranch(llvm::Value *value) {
 llvm::Value *FunctionEmitContext::XeStartUnmaskedRegion() {
     auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_unmask_begin);
     std::vector<llvm::Value *> args;
-    llvm::Value *maskAlloca = AllocaInst(LLVMTypes::Int32Type)->getPointer();
+    AddressInfo *maskAlloca = AllocaInst(LLVMTypes::Int32Type);
     llvm::Value *execMask = llvm::CallInst::Create(Fn, args, "", bblock);
     StoreInst(execMask, maskAlloca);
-    return maskAlloca;
+    return maskAlloca->getPointer();
 }
 
 void FunctionEmitContext::XeEndUnmaskedRegion(llvm::Value *execMask) {
@@ -3947,9 +3947,9 @@ llvm::Value *FunctionEmitContext::InvokeSyclInst(llvm::Value *func, const Functi
     llvm::BasicBlock *bbExternalCall = NULL;
     llvm::BasicBlock *bbExternalCallJoin = NULL;
 #endif
-    llvm::Value *resultPtr = NULL;
+    AddressInfo *resultPtrInfo = NULL;
     if (returnType->IsVoidType() == false)
-        resultPtr = AllocaInst(returnType)->getPointer();
+        resultPtrInfo = AllocaInst(returnType);
 #if 0
     // Prototype set of HW mask before invoke_sycl call
     if (g->target->isXeTarget()) {
@@ -3981,7 +3981,7 @@ llvm::Value *FunctionEmitContext::InvokeSyclInst(llvm::Value *func, const Functi
 
     llvm::Value *callResult = CallInst(func, funcType, argsFinal, returnType->IsVoidType() ? "" : "calltmp");
     if (returnType->IsVoidType() == false) {
-        StoreInst(callResult, resultPtr);
+        StoreInst(callResult, resultPtrInfo);
     }
 #if 0
     // Finish SIMDCall BB
@@ -3990,8 +3990,8 @@ llvm::Value *FunctionEmitContext::InvokeSyclInst(llvm::Value *func, const Functi
         SetCurrentBasicBlock(bbExternalCallJoin);
     }
 #endif
-    if (resultPtr) {
-        llvm::Value *res = LoadInst(resultPtr, returnType);
+    if (resultPtrInfo) {
+        llvm::Value *res = LoadInst(resultPtrInfo->getPointer(), returnType);
         if (broadcastReturnVal) {
             // If return value was broadcasted, extract the first element from broadcasted result
             // and use it as a final result.

@@ -38,6 +38,7 @@
 #pragma once
 
 #include "ast.h"
+#include "ctx.h"
 #include "ispc.h"
 #include "type.h"
 
@@ -820,7 +821,7 @@ Expr *MakeBinaryExpr(BinaryExpr::Op o, Expr *a, Expr *b, SourcePos p);
     @param ctx       FunctionEmitContext to use for generating instructions
     @param pos       Source file position of the variable being initialized
 */
-void InitSymbol(llvm::Value *lvalue, const Type *symType, Expr *initExpr, FunctionEmitContext *ctx, SourcePos pos);
+void InitSymbol(AddressInfo *lvalue, const Type *symType, Expr *initExpr, FunctionEmitContext *ctx, SourcePos pos);
 
 bool PossiblyResolveFunctionOverloads(Expr *expr, const Type *type);
 } // namespace ispc
