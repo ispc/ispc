@@ -2518,17 +2518,13 @@ FunctionType::FunctionMangledName FunctionType::GetFunctionMangledName(bool appF
     return mangle;
 }
 
-llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
-    if (!g->target->isXeTarget() && isTask == true) {
-        Assert(removeMask == false);
-    }
-
+std::vector<llvm::Type *> FunctionType::LLVMFunctionArgTypes(llvm::LLVMContext *ctx, bool removeMask) const {
     // Get the LLVM Type *s for the function arguments
     std::vector<llvm::Type *> llvmArgTypes;
     for (unsigned int i = 0; i < paramTypes.size(); ++i) {
         if (paramTypes[i] == NULL) {
             Assert(m->errorCount > 0);
-            return NULL;
+            return llvmArgTypes;
         }
         Assert(paramTypes[i]->IsVoidType() == false);
 
@@ -2559,7 +2555,7 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
 
         if (castedArgType == NULL) {
             Assert(m->errorCount > 0);
-            return NULL;
+            return llvmArgTypes;
         }
         llvmArgTypes.push_back(castedArgType);
     }
@@ -2568,6 +2564,15 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
     if (!(removeMask || isUnmasked || IsISPCKernel())) {
         llvmArgTypes.push_back(LLVMTypes::MaskType);
     }
+    return llvmArgTypes;
+}
+
+llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
+    if (!g->target->isXeTarget() && isTask == true) {
+        Assert(removeMask == false);
+    }
+
+    std::vector<llvm::Type *> llvmArgTypes = LLVMFunctionArgTypes(ctx, removeMask);
 
     std::vector<llvm::Type *> callTypes;
     if (isTask && (!g->target->isXeTarget())) {

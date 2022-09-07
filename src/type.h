@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -887,6 +887,11 @@ class FunctionType : public Type {
         The \c appFunction parameter indicates whether the function is generated for
         internal ISPC call or for external call from application.*/
     FunctionMangledName GetFunctionMangledName(bool appFunction) const;
+
+    /** This method returns std::vector of LLVM types of function arguments.
+        The \c disableMask parameter indicates whether the mask parameter should be
+        included to the list of arguments types. */
+    std::vector<llvm::Type *> LLVMFunctionArgTypes(llvm::LLVMContext *ctx, bool disableMask = false) const;
 
     /** This method returns the LLVM FunctionType that corresponds to this
         function type.  The \c disableMask parameter indicates whether the
