@@ -70,11 +70,6 @@ class Symbol {
 
     SourcePos pos;            /*!< Source file position where the symbol was defined */
     std::string name;         /*!< Symbol's name */
-    llvm::Value *storagePtr;  /*!< For symbols with storage associated with
-                                   them (i.e. variables but not functions),
-                                   this member stores a pointer to its
-                                   location in memory.)
-                                   DEPRECATED. Use storageInfo instead. */
     AddressInfo *storageInfo; /*!< For symbols with storage associated with
                                    them (i.e. variables but not functions),
                                    this member stores an address info: pointer to
@@ -96,7 +91,7 @@ class Symbol {
                                     example, the ConstExpr class can't currently represent
                                     struct types.  For cases like these, ConstExpr is NULL,
                                     though for all const symbols, the value pointed to by the
-                                    storagePtr member will be its constant value.  (This
+                                    storageInfo pointer member will be its constant value.  (This
                                     messiness is due to needing an ispc ConstExpr for the early
                                     constant folding optimizations). */
     StorageClass storageClass; /*!< Records the storage class (if any) provided with the

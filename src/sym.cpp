@@ -49,7 +49,6 @@ using namespace ispc;
 // Symbol
 
 Symbol::Symbol(const std::string &n, SourcePos p, const Type *t, StorageClass sc) : pos(p), name(n) {
-    storagePtr = NULL;
     storageInfo = NULL;
     function = exportedFunction = NULL;
     type = t;

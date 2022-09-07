@@ -1747,7 +1747,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
         AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
-    llvm::Value *retPtr = ctx->AllocaInst(retType, "logical_op_mem");
+    llvm::Value *retPtr = ctx->AllocaInst(retType, "logical_op_mem")->getPointer();
     llvm::BasicBlock *bbSkipEvalValue1 = ctx->CreateBasicBlock("skip_eval_1", ctx->GetCurrentBasicBlock());
     llvm::BasicBlock *bbEvalValue1 = ctx->CreateBasicBlock("eval_1", bbSkipEvalValue1);
     llvm::BasicBlock *bbLogicalDone = ctx->CreateBasicBlock("logical_op_done", bbEvalValue1);
@@ -3269,7 +3269,7 @@ SelectExpr::SelectExpr(Expr *t, Expr *e1, Expr *e2, SourcePos p) : Expr(p, Selec
 static llvm::Value *lEmitVaryingSelect(FunctionEmitContext *ctx, llvm::Value *test, llvm::Value *expr1,
                                        llvm::Value *expr2, const Type *type) {
 
-    llvm::Value *resultPtr = ctx->AllocaInst(type, "selectexpr_tmp");
+    llvm::Value *resultPtr = ctx->AllocaInst(type, "selectexpr_tmp")->getPointer();
     Assert(resultPtr != NULL);
     // Don't need to worry about masking here
     ctx->StoreInst(expr2, resultPtr, type, type->IsUniformType());
@@ -3393,8 +3393,8 @@ llvm::Value *SelectExpr::GetValue(FunctionEmitContext *ctx) const {
         // Temporary storage to store the values computed for each
         // expression, if any.  (These stay as uninitialized memory if we
         // short circuit around the corresponding expression.)
-        llvm::Value *expr1Ptr = ctx->AllocaInst(expr1->GetType());
-        llvm::Value *expr2Ptr = ctx->AllocaInst(expr1->GetType());
+        llvm::Value *expr1Ptr = ctx->AllocaInst(expr1->GetType())->getPointer();
+        llvm::Value *expr2Ptr = ctx->AllocaInst(expr1->GetType())->getPointer();
 
         if (shortCircuit1)
             lEmitSelectExprCode(ctx, testVal, oldMask, fullMask, expr1, expr1Ptr);
@@ -4373,7 +4373,7 @@ llvm::Value *IndexExpr::GetValue(FunctionEmitContext *ctx) const {
             return NULL;
         }
         ctx->SetDebugPos(pos);
-        llvm::Value *tmpPtr = ctx->AllocaInst(baseExprType, "array_tmp");
+        llvm::Value *tmpPtr = ctx->AllocaInst(baseExprType, "array_tmp")->getPointer();
         ctx->StoreInst(val, tmpPtr, baseExprType, baseExprType->IsUniformType());
 
         // Get a pointer type to the underlying elements
@@ -5048,7 +5048,7 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
         if (basePtr == NULL || basePtrType == NULL) {
             // Check that expression on the left side is a rvalue expression
             llvm::Value *exprValue = expr->GetValue(ctx);
-            basePtr = ctx->AllocaInst(expr->GetType());
+            basePtr = ctx->AllocaInst(expr->GetType())->getPointer();
             basePtrType = PointerType::GetUniform(exprVectorType);
             if (basePtr == NULL || basePtrType == NULL) {
                 AssertPos(pos, m->errorCount > 0);
@@ -5058,7 +5058,7 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
         }
 
         // Allocate temporary memory to store the result
-        llvm::Value *resultPtr = ctx->AllocaInst(memberType, "vector_tmp");
+        llvm::Value *resultPtr = ctx->AllocaInst(memberType, "vector_tmp")->getPointer();
 
         if (resultPtr == NULL) {
             AssertPos(pos, m->errorCount > 0);
@@ -5205,7 +5205,7 @@ llvm::Value *MemberExpr::GetValue(FunctionEmitContext *ctx) const {
         }
         ctx->SetDebugPos(pos);
         const Type *exprType = expr->GetType();
-        llvm::Value *ptr = ctx->AllocaInst(exprType, "struct_tmp");
+        llvm::Value *ptr = ctx->AllocaInst(exprType, "struct_tmp")->getPointer();
         ctx->StoreInst(val, ptr, exprType, exprType->IsUniformType());
 
         int elementNumber = getElementNumber();
@@ -7207,7 +7207,7 @@ std::pair<llvm::Constant *, bool> TypeCastExpr::GetConstant(const Type *constTyp
 
     llvm::Value *ptr = NULL;
     if (GetBaseSymbol())
-        ptr = GetBaseSymbol()->storagePtr;
+        ptr = GetBaseSymbol()->storageInfo ? GetBaseSymbol()->storageInfo->getPointer() : NULL;
 
     if (ptr && llvm::dyn_cast<llvm::GlobalVariable>(ptr)) {
         if (CastType<ArrayType>(expr->GetType())) {
@@ -7258,7 +7258,7 @@ llvm::Value *ReferenceExpr::GetValue(FunctionEmitContext *ctx) const {
         return NULL;
     }
 
-    llvm::Value *ptr = ctx->AllocaInst(type);
+    llvm::Value *ptr = ctx->AllocaInst(type)->getPointer();
     ctx->StoreInst(value, ptr, type, expr->GetType()->IsUniformType());
     return ptr;
 }
@@ -7596,7 +7596,7 @@ std::pair<llvm::Constant *, bool> AddressOfExpr::GetConstant(const Type *type) c
     }
     llvm::Value *ptr = NULL;
     if (GetBaseSymbol())
-        ptr = GetBaseSymbol()->storagePtr;
+        ptr = GetBaseSymbol()->storageInfo ? GetBaseSymbol()->storageInfo->getPointer() : NULL;
     if (ptr && llvm::dyn_cast<llvm::GlobalVariable>(ptr)) {
         const Type *eTYPE = GetType();
         if (type->LLVMType(g->ctx) == eTYPE->LLVMType(g->ctx)) {
@@ -7722,7 +7722,8 @@ llvm::Value *AllocaExpr::GetValue(FunctionEmitContext *ctx) const {
     if (llvmValue == NULL)
         return NULL;
     llvm::Value *resultPtr = ctx->AllocaInst((LLVMTypes::VoidPointerType)->PTR_ELT_TYPE(), llvmValue, "allocaExpr", 16,
-                                             false); // 16 byte stack alignment.
+                                             false)
+                                 ->getPointer(); // 16 byte stack alignment.
     return resultPtr;
 }
 
@@ -7772,8 +7773,8 @@ int AllocaExpr::EstimateCost() const { return 0; }
 SymbolExpr::SymbolExpr(Symbol *s, SourcePos p) : Expr(p, SymbolExprID) { symbol = s; }
 
 llvm::Value *SymbolExpr::GetValue(FunctionEmitContext *ctx) const {
-    // storagePtr may be NULL due to an earlier compilation error
-    if (!symbol || !symbol->storagePtr)
+    // storageInfo may be NULL due to an earlier compilation error
+    if (!symbol || !symbol->storageInfo)
         return NULL;
     ctx->SetDebugPos(pos);
 
@@ -7785,14 +7786,14 @@ llvm::Value *SymbolExpr::GetValue(FunctionEmitContext *ctx) const {
         return ctx->XeSimdCFPredicate(LLVMMaskAllOn);
     }
 #endif
-    return ctx->LoadInst(symbol->storagePtr, symbol->type, loadName.c_str());
+    return ctx->LoadInst(symbol->storageInfo->getPointer(), symbol->type, loadName.c_str());
 }
 
 llvm::Value *SymbolExpr::GetLValue(FunctionEmitContext *ctx) const {
     if (symbol == NULL)
         return NULL;
     ctx->SetDebugPos(pos);
-    return symbol->storagePtr;
+    return symbol->storageInfo->getPointer();
 }
 
 const Type *SymbolExpr::GetLValueType() const {

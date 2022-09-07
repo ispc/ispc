@@ -1087,7 +1087,7 @@ static void lDefineConstantInt(const char *name, int val, llvm::Module *module, 
     llvm::Constant *linit = LLVMInt32(val);
     auto GV = new llvm::GlobalVariable(*module, ltype, true, llvm::GlobalValue::InternalLinkage, linit, name);
     dbg_sym.push_back(GV);
-    sym->storagePtr = GV;
+    sym->storageInfo = new AddressInfo(GV, GV->getValueType());
     symbolTable->AddVariable(sym);
 
     if (m->diBuilder != NULL) {
@@ -1097,7 +1097,7 @@ static void lDefineConstantInt(const char *name, int val, llvm::Module *module, 
         // FIXME? DWARF says that this (and programIndex below) should
         // have the DW_AT_artifical attribute.  It's not clear if this
         // matters for anything though.
-        llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
+        llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storageInfo->getPointer());
         Assert(sym_GV_storagePtr);
         llvm::DIGlobalVariableExpression *var =
             m->diBuilder->createGlobalVariableExpression(cu, name, name, file, 0 /* line */, diType, true /* static */);
@@ -1142,14 +1142,14 @@ static void lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable,
     auto GV =
         new llvm::GlobalVariable(*module, ltype, true, llvm::GlobalValue::InternalLinkage, linit, sym->name.c_str());
     dbg_sym.push_back(GV);
-    sym->storagePtr = GV;
+    sym->storageInfo = new AddressInfo(GV, GV->getValueType());
     symbolTable->AddVariable(sym);
 
     if (m->diBuilder != NULL) {
         llvm::DIFile *file = m->diCompileUnit->getFile();
         llvm::DICompileUnit *cu = m->diCompileUnit;
         llvm::DIType *diType = sym->type->GetDIType(file);
-        llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
+        llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storageInfo->getPointer());
         Assert(sym_GV_storagePtr);
         llvm::DIGlobalVariableExpression *var = m->diBuilder->createGlobalVariableExpression(
             cu, sym->name.c_str(), sym->name.c_str(), file, 0 /* line */, diType, false /* static */);
