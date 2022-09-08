@@ -179,7 +179,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       LLVM_VERSION: "14.0"
-      LLVM_TAR: llvm-14.0.3-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-14.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@v3
@@ -215,7 +215,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       LLVM_VERSION: "14.0"
-      LLVM_TAR: llvm-14.0.3-ubuntu18.04-Release-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-14.0.6-ubuntu18.04-Release-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@v3
@@ -251,7 +251,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       LLVM_VERSION: "14.0"
-      LLVM_TAR: llvm-14.0.3-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-14.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@v3
@@ -868,7 +868,7 @@ jobs:
     runs-on: windows-2019
     env:
       LLVM_VERSION: "14.0"
-      LLVM_TAR: llvm-14.0.3-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      LLVM_TAR: llvm-14.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
       LLVM_HOME: "C:\\projects\\llvm"
       CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       BUILD_TYPE: "Release"
