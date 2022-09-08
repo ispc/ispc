@@ -662,6 +662,9 @@ struct Globals {
     /** Whether to dump IR to file. */
     bool dumpFile;
 
+    /** Store the path to directory for IR file dumps. */
+    std::string dumpFilePath;
+
     /** Indicates after which optimization we want to generate
         DebugIR information. */
     int debugIR;
