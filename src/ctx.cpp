@@ -1279,7 +1279,7 @@ void FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck
             llvm::Value *retVal = expr->GetValue(this);
             if (retVal != NULL) {
                 if (returnType->IsUniformType() || CastType<ReferenceType>(returnType) != NULL)
-                    StoreInst(retVal, returnValueAddressInfo, returnType, returnType->IsUniformType());
+                    StoreInst(retVal, returnValueAddressInfo, returnType);
                 else {
                     // Use a masked store to store the value of the expression
                     // in the return value memory; this preserves the return
@@ -2970,7 +2970,7 @@ void FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr, const Ty
         addGSMetadata(inst, currentPos);
 }
 
-void FunctionEmitContext::StoreInst(llvm::Value *value, AddressInfo *ptrInfo, const Type *ptrType, bool isUniformData) {
+void FunctionEmitContext::StoreInst(llvm::Value *value, AddressInfo *ptrInfo, const Type *ptrType) {
     if (value == NULL || ptrInfo == NULL) {
         // may happen due to error elsewhere
         AssertPos(currentPos, m->errorCount > 0);
@@ -2997,16 +2997,6 @@ void FunctionEmitContext::StoreInst(llvm::Value *value, AddressInfo *ptrInfo, co
         inst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne());
     }
 
-#ifdef ISPC_XE_ENABLED
-    // For uniform data like short vectors we need to add ISPC-Uniform metadata
-    // to exclude these instructions from predication in SIMDCFLowering pass.
-    llvm::VectorType *ty = llvm::dyn_cast<llvm::VectorType>(value->getType());
-    if (ty != NULL) {
-        if (emitXeHardwareMask() && isUniformData) {
-            XeUniformMetadata(inst);
-        }
-    }
-#endif
     AddDebugPos(inst);
 }
 
@@ -3034,11 +3024,11 @@ void FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr, llvm::
             storeUniformToSOA(value, ptr, mask, valueType, ptrType);
         else if (ptrType->GetBaseType()->IsUniformType())
             // the easy case
-            StoreInst(value, ptrInfo, valueType, true);
+            StoreInst(value, ptrInfo, valueType);
         else if (mask == LLVMMaskAllOn && !g->opt.disableMaskAllOnOptimizations)
             // Otherwise it is a masked store unless we can determine that the
             // mask is all on...  (Unclear if this check is actually useful.)
-            StoreInst(value, ptrInfo, valueType, false);
+            StoreInst(value, ptrInfo, valueType);
         else {
             maskedStore(value, ptr, ptrType, mask);
         }
@@ -3071,7 +3061,7 @@ void FunctionEmitContext::storeUniformToSOA(llvm::Value *value, llvm::Value *ptr
         // then we can do a final regular store
         AssertPos(currentPos, Type::IsBasicType(valueType));
         ptr = lFinalSliceOffset(this, ptr, &ptrType);
-        StoreInst(value, new AddressInfo(ptr, ptrType), valueType, valueType->IsUniformType());
+        StoreInst(value, new AddressInfo(ptr, ptrType), valueType);
     }
 }
 
@@ -3437,12 +3427,11 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
 #ifdef ISPC_XE_ENABLED
             // Current mask will be calculated according to EM mask
             oldFullMask = XeSimdCFPredicate(LLVMMaskAllOn);
-            StoreInst(oldFullMask, maskPtrInfo, NULL, true);
 #endif
         } else {
             oldFullMask = GetFullMask();
-            StoreInst(oldFullMask, maskPtrInfo);
         }
+        StoreInst(oldFullMask, maskPtrInfo);
 
         // Mask wasn't initialized
         Assert(oldFullMask != NULL && "Mask is not initialized");
@@ -3541,11 +3530,7 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
             // currentMask = currentMask & ~callmask
             llvm::Value *notCallMask = BinaryOperator(llvm::Instruction::Xor, callMask, LLVMMaskAllOn, "~callMask");
             currentMask = BinaryOperator(llvm::Instruction::And, currentMask, notCallMask, "currentMask&~callMask");
-            if (emitXeHardwareMask()) {
-                StoreInst(currentMask, maskPtrInfo, NULL, true);
-            } else {
-                StoreInst(currentMask, maskPtrInfo);
-            }
+            StoreInst(currentMask, maskPtrInfo);
 
             // And go back to the test to see if we need to do another
             // call.

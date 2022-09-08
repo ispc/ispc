@@ -265,7 +265,7 @@ static void lCopyInTaskParameter(int i, AddressInfo *structArgPtrInfo, const std
     // and copy the value from the struct and into the local alloca'ed
     // memory
     llvm::Value *ptrval = ctx->LoadInst(ptr, sym->type, sym->name.c_str());
-    ctx->StoreInst(ptrval, sym->storageInfo, sym->type, sym->type->IsUniformType());
+    ctx->StoreInst(ptrval, sym->storageInfo, sym->type);
     ctx->EmitFunctionParameterDebugInfo(sym, i);
 }
 
