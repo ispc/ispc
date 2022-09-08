@@ -1,37 +1,89 @@
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -h %t.h --emit-llvm-text -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s --check-prefixes CHECK_ALL,CHECK_BLOCK
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -h %t.h --emit-llvm-text -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s --check-prefixes CHECK_ALL,CHECK_BLOCK
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe32 -h %t.h --emit-llvm-text -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s --check-prefixes CHECK_ALL,CHECK_BLOCK
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe32 -h %t.h --emit-llvm-text -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s --check-prefixes CHECK_ALL,CHECK_BLOCK
+// This test case checks for the XeGatherCoalescing pass's ability to coalesce
+//   block loads in the simple case - inline loads to contiguous addresses.
+// This test should pass more easily relative to cases where the block loads
+//   occur inside a loop or uses non-constant terms for indexing - these cases
+//   are split into separate tests.
 
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -h %t.h --emit-llvm-text -o %t.ll --opt=build-llvm-loads-on-xe-gather-coalescing
-// RUN: FileCheck --input-file=%t.ll %s --check-prefixes CHECK_ALL,CHECK_LOAD
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -h %t.h --emit-llvm-text -o %t.ll --opt=build-llvm-loads-on-xe-gather-coalescing
-// RUN: FileCheck --input-file=%t.ll %s --check-prefixes CHECK_ALL,CHECK_LOAD
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe32 -h %t.h --emit-llvm-text -o %t.ll --opt=build-llvm-loads-on-xe-gather-coalescing
-// RUN: FileCheck --input-file=%t.ll %s --check-prefixes CHECK_ALL,CHECK_LOAD
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe32 -h %t.h --emit-llvm-text -o %t.ll --opt=build-llvm-loads-on-xe-gather-coalescing
-// RUN: FileCheck --input-file=%t.ll %s --check-prefixes CHECK_ALL,CHECK_LOAD
-// REQUIRES: XE_ENABLED
 
-#define LOAD(n)               \
-    do {                      \
-        if (n < programCount) \
-            a[n] = _in[n];    \
-    } while (false)
+// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -h %t.h --emit-llvm-text --debug-phase=321:321 --dump-file=%t -o /dev/null
+// RUN: FileCheck --input-file %t/ir_321_XeGatherCoalescing.ll %s --check-prefixes CHECK_ALL,CHECK_LOAD_INLINE4,CHECK_LOAD_INLINE16
+// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -h %t.h --emit-llvm-text --debug-phase=321:321 --dump-file=%t -o /dev/null
+// RUN: FileCheck --input-file %t/ir_321_XeGatherCoalescing.ll %s --check-prefixes CHECK_ALL,CHECK_LOAD_INLINE4,CHECK_LOAD_INLINE16
+// RUN: %{ispc} %s --target=gen9-x16 --arch=xe32 -h %t.h --emit-llvm-text --debug-phase=321:321 --dump-file=%t -o /dev/null
+// RUN: FileCheck --input-file %t/ir_321_XeGatherCoalescing.ll %s --check-prefixes CHECK_ALL,CHECK_LOAD_INLINE4,CHECK_LOAD_INLINE16
+// RUN: %{ispc} %s --target=gen9-x8 --arch=xe32 -h %t.h --emit-llvm-text --debug-phase=321:321 --dump-file=%t -o /dev/null
+// RUN: FileCheck --input-file %t/ir_321_XeGatherCoalescing.ll %s --check-prefixes CHECK_ALL,CHECK_LOAD_INLINE4,CHECK_LOAD_INLINE16
 
-// CHECK_ALL-LABEL: gather_coalescing
-// CHECK_BLOCK: @llvm.genx.svm.block.ld
-// CHECK_LOAD: %vectorized_ld_exp = load
-task void gather_coalescing(uniform float _out[], uniform float _in[]) {
-    uniform int a[programCount];
+
+// REQUIRES:  XE_ENABLED
+// XFAIL:     XE_ENABLED
+
+#define LOAD(n)   \
+    a[n] = _in[n]
+
+#define NUM 64
+
+
+// CHECK_ALL-LABEL:     @gather_coalescing_inline4
+
+// CHECK_LOAD_INLINE4:  %vectorized_ptrtoint = ptrtoint float* %_in to i64
+// CHECK_LOAD_INLINE4:  %vectorized_address = add i64 %vectorized_ptrtoint, 0
+// CHECK_LOAD_INLINE4:  %vectorized_address_ptr = inttoptr i64 %vectorized_address to <4 x float>*
+// CHECK_LOAD_INLINE4:  %vectorized_ld_exp = load <4 x float>, <4 x float>* %vectorized_address_ptr
+// CHECK_LOAD_INLINE4:  %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 0
+// CHECK_LOAD_INLINE4:  %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 1
+// CHECK_LOAD_INLINE4:  %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 2
+// CHECK_LOAD_INLINE4:  %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 3
+
+task void gather_coalescing_inline4(uniform float _out[], uniform float _in[]) {
+    uniform float a[NUM];
 
     // Initialization
-    for (uniform int i = 0; i < programCount; ++i)
-        a[i] = 0;
+    for (uniform int i = 0; i < NUM; i++)
+        a[i] = 0.0f;
+
+    LOAD(0);
+    LOAD(1);
+    LOAD(2);
+    LOAD(3);
+
+    // Perform calculation on loaded values
+    for (uniform int i = 0; i < NUM; i++)
+        a[i] *= (i + 1);
+
+    _out[programIndex] = a[programIndex];
+}
+
+
+// CHECK_ALL-LABEL:       @gather_coalescing_inline16
+
+// CHECK_LOAD_INLINE16:   %vectorized_ptrtoint = ptrtoint float* %_in to i64
+// CHECK_LOAD_INLINE16:   %vectorized_address = add i64 %vectorized_ptrtoint, 0
+// CHECK_LOAD_INLINE16:   %vectorized_address_ptr = inttoptr i64 %vectorized_address to <16 x float>*
+// CHECK_LOAD_INLINE16:   %vectorized_ld_exp = load <16 x float>, <16 x float>* %vectorized_address_ptr
+// CHECK_LOAD_INLINE16:   %mem_coal_eei{{[0-9]*}} = extractelement <16 x float> %vectorized_ld_exp, i64 0
+// CHECK_LOAD_INLINE16:   %mem_coal_eei{{[0-9]*}} = extractelement <16 x float> %vectorized_ld_exp, i64 1
+// CHECK_LOAD_INLINE16:   %mem_coal_eei{{[0-9]*}} = extractelement <16 x float> %vectorized_ld_exp, i64 2
+// CHECK_LOAD_INLINE16:   %mem_coal_eei{{[0-9]*}} = extractelement <16 x float> %vectorized_ld_exp, i64 3
+// CHECK_LOAD_INLINE16:   %mem_coal_eei{{[0-9]*}} = extractelement <16 x float> %vectorized_ld_exp, i64 4
+// CHECK_LOAD_INLINE16:   %mem_coal_eei{{[0-9]*}} = extractelement <16 x float> %vectorized_ld_exp, i64 5
+// CHECK_LOAD_INLINE16:   %mem_coal_eei{{[0-9]*}} = extractelement <16 x float> %vectorized_ld_exp, i64 6
+// CHECK_LOAD_INLINE16:   %mem_coal_eei{{[0-9]*}} = extractelement <16 x float> %vectorized_ld_exp, i64 7
+// CHECK_LOAD_INLINE16:   %mem_coal_eei{{[0-9]*}} = extractelement <16 x float> %vectorized_ld_exp, i64 8
+// CHECK_LOAD_INLINE16:   %mem_coal_eei{{[0-9]*}} = extractelement <16 x float> %vectorized_ld_exp, i64 9
+// CHECK_LOAD_INLINE16:   %mem_coal_eei{{[0-9]*}} = extractelement <16 x float> %vectorized_ld_exp, i64 10
+// CHECK_LOAD_INLINE16:   %mem_coal_eei{{[0-9]*}} = extractelement <16 x float> %vectorized_ld_exp, i64 11
+// CHECK_LOAD_INLINE16:   %mem_coal_eei{{[0-9]*}} = extractelement <16 x float> %vectorized_ld_exp, i64 12
+// CHECK_LOAD_INLINE16:   %mem_coal_eei{{[0-9]*}} = extractelement <16 x float> %vectorized_ld_exp, i64 13
+// CHECK_LOAD_INLINE16:   %mem_coal_eei{{[0-9]*}} = extractelement <16 x float> %vectorized_ld_exp, i64 14
+// CHECK_LOAD_INLINE16:   %mem_coal_eei{{[0-9]*}} = extractelement <16 x float> %vectorized_ld_exp, i64 15
+
+task void gather_coalescing_inline16(uniform float _out[], uniform float _in[]) {
+    uniform float a[NUM];
+
+    // Initialization
+    for (uniform int i = 0; i < NUM; i++)
+        a[i] = 0.0f;
 
     LOAD(0);
     LOAD(1);
@@ -50,10 +102,8 @@ task void gather_coalescing(uniform float _out[], uniform float _in[]) {
     LOAD(14);
     LOAD(15);
 
-    uniform int elem_num = programCount > 16 ? 16 : programCount;
-
     // Perform calculation on loaded values
-    for (uniform int i = 0; i < elem_num; ++i)
+    for (uniform int i = 0; i < NUM; i++)
         a[i] *= (i + 1);
 
     _out[programIndex] = a[programIndex];
