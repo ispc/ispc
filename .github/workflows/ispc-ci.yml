@@ -210,72 +210,6 @@ jobs:
         name: ispc_llvm14_linux
         path: build/ispc-trunk-linux.tar.gz
 
-  linux-build-ispc-llvm14-release:
-    needs: [define-flow]
-    runs-on: ubuntu-latest
-    env:
-      LLVM_VERSION: "14.0"
-      LLVM_TAR: llvm-14.0.6-ubuntu18.04-Release-x86.arm.wasm.tar.xz
-
-    steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: true
-
-    - name: Install dependencies
-      run: |
-        .github/workflows/scripts/install-build-deps.sh
-
-    - name: Check environment
-      run: |
-        ./check_env.py
-        which -a clang
-        cat /proc/cpuinfo
-
-    - name: Build package
-      run: |
-        .github/workflows/scripts/build-ispc.sh
-
-    - name: Sanity testing (make check-all, make test)
-      run: |
-        .github/workflows/scripts/check-ispc.sh
-
-    - name: Upload package
-      uses: actions/upload-artifact@v2
-      with:
-        name: ispc_llvm14rel_linux
-        path: build/ispc-trunk-linux.tar.gz
-
-  linux-build-ispc-llvm14-no-dumps:
-    needs: [define-flow]
-    runs-on: ubuntu-latest
-    env:
-      LLVM_VERSION: "14.0"
-      LLVM_TAR: llvm-14.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
-
-    steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: true
-
-    - name: Install dependencies
-      run: |
-        .github/workflows/scripts/install-build-deps.sh
-
-    - name: Check environment
-      run: |
-        ./check_env.py
-        which -a clang
-        cat /proc/cpuinfo
-
-    - name: Build package
-      run: |
-        .github/workflows/scripts/build-ispc.sh -DISPC_NO_DUMPS=ON
-
-    - name: Sanity testing (make check-all, make test)
-      run: |
-        .github/workflows/scripts/check-ispc.sh
-
   linux-build-ispc-llvm15:
     needs: [define-flow]
     runs-on: ubuntu-latest
@@ -524,7 +458,8 @@ jobs:
     - name: Running tests
       run: |
         echo PATH=$PATH
-        ./alloy.py -r --only="stability current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        # Just sanity check for 14.0
+        ./alloy.py -r --only="stability current -O2" --only-targets="avx2-i32x8" --time --update-errors=FP
 
     - name: Check
       run: |
@@ -536,87 +471,6 @@ jobs:
       if: failure()
       with:
         name: fail_db.llvm14.${{matrix.target}}.txt
-        path: fail_db.txt
-
-  # Test release version
-  linux-test-llvm14-release:
-    needs: [define-flow, linux-build-ispc-llvm14-release]
-    runs-on: ubuntu-latest
-    continue-on-error: false
-    strategy:
-      fail-fast: false
-    steps:
-    - uses: actions/checkout@v3
-    - name: Download package
-      uses: actions/download-artifact@v2
-      with:
-        name: ispc_llvm14rel_linux
-
-    - name: Install dependencies and unpack artifacts
-      run: |
-        .github/workflows/scripts/install-test-deps.sh
-
-    - name: Check environment
-      run: |
-        cat /proc/cpuinfo
-
-    - name: Running tests
-      run: |
-        echo PATH=$PATH
-        ./alloy.py -r --only="stability current -O0 -O2" --only-targets="avx2-i32x8" --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v2
-      if: failure()
-      with:
-        name: fail_db.llvm14rel.${{matrix.target}}.txt
-        path: fail_db.txt
-
-  # Debug run is experimental with the purpose to see if it's capable to catch anything.
-  # So it's running in "full" mode only for now.
-  # Single target, as it should be representative enough.
-  linux-test-debug-llvm14:
-    needs: [define-flow, linux-build-ispc-llvm14]
-    if: ${{ needs.define-flow.outputs.flow_type == 'full' }}
-    runs-on: ubuntu-latest
-    continue-on-error: false
-    strategy:
-      fail-fast: false
-    steps:
-    - uses: actions/checkout@v3
-    - name: Download package
-      uses: actions/download-artifact@v2
-      with:
-        name: ispc_llvm14_linux
-
-    - name: Install dependencies and unpack artifacts
-      run: |
-        .github/workflows/scripts/install-test-deps.sh
-
-    - name: Check environment
-      run: |
-        cat /proc/cpuinfo
-
-    - name: Running tests
-      run: |
-        echo PATH=$PATH
-        ./alloy.py -r --only="stability current debug -O0 -O2" --only-targets="avx2-i32x8" --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v2
-      if: failure()
-      with:
-        name: fail_db.llvm14.debug.txt
         path: fail_db.txt
 
   linux-test-llvm15:
@@ -1120,7 +974,8 @@ jobs:
       run: |
         $env:ISPC_HOME = "$pwd"
         .github/workflows/scripts/load-vs-env.ps1 "${{ matrix.arch }}"
-        python .\alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        # Just sanity check for 14.0
+        python .\alloy.py -r --only="stability ${{ matrix.arch }} current -O2" --only-targets="avx2-i32x8" --time --update-errors=FP
 
     - name: Check
       run: |
