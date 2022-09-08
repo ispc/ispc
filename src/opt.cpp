@@ -43,9 +43,11 @@
 #include "sym.h"
 #include "util.h"
 
+#include <filesystem>
 #include <map>
 #include <regex>
 #include <set>
+#include <sstream>
 #include <stdio.h>
 
 #include <llvm/ADT/SmallSet.h>
@@ -137,7 +139,7 @@ static llvm::Pass *CreateMakeInternalFuncsStaticPass();
 
 #ifndef ISPC_NO_DUMPS
 static llvm::Pass *CreateDebugPass(char *output);
-static llvm::Pass *CreateDebugPassFile(int number, llvm::StringRef name);
+static llvm::Pass *CreateDebugPassFile(int number, llvm::StringRef name, std::string dir);
 #endif
 
 static llvm::Pass *CreateReplaceStdlibShiftPass();
@@ -451,7 +453,7 @@ void DebugPassManager::add(llvm::Pass *P, int stage = -1) {
         if (g->debug_stages.find(number) != g->debug_stages.end()) {
             // adding dump of LLVM IR after optimization
             if (g->dumpFile) {
-                PM.add(CreateDebugPassFile(number, P->getPassName()));
+                PM.add(CreateDebugPassFile(number, P->getPassName(), g->dumpFilePath));
             } else {
                 char buf[100];
                 snprintf(buf, sizeof(buf), "\n\n*****LLVM IR after phase %d: %s*****\n\n", number,
@@ -4786,7 +4788,8 @@ static llvm::Pass *CreateDebugPass(char *output) { return new DebugPass(output);
 class DebugPassFile : public llvm::ModulePass {
   public:
     static char ID;
-    DebugPassFile(int number, llvm::StringRef name) : ModulePass(ID), pnum(number), pname(name) {}
+    DebugPassFile(int number, llvm::StringRef name, std::string dir)
+        : ModulePass(ID), pnum(number), pname(name), pdir(dir) {}
 
     llvm::StringRef getPassName() const { return "Dump LLVM IR"; }
     bool runOnModule(llvm::Module &m);
@@ -4796,6 +4799,7 @@ class DebugPassFile : public llvm::ModulePass {
     void run(llvm::Module &m, bool init);
     int pnum;
     llvm::StringRef pname;
+    std::string pdir;
 };
 
 char DebugPassFile::ID = 0;
@@ -4811,10 +4815,28 @@ std::string sanitize(std::string in) {
 }
 
 void DebugPassFile::run(llvm::Module &module, bool init) {
+    std::ostringstream oss;
+    oss << (init ? "init_" : "ir_")
+        << pnum << "_"
+        << sanitize(std::string{pname})
+        << ".ll";
+
+    const std::filesystem::path pathFile{oss.str()};
+    const std::filesystem::path pathDir{pdir};
+
+    std::filesystem::path pathDirFile;
+
+    if (!pathDir.empty()) {
+        std::filesystem::create_directories(pathDir);
+        pathDirFile = pathDir;
+        pathDirFile /= pathFile;
+    } else {
+        pathDirFile = pathFile;
+    }
+
     std::error_code EC;
-    char fname[100];
-    snprintf(fname, sizeof(fname), "%s_%d_%s.ll", init ? "init" : "ir", pnum, sanitize(std::string(pname)).c_str());
-    llvm::raw_fd_ostream OS(fname, EC, llvm::sys::fs::OF_None);
+    std::string pathDirFileStr = pathDirFile.string();
+    llvm::raw_fd_ostream OS(pathDirFileStr, EC, llvm::sys::fs::OF_None);
     Assert(!EC && "IR dump file creation failed!");
     module.print(OS, 0);
 }
@@ -4829,7 +4851,9 @@ bool DebugPassFile::doInitialization(llvm::Module &module) {
     return true;
 }
 
-static llvm::Pass *CreateDebugPassFile(int number, llvm::StringRef name) { return new DebugPassFile(number, name); }
+static llvm::Pass *CreateDebugPassFile(int number, llvm::StringRef name, std::string dir) {
+    return new DebugPassFile(number, name, dir);
+}
 #endif
 
 ///////////////////////////////////////////////////////////////////////////

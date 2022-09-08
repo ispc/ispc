@@ -220,7 +220,8 @@ static void lPrintVersion() {
 #endif
     printf("    [--[no-]discard-value-names]\tDo not discard/Discard value names when generating LLVM IR.\n");
 #ifndef ISPC_NO_DUMPS
-    printf("    [--dump-file]\t\t\tDump module IR to file(s) in current directory\n");
+    printf("    [--dump-file[=<path>]]\t\tDump module IR to file(s) in "
+           "current directory, or to <path> if specified\n");
 #endif
     printf("    [--fuzz-seed=<value>]\t\tSeed value for RNG for fuzz testing\n");
     printf("    [--fuzz-test]\t\t\tRandomly perturb program input to test error conditions\n");
@@ -496,6 +497,12 @@ static void writeCompileTimeFile(const char *outFileName) {
     llvm::timeTraceProfilerWrite(fos);
     of->keep();
     return;
+}
+
+static std::string ParsePath(char *path, ArgErrors &errorHandler) {
+    constexpr int parsing_limit = 1024;
+    auto len = strnlen(path, parsing_limit);
+    return std::string{path, len};
 }
 
 static std::set<int> ParsingPhases(char *stages, ArgErrors &errorHandler) {
@@ -943,8 +950,12 @@ int main(int Argc, char *Argv[]) {
                                     "handles the phases and it may possibly make some bugs go"
                                     "away or introduce the new ones.");
             g->debug_stages = ParsingPhases(argv[i] + strlen("--debug-phase="), errorHandler);
-        } else if (strncmp(argv[i], "--dump-file", 11) == 0)
+        } else if (strncmp(argv[i], "--dump-file=", 12) == 0) {
             g->dumpFile = true;
+            g->dumpFilePath = ParsePath(argv[i] + strlen("--dump-file="), errorHandler);
+        } else if (strncmp(argv[i], "--dump-file", 11) == 0) {
+            g->dumpFile = true;
+        }
 #endif
 
         else if (strncmp(argv[i], "--off-phase=", 12) == 0) {
