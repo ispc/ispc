@@ -276,6 +276,108 @@ jobs:
       run: |
         .github/workflows/scripts/check-ispc.sh
 
+  linux-build-ispc-llvm15:
+    needs: [define-flow]
+    runs-on: ubuntu-latest
+    env:
+      LLVM_VERSION: "15.0"
+      LLVM_TAR: llvm-15.0.0-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.sh
+
+    - name: Check environment
+      run: |
+        ./check_env.py
+        which -a clang
+        cat /proc/cpuinfo
+
+    - name: Build package
+      run: |
+        .github/workflows/scripts/build-ispc.sh
+
+    - name: Sanity testing (make check-all, make test)
+      run: |
+        .github/workflows/scripts/check-ispc.sh
+
+    - name: Upload package
+      uses: actions/upload-artifact@v2
+      with:
+        name: ispc_llvm15_linux
+        path: build/ispc-trunk-linux.tar.gz
+
+  linux-build-ispc-llvm15-release:
+    needs: [define-flow]
+    runs-on: ubuntu-latest
+    env:
+      LLVM_VERSION: "15.0"
+      LLVM_TAR: llvm-15.0.0-ubuntu18.04-Release-x86.arm.wasm.tar.xz
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.sh
+
+    - name: Check environment
+      run: |
+        ./check_env.py
+        which -a clang
+        cat /proc/cpuinfo
+
+    - name: Build package
+      run: |
+        .github/workflows/scripts/build-ispc.sh
+
+    - name: Sanity testing (make check-all, make test)
+      run: |
+        .github/workflows/scripts/check-ispc.sh
+
+    - name: Upload package
+      uses: actions/upload-artifact@v2
+      with:
+        name: ispc_llvm15rel_linux
+        path: build/ispc-trunk-linux.tar.gz
+
+  linux-build-ispc-llvm15-no-dumps:
+    needs: [define-flow]
+    runs-on: ubuntu-latest
+    env:
+      LLVM_VERSION: "15.0"
+      LLVM_TAR: llvm-15.0.0-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.sh
+
+    - name: Check environment
+      run: |
+        ./check_env.py
+        which -a clang
+        cat /proc/cpuinfo
+
+    - name: Build package
+      run: |
+        .github/workflows/scripts/build-ispc.sh -DISPC_NO_DUMPS=ON
+
+    - name: Sanity testing (make check-all, make test)
+      run: |
+        .github/workflows/scripts/check-ispc.sh
+
   linux-test-llvm11:
     needs: [define-flow, linux-build-ispc-llvm11]
     runs-on: ubuntu-latest
@@ -517,6 +619,127 @@ jobs:
         name: fail_db.llvm14.debug.txt
         path: fail_db.txt
 
+  linux-test-llvm15:
+    needs: [define-flow, linux-build-ispc-llvm15]
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
+    steps:
+    - uses: actions/checkout@v3
+    - name: Download package
+      uses: actions/download-artifact@v2
+      with:
+        name: ispc_llvm15_linux
+
+    - name: Install dependencies and unpack artifacts
+      run: |
+        .github/workflows/scripts/install-test-deps.sh
+
+    - name: Check environment
+      run: |
+        cat /proc/cpuinfo
+
+    - name: Running tests
+      run: |
+        echo PATH=$PATH
+        ./alloy.py -r --only="stability current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+
+    - name: Check
+      run: |
+        # Print fails to the log.
+        git diff --exit-code
+
+    - name: Upload fail_db.txt
+      uses: actions/upload-artifact@v2
+      if: failure()
+      with:
+        name: fail_db.llvm15.${{matrix.target}}.txt
+        path: fail_db.txt
+
+  # Test release version
+  linux-test-llvm15-release:
+    needs: [define-flow, linux-build-ispc-llvm15-release]
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v3
+    - name: Download package
+      uses: actions/download-artifact@v2
+      with:
+        name: ispc_llvm15rel_linux
+
+    - name: Install dependencies and unpack artifacts
+      run: |
+        .github/workflows/scripts/install-test-deps.sh
+
+    - name: Check environment
+      run: |
+        cat /proc/cpuinfo
+
+    - name: Running tests
+      run: |
+        echo PATH=$PATH
+        ./alloy.py -r --only="stability current -O0 -O2" --only-targets="avx2-i32x8" --time --update-errors=FP
+
+    - name: Check
+      run: |
+        # Print fails to the log.
+        git diff --exit-code
+
+    - name: Upload fail_db.txt
+      uses: actions/upload-artifact@v2
+      if: failure()
+      with:
+        name: fail_db.llvm15rel.${{matrix.target}}.txt
+        path: fail_db.txt
+
+  # Debug run is experimental with the purpose to see if it's capable to catch anything.
+  # So it's running in "full" mode only for now.
+  # Single target, as it should be representative enough.
+  linux-test-debug-llvm15:
+    needs: [define-flow, linux-build-ispc-llvm15]
+    if: ${{ needs.define-flow.outputs.flow_type == 'full' }}
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v3
+    - name: Download package
+      uses: actions/download-artifact@v2
+      with:
+        name: ispc_llvm15_linux
+
+    - name: Install dependencies and unpack artifacts
+      run: |
+        .github/workflows/scripts/install-test-deps.sh
+
+    - name: Check environment
+      run: |
+        cat /proc/cpuinfo
+
+    - name: Running tests
+      run: |
+        echo PATH=$PATH
+        ./alloy.py -r --only="stability current debug -O0 -O2" --only-targets="avx2-i32x8" --time --update-errors=FP
+
+    - name: Check
+      run: |
+        # Print fails to the log.
+        git diff --exit-code
+
+    - name: Upload fail_db.txt
+      uses: actions/upload-artifact@v2
+      if: failure()
+      with:
+        name: fail_db.llvm15.debug.txt
+        path: fail_db.txt
+
   win-build-ispc-llvm11:
     needs: [define-flow]
     runs-on: windows-2019
@@ -679,6 +902,47 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: ispc_llvm14_win
+        path: build/ispc-trunk-windows.msi
+
+  win-build-ispc-llvm15:
+    needs: [define-flow]
+    runs-on: windows-2019
+    env:
+      LLVM_VERSION: "15.0"
+      LLVM_TAR: llvm-15.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      LLVM_HOME: "C:\\projects\\llvm"
+      CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
+      BUILD_TYPE: "Release"
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.2
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.ps1
+
+    - name: Check environment
+      shell: cmd
+      run: |
+        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+
+    - name: Build package
+      run: |
+        .github/workflows/scripts/build-ispc.ps1
+
+    - name: Sanity testing (make check-all, make test)
+      run: |
+        .github/workflows/scripts/check-ispc.ps1
+
+    - name: Upload package
+      uses: actions/upload-artifact@v2
+      with:
+        name: ispc_llvm15_win
         path: build/ispc-trunk-windows.msi
 
   win-test-llvm11:
@@ -868,5 +1132,51 @@ jobs:
       if: failure()
       with:
         name: fail_db.llvm14.${{matrix.arch}}.${{matrix.target}}.txt
+        path: fail_db.txt
+
+  win-test-llvm15:
+    needs: [define-flow, win-build-ispc-llvm15]
+    env:
+      LLVM_HOME: "C:\\projects\\llvm"
+    runs-on: windows-2022
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86, x86-64]
+        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Download package
+      uses: actions/download-artifact@v2
+      with:
+        name: ispc_llvm15_win
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-test-deps.ps1
+
+    - name: Check environment
+      shell: cmd
+      run: |
+        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+
+    - name: Running tests
+      run: |
+        $env:ISPC_HOME = "$pwd"
+        .github/workflows/scripts/load-vs-env.ps1 "${{ matrix.arch }}"
+        python .\alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+
+    - name: Check
+      run: |
+        # Print fails to the log.
+        git diff --exit-code
+
+    - name: Upload fail_db.txt
+      uses: actions/upload-artifact@v2
+      if: failure()
+      with:
+        name: fail_db.llvm15.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
 
