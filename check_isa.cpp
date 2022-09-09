@@ -147,7 +147,7 @@ static const char *lGetSystemISA() {
             if ((info2[1] & (1 << 5)) != 0) {
                 return "AVX2 (codename Haswell)";
             } else {
-                // Ivy Bridge specific target was depricated in ISPC, but
+                // Ivy Bridge specific target was deprecated in ISPC, but
                 // no harm detecting it in standalone tool.
                 return "AVX1.1 (codename Ivy Bridge)";
             }
