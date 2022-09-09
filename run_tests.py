@@ -439,7 +439,7 @@ def run_test(testname, host, target):
         target_match = re.match('.*-(i[0-9]*)?x([0-9]*)', options.target)
         # If target does not contain width in a standard way:
         if target_match == None:
-            error("Unable to detect the target width for target %s\nOnly canonical form of the target names is supported, depricated forms are not supported" % options.target, 0)
+            error("Unable to detect the target width for target %s\nOnly canonical form of the target names is supported, deprecated forms are not supported" % options.target, 0)
             return Status.Compfail
         width = int(target_match.group(2))
 

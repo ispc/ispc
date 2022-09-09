@@ -36,7 +36,7 @@ syn match	cNumber		display contained "\(\d\+\|0[xX]\x\+\|0[bB][01]\+\)[kMG]\=\([
 
 " Decimal floating point literal with optional suffix
 syn match	cFloat		display contained "\(\(\d\+\.\d*\)\|\(\.\d\+\)\)\([fF]16\|[dDfF]\)\=\>"
-" [Depricated] decimal floating point literal with "f" suffix, but " without radix separator
+" [Deprecated] decimal floating point literal with "f" suffix, but " without radix separator
 syn match	cFloat		display contained "\d\+[fF]\>"
 " Scientific notation floating point literals with optional suffix
 syn match	cFloat		display contained "\(\(\d\+\.\d*\)\|\(\.\d\+\)\|\d\+\)[eE][-+]\=\d\+\([fF]16\|[dDfF]\)\=\>"

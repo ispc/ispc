@@ -752,7 +752,7 @@ binaries (which are based on patched version of LLVM 3.3):
 * The naming of targets was changed to explicitly include data type width and
   a number of threads in the gang. For example, avx2-i32x8 is avx2 target,
   which uses 32 bit types as a base and has 8 threads in a gang. Old naming
-  scheme is still supported, but depricated.
+  scheme is still supported, but deprecated.
 
 * New SSE4 targets for calculations based on 8 bit and 16 bit data types:
   sse4-i8x16 and sse4-i16x8.

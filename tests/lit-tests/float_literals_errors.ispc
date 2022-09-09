@@ -14,7 +14,7 @@ float f1 = 0x2p1;
 float f2 = .f;
 
 // FP literal need to have a radix separator, even if a suffix is used (float16 or double).
-// It's legal to have a constant without radix separator with "f" suffix (float) - depricated.
+// It's legal to have a constant without radix separator with "f" suffix (float) - deprecated.
 // CHECK: 19:14: Error: floating point literal should have a radix separator
 float16 f3 = 1f16;
 // CHECK: 21:12: Warning: single precision floating point literal should have a radix separator
