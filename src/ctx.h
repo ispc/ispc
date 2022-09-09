@@ -524,7 +524,8 @@ class FunctionEmitContext {
     /** Standard store instruction; for this variant, the lvalue must be a
         single pointer, not a varying lvalue.
         'ptrType' needs to be provided when storage type is different from IR type. For example,
-     * 'unform bool' is 'i1' in IR but stored as 'i8'. */
+        'unform bool' is 'i1' in IR but stored as 'i8'. */
+    /*  TODO: keep all info about type in ptrInfo so we can eliminate usage of ptrType optional arg */
     void StoreInst(llvm::Value *value, AddressInfo *ptrInfo, const Type *ptrType = NULL);
 
     /** In this variant of StoreInst(), the lvalue may be varying.  If so,
