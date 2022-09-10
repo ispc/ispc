@@ -902,6 +902,10 @@ preprocessor runs:
   * - ISPC_UINT_IS_DEFINED
     - 1
     - The macro is defined if uint8/uint16/uint32/uint64 types are defined in the ``ispc`` (it's defined in 1.13.0 and later)
+  * - ISPC_FP16_SUPPORTED
+    - 1
+    - The macro is defined if float16 type is supported by the ``ispc`` target.
+      The implementation may rely either on native hardware support or emulation.
   * - ISPC_FP64_SUPPORTED
     - 1
     - The macro is defined if double type is supported by the target

@@ -2434,6 +2434,10 @@ int Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *o
     opts.addMacroDef(ispc_major);
     opts.addMacroDef(ispc_minor);
 
+    if (g->target->hasFp16Support()) {
+        opts.addMacroDef("ISPC_FP16_SUPPORTED ");
+    }
+
     if (g->target->hasFp64Support()) {
         opts.addMacroDef("ISPC_FP64_SUPPORTED ");
     }

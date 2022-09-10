@@ -321,6 +321,8 @@ class Target {
 
     bool hasSatArith() const { return m_hasSaturatingArithmetic; }
 
+    bool hasFp16Support() const { return m_hasFp16Support; }
+
     bool hasFp64Support() const { return m_hasFp64Support; }
 
     bool warnFtoU32IsExpensive() const { return m_warnFtoU32IsExpensive; }
@@ -430,6 +432,9 @@ class Target {
 
     /** Indicates whether the target has special saturating arithmetic instructions. */
     bool m_hasSaturatingArithmetic;
+
+    /** Indicates whether the target has FP16 support. */
+    bool m_hasFp16Support;
 
     /** Indicates whether the target has FP64 support. */
     bool m_hasFp64Support;
