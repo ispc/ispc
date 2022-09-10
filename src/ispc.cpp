@@ -615,7 +615,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
       m_nativeVectorWidth(-1), m_nativeVectorAlignment(-1), m_dataTypeWidth(-1), m_vectorWidth(-1), m_generatePIC(pic),
       m_maskingIsFree(false), m_maskBitCount(-1), m_hasHalf(false), m_hasRand(false), m_hasGather(false),
       m_hasScatter(false), m_hasTranscendentals(false), m_hasTrigonometry(false), m_hasRsqrtd(false), m_hasRcpd(false),
-      m_hasVecPrefetch(false), m_hasSaturatingArithmetic(false), m_hasFp64Support(true),
+      m_hasVecPrefetch(false), m_hasSaturatingArithmetic(false), m_hasFp16Support(false), m_hasFp64Support(true),
       m_warnFtoU32IsExpensive(false) {
     DeviceType CPUID = CPU_None, CPUfromISA = CPU_None;
     AllCPUs a;
@@ -793,10 +793,16 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
               target_string.c_str());
         return;
     }
+
+    if (ISPCTargetIsGen(m_ispc_target) || ISPCTargetIsNeon(m_ispc_target)) {
+        m_hasFp16Support = true;
+    }
+
 #ifdef ISPC_XE_ENABLED
     if ((ISPCTargetIsGen(m_ispc_target)) && (CPUID == GPU_TGLLP || CPUID == GPU_XEHPG)) {
         m_hasFp64Support = false;
     }
+
     // In case of Xe target addressing should correspond to host addressing. Otherwise SVM pointers will not work.
     if (arch == Arch::xe32) {
         g->opt.force32BitAddressing = true;
