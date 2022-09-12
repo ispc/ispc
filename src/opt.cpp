@@ -773,21 +773,12 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 #ifdef ISPC_XE_ENABLED
         if (g->target->isXeTarget() && g->opt.disableGatherScatterOptimizations == false &&
             g->target->getVectorWidth() > 1) {
-            optPM.add(llvm::createInstructionCombiningPass(), 320);
-            if (!g->opt.disableXeGatherCoalescing)
+            if (!g->opt.disableXeGatherCoalescing) {
                 optPM.add(CreateXeGatherCoalescingPass());
-            optPM.add(CreateImproveMemoryOpsPass());
 
-            if (g->opt.disableCoalescing == false) {
-                // It is important to run this here to make it easier to
-                // finding matching gathers we can coalesce..
-                optPM.add(llvm::createEarlyCSEPass());
-                optPM.add(CreateGatherCoalescePass());
-            }
-
-            // Try the llvm provided load/store vectorizer
-            if (!g->opt.disableXeGatherCoalescing)
+                // Try the llvm provided load/store vectorizer
                 optPM.add(llvm::createLoadStoreVectorizerPass());
+            }
         }
 #endif
 
