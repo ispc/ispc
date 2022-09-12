@@ -5673,7 +5673,7 @@ class MemoryCoalescing : public llvm::FunctionPass {
     // Methods in this block are interface for different coalescing types.
 
     // Return true if coalescing can handle Inst.
-    virtual bool isOptimizationTarget(llvm::Instruction *Inst) = 0;
+    virtual bool isOptimizationTarget(llvm::Instruction *Inst) const = 0;
     // Return pointer value or null if there is no one. This should handle
     // all optimization targets.
     virtual llvm::Value *getPointer(llvm::Instruction *Inst) const = 0;
@@ -6189,7 +6189,7 @@ llvm::Value *MemoryCoalescing::extractValueFromBlock(const MemoryCoalescing::Blo
 
 class XeGatherCoalescing : public MemoryCoalescing {
   private:
-    bool isOptimizationTarget(llvm::Instruction *Inst);
+    bool isOptimizationTarget(llvm::Instruction *Inst) const;
     llvm::Value *getPointer(llvm::Instruction *Inst) const;
     OffsetsVecT getOffset(llvm::Instruction *Inst) const;
     llvm::Value *getStoredValue(llvm::Instruction *Inst) const { return nullptr; }
@@ -6344,7 +6344,7 @@ bool XeGatherCoalescing::isConstOffsetPseudoGather(llvm::CallInst *CI) const {
             llvm::isa<llvm::ConstantVector>(opOffset));
 }
 
-bool XeGatherCoalescing::isOptimizationTarget(llvm::Instruction *Inst) {
+bool XeGatherCoalescing::isOptimizationTarget(llvm::Instruction *Inst) const {
     if (auto LI = llvm::dyn_cast<llvm::LoadInst>(Inst)) {
         if (!LI->getType()->isVectorTy() && !LI->getType()->isAggregateType())
             return GetAddressSpace(LI->getPointerOperand()) == AddrSpace;
