@@ -774,10 +774,10 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         if (g->target->isXeTarget() && g->opt.disableGatherScatterOptimizations == false &&
             g->target->getVectorWidth() > 1) {
             if (!g->opt.disableXeGatherCoalescing) {
-                optPM.add(CreateXeGatherCoalescingPass());
+                optPM.add(CreateXeGatherCoalescingPass(), 321);
 
                 // Try the llvm provided load/store vectorizer
-                optPM.add(llvm::createLoadStoreVectorizerPass());
+                optPM.add(llvm::createLoadStoreVectorizerPass(), 325);
             }
         }
 #endif
