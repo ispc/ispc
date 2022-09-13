@@ -63,6 +63,8 @@ function (add_dpcpp_library target_name)
             set(DPCPP_CUSTOM_INCLUDE_DIR_PARMS "-I" ${DPCPP_CUSTOM_INCLUDE_DIR_PARMS})
         endif()
 
+        # Allow function pointers in DPC++ and do not instrument SYCL code.
+        list(APPEND DPCPP_CUSTOM_FLAGS "-Xclang" "-fsycl-allow-func-ptr" "-fno-sycl-instrument-device-code")
         if (DPCPP_SPV)
             # Get only SYCL device code to SPIR-V
             # WA: SYCL assert implementation should be treated separately.
