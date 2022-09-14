@@ -486,7 +486,7 @@ class FunctionEmitContext {
      * 'type' needs to be provided when storage type is different from IR type. For example,
      * 'unform bool' is 'i1' in IR but stored as 'i8'.
      * Otherwise leave this as NULL. */
-    llvm::Value *LoadInst(llvm::Value *ptr, const Type *type = NULL, const llvm::Twine &name = "");
+    llvm::Value *LoadInst(AddressInfo *ptrInfo, const Type *type = NULL, const llvm::Twine &name = "");
 
     /** Emits addrspacecast instruction. Depending on atEntryBlock it is generated in
         alloca block or in the current block.
