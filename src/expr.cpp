@@ -1812,7 +1812,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
         // loading the value stored in retPtr in turn gives the overall
         // result.
         ctx->SetCurrentBasicBlock(bbLogicalDone);
-        return ctx->LoadInst(retPtrInfo->getPointer(), retType);
+        return ctx->LoadInst(retPtrInfo, retType);
     } else {
         // Otherwise, the first operand is varying...  Save the current
         // value of the mask so that we can restore it at the end.
@@ -1927,7 +1927,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
         // the old mask and return the computed result
         ctx->SetCurrentBasicBlock(bbLogicalDone);
         ctx->SetInternalMask(oldMask);
-        return ctx->LoadInst(retPtrInfo->getPointer(), retType);
+        return ctx->LoadInst(retPtrInfo, retType);
     }
 }
 
@@ -3277,7 +3277,7 @@ static llvm::Value *lEmitVaryingSelect(FunctionEmitContext *ctx, llvm::Value *te
     // Use masking to conditionally store the expr1 values
     Assert(resultPtrInfo->getType() == PointerType::GetUniform(type)->LLVMStorageType(g->ctx));
     ctx->StoreInst(expr1, resultPtrInfo->getPointer(), test, type, PointerType::GetUniform(type));
-    return ctx->LoadInst(resultPtrInfo->getPointer(), type, "selectexpr_final");
+    return ctx->LoadInst(resultPtrInfo, type, "selectexpr_final");
 }
 
 static void lEmitSelectExprCode(FunctionEmitContext *ctx, llvm::Value *testVal, llvm::Value *oldMask,
@@ -3415,8 +3415,8 @@ llvm::Value *SelectExpr::GetValue(FunctionEmitContext *ctx) const {
         }
 
         ctx->SetInternalMask(oldMask);
-        llvm::Value *expr1Val = ctx->LoadInst(expr1PtrInfo->getPointer(), expr1->GetType());
-        llvm::Value *expr2Val = ctx->LoadInst(expr2PtrInfo->getPointer(), expr2->GetType());
+        llvm::Value *expr1Val = ctx->LoadInst(expr1PtrInfo, expr1->GetType());
+        llvm::Value *expr2Val = ctx->LoadInst(expr2PtrInfo, expr2->GetType());
         return lEmitVaryingSelect(ctx, testVal, expr1Val, expr2Val, type);
     } else {
         // FIXME? Short-circuiting doesn't work in the case of
@@ -5094,7 +5094,7 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
             ctx->StoreInst(elementValue, new AddressInfo(ptmp, exprVectorType->GetElementType()), elementPtrType);
         }
 
-        return ctx->LoadInst(resultPtrInfo->getPointer(), memberType, llvm::Twine(basePtr->getName()) + "_swizzle");
+        return ctx->LoadInst(resultPtrInfo, memberType, llvm::Twine(basePtr->getName()) + "_swizzle");
     }
 }
 
@@ -7793,7 +7793,7 @@ llvm::Value *SymbolExpr::GetValue(FunctionEmitContext *ctx) const {
         return ctx->XeSimdCFPredicate(LLVMMaskAllOn);
     }
 #endif
-    return ctx->LoadInst(symbol->storageInfo->getPointer(), symbol->type, loadName.c_str());
+    return ctx->LoadInst(symbol->storageInfo, symbol->type, loadName.c_str());
 }
 
 llvm::Value *SymbolExpr::GetLValue(FunctionEmitContext *ctx) const {
