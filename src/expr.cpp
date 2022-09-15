@@ -7728,7 +7728,7 @@ llvm::Value *AllocaExpr::GetValue(FunctionEmitContext *ctx) const {
     llvm::Value *llvmValue = expr->GetValue(ctx);
     if (llvmValue == NULL)
         return NULL;
-    llvm::Value *resultPtr = ctx->AllocaInst((LLVMTypes::VoidPointerType)->PTR_ELT_TYPE(), llvmValue, "allocaExpr", 16,
+    llvm::Value *resultPtr = ctx->AllocaInst(LLVMTypes::Int8Type, llvmValue, "allocaExpr", 16,
                                              false)
                                  ->getPointer(); // 16 byte stack alignment.
     return resultPtr;
