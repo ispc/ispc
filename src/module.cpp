@@ -2651,10 +2651,7 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
 
     // Now we can load the system's ISA enumerant
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
-    llvm::PointerType *ptr_type = llvm::dyn_cast<llvm::PointerType>(systemBestISAPtr->getType());
-    Assert(ptr_type);
-    llvm::Value *systemISA =
-        new llvm::LoadInst(ptr_type->getPointerElementType(), systemBestISAPtr, "system_isa", bblock);
+    llvm::Value *systemISA = new llvm::LoadInst(LLVMTypes::Int32Type, systemBestISAPtr, "system_isa", bblock);
 #else
     llvm::Value *systemISA = new llvm::LoadInst(systemBestISAPtr, "system_isa", bblock);
 #endif
@@ -2774,23 +2771,23 @@ static void lEmitDispatchModule(llvm::Module *module, std::map<std::string, Func
     optPM.run(*module);
 }
 
-// Determines if two types are compatible
+// Determines if two types are compatible.
+// Here we check layout compatibility. We don't care about pointer types.
 static bool lCompatibleTypes(llvm::Type *Ty1, llvm::Type *Ty2) {
     while (Ty1->getTypeID() == Ty2->getTypeID())
         switch (Ty1->getTypeID()) {
-        case llvm::ArrayType::ArrayTyID:
+        case llvm::Type::ArrayTyID:
             if (Ty1->getArrayNumElements() != Ty2->getArrayNumElements())
                 return false;
             Ty1 = Ty1->getArrayElementType();
             Ty2 = Ty2->getArrayElementType();
             break;
-
-        case llvm::ArrayType::PointerTyID:
-            Ty1 = Ty1->getPointerElementType();
-            Ty2 = Ty2->getPointerElementType();
-            break;
-
-        case llvm::ArrayType::StructTyID: {
+        case llvm::Type::PointerTyID:
+            // Uniform pointers are compatible.
+            // Varying pointers are represented as <N x i32>/<N x i64>, it'll
+            // be checked in default statement.
+            return true;
+        case llvm::Type::StructTyID: {
             llvm::StructType *STy1 = llvm::dyn_cast<llvm::StructType>(Ty1);
             llvm::StructType *STy2 = llvm::dyn_cast<llvm::StructType>(Ty2);
             return STy1 && STy2 && STy1->isLayoutIdentical(STy2);
@@ -2815,7 +2812,7 @@ static void lExtractOrCheckGlobals(llvm::Module *msrc, llvm::Module *mdst, bool 
         llvm::GlobalVariable *gv = &*iter;
         // Is it a global definition?
         if (gv->getLinkage() == llvm::GlobalValue::ExternalLinkage && gv->hasInitializer()) {
-            llvm::Type *type = gv->getType()->PTR_ELT_TYPE();
+            llvm::Type *type = gv->getValueType();
             Symbol *sym = m->symbolTable->LookupVariable(gv->getName().str().c_str());
             Assert(sym != NULL);
 
@@ -2827,7 +2824,7 @@ static void lExtractOrCheckGlobals(llvm::Module *msrc, llvm::Module *mdst, bool 
                 // It is possible that the types may not match: for
                 // example, this happens with varying globals if we
                 // compile to different vector widths
-                if (!lCompatibleTypes(exist->getType(), gv->getType())) {
+                if (!lCompatibleTypes(exist->getValueType(), gv->getValueType())) {
                     Warning(sym->pos,
                             "Mismatch in size/layout of global "
                             "variable \"%s\" with different targets. "

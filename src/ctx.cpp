@@ -1476,11 +1476,12 @@ static llvm::Value *lGetStringAsValue(llvm::BasicBlock *bblock, const char *s) {
     llvm::Constant *sConstant = llvm::ConstantDataArray::getString(*g->ctx, s, true);
     std::string var_name = "_";
     var_name = var_name + s;
-    llvm::Value *sPtr = new llvm::GlobalVariable(*m->module, sConstant->getType(), true /* const */,
-                                                 llvm::GlobalValue::InternalLinkage, sConstant, var_name.c_str());
+    llvm::GlobalVariable *sPtr =
+        new llvm::GlobalVariable(*m->module, sConstant->getType(), true /* const */, llvm::GlobalValue::InternalLinkage,
+                                 sConstant, var_name.c_str());
     llvm::Value *indices[2] = {LLVMInt32(0), LLVMInt32(0)};
     llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
-    return llvm::GetElementPtrInst::Create(PTYPE(sPtr), sPtr, arrayRef, "sptr", bblock);
+    return llvm::GetElementPtrInst::Create(sPtr->getValueType(), sPtr, arrayRef, "sptr", bblock);
 }
 
 void FunctionEmitContext::AddInstrumentationPoint(const char *note) {
@@ -2634,7 +2635,11 @@ llvm::Value *FunctionEmitContext::AddrSpaceCastInst(llvm::Value *val, AddressSpa
     if (pt->getAddressSpace() == (unsigned)as) {
         return val;
     }
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_13_0
+    llvm::PointerType *newType = llvm::PointerType::getWithSamePointeeType(pt, (unsigned)as);
+#else
     llvm::PointerType *newType = llvm::PointerType::get(pt->getPointerElementType(), (unsigned)as);
+#endif
     llvm::AddrSpaceCastInst *inst;
     if (atEntryBlock) {
         inst = new llvm::AddrSpaceCastInst(val, newType, val->getName() + "__cast", allocaBlock->getTerminator());
