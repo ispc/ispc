@@ -336,7 +336,10 @@ struct EventPool {
               ISPCRTEventPoolType type = ISPCRTEventPoolType::compute)
         : m_context(context), m_device(device) {
         // Get device timestamp resolution
-        ze_device_properties_t device_properties = {ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES};
+        ze_device_properties_t device_properties = {
+            .stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES,
+            .pNext = nullptr,
+        };
         L0_SAFE_CALL(zeDeviceGetProperties(m_device, &device_properties));
         m_timestampFreq = device_properties.timerResolution;
         if(device_properties.kernelTimestampValidBits < 64) {
@@ -1017,7 +1020,10 @@ static ze_driver_handle_t deviceDiscovery(bool *p_is_mock) {
         std::vector<ze_device_handle_t> allDevices(deviceCount);
         L0_SAFE_CALL(zeDeviceGet(driver, &deviceCount, allDevices.data()));
         for (auto &device : allDevices) {
-            ze_device_properties_t device_properties;
+            ze_device_properties_t device_properties = {
+                .stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES,
+                .pNext = nullptr,
+            };
             L0_SAFE_CALL(zeDeviceGetProperties(device, &device_properties));
             if (device_properties.type == ZE_DEVICE_TYPE_GPU && device_properties.vendorId == 0x8086) {
                 if (selectedDriver != nullptr && driver != selectedDriver)
@@ -1042,7 +1048,10 @@ ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx) {
     if (deviceIdx >= g_deviceList.size())
         throw std::runtime_error("Invalid device number");
     ISPCRTDeviceInfo info;
-    ze_device_properties_t dp;
+    ze_device_properties_t dp = {
+        .stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES,
+        .pNext = nullptr,
+    };
     L0_SAFE_CALL(zeDeviceGetProperties(g_deviceList[deviceIdx], &dp));
     info.deviceId = dp.deviceId;
     info.vendorId = dp.vendorId;
