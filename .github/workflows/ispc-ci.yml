@@ -598,6 +598,50 @@ jobs:
         name: fail_db.llvm15.debug.txt
         path: fail_db.txt
 
+  macos-build-ispc-llvm15:
+    needs: [define-flow]
+    runs-on: macos-11
+    env:
+      LLVM_VERSION: "15.0"
+      LLVM_TAR: llvm-15.0.6-macos11-Release+Asserts-x86.arm.wasm.tar.xz
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        ls -al /Library/Developer/CommandLineTools/SDKs/
+        xcrun --show-sdk-path
+        [ -n "$LLVM_REPO" ] && wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 --no-verbose $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
+        tar xf $LLVM_TAR
+        echo "${GITHUB_WORKSPACE}/bin-$LLVM_VERSION/bin" >> $GITHUB_PATH
+        brew install bison flex
+        echo "/usr/local/opt/bison/bin" >> $GITHUB_PATH
+        echo "/usr/local/opt/flex/bin" >> $GITHUB_PATH
+
+    - name: Check environment
+      run: |
+        ./check_env.py
+        which -a clang
+        llvm-config --system-libs
+        sysctl -n machdep.cpu.brand_string
+
+    - name: Build package
+      run: |
+        .github/workflows/scripts/build-ispc.sh -DBENCHMARKS_ISPC_TARGETS=avx1-i32x4
+
+    - name: Sanity testing (make check-all, make test)
+      run: |
+        .github/workflows/scripts/check-ispc.sh
+
+    - name: Upload package
+      uses: actions/upload-artifact@v3
+      with:
+        name: ispc_llvm15_macos
+        path: build/ispc-trunk-macos.tar.gz
+
   win-build-ispc-llvm11:
     needs: [define-flow]
     runs-on: windows-2019
