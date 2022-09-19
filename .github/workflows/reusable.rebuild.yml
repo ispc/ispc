@@ -315,7 +315,7 @@ jobs:
         path: llvm/llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release-x86.arm.wasm.tar.7z
 
   mac-build:
-    runs-on: macos-10.15
+    runs-on: macos-11
 
     steps:
     - uses: actions/checkout@v3
@@ -349,16 +349,16 @@ jobs:
     - name: Pack LLVM
       run: |
         cd llvm
-        tar cJvf llvm-${{ inputs.full_version }}-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
+        tar cJvf llvm-${{ inputs.full_version }}-macos11-Release+Asserts-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvm_macos_x86
-        path: llvm/llvm-${{ inputs.full_version }}-macos10.15-Release+Asserts-x86.arm.wasm.tar.xz
+        path: llvm/llvm-${{ inputs.full_version }}-macos11-Release+Asserts-x86.arm.wasm.tar.xz
 
   mac-build-release:
-    runs-on: macos-10.15
+    runs-on: macos-11
 
     steps:
     - uses: actions/checkout@v3
@@ -392,11 +392,11 @@ jobs:
     - name: Pack LLVM
       run: |
         cd llvm
-        tar cJvf llvm-${{ inputs.full_version }}-macos10.15-Release-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
+        tar cJvf llvm-${{ inputs.full_version }}-macos11-Release-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
         name: llvmrel_macos_x86
-        path: llvm/llvm-${{ inputs.full_version }}-macos10.15-Release-x86.arm.wasm.tar.xz
+        path: llvm/llvm-${{ inputs.full_version }}-macos11-Release-x86.arm.wasm.tar.xz
 
