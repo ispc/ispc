@@ -759,7 +759,8 @@ void ispc::InitSymbol(AddressInfo *ptrInfo, const Type *symType, Expr *initExpr,
 
                 llvm::Value *ep;
                 if (CastType<StructType>(symType) != NULL)
-                    ep = ctx->AddElementOffset(ptrInfo->getPointer(), i, NULL, "element");
+                    ep = ctx->AddElementOffset(new AddressInfo(ptrInfo->getPointer(), CastType<StructType>(symType)), i,
+                                               "element");
                 else {
                     ep = ctx->GetElementPtrInst(ptrInfo->getPointer(), LLVMInt32(0), LLVMInt32(i),
                                                 /* Type of aggregate structure */ PointerType::GetUniform(symType),
@@ -5065,7 +5066,6 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
 
         // Allocate temporary memory to store the result
         AddressInfo *resultPtrInfo = ctx->AllocaInst(memberType, "vector_tmp");
-
         if (resultPtrInfo == NULL) {
             AssertPos(pos, m->errorCount > 0);
             return NULL;
@@ -5082,12 +5082,12 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
         ctx->SetDebugPos(pos);
         for (size_t i = 0; i < identifier.size(); ++i) {
             char idStr[2] = {identifier[i], '\0'};
-            llvm::Value *elementPtr =
-                ctx->AddElementOffset(basePtr, indices[i], basePtrType, llvm::Twine(basePtr->getName()) + idStr);
+            llvm::Value *elementPtr = ctx->AddElementOffset(new AddressInfo(basePtr, basePtrType), indices[i],
+                                                            llvm::Twine(basePtr->getName()) + idStr);
             llvm::Value *elementValue = ctx->LoadInst(elementPtr, elementMask, elementPtrType);
 
-            llvm::Value *ptmp = ctx->AddElementOffset(resultPtrInfo->getPointer(), i, NULL,
-                                                      llvm::Twine(resultPtrInfo->getPointer()->getName()) + idStr);
+            llvm::Value *ptmp =
+                ctx->AddElementOffset(resultPtrInfo, i, llvm::Twine(resultPtrInfo->getPointer()->getName()) + idStr);
             // TODO: when we have swizzle on bool type, it breaks here on StoreInst.
             // The condition in StoreInst checking that SwitchBoolSize is needed doesn't detect it.
             ctx->StoreInst(elementValue, new AddressInfo(ptmp, exprVectorType->GetElementType()), elementPtrType);
@@ -5218,7 +5218,7 @@ llvm::Value *MemberExpr::GetValue(FunctionEmitContext *ctx) const {
         if (elementNumber == -1)
             return NULL;
 
-        lvalue = ctx->AddElementOffset(ptrInfo->getPointer(), elementNumber, PointerType::GetUniform(exprType));
+        lvalue = ctx->AddElementOffset(ptrInfo, elementNumber);
         lvalueType = PointerType::GetUniform(GetType());
         mask = LLVMMaskAllOn;
     } else {
@@ -5254,7 +5254,8 @@ llvm::Value *MemberExpr::GetLValue(FunctionEmitContext *ctx) const {
 
     const Type *exprLValueType = dereferenceExpr ? exprType : expr->GetLValueType();
     ctx->SetDebugPos(pos);
-    llvm::Value *ptr = ctx->AddElementOffset(basePtr, elementNumber, exprLValueType, basePtr->getName().str().c_str());
+    llvm::Value *ptr = ctx->AddElementOffset(new AddressInfo(basePtr, exprLValueType), elementNumber,
+                                             basePtr->getName().str().c_str());
     if (ptr == NULL) {
         AssertPos(pos, m->errorCount > 0);
         return NULL;

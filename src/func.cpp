@@ -260,7 +260,7 @@ static void lCopyInTaskParameter(int i, AddressInfo *structArgPtrInfo, const std
     sym->storageInfo = ctx->AllocaInst(sym->type, sym->name.c_str());
 
     // get a pointer to the value in the struct
-    llvm::Value *ptr = ctx->AddElementOffset(structArgPtrInfo->getPointer(), i, NULL, sym->name.c_str());
+    llvm::Value *ptr = ctx->AddElementOffset(structArgPtrInfo, i, sym->name.c_str());
 
     // and copy the value from the struct and into the local alloca'ed
     // memory
@@ -317,17 +317,17 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
 
         std::vector<llvm::Type *> llvmArgTypes = type->LLVMFunctionArgTypes(g->ctx);
         llvm::Type *st = llvm::StructType::get(*g->ctx, llvmArgTypes);
-
+        AddressInfo *stInfo = new AddressInfo(structParamPtr, st);
         // Copy the function parameter values from the structure into local
         // storage
         for (unsigned int i = 0; i < args.size(); ++i)
-            lCopyInTaskParameter(i, new AddressInfo(structParamPtr, st), args, ctx);
+            lCopyInTaskParameter(i, stInfo, args, ctx);
 
         if (type->isUnmasked == false) {
             // Copy in the mask as well.
             int nArgs = (int)args.size();
             // The mask is the last parameter in the argument structure
-            llvm::Value *ptr = ctx->AddElementOffset(structParamPtr, nArgs, NULL, "task_struct_mask");
+            llvm::Value *ptr = ctx->AddElementOffset(stInfo, nArgs, "task_struct_mask");
             llvm::Value *ptrval = ctx->LoadInst(new AddressInfo(ptr, LLVMTypes::MaskType), NULL, "mask");
             ctx->SetFunctionMask(ptrval);
         }

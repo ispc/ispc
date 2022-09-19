@@ -3508,7 +3508,7 @@ static AddressInfo *lEmitPrintArgCode(Expr *expr, FunctionEmitContext *ctx) {
     return new AddressInfo(ptr, LLVMTypes::VoidPointerType);
 }
 
-static bool lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, llvm::Value *argPtrArray, int offset,
+static bool lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, AddressInfo *argPtrArray, int offset,
                              std::string &argTypes) {
     if (!expr)
         return false;
@@ -3521,7 +3521,7 @@ static bool lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, llvm::Value *
     AddressInfo *ptrInfo = lEmitPrintArgCode(expr, ctx);
     if (!ptrInfo)
         return false;
-    llvm::Value *arrayPtr = ctx->AddElementOffset(argPtrArray, offset, NULL);
+    llvm::Value *arrayPtr = ctx->AddElementOffset(argPtrArray, offset);
     ctx->StoreInst(ptrInfo->getPointer(), new AddressInfo(arrayPtr, ptrInfo->getElementType()));
     return true;
 }
@@ -3546,23 +3546,24 @@ std::vector<llvm::Value *> PrintStmt::getDoPrintArgs(FunctionEmitContext *ctx) c
         checkFormatString(format, nArgs, pos);
         // Allocate space for the array of pointers to values to be printed
         llvm::Type *argPtrArrayType = llvm::ArrayType::get(LLVMTypes::VoidPointerType, nArgs);
-        llvm::Value *argPtrArray = ctx->AllocaInst(argPtrArrayType, "print_arg_ptrs")->getPointer();
+        AddressInfo *argPtrArrayInfo = ctx->AllocaInst(argPtrArrayType, "print_arg_ptrs");
         // Store the array pointer as a void **, which is what __do_print()
         // expects
-        doPrintArgs[ARGS_IDX] = ctx->BitCastInst(argPtrArray, llvm::PointerType::get(LLVMTypes::VoidPointerType, 0));
+        doPrintArgs[ARGS_IDX] =
+            ctx->BitCastInst(argPtrArrayInfo->getPointer(), llvm::PointerType::get(LLVMTypes::VoidPointerType, 0));
 
         // Now, for each of the arguments, emit code to evaluate its value
         // and store the value into alloca's storage.  Then store the
-        // pointer to the alloca's storage into argPtrArray.
+        // pointer to the alloca's storage into argPtrArrayInfo.
         if (elist) {
             for (unsigned int i = 0; i < elist->exprs.size(); ++i) {
                 Expr *expr = elist->exprs[i];
-                if (!lProcessPrintArg(expr, ctx, argPtrArray, i, argTypes)) {
+                if (!lProcessPrintArg(expr, ctx, argPtrArrayInfo, i, argTypes)) {
                     return {};
                 }
             }
         } else {
-            if (lProcessPrintArg(values, ctx, argPtrArray, 0, argTypes)) {
+            if (lProcessPrintArg(values, ctx, argPtrArrayInfo, 0, argTypes)) {
                 return {};
             }
         }
