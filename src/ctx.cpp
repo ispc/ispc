@@ -240,6 +240,12 @@ AddressInfo::AddressInfo(llvm::Value *p, const Type *t) : pointer(p), ispcType(t
     Assert(elementType != nullptr && "Element type cannot be null");
 }
 
+llvm::Type *AddressInfo::GetPointeeLLVMType(const PointerType *pt) {
+    Assert(pt != nullptr && "ISPC type cannot be null");
+    llvm::Type *type = pt->GetBaseType()->LLVMStorageType(g->ctx);
+    Assert(type != nullptr && "LLVM pointer element type cannot be null");
+    return type;
+}
 ///////////////////////////////////////////////////////////////////////////
 
 FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::Function *lf, SourcePos firstStmtPos) {
@@ -2103,7 +2109,8 @@ llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::
         // uniform, so just emit the regular LLVM GEP instruction
         llvm::Value *ind[1] = {index};
         llvm::ArrayRef<llvm::Value *> arrayRef(&ind[0], &ind[1]);
-        llvm::Instruction *inst = llvm::GetElementPtrInst::Create(PTYPE(basePtr), basePtr, arrayRef,
+        llvm::Type *llvmPtrElType = AddressInfo::GetPointeeLLVMType(ptrType);
+        llvm::Instruction *inst = llvm::GetElementPtrInst::Create(llvmPtrElType, basePtr, arrayRef,
                                                                   name.isTriviallyEmpty() ? "gep" : name, bblock);
         AddDebugPos(inst);
         return inst;
@@ -2146,7 +2153,8 @@ llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::
         // uniform, so just emit the regular LLVM GEP instruction
         llvm::Value *indices[2] = {index0, index1};
         llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
-        llvm::Instruction *inst = llvm::GetElementPtrInst::Create(PTYPE(basePtr), basePtr, arrayRef,
+        llvm::Type *llvmPtrElType = AddressInfo::GetPointeeLLVMType(ptrType);
+        llvm::Instruction *inst = llvm::GetElementPtrInst::Create(llvmPtrElType, basePtr, arrayRef,
                                                                   name.isTriviallyEmpty() ? "gep" : name, bblock);
         AddDebugPos(inst);
         return inst;
@@ -2429,11 +2437,10 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
                 new llvm::LoadInst(ptr, name.isTriviallyEmpty() ? (llvm::Twine(ptr->getName()) + "_load") : name,
                                    false /* not volatile */, bblock);
 #else // LLVM 11.0+
-            llvm::PointerType *ptr_type = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
-            llvm::LoadInst *inst =
-                new llvm::LoadInst(ptr_type->getPointerElementType(), ptr,
-                                   name.isTriviallyEmpty() ? (llvm::Twine(ptr->getName()) + "_load") : name,
-                                   false /* not volatile */, bblock);
+            llvm::Type *llvmPtrType = AddressInfo::GetPointeeLLVMType(ptrType);
+            llvm::LoadInst *inst = new llvm::LoadInst(
+                llvmPtrType, ptr, name.isTriviallyEmpty() ? (llvm::Twine(ptr->getName()) + "_load") : name,
+                false /* not volatile */, bblock);
 #endif
 
             if (atomicType != NULL && atomicType->IsVaryingType()) {
