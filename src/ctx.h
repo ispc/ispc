@@ -70,6 +70,9 @@ class AddressInfo {
     // Return the address space that this address resides in.
     unsigned getAddressSpace() const { return getType()->getAddressSpace(); }
 
+    // Get LLVM pointer element type from ISPC PointerType.
+    static llvm::Type *GetPointeeLLVMType(const PointerType *pt);
+
   private:
     llvm::Value *pointer;
     llvm::Type *elementType;
