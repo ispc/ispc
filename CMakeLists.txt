@@ -294,7 +294,11 @@ if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "15.0.0")
     list(APPEND CLANG_LIBRARY_LIST clangSupport)
 endif()
 set(LLVM_COMPONENTS engine ipo bitreader bitwriter instrumentation linker option frontendopenmp)
-if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "15.0.0" AND ISPC_WINDOWS_TARGET)
+if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "15.0.0")
+    # windowsdriver is a small library introduced in LLVM 15. While it's targeted at Windows only,
+    # it's used in the LLVM code without any ifdef and is needed on all platforms.
+    # An interesting fact, that on Linux it is not required, because linker is smart enough to optimize out
+    # the calls to unresolved symbols. It's not the case on macOS though.
     list(APPEND LLVM_COMPONENTS windowsdriver)
 endif()
 
