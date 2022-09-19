@@ -67,6 +67,9 @@ class AddressInfo {
     // Return the type of the values stored in this address.
     llvm::Type *getElementType() const { return elementType; }
 
+    // Return the ISPC type. May be NULL.
+    const Type *getISPCType() const { return ispcType; }
+
     // Return the address space that this address resides in.
     unsigned getAddressSpace() const { return getType()->getAddressSpace(); }
 
@@ -449,7 +452,8 @@ class FunctionEmitContext {
         and an integer offset to a slice within that type. */
     llvm::Value *MakeSlicePointer(llvm::Value *ptr, llvm::Value *offset);
 
-    /* Regularize to a standard pointer type. */
+    /* Regularize to a standard pointer type.
+       May return NULL if type is not PointerType or ReferenceType */
     const PointerType *RegularizePointer(const Type *ptrRefType);
 
     /** These GEP methods are generalizations of the standard ones in LLVM;
@@ -467,11 +471,9 @@ class FunctionEmitContext {
     /** This method returns a new pointer that represents offsetting the
         given base pointer to point at the given element number of the
         structure type that the base pointer points to.  (The provided
-        pointer must be a pointer to a structure type.  The ptrType gives
-        the type of the pointer, though it may be NULL if the base pointer
-        is uniform. */
-    llvm::Value *AddElementOffset(llvm::Value *basePtr, int elementNum, const Type *ptrType,
-                                  const llvm::Twine &name = "", const PointerType **resultPtrType = NULL);
+        pointer in AddressInfo must be a pointer to a structure type.) */
+    llvm::Value *AddElementOffset(AddressInfo *basePtrInfo, int elementNum, const llvm::Twine &name = "",
+                                  const PointerType **resultPtrType = NULL);
 
     /** Bool is stored as i8 and <WIDTH x i8> but represented in IR as i1 and
      * <WIDTH x MASK>. This is a helper function to match bool size at storage
