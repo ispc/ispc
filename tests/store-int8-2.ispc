@@ -6,9 +6,9 @@ task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     #pragma ignore warning(perf)
     unsigned int8 val = aFOO[programIndex];
     if (programIndex & 1)
-        x[2+programIndex] = val;
+        x[1+programIndex] = val;
     #pragma ignore warning(perf)
-    RET[programIndex] = x[1+programIndex];
+    RET[programIndex] = x[programIndex];
 }
 
 task void result(uniform float RET[]) {
