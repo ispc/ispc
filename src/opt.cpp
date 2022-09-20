@@ -4826,10 +4826,7 @@ std::string sanitize(std::string in) {
 
 void DebugPassFile::run(llvm::Module &module, bool init) {
     std::ostringstream oss;
-    oss << (init ? "init_" : "ir_")
-        << pnum << "_"
-        << sanitize(std::string{pname})
-        << ".ll";
+    oss << (init ? "init_" : "ir_") << pnum << "_" << sanitize(std::string{pname}) << ".ll";
 
     const std::filesystem::path pathFile{oss.str()};
     const std::filesystem::path pathDir{pdir};
