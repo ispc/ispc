@@ -6,3 +6,4 @@
 - ``04_fastdiv`` - integer division by a constant is handled by an algorithm, which produces a code sequence without actual division operation. Current implementation relies on code generator to do the right thing on every specific platform. This benchmark tests performance integer division by a constant.
 - ``05_packed_load_store`` - test ``packed_[load|store]_active()`` stdlib functions performance.
 - ``06_math`` - test math functions performance.
+- ``07_loop_unroll_varying-cpu`` - test unrolling performance for varying index loop on CPU.
