@@ -190,6 +190,11 @@ static void L0InitContext(ze_device_handle_t &hDevice, ze_module_handle_t &hModu
     is.close();
 
     std::string igcOptions = "-vc-codegen -no-optimize -Xfinalizer '-presched'";
+#ifdef ISPC_IS_LINUX
+    // `newspillcost` is not yet supported on Windows in open source
+    // TODO: use `newspillcost` for all platforms as soon as it available
+    igcOptions += " -Xfinalizer '-newspillcost'";
+#endif
     const char *userIgcOptionsEnv = getenv("ISPCRT_IGC_OPTIONS");
     if (userIgcOptionsEnv) {
         std::string userIgcOptions(userIgcOptionsEnv);
