@@ -3276,20 +3276,25 @@ llvm::Instruction *FunctionEmitContext::SelectInst(llvm::Value *test, llvm::Valu
     pointer to a function to be called, figure out how many arguments the
     function has. */
 static unsigned int lCalleeArgCount(llvm::Value *callee, const FunctionType *funcType) {
-    llvm::FunctionType *ft = llvm::dyn_cast<llvm::FunctionType>(callee->getType());
+    llvm::Function *calleeFunc = llvm::dyn_cast<llvm::Function>(callee);
+    // Easy function type callee
+    if (calleeFunc) {
+        return calleeFunc->getFunctionType()->getNumParams();
+    } else {
+        // Uniform or varying function pointer must have funcType != NULL
+        Assert(funcType != nullptr);
+        // These calls are always unmasked, others have mask
+        if (funcType->isExternC || funcType->isExternSYCL || funcType->isUnmasked)
+            return funcType->GetNumParameters();
+        // It cannot be task on Xe target
+        else {
+            if (g->target->isXeTarget()) {
+                Assert(funcType->isTask == false);
+            }
 
-    if (ft == NULL) {
-        llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(callee->getType());
-        if (pt == NULL) {
-            // varying--in this case, it must be the version of the
-            // function that takes a mask
             return funcType->GetNumParameters() + 1;
         }
-        ft = llvm::dyn_cast<llvm::FunctionType>(pt->PTR_ELT_TYPE());
     }
-
-    Assert(ft != NULL);
-    return ft->getNumParams();
 }
 
 llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
@@ -3304,12 +3309,12 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
     // functions from the application.  Add the mask if it's needed.
     // There may be more arguments than function parameters for vararg case.
     unsigned int calleeArgCount = lCalleeArgCount(func, funcType);
+    bool disableMask = args.size() == calleeArgCount;
 
     // For Xe targets check the LLVM function signature and cast address space of
     // passed arguments if needed
     if (g->target->isXeTarget() && funcType) {
 #ifdef ISPC_XE_ENABLED
-        bool disableMask = args.size() == calleeArgCount;
         llvm::FunctionType *llvmFuncType = funcType->LLVMFunctionType(g->ctx, disableMask);
         Assert(args.size() <= llvmFuncType->getFunctionNumParams());
         for (int i = 0; i < args.size(); i++) {
@@ -3343,8 +3348,16 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
         // Regular 'uniform' function call--just one function or function
         // pointer, so just emit the IR directly.
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
-        llvm::PointerType *func_ptr_type = llvm::dyn_cast<llvm::PointerType>(func->getType());
-        llvm::FunctionType *func_type = llvm::dyn_cast<llvm::FunctionType>(func_ptr_type->getPointerElementType());
+        llvm::FunctionType *func_type = nullptr;
+
+        // Easy function type callee
+        if (llvm::Function *f = llvm::dyn_cast<llvm::Function>(func)) {
+            func_type = f->getFunctionType();
+        } else {
+            // In case of uniform function pointer get the signature from funcType
+            Assert(funcType != nullptr);
+            func_type = funcType->LLVMFunctionType(g->ctx, disableMask);
+        }
         llvm::CallInst *callinst = llvm::CallInst::Create(func_type, func, argVals, name, bblock);
 #else
         llvm::CallInst *callinst = llvm::CallInst::Create(func, argVals, name, bblock);
