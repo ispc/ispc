@@ -8,8 +8,11 @@
 // RUN: %{ispc} %s --target=avx2-i32x8 --arch=x86-64 --emit-llvm-text -o - | FileCheck %s --check-prefixes=CHECK_FP_NO_16,CHECK
 
 // REQUIRES: XE_ENABLED
-// REQUIRES: ARM_ENABLED
 // REQUIRES: X86_ENABLED
+// We do not support ARM targets on Windows.
+// Not every ISPC build on macOS supports ARM targets.
+// They are supported only if macOS SDK supports them.
+// REQUIRES: ARM_ENABLED && !WINDOWS_HOST && (!MACOS_HOST || MACOS_ARM_ENABLED)
 
 // CHECK_FP_16: void @test_fp16_only(
 // CHECK_FP_NO_16-NOT: void @test_fp16_only(
