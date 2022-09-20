@@ -1,6 +1,6 @@
 # ISPC micro-benchmarks.
 
-Micro-benchmarks are designed to test efficiency of different aspects of ISPC code generation. This suit assumes three type of tests:
+Micro-benchmarks are designed to test efficiency of different aspects of ISPC code generation. This suite assumes three type of tests:
 
 1. [**Individual language features and library functions**](01_trivial). Testing them in isolation focuses on implementation quality of language constructs, like ``foreach`` loops and library function like ``aos_to_soa()``. This category of tests allow covering ISPC functionality quite thoroughly, but doesn't address interplay between different features and compiler optimizations.
 2. [**Feature combinations and non-obvious optimization effects**](02_medium). It's impractical to cover all combinations, so this kind of tests requires understanding of the specific effects triggered by features combination. An example might be memory operations nesting in non-trivial loops.

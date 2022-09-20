@@ -51,6 +51,7 @@
 #include <map>
 #include <sstream>
 #include <stdio.h>
+#include <iostream>
 
 #include <llvm/IR/CallingConv.h>
 #include <llvm/IR/DerivedTypes.h>
@@ -1116,9 +1117,7 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
         step->EmitCode(ctx);
 
     llvm::Instruction *branchInst = ctx->BranchInst(btest);
-    if (uniformTest) {
-        ctx->setLoopUnrollMetadata(branchInst, loopAttribute, pos);
-    }
+    ctx->setLoopUnrollMetadata(branchInst, loopAttribute, pos);
 
     // Set the current emission basic block to the loop exit basic block
     ctx->SetCurrentBasicBlock(bexit);
@@ -1150,11 +1149,11 @@ void ForStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) 
     bool uniformTest = test ? test->GetType()->IsUniformType()
                             : (!g->opt.disableUniformControlFlow && !lHasVaryingBreakOrContinue(stmts));
 
-    if (uniformTest) {
-        loopAttribute = lAttr;
-    } else {
-        Warning(pos, "'#pragma unroll/nounroll' ignored - not supported for varying for loop.");
+    if (!uniformTest) {
+        Warning(pos, "'#pragma unroll/nounroll' is EXPERIMENTAL for varying for loop.");
     }
+
+    loopAttribute = lAttr;
 }
 
 int ForStmt::EstimateCost() const {
@@ -1433,7 +1432,8 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->StartForeach(FunctionEmitContext::FOREACH_REGULAR);
 
     // On to the outermost loop's test
-    ctx->BranchInst(bbTest[0]);
+    llvm::Instruction * bbBIOuter = ctx->BranchInst(bbTest[0]);
+    ctx->setLoopUnrollMetadata(bbBIOuter, loopAttribute, pos);
 
     ///////////////////////////////////////////////////////////////////////////
     // foreach_reset: this code runs when we need to reset the counter for
@@ -1664,7 +1664,8 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims - 1], NULL, "counter");
         llvm::Value *beforeAlignedEnd = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT, counter,
                                                      alignedEnd[nDims - 1], "before_aligned_end");
-        ctx->BranchInst(bbFullBody, bbPartialInnerAllOuter, beforeAlignedEnd);
+        llvm::Instruction *bbBIOuterNotInExtras = ctx->BranchInst(bbFullBody, bbPartialInnerAllOuter, beforeAlignedEnd);
+        ctx->setLoopUnrollMetadata(bbBIOuterNotInExtras, loopAttribute, pos);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1983,7 +1984,12 @@ Stmt *ForeachStmt::TypeCheck() {
 }
 
 void ForeachStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
-    Warning(pos, "'#pragma unroll/nounroll' ignored - not supported for foreach loop.");
+    if (loopAttribute.first != Globals::pragmaUnrollType::none)
+        Error(pos, "Multiple '#pragma unroll/nounroll' directives used.");
+
+    Warning(pos, "'#pragma unroll/nounroll' is EXPERIMENTAL for foreach loop.");
+
+    loopAttribute = lAttr;
 }
 
 int ForeachStmt::EstimateCost() const { return dimVariables.size() * (COST_UNIFORM_LOOP + COST_SIMPLE_ARITH_LOGIC_OP); }
