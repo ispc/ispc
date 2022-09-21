@@ -3083,8 +3083,13 @@ void FunctionEmitContext::MemcpyInst(llvm::Value *dest, llvm::Value *src, llvm::
     if (align == NULL)
         align = LLVMInt32(1);
     llvm::FunctionCallee mcFuncCallee =
+#ifdef ISPC_OPAQUE_PTR_MODE
+        m->module->getOrInsertFunction("llvm.memcpy.p0.p0.i64", LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
+                                       LLVMTypes::VoidPointerType, LLVMTypes::Int64Type, LLVMTypes::BoolType);
+#else
         m->module->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64", LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
                                        LLVMTypes::VoidPointerType, LLVMTypes::Int64Type, LLVMTypes::BoolType);
+#endif
     llvm::Constant *mcFunc = llvm::cast<llvm::Constant>(mcFuncCallee.getCallee());
     AssertPos(currentPos, mcFunc != NULL);
     AssertPos(currentPos, llvm::isa<llvm::Function>(mcFunc));
