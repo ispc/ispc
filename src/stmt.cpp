@@ -47,11 +47,11 @@
 #include "util.h"
 
 #include <algorithm>
+#include <iostream>
 #include <iterator>
 #include <map>
 #include <sstream>
 #include <stdio.h>
-#include <iostream>
 
 #include <llvm/IR/CallingConv.h>
 #include <llvm/IR/DerivedTypes.h>
@@ -1432,7 +1432,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->StartForeach(FunctionEmitContext::FOREACH_REGULAR);
 
     // On to the outermost loop's test
-    llvm::Instruction * bbBIOuter = ctx->BranchInst(bbTest[0]);
+    llvm::Instruction *bbBIOuter = ctx->BranchInst(bbTest[0]);
     ctx->setLoopUnrollMetadata(bbBIOuter, loopAttribute, pos);
 
     ///////////////////////////////////////////////////////////////////////////
