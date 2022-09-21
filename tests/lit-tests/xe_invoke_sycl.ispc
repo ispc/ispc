@@ -55,7 +55,7 @@
 // @llvm.genx.simdcf.goto
 // Check that broadcast of uniform return values work as expected.
 // CHECK_GPU: call x86_regcallcc <8 x i32> @__regcall3__extern_sycl_decl_uniform(<8 x i64> %{{.*}})
-// CHECK_GPU: extractelement <8 x i32> %{{.*}}, i32 0
+// CHECK_GPU: extractelement <8 x i32> %{{.*}}, i{{(32|64)}} 0
 // CHECK_GPU: call x86_regcallcc <8 x i32> @__regcall3__extern_sycl_decl(<8 x i64> %{{.*}}, <8 x i32> {{.*}})
 // @llvm.genx.simdcf.join
 

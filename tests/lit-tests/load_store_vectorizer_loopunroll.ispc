@@ -4,7 +4,9 @@
 //   XeGatherCoalescing pass.
 // This test checks for sequences of 4-wide store coalescing, as that appears
 //   to be the width targeted by the LoadStoreVectorizer.
-
+// Note: LoadStoreVectorizerPass from LLVM 13.0 uses "undef" as a placeholder
+//   for resulting vector and "poison" starting from LLVM 14.0 (llvm/llvm-project@cf284f6)
+//   It's safe transformation since poison values will be always overwriten with a different value.
 
 // RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -h %t.h --emit-llvm-text --debug-phase=325:325 --dump-file=%t -o /dev/null
 // RUN: FileCheck --input-file %t/ir_325_GPULoadandStoreVectorizer.ll %s --check-prefixes CHECK_ALL,CHECK
@@ -26,7 +28,7 @@
 
 // CHECK_ALL-LABEL: @scatter_coalescing_loopunroll4pragma
 
-// CHECK:           %{{[0-9]+}} = insertelement <4 x float> undef, float %_in{{.*}}, i{{(32|64)}} 0
+// CHECK:           %{{[0-9]+}} = insertelement <4 x float> {{undef|poison}}, float %_in{{.*}}, i{{(32|64)}} 0
 // CHECK:           %{{[0-9]+}} = insertelement <4 x float> %{{[0-9]+}}, float %_in{{.*}}, i{{(32|64)}} 1
 // CHECK:           %{{[0-9]+}} = insertelement <4 x float> %{{[0-9]+}}, float %_in{{.*}}, i{{(32|64)}} 2
 // CHECK:           %{{[0-9]+}} = insertelement <4 x float> %{{[0-9]+}}, float %_in{{.*}}, i{{(32|64)}} 3
@@ -53,7 +55,7 @@ task void scatter_coalescing_loopunroll4pragma(uniform float _out[], uniform flo
 
 // CHECK_ALL-LABEL: @scatter_coalescing_loopunroll4inline
 
-// CHECK:           %{{[0-9]+}} = insertelement <4 x float> undef, float %_in{{.*}}, i{{(32|64)}} 0
+// CHECK:           %{{[0-9]+}} = insertelement <4 x float> {{undef|poison}}, float %_in{{.*}}, i{{(32|64)}} 0
 // CHECK:           %{{[0-9]+}} = insertelement <4 x float> %{{[0-9]+}}, float %_in{{.*}}, i{{(32|64)}} 1
 // CHECK:           %{{[0-9]+}} = insertelement <4 x float> %{{[0-9]+}}, float %_in{{.*}}, i{{(32|64)}} 2
 // CHECK:           %{{[0-9]+}} = insertelement <4 x float> %{{[0-9]+}}, float %_in{{.*}}, i{{(32|64)}} 3
@@ -85,12 +87,12 @@ task void scatter_coalescing_loopunroll4inline(uniform float _out[], uniform flo
 
 // CHECK_ALL-LABEL: @scatter_coalescing_loopunroll8inline
 
-// CHECK:           %{{[0-9]+}} = insertelement <4 x float> undef, float %_in{{.*}}, i{{(32|64)}} 0
+// CHECK:           %{{[0-9]+}} = insertelement <4 x float> {{undef|poison}}, float %_in{{.*}}, i{{(32|64)}} 0
 // CHECK:           %{{[0-9]+}} = insertelement <4 x float> %{{[0-9]+}}, float %_in{{.*}}, i{{(32|64)}} 1
 // CHECK:           %{{[0-9]+}} = insertelement <4 x float> %{{[0-9]+}}, float %_in{{.*}}, i{{(32|64)}} 2
 // CHECK:           %{{[0-9]+}} = insertelement <4 x float> %{{[0-9]+}}, float %_in{{.*}}, i{{(32|64)}} 3
 // CHECK:           store <4 x float> %{{[0-9]+}}, <4 x float>* %{{[0-9]+}}
-// CHECK:           %{{[0-9]+}} = insertelement <4 x float> undef, float %_in{{.*}}, i{{(32|64)}} 0
+// CHECK:           %{{[0-9]+}} = insertelement <4 x float> {{undef|poison}}, float %_in{{.*}}, i{{(32|64)}} 0
 // CHECK:           %{{[0-9]+}} = insertelement <4 x float> %{{[0-9]+}}, float %_in{{.*}}, i{{(32|64)}} 1
 // CHECK:           %{{[0-9]+}} = insertelement <4 x float> %{{[0-9]+}}, float %_in{{.*}}, i{{(32|64)}} 2
 // CHECK:           %{{[0-9]+}} = insertelement <4 x float> %{{[0-9]+}}, float %_in{{.*}}, i{{(32|64)}} 3
