@@ -43,7 +43,6 @@
 #include "sym.h"
 #include "util.h"
 
-#include <filesystem>
 #include <map>
 #include <regex>
 #include <set>
@@ -4828,22 +4827,25 @@ void DebugPassFile::run(llvm::Module &module, bool init) {
     std::ostringstream oss;
     oss << (init ? "init_" : "ir_") << pnum << "_" << sanitize(std::string{pname}) << ".ll";
 
-    const std::filesystem::path pathFile{oss.str()};
-    const std::filesystem::path pathDir{pdir};
+    const std::string pathFile{oss.str()};
 
-    std::filesystem::path pathDirFile;
+#ifdef ISPC_HOST_IS_WINDOWS
+    const std::string pathSep{"\\"};
+#else
+    const std::string pathSep{"/"};
+#endif // ISPC_HOST_IS_WINDOWS
 
-    if (!pathDir.empty()) {
-        std::filesystem::create_directories(pathDir);
-        pathDirFile = pathDir;
-        pathDirFile /= pathFile;
+    std::string pathDirFile;
+
+    if (!pdir.empty()) {
+        llvm::sys::fs::create_directories(pdir);
+        pathDirFile = pdir + pathSep + pathFile;
     } else {
         pathDirFile = pathFile;
     }
 
     std::error_code EC;
-    std::string pathDirFileStr = pathDirFile.string();
-    llvm::raw_fd_ostream OS(pathDirFileStr, EC, llvm::sys::fs::OF_None);
+    llvm::raw_fd_ostream OS(pathDirFile, EC, llvm::sys::fs::OF_None);
     Assert(!EC && "IR dump file creation failed!");
     module.print(OS, 0);
 }
