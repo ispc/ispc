@@ -2,7 +2,7 @@
 
 // RUN: %{ispc} %s --target=host --nostdlib --nowrap 2>&1 | FileCheck %s
 
-// CHECK: Warning: '#pragma unroll/nounroll' ignored - not supported for varying for loop.
+// CHECK: Warning: '#pragma unroll/nounroll' is EXPERIMENTAL for varying for loop.
 extern void goo_for_var(int);
 void foo_for_var() {
 #pragma unroll(3)
@@ -22,7 +22,7 @@ void foo_do_var() {
     } while(iter1 < 45);
 }
 
-// CHECK: Warning: '#pragma unroll/nounroll' ignored - not supported for foreach loop.
+// CHECK: Warning: '#pragma unroll/nounroll' is EXPERIMENTAL for foreach loop.
 extern void goo_foreach(int, int);
 void foo_foreach() {
 #pragma unroll(3)
@@ -49,7 +49,7 @@ void foo_foreach_unique(int var) {
     }
 }
 
-// CHECK: Warning: '#pragma unroll/nounroll' ignored - not supported for foreach loop.
+// CHECK: Warning: '#pragma unroll/nounroll' is EXPERIMENTAL for foreach loop.
 extern void goo_foreach_tiled(int, int, int);
 void foo_foreach_tiled() {
 #pragma unroll 3
