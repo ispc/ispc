@@ -210,8 +210,7 @@ Module::Module(const char *fn) : bufferCPP{nullptr} {
         if (IsStdin(filename)) {
             // Unfortunately we can't yet call Error() since the global 'm'
             // variable hasn't been initialized yet.
-            Error(SourcePos(), "Can't emit debugging information with no "
-                               "source file on disk.\n");
+            Error(SourcePos(), "Can't emit debugging information with no source file on disk.\n");
             ++errorCount;
             delete diBuilder;
             diBuilder = NULL;
@@ -402,22 +401,17 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
     }
 
     if (symbolTable->LookupFunction(name.c_str())) {
-        Error(pos,
-              "Global variable \"%s\" shadows previously-declared "
-              "function.",
-              name.c_str());
+        Error(pos, "Global variable \"%s\" shadows previously-declared function.", name.c_str());
         return;
     }
 
     if (storageClass == SC_EXTERN_C) {
-        Error(pos, "extern \"C\" qualifier can only be used for "
-                   "functions.");
+        Error(pos, "extern \"C\" qualifier can only be used for functions.");
         return;
     }
 
     if (storageClass == SC_EXTERN_SYCL) {
-        Error(pos, "extern \"SYCL\" qualifier can only be used for "
-                   "functions.");
+        Error(pos, "extern \"SYCL\" qualifier can only be used for functions.");
         return;
     }
 
@@ -448,10 +442,7 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
     ConstExpr *constValue = NULL;
     if (storageClass == SC_EXTERN) {
         if (initExpr != NULL)
-            Error(pos,
-                  "Initializer can't be provided with \"extern\" "
-                  "global variable \"%s\".",
-                  name.c_str());
+            Error(pos, "Initializer can't be provided with \"extern\" global variable \"%s\".", name.c_str());
     } else {
         if (initExpr != NULL) {
             initExpr = TypeCheck(initExpr);
@@ -476,8 +467,8 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
                         if ((storageClass != SC_STATIC) && (initPair.second == true)) {
                             if (g->isMultiTargetCompilation == true) {
                                 Error(initExpr->pos,
-                                      "Initializer for global variable \"%s\" "
-                                      "is not a constant for multi-target compilation.",
+                                      "Initializer for global variable \"%s\" is not a constant for multi-target "
+                                      "compilation.",
                                       name.c_str());
                                 return;
                             }
@@ -496,9 +487,7 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
                             // represent their values.
                             constValue = llvm::dyn_cast<ConstExpr>(initExpr);
                     } else
-                        Error(initExpr->pos,
-                              "Initializer for global variable \"%s\" "
-                              "must be a constant.",
+                        Error(initExpr->pos, "Initializer for global variable \"%s\" must be a constant.",
                               name.c_str());
                 }
             }
@@ -520,10 +509,8 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
         if (!Type::Equal(sym->type, type) ||
             (sym->storageClass != SC_EXTERN && sym->storageClass != SC_EXTERN_C &&
              sym->storageClass != SC_EXTERN_SYCL && sym->storageClass != storageClass)) {
-            Error(pos,
-                  "Definition of variable \"%s\" conflicts with "
-                  "definition at %s:%d.",
-                  name.c_str(), sym->pos.name, sym->pos.first_line);
+            Error(pos, "Definition of variable \"%s\" conflicts with definition at %s:%d.", name.c_str(), sym->pos.name,
+                  sym->pos.first_line);
             return;
         }
 
@@ -533,10 +520,8 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
         // And issue an error if this is a redefinition of a variable
         if (gv->hasInitializer() && sym->storageClass != SC_EXTERN && sym->storageClass != SC_EXTERN_C &&
             sym->storageClass != SC_EXTERN_SYCL) {
-            Error(pos,
-                  "Redefinition of variable \"%s\" is illegal. "
-                  "(Previous definition at %s:%d.)",
-                  sym->name.c_str(), sym->pos.name, sym->pos.first_line);
+            Error(pos, "Redefinition of variable \"%s\" is illegal. (Previous definition at %s:%d.)", sym->name.c_str(),
+                  sym->pos.name, sym->pos.first_line);
             return;
         }
 
@@ -652,30 +637,19 @@ static void lCheckExportedParameterTypes(const Type *type, const std::string &na
             while (pt) {
                 if (pt->GetBaseType()->IsSOAType()) {
                     isSOAType = true;
-                    Error(pos,
-                          "SOA type parameter \"%s\" is illegal "
-                          "in an exported function.",
-                          name.c_str());
+                    Error(pos, "SOA type parameter \"%s\" is illegal in an exported function.", name.c_str());
                 }
                 pt = CastType<PointerType>(pt->GetBaseType());
             }
             if (!isSOAType) {
-                Error(pos,
-                      "Varying pointer type parameter \"%s\" is illegal "
-                      "in an exported function.",
-                      name.c_str());
+                Error(pos, "Varying pointer type parameter \"%s\" is illegal in an exported function.", name.c_str());
             }
         }
         if (CastType<StructType>(type->GetBaseType()))
-            Error(pos,
-                  "Struct parameter \"%s\" with vector typed "
-                  "member(s) is illegal in an exported function.",
+            Error(pos, "Struct parameter \"%s\" with vector typed member(s) is illegal in an exported function.",
                   name.c_str());
         else if (CastType<VectorType>(type))
-            Error(pos,
-                  "Vector-typed parameter \"%s\" is illegal in an exported "
-                  "function.",
-                  name.c_str());
+            Error(pos, "Vector-typed parameter \"%s\" is illegal in an exported function.", name.c_str());
         else
             Error(pos, "Varying parameter \"%s\" is illegal in an exported function.", name.c_str());
     }
@@ -686,14 +660,9 @@ static void lCheckExportedParameterTypes(const Type *type, const std::string &na
 static void lCheckTaskParameterTypes(const Type *type, const std::string &name, SourcePos pos) {
     if (lRecursiveCheckValidParamType(type, false, false, name, pos) == false) {
         if (CastType<PointerType>(type))
-            Error(pos,
-                  "Varying pointer type parameter \"%s\" is illegal "
-                  "in an \"task\" for Xe targets.",
-                  name.c_str());
+            Error(pos, "Varying pointer type parameter \"%s\" is illegal in an \"task\" for Xe targets.", name.c_str());
         if (CastType<StructType>(type->GetBaseType()))
-            Error(pos,
-                  "Struct parameter \"%s\" with vector typed "
-                  "member(s) is illegal in an \"task\" for Xe targets.",
+            Error(pos, "Struct parameter \"%s\" with vector typed member(s) is illegal in an \"task\" for Xe targets.",
                   name.c_str());
         else if (CastType<VectorType>(type))
             Error(pos,
@@ -736,9 +705,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     // If a global variable with the same name has already been declared
     // issue an error.
     if (symbolTable->LookupVariable(name.c_str()) != NULL) {
-        Error(pos,
-              "Function \"%s\" shadows previously-declared global variable. "
-              "Ignoring this definition.",
+        Error(pos, "Function \"%s\" shadows previously-declared global variable. Ignoring this definition.",
               name.c_str());
         return;
     }
@@ -798,9 +765,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         // Make sure the user hasn't supplied both an 'extern "C"' and a
         // 'task' qualifier with the function
         if (functionType->isTask) {
-            Error(pos,
-                  "\"task\" qualifier is illegal with C-linkage extern "
-                  "function \"%s\".  Ignoring this function.",
+            Error(pos, "\"task\" qualifier is illegal with C-linkage extern function \"%s\".  Ignoring this function.",
                   name.c_str());
             return;
         }
@@ -964,11 +929,9 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
             function->addAttribute(i+1, llvm::Attribute::constructAlignmentFromInt(align));
 #endif
         }
-        if (symbolTable->LookupFunction(argName.c_str()))
-            Warning(argPos,
-                    "Function parameter \"%s\" shadows a function "
-                    "declared in global scope.",
-                    argName.c_str());
+        if (symbolTable->LookupFunction(argName.c_str())) {
+            Warning(argPos, "Function parameter \"%s\" shadows a function declared in global scope.", argName.c_str());
+        }
 
         if (defaultValue != NULL)
             seenDefaultArg = true;
@@ -1023,9 +986,7 @@ void Module::AddExportedTypes(const std::vector<std::pair<const Type *, SourcePo
     for (int i = 0; i < (int)types.size(); ++i) {
         if (CastType<StructType>(types[i].first) == NULL && CastType<VectorType>(types[i].first) == NULL &&
             CastType<EnumType>(types[i].first) == NULL)
-            Error(types[i].second,
-                  "Only struct, vector, and enum types, "
-                  "not \"%s\", are allowed in type export lists.",
+            Error(types[i].second, "Only struct, vector, and enum types, not \"%s\", are allowed in type export lists.",
                   types[i].first->GetString().c_str());
         else
             exportedTypes.push_back(types[i]);
@@ -1112,10 +1073,8 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
                 return 1;
             }
             if (fileType != NULL)
-                Warning(SourcePos(),
-                        "Emitting %s file, but filename \"%s\" "
-                        "has suffix \"%s\"?",
-                        fileType, outFileName, suffix);
+                Warning(SourcePos(), "Emitting %s file, but filename \"%s\" has suffix \"%s\"?", fileType, outFileName,
+                        suffix);
         }
     }
     if (outputType == Header) {
@@ -1185,8 +1144,7 @@ bool Module::translateToSPIRV(llvm::Module *module, std::stringstream &ss) {
 #if ISPC_LLVM_VERSION == ISPC_LLVM_12_0
     llvm::cl::opt<bool> SPIRVAllowUnknownIntrinsics(
         "spirv-allow-unknown-intrinsics", llvm::cl::init(true),
-        llvm::cl::desc("Unknown LLVM intrinsics will be translated as external function "
-                       "calls in SPIR-V"));
+        llvm::cl::desc("Unknown LLVM intrinsics will be translated as external function calls in SPIR-V"));
 
     Opts.setSPIRVAllowUnknownIntrinsicsEnabled(SPIRVAllowUnknownIntrinsics);
 #else
@@ -2942,8 +2900,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             return 1;
         }
         if (cpu != NULL) {
-            Error(SourcePos(), "Illegal to specify cpu type when compiling "
-                               "for multiple targets.");
+            Error(SourcePos(), "Illegal to specify cpu type when compiling for multiple targets.");
             return 1;
         }
 
@@ -2998,10 +2955,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             // this target ISA.  (It doesn't make sense to compile to both
             // avx and avx-x2, for example.)
             if (targetMachines[g->target->getISA()] != NULL) {
-                Error(SourcePos(),
-                      "Can't compile to multiple variants of %s "
-                      "target!\n",
-                      g->target->GetISAString());
+                Error(SourcePos(), "Can't compile to multiple variants of %s target!\n", g->target->GetISAString());
                 return 1;
             }
             targetMachines[g->target->getISA()] = g->target->GetTargetMachine();
