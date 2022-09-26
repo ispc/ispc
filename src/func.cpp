@@ -119,31 +119,30 @@ void Function::Print() const {
 
 void Function::Print(Indent &indent) const {
     indent.Print("Function");
-    if (sym) {
+
+    if (sym && sym->type) {
         sym->pos.Print();
-        printf(" \"%s\"\n", sym->name.c_str());
+        printf(" [%s] \"%s\"\n", sym->type->GetString().c_str(), sym->name.c_str());
     } else {
-        printf("<NULL>");
+        printf("<NULL>\n");
     }
 
     indent.pushList(args.size() + 1);
-    if (args.size() > 0) {
-        for (int i = 0; i < args.size(); i++) {
-            static constexpr std::size_t BUFSIZE{15};
-            char buffer[BUFSIZE];
-            snprintf(buffer, BUFSIZE, "param %d", i);
-            indent.setNextLabel(buffer);
-            if (args[i]) {
-                indent.Print();
-                if (args[i]->type != nullptr) {
-                    printf("[%s] ", args[i]->type->GetString().c_str());
-                }
-                printf("%s\n", args[i]->name.c_str());
-                indent.Done();
-            } else {
-                indent.Print("<NULL>");
-                indent.Done();
+    for (int i = 0; i < args.size(); i++) {
+        static constexpr std::size_t BUFSIZE{15};
+        char buffer[BUFSIZE];
+        snprintf(buffer, BUFSIZE, "param %d", i);
+        indent.setNextLabel(buffer);
+        if (args[i]) {
+            indent.Print();
+            if (args[i]->type != nullptr) {
+                printf("[%s] ", args[i]->type->GetString().c_str());
             }
+            printf("%s\n", args[i]->name.c_str());
+            indent.Done();
+        } else {
+            indent.Print("<NULL>\n");
+            indent.Done();
         }
     }
 
