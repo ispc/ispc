@@ -878,6 +878,24 @@ Symbol *TemplateInstantiation::InstantiateSymbol(Symbol *sym) {
     return instSym;
 }
 
+Symbol *TemplateInstantiation::InstantiateTemplateSymbol(TemplateSymbol *sym) {
+    // The function is assumed to be called once per instantiation and
+    // only for the tempalte that is being instantiated.
+    Assert(sym && functionSym == nullptr);
+
+    // Instantiate the function type
+    const Type *instType = sym->type->ResolveDependence(*this);
+
+    // Create a function symbol
+    Symbol *instSym = new Symbol(sym->name, sym->pos, instType, SC_STATIC);
+    functionSym = instSym;
+
+    // Create llvm::Function and attach to the symbol, so the symbol is complete and ready for use.
+    llvm::Function *llvmFunc = createLLVMFunction(instSym, sym->isInline, sym->isNoInline);
+    instSym->function = llvmFunc;
+    return instSym;
+}
+
 // After the instance of the template function is created, the symbols should point to the parent function.
 void TemplateInstantiation::SetFunction(Function *func) {
     for (auto &symPair : symMap) {
@@ -885,4 +903,9 @@ void TemplateInstantiation::SetFunction(Function *func) {
         sym->parentFunction = func;
     }
     functionSym->parentFunction = func;
+}
+
+llvm::Function *TemplateInstantiation::createLLVMFunction(Symbol *functionSym, bool isInline, bool isNoInline) {
+    // TODO: implement
+    return nullptr;
 }

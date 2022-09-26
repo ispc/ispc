@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -106,6 +106,33 @@ class Symbol {
     /*!< For symbols that are parameters to functions or are
          variables declared inside functions, this gives the
          function they're in. */
+};
+
+/**
+   @brief Represents function template.
+
+   TODO: The only reason that it's separate from Symbol is that we trying not to introduce additional
+   overhead. Symbol class needs to be refactored to be either a class hierarchy or be implemented as
+   a union of different types of symbols.
+ */
+class TemplateSymbol {
+  public:
+    TemplateSymbol(const TemplateParms *parms, const std::string &n, const FunctionType *t, const SourcePos p,
+                   bool isInline, bool inNoInline);
+
+    SourcePos pos;
+    const std::string name;
+    const FunctionType *type;
+    const TemplateParms *templateParms;
+    FunctionTemplate *functionTemplate;
+
+    // Inline / noinline attributes.
+    // TODO: it's bad idea to store them here, this need to be redesigned.
+    // The reason to keep them here for now is that for regular functions it's not stored anywhere in AST,
+    // but attached as attrubutes to llvm::Function when it's created. For templates we need to store this
+    // information in here and use later when the template is instantiated.
+    bool isInline;
+    bool isNoInline;
 };
 
 /** @brief Symbol table that holds all known symbols during parsing and compilation.

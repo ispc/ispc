@@ -55,6 +55,13 @@ Symbol::Symbol(const std::string &n, SourcePos p, const Type *t, StorageClass sc
       storageClass(sc), varyingCFDepth(0), parentFunction(NULL) {}
 
 ///////////////////////////////////////////////////////////////////////////
+// TemplateSymbol
+
+TemplateSymbol::TemplateSymbol(const TemplateParms *parms, const std::string &n, const FunctionType *t,
+                               const SourcePos p, bool inl, bool noinl)
+    : pos(p), name(n), type(t), templateParms(parms), functionTemplate(nullptr), isInline(inl), isNoInline(noinl) {}
+
+///////////////////////////////////////////////////////////////////////////
 // SymbolTable
 
 SymbolTable::SymbolTable() { PushScope(); }

@@ -106,6 +106,7 @@ class FunctionEmitContext;
 class Expr;
 class ExprList;
 class Function;
+class FunctionTemplate;
 class FunctionType;
 class Module;
 class PointerType;
@@ -113,6 +114,8 @@ class Stmt;
 class Symbol;
 class SymbolTable;
 class TemplateInstantiation;
+class TemplateParms;
+class TemplateSymbol;
 class Type;
 struct VariableDeclaration;
 
