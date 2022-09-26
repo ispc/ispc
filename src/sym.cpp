@@ -37,6 +37,7 @@
 
 #include "sym.h"
 #include "expr.h"
+#include "func.h"
 #include "type.h"
 #include "util.h"
 
@@ -188,6 +189,50 @@ Symbol *SymbolTable::LookupIntrinsics(llvm::Function *func) {
     if (iter != intrinsics.end()) {
         Symbol *funcs = iter->second;
         return funcs;
+    }
+    return nullptr;
+}
+
+bool SymbolTable::AddFunctionTemplate(TemplateSymbol *templ) {
+    Assert(templ && templ->templateParms && templ->type);
+    if (LookupFunctionTemplate(templ->templateParms, templ->name, templ->type) != nullptr) {
+        // A function template of the same name and type has already been added to
+        // the symbol table
+        return false;
+    }
+
+    std::vector<TemplateSymbol *> &funTemplOverloads = functionTemplates[templ->name];
+    funTemplOverloads.push_back(templ);
+    return true;
+}
+
+bool SymbolTable::LookupFunctionTemplate(const std::string &name, std::vector<TemplateSymbol *> *matches) {
+    FunctionTemplateMapType::iterator iter = functionTemplates.find(name);
+    if (iter != functionTemplates.end()) {
+        if (matches == nullptr) {
+            return true;
+        }
+        const std::vector<TemplateSymbol *> &templs = iter->second;
+        for (auto templ : templs) {
+            matches->push_back(templ);
+        }
+    }
+    return matches ? (matches->size() > 0) : false;
+}
+
+TemplateSymbol *SymbolTable::LookupFunctionTemplate(const TemplateParms *templateParmList, const std::string &name,
+                                                    const FunctionType *type) {
+    // The template declaration matches if:
+    // - template paramters list matches
+    // - function types match
+    FunctionTemplateMapType::iterator iter = functionTemplates.find(name);
+    if (iter != functionTemplates.end()) {
+        std::vector<TemplateSymbol *> templs = iter->second;
+        for (auto templ : templs) {
+            if (templateParmList->IsEqual(templ->templateParms) && Type::Equal(templ->type, type)) {
+                return templ;
+            }
+        }
     }
     return nullptr;
 }
