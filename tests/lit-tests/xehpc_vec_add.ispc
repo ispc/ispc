@@ -30,20 +30,14 @@ typedef float T;
 task void vadd(uniform int n, uniform T aIN[], uniform T bIN[], uniform T cOUT[]) {
 #ifdef UNIFORM
   for (uniform int i = 0; i < n; i += programCount) {
-// CHECK_UNIFORM_DOUBLE: call <16 x double> @llvm.genx.svm.gather.v16f64.v16i1.v16i64
-// CHECK_UNIFORM_DOUBLE-NEXT: call <16 x double> @llvm.genx.svm.gather.v16f64.v16i1.v16i64
-// CHECK_UNIFORM_I64: call <16 x i64> @llvm.genx.svm.gather.v16i64.v16i1.v16i64
-// CHECK_UNIFORM_I64-NEXT: call <16 x i64> @llvm.genx.svm.gather.v16i64.v16i1.v16i64
+// CHECK_UNIFORM_DOUBLE:  %{{.*}} = load <32 x double>
+// CHECK_UNIFORM_I64:     %{{.*}} = load <32 x i64>
     T a = aIN[i + programIndex];
-// CHECK_UNIFORM_DOUBLE: call <16 x double> @llvm.genx.svm.gather.v16f64.v16i1.v16i64
-// CHECK_UNIFORM_DOUBLE-NEXT: call <16 x double> @llvm.genx.svm.gather.v16f64.v16i1.v16i64
-// CHECK_UNIFORM_I64: call <16 x i64> @llvm.genx.svm.gather.v16i64.v16i1.v16i64
-// CHECK_UNIFORM_I64-NEXT: call <16 x i64> @llvm.genx.svm.gather.v16i64.v16i1.v16i64
+// CHECK_UNIFORM_DOUBLE:  %{{.*}} = load <32 x double>
+// CHECK_UNIFORM_I64:     %{{.*}} = load <32 x i64>
     T b = bIN[i + programIndex];
-// CHECK_UNIFORM_DOUBLE: call void @llvm.genx.svm.scatter.v16i1.v16i64.v16f64
-// CHECK_UNIFORM_DOUBLE-NEXT: call void @llvm.genx.svm.scatter.v16i1.v16i64.v16f64
-// CHECK_UNIFORM_I64: call void @llvm.genx.svm.scatter.v16i1.v16i64.v16i64
-// CHECK_UNIFORM_I64-NEXT: call void @llvm.genx.svm.scatter.v16i1.v16i64.v16i64
+// CHECK_UNIFORM_DOUBLE:  store <32 x double> %add_a_load_b_load
+// CHECK_UNIFORM_I64:     store <32 x i64> %add_a_load_b_load
     cOUT[i + programIndex] = a + b;
   }
 #elif defined VARYING

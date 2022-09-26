@@ -59,7 +59,8 @@
 // CHECK_GPU: call x86_regcallcc <8 x i32> @__regcall3__extern_sycl_decl(<8 x i64> %{{.*}}, <8 x i32> {{.*}})
 // @llvm.genx.simdcf.join
 
-// CHECK_GPU: @llvm.genx.svm.block.st
+// CHECK_GPU: store <8 x float>
+// CHECK_GPU: store float
 // CHECK_GPU: call x86_regcallcc void @__regcall3__extern_sycl_decl_void(<8 x i64> {{.*}})
 // CHECK_GPU: call x86_regcallcc void @__regcall3__extern_sycl_decl_noarg()
 // CHECK_GPU: call x86_regcallcc <8 x i32> @__regcall3__extern_sycl_decl_ptr(<8 x i64> {{.*}})
