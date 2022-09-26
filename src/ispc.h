@@ -112,6 +112,7 @@ class PointerType;
 class Stmt;
 class Symbol;
 class SymbolTable;
+class TemplateInstantiation;
 class Type;
 struct VariableDeclaration;
 
