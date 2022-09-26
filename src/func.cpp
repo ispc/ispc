@@ -824,3 +824,48 @@ bool TemplateArgs::IsEqual(TemplateArgs &otherArgs) const {
     }
     return true;
 }
+
+///////////////////////////////////////////////////////////////////////////
+// TemplateInstantiation
+
+TemplateInstantiation::TemplateInstantiation(const TemplateParms &typeParms,
+                                             const std::vector<std::pair<const Type *, SourcePos>> &typeArgs)
+    : functionSym(nullptr) {
+    Assert(typeArgs.size() == typeParms.GetCount());
+    for (int i = 0; i < typeArgs.size(); i++) {
+        std::string name = typeParms[i]->GetName();
+        const Type *type = typeArgs[i].first;
+        args[name] = type;
+    }
+}
+
+const Type *TemplateInstantiation::InstantiateType(const std::string &name) {
+    auto t = args.find(name);
+    if (t == args.end()) {
+        return nullptr;
+    }
+
+    return t->second;
+}
+
+Symbol *TemplateInstantiation::InstantiateSymbol(Symbol *sym) {
+    if (sym == nullptr) {
+        return nullptr;
+    }
+    auto t = symMap.find(sym);
+    if (t != symMap.end()) {
+        return t->second;
+    }
+
+    // TODO: implement symbol instantiation.
+    return sym;
+}
+
+// After the instance of the template function is created, the symbols should point to the parent function.
+void TemplateInstantiation::SetFunction(Function *func) {
+    for (auto &symPair : symMap) {
+        Symbol *sym = symPair.second;
+        sym->parentFunction = func;
+    }
+    functionSym->parentFunction = func;
+}

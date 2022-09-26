@@ -41,6 +41,7 @@
 #include "ispc.h"
 #include "type.h"
 
+#include <unordered_map>
 #include <vector>
 
 namespace ispc {
@@ -96,6 +97,26 @@ class TemplateArgs {
     bool IsEqual(TemplateArgs &otherArgs) const;
 
     std::vector<std::pair<const Type *, SourcePos>> args;
+};
+
+// A helper class to drive function instantiation, it provides the following:
+// - mapping of the symbols in the template to the symbols in the instantiation
+// - type instantiation
+class TemplateInstantiation {
+  public:
+    TemplateInstantiation(const TemplateParms &typeParms,
+                          const std::vector<std::pair<const Type *, SourcePos>> &typeArgs);
+    const Type *InstantiateType(const std::string &name);
+    Symbol *InstantiateSymbol(Symbol *sym);
+    void SetFunction(Function *func);
+
+  private:
+    // Function Symbol of the instantiation.
+    Symbol *functionSym;
+    // Mapping of the symbols in the template to correspoding symbols in the instantiation.
+    std::unordered_map<Symbol *, Symbol *> symMap;
+    // Mapping of template parameter names to the types in the instantiation.
+    std::unordered_map<std::string, const Type *> args;
 };
 
 } // namespace ispc
