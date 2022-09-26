@@ -1,81 +1,83 @@
 // This test is checking correct svm.ld/st svm.gather/scatter generation for different types and SIMD width.
 
 // RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -DUNIFORM --emit-llvm-text --nowrap -o %t.ll
-// RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_UNIFORM %s
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -DVARYING --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_VARYING_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_VARYING
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -DMASKED_ST --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_MASKED_ST
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -DMASKED_ST --emit-llvm-text --opt=enable-xe-unsafe-masked-load --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_MASKED_ST_UNSAFE
+// RUN: FileCheck --input-file=%t.ll -check-prefixes=CHECK_ALL,CHECK_UNIFORM %s
+// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -DVARYING --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_VARYING_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_VARYING
+// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -DMASKED_ST --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_MASKED_ST_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_MASKED_ST
+// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -DMASKED_ST --emit-llvm-text --opt=enable-xe-unsafe-masked-load --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_MASKED_ST_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_MASKED_ST_UNSAFE
 
 // RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -DUNIFORM --emit-llvm-text --nowrap -o %t.ll
-// RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_UNIFORM %s
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -DVARYING --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_VARYING_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_VARYING
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -DMASKED_ST --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_MASKED_ST
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -DMASKED_ST --emit-llvm-text --opt=enable-xe-unsafe-masked-load --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_MASKED_ST_UNSAFE
+// RUN: FileCheck --input-file=%t.ll -check-prefixes=CHECK_ALL,CHECK_UNIFORM %s
+// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -DVARYING --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_VARYING_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_VARYING
+// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -DMASKED_ST --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_MASKED_ST_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_MASKED_ST
+// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -DMASKED_ST --emit-llvm-text --opt=enable-xe-unsafe-masked-load --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_MASKED_ST_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_MASKED_ST_UNSAFE
 
 // RUN: %{ispc} %s --target=gen9-x16 --arch=xe32 -DUNIFORM --emit-llvm-text --nowrap -o %t.ll 2>&1
-// RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_UNIFORM %s
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe32 -DVARYING --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_VARYING_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_VARYING
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe32 -DMASKED_ST --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_MASKED_ST
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe32 -DMASKED_ST --emit-llvm-text --opt=enable-xe-unsafe-masked-load --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_MASKED_ST_UNSAFE
+// RUN: FileCheck --input-file=%t.ll -check-prefixes=CHECK_ALL,CHECK_UNIFORM %s
+// RUN: %{ispc} %s --target=gen9-x16 --arch=xe32 -DVARYING --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_VARYING_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_VARYING
+// RUN: %{ispc} %s --target=gen9-x16 --arch=xe32 -DMASKED_ST --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_MASKED_ST_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_MASKED_ST
+// RUN: %{ispc} %s --target=gen9-x16 --arch=xe32 -DMASKED_ST --emit-llvm-text --opt=enable-xe-unsafe-masked-load --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_MASKED_ST_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_MASKED_ST_UNSAFE
 
 // RUN: %{ispc} %s --target=gen9-x8 --arch=xe32 -DUNIFORM --emit-llvm-text --nowrap -o %t.ll 2>&1
-// RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_UNIFORM %s
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe32 -DVARYING --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_VARYING_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_VARYING
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe32 -DMASKED_ST --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_MASKED_ST
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe32 -DMASKED_ST --emit-llvm-text --opt=enable-xe-unsafe-masked-load --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_MASKED_ST_UNSAFE
+// RUN: FileCheck --input-file=%t.ll -check-prefixes=CHECK_ALL,CHECK_UNIFORM %s
+// RUN: %{ispc} %s --target=gen9-x8 --arch=xe32 -DVARYING --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_VARYING_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_VARYING
+// RUN: %{ispc} %s --target=gen9-x8 --arch=xe32 -DMASKED_ST --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_MASKED_ST_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_MASKED_ST
+// RUN: %{ispc} %s --target=gen9-x8 --arch=xe32 -DMASKED_ST --emit-llvm-text --opt=enable-xe-unsafe-masked-load --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_MASKED_ST_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_MASKED_ST_UNSAFE
 
 // Now process special cases
 // i8 simd16
 // RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -DUNIFORM -DTEST_I8 --emit-llvm-text --nowrap -o %t.ll
-// RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_UNIFORM %s
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -DVARYING -DTEST_I8 --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_VARYING_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_VARYING_I8_SIMD16
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -DMASKED_ST -DTEST_I8 --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_MASKED_ST_I8_SIMD16
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -DMASKED_ST -DTEST_I8 --emit-llvm-text --opt=enable-xe-unsafe-masked-load --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_MASKED_ST_UNSAFE_I8_SIMD16
+// RUN: FileCheck --input-file=%t.ll -check-prefixes=CHECK_ALL,CHECK_UNIFORM %s
+// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -DVARYING -DTEST_I8 --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_VARYING_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_VARYING_I8_SIMD16
+// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -DMASKED_ST -DTEST_I8 --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_MASKED_ST_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_MASKED_ST_I8_SIMD16
+// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -DMASKED_ST -DTEST_I8 --emit-llvm-text --opt=enable-xe-unsafe-masked-load --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_MASKED_ST_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_MASKED_ST_UNSAFE_I8_SIMD16
 
 // for i8 we always generate gathers/scatters since i8x8 is too small for svm ld/st
 // RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -DUNIFORM -DTEST_I8 --emit-llvm-text --nowrap -o %t.ll
-// RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_UNIFORM_I8_SIMD8 %s
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -DVARYING -DTEST_I8 --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_VARYING_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_VARYING_I8_SIMD8
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -DMASKED_ST -DTEST_I8 --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_MASKED_ST_I8_SIMD8
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -DMASKED_ST -DTEST_I8 --emit-llvm-text --opt=enable-xe-unsafe-masked-load --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_MASKED_ST_UNSAFE_I8_SIMD8
+// RUN: FileCheck --input-file=%t.ll -check-prefixes=CHECK_ALL,CHECK_UNIFORM %s
+// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -DVARYING -DTEST_I8 --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_VARYING_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_VARYING_I8_SIMD8
+// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -DMASKED_ST -DTEST_I8 --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_MASKED_ST_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_MASKED_ST_I8_SIMD8
+// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -DMASKED_ST -DTEST_I8 --emit-llvm-text --opt=enable-xe-unsafe-masked-load --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_MASKED_ST_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_MASKED_ST_UNSAFE_I8_SIMD8
 
 // i16 simd16
 // RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -DUNIFORM -DTEST_I16 --emit-llvm-text --nowrap -o %t.ll
-// RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_UNIFORM %s
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -DVARYING -DTEST_I16 --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_VARYING_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_VARYING_I16_SIMD16
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -DMASKED_ST -DTEST_I16 --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_MASKED_ST_I16_SIMD16
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -DMASKED_ST -DTEST_I16 --emit-llvm-text --opt=enable-xe-unsafe-masked-load --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_MASKED_ST_UNSAFE_I16_SIMD16
+// RUN: FileCheck --input-file=%t.ll -check-prefixes=CHECK_ALL,CHECK_UNIFORM %s
+// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -DVARYING -DTEST_I16 --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_VARYING_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_VARYING_I16_SIMD16
+// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -DMASKED_ST -DTEST_I16 --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_MASKED_ST_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_MASKED_ST_I16_SIMD16
+// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -DMASKED_ST -DTEST_I16 --emit-llvm-text --opt=enable-xe-unsafe-masked-load --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_MASKED_ST_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_MASKED_ST_UNSAFE_I16_SIMD16
 
 // i16 simd8
 // RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -DUNIFORM -DTEST_I16 --emit-llvm-text --nowrap -o %t.ll
-// RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_UNIFORM %s
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -DVARYING -DTEST_I16 --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_VARYING_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_VARYING_I16_SIMD8
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -DMASKED_ST -DTEST_I16 --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_MASKED_ST_I16_SIMD8
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -DMASKED_ST -DTEST_I16 --emit-llvm-text --opt=enable-xe-unsafe-masked-load --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_MASKED_ST_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_MASKED_ST_UNSAFE_I16_SIMD8
+// RUN: FileCheck --input-file=%t.ll -check-prefixes=CHECK_ALL,CHECK_UNIFORM %s
+// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -DVARYING -DTEST_I16 --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_VARYING_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_VARYING_I16_SIMD8
+// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -DMASKED_ST -DTEST_I16 --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_MASKED_ST_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_MASKED_ST_I16_SIMD8
+// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -DMASKED_ST -DTEST_I16 --emit-llvm-text --opt=enable-xe-unsafe-masked-load --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_MASKED_ST_WARN
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_MASKED_ST_UNSAFE_I16_SIMD8
+
+// CHECK_ALL-LABEL: @vadd(
 
 // REQUIRES: XE_ENABLED
 #ifdef TEST_I8
@@ -89,17 +91,11 @@ typedef float T;
 export void vadd(uniform int n, uniform T aIN[], uniform T bIN[], uniform T cOUT[]) {
 #ifdef UNIFORM
   for (uniform int i = 0; i < n; i += programCount) {
-// CHECK_UNIFORM: @llvm.genx.svm.block.ld.unaligned
-// CHECK_UNIFORM_I8_SIMD8: call <32 x i8> @llvm.genx.svm.gather.v32i8.v8i1.v8i64(<8 x i1> {{.*}}, i32 0, {{.*}})
-// CHECK_UNIFORM_I8_SIMD8-NEXT: call <8 x i8> @llvm.genx.rdregioni.v8i8.v32i8.i16(<32 x i8> {{.*}}, i32 0, i32 8, i32 4, i16 0, i32 undef)
+// CHECK_UNIFORM:               %{{.*}} = load <{{(8|16)}} x {{(i8|i16|float)}}
     T a = aIN[i + programIndex];
-// CHECK_UNIFORM: @llvm.genx.svm.block.ld.unaligned
-// CHECK_UNIFORM_I8_SIMD8: call <32 x i8> @llvm.genx.svm.gather.v32i8.v8i1.v8i64(<8 x i1> {{.*}}, i32 0, {{.*}})
-// CHECK_UNIFORM_I8_SIMD8-NEXT: call <8 x i8> @llvm.genx.rdregioni.v8i8.v32i8.i16(<32 x i8> {{.*}}, i32 0, i32 8, i32 4, i16 0, i32 undef)
+// CHECK_UNIFORM:               %{{.*}} = load <{{(8|16)}} x {{(i8|i16|float)}}
     T b = bIN[i + programIndex];
-// CHECK_UNIFORM: @llvm.genx.svm.block.st
-// CHECK_UNIFORM_I8_SIMD8: call <32 x i8> @llvm.genx.wrregioni.v32i8.v8i8.i16.v8i1(<32 x i8> undef, <8 x i8> {{.*}}, i32 0, i32 8, i32 4, i16 0, i32 0, <8 x i1> {{.*}})
-// CHECK_UNIFORM_I8_SIMD8-NEXT: call void @llvm.genx.svm.scatter.v8i1.v8i64.v32i8(<8 x i1> {{.*}}, i32 0, {{.*}})
+// CHECK_UNIFORM:               store <{{(8|16)}} x {{(i8|i16|float)}}> %add_a_load_b_load
     cOUT[i + programIndex] = a + b;
   }
 #elif defined VARYING

@@ -104,7 +104,7 @@ extern "C" __regcall uniform EndsWithFlexArray foo7(uniform int b) {
   return f;
 }
 
-// CHECK: define x86_regcallcc <16 x float> @__regcall3__foo8(float addrspace(4)* noalias %A, <16 x float> %b, i32 %I, <16 x i1> %mask)
+// CHECK: define x86_regcallcc <16 x float> @__regcall3__foo8(float addrspace(4)* noalias nocapture {{(readonly)?}} %A, <16 x float> %b, i32 %I, <16 x i1> %mask)
 extern "C" __regcall float foo8(uniform float A[], float b, uniform int I, bool mask) {
   return A[programIndex+I];
 }
