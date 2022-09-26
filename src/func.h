@@ -108,6 +108,7 @@ class TemplateInstantiation {
                           const std::vector<std::pair<const Type *, SourcePos>> &typeArgs);
     const Type *InstantiateType(const std::string &name);
     Symbol *InstantiateSymbol(Symbol *sym);
+    Symbol *InstantiateTemplateSymbol(TemplateSymbol *sym);
     void SetFunction(Function *func);
 
   private:
@@ -117,6 +118,8 @@ class TemplateInstantiation {
     std::unordered_map<Symbol *, Symbol *> symMap;
     // Mapping of template parameter names to the types in the instantiation.
     std::unordered_map<std::string, const Type *> args;
+
+    llvm::Function *createLLVMFunction(Symbol *functionSym, bool isInline, bool isNoInline);
 };
 
 } // namespace ispc
