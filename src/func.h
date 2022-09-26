@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2022, Intel Corporation
+  Copyright (c) 2011-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -39,6 +39,7 @@
 
 #include "ast.h"
 #include "ispc.h"
+#include "type.h"
 
 #include <vector>
 
@@ -75,4 +76,18 @@ class Function {
     Symbol *taskIndexSym1, *taskCountSym1;
     Symbol *taskIndexSym2, *taskCountSym2;
 };
+
+// A helper class to manage template parameters list.
+class TemplateParms {
+  public:
+    TemplateParms();
+    void Add(const TemplateTypeParmType *);
+    size_t GetCount() const;
+    const TemplateTypeParmType *operator[](size_t i) const;
+    bool IsEqual(const TemplateParms *p) const;
+
+  private:
+    std::vector<const TemplateTypeParmType *> parms;
+};
+
 } // namespace ispc
