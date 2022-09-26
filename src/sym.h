@@ -42,6 +42,7 @@
 #include "ctx.h"
 #include "decl.h"
 #include "ispc.h"
+
 #include <map>
 
 namespace ispc {
@@ -213,6 +214,29 @@ class SymbolTable {
         @return pointer to matching Symbol; NULL if none is found. */
     Symbol *LookupFunction(const char *name, const FunctionType *type);
 
+    /** Adds the given function template to the symbol table.
+        @param templ The function template to be added.
+
+        @return true if the template has been added.  False if another
+        function template with the same name and function signature is
+        already present in the symbol table. */
+    bool AddFunctionTemplate(TemplateSymbol *templ);
+
+    /** Looks for the function or functions with the given name in the
+        symbol name.  If a function has been overloaded and multiple
+        definitions are present for a given function name, all of them will
+        be returned in the provided vector and it's up the the caller to
+        resolve which one (if any) to use.  Returns true if any matches
+        were found. */
+    bool LookupFunctionTemplate(const std::string &name, std::vector<TemplateSymbol *> *matches = nullptr);
+
+    /** Looks for a function template with the given name and type
+        in the symbol table.
+
+        @return pointer to matching FunctionTemplate; NULL if none is found. */
+    TemplateSymbol *LookupFunctionTemplate(const TemplateParms *templateParmList, const std::string &name,
+                                           const FunctionType *type);
+
     /** Returns all of the functions in the symbol table that match the given
         predicate.
 
@@ -322,6 +346,13 @@ class SymbolTable {
      */
     typedef std::map<llvm::Function *, Symbol *> IntrinsicMapType;
     IntrinsicMapType intrinsics;
+
+    /** Function template declarations, as well as function declaration, are
+        *not* scoped.  A STL \c vector is used to store the function templates
+        for a given name since, due to function overloading, a name can
+        have multiple function templates associated with it. */
+    typedef std::map<std::string, std::vector<TemplateSymbol *>> FunctionTemplateMapType;
+    FunctionTemplateMapType functionTemplates;
 
     /** Scoped types.
      */

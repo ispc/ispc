@@ -449,6 +449,11 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
         return;
     }
 
+    if (symbolTable->LookupFunctionTemplate(name.c_str())) {
+        Error(pos, "Global variable \"%s\" shadows previously-declared function template.", name.c_str());
+        return;
+    }
+
     if (storageClass == SC_EXTERN_C) {
         Error(pos, "extern \"C\" qualifier can only be used for functions.");
         return;
@@ -967,8 +972,14 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
             function->addAttribute(i+1, llvm::Attribute::constructAlignmentFromInt(align));
 #endif
         }
+
         if (symbolTable->LookupFunction(argName.c_str())) {
             Warning(argPos, "Function parameter \"%s\" shadows a function declared in global scope.", argName.c_str());
+        }
+
+        if (symbolTable->LookupFunctionTemplate(argName.c_str())) {
+            Warning(argPos, "Function parameter \"%s\" shadows a function template declared in global scope.",
+                    argName.c_str());
         }
 
         if (defaultValue != NULL)

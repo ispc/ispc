@@ -3217,6 +3217,20 @@ static bool lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
         return true;
     }
 
+    const TemplateTypeParmType *ttpa = CastType<TemplateTypeParmType>(a);
+    const TemplateTypeParmType *ttpb = CastType<TemplateTypeParmType>(b);
+    if (ttpa != NULL && ttpb != NULL) {
+        // Template type parameter types must have the same name to match.
+        if (ttpa->GetName() != ttpb->GetName()) {
+            return false;
+        }
+        // Variability should match, otherwise they are not equal.
+        if (ttpa->GetVariability() != ttpb->GetVariability()) {
+            return false;
+        }
+        return true;
+    }
+
     return false;
 }
 
