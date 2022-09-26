@@ -2359,13 +2359,21 @@ std::string FunctionType::GetString() const {
     ret += GetReturnTypeString();
     ret += "(";
     for (unsigned int i = 0; i < paramTypes.size(); ++i) {
-        if (paramTypes[i] == NULL)
+        if (paramTypes[i] == NULL) {
             ret += "/* ERROR */";
-        else
+        } else {
             ret += paramTypes[i]->GetString();
+        }
 
-        if (i != paramTypes.size() - 1)
+        ret += " " + paramNames[i];
+
+        if (paramDefaults[i] != NULL) {
+            ret += " = init";
+        }
+
+        if (i != paramTypes.size() - 1) {
             ret += ", ";
+        }
     }
     ret += ")";
     return ret;
