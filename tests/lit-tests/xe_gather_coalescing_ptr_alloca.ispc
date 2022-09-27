@@ -28,7 +28,6 @@
 // RUN: FileCheck --input-file %t/ir_321_XeGatherCoalescing.ll %s --check-prefixes CHECK_ALL,CHECK_LOAD
 
 // REQUIRES:  XE_ENABLED
-// XFAIL:     XE_ENABLED
 
 
 struct vec3f {

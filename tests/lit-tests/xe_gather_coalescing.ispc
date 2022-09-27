@@ -16,7 +16,6 @@
 
 
 // REQUIRES:  XE_ENABLED
-// XFAIL:     XE_ENABLED
 
 #define LOAD(n)   \
     a[n] = _in[n]
