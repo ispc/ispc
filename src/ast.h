@@ -213,6 +213,8 @@ class AST {
         information and source code. */
     void AddFunction(Symbol *sym, Stmt *code);
 
+    void AddFunctionTemplate(TemplateSymbol *templ, Stmt *code);
+
     /** Generate LLVM IR for all of the functions into the current
         module. */
     void GenerateIR();
@@ -221,6 +223,7 @@ class AST {
 
   private:
     std::vector<Function *> functions;
+    std::vector<FunctionTemplate *> functionTemplates;
 };
 
 /** Callback function type for preorder traversial visiting function for

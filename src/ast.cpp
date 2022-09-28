@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2022, Intel Corporation
+  Copyright (c) 2011-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -144,10 +144,25 @@ void AST::AddFunction(Symbol *sym, Stmt *code) {
     functions.push_back(new Function(sym, code));
 }
 
+void AST::AddFunctionTemplate(TemplateSymbol *templSym, Stmt *code) {
+    if (templSym == nullptr || code == nullptr) {
+        return;
+    }
+
+    FunctionTemplate *funcTempl = new FunctionTemplate(templSym, code);
+    templSym->functionTemplate = funcTempl;
+    functionTemplates.push_back(funcTempl);
+}
+
 void AST::GenerateIR() {
     llvm::TimeTraceScope TimeScope("GenerateIR");
-    for (unsigned int i = 0; i < functions.size(); ++i)
-        functions[i]->GenerateIR();
+    for (auto fn : functions) {
+        fn->GenerateIR();
+    }
+
+    for (auto templateFn : functionTemplates) {
+        templateFn->GenerateIR();
+    }
 }
 
 void AST::Print(Globals::ASTDumpKind printKind) const {
@@ -158,10 +173,18 @@ void AST::Print(Globals::ASTDumpKind printKind) const {
     printf("AST\n");
     Indent indent;
 
+    // Function templates
     int funcsToPrint = 0;
+    int funcTemplsToPrint = 0;
     if (printKind == Globals::ASTDumpKind::All) {
+        funcTemplsToPrint = functionTemplates.size();
         funcsToPrint = functions.size();
     } else if (printKind == Globals::ASTDumpKind::User) {
+        for (unsigned int i = 0; i < functionTemplates.size(); ++i) {
+            if (!functionTemplates[i]->IsStdlibSymbol()) {
+                funcTemplsToPrint++;
+            }
+        }
         for (unsigned int i = 0; i < functions.size(); ++i) {
             if (!functions[i]->IsStdlibSymbol()) {
                 funcsToPrint++;
@@ -169,7 +192,16 @@ void AST::Print(Globals::ASTDumpKind printKind) const {
         }
     }
 
-    indent.pushList(funcsToPrint);
+    indent.pushList(funcTemplsToPrint + funcsToPrint);
+    // Function templates
+    for (unsigned int i = 0; i < functionTemplates.size(); ++i) {
+        if (printKind == Globals::ASTDumpKind::All ||
+            (printKind == Globals::ASTDumpKind::User && !functionTemplates[i]->IsStdlibSymbol())) {
+            functionTemplates[i]->Print(indent);
+        }
+    }
+
+    // Functions
     for (unsigned int i = 0; i < functions.size(); ++i) {
         if (printKind == Globals::ASTDumpKind::All ||
             (printKind == Globals::ASTDumpKind::User && !functions[i]->IsStdlibSymbol())) {
