@@ -85,13 +85,13 @@ struct PragmaAttributes {
 
 %{
 
-#include "ispc.h"
-#include "type.h"
-#include "module.h"
 #include "decl.h"
 #include "expr.h"
-#include "sym.h"
+#include "ispc.h"
+#include "module.h"
 #include "stmt.h"
+#include "sym.h"
+#include "type.h"
 #include "util.h"
 
 #include <stdio.h>
