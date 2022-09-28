@@ -96,6 +96,21 @@ class Module {
         provided statements to the module. */
     void AddFunctionDefinition(const std::string &name, const FunctionType *ftype, Stmt *code);
 
+    /** Add a declaration of the function template defined by the given function
+        symbol to the module. */
+    void AddFunctionTemplateDeclaration(const TemplateParms *templateParmList, const std::string &name,
+                                        const FunctionType *ftype, StorageClass sc, bool isInline, bool isNoInline,
+                                        bool isVectorCall, SourcePos pos);
+
+    /** Add the function described by the declaration information and the
+        provided statements to the module. */
+    void AddFunctionTemplateDefinition(const TemplateParms *templateParmList, const std::string &name,
+                                       const FunctionType *ftype, Stmt *code);
+
+    void AddFunctionTemplateInstantiation(const std::string &name,
+                                          const std::vector<std::pair<const Type *, SourcePos>> &types,
+                                          const FunctionType *ftype, SourcePos pos);
+
     /** Adds the given type to the set of types that have their definitions
         included in automatically generated header files. */
     void AddExportedTypes(const std::vector<std::pair<const Type *, SourcePos>> &types);
