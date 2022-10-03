@@ -1,32 +1,33 @@
-## Copyright 2021 Intel Corporation
+## Copyright 2021-2022 Intel Corporation
 ## SPDX-License-Identifier: BSD-3-Clause
 
 ###############################################################################
-## Definititions for ISPC/ESIMD interoperability ##############################
+## Definititions for ISPC/ESIMD and ISPC/DPC++ interoperability ###############
 ###############################################################################
 
 # This module contains helper functions allowing to link several modules on
 # LLVM IR level and translate final module to SPIR-V format.
-# For ISPC the workflow is easy:
+# For ISPC and DPC++ SYCL the workflow is easy:
 #   1. compile to bitcode
 # This bitcode file is ready to be linked with others and translated to .spv.
-# For DPC++:
+# For DPC++ ESIMD:
 #   1. extract ESIMD bitcode using clang-offload-bundler from DPC++ library
-#   3. lower extracted bitcode to real VC backend intrinsics using sycl-post-link
+#   2. lower extracted bitcode to real VC backend intrinsics using sycl-post-link
 # Lowered bitcode file can be linked with ISPC bitcode using llvm-link and
 # translated then to .spv with llvm-spirv.
 
 # Find DPCPP compiler
 set(OLD_CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH})
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
-find_package(dpcpp_compiler)
+find_package(dpcpp_compiler REQUIRED)
 set(CMAKE_MODULE_PATH ${OLD_CMAKE_MODULE_PATH})
 unset(OLD_CMAKE_MODULE_PATH)
 
-# Create DPCPP library
+# Create DPCPP library or SPIR-V file
 # target_name: name of the target to use for the created library
 # ARGN: DPCPP source files
 function (add_dpcpp_library target_name)
+    cmake_parse_arguments(PARSE_ARGV 1 DPCPP "SPV" "" "")
     set(outdir ${CMAKE_CURRENT_BINARY_DIR})
 
     set(DPCPP_CXX_FLAGS "")
@@ -35,14 +36,14 @@ function (add_dpcpp_library target_name)
     elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
         set(DPCPP_CXX_FLAGS "-g")
     elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo")
-        set(DPCPP_CXX_FLAGS "-O2 -g")
+        set(DPCPP_CXX_FLAGS "-O2" "-g")
     else()
         message(FATAL_ERROR "add_dpcpp_library only supports Debug;Release;RelWithDebInfo build configs")
     endif()
 
     # Compile each DPCPP file
-    set(DPCPP_OBJECTS "")
-    foreach(src ${ARGN})
+    set(DPCPP_RESULTS "")
+    foreach(src ${DPCPP_UNPARSED_ARGUMENTS})
         get_filename_component(fname ${src} NAME_WE)
 
         # If input path is not absolute, prepend ${CMAKE_CURRENT_LIST_DIR}
@@ -51,16 +52,26 @@ function (add_dpcpp_library target_name)
         else()
             set(input ${src})
         endif()
-
-        set(result "${outdir}/${fname}.o")
-
-        if(DPCPP_ESIMD_INCLUDE_DIR)
-            string(REPLACE ";" ";-I;" DPCPP_ESIMD_INCLUDE_DIR_PARMS "${DPCPP_ESIMD_INCLUDE_DIR}")
-            set(DPCPP_ESIMD_INCLUDE_DIR_PARMS "-I" ${DPCPP_ESIMD_INCLUDE_DIR_PARMS})
+        if (DPCPP_SPV)
+            set(result "${outdir}/${fname}.spv")
+        else()
+            set(result "${outdir}/${fname}.o")
         endif()
 
-        if (NOT DPCPP_ESIMD_FLAGS)
-            set (DPCPP_ESIMD_FLAGS "")
+        if(DPCPP_CUSTOM_INCLUDE_DIR)
+            string(REPLACE ";" ";-I;" DPCPP_CUSTOM_INCLUDE_DIR_PARMS "${DPCPP_CUSTOM_INCLUDE_DIR}")
+            set(DPCPP_CUSTOM_INCLUDE_DIR_PARMS "-I" ${DPCPP_CUSTOM_INCLUDE_DIR_PARMS})
+        endif()
+
+        # Allow function pointers in DPC++ and do not instrument SYCL code.
+        list(APPEND DPCPP_CUSTOM_FLAGS "-Xclang" "-fsycl-allow-func-ptr" "-fno-sycl-instrument-device-code")
+        if (DPCPP_SPV)
+            # Get only SYCL device code to SPIR-V
+            # WA: SYCL assert implementation should be treated separately.
+            # Disable usage of asserts for now with "-DSYCL_DISABLE_FALLBACK_ASSERT=1"
+            list(APPEND DPCPP_CUSTOM_FLAGS "-fsycl-device-only" "-fno-sycl-use-bitcode" "-DSYCL_DISABLE_FALLBACK_ASSERT=1")
+        else()
+            list(APPEND DPCPP_CUSTOM_FLAGS "-c")
         endif()
 
         add_custom_command(
@@ -69,23 +80,25 @@ function (add_dpcpp_library target_name)
             COMMAND ${DPCPP_COMPILER}
                 -fsycl
                 -fPIE
-                -c
                 ${DPCPP_CXX_FLAGS}
-                ${DPCPP_ESIMD_INCLUDE_DIR_PARMS}
-                ${DPCPP_ESIMD_FLAGS}
+                ${DPCPP_CUSTOM_INCLUDE_DIR_PARMS}
+                ${DPCPP_CUSTOM_FLAGS}
                 -I ${CMAKE_CURRENT_SOURCE_DIR}
                 -o ${result}
                 ${input}
             COMMENT "Building DPCPP object ${result}"
         )
 
-        list(APPEND DPCPP_OBJECTS ${result})
+        list(APPEND DPCPP_RESULTS ${result})
     endforeach()
-
-    add_library(${target_name} STATIC)
-    set_target_properties(${target_name} PROPERTIES
-        LINKER_LANGUAGE CXX
-        SOURCES "${DPCPP_OBJECTS}")
+    if (DPCPP_SPV)
+        add_custom_target(${target_name} DEPENDS ${DPCPP_RESULTS})
+    else()
+        add_library(${target_name} STATIC)
+        set_target_properties(${target_name} PROPERTIES
+            LINKER_LANGUAGE CXX
+            SOURCES "${DPCPP_RESULTS}")
+    endif()
 endfunction()
 
 # Extract esimd bitcode
@@ -107,11 +120,11 @@ function (dpcpp_get_esimd_bitcode target_name library)
         DEPENDS ${library}
         OUTPUT ${lower_post_link} ${post_link_result}
         COMMAND ${DPCPP_CLANG_BUNDLER}
-            --inputs=$<TARGET_FILE:${library}>
+            --input=$<TARGET_FILE:${library}>
             --unbundle
             --targets=sycl-spir64-unknown-unknown-sycldevice
             --type=a
-            --outputs=${bundler_result_tmp}
+            --output=${bundler_result_tmp}
         COMMAND ${DPCPP_LLVM_LINK}
             ${bundler_result_tmp}
             -o ${bundler_result}
@@ -129,6 +142,38 @@ function (dpcpp_get_esimd_bitcode target_name library)
     add_custom_target(${target_name} DEPENDS ${post_link_result})
     set_target_properties(${target_name} PROPERTIES
         ISPC_CUSTOM_DEPENDENCIES ${post_link_result}
+    )
+endfunction()
+
+# Extract dpcpp sycl bitcode
+# target_name: name of the target to use for the extracted bitcode. The bitcode
+#              file will be set as a ISPC_CUSTOM_DEPENDENCIES property on this target
+# library: the library to extract bitcode from
+function (dpcpp_get_sycl_bitcode target_name library)
+    set(outdir ${CMAKE_CURRENT_BINARY_DIR})
+    # Result after unbundle command
+    set(bundler_result_tmp "${outdir}/${target_name}.out")
+    # Result after bitcode linking of unbundled output
+    set(bundler_result "${outdir}/${target_name}.bc")
+
+    add_custom_command(
+        DEPENDS ${library}
+        OUTPUT ${bundler_result}
+        COMMAND ${DPCPP_CLANG_BUNDLER}
+            --input=$<TARGET_FILE:${library}>
+            --unbundle
+            --targets=sycl-spir64-unknown-unknown-sycldevice
+            --type=a
+            --output=${bundler_result_tmp}
+        COMMAND ${DPCPP_LLVM_LINK}
+            ${bundler_result_tmp}
+            -o ${bundler_result}
+        COMMENT "Extracting DPC++ Bitcode ${bundler_result}"
+    )
+
+    add_custom_target(${target_name} DEPENDS ${bundler_result})
+    set_target_properties(${target_name} PROPERTIES
+        ISPC_CUSTOM_DEPENDENCIES ${bundler_result}
     )
 endfunction()
 
@@ -284,4 +329,38 @@ function (link_ispc_esimd ispc_target)
         ${ispc_target}_ispc2esimd_bc)
 
     add_dependencies(${ispc_target} ${ispc_target}_ispc2esimd_spv)
+endfunction()
+
+# Link ISPC and DPC++ GPU modules to SPIR-V
+# ispc_target: the ispc kernel target previously compiled to bitcode
+# ARGN: list of compiled DPCPP targets to link the ispc target with
+function (link_ispc_dpcpp ispc_target)
+    if (NOT BUILD_GPU)
+        message(FATAL_ERROR "Linking of ISPC/DPC++ modules is supported on GPU only")
+    endif()
+
+    if (NOT TARGET ${ispc_target}_bc)
+        message(FATAL_ERROR "ISPC target ${ispc_target} must be compiled to bc for ISPC/DPC++ linking")
+    endif()
+
+    set(DPCPP_BC_TARGETS "")
+    foreach(lib ${ARGN})
+        set(bc_target_name ${lib}_bc)
+        if (NOT TARGET ${bc_target_name})
+            dpcpp_get_sycl_bitcode(${bc_target_name} ${lib})
+        endif()
+        list(APPEND DPCPP_BC_TARGETS ${bc_target_name})
+    endforeach()
+
+    # Link ISPC and DPC++ on LLVM bitcode level
+    link_bitcode(${ispc_target}_ispc2dpcpp_bc
+        ${ispc_target}_bc
+        ${DPCPP_BC_TARGETS})
+
+    # Translate linked bitcode to SPIR-V
+    translate_to_spirv(${ispc_target}_ispc2dpcpp_spv
+        ${ispc_target}_bc
+        ${ispc_target}_ispc2dpcpp_bc)
+
+    add_dependencies(${ispc_target} ${ispc_target}_ispc2dpcpp_spv)
 endfunction()

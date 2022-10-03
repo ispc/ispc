@@ -57,6 +57,7 @@
 #error Unknown value of ISPC_MASK_BITS
 #endif
 
+typedef uniform int8 *uniform opaque_ptr_t;
 ///////////////////////////////////////////////////////////////////////////
 // Xe specific primitives
 
@@ -274,6 +275,10 @@ __declspec(safe, cost1) static inline uniform unsigned int16 extract(unsigned in
     return __extract_int16(x, (uniform unsigned int)i);
 }
 
+__declspec(safe, cost1) static inline uniform float16 extract(float16 x, uniform int i) {
+    return float16bits(__extract_int16((int16)intbits(x), i));
+}
+
 __declspec(safe, cost1) static inline uniform int32 extract(int32 x, uniform int i) { return __extract_int32(x, i); }
 
 __declspec(safe, cost1) static inline uniform unsigned int32 extract(unsigned int32 x, uniform int i) {
@@ -289,7 +294,6 @@ __declspec(safe, cost1) static inline uniform int64 extract(int64 x, uniform int
 __declspec(safe, cost1) static inline uniform unsigned int64 extract(unsigned int64 x, uniform int i) {
     return __extract_int64(x, (uniform unsigned int)i);
 }
-
 // x[i] = v
 __declspec(safe, cost1) static inline float insert(float x, uniform int i, uniform float v) {
     return floatbits(__insert_int32((int)intbits(x), i, (uniform int)intbits(v)));
@@ -708,25 +712,27 @@ __declspec(safe) static inline int64 count_trailing_zeros(int64 v) {
 // AOS/SOA conversion
 
 static inline void aos_to_soa2(uniform float a[], varying float *uniform v0, varying float *uniform v1) {
-    __aos_to_soa2_float(a, v0, v1);
+    __aos_to_soa2_float((opaque_ptr_t)a, (opaque_ptr_t)v0, (opaque_ptr_t)v1);
 }
 
-static inline void soa_to_aos2(float v0, float v1, uniform float a[]) { __soa_to_aos2_float(v0, v1, a); }
+static inline void soa_to_aos2(float v0, float v1, uniform float a[]) { __soa_to_aos2_float(v0, v1, (opaque_ptr_t)a); }
 
 static inline void aos_to_soa3(uniform float a[], varying float *uniform v0, varying float *uniform v1,
                                varying float *uniform v2) {
-    __aos_to_soa3_float(a, v0, v1, v2);
+    __aos_to_soa3_float((opaque_ptr_t)a, (opaque_ptr_t)v0, (opaque_ptr_t)v1, (opaque_ptr_t)v2);
 }
 
-static inline void soa_to_aos3(float v0, float v1, float v2, uniform float a[]) { __soa_to_aos3_float(v0, v1, v2, a); }
+static inline void soa_to_aos3(float v0, float v1, float v2, uniform float a[]) {
+    __soa_to_aos3_float(v0, v1, v2, (opaque_ptr_t)a);
+}
 
 static inline void aos_to_soa4(uniform float a[], varying float *uniform v0, varying float *uniform v1,
                                varying float *uniform v2, varying float *uniform v3) {
-    __aos_to_soa4_float(a, v0, v1, v2, v3);
+    __aos_to_soa4_float((opaque_ptr_t)a, (opaque_ptr_t)v0, (opaque_ptr_t)v1, (opaque_ptr_t)v2, (opaque_ptr_t)v3);
 }
 
 static inline void soa_to_aos4(float v0, float v1, float v2, float v3, uniform float a[]) {
-    __soa_to_aos4_float(v0, v1, v2, v3, a);
+    __soa_to_aos4_float(v0, v1, v2, v3, (opaque_ptr_t)a);
 }
 
 static inline void aos_to_soa2(uniform int32 a[], varying int32 *uniform v0, varying int32 *uniform v1) {
@@ -758,27 +764,29 @@ static inline void soa_to_aos4(int32 v0, int32 v1, int32 v2, int32 v3, uniform i
 }
 
 static inline void aos_to_soa2(uniform double a[], varying double *uniform v0, varying double *uniform v1) {
-    __aos_to_soa2_double(a, v0, v1);
+    __aos_to_soa2_double((opaque_ptr_t)a, (opaque_ptr_t)v0, (opaque_ptr_t)v1);
 }
 
-static inline void soa_to_aos2(double v0, double v1, uniform double a[]) { __soa_to_aos2_double(v0, v1, a); }
+static inline void soa_to_aos2(double v0, double v1, uniform double a[]) {
+    __soa_to_aos2_double(v0, v1, (opaque_ptr_t)a);
+}
 
 static inline void aos_to_soa3(uniform double a[], varying double *uniform v0, varying double *uniform v1,
                                varying double *uniform v2) {
-    __aos_to_soa3_double(a, v0, v1, v2);
+    __aos_to_soa3_double((opaque_ptr_t)a, (opaque_ptr_t)v0, (opaque_ptr_t)v1, (opaque_ptr_t)v2);
 }
 
 static inline void soa_to_aos3(double v0, double v1, double v2, uniform double a[]) {
-    __soa_to_aos3_double(v0, v1, v2, a);
+    __soa_to_aos3_double(v0, v1, v2, (opaque_ptr_t)a);
 }
 
 static inline void aos_to_soa4(uniform double a[], varying double *uniform v0, varying double *uniform v1,
                                varying double *uniform v2, varying double *uniform v3) {
-    __aos_to_soa4_double(a, v0, v1, v2, v3);
+    __aos_to_soa4_double((opaque_ptr_t)a, (opaque_ptr_t)v0, (opaque_ptr_t)v1, (opaque_ptr_t)v2, (opaque_ptr_t)v3);
 }
 
 static inline void soa_to_aos4(double v0, double v1, double v2, double v3, uniform double a[]) {
-    __soa_to_aos4_double(v0, v1, v2, v3, a);
+    __soa_to_aos4_double(v0, v1, v2, v3, (opaque_ptr_t)a);
 }
 
 static inline void aos_to_soa2(uniform int64 a[], varying int64 *uniform v0, varying int64 *uniform v1) {
@@ -812,31 +820,31 @@ static inline void soa_to_aos4(int64 v0, int64 v1, int64 v2, int64 v3, uniform i
 // Prefetching
 
 __declspec(safe, cost1) static inline void prefetch_l1(const void *uniform ptr) {
-    __prefetch_read_uniform_1((uniform int8 * uniform) ptr);
+    __prefetch_read_uniform_1((opaque_ptr_t)ptr);
 }
 
 __declspec(safe, cost1) static inline void prefetch_l2(const void *uniform ptr) {
-    __prefetch_read_uniform_2((uniform int8 * uniform) ptr);
+    __prefetch_read_uniform_2((opaque_ptr_t)ptr);
 }
 
 __declspec(safe, cost1) static inline void prefetch_l3(const void *uniform ptr) {
-    __prefetch_read_uniform_3((uniform int8 * uniform) ptr);
+    __prefetch_read_uniform_3((opaque_ptr_t)ptr);
 }
 
 __declspec(safe, cost1) static inline void prefetch_nt(const void *uniform ptr) {
-    __prefetch_read_uniform_nt((uniform int8 * uniform) ptr);
+    __prefetch_read_uniform_nt((opaque_ptr_t)ptr);
 }
 
 __declspec(safe, cost1) static inline void prefetchw_l1(const void *uniform ptr) {
-    __prefetch_write_uniform_1((uniform int8 * uniform) ptr);
+    __prefetch_write_uniform_1((opaque_ptr_t)ptr);
 }
 
 __declspec(safe, cost1) static inline void prefetchw_l2(const void *uniform ptr) {
-    __prefetch_write_uniform_2((uniform int8 * uniform) ptr);
+    __prefetch_write_uniform_2((opaque_ptr_t)ptr);
 }
 
 __declspec(safe, cost1) static inline void prefetchw_l3(const void *uniform ptr) {
-    __prefetch_write_uniform_3((uniform int8 * uniform) ptr);
+    __prefetch_write_uniform_3((opaque_ptr_t)ptr);
 }
 
 static inline void prefetch_l1(const void *varying ptr) {
@@ -894,6 +902,14 @@ __declspec(safe, cost1) static inline uniform int16 select(uniform bool cond, un
     return cond ? t : f;
 }
 
+__declspec(safe, cost1) static inline float16 select(bool cond, float16 t, float16 f) { return cond ? t : f; }
+
+__declspec(safe, cost1) static inline float16 select(uniform bool cond, float16 t, float16 f) { return cond ? t : f; }
+
+__declspec(safe, cost1) static inline uniform float16 select(uniform bool cond, uniform float16 t, uniform float16 f) {
+    return cond ? t : f;
+}
+
 __declspec(safe, cost1) static inline int32 select(bool cond, int32 t, int32 f) { return cond ? t : f; }
 
 __declspec(safe, cost1) static inline int32 select(uniform bool cond, int32 t, int32 f) { return cond ? t : f; }
@@ -939,6 +955,35 @@ __declspec(safe) static inline uniform int32 reduce_add(int16 x) { return __redu
 
 __declspec(safe) static inline uniform unsigned int32 reduce_add(unsigned int16 x) {
     return __reduce_add_int16(__mask ? x : (int16)0);
+}
+
+__declspec(safe) static inline uniform float16 reduce_add(float16 x) {
+    // zero the lanes where the mask is off
+    return __reduce_add_half(__mask ? x : 0.0f16);
+}
+
+__declspec(safe) static inline uniform float16 reduce_min(float16 v) {
+    // For the lanes where the mask is off, replace the given value with
+    // infinity, so that it doesn't affect the result.
+    const int16 iflt_max = 0x7c00; // infinity
+    // unmasked block is needed to make sure that argument for unmasked
+    // function __reduce_min_float() are calculated without a mask.
+    bool test = __mask;
+    uniform float16 result;
+    unmasked { result = __reduce_min_half(test ? v : float16bits(iflt_max)); }
+    return result;
+}
+
+__declspec(safe) static inline uniform float16 reduce_max(float16 v) {
+    // For the lanes where the mask is off, replace the given value with
+    // negative infinity, so that it doesn't affect the result.
+    const int16 iflt_neg_max = 0xfc00; // -infinity
+    // unmasked block is needed to make sure that argument for unmasked
+    // function __reduce_max_half() are calculated without a mask.
+    bool test = __mask;
+    uniform float16 result;
+    unmasked { result = __reduce_max_half(test ? v : float16bits(iflt_neg_max)); }
+    return result;
 }
 
 __declspec(safe) static inline uniform float reduce_add(float x) {
@@ -1073,19 +1118,22 @@ __declspec(safe) static inline uniform unsigned int64 reduce_max(unsigned int64 
 
 #define REDUCE_EQUAL(TYPE, FUNCTYPE, MASKTYPE)                                                                         \
     __declspec(safe) static inline uniform bool reduce_equal(TYPE v) {                                                 \
-        uniform TYPE unusedValue;                                                                                      \
+        uniform int8 unusedValue;                                                                                      \
         return __reduce_equal_##FUNCTYPE(v, &unusedValue, (MASKTYPE)__mask);                                           \
     }                                                                                                                  \
     __declspec(safe) static inline uniform bool reduce_equal(TYPE v, uniform TYPE *uniform value) {                    \
-        return __reduce_equal_##FUNCTYPE(v, value, (MASKTYPE)__mask);                                                  \
+        return __reduce_equal_##FUNCTYPE(v, (opaque_ptr_t)value, (MASKTYPE)__mask);                                    \
     }
 
+REDUCE_EQUAL(float16, half, IntMaskType)
 REDUCE_EQUAL(int32, int32, IntMaskType)
 REDUCE_EQUAL(unsigned int32, int32, UIntMaskType)
 REDUCE_EQUAL(float, float, IntMaskType)
 REDUCE_EQUAL(int64, int64, IntMaskType)
 REDUCE_EQUAL(unsigned int64, int64, UIntMaskType)
 REDUCE_EQUAL(double, double, IntMaskType)
+
+static float16 exclusive_scan_add(float16 v) { return __exclusive_scan_add_half(v, __mask); }
 
 static int32 exclusive_scan_add(int32 v) { return __exclusive_scan_add_i32(v, (IntMaskType)__mask); }
 
@@ -1123,241 +1171,257 @@ static unsigned int64 exclusive_scan_or(unsigned int64 v) { return __exclusive_s
 /* unsigned int32 implementations. */
 // unsigned int32 load.
 static inline uniform int packed_load_active(uniform unsigned int a[], varying unsigned int *uniform vals) {
-    return __packed_load_activei32(a, vals, (UIntMaskType)__mask);
+    return __packed_load_activei32((opaque_ptr_t)a, (opaque_ptr_t)vals, (UIntMaskType)__mask);
 }
 
 // unsigned int32 store.
 static inline uniform int packed_store_active(uniform unsigned int a[], unsigned int vals) {
-    return __packed_store_activei32(a, vals, (UIntMaskType)__mask);
+    return __packed_store_activei32((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
 }
 
 // unsigned int32 store2.
 static inline uniform int packed_store_active2(uniform unsigned int a[], unsigned int vals) {
-    return __packed_store_active2i32(a, vals, (UIntMaskType)__mask);
+    return __packed_store_active2i32((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
 }
 
 /* int32 implementations. */
 // int32 load.
 static inline uniform int packed_load_active(uniform int a[], varying int *uniform vals) {
-    return __packed_load_activei32(a, vals, (IntMaskType)__mask);
+    return __packed_load_activei32((opaque_ptr_t)a, (opaque_ptr_t)vals, (IntMaskType)__mask);
 }
 
 // int32 store.
 static inline uniform int packed_store_active(uniform int a[], int vals) {
-    return __packed_store_activei32(a, vals, (IntMaskType)__mask);
+    return __packed_store_activei32((opaque_ptr_t)a, vals, (IntMaskType)__mask);
 }
 
 // int32 store2.
 static inline uniform int packed_store_active2(uniform int a[], int vals) {
-    return __packed_store_active2i32(a, vals, (IntMaskType)__mask);
+    return __packed_store_active2i32((opaque_ptr_t)a, vals, (IntMaskType)__mask);
 }
 
 // int32 store with lanes.
 static inline uniform int packed_store_active(bool active, uniform int a[], int vals) {
-    return __packed_store_activei32(a, vals, (IntMaskType)(-(int)active));
+    return __packed_store_activei32((opaque_ptr_t)a, vals, (IntMaskType)(-(int)active));
 }
 
 /* unsigned int64 implementations. */
 // unsigned int64 load.
 static inline uniform int packed_load_active(uniform unsigned int64 a[], varying unsigned int64 *uniform vals) {
-    return __packed_load_activei64(a, vals, (UIntMaskType)__mask);
+    return __packed_load_activei64((opaque_ptr_t)a, (opaque_ptr_t)vals, (UIntMaskType)__mask);
 }
 
 // unsigned int64 store.
 static inline uniform int packed_store_active(uniform unsigned int64 a[], unsigned int64 vals) {
-    return __packed_store_activei64(a, vals, (UIntMaskType)__mask);
+    return __packed_store_activei64((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
 }
 
 // unsigned int64 store2.
 static inline uniform int packed_store_active2(uniform unsigned int64 a[], unsigned int64 vals) {
-    return __packed_store_active2i64(a, vals, (UIntMaskType)__mask);
+    return __packed_store_active2i64((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
 }
 
 /* int64 implementations. */
 // int64 load.
 static inline uniform int packed_load_active(uniform int64 a[], varying int64 *uniform vals) {
-    return __packed_load_activei64(a, vals, (IntMaskType)__mask);
+    return __packed_load_activei64((opaque_ptr_t)a, (opaque_ptr_t)vals, (IntMaskType)__mask);
 }
 
 // int64 store.
 static inline uniform int packed_store_active(uniform int64 a[], int64 vals) {
-    return __packed_store_activei64(a, vals, (IntMaskType)__mask);
+    return __packed_store_activei64((opaque_ptr_t)a, vals, (IntMaskType)__mask);
 }
 
 // int64 store2.
 static inline uniform int packed_store_active2(uniform int64 a[], int64 vals) {
-    return __packed_store_active2i64(a, vals, (IntMaskType)__mask);
+    return __packed_store_active2i64((opaque_ptr_t)a, vals, (IntMaskType)__mask);
 }
 
 // int64 store with lanes.
 static inline uniform int packed_store_active(bool active, uniform int64 a[], int64 vals) {
-    return __packed_store_activei64(a, vals, (IntMaskType)(-(int)active));
+    return __packed_store_activei64((opaque_ptr_t)a, vals, (IntMaskType)(-(int)active));
 }
 
 ///////////////////////////////////////////////////////////////////////////
 // streaming store
 
 __declspec(safe, cost1) static inline void streaming_store(uniform unsigned int8 a[], unsigned int8 vals) {
-    __streaming_store_varying_i8(a, vals);
+    __streaming_store_varying_i8((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform int8 a[], int8 vals) {
-    __streaming_store_varying_i8(a, vals);
+    __streaming_store_varying_i8((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform unsigned int16 a[], unsigned int16 vals) {
-    __streaming_store_varying_i16(a, vals);
+    __streaming_store_varying_i16((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform int16 a[], int16 vals) {
-    __streaming_store_varying_i16(a, vals);
+    __streaming_store_varying_i16((opaque_ptr_t)a, vals);
+}
+
+__declspec(safe, cost1) static inline void streaming_store(uniform float16 a[], float16 vals) {
+    __streaming_store_varying_half((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform unsigned int a[], unsigned int vals) {
-    __streaming_store_varying_i32(a, vals);
+    __streaming_store_varying_i32((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform int a[], int vals) {
-    __streaming_store_varying_i32(a, vals);
+    __streaming_store_varying_i32((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform unsigned int64 a[], unsigned int64 vals) {
-    __streaming_store_varying_i64(a, vals);
+    __streaming_store_varying_i64((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform int64 a[], int64 vals) {
-    __streaming_store_varying_i64(a, vals);
+    __streaming_store_varying_i64((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform float a[], float vals) {
-    __streaming_store_varying_float(a, vals);
+    __streaming_store_varying_float((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform double a[], double vals) {
-    __streaming_store_varying_double(a, vals);
+    __streaming_store_varying_double((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform unsigned int8 a[], uniform unsigned int8 vals) {
-    __streaming_store_uniform_i8(a, vals);
+    __streaming_store_uniform_i8((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform int8 a[], uniform int8 vals) {
-    __streaming_store_uniform_i8(a, vals);
+    __streaming_store_uniform_i8((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform unsigned int16 a[], uniform unsigned int16 vals) {
-    __streaming_store_uniform_i16(a, vals);
+    __streaming_store_uniform_i16((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform int16 a[], uniform int16 vals) {
-    __streaming_store_uniform_i16(a, vals);
+    __streaming_store_uniform_i16((opaque_ptr_t)a, vals);
+}
+
+__declspec(safe, cost1) static inline void streaming_store(uniform float16 a[], uniform float16 vals) {
+    __streaming_store_uniform_half((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform unsigned int a[], uniform unsigned int vals) {
-    __streaming_store_uniform_i32(a, vals);
+    __streaming_store_uniform_i32((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform int a[], uniform int vals) {
-    __streaming_store_uniform_i32(a, vals);
+    __streaming_store_uniform_i32((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform unsigned int64 a[], uniform unsigned int64 vals) {
-    __streaming_store_uniform_i64(a, vals);
+    __streaming_store_uniform_i64((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform int64 a[], uniform int64 vals) {
-    __streaming_store_uniform_i64(a, vals);
+    __streaming_store_uniform_i64((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform float a[], uniform float vals) {
-    __streaming_store_uniform_float(a, vals);
+    __streaming_store_uniform_float((opaque_ptr_t)a, vals);
 }
 
 __declspec(safe, cost1) static inline void streaming_store(uniform double a[], uniform double vals) {
-    __streaming_store_uniform_double(a, vals);
+    __streaming_store_uniform_double((opaque_ptr_t)a, vals);
 }
 
 ///////////////////////////////////////////////////////////////////////////
 // streaming load
 
 __declspec(safe, cost1) static inline varying unsigned int8 streaming_load(uniform unsigned int8 a[]) {
-    return (unsigned int8)__streaming_load_varying_i8(a);
+    return (unsigned int8)__streaming_load_varying_i8((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline varying int8 streaming_load(uniform int8 a[]) {
-    return __streaming_load_varying_i8(a);
+    return __streaming_load_varying_i8((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline uniform unsigned int8 streaming_load_uniform(uniform unsigned int8 a[]) {
-    return (unsigned int8)__streaming_load_uniform_i8(a);
+    return (unsigned int8)__streaming_load_uniform_i8((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline uniform int8 streaming_load_uniform(uniform int8 a[]) {
-    return __streaming_load_uniform_i8(a);
+    return __streaming_load_uniform_i8((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline varying unsigned int16 streaming_load(uniform unsigned int16 a[]) {
-    return (unsigned int16)__streaming_load_varying_i16(a);
+    return (unsigned int16)__streaming_load_varying_i16((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline varying int16 streaming_load(uniform int16 a[]) {
-    return __streaming_load_varying_i16(a);
+    return __streaming_load_varying_i16((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline uniform unsigned int16 streaming_load_uniform(uniform unsigned int16 a[]) {
-    return (unsigned int16)__streaming_load_uniform_i16(a);
+    return (unsigned int16)__streaming_load_uniform_i16((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline uniform int16 streaming_load_uniform(uniform int16 a[]) {
-    return __streaming_load_uniform_i16(a);
+    return __streaming_load_uniform_i16((opaque_ptr_t)a);
+}
+
+__declspec(safe, cost1) static inline varying float16 streaming_load(uniform float16 a[]) {
+    return __streaming_load_varying_half((opaque_ptr_t)a);
+}
+
+__declspec(safe, cost1) static inline uniform float16 streaming_load_uniform(uniform float16 a[]) {
+    return __streaming_load_uniform_half((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline varying unsigned int streaming_load(uniform unsigned int a[]) {
-    return (unsigned int)__streaming_load_varying_i32(a);
+    return (unsigned int)__streaming_load_varying_i32((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline varying int streaming_load(uniform int a[]) {
-    return __streaming_load_varying_i32(a);
+    return __streaming_load_varying_i32((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline uniform unsigned int streaming_load_uniform(uniform unsigned int a[]) {
-    return (unsigned int)__streaming_load_uniform_i32(a);
+    return (unsigned int)__streaming_load_uniform_i32((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline uniform int streaming_load_uniform(uniform int a[]) {
-    return __streaming_load_uniform_i32(a);
+    return __streaming_load_uniform_i32((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline varying unsigned int64 streaming_load(uniform unsigned int64 a[]) {
-    return (unsigned int64)__streaming_load_varying_i64(a);
+    return (unsigned int64)__streaming_load_varying_i64((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline varying int64 streaming_load(uniform int64 a[]) {
-    return __streaming_load_varying_i64(a);
+    return __streaming_load_varying_i64((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline uniform unsigned int64 streaming_load_uniform(uniform unsigned int64 a[]) {
-    return (unsigned int64)__streaming_load_uniform_i64(a);
+    return (unsigned int64)__streaming_load_uniform_i64((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline uniform int64 streaming_load_uniform(uniform int64 a[]) {
-    return __streaming_load_uniform_i64(a);
+    return __streaming_load_uniform_i64((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline varying float streaming_load(uniform float a[]) {
-    return __streaming_load_varying_float(a);
+    return __streaming_load_varying_float((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline uniform float streaming_load_uniform(uniform float a[]) {
-    return __streaming_load_uniform_float(a);
+    return __streaming_load_uniform_float((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline varying double streaming_load(uniform double a[]) {
-    return __streaming_load_varying_double(a);
+    return __streaming_load_varying_double((opaque_ptr_t)a);
 }
 
 __declspec(safe, cost1) static inline uniform double streaming_load_uniform(uniform double a[]) {
-    return __streaming_load_uniform_double(a);
+    return __streaming_load_uniform_double((opaque_ptr_t)a);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1437,6 +1501,16 @@ __declspec(safe, cost1) static inline uniform double abs(uniform double a) {
     return doublebits(i);
 }
 
+__declspec(safe, cost1) static inline unsigned int16 signbits(float16 x) {
+    unsigned int16 i = intbits(x);
+    return (i & 0x8000);
+}
+
+__declspec(safe, cost1) static inline uniform unsigned int16 signbits(uniform float16 x) {
+    uniform unsigned int16 i = intbits(x);
+    return (i & 0x8000);
+}
+
 __declspec(safe, cost1) static inline unsigned int signbits(float x) {
     unsigned int i = intbits(x);
     return (i & 0x80000000);
@@ -1457,6 +1531,10 @@ __declspec(safe, cost1) static inline uniform unsigned int64 signbits(uniform do
     return (i & 0x8000000000000000);
 }
 
+__declspec(safe, cost2) static inline float16 round(float16 x) { return __round_varying_half(x); }
+
+__declspec(safe, cost2) static inline uniform float16 round(uniform float16 x) { return __round_uniform_half(x); }
+
 __declspec(safe, cost2) static inline float round(float x) { return __round_varying_float(x); }
 
 __declspec(safe, cost2) static inline uniform float round(uniform float x) { return __round_uniform_float(x); }
@@ -1464,6 +1542,10 @@ __declspec(safe, cost2) static inline uniform float round(uniform float x) { ret
 __declspec(safe, cost2) static inline double round(double x) { return __round_varying_double(x); }
 
 __declspec(safe, cost2) static inline uniform double round(uniform double x) { return __round_uniform_double(x); }
+
+__declspec(safe, cost2) static inline float16 floor(float16 x) { return __floor_varying_half(x); }
+
+__declspec(safe, cost2) static inline uniform float16 floor(uniform float16 x) { return __floor_uniform_half(x); }
 
 __declspec(safe, cost2) static inline float floor(float x) { return __floor_varying_float(x); }
 
@@ -1473,6 +1555,10 @@ __declspec(safe, cost2) static inline double floor(double x) { return __floor_va
 
 __declspec(safe, cost2) static inline uniform double floor(uniform double x) { return __floor_uniform_double(x); }
 
+__declspec(safe, cost2) static inline float16 ceil(float16 x) { return __ceil_varying_half(x); }
+
+__declspec(safe, cost2) static inline uniform float16 ceil(uniform float16 x) { return __ceil_uniform_half(x); }
+
 __declspec(safe, cost2) static inline float ceil(float x) { return __ceil_varying_float(x); }
 
 __declspec(safe, cost2) static inline uniform float ceil(uniform float x) { return __ceil_uniform_float(x); }
@@ -1481,6 +1567,10 @@ __declspec(safe, cost2) static inline double ceil(double x) { return __ceil_vary
 
 __declspec(safe, cost2) static inline uniform double ceil(uniform double x) { return __ceil_uniform_double(x); }
 ///////////////////////////
+__declspec(safe, cost2) static inline float16 trunc(float16 x) { return __trunc_varying_half(x); }
+
+__declspec(safe, cost2) static inline uniform float16 trunc(uniform float16 x) { return __trunc_uniform_half(x); }
+
 __declspec(safe, cost2) static inline float trunc(float x) { return __trunc_varying_float(x); }
 
 __declspec(safe, cost2) static inline uniform float trunc(uniform float x) { return __trunc_uniform_float(x); }
@@ -1812,11 +1902,11 @@ static inline void memory_barrier() { __memory_barrier(); }
 
 #define DEFINE_ATOMIC_OP(TA, TB, OPA, OPB, MASKTYPE, TC)                                                               \
     static inline TA atomic_##OPA##_global(uniform TA *uniform ptr, TA value) {                                        \
-        TA ret = __atomic_##OPB##_##TB##_global(ptr, value, (MASKTYPE)__mask);                                         \
+        TA ret = __atomic_##OPB##_##TB##_global((opaque_ptr_t)ptr, value, (MASKTYPE)__mask);                           \
         return ret;                                                                                                    \
     }                                                                                                                  \
     static inline uniform TA atomic_##OPA##_global(uniform TA *uniform ptr, uniform TA value) {                        \
-        uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ptr, value);                                           \
+        uniform TA ret = __atomic_##OPB##_uniform_##TB##_global((opaque_ptr_t)ptr, value);                             \
         return ret;                                                                                                    \
     }                                                                                                                  \
     static inline TA atomic_##OPA##_global(uniform TA *varying ptr, TA value) {                                        \
@@ -1824,7 +1914,7 @@ static inline void memory_barrier() { __memory_barrier(); }
         ptrArray[programIndex] = ptr;                                                                                  \
         TA ret;                                                                                                        \
         foreach_active(i) {                                                                                            \
-            uniform TA *uniform p = ptrArray[i];                                                                       \
+            uniform int8 *uniform p = (opaque_ptr_t)ptrArray[i];                                                       \
             uniform TA v = extract(value, i);                                                                          \
             uniform TA r = __atomic_##OPB##_uniform_##TB##_global(p, v);                                               \
             ret = insert(ret, i, r);                                                                                   \
@@ -1845,7 +1935,7 @@ static inline void memory_barrier() { __memory_barrier(); }
         for (; i < programCount; ++i) {                                                                                \
             if ((mask & (1ull << i)) == 0)                                                                             \
                 continue;                                                                                              \
-            memVal = __atomic_swap_uniform_##TB##_global(ptr, extract(value, i));                                      \
+            memVal = __atomic_swap_uniform_##TB##_global((opaque_ptr_t)ptr, extract(value, i));                        \
             lastSwap = i;                                                                                              \
             break;                                                                                                     \
         }                                                                                                              \
@@ -1866,7 +1956,7 @@ static inline void memory_barrier() { __memory_barrier(); }
         return ret[programIndex];                                                                                      \
     }                                                                                                                  \
     static inline uniform TA atomic_swap_global(uniform TA *uniform ptr, uniform TA value) {                           \
-        uniform TA ret = __atomic_swap_uniform_##TB##_global(ptr, value);                                              \
+        uniform TA ret = __atomic_swap_uniform_##TB##_global((opaque_ptr_t)ptr, value);                                \
         return ret;                                                                                                    \
     }                                                                                                                  \
     static inline TA atomic_swap_global(uniform TA *varying ptr, TA value) {                                           \
@@ -1874,7 +1964,7 @@ static inline void memory_barrier() { __memory_barrier(); }
         ptrArray[programIndex] = ptr;                                                                                  \
         TA ret;                                                                                                        \
         foreach_active(i) {                                                                                            \
-            uniform TA *uniform p = ptrArray[i];                                                                       \
+            uniform int8 *uniform p = (opaque_ptr_t)ptrArray[i];                                                       \
             uniform TA v = extract(value, i);                                                                          \
             uniform TA r = __atomic_swap_uniform_##TB##_global(p, v);                                                  \
             ret = insert(ret, i, r);                                                                                   \
@@ -1887,11 +1977,11 @@ static inline void memory_barrier() { __memory_barrier(); }
         uniform TA oneval = reduce_##OPA(value);                                                                       \
         TA ret;                                                                                                        \
         if (lanemask() != 0)                                                                                           \
-            ret = __atomic_##OPB##_uniform_##TB##_global(ptr, oneval);                                                 \
+            ret = __atomic_##OPB##_uniform_##TB##_global((opaque_ptr_t)ptr, oneval);                                   \
         return ret;                                                                                                    \
     }                                                                                                                  \
     static inline uniform TA atomic_##OPA##_global(uniform TA *uniform ptr, uniform TA value) {                        \
-        uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ptr, value);                                           \
+        uniform TA ret = __atomic_##OPB##_uniform_##TB##_global((opaque_ptr_t)ptr, value);                             \
         return ret;                                                                                                    \
     }                                                                                                                  \
     static inline TA atomic_##OPA##_global(uniform TA *varying ptr, TA value) {                                        \
@@ -1899,7 +1989,7 @@ static inline void memory_barrier() { __memory_barrier(); }
         ptrArray[programIndex] = ptr;                                                                                  \
         TA ret;                                                                                                        \
         foreach_active(i) {                                                                                            \
-            uniform TA *uniform p = ptrArray[i];                                                                       \
+            uniform int8 *uniform p = (opaque_ptr_t)ptrArray[i];                                                       \
             uniform TA v = extract(value, i);                                                                          \
             uniform TA r = __atomic_##OPB##_uniform_##TB##_global(p, v);                                               \
             ret = insert(ret, i, r);                                                                                   \
@@ -1958,11 +2048,11 @@ DEFINE_ATOMIC_SWAP(double, double, IntMaskType, int64)
 #define ATOMIC_DECL_CMPXCHG(TA, TB, MASKTYPE, TC)                                                                      \
     static inline uniform TA atomic_compare_exchange_global(uniform TA *uniform ptr, uniform TA oldval,                \
                                                             uniform TA newval) {                                       \
-        uniform TA ret = __atomic_compare_exchange_uniform_##TB##_global(ptr, oldval, newval);                         \
+        uniform TA ret = __atomic_compare_exchange_uniform_##TB##_global((opaque_ptr_t)ptr, oldval, newval);           \
         return ret;                                                                                                    \
     }                                                                                                                  \
     static inline TA atomic_compare_exchange_global(uniform TA *uniform ptr, TA oldval, TA newval) {                   \
-        TA ret = __atomic_compare_exchange_##TB##_global(ptr, oldval, newval, (MASKTYPE)__mask);                       \
+        TA ret = __atomic_compare_exchange_##TB##_global((opaque_ptr_t)ptr, oldval, newval, (MASKTYPE)__mask);         \
         return ret;                                                                                                    \
     }                                                                                                                  \
     static inline TA atomic_compare_exchange_global(uniform TA *varying ptr, TA oldval, TA newval) {                   \
@@ -1970,8 +2060,8 @@ DEFINE_ATOMIC_SWAP(double, double, IntMaskType, int64)
         ptrArray[programIndex] = ptr;                                                                                  \
         TA ret;                                                                                                        \
         foreach_active(i) {                                                                                            \
-            uniform TA r =                                                                                             \
-                __atomic_compare_exchange_uniform_##TB##_global(ptrArray[i], extract(oldval, i), extract(newval, i));  \
+            uniform TA r = __atomic_compare_exchange_uniform_##TB##_global((opaque_ptr_t)ptrArray[i],                  \
+                                                                           extract(oldval, i), extract(newval, i));    \
             ret = insert(ret, i, r);                                                                                   \
         }                                                                                                              \
         return ret;                                                                                                    \
@@ -2196,7 +2286,6 @@ static inline void *atomic_compare_exchange_local(void **ptr, void *oldval, void
     return (void *)atomic_compare_exchange_local((intptr_t *)ptr, (intptr_t)oldval, (intptr_t)newval);
 }
 
-///////////////////////////////////////////////////////////////////////////
 // Transcendentals (float precision)
 
 __declspec(safe) static inline float sqrt(float v) {
@@ -2636,16 +2725,16 @@ __declspec(safe) static inline uniform float acos(uniform float v) {
 
 __declspec(safe) static inline void sincos(float x_full, varying float *uniform sin_result,
                                            varying float *uniform cos_result) {
-    if (__have_native_trigonometry && !__is_xe_target) {
-        __sincos_varying_float(x_full, sin_result, cos_result);
+    if (__have_native_trigonometry) {
+        __sincos_varying_float(x_full, (opaque_ptr_t)sin_result, (opaque_ptr_t)cos_result);
         return;
     }
     if (__math_lib == __math_lib_svml) {
-        __svml_sincosf(x_full, sin_result, cos_result);
+        __svml_sincosf(x_full, (opaque_ptr_t)sin_result, (opaque_ptr_t)cos_result);
     } else if (__math_lib == __math_lib_system) {
         foreach_active(i) {
             uniform float s, c;
-            __stdlib_sincosf(extract(x_full, i), &s, &c);
+            __stdlib_sincosf(extract(x_full, i), (opaque_ptr_t)&s, (opaque_ptr_t)&c);
             *sin_result = insert(*sin_result, i, s);
             *cos_result = insert(*cos_result, i, c);
         }
@@ -2705,12 +2794,12 @@ __declspec(safe) static inline void sincos(float x_full, varying float *uniform 
 
 __declspec(safe) static inline void sincos(uniform float x_full, uniform float *uniform sin_result,
                                            uniform float *uniform cos_result) {
-    if (__have_native_trigonometry && !__is_xe_target) {
-        __sincos_uniform_float(x_full, sin_result, cos_result);
+    if (__have_native_trigonometry) {
+        __sincos_uniform_float(x_full, (opaque_ptr_t)sin_result, (opaque_ptr_t)cos_result);
         return;
     }
     if (__math_lib == __math_lib_system || __math_lib == __math_lib_svml) {
-        __stdlib_sincosf(x_full, sin_result, cos_result);
+        __stdlib_sincosf(x_full, (opaque_ptr_t)sin_result, (opaque_ptr_t)cos_result);
     } else if (__math_lib == __math_lib_ispc || __math_lib == __math_lib_ispc_fast) {
         const uniform float pi_over_two_vec = 1.57079637050628662109375;
         const uniform float two_over_pi_vec = 0.636619746685028076171875;
@@ -3054,10 +3143,6 @@ __declspec(safe) static inline uniform float atan2(uniform float y, uniform floa
     }
 }
 
-__declspec(safe) static inline float16 exp(float16 x_full) { return __exp_varying_half(x_full); }
-
-__declspec(safe) static inline uniform float16 exp(uniform float16 x_full) { return __exp_uniform_half(x_full); }
-
 __declspec(safe) static inline float exp(float x_full) {
     if (__have_native_transcendentals) {
         return __exp_varying_float(x_full);
@@ -3260,10 +3345,6 @@ __declspec(safe) static inline void __range_reduce_log(uniform float input, unif
     *reduced = floatbits(blended);
 }
 
-__declspec(safe) static inline float16 log(float16 x_full) { return __log_varying_half(x_full); }
-
-__declspec(safe) static inline uniform float16 log(uniform float16 x_full) { return __log_uniform_half(x_full); }
-
 __declspec(safe) static inline float log(float x_full) {
     if (__have_native_transcendentals) {
         return __log_varying_float(x_full);
@@ -3435,12 +3516,6 @@ __declspec(safe) static inline uniform float log(uniform float x_full) {
     }
 }
 
-__declspec(safe) static inline float16 pow(float16 a, float16 b) { return __pow_varying_half(a, b); }
-
-__declspec(safe) static inline uniform float16 pow(uniform float16 a, uniform float16 b) {
-    return __pow_uniform_half(a, b);
-}
-
 __declspec(safe) static inline float pow(float a, float b) {
     if (__have_native_transcendentals) {
         return __pow_varying_float(a, b);
@@ -3467,6 +3542,206 @@ __declspec(safe) static inline uniform float pow(uniform float a, uniform float 
     } else if (__math_lib == __math_lib_ispc || __math_lib == __math_lib_ispc_fast) {
         return exp(b * log(a));
     }
+}
+
+///////////////////////////////////////////////////////////////////////////
+// Transcendentals (16-bit float precision)
+
+__declspec(safe) static inline float16 sqrt(float16 v) { return __sqrt_varying_half(v); }
+
+__declspec(safe) static inline uniform float16 sqrt(uniform float16 v) { return __sqrt_uniform_half(v); }
+
+__declspec(safe) static inline float16 rsqrt(float16 v) { return __rsqrt_varying_half(v); }
+
+__declspec(safe) static inline uniform float16 rsqrt(uniform float16 v) { return __rsqrt_uniform_half(v); }
+
+__declspec(safe) static inline float16 ldexp(float16 x, int n) {
+    unsigned int16 ex = 0x7c00u;
+    unsigned int16 ix = intbits(x);
+    ex &= ix;           // extract old exponent;
+    ix = ix & ~0x7c00u; // clear exponent
+    int16 n16 = ((int16)n << 10) + ex;
+    ix |= n16; // insert new exponent
+    return float16bits(ix);
+}
+
+__declspec(safe) static inline uniform float16 ldexp(uniform float16 x, uniform int n) {
+    uniform unsigned int16 ex = 0x7c00u;
+    uniform unsigned int16 ix = intbits(x);
+    ex &= ix;           // extract old exponent;
+    ix = ix & ~0x7c00u; // clear exponent
+    uniform int16 n16 = ((uniform int16)n << 10) + ex;
+    ix |= n16; // insert new exponent
+    return float16bits(ix);
+}
+
+__declspec(safe) static inline float16 frexp(float16 x, varying int *uniform pw2) {
+    unsigned int16 ex = 0x7c00u; // exponent mask
+    unsigned int16 ix = intbits(x);
+    ex &= ix;
+    ix &= ~0x7c00u;              // clear exponent
+    *pw2 = (int)(ex >> 10) - 14; // compute exponent
+    ix |= 0x3800u;               // insert exponent +1 in x
+    return float16bits(ix);
+}
+
+__declspec(safe) static inline uniform float16 frexp(uniform float16 x, uniform int *uniform pw2) {
+    uniform unsigned int16 ex = 0x7c00u; // exponent mask
+    uniform unsigned int16 ix = intbits(x);
+    ex &= ix;
+    ix &= ~0x7c00u;                      // clear exponent
+    *pw2 = (uniform int)(ex >> 10) - 14; // compute exponent
+    ix |= 0x3800u;                       // insert exponent +1 in x
+    return float16bits(ix);
+}
+
+// If no native trigonometry support, convert to float, get asin and convert to half back
+__declspec(safe) static inline float16 sin(float16 x_full) {
+    if (__have_native_trigonometry) {
+        return __sin_varying_half(x_full);
+    } else {
+        return (float16)(sin((float)x_full));
+    }
+}
+
+__declspec(safe) static inline uniform float16 sin(uniform float16 x_full) {
+    if (__have_native_trigonometry) {
+        return __sin_uniform_half(x_full);
+    } else {
+        return (uniform float16)(sin((uniform float)x_full));
+    }
+}
+
+__declspec(safe) static inline float16 asin(float16 x_full) {
+    if (__have_native_trigonometry && !__is_xe_target) {
+        return __asin_varying_half(x_full);
+    } else {
+        return (float16)(asin((float)x_full));
+    }
+}
+
+__declspec(safe) static inline uniform float16 asin(uniform float16 x_full) {
+    if (__have_native_trigonometry && !__is_xe_target) {
+        return __asin_uniform_half(x_full);
+    } else {
+        return (uniform float16)(asin((uniform float)x_full));
+    }
+}
+
+__declspec(safe) static inline float16 cos(float16 x_full) {
+    if (__have_native_trigonometry) {
+        return __cos_varying_half(x_full);
+    } else {
+        return (float16)(cos((float)x_full));
+    }
+}
+
+__declspec(safe) static inline uniform float16 cos(uniform float16 x_full) {
+    if (__have_native_trigonometry) {
+        return __cos_uniform_half(x_full);
+    } else {
+        return (uniform float16)(cos((uniform float)x_full));
+    }
+}
+
+__declspec(safe) static inline float16 tan(float16 x_full) {
+    if (__have_native_trigonometry) {
+        return __tan_varying_half(x_full);
+    } else {
+        return (float16)(tan((float)x_full));
+    }
+}
+
+__declspec(safe) static inline uniform float16 tan(uniform float16 x_full) {
+    if (__have_native_trigonometry) {
+        return __tan_uniform_half(x_full);
+    } else {
+        return (uniform float16)(tan((uniform float)x_full));
+    }
+}
+
+__declspec(safe) static inline float16 acos(float16 x_full) {
+    if (__have_native_trigonometry && !__is_xe_target) {
+        return __acos_varying_half(x_full);
+    } else {
+        return (float16)(acos((float)x_full));
+    }
+}
+
+__declspec(safe) static inline uniform float16 acos(uniform float16 x_full) {
+    if (__have_native_trigonometry && !__is_xe_target) {
+        return __acos_uniform_half(x_full);
+    } else {
+        return (uniform float16)(acos((uniform float)x_full));
+    }
+}
+
+__declspec(safe) static inline void sincos(float16 x_full, varying float16 *uniform sin_result,
+                                           varying float16 *uniform cos_result) {
+    if (__have_native_trigonometry) {
+        __sincos_varying_half(x_full, (opaque_ptr_t)sin_result, (opaque_ptr_t)cos_result);
+    } else {
+        *sin_result = (float16)sin((float)x_full);
+        *cos_result = (float16)cos((float)x_full);
+    }
+    return;
+}
+
+__declspec(safe) static inline void sincos(uniform float16 x_full, uniform float16 *uniform sin_result,
+                                           uniform float16 *uniform cos_result) {
+    if (__have_native_trigonometry) {
+        __sincos_uniform_half(x_full, (opaque_ptr_t)sin_result, (opaque_ptr_t)cos_result);
+    } else {
+        *sin_result = (uniform float16)sin((uniform float)x_full);
+        *cos_result = (uniform float16)cos((uniform float)x_full);
+    }
+    return;
+}
+
+__declspec(safe) static inline float16 atan(float16 x_full) {
+    if (__have_native_trigonometry && !__is_xe_target) {
+        return __atan_varying_half(x_full);
+    } else {
+        return (float16)(atan((float)x_full));
+    }
+}
+
+__declspec(safe) static inline uniform float16 atan(uniform float16 x_full) {
+    if (__have_native_trigonometry && !__is_xe_target) {
+        return __atan_uniform_half(x_full);
+    } else {
+        return (uniform float16)(atan((uniform float)x_full));
+    }
+}
+
+__declspec(safe) static inline float16 atan2(float16 y, float16 x) {
+    if (__have_native_trigonometry && !__is_xe_target) {
+        return __atan2_varying_half(y, x);
+    } else {
+        return (float16)(atan2((float)y, (float)x));
+    }
+}
+
+__declspec(safe) static inline uniform float16 atan2(uniform float16 y, uniform float16 x) {
+    if (__have_native_trigonometry && !__is_xe_target) {
+        return __atan2_uniform_half(y, x);
+    } else {
+        return (uniform float16)(atan2((uniform float)y, (uniform float)x));
+    }
+}
+
+__declspec(safe) static inline float16 exp(float16 x_full) { return __exp_varying_half(x_full); }
+
+__declspec(safe) static inline uniform float16 exp(uniform float16 x_full) { return __exp_uniform_half(x_full); }
+
+__declspec(safe) static inline float16 log(float16 x_full) { return __log_varying_half(x_full); }
+
+__declspec(safe) static inline uniform float16 log(uniform float16 x_full) { return __log_uniform_half(x_full); }
+
+__declspec(safe) static inline float16 pow(float16 a, float16 b) { return __pow_varying_half(a, b); }
+
+__declspec(safe) static inline uniform float16 pow(uniform float16 a, uniform float16 b) {
+    return __pow_uniform_half(a, b);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -3662,15 +3937,15 @@ __declspec(safe) static inline uniform double acos(const uniform double v) {
 __declspec(safe) static inline void sincos(double x, varying double *uniform sin_result,
                                            varying double *uniform cos_result) {
     if (__have_native_trigonometry) {
-        __sincos_varying_double(x, sin_result, cos_result);
+        __sincos_varying_double(x, (opaque_ptr_t)sin_result, (opaque_ptr_t)cos_result);
         return;
     }
     if (__math_lib == __math_lib_svml) {
-        __svml_sincosd(x, sin_result, cos_result);
+        __svml_sincosd(x, (opaque_ptr_t)sin_result, (opaque_ptr_t)cos_result);
     } else {
         foreach_active(i) {
             uniform double sr, cr;
-            __stdlib_sincos(extract(x, i), &sr, &cr);
+            __stdlib_sincos(extract(x, i), (opaque_ptr_t)&sr, (opaque_ptr_t)&cr);
             *sin_result = insert(*sin_result, i, sr);
             *cos_result = insert(*cos_result, i, cr);
         }
@@ -3680,9 +3955,9 @@ __declspec(safe) static inline void sincos(double x, varying double *uniform sin
 __declspec(safe) static inline void sincos(uniform double x, uniform double *uniform sin_result,
                                            uniform double *uniform cos_result) {
     if (__have_native_trigonometry) {
-        __sincos_uniform_double(x, sin_result, cos_result);
+        __sincos_uniform_double(x, (opaque_ptr_t)sin_result, (opaque_ptr_t)cos_result);
     } else
-        __stdlib_sincos(x, sin_result, cos_result);
+        __stdlib_sincos(x, (opaque_ptr_t)sin_result, (opaque_ptr_t)cos_result);
 }
 
 __declspec(safe) static inline double tan(double x) {
@@ -4889,7 +5164,7 @@ static inline uniform bool rdrand(float *uniform ptr) {
         return false;
     else {
         uniform int32 irand;
-        uniform bool success = __rdrand_i32(&irand);
+        uniform bool success = __rdrand_i32((opaque_ptr_t)&irand);
         if (success) {
             irand &= (1ul << 23) - 1;
             *ptr = floatbits(0x3F800000 | irand) - 1.0f;
@@ -4905,7 +5180,7 @@ static inline bool rdrand(varying float *uniform ptr) {
         bool success = false;
         foreach_active(index) {
             uniform int32 irand;
-            if (__rdrand_i32(&irand)) {
+            if (__rdrand_i32((opaque_ptr_t)&irand)) {
                 // FIXME: it probably would be preferable, here and in the
                 // following rdrand() function, to do the int->float stuff
                 // in vector form.  However, we need to be careful to not
@@ -4930,7 +5205,7 @@ static inline bool rdrand(float *ptr) {
         bool success = false;
         foreach_active(index) {
             uniform int32 irand;
-            if (__rdrand_i32(&irand)) {
+            if (__rdrand_i32((opaque_ptr_t)&irand)) {
                 irand &= (1ul << 23) - 1;
                 *ptrs[index] = floatbits(0x3F800000 | irand) - 1.0f;
                 success = true;
@@ -4944,7 +5219,7 @@ static inline uniform bool rdrand(int16 *uniform ptr) {
     if (__have_native_rand == false)
         return false;
     else
-        return __rdrand_i16(ptr);
+        return __rdrand_i16((int8 * uniform) ptr);
 }
 
 static inline bool rdrand(varying int16 *uniform ptr) {
@@ -4954,7 +5229,7 @@ static inline bool rdrand(varying int16 *uniform ptr) {
         bool success = false;
         foreach_active(index) {
             uniform int16 irand;
-            if (__rdrand_i16(&irand)) {
+            if (__rdrand_i16((opaque_ptr_t)&irand)) {
                 *ptr = irand;
                 success = true;
             }
@@ -4973,7 +5248,7 @@ static inline bool rdrand(int16 *ptr) {
 
         foreach_active(index) {
             uniform int16 irand;
-            if (__rdrand_i16(&irand)) {
+            if (__rdrand_i16((opaque_ptr_t)&irand)) {
                 *ptrs[index] = irand;
                 success = true;
             }
@@ -4986,7 +5261,7 @@ static inline uniform bool rdrand(int32 *uniform ptr) {
     if (__have_native_rand == false)
         return false;
     else
-        return __rdrand_i32(ptr);
+        return __rdrand_i32((int8 * uniform) ptr);
 }
 
 static inline bool rdrand(varying int32 *uniform ptr) {
@@ -4996,7 +5271,7 @@ static inline bool rdrand(varying int32 *uniform ptr) {
         bool success = false;
         foreach_active(index) {
             uniform int32 irand;
-            if (__rdrand_i32(&irand)) {
+            if (__rdrand_i32((opaque_ptr_t)&irand)) {
                 *ptr = irand;
                 success = true;
             }
@@ -5015,7 +5290,7 @@ static inline bool rdrand(int32 *ptr) {
 
         foreach_active(index) {
             uniform int32 irand;
-            if (__rdrand_i32(&irand)) {
+            if (__rdrand_i32((opaque_ptr_t)&irand)) {
                 *ptrs[index] = irand;
                 success = true;
             }
@@ -5028,7 +5303,7 @@ static inline uniform bool rdrand(int64 *uniform ptr) {
     if (__have_native_rand == false)
         return false;
     else
-        return __rdrand_i64(ptr);
+        return __rdrand_i64((int8 * uniform) ptr);
 }
 
 static inline bool rdrand(varying int64 *uniform ptr) {
@@ -5038,7 +5313,7 @@ static inline bool rdrand(varying int64 *uniform ptr) {
         bool success = false;
         foreach_active(index) {
             uniform int64 irand;
-            if (__rdrand_i64(&irand)) {
+            if (__rdrand_i64((opaque_ptr_t)&irand)) {
                 *ptr = irand;
                 success = true;
             }
@@ -5057,7 +5332,7 @@ static inline bool rdrand(int64 *ptr) {
 
         foreach_active(index) {
             uniform int64 irand;
-            if (__rdrand_i64(&irand)) {
+            if (__rdrand_i64((opaque_ptr_t)&irand)) {
                 *ptrs[index] = irand;
                 success = true;
             }

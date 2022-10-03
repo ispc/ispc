@@ -57,9 +57,12 @@ option(ISPC_INCLUDE_EXAMPLES "Generate build targets for the ISPC examples" ON)
 option(ISPC_INCLUDE_DPCPP_EXAMPLES "Generate build targets for the ISPC/DPCPP interoperability examples" OFF)
 option(ISPC_INCLUDE_TESTS "Generate build targets for the ISPC tests." ON)
 option(ISPC_INCLUDE_BENCHMARKS "Generate build targets for the ISPC tests." OFF)
+option(ISPC_INCLUDE_RT "Generate build targets for ISPC runtime." ON)
 option(ISPC_INCLUDE_UTILS "Generate build targets for the utils." ON)
 option(ISPC_PREPARE_PACKAGE "Generate build targets for ispc package" OFF)
 option(ISPC_NO_DUMPS "Turn off functionality, which requires LLVM dump() functions" OFF)
+
+option(ISPC_OPAQUE_PTR_MODE "Build ISPC with usage of opaque pointers" OFF)
 
 option(ISPC_CROSS "Build ISPC with cross compilation support" OFF)
 # Default settings for cross compilation
@@ -119,19 +122,6 @@ else()
     endif()
 endif()
 
-# Get ispc version
-file(READ "${CMAKE_CURRENT_SOURCE_DIR}/src/ispc_version.h" ispc_ver)
-string(REGEX MATCH "ISPC_VERSION \"([0-9]*)\.([0-9]*)\.([0-9]*)([a-z]*)" _ ${ispc_ver})
-set(ISPC_VERSION_MAJOR ${CMAKE_MATCH_1})
-set(ISPC_VERSION_MINOR ${CMAKE_MATCH_2})
-set(ISPC_VERSION_PATCH ${CMAKE_MATCH_3})
-set(ISPC_VERSION_SUFFIX ${CMAKE_MATCH_4})
-if (${ISPC_VERSION_SUFFIX} MATCHES ".*dev")
-    set (REPO_TAG "main")
-else()
-    set (REPO_TAG "v${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}.${ISPC_VERSION_PATCH}${ISPC_VERSION_SUFFIX}")
-endif()
-
 if (APPLE)
     # Use standard macOS SDK location if this is not specified.
     if (NOT ISPC_MACOS_SDK_PATH)
@@ -188,7 +178,6 @@ endif()
 
 # If Xe target is enabled, generate build targets for Xe examples and ISPCRT on Linux
 if (XE_ENABLED)
-    option(ISPC_INCLUDE_RT "Generate build targets for ISPC runtime." ON)
     option(ISPC_INCLUDE_XE_EXAMPLES "Generate build targets for the ISPC Xe examples" ON)
 endif()
 
@@ -228,6 +217,10 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindLLVM.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Git.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateBuiltins.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Stdlib.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Version.cmake)
+
+# Get ispc version
+get_ispc_version("${CMAKE_CURRENT_SOURCE_DIR}/common/version.h")
 
 find_package(Python3 REQUIRED)
     if (NOT Python3_Interpreter_FOUND)
@@ -297,7 +290,17 @@ if (WASM_ENABLED)
 endif()
 
 set(CLANG_LIBRARY_LIST clangFrontend clangDriver clangSerialization clangParse clangSema clangAnalysis clangAST clangBasic clangEdit clangLex)
+if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "15.0.0")
+    list(APPEND CLANG_LIBRARY_LIST clangSupport)
+endif()
 set(LLVM_COMPONENTS engine ipo bitreader bitwriter instrumentation linker option frontendopenmp)
+if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "15.0.0")
+    # windowsdriver is a small library introduced in LLVM 15. While it's targeted at Windows only,
+    # it's used in the LLVM code without any ifdef and is needed on all platforms.
+    # An interesting fact, that on Linux it is not required, because linker is smart enough to optimize out
+    # the calls to unresolved symbols. It's not the case on macOS though.
+    list(APPEND LLVM_COMPONENTS windowsdriver)
+endif()
 
 if (X86_ENABLED)
     list(APPEND LLVM_COMPONENTS x86)
@@ -321,6 +324,25 @@ if (XE_ENABLED)
     list(APPEND XE_LIBRARY_LIST LLVMGenXIntrinsics LLVMSPIRVLib)
 endif()
 
+# Set the flag responsible for generation of opaque pointers in builtins
+set(ISPC_OPAQUE_FLAGS)
+if (ISPC_OPAQUE_PTR_MODE)
+    if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "15.0.0")
+    # Do nothing, opaque pointers mode is default
+    elseif (${LLVM_VERSION_NUMBER} VERSION_EQUAL "14.0.0")
+    # Explicitly enable opaque pointers for LLVM 14.0
+        set(ISPC_OPAQUE_FLAGS "-Xclang" "-opaque-pointers")
+    else()
+        message(FATAL_ERROR "ISPC opaque pointers mode is not supported with LLVM " ${LLVM_VERSION_NUMBER})
+    endif()
+else()
+    # Explicitly disable opaque pointers starting LLVM 15.0
+    if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "15.0.0")
+        set(ISPC_OPAQUE_FLAGS "-Xclang" "-no-opaque-pointers")
+    endif()
+endif()
+message(STATUS "ISPC opaque pointers mode is " ${ISPC_OPAQUE_PTR_MODE})
+
 get_llvm_libfiles(LLVM_LIBRARY_LIST ${LLVM_COMPONENTS})
 get_llvm_cppflags(LLVM_CPP_FLAGS)
 
@@ -330,7 +352,8 @@ generate_stdlib(STDLIB_FILES ${ISPC_MASKS})
 
 add_executable(${PROJECT_NAME} ${BUILTIN_FILES} ${BUILTIN_CPP_FILES}
                ${STDLIB_FILES} ${BISON_CPP_OUTPUT} ${FLEX_OUTPUT}
-               ${CMAKE_CURRENT_SOURCE_DIR}/stdlib.ispc)
+               ${CMAKE_CURRENT_SOURCE_DIR}/stdlib.ispc
+               ${CMAKE_CURRENT_SOURCE_DIR}/common/version.rc)
 
 target_sources(${PROJECT_NAME}
     PRIVATE
@@ -372,11 +395,8 @@ target_sources(${PROJECT_NAME}
         "src/util.h"
         "src/parse.yy"
         "src/lex.ll"
+        "common/version.h"
 )
-
-if (XE_ENABLED)
-    target_sources(${PROJECT_NAME} PRIVATE "src/xe/GlobalsLocalization.cpp")
-endif()
 
 # To show stdlib.ispc in VS solution:
 if (WIN32)
@@ -406,6 +426,7 @@ endif()
 if (ARM_ENABLED)
     target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_ARM_ENABLED)
 endif()
+
 if (XE_ENABLED)
     target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_XE_ENABLED)
 endif()
@@ -441,11 +462,17 @@ if (NOT ISPC_PS_TARGET)
     target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_PS_TARGET_OFF)
 endif()
 
+# Compile definition for opaque pointers mode
+if (ISPC_OPAQUE_PTR_MODE)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_OPAQUE_PTR_MODE)
+endif()
+
 # Include directories
 target_include_directories(${PROJECT_NAME} PRIVATE
                            ${LLVM_INCLUDE_DIRS}
                            ${XE_DEPS_DIR}/include
                            ${CMAKE_CURRENT_SOURCE_DIR}/src
+                           ${CMAKE_CURRENT_SOURCE_DIR}/common
                            ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
 
 # Compile options
@@ -479,6 +506,8 @@ endif()
 # Link options
 if (WIN32)
     target_link_options(${PROJECT_NAME} PRIVATE /DYNAMICBASE)
+    # Control flow guard
+    target_link_options(${PROJECT_NAME} PRIVATE /GUARD:CF)
     if (MSVC AND NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
         target_link_options(${PROJECT_NAME} PUBLIC /OPT:REF /OPT:ICF)
     endif()
@@ -649,7 +678,7 @@ if (ISPC_PREPARE_PACKAGE)
     include(ExternalProject)
     ExternalProject_Add(ispc_web
       GIT_REPOSITORY    https://github.com/ispc/ispc.github.com.git
-      GIT_TAG ${REPO_TAG}
+      GIT_TAG ${ISPC_DOC_REPO_TAG}
       PREFIX ispc_web
       SOURCE_DIR ispc_web/repo
       CONFIGURE_COMMAND cmake -E echo "Skipping configure step."

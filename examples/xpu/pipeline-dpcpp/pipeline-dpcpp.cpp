@@ -28,7 +28,7 @@
 #include <level_zero/zes_api.h>
 
 // SYCL and interoperability headers
-#include <sycl.hpp>
+#include <CL/sycl.hpp>
 #include <sycl/ext/oneapi/backend/level_zero.hpp>
 
 #include "L0_helpers.h"
@@ -72,7 +72,7 @@ void DpcppApp::transformStage2(gpu_vec &in) {
 
     auto ctx = sycl::ext::oneapi::level_zero::make_context(platform.get_devices(), (uintptr_t)m_context,
                                                            /*keep ownership of m_context handler on ISPC side*/ true);
-    auto q = sycl::ext::oneapi::level_zero::make_queue(ctx, (uintptr_t)m_command_queue,
+    auto q = sycl::ext::oneapi::level_zero::make_queue(ctx, device, (uintptr_t)m_command_queue,
                                                        /*keep ownership of m_command_queue handler on ISPC side*/ true);
 
     // Set problem space

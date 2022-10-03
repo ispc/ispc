@@ -41,10 +41,6 @@
 #include "target_enums.h"
 #include "target_registry.h"
 
-#if ISPC_LLVM_VERSION < OLDEST_SUPPORTED_LLVM || ISPC_LLVM_VERSION > LATEST_SUPPORTED_LLVM
-#error "Only LLVM 11.0 - 14.0 and 15.0 development branch are supported"
-#endif
-
 #if defined(_WIN32) || defined(_WIN64)
 #define ISPC_HOST_IS_WINDOWS
 #elif defined(__linux__)
@@ -119,7 +115,7 @@ class SymbolTable;
 class Type;
 struct VariableDeclaration;
 
-enum StorageClass { SC_NONE, SC_EXTERN, SC_STATIC, SC_TYPEDEF, SC_EXTERN_C };
+enum StorageClass { SC_NONE, SC_EXTERN, SC_STATIC, SC_TYPEDEF, SC_EXTERN_C, SC_EXTERN_SYCL };
 
 // Enumerant for address spaces.
 enum class AddressSpace {
@@ -246,10 +242,16 @@ class Target {
         of the structure where the element is located. */
     llvm::Value *StructOffset(llvm::Type *type, int element, llvm::BasicBlock *insertAtEnd);
 
+    /** Update function name with __regcall3_ prefix. */
+    void markFuncNameWithRegCallPrefix(std::string &funcName) const;
+
     /** Mark LLVM function with target specific attribute, if required. */
     void markFuncWithTargetAttr(llvm::Function *func);
 
-    /** Set LLVM function with Calling Convention. */
+    /** Set LLVM function with Calling Convention.
+        The usage of this function is deprecated. The preferred way is to use
+        llvm::Function::setCallingConv(llvm::CallingConv) and FunctionType::GetCallingConv())
+    */
     void markFuncWithCallingConv(llvm::Function *func);
 
     const llvm::Target *getTarget() const { return m_target; }
@@ -318,6 +320,8 @@ class Target {
     bool hasVecPrefetch() const { return m_hasVecPrefetch; }
 
     bool hasSatArith() const { return m_hasSaturatingArithmetic; }
+
+    bool hasFp16Support() const { return m_hasFp16Support; }
 
     bool hasFp64Support() const { return m_hasFp64Support; }
 
@@ -428,6 +432,9 @@ class Target {
 
     /** Indicates whether the target has special saturating arithmetic instructions. */
     bool m_hasSaturatingArithmetic;
+
+    /** Indicates whether the target has FP16 support. */
+    bool m_hasFp16Support;
 
     /** Indicates whether the target has FP64 support. */
     bool m_hasFp64Support;
@@ -553,6 +560,16 @@ struct Opt {
         likely only useful for measuring the impact of this optimization */
     bool disableXeGatherCoalescing;
 
+    /** Minimal difference between the number of eliminated loads and
+        the number of newly created mem insts. Default value is zero:
+        assuming that gather is more dufficult due to address calculations.
+        the default value should be adjusted with some experiments. */
+    int thresholdForXeGatherCoalescing;
+
+    /** Experimental: Xe gather coalescing will generate standard
+        vectorized llvm loads instead of block ld intrinsics. */
+    bool buildLLVMLoadsOnXeGatherCoalescing;
+
     /** Enables experimental support of foreach statement inside varying CF.
         Current implementation brings performance degradation due to ineffective
         implementation of unmasked.*/
@@ -599,11 +616,11 @@ struct Globals {
 
     /** There are a number of math libraries that can be used for
         transcendentals and the like during program compilation. */
-    enum MathLib { Math_ISPC, Math_ISPCFast, Math_SVML, Math_System };
+    enum class MathLib { Math_ISPC, Math_ISPCFast, Math_SVML, Math_System };
     MathLib mathLib;
 
     /** Optimization level to be specified while creating TargetMachine. */
-    enum CodegenOptLevel { None, Aggressive };
+    enum class CodegenOptLevel { None, Aggressive };
     CodegenOptLevel codegenOptLevel;
 
     /** Records whether the ispc standard library should be made available
@@ -625,6 +642,14 @@ struct Globals {
         ispc's execution. */
     bool debugPrint;
 
+    /** When \c true, dump AST.
+        None - don't dump AST
+        User - dump AST only for user code, but not for stdlib functions
+        All - dump AST for all the code
+    */
+    enum class ASTDumpKind { None, User, All };
+    ASTDumpKind astDump;
+
     /** When \c true, target ISA will be printed during ispc's execution. */
     bool printTarget;
 
@@ -636,6 +661,9 @@ struct Globals {
 
     /** Whether to dump IR to file. */
     bool dumpFile;
+
+    /** Store the path to directory for IR file dumps. */
+    std::string dumpFilePath;
 
     /** Indicates after which optimization we want to generate
         DebugIR information. */
@@ -767,6 +795,7 @@ enum {
     COST_SIMPLE_ARITH_LOGIC_OP = 1,
     COST_SYNC = 32,
     COST_TASK_LAUNCH = 32,
+    COST_INVOKE = 32,
     COST_TYPECAST_COMPLEX = 4,
     COST_TYPECAST_SIMPLE = 1,
     COST_UNIFORM_IF = 2,

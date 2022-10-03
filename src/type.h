@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -843,10 +843,14 @@ class FunctionType : public Type {
     FunctionType(const Type *returnType, const llvm::SmallVector<const Type *, 8> &argTypes,
                  const llvm::SmallVector<std::string, 8> &argNames, const llvm::SmallVector<Expr *, 8> &argDefaults,
                  const llvm::SmallVector<SourcePos, 8> &argPos, bool isTask, bool isExported, bool isExternC,
-                 bool isUnmasked);
+                 bool isExternSYCL, bool isUnmasked, bool isVectorCall, bool isRegCall);
+    // Structure holding the mangling suffix and prefix for function
+    struct FunctionMangledName {
+        std::string prefix;
+        std::string suffix;
+    };
 
     Variability GetVariability() const;
-
     bool IsBoolType() const;
     bool IsFloatType() const;
     bool IsIntType() const;
@@ -879,20 +883,33 @@ class FunctionType : public Type {
 
     const std::string GetReturnTypeString() const;
 
+    /** This method returns the FunctionMangledName depending on Function type.
+        The \c appFunction parameter indicates whether the function is generated for
+        internal ISPC call or for external call from application.*/
+    FunctionMangledName GetFunctionMangledName(bool appFunction) const;
+
+    /** This method returns std::vector of LLVM types of function arguments.
+        The \c disableMask parameter indicates whether the mask parameter should be
+        included to the list of arguments types. */
+    std::vector<llvm::Type *> LLVMFunctionArgTypes(llvm::LLVMContext *ctx, bool disableMask = false) const;
+
     /** This method returns the LLVM FunctionType that corresponds to this
         function type.  The \c disableMask parameter indicates whether the
         llvm::FunctionType should have the trailing mask parameter, if
         present, removed from the return function signature. */
     llvm::FunctionType *LLVMFunctionType(llvm::LLVMContext *ctx, bool disableMask = false) const;
 
+    /* This method returns appropriate llvm::CallingConv for the function*/
+    const unsigned int GetCallingConv() const;
+
+    /* Get string representation of calling convention */
+    const std::string GetNameForCallConv() const;
+
     int GetNumParameters() const { return (int)paramTypes.size(); }
     const Type *GetParameterType(int i) const;
     Expr *GetParameterDefault(int i) const;
     const SourcePos &GetParameterSourcePos(int i) const;
     const std::string &GetParameterName(int i) const;
-
-    /** This method determines if function requires addrspace casts at the beginning*/
-    bool RequiresAddrSpaceCasts(const llvm::Function *func) const;
 
     /** This value is true if the function had a 'task' qualifier in the
         source program. */
@@ -906,10 +923,20 @@ class FunctionType : public Type {
         function in the source program. */
     const bool isExternC;
 
+    /** This value is true if the function was declared as an 'extern "SYCL"'
+    function in the source program. */
+    const bool isExternSYCL;
+
     /** Indicates whether the function doesn't take an implicit mask
         parameter (and thus should start execution with an "all on"
         mask). */
     const bool isUnmasked;
+
+    /** Indicates whether the function has __vectorcall attribute. */
+    const bool isVectorCall;
+
+    /** Indicates whether the function has __regcall attribute. */
+    const bool isRegCall;
 
     /** Indicates whether this function has been declared to be safe to run
         with an all-off mask. */

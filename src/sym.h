@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -39,6 +39,7 @@
 
 #pragma once
 
+#include "ctx.h"
 #include "decl.h"
 #include "ispc.h"
 #include <map>
@@ -69,10 +70,10 @@ class Symbol {
 
     SourcePos pos;            /*!< Source file position where the symbol was defined */
     std::string name;         /*!< Symbol's name */
-    llvm::Value *storagePtr;  /*!< For symbols with storage associated with
+    AddressInfo *storageInfo; /*!< For symbols with storage associated with
                                    them (i.e. variables but not functions),
-                                   this member stores a pointer to its
-                                   location in memory.) */
+                                   this member stores an address info: pointer to
+                                   its location in memory and its element type.) */
     llvm::Function *function; /*!< For symbols that represent functions,
                                    this stores the LLVM Function value for
                                    the symbol once it has been created. */
@@ -90,7 +91,7 @@ class Symbol {
                                     example, the ConstExpr class can't currently represent
                                     struct types.  For cases like these, ConstExpr is NULL,
                                     though for all const symbols, the value pointed to by the
-                                    storagePtr member will be its constant value.  (This
+                                    storageInfo pointer member will be its constant value.  (This
                                     messiness is due to needing an ispc ConstExpr for the early
                                     constant folding optimizations). */
     StorageClass storageClass; /*!< Records the storage class (if any) provided with the
@@ -295,7 +296,7 @@ class SymbolTable {
     typedef std::map<llvm::Function *, Symbol *> IntrinsicMapType;
     IntrinsicMapType intrinsics;
 
-    /** Type definitions can't currently be scoped.
+    /** Scoped types.
      */
     typedef std::map<std::string, const Type *> TypeMapType;
     std::vector<TypeMapType> types;

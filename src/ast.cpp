@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2021, Intel Corporation
+  Copyright (c) 2011-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -49,9 +49,91 @@
 using namespace ispc;
 
 ///////////////////////////////////////////////////////////////////////////
+// Indent
+
+Indent::~Indent() {
+    Assert(stack.empty() && "Indent stack is not empty on destruction");
+    // Any Print() call must be paired by Done() call
+    Assert(printCalls == doneCalls && "AST dump has encountered a bug");
+};
+
+void Indent::pushSingle() { stack.push_back(1); }
+void Indent::pushList(int i) {
+    if (i > 0) {
+        stack.push_back(i);
+    }
+}
+
+void Indent::setNextLabel(std::string s) { label = s; }
+
+// Print indent and an optional string
+void Indent::Print(const char *title) {
+    printCalls++;
+    Assert(!stack.empty());
+    int &top = stack.back();
+    Assert(top > 0);
+
+    for (int i = 0; i < (stack.size() - 1); i++) {
+        if (stack[i] == 0) {
+            printf("  ");
+        } else {
+            printf("| ");
+        }
+    }
+
+    if (top == 1) {
+        printf("`-");
+    } else {
+        printf("|-");
+    }
+    top--;
+
+    if (!label.empty()) {
+        printf("(%s) ", label.c_str());
+        label.clear();
+    }
+
+    // An optional string
+    if (title != nullptr) {
+        printf("%s", title);
+    }
+}
+
+void Indent::Print(const char *title, const SourcePos &pos) {
+    // Same as previous version
+    Print(title);
+    // Plus source position info
+    pos.Print();
+}
+
+void Indent::PrintLn(const char *title, const SourcePos &pos) {
+    // Same as previous version
+    Print(title, pos);
+    // Plus end of line
+    printf("\n");
+}
+
+void Indent::Done() {
+    doneCalls++;
+    Assert(!stack.empty());
+    int &top = stack.back();
+    Assert(top >= 0);
+    if (top == 0) {
+        stack.pop_back();
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////
 // ASTNode
 
 ASTNode::~ASTNode() {}
+
+void ASTNode::Print() const {
+    Indent indent;
+    indent.pushSingle();
+    Print(indent);
+    fflush(stdout);
+}
 
 ///////////////////////////////////////////////////////////////////////////
 // AST
@@ -66,6 +148,36 @@ void AST::GenerateIR() {
     llvm::TimeTraceScope TimeScope("GenerateIR");
     for (unsigned int i = 0; i < functions.size(); ++i)
         functions[i]->GenerateIR();
+}
+
+void AST::Print(Globals::ASTDumpKind printKind) const {
+    if (printKind == Globals::ASTDumpKind::None) {
+        return;
+    }
+
+    printf("AST\n");
+    Indent indent;
+
+    int funcsToPrint = 0;
+    if (printKind == Globals::ASTDumpKind::All) {
+        funcsToPrint = functions.size();
+    } else if (printKind == Globals::ASTDumpKind::User) {
+        for (unsigned int i = 0; i < functions.size(); ++i) {
+            if (!functions[i]->IsStdlibSymbol()) {
+                funcsToPrint++;
+            }
+        }
+    }
+
+    indent.pushList(funcsToPrint);
+    for (unsigned int i = 0; i < functions.size(); ++i) {
+        if (printKind == Globals::ASTDumpKind::All ||
+            (printKind == Globals::ASTDumpKind::User && !functions[i]->IsStdlibSymbol())) {
+            functions[i]->Print(indent);
+        }
+    }
+
+    fflush(stdout);
 }
 
 ///////////////////////////////////////////////////////////////////////////

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -49,7 +49,7 @@ using namespace ispc;
 // Symbol
 
 Symbol::Symbol(const std::string &n, SourcePos p, const Type *t, StorageClass sc) : pos(p), name(n) {
-    storagePtr = NULL;
+    storageInfo = NULL;
     function = exportedFunction = NULL;
     type = t;
     constValue = NULL;

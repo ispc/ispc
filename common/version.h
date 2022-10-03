@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2020, Intel Corporation
+  Copyright (c) 2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -31,18 +31,13 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file GlobalsLocalization.h
-    @brief Define extra passes required for Xe target
+/** @file version.h
+    @brief defines the ISPC version
 */
 
-#include "../ispc_version.h"
-#ifndef GEN_GLOBALS_LOCALIZATION_H
-#define GEN_GLOBALS_LOCALIZATION_H
+#pragma once
 
-namespace llvm {
-class Pass;
-
-Pass *createGlobalsLocalizationPass();
-} // namespace llvm
-
-#endif
+#define ISPC_VERSION_MAJOR 1
+#define ISPC_VERSION_MINOR 19
+#define ISPC_VERSION_PATCH 0
+#define ISPC_VERSION "1.19.0dev"

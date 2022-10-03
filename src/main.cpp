@@ -210,6 +210,8 @@ static void lPrintVersion() {
 [[noreturn]] static void devUsage(int ret) {
     lPrintVersion();
     printf("\nusage (developer options): ispc\n");
+    printf("    [--ast-dump=user|all]\t\tDump AST for user code or all the code including stdlib. If no argument is "
+           "given, dump AST for user code only\n");
     printf("    [--debug]\t\t\t\tPrint information useful for debugging ispc\n");
     printf("    [--debug-llvm]\t\t\tEnable LLVM debugging information (dumps to stderr)\n");
 #ifndef ISPC_NO_DUMPS
@@ -218,7 +220,8 @@ static void lPrintVersion() {
 #endif
     printf("    [--[no-]discard-value-names]\tDo not discard/Discard value names when generating LLVM IR.\n");
 #ifndef ISPC_NO_DUMPS
-    printf("    [--dump-file]\t\t\tDump module IR to file(s) in current directory\n");
+    printf("    [--dump-file[=<path>]]\t\tDump module IR to file(s) in "
+           "current directory, or to <path> if specified\n");
 #endif
     printf("    [--fuzz-seed=<value>]\t\tSeed value for RNG for fuzz testing\n");
     printf("    [--fuzz-test]\t\t\tRandomly perturb program input to test error conditions\n");
@@ -236,6 +239,10 @@ static void lPrintVersion() {
     printf("        disable-uniform-memory-optimizations\tDisable uniform-based coherent memory access\n");
 #ifdef ISPC_XE_ENABLED
     printf("        disable-xe-gather-coalescing\t\tDisable Xe gather coalescing\n");
+    printf("        threshold-for-xe-gather-coalescing=<0>\tMinimal number of eliminated memory instructions for "
+           "Xe gather coalescing.\n");
+    printf("        build-llvm-loads-on-xe-gather-coalescing\t\tExperimental: build standard llvm loads on "
+           "Xe gather coalescing.\n");
     printf("        enable-xe-unsafe-masked-load\t\tEnable Xe unsafe masked load\n");
 #endif
     printf("    [--print-target]\t\t\tPrint target's information\n");
@@ -492,6 +499,12 @@ static void writeCompileTimeFile(const char *outFileName) {
     return;
 }
 
+static std::string ParsePath(char *path, ArgErrors &errorHandler) {
+    constexpr int parsing_limit = 1024;
+    auto len = strnlen(path, parsing_limit);
+    return std::string{path, len};
+}
+
 static std::set<int> ParsingPhases(char *stages, ArgErrors &errorHandler) {
     constexpr int parsing_limit = 100;
     std::set<int> phases;
@@ -642,6 +655,17 @@ int main(int Argc, char *Argv[]) {
                 errorHandler.AddWarning("Overwriting --arch=%s with --arch=%s", prev_arch_str.c_str(),
                                         arch_str.c_str());
             }
+        } else if (!strcmp(argv[i], "--ast-dump")) {
+            g->astDump = Globals::ASTDumpKind::User;
+        } else if (!strncmp(argv[i], "--ast-dump=", 11)) {
+            const char *ast = argv[i] + 11;
+            if (!strcmp(ast, "user"))
+                g->astDump = Globals::ASTDumpKind::User;
+            else if (!strcmp(ast, "all"))
+                g->astDump = Globals::ASTDumpKind::All;
+            else {
+                errorHandler.AddError("Unknown --ast-dump= value \"%s\".", ast);
+            }
         } else if (!strncmp(argv[i], "--x86-asm-syntax=", 17)) {
             intelAsmSyntax = argv[i] + 17;
             if (!((std::string(intelAsmSyntax) == "intel") || (std::string(intelAsmSyntax) == "att"))) {
@@ -754,13 +778,13 @@ int main(int Argc, char *Argv[]) {
         } else if (!strncmp(argv[i], "--math-lib=", 11)) {
             const char *lib = argv[i] + 11;
             if (!strcmp(lib, "default"))
-                g->mathLib = Globals::Math_ISPC;
+                g->mathLib = Globals::MathLib::Math_ISPC;
             else if (!strcmp(lib, "fast"))
-                g->mathLib = Globals::Math_ISPCFast;
+                g->mathLib = Globals::MathLib::Math_ISPCFast;
             else if (!strcmp(lib, "svml"))
-                g->mathLib = Globals::Math_SVML;
+                g->mathLib = Globals::MathLib::Math_SVML;
             else if (!strcmp(lib, "system"))
-                g->mathLib = Globals::Math_System;
+                g->mathLib = Globals::MathLib::Math_System;
             else {
                 errorHandler.AddError("Unknown --math-lib= option \"%s\".", lib);
             }
@@ -806,6 +830,10 @@ int main(int Argc, char *Argv[]) {
 #ifdef ISPC_XE_ENABLED
             else if (!strcmp(opt, "disable-xe-gather-coalescing"))
                 g->opt.disableXeGatherCoalescing = true;
+            else if (!strncmp(opt, "threshold-for-xe-gather-coalescing=", 37))
+                g->opt.thresholdForXeGatherCoalescing = atoi(opt + 37);
+            else if (!strcmp(opt, "build-llvm-loads-on-xe-gather-coalescing"))
+                g->opt.buildLLVMLoadsOnXeGatherCoalescing = true;
             else if (!strcmp(opt, "emit-xe-hardware-mask"))
                 g->opt.emitXeHardwareMask = true;
             else if (!strcmp(opt, "enable-xe-foreach-varying"))
@@ -922,8 +950,12 @@ int main(int Argc, char *Argv[]) {
                                     "handles the phases and it may possibly make some bugs go"
                                     "away or introduce the new ones.");
             g->debug_stages = ParsingPhases(argv[i] + strlen("--debug-phase="), errorHandler);
-        } else if (strncmp(argv[i], "--dump-file", 11) == 0)
+        } else if (strncmp(argv[i], "--dump-file=", 12) == 0) {
             g->dumpFile = true;
+            g->dumpFilePath = ParsePath(argv[i] + strlen("--dump-file="), errorHandler);
+        } else if (strncmp(argv[i], "--dump-file", 11) == 0) {
+            g->dumpFile = true;
+        }
 #endif
 
         else if (strncmp(argv[i], "--off-phase=", 12) == 0) {

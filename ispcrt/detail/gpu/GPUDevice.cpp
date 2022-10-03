@@ -1,7 +1,8 @@
-// Copyright 2020-2021 Intel Corporation
+// Copyright 2020-2022 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "GPUDevice.h"
+#include "GPUContext.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 
@@ -197,7 +198,7 @@ struct Future : public ispcrt::base::Future {
     bool valid() override { return m_valid; }
     uint64_t time() override { return m_time; }
 
-    friend class TaskQueue;
+    friend struct TaskQueue;
 
   private:
     uint64_t m_time{0};
@@ -490,10 +491,14 @@ struct MemoryView : public ispcrt::base::MemoryView {
         if (m_shared) {
             ze_device_mem_alloc_desc_t device_alloc_desc = {};
             ze_host_mem_alloc_desc_t host_alloc_desc = {};
+            if (!m_context)
+                throw std::runtime_error("Context handle is NULL!");
             status =
                 zeMemAllocShared(m_context, &device_alloc_desc, &host_alloc_desc, m_size, 64, m_device, &m_devicePtr);
         } else {
             ze_device_mem_alloc_desc_t allocDesc = {};
+            if (!m_device)
+                throw std::runtime_error("Device handle is NULL!");
             status = zeMemAllocDevice(m_context, &allocDesc, m_size, m_size, m_device, &m_devicePtr);
         }
         if (status != ZE_RESULT_SUCCESS)
@@ -560,11 +565,25 @@ struct Module : public ispcrt::base::Module {
         // + or = sign. '+' means that the content of the variable should
         // be added to the default igc options, while '=' will replace
         // the options with the content of the env var.
-        std::string igcOptions = "-vc-codegen -no-optimize -Xfinalizer '-presched'";
+        std::string igcOptions;
+        // If scalar module is passed to ISPC Runtime, do not use VC backend
+        // options on it
+        if (opts.moduleType != ISPCRTModuleType::ISPCRT_SCALAR_MODULE) {
+            igcOptions += "-vc-codegen -no-optimize -Xfinalizer '-presched'";
+#if defined(__linux__)
+            // `newspillcost` is not yet supported on Windows in open source
+            // TODO: use `newspillcost` for all platforms as soon as it available
+            igcOptions += " -Xfinalizer '-newspillcost'";
+#endif
+        }
         // If stackSize has default value 0, do not set -stateless-stack-mem-size,
         // it will be set to 8192 in VC backend by default.
         if (opts.stackSize > 0) {
             igcOptions += " -stateless-stack-mem-size=" + std::to_string(opts.stackSize);
+        }
+        // If module is a library for the kernel, add " -library-compilation"
+        if (opts.libraryCompilation) {
+            igcOptions += " -library-compilation";
         }
         constexpr auto MAX_ISPCRT_IGC_OPTIONS = 2000UL;
 #if defined(_WIN32) || defined(_WIN64)
@@ -612,6 +631,14 @@ struct Module : public ispcrt::base::Module {
     }
 
     ze_module_handle_t handle() const { return m_module; }
+
+    void *functionPtr(const char *name) const override {
+        void *fptr = nullptr;
+        L0_SAFE_CALL(zeModuleGetFunctionPointer(m_module, name, &fptr));
+        if (!fptr)
+            throw std::logic_error("could not find GPU function");
+        return fptr;
+    }
 
   private:
     std::string m_file;
@@ -765,7 +792,8 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
             waitEvents.push_back(ev.first->handle());
         }
         L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl_mem_d2h->handle(), view.hostPtr(), view.devicePtr(),
-                                                   view.numBytes(), nullptr, waitEvents.size(), waitEvents.data()));
+                                                   view.numBytes(), nullptr, (uint32_t)waitEvents.size(),
+                                                   waitEvents.data()));
 
         m_cl_mem_d2h->inc();
     }
@@ -778,6 +806,28 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
                                                    view.numBytes(), copyEvent->handle(), 0, nullptr));
         m_cl_mem_h2d->inc();
         m_cl_mem_h2d->addEvent(copyEvent);
+    }
+
+    void copyMemoryView(base::MemoryView &mv_dst, base::MemoryView &mv_src, const size_t size) override {
+        auto &view_dst = (gpu::MemoryView &)mv_dst;
+        auto &view_src = (gpu::MemoryView &)mv_src;
+
+        // Create event and add it to m_cl_compute command list
+        auto event = m_ep_compute.createEvent();
+        if (event == nullptr)
+            throw std::runtime_error("Failed to create event!");
+        try {
+            L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl_compute->handle(), view_dst.devicePtr(), view_src.devicePtr(),
+                                                       size, event->handle(), 0, nullptr));
+            m_cl_compute->inc();
+        } catch (ispcrt::base::ispcrt_runtime_error &e) {
+            // cleanup and rethrow
+            m_ep_compute.deleteEvent(event);
+            throw e;
+        }
+        auto *future = new gpu::Future;
+        assert(future);
+        m_events_compute_list.push_back(std::make_pair(event, future));
     }
 
     ispcrt::base::Future *launch(ispcrt::base::Kernel &k, ispcrt::base::MemoryView *params, size_t dim0, size_t dim1,
@@ -794,8 +844,8 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         }
 
         std::array<uint32_t, 3> suggestedGroupSize = {0};
-        L0_SAFE_CALL(zeKernelSuggestGroupSize(kernel.handle(), dim0, dim1, dim2, &suggestedGroupSize[0],
-                                              &suggestedGroupSize[1], &suggestedGroupSize[2]));
+        L0_SAFE_CALL(zeKernelSuggestGroupSize(kernel.handle(), uint32_t(dim0), uint32_t(dim1), uint32_t(dim2),
+                                              &suggestedGroupSize[0], &suggestedGroupSize[1], &suggestedGroupSize[2]));
         // TODO: Is this needed? Didn't find info in spec on the valid values that zeKernelSuggestGroupSize will return
         suggestedGroupSize[0] = std::max(suggestedGroupSize[0], uint32_t(1));
         suggestedGroupSize[1] = std::max(suggestedGroupSize[1], uint32_t(1));
@@ -811,9 +861,9 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         if (event == nullptr)
             throw std::runtime_error("Failed to create event!");
         try {
-            L0_SAFE_CALL(zeCommandListAppendLaunchKernel(m_cl_compute->handle(), kernel.handle(), &dispatchTraits,
-                                                         event->handle(), m_cl_mem_h2d->getEventHandlers().size(),
-                                                         m_cl_mem_h2d->getEventHandlers().data()));
+            L0_SAFE_CALL(zeCommandListAppendLaunchKernel(
+                m_cl_compute->handle(), kernel.handle(), &dispatchTraits, event->handle(),
+                (uint32_t)m_cl_mem_h2d->getEventHandlers().size(), m_cl_mem_h2d->getEventHandlers().data()));
             m_cl_compute->inc();
         } catch (ispcrt::base::ispcrt_runtime_error &e) {
             // cleanup and rethrow
@@ -972,7 +1022,7 @@ static ze_driver_handle_t deviceDiscovery(bool *p_is_mock) {
         std::vector<ze_device_handle_t> allDevices(deviceCount);
         L0_SAFE_CALL(zeDeviceGet(driver, &deviceCount, allDevices.data()));
         for (auto &device : allDevices) {
-            ze_device_properties_t device_properties;
+            ze_device_properties_t device_properties = {ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES};
             L0_SAFE_CALL(zeDeviceGetProperties(device, &device_properties));
             if (device_properties.type == ZE_DEVICE_TYPE_GPU && device_properties.vendorId == 0x8086) {
                 if (selectedDriver != nullptr && driver != selectedDriver)
@@ -989,7 +1039,7 @@ static ze_driver_handle_t deviceDiscovery(bool *p_is_mock) {
 
 uint32_t deviceCount() {
     deviceDiscovery(nullptr);
-    return g_deviceList.size();
+    return (uint32_t)g_deviceList.size();
 }
 
 ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx) {
@@ -997,53 +1047,91 @@ ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx) {
     if (deviceIdx >= g_deviceList.size())
         throw std::runtime_error("Invalid device number");
     ISPCRTDeviceInfo info;
-    ze_device_properties_t dp;
+    ze_device_properties_t dp = {ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES};
     L0_SAFE_CALL(zeDeviceGetProperties(g_deviceList[deviceIdx], &dp));
     info.deviceId = dp.deviceId;
     info.vendorId = dp.vendorId;
     return info;
 }
 
+void linkModules(gpu::Module **modules, const uint32_t numModules) {
+    std::vector<ze_module_handle_t> moduleHandles;
+    for (int i = 0; i< numModules; i++) {
+        moduleHandles.push_back(modules[i]->handle());
+    }
+
+    ze_module_build_log_handle_t linkLog;
+    L0_SAFE_CALL_NOEXCEPT(zeModuleDynamicLink(numModules, moduleHandles.data(), &linkLog));
+
+    size_t buildLogSize;
+    L0_SAFE_CALL(zeModuleBuildLogGetString(linkLog, &buildLogSize, nullptr));
+    char *dynLogBuffer = new char[buildLogSize]();
+    L0_SAFE_CALL_NOEXCEPT(zeModuleBuildLogGetString(linkLog, &buildLogSize, dynLogBuffer));
+
+    // For now always print dynamic linking log.
+    // TODO: introduce verbose mode to ISPCRT
+    std::cout << dynLogBuffer << "\n";
+    delete[] dynLogBuffer;
+    if (linkLog)
+        L0_SAFE_CALL_NOEXCEPT(zeModuleBuildLogDestroy(linkLog));
+
+}
+
+
 } // namespace gpu
 
 // Use the first available device by default for now.
 // Later we may do something more sophisticated (e.g. use the one
 // with most FLOPs or have some kind of load balancing)
-GPUDevice::GPUDevice() : GPUDevice(0) {}
+GPUDevice::GPUDevice() : GPUDevice(nullptr, nullptr, 0) {}
 
-GPUDevice::GPUDevice(uint32_t deviceIdx) {
-    // Find an instance of Intel GPU device
-    // User can select particular device using env variable
-    // By default first available device is selected
-    auto gpuDeviceToGrab = deviceIdx;
-#if defined(_WIN32) || defined(_WIN64)
-    char *gpuDeviceEnv = nullptr;
-    size_t gpuDeviceEnvSz = 0;
-    _dupenv_s(&gpuDeviceEnv, &gpuDeviceEnvSz, "ISPCRT_GPU_DEVICE");
-#else
-    const char *gpuDeviceEnv = getenv("ISPCRT_GPU_DEVICE");
-#endif
-    if (gpuDeviceEnv) {
-        std::istringstream(gpuDeviceEnv) >> gpuDeviceToGrab;
-    }
-
+GPUDevice::GPUDevice(void* nativeContext, void* nativeDevice, uint32_t deviceIdx) {
     // Perform GPU discovery
     m_driver = gpu::deviceDiscovery(&m_is_mock);
 
-    if (gpuDeviceToGrab >= gpu::g_deviceList.size())
-        throw std::runtime_error("could not find a valid GPU device");
+    if (nativeDevice) {
+        // Use the native device handler passed from app
+        m_device = nativeDevice;
+    } else {
+        // Find an instance of Intel GPU device
+        // User can select particular device using env variable
+        // By default first available device is selected
+        auto gpuDeviceToGrab = deviceIdx;
+    #if defined(_WIN32) || defined(_WIN64)
+        char *gpuDeviceEnv = nullptr;
+        size_t gpuDeviceEnvSz = 0;
+        _dupenv_s(&gpuDeviceEnv, &gpuDeviceEnvSz, "ISPCRT_GPU_DEVICE");
+    #else
+        const char *gpuDeviceEnv = getenv("ISPCRT_GPU_DEVICE");
+    #endif
+        if (gpuDeviceEnv) {
+            std::istringstream(gpuDeviceEnv) >> gpuDeviceToGrab;
+        }
+        if (gpuDeviceToGrab >= gpu::g_deviceList.size())
+            throw std::runtime_error("could not find a valid GPU device");
 
-    m_device = gpu::g_deviceList[gpuDeviceToGrab];
+        m_device = gpu::g_deviceList[gpuDeviceToGrab];
+    }
 
-    ze_context_desc_t contextDesc = {}; // use default values
-    L0_SAFE_CALL(zeContextCreate((ze_driver_handle_t)m_driver, &contextDesc, (ze_context_handle_t *)&m_context));
+    if (!m_device)
+        throw std::runtime_error("failed to create GPU device");
 
+    if (nativeContext) {
+        // Use the native device handler passed from app,
+        // Keep ownership of the handler in the app.
+        m_context = nativeContext;
+        m_has_context_ownership = false;
+    } else {
+        ze_context_desc_t contextDesc = {}; // use default values
+        L0_SAFE_CALL(zeContextCreate((ze_driver_handle_t)m_driver, &contextDesc, (ze_context_handle_t *)&m_context));
+    }
     if (!m_context)
         throw std::runtime_error("failed to create GPU context");
 }
 
 GPUDevice::~GPUDevice() {
-    if (m_context)
+    // Destroy context if it was created in GPUDevice.
+    if (m_context && m_has_context_ownership)
         L0_SAFE_CALL_NOEXCEPT(zeContextDestroy((ze_context_handle_t)m_context));
 }
 
@@ -1059,6 +1147,10 @@ base::Module *GPUDevice::newModule(const char *moduleFile, const ISPCRTModuleOpt
     return new gpu::Module((ze_device_handle_t)m_device, (ze_context_handle_t)m_context, moduleFile, m_is_mock, opts);
 }
 
+void GPUDevice::linkModules(base::Module **modules, const uint32_t numModules) const {
+    gpu::linkModules((gpu::Module **)modules, numModules);
+}
+
 base::Kernel *GPUDevice::newKernel(const base::Module &module, const char *name) const {
     return new gpu::Kernel(module, name);
 }
@@ -1068,5 +1160,55 @@ void *GPUDevice::platformNativeHandle() const { return m_driver; }
 void *GPUDevice::deviceNativeHandle() const { return m_device; }
 
 void *GPUDevice::contextNativeHandle() const { return m_context; }
+
+ISPCRTAllocationType GPUDevice::getMemAllocType(void* appMemory) const {
+    ze_memory_allocation_properties_t memProperties = {ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES};
+    ze_device_handle_t gpuDevice = (ze_device_handle_t)m_device;
+    L0_SAFE_CALL(zeMemGetAllocProperties((ze_context_handle_t)m_context, appMemory, &memProperties, &gpuDevice));
+    switch (memProperties.type) {
+        case ZE_MEMORY_TYPE_UNKNOWN:
+            return ISPCRT_ALLOC_TYPE_UNKNOWN;
+        case ZE_MEMORY_TYPE_HOST:
+            return ISPCRT_ALLOC_TYPE_HOST;
+        case ZE_MEMORY_TYPE_DEVICE:
+            return ISPCRT_ALLOC_TYPE_DEVICE;
+        case ZE_MEMORY_TYPE_SHARED:
+            return ISPCRT_ALLOC_TYPE_SHARED;
+        default:
+            return ISPCRT_ALLOC_TYPE_UNKNOWN;
+    }
+    return ISPCRT_ALLOC_TYPE_UNKNOWN;
+}
+
+GPUContext::GPUContext() : GPUContext(nullptr) {}
+
+GPUContext::GPUContext(void* nativeContext) {
+    // Perform GPU discovery
+    m_driver = gpu::deviceDiscovery(&m_is_mock);
+    if (nativeContext) {
+        m_has_context_ownership = false;
+        m_context = nativeContext;
+    } else {
+        ze_context_desc_t contextDesc = {}; // use default values
+        L0_SAFE_CALL(zeContextCreate((ze_driver_handle_t)m_driver, &contextDesc, (ze_context_handle_t *)&m_context));
+    }
+    if (!m_context)
+        throw std::runtime_error("failed to create GPU context");
+}
+
+GPUContext::~GPUContext() {
+    if (m_context && m_has_context_ownership)
+        L0_SAFE_CALL_NOEXCEPT(zeContextDestroy((ze_context_handle_t)m_context));
+}
+
+base::MemoryView *GPUContext::newMemoryView(void *appMem, size_t numBytes, bool shared) const {
+    return new gpu::MemoryView((ze_context_handle_t)m_context, nullptr, appMem, numBytes, shared);
+}
+
+ISPCRTDeviceType GPUContext::getDeviceType() const {
+    return ISPCRTDeviceType::ISPCRT_DEVICE_TYPE_GPU;
+}
+
+void *GPUContext::contextNativeHandle() const { return m_context; }
 
 } // namespace ispcrt

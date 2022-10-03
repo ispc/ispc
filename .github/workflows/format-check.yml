@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
 
@@ -15,9 +15,9 @@ jobs:
       run: |
         echo "APT::Acquire::Retries \"3\";" | sudo tee -a /etc/apt/apt.conf.d/80-retries
         sudo apt-get update
-        sudo apt-get install -y clang-format-10 clang-10
-        sudo ln -sf /usr/bin/clang-10 /usr/bin/clang
-        sudo ln -sf /usr/bin/clang-format-10 /usr/bin/clang-format
+        sudo apt-get install -y clang-format-12 clang-12
+        sudo ln -sf /usr/bin/clang-12 /usr/bin/clang
+        sudo ln -sf /usr/bin/clang-format-12 /usr/bin/clang-format
 
     - name: Check format
       run: |

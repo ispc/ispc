@@ -27,6 +27,7 @@
 // RUN: %{ispc} %s -o %t.spv --nostdlib --target=xehpg-x16 --device=dg2
 
 // REQUIRES: XE_ENABLED
+// REQUIRES: LINUX_HOST
 
 uniform int i;
 

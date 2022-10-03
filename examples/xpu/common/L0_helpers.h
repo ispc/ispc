@@ -89,7 +89,7 @@ void L0InitContext(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_
         L0_SAFE_CALL(zeDeviceGet(driver, &deviceCount, allDevices.data()));
 
         for (auto &device : allDevices) {
-            ze_device_properties_t device_properties;
+            ze_device_properties_t device_properties = {ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES};
             L0_SAFE_CALL(zeDeviceGetProperties(device, &device_properties));
             if (device_properties.type == ZE_DEVICE_TYPE_GPU && device_properties.vendorId == 0x8086) {
                 gpuDevice++;

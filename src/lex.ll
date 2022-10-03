@@ -83,7 +83,7 @@ static int allTokens[] = {
   TOKEN_SIZEOF, TOKEN_ALLOCA, TOKEN_STATIC, TOKEN_STRUCT, TOKEN_SWITCH, TOKEN_SYNC,
   TOKEN_TASK, TOKEN_TRUE, TOKEN_TYPEDEF, TOKEN_UNIFORM, TOKEN_UNMASKED,
   TOKEN_UNSIGNED, TOKEN_VARYING, TOKEN_VOID, TOKEN_WHILE,
-  TOKEN_STRING_C_LITERAL, TOKEN_DOTDOTDOT,
+  TOKEN_STRING_C_LITERAL, TOKEN_STRING_SYCL_LITERAL, TOKEN_DOTDOTDOT,
   TOKEN_FLOAT_CONSTANT, TOKEN_FLOAT16_CONSTANT, TOKEN_DOUBLE_CONSTANT,
   TOKEN_INT8_CONSTANT, TOKEN_UINT8_CONSTANT,
   TOKEN_INT16_CONSTANT, TOKEN_UINT16_CONSTANT,
@@ -94,6 +94,7 @@ static int allTokens[] = {
   TOKEN_MUL_ASSIGN, TOKEN_DIV_ASSIGN, TOKEN_MOD_ASSIGN, TOKEN_ADD_ASSIGN,
   TOKEN_SUB_ASSIGN, TOKEN_LEFT_ASSIGN, TOKEN_RIGHT_ASSIGN, TOKEN_AND_ASSIGN,
   TOKEN_XOR_ASSIGN, TOKEN_OR_ASSIGN, TOKEN_PTR_OP, TOKEN_NOINLINE, TOKEN_VECTORCALL,
+  TOKEN_REGCALL, TOKEN_INVOKE_SYCL,
   ';', '{', '}', ',', ':', '=', '(', ')', '[', ']', '.', '&', '!', '~', '-',
   '+', '*', '/', '%', '<', '>', '^', '|', '?',
 };
@@ -134,6 +135,7 @@ void ParserInit() {
     tokenToName[TOKEN_INLINE] = "inline";
     tokenToName[TOKEN_NOINLINE] = "noinline";
     tokenToName[TOKEN_VECTORCALL] = "__vectorcall";
+    tokenToName[TOKEN_REGCALL] = "__regcall";
     tokenToName[TOKEN_INT] = "int";
     tokenToName[TOKEN_UINT] = "uint";
     tokenToName[TOKEN_INT8] = "int8";
@@ -144,6 +146,7 @@ void ParserInit() {
     tokenToName[TOKEN_INT64] = "int64";
     tokenToName[TOKEN_UINT64] = "uint64";
     tokenToName[TOKEN_LAUNCH] = "launch";
+    tokenToName[TOKEN_INVOKE_SYCL] = "invoke_sycl";
     tokenToName[TOKEN_NEW] = "new";
     tokenToName[TOKEN_NULL] = "NULL";
     tokenToName[TOKEN_PRINT] = "print";
@@ -166,6 +169,7 @@ void ParserInit() {
     tokenToName[TOKEN_VOID] = "void";
     tokenToName[TOKEN_WHILE] = "while";
     tokenToName[TOKEN_STRING_C_LITERAL] = "\"C\"";
+    tokenToName[TOKEN_STRING_SYCL_LITERAL] = "\"SYCL\"";
     tokenToName[TOKEN_DOTDOTDOT] = "...";
     tokenToName[TOKEN_FLOAT_CONSTANT] = "TOKEN_FLOAT_CONSTANT";
     tokenToName[TOKEN_FLOAT16_CONSTANT] = "TOKEN_FLOAT16_CONSTANT";
@@ -258,6 +262,7 @@ void ParserInit() {
     tokenNameRemap["TOKEN_INLINE"] = "\'inline\'";
     tokenNameRemap["TOKEN_NOINLINE"] = "\'noinline\'";
     tokenNameRemap["TOKEN_VECTORCALL"] = "\'__vectorcall\'";
+    tokenNameRemap["TOKEN_REGCALL"] = "\'__regcall\'";
     tokenNameRemap["TOKEN_INT"] = "\'int\'";
     tokenNameRemap["TOKEN_UINT"] = "\'uint\'";
     tokenNameRemap["TOKEN_INT8"] = "\'int8\'";
@@ -268,6 +273,7 @@ void ParserInit() {
     tokenNameRemap["TOKEN_INT64"] = "\'int64\'";
     tokenNameRemap["TOKEN_UINT64"] = "\'uint64\'";
     tokenNameRemap["TOKEN_LAUNCH"] = "\'launch\'";
+    tokenNameRemap["TOKEN_INVOKE_SYCL"] = "\'invoke_sycl\'";
     tokenNameRemap["TOKEN_NEW"] = "\'new\'";
     tokenNameRemap["TOKEN_NULL"] = "\'NULL\'";
     tokenNameRemap["TOKEN_PRINT"] = "\'print\'";
@@ -290,6 +296,7 @@ void ParserInit() {
     tokenNameRemap["TOKEN_VOID"] = "\'void\'";
     tokenNameRemap["TOKEN_WHILE"] = "\'while\'";
     tokenNameRemap["TOKEN_STRING_C_LITERAL"] = "\"C\"";
+    tokenNameRemap["TOKEN_STRING_SYCL_LITERAL"] = "\"SYCL\"";
     tokenNameRemap["TOKEN_DOTDOTDOT"] = "\'...\'";
     tokenNameRemap["TOKEN_FLOAT_CONSTANT"] = "float constant";
     tokenNameRemap["TOKEN_FLOAT16_CONSTANT"] = "float16 constant";
@@ -429,6 +436,7 @@ in { RT; return TOKEN_IN; }
 inline { RT; return TOKEN_INLINE; }
 noinline { RT; return TOKEN_NOINLINE; }
 __vectorcall { RT; return TOKEN_VECTORCALL; }
+__regcall { RT; return TOKEN_REGCALL; }
 int { RT; return TOKEN_INT; }
 uint { RT; return TOKEN_UINT; }
 int8 { RT; return TOKEN_INT8; }
@@ -440,6 +448,7 @@ uint32 { RT; return TOKEN_UINT; }
 int64 { RT; return TOKEN_INT64; }
 uint64 { RT; return TOKEN_UINT64; }
 launch { RT; return TOKEN_LAUNCH; }
+invoke_sycl { RT; return TOKEN_INVOKE_SYCL; }
 new { RT; return TOKEN_NEW; }
 NULL { RT; return TOKEN_NULL; }
 print { RT; return TOKEN_PRINT; }
@@ -462,6 +471,7 @@ varying { RT; return TOKEN_VARYING; }
 void { RT; return TOKEN_VOID; }
 while { RT; return TOKEN_WHILE; }
 \"C\" { RT; return TOKEN_STRING_C_LITERAL; }
+\"SYCL\" { RT; return TOKEN_STRING_SYCL_LITERAL; }
 \.\.\. { RT; return TOKEN_DOTDOTDOT; }
 
 "operator*"  { return TOKEN_IDENTIFIER; }

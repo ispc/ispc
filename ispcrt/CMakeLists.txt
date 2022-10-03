@@ -21,7 +21,8 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 ## Establish project ##########################################################
 
-# set (REPO_TAG "v${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}.${ISPC_VERSION_PATCH}${ISPC_VERSION_SUFFIX}")
+include(${CMAKE_CURRENT_LIST_DIR}/../cmake/Version.cmake)
+get_ispc_version("${CMAKE_CURRENT_LIST_DIR}/../common/version.h")
 project(ispcrt VERSION ${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}.${ISPC_VERSION_PATCH} LANGUAGES CXX)
 
 include(GNUInstallDirs)
@@ -31,12 +32,24 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 ## Add library and executable targets #########################################
 
 option(ISPCRT_BUILD_CPU "Enable CPU support in ispcrt" ON)
-option(ISPCRT_BUILD_GPU "Enable Level0 GPU support in ispcrt" ON)
 option(ISPCRT_BUILD_TASKING "Enable CPU tasking targets in ispcrt" ON)
-if (WIN32)
-  option(ISPCRT_BUILD_TESTS "Enable ispcrt tests" OFF)
+
+# Do not build ISPCRT with GPU support on FreeBSD even if XE_ENABLED is ON.
+# All dependencies, such as L0 and compute-runtime, are theoretically available
+# on FreeBSD, but were never tested. If this switch is enabled, the full recipe to
+# build/test the full stack is needed.
+if (XE_ENABLED AND NOT (CMAKE_SYSTEM_NAME STREQUAL "FreeBSD"))
+  option(ISPCRT_BUILD_GPU "Enable Level0 GPU support in ispcrt" ON)
 else()
-  option(ISPCRT_BUILD_TESTS "Enable ispcrt tests" ON)
+  option(ISPCRT_BUILD_GPU "Enable Level0 GPU support in ispcrt" OFF)
+endif()
+
+if (ISPCRT_BUILD_GPU)
+  if (WIN32)
+    option(ISPCRT_BUILD_TESTS "Enable ispcrt tests" OFF)
+  else()
+    option(ISPCRT_BUILD_TESTS "Enable ispcrt tests" ON)
+  endif()
 endif()
 
 if (NOT ISPCRT_BUILD_CPU AND NOT ISPCRT_BUILD_GPU)
@@ -45,17 +58,52 @@ endif()
 
 if (ISPCRT_BUILD_GPU)
   find_package(level_zero REQUIRED)
+  message(STATUS "ISPC Runtime will be built with GPU support")
 endif()
 
+set(ISPCRT_BUILD_TASK_MODELS "OpenMP;TBB;Threads")
+
 if (ISPCRT_BUILD_TASKING)
+  # Set default value for ISPCRT_BUILD_TASK_MODEL if it is not set externally
+  if (NOT ISPCRT_BUILD_TASK_MODEL)
+      if (WIN32 OR APPLE)
+        set (ISPCRT_BUILD_TASK_MODEL "Threads")
+      else()
+        set (ISPCRT_BUILD_TASK_MODEL "OpenMP")
+      endif()
+  endif()
+
+  # Report error if unsupported thread model is requested.
+  string(FIND "${ISPCRT_BUILD_TASK_MODELS}" "${ISPCRT_BUILD_TASK_MODEL}" MATCHED_TASK_MODEL)
+
+  if (${MATCHED_TASK_MODEL} EQUAL -1)
+    message(FATAL_ERROR "ISPCRT_BUILD_TASK_MODEL (${ISPCRT_BUILD_TASK_MODEL}) allows only the following values: ${ISPCRT_BUILD_TASK_MODELS}")
+  endif()
+
+  message(STATUS "ISPC Runtime will be built with support of " ${ISPCRT_BUILD_TASK_MODEL} " tasking model on CPU")
+
   add_library(ispcrt_tasking INTERFACE)
-  if (WIN32)
-    find_package(Threads REQUIRED)
-    target_link_libraries(ispcrt_tasking INTERFACE Threads::Threads)
-  else()
+
+  if (ISPCRT_BUILD_TASK_MODEL STREQUAL "OpenMP")
     find_package(OpenMP REQUIRED)
-    target_link_libraries(ispcrt_tasking INTERFACE OpenMP::OpenMP_CXX)
-    target_compile_definitions(ispcrt_tasking INTERFACE ISPC_USE_OMP)
+    if (OpenMP_FOUND)
+      target_link_libraries(ispcrt_tasking INTERFACE OpenMP::OpenMP_CXX)
+      target_compile_definitions(ispcrt_tasking INTERFACE ISPC_USE_OMP)
+    endif()
+  elseif (ISPCRT_BUILD_TASK_MODEL STREQUAL "TBB")
+      find_package(TBB REQUIRED COMPONENTS tbb)
+      if (TBB_FOUND)
+        # TBB package does not produce any info when found, so print it here.
+        message(STATUS "Found TBB: ${TBB_VERSION} at ${TBB_DIR}")
+        target_link_libraries(ispcrt_tasking INTERFACE TBB::tbb)
+        target_compile_definitions(ispcrt_tasking INTERFACE ISPC_USE_TBB_PARALLEL_FOR)
+      endif()
+  else()
+    find_package(Threads REQUIRED)
+    if (Threads_FOUND)
+      # Use default compile definitions from ispc_tasking.cpp
+      target_link_libraries(ispcrt_tasking INTERFACE Threads::Threads)
+    endif()
   endif()
 endif()
 
@@ -68,6 +116,7 @@ macro(build_ispcrt SHARED_OR_STATIC TARGET_NAME)
     $<$<BOOL:${ISPCRT_BUILD_TASKING}>:ispc_tasking.cpp>
 
     ispcrt.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/../common/version.rc
     $<$<BOOL:${ISPCRT_BUILD_CPU}>:detail/cpu/CPUDevice.cpp>
     $<$<BOOL:${ISPCRT_BUILD_GPU}>:detail/gpu/GPUDevice.cpp>
   )
@@ -82,6 +131,7 @@ macro(build_ispcrt SHARED_OR_STATIC TARGET_NAME)
 
   target_include_directories(${TARGET_NAME}
   PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/../common>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>
     $<BUILD_INTERFACE:${LEVEL_ZERO_INCLUDE_DIR}>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/ispcrt>
@@ -95,8 +145,17 @@ macro(build_ispcrt SHARED_OR_STATIC TARGET_NAME)
   )
 
   # Security options
-  if (UNIX)
-    target_compile_options(${TARGET_NAME} PRIVATE -fstack-protector-strong)
+  if (MSVC)
+    # Stack canaries
+    target_compile_options(${TARGET_NAME} PRIVATE /GS)
+    # Control flow guard
+    target_link_options(${TARGET_NAME} PRIVATE /GUARD:CF)
+  elseif (APPLE)
+  else()
+    # Enable stack protector
+    # NOT to assume that null pointer deference does not exist
+    # Assume that signed overflow always wraps
+    target_compile_options(${TARGET_NAME} PRIVATE -fstack-protector-strong -fno-delete-null-pointer-checks -fwrapv)
   endif()
 
   ## Install targets + exports ##

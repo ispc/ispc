@@ -35,10 +35,10 @@ The main goals behind ``ispc`` are to:
 in hearing your experiences using the system.  We are especially interested
 in hearing if you try using ispc but see results that are not as you
 were expecting or hoping for.** We encourage you to send a note with your
-experiences or comments to the `ispc-users`_ mailing list or to file bug or
+experiences or comments to the `GitHub Discussions`_ forum or to file bug or
 feature requests with the ``ispc`` `bug tracker`_. (Thanks!)
 
-.. _ispc-users: http://groups.google.com/group/ispc-users
+.. _GitHub Discussions: https://github.com/ispc/ispc/discussions
 .. _bug tracker: https://github.com/ispc/ispc/issues?state=open
 
 
@@ -496,9 +496,23 @@ code.
 Updating ISPC Programs For Changes In ISPC 1.18.0
 -------------------------------------------------
 
-AVX512 targets were renamed to drop "base type", old naming is accepted for
-compatibility. New names are `avx512skx-x4`, `avx512skx-x8`, `avx512skx-x16`,
-`avx512skx-x32`, `avx512skx-x64`, and `avx512knl-x16`.
+AVX512 targets were renamed to drop "base type" (or "mask size"), old naming is accepted for
+compatibility. New names are avx512skx-x4, avx512skx-x8, avx512skx-x16,
+avx512skx-x32, avx512skx-x64, and avx512knl-x16.
+
+Standard library gained full support for ``float16`` type.  Note that it is
+fully supported only on the targets with native hardware support.
+On the other targets emulation is still not guaranteed, but may work in some cases.
+
+The compiler gained support for ``-E`` switch for running preprocessor only,
+which is similar to the switch of C/C++ compilers.  Also, as a result of bug fix,
+in case of preprocessor error, the compiler will crash now.  It used not to crash and
+produced some output (sometimes correct!).  As it was a convenient feature for some
+users running experiments in isolated environment (like ignoring missing includes
+when compiling of `Compiler Explorer`_), ``--ignore-preprocessor-errors`` switch
+was added to preserve this behavior.
+
+.. _Compiler Explorer: https://godbolt.org/
 
 
 Getting Started with ISPC
@@ -658,20 +672,24 @@ To generate a text assembly file, pass ``--emit-asm``:
 
 ::
 
-   ispc foo.ispc -o foo.asm --emit-asm
+   ispc foo.ispc -o foo.s --emit-asm
 
 To generate LLVM bitcode, use the ``--emit-llvm`` flag.
 To generate LLVM bitcode in textual form, use the ``--emit-llvm-text`` flag.
 
-To generate a stub after running the preprocessor, use the ``-E`` flag.
+To run only the preprocessor, use the ``-E`` flag.
 
 ::
 
-    ispc foo.ispc -E -o foo.i  OR  ispc foo.ispc -E -o foo.ispi
+    ispc foo.ispc -E -o foo.i
+    ispc foo.ispc -E -o foo.ispi
 
-In this mode, the preprocessor will assume ``stdout`` if no output file is
-specified.
-Both ``.i`` or ``.ispi`` are valid suffixes.
+In this mode, the output will be directed to ``stdout`` if no output file is
+specified.  The standard suffixes ``.i`` or ``.ispi`` are assumed for preprocessor output.
+
+By default the compilation will fail if preprocessor encountered an error.
+To ignore the preprocessor errors and proceed with normal compilation flow,
+``--ignore-preprocessor-errors`` switch may be used.
 
 Optimizations are on by default; they can be turned off with ``-O0``:
 
@@ -738,10 +756,23 @@ on which you're running ``ispc`` is used to determine the target CPU.
 
    ispc foo.ispc -o foo.obj --device=corei7-avx
 
-Next, ``--target`` selects the target instruction set.  The target
-string is of the form ``[ISA]-i[mask size]x[gang size]``.  For example,
-``--target=avx2-i32x16`` specifies a target with the AVX2 instruction set,
-a mask size of 32 bits, and a gang size of 16.
+Next, ``--target`` selects the target instruction set.  For targets without
+hardware support for masking, the target string is of the form ``[ISA]-i[mask size]x[gang size]``.
+For example, ``--target=avx2-i32x16`` specifies a target with the AVX2 instruction set,
+a mask size of 32 bits, and a gang size of 16.  For targets with hardware masking support,
+which are AVX512 and GPU targets, the target string is of the form
+``[ISA]-x[gang size]``.  For example, ``--target=xehpg-x16`` specifies Intel XeHPG
+as a target ISA and defines a gang size of 16.
+
+By default, the target instruction set is chosen based on the most capable
+one supported by the system on which you're running ``ispc``.  In this case a warning
+will be issued noting the target used for compilation.  It is recommended to
+always use ``--target`` switch to explicitly specify the target.
+
+To get the complete list of supported targets, please use ``--help`` switch
+and note the list in the description of ``--target``, or use ``--support-matrix``
+switch, which will give the complete information of supported combinations
+of target, arch and target OS.
 
 The following target ISAs are supported:
 
@@ -756,26 +787,23 @@ neon         ARM NEON
 sse2         SSE2 (early 2000s era x86 CPUs)
 sse4         SSE4 (generally 2008-2010 Intel CPUs)
 gen9         Intel Gen9 GPU
+xehpg        Intel XeHPG GPU
 xelp         Intel XeLP GPU
 ============ =========================================================
 
 Consult your CPU's manual for specifics on which vector instruction set it
 supports.
 
-The mask size may be 8, 16, or 32 bits, though not all combinations of ISAs
-and mask sizes are supported.  For best performance, the best general
+The mask size may be 8, 16, 32, or 64 bits, though not all combinations of ISA
+and mask size are supported.  For best performance, the best general
 approach is to choose a mask size equal to the size of the most common
-datatype in your programs.  For example, if most of your computation is on
+datatype in your programs.  For example, if most of the computations are done using
 32-bit floating-point values, an ``i32`` target is appropriate.  However,
-if you're mostly doing computation on 8-bit images, ``i8`` is a better choice.
+if you're mostly doing computation with 8-bit data types, ``i8`` is a better choice.
 
 See `Basic Concepts: Program Instances and Gangs of Program Instances`_ for
 more discussion of the "gang size" and its implications for program
 execution.
-
-Running ``ispc --help`` and looking at the output for the ``--target``
-option gives the most up-to-date documentation about which targets your
-compiler binary supports.
 
 The naming scheme for compilation targets changed in August 2013; the
 following table shows the relationship between names in the old scheme and
@@ -799,15 +827,8 @@ sse4-i8x16    n/a
 sse4-i16x8    n/a
 ============= ===========
 
-By default, the target instruction set is chosen based on the most capable
-one supported by the system on which you're running ``ispc``.  You can
-override this choice with the ``--target`` flag; for example, to select
-Intel® SSE2 with a 32-bit mask and 4 program instances in a gang, use
-``--target=sse2-i32x4``.  (As with the other options in this section, see
-the output of ``ispc --help`` for a full list of supported targets.)
-
 Finally, ``--target-os`` selects the target operating system. Depending on
-your host ``ispc`` may support Windows, Linux, macOS, Android, iOS and PS4
+your host ``ispc`` may support Windows, Linux, macOS, Android, iOS and PS4/PS5
 targets. Running ``ispc --help`` and looking at the output for the ``--target-os``
 option gives the list of supported targets. By default ``ispc`` produces the
 code for your host operating system.
@@ -881,6 +902,10 @@ preprocessor runs:
   * - ISPC_UINT_IS_DEFINED
     - 1
     - The macro is defined if uint8/uint16/uint32/uint64 types are defined in the ``ispc`` (it's defined in 1.13.0 and later)
+  * - ISPC_FP16_SUPPORTED
+    - 1
+    - The macro is defined if float16 type is supported by the ``ispc`` target.
+      The implementation may rely either on native hardware support or emulation.
   * - ISPC_FP64_SUPPORTED
     - 1
     - The macro is defined if double type is supported by the target
@@ -1583,9 +1608,10 @@ The following reserved words from C89 are also reserved in ``ispc``:
 
 ``bool``, ``delete``, ``export``, ``cdo``, ``cfor``, ``cif``, ``cwhile``,
 ``false``, ``float16``, ``foreach``, ``foreach_active``, ``foreach_tiled``,
-``foreach_unique``, ``in``, ``inline``, ``noinline``, ``__vectorcall``, ``int8``, ``int16``,
-``int32``, ``int64``, ``launch``, ``new``, ``print``, ``uint8``, ``uint16``,
-``uint32``, ``uint64``, ``soa``, ``sync``, ``task``, ``true``, ``uniform``, and ``varying``.
+``foreach_unique``, ``in``, ``inline``, ``noinline``, ``__regcall``,
+``__vectorcall``, ``int8``, ``int16``, ``int32``, ``int64``, ``launch``,
+``new``, ``print``, ``uint8``, ``uint16``, ``uint32``, ``uint64``, ``soa``,
+``sync``, ``task``, ``true``, ``uniform``, and ``varying``.
 
 
 Lexical Structure
@@ -1745,11 +1771,11 @@ The following identifiers are reserved as language keywords: ``bool``,
 ``enum``, ``export``, ``extern``, ``false``, ``float``, ``float16``, ``for``,
 ``foreach``, ``foreach_active``, ``foreach_tiled``, ``foreach_unique``,
 ``goto``, ``if``, ``in``, ``inline``, ``noinline``, ``int``, ``int8``,
-``int16``, ``int32``, ``int64``, ``launch``, ``NULL``, ``print``, ``return``,
-``signed``, ``sizeof``, ``soa``, ``static``, ``struct``, ``switch``,
-``sync``, ``task``, ``true``, ``typedef``, ``uint``, ``uint8``,
+``int16``, ``int32``, ``int64``, ``invoke_sycl``, ``launch``, ``NULL``,
+``print``, ``return``, ``signed``, ``sizeof``, ``soa``, ``static``, ``struct``,
+``switch``, ``sync``, ``task``, ``true``, ``typedef``, ``uint``, ``uint8``,
 ``uint16``, ``uint32``, ``uint64``, ``uniform``, ``union``, ``unsigned``,
-``varying``, ``__vectorcall``, ``void``, ``volatile``, ``while``.
+``varying``, ``__regcall``, ``__vectorcall``, ``void``, ``volatile``, ``while``.
 
 ``ispc`` defines the following operators and punctuation:
 
@@ -1810,10 +1836,10 @@ basic types:
 * ``int``: 32-bit signed integer; may also be specified as ``int32``.
 * ``unsigned int``: 32-bit unsigned integer; may also be specified as
   ``unsigned int32``, ``uint32`` or ``uint``.
-* ``float16``: 16-bit floating point value
-* ``float``: 32-bit floating point value
 * ``int64``: 64-bit signed integer.
 * ``unsigned int64``: 64-bit unsigned integer; may also be specified as ``uint64``.
+* ``float16``: 16-bit floating point value
+* ``float``: 32-bit floating point value
 * ``double``: 64-bit double-precision floating point value.
 
 There are also a few built-in types related to pointers and memory:
@@ -2350,7 +2376,7 @@ varying.
 
 Here, ``b`` is a ``varying Bar`` (since ``varying`` is the default
 variability).  If ``Bar`` is defined as above, then ``vb.a`` is still a
-``uniform int``, since its varaibility was bound in the original
+``uniform int``, since its variability was bound in the original
 declaration of the ``Bar`` type.  Similarly, ``vb.b`` is ``varying``.  The
 variability of ``vb.c`` is ``varying``, since ``vb`` is ``varying``.
 
@@ -3665,8 +3691,8 @@ otherwise ``f``. These are the variants of ``select()`` for the ``int8`` type:
     int8 select(uniform bool cond, int8 t, int8 f)
     uniform int8 select(uniform bool cond, uniform int8 t, uniform int8 f)
 
-There are also variants for ``int16``, ``int32``, ``int64``, ``float``, and
-``double`` types.
+There are also variants for ``int16``, ``int32``, ``int64``, ``float``, ``float16``
+and ``double`` types.
 
 Bit Operations
 --------------
@@ -3710,24 +3736,33 @@ Also it is possible to convert a ``bool`` varying value to an integer using
 
     uniform int packmask(bool value)
 
-The ``intbits()`` and ``floatbits()`` functions can be used to implement
-low-level floating-point bit twiddling.  For example, ``intbits()`` returns
-an ``unsigned int`` that is a bit-for-bit copy of the given ``float``
-value.  (Note: it is **not** the same as ``(int)a``, but corresponds to
-something like ``*((int *)&a)`` in C.
+The ``intbits()``, ``float16bits()``, ``floatbits()`` and ``doublebits()``
+functions can be used to implement low-level floating-point bit twiddling.
+For example, ``intbits()`` returns an ``unsigned int`` that is a bit-for-bit
+copy of the given ``float`` value.  (Note: it is **not** the same as ``(int)a``,
+but corresponds to something like ``*((int *)&a)`` in C.
 
 ::
 
+    float16 float16bits(unsigned int16 a);
+    uniform float16 float16bits(uniform unsigned int16 a);
     float floatbits(unsigned int a);
     uniform float floatbits(uniform unsigned int a);
+    double doublebits(unsigned int64 a);
+    uniform double doublebits(uniform unsigned int64 a);
+    unsigned int16 intbits(float16 a);
+    uniform unsigned int16 intbits(uniform float16 a);
     unsigned int intbits(float a);
     uniform unsigned int intbits(uniform float a);
+    unsigned int64 intbits(double a);
+    uniform unsigned int64 intbits(uniform double a);
 
 
-The ``intbits()`` and ``floatbits()`` functions have no cost at runtime;
-they just let the compiler know how to interpret the bits of the given
-value.  They make it possible to efficiently write functions that take
-advantage of the low-level bit representation of floating-point values.
+The ``intbits()``, ``float16bits()``, ``floatbits()`` and ``doublebits()``
+functions have no cost at runtime; they just let the compiler know how to
+interpret the bits of the given value.  They make it possible to efficiently
+write functions that take advantage of the low-level bit representation of
+floating-point values.
 
 For example, the ``abs()`` function in the standard library is implemented
 as follows:
@@ -3784,6 +3819,8 @@ is on (i.e. the value is negative) and zero if it is off.
 
 ::
 
+    float16 abs(float a)
+    uniform float16 abs(uniform float a)
     float abs(float a)
     uniform float abs(uniform float a)
     double abs(double a)
@@ -3796,11 +3833,16 @@ is on (i.e. the value is negative) and zero if it is off.
     uniform int abs(uniform int a)
     int64 abs(int64 a)
     uniform int64 abs(uniform int64 a)
+    unsigned int16 signbits(float16 x)
+    uniform unsigned int16 signbits(uniform float16 x)
     unsigned int signbits(float x)
+    uniform unsigned int signbits(uniform float x)
+    unsigned int64 signbits(double x)
+    uniform unsigned int64 signbits(uniform double x)
 
-Standard rounding functions are provided.  (On machines that support Intel®
-SSE or Intel® AVX, these functions all map to variants of the ``roundss`` and
-``roundps`` instructions, respectively.)
+Standard rounding functions are provided for ``float16``, ``float`` and ``double``
+types.  (On machines that support Intel®SSE or Intel® AVX, these functions all
+map to variants of the ``roundss`` and ``roundps`` instructions, respectively.)
 
 ::
 
@@ -3830,8 +3872,8 @@ use Newton-Raphson.
     float rcp_fast(float v)
     uniform float rcp_fast(uniform float v)
 
-A standard set of minimum and maximum functions is available.  These
-functions also map to corresponding intrinsic functions.
+A standard set of minimum and maximum functions is available for all ispc
+standard types.  These functions also map to corresponding intrinsic functions.
 
 ::
 
@@ -3866,6 +3908,8 @@ The ``isnan()`` functions test whether the given value is a floating-point
 
 ::
 
+    bool isnan(float16 v)
+    uniform bool isnan(uniform float16 v)
     bool isnan(float v)
     uniform bool isnan(uniform float v)
     bool isnan(double v)
@@ -3981,6 +4025,9 @@ normalized exponent as a power of two in the ``pw2`` parameter.
     uniform float frexp(uniform float x,
                         uniform int * uniform pw2)
 
+
+All transcendental functions are provided for ``float16``, ``float`` and
+``double`` types.
 
 Saturating Arithmetic
 ---------------------
@@ -4260,6 +4307,7 @@ the running program instances.
     int16 broadcast(int16 value, uniform int index)
     int32 broadcast(int32 value, uniform int index)
     int64 broadcast(int64 value, uniform int index)
+    float16 broadcast(float16 value, uniform int index)
     float broadcast(float value, uniform int index)
     double broadcast(double value, uniform int index)
 
@@ -4278,6 +4326,7 @@ the size of the gang (it is masked to ensure valid offsets).
     int16 rotate(int16 value, uniform int offset)
     int32 rotate(int32 value, uniform int offset)
     int64 rotate(int64 value, uniform int offset)
+    float16 rotate(float16 value, uniform int offset)
     float rotate(float value, uniform int offset)
     double rotate(double value, uniform int offset)
 
@@ -4294,6 +4343,7 @@ Instead, zeroes are shifted in where appropriate.
     int16 shift(int16 value, uniform int offset)
     int32 shift(int32 value, uniform int offset)
     int64 shift(int64 value, uniform int offset)
+    float16 shift(float16 value, uniform int offset)
     float shift(float value, uniform int offset)
     double shift(double value, uniform int offset)
 
@@ -4310,6 +4360,7 @@ from which to get the value of ``value``.  The provided values for
     int16 shuffle(int16 value, int permutation)
     int32 shuffle(int32 value, int permutation)
     int64 shuffle(int64 value, int permutation)
+    float16 shuffle(float16 value, int permutation)
     float shuffle(float value, int permutation)
     double shuffle(double value, int permutation)
 
@@ -4326,6 +4377,7 @@ the last element of ``value1``, etc.)
     int16 shuffle(int16 value0, int16 value1, int permutation)
     int32 shuffle(int32 value0, int32 value1, int permutation)
     int64 shuffle(int64 value0, int64 value1, int permutation)
+    float16 shuffle(float16 value0, float16 value1, int permutation)
     float shuffle(float value0, float value1, int permutation)
     double shuffle(double value0, double value1, int permutation)
 
@@ -4344,7 +4396,9 @@ element of it as a single ``uniform`` value.  .
     uniform int16 extract(int16 x, uniform int i)
     uniform int32 extract(int32 x, uniform int i)
     uniform int64 extract(int64 x, uniform int i)
+    uniform float16 extract(float16 x, uniform int i)
     uniform float extract(float x, uniform int i)
+    uniform double extract(double x, uniform int i)
 
 Similarly, ``insert`` returns a new value
 where the ``i`` th element of ``x`` has been replaced with the value ``v``
@@ -4356,7 +4410,9 @@ where the ``i`` th element of ``x`` has been replaced with the value ``v``
     int16 insert(int16 x, uniform int i, uniform int16 v)
     int32 insert(int32 x, uniform int i, uniform int32 v)
     int64 insert(int64 x, uniform int i, uniform int64 v)
+    float16 insert(float16 x, uniform int i, uniform float16 v)
     float insert(float x, uniform int i, uniform float v)
+    double insert(double x, uniform int i, uniform double v)
 
 
 Reductions
@@ -4390,6 +4446,7 @@ instances are added together by the ``reduce_add()`` function.
     uniform int64 reduce_add(int64 x)
     uniform unsigned int64 reduce_add(unsigned int64 x)
 
+    uniform float16 reduce_add(float16 x)
     uniform float reduce_add(float x)
     uniform double reduce_add(double x)
 
@@ -4403,6 +4460,7 @@ across all of the currently-executing program instances.
     uniform int64 reduce_min(int64 a)
     uniform unsigned int64 reduce_min(unsigned int64 a)
 
+    uniform float16 reduce_min(float16 a)
     uniform float reduce_min(float a)
     uniform double reduce_min(double a)
 
@@ -4416,6 +4474,7 @@ varying variable over the active program instances.
     uniform int64 reduce_max(int64 a)
     uniform unsigned int64 reduce_max(unsigned int64 a)
 
+    uniform float16 reduce_max(float16 a)
     uniform float reduce_max(float a)
     uniform double reduce_max(double a)
 
@@ -4429,6 +4488,7 @@ all of the currently-running program instances:
     uniform bool reduce_equal(int64 v)
     uniform bool reduce_equal(unsigned int64 v)
 
+    uniform bool reduce_equal(float16 v)
     uniform bool reduce_equal(float v)
     uniform bool reduce_equal(double)
 
@@ -4448,6 +4508,7 @@ performance in the `Performance Guide`_.
     uniform bool reduce_equal(unsigned int64 v,
                               uniform unsigned int64 * uniform sameval)
 
+    uniform bool reduce_equal(float16 v, uniform float16 * uniform sameval)
     uniform bool reduce_equal(float v, uniform float * uniform sameval)
     uniform bool reduce_equal(double, uniform double * uniform sameval)
 
@@ -4478,6 +4539,7 @@ bitwise-or are available:
 
     int32 exclusive_scan_add(int32 v)
     unsigned int32 exclusive_scan_add(unsigned int32 v)
+    float16 exclusive_scan_add(float16 v)
     float exclusive_scan_add(float v)
     int64 exclusive_scan_add(int64 v)
     unsigned int64 exclusive_scan_add(unsigned int64 v)
@@ -4651,6 +4713,7 @@ For storing to array from varying variable:
     void streaming_store(uniform int a[], int vals)
     void streaming_store(uniform unsigned int64 a[], unsigned int64 vals)
     void streaming_store(uniform int64 a[], int64 vals)
+    void streaming_store(uniform float16 a[], float16 vals)
     void streaming_store(uniform float a[], float vals)
     void streaming_store(uniform double a[], double vals)
 
@@ -4666,6 +4729,7 @@ For storing to array from uniform variable:
     void streaming_store(uniform int a[], uniform int vals)
     void streaming_store(uniform unsigned int64 a[], uniform unsigned int64 vals)
     void streaming_store(uniform int64 a[], uniform int64 vals)
+    void streaming_store(uniform float16 a[], uniform float16 vals)
     void streaming_store(uniform float a[], uniform float vals)
     void streaming_store(uniform double a[], uniform double vals)
 
@@ -4683,6 +4747,7 @@ For loading as varying from array:
     varying int streaming_load(uniform int a[])
     varying unsigned int64 streaming_load(uniform unsigned int64 a[])
     varying int64 streaming_load(uniform int64 a[])
+    varying float16 streaming_load(uniform float16 a[])
     varying float streaming_load(uniform float a[])
     varying double streaming_load(uniform double a[])
 
@@ -4698,6 +4763,7 @@ For loading as uniform from array:
     uniform int streaming_load_uniform(uniform int a[])
     uniform unsigned int64 streaming_load_uniform(uniform unsigned int64 a[])
     uniform int64 streaming_load_uniform(uniform int64 a[])
+    uniform float16 streaming_load_uniform(uniform float16 a[])
     uniform float streaming_load_uniform(uniform float a[])
     uniform double streaming_load_uniform(uniform double a[])
 
@@ -4828,9 +4894,12 @@ Conversions To and From Half-Precision Floats
 ---------------------------------------------
 
 There are functions to convert to and from the IEEE 16-bit floating-point
-format.  Note that there is a ``float16`` data-type in ``ispc`` but with limited
-library support; these functions facilitate converting to and from half-format
-data in memory.
+format.  Note that there is a ``float16`` data-type in ``ispc``, which has
+full language and standard library support, but only on the targets with
+hardware support for this type.
+The following functions facilitate converting to and from half-format
+data in memory and are primarily targeted for the use on the targets
+without native support for ``float16`` in the hardware.
 
 To use them, half-format data should be loaded into an ``int16`` and the
 ``half_to_float()`` function used to convert it to a 32-bit floating point
@@ -5264,6 +5333,11 @@ qualifier.
 ``__vectorcall`` can only be used for ``extern "C"`` function declarations and
 on Windows OS.
 
+Also ``extern "C"`` functions can be marked with ``__regcall`` calling convention.
+This calling convention makes return values and function arguments passed through
+registers in most cases. Note, that ``__regcall3__`` prefix will be added to the
+function name.
+
 **Only a single function call is made back to C++ for the entire gang of
 running program instances**.  Furthermore, function calls back to C/C++ are not
 made if none of the program instances want to make the call.  For example,
@@ -5328,6 +5402,30 @@ that takes a scalar parameter.
 This code calls ``erf()`` once for each active program instance, passing it
 the program instance's value of ``v`` and storing the result in the
 instance's ``result`` value.
+
+``extern "C"`` function may also have a definition. On GPU it is intended to make
+a function (not a kernel!) callable from a different module. On CPU it is not
+advised to have ``extern "C"`` functions with definitions and to use ``export``
+functions instead, which are designed to be entry points from C/C++.
+
+On GPU ISPC experimentally supports calls to SYCL/DPC++ device functions using
+`invoke_sycl` construct. `invoke_sycl` accepts only functions declared as ``extern "SYCL"``.
+``extern "SYCL"`` declaration is similar to ``extern "C"``, but in addition it means
+that function signature will be modified if needed to align with SYCL/DPC++ backend (IGC) ABI.
+
+Below is a comparison between ``export``, ``extern``, ``extern "C"`` and ``extern "SYCL"`` functions.
+
+=============================================== ============= =============== ================== ============
+Feature                                          ``export``   ``extern "C"``  ``extern "SYCL"``  ``extern``
+----------------------------------------------- ------------- --------------- ------------------ ------------
+Varying parameters support                      No            Yes             Yes                Yes
+Dispatch function for multi-target compilation  Yes           Yes             Yes                No
+Mangled name                                    No            No              No                 Yes
+Mask parameter                                  No            No              No                 Yes
+Calling convention specifier support            No            Yes             Yes                No
+Declaration in header file                      Yes           No              No                 No
+SYCL/DPC++ backend ABI compliance               No            No              Yes                No
+=============================================== ============= =============== ================== ============
 
 Data Layout
 -----------

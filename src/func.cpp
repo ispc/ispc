@@ -71,6 +71,90 @@
 
 using namespace ispc;
 
+bool Function::IsStdlibSymbol() const {
+    if (sym == nullptr) {
+        return false;
+    }
+
+    if (sym->pos.name != nullptr && !strcmp(sym->pos.name, "stdlib.ispc")) {
+        return true;
+    }
+    return false;
+}
+
+void Function::debugPrintHelper(DebugPrintPoint dumpPoint) {
+    if (code == nullptr || sym == nullptr) {
+        return;
+    }
+
+    if (!g->debugPrint) {
+        return;
+    }
+
+    // With debug prints enabled we will dump AST on several stages, so need annotation.
+    if (g->debugPrint) {
+        switch (dumpPoint) {
+        case DebugPrintPoint::Initial:
+            printf("Initial AST\n");
+            break;
+        case DebugPrintPoint::AfterTypeChecking:
+            printf("AST after after typechecking\n");
+            break;
+        case DebugPrintPoint::AfterOptimization:
+            printf("AST after optimization\n");
+            break;
+        }
+    }
+
+    Print();
+    printf("\n");
+}
+
+void Function::Print() const {
+    Indent indent;
+    indent.pushSingle();
+    Print(indent);
+    fflush(stdout);
+}
+
+void Function::Print(Indent &indent) const {
+    indent.Print("Function");
+
+    if (sym && sym->type) {
+        sym->pos.Print();
+        printf(" [%s] \"%s\"\n", sym->type->GetString().c_str(), sym->name.c_str());
+    } else {
+        printf("<NULL>\n");
+    }
+
+    indent.pushList(args.size() + 1);
+    for (int i = 0; i < args.size(); i++) {
+        static constexpr std::size_t BUFSIZE{15};
+        char buffer[BUFSIZE];
+        snprintf(buffer, BUFSIZE, "param %d", i);
+        indent.setNextLabel(buffer);
+        if (args[i]) {
+            indent.Print();
+            if (args[i]->type != nullptr) {
+                printf("[%s] ", args[i]->type->GetString().c_str());
+            }
+            printf("%s\n", args[i]->name.c_str());
+            indent.Done();
+        } else {
+            indent.Print("<NULL>\n");
+            indent.Done();
+        }
+    }
+
+    indent.setNextLabel("body");
+    if (code != nullptr) {
+        code->Print(indent);
+    } else {
+        printf("<CODE is missing>\n");
+    }
+    indent.Done();
+}
+
 Function::Function(Symbol *s, Stmt *c) {
     sym = s;
     code = c;
@@ -79,30 +163,17 @@ Function::Function(Symbol *s, Stmt *c) {
     Assert(maskSymbol != NULL);
 
     if (code != NULL) {
+        debugPrintHelper(DebugPrintPoint::Initial);
+
         code = TypeCheck(code);
 
-        if (code != NULL && g->debugPrint) {
-            printf("After typechecking function \"%s\":\n", sym->name.c_str());
-            code->Print(0);
-            printf("---------------------\n");
-        }
+        debugPrintHelper(DebugPrintPoint::AfterTypeChecking);
 
         if (code != NULL) {
             code = Optimize(code);
-            if (g->debugPrint) {
-                printf("After optimizing function \"%s\":\n", sym->name.c_str());
-                code->Print(0);
-                printf("---------------------\n");
-            }
-        }
-    }
 
-    if (g->debugPrint) {
-        printf("Add Function %s\n", sym->name.c_str());
-        if (code != NULL) {
-            code->Print(0);
+            debugPrintHelper(DebugPrintPoint::AfterOptimization);
         }
-        printf("\n\n\n");
     }
 
     const FunctionType *type = CastType<FunctionType>(sym->type);
@@ -167,15 +238,15 @@ const FunctionType *Function::GetType() const {
     local stack-allocated variables.  (Which we expect that LLVM's
     'mem2reg' pass will in turn promote to SSA registers..
  */
-static void lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const std::vector<Symbol *> &args,
+static void lCopyInTaskParameter(int i, AddressInfo *structArgPtrInfo, const std::vector<Symbol *> &args,
                                  FunctionEmitContext *ctx) {
     // We expect the argument structure to come in as a poitner to a
     // structure.  Confirm and figure out its type here.
-    const llvm::Type *structArgType = structArgPtr->getType();
+    const llvm::Type *structArgType = structArgPtrInfo->getPointer()->getType();
     Assert(llvm::isa<llvm::PointerType>(structArgType));
     const llvm::PointerType *pt = llvm::dyn_cast<const llvm::PointerType>(structArgType);
     Assert(pt);
-    Assert(llvm::isa<llvm::StructType>(pt->PTR_ELT_TYPE()));
+    Assert(llvm::isa<llvm::StructType>(structArgPtrInfo->getElementType()));
 
     // Get the type of the argument we're copying in and its Symbol pointer
     Symbol *sym = args[i];
@@ -185,15 +256,16 @@ static void lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const std::ve
         return;
 
     // allocate space to copy the parameter in to
-    sym->storagePtr = ctx->AllocaInst(sym->type, sym->name.c_str());
+    sym->storageInfo = ctx->AllocaInst(sym->type, sym->name.c_str());
 
     // get a pointer to the value in the struct
-    llvm::Value *ptr = ctx->AddElementOffset(structArgPtr, i, NULL, sym->name.c_str());
+    llvm::Value *ptr = ctx->AddElementOffset(structArgPtrInfo, i, sym->name.c_str());
 
     // and copy the value from the struct and into the local alloca'ed
     // memory
-    llvm::Value *ptrval = ctx->LoadInst(ptr, sym->type, sym->name.c_str());
-    ctx->StoreInst(ptrval, sym->storagePtr, sym->type, sym->type->IsUniformType());
+    llvm::Value *ptrval =
+        ctx->LoadInst(new AddressInfo(ptr, sym->storageInfo->getElementType()), sym->type, sym->name.c_str());
+    ctx->StoreInst(ptrval, sym->storageInfo, sym->type);
     ctx->EmitFunctionParameterDebugInfo(sym, i);
 }
 
@@ -205,7 +277,7 @@ static void lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const std::ve
 void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, SourcePos firstStmtPos) {
     // Connect the __mask builtin to the location in memory that stores its
     // value
-    maskSymbol->storagePtr = ctx->GetFullMaskPointer();
+    maskSymbol->storageInfo = ctx->GetFullMaskAddressInfo();
 
     // add debugging info for __mask
     maskSymbol->pos = firstStmtPos;
@@ -241,52 +313,58 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         llvm::Value *taskCount0 = &*(argIter++);
         llvm::Value *taskCount1 = &*(argIter++);
         llvm::Value *taskCount2 = &*(argIter++);
+
+        std::vector<llvm::Type *> llvmArgTypes = type->LLVMFunctionArgTypes(g->ctx);
+        llvm::Type *st = llvm::StructType::get(*g->ctx, llvmArgTypes);
+        AddressInfo *stInfo = new AddressInfo(structParamPtr, st);
         // Copy the function parameter values from the structure into local
         // storage
         for (unsigned int i = 0; i < args.size(); ++i)
-            lCopyInTaskParameter(i, structParamPtr, args, ctx);
+            lCopyInTaskParameter(i, stInfo, args, ctx);
 
         if (type->isUnmasked == false) {
             // Copy in the mask as well.
             int nArgs = (int)args.size();
             // The mask is the last parameter in the argument structure
-            llvm::Value *ptr = ctx->AddElementOffset(structParamPtr, nArgs, NULL, "task_struct_mask");
-            llvm::Value *ptrval = ctx->LoadInst(ptr, NULL, "mask");
+            llvm::Value *ptr = ctx->AddElementOffset(stInfo, nArgs, "task_struct_mask");
+            llvm::Value *ptrval = ctx->LoadInst(new AddressInfo(ptr, LLVMTypes::MaskType), NULL, "mask");
             ctx->SetFunctionMask(ptrval);
         }
 
         // Copy threadIndex and threadCount into stack-allocated storage so
         // that their symbols point to something reasonable.
-        threadIndexSym->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "threadIndex");
-        ctx->StoreInst(threadIndex, threadIndexSym->storagePtr);
+        threadIndexSym->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "threadIndex");
+        ctx->StoreInst(threadIndex, threadIndexSym->storageInfo);
 
-        threadCountSym->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "threadCount");
-        ctx->StoreInst(threadCount, threadCountSym->storagePtr);
+        threadCountSym->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "threadCount");
+        ctx->StoreInst(threadCount, threadCountSym->storageInfo);
 
         // Copy taskIndex and taskCount into stack-allocated storage so
         // that their symbols point to something reasonable.
-        taskIndexSym->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex");
-        ctx->StoreInst(taskIndex, taskIndexSym->storagePtr);
+        taskIndexSym->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex");
+        ctx->StoreInst(taskIndex, taskIndexSym->storageInfo);
 
-        taskCountSym->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount");
-        ctx->StoreInst(taskCount, taskCountSym->storagePtr);
+        taskCountSym->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount");
+        ctx->StoreInst(taskCount, taskCountSym->storageInfo);
 
-        taskIndexSym0->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex0");
-        ctx->StoreInst(taskIndex0, taskIndexSym0->storagePtr);
-        taskIndexSym1->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex1");
-        ctx->StoreInst(taskIndex1, taskIndexSym1->storagePtr);
-        taskIndexSym2->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex2");
-        ctx->StoreInst(taskIndex2, taskIndexSym2->storagePtr);
+        taskIndexSym0->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex0");
+        ctx->StoreInst(taskIndex0, taskIndexSym0->storageInfo);
+        taskIndexSym1->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex1");
+        ctx->StoreInst(taskIndex1, taskIndexSym1->storageInfo);
+        taskIndexSym2->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex2");
+        ctx->StoreInst(taskIndex2, taskIndexSym2->storageInfo);
 
-        taskCountSym0->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount0");
-        ctx->StoreInst(taskCount0, taskCountSym0->storagePtr);
-        taskCountSym1->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount1");
-        ctx->StoreInst(taskCount1, taskCountSym1->storagePtr);
-        taskCountSym2->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount2");
-        ctx->StoreInst(taskCount2, taskCountSym2->storagePtr);
+        taskCountSym0->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount0");
+        ctx->StoreInst(taskCount0, taskCountSym0->storageInfo);
+        taskCountSym1->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount1");
+        ctx->StoreInst(taskCount1, taskCountSym1->storageInfo);
+        taskCountSym2->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount2");
+        ctx->StoreInst(taskCount2, taskCountSym2->storageInfo);
     } else {
         // Regular, non-task function or GPU task
         llvm::Function::arg_iterator argIter = function->arg_begin();
+        llvm::FunctionType *fType = type->LLVMFunctionType(g->ctx);
+        Assert(fType->getFunctionNumParams() >= args.size());
         for (unsigned int i = 0; i < args.size(); ++i, ++argIter) {
             Symbol *argSym = args[i];
             if (argSym == NULL)
@@ -297,17 +375,20 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
 
             // Allocate stack storage for the parameter and emit code
             // to store the its value there.
-            argSym->storagePtr = ctx->AllocaInst(argSym->type, argSym->name.c_str());
+            argSym->storageInfo = ctx->AllocaInst(argSym->type, argSym->name.c_str());
             // ISPC export and extern "C" functions have addrspace in the declaration on Xe so
             // we cast addrspace from generic to default in the alloca BB.
             // define dso_local spir_func void @test(%S addrspace(4)* noalias %s)
             // addrspacecast %S addrspace(4)* %s to %S*
             llvm::Value *addrCasted = &*argIter;
-            if (type->RequiresAddrSpaceCasts(function) && llvm::isa<llvm::PointerType>(argIter->getType())) {
-                addrCasted = ctx->AddrSpaceCast(&*argIter, AddressSpace::ispc_default, true);
+#ifdef ISPC_XE_ENABLED
+            // Update addrspace of passed argument if needed for Xe target
+            if (g->target->isXeTarget()) {
+                addrCasted = ctx->XeUpdateAddrSpaceForParam(addrCasted, fType, i, true);
             }
+#endif
 
-            ctx->StoreInst(addrCasted, argSym->storagePtr, argSym->type);
+            ctx->StoreInst(addrCasted, argSym->storageInfo, argSym->type);
 
             ctx->EmitFunctionParameterDebugInfo(argSym, i);
         }
@@ -318,7 +399,8 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         // happens for example with 'export'ed functions that the app
         // calls, with tasks on GPU and with unmasked functions.
         if (argIter == function->arg_end()) {
-            Assert(type->isUnmasked || type->isExported || type->IsISPCExternal() || type->IsISPCKernel());
+            Assert(type->isUnmasked || type->isExported || type->isExternC || type->isExternSYCL ||
+                   type->IsISPCExternal() || type->IsISPCKernel());
             ctx->SetFunctionMask(LLVMMaskAllOn);
         } else {
             Assert(type->isUnmasked == false);
@@ -527,11 +609,11 @@ void Function::GenerateIR() {
         return;
     }
 
-    // If function is an 'extern C', it cannot be defined in ISPC.
     const FunctionType *type = CastType<FunctionType>(sym->type);
     Assert(type != NULL);
-    if (type->isExternC) {
-        Error(sym->pos, "\n\'extern \"C\"\' function \"%s\" cannot be defined in ISPC.", sym->name.c_str());
+
+    if (type->isExternSYCL) {
+        Error(sym->pos, "\n\'extern \"SYCL\"\' function \"%s\" cannot be defined in ISPC.", sym->name.c_str());
         return;
     }
 
@@ -559,39 +641,48 @@ void Function::GenerateIR() {
             emitCode(&ec, function, firstStmtPos);
         }
     } else {
+        // In case of multi-target compilation for extern "C" functions which were defined, we want
+        // to have a target-specific implementation for each target similar to exported functions.
+        // However declarations of extern "C"/"SYCL" functions must be not-mangled and therefore, the calls to such
+        // functions must be not-mangled. The trick to support target-specific implementation in such case is to
+        // generate definition of target-specific implementation mangled with target ("name_<target>") which would be
+        // called from a dispatch function. Since we use not-mangled names in the call, it will be a call to a dispatch
+        // function which will resolve to particular implementation. The condition below ensures that in case of
+        // multi-target compilation we will emit only one-per-target definition of extern "C" function mangled with
+        // <target> suffix.
+        if (!((type->isExternC || type->isExternSYCL) && g->mangleFunctionsWithTarget)) {
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
-        llvm::TimeTraceScope TimeScope("emitCode", llvm::StringRef(sym->name));
+            llvm::TimeTraceScope TimeScope("emitCode", llvm::StringRef(sym->name));
 #endif
-        FunctionEmitContext ec(this, sym, function, firstStmtPos);
-        emitCode(&ec, function, firstStmtPos);
+            FunctionEmitContext ec(this, sym, function, firstStmtPos);
+            emitCode(&ec, function, firstStmtPos);
+        }
     }
 
     if (m->errorCount == 0) {
         // If the function is 'export'-qualified, emit a second version of
         // it without a mask parameter and without name mangling so that
-        // the application can call it
+        // the application can call it.
+        // For 'extern "C"' we emit the version without mask parameter only.
         // For Xe we emit a version without mask parameter only for ISPC kernels and
         // ISPC external functions.
-        if (type->isExported || type->IsISPCExternal() || type->IsISPCKernel()) {
+        if (type->isExported || type->isExternC || type->isExternSYCL || type->IsISPCExternal() ||
+            type->IsISPCKernel()) {
             llvm::FunctionType *ftype = type->LLVMFunctionType(g->ctx, true);
             llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
-            std::string functionName = sym->name;
-            if (g->mangleFunctionsWithTarget) {
-                functionName += std::string("_") + g->target->GetISAString();
-            }
+            auto [name_pref, name_suf] = type->GetFunctionMangledName(true);
+            std::string functionName = name_pref + sym->name + name_suf;
 
             llvm::Function *appFunction = llvm::Function::Create(ftype, linkage, functionName.c_str(), m->module);
             appFunction->setDoesNotThrow();
-            g->target->markFuncWithCallingConv(appFunction);
+            appFunction->setCallingConv(type->GetCallingConv());
 
             // Xe kernel should have "dllexport" and "CMGenxMain" attribute,
             // otherss have "CMStackCall" attribute
             if (g->target->isXeTarget()) {
                 if (type->IsISPCExternal()) {
-                    // Mark ISPCExternal() function as spirv_func and DSO local.
-                    appFunction->setCallingConv(llvm::CallingConv::SPIR_FUNC);
                     appFunction->addFnAttr("CMStackCall");
-                    appFunction->setDSOLocal(true);
+
                 } else if (type->IsISPCKernel()) {
                     appFunction->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
                     appFunction->addFnAttr("CMGenxMain");

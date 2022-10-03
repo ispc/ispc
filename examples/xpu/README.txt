@@ -182,3 +182,46 @@ cmake -DCMAKE_C_COMPILER=<dpcpp_path>/bin/clang -DCMAKE_CXX_COMPILER=<dpcpp_path
 
 Running this example may require setting the LD_LIBRARY_PATH environmental variable to include
 oneAPI DPC++ Compiler libraries.
+
+vadd-esimd
+======================================
+This vector add example demonstrates a basic scanerio of interoperability between
+Explicit SIMD SYCL* Extension and ISPC. It uses SYCL Runtime and runs an ESIMD kernel which
+calls to ISPC function.
+
+It is required to use include interop.cmake file to your CMakeLists.txt if you
+want to use ISPC/ESIMD interoperability feature:
+
+include(${ISPCRT_DIR}/interop.cmake)
+
+It requires oneAPI DPC++ Compiler.
+
+To enable this example please configure the build of ISPC examples using the following
+command line:
+
+cmake -DCMAKE_C_COMPILER=<dpcpp_path>/bin/clang -DCMAKE_CXX_COMPILER=<dpcpp_path>/bin/clang++ \
+      -DISPC_INCLUDE_DPCPP_EXAMPLES=ON <examples source dir>
+
+Running this example may require setting the LD_LIBRARY_PATH environmental variable to include
+oneAPI DPC++ Compiler libraries.
+
+callback-esimd
+======================================
+This example demonstrates usage of callbacks between ISPC and Explicit SIMD SYCL* Extension
+by passing a pointer to an ISPC function to ESIMD and calling that function from ESIMD.
+
+It is required to use include interop.cmake file to your CMakeLists.txt if you
+want to use ISPC/ESIMD interoperability feature:
+
+include(${ISPCRT_DIR}/interop.cmake)
+
+It requires oneAPI DPC++ Compiler.
+
+To enable this example please configure the build of ISPC examples using the following
+command line:
+
+cmake -DCMAKE_C_COMPILER=<dpcpp_path>/bin/clang -DCMAKE_CXX_COMPILER=<dpcpp_path>/bin/clang++ \
+      -DISPC_INCLUDE_DPCPP_EXAMPLES=ON <examples source dir>
+
+Running this example may require setting the LD_LIBRARY_PATH environmental variable to include
+oneAPI DPC++ Compiler libraries.

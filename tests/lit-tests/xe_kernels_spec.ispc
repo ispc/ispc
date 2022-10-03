@@ -19,7 +19,7 @@
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_FUNC_GPU %s
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_METADATA %s
 // RUN: %{ispc} %s --target=gen9-x16 --emit-llvm-text -g --nowrap --no-discard-value-names -o - | FileCheck -check-prefix=CHECK_METADATA_DEBUG %s
-// RUN: %{ispc} %s --target=gen9-x16 -DCHECK_DIAG --nowrap --emit-spirv -o %t.spv 2>&1 | FileCheck %s -check-prefix=CHECK_RET_VAL_EXPORT_WARN_GPU
+// RUN: %{ispc} %s --target=gen9-x16 -DCHECK_DIAG --nowrap --emit-spirv -o %t.spv 2>&1
 // RUN: not %{ispc} %s --target=gen9-x16 -DCHECK_DIAG_TASK --nowrap --emit-spirv -o %t.spv 2>&1 | FileCheck %s -check-prefix=CHECK_RET_VAL_TASK_ERROR
 
 // CPU run to avoid regressions
@@ -47,7 +47,7 @@
 // CHECK_DATALAYOUT: target triple = "spir64-unknown-unknown"
 
 // CHECK_EXPORT_F1_GPU: void @f1__{{.*}}(float* noalias nocapture %RET, <16 x {{.*}}> %__mask)
-// CHECK_EXPORT_F1_GPU: dso_local spir_func void @f1(float addrspace(4)* noalias nocapture %RET) {{.*}}
+// CHECK_EXPORT_F1_GPU: spir_func void @f1(float addrspace(4)* noalias nocapture %RET) {{.*}}
 // CHECK_EXPORT_F1_GPU-NOT: spir_kernel void @f1(i8 addrspace(1)* noalias nocapture "VCArgumentIOKind"="0" %RET)
 // CHECK_EXPORT_F1_CPU: void @f1__{{.*}}(float* noalias nocapture %RET, <16 x {{.*}}> %__mask)
 // CHECK_EXPORT_F1_CPU: void @f1(float* noalias nocapture %RET)
@@ -60,7 +60,7 @@ export void f1(uniform float RET[]) {}
 task void f1_task(uniform float RET[]) {}
 
 // CHECK_EXPORT_F2_GPU: void @f2__{{.*}}(float* noalias nocapture %aF, double* noalias nocapture %aD, i32* noalias nocapture %aI, <16 x {{.*}}> %__mask)
-// CHECK_EXPORT_F2_GPU: dso_local spir_func void @f2(float addrspace(4)* noalias nocapture %aF, double addrspace(4)* noalias nocapture %aD, i32 addrspace(4)* noalias nocapture %aI) {{.*}}
+// CHECK_EXPORT_F2_GPU: spir_func void @f2(float addrspace(4)* noalias nocapture %aF, double addrspace(4)* noalias nocapture %aD, i32 addrspace(4)* noalias nocapture %aI) {{.*}}
 // CHECK_EXPORT_F2_GPU-NOT: spir_kernel void @f2(i8 addrspace(1)* noalias nocapture "VCArgumentIOKind"="0" %aF, i8 addrspace(1)* noalias nocapture "VCArgumentIOKind"="0" %aD, i8 addrspace(1)* noalias nocapture "VCArgumentIOKind"="0" %aI)
 // CHECK_EXPORT_F2_CPU: void @f2__{{.*}}(float* noalias nocapture %aF, double* noalias nocapture %aD, i32* noalias nocapture %aI, <16 x {{.*}}> %__mask)
 // CHECK_EXPORT_F2_CPU: void @f2(float* noalias nocapture %aF, double* noalias nocapture %aD, i32* noalias nocapture %aI)
@@ -73,7 +73,7 @@ export void f2(uniform float aF[], uniform double aD[], uniform int aI[]) {}
 task void f2_task(uniform float aF[], uniform double aD[], uniform int aI[]) {}
 
 // CHECK_EXPORT_F3_GPU: void @f3__{{.*}}(float* noalias nocapture %aF1, float* noalias nocapture %aF2, float %a, <16 x {{.*}}> %__mask)
-// CHECK_EXPORT_F3_GPU: dso_local spir_func void @f3(float addrspace(4)* noalias nocapture %aF1, float addrspace(4)* noalias nocapture %aF2, float %a) {{.*}}
+// CHECK_EXPORT_F3_GPU: spir_func void @f3(float addrspace(4)* noalias nocapture %aF1, float addrspace(4)* noalias nocapture %aF2, float %a) {{.*}}
 // CHECK_EXPORT_F3_GPU-NOT: spir_kernel void @f3(i8 addrspace(1)* noalias nocapture "VCArgumentIOKind"="0" %aF1, i8 addrspace(1)* noalias nocapture "VCArgumentIOKind"="0" %aF2, float "VCArgumentIOKind"="0" %a)
 // CHECK_EXPORT_F3_CPU: void @f3__{{.*}}(float* noalias nocapture %aF1, float* noalias nocapture %aF2, float %a, <16 x {{.*}}> %__mask)
 // CHECK_EXPORT_F3_CPU: void @f3(float* noalias nocapture %aF1, float* noalias nocapture %aF2, float %a)
@@ -86,7 +86,7 @@ export void f3(uniform float aF1[], uniform float aF2[], uniform float a) {}
 task void f3_task(uniform float aF1[], uniform float aF2[], uniform float a) {}
 
 // CHECK_EXPORT_F4_GPU: void @f4__{{.*}}(float* noalias nocapture %aF1, double* noalias nocapture %aF2, float %a, <16 x {{.*}}> %__mask)
-// CHECK_EXPORT_F4_GPU: dso_local spir_func void @f4(float addrspace(4)* noalias nocapture %aF1, double addrspace(4)* noalias nocapture %aF2, float %a) {{.*}}
+// CHECK_EXPORT_F4_GPU: spir_func void @f4(float addrspace(4)* noalias nocapture %aF1, double addrspace(4)* noalias nocapture %aF2, float %a) {{.*}}
 // CHECK_EXPORT_F4_GPU-NOT: spir_kernel void @f4(i8 addrspace(1)* noalias nocapture "VCArgumentIOKind"="0" %aF1, i8 addrspace(1)* noalias nocapture "VCArgumentIOKind"="0" %aF2, float "VCArgumentIOKind"="0" %a)
 // CHECK_EXPORT_F4_CPU: void @f4__{{.*}}(float* noalias nocapture %aF1, double* noalias nocapture %aF2, float %a, <16 x {{.*}}> %__mask)
 // CHECK_EXPORT_F4_CPU: void @f4(float* noalias nocapture %aF1, double* noalias nocapture %aF2, float %a)
@@ -99,7 +99,7 @@ export void f4(uniform float aF1[], double *uniform aF2, uniform float a) {}
 task void f4_task(uniform float aF1[], double *uniform aF2, uniform float a) {}
 
 // CHECK_EXPORT_F5_GPU: void @f5__{{.*}}(i8* noalias nocapture %_p, <16 x {{.*}}> %__mask)
-// CHECK_EXPORT_F5_GPU: dso_local spir_func void @f5(i8 addrspace(4)* noalias nocapture %_p) {{.*}}
+// CHECK_EXPORT_F5_GPU: spir_func void @f5(i8 addrspace(4)* noalias nocapture %_p) {{.*}}
 // CHECK_EXPORT_F5_GPU-NOT: spir_kernel void @f5(i8 addrspace(1)* noalias nocapture "VCArgumentIOKind"="0" %_p)
 // CHECK_EXPORT_F5_CPU: void @f5__{{.*}}(i8* noalias nocapture %_p, <16 x {{.*}}> %__mask)
 // CHECK_EXPORT_F5_CPU: void @f5(i8* noalias nocapture %_p)
@@ -112,7 +112,7 @@ export void f5(void *uniform _p) {}
 task void f5_task(void *uniform _p) {}
 
 // CHECK_EXPORT_F6_GPU: void @f6__{{.*}}(float %a, <16 x {{.*}}> %__mask)
-// CHECK_EXPORT_F6_GPU: dso_local spir_func void @f6(float %a) {{.*}}
+// CHECK_EXPORT_F6_GPU: spir_func void @f6(float %a) {{.*}}
 // CHECK_EXPORT_F6_GPU-NOT: spir_kernel void @f6(float "VCArgumentIOKind"="0" %a)
 // CHECK_EXPORT_F6_CPU: void @f6__{{.*}}(float %a, <16 x {{.*}}> %__mask)
 // CHECK_EXPORT_F6_CPU: void @f6(float %a)
@@ -125,7 +125,7 @@ export void f6(uniform float a) {}
 task void f6_task(uniform float a) {}
 
 // CHECK_EXPORT_F7_GPU: void @f7__{{.*}}(<16 x {{.*}}> %__mask)
-// CHECK_EXPORT_F7_GPU: dso_local spir_func void @f7() {{.*}}
+// CHECK_EXPORT_F7_GPU: spir_func void @f7() {{.*}}
 // CHECK_EXPORT_F7_GPU-NOT: spir_kernel void @f7()
 // CHECK_EXPORT_F7_CPU: void @f7__{{.*}}(<16 x {{.*}}> %__mask)
 // CHECK_EXPORT_F7_CPU: void @f7()
@@ -172,15 +172,15 @@ extern uniform int t4_call() {
 }
 
 // Check signature of extern "C" functions
-// CHECK_FUNC_GPU: declare dso_local spir_func void @t5(i32 addrspace(4)* noalias) {{.*}}
+// CHECK_FUNC_GPU: declare spir_func void @t5(i32 addrspace(4)* noalias) {{.*}}
 // CHECK_FUNC_CPU: declare void @t5(i32* noalias)
 extern "C" void t5(uniform int p[]);
 // CHECK_FUNC_GPU: void @t5_call___{{.*}}
 // CHECK_FUNC_GPU: addrspacecast i32* %p to i32 addrspace(4)*
-// CHECK_FUNC_GPU: call void @t5(i32 addrspace(4)* %{{.*}})
+// CHECK_FUNC_GPU: call spir_func void @t5(i32 addrspace(4)* %{{.*}})
 
-// CHECK_FUNC_GPU: dso_local spir_func void @t5_call(i32 addrspace(4)* noalias %p) {{.*}}
-// CHECK_FUNC_GPU: call void @t5(i32 addrspace(4)* %p)
+// CHECK_FUNC_GPU: spir_func void @t5_call(i32 addrspace(4)* noalias %p) {{.*}}
+// CHECK_FUNC_GPU: call spir_func void @t5(i32 addrspace(4)* %p)
 
 // CHECK_FUNC_CPU: void @t5_call___{{.*}}
 // CHECK_FUNC_CPU: call void @t5(i32* %p)
@@ -193,7 +193,6 @@ export void t5_call(uniform int p[]) {
 
 // Diagnostics
 #ifdef CHECK_DIAG
-// CHECK_RET_VAL_EXPORT_WARN_GPU: Warning: Export and extern "C"-qualified functions must have void return type for Xe target.
 export uniform int check_diag() {
     return programCount;
 }

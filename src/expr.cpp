@@ -611,7 +611,8 @@ bool ispc::PossiblyResolveFunctionOverloads(Expr *expr, const Type *type) {
     @param ctx       FunctionEmitContext to use for generating instructions
     @param pos       Source file position of the variable being initialized
 */
-void ispc::InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, FunctionEmitContext *ctx, SourcePos pos) {
+void ispc::InitSymbol(AddressInfo *ptrInfo, const Type *symType, Expr *initExpr, FunctionEmitContext *ctx,
+                      SourcePos pos) {
     if (initExpr == NULL)
         // leave it uninitialized
         return;
@@ -633,13 +634,13 @@ void ispc::InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, Fun
         }
 
         if (Type::IsBasicType(symType))
-            ctx->StoreInst(constValue, ptr, symType, symType->IsUniformType());
+            ctx->StoreInst(constValue, ptrInfo, symType);
         else {
             llvm::Value *constPtr =
                 new llvm::GlobalVariable(*m->module, llvmType, true /* const */, llvm::GlobalValue::InternalLinkage,
                                          constValue, "const_initializer");
             llvm::Value *size = g->target->SizeOf(llvmType, ctx->GetCurrentBasicBlock());
-            ctx->MemcpyInst(ptr, constPtr, size);
+            ctx->MemcpyInst(ptrInfo->getPointer(), constPtr, size);
         }
 
         return;
@@ -659,7 +660,7 @@ void ispc::InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, Fun
         llvm::Value *initializerValue = initExpr->GetValue(ctx);
         if (initializerValue != NULL)
             // Bingo; store the value in the variable's storage
-            ctx->StoreInst(initializerValue, ptr, symType, symType->IsUniformType());
+            ctx->StoreInst(initializerValue, ptrInfo, symType);
         return;
     }
 
@@ -670,7 +671,7 @@ void ispc::InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, Fun
         ExprList *elist = llvm::dyn_cast<ExprList>(initExpr);
         if (elist != NULL) {
             if (elist->exprs.size() == 1) {
-                InitSymbol(ptr, symType, elist->exprs[0], ctx, pos);
+                InitSymbol(ptrInfo, symType, elist->exprs[0], ctx, pos);
                 return;
             } else if (symType->IsVaryingType() == false) {
                 Error(initExpr->pos,
@@ -695,7 +696,7 @@ void ispc::InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, Fun
 
         llvm::Value *initializerValue = initExpr->GetValue(ctx);
         if (initializerValue)
-            ctx->StoreInst(initializerValue, ptr, initExpr->GetType(), symType->IsUniformType());
+            ctx->StoreInst(initializerValue, ptrInfo, initExpr->GetType());
         return;
     }
 
@@ -758,13 +759,16 @@ void ispc::InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, Fun
 
                 llvm::Value *ep;
                 if (CastType<StructType>(symType) != NULL)
-                    ep = ctx->AddElementOffset(ptr, i, NULL, "element");
-                else
-                    ep = ctx->GetElementPtrInst(ptr, LLVMInt32(0), LLVMInt32(i), PointerType::GetUniform(elementType),
+                    ep = ctx->AddElementOffset(new AddressInfo(ptrInfo->getPointer(), CastType<StructType>(symType)), i,
+                                               "element");
+                else {
+                    ep = ctx->GetElementPtrInst(ptrInfo->getPointer(), LLVMInt32(0), LLVMInt32(i),
+                                                /* Type of aggregate structure */ PointerType::GetUniform(symType),
                                                 "gep");
-
+                }
+                AddressInfo *epInfo = new AddressInfo(ep, ptrInfo->getElementType());
                 if (i < nInits)
-                    InitSymbol(ep, elementType, exprList->exprs[i], ctx, pos);
+                    InitSymbol(epInfo, elementType, exprList->exprs[i], ctx, pos);
                 else {
                     // If we don't have enough initializer values, initialize the
                     // rest as zero.
@@ -775,7 +779,7 @@ void ispc::InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, Fun
                     }
 
                     llvm::Constant *zeroInit = llvm::Constant::getNullValue(llvmType);
-                    ctx->StoreInst(zeroInit, ep, elementType, elementType->IsUniformType());
+                    ctx->StoreInst(zeroInit, epInfo, elementType);
                 }
             }
         } else if (collectionType) {
@@ -1315,30 +1319,47 @@ int UnaryExpr::EstimateCost() const {
     return COST_SIMPLE_ARITH_LOGIC_OP;
 }
 
-void UnaryExpr::Print() const {
-    if (!expr || !GetType())
+void UnaryExpr::Print(Indent &indent) const {
+    if (!expr || !GetType()) {
+        indent.Print("UnaryExpr: <NULL EXPR>\n");
+        indent.Done();
         return;
+    }
 
-    printf("[ %s ] (", GetType()->GetString().c_str());
-    if (op == PreInc)
-        printf("++");
-    if (op == PreDec)
-        printf("--");
-    if (op == Negate)
-        printf("-");
-    if (op == LogicalNot)
-        printf("!");
-    if (op == BitNot)
-        printf("~");
-    printf("(");
-    expr->Print();
-    printf(")");
-    if (op == PostInc)
-        printf("++");
-    if (op == PostDec)
-        printf("--");
-    printf(")");
-    pos.Print();
+    indent.Print("UnaryExpr", pos);
+
+    printf("[ %s ] ", GetType()->GetString().c_str());
+    switch (op) {
+    case PreInc: ///< Pre-increment
+        printf("prefix '++'");
+        break;
+    case PreDec: ///< Pre-decrement
+        printf("prefix '--'");
+        break;
+    case PostInc: ///< Post-increment
+        printf("postfix '++'");
+        break;
+    case PostDec: ///< Post-decrement
+        printf("postfix '--'");
+        break;
+    case Negate: ///< Negation
+        printf("prefix '-'");
+        break;
+    case LogicalNot: ///< Logical not
+        printf("prefix '!'");
+        break;
+    case BitNot:
+        printf("prefix '~'");
+        break;
+    default:
+        printf("<ILLEGAL OP");
+        break;
+    }
+    printf("\n");
+    indent.pushSingle();
+    expr->Print(indent);
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1730,7 +1751,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
         AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
-    llvm::Value *retPtr = ctx->AllocaInst(retType, "logical_op_mem");
+    AddressInfo *retPtrInfo = ctx->AllocaInst(retType, "logical_op_mem");
     llvm::BasicBlock *bbSkipEvalValue1 = ctx->CreateBasicBlock("skip_eval_1", ctx->GetCurrentBasicBlock());
     llvm::BasicBlock *bbEvalValue1 = ctx->CreateBasicBlock("eval_1", bbSkipEvalValue1);
     llvm::BasicBlock *bbLogicalDone = ctx->CreateBasicBlock("logical_op_done", bbEvalValue1);
@@ -1755,7 +1776,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
             // uniform or varying)
             ctx->SetCurrentBasicBlock(bbSkipEvalValue1);
             llvm::Value *trueValue = retType->IsUniformType() ? LLVMTrue : LLVMMaskAllOn;
-            ctx->StoreInst(trueValue, retPtr, retType, retType->IsUniformType());
+            ctx->StoreInst(trueValue, retPtrInfo, retType);
             ctx->BranchInst(bbLogicalDone);
         } else {
             AssertPos(pos, op == BinaryExpr::LogicalAnd);
@@ -1768,7 +1789,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
             // uniform or varying false).
             ctx->SetCurrentBasicBlock(bbSkipEvalValue1);
             llvm::Value *falseValue = retType->IsUniformType() ? LLVMFalse : LLVMMaskAllOff;
-            ctx->StoreInst(falseValue, retPtr, retType, retType->IsUniformType());
+            ctx->StoreInst(falseValue, retPtrInfo, retType);
             ctx->BranchInst(bbLogicalDone);
         }
 
@@ -1787,14 +1808,14 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
             AssertPos(pos, m->errorCount > 0);
             return NULL;
         }
-        ctx->StoreInst(value1, retPtr, arg1->GetType(), retType->IsUniformType());
+        ctx->StoreInst(value1, retPtrInfo, arg1->GetType());
         ctx->BranchInst(bbLogicalDone);
 
         // In all cases, we end up at the bbLogicalDone basic block;
         // loading the value stored in retPtr in turn gives the overall
         // result.
         ctx->SetCurrentBasicBlock(bbLogicalDone);
-        return ctx->LoadInst(retPtr, retType);
+        return ctx->LoadInst(retPtrInfo, retType);
     } else {
         // Otherwise, the first operand is varying...  Save the current
         // value of the mask so that we can restore it at the end.
@@ -1828,7 +1849,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
             // value0 is true for all running lanes, so it can be used for
             // the final result
             ctx->SetCurrentBasicBlock(bbSkipEvalValue1);
-            ctx->StoreInst(value0, retPtr, arg0->GetType(), retType->IsUniformType());
+            ctx->StoreInst(value0, retPtrInfo, arg0->GetType());
             ctx->BranchInst(bbLogicalDone);
 
             // Otherwise, we need to valuate arg1. However, first we need
@@ -1852,7 +1873,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
             llvm::Value *value1AndMask =
                 ctx->BinaryOperator(llvm::Instruction::And, value1, ctx->GetInternalMask(), "op&mask");
             llvm::Value *result = ctx->BinaryOperator(llvm::Instruction::Or, value0AndMask, value1AndMask, "or_result");
-            ctx->StoreInst(result, retPtr, retType, retType->IsUniformType());
+            ctx->StoreInst(result, retPtrInfo, retType);
             ctx->BranchInst(bbLogicalDone);
         } else {
             AssertPos(pos, op == BinaryExpr::LogicalAnd);
@@ -1877,7 +1898,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
             // value0 was false for all running lanes, so use its value as
             // the overall result.
             ctx->SetCurrentBasicBlock(bbSkipEvalValue1);
-            ctx->StoreInst(value0, retPtr, arg0->GetType(), retType->IsUniformType());
+            ctx->StoreInst(value0, retPtrInfo, arg0->GetType());
             ctx->BranchInst(bbLogicalDone);
 
             // Otherwise we need to evaluate value1, but again with the
@@ -1901,7 +1922,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
                 ctx->BinaryOperator(llvm::Instruction::And, value1, ctx->GetInternalMask(), "value1&mask");
             llvm::Value *result =
                 ctx->BinaryOperator(llvm::Instruction::And, value0AndMask, value1AndMask, "or_result");
-            ctx->StoreInst(result, retPtr, retType, retType->IsUniformType());
+            ctx->StoreInst(result, retPtrInfo, retType);
             ctx->BranchInst(bbLogicalDone);
         }
 
@@ -1909,7 +1930,7 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
         // the old mask and return the computed result
         ctx->SetCurrentBasicBlock(bbLogicalDone);
         ctx->SetInternalMask(oldMask);
-        return ctx->LoadInst(retPtr, retType);
+        return ctx->LoadInst(retPtrInfo, retType);
     }
 }
 
@@ -2800,16 +2821,21 @@ int BinaryExpr::EstimateCost() const {
     return (op == Div || op == Mod) ? COST_COMPLEX_ARITH_OP : COST_SIMPLE_ARITH_LOGIC_OP;
 }
 
-void BinaryExpr::Print() const {
-    if (!arg0 || !arg1 || !GetType())
+void BinaryExpr::Print(Indent &indent) const {
+    if (!arg0 || !arg1 || !GetType()) {
+        indent.Print("BinaryExpr: <NULL EXPR>\n");
+        indent.Done();
         return;
+    }
 
-    printf("[ %s ] (", GetType()->GetString().c_str());
-    arg0->Print();
-    printf(" %s ", lOpString(op));
-    arg1->Print();
-    printf(")");
-    pos.Print();
+    indent.Print("BinaryExpr", pos);
+
+    printf("[ %s ], '%s'\n", GetType()->GetString().c_str(), lOpString(op));
+    indent.pushList(2);
+    arg0->Print(indent);
+    arg1->Print(indent);
+
+    indent.Done();
 }
 
 static std::pair<llvm::Constant *, bool> lGetBinaryExprStorageConstant(const Type *type, const BinaryExpr *bExpr,
@@ -2869,7 +2895,7 @@ static std::pair<llvm::Constant *, bool> lGetBinaryExprStorageConstant(const Typ
         isNotValidForMultiTargetGlobal = isNotValidForMultiTargetGlobal || c2Pair.second;
         if (op == BinaryExpr::Op::Sub)
             c2 = llvm::ConstantExpr::getNeg(c2);
-        llvm::Constant *c = llvm::ConstantExpr::getGetElementPtr(PTYPE(c1), c1, c2);
+        llvm::Constant *c = llvm::ConstantExpr::getGetElementPtr(AddressInfo::GetPointeeLLVMType(pt0), c1, c2);
         return std::pair<llvm::Constant *, bool>(c, isNotValidForMultiTargetGlobal);
     } else if (const PointerType *pt1 = CastType<PointerType>(arg1->GetType())) {
         std::pair<llvm::Constant *, bool> c1Pair;
@@ -2889,7 +2915,7 @@ static std::pair<llvm::Constant *, bool> lGetBinaryExprStorageConstant(const Typ
             c2Pair = cExpr->GetConstant(cExpr->GetType());
         llvm::Constant *c2 = c2Pair.first;
         isNotValidForMultiTargetGlobal = isNotValidForMultiTargetGlobal || c2Pair.second;
-        llvm::Constant *c = llvm::ConstantExpr::getGetElementPtr(PTYPE(c1), c1, c2);
+        llvm::Constant *c = llvm::ConstantExpr::getGetElementPtr(AddressInfo::GetPointeeLLVMType(pt1), c1, c2);
         return std::pair<llvm::Constant *, bool>(c, isNotValidForMultiTargetGlobal);
     }
 
@@ -2910,13 +2936,13 @@ std::pair<llvm::Constant *, bool> BinaryExpr::GetConstant(const Type *type) cons
 static const char *lOpString(AssignExpr::Op op) {
     switch (op) {
     case AssignExpr::Assign:
-        return "assignment operator";
+        return "=";
     case AssignExpr::MulAssign:
         return "*=";
     case AssignExpr::DivAssign:
         return "/=";
     case AssignExpr::ModAssign:
-        return "%%=";
+        return "%=";
     case AssignExpr::AddAssign:
         return "+=";
     case AssignExpr::SubAssign:
@@ -3215,16 +3241,21 @@ int AssignExpr::EstimateCost() const {
         return COST_ASSIGN + COST_SIMPLE_ARITH_LOGIC_OP;
 }
 
-void AssignExpr::Print() const {
-    if (!lvalue || !rvalue || !GetType())
+void AssignExpr::Print(Indent &indent) const {
+    if (!lvalue || !rvalue || !GetType()) {
+        indent.Print("AssignExpr: <NULL EXPR>\n");
+        indent.Done();
         return;
+    }
 
-    printf("[%s] assign (", GetType()->GetString().c_str());
-    lvalue->Print();
-    printf(" %s ", lOpString(op));
-    rvalue->Print();
-    printf(")");
-    pos.Print();
+    indent.Print("AssignExpr", pos);
+
+    printf("[%s], '%s'\n", GetType()->GetString().c_str(), lOpString(op));
+    indent.pushList(2);
+    lvalue->Print(indent);
+    rvalue->Print(indent);
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -3242,18 +3273,18 @@ SelectExpr::SelectExpr(Expr *t, Expr *e1, Expr *e2, SourcePos p) : Expr(p, Selec
 static llvm::Value *lEmitVaryingSelect(FunctionEmitContext *ctx, llvm::Value *test, llvm::Value *expr1,
                                        llvm::Value *expr2, const Type *type) {
 
-    llvm::Value *resultPtr = ctx->AllocaInst(type, "selectexpr_tmp");
-    Assert(resultPtr != NULL);
+    AddressInfo *resultPtrInfo = ctx->AllocaInst(type, "selectexpr_tmp");
+    Assert(resultPtrInfo != NULL);
     // Don't need to worry about masking here
-    ctx->StoreInst(expr2, resultPtr, type, type->IsUniformType());
+    ctx->StoreInst(expr2, resultPtrInfo, type);
     // Use masking to conditionally store the expr1 values
-    Assert(resultPtr->getType() == PointerType::GetUniform(type)->LLVMStorageType(g->ctx));
-    ctx->StoreInst(expr1, resultPtr, test, type, PointerType::GetUniform(type));
-    return ctx->LoadInst(resultPtr, type, "selectexpr_final");
+    Assert(resultPtrInfo->getType() == PointerType::GetUniform(type)->LLVMStorageType(g->ctx));
+    ctx->StoreInst(expr1, resultPtrInfo->getPointer(), test, type, PointerType::GetUniform(type));
+    return ctx->LoadInst(resultPtrInfo, type, "selectexpr_final");
 }
 
 static void lEmitSelectExprCode(FunctionEmitContext *ctx, llvm::Value *testVal, llvm::Value *oldMask,
-                                llvm::Value *fullMask, Expr *expr, llvm::Value *exprPtr) {
+                                llvm::Value *fullMask, Expr *expr, AddressInfo *exprPtrInfo) {
     llvm::BasicBlock *bbEval = ctx->CreateBasicBlock("select_eval_expr", ctx->GetCurrentBasicBlock());
     llvm::BasicBlock *bbDone = ctx->CreateBasicBlock("select_done", bbEval);
 
@@ -3267,7 +3298,7 @@ static void lEmitSelectExprCode(FunctionEmitContext *ctx, llvm::Value *testVal, 
     llvm::Value *testAndMask = ctx->BinaryOperator(llvm::Instruction::And, testVal, oldMask, "test&mask");
     ctx->SetInternalMask(testAndMask);
     llvm::Value *exprVal = expr->GetValue(ctx);
-    ctx->StoreInst(exprVal, exprPtr, expr->GetType(), expr->GetType()->IsUniformType());
+    ctx->StoreInst(exprVal, exprPtrInfo, expr->GetType());
     ctx->BranchInst(bbDone);
 
     ctx->SetCurrentBasicBlock(bbDone);
@@ -3366,29 +3397,29 @@ llvm::Value *SelectExpr::GetValue(FunctionEmitContext *ctx) const {
         // Temporary storage to store the values computed for each
         // expression, if any.  (These stay as uninitialized memory if we
         // short circuit around the corresponding expression.)
-        llvm::Value *expr1Ptr = ctx->AllocaInst(expr1->GetType());
-        llvm::Value *expr2Ptr = ctx->AllocaInst(expr1->GetType());
+        AddressInfo *expr1PtrInfo = ctx->AllocaInst(expr1->GetType());
+        AddressInfo *expr2PtrInfo = ctx->AllocaInst(expr1->GetType());
 
         if (shortCircuit1)
-            lEmitSelectExprCode(ctx, testVal, oldMask, fullMask, expr1, expr1Ptr);
+            lEmitSelectExprCode(ctx, testVal, oldMask, fullMask, expr1, expr1PtrInfo);
         else {
             ctx->SetInternalMaskAnd(oldMask, testVal);
             llvm::Value *expr1Val = expr1->GetValue(ctx);
-            ctx->StoreInst(expr1Val, expr1Ptr, expr1->GetType(), expr1->GetType()->IsUniformType());
+            ctx->StoreInst(expr1Val, expr1PtrInfo, expr1->GetType());
         }
 
         if (shortCircuit2) {
             llvm::Value *notTest = ctx->NotOperator(testVal);
-            lEmitSelectExprCode(ctx, notTest, oldMask, fullMask, expr2, expr2Ptr);
+            lEmitSelectExprCode(ctx, notTest, oldMask, fullMask, expr2, expr2PtrInfo);
         } else {
             ctx->SetInternalMaskAndNot(oldMask, testVal);
             llvm::Value *expr2Val = expr2->GetValue(ctx);
-            ctx->StoreInst(expr2Val, expr2Ptr, expr2->GetType(), expr2->GetType()->IsUniformType());
+            ctx->StoreInst(expr2Val, expr2PtrInfo, expr2->GetType());
         }
 
         ctx->SetInternalMask(oldMask);
-        llvm::Value *expr1Val = ctx->LoadInst(expr1Ptr, expr1->GetType());
-        llvm::Value *expr2Val = ctx->LoadInst(expr2Ptr, expr2->GetType());
+        llvm::Value *expr1Val = ctx->LoadInst(expr1PtrInfo, expr1->GetType());
+        llvm::Value *expr2Val = ctx->LoadInst(expr2PtrInfo, expr2->GetType());
         return lEmitVaryingSelect(ctx, testVal, expr1Val, expr2Val, type);
     } else {
         // FIXME? Short-circuiting doesn't work in the case of
@@ -3595,25 +3626,29 @@ Expr *SelectExpr::TypeCheck() {
 
 int SelectExpr::EstimateCost() const { return COST_SELECT; }
 
-void SelectExpr::Print() const {
-    if (!test || !expr1 || !expr2 || !GetType())
+void SelectExpr::Print(Indent &indent) const {
+    if (!test || !expr1 || !expr2 || !GetType()) {
+        indent.Print("SelectExpr: <NULL EXPR>\n");
+        indent.Done();
         return;
+    }
 
-    printf("[%s] (", GetType()->GetString().c_str());
-    test->Print();
-    printf(" ? ");
-    expr1->Print();
-    printf(" : ");
-    expr2->Print();
-    printf(")");
-    pos.Print();
+    indent.Print("SelectExpr", pos);
+
+    printf("[%s]\n", GetType()->GetString().c_str());
+    indent.pushList(3);
+    test->Print(indent);
+    expr1->Print(indent);
+    expr2->Print(indent);
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
 // FunctionCallExpr
 
-FunctionCallExpr::FunctionCallExpr(Expr *f, ExprList *a, SourcePos p, bool il, Expr *lce[3])
-    : Expr(p, FunctionCallExprID), isLaunch(il) {
+FunctionCallExpr::FunctionCallExpr(Expr *f, ExprList *a, SourcePos p, bool il, Expr *lce[3], bool iis)
+    : Expr(p, FunctionCallExprID), isLaunch(il), isInvoke(iis) {
     func = f;
     args = a;
     std::vector<const Expr *> warn;
@@ -3741,8 +3776,13 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
 
         if (launchCount[0] != NULL)
             ctx->LaunchInst(callee, argVals, launchCount, ft);
-    } else
-        retVal = ctx->CallInst(callee, ft, argVals, isVoidFunc ? "" : "calltmp");
+    } else {
+        if (isInvoke) {
+            return ctx->InvokeSyclInst(callee, ft, argVals);
+        } else {
+            retVal = ctx->CallInst(callee, ft, argVals, isVoidFunc ? "" : "calltmp");
+        }
+    }
 
     if (isVoidFunc)
         return NULL;
@@ -3760,8 +3800,8 @@ llvm::Value *FunctionCallExpr::GetLValue(FunctionEmitContext *ctx) const {
     }
 }
 
-bool FullResolveOverloads(Expr *func, ExprList *args, std::vector<const Type *> *argTypes,
-                          std::vector<bool> *argCouldBeNULL, std::vector<bool> *argIsConstant) {
+static bool lFullResolveOverloads(Expr *func, ExprList *args, std::vector<const Type *> *argTypes,
+                                  std::vector<bool> *argCouldBeNULL, std::vector<bool> *argIsConstant) {
     for (unsigned int i = 0; i < args->exprs.size(); ++i) {
         Expr *expr = args->exprs[i];
         if (expr == NULL)
@@ -3781,7 +3821,7 @@ const Type *FunctionCallExpr::GetType() const {
     std::vector<bool> argCouldBeNULL, argIsConstant;
     if (func == NULL || args == NULL)
         return NULL;
-    if (FullResolveOverloads(func, args, &argTypes, &argCouldBeNULL, &argIsConstant) == true) {
+    if (lFullResolveOverloads(func, args, &argTypes, &argCouldBeNULL, &argIsConstant) == true) {
         FunctionSymbolExpr *fse = llvm::dyn_cast<FunctionSymbolExpr>(func);
         if (fse != NULL) {
             fse->ResolveOverloads(args->pos, argTypes, &argCouldBeNULL, &argIsConstant);
@@ -3815,7 +3855,7 @@ Expr *FunctionCallExpr::TypeCheck() {
     std::vector<const Type *> argTypes;
     std::vector<bool> argCouldBeNULL, argIsConstant;
 
-    if (FullResolveOverloads(func, args, &argTypes, &argCouldBeNULL, &argIsConstant) == false) {
+    if (lFullResolveOverloads(func, args, &argTypes, &argCouldBeNULL, &argIsConstant) == false) {
         return NULL;
     }
 
@@ -3928,6 +3968,22 @@ Expr *FunctionCallExpr::TypeCheck() {
         }
         AssertPos(pos, launchCountExpr[0] == NULL);
     }
+    if (isInvoke && !funcType->isExternSYCL) {
+        Error(pos, "\"invoke_sycl\" expression illegal with non-\'extern \"SYCL\"\'-"
+                   "qualified function.");
+        return NULL;
+    }
+
+    if (isInvoke && !funcType->isRegCall) {
+        Error(pos, "\"invoke_sycl\" expression can be only used with \'__regcall\'-"
+                   "qualified function.");
+        return NULL;
+    }
+
+    if (!isInvoke && funcType->isExternSYCL) {
+        Error(pos, "Illegal to call \'extern \"SYCL\"\'-qualified function without \"invoke_sycl\" expression.");
+        return NULL;
+    }
 
     if (func == NULL || args == NULL)
         return NULL;
@@ -3937,6 +3993,8 @@ Expr *FunctionCallExpr::TypeCheck() {
 int FunctionCallExpr::EstimateCost() const {
     if (isLaunch)
         return COST_TASK_LAUNCH;
+    if (isInvoke)
+        return COST_INVOKE;
 
     const Type *type = func->GetType();
     if (type == NULL)
@@ -3956,16 +4014,23 @@ int FunctionCallExpr::EstimateCost() const {
         return COST_FUNCALL;
 }
 
-void FunctionCallExpr::Print() const {
-    if (!func || !args || !GetType())
+void FunctionCallExpr::Print(Indent &indent) const {
+    if (!func || !args || !GetType()) {
+        indent.Print("FunctionCallExpr: <NULL EXPR>\n");
+        indent.Done();
         return;
+    }
 
-    printf("[%s] funcall %s ", GetType()->GetString().c_str(), isLaunch ? "launch" : "");
-    func->Print();
-    printf(" args (");
-    args->Print();
-    printf(")");
-    pos.Print();
+    indent.Print("FunctionCallExpr", pos);
+
+    printf("[%s] %s %s\n", GetType()->GetString().c_str(), isLaunch ? "launch" : "", isInvoke ? "invoke_sycl" : "");
+    indent.pushList(2);
+    indent.setNextLabel("func");
+    func->Print(indent);
+    indent.setNextLabel("args");
+    args->Print(indent);
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -4152,14 +4217,20 @@ std::pair<llvm::Constant *, bool> ExprList::GetConstant(const Type *type) const 
 
 int ExprList::EstimateCost() const { return 0; }
 
-void ExprList::Print() const {
-    printf("expr list (");
+void ExprList::Print(Indent &indent) const {
+    indent.PrintLn("ExprList", pos);
+
+    indent.pushList(exprs.size());
     for (unsigned int i = 0; i < exprs.size(); ++i) {
-        if (exprs[i] != NULL)
-            exprs[i]->Print();
-        printf("%s", (i == exprs.size() - 1) ? ")" : ", ");
+        if (exprs[i] != NULL) {
+            exprs[i]->Print(indent);
+        } else {
+            indent.Print("<NULL");
+            indent.Done();
+        }
     }
-    pos.Print();
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -4306,8 +4377,8 @@ llvm::Value *IndexExpr::GetValue(FunctionEmitContext *ctx) const {
             return NULL;
         }
         ctx->SetDebugPos(pos);
-        llvm::Value *tmpPtr = ctx->AllocaInst(baseExprType, "array_tmp");
-        ctx->StoreInst(val, tmpPtr, baseExprType, baseExprType->IsUniformType());
+        AddressInfo *tmpPtrInfo = ctx->AllocaInst(baseExprType, "array_tmp");
+        ctx->StoreInst(val, tmpPtrInfo, baseExprType);
 
         // Get a pointer type to the underlying elements
         const SequentialType *st = CastType<SequentialType>(baseExprType);
@@ -4318,7 +4389,8 @@ llvm::Value *IndexExpr::GetValue(FunctionEmitContext *ctx) const {
         lvType = PointerType::GetUniform(st->GetElementType());
 
         // And do the indexing calculation into the temporary array in memory
-        ptr = ctx->GetElementPtrInst(tmpPtr, LLVMInt32(0), index->GetValue(ctx), PointerType::GetUniform(baseExprType));
+        ptr = ctx->GetElementPtrInst(tmpPtrInfo->getPointer(), LLVMInt32(0), index->GetValue(ctx),
+                                     PointerType::GetUniform(baseExprType));
         ptr = lAddVaryingOffsetsIfNeeded(ctx, ptr, lvType);
 
         mask = LLVMMaskAllOn;
@@ -4655,16 +4727,21 @@ int IndexExpr::EstimateCost() const {
         return COST_LOAD;
 }
 
-void IndexExpr::Print() const {
-    if (!baseExpr || !index || !GetType())
+void IndexExpr::Print(Indent &indent) const {
+    if (!baseExpr || !index || !GetType()) {
+        indent.Print("IndexExpr: <NULL EXPR>\n");
+        indent.Done();
         return;
+    }
 
-    printf("[%s] index ", GetType()->GetString().c_str());
-    baseExpr->Print();
-    printf("[");
-    index->Print();
-    printf("]");
-    pos.Print();
+    indent.Print("IndexExpr", pos);
+
+    printf("[%s]\n", GetType()->GetString().c_str());
+    indent.pushList(2);
+    baseExpr->Print(indent);
+    index->Print(indent);
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -4964,6 +5041,7 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
         }
 
         llvm::Value *basePtr = NULL;
+        AddressInfo *basePtrInfo = NULL;
         const Type *basePtrType = NULL;
         if (dereferenceExpr) {
             basePtr = expr->GetValue(ctx);
@@ -4976,19 +5054,19 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
         if (basePtr == NULL || basePtrType == NULL) {
             // Check that expression on the left side is a rvalue expression
             llvm::Value *exprValue = expr->GetValue(ctx);
-            basePtr = ctx->AllocaInst(expr->GetType());
+            basePtrInfo = ctx->AllocaInst(expr->GetType());
+            basePtr = basePtrInfo->getPointer();
             basePtrType = PointerType::GetUniform(exprVectorType);
             if (basePtr == NULL || basePtrType == NULL) {
                 AssertPos(pos, m->errorCount > 0);
                 return NULL;
             }
-            ctx->StoreInst(exprValue, basePtr, expr->GetType(), expr->GetType()->IsUniformType());
+            ctx->StoreInst(exprValue, basePtrInfo, expr->GetType());
         }
 
         // Allocate temporary memory to store the result
-        llvm::Value *resultPtr = ctx->AllocaInst(memberType, "vector_tmp");
-
-        if (resultPtr == NULL) {
+        AddressInfo *resultPtrInfo = ctx->AllocaInst(memberType, "vector_tmp");
+        if (resultPtrInfo == NULL) {
             AssertPos(pos, m->errorCount > 0);
             return NULL;
         }
@@ -4997,25 +5075,25 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
         // to the same logic where it's used elsewhere
         llvm::Value *elementMask = ctx->GetFullMask();
 
-        const Type *elementPtrType = NULL;
-        if (CastType<ReferenceType>(basePtrType) != NULL)
-            elementPtrType = PointerType::GetUniform(basePtrType->GetReferenceTarget());
-        else
-            elementPtrType = basePtrType->IsUniformType() ? PointerType::GetUniform(exprVectorType->GetElementType())
-                                                          : PointerType::GetVarying(exprVectorType->GetElementType());
-
+        const PointerType *ptrType = ctx->RegularizePointer(basePtrType);
+        const Type *elementPtrType = ptrType->IsUniformType()
+                                         ? PointerType::GetUniform(exprVectorType->GetElementType())
+                                         : PointerType::GetVarying(exprVectorType->GetElementType());
         ctx->SetDebugPos(pos);
         for (size_t i = 0; i < identifier.size(); ++i) {
             char idStr[2] = {identifier[i], '\0'};
-            llvm::Value *elementPtr =
-                ctx->AddElementOffset(basePtr, indices[i], basePtrType, llvm::Twine(basePtr->getName()) + idStr);
+            llvm::Value *elementPtr = ctx->AddElementOffset(new AddressInfo(basePtr, basePtrType), indices[i],
+                                                            llvm::Twine(basePtr->getName()) + idStr);
             llvm::Value *elementValue = ctx->LoadInst(elementPtr, elementMask, elementPtrType);
 
-            llvm::Value *ptmp = ctx->AddElementOffset(resultPtr, i, NULL, llvm::Twine(resultPtr->getName()) + idStr);
-            ctx->StoreInst(elementValue, ptmp, elementPtrType, expr->GetType()->IsUniformType());
+            llvm::Value *ptmp =
+                ctx->AddElementOffset(resultPtrInfo, i, llvm::Twine(resultPtrInfo->getPointer()->getName()) + idStr);
+            // TODO: when we have swizzle on bool type, it breaks here on StoreInst.
+            // The condition in StoreInst checking that SwitchBoolSize is needed doesn't detect it.
+            ctx->StoreInst(elementValue, new AddressInfo(ptmp, exprVectorType->GetElementType()), elementPtrType);
         }
 
-        return ctx->LoadInst(resultPtr, memberType, llvm::Twine(basePtr->getName()) + "_swizzle");
+        return ctx->LoadInst(resultPtrInfo, memberType, llvm::Twine(basePtr->getName()) + "_swizzle");
     }
 }
 
@@ -5133,14 +5211,14 @@ llvm::Value *MemberExpr::GetValue(FunctionEmitContext *ctx) const {
         }
         ctx->SetDebugPos(pos);
         const Type *exprType = expr->GetType();
-        llvm::Value *ptr = ctx->AllocaInst(exprType, "struct_tmp");
-        ctx->StoreInst(val, ptr, exprType, exprType->IsUniformType());
+        AddressInfo *ptrInfo = ctx->AllocaInst(exprType, "struct_tmp");
+        ctx->StoreInst(val, ptrInfo, exprType);
 
         int elementNumber = getElementNumber();
         if (elementNumber == -1)
             return NULL;
 
-        lvalue = ctx->AddElementOffset(ptr, elementNumber, PointerType::GetUniform(exprType));
+        lvalue = ctx->AddElementOffset(ptrInfo, elementNumber);
         lvalueType = PointerType::GetUniform(GetType());
         mask = LLVMMaskAllOn;
     } else {
@@ -5176,7 +5254,8 @@ llvm::Value *MemberExpr::GetLValue(FunctionEmitContext *ctx) const {
 
     const Type *exprLValueType = dereferenceExpr ? exprType : expr->GetLValueType();
     ctx->SetDebugPos(pos);
-    llvm::Value *ptr = ctx->AddElementOffset(basePtr, elementNumber, exprLValueType, basePtr->getName().str().c_str());
+    llvm::Value *ptr = ctx->AddElementOffset(new AddressInfo(basePtr, exprLValueType), elementNumber,
+                                             basePtr->getName().str().c_str());
     if (ptr == NULL) {
         AssertPos(pos, m->errorCount > 0);
         return NULL;
@@ -5199,14 +5278,20 @@ int MemberExpr::EstimateCost() const {
         return COST_SIMPLE_ARITH_LOGIC_OP;
 }
 
-void MemberExpr::Print() const {
-    if (!expr || !GetType())
+void MemberExpr::Print(Indent &indent) const {
+    if (!expr || !GetType()) {
+        indent.Print("MemberExpr: <NULL EXPR>\n");
+        indent.Done();
         return;
+    }
 
-    printf("[%s] member (", GetType()->GetString().c_str());
-    expr->Print();
-    printf(" . %s)", identifier.c_str());
-    pos.Print();
+    indent.Print("MemberExpr", pos);
+
+    printf("[%s] .%s\n", GetType()->GetString().c_str(), identifier.c_str());
+    indent.pushSingle();
+    expr->Print(indent);
+
+    indent.Done();
 }
 
 /** There is no structure member with the name we've got in "identifier".
@@ -5829,7 +5914,9 @@ Expr *ConstExpr::TypeCheck() { return this; }
 
 int ConstExpr::EstimateCost() const { return 0; }
 
-void ConstExpr::Print() const {
+void ConstExpr::Print(Indent &indent) const {
+    indent.Print("ConstExpr", pos);
+
     printf("[%s] (", GetType()->GetString().c_str());
     for (int i = 0; i < Count(); ++i) {
         switch (getBasicType()) {
@@ -5860,9 +5947,16 @@ void ConstExpr::Print() const {
         case AtomicType::TYPE_UINT64:
             printf("%" PRIu64, uint64Val[i]);
             break;
-        case AtomicType::TYPE_FLOAT16:
-            printf("%f", fpVal[i].convertToFloat());
+        case AtomicType::TYPE_FLOAT16: {
+            llvm::APFloat V(fpVal[i]);
+#if ISPC_LLVM_VERSION < ISPC_LLVM_13_0
+            // Starting from LLVM 13, this is done by convertToFloat() implicitly.
+            bool ignored;
+            V.convert(llvm::APFloat::IEEEsingle(), llvm::APFloat::rmNearestTiesToEven, &ignored);
+#endif
+            printf("%f", V.convertToFloat());
             break;
+        }
         case AtomicType::TYPE_FLOAT:
             printf("%f", fpVal[i].convertToFloat());
             break;
@@ -5875,8 +5969,9 @@ void ConstExpr::Print() const {
         if (i != Count() - 1)
             printf(", ");
     }
-    printf(")");
-    pos.Print();
+    printf(")\n");
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -7068,11 +7163,12 @@ int TypeCastExpr::EstimateCost() const {
     return COST_TYPECAST_SIMPLE;
 }
 
-void TypeCastExpr::Print() const {
-    printf("[%s] type cast (", GetType()->GetString().c_str());
-    expr->Print();
-    printf(")");
-    pos.Print();
+void TypeCastExpr::Print(Indent &indent) const {
+    indent.Print("TypeCastExpr", pos);
+    printf("[%s]\n", GetType()->GetString().c_str());
+    indent.pushSingle();
+    expr->Print(indent);
+    indent.Done();
 }
 
 Symbol *TypeCastExpr::GetBaseSymbol() const { return expr ? expr->GetBaseSymbol() : NULL; }
@@ -7118,14 +7214,15 @@ std::pair<llvm::Constant *, bool> TypeCastExpr::GetConstant(const Type *constTyp
 
     llvm::Value *ptr = NULL;
     if (GetBaseSymbol())
-        ptr = GetBaseSymbol()->storagePtr;
+        ptr = GetBaseSymbol()->storageInfo ? GetBaseSymbol()->storageInfo->getPointer() : NULL;
 
     if (ptr && llvm::dyn_cast<llvm::GlobalVariable>(ptr)) {
         if (CastType<ArrayType>(expr->GetType())) {
             if (llvm::Constant *c = llvm::dyn_cast<llvm::Constant>(ptr)) {
                 llvm::Value *offsets[2] = {LLVMInt32(0), LLVMInt32(0)};
                 llvm::ArrayRef<llvm::Value *> arrayRef(&offsets[0], &offsets[2]);
-                llvm::Value *resultPtr = llvm::ConstantExpr::getGetElementPtr(PTYPE(c), c, arrayRef);
+                llvm::Value *resultPtr = llvm::ConstantExpr::getGetElementPtr(
+                    llvm::dyn_cast<llvm::GlobalVariable>(ptr)->getValueType(), c, arrayRef);
                 if (resultPtr->getType() == constType->LLVMType(g->ctx)) {
                     llvm::Constant *ret = llvm::dyn_cast<llvm::Constant>(resultPtr);
                     return std::pair<llvm::Constant *, bool>(ret, false);
@@ -7169,9 +7266,9 @@ llvm::Value *ReferenceExpr::GetValue(FunctionEmitContext *ctx) const {
         return NULL;
     }
 
-    llvm::Value *ptr = ctx->AllocaInst(type);
-    ctx->StoreInst(value, ptr, type, expr->GetType()->IsUniformType());
-    return ptr;
+    AddressInfo *ptrInfo = ctx->AllocaInst(type);
+    ctx->StoreInst(value, ptrInfo, type);
+    return ptrInfo->getPointer();
 }
 
 Symbol *ReferenceExpr::GetBaseSymbol() const { return expr ? expr->GetBaseSymbol() : NULL; }
@@ -7212,14 +7309,20 @@ Expr *ReferenceExpr::TypeCheck() {
 
 int ReferenceExpr::EstimateCost() const { return 0; }
 
-void ReferenceExpr::Print() const {
-    if (expr == NULL || GetType() == NULL)
+void ReferenceExpr::Print(Indent &indent) const {
+    if (expr == NULL || GetType() == NULL) {
+        indent.Print("ReferenceExpr: <NULL EXPR>\n");
+        indent.Done();
         return;
+    }
 
-    printf("[%s] &(", GetType()->GetString().c_str());
-    expr->Print();
-    printf(")");
-    pos.Print();
+    indent.Print("ReferenceExpr", pos);
+
+    printf("[%s]\n", GetType()->GetString().c_str());
+    indent.pushSingle();
+    expr->Print(indent);
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -7324,14 +7427,20 @@ int PtrDerefExpr::EstimateCost() const {
         return COST_DEREF;
 }
 
-void PtrDerefExpr::Print() const {
-    if (expr == NULL || GetType() == NULL)
+void PtrDerefExpr::Print(Indent &indent) const {
+    if (expr == NULL || GetType() == NULL) {
+        indent.Print("PtrDerefExpr: <NULL EXPR>\n");
+        indent.Done();
         return;
+    }
 
-    printf("[%s] *(", GetType()->GetString().c_str());
-    expr->Print();
-    printf(")");
-    pos.Print();
+    indent.Print("PtrDerefExpr", pos);
+
+    printf("[%s]\n", GetType()->GetString().c_str());
+    indent.pushSingle();
+    expr->Print(indent);
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -7372,14 +7481,19 @@ int RefDerefExpr::EstimateCost() const {
     return COST_DEREF;
 }
 
-void RefDerefExpr::Print() const {
-    if (expr == NULL || GetType() == NULL)
+void RefDerefExpr::Print(Indent &indent) const {
+    if (expr == NULL || GetType() == NULL) {
+        indent.Print("RefDerefExpr: <NULL EXPR>\n");
         return;
+    }
 
-    printf("[%s] deref-reference (", GetType()->GetString().c_str());
-    expr->Print();
-    printf(")");
-    pos.Print();
+    indent.Print("RefDerefExpr", pos);
+
+    printf("[%s]\n", GetType()->GetString().c_str());
+    indent.pushSingle();
+    expr->Print(indent);
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -7433,14 +7547,20 @@ const Type *AddressOfExpr::GetLValueType() const {
 
 Symbol *AddressOfExpr::GetBaseSymbol() const { return expr ? expr->GetBaseSymbol() : NULL; }
 
-void AddressOfExpr::Print() const {
-    printf("&(");
-    if (expr)
-        expr->Print();
-    else
-        printf("NULL expr");
-    printf(")");
-    pos.Print();
+void AddressOfExpr::Print(Indent &indent) const {
+    if (expr == NULL || GetType() == NULL) {
+        indent.Print("AddressOfExpr: <NULL EXPR>\n");
+        indent.Done();
+        return;
+    }
+
+    indent.Print("AddressOfExpr", pos);
+
+    printf("[%s]\n", GetType()->GetString().c_str());
+    indent.pushSingle();
+    expr->Print(indent);
+
+    indent.Done();
 }
 
 Expr *AddressOfExpr::TypeCheck() {
@@ -7484,7 +7604,7 @@ std::pair<llvm::Constant *, bool> AddressOfExpr::GetConstant(const Type *type) c
     }
     llvm::Value *ptr = NULL;
     if (GetBaseSymbol())
-        ptr = GetBaseSymbol()->storagePtr;
+        ptr = GetBaseSymbol()->storageInfo ? GetBaseSymbol()->storageInfo->getPointer() : NULL;
     if (ptr && llvm::dyn_cast<llvm::GlobalVariable>(ptr)) {
         const Type *eTYPE = GetType();
         if (type->LLVMType(g->ctx) == eTYPE->LLVMType(g->ctx)) {
@@ -7511,7 +7631,8 @@ std::pair<llvm::Constant *, bool> AddressOfExpr::GetConstant(const Type *type) c
                     return std::pair<llvm::Constant *, bool>(NULL, false);
                 gepIndex.insert(gepIndex.begin(), LLVMInt64(0));
                 llvm::Constant *c = llvm::cast<llvm::Constant>(ptr);
-                llvm::Constant *c1 = llvm::ConstantExpr::getGetElementPtr(PTYPE(c), c, gepIndex);
+                llvm::Constant *c1 = llvm::ConstantExpr::getGetElementPtr(
+                    llvm::dyn_cast<llvm::GlobalVariable>(ptr)->getValueType(), c, gepIndex);
                 return std::pair<llvm::Constant *, bool>(c1, isNotValidForMultiTargetGlobal);
             }
         }
@@ -7546,15 +7667,20 @@ const Type *SizeOfExpr::GetType() const {
                                                                  : AtomicType::UniformUInt64;
 }
 
-void SizeOfExpr::Print() const {
-    printf("Sizeof (");
-    if (expr != NULL)
-        expr->Print();
-    const Type *t = expr ? expr->GetType() : type;
-    if (t != NULL)
-        printf(" [type %s]", t->GetString().c_str());
-    printf(")");
-    pos.Print();
+void SizeOfExpr::Print(Indent &indent) const {
+    indent.Print("SizeOfExpr", pos);
+
+    if (expr != nullptr) {
+        printf("\n");
+        indent.pushSingle();
+        expr->Print(indent);
+    } else if (type != nullptr) {
+        printf("type arg: [%s]\n", type->GetString().c_str());
+    } else {
+        printf("<NULL>\n");
+    }
+
+    indent.Done();
 }
 
 Expr *SizeOfExpr::TypeCheck() {
@@ -7604,22 +7730,27 @@ llvm::Value *AllocaExpr::GetValue(FunctionEmitContext *ctx) const {
     llvm::Value *llvmValue = expr->GetValue(ctx);
     if (llvmValue == NULL)
         return NULL;
-    llvm::Value *resultPtr = ctx->AllocaInst((LLVMTypes::VoidPointerType)->PTR_ELT_TYPE(), llvmValue, "allocaExpr", 16,
-                                             false); // 16 byte stack alignment.
+    llvm::Value *resultPtr = ctx->AllocaInst(LLVMTypes::Int8Type, llvmValue, "allocaExpr", 16,
+                                             false)
+                                 ->getPointer(); // 16 byte stack alignment.
     return resultPtr;
 }
 
 const Type *AllocaExpr::GetType() const { return PointerType::Void; }
 
-void AllocaExpr::Print() const {
-    printf("AllocaExpr (");
-    if (expr != NULL)
-        expr->Print();
-    const Type *t = expr ? expr->GetType() : NULL;
-    if (t != NULL)
-        printf(" [type %s]", t->GetString().c_str());
-    printf(")");
-    pos.Print();
+void AllocaExpr::Print(Indent &indent) const {
+    if (expr == nullptr) {
+        indent.Print("AllocaExpr: <NULL EXPR>\n");
+        indent.Done();
+        return;
+    }
+
+    indent.PrintLn("AllocaExpr", pos);
+
+    indent.pushSingle();
+    expr->Print(indent);
+
+    indent.Done();
 }
 
 Expr *AllocaExpr::TypeCheck() {
@@ -7651,8 +7782,8 @@ int AllocaExpr::EstimateCost() const { return 0; }
 SymbolExpr::SymbolExpr(Symbol *s, SourcePos p) : Expr(p, SymbolExprID) { symbol = s; }
 
 llvm::Value *SymbolExpr::GetValue(FunctionEmitContext *ctx) const {
-    // storagePtr may be NULL due to an earlier compilation error
-    if (!symbol || !symbol->storagePtr)
+    // storageInfo may be NULL due to an earlier compilation error
+    if (!symbol || !symbol->storageInfo)
         return NULL;
     ctx->SetDebugPos(pos);
 
@@ -7664,14 +7795,14 @@ llvm::Value *SymbolExpr::GetValue(FunctionEmitContext *ctx) const {
         return ctx->XeSimdCFPredicate(LLVMMaskAllOn);
     }
 #endif
-    return ctx->LoadInst(symbol->storagePtr, symbol->type, loadName.c_str());
+    return ctx->LoadInst(symbol->storageInfo, symbol->type, loadName.c_str());
 }
 
 llvm::Value *SymbolExpr::GetLValue(FunctionEmitContext *ctx) const {
     if (symbol == NULL)
         return NULL;
     ctx->SetDebugPos(pos);
-    return symbol->storagePtr;
+    return symbol->storageInfo->getPointer();
 }
 
 const Type *SymbolExpr::GetLValueType() const {
@@ -7706,12 +7837,18 @@ int SymbolExpr::EstimateCost() const {
     return 0;
 }
 
-void SymbolExpr::Print() const {
-    if (symbol == NULL || GetType() == NULL)
+void SymbolExpr::Print(Indent &indent) const {
+    if (symbol == NULL || GetType() == NULL) {
+        indent.Print("SymbolExpr: <NULL EXPR>\n");
+        indent.Done();
         return;
+    }
 
-    printf("[%s] sym: (%s)", GetType()->GetString().c_str(), symbol->name.c_str());
-    pos.Print();
+    indent.Print("SymbolExpr", pos);
+
+    printf("[%s] symbol name: %s\n", GetType()->GetString().c_str(), symbol->name.c_str());
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -7746,12 +7883,18 @@ Expr *FunctionSymbolExpr::Optimize() { return this; }
 
 int FunctionSymbolExpr::EstimateCost() const { return 0; }
 
-void FunctionSymbolExpr::Print() const {
-    if (!matchingFunc || !GetType())
+void FunctionSymbolExpr::Print(Indent &indent) const {
+    if (!matchingFunc || !GetType()) {
+        indent.Print("FunctionSymbolExpr: <NULL EXPR>\n");
+        indent.Done();
         return;
+    }
 
-    printf("[%s] fun sym (%s)", GetType()->GetString().c_str(), matchingFunc->name.c_str());
-    pos.Print();
+    indent.Print("FunctionSymbolExpr", pos);
+
+    printf("[%s] function name: %s\n", GetType()->GetString().c_str(), matchingFunc->name.c_str());
+
+    indent.Done();
 }
 
 std::pair<llvm::Constant *, bool> FunctionSymbolExpr::GetConstant(const Type *type) const {
@@ -8115,9 +8258,9 @@ llvm::Value *SyncExpr::GetValue(FunctionEmitContext *ctx) const {
 
 int SyncExpr::EstimateCost() const { return COST_SYNC; }
 
-void SyncExpr::Print() const {
-    printf("sync");
-    pos.Print();
+void SyncExpr::Print(Indent &indent) const {
+    indent.PrintLn("SyncExpr", pos);
+    indent.Done();
 }
 
 Expr *SyncExpr::TypeCheck() { return this; }
@@ -8151,9 +8294,9 @@ std::pair<llvm::Constant *, bool> NullPointerExpr::GetConstant(const Type *type)
     return std::pair<llvm::Constant *, bool>(llvm::Constant::getNullValue(llvmType), false);
 }
 
-void NullPointerExpr::Print() const {
-    printf("NULL");
-    pos.Print();
+void NullPointerExpr::Print(Indent &indent) const {
+    indent.PrintLn("NullPointerExpr", pos);
+    indent.Done();
 }
 
 int NullPointerExpr::EstimateCost() const { return 0; }
@@ -8280,7 +8423,7 @@ llvm::Value *NewExpr::GetValue(FunctionEmitContext *ctx) const {
                 ctx->SetCurrentBasicBlock(bbInit);
                 llvm::Type *ptrType = retType->GetAsUniformType()->LLVMType(g->ctx);
                 llvm::Value *ptr = ctx->IntToPtrInst(p, ptrType);
-                InitSymbol(ptr, allocType, initExpr, ctx, pos);
+                InitSymbol(new AddressInfo(ptr, ptrType), allocType, initExpr, ctx, pos);
                 ctx->BranchInst(bbSkip);
 
                 ctx->SetCurrentBasicBlock(bbSkip);
@@ -8296,7 +8439,7 @@ llvm::Value *NewExpr::GetValue(FunctionEmitContext *ctx) const {
         ptrValue = ctx->BitCastInst(ptrValue, ptrType, llvm::Twine(ptrValue->getName()) + "_cast_ptr");
 
         if (initExpr != NULL)
-            InitSymbol(ptrValue, allocType, initExpr, ctx, pos);
+            InitSymbol(new AddressInfo(ptrValue, ptrType), allocType, initExpr, ctx, pos);
 
         return ptrValue;
     }
@@ -8368,6 +8511,26 @@ Expr *NewExpr::TypeCheck() {
 
 Expr *NewExpr::Optimize() { return this; }
 
-void NewExpr::Print() const { printf("new (%s)", allocType ? allocType->GetString().c_str() : "NULL"); }
+void NewExpr::Print(Indent &indent) const {
+    indent.Print("NewExpr", pos);
+
+    printf("[%s] isVarying: %s\n", allocType ? allocType->GetString().c_str() : "<NULL allocType>",
+           isVarying ? "true" : "false");
+
+    if (countExpr || initExpr) {
+        int kids = (countExpr ? 1 : 0) + (initExpr ? 1 : 0);
+        indent.pushList(kids);
+        if (countExpr) {
+            indent.setNextLabel("count");
+            countExpr->Print(indent);
+        }
+        if (initExpr) {
+            indent.setNextLabel("init");
+            initExpr->Print(indent);
+        }
+    }
+
+    indent.Done();
+}
 
 int NewExpr::EstimateCost() const { return COST_NEW; }

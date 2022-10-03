@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -133,7 +133,7 @@ static const char *lBuiltinTokens[] = {
     "do", "delete", "double", "else", "enum", "export", "extern", "false",
     "float16", "float", "for", "foreach", "foreach_active", "foreach_tiled",
     "foreach_unique", "goto", "if", "in", "inline",
-    "int", "int8", "int16", "int32", "int64", "launch", "new", "NULL",
+    "int", "int8", "int16", "int32", "int64", "invoke_sycl", "launch", "new", "NULL",
     "print", "return", "signed", "sizeof", "static", "struct", "switch",
     "sync", "task", "true", "typedef", "uniform", "unmasked", "unsigned",
     "varying", "void", "while", NULL
@@ -197,7 +197,7 @@ struct ForeachDimension {
 %token TOKEN_INT64_CONSTANT TOKEN_UINT64_CONSTANT
 %token TOKEN_INT32DOTDOTDOT_CONSTANT TOKEN_UINT32DOTDOTDOT_CONSTANT
 %token TOKEN_INT64DOTDOTDOT_CONSTANT TOKEN_UINT64DOTDOTDOT_CONSTANT
-%token TOKEN_FLOAT16_CONSTANT TOKEN_FLOAT_CONSTANT TOKEN_DOUBLE_CONSTANT TOKEN_STRING_C_LITERAL
+%token TOKEN_FLOAT16_CONSTANT TOKEN_FLOAT_CONSTANT TOKEN_DOUBLE_CONSTANT TOKEN_STRING_C_LITERAL TOKEN_STRING_SYCL_LITERAL
 %token TOKEN_IDENTIFIER TOKEN_STRING_LITERAL TOKEN_TYPE_NAME TOKEN_PRAGMA TOKEN_NULL
 %token TOKEN_PTR_OP TOKEN_INC_OP TOKEN_DEC_OP TOKEN_LEFT_OP TOKEN_RIGHT_OP
 %token TOKEN_LE_OP TOKEN_GE_OP TOKEN_EQ_OP TOKEN_NE_OP
@@ -206,7 +206,7 @@ struct ForeachDimension {
 %token TOKEN_AND_ASSIGN TOKEN_OR_ASSIGN TOKEN_XOR_ASSIGN
 %token TOKEN_SIZEOF TOKEN_NEW TOKEN_DELETE TOKEN_IN TOKEN_INTRINSIC_CALL TOKEN_ALLOCA
 
-%token TOKEN_EXTERN TOKEN_EXPORT TOKEN_STATIC TOKEN_INLINE TOKEN_NOINLINE TOKEN_VECTORCALL TOKEN_TASK TOKEN_DECLSPEC
+%token TOKEN_EXTERN TOKEN_EXPORT TOKEN_STATIC TOKEN_INLINE TOKEN_NOINLINE TOKEN_VECTORCALL TOKEN_REGCALL TOKEN_TASK TOKEN_DECLSPEC
 %token TOKEN_UNIFORM TOKEN_VARYING TOKEN_TYPEDEF TOKEN_SOA TOKEN_UNMASKED
 %token TOKEN_CHAR TOKEN_INT TOKEN_SIGNED TOKEN_UNSIGNED TOKEN_FLOAT16 TOKEN_FLOAT TOKEN_DOUBLE
 %token TOKEN_INT8 TOKEN_INT16 TOKEN_INT64 TOKEN_CONST TOKEN_VOID TOKEN_BOOL
@@ -218,13 +218,14 @@ struct ForeachDimension {
 %token TOKEN_FOREACH_UNIQUE TOKEN_FOREACH_ACTIVE TOKEN_DOTDOTDOT
 %token TOKEN_FOR TOKEN_GOTO TOKEN_CONTINUE TOKEN_BREAK TOKEN_RETURN
 %token TOKEN_CIF TOKEN_CDO TOKEN_CFOR TOKEN_CWHILE
-%token TOKEN_SYNC TOKEN_PRINT TOKEN_ASSERT
+%token TOKEN_SYNC TOKEN_PRINT TOKEN_ASSERT TOKEN_INVOKE_SYCL
 
 %type <expr> primary_expression postfix_expression integer_dotdotdot
 %type <expr> unary_expression cast_expression funcall_expression launch_expression intrincall_expression
 %type <expr> multiplicative_expression additive_expression shift_expression
 %type <expr> relational_expression equality_expression and_expression
 %type <expr> exclusive_or_expression inclusive_or_expression
+%type <expr> invoke_sycl_expression
 %type <expr> logical_and_expression logical_or_expression new_expression
 %type <expr> conditional_expression assignment_expression expression
 %type <expr> initializer constant_expression for_test
@@ -472,6 +473,19 @@ launch_expression
        }
     ;
 
+invoke_sycl_expression
+    : TOKEN_INVOKE_SYCL '(' postfix_expression ')'
+      {
+          $$ = new FunctionCallExpr($3, new ExprList(@4), Union(@1,@4), false, NULL, true);
+      }
+    | TOKEN_INVOKE_SYCL '(' postfix_expression ',' argument_expression_list ')'
+      {
+          $$ = new FunctionCallExpr($3, $5, Union(@1,@6), false, NULL, true);
+      }
+    | TOKEN_INVOKE_SYCL '(' error ')'
+      { $$ = NULL; }
+    ;
+
 postfix_expression
     : primary_expression
     | postfix_expression '[' expression ']'
@@ -540,6 +554,7 @@ argument_expression_list
 unary_expression
     : funcall_expression
     | intrincall_expression
+    | invoke_sycl_expression
     | TOKEN_INC_OP unary_expression
       { $$ = new UnaryExpr(UnaryExpr::PreInc, $2, Union(@1, @2)); }
     | TOKEN_DEC_OP unary_expression
@@ -962,6 +977,7 @@ storage_class_specifier
     : TOKEN_TYPEDEF { $$ = SC_TYPEDEF; }
     | TOKEN_EXTERN { $$ = SC_EXTERN; }
     | TOKEN_EXTERN TOKEN_STRING_C_LITERAL  { $$ = SC_EXTERN_C; }
+    | TOKEN_EXTERN TOKEN_STRING_SYCL_LITERAL  { $$ = SC_EXTERN_SYCL; }
     | TOKEN_STATIC { $$ = SC_STATIC; }
     ;
 
@@ -1195,6 +1211,11 @@ specifier_qualifier_list
                       "function declarations.");
                 $$ = $2;
             }
+            else if ($1 == TYPEQUAL_REGCALL) {
+                Error(@1, "\"__regcall\" qualifier is illegal outside of "
+                      "function declarations.");
+                $$ = $2;
+            }
             else if ($1 == TYPEQUAL_TASK) {
                 Error(@1, "\"task\" qualifier is illegal outside of "
                       "function declarations.");
@@ -1347,6 +1368,7 @@ type_qualifier
     | TOKEN_INLINE        { $$ = TYPEQUAL_INLINE; }
     | TOKEN_NOINLINE      { $$ = TYPEQUAL_NOINLINE; }
     | TOKEN_VECTORCALL    { $$ = TYPEQUAL_VECTORCALL; }
+    | TOKEN_REGCALL       { $$ = TYPEQUAL_REGCALL; }
     | TOKEN_SIGNED        { $$ = TYPEQUAL_SIGNED; }
     | TOKEN_UNSIGNED      { $$ = TYPEQUAL_UNSIGNED; }
     ;
@@ -2109,6 +2131,7 @@ translation_unit
 external_declaration
     : function_definition
     | TOKEN_EXTERN TOKEN_STRING_C_LITERAL '{' declaration '}'
+    | TOKEN_EXTERN TOKEN_STRING_SYCL_LITERAL '{' declaration '}'
     | TOKEN_EXPORT '{' type_specifier_list '}' ';'
     {
         if ($3 != NULL)
@@ -2271,8 +2294,9 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
             bool isInline = (ds->typeQualifiers & TYPEQUAL_INLINE);
             bool isNoInline = (ds->typeQualifiers & TYPEQUAL_NOINLINE);
             bool isVectorCall = (ds->typeQualifiers & TYPEQUAL_VECTORCALL);
+            bool isRegCall = (ds->typeQualifiers & TYPEQUAL_REGCALL);
             m->AddFunctionDeclaration(decl->name, ft, ds->storageClass,
-                                      isInline, isNoInline, isVectorCall, decl->pos);
+                                      isInline, isNoInline, isVectorCall, isRegCall, decl->pos);
         }
         else {
             bool isConst = (ds->typeQualifiers & TYPEQUAL_CONST) != 0;
@@ -2418,6 +2442,8 @@ lGetStorageClassString(StorageClass sc) {
         return "typedef";
     case SC_EXTERN_C:
         return "extern \"C\"";
+    case SC_EXTERN_SYCL:
+        return "extern \"SYCL\"";
     default:
         Assert(!"logic error in lGetStorageClassString()");
         return "";

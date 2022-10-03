@@ -1,0 +1,19 @@
+// All check strings for this test are moved to a separate file, as otherwise
+// some of the messages will match themselves in preprocessed output.
+
+// CHECK_PASS_0: return 1337;
+// CHECK_PASS_0: return 314159;
+
+// CHECK_PASS_1: ret i32 1337
+// CHECK_PASS_1: ret i32 314159
+
+// CHECK_PASS_2: return 7331;
+// CHECK_PASS_2: return 314159;
+
+// CHECK_PASS_3: ret i32 7331
+// CHECK_PASS_3: ret i32 314159
+
+// CHECK_ERROR:  DO_ELSE: Preprocessor #error
+
+// CHECK_WARN:   Emitting preprocessed stub file
+

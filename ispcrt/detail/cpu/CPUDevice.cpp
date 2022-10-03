@@ -1,7 +1,8 @@
-// Copyright 2020-2021 Intel Corporation
+// Copyright 2020-2022 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "CPUDevice.h"
+#include "CPUContext.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 #include "windows.h"
@@ -11,6 +12,7 @@
 // std
 #include <cassert>
 #include <chrono>
+#include <cstring>
 #include <exception>
 #include <string>
 
@@ -24,7 +26,7 @@ struct Future : public ispcrt::base::Future {
     bool valid() override { return m_valid; }
     uint64_t time() override { return m_time; }
 
-    friend class TaskQueue;
+    friend struct TaskQueue;
 
   private:
     uint64_t m_time{0};
@@ -34,31 +36,45 @@ struct Future : public ispcrt::base::Future {
 using CPUKernelEntryPoint = void (*)(void *, size_t, size_t, size_t);
 
 struct MemoryView : public ispcrt::base::MemoryView {
-    MemoryView(void *appMem, size_t numBytes, bool shared) :
-            m_mem(appMem), m_size(numBytes), m_shared(shared) {
-        if (m_shared) {
-            m_mem = malloc(m_size);
-            if (!m_mem)
-                throw std::bad_alloc();
-        }
-    }
+    MemoryView(void *appMem, size_t numBytes, bool shared) : m_hostPtr(appMem), m_devicePtr(appMem), m_size(numBytes), m_shared(shared) {}
 
     ~MemoryView() {
-        if (m_shared)
-            free(m_mem);
+        if (!m_external_alloc && m_devicePtr)
+            free(m_devicePtr);
     }
 
     bool isShared() { return m_shared; }
 
-    void *hostPtr() { return m_mem; };
+    void *hostPtr() {
+        if (m_shared) {
+            return devicePtr();
+        }
+        else {
+            if (!m_hostPtr)
+                 throw std::logic_error("pointer to the host memory is NULL");
+            return m_hostPtr;
+        }
+    };
 
-    void *devicePtr() { return m_mem; };
+    void *devicePtr() {
+        if (!m_devicePtr)
+            allocate();
+        return m_devicePtr;
+    };
 
     size_t numBytes() { return m_size; };
 
   private:
+    void allocate() {
+        m_devicePtr = malloc(m_size);
+        if (!m_devicePtr)
+            throw std::bad_alloc();
+        m_external_alloc = false;
+    }
+    bool m_external_alloc{true};
     bool m_shared{false};
-    void *m_mem{nullptr};
+    void *m_hostPtr{nullptr};
+    void *m_devicePtr{nullptr};
     size_t m_size{0};
 };
 
@@ -94,6 +110,17 @@ struct Module : public ispcrt::base::Module {
 
     void *lib() const { return m_lib; }
 
+    void *functionPtr(const char *name) const override {
+#if defined(_WIN32) || defined(_WIN64)
+        void *fptr = GetProcAddress((HMODULE)m_lib, name);
+#else
+        void *fptr = dlsym(m_lib ? m_lib : RTLD_DEFAULT, name);
+#endif
+        if (!fptr)
+            throw std::logic_error("could not find CPU function");
+        return fptr;
+    }
+
   private:
     std::string m_file;
     void *m_lib{nullptr};
@@ -105,7 +132,7 @@ struct Kernel : public ispcrt::base::Kernel {
 
         auto name = std::string(_name) + "_cpu_entry_point";
 #if defined(_WIN32) || defined(_WIN64)
-        void* fcn = GetProcAddress((HMODULE)module.lib(), name.c_str());
+        void *fcn = GetProcAddress((HMODULE)module.lib(), name.c_str());
 #else
         void *fcn = dlsym(module.lib() ? module.lib() : RTLD_DEFAULT, name.c_str());
 #endif
@@ -148,6 +175,12 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         // no-op
     }
 
+    void copyMemoryView(base::MemoryView &mv_dst, base::MemoryView &mv_src, const size_t size) override {
+        auto &view_dst = (cpu::MemoryView &)mv_dst;
+        auto &view_src = (cpu::MemoryView &)mv_src;
+        memcpy(view_dst.devicePtr(), view_src.devicePtr(), size);
+    }
+
     ispcrt::base::Future *launch(ispcrt::base::Kernel &k, ispcrt::base::MemoryView *params, size_t dim0, size_t dim1,
                                  size_t dim2) override {
         auto &kernel = (cpu::Kernel &)k;
@@ -176,14 +209,10 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         // no-op
     }
 
-    void* taskQueueNativeHandle() const override {
-        return nullptr;
-    }
+    void *taskQueueNativeHandle() const override { return nullptr; }
 };
 
-uint32_t deviceCount() {
-    return 1;
-}
+uint32_t deviceCount() { return 1; }
 
 ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx) {
     ISPCRTDeviceInfo info;
@@ -200,7 +229,11 @@ ispcrt::base::MemoryView *CPUDevice::newMemoryView(void *appMem, size_t numBytes
 
 ispcrt::base::TaskQueue *CPUDevice::newTaskQueue() const { return new cpu::TaskQueue(); }
 
-ispcrt::base::Module *CPUDevice::newModule(const char *moduleFile, const ISPCRTModuleOptions &moduleOpts) const { return new cpu::Module(moduleFile); }
+ispcrt::base::Module *CPUDevice::newModule(const char *moduleFile, const ISPCRTModuleOptions &moduleOpts) const {
+    return new cpu::Module(moduleFile);
+}
+
+void CPUDevice::linkModules(base::Module **modules, const uint32_t numModules) const {}
 
 ispcrt::base::Kernel *CPUDevice::newKernel(const ispcrt::base::Module &module, const char *name) const {
     return new cpu::Kernel(module, name);
@@ -211,5 +244,19 @@ void *CPUDevice::platformNativeHandle() const { return nullptr; }
 void *CPUDevice::deviceNativeHandle() const { return nullptr; }
 
 void *CPUDevice::contextNativeHandle() const { return nullptr; }
+
+ISPCRTAllocationType CPUDevice::getMemAllocType(void* appMemory) const {
+    return ISPCRT_ALLOC_TYPE_UNKNOWN;
+}
+
+ispcrt::base::MemoryView *CPUContext::newMemoryView(void *appMem, size_t numBytes, bool shared) const {
+    return new cpu::MemoryView(appMem, numBytes, shared);
+}
+
+ISPCRTDeviceType CPUContext::getDeviceType() const {
+    return ISPCRTDeviceType::ISPCRT_DEVICE_TYPE_CPU;
+}
+
+void *CPUContext::contextNativeHandle() const { return nullptr; }
 
 } // namespace ispcrt

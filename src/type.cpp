@@ -2258,8 +2258,9 @@ llvm::DIType *ReferenceType::GetDIType(llvm::DIScope *scope) const {
 // FunctionType
 
 FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 8> &a, SourcePos p)
-    : Type(FUNCTION_TYPE), isTask(false), isExported(false), isExternC(false), isUnmasked(false), returnType(r),
-      paramTypes(a), paramNames(llvm::SmallVector<std::string, 8>(a.size(), "")),
+    : Type(FUNCTION_TYPE), isTask(false), isExported(false), isExternC(false), isExternSYCL(false), isUnmasked(false),
+      isVectorCall(false), isRegCall(false), returnType(r), paramTypes(a),
+      paramNames(llvm::SmallVector<std::string, 8>(a.size(), "")),
       paramDefaults(llvm::SmallVector<Expr *, 8>(a.size(), NULL)),
       paramPositions(llvm::SmallVector<SourcePos, 8>(a.size(), p)) {
     Assert(returnType != NULL);
@@ -2269,9 +2270,11 @@ FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 
 
 FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 8> &a,
                            const llvm::SmallVector<std::string, 8> &an, const llvm::SmallVector<Expr *, 8> &ad,
-                           const llvm::SmallVector<SourcePos, 8> &ap, bool it, bool is, bool ec, bool ium)
-    : Type(FUNCTION_TYPE), isTask(it), isExported(is), isExternC(ec), isUnmasked(ium), returnType(r), paramTypes(a),
-      paramNames(an), paramDefaults(ad), paramPositions(ap) {
+                           const llvm::SmallVector<SourcePos, 8> &ap, bool it, bool is, bool ec, bool esycl, bool ium,
+                           bool ivc, bool irc)
+    : Type(FUNCTION_TYPE), isTask(it), isExported(is), isExternC(ec), isExternSYCL(esycl), isUnmasked(ium),
+      isVectorCall(ivc), isRegCall(irc), returnType(r), paramTypes(a), paramNames(an), paramDefaults(ad),
+      paramPositions(ap) {
     Assert(paramTypes.size() == paramNames.size() && paramNames.size() == paramDefaults.size() &&
            paramDefaults.size() == paramPositions.size());
     Assert(returnType != NULL);
@@ -2293,7 +2296,9 @@ bool FunctionType::IsConstType() const { return false; }
 
 bool FunctionType::IsISPCKernel() const { return g->target->isXeTarget() && isTask; }
 
-bool FunctionType::IsISPCExternal() const { return g->target->isXeTarget() && (isExported || isExternC); }
+bool FunctionType::IsISPCExternal() const {
+    return g->target->isXeTarget() && (isExported || isExternC || isExternSYCL);
+}
 
 const Type *FunctionType::GetBaseType() const {
     FATAL("FunctionType::GetBaseType() shouldn't be called");
@@ -2336,8 +2341,8 @@ const FunctionType *FunctionType::ResolveUnboundVariability(Variability v) const
         pt.push_back(paramTypes[i]->ResolveUnboundVariability(v));
     }
 
-    FunctionType *ret =
-        new FunctionType(rt, pt, paramNames, paramDefaults, paramPositions, isTask, isExported, isExternC, isUnmasked);
+    FunctionType *ret = new FunctionType(rt, pt, paramNames, paramDefaults, paramPositions, isTask, isExported,
+                                         isExternC, isExternSYCL, isUnmasked, isVectorCall, isRegCall);
     ret->isSafe = isSafe;
     ret->costOverride = costOverride;
 
@@ -2349,16 +2354,26 @@ const Type *FunctionType::GetAsConstType() const { return this; }
 const Type *FunctionType::GetAsNonConstType() const { return this; }
 
 std::string FunctionType::GetString() const {
-    std::string ret = GetReturnTypeString();
+    std::string ret = GetNameForCallConv();
+    ret += " ";
+    ret += GetReturnTypeString();
     ret += "(";
     for (unsigned int i = 0; i < paramTypes.size(); ++i) {
-        if (paramTypes[i] == NULL)
+        if (paramTypes[i] == NULL) {
             ret += "/* ERROR */";
-        else
+        } else {
             ret += paramTypes[i]->GetString();
+        }
 
-        if (i != paramTypes.size() - 1)
+        ret += " " + paramNames[i];
+
+        if (paramDefaults[i] != NULL) {
+            ret += " = init";
+        }
+
+        if (i != paramTypes.size() - 1) {
             ret += ", ";
+        }
     }
     ret += ")";
     return ret;
@@ -2477,6 +2492,8 @@ const std::string FunctionType::GetReturnTypeString() const {
         ret += "export ";
     if (isExternC)
         ret += "extern \"C\" ";
+    if (isExternSYCL)
+        ret += "extern \"SYCL\" ";
     if (isUnmasked)
         ret += "unmasked ";
     if (isSafe)
@@ -2490,17 +2507,32 @@ const std::string FunctionType::GetReturnTypeString() const {
     return ret + returnType->GetString();
 }
 
-llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
-    if (!g->target->isXeTarget() && isTask == true) {
-        Assert(removeMask == false);
+FunctionType::FunctionMangledName FunctionType::GetFunctionMangledName(bool appFunction) const {
+    FunctionMangledName mangle = {};
+    // Mangle internal functions name.
+    if (!(isExternC || isExternSYCL || appFunction)) {
+        mangle.suffix += Mangle();
     }
+    // Always add target suffix except extern "C" and extern "SYCL" internal cases.
+    if (g->mangleFunctionsWithTarget) {
+        if ((!appFunction && !isExternC && !isExternSYCL) || appFunction) {
+            mangle.suffix += std::string("_") + g->target->GetISAString();
+        }
+    }
+    // If the function is declared as regcall, add __regcall3__ prefix.
+    if (isRegCall) {
+        mangle.prefix += "__regcall3__";
+    }
+    return mangle;
+}
 
+std::vector<llvm::Type *> FunctionType::LLVMFunctionArgTypes(llvm::LLVMContext *ctx, bool removeMask) const {
     // Get the LLVM Type *s for the function arguments
     std::vector<llvm::Type *> llvmArgTypes;
     for (unsigned int i = 0; i < paramTypes.size(); ++i) {
         if (paramTypes[i] == NULL) {
             Assert(m->errorCount > 0);
-            return NULL;
+            return llvmArgTypes;
         }
         Assert(paramTypes[i]->IsVoidType() == false);
 
@@ -2521,10 +2553,17 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
                 castedArgType = refPtr->LLVMType(ctx);
             }
         }
+        // For extern "SYCL" functions on Xe targets broadcast uniform parameters
+        // to varying to match IGC signature by vISA level.
+        if (g->target->isXeTarget() && isExternSYCL) {
+            if (argType->IsUniformType()) {
+                castedArgType = argType->GetAsVaryingType()->LLVMType(ctx);
+            }
+        }
 
         if (castedArgType == NULL) {
             Assert(m->errorCount > 0);
-            return NULL;
+            return llvmArgTypes;
         }
         llvmArgTypes.push_back(castedArgType);
     }
@@ -2533,6 +2572,15 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
     if (!(removeMask || isUnmasked || IsISPCKernel())) {
         llvmArgTypes.push_back(LLVMTypes::MaskType);
     }
+    return llvmArgTypes;
+}
+
+llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
+    if (!g->target->isXeTarget() && isTask == true) {
+        Assert(removeMask == false);
+    }
+
+    std::vector<llvm::Type *> llvmArgTypes = LLVMFunctionArgTypes(ctx, removeMask);
 
     std::vector<llvm::Type *> callTypes;
     if (isTask && (!g->target->isXeTarget())) {
@@ -2566,9 +2614,57 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
     const Type *retType = returnType;
 
     llvm::Type *llvmReturnType = retType->LLVMType(g->ctx);
+    // For extern "SYCL" functions on XE targets broadcast uniform return value
+    // to varying to match IGC signature by vISA level.
+    if (g->target->isXeTarget() && isExternSYCL) {
+        if (!retType->IsVoidType() && retType->IsUniformType()) {
+            llvmReturnType = retType->GetAsVaryingType()->LLVMType(ctx);
+        }
+    }
     if (llvmReturnType == NULL)
         return NULL;
     return llvm::FunctionType::get(llvmReturnType, callTypes, false);
+}
+
+const unsigned int FunctionType::GetCallingConv() const {
+    // Default calling convention on CPU targets is CallingConv::C.
+    // If __vectorcall or __regcall is specified explicitly, corresponding
+    // llvm::CallingConv will be used.
+    // For Xe targets it is either CallingConv::SPIR_KERNEL for kernels or
+    // CallingConv::SPIR_FUNC for all other functions.
+    if (isRegCall && (isExternC || isExternSYCL))
+        return (unsigned int)llvm::CallingConv::X86_RegCall;
+
+    if (g->target->isXeTarget()) {
+        if (IsISPCKernel()) {
+            return (unsigned int)llvm::CallingConv::SPIR_KERNEL;
+        } else {
+            return (unsigned int)llvm::CallingConv::SPIR_FUNC;
+        }
+    }
+
+    if (g->calling_conv == CallingConv::x86_vectorcall) {
+        if ((isVectorCall && isExternC) || !isExternC)
+            return (unsigned int)llvm::CallingConv::X86_VectorCall;
+    }
+    return (unsigned int)llvm::CallingConv::C;
+}
+
+const std::string FunctionType::GetNameForCallConv() const {
+    switch (GetCallingConv()) {
+    case llvm::CallingConv::C:
+        return "";
+    case llvm::CallingConv::X86_VectorCall:
+        return "__vectorcall";
+    case llvm::CallingConv::X86_RegCall:
+        return "__regcall";
+    case llvm::CallingConv::SPIR_FUNC:
+        return "spir_func";
+    case llvm::CallingConv::SPIR_KERNEL:
+        return "spir_kernel";
+    default:
+        return "<unknown>";
+    }
 }
 
 const Type *FunctionType::GetParameterType(int i) const {
@@ -2589,10 +2685,6 @@ const SourcePos &FunctionType::GetParameterSourcePos(int i) const {
 const std::string &FunctionType::GetParameterName(int i) const {
     Assert(i < (int)paramNames.size());
     return paramNames[i];
-}
-
-bool FunctionType::RequiresAddrSpaceCasts(const llvm::Function *func) const {
-    return IsISPCExternal() && func->getCallingConv() == llvm::CallingConv::SPIR_FUNC;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -2871,7 +2963,7 @@ static bool lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
             return false;
 
         if (fta->isTask != ftb->isTask || fta->isExported != ftb->isExported || fta->isExternC != ftb->isExternC ||
-            fta->isUnmasked != ftb->isUnmasked)
+            fta->isExternSYCL != ftb->isExternSYCL || fta->isUnmasked != ftb->isUnmasked)
             return false;
 
         if (fta->GetNumParameters() != ftb->GetNumParameters())

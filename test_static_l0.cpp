@@ -132,7 +132,7 @@ static void L0InitContext(ze_device_handle_t &hDevice, ze_module_handle_t &hModu
         L0_SAFE_CALL(zeDeviceGet(driver, &deviceCount, allDevices.data()));
 
         for (auto &device : allDevices) {
-            ze_device_properties_t device_properties;
+            ze_device_properties_t device_properties = {ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES};
             L0_SAFE_CALL(zeDeviceGetProperties(device, &device_properties));
             if (device_properties.type == ZE_DEVICE_TYPE_GPU && device_properties.vendorId == 0x8086) {
                 gpuDevice++;
@@ -190,6 +190,11 @@ static void L0InitContext(ze_device_handle_t &hDevice, ze_module_handle_t &hModu
     is.close();
 
     std::string igcOptions = "-vc-codegen -no-optimize -Xfinalizer '-presched'";
+#ifdef ISPC_IS_LINUX
+    // `newspillcost` is not yet supported on Windows in open source
+    // TODO: use `newspillcost` for all platforms as soon as it available
+    igcOptions += " -Xfinalizer '-newspillcost'";
+#endif
     const char *userIgcOptionsEnv = getenv("ISPCRT_IGC_OPTIONS");
     if (userIgcOptionsEnv) {
         std::string userIgcOptions(userIgcOptionsEnv);
@@ -696,7 +701,7 @@ int main(int argc, char *argv[]) {
 #error "Currently unsupported for Xe"
 #elif (TEST_SIG == 8)
     int groupSpaceWidth = 2;
-    int groupSpaceHeight = 8;
+    int groupSpaceHeight = 16;
     assert(N >= groupSpaceWidth * groupSpaceHeight);
     L0Launch_F_Threads(hDevice, hModule, hContext, hCommandQueue, return_data, groupSpaceWidth, groupSpaceHeight);
     L0Launch_Result_Threads(hDevice, hModule, hContext, hCommandQueue, expect_data, groupSpaceWidth, groupSpaceHeight);

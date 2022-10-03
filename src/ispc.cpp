@@ -625,7 +625,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
       m_nativeVectorWidth(-1), m_nativeVectorAlignment(-1), m_dataTypeWidth(-1), m_vectorWidth(-1), m_generatePIC(pic),
       m_maskingIsFree(false), m_maskBitCount(-1), m_hasHalf(false), m_hasRand(false), m_hasGather(false),
       m_hasScatter(false), m_hasTranscendentals(false), m_hasTrigonometry(false), m_hasRsqrtd(false), m_hasRcpd(false),
-      m_hasVecPrefetch(false), m_hasSaturatingArithmetic(false), m_hasFp64Support(true),
+      m_hasVecPrefetch(false), m_hasSaturatingArithmetic(false), m_hasFp16Support(false), m_hasFp64Support(true),
       m_warnFtoU32IsExpensive(false) {
     DeviceType CPUID = CPU_None, CPUfromISA = CPU_None;
     AllCPUs a;
@@ -803,10 +803,16 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
               target_string.c_str());
         return;
     }
+
+    if (ISPCTargetIsGen(m_ispc_target) || ISPCTargetIsNeon(m_ispc_target)) {
+        m_hasFp16Support = true;
+    }
+
 #ifdef ISPC_XE_ENABLED
     if ((ISPCTargetIsGen(m_ispc_target)) && (CPUID == GPU_TGLLP || CPUID == GPU_XEHPG)) {
         m_hasFp64Support = false;
     }
+
     // In case of Xe target addressing should correspond to host addressing. Otherwise SVM pointers will not work.
     if (arch == Arch::xe32) {
         g->opt.force32BitAddressing = true;
@@ -816,7 +822,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
 #endif
 
     // Check math library
-    if (g->mathLib == Globals::Math_SVML && !ISPCTargetIsX86(m_ispc_target)) {
+    if (g->mathLib == Globals::MathLib::Math_SVML && !ISPCTargetIsX86(m_ispc_target)) {
         Error(SourcePos(), "SVML math library is supported for x86 targets only.");
         return;
     }
@@ -1821,6 +1827,8 @@ llvm::Value *Target::StructOffset(llvm::Type *type, int element, llvm::BasicBloc
         return LLVMInt64(offset);
 }
 
+void Target::markFuncNameWithRegCallPrefix(std::string &funcName) const { funcName = "__regcall3__" + funcName; }
+
 void Target::markFuncWithTargetAttr(llvm::Function *func) {
     if (m_tf_attributes) {
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
@@ -1832,6 +1840,8 @@ void Target::markFuncWithTargetAttr(llvm::Function *func) {
 }
 
 void Target::markFuncWithCallingConv(llvm::Function *func) {
+    assert("markFuncWithCallingConv is deprecated, use llvm::Function::setCallingConv(llvm::CallingConv) and "
+           "FunctionType::GetCallingConv() instead.");
     assert(g->calling_conv != CallingConv::uninitialized);
     if (g->calling_conv == CallingConv::x86_vectorcall) {
         func->setCallingConv(llvm::CallingConv::X86_VectorCall);
@@ -1954,6 +1964,8 @@ Opt::Opt() {
     disableZMM = false;
 #ifdef ISPC_XE_ENABLED
     disableXeGatherCoalescing = false;
+    thresholdForXeGatherCoalescing = 0;
+    buildLLVMLoadsOnXeGatherCoalescing = false;
     enableForeachInsideVarying = false;
     emitXeHardwareMask = false;
     enableXeUnsafeMaskedLoad = false;
@@ -1966,14 +1978,15 @@ Opt::Opt() {
 Globals::Globals() {
     target_registry = TargetLibRegistry::getTargetLibRegistry();
 
-    mathLib = Globals::Math_ISPC;
-    codegenOptLevel = Globals::Aggressive;
+    mathLib = Globals::MathLib::Math_ISPC;
+    codegenOptLevel = Globals::CodegenOptLevel::Aggressive;
 
     includeStdlib = true;
     runCPP = true;
     onlyCPP = false;
     ignoreCPPErrors = false;
     debugPrint = false;
+    astDump = Globals::ASTDumpKind::None;
     dumpFile = false;
     printTarget = false;
     NoOmitFramePointer = false;
@@ -2000,6 +2013,25 @@ Globals::Globals() {
     timeTraceGranularity = 500;
     target = NULL;
     ctx = new llvm::LLVMContext;
+
+// Opaque pointers mode is supported starting from LLVM 14,
+// became default in LLVM 15
+#ifdef ISPC_OPAQUE_PTR_MODE
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_15_0
+// Do nothing, opaque pointers mode is default
+#elif ISPC_LLVM_VERSION == ISPC_LLVM_14_0
+    // Explicitly enable opaque pointers mode for LLVM 14.0
+    ctx->setOpaquePointers(true);
+#else
+    FATAL("Opaque pointers mode is not supported with this LLVM version!");
+#endif
+#else
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_15_0
+    // Explicitly disable opaque pointers starting LLVM 15.0
+    ctx->setOpaquePointers(false);
+#endif
+#endif
+
 #ifdef ISPC_XE_ENABLED
     stackMemSize = 0;
 #endif
@@ -2054,7 +2086,7 @@ llvm::DINamespace *SourcePos::GetDINamespace() const {
 }
 
 void SourcePos::Print() const {
-    printf(" @ [%s:%d.%d - %d.%d] ", name, first_line, first_column, last_line, last_column);
+    printf(" <%s:%d.%d - %d.%d> ", name, first_line, first_column, last_line, last_column);
 }
 
 bool SourcePos::operator==(const SourcePos &p2) const {

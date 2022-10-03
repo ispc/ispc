@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2020, Intel Corporation
+#  Copyright (c) 2018-2022, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -53,7 +53,10 @@ list(APPEND LIT_ARGS "-Dxe_enabled=$<IF:$<BOOL:${XE_ENABLED}>,ON,OFF>")
 # ISPC enabled OS.
 list(APPEND LIT_ARGS "-Dwindows_enabled=$<IF:$<BOOL:${ISPC_WINDOWS_TARGET}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Dmacos_arm_enabled=$<IF:$<BOOL:${ISPC_MACOS_ARM_TARGET}>,ON,OFF>")
-
+# Dumps enabled/disbaled
+list(APPEND LIT_ARGS "-Ddumps_enabled=$<IF:$<BOOL:${ISPC_NO_DUMPS}>,OFF,ON>")
+# ISPC opaque pointers
+list(APPEND LIT_ARGS "-Dopaque_mode=$<IF:$<BOOL:${ISPC_OPAQUE_PTR_MODE}>,ON,OFF>")
 add_custom_target(check-all DEPENDS ispc
     COMMAND ${LIT_COMMAND} ${LIT_ARGS}
     COMMENT "Running lit tests"

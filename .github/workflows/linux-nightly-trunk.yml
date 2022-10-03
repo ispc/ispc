@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
 
@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
 
@@ -92,7 +92,7 @@ jobs:
       LLVM_TAR: llvm-trunk-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
 
@@ -139,7 +139,7 @@ jobs:
                  avx512knl-x16,
                  avx512skx-x4, avx512skx-x8, avx512skx-x16, avx512skx-x64, avx512skx-x32]
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Download package
       uses: actions/download-artifact@v2
       with:

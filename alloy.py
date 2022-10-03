@@ -120,8 +120,10 @@ def checkout_LLVM(component, version_LLVM, target_dir, from_validation, verbose)
     # git: "origin/release/9.x"
     if  version_LLVM == "trunk":
         GIT_TAG="main"
+    elif  version_LLVM == "15_0":
+        GIT_TAG="llvmorg-15.0.0"
     elif  version_LLVM == "14_0":
-        GIT_TAG="llvmorg-14.0.0"
+        GIT_TAG="llvmorg-14.0.6"
     elif  version_LLVM == "13_0":
         GIT_TAG="llvmorg-13.0.1"
     elif  version_LLVM == "12_0":
@@ -222,7 +224,7 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
             alloy_error("Can't find XCode (xcrun tool) - it's required on MacOS 10.9 and newer", 1)
 
     # prepare configuration parameters
-    llvm_enable_projects = " -DLLVM_ENABLE_PROJECTS=\"clang"
+    llvm_enable_runtimes = ""
     if current_OS == "MacOS" and int(current_OS_version.split(".")[0]) >= 13:
         # Starting with MacOS 10.9 Maverics, the system doesn't contain headers for standard C++ library and
         # the default library is libc++, bit libstdc++. The headers are part of XCode now. But we are checking out
@@ -236,7 +238,9 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
         # We either need to explicitly opt-out from using libcxxabi from this repo, or build and use it,
         # otherwise a build error will occure (attempt to use just built libcxxabi, which was not built).
         # An option to build seems to be a better one.
-        llvm_enable_projects +=";libcxx;libcxxabi"
+        llvm_enable_runtimes +=" -DLLVM_ENABLE_RUNTIMES=\"libcxx;libcxxabi\""
+
+    llvm_enable_projects = llvm_enable_runtimes + " -DLLVM_ENABLE_PROJECTS=\"clang"
     if current_OS == "Linux":
         # OpenMP is needed for Xe enabled builds.
         # Starting from Ubuntu 20.04 libomp-dev package doesn't install omp.h to default location.
@@ -610,7 +614,7 @@ def validation_run(only, only_targets, reference_branch, number, update, speed_n
             archs.append("x86-64")
         if "native" in only:
             sde_targets_t = []
-        for i in ["6.0", "7.0", "8.0", "9.0", "10.0", "11.0", "12.0", "13.0", "14.0", "trunk"]:
+        for i in ["6.0", "7.0", "8.0", "9.0", "10.0", "11.0", "12.0", "13.0", "14.0", "15.0", "trunk"]:
             if i in only:
                 LLVM.append(i)
         if "current" in only:
@@ -816,7 +820,7 @@ def Main():
     if os.environ.get("ISPC_HOME") == None:
         alloy_error("you have no ISPC_HOME", 1)
     if options.only != "":
-        test_only_r = " 6.0 7.0 8.0 9.0 10.0 11.0 12.0 13.0 14.0 trunk current build stability performance x86 x86-64 x86_64 -O0 -O1 -O2 native debug nodebug "
+        test_only_r = " 6.0 7.0 8.0 9.0 10.0 11.0 12.0 13.0 14.0 15.0 trunk current build stability performance x86 x86-64 x86_64 -O0 -O1 -O2 native debug nodebug "
         test_only = options.only.split(" ")
         for iterator in test_only:
             if not (" " + iterator + " " in test_only_r):

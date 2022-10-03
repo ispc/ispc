@@ -1,0 +1,8 @@
+// All check strings for this test are moved to a separate file, as otherwise
+// some of the messages will match themselves in preprocessed output.
+
+// CHECK_PASS_i32x4: return 4; /*target_width*/
+// CHECK_PASS_i32x4: return 4; /*target_element_width*/
+
+// CHECK_PASS_i32x8: return 8; /*target_width*/
+// CHECK_PASS_i32x8: return 4; /*target_element_width*/

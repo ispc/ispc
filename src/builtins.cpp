@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -469,10 +469,14 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__cast_mask_to_i1",
         "__cast_mask_to_i8",
         "__cast_mask_to_i16",
+        "__cast_mask_to_i32",
+        "__cast_mask_to_i64",
         "__ceil_uniform_double",
         "__ceil_uniform_float",
+        "__ceil_uniform_half",
         "__ceil_varying_double",
         "__ceil_varying_float",
+        "__ceil_varying_half",
         "__clock",
         "__count_trailing_zeros_i32",
         "__count_trailing_zeros_i64",
@@ -493,6 +497,7 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__doublebits_varying_int64",
         "__exclusive_scan_add_double",
         "__exclusive_scan_add_float",
+        "__exclusive_scan_add_half",
         "__exclusive_scan_add_i32",
         "__exclusive_scan_add_i64",
         "__exclusive_scan_and_i32",
@@ -515,8 +520,10 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__floatbits_varying_int32",
         "__floor_uniform_double",
         "__floor_uniform_float",
+        "__floor_uniform_half",
         "__floor_varying_double",
         "__floor_varying_float",
+        "__floor_varying_half",
         "__get_system_isa",
         "__half_to_float_uniform",
         "__half_to_float_varying",
@@ -663,22 +670,26 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__rdrand_i64",
         "__reduce_add_double",
         "__reduce_add_float",
+        "__reduce_add_half",
         "__reduce_add_int8",
         "__reduce_add_int16",
         "__reduce_add_int32",
         "__reduce_add_int64",
         "__reduce_equal_double",
         "__reduce_equal_float",
+        "__reduce_equal_half",
         "__reduce_equal_int32",
         "__reduce_equal_int64",
         "__reduce_max_double",
         "__reduce_max_float",
+        "__reduce_max_half",
         "__reduce_max_int32",
         "__reduce_max_int64",
         "__reduce_max_uint32",
         "__reduce_max_uint64",
         "__reduce_min_double",
         "__reduce_min_float",
+        "__reduce_min_half",
         "__reduce_min_int32",
         "__reduce_min_int64",
         "__reduce_min_uint32",
@@ -692,16 +703,20 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__rotate_i8",
         "__round_uniform_double",
         "__round_uniform_float",
+        "__round_uniform_half",
         "__round_varying_double",
         "__round_varying_float",
+        "__round_varying_half",
         "__rsqrt_fast_uniform_double",
         "__rsqrt_fast_uniform_float",
         "__rsqrt_fast_varying_double",
         "__rsqrt_fast_varying_float",
         "__rsqrt_uniform_double",
         "__rsqrt_uniform_float",
+        "__rsqrt_uniform_half",
         "__rsqrt_varying_double",
         "__rsqrt_varying_float",
+        "__rsqrt_varying_half",
         "__saturating_add_i8",
         "__saturating_add_i16",
         "__saturating_add_i32",
@@ -784,8 +799,10 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__soa_to_aos4_float8",
         "__sqrt_uniform_double",
         "__sqrt_uniform_float",
+        "__sqrt_uniform_half",
         "__sqrt_varying_double",
         "__sqrt_varying_float",
+        "__sqrt_varying_half",
         "__stdlib_acosf",
         "__stdlib_asinf",
         "__stdlib_atan",
@@ -809,24 +826,28 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__stdlib_tanf",
         "__streaming_load_uniform_double",
         "__streaming_load_uniform_float",
+        "__streaming_load_uniform_half",
         "__streaming_load_uniform_i8",
         "__streaming_load_uniform_i16",
         "__streaming_load_uniform_i32",
         "__streaming_load_uniform_i64",
         "__streaming_load_varying_double",
         "__streaming_load_varying_float",
+        "__streaming_load_varying_half",
         "__streaming_load_varying_i8",
         "__streaming_load_varying_i16",
         "__streaming_load_varying_i32",
         "__streaming_load_varying_i64",
         "__streaming_store_uniform_double",
         "__streaming_store_uniform_float",
+        "__streaming_store_uniform_half",
         "__streaming_store_uniform_i8",
         "__streaming_store_uniform_i16",
         "__streaming_store_uniform_i32",
         "__streaming_store_uniform_i64",
         "__streaming_store_varying_double",
         "__streaming_store_varying_float",
+        "__streaming_store_varying_half",
         "__streaming_store_varying_i8",
         "__streaming_store_varying_i16",
         "__streaming_store_varying_i32",
@@ -859,8 +880,10 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__svml_invsqrtf",
         "__trunc_uniform_double",
         "__trunc_uniform_float",
+        "__trunc_uniform_half",
         "__trunc_varying_double",
         "__trunc_varying_float",
+        "__trunc_varying_half",
         "__log_uniform_half",
         "__log_varying_half",
         "__exp_uniform_half",
@@ -895,6 +918,22 @@ static void lSetInternalFunctions(llvm::Module *module) {
         "__tan_uniform_float",
         "__atan_uniform_float",
         "__atan2_uniform_float",
+        "__sin_varying_half",
+        "__asin_varying_half",
+        "__cos_varying_half",
+        "__acos_varying_half",
+        "__sincos_varying_half",
+        "__tan_varying_half",
+        "__atan_varying_half",
+        "__atan2_varying_half",
+        "__sin_uniform_half",
+        "__asin_uniform_half",
+        "__cos_uniform_half",
+        "__acos_uniform_half",
+        "__sincos_uniform_half",
+        "__tan_uniform_half",
+        "__atan_uniform_half",
+        "__atan2_uniform_half",
         "__sin_varying_double",
         "__asin_varying_double",
         "__cos_varying_double",
@@ -1048,7 +1087,7 @@ static void lDefineConstantInt(const char *name, int val, llvm::Module *module, 
     llvm::Constant *linit = LLVMInt32(val);
     auto GV = new llvm::GlobalVariable(*module, ltype, true, llvm::GlobalValue::InternalLinkage, linit, name);
     dbg_sym.push_back(GV);
-    sym->storagePtr = GV;
+    sym->storageInfo = new AddressInfo(GV, GV->getValueType());
     symbolTable->AddVariable(sym);
 
     if (m->diBuilder != NULL) {
@@ -1058,7 +1097,7 @@ static void lDefineConstantInt(const char *name, int val, llvm::Module *module, 
         // FIXME? DWARF says that this (and programIndex below) should
         // have the DW_AT_artifical attribute.  It's not clear if this
         // matters for anything though.
-        llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
+        llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storageInfo->getPointer());
         Assert(sym_GV_storagePtr);
         llvm::DIGlobalVariableExpression *var =
             m->diBuilder->createGlobalVariableExpression(cu, name, name, file, 0 /* line */, diType, true /* static */);
@@ -1103,14 +1142,14 @@ static void lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable,
     auto GV =
         new llvm::GlobalVariable(*module, ltype, true, llvm::GlobalValue::InternalLinkage, linit, sym->name.c_str());
     dbg_sym.push_back(GV);
-    sym->storagePtr = GV;
+    sym->storageInfo = new AddressInfo(GV, GV->getValueType());
     symbolTable->AddVariable(sym);
 
     if (m->diBuilder != NULL) {
         llvm::DIFile *file = m->diCompileUnit->getFile();
         llvm::DICompileUnit *cu = m->diCompileUnit;
         llvm::DIType *diType = sym->type->GetDIType(file);
-        llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
+        llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storageInfo->getPointer());
         Assert(sym_GV_storagePtr);
         llvm::DIGlobalVariableExpression *var = m->diBuilder->createGlobalVariableExpression(
             cu, sym->name.c_str(), sym->name.c_str(), file, 0 /* line */, diType, false /* static */);
@@ -1170,10 +1209,11 @@ void ispc::DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::
     // Define __math_lib stuff.  This is used by stdlib.ispc, for example, to
     // figure out which math routines to end up calling...
     lDefineConstantInt("__math_lib", (int)g->mathLib, module, symbolTable, debug_symbols);
-    lDefineConstantInt("__math_lib_ispc", (int)Globals::Math_ISPC, module, symbolTable, debug_symbols);
-    lDefineConstantInt("__math_lib_ispc_fast", (int)Globals::Math_ISPCFast, module, symbolTable, debug_symbols);
-    lDefineConstantInt("__math_lib_svml", (int)Globals::Math_SVML, module, symbolTable, debug_symbols);
-    lDefineConstantInt("__math_lib_system", (int)Globals::Math_System, module, symbolTable, debug_symbols);
+    lDefineConstantInt("__math_lib_ispc", (int)Globals::MathLib::Math_ISPC, module, symbolTable, debug_symbols);
+    lDefineConstantInt("__math_lib_ispc_fast", (int)Globals::MathLib::Math_ISPCFast, module, symbolTable,
+                       debug_symbols);
+    lDefineConstantInt("__math_lib_svml", (int)Globals::MathLib::Math_SVML, module, symbolTable, debug_symbols);
+    lDefineConstantInt("__math_lib_system", (int)Globals::MathLib::Math_System, module, symbolTable, debug_symbols);
     lDefineConstantIntFunc("__fast_masked_vload", (int)g->opt.fastMaskedVload, module, symbolTable, debug_symbols);
 
     lDefineConstantInt("__have_native_half", g->target->hasHalf(), module, symbolTable, debug_symbols);
@@ -1192,7 +1232,11 @@ void ispc::DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::
         alignment->setInitializer(LLVMInt32(g->forceAlignment));
     }
 
-    if (g->generateDebuggingSymbols) {
+    // IGC cannot deal with global references, so to keep debug capabilities
+    // on Xe target, ISPC should not generate any global relocations.
+    // When llvm.used is not generated, all previously defined global debug contants will be eliminated,
+    // so there will not be any global relocations passed to IGC.
+    if (!g->target->isXeTarget() && g->generateDebuggingSymbols) {
         emitLLVMUsed(*module, debug_symbols);
     }
 

@@ -1,4 +1,4 @@
-// Copyright 2020 Intel Corporation
+// Copyright 2020-2022 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "ze_mock.h"
@@ -238,6 +238,17 @@ ze_result_t zeMemAllocDevice(ze_context_handle_t hContext, const ze_device_mem_a
     MOCK_RET;
 }
 
+ze_result_t zeMemAllocShared(ze_context_handle_t hContext, const ze_device_mem_alloc_desc_t *device_desc,
+                             const ze_host_mem_alloc_desc_t *host_desc, size_t size,
+                             size_t alignment, ze_device_handle_t hDevice, void **pptr) {
+    MOCK_CNT_CALL;
+    if (hContext != ContextHandle.get())
+        return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
+    if (MOCK_SHOULD_SUCCEED)
+        *pptr = new uint8_t[size];
+    MOCK_RET;
+}
+
 ze_result_t zeMemFree(ze_context_handle_t hContext, void *ptr) {
     MOCK_CNT_CALL;
     if (hContext != ContextHandle.get() || !ptr)
@@ -262,6 +273,42 @@ ze_result_t zeModuleDestroy(ze_module_handle_t hModule) {
     if (hModule != ModuleHandle.get())
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
 
+    MOCK_RET;
+}
+
+ze_result_t zeModuleDynamicLink(uint32_t numModules,
+                                ze_module_handle_t* phModules,
+                                ze_module_build_log_handle_t* phLinkLog) {
+    MOCK_CNT_CALL;
+    if (phModules == NULL)
+        return ZE_RESULT_ERROR_INVALID_NULL_POINTER;
+    MOCK_RET;
+}
+
+ze_result_t zeModuleBuildLogGetString(ze_module_build_log_handle_t hModuleBuildLog,
+                                      size_t* pSize,
+                                      char* pBuildLog) {
+    MOCK_CNT_CALL;
+    *pSize = 0;
+    MOCK_RET;
+}
+
+ze_result_t zeModuleBuildLogDestroy(ze_module_build_log_handle_t hModuleBuildLog) {
+    MOCK_CNT_CALL;
+    if (hModuleBuildLog == NULL)
+        return ZE_RESULT_ERROR_UNINITIALIZED;
+    MOCK_RET;
+}
+
+ze_result_t zeModuleGetFunctionPointer(ze_module_handle_t hModule,
+                                       const char* pFunctionName,
+                                       void** pfnFunction) {
+    MOCK_CNT_CALL;
+    if (hModule != ModuleHandle.get())
+        return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
+    if (pFunctionName == NULL)
+        return ZE_RESULT_ERROR_INVALID_NULL_POINTER;
+    *pfnFunction = malloc(sizeof(void*));
     MOCK_RET;
 }
 
@@ -407,6 +454,8 @@ ze_result_t zeGetKernelProcAddrTable(ze_api_version_t version, ze_kernel_dditabl
 
 ze_result_t zeGetMemProcAddrTable(ze_api_version_t version, ze_mem_dditable_t *pDdiTable) {
     pDdiTable->pfnAllocDevice = ispcrt::testing::mock::driver::zeMemAllocDevice;
+    pDdiTable->pfnAllocShared = ispcrt::testing::mock::driver::zeMemAllocShared;
+
     pDdiTable->pfnFree = ispcrt::testing::mock::driver::zeMemFree;
     return ZE_RESULT_SUCCESS;
 }
@@ -414,6 +463,14 @@ ze_result_t zeGetMemProcAddrTable(ze_api_version_t version, ze_mem_dditable_t *p
 ze_result_t zeGetModuleProcAddrTable(ze_api_version_t version, ze_module_dditable_t *pDdiTable) {
     pDdiTable->pfnCreate = ispcrt::testing::mock::driver::zeModuleCreate;
     pDdiTable->pfnDestroy = ispcrt::testing::mock::driver::zeModuleDestroy;
+    pDdiTable->pfnDynamicLink = ispcrt::testing::mock::driver::zeModuleDynamicLink;
+    pDdiTable->pfnGetFunctionPointer = ispcrt::testing::mock::driver::zeModuleGetFunctionPointer;
+    return ZE_RESULT_SUCCESS;
+}
+
+ze_result_t zeGetModuleBuildLogProcAddrTable(ze_api_version_t version, ze_module_build_log_dditable_t *pDdiTable) {
+    pDdiTable->pfnGetString = ispcrt::testing::mock::driver::zeModuleBuildLogGetString;
+    pDdiTable->pfnDestroy = ispcrt::testing::mock::driver::zeModuleBuildLogDestroy;
     return ZE_RESULT_SUCCESS;
 }
 
@@ -422,7 +479,6 @@ ze_result_t zeGetModuleProcAddrTable(ze_api_version_t version, ze_module_dditabl
 
 MOCK_DDI_FUN(zeGetFenceProcAddrTable, ze_fence_dditable_t)
 MOCK_DDI_FUN(zeGetImageProcAddrTable, ze_image_dditable_t)
-MOCK_DDI_FUN(zeGetModuleBuildLogProcAddrTable, ze_module_build_log_dditable_t)
 MOCK_DDI_FUN(zeGetPhysicalMemProcAddrTable, ze_physical_mem_dditable_t)
 MOCK_DDI_FUN(zeGetSamplerProcAddrTable, ze_sampler_dditable_t)
 MOCK_DDI_FUN(zeGetVirtualMemProcAddrTable, ze_virtual_mem_dditable_t)

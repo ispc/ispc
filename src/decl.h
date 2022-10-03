@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -53,6 +53,7 @@
 
 #pragma once
 
+#include "ast.h"
 #include "ispc.h"
 
 #include <llvm/ADT/SmallVector.h>
@@ -79,6 +80,7 @@ class Declarator;
 #define TYPEQUAL_UNMASKED (1 << 8)
 #define TYPEQUAL_NOINLINE (1 << 9)
 #define TYPEQUAL_VECTORCALL (1 << 10)
+#define TYPEQUAL_REGCALL (1 << 11)
 
 /** @brief Representation of the declaration specifiers in a declaration.
 
@@ -136,7 +138,8 @@ class Declarator {
 
     void InitFromType(const Type *base, DeclSpecs *ds);
 
-    void Print(int indent) const;
+    void Print() const;
+    void Print(Indent &indent) const;
 
     /** Position of the declarator in the source program. */
     const SourcePos pos;
@@ -184,7 +187,8 @@ class Declaration {
     Declaration(DeclSpecs *ds, std::vector<Declarator *> *dlist = NULL);
     Declaration(DeclSpecs *ds, Declarator *d);
 
-    void Print(int indent) const;
+    void Print() const;
+    void Print(Indent &indent) const;
 
     /** This method walks through all of the Declarators in a declaration
         and returns a fully-initialized Symbol and (possibly) and

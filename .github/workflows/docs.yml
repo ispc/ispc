@@ -2,10 +2,10 @@ name: Docs check
 
 on:
   push:
-    path:
+    paths:
       - "docs/**"
   pull_request:
-    path:
+    paths:
       - "docs/**"
   workflow_dispatch:
 
@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Check environment
       run: |

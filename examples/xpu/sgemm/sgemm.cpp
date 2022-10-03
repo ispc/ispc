@@ -46,7 +46,7 @@ void SGEMMApp::initialize() {
 #endif
 
     // Get device timestamp resolution - needed for time measurments
-    ze_device_properties_t device_properties;
+    ze_device_properties_t device_properties = {ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES};
     L0_SAFE_CALL(zeDeviceGetProperties(m_device, &device_properties));
     m_timestamp_freq = device_properties.timerResolution;
 

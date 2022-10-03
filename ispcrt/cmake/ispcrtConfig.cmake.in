@@ -14,6 +14,14 @@ set(ISPCRT_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/../../../include/ispcrt)
 set(ISPCRT_DIR ${CMAKE_CURRENT_LIST_DIR})
 include_directories_ispc(${ISPCRT_INCLUDE_DIR})
 
+## Set the variable regarding pre-built tasking support
+if (@ISPCRT_BUILD_TASKING@)
+  set(ISPCRT_TASKING_ENABLED TRUE)
+  set(ISPCRT_TASKING_MODEL @ISPCRT_BUILD_TASK_MODEL@)
+else()
+  set(ISPCRT_TASKING_ENABLED FALSE)
+endif()
+
 ## Find level_zero if required ##
 
 if(@ISPCRT_BUILD_GPU@)

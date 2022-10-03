@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Intel Corporation
+// Copyright 2020-2022 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "ispcrt.h"
@@ -12,10 +12,12 @@
 
 #ifdef ISPCRT_BUILD_CPU
 #include "detail/cpu/CPUDevice.h"
+#include "detail/cpu/CPUContext.h"
 #endif
 
 #ifdef ISPCRT_BUILD_GPU
 #include "detail/gpu/GPUDevice.h"
+#include "detail/gpu/GPUContext.h"
 #endif
 
 static void defaultErrorFcn(ISPCRTError e, const char *msg) {
@@ -38,6 +40,25 @@ static OBJECT_T &referenceFromHandle(HANDLE_T handle) {
 }
 
 #define ISPCRT_CATCH_BEGIN try {
+#define ISPCRT_CATCH_END_NO_RETURN()                                                                                   \
+    }                                                                                                                  \
+    catch (const ispcrt::base::ispcrt_runtime_error &e) {                                                              \
+        handleError(e.e, e.what());                                                                                    \
+        return;                                                                                                        \
+    }                                                                                                                  \
+    catch (const std::logic_error &e) {                                                                                \
+        handleError(ISPCRT_INVALID_OPERATION, e.what());                                                               \
+        return;                                                                                                        \
+    }                                                                                                                  \
+    catch (const std::exception &e) {                                                                                  \
+        handleError(ISPCRT_UNKNOWN_ERROR, e.what());                                                                   \
+        return;                                                                                                        \
+    }                                                                                                                  \
+    catch (...) {                                                                                                      \
+        handleError(ISPCRT_UNKNOWN_ERROR, "an unrecognized exception was caught");                                     \
+        return;                                                                                                        \
+    }
+
 #define ISPCRT_CATCH_END(a)                                                                                            \
     }                                                                                                                  \
     catch (const ispcrt::base::ispcrt_runtime_error &e) {                                                              \
@@ -73,21 +94,25 @@ void ispcrtRelease(ISPCRTGenericHandle h) ISPCRT_CATCH_BEGIN {
     auto &obj = referenceFromHandle(h);
     obj.refDec();
 }
-ISPCRT_CATCH_END()
+ISPCRT_CATCH_END_NO_RETURN()
 
 void ispcrtRetain(ISPCRTGenericHandle h) ISPCRT_CATCH_BEGIN {
     auto &obj = referenceFromHandle(h);
     obj.refInc();
 }
-ISPCRT_CATCH_END()
+ISPCRT_CATCH_END_NO_RETURN()
 
 ///////////////////////////////////////////////////////////////////////////////
 // Device initialization //////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
-
-ISPCRTDevice ispcrtGetDevice(ISPCRTDeviceType type, uint32_t deviceIdx) ISPCRT_CATCH_BEGIN {
+static ISPCRTDevice getISPCRTDevice(ISPCRTDeviceType type, ISPCRTContext context, ISPCRTGenericHandle d, uint32_t deviceIdx) ISPCRT_CATCH_BEGIN {
     ispcrt::base::Device *device = nullptr;
 
+    void* nativeContext = nullptr;
+    if (context) {
+        auto &c = referenceFromHandle<ispcrt::base::Context>(context);
+        nativeContext = c.contextNativeHandle();
+    }
     switch (type) {
     case ISPCRT_DEVICE_TYPE_AUTO: {
 #if defined(ISPCRT_BUILD_GPU) && defined(ISPCRT_BUILD_CPU)
@@ -108,7 +133,7 @@ ISPCRTDevice ispcrtGetDevice(ISPCRTDeviceType type, uint32_t deviceIdx) ISPCRT_C
     }
     case ISPCRT_DEVICE_TYPE_GPU:
 #ifdef ISPCRT_BUILD_GPU
-        device = new ispcrt::GPUDevice(deviceIdx);
+        device = new ispcrt::GPUDevice(nativeContext, d, deviceIdx);
 #else
         throw std::runtime_error("GPU support not enabled");
 #endif
@@ -126,7 +151,21 @@ ISPCRTDevice ispcrtGetDevice(ISPCRTDeviceType type, uint32_t deviceIdx) ISPCRT_C
 
     return (ISPCRTDevice)device;
 }
-ISPCRT_CATCH_END(nullptr)
+ISPCRT_CATCH_END(0)
+
+ISPCRTDevice ispcrtGetDevice(ISPCRTDeviceType type, uint32_t deviceIdx) {
+    return getISPCRTDevice(type, nullptr, nullptr, deviceIdx);
+}
+
+ISPCRTDevice ispcrtGetDeviceFromContext(ISPCRTContext context, uint32_t deviceIdx) {
+    auto &c = referenceFromHandle<ispcrt::base::Context>(context);
+    return getISPCRTDevice(c.getDeviceType(), context, nullptr, deviceIdx);
+}
+
+ISPCRTDevice ispcrtGetDeviceFromNativeHandle(ISPCRTContext context, ISPCRTGenericHandle d) {
+    auto &c = referenceFromHandle<ispcrt::base::Context>(context);
+    return getISPCRTDevice(c.getDeviceType(), context, d, 0);
+}
 
 uint32_t ispcrtGetDeviceCount(ISPCRTDeviceType type) ISPCRT_CATCH_BEGIN {
     uint32_t devices = 0;
@@ -154,7 +193,8 @@ uint32_t ispcrtGetDeviceCount(ISPCRTDeviceType type) ISPCRT_CATCH_BEGIN {
     }
 
     return devices;
-} ISPCRT_CATCH_END(0)
+}
+ISPCRT_CATCH_END(0)
 
 void ispcrtGetDeviceInfo(ISPCRTDeviceType type, uint32_t deviceIdx, ISPCRTDeviceInfo *info) ISPCRT_CATCH_BEGIN {
     if (info == nullptr)
@@ -181,8 +221,62 @@ void ispcrtGetDeviceInfo(ISPCRTDeviceType type, uint32_t deviceIdx, ISPCRTDevice
     default:
         throw std::runtime_error("Unknown device type queried!");
     }
-} ISPCRT_CATCH_END()
+}
+ISPCRT_CATCH_END_NO_RETURN()
 
+///////////////////////////////////////////////////////////////////////////////
+// Context initialization //////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+static ISPCRTContext getISPCRTContext(ISPCRTDeviceType type, ISPCRTGenericHandle c) ISPCRT_CATCH_BEGIN {
+    ispcrt::base::Context *context = nullptr;
+
+    switch (type) {
+    case ISPCRT_DEVICE_TYPE_AUTO: {
+#if defined(ISPCRT_BUILD_GPU) && defined(ISPCRT_BUILD_CPU)
+        try {
+            context = new ispcrt::GPUContext;
+        } catch (...) {
+            if (context)
+                delete context;
+            context = new ispcrt::CPUContext;
+        }
+#elif defined(ISPCRT_BUILD_CPU)
+        context = new ispcrt::CPUContext;
+        break;
+#elif defined(ISPCRT_BUILD_GPU)
+        context = new ispcrt::GPUContext;
+        break;
+#endif
+    }
+    case ISPCRT_DEVICE_TYPE_GPU:
+#ifdef ISPCRT_BUILD_GPU
+        context = new ispcrt::GPUContext(c);
+#else
+        throw std::runtime_error("GPU support not enabled");
+#endif
+        break;
+    case ISPCRT_DEVICE_TYPE_CPU:
+#ifdef ISPCRT_BUILD_CPU
+        context = new ispcrt::CPUContext;
+#else
+        throw std::runtime_error("CPU support not enabled");
+#endif
+        break;
+    default:
+        throw std::runtime_error("Unknown device type queried!");
+    }
+
+    return (ISPCRTContext)context;
+}
+ISPCRT_CATCH_END(0)
+
+ISPCRTContext ispcrtNewContext(ISPCRTDeviceType type) {
+    return getISPCRTContext(type, nullptr);
+}
+
+ISPCRTContext ispcrtGetContextFromNativeHandle(ISPCRTDeviceType type, ISPCRTGenericHandle c){
+    return getISPCRTContext(type, c);
+}
 ///////////////////////////////////////////////////////////////////////////////
 // MemoryViews ////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -190,7 +284,20 @@ void ispcrtGetDeviceInfo(ISPCRTDeviceType type, uint32_t deviceIdx, ISPCRTDevice
 ISPCRTMemoryView ispcrtNewMemoryView(ISPCRTDevice d, void *appMemory, size_t numBytes,
                                      ISPCRTNewMemoryViewFlags *flags) ISPCRT_CATCH_BEGIN {
     const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
+    if (flags->allocType != ISPCRT_ALLOC_TYPE_SHARED && flags->allocType != ISPCRT_ALLOC_TYPE_DEVICE) {
+        throw std::runtime_error("Unsupported memory allocation type requested!");
+    }
     return (ISPCRTMemoryView)device.newMemoryView(appMemory, numBytes, flags->allocType == ISPCRT_ALLOC_TYPE_SHARED);
+}
+ISPCRT_CATCH_END(nullptr)
+
+ISPCRTMemoryView ispcrtNewMemoryViewForContext(ISPCRTContext c, void *appMemory, size_t numBytes,
+                                               ISPCRTNewMemoryViewFlags *flags) ISPCRT_CATCH_BEGIN {
+    const auto &context = referenceFromHandle<ispcrt::base::Context>(c);
+    if (flags->allocType != ISPCRT_ALLOC_TYPE_SHARED) {
+        throw std::runtime_error("Only shared memory allocation is allowed for context!");
+    }
+    return (ISPCRTMemoryView)context.newMemoryView(appMemory, numBytes, true);
 }
 ISPCRT_CATCH_END(nullptr)
 
@@ -212,6 +319,19 @@ size_t ispcrtSize(ISPCRTMemoryView h) ISPCRT_CATCH_BEGIN {
 }
 ISPCRT_CATCH_END(0)
 
+ISPCRTAllocationType ispcrtGetMemoryViewAllocType(ISPCRTMemoryView h) ISPCRT_CATCH_BEGIN {
+    auto &mv = referenceFromHandle<ispcrt::base::MemoryView>(h);
+    return mv.isShared() ? ISPCRTAllocationType::ISPCRT_ALLOC_TYPE_SHARED
+                         : ISPCRTAllocationType::ISPCRT_ALLOC_TYPE_DEVICE;
+}
+ISPCRT_CATCH_END(ISPCRTAllocationType::ISPCRT_ALLOC_TYPE_UNKNOWN)
+
+ISPCRTAllocationType ispcrtGetMemoryAllocType(ISPCRTDevice d, void* memBuffer) ISPCRT_CATCH_BEGIN {
+    const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
+    return device.getMemAllocType(memBuffer);
+}
+ISPCRT_CATCH_END(ISPCRTAllocationType::ISPCRT_ALLOC_TYPE_UNKNOWN)
+
 void *ispcrtSharedPtr(ISPCRTMemoryView h) ISPCRT_CATCH_BEGIN {
     auto &mv = referenceFromHandle<ispcrt::base::MemoryView>(h);
     return mv.devicePtr();
@@ -219,12 +339,27 @@ void *ispcrtSharedPtr(ISPCRTMemoryView h) ISPCRT_CATCH_BEGIN {
 ISPCRT_CATCH_END(nullptr)
 
 ///////////////////////////////////////////////////////////////////////////////
-// Kernels ////////////////////////////////////////////////////////////////////
+// Modules ////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-ISPCRTModule ispcrtLoadModule(ISPCRTDevice d, const char *moduleFile, ISPCRTModuleOptions moduleOpts) ISPCRT_CATCH_BEGIN {
+ISPCRTModule ispcrtLoadModule(ISPCRTDevice d, const char *moduleFile,
+                              ISPCRTModuleOptions moduleOpts) ISPCRT_CATCH_BEGIN {
     const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
-    return (ISPCRTModule)device.newModule(moduleFile, moduleOpts);
+    auto module = (ISPCRTModule)device.newModule(moduleFile, moduleOpts);
+    return module;
+
+}
+ISPCRT_CATCH_END(nullptr)
+
+void ispcrtLinkModules(ISPCRTDevice d, ISPCRTModule *modules, const uint32_t numModules) ISPCRT_CATCH_BEGIN {
+    const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
+    device.linkModules((ispcrt::base::Module **)modules, numModules);
+}
+ISPCRT_CATCH_END()
+
+void *ispcrtFunctionPtr(ISPCRTModule m, const char *name) ISPCRT_CATCH_BEGIN {
+    const auto &module = referenceFromHandle<ispcrt::base::Module>(m);
+    return module.functionPtr(name);
 }
 ISPCRT_CATCH_END(nullptr)
 
@@ -249,21 +384,35 @@ void ispcrtDeviceBarrier(ISPCRTTaskQueue q) ISPCRT_CATCH_BEGIN {
     auto &queue = referenceFromHandle<ispcrt::base::TaskQueue>(q);
     queue.barrier();
 }
-ISPCRT_CATCH_END()
+ISPCRT_CATCH_END_NO_RETURN()
 
 void ispcrtCopyToDevice(ISPCRTTaskQueue q, ISPCRTMemoryView mv) ISPCRT_CATCH_BEGIN {
     auto &queue = referenceFromHandle<ispcrt::base::TaskQueue>(q);
     auto &view = referenceFromHandle<ispcrt::base::MemoryView>(mv);
     queue.copyToDevice(view);
 }
-ISPCRT_CATCH_END()
+ISPCRT_CATCH_END_NO_RETURN()
 
 void ispcrtCopyToHost(ISPCRTTaskQueue q, ISPCRTMemoryView mv) ISPCRT_CATCH_BEGIN {
     auto &queue = referenceFromHandle<ispcrt::base::TaskQueue>(q);
     auto &view = referenceFromHandle<ispcrt::base::MemoryView>(mv);
     queue.copyToHost(view);
 }
-ISPCRT_CATCH_END()
+ISPCRT_CATCH_END_NO_RETURN()
+
+void ispcrtCopyMemoryView(ISPCRTTaskQueue q, ISPCRTMemoryView mvDst, ISPCRTMemoryView mvSrc, const size_t size) ISPCRT_CATCH_BEGIN {
+    auto &queue = referenceFromHandle<ispcrt::base::TaskQueue>(q);
+    auto &viewDst = referenceFromHandle<ispcrt::base::MemoryView>(mvDst);
+    auto &viewSrc = referenceFromHandle<ispcrt::base::MemoryView>(mvSrc);
+    if (size > viewDst.numBytes()) {
+        throw std::runtime_error("Requested copy size is bigger than destination buffer size!");
+    }
+    if (size > viewSrc.numBytes()) {
+        throw std::runtime_error("Requested copy size is bigger than source buffer size!");
+    }
+    queue.copyMemoryView(viewDst, viewSrc, size);
+}
+ISPCRT_CATCH_END_NO_RETURN()
 
 ISPCRTFuture ispcrtLaunch1D(ISPCRTTaskQueue q, ISPCRTKernel k, ISPCRTMemoryView p, size_t dim0) ISPCRT_CATCH_BEGIN {
     return ispcrtLaunch3D(q, k, p, dim0, 1, 1);
@@ -294,7 +443,7 @@ void ispcrtSync(ISPCRTTaskQueue q) ISPCRT_CATCH_BEGIN {
     auto &queue = referenceFromHandle<ispcrt::base::TaskQueue>(q);
     queue.sync();
 }
-ISPCRT_CATCH_END()
+ISPCRT_CATCH_END_NO_RETURN()
 
 uint64_t ispcrtFutureGetTimeNs(ISPCRTFuture f) ISPCRT_CATCH_BEGIN {
     if (!f)
@@ -331,9 +480,15 @@ ISPCRTGenericHandle ispcrtDeviceNativeHandle(ISPCRTDevice d) ISPCRT_CATCH_BEGIN 
 }
 ISPCRT_CATCH_END(nullptr)
 
-ISPCRTGenericHandle ispcrtContextNativeHandle(ISPCRTDevice d) ISPCRT_CATCH_BEGIN {
+ISPCRTGenericHandle ispcrtDeviceContextNativeHandle(ISPCRTDevice d) ISPCRT_CATCH_BEGIN {
     const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
     return device.contextNativeHandle();
+}
+ISPCRT_CATCH_END(nullptr)
+
+ISPCRTGenericHandle ispcrtContextNativeHandle(ISPCRTContext c) ISPCRT_CATCH_BEGIN {
+    const auto &context = referenceFromHandle<ispcrt::base::Context>(c);
+    return context.contextNativeHandle();
 }
 ISPCRT_CATCH_END(nullptr)
 
@@ -342,6 +497,4 @@ ISPCRTGenericHandle ispcrtTaskQueueNativeHandle(ISPCRTTaskQueue q) ISPCRT_CATCH_
     return queue.taskQueueNativeHandle();
 }
 ISPCRT_CATCH_END(nullptr)
-
-
 } // extern "C"

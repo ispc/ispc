@@ -1,4 +1,4 @@
-## Copyright 2020 Intel Corporation
+## Copyright 2020-2022 Intel Corporation
 ## SPDX-License-Identifier: BSD-3-Clause
 
 ###############################################################################
@@ -107,7 +107,15 @@ macro (ispc_compile)
   set(ISPC_TARGET_EXT ${CMAKE_CXX_OUTPUT_EXTENSION})
   string(REPLACE ";" "," ISPC_TARGET_ARGS "${ISPC_TARGETS}")
 
-  set(ISPC_ARCHITECTURE "x86-64")
+  if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+    if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm64|aarch64")
+      set(ISPC_ARCHITECTURE "aarch64")
+    else()
+      set(ISPC_ARCHITECTURE "x86-64")
+    endif()
+  else()
+    set(ISPC_ARCHITECTURE "x86")
+  endif()
 
   set(ISPC_TARGET_DIR ${CMAKE_CURRENT_BINARY_DIR})
   include_directories(${ISPC_TARGET_DIR})
@@ -127,7 +135,7 @@ macro (ispc_compile)
   mark_as_advanced(ISPC_FLAGS_RELEASE)
   set(ISPC_FLAGS_RELWITHDEBINFO "-O2 -g" CACHE STRING "ISPC Release with Debug symbols flags")
   mark_as_advanced(ISPC_FLAGS_RELWITHDEBINFO)
-  if (WIN32 OR "${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+  if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
     set(ISPC_OPT_FLAGS ${ISPC_FLAGS_RELEASE})
   elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     set(ISPC_OPT_FLAGS ${ISPC_FLAGS_DEBUG})
@@ -156,8 +164,17 @@ macro (ispc_compile)
 
   foreach(src ${ARGN})
     get_filename_component(fname ${src} NAME_WE)
+    # The src_relpath will usually be the same as getting the DIRECTORY
+    # component of the src file name, but we go through the full path
+    # computation path to handle cases where the src name is an absolute
+    # file path in some other location, where we need to compute a path to
+    get_filename_component(src_dir ${src} ABSOLUTE)
+    file(RELATIVE_PATH src_relpath ${CMAKE_CURRENT_LIST_DIR} ${src_dir})
+    get_filename_component(src_relpath ${src_relpath} DIRECTORY)
+    # Remove any relative paths up from the relative path
+    string(REPLACE "../" "_/" src_relpath "${src_relpath}")
 
-    set(outdir "${ISPC_TARGET_DIR}/local_ispc")
+    set(outdir "${ISPC_TARGET_DIR}/${src_relpath}")
     set(input ${CMAKE_CURRENT_SOURCE_DIR}/${src})
 
     set(ISPC_DEPENDENCIES_FILE ${outdir}/${fname}.dev.idep)
@@ -168,19 +185,14 @@ macro (ispc_compile)
     list(LENGTH ISPC_TARGETS NUM_TARGETS)
     if (NUM_TARGETS GREATER 1)
       foreach(target ${ISPC_TARGETS})
-        string(REPLACE "-i8x16"  "" target ${target})
-        string(REPLACE "-i32x4"  "" target ${target})
-        string(REPLACE "-i32x8"  "" target ${target})
-        string(REPLACE "-i32x16" "" target ${target})
-        string(REPLACE "-i64x4"  "" target ${target})
-        string(REPLACE "-i64x8"  "" target ${target})
+        string(REGEX REPLACE "-(i(8|16|32|64))?x(4|8|16|32|64)" "" target ${target})
         string(REPLACE "avx1" "avx" target ${target})
         list(APPEND results "${outdir}/${fname}.dev_${target}${ISPC_TARGET_EXT}")
       endforeach()
     endif()
 
     add_custom_command(
-      OUTPUT ${results} ${ISPC_TARGET_DIR}/${fname}_ispc.h
+      OUTPUT ${results} ${outdir}/${fname}_ispc.h
       COMMAND ${CMAKE_COMMAND} -E make_directory ${outdir}
       COMMAND ${ISPC_EXECUTABLE}
         ${ISPC_DEFINITIONS}
@@ -192,7 +204,7 @@ macro (ispc_compile)
         --target=${ISPC_TARGET_ARGS}
         --woff
         ${ISPC_ADDITIONAL_ARGS}
-        -h ${ISPC_TARGET_DIR}/${fname}_ispc.h
+        -h ${outdir}/${fname}_ispc.h
         -MMM ${ISPC_DEPENDENCIES_FILE}
         -o ${outdir}/${fname}.dev${ISPC_TARGET_EXT}
         ${input}
@@ -265,8 +277,6 @@ function (ispc_compile_gpu parent_target output_prefix)
     set(ISPC_TARGET_DIR ${CMAKE_CURRENT_BINARY_DIR})
   endif()
 
-  set(outdir ${ISPC_TARGET_DIR})
-
   set(ISPC_PROGRAM_COUNT 16)
   if ("${ISPC_TARGET_XE}" STREQUAL "gen9-x8" OR
       "${ISPC_TARGET_XE}" STREQUAL "xelp-x8")
@@ -320,23 +330,38 @@ function (ispc_compile_gpu parent_target output_prefix)
   foreach(src ${ARGN})
     get_filename_component(fname ${src} NAME_WE)
     get_filename_component(dir ${src} PATH)
+    # The src_relpath will usually be the same as getting the DIRECTORY
+    # component of the src file name, but we go through the full path
+    # computation path to handle cases where the src name is an absolute
+    # file path in some other location, where we need to compute a path to
+    get_filename_component(src_dir ${src} ABSOLUTE)
+    file(RELATIVE_PATH src_relpath ${CMAKE_CURRENT_LIST_DIR} ${src_dir})
+    get_filename_component(src_relpath ${src_relpath} DIRECTORY)
+    # Remove any relative paths up from the relative path
+    string(REPLACE "../" "_/" src_relpath "${src_relpath}")
+
+    set(outdir "${ISPC_TARGET_DIR}/${src_relpath}")
 
     set(input ${CMAKE_CURRENT_LIST_DIR}/${dir}/${fname}.ispc)
 
     set(ISPC_DEPENDENCIES_FILE ${outdir}/${fname}.gpu.dev.idep)
     ispc_read_dependencies(${ISPC_DEPENDENCIES_FILE})
 
+    # We don't do any separate compilation or linking for SPV files right now,
+    # so we treat the output spv/bin/bc files as final targets and output to
+    # the ISPC_TARGET_DIR root
     if (ISPC_XE_FORMAT STREQUAL "spv")
-      set(result "${outdir}/${output_prefix}${parent_target}.spv")
+      set(result "${ISPC_TARGET_DIR}/${output_prefix}${parent_target}.spv")
     elseif (ISPC_XE_FORMAT STREQUAL "zebin")
-      set(result "${outdir}/${output_prefix}${parent_target}.bin")
+      set(result "${ISPC_TARGET_DIR}/${output_prefix}${parent_target}.bin")
     elseif (ISPC_XE_FORMAT STREQUAL "bc")
-      set(result "${outdir}/${output_prefix}${parent_target}.bc")
+      set(result "${ISPC_TARGET_DIR}/${output_prefix}${parent_target}.bc")
     endif()
 
     add_custom_command(
       OUTPUT ${result}
       DEPENDS ${input} ${ISPC_DEPENDENCIES}
+      COMMAND ${CMAKE_COMMAND} -E make_directory ${outdir}
       COMMAND ${ISPC_EXECUTABLE}
         -I ${CMAKE_CURRENT_SOURCE_DIR}
         ${ISPC_INCLUDE_DIR_PARMS}

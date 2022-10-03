@@ -34,13 +34,13 @@ EXIT_CODE=0
 echo "\
 ############################################################################
 Checking formatting of modified files. It is expected that the files were
-formatted with clang-format 10.0.0. It is also expected that clang-format
-version 10.0.0 is used for the check. Otherwise the result can ne unexpected.
+formatted with clang-format 12.0.0. It is also expected that clang-format
+version 12.0.0 is used for the check. Otherwise the result can ne unexpected.
 ############################################################################"
 
 CLANG_FORMAT="clang-format"
 [[ ! -z $1 ]] && CLANG_FORMAT=$1
-REQUIRED_VERSION="10.0.0"
+REQUIRED_VERSION="12.0.0"
 VERSION_STRING="clang-format version $REQUIRED_VERSION.*"
 CURRENT_VERSION="$($CLANG_FORMAT --version)"
 if ! [[ $CURRENT_VERSION =~ $VERSION_STRING ]] ; then
@@ -50,7 +50,7 @@ fi
 
 # Check all source files.
 # For benchmarks folder do not check 03_complex, as these tests come from real projects with their formatting.
-FILES=`ls src/*.cpp src/*.h src/xe/*.cpp src/xe/*.h *.cpp builtins/builtins-c-* benchmarks/{01,02}*/*{cpp,ispc} stdlib.ispc`
+FILES=`ls src/*.cpp src/*.h *.cpp builtins/builtins-c-* benchmarks/{01,02}*/*{cpp,ispc} common/*.h stdlib.ispc`
 for FILE in $FILES; do
     $CLANG_FORMAT $FILE | cmp  $FILE >/dev/null
     if [ $? -ne 0 ]; then

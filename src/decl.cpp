@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -218,6 +218,8 @@ static const char *lGetStorageClassName(StorageClass storageClass) {
         return "extern";
     case SC_EXTERN_C:
         return "extern \"C\"";
+    case SC_EXTERN_SYCL:
+        return "extern \"SYCL\"";
     case SC_STATIC:
         return "static";
     case SC_TYPEDEF:
@@ -273,10 +275,17 @@ void Declarator::InitFromDeclSpecs(DeclSpecs *ds) {
     }
 }
 
-void Declarator::Print(int indent) const {
-    printf("%*cdeclarator: [", indent, ' ');
-    pos.Print();
+void Declarator::Print() const {
+    Indent indent;
+    indent.pushSingle();
+    Print(indent);
+    fflush(stdout);
+}
 
+void Declarator::Print(Indent &indent) const {
+    indent.Print("Declarator", pos);
+
+    printf("[");
     lPrintTypeQualifiers(typeQualifiers);
     printf("%s ", lGetStorageClassName(storageClass));
     if (name.size() > 0)
@@ -307,23 +316,32 @@ void Declarator::Print(int indent) const {
         FATAL("Unhandled declarator kind");
     }
 
-    if (initExpr != NULL) {
-        printf(" = (");
-        initExpr->Print();
-        printf(")");
+    printf("]\n");
+
+    int kids = (initExpr ? 1 : 0) + functionParams.size() + (child ? 1 : 0);
+    indent.pushList(kids);
+
+    if (initExpr != nullptr) {
+        indent.setNextLabel("init");
+        initExpr->Print(indent);
     }
 
     if (functionParams.size() > 0) {
         for (unsigned int i = 0; i < functionParams.size(); ++i) {
-            printf("\n%*cfunc param %d:\n", indent, ' ', i);
-            functionParams[i]->Print(indent + 4);
+            static constexpr std::size_t BUFSIZE{20};
+            char buffer[BUFSIZE];
+            snprintf(buffer, BUFSIZE, "func param %d", i);
+            indent.setNextLabel(buffer);
+            functionParams[i]->Print(indent);
         }
     }
 
-    if (child != NULL)
-        child->Print(indent + 4);
+    if (child != nullptr) {
+        indent.setNextLabel("child");
+        child->Print(indent);
+    }
 
-    printf("]\n");
+    indent.Done();
 }
 
 void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
@@ -538,9 +556,12 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         returnType = returnType->ResolveUnboundVariability(Variability::Varying);
 
         bool isExternC = ds && (ds->storageClass == SC_EXTERN_C);
+        bool isExternSYCL = ds && (ds->storageClass == SC_EXTERN_SYCL);
         bool isExported = ds && ((ds->typeQualifiers & TYPEQUAL_EXPORT) != 0);
         bool isTask = ds && ((ds->typeQualifiers & TYPEQUAL_TASK) != 0);
         bool isUnmasked = ds && ((ds->typeQualifiers & TYPEQUAL_UNMASKED) != 0);
+        bool isVectorCall = ds && ((ds->typeQualifiers & TYPEQUAL_VECTORCALL) != 0);
+        bool isRegCall = ds && ((ds->typeQualifiers & TYPEQUAL_REGCALL) != 0);
 
         if (isExported && isTask) {
             Error(pos, "Function can't have both \"task\" and \"export\" "
@@ -557,6 +578,16 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                        "qualifiers");
             return;
         }
+        if (isExternSYCL && isTask) {
+            Error(pos, "Function can't have both \"extern \"SYCL\"\" and \"task\" "
+                       "qualifiers");
+            return;
+        }
+        if (isExternSYCL && isExported) {
+            Error(pos, "Function can't have both \"extern \"SYCL\"\" and \"export\" "
+                       "qualifiers");
+            return;
+        }
         if (isUnmasked && isExported)
             Warning(pos, "\"unmasked\" qualifier is redundant for exported "
                          "functions.");
@@ -566,8 +597,9 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             return;
         }
 
-        const FunctionType *functionType = new FunctionType(returnType, args, argNames, argDefaults, argPos, isTask,
-                                                            isExported, isExternC, isUnmasked);
+        const FunctionType *functionType =
+            new FunctionType(returnType, args, argNames, argDefaults, argPos, isTask, isExported, isExternC,
+                             isExternSYCL, isUnmasked, isVectorCall, isRegCall);
 
         // handle any explicit __declspecs on the function
         if (ds != NULL) {
@@ -656,16 +688,30 @@ void Declaration::DeclareFunctions() {
         bool isInline = (declSpecs->typeQualifiers & TYPEQUAL_INLINE);
         bool isNoInline = (declSpecs->typeQualifiers & TYPEQUAL_NOINLINE);
         bool isVectorCall = (declSpecs->typeQualifiers & TYPEQUAL_VECTORCALL);
-        m->AddFunctionDeclaration(decl->name, ftype, decl->storageClass, isInline, isNoInline, isVectorCall, decl->pos);
+        bool isRegCall = (declSpecs->typeQualifiers & TYPEQUAL_REGCALL);
+        m->AddFunctionDeclaration(decl->name, ftype, decl->storageClass, isInline, isNoInline, isVectorCall, isRegCall,
+                                  decl->pos);
     }
 }
 
-void Declaration::Print(int indent) const {
-    printf("%*cDeclaration: specs [", indent, ' ');
+void Declaration::Print() const {
+    Indent indent;
+    indent.pushSingle();
+    Print(indent);
+    fflush(stdout);
+}
+
+void Declaration::Print(Indent &indent) const {
+    indent.Print("Declaration: specs [");
     declSpecs->Print();
     printf("], declarators:\n");
-    for (unsigned int i = 0; i < declarators.size(); ++i)
-        declarators[i]->Print(indent + 4);
+
+    indent.pushList(declarators.size());
+    for (unsigned int i = 0; i < declarators.size(); ++i) {
+        declarators[i]->Print(indent);
+    }
+
+    indent.Done();
 }
 
 ///////////////////////////////////////////////////////////////////////////

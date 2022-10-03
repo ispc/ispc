@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Intel Corporation
+// Copyright 2020-2022 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "ispcrt.hpp"
@@ -145,6 +145,18 @@ TEST_F(MockTest, Device_Constructor_zeContextCreate) {
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
 }
 
+TEST_F(MockTest, Context_Constructor_zeInit) {
+    Config::setRetValue("zeInit", ZE_RESULT_ERROR_DEVICE_LOST);
+    ispcrt::Context c(ISPCRT_DEVICE_TYPE_GPU);
+    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+}
+
+TEST_F(MockTest, Device_Constructor_FromContext) {
+    ispcrt::Context c(ISPCRT_DEVICE_TYPE_GPU);
+    ispcrt::Device d(c);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
 /////////////////////////////////////////////////////////////////////
 // Module tests
 
@@ -175,6 +187,44 @@ TEST_F(MockTestWithDevice, Module_Constructor_zeModuleCreate) {
     Config::setRetValue("zeModuleCreate", ZE_RESULT_ERROR_DEVICE_LOST);
     ispcrt::Module m(m_device, "");
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+}
+
+/////////////////////////////////////////////////////////////////////
+// Dynamic binary linking tests
+
+TEST_F(MockTestWithDevice, Module_DynamicLink) {
+    // Create 2 modules and link them
+    ASSERT_NE(m_device, 0);
+    ispcrt::Module m1(m_device, "");
+    ispcrt::Module m2(m_device, "");
+    Config::setRetValue("zeModuleBuildLogDestroy", ZE_RESULT_SUCCESS);
+    std::array<ISPCRTModule, 2> modules = {
+        (ISPCRTModule)m1.handle(), (ISPCRTModule)m2.handle()};
+    m_device.linkModules(modules.data(), modules.size());
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTestWithModule, Module_FunctionPtr) {
+    // Get function pointer from module
+    ASSERT_NE(m_module, 0);
+    m_module.functionPtr("test");
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTestWithModule, Module_FunctionPtr_zeModuleGetFunctionPointer) {
+    // Check if error is reported when zeModuleGetFunctionPointer is not successful
+    ASSERT_NE(m_module, 0);
+    Config::setRetValue("zeModuleGetFunctionPointer", ZE_RESULT_ERROR_DEVICE_LOST);
+    m_module.functionPtr("test");
+    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+}
+
+TEST_F(MockTestWithModule, Module_FunctionPtr_zeModuleGetFunctionPointer_invalid_fname) {
+    // Check if error is reported when zeModuleGetFunctionPointer is not successful
+    ASSERT_NE(m_module, 0);
+    Config::setRetValue("zeModuleGetFunctionPointer", ZE_RESULT_ERROR_INVALID_FUNCTION_NAME);
+    m_module.functionPtr("test");
+    ASSERT_EQ(sm_rt_error, ISPCRT_INVALID_ARGUMENT);
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -218,6 +268,13 @@ TEST_F(MockTestWithDevice, ArrayObj_zeMemAllocDevice) {
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
     // Check that nullptr is returned
     ASSERT_EQ(dev_buf_ptr, nullptr);
+}
+
+TEST_F(MockTest, ArrayObj_contextAlloc) {
+    ispcrt::Context c(ISPCRT_DEVICE_TYPE_GPU);
+    auto buf_dev = ispcrt::Array<float, ispcrt::AllocType::Shared>(c, 64 * 1024);
+    auto dev_buf_ptr = buf_dev.sharedPtr();
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -304,6 +361,47 @@ TEST_F(MockTestWithDevice, TaskQueue_CopyToHost_zeCommandListAppendMemoryCopy) {
     Config::setRetValue("zeCommandListAppendMemoryCopy", ZE_RESULT_ERROR_DEVICE_LOST);
     tq.copyToHost(buf_dev);
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+}
+
+TEST_F(MockTestWithDevice, TaskQueue_CopyArray) {
+    ispcrt::TaskQueue tq(m_device);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    // Create an allocation
+    std::vector<float> buf(64 * 1024);
+    ispcrt::Array<float> buf_dev(m_device, buf);
+    ispcrt::Array<float> buf_copy(m_device, buf);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    // "copy"
+    tq.copyArray(buf_copy, buf_dev, buf_dev.size());
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_TRUE(Config::checkCmdList({CmdListElem::MemoryCopy}));
+}
+
+TEST_F(MockTestWithDevice, TaskQueue_CopyArray_zeCommandListAppendMemoryCopy) {
+    ispcrt::TaskQueue tq(m_device);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    // Create an allocation
+    std::vector<float> buf(64 * 1024);
+    ispcrt::Array<float> buf_copy(m_device, buf);
+    ispcrt::Array<float> buf_dev(m_device, buf);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    // "copy", but fail
+    Config::setRetValue("zeCommandListAppendMemoryCopy", ZE_RESULT_ERROR_DEVICE_LOST);
+    tq.copyArray(buf_copy, buf_dev, buf_dev.size());
+    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
+}
+
+TEST_F(MockTestWithDevice, TaskQueue_CopyArray_InvalidSize) {
+    ispcrt::TaskQueue tq(m_device);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    // Create an allocation
+    std::vector<float> buf(64 * 1024);
+    ispcrt::Array<float> buf_dev(m_device, buf);
+    ispcrt::Array<float> buf_copy(m_device, buf);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    // copy command should return error since the requested size if biffer than buffer size
+    tq.copyArray(buf_copy, buf_dev, buf_dev.size() * 2);
+    ASSERT_EQ(sm_rt_error, ISPCRT_UNKNOWN_ERROR);
 }
 
 TEST_F(MockTestWithDevice, TaskQueue_Barrier_zeCommandListAppendBarrier) {
@@ -614,7 +712,7 @@ TEST_F(MockTestWithModuleQueueKernel, TaskQueue_Sync_zeEventQueryKernelTimestamp
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
 }
 
-/// C API
+/// C Device API
 TEST_F(MockTest, C_API_DeviceCount1) {
     // CPU
     uint32_t devCnt = ispcrtGetDeviceCount(ISPCRT_DEVICE_TYPE_CPU);
@@ -676,6 +774,60 @@ TEST_F(MockTest, C_API_DeviceInfoGPU) {
         ASSERT_EQ(dps[d == 0?0:3].deviceId, di.deviceId);
         ASSERT_EQ(dps[d == 0?0:3].vendorId, di.vendorId);
     }
+}
+
+/// C Context API
+TEST_F(MockTest, C_API_CreateDeviceFromContext) {
+    Config::setDeviceCount(2);
+    Config::setDeviceProperties(0, DeviceProperties(VendorId::Intel, DeviceId::Gen9));
+    Config::setDeviceProperties(1, DeviceProperties(VendorId::Intel, DeviceId::Gen12));
+    ISPCRTContext context = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
+    uint32_t ndevices = ispcrtGetDeviceCount(ISPCRT_DEVICE_TYPE_GPU);
+    ISPCRTDevice gpu0 = ispcrtGetDeviceFromContext(context, 0);
+    ISPCRTDevice gpu1 = ispcrtGetDeviceFromContext(context, 1);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTest, C_API_AllocateSharedMemoryForGPU) {
+    ISPCRTContext context = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
+    std::vector<uint8_t> buffer;
+    ISPCRTNewMemoryViewFlags mem_flags;
+    mem_flags.allocType = ISPCRT_ALLOC_TYPE_SHARED;
+    ISPCRTMemoryView mem = ispcrtNewMemoryViewForContext(context, buffer.data(), buffer.size(), &mem_flags);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTest, C_API_AllocateSharedMemoryForCPU) {
+    ISPCRTContext context = ispcrtNewContext(ISPCRT_DEVICE_TYPE_CPU);
+    std::vector<uint8_t> buffer;
+    ISPCRTNewMemoryViewFlags mem_flags;
+    mem_flags.allocType = ISPCRT_ALLOC_TYPE_SHARED;
+    ISPCRTMemoryView mem = ispcrtNewMemoryViewForContext(context, buffer.data(), buffer.size(), &mem_flags);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTest, C_API_AllocateDeviceMemory) {
+    ISPCRTContext context = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
+    std::vector<uint8_t> buffer;
+    ISPCRTNewMemoryViewFlags mem_flags;
+    mem_flags.allocType = ISPCRT_ALLOC_TYPE_DEVICE;
+    ISPCRTMemoryView mem = ispcrtNewMemoryViewForContext(context, buffer.data(), buffer.size(), &mem_flags);
+    ASSERT_EQ(sm_rt_error, ISPCRT_UNKNOWN_ERROR);
+}
+
+TEST_F(MockTest, C_API_CreateContextFromNativeHandler) {
+    ISPCRTContext context1 = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
+    auto handle = ispcrtContextNativeHandle(context1);
+    ISPCRTContext context2 = ispcrtGetContextFromNativeHandle(ISPCRT_DEVICE_TYPE_GPU, handle);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTest, C_API_CreateDeviceFromNativeHandler) {
+    ISPCRTContext context = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
+    ISPCRTDevice device1 = ispcrtGetDeviceFromContext(context, 0);
+    auto handle = ispcrtDeviceNativeHandle(device1);
+    ISPCRTDevice device2 = ispcrtGetDeviceFromNativeHandle(context, handle);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
 /// C++ Device API
@@ -926,15 +1078,15 @@ TEST_F(MockTest, Device_ManyGPUs_EnvOverride) {
 
 /// Compilation tests
 TEST_F(MockTest, Compilation_SharedArray) {
-    auto d = Device(ISPCRT_DEVICE_TYPE_CPU);
+    auto c = Context(ISPCRT_DEVICE_TYPE_CPU);
     struct Parameters { int i; };
-    auto pmv = ispcrt::Array<Parameters, ispcrt::AllocType::Shared>(d);
+    auto pmv = ispcrt::Array<Parameters, ispcrt::AllocType::Shared>(c);
     auto p = pmv.sharedPtr();
     p->i = 1234;
-    auto pmv2 = ispcrt::Array<Parameters, ispcrt::AllocType::Shared>(d, 2);
+    auto pmv2 = ispcrt::Array<Parameters, ispcrt::AllocType::Shared>(c, 2);
     p = pmv.sharedPtr();
     p->i = 1234;
-    ispcrt::SharedMemoryAllocator<float> sma(d);
+    ispcrt::SharedMemoryAllocator<float> sma(c);
     ispcrt::SharedVector<float> v(16, sma);
 }
 

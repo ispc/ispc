@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
 
@@ -44,7 +44,7 @@ jobs:
     - name: Build package
       run: |
         echo PATH=$PATH
-        cmake -B build -DISPC_PREPARE_PACKAGE=ON -DISPC_INCLUDE_BENCHMARKS=ON -DBENCHMARK_ENABLE_INSTALL=ON
+        cmake -B build -DISPC_PREPARE_PACKAGE=ON -DISPC_INCLUDE_BENCHMARKS=ON -DBENCHMARK_ENABLE_INSTALL=ON -DISPC_PACKAGE_NAME=ispc-trunk-linux
         cmake --build build --target package -j4
 
     - name: Sanity testing (make check-all, make test)
@@ -95,7 +95,7 @@ jobs:
     - name: Upload results
       uses: actions/upload-artifact@v2
       with:
-        name: ispc_llvm11_linux_bench_results
+        name: ispc_llvm13_linux_bench_results
         path: ispc-trunk-linux/benchmarks/out/*.json
     - name: Clean self-hosted runner
       run: rm -rf ${GITHUB_WORKSPACE:?}/* ${HOME:?}/* 
@@ -108,11 +108,11 @@ jobs:
     env:
       CALCITE_CLI: '@siliceum/calcite-cli@0.7.2'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Download benchmarks results
         uses: actions/download-artifact@v2
         with:
-          name: ispc_llvm11_linux_bench_results
+          name: ispc_llvm13_linux_bench_results
       - name: Upload bench datasets to calcite
         working-directory: .calcite
         run: |

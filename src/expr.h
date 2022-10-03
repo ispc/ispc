@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2022, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -38,6 +38,7 @@
 #pragma once
 
 #include "ast.h"
+#include "ctx.h"
 #include "ispc.h"
 #include "type.h"
 
@@ -105,9 +106,6 @@ class Expr : public ASTNode {
         encountered, NULL should be returned. */
     virtual Expr *TypeCheck() = 0;
 
-    /** Prints the expression to standard output (used for debugging). */
-    virtual void Print() const = 0;
-
     virtual bool HasAmbiguousVariability(std::vector<const Expr *> &warn) const;
 };
 
@@ -131,7 +129,7 @@ class UnaryExpr : public Expr {
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
-    void Print() const;
+    void Print(Indent &indent) const;
     Expr *Optimize();
     Expr *TypeCheck();
     int EstimateCost() const;
@@ -176,7 +174,7 @@ class BinaryExpr : public Expr {
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
     const Type *GetLValueType() const;
-    void Print() const;
+    void Print(Indent &indent) const;
 
     Expr *Optimize();
     Expr *TypeCheck();
@@ -213,7 +211,7 @@ class AssignExpr : public Expr {
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
-    void Print() const;
+    void Print(Indent &indent) const;
 
     Expr *Optimize();
     Expr *TypeCheck();
@@ -236,7 +234,7 @@ class SelectExpr : public Expr {
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
-    void Print() const;
+    void Print(Indent &indent) const;
 
     Expr *Optimize();
     Expr *TypeCheck();
@@ -262,7 +260,7 @@ class ExprList : public Expr {
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
-    void Print() const;
+    void Print(Indent &indent) const;
     std::pair<llvm::Constant *, bool> GetStorageConstant(const Type *type) const;
     std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
     ExprList *Optimize();
@@ -277,7 +275,8 @@ class ExprList : public Expr {
  */
 class FunctionCallExpr : public Expr {
   public:
-    FunctionCallExpr(Expr *func, ExprList *args, SourcePos p, bool isLaunch = false, Expr *launchCountExpr[3] = NULL);
+    FunctionCallExpr(Expr *func, ExprList *args, SourcePos p, bool isLaunch = false, Expr *launchCountExpr[3] = NULL,
+                     bool isInvoke = false);
 
     static inline bool classof(FunctionCallExpr const *) { return true; }
     static inline bool classof(ASTNode const *N) { return N->getValueID() == FunctionCallExprID; }
@@ -286,7 +285,7 @@ class FunctionCallExpr : public Expr {
     llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
     const Type *GetLValueType() const;
-    void Print() const;
+    void Print(Indent &indent) const;
 
     Expr *Optimize();
     Expr *TypeCheck();
@@ -295,6 +294,7 @@ class FunctionCallExpr : public Expr {
     Expr *func;
     ExprList *args;
     bool isLaunch;
+    bool isInvoke;
     Expr *launchCountExpr[3];
 };
 
@@ -315,7 +315,7 @@ class IndexExpr : public Expr {
     const Type *GetType() const;
     const Type *GetLValueType() const;
     Symbol *GetBaseSymbol() const;
-    void Print() const;
+    void Print(Indent &indent) const;
 
     Expr *Optimize();
     Expr *TypeCheck();
@@ -346,7 +346,7 @@ class MemberExpr : public Expr {
     llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
     Symbol *GetBaseSymbol() const;
-    void Print() const;
+    void Print(Indent &indent) const;
     Expr *Optimize();
     Expr *TypeCheck();
     int EstimateCost() const;
@@ -435,7 +435,7 @@ class ConstExpr : public Expr {
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
-    void Print() const;
+    void Print(Indent &indent) const;
     std::pair<llvm::Constant *, bool> GetStorageConstant(const Type *type) const;
     std::pair<llvm::Constant *, bool> GetConstant(const Type *constType) const;
 
@@ -496,7 +496,7 @@ class TypeCastExpr : public Expr {
     llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
     const Type *GetLValueType() const;
-    void Print() const;
+    void Print(Indent &indent) const;
     Expr *TypeCheck();
     Expr *Optimize();
     int EstimateCost() const;
@@ -522,7 +522,7 @@ class ReferenceExpr : public Expr {
     const Type *GetType() const;
     const Type *GetLValueType() const;
     Symbol *GetBaseSymbol() const;
-    void Print() const;
+    void Print(Indent &indent) const;
     Expr *TypeCheck();
     Expr *Optimize();
     int EstimateCost() const;
@@ -561,7 +561,7 @@ class PtrDerefExpr : public DerefExpr {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == PtrDerefExprID; }
 
     const Type *GetType() const;
-    void Print() const;
+    void Print(Indent &indent) const;
     Expr *TypeCheck();
     int EstimateCost() const;
 };
@@ -576,7 +576,7 @@ class RefDerefExpr : public DerefExpr {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == RefDerefExprID; }
 
     const Type *GetType() const;
-    void Print() const;
+    void Print(Indent &indent) const;
     Expr *TypeCheck();
     int EstimateCost() const;
 };
@@ -593,7 +593,7 @@ class AddressOfExpr : public Expr {
     const Type *GetType() const;
     const Type *GetLValueType() const;
     Symbol *GetBaseSymbol() const;
-    void Print() const;
+    void Print(Indent &indent) const;
     Expr *TypeCheck();
     Expr *Optimize();
     int EstimateCost() const;
@@ -614,7 +614,7 @@ class SizeOfExpr : public Expr {
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
-    void Print() const;
+    void Print(Indent &indent) const;
     Expr *TypeCheck();
     Expr *Optimize();
     int EstimateCost() const;
@@ -637,7 +637,7 @@ class AllocaExpr : public Expr {
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
-    void Print() const;
+    void Print(Indent &indent) const;
     Expr *TypeCheck();
     Expr *Optimize();
     int EstimateCost() const;
@@ -662,7 +662,7 @@ class SymbolExpr : public Expr {
     Symbol *GetBaseSymbol() const;
     Expr *TypeCheck();
     Expr *Optimize();
-    void Print() const;
+    void Print(Indent &indent) const;
     int EstimateCost() const;
 
   private:
@@ -684,7 +684,7 @@ class FunctionSymbolExpr : public Expr {
     Symbol *GetBaseSymbol() const;
     Expr *TypeCheck();
     Expr *Optimize();
-    void Print() const;
+    void Print(Indent &indent) const;
     int EstimateCost() const;
     std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
 
@@ -738,7 +738,7 @@ class SyncExpr : public Expr {
     const Type *GetType() const;
     Expr *TypeCheck();
     Expr *Optimize();
-    void Print() const;
+    void Print(Indent &indent) const;
     int EstimateCost() const;
 };
 
@@ -755,7 +755,7 @@ class NullPointerExpr : public Expr {
     Expr *TypeCheck();
     Expr *Optimize();
     std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
-    void Print() const;
+    void Print(Indent &indent) const;
     int EstimateCost() const;
 };
 
@@ -773,7 +773,7 @@ class NewExpr : public Expr {
     const Type *GetType() const;
     Expr *TypeCheck();
     Expr *Optimize();
-    void Print() const;
+    void Print(Indent &indent) const;
     int EstimateCost() const;
 
     /** Type of object to allocate storage for. */
@@ -821,7 +821,7 @@ Expr *MakeBinaryExpr(BinaryExpr::Op o, Expr *a, Expr *b, SourcePos p);
     @param ctx       FunctionEmitContext to use for generating instructions
     @param pos       Source file position of the variable being initialized
 */
-void InitSymbol(llvm::Value *lvalue, const Type *symType, Expr *initExpr, FunctionEmitContext *ctx, SourcePos pos);
+void InitSymbol(AddressInfo *lvalue, const Type *symType, Expr *initExpr, FunctionEmitContext *ctx, SourcePos pos);
 
 bool PossiblyResolveFunctionOverloads(Expr *expr, const Type *type);
 } // namespace ispc
