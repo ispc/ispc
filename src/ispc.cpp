@@ -1358,8 +1358,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
 #endif
             } else if (g->target_os == TargetOS::windows) {
                 CPUID = CPU_MicrosoftSQ1
-            }
-            else {
+            } else {
                 CPUID = CPU_CortexA35;
             }
         } else {
