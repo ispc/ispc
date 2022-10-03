@@ -318,6 +318,10 @@ typedef enum {
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
     CPU_AppleA14,
 #endif
+
+    // Microsoft SQX CPUs
+    CPU_MicrosoftSQ1,
+    CPU_MicrosoftSQ2,
 #endif
 #ifdef ISPC_XE_ENABLED
     GPU_SKL,
@@ -376,6 +380,8 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
     {CPU_AppleA14, {}},
 #endif
+    {CPU_MicrosoftSQ1, {}},
+    {CPU_MicrosoftSQ2, {}},
 #endif
 #ifdef ISPC_XE_ENABLED
     {GPU_SKL, {}},
@@ -480,6 +486,8 @@ class AllCPUs {
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         names[CPU_AppleA14].push_back("apple-a14");
 #endif
+        names[CPU_MicrosoftSQ1].push_back("microsoft-sq1");
+        names[CPU_MicrosoftSQ2].push_back("microsoft-sq2");
 #endif
 
 #ifdef ISPC_XE_ENABLED
@@ -562,6 +570,8 @@ class AllCPUs {
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         compat[CPU_AppleA14] = Set(CPU_AppleA14, CPU_None);
 #endif
+        compat[CPU_MicrosoftSQ1] = Set(CPU_MicrosoftSQ1, CPU_MicrosoftSQ2, CPU_None);
+        compat[CPU_MicrosoftSQ1] = Set(CPU_MicrosoftSQ2, CPU_MicrosoftSQ1, CPU_None);
 #endif
 
 #ifdef ISPC_XE_ENABLED
@@ -1340,7 +1350,10 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
 #else
                 CPUID = CPU_AppleA13;
 #endif
-            } else {
+            } else if (g->target_os == TargetOS::windows) {
+                CPUID = CPU_MicrosoftSQ1
+            }
+            else {
                 CPUID = CPU_CortexA35;
             }
         } else {
@@ -1546,8 +1559,7 @@ std::string Target::GetTripleString() const {
             Error(SourcePos(), "Arm is not supported on Windows.");
             exit(1);
         } else if (m_arch == Arch::aarch64) {
-            Error(SourcePos(), "Aarch64 is not supported on Windows.");
-            exit(1);
+            triple.setArchName("arm64");
         } else if (m_arch == Arch::xe32) {
             triple.setArchName("spir");
         } else if (m_arch == Arch::xe64) {
