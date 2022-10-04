@@ -16,7 +16,7 @@ ARG SPIRV_TRANSLATOR_COMMIT_SHA="5d69690864d8e7d5bf221284a37c57f016ce7d98"
 # otherwise LLVM build may fail, as it will use all the cores available to container.
 
 # Packages
-RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get install -y clang-12 build-essential libnuma1 opencl-headers ocl-icd-libopencl1 clinfo vim gcc g++ git python3 imagemagick \
+RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get install -y clang-12 build-essential libnuma1 opencl-headers ocl-icd-libopencl1 clinfo vim gcc g++ git python3-dev imagemagick \
     m4 bison flex zlib1g-dev libncurses-dev libtinfo-dev libc6-dev-i386 cpio lsb-core wget netcat-openbsd libtbb2-dev libglfw3-dev pkgconf gdb gcc-multilib g++-multilib curl libomp-12-dev && \
     rm -rf /var/lib/apt/lists/*
 
