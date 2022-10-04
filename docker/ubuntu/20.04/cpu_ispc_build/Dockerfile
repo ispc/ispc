@@ -15,7 +15,7 @@ ARG EXTRA_BUILD_ARG
 RUN uname -a
 
 # Packages
-RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get install -y wget cmake build-essential gcc g++ git python3 ncurses-dev libtinfo-dev && \
+RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get install -y wget cmake build-essential gcc g++ git python3-dev ncurses-dev libtinfo-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # If you are behind a proxy, you need to configure git.

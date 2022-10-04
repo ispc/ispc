@@ -15,7 +15,7 @@ ARG EXTRA_BUILD_ARG
 RUN uname -a
 
 # Packages required to build ISPC and Clang.
-RUN apt-get -y update && apt-get install -y wget build-essential gcc g++ git python3 ncurses-dev libtinfo-dev && \
+RUN apt-get -y update && apt-get install -y wget build-essential gcc g++ git python3-dev ncurses-dev libtinfo-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Download and install required version of cmake (3.14 for x86, 3.20 for aarch64, as earlier versions are not available as binary distribution) for ISPC build
