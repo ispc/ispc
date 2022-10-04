@@ -2089,7 +2089,10 @@ llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::
         // Handle the indexing into the soa<> structs with the major
         // component of the index through a recursive call
         llvm::Value *p = GetElementPtrInst(ExtractInst(basePtr, 0), index, ptrType->GetAsNonSlice(), name);
-
+        if (p == NULL) {
+            AssertPos(currentPos, m->errorCount > 0);
+            return NULL;
+        }
         // And mash the results together for the return value
         return MakeSlicePointer(p, ptrSliceOffset);
     }
@@ -2141,6 +2144,10 @@ llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::
         }
 
         llvm::Value *p = GetElementPtrInst(ExtractInst(basePtr, 0), index0, index1, ptrType->GetAsNonSlice(), name);
+        if (p == NULL) {
+            AssertPos(currentPos, m->errorCount > 0);
+            return NULL;
+        }
         return MakeSlicePointer(p, ptrSliceOffset);
     }
 
