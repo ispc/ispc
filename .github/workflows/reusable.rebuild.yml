@@ -314,7 +314,7 @@ jobs:
         name: llvmrel_win_x86
         path: llvm/llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release-x86.arm.wasm.tar.7z
 
-  mac-build:
+  mac-build-1:
     runs-on: macos-11
 
     steps:
@@ -324,17 +324,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        ls -ald /Applications/Xcode*
-        xcrun --show-sdk-path
-        # There are several Xcode versions installed.
-        # /Applications/Xcode.app is a symlink pointing to the one that needs to be used.
-        # But the one, which is currently "selected" doesn't use symlink.
-        # We need canonical location to make resulting clang build working on other machines.
-        sudo xcode-select -switch /Applications/Xcode.app/Contents/Developer
-        xcrun --show-sdk-path
-        mkdir llvm
-        echo "LLVM_HOME=${GITHUB_WORKSPACE}/llvm" >> $GITHUB_ENV
-        echo "ISPC_HOME=${GITHUB_WORKSPACE}" >> $GITHUB_ENV
+        .github/workflows/scripts/install-llvm-deps-mac.sh
 
     - name: Check environment
       run: |
@@ -345,7 +335,55 @@ jobs:
 
     - name: Build LLVM
       run: |
-        ./alloy.py -b --version=${{ inputs.version }} --selfbuild --verbose
+        ./alloy.py -b --version=${{ inputs.version }} --selfbuild-phase1 --verbose
+
+    - name: Tar itermediate results
+      run: |
+        cd llvm
+        rm -rf llvm*/.git
+        tar cf llvm_stage1.tar bin* llvm*
+
+    - name: Upload package
+      uses: actions/upload-artifact@v2
+      with:
+        name: llvm_macos_x86_stage1
+        path: |
+          llvm/llvm_stage1.tar
+
+  mac-build-2:
+    needs: [mac-build-1]
+    runs-on: macos-11
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-llvm-deps-mac.sh
+
+    - name: Check environment
+      run: |
+        ./check_env.py
+        which -a clang
+        sysctl -n machdep.cpu.brand_string
+        sysctl -n hw.ncpu
+
+    - name: Download package
+      uses: actions/download-artifact@v3
+      with:
+        name: llvm_macos_x86_stage1
+        path: llvm
+
+    - name: Extract intermediate results
+      run: |
+        cd llvm
+        tar xf llvm_stage1.tar
+
+    - name: Build LLVM
+      run: |
+        ./alloy.py -b --version=${{ inputs.version }} --selfbuild-phase2 --verbose
 
     - name: Pack LLVM
       run: |
@@ -358,7 +396,7 @@ jobs:
         name: llvm_macos_x86
         path: llvm/llvm-${{ inputs.full_version }}-macos11-Release+Asserts-x86.arm.wasm.tar.xz
 
-  mac-build-release:
+  mac-build-release-1:
     runs-on: macos-11
 
     steps:
@@ -368,17 +406,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        ls -ald /Applications/Xcode*
-        xcrun --show-sdk-path
-        # There are several Xcode versions installed.
-        # /Applications/Xcode.app is a symlink pointing to the one that needs to be used.
-        # But the one, which is currently "selected" doesn't use symlink.
-        # We need canonical location to make resulting clang build working on other machines.
-        sudo xcode-select -switch /Applications/Xcode.app/Contents/Developer
-        xcrun --show-sdk-path
-        mkdir llvm
-        echo "LLVM_HOME=${GITHUB_WORKSPACE}/llvm" >> $GITHUB_ENV
-        echo "ISPC_HOME=${GITHUB_WORKSPACE}" >> $GITHUB_ENV
+        .github/workflows/scripts/install-llvm-deps-mac.sh
 
     - name: Check environment
       run: |
@@ -389,7 +417,55 @@ jobs:
 
     - name: Build LLVM
       run: |
-        ./alloy.py -b --version=${{ inputs.version }} --selfbuild --verbose --llvm-disable-assertions
+        ./alloy.py -b --version=${{ inputs.version }} --selfbuild-phase1 --verbose --llvm-disable-assertions
+
+    - name: Tar itermediate results
+      run: |
+        cd llvm
+        rm -rf llvm*/.git
+        tar cf llvm_stage1.tar bin* llvm*
+
+    - name: Upload package
+      uses: actions/upload-artifact@v2
+      with:
+        name: llvmrel_macos_x86_stage1
+        path: |
+          llvm/llvm_stage1.tar
+
+  mac-build-release-2:
+    needs: [mac-build-release-1]
+    runs-on: macos-11
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-llvm-deps-mac.sh
+
+    - name: Check environment
+      run: |
+        ./check_env.py
+        which -a clang
+        sysctl -n machdep.cpu.brand_string
+        sysctl -n hw.ncpu
+
+    - name: Download package
+      uses: actions/download-artifact@v3
+      with:
+        name: llvmrel_macos_x86_stage1
+        path: llvm
+
+    - name: Extract intermediate results
+      run: |
+        cd llvm
+        tar xf llvm_stage1.tar
+
+    - name: Build LLVM
+      run: |
+        ./alloy.py -b --version=${{ inputs.version }} --selfbuild-phase2 --verbose --llvm-disable-assertions
 
     - name: Pack LLVM
       run: |
@@ -401,4 +477,3 @@ jobs:
       with:
         name: llvmrel_macos_x86
         path: llvm/llvm-${{ inputs.full_version }}-macos11-Release-x86.arm.wasm.tar.xz
-
