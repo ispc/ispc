@@ -257,6 +257,7 @@ static void lCopyInTaskParameter(int i, AddressInfo *structArgPtrInfo, const std
 
     // allocate space to copy the parameter in to
     sym->storageInfo = ctx->AllocaInst(sym->type, sym->name.c_str());
+    Assert(sym->storageInfo);
 
     // get a pointer to the value in the struct
     llvm::Value *ptr = ctx->AddElementOffset(structArgPtrInfo, i, sym->name.c_str());

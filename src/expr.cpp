@@ -5055,12 +5055,13 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
             // Check that expression on the left side is a rvalue expression
             llvm::Value *exprValue = expr->GetValue(ctx);
             basePtrInfo = ctx->AllocaInst(expr->GetType());
-            basePtr = basePtrInfo->getPointer();
             basePtrType = PointerType::GetUniform(exprVectorType);
-            if (basePtr == NULL || basePtrType == NULL) {
+            if (basePtrInfo == NULL || basePtrType == NULL) {
                 AssertPos(pos, m->errorCount > 0);
                 return NULL;
             }
+            basePtr = basePtrInfo->getPointer();
+            AssertPos(pos, basePtr != NULL);
             ctx->StoreInst(exprValue, basePtrInfo, expr->GetType());
         }
 
