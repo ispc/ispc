@@ -56,7 +56,7 @@ jobs:
         make ispc_benchmarks && make test
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: ispc_llvm13_linux_bench
         path: build/ispc-trunk-linux.tar.gz
@@ -67,7 +67,7 @@ jobs:
     needs: linux-build
     steps:
     - name: Download package
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: ispc_llvm13_linux_bench
     - name: Install dependencies and unpack artifacts
@@ -93,7 +93,7 @@ jobs:
       run: curl http://$StabilizerServer:7373/release
       if: always()
     - name: Upload results
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: ispc_llvm13_linux_bench_results
         path: ispc-trunk-linux/benchmarks/out/*.json
@@ -110,7 +110,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Download benchmarks results
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: ispc_llvm13_linux_bench_results
       - name: Upload bench datasets to calcite

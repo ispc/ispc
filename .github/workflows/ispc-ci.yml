@@ -98,7 +98,7 @@ jobs:
         .github/workflows/scripts/check-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: ispc_llvm11_linux
         path: build/ispc-trunk-linux.tar.gz
@@ -134,7 +134,7 @@ jobs:
         .github/workflows/scripts/check-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: ispc_llvm12_linux
         path: build/ispc-trunk-linux.tar.gz
@@ -170,7 +170,7 @@ jobs:
         .github/workflows/scripts/check-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: ispc_llvm13_linux
         path: build/ispc-trunk-linux.tar.gz
@@ -206,7 +206,7 @@ jobs:
         .github/workflows/scripts/check-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: ispc_llvm14_linux
         path: build/ispc-trunk-linux.tar.gz
@@ -243,7 +243,7 @@ jobs:
         .github/workflows/scripts/check-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: ispc_llvm15_linux
         path: build/ispc-trunk-linux.tar.gz
@@ -280,7 +280,7 @@ jobs:
         .github/workflows/scripts/check-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: ispc_llvm15rel_linux
         path: build/ispc-trunk-linux.tar.gz
@@ -325,7 +325,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Download package
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: ispc_llvm11_linux
 
@@ -349,7 +349,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: failure()
       with:
         name: fail_db.llvm11.${{matrix.target}}.txt
@@ -366,7 +366,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Download package
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: ispc_llvm12_linux
 
@@ -390,7 +390,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: failure()
       with:
         name: fail_db.llvm12.${{matrix.target}}.txt
@@ -407,7 +407,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Download package
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: ispc_llvm13_linux
 
@@ -430,7 +430,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: failure()
       with:
         name: fail_db.llvm13.${{matrix.target}}.txt
@@ -447,7 +447,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Download package
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: ispc_llvm14_linux
 
@@ -471,7 +471,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: failure()
       with:
         name: fail_db.llvm14.${{matrix.target}}.txt
@@ -488,7 +488,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Download package
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: ispc_llvm15_linux
 
@@ -511,7 +511,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: failure()
       with:
         name: fail_db.llvm15.${{matrix.target}}.txt
@@ -527,7 +527,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Download package
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: ispc_llvm15rel_linux
 
@@ -550,7 +550,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: failure()
       with:
         name: fail_db.llvm15rel.${{matrix.target}}.txt
@@ -569,7 +569,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Download package
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: ispc_llvm15_linux
 
@@ -592,7 +592,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: failure()
       with:
         name: fail_db.llvm15.debug.txt
@@ -634,7 +634,7 @@ jobs:
         .github/workflows/scripts/check-ispc.ps1
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: ispc_llvm11_win
         path: build/ispc-trunk-windows.msi
@@ -675,7 +675,7 @@ jobs:
         .github/workflows/scripts/check-ispc.ps1
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: ispc_llvm12_win
         path: build/ispc-trunk-windows.msi
@@ -716,7 +716,7 @@ jobs:
         .github/workflows/scripts/check-ispc.ps1
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: ispc_llvm13_win
         path: build/ispc-trunk-windows.msi
@@ -757,7 +757,7 @@ jobs:
         .github/workflows/scripts/check-ispc.ps1
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: ispc_llvm14_win
         path: build/ispc-trunk-windows.msi
@@ -799,7 +799,7 @@ jobs:
         .github/workflows/scripts/check-ispc.ps1
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: ispc_llvm15_win
         path: build/ispc-trunk-windows.msi
@@ -819,7 +819,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Download package
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: ispc_llvm11_win
 
@@ -845,7 +845,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: failure()
       with:
         name: fail_db.llvm11.${{matrix.arch}}.${{matrix.target}}.txt
@@ -868,7 +868,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Download package
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: ispc_llvm12_win
 
@@ -894,7 +894,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: failure()
       with:
         name: fail_db.llvm12.${{matrix.arch}}.${{matrix.target}}.txt
@@ -916,7 +916,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Download package
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: ispc_llvm13_win
 
@@ -941,7 +941,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: failure()
       with:
         name: fail_db.llvm13.${{matrix.arch}}.${{matrix.target}}.txt
@@ -962,7 +962,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Download package
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: ispc_llvm14_win
 
@@ -988,7 +988,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: failure()
       with:
         name: fail_db.llvm14.${{matrix.arch}}.${{matrix.target}}.txt
@@ -1009,7 +1009,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Download package
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: ispc_llvm15_win
 
@@ -1034,7 +1034,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: failure()
       with:
         name: fail_db.llvm15.${{matrix.arch}}.${{matrix.target}}.txt

@@ -51,7 +51,7 @@ jobs:
         docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }}:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=${{ inputs.version }} .
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: llvm_linux_x86_stage1_cache
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
@@ -70,7 +70,7 @@ jobs:
         cat /proc/cpuinfo
 
     - name: Download package
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: llvm_linux_x86_stage1_cache
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
@@ -90,7 +90,7 @@ jobs:
         tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release+Asserts-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: llvm_linux_x86
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release+Asserts-x86.arm.wasm.tar.xz
@@ -114,7 +114,7 @@ jobs:
         docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }}:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg EXTRA_BUILD_ARG="--llvm-disable-assertions" .
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: llvmrel_linux_x86_stage1_cache
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
@@ -133,7 +133,7 @@ jobs:
         cat /proc/cpuinfo
 
     - name: Download package
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: llvmrel_linux_x86_stage1_cache
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
@@ -153,7 +153,7 @@ jobs:
         tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: llvmrel_linux_x86
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release-x86.arm.wasm.tar.xz
@@ -187,7 +187,7 @@ jobs:
         rm -rf result.tar usr bin-${{ inputs.version }}
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: llvm_linux_aarch64
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release+Asserts-x86.arm.wasm.tar.xz
@@ -221,7 +221,7 @@ jobs:
         rm -rf result.tar usr bin-${{ inputs.version }}
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: llvmrel_linux_aarch64
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release-x86.arm.wasm.tar.xz
@@ -265,7 +265,7 @@ jobs:
         7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: llvm_win_x86
         path: llvm/llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release+Asserts-x86.arm.wasm.tar.7z
@@ -309,7 +309,7 @@ jobs:
         7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: llvmrel_win_x86
         path: llvm/llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release-x86.arm.wasm.tar.7z
@@ -344,7 +344,7 @@ jobs:
         tar cf llvm_stage1.tar bin* llvm*
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: llvm_macos_x86_stage1
         path: |
@@ -391,7 +391,7 @@ jobs:
         tar cJvf llvm-${{ inputs.full_version }}-macos11-Release+Asserts-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: llvm_macos_x86
         path: llvm/llvm-${{ inputs.full_version }}-macos11-Release+Asserts-x86.arm.wasm.tar.xz
@@ -426,7 +426,7 @@ jobs:
         tar cf llvm_stage1.tar bin* llvm*
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: llvmrel_macos_x86_stage1
         path: |
@@ -473,7 +473,7 @@ jobs:
         tar cJvf llvm-${{ inputs.full_version }}-macos11-Release-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: llvmrel_macos_x86
         path: llvm/llvm-${{ inputs.full_version }}-macos11-Release-x86.arm.wasm.tar.xz
