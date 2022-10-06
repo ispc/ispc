@@ -87,7 +87,7 @@ jobs:
         .github/workflows/scripts/check-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: ispc_llvm13_linux
         path: build/ispc-trunk-linux.tar.gz
@@ -104,7 +104,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Download package
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: ispc_llvm13_linux
 
@@ -128,7 +128,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: failure()
       with:
         name: fail_db.llvm13.${{matrix.target}}.txt
