@@ -78,20 +78,20 @@ jobs:
         tar xvf result.tar usr/local/src/llvm
         mv usr/local/src/llvm/bin-15.0 .
         # Note using gzip here, instead of xz - trading of space for speed, as it's just for passing to another stage.
-        tar czvf llvm-15.0.0-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz bin-15.0
+        tar czvf llvm-15.0.2-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz bin-15.0
 
     - name: Upload package
       uses: actions/upload-artifact@v3
       with:
         name: llvm_15_linux
-        path: docker/ubuntu/18.04/cpu_ispc_build/llvm-15.0.0-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz
+        path: docker/ubuntu/18.04/cpu_ispc_build/llvm-15.0.2-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz
 
   linux-build-ispc-llvm-15:
     needs: [linux-build-llvm-15-2]
     runs-on: ubuntu-latest
     env:
       LLVM_VERSION: "15.0"
-      LLVM_TAR: llvm-15.0.0-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz
+      LLVM_TAR: llvm-15.0.2-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz
 
     steps:
     - uses: actions/checkout@v3
@@ -208,7 +208,7 @@ jobs:
       shell: cmd
       run: |
         cd llvm
-        set TAR_BASE_NAME=llvm-15.0.0-win.vs2019-Release+Asserts-x86.arm.wasm
+        set TAR_BASE_NAME=llvm-15.0.2-win.vs2019-Release+Asserts-x86.arm.wasm
         7z.exe a -ttar -snl %TAR_BASE_NAME%.tar bin-15.0
         7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
 
@@ -216,7 +216,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: llvm_15_win
-        path: llvm/llvm-15.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+        path: llvm/llvm-15.0.2-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
 
 
   win-build-ispc-llvm-15:
@@ -224,7 +224,7 @@ jobs:
     runs-on: windows-2022
     env:
       LLVM_VERSION: "15.0"
-      LLVM_TAR: llvm-15.0.0-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      LLVM_TAR: llvm-15.0.2-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
       LLVM_HOME: "C:\\projects\\llvm"
       CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       BUILD_TYPE: "Release"
