@@ -2419,17 +2419,6 @@ int Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *o
         }
     }
 
-    if (g->target->isXeTarget()) {
-        opts.addMacroDef("taskIndex=__taskIndex()");
-        opts.addMacroDef("taskCount=__taskCount()");
-        opts.addMacroDef("taskCount0=__taskCount0()");
-        opts.addMacroDef("taskCount1=__taskCount1()");
-        opts.addMacroDef("taskCount2=__taskCount2()");
-        opts.addMacroDef("taskIndex0=__taskIndex0()");
-        opts.addMacroDef("taskIndex1=__taskIndex1()");
-        opts.addMacroDef("taskIndex2=__taskIndex2()");
-    }
-
     inst.getLangOpts().LineComment = 1;
     inst.createPreprocessor(clang::TU_Complete);
 

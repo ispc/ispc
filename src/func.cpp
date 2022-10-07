@@ -191,7 +191,7 @@ Function::Function(Symbol *s, Stmt *c) {
             paramSym->parentFunction = this;
     }
 
-    if (type->isTask && !g->target->isXeTarget()) {
+    if (type->isTask) {
         threadIndexSym = m->symbolTable->LookupVariable("threadIndex");
         Assert(threadIndexSym);
         threadCountSym = m->symbolTable->LookupVariable("threadCount");
@@ -268,6 +268,13 @@ static void lCopyInTaskParameter(int i, AddressInfo *structArgPtrInfo, const std
         ctx->LoadInst(new AddressInfo(ptr, sym->storageInfo->getElementType()), sym->type, sym->name.c_str());
     ctx->StoreInst(ptrval, sym->storageInfo, sym->type);
     ctx->EmitFunctionParameterDebugInfo(sym, i);
+}
+
+static llvm::Value *lXeGetTaskVariableValue(FunctionEmitContext *ctx, std::string taskFunc) {
+    std::vector<llvm::Value *> args;
+    llvm::Function *task_func = m->module->getFunction(taskFunc);
+    Assert(task_func != NULL);
+    return ctx->CallInst(task_func, NULL, args, taskFunc + "_call");
 }
 
 /** Given the statements implementing a function, emit the code that
@@ -422,6 +429,28 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
             }
 
             Assert(++argIter == function->arg_end());
+        }
+        if (g->target->isXeTarget() && type->isTask) {
+            // Assign taskIndex and taskCount to the result of calling of corresponding builtins.
+            taskIndexSym->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex");
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_index"), taskIndexSym->storageInfo);
+
+            taskCountSym->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount");
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_count"), taskCountSym->storageInfo);
+
+            taskIndexSym0->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex0");
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_index0"), taskIndexSym0->storageInfo);
+            taskIndexSym1->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex1");
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_index1"), taskIndexSym1->storageInfo);
+            taskIndexSym2->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex2");
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_index2"), taskIndexSym2->storageInfo);
+
+            taskCountSym0->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount0");
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_count0"), taskCountSym0->storageInfo);
+            taskCountSym1->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount1");
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_count1"), taskCountSym1->storageInfo);
+            taskCountSym2->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount2");
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_count2"), taskCountSym2->storageInfo);
         }
     }
 
