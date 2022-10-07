@@ -158,8 +158,9 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
     endif()
 
     # OS to arch constrains
-    if (${os_name} STREQUAL "windows" AND ${arch} STREQUAL "arm")
+    if (${os_name} STREQUAL "windows" AND ${arch} STREQUAL "arm" AND "${bit}" STREQUAL "32")
         set(SKIP ON)
+
     endif()
     if (${os_name} STREQUAL "macos")
         if (${target_arch} STREQUAL "x86_64")

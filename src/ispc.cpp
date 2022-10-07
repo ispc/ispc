@@ -1552,8 +1552,7 @@ std::string Target::GetTripleString() const {
             Error(SourcePos(), "Arm is not supported on Windows.");
             exit(1);
         } else if (m_arch == Arch::aarch64) {
-            Error(SourcePos(), "Aarch64 is not supported on Windows.");
-            exit(1);
+            triple.setArchName("aarch64");
         } else if (m_arch == Arch::xe32) {
             triple.setArchName("spir");
         } else if (m_arch == Arch::xe64) {
