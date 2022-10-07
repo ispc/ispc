@@ -664,6 +664,8 @@ std::vector<VariableDeclaration> Declaration::GetVariableDeclarations() const {
             Symbol *sym = new Symbol(decl->name, decl->pos, decl->type, decl->storageClass);
             m->symbolTable->AddVariable(sym);
             vars.push_back(VariableDeclaration(sym, decl->initExpr));
+        } else {
+            Error(decl->pos, "\"%s\" is illegal in declaration.", decl->name.c_str());
         }
     }
 
