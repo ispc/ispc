@@ -1549,7 +1549,7 @@ std::string Target::GetTripleString() const {
         } else if (m_arch == Arch::x86_64) {
             triple.setArchName("x86_64");
         } else if (m_arch == Arch::arm) {
-            Error(SourcePos(), "Arm is not supported on Windows.");
+            Error(SourcePos(), "arm (32 bit) is not supported on Windows, use aarch64 instead.");
             exit(1);
         } else if (m_arch == Arch::aarch64) {
             triple.setArchName("aarch64");
