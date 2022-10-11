@@ -18,6 +18,8 @@
 // CHECK-EXPORT_EXTERN_FUNC: Error: Undeclared symbol "taskIndex0".
 // CHECK-EXPORT_EXTERN_FUNC: Error: Undeclared symbol "taskIndex1".
 // CHECK-EXPORT_EXTERN_FUNC: Error: Undeclared symbol "taskIndex2".
+// CHECK-EXPORT_EXTERN_FUNC: Error: Undeclared symbol "threadIndex".
+// CHECK-EXPORT_EXTERN_FUNC: Error: Undeclared symbol "threadCount".
 // CHECK-EXPORT_EXTERN_FUNC: Warning: Function parameter "taskIndex" shadows a function declared in global scope.
 // CHECK-EXPORT_EXTERN_FUNC-NOT: FATAL ERROR
 
@@ -34,6 +36,7 @@ export void export_fn1(const uniform int taskIndex) { }
 
 export void export_fn2(uniform int res[]) {
     res[0] = taskIndex0 * taskIndex1 * taskIndex2;
+    res[1] = threadIndex + threadCount;
 }
 
 export void export_fn3(uniform int res[]) {
@@ -49,6 +52,7 @@ task void task_fn1(const uniform int taskIndex) { }
 
 task void task_fn2(uniform int res[]) {
     res[0] = taskIndex0 * taskIndex1 * taskIndex2;
+    res[1] = threadIndex + threadCount;
 }
 
 task void task_fn3(uniform int res[]) {
@@ -64,6 +68,7 @@ extern void extern_fn1(const uniform int taskIndex) { }
 
 extern void extern_fn2(uniform int res[]) {
     res[0] = taskIndex0 * taskIndex1 * taskIndex2;
+    res[1] = threadIndex + threadCount;
 }
 
 extern void extern_fn3(uniform int res[]) {

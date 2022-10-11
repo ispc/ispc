@@ -431,6 +431,14 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
             Assert(++argIter == function->arg_end());
         }
         if (g->target->isXeTarget() && type->isTask) {
+            // Assign threadIndex and threadCount to the result of calling of corresponding builtins.
+            // On Xe threadIndex equals to taskIndex and threadCount to taskCount.
+            threadIndexSym->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "threadIndex");
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_index"), threadIndexSym->storageInfo);
+
+            threadCountSym->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "threadCount");
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_count"), threadCountSym->storageInfo);
+
             // Assign taskIndex and taskCount to the result of calling of corresponding builtins.
             taskIndexSym->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex");
             ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_index"), taskIndexSym->storageInfo);
