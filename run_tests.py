@@ -344,7 +344,12 @@ def check_if_skip_test(filename, host, target):
     else:
         oss = "unknown"
 
-    rule_values = {"arch": target.arch, "OS": oss, "cpu": target.cpu}
+    # Alias all of acm-* devices to dg2.
+    target_cpu = target.cpu
+    if target_cpu.startswith("acm-"):
+        target_cpu = "dg2"
+
+    rule_values = {"arch": target.arch, "OS": oss, "cpu": target_cpu}
 
     test_file_path = add_prefix(filename, host, target)
     with open(test_file_path) as test_file:
