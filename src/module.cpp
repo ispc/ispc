@@ -1178,9 +1178,9 @@ bool Module::writeSPIRV(llvm::Module *module, const char *outFileName) {
 
 // Translate ISPC CPU name to Neo representation
 static std::string translateCPU(const std::string &CPU) {
-    auto It = ISPCToNeoCPU.find(CPU);
-    Assert(It != ISPCToNeoCPU.end() && "Unexpected CPU");
-    return It->second;
+    // For the platforms that we support it's 1:1 mapping at the moment,
+    // in case of exceptions, they need to be handled here.
+    return CPU;
 }
 
 // Copy outputs. Required file should have provided extension (it is
