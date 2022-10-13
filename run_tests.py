@@ -125,6 +125,9 @@ class TargetConfig(object):
     def set_cpu(self, cpu):
         if cpu is not None:
             self.cpu = cpu
+            # Alias all of acm-* devices to dg2.
+            if cpu.startswith("acm-"):
+                self.cpu = "dg2"
         else:
             self.cpu = "unspec"
 
@@ -306,10 +309,7 @@ def check_if_skip_test(filename, host, target):
     else:
         oss = "unknown"
 
-    # Alias all of acm-* devices to dg2.
     target_cpu = target.cpu
-    if target_cpu.startswith("acm-"):
-        target_cpu = "dg2"
 
     rule_values = {"arch": target.arch, "OS": oss, "cpu": target_cpu}
 
@@ -1047,7 +1047,7 @@ if __name__ == "__main__":
                   action = "store_true")
     parser.add_option("--file", dest='in_file', help='file to save run_tests output', default="")
     parser.add_option("--l0loader", dest='l0loader', help='Path to L0 loader', default="")
-    parser.add_option("--device", dest='device', help='Specify target ISPC device. For example: core2, skx, cortex-a9, skl, tgllp, dg2, etc.', default=None)
+    parser.add_option("--device", dest='device', help='Specify target ISPC device. For example: core2, skx, cortex-a9, skl, tgllp, acm-g11, etc.', default=None)
     parser.add_option("--ispc_output", dest='ispc_output', choices=['obj', 'spv', 'ze'], help='Specify ISPC output', default=None)
     parser.add_option("--fail_db", dest='fail_db', help='File to use as a fail database', default='fail_db.txt', type=str)
     parser.add_option("--debug_check", dest='debug_check', help='Run tests in debug mode with validating debug info', default=False, action="store_true")
