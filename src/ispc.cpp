@@ -496,7 +496,6 @@ class AllCPUs {
         names[GPU_ACM_G10].push_back("acm-g10");
         // ACM 128EU version
         names[GPU_ACM_G11].push_back("acm-g11");
-        names[GPU_ACM_G11].push_back("dg2"); // It's here just for backward compatibility
         // ACM 256EU version
         names[GPU_ACM_G12].push_back("acm-g12");
         names[GPU_PVC].push_back("pvc");

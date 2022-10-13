@@ -4,14 +4,12 @@
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x8 --device=skl
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x8 --device=tgllp
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x8 --device=dg1
-// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x8 --device=dg2
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x8 --device=acm-g10
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x8 --device=acm-g11
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x8 --device=acm-g12
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x16 --device=skl
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x16 --device=tgllp
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x16 --device=dg1
-// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x16 --device=dg2
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x16 --device=acm-g10
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x16 --device=acm-g11
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x16 --device=acm-g12
@@ -20,14 +18,12 @@
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelp-x8 --device=skl
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelp-x8 --device=tgllp
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelp-x8 --device=dg1
-// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelp-x8 --device=dg2
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelp-x8 --device=acm-g10
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelp-x8 --device=acm-g11
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelp-x8 --device=acm-g12
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelp-x16 --device=skl
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelp-x16 --device=tgllp
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelp-x16 --device=dg1
-// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelp-x16 --device=dg2
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelp-x16 --device=acm-g10
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelp-x16 --device=acm-g11
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelp-x16 --device=acm-g12
@@ -36,14 +32,12 @@
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpg-x8 --device=skl
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpg-x8 --device=tgllp
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpg-x8 --device=dg1
-// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpg-x8 --device=dg2
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpg-x8 --device=acm-g10
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpg-x8 --device=acm-g11
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpg-x8 --device=acm-g12
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpg-x16 --device=skl
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpg-x16 --device=tgllp
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpg-x16 --device=dg1
-// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpg-x16 --device=dg2
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpg-x16 --device=acm-g10
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpg-x16 --device=acm-g11
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpg-x16 --device=acm-g12
@@ -52,7 +46,6 @@
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpc-x16 --device=skl
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpc-x16 --device=tgllp
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpc-x16 --device=dg1
-// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpc-x16 --device=dg2
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpc-x16 --device=acm-g10
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpc-x16 --device=acm-g11
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xehpc-x16 --device=acm-g12
