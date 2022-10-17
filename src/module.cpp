@@ -2427,28 +2427,18 @@ int Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *o
 // Given an output filename of the form "foo.obj", and an ISA name like
 // "avx", return a string with the ISA name inserted before the original
 // filename's suffix, like "foo_avx.obj".
-static std::string lGetTargetFileName(const char *outFileName, const char *isaString) {
-    int bufferSize = strlen(outFileName) + 16;
-    char *targetOutFileName = new char[bufferSize];
-    if (strrchr(outFileName, '.') != NULL) {
-        // Copy everything up to the last '.'
-        int count = strrchr(outFileName, '.') - outFileName;
-        strncpy(targetOutFileName, outFileName, count);
-        targetOutFileName[count] = '\0';
+static std::string lGetTargetFileName(const char *outFileName, const std::string &isaString) {
+    assert(outFileName != nullptr && "`outFileName` should not be null");
 
-        // Add the ISA name
-        strncat(targetOutFileName, "_", bufferSize - strlen(targetOutFileName) - 1);
-        strncat(targetOutFileName, isaString, bufferSize - strlen(targetOutFileName) - 1);
+    std::string targetOutFileName{outFileName};
+    const auto pos_dot = targetOutFileName.find_last_of('.');
 
-        // And finish with the original file suffix
-        strncat(targetOutFileName, strrchr(outFileName, '.'), bufferSize - strlen(targetOutFileName) - 1);
+    if (pos_dot != std::string::npos) {
+        targetOutFileName = targetOutFileName.substr(0, pos_dot) + "_" + isaString + targetOutFileName.substr(pos_dot);
     } else {
         // Can't find a '.' in the filename, so just append the ISA suffix
         // to what we weregiven
-        strncpy(targetOutFileName, outFileName, bufferSize - 1);
-        targetOutFileName[bufferSize - 1] = '\0';
-        strncat(targetOutFileName, "_", bufferSize - strlen(targetOutFileName) - 1);
-        strncat(targetOutFileName, isaString, bufferSize - strlen(targetOutFileName) - 1);
+        targetOutFileName.append("_" + isaString);
     }
     return targetOutFileName;
 }
@@ -2967,7 +2957,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
 
                 if (outFileName != NULL) {
                     std::string targetOutFileName;
-                    const char *isaName = g->target->GetISAString();
+                    std::string isaName{g->target->GetISAString()};
                     targetOutFileName = lGetTargetFileName(outFileName, isaName);
                     if (!m->writeOutput(outputType, outputFlags, targetOutFileName.c_str())) {
                         return 1;
