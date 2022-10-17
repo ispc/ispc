@@ -618,8 +618,9 @@ struct Module : public ispcrt::base::Module {
         const char *userIgcOptionsEnv = getenv_wr(ISPCRT_IGC_OPTIONS);
         if (userIgcOptionsEnv) {
             // Copy at most MAX_ISPCRT_IGC_OPTIONS characters from the env - just to be safe
-            const auto copyChars = std::min(std::strlen(userIgcOptionsEnv), (size_t)MAX_ISPCRT_IGC_OPTIONS);
-            std::string userIgcOptions(userIgcOptionsEnv, copyChars);
+            constexpr auto MAX_ISPCRT_IGC_OPTIONS = 2000UL;
+            const auto numCopyChars = strnlen(userIgcOptionsEnv, MAX_ISPCRT_IGC_OPTIONS);
+            std::string userIgcOptions{userIgcOptionsEnv, numCopyChars};
             if (userIgcOptions.length() >= 3) {
                 auto prefix = userIgcOptions.substr(0, 2);
                 if (prefix == "+ ") {
@@ -842,8 +843,8 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         if (event == nullptr)
             throw std::runtime_error("Failed to create event!");
         try {
-            L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl_compute->handle(), view_dst.devicePtr(), view_src.devicePtr(),
-                                                       size, event->handle(), 0, nullptr));
+            L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_cl_compute->handle(), view_dst.devicePtr(),
+                                                       view_src.devicePtr(), size, event->handle(), 0, nullptr));
             m_cl_compute->inc();
         } catch (ispcrt::base::ispcrt_runtime_error &e) {
             // cleanup and rethrow
@@ -1073,7 +1074,7 @@ ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx) {
 
 void linkModules(gpu::Module **modules, const uint32_t numModules) {
     std::vector<ze_module_handle_t> moduleHandles;
-    for (int i = 0; i< numModules; i++) {
+    for (int i = 0; i < numModules; i++) {
         moduleHandles.push_back(modules[i]->handle());
     }
 
@@ -1098,7 +1099,6 @@ void linkModules(gpu::Module **modules, const uint32_t numModules) {
         L0_SAFE_CALL_NOEXCEPT(zeModuleDynamicLink(numModules, moduleHandles.data(), nullptr));
     }
 }
-
 
 } // namespace gpu
 
@@ -1195,28 +1195,28 @@ void *GPUDevice::deviceNativeHandle() const { return m_device; }
 
 void *GPUDevice::contextNativeHandle() const { return m_context; }
 
-ISPCRTAllocationType GPUDevice::getMemAllocType(void* appMemory) const {
+ISPCRTAllocationType GPUDevice::getMemAllocType(void *appMemory) const {
     ze_memory_allocation_properties_t memProperties = {ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES};
     ze_device_handle_t gpuDevice = (ze_device_handle_t)m_device;
     L0_SAFE_CALL(zeMemGetAllocProperties((ze_context_handle_t)m_context, appMemory, &memProperties, &gpuDevice));
     switch (memProperties.type) {
-        case ZE_MEMORY_TYPE_UNKNOWN:
-            return ISPCRT_ALLOC_TYPE_UNKNOWN;
-        case ZE_MEMORY_TYPE_HOST:
-            return ISPCRT_ALLOC_TYPE_HOST;
-        case ZE_MEMORY_TYPE_DEVICE:
-            return ISPCRT_ALLOC_TYPE_DEVICE;
-        case ZE_MEMORY_TYPE_SHARED:
-            return ISPCRT_ALLOC_TYPE_SHARED;
-        default:
-            return ISPCRT_ALLOC_TYPE_UNKNOWN;
+    case ZE_MEMORY_TYPE_UNKNOWN:
+        return ISPCRT_ALLOC_TYPE_UNKNOWN;
+    case ZE_MEMORY_TYPE_HOST:
+        return ISPCRT_ALLOC_TYPE_HOST;
+    case ZE_MEMORY_TYPE_DEVICE:
+        return ISPCRT_ALLOC_TYPE_DEVICE;
+    case ZE_MEMORY_TYPE_SHARED:
+        return ISPCRT_ALLOC_TYPE_SHARED;
+    default:
+        return ISPCRT_ALLOC_TYPE_UNKNOWN;
     }
     return ISPCRT_ALLOC_TYPE_UNKNOWN;
 }
 
 GPUContext::GPUContext() : GPUContext(nullptr) {}
 
-GPUContext::GPUContext(void* nativeContext) {
+GPUContext::GPUContext(void *nativeContext) {
     // Perform GPU discovery
     m_driver = gpu::deviceDiscovery(&m_is_mock);
     if (nativeContext) {
@@ -1239,9 +1239,7 @@ base::MemoryView *GPUContext::newMemoryView(void *appMem, size_t numBytes, bool 
     return new gpu::MemoryView((ze_context_handle_t)m_context, nullptr, appMem, numBytes, shared);
 }
 
-ISPCRTDeviceType GPUContext::getDeviceType() const {
-    return ISPCRTDeviceType::ISPCRT_DEVICE_TYPE_GPU;
-}
+ISPCRTDeviceType GPUContext::getDeviceType() const { return ISPCRTDeviceType::ISPCRT_DEVICE_TYPE_GPU; }
 
 void *GPUContext::contextNativeHandle() const { return m_context; }
 
