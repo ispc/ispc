@@ -148,7 +148,6 @@ define(`NEON_PREFIX_RSQRTSQ',
 `ifelse(RUNTIME, `64', `llvm.aarch64.neon.frsqrts',
         RUNTIME, `32', `llvm.arm.neon.vrsqrts')')
 
-
 stdlib_core()
 scans()
 reduce_equal(WIDTH)
@@ -186,17 +185,60 @@ define i16 @__float_to_half_uniform(float %v) nounwind readnone alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; math
 
-declare i32 @llvm.arm.get.fpscr() nounwind
-declare void @llvm.arm.set.fpscr(i32) nounwind
+ifelse(RUNTIME, `32',
+`
+  declare void @llvm.arm.set.fpscr(i32) nounwind
+  declare i32 @llvm.arm.get.fpscr() nounwind
 
-define void @__fastmath() nounwind alwaysinline {
-  %x = call i32 @llvm.arm.get.fpscr()
-  ; Turn on FTZ (bit 24) and default NaN (bit 25)
-  %y = or i32 %x, 50331648
-  call void @llvm.arm.set.fpscr(i32 %y)
-  ret void
-}
+  define void @__fastmath() nounwind alwaysinline {
+    %x = call i32 @llvm.arm.get.fpscr()
+    ; Turn on FTZ (bit 24) and default NaN (bit 25)
+    %y = or i32 %x, 50331648
+    call void @llvm.arm.set.fpscr(i32 %y)
+    ret void
+  }
 
+  define i32 @__set_ftz_daz_flags() nounwind alwaysinline {
+    %x = call i32 @llvm.arm.get.fpscr()
+    ; Turn on FTZ (bit 24) and default NaN (bit 25)
+    %y = or i32 %x, 50331648
+    call void @llvm.arm.set.fpscr(i32 %y)
+    ret i32 %x
+  }
+
+  define void @__restore_ftz_daz_flags(i32 %oldVal) nounwind alwaysinline {
+    ; restore value to previously saved
+    call void @llvm.arm.set.fpscr(i32 %oldVal)
+    ret void
+  }
+',
+  RUNTIME, `64',
+`
+  declare void @llvm.aarch64.set.fpcr(i64) nounwind
+  declare i64 @llvm.aarch64.get.fpcr() nounwind
+
+  define void @__fastmath() nounwind alwaysinline {
+    %x = call i64 @llvm.aarch64.get.fpcr()
+    ; Turn on FTZ (bit 24) and default NaN (bit 25)
+    %y = or i64 %x, 50331648
+    call void @llvm.aarch64.set.fpcr(i64 %y)
+    ret void
+  }
+
+  define i64 @__set_ftz_daz_flags() nounwind alwaysinline {
+    %x = call i64 @llvm.aarch64.get.fpcr()
+    ; Turn on FTZ (bit 24) and default NaN (bit 25)
+    %y = or i64 %x, 50331648
+    call void @llvm.aarch64.set.fpcr(i64 %y)
+    ret i64 %x
+  }
+
+  define void @__restore_ftz_daz_flags(i64 %oldVal) nounwind alwaysinline {
+    ; restore value to previously saved
+    call void @llvm.aarch64.set.fpcr(i64 %oldVal)
+    ret void
+  }
+')
 ;; round/floor/ceil
 
 ;; FIXME: grabbed these from the sse2 target, which does not have native

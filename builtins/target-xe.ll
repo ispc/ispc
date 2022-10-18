@@ -257,6 +257,14 @@ define void @__fastmath() nounwind alwaysinline {
   ret void
 }
 
+define i32 @__set_ftz_daz_flags() nounwind alwaysinline {
+  ret i32 0
+}
+
+define void @__restore_ftz_daz_flags(i32 %oldVal) nounwind alwaysinline {
+  ret void
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; min/max
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

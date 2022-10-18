@@ -2013,6 +2013,7 @@ Opt::Opt() {
     disableUniformMemoryOptimizations = false;
     disableCoalescing = false;
     disableZMM = false;
+    resetFTZ_DAZ = false;
 #ifdef ISPC_XE_ENABLED
     disableXeGatherCoalescing = false;
     thresholdForXeGatherCoalescing = 0;
