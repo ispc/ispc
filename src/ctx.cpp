@@ -365,6 +365,24 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::F
         SetInternalMaskAnd(LLVMMaskAllOn, allOnMask);
     }
 
+    // If reset of FTZ/DAZ flags is requested and we're inside external function,
+    // allocate memory for keeping the old FTZ/DAZ value
+    if ((g->opt.resetFTZ_DAZ) &&
+        (func->GetType()->isExported || func->GetType()->isExternC || func->GetType()->isExternSYCL ||
+         func->GetType()->IsISPCKernel()) &&
+        // The condition below checks that the function doesn't have additional `__mask` parameter.
+        // If it has `__mask`, it's an internal version of export function and we don't need to set
+        // FTZ/DAZ flags there.
+        (lf->getFunctionType()->getNumParams() == func->GetType()->GetNumParameters())) {
+        // On ARM the size of register with FTZ/DAZ flags is platform dependent,
+        // on other platforms it's always i32.
+        functionFTZ_DAZValue = AllocaInst(
+            g->target->getArch() == Arch::aarch64 ? LLVMTypes::Int64Type : LLVMTypes::Int32Type, "func_entry_ftz");
+
+    } else {
+        functionFTZ_DAZValue = NULL;
+    }
+
     if (m->diBuilder) {
         currentPos = funSym->pos;
 
@@ -1333,6 +1351,31 @@ void FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck
         AddInstrumentationPoint("return: some but not all lanes have returned");
         SetInternalMask(LLVMMaskAllOff);
     }
+}
+
+void FunctionEmitContext::SetFunctionFTZ_DAZFlags() {
+    if (functionFTZ_DAZValue == NULL)
+        return;
+    std::vector<Symbol *> mm;
+    m->symbolTable->LookupFunction("__set_ftz_daz_flags", &mm);
+    AssertPos(currentPos, mm.size() >= 1);
+    llvm::Function *fmm = mm[0]->function;
+    std::vector<llvm::Value *> args;
+    llvm::Value *oldFTZ = CallInst(fmm, NULL, args, "");
+    StoreInst(oldFTZ, functionFTZ_DAZValue);
+}
+
+void FunctionEmitContext::RestoreFunctionFTZ_DAZFlags() {
+    if (functionFTZ_DAZValue == NULL)
+        return;
+    std::vector<Symbol *> mm;
+    m->symbolTable->LookupFunction("__restore_ftz_daz_flags", &mm);
+    AssertPos(currentPos, mm.size() >= 1);
+    llvm::Function *fmm = mm[0]->function;
+    llvm::Value *oldFTZ = LoadInst(functionFTZ_DAZValue);
+    std::vector<llvm::Value *> args;
+    args.push_back(oldFTZ);
+    CallInst(fmm, NULL, args, "");
 }
 
 llvm::Value *FunctionEmitContext::Any(llvm::Value *mask) {
@@ -3611,7 +3654,10 @@ llvm::Instruction *FunctionEmitContext::ReturnInst() {
         return NULL;
     }
 #endif
-
+    // Restore DAZ/FTZ flags if they were set before return statement
+    if (functionFTZ_DAZValue != NULL) {
+        RestoreFunctionFTZ_DAZFlags();
+    }
     llvm::Instruction *rinst = NULL;
     if (returnValueAddressInfo != NULL) {
         // We have value(s) to return; load them from their storage

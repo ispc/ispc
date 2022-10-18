@@ -303,6 +303,17 @@ class FunctionEmitContext {
     void CurrentLanesReturned(Expr *value, bool doCoherenceCheck);
     /** @} */
 
+    /** @name FTZ/DAZ-flags related routines
+        @{
+    */
+    /** Sets FTZ/DAZ flags. Returns the value detected on function entry */
+    void SetFunctionFTZ_DAZFlags();
+
+    /** Restores FTZ/DAZ flags saved on function entry */
+    void RestoreFunctionFTZ_DAZFlags();
+
+    /** @} */
+
     /** @name Small helper/utility routines
         @{
     */
@@ -683,6 +694,9 @@ class FunctionEmitContext {
 
     /** Value of the program mask when the function starts execution.  */
     llvm::Value *functionMaskValue;
+
+    /** Value of the ftz/daz flags when the function starts execution.  */
+    AddressInfo *functionFTZ_DAZValue;
 
     /** Current source file position; if debugging information is being
         generated, this position is used to set file/line information for

@@ -462,6 +462,9 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         }
     }
 
+    // Set FTZ/DAZ flags if requested
+    ctx->SetFunctionFTZ_DAZFlags();
+
     // Finally, we can generate code for the function
     if (code != NULL) {
         ctx->SetDebugPos(code->pos);

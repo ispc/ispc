@@ -170,6 +170,7 @@ static void lPrintVersion() {
     printf("        fast-masked-vload\t\tFaster masked vector loads on SSE (may go past end of array)\n");
     printf("        fast-math\t\t\tPerform non-IEEE-compliant optimizations of numeric expressions\n");
     printf("        force-aligned-memory\t\tAlways issue \"aligned\" vector load and store instructions\n");
+    printf("        reset-ftz-daz\t\t\tReset FTZ/DAZ flags on ISPC extern function entrance / restore on return\n");
     printf("    [--pic]\t\t\t\tGenerate position-independent code.  Ignored for Windows target\n");
     printf("    [--quiet]\t\t\t\tSuppress all output\n");
     printf("    [--support-matrix]\t\t\tPrint full matrix of supported targets, architectures and OSes\n");
@@ -804,6 +805,8 @@ int main(int Argc, char *Argv[]) {
                 g->opt.disableZMM = true;
             else if (!strcmp(opt, "force-aligned-memory"))
                 g->opt.forceAlignedMemory = true;
+            else if (!strcmp(opt, "reset-ftz-daz"))
+                g->opt.resetFTZ_DAZ = true;
 
             // These are only used for performance tests of specific
             // optimizations

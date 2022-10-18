@@ -6987,6 +6987,47 @@ define <$1 x half> @__$2_varying_half(<$1 x half>,
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; fast math, FTZ/DAZ functions
+define(`fastMathFTZDAZ_x86', `
+declare void @llvm.x86.sse.stmxcsr(i8 *) nounwind
+declare void @llvm.x86.sse.ldmxcsr(i8 *) nounwind
+
+define void @__fastmath() nounwind alwaysinline {
+  %ptr = alloca i32
+  %ptr8 = bitcast i32 * %ptr to i8 *
+  call void @llvm.x86.sse.stmxcsr(i8 * %ptr8)
+  %oldval = load PTR_OP_ARGS(`i32 ') %ptr
+
+  ; turn on DAZ (64)/FTZ (32768) -> 32832
+  %update = or i32 %oldval, 32832
+  store i32 %update, i32 *%ptr
+  call void @llvm.x86.sse.ldmxcsr(i8 * %ptr8)
+  ret void
+}
+
+define i32 @__set_ftz_daz_flags() nounwind alwaysinline {
+  %ptr = alloca i32
+  %ptr8 = bitcast i32 * %ptr to i8 *
+  call void @llvm.x86.sse.stmxcsr(i8 * %ptr8)
+  %oldval = load PTR_OP_ARGS(`i32 ') %ptr
+
+  ; turn on DAZ (64)/FTZ (32768) -> 32832
+  %update = or i32 %oldval, 32832
+  store i32 %update, i32 *%ptr
+  call void @llvm.x86.sse.ldmxcsr(i8 * %ptr8)
+  ret i32 %oldval
+}
+
+define void @__restore_ftz_daz_flags(i32 %oldVal) nounwind alwaysinline {
+  ; restore value to previously saved
+  %ptr = alloca i32
+  %ptr8 = bitcast i32 * %ptr to i8 *
+  store i32 %oldVal, i32 *%ptr
+  call void @llvm.x86.sse.ldmxcsr(i8 * %ptr8)
+  ret void
+}
+')
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; 16-bit float math functions
 
 ;; $1: target vector width

@@ -107,6 +107,14 @@ entry:
   ret void
 }
 
+define i32 @__set_ftz_daz_flags() nounwind alwaysinline {
+  ret i32 0
+}
+
+define void @__restore_ftz_daz_flags(i32 %oldVal) nounwind alwaysinline {
+  ret void
+}
+
 define <4 x double> @__rsqrt_varying_double(<4 x double> %v) nounwind readnone alwaysinline {
 entry:
   %0 = tail call <4 x double> @llvm.sqrt.v4f64(<4 x double> %v)

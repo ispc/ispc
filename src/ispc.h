@@ -557,6 +557,10 @@ struct Opt {
         Affects only >= 512 bit wide targets and only if avx512vl is available */
     bool disableZMM;
 
+    /** Set FTZ/DAZ flags on the extern function entrance and restore them.
+        upon return to "host" code.*/
+    bool resetFTZ_DAZ;
+
 #ifdef ISPC_XE_ENABLED
     /** Disables optimization that coalesce gathers on Xe. This is
         likely only useful for measuring the impact of this optimization */
