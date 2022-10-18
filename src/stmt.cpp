@@ -47,7 +47,6 @@
 #include "util.h"
 
 #include <algorithm>
-#include <iostream>
 #include <iterator>
 #include <map>
 #include <sstream>
@@ -1984,8 +1983,9 @@ Stmt *ForeachStmt::TypeCheck() {
 }
 
 void ForeachStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
-    if (loopAttribute.first != Globals::pragmaUnrollType::none)
+    if (loopAttribute.first != Globals::pragmaUnrollType::none) {
         Error(pos, "Multiple '#pragma unroll/nounroll' directives used.");
+    }
 
     Warning(pos, "'#pragma unroll/nounroll' is EXPERIMENTAL for foreach loop.");
 
