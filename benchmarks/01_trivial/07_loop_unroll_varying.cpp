@@ -4,7 +4,7 @@
 #include "../../ispcrt/ispcrt.hpp"
 #include "../common.h"
 
-#include "07_loop_unroll_varying-cpu_ispc.h"
+#include "07_loop_unroll_varying_ispc.h"
 
 static Docs docs("Check the performance and functionality of loop unrolling with varying types.\n"
                  "The bench kernel performs prefix scan over an input buffer.\n"
