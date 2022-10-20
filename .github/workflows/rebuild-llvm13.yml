@@ -12,6 +12,7 @@ on:
       - "llvm_patches/*13_0*"
       - "alloy.py"
       - ".github/workflows/rebuild-llvm13.yml"
+      - ".github/workflows/reusable.rebuild.yml"
   workflow_dispatch:
 
 jobs:
