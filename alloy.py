@@ -257,6 +257,8 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
                 try_do_LLVM("patch LLVM with patch " + patch + " ", "git apply " + patch, from_validation, verbose)
         os.chdir("../")
 
+    targets_and_common_options = "  -DLLVM_ENABLE_ZLIB=OFF -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86 -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly"
+
     # configuring llvm and build for first phase of selfbuild
     cmakelists_path = LLVM_SRC + "/llvm"
     if selfbuild is SelfbuildType.SELF or selfbuild is SelfbuildType.SELF_PHASE1:
@@ -277,8 +279,7 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
                 (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" else "") +
                 (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" else "") +
                 (("  -DDEFAULT_SYSROOT=" + mac_system_root) if mac_system_root != "" else "") +
-                "  -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86" +
-                "  -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly" +
+                targets_and_common_options +
                 " ../" + cmakelists_path,
                 from_validation, verbose)
         try_do_LLVM("build release version for selfbuild ", make, from_validation, verbose)
@@ -313,8 +314,7 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
                     (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
                     (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
                     (("  -DDEFAULT_SYSROOT=" + mac_system_root) if mac_system_root != "" else "") +
-                    "  -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86" +
-                    "  -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly" +
+                    targets_and_common_options +
                     " ../" + cmakelists_path,
                     from_validation, verbose)
         else:
@@ -325,8 +325,7 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
                     get_llvm_enable_dump_switch(version_LLVM) +
                     get_llvm_disable_assertions_switch(llvm_disable_assertions) +
                     '  -DLLVM_INSTALL_UTILS=ON' +
-                    '  -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86' +
-                    '  -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly' +
+                    targets_and_common_options +
                     '  -DLLVM_LIT_TOOLS_DIR="C:\\gnuwin32\\bin" ..\\' + cmakelists_path,
                     from_validation, verbose)
 
