@@ -58,7 +58,7 @@ for:
         if "%LLVM_VERSION%"=="latest" (set WASM=ON)
         if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2019" ( (set generator="Visual Studio 16") & (set vspath="C:\Program Files (x86)\Microsoft Visual Studio\2019"))
         if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2022" ( (set generator="Visual Studio 17") & (set vspath="C:\Program Files\Microsoft Visual Studio\2022"))
-        set LLVM_TAR=llvm-15.0.2-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+        set LLVM_TAR=llvm-15.0.3-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
         if "%LLVM_VERSION%"=="14.0" (set LLVM_TAR=llvm-14.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z)
         if "%LLVM_VERSION%"=="13.0" (set LLVM_TAR=llvm-13.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z)
         if "%LLVM_VERSION%"=="12.0" (set LLVM_TAR=llvm-12.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z)
@@ -112,7 +112,7 @@ for:
         export LLVM_HOME=$APPVEYOR_BUILD_FOLDER/llvm
         export CROSS_TOOLS=/usr/local/src/cross
         export WASM=OFF
-        export LLVM_TAR=llvm-15.0.2-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+        export LLVM_TAR=llvm-15.0.3-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
   install:
     - sh: |-
         sudo apt-get update
