@@ -1,7 +1,7 @@
 ARG LLVM_VERSION=13.0
 
 FROM rockylinux:8 AS llvm_only
-MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
+LABEL maintainer="Dmitry Babokin <dmitry.y.babokin@intel.com>"
 SHELL ["/bin/bash", "-c"]
 
 ARG REPO=ispc/ispc
@@ -12,20 +12,24 @@ ARG LLVM_VERSION
 # otherwise LLVM build may fail, as it will use all the cores available to container.
 
 # Packages required to build ISPC and Clang. libtool is needed to build ncurses.
-RUN dnf -y update && dnf install -y wget yum-utils gcc gcc-c++ git python3 make ncurses-devel zlib-devel xz libtool && \
+RUN dnf -y update && dnf install -y wget-1.19.5 yum-utils-4.0.21 gcc-8.5.0 gcc-c++-8.5.0 git-2.31.1 python36-3.6.8 make-4.2.1 ncurses-devel-6.1 xz-5.2.4 libtool-2.4.6 && \
 #    yum install -y libtool autopoint gettext-devel texinfo help2man && \
     dnf clean -y all
 
 # These packages are required if you need to link IPSC with -static.
-RUN dnf -y --enablerepo=powertools install libstdc++-static zlib-static && \
+RUN dnf -y --enablerepo=powertools install libstdc++-static-8.5.0 && \
     dnf clean -y all
 
+WORKDIR /usr/local/src
+
 # Ncurses for g++ --static -lcurses -ltinfo. Despite setting --enable-overwrite it doesn't link(only static not linked?) libncurses as libcurses so symlinked manually
-RUN git clone https://github.com/ThomasDickey/ncurses-snapshots.git --depth=1 --branch=v6_3 && cd ncurses-snapshots && ./configure --with-termlib --with-libtool --with-libtool-opts=-static --enable-static --enable-overwrite && make -j8 && make install && \
+RUN git clone https://github.com/ThomasDickey/ncurses-snapshots.git --depth=1 --branch=v6_3
+WORKDIR /usr/local/src/ncurses-snapshots
+RUN ./configure --with-termlib --with-libtool --with-libtool-opts=-static --enable-static --enable-overwrite && make -j"$(nproc)" && make install && \
   ln -s /usr/lib/libncurses.a /usr/lib/libcurses.a && ln -s /usr/lib/libncurses++.a /usr/lib/libcurses++.a
 
 # Download and install required version of cmake (3.14 for x86, 3.20 for aarch64, as earlier versions are not available as binary distribution) for ISPC build
-RUN if [[ `uname -m` =~ "x86" ]]; then export CMAKE_URL="https://cmake.org/files/v3.14/cmake-3.14.0-Linux-x86_64.sh"; else export CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v3.20.3/cmake-3.20.3-linux-aarch64.sh"; fi && \
+RUN if [[ $(uname -m) =~ "x86" ]]; then export CMAKE_URL="https://cmake.org/files/v3.14/cmake-3.14.0-Linux-x86_64.sh"; else export CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v3.20.3/cmake-3.20.3-linux-aarch64.sh"; fi && \
     wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 $CMAKE_URL && mkdir /opt/cmake && sh cmake-*.sh --prefix=/opt/cmake --skip-license && \
     ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm -rf cmake-*.sh
 
@@ -36,7 +40,6 @@ WORKDIR /usr/local/src
 
 # Fork ispc on github and clone *your* fork.
 RUN git clone https://github.com/$REPO.git ispc
-RUN cd ispc && git checkout $SHA && cd ..
 
 # This is home for Clang builds
 RUN mkdir /usr/local/src/llvm
@@ -49,6 +52,7 @@ ENV LLVM_HOME=/usr/local/src/llvm
 # extract it, add to path and set SDE_HOME.
 
 WORKDIR /usr/local/src/ispc
+RUN git checkout $SHA
 
 # Build Clang with all required patches.
 # Pass required LLVM_VERSION with --build-arg LLVM_VERSION=<version>.
@@ -57,8 +61,8 @@ WORKDIR /usr/local/src/ispc
 # or better do clang selfbuild and use it for ispc build as well (i.e. just "make").
 # "rm" are just to keep docker image small.
 # Add --llvm-disable-assertions for building "release" version.
-RUN ./alloy.py -b --version=$LLVM_VERSION --selfbuild --verbose && \
-    rm -rf $LLVM_HOME/build-$LLVM_VERSION $LLVM_HOME/llvm-$LLVM_VERSION $LLVM_HOME/bin-"$LLVM_VERSION"_temp $LLVM_HOME/build-"$LLVM_VERSION"_temp
+RUN ./alloy.py -b --version="$LLVM_VERSION" --selfbuild --verbose && \
+    rm -rf "$LLVM_HOME"/build-"$LLVM_VERSION" "$LLVM_HOME"/llvm-"$LLVM_VERSION" "$LLVM_HOME"/bin-"$LLVM_VERSION"_temp "$LLVM_HOME"/build-"$LLVM_VERSION"_temp
 
 ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
 
@@ -66,10 +70,10 @@ FROM llvm_only AS ispc_build
 
 ARG LLVM_VERSION
 
-RUN dnf -y update && dnf install -y m4 bison flex && dnf clean -y all
-RUN if [[ `uname -m` =~ "x86" ]]; then dnf -y update && dnf install -y glibc-devel.i686 && dnf clean -y all; fi
+RUN dnf -y update && dnf install -y m4-1.4.18 bison-3.0.4 flex-2.6.1 && dnf clean -y all
+RUN if [[ $(uname -m) =~ "x86" ]]; then dnf -y update && dnf install -y glibc-devel-2.28-189.5.el8_6.i686 && dnf clean -y all; fi
 
 # Build ISPC
 RUN mkdir build
 WORKDIR /usr/local/src/ispc/build
-RUN cmake .. -DISPC_CROSS=ON && make -j8 && make check-all
+RUN cmake .. -DISPC_CROSS=ON && make -j"$(nproc)" && make check-all
