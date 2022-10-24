@@ -55,89 +55,89 @@ template <typename T> void check(T *src, T *dst, size_t num_elems) {
 
 #define ARGS Arg(8192ull)->Arg(8192ull << 10ull)->Arg(8192ull << 15ull)
 
-#ifndef UNROLL_VARYING_BENCH_CPU
-#define UNROLL_VARYING_BENCH_CPU(T_FOR, T_C, T_ISPC, UNROLL_FACTOR)                                                    \
-    static void unroll_varying_cpu_##T_FOR##_##T_ISPC##_##UNROLL_FACTOR(benchmark::State &state) {                     \
+#ifndef UNROLL_VARYING_BENCH
+#define UNROLL_VARYING_BENCH(T_FOR, T_C, T_ISPC, UNROLL_FACTOR)                                                        \
+    static void unroll_varying_##T_FOR##_##T_ISPC##_##UNROLL_FACTOR(benchmark::State &state) {                         \
         const size_t num_elems = state.range(0);                                                                       \
         T_C *src = static_cast<T_C *>(aligned_alloc_helper(sizeof(T_C) * num_elems));                                  \
         T_C *dst = static_cast<T_C *>(aligned_alloc_helper(sizeof(T_C) * num_elems));                                  \
         init_src(src, num_elems);                                                                                      \
         init_dst(dst, num_elems);                                                                                      \
         for (auto _ : state) {                                                                                         \
-            ispc::unroll_varying_cpu_##T_FOR##_##T_ISPC##_##UNROLL_FACTOR(src, dst, num_elems);                        \
+            ispc::unroll_varying_##T_FOR##_##T_ISPC##_##UNROLL_FACTOR(src, dst, num_elems);                            \
         }                                                                                                              \
         check(src, dst, num_elems);                                                                                    \
         aligned_free_helper(src);                                                                                      \
         aligned_free_helper(dst);                                                                                      \
         state.SetComplexityN(state.range(0));                                                                          \
     }                                                                                                                  \
-    BENCHMARK(unroll_varying_cpu_##T_FOR##_##T_ISPC##_##UNROLL_FACTOR)->ARGS
-#endif // UNROLL_VARYING_BENCH_CPU
+    BENCHMARK(unroll_varying_##T_FOR##_##T_ISPC##_##UNROLL_FACTOR)->ARGS
+#endif // UNROLL_VARYING_BENCH
 
-UNROLL_VARYING_BENCH_CPU(foreach, uint64_t, uint64, 1);
-UNROLL_VARYING_BENCH_CPU(foreach, int64_t, int64, 1);
-UNROLL_VARYING_BENCH_CPU(foreach, uint32_t, uint32, 1);
-UNROLL_VARYING_BENCH_CPU(foreach, int32_t, int32, 1);
-UNROLL_VARYING_BENCH_CPU(foreach, uint16_t, uint16, 1);
-UNROLL_VARYING_BENCH_CPU(foreach, int16_t, int16, 1);
-UNROLL_VARYING_BENCH_CPU(foreach, uint8_t, uint8, 1);
-UNROLL_VARYING_BENCH_CPU(foreach, int8_t, int8, 1);
-UNROLL_VARYING_BENCH_CPU(foreach, double, double, 1);
-UNROLL_VARYING_BENCH_CPU(foreach, float, float, 1);
+UNROLL_VARYING_BENCH(foreach, uint64_t, uint64, 1);
+UNROLL_VARYING_BENCH(foreach, int64_t, int64, 1);
+UNROLL_VARYING_BENCH(foreach, uint32_t, uint32, 1);
+UNROLL_VARYING_BENCH(foreach, int32_t, int32, 1);
+UNROLL_VARYING_BENCH(foreach, uint16_t, uint16, 1);
+UNROLL_VARYING_BENCH(foreach, int16_t, int16, 1);
+UNROLL_VARYING_BENCH(foreach, uint8_t, uint8, 1);
+UNROLL_VARYING_BENCH(foreach, int8_t, int8, 1);
+UNROLL_VARYING_BENCH(foreach, double, double, 1);
+UNROLL_VARYING_BENCH(foreach, float, float, 1);
 
-UNROLL_VARYING_BENCH_CPU(foreach, uint64_t, uint64, 2);
-UNROLL_VARYING_BENCH_CPU(foreach, int64_t, int64, 2);
-UNROLL_VARYING_BENCH_CPU(foreach, uint32_t, uint32, 2);
-UNROLL_VARYING_BENCH_CPU(foreach, int32_t, int32, 2);
-UNROLL_VARYING_BENCH_CPU(foreach, uint16_t, uint16, 2);
-UNROLL_VARYING_BENCH_CPU(foreach, int16_t, int16, 2);
-UNROLL_VARYING_BENCH_CPU(foreach, uint8_t, uint8, 2);
-UNROLL_VARYING_BENCH_CPU(foreach, int8_t, int8, 2);
-UNROLL_VARYING_BENCH_CPU(foreach, double, double, 2);
-UNROLL_VARYING_BENCH_CPU(foreach, float, float, 2);
+UNROLL_VARYING_BENCH(foreach, uint64_t, uint64, 2);
+UNROLL_VARYING_BENCH(foreach, int64_t, int64, 2);
+UNROLL_VARYING_BENCH(foreach, uint32_t, uint32, 2);
+UNROLL_VARYING_BENCH(foreach, int32_t, int32, 2);
+UNROLL_VARYING_BENCH(foreach, uint16_t, uint16, 2);
+UNROLL_VARYING_BENCH(foreach, int16_t, int16, 2);
+UNROLL_VARYING_BENCH(foreach, uint8_t, uint8, 2);
+UNROLL_VARYING_BENCH(foreach, int8_t, int8, 2);
+UNROLL_VARYING_BENCH(foreach, double, double, 2);
+UNROLL_VARYING_BENCH(foreach, float, float, 2);
 
-UNROLL_VARYING_BENCH_CPU(foreach, uint64_t, uint64, 4);
-UNROLL_VARYING_BENCH_CPU(foreach, int64_t, int64, 4);
-UNROLL_VARYING_BENCH_CPU(foreach, uint32_t, uint32, 4);
-UNROLL_VARYING_BENCH_CPU(foreach, int32_t, int32, 4);
-UNROLL_VARYING_BENCH_CPU(foreach, uint16_t, uint16, 4);
-UNROLL_VARYING_BENCH_CPU(foreach, int16_t, int16, 4);
-UNROLL_VARYING_BENCH_CPU(foreach, uint8_t, uint8, 4);
-UNROLL_VARYING_BENCH_CPU(foreach, int8_t, int8, 4);
-UNROLL_VARYING_BENCH_CPU(foreach, double, double, 4);
-UNROLL_VARYING_BENCH_CPU(foreach, float, float, 4);
+UNROLL_VARYING_BENCH(foreach, uint64_t, uint64, 4);
+UNROLL_VARYING_BENCH(foreach, int64_t, int64, 4);
+UNROLL_VARYING_BENCH(foreach, uint32_t, uint32, 4);
+UNROLL_VARYING_BENCH(foreach, int32_t, int32, 4);
+UNROLL_VARYING_BENCH(foreach, uint16_t, uint16, 4);
+UNROLL_VARYING_BENCH(foreach, int16_t, int16, 4);
+UNROLL_VARYING_BENCH(foreach, uint8_t, uint8, 4);
+UNROLL_VARYING_BENCH(foreach, int8_t, int8, 4);
+UNROLL_VARYING_BENCH(foreach, double, double, 4);
+UNROLL_VARYING_BENCH(foreach, float, float, 4);
 
-UNROLL_VARYING_BENCH_CPU(for,     uint64_t,  uint64, 1);
-UNROLL_VARYING_BENCH_CPU(for,     int64_t,   int64,  1);
-UNROLL_VARYING_BENCH_CPU(for,     uint32_t,  uint32, 1);
-UNROLL_VARYING_BENCH_CPU(for,     int32_t,   int32,  1);
-UNROLL_VARYING_BENCH_CPU(for,     uint16_t,  uint16, 1);
-UNROLL_VARYING_BENCH_CPU(for,     int16_t,   int16,  1);
-UNROLL_VARYING_BENCH_CPU(for,     uint8_t,   uint8,  1);
-UNROLL_VARYING_BENCH_CPU(for,     int8_t,    int8,   1);
-UNROLL_VARYING_BENCH_CPU(for,     double,    double, 1);
-UNROLL_VARYING_BENCH_CPU(for,     float,     float,  1);
+UNROLL_VARYING_BENCH(for,     uint64_t,  uint64, 1);
+UNROLL_VARYING_BENCH(for,     int64_t,   int64,  1);
+UNROLL_VARYING_BENCH(for,     uint32_t,  uint32, 1);
+UNROLL_VARYING_BENCH(for,     int32_t,   int32,  1);
+UNROLL_VARYING_BENCH(for,     uint16_t,  uint16, 1);
+UNROLL_VARYING_BENCH(for,     int16_t,   int16,  1);
+UNROLL_VARYING_BENCH(for,     uint8_t,   uint8,  1);
+UNROLL_VARYING_BENCH(for,     int8_t,    int8,   1);
+UNROLL_VARYING_BENCH(for,     double,    double, 1);
+UNROLL_VARYING_BENCH(for,     float,     float,  1);
 
-UNROLL_VARYING_BENCH_CPU(for,     uint64_t,  uint64, 2);
-UNROLL_VARYING_BENCH_CPU(for,     int64_t,   int64,  2);
-UNROLL_VARYING_BENCH_CPU(for,     uint32_t,  uint32, 2);
-UNROLL_VARYING_BENCH_CPU(for,     int32_t,   int32,  2);
-UNROLL_VARYING_BENCH_CPU(for,     uint16_t,  uint16, 2);
-UNROLL_VARYING_BENCH_CPU(for,     int16_t,   int16,  2);
-UNROLL_VARYING_BENCH_CPU(for,     uint8_t,   uint8,  2);
-UNROLL_VARYING_BENCH_CPU(for,     int8_t,    int8,   2);
-UNROLL_VARYING_BENCH_CPU(for,     double,    double, 2);
-UNROLL_VARYING_BENCH_CPU(for,     float,     float,  2);
+UNROLL_VARYING_BENCH(for,     uint64_t,  uint64, 2);
+UNROLL_VARYING_BENCH(for,     int64_t,   int64,  2);
+UNROLL_VARYING_BENCH(for,     uint32_t,  uint32, 2);
+UNROLL_VARYING_BENCH(for,     int32_t,   int32,  2);
+UNROLL_VARYING_BENCH(for,     uint16_t,  uint16, 2);
+UNROLL_VARYING_BENCH(for,     int16_t,   int16,  2);
+UNROLL_VARYING_BENCH(for,     uint8_t,   uint8,  2);
+UNROLL_VARYING_BENCH(for,     int8_t,    int8,   2);
+UNROLL_VARYING_BENCH(for,     double,    double, 2);
+UNROLL_VARYING_BENCH(for,     float,     float,  2);
 
-UNROLL_VARYING_BENCH_CPU(for,     uint64_t,  uint64, 4);
-UNROLL_VARYING_BENCH_CPU(for,     int64_t,   int64,  4);
-UNROLL_VARYING_BENCH_CPU(for,     uint32_t,  uint32, 4);
-UNROLL_VARYING_BENCH_CPU(for,     int32_t,   int32,  4);
-UNROLL_VARYING_BENCH_CPU(for,     uint16_t,  uint16, 4);
-UNROLL_VARYING_BENCH_CPU(for,     int16_t,   int16,  4);
-UNROLL_VARYING_BENCH_CPU(for,     uint8_t,   uint8,  4);
-UNROLL_VARYING_BENCH_CPU(for,     int8_t,    int8,   4);
-UNROLL_VARYING_BENCH_CPU(for,     double,    double, 4);
-UNROLL_VARYING_BENCH_CPU(for,     float,     float,  4);
+UNROLL_VARYING_BENCH(for,     uint64_t,  uint64, 4);
+UNROLL_VARYING_BENCH(for,     int64_t,   int64,  4);
+UNROLL_VARYING_BENCH(for,     uint32_t,  uint32, 4);
+UNROLL_VARYING_BENCH(for,     int32_t,   int32,  4);
+UNROLL_VARYING_BENCH(for,     uint16_t,  uint16, 4);
+UNROLL_VARYING_BENCH(for,     int16_t,   int16,  4);
+UNROLL_VARYING_BENCH(for,     uint8_t,   uint8,  4);
+UNROLL_VARYING_BENCH(for,     int8_t,    int8,   4);
+UNROLL_VARYING_BENCH(for,     double,    double, 4);
+UNROLL_VARYING_BENCH(for,     float,     float,  4);
 
 BENCHMARK_MAIN();
