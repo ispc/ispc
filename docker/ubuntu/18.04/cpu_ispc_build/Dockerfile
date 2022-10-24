@@ -1,7 +1,7 @@
 ARG LLVM_VERSION=13.0
 
 FROM ubuntu:18.04 AS llvm_build_step1
-MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
+LABEL maintainer="Dmitry Babokin <dmitry.y.babokin@intel.com>"
 SHELL ["/bin/bash", "-c"]
 
 ARG REPO=ispc/ispc
@@ -15,11 +15,12 @@ ARG EXTRA_BUILD_ARG
 RUN uname -a
 
 # Packages required to build ISPC and Clang.
-RUN apt-get -y update && apt-get install -y wget build-essential gcc g++ git python3-dev ncurses-dev libtinfo-dev && \
+RUN apt-get -y update && apt-get --no-install-recommends install -y wget=1.19.4-1ubuntu2.2 build-essential=12.4ubuntu1 gcc=4:7.4.0-1ubuntu2.3 \
+    g++=4:7.4.0-1ubuntu2.3 git=1:2.17.1-1ubuntu0.12 python3-dev=3.6.7-1~18.04 libncurses5-dev=6.1-1ubuntu1.18.04 libtinfo-dev=6.1-1ubuntu1.18.04 ca-certificates=20211016~18.04.1 && \    
     rm -rf /var/lib/apt/lists/*
 
 # Download and install required version of cmake (3.14 for x86, 3.20 for aarch64, as earlier versions are not available as binary distribution) for ISPC build
-RUN if [[ `uname -m` =~ "x86" ]]; then export CMAKE_URL="https://cmake.org/files/v3.14/cmake-3.14.0-Linux-x86_64.sh"; else export CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v3.20.3/cmake-3.20.3-linux-aarch64.sh"; fi && \
+RUN if [[ $(uname -m) =~ "x86" ]]; then export CMAKE_URL="https://cmake.org/files/v3.14/cmake-3.14.0-Linux-x86_64.sh"; else export CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v3.20.3/cmake-3.20.3-linux-aarch64.sh"; fi && \
     wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 $CMAKE_URL && mkdir /opt/cmake && sh cmake-*.sh --prefix=/opt/cmake --skip-license && \
     ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm -rf cmake-*.sh
 
@@ -30,7 +31,6 @@ WORKDIR /usr/local/src
 
 # Fork ispc on github and clone *your* fork.
 RUN git clone https://github.com/$REPO.git ispc
-RUN cd ispc && git checkout $SHA && cd ..
 
 # This is home for Clang builds
 RUN mkdir /usr/local/src/llvm
@@ -43,6 +43,7 @@ ENV LLVM_HOME=/usr/local/src/llvm
 # extract it, add to path and set SDE_HOME.
 
 WORKDIR /usr/local/src/ispc
+RUN git checkout $SHA
 
 # Build Clang with all required patches.
 # Pass required LLVM_VERSION with --build-arg LLVM_VERSION=<version>.
@@ -50,15 +51,15 @@ WORKDIR /usr/local/src/ispc
 # i.e. if clang was built by gcc, you may need to use gcc to build ispc (i.e. run "make gcc"),
 # or better do clang selfbuild and use it for ispc build as well (i.e. just "make").
 # "rm" are just to keep docker image small.
-RUN python3 ./alloy.py -b --version=$LLVM_VERSION --selfbuild-phase1 --verbose $EXTRA_BUILD_ARG && \
-    rm -rf $LLVM_HOME/build-"$LLVM_VERSION"_temp
+RUN python3 ./alloy.py -b --version="$LLVM_VERSION" --selfbuild-phase1 --verbose "$EXTRA_BUILD_ARG" && \
+    rm -rf "$LLVM_HOME"/build-"$LLVM_VERSION"_temp
 
 FROM llvm_build_step1 AS llvm_build_step2
 ARG LLVM_VERSION
 ARG EXTRA_BUILD_ARG
 
-RUN python3 ./alloy.py -b --version=$LLVM_VERSION --selfbuild-phase2 --verbose $EXTRA_BUILD_ARG && \
-    rm -rf $LLVM_HOME/build-$LLVM_VERSION $LLVM_HOME/llvm-$LLVM_VERSION $LLVM_HOME/bin-"$LLVM_VERSION"_temp
+RUN python3 ./alloy.py -b --version="$LLVM_VERSION" --selfbuild-phase2 --verbose "$EXTRA_BUILD_ARG" && \
+    rm -rf "$LLVM_HOME"/build-"$LLVM_VERSION" "$LLVM_HOME"/llvm-"$LLVM_VERSION" "$LLVM_HOME"/bin-"$LLVM_VERSION"_temp
 ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
 
 FROM llvm_build_step2 AS ispc_build
@@ -66,21 +67,22 @@ ARG LLVM_VERSION
 
 # ISPC builds in C++17 mode and will fail without modern libstdc++
 # Also install regular ISPC dependencies
-RUN if [[ `uname -m` =~ "x86" ]]; then export CROSS_LIBS="libc6-dev-i386"; else export CROSS_LIBS="libc6-dev-armhf-cross"; fi && \
-    apt-get -y update && apt-get install -y software-properties-common && \
+RUN if [[ $(uname -m) =~ "x86" ]]; then export CROSS_LIBS="libc6-dev-i386=2.27-3ubuntu1.6"; else export CROSS_LIBS="libc6-dev-armhf-cross=2.27-3ubuntu1cross1.1"; fi && \
+    apt-get -y update && apt-get --no-install-recommends install -y software-properties-common=0.96.24.32.18 && \
     add-apt-repository ppa:ubuntu-toolchain-r/test -y && apt-get -y update && \
-    apt-get -y update && apt-get install -y libstdc++-9-dev && \
-    apt-get install -y m4 bison flex zlib1g-dev $CROSS_LIBS && \
+    apt-get --no-install-recommends install -y libstdc++-9-dev=9.4.0-1ubuntu1~18.04 && \
+    apt-get --no-install-recommends install -y m4=1.4.18-1 bison=2:3.0.4.dfsg-1build1 flex=2.6.4-6 $CROSS_LIBS && \
     rm -rf /var/lib/apt/lists/*
 
 # Configure ISPC build
+WORKDIR /usr/local/src/ispc
 RUN mkdir build_$LLVM_VERSION
-WORKDIR build_$LLVM_VERSION
+WORKDIR /usr/local/src/ispc/build_$LLVM_VERSION
 RUN cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/src/ispc/bin-$LLVM_VERSION -DCMAKE_CXX_FLAGS=-Werror
 
 # Build ISPC
-RUN make ispc -j8 && make check-all && make install
-WORKDIR ../
+RUN make ispc -j"$(nproc)" && make check-all && make install
+WORKDIR /usr/local/src/ispc
 RUN rm -rf build_$LLVM_VERSION
 
 #export path for ispc

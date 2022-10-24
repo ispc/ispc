@@ -1,7 +1,7 @@
 ARG LLVM_VERSION=13.0
 
 FROM ubuntu:16.04 AS llvm_build_step1
-MAINTAINER Dmitry Babokin <dmitry.y.babokin@intel.com>
+LABEL maintainer="Dmitry Babokin <dmitry.y.babokin@intel.com>"
 SHELL ["/bin/bash", "-c"]
 
 ARG REPO=ispc/ispc
@@ -16,8 +16,9 @@ RUN uname -a
 
 # Packages required to build ISPC and Clang.
 # Adding this repository is needed for Ubuntu 16.04 to install python3.6.
-RUN apt-get -y update && apt-get install -y software-properties-common && add-apt-repository ppa:deadsnakes/ppa && \
-    apt-get -y update && apt-get install -y wget build-essential gcc g++ git python3.6 ncurses-dev libtinfo-dev && \
+RUN apt-get -y update && apt-get --no-install-recommends install -y software-properties-common=0.96.20.10 && add-apt-repository ppa:jblgf0/python \
+    wget=1.17.1-1ubuntu1.5 build-essential=12.1ubuntu2 gcc=4:5.3.1-1ubuntu1 g++=4:5.3.1-1ubuntu1 git=1:2.7.4-0ubuntu1.10 python3.6=3.6.10-1+xenial1 \
+    libncurses5-dev=6.0+20160213-1ubuntu1 libtinfo-dev=6.0+20160213-1ubuntu1 && \
     rm -rf /var/lib/apt/lists/*
 
 # Download and install required version of cmake (3.13) for ISPC build
@@ -31,7 +32,6 @@ WORKDIR /usr/local/src
 
 # Fork ispc on github and clone *your* fork.
 RUN git clone https://github.com/$REPO.git ispc
-RUN cd ispc && git checkout $SHA && cd ..
 
 # This is home for Clang builds
 RUN mkdir /usr/local/src/llvm
@@ -44,6 +44,7 @@ ENV LLVM_HOME=/usr/local/src/llvm
 # extract it, add to path and set SDE_HOME.
 
 WORKDIR /usr/local/src/ispc
+RUN git checkout $SHA
 
 # Build Clang with all required patches.
 # Pass required LLVM_VERSION with --build-arg LLVM_VERSION=<version>.
@@ -51,15 +52,15 @@ WORKDIR /usr/local/src/ispc
 # i.e. if clang was built by gcc, you may need to use gcc to build ispc (i.e. run "make gcc"),
 # or better do clang selfbuild and use it for ispc build as well (i.e. just "make").
 # "rm" are just to keep docker image small.
-RUN python3.6 ./alloy.py -b --version=$LLVM_VERSION --selfbuild-phase1 --verbose $EXTRA_BUILD_ARG && \
-    rm -rf $LLVM_HOME/build-"$LLVM_VERSION"_temp
+RUN python3.6 ./alloy.py -b --version="$LLVM_VERSION" --selfbuild-phase1 --verbose "$EXTRA_BUILD_ARG" && \
+    rm -rf "$LLVM_HOME"/build-"$LLVM_VERSION"_temp
 
 FROM llvm_build_step1 AS llvm_build_step2
 ARG LLVM_VERSION
 ARG EXTRA_BUILD_ARG
 
-RUN python3.6 ./alloy.py -b --version=$LLVM_VERSION --selfbuild-phase2 --verbose $EXTRA_BUILD_ARG && \
-    rm -rf $LLVM_HOME/build-$LLVM_VERSION $LLVM_HOME/llvm-$LLVM_VERSION $LLVM_HOME/bin-"$LLVM_VERSION"_temp
+RUN python3.6 ./alloy.py -b --version="$LLVM_VERSION" --selfbuild-phase2 --verbose "$EXTRA_BUILD_ARG" && \
+    rm -rf "$LLVM_HOME"/build-"$LLVM_VERSION" "$LLVM_HOME"/llvm-"$LLVM_VERSION" "$LLVM_HOME"/bin-"$LLVM_VERSION"_temp
 ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
 
 FROM llvm_build_step2 AS ispc_build
@@ -68,19 +69,20 @@ ARG LLVM_VERSION
 # ISPC builds in C++17 mode and will fail without modern libstdc++
 # Also install regular ISPC dependencies
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test -y && apt-get -y update && \
-    apt-get install -y libstdc++-9-dev && \
-    apt-get install -y m4 bison flex zlib1g-dev libc6-dev-i386 && \
+    apt-get --no-install-recommends install -y libstdc++-9-dev=9.4.0-1ubuntu1~16.04 \
+    m4=1.4.17-5 bison=2:3.0.4.dfsg-1 flex=2.6.0-11 libc6-dev-i386=2.23-0ubuntu11.3 && \
     rm -rf /var/lib/apt/lists/*
 
 # Configure ISPC build
+WORKDIR /usr/local/src/ispc
 RUN mkdir build_$LLVM_VERSION
-WORKDIR build_$LLVM_VERSION
+WORKDIR /usr/local/src/ispc/build_$LLVM_VERSION
 RUN cmake ../ -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_INSTALL_PREFIX=/usr/local/src/ispc/bin-$LLVM_VERSION -DCMAKE_CXX_FLAGS=-Werror
 
 # Build ISPC
-RUN make ispc -j8 && make check-all && make install
-WORKDIR ../
+RUN make ispc -j"$(nproc)" && make check-all && make install
+WORKDIR /usr/local/src/ispc
 RUN rm -rf build_$LLVM_VERSION
 
-#export path for ispc
+# Export path for ispc
 ENV PATH=/usr/local/src/ispc/bin-$LLVM_VERSION/bin:$PATH
