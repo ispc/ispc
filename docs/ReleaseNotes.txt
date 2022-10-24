@@ -1,3 +1,13 @@
+=== v1.18.1 === (24 October 2022)
+
+A minor ISPC update with security fix - zlib dependency was removed.
+We previously shipped:
+ - Windows binaries without zlib support.
+ - Linux binaries with zlib support, zlib was statically linked.
+ - macOS binaries with zlib support, zlib was a dynamic dependency.
+
+This update contains release binaries for Linux only.
+
 === v1.18.0 === (5 May 2022)
 
 An ISPC release with a bunch of stability and performance fixes, improvements
