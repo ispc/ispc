@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-#  Copyright (c) 2013-2021, Intel Corporation
+#  Copyright (c) 2013-2022, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -207,38 +207,6 @@ def check_print_output(output):
     else:
         return lines[0:len(lines)//2] == lines[len(lines)//2:len(lines)]
 
-def prerun_debug_check_xe():
-    os.environ['IGC_DumpToCurrentDir'] = '1'
-    os.environ['IGC_ShaderDumpEnable'] = '1'
-    os.environ['ISPCRT_IGC_OPTIONS'] = '+ -g'
-
-def postrun_debug_check_xe(test_name, exe_wd):
-    objdumpProc = subprocess.run('/usr/bin/objdump -h *_dwarf.elf', shell=True, cwd=exe_wd, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    readelfProc = subprocess.run('/usr/bin/readelf --debug-dump *_dwarf.elf', shell=True, cwd=exe_wd, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
-    # Cleanup files used to check debug information
-    # since this directory may be reused by other tests.
-    subprocess.run('rm -rf *_dwarf.elf', shell=True)
-
-    if objdumpProc.returncode != 0:
-        print("[DEBUG CHECK] " + test_name + " - objdump failed - return code: " + str(objdumpProc.returncode))
-        return False
-    elif objdumpProc.stdout.find('.debug') == -1:
-        print("[DEBUG CHECK] " + test_name + " - objdump failed - couldn't find .debug info in *_dwarf.elf file")
-        return False
-    elif readelfProc.returncode != 0:
-        print("[DEBUG CHECK] " + test_name + " - readelf failed - return code: " + str(objdumpProc.returncode))
-        return False
-    elif readelfProc.stdout.find('Warning:') != -1 or readelfProc.stdout.find('Error:') != -1:
-        readelfOutput = readelfProc.stdout.splitlines()
-        print("[DEBUG CHECK] " + test_name + " - readelf return Warning / Error: \n")
-        for line in readelfOutput:
-            if line.find('Warning:') != -1 or line.find('Error:') != -1:
-                print(line)
-        return False
-    return True
-
-
 # run the commands in cmd_list
 def run_cmds(compile_cmds, run_cmd, filename, expect_failure, sig, exe_wd="."):
     for cmd in compile_cmds:
@@ -251,9 +219,6 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure, sig, exe_wd="."):
             return Status.Compfail
 
     if not options.save_bin:
-        if options.debug_check and options.ispc_output == "spv":
-            prerun_debug_check_xe()
-
         (return_code, output, timeout) = run_command(run_cmd, options.test_time, cwd=exe_wd)
         if sig < 32:
             run_failed = (return_code != 0) or timeout
@@ -263,9 +228,6 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure, sig, exe_wd="."):
             if not output_equality:
                 print_debug("Print outputs check failed\n", s, run_tests_log)
             run_failed = (return_code != 0) or not output_equality or timeout
-
-        if options.debug_check and options.ispc_output == "spv":
-            run_failed = not postrun_debug_check_xe(run_cmd, exe_wd)
 
     else:
         run_failed = 0
