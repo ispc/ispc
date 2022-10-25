@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
 #
-#  Copyright (c) 2013-2019, Intel Corporation 
+#  Copyright (c) 2013-2022, Intel Corporation
 #  All rights reserved.
-# 
+#
 #  Redistribution and use in source and binary forms, with or without
 #  modification, are permitted provided that the following conditions are
 #  met:
-# 
+#
 #    * Redistributions of source code must retain the above copyright
 #      notice, this list of conditions and the following disclaimer.
-# 
+#
 #    * Redistributions in binary form must reproduce the above copyright
 #      notice, this list of conditions and the following disclaimer in the
 #      documentation and/or other materials provided with the distribution.
-# 
+#
 #    * Neither the name of Intel Corporation nor the names of its
 #      contributors may be used to endorse or promote products derived from
 #      this software without specific prior written permission.
-# 
-# 
+#
+#
 #   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
 #   IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
 #   TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
@@ -44,13 +44,7 @@ class EmptyClass(object): pass
 def dump(fname, obj):
     import pickle
     with open(fname, 'w') as fp:
-        pickle.dump(obj, fp)  
-
-def undump(fname):
-    import pickle
-    with open(fname, 'r') as fp:
-        obj = pickle.load(fp) 
-    return obj
+        pickle.dump(obj, fp)
 
 # retrieve the host name
 def get_host_name():
@@ -120,7 +114,7 @@ def print_debug(line, silent, filename):
 # print errors from scripts
 # type 1 for error in environment
 # type 2 for warning
-# type 3 for error of compiler or test which isn't the goal of script 
+# type 3 for error of compiler or test which isn't the goal of script
 def error(line, error_type = 1):
     line = line + "\n"
     if error_type == 1:
@@ -135,7 +129,7 @@ def check_tools(m):
     input_tools=[[[1,4],"m4 --version", "bad m4 version"],
                  [[3,0],"bison --version", "bad bison version"],
                  [[2,5], "flex --version", "bad flex version"]]
-    ret = 1 
+    ret = 1
     for t in range(0,len(input_tools)):
         t1 = ((take_lines(input_tools[t][1], "first"))[:-1].split(" "))
         for i in range(0,len(t1)):
@@ -163,8 +157,8 @@ def check_tools(m):
 class TestResult(object):
     """
     this class stores basicly two integers which stand for the result
-    of the test: (runfail{0/1}, compfail{0/1}). other values are 
-    deemed invalid. the __cmp__ function of this class is used to 
+    of the test: (runfail{0/1}, compfail{0/1}). other values are
+    deemed invalid. the __cmp__ function of this class is used to
     define what test regression actually is.
     """
     def __init__(self, runfailed, compfailed):
@@ -220,7 +214,7 @@ class TestCase(object):
 
     def __eq__(self, other):
         if isinstance(other, TestCase):
-            return not self.__ne__(other)   
+            return not self.__ne__(other)
         raise RuntimeError("Wrong type for comparioson")
         return NotImplemented
 
@@ -246,7 +240,7 @@ class Test(object):
         for test_case in self.test_cases:
             string += repr(test_case).rjust(60) + '\n'
         return string
-    
+
     def __hash__(self):
         return hash(self.name)
 
@@ -259,7 +253,7 @@ class Test(object):
 
     def __eq__(self, other):
         if isinstance(other, Test):
-            return not self.__ne__(other)   
+            return not self.__ne__(other)
         return NotImplemented
 
 
@@ -267,7 +261,7 @@ class RegressionInfo(object):
     """
     service class which provides some statistics on a given regression.
     the regression test names and cases are given in a form of Test() objects
-    with empty (-1, -1) results 
+    with empty (-1, -1) results
     """
     def __init__(self, revision_old, revision_new, tests):
         self.revision_old, self.revision_new = (revision_old, revision_new)
@@ -286,7 +280,7 @@ class RegressionInfo(object):
                 self.inc_dictionary(self.archfailes, test_case.arch)
                 self.inc_dictionary(self.optfails, test_case.opt)
                 self.inc_dictionary(self.targetfails, test_case.target)
-        
+
         self.archs = list(self.archfailes.keys())
         self.opts = list(self.optfails.keys())
         self.targets = list(self.targetfails.keys())
@@ -309,7 +303,7 @@ class RegressionInfo(object):
 
 class TestTable(object):
     """
-    the table which stores a tuple of Test() objects (one per revision) and has some 
+    the table which stores a tuple of Test() objects (one per revision) and has some
     convenience methods for dealing with them
     """
     def __init__(self):
@@ -321,7 +315,7 @@ class TestTable(object):
         revision_name = str(revision_name)
         if revision_name not in self.table:
             self.table[revision_name] = []
-        
+
         test_case = TestCase(arch, opt, target)
         test_case.result = TestResult(runfailed, compfailed)
 
@@ -329,7 +323,7 @@ class TestTable(object):
             if test.name == test_name:
                 test.add_result(test_case)
                 return
-        
+
         test = Test(test_name)
         test.add_result(test_case)
         self.table[revision_name].append(test)
@@ -341,7 +335,7 @@ class TestTable(object):
         return list(set(test1.test_cases) & set(test2.test_cases))
 
     def test_regression(self, test1, test2):
-        """ Return the tuple of empty (i.e. with undefined results) TestCase() objects 
+        """ Return the tuple of empty (i.e. with undefined results) TestCase() objects
             corresponding to regression in test2 comparing to test1 """
         if test1.name != test2.name:
             return []
@@ -353,7 +347,7 @@ class TestTable(object):
                 if tc1 == tc2 and tc1.result < tc2.result:
                     regressed.append(TestCase(tc1.arch, tc1.opt, tc1.target))
         return regressed
- 
+
     def regression(self, revision_old, revision_new):
         """ Return a tuple of Test() objects containing TestCase() object which show regression along given revisions """
         revision_old, revision_new = (str(revision_old), str(revision_new))
@@ -376,7 +370,7 @@ class TestTable(object):
                     test.add_result(test_case)
                 regressed.append(test)
         return RegressionInfo(revision_old, revision_new, regressed)
-    
+
     def __repr__(self):
         string = ""
         for rev in self.table.keys():
@@ -401,7 +395,7 @@ class RevisionInfo(object):
         self.skipped = 0
         self.testall = 0
         self.regressions = {}
-    
+
     def register_test(self, arch, opt, target, succeed, runfailed, compfailed, skipped):
         if arch not in self.archs:
             self.archs.append(arch)
@@ -419,10 +413,10 @@ class RevisionInfo(object):
         (regression.py) and 'revision' is tested (not current) LLVM revision name """
         if revision == self.revision:
             raise RuntimeError("No regression can be found along the same LLVM revision!")
-      
+
         if revision in self.regressions:
             raise RuntimeError("This revision regression info is already in self.regressions!")
-      
+
         self.regressions[revision] = regression_info
 
     def __repr__(self):
@@ -477,13 +471,7 @@ class ExecutionStateGatherer(object):
     def dump(self, fname, obj):
         import pickle
         with open(fname, 'wb') as fp:
-            pickle.dump(obj, fp)  
-
-    def undump(self, fname):
-        import pickle
-        with open(fname, 'r') as fp:
-            obj = pickle.load(fp) 
-        return obj
+            pickle.dump(obj, fp)
 
     def get_host_name(self):
         import socket
@@ -499,4 +487,4 @@ class ExecutionStateGatherer(object):
 
 # this class instance is intended to gather and store all information
 # regarding the testing process.
-ex_state = ExecutionStateGatherer()   
+ex_state = ExecutionStateGatherer()
