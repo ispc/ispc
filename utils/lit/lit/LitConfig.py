@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 import inspect
 import os
+import platform
 import sys
 
 import lit.Test
@@ -21,10 +22,9 @@ class LitConfig(object):
 
     def __init__(self, progname, path, quiet,
                  useValgrind, valgrindLeakCheck, valgrindArgs,
-                 noExecute, debug, isWindows, singleProcess,
+                 noExecute, debug, isWindows,
                  params, config_prefix = None,
                  maxIndividualTestTime = 0,
-                 maxFailures = None,
                  parallelism_groups = {},
                  echo_all_commands = False):
         # The name of the test runner.
@@ -37,7 +37,6 @@ class LitConfig(object):
         self.valgrindUserArgs = list(valgrindArgs)
         self.noExecute = noExecute
         self.debug = debug
-        self.singleProcess = singleProcess
         self.isWindows = bool(isWindows)
         self.params = dict(params)
         self.bashPath = None
@@ -65,7 +64,6 @@ class LitConfig(object):
             self.valgrindArgs.extend(self.valgrindUserArgs)
 
         self.maxIndividualTestTime = maxIndividualTestTime
-        self.maxFailures = maxFailures
         self.parallelism_groups = parallelism_groups
         self.echo_all_commands = echo_all_commands
 
@@ -77,6 +75,19 @@ class LitConfig(object):
         """
         return self._maxIndividualTestTime
 
+    @property
+    def maxIndividualTestTimeIsSupported(self):
+        """
+            Returns a tuple (<supported> , <error message>)
+            where
+            `<supported>` is True if setting maxIndividualTestTime is supported
+                on the current host, returns False otherwise.
+            `<error message>` is an empty string if `<supported>` is True,
+                otherwise is contains a string describing why setting
+                maxIndividualTestTime is not supported.
+        """
+        return lit.util.killProcessAndChildrenIsSupported()
+
     @maxIndividualTestTime.setter
     def maxIndividualTestTime(self, value):
         """
@@ -87,16 +98,13 @@ class LitConfig(object):
             self.fatal('maxIndividualTestTime must set to a value of type int.')
         self._maxIndividualTestTime = value
         if self.maxIndividualTestTime > 0:
-            # The current implementation needs psutil to set
+            # The current implementation needs psutil on some platforms to set
             # a timeout per test. Check it's available.
             # See lit.util.killProcessAndChildren()
-            try:
-                import psutil  # noqa: F401
-            except ImportError:
-                self.fatal("Setting a timeout per test requires the"
-                           " Python psutil module but it could not be"
-                           " found. Try installing it via pip or via"
-                           " your operating system's package manager.")
+            supported, errormsg = self.maxIndividualTestTimeIsSupported
+            if not supported:
+                self.fatal('Setting a timeout per test not supported. ' +
+                           errormsg)
         elif self.maxIndividualTestTime < 0:
             self.fatal('The timeout per test must be >= 0 seconds')
 
@@ -120,6 +128,22 @@ class LitConfig(object):
         if self.bashPath is None:
             self.bashPath = ''
 
+        # Check whether the found version of bash is able to cope with paths in
+        # the host path format. If not, don't return it as it can't be used to
+        # run scripts. For example, WSL's bash.exe requires '/mnt/c/foo' rather
+        # than 'C:\\foo' or 'C:/foo'.
+        if self.isWindows and self.bashPath:
+            command = [self.bashPath, '-c',
+                       '[[ -f "%s" ]]' % self.bashPath.replace('\\', '\\\\')]
+            _, _, exitCode = lit.util.executeCommand(command)
+            if exitCode:
+                self.note('bash command failed: %s' % (
+                    ' '.join('"%s"' % c for c in command)))
+                self.bashPath = ''
+
+        if not self.bashPath:
+            self.warning('Unable to find a usable version of bash.')
+
         return self.bashPath
 
     def getToolsPath(self, dir, paths, tools):
@@ -141,17 +165,18 @@ class LitConfig(object):
         f = inspect.currentframe()
         # Step out of _write_message, and then out of wrapper.
         f = f.f_back.f_back
-        file,line,_,_,_ = inspect.getframeinfo(f)
-        location = '%s:%d' % (file, line)
-
-        sys.stderr.write('%s: %s: %s: %s\n' % (self.progname, location,
-                                               kind, message))
+        file = os.path.abspath(inspect.getsourcefile(f))
+        line = inspect.getlineno(f)
+        sys.stderr.write('%s: %s:%d: %s: %s\n' % (self.progname, file, line,
+                                                  kind, message))
 
     def note(self, message):
-        self._write_message('note', message)
+        if not self.quiet:
+            self._write_message('note', message)
 
     def warning(self, message):
-        self._write_message('warning', message)
+        if not self.quiet:
+            self._write_message('warning', message)
         self.numWarnings += 1
 
     def error(self, message):
