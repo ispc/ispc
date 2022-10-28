@@ -493,6 +493,14 @@ else()
     target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector-strong
                            -fdata-sections -ffunction-sections -fno-delete-null-pointer-checks
                            -Wformat -Wformat-security -fpie -fwrapv)
+    # LLVM 14 switches default DWARF version from v4 to v5
+    # but gdb < 10.1 can't read DWARF v5.
+    # https://discourse.llvm.org/t/gdb-10-1-cant-read-clangs-dwarf-v5/6035
+    # Use DWARF v4 for ISPC build to allow debugging of ispc binary with gdb
+    # on Ubuntu 20.04
+    if (NOT CMAKE_BUILD_TYPE STREQUAL "Release" AND ${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "14.0.0")
+        target_compile_options(${PROJECT_NAME} PRIVATE -gdwarf-4)
+    endif()
 endif()
 
 # Set C++ standard to C++17.
