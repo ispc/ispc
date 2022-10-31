@@ -667,12 +667,13 @@ static void InitTaskSystem() {
                         exit(1);
                     }
 
-                    char name[40];
+                    constexpr std::size_t FILENAME_MAX_LEN{1024UL};
+                    char name[FILENAME_MAX_LEN];
                     bool success = false;
                     srand(time(NULL));
                     for (int i = 0; i < 10; i++) {
                         // Some platforms (e.g. FreeBSD) require the name to begin with a slash
-                        sprintf(name, "/ispc_task.%d.%d", (int)getpid(), (int)rand());
+                        snprintf(name, FILENAME_MAX_LEN, "/ispc_task.%d.%d", static_cast<int>(getpid()), static_cast<int>(rand()));
                         workerSemaphore = sem_open(name, O_CREAT, S_IRUSR | S_IWUSR, 0);
                         if (workerSemaphore != SEM_FAILED) {
                             success = true;
