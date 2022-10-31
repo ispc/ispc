@@ -3,9 +3,10 @@
 
 #include "ze_mock.h"
 
+#include <algorithm>
 #include <cstring>
-#include <string>
 #include <iostream>
+#include <string>
 
 namespace ispcrt {
 namespace testing {
@@ -36,12 +37,12 @@ MockHandle<ze_event_pool_handle_t> EventPoolHandle;
 MockHandle<ze_event_handle_t> LaunchEventHandle;
 
 bool ExpectedDevice(ze_device_handle_t hDevice) {
-    auto dp = reinterpret_cast<DeviceProperties*>(hDevice);
+    auto dp = reinterpret_cast<DeviceProperties *>(hDevice);
     return dp == Config::getDevicePtr(Config::getExpectedDevice());
 }
 
 bool ValidDevice(ze_device_handle_t hDevice) {
-    auto dp = reinterpret_cast<DeviceProperties*>(hDevice);
+    auto dp = reinterpret_cast<DeviceProperties *>(hDevice);
     for (int i = 0; i < Config::getDeviceCount(); i++)
         if (dp == Config::getDevicePtr(i))
             return true;
@@ -75,13 +76,15 @@ ze_result_t zeDeviceGetProperties(ze_device_handle_t hDevice, ze_device_properti
     if (!ValidDevice(hDevice) || pDeviceProperties == nullptr)
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
 
-    auto dp = reinterpret_cast<DeviceProperties*>(hDevice);
+    auto dp = reinterpret_cast<DeviceProperties *>(hDevice);
 
     pDeviceProperties->stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
     pDeviceProperties->type = ZE_DEVICE_TYPE_GPU;
     pDeviceProperties->deviceId = dp->deviceId;
     pDeviceProperties->vendorId = dp->vendorId;
-    std::strcpy(pDeviceProperties->name, "ISPCRT Mock Device");
+
+    const std::string MOCK_NAME{"ISPCRT Mock Device"};
+    std::copy(MOCK_NAME.cbegin(), MOCK_NAME.cend(), pDeviceProperties->name);
 
     MOCK_RET;
 }
@@ -102,8 +105,7 @@ ze_result_t zeContextDestroy(ze_context_handle_t hContext) {
 ze_result_t zeCommandQueueCreate(ze_context_handle_t hContext, ze_device_handle_t hDevice,
                                  const ze_command_queue_desc_t *desc, ze_command_queue_handle_t *phCommandQueue) {
     MOCK_CNT_CALL;
-    if (!ExpectedDevice(hDevice) || hContext != ContextHandle.get() || desc == nullptr ||
-        phCommandQueue == nullptr)
+    if (!ExpectedDevice(hDevice) || hContext != ContextHandle.get() || desc == nullptr || phCommandQueue == nullptr)
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     *phCommandQueue = CmdQueueHandle.get();
     MOCK_RET;
@@ -239,8 +241,8 @@ ze_result_t zeMemAllocDevice(ze_context_handle_t hContext, const ze_device_mem_a
 }
 
 ze_result_t zeMemAllocShared(ze_context_handle_t hContext, const ze_device_mem_alloc_desc_t *device_desc,
-                             const ze_host_mem_alloc_desc_t *host_desc, size_t size,
-                             size_t alignment, ze_device_handle_t hDevice, void **pptr) {
+                             const ze_host_mem_alloc_desc_t *host_desc, size_t size, size_t alignment,
+                             ze_device_handle_t hDevice, void **pptr) {
     MOCK_CNT_CALL;
     if (hContext != ContextHandle.get())
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
@@ -276,18 +278,15 @@ ze_result_t zeModuleDestroy(ze_module_handle_t hModule) {
     MOCK_RET;
 }
 
-ze_result_t zeModuleDynamicLink(uint32_t numModules,
-                                ze_module_handle_t* phModules,
-                                ze_module_build_log_handle_t* phLinkLog) {
+ze_result_t zeModuleDynamicLink(uint32_t numModules, ze_module_handle_t *phModules,
+                                ze_module_build_log_handle_t *phLinkLog) {
     MOCK_CNT_CALL;
     if (phModules == NULL)
         return ZE_RESULT_ERROR_INVALID_NULL_POINTER;
     MOCK_RET;
 }
 
-ze_result_t zeModuleBuildLogGetString(ze_module_build_log_handle_t hModuleBuildLog,
-                                      size_t* pSize,
-                                      char* pBuildLog) {
+ze_result_t zeModuleBuildLogGetString(ze_module_build_log_handle_t hModuleBuildLog, size_t *pSize, char *pBuildLog) {
     MOCK_CNT_CALL;
     *pSize = 0;
     MOCK_RET;
@@ -300,15 +299,13 @@ ze_result_t zeModuleBuildLogDestroy(ze_module_build_log_handle_t hModuleBuildLog
     MOCK_RET;
 }
 
-ze_result_t zeModuleGetFunctionPointer(ze_module_handle_t hModule,
-                                       const char* pFunctionName,
-                                       void** pfnFunction) {
+ze_result_t zeModuleGetFunctionPointer(ze_module_handle_t hModule, const char *pFunctionName, void **pfnFunction) {
     MOCK_CNT_CALL;
     if (hModule != ModuleHandle.get())
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     if (pFunctionName == NULL)
         return ZE_RESULT_ERROR_INVALID_NULL_POINTER;
-    *pfnFunction = malloc(sizeof(void*));
+    *pfnFunction = malloc(sizeof(void *));
     MOCK_RET;
 }
 
@@ -341,10 +338,9 @@ ze_result_t zeKernelSetIndirectAccess(ze_kernel_handle_t hKernel, ze_kernel_indi
     MOCK_RET;
 }
 
-ze_result_t zeKernelSuggestGroupSize(ze_kernel_handle_t hKernel, uint32_t globalSizeX,
-                                     uint32_t globalSizeY, uint32_t globalSizeZ,
-                                     uint32_t* groupSizeX, uint32_t* groupSizeY,
-                                     uint32_t* groupSizeZ) {
+ze_result_t zeKernelSuggestGroupSize(ze_kernel_handle_t hKernel, uint32_t globalSizeX, uint32_t globalSizeY,
+                                     uint32_t globalSizeZ, uint32_t *groupSizeX, uint32_t *groupSizeY,
+                                     uint32_t *groupSizeZ) {
     MOCK_CNT_CALL;
     if (hKernel != KernelHandle.get()) {
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
@@ -358,8 +354,8 @@ ze_result_t zeKernelSuggestGroupSize(ze_kernel_handle_t hKernel, uint32_t global
     MOCK_RET;
 }
 
-ze_result_t zeKernelSetGroupSize(ze_kernel_handle_t hKernel, uint32_t groupSizeX,
-                                 uint32_t groupSizeY, uint32_t groupSizeZ) {
+ze_result_t zeKernelSetGroupSize(ze_kernel_handle_t hKernel, uint32_t groupSizeX, uint32_t groupSizeY,
+                                 uint32_t groupSizeZ) {
     MOCK_CNT_CALL;
     if (hKernel != KernelHandle.get()) {
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
