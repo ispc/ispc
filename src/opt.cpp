@@ -5814,9 +5814,10 @@ MemoryCoalescing::BasePtrInfo MemoryCoalescing::analyseVarOffsetGEP(llvm::GetEle
         for (unsigned i = 1; i < FirstConstIdx; ++i)
             PartialIdxs.push_back(GEP->getOperand(i));
         llvm::Value *tPtr = GEP->getPointerOperand();
-        llvm::Type * const tTypeCasted = llvm::cast<llvm::PointerType>(tPtr->getType()->getScalarType());
+        llvm::Type *const tTypeCasted = llvm::cast<llvm::PointerType>(tPtr->getType()->getScalarType());
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_15_0
-        llvm::Type *tType = (tTypeCasted->isOpaquePointerTy()) ? nullptr : tTypeCasted->getNonOpaquePointerElementType();
+        llvm::Type *tType =
+            (tTypeCasted->isOpaquePointerTy()) ? nullptr : tTypeCasted->getNonOpaquePointerElementType();
 #else
         llvm::Type *tType = llvm::cast<llvm::PointerType>(tPtr->getType()->getScalarType())->getElementType();
 #endif // ISPC_LLVM_VERSION
@@ -5835,7 +5836,7 @@ MemoryCoalescing::BasePtrInfo MemoryCoalescing::analyseVarOffsetGEP(llvm::GetEle
     llvm::PointerType *PartialType = llvm::cast<llvm::PointerType>(DanglingGEP->getType());
     // Create temporary GEP that will help us to get some useful info
     llvm::Value *tPtr = llvm::ConstantPointerNull::get(PartialType);
-    llvm::Type * const tTypeCasted = llvm::cast<llvm::PointerType>(tPtr->getType()->getScalarType());
+    llvm::Type *const tTypeCasted = llvm::cast<llvm::PointerType>(tPtr->getType()->getScalarType());
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_15_0
     llvm::Type *tType = (tTypeCasted->isOpaquePointerTy()) ? nullptr : tTypeCasted->getNonOpaquePointerElementType();
 #else
