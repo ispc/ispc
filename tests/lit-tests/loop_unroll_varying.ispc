@@ -4,8 +4,6 @@
 // RUN: %{ispc} %s --target=host --nowrap -O0 --emit-llvm-text --no-discard-value-names --nostdlib -o - | FileCheck %s -check-prefixes=CHECK_ALL,CHECKO0
 // RUN: %{ispc} %s --target=host --nowrap -O2 --emit-llvm-text --no-discard-value-names --nostdlib -o - | FileCheck %s -check-prefixes=CHECK_ALL,CHECKO2
 
-// XFAIL: LLVM_15_0+
-
 
 #define NUM 1024
 
