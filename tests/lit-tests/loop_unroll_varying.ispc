@@ -190,8 +190,8 @@ int foo_foreach_unroll8() {
 // CHECKO0:         }
 
 // CHECKO2:         foreach_full_body:
-// CHECKO2-COUNT-4: load <{{[0-9]*}} x i32>, {{.*}} %ptr_cast_for_load
-// CHECKO2-NOT:     load <{{[0-9]*}} x i32>, {{.*}} %ptr_cast_for_load
+// CHECKO2-COUNT-4: load <{{[0-9]*}} x i32>, {{.*}} %ptr
+// CHECKO2-NOT:     load <{{[0-9]*}} x i32>, {{.*}} %ptr
 // CHECKO2:         br {{(i1)|(label)}} %{{[a-zA-Z_][a-zA-Z0-9_]*}}
 // CHECKO2:         }
 
