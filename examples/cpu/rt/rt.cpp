@@ -123,11 +123,12 @@ int main(int argc, char *argv[]) {
     //
     // Read the camera specification information from the camera file
     //
-    char fnbuf[1024];
-    sprintf(fnbuf, "%s.camera", filename);
-    FILE *f = fopen(fnbuf, "rb");
+    constexpr std::size_t FILENAME_MAX_LEN{1000UL};
+    char filename_buf[FILENAME_MAX_LEN];
+    snprintf(filename_buf, FILENAME_MAX_LEN, "%s.camera", filename);
+    FILE *f = fopen(filename_buf, "rb");
     if (!f) {
-        perror(fnbuf);
+        perror(filename_buf);
         return 1;
     }
 
@@ -145,10 +146,10 @@ int main(int argc, char *argv[]) {
     //
     // Read in the serialized BVH
     //
-    sprintf(fnbuf, "%s.bvh", filename);
-    f = fopen(fnbuf, "rb");
+    snprintf(filename_buf, FILENAME_MAX_LEN, "%s.bvh", filename);
+    f = fopen(filename_buf, "rb");
     if (!f) {
-        perror(fnbuf);
+        perror(filename_buf);
         return 1;
     }
 
