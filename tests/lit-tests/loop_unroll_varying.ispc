@@ -184,14 +184,14 @@ int foo_foreach_unroll8() {
 // CHECK_ALL-LABEL: define <{{[0-9]*}} x i32> @foo_foreach_nocall___
 
 // CHECKO0:         foreach_full_body:
-// CHECKO0:         load <{{[0-9]*}} x i32>, <{{[0-9]*}} x i32>* %iter1{{[0-9]*}}
-// CHECKO0-NOT:     load <{{[0-9]*}} x i32>, <{{[0-9]*}} x i32>* %iter1{{[0-9]*}}
+// CHECKO0:         load <{{[0-9]*}} x i32>, {{.*}} %iter1{{[0-9]*}}
+// CHECKO0-NOT:     load <{{[0-9]*}} x i32>, {{.*}} %iter1{{[0-9]*}}
 // CHECKO0:         br label %{{[a-zA-Z_][a-zA-Z0-9_]*}}
 // CHECKO0:         }
 
 // CHECKO2:         foreach_full_body:
-// CHECKO2-COUNT-4: load <{{[0-9]*}} x i32>, <{{[0-9]*}} x i32>* %ptr_cast_for_load
-// CHECKO2-NOT:     load <{{[0-9]*}} x i32>, <{{[0-9]*}} x i32>* %ptr_cast_for_load
+// CHECKO2-COUNT-4: load <{{[0-9]*}} x i32>, {{.*}} %ptr_cast_for_load
+// CHECKO2-NOT:     load <{{[0-9]*}} x i32>, {{.*}} %ptr_cast_for_load
 // CHECKO2:         br {{(i1)|(label)}} %{{[a-zA-Z_][a-zA-Z0-9_]*}}
 // CHECKO2:         }
 
