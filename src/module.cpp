@@ -52,6 +52,7 @@
 #include <algorithm>
 #include <ctype.h>
 #include <fcntl.h>
+#include <fstream>
 #include <iostream>
 #include <set>
 #include <sstream>
@@ -80,12 +81,15 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Verifier.h>
+#include <llvm/IRReader/IRReader.h>
+#include <llvm/Linker/Linker.h>
 #include <llvm/PassRegistry.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/DynamicLibrary.h>
 #include <llvm/Support/FileUtilities.h>
 #include <llvm/Support/FormattedStream.h>
 #include <llvm/Support/Host.h>
+#include <llvm/Support/SourceMgr.h>
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Target/TargetMachine.h>
@@ -100,7 +104,6 @@
 
 #ifdef ISPC_XE_ENABLED
 #include <LLVMSPIRVLib/LLVMSPIRVLib.h>
-#include <fstream>
 #if defined(_WIN64)
 #define OCLOC_LIBRARY_NAME "ocloc64.dll"
 #elif defined(_WIN32)
@@ -123,6 +126,34 @@
 #endif
 
 using namespace ispc;
+
+// The magic constants are derived from https://github.com/intel/compute-runtime repo
+// compute-runtime/shared/source/compiler_interface/intermediate_representations.h
+const char *llvmBcMagic = "BC\xc0\xde";
+const char *spirvMagic = "\x07\x23\x02\x03";
+const char *spirvMagicInv = "\x03\x02\x23\x07";
+
+static bool lHasSameMagic(const char *expectedMagic, std::ifstream &is) {
+    // Check for magic number at the beginning of the file
+    std::vector<unsigned char> code;
+    is.seekg(0, std::ios::end);
+    size_t codeSize = is.tellg();
+    is.seekg(0, std::ios::beg);
+
+    auto binaryMagicLen = std::min(strlen(expectedMagic), codeSize);
+    code.resize(binaryMagicLen);
+    is.read((char *)code.data(), binaryMagicLen);
+    is.seekg(0, std::ios::beg);
+
+    std::string magicHeader(code.begin(), code.end());
+    return magicHeader.compare(expectedMagic) == 0;
+}
+
+static bool lIsLlvmBitcode(std::ifstream &is) { return lHasSameMagic(llvmBcMagic, is); }
+
+static bool lIsSpirVBitcode(std::ifstream &is) {
+    return lHasSameMagic(spirvMagic, is) || lHasSameMagic(spirvMagicInv, is);
+}
 
 /*! list of files encountered by the parser. this allows emitting of
     the module file's dependencies via the -MMM option */
@@ -1126,6 +1157,17 @@ bool Module::writeBitcode(llvm::Module *module, const char *outFileName, OutputT
 }
 
 #ifdef ISPC_XE_ENABLED
+std::unique_ptr<llvm::Module> Module::translateFromSPIRV(std::ifstream &is) {
+    std::string err;
+    llvm::Module *m;
+    bool success = llvm::readSpirv(*g->ctx, is, m, err);
+    if (!success) {
+        fprintf(stderr, "Fails to read SPIR-V: %s \n", err.c_str());
+        return nullptr;
+    }
+    return std::unique_ptr<llvm::Module>(m);
+}
+
 bool Module::translateToSPIRV(llvm::Module *module, std::stringstream &ss) {
     std::string err;
     SPIRV::TranslatorOpts Opts;
@@ -3063,6 +3105,44 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         g->target = NULL;
         return errorCount > 0;
     }
+}
+
+int Module::LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputType, const char *outFileName) {
+    auto llvmLink = std::make_unique<llvm::Module>("llvm-link", *g->ctx);
+    llvm::Linker linker(*llvmLink);
+    for (const auto &file : linkFiles) {
+        llvm::SMDiagnostic err;
+        std::unique_ptr<llvm::Module> m = nullptr;
+        std::ifstream inputStream(file, std::ios::binary);
+        if (!inputStream.is_open()) {
+            perror(file.c_str());
+            return 1;
+        }
+        if (lIsLlvmBitcode(inputStream))
+            m = llvm::parseIRFile(file, err, *g->ctx);
+#ifdef ISPC_XE_ENABLED
+        else if (lIsSpirVBitcode(inputStream))
+            m = translateFromSPIRV(inputStream);
+#endif
+        else {
+            Error(SourcePos(), "Unrecognized format of input file %s", file.c_str());
+            return 1;
+        }
+        if (m) {
+            linker.linkInModule(std::move(m), 0);
+        }
+        inputStream.close();
+    }
+    if (outFileName != NULL) {
+        if ((outputType == Bitcode) || (outputType == BitcodeText))
+            writeBitcode(llvmLink.get(), outFileName, outputType);
+#ifdef ISPC_XE_ENABLED
+        else if (outputType == SPIRV)
+            writeSPIRV(llvmLink.get(), outFileName);
+#endif
+        return 0;
+    }
+    return 1;
 }
 
 void Module::clearCPPBuffer() {

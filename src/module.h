@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -160,6 +160,7 @@ class Module {
                                 OutputFlags outputFlags, OutputType outputType, const char *outFileName,
                                 const char *headerFileName, const char *depsFileName, const char *depsTargetName,
                                 const char *hostStubFileName, const char *devStubFileName);
+    static int LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputType, const char *outFileName);
 
     /** Total number of errors encountered during compilation. */
     int errorCount;
@@ -221,6 +222,7 @@ class Module {
                                           OutputType outputType, const char *outFileName);
     static bool writeBitcode(llvm::Module *module, const char *outFileName, OutputType outputType);
 #ifdef ISPC_XE_ENABLED
+    static std::unique_ptr<llvm::Module> translateFromSPIRV(std::ifstream &outString);
     static bool translateToSPIRV(llvm::Module *module, std::stringstream &outString);
     static bool writeSPIRV(llvm::Module *module, const char *outFileName);
     static bool writeZEBin(llvm::Module *module, const char *outFileName);

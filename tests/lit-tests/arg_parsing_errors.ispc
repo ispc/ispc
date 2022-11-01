@@ -19,6 +19,11 @@
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=sse3,avx2-i32x8,gost 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_19
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target sse3,avx2-i32x8,gost 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_20
 //; RUN: %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --arch=x86 --arch=x86_64 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_21
+//; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 link 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_22
+//; RUN: not %{ispc} link %s 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_23
+//; RUN: not %{ispc} link --emit-obj %s 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_24
+//; RUN: %{ispc} %s -o %t.bc --emit-llvm | not %{ispc} link %t.bc 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_25
+//; RUN: %{ispc} %s -o %t.bc --emit-llvm | %{ispc} link %t.bc -o %t.bc
 //; RUN: %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --help
 //; RUN: %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --help-dev
 //; RUN: %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --support-matrix
@@ -57,6 +62,10 @@
 //; CHECK_ERROR_19: Error: Incorrect targets: sse3,gost. Choices are:
 //; CHECK_ERROR_20: Error: Incorrect targets: sse3,gost. Choices are:
 //; CHECK_ERROR_21: Warning: Overwriting --arch=x86 with --arch=x86-64
+//; CHECK_ERROR_22: Error: Option "link" can't be used in compilation mode. Use "ispc link --help" for details
+//; CHECK_ERROR_23: Unrecognized format of input file
+//; CHECK_ERROR_24: Error: Unknown option "--emit-obj"
+//; CHECK_ERROR_25: Warning: No output file name specified
 
 //; CHECK_ERROR_QUIET-NOT: Error
 
