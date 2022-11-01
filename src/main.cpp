@@ -199,6 +199,25 @@ static void lPrintVersion() {
     exit(ret);
 }
 
+[[noreturn]] static void linkUsage(int ret) {
+    lPrintVersion();
+    printf("\nusage: ispc link\n");
+    printf("\nLink several IR or SPIR-V files to selected output format: LLVM BC (default), LLVM text or SPIR-V\n");
+    printf("    [--emit-llvm]\t\t\tEmit LLVM bitcode file as output\n");
+    printf("    [--emit-llvm-text]\t\t\tEmit LLVM bitcode file as output in textual form\n");
+#ifdef ISPC_XE_ENABLED
+    printf("    [--emit-spirv]\t\t\tEmit SPIR-V file as output\n");
+#endif
+    printf("    [-o <name>/--outfile=<name>]\tOutput filename (may be \"-\" for standard output)\n");
+    printf("    <files to link or \"-\" for stdin>\n");
+    printf("\nExamples:\n");
+    printf("    Link two SPIR-V files to LLVM BC output:\n");
+    printf("        ispc link test_a.spv test_b.spv --emit-llvm -o test.bc\n");
+    printf("    Link LLVM bitcode files to SPIR-V output:\n");
+    printf("        ispc link test_a.bc test_b.bc --emit-spirv -o test.bc\n");
+    exit(ret);
+}
+
 [[noreturn]] static void devUsage(int ret) {
     lPrintVersion();
     printf("\nusage (developer options): ispc\n");
@@ -594,6 +613,8 @@ int main(int Argc, char *Argv[]) {
     const char *depsTargetName = NULL;
     const char *hostStubFileName = NULL;
     const char *devStubFileName = NULL;
+
+    std::vector<std::string> linkFileNames;
     // Initiailize globals early so that we can set various option values
     // as we're parsing below
     g = new Globals;
@@ -607,11 +628,67 @@ int main(int Argc, char *Argv[]) {
 
     ArgErrors errorHandler;
 
+    // If the first argument is "link"
+    // ISPC will be used in a linkage mode
+    if (!strncmp(argv[1], "link", 4)) {
+        // Use bitcode format by default
+        ot = Module::Bitcode;
+
+        if (argc < 2) {
+            // Not sufficient number of arguments
+            linkUsage(-1);
+        }
+        for (int i = 2; i < argc; ++i) {
+            if (!strcmp(argv[i], "--help")) {
+                linkUsage(0);
+            } else if (!strcmp(argv[i], "-o")) {
+                if (++i != argc) {
+                    outFileName = argv[i];
+                } else {
+                    errorHandler.AddError("No output file specified after -o option.");
+                }
+            } else if (!strncmp(argv[i], "--outfile=", 10)) {
+                outFileName = argv[i] + strlen("--outfile=");
+#ifdef ISPC_XE_ENABLED
+            } else if (!strcmp(argv[i], "--emit-spirv")) {
+                ot = Module::SPIRV;
+#endif
+            } else if (!strcmp(argv[i], "--emit-llvm")) {
+                ot = Module::Bitcode;
+            } else if (!strcmp(argv[i], "--emit-llvm-text")) {
+                ot = Module::BitcodeText;
+            } else if (argv[i][0] == '-') {
+                errorHandler.AddError("Unknown option \"%s\".", argv[i]);
+            } else {
+                file = argv[i];
+                linkFileNames.push_back(file);
+            }
+        }
+        // Emit accumulted errors and warnings, if any.
+        errorHandler.Emit();
+
+        if (linkFileNames.size() == 0) {
+            Error(SourcePos(), "No input files were specified.");
+            exit(1);
+        }
+
+        if (outFileName == NULL) {
+            Warning(SourcePos(), "No output file name specified. "
+                                 "The inputs will be linked and warnings/errors will "
+                                 "be issued, but no output will be generated.");
+        }
+
+        return Module::LinkAndOutput(linkFileNames, ot, outFileName);
+    }
+
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--help")) {
             usage(0);
         } else if (!strcmp(argv[i], "--help-dev")) {
             devUsage(0);
+        } else if (!strncmp(argv[i], "link", 4)) {
+            errorHandler.AddError(
+                "Option \"link\" can't be used in compilation mode. Use \"ispc link --help\" for details");
         } else if (!strcmp(argv[i], "--support-matrix")) {
             g->target_registry->printSupportMatrix();
             exit(0);
