@@ -54,6 +54,7 @@
 #define PRIu64 "llu"
 #endif
 
+#include <algorithm>
 #include <list>
 #include <set>
 #include <stdio.h>
@@ -5500,31 +5501,31 @@ ConstExpr::ConstExpr(const ConstExpr *old, SourcePos p) : Expr(p, ConstExprID) {
 
     switch (basicType) {
     case AtomicType::TYPE_BOOL:
-        memcpy(boolVal, old->boolVal, Count() * sizeof(bool));
+        std::copy(old->boolVal, old->boolVal + Count(), boolVal);
         break;
     case AtomicType::TYPE_INT8:
-        memcpy(int8Val, old->int8Val, Count() * sizeof(int8_t));
+        std::copy(old->int8Val, old->int8Val + Count(), int8Val);
         break;
     case AtomicType::TYPE_UINT8:
-        memcpy(uint8Val, old->uint8Val, Count() * sizeof(uint8_t));
+        std::copy(old->uint8Val, old->uint8Val + Count(), uint8Val);
         break;
     case AtomicType::TYPE_INT16:
-        memcpy(int16Val, old->int16Val, Count() * sizeof(int16_t));
+        std::copy(old->int16Val, old->int16Val + Count(), int16Val);
         break;
     case AtomicType::TYPE_UINT16:
-        memcpy(uint16Val, old->uint16Val, Count() * sizeof(uint16_t));
+        std::copy(old->uint16Val, old->uint16Val + Count(), uint16Val);
         break;
     case AtomicType::TYPE_INT32:
-        memcpy(int32Val, old->int32Val, Count() * sizeof(int32_t));
+        std::copy(old->int32Val, old->int32Val + Count(), int32Val);
         break;
     case AtomicType::TYPE_UINT32:
-        memcpy(uint32Val, old->uint32Val, Count() * sizeof(uint32_t));
+        std::copy(old->uint32Val, old->uint32Val + Count(), uint32Val);
         break;
     case AtomicType::TYPE_INT64:
-        memcpy(int64Val, old->int64Val, Count() * sizeof(int64_t));
+        std::copy(old->int64Val, old->int64Val + Count(), int64Val);
         break;
     case AtomicType::TYPE_UINT64:
-        memcpy(uint64Val, old->uint64Val, Count() * sizeof(uint64_t));
+        std::copy(old->uint64Val, old->uint64Val + Count(), uint64Val);
         break;
     case AtomicType::TYPE_FLOAT16:
         fpVal = old->fpVal;
