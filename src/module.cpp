@@ -805,12 +805,6 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
                                                   ? llvm::GlobalValue::InternalLinkage
                                                   : llvm::GlobalValue::ExternalLinkage;
 
-    // For Xe target all functions except Xe kernels, external functions and explicitly marked extern functions must
-    // be internal.
-    if (g->target->isXeTarget() && !functionType->IsISPCKernel() && !functionType->IsISPCExternal() &&
-        (storageClass != SC_EXTERN))
-        linkage = llvm::GlobalValue::InternalLinkage;
-
     auto [name_pref, name_suf] = functionType->GetFunctionMangledName(false);
     std::string functionName = name_pref + name + name_suf;
 

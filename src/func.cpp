@@ -308,6 +308,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
 #endif
     const FunctionType *type = CastType<FunctionType>(sym->type);
     Assert(type != NULL);
+
     // CPU tasks
     if (type->isTask == true && !g->target->isXeTarget()) {
         Assert(type->IsISPCExternal() == false);
@@ -761,9 +762,21 @@ void Function::GenerateIR() {
                 }
             }
         } else {
-            // In case if it is not the kernel, mark function as a stack call
             if (g->target->isXeTarget()) {
+                // Mark all internal ISPC functions as a stack call
                 function->addFnAttr("CMStackCall");
+                // Mark all internal ISPC functions as AlwaysInline to facilitate inlining on GPU
+                // if it's not marked as "noinline" explicitly
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
+                if (!(function->getAttributes().getFnAttrs().hasAttribute(llvm::Attribute::NoInline) ||
+                      function->getAttributes().getFnAttrs().hasAttribute(llvm::Attribute::AlwaysInline)))
+#else
+                if (!(function->getAttributes().getFnAttributes().hasAttribute(llvm::Attribute::NoInline) ||
+                      function->getAttributes().getFnAttributes().hasAttribute(llvm::Attribute::AlwaysInline)))
+#endif
+                {
+                    function->addFnAttr(llvm::Attribute::AlwaysInline);
+                }
             }
         }
     }
