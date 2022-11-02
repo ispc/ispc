@@ -147,11 +147,20 @@ task void f7_task() {}
 // CHECK_METADATA-NOT: !"Debug Info Version"
 // CHECK_METADATA_DEBUG: !"Debug Info Version"
 
-// Check linkage of non-kernel/non-export functions
-// On GPU they have internal linkage
-// CHECK_FUNC_GPU-NOT: @t1__
+// Check linkage and inlining of non-kernel/non-export functions
+// On GPU the functions have alwaysinline attribute by default
+// CHECK_FUNC_GPU: alwaysinline
+// CHECK_FUNC_GPU-NEXT: @t1__
+// CHECK_FUNC_CPU-NOT: alwaysinline
 // CHECK_FUNC_CPU: @t1__
 uniform int t1() {
+    return programCount;
+}
+// CHECK_FUNC_GPU-NOT: alwaysinline
+// CHECK_FUNC_GPU: @t1_noinline__
+// CHECK_FUNC_CPU-NOT: alwaysinline
+// CHECK_FUNC_CPU: @t1_noinline__
+noinline uniform int t1_noinline() {
     return programCount;
 }
 // CHECK_FUNC_GPU-NOT: @t2__
@@ -159,12 +168,16 @@ uniform int t1() {
 static uniform int t2() {
     return programCount;
 }
+// CHECK_FUNC_GPU: alwaysinline
 // CHECK_FUNC_GPU: @t3__
+// CHECK_FUNC_CPU-NOT: alwaysinline
 // CHECK_FUNC_CPU: @t3__
 extern uniform int t3() {
     return programCount;
 }
+// CHECK_FUNC_GPU-NOT: alwaysinline
 // CHECK_FUNC_GPU: @t4(
+// CHECK_FUNC_CPU-NOT: alwaysinline
 // CHECK_FUNC_CPU: @t4(
 extern "C" uniform int t4(int p);
 extern uniform int t4_call() {

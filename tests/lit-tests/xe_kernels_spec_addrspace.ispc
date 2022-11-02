@@ -35,7 +35,7 @@ inline void contextInit(uniform Context *uniform context) {
     context->y = 1;
 }
 
-// CHECK-XE: define internal spir_func void @swap___{{.*}}
+// CHECK-XE: define spir_func void @swap___{{.*}}
 // CHECK-XE: define spir_func void @intersectISPC___{{.*}}(i1 %{{.*}}, %v8_uniform_Context* noalias %{{.*}}, %v8_uniform_RayHit* noalias %{{.*}}, float* noalias %{{.*}}, i8* noalias %{{.*}}, <8 x i1> %__mask)
 // CHECK-XE-NOT: addrspacecast %v8_uniform_Context addrspace(4)* %{{.*}} to %v8_uniform_Context*
 // CHECK-XE-NOT: addrspacecast %v8_uniform_RayHit addrspace(4)* %{{.*}} to %v8_uniform_RayHit*
