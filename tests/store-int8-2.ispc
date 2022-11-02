@@ -1,7 +1,5 @@
 #include "../test_static.isph"
-// TODO: fix the test, temporarily disabled on Xe targets
-// rule: skip on arch=xe32
-// rule: skip on arch=xe64
+
 task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     uniform unsigned int8 x[2*programCount];
     for (uniform int i = 0; i < 2*programCount; ++i)

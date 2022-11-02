@@ -951,7 +951,7 @@ define(`xe_masked_load', `
 ; for the lanes that cross the page boundaries.
 define <WIDTH x $1> @__masked_load_blend_$1(i8 *, <WIDTH x MASK> %mask) nounwind alwaysinline {
   %bitptr = bitcast i8* %0 to <WIDTH x $1>*
-  %res = load PTR_OP_ARGS(`<WIDTH x $1> ')  %bitptr
+  %res = load PTR_OP_ARGS(`<WIDTH x $1> ') %bitptr, align SIZEOF($1)
   %res_masked = select <WIDTH x MASK> %mask, <WIDTH x $1> %res, <WIDTH x $1> undef
   ret <WIDTH x $1> %res_masked
 }
