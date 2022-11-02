@@ -122,6 +122,10 @@ macro(build_ispcrt SHARED_OR_STATIC TARGET_NAME)
     $<$<BOOL:${ISPCRT_BUILD_CPU}>:detail/cpu/CPUDevice.cpp>
     $<$<BOOL:${ISPCRT_BUILD_GPU}>:detail/gpu/GPUDevice.cpp>
   )
+  set_target_properties(${TARGET_NAME} PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+  )
 
   if (ISPCRT_BUILD_GPU)
     target_compile_definitions(${TARGET_NAME} PRIVATE ISPCRT_BUILD_GPU)
