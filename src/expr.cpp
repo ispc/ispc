@@ -1097,6 +1097,10 @@ const Type *UnaryExpr::GetType() const {
     if (type == NULL)
         return NULL;
 
+    if (type->IsDependentType()) {
+        return AtomicType::Dependent;
+    }
+
     // Unary expressions should be returning target types after updating
     // reference address.
     if (CastType<ReferenceType>(type) != NULL) {
@@ -1242,6 +1246,10 @@ Expr *UnaryExpr::TypeCheck() {
     if (expr == NULL || (type = expr->GetType()) == NULL)
         // something went wrong in type checking...
         return NULL;
+
+    if (type->IsDependentType()) {
+        return this;
+    }
 
     if (type->IsSOAType()) {
         Error(pos, "Can't apply unary operator to SOA type \"%s\".", type->GetString().c_str());
@@ -2061,6 +2069,10 @@ const Type *BinaryExpr::GetType() const {
     if (type0 == NULL || type1 == NULL)
         return NULL;
 
+    if (type0->IsDependentType() || type1->IsDependentType()) {
+        return AtomicType::Dependent;
+    }
+
     // If this hits, it means that our TypeCheck() method hasn't been
     // called before GetType() was called; adding two pointers is illegal
     // and will fail type checking and (int + ptr) should be canonicalized
@@ -2511,6 +2523,10 @@ Expr *BinaryExpr::TypeCheck() {
     const Type *type0 = arg0->GetType(), *type1 = arg1->GetType();
     if (type0 == NULL || type1 == NULL)
         return NULL;
+
+    if (type0->IsDependentType() || type1->IsDependentType()) {
+        return this;
+    }
 
     // If either operand is a reference, dereference it before we move
     // forward
@@ -3135,7 +3151,16 @@ Expr *AssignExpr::Optimize() {
     return this;
 }
 
-const Type *AssignExpr::GetType() const { return lvalue ? lvalue->GetType() : NULL; }
+const Type *AssignExpr::GetType() const {
+    if (lvalue) {
+        const Type *ltype = lvalue->GetType();
+        if (ltype && ltype->IsDependentType()) {
+            return AtomicType::Dependent;
+        }
+        return ltype;
+    }
+    return NULL;
+}
 
 /** Recursively checks a structure type to see if it (or any struct type
     that it holds) has a const-qualified member. */
@@ -3167,6 +3192,12 @@ static bool lCheckForConstStructMember(SourcePos pos, const StructType *structTy
 Expr *AssignExpr::TypeCheck() {
     if (lvalue == NULL || rvalue == NULL)
         return NULL;
+
+    const Type *ltype = lvalue->GetType();
+    const Type *rtype = rvalue->GetType();
+    if ((ltype && ltype->IsDependentType()) || (rtype && rtype->IsDependentType())) {
+        return this;
+    }
 
     bool lvalueIsReference = CastType<ReferenceType>(lvalue->GetType()) != NULL;
     if (lvalueIsReference)
@@ -3492,6 +3523,10 @@ const Type *SelectExpr::GetType() const {
     if (!testType || !expr1Type || !expr2Type)
         return NULL;
 
+    if (testType->IsDependentType() || expr1Type->IsDependentType() || expr2Type->IsDependentType()) {
+        return AtomicType::Dependent;
+    }
+
     bool becomesVarying = (testType->IsVaryingType() || expr1Type->IsVaryingType() || expr2Type->IsVaryingType());
     // if expr1 and expr2 have different vector sizes, typechecking should fail...
     int testVecSize = CastType<VectorType>(testType) != NULL ? CastType<VectorType>(testType)->GetElementCount() : 0;
@@ -3600,9 +3635,13 @@ Expr *SelectExpr::TypeCheck() {
     if (test == NULL || expr1 == NULL || expr2 == NULL)
         return NULL;
 
-    const Type *type1 = expr1->GetType(), *type2 = expr2->GetType();
-    if (!type1 || !type2)
+    const Type *type1 = expr1->GetType(), *type2 = expr2->GetType(), *testType = test->GetType();
+    if (!type1 || !type2 || !testType)
         return NULL;
+
+    if (testType->IsDependentType() || type1->IsDependentType() || type2->IsDependentType()) {
+        return this;
+    }
 
     if (const ArrayType *at1 = CastType<ArrayType>(type1)) {
         expr1 = TypeConvertExpr(expr1, PointerType::GetUniform(at1->GetBaseType()), "select");
@@ -3617,9 +3656,6 @@ Expr *SelectExpr::TypeCheck() {
         type2 = expr2->GetType();
     }
 
-    const Type *testType = test->GetType();
-    if (testType == NULL)
-        return NULL;
     test = TypeConvertExpr(test, lMatchingBoolType(testType), "select");
     if (test == NULL)
         return NULL;
@@ -3849,6 +3885,7 @@ const Type *FunctionCallExpr::GetType() const {
     std::vector<bool> argCouldBeNULL, argIsConstant;
     if (func == NULL || args == NULL)
         return NULL;
+    // TODO: bail in case of dependent types.
     if (lFullResolveOverloads(func, args, &argTypes, &argCouldBeNULL, &argIsConstant) == true) {
         FunctionSymbolExpr *fse = llvm::dyn_cast<FunctionSymbolExpr>(func);
         if (fse != NULL) {
@@ -4460,6 +4497,10 @@ const Type *IndexExpr::GetType() const {
         ((indexType = index->GetType()) == NULL))
         return NULL;
 
+    if (baseExprType->IsDependentType() || indexType->IsDependentType()) {
+        return AtomicType::Dependent;
+    }
+
     const Type *elementType = NULL;
     const PointerType *pointerType = CastType<PointerType>(baseExprType);
     if (pointerType != NULL)
@@ -4703,6 +4744,10 @@ Expr *IndexExpr::TypeCheck() {
         return NULL;
     }
 
+    if (baseExprType->IsDependentType() || indexType->IsDependentType()) {
+        return this;
+    }
+
     if (!CastType<SequentialType>(baseExprType->GetReferenceTarget())) {
         if (const PointerType *pt = CastType<PointerType>(baseExprType)) {
             if (pt->GetBaseType()->IsVoidType()) {
@@ -4841,6 +4886,10 @@ const Type *StructMemberExpr::GetType() const {
         return NULL;
     }
 
+    if (exprType->IsDependentType() || structType->IsDependentType() || lvalueType->IsDependentType()) {
+        return AtomicType::Dependent;
+    }
+
     const Type *elementType = structType->GetElementType(identifier);
     if (elementType == NULL) {
         Error(identifierPos, "Element name \"%s\" not present in struct type \"%s\".%s", identifier.c_str(),
@@ -4975,7 +5024,14 @@ const Type *VectorMemberExpr::GetType() const {
     // type.  For n-element expressions, we have a shortvec type
     // with n > 1 elements.  This can be changed when we get
     // type<1> -> type conversions.
-    type = (identifier.length() == 1) ? (const Type *)exprVectorType->GetElementType() : (const Type *)memberType;
+    const Type *t =
+        (identifier.length() == 1) ? (const Type *)exprVectorType->GetElementType() : (const Type *)memberType;
+
+    if (t->IsDependentType()) {
+        return AtomicType::Dependent;
+    }
+
+    type = t;
 
     const Type *lvType = GetLValueType();
     if (lvType != NULL) {
@@ -7005,6 +7061,10 @@ const Type *TypeCastExpr::GetType() const {
     if (toType == NULL || fromType == NULL)
         return NULL;
 
+    if (toType->IsDependentType()) {
+        return toType;
+    }
+
     if (toType->HasUnboundVariability()) {
         if (fromType->IsUniformType()) {
             toType = type->ResolveUnboundVariability(Variability::Uniform);
@@ -7040,6 +7100,10 @@ Expr *TypeCastExpr::TypeCheck() {
     const Type *toType = type, *fromType = expr->GetType();
     if (toType == NULL || fromType == NULL)
         return NULL;
+
+    if (toType->IsDependentType() || fromType->IsDependentType()) {
+        return this;
+    }
 
     if (toType->HasUnboundVariability() && fromType->IsUniformType()) {
         TypeCastExpr *tce = new TypeCastExpr(toType->GetAsUniformType(), expr, pos);
@@ -7331,6 +7395,10 @@ const Type *ReferenceExpr::GetType() const {
     if (!type)
         return NULL;
 
+    if (type->IsDependentType()) {
+        return AtomicType::Dependent;
+    }
+
     return new ReferenceType(type);
 }
 
@@ -7441,6 +7509,10 @@ const Type *PtrDerefExpr::GetType() const {
     }
     AssertPos(pos, CastType<PointerType>(type) != NULL);
 
+    if (type->IsDependentType()) {
+        return AtomicType::Dependent;
+    }
+
     if (type->IsUniformType())
         return type->GetBaseType();
     else
@@ -7452,6 +7524,10 @@ Expr *PtrDerefExpr::TypeCheck() {
     if (expr == NULL || (type = expr->GetType()) == NULL) {
         AssertPos(pos, m->errorCount > 0);
         return NULL;
+    }
+
+    if (type->IsDependentType()) {
+        return this;
     }
 
     if (const PointerType *pt = CastType<PointerType>(type)) {
@@ -7515,6 +7591,10 @@ const Type *RefDerefExpr::GetType() const {
         return NULL;
     }
 
+    if (type->IsDependentType()) {
+        return AtomicType::Dependent;
+    }
+
     AssertPos(pos, CastType<ReferenceType>(type) != NULL);
     return type->GetReferenceTarget();
 }
@@ -7524,6 +7604,10 @@ Expr *RefDerefExpr::TypeCheck() {
     if (expr == NULL || (type = expr->GetType()) == NULL) {
         AssertPos(pos, m->errorCount > 0);
         return NULL;
+    }
+
+    if (type->IsDependentType()) {
+        return this;
     }
 
     // We only create RefDerefExprs internally for references in
@@ -7583,6 +7667,10 @@ const Type *AddressOfExpr::GetType() const {
         return NULL;
 
     const Type *exprType = expr->GetType();
+    if (exprType && exprType->IsDependentType()) {
+        return AtomicType::Dependent;
+    }
+
     if (CastType<ReferenceType>(exprType) != NULL)
         return PointerType::GetUniform(exprType->GetReferenceTarget());
 
@@ -7633,6 +7721,10 @@ Expr *AddressOfExpr::TypeCheck() {
     if (expr == NULL || (exprType = expr->GetType()) == NULL) {
         AssertPos(pos, m->errorCount > 0);
         return NULL;
+    }
+
+    if (exprType->IsDependentType()) {
+        return this;
     }
 
     if (CastType<ReferenceType>(exprType) != NULL || CastType<FunctionType>(exprType) != NULL) {
@@ -7754,6 +7846,10 @@ void SizeOfExpr::Print(Indent &indent) const {
 }
 
 Expr *SizeOfExpr::TypeCheck() {
+    if (type && type->IsDependentType()) {
+        return this;
+    }
+
     // Can't compute the size of a struct without a definition
     if (type != NULL && CastType<UndefinedStructType>(type) != NULL) {
         Error(pos,
@@ -7837,6 +7933,10 @@ Expr *AllocaExpr::TypeCheck() {
     }
 
     const Type *argType = expr ? expr->GetType() : NULL;
+    if (argType && argType->IsDependentType()) {
+        return this;
+    }
+
     const Type *sizeType = m->symbolTable->LookupType("size_t");
     Assert(sizeType != NULL);
     if (!Type::Equal(sizeType->GetAsUniformType(), expr->GetType())) {
@@ -7956,6 +8056,7 @@ FunctionSymbolExpr::FunctionSymbolExpr(const char *n, const std::vector<Template
 }
 
 const Type *FunctionSymbolExpr::GetType() const {
+    // TODO: ???
     if (triedToResolve == false && matchingFunc == NULL) {
         Error(pos, "Ambiguous use of overloaded function \"%s\".", name.c_str());
         return NULL;
@@ -8599,6 +8700,10 @@ const Type *NewExpr::GetType() const {
     if (allocType == NULL)
         return NULL;
 
+    if (allocType->IsDependentType()) {
+        return AtomicType::Dependent;
+    }
+
     return isVarying ? PointerType::GetVarying(allocType) : PointerType::GetUniform(allocType);
 }
 
@@ -8607,6 +8712,10 @@ Expr *NewExpr::TypeCheck() {
     if (allocType == NULL) {
         AssertPos(pos, m->errorCount > 0);
         return NULL;
+    }
+
+    if (allocType->IsDependentType()) {
+        return this;
     }
 
     if (g->target->isXeTarget()) {
