@@ -48,15 +48,9 @@ using namespace ispc;
 ///////////////////////////////////////////////////////////////////////////
 // Symbol
 
-Symbol::Symbol(const std::string &n, SourcePos p, const Type *t, StorageClass sc) : pos(p), name(n) {
-    storageInfo = NULL;
-    function = exportedFunction = NULL;
-    type = t;
-    constValue = NULL;
-    storageClass = sc;
-    varyingCFDepth = 0;
-    parentFunction = NULL;
-}
+Symbol::Symbol(const std::string &n, SourcePos p, const Type *t, StorageClass sc)
+    : pos(p), name(n), storageInfo(NULL), function(NULL), exportedFunction(NULL), type(t), constValue(NULL),
+      storageClass(sc), varyingCFDepth(0), parentFunction(NULL) {}
 
 ///////////////////////////////////////////////////////////////////////////
 // SymbolTable
