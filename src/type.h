@@ -130,6 +130,9 @@ class Type : public Traceable {
     /** Returns true if the underlying type is a float or integer type. */
     bool IsNumericType() const { return IsFloatType() || IsIntType(); }
 
+    /** Returns true if the type is any kind of dependent type. */
+    bool IsDependentType() const;
+
     /** Returns the variability of the type. */
     virtual Variability GetVariability() const = 0;
 
@@ -322,6 +325,7 @@ class AtomicType : public Type {
         TYPE_INT64,
         TYPE_UINT64,
         TYPE_DOUBLE,
+        TYPE_DEPENDENT,
         NUM_BASIC_TYPES
     };
 
@@ -339,6 +343,7 @@ class AtomicType : public Type {
     static const AtomicType *UniformInt64, *VaryingInt64;
     static const AtomicType *UniformUInt64, *VaryingUInt64;
     static const AtomicType *UniformDouble, *VaryingDouble;
+    static const AtomicType *Dependent;
     static const AtomicType *Void;
 
   private:
@@ -750,6 +755,9 @@ class StructType : public CollectionType {
     /** Returns the type of the i'th structure element.  The value of \c i must
         be between 0 and NumElements()-1. */
     const Type *GetElementType(int i) const;
+
+    /** Return the raw element type without "finilizing" varibility and constness of the element. */
+    const Type *GetRawElementType(int i) const;
 
     /** Returns which structure element number (starting from zero) that
         has the given name.  If there is no such element, return -1. */

@@ -285,6 +285,9 @@ Stmt *DeclStmt::Optimize() {
 // another brace initialization.
 static bool checkInit(const Type *type, Expr **init) {
     bool encounteredError = false;
+    if (type && type->IsDependentType()) {
+        return false;
+    }
 
     // get the right type for stuff like const float foo = 2; so that
     // the int->float type conversion is in there and we don't return
@@ -294,6 +297,11 @@ static bool checkInit(const Type *type, Expr **init) {
         // an error.  Need to leave vars[i].init as is in that case so
         // it is in fact caught later, though.
         if (llvm::dyn_cast<ExprList>(*init) == NULL) {
+            const Type *t = (*init) ? (*init)->GetType() : NULL;
+            if (t && t->IsDependentType()) {
+                return false;
+            }
+
             *init = TypeConvertExpr(*init, type, "initializer");
             if (*init == NULL)
                 encounteredError = true;
@@ -486,6 +494,9 @@ Stmt *IfStmt::TypeCheck() {
     if (test != NULL) {
         const Type *testType = test->GetType();
         if (testType != NULL) {
+            if (testType->IsDependentType()) {
+                return this;
+            }
             bool isUniform = (testType->IsUniformType() && !g->opt.disableUniformControlFlow);
             test = TypeConvertExpr(test, isUniform ? AtomicType::UniformBool : AtomicType::VaryingBool,
                                    "\"if\" statement test");
@@ -937,6 +948,10 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
 Stmt *DoStmt::TypeCheck() {
     const Type *testType;
     if (testExpr != NULL && (testType = testExpr->GetType()) != NULL) {
+        if (testType->IsDependentType()) {
+            return this;
+        }
+
         // Should the test condition for the loop be uniform or varying?
         // It can be uniform only if three conditions are met:
         //
@@ -1161,6 +1176,10 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
 Stmt *ForStmt::TypeCheck() {
     const Type *testType;
     if (test && (testType = test->GetType()) != NULL) {
+        if (testType->IsDependentType()) {
+            return this;
+        }
+
         // See comments in DoStmt::TypeCheck() regarding
         // 'uniformTest' and the type conversion here.
         bool uniformTest =
@@ -1978,6 +1997,19 @@ void ForeachStmt::EmitCodeForXe(FunctionEmitContext *ctx) const {
 #endif
 
 Stmt *ForeachStmt::TypeCheck() {
+    for (auto expr : startExprs) {
+        const Type *t = expr ? expr->GetType() : NULL;
+        if (t && t->IsDependentType()) {
+            return this;
+        }
+    }
+    for (auto expr : endExprs) {
+        const Type *t = expr ? expr->GetType() : NULL;
+        if (t && t->IsDependentType()) {
+            return this;
+        }
+    }
+
     bool anyErrors = false;
     for (unsigned int i = 0; i < startExprs.size(); ++i) {
         if (startExprs[i] != NULL)
@@ -2537,6 +2569,10 @@ Stmt *ForeachUniqueStmt::TypeCheck() {
     if (sym == NULL || expr == NULL || (type = expr->GetType()) == NULL)
         return NULL;
 
+    if (type->IsDependentType()) {
+        return this;
+    }
+
     if (type->IsVaryingType() == false) {
         Error(expr->pos,
               "Iteration domain type in \"foreach_tiled\" loop "
@@ -2824,6 +2860,10 @@ Stmt *SwitchStmt::TypeCheck() {
     if (expr == NULL || (exprType = expr->GetType()) == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
+    }
+
+    if (exprType->IsDependentType()) {
+        return this;
     }
 
     const Type *toType = NULL;
@@ -3865,6 +3905,9 @@ void AssertStmt::Print(Indent &indent) const {
 Stmt *AssertStmt::TypeCheck() {
     const Type *type;
     if (expr && (type = expr->GetType()) != NULL) {
+        if (type->IsDependentType()) {
+            return this;
+        }
         bool isUniform = type->IsUniformType();
         expr = TypeConvertExpr(expr, isUniform ? AtomicType::UniformBool : AtomicType::VaryingBool,
                                "\"assert\" statement");
@@ -3958,6 +4001,10 @@ Stmt *DeleteStmt::TypeCheck() {
     const Type *exprType;
     if (expr == NULL || ((exprType = expr->GetType()) == NULL))
         return NULL;
+
+    if (exprType->IsDependentType()) {
+        return this;
+    }
 
     if (CastType<PointerType>(exprType) == NULL) {
         Error(pos, "Illegal to delete non-pointer type \"%s\".", exprType->GetString().c_str());
