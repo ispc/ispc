@@ -73,15 +73,16 @@ struct Variability {
 /** Enumerant that records each of the types that inherit from the Type
     baseclass. */
 enum TypeId {
-    ATOMIC_TYPE,           // 0
-    ENUM_TYPE,             // 1
-    POINTER_TYPE,          // 2
-    ARRAY_TYPE,            // 3
-    VECTOR_TYPE,           // 4
-    STRUCT_TYPE,           // 5
-    UNDEFINED_STRUCT_TYPE, // 6
-    REFERENCE_TYPE,        // 7
-    FUNCTION_TYPE          // 8
+    ATOMIC_TYPE,             // 0
+    ENUM_TYPE,               // 1
+    POINTER_TYPE,            // 2
+    ARRAY_TYPE,              // 3
+    VECTOR_TYPE,             // 4
+    STRUCT_TYPE,             // 5
+    UNDEFINED_STRUCT_TYPE,   // 6
+    REFERENCE_TYPE,          // 7
+    FUNCTION_TYPE,           // 8
+    TEMPLATE_TYPE_PARM_TYPE, // 9
 };
 
 /** @brief Interface class that defines the type abstraction.
@@ -342,6 +343,50 @@ class AtomicType : public Type {
     AtomicType(BasicType basicType, Variability v, bool isConst);
 
     mutable const AtomicType *asOtherConstType, *asUniformType, *asVaryingType;
+};
+
+/** @brief Type representing a template typename type.
+
+    'TemplateTypeParmType' should be resolved during template instantiation.
+ */
+class TemplateTypeParmType : public Type {
+  public:
+    TemplateTypeParmType(std::string, Variability v, bool ic, SourcePos pos);
+
+    Variability GetVariability() const;
+
+    bool IsBoolType() const;
+    bool IsFloatType() const;
+    bool IsIntType() const;
+    bool IsUnsignedType() const;
+    bool IsConstType() const;
+
+    const Type *GetBaseType() const;
+    const Type *GetAsVaryingType() const;
+    const Type *GetAsUniformType() const;
+    const Type *GetAsUnboundVariabilityType() const;
+    const Type *GetAsSOAType(int width) const;
+    const Type *ResolveUnboundVariability(Variability v) const;
+
+    const Type *GetAsConstType() const;
+    const Type *GetAsNonConstType() const;
+
+    std::string GetName() const;
+    const SourcePos &GetSourcePos() const;
+    std::string GetString() const;
+    std::string Mangle() const;
+    std::string GetCDeclaration(const std::string &name) const;
+
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+
+    llvm::DIType *GetDIType(llvm::DIScope *scope) const;
+
+  private:
+    const std::string name;
+    const Variability variability;
+    const bool isConst;
+    const SourcePos pos;
+    mutable const TemplateTypeParmType *asOtherConstType, *asUniformType, *asVaryingType;
 };
 
 /** @brief Type implementation for enumerated types
@@ -975,6 +1020,13 @@ template <typename T> inline const T *CastType(const Type *type) { return NULL; 
 template <> inline const AtomicType *CastType(const Type *type) {
     if (type != NULL && type->typeId == ATOMIC_TYPE)
         return (const AtomicType *)type;
+    else
+        return NULL;
+}
+
+template <> inline const TemplateTypeParmType *CastType(const Type *type) {
+    if (type != NULL && type->typeId == TEMPLATE_TYPE_PARM_TYPE)
+        return (const TemplateTypeParmType *)type;
     else
         return NULL;
 }
