@@ -571,6 +571,138 @@ llvm::DIType *AtomicType::GetDIType(llvm::DIScope *scope) const {
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// TemplateTypeParmType
+
+TemplateTypeParmType::TemplateTypeParmType(std::string n, Variability v, bool ic, SourcePos p)
+    : Type(TEMPLATE_TYPE_PARM_TYPE), name(n), variability(v), isConst(ic), pos(p) {
+    asOtherConstType = NULL;
+    asUniformType = asVaryingType = NULL;
+}
+
+Variability TemplateTypeParmType::GetVariability() const { return variability; }
+
+bool TemplateTypeParmType::IsBoolType() const { return false; }
+
+bool TemplateTypeParmType::IsFloatType() const { return false; }
+
+bool TemplateTypeParmType::IsIntType() const { return false; }
+
+bool TemplateTypeParmType::IsUnsignedType() const { return false; }
+
+bool TemplateTypeParmType::IsConstType() const { return isConst; }
+
+const Type *TemplateTypeParmType::GetBaseType() const { return this; }
+
+const Type *TemplateTypeParmType::GetAsVaryingType() const {
+    if (variability == Variability::Varying)
+        return this;
+    if (asVaryingType == NULL) {
+        asVaryingType = new TemplateTypeParmType(name, Variability::Varying, isConst, pos);
+        if (variability == Variability::Uniform)
+            asVaryingType->asUniformType = this;
+    }
+    return asVaryingType;
+}
+
+const Type *TemplateTypeParmType::GetAsUniformType() const {
+    if (variability == Variability::Uniform)
+        return this;
+    if (asUniformType == NULL) {
+        asUniformType = new TemplateTypeParmType(name, Variability::Uniform, isConst, pos);
+        if (variability == Variability::Varying)
+            asUniformType->asVaryingType = this;
+    }
+    return asUniformType;
+}
+
+const Type *TemplateTypeParmType::GetAsUnboundVariabilityType() const {
+    if (variability == Variability::Unbound)
+        return this;
+    return new TemplateTypeParmType(name, Variability::Unbound, isConst, pos);
+}
+
+// Revisit: Should soa type be supported for template type param?
+const Type *TemplateTypeParmType::GetAsSOAType(int width) const {
+    Error(pos, "soa type not supported for template type parameter.");
+    return this;
+}
+
+const Type *TemplateTypeParmType::ResolveUnboundVariability(Variability v) const {
+    Assert(v != Variability::Unbound);
+    if (variability != Variability::Unbound)
+        return this;
+    return new TemplateTypeParmType(name, v, isConst, pos);
+}
+
+const Type *TemplateTypeParmType::GetAsConstType() const {
+    if (isConst == true)
+        return this;
+
+    if (asOtherConstType == NULL) {
+        asOtherConstType = new TemplateTypeParmType(name, variability, true, pos);
+        asOtherConstType->asOtherConstType = this;
+    }
+    return asOtherConstType;
+}
+
+const Type *TemplateTypeParmType::GetAsNonConstType() const {
+    if (isConst == false)
+        return this;
+
+    if (asOtherConstType == NULL) {
+        asOtherConstType = new TemplateTypeParmType(name, variability, false, pos);
+        asOtherConstType->asOtherConstType = this;
+    }
+    return asOtherConstType;
+}
+
+std::string TemplateTypeParmType::GetName() const { return name; }
+
+const SourcePos &TemplateTypeParmType::GetSourcePos() const { return pos; }
+
+std::string TemplateTypeParmType::GetString() const {
+    std::string ret;
+    if (isConst)
+        ret += "const ";
+
+    ret += variability.GetString();
+    ret += " ";
+    ret += name;
+    return ret;
+}
+
+std::string TemplateTypeParmType::Mangle() const {
+    std::string ret;
+    if (isConst)
+        ret += "C";
+    ret += variability.MangleString();
+    ret += name;
+    return ret;
+}
+
+std::string TemplateTypeParmType::GetCDeclaration(const std::string &cname) const {
+    std::string ret;
+    if (variability == Variability::Unbound) {
+        Assert(m->errorCount > 0);
+        return ret;
+    }
+    if (isConst)
+        ret += "const ";
+    ret += name;
+    if (lShouldPrintName(cname)) {
+        ret += " ";
+        ret += cname;
+    }
+    return ret;
+}
+
+// This should never be called.
+llvm::Type *TemplateTypeParmType::LLVMType(llvm::LLVMContext *ctx) const { UNREACHABLE(); }
+
+// This should never be called.
+llvm::DIType *TemplateTypeParmType::GetDIType(llvm::DIScope *scope) const { UNREACHABLE(); }
+
+///////////////////////////////////////////////////////////////////////////
 // EnumType
 
 EnumType::EnumType(SourcePos p) : Type(ENUM_TYPE), pos(p) {
