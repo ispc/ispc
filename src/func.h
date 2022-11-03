@@ -61,6 +61,7 @@ class Function {
   private:
     enum class DebugPrintPoint { Initial, AfterTypeChecking, AfterOptimization };
     void debugPrintHelper(DebugPrintPoint dumpPoint);
+    void typeCheckAndOptimize();
 
     void emitCode(FunctionEmitContext *ctx, llvm::Function *function, SourcePos firstStmtPos);
 

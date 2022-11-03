@@ -155,26 +155,16 @@ void Function::Print(Indent &indent) const {
     indent.Done();
 }
 
-Function::Function(Symbol *s, Stmt *c) {
-    sym = s;
-    code = c;
-
+// The Function is created when the body of the function is already parsed and AST is created for it,
+// and we are about to close the symbol table scope for the function. So all symbols that require special
+// handling during code generation must be saved. This includes symbols for arguments and special symbols
+// like __mask and thread / task variables.
+// Type checking and optimization is also done here.
+Function::Function(Symbol *s, Stmt *c) : sym(s), code(c) {
     maskSymbol = m->symbolTable->LookupVariable("__mask");
     Assert(maskSymbol != NULL);
 
-    if (code != NULL) {
-        debugPrintHelper(DebugPrintPoint::Initial);
-
-        code = TypeCheck(code);
-
-        debugPrintHelper(DebugPrintPoint::AfterTypeChecking);
-
-        if (code != NULL) {
-            code = Optimize(code);
-
-            debugPrintHelper(DebugPrintPoint::AfterOptimization);
-        }
-    }
+    typeCheckAndOptimize();
 
     const FunctionType *type = CastType<FunctionType>(sym->type);
     Assert(type != NULL);
@@ -218,6 +208,22 @@ Function::Function(Symbol *s, Stmt *c) {
         threadIndexSym = threadCountSym = taskIndexSym = taskCountSym = NULL;
         taskIndexSym0 = taskIndexSym1 = taskIndexSym2 = NULL;
         taskCountSym0 = taskCountSym1 = taskCountSym2 = NULL;
+    }
+}
+
+void Function::typeCheckAndOptimize() {
+    if (code != NULL) {
+        debugPrintHelper(DebugPrintPoint::Initial);
+
+        code = TypeCheck(code);
+
+        debugPrintHelper(DebugPrintPoint::AfterTypeChecking);
+
+        if (code != NULL) {
+            code = Optimize(code);
+
+            debugPrintHelper(DebugPrintPoint::AfterOptimization);
+        }
     }
 }
 
