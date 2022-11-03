@@ -164,8 +164,6 @@ Function::Function(Symbol *s, Stmt *c) : sym(s), code(c) {
     maskSymbol = m->symbolTable->LookupVariable("__mask");
     Assert(maskSymbol != NULL);
 
-    typeCheckAndOptimize();
-
     const FunctionType *type = CastType<FunctionType>(sym->type);
     Assert(type != NULL);
 
@@ -209,6 +207,8 @@ Function::Function(Symbol *s, Stmt *c) : sym(s), code(c) {
         taskIndexSym0 = taskIndexSym1 = taskIndexSym2 = NULL;
         taskCountSym0 = taskCountSym1 = taskCountSym2 = NULL;
     }
+
+    typeCheckAndOptimize();
 }
 
 void Function::typeCheckAndOptimize() {
