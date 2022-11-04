@@ -5493,7 +5493,7 @@ ConstExpr::ConstExpr(const Type *t, bool *b, SourcePos p) : Expr(p, ConstExprID)
         boolVal[j] = b[j];
 }
 
-ConstExpr::ConstExpr(ConstExpr *old, SourcePos p) : Expr(p, ConstExprID) {
+ConstExpr::ConstExpr(const ConstExpr *old, SourcePos p) : Expr(p, ConstExprID) {
     type = old->type;
 
     AtomicType::BasicType basicType = getBasicType();

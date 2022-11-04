@@ -2237,10 +2237,8 @@ int ForeachActiveStmt::EstimateCost() const { return COST_VARYING_LOOP; }
 // ForeachUniqueStmt
 
 ForeachUniqueStmt::ForeachUniqueStmt(const char *iterName, Expr *e, Stmt *s, SourcePos pos)
-    : Stmt(pos, ForeachUniqueStmtID) {
+    : Stmt(pos, ForeachUniqueStmtID), expr(e), stmts(s) {
     sym = m->symbolTable->LookupVariable(iterName);
-    expr = e;
-    stmts = s;
 }
 
 void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
