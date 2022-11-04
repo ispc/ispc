@@ -428,7 +428,7 @@ class ConstExpr : public Expr {
 
     /** Create ConstExpr with the same type and values as the given one,
         but at the given position. */
-    ConstExpr(ConstExpr *old, SourcePos pos);
+    ConstExpr(const ConstExpr *old, SourcePos pos);
 
     static inline bool classof(ConstExpr const *) { return true; }
     static inline bool classof(ASTNode const *N) { return N->getValueID() == ConstExprID; }
