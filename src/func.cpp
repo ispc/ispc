@@ -71,6 +71,9 @@
 
 using namespace ispc;
 
+///////////////////////////////////////////////////////////////////////////
+// Function
+
 bool Function::IsStdlibSymbol() const {
     if (sym == nullptr) {
         return false;
@@ -208,6 +211,15 @@ Function::Function(Symbol *s, Stmt *c) : sym(s), code(c) {
         taskCountSym0 = taskCountSym1 = taskCountSym2 = NULL;
     }
 
+    typeCheckAndOptimize();
+}
+
+// The version of constructor, which accepts symbols directly instead of doing lookup in the symbol table.
+// This is necessary to instantiate template functions, as symbol lookup is not available during instantiation.
+Function::Function(Symbol *s, Stmt *c, Symbol *ms, std::vector<Symbol *> &a)
+    : sym(s), args(a), code(c), maskSymbol(ms), threadIndexSym(nullptr), threadCountSym(nullptr), taskIndexSym(nullptr),
+      taskCountSym(nullptr), taskIndexSym0(nullptr), taskCountSym0(nullptr), taskIndexSym1(nullptr),
+      taskCountSym1(nullptr), taskIndexSym2(nullptr), taskCountSym2(nullptr) {
     typeCheckAndOptimize();
 }
 
@@ -823,6 +835,154 @@ bool TemplateArgs::IsEqual(TemplateArgs &otherArgs) const {
         }
     }
     return true;
+}
+
+///////////////////////////////////////////////////////////////////////////
+// FunctionTemplate
+
+FunctionTemplate::FunctionTemplate(TemplateSymbol *s, Stmt *c) : sym(s), code(c) {
+    maskSymbol = m->symbolTable->LookupVariable("__mask");
+    Assert(maskSymbol != NULL);
+
+    const FunctionType *type = GetFunctionType();
+    Assert(type != NULL);
+
+    for (int i = 0; i < type->GetNumParameters(); ++i) {
+        const char *paramName = type->GetParameterName(i).c_str();
+        Symbol *paramSym = m->symbolTable->LookupVariable(paramName);
+        if (paramSym == NULL) {
+            Assert(strncmp(paramName, "__anon_parameter_", 17) == 0);
+        }
+        args.push_back(paramSym);
+
+        // No initialization of parentFunction, as it's needed only for code generation
+        // and hence it doesn't make sense for the template. Instantiations will get it initialized.
+    }
+}
+
+std::string FunctionTemplate::GetName() const {
+    Assert(sym);
+    return sym->name;
+}
+
+const TemplateParms *FunctionTemplate::GetTemplateParms() const {
+    Assert(sym);
+    return sym->templateParms;
+}
+
+const FunctionType *FunctionTemplate::GetFunctionType() const {
+    Assert(sym);
+    return sym->type;
+}
+
+void FunctionTemplate::Print() const {
+    Indent indent;
+    indent.pushSingle();
+    Print(indent);
+    fflush(stdout);
+};
+
+void FunctionTemplate::GenerateIR() const {
+    for (const auto &inst : instantiations) {
+        Function *func = const_cast<Function *>(inst.second->parentFunction);
+        func->GenerateIR();
+    }
+}
+
+void FunctionTemplate::Print(Indent &indent) const {
+    indent.Print("FunctionTemplate", sym->pos);
+
+    const FunctionType *ftype = GetFunctionType();
+    if (ftype) {
+        printf("[%s] ", ftype->GetString().c_str());
+    }
+
+    printf("\"%s\"\n", GetName().c_str());
+
+    const TemplateParms *typenames = GetTemplateParms();
+    int itemsToPrint = typenames->GetCount() + (code ? 1 : 0) + instantiations.size();
+
+    indent.pushList(itemsToPrint);
+    if (typenames->GetCount() > 0) {
+        for (int i = 0; i < typenames->GetCount(); i++) {
+            static constexpr std::size_t BUFSIZE{25};
+            char buffer[BUFSIZE];
+            snprintf(buffer, BUFSIZE, "template param %d", i);
+            indent.setNextLabel(buffer);
+            if ((*typenames)[i]) {
+                indent.Print("TemplateTypeParmType", (*typenames)[i]->GetSourcePos());
+                printf("\"%s\"\n", (*typenames)[i]->GetName().c_str());
+                indent.Done();
+            } else {
+                indent.Print("<NULL>");
+                indent.Done();
+            }
+        }
+    }
+
+    if (code) {
+        indent.setNextLabel("body");
+        code->Print(indent);
+    }
+
+    for (const auto &inst : instantiations) {
+        std::string args;
+        for (size_t i = 0; i < inst.first->args.size(); i++) {
+            auto &arg = inst.first->args[i];
+            args += arg.first->GetString();
+            if (i + 1 < inst.first->args.size()) {
+                args += ", ";
+            }
+        }
+        args = "instantiation <" + args + ">";
+        indent.setNextLabel(args);
+        inst.second->parentFunction->Print(indent);
+    }
+
+    indent.Done();
+};
+
+bool FunctionTemplate::IsStdlibSymbol() const {
+    if (sym == nullptr) {
+        return false;
+    }
+    if (sym->pos.name != nullptr && !strcmp(sym->pos.name, "stdlib.ispc")) {
+        return true;
+    }
+    return false;
+};
+
+Symbol *FunctionTemplate::LookupInstantiation(const std::vector<std::pair<const Type *, SourcePos>> &types) {
+    TemplateArgs argsToMatch(types);
+    for (const auto &inst : instantiations) {
+        if (inst.first->IsEqual(argsToMatch)) {
+            return inst.second;
+        }
+    }
+    return nullptr;
+}
+
+Symbol *FunctionTemplate::AddInstantiation(const std::vector<std::pair<const Type *, SourcePos>> &types) {
+    const TemplateParms *typenames = GetTemplateParms();
+    Assert(typenames);
+    TemplateInstantiation templInst(*typenames, types);
+
+    Symbol *instSym = templInst.InstantiateTemplateSymbol(sym);
+    Symbol *instMaskSym = templInst.InstantiateSymbol(maskSymbol);
+    std::vector<Symbol *> instArgs;
+    for (auto arg : args) {
+        instArgs.push_back(templInst.InstantiateSymbol(arg));
+    }
+
+    Stmt *instCode = code->Instantiate(templInst);
+    Function *inst = new Function(instSym, instCode, instMaskSym, instArgs);
+
+    templInst.SetFunction(inst);
+
+    TemplateArgs *templArgs = new TemplateArgs(types);
+    instantiations.push_back(std::make_pair(templArgs, instSym));
+
+    return instSym;
 }
 
 ///////////////////////////////////////////////////////////////////////////
