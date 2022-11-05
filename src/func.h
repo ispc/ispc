@@ -49,6 +49,7 @@ namespace ispc {
 class Function {
   public:
     Function(Symbol *sym, Stmt *code);
+    Function(Symbol *sym, Stmt *code, Symbol *maskSymbol, std::vector<Symbol *> &args);
 
     const Type *GetReturnType() const;
     const FunctionType *GetType() const;
@@ -97,6 +98,32 @@ class TemplateArgs {
     bool IsEqual(TemplateArgs &otherArgs) const;
 
     std::vector<std::pair<const Type *, SourcePos>> args;
+};
+
+class FunctionTemplate {
+  public:
+    FunctionTemplate(TemplateSymbol *sym, Stmt *code);
+    std::string GetName() const;
+    const TemplateParms *GetTemplateParms() const;
+    const FunctionType *GetFunctionType() const;
+
+    Symbol *LookupInstantiation(const std::vector<std::pair<const Type *, SourcePos>> &types);
+    Symbol *AddInstantiation(const std::vector<std::pair<const Type *, SourcePos>> &types);
+
+    // Generate code for instantiations
+    void GenerateIR() const;
+
+    void Print() const;
+    void Print(Indent &indent) const;
+    bool IsStdlibSymbol() const;
+
+  private:
+    TemplateSymbol *sym;
+    std::vector<Symbol *> args;
+    Stmt *code;
+    Symbol *maskSymbol;
+
+    std::vector<std::pair<TemplateArgs *, Symbol *>> instantiations;
 };
 
 // A helper class to drive function instantiation, it provides the following:
