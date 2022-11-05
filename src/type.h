@@ -151,6 +151,9 @@ class Type : public Traceable {
         unbound. */
     bool HasUnboundVariability() const { return GetVariability() == Variability::Unbound; }
 
+    /** Resolves dependent type with mapping of template types to concrete type passed as argeument */
+    virtual const Type *ResolveDependence(TemplateInstantiation &templInst) const = 0;
+
     /* Returns a type wherein any elements of the original type and
        contained types that have unbound variability have their variability
        set to the given variability. */
@@ -288,6 +291,7 @@ class AtomicType : public Type {
     const AtomicType *GetAsUnboundVariabilityType() const;
     const AtomicType *GetAsSOAType(int width) const;
 
+    const AtomicType *ResolveDependence(TemplateInstantiation &templInst) const;
     const AtomicType *ResolveUnboundVariability(Variability v) const;
     const AtomicType *GetAsUnsignedType() const;
     const AtomicType *GetAsConstType() const;
@@ -366,6 +370,7 @@ class TemplateTypeParmType : public Type {
     const Type *GetAsUniformType() const;
     const Type *GetAsUnboundVariabilityType() const;
     const Type *GetAsSOAType(int width) const;
+    const Type *ResolveDependence(TemplateInstantiation &templInst) const;
     const Type *ResolveUnboundVariability(Variability v) const;
 
     const Type *GetAsConstType() const;
@@ -414,6 +419,7 @@ class EnumType : public Type {
     const EnumType *GetAsUnboundVariabilityType() const;
     const EnumType *GetAsSOAType(int width) const;
 
+    const EnumType *ResolveDependence(TemplateInstantiation &templInst) const;
     const EnumType *ResolveUnboundVariability(Variability v) const;
     const EnumType *GetAsConstType() const;
     const EnumType *GetAsNonConstType() const;
@@ -499,6 +505,7 @@ class PointerType : public Type {
     const PointerType *GetAsUnboundVariabilityType() const;
     const PointerType *GetAsSOAType(int width) const;
 
+    const PointerType *ResolveDependence(TemplateInstantiation &templInst) const;
     const PointerType *ResolveUnboundVariability(Variability v) const;
     const PointerType *GetAsConstType() const;
     const PointerType *GetAsNonConstType() const;
@@ -600,6 +607,7 @@ class ArrayType : public SequentialType {
     const ArrayType *GetAsUniformType() const;
     const ArrayType *GetAsUnboundVariabilityType() const;
     const ArrayType *GetAsSOAType(int width) const;
+    const ArrayType *ResolveDependence(TemplateInstantiation &templInst) const;
     const ArrayType *ResolveUnboundVariability(Variability v) const;
 
     const ArrayType *GetAsUnsignedType() const;
@@ -667,6 +675,7 @@ class VectorType : public SequentialType {
     const VectorType *GetAsUniformType() const;
     const VectorType *GetAsUnboundVariabilityType() const;
     const VectorType *GetAsSOAType(int width) const;
+    const VectorType *ResolveDependence(TemplateInstantiation &templInst) const;
     const VectorType *ResolveUnboundVariability(Variability v) const;
 
     const VectorType *GetAsUnsignedType() const;
@@ -720,6 +729,7 @@ class StructType : public CollectionType {
     const StructType *GetAsUniformType() const;
     const StructType *GetAsUnboundVariabilityType() const;
     const StructType *GetAsSOAType(int width) const;
+    const StructType *ResolveDependence(TemplateInstantiation &templInst) const;
     const StructType *ResolveUnboundVariability(Variability v) const;
 
     const StructType *GetAsConstType() const;
@@ -808,6 +818,7 @@ class UndefinedStructType : public Type {
     const UndefinedStructType *GetAsUniformType() const;
     const UndefinedStructType *GetAsUnboundVariabilityType() const;
     const UndefinedStructType *GetAsSOAType(int width) const;
+    const UndefinedStructType *ResolveDependence(TemplateInstantiation &templInst) const;
     const UndefinedStructType *ResolveUnboundVariability(Variability v) const;
 
     const UndefinedStructType *GetAsConstType() const;
@@ -851,6 +862,7 @@ class ReferenceType : public Type {
     const ReferenceType *GetAsUniformType() const;
     const ReferenceType *GetAsUnboundVariabilityType() const;
     const Type *GetAsSOAType(int width) const;
+    const ReferenceType *ResolveDependence(TemplateInstantiation &templInst) const;
     const ReferenceType *ResolveUnboundVariability(Variability v) const;
 
     const ReferenceType *GetAsConstType() const;
@@ -910,6 +922,7 @@ class FunctionType : public Type {
     const Type *GetAsUniformType() const;
     const Type *GetAsUnboundVariabilityType() const;
     const Type *GetAsSOAType(int width) const;
+    const FunctionType *ResolveDependence(TemplateInstantiation &templInst) const;
     const FunctionType *ResolveUnboundVariability(Variability v) const;
 
     const Type *GetAsConstType() const;

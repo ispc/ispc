@@ -37,6 +37,7 @@
 
 #include "type.h"
 #include "expr.h"
+#include "func.h"
 #include "llvmutil.h"
 #include "module.h"
 #include "sym.h"
@@ -275,6 +276,7 @@ const AtomicType *AtomicType::GetAsSOAType(int width) const {
     return new AtomicType(basicType, Variability(Variability::SOA, width), isConst);
 }
 
+const AtomicType *AtomicType::ResolveDependence(TemplateInstantiation &templInst) const { return this; }
 const AtomicType *AtomicType::ResolveUnboundVariability(Variability v) const {
     Assert(v != Variability::Unbound);
     if (variability != Variability::Unbound)
@@ -627,6 +629,23 @@ const Type *TemplateTypeParmType::GetAsSOAType(int width) const {
     return this;
 }
 
+const Type *TemplateTypeParmType::ResolveDependence(TemplateInstantiation &templInst) const {
+    const Type *resolvedType = templInst.InstantiateType(GetName());
+    if (resolvedType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+    Variability v = variability;
+    // TODO: review this.
+    if (v == Variability::Unbound)
+        v = Variability::Varying;
+    resolvedType = resolvedType->ResolveUnboundVariability(v);
+    if (isConst) {
+        resolvedType = resolvedType->GetAsConstType();
+    }
+    return resolvedType;
+}
+
 const Type *TemplateTypeParmType::ResolveUnboundVariability(Variability v) const {
     Assert(v != Variability::Unbound);
     if (variability != Variability::Unbound)
@@ -739,6 +758,8 @@ const EnumType *EnumType::GetAsUniformType() const {
         return enumType;
     }
 }
+
+const EnumType *EnumType::ResolveDependence(TemplateInstantiation &templInst) const { return this; }
 
 const EnumType *EnumType::ResolveUnboundVariability(Variability v) const {
     if (variability != Variability::Unbound)
@@ -1004,6 +1025,22 @@ const PointerType *PointerType::GetWithAddrSpace(AddressSpace as) const {
     if (addrSpace == as)
         return this;
     return new PointerType(baseType, variability, isConst, isSlice, isFrozen, as);
+}
+
+const PointerType *PointerType::ResolveDependence(TemplateInstantiation &templInst) const {
+    if (baseType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+
+    const Type *resType = baseType->ResolveDependence(templInst);
+    if (baseType == resType) {
+        return this;
+    }
+
+    const PointerType *pType = new PointerType(resType, variability, isConst, isSlice, isFrozen);
+    pType = pType->ResolveUnboundVariability(Variability::Varying);
+    return pType;
 }
 
 const PointerType *PointerType::ResolveUnboundVariability(Variability v) const {
@@ -1297,6 +1334,19 @@ const ArrayType *ArrayType::GetAsSOAType(int width) const {
     return new ArrayType(child->GetAsSOAType(width), numElements);
 }
 
+const ArrayType *ArrayType::ResolveDependence(TemplateInstantiation &templInst) const {
+    if (child == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+
+    const Type *resType = child->ResolveDependence(templInst);
+    if (resType == child) {
+        return this;
+    }
+    return new ArrayType(resType, numElements);
+}
+
 const ArrayType *ArrayType::ResolveUnboundVariability(Variability v) const {
     if (child == NULL) {
         Assert(m->errorCount > 0);
@@ -1523,6 +1573,8 @@ const VectorType *VectorType::GetAsUnboundVariabilityType() const {
 const VectorType *VectorType::GetAsSOAType(int width) const {
     return new VectorType(base->GetAsSOAType(width), numElements);
 }
+
+const VectorType *VectorType::ResolveDependence(TemplateInstantiation &templInst) const { return this; }
 
 const VectorType *VectorType::ResolveUnboundVariability(Variability v) const {
     return new VectorType(base->ResolveUnboundVariability(v), numElements);
@@ -1851,6 +1903,8 @@ const StructType *StructType::GetAsSOAType(int width) const {
                           Variability(Variability::SOA, width), isAnonymous, pos);
 }
 
+const StructType *StructType::ResolveDependence(TemplateInstantiation &templInst) const { return this; }
+
 const StructType *StructType::ResolveUnboundVariability(Variability v) const {
     Assert(v != Variability::Unbound);
 
@@ -2115,6 +2169,10 @@ const UndefinedStructType *UndefinedStructType::GetAsSOAType(int width) const {
     return NULL;
 }
 
+const UndefinedStructType *UndefinedStructType::ResolveDependence(TemplateInstantiation &templInst) const {
+    return this;
+}
+
 const UndefinedStructType *UndefinedStructType::ResolveUnboundVariability(Variability v) const {
     if (variability != Variability::Unbound)
         return this;
@@ -2275,6 +2333,14 @@ const ReferenceType *ReferenceType::GetAsUnboundVariabilityType() const {
 const Type *ReferenceType::GetAsSOAType(int width) const {
     // FIXME: is this right?
     return new ArrayType(this, width);
+}
+
+const ReferenceType *ReferenceType::ResolveDependence(TemplateInstantiation &templInst) const {
+    if (targetType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+    return new ReferenceType(targetType->ResolveDependence(templInst));
 }
 
 const ReferenceType *ReferenceType::ResolveUnboundVariability(Variability v) const {
@@ -2474,6 +2540,30 @@ const Type *FunctionType::GetAsUnboundVariabilityType() const {
 const Type *FunctionType::GetAsSOAType(int width) const {
     FATAL("FunctionType::GetAsSOAType() shouldn't be called");
     return NULL;
+}
+
+const FunctionType *FunctionType::ResolveDependence(TemplateInstantiation &templInst) const {
+    if (returnType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+    const Type *rt = returnType->ResolveDependence(templInst);
+
+    llvm::SmallVector<const Type *, 8> pt;
+    for (unsigned int i = 0; i < paramTypes.size(); ++i) {
+        if (paramTypes[i] == NULL) {
+            Assert(m->errorCount > 0);
+            return NULL;
+        }
+        const Type *argt = paramTypes[i]->ResolveDependence(templInst);
+        pt.push_back(argt);
+    }
+
+    FunctionType *ret = new FunctionType(rt, pt, paramNames, paramDefaults, paramPositions, isTask, isExported,
+                                         isExternC, isExternSYCL, isUnmasked, isVectorCall, isRegCall);
+    ret->isSafe = isSafe;
+    ret->costOverride = costOverride;
+    return ret;
 }
 
 const FunctionType *FunctionType::ResolveUnboundVariability(Variability v) const {
