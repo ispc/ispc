@@ -1149,7 +1149,9 @@ void ForStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) 
                             : (!g->opt.disableUniformControlFlow && !lHasVaryingBreakOrContinue(stmts));
 
     if (!uniformTest) {
-        Warning(pos, "'#pragma unroll/nounroll' is EXPERIMENTAL for varying for loop.");
+        PerformanceWarning(
+            pos,
+            "'#pragma unroll/nounroll' for varying for loop is slow. Try '#pragma unroll/nounroll' for foreach loop.");
     }
 
     loopAttribute = lAttr;
@@ -1986,8 +1988,6 @@ void ForeachStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAt
     if (loopAttribute.first != Globals::pragmaUnrollType::none) {
         Error(pos, "Multiple '#pragma unroll/nounroll' directives used.");
     }
-
-    Warning(pos, "'#pragma unroll/nounroll' is EXPERIMENTAL for foreach loop.");
 
     loopAttribute = lAttr;
 }
