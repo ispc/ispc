@@ -931,21 +931,6 @@ preprocessor runs:
 When using ``#pragma ignore warning`` before a call to a macro, it suppresses warnings from the expanded macro code.
 
 
-``#pragma unroll`` and ``#pragma nounroll`` directives provide loop unrolling optimization hints to the compiler.
-This pragma is placed immediately before a loop statement. Currently, this functionality is limited to uniform ``for`` and ``do-while``.
-
-.. list-table:: ``#pragma unroll`` and ``#pragma nounroll`` directives and their functions:
-
-  * - ``#pragma`` name
-    - Use
-  * - ``#pragma unroll COUNT``
-    - Directs the loop unroller to unroll the loop ``COUNT`` times.
-      The parameter may optionally be enclosed in parentheses:  ``#pragma unroll (COUNT)``.
-  * - ``#pragma unroll``
-    - Directs the loop unroller to fully unroll the loop if possible.
-  * - ``#pragma nounroll``
-    - Directs the loop unroller to not unroll the loop.
-
 Debugging
 ---------
 
@@ -4277,6 +4262,24 @@ loop usually required for ``foreach``.
 The ``assume()`` hint informs the compiler that memory locations used by
 loads and stores are aligned. This results in aligned instructions instead
 of unaligned instructions.
+
+The ``ispc`` preprocessor ``#pragma unroll`` and ``#pragma nounroll`` directives provide loop unrolling optimization hints to the compiler.
+The pragma is placed immediately before a loop statement.
+Currently, this functionality is limited to ``foreach`` and uniform ``for`` and ``do-while``.
+Varying ``for`` is also supported, but generates sub-optimal code compared to ``foreach`` and outputs a performance warning.
+
+.. list-table:: ``#pragma unroll`` and ``#pragma nounroll`` directives and their functions:
+
+  * - ``#pragma`` name
+    - Use
+  * - ``#pragma unroll COUNT``
+    - Directs the loop unroller to unroll the loop ``COUNT`` times.
+      The parameter may optionally be enclosed in parentheses:  ``#pragma unroll (COUNT)``.
+  * - ``#pragma unroll``
+    - Directs the loop unroller to fully unroll the loop if possible.
+  * - ``#pragma nounroll``
+    - Directs the loop unroller to not unroll the loop.
+
 
 Cross-Program Instance Operations
 ---------------------------------
