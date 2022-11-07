@@ -52,6 +52,8 @@ if (ISPCRT_BUILD_GPU)
   endif()
 endif()
 
+option(ISPCRT_BUILD_STATIC "Build ispcrt static library" ON)
+
 if (NOT ISPCRT_BUILD_CPU AND NOT ISPCRT_BUILD_GPU)
   message(FATAL_ERROR "You must enable either CPU or GPU support!")
 endif()
@@ -185,6 +187,7 @@ macro(build_ispcrt SHARED_OR_STATIC TARGET_NAME)
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   )
 endmacro()
+
 if (WIN32)
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endif()
@@ -192,7 +195,10 @@ build_ispcrt(SHARED ${PROJECT_NAME})
 if (WIN32)
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS OFF)
 endif()
-build_ispcrt(STATIC ${PROJECT_NAME}_static)
+
+if (ISPCRT_BUILD_STATIC)
+  build_ispcrt(STATIC ${PROJECT_NAME}_static)
+endif()
 
 ## Build tests ############################################################
 
