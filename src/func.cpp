@@ -905,7 +905,71 @@ void TemplateInstantiation::SetFunction(Function *func) {
     functionSym->parentFunction = func;
 }
 
+// For regular functions, llvm::Function is create when declaration is met in the program to ensure that
+// the function symbol is represented llvm::Module as declaration. So all the work is done in ispc::Module.
+// For function templates we need llvm::Function when instantiation is created, so we do it here.
+// TODO: change the design to unify llvm::Function creation for both regular functions and instantiations of
+// function templates.
 llvm::Function *TemplateInstantiation::createLLVMFunction(Symbol *functionSym, bool isInline, bool isNoInline) {
-    // TODO: implement
-    return nullptr;
+    Assert(functionSym && functionSym->type && CastType<FunctionType>(functionSym->type));
+    const FunctionType *functionType = CastType<FunctionType>(functionSym->type);
+
+    // Get the LLVM FunctionType
+    llvm::FunctionType *llvmFunctionType = functionType->LLVMFunctionType(g->ctx, false /*disableMask*/);
+    if (llvmFunctionType == nullptr) {
+        return nullptr;
+    }
+
+    // Mangling
+    auto [name_pref, name_suf] = functionType->GetFunctionMangledName(false);
+    std::string functionName = name_pref + functionSym->name + name_suf;
+
+    // And create the llvm::Function
+    llvm::Function *function =
+        llvm::Function::Create(llvmFunctionType, llvm::GlobalValue::InternalLinkage, functionName.c_str(), m->module);
+
+    // Set function attributes: we never throw exceptions
+    function->setDoesNotThrow();
+
+    function->setCallingConv(functionType->GetCallingConv());
+    g->target->markFuncWithTargetAttr(function);
+
+    if (isInline) {
+        function->addFnAttr(llvm::Attribute::AlwaysInline);
+    }
+    if (isNoInline) {
+        function->addFnAttr(llvm::Attribute::NoInline);
+    }
+
+    // Add NoAlias attribute to function arguments if needed.
+    int nArgs = functionType->GetNumParameters();
+    for (int i = 0; i < nArgs; ++i) {
+        const Type *argType = functionType->GetParameterType(i);
+
+        // ISPC assumes that no pointers alias.  (It should be possible to
+        // specify when this is not the case, but this should be the
+        // default.)  Set parameter attributes accordingly.  (Only for
+        // uniform pointers, since varying pointers are int vectors...)
+        if (!functionType->isTask && !functionType->isExternSYCL &&
+            ((CastType<PointerType>(argType) != NULL && argType->IsUniformType() &&
+              // Exclude SOA argument because it is a pair {struct *, int}
+              // instead of pointer
+              !CastType<PointerType>(argType)->IsSlice()) ||
+
+             CastType<ReferenceType>(argType) != NULL)) {
+
+            function->addParamAttr(i, llvm::Attribute::NoAlias);
+        }
+    }
+
+    // If llvm gave us back a Function * with a different name than the one
+    // we asked for, then there's already a function with that same
+    // (mangled) name in the llvm::Module.  In that case, erase the one we
+    // tried to add and just work with the one it already had.
+    if (function->getName() != functionName) {
+        function->eraseFromParent();
+        function = m->module->getFunction(functionName);
+    }
+
+    return function;
 }
