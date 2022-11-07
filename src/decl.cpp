@@ -622,6 +622,8 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         child->InitFromType(functionType, ds);
         type = child->type;
         name = child->name;
+    } else {
+        UNREACHABLE();
     }
 }
 
