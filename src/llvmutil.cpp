@@ -1632,7 +1632,7 @@ llvm::Value *LLVMShuffleVectors(llvm::Value *v1, llvm::Value *v2, int32_t shuf[]
 }
 
 #ifdef ISPC_XE_ENABLED
-bool lIsSVMLoad(llvm::Instruction *inst) {
+static bool lIsSVMLoad(llvm::Instruction *inst) {
     Assert(inst);
 
     switch (llvm::GenXIntrinsic::getGenXIntrinsicID(inst)) {
@@ -1645,7 +1645,7 @@ bool lIsSVMLoad(llvm::Instruction *inst) {
     }
 }
 
-void lGetAddressSpace(llvm::Value *v, std::set<llvm::Value *> &done, std::set<AddressSpace> &addrSpaceVec) {
+static void lGetAddressSpace(llvm::Value *v, std::set<llvm::Value *> &done, std::set<AddressSpace> &addrSpaceVec) {
     if (done.find(v) != done.end()) {
         if (llvm::isa<llvm::PointerType>(v->getType()))
             addrSpaceVec.insert(AddressSpace::ispc_global);
