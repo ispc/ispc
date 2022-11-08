@@ -1631,6 +1631,216 @@ llvm::Value *LLVMShuffleVectors(llvm::Value *v1, llvm::Value *v2, int32_t shuf[]
     return new llvm::ShuffleVectorInst(v1, v2, vec, "shuffle", insertBefore);
 }
 
+/** Copy the metadata (if any) attached to the 'from' instruction in the IR
+    to the 'to' instruction. */
+void LLVMCopyMetadata(llvm::Value *vto, const llvm::Instruction *from) {
+    llvm::Instruction *to = llvm::dyn_cast<llvm::Instruction>(vto);
+    if (!to)
+        return;
+
+    llvm::SmallVector<std::pair<unsigned int, llvm::MDNode *>, 8> metadata;
+
+    from->getAllMetadata(metadata);
+    for (unsigned int i = 0; i < metadata.size(); ++i)
+        to->setMetadata(metadata[i].first, metadata[i].second);
+}
+
+/** Find the SourcePos that the metadata in the instruction (if present) corresponds to */
+bool LLVMGetSourcePosFromMetadata(const llvm::Instruction *inst, SourcePos *pos) {
+    llvm::MDNode *filename = inst->getMetadata("filename");
+    llvm::MDNode *first_line = inst->getMetadata("first_line");
+    llvm::MDNode *first_column = inst->getMetadata("first_column");
+    llvm::MDNode *last_line = inst->getMetadata("last_line");
+    llvm::MDNode *last_column = inst->getMetadata("last_column");
+
+    if (!filename || !first_line || !first_column || !last_line || !last_column)
+        return false;
+
+    // All of these asserts are things that FunctionEmitContext::addGSMetadata() is
+    // expected to have done in its operation
+    llvm::MDString *str = llvm::dyn_cast<llvm::MDString>(filename->getOperand(0));
+    Assert(str);
+    llvm::ConstantInt *first_lnum =
+
+        llvm::mdconst::extract<llvm::ConstantInt>(first_line->getOperand(0));
+    Assert(first_lnum);
+
+    llvm::ConstantInt *first_colnum =
+
+        llvm::mdconst::extract<llvm::ConstantInt>(first_column->getOperand(0));
+    Assert(first_column);
+
+    llvm::ConstantInt *last_lnum =
+
+        llvm::mdconst::extract<llvm::ConstantInt>(last_line->getOperand(0));
+    Assert(last_lnum);
+
+    llvm::ConstantInt *last_colnum = llvm::mdconst::extract<llvm::ConstantInt>(last_column->getOperand(0));
+    Assert(last_column);
+
+    *pos = SourcePos(str->getString().data(), (int)first_lnum->getZExtValue(), (int)first_colnum->getZExtValue(),
+                     (int)last_lnum->getZExtValue(), (int)last_colnum->getZExtValue());
+    return true;
+}
+
+llvm::Instruction *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, const llvm::Twine &name,
+                                llvm::Instruction *insertBefore) {
+    llvm::Value *args[2] = {arg0, arg1};
+    llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[2]);
+    return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
+}
+
+llvm::Instruction *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
+                                const llvm::Twine &name, llvm::Instruction *insertBefore) {
+    llvm::Value *args[3] = {arg0, arg1, arg2};
+    llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[3]);
+    return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
+}
+
+llvm::Instruction *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
+                                llvm::Value *arg3, const llvm::Twine &name, llvm::Instruction *insertBefore) {
+    llvm::Value *args[4] = {arg0, arg1, arg2, arg3};
+    llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[4]);
+    return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
+}
+
+llvm::Instruction *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
+                                llvm::Value *arg3, llvm::Value *arg4, const llvm::Twine &name,
+                                llvm::Instruction *insertBefore) {
+    llvm::Value *args[5] = {arg0, arg1, arg2, arg3, arg4};
+    llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[5]);
+    return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
+}
+
+llvm::Instruction *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
+                                llvm::Value *arg3, llvm::Value *arg4, llvm::Value *arg5, const llvm::Twine &name,
+                                llvm::Instruction *insertBefore) {
+    llvm::Value *args[6] = {arg0, arg1, arg2, arg3, arg4, arg5};
+    llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[6]);
+    return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
+}
+
+llvm::Instruction *LLVMGEPInst(llvm::Value *ptr, llvm::Type *ptrElType, llvm::Value *offset, const char *name,
+                               llvm::Instruction *insertBefore) {
+    llvm::Value *index[1] = {offset};
+    llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
+    return llvm::GetElementPtrInst::Create(ptrElType, ptr, arrayRef, name, insertBefore);
+}
+
+/** Given a vector of constant values (int, float, or bool) representing an
+    execution mask, convert it to a bitvector where the 0th bit corresponds
+    to the first vector value and so forth.
+*/
+static uint64_t lConstElementsToMask(const llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> &elements) {
+    Assert(elements.size() <= 64);
+
+    uint64_t mask = 0;
+    uint64_t undefSetMask = 0;
+    llvm::APInt intMaskValue;
+    for (unsigned int i = 0; i < elements.size(); ++i) {
+        // SSE has the "interesting" approach of encoding blending
+        // masks as <n x float>.
+        if (llvm::ConstantFP *cf = llvm::dyn_cast<llvm::ConstantFP>(elements[i])) {
+            llvm::APFloat apf = cf->getValueAPF();
+            intMaskValue = apf.bitcastToAPInt();
+        } else if (llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(elements[i])) {
+            // Otherwise get it as an int
+            intMaskValue = ci->getValue();
+        } else {
+            // We create a separate 'undef mask' with all undef bits set.
+            // This mask will have no bits set if there are no 'undef' elements.
+            llvm::UndefValue *uv = llvm::dyn_cast<llvm::UndefValue>(elements[i]);
+            Assert(uv != NULL); // vs return -1 if NULL?
+            undefSetMask |= (1ull << i);
+            continue;
+        }
+        // Is the high-bit set?  If so, OR in the appropriate bit in
+        // the result mask
+        if (intMaskValue.countLeadingOnes() > 0)
+            mask |= (1ull << i);
+    }
+
+    // if no bits are set in mask, do not need to consider undefs. It's
+    // always 'all_off'.
+    // If any bits are set in mask, assume' undef' bits as as '1'. This ensures
+    // cases with only '1's and 'undef's will be considered as 'all_on'
+    if (mask != 0)
+        mask |= undefSetMask;
+
+    return mask;
+}
+
+/** Given an llvm::Value represinting a vector mask, see if the value is a
+    constant.  If so, return true and set *bits to be the integer mask
+    found by taking the high bits of the mask values in turn and
+    concatenating them into a single integer.  In other words, given the
+    4-wide mask: < 0xffffffff, 0, 0, 0xffffffff >, we have 0b1001 = 9.
+ */
+bool GetMaskFromValue(llvm::Value *factor, uint64_t *mask) {
+    llvm::ConstantDataVector *cdv = llvm::dyn_cast<llvm::ConstantDataVector>(factor);
+    if (cdv != NULL) {
+        llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
+        for (int i = 0; i < (int)cdv->getNumElements(); ++i)
+            elements.push_back(cdv->getElementAsConstant(i));
+        *mask = lConstElementsToMask(elements);
+        return true;
+    }
+
+    llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(factor);
+    if (cv != NULL) {
+        llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
+        for (int i = 0; i < (int)cv->getNumOperands(); ++i) {
+            llvm::Constant *c = llvm::dyn_cast<llvm::Constant>(cv->getOperand(i));
+            if (c == NULL)
+                return false;
+            if (llvm::isa<llvm::ConstantExpr>(cv->getOperand(i)))
+                return false; // We can not handle constant expressions here
+            elements.push_back(c);
+        }
+        *mask = lConstElementsToMask(elements);
+        return true;
+    } else if (llvm::isa<llvm::ConstantAggregateZero>(factor)) {
+        *mask = 0;
+        return true;
+    } else {
+#if 0
+        llvm::ConstantExpr *ce = llvm::dyn_cast<llvm::ConstantExpr>(factor);
+        if (ce != NULL) {
+            llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
+            const llvm::TargetData *td = targetMachine->getTargetData();
+            llvm::Constant *c = llvm::ConstantFoldConstantExpression(ce, td);
+            c->dump();
+            factor = c;
+        }
+        // else we should be able to handle it above...
+        Assert(!llvm::isa<llvm::Constant>(factor));
+#endif
+        return false;
+    }
+}
+
+/** Determines if the given mask value is all on, all off, mixed, or
+    unknown at compile time.
+*/
+MaskStatus GetMaskStatusFromValue(llvm::Value *mask, int vecWidth) {
+    uint64_t bits;
+    if (GetMaskFromValue(mask, &bits) == false)
+        return MaskStatus::unknown;
+
+    if (bits == 0)
+        return MaskStatus::all_off;
+
+    if (vecWidth == -1)
+        vecWidth = g->target->getVectorWidth();
+    Assert(vecWidth <= 64);
+
+    for (int i = 0; i < vecWidth; ++i) {
+        if ((bits & (1ull << i)) == 0)
+            return MaskStatus::mixed;
+    }
+    return MaskStatus::all_on;
+}
+
 #ifdef ISPC_XE_ENABLED
 static bool lIsSVMLoad(llvm::Instruction *inst) {
     Assert(inst);

@@ -178,249 +178,6 @@ static llvm::Pass *CreateMangleOpenCLBuiltins();
 #endif
 
 ///////////////////////////////////////////////////////////////////////////
-
-/** This utility routine copies the metadata (if any) attached to the
-    'from' instruction in the IR to the 'to' instruction.
-
-    For flexibility, this function takes an llvm::Value rather than an
-    llvm::Instruction for the 'to' parameter; at some places in the code
-    below, we sometimes use a llvm::Value to start out storing a value and
-    then later store instructions.  If a llvm::Value is passed to this, the
-    routine just returns without doing anything; if it is in fact an
-    LLVM::Instruction, then the metadata can be copied to it.
- */
-static void lCopyMetadata(llvm::Value *vto, const llvm::Instruction *from) {
-    llvm::Instruction *to = llvm::dyn_cast<llvm::Instruction>(vto);
-    if (!to)
-        return;
-
-    llvm::SmallVector<std::pair<unsigned int, llvm::MDNode *>, 8> metadata;
-
-    from->getAllMetadata(metadata);
-    for (unsigned int i = 0; i < metadata.size(); ++i)
-        to->setMetadata(metadata[i].first, metadata[i].second);
-}
-
-/** We have a protocol with the front-end LLVM IR code generation process
-    that allows us to encode the source file position that corresponds with
-    instructions.  (For example, this allows us to issue performance
-    warnings related to things like scatter and gather after optimization
-    has been performed, so that we aren't warning about scatters and
-    gathers that have been improved to stores and loads by optimization
-    passes.)  Note that this is slightly redundant with the source file
-    position encoding generated for debugging symbols, though we don't
-    always generate debugging information but we do always generate this
-    position data.
-
-    This function finds the SourcePos that the metadata in the instruction
-    (if present) corresponds to.  See the implementation of
-    FunctionEmitContext::addGSMetadata(), which encodes the source position during
-    code generation.
-
-    @param inst   Instruction to try to find the source position of
-    @param pos    Output variable in which to store the position
-    @returns      True if source file position metadata was present and *pos
-                  has been set.  False otherwise.
-*/
-static bool lGetSourcePosFromMetadata(const llvm::Instruction *inst, SourcePos *pos) {
-    llvm::MDNode *filename = inst->getMetadata("filename");
-    llvm::MDNode *first_line = inst->getMetadata("first_line");
-    llvm::MDNode *first_column = inst->getMetadata("first_column");
-    llvm::MDNode *last_line = inst->getMetadata("last_line");
-    llvm::MDNode *last_column = inst->getMetadata("last_column");
-
-    if (!filename || !first_line || !first_column || !last_line || !last_column)
-        return false;
-
-    // All of these asserts are things that FunctionEmitContext::addGSMetadata() is
-    // expected to have done in its operation
-    llvm::MDString *str = llvm::dyn_cast<llvm::MDString>(filename->getOperand(0));
-    Assert(str);
-    llvm::ConstantInt *first_lnum =
-
-        llvm::mdconst::extract<llvm::ConstantInt>(first_line->getOperand(0));
-    Assert(first_lnum);
-
-    llvm::ConstantInt *first_colnum =
-
-        llvm::mdconst::extract<llvm::ConstantInt>(first_column->getOperand(0));
-    Assert(first_column);
-
-    llvm::ConstantInt *last_lnum =
-
-        llvm::mdconst::extract<llvm::ConstantInt>(last_line->getOperand(0));
-    Assert(last_lnum);
-
-    llvm::ConstantInt *last_colnum = llvm::mdconst::extract<llvm::ConstantInt>(last_column->getOperand(0));
-    Assert(last_column);
-
-    *pos = SourcePos(str->getString().data(), (int)first_lnum->getZExtValue(), (int)first_colnum->getZExtValue(),
-                     (int)last_lnum->getZExtValue(), (int)last_colnum->getZExtValue());
-    return true;
-}
-
-static llvm::Instruction *lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, const llvm::Twine &name,
-                                    llvm::Instruction *insertBefore = NULL) {
-    llvm::Value *args[2] = {arg0, arg1};
-    llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[2]);
-    return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
-}
-
-static llvm::Instruction *lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
-                                    const llvm::Twine &name, llvm::Instruction *insertBefore = NULL) {
-    llvm::Value *args[3] = {arg0, arg1, arg2};
-    llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[3]);
-    return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
-}
-
-static llvm::Instruction *lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
-                                    llvm::Value *arg3, const llvm::Twine &name,
-                                    llvm::Instruction *insertBefore = NULL) {
-    llvm::Value *args[4] = {arg0, arg1, arg2, arg3};
-    llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[4]);
-    return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
-}
-
-static llvm::Instruction *lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
-                                    llvm::Value *arg3, llvm::Value *arg4, const llvm::Twine &name,
-                                    llvm::Instruction *insertBefore = NULL) {
-    llvm::Value *args[5] = {arg0, arg1, arg2, arg3, arg4};
-    llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[5]);
-    return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
-}
-
-static llvm::Instruction *lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
-                                    llvm::Value *arg3, llvm::Value *arg4, llvm::Value *arg5, const llvm::Twine &name,
-                                    llvm::Instruction *insertBefore = NULL) {
-    llvm::Value *args[6] = {arg0, arg1, arg2, arg3, arg4, arg5};
-    llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[6]);
-    return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
-}
-
-static llvm::Instruction *lGEPInst(llvm::Value *ptr, llvm::Type *ptrElType, llvm::Value *offset, const char *name,
-                                   llvm::Instruction *insertBefore) {
-    llvm::Value *index[1] = {offset};
-    llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
-    return llvm::GetElementPtrInst::Create(ptrElType, ptr, arrayRef, name, insertBefore);
-}
-
-/** Given a vector of constant values (int, float, or bool) representing an
-    execution mask, convert it to a bitvector where the 0th bit corresponds
-    to the first vector value and so forth.
-*/
-static uint64_t lConstElementsToMask(const llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> &elements) {
-    Assert(elements.size() <= 64);
-
-    uint64_t mask = 0;
-    uint64_t undefSetMask = 0;
-    llvm::APInt intMaskValue;
-    for (unsigned int i = 0; i < elements.size(); ++i) {
-        // SSE has the "interesting" approach of encoding blending
-        // masks as <n x float>.
-        if (llvm::ConstantFP *cf = llvm::dyn_cast<llvm::ConstantFP>(elements[i])) {
-            llvm::APFloat apf = cf->getValueAPF();
-            intMaskValue = apf.bitcastToAPInt();
-        } else if (llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(elements[i])) {
-            // Otherwise get it as an int
-            intMaskValue = ci->getValue();
-        } else {
-            // We create a separate 'undef mask' with all undef bits set.
-            // This mask will have no bits set if there are no 'undef' elements.
-            llvm::UndefValue *uv = llvm::dyn_cast<llvm::UndefValue>(elements[i]);
-            Assert(uv != NULL); // vs return -1 if NULL?
-            undefSetMask |= (1ull << i);
-            continue;
-        }
-        // Is the high-bit set?  If so, OR in the appropriate bit in
-        // the result mask
-        if (intMaskValue.countLeadingOnes() > 0)
-            mask |= (1ull << i);
-    }
-
-    // if no bits are set in mask, do not need to consider undefs. It's
-    // always 'all_off'.
-    // If any bits are set in mask, assume' undef' bits as as '1'. This ensures
-    // cases with only '1's and 'undef's will be considered as 'all_on'
-    if (mask != 0)
-        mask |= undefSetMask;
-
-    return mask;
-}
-
-/** Given an llvm::Value represinting a vector mask, see if the value is a
-    constant.  If so, return true and set *bits to be the integer mask
-    found by taking the high bits of the mask values in turn and
-    concatenating them into a single integer.  In other words, given the
-    4-wide mask: < 0xffffffff, 0, 0, 0xffffffff >, we have 0b1001 = 9.
- */
-static bool lGetMask(llvm::Value *factor, uint64_t *mask) {
-    llvm::ConstantDataVector *cdv = llvm::dyn_cast<llvm::ConstantDataVector>(factor);
-    if (cdv != NULL) {
-        llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
-        for (int i = 0; i < (int)cdv->getNumElements(); ++i)
-            elements.push_back(cdv->getElementAsConstant(i));
-        *mask = lConstElementsToMask(elements);
-        return true;
-    }
-
-    llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(factor);
-    if (cv != NULL) {
-        llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
-        for (int i = 0; i < (int)cv->getNumOperands(); ++i) {
-            llvm::Constant *c = llvm::dyn_cast<llvm::Constant>(cv->getOperand(i));
-            if (c == NULL)
-                return false;
-            if (llvm::isa<llvm::ConstantExpr>(cv->getOperand(i)))
-                return false; // We can not handle constant expressions here
-            elements.push_back(c);
-        }
-        *mask = lConstElementsToMask(elements);
-        return true;
-    } else if (llvm::isa<llvm::ConstantAggregateZero>(factor)) {
-        *mask = 0;
-        return true;
-    } else {
-#if 0
-        llvm::ConstantExpr *ce = llvm::dyn_cast<llvm::ConstantExpr>(factor);
-        if (ce != NULL) {
-            llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
-            const llvm::TargetData *td = targetMachine->getTargetData();
-            llvm::Constant *c = llvm::ConstantFoldConstantExpression(ce, td);
-            c->dump();
-            factor = c;
-        }
-        // else we should be able to handle it above...
-        Assert(!llvm::isa<llvm::Constant>(factor));
-#endif
-        return false;
-    }
-}
-
-enum class MaskStatus { all_on, all_off, mixed, unknown };
-
-/** Determines if the given mask value is all on, all off, mixed, or
-    unknown at compile time.
-*/
-static MaskStatus lGetMaskStatus(llvm::Value *mask, int vecWidth = -1) {
-    uint64_t bits;
-    if (lGetMask(mask, &bits) == false)
-        return MaskStatus::unknown;
-
-    if (bits == 0)
-        return MaskStatus::all_off;
-
-    if (vecWidth == -1)
-        vecWidth = g->target->getVectorWidth();
-    Assert(vecWidth <= 64);
-
-    for (int i = 0; i < vecWidth; ++i) {
-        if ((bits & (1ull << i)) == 0)
-            return MaskStatus::mixed;
-    }
-    return MaskStatus::all_on;
-}
-
-///////////////////////////////////////////////////////////////////////////
 // This is a wrap over class llvm::PassManager. This duplicates PassManager function run()
 //   and change PassManager function add by adding some checks and debug passes.
 //   This wrap can control:
@@ -992,7 +749,7 @@ restart:
                 goto restart;
             }
 
-            MaskStatus maskStatus = lGetMaskStatus(factor);
+            MaskStatus maskStatus = GetMaskStatusFromValue(factor);
             llvm::Value *value = NULL;
             if (maskStatus == MaskStatus::all_off) {
                 // Mask all off -> replace with the first blend value
@@ -1010,7 +767,7 @@ restart:
         } else if (matchesMaskInstruction(callInst->getCalledFunction())) {
             llvm::Value *factor = callInst->getArgOperand(0);
             uint64_t mask;
-            if (lGetMask(factor, &mask) == true) {
+            if (GetMaskFromValue(factor, &mask) == true) {
                 // If the vector-valued mask has a known value, replace it
                 // with the corresponding integer mask from its elements
                 // high bits.
@@ -1022,7 +779,7 @@ restart:
         } else if (callInst->getCalledFunction() == avxMaskedLoad32 ||
                    callInst->getCalledFunction() == avxMaskedLoad64) {
             llvm::Value *factor = callInst->getArgOperand(1);
-            MaskStatus maskStatus = lGetMaskStatus(factor);
+            MaskStatus maskStatus = GetMaskStatusFromValue(factor);
             if (maskStatus == MaskStatus::all_off) {
                 // nothing being loaded, replace with undef value
                 llvm::Type *returnType = callInst->getType();
@@ -1039,7 +796,7 @@ restart:
                 llvm::Value *castPtr =
                     new llvm::BitCastInst(callInst->getArgOperand(0), llvm::PointerType::get(returnType, 0),
                                           llvm::Twine(callInst->getArgOperand(0)->getName()) + "_cast", callInst);
-                lCopyMetadata(castPtr, callInst);
+                LLVMCopyMetadata(castPtr, callInst);
                 int align;
                 if (g->opt.forceAlignedMemory)
                     align = g->target->getNativeVectorAlignment();
@@ -1054,7 +811,7 @@ restart:
                     returnType, castPtr, llvm::Twine(callInst->getArgOperand(0)->getName()) + "_load",
                     false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(), (llvm::Instruction *)NULL);
 #endif
-                lCopyMetadata(loadInst, callInst);
+                LLVMCopyMetadata(loadInst, callInst);
                 llvm::ReplaceInstWithInst(callInst, loadInst);
                 modifiedAny = true;
                 goto restart;
@@ -1063,7 +820,7 @@ restart:
                    callInst->getCalledFunction() == avxMaskedStore64) {
             // NOTE: mask is the 2nd parameter, not the 3rd one!!
             llvm::Value *factor = callInst->getArgOperand(1);
-            MaskStatus maskStatus = lGetMaskStatus(factor);
+            MaskStatus maskStatus = GetMaskStatusFromValue(factor);
             if (maskStatus == MaskStatus::all_off) {
                 // nothing actually being stored, just remove the inst
                 callInst->eraseFromParent();
@@ -1076,7 +833,7 @@ restart:
                 llvm::Value *castPtr =
                     new llvm::BitCastInst(callInst->getArgOperand(0), llvm::PointerType::get(storeType, 0),
                                           llvm::Twine(callInst->getArgOperand(0)->getName()) + "_ptrcast", callInst);
-                lCopyMetadata(castPtr, callInst);
+                LLVMCopyMetadata(castPtr, callInst);
 
                 int align;
                 if (g->opt.forceAlignedMemory)
@@ -1085,7 +842,7 @@ restart:
                     align = callInst->getCalledFunction() == avxMaskedStore32 ? 4 : 8;
                 llvm::StoreInst *storeInst = new llvm::StoreInst(rvalue, castPtr, (llvm::Instruction *)NULL,
                                                                  llvm::MaybeAlign(align).valueOrOne());
-                lCopyMetadata(storeInst, callInst);
+                LLVMCopyMetadata(storeInst, callInst);
                 llvm::ReplaceInstWithInst(callInst, storeInst);
 
                 modifiedAny = true;
@@ -1202,7 +959,7 @@ bool InstructionSimplifyPass::simplifySelect(llvm::SelectInst *selectInst, llvm:
     llvm::Value *factor = selectInst->getOperand(0);
 
     // Simplify all-on or all-off mask values
-    MaskStatus maskStatus = lGetMaskStatus(factor);
+    MaskStatus maskStatus = GetMaskStatusFromValue(factor);
     llvm::Value *value = NULL;
     if (maskStatus == MaskStatus::all_on)
         // Mask all on -> replace with the first select value
@@ -1239,7 +996,7 @@ bool InstructionSimplifyPass::simplifyCall(llvm::CallInst *callInst, llvm::Basic
         return false;
 
     uint64_t mask;
-    if (lGetMask(callInst->getArgOperand(0), &mask) == true) {
+    if (GetMaskFromValue(callInst->getArgOperand(0), &mask) == true) {
         llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), iter, LLVMInt64(mask));
         return true;
     }
@@ -1964,7 +1721,7 @@ lExtractUniformsFromOffset(llvm::Value **basePtr, llvm::Value **offsetVector,
     if (uniformDelta == NULL)
         return;
 
-    *basePtr = lGEPInst(*basePtr, arrayRef, "new_base", insertBefore);
+    *basePtr = LLVMGEPInst(*basePtr, arrayRef, "new_base", insertBefore);
 
     // this should only happen if we have only uniforms, but that in turn
     // shouldn't be a gather/scatter!
@@ -2329,7 +2086,7 @@ static bool lGSToGSBaseOffsets(llvm::CallInst *callInst) {
     // __pseudo_*_base_offsets_* functions want.
     basePtr = new llvm::IntToPtrInst(basePtr, LLVMTypes::VoidPointerType, llvm::Twine(basePtr->getName()) + "_2void",
                                      callInst);
-    lCopyMetadata(basePtr, callInst);
+    LLVMCopyMetadata(basePtr, callInst);
     llvm::Function *gatherScatterFunc = info->baseOffsetsFunc;
 
     if ((info->isGather == true && g->target->hasGather()) ||
@@ -2356,9 +2113,9 @@ static bool lGSToGSBaseOffsets(llvm::CallInst *callInst) {
             // llvm::Instruction to llvm::CallInst::Create; this means that
             // the instruction isn't inserted into a basic block and that
             // way we can then call ReplaceInstWithInst().
-            llvm::Instruction *newCall = lCallInst(gatherScatterFunc, basePtr, offsetScale, offsetVector, mask,
-                                                   callInst->getName().str().c_str(), NULL);
-            lCopyMetadata(newCall, callInst);
+            llvm::Instruction *newCall = LLVMCallInst(gatherScatterFunc, basePtr, offsetScale, offsetVector, mask,
+                                                      callInst->getName().str().c_str(), NULL);
+            LLVMCopyMetadata(newCall, callInst);
             llvm::ReplaceInstWithInst(callInst, newCall);
         } else {
             llvm::Value *storeValue = callInst->getArgOperand(1);
@@ -2368,8 +2125,8 @@ static bool lGSToGSBaseOffsets(llvm::CallInst *callInst) {
             // base+offsets instruction.  See above for why passing NULL
             // for the Instruction * is intended.
             llvm::Instruction *newCall =
-                lCallInst(gatherScatterFunc, basePtr, offsetScale, offsetVector, storeValue, mask, "", NULL);
-            lCopyMetadata(newCall, callInst);
+                LLVMCallInst(gatherScatterFunc, basePtr, offsetScale, offsetVector, storeValue, mask, "", NULL);
+            LLVMCopyMetadata(newCall, callInst);
             llvm::ReplaceInstWithInst(callInst, newCall);
         }
     } else {
@@ -2407,9 +2164,9 @@ static bool lGSToGSBaseOffsets(llvm::CallInst *callInst) {
             // llvm::Instruction to llvm::CallInst::Create; this means that
             // the instruction isn't inserted into a basic block and that
             // way we can then call ReplaceInstWithInst().
-            llvm::Instruction *newCall = lCallInst(gatherScatterFunc, basePtr, variableOffset, offsetScale, constOffset,
-                                                   mask, callInst->getName().str().c_str(), NULL);
-            lCopyMetadata(newCall, callInst);
+            llvm::Instruction *newCall = LLVMCallInst(gatherScatterFunc, basePtr, variableOffset, offsetScale,
+                                                      constOffset, mask, callInst->getName().str().c_str(), NULL);
+            LLVMCopyMetadata(newCall, callInst);
             llvm::ReplaceInstWithInst(callInst, newCall);
         } else {
             llvm::Value *storeValue = callInst->getArgOperand(1);
@@ -2418,9 +2175,9 @@ static bool lGSToGSBaseOffsets(llvm::CallInst *callInst) {
             // Generate a new function call to the next pseudo scatter
             // base+offsets instruction.  See above for why passing NULL
             // for the Instruction * is intended.
-            llvm::Instruction *newCall = lCallInst(gatherScatterFunc, basePtr, variableOffset, offsetScale, constOffset,
-                                                   storeValue, mask, "", NULL);
-            lCopyMetadata(newCall, callInst);
+            llvm::Instruction *newCall = LLVMCallInst(gatherScatterFunc, basePtr, variableOffset, offsetScale,
+                                                      constOffset, storeValue, mask, "", NULL);
+            LLVMCopyMetadata(newCall, callInst);
             llvm::ReplaceInstWithInst(callInst, newCall);
         }
     }
@@ -2620,7 +2377,7 @@ static llvm::Value *lComputeCommonPointer(llvm::Value *base, llvm::Type *baseTyp
     llvm::Value *firstOffset = LLVMExtractFirstVectorElement(offsets);
     Assert(firstOffset != NULL);
 
-    return lGEPInst(base, baseType, firstOffset, "ptr", insertBefore);
+    return LLVMGEPInst(base, baseType, firstOffset, "ptr", insertBefore);
 }
 
 static llvm::Constant *lGetOffsetScaleVec(llvm::Value *offsetScale, llvm::Type *vecType) {
@@ -2808,7 +2565,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
         return false;
 
     SourcePos pos;
-    lGetSourcePosFromMetadata(callInst, &pos);
+    LLVMGetSourcePosFromMetadata(callInst, &pos);
 
     llvm::Value *base = callInst->getArgOperand(0);
     llvm::Value *fullOffsets = NULL;
@@ -2857,7 +2614,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
             ptr = lComputeCommonPointer(base, gatherInfo->baseType, fullOffsets, callInst);
             ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(scalarType, 0), base->getName(), callInst);
 
-            lCopyMetadata(ptr, callInst);
+            LLVMCopyMetadata(ptr, callInst);
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
             Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
             llvm::Value *scalarValue = new llvm::LoadInst(scalarType, ptr, callInst->getName(), callInst);
@@ -2888,7 +2645,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
                                                llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
             llvm::Value *shufValue = new llvm::ShuffleVectorInst(insertVec, undef2Value, zeroMask, callInst->getName());
 
-            lCopyMetadata(shufValue, callInst);
+            LLVMCopyMetadata(shufValue, callInst);
             llvm::ReplaceInstWithInst(callInst, llvm::dyn_cast<llvm::Instruction>(shufValue));
             return true;
         } else {
@@ -2919,24 +2676,24 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
 
             if (gatherInfo != NULL) {
                 ptr = lComputeCommonPointer(base, gatherInfo->baseType, fullOffsets, callInst);
-                lCopyMetadata(ptr, callInst);
+                LLVMCopyMetadata(ptr, callInst);
                 Debug(pos, "Transformed gather to unaligned vector load!");
                 bool doBlendLoad = false;
 #ifdef ISPC_XE_ENABLED
                 doBlendLoad = g->target->isXeTarget() && g->opt.enableXeUnsafeMaskedLoad;
 #endif
                 llvm::Instruction *newCall =
-                    lCallInst(doBlendLoad ? gatherInfo->blendMaskedFunc : gatherInfo->loadMaskedFunc, ptr, mask,
-                              llvm::Twine(ptr->getName()) + "_masked_load");
-                lCopyMetadata(newCall, callInst);
+                    LLVMCallInst(doBlendLoad ? gatherInfo->blendMaskedFunc : gatherInfo->loadMaskedFunc, ptr, mask,
+                                 llvm::Twine(ptr->getName()) + "_masked_load");
+                LLVMCopyMetadata(newCall, callInst);
                 llvm::ReplaceInstWithInst(callInst, newCall);
                 return true;
             } else {
                 Debug(pos, "Transformed scatter to unaligned vector store!");
                 ptr = lComputeCommonPointer(base, scatterInfo->baseType, fullOffsets, callInst);
                 ptr = new llvm::BitCastInst(ptr, scatterInfo->vecPtrType, "ptrcast", callInst);
-                llvm::Instruction *newCall = lCallInst(scatterInfo->maskedStoreFunc, ptr, storeValue, mask, "");
-                lCopyMetadata(newCall, callInst);
+                llvm::Instruction *newCall = LLVMCallInst(scatterInfo->maskedStoreFunc, ptr, storeValue, mask, "");
+                LLVMCopyMetadata(newCall, callInst);
                 llvm::ReplaceInstWithInst(callInst, newCall);
                 return true;
             }
@@ -3008,7 +2765,7 @@ static llvm::CallInst *lXeStoreInst(llvm::Value *val, llvm::Value *ptr, llvm::In
     }
     if (isMaskedStoreRequired) {
         if (llvm::Function *maskedFunc = lXeMaskedInst(inst, true, valVecType->getScalarType())) {
-            return llvm::dyn_cast<llvm::CallInst>(lCallInst(maskedFunc, ptr, val, LLVMMaskAllOn, ""));
+            return llvm::dyn_cast<llvm::CallInst>(LLVMCallInst(maskedFunc, ptr, val, LLVMMaskAllOn, ""));
         } else {
             return NULL;
         }
@@ -3053,7 +2810,7 @@ static llvm::CallInst *lXeLoadInst(llvm::Value *ptr, llvm::Type *retType, llvm::
             // <WIDTH x $1> @__masked_load_i8(i8 *, <WIDTH x MASK> %mask)
             // Cast pointer to i8*
             ptr = new llvm::BitCastInst(ptr, LLVMTypes::Int8PointerType, "ptr_to_i8", inst);
-            return llvm::dyn_cast<llvm::CallInst>(lCallInst(maskedFunc, ptr, LLVMMaskAllOn, "_masked_load_"));
+            return llvm::dyn_cast<llvm::CallInst>(LLVMCallInst(maskedFunc, ptr, LLVMMaskAllOn, "_masked_load_"));
         } else {
             return NULL;
         }
@@ -3121,7 +2878,7 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
     llvm::Value *rvalue = callInst->getArgOperand(1);
     llvm::Value *mask = callInst->getArgOperand(2);
 
-    MaskStatus maskStatus = lGetMaskStatus(mask);
+    MaskStatus maskStatus = GetMaskStatusFromValue(mask);
     if (maskStatus == MaskStatus::all_off) {
         // Zero mask - no-op, so remove the store completely.  (This
         // may in turn lead to being able to optimize out instructions
@@ -3146,14 +2903,14 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
             llvm::Type *ptrType = llvm::PointerType::get(rvalueType, 0);
 
             lvalue = new llvm::BitCastInst(lvalue, ptrType, "lvalue_to_ptr_type", callInst);
-            lCopyMetadata(lvalue, callInst);
+            LLVMCopyMetadata(lvalue, callInst);
             store = new llvm::StoreInst(
                 rvalue, lvalue, false /* not volatile */,
                 llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align)
                     .valueOrOne());
         }
         if (store != NULL) {
-            lCopyMetadata(store, callInst);
+            LLVMCopyMetadata(store, callInst);
             llvm::ReplaceInstWithInst(callInst, store);
             return true;
         }
@@ -3164,7 +2921,7 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
             // Get the source position from the metadata attached to the call
             // instruction so that we can issue PerformanceWarning()s below.
             SourcePos pos;
-            bool gotPosition = lGetSourcePosFromMetadata(callInst, &pos);
+            bool gotPosition = LLVMGetSourcePosFromMetadata(callInst, &pos);
             if (gotPosition) {
                 PerformanceWarning(pos, "Scatter required to store value.");
             }
@@ -3225,7 +2982,7 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
     llvm::Value *ptr = callInst->getArgOperand(0);
     llvm::Value *mask = callInst->getArgOperand(1);
 
-    MaskStatus maskStatus = lGetMaskStatus(mask);
+    MaskStatus maskStatus = GetMaskStatusFromValue(mask);
     if (maskStatus == MaskStatus::all_off) {
         // Zero mask - no-op, so replace the load with an undef value
         llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), iter, llvm::UndefValue::get(callInst->getType()));
@@ -3262,7 +3019,7 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
 #endif
         }
         if (load != NULL) {
-            lCopyMetadata(load, callInst);
+            LLVMCopyMetadata(load, callInst);
             llvm::ReplaceInstWithInst(callInst, load);
             return true;
         }
@@ -3540,7 +3297,7 @@ static void lSelectLoads(const std::vector<int64_t> &loadOffsets, std::vector<Co
 static void lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup,
                               const std::vector<CoalescedLoadOp> &loadOps) {
     SourcePos pos;
-    lGetSourcePosFromMetadata(coalesceGroup[0], &pos);
+    LLVMGetSourcePosFromMetadata(coalesceGroup[0], &pos);
 
     // Create a string that indicates the line numbers of the subsequent
     // gathers from the first one that were coalesced here.
@@ -3554,7 +3311,7 @@ static void lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup
 
         for (int i = 1; i < (int)coalesceGroup.size(); ++i) {
             SourcePos p;
-            bool ok = lGetSourcePosFromMetadata(coalesceGroup[i], &p);
+            bool ok = LLVMGetSourcePosFromMetadata(coalesceGroup[i], &p);
             if (ok) {
                 char buf[32];
                 snprintf(buf, sizeof(buf), "%d", p.first_line);
@@ -3608,7 +3365,7 @@ static void lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup
  */
 llvm::Value *lGEPAndLoad(llvm::Value *basePtr, llvm::Type *baseType, int64_t offset, int align,
                          llvm::Instruction *insertBefore, llvm::Type *type) {
-    llvm::Value *ptr = lGEPInst(basePtr, baseType, LLVMInt64(offset), "new_base", insertBefore);
+    llvm::Value *ptr = LLVMGEPInst(basePtr, baseType, LLVMInt64(offset), "new_base", insertBefore);
     ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(type, 0), "ptr_cast", insertBefore);
 #if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
     return new llvm::LoadInst(ptr, "gather_load", false /* not volatile */, llvm::MaybeAlign(align), insertBefore);
@@ -4039,7 +3796,7 @@ static llvm::Value *lComputeBasePtr(llvm::CallInst *gatherInst, llvm::Type *base
     llvm::Value *offset =
         llvm::BinaryOperator::Create(llvm::Instruction::Mul, variable, offsetScale, "offset", insertBefore);
 
-    return lGEPInst(basePtr, baseType, offset, "new_base", insertBefore);
+    return LLVMGEPInst(basePtr, baseType, offset, "new_base", insertBefore);
 }
 
 /** Extract the constant offsets (from the common base pointer) from each
@@ -4208,7 +3965,7 @@ restart:
             continue;
 
         SourcePos pos;
-        lGetSourcePosFromMetadata(callInst, &pos);
+        LLVMGetSourcePosFromMetadata(callInst, &pos);
         Debug(pos, "Checking for coalescable gathers starting here...");
 
         llvm::Value *base = callInst->getArgOperand(0);
@@ -4228,7 +3985,7 @@ restart:
         // Then and only then do we have a common base pointer with all
         // offsets from that constants (in which case we can potentially
         // coalesce).
-        if (lGetMaskStatus(mask) != MaskStatus::all_on)
+        if (GetMaskStatusFromValue(mask) != MaskStatus::all_on)
             continue;
 
         if (!LLVMVectorValuesAllEqual(variableOffsets))
@@ -4259,7 +4016,7 @@ restart:
             SourcePos fwdPos;
             // TODO: need to redesign metadata attached to pseudo calls,
             // LLVM drops metadata frequently and it results in bad disgnostics.
-            lGetSourcePosFromMetadata(fwdCall, &fwdPos);
+            LLVMGetSourcePosFromMetadata(fwdCall, &fwdPos);
 
 #ifndef ISPC_NO_DUMPS
             if (g->debugPrint) {
@@ -4426,8 +4183,8 @@ static bool lReplacePseudoMaskedStore(llvm::CallInst *callInst) {
     // Generate the call to the appropriate masked store function and
     // replace the __pseudo_* one with it.
     llvm::Function *fms = doBlend ? info->blendFunc : info->maskedStoreFunc;
-    llvm::Instruction *inst = lCallInst(fms, lvalue, rvalue, mask, "", callInst);
-    lCopyMetadata(inst, callInst);
+    llvm::Instruction *inst = LLVMCallInst(fms, lvalue, rvalue, mask, "", callInst);
+    LLVMCopyMetadata(inst, callInst);
 
     callInst->eraseFromParent();
     return true;
@@ -4601,7 +4358,7 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
     // Get the source position from the metadata attached to the call
     // instruction so that we can issue PerformanceWarning()s below.
     SourcePos pos;
-    bool gotPosition = lGetSourcePosFromMetadata(callInst, &pos);
+    bool gotPosition = LLVMGetSourcePosFromMetadata(callInst, &pos);
 
     callInst->setCalledFunction(info->actualFunc);
     // Check for alloca and if not alloca - generate __gather and change arguments
@@ -5216,7 +4973,7 @@ static llvm::Instruction *lGetBinaryIntrinsic(const char *name, llvm::Value *opa
     // of target builtins like __avg_up_uint8 that are implemented with plain
     // arithmetic ops into recursive calls to themselves.
     if (lHasIntrinsicInDefinition(func))
-        return lCallInst(func, opa, opb, name);
+        return LLVMCallInst(func, opa, opb, name);
     else
         return NULL;
 }
@@ -6473,7 +6230,7 @@ restart:
                 Assert(Fn);
                 llvm::Instruction *newInst = llvm::CallInst::Create(Fn, ci->getOperand(0), "");
                 if (newInst != NULL) {
-                    lCopyMetadata(newInst, ci);
+                    LLVMCopyMetadata(newInst, ci);
                     llvm::ReplaceInstWithInst(ci, newInst);
                     modifiedAny = true;
                     goto restart;
@@ -6528,7 +6285,7 @@ bool CheckIRForGenTarget::runOnBasicBlock(llvm::BasicBlock &bb) {
     for (llvm::BasicBlock::iterator I = bb.begin(), E = --bb.end(); I != E; ++I) {
         llvm::Instruction *inst = &*I;
         SourcePos pos;
-        lGetSourcePosFromMetadata(inst, &pos);
+        LLVMGetSourcePosFromMetadata(inst, &pos);
         if (llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst)) {
             if (llvm::GenXIntrinsic::getGenXIntrinsicID(ci) == llvm::GenXIntrinsic::genx_lsc_prefetch_stateless) {
                 // If prefetch is supported, fix data size parameter
