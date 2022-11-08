@@ -386,6 +386,17 @@ extern void LLVMCopyMetadata(llvm::Value *vto, const llvm::Instruction *from);
                   has been set.  False otherwise.*/
 extern bool LLVMGetSourcePosFromMetadata(const llvm::Instruction *inst, SourcePos *pos);
 
+/** Given an llvm::Value, return true if we can determine that it's an
+    undefined value.  This only makes a weak attempt at chasing this down,
+    only detecting flat-out undef values, and bitcasts of undef values.
+
+    @todo Is it worth working harder to find more of these?  It starts to
+    get tricky, since having an undef operand doesn't necessarily mean that
+    the result will be undefined.  (And for that matter, is there an LLVM
+    call that will do this for us?)
+ */
+extern bool LLVMIsValueUndef(llvm::Value *value);
+
 /** Below are helper functions to construct LLVM instructions. */
 extern llvm::Instruction *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
                                        const llvm::Twine &name, llvm::Instruction *insertBefore = NULL);
