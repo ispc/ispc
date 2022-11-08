@@ -1683,6 +1683,20 @@ bool LLVMGetSourcePosFromMetadata(const llvm::Instruction *inst, SourcePos *pos)
     return true;
 }
 
+/** Given an llvm::Value, return true if we can determine that it's an
+    undefined value.  This only makes a weak attempt at chasing this down,
+    only detecting flat-out undef values, and bitcasts of undef values. */
+bool LLVMIsValueUndef(llvm::Value *value) {
+    if (llvm::isa<llvm::UndefValue>(value))
+        return true;
+
+    llvm::BitCastInst *bci = llvm::dyn_cast<llvm::BitCastInst>(value);
+    if (bci)
+        return LLVMIsValueUndef(bci->getOperand(0));
+
+    return false;
+}
+
 llvm::Instruction *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, const llvm::Twine &name,
                                 llvm::Instruction *insertBefore) {
     llvm::Value *args[2] = {arg0, arg1};
