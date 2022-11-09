@@ -31,14 +31,22 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file ISPCPasses.h
-    @brief Includes available ISPC passes
-*/
-
 #pragma once
 
-#include "ImproveMemoryOps.h"
-#include "InstructionSimplify.h"
-#include "IntrinsicsOpt.h"
-#include "Peephole.h"
-#include "ReplacePseudoMemoryOps.h"
+#include "ISPCPass.h"
+
+namespace ispc {
+
+// PeepholePass
+
+class PeepholePass : public llvm::FunctionPass {
+  public:
+    PeepholePass() : FunctionPass(ID){};
+    llvm::StringRef getPassName() const { return "Peephole Optimizations"; }
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+    bool runOnFunction(llvm::Function &F);
+
+    static char ID;
+};
+llvm::Pass *CreatePeepholePass();
+} // namespace ispc
