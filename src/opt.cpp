@@ -116,10 +116,6 @@
 
 using namespace ispc;
 
-#ifdef ISPC_XE_ENABLED
-static llvm::Pass *CreateCheckIRForGenTarget();
-#endif
-
 ///////////////////////////////////////////////////////////////////////////
 // This is a wrap over class llvm::PassManager. This duplicates PassManager function run()
 //   and change PassManager function add by adding some checks and debug passes.
@@ -231,7 +227,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
             // This pass is needed for correct prints work
             optPM.add(llvm::createSROAPass());
             optPM.add(CreateReplaceLLVMIntrinsics());
-            optPM.add(CreateCheckIRForGenTarget());
+            optPM.add(CreateCheckIRForXeTarget());
             optPM.add(CreateMangleOpenCLBuiltins());
             // This pass is required to prepare LLVM IR for open source SPIR-V translator
             optPM.add(
@@ -514,7 +510,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createConstantMergePass());
 #ifdef ISPC_XE_ENABLED
         if (g->target->isXeTarget()) {
-            optPM.add(CreateCheckIRForGenTarget());
+            optPM.add(CreateCheckIRForXeTarget());
             optPM.add(CreateMangleOpenCLBuiltins());
             // This pass is required to prepare LLVM IR for open source SPIR-V translator
             optPM.add(
@@ -535,102 +531,3 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
     }
 #endif
 }
-
-#ifdef ISPC_XE_ENABLED
-///////////////////////////////////////////////////////////////////////////
-// CheckIRForGenTarget
-
-/** This pass checks IR for Xe target and fix arguments for Xe intrinsics if needed.
-    In case if unsupported statement is found, it reports error and stops compilation.
-    Currently it performs 2 checks:
-    1. double type support by target
-    2. prefetch support by target and fixing prefetch args
- */
-
-class CheckIRForGenTarget : public llvm::FunctionPass {
-  public:
-    static char ID;
-    CheckIRForGenTarget(bool last = false) : FunctionPass(ID) {}
-
-    llvm::StringRef getPassName() const { return "Check IR for Xe target"; }
-    bool runOnBasicBlock(llvm::BasicBlock &BB);
-    bool runOnFunction(llvm::Function &F);
-};
-
-char CheckIRForGenTarget::ID = 0;
-
-bool CheckIRForGenTarget::runOnBasicBlock(llvm::BasicBlock &bb) {
-    DEBUG_START_PASS("CheckIRForGenTarget");
-    bool modifiedAny = false;
-    // This list contains regex expr for unsupported function names
-    // To be extended
-
-    for (llvm::BasicBlock::iterator I = bb.begin(), E = --bb.end(); I != E; ++I) {
-        llvm::Instruction *inst = &*I;
-        SourcePos pos;
-        LLVMGetSourcePosFromMetadata(inst, &pos);
-        if (llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst)) {
-            if (llvm::GenXIntrinsic::getGenXIntrinsicID(ci) == llvm::GenXIntrinsic::genx_lsc_prefetch_stateless) {
-                // If prefetch is supported, fix data size parameter
-                Assert(ci->arg_size() > 6);
-                llvm::Value *dataSizeVal = ci->getArgOperand(6);
-                llvm::ConstantInt *dataSizeConst = llvm::dyn_cast<llvm::ConstantInt>(dataSizeVal);
-                Assert(dataSizeConst && (dataSizeConst->getBitWidth() == 8));
-                int dataSizeNum = dataSizeConst->getSExtValue();
-                // 0: invalid
-                // 1: d8
-                // 2: d16
-                // 3: d32
-                // 4: d64
-                // Valid user's input is 1, 2, 4, 8
-                int8_t genSize = 3;
-                switch (dataSizeNum) {
-                case 1:
-                    genSize = 1;
-                    break;
-                case 2:
-                    genSize = 2;
-                    break;
-                case 4:
-                    genSize = 3;
-                    break;
-                case 8:
-                    genSize = 4;
-                    break;
-                default:
-                    Error(pos, "Incorrect data size argument for \'prefetch\'. Valid values are 1, 2, 4, 8");
-                }
-                llvm::Value *dataSizeGen = llvm::ConstantInt::get(LLVMTypes::Int8Type, genSize);
-                ci->setArgOperand(6, dataSizeGen);
-            }
-        }
-        // Report error if double type is not supported by the target
-        if (!g->target->hasFp64Support()) {
-            for (int i = 0; i < (int)inst->getNumOperands(); ++i) {
-                llvm::Type *t = inst->getOperand(i)->getType();
-                if (t == LLVMTypes::DoubleType || t == LLVMTypes::DoublePointerType ||
-                    t == LLVMTypes::DoubleVectorType || t == LLVMTypes::DoubleVectorPointerType) {
-                    Error(pos, "\'double\' type is not supported by the target\n");
-                }
-            }
-        }
-    }
-    DEBUG_END_PASS("CheckIRForGenTarget");
-
-    return modifiedAny;
-}
-
-bool CheckIRForGenTarget::runOnFunction(llvm::Function &F) {
-    llvm::TimeTraceScope FuncScope("CheckIRForGenTarget::runOnFunction", F.getName());
-    bool modifiedAny = false;
-    for (llvm::BasicBlock &BB : F) {
-        modifiedAny |= runOnBasicBlock(BB);
-    }
-    return modifiedAny;
-}
-
-static llvm::Pass *CreateCheckIRForGenTarget() { return new CheckIRForGenTarget(); }
-
-///////////////////////////////////////////////////////////////////////////
-
-#endif

@@ -31,24 +31,30 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file ISPCPasses.h
-    @brief Includes available ISPC passes
-*/
-
 #pragma once
 
-#include "CheckIRForXeTarget.h"
-#include "DebugPass.h"
-#include "DemotePHIsPass.h"
-#include "GatherCoalescePass.h"
-#include "ImproveMemoryOps.h"
-#include "InstructionSimplify.h"
-#include "IntrinsicsOptPass.h"
-#include "IsCompileTimeConstant.h"
-#include "MakeInternalFuncsStatic.h"
-#include "MangleOpenCLBuiltins.h"
-#include "PeepholePass.h"
-#include "ReplacePseudoMemoryOps.h"
-#include "ReplaceStdlibShiftPass.h"
-#include "XeGatherCoalescePass.h"
-#include "XeReplaceLLVMIntrinsics.h"
+#include "ISPCPass.h"
+
+#ifdef ISPC_XE_ENABLED
+
+namespace ispc {
+
+/** This pass checks IR for Xe target and fix arguments for Xe intrinsics if needed.
+    In case if unsupported statement is found, it reports error and stops compilation.
+    Currently it performs 2 checks:
+    1. double type support by target
+    2. prefetch support by target and fixing prefetch args
+ */
+
+class CheckIRForXeTarget : public llvm::FunctionPass {
+  public:
+    static char ID;
+    CheckIRForXeTarget(bool last = false) : FunctionPass(ID) {}
+
+    llvm::StringRef getPassName() const { return "Check IR for Xe target"; }
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+    bool runOnFunction(llvm::Function &F);
+};
+llvm::Pass *CreateCheckIRForXeTarget();
+} // namespace ispc
+#endif
