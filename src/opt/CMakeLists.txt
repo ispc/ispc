@@ -34,6 +34,8 @@ target_sources(${PROJECT_NAME}
     PRIVATE
         "ImproveMemoryOps.cpp"
         "ImproveMemoryOps.h"
+        "InstructionSimplify.cpp"
+        "InstructionSimplify.h"
         "IntrinsicsOpt.cpp"
         "IntrinsicsOpt.h"
         "ReplacePseudoMemoryOps.cpp"

@@ -31,13 +31,34 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file ISPCPasses.h
-    @brief Includes available ISPC passes
-*/
-
 #pragma once
 
-#include "ImproveMemoryOps.h"
-#include "InstructionSimplify.h"
-#include "IntrinsicsOpt.h"
-#include "ReplacePseudoMemoryOps.h"
+#include "ISPCPass.h"
+
+namespace ispc {
+
+/** This simple optimization pass looks for a vector select instruction
+    with an all-on or all-off constant mask, simplifying it to the
+    appropriate operand if so.
+
+    @todo The better thing to do would be to submit a patch to LLVM to get
+    these; they're presumably pretty simple patterns to match.
+*/
+class InstructionSimplifyPass : public llvm::FunctionPass {
+  public:
+    InstructionSimplifyPass() : FunctionPass(ID) {}
+
+    llvm::StringRef getPassName() const { return "Vector Select Optimization"; }
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+    bool runOnFunction(llvm::Function &F);
+
+    static char ID;
+
+  private:
+    static bool simplifySelect(llvm::SelectInst *selectInst, llvm::BasicBlock::iterator iter);
+    static llvm::Value *simplifyBoolVec(llvm::Value *value);
+    static bool simplifyCall(llvm::CallInst *callInst, llvm::BasicBlock::iterator iter);
+};
+
+llvm::Pass *CreateInstructionSimplifyPass();
+} // namespace ispc
