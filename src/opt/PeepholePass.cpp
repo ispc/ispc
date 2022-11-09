@@ -33,7 +33,7 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "Peephole.h"
+#include "PeepholePass.h"
 
 namespace ispc {
 
