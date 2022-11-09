@@ -31,23 +31,20 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file ISPCPasses.h
-    @brief Includes available ISPC passes
-*/
-
 #pragma once
 
-#include "DebugPass.h"
-#include "DemotePHIsPass.h"
-#include "GatherCoalescePass.h"
-#include "ImproveMemoryOps.h"
-#include "InstructionSimplify.h"
-#include "IntrinsicsOptPass.h"
-#include "IsCompileTimeConstant.h"
-#include "MakeInternalFuncsStatic.h"
-#include "MangleOpenCLBuiltins.h"
-#include "PeepholePass.h"
-#include "ReplacePseudoMemoryOps.h"
-#include "ReplaceStdlibShiftPass.h"
-#include "XeGatherCoalescePass.h"
-#include "XeReplaceLLVMIntrinsics.h"
+#include "ISPCPass.h"
+
+#ifdef ISPC_XE_ENABLED
+
+namespace ispc {
+class DemotePHIs : public llvm::FunctionPass {
+  public:
+    static char ID;
+    DemotePHIs() : FunctionPass(ID) {}
+    llvm::StringRef getPassName() const { return "Demote PHI nodes"; }
+    bool runOnFunction(llvm::Function &F);
+};
+llvm::Pass *CreateDemotePHIs();
+} // namespace ispc
+#endif

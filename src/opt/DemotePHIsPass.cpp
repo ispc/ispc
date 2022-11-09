@@ -31,23 +31,30 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file ISPCPasses.h
-    @brief Includes available ISPC passes
-*/
-
-#pragma once
-
-#include "DebugPass.h"
 #include "DemotePHIsPass.h"
-#include "GatherCoalescePass.h"
-#include "ImproveMemoryOps.h"
-#include "InstructionSimplify.h"
-#include "IntrinsicsOptPass.h"
-#include "IsCompileTimeConstant.h"
-#include "MakeInternalFuncsStatic.h"
-#include "MangleOpenCLBuiltins.h"
-#include "PeepholePass.h"
-#include "ReplacePseudoMemoryOps.h"
-#include "ReplaceStdlibShiftPass.h"
-#include "XeGatherCoalescePass.h"
-#include "XeReplaceLLVMIntrinsics.h"
+
+#ifdef ISPC_XE_ENABLED
+namespace ispc {
+
+char DemotePHIs::ID = 0;
+
+bool DemotePHIs::runOnFunction(llvm::Function &F) {
+    llvm::TimeTraceScope FuncScope("DemotePHIs::runOnFunction", F.getName());
+    if (F.isDeclaration() || skipFunction(F))
+        return false;
+    std::vector<llvm::Instruction *> WorkList;
+    for (auto &ibb : F)
+        for (llvm::BasicBlock::iterator iib = ibb.begin(), iie = ibb.end(); iib != iie; ++iib)
+            if (llvm::isa<llvm::PHINode>(iib))
+                WorkList.push_back(&*iib);
+
+    // Demote phi nodes
+    for (auto *ilb : llvm::reverse(WorkList))
+        DemotePHIToStack(llvm::cast<llvm::PHINode>(ilb), nullptr);
+
+    return !WorkList.empty();
+}
+
+llvm::Pass *CreateDemotePHIs() { return new DemotePHIs(); }
+} // namespace ispc
+#endif
