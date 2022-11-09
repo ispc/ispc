@@ -69,6 +69,13 @@
 #include <llvm/GenXIntrinsics/GenXIntrinsics.h>
 #endif
 
+#ifndef PRId64
+#define PRId64 "lld"
+#endif
+#ifndef PRIu64
+#define PRIu64 "llu"
+#endif
+
 namespace ispc {
 
 // Constant in number of bytes.
