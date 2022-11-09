@@ -48,3 +48,4 @@
 #include "Peephole.h"
 #include "ReplacePseudoMemoryOps.h"
 #include "ReplaceStdlibShiftPass.h"
+#include "XeGatherCoalescePass.h"

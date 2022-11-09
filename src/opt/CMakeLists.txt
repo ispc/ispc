@@ -54,4 +54,6 @@ target_sources(${PROJECT_NAME}
         "ReplacePseudoMemoryOps.h"
         "ReplaceStdlibShiftPass.cpp"
         "ReplaceStdlibShiftPass.h"
+        "XeGatherCoalescePass.cpp"
+        "XeGatherCoalescePass.h"
 )
