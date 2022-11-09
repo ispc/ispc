@@ -32,6 +32,8 @@
 
 target_sources(${PROJECT_NAME}
     PRIVATE
+        "DebugPass.cpp"    
+        "DebugPass.h"
         "GatherCoalescePass.cpp"
         "GatherCoalescePass.h"
         "IsCompileTimeConstant.cpp"
