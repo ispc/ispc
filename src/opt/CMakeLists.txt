@@ -38,6 +38,8 @@ target_sources(${PROJECT_NAME}
         "InstructionSimplify.h"
         "IntrinsicsOpt.cpp"
         "IntrinsicsOpt.h"
+        "MakeInternalFuncsStatic.cpp"
+        "MakeInternalFuncsStatic.h"
         "Peephole.cpp"
         "Peephole.h"
         "ReplacePseudoMemoryOps.cpp"
