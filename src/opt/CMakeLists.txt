@@ -32,6 +32,8 @@
 
 target_sources(${PROJECT_NAME}
     PRIVATE
+        "GatherCoalescePass.cpp"
+        "GatherCoalescePass.h"
         "IsCompileTimeConstant.cpp"
         "IsCompileTimeConstant.h"
         "ImproveMemoryOps.cpp"
