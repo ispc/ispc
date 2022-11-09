@@ -81,6 +81,13 @@ static std::string mangleOCLBuiltin(const llvm::Function &func) {
     return mangleMathOCLBuiltin(func);
 }
 
+static std::string mangleSPIRVBuiltin(const llvm::Function &func) {
+    Assert(func.getName().startswith("__spirv_") && "wrong argument: spirv builtin is expected");
+    std::string mangledName;
+    mangleOpenClBuiltin(func.getName().str(), func.getArg(0)->getType(), mangledName);
+    return mangledName;
+}
+
 bool MangleOpenCLBuiltins::mangleOpenCLBuiltins(llvm::BasicBlock &bb) {
     DEBUG_START_BB("MangleOpenCLBuiltins");
     bool modifiedAny = false;
@@ -90,8 +97,13 @@ bool MangleOpenCLBuiltins::mangleOpenCLBuiltins(llvm::BasicBlock &bb) {
             llvm::Function *func = ci->getCalledFunction();
             if (func == NULL)
                 continue;
-            if (func->getName().startswith("__spirv_ocl")) {
-                std::string mangledName = mangleOCLBuiltin(*func);
+            if (func->getName().startswith("__spirv_")) {
+                std::string mangledName;
+                if (func->getName().startswith("__spirv_ocl")) {
+                    mangledName = mangleOCLBuiltin(*func);
+                } else {
+                    mangledName = mangleSPIRVBuiltin(*func);
+                }
                 func->setName(mangledName);
                 modifiedAny = true;
             }
