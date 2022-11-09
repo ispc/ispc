@@ -408,12 +408,10 @@ define i64 @__popcnt_int64(i64) nounwind readonly alwaysinline {
   ret i64 %res
 }
 
-declare i32 @llvm.genx.group.id.x()
-declare i32 @llvm.genx.group.id.y()
-declare i32 @llvm.genx.group.id.z()
-declare <3 x i32> @llvm.genx.local.id.v3i32()
-declare <3 x i32> @llvm.genx.group.count.v3i32()
-declare <3 x i32> @llvm.genx.local.size.v3i32()
+declare i64 @__spirv_BuiltInWorkgroupId(i32 %dim)
+declare i64 @__spirv_BuiltInLocalInvocationId(i32 %dim)
+declare i64 @__spirv_BuiltInNumWorkgroups(i32 %dim)
+declare i64 @__spirv_BuiltInWorkgroupSize(i32 %dim)
 
 define i32 @__task_index()  nounwind readnone alwaysinline {
 ;; linear_group_id() * linear_local_size() + linear_local_id();
@@ -423,31 +421,40 @@ define i32 @__task_index()  nounwind readnone alwaysinline {
 ;; linear_local_id = local_size(0) * (local_size(1) * local_id(2) +
 ;;                   + local_id(1)) + local_id(0);
 ;; linear_group_id
-  %gr_id_x = call i32 @llvm.genx.group.id.x()
-  %gr_id_y = call i32 @llvm.genx.group.id.y()
-  %gr_id_z = call i32 @llvm.genx.group.id.z()
-  %gr_count = call <3 x i32> @llvm.genx.group.count.v3i32()
-  %gr_count_x = extractelement <3 x i32> %gr_count, i32 0
-  %gr_count_y = extractelement <3 x i32> %gr_count, i32 1
-  %gr_count_z = extractelement <3 x i32> %gr_count, i32 2
+  %gr_id_x_64 = call i64 @__spirv_BuiltInWorkgroupId(i32 0)
+  %gr_id_y_64 = call i64 @__spirv_BuiltInWorkgroupId(i32 1)
+  %gr_id_z_64 = call i64 @__spirv_BuiltInWorkgroupId(i32 2)
+  %gr_id_x = trunc i64 %gr_id_x_64 to i32
+  %gr_id_y = trunc i64 %gr_id_y_64 to i32
+  %gr_id_z = trunc i64 %gr_id_z_64 to i32
+  %gr_count_x_64 = call i64 @__spirv_BuiltInNumWorkgroups(i32 0)
+  %gr_count_y_64 = call i64 @__spirv_BuiltInNumWorkgroups(i32 1)
+  %gr_count_z_64 = call i64 @__spirv_BuiltInNumWorkgroups(i32 2)
+  %gr_count_x = trunc i64 %gr_count_x_64 to i32
+  %gr_count_y = trunc i64 %gr_count_y_64 to i32
+  %gr_count_z = trunc i64 %gr_count_z_64 to i32
   %gr_count_y_z = mul i32 %gr_count_y, %gr_id_z
   %gr_id_y_z_temp = add i32 %gr_count_y_z, %gr_id_y
   %gr_id_x_y_z_temp = mul i32 %gr_id_y_z_temp, %gr_count_x
   %gr_id = add i32 %gr_id_x_y_z_temp, %gr_id_x
 
 ;; linear_local_size
-  %l_size = call <3 x i32> @llvm.genx.local.size.v3i32()
-  %l_size_x = extractelement <3 x i32> %l_size, i32 0
-  %l_size_y = extractelement <3 x i32> %l_size, i32 1
-  %l_size_z = extractelement <3 x i32> %l_size, i32 2
+  %l_size_x_64 = call i64 @__spirv_BuiltInWorkgroupSize(i32 0)
+  %l_size_y_64 = call i64 @__spirv_BuiltInWorkgroupSize(i32 1)
+  %l_size_z_64 = call i64 @__spirv_BuiltInWorkgroupSize(i32 2)
+  %l_size_x = trunc i64 %l_size_x_64 to i32
+  %l_size_y = trunc i64 %l_size_y_64 to i32
+  %l_size_z = trunc i64 %l_size_z_64 to i32
   %l_size_xy = mul i32 %l_size_x, %l_size_y
   %l_size_xyz = mul i32 %l_size_xy, %l_size_z
 
 ;; linear_local_id
-  %l_id = call <3 x i32> @llvm.genx.local.id.v3i32()
-  %l_id_x = extractelement <3 x i32> %l_id, i32 0
-  %l_id_y = extractelement <3 x i32> %l_id, i32 1
-  %l_id_z = extractelement <3 x i32> %l_id, i32 2
+  %l_id_x_64 = call i64 @__spirv_BuiltInLocalInvocationId(i32 0)
+  %l_id_y_64 = call i64 @__spirv_BuiltInLocalInvocationId(i32 1)
+  %l_id_z_64 = call i64 @__spirv_BuiltInLocalInvocationId(i32 2)
+  %l_id_x = trunc i64 %l_id_x_64 to i32
+  %l_id_y = trunc i64 %l_id_y_64 to i32
+  %l_id_z = trunc i64 %l_id_z_64 to i32
   %l_is_y_z_size = mul i32 %l_size_y, %l_id_z
   %l_is_y_z_size_temp = add i32 %l_is_y_z_size, %l_id_y
   %l_is_x_y_z_size_temp = mul i32 %l_is_y_z_size_temp, %l_size_x
@@ -463,23 +470,39 @@ define i32 @__task_count()  nounwind readnone alwaysinline {
 ;; linear_group_count = group_count(0) * group_count(1) * group_count(2);
 ;; linear_local_size = local_size(0) * local_size(1) * local_size(2);
 ;; linear_local_size
-  %l_size = call <3 x i32> @llvm.genx.local.size.v3i32()
-  %gr_count = call <3 x i32> @llvm.genx.group.count.v3i32()
-  %gr_size_count = mul <3 x i32> %l_size, %gr_count
-  %gr_size_count_x = extractelement <3 x i32> %gr_size_count, i32 0
-  %gr_size_count_y = extractelement <3 x i32> %gr_size_count, i32 1
-  %gr_size_count_z = extractelement <3 x i32> %gr_size_count, i32 2
-  %gr_size_count_xy = mul i32 %gr_size_count_x, %gr_size_count_y
-  %res = mul i32 %gr_size_count_xy, %gr_size_count_z
+  %l_size_x_ = call i64 @__spirv_BuiltInWorkgroupSize(i32 0)
+  %l_size_y_ = call i64 @__spirv_BuiltInWorkgroupSize(i32 1)
+  %l_size_z_ = call i64 @__spirv_BuiltInWorkgroupSize(i32 2)
+  %l_size_x = trunc i64 %l_size_x_ to i32
+  %l_size_y = trunc i64 %l_size_y_ to i32
+  %l_size_z = trunc i64 %l_size_z_ to i32
+  %l_size_1 = insertelement <3 x i32> undef, i32 %l_size_x, i32 0
+  %l_size_2 = insertelement <3 x i32> %l_size_1, i32 %l_size_y, i32 1
+  %l_size_3 = insertelement <3 x i32> %l_size_2, i32 %l_size_z, i32 2
+  %gr_count_x_ = call i64 @__spirv_BuiltInNumWorkgroups(i32 0)
+  %gr_count_y_ = call i64 @__spirv_BuiltInNumWorkgroups(i32 1)
+  %gr_count_z_ = call i64 @__spirv_BuiltInNumWorkgroups(i32 2)
+  %gr_count_x = trunc i64 %gr_count_x_ to i32
+  %gr_count_y = trunc i64 %gr_count_y_ to i32
+  %gr_count_z = trunc i64 %gr_count_z_ to i32
+  %gr_count_1 = insertelement <3 x i32> undef, i32 %gr_count_x, i32 0
+  %gr_count_2 = insertelement <3 x i32> %gr_count_1, i32 %gr_count_y, i32 1
+  %gr_count_3 = insertelement <3 x i32> %gr_count_2, i32 %gr_count_z, i32 2
+  %size_gr = mul <3 x i32> %l_size_3, %gr_count_3
+  %size_gr_0 = extractelement <3 x i32> %size_gr, i32 0
+  %size_gr_1 = extractelement <3 x i32> %size_gr, i32 1
+  %size_gr_2 = extractelement <3 x i32> %size_gr, i32 2
+  %res_ = mul i32 %size_gr_0, %size_gr_1
+  %res = mul i32 %res_, %size_gr_2
   ret i32 %res
 }
 
 define(`__xe_task_count', `
-  %l_size = call <3 x i32> @llvm.genx.local.size.v3i32()
-  %l_size_v = extractelement <3 x i32> %l_size, i32 $1
-  %gr_count = call <3 x i32> @llvm.genx.group.count.v3i32()
-  %gr_count_v = extractelement <3 x i32> %gr_count, i32 $1
-  %res = mul i32 %l_size_v, %gr_count_v
+  %l_size_64 = call i64 @__spirv_BuiltInWorkgroupSize(i32 $1)
+  %l_size = trunc i64 %l_size_64 to i32
+  %gr_count_64 = call i64 @__spirv_BuiltInNumWorkgroups(i32 $1)
+  %gr_count = trunc i64 %gr_count_64 to i32
+  %res = mul i32 %l_size, %gr_count
   ret i32 %res
 ')
 
@@ -496,26 +519,27 @@ define i32 @__task_count2()  nounwind readnone alwaysinline {
 }
 
 define(`__xe_task_index', `
-  %gr_id_v = call i32 @llvm.genx.group.id.$2()
-  %l_id = call <3 x i32> @llvm.genx.local.id.v3i32()
-  %l_id_v = extractelement <3 x i32> %l_id, i32 $1
-  %l_size = call <3 x i32> @llvm.genx.local.size.v3i32()
-  %l_size_v = extractelement <3 x i32> %l_size, i32 $1
-  %res_tmp = mul i32 %gr_id_v, %l_size_v
-  %res = add i32 %res_tmp, %l_id_v
+  %gr_id_64 = call i64 @__spirv_BuiltInWorkgroupId(i32 $1)
+  %gr_id = trunc i64 %gr_id_64 to i32
+  %l_id_64 = call i64 @__spirv_BuiltInLocalInvocationId(i32 $1)
+  %l_id = trunc i64 %l_id_64 to i32
+  %l_size_64 = call i64 @__spirv_BuiltInWorkgroupSize(i32 $1)
+  %l_size = trunc i64 %l_size_64 to i32
+  %res_tmp = mul i32 %gr_id, %l_size
+  %res = add i32 %res_tmp, %l_id
   ret i32 %res
 ')
 
 define i32 @__task_index0()  nounwind readnone alwaysinline {
-   __xe_task_index(0, x)
+   __xe_task_index(0)
 }
 
 define i32 @__task_index1()  nounwind readnone alwaysinline {
-   __xe_task_index(1, y)
+   __xe_task_index(1)
 }
 
 define i32 @__task_index2()  nounwind readnone alwaysinline {
-   __xe_task_index(2, z)
+   __xe_task_index(2)
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
