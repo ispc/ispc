@@ -31,7 +31,7 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "IntrinsicsOpt.h"
+#include "IntrinsicsOptPass.h"
 
 namespace ispc {
 
