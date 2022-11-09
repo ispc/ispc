@@ -31,18 +31,22 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file ISPCPasses.h
-    @brief Includes available ISPC passes
-*/
-
 #pragma once
 
-#include "GatherCoalescePass.h"
-#include "ImproveMemoryOps.h"
-#include "InstructionSimplify.h"
-#include "IntrinsicsOpt.h"
-#include "IsCompileTimeConstant.h"
-#include "MakeInternalFuncsStatic.h"
-#include "Peephole.h"
-#include "ReplacePseudoMemoryOps.h"
-#include "ReplaceStdlibShiftPass.h"
+#include "ISPCPass.h"
+
+namespace ispc {
+
+class ReplaceStdlibShiftPass : public llvm::FunctionPass {
+  public:
+    static char ID;
+    ReplaceStdlibShiftPass() : FunctionPass(ID) {}
+
+    llvm::StringRef getPassName() const { return "Resolve \"replace extract insert chains\""; }
+
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+
+    bool runOnFunction(llvm::Function &F);
+};
+llvm::Pass *CreateReplaceStdlibShiftPass();
+} // namespace ispc
