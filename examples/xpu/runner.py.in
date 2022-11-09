@@ -1,6 +1,6 @@
 #!@Python3_EXECUTABLE@ -uB
 #
-#  Copyright (c) 2019-2021, Intel Corporation
+#  Copyright (c) 2019-2022, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -52,18 +52,18 @@ def compare_images(image0, image1, image_cmp_th):
     return False
 
   if not os.path.isfile(image0):
-    print('No such file: {0}'.format(image0))
+    print(f"No such file: {image0}")
     return False
 
   if not os.path.isfile(image1):
-    print('No such file: {0}'.format(image1))
+    print(f"No such file: {image1}")
     return False
 
   error = get_img_diff_MSE(image0, image1)
   if error > image_cmp_th:
-    print("Failed correctness test with MSE: %f / %f" % (error, image_cmp_th))
+    print(f"Failed correctness test with MSE: {error:.6f} / {image_cmp_th:.6f}")
   else:
-    print("Passed correctness test with MSE: %f / %f" % (error, image_cmp_th))
+    print(f"Passed correctness test with MSE: {error:.6f} / {image_cmp_th:.6f}")
   return error < image_cmp_th
 
 parser = argparse.ArgumentParser()
@@ -75,8 +75,8 @@ parser.add_argument('-image_cmp_th', dest='image_cmp_th', type=float)
 parser.add_argument('-dpcpp_spv', dest='dpcpp_spv', type=str)
 args, unknown = parser.parse_known_args()
 
-print("Found additional arguments: ", unknown, " Will append these to cmd line.")
-print("Using [" + args.exe_name + "] test in " + args.dir)
+print(f"Found additional arguments: {unknown} Will append these to cmd line.")
+print(f"Using [{args.exe_name}] test in {args.dir}")
 
 additional_path = ""
 additional_libs = ""
@@ -89,7 +89,7 @@ if os.name != 'nt':
     runtime_lib = os.path.join(cur_dir, "../../../install/lib")
     additional_libs = os.pathsep + os.pathsep.join([runtime_lib, local_lib])
 
-print("Using runtime lib path: ", additional_libs)
+print(f"Using runtime lib path: {additional_libs}")
 
 test_env = os.environ.copy()
 if "PATH" in test_env:
@@ -109,14 +109,14 @@ executable = os.path.join(test_dir, host_name)
 
 cmd = [executable] + unknown
 
-print("Using host name: ", host_name)
-print("Attempting to access executable at: ", executable)
+print(f"Using host name: {host_name}")
+print(f"Attempting to access executable at: {executable}")
 
 p = subprocess.Popen(cmd, stdout=subprocess.PIPE, env=test_env, cwd=test_dir)
 out, err = p.communicate()
 print(out)
 if p.returncode:
-    print("Workload returned non-zero error code: ", p.returncode)
+    print(f"Workload returned non-zero error code: {p.returncode}")
     sys.exit(p.returncode)
 if args.res_image and args.ref_image:
     if not compare_images(os.path.join(test_dir, args.res_image), os.path.join(test_dir, args.ref_image), args.image_cmp_th):
