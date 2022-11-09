@@ -37,6 +37,7 @@
 
 #pragma once
 
+#include "GatherCoalescePass.h"
 #include "ImproveMemoryOps.h"
 #include "InstructionSimplify.h"
 #include "IntrinsicsOpt.h"
