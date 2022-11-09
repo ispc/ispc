@@ -32,6 +32,8 @@
 
 target_sources(${PROJECT_NAME}
     PRIVATE
+        "IsCompileTimeConstant.cpp"
+        "IsCompileTimeConstant.h"
         "ImproveMemoryOps.cpp"
         "ImproveMemoryOps.h"
         "InstructionSimplify.cpp"
