@@ -31,16 +31,35 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file ISPCPasses.h
-    @brief Includes available ISPC passes
-*/
-
 #pragma once
 
-#include "ImproveMemoryOps.h"
-#include "InstructionSimplify.h"
-#include "IntrinsicsOpt.h"
-#include "IsCompileTimeConstant.h"
-#include "MakeInternalFuncsStatic.h"
-#include "Peephole.h"
-#include "ReplacePseudoMemoryOps.h"
+#include "ISPCPass.h"
+
+namespace ispc {
+
+/** LLVM IR implementations of target-specific functions may include calls
+    to the functions "bool __is_compile_time_constant_*(...)"; these allow
+    them to have specialied code paths for where the corresponding value is
+    known at compile time.  For masks, for example, this allows them to not
+    incur the cost of a MOVMSK call at runtime to compute its value in
+    cases where the mask value isn't known until runtime.
+
+    This pass resolves these calls into either 'true' or 'false' values so
+    that later optimization passes can operate with these as constants.
+
+    See stdlib.m4 for a number of uses of this idiom.
+ */
+
+class IsCompileTimeConstantPass : public llvm::FunctionPass {
+  public:
+    static char ID;
+    IsCompileTimeConstantPass(bool last = false) : FunctionPass(ID) { isLastTry = last; }
+
+    llvm::StringRef getPassName() const { return "Resolve \"is compile time constant\""; }
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+    bool runOnFunction(llvm::Function &F);
+
+    bool isLastTry;
+};
+llvm::Pass *CreateIsCompileTimeConstantPass(bool isLastTry);
+} // namespace ispc

@@ -127,8 +127,6 @@ using namespace ispc;
 
 static llvm::Pass *CreateGatherCoalescePass();
 
-static llvm::Pass *CreateIsCompileTimeConstantPass(bool isLastTry);
-
 #ifndef ISPC_NO_DUMPS
 static llvm::Pass *CreateDebugPass(char *output);
 static llvm::Pass *CreateDebugPassFile(int number, llvm::StringRef name, std::string dir);
@@ -1565,110 +1563,6 @@ bool GatherCoalescePass::runOnFunction(llvm::Function &F) {
 }
 
 static llvm::Pass *CreateGatherCoalescePass() { return new GatherCoalescePass; }
-
-///////////////////////////////////////////////////////////////////////////
-// IsCompileTimeConstantPass
-
-/** LLVM IR implementations of target-specific functions may include calls
-    to the functions "bool __is_compile_time_constant_*(...)"; these allow
-    them to have specialied code paths for where the corresponding value is
-    known at compile time.  For masks, for example, this allows them to not
-    incur the cost of a MOVMSK call at runtime to compute its value in
-    cases where the mask value isn't known until runtime.
-
-    This pass resolves these calls into either 'true' or 'false' values so
-    that later optimization passes can operate with these as constants.
-
-    See stdlib.m4 for a number of uses of this idiom.
- */
-
-class IsCompileTimeConstantPass : public llvm::FunctionPass {
-  public:
-    static char ID;
-    IsCompileTimeConstantPass(bool last = false) : FunctionPass(ID) { isLastTry = last; }
-
-    llvm::StringRef getPassName() const { return "Resolve \"is compile time constant\""; }
-    bool runOnBasicBlock(llvm::BasicBlock &BB);
-    bool runOnFunction(llvm::Function &F);
-
-    bool isLastTry;
-};
-
-char IsCompileTimeConstantPass::ID = 0;
-
-bool IsCompileTimeConstantPass::runOnBasicBlock(llvm::BasicBlock &bb) {
-    DEBUG_START_PASS("IsCompileTimeConstantPass");
-
-    llvm::Function *funcs[] = {m->module->getFunction("__is_compile_time_constant_mask"),
-                               m->module->getFunction("__is_compile_time_constant_uniform_int32"),
-                               m->module->getFunction("__is_compile_time_constant_varying_int32")};
-
-    bool modifiedAny = false;
-restart:
-    for (llvm::BasicBlock::iterator i = bb.begin(), e = bb.end(); i != e; ++i) {
-        // Iterate through the instructions looking for calls to the
-        // __is_compile_time_constant_*() functions
-        llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*i);
-        if (callInst == NULL)
-            continue;
-
-        int j;
-        int nFuncs = sizeof(funcs) / sizeof(funcs[0]);
-        for (j = 0; j < nFuncs; ++j) {
-            if (funcs[j] != NULL && callInst->getCalledFunction() == funcs[j])
-                break;
-        }
-        if (j == nFuncs)
-            // not a __is_compile_time_constant_* function
-            continue;
-
-        // This optimization pass can be disabled with both the (poorly
-        // named) disableGatherScatterFlattening option and
-        // disableMaskAllOnOptimizations.
-        if (g->opt.disableGatherScatterFlattening || g->opt.disableMaskAllOnOptimizations) {
-            llvm::ReplaceInstWithValue(i->getParent()->getInstList(), i, LLVMFalse);
-            modifiedAny = true;
-            goto restart;
-        }
-
-        // Is it a constant?  Bingo, turn the call's value into a constant
-        // true value.
-        llvm::Value *operand = callInst->getArgOperand(0);
-        if (llvm::isa<llvm::Constant>(operand)) {
-            llvm::ReplaceInstWithValue(i->getParent()->getInstList(), i, LLVMTrue);
-            modifiedAny = true;
-            goto restart;
-        }
-
-        // This pass runs multiple times during optimization.  Up until the
-        // very last time, it only replaces the call with a 'true' if the
-        // value is known to be constant and otherwise leaves the call
-        // alone, in case further optimization passes can help resolve its
-        // value.  The last time through, it eventually has to give up, and
-        // replaces any remaining ones with 'false' constants.
-        if (isLastTry) {
-            llvm::ReplaceInstWithValue(i->getParent()->getInstList(), i, LLVMFalse);
-            modifiedAny = true;
-            goto restart;
-        }
-    }
-
-    DEBUG_END_PASS("IsCompileTimeConstantPass");
-
-    return modifiedAny;
-}
-
-bool IsCompileTimeConstantPass::runOnFunction(llvm::Function &F) {
-
-    llvm::TimeTraceScope FuncScope("IsCompileTimeConstantPass::runOnFunction", F.getName());
-    bool modifiedAny = false;
-    for (llvm::BasicBlock &BB : F) {
-        modifiedAny |= runOnBasicBlock(BB);
-    }
-    return modifiedAny;
-}
-
-static llvm::Pass *CreateIsCompileTimeConstantPass(bool isLastTry) { return new IsCompileTimeConstantPass(isLastTry); }
 
 //////////////////////////////////////////////////////////////////////////
 // DebugPass
