@@ -64,7 +64,15 @@
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #include <llvm/Transforms/Vectorize.h>
 
+#ifdef ISPC_XE_ENABLED
+#include <llvm/GenXIntrinsics/GenXIntrOpts.h>
+#include <llvm/GenXIntrinsics/GenXIntrinsics.h>
+#endif
+
 namespace ispc {
+
+// Constant in number of bytes.
+enum { BYTE = 1, WORD = 2, DWORD = 4, QWORD = 8, OWORD = 16, GRF = 32 };
 
 #ifndef ISPC_NO_DUMPS
 #define DEBUG_START_PASS(NAME)                                                                                         \
