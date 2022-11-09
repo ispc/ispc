@@ -31,19 +31,54 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file ISPCPasses.h
-    @brief Includes available ISPC passes
-*/
-
 #pragma once
 
-#include "DebugPass.h"
-#include "GatherCoalescePass.h"
-#include "ImproveMemoryOps.h"
-#include "InstructionSimplify.h"
-#include "IntrinsicsOpt.h"
-#include "IsCompileTimeConstant.h"
-#include "MakeInternalFuncsStatic.h"
-#include "Peephole.h"
-#include "ReplacePseudoMemoryOps.h"
-#include "ReplaceStdlibShiftPass.h"
+#include "ISPCPass.h"
+
+#include <sstream>
+
+#ifndef ISPC_NO_DUMPS
+#include <llvm/Support/FileSystem.h>
+#include <llvm/Support/Regex.h>
+
+namespace ispc {
+
+/** This pass is added in list of passes after optimizations which
+    we want to debug and print dump of LLVM IR in stderr. Also it
+    prints name and number of previous optimization.
+ */
+class DebugPass : public llvm::ModulePass {
+  public:
+    static char ID;
+    DebugPass(char *output) : ModulePass(ID) { snprintf(str_output, sizeof(str_output), "%s", output); }
+
+    llvm::StringRef getPassName() const { return "Dump LLVM IR"; }
+    bool runOnModule(llvm::Module &m);
+
+  private:
+    char str_output[100];
+};
+llvm::Pass *CreateDebugPass(char *output);
+
+/** This pass is added in list of passes after optimizations which
+    we want to debug and print dump of LLVM IR to file.
+ */
+class DebugPassFile : public llvm::ModulePass {
+  public:
+    static char ID;
+    DebugPassFile(int number, llvm::StringRef name, std::string dir)
+        : ModulePass(ID), pnum(number), pname(name), pdir(dir) {}
+
+    llvm::StringRef getPassName() const { return "Dump LLVM IR"; }
+    bool runOnModule(llvm::Module &m);
+    bool doInitialization(llvm::Module &m);
+
+  private:
+    void run(llvm::Module &m, bool init);
+    int pnum;
+    llvm::StringRef pname;
+    std::string pdir;
+};
+llvm::Pass *CreateDebugPassFile(int number, llvm::StringRef name, std::string dir);
+} // namespace ispc
+#endif

@@ -125,11 +125,6 @@
 
 using namespace ispc;
 
-#ifndef ISPC_NO_DUMPS
-static llvm::Pass *CreateDebugPass(char *output);
-static llvm::Pass *CreateDebugPassFile(int number, llvm::StringRef name, std::string dir);
-#endif
-
 #ifdef ISPC_XE_ENABLED
 static llvm::Pass *CreateXeGatherCoalescingPass();
 static llvm::Pass *CreateReplaceLLVMIntrinsics();
@@ -553,116 +548,6 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
     }
 #endif
 }
-
-//////////////////////////////////////////////////////////////////////////
-// DebugPass
-
-/** This pass is added in list of passes after optimizations which
-    we want to debug and print dump of LLVM IR in stderr. Also it
-    prints name and number of previous optimization.
- */
-#ifndef ISPC_NO_DUMPS
-class DebugPass : public llvm::ModulePass {
-  public:
-    static char ID;
-    DebugPass(char *output) : ModulePass(ID) { snprintf(str_output, sizeof(str_output), "%s", output); }
-
-    llvm::StringRef getPassName() const { return "Dump LLVM IR"; }
-    bool runOnModule(llvm::Module &m);
-
-  private:
-    char str_output[100];
-};
-
-char DebugPass::ID = 0;
-
-bool DebugPass::runOnModule(llvm::Module &module) {
-    fprintf(stderr, "%s", str_output);
-    fflush(stderr);
-    module.dump();
-    return true;
-}
-
-static llvm::Pass *CreateDebugPass(char *output) { return new DebugPass(output); }
-#endif
-
-//////////////////////////////////////////////////////////////////////////
-// DebugPassFile
-
-/** This pass is added in list of passes after optimizations which
-    we want to debug and print dump of LLVM IR to file.
- */
-#ifndef ISPC_NO_DUMPS
-class DebugPassFile : public llvm::ModulePass {
-  public:
-    static char ID;
-    DebugPassFile(int number, llvm::StringRef name, std::string dir)
-        : ModulePass(ID), pnum(number), pname(name), pdir(dir) {}
-
-    llvm::StringRef getPassName() const { return "Dump LLVM IR"; }
-    bool runOnModule(llvm::Module &m);
-    bool doInitialization(llvm::Module &m);
-
-  private:
-    void run(llvm::Module &m, bool init);
-    int pnum;
-    llvm::StringRef pname;
-    std::string pdir;
-};
-
-char DebugPassFile::ID = 0;
-
-/**
- * Strips all non-alphanumeric characters from given string.
- */
-std::string sanitize(std::string in) {
-    llvm::Regex r("[^[:alnum:]]");
-    while (r.match(in))
-        in = r.sub("", in);
-    return in;
-}
-
-void DebugPassFile::run(llvm::Module &module, bool init) {
-    std::ostringstream oss;
-    oss << (init ? "init_" : "ir_") << pnum << "_" << sanitize(std::string{pname}) << ".ll";
-
-    const std::string pathFile{oss.str()};
-
-#ifdef ISPC_HOST_IS_WINDOWS
-    const std::string pathSep{"\\"};
-#else
-    const std::string pathSep{"/"};
-#endif // ISPC_HOST_IS_WINDOWS
-
-    std::string pathDirFile;
-
-    if (!pdir.empty()) {
-        llvm::sys::fs::create_directories(pdir);
-        pathDirFile = pdir + pathSep + pathFile;
-    } else {
-        pathDirFile = pathFile;
-    }
-
-    std::error_code EC;
-    llvm::raw_fd_ostream OS(pathDirFile, EC, llvm::sys::fs::OF_None);
-    Assert(!EC && "IR dump file creation failed!");
-    module.print(OS, 0);
-}
-
-bool DebugPassFile::runOnModule(llvm::Module &module) {
-    run(module, false);
-    return true;
-}
-
-bool DebugPassFile::doInitialization(llvm::Module &module) {
-    run(module, true);
-    return true;
-}
-
-static llvm::Pass *CreateDebugPassFile(int number, llvm::StringRef name, std::string dir) {
-    return new DebugPassFile(number, name, dir);
-}
-#endif
 
 #ifdef ISPC_XE_ENABLED
 
