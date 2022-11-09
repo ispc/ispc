@@ -83,7 +83,7 @@ function(test_add)
     endif()
     if (SUPPORTED EQUAL 1)
         add_test(NAME ${result_test_name}
-            COMMAND ${PYTHON_EXECUTABLE} ${TEST_RUNNER} ${REF_IMAGE_OPT} ${RES_IMAGE_OPT} ${IMAGE_CMP_TH_OPT} ${DPCPP_SPV}
+            COMMAND ${Python3_EXECUTABLE} ${TEST_RUNNER} ${REF_IMAGE_OPT} ${RES_IMAGE_OPT} ${IMAGE_CMP_TH_OPT} ${DPCPP_SPV}
             ${TEST_REL_PATH} ${PARSED_ARGS_UNPARSED_ARGUMENTS}
         )
     endif()
