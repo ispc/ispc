@@ -48,4 +48,6 @@ target_sources(${PROJECT_NAME}
         "Peephole.h"
         "ReplacePseudoMemoryOps.cpp"
         "ReplacePseudoMemoryOps.h"
+        "ReplaceStdlibShiftPass.cpp"
+        "ReplaceStdlibShiftPass.h"
 )
