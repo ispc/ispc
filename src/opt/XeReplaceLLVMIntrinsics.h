@@ -31,22 +31,24 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file ISPCPasses.h
-    @brief Includes available ISPC passes
-*/
-
 #pragma once
 
-#include "DebugPass.h"
-#include "GatherCoalescePass.h"
-#include "ImproveMemoryOps.h"
-#include "InstructionSimplify.h"
-#include "IntrinsicsOptPass.h"
-#include "IsCompileTimeConstant.h"
-#include "MakeInternalFuncsStatic.h"
-#include "MangleOpenCLBuiltins.h"
-#include "PeepholePass.h"
-#include "ReplacePseudoMemoryOps.h"
-#include "ReplaceStdlibShiftPass.h"
-#include "XeGatherCoalescePass.h"
-#include "XeReplaceLLVMIntrinsics.h"
+#include "ISPCPass.h"
+
+#ifdef ISPC_XE_ENABLED
+
+namespace ispc {
+/** This pass replaces LLVM intrinsics unsupported on Xe
+ */
+
+class ReplaceLLVMIntrinsics : public llvm::FunctionPass {
+  public:
+    static char ID;
+    ReplaceLLVMIntrinsics() : FunctionPass(ID) {}
+    llvm::StringRef getPassName() const { return "LLVM intrinsics replacement"; }
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+    bool runOnFunction(llvm::Function &F);
+};
+llvm::Pass *CreateReplaceLLVMIntrinsics();
+} // namespace ispc
+#endif
