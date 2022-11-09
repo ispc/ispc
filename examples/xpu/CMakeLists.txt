@@ -86,7 +86,6 @@ find_package(Python3 REQUIRED)
 if (NOT Python3_Interpreter_FOUND)
     message(FATAL_ERROR "Failed to find python3 interpretor")
 endif()
-include(FindPythonInterp)
 
 set(COMMON_PATH "${CMAKE_CURRENT_SOURCE_DIR}/common" "${CMAKE_CURRENT_SOURCE_DIR}/../common")
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/AddPerfExample.cmake)
