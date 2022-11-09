@@ -44,6 +44,8 @@ target_sources(${PROJECT_NAME}
         "InstructionSimplify.h"
         "IntrinsicsOpt.cpp"
         "IntrinsicsOpt.h"
+        "MangleOpenCLBuiltins.cpp"
+        "MangleOpenCLBuiltins.h"
         "MakeInternalFuncsStatic.cpp"
         "MakeInternalFuncsStatic.h"
         "Peephole.cpp"

@@ -31,20 +31,28 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/** @file ISPCPasses.h
-    @brief Includes available ISPC passes
-*/
-
 #pragma once
 
-#include "DebugPass.h"
-#include "GatherCoalescePass.h"
-#include "ImproveMemoryOps.h"
-#include "InstructionSimplify.h"
-#include "IntrinsicsOpt.h"
-#include "IsCompileTimeConstant.h"
-#include "MakeInternalFuncsStatic.h"
-#include "MangleOpenCLBuiltins.h"
-#include "Peephole.h"
-#include "ReplacePseudoMemoryOps.h"
-#include "ReplaceStdlibShiftPass.h"
+#include "ISPCPass.h"
+
+#ifdef ISPC_XE_ENABLED
+#include <LLVMSPIRVLib/LLVMSPIRVLib.h>
+
+namespace ispc {
+
+/** This pass mangles SPIR-V OpenCL builtins used in Xe target file
+ */
+
+class MangleOpenCLBuiltins : public llvm::FunctionPass {
+  public:
+    static char ID;
+    MangleOpenCLBuiltins(bool last = false) : FunctionPass(ID) {}
+
+    llvm::StringRef getPassName() const { return "Mangle OpenCL builtins"; }
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+    bool runOnFunction(llvm::Function &F);
+};
+
+llvm::Pass *CreateMangleOpenCLBuiltins();
+} // namespace ispc
+#endif

@@ -123,7 +123,6 @@ static llvm::Pass *CreateXeGatherCoalescingPass();
 static llvm::Pass *CreateReplaceLLVMIntrinsics();
 static llvm::Pass *CreateDemotePHIs();
 static llvm::Pass *CreateCheckIRForGenTarget();
-static llvm::Pass *CreateMangleOpenCLBuiltins();
 #endif
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1666,96 +1665,6 @@ bool CheckIRForGenTarget::runOnFunction(llvm::Function &F) {
 static llvm::Pass *CreateCheckIRForGenTarget() { return new CheckIRForGenTarget(); }
 
 ///////////////////////////////////////////////////////////////////////////
-// MangleOpenCLBuiltins
-
-/** This pass mangles SPIR-V OpenCL builtins used in Xe target file
- */
-
-class MangleOpenCLBuiltins : public llvm::FunctionPass {
-  public:
-    static char ID;
-    MangleOpenCLBuiltins(bool last = false) : FunctionPass(ID) {}
-
-    llvm::StringRef getPassName() const { return "Mangle OpenCL builtins"; }
-    bool runOnBasicBlock(llvm::BasicBlock &BB);
-    bool runOnFunction(llvm::Function &F);
-};
-
-char MangleOpenCLBuiltins::ID = 0;
-
-static std::string mangleMathOCLBuiltin(const llvm::Function &func) {
-    Assert(func.getName().startswith("__spirv_ocl") && "wrong argument: ocl builtin is expected");
-    std::string mangledName;
-    llvm::Type *retType = func.getReturnType();
-    std::string funcName = func.getName().str();
-    std::vector<llvm::Type *> ArgTy;
-    // spirv OpenCL builtins are used for double types only
-    Assert(retType->isVectorTy() && llvm::dyn_cast<llvm::FixedVectorType>(retType)->getElementType()->isDoubleTy() ||
-           retType->isSingleValueType() && retType->isDoubleTy());
-    if (retType->isVectorTy() && llvm::dyn_cast<llvm::FixedVectorType>(retType)->getElementType()->isDoubleTy()) {
-        // Get vector width from retType. Required width may be different from target width
-        // for example for 32-width targets
-        ArgTy.push_back(llvm::FixedVectorType::get(LLVMTypes::DoubleType,
-                                                   llvm::dyn_cast<llvm::FixedVectorType>(retType)->getNumElements()));
-        // _DvWIDTH suffix is used in target file to differentiate scalar
-        // and vector versions of intrinsics. Here we remove this
-        // suffix and mangle the name.
-        size_t pos = funcName.find("_DvWIDTH");
-        if (pos != std::string::npos) {
-            funcName.erase(pos, 8);
-        }
-    } else if (retType->isSingleValueType() && retType->isDoubleTy()) {
-        ArgTy.push_back(LLVMTypes::DoubleType);
-    }
-    mangleOpenClBuiltin(funcName, ArgTy, mangledName);
-    return mangledName;
-}
-
-static std::string manglePrintfOCLBuiltin(const llvm::Function &func) {
-    Assert(func.getName() == "__spirv_ocl_printf" && "wrong argument: ocl builtin is expected");
-    std::string mangledName;
-    mangleOpenClBuiltin(func.getName().str(), func.getArg(0)->getType(), mangledName);
-    return mangledName;
-}
-
-static std::string mangleOCLBuiltin(const llvm::Function &func) {
-    Assert(func.getName().startswith("__spirv_ocl") && "wrong argument: ocl builtin is expected");
-    if (func.getName() == "__spirv_ocl_printf")
-        return manglePrintfOCLBuiltin(func);
-    return mangleMathOCLBuiltin(func);
-}
-
-bool MangleOpenCLBuiltins::runOnBasicBlock(llvm::BasicBlock &bb) {
-    DEBUG_START_PASS("MangleOpenCLBuiltins");
-    bool modifiedAny = false;
-    for (llvm::BasicBlock::iterator I = bb.begin(), E = --bb.end(); I != E; ++I) {
-        llvm::Instruction *inst = &*I;
-        if (llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst)) {
-            llvm::Function *func = ci->getCalledFunction();
-            if (func == NULL)
-                continue;
-            if (func->getName().startswith("__spirv_ocl")) {
-                std::string mangledName = mangleOCLBuiltin(*func);
-                func->setName(mangledName);
-                modifiedAny = true;
-            }
-        }
-    }
-    DEBUG_END_PASS("MangleOpenCLBuiltins");
-
-    return modifiedAny;
-}
-
-bool MangleOpenCLBuiltins::runOnFunction(llvm::Function &F) {
-    llvm::TimeTraceScope FuncScope("MangleOpenCLBuiltins::runOnFunction", F.getName());
-    bool modifiedAny = false;
-    for (llvm::BasicBlock &BB : F) {
-        modifiedAny |= runOnBasicBlock(BB);
-    }
-    return modifiedAny;
-}
-
-static llvm::Pass *CreateMangleOpenCLBuiltins() { return new MangleOpenCLBuiltins(); }
 
 class DemotePHIs : public llvm::FunctionPass {
   public:
