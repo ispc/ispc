@@ -67,6 +67,8 @@
 #ifdef ISPC_XE_ENABLED
 #include <llvm/GenXIntrinsics/GenXIntrOpts.h>
 #include <llvm/GenXIntrinsics/GenXIntrinsics.h>
+// Used for Xe gather coalescing
+#include <llvm/Transforms/Utils/Local.h>
 #endif
 
 #ifndef PRId64

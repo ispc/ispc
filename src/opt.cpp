@@ -111,15 +111,12 @@
 #include <llvm/GenXIntrinsics/GenXIntrOpts.h>
 #include <llvm/GenXIntrinsics/GenXIntrinsics.h>
 #include <llvm/GenXIntrinsics/GenXSPIRVWriterAdaptor.h>
-// Used for Xe gather coalescing
-#include <llvm/Transforms/Utils/Local.h>
 
 #endif
 
 using namespace ispc;
 
 #ifdef ISPC_XE_ENABLED
-static llvm::Pass *CreateDemotePHIs();
 static llvm::Pass *CreateCheckIRForGenTarget();
 #endif
 
@@ -635,34 +632,5 @@ bool CheckIRForGenTarget::runOnFunction(llvm::Function &F) {
 static llvm::Pass *CreateCheckIRForGenTarget() { return new CheckIRForGenTarget(); }
 
 ///////////////////////////////////////////////////////////////////////////
-
-class DemotePHIs : public llvm::FunctionPass {
-  public:
-    static char ID;
-    DemotePHIs() : FunctionPass(ID) {}
-    llvm::StringRef getPassName() const { return "Demote PHI nodes"; }
-    bool runOnFunction(llvm::Function &F);
-};
-
-char DemotePHIs::ID = 0;
-
-bool DemotePHIs::runOnFunction(llvm::Function &F) {
-    llvm::TimeTraceScope FuncScope("DemotePHIs::runOnFunction", F.getName());
-    if (F.isDeclaration() || skipFunction(F))
-        return false;
-    std::vector<llvm::Instruction *> WorkList;
-    for (auto &ibb : F)
-        for (llvm::BasicBlock::iterator iib = ibb.begin(), iie = ibb.end(); iib != iie; ++iib)
-            if (llvm::isa<llvm::PHINode>(iib))
-                WorkList.push_back(&*iib);
-
-    // Demote phi nodes
-    for (auto *ilb : llvm::reverse(WorkList))
-        DemotePHIToStack(llvm::cast<llvm::PHINode>(ilb), nullptr);
-
-    return !WorkList.empty();
-}
-
-static llvm::Pass *CreateDemotePHIs() { return new DemotePHIs(); }
 
 #endif
