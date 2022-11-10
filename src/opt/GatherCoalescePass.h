@@ -59,16 +59,18 @@ namespace ispc {
 class GatherCoalescePass : public llvm::FunctionPass {
   public:
     static char ID;
-    GatherCoalescePass() : FunctionPass(ID) {}
+    explicit GatherCoalescePass() : FunctionPass(ID) {}
 
-    llvm::StringRef getPassName() const { return "Gather Coalescing"; }
-    bool runOnBasicBlock(llvm::BasicBlock &BB);
-    bool runOnFunction(llvm::Function &F);
+    llvm::StringRef getPassName() const override { return "Gather Coalescing"; }
+    bool runOnFunction(llvm::Function &F) override;
 
   private:
     // Type of base pointer element type (the 1st argument of the intrinsic) is i8
     // e.g. @__pseudo_gather_factored_base_offsets32_i32(i8 *, <WIDTH x i32>, i32, <WIDTH x i32>, <WIDTH x MASK>)
     llvm::Type *baseType{LLVMTypes::Int8Type};
+    bool coalesceGathersFactored(llvm::BasicBlock &BB);
 };
+
 llvm::Pass *CreateGatherCoalescePass();
+
 } // namespace ispc

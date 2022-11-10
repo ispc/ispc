@@ -41,12 +41,16 @@ namespace ispc {
 
 class PeepholePass : public llvm::FunctionPass {
   public:
-    PeepholePass() : FunctionPass(ID){};
-    llvm::StringRef getPassName() const { return "Peephole Optimizations"; }
-    bool runOnBasicBlock(llvm::BasicBlock &BB);
-    bool runOnFunction(llvm::Function &F);
-
     static char ID;
+    explicit PeepholePass() : FunctionPass(ID){};
+
+    llvm::StringRef getPassName() const override { return "Peephole Optimizations"; }
+    bool runOnFunction(llvm::Function &F) override;
+
+  private:
+    bool matchAndReplace(llvm::BasicBlock &BB);
 };
+
 llvm::Pass *CreatePeepholePass();
+
 } // namespace ispc

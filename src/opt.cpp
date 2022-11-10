@@ -81,10 +81,6 @@
 #endif
 #endif // ISPC_HOST_IS_WINDOWS
 
-#ifndef ISPC_NO_DUMPS
-#include <llvm/Support/FileSystem.h>
-#include <llvm/Support/Regex.h>
-#endif
 #ifdef ISPC_XE_ENABLED
 #include <llvm/GenXIntrinsics/GenXSPIRVWriterAdaptor.h>
 #endif
@@ -170,6 +166,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         // run absolutely no optimizations, since the front-end needs us to
         // take the various __pseudo_* functions it has emitted and turn
         // them into something that can actually execute.
+        // TODO: ISPC doesn't use SimdCF now so the block below can be removed.
 #ifdef ISPC_XE_ENABLED
         if (g->target->isXeTarget()) {
             // Global DCE is required for ISPCSimdCFLoweringPass

@@ -44,11 +44,17 @@ namespace ispc {
 class ReplaceLLVMIntrinsics : public llvm::FunctionPass {
   public:
     static char ID;
-    ReplaceLLVMIntrinsics() : FunctionPass(ID) {}
-    llvm::StringRef getPassName() const { return "LLVM intrinsics replacement"; }
-    bool runOnBasicBlock(llvm::BasicBlock &BB);
-    bool runOnFunction(llvm::Function &F);
+    explicit ReplaceLLVMIntrinsics() : FunctionPass(ID) {}
+
+    llvm::StringRef getPassName() const override { return "LLVM intrinsics replacement"; }
+    bool runOnFunction(llvm::Function &F) override;
+
+  private:
+    bool replaceUnspportedIntrinsics(llvm::BasicBlock &BB);
 };
+
 llvm::Pass *CreateReplaceLLVMIntrinsics();
+
 } // namespace ispc
+
 #endif

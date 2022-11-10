@@ -511,9 +511,9 @@ llvm::Value *MemoryCoalescing::extractValueFromBlock(const MemoryCoalescing::Blo
 char XeGatherCoalescing::ID = 0;
 
 void XeGatherCoalescing::runOnBasicBlock(llvm::BasicBlock &bb) {
-    DEBUG_START_PASS("XeGatherCoalescing");
+    DEBUG_START_BB("XeGatherCoalescing");
     runOnBasicBlockImpl(bb);
-    DEBUG_END_PASS("XeGatherCoalescing");
+    DEBUG_END_BB("XeGatherCoalescing");
 }
 
 void XeGatherCoalescing::optimizePtr(llvm::Value *Ptr, PtrData &PD, llvm::Instruction *InsertPoint) {
@@ -685,5 +685,7 @@ llvm::Value *XeGatherCoalescing::getPointer(llvm::Instruction *Inst) const {
 }
 
 llvm::Pass *CreateXeGatherCoalescingPass() { return new XeGatherCoalescing; }
+
 } // namespace ispc
+
 #endif

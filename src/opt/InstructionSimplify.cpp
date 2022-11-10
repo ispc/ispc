@@ -37,7 +37,7 @@ namespace ispc {
 
 char InstructionSimplifyPass::ID = 0;
 
-llvm::Value *InstructionSimplifyPass::simplifyBoolVec(llvm::Value *value) {
+static llvm::Value *lSimplifyBoolVec(llvm::Value *value) {
     llvm::TruncInst *trunc = llvm::dyn_cast<llvm::TruncInst>(value);
     if (trunc != NULL) {
         // Convert trunc({sext,zext}(i1 vector)) -> (i1 vector)
@@ -75,7 +75,7 @@ llvm::Value *InstructionSimplifyPass::simplifyBoolVec(llvm::Value *value) {
     return NULL;
 }
 
-bool InstructionSimplifyPass::simplifySelect(llvm::SelectInst *selectInst, llvm::BasicBlock::iterator iter) {
+static bool lSimplifySelect(llvm::SelectInst *selectInst, llvm::BasicBlock::iterator iter) {
     if (selectInst->getType()->isVectorTy() == false)
         return false;
     Assert(selectInst->getOperand(1) != NULL);
@@ -101,7 +101,7 @@ bool InstructionSimplifyPass::simplifySelect(llvm::SelectInst *selectInst, llvm:
     // the code generators and leads to sub-optimal code (particularly for
     // 8 and 16-bit masks).  We'll try to simplify them out here so that
     // the code generator patterns match..
-    if ((factor = simplifyBoolVec(factor)) != NULL) {
+    if ((factor = lSimplifyBoolVec(factor)) != NULL) {
         llvm::Instruction *newSelect = llvm::SelectInst::Create(factor, selectInst->getOperand(1),
                                                                 selectInst->getOperand(2), selectInst->getName());
         llvm::ReplaceInstWithInst(selectInst, newSelect);
@@ -111,7 +111,7 @@ bool InstructionSimplifyPass::simplifySelect(llvm::SelectInst *selectInst, llvm:
     return false;
 }
 
-bool InstructionSimplifyPass::simplifyCall(llvm::CallInst *callInst, llvm::BasicBlock::iterator iter) {
+static bool lSimplifyCall(llvm::CallInst *callInst, llvm::BasicBlock::iterator iter) {
     llvm::Function *calledFunc = callInst->getCalledFunction();
 
     // Turn a __movmsk call with a compile-time constant vector into the
@@ -127,26 +127,26 @@ bool InstructionSimplifyPass::simplifyCall(llvm::CallInst *callInst, llvm::Basic
     return false;
 }
 
-bool InstructionSimplifyPass::runOnBasicBlock(llvm::BasicBlock &bb) {
-    DEBUG_START_PASS("InstructionSimplify");
+bool InstructionSimplifyPass::simplifyInstructions(llvm::BasicBlock &bb) {
+    DEBUG_START_BB("InstructionSimplify");
 
     bool modifiedAny = false;
 
 restart:
     for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
         llvm::SelectInst *selectInst = llvm::dyn_cast<llvm::SelectInst>(&*iter);
-        if (selectInst && simplifySelect(selectInst, iter)) {
+        if (selectInst && lSimplifySelect(selectInst, iter)) {
             modifiedAny = true;
             goto restart;
         }
         llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*iter);
-        if (callInst && simplifyCall(callInst, iter)) {
+        if (callInst && lSimplifyCall(callInst, iter)) {
             modifiedAny = true;
             goto restart;
         }
     }
 
-    DEBUG_END_PASS("InstructionSimplify");
+    DEBUG_END_BB("InstructionSimplify");
 
     return modifiedAny;
 }
@@ -156,10 +156,11 @@ bool InstructionSimplifyPass::runOnFunction(llvm::Function &F) {
     llvm::TimeTraceScope FuncScope("InstructionSimplifyPass::runOnFunction", F.getName());
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
-        modifiedAny |= runOnBasicBlock(BB);
+        modifiedAny |= simplifyInstructions(BB);
     }
     return modifiedAny;
 }
 
 llvm::Pass *CreateInstructionSimplifyPass() { return new InstructionSimplifyPass; }
+
 } // namespace ispc

@@ -49,12 +49,17 @@ namespace ispc {
 class CheckIRForXeTarget : public llvm::FunctionPass {
   public:
     static char ID;
-    CheckIRForXeTarget(bool last = false) : FunctionPass(ID) {}
+    explicit CheckIRForXeTarget() : FunctionPass(ID) {}
 
-    llvm::StringRef getPassName() const { return "Check IR for Xe target"; }
-    bool runOnBasicBlock(llvm::BasicBlock &BB);
-    bool runOnFunction(llvm::Function &F);
+    llvm::StringRef getPassName() const override { return "Check and fix IR for Xe target"; }
+    bool runOnFunction(llvm::Function &F) override;
+
+  private:
+    bool checkAndFixIRForXe(llvm::BasicBlock &BB);
 };
+
 llvm::Pass *CreateCheckIRForXeTarget();
+
 } // namespace ispc
+
 #endif

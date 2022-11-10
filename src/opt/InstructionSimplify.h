@@ -46,19 +46,16 @@ namespace ispc {
 */
 class InstructionSimplifyPass : public llvm::FunctionPass {
   public:
-    InstructionSimplifyPass() : FunctionPass(ID) {}
-
-    llvm::StringRef getPassName() const { return "Vector Select Optimization"; }
-    bool runOnBasicBlock(llvm::BasicBlock &BB);
-    bool runOnFunction(llvm::Function &F);
-
     static char ID;
+    explicit InstructionSimplifyPass() : FunctionPass(ID) {}
+
+    llvm::StringRef getPassName() const override { return "Vector Select Optimization"; }
+    bool runOnFunction(llvm::Function &F) override;
 
   private:
-    static bool simplifySelect(llvm::SelectInst *selectInst, llvm::BasicBlock::iterator iter);
-    static llvm::Value *simplifyBoolVec(llvm::Value *value);
-    static bool simplifyCall(llvm::CallInst *callInst, llvm::BasicBlock::iterator iter);
+    bool simplifyInstructions(llvm::BasicBlock &BB);
 };
 
 llvm::Pass *CreateInstructionSimplifyPass();
+
 } // namespace ispc

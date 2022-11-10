@@ -1998,8 +1998,8 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
     return false;
 }
 
-bool ImproveMemoryOpsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
-    DEBUG_START_PASS("ImproveMemoryOps");
+bool ImproveMemoryOpsPass::improveMemoryOps(llvm::BasicBlock &bb) {
+    DEBUG_START_BB("ImproveMemoryOps");
 
     bool modifiedAny = false;
 restart:
@@ -2033,7 +2033,7 @@ restart:
         }
     }
 
-    DEBUG_END_PASS("ImproveMemoryOps");
+    DEBUG_END_BB("ImproveMemoryOps");
 
     return modifiedAny;
 }
@@ -2043,10 +2043,11 @@ bool ImproveMemoryOpsPass::runOnFunction(llvm::Function &F) {
     llvm::TimeTraceScope FuncScope("ImproveMemoryOpsPass::runOnFunction", F.getName());
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
-        modifiedAny |= runOnBasicBlock(BB);
+        modifiedAny |= improveMemoryOps(BB);
     }
     return modifiedAny;
 }
 
 llvm::Pass *CreateImproveMemoryOpsPass() { return new ImproveMemoryOpsPass; }
+
 } // namespace ispc

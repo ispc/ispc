@@ -52,8 +52,8 @@ static int64_t lGetIntValue(llvm::Value *offset) {
 // optimizing rotate() implementation better when similar implementations
 // are used for both. This is a hack to produce similarly optimized code for
 // shift.
-bool ReplaceStdlibShiftPass::runOnBasicBlock(llvm::BasicBlock &bb) {
-    DEBUG_START_PASS("ReplaceStdlibShiftPass");
+bool ReplaceStdlibShiftPass::replaceStdlibShiftBuiltin(llvm::BasicBlock &bb) {
+    DEBUG_START_BB("ReplaceStdlibShiftPass");
     bool modifiedAny = false;
 
     llvm::Function *shifts[6];
@@ -99,7 +99,7 @@ bool ReplaceStdlibShiftPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         }
     }
 
-    DEBUG_END_PASS("ReplaceStdlibShiftPass");
+    DEBUG_END_BB("ReplaceStdlibShiftPass");
 
     return modifiedAny;
 }
@@ -109,10 +109,11 @@ bool ReplaceStdlibShiftPass::runOnFunction(llvm::Function &F) {
     llvm::TimeTraceScope FuncScope("ReplaceStdlibShiftPass::runOnFunction", F.getName());
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
-        modifiedAny |= runOnBasicBlock(BB);
+        modifiedAny |= replaceStdlibShiftBuiltin(BB);
     }
     return modifiedAny;
 }
 
 llvm::Pass *CreateReplaceStdlibShiftPass() { return new ReplaceStdlibShiftPass(); }
+
 } // namespace ispc

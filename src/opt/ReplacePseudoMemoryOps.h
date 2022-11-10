@@ -44,11 +44,13 @@ namespace ispc {
 class ReplacePseudoMemoryOpsPass : public llvm::FunctionPass {
   public:
     static char ID;
-    ReplacePseudoMemoryOpsPass() : FunctionPass(ID) {}
+    explicit ReplacePseudoMemoryOpsPass() : FunctionPass(ID) {}
 
-    llvm::StringRef getPassName() const { return "Replace Pseudo Memory Ops"; }
-    bool runOnBasicBlock(llvm::BasicBlock &BB);
-    bool runOnFunction(llvm::Function &F);
+    llvm::StringRef getPassName() const override { return "Replace Pseudo Memory Ops"; }
+    bool runOnFunction(llvm::Function &F) override;
+
+  private:
+    bool replacePseudoMemoryOps(llvm::BasicBlock &BB);
 };
 
 llvm::Pass *CreateReplacePseudoMemoryOpsPass();

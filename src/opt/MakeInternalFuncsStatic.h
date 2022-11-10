@@ -50,12 +50,13 @@ namespace ispc {
 class MakeInternalFuncsStaticPass : public llvm::ModulePass {
   public:
     static char ID;
-    MakeInternalFuncsStaticPass(bool last = false) : ModulePass(ID) {}
+    explicit MakeInternalFuncsStaticPass() : ModulePass(ID) {}
 
-    void getAnalysisUsage(llvm::AnalysisUsage &AU) const { AU.setPreservesCFG(); }
-
-    llvm::StringRef getPassName() const { return "Make internal funcs \"static\""; }
-    bool runOnModule(llvm::Module &m);
+    void getAnalysisUsage(llvm::AnalysisUsage &AU) const override { AU.setPreservesCFG(); }
+    llvm::StringRef getPassName() const override { return "Make internal funcs \"static\""; }
+    bool runOnModule(llvm::Module &m) override;
 };
+
 llvm::Pass *CreateMakeInternalFuncsStaticPass();
+
 } // namespace ispc

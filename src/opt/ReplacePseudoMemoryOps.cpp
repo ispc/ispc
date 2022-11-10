@@ -304,8 +304,8 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
     return true;
 }
 
-bool ReplacePseudoMemoryOpsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
-    DEBUG_START_PASS("ReplacePseudoMemoryOpsPass");
+bool ReplacePseudoMemoryOpsPass::replacePseudoMemoryOps(llvm::BasicBlock &bb) {
+    DEBUG_START_BB("ReplacePseudoMemoryOpsPass");
 
     bool modifiedAny = false;
 
@@ -324,7 +324,7 @@ restart:
         }
     }
 
-    DEBUG_END_PASS("ReplacePseudoMemoryOpsPass");
+    DEBUG_END_BB("ReplacePseudoMemoryOpsPass");
 
     return modifiedAny;
 }
@@ -334,7 +334,7 @@ bool ReplacePseudoMemoryOpsPass::runOnFunction(llvm::Function &F) {
     llvm::TimeTraceScope FuncScope("ReplacePseudoMemoryOpsPass::runOnFunction", F.getName());
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
-        modifiedAny |= runOnBasicBlock(BB);
+        modifiedAny |= replacePseudoMemoryOps(BB);
     }
     return modifiedAny;
 }

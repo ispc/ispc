@@ -37,8 +37,8 @@ namespace ispc {
 
 char IsCompileTimeConstantPass::ID = 0;
 
-bool IsCompileTimeConstantPass::runOnBasicBlock(llvm::BasicBlock &bb) {
-    DEBUG_START_PASS("IsCompileTimeConstantPass");
+bool IsCompileTimeConstantPass::lowerCompileTimeConstant(llvm::BasicBlock &bb) {
+    DEBUG_START_BB("IsCompileTimeConstantPass");
 
     llvm::Function *funcs[] = {m->module->getFunction("__is_compile_time_constant_mask"),
                                m->module->getFunction("__is_compile_time_constant_uniform_int32"),
@@ -94,7 +94,7 @@ restart:
         }
     }
 
-    DEBUG_END_PASS("IsCompileTimeConstantPass");
+    DEBUG_END_BB("IsCompileTimeConstantPass");
 
     return modifiedAny;
 }
@@ -104,10 +104,11 @@ bool IsCompileTimeConstantPass::runOnFunction(llvm::Function &F) {
     llvm::TimeTraceScope FuncScope("IsCompileTimeConstantPass::runOnFunction", F.getName());
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
-        modifiedAny |= runOnBasicBlock(BB);
+        modifiedAny |= lowerCompileTimeConstant(BB);
     }
     return modifiedAny;
 }
 
 llvm::Pass *CreateIsCompileTimeConstantPass(bool isLastTry) { return new IsCompileTimeConstantPass(isLastTry); }
+
 } // namespace ispc

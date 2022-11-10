@@ -34,6 +34,7 @@
 #include "MangleOpenCLBuiltins.h"
 
 #ifdef ISPC_XE_ENABLED
+
 namespace ispc {
 
 char MangleOpenCLBuiltins::ID = 0;
@@ -80,8 +81,8 @@ static std::string mangleOCLBuiltin(const llvm::Function &func) {
     return mangleMathOCLBuiltin(func);
 }
 
-bool MangleOpenCLBuiltins::runOnBasicBlock(llvm::BasicBlock &bb) {
-    DEBUG_START_PASS("MangleOpenCLBuiltins");
+bool MangleOpenCLBuiltins::mangleOpenCLBuiltins(llvm::BasicBlock &bb) {
+    DEBUG_START_BB("MangleOpenCLBuiltins");
     bool modifiedAny = false;
     for (llvm::BasicBlock::iterator I = bb.begin(), E = --bb.end(); I != E; ++I) {
         llvm::Instruction *inst = &*I;
@@ -96,7 +97,7 @@ bool MangleOpenCLBuiltins::runOnBasicBlock(llvm::BasicBlock &bb) {
             }
         }
     }
-    DEBUG_END_PASS("MangleOpenCLBuiltins");
+    DEBUG_END_BB("MangleOpenCLBuiltins");
 
     return modifiedAny;
 }
@@ -105,11 +106,13 @@ bool MangleOpenCLBuiltins::runOnFunction(llvm::Function &F) {
     llvm::TimeTraceScope FuncScope("MangleOpenCLBuiltins::runOnFunction", F.getName());
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
-        modifiedAny |= runOnBasicBlock(BB);
+        modifiedAny |= mangleOpenCLBuiltins(BB);
     }
     return modifiedAny;
 }
 
 llvm::Pass *CreateMangleOpenCLBuiltins() { return new MangleOpenCLBuiltins(); }
+
 } // namespace ispc
+
 #endif

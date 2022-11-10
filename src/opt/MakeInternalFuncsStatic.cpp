@@ -214,4 +214,5 @@ bool MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
 }
 
 llvm::Pass *CreateMakeInternalFuncsStaticPass() { return new MakeInternalFuncsStaticPass; }
+
 } // namespace ispc

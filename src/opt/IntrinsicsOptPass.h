@@ -48,17 +48,15 @@ namespace ispc {
 */
 class IntrinsicsOpt : public llvm::FunctionPass {
   public:
-    IntrinsicsOpt() : FunctionPass(ID){};
-
-    llvm::StringRef getPassName() const { return "Intrinsics Cleanup Optimization"; }
-
-    bool runOnBasicBlock(llvm::BasicBlock &BB);
-
-    bool runOnFunction(llvm::Function &F);
-
     static char ID;
+    explicit IntrinsicsOpt() : FunctionPass(ID){};
+
+    llvm::StringRef getPassName() const override { return "Intrinsics Cleanup Optimization"; }
+    bool runOnFunction(llvm::Function &F) override;
 
   private:
+    bool optimizeIntrinsics(llvm::BasicBlock &BB);
+
     struct MaskInstruction {
         MaskInstruction(llvm::Function *f) { function = f; }
         llvm::Function *function;
@@ -90,5 +88,7 @@ class IntrinsicsOpt : public llvm::FunctionPass {
     bool matchesMaskInstruction(llvm::Function *function);
     BlendInstruction *matchingBlendInstruction(llvm::Function *function);
 };
+
 llvm::Pass *CreateIntrinsicsOptPass();
+
 } // namespace ispc
