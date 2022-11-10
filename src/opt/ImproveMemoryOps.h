@@ -50,14 +50,15 @@ namespace ispc {
 class ImproveMemoryOpsPass : public llvm::FunctionPass {
   public:
     static char ID;
-    ImproveMemoryOpsPass() : FunctionPass(ID) {}
+    explicit ImproveMemoryOpsPass() : FunctionPass(ID) {}
 
-    llvm::StringRef getPassName() const { return "Improve Memory Ops"; }
+    llvm::StringRef getPassName() const override { return "Improve Memory Ops"; }
+    bool runOnFunction(llvm::Function &F) override;
 
-    bool runOnBasicBlock(llvm::BasicBlock &BB);
-
-    bool runOnFunction(llvm::Function &F);
+  private:
+    bool improveMemoryOps(llvm::BasicBlock &BB);
 };
 
 llvm::Pass *CreateImproveMemoryOpsPass();
+
 } // namespace ispc

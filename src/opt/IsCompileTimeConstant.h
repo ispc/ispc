@@ -53,13 +53,16 @@ namespace ispc {
 class IsCompileTimeConstantPass : public llvm::FunctionPass {
   public:
     static char ID;
-    IsCompileTimeConstantPass(bool last = false) : FunctionPass(ID) { isLastTry = last; }
+    explicit IsCompileTimeConstantPass(bool last = false) : FunctionPass(ID) { isLastTry = last; }
 
-    llvm::StringRef getPassName() const { return "Resolve \"is compile time constant\""; }
-    bool runOnBasicBlock(llvm::BasicBlock &BB);
-    bool runOnFunction(llvm::Function &F);
+    llvm::StringRef getPassName() const override { return "Resolve \"is compile time constant\""; }
+    bool runOnFunction(llvm::Function &F) override;
 
+  private:
     bool isLastTry;
+    bool lowerCompileTimeConstant(llvm::BasicBlock &BB);
 };
+
 llvm::Pass *CreateIsCompileTimeConstantPass(bool isLastTry);
+
 } // namespace ispc

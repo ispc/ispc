@@ -84,7 +84,7 @@ namespace ispc {
 enum { BYTE = 1, WORD = 2, DWORD = 4, QWORD = 8, OWORD = 16, GRF = 32 };
 
 #ifndef ISPC_NO_DUMPS
-#define DEBUG_START_PASS(NAME)                                                                                         \
+#define DEBUG_START_BB(NAME)                                                                                           \
     if (g->debugPrint &&                                                                                               \
         (getenv("FUNC") == NULL || (getenv("FUNC") != NULL && !strncmp(bb.getParent()->getName().str().c_str(),        \
                                                                        getenv("FUNC"), strlen(getenv("FUNC")))))) {    \
@@ -94,7 +94,7 @@ enum { BYTE = 1, WORD = 2, DWORD = 4, QWORD = 8, OWORD = 16, GRF = 32 };
         fprintf(stderr, "---------------\n\n");                                                                        \
     } else /* eat semicolon */
 
-#define DEBUG_END_PASS(NAME)                                                                                           \
+#define DEBUG_END_BB(NAME)                                                                                             \
     if (g->debugPrint &&                                                                                               \
         (getenv("FUNC") == NULL || (getenv("FUNC") != NULL && !strncmp(bb.getParent()->getName().str().c_str(),        \
                                                                        getenv("FUNC"), strlen(getenv("FUNC")))))) {    \
@@ -104,8 +104,8 @@ enum { BYTE = 1, WORD = 2, DWORD = 4, QWORD = 8, OWORD = 16, GRF = 32 };
         fprintf(stderr, "---------------\n\n");                                                                        \
     } else /* eat semicolon */
 #else
-#define DEBUG_START_PASS(NAME)
-#define DEBUG_END_PASS(NAME)
+#define DEBUG_START_BB(NAME)
+#define DEBUG_END_BB(NAME)
 #endif
 
 } // namespace ispc

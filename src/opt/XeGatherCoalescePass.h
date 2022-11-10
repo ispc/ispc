@@ -231,7 +231,7 @@ class MemoryCoalescing : public llvm::FunctionPass {
     MemoryCoalescing(char &ID, MemType OptType, AddressSpace AddrSpace)
         : FunctionPass(ID), AddrSpace(AddrSpace), OptType(OptType) {}
     // Optimization runner
-    bool runOnFunction(llvm::Function &Fn);
+    bool runOnFunction(llvm::Function &Fn) override;
 
     /* ------ Handlers ------ */
     // Methods in this block are interface for different coalescing types.
@@ -297,10 +297,14 @@ class XeGatherCoalescing : public MemoryCoalescing {
 
   public:
     static char ID;
-    XeGatherCoalescing() : MemoryCoalescing(ID, MemoryCoalescing::MemType::OPT_LOAD, AddressSpace::ispc_global) {}
+    explicit XeGatherCoalescing()
+        : MemoryCoalescing(ID, MemoryCoalescing::MemType::OPT_LOAD, AddressSpace::ispc_global) {}
 
     llvm::StringRef getPassName() const { return "Xe Gather Coalescing"; }
 };
+
 llvm::Pass *CreateXeGatherCoalescingPass();
+
 } // namespace ispc
+
 #endif

@@ -34,6 +34,7 @@
 #include "DebugPass.h"
 
 #ifndef ISPC_NO_DUMPS
+
 namespace ispc {
 
 char DebugPass::ID = 0;
@@ -52,7 +53,7 @@ char DebugPassFile::ID = 0;
 /**
  * Strips all non-alphanumeric characters from given string.
  */
-std::string sanitize(std::string in) {
+static std::string lSanitize(std::string in) {
     llvm::Regex r("[^[:alnum:]]");
     while (r.match(in))
         in = r.sub("", in);
@@ -61,7 +62,7 @@ std::string sanitize(std::string in) {
 
 void DebugPassFile::run(llvm::Module &module, bool init) {
     std::ostringstream oss;
-    oss << (init ? "init_" : "ir_") << pnum << "_" << sanitize(std::string{pname}) << ".ll";
+    oss << (init ? "init_" : "ir_") << pnum << "_" << lSanitize(std::string{pname}) << ".ll";
 
     const std::string pathFile{oss.str()};
 
@@ -99,5 +100,7 @@ bool DebugPassFile::doInitialization(llvm::Module &module) {
 llvm::Pass *CreateDebugPassFile(int number, llvm::StringRef name, std::string dir) {
     return new DebugPassFile(number, name, dir);
 }
+
 } // namespace ispc
+
 #endif

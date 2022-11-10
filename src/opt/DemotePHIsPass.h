@@ -38,13 +38,18 @@
 #ifdef ISPC_XE_ENABLED
 
 namespace ispc {
+
 class DemotePHIs : public llvm::FunctionPass {
   public:
     static char ID;
-    DemotePHIs() : FunctionPass(ID) {}
-    llvm::StringRef getPassName() const { return "Demote PHI nodes"; }
-    bool runOnFunction(llvm::Function &F);
+    explicit DemotePHIs() : FunctionPass(ID) {}
+
+    llvm::StringRef getPassName() const override { return "Demote PHI nodes"; }
+    bool runOnFunction(llvm::Function &F) override;
 };
+
 llvm::Pass *CreateDemotePHIs();
+
 } // namespace ispc
+
 #endif

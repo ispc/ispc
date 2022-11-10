@@ -40,13 +40,13 @@ namespace ispc {
 class ReplaceStdlibShiftPass : public llvm::FunctionPass {
   public:
     static char ID;
-    ReplaceStdlibShiftPass() : FunctionPass(ID) {}
+    explicit ReplaceStdlibShiftPass() : FunctionPass(ID) {}
 
-    llvm::StringRef getPassName() const { return "Resolve \"replace extract insert chains\""; }
+    llvm::StringRef getPassName() const override { return "Resolve \"replace extract insert chains\""; }
+    bool runOnFunction(llvm::Function &F) override;
 
-    bool runOnBasicBlock(llvm::BasicBlock &BB);
-
-    bool runOnFunction(llvm::Function &F);
+  private:
+    bool replaceStdlibShiftBuiltin(llvm::BasicBlock &BB);
 };
 llvm::Pass *CreateReplaceStdlibShiftPass();
 } // namespace ispc

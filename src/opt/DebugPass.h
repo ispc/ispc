@@ -50,10 +50,10 @@ namespace ispc {
 class DebugPass : public llvm::ModulePass {
   public:
     static char ID;
-    DebugPass(char *output) : ModulePass(ID) { snprintf(str_output, sizeof(str_output), "%s", output); }
+    explicit DebugPass(char *output) : ModulePass(ID) { snprintf(str_output, sizeof(str_output), "%s", output); }
 
-    llvm::StringRef getPassName() const { return "Dump LLVM IR"; }
-    bool runOnModule(llvm::Module &m);
+    llvm::StringRef getPassName() const override { return "Dump LLVM IR"; }
+    bool runOnModule(llvm::Module &m) override;
 
   private:
     char str_output[100];
@@ -66,12 +66,12 @@ llvm::Pass *CreateDebugPass(char *output);
 class DebugPassFile : public llvm::ModulePass {
   public:
     static char ID;
-    DebugPassFile(int number, llvm::StringRef name, std::string dir)
+    explicit DebugPassFile(int number, llvm::StringRef name, std::string dir)
         : ModulePass(ID), pnum(number), pname(name), pdir(dir) {}
 
-    llvm::StringRef getPassName() const { return "Dump LLVM IR"; }
-    bool runOnModule(llvm::Module &m);
-    bool doInitialization(llvm::Module &m);
+    llvm::StringRef getPassName() const override { return "Dump LLVM IR"; }
+    bool runOnModule(llvm::Module &m) override;
+    bool doInitialization(llvm::Module &m) override;
 
   private:
     void run(llvm::Module &m, bool init);
@@ -79,6 +79,8 @@ class DebugPassFile : public llvm::ModulePass {
     llvm::StringRef pname;
     std::string pdir;
 };
+
 llvm::Pass *CreateDebugPassFile(int number, llvm::StringRef name, std::string dir);
 } // namespace ispc
+
 #endif

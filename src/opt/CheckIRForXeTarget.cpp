@@ -34,16 +34,14 @@
 #include "CheckIRForXeTarget.h"
 
 #ifdef ISPC_XE_ENABLED
+
 namespace ispc {
 
 char CheckIRForXeTarget::ID = 0;
 
-bool CheckIRForXeTarget::runOnBasicBlock(llvm::BasicBlock &bb) {
-    DEBUG_START_PASS("CheckIRForXeTarget");
+bool CheckIRForXeTarget::checkAndFixIRForXe(llvm::BasicBlock &bb) {
+    DEBUG_START_BB("CheckIRForXeTarget");
     bool modifiedAny = false;
-    // This list contains regex expr for unsupported function names
-    // To be extended
-
     for (llvm::BasicBlock::iterator I = bb.begin(), E = --bb.end(); I != E; ++I) {
         llvm::Instruction *inst = &*I;
         SourcePos pos;
@@ -94,20 +92,22 @@ bool CheckIRForXeTarget::runOnBasicBlock(llvm::BasicBlock &bb) {
             }
         }
     }
-    DEBUG_END_PASS("CheckIRForXeTarget");
-
+    DEBUG_END_BB("CheckIRForXeTarget");
     return modifiedAny;
 }
 
 bool CheckIRForXeTarget::runOnFunction(llvm::Function &F) {
     llvm::TimeTraceScope FuncScope("CheckIRForXeTarget::runOnFunction", F.getName());
+
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
-        modifiedAny |= runOnBasicBlock(BB);
+        modifiedAny |= checkAndFixIRForXe(BB);
     }
     return modifiedAny;
 }
 
 llvm::Pass *CreateCheckIRForXeTarget() { return new CheckIRForXeTarget(); }
+
 } // namespace ispc
+
 #endif

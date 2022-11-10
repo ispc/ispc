@@ -37,8 +37,8 @@ namespace ispc {
 
 char IntrinsicsOpt::ID = 0;
 
-bool IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
-    DEBUG_START_PASS("IntrinsicsOpt");
+bool IntrinsicsOpt::optimizeIntrinsics(llvm::BasicBlock &bb) {
+    DEBUG_START_BB("IntrinsicsOpt");
 
     // We can't initialize mask/blend function vector during pass initialization,
     // as they may be optimized out by the time the pass is invoked.
@@ -215,7 +215,7 @@ restart:
         }
     }
 
-    DEBUG_END_PASS("IntrinsicsOpt");
+    DEBUG_END_BB("IntrinsicsOpt");
 
     return modifiedAny;
 }
@@ -225,7 +225,7 @@ bool IntrinsicsOpt::runOnFunction(llvm::Function &F) {
     llvm::TimeTraceScope FuncScope("IntrinsicsOpt::runOnFunction", F.getName());
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
-        modifiedAny |= runOnBasicBlock(BB);
+        modifiedAny |= optimizeIntrinsics(BB);
     }
     return modifiedAny;
 }
@@ -249,4 +249,5 @@ IntrinsicsOpt::BlendInstruction *IntrinsicsOpt::matchingBlendInstruction(llvm::F
 }
 
 llvm::Pass *CreateIntrinsicsOptPass() { return new IntrinsicsOpt; }
+
 } // namespace ispc

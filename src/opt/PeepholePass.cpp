@@ -276,8 +276,8 @@ static llvm::Instruction *lMatchAvgDownInt16(llvm::Value *inst) {
     return NULL;
 }
 
-bool PeepholePass::runOnBasicBlock(llvm::BasicBlock &bb) {
-    DEBUG_START_PASS("PeepholePass");
+bool PeepholePass::matchAndReplace(llvm::BasicBlock &bb) {
+    DEBUG_START_BB("PeepholePass");
 
     bool modifiedAny = false;
 restart:
@@ -306,7 +306,7 @@ restart:
         }
     }
 
-    DEBUG_END_PASS("PeepholePass");
+    DEBUG_END_BB("PeepholePass");
 
     return modifiedAny;
 }
@@ -316,7 +316,7 @@ bool PeepholePass::runOnFunction(llvm::Function &F) {
     llvm::TimeTraceScope FuncScope("PeepholePass::runOnFunction", F.getName());
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
-        modifiedAny |= runOnBasicBlock(BB);
+        modifiedAny |= matchAndReplace(BB);
     }
     return modifiedAny;
 }

@@ -282,8 +282,8 @@ static void lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup
 
     return *((type *)(basePtr + offset))
  */
-llvm::Value *lGEPAndLoad(llvm::Value *basePtr, llvm::Type *baseType, int64_t offset, int align,
-                         llvm::Instruction *insertBefore, llvm::Type *type) {
+static llvm::Value *lGEPAndLoad(llvm::Value *basePtr, llvm::Type *baseType, int64_t offset, int align,
+                                llvm::Instruction *insertBefore, llvm::Type *type) {
     llvm::Value *ptr = LLVMGEPInst(basePtr, baseType, LLVMInt64(offset), "new_base", insertBefore);
     ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(type, 0), "ptr_cast", insertBefore);
 #if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
@@ -850,8 +850,8 @@ static bool lInstructionMayWriteToMemory(llvm::Instruction *inst) {
     return false;
 }
 
-bool GatherCoalescePass::runOnBasicBlock(llvm::BasicBlock &bb) {
-    DEBUG_START_PASS("GatherCoalescePass");
+bool GatherCoalescePass::coalesceGathersFactored(llvm::BasicBlock &bb) {
+    DEBUG_START_BB("GatherCoalescePass");
 
     llvm::Function *gatherFuncs[] = {
         m->module->getFunction("__pseudo_gather_factored_base_offsets32_i32"),
@@ -986,21 +986,22 @@ restart:
             goto restart;
         }
     }
-
-    DEBUG_END_PASS("GatherCoalescePass");
+    DEBUG_END_BB("GatherCoalescePass");
 
     return modifiedAny;
 }
 
 bool GatherCoalescePass::runOnFunction(llvm::Function &F) {
-
     llvm::TimeTraceScope FuncScope("GatherCoalescePass::runOnFunction", F.getName());
+
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
-        modifiedAny |= runOnBasicBlock(BB);
+        modifiedAny |= coalesceGathersFactored(BB);
     }
+
     return modifiedAny;
 }
 
 llvm::Pass *CreateGatherCoalescePass() { return new GatherCoalescePass; }
+
 } // namespace ispc

@@ -34,12 +34,14 @@
 #include "DemotePHIsPass.h"
 
 #ifdef ISPC_XE_ENABLED
+
 namespace ispc {
 
 char DemotePHIs::ID = 0;
 
 bool DemotePHIs::runOnFunction(llvm::Function &F) {
     llvm::TimeTraceScope FuncScope("DemotePHIs::runOnFunction", F.getName());
+
     if (F.isDeclaration() || skipFunction(F))
         return false;
     std::vector<llvm::Instruction *> WorkList;
@@ -53,8 +55,11 @@ bool DemotePHIs::runOnFunction(llvm::Function &F) {
         DemotePHIToStack(llvm::cast<llvm::PHINode>(ilb), nullptr);
 
     return !WorkList.empty();
+    ;
 }
 
 llvm::Pass *CreateDemotePHIs() { return new DemotePHIs(); }
+
 } // namespace ispc
+
 #endif
