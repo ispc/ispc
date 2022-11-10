@@ -310,7 +310,7 @@ template<AllocType alloc>
         GenericObject<ISPCRTMemoryView>() {
             ISPCRTNewMemoryViewFlags flags;
             flags.allocType = ISPCRT_ALLOC_TYPE_SHARED;
-            setHandle(ispcrtNewMemoryViewForContext(context.handle(), nullptr, size * sizeof(T), &flags));
+            m_handle = ispcrtNewMemoryViewForContext(context.handle(), nullptr, size * sizeof(T), &flags);
         }
 
 // Device-only methods
