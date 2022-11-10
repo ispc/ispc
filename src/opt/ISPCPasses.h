@@ -39,7 +39,6 @@
 
 #include "CheckIRForXeTarget.h"
 #include "DebugPass.h"
-#include "DemotePHIsPass.h"
 #include "GatherCoalescePass.h"
 #include "ImproveMemoryOps.h"
 #include "InstructionSimplify.h"

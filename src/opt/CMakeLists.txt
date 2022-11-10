@@ -36,8 +36,6 @@ target_sources(${PROJECT_NAME}
         "CheckIRForXeTarget.h"
         "DebugPass.cpp"
         "DebugPass.h"
-        "DemotePHIsPass.cpp"
-        "DemotePHIsPass.h"
         "GatherCoalescePass.cpp"
         "GatherCoalescePass.h"
         "IsCompileTimeConstant.cpp"
