@@ -166,16 +166,10 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         // run absolutely no optimizations, since the front-end needs us to
         // take the various __pseudo_* functions it has emitted and turn
         // them into something that can actually execute.
-        // TODO: ISPC doesn't use SimdCF now so the block below can be removed.
 #ifdef ISPC_XE_ENABLED
+        // mem2reg affects several acos/asin tests with O0 on Gen9,
+        // seems like a problem with VC BE.
         if (g->target->isXeTarget()) {
-            // Global DCE is required for ISPCSimdCFLoweringPass
-            optPM.add(llvm::createGlobalDCEPass());
-            // FIXME: temporary solution
-            optPM.add(llvm::createBreakCriticalEdgesPass());
-            optPM.add(CreateDemotePHIs());
-            optPM.add(llvm::createISPCSimdCFLoweringPass());
-            // FIXME: temporary solution
             optPM.add(llvm::createPromoteMemoryToRegisterPass());
         }
 #endif
@@ -193,6 +187,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 #else
         optPM.add(llvm::createCFGSimplificationPass());
 #endif
+        optPM.add(llvm::createGlobalDCEPass());
 #ifdef ISPC_XE_ENABLED
         if (g->target->isXeTarget()) {
             optPM.add(llvm::createPromoteMemoryToRegisterPass());
@@ -204,9 +199,9 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
             // This pass is required to prepare LLVM IR for open source SPIR-V translator
             optPM.add(
                 llvm::createGenXSPIRVWriterAdaptorPass(true /*RewriteTypes*/, false /*RewriteSingleElementVectors*/));
+            optPM.add(llvm::createGlobalDCEPass());
         }
 #endif
-        optPM.add(llvm::createGlobalDCEPass());
     } else {
         llvm::PassRegistry *registry = llvm::PassRegistry::getPassRegistry();
         llvm::initializeCore(*registry);
@@ -220,16 +215,6 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 
         optPM.add(llvm::createGlobalDCEPass(), 184);
 
-#ifdef ISPC_XE_ENABLED
-        if (g->target->isXeTarget()) {
-            // FIXME: temporary solution
-            optPM.add(llvm::createBreakCriticalEdgesPass());
-            optPM.add(CreateDemotePHIs());
-            optPM.add(llvm::createISPCSimdCFLoweringPass());
-            // FIXME: temporary solution
-            optPM.add(llvm::createPromoteMemoryToRegisterPass());
-        }
-#endif
         // Setup to use LLVM default AliasAnalysis
         // Ideally, we want call:
         //    llvm::PassManagerBuilder pm_Builder;
