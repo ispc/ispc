@@ -8148,20 +8148,13 @@ int FunctionSymbolExpr::computeOverloadCost(const FunctionType *ftype, const std
 bool FunctionSymbolExpr::ResolveOverloads(SourcePos argPos, const std::vector<const Type *> &argTypes,
                                           const std::vector<bool> *argCouldBeNULL,
                                           const std::vector<bool> *argIsConstant) {
-    const char *funName = candidateFunctions.front()->name.c_str();
+    // Note: this name may be different from "name" only for intrinsics and this is
+    // probably also wrong.
+    // const char *funName = candidateFunctions.front()->name.c_str();
     if (triedToResolve == true) {
         return true;
     }
-
     triedToResolve = true;
-
-    // Functions with names that start with "__" should only be various
-    // builtins.  For those, we'll demand an exact match, since we'll
-    // expect whichever function in stdlib.ispc is calling out to one of
-    // those to be matching the argument types exactly; this is to be a bit
-    // extra safe to be sure that the expected builtin is in fact being
-    // called.
-    bool exactMatchOnly = (name.substr(0, 2) == "__");
 
     // First, find the subset of overload candidates that take the same
     // number of arguments as have parameters (including functions that
@@ -8209,7 +8202,7 @@ bool FunctionSymbolExpr::ResolveOverloads(SourcePos argPos, const std::vector<co
                                 "This warning will be turned into error in the next ispc release.\n"
                                 "Please add explicit cast to arguments to have unambiguous match."
                                 "\n%s",
-                                funName, candidateMessage.c_str());
+                                name.c_str(), candidateMessage.c_str());
                     }
                 }
             }
@@ -8227,19 +8220,15 @@ bool FunctionSymbolExpr::ResolveOverloads(SourcePos argPos, const std::vector<co
     } else if (matches.size() > 1) {
         // Multiple matches: ambiguous
         std::string candidateMessage = lGetOverloadCandidateMessage(matches, argTypes, argCouldBeNULL);
-        Error(pos,
-              "Multiple overloaded functions matched call to function "
-              "\"%s\"%s.\n%s",
-              funName, exactMatchOnly ? " only considering exact matches" : "", candidateMessage.c_str());
+        Error(pos, "Multiple overloaded functions matched call to function \"%s\".\n%s", name.c_str(),
+              candidateMessage.c_str());
         return false;
     } else {
         // No matches at all
     failure:
         std::string candidateMessage = lGetOverloadCandidateMessage(matches, argTypes, argCouldBeNULL);
-        Error(pos,
-              "Unable to find any matching overload for call to function "
-              "\"%s\"%s.\n%s",
-              funName, exactMatchOnly ? " only considering exact matches" : "", candidateMessage.c_str());
+        Error(pos, "Unable to find any matching overload for call to function \"%s\".\n%s", name.c_str(),
+              candidateMessage.c_str());
         return false;
     }
 }
