@@ -7856,11 +7856,8 @@ void SymbolExpr::Print(Indent &indent) const {
 // FunctionSymbolExpr
 
 FunctionSymbolExpr::FunctionSymbolExpr(const char *n, const std::vector<Symbol *> &candidates, SourcePos p)
-    : Expr(p, FunctionSymbolExprID) {
-    name = n;
-    candidateFunctions = candidates;
-    matchingFunc = (candidates.size() == 1) ? candidates[0] : NULL;
-    triedToResolve = false;
+    : Expr(p, FunctionSymbolExprID), name(n), candidateFunctions(candidates), triedToResolve(false) {
+    matchingFunc = (candidates.size() == 1) ? candidates[0] : nullptr;
 }
 
 const Type *FunctionSymbolExpr::GetType() const {
@@ -7987,21 +7984,24 @@ static bool lIsMatchWithTypeWidening(const Type *callType, const Type *funcArgTy
  */
 std::vector<Symbol *> FunctionSymbolExpr::getCandidateFunctions(int argCount) const {
     std::vector<Symbol *> ret;
-    for (int i = 0; i < (int)candidateFunctions.size(); ++i) {
-        const FunctionType *ft = CastType<FunctionType>(candidateFunctions[i]->type);
+    for (Symbol *sym : candidateFunctions) {
+        AssertPos(pos, sym != nullptr);
+        const FunctionType *ft = CastType<FunctionType>(sym->type);
         AssertPos(pos, ft != NULL);
 
         // There's no way to match if the caller is passing more arguments
         // than this function instance takes.
-        if (argCount > ft->GetNumParameters())
+        if (argCount > ft->GetNumParameters()) {
             continue;
+        }
 
         // Not enough arguments, and no default argument value to save us
-        if (argCount < ft->GetNumParameters() && ft->GetParameterDefault(argCount) == NULL)
+        if (argCount < ft->GetNumParameters() && ft->GetParameterDefault(argCount) == nullptr) {
             continue;
+        }
 
         // Success
-        ret.push_back(candidateFunctions[i]);
+        ret.push_back(sym);
     }
     return ret;
 }
