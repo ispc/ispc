@@ -807,3 +807,20 @@ bool TemplateParms::IsEqual(const TemplateParms *p) const {
 
     return true;
 }
+
+///////////////////////////////////////////////////////////////////////////
+// TemplateArgs
+
+TemplateArgs::TemplateArgs(const std::vector<std::pair<const Type *, SourcePos>> &a) : args(a) {}
+
+bool TemplateArgs::IsEqual(TemplateArgs &otherArgs) const {
+    if (args.size() != otherArgs.args.size()) {
+        return false;
+    }
+    for (int i = 0; i < args.size(); i++) {
+        if (!Type::Equal(args[i].first, otherArgs.args[i].first)) {
+            return false;
+        }
+    }
+    return true;
+}

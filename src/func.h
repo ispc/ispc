@@ -90,4 +90,12 @@ class TemplateParms {
     std::vector<const TemplateTypeParmType *> parms;
 };
 
+class TemplateArgs {
+  public:
+    TemplateArgs(const std::vector<std::pair<const Type *, SourcePos>> &args);
+    bool IsEqual(TemplateArgs &otherArgs) const;
+
+    std::vector<std::pair<const Type *, SourcePos>> args;
+};
+
 } // namespace ispc
