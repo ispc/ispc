@@ -7948,6 +7948,13 @@ FunctionSymbolExpr::FunctionSymbolExpr(const char *n, const std::vector<Symbol *
     matchingFunc = (candidates.size() == 1) ? candidates[0] : nullptr;
 }
 
+FunctionSymbolExpr::FunctionSymbolExpr(const char *n, const std::vector<TemplateSymbol *> &candidates,
+                                       std::vector<std::pair<const Type *, SourcePos>> &types, SourcePos p)
+    : Expr(p, FunctionSymbolExprID), name(n), candidateTemplateFunctions(candidates), templateArgs(types),
+      triedToResolve(false) {
+    matchingFunc = nullptr;
+}
+
 const Type *FunctionSymbolExpr::GetType() const {
     if (triedToResolve == false && matchingFunc == NULL) {
         Error(pos, "Ambiguous use of overloaded function \"%s\".", name.c_str());
@@ -8094,6 +8101,55 @@ std::vector<Symbol *> FunctionSymbolExpr::getCandidateFunctions(int argCount) co
 
         // Success
         ret.push_back(sym);
+    }
+    return ret;
+}
+
+std::vector<Symbol *>
+FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *> &argTypes) const {
+    // Two different cases are possible here:
+    // 1. The template function was specified as simple_template_id, i.e. with explicit template arguments:
+    //      foo<int>(arg1, arg2);
+    //    In this case no type deduction is needed - the types were explicitly specified.
+    //    The arguments still need to be verified for viability - i.e. that Implicit Convertion Sequence (ICS)
+    //    exists (and is better that others).
+    // 2. The template function was specified by name, without tempalte paramters, i.e.
+    //      foo(arg1, arg2);
+    //    In this case template type parameters deduction need to happen.
+    //    And then the same step for ICS to be done for the candidate.
+    //
+    // NOTE: #2 is not implemented yet.
+
+    std::vector<Symbol *> ret;
+    for (TemplateSymbol *templSym : candidateTemplateFunctions) {
+        AssertPos(pos, templSym != nullptr);
+        const FunctionType *ft = CastType<FunctionType>(templSym->type);
+        AssertPos(pos, ft != nullptr);
+
+        // There's no way to match if the caller is passing more arguments
+        // than this function instance takes.
+        if (argTypes.size() > ft->GetNumParameters()) {
+            continue;
+        }
+
+        // Not enough arguments, and no default argument value to save us
+        if (argTypes.size() < ft->GetNumParameters() && ft->GetParameterDefault(argTypes.size()) == nullptr) {
+            continue;
+        }
+
+        // This looks like a candidate, so now we need get to instantiation and add it to candidate list.
+        if (templateArgs.size() > 0) {
+            Symbol *funcSym = templSym->functionTemplate->LookupInstantiation(templateArgs);
+            if (funcSym == nullptr) {
+                funcSym = templSym->functionTemplate->AddInstantiation(templateArgs);
+            }
+            AssertPos(pos, funcSym);
+            // Success
+            ret.push_back(funcSym);
+        } else {
+            // Not implemented yet.
+            UNREACHABLE();
+        }
     }
     return ret;
 }
@@ -8253,6 +8309,8 @@ bool FunctionSymbolExpr::ResolveOverloads(SourcePos argPos, const std::vector<co
     // take more arguments but have defaults starting no later than after
     // our last parameter).
     std::vector<Symbol *> actualCandidates = getCandidateFunctions(argTypes.size());
+    std::vector<Symbol *> templateCandidates = getCandidateTemplateFunctions(argTypes);
+    actualCandidates.insert(actualCandidates.end(), templateCandidates.begin(), templateCandidates.end());
 
     int bestMatchCost = 1 << 30;
     std::vector<Symbol *> matches;
