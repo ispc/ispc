@@ -1,9 +1,8 @@
 // Tests checks that stmxcsr/ldmxcsr intrinsics set/restore FTZ/DAZ flags when --opt=reset-ftz-daz is passed.
 // --opt=reset-ftz-daz affects external ISPC functions only.
 
-// RUN: %{ispc} %s --target=avx2 --arch=x86 --emit-llvm-text --opt=reset-ftz-daz -o - | FileCheck %s
-// RUN: %{ispc} %s --target=avx2 --arch=x86-64 --emit-llvm-text --opt=reset-ftz-daz -o - | FileCheck %s
-// RUN: %{ispc} %s --target=avx2 --emit-llvm-text -o - | FileCheck --check-prefixes=CHECK_NO_FTZ_DAZ %s
+// RUN: %{ispc} %s --target=avx2 --arch=x86-64 --nostdlib --emit-llvm-text --opt=reset-ftz-daz -o - | FileCheck %s
+// RUN: %{ispc} %s --target=avx2 --arch=x86-64 --nostdlib --emit-llvm-text -o - | FileCheck --check-prefixes=CHECK_NO_FTZ_DAZ %s
 
 // CHECK: define float @test_ftz_daz___
 // CHECK-NOT: stmxcsr

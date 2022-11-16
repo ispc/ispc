@@ -1,22 +1,13 @@
 // Tests checks that correct registries are used to set/restore FTZ/DAZ flags on ARM
 
-// RUN: %{ispc} %s --arch=arm --target=neon-i32x8 --emit-asm --opt=reset-ftz-daz -o - | FileCheck --check-prefixes=CHECK_ARM %s
-// RUN: %{ispc} %s --arch=aarch64 --target=neon-i32x8 --emit-asm --opt=reset-ftz-daz -o - | FileCheck --check-prefixes=CHECK_AARCH64 %s
+// RUN: %{ispc} %s --arch=arm --target=neon-i32x8 --nostdlib --emit-asm --opt=reset-ftz-daz -o - | FileCheck --check-prefixes=CHECK_ARM %s
 
 // CHECK_ARM: vmrs
 // CHECK_ARM: fpscr
 
-// CHECK_AARCH64: mrs
-// CHECK_AARCH64: FPCR
-
 // ARM must be enabled in order to test it.
-// REQUIRES: ARM_ENABLED
-// There are a few exceptions though.
-// We do not support ARM targets on Windows.
-// REQUIRES: !WINDOWS_HOST
-// Not every ISPC build on macOS supports ARM targets.
-// They are supported only if macOS SDK supports them.
-// REQUIRES: !MACOS_HOST || MACOS_ARM_ENABLED
+// Windows and Mac do not support 32 bit ARM. so test on Linux only (Android assumed to be the same)
+// REQUIRES: ARM_ENABLED && LINUX_HOST
 
 export uniform float export_test_ftz_daz(){
     uniform float x = 0x1p-149;
