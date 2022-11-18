@@ -53,7 +53,7 @@ template <typename T> void check(T *src, T *dst, size_t num_elems) {
     aligned_free_helper(buf);
 }
 
-#define ARGS Arg(8192ull)->Arg(8192ull << 10ull)->Arg(8192ull << 15ull)
+#define ARGS Arg(8192ull)->Arg(8192ull << 10ull)
 
 #ifndef UNROLL_VARYING_BENCH
 #define UNROLL_VARYING_BENCH(T_FOR, T_C, T_ISPC, UNROLL_FACTOR)                                                        \
