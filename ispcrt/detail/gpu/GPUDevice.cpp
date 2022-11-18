@@ -28,6 +28,18 @@
 // level0
 #include <level_zero/ze_api.h>
 
+// Simple OS-agnostic wrapper to get environment variable.
+static const char *getenv_wr(const char *env) {
+    char *value = nullptr;
+#if defined(_WIN32) || defined(_WIN64)
+    size_t size = 0;
+    _dupenv_s(&value, &size, env);
+#else
+    value = getenv(env);
+#endif
+    return value;
+}
+
 namespace ispcrt {
 namespace gpu {
 
@@ -339,7 +351,7 @@ struct EventPool {
         ze_device_properties_t device_properties = {ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES};
         L0_SAFE_CALL(zeDeviceGetProperties(m_device, &device_properties));
         m_timestampFreq = device_properties.timerResolution;
-        if(device_properties.kernelTimestampValidBits < 64) {
+        if (device_properties.kernelTimestampValidBits < 64) {
             m_timestampMaxValue = ((uint64_t)1 << device_properties.kernelTimestampValidBits) - 1;
         } else {
             // We can't calculate max using bitshifting for 64 bits
@@ -354,13 +366,7 @@ struct EventPool {
             // the number of possible kernel launches. To make it more clear for the user,
             // the variable is named ISPCRT_MAX_KERNEL_LAUNCHES
             constexpr const char *POOL_SIZE_ENV_NAME = "ISPCRT_MAX_KERNEL_LAUNCHES";
-#if defined(_WIN32) || defined(_WIN64)
-            char *poolSizeEnv = nullptr;
-            size_t poolSizeEnvSz = 0;
-            _dupenv_s(&poolSizeEnv, &poolSizeEnvSz, POOL_SIZE_ENV_NAME);
-#else
-            const char *poolSizeEnv = getenv(POOL_SIZE_ENV_NAME);
-#endif
+            const char *poolSizeEnv = getenv_wr(POOL_SIZE_ENV_NAME);
             if (poolSizeEnv) {
                 std::istringstream(poolSizeEnv) >> poolSize;
             }
@@ -521,18 +527,12 @@ struct Module : public ispcrt::base::Module {
         : m_file(moduleFile) {
         std::ifstream is;
         ze_module_format_t moduleFormat = ZE_MODULE_FORMAT_IL_SPIRV;
-        // Try to open spv file by default if ISPCRT_USE_ZEBIN is not set.
-        // TODO: change default to zebin when it gets more mature
-#if defined(_WIN32) || defined(_WIN64)
-        char *userZEBinFormatEnv = nullptr;
-        size_t userZEBinFormatEnvSz = 0;
-        _dupenv_s(&userZEBinFormatEnv, &userZEBinFormatEnvSz, "ISPCRT_USE_ZEBIN");
-#else
-        const char *userZEBinFormatEnv = getenv("ISPCRT_USE_ZEBIN");
-#endif
 
         size_t codeSize = 0;
         if (!is_mock_dev) {
+            // Try to open spv file by default if ISPCRT_USE_ZEBIN is not set.
+            // TODO: change default to zebin when it gets more mature
+            const char *userZEBinFormatEnv = getenv_wr("ISPCRT_USE_ZEBIN");
             if (userZEBinFormatEnv) {
                 is.open(m_file + ".bin", std::ios::binary);
                 moduleFormat = ZE_MODULE_FORMAT_NATIVE;
@@ -586,13 +586,7 @@ struct Module : public ispcrt::base::Module {
             igcOptions += " -library-compilation";
         }
         constexpr auto MAX_ISPCRT_IGC_OPTIONS = 2000UL;
-#if defined(_WIN32) || defined(_WIN64)
-        char *userIgcOptionsEnv = nullptr;
-        size_t userIgcOptionsEnvSz = 0;
-        _dupenv_s(&userIgcOptionsEnv, &userIgcOptionsEnvSz, "ISPCRT_IGC_OPTIONS");
-#else
-        const char *userIgcOptionsEnv = getenv("ISPCRT_IGC_OPTIONS");
-#endif
+        const char *userIgcOptionsEnv = getenv_wr("ISPCRT_IGC_OPTIONS");
         if (userIgcOptionsEnv) {
             // Copy at most MAX_ISPCRT_IGC_OPTIONS characters from the env - just to be safe
             const auto copyChars = std::min(std::strlen(userIgcOptionsEnv), (size_t)MAX_ISPCRT_IGC_OPTIONS);
@@ -691,25 +685,8 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         uint32_t copyOrdinal = std::numeric_limits<uint32_t>::max();
         uint32_t computeOrdinal = 0;
         // Check env variable before queue configuration
-        bool isCopyEngineEnabled = true;
-#if defined(_WIN32) || defined(_WIN64)
-        char *is_disable_copy_eng_s = nullptr;
-        size_t is_disable_copy_eng_sz = 0;
-        _dupenv_s(&is_disable_copy_eng_s, &is_disable_copy_eng_sz, "ISPCRT_DISABLE_COPY_ENGINE");
-        isCopyEngineEnabled = (is_disable_copy_eng_s == nullptr);
-#else
-        isCopyEngineEnabled = getenv("ISPCRT_DISABLE_COPY_ENGINE") == nullptr;
-#endif
-
-        bool useMultipleCommandLists = true;
-#if defined(_WIN32) || defined(_WIN64)
-        char *use_use_multi_cmdl_s = nullptr;
-        size_t use_use_multi_cmdl_sz = 0;
-        _dupenv_s(&use_use_multi_cmdl_s, &use_use_multi_cmdl_sz, "ISPCRT_DISABLE_MULTI_COMMAND_LISTS");
-        useMultipleCommandLists = (use_use_multi_cmdl_s == nullptr);
-#else
-        useMultipleCommandLists = getenv("ISPCRT_DISABLE_MULTI_COMMAND_LISTS") == nullptr;
-#endif
+        bool isCopyEngineEnabled = getenv_wr("ISPCRT_DISABLE_COPY_ENGINE") == nullptr;
+        bool useMultipleCommandLists = getenv("ISPCRT_DISABLE_MULTI_COMMAND_LISTS") == nullptr;
         // No need to create copy queue if only one command list is requested.
         if (!is_mock_dev && isCopyEngineEnabled && useMultipleCommandLists) {
             // Discover all command queue groups
@@ -985,15 +962,7 @@ static std::vector<ze_device_handle_t> g_deviceList;
 
 static ze_driver_handle_t deviceDiscovery(bool *p_is_mock) {
     static ze_driver_handle_t selectedDriver = nullptr;
-    bool is_mock = false;
-#if defined(_WIN32) || defined(_WIN64)
-    char *is_mock_s = nullptr;
-    size_t is_mock_sz = 0;
-    _dupenv_s(&is_mock_s, &is_mock_sz, "ISPCRT_MOCK_DEVICE");
-    is_mock = is_mock_s != nullptr;
-#else
-    is_mock = getenv("ISPCRT_MOCK_DEVICE") != nullptr;
-#endif
+    bool is_mock = getenv_wr("ISPCRT_MOCK_DEVICE") != nullptr;
 
     // Allow reinitialization of device list for mock device
     if (!is_mock && selectedDriver != nullptr)
@@ -1097,13 +1066,7 @@ GPUDevice::GPUDevice(void* nativeContext, void* nativeDevice, uint32_t deviceIdx
         // User can select particular device using env variable
         // By default first available device is selected
         auto gpuDeviceToGrab = deviceIdx;
-    #if defined(_WIN32) || defined(_WIN64)
-        char *gpuDeviceEnv = nullptr;
-        size_t gpuDeviceEnvSz = 0;
-        _dupenv_s(&gpuDeviceEnv, &gpuDeviceEnvSz, "ISPCRT_GPU_DEVICE");
-    #else
-        const char *gpuDeviceEnv = getenv("ISPCRT_GPU_DEVICE");
-    #endif
+        const char *gpuDeviceEnv = getenv_wr("ISPCRT_GPU_DEVICE");
         if (gpuDeviceEnv) {
             std::istringstream(gpuDeviceEnv) >> gpuDeviceToGrab;
         }
