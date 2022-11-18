@@ -114,7 +114,7 @@ print(f"Attempting to access executable at: {executable}")
 
 p = subprocess.Popen(cmd, stdout=subprocess.PIPE, env=test_env, cwd=test_dir)
 out, err = p.communicate()
-print(out)
+print(out.decode())
 if p.returncode:
     print(f"Workload returned non-zero error code: {p.returncode}")
     sys.exit(p.returncode)
