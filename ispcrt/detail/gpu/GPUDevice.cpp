@@ -180,20 +180,19 @@ static const std::string getIspcrtErrorMessage(ze_result_t err) {
 }
 
 #define L0_THROW_IF(status)                                                                                            \
-    {                                                                                                                  \
+    do {                                                                                                               \
         if (status != 0) {                                                                                             \
             std::stringstream ss;                                                                                      \
             ss << __FILE__ << ":" << __LINE__ << ": L0 error 0x" << std::hex << (int)status;                           \
             ss << ": " << ispcrt::gpu::getIspcrtErrorMessage(status);                                                  \
             throw ispcrt::base::ispcrt_runtime_error(ispcrt::gpu::getIspcrtError(status), ss.str());                   \
         }                                                                                                              \
-    }
+    } while (0)
 
-#define L0_SAFE_CALL(call)                                                                                             \
-    { L0_THROW_IF((call)) }
+#define L0_SAFE_CALL(call) L0_THROW_IF((call))
 
 #define L0_SAFE_CALL_NOEXCEPT(call)                                                                                    \
-    {                                                                                                                  \
+    do {                                                                                                               \
         auto status = (call);                                                                                          \
         if (status != 0) {                                                                                             \
             std::stringstream ss;                                                                                      \
@@ -201,7 +200,7 @@ static const std::string getIspcrtErrorMessage(ze_result_t err) {
             ss << ": " << ispcrt::gpu::getIspcrtErrorMessage(status);                                                  \
             std::cerr << ss.str() << std::endl;                                                                        \
         }                                                                                                              \
-    }
+    } while (0)
 
 struct Future : public ispcrt::base::Future {
     Future() {}
