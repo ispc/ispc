@@ -28,6 +28,20 @@
 // level0
 #include <level_zero/ze_api.h>
 
+#define DECLARE_ENV(NAME) const char *NAME = #NAME;
+DECLARE_ENV(ISPCRT_VERBOSE)
+DECLARE_ENV(ISPCRT_MAX_KERNEL_LAUNCHES)
+DECLARE_ENV(ISPCRT_GPU_DEVICE)
+DECLARE_ENV(ISPCRT_MOCK_DEVICE)
+DECLARE_ENV(ISPCRT_GPU_THREAD_GROUP_SIZE_X)
+DECLARE_ENV(ISPCRT_GPU_THREAD_GROUP_SIZE_Y)
+DECLARE_ENV(ISPCRT_GPU_THREAD_GROUP_SIZE_Z)
+DECLARE_ENV(ISPCRT_DISABLE_MULTI_COMMAND_LISTS)
+DECLARE_ENV(ISPCRT_DISABLE_COPY_ENGINE)
+DECLARE_ENV(ISPCRT_IGC_OPTIONS)
+DECLARE_ENV(ISPCRT_USE_ZEBIN)
+#undef DECLARE_ENV
+
 // Simple OS-agnostic wrapper to get environment variable.
 static const char *getenv_wr(const char *env) {
     char *value = nullptr;
@@ -364,14 +378,13 @@ struct EventPool {
             // User can set a lower limit for the pool size, which in fact limits
             // the number of possible kernel launches. To make it more clear for the user,
             // the variable is named ISPCRT_MAX_KERNEL_LAUNCHES
-            constexpr const char *POOL_SIZE_ENV_NAME = "ISPCRT_MAX_KERNEL_LAUNCHES";
-            const char *poolSizeEnv = getenv_wr(POOL_SIZE_ENV_NAME);
+            const char *poolSizeEnv = getenv_wr(ISPCRT_MAX_KERNEL_LAUNCHES);
             if (poolSizeEnv) {
                 std::istringstream(poolSizeEnv) >> poolSize;
             }
             if (poolSize > POOL_SIZE_CAP) {
                 m_poolSize = POOL_SIZE_CAP;
-                std::cerr << "[ISPCRT][WARNING] " << POOL_SIZE_ENV_NAME << " value too large, using " << POOL_SIZE_CAP
+                std::cerr << "[ISPCRT][WARNING] " << ISPCRT_MAX_KERNEL_LAUNCHES << " value too large, using " << POOL_SIZE_CAP
                           << " instead." << std::endl;
             } else {
                 m_poolSize = poolSize;
@@ -531,7 +544,7 @@ struct Module : public ispcrt::base::Module {
         if (!is_mock_dev) {
             // Try to open spv file by default if ISPCRT_USE_ZEBIN is not set.
             // TODO: change default to zebin when it gets more mature
-            const char *userZEBinFormatEnv = getenv_wr("ISPCRT_USE_ZEBIN");
+            const char *userZEBinFormatEnv = getenv_wr(ISPCRT_USE_ZEBIN);
             if (userZEBinFormatEnv) {
                 is.open(m_file + ".bin", std::ios::binary);
                 moduleFormat = ZE_MODULE_FORMAT_NATIVE;
@@ -585,7 +598,7 @@ struct Module : public ispcrt::base::Module {
             igcOptions += " -library-compilation";
         }
         constexpr auto MAX_ISPCRT_IGC_OPTIONS = 2000UL;
-        const char *userIgcOptionsEnv = getenv_wr("ISPCRT_IGC_OPTIONS");
+        const char *userIgcOptionsEnv = getenv_wr(ISPCRT_IGC_OPTIONS);
         if (userIgcOptionsEnv) {
             // Copy at most MAX_ISPCRT_IGC_OPTIONS characters from the env - just to be safe
             const auto copyChars = std::min(std::strlen(userIgcOptionsEnv), (size_t)MAX_ISPCRT_IGC_OPTIONS);
@@ -684,8 +697,8 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         uint32_t copyOrdinal = std::numeric_limits<uint32_t>::max();
         uint32_t computeOrdinal = 0;
         // Check env variable before queue configuration
-        bool isCopyEngineEnabled = getenv_wr("ISPCRT_DISABLE_COPY_ENGINE") == nullptr;
-        bool useMultipleCommandLists = getenv("ISPCRT_DISABLE_MULTI_COMMAND_LISTS") == nullptr;
+        bool isCopyEngineEnabled = getenv_wr(ISPCRT_DISABLE_COPY_ENGINE) == nullptr;
+        bool useMultipleCommandLists = getenv(ISPCRT_DISABLE_MULTI_COMMAND_LISTS) == nullptr;
         // No need to create copy queue if only one command list is requested.
         if (!is_mock_dev && isCopyEngineEnabled && useMultipleCommandLists) {
             // Discover all command queue groups
@@ -961,7 +974,7 @@ static std::vector<ze_device_handle_t> g_deviceList;
 
 static ze_driver_handle_t deviceDiscovery(bool *p_is_mock) {
     static ze_driver_handle_t selectedDriver = nullptr;
-    bool is_mock = getenv_wr("ISPCRT_MOCK_DEVICE") != nullptr;
+    bool is_mock = getenv_wr(ISPCRT_MOCK_DEVICE) != nullptr;
 
     // Allow reinitialization of device list for mock device
     if (!is_mock && selectedDriver != nullptr)
@@ -1065,7 +1078,7 @@ GPUDevice::GPUDevice(void* nativeContext, void* nativeDevice, uint32_t deviceIdx
         // User can select particular device using env variable
         // By default first available device is selected
         auto gpuDeviceToGrab = deviceIdx;
-        const char *gpuDeviceEnv = getenv_wr("ISPCRT_GPU_DEVICE");
+        const char *gpuDeviceEnv = getenv_wr(ISPCRT_GPU_DEVICE);
         if (gpuDeviceEnv) {
             std::istringstream(gpuDeviceEnv) >> gpuDeviceToGrab;
         }
