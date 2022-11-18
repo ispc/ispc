@@ -40,6 +40,7 @@ version 12.0.0 is used for the check. Otherwise the result can ne unexpected.
 
 CLANG_FORMAT="clang-format"
 [[ ! -z $1 ]] && CLANG_FORMAT=$1
+which "$CLANG_FORMAT" || { echo "No $CLANG_FORMAT found in PATH" && exit 1; }
 REQUIRED_VERSION="12.0.0"
 VERSION_STRING="clang-format version $REQUIRED_VERSION.*"
 CURRENT_VERSION="$($CLANG_FORMAT --version)"
@@ -52,7 +53,7 @@ fi
 # For benchmarks folder do not check 03_complex, as these tests come from real projects with their formatting.
 FILES=`ls src/*.cpp src/*.h src/opt/*.cpp src/opt/*.h *.cpp builtins/builtins-c-* benchmarks/{01,02}*/*{cpp,ispc} common/*.h stdlib.ispc`
 for FILE in $FILES; do
-    $CLANG_FORMAT $FILE | cmp  $FILE >/dev/null
+    diff -uN --label original/$FILE --label formatted/$FILE <(cat $FILE) <($CLANG_FORMAT $FILE)
     if [ $? -ne 0 ]; then
         echo "[!] INCORRECT FORMATTING! $FILE" >&2
             EXIT_CODE=1
