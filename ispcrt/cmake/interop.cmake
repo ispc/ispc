@@ -220,6 +220,44 @@ function (link_bitcode target_name)
     )
 endfunction()
 
+# Link bitcode files into one
+# target_name: target to generate for the linked bitcode output
+# ispc_target: the original ISPC target being linked
+# bc_target: name of bitcode file for post-link
+function (sycl_post_link target_name ispc_target bc_target)
+    # Run sycl-post-link utility
+    set(outdir ${CMAKE_CURRENT_BINARY_DIR})
+    # Intermediate bitcode file with link to the real one
+    set(lower_post_link "${outdir}/${target_name}_post_link.bc")
+    # Final esimd bitcode file
+    set(post_link_result "${outdir}/${target_name}_post_link_0.bc")
+
+    # Get the BC file we want to process with sycl-post-link
+    get_target_property(input ${bc_target} ISPC_CUSTOM_DEPENDENCIES)
+
+    add_custom_command(
+        DEPENDS ${ispc_target} ${bc_target} ${input}
+        OUTPUT ${lower_post_link} ${post_link_result}
+        COMMAND ${DPCPP_SYCL_POST_LINK}
+            -split=auto
+            -emit-param-info
+            -symbols
+            -emit-exported-symbols
+            -lower-esimd
+            -O2
+            -spec-const=rt
+            -device-globals
+            -o ${lower_post_link}
+            ${input}
+        COMMENT "Running sycl-post-link ${bundler_result_tmp}"
+    )
+
+    add_custom_target(${target_name} DEPENDS ${post_link_result})
+    set_target_properties(${target_name} PROPERTIES
+        ISPC_CUSTOM_DEPENDENCIES ${post_link_result}
+    )
+endfunction()
+
 # Translate the linked bitcode files to SPV
 # target_name: target name to use for the output spv command, should have a single bc file
 #              as its ISPC_CUSTOM_DEPENDENCIES
@@ -357,10 +395,15 @@ function (link_ispc_dpcpp ispc_target)
         ${ispc_target}_bc
         ${DPCPP_BC_TARGETS})
 
+    # Run sycl-post-link on linked bitcode
+    sycl_post_link(${ispc_target}_ispc2dpcpp_postlink
+        ${ispc_target}_bc
+        ${ispc_target}_ispc2dpcpp_bc)
+
     # Translate linked bitcode to SPIR-V
     translate_to_spirv(${ispc_target}_ispc2dpcpp_spv
         ${ispc_target}_bc
-        ${ispc_target}_ispc2dpcpp_bc)
+        ${ispc_target}_ispc2dpcpp_postlink)
 
     add_dependencies(${ispc_target} ${ispc_target}_ispc2dpcpp_spv)
 endfunction()
