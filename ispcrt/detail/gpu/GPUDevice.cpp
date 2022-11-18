@@ -42,6 +42,14 @@ DECLARE_ENV(ISPCRT_IGC_OPTIONS)
 DECLARE_ENV(ISPCRT_USE_ZEBIN)
 #undef DECLARE_ENV
 
+#if defined(_WIN32) || defined(_WIN64)
+#define UNLIKELY(expr) (expr)
+#else
+#define UNLIKELY(expr) (__builtin_expect(!!(expr), 0))
+#endif
+
+static bool is_verbose = false;
+
 // Simple OS-agnostic wrapper to get environment variable.
 static const char *getenv_wr(const char *env) {
     char *value = nullptr;
@@ -52,6 +60,15 @@ static const char *getenv_wr(const char *env) {
     value = getenv(env);
 #endif
     return value;
+}
+
+static void print_env(const char *env) {
+    const char *val = getenv_wr(env);
+    if (val) {
+        std::cout << env << "=" << val << std::endl;
+    } else {
+        std::cout << env << " is not set" << std::endl;
+    }
 }
 
 namespace ispcrt {
@@ -624,8 +641,25 @@ struct Module : public ispcrt::base::Module {
         moduleDesc.pBuildFlags = igcOptions.c_str();
 
         assert(device != nullptr);
-        L0_SAFE_CALL(zeModuleCreate(context, device, &moduleDesc, &m_module, nullptr));
-        assert(m_module != nullptr);
+        if (UNLIKELY(is_verbose)) {
+            ze_module_build_log_handle_t hLog = nullptr;
+            size_t size = 0;
+
+            std::cout << "Module " << m_file  << " format=" << moduleFormat;
+            std::cout << " size=" << codeSize << std::endl;
+            std::cout << "IGC options: " << igcOptions << std::endl;
+
+            L0_SAFE_CALL(zeModuleCreate(context, device, &moduleDesc, &m_module, &hLog));
+            L0_SAFE_CALL(zeModuleBuildLogGetString(hLog, &size, nullptr));
+
+            std::vector<char> log(size);
+            L0_SAFE_CALL(zeModuleBuildLogGetString(hLog, &size, log.data()));
+
+            std::cout << "Build log (" << size << "): " << log.data() << std::endl;
+            L0_SAFE_CALL(zeModuleBuildLogDestroy(hLog));
+        } else {
+            L0_SAFE_CALL(zeModuleCreate(context, device, &moduleDesc, &m_module, nullptr));
+        }
 
         if (m_module == nullptr)
             throw std::runtime_error("Failed to load spv module!");
@@ -645,6 +679,8 @@ struct Module : public ispcrt::base::Module {
             throw std::logic_error("could not find GPU function");
         return fptr;
     }
+
+    std::string filename() { return m_file; }
 
   private:
     std::string m_file;
@@ -1041,21 +1077,26 @@ void linkModules(gpu::Module **modules, const uint32_t numModules) {
         moduleHandles.push_back(modules[i]->handle());
     }
 
-    ze_module_build_log_handle_t linkLog;
-    L0_SAFE_CALL_NOEXCEPT(zeModuleDynamicLink(numModules, moduleHandles.data(), &linkLog));
+    if (UNLIKELY(is_verbose)) {
+        std::cout << "Link " << numModules << " modules: ";
+        for (int i = 0; i< numModules; i++) {
+            std::cout << modules[i]->filename() << " ";
+        }
+        std::cout << std::endl;
 
-    size_t buildLogSize;
-    L0_SAFE_CALL(zeModuleBuildLogGetString(linkLog, &buildLogSize, nullptr));
-    char *dynLogBuffer = new char[buildLogSize]();
-    L0_SAFE_CALL_NOEXCEPT(zeModuleBuildLogGetString(linkLog, &buildLogSize, dynLogBuffer));
+        ze_module_build_log_handle_t hLog = nullptr;
+        size_t size = 0;
+        L0_SAFE_CALL_NOEXCEPT(zeModuleDynamicLink(numModules, moduleHandles.data(), &hLog));
+        L0_SAFE_CALL(zeModuleBuildLogGetString(hLog, &size, nullptr));
 
-    // For now always print dynamic linking log.
-    // TODO: introduce verbose mode to ISPCRT
-    std::cout << dynLogBuffer << "\n";
-    delete[] dynLogBuffer;
-    if (linkLog)
-        L0_SAFE_CALL_NOEXCEPT(zeModuleBuildLogDestroy(linkLog));
+        std::vector<char> log(size);
+        L0_SAFE_CALL_NOEXCEPT(zeModuleBuildLogGetString(hLog, &size, log.data()));
 
+        std::cout << "Link log(" << size << ") " << log.data() << "\n";
+        L0_SAFE_CALL_NOEXCEPT(zeModuleBuildLogDestroy(hLog));
+    } else {
+        L0_SAFE_CALL_NOEXCEPT(zeModuleDynamicLink(numModules, moduleHandles.data(), nullptr));
+    }
 }
 
 
@@ -1067,6 +1108,24 @@ void linkModules(gpu::Module **modules, const uint32_t numModules) {
 GPUDevice::GPUDevice() : GPUDevice(nullptr, nullptr, 0) {}
 
 GPUDevice::GPUDevice(void* nativeContext, void* nativeDevice, uint32_t deviceIdx) {
+    // Enable verbose if env var is set
+    is_verbose = getenv_wr(ISPCRT_VERBOSE) != nullptr;
+    if (UNLIKELY(is_verbose)) {
+        std::cout << "Verbose mode is on" << std::endl;
+        print_env(ISPCRT_VERBOSE);
+        print_env(ISPCRT_GPU_DEVICE);
+        print_env(ISPCRT_MOCK_DEVICE);
+        print_env(ISPCRT_GPU_THREAD_GROUP_SIZE_X);
+        print_env(ISPCRT_GPU_THREAD_GROUP_SIZE_Y);
+        print_env(ISPCRT_GPU_THREAD_GROUP_SIZE_Z);
+        print_env(ISPCRT_DISABLE_MULTI_COMMAND_LISTS);
+        print_env(ISPCRT_DISABLE_COPY_ENGINE);
+        print_env(ISPCRT_IGC_OPTIONS);
+        print_env(ISPCRT_USE_ZEBIN);
+        print_env(ISPCRT_MAX_KERNEL_LAUNCHES);
+        std::cout << "Device index " << deviceIdx << std::endl;
+    }
+
     // Perform GPU discovery
     m_driver = gpu::deviceDiscovery(&m_is_mock);
 
