@@ -18,7 +18,7 @@ ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx);
 struct CPUDevice : public base::Device {
     CPUDevice() = default;
 
-    base::MemoryView *newMemoryView(void *appMem, size_t numBytes, bool shared) const override;
+    base::MemoryView *newMemoryView(void *appMem, size_t numBytes, const ISPCRTNewMemoryViewFlags *flags) const override;
 
     base::TaskQueue *newTaskQueue() const override;
 

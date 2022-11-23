@@ -285,7 +285,7 @@ ISPCRTMemoryView ispcrtNewMemoryView(ISPCRTDevice d, void *appMemory, size_t num
     if (flags->allocType != ISPCRT_ALLOC_TYPE_SHARED && flags->allocType != ISPCRT_ALLOC_TYPE_DEVICE) {
         throw std::runtime_error("Unsupported memory allocation type requested!");
     }
-    return (ISPCRTMemoryView)device.newMemoryView(appMemory, numBytes, flags->allocType == ISPCRT_ALLOC_TYPE_SHARED);
+    return (ISPCRTMemoryView)device.newMemoryView(appMemory, numBytes, flags);
 }
 ISPCRT_CATCH_END(nullptr)
 
@@ -295,7 +295,7 @@ ISPCRTMemoryView ispcrtNewMemoryViewForContext(ISPCRTContext c, void *appMemory,
     if (flags->allocType != ISPCRT_ALLOC_TYPE_SHARED) {
         throw std::runtime_error("Only shared memory allocation is allowed for context!");
     }
-    return (ISPCRTMemoryView)context.newMemoryView(appMemory, numBytes, true);
+    return (ISPCRTMemoryView)context.newMemoryView(appMemory, numBytes, flags);
 }
 ISPCRT_CATCH_END(nullptr)
 
