@@ -18,7 +18,7 @@ struct Device : public RefCounted {
 
     virtual ~Device() = default;
 
-    virtual MemoryView *newMemoryView(void *appMemory, size_t numBytes, bool shared) const = 0;
+    virtual MemoryView *newMemoryView(void *appMemory, size_t numBytes, const ISPCRTNewMemoryViewFlags *flags) const = 0;
 
     virtual TaskQueue *newTaskQueue() const = 0;
 

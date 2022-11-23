@@ -201,6 +201,12 @@ inline ISPCRTAllocationType Device::getMemoryAllocType(void *memBuffer) {
 
 enum class AllocType { Device, Shared };
 
+enum class SharedMemoryUsageHint {
+    HostDeviceReadWrite,
+    HostWriteDeviceRead,
+    HostReadDeviceWrite
+};
+
 template <typename T, AllocType AT = AllocType::Device> class Array : public GenericObject<ISPCRTMemoryView> {
   public:
     template<AllocType alloc> using EnableForSharedAllocation = typename std::enable_if<(alloc == AllocType::Shared)>::type*;
@@ -229,19 +235,27 @@ template <typename T, AllocType AT = AllocType::Device> class Array : public Gen
 
     // Allocate single object in shared memory
     template<AllocType alloc = AT>
-        Array(const Device &device, EnableForSharedAllocation<alloc> = 0);
+        Array(const Device &device,
+              SharedMemoryUsageHint SMAT = SharedMemoryUsageHint::HostDeviceReadWrite,
+              EnableForSharedAllocation<alloc> = 0);
 
     // Allocate single object in shared memory for context
     template<AllocType alloc = AT>
-        Array(const Context &context, EnableForSharedAllocation<alloc> = 0);
+        Array(const Context &context,
+              SharedMemoryUsageHint SMAT = SharedMemoryUsageHint::HostDeviceReadWrite,
+              EnableForSharedAllocation<alloc> = 0);
 
     // Allocate multiple objects in shared memory
     template<AllocType alloc = AT>
-        Array(const Device &device, size_t size, EnableForSharedAllocation<alloc> = 0);
+        Array(const Device &device, size_t size,
+              SharedMemoryUsageHint SMAT = SharedMemoryUsageHint::HostDeviceReadWrite,
+              EnableForSharedAllocation<alloc> = 0);
 
     // Allocate multiple objects in shared memory for context
     template<AllocType alloc = AT>
-        Array(const Context &context, size_t size, EnableForSharedAllocation<alloc> = 0);
+        Array(const Context &context, size_t size,
+              SharedMemoryUsageHint SMAT = SharedMemoryUsageHint::HostDeviceReadWrite,
+              EnableForSharedAllocation<alloc> = 0);
 
     //////// Methods valid only for Device memory allocations ////////
 
@@ -256,10 +270,16 @@ template <typename T, AllocType AT = AllocType::Device> class Array : public Gen
     template<AllocType alloc = AT>
         T *sharedPtr(EnableForSharedAllocation<alloc> = 0) const;
 
+    template<AllocType alloc = AT>
+        SharedMemoryUsageHint smType(EnableForSharedAllocation<alloc> = 0) const;
+
     //////// Methods for all types of memory allocations ////////
 
     size_t size() const;
     AllocType type() const;
+
+private:
+    SharedMemoryUsageHint m_smuh{SharedMemoryUsageHint::HostDeviceReadWrite};
 };
 
 // Inlined definitions //
@@ -271,6 +291,7 @@ template<AllocType alloc>
         : GenericObject<ISPCRTMemoryView>() {
             ISPCRTNewMemoryViewFlags flags;
             flags.allocType = ISPCRT_ALLOC_TYPE_DEVICE;
+            flags.smHint = ISPCRT_SM_HOST_DEVICE_READ_WRITE;
             m_handle = ispcrtNewMemoryView(device.handle(), appMemory, size * sizeof(T), &flags);
         }
 
@@ -291,27 +312,41 @@ template<AllocType alloc>
 // Shared memory allocations
 template<typename T, AllocType AT>
 template<AllocType alloc>
-    inline Array<T, AT>::Array(const Device &device, EnableForSharedAllocation<alloc>) : Array<T, AT>(device, 1) {}
+    inline Array<T, AT>::Array(const Device &device, SharedMemoryUsageHint smuh, EnableForSharedAllocation<alloc>) : Array<T, AT>(device, 1, smuh) {}
 
 template<typename T, AllocType AT>
 template<AllocType alloc>
-    inline Array<T, AT>::Array(const Context &context, EnableForSharedAllocation<alloc>) : Array<T, AT>(context, 1) {}
+    inline Array<T, AT>::Array(const Context &context, SharedMemoryUsageHint smuh, EnableForSharedAllocation<alloc>) : Array<T, AT>(context, 1, smuh) {}
+
+inline void set_shared_memory_view_flags(ISPCRTNewMemoryViewFlags *p, SharedMemoryUsageHint t) {
+    p->allocType = ISPCRT_ALLOC_TYPE_SHARED;
+    switch (t) {
+    case SharedMemoryUsageHint::HostDeviceReadWrite:
+        p->smHint = ISPCRT_SM_HOST_DEVICE_READ_WRITE; break;
+    case SharedMemoryUsageHint::HostWriteDeviceRead:
+        p->smHint = ISPCRT_SM_HOST_WRITE_DEVICE_READ; break;
+    case SharedMemoryUsageHint::HostReadDeviceWrite:
+        p->smHint = ISPCRT_SM_HOST_READ_DEVICE_WRITE; break;
+    default:
+        throw std::bad_alloc();
+    }
+}
 
 template<typename T, AllocType AT>
 template<AllocType alloc>
-    inline Array<T, AT>::Array(const Device &device, size_t size, EnableForSharedAllocation<alloc>) :
+    inline Array<T, AT>::Array(const Device &device, size_t size, SharedMemoryUsageHint smuh, EnableForSharedAllocation<alloc>) : m_smuh(smuh),
         GenericObject<ISPCRTMemoryView>() {
             ISPCRTNewMemoryViewFlags flags;
-            flags.allocType = ISPCRT_ALLOC_TYPE_SHARED;
+            set_shared_memory_view_flags(&flags, smuh);
             m_handle = ispcrtNewMemoryView(device.handle(), nullptr, size * sizeof(T), &flags);
         }
 
 template<typename T, AllocType AT>
 template<AllocType alloc>
-    inline Array<T, AT>::Array(const Context &context, size_t size, EnableForSharedAllocation<alloc>) :
+    inline Array<T, AT>::Array(const Context &context, size_t size, SharedMemoryUsageHint smuh, EnableForSharedAllocation<alloc>) : m_smuh(smuh),
         GenericObject<ISPCRTMemoryView>() {
             ISPCRTNewMemoryViewFlags flags;
-            flags.allocType = ISPCRT_ALLOC_TYPE_SHARED;
+            set_shared_memory_view_flags(&flags, smuh);
             m_handle = ispcrtNewMemoryViewForContext(context.handle(), nullptr, size * sizeof(T), &flags);
         }
 
@@ -331,6 +366,10 @@ template<typename T, AllocType AT>
 template<AllocType alloc>
     inline T *Array<T,AT>::sharedPtr(EnableForSharedAllocation<alloc>) const { return (T *)ispcrtSharedPtr(handle()); }
 
+template<typename T, AllocType AT>
+template<AllocType alloc>
+    inline SharedMemoryUsageHint Array<T,AT>::smType(EnableForSharedAllocation<alloc>) const { return m_smuh; }
+
 // All other methods
 
 template <typename T, AllocType AT>
@@ -348,15 +387,18 @@ template <typename T> class SharedMemoryAllocator {
     using value_type = T;
 
     SharedMemoryAllocator() = delete;
-    SharedMemoryAllocator(const Context &context) : m_context(context) {}
+    SharedMemoryAllocator(const Context &context, SharedMemoryUsageHint smuh = SharedMemoryUsageHint::HostDeviceReadWrite) : m_context(context), m_smuh(smuh) {}
     SharedMemoryAllocator(const SharedMemoryAllocator&) = default;
     ~SharedMemoryAllocator() = default;
     SharedMemoryAllocator& operator=(const SharedMemoryAllocator&) = delete;
 
     T* allocate(const size_t n);
     void deallocate(T* const p, const size_t n);
+
+    SharedMemoryUsageHint smType() const { return m_smuh; }
 protected:
     Context m_context;
+    SharedMemoryUsageHint m_smuh;
     std::unordered_map<void*, Array<T, AllocType::Shared>> m_ptrToArray;
 };
 
@@ -365,7 +407,7 @@ protected:
 template <typename T>
 inline T *SharedMemoryAllocator<T>::allocate(const size_t n) {
     // Allocate a memory that can be shared between the host and the device
-    auto a = Array<T, AllocType::Shared>(m_context, n);
+    auto a = Array<T, AllocType::Shared>(m_context, n, m_smuh);
 
     void* ptr = a.sharedPtr();
     if (ptr == nullptr) {

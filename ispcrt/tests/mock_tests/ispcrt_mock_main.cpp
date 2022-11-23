@@ -62,6 +62,40 @@ class MockTestWithDevice : public MockTest {
     ispcrt::Device m_device;
 };
 
+class MockTestWithContext : public MockTest {
+  protected:
+    void SetUp() override {
+        MockTest::SetUp();
+        EXPECT_EQ(m_ctxt, 0);
+        m_ctxt = Context(ISPCRT_DEVICE_TYPE_GPU);
+        ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+        EXPECT_NE(m_ctxt, 0);
+    }
+
+    void TearDown() override {
+        ResetError();
+        Config::cleanup();
+        // Make sure we can still recreate a context object
+        ispcrt::Context c(ISPCRT_DEVICE_TYPE_GPU);
+        ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+        ResetError();
+    }
+
+    ispcrt::Context m_ctxt;
+};
+
+class MockTestWithContextMemPool : public MockTestWithContext {
+  protected:
+    void SetUp() override {
+        setenv("ISPCRT_MEM_POOL", "1", 1);
+        MockTestWithContext::SetUp();
+    }
+
+    void TearDown() override {
+        MockTestWithContext::TearDown();
+        unsetenv("ISPCRT_MEM_POOL");
+    }
+};
 
 class MockTestWithModule : public MockTestWithDevice {
   protected:
@@ -154,6 +188,163 @@ TEST_F(MockTest, Context_Constructor_zeInit) {
 TEST_F(MockTest, Device_Constructor_FromContext) {
     ispcrt::Context c(ISPCRT_DEVICE_TYPE_GPU);
     ispcrt::Device d(c);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+/////////////////////////////////////////////////////////////////////
+// Context tests
+
+TEST_F(MockTestWithContext, SharedMemAlloc1) {
+    ispcrt::SharedMemoryAllocator<char> sma(m_ctxt);
+    sma.allocate(1);
+    ASSERT_EQ(CallCounters::get("zeMemAllocShared"), 1);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTestWithContext, SharedMemAlloc4) {
+    ispcrt::SharedMemoryAllocator<char> sma(m_ctxt);
+    for(int i = 0; i < 4; i++)
+        sma.allocate(1);
+    ASSERT_EQ(CallCounters::get("zeMemAllocShared"), 4);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTestWithContext, SharedMemAllocHDRW) {
+    ispcrt::SharedMemoryAllocator<char> sma(m_ctxt,
+                                            ispcrt::SharedMemoryUsageHint::HostDeviceReadWrite);
+    for(int i = 0; i < 10; i++)
+        sma.allocate(1ULL << 10);
+    ASSERT_EQ(CallCounters::get("zeMemAllocShared"), 10);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTestWithContext, SharedMemAllocHRDW) {
+    ispcrt::SharedMemoryAllocator<char> sma(m_ctxt,
+                                            ispcrt::SharedMemoryUsageHint::HostReadDeviceWrite);
+    for(int i = 0; i < 5; i++)
+        sma.allocate(1ULL << 5);
+    ASSERT_EQ(CallCounters::get("zeMemAllocShared"), 5);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTestWithContext, SharedMemAllocHWDR) {
+    ispcrt::SharedMemoryAllocator<char> sma(m_ctxt,
+                                            ispcrt::SharedMemoryUsageHint::HostWriteDeviceRead);
+    for(int i = 0; i < 7; i++)
+        sma.allocate((1ULL << 7) - 100);
+    ASSERT_EQ(CallCounters::get("zeMemAllocShared"), 7);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTestWithContextMemPool, SharedMemAlloc0) {
+    ispcrt::SharedMemoryAllocator<char> sma(m_ctxt);
+    sma.allocate(0);
+    ASSERT_EQ(CallCounters::get("zeMemAllocShared"), 1);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTestWithContextMemPool, SharedMemAlloc1) {
+    ispcrt::SharedMemoryAllocator<char> sma(m_ctxt);
+    sma.allocate(1);
+    ASSERT_EQ(CallCounters::get("zeMemAllocShared"), 1);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTestWithContextMemPool, SharedMemAllocHDRW) {
+    ispcrt::SharedMemoryAllocator<char> sma(m_ctxt,
+                                            ispcrt::SharedMemoryUsageHint::HostDeviceReadWrite);
+    for(int i = 0; i < 10; i++)
+        sma.allocate(1ULL << 10);
+    ASSERT_EQ(CallCounters::get("zeMemAllocShared"), 10);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTestWithContextMemPool, SharedMemAllocHRDW) {
+    ispcrt::SharedMemoryAllocator<char> sma(m_ctxt,
+                                            ispcrt::SharedMemoryUsageHint::HostReadDeviceWrite);
+    for(int i = 0; i < 5; i++)
+        sma.allocate(1ULL << 5);
+    ASSERT_EQ(CallCounters::get("zeMemAllocShared"), 1);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTestWithContextMemPool, SharedMemAllocHWDR) {
+    ispcrt::SharedMemoryAllocator<char> sma(m_ctxt,
+                                            ispcrt::SharedMemoryUsageHint::HostWriteDeviceRead);
+    for(int i = 0; i < 7; i++)
+        sma.allocate((1ULL << 7) - 100);
+    ASSERT_EQ(CallCounters::get("zeMemAllocShared"), 1);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTestWithContextMemPool, SharedMemAllocMemPool) {
+    ispcrt::SharedMemoryAllocator<char> sma_hrdw(m_ctxt,
+                                                 ispcrt::SharedMemoryUsageHint::HostReadDeviceWrite);
+    ispcrt::SharedMemoryAllocator<char> sma_hwdr(m_ctxt,
+                                                 ispcrt::SharedMemoryUsageHint::HostWriteDeviceRead);
+    for(int i = 0; i < 5; i++) {
+        sma_hrdw.allocate(256);
+        sma_hwdr.allocate(512);
+    }
+    ASSERT_EQ(CallCounters::get("zeMemAllocShared"), 2);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTestWithContextMemPool, SharedMemAllocAllDiff) {
+    ispcrt::SharedMemoryAllocator<char> sma_hdrw(m_ctxt,
+                                                 ispcrt::SharedMemoryUsageHint::HostDeviceReadWrite);
+    ispcrt::SharedMemoryAllocator<char> sma_hrdw(m_ctxt,
+                                                 ispcrt::SharedMemoryUsageHint::HostReadDeviceWrite);
+    ispcrt::SharedMemoryAllocator<char> sma_hwdr(m_ctxt,
+                                                 ispcrt::SharedMemoryUsageHint::HostWriteDeviceRead);
+    auto *p1 = sma_hdrw.allocate(128);
+    auto *p2 = sma_hrdw.allocate(256);
+    auto *p3 = sma_hwdr.allocate(512);
+    ASSERT_NE(p1, p2);
+    ASSERT_NE(p1, p3);
+    ASSERT_NE(p2, p3);
+    ASSERT_EQ(CallCounters::get("zeMemAllocShared"), 3);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTestWithContextMemPool, SeveralBulksUnderSameChunkSize1) {
+    ispcrt::SharedMemoryAllocator<char> sma(m_ctxt,
+                                            ispcrt::SharedMemoryUsageHint::HostWriteDeviceRead);
+    for(int i = 0; i < 3; i++)
+        sma.allocate(1ULL << 20);
+    ASSERT_EQ(CallCounters::get("zeMemAllocShared"), 2);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTestWithContextMemPool, SeveralBulksUnderSameChunkSize2) {
+    ispcrt::SharedMemoryAllocator<char> sma(m_ctxt,
+                                            ispcrt::SharedMemoryUsageHint::HostWriteDeviceRead);
+    for(int i = 0; i < 23; i++)
+        sma.allocate(1ULL << 19);
+    ASSERT_EQ(CallCounters::get("zeMemAllocShared"), 6);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTestWithContextMemPool, CheckFreeList) {
+    ispcrt::SharedMemoryAllocator<char> sma(m_ctxt,
+                                            ispcrt::SharedMemoryUsageHint::HostWriteDeviceRead);
+    const size_t size = 1ULL << 20;
+    auto *p1 = sma.allocate(size);
+    auto *p2 = sma.allocate(size);
+    ASSERT_NE(p1, p2);
+    sma.deallocate(p1, size);
+    auto *p3 = sma.allocate(size);
+    ASSERT_EQ(p1, p3);
+    sma.deallocate(p2, size);
+    auto *p4 = sma.allocate(size);
+    ASSERT_EQ(p2, p4);
+    sma.deallocate(p3,size);
+    sma.deallocate(p4,size);
+    auto *p5 = sma.allocate(size);
+    auto *p6 = sma.allocate(size);
+    ASSERT_EQ(p5, p1);
+    ASSERT_EQ(p6, p2);
+    ASSERT_EQ(CallCounters::get("zeMemAllocShared"), 1);
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 

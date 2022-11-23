@@ -22,6 +22,11 @@
 #include <sstream>
 #include <vector>
 #include <memory>
+#include <list>
+
+#if defined(_WIN32) || defined(_WIN64)
+#include <intrin.h>
+#endif
 
 // ispcrt
 #include "detail/Exception.h"
@@ -41,6 +46,7 @@ DECLARE_ENV(ISPCRT_DISABLE_MULTI_COMMAND_LISTS)
 DECLARE_ENV(ISPCRT_DISABLE_COPY_ENGINE)
 DECLARE_ENV(ISPCRT_IGC_OPTIONS)
 DECLARE_ENV(ISPCRT_USE_ZEBIN)
+DECLARE_ENV(ISPCRT_MEM_POOL)
 #undef DECLARE_ENV
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -71,6 +77,26 @@ static void print_env(const char *env) {
         std::cout << env << " is not set" << std::endl;
     }
 }
+
+
+#if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN64)
+#define CLZ __lzcnt64
+#else // defined(_WIN64)
+#define CLZ __lzcnt
+#endif // defined(_WIN64)
+#else // defined(_WIN32) || defined(_WIN64)
+#define CLZ __builtin_clzl
+#endif
+static size_t round_up_pow2(size_t x) {
+    size_t p = 0;
+    if (x < 2)
+        return x;
+    size_t lead_zeros = CLZ(x - 1);
+    p = 1ULL << (8 * sizeof (size_t) - lead_zeros);
+    return p;
+}
+#undef CLZ
 
 namespace ispcrt {
 namespace gpu {
@@ -500,13 +526,232 @@ struct EventPool {
     std::vector<Event *> m_events_pool;
 };
 
+// Class to contain a single rather big memory hunk. This hunk allocated once.
+// It is virtually splitted into smaller chunks of same size.
+class Bulk {
+  public:
+    static const size_t MIN_POW_2 = 6;
+    static const size_t MAX_POW_2 = 21;
+
+    // Cut-off of chunking allocations 2 MB.
+    // 2MB corresponds with DG2 shared mem allocation. To utilize it with less
+    // overhead it may be useful to decrease it.
+    static constexpr size_t BULK_SIZE = (1ULL << MAX_POW_2);
+
+    // No actual shared memory allocation happen in bulk constructor. It is
+    // delayed until actual requests to allocate memory.
+    Bulk(size_t chunkSize, ze_context_handle_t ctxt, ze_device_handle_t dev) :
+      m_chunkSize(chunkSize), m_numChunks(BULK_SIZE / chunkSize), m_ctxt(ctxt), m_dev(dev) { }
+
+    // Note: when using that constructor, one should set device handle later.
+    Bulk(size_t chunkSize, ze_context_handle_t ctxt) :
+      m_chunkSize(chunkSize), m_numChunks(BULK_SIZE / chunkSize), m_ctxt(ctxt) { }
+
+    // Free memory hunk
+    ~Bulk() {
+        deallocate();
+    }
+
+    // Allocate and return a pointer to free chunk inside bulk
+    void *allocChunk() {
+        // Allocate BULK_SIZE hunk once lazily on the first real allocation.
+        if (!m_memPtr)
+            allocate();
+
+        // The initial allocation works in linear allocator fashion.
+        // m_initFreeChunks goes up to m_numChunks only once, after that all
+        // allocation would request free chunks from the list of free chunks.
+        // The map of used chunks is updated as well. It is needed to search
+        // index of chunk by memory pointer.
+        assert(m_memPtr);
+        if (m_freeChunks.empty() && m_initFreeChunks < m_numChunks) {
+            void *ptr = chunkPtr(m_initFreeChunks);
+            m_usedChunks[ptr] = m_initFreeChunks++;
+            return ptr;
+        } else {
+            if (!m_freeChunks.empty()) {
+                size_t idx = m_freeChunks.front();
+                m_freeChunks.pop_front();
+                void *ptr = chunkPtr(idx);
+                m_usedChunks[ptr] = idx;
+                return ptr;
+            } else {
+                // TODO! Really?
+                assert(false);
+                return nullptr;
+            }
+        }
+    }
+
+    // Free chunk
+    void freeChunk(void *ptr) {
+        // Find chunk index by memory pointer, delete it from used and place it
+        // to free ones.
+        auto it = m_usedChunks.find(ptr);
+        assert(it != m_usedChunks.end());
+        m_freeChunks.push_back(it->second);
+        m_usedChunks.erase(it);
+    }
+
+    // Return true if there is no empty chunks
+    bool full() { return !(m_initFreeChunks < m_numChunks) && m_freeChunks.empty(); }
+
+    // Getter and setter for device handle. It is needed because sometimes Bulk
+    // objects are created before device handle is constructed.
+    ze_device_handle_t hDev() const { return m_dev; }
+    void hDev(ze_device_handle_t dev) { m_dev = dev; }
+
+  private:
+
+    char  *m_memPtr{nullptr};
+
+    size_t m_chunkSize{0};
+    size_t m_numChunks{0};
+
+    // Index of free chunk during initial linear allocation.
+    size_t m_initFreeChunks{0};
+
+    // Contain free chunk indexes
+    std::list<size_t> m_freeChunks;
+
+    std::unordered_map<void*, size_t> m_usedChunks;
+
+    ze_context_handle_t m_ctxt{nullptr};
+    ze_device_handle_t m_dev{nullptr};
+
+    char* chunkPtr(size_t i) { return m_memPtr + m_chunkSize * i; }
+
+    void *allocate() {
+        ze_result_t status;
+        ze_device_mem_alloc_desc_t dev_desc = {};
+        ze_host_mem_alloc_desc_t host_desc = {};
+
+        // The best scenario would be if zeMemAllocShared was able to allocate
+        // memory aligned to BULK_SIZE. In that case, it would be easier to
+        // found the Bulk that own a specific chunk. At least, 4 MB doesn't
+        // work, so we need to track chuck(ptr)->Bulk map in the ChunkedPool.
+        status = zeMemAllocShared(m_ctxt, &dev_desc, &host_desc, BULK_SIZE, 64, m_dev, (void**)&m_memPtr);
+        L0_THROW_IF(status);
+
+        return m_memPtr;
+    }
+
+    void deallocate() {
+        if (m_memPtr)
+            L0_SAFE_CALL_NOEXCEPT(zeMemFree(m_ctxt, m_memPtr));
+    }
+};
+
+// ChunkedPool contains Bulks for some chunk size. It manages lists of bulks
+// for every size. If needed additional bulks are created.
+class ChunkedPool {
+  public:
+    static constexpr size_t MIN_CHUNK_SIZE = 1ULL << Bulk::MIN_POW_2;
+    static constexpr size_t MAX_CHUNK_SIZE = 1ULL << Bulk::MAX_POW_2;
+
+    ChunkedPool(ISPCRTSharedMemoryAllocationHint type, ze_context_handle_t ctxt) : m_type(type), m_ctxt(ctxt) {
+        // Create empty Bulk objects for chunks of power of 2.
+        for (int i = Bulk::MIN_POW_2; i < Bulk::MAX_POW_2; i++) {
+            size_t chunkSize = 1ULL << i;
+            m_bulks[chunkSize] = std::list<Bulk*>( { new Bulk(chunkSize, m_ctxt) } );
+        }
+    }
+
+    ~ChunkedPool() {
+        for(auto &l : m_bulks)
+            for(auto b : l.second)
+                delete b;
+    }
+
+    void *allocate(size_t size) {
+        assert(size == round_up_pow2(size));
+        assert(size < MAX_CHUNK_SIZE);
+        if (size < MIN_CHUNK_SIZE) {
+            size = MIN_CHUNK_SIZE;
+        }
+
+        auto &bulks = m_bulks[size];
+
+        bool allFull = true;
+        Bulk *blk = bulks.front();
+        for (int i = 0; i < bulks.size(); i++) {
+            if (blk->full()) {
+                bulks.pop_front();
+                bulks.push_back(blk);
+                blk = bulks.front();
+                continue;
+            }
+            allFull = false;
+            break;
+        }
+        if (allFull) {
+            blk = new Bulk(size, m_ctxt, m_dev);
+            bulks.push_back(blk);
+        }
+
+        void *mem_ptr = blk->allocChunk();
+        m_allocated[mem_ptr] = blk;
+        return mem_ptr;
+    }
+
+    void deallocate(void *ptr) {
+        auto it = m_allocated.find(ptr);
+        assert(it != m_allocated.end());
+        Bulk *blk = it->second;
+        blk->freeChunk(ptr);
+        m_allocated.erase(it);
+    }
+
+    // Getter and setter for device handle. It is needed because ChunkedPool
+    // may be constructed inside Context before device creation.
+    ze_device_handle_t hDev() const { return m_dev; }
+    void hDev(ze_device_handle_t dev) {
+        m_dev = dev;
+        // Update device handle in all bulks.
+        for(auto &l : m_bulks)
+            for(auto &b : l.second)
+                if (!b->hDev())
+                    b->hDev(dev);
+    }
+
+  private:
+    // Shared memory with allocation hint stored in this ChunkedPool
+    ISPCRTSharedMemoryAllocationHint m_type;
+
+    // Contains lists of bulks for some chunk sizes.
+    std::unordered_map<size_t, std::list<Bulk*>> m_bulks;
+
+    // Map every allocated memory to Bulk that contains it.
+    std::unordered_map<void*, Bulk*> m_allocated;
+
+    ze_context_handle_t m_ctxt{nullptr};
+    ze_device_handle_t m_dev{nullptr};
+};
+
 struct MemoryView : public ispcrt::base::MemoryView {
-    MemoryView(ze_context_handle_t context, ze_device_handle_t device, void *appMem, size_t numBytes, bool shared)
-        : m_hostPtr(appMem), m_size(numBytes), m_context(context), m_device(device), m_shared(shared) {}
+    MemoryView(ze_context_handle_t context, ze_device_handle_t device,
+               void *appMem, size_t numBytes, const ISPCRTNewMemoryViewFlags *flags, const GPUContext *ctxt)
+        : m_hostPtr(appMem), m_size(numBytes), m_requestedSize(numBytes), m_context(context), m_device(device),
+          m_shared(flags->allocType == ISPCRT_ALLOC_TYPE_SHARED), m_smhint(flags->smHint), m_ctxtGPU(ctxt)
+    {
+        // Use MemPool only when it is explicitly enabled with env var and memory hint is not device/host read/write
+        m_useMemPool = (getenv_wr(ISPCRT_MEM_POOL) != nullptr) && (m_smhint != ISPCRT_SM_HOST_DEVICE_READ_WRITE);
+        if (m_ctxtGPU && m_useMemPool && !m_ctxtGPU->memPool(m_smhint)->hDev())
+            m_ctxtGPU->memPool(m_smhint)->hDev(device);
+    }
 
     ~MemoryView() {
-        if (m_devicePtr)
-            L0_SAFE_CALL_NOEXCEPT(zeMemFree(m_context, m_devicePtr));
+        if (m_devicePtr) {
+            if (m_shared && m_useMemPool && m_size < Bulk::BULK_SIZE) {
+                assert(m_ctxtGPU);
+                m_ctxtGPU->memPool(m_smhint)->deallocate(m_devicePtr);
+                if (UNLIKELY(is_verbose)) {
+                    std::cout << "MemPool deallocation at " << m_devicePtr << std::endl;
+                }
+            } else {
+                L0_SAFE_CALL_NOEXCEPT(zeMemFree(m_context, m_devicePtr));
+            }
+        }
     }
 
     bool isShared() { return m_shared; }
@@ -522,33 +767,70 @@ struct MemoryView : public ispcrt::base::MemoryView {
     size_t numBytes() { return m_size; };
 
   private:
-    void allocate() {
-        ze_result_t status;
-        if (m_shared) {
-            ze_device_mem_alloc_desc_t device_alloc_desc = {};
-            ze_host_mem_alloc_desc_t host_alloc_desc = {};
-            if (!m_context)
-                throw std::runtime_error("Context handle is NULL!");
-            status =
-                zeMemAllocShared(m_context, &device_alloc_desc, &host_alloc_desc, m_size, 64, m_device, &m_devicePtr);
-        } else {
-            ze_device_mem_alloc_desc_t allocDesc = {};
-            if (!m_device)
-                throw std::runtime_error("Device handle is NULL!");
-            status = zeMemAllocDevice(m_context, &allocDesc, m_size, m_size, m_device, &m_devicePtr);
-        }
+    void allocDevice() {
+        if (!m_device)
+            throw std::runtime_error("Device handle is NULL!");
+
+        ze_device_mem_alloc_desc_t allocDesc = {};
+        ze_result_t status = zeMemAllocDevice(m_context, &allocDesc, m_size, m_size, m_device, &m_devicePtr);
+
         if (status != ZE_RESULT_SUCCESS)
             m_devicePtr = nullptr;
         L0_THROW_IF(status);
     }
 
+    void allocShared() {
+        if (!m_context)
+            throw std::runtime_error("Context handle is NULL!");
+
+        ze_device_mem_alloc_desc_t device_alloc_desc = {};
+        ze_host_mem_alloc_desc_t host_alloc_desc = {};
+        ze_result_t status = zeMemAllocShared(m_context, &device_alloc_desc,
+                                              &host_alloc_desc, m_size, 64, m_device, &m_devicePtr);
+
+        if (status != ZE_RESULT_SUCCESS)
+            m_devicePtr = nullptr;
+        L0_THROW_IF(status);
+        if (UNLIKELY(is_verbose)) {
+            std::cout << "zeMemAllocShared " << m_size << " for requested "
+                      << m_requestedSize << " at " << m_devicePtr << std::endl;
+        }
+    }
+
+    void allocate() {
+        if (m_shared) {
+
+            if (m_useMemPool && m_size < Bulk::BULK_SIZE) {
+                m_size = round_up_pow2(m_requestedSize);
+
+                m_devicePtr = m_ctxtGPU->memPool(m_smhint)->allocate(m_size);
+                assert(m_devicePtr);
+                if (UNLIKELY(is_verbose)) {
+                    std::cout << "MemPool allocation " << m_size << "(" << m_requestedSize
+                              << ") at " << m_devicePtr << std::endl;
+                }
+            } else {
+                allocShared();
+            }
+
+        } else {
+            allocDevice();
+        }
+    }
+
+    ISPCRTSharedMemoryAllocationHint m_smhint{ISPCRT_SM_HOST_DEVICE_READ_WRITE};
     bool m_shared{false};
+    bool m_useMemPool{false};
+
     void *m_hostPtr{nullptr};
     void *m_devicePtr{nullptr};
     size_t m_size{0};
+    size_t m_requestedSize{0};
 
     ze_device_handle_t m_device{nullptr};
     ze_context_handle_t m_context{nullptr};
+
+    const GPUContext *m_ctxtGPU{nullptr};
 };
 
 struct Module : public ispcrt::base::Module {
@@ -1075,6 +1357,24 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
 static std::vector<ze_device_handle_t> g_deviceList;
 
 static ze_driver_handle_t deviceDiscovery(bool *p_is_mock) {
+    // Enable verbose if env var is set
+    is_verbose = getenv_wr(ISPCRT_VERBOSE) != nullptr;
+    if (UNLIKELY(is_verbose)) {
+        std::cout << "Verbose mode is on" << std::endl;
+        print_env(ISPCRT_VERBOSE);
+        print_env(ISPCRT_GPU_DEVICE);
+        print_env(ISPCRT_MOCK_DEVICE);
+        print_env(ISPCRT_GPU_THREAD_GROUP_SIZE_X);
+        print_env(ISPCRT_GPU_THREAD_GROUP_SIZE_Y);
+        print_env(ISPCRT_GPU_THREAD_GROUP_SIZE_Z);
+        print_env(ISPCRT_DISABLE_MULTI_COMMAND_LISTS);
+        print_env(ISPCRT_DISABLE_COPY_ENGINE);
+        print_env(ISPCRT_IGC_OPTIONS);
+        print_env(ISPCRT_USE_ZEBIN);
+        print_env(ISPCRT_MAX_KERNEL_LAUNCHES);
+        print_env(ISPCRT_MEM_POOL);
+    }
+
     static ze_driver_handle_t selectedDriver = nullptr;
     bool is_mock = getenv_wr(ISPCRT_MOCK_DEVICE) != nullptr;
 
@@ -1189,24 +1489,6 @@ base::Module *staticLinkModules(gpu::Module **modules, const uint32_t numModules
 GPUDevice::GPUDevice() : GPUDevice(nullptr, nullptr, 0) {}
 
 GPUDevice::GPUDevice(void* nativeContext, void* nativeDevice, uint32_t deviceIdx) {
-    // Enable verbose if env var is set
-    is_verbose = getenv_wr(ISPCRT_VERBOSE) != nullptr;
-    if (UNLIKELY(is_verbose)) {
-        std::cout << "Verbose mode is on" << std::endl;
-        print_env(ISPCRT_VERBOSE);
-        print_env(ISPCRT_GPU_DEVICE);
-        print_env(ISPCRT_MOCK_DEVICE);
-        print_env(ISPCRT_GPU_THREAD_GROUP_SIZE_X);
-        print_env(ISPCRT_GPU_THREAD_GROUP_SIZE_Y);
-        print_env(ISPCRT_GPU_THREAD_GROUP_SIZE_Z);
-        print_env(ISPCRT_DISABLE_MULTI_COMMAND_LISTS);
-        print_env(ISPCRT_DISABLE_COPY_ENGINE);
-        print_env(ISPCRT_IGC_OPTIONS);
-        print_env(ISPCRT_USE_ZEBIN);
-        print_env(ISPCRT_MAX_KERNEL_LAUNCHES);
-        std::cout << "Device index " << deviceIdx << std::endl;
-    }
-
     // Perform GPU discovery
     m_driver = gpu::deviceDiscovery(&m_is_mock);
 
@@ -1250,8 +1532,9 @@ GPUDevice::~GPUDevice() {
         L0_SAFE_CALL_NOEXCEPT(zeContextDestroy((ze_context_handle_t)m_context));
 }
 
-base::MemoryView *GPUDevice::newMemoryView(void *appMem, size_t numBytes, bool shared) const {
-    return new gpu::MemoryView((ze_context_handle_t)m_context, (ze_device_handle_t)m_device, appMem, numBytes, shared);
+base::MemoryView *GPUDevice::newMemoryView(void *appMem, size_t numBytes, const ISPCRTNewMemoryViewFlags *flags) const {
+    return new gpu::MemoryView((ze_context_handle_t)m_context,
+                               (ze_device_handle_t)m_device, appMem, numBytes, flags, nullptr);
 }
 
 base::TaskQueue *GPUDevice::newTaskQueue() const {
@@ -1313,19 +1596,39 @@ GPUContext::GPUContext(void *nativeContext) {
     }
     if (!m_context)
         throw std::runtime_error("failed to create GPU context");
+
+    ze_context_handle_t ctxt = (ze_context_handle_t) m_context;
+    m_memPoolHWDR = std::unique_ptr<gpu::ChunkedPool>(new gpu::ChunkedPool(ISPCRT_SM_HOST_WRITE_DEVICE_READ, ctxt));
+    m_memPoolHRDW = std::unique_ptr<gpu::ChunkedPool>(new gpu::ChunkedPool(ISPCRT_SM_HOST_READ_DEVICE_WRITE, ctxt));
 }
 
 GPUContext::~GPUContext() {
+    // Destroy mem pools earlier than context, because context is used inside mem pools to deallocate memory.
+    m_memPoolHWDR.reset();
+    m_memPoolHRDW.reset();
     if (m_context && m_has_context_ownership)
         L0_SAFE_CALL_NOEXCEPT(zeContextDestroy((ze_context_handle_t)m_context));
 }
 
-base::MemoryView *GPUContext::newMemoryView(void *appMem, size_t numBytes, bool shared) const {
-    return new gpu::MemoryView((ze_context_handle_t)m_context, nullptr, appMem, numBytes, shared);
+base::MemoryView *GPUContext::newMemoryView(void *appMem, size_t numBytes, const ISPCRTNewMemoryViewFlags *flags) const {
+    return new gpu::MemoryView((ze_context_handle_t)m_context, nullptr, appMem, numBytes, flags, this);
 }
 
 ISPCRTDeviceType GPUContext::getDeviceType() const { return ISPCRTDeviceType::ISPCRT_DEVICE_TYPE_GPU; }
 
 void *GPUContext::contextNativeHandle() const { return m_context; }
+
+gpu::ChunkedPool *GPUContext::memPool(ISPCRTSharedMemoryAllocationHint type) const {
+    switch (type) {
+        case ISPCRT_SM_HOST_DEVICE_READ_WRITE:
+            throw std::runtime_error("MemPool for shared memory with HOST_DEVICE_READ_WRITE is not supported");
+        case ISPCRT_SM_HOST_WRITE_DEVICE_READ:
+            return m_memPoolHWDR.get();
+        case ISPCRT_SM_HOST_READ_DEVICE_WRITE:
+            return m_memPoolHRDW.get();
+        default:
+            throw std::runtime_error("requested incorrect MemPool");
+    }
+}
 
 } // namespace ispcrt

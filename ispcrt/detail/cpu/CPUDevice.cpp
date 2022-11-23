@@ -253,8 +253,8 @@ ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx) {
 
 } // namespace cpu
 
-ispcrt::base::MemoryView *CPUDevice::newMemoryView(void *appMem, size_t numBytes, bool shared) const {
-    return new cpu::MemoryView(appMem, numBytes, shared);
+ispcrt::base::MemoryView *CPUDevice::newMemoryView(void *appMem, size_t numBytes, const ISPCRTNewMemoryViewFlags *flags) const {
+    return new cpu::MemoryView(appMem, numBytes, flags->allocType == ISPCRT_ALLOC_TYPE_SHARED);
 }
 
 ispcrt::base::TaskQueue *CPUDevice::newTaskQueue() const { return new cpu::TaskQueue(); }
@@ -283,8 +283,8 @@ ISPCRTAllocationType CPUDevice::getMemAllocType(void* appMemory) const {
     return ISPCRT_ALLOC_TYPE_UNKNOWN;
 }
 
-ispcrt::base::MemoryView *CPUContext::newMemoryView(void *appMem, size_t numBytes, bool shared) const {
-    return new cpu::MemoryView(appMem, numBytes, shared);
+ispcrt::base::MemoryView *CPUContext::newMemoryView(void *appMem, size_t numBytes, const ISPCRTNewMemoryViewFlags *flags) const {
+    return new cpu::MemoryView(appMem, numBytes, flags->allocType == ISPCRT_ALLOC_TYPE_SHARED);
 }
 
 ISPCRTDeviceType CPUContext::getDeviceType() const {

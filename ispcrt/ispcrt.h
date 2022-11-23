@@ -111,8 +111,17 @@ typedef enum {
     ISPCRT_ALLOC_TYPE_UNKNOWN,
 } ISPCRTAllocationType;
 
+// Choose shared memory allocation flags
+typedef enum {
+    ISPCRT_SM_HOST_DEVICE_READ_WRITE = 0,
+    ISPCRT_SM_HOST_WRITE_DEVICE_READ,
+    ISPCRT_SM_HOST_READ_DEVICE_WRITE,
+    ISPCRT_SM_UNKNOWN,
+} ISPCRTSharedMemoryAllocationHint;
+
 typedef struct {
     ISPCRTAllocationType allocType;
+    ISPCRTSharedMemoryAllocationHint smHint;
 } ISPCRTNewMemoryViewFlags;
 
 ISPCRTMemoryView ispcrtNewMemoryView(ISPCRTDevice, void *appMemory, size_t numBytes, ISPCRTNewMemoryViewFlags *flags);
