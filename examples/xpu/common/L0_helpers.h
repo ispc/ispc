@@ -149,6 +149,8 @@ void L0InitContext(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_
     moduleDesc.pInputModule = codeBin;
     moduleDesc.pBuildFlags = "-vc-codegen -no-optimize -Xfinalizer '-presched'";
     L0_SAFE_CALL(zeModuleCreate(hContext, hDevice, &moduleDesc, &hModule, nullptr));
+
+    delete[] codeBin;
 }
 
 void L0DestroyContext(ze_driver_handle_t hDriver, ze_device_handle_t hDevice, ze_context_handle_t hContext,
