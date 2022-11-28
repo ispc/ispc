@@ -180,7 +180,16 @@ static int run() {
         }
 
         printf("[aobench ISPC GPU]:\t\t[%.3f] million cycles (%d x %d image)\n", minCyclesISPC, width, height);
+
+        // Release allocated resources
+        ispcrtRelease(queue);
+        ispcrtRelease(kernel);
+        ispcrtRelease(module);
+        ispcrtRelease(p_dev);
+        ispcrtRelease(buf_dev);
+        ispcrtRelease(device);
     };
+
     run_kernel(ISPCRT_DEVICE_TYPE_CPU);
     savePPM("ao-ispc-cpu.ppm", width, height, fimg);
 

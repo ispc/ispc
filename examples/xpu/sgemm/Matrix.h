@@ -153,6 +153,7 @@ class Matrix {
 #else
         free(M.data);
 #endif
+        free(mtxname);
     }
 };
 
