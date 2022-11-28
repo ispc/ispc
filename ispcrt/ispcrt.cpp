@@ -125,11 +125,10 @@ static ISPCRTDevice getISPCRTDevice(ISPCRTDeviceType type, ISPCRTContext context
         }
 #elif defined(ISPCRT_BUILD_CPU)
         device = new ispcrt::CPUDevice;
-        break;
 #elif defined(ISPCRT_BUILD_GPU)
         device = new ispcrt::GPUDevice;
-        break;
 #endif
+        break;
     }
     case ISPCRT_DEVICE_TYPE_GPU:
 #ifdef ISPCRT_BUILD_GPU
@@ -242,11 +241,10 @@ static ISPCRTContext getISPCRTContext(ISPCRTDeviceType type, ISPCRTGenericHandle
         }
 #elif defined(ISPCRT_BUILD_CPU)
         context = new ispcrt::CPUContext;
-        break;
 #elif defined(ISPCRT_BUILD_GPU)
         context = new ispcrt::GPUContext;
-        break;
 #endif
+        break;
     }
     case ISPCRT_DEVICE_TYPE_GPU:
 #ifdef ISPCRT_BUILD_GPU
