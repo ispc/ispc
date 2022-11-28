@@ -21,6 +21,7 @@
 #include <limits>
 #include <sstream>
 #include <vector>
+#include <memory>
 
 // ispcrt
 #include "detail/Exception.h"
@@ -724,6 +725,29 @@ struct Kernel : public ispcrt::base::Kernel {
     ze_kernel_handle_t m_kernel{nullptr};
 };
 
+struct CommandQueue {
+    CommandQueue(ze_device_handle_t dev, ze_context_handle_t ctxt, uint32_t ordinal) {
+        // Create compute command queue
+        ze_command_queue_desc_t desc = {};
+        desc.ordinal = ordinal;
+        desc.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
+        desc.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
+
+        L0_SAFE_CALL(zeCommandQueueCreate(ctxt, dev, &desc, &m_handle));
+
+        if (!m_handle)
+            throw std::runtime_error("Failed to create command queue!");
+    }
+
+    ze_command_queue_handle_t handle() const { return m_handle; }
+
+    ~CommandQueue() {
+        L0_SAFE_CALL_NOEXCEPT(zeCommandQueueDestroy(m_handle));
+    }
+  private:
+    ze_command_queue_handle_t m_handle{nullptr};
+};
+
 struct TaskQueue : public ispcrt::base::TaskQueue {
     TaskQueue(ze_device_handle_t device, ze_context_handle_t context, const bool is_mock_dev)
         : m_ep_compute(context, device, ISPCRTEventPoolType::compute),
@@ -779,21 +803,16 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
             m_cl_mem_h2d = m_cl_compute;
         }
 
-        createCommandQueue(&m_q_compute, computeOrdinal);
+        m_q_compute = createCommandQueue(computeOrdinal);
         // If there is no copy engine in HW, no need to create separate queue
         if (useCopyEngine) {
-            createCommandQueue(&m_q_copy, copyOrdinal);
+            m_q_copy = createCommandQueue(copyOrdinal);
         } else {
             m_q_copy = m_q_compute;
         }
     }
 
     ~TaskQueue() {
-        if (m_q_compute)
-            L0_SAFE_CALL_NOEXCEPT(zeCommandQueueDestroy(m_q_compute));
-        if (m_q_copy && m_q_copy != m_q_compute)
-            L0_SAFE_CALL_NOEXCEPT(zeCommandQueueDestroy(m_q_copy));
-
         // Clean up any events that could be in the queue
         for (const auto &p : m_events_compute_list) {
             auto e = p.first;
@@ -913,22 +932,22 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
             // If there are commands to copy from device to host,
             // run sync of copy queue - it will ensure that all commands in pipeline were executed before.
             if (anyD2HCopyCommand()) {
-                L0_SAFE_CALL(zeCommandQueueSynchronize(m_q_copy, std::numeric_limits<uint64_t>::max()));
+                L0_SAFE_CALL(zeCommandQueueSynchronize(m_q_copy->handle(), std::numeric_limits<uint64_t>::max()));
             } else {
                 // If there are commands in compute list, run sync of compute queue -
                 // it will ensure that dependent copy commands from host to device were executed before.
                 if (anyComputeCommand()) {
-                    L0_SAFE_CALL(zeCommandQueueSynchronize(m_q_compute, std::numeric_limits<uint64_t>::max()));
+                    L0_SAFE_CALL(zeCommandQueueSynchronize(m_q_compute->handle(), std::numeric_limits<uint64_t>::max()));
                 }
                 // If there are commands in copy to device commandlist only, run sync of copy queue.
                 else if (anyH2DCopyCommand()) {
-                    L0_SAFE_CALL(zeCommandQueueSynchronize(m_q_copy, std::numeric_limits<uint64_t>::max()));
+                    L0_SAFE_CALL(zeCommandQueueSynchronize(m_q_copy->handle(), std::numeric_limits<uint64_t>::max()));
                 }
             }
         } else {
             // If we have any command in one of our command lists, make queue sync
             if (anyD2HCopyCommand() || anyH2DCopyCommand() || anyComputeCommand()) {
-                L0_SAFE_CALL(zeCommandQueueSynchronize(m_q_compute, std::numeric_limits<uint64_t>::max()));
+                L0_SAFE_CALL(zeCommandQueueSynchronize(m_q_compute->handle(), std::numeric_limits<uint64_t>::max()));
             }
         }
         m_cl_compute->reset();
@@ -959,45 +978,39 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         m_ep_copy.releaseEvents();
     }
 
-    void *taskQueueNativeHandle() const override { return m_q_compute; }
+    void *taskQueueNativeHandle() const override { return m_q_compute->handle(); }
 
   private:
-    ze_command_queue_handle_t m_q_compute{nullptr};
-    ze_command_queue_handle_t m_q_copy{nullptr};
     ze_context_handle_t m_context{nullptr};
     ze_device_handle_t m_device{nullptr};
 
-    CommandList *m_cl_compute{nullptr};
-    CommandList *m_cl_mem_h2d{nullptr};
-    CommandList *m_cl_mem_d2h{nullptr};
+    std::shared_ptr<CommandQueue> m_q_compute;
+    std::shared_ptr<CommandQueue> m_q_copy;
+
+    std::shared_ptr<CommandList> m_cl_compute;
+    std::shared_ptr<CommandList> m_cl_mem_h2d;
+    std::shared_ptr<CommandList> m_cl_mem_d2h;
+
     EventPool m_ep_compute, m_ep_copy;
     std::vector<std::pair<Event *, Future *>> m_events_compute_list;
 
     bool useCopyEngine{false};
 
-    CommandList *createCommandList(uint32_t ordinal) {
-        auto cmdl = new CommandList(m_device, m_context, ordinal);
-        assert(cmdl);
+    std::shared_ptr<CommandList> createCommandList(uint32_t ordinal) {
+        std::shared_ptr<CommandList> cmdl{ new CommandList(m_device, m_context, ordinal) };
+        assert(cmdl.get());
         return cmdl;
     }
 
-    void createCommandQueue(ze_command_queue_handle_t *q, uint32_t ordinal) {
-        // Create compute command queue
-        ze_command_queue_desc_t commandQueueDesc = {};
-        commandQueueDesc.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
-        commandQueueDesc.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
-        commandQueueDesc.ordinal = ordinal;
-
-        L0_SAFE_CALL(zeCommandQueueCreate(m_context, m_device, &commandQueueDesc, q));
-
-        if (q == nullptr)
-            throw std::runtime_error("Failed to create command queue!");
+    std::shared_ptr<CommandQueue> createCommandQueue(uint32_t ordinal) {
+        std::shared_ptr<CommandQueue> cmdq{ new CommandQueue(m_device, m_context, ordinal) };
+        return cmdq;
     }
 
     void submit() override {
-        m_cl_mem_h2d->submit(m_q_copy);
-        m_cl_compute->submit(m_q_compute);
-        m_cl_mem_d2h->submit(m_q_copy);
+        m_cl_mem_h2d->submit(m_q_copy->handle());
+        m_cl_compute->submit(m_q_compute->handle());
+        m_cl_mem_d2h->submit(m_q_copy->handle());
     }
 
     bool anyH2DCopyCommand() { return m_cl_mem_h2d->count() > 0; }
