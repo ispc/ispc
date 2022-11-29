@@ -299,13 +299,14 @@ ze_result_t zeModuleBuildLogDestroy(ze_module_build_log_handle_t hModuleBuildLog
     MOCK_RET;
 }
 
+static void *pfnFunctionMem = NULL;
 ze_result_t zeModuleGetFunctionPointer(ze_module_handle_t hModule, const char *pFunctionName, void **pfnFunction) {
     MOCK_CNT_CALL;
     if (hModule != ModuleHandle.get())
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     if (pFunctionName == NULL)
         return ZE_RESULT_ERROR_INVALID_NULL_POINTER;
-    *pfnFunction = malloc(sizeof(void *));
+    *pfnFunction = &pfnFunctionMem;
     MOCK_RET;
 }
 

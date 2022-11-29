@@ -785,6 +785,9 @@ TEST_F(MockTest, C_API_CreateDeviceFromContext) {
     uint32_t ndevices = ispcrtGetDeviceCount(ISPCRT_DEVICE_TYPE_GPU);
     ISPCRTDevice gpu0 = ispcrtGetDeviceFromContext(context, 0);
     ISPCRTDevice gpu1 = ispcrtGetDeviceFromContext(context, 1);
+    ispcrtRelease(gpu1);
+    ispcrtRelease(gpu0);
+    ispcrtRelease(context);
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
@@ -794,6 +797,8 @@ TEST_F(MockTest, C_API_AllocateSharedMemoryForGPU) {
     ISPCRTNewMemoryViewFlags mem_flags;
     mem_flags.allocType = ISPCRT_ALLOC_TYPE_SHARED;
     ISPCRTMemoryView mem = ispcrtNewMemoryViewForContext(context, buffer.data(), buffer.size(), &mem_flags);
+    ispcrtRelease(mem);
+    ispcrtRelease(context);
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
@@ -803,6 +808,8 @@ TEST_F(MockTest, C_API_AllocateSharedMemoryForCPU) {
     ISPCRTNewMemoryViewFlags mem_flags;
     mem_flags.allocType = ISPCRT_ALLOC_TYPE_SHARED;
     ISPCRTMemoryView mem = ispcrtNewMemoryViewForContext(context, buffer.data(), buffer.size(), &mem_flags);
+    ispcrtRelease(mem);
+    ispcrtRelease(context);
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
@@ -812,6 +819,8 @@ TEST_F(MockTest, C_API_AllocateDeviceMemory) {
     ISPCRTNewMemoryViewFlags mem_flags;
     mem_flags.allocType = ISPCRT_ALLOC_TYPE_DEVICE;
     ISPCRTMemoryView mem = ispcrtNewMemoryViewForContext(context, buffer.data(), buffer.size(), &mem_flags);
+    if (mem) ispcrtRelease(mem);
+    if (context) ispcrtRelease(context);
     ASSERT_EQ(sm_rt_error, ISPCRT_UNKNOWN_ERROR);
 }
 
@@ -819,6 +828,8 @@ TEST_F(MockTest, C_API_CreateContextFromNativeHandler) {
     ISPCRTContext context1 = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
     auto handle = ispcrtContextNativeHandle(context1);
     ISPCRTContext context2 = ispcrtGetContextFromNativeHandle(ISPCRT_DEVICE_TYPE_GPU, handle);
+    ispcrtRelease(context2);
+    ispcrtRelease(context1);
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
@@ -827,6 +838,9 @@ TEST_F(MockTest, C_API_CreateDeviceFromNativeHandler) {
     ISPCRTDevice device1 = ispcrtGetDeviceFromContext(context, 0);
     auto handle = ispcrtDeviceNativeHandle(device1);
     ISPCRTDevice device2 = ispcrtGetDeviceFromNativeHandle(context, handle);
+    ispcrtRelease(device2);
+    ispcrtRelease(device1);
+    ispcrtRelease(context);
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
