@@ -53,7 +53,12 @@ template <typename T> void check(T *src, T *dst, size_t num_elems) {
     aligned_free_helper(buf);
 }
 
-#define ARGS Arg(8192ull)->Arg(8192ull << 10ull)->Arg(8192ull << 15ull)
+// Minimum size is maximum target width * 4, i.e. 64*4 = 256.
+// // 256 * sizeof (int) = 1kb - expected to reside in L1
+// // 256 * sizeof (int) << 4 = 16kb - expected to reside in L1
+// // 256 * sizeof (int) << 7 = 128kb - expected to reside in L2
+// // 256 * sizeof (int) << 12 = 4 Mb - expected to reside in L3.
+#define ARGS Arg(256)->Arg(256 << 4)->Arg(256 << 7)->Arg(256 << 12)
 
 #ifndef UNROLL_VARYING_BENCH
 #define UNROLL_VARYING_BENCH(T_FOR, T_C, T_ISPC, UNROLL_FACTOR)                                                        \
