@@ -16,7 +16,7 @@ RUN uname -a
 
 # Packages required to build ISPC and Clang.
 RUN apt-get -y update && apt-get --no-install-recommends install -y wget=1.19.4-1ubuntu2.2 build-essential=12.4ubuntu1 gcc=4:7.4.0-1ubuntu2.3 \
-    g++=4:7.4.0-1ubuntu2.3 git=1:2.17.1-1ubuntu0.12 python3-dev=3.6.7-1~18.04 libncurses5-dev=6.1-1ubuntu1.18.04 libtinfo-dev=6.1-1ubuntu1.18.04 ca-certificates=20211016~18.04.1 && \    
+    g++=4:7.4.0-1ubuntu2.3 git=1:2.17.1-1ubuntu0.13 python3-dev=3.6.7-1~18.04 libncurses5-dev=6.1-1ubuntu1.18.04 libtinfo-dev=6.1-1ubuntu1.18.04 ca-certificates=20211016~18.04.1 && \
     rm -rf /var/lib/apt/lists/*
 
 # Download and install required version of cmake (3.14 for x86, 3.20 for aarch64, as earlier versions are not available as binary distribution) for ISPC build
