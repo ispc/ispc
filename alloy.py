@@ -261,7 +261,7 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
                 try_do_LLVM("patch LLVM with patch " + patch + " ", "git apply " + patch, from_validation, verbose)
         os.chdir("../")
 
-    targets_and_common_options = "  -DLLVM_ENABLE_ZLIB=OFF -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86 -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly"
+    targets_and_common_options = "  -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86 -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly"
 
     # configuring llvm and build for first phase of selfbuild
     cmakelists_path = LLVM_SRC + "/llvm"
