@@ -614,7 +614,7 @@ jobs:
         submodules: true
 
     - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1.0.2
+      uses: microsoft/setup-msbuild@v1
 
     - name: Install dependencies
       run: |
@@ -655,7 +655,7 @@ jobs:
         submodules: true
 
     - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1.0.2
+      uses: microsoft/setup-msbuild@v1
 
     - name: Install dependencies
       run: |
@@ -696,7 +696,7 @@ jobs:
         submodules: true
 
     - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1.0.2
+      uses: microsoft/setup-msbuild@v1
 
     - name: Install dependencies
       run: |
@@ -737,7 +737,7 @@ jobs:
         submodules: true
 
     - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1.0.2
+      uses: microsoft/setup-msbuild@v1
 
     - name: Install dependencies
       run: |
@@ -779,7 +779,7 @@ jobs:
         submodules: true
 
     - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1.0.2
+      uses: microsoft/setup-msbuild@v1
 
     - name: Install dependencies
       run: |
