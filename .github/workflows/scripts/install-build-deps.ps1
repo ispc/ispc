@@ -20,5 +20,7 @@ echo "${env:LLVM_HOME}\bin-${env:LLVM_VERSION}\bin" | Out-File -FilePath $env:GI
 # Download and unpack gnuwin32
 mkdir ${env:CROSS_TOOLS_GNUWIN32}
 cd ${env:CROSS_TOOLS_GNUWIN32}
-wget --retry-connrefused --waitretry=10 --read-timeout=20 --timeout=15 -t 5 -O libgw32c-0.4-lib.zip https://sourceforge.net/projects/gnuwin32/files/libgw32c/0.4/libgw32c-0.4-lib.zip/download
+# The following line is needed to enable all TLS versions. The server appears to require different TLS version depending on the specific redirect.
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls, [Net.SecurityProtocolType]::Tls11, [Net.SecurityProtocolType]::Tls12
+wget --retry-connrefused --waitretry=10 --read-timeout=20 --timeout=15 -t 5 -O libgw32c-0.4-lib.zip 'https://downloads.sourceforge.net/project/gnuwin32/libgw32c/0.4/libgw32c-0.4-lib.zip'
 7z.exe x libgw32c-0.4-lib.zip
