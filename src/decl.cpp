@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -472,7 +472,9 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                 snprintf(buf, sizeof(buf), "__anon_parameter_%d", i);
                 decl->name = buf;
             }
-            decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
+            if (!decl->type->IsDependentType()) {
+                decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
+            }
 
             if (d->declSpecs->storageClass != SC_NONE)
                 Error(decl->pos,
@@ -553,7 +555,9 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             return;
         }
 
-        returnType = returnType->ResolveUnboundVariability(Variability::Varying);
+        if (!returnType->IsDependentType()) {
+            returnType = returnType->ResolveUnboundVariability(Variability::Varying);
+        }
 
         bool isExternC = ds && (ds->storageClass == SC_EXTERN_C);
         bool isExternSYCL = ds && (ds->storageClass == SC_EXTERN_SYCL);
@@ -662,7 +666,9 @@ std::vector<VariableDeclaration> Declaration::GetVariableDeclarations() const {
         if (decl->type->IsVoidType())
             Error(decl->pos, "\"void\" type variable illegal in declaration.");
         else if (CastType<FunctionType>(decl->type) == NULL) {
-            decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
+            if (!decl->type->IsDependentType()) {
+                decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
+            }
             Symbol *sym = new Symbol(decl->name, decl->pos, decl->type, decl->storageClass);
             m->symbolTable->AddVariable(sym);
             vars.push_back(VariableDeclaration(sym, decl->initExpr));
