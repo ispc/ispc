@@ -712,6 +712,7 @@ struct Kernel : public ispcrt::base::Kernel {
     }
 
     ~Kernel() {
+        L0_SAFE_CALL_NOEXCEPT(zeKernelDestroy(m_kernel));
         if (m_module)
             m_module->refDec();
     }
