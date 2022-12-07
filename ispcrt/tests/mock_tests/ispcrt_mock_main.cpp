@@ -227,6 +227,20 @@ TEST_F(MockTestWithModule, Module_FunctionPtr_zeModuleGetFunctionPointer_invalid
     ASSERT_EQ(sm_rt_error, ISPCRT_INVALID_ARGUMENT);
 }
 
+// Static binary linking tests
+TEST_F(MockTestWithDevice, Module_StaticLink) {
+    // Create 2 modules and link them
+    ASSERT_NE(m_device, 0);
+    ispcrt::Module m1(m_device, "");
+    ispcrt::Module m2(m_device, "");
+    Config::setRetValue("zeModuleBuildLogDestroy", ZE_RESULT_SUCCESS);
+    std::array<ISPCRTModule, 2> modules = {
+        (ISPCRTModule)m1.handle(), (ISPCRTModule)m2.handle()};
+    ispcrt::Module m3 = m_device.staticLinkModules(modules.data(), modules.size());
+    ispcrt::Kernel k(m_device, m3, "");
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
 /////////////////////////////////////////////////////////////////////
 // Kernel tests
 
