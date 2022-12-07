@@ -760,7 +760,7 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         uint32_t computeOrdinal = 0;
         // Check env variable before queue configuration
         bool isCopyEngineEnabled = getenv_wr(ISPCRT_DISABLE_COPY_ENGINE) == nullptr;
-        bool useMultipleCommandLists = getenv(ISPCRT_DISABLE_MULTI_COMMAND_LISTS) == nullptr;
+        bool useMultipleCommandLists = getenv_wr(ISPCRT_DISABLE_MULTI_COMMAND_LISTS) == nullptr;
         // No need to create copy queue if only one command list is requested.
         if (!is_mock_dev && isCopyEngineEnabled && useMultipleCommandLists) {
             // Discover all command queue groups
