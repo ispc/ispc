@@ -1086,7 +1086,7 @@ ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx) {
     return info;
 }
 
-void linkModules(gpu::Module **modules, const uint32_t numModules) {
+void dynamicLinkModules(gpu::Module **modules, const uint32_t numModules) {
     std::vector<ze_module_handle_t> moduleHandles;
     for (int i = 0; i < numModules; i++) {
         moduleHandles.push_back(modules[i]->handle());
@@ -1195,8 +1195,8 @@ base::Module *GPUDevice::newModule(const char *moduleFile, const ISPCRTModuleOpt
     return new gpu::Module((ze_device_handle_t)m_device, (ze_context_handle_t)m_context, moduleFile, m_is_mock, opts);
 }
 
-void GPUDevice::linkModules(base::Module **modules, const uint32_t numModules) const {
-    gpu::linkModules((gpu::Module **)modules, numModules);
+void GPUDevice::dynamicLinkModules(base::Module **modules, const uint32_t numModules) const {
+    gpu::dynamicLinkModules((gpu::Module **)modules, numModules);
 }
 
 base::Kernel *GPUDevice::newKernel(const base::Module &module, const char *name) const {

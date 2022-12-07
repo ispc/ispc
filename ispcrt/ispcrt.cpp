@@ -349,9 +349,9 @@ ISPCRTModule ispcrtLoadModule(ISPCRTDevice d, const char *moduleFile,
 }
 ISPCRT_CATCH_END(nullptr)
 
-void ispcrtLinkModules(ISPCRTDevice d, ISPCRTModule *modules, const uint32_t numModules) ISPCRT_CATCH_BEGIN {
+void ispcrtDynamicLinkModules(ISPCRTDevice d, ISPCRTModule *modules, const uint32_t numModules) ISPCRT_CATCH_BEGIN {
     const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
-    device.linkModules((ispcrt::base::Module **)modules, numModules);
+    device.dynamicLinkModules((ispcrt::base::Module **)modules, numModules);
 }
 ISPCRT_CATCH_END()
 

@@ -143,7 +143,7 @@ struct ISPCRTModuleOptions_ {
 typedef struct ISPCRTModuleOptions_ ISPCRTModuleOptions;
 
 ISPCRTModule ispcrtLoadModule(ISPCRTDevice, const char *moduleFile, ISPCRTModuleOptions);
-void ispcrtLinkModules(ISPCRTDevice, ISPCRTModule *modules, uint32_t numModules);
+void ispcrtDynamicLinkModules(ISPCRTDevice, ISPCRTModule *modules, uint32_t numModules);
 void *ispcrtFunctionPtr(ISPCRTModule, const char *name);
 ISPCRTKernel ispcrtNewKernel(ISPCRTDevice, ISPCRTModule, const char *name);
 
