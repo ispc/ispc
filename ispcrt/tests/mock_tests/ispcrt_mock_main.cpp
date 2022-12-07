@@ -200,7 +200,7 @@ TEST_F(MockTestWithDevice, Module_DynamicLink) {
     Config::setRetValue("zeModuleBuildLogDestroy", ZE_RESULT_SUCCESS);
     std::array<ISPCRTModule, 2> modules = {
         (ISPCRTModule)m1.handle(), (ISPCRTModule)m2.handle()};
-    m_device.linkModules(modules.data(), modules.size());
+    m_device.dynamicLinkModules(modules.data(), modules.size());
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
