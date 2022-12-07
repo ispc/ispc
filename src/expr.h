@@ -739,7 +739,6 @@ class FunctionSymbolExpr : public Expr {
     bool ResolveOverloads(SourcePos argPos, const std::vector<const Type *> &argTypes,
                           const std::vector<bool> *argCouldBeNULL = NULL,
                           const std::vector<bool> *argIsConstant = NULL);
-    Symbol *GetMatchingFunction();
 
   private:
     std::vector<Symbol *> getCandidateFunctions(int argCount) const;
