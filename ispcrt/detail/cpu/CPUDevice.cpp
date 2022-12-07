@@ -16,6 +16,7 @@
 #include <cstring>
 #include <exception>
 #include <string>
+#include <vector>
 
 namespace ispcrt {
 namespace cpu {
@@ -164,6 +165,13 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         // no-op
     }
 
+    ~TaskQueue() {
+        for (auto f : m_futures) {
+            delete f;
+        }
+        m_futures.clear();
+    }
+
     void barrier() override {
         // no-op
     }
@@ -191,6 +199,8 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
 
         auto *future = new cpu::Future;
         assert(future);
+        // Vector to know what to deallocate when TaskQueue object destructed
+        m_futures.push_back(future);
 
         auto start = std::chrono::high_resolution_clock::now();
         fcn(parameters ? parameters->devicePtr() : nullptr, dim0, dim1, dim2);
@@ -211,6 +221,9 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
     }
 
     void *taskQueueNativeHandle() const override { return nullptr; }
+
+  private:
+    std::vector<cpu::Future*> m_futures;
 };
 
 uint32_t deviceCount() { return 1; }
