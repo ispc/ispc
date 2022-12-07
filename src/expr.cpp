@@ -8222,8 +8222,6 @@ bool FunctionSymbolExpr::ResolveOverloads(SourcePos argPos, const std::vector<co
     }
 }
 
-Symbol *FunctionSymbolExpr::GetMatchingFunction() { return matchingFunc; }
-
 ///////////////////////////////////////////////////////////////////////////
 // SyncExpr
 
