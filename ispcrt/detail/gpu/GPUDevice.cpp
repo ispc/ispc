@@ -595,25 +595,25 @@ struct Module : public ispcrt::base::Module {
         // + or = sign. '+' means that the content of the variable should
         // be added to the default igc options, while '=' will replace
         // the options with the content of the env var.
-        std::string igcOptions;
+        m_igc_options = "";
         // If scalar module is passed to ISPC Runtime, do not use VC backend
         // options on it
         if (opts.moduleType != ISPCRTModuleType::ISPCRT_SCALAR_MODULE) {
-            igcOptions += "-vc-codegen -no-optimize -Xfinalizer '-presched'";
+            m_igc_options += "-vc-codegen -no-optimize -Xfinalizer '-presched'";
 #if defined(__linux__)
             // `newspillcost` is not yet supported on Windows in open source
             // TODO: use `newspillcost` for all platforms as soon as it available
-            igcOptions += " -Xfinalizer '-newspillcost'";
+            m_igc_options += " -Xfinalizer '-newspillcost'";
 #endif
         }
         // If stackSize has default value 0, do not set -stateless-stack-mem-size,
         // it will be set to 8192 in VC backend by default.
         if (opts.stackSize > 0) {
-            igcOptions += " -stateless-stack-mem-size=" + std::to_string(opts.stackSize);
+            m_igc_options += " -stateless-stack-mem-size=" + std::to_string(opts.stackSize);
         }
         // If module is a library for the kernel, add " -library-compilation"
         if (opts.libraryCompilation) {
-            igcOptions += " -library-compilation";
+            m_igc_options += " -library-compilation";
         }
         constexpr auto MAX_ISPCRT_IGC_OPTIONS = 2000UL;
         const char *userIgcOptionsEnv = getenv_wr(ISPCRT_IGC_OPTIONS);
@@ -625,9 +625,9 @@ struct Module : public ispcrt::base::Module {
             if (userIgcOptions.length() >= 3) {
                 auto prefix = userIgcOptions.substr(0, 2);
                 if (prefix == "+ ") {
-                    igcOptions += ' ' + userIgcOptions.substr(2);
+                    m_igc_options += ' ' + userIgcOptions.substr(2);
                 } else if (prefix == "= ") {
-                    igcOptions = userIgcOptions.substr(2);
+                    m_igc_options = userIgcOptions.substr(2);
                 } else {
                     throw std::runtime_error("Invalid ISPCRT_IGC_OPTIONS string" + userIgcOptions);
                 }
@@ -636,11 +636,10 @@ struct Module : public ispcrt::base::Module {
             }
         }
 
-        ze_module_desc_t moduleDesc = {};
-        moduleDesc.format = moduleFormat;
-        moduleDesc.inputSize = codeSize;
-        moduleDesc.pInputModule = m_code.data();
-        moduleDesc.pBuildFlags = igcOptions.c_str();
+        m_module_desc.format = moduleFormat;
+        m_module_desc.inputSize = codeSize;
+        m_module_desc.pInputModule = m_code.data();
+        m_module_desc.pBuildFlags = m_igc_options.c_str();
 
         assert(device != nullptr);
         if (UNLIKELY(is_verbose)) {
@@ -649,9 +648,9 @@ struct Module : public ispcrt::base::Module {
 
             std::cout << "Module " << m_file  << " format=" << moduleFormat;
             std::cout << " size=" << codeSize << std::endl;
-            std::cout << "IGC options: " << igcOptions << std::endl;
+            std::cout << "IGC options: " << m_igc_options << std::endl;
 
-            L0_SAFE_CALL(zeModuleCreate(context, device, &moduleDesc, &m_module, &hLog));
+            L0_SAFE_CALL(zeModuleCreate(context, device, &m_module_desc, &m_module, &hLog));
             L0_SAFE_CALL(zeModuleBuildLogGetString(hLog, &size, nullptr));
 
             std::vector<char> log(size);
@@ -660,13 +659,55 @@ struct Module : public ispcrt::base::Module {
             std::cout << "Build log (" << size << "): " << log.data() << std::endl;
             L0_SAFE_CALL(zeModuleBuildLogDestroy(hLog));
         } else {
-            L0_SAFE_CALL(zeModuleCreate(context, device, &moduleDesc, &m_module, nullptr));
+            L0_SAFE_CALL(zeModuleCreate(context, device, &m_module_desc, &m_module, nullptr));
         }
 
         if (m_module == nullptr)
             throw std::runtime_error("Failed to load spv module!");
     }
 
+    Module(ze_device_handle_t device, ze_context_handle_t context, Module** modules, const uint32_t numModules) {
+        bool useZEBinFormat = getenv_wr(ISPCRT_USE_ZEBIN) != NULL;
+
+        std::vector<const char *> buildFlags;
+        std::vector<size_t> inputSizes;
+        std::vector<const uint8_t *> inputModules;
+        for (int i = 0; i < numModules; i++) {
+            buildFlags.push_back(modules[i]->m_module_desc.pBuildFlags);
+            inputSizes.push_back(modules[i]->m_module_desc.inputSize);
+            inputModules.push_back(modules[i]->m_module_desc.pInputModule);
+        }
+
+        m_module_desc_exp.count = numModules;
+        m_module_desc_exp.inputSizes = inputSizes.data();
+        m_module_desc_exp.pInputModules = inputModules.data();
+        m_module_desc_exp.pBuildFlags = buildFlags.data();
+        m_module_desc_exp.pNext = nullptr;
+        m_module_desc_exp.pConstants = nullptr;
+
+        m_module_desc.pNext = &m_module_desc_exp;
+        m_module_desc.format = useZEBinFormat ? ZE_MODULE_FORMAT_NATIVE : ZE_MODULE_FORMAT_IL_SPIRV;
+
+        assert(device != nullptr);
+        if (UNLIKELY(is_verbose)) {
+            ze_module_build_log_handle_t hLog = nullptr;
+            size_t size = 0;
+
+            zeModuleCreate(context, device, &m_module_desc, &m_module, &hLog);
+            L0_SAFE_CALL(zeModuleBuildLogGetString(hLog, &size, nullptr));
+
+            std::vector<char> log(size);
+            L0_SAFE_CALL(zeModuleBuildLogGetString(hLog, &size, log.data()));
+
+            std::cout << "Build log (" << size << "): " << log.data() << std::endl;
+            L0_SAFE_CALL(zeModuleBuildLogDestroy(hLog));
+        } else {
+            L0_SAFE_CALL(zeModuleCreate(context, device, &m_module_desc, &m_module, nullptr));
+        }
+
+        if (m_module == nullptr)
+            throw std::runtime_error("Failed to create module!");
+    }
     ~Module() {
         if (m_module)
             L0_SAFE_CALL_NOEXCEPT(zeModuleDestroy(m_module));
@@ -688,7 +729,11 @@ struct Module : public ispcrt::base::Module {
     std::string m_file;
     std::vector<unsigned char> m_code;
 
+    ze_module_desc_t m_module_desc{ZE_STRUCTURE_TYPE_MODULE_DESC};
+    ze_module_program_exp_desc_t m_module_desc_exp{ZE_STRUCTURE_TYPE_MODULE_PROGRAM_EXP_DESC};
     ze_module_handle_t m_module{nullptr};
+
+    std::string m_igc_options;
 };
 
 struct Kernel : public ispcrt::base::Kernel {
@@ -1093,7 +1138,7 @@ void dynamicLinkModules(gpu::Module **modules, const uint32_t numModules) {
     }
 
     if (UNLIKELY(is_verbose)) {
-        std::cout << "Link " << numModules << " modules: ";
+        std::cout << "Binary linking of " << numModules << " modules: ";
         for (int i = 0; i< numModules; i++) {
             std::cout << modules[i]->filename() << " ";
         }
@@ -1112,6 +1157,22 @@ void dynamicLinkModules(gpu::Module **modules, const uint32_t numModules) {
     } else {
         L0_SAFE_CALL_NOEXCEPT(zeModuleDynamicLink(numModules, moduleHandles.data(), nullptr));
     }
+}
+
+base::Module *staticLinkModules(gpu::Module **modules, const uint32_t numModules, ze_device_handle_t device, ze_context_handle_t context) {
+    std::vector<ze_module_handle_t> moduleHandles;
+    for (int i = 0; i < numModules; i++) {
+        moduleHandles.push_back(modules[i]->handle());
+    }
+
+    if (UNLIKELY(is_verbose)) {
+        std::cout << "vISA linking of " << numModules << " modules: ";
+        for (int i = 0; i< numModules; i++) {
+            std::cout << modules[i]->filename() << " ";
+        }
+        std::cout << std::endl;
+    }
+    return new gpu::Module(device, context, modules, numModules);
 }
 
 } // namespace gpu
@@ -1197,6 +1258,10 @@ base::Module *GPUDevice::newModule(const char *moduleFile, const ISPCRTModuleOpt
 
 void GPUDevice::dynamicLinkModules(base::Module **modules, const uint32_t numModules) const {
     gpu::dynamicLinkModules((gpu::Module **)modules, numModules);
+}
+
+base::Module *GPUDevice::staticLinkModules(base::Module **modules, const uint32_t numModules) const {
+    return gpu::staticLinkModules((gpu::Module **)modules, numModules, (ze_device_handle_t)m_device, (ze_context_handle_t)m_context);
 }
 
 base::Kernel *GPUDevice::newKernel(const base::Module &module, const char *name) const {

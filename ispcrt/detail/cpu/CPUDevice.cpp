@@ -249,6 +249,10 @@ ispcrt::base::Module *CPUDevice::newModule(const char *moduleFile, const ISPCRTM
 
 void CPUDevice::dynamicLinkModules(base::Module **modules, const uint32_t numModules) const {}
 
+ispcrt::base::Module *CPUDevice::staticLinkModules(base::Module **modules, const uint32_t numModules) const {
+    return nullptr;
+}
+
 ispcrt::base::Kernel *CPUDevice::newKernel(const ispcrt::base::Module &module, const char *name) const {
     return new cpu::Kernel(module, name);
 }

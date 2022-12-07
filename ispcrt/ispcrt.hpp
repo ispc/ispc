@@ -124,6 +124,7 @@ inline void* Context::nativeContextHandle() const { return ispcrtContextNativeHa
 /////////////////////////////////////////////////////////////////////////////
 // Device wrapper ///////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
+class Module;
 class Device : public GenericObject<ISPCRTDevice> {
   public:
     Device() = default;
@@ -145,6 +146,7 @@ class Device : public GenericObject<ISPCRTDevice> {
     static std::vector<ISPCRTDeviceInfo> allDevicesInformation(ISPCRTDeviceType type);
     // link modules
     void dynamicLinkModules(ISPCRTModule* modules, const uint32_t num);
+    Module staticLinkModules(ISPCRTModule* modules, const uint32_t num);
     // check memory type
     ISPCRTAllocationType getMemoryAllocType(void *memBuffer);
 };
@@ -393,6 +395,7 @@ class Module : public GenericObject<ISPCRTModule> {
   public:
     Module() = default;
     Module(const Device &device, const char *moduleName, const ISPCRTModuleOptions &opts = ISPCRTModuleOptions{});
+    Module(ISPCRTModule module);
     void *functionPtr(const char *functionName);
 };
 
@@ -401,8 +404,14 @@ class Module : public GenericObject<ISPCRTModule> {
 inline Module::Module(const Device &device, const char *moduleName, const ISPCRTModuleOptions &opts)
     : GenericObject<ISPCRTModule>(ispcrtLoadModule(device.handle(), moduleName, opts)) {}
 
+inline Module::Module(ISPCRTModule module) : GenericObject<ISPCRTModule>(module) {}
+
 inline void* Module::functionPtr(const char *functionName){
     return ispcrtFunctionPtr(handle(), functionName);
+}
+
+inline Module Device::staticLinkModules(ISPCRTModule* modules, const uint32_t num) {
+    return Module(ispcrtStaticLinkModules(handle(), (ISPCRTModule*)modules, num));
 }
 
 /////////////////////////////////////////////////////////////////////////////
