@@ -90,42 +90,62 @@ struct Module : public ispcrt::base::Module {
 #else
             std::string ext = ".so";
 #endif
+            void* lib = nullptr;
 #if defined _WIN32
-            m_lib = LoadLibrary((m_file + ext).c_str());
+            lib = LoadLibrary((m_file + ext).c_str());
 #else
-            m_lib = dlopen(("lib" + m_file + ext).c_str(), RTLD_LAZY | RTLD_LOCAL);
+            lib = dlopen(("lib" + m_file + ext).c_str(), RTLD_LAZY | RTLD_LOCAL);
 #endif
 
-            if (!m_lib)
+            if (!lib)
                 throw std::logic_error("could not open CPU shared module file");
+            m_libs.push_back(lib);
+        }
+    }
+
+    Module(Module **modules, const uint32_t numModules) {
+        for (uint32_t i = 0; i < numModules; i++ ) {
+            for (auto lib : modules[i]->libs()) {
+                m_libs.push_back(lib);
+            }
         }
     }
 
     ~Module() {
-        if (m_lib)
+        if (m_libs.size() > 0) {
+            for (auto lib : m_libs) {
+                if (lib) {
 #if defined(_WIN32) || defined(_WIN64)
-            FreeLibrary((HMODULE)m_lib);
+                    FreeLibrary((HMODULE)lib);
 #else
-            dlclose(m_lib);
+                    dlclose(lib);
 #endif
+                }
+            }
+        }
     }
 
-    void *lib() const { return m_lib; }
-
     void *functionPtr(const char *name) const override {
+        void *fptr = nullptr;
+        for (auto lib : m_libs) {
 #if defined(_WIN32) || defined(_WIN64)
-        void *fptr = GetProcAddress((HMODULE)m_lib, name);
+            fptr = GetProcAddress((HMODULE)lib, name);
 #else
-        void *fptr = dlsym(m_lib ? m_lib : RTLD_DEFAULT, name);
+            fptr = dlsym(lib ? lib : RTLD_DEFAULT, name);
 #endif
+            if (fptr != nullptr)
+                break;
+        }
         if (!fptr)
             throw std::logic_error("could not find CPU function");
         return fptr;
     }
 
+    std::vector<void*> libs() { return m_libs; };
+
   private:
     std::string m_file;
-    void *m_lib{nullptr};
+    std::vector<void*>m_libs;
 };
 
 struct Kernel : public ispcrt::base::Kernel {
@@ -133,11 +153,7 @@ struct Kernel : public ispcrt::base::Kernel {
         const cpu::Module &module = (const cpu::Module &)_module;
 
         auto name = std::string(_name) + "_cpu_entry_point";
-#if defined(_WIN32) || defined(_WIN64)
-        void *fcn = GetProcAddress((HMODULE)module.lib(), name.c_str());
-#else
-        void *fcn = dlsym(module.lib() ? module.lib() : RTLD_DEFAULT, name.c_str());
-#endif
+        void* fcn = module.functionPtr(name.c_str());
 
         if (!fcn)
             throw std::logic_error("could not find CPU kernel function");
@@ -250,7 +266,7 @@ ispcrt::base::Module *CPUDevice::newModule(const char *moduleFile, const ISPCRTM
 void CPUDevice::dynamicLinkModules(base::Module **modules, const uint32_t numModules) const {}
 
 ispcrt::base::Module *CPUDevice::staticLinkModules(base::Module **modules, const uint32_t numModules) const {
-    return nullptr;
+    return new cpu::Module((cpu::Module**)modules, numModules);
 }
 
 ispcrt::base::Kernel *CPUDevice::newKernel(const ispcrt::base::Module &module, const char *name) const {
