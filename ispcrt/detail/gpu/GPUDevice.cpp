@@ -652,12 +652,15 @@ struct Module : public ispcrt::base::Module {
 
             L0_SAFE_CALL(zeModuleCreate(context, device, &m_module_desc, &m_module, &hLog));
             L0_SAFE_CALL(zeModuleBuildLogGetString(hLog, &size, nullptr));
+            if (size > 0) {
+                std::vector<char> log(size);
+                L0_SAFE_CALL(zeModuleBuildLogGetString(hLog, &size, log.data()));
 
-            std::vector<char> log(size);
-            L0_SAFE_CALL(zeModuleBuildLogGetString(hLog, &size, log.data()));
-
-            std::cout << "Build log (" << size << "): " << log.data() << std::endl;
-            L0_SAFE_CALL(zeModuleBuildLogDestroy(hLog));
+                std::cout << "Build log (" << size << "): " << log.data() << std::endl;
+                L0_SAFE_CALL(zeModuleBuildLogDestroy(hLog));
+            } else {
+                std::cout << "Build log is empty" << std::endl;
+            }
         } else {
             L0_SAFE_CALL(zeModuleCreate(context, device, &m_module_desc, &m_module, nullptr));
         }
@@ -695,12 +698,15 @@ struct Module : public ispcrt::base::Module {
 
             zeModuleCreate(context, device, &m_module_desc, &m_module, &hLog);
             L0_SAFE_CALL(zeModuleBuildLogGetString(hLog, &size, nullptr));
+            if (size > 0) {
+                std::vector<char> log(size);
+                L0_SAFE_CALL(zeModuleBuildLogGetString(hLog, &size, log.data()));
 
-            std::vector<char> log(size);
-            L0_SAFE_CALL(zeModuleBuildLogGetString(hLog, &size, log.data()));
-
-            std::cout << "Build log (" << size << "): " << log.data() << std::endl;
-            L0_SAFE_CALL(zeModuleBuildLogDestroy(hLog));
+                std::cout << "Build log (" << size << "): " << log.data() << std::endl;
+                L0_SAFE_CALL(zeModuleBuildLogDestroy(hLog));
+            } else {
+                std::cout << "Build log is empty" << std::endl;
+            }
         } else {
             L0_SAFE_CALL(zeModuleCreate(context, device, &m_module_desc, &m_module, nullptr));
         }
