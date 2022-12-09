@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2019-2021, Intel Corporation
+#  Copyright (c) 2019-2022, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -97,6 +97,7 @@ add_subdirectory(aobench)
 add_subdirectory(mandelbrot)
 add_subdirectory(simple)
 add_subdirectory(simple-usm)
+add_subdirectory(usm-mem)
 
 # DPC++ related examples should not run as part of ISPC_BUILD
 # They require complete ISPC installation and ISPC_INCLUDE_DPCPP_EXAMPLES turned ON

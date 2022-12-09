@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2019-2021, Intel Corporation
+#  Copyright (c) 2019-2022, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -41,6 +41,9 @@ test_add(NAME simple host_simple --gpu)
 test_add(NAME simple-usm host_simple-usm "")
 test_add(NAME simple-usm host_simple-usm --cpu)
 test_add(NAME simple-usm host_simple-usm --gpu)
+
+test_add(NAME usm-mem host_usm-mem 1)
+test_add(NAME usm-mem host_usm-mem 2)
 
 # iterations, width, height
 test_add(NAME aobench TEST_IS_ISPCRT_RUNTIME RES_IMAGE "ao-ispc-gpu.ppm" REF_IMAGE "ao-ispc-cpu.ppm" IMAGE_CMP_TH "0.005" host_aobench 3 32 32)
