@@ -952,7 +952,8 @@ class FunctionType : public Type {
     /** This method returns the FunctionMangledName depending on Function type.
         The \c appFunction parameter indicates whether the function is generated for
         internal ISPC call or for external call from application.*/
-    FunctionMangledName GetFunctionMangledName(bool appFunction) const;
+    FunctionMangledName GetFunctionMangledName(bool appFunction,
+                                               std::vector<const Type *> *templateArgs = nullptr) const;
 
     /** This method returns std::vector of LLVM types of function arguments.
         The \c disableMask parameter indicates whether the mask parameter should be
@@ -1013,6 +1014,8 @@ class FunctionType : public Type {
     int costOverride;
 
   private:
+    std::string mangleTemplateArgs(std::vector<const Type *> *templateArgs) const;
+
     const Type *const returnType;
 
     // The following four vectors should all have the same length (which is

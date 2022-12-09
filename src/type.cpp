@@ -117,7 +117,8 @@ std::string Variability::MangleString() const {
         return std::string(buf);
     }
     case Unbound:
-        FATAL("Unbound unexpected in Variability::MangleString()");
+        // We need to mangle unbound variability for template type arguments.
+        return "ub";
     default:
         FATAL("Unhandled variability");
         return "";
@@ -2818,10 +2819,27 @@ const std::string FunctionType::GetReturnTypeString() const {
     return ret + returnType->GetString();
 }
 
-FunctionType::FunctionMangledName FunctionType::GetFunctionMangledName(bool appFunction) const {
+std::string FunctionType::mangleTemplateArgs(std::vector<const Type *> *templateArgs) const {
+    if (templateArgs == nullptr) {
+        return "";
+    }
+    std::string ret = "___";
+    for (const Type *arg : *templateArgs) {
+        if (arg) {
+            ret += arg->Mangle();
+        } else {
+            Assert(m->errorCount > 0);
+        }
+    }
+    return ret;
+}
+
+FunctionType::FunctionMangledName FunctionType::GetFunctionMangledName(bool appFunction,
+                                                                       std::vector<const Type *> *templateArgs) const {
     FunctionMangledName mangle = {};
     // Mangle internal functions name.
     if (!(isExternC || isExternSYCL || appFunction)) {
+        mangle.suffix += mangleTemplateArgs(templateArgs);
         mangle.suffix += Mangle();
     }
     // Always add target suffix except extern "C" and extern "SYCL" internal cases.
