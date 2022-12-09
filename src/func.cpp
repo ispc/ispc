@@ -996,6 +996,7 @@ TemplateInstantiation::TemplateInstantiation(const TemplateParms &typeParms,
         std::string name = typeParms[i]->GetName();
         const Type *type = typeArgs[i].first;
         args[name] = type;
+        templateArgs.push_back(typeArgs[i].first);
     }
 }
 
@@ -1081,7 +1082,7 @@ llvm::Function *TemplateInstantiation::createLLVMFunction(Symbol *functionSym, b
     }
 
     // Mangling
-    auto [name_pref, name_suf] = functionType->GetFunctionMangledName(false);
+    auto [name_pref, name_suf] = functionType->GetFunctionMangledName(false, &templateArgs);
     std::string functionName = name_pref + functionSym->name + name_suf;
 
     // And create the llvm::Function

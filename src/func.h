@@ -145,6 +145,8 @@ class TemplateInstantiation {
     std::unordered_map<Symbol *, Symbol *> symMap;
     // Mapping of template parameter names to the types in the instantiation.
     std::unordered_map<std::string, const Type *> args;
+    // Template arguments in the order of the template parameters.
+    std::vector<const Type *> templateArgs;
 
     llvm::Function *createLLVMFunction(Symbol *functionSym, bool isInline, bool isNoInline);
 };
