@@ -2589,6 +2589,10 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
         llvm::Function::Create(ftype, llvm::GlobalValue::ExternalLinkage, functionName.c_str(), module);
     dispatchFunc->setCallingConv(callingConv);
 
+    // Make dispatch function callable from DLLs.
+    if ((g->target_os == TargetOS::windows) && (g->dllExport)) {
+        dispatchFunc->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+    }
     llvm::BasicBlock *bblock = llvm::BasicBlock::Create(*g->ctx, "entry", dispatchFunc);
 
     // Start by calling out to the function that determines the system's

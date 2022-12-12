@@ -735,6 +735,11 @@ void Function::GenerateIR() {
                     appFunction->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
                     appFunction->addFnAttr("CMGenxMain");
                 }
+            } else {
+                // Make application function callable from DLLs.
+                if ((g->target_os == TargetOS::windows) && (g->dllExport)) {
+                    appFunction->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+                }
             }
 
             if (function->getFunctionType()->getNumParams() > 0) {
