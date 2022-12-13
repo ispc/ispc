@@ -1,11 +1,11 @@
-// This test checks that dispatch function (in case of multu-target compilation) and application function (in case of single target compilation) have
+// This test checks that dispatch function (in case of multi-target compilation) and application function (in case of single target compilation) have
 // "dllexport" storage type when ISPC "--dllexport" switch is used.
 
-// RUN: %{ispc} %s  --dllexport --target=sse2 --emit-llvm-text -o - | FileCheck %s --check-prefixes=CHECK_DLLEXPORT,CHECK_DLLEXPORT_SINGLE_TARGET
-// RUN: %{ispc} %s  --dllexport --target=sse2 --emit-llvm-text -o - | FileCheck %s --check-prefix=CHECK_DLLEXPORT
+// RUN: %{ispc} %s  --dllexport --target=sse2 --target-os=windows --emit-llvm-text -o - | FileCheck %s --check-prefixes=CHECK_DLLEXPORT,CHECK_DLLEXPORT_SINGLE_TARGET
+// RUN: %{ispc} %s  --dllexport --target=sse2 --target-os=windows --emit-llvm-text -o - | FileCheck %s --check-prefix=CHECK_DLLEXPORT
 
-// RUN: %{ispc} %s  --target=sse2 --emit-llvm-text -o - | FileCheck %s --check-prefix=CHECK_NODLLEXPORT
-// RUN: %{ispc} %s  --target=sse2 --emit-llvm-text -o - | FileCheck %s --check-prefix=CHECK_NODLLEXPORT
+// RUN: %{ispc} %s  --target=sse2 --target-os=windows --emit-llvm-text -o - | FileCheck %s --check-prefix=CHECK_NODLLEXPORT
+// RUN: %{ispc} %s  --target=sse2 --target-os=windows --emit-llvm-text -o - | FileCheck %s --check-prefix=CHECK_NODLLEXPORT
 
 // REQUIRES: WINDOWS_ENABLED
 
