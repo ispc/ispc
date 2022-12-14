@@ -1,9 +1,8 @@
 // RUN: %{ispc} --emit-spirv --target=gen9-x8 %s -o %t.spv
-// RUN: ocloc compile -file %t.spv -spirv_input -options "-vc-codegen" -device SKL -output %t.bin -output_no_suffix
-// RUN: ocloc disasm -file %t.bin -device SKL -dump ./
-// RUN: FileCheck %s -check-prefix=CHECK_FOO1 -input-file=foo1_kernel_KernelHeap.asm
-// RUN: FileCheck %s -check-prefix=CHECK_FOO2 -input-file=foo2_kernel_KernelHeap.asm
-// RUN: FileCheck %s -check-prefix=CHECK_FOO3 -input-file=foo3_kernel_KernelHeap.asm
+// RUN: ocloc compile -file %t.spv -spirv_input -options "-vc-codegen -Xfinalizer -output" -device skl -output %t.bin -output_no_suffix
+// RUN: FileCheck %s -check-prefix=CHECK_FOO1 -input-file=foo1_kernel.asm
+// RUN: FileCheck %s -check-prefix=CHECK_FOO2 -input-file=foo2_kernel.asm
+// RUN: FileCheck %s -check-prefix=CHECK_FOO3 -input-file=foo3_kernel.asm
 
 // REQUIRES: XE_ENABLED
 // REQUIRES: OCLOC_INSTALLED
