@@ -991,18 +991,24 @@ Symbol *FunctionTemplate::AddInstantiation(const std::vector<std::pair<const Typ
 TemplateInstantiation::TemplateInstantiation(const TemplateParms &typeParms,
                                              const std::vector<std::pair<const Type *, SourcePos>> &typeArgs)
     : functionSym(nullptr) {
-    Assert(typeArgs.size() == typeParms.GetCount());
+    Assert(typeArgs.size() <= typeParms.GetCount());
+    // Create a mapping from the template parameters to the arguments.
+    // Note we do that for all specified templates arguments, which number may be less than a number of template
+    // parameters. In this case the rest of template parameters will be deduced later during template argumnet
+    // deduction.
     for (int i = 0; i < typeArgs.size(); i++) {
         std::string name = typeParms[i]->GetName();
         const Type *type = typeArgs[i].first;
-        args[name] = type;
+        argsMap[name] = type;
         templateArgs.push_back(typeArgs[i].first);
     }
 }
 
+void TemplateInstantiation::AddArgument(std::string paramName, const Type *argType) { argsMap[paramName] = argType; }
+
 const Type *TemplateInstantiation::InstantiateType(const std::string &name) {
-    auto t = args.find(name);
-    if (t == args.end()) {
+    auto t = argsMap.find(name);
+    if (t == argsMap.end()) {
         return nullptr;
     }
 

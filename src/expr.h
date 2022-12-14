@@ -743,7 +743,7 @@ class FunctionSymbolExpr : public Expr {
   public:
     FunctionSymbolExpr(const char *name, const std::vector<Symbol *> &candFuncs, SourcePos pos);
     FunctionSymbolExpr(const char *name, const std::vector<TemplateSymbol *> &candFuncs,
-                       std::vector<std::pair<const Type *, SourcePos>> &types, SourcePos pos);
+                       const std::vector<std::pair<const Type *, SourcePos>> &types, SourcePos pos);
 
     static inline bool classof(FunctionSymbolExpr const *) { return true; }
     static inline bool classof(ASTNode const *N) { return N->getValueID() == FunctionSymbolExprID; }
