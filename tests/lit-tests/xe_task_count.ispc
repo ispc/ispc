@@ -1,15 +1,14 @@
 // This test checks number of mul operations for taskIndex/taskCount calculations for Xe targets.
 // RUN: %{ispc} --emit-spirv --target=gen9-x8 %s -o %t.spv
-// RUN: ocloc compile -file %t.spv -spirv_input -options "-vc-codegen" -device SKL -output %t.bin -output_no_suffix
-// RUN: ocloc disasm -file %t.bin -device SKL -dump ./
-// RUN: FileCheck %s -check-prefix=CHECK_TASKCOUNT -input-file=taskCount_kernel_KernelHeap.asm
-// RUN: FileCheck %s -check-prefix=CHECK_TASKCOUNT0 -input-file=taskCount0_kernel_KernelHeap.asm
-// RUN: FileCheck %s -check-prefix=CHECK_TASKCOUNT1 -input-file=taskCount1_kernel_KernelHeap.asm
-// RUN: FileCheck %s -check-prefix=CHECK_TASKCOUNT2 -input-file=taskCount2_kernel_KernelHeap.asm
-// RUN: FileCheck %s -check-prefix=CHECK_TASKINDEX -input-file=taskIndex_kernel_KernelHeap.asm
-// RUN: FileCheck %s -check-prefix=CHECK_TASKINDEX0 -input-file=taskIndex0_kernel_KernelHeap.asm
-// RUN: FileCheck %s -check-prefix=CHECK_TASKINDEX1 -input-file=taskIndex1_kernel_KernelHeap.asm
-// RUN: FileCheck %s -check-prefix=CHECK_TASKINDEX2 -input-file=taskIndex2_kernel_KernelHeap.asm
+// RUN: ocloc compile -file %t.spv -spirv_input -options "-vc-codegen -Xfinalizer -output" -device SKL -output %t.bin -output_no_suffix
+// RUN: FileCheck %s -check-prefix=CHECK_TASKCOUNT -input-file=taskCount_kernel.asm
+// RUN: FileCheck %s -check-prefix=CHECK_TASKCOUNT0 -input-file=taskCount0_kernel.asm
+// RUN: FileCheck %s -check-prefix=CHECK_TASKCOUNT1 -input-file=taskCount1_kernel.asm
+// RUN: FileCheck %s -check-prefix=CHECK_TASKCOUNT2 -input-file=taskCount2_kernel.asm
+// RUN: FileCheck %s -check-prefix=CHECK_TASKINDEX -input-file=taskIndex_kernel.asm
+// RUN: FileCheck %s -check-prefix=CHECK_TASKINDEX0 -input-file=taskIndex0_kernel.asm
+// RUN: FileCheck %s -check-prefix=CHECK_TASKINDEX1 -input-file=taskIndex1_kernel.asm
+// RUN: FileCheck %s -check-prefix=CHECK_TASKINDEX2 -input-file=taskIndex2_kernel.asm
 
 // REQUIRES: XE_ENABLED
 // REQUIRES: OCLOC_INSTALLED
