@@ -1,11 +1,10 @@
-// Tests multiple instantiation of templates with same function type (no
-// typenames as parameters or return type)
+// Tests multiple instantiations of templates with same function type (no typenames as parameters or return type).
 // This verifies temlate name mangling.
 
-// RUN: %{ispc}  %s --emit-llvm-text --target=host -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-llvm-text --target=host --nostdlib -o - | FileCheck %s
 
-// CHECK: define {{.*}} @addTemp___ubi___vyfvyf
-// CHECK: define {{.*}} @addTemp___ubI___vyfvyf
+// CHECK: define {{.*}} @addTemp___vyi___vyfvyf
+// CHECK: define {{.*}} @addTemp___vyI___vyfvyf
 template <typename T> noinline int addTemp(float targ0, float targ1) { return (int)((T)targ0 + (T)targ1); }
 
 bool foo(float arg0, float arg1) {

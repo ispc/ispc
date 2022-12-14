@@ -138,13 +138,15 @@ class TemplateInstantiation {
     Symbol *InstantiateTemplateSymbol(TemplateSymbol *sym);
     void SetFunction(Function *func);
 
+    void AddArgument(std::string paramName, const Type *argType);
+
   private:
     // Function Symbol of the instantiation.
     Symbol *functionSym;
     // Mapping of the symbols in the template to correspoding symbols in the instantiation.
     std::unordered_map<Symbol *, Symbol *> symMap;
     // Mapping of template parameter names to the types in the instantiation.
-    std::unordered_map<std::string, const Type *> args;
+    std::unordered_map<std::string, const Type *> argsMap;
     // Template arguments in the order of the template parameters.
     std::vector<const Type *> templateArgs;
 

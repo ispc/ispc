@@ -118,7 +118,8 @@ std::string Variability::MangleString() const {
     }
     case Unbound:
         // We need to mangle unbound variability for template type arguments.
-        return "ub";
+        // return "ub";
+        FATAL("Unbound unexpected in Variability::MangleString()");
     default:
         FATAL("Unhandled variability");
         return "";
@@ -704,14 +705,22 @@ const Type *TemplateTypeParmType::GetAsSOAType(int width) const {
 const Type *TemplateTypeParmType::ResolveDependence(TemplateInstantiation &templInst) const {
     const Type *resolvedType = templInst.InstantiateType(GetName());
     if (resolvedType == NULL) {
-        Assert(m->errorCount > 0);
-        return NULL;
+        // Failed to resolve the type, return
+        return this;
     }
-    Variability v = variability;
-    // TODO: review this.
-    if (v == Variability::Unbound)
-        v = Variability::Varying;
-    resolvedType = resolvedType->ResolveUnboundVariability(v);
+
+    if (variability == Variability::Unbound) {
+        // Use resolved type variability
+    } else if (variability == Variability::Uniform) {
+        // Enforce uniform variability
+        resolvedType = resolvedType->GetAsUniformType();
+    } else if (variability == Variability::Varying) {
+        // Enforce varying variability
+        resolvedType = resolvedType->GetAsVaryingType();
+    } else {
+        UNREACHABLE();
+    }
+
     if (isConst) {
         resolvedType = resolvedType->GetAsConstType();
     }
