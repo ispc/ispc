@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -70,6 +70,8 @@ using namespace ispc;
 extern int yyparse();
 struct yy_buffer_state;
 extern yy_buffer_state *yy_scan_string(const char *);
+typedef struct yy_buffer_state *YY_BUFFER_STATE;
+extern void yy_delete_buffer(YY_BUFFER_STATE);
 
 /** Given an LLVM type, try to find the equivalent ispc type.  Note that
     this is an under-constrained problem due to LLVM's type representations
@@ -1264,25 +1266,27 @@ void ispc::DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::
         // definitions added.
         extern const char stdlib_mask1_code[], stdlib_mask8_code[];
         extern const char stdlib_mask16_code[], stdlib_mask32_code[], stdlib_mask64_code[];
+        YY_BUFFER_STATE strbuf;
         switch (g->target->getMaskBitCount()) {
         case 1:
-            yy_scan_string(stdlib_mask1_code);
+            strbuf = yy_scan_string(stdlib_mask1_code);
             break;
         case 8:
-            yy_scan_string(stdlib_mask8_code);
+            strbuf = yy_scan_string(stdlib_mask8_code);
             break;
         case 16:
-            yy_scan_string(stdlib_mask16_code);
+            strbuf = yy_scan_string(stdlib_mask16_code);
             break;
         case 32:
-            yy_scan_string(stdlib_mask32_code);
+            strbuf = yy_scan_string(stdlib_mask32_code);
             break;
         case 64:
-            yy_scan_string(stdlib_mask64_code);
+            strbuf = yy_scan_string(stdlib_mask64_code);
             break;
         default:
             FATAL("Unhandled mask bit size for stdlib.ispc");
         }
         yyparse();
+        yy_delete_buffer(strbuf);
     }
 }
