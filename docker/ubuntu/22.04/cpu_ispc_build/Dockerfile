@@ -40,7 +40,7 @@ FROM llvm_build_only AS ispc_build
 ARG LLVM_VERSION
 
 RUN apt-get -y update && apt-get --no-install-recommends install -y m4 bison flex \
-    libc6-dev-i386-cross libc6-dev-arm64-cross libc6-dev-armhf-cross libc6-dev-arm64-cross && \
+    libc6-dev-i386-cross libc6-dev-arm64-cross libc6-dev-armhf-cross && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /home/src/ispc
