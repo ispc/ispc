@@ -41,7 +41,7 @@ FROM llvm_build_only AS ispc_build
 ARG LLVM_VERSION
 
 RUN apt-get -y update && apt-get --no-install-recommends install -y m4=1.4.18-4 bison=2:3.5.1+dfsg-1 flex=2.6.4-6.2 \
-    libc6-dev-i386-cross=2.31-0ubuntu9.9cross1 libc6-dev-arm64-cross=2.31-0ubuntu9.9cross1 libc6-dev-armhf-cross=2.31-0ubuntu9.9cross1 libc6-dev-arm64-cross=2.31-0ubuntu9.9cross1 && \
+    libc6-dev-i386-cross=2.31-0ubuntu9.9cross1 libc6-dev-arm64-cross=2.31-0ubuntu9.9cross1 libc6-dev-armhf-cross=2.31-0ubuntu9.9cross1 && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /home/src/ispc
