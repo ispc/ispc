@@ -7030,6 +7030,9 @@ define void @__restore_ftz_daz_flags(i32 %oldVal) nounwind alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; 16-bit float math functions
 
+declare float @__gnu_h2f_ieee(i16 %v) nounwind readnone
+declare i16 @__gnu_f2h_ieee(float %v) nounwind readnone
+
 ;; $1: target vector width
 
 define(`halfMath', `

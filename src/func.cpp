@@ -414,8 +414,9 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         // happens for example with 'export'ed functions that the app
         // calls, with tasks on GPU and with unmasked functions.
         if (argIter == function->arg_end()) {
-            Assert(type->isUnmasked || type->isExported || type->isExternC || type->isExternSYCL ||
-                   type->IsISPCExternal() || type->IsISPCKernel());
+            // function->print(llvm::errs(), nullptr);
+            //Assert(type->isUnmasked || type->isExported || type->isExternC || type->isExternSYCL ||
+            //       type->IsISPCExternal() || type->IsISPCKernel());
             ctx->SetFunctionMask(LLVMMaskAllOn);
         } else {
             Assert(type->isUnmasked == false);

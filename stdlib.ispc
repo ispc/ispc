@@ -4182,10 +4182,7 @@ __declspec(safe) static inline uniform double pow(uniform double a, uniform doub
 ///////////////////////////////////////////////////////////////////////////
 // half-precision floats
 
-__declspec(safe) static inline uniform float half_to_float(uniform unsigned int16 h) {
-    if (__have_native_half) {
-        return __half_to_float_uniform(h);
-    } else {
+__declspec(safe) static inline uniform float __gnu_h2f_ieee(uniform unsigned int16 h) {
         // https://gist.github.com/2144712
         // Fabian "ryg" Giesen.
         static const uniform unsigned int32 shifted_exp = 0x7c00ul << 13; // exponent mask after shift
@@ -4204,6 +4201,13 @@ __declspec(safe) static inline uniform float half_to_float(uniform unsigned int1
 
         o |= ((int32)(h & 0x8000)) << 16; // sign bit
         return floatbits(o);
+}
+
+__declspec(safe) static inline uniform float half_to_float(uniform unsigned int16 h) {
+    if (__have_native_half) {
+        return __half_to_float_uniform(h);
+    } else {
+        return __gnu_h2f_ieee(h);
     }
 }
 
@@ -4229,10 +4233,7 @@ __declspec(safe) static inline float half_to_float(unsigned int16 h) {
     }
 }
 
-__declspec(safe) static inline uniform int16 float_to_half(uniform float f) {
-    if (__have_native_half) {
-        return __float_to_half_uniform(f);
-    } else {
+__declspec(safe) static inline uniform int16 __gnu_f2h_ieee(uniform float f) {
         // via Fabian "ryg" Giesen.
         // https://gist.github.com/2156668
         uniform unsigned int32 sign_mask = 0x80000000u;
@@ -4269,6 +4270,13 @@ __declspec(safe) static inline uniform int16 float_to_half(uniform float f) {
             o = fint2 >> 13; // Take the bits!
 
         return (o | (sign >> 16));
+}
+
+__declspec(safe) static inline uniform int16 float_to_half(uniform float f) {
+    if (__have_native_half) {
+        return __float_to_half_uniform(f);
+    } else {
+        return __gnu_f2h_ieee(f);
     }
 }
 
