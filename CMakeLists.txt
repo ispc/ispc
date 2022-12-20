@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2022, Intel Corporation
+#  Copyright (c) 2018-2023, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -60,7 +60,6 @@ option(ISPC_INCLUDE_BENCHMARKS "Generate build targets for the ISPC tests." OFF)
 option(ISPC_INCLUDE_RT "Generate build targets for ISPC runtime." ON)
 option(ISPC_INCLUDE_UTILS "Generate build targets for the utils." ON)
 option(ISPC_PREPARE_PACKAGE "Generate build targets for ispc package" OFF)
-option(ISPC_NO_DUMPS "Turn off functionality, which requires LLVM dump() functions" OFF)
 
 option(ISPC_OPAQUE_PTR_MODE "Build ISPC with usage of opaque pointers" OFF)
 
@@ -441,10 +440,6 @@ endif()
 
 if (WASM_ENABLED)
     target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_WASM_ENABLED)
-endif()
-
-if (ISPC_NO_DUMPS)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE ISPC_NO_DUMPS)
 endif()
 
 # Compile definitions for cross compilation

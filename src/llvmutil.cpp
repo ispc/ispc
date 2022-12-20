@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -1156,10 +1156,8 @@ bool LLVMVectorValuesAllEqual(llvm::Value *v, llvm::Value **splat) {
     bool equal = lVectorValuesAllEqual(v, vectorLength, seenPhis, splat);
 
     Debug(SourcePos(), "LLVMVectorValuesAllEqual(%s) -> %s.", v->getName().str().c_str(), equal ? "true" : "false");
-#ifndef ISPC_NO_DUMPS
     if (g->debugPrint)
         LLVMDumpValue(v);
-#endif
 
     return equal;
 }
@@ -1440,15 +1438,12 @@ bool LLVMVectorIsLinear(llvm::Value *v, int stride) {
     std::vector<llvm::PHINode *> seenPhis;
     bool linear = lVectorIsLinear(v, vectorLength, stride, seenPhis);
     Debug(SourcePos(), "LLVMVectorIsLinear(%s) -> %s.", v->getName().str().c_str(), linear ? "true" : "false");
-#ifndef ISPC_NO_DUMPS
     if (g->debugPrint)
         LLVMDumpValue(v);
-#endif
 
     return linear;
 }
 
-#ifndef ISPC_NO_DUMPS
 static void lDumpValue(llvm::Value *v, std::set<llvm::Value *> &done) {
     if (done.find(v) != done.end())
         return;
@@ -1458,7 +1453,7 @@ static void lDumpValue(llvm::Value *v, std::set<llvm::Value *> &done) {
         return;
 
     fprintf(stderr, "  ");
-    v->dump();
+    v->print(llvm::errs());
     done.insert(v);
 
     if (inst == NULL)
@@ -1473,7 +1468,6 @@ void LLVMDumpValue(llvm::Value *v) {
     lDumpValue(v, done);
     fprintf(stderr, "----\n");
 }
-#endif
 
 static llvm::Value *lExtractFirstVectorElement(llvm::Value *v, std::map<llvm::PHINode *, llvm::PHINode *> &phiMap) {
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0

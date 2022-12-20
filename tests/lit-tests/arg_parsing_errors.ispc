@@ -9,12 +9,11 @@
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --dev-stub 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_9
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --host-stub 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_10
 //; RUN: not %{ispc} --nowrap --target=avx2-i32x8 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_11
-// not running --debug-phase tests, as they are not passing with -DNO_DUMPS=ON (the switch is not available in this mode)
-//; not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --debug-phase= 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_12
+//; RUN not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --debug-phase= 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_12
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --off-phase= 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_13
-//; not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --debug-phase=12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_14
+//; RUN not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --debug-phase=12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_14
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --off-phase=12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_15
-//; not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --debug-phase=2000 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_16
+//; RUN not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --debug-phase=2000 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_16
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --off-phase=2000 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_17
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --arch=x64 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_18
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=sse3,avx2-i32x8,gost 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_19

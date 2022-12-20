@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022, Intel Corporation
+  Copyright (c) 2022-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -83,14 +83,13 @@ namespace ispc {
 // Constant in number of bytes.
 enum { BYTE = 1, WORD = 2, DWORD = 4, QWORD = 8, OWORD = 16, GRF = 32 };
 
-#ifndef ISPC_NO_DUMPS
 #define DEBUG_START_BB(NAME)                                                                                           \
     if (g->debugPrint &&                                                                                               \
         (getenv("FUNC") == NULL || (getenv("FUNC") != NULL && !strncmp(bb.getParent()->getName().str().c_str(),        \
                                                                        getenv("FUNC"), strlen(getenv("FUNC")))))) {    \
         fprintf(stderr, "Start of " NAME "\n");                                                                        \
         fprintf(stderr, "---------------\n");                                                                          \
-        bb.dump();                                                                                                     \
+        bb.print(llvm::errs());                                                                                        \
         fprintf(stderr, "---------------\n\n");                                                                        \
     } else /* eat semicolon */
 
@@ -100,12 +99,8 @@ enum { BYTE = 1, WORD = 2, DWORD = 4, QWORD = 8, OWORD = 16, GRF = 32 };
                                                                        getenv("FUNC"), strlen(getenv("FUNC")))))) {    \
         fprintf(stderr, "End of " NAME " %s\n", modifiedAny ? "** CHANGES **" : "");                                   \
         fprintf(stderr, "---------------\n");                                                                          \
-        bb.dump();                                                                                                     \
+        bb.print(llvm::errs());                                                                                        \
         fprintf(stderr, "---------------\n\n");                                                                        \
     } else /* eat semicolon */
-#else
-#define DEBUG_START_BB(NAME)
-#define DEBUG_END_BB(NAME)
-#endif
 
 } // namespace ispc
