@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2021, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -366,7 +366,6 @@ void ispc::Error(SourcePos p, const char *fmt, ...) {
 }
 
 void ispc::Debug(SourcePos p, const char *fmt, ...) {
-#ifndef ISPC_NO_DUMPS
     if (!g->debugPrint || g->quiet)
         return;
 
@@ -374,7 +373,6 @@ void ispc::Debug(SourcePos p, const char *fmt, ...) {
     va_start(args, fmt);
     lPrint("Debug", false, p, fmt, args);
     va_end(args);
-#endif
 }
 
 void ispc::Warning(SourcePos p, const char *fmt, ...) {

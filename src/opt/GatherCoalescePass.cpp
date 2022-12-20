@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022, Intel Corporation
+  Copyright (c) 2022-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -937,7 +937,6 @@ restart:
             // LLVM drops metadata frequently and it results in bad disgnostics.
             LLVMGetSourcePosFromMetadata(fwdCall, &fwdPos);
 
-#ifndef ISPC_NO_DUMPS
             if (g->debugPrint) {
                 if (base != fwdCall->getArgOperand(0)) {
                     Debug(fwdPos, "base pointers mismatch");
@@ -960,7 +959,6 @@ restart:
                     LLVMDumpValue(fwdCall->getArgOperand(4));
                 }
             }
-#endif
 
             if (base == fwdCall->getArgOperand(0) && variableOffsets == fwdCall->getArgOperand(1) &&
                 offsetScale == fwdCall->getArgOperand(2) && mask == fwdCall->getArgOperand(4)) {

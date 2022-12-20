@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022, Intel Corporation
+  Copyright (c) 2022-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -37,7 +37,6 @@
 
 #include <sstream>
 
-#ifndef ISPC_NO_DUMPS
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/Regex.h>
 
@@ -82,5 +81,3 @@ class DebugPassFile : public llvm::ModulePass {
 
 llvm::Pass *CreateDebugPassFile(int number, llvm::StringRef name, std::string dir);
 } // namespace ispc
-
-#endif

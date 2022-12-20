@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -2327,10 +2327,8 @@ int Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *o
     headerOpts.UseBuiltinIncludes = 0;
     headerOpts.UseStandardSystemIncludes = 0;
     headerOpts.UseStandardCXXIncludes = 0;
-#ifndef ISPC_NO_DUMPS
     if (g->debugPrint)
         headerOpts.Verbose = 1;
-#endif
     for (int i = 0; i < (int)g->includePath.size(); ++i) {
         headerOpts.AddPath(g->includePath[i], clang::frontend::Angled, false /* not a framework */,
                            true /* ignore sys root */);

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -116,7 +116,6 @@ void DebugPassManager::add(llvm::Pass *P, int stage = -1) {
     if (g->off_stages.find(number) == g->off_stages.end()) {
         // adding optimization (not switched off)
         PM.add(P);
-#ifndef ISPC_NO_DUMPS
         if (g->debug_stages.find(number) != g->debug_stages.end()) {
             // adding dump of LLVM IR after optimization
             if (g->dumpFile) {
@@ -128,18 +127,15 @@ void DebugPassManager::add(llvm::Pass *P, int stage = -1) {
                 PM.add(CreateDebugPass(buf));
             }
         }
-#endif
     }
 }
 ///////////////////////////////////////////////////////////////////////////
 
 void ispc::Optimize(llvm::Module *module, int optLevel) {
-#ifndef ISPC_NO_DUMPS
     if (g->debugPrint) {
         printf("*** Code going into optimization ***\n");
-        module->dump();
+        module->print(llvm::errs(), nullptr);
     }
-#endif
     DebugPassManager optPM;
 
     if (g->enableLLVMIntrinsics) {
@@ -481,10 +477,8 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
     optPM.add(llvm::createVerifierPass(), LAST_OPT_NUMBER);
     optPM.run(*module);
 
-#ifndef ISPC_NO_DUMPS
     if (g->debugPrint) {
         printf("\n*****\nFINAL OUTPUT\n*****\n");
-        module->dump();
+        module->print(llvm::errs(), nullptr);
     }
-#endif
 }

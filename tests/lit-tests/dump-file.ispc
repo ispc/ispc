@@ -13,8 +13,6 @@
 // RUN: FileCheck %s --input-file ./ir_220_DeadCodeElimination.ll -check-prefixes=CHECK_ALL,CHECK_PRE
 // RUN: FileCheck %s --input-file ./ir_300_Unrollloops.ll -check-prefixes=CHECK_ALL,CHECK_POST
 
-// REQUIRES: DUMPS_ENABLED
-
 #define NUM 1024
 
 // CHECK_ALL-LABEL: @foo(

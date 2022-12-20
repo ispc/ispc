@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022, Intel Corporation
+  Copyright (c) 2022-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -156,12 +156,10 @@ static llvm::Value *lExtractFromInserts(llvm::Value *v, unsigned int index) {
     *offsets with an int vector of the per-lane offsets
  */
 static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets, llvm::Instruction *insertBefore) {
-#ifndef ISPC_NO_DUMPS
     if (g->debugPrint) {
         fprintf(stderr, "lGetBasePtrAndOffsets\n");
         LLVMDumpValue(ptrs);
     }
-#endif
 
     bool broadcastDetected = false;
     // Looking for %gep_offset = shufflevector <8 x i64> %0, <8 x i64> undef, <8 x i32> zeroinitializer

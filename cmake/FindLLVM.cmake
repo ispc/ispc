@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2020, Intel Corporation
+#  Copyright (c) 2018-2023, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -130,9 +130,6 @@ run_llvm_config(LLVM_VERSION_NUMBER "--version")
 message(STATUS "Detected LLVM version: ${LLVM_VERSION_NUMBER}")
 
 run_llvm_config(ASSERTIONS "--assertion-mode")
-if (NOT ${ASSERTIONS} STREQUAL "ON")
-    message(WARNING "LLVM was built without assertions enabled (-DLLVM_ENABLE_ASSERTIONS=OFF). This disables dumps, which are required for ISPC to be fully functional.")
-endif()
 
 run_llvm_config(CXX_FLAGS "--cxxflags")
 # Check DNDEBUG flag

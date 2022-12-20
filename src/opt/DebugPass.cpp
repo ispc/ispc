@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022, Intel Corporation
+  Copyright (c) 2022-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -33,8 +33,6 @@
 
 #include "DebugPass.h"
 
-#ifndef ISPC_NO_DUMPS
-
 namespace ispc {
 
 char DebugPass::ID = 0;
@@ -42,7 +40,7 @@ char DebugPass::ID = 0;
 bool DebugPass::runOnModule(llvm::Module &module) {
     fprintf(stderr, "%s", str_output);
     fflush(stderr);
-    module.dump();
+    module.print(llvm::errs(), nullptr);
     return true;
 }
 
@@ -102,5 +100,3 @@ llvm::Pass *CreateDebugPassFile(int number, llvm::StringRef name, std::string di
 }
 
 } // namespace ispc
-
-#endif

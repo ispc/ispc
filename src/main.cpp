@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -80,15 +80,6 @@ static void lPrintVersion() {
     printf("%s\n", ISPC_VERSION_STRING);
 #ifdef ISPC_HOST_IS_WINDOWS
     printf("Supported Visual Studio versions: %s.\n", ISPC_VS_VERSION);
-#endif
-
-// The recommended way to build ISPC assumes custom LLVM build with a set of patches.
-// If the default LLVM distribution is used, then the resuling ISPC binary may contain
-// known and already fixed stability and performance problems.
-#ifdef ISPC_NO_DUMPS
-    printf("This version is likely linked against non-recommended LLVM binaries.\n"
-           "For best stability and performance please use official binary distribution from "
-           "http://ispc.github.io/downloads.html");
 #endif
 }
 
@@ -215,15 +206,11 @@ static void lPrintVersion() {
            "given, dump AST for user code only\n");
     printf("    [--debug]\t\t\t\tPrint information useful for debugging ispc\n");
     printf("    [--debug-llvm]\t\t\tEnable LLVM debugging information (dumps to stderr)\n");
-#ifndef ISPC_NO_DUMPS
     printf("    [--debug-phase=<value>]\t\tSet optimization phases to dump. "
            "--debug-phase=first,210:220,300,305,310:last\n");
-#endif
     printf("    [--[no-]discard-value-names]\tDo not discard/Discard value names when generating LLVM IR.\n");
-#ifndef ISPC_NO_DUMPS
     printf("    [--dump-file[=<path>]]\t\tDump module IR to file(s) in "
            "current directory, or to <path> if specified\n");
-#endif
     printf("    [--fuzz-seed=<value>]\t\tSeed value for RNG for fuzz testing\n");
     printf("    [--fuzz-test]\t\t\tRandomly perturb program input to test error conditions\n");
     printf("    [--off-phase=<value>]\t\tSwitch off optimization phases. --off-phase=first,210:220,300,305,310:last\n");
@@ -946,9 +933,7 @@ int main(int Argc, char *Argv[]) {
             } else {
                 errorHandler.AddError("No output file name specified after --host-stub option.");
             }
-        }
-#ifndef ISPC_NO_DUMPS
-        else if (strncmp(argv[i], "--debug-phase=", 14) == 0) {
+        } else if (strncmp(argv[i], "--debug-phase=", 14) == 0) {
             errorHandler.AddWarning("Adding debug phases may change the way PassManager"
                                     "handles the phases and it may possibly make some bugs go"
                                     "away or introduce the new ones.");
@@ -959,7 +944,6 @@ int main(int Argc, char *Argv[]) {
         } else if (strncmp(argv[i], "--dump-file", 11) == 0) {
             g->dumpFile = true;
         }
-#endif
 
         else if (strncmp(argv[i], "--off-phase=", 12) == 0) {
             g->off_stages = ParsingPhases(argv[i] + strlen("--off-phase="), errorHandler);
