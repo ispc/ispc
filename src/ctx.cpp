@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -1668,9 +1668,19 @@ llvm::Value *FunctionEmitContext::BinaryOperator(llvm::Instruction::BinaryOps in
     llvm::Type *type = v0->getType();
     int arraySize = lArrayVectorWidth(type);
     if (arraySize == 0) {
-        llvm::Instruction *bop = llvm::BinaryOperator::Create(inst, v0, v1, name, bblock);
-        AddDebugPos(bop);
-        return bop;
+        if (!g->target->hasHalf() && (type == LLVMTypes::Float16Type || type == LLVMTypes::Float16VectorType)) {
+            auto tt = type == LLVMTypes::Float16Type ? LLVMTypes::FloatType : LLVMTypes::FloatVectorType;
+            llvm::Value *v0_ = H2FCastInst(v0, tt, name);
+            llvm::Value *v1_ = H2FCastInst(v1, tt, name);
+            llvm::Instruction *bop_ = llvm::BinaryOperator::Create(inst, v0_, v1_, name, bblock);
+            AddDebugPos(bop_);
+            llvm::Value *bop = F2HCastInst(bop_, type, name);
+            return bop;
+        } else {
+            llvm::Instruction *bop = llvm::BinaryOperator::Create(inst, v0, v1, name, bblock);
+            AddDebugPos(bop);
+            return bop;
+        }
     } else {
         // If this is an ispc VectorType, apply the binary operator to each
         // of the elements of the array (which in turn should be either
@@ -1743,10 +1753,20 @@ llvm::Value *FunctionEmitContext::CmpInst(llvm::Instruction::OtherOps inst, llvm
     llvm::Type *type = v0->getType();
     int arraySize = lArrayVectorWidth(type);
     if (arraySize == 0) {
-        llvm::Instruction *ci =
-            llvm::CmpInst::Create(inst, pred, v0, v1, name.isTriviallyEmpty() ? "cmp" : name, bblock);
-        AddDebugPos(ci);
-        return ci;
+        if (!g->target->hasHalf() && (type == LLVMTypes::Float16Type || type == LLVMTypes::Float16VectorType)) {
+            auto tt = type == LLVMTypes::Float16Type ? LLVMTypes::FloatType : LLVMTypes::FloatVectorType;
+            llvm::Value *v0_ = H2FCastInst(v0, tt, name);
+            llvm::Value *v1_ = H2FCastInst(v1, tt, name);
+            llvm::Instruction *ci =
+                llvm::CmpInst::Create(inst, pred, v0_, v1_, name.isTriviallyEmpty() ? "cmp" : name, bblock);
+            AddDebugPos(ci);
+            return ci;
+        } else {
+            llvm::Instruction *ci =
+                llvm::CmpInst::Create(inst, pred, v0, v1, name.isTriviallyEmpty() ? "cmp" : name, bblock);
+            AddDebugPos(ci);
+            return ci;
+        }
     } else {
         llvm::Type *boolType = lGetMatchingBoolVectorType(type);
         llvm::Value *ret = llvm::UndefValue::get(boolType);
@@ -1924,6 +1944,81 @@ llvm::Instruction *FunctionEmitContext::FPCastInst(llvm::Value *value, llvm::Typ
         value, type, name.isTriviallyEmpty() ? llvm::Twine(value->getName()) + "_cast" : name, bblock);
     AddDebugPos(inst);
     return inst;
+}
+
+llvm::Value *FunctionEmitContext::__f2h_CastInst(const char *funcName, llvm::Value *v, llvm::Type *targetType,
+                                                 const llvm::Twine &name) {
+    if (v == NULL) {
+        AssertPos(currentPos, m->errorCount > 0);
+        return NULL;
+    }
+
+    llvm::Twine tw = name.isTriviallyEmpty() ? llvm::Twine(v->getName()) + "_f2h_cast" : name;
+
+    std::vector<Symbol *> foos;
+    m->symbolTable->LookupFunction(funcName, &foos);
+    assert(foos.size() == 2);
+    Symbol *s = foos[0];
+
+    const FunctionType *f0 = CastType<FunctionType>(foos[0]->type);
+    const FunctionType *f1 = CastType<FunctionType>(foos[1]->type);
+    if (targetType == LLVMTypes::Float16VectorType || targetType == LLVMTypes::FloatVectorType) {
+        if (f1->GetReturnType()->IsVaryingType()) {
+            s = foos[1];
+        } else if (f0->GetReturnType()->IsVaryingType()) {
+            s = foos[0];
+        } else {
+            assert(false);
+        }
+    } else {
+        if (f0->GetReturnType()->IsUniformType()) {
+            s = foos[0];
+        } else if (f1->GetReturnType()->IsUniformType()) {
+            s = foos[1];
+        } else {
+            assert(false);
+        }
+    }
+
+    llvm::Function *fn = s->function;
+    assert(fn);
+    llvm::Value *mask = GetInternalMask();
+    llvm::Value *inst = CallInst(fn, NULL, v, mask, tw);
+
+    AddDebugPos(inst);
+    return inst;
+}
+
+llvm::Value *FunctionEmitContext::F2HCastInst(llvm::Value *v, llvm::Type *targetType, const llvm::Twine &name) {
+    return __f2h_CastInst("float_to_float16", v, targetType, name);
+}
+
+llvm::Value *FunctionEmitContext::H2FCastInst(llvm::Value *v, llvm::Type *targetType, const llvm::Twine &name) {
+    return __f2h_CastInst("float16_to_float", v, targetType, name);
+}
+
+llvm::Value *FunctionEmitContext::I2HCastInst(llvm::Instruction::CastOps op, llvm::Value *v, llvm::Type *t,
+                                              const llvm::Twine &name) {
+    // Cast to float16 from int via float if target has not native half
+    if (g->target->hasHalf()) {
+        return CastInst(op, v, t, name);
+    } else {
+        llvm::Type *tt = t == LLVMTypes::Float16Type ? LLVMTypes::FloatType : LLVMTypes::FloatVectorType;
+        llvm::Value *c1 = CastInst(op, v, tt, name);
+        return F2HCastInst(c1, t, name);
+    }
+}
+
+llvm::Value *FunctionEmitContext::H2ICastInst(llvm::Instruction::CastOps op, llvm::Value *v, llvm::Type *t,
+                                              const llvm::Twine &name) {
+    // Cast from float16 to int via float if target has not native half
+    if (g->target->hasHalf()) {
+        return CastInst(op, v, t, name);
+    } else {
+        llvm::Type *tt = t->isVectorTy() ? LLVMTypes::FloatVectorType : LLVMTypes::FloatType;
+        llvm::Value *c1 = H2FCastInst(v, tt, name);
+        return CastInst(op, c1, t, name);
+    }
 }
 
 llvm::Instruction *FunctionEmitContext::SExtInst(llvm::Value *value, llvm::Type *type, const llvm::Twine &name) {

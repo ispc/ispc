@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -450,6 +450,13 @@ class FunctionEmitContext {
     llvm::Instruction *CastInst(llvm::Instruction::CastOps op, llvm::Value *value, llvm::Type *type,
                                 const llvm::Twine &name = "");
     llvm::Instruction *FPCastInst(llvm::Value *value, llvm::Type *type, const llvm::Twine &name = "");
+    llvm::Value *__f2h_CastInst(const char *funcName, llvm::Value *v, llvm::Type *t, const llvm::Twine &name = "");
+    llvm::Value *F2HCastInst(llvm::Value *v, llvm::Type *t, const llvm::Twine &name = "");
+    llvm::Value *H2FCastInst(llvm::Value *v, llvm::Type *t, const llvm::Twine &name = "");
+    llvm::Value *I2HCastInst(llvm::Instruction::CastOps op, llvm::Value *v, llvm::Type *t,
+                             const llvm::Twine &name = "");
+    llvm::Value *H2ICastInst(llvm::Instruction::CastOps op, llvm::Value *v, llvm::Type *t,
+                             const llvm::Twine &name = "");
     llvm::Instruction *SExtInst(llvm::Value *value, llvm::Type *type, const llvm::Twine &name = "");
     llvm::Instruction *ZExtInst(llvm::Value *value, llvm::Type *type, const llvm::Twine &name = "");
 

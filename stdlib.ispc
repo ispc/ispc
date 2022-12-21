@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -105,6 +105,13 @@ typedef uniform int8 *uniform opaque_ptr_t;
 ///////////////////////////////////////////////////////////////////////////
 // Low level primitives
 
+__declspec(safe) static inline uniform float float16_to_float(uniform float16 hf);
+__declspec(safe) static inline uniform float16 float_to_float16(uniform float f);
+__declspec(safe) static inline float float16_to_float(float16 hf);
+__declspec(safe) static inline float16 float_to_float16(float f);
+#define H float_to_float16
+#define F float16_to_float
+
 __declspec(safe, cost0) static inline float16 float16bits(unsigned int16 a) { return __halfbits_varying_int16(a); }
 
 __declspec(safe, cost0) static inline uniform float16 float16bits(uniform unsigned int16 a) {
@@ -157,7 +164,13 @@ __declspec(safe) static inline int8 broadcast(int8 v, uniform int i) { return __
 
 __declspec(safe) static inline int16 broadcast(int16 v, uniform int i) { return __broadcast_i16(v, i); }
 
-__declspec(safe) static inline float16 broadcast(float16 v, uniform int i) { return __broadcast_half(v, i); }
+__declspec(safe) static inline float16 broadcast(float16 v, uniform int i) {
+    if (__have_native_half) {
+        return __broadcast_half(v, i);
+    } else {
+        return H(__broadcast_float(F(v), i));
+    }
+}
 
 __declspec(safe) static inline int32 broadcast(int32 v, uniform int i) { return __broadcast_i32(v, i); }
 
@@ -171,7 +184,13 @@ __declspec(safe) static inline int8 rotate(int8 v, uniform int i) { return __rot
 
 __declspec(safe) static inline int16 rotate(int16 v, uniform int i) { return __rotate_i16(v, i); }
 
-__declspec(safe) static inline float16 rotate(float16 v, uniform int i) { return __rotate_half(v, i); }
+__declspec(safe) static inline float16 rotate(float16 v, uniform int i) {
+    if (__have_native_half) {
+        return __rotate_half(v, i);
+    } else {
+        return F(__rotate_float(F(v), i));
+    }
+}
 
 __declspec(safe) static inline int32 rotate(int32 v, uniform int i) { return __rotate_i32(v, i); }
 
@@ -198,8 +217,14 @@ __declspec(safe) static inline int16 shift(int16 v, uniform int i) {
 }
 
 __declspec(safe) static inline float16 shift(float16 v, uniform int i) {
-    varying int16 result;
-    unmasked { result = __shift_half(v, i); }
+    varying float16 result;
+    unmasked {
+        if (__have_native_half) {
+            result = __shift_half(v, i);
+        } else {
+            result = H(__shift_float(F(v), i));
+        }
+    }
     return result;
 }
 
@@ -1048,31 +1073,59 @@ __declspec(safe) static inline uniform unsigned int32 reduce_add(unsigned int16 
 
 __declspec(safe) static inline uniform float16 reduce_add(float16 x) {
     // zero the lanes where the mask is off
-    return __reduce_add_half(__mask ? x : 0.0f16);
+    if (__have_native_half) {
+        return __reduce_add_half(__mask ? x : 0.0f16);
+    } else {
+        return H(__reduce_add_float(__mask ? F(x) : 0.));
+    }
 }
 
 __declspec(safe) static inline uniform float16 reduce_min(float16 v) {
-    // For the lanes where the mask is off, replace the given value with
-    // infinity, so that it doesn't affect the result.
-    const int16 iflt_max = 0x7c00; // infinity
-    // unmasked block is needed to make sure that argument for unmasked
-    // function __reduce_min_float() are calculated without a mask.
-    bool test = __mask;
-    uniform float16 result;
-    unmasked { result = __reduce_min_half(test ? v : float16bits(iflt_max)); }
-    return result;
+    if (__have_native_half) {
+        // For the lanes where the mask is off, replace the given value with
+        // infinity, so that it doesn't affect the result.
+        const int16 iflt_max = 0x7c00; // infinity
+        // unmasked block is needed to make sure that argument for unmasked
+        // function __reduce_min_float() are calculated without a mask.
+        bool test = __mask;
+        uniform float16 result;
+        unmasked { result = __reduce_min_half(test ? v : float16bits(iflt_max)); }
+        return result;
+    } else {
+        // For the lanes where the mask is off, replace the given value with
+        // infinity, so that it doesn't affect the result.
+        int iflt_max = 0x7f800000; // infinity
+        // unmasked block is needed to make sure that argument for unmasked
+        // function __reduce_min_float() are calculated without a mask.
+        bool test = __mask;
+        uniform float result;
+        unmasked { result = __reduce_min_float(test ? F(v) : floatbits(iflt_max)); }
+        return H(result);
+    }
 }
 
 __declspec(safe) static inline uniform float16 reduce_max(float16 v) {
-    // For the lanes where the mask is off, replace the given value with
-    // negative infinity, so that it doesn't affect the result.
-    const int16 iflt_neg_max = 0xfc00; // -infinity
-    // unmasked block is needed to make sure that argument for unmasked
-    // function __reduce_max_half() are calculated without a mask.
-    bool test = __mask;
-    uniform float16 result;
-    unmasked { result = __reduce_max_half(test ? v : float16bits(iflt_neg_max)); }
-    return result;
+    if (__have_native_half) {
+        // For the lanes where the mask is off, replace the given value with
+        // negative infinity, so that it doesn't affect the result.
+        const int16 iflt_neg_max = 0xfc00; // -infinity
+        // unmasked block is needed to make sure that argument for unmasked
+        // function __reduce_max_half() are calculated without a mask.
+        bool test = __mask;
+        uniform float16 result;
+        unmasked { result = __reduce_max_half(test ? v : float16bits(iflt_neg_max)); }
+        return result;
+    } else {
+        // For the lanes where the mask is off, replace the given value with
+        // negative infinity, so that it doesn't affect the result.
+        const int iflt_neg_max = 0xff800000; // -infinity
+        // unmasked block is needed to make sure that argument for unmasked
+        // function __reduce_max_float() are calculated without a mask.
+        bool test = __mask;
+        uniform float result;
+        unmasked { result = __reduce_max_float(test ? F(v) : floatbits(iflt_neg_max)); }
+        return H(result);
+    }
 }
 
 __declspec(safe) static inline uniform float reduce_add(float x) {
@@ -1205,6 +1258,26 @@ __declspec(safe) static inline uniform unsigned int64 reduce_max(unsigned int64 
     return __reduce_max_uint64(__mask ? v : 0);
 }
 
+__declspec(safe) static inline uniform bool reduce_equal(float16 v) {
+    uniform int8 unusedValue;
+    if (__have_native_half) {
+        return __reduce_equal_half(v, &unusedValue, (IntMaskType)__mask);
+    } else {
+        return __reduce_equal_float(F(v), &unusedValue, (IntMaskType)__mask);
+    }
+}
+
+__declspec(safe) static inline uniform bool reduce_equal(float16 v, uniform float16 *uniform value) {
+    if (__have_native_half) {
+        return __reduce_equal_half(v, (opaque_ptr_t)value, (IntMaskType)__mask);
+    } else {
+        uniform float val;
+        uniform bool res = __reduce_equal_float(F(v), (opaque_ptr_t)&val, (IntMaskType)__mask);
+        *value = H(val);
+        return res;
+    }
+}
+
 #define REDUCE_EQUAL(TYPE, FUNCTYPE, MASKTYPE)                                                                         \
     __declspec(safe) static inline uniform bool reduce_equal(TYPE v) {                                                 \
         uniform int8 unusedValue;                                                                                      \
@@ -1214,7 +1287,6 @@ __declspec(safe) static inline uniform unsigned int64 reduce_max(unsigned int64 
         return __reduce_equal_##FUNCTYPE(v, (opaque_ptr_t)value, (MASKTYPE)__mask);                                    \
     }
 
-REDUCE_EQUAL(float16, half, IntMaskType)
 REDUCE_EQUAL(int32, int32, IntMaskType)
 REDUCE_EQUAL(unsigned int32, int32, UIntMaskType)
 REDUCE_EQUAL(float, float, IntMaskType)
@@ -1222,7 +1294,13 @@ REDUCE_EQUAL(int64, int64, IntMaskType)
 REDUCE_EQUAL(unsigned int64, int64, UIntMaskType)
 REDUCE_EQUAL(double, double, IntMaskType)
 
-static float16 exclusive_scan_add(float16 v) { return __exclusive_scan_add_half(v, __mask); }
+static float16 exclusive_scan_add(float16 v) {
+    if (__have_native_half) {
+        return __exclusive_scan_add_half(v, __mask);
+    } else {
+        return H(__exclusive_scan_add_float(F(v), __mask));
+    }
+}
 
 static int32 exclusive_scan_add(int32 v) { return __exclusive_scan_add_i32(v, (IntMaskType)__mask); }
 
@@ -1523,13 +1601,25 @@ __declspec(safe) static inline uniform int64 clock() { return __clock(); }
 ///////////////////////////////////////////////////////////////////////////
 // Floating-Point Math
 
-__declspec(safe, cost1) static inline uniform bool isnan(uniform float16 v) { return v != v; }
-
-__declspec(safe, cost1) static inline bool isnan(float16 v) { return v != v; }
-
 __declspec(safe, cost1) static inline uniform bool isnan(uniform float v) { return v != v; }
 
 __declspec(safe, cost1) static inline bool isnan(float v) { return v != v; }
+
+__declspec(safe, cost1) static inline uniform bool isnan(uniform float16 v) {
+    if (__have_native_half) {
+        return v != v;
+    } else {
+        return isnan(F(v));
+    }
+}
+
+__declspec(safe, cost1) static inline bool isnan(float16 v) {
+    if (__have_native_half) {
+        return v != v;
+    } else {
+        return isnan(F(v));
+    }
+}
 
 __declspec(safe, cost1) static inline uniform bool isnan(uniform double v) { return v != v; }
 
@@ -1620,9 +1710,21 @@ __declspec(safe, cost1) static inline uniform unsigned int64 signbits(uniform do
     return (i & 0x8000000000000000);
 }
 
-__declspec(safe, cost2) static inline float16 round(float16 x) { return __round_varying_half(x); }
+__declspec(safe, cost2) static inline float16 round(float16 x) {
+    if (__have_native_half) {
+        return __round_varying_half(x);
+    } else {
+        return H(__round_varying_float(F(x)));
+    }
+}
 
-__declspec(safe, cost2) static inline uniform float16 round(uniform float16 x) { return __round_uniform_half(x); }
+__declspec(safe, cost2) static inline uniform float16 round(uniform float16 x) {
+    if (__have_native_half) {
+        return __round_uniform_half(x);
+    } else {
+        return H(__round_uniform_float(F(x)));
+    }
+}
 
 __declspec(safe, cost2) static inline float round(float x) { return __round_varying_float(x); }
 
@@ -1632,9 +1734,21 @@ __declspec(safe, cost2) static inline double round(double x) { return __round_va
 
 __declspec(safe, cost2) static inline uniform double round(uniform double x) { return __round_uniform_double(x); }
 
-__declspec(safe, cost2) static inline float16 floor(float16 x) { return __floor_varying_half(x); }
+__declspec(safe, cost2) static inline float16 floor(float16 x) {
+    if (__have_native_half) {
+        return __floor_varying_half(x);
+    } else {
+        return H(__floor_varying_float(F(x)));
+    }
+}
 
-__declspec(safe, cost2) static inline uniform float16 floor(uniform float16 x) { return __floor_uniform_half(x); }
+__declspec(safe, cost2) static inline uniform float16 floor(uniform float16 x) {
+    if (__have_native_half) {
+        return __floor_uniform_half(x);
+    } else {
+        return H(__floor_uniform_float(F(x)));
+    }
+}
 
 __declspec(safe, cost2) static inline float floor(float x) { return __floor_varying_float(x); }
 
@@ -1644,9 +1758,21 @@ __declspec(safe, cost2) static inline double floor(double x) { return __floor_va
 
 __declspec(safe, cost2) static inline uniform double floor(uniform double x) { return __floor_uniform_double(x); }
 
-__declspec(safe, cost2) static inline float16 ceil(float16 x) { return __ceil_varying_half(x); }
+__declspec(safe, cost2) static inline float16 ceil(float16 x) {
+    if (__have_native_half) {
+        return __ceil_varying_half(x);
+    } else {
+        return H(__ceil_varying_float(F(x)));
+    }
+}
 
-__declspec(safe, cost2) static inline uniform float16 ceil(uniform float16 x) { return __ceil_uniform_half(x); }
+__declspec(safe, cost2) static inline uniform float16 ceil(uniform float16 x) {
+    if (__have_native_half) {
+        return __ceil_uniform_half(x);
+    } else {
+        return H(__ceil_uniform_float(F(x)));
+    }
+}
 
 __declspec(safe, cost2) static inline float ceil(float x) { return __ceil_varying_float(x); }
 
@@ -1656,9 +1782,21 @@ __declspec(safe, cost2) static inline double ceil(double x) { return __ceil_vary
 
 __declspec(safe, cost2) static inline uniform double ceil(uniform double x) { return __ceil_uniform_double(x); }
 ///////////////////////////
-__declspec(safe, cost2) static inline float16 trunc(float16 x) { return __trunc_varying_half(x); }
+__declspec(safe, cost2) static inline float16 trunc(float16 x) {
+    if (__have_native_half) {
+        return __trunc_varying_half(x);
+    } else {
+        return H(__trunc_varying_float(F(x)));
+    }
+}
 
-__declspec(safe, cost2) static inline uniform float16 trunc(uniform float16 x) { return __trunc_uniform_half(x); }
+__declspec(safe, cost2) static inline uniform float16 trunc(uniform float16 x) {
+    if (__have_native_half) {
+        return __trunc_uniform_half(x);
+    } else {
+        return H(__trunc_uniform_float(F(x)));
+    }
+}
 
 __declspec(safe, cost2) static inline float trunc(float x) { return __trunc_varying_float(x); }
 
@@ -1742,16 +1880,36 @@ __declspec(safe) static inline uniform float16 rcp(uniform float16 v) {
 
 // float16
 
-__declspec(safe, cost1) static inline float16 min(float16 a, float16 b) { return __min_varying_half(a, b); }
-
-__declspec(safe, cost1) static inline uniform float16 min(uniform float16 a, uniform float16 b) {
-    return __min_uniform_half(a, b);
+__declspec(safe, cost1) static inline float16 min(float16 a, float16 b) {
+    if (__have_native_half) {
+        return __min_varying_half(a, b);
+    } else {
+        return H(__min_varying_float(F(a), F(b)));
+    }
 }
 
-__declspec(safe, cost1) static inline float16 max(float16 a, float16 b) { return __max_varying_half(a, b); }
+__declspec(safe, cost1) static inline uniform float16 min(uniform float16 a, uniform float16 b) {
+    if (__have_native_half) {
+        return __min_uniform_half(a, b);
+    } else {
+        return H(__min_uniform_float(F(a), F(b)));
+    }
+}
+
+__declspec(safe, cost1) static inline float16 max(float16 a, float16 b) {
+    if (__have_native_half) {
+        return __max_varying_half(a, b);
+    } else {
+        return H(__max_varying_float(F(a), F(b)));
+    }
+}
 
 __declspec(safe, cost1) static inline uniform float16 max(uniform float16 a, uniform float16 b) {
-    return __max_uniform_half(a, b);
+    if (__have_native_half) {
+        return __max_uniform_half(a, b);
+    } else {
+        return H(__max_uniform_float(F(a), F(b)));
+    }
 }
 
 // float
@@ -3636,13 +3794,37 @@ __declspec(safe) static inline uniform float pow(uniform float a, uniform float 
 ///////////////////////////////////////////////////////////////////////////
 // Transcendentals (16-bit float precision)
 
-__declspec(safe) static inline float16 sqrt(float16 v) { return __sqrt_varying_half(v); }
+__declspec(safe) static inline float16 sqrt(float16 v) {
+    if (__have_native_half) {
+        return __sqrt_varying_half(v);
+    } else {
+        return H(__sqrt_varying_float(F(v)));
+    }
+}
 
-__declspec(safe) static inline uniform float16 sqrt(uniform float16 v) { return __sqrt_uniform_half(v); }
+__declspec(safe) static inline uniform float16 sqrt(uniform float16 v) {
+    if (__have_native_half) {
+        return __sqrt_uniform_half(v);
+    } else {
+        return H(__sqrt_uniform_float(F(v)));
+    }
+}
 
-__declspec(safe) static inline float16 rsqrt(float16 v) { return __rsqrt_varying_half(v); }
+__declspec(safe) static inline float16 rsqrt(float16 v) {
+    if (__have_native_half) {
+        return __rsqrt_varying_half(v);
+    } else {
+        return H(__rsqrt_varying_float(F(v)));
+    }
+}
 
-__declspec(safe) static inline uniform float16 rsqrt(uniform float16 v) { return __rsqrt_uniform_half(v); }
+__declspec(safe) static inline uniform float16 rsqrt(uniform float16 v) {
+    if (__have_native_half) {
+        return __rsqrt_uniform_half(v);
+    } else {
+        return H(__rsqrt_uniform_float(F(v)));
+    }
+}
 
 __declspec(safe) static inline float16 ldexp(float16 x, int n) {
     unsigned int16 ex = 0x7c00u;
@@ -3819,18 +4001,52 @@ __declspec(safe) static inline uniform float16 atan2(uniform float16 y, uniform 
     }
 }
 
-__declspec(safe) static inline float16 exp(float16 x_full) { return __exp_varying_half(x_full); }
+__declspec(safe) static inline float16 exp(float16 x_full) {
+    if (__have_native_half && __have_native_transcendentals) {
+        return __exp_varying_half(x_full);
+    } else {
+        return H(exp(F(x_full)));
+    }
+}
 
-__declspec(safe) static inline uniform float16 exp(uniform float16 x_full) { return __exp_uniform_half(x_full); }
+__declspec(safe) static inline uniform float16 exp(uniform float16 x_full) {
+    if (__have_native_half && __have_native_transcendentals) {
+        return __exp_uniform_half(x_full);
+    } else {
+        return H(exp(F(x_full)));
+    }
+}
 
-__declspec(safe) static inline float16 log(float16 x_full) { return __log_varying_half(x_full); }
+__declspec(safe) static inline float16 log(float16 x_full) {
+    if (__have_native_half && __have_native_transcendentals) {
+        return __log_varying_half(x_full);
+    } else {
+        return H(log(F(x_full)));
+    }
+}
 
-__declspec(safe) static inline uniform float16 log(uniform float16 x_full) { return __log_uniform_half(x_full); }
+__declspec(safe) static inline uniform float16 log(uniform float16 x_full) {
+    if (__have_native_half && __have_native_transcendentals) {
+        return __log_uniform_half(x_full);
+    } else {
+        return H(log(F(x_full)));
+    }
+}
 
-__declspec(safe) static inline float16 pow(float16 a, float16 b) { return __pow_varying_half(a, b); }
+__declspec(safe) static inline float16 pow(float16 a, float16 b) {
+    if (__have_native_half && __have_native_transcendentals) {
+        return __pow_varying_half(a, b);
+    } else {
+        return H(pow(F(a), F(b)));
+    }
+}
 
 __declspec(safe) static inline uniform float16 pow(uniform float16 a, uniform float16 b) {
-    return __pow_uniform_half(a, b);
+    if (__have_native_half && __have_native_transcendentals) {
+        return __pow_uniform_half(a, b);
+    } else {
+        return H(pow(F(a), F(b)));
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -4207,6 +4423,8 @@ __declspec(safe) static inline uniform float half_to_float(uniform unsigned int1
     }
 }
 
+__declspec(safe) static inline uniform float float16_to_float(uniform float16 hf) { return half_to_float(intbits(hf)); }
+
 __declspec(safe) static inline float half_to_float(unsigned int16 h) {
     if (__have_native_half) {
         return __half_to_float_varying((unsigned int16)h);
@@ -4228,6 +4446,8 @@ __declspec(safe) static inline float half_to_float(unsigned int16 h) {
         return floatbits(((exp == shifted_exp) ? infnan_val : reg_val) | sign_bit);
     }
 }
+
+__declspec(safe) static inline float float16_to_float(float16 hf) { return half_to_float(intbits(hf)); }
 
 __declspec(safe) static inline uniform int16 float_to_half(uniform float f) {
     if (__have_native_half) {
@@ -4270,6 +4490,10 @@ __declspec(safe) static inline uniform int16 float_to_half(uniform float f) {
 
         return (o | (sign >> 16));
     }
+}
+
+__declspec(safe) static inline uniform float16 float_to_float16(uniform float f) {
+    return float16bits(float_to_half(f));
 }
 
 __declspec(safe) static inline int16 float_to_half(float f) {
@@ -4331,6 +4555,8 @@ __declspec(safe) static inline int16 float_to_half(float f) {
         return (o | (sign >> 16));
     }
 }
+
+__declspec(safe) static inline float16 float_to_float16(float f) { return float16bits(float_to_half(f)); }
 
 __declspec(safe) static inline uniform float half_to_float_fast(uniform unsigned int16 h) {
     if (__have_native_half) {

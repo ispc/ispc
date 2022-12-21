@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -263,6 +263,12 @@ const AtomicType *AtomicType::GetAsUniformType() const {
 
 const AtomicType *AtomicType::GetAsUnboundVariabilityType() const {
     Assert(basicType != TYPE_VOID);
+    if (basicType == TYPE_FLOAT16 && !g->includeStdlib && !g->target->hasHalf()) {
+        Error(SourcePos(), "Target doesn't support natively half floating point "
+                           "arithmetics, stdlib is needed to emulate them");
+        return NULL;
+    }
+
     if (variability == Variability::Unbound)
         return this;
     return new AtomicType(basicType, Variability::Unbound, isConst);
