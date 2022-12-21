@@ -58,7 +58,7 @@ list(APPEND LIT_ARGS "-Ddumps_enabled=$<IF:$<BOOL:${ISPC_NO_DUMPS}>,OFF,ON>")
 # ISPC opaque pointers
 list(APPEND LIT_ARGS "-Dopaque_mode=$<IF:$<BOOL:${ISPC_OPAQUE_PTR_MODE}>,ON,OFF>")
 add_custom_target(check-all DEPENDS ispc
-    COMMAND ${LIT_COMMAND} ${LIT_ARGS}
+    COMMAND ${LIT_COMMAND} ${LIT_ARGS} "--verbose"
     COMMENT "Running lit tests"
     USES_TERMINAL
     )

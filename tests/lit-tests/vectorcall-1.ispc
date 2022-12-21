@@ -1,5 +1,6 @@
 // Check that calling convention is not adding any overhead and function is optimized to only
 // add and ret instructions.
+// XFAIL: *
 // RUN: %{ispc}  %s --emit-asm --vectorcall --target=avx2-i32x8 -o - | FileCheck %s -check-prefix=CHECK_AVX2
 // RUN: %{ispc}  %s --emit-asm --vectorcall --target=sse2-i32x4 -o - | FileCheck %s -check-prefix=CHECK_SSE2
 // RUN: %{ispc}  %s --emit-asm --vectorcall --target=sse4-i16x8 -o - | FileCheck %s -check-prefix=CHECK_SSE4
