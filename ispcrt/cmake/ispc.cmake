@@ -1,4 +1,4 @@
-## Copyright 2020-2022 Intel Corporation
+## Copyright 2020-2023 Intel Corporation
 ## SPDX-License-Identifier: BSD-3-Clause
 
 ###############################################################################
@@ -39,6 +39,17 @@ else()
   string(REGEX MATCH "(.*), ([0-9]*\.[0-9]*\.[0-9]*[a-z]*) (.*)" _ ${ISPC_INFO})
   set(ISPC_VERSION ${CMAKE_MATCH_2})
   message(STATUS "Found ISPC v${ISPC_VERSION}: ${ISPC_EXECUTABLE}")
+  # Execute "ispc --help" and parse supported archs
+  execute_process(COMMAND ${ISPC_EXECUTABLE} "--help"
+                  OUTPUT_VARIABLE ISPC_HELP)
+  string(REGEX MATCH "--arch={((([a-z,0-9,-])+, |([a-z,0-9,-])+)+)}" _ ${ISPC_HELP})
+  set(ISPC_ARCHS ${CMAKE_MATCH_1})
+  if ("${ISPC_ARCHS}" STREQUAL "")
+    message(WARNING "Can't determine ISPC supported architectures.")
+  else()
+    message(STATUS "ISPC supports: ${ISPC_ARCHS}")
+    string(REPLACE ", " ";" ISPC_ARCHS_LIST ${ISPC_ARCHS})
+  endif()
 endif()
 
 ## ISPC config options ##
@@ -50,18 +61,32 @@ set(ISPC_ADDRESSING 32 CACHE STRING "32 vs 64 bit addressing in ispc")
 set_property(CACHE ISPC_ADDRESSING PROPERTY STRINGS 32 64)
 mark_as_advanced(ISPC_ADDRESSING)
 
+macro(define_ispc_supported_arch ARCH_NAME ARCH_FILTER)
+  set(ISPC_ARCHS_${ARCH_NAME}_LIST ${ISPC_ARCHS_LIST})
+  list(FILTER ISPC_ARCHS_${ARCH_NAME}_LIST INCLUDE REGEX ${ARCH_FILTER})
+  list(LENGTH ISPC_ARCHS_${ARCH_NAME}_LIST ARCH_LENGTH)
+  if (${ARCH_LENGTH} GREATER 0)
+    set(ISPC_${ARCH_NAME}_ENABLED TRUE)
+  endif()
+endmacro()
+
+define_ispc_supported_arch(X86 "x86|x86-64")
+define_ispc_supported_arch(ARM "arm|aarch64")
+define_ispc_supported_arch(XE "xe32|xe64")
+
 macro(define_ispc_isa_options ISA_NAME)
   set(ISPC_TARGET_${ISA_NAME} ${ARGV1} CACHE STRING "ispc target used for ${ISA_NAME} ISA")
   set_property(CACHE ISPC_TARGET_${ISA_NAME} PROPERTY STRINGS ${ARGN} NONE)
   #mark_as_advanced(ISPC_TARGET_${ISA_NAME})
 endmacro()
 
-# TODO: query ISPC for available targets to be added here
-define_ispc_isa_options(SSE4 sse4-i32x4 sse4-i32x8 sse4-i16x8 sse4-i8x16)
-define_ispc_isa_options(AVX avx1-i32x8 avx1-i32x4 avx1-i32x16 avx1-i64x4)
-define_ispc_isa_options(AVX2 avx2-i32x8 avx2-i32x4 avx2-i32x16 avx2-i64x4)
-define_ispc_isa_options(AVX512KNL avx512knl-x16)
-define_ispc_isa_options(AVX512SKX avx512skx-x16 avx512skx-x8)
+if (ISPC_X86_ENABLED)
+  define_ispc_isa_options(SSE4 sse4-i32x4 sse4-i32x8 sse4-i16x8 sse4-i8x16)
+  define_ispc_isa_options(AVX avx1-i32x8 avx1-i32x4 avx1-i32x16 avx1-i64x4)
+  define_ispc_isa_options(AVX2 avx2-i32x8 avx2-i32x4 avx2-i32x16 avx2-i64x4)
+  define_ispc_isa_options(AVX512KNL avx512knl-x16)
+  define_ispc_isa_options(AVX512SKX avx512skx-x16 avx512skx-x8)
+endif()
 
 macro(append_ispc_target_list ISA_NAME)
   set(_TARGET_NAME ISPC_TARGET_${ISA_NAME})
@@ -72,11 +97,13 @@ macro(append_ispc_target_list ISA_NAME)
 endmacro()
 
 unset(ISPC_TARGET_LIST)
-append_ispc_target_list(SSE4)
-append_ispc_target_list(AVX)
-append_ispc_target_list(AVX2)
-append_ispc_target_list(AVX512KNL)
-append_ispc_target_list(AVX512SKX)
+if (ISPC_X86_ENABLED)
+  append_ispc_target_list(SSE4)
+  append_ispc_target_list(AVX)
+  append_ispc_target_list(AVX2)
+  append_ispc_target_list(AVX512KNL)
+  append_ispc_target_list(AVX512SKX)
+endif()
 
 ## Macros ##
 
