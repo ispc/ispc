@@ -82,7 +82,7 @@ Module *ispc::m;
 ///////////////////////////////////////////////////////////////////////////
 // Target
 
-#if defined(__arm__) || defined(__aarch64__)
+#if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64)
 #define ARM_HOST
 #endif
 
