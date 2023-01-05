@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-#  Copyright (c) 2013-2022, Intel Corporation
+#  Copyright (c) 2013-2023, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -147,14 +147,10 @@ def checkout_LLVM(component, version_LLVM, target_dir, from_validation, verbose)
     else:
         alloy_error("Unsupported llvm version: " + version_LLVM, 1)
 
-    try_do_LLVM("clone "+component+" from "+GIT_REPO_BASE+" to "+target_dir+" ",
-                "git clone "+GIT_REPO_BASE+" "+target_dir,
-                from_validation, verbose)
-    if GIT_TAG != "main":
-        os.chdir(target_dir)
-        try_do_LLVM("switch to "+GIT_TAG+" tag ",
-                    "git checkout -b "+GIT_TAG+" "+GIT_TAG, from_validation, verbose)
-        os.chdir("..")
+    depth = "" if options.full_checkout else "--depth=1 --shallow-submodules"
+    git_clone_cmd = f"git clone {depth} --branch {GIT_TAG} {GIT_REPO_BASE} {target_dir}"
+    try_do_LLVM(f"clone {component} with tag {GIT_TAG} from {GIT_REPO_BASE} to {target_dir}",
+                git_clone_cmd, from_validation, verbose)
 
 # ISPC uses LLVM dumps for debug output, so build correctly it requires these functions to be
 # present in LLVM libraries. In LLVM 5.0 they are not there by default and require explicit enabling.
@@ -945,6 +941,9 @@ if __name__ == '__main__':
                     "These options must be used with -b option.")
     llvm_group.add_option('--version', dest='version',
         help='version of llvm to build: 6.0 7.0 8.0 9.0 10.0 11.0 12.0 13.0 trunk. Default: trunk', default="trunk")
+    llvm_group.add_option('--full-checkout', dest='full_checkout', action='store_true', default=False,
+        help=('Disable a shallow clone and checkout a whole LLVM repository.\n'
+              'By default it clones LLVM with --depth=1 to save space and time'))
     llvm_group.add_option('--with-gcc-toolchain', dest='gcc_toolchain_path',
          help='GCC install dir to use when building clang. It is important to set when ' +
          'you have alternative gcc installation. Note that otherwise gcc from standard ' +
