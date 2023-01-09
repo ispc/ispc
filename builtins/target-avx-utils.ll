@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2020, Intel Corporation
+;;  Copyright (c) 2010-2023, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -294,25 +294,25 @@ define_avgs()
 define(`convert_scale_to_const', `
 
 
- switch i32 %$10, label %default_$1 [ i32 1, label %on_one_$1
-                                      i32 2, label %on_two_$1
-                                      i32 4, label %on_four_$1
-                                      i32 8, label %on_eight_$1]
+ switch i32 %argn(`10',$@), label %default_$1 [ i32 1, label %on_one_$1
+                                                i32 2, label %on_two_$1
+                                                i32 4, label %on_four_$1
+                                                i32 8, label %on_eight_$1]
 
 on_one_$1:
-  %$1_1 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, $11 1)
+  %$1_1 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 1)
   br label %end_bb_$1
 
 on_two_$1:
-  %$1_2 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, $11 2)
+  %$1_2 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 2)
   br label %end_bb_$1
 
 on_four_$1:
-  %$1_4 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, $11 4)
+  %$1_4 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 4)
   br label %end_bb_$1
 
 on_eight_$1:
-  %$1_8 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, $11 8)
+  %$1_8 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 8)
   br label %end_bb_$1
 
 default_$1:

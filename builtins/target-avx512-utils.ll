@@ -1,4 +1,4 @@
-;;  Copyright (c) 2015-2021, Intel Corporation
+;;  Copyright (c) 2015-2023, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -382,10 +382,10 @@ define float @__sqrt_uniform_float(float) nounwind readonly alwaysinline {
 define(`convert_scale_to_const_gather', `
 
 
- switch i32 %$10, label %default_$1 [ i32 1, label %on_one_$1
-                                      i32 2, label %on_two_$1
-                                      i32 4, label %on_four_$1
-                                      i32 8, label %on_eight_$1]
+ switch i32 %argn(`10',$@), label %default_$1 [ i32 1, label %on_one_$1
+                                                i32 2, label %on_two_$1
+                                                i32 4, label %on_four_$1
+                                                i32 8, label %on_eight_$1]
 
 on_one_$1:
   %$1_1 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, $9 %$8, i32 1)
@@ -428,10 +428,10 @@ end_bb_$1:
 define(`convert_scale_to_const_scatter', `
 
 
- switch i32 %$10, label %default_$3 [ i32 1, label %on_one_$3
-                                      i32 2, label %on_two_$3
-                                      i32 4, label %on_four_$3
-                                      i32 8, label %on_eight_$3]
+ switch i32 %argn(`10',$@), label %default_$3 [ i32 1, label %on_one_$3
+                                                i32 2, label %on_two_$3
+                                                i32 4, label %on_four_$3
+                                                i32 8, label %on_eight_$3]
 
 on_one_$3:
   call void @$1(i8* %$5, $9 %$8, <$2 x $7> %$6, <$2 x $4> %$3, i32 1)
