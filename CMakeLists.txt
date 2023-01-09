@@ -547,8 +547,18 @@ endif()
 
 # Link against Clang libraries
 foreach(clangLib ${CLANG_LIBRARY_LIST})
-    find_library(${clangLib}Path NAMES ${clangLib} HINTS ${LLVM_LIBRARY_DIRS})
-    list(APPEND CLANG_LIBRARY_FULL_PATH_LIST ${${clangLib}Path})
+    # Preferred way to build ISPC is to link it with individual clang static
+    # libraries. However, when they omitted it can be link with shared library
+    # libclang-cpp.so. Second approach would be utilized in some controlled
+    # environments, like in package managers for particular OSes (issue 2418).
+    find_library(${clangLib}Path
+                 NAMES
+                    "${CMAKE_STATIC_LIBRARY_PREFIX}${clangLib}${CMAKE_STATIC_LIBRARY_SUFFIX}"
+                    clang-cpp
+                 HINTS ${LLVM_LIBRARY_DIRS})
+    if (NOT ${${clangLib}Path} IN_LIST CLANG_LIBRARY_FULL_PATH_LIST)
+        list(APPEND CLANG_LIBRARY_FULL_PATH_LIST ${${clangLib}Path})
+    endif()
 endforeach()
 target_link_libraries(${PROJECT_NAME} ${CLANG_LIBRARY_FULL_PATH_LIST})
 
