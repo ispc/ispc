@@ -1997,27 +1997,27 @@ llvm::Value *FunctionEmitContext::H2FCastInst(llvm::Value *v, llvm::Type *target
     return lFloat2HalfHalf2FloatCast("float16_to_float", v, targetType, name);
 }
 
-llvm::Value *FunctionEmitContext::I2HCastInst(llvm::Instruction::CastOps op, llvm::Value *v, llvm::Type *t,
+llvm::Value *FunctionEmitContext::I2HCastInst(llvm::Instruction::CastOps op, llvm::Value *v, llvm::Type *targetType,
                                               const llvm::Twine &name) {
     // Cast to float16 from int via float if target has not native half
     if (g->target->hasHalf()) {
-        return CastInst(op, v, t, name);
+        return CastInst(op, v, targetType, name);
     } else {
-        llvm::Type *tt = t == LLVMTypes::Float16Type ? LLVMTypes::FloatType : LLVMTypes::FloatVectorType;
+        llvm::Type *tt = targetType->isVectorTy() ? LLVMTypes::FloatVectorType : LLVMTypes::FloatType;
         llvm::Value *c1 = CastInst(op, v, tt, name);
-        return F2HCastInst(c1, t, name);
+        return F2HCastInst(c1, targetType, name);
     }
 }
 
-llvm::Value *FunctionEmitContext::H2ICastInst(llvm::Instruction::CastOps op, llvm::Value *v, llvm::Type *t,
+llvm::Value *FunctionEmitContext::H2ICastInst(llvm::Instruction::CastOps op, llvm::Value *v, llvm::Type *targetType,
                                               const llvm::Twine &name) {
     // Cast from float16 to int via float if target has not native half
     if (g->target->hasHalf()) {
-        return CastInst(op, v, t, name);
+        return CastInst(op, v, targetType, name);
     } else {
-        llvm::Type *tt = t->isVectorTy() ? LLVMTypes::FloatVectorType : LLVMTypes::FloatType;
+        llvm::Type *tt = targetType->isVectorTy() ? LLVMTypes::FloatVectorType : LLVMTypes::FloatType;
         llvm::Value *c1 = H2FCastInst(v, tt, name);
-        return CastInst(op, c1, t, name);
+        return CastInst(op, c1, targetType, name);
     }
 }
 
