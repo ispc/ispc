@@ -188,7 +188,7 @@ __declspec(safe) static inline float16 rotate(float16 v, uniform int i) {
     if (__have_native_half) {
         return __rotate_half(v, i);
     } else {
-        return F(__rotate_float(F(v), i));
+        return H(__rotate_float(F(v), i));
     }
 }
 
