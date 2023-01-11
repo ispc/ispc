@@ -1997,6 +1997,22 @@ llvm::Value *FunctionEmitContext::H2FCastInst(llvm::Value *v, llvm::Type *target
     return lFloat2HalfHalf2FloatCast("float16_to_float", v, targetType, name);
 }
 
+llvm::Value *FunctionEmitContext::D2HCastInst(llvm::Value *v, llvm::Type *targetType, const llvm::Twine &name) {
+    // at first double to float
+    llvm::Type *tt = targetType->isVectorTy() ? LLVMTypes::FloatVectorType : LLVMTypes::FloatType;
+    llvm::Value *c1 = FPCastInst(v, tt, name);
+    // then float to half 
+    return F2HCastInst(c1, targetType, name);
+}
+
+llvm::Value *FunctionEmitContext::H2DCastInst(llvm::Value *v, llvm::Type *targetType, const llvm::Twine &name) {
+    // at first half to float
+    llvm::Type *tt = targetType->isVectorTy() ? LLVMTypes::FloatVectorType : LLVMTypes::FloatType;
+    llvm::Value *c1 = H2FCastInst(v, tt, name);
+    // then float to double
+    return FPCastInst(c1, targetType, name);
+}
+
 llvm::Value *FunctionEmitContext::I2HCastInst(llvm::Instruction::CastOps op, llvm::Value *v, llvm::Type *targetType,
                                               const llvm::Twine &name) {
     // Cast to float16 from int via float if target has not native half

@@ -457,6 +457,12 @@ class FunctionEmitContext {
     /** half to float cast via float16_to_float. */
     llvm::Value *H2FCastInst(llvm::Value *v, llvm::Type *t, const llvm::Twine &name = "");
 
+    /** double to half cast via float_to_float16. */
+    llvm::Value *D2HCastInst(llvm::Value *v, llvm::Type *t, const llvm::Twine &name = "");
+
+    /** half to double cast via float16_to_float. */
+    llvm::Value *H2DCastInst(llvm::Value *v, llvm::Type *t, const llvm::Twine &name = "");
+
     /** int to half conversion via int to float, then float_to_float16. */
     llvm::Value *I2HCastInst(llvm::Instruction::CastOps op, llvm::Value *v, llvm::Type *t,
                              const llvm::Twine &name = "");

@@ -6072,7 +6072,11 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             }
             break;
         case AtomicType::TYPE_DOUBLE:
-            cast = ctx->FPCastInst(exprVal, targetType, cOpName);
+            if (g->target->hasHalf()) {
+                cast = ctx->FPCastInst(exprVal, targetType, cOpName);
+            } else {
+                cast = ctx->D2HCastInst(exprVal, targetType, cOpName);
+            }
             break;
         default:
             FATAL("unimplemented");
@@ -6157,7 +6161,11 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
                                  exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT16:
-            cast = ctx->FPCastInst(exprVal, targetType, cOpName);
+            if (g->target->hasHalf()) {
+                cast = ctx->FPCastInst(exprVal, targetType, cOpName);
+            } else {
+                cast = ctx->H2DCastInst(exprVal, targetType, cOpName);
+            }
             break;
         case AtomicType::TYPE_FLOAT:
             cast = ctx->FPCastInst(exprVal, targetType, cOpName);
