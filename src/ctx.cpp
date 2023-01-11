@@ -1957,7 +1957,7 @@ llvm::Value *FunctionEmitContext::lFloat2HalfHalf2FloatCast(const char *funcName
 
     std::vector<Symbol *> foos;
     m->symbolTable->LookupFunction(funcName, &foos);
-    assert(foos.size() == 2);
+    AssertPos(currentPos, foos.size() == 2);
     Symbol *s = foos[0];
 
     const FunctionType *f0 = CastType<FunctionType>(foos[0]->type);
@@ -1968,7 +1968,7 @@ llvm::Value *FunctionEmitContext::lFloat2HalfHalf2FloatCast(const char *funcName
         } else if (f0->GetReturnType()->IsVaryingType()) {
             s = foos[0];
         } else {
-            assert(false);
+            UNREACHABLE();
         }
     } else {
         if (f0->GetReturnType()->IsUniformType()) {
@@ -1976,12 +1976,12 @@ llvm::Value *FunctionEmitContext::lFloat2HalfHalf2FloatCast(const char *funcName
         } else if (f1->GetReturnType()->IsUniformType()) {
             s = foos[1];
         } else {
-            assert(false);
+            UNREACHABLE();
         }
     }
 
     llvm::Function *fn = s->function;
-    assert(fn);
+    AssertPos(currentPos, fn);
     llvm::Value *mask = GetInternalMask();
     llvm::Value *inst = CallInst(fn, NULL, v, mask, tw);
 
