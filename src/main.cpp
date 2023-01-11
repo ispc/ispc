@@ -1221,5 +1221,9 @@ int main(int Argc, char *Argv[]) {
         }
         llvm::timeTraceProfilerCleanup();
     }
+
+    // Free all bookkeeped objects.
+    BookKeeper::in().freeAll();
+
     return ret;
 }

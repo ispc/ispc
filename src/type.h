@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -89,7 +89,7 @@ enum TypeId {
     Abstract base class that defines the interface that must be implemented
     for all types in the language.
  */
-class Type {
+class Type : public Traceable {
   public:
     /** Returns true if the underlying type is boolean.  In other words,
         this is true for individual bools and for short-vectors with
