@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2022, Intel Corporation
+  Copyright (c) 2011-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -109,7 +109,7 @@ class Indent {
     (AST) nodes must implement.  The base classes for both expressions
     (Expr) and statements (Stmt) inherit from this class.
 */
-class ASTNode {
+class ASTNode : public Traceable {
     const unsigned char SubclassID; // Subclass identifier (for isa/dyn_cast)
   public:
     ASTNode(SourcePos p, unsigned scid) : SubclassID(scid), pos(p) {}

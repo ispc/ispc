@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -55,7 +55,7 @@ struct CFInfo;
 /** AddressInfo is a helper class to work with pointers.
     It keeps llvm pointer, llvm element type, and ISPC type.
 */
-class AddressInfo {
+class AddressInfo : public Traceable {
   public:
     AddressInfo(llvm::Value *p, llvm::Type *t);
     AddressInfo(llvm::Value *p, const Type *t);

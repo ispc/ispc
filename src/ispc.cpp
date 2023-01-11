@@ -2343,3 +2343,11 @@ SourcePos ispc::Union(const SourcePos &p1, const SourcePos &p2) {
     ret.last_column = std::max(p1.last_column, p2.last_column);
     return ret;
 }
+
+BookKeeper &BookKeeper::in() {
+    static BookKeeper instance;
+    return instance;
+}
+
+// Traverse all bookkeeped objects and call delete for every one.
+void BookKeeper::freeAll() { BookKeeper::in().freeOne<Traceable>(); }

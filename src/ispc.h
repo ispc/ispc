@@ -853,4 +853,45 @@ enum {
 
 extern Globals *g;
 extern Module *m;
+
+// Singleton object for bookkeeping heap objects to destroy them later to
+// avoid memory leak.
+class BookKeeper {
+  private:
+    BookKeeper() {}
+
+    template <typename T> std::vector<T *> &getStorage() {
+        // Vector to store bookkeeped objects.
+        static std::vector<T *> v;
+        return v;
+    }
+
+    template <typename T> void freeOne() {
+        std::vector<T *> &v = getStorage<T>();
+        for (auto e : v)
+            delete e;
+        v.clear();
+    }
+
+  public:
+    static BookKeeper &in();
+    BookKeeper(BookKeeper const &) = delete;
+    void operator=(BookKeeper const &) = delete;
+
+    template <typename T> void *add(T *p) {
+        std::vector<T *> &v = getStorage<T>();
+        v.push_back(p);
+        return p;
+    }
+
+    // Free all bookkeeped objects.
+    void freeAll();
+};
+
+// Base class to inherit for objects needed to be bookkeeped.
+class Traceable {
+  public:
+    void *operator new(size_t size) { return BookKeeper::in().add(static_cast<Traceable *>(::operator new(size))); }
+    virtual ~Traceable() = default;
+};
 } // namespace ispc
