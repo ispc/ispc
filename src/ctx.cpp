@@ -1946,8 +1946,8 @@ llvm::Instruction *FunctionEmitContext::FPCastInst(llvm::Value *value, llvm::Typ
     return inst;
 }
 
-llvm::Value *FunctionEmitContext::__f2h_CastInst(const char *funcName, llvm::Value *v, llvm::Type *targetType,
-                                                 const llvm::Twine &name) {
+llvm::Value *FunctionEmitContext::lFloat2HalfHalf2FloatCast(const char *funcName, llvm::Value *v,
+                                                            llvm::Type *targetType, const llvm::Twine &name) {
     if (v == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -1990,11 +1990,11 @@ llvm::Value *FunctionEmitContext::__f2h_CastInst(const char *funcName, llvm::Val
 }
 
 llvm::Value *FunctionEmitContext::F2HCastInst(llvm::Value *v, llvm::Type *targetType, const llvm::Twine &name) {
-    return __f2h_CastInst("float_to_float16", v, targetType, name);
+    return lFloat2HalfHalf2FloatCast("float_to_float16", v, targetType, name);
 }
 
 llvm::Value *FunctionEmitContext::H2FCastInst(llvm::Value *v, llvm::Type *targetType, const llvm::Twine &name) {
-    return __f2h_CastInst("float16_to_float", v, targetType, name);
+    return lFloat2HalfHalf2FloatCast("float16_to_float", v, targetType, name);
 }
 
 llvm::Value *FunctionEmitContext::I2HCastInst(llvm::Instruction::CastOps op, llvm::Value *v, llvm::Type *t,
