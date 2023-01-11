@@ -582,7 +582,6 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         llvm::Type *i32Type = llvm::Type::getInt32Ty(fContext);
         llvm::SmallVector<llvm::Metadata *, 8> argKinds;
         llvm::SmallVector<llvm::Metadata *, 8> argInOutKinds;
-        llvm::SmallVector<llvm::Metadata *, 8> argOffsets;
         llvm::SmallVector<llvm::Metadata *, 8> argTypeDescs;
 
         // In ISPC we need only AK_NORMAL and IK_NORMAL now, in future it can change.
@@ -614,8 +613,6 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
                     // GRF align if arg would cross GRF boundary
                     offset = llvm::alignTo(offset, grf_size);
             }
-
-            argOffsets.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, offset)));
 
             offset += bytes;
         }
