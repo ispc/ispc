@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022, Intel Corporation
+  Copyright (c) 2022-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -43,34 +43,55 @@ static std::string mangleMathOCLBuiltin(const llvm::Function &func) {
     Assert(func.getName().startswith("__spirv_ocl") && "wrong argument: ocl builtin is expected");
     std::string mangledName;
     llvm::Type *retType = func.getReturnType();
-    std::string funcName = func.getName().str();
-    std::vector<llvm::Type *> ArgTy;
     // spirv OpenCL builtins are used for double types only
     Assert(retType->isVectorTy() && llvm::dyn_cast<llvm::FixedVectorType>(retType)->getElementType()->isDoubleTy() ||
            retType->isSingleValueType() && retType->isDoubleTy());
-    if (retType->isVectorTy() && llvm::dyn_cast<llvm::FixedVectorType>(retType)->getElementType()->isDoubleTy()) {
-        // Get vector width from retType. Required width may be different from target width
-        // for example for 32-width targets
-        ArgTy.push_back(llvm::FixedVectorType::get(LLVMTypes::DoubleType,
-                                                   llvm::dyn_cast<llvm::FixedVectorType>(retType)->getNumElements()));
-        // _DvWIDTH suffix is used in target file to differentiate scalar
-        // and vector versions of intrinsics. Here we remove this
-        // suffix and mangle the name.
-        size_t pos = funcName.find("_DvWIDTH");
-        if (pos != std::string::npos) {
-            funcName.erase(pos, 8);
-        }
-    } else if (retType->isSingleValueType() && retType->isDoubleTy()) {
-        ArgTy.push_back(LLVMTypes::DoubleType);
+
+    std::string funcName = func.getName().str();
+    std::vector<llvm::Type *> ArgTy;
+#if ISPC_LLVM_VERSION == ISPC_LLVM_15_0
+    std::vector<SPIRV::PointerIndirectPair> PointerElementTys;
+#endif
+    // _DvWIDTH suffix is used in target file to differentiate scalar
+    // and vector versions of intrinsics. Here we remove this
+    // suffix and mangle the name.
+    size_t pos = funcName.find("_DvWIDTH");
+    bool isVaryingFunc = pos != std::string::npos;
+    if (isVaryingFunc) {
+        funcName.erase(pos, 8);
     }
-    mangleOpenClBuiltin(funcName, ArgTy, mangledName);
+    for (auto &arg : func.args()) {
+        ArgTy.push_back(arg.getType());
+        // In LLVM15 SPIR-V translator requires to pass pointer type information to mangleBuiltin
+        // https://github.com/KhronosGroup/SPIRV-LLVM-Translator/commit/0eb9a7d2937542e1f95a4e1f9aa9850e669dc45f
+        // It changes again in LLVM16 SPIR-V translator where TypedPointerType is required
+        // https://github.com/KhronosGroup/SPIRV-LLVM-Translator/commit/42cf770344bb8d0a32db1ec892bee63f43d793b1
+#if ISPC_LLVM_VERSION == ISPC_LLVM_15_0
+        SPIRV::PointerIndirectPair PtrElemTy;
+        if (arg.getType()->isPointerTy()) {
+            PtrElemTy.setPointer(isVaryingFunc ? LLVMTypes::DoubleVectorType : LLVMTypes::DoubleType);
+        }
+        PointerElementTys.push_back(PtrElemTy);
+#endif
+    }
+
+    mangleOpenClBuiltin(funcName, ArgTy,
+#if ISPC_LLVM_VERSION == ISPC_LLVM_15_0
+                        PointerElementTys,
+#endif
+                        mangledName);
     return mangledName;
 }
 
 static std::string manglePrintfOCLBuiltin(const llvm::Function &func) {
     Assert(func.getName() == "__spirv_ocl_printf" && "wrong argument: ocl builtin is expected");
     std::string mangledName;
-    mangleOpenClBuiltin(func.getName().str(), func.getArg(0)->getType(), mangledName);
+    mangleOpenClBuiltin(func.getName().str(), func.getArg(0)->getType(),
+#if ISPC_LLVM_VERSION == ISPC_LLVM_15_0
+                        // For spirv_ocl_printf builtin the argument is always i8*
+                        SPIRV::PointerIndirectPair(LLVMTypes::Int8Type),
+#endif
+                        mangledName);
     return mangledName;
 }
 
@@ -84,7 +105,12 @@ static std::string mangleOCLBuiltin(const llvm::Function &func) {
 static std::string mangleSPIRVBuiltin(const llvm::Function &func) {
     Assert(func.getName().startswith("__spirv_") && "wrong argument: spirv builtin is expected");
     std::string mangledName;
-    mangleOpenClBuiltin(func.getName().str(), func.getArg(0)->getType(), mangledName);
+    mangleOpenClBuiltin(func.getName().str(), func.getArg(0)->getType(),
+#if ISPC_LLVM_VERSION == ISPC_LLVM_15_0
+                        // spirv builtins doesn't have pointer arguments
+                        {},
+#endif
+                        mangledName);
     return mangledName;
 }
 
