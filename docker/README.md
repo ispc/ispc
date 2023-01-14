@@ -26,7 +26,7 @@ By default `Dockerfile`s are assumed to be built as `x86` images, but some can b
  * [centos/7/cpu\_ispc\_build/Dockerfile](centos/7/cpu_ispc_build/Dockerfile) `CentOS 7` image. CPU only. Works on both `x86` and `aarch64`.
  * [centos/7/xpu\_ispc\_build/Dockerfile](centos/7/xpu_ispc_build/Dockerfile) `CentOS 7` image. XPU (CPU+GPU). `x86` image only. This image is used for building `ispc` package for future binary releases.
  * [centos/8/cpu\_ispc\_build/Dockerfile](centos/8/cpu_ispc_build/Dockerfile) `CentOS 8` image. CPU only. Works on both `x86` and `aarch64`.
- * [fedora/Dockerfile](fedora/Dockerfile) Outdated Fedora 26 image.
+ * [fedora/Dockerfile](fedora/Dockerfile) Fedora 36 with CPU only build linked with system LLVM and Clang shared libraries.
 
 XPU-enabled builds
 ------------------
