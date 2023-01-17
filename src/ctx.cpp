@@ -1946,41 +1946,16 @@ llvm::Instruction *FunctionEmitContext::FPCastInst(llvm::Value *value, llvm::Typ
     return inst;
 }
 
-llvm::Value *FunctionEmitContext::lFloat2HalfHalf2FloatCast(const char *funcName, llvm::Value *v,
-                                                            llvm::Type *targetType, const llvm::Twine &name) {
+llvm::Value *FunctionEmitContext::lFloat2HalfHalf2FloatCast(Symbol *funcSym, llvm::Value *v, llvm::Type *targetType,
+                                                            const llvm::Twine &name) {
     if (v == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
     }
 
     llvm::Twine tw = name.isTriviallyEmpty() ? llvm::Twine(v->getName()) + "_f2h_cast" : name;
-
-    std::vector<Symbol *> foos;
-    m->symbolTable->LookupFunction(funcName, &foos);
-    AssertPos(currentPos, foos.size() == 2);
-    Symbol *s = foos[0];
-
-    const FunctionType *f0 = CastType<FunctionType>(foos[0]->type);
-    const FunctionType *f1 = CastType<FunctionType>(foos[1]->type);
-    if (targetType == LLVMTypes::Float16VectorType || targetType == LLVMTypes::FloatVectorType) {
-        if (f1->GetReturnType()->IsVaryingType()) {
-            s = foos[1];
-        } else if (f0->GetReturnType()->IsVaryingType()) {
-            s = foos[0];
-        } else {
-            UNREACHABLE();
-        }
-    } else {
-        if (f0->GetReturnType()->IsUniformType()) {
-            s = foos[0];
-        } else if (f1->GetReturnType()->IsUniformType()) {
-            s = foos[1];
-        } else {
-            UNREACHABLE();
-        }
-    }
-
-    llvm::Function *fn = s->function;
+    AssertPos(currentPos, funcSym);
+    llvm::Function *fn = funcSym->function;
     AssertPos(currentPos, fn);
     llvm::Value *mask = GetInternalMask();
     llvm::Value *inst = CallInst(fn, NULL, v, mask, tw);
@@ -1990,18 +1965,25 @@ llvm::Value *FunctionEmitContext::lFloat2HalfHalf2FloatCast(const char *funcName
 }
 
 llvm::Value *FunctionEmitContext::F2HCastInst(llvm::Value *v, llvm::Type *targetType, const llvm::Twine &name) {
-    return lFloat2HalfHalf2FloatCast("float_to_float16", v, targetType, name);
+    FunctionType funcType(targetType->isVectorTy() ? AtomicType::VaryingFloat16 : AtomicType::UniformFloat16,
+                          {targetType->isVectorTy() ? AtomicType::VaryingFloat : AtomicType::UniformFloat}, currentPos);
+    Symbol *s = m->symbolTable->LookupFunction("float_to_float16", &funcType);
+    return lFloat2HalfHalf2FloatCast(s, v, targetType, name);
 }
 
 llvm::Value *FunctionEmitContext::H2FCastInst(llvm::Value *v, llvm::Type *targetType, const llvm::Twine &name) {
-    return lFloat2HalfHalf2FloatCast("float16_to_float", v, targetType, name);
+    FunctionType funcType(targetType->isVectorTy() ? AtomicType::VaryingFloat : AtomicType::UniformFloat,
+                          {targetType->isVectorTy() ? AtomicType::VaryingFloat16 : AtomicType::UniformFloat16},
+                          currentPos);
+    Symbol *s = m->symbolTable->LookupFunction("float16_to_float", &funcType);
+    return lFloat2HalfHalf2FloatCast(s, v, targetType, name);
 }
 
 llvm::Value *FunctionEmitContext::D2HCastInst(llvm::Value *v, llvm::Type *targetType, const llvm::Twine &name) {
     // at first double to float
     llvm::Type *tt = targetType->isVectorTy() ? LLVMTypes::FloatVectorType : LLVMTypes::FloatType;
     llvm::Value *c1 = FPCastInst(v, tt, name);
-    // then float to half 
+    // then float to half
     return F2HCastInst(c1, targetType, name);
 }
 
