@@ -1879,6 +1879,7 @@ static void lGetAddressSpace(llvm::Value *v, std::set<llvm::Value *> &done, std:
         // This is the only return point that constant expression instruction
         // can reach, drop all references here
         inst->dropAllReferences();
+        inst->deleteValue();
     }
 }
 
