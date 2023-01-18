@@ -869,7 +869,7 @@ class FunctionEmitContext {
 
     llvm::Value *addVaryingOffsetsIfNeeded(llvm::Value *ptr, const Type *ptrType);
 
-    llvm::Value *lFloat2HalfHalf2FloatCast(Symbol *funcSym, llvm::Value *v, llvm::Type *t,
-                                           const llvm::Twine &name = "");
+    llvm::Value *Float2HalfHalf2FloatCast(Symbol *funcSym, llvm::Value *v, llvm::Type *t,
+                                          const llvm::Twine &name = "");
 };
 } // namespace ispc

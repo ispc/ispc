@@ -1946,8 +1946,8 @@ llvm::Instruction *FunctionEmitContext::FPCastInst(llvm::Value *value, llvm::Typ
     return inst;
 }
 
-llvm::Value *FunctionEmitContext::lFloat2HalfHalf2FloatCast(Symbol *funcSym, llvm::Value *v, llvm::Type *targetType,
-                                                            const llvm::Twine &name) {
+llvm::Value *FunctionEmitContext::Float2HalfHalf2FloatCast(Symbol *funcSym, llvm::Value *v, llvm::Type *targetType,
+                                                           const llvm::Twine &name) {
     if (v == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -1968,7 +1968,7 @@ llvm::Value *FunctionEmitContext::F2HCastInst(llvm::Value *v, llvm::Type *target
     FunctionType funcType(targetType->isVectorTy() ? AtomicType::VaryingFloat16 : AtomicType::UniformFloat16,
                           {targetType->isVectorTy() ? AtomicType::VaryingFloat : AtomicType::UniformFloat}, currentPos);
     Symbol *s = m->symbolTable->LookupFunction("float_to_float16", &funcType);
-    return lFloat2HalfHalf2FloatCast(s, v, targetType, name);
+    return Float2HalfHalf2FloatCast(s, v, targetType, name);
 }
 
 llvm::Value *FunctionEmitContext::H2FCastInst(llvm::Value *v, llvm::Type *targetType, const llvm::Twine &name) {
@@ -1976,7 +1976,7 @@ llvm::Value *FunctionEmitContext::H2FCastInst(llvm::Value *v, llvm::Type *target
                           {targetType->isVectorTy() ? AtomicType::VaryingFloat16 : AtomicType::UniformFloat16},
                           currentPos);
     Symbol *s = m->symbolTable->LookupFunction("float16_to_float", &funcType);
-    return lFloat2HalfHalf2FloatCast(s, v, targetType, name);
+    return Float2HalfHalf2FloatCast(s, v, targetType, name);
 }
 
 llvm::Value *FunctionEmitContext::D2HCastInst(llvm::Value *v, llvm::Type *targetType, const llvm::Twine &name) {
