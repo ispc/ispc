@@ -1,4 +1,4 @@
-;;  Copyright (c) 2019-2021, Intel Corporation
+;;  Copyright (c) 2019-2023, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -30,9 +30,6 @@
 ;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 define(`WIDTH',`16')
-define(`HALF_WIDTH',`8')
-define(`QUARTER_WIDTH',`4')
-define(`QUAVER_WIDTH',`2')
 define(`WIDTH_X2',`32')
 define(`WIDTH_X4',`64')
 define(`XE_SUFFIX',`CONCAT(`v16', XE_TYPE($1))')
