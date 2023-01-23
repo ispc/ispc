@@ -312,7 +312,8 @@ int mm_write_mtx_crd(char fname[], int M, int N, int nz, int I[], int J[], doubl
 
     /* print banner followed by typecode */
     fprintf(f, "%s ", MatrixMarketBanner);
-    fprintf(f, "%s\n", mm_typecode_to_str(matcode));
+    char *mm_typecoded_str =  mm_typecode_to_str(matcode);
+    fprintf(f, "%s\n", mm_typecoded_str);
 
     /* print matrix sizes and nonzeros */
     fprintf(f, "%d %d %d\n", M, N, nz);
@@ -330,12 +331,14 @@ int mm_write_mtx_crd(char fname[], int M, int N, int nz, int I[], int J[], doubl
     else {
         if (f != stdout)
             fclose(f);
+        free(mm_typecoded_str);
         return MM_UNSUPPORTED_TYPE;
     }
 
     if (f != stdout)
         fclose(f);
 
+    free(mm_typecoded_str);
     return 0;
 }
 
