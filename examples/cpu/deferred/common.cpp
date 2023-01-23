@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2022, Intel Corporation
+  Copyright (c) 2011-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -122,6 +122,7 @@ InputData *CreateInputDataFromFile(const char *path) {
     // Load header
     if (fread(&input->header, sizeof(ispc::InputHeader), 1, in) != 1) {
         fprintf(stderr, "Preumature EOF reading file \"%s\"\n", path);
+        fclose(in);
         return NULL;
     }
 
@@ -129,6 +130,7 @@ InputData *CreateInputDataFromFile(const char *path) {
     input->chunk = (uint8_t *)lAlignedMalloc(input->header.inputDataChunkSize, ALIGNMENT_BYTES);
     if (fread(input->chunk, input->header.inputDataChunkSize, 1, in) != 1) {
         fprintf(stderr, "Preumature EOF reading file \"%s\"\n", path);
+        fclose(in);
         return NULL;
     }
 
