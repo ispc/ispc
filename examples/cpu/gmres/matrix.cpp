@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2012, Intel Corporation
+  Copyright (c) 2012-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -92,10 +92,16 @@ bool compare_entries(struct entry i, struct entry j) {
 }
 
 #define ERR_OUT(...)                                                                                                   \
-    {                                                                                                                  \
+    do {                                                                                                               \
         fprintf(stderr, __VA_ARGS__);                                                                                  \
         return NULL;                                                                                                   \
-    }
+    } while(0)
+
+#define ERR_OUT_WITH_CLOSE(file, ...)                                                                                  \
+    do {                                                                                                               \
+        fclose(file);                                                                                                  \
+        ERR_OUT(__VA_ARGS__);                                                                                          \
+    } while(0)
 
 CRSMatrix *CRSMatrix::matrix_from_mtf(char *path) {
     FILE *f;
@@ -107,22 +113,22 @@ CRSMatrix *CRSMatrix::matrix_from_mtf(char *path) {
         ERR_OUT("Error: %s does not name a valid/readable file.\n", path);
 
     if (mm_read_banner(f, &matcode) != 0)
-        ERR_OUT("Error: Could not process Matrix Market banner.\n");
+        ERR_OUT_WITH_CLOSE(f, "Error: Could not process Matrix Market banner.\n");
 
     if (mm_is_complex(matcode))
-        ERR_OUT("Error: Application does not support complex numbers.\n")
+        ERR_OUT_WITH_CLOSE(f, "Error: Application does not support complex numbers.\n");
 
     if (mm_is_dense(matcode))
-        ERR_OUT("Error: supplied matrix is dense (should be sparse.)\n");
+        ERR_OUT_WITH_CLOSE(f, "Error: supplied matrix is dense (should be sparse.)\n");
 
     if (!mm_is_matrix(matcode))
-        ERR_OUT("Error: %s does not encode a matrix.\n", path)
+        ERR_OUT_WITH_CLOSE(f, "Error: %s does not encode a matrix.\n", path);
 
     if (mm_read_mtx_crd_size(f, &m, &n, &nz) != 0)
-        ERR_OUT("Error: could not read matrix size from file.\n");
+        ERR_OUT_WITH_CLOSE(f, "Error: could not read matrix size from file.\n");
 
     if (m != n)
-        ERR_OUT("Error: Application does not support non-square matrices.");
+        ERR_OUT_WITH_CLOSE(f, "Error: Application does not support non-square matrices.");
 
     std::vector<struct entry> entries;
     entries.resize(nz);
@@ -145,6 +151,7 @@ CRSMatrix *CRSMatrix::matrix_from_mtf(char *path) {
         M->columns[i] = entries[i].col;
     }
 
+    fclose(f);
     return M;
 }
 
@@ -158,20 +165,20 @@ Vector *Vector::vector_from_mtf(char *path) {
         ERR_OUT("Error: %s does not name a valid/readable file.\n", path);
 
     if (mm_read_banner(f, &matcode) != 0)
-        ERR_OUT("Error: Could not process Matrix Market banner.\n");
+        ERR_OUT_WITH_CLOSE(f, "Error: Could not process Matrix Market banner.\n");
 
     if (mm_is_complex(matcode))
-        ERR_OUT("Error: Application does not support complex numbers.\n")
+        ERR_OUT_WITH_CLOSE(f, "Error: Application does not support complex numbers.\n");
 
     if (mm_is_dense(matcode)) {
         if (mm_read_mtx_array_size(f, &m, &n) != 0)
-            ERR_OUT("Error: could not read matrix size from file.\n");
+            ERR_OUT_WITH_CLOSE(f, "Error: could not read matrix size from file.\n");
     } else {
         if (mm_read_mtx_crd_size(f, &m, &n, &nz) != 0)
-            ERR_OUT("Error: could not read matrix size from file.\n");
+            ERR_OUT_WITH_CLOSE(f, "Error: could not read matrix size from file.\n");
     }
     if (n != 1)
-        ERR_OUT("Error: %s does not describe a vector.\n", path);
+        ERR_OUT_WITH_CLOSE(f, "Error: %s does not describe a vector.\n", path);
 
     Vector *x = new Vector(m);
 
@@ -191,6 +198,7 @@ Vector *Vector::vector_from_mtf(char *path) {
             (*x)[row - 1] = val;
         }
     }
+    fclose(f);
     return x;
 }
 
