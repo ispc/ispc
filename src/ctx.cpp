@@ -1949,7 +1949,9 @@ llvm::Value *FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Va
     // Find the scale factor for the index (i.e. the size of the object
     // that the pointer(s) point(s) to.
     const Type *scaleType = ptrType->GetBaseType();
-    llvm::Value *scale = g->target->SizeOf(scaleType->LLVMType(g->ctx), bblock);
+    llvm::Type *llvmScaleType = scaleType->LLVMType(g->ctx);
+    Assert(llvmScaleType != NULL);
+    llvm::Value *scale = g->target->SizeOf(llvmScaleType, bblock);
 
     bool indexIsVarying = llvm::isa<llvm::VectorType>(index->getType());
     llvm::Value *offset = NULL;
@@ -2279,7 +2281,9 @@ llvm::Value *FunctionEmitContext::AddElementOffset(AddressInfo *fullBasePtrInfo,
             // type of the vector.
             const SequentialType *st = CastType<SequentialType>(ptrType->GetBaseType());
             AssertPos(currentPos, st != NULL);
-            llvm::Value *size = g->target->SizeOf(st->GetElementType()->LLVMType(g->ctx), bblock);
+            llvm::Type *elemLLVMType = st->GetElementType()->LLVMType(g->ctx);
+            Assert(elemLLVMType);
+            llvm::Value *size = g->target->SizeOf(elemLLVMType, bblock);
             llvm::Value *scale =
                 (g->target->is32Bit() || g->opt.force32BitAddressing) ? LLVMInt32(elementNum) : LLVMInt64(elementNum);
             offset = BinaryOperator(llvm::Instruction::Mul, size, scale);
@@ -3452,6 +3456,7 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
         const Type *returnType = funcType->GetReturnType();
         llvm::Type *llvmReturnType = returnType->LLVMType(g->ctx);
         AddressInfo *resultPtrInfo = NULL;
+        Assert(llvmReturnType);
         if (llvmReturnType->isVoidTy() == false)
             resultPtrInfo = AllocaInst(returnType);
 
@@ -3764,6 +3769,7 @@ llvm::Value *FunctionEmitContext::addVaryingOffsetsIfNeeded(llvm::Value *ptr, co
 
     // Find the size of a uniform element of the varying type
     llvm::Type *llvmBaseUniformType = baseType->GetAsUniformType()->LLVMType(g->ctx);
+    Assert(llvmBaseUniformType);
     llvm::Value *unifSize = g->target->SizeOf(llvmBaseUniformType, bblock);
     unifSize = SmearUniform(unifSize);
 
