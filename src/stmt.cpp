@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -3145,11 +3145,11 @@ class PrintArgsBuilder {
     FunctionEmitContext *ctx;
 
     struct AdditionalData {
-        llvm::Value *mask;
+        llvm::Value *mask{NULL};
         enum { LeftParenthesisIdx = 0, RightParenthesisIdx, EmptyIdx, FalseIdx, TrueIdx, NumStrings };
-        std::array<llvm::Value *, NumStrings> strings;
+        std::array<llvm::Value *, NumStrings> strings{};
 
-        AdditionalData() { mask = NULL; }
+        AdditionalData() {}
         AdditionalData(FunctionEmitContext *ctx) {
             if (ctx->emitXeHardwareMask())
                 mask = ctx->XeSimdCFPredicate(LLVMMaskAllOn);
