@@ -106,11 +106,13 @@ MemoryCoalescing::BasePtrInfo MemoryCoalescing::analyseVarOffsetGEP(llvm::GetEle
     // Find the last constant idxs: we may be able to use them as constant offset for
     // several GEPs with common pre-constant part
     auto FirstConstIdx = GEP->getNumOperands();
-    for (unsigned i = FirstConstIdx - 1; i >= 0; --i) {
+    Assert(FirstConstIdx);
+    unsigned i = FirstConstIdx - 1;
+    do {
         if (!llvm::isa<llvm::ConstantInt>(GEP->getOperand(i)))
             break;
         FirstConstIdx = i;
-    }
+    } while (i--);
     // Early return in case when no constant offset was found:
     // further actions are useless.
     if (GEP->getNumOperands() == FirstConstIdx) {
