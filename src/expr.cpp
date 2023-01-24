@@ -8345,7 +8345,9 @@ llvm::Value *NewExpr::GetValue(FunctionEmitContext *ctx) const {
     // Compute the total amount of memory to allocate, allocSize, as the
     // product of the number of elements to allocate and the size of a
     // single element.
-    llvm::Value *eltSize = g->target->SizeOf(allocType->LLVMType(g->ctx), ctx->GetCurrentBasicBlock());
+    llvm::Type *llvmAllocType = allocType->LLVMType(g->ctx);
+    Assert(llvmAllocType);
+    llvm::Value *eltSize = g->target->SizeOf(llvmAllocType, ctx->GetCurrentBasicBlock());
     if (isVarying)
         eltSize = ctx->SmearUniform(eltSize, "smear_size");
     llvm::Value *allocSize = ctx->BinaryOperator(llvm::Instruction::Mul, countValue, eltSize, "alloc_size");
