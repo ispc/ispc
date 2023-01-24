@@ -559,8 +559,9 @@ llvm::DIType *AtomicType::GetDIType(llvm::DIScope *scope) const {
 
         llvm::DINodeArray subArray = m->diBuilder->getOrCreateArray(sub);
         llvm::DIType *unifType = GetAsUniformType()->GetDIType(scope);
-        uint64_t size = unifType->getSizeInBits() * g->target->getVectorWidth();
-        uint64_t align = unifType->getAlignInBits() * g->target->getVectorWidth();
+        uint64_t width = g->target->getVectorWidth();
+        uint64_t size = unifType->getSizeInBits() * width;
+        uint64_t align = unifType->getAlignInBits() * width;
         return m->diBuilder->createVectorType(size, align, unifType, subArray);
     } else {
         Assert(variability == Variability::SOA);
@@ -765,8 +766,9 @@ llvm::DIType *EnumType::GetDIType(llvm::DIScope *scope) const {
 
         llvm::DINodeArray subArray = m->diBuilder->getOrCreateArray(sub);
         // llvm::DebugNodeArray subArray = m->diBuilder->getOrCreateArray(sub);
-        uint64_t size = diType->getSizeInBits() * g->target->getVectorWidth();
-        uint64_t align = diType->getAlignInBits() * g->target->getVectorWidth();
+        uint64_t width = g->target->getVectorWidth();
+        uint64_t size = diType->getSizeInBits() * width;
+        uint64_t align = diType->getAlignInBits() * width;
         return m->diBuilder->createVectorType(size, align, diType, subArray);
     }
     case Variability::SOA: {

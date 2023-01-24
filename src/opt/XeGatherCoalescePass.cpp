@@ -458,8 +458,9 @@ llvm::Value *MemoryCoalescing::extractValueFromBlock(const MemoryCoalescing::Blo
                                                      MemoryCoalescing::OffsetT OffsetBytes, llvm::Type *DstTy,
                                                      llvm::Instruction *InsertBefore) const {
     Assert(BlockInstsVec.size() > 0);
-    OffsetT BlockSizeInBytes = getScalarTypeSize(BlockInstsVec[0]->getType()) *
-                               llvm::cast<llvm::FixedVectorType>(BlockInstsVec[0]->getType())->getNumElements();
+    OffsetT ScalarTypeSize = getScalarTypeSize(BlockInstsVec[0]->getType());
+    OffsetT BlockSizeInBytes =
+        ScalarTypeSize * llvm::cast<llvm::FixedVectorType>(BlockInstsVec[0]->getType())->getNumElements();
     unsigned StartIdx = OffsetBytes / BlockSizeInBytes;
     unsigned EndIdx = (OffsetBytes + getScalarTypeSize(DstTy) - 1) / BlockSizeInBytes;
     unsigned BlocksAffected = EndIdx - StartIdx + 1;
