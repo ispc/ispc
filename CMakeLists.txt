@@ -36,8 +36,12 @@
 cmake_minimum_required(VERSION 3.13)
 
 if (UNIX)
-    set(CMAKE_C_COMPILER "clang")
-    set(CMAKE_CXX_COMPILER "clang++")
+    if (NOT CMAKE_C_COMPILER)
+        set(CMAKE_C_COMPILER "clang")
+    endif()
+    if (NOT CMAKE_CXX_COMPILER)
+        set(CMAKE_CXX_COMPILER "clang++")
+    endif()
 endif()
 
 set(PROJECT_NAME ispc)
