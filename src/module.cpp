@@ -1482,8 +1482,8 @@ static void lEmitEnumDecls(const std::vector<const EnumType *> &enumTypes, FILE 
         for (int j = 0; j < enumTypes[i]->GetEnumeratorCount(); ++j) {
             const Symbol *e = enumTypes[i]->GetEnumerator(j);
             Assert(e->constValue != NULL);
-            unsigned int enumValue;
-            int count = e->constValue->GetValues(&enumValue);
+            unsigned int enumValue[1];
+            int count = e->constValue->GetValues(enumValue);
             Assert(count == 1);
 
             // Always print an initializer to set the value.  We could be
@@ -1491,7 +1491,7 @@ static void lEmitEnumDecls(const std::vector<const EnumType *> &enumTypes, FILE 
             // one plus the previous enumerator value (or zero, for the
             // first enumerator) is the same as the value stored with the
             // enumerator, though that doesn't seem worth the trouble...
-            fprintf(file, "    %s = %d%c\n", e->name.c_str(), enumValue,
+            fprintf(file, "    %s = %d%c\n", e->name.c_str(), enumValue[0],
                     (j < enumTypes[i]->GetEnumeratorCount() - 1) ? ',' : ' ');
         }
         fprintf(file, "};\n");
