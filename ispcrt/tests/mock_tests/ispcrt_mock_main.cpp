@@ -1,4 +1,4 @@
-// Copyright 2020-2022 Intel Corporation
+// Copyright 2020-2023 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "ispcrt.hpp"
@@ -1001,6 +1001,7 @@ TEST_F(MockTest, C_API_AllocateSharedMemoryForGPU) {
     std::vector<uint8_t> buffer;
     ISPCRTNewMemoryViewFlags mem_flags;
     mem_flags.allocType = ISPCRT_ALLOC_TYPE_SHARED;
+    mem_flags.smHint = ISPCRT_SM_HOST_WRITE_DEVICE_READ;
     ISPCRTMemoryView mem = ispcrtNewMemoryViewForContext(context, buffer.data(), buffer.size(), &mem_flags);
     ispcrtRelease(mem);
     ispcrtRelease(context);
@@ -1012,6 +1013,7 @@ TEST_F(MockTest, C_API_AllocateSharedMemoryForCPU) {
     std::vector<uint8_t> buffer;
     ISPCRTNewMemoryViewFlags mem_flags;
     mem_flags.allocType = ISPCRT_ALLOC_TYPE_SHARED;
+    mem_flags.smHint = ISPCRT_SM_HOST_WRITE_DEVICE_READ;
     ISPCRTMemoryView mem = ispcrtNewMemoryViewForContext(context, buffer.data(), buffer.size(), &mem_flags);
     ispcrtRelease(mem);
     ispcrtRelease(context);
@@ -1023,6 +1025,7 @@ TEST_F(MockTest, C_API_AllocateDeviceMemory) {
     std::vector<uint8_t> buffer;
     ISPCRTNewMemoryViewFlags mem_flags;
     mem_flags.allocType = ISPCRT_ALLOC_TYPE_DEVICE;
+    mem_flags.smHint = ISPCRT_SM_HOST_WRITE_DEVICE_READ;
     ISPCRTMemoryView mem = ispcrtNewMemoryViewForContext(context, buffer.data(), buffer.size(), &mem_flags);
     if (mem) ispcrtRelease(mem);
     if (context) ispcrtRelease(context);
