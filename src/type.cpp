@@ -741,12 +741,12 @@ llvm::DIType *EnumType::GetDIType(llvm::DIScope *scope) const {
 
     std::vector<llvm::Metadata *> enumeratorDescriptors;
     for (unsigned int i = 0; i < enumerators.size(); ++i) {
-        unsigned int enumeratorValue;
+        unsigned int enumeratorValue[1];
         Assert(enumerators[i]->constValue != NULL);
-        int count = enumerators[i]->constValue->GetValues(&enumeratorValue);
+        int count = enumerators[i]->constValue->GetValues(enumeratorValue);
         Assert(count == 1);
 
-        llvm::Metadata *descriptor = m->diBuilder->createEnumerator(enumerators[i]->name, enumeratorValue);
+        llvm::Metadata *descriptor = m->diBuilder->createEnumerator(enumerators[i]->name, enumeratorValue[0]);
         enumeratorDescriptors.push_back(descriptor);
     }
 
