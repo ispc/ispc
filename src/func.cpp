@@ -435,7 +435,8 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
                 ctx->SetFunctionMask(&*argIter);
             }
 
-            Assert(++argIter == function->arg_end());
+            ++argIter;
+            Assert(argIter == function->arg_end());
         }
         if (g->target->isXeTarget() && type->isTask) {
             // Assign threadIndex and threadCount to the result of calling of corresponding builtins.
