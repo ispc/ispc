@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -65,6 +65,7 @@ __declspec(align(16))
         x = xx;
         y = yy;
         z = zz;
+        pad = 0.;
     }
 
     vec operator*(float f) const { return vec(x * f, y * f, z * f); }
