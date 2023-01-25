@@ -20,18 +20,15 @@ namespace ispc {
     See for example the comments discussing the __pseudo_gather functions
     in builtins.cpp for more information about this.
  */
-class ImproveMemoryOpsPass : public llvm::FunctionPass {
+class ImproveMemoryOpsPass : public llvm::PassInfoMixin<ImproveMemoryOpsPass> {
   public:
-    static char ID;
-    explicit ImproveMemoryOpsPass() : FunctionPass(ID) {}
+    explicit ImproveMemoryOpsPass() {}
 
-    llvm::StringRef getPassName() const override { return "Improve Memory Ops"; }
-    bool runOnFunction(llvm::Function &F) override;
+    static llvm::StringRef getPassName() { return "Improve Memory Ops"; }
+    llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:
     bool improveMemoryOps(llvm::BasicBlock &BB);
 };
-
-llvm::Pass *CreateImproveMemoryOpsPass();
 
 } // namespace ispc

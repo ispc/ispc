@@ -8,8 +8,6 @@
 
 namespace ispc {
 
-char ReplaceStdlibShiftPass::ID = 0;
-
 /** Given an llvm::Value known to be an integer, return its value as
     an int64_t.
 */
@@ -79,16 +77,20 @@ bool ReplaceStdlibShiftPass::replaceStdlibShiftBuiltin(llvm::BasicBlock &bb) {
     return modifiedAny;
 }
 
-bool ReplaceStdlibShiftPass::runOnFunction(llvm::Function &F) {
-
-    llvm::TimeTraceScope FuncScope("ReplaceStdlibShiftPass::runOnFunction", F.getName());
+llvm::PreservedAnalyses ReplaceStdlibShiftPass::run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM) {
+    llvm::TimeTraceScope FuncScope("ReplaceStdlibShiftPass::run", F.getName());
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= replaceStdlibShiftBuiltin(BB);
     }
-    return modifiedAny;
-}
+    if (!modifiedAny) {
+        // No changes, all analyses are preserved.
+        return llvm::PreservedAnalyses::all();
+    }
 
-llvm::Pass *CreateReplaceStdlibShiftPass() { return new ReplaceStdlibShiftPass(); }
+    llvm::PreservedAnalyses PA;
+    PA.preserveSet<llvm::CFGAnalyses>();
+    return PA;
+}
 
 } // namespace ispc

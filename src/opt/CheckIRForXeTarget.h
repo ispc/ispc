@@ -19,19 +19,16 @@ namespace ispc {
     2. prefetch support by target and fixing prefetch args
  */
 
-class CheckIRForXeTarget : public llvm::FunctionPass {
+class CheckIRForXeTarget : public llvm::PassInfoMixin<CheckIRForXeTarget> {
   public:
-    static char ID;
-    explicit CheckIRForXeTarget() : FunctionPass(ID) {}
+    explicit CheckIRForXeTarget() {}
 
-    llvm::StringRef getPassName() const override { return "Check and fix IR for Xe target"; }
-    bool runOnFunction(llvm::Function &F) override;
+    static llvm::StringRef getPassName() { return "Check and fix IR for Xe target"; }
+    llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:
     bool checkAndFixIRForXe(llvm::BasicBlock &BB);
 };
-
-llvm::Pass *CreateCheckIRForXeTarget();
 
 } // namespace ispc
 

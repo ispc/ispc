@@ -14,18 +14,15 @@ namespace ispc {
     runs, we need to turn them into actual native gathers and scatters.
     This task is handled by the ReplacePseudoMemoryOpsPass here.
  */
-class ReplacePseudoMemoryOpsPass : public llvm::FunctionPass {
+class ReplacePseudoMemoryOpsPass : public llvm::PassInfoMixin<ReplacePseudoMemoryOpsPass> {
   public:
-    static char ID;
-    explicit ReplacePseudoMemoryOpsPass() : FunctionPass(ID) {}
+    explicit ReplacePseudoMemoryOpsPass() {}
 
-    llvm::StringRef getPassName() const override { return "Replace Pseudo Memory Ops"; }
-    bool runOnFunction(llvm::Function &F) override;
+    static llvm::StringRef getPassName() { return "Replace Pseudo Memory Ops"; }
+    llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:
     bool replacePseudoMemoryOps(llvm::BasicBlock &BB);
 };
-
-llvm::Pass *CreateReplacePseudoMemoryOpsPass();
 
 } // namespace ispc

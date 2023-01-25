@@ -12,18 +12,15 @@ namespace ispc {
 
 // PeepholePass
 
-class PeepholePass : public llvm::FunctionPass {
+class PeepholePass : public llvm::PassInfoMixin<PeepholePass> {
   public:
-    static char ID;
-    explicit PeepholePass() : FunctionPass(ID){};
+    explicit PeepholePass(){};
 
-    llvm::StringRef getPassName() const override { return "Peephole Optimizations"; }
-    bool runOnFunction(llvm::Function &F) override;
+    static llvm::StringRef getPassName() { return "Peephole Optimizations"; }
+    llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:
     bool matchAndReplace(llvm::BasicBlock &BB);
 };
-
-llvm::Pass *CreatePeepholePass();
 
 } // namespace ispc

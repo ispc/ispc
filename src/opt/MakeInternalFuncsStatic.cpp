@@ -8,9 +8,7 @@
 
 namespace ispc {
 
-char MakeInternalFuncsStaticPass::ID = 0;
-
-bool MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
+llvm::PreservedAnalyses MakeInternalFuncsStaticPass::run(llvm::Module &M, llvm::ModuleAnalysisManager &MAM) {
     const char *names[] = {
         "__avg_up_uint8",
         "__avg_up_int8",
@@ -173,19 +171,17 @@ bool MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
 #endif
     };
 
-    bool modifiedAny = false;
     int count = sizeof(names) / sizeof(names[0]);
     for (int i = 0; i < count; ++i) {
         llvm::Function *f = m->module->getFunction(names[i]);
         if (f != nullptr && f->empty() == false) {
             f->setLinkage(llvm::GlobalValue::InternalLinkage);
-            modifiedAny = true;
         }
     }
 
-    return modifiedAny;
+    llvm::PreservedAnalyses PA;
+    PA.preserveSet<llvm::CFGAnalyses>();
+    return PA;
 }
-
-llvm::Pass *CreateMakeInternalFuncsStaticPass() { return new MakeInternalFuncsStaticPass; }
 
 } // namespace ispc

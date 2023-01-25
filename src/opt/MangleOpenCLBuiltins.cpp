@@ -10,8 +10,6 @@
 
 namespace ispc {
 
-char MangleOpenCLBuiltins::ID = 0;
-
 static std::string mangleMathOCLBuiltin(const llvm::Function &func) {
     Assert(func.getName().startswith("__spirv_ocl") && "wrong argument: ocl builtin is expected");
     std::string mangledName;
@@ -117,16 +115,13 @@ bool MangleOpenCLBuiltins::mangleOpenCLBuiltins(llvm::BasicBlock &bb) {
     return modifiedAny;
 }
 
-bool MangleOpenCLBuiltins::runOnFunction(llvm::Function &F) {
-    llvm::TimeTraceScope FuncScope("MangleOpenCLBuiltins::runOnFunction", F.getName());
-    bool modifiedAny = false;
+llvm::PreservedAnalyses MangleOpenCLBuiltins::run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM) {
+    llvm::TimeTraceScope FuncScope("MangleOpenCLBuiltins::run", F.getName());
     for (llvm::BasicBlock &BB : F) {
-        modifiedAny |= mangleOpenCLBuiltins(BB);
+        mangleOpenCLBuiltins(BB);
     }
-    return modifiedAny;
+    return llvm::PreservedAnalyses::all();
 }
-
-llvm::Pass *CreateMangleOpenCLBuiltins() { return new MangleOpenCLBuiltins(); }
 
 } // namespace ispc
 

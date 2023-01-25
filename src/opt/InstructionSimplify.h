@@ -17,18 +17,15 @@ namespace ispc {
     @todo The better thing to do would be to submit a patch to LLVM to get
     these; they're presumably pretty simple patterns to match.
 */
-class InstructionSimplifyPass : public llvm::FunctionPass {
+class InstructionSimplifyPass : public llvm::PassInfoMixin<InstructionSimplifyPass> {
   public:
-    static char ID;
-    explicit InstructionSimplifyPass() : FunctionPass(ID) {}
+    explicit InstructionSimplifyPass() {}
 
-    llvm::StringRef getPassName() const override { return "Vector Select Optimization"; }
-    bool runOnFunction(llvm::Function &F) override;
+    static llvm::StringRef getPassName() { return "Vector Select Optimization"; }
+    llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:
     bool simplifyInstructions(llvm::BasicBlock &BB);
 };
-
-llvm::Pass *CreateInstructionSimplifyPass();
 
 } // namespace ispc

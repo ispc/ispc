@@ -19,31 +19,26 @@ namespace ispc {
     we want to debug and print dump of LLVM IR in stderr. Also it
     prints name and number of previous optimization.
  */
-class DebugPass : public llvm::ModulePass {
+class DebugPass : public llvm::PassInfoMixin<DebugPass> {
   public:
-    static char ID;
-    explicit DebugPass(char *output) : ModulePass(ID) { snprintf(str_output, sizeof(str_output), "%s", output); }
+    explicit DebugPass(char *output) { snprintf(str_output, sizeof(str_output), "%s", output); }
 
-    llvm::StringRef getPassName() const override { return "Dump LLVM IR"; }
-    bool runOnModule(llvm::Module &m) override;
+    static llvm::StringRef getPassName() { return "Dump LLVM IR"; }
+    llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &MAM);
 
   private:
     char str_output[100];
 };
-llvm::Pass *CreateDebugPass(char *output);
 
 /** This pass is added in list of passes after optimizations which
     we want to debug and print dump of LLVM IR to file.
  */
-class DebugPassFile : public llvm::ModulePass {
+class DebugPassFile : public llvm::PassInfoMixin<DebugPassFile> {
   public:
-    static char ID;
-    explicit DebugPassFile(int number, llvm::StringRef name, std::string dir)
-        : ModulePass(ID), pnum(number), pname(name), pdir(dir) {}
+    explicit DebugPassFile(int number, llvm::StringRef name, std::string dir) : pnum(number), pname(name), pdir(dir) {}
 
-    llvm::StringRef getPassName() const override { return "Dump LLVM IR"; }
-    bool runOnModule(llvm::Module &m) override;
-    bool doInitialization(llvm::Module &m) override;
+    static llvm::StringRef getPassName() { return "Dump LLVM IR"; }
+    llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &MAM);
 
   private:
     void run(llvm::Module &m, bool init);
@@ -52,5 +47,4 @@ class DebugPassFile : public llvm::ModulePass {
     std::string pdir;
 };
 
-llvm::Pass *CreateDebugPassFile(int number, llvm::StringRef name, std::string dir);
 } // namespace ispc

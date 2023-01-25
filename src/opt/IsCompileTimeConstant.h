@@ -23,19 +23,16 @@ namespace ispc {
     See stdlib.m4 for a number of uses of this idiom.
  */
 
-class IsCompileTimeConstantPass : public llvm::FunctionPass {
+class IsCompileTimeConstantPass : public llvm::PassInfoMixin<IsCompileTimeConstantPass> {
   public:
-    static char ID;
-    explicit IsCompileTimeConstantPass(bool last = false) : FunctionPass(ID) { isLastTry = last; }
+    explicit IsCompileTimeConstantPass(bool last = false) { isLastTry = last; }
 
-    llvm::StringRef getPassName() const override { return "Resolve \"is compile time constant\""; }
-    bool runOnFunction(llvm::Function &F) override;
+    static llvm::StringRef getPassName() { return "Resolve \"is compile time constant\""; }
+    llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:
     bool isLastTry;
     bool lowerCompileTimeConstant(llvm::BasicBlock &BB);
 };
-
-llvm::Pass *CreateIsCompileTimeConstantPass(bool isLastTry);
 
 } // namespace ispc

@@ -10,16 +10,15 @@
 
 namespace ispc {
 
-class ReplaceStdlibShiftPass : public llvm::FunctionPass {
+class ReplaceStdlibShiftPass : public llvm::PassInfoMixin<ReplaceStdlibShiftPass> {
   public:
-    static char ID;
-    explicit ReplaceStdlibShiftPass() : FunctionPass(ID) {}
+    explicit ReplaceStdlibShiftPass() {}
 
-    llvm::StringRef getPassName() const override { return "Resolve \"replace extract insert chains\""; }
-    bool runOnFunction(llvm::Function &F) override;
+    static llvm::StringRef getPassName() { return "Resolve \"replace extract insert chains\""; }
+    llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:
     bool replaceStdlibShiftBuiltin(llvm::BasicBlock &BB);
 };
-llvm::Pass *CreateReplaceStdlibShiftPass();
+
 } // namespace ispc

@@ -8,8 +8,6 @@
 
 namespace ispc {
 
-char IsCompileTimeConstantPass::ID = 0;
-
 bool IsCompileTimeConstantPass::lowerCompileTimeConstant(llvm::BasicBlock &bb) {
     DEBUG_START_BB("IsCompileTimeConstantPass");
 
@@ -75,16 +73,21 @@ bool IsCompileTimeConstantPass::lowerCompileTimeConstant(llvm::BasicBlock &bb) {
     return modifiedAny;
 }
 
-bool IsCompileTimeConstantPass::runOnFunction(llvm::Function &F) {
+llvm::PreservedAnalyses IsCompileTimeConstantPass::run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM) {
 
-    llvm::TimeTraceScope FuncScope("IsCompileTimeConstantPass::runOnFunction", F.getName());
+    llvm::TimeTraceScope FuncScope("IsCompileTimeConstantPass::run", F.getName());
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= lowerCompileTimeConstant(BB);
     }
-    return modifiedAny;
-}
+    if (!modifiedAny) {
+        // No changes, all analyses are preserved.
+        return llvm::PreservedAnalyses::all();
+    }
 
-llvm::Pass *CreateIsCompileTimeConstantPass(bool isLastTry) { return new IsCompileTimeConstantPass(isLastTry); }
+    llvm::PreservedAnalyses PA;
+    PA.preserveSet<llvm::CFGAnalyses>();
+    return PA;
+}
 
 } // namespace ispc

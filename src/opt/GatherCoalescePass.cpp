@@ -8,8 +8,6 @@
 
 namespace ispc {
 
-char GatherCoalescePass::ID = 0;
-
 /** Representation of a memory load that the gather coalescing code has
     decided to generate.
  */
@@ -966,17 +964,22 @@ bool GatherCoalescePass::coalesceGathersFactored(llvm::BasicBlock &bb) {
     return modifiedAny;
 }
 
-bool GatherCoalescePass::runOnFunction(llvm::Function &F) {
-    llvm::TimeTraceScope FuncScope("GatherCoalescePass::runOnFunction", F.getName());
+llvm::PreservedAnalyses GatherCoalescePass::run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM) {
+    llvm::TimeTraceScope FuncScope("GatherCoalescePass::run", F.getName());
 
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= coalesceGathersFactored(BB);
     }
 
-    return modifiedAny;
-}
+    if (!modifiedAny) {
+        // No changes, all analyses are preserved.
+        return llvm::PreservedAnalyses::all();
+    }
 
-llvm::Pass *CreateGatherCoalescePass() { return new GatherCoalescePass; }
+    llvm::PreservedAnalyses PA;
+    PA.preserveSet<llvm::CFGAnalyses>();
+    return PA;
+}
 
 } // namespace ispc

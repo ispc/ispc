@@ -11,13 +11,21 @@
 namespace ispc {
 
 // Optimization runner
-bool MemoryCoalescing::runOnFunction(llvm::Function &Fn) {
-    llvm::TimeTraceScope FuncScope("MemoryCoalescing::runOnFunction", Fn.getName());
+llvm::PreservedAnalyses MemoryCoalescing::run(llvm::Function &Fn, llvm::FunctionAnalysisManager &FAM) {
+    llvm::TimeTraceScope FuncScope("MemoryCoalescing::run", Fn.getName());
+    bool modifiedAny = false;
     for (llvm::BasicBlock &BB : Fn) {
-        runOnBasicBlock(BB);
+        modifiedAny |= runOnBasicBlock(BB);
     }
 
-    return modifiedAny;
+    if (!modifiedAny) {
+        // No changes, all analyses are preserved.
+        return llvm::PreservedAnalyses::all();
+    }
+
+    llvm::PreservedAnalyses PA;
+    PA.preserveSet<llvm::CFGAnalyses>();
+    return PA;
 }
 
 // Find base pointer info for ptr operand.
@@ -151,11 +159,12 @@ MemoryCoalescing::BasePtrInfo MemoryCoalescing::analyseArithmetics(llvm::BinaryO
 
 // Basic block optimization runner.
 // TODO: runOnBasicBlock must call it to run optimization. See comment above.
-void MemoryCoalescing::runOnBasicBlockImpl(llvm::BasicBlock &BB) {
+bool MemoryCoalescing::runOnBasicBlockImpl(llvm::BasicBlock &BB) {
     analyseInsts(BB);
     applyOptimization();
     deletePossiblyDeadInsts();
     clear();
+    return modifiedAny;
 }
 
 void MemoryCoalescing::deletePossiblyDeadInsts() {
@@ -458,12 +467,12 @@ llvm::Value *MemoryCoalescing::extractValueFromBlock(const MemoryCoalescing::Blo
     }
 }
 
-char XeGatherCoalescing::ID = 0;
-
-void XeGatherCoalescing::runOnBasicBlock(llvm::BasicBlock &bb) {
+bool XeGatherCoalescing::runOnBasicBlock(llvm::BasicBlock &bb) {
     DEBUG_START_BB("XeGatherCoalescing");
-    runOnBasicBlockImpl(bb);
+    bool modifiedAny = false;
+    modifiedAny = runOnBasicBlockImpl(bb);
     DEBUG_END_BB("XeGatherCoalescing");
+    return modifiedAny;
 }
 
 void XeGatherCoalescing::optimizePtr(llvm::Value *Ptr, PtrData &PD, llvm::Instruction *InsertPoint) {
@@ -632,8 +641,6 @@ llvm::Value *XeGatherCoalescing::getPointer(llvm::Instruction *Inst) const {
 
     return nullptr;
 }
-
-llvm::Pass *CreateXeGatherCoalescingPass() { return new XeGatherCoalescing; }
 
 } // namespace ispc
 

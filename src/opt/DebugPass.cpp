@@ -8,18 +8,12 @@
 
 namespace ispc {
 
-char DebugPass::ID = 0;
-
-bool DebugPass::runOnModule(llvm::Module &module) {
+llvm::PreservedAnalyses DebugPass::run(llvm::Module &M, llvm::ModuleAnalysisManager &MAM) {
     fprintf(stderr, "%s", str_output);
     fflush(stderr);
-    module.print(llvm::errs(), nullptr);
-    return true;
+    M.print(llvm::errs(), nullptr);
+    return llvm::PreservedAnalyses::all();
 }
-
-llvm::Pass *CreateDebugPass(char *output) { return new DebugPass(output); }
-
-char DebugPassFile::ID = 0;
 
 /**
  * Strips all non-alphanumeric characters from given string.
@@ -58,18 +52,9 @@ void DebugPassFile::run(llvm::Module &module, bool init) {
     module.print(OS, 0);
 }
 
-bool DebugPassFile::runOnModule(llvm::Module &module) {
-    run(module, false);
-    return true;
-}
-
-bool DebugPassFile::doInitialization(llvm::Module &module) {
-    run(module, true);
-    return true;
-}
-
-llvm::Pass *CreateDebugPassFile(int number, llvm::StringRef name, std::string dir) {
-    return new DebugPassFile(number, name, dir);
+llvm::PreservedAnalyses DebugPassFile::run(llvm::Module &M, llvm::ModuleAnalysisManager &MAM) {
+    run(M, false);
+    return llvm::PreservedAnalyses::all();
 }
 
 } // namespace ispc

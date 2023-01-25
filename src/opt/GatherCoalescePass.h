@@ -29,13 +29,12 @@ namespace ispc {
 //  in this case, we're often able to generate wide vector loads and
 //  appropriate shuffles automatically.
 
-class GatherCoalescePass : public llvm::FunctionPass {
+class GatherCoalescePass : public llvm::PassInfoMixin<GatherCoalescePass> {
   public:
-    static char ID;
-    explicit GatherCoalescePass() : FunctionPass(ID) {}
+    explicit GatherCoalescePass() {}
 
-    llvm::StringRef getPassName() const override { return "Gather Coalescing"; }
-    bool runOnFunction(llvm::Function &F) override;
+    static llvm::StringRef getPassName() { return "Gather Coalescing"; }
+    llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:
     // Type of base pointer element type (the 1st argument of the intrinsic) is i8
@@ -43,7 +42,5 @@ class GatherCoalescePass : public llvm::FunctionPass {
     llvm::Type *baseType{LLVMTypes::Int8Type};
     bool coalesceGathersFactored(llvm::BasicBlock &BB);
 };
-
-llvm::Pass *CreateGatherCoalescePass();
 
 } // namespace ispc

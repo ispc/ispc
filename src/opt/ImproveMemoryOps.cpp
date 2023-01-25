@@ -8,8 +8,6 @@
 
 namespace ispc {
 
-char ImproveMemoryOpsPass::ID = 0;
-
 /** Check to make sure that this value is actually a pointer in the end.
     We need to make sure that given an expression like vec(offset) +
     ptr2int(ptr), lGetBasePointer() doesn't return vec(offset) for the base
@@ -1947,16 +1945,20 @@ bool ImproveMemoryOpsPass::improveMemoryOps(llvm::BasicBlock &bb) {
     return modifiedAny;
 }
 
-bool ImproveMemoryOpsPass::runOnFunction(llvm::Function &F) {
-
-    llvm::TimeTraceScope FuncScope("ImproveMemoryOpsPass::runOnFunction", F.getName());
+llvm::PreservedAnalyses ImproveMemoryOpsPass::run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM) {
+    llvm::TimeTraceScope FuncScope("ImproveMemoryOpsPass::run", F.getName());
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= improveMemoryOps(BB);
     }
-    return modifiedAny;
-}
+    if (!modifiedAny) {
+        // No changes, all analyses are preserved.
+        return llvm::PreservedAnalyses::all();
+    }
 
-llvm::Pass *CreateImproveMemoryOpsPass() { return new ImproveMemoryOpsPass; }
+    llvm::PreservedAnalyses PA;
+    PA.preserveSet<llvm::CFGAnalyses>();
+    return PA;
+}
 
 } // namespace ispc

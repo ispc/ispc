@@ -20,16 +20,12 @@ namespace ispc {
     even though we may need to generate calls to them during later
     optimization passes.
  */
-class MakeInternalFuncsStaticPass : public llvm::ModulePass {
+class MakeInternalFuncsStaticPass : public llvm::PassInfoMixin<MakeInternalFuncsStaticPass> {
   public:
-    static char ID;
-    explicit MakeInternalFuncsStaticPass() : ModulePass(ID) {}
+    explicit MakeInternalFuncsStaticPass() {}
 
-    void getAnalysisUsage(llvm::AnalysisUsage &AU) const override { AU.setPreservesCFG(); }
-    llvm::StringRef getPassName() const override { return "Make internal funcs \"static\""; }
-    bool runOnModule(llvm::Module &m) override;
+    static llvm::StringRef getPassName() { return "Make internal funcs \"static\""; }
+    llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &MAM);
 };
-
-llvm::Pass *CreateMakeInternalFuncsStaticPass();
 
 } // namespace ispc

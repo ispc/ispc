@@ -19,13 +19,12 @@ namespace ispc {
     @todo The better thing to do would be to submit a patch to LLVM to get
     these; they're presumably pretty simple patterns to match.
 */
-class IntrinsicsOpt : public llvm::FunctionPass {
+class IntrinsicsOpt : public llvm::PassInfoMixin<IntrinsicsOpt> {
   public:
-    static char ID;
-    explicit IntrinsicsOpt() : FunctionPass(ID){};
+    explicit IntrinsicsOpt(){};
 
-    llvm::StringRef getPassName() const override { return "Intrinsics Cleanup Optimization"; }
-    bool runOnFunction(llvm::Function &F) override;
+    static llvm::StringRef getPassName() { return "Intrinsics Cleanup Optimization"; }
+    llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:
     bool optimizeIntrinsics(llvm::BasicBlock &BB);
@@ -61,7 +60,5 @@ class IntrinsicsOpt : public llvm::FunctionPass {
     bool matchesMaskInstruction(llvm::Function *function);
     BlendInstruction *matchingBlendInstruction(llvm::Function *function);
 };
-
-llvm::Pass *CreateIntrinsicsOptPass();
 
 } // namespace ispc
