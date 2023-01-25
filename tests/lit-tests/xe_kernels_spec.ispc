@@ -53,9 +53,9 @@
 // CHECK_EXPORT_F1_CPU: void @f1(float* noalias nocapture %RET)
 export void f1(uniform float RET[]) {}
 
-// CHECK_TASK_F1_GPU: dllexport spir_kernel void @f1_task(i8 addrspace(1)* nocapture "VCArgumentIOKind"="0" %RET) {{.*}}
+// CHECK_TASK_F1_GPU: dllexport spir_kernel void @f1_task(i8 addrspace(1)* {{.*}} "VCArgumentIOKind"="0" %RET) {{.*}}
 // CHECK_TASK_F1_GPU-NOT: void @f1_task__
-// CHECK_TASK_F1_CPU: void @f1_task__{{.*}} noalias nocapture %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9, i32 %10)
+// CHECK_TASK_F1_CPU: void @f1_task__{{.*}} noalias {{.*}} %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9, i32 %10)
 // CHECK_TASK_F1_CPU-NOT: void @f1_task(float* noalias nocapture %RET)
 task void f1_task(uniform float RET[]) {}
 
@@ -66,9 +66,9 @@ task void f1_task(uniform float RET[]) {}
 // CHECK_EXPORT_F2_CPU: void @f2(float* noalias nocapture %aF, double* noalias nocapture %aD, i32* noalias nocapture %aI)
 export void f2(uniform float aF[], uniform double aD[], uniform int aI[]) {}
 
-// CHECK_TASK_F2_GPU: dllexport spir_kernel void @f2_task(i8 addrspace(1)* nocapture "VCArgumentIOKind"="0" %aF, i8 addrspace(1)* nocapture "VCArgumentIOKind"="0" %aD, i8 addrspace(1)* nocapture "VCArgumentIOKind"="0" %aI)  {{.*}}
+// CHECK_TASK_F2_GPU: dllexport spir_kernel void @f2_task(i8 addrspace(1)* {{.*}} "VCArgumentIOKind"="0" %aF, i8 addrspace(1)* {{.*}} "VCArgumentIOKind"="0" %aD, i8 addrspace(1)* {{.*}} "VCArgumentIOKind"="0" %aI)  {{.*}}
 // CHECK_TASK_F2_GPU-NOT: void @f2_task__
-// CHECK_TASK_F2_CPU: void @f2_task__{{.*}} noalias nocapture %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9, i32 %10)
+// CHECK_TASK_F2_CPU: void @f2_task__{{.*}} noalias {{.*}} %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9, i32 %10)
 // CHECK_TASK_F2_CPU-NOT: void @f2_task(float* noalias nocapture %aF, double* noalias nocapture %aD, i32* noalias nocapture %aI)
 task void f2_task(uniform float aF[], uniform double aD[], uniform int aI[]) {}
 
@@ -79,9 +79,9 @@ task void f2_task(uniform float aF[], uniform double aD[], uniform int aI[]) {}
 // CHECK_EXPORT_F3_CPU: void @f3(float* noalias nocapture %aF1, float* noalias nocapture %aF2, float %a)
 export void f3(uniform float aF1[], uniform float aF2[], uniform float a) {}
 
-// CHECK_TASK_F3_GPU: dllexport spir_kernel void @f3_task(i8 addrspace(1)* nocapture "VCArgumentIOKind"="0" %aF1, i8 addrspace(1)* nocapture "VCArgumentIOKind"="0" %aF2, float "VCArgumentIOKind"="0" %a)  {{.*}}
+// CHECK_TASK_F3_GPU: dllexport spir_kernel void @f3_task(i8 addrspace(1)* {{.*}} "VCArgumentIOKind"="0" %aF1, i8 addrspace(1)* {{.*}} "VCArgumentIOKind"="0" %aF2, float "VCArgumentIOKind"="0" %a)  {{.*}}
 // CHECK_TASK_F3_GPU-NOT: void @f3_task__
-// CHECK_TASK_F3_CPU: void @f3_task__{{.*}} noalias nocapture %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9, i32 %10)
+// CHECK_TASK_F3_CPU: void @f3_task__{{.*}} noalias {{.*}} %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9, i32 %10)
 // CHECK_TASK_F3_CPU-NOT: void @f3_task(float* noalias nocapture %aF1, float* noalias nocapture %aF2, float %a)
 task void f3_task(uniform float aF1[], uniform float aF2[], uniform float a) {}
 
@@ -92,9 +92,9 @@ task void f3_task(uniform float aF1[], uniform float aF2[], uniform float a) {}
 // CHECK_EXPORT_F4_CPU: void @f4(float* noalias nocapture %aF1, double* noalias nocapture %aF2, float %a)
 export void f4(uniform float aF1[], double *uniform aF2, uniform float a) {}
 
-// CHECK_TASK_F4_GPU: dllexport spir_kernel void @f4_task(i8 addrspace(1)* nocapture "VCArgumentIOKind"="0" %aF1, i8 addrspace(1)* nocapture "VCArgumentIOKind"="0" %aF2, float "VCArgumentIOKind"="0" %a)  {{.*}}
+// CHECK_TASK_F4_GPU: dllexport spir_kernel void @f4_task(i8 addrspace(1)* {{.*}} "VCArgumentIOKind"="0" %aF1, i8 addrspace(1)* {{.*}} "VCArgumentIOKind"="0" %aF2, float "VCArgumentIOKind"="0" %a)  {{.*}}
 // CHECK_TASK_F4_GPU-NOT: void @f4_task__
-// CHECK_TASK_F4_CPU: void @f4_task__{{.*}} noalias nocapture %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9, i32 %10)
+// CHECK_TASK_F4_CPU: void @f4_task__{{.*}} noalias {{.*}} %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9, i32 %10)
 // CHECK_TASK_F4_CPU-NOT: void @f4_task(float* noalias nocapture %aF1, float* noalias nocapture %aF2, float %a)
 task void f4_task(uniform float aF1[], double *uniform aF2, uniform float a) {}
 
@@ -105,9 +105,9 @@ task void f4_task(uniform float aF1[], double *uniform aF2, uniform float a) {}
 // CHECK_EXPORT_F5_CPU: void @f5(i8* noalias nocapture %_p)
 export void f5(void *uniform _p) {}
 
-// CHECK_TASK_F5_GPU: dllexport spir_kernel void @f5_task(i8 addrspace(1)* nocapture "VCArgumentIOKind"="0" %_p)  {{.*}}
+// CHECK_TASK_F5_GPU: dllexport spir_kernel void @f5_task(i8 addrspace(1)* {{.*}} "VCArgumentIOKind"="0" %_p)  {{.*}}
 // CHECK_TASK_F5_GPU-NOT: void @f5_task__
-// CHECK_TASK_F5_CPU: void @f5_task__{{.*}} noalias nocapture %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9, i32 %10)
+// CHECK_TASK_F5_CPU: void @f5_task__{{.*}} noalias {{.*}} %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9, i32 %10)
 // CHECK_TASK_F5_CPU-NOT: void @f5_task(i8* noalias nocapture %_p)
 task void f5_task(void *uniform _p) {}
 
@@ -120,7 +120,7 @@ export void f6(uniform float a) {}
 
 // CHECK_TASK_F6_GPU: dllexport spir_kernel void @f6_task(float "VCArgumentIOKind"="0" %a)  {{.*}}
 // CHECK_TASK_F6_GPU-NOT: void @f6_task__
-// CHECK_TASK_F6_CPU: void @f6_task__{{.*}} noalias nocapture %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9, i32 %10)
+// CHECK_TASK_F6_CPU: void @f6_task__{{.*}} noalias {{.*}} %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9, i32 %10)
 // CHECK_TASK_F6_CPU-NOT: void @f6_task(float %a)
 task void f6_task(uniform float a) {}
 
@@ -133,7 +133,7 @@ export void f7() {}
 
 // CHECK_TASK_F7_GPU: dllexport spir_kernel void @f7_task()  {{.*}}
 // CHECK_TASK_F7_GPU-NOT: void @f7_task__
-// CHECK_TASK_F7_CPU: void @f7_task__{{.*}} noalias nocapture %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9, i32 %10)
+// CHECK_TASK_F7_CPU: void @f7_task__{{.*}} noalias {{.*}} %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9, i32 %10)
 // CHECK_TASK_F7_CPU-NOT: void @f7_task()
 task void f7_task() {}
 

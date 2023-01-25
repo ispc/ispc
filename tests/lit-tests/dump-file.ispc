@@ -2,16 +2,16 @@
 //   with and without the optional destination directory specified.
 
 // RUN: %{ispc} %s --target=host --nostdlib -h %t.h --emit-llvm-text --dump-file=%t --debug-phase=220,300 -o /dev/null
-// RUN: FileCheck %s --input-file %t/ir_220_DeadCodeElimination.ll -check-prefixes=CHECK_ALL,CHECK_PRE
-// RUN: FileCheck %s --input-file %t/ir_300_Unrollloops.ll -check-prefixes=CHECK_ALL,CHECK_POST
+// RUN: FileCheck %s --input-file %t/ir_220_DCEPass.ll -check-prefixes=CHECK_ALL,CHECK_PRE
+// RUN: FileCheck %s --input-file %t/ir_300_LoopUnrollPass.ll -check-prefixes=CHECK_ALL,CHECK_POST
 
 // RUN: %{ispc} %s --target=host --nostdlib -h %t.h --emit-llvm-text --dump-file --debug-phase=220,300 -o /dev/null
-// RUN: FileCheck %s --input-file ir_220_DeadCodeElimination.ll -check-prefixes=CHECK_ALL,CHECK_PRE
-// RUN: FileCheck %s --input-file ir_300_Unrollloops.ll -check-prefixes=CHECK_ALL,CHECK_POST
+// RUN: FileCheck %s --input-file ir_220_DCEPass.ll -check-prefixes=CHECK_ALL,CHECK_PRE
+// RUN: FileCheck %s --input-file ir_300_LoopUnrollPass.ll -check-prefixes=CHECK_ALL,CHECK_POST
 
 // RUN: %{ispc} %s --target=host --nostdlib -h %t.h --emit-llvm-text --dump-file=./ --debug-phase=220,300 -o /dev/null
-// RUN: FileCheck %s --input-file ./ir_220_DeadCodeElimination.ll -check-prefixes=CHECK_ALL,CHECK_PRE
-// RUN: FileCheck %s --input-file ./ir_300_Unrollloops.ll -check-prefixes=CHECK_ALL,CHECK_POST
+// RUN: FileCheck %s --input-file ./ir_220_DCEPass.ll -check-prefixes=CHECK_ALL,CHECK_PRE
+// RUN: FileCheck %s --input-file ./ir_300_LoopUnrollPass.ll -check-prefixes=CHECK_ALL,CHECK_POST
 
 #define NUM 1024
 

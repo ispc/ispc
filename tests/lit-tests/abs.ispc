@@ -8,5 +8,4 @@ unsigned int foo_var(int a) {
 //; CHECK_AVX2: vpabsd
 //; CHECK_AVX512: vpabsd
     return abs(a);
-
 }
