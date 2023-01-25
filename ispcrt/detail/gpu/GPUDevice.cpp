@@ -1,4 +1,4 @@
-// Copyright 2020-2022 Intel Corporation
+// Copyright 2020-2023 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "GPUDevice.h"
@@ -736,15 +736,18 @@ struct MemoryView : public ispcrt::base::MemoryView {
     {
         // Use MemPool only when it is explicitly enabled with env var and memory hint is not device/host read/write
         m_useMemPool = (getenv_wr(ISPCRT_MEM_POOL) != nullptr) && (m_smhint != ISPCRT_SM_HOST_DEVICE_READ_WRITE);
-        if (m_ctxtGPU && m_useMemPool && !m_ctxtGPU->memPool(m_smhint)->hDev())
-            m_ctxtGPU->memPool(m_smhint)->hDev(device);
+        if (m_ctxtGPU && m_useMemPool) {
+            m_memPool = m_ctxtGPU->memPool(m_smhint);
+            if (!m_memPool->hDev())
+                m_memPool->hDev(device);
+        }
     }
 
     ~MemoryView() {
         if (m_devicePtr) {
             if (m_shared && m_useMemPool && m_size < Bulk::BULK_SIZE) {
                 assert(m_ctxtGPU);
-                m_ctxtGPU->memPool(m_smhint)->deallocate(m_devicePtr);
+                m_memPool->deallocate(m_devicePtr);
                 if (UNLIKELY(is_verbose)) {
                     std::cout << "MemPool deallocation at " << m_devicePtr << std::endl;
                 }
@@ -803,7 +806,7 @@ struct MemoryView : public ispcrt::base::MemoryView {
             if (m_useMemPool && m_size < Bulk::BULK_SIZE) {
                 m_size = round_up_pow2(m_requestedSize);
 
-                m_devicePtr = m_ctxtGPU->memPool(m_smhint)->allocate(m_size);
+                m_devicePtr = m_memPool->allocate(m_size);
                 assert(m_devicePtr);
                 if (UNLIKELY(is_verbose)) {
                     std::cout << "MemPool allocation " << m_size << "(" << m_requestedSize
@@ -831,6 +834,7 @@ struct MemoryView : public ispcrt::base::MemoryView {
     ze_context_handle_t m_context{nullptr};
 
     const GPUContext *m_ctxtGPU{nullptr};
+    ChunkedPool *m_memPool{nullptr};
 };
 
 struct Module : public ispcrt::base::Module {
