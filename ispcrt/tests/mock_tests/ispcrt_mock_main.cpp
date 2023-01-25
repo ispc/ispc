@@ -1028,7 +1028,7 @@ TEST_F(MockTest, C_API_AllocateDeviceMemory) {
     mem_flags.smHint = ISPCRT_SM_HOST_WRITE_DEVICE_READ;
     ISPCRTMemoryView mem = ispcrtNewMemoryViewForContext(context, buffer.data(), buffer.size(), &mem_flags);
     if (mem) ispcrtRelease(mem);
-    if (context) ispcrtRelease(context);
+    ispcrtRelease(context);
     ASSERT_EQ(sm_rt_error, ISPCRT_UNKNOWN_ERROR);
 }
 
