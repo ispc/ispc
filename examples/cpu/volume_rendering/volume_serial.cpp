@@ -37,11 +37,12 @@
 
 // Just enough of a float3 class to do what we need in this file.
 struct float3 {
-    float3() {}
+    float3() { x = y = z = pad = 0.; }
     float3(float xx, float yy, float zz) {
         x = xx;
         y = yy;
         z = zz;
+        pad = 0.;
     }
 
     float3 operator*(float f) const { return float3(x * f, y * f, z * f); }
