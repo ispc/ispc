@@ -1315,6 +1315,7 @@ const Type *ArrayType::SizeUnsizedArrays(const Type *type, Expr *initExpr) {
     if (nextList == NULL)
         return type;
 
+    Assert(at);
     const Type *nextType = at->GetElementType();
     const ArrayType *nextArrayType = CastType<ArrayType>(nextType);
     if (nextArrayType != NULL && nextArrayType->GetElementCount() == 0) {

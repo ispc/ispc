@@ -3501,6 +3501,7 @@ void PrintStmt::emitCode4LZ(FunctionEmitContext *ctx) const {
 static AddressInfo *lEmitPrintArgCode(Expr *expr, FunctionEmitContext *ctx) {
     const Type *type = expr->GetType();
 
+    Assert(type);
     llvm::Type *llvmExprType = type->LLVMType(g->ctx);
     AddressInfo *ptrInfo = ctx->AllocaInst(llvmExprType, "print_arg");
     llvm::Value *val = expr->GetValue(ctx);
