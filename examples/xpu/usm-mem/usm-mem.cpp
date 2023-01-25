@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022, Intel Corporation
+  Copyright (c) 2022-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -115,7 +115,7 @@ static int run_same_mem(const ISPCRTDeviceType device_type, const unsigned int S
         queue.launch(kernel, p, 1);
         queue.sync();
 
-        std::cout << i << " (same) Executed on: " << device_type << '\n' << std::setprecision(6) << std::fixed;
+        std::cout << i << " (same) Executed on: " << device_type << '\n';
 
         // Check and print result
         bool bValid = validate_result(vec, vgold, SIZE);
@@ -134,7 +134,7 @@ int run_many_small(const ISPCRTDeviceType device_type) {
 
     for (int i = 0; i < 1<<6; i++) {
         sma.allocate(5);
-        std::cout << i << " (small) Executed on: " << device_type << '\n' << std::setprecision(6) << std::fixed;
+        std::cout << i << " (small) Executed on: " << device_type << '\n';
     }
     return 0;
 }
