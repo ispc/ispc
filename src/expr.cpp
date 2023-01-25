@@ -4202,7 +4202,6 @@ static std::pair<llvm::Constant *, bool> lGetExprListConstant(const Type *type, 
             return std::pair<llvm::Constant *, bool>(llvm::ConstantVector::get(cv), isNotValidForMultiTargetGlobal);
         }
     }
-    return std::pair<llvm::Constant *, bool>(NULL, false);
 }
 
 std::pair<llvm::Constant *, bool> ExprList::GetStorageConstant(const Type *type) const {
