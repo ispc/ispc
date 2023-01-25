@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2020-2021, Intel Corporation
+  Copyright (c) 2020-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -157,6 +157,8 @@ void usage(const char *p) {
 }
 
 int main(int argc, char *argv[]) {
+    std::ios_base::fmtflags f(std::cout.flags());
+
     constexpr unsigned int SIZE = 16;
 
     // Run on CPU by default
@@ -180,5 +182,6 @@ int main(int argc, char *argv[]) {
     }
 
     int success = run(device_type, SIZE);
+    std::cout.flags(f);
     return success;
 }
