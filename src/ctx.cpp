@@ -1285,9 +1285,11 @@ std::vector<std::string> FunctionEmitContext::GetLabels() {
 void FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck) {
     const Type *returnType = function->GetReturnType();
     if (returnType->IsVoidType()) {
-        if (expr != NULL)
-            Error(expr->pos, "Can't return non-void type \"%s\" from void function.",
-                  expr->GetType()->GetString().c_str());
+        if (expr != NULL) {
+            const Type *exprType = expr->GetType();
+            Assert(exprType);
+            Error(expr->pos, "Can't return non-void type \"%s\" from void function.", exprType->GetString().c_str());
+        }
     } else {
         if (expr == NULL) {
             Error(funcStartPos, "Must provide return value for return "

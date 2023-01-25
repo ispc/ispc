@@ -402,7 +402,9 @@ Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, So
         if (llvm::Intrinsic::isOverloaded(ID)) {
             int nInits = args->exprs.size();
             for (int i = 0; i < nInits; ++i) {
-                exprType.push_back((args->exprs[i])->GetType()->LLVMType(g->ctx));
+                const Type *argType = (args->exprs[i])->GetType();
+                Assert(argType);
+                exprType.push_back(argType->LLVMType(g->ctx));
             }
         }
         llvm::ArrayRef<llvm::Type *> argArr(exprType);

@@ -687,17 +687,19 @@ void ispc::InitSymbol(AddressInfo *ptrInfo, const Type *symType, Expr *initExpr,
 
     const ReferenceType *rt = CastType<ReferenceType>(symType);
     if (rt) {
-        if (!Type::Equal(initExpr->GetType(), rt)) {
+        const Type *initExprType = initExpr->GetType();
+        Assert(initExprType);
+        if (!Type::Equal(initExprType, rt)) {
             Error(initExpr->pos,
                   "Initializer for reference type \"%s\" must have same "
                   "reference type itself. \"%s\" is incompatible.",
-                  rt->GetString().c_str(), initExpr->GetType()->GetString().c_str());
+                  rt->GetString().c_str(), initExprType->GetString().c_str());
             return;
         }
 
         llvm::Value *initializerValue = initExpr->GetValue(ctx);
         if (initializerValue)
-            ctx->StoreInst(initializerValue, ptrInfo, initExpr->GetType());
+            ctx->StoreInst(initializerValue, ptrInfo, initExprType);
         return;
     }
 
@@ -1937,7 +1939,9 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
    see at this point.) */
 static bool lIsDifficultShiftAmount(Expr *expr) {
     // Uniform shifts (of uniform values) are no problem.
-    if (expr->GetType()->IsVaryingType() == false)
+    const Type *exprType = expr->GetType();
+    Assert(exprType);
+    if (exprType->IsVaryingType() == false)
         return false;
 
     ConstExpr *ce = llvm::dyn_cast<ConstExpr>(expr);
@@ -1957,7 +1961,9 @@ static bool lIsDifficultShiftAmount(Expr *expr) {
         // Finally, if the shift amount is given by a uniform value that's
         // been smeared out into a varying, we have the same shift for all
         // lanes and are also in good shape.
-        return (tce->expr->GetType()->IsUniformType() == false);
+        const Type *tceType = tce->expr->GetType();
+        Assert(tceType);
+        return (tceType->IsUniformType() == false);
     }
 
     return true;
@@ -6647,12 +6653,14 @@ bool TypeCastExpr::HasAmbiguousVariability(std::vector<const Expr *> &warn) cons
 }
 
 void TypeCastExpr::PrintAmbiguousVariability() const {
+    const Type *exprType = expr->GetType();
+    Assert(exprType);
     Warning(pos,
             "Typecasting to type \"%s\" (variability not specified) "
             "from \"uniform\" type \"%s\" results in \"uniform\" variability.\n"
             "In the context of function argument it may lead to unexpected behavior. "
             "Casting to \"%s\" is recommended.",
-            (type->GetString()).c_str(), ((expr->GetType())->GetString()).c_str(),
+            (type->GetString()).c_str(), (exprType->GetString()).c_str(),
             (type->GetAsUniformType()->GetString()).c_str());
 }
 
@@ -6776,17 +6784,20 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
     if (fromArrayType != NULL && toPointerType != NULL) {
         // implicit array to pointer to first element
         Expr *arrayAsPtr = lArrayToPointer(expr);
-        if (Type::EqualIgnoringConst(arrayAsPtr->GetType(), toPointerType) == false) {
-            AssertPos(pos,
-                      PointerType::IsVoidPointer(toPointerType) ||
-                          Type::EqualIgnoringConst(arrayAsPtr->GetType()->GetAsVaryingType(), toPointerType) == true);
+        const Type *arrayType = arrayAsPtr->GetType();
+        Assert(arrayType);
+        if (Type::EqualIgnoringConst(arrayType, toPointerType) == false) {
+            AssertPos(pos, PointerType::IsVoidPointer(toPointerType) ||
+                               Type::EqualIgnoringConst(arrayType->GetAsVaryingType(), toPointerType) == true);
             arrayAsPtr = new TypeCastExpr(toPointerType, arrayAsPtr, pos);
             arrayAsPtr = ::TypeCheck(arrayAsPtr);
             AssertPos(pos, arrayAsPtr != NULL);
             arrayAsPtr = ::Optimize(arrayAsPtr);
             AssertPos(pos, arrayAsPtr != NULL);
+            arrayType = arrayAsPtr->GetType();
         }
-        AssertPos(pos, Type::EqualIgnoringConst(arrayAsPtr->GetType(), toPointerType));
+        Assert(arrayType);
+        AssertPos(pos, Type::EqualIgnoringConst(arrayType, toPointerType));
         return arrayAsPtr->GetValue(ctx);
     }
 
@@ -7762,6 +7773,7 @@ Expr *AllocaExpr::TypeCheck() {
         expr = TypeConvertExpr(expr, sizeType->GetAsUniformType(), "Alloca_arg");
     }
     if (expr == NULL) {
+        Assert(argType);
         Error(pos, "\"alloca()\" cannot have an argument of type \"%s\".", argType->GetString().c_str());
         return NULL;
     }
