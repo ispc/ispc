@@ -8,8 +8,6 @@
 
 namespace ispc {
 
-char IntrinsicsOpt::ID = 0;
-
 bool IntrinsicsOpt::optimizeIntrinsics(llvm::BasicBlock &bb) {
     DEBUG_START_BB("IntrinsicsOpt");
 
@@ -190,14 +188,21 @@ bool IntrinsicsOpt::optimizeIntrinsics(llvm::BasicBlock &bb) {
     return modifiedAny;
 }
 
-bool IntrinsicsOpt::runOnFunction(llvm::Function &F) {
+llvm::PreservedAnalyses IntrinsicsOpt::run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM) {
 
-    llvm::TimeTraceScope FuncScope("IntrinsicsOpt::runOnFunction", F.getName());
+    llvm::TimeTraceScope FuncScope("IntrinsicsOpt::run", F.getName());
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= optimizeIntrinsics(BB);
     }
-    return modifiedAny;
+    if (!modifiedAny) {
+        // No changes, all analyses are preserved.
+        return llvm::PreservedAnalyses::all();
+    }
+
+    llvm::PreservedAnalyses PA;
+    PA.preserveSet<llvm::CFGAnalyses>();
+    return PA;
 }
 
 bool IntrinsicsOpt::matchesMaskInstruction(llvm::Function *function) {
@@ -217,7 +222,5 @@ IntrinsicsOpt::BlendInstruction *IntrinsicsOpt::matchingBlendInstruction(llvm::F
     }
     return nullptr;
 }
-
-llvm::Pass *CreateIntrinsicsOptPass() { return new IntrinsicsOpt; }
 
 } // namespace ispc

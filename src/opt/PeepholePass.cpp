@@ -8,8 +8,6 @@
 
 namespace ispc {
 
-char PeepholePass::ID = 0;
-
 using namespace llvm::PatternMatch;
 
 template <typename Op_t, unsigned Opcode> struct CastClassTypes_match {
@@ -283,16 +281,21 @@ bool PeepholePass::matchAndReplace(llvm::BasicBlock &bb) {
     return modifiedAny;
 }
 
-bool PeepholePass::runOnFunction(llvm::Function &F) {
+llvm::PreservedAnalyses PeepholePass::run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM) {
 
-    llvm::TimeTraceScope FuncScope("PeepholePass::runOnFunction", F.getName());
+    llvm::TimeTraceScope FuncScope("PeepholePass::run", F.getName());
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= matchAndReplace(BB);
     }
-    return modifiedAny;
-}
+    if (!modifiedAny) {
+        // No changes, all analyses are preserved.
+        return llvm::PreservedAnalyses::all();
+    }
 
-llvm::Pass *CreatePeepholePass() { return new PeepholePass; }
+    llvm::PreservedAnalyses PA;
+    PA.preserveSet<llvm::CFGAnalyses>();
+    return PA;
+}
 
 } // namespace ispc

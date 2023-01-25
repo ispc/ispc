@@ -14,19 +14,16 @@ namespace ispc {
 /** This pass replaces LLVM intrinsics unsupported on Xe
  */
 
-class ReplaceLLVMIntrinsics : public llvm::FunctionPass {
+class ReplaceLLVMIntrinsics : public llvm::PassInfoMixin<ReplaceLLVMIntrinsics> {
   public:
-    static char ID;
-    explicit ReplaceLLVMIntrinsics() : FunctionPass(ID) {}
+    explicit ReplaceLLVMIntrinsics() {}
 
-    llvm::StringRef getPassName() const override { return "LLVM intrinsics replacement"; }
-    bool runOnFunction(llvm::Function &F) override;
+    static llvm::StringRef getPassName() { return "LLVM intrinsics replacement"; }
+    llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:
     bool replaceUnspportedIntrinsics(llvm::BasicBlock &BB);
 };
-
-llvm::Pass *CreateReplaceLLVMIntrinsics();
 
 } // namespace ispc
 

@@ -10,8 +10,6 @@
 
 namespace ispc {
 
-char ReplaceLLVMIntrinsics::ID = 0;
-
 bool ReplaceLLVMIntrinsics::replaceUnspportedIntrinsics(llvm::BasicBlock &bb) {
     DEBUG_START_BB("LLVM intrinsics replacement");
     std::vector<llvm::AllocaInst *> Allocas;
@@ -94,17 +92,21 @@ restart:
     return modifiedAny;
 }
 
-bool ReplaceLLVMIntrinsics::runOnFunction(llvm::Function &F) {
-
-    llvm::TimeTraceScope FuncScope("ReplaceLLVMIntrinsics::runOnFunction", F.getName());
+llvm::PreservedAnalyses ReplaceLLVMIntrinsics::run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM) {
+    llvm::TimeTraceScope FuncScope("ReplaceLLVMIntrinsics::run", F.getName());
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= replaceUnspportedIntrinsics(BB);
     }
-    return modifiedAny;
-}
+    if (!modifiedAny) {
+        // No changes, all analyses are preserved.
+        return llvm::PreservedAnalyses::all();
+    }
 
-llvm::Pass *CreateReplaceLLVMIntrinsics() { return new ReplaceLLVMIntrinsics(); }
+    llvm::PreservedAnalyses PA;
+    PA.preserveSet<llvm::CFGAnalyses>();
+    return PA;
+}
 
 } // namespace ispc
 

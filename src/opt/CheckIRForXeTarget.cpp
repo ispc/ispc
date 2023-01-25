@@ -10,8 +10,6 @@
 
 namespace ispc {
 
-char CheckIRForXeTarget::ID = 0;
-
 bool CheckIRForXeTarget::checkAndFixIRForXe(llvm::BasicBlock &bb) {
     DEBUG_START_BB("CheckIRForXeTarget");
     bool modifiedAny = false;
@@ -69,17 +67,14 @@ bool CheckIRForXeTarget::checkAndFixIRForXe(llvm::BasicBlock &bb) {
     return modifiedAny;
 }
 
-bool CheckIRForXeTarget::runOnFunction(llvm::Function &F) {
-    llvm::TimeTraceScope FuncScope("CheckIRForXeTarget::runOnFunction", F.getName());
+llvm::PreservedAnalyses CheckIRForXeTarget::run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM) {
+    llvm::TimeTraceScope FuncScope("CheckIRForXeTarget::run", F.getName());
 
-    bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
-        modifiedAny |= checkAndFixIRForXe(BB);
+        checkAndFixIRForXe(BB);
     }
-    return modifiedAny;
+    return llvm::PreservedAnalyses::all();
 }
-
-llvm::Pass *CreateCheckIRForXeTarget() { return new CheckIRForXeTarget(); }
 
 } // namespace ispc
 

@@ -16,19 +16,16 @@ namespace ispc {
 /** This pass mangles SPIR-V OpenCL builtins used in Xe target file
  */
 
-class MangleOpenCLBuiltins : public llvm::FunctionPass {
+class MangleOpenCLBuiltins : public llvm::PassInfoMixin<MangleOpenCLBuiltins> {
   public:
-    static char ID;
-    explicit MangleOpenCLBuiltins() : FunctionPass(ID) {}
+    explicit MangleOpenCLBuiltins() {}
 
-    llvm::StringRef getPassName() const override { return "Mangle OpenCL builtins"; }
-    bool runOnFunction(llvm::Function &F) override;
+    static llvm::StringRef getPassName() { return "Mangle OpenCL builtins"; }
+    llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:
     bool mangleOpenCLBuiltins(llvm::BasicBlock &BB);
 };
-
-llvm::Pass *CreateMangleOpenCLBuiltins();
 
 } // namespace ispc
 

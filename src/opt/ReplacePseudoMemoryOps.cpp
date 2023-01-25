@@ -8,8 +8,6 @@
 
 namespace ispc {
 
-char ReplacePseudoMemoryOpsPass::ID = 0;
-
 /** This routine attempts to determine if the given pointer in lvalue is
     pointing to stack-allocated memory.  It's conservative in that it
     should never return true for non-stack allocated memory, but may return
@@ -297,16 +295,20 @@ bool ReplacePseudoMemoryOpsPass::replacePseudoMemoryOps(llvm::BasicBlock &bb) {
     return modifiedAny;
 }
 
-bool ReplacePseudoMemoryOpsPass::runOnFunction(llvm::Function &F) {
-
-    llvm::TimeTraceScope FuncScope("ReplacePseudoMemoryOpsPass::runOnFunction", F.getName());
+llvm::PreservedAnalyses ReplacePseudoMemoryOpsPass::run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM) {
+    llvm::TimeTraceScope FuncScope("ReplacePseudoMemoryOpsPass::run", F.getName());
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= replacePseudoMemoryOps(BB);
     }
-    return modifiedAny;
-}
+    if (!modifiedAny) {
+        // No changes, all analyses are preserved.
+        return llvm::PreservedAnalyses::all();
+    }
 
-llvm::Pass *CreateReplacePseudoMemoryOpsPass() { return new ReplacePseudoMemoryOpsPass; }
+    llvm::PreservedAnalyses PA;
+    PA.preserveSet<llvm::CFGAnalyses>();
+    return PA;
+}
 
 } // namespace ispc

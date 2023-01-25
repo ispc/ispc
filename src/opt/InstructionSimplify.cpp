@@ -8,8 +8,6 @@
 
 namespace ispc {
 
-char InstructionSimplifyPass::ID = 0;
-
 static llvm::Value *lSimplifyBoolVec(llvm::Value *value) {
     llvm::TruncInst *trunc = llvm::dyn_cast<llvm::TruncInst>(value);
     if (trunc != nullptr) {
@@ -126,16 +124,21 @@ bool InstructionSimplifyPass::simplifyInstructions(llvm::BasicBlock &bb) {
     return modifiedAny;
 }
 
-bool InstructionSimplifyPass::runOnFunction(llvm::Function &F) {
-
-    llvm::TimeTraceScope FuncScope("InstructionSimplifyPass::runOnFunction", F.getName());
+llvm::PreservedAnalyses InstructionSimplifyPass::run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM) {
+    llvm::TimeTraceScope FuncScope("InstructionSimplifyPass::run", F.getName());
     bool modifiedAny = false;
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= simplifyInstructions(BB);
     }
-    return modifiedAny;
-}
 
-llvm::Pass *CreateInstructionSimplifyPass() { return new InstructionSimplifyPass; }
+    if (!modifiedAny) {
+        // No changes, all analyses are preserved.
+        return llvm::PreservedAnalyses::all();
+    }
+
+    llvm::PreservedAnalyses PA;
+    PA.preserveSet<llvm::CFGAnalyses>();
+    return PA;
+}
 
 } // namespace ispc
