@@ -51,6 +51,10 @@ extern void volume_serial(float density[], int nVoxels[3], const float raster2ca
 /* Write a PPM image file with the image */
 static void writePPM(float *buf, int width, int height, const char *fn) {
     FILE *fp = fopen(fn, "wb");
+    if (!fp) {
+        printf("Couldn't open a file '%s'\n", fn);
+        exit(1);
+    }
     fprintf(fp, "P6\n");
     fprintf(fp, "%d %d\n", width, height);
     fprintf(fp, "255\n");

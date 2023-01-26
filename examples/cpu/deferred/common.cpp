@@ -179,6 +179,10 @@ void WriteFrame(const char *filename, const InputData *input, const Framebuffer 
 
     // Write out simple PPM file
     FILE *out = fopen(filename, "wb");
+    if (!out) {
+        printf("Couldn't open a file '%s'\n", filename);
+        exit(1);
+    }
     fprintf(out, "P6 %d %d 255\n", input->header.framebufferWidth, input->header.framebufferHeight);
     fwrite(framebufferAOS, imageBytes, 1, out);
     fclose(out);
