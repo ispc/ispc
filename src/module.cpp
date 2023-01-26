@@ -1136,6 +1136,7 @@ bool Module::writeBitcode(llvm::Module *module, const char *outFileName, OutputT
     // go.  If we open it, it'll be closed by the llvm::raw_fd_ostream
     // destructor.
     int fd;
+    Assert(outFileName);
     if (!strcmp(outFileName, "-"))
         fd = 1; // stdout
     else {
