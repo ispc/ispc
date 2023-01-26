@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -103,7 +103,6 @@ int main(int argc, char **argv) {
     if (argc < 3) {
         printf("%s\n", argv[0]);
         printf("Usage: ao [width] [height] [ispc iterations] [tasks iterations] [serial iterations]\n");
-        getchar();
         exit(-1);
     } else {
         if (argc == 6) {
