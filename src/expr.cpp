@@ -2729,7 +2729,7 @@ Expr *BinaryExpr::TypeCheck() {
             pt1 = CastType<PointerType>(type1);
         } else if (pt1 != NULL && lIsAllIntZeros(arg0)) {
             arg0 = new NullPointerExpr(pos);
-            type0 = arg1->GetType();
+            type0 = arg0->GetType();
             pt0 = CastType<PointerType>(type0);
         }
 
