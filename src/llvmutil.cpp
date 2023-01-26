@@ -606,7 +606,9 @@ static bool lIsFirstElementConstVector(llvm::Value *v) {
     // TODO: after fixing FIXME above isXeTarget() needs to be removed.
     if (g->target->isXeTarget()) {
         if (cv == NULL && llvm::isa<llvm::Instruction>(v)) {
-            cv = llvm::dyn_cast<llvm::ConstantVector>(llvm::dyn_cast<llvm::Instruction>(v)->getOperand(1));
+            llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(v);
+            Assert(inst);
+            cv = llvm::dyn_cast<llvm::ConstantVector>(inst->getOperand(1));
         }
     }
     if (cv != NULL) {
@@ -742,6 +744,7 @@ llvm::Value *LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth, bool com
             }
             if (ie != NULL && llvm::isa<llvm::UndefValue>(ie->getOperand(0))) {
                 llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(ie->getOperand(2));
+                Assert(ci);
                 if (ci->isZero()) {
                     return ie->getOperand(1);
                 }
@@ -1518,6 +1521,7 @@ static llvm::Value *lExtractFirstVectorElement(llvm::Value *v, std::map<llvm::PH
     // "lExtractFirstVectorElement" function.
     if (llvm::isa<llvm::ShuffleVectorInst>(v)) {
         llvm::ShuffleVectorInst *shuf = llvm::dyn_cast<llvm::ShuffleVectorInst>(v);
+        Assert(shuf);
         llvm::Value *indices = shuf->getShuffleMaskForBitcode();
         if (llvm::isa<llvm::ConstantAggregateZero>(indices)) {
             return lExtractFirstVectorElement(shuf->getOperand(0), phiMap);

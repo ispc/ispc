@@ -1443,7 +1443,9 @@ static void lEmitStructDecl(const StructType *st, std::vector<const StructType *
     llvm::Type *stype = st->LLVMType(g->ctx);
     const llvm::DataLayout *DL = g->target->getDataLayout();
 
-    if (!(pack = llvm::dyn_cast<llvm::StructType>(stype)->isPacked())) {
+    llvm::StructType *stypeStructType = llvm::dyn_cast<llvm::StructType>(stype);
+    Assert(stypeStructType);
+    if (!(pack = stypeStructType->isPacked())) {
         for (int i = 0; !needsAlign && (i < st->GetElementCount()); ++i) {
             const Type *ftype = st->GetElementType(i)->GetAsNonConstType();
             needsAlign |= ftype->IsVaryingType() && (CastType<StructType>(ftype) == NULL);

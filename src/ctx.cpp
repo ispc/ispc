@@ -2664,6 +2664,7 @@ void FunctionEmitContext::addGSMetadata(llvm::Value *v, SourcePos pos) {
 llvm::Value *FunctionEmitContext::AddrSpaceCastInst(llvm::Value *val, AddressSpace as, bool atEntryBlock) {
     Assert(llvm::isa<llvm::PointerType>(val->getType()));
     llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(val->getType());
+    Assert(pt);
     if (pt->getAddressSpace() == (unsigned)as) {
         return val;
     }
