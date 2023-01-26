@@ -2546,7 +2546,7 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
 
             // It is a kludge. When we dereference varying pointer to uniform struct
             // with "bound uniform" member, we should return first unmasked member.
-            int need_one_elem = CastType<StructType>(ptrType->GetBaseType()) &&
+            int need_one_elem = CastType<StructType>(ptrType->GetBaseType()) && returnCollectionType &&
                                 returnCollectionType->GetElementType(i)->IsUniformType();
             // This in turn will be another gather
             llvm::Value *eltValues = LoadInst(eltPtr, mask, eltPtrType, name, need_one_elem);
