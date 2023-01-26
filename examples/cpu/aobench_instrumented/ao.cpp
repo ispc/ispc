@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -103,7 +103,6 @@ int main(int argc, char **argv) {
     if (argc != 4) {
         printf("%s\n", argv[0]);
         printf("Usage: ao [num test iterations] [width] [height]\n");
-        getchar();
         exit(-1);
     } else {
         test_iterations = atoi(argv[1]);
