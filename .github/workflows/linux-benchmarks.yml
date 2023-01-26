@@ -11,7 +11,7 @@ on:
 
 env:
   LLVM_VERSION: "13.0"
-  LLVM_REPO: https://github.com/ispc/llvm-project
+  LLVM_REPO: https://github.com/ispc/ispc.dependencies
   LLVM_TAR: llvm-13.0.1-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
 
 jobs:

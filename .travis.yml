@@ -52,7 +52,7 @@ jobs:
       env:
         - LLVM_VERSION=15.0 OS=Ubuntu18.04aarch64
         - LLVM_TAR=llvm-15.0.7-ubuntu18.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
-        - LLVM_REPO=https://github.com/ispc/llvm-project
+        - LLVM_REPO=https://github.com/ispc/ispc.dependencies
         - ISPC_HOME=$TRAVIS_BUILD_DIR
       before_install:
         - cat /proc/cpuinfo
