@@ -940,12 +940,20 @@ Stmt *DoStmt::TypeCheck() {
     return this;
 }
 
+static bool lLoopStmtUniformTest(Expr *expr, Stmt *stmts) {
+    if (expr) {
+        const Type *type = expr->GetType();
+        Assert(type);
+        return type->IsUniformType();
+    } else {
+        return (!g->opt.disableUniformControlFlow && !lHasVaryingBreakOrContinue(stmts));
+    }
+}
+
 void DoStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
     if (loopAttribute.first != Globals::pragmaUnrollType::none)
         Error(pos, "Multiple '#pragma unroll/nounroll' directives used.");
-    bool uniformTest = testExpr ? testExpr->GetType()->IsUniformType()
-                                : (!g->opt.disableUniformControlFlow && !lHasVaryingBreakOrContinue(bodyStmts));
-    if (uniformTest) {
+    if (lLoopStmtUniformTest(testExpr, bodyStmts)) {
         loopAttribute = lAttr;
     } else {
         Warning(pos, "'#pragma unroll/nounroll' ignored - not supported for varying do loop.");
@@ -953,10 +961,7 @@ void DoStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) {
 }
 
 int DoStmt::EstimateCost() const {
-    bool uniformTest = testExpr ? testExpr->GetType()->IsUniformType()
-                                : (!g->opt.disableUniformControlFlow && !lHasVaryingBreakOrContinue(bodyStmts));
-
-    return uniformTest ? COST_UNIFORM_LOOP : COST_VARYING_LOOP;
+    return lLoopStmtUniformTest(testExpr, bodyStmts) ? COST_UNIFORM_LOOP : COST_VARYING_LOOP;
 }
 
 void DoStmt::Print(Indent &indent) const {
@@ -1145,10 +1150,7 @@ void ForStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) 
     if (loopAttribute.first != Globals::pragmaUnrollType::none)
         Error(pos, "Multiple '#pragma unroll/nounroll' directives used.");
 
-    bool uniformTest = test ? test->GetType()->IsUniformType()
-                            : (!g->opt.disableUniformControlFlow && !lHasVaryingBreakOrContinue(stmts));
-
-    if (!uniformTest) {
+    if (!lLoopStmtUniformTest(test, stmts)) {
         PerformanceWarning(
             pos,
             "'#pragma unroll/nounroll' for varying for loop is slow. Try '#pragma unroll/nounroll' for foreach loop.");
@@ -1157,12 +1159,7 @@ void ForStmt::SetLoopAttribute(std::pair<Globals::pragmaUnrollType, int> lAttr) 
     loopAttribute = lAttr;
 }
 
-int ForStmt::EstimateCost() const {
-    bool uniformTest = test ? test->GetType()->IsUniformType()
-                            : (!g->opt.disableUniformControlFlow && !lHasVaryingBreakOrContinue(stmts));
-
-    return uniformTest ? COST_UNIFORM_LOOP : COST_VARYING_LOOP;
-}
+int ForStmt::EstimateCost() const { return lLoopStmtUniformTest(test, stmts) ? COST_UNIFORM_LOOP : COST_VARYING_LOOP; }
 
 void ForStmt::Print(Indent &indent) const {
     indent.PrintLn("ForStmt", pos);
