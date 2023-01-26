@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021, Intel Corporation
+ * Copyright (c) 2019-2023, Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -63,7 +63,13 @@ int main(int argc, char *argv[]) {
 
     SGEMMApp::RunResult result;
     // validate only if number of iterations is set to 1
-    app.run(result, m, niterations, gx, gy, niterations == 1);
+    try {
+        app.run(result, m, niterations, gx, gy, niterations == 1);
+    }
+    catch (const std::exception &exc) {
+        std::cerr << exc.what();
+        return -1;
+    }
 
     app.cleanup();
 
