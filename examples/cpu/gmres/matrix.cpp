@@ -134,7 +134,10 @@ CRSMatrix *CRSMatrix::matrix_from_mtf(char *path) {
     entries.resize(nz);
 
     for (int i = 0; i < nz; i++) {
-        fscanf(f, "%d %d %lg\n", &entries[i].row, &entries[i].col, &entries[i].val);
+        if (3 != fscanf(f, "%d %d %lg\n", &entries[i].row, &entries[i].col, &entries[i].val)) {
+            printf("Couldn't read input correctly\n");
+            exit(-1);
+        }
         // Adjust from 1-based to 0-based
         entries[i].row--;
         entries[i].col--;
@@ -185,7 +188,10 @@ Vector *Vector::vector_from_mtf(char *path) {
     if (mm_is_dense(matcode)) {
         double val;
         for (int i = 0; i < m; i++) {
-            fscanf(f, "%lg\n", &val);
+            if (1 != fscanf(f, "%lg\n", &val)) {
+                printf("Couldn't read input correctly\n");
+                exit(-1);
+            }
             (*x)[i] = val;
         }
     } else {
@@ -194,7 +200,10 @@ Vector *Vector::vector_from_mtf(char *path) {
         int row;
         int col;
         for (int i = 0; i < nz; i++) {
-            fscanf(f, "%d %d %lg\n", &row, &col, &val);
+            if (3 != fscanf(f, "%d %d %lg\n", &row, &col, &val)) {
+                printf("Couldn't read input correctly\n");
+                exit(-1);
+            }
             (*x)[row - 1] = val;
         }
     }
