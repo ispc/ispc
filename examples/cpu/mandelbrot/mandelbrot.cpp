@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -52,6 +52,10 @@ extern void mandelbrot_serial(float x0, float y0, float x1, float y1, int width,
 /* Write a PPM image file with the image of the Mandelbrot set */
 static void writePPM(int *buf, int width, int height, const char *fn) {
     FILE *fp = fopen(fn, "wb");
+    if (!fp) {
+        printf("Couldn't open a file '%s'\n", fn);
+        exit(-1);
+    }
     fprintf(fp, "P6\n");
     fprintf(fp, "%d %d\n", width, height);
     fprintf(fp, "255\n");
