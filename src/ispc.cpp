@@ -328,7 +328,9 @@ typedef enum {
     CPU_ICX,
     CPU_TGL,
     CPU_ADL,
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
     CPU_SPR,
+#endif
 
     // Zen 1-2-3
     CPU_ZNVER1,
@@ -395,7 +397,9 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {CPU_ICX, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
     {CPU_TGL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
     {CPU_ADL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
     {CPU_SPR, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
+#endif
     {CPU_ZNVER1, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
     {CPU_ZNVER2, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
     {CPU_ZNVER3, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
@@ -492,8 +496,12 @@ class AllCPUs {
         names[CPU_TGL].push_back("tgl");
         names[CPU_ADL].push_back("alderlake");
         names[CPU_ADL].push_back("adl");
+// Note for SPR support: it's suported starting LLVM 12, but the support is complete and correct
+// only starting LLVM 15.0.3. LLVM 14 is ok if it's properly patched.
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
         names[CPU_SPR].push_back("sapphirerapids");
         names[CPU_SPR].push_back("spr");
+#endif
 
         names[CPU_ZNVER1].push_back("znver1");
         names[CPU_ZNVER2].push_back("znver2");
@@ -538,9 +546,11 @@ class AllCPUs {
 
         compat[CPU_SKX] = Set(CPU_SKX, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                               CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_None);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
         compat[CPU_SPR] = Set(CPU_SPR, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                               CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX, CPU_ICL,
                               CPU_ICX, CPU_TGL, CPU_ADL, CPU_None);
+#endif
         compat[CPU_ADL] = Set(CPU_ADL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                               CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_None);
         compat[CPU_TGL] =
@@ -721,7 +731,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
             m_ispc_target = ISPCTarget::avx512knl_x16;
             break;
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
         case CPU_SPR:
+#endif
         case CPU_TGL:
         case CPU_ICX:
         case CPU_ICL:
@@ -829,6 +841,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         return;
     }
 
+    // FP16 support for Xe and Arm. For x86 set is individually for appropriate targets.
     if (ISPCTargetIsGen(m_ispc_target) || ISPCTargetIsNeon(m_ispc_target)) {
         m_hasFp16Support = true;
     }
@@ -1156,6 +1169,117 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasVecPrefetch = false;
         CPUfromISA = CPU_SKX;
         break;
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
+    case ISPCTarget::avx512spr_x4:
+        this->m_isa = Target::SPR_AVX512;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 64;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 4;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasHalf = true;
+        this->m_hasRand = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasTranscendentals = false;
+        this->m_hasTrigonometry = false;
+        this->m_hasRsqrtd = this->m_hasRcpd = true;
+        this->m_hasVecPrefetch = false;
+        this->m_hasFp16Support = true;
+        CPUfromISA = CPU_SPR;
+        this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
+        this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
+        break;
+    case ISPCTarget::avx512spr_x8:
+        this->m_isa = Target::SPR_AVX512;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 64;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 8;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasHalf = true;
+        this->m_hasRand = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasTranscendentals = false;
+        this->m_hasTrigonometry = false;
+        this->m_hasRsqrtd = this->m_hasRcpd = true;
+        this->m_hasVecPrefetch = false;
+        this->m_hasFp16Support = true;
+        CPUfromISA = CPU_SPR;
+        this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
+        this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
+        break;
+    case ISPCTarget::avx512spr_x16:
+        this->m_isa = Target::SPR_AVX512;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 64;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 16;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasHalf = true;
+        this->m_hasRand = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasTranscendentals = false;
+        this->m_hasTrigonometry = false;
+        this->m_hasRsqrtd = this->m_hasRcpd = true;
+        this->m_hasVecPrefetch = false;
+        this->m_hasFp16Support = true;
+        CPUfromISA = CPU_SPR;
+        if (g->opt.disableZMM) {
+            this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
+            this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
+        } else {
+            this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "512"));
+            this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "512"));
+        }
+        break;
+    case ISPCTarget::avx512spr_x64:
+        this->m_isa = Target::SPR_AVX512;
+        this->m_nativeVectorWidth = 64;
+        this->m_nativeVectorAlignment = 64;
+        this->m_dataTypeWidth = 8;
+        this->m_vectorWidth = 64;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasHalf = true;
+        this->m_hasRand = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasTranscendentals = false;
+        this->m_hasTrigonometry = false;
+        this->m_hasRsqrtd = this->m_hasRcpd = false;
+        this->m_hasVecPrefetch = false;
+        this->m_hasFp16Support = true;
+        CPUfromISA = CPU_SPR;
+        break;
+    case ISPCTarget::avx512spr_x32:
+        this->m_isa = Target::SPR_AVX512;
+        this->m_nativeVectorWidth = 64;
+        this->m_nativeVectorAlignment = 64;
+        this->m_dataTypeWidth = 16;
+        this->m_vectorWidth = 32;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasHalf = true;
+        this->m_hasRand = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasTranscendentals = false;
+        this->m_hasTrigonometry = false;
+        this->m_hasRsqrtd = this->m_hasRcpd = false;
+        this->m_hasVecPrefetch = false;
+        this->m_hasFp16Support = true;
+        CPUfromISA = CPU_SPR;
+        break;
+#else
+    case ISPCTarget::avx512spr_x4:
+    case ISPCTarget::avx512spr_x8:
+    case ISPCTarget::avx512spr_x16:
+    case ISPCTarget::avx512spr_x32:
+    case ISPCTarget::avx512spr_x64:
+        unsupported_target = true;
+        break;
+#endif
 #ifdef ISPC_ARM_ENABLED
     case ISPCTarget::neon_i8x16:
         this->m_isa = Target::NEON;
@@ -1400,6 +1524,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         break;
     case Target::KNL_AVX512:
     case Target::SKX_AVX512:
+    case Target::SPR_AVX512:
         this->setWarning(PerfWarningType::DIVModInt);
         break;
     default:
@@ -1808,6 +1933,8 @@ const char *Target::ISAToString(ISA isa) {
         return "avx512knl";
     case Target::SKX_AVX512:
         return "avx512skx";
+    case Target::SPR_AVX512:
+        return "avx512spr";
 #ifdef ISPC_XE_ENABLED
     case Target::GEN9:
         return "gen9";
@@ -1861,6 +1988,8 @@ const char *Target::ISAToTargetString(ISA isa) {
         return "avx512knl-x16";
     case Target::SKX_AVX512:
         return "avx512skx-x16";
+    case Target::SPR_AVX512:
+        return "avx512spr-x16";
     default:
         FATAL("Unhandled target in ISAToTargetString()");
     }

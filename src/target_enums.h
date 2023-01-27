@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019-2021, Intel Corporation
+  Copyright (c) 2019-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -81,6 +81,11 @@ enum class ISPCTarget {
     avx512skx_x16,
     avx512skx_x32,
     avx512skx_x64,
+    avx512spr_x4,
+    avx512spr_x8,
+    avx512spr_x16,
+    avx512spr_x32,
+    avx512spr_x64,
     neon_i8x16,
     neon_i16x8,
     neon_i32x4,
