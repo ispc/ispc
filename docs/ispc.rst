@@ -782,7 +782,8 @@ Target       Description
 avx, avx1    AVX (2010-2011 era Intel CPUs)
 avx2         AVX 2 target (2013- Intel "Haswell" CPUs)
 avx512knl    AVX 512 target (Xeon Phi chips codename Knights Landing)
-avx512skx    AVX 512 target (future Xeon CPUs)
+avx512skx    AVX 512 target (Skylake Xeon CPUs)
+avx512spr    AVX 512 target (Sapphire Rapids Xeon CPUs, 4th generation Xeon Scalable)
 neon         ARM NEON
 sse2         SSE2 (early 2000s era x86 CPUs)
 sse4         SSE4 (generally 2008-2010 Intel CPUs)
@@ -878,7 +879,7 @@ preprocessor runs:
   * - ISPC
     - 1
     - Enables detecting that the ``ispc`` compiler is processing the file
-  * - ISPC_TARGET_{NEON, SSE2, SSE4, AVX, AVX2, AVX512KNL, AVX512SKX}
+  * - ISPC_TARGET_{NEON, SSE2, SSE4, AVX, AVX2, AVX512KNL, AVX512SKX, AVX512SPR}
     - 1
     - One of these will be set, depending on the compilation target
   * - ISPC_POINTER_SIZE
