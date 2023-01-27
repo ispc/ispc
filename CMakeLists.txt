@@ -279,6 +279,10 @@ if (X86_ENABLED)
         avx512knl-x16
         avx512skx-x4 avx512skx-x8 avx512skx-x16
         avx512skx-x32 avx512skx-x64)
+    if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "14.0.0")
+        list(APPEND ISPC_TARGETS
+            avx512spr-x4 avx512spr-x8 avx512spr-x16 avx512spr-x32 avx512spr-x64)
+    endif()
 endif()
 if (ARM_ENABLED)
     list(APPEND ISPC_TARGETS neon-i8x16 neon-i16x8 neon-i32x4 neon-i32x8)
