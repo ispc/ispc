@@ -1,4 +1,4 @@
-;;  Copyright (c) 2011-2019, Intel Corporation
+;;  Copyright (c) 2011-2023, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -93,45 +93,83 @@
 ;;     int info2[4];
 ;;     __cpuid_count(info2, 7, 0);
 ;; 
+;;     // Call cpuid with eax=7, ecx=1
+;;     int info3[4];
+;;     __cpuid_count(info3, 7, 1);
+;; 
+;;     _Bool sse2 =                (info[3] & (1 << 26))  != 0;
+;;     _Bool sse4 =                (info[2] & (1 << 19))  != 0;
+;;     _Bool avx_f16c =            (info[2] & (1 << 29))  != 0;
+;;     _Bool avx_rdrand =          (info[2] & (1 << 30))  != 0;
+;;     _Bool osxsave =             (info[2] & (1 << 27))  != 0;
+;;     _Bool avx =                 (info[2] & (1 << 28))  != 0;
+;;     _Bool avx2 =                (info2[1] & (1 << 5))  != 0;
+;;     _Bool avx512_f =            (info2[1] & (1 << 16)) != 0;
+;;     _Bool avx512_dq =           (info2[1] & (1 << 17)) != 0;
+;;     _Bool avx512_pf =           (info2[1] & (1 << 26)) != 0;
+;;     _Bool avx512_er =           (info2[1] & (1 << 27)) != 0;
+;;     _Bool avx512_cd =           (info2[1] & (1 << 28)) != 0;
+;;     _Bool avx512_bw =           (info2[1] & (1 << 30)) != 0;
+;;     _Bool avx512_vl =           (info2[1] & (1 << 31)) != 0;
+;;     _Bool avx512_vbmi2 =        (info2[2] & (1 << 6))  != 0;
+;;     _Bool avx512_gfni =         (info2[2] & (1 << 8))  != 0;
+;;     _Bool avx512_vaes =         (info2[2] & (1 << 9))  != 0;
+;;     _Bool avx512_vpclmulqdq =   (info2[2] & (1 << 10)) != 0;
+;;     _Bool avx512_vnni =         (info2[2] & (1 << 11)) != 0;
+;;     _Bool avx512_bitalg =       (info2[2] & (1 << 12)) != 0;
+;;     _Bool avx512_vpopcntdq =    (info2[2] & (1 << 14)) != 0;
+;;     _Bool avx_vnni =            (info3[0] & (1 << 4))  != 0;
+;;     _Bool avx512_bf16 =         (info3[0] & (1 << 5))  != 0;
+;;     _Bool avx512_vp2intersect = (info2[3] & (1 << 8))  != 0;
+;;     _Bool avx512_amx_bf16 =     (info2[3] & (1 << 22)) != 0;
+;;     _Bool avx512_amx_tile =     (info2[3] & (1 << 24)) != 0;
+;;     _Bool avx512_amx_int8 =     (info2[3] & (1 << 25)) != 0;
+;;     _Bool avx512_fp16 =         (info2[3] & (1 << 23)) != 0;
+;; 
 ;;     // NOTE: the values returned below must be the same as the
 ;;     // corresponding enumerant values in Target::ISA.
-;;     if ((info[2] & (1 << 27)) != 0 &&  // OSXSAVE
-;;         (info2[1] & (1 <<  5)) != 0 && // AVX2
-;;         (info2[1] & (1 << 16)) != 0 && // AVX512 F
-;;         __os_has_avx512_support()) {
+;;     if (osxsave && avx2 && avx512_f && __os_has_avx512_support()) {
 ;;         // We need to verify that AVX2 is also available,
 ;;         // as well as AVX512, because our targets are supposed
 ;;         // to use both.
 ;; 
-;;         if ((info2[1] & (1 << 17)) != 0 && // AVX512 DQ
-;;             (info2[1] & (1 << 28)) != 0 && // AVX512 CDI
-;;             (info2[1] & (1 << 30)) != 0 && // AVX512 BW
-;;             (info2[1] & (1 << 31)) != 0) { // AVX512 VL
+;;         // Knights Landing:          KNL = F + PF + ER + CD
+;;         // Skylake server:           SKX = F + DQ + CD + BW + VL
+;;         // Cascade Lake server:      CLX = SKX + VNNI
+;;         // Cooper Lake server:       CPX = CLX + BF16
+;;         // Ice Lake client & server: ICL = CLX + VBMI2 + GFNI + VAES + VPCLMULQDQ + BITALG + VPOPCNTDQ
+;;         // Tiger Lake:               TGL = ICL + VP2INTERSECT
+;;         // Sapphire Rapids:          SPR = ICL + BF16 + AMX_BF16 + AMX_TILE + AMX_INT8 + AVX_VNNI + FP16
+;;         _Bool knl = avx512_pf && avx512_er && avx512_cd;
+;;         _Bool skx = avx512_dq && avx512_cd && avx512_bw && avx512_vl;
+;;         _Bool clx = skx && avx512_vnni;
+;;         _Bool cpx = clx && avx512_bf16;
+;;         _Bool icl =
+;;             clx && avx512_vbmi2 && avx512_gfni && avx512_vaes && avx512_vpclmulqdq && avx512_bitalg && avx512_vpopcntdq;
+;;         _Bool tgl = icl && avx512_vp2intersect;
+;;         _Bool spr =
+;;             icl && avx512_bf16 && avx512_amx_bf16 && avx512_amx_tile && avx512_amx_int8 && avx_vnni && avx512_fp16;
+;;         if (spr) {
+;;             return 6; // SPR
+;;         } else if (skx) {
 ;;             return 5; // SKX
-;;         }
-;;         else if ((info2[1] & (1 << 26)) != 0 && // AVX512 PF
-;;                  (info2[1] & (1 << 27)) != 0 && // AVX512 ER
-;;                  (info2[1] & (1 << 28)) != 0) { // AVX512 CDI
-;;             return 4; // KNL_AVX512
+;;         } else if (knl) {
+;;             return 4; // KNL
 ;;         }
 ;;         // If it's unknown AVX512 target, fall through and use AVX2
 ;;         // or whatever is available in the machine.
 ;;     }
 ;; 
-;;     if ((info[2] & (1 << 27)) != 0 && // OSXSAVE
-;;         (info[2] & (1 << 28)) != 0 &&
-;;         __os_has_avx_support()) {
-;;        if ((info[2] & (1 << 29)) != 0 &&  // F16C
-;;            (info[2] & (1 << 30)) != 0 &&  // RDRAND
-;;            (info2[1] & (1 << 5)) != 0) {  // AVX2
-;;            return 3;
-;;        }
-;;        // Regular AVX
-;;        return 2;
+;;     if (osxsave && avx && __os_has_avx_support()) {
+;;         if (avx_f16c && avx_rdrand && avx2) {
+;;             return 3;
+;;         }
+;;         // Regular AVX
+;;         return 2;
 ;;     }
-;;     else if ((info[2] & (1 << 19)) != 0)
+;;     else if (sse4)
 ;;         return 1; // SSE4
-;;     else if ((info[3] & (1 << 26)) != 0)
+;;     else if (sse2)
 ;;         return 0; // SSE2
 ;;     else
 ;;         abort();
@@ -146,80 +184,130 @@ define(`PTR_OP_ARGS',
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-define i32 @__get_system_isa() nounwind uwtable {
+define i32 @__get_system_isa() local_unnamed_addr nounwind uwtable {
 entry:
   %0 = tail call { i32, i32, i32, i32 } asm sideeffect "cpuid", "={ax},={bx},={cx},={dx},0,~{dirflag},~{fpsr},~{flags}"(i32 1) nounwind
   %asmresult5.i = extractvalue { i32, i32, i32, i32 } %0, 2
   %asmresult6.i = extractvalue { i32, i32, i32, i32 } %0, 3
   %1 = tail call { i32, i32, i32, i32 } asm sideeffect "xchg$(l$)\09$(%$)ebx, $1\0A\09cpuid\0A\09xchg$(l$)\09$(%$)ebx, $1\0A\09", "={ax},=r,={cx},={dx},0,2,~{dirflag},~{fpsr},~{flags}"(i32 7, i32 0) nounwind
-  %asmresult4.i87 = extractvalue { i32, i32, i32, i32 } %1, 1
-  %and = and i32 %asmresult5.i, 134217728
-  %cmp = icmp eq i32 %and, 0
-  br i1 %cmp, label %if.else65, label %land.lhs.true
+  %asmresult4.i277 = extractvalue { i32, i32, i32, i32 } %1, 1
+  %asmresult5.i278 = extractvalue { i32, i32, i32, i32 } %1, 2
+  %asmresult6.i279 = extractvalue { i32, i32, i32, i32 } %1, 3
+  %2 = tail call { i32, i32, i32, i32 } asm sideeffect "xchg$(l$)\09$(%$)ebx, $1\0A\09cpuid\0A\09xchg$(l$)\09$(%$)ebx, $1\0A\09", "={ax},=r,={cx},={dx},0,2,~{dirflag},~{fpsr},~{flags}"(i32 7, i32 1) nounwind
+  %asmresult.i283 = extractvalue { i32, i32, i32, i32 } %2, 0
+  %and = and i32 %asmresult6.i, 67108864
+  %cmp.not = icmp ne i32 %and, 0
+  %and4 = and i32 %asmresult5.i, 524288
+  %cmp5.not = icmp ne i32 %and4, 0
+  %and16 = and i32 %asmresult5.i, 134217728
+  %cmp17.not = icmp eq i32 %and16, 0
+  %and24 = and i32 %asmresult4.i277, 32
+  %cmp25.not = icmp eq i32 %and24, 0
+  %and28 = and i32 %asmresult4.i277, 65536
+  %cmp29.not = icmp eq i32 %and28, 0
+  %and56 = and i32 %asmresult5.i278, 64
+  %cmp57.not = icmp eq i32 %and56, 0
+  %and60 = and i32 %asmresult5.i278, 256
+  %cmp61.not = icmp eq i32 %and60, 0
+  %and64 = and i32 %asmresult5.i278, 512
+  %cmp65.not = icmp eq i32 %and64, 0
+  %and68 = and i32 %asmresult5.i278, 1024
+  %cmp69.not = icmp eq i32 %and68, 0
+  %and72 = and i32 %asmresult5.i278, 2048
+  %cmp73 = icmp eq i32 %and72, 0
+  %and84 = and i32 %asmresult.i283, 16
+  %cmp85.not = icmp ne i32 %and84, 0
+  %and88 = and i32 %asmresult.i283, 32
+  %cmp89.not = icmp ne i32 %and88, 0
+  %and96 = and i32 %asmresult6.i279, 4194304
+  %cmp97.not = icmp ne i32 %and96, 0
+  %and100 = and i32 %asmresult6.i279, 16777216
+  %cmp101.not = icmp ne i32 %and100, 0
+  %and104 = and i32 %asmresult6.i279, 33554432
+  %cmp105.not = icmp ne i32 %and104, 0
+  %and108 = and i32 %asmresult6.i279, 8388608
+  %cmp109 = icmp ne i32 %and108, 0
+  %brmerge = select i1 %cmp17.not, i1 true, i1 %cmp25.not
+  %brmerge250 = select i1 %brmerge, i1 true, i1 %cmp29.not
+  br i1 %brmerge250, label %if.end190, label %land.lhs.true114
 
-land.lhs.true:                                    ; preds = %entry
-  %2 = and i32 %asmresult4.i87, 65568
-  %3 = icmp eq i32 %2, 65568
-  br i1 %3, label %land.lhs.true9, label %if.end39
+land.lhs.true114:                                 ; preds = %entry
+  %3 = tail call { i32, i32 } asm sideeffect ".byte 0x0f, 0x01, 0xd0", "={ax},={dx},{cx},~{dirflag},~{fpsr},~{flags}"(i32 0) nounwind
+  %asmresult.i287 = extractvalue { i32, i32 } %3, 0
+  %and.i = and i32 %asmresult.i287, 230
+  %cmp.i.not = icmp eq i32 %and.i, 230
+  br i1 %cmp.i.not, label %if.then, label %if.end190
 
-land.lhs.true9:                                   ; preds = %land.lhs.true
-  %4 = tail call { i32, i32 } asm sideeffect ".byte 0x0f, 0x01, 0xd0", "={ax},={dx},{cx},~{dirflag},~{fpsr},~{flags}"(i32 0) nounwind
-  %asmresult.i90 = extractvalue { i32, i32 } %4, 0
-  %and.i = and i32 %asmresult.i90, 230
-  %cmp.i = icmp eq i32 %and.i, 230
-  br i1 %cmp.i, label %if.then, label %if.end39
+if.then:                                          ; preds = %land.lhs.true114
+  %4 = and i32 %asmresult4.i277, 469762048
+  %.not = icmp eq i32 %4, 469762048
+  %5 = and i32 %asmresult4.i277, 268566528
+  %.not295 = icmp eq i32 %5, 268566528
+  %6 = icmp ugt i32 %asmresult4.i277, -1073741825
+  %spec.select272 = and i1 %6, %.not295
+  %not.spec.select272.demorgan = and i1 %6, %.not295
+  %not.spec.select272 = xor i1 %not.spec.select272.demorgan, true
+  %7 = select i1 %not.spec.select272, i1 true, i1 %cmp73
+  %brmerge253 = select i1 %7, i1 true, i1 %cmp57.not
+  %brmerge254 = select i1 %brmerge253, i1 true, i1 %cmp61.not
+  %brmerge255 = select i1 %brmerge254, i1 true, i1 %cmp65.not
+  %brmerge256 = select i1 %brmerge255, i1 true, i1 %cmp69.not
+  br i1 %brmerge256, label %if.else, label %land.lhs.true149
 
-if.then:                                          ; preds = %land.lhs.true9
-  %5 = and i32 %asmresult4.i87, -805175296
-  %6 = icmp eq i32 %5, -805175296
-  br i1 %6, label %return, label %if.else
+land.lhs.true149:                                 ; preds = %if.then
+  %8 = and i32 %asmresult5.i278, 20480
+  %9 = icmp eq i32 %8, 20480
+  %brmerge258 = select i1 %9, i1 %cmp89.not, i1 false
+  %brmerge259 = select i1 %brmerge258, i1 %cmp97.not, i1 false
+  %brmerge260 = select i1 %brmerge259, i1 %cmp101.not, i1 false
+  %brmerge261 = select i1 %brmerge260, i1 %cmp105.not, i1 false
+  %10 = select i1 %brmerge261, i1 %cmp85.not, i1 false
+  %or.cond = select i1 %10, i1 %cmp109, i1 false
+  %brmerge267 = select i1 %or.cond, i1 true, i1 %spec.select272
+  %.mux = select i1 %or.cond, i32 6, i32 5
+  %brmerge299 = select i1 %brmerge267, i1 true, i1 %.not
+  %.mux.mux = select i1 %brmerge267, i32 %.mux, i32 4
+  br i1 %brmerge299, label %cleanup212, label %if.end190
 
 if.else:                                          ; preds = %if.then
-  %7 = and i32 %asmresult4.i87, 469762048
-  %8 = icmp eq i32 %7, 469762048
-  br i1 %8, label %return, label %if.end39
+  %brmerge297 = or i1 %.not, %spec.select272
+  %.mux298 = select i1 %spec.select272, i32 5, i32 4
+  br i1 %brmerge297, label %cleanup212, label %if.end190
 
-if.end39:                                         ; preds = %if.else, %land.lhs.true9, %land.lhs.true
-  %9 = and i32 %asmresult5.i, 402653184
-  %10 = icmp eq i32 %9, 402653184
-  br i1 %10, label %land.lhs.true47, label %if.else65
+if.end190:                                        ; preds = %land.lhs.true149, %if.else, %entry, %land.lhs.true114
+  %11 = and i32 %asmresult5.i, 402653184
+  %.not296 = icmp eq i32 %11, 402653184
+  br i1 %.not296, label %land.lhs.true194, label %if.else205
 
-land.lhs.true47:                                  ; preds = %if.end39
-  %11 = tail call { i32, i32 } asm sideeffect ".byte 0x0f, 0x01, 0xd0", "={ax},={dx},{cx},~{dirflag},~{fpsr},~{flags}"(i32 0) nounwind
-  %asmresult.i91 = extractvalue { i32, i32 } %11, 0
-  %and.i92 = and i32 %asmresult.i91, 6
-  %cmp.i93 = icmp eq i32 %and.i92, 6
-  br i1 %cmp.i93, label %if.then50, label %if.else65
+land.lhs.true194:                                 ; preds = %if.end190
+  %12 = tail call { i32, i32 } asm sideeffect ".byte 0x0f, 0x01, 0xd0", "={ax},={dx},{cx},~{dirflag},~{fpsr},~{flags}"(i32 0) nounwind
+  %asmresult.i288 = extractvalue { i32, i32 } %12, 0
+  %and.i289 = and i32 %asmresult.i288, 6
+  %cmp.i290.not = icmp eq i32 %and.i289, 6
+  br i1 %cmp.i290.not, label %if.then197, label %if.else205
 
-if.then50:                                        ; preds = %land.lhs.true47
-  %12 = and i32 %asmresult5.i, 1610612736
-  %13 = icmp ne i32 %12, 1610612736
-  %and60 = and i32 %asmresult4.i87, 32
-  %cmp61 = icmp eq i32 %and60, 0
-  %or.cond112 = or i1 %13, %cmp61
-  %spec.select = select i1 %or.cond112, i32 2, i32 3
-  ret i32 %spec.select
+if.then197:                                       ; preds = %land.lhs.true194
+  %13 = and i32 %asmresult5.i, 1610612736
+  %14 = icmp ne i32 %13, 1610612736
+  %brmerge266 = select i1 %14, i1 true, i1 %cmp25.not
+  %spec.select268 = select i1 %brmerge266, i32 2, i32 3
+  br label %cleanup212
 
-if.else65:                                        ; preds = %land.lhs.true47, %if.end39, %entry
-  %and67 = and i32 %asmresult5.i, 524288
-  %cmp68 = icmp eq i32 %and67, 0
-  br i1 %cmp68, label %if.else70, label %return
+if.else205:                                       ; preds = %if.end190, %land.lhs.true194
+  %brmerge269 = select i1 %cmp5.not, i1 true, i1 %cmp.not
+  %and4.lobit = lshr exact i32 %and4, 19
+  br i1 %brmerge269, label %cleanup212, label %if.else211
 
-if.else70:                                        ; preds = %if.else65
-  %and72 = and i32 %asmresult6.i, 67108864
-  %cmp73 = icmp eq i32 %and72, 0
-  br i1 %cmp73, label %if.else75, label %return
-
-if.else75:                                        ; preds = %if.else70
+if.else211:                                       ; preds = %if.else205
   tail call void @abort() noreturn nounwind
   unreachable
 
-return:                                          ; preds = %if.else, %if.else70, %if.else65, %if.then
-  %retval.0 = phi i32 [ 5, %if.then ], [ 4, %if.else ], [ 1, %if.else65 ], [ 0, %if.else70 ]
-  ret i32 %retval.0
+cleanup212:                                       ; preds = %land.lhs.true149, %if.else, %if.then197, %if.else205
+  %retval.1 = phi i32 [ %and4.lobit, %if.else205 ], [ %spec.select268, %if.then197 ], [ %.mux.mux, %land.lhs.true149 ], [ %.mux298, %if.else ]
+  ret i32 %retval.1
 }
 
-declare void @abort() noreturn nounwind
+declare void @abort() local_unnamed_addr noreturn nounwind
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; This function is called by each of the dispatch functions we generate;
