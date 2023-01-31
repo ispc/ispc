@@ -61,25 +61,13 @@ restart:
                 llvm::SmallVector<llvm::Value *, 8> Args;
                 Args.push_back(llvm::ConstantInt::get(LLVMTypes::Int32Type, 0));
                 Args.push_back(llvm::ConstantVector::getSplat(
-#if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
-                    g->target->getNativeVectorWidth(),
-#elif ISPC_LLVM_VERSION < ISPC_LLVM_12_0
-                    {static_cast<unsigned int>(g->target->getNativeVectorWidth()), false},
-#else // LLVM 12.0+
                     llvm::ElementCount::get(static_cast<unsigned int>(g->target->getNativeVectorWidth()), false),
-#endif
                     llvm::ConstantInt::getTrue(*g->ctx)));
 
                 Args.push_back(llvm::ConstantInt::get(LLVMTypes::Int32Type, 39));
                 Args.push_back(llvm::ConstantInt::get(LLVMTypes::Int32Type, 33554448));
                 llvm::Value *zeroMask = llvm::ConstantVector::getSplat(
-#if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
-                    g->target->getNativeVectorWidth(),
-#elif ISPC_LLVM_VERSION < ISPC_LLVM_12_0
-                    {static_cast<unsigned int>(g->target->getNativeVectorWidth()), false},
-#else // LLVM 12.0+
                     llvm::ElementCount::get(static_cast<unsigned int>(g->target->getNativeVectorWidth()), false),
-#endif
                     llvm::Constant::getNullValue(llvm::Type::getInt16Ty(*g->ctx)));
                 Args.push_back(zeroMask);
 

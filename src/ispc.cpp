@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -282,17 +282,13 @@ typedef enum {
 
     CPU_ICX,
     CPU_TGL,
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
     CPU_ADL,
     CPU_SPR,
-#endif
 
     // Zen 1-2-3
     CPU_ZNVER1,
     CPU_ZNVER2,
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
     CPU_ZNVER3,
-#endif
 
 // FIXME: LLVM supports a ton of different ARM CPU variants--not just
 // cortex-a9 and a15.  We should be able to handle any of them that also
@@ -315,9 +311,7 @@ typedef enum {
     CPU_AppleA11,
     CPU_AppleA12,
     CPU_AppleA13,
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
     CPU_AppleA14,
-#endif
 #endif
 #ifdef ISPC_XE_ENABLED
     GPU_SKL,
@@ -355,15 +349,11 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {CPU_Silvermont, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42"}},
     {CPU_ICX, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
     {CPU_TGL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
     {CPU_ADL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
     {CPU_SPR, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
-#endif
     {CPU_ZNVER1, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
     {CPU_ZNVER2, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
     {CPU_ZNVER3, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
-#endif
 // TODO: Add features for remaining CPUs if valid.
 #ifdef ISPC_ARM_ENABLED
     {CPU_CortexA9, {}},
@@ -376,9 +366,7 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {CPU_AppleA11, {}},
     {CPU_AppleA12, {}},
     {CPU_AppleA13, {}},
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
     {CPU_AppleA14, {}},
-#endif
 #endif
 #ifdef ISPC_XE_ENABLED
     {GPU_SKL, {}},
@@ -457,19 +445,15 @@ class AllCPUs {
         names[CPU_ICX].push_back("icx");
         names[CPU_TGL].push_back("tigerlake");
         names[CPU_TGL].push_back("tgl");
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         names[CPU_ADL].push_back("alderlake");
         names[CPU_ADL].push_back("adl");
         names[CPU_SPR].push_back("sapphirerapids");
         names[CPU_SPR].push_back("spr");
-#endif
 
         names[CPU_ZNVER1].push_back("znver1");
         names[CPU_ZNVER2].push_back("znver2");
         names[CPU_ZNVER2].push_back("ps5");
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         names[CPU_ZNVER3].push_back("znver3");
-#endif
 
 #ifdef ISPC_ARM_ENABLED
         names[CPU_CortexA9].push_back("cortex-a9");
@@ -483,9 +467,7 @@ class AllCPUs {
         names[CPU_AppleA11].push_back("apple-a11");
         names[CPU_AppleA12].push_back("apple-a12");
         names[CPU_AppleA13].push_back("apple-a13");
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         names[CPU_AppleA14].push_back("apple-a14");
-#endif
 #endif
 
 #ifdef ISPC_XE_ENABLED
@@ -511,13 +493,11 @@ class AllCPUs {
 
         compat[CPU_SKX] = Set(CPU_SKX, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                               CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_None);
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         compat[CPU_SPR] = Set(CPU_SPR, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                               CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX, CPU_ICL,
                               CPU_ICX, CPU_TGL, CPU_ADL, CPU_None);
         compat[CPU_ADL] = Set(CPU_ADL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                               CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_None);
-#endif
         compat[CPU_TGL] =
             Set(CPU_TGL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
                 CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX, CPU_ICL, CPU_ICX, CPU_None);
@@ -529,11 +509,9 @@ class AllCPUs {
             Set(CPU_ICL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
                 CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX, CPU_None);
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         compat[CPU_ZNVER3] =
             Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
                 CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_ZNVER3, CPU_None);
-#endif
         compat[CPU_ZNVER2] =
             Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
                 CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_ZNVER2, CPU_None);
@@ -571,9 +549,7 @@ class AllCPUs {
         compat[CPU_AppleA11] = Set(CPU_AppleA11, CPU_None);
         compat[CPU_AppleA12] = Set(CPU_AppleA12, CPU_None);
         compat[CPU_AppleA13] = Set(CPU_AppleA13, CPU_None);
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         compat[CPU_AppleA14] = Set(CPU_AppleA14, CPU_None);
-#endif
 #endif
 
 #ifdef ISPC_XE_ENABLED
@@ -674,9 +650,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         case CPU_AppleA11:
         case CPU_AppleA12:
         case CPU_AppleA13:
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         case CPU_AppleA14:
-#endif
             m_ispc_target = ISPCTarget::neon_i32x4;
             break;
 #endif
@@ -702,9 +676,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
             m_ispc_target = ISPCTarget::avx512knl_x16;
             break;
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         case CPU_SPR:
-#endif
         case CPU_TGL:
         case CPU_ICX:
         case CPU_ICL:
@@ -712,10 +684,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
             m_ispc_target = ISPCTarget::avx512skx_x16;
             break;
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         case CPU_ADL:
         case CPU_ZNVER3:
-#endif
         case CPU_ZNVER1:
         case CPU_ZNVER2:
         case CPU_Skylake:
@@ -1394,11 +1364,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
                 CPUID = CPU_AppleA7;
             } else if (g->target_os == TargetOS::macos) {
                 // Open source LLVM doesn't has definition for M1 CPU, so use the latest iPhone CPU.
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
                 CPUID = CPU_AppleA14;
-#else
-                CPUID = CPU_AppleA13;
-#endif
             } else {
                 CPUID = CPU_CortexA35;
             }

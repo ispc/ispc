@@ -60,11 +60,7 @@ class PHINode;
 class InsertElementInst;
 } // namespace llvm
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
 #define LLVMVECTOR llvm::FixedVectorType
-#else
-#define LLVMVECTOR llvm::VectorType
-#endif
 
 namespace ispc {
 

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -914,11 +914,7 @@ static llvm::Constant *lLLVMConstantValue(const Type *type, llvm::LLVMContext *c
         // LLVM ArrayTypes leaks into the code here; it feels like this detail
         // should be better encapsulated?
         if (baseType->IsUniformType()) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
             llvm::FixedVectorType *lvt = llvm::dyn_cast<llvm::FixedVectorType>(llvmVectorType);
-#else
-            llvm::VectorType *lvt = llvm::dyn_cast<llvm::VectorType>(llvmVectorType);
-#endif
             Assert(lvt != NULL);
             std::vector<llvm::Constant *> vals;
             for (unsigned int i = 0; i < lvt->getNumElements(); ++i)

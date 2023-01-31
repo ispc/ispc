@@ -165,11 +165,7 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
     // Looking for %gep_offset = shufflevector <8 x i64> %0, <8 x i64> undef, <8 x i32> zeroinitializer
     llvm::ShuffleVectorInst *shuffle = llvm::dyn_cast<llvm::ShuffleVectorInst>(ptrs);
     if (shuffle != NULL) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
         llvm::Value *indices = shuffle->getShuffleMaskForBitcode();
-#else
-        llvm::Value *indices = shuffle->getOperand(2);
-#endif
         llvm::Value *vec = shuffle->getOperand(1);
 
         if (LLVMIsValueUndef(vec) && llvm::isa<llvm::ConstantAggregateZero>(indices)) {
@@ -194,18 +190,10 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
                 llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(bop_var->getOperand(1));
                 llvm::Instruction *shuffle_offset = NULL;
                 if (cv != NULL) {
-                    llvm::Value *zeroMask =
-#if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
-                        llvm::ConstantVector::getSplat(cv->getType()->getVectorNumElements(),
-#elif ISPC_LLVM_VERSION < ISPC_LLVM_12_0
-                        llvm::ConstantVector::getSplat(
-                            {llvm::dyn_cast<llvm::VectorType>(cv->getType())->getNumElements(), false},
-#else // LLVM 12.0+
-                        llvm::ConstantVector::getSplat(
-                            llvm::ElementCount::get(
-                                llvm::dyn_cast<llvm::FixedVectorType>(cv->getType())->getNumElements(), false),
-#endif
-                                                       llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
+                    llvm::Value *zeroMask = llvm::ConstantVector::getSplat(
+                        llvm::ElementCount::get(llvm::dyn_cast<llvm::FixedVectorType>(cv->getType())->getNumElements(),
+                                                false),
+                        llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
                     // Create offset
                     shuffle_offset = new llvm::ShuffleVectorInst(cv, llvm::UndefValue::get(cv->getType()), zeroMask,
                                                                  "shuffle", bop_var);
@@ -218,14 +206,8 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
                     if (bop_var != NULL) {
                         llvm::Type *bop_var_type = bop_var->getType();
                         llvm::Value *zeroMask = llvm::ConstantVector::getSplat(
-#if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
-                            bop_var_type->getVectorNumElements(),
-#elif ISPC_LLVM_VERSION < ISPC_LLVM_12_0
-                            {llvm::dyn_cast<llvm::VectorType>(bop_var_type)->getNumElements(), false},
-#else // LLVM 12.0+
                             llvm::ElementCount::get(
                                 llvm::dyn_cast<llvm::FixedVectorType>(bop_var_type)->getNumElements(), false),
-#endif
                             llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
                         shuffle_offset = new llvm::ShuffleVectorInst(bop_var, llvm::UndefValue::get(bop_var_type),
                                                                      zeroMask, "shuffle");
@@ -1584,12 +1566,8 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
             ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(scalarType, 0), base->getName(), callInst);
 
             LLVMCopyMetadata(ptr, callInst);
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
             Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
             llvm::Value *scalarValue = new llvm::LoadInst(scalarType, ptr, callInst->getName(), callInst);
-#else
-            llvm::Value *scalarValue = new llvm::LoadInst(ptr, callInst->getName(), callInst);
-#endif
 
             // Generate the following sequence:
             //   %name123 = insertelement <4 x i32> undef, i32 %val, i32 0
@@ -1599,19 +1577,10 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
             llvm::Value *undef2Value = llvm::UndefValue::get(callInst->getType());
             llvm::Value *insertVec =
                 llvm::InsertElementInst::Create(undef1Value, scalarValue, LLVMInt32(0), callInst->getName(), callInst);
-            llvm::Value *zeroMask =
-#if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
-                llvm::ConstantVector::getSplat(callInst->getType()->getVectorNumElements(),
-#elif ISPC_LLVM_VERSION < ISPC_LLVM_12_0
-                llvm::ConstantVector::getSplat(
-                    {llvm::dyn_cast<llvm::VectorType>(callInst->getType())->getNumElements(), false},
-
-#else // LLVM 12.0+
-                llvm::ConstantVector::getSplat(
-                    llvm::ElementCount::get(
-                        llvm::dyn_cast<llvm::FixedVectorType>(callInst->getType())->getNumElements(), false),
-#endif
-                                               llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
+            llvm::Value *zeroMask = llvm::ConstantVector::getSplat(
+                llvm::ElementCount::get(llvm::dyn_cast<llvm::FixedVectorType>(callInst->getType())->getNumElements(),
+                                        false),
+                llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
             llvm::Value *shufValue = new llvm::ShuffleVectorInst(insertVec, undef2Value, zeroMask, callInst->getName());
 
             LLVMCopyMetadata(shufValue, callInst);
@@ -1707,13 +1676,8 @@ static llvm::Function *lXeMaskedInst(llvm::Instruction *inst, bool isStore, llvm
 
 static llvm::CallInst *lXeStoreInst(llvm::Value *val, llvm::Value *ptr, llvm::Instruction *inst) {
     Assert(g->target->isXeTarget());
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     Assert(llvm::isa<llvm::FixedVectorType>(val->getType()));
     llvm::FixedVectorType *valVecType = llvm::dyn_cast<llvm::FixedVectorType>(val->getType());
-#else
-    Assert(llvm::isa<llvm::VectorType>(val->getType()));
-    llvm::VectorType *valVecType = llvm::dyn_cast<llvm::VectorType>(val->getType());
-#endif
     Assert(llvm::isPowerOf2_32(valVecType->getNumElements()));
 
     // The data write of svm store must have a size that is a power of two from 16 to 128
@@ -1748,13 +1712,8 @@ static llvm::CallInst *lXeStoreInst(llvm::Value *val, llvm::Value *ptr, llvm::In
 }
 
 static llvm::CallInst *lXeLoadInst(llvm::Value *ptr, llvm::Type *retType, llvm::Instruction *inst) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     Assert(llvm::isa<llvm::FixedVectorType>(retType));
     llvm::FixedVectorType *retVecType = llvm::dyn_cast<llvm::FixedVectorType>(retType);
-#else
-    Assert(llvm::isa<llvm::VectorType>(retType));
-    llvm::VectorType *retVecType = llvm::dyn_cast<llvm::VectorType>(retType);
-#endif
     Assert(llvm::isPowerOf2_32(retVecType->getNumElements()));
     Assert(retVecType->getPrimitiveSizeInBits());
     // The data read of svm load must have a size that is a power of two from 16 to 128
@@ -1972,20 +1931,12 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
         {
             llvm::Type *ptrType = llvm::PointerType::get(callInst->getType(), 0);
             ptr = new llvm::BitCastInst(ptr, ptrType, "ptr_cast_for_load", callInst);
-#if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
-            load = new llvm::LoadInst(
-                ptr, callInst->getName(), false /* not volatile */,
-                llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align)
-                    .valueOrOne(),
-                (llvm::Instruction *)NULL);
-#else // LLVM 11.0+
             Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
             load = new llvm::LoadInst(
                 callInst->getType(), ptr, callInst->getName(), false /* not volatile */,
                 llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align)
                     .valueOrOne(),
                 (llvm::Instruction *)NULL);
-#endif
         }
         if (load != NULL) {
             LLVMCopyMetadata(load, callInst);

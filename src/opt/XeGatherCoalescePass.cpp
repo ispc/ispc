@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022, Intel Corporation
+  Copyright (c) 2022-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -315,12 +315,8 @@ MemoryCoalescing::OffsetsVecT MemoryCoalescing::getConstOffsetFromVector(llvm::V
 
     if (!ConstVec)
         return res;
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     for (unsigned i = 0, size = llvm::cast<llvm::FixedVectorType>(ConstVec->getType())->getNumElements(); i < size;
          ++i) {
-#else
-    for (unsigned i = 0, size = llvm::cast<llvm::VectorType>(ConstVec->getType())->getNumElements(); i < size; ++i) {
-#endif
         auto ConstantInt = llvm::dyn_cast<llvm::ConstantInt>(ConstVec->getElementAsConstant(i));
         if (!ConstantInt) {
             // Actually, we don't expect this to happen
@@ -370,11 +366,7 @@ llvm::Value *MemoryCoalescing::buildIEI(llvm::Value *InsertTo, llvm::Value *Val,
             auto *EEI = llvm::ExtractElementInst::Create(InsertTo, llvm::ConstantInt::get(LLVMTypes::Int64Type, Idx),
                                                          "mem_coal_diff_ty_eei", InsertBefore);
             // Cast it to vector of smaller types
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
             auto *Cast = buildCast(EEI, llvm::FixedVectorType::get(ValTy, ScalarTypeBytes / ValTyBytes), InsertBefore);
-#else
-            auto *Cast = buildCast(EEI, llvm::VectorType::get(ValTy, ScalarTypeBytes / ValTyBytes), InsertBefore);
-#endif
             // Insert value into casted type. Do it via this builder so we don't duplicate logic of offset calculations.
             auto *IEI = buildIEI(Cast, Val, Rem, InsertBefore);
             // Cast to original type
@@ -424,15 +416,9 @@ llvm::Value *MemoryCoalescing::buildEEI(llvm::Value *ExtractFrom, MemoryCoalesci
         // Cast source to byte vector
         Res = buildCast(
             ExtractFrom,
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
             llvm::FixedVectorType::get(LLVMTypes::Int8Type,
                                        ScalarTypeBytes *
                                            llvm::cast<llvm::FixedVectorType>(ExtractFrom->getType())->getNumElements()),
-#else
-            llvm::VectorType::get(LLVMTypes::Int8Type,
-                                  ScalarTypeBytes *
-                                      llvm::cast<llvm::VectorType>(ExtractFrom->getType())->getNumElements()),
-#endif
             InsertBefore);
         // Prepare Idxs vector for shuffle vector
         std::vector<unsigned int> ByteIdxs(DstTyBytes);
@@ -461,11 +447,7 @@ llvm::Value *MemoryCoalescing::buildEEI(llvm::Value *ExtractFrom, MemoryCoalesci
     }
 
     // Smaller type case. Need to insert cast-eei chain.
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     auto Cast = buildCast(Res, llvm::FixedVectorType::get(DstTy, ScalarTypeBytes / DstTyBytes), InsertBefore);
-#else
-    auto Cast = buildCast(Res, llvm::VectorType::get(DstTy, ScalarTypeBytes / DstTyBytes), InsertBefore);
-#endif
     // Now call the builder with adjusted types
     return buildEEI(Cast, Rem, DstTy, InsertBefore);
 }
@@ -475,11 +457,7 @@ llvm::Value *MemoryCoalescing::extractValueFromBlock(const MemoryCoalescing::Blo
                                                      llvm::Instruction *InsertBefore) const {
     Assert(BlockInstsVec.size() > 0);
     OffsetT BlockSizeInBytes = getScalarTypeSize(BlockInstsVec[0]->getType()) *
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
                                llvm::cast<llvm::FixedVectorType>(BlockInstsVec[0]->getType())->getNumElements();
-#else
-                               llvm::cast<llvm::VectorType>(BlockInstsVec[0]->getType())->getNumElements();
-#endif
     unsigned StartIdx = OffsetBytes / BlockSizeInBytes;
     unsigned EndIdx = (OffsetBytes + getScalarTypeSize(DstTy) - 1) / BlockSizeInBytes;
     unsigned BlocksAffected = EndIdx - StartIdx + 1;
@@ -489,12 +467,8 @@ llvm::Value *MemoryCoalescing::extractValueFromBlock(const MemoryCoalescing::Blo
         return buildEEI(BlockInstsVec[StartIdx], OffsetBytes % BlockSizeInBytes, DstTy, InsertBefore);
     } else {
         // Need to get value from several blocks
-        llvm::Value *ByteVec = llvm::UndefValue::get(
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
-            llvm::FixedVectorType::get(LLVMTypes::Int8Type, getScalarTypeSize(DstTy)));
-#else
-            llvm::VectorType::get(LLVMTypes::Int8Type, getScalarTypeSize(DstTy)));
-#endif
+        llvm::Value *ByteVec =
+            llvm::UndefValue::get(llvm::FixedVectorType::get(LLVMTypes::Int8Type, getScalarTypeSize(DstTy)));
         for (OffsetT CurrOffset = OffsetBytes, TargetOffset = 0; CurrOffset < OffsetBytes + getScalarTypeSize(DstTy);
              ++CurrOffset, ++TargetOffset) {
             unsigned Idx = CurrOffset / BlockSizeInBytes;
@@ -578,11 +552,7 @@ void XeGatherCoalescing::optimizePtr(llvm::Value *Ptr, PtrData &PD, llvm::Instru
         llvm::PtrToIntInst *PtrToInt =
             new llvm::PtrToIntInst(Ptr, LLVMTypes::Int64Type, "vectorized_ptrtoint", InsertPoint);
         llvm::Instruction *Addr = llvm::BinaryOperator::CreateAdd(PtrToInt, Offset, "vectorized_address", InsertPoint);
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
         llvm::Type *RetType = llvm::FixedVectorType::get(LargestType, ReqSize / LargestTypeSize);
-#else
-        llvm::Type *RetType = llvm::VectorType::get(LargestType, ReqSize / LargestTypeSize);
-#endif
         llvm::Instruction *LD = nullptr;
         if (g->opt.buildLLVMLoadsOnXeGatherCoalescing) {
             // Experiment: build standard llvm load instead of block ld
