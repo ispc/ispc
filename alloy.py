@@ -99,7 +99,7 @@ def try_do_LLVM(text, command, from_validation, verbose=False):
     print_debug("Command line: "+command+"\n", True, alloy_build)
     if from_validation == True:
         text = text + "\n"
-    print_debug("Trying to " + text, from_validation, alloy_build)
+    print_debug("Trying to " + text + " ", from_validation, alloy_build)
 
     with subprocess.Popen(command, shell=True,universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT) as proc:
         for line in proc.stdout:
@@ -256,7 +256,7 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
         patches = glob.glob(os.environ["ISPC_HOME"] + os.sep + "llvm_patches" + os.sep + "*.*")
         for patch in patches:
             if version_LLVM in os.path.basename(patch):
-                try_do_LLVM("patch LLVM with patch " + patch + " ", "git apply " + patch, from_validation, verbose)
+                try_do_LLVM("patch LLVM with patch " + patch, "git apply " + patch, from_validation, verbose)
         os.chdir("../")
 
     targets_and_common_options = "  -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86 -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly"
@@ -269,7 +269,7 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
         os.makedirs(LLVM_BUILD_selfbuild)
         os.makedirs(LLVM_BIN_selfbuild)
         os.chdir(LLVM_BUILD_selfbuild)
-        try_do_LLVM("configure release version for selfbuild ",
+        try_do_LLVM("configure release version for selfbuild",
                 "cmake -G " + "\"" + generator + "\"" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
                 "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN_selfbuild +
                 "  -DCMAKE_BUILD_TYPE=Release" +
@@ -284,8 +284,8 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
                 targets_and_common_options +
                 " ../" + cmakelists_path,
                 from_validation, verbose)
-        try_do_LLVM("build release version for selfbuild ", make, from_validation, verbose)
-        try_do_LLVM("install release version for selfbuild ", "make install", from_validation, verbose)
+        try_do_LLVM("build release version for selfbuild", make, from_validation, verbose)
+        try_do_LLVM("install release version for selfbuild" , "make install", from_validation, verbose)
         os.chdir("../")
 
     # set compiler to use if this is selfbuild
@@ -303,7 +303,7 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
         os.chdir(LLVM_BUILD)
         build_type = "Release" if debug == False else "Debug"
         if current_OS != "Windows":
-            try_do_LLVM("configure " + build_type + " version ",
+            try_do_LLVM("configure " + build_type + " version",
                     "cmake -G " + "\"" + generator + "\"" + " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" +
                     selfbuild_compiler +
                     "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN +
@@ -320,7 +320,7 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
                     " ../" + cmakelists_path,
                     from_validation, verbose)
         else:
-            try_do_LLVM("configure " + build_type + " version ",
+            try_do_LLVM("configure " + build_type + " version",
                     'cmake -Thost=x64 -G ' + '\"' + generator + '\"' + ' -DCMAKE_INSTALL_PREFIX="..\\'+ LLVM_BIN + '" ' +
                     '  -DCMAKE_BUILD_TYPE=' + build_type +
                     llvm_enable_projects +
@@ -333,10 +333,10 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
 
         # building llvm
         if current_OS != "Windows":
-            try_do_LLVM("build LLVM ", make, from_validation, verbose)
-            try_do_LLVM("install LLVM ", "make install", from_validation, verbose)
+            try_do_LLVM("build LLVM", make, from_validation, verbose)
+            try_do_LLVM("install LLVM", "make install", from_validation, verbose)
         else:
-            try_do_LLVM("build LLVM and then install LLVM ", "msbuild INSTALL.vcxproj /V:m /p:Platform=x64 /p:Configuration=" + build_type + " /t:rebuild", from_validation, verbose)
+            try_do_LLVM("build LLVM and then install LLVM", "msbuild INSTALL.vcxproj /V:m /p:Platform=x64 /p:Configuration=" + build_type + " /t:rebuild", from_validation, verbose)
         os.chdir(current_path)
 
 
@@ -450,8 +450,8 @@ def build_ispc(version_LLVM, make):
         try_do_LLVM("configure ispc build", 'cmake -DCMAKE_INSTALL_PREFIX="..\\'+ ISPC_BIN + '" ' +
                     '  -DCMAKE_BUILD_TYPE=Release' +
                         ispc_home, True)
-        try_do_LLVM("build ISPC with LLVM version " + version_LLVM + " ", make_ispc, True)
-        try_do_LLVM("install ISPC ", "make install", True)
+        try_do_LLVM("build ISPC with LLVM version " + version_LLVM, make_ispc, True)
+        try_do_LLVM("install ISPC", "make install", True)
         copyfile(os.path.join(ispc_home, ISPC_BIN, "bin", "ispc"), os.path.join(ispc_home, + "ispc"))
         os.environ["PATH"] = p_temp
     else:
@@ -459,8 +459,8 @@ def build_ispc(version_LLVM, make):
                     '  -DCMAKE_BUILD_TYPE=Release ' +
                         ispc_home, True)
         try_do_LLVM("clean ISPC for building", "msbuild ispc.vcxproj /t:clean", True)
-        try_do_LLVM("build ISPC with LLVM version " + version_LLVM + " ", "msbuild ispc.vcxproj /V:m /p:Platform=x64 /p:Configuration=Release /t:rebuild", True)
-        try_do_LLVM("install ISPC  ", "msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release", True)
+        try_do_LLVM("build ISPC with LLVM version " + version_LLVM, "msbuild ispc.vcxproj /V:m /p:Platform=x64 /p:Configuration=Release /t:rebuild", True)
+        try_do_LLVM("install ISPC", "msbuild INSTALL.vcxproj /p:Platform=x64 /p:Configuration=Release", True)
         copyfile(os.path.join(ispc_home, ISPC_BIN, "bin", "ispc.exe"), os.path.join(ispc_home, + "ispc.exe"))
 
     os.chdir(current_path)
@@ -751,7 +751,7 @@ def validation_run(only, only_targets, reference_branch, number, update, speed_n
             if "No local changes" in take_lines("git stash", "first"):
                 stashing = False
             #try_do_LLVM("stash current branch ", "git stash", True)
-            try_do_LLVM("checkout reference branch " + reference_branch + " ", "git checkout " + reference_branch, True)
+            try_do_LLVM("checkout reference branch " + reference_branch, "git checkout " + reference_branch, True)
             sys.stdout.write(".\n")
             build_ispc(newest_LLVM, make)
             sys.stdout.write(".\n")
@@ -760,9 +760,9 @@ def validation_run(only, only_targets, reference_branch, number, update, speed_n
             else:
                 common.remove_if_exists("ispc_ref.exe")
                 os.rename("ispc.exe", "ispc_ref.exe")
-            try_do_LLVM("checkout test branch " + current_branch + " ", "git checkout " + current_branch, True)
+            try_do_LLVM("checkout test branch " + current_branch, "git checkout " + current_branch, True)
             if stashing:
-                try_do_LLVM("return current branch ", "git stash pop", True)
+                try_do_LLVM("return current branch", "git stash pop", True)
             sys.stdout.write("You can interrupt script now.\n")
             build_ispc(newest_LLVM, make)
         else:
