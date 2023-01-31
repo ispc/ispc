@@ -1415,7 +1415,7 @@ static void lEmitStructDecl(const StructType *st, std::vector<const StructType *
     if (!needsAlign) {
         fprintf(file, "%sstruct %s%s {\n", (pack) ? "packed " : "", st->GetCStructName().c_str(), sSOA);
     } else {
-        unsigned uABI = DL->getABITypeAlignment(stype);
+        unsigned uABI = DL->getABITypeAlign(stype).value();
         fprintf(file, "__ISPC_ALIGNED_STRUCT__(%u) %s%s {\n", uABI, st->GetCStructName().c_str(), sSOA);
     }
     for (int i = 0; i < st->GetElementCount(); ++i) {
@@ -1424,7 +1424,7 @@ static void lEmitStructDecl(const StructType *st, std::vector<const StructType *
 
         fprintf(file, "    ");
         if (needsAlign && ftype->IsVaryingType() && (CastType<StructType>(ftype) == NULL)) {
-            unsigned uABI = DL->getABITypeAlignment(ftype->LLVMStorageType(g->ctx));
+            unsigned uABI = DL->getABITypeAlign(ftype->LLVMStorageType(g->ctx)).value();
             fprintf(file, "__ISPC_ALIGN__(%u) ", uABI);
         }
         // Don't expand arrays, pointers and structures:
@@ -1522,7 +1522,7 @@ static void lEmitVectorTypedefs(const std::vector<const VectorType *> &types, FI
         int size = vt->GetElementCount();
 
         llvm::Type *ty = vt->LLVMStorageType(g->ctx);
-        int align = g->target->getDataLayout()->getABITypeAlignment(ty);
+        int align = g->target->getDataLayout()->getABITypeAlign(ty).value();
         baseDecl = vt->GetBaseType()->GetCDeclaration("");
         fprintf(file, "#ifndef __ISPC_VECTOR_%s%d__\n", baseDecl.c_str(), size);
         fprintf(file, "#define __ISPC_VECTOR_%s%d__\n", baseDecl.c_str(), size);
