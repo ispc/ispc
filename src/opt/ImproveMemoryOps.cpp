@@ -1954,7 +1954,7 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
     MaskStatus maskStatus = GetMaskStatusFromValue(mask);
     if (maskStatus == MaskStatus::all_off) {
         // Zero mask - no-op, so replace the load with an undef value
-        llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), iter, llvm::UndefValue::get(callInst->getType()));
+        ReplaceInstWithValueWrapper(iter, llvm::UndefValue::get(callInst->getType()));
         return true;
     } else if (maskStatus == MaskStatus::all_on) {
         // The mask is all on, so turn this into a regular load

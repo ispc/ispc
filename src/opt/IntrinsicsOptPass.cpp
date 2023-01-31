@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022, Intel Corporation
+  Copyright (c) 2022-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -91,7 +91,7 @@ restart:
 
             // If the values are the same, then no need to blend..
             if (v[0] == v[1]) {
-                llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), iter, v[0]);
+                ReplaceInstWithValueWrapper(iter, v[0]);
                 modifiedAny = true;
                 goto restart;
             }
@@ -103,12 +103,12 @@ restart:
             // otherwise the result is undefined and any value is fine,
             // ergo the defined one is an acceptable result.)
             if (LLVMIsValueUndef(v[0])) {
-                llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), iter, v[1]);
+                ReplaceInstWithValueWrapper(iter, v[1]);
                 modifiedAny = true;
                 goto restart;
             }
             if (LLVMIsValueUndef(v[1])) {
-                llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), iter, v[0]);
+                ReplaceInstWithValueWrapper(iter, v[0]);
                 modifiedAny = true;
                 goto restart;
             }
@@ -124,7 +124,7 @@ restart:
             }
 
             if (value != NULL) {
-                llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), iter, value);
+                ReplaceInstWithValueWrapper(iter, value);
                 modifiedAny = true;
                 goto restart;
             }
@@ -136,7 +136,7 @@ restart:
                 // with the corresponding integer mask from its elements
                 // high bits.
                 llvm::Value *value = (callInst->getType() == LLVMTypes::Int32Type) ? LLVMInt32(mask) : LLVMInt64(mask);
-                llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), iter, value);
+                ReplaceInstWithValueWrapper(iter, value);
                 modifiedAny = true;
                 goto restart;
             }
@@ -149,7 +149,7 @@ restart:
                 llvm::Type *returnType = callInst->getType();
                 Assert(llvm::isa<llvm::VectorType>(returnType));
                 llvm::Value *undefValue = llvm::UndefValue::get(returnType);
-                llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), iter, undefValue);
+                ReplaceInstWithValueWrapper(iter, undefValue);
                 modifiedAny = true;
                 goto restart;
             } else if (maskStatus == MaskStatus::all_on) {

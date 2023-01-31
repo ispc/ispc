@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022, Intel Corporation
+  Copyright (c) 2022-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -92,7 +92,7 @@ static bool lSimplifySelect(llvm::SelectInst *selectInst, llvm::BasicBlock::iter
         // Mask all off -> replace with the second select value
         value = selectInst->getOperand(2);
     if (value != NULL) {
-        llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), iter, value);
+        ReplaceInstWithValueWrapper(iter, value);
         return true;
     }
 
@@ -121,7 +121,7 @@ static bool lSimplifyCall(llvm::CallInst *callInst, llvm::BasicBlock::iterator i
 
     uint64_t mask;
     if (GetMaskFromValue(callInst->getArgOperand(0), &mask) == true) {
-        llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), iter, LLVMInt64(mask));
+        ReplaceInstWithValueWrapper(iter, LLVMInt64(mask));
         return true;
     }
     return false;
