@@ -116,10 +116,12 @@ def checkout_LLVM(component, version_LLVM, target_dir, from_validation, verbose)
     GIT_REPO_BASE="https://github.com/llvm/llvm-project.git"
 
     # Identify the version
-    # An example of using branch (instead of final tag) is the following (for 9.0):
-    # git: "origin/release/9.x"
+    # An example of using branch (instead of final tag) is the following (for 16.0):
+    # git: "release/16.x"
     if  version_LLVM == "trunk":
         GIT_TAG="main"
+    elif  version_LLVM == "16_0":
+        GIT_TAG="release/16.x"
     elif  version_LLVM == "15_0":
         GIT_TAG="llvmorg-15.0.7"
     elif  version_LLVM == "14_0":
@@ -611,7 +613,7 @@ def validation_run(only, only_targets, reference_branch, number, update, speed_n
             archs.append("x86-64")
         if "native" in only:
             sde_targets_t = []
-        for i in ["6.0", "7.0", "8.0", "9.0", "10.0", "11.0", "12.0", "13.0", "14.0", "15.0", "trunk"]:
+        for i in ["6.0", "7.0", "8.0", "9.0", "10.0", "11.0", "12.0", "13.0", "14.0", "15.0", "16.0", "trunk"]:
             if i in only:
                 LLVM.append(i)
         if "current" in only:
@@ -817,7 +819,7 @@ def Main():
     if os.environ.get("ISPC_HOME") == None:
         alloy_error("you have no ISPC_HOME", 1)
     if options.only != "":
-        test_only_r = " 6.0 7.0 8.0 9.0 10.0 11.0 12.0 13.0 14.0 15.0 trunk current build stability performance x86 x86-64 x86_64 -O0 -O1 -O2 native debug nodebug "
+        test_only_r = " 6.0 7.0 8.0 9.0 10.0 11.0 12.0 13.0 14.0 15.0 16.0 trunk current build stability performance x86 x86-64 x86_64 -O0 -O1 -O2 native debug nodebug "
         test_only = options.only.split(" ")
         for iterator in test_only:
             if not (" " + iterator + " " in test_only_r):
@@ -987,7 +989,7 @@ if __name__ == '__main__':
     run_group.add_option('--only', dest='only',
         help='set types of tests. Possible values:\n' +
             '-O0, -O1, -O2, x86, x86-64, stability (test only stability), performance (test only performance),\n' +
-            'build (only build with different LLVM), 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, trunk, native (do not use SDE),\n' +
+            'build (only build with different LLVM), 6.0-16.0, trunk, native (do not use SDE),\n' +
             'current (do not rebuild ISPC), debug (only with debug info), nodebug (only without debug info, default).',
             default="")
     run_group.add_option('--perf_LLVM', dest='perf_llvm',
