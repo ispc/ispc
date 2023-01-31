@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -1480,7 +1480,7 @@ llvm::DIType *VectorType::GetDIType(llvm::DIScope *scope) const {
 
     if (IsUniformType()) {
         llvm::Type *ty = this->LLVMType(g->ctx);
-        align = g->target->getDataLayout()->getABITypeAlignment(ty);
+        align = g->target->getDataLayout()->getABITypeAlign(ty).value();
     }
 
     if (IsUniformType() || IsVaryingType())
@@ -1832,7 +1832,7 @@ llvm::DIType *StructType::GetDIType(llvm::DIScope *scope) const {
         uint64_t eltSize = eltType->getSizeInBits();
 
         auto llvmType = GetElementType(i)->LLVMStorageType(g->ctx);
-        uint64_t eltAlign = dataLayout.getABITypeAlignment(llvmType) * 8;
+        uint64_t eltAlign = dataLayout.getABITypeAlign(llvmType).value() * 8;
         Assert(eltAlign != 0);
 
         auto eltOffset = layout->getElementOffsetInBits(i);
