@@ -286,13 +286,9 @@ static llvm::Value *lGEPAndLoad(llvm::Value *basePtr, llvm::Type *baseType, int6
                                 llvm::Instruction *insertBefore, llvm::Type *type) {
     llvm::Value *ptr = LLVMGEPInst(basePtr, baseType, LLVMInt64(offset), "new_base", insertBefore);
     ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(type, 0), "ptr_cast", insertBefore);
-#if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
-    return new llvm::LoadInst(ptr, "gather_load", false /* not volatile */, llvm::MaybeAlign(align), insertBefore);
-#else // LLVM 11.0+
     Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
     return new llvm::LoadInst(type, ptr, "gather_load", false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(),
                               insertBefore);
-#endif
 }
 
 /* Having decided that we're doing to emit a series of loads, as encoded in

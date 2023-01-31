@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022, Intel Corporation
+  Copyright (c) 2022-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -56,11 +56,7 @@ static bool lIsSafeToBlend(llvm::Value *lvalue) {
             while ((at = llvm::dyn_cast<llvm::ArrayType>(type))) {
                 type = at->getElementType();
             }
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
             llvm::FixedVectorType *vt = llvm::dyn_cast<llvm::FixedVectorType>(type);
-#else
-            llvm::VectorType *vt = llvm::dyn_cast<llvm::VectorType>(type);
-#endif
             return (vt != NULL && (int)vt->getNumElements() == g->target->getVectorWidth());
         } else {
             llvm::GetElementPtrInst *gep = llvm::dyn_cast<llvm::GetElementPtrInst>(lvalue);

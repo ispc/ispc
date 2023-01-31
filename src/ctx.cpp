@@ -1647,11 +1647,7 @@ static int lArrayVectorWidth(llvm::Type *t) {
 
     // We shouldn't be seeing arrays of anything but vectors being passed
     // to things like FunctionEmitContext::BinaryOperator() as operands.
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     llvm::FixedVectorType *vectorElementType = llvm::dyn_cast<llvm::FixedVectorType>(arrayType->getElementType());
-#else
-    llvm::VectorType *vectorElementType = llvm::dyn_cast<llvm::VectorType>(arrayType->getElementType());
-#endif
     Assert((vectorElementType != NULL && (int)vectorElementType->getNumElements() == g->target->getVectorWidth()));
 
     return (int)arrayType->getNumElements();
@@ -1720,11 +1716,7 @@ static llvm::Type *lGetMatchingBoolVectorType(llvm::Type *type) {
     llvm::ArrayType *arrayType = llvm::dyn_cast<llvm::ArrayType>(type);
     Assert(arrayType != NULL);
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     llvm::FixedVectorType *vectorElementType = llvm::dyn_cast<llvm::FixedVectorType>(arrayType->getElementType());
-#else
-    llvm::VectorType *vectorElementType = llvm::dyn_cast<llvm::VectorType>(arrayType->getElementType());
-#endif
     Assert(vectorElementType != NULL);
     Assert((int)vectorElementType->getNumElements() == g->target->getVectorWidth());
 
@@ -1783,15 +1775,8 @@ llvm::Value *FunctionEmitContext::SmearUniform(llvm::Value *value, const llvm::T
 
     // Check for a constant case.
     if (llvm::Constant *const_val = llvm::dyn_cast<llvm::Constant>(value)) {
-#if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
-        ret = llvm::ConstantVector::getSplat(g->target->getVectorWidth(), const_val);
-#elif ISPC_LLVM_VERSION < ISPC_LLVM_12_0
-        ret =
-            llvm::ConstantVector::getSplat({static_cast<unsigned int>(g->target->getVectorWidth()), false}, const_val);
-#else // LLVM 12.0+
         ret = llvm::ConstantVector::getSplat(
             llvm::ElementCount::get(static_cast<unsigned int>(g->target->getVectorWidth()), false), const_val);
-#endif
         return ret;
     }
 
@@ -2350,14 +2335,9 @@ llvm::Value *FunctionEmitContext::LoadInst(AddressInfo *ptrInfo, const Type *typ
     llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
     AssertPos(currentPos, pt != NULL);
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     llvm::LoadInst *inst =
         new llvm::LoadInst(ptrInfo->getElementType(), ptr,
                            name.isTriviallyEmpty() ? (llvm::Twine(ptr->getName()) + "_load") : name, bblock);
-#else
-    llvm::LoadInst *inst =
-        new llvm::LoadInst(ptr, name.isTriviallyEmpty() ? (llvm::Twine(ptr->getName()) + "_load") : name, bblock);
-#endif
 
     if (g->opt.forceAlignedMemory && llvm::dyn_cast<llvm::VectorType>(ptrInfo->getElementType())) {
         inst->setAlignment(llvm::MaybeAlign(g->target->getNativeVectorAlignment()).valueOrOne());
@@ -2479,16 +2459,10 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
             // unaligned vector loads, so we specify a reduced alignment here.
             const AtomicType *atomicType = CastType<AtomicType>(ptrType->GetBaseType());
 
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_10_0
-            llvm::LoadInst *inst =
-                new llvm::LoadInst(ptr, name.isTriviallyEmpty() ? (llvm::Twine(ptr->getName()) + "_load") : name,
-                                   false /* not volatile */, bblock);
-#else // LLVM 11.0+
             llvm::Type *llvmPtrType = AddressInfo::GetPointeeLLVMType(ptrType);
             llvm::LoadInst *inst = new llvm::LoadInst(
                 llvmPtrType, ptr, name.isTriviallyEmpty() ? (llvm::Twine(ptr->getName()) + "_load") : name,
                 false /* not volatile */, bblock);
-#endif
 
             if (atomicType != NULL && atomicType->IsVaryingType()) {
                 // We actually just want to align to the vector element
@@ -3275,13 +3249,8 @@ llvm::Value *FunctionEmitContext::BroadcastValue(llvm::Value *v, llvm::Type *vec
         return NULL;
     }
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     llvm::FixedVectorType *ty = llvm::dyn_cast<llvm::FixedVectorType>(vecType);
     Assert(ty && ty->getElementType() == v->getType());
-#else
-    llvm::VectorType *ty = llvm::dyn_cast<llvm::VectorType>(vecType);
-    Assert(ty && ty->getVectorElementType() == v->getType());
-#endif
 
     // Generate the following sequence:
     //   %name_init.i = insertelement <4 x i32> undef, i32 %val, i32 0
@@ -3296,18 +3265,9 @@ llvm::Value *FunctionEmitContext::BroadcastValue(llvm::Value *v, llvm::Type *vec
         InsertInst(undef1, v, 0, name.isTriviallyEmpty() ? (llvm::Twine(v->getName()) + "_broadcast") : name + "_init");
 
     // ShuffleVector
-#if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
-    llvm::Constant *zeroVec = llvm::ConstantVector::getSplat(
-        vecType->getVectorNumElements(), llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
-#elif ISPC_LLVM_VERSION < ISPC_LLVM_12_0
-    llvm::Constant *zeroVec =
-        llvm::ConstantVector::getSplat({static_cast<unsigned int>(ty->getNumElements()), false},
-                                       llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
-#else
     llvm::Constant *zeroVec =
         llvm::ConstantVector::getSplat(llvm::ElementCount::get(static_cast<unsigned int>(ty->getNumElements()), false),
                                        llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
-#endif
     llvm::Value *ret = ShuffleInst(insert, undef2, zeroVec,
                                    name.isTriviallyEmpty() ? (llvm::Twine(v->getName()) + "_broadcast") : name);
 
@@ -3408,7 +3368,6 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
     if (llvm::isa<llvm::VectorType>(func->getType()) == false) {
         // Regular 'uniform' function call--just one function or function
         // pointer, so just emit the IR directly.
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
         llvm::FunctionType *func_type = nullptr;
 
         // Easy function type callee
@@ -3420,9 +3379,6 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
             func_type = funcType->LLVMFunctionType(g->ctx, disableMask);
         }
         llvm::CallInst *callinst = llvm::CallInst::Create(func_type, func, argVals, name, bblock);
-#else
-        llvm::CallInst *callinst = llvm::CallInst::Create(func, argVals, name, bblock);
-#endif
 
         // We could be dealing with a function pointer in which case this will not be a 'llvm::Function'.
         // If 'llvm::Function', use same calling convention as the actual function definition. It's
@@ -3884,23 +3840,11 @@ llvm::Value *FunctionEmitContext::XeSimdCFAny(llvm::Value *value) {
 
 llvm::Value *FunctionEmitContext::XeSimdCFPredicate(llvm::Value *value, llvm::Value *defaults) {
     AssertPos(currentPos, llvm::isa<llvm::VectorType>(value->getType()));
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     llvm::FixedVectorType *vt = llvm::dyn_cast<llvm::FixedVectorType>(value->getType());
-#else
-    llvm::VectorType *vt = llvm::dyn_cast<llvm::VectorType>(value->getType());
-#endif
     if (defaults == NULL) {
-#if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
-        defaults = llvm::ConstantVector::getSplat(vt->getVectorNumElements(),
-                                                  llvm::Constant::getNullValue(vt->getElementType()));
-#elif ISPC_LLVM_VERSION < ISPC_LLVM_12_0
-        defaults = llvm::ConstantVector::getSplat({static_cast<unsigned int>(vt->getNumElements()), false},
-                                                  llvm::Constant::getNullValue(vt->getElementType()));
-#else
         defaults = llvm::ConstantVector::getSplat(
             llvm::ElementCount::get(static_cast<unsigned int>(vt->getNumElements()), false),
             llvm::Constant::getNullValue(vt->getElementType()));
-#endif
     }
 
     auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, llvm::GenXIntrinsic::genx_simdcf_predicate,

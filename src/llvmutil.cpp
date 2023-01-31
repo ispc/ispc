@@ -493,11 +493,7 @@ llvm::Constant *LLVMBoolVectorInStorage(const bool *bvec) {
 }
 
 llvm::Constant *LLVMIntAsType(int64_t val, llvm::Type *type) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     llvm::FixedVectorType *vecType = llvm::dyn_cast<llvm::FixedVectorType>(type);
-#else
-    llvm::VectorType *vecType = llvm::dyn_cast<llvm::VectorType>(type);
-#endif
 
     if (vecType != NULL) {
         llvm::Constant *v = llvm::ConstantInt::get(vecType->getElementType(), val, true /* signed */);
@@ -510,11 +506,7 @@ llvm::Constant *LLVMIntAsType(int64_t val, llvm::Type *type) {
 }
 
 llvm::Constant *LLVMUIntAsType(uint64_t val, llvm::Type *type) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     llvm::FixedVectorType *vecType = llvm::dyn_cast<llvm::FixedVectorType>(type);
-#else
-    llvm::VectorType *vecType = llvm::dyn_cast<llvm::VectorType>(type);
-#endif
 
     if (vecType != NULL) {
         llvm::Constant *v = llvm::ConstantInt::get(vecType->getElementType(), val, false /* unsigned */);
@@ -731,11 +723,7 @@ llvm::Value *LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth, bool com
     //              <i64 4, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef>
     //   %gep_offset = shufflevector <8 x i64> %0, <8 x i64> undef, <8 x i32> zeroinitializer
     else if (llvm::ShuffleVectorInst *shuf = llvm::dyn_cast<llvm::ShuffleVectorInst>(inst)) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
         llvm::Value *indices = shuf->getShuffleMaskForBitcode();
-#else
-        llvm::Value *indices = shuf->getOperand(2);
-#endif
 
         if (llvm::isa<llvm::ConstantAggregateZero>(indices)) {
             llvm::Value *op = shuf->getOperand(0);
@@ -765,11 +753,7 @@ llvm::Value *LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth, bool com
 
 bool LLVMExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts) {
     // Make sure we do in fact have a vector of integer values here
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     llvm::FixedVectorType *vt = llvm::dyn_cast<llvm::FixedVectorType>(v->getType());
-#else
-    llvm::VectorType *vt = llvm::dyn_cast<llvm::VectorType>(v->getType());
-#endif
     Assert(vt != NULL);
     Assert(llvm::isa<llvm::IntegerType>(vt->getElementType()));
 
@@ -1109,11 +1093,7 @@ static bool lVectorValuesAllEqual(llvm::Value *v, int vectorLength, std::vector<
 
     llvm::ShuffleVectorInst *shuffle = llvm::dyn_cast<llvm::ShuffleVectorInst>(v);
     if (shuffle != NULL) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
         llvm::Value *indices = shuffle->getShuffleMaskForBitcode();
-#else
-        llvm::Value *indices = shuffle->getOperand(2);
-#endif
 
         if (lVectorValuesAllEqual(indices, vectorLength, seenPhis))
             // The easy case--just a smear of the same element across the
@@ -1144,11 +1124,7 @@ static bool lVectorValuesAllEqual(llvm::Value *v, int vectorLength, std::vector<
     where the values are actually all equal.
 */
 bool LLVMVectorValuesAllEqual(llvm::Value *v, llvm::Value **splat) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     llvm::FixedVectorType *vt = llvm::dyn_cast<llvm::FixedVectorType>(v->getType());
-#else
-    llvm::VectorType *vt = llvm::dyn_cast<llvm::VectorType>(v->getType());
-#endif
     Assert(vt != NULL);
     int vectorLength = vt->getNumElements();
 
@@ -1427,11 +1403,7 @@ static bool lVectorIsLinear(llvm::Value *v, int vectorLength, int stride, std::v
     elements equal to some non-constant value plus an integer offset, etc.
 */
 bool LLVMVectorIsLinear(llvm::Value *v, int stride) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     llvm::FixedVectorType *vt = llvm::dyn_cast<llvm::FixedVectorType>(v->getType());
-#else
-    llvm::VectorType *vt = llvm::dyn_cast<llvm::VectorType>(v->getType());
-#endif
     Assert(vt != NULL);
     int vectorLength = vt->getNumElements();
 
@@ -1470,11 +1442,7 @@ void LLVMDumpValue(llvm::Value *v) {
 }
 
 static llvm::Value *lExtractFirstVectorElement(llvm::Value *v, std::map<llvm::PHINode *, llvm::PHINode *> &phiMap) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     llvm::FixedVectorType *vt = llvm::dyn_cast<llvm::FixedVectorType>(v->getType());
-#else
-    llvm::VectorType *vt = llvm::dyn_cast<llvm::VectorType>(v->getType());
-#endif
     Assert(vt != NULL);
 
     // First, handle various constant types; do the extraction manually, as
@@ -1550,11 +1518,7 @@ static llvm::Value *lExtractFirstVectorElement(llvm::Value *v, std::map<llvm::PH
     // "lExtractFirstVectorElement" function.
     if (llvm::isa<llvm::ShuffleVectorInst>(v)) {
         llvm::ShuffleVectorInst *shuf = llvm::dyn_cast<llvm::ShuffleVectorInst>(v);
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
         llvm::Value *indices = shuf->getShuffleMaskForBitcode();
-#else
-        llvm::Value *indices = shuf->getOperand(2);
-#endif
         if (llvm::isa<llvm::ConstantAggregateZero>(indices)) {
             return lExtractFirstVectorElement(shuf->getOperand(0), phiMap);
         }
@@ -1589,11 +1553,7 @@ llvm::Value *LLVMExtractFirstVectorElement(llvm::Value *v) {
  */
 llvm::Value *LLVMConcatVectors(llvm::Value *v1, llvm::Value *v2, llvm::Instruction *insertBefore) {
     Assert(v1->getType() == v2->getType());
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     llvm::FixedVectorType *vt = llvm::dyn_cast<llvm::FixedVectorType>(v1->getType());
-#else
-    llvm::VectorType *vt = llvm::dyn_cast<llvm::VectorType>(v1->getType());
-#endif
     Assert(vt != NULL);
 
     int32_t identity[ISPC_MAX_NVEC];

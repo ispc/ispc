@@ -152,10 +152,8 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
     }
     optPM.add(llvm::createIndVarSimplifyPass());
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
     llvm::SimplifyCFGOptions simplifyCFGopt;
     simplifyCFGopt.HoistCommonInsts = true;
-#endif
     if (optLevel == 0) {
         // This is more or less the minimum set of optimizations that we
         // need to do to generate code that will actually run.  (We can't
@@ -178,11 +176,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateIsCompileTimeConstantPass(true));
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(CreateMakeInternalFuncsStaticPass());
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         optPM.add(llvm::createCFGSimplificationPass(simplifyCFGopt));
-#else
-        optPM.add(llvm::createCFGSimplificationPass());
-#endif
         optPM.add(llvm::createGlobalDCEPass());
 #ifdef ISPC_XE_ENABLED
         if (g->target->isXeTarget()) {
@@ -222,11 +216,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         // An alternative is to call populateFunctionPassManager()
         optPM.add(llvm::createTypeBasedAAWrapperPass(), 190);
         optPM.add(llvm::createBasicAAWrapperPass());
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         optPM.add(llvm::createCFGSimplificationPass(simplifyCFGopt));
-#else
-        optPM.add(llvm::createCFGSimplificationPass());
-#endif
 
         optPM.add(llvm::createSROAPass());
 
@@ -238,11 +228,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createReassociatePass(), 200);
         optPM.add(llvm::createInstSimplifyLegacyPass());
         optPM.add(llvm::createDeadCodeEliminationPass());
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         optPM.add(llvm::createCFGSimplificationPass(simplifyCFGopt));
-#else
-        optPM.add(llvm::createCFGSimplificationPass());
-#endif
 
         optPM.add(llvm::createPromoteMemoryToRegisterPass());
         optPM.add(llvm::createAggressiveDCEPass());
@@ -260,32 +246,17 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         // On to more serious optimizations
         optPM.add(llvm::createSROAPass());
         optPM.add(llvm::createInstructionCombiningPass());
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         optPM.add(llvm::createCFGSimplificationPass(simplifyCFGopt));
-#else
-        optPM.add(llvm::createCFGSimplificationPass());
-#endif
         optPM.add(llvm::createPromoteMemoryToRegisterPass());
         optPM.add(llvm::createGlobalOptimizerPass());
         optPM.add(llvm::createReassociatePass());
-        // IPConstProp will not be supported by LLVM moving forward.
-        // Switching to IPSCCP which is its recommended functional equivalent.
-        // TODO : Make IPSCCP the default after ISPC 1.14 release.
-#if ISPC_LLVM_VERSION < ISPC_LLVM_12_0
-        optPM.add(llvm::createIPConstantPropagationPass());
-#else
         optPM.add(llvm::createIPSCCPPass());
-#endif
 
         optPM.add(CreateReplaceStdlibShiftPass(), 229);
 
         optPM.add(llvm::createDeadArgEliminationPass(), 230);
         optPM.add(llvm::createInstructionCombiningPass());
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         optPM.add(llvm::createCFGSimplificationPass(simplifyCFGopt));
-#else
-        optPM.add(llvm::createCFGSimplificationPass());
-#endif
         optPM.add(llvm::createPruneEHPass());
         optPM.add(llvm::createPostOrderFunctionAttrsLegacyPass());
         optPM.add(llvm::createReversePostOrderFunctionAttrsPass());
@@ -294,11 +265,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(llvm::createInstSimplifyLegacyPass());
         optPM.add(llvm::createDeadCodeEliminationPass());
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         optPM.add(llvm::createCFGSimplificationPass(simplifyCFGopt));
-#else
-        optPM.add(llvm::createCFGSimplificationPass());
-#endif
 
 #if ISPC_LLVM_VERSION < ISPC_LLVM_15_0
         // Starting LLVM 15.0 this pass is supported with new pass manager only (217e857)
@@ -309,11 +276,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createAggressiveDCEPass());
         optPM.add(llvm::createInstructionCombiningPass(), 241);
         optPM.add(llvm::createJumpThreadingPass());
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         optPM.add(llvm::createCFGSimplificationPass(simplifyCFGopt));
-#else
-        optPM.add(llvm::createCFGSimplificationPass());
-#endif
 
         optPM.add(llvm::createSROAPass());
 
@@ -362,11 +325,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createDeadArgEliminationPass());
         optPM.add(llvm::createAggressiveDCEPass());
         optPM.add(llvm::createInstructionCombiningPass());
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         optPM.add(llvm::createCFGSimplificationPass(simplifyCFGopt));
-#else
-        optPM.add(llvm::createCFGSimplificationPass());
-#endif
 
         if (g->opt.disableHandlePseudoMemoryOps == false) {
             optPM.add(CreateReplacePseudoMemoryOpsPass(), 280);
@@ -385,11 +344,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(CreateInstructionSimplifyPass());
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         optPM.add(llvm::createCFGSimplificationPass(simplifyCFGopt));
-#else
-        optPM.add(llvm::createCFGSimplificationPass());
-#endif
         optPM.add(llvm::createReassociatePass());
         optPM.add(llvm::createLoopRotatePass());
         optPM.add(llvm::createLICMPass());
@@ -442,11 +397,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createCorrelatedValuePropagationPass());
         optPM.add(llvm::createDeadStoreEliminationPass());
         optPM.add(llvm::createAggressiveDCEPass());
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_12_0
         optPM.add(llvm::createCFGSimplificationPass(simplifyCFGopt));
-#else
-        optPM.add(llvm::createCFGSimplificationPass());
-#endif
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(CreateInstructionSimplifyPass());
 #ifdef ISPC_XE_ENABLED

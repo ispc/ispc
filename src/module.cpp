@@ -1135,15 +1135,7 @@ bool Module::translateToSPIRV(llvm::Module *module, std::stringstream &ss) {
         llvm::cl::desc("Allow DWARF operations not listed in the OpenCL.DebugInfo.100 "
                        "specification (experimental, may produce incompatible SPIR-V "
                        "module)"));
-#if ISPC_LLVM_VERSION == ISPC_LLVM_12_0
-    llvm::cl::opt<bool> SPIRVAllowUnknownIntrinsics(
-        "spirv-allow-unknown-intrinsics", llvm::cl::init(true),
-        llvm::cl::desc("Unknown LLVM intrinsics will be translated as external function calls in SPIR-V"));
-
-    Opts.setSPIRVAllowUnknownIntrinsicsEnabled(SPIRVAllowUnknownIntrinsics);
-#else
     Opts.setSPIRVAllowUnknownIntrinsics({"llvm.genx"});
-#endif
     Opts.setAllowExtraDIExpressionsEnabled(SPIRVAllowExtraDIExpressions);
     Opts.setDesiredBIsRepresentation(SPIRV::BIsRepresentation::SPIRVFriendlyIR);
     Opts.setDebugInfoEIS(SPIRV::DebugInfoEIS::OpenCL_DebugInfo_100);
@@ -2588,11 +2580,7 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
     llvm::CallInst::Create(setISAFunc, "", bblock);
 
     // Now we can load the system's ISA enumerant
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_11_0
     llvm::Value *systemISA = new llvm::LoadInst(LLVMTypes::Int32Type, systemBestISAPtr, "system_isa", bblock);
-#else
-    llvm::Value *systemISA = new llvm::LoadInst(systemBestISAPtr, "system_isa", bblock);
-#endif
 
     // Now emit code that works backwards though the available variants of
     // the function.  We'll call out to the first one we find that will run

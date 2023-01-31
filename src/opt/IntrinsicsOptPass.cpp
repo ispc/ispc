@@ -166,15 +166,9 @@ restart:
                     align = g->target->getNativeVectorAlignment();
                 else
                     align = callInst->getCalledFunction() == avxMaskedLoad32 ? 4 : 8;
-#if ISPC_LLVM_VERSION < ISPC_LLVM_11_0
-                llvm::Instruction *loadInst =
-                    new llvm::LoadInst(castPtr, llvm::Twine(callInst->getArgOperand(0)->getName()) + "_load",
-                                       false /* not volatile */, llvm::MaybeAlign(align), (llvm::Instruction *)NULL);
-#else
                 llvm::Instruction *loadInst = new llvm::LoadInst(
                     returnType, castPtr, llvm::Twine(callInst->getArgOperand(0)->getName()) + "_load",
                     false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(), (llvm::Instruction *)NULL);
-#endif
                 LLVMCopyMetadata(loadInst, callInst);
                 llvm::ReplaceInstWithInst(callInst, loadInst);
                 modifiedAny = true;

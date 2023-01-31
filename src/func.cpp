@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2022, Intel Corporation
+  Copyright (c) 2011-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -682,9 +682,7 @@ void Function::GenerateIR() {
         // if it is a kernel
         const FunctionType *type = CastType<FunctionType>(sym->type);
         if (!type->IsISPCKernel()) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
             llvm::TimeTraceScope TimeScope("emitCode", llvm::StringRef(sym->name));
-#endif
             FunctionEmitContext ec(this, sym, function, firstStmtPos);
             emitCode(&ec, function, firstStmtPos);
         }
@@ -699,9 +697,7 @@ void Function::GenerateIR() {
         // multi-target compilation we will emit only one-per-target definition of extern "C" function mangled with
         // <target> suffix.
         if (!((type->isExternC || type->isExternSYCL) && g->mangleFunctionsWithTarget)) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
             llvm::TimeTraceScope TimeScope("emitCode", llvm::StringRef(sym->name));
-#endif
             FunctionEmitContext ec(this, sym, function, firstStmtPos);
             emitCode(&ec, function, firstStmtPos);
         }
@@ -756,9 +752,7 @@ void Function::GenerateIR() {
                 // error, so don't worry about this one...
                 appFunction->eraseFromParent();
             } else {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_10_0
                 llvm::TimeTraceScope TimeScope("emitCode", llvm::StringRef(sym->name));
-#endif
                 // And emit the code again
                 FunctionEmitContext ec(this, sym, appFunction, firstStmtPos);
                 emitCode(&ec, appFunction, firstStmtPos);
