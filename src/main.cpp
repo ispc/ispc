@@ -177,7 +177,7 @@ static void lPrintVersion() {
              g->target_registry->getSupportedOSes().c_str());
     PrintWithWordBreaks(targetHelp, 24, TerminalWidth(), stdout);
     printf("    [--time-trace]\t\t\tTurn on time profiler. Generates JSON file based on output filename.\n");
-    printf("    [--time-trace-granularity=<value>\tMinimum time granularity (in microseconds) traced by time "
+    printf("    [--time-trace-granularity=<value>]\tMinimum time granularity (in microseconds) traced by time "
            "profiler.\n");
     printf("    [--vectorcall/--no-vectorcall]\tEnable/disable vectorcall calling convention on Windows (x64 only). "
            "Disabled by default\n");
