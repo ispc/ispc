@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022, Intel Corporation
+  Copyright (c) 2022-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -67,7 +67,7 @@ restart:
         // named) disableGatherScatterFlattening option and
         // disableMaskAllOnOptimizations.
         if (g->opt.disableGatherScatterFlattening || g->opt.disableMaskAllOnOptimizations) {
-            llvm::ReplaceInstWithValue(i->getParent()->getInstList(), i, LLVMFalse);
+            ReplaceInstWithValueWrapper(i, LLVMFalse);
             modifiedAny = true;
             goto restart;
         }
@@ -76,7 +76,7 @@ restart:
         // true value.
         llvm::Value *operand = callInst->getArgOperand(0);
         if (llvm::isa<llvm::Constant>(operand)) {
-            llvm::ReplaceInstWithValue(i->getParent()->getInstList(), i, LLVMTrue);
+            ReplaceInstWithValueWrapper(i, LLVMTrue);
             modifiedAny = true;
             goto restart;
         }
@@ -88,7 +88,7 @@ restart:
         // value.  The last time through, it eventually has to give up, and
         // replaces any remaining ones with 'false' constants.
         if (isLastTry) {
-            llvm::ReplaceInstWithValue(i->getParent()->getInstList(), i, LLVMFalse);
+            ReplaceInstWithValueWrapper(i, LLVMFalse);
             modifiedAny = true;
             goto restart;
         }
