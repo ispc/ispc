@@ -1437,7 +1437,12 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
             return;
         }
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
+        std::optional<llvm::Reloc::Model> relocModel;
+#else
         llvm::Optional<llvm::Reloc::Model> relocModel;
+#endif
+
         if (m_generatePIC) {
             relocModel = llvm::Reloc::PIC_;
         }

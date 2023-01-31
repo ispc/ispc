@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -3171,7 +3171,13 @@ void FunctionEmitContext::setLoopUnrollMetadata(llvm::Instruction *inst,
     }
 
     llvm::SmallVector<llvm::Metadata *, 4> Args;
-    llvm::TempMDTuple TempNode = llvm::MDNode::getTemporary(*g->ctx, llvm::None);
+    llvm::TempMDTuple TempNode = llvm::MDNode::getTemporary(*g->ctx,
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
+                                                            std::nullopt
+#else
+                                                            llvm::None
+#endif
+    );
     Args.push_back(TempNode.get());
     if (loopAttribute.first == Globals::pragmaUnrollType::count) {
         llvm::Metadata *Vals[] = {llvm::MDString::get(*g->ctx, "llvm.loop.unroll.count"),
