@@ -16,7 +16,7 @@ RUN uname -a
 
 # Packages
 RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends install -y wget=1.20.3-1ubuntu2 cmake=3.16.3-1ubuntu1 build-essential=12.8ubuntu1.1 \
-    gcc=4:9.3.0-1ubuntu2 g++=4:9.3.0-1ubuntu2 git=1:2.25.1-1ubuntu3.5 python3-dev=3.8.2-0ubuntu2 libncurses-dev=6.2-0ubuntu2 libtinfo-dev=6.2-0ubuntu2 ca-certificates=20211016~20.04.1 && \
+    gcc=4:9.3.0-1ubuntu2 g++=4:9.3.0-1ubuntu2 git=1:2.25.1-1ubuntu3.8 python3-dev=3.8.2-0ubuntu2 libncurses-dev=6.2-0ubuntu2 libtinfo-dev=6.2-0ubuntu2 ca-certificates=20211016ubuntu0.20.04.1 && \
     rm -rf /var/lib/apt/lists/*
 
 # If you are behind a proxy, you need to configure git.
