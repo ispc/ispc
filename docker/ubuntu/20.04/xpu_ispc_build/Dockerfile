@@ -17,11 +17,11 @@ ARG SPIRV_TRANSLATOR_COMMIT_SHA="d7a030447802718de76355c248b6bb292669683b"
 
 # Packages
 RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends install -y clang-8=1:8.0.1-9 build-essential=12.8ubuntu1.1 \
-    libnuma1=2.0.12-1 opencl-headers=2.2~2019.08.06-g0d5f18c-1 ocl-icd-libopencl1=2.2.11-1ubuntu1 clinfo=2.2.18.04.06-1 vim=2:8.1.2269-1ubuntu5.9 \
-    gcc=4:9.3.0-1ubuntu2 g++=4:9.3.0-1ubuntu2 git=1:2.25.1-1ubuntu3.5 python3-dev=3.8.2-0ubuntu2 imagemagick=8:6.9.10.23+dfsg-2.1ubuntu11.4 \
+    libnuma1=2.0.12-1 opencl-headers=2.2~2019.08.06-g0d5f18c-1 ocl-icd-libopencl1=2.2.11-1ubuntu1 clinfo=2.2.18.04.06-1 vim=2:8.1.2269-1ubuntu5.11 \
+    gcc=4:9.3.0-1ubuntu2 g++=4:9.3.0-1ubuntu2 git=1:2.25.1-1ubuntu3.8 python3-dev=3.8.2-0ubuntu2 imagemagick=8:6.9.10.23+dfsg-2.1ubuntu11.4 \
     m4=1.4.18-4 bison=2:3.5.1+dfsg-1 flex=2.6.4-6.2 libncurses-dev=6.2-0ubuntu2 libtinfo-dev=6.2-0ubuntu2 libc6-dev-i386=2.31-0ubuntu9.9 cpio=2.13+dfsg-2ubuntu0.3 \
     lsb-core=11.1.0ubuntu2 wget=1.20.3-1ubuntu2 netcat-openbsd=1.206-1ubuntu1 libtbb-dev=2020.1-2 libglfw3-dev=3.3.2-1 pkgconf=1.6.3-5 gdb=9.2-0ubuntu1~20.04.1 \
-    gcc-multilib=4:9.3.0-1ubuntu2 g++-multilib=4:9.3.0-1ubuntu2 curl=7.68.0-1ubuntu2.13 libomp-dev=1:10.0-50~exp1 ca-certificates=20211016~20.04.1 && \
+    gcc-multilib=4:9.3.0-1ubuntu2 g++-multilib=4:9.3.0-1ubuntu2 curl=7.68.0-1ubuntu2.15 libomp-dev=1:10.0-50~exp1 ca-certificates=20211016ubuntu0.20.04.1 && \
     rm -rf /var/lib/apt/lists/*
 
 # Download and install required version of cmake (3.14) for ISPC build
