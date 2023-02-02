@@ -7037,15 +7037,15 @@ define void @__restore_ftz_daz_flags(i32 %oldVal) nounwind alwaysinline {
 ;; $1: target vector width
 
 define(`halfMath', `
-declare half @llvm.round.f16(half)
+declare half @llvm.nearbyint.f16(half)
 define half @__round_uniform_half(half %Val) nounwind readnone alwaysinline {
-  %retVal = call half @llvm.round.f16(half %Val)
+  %retVal = call half @llvm.nearbyint.f16(half %Val)
   ret half %retVal
 }
 
-declare <$1 x half> @llvm.round.v$1f16(<$1 x half>)
+declare <$1 x half> @llvm.nearbyint.v$1f16(<$1 x half>)
 define <$1 x half> @__round_varying_half(<$1 x half> %Val) nounwind readnone alwaysinline {
-  %retVal = call <$1 x half> @llvm.round.v$1f16(<$1 x half> %Val)
+  %retVal = call <$1 x half> @llvm.nearbyint.v$1f16(<$1 x half> %Val)
   ret <$1 x half> %retVal
 }
 
