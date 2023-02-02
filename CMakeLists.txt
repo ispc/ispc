@@ -296,6 +296,9 @@ set(CLANG_LIBRARY_LIST clangFrontend clangDriver clangSerialization clangParse c
 if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "15.0.0")
     list(APPEND CLANG_LIBRARY_LIST clangSupport)
 endif()
+if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "16.0.0")
+    list(APPEND CLANG_LIBRARY_LIST clangASTMatchers)
+endif()
 
 set(LLVM_COMPONENTS engine ipo bitreader bitwriter instrumentation linker option frontendopenmp)
 if (XE_ENABLED AND ${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "14.0.0")
