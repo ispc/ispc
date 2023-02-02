@@ -130,6 +130,7 @@ using namespace ispc;
 // The magic constants are derived from https://github.com/intel/compute-runtime repo
 // compute-runtime/shared/source/compiler_interface/intermediate_representations.h
 const char *llvmBcMagic = "BC\xc0\xde";
+const char *llvmBcMagicWrapper = "\xDE\xC0\x17\x0B";
 const char *spirvMagic = "\x07\x23\x02\x03";
 const char *spirvMagicInv = "\x03\x02\x23\x07";
 
@@ -149,7 +150,9 @@ static bool lHasSameMagic(const char *expectedMagic, std::ifstream &is) {
     return magicHeader.compare(expectedMagic) == 0;
 }
 
-static bool lIsLlvmBitcode(std::ifstream &is) { return lHasSameMagic(llvmBcMagic, is); }
+static bool lIsLlvmBitcode(std::ifstream &is) {
+    return lHasSameMagic(llvmBcMagic, is) || lHasSameMagic(llvmBcMagicWrapper, is);
+}
 
 static bool lIsSpirVBitcode(std::ifstream &is) {
     return lHasSameMagic(spirvMagic, is) || lHasSameMagic(spirvMagicInv, is);
