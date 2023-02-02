@@ -22,8 +22,8 @@
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 link 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_22
 //; RUN: not %{ispc} link %s 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_23
 //; RUN: not %{ispc} link --emit-obj %s 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_24
-//; RUN: %{ispc} %s -o %t.bc --emit-llvm | not %{ispc} link %t.bc 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_25
-//; RUN: %{ispc} %s -o %t.bc --emit-llvm | %{ispc} link %t.bc -o %t.bc
+//; RUN: %{ispc} %s -o %t.bc --emit-llvm && not %{ispc} link %t.bc 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_25
+//; RUN: %{ispc} %s -o %t.bc --emit-llvm && %{ispc} link %t.bc -o %t_link.bc
 //; RUN: %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --help
 //; RUN: %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --help-dev
 //; RUN: %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --support-matrix
