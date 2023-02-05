@@ -630,7 +630,7 @@ int main(int Argc, char *Argv[]) {
 
     // If the first argument is "link"
     // ISPC will be used in a linkage mode
-    if (!strncmp(argv[1], "link", 4)) {
+    if (argc > 1 && !strncmp(argv[1], "link", 4)) {
         // Use bitcode format by default
         ot = Module::Bitcode;
 
