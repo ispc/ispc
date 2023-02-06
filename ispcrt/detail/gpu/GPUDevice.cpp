@@ -672,7 +672,7 @@ class ChunkedPool {
 
     ChunkedPool(ISPCRTSharedMemoryAllocationHint type, ze_context_handle_t ctxt) : m_type(type), m_ctxt(ctxt) {
         // Create empty Bulk objects for chunks of power of 2.
-        for (int i = Bulk::MIN_POW_2; i < Bulk::MAX_POW_2; i++) {
+        for (int i = Bulk::MIN_POW_2; i <= Bulk::MAX_POW_2; i++) {
             size_t chunkSize = 1ULL << i;
             m_bulks[chunkSize] = std::list<Bulk*>( { new Bulk(chunkSize, m_ctxt) } );
         }
@@ -686,7 +686,7 @@ class ChunkedPool {
 
     void *allocate(size_t size) {
         assert(size == round_up_pow2(size));
-        assert(size < MAX_CHUNK_SIZE);
+        assert(size <= MAX_CHUNK_SIZE);
         if (size < MIN_CHUNK_SIZE) {
             size = MIN_CHUNK_SIZE;
         }
@@ -766,7 +766,7 @@ struct MemoryView : public ispcrt::base::MemoryView {
 
     ~MemoryView() {
         if (m_devicePtr) {
-            if (m_shared && m_useMemPool && m_size < Bulk::BULK_SIZE) {
+            if (m_shared && m_useMemPool && m_size <= ChunkedPool::MAX_CHUNK_SIZE) {
                 assert(m_ctxtGPU);
                 m_memPool->deallocate(m_devicePtr);
                 if (UNLIKELY(is_verbose)) {
@@ -824,7 +824,7 @@ struct MemoryView : public ispcrt::base::MemoryView {
     void allocate() {
         if (m_shared) {
 
-            if (m_useMemPool && m_size < Bulk::BULK_SIZE) {
+            if (m_useMemPool && m_size <= ChunkedPool::MAX_CHUNK_SIZE) {
                 m_size = round_up_pow2(m_requestedSize);
 
                 m_devicePtr = m_memPool->allocate(m_size);

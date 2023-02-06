@@ -1052,6 +1052,71 @@ TEST_F(MockTest, C_API_CreateDeviceFromNativeHandler) {
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
+TEST_F(MockTest, C_API_MemPoolGeneralTest) {
+    setenv("ISPCRT_MEM_POOL", "1", 1);
+    void *p = NULL;
+    ISPCRTContext context = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
+    ISPCRTNewMemoryViewFlags flags = { ISPCRT_ALLOC_TYPE_SHARED, ISPCRT_SM_HOST_WRITE_DEVICE_READ };
+    ISPCRTMemoryView view = ispcrtNewMemoryViewForContext(context, NULL, 1ULL<<10, &flags);
+    p = ispcrtHostPtr(view);
+    ASSERT_EQ(ispcrtSize(view), 1ULL<<10);
+    ispcrtRelease(view);
+    flags = { ISPCRT_ALLOC_TYPE_SHARED, ISPCRT_SM_HOST_READ_DEVICE_WRITE };
+    view = ispcrtNewMemoryViewForContext(context, NULL, 1ULL<<10, &flags);
+    p = ispcrtHostPtr(view);
+    ASSERT_EQ(ispcrtSize(view), 1ULL<<10);
+    ispcrtRelease(view);
+    ispcrtRelease(context);
+    unsetenv("ISPCRT_MEM_POOL");
+}
+
+TEST_F(MockTest, C_API_MemPoolFallBack) {
+    setenv("ISPCRT_MEM_POOL", "1", 1);
+    void *p = NULL;
+    ISPCRTContext context = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
+    ISPCRTNewMemoryViewFlags flags = { ISPCRT_ALLOC_TYPE_SHARED, ISPCRT_SM_HOST_WRITE_DEVICE_READ };
+    ISPCRTMemoryView view = ispcrtNewMemoryViewForContext(context, NULL, (1ULL<<21) + 1, &flags);
+    p = ispcrtHostPtr(view);
+    ASSERT_EQ(ispcrtSize(view), (1ULL<<21) + 1);
+    ispcrtRelease(view);
+    view = ispcrtNewMemoryViewForContext(context, NULL, (1ULL<<10) - 12, &flags);
+    p = ispcrtHostPtr(view);
+    ASSERT_EQ(ispcrtSize(view), 1ULL<<10);
+    ispcrtRelease(view);
+    ispcrtRelease(context);
+    unsetenv("ISPCRT_MEM_POOL");
+}
+
+TEST_F(MockTest, C_API_MemPoolRoundUpPow2) {
+    setenv("ISPCRT_MEM_POOL", "1", 1);
+    void *p = NULL;
+    ISPCRTContext context = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
+    ISPCRTNewMemoryViewFlags flags = { ISPCRT_ALLOC_TYPE_SHARED, ISPCRT_SM_HOST_WRITE_DEVICE_READ };
+    ISPCRTMemoryView view;
+    view = ispcrtNewMemoryViewForContext(context, NULL, 1ULL<<21, &flags);
+    p = ispcrtHostPtr(view);
+    ASSERT_EQ(ispcrtSize(view), 1ULL<<21);
+    ispcrtRelease(view);
+    view = ispcrtNewMemoryViewForContext(context, NULL, (1ULL<<21) - 1, &flags);
+    p = ispcrtHostPtr(view);
+    ASSERT_EQ(ispcrtSize(view), 1ULL<<21);
+    ispcrtRelease(view);
+    view = ispcrtNewMemoryViewForContext(context, NULL, 1ULL<<7, &flags);
+    p = ispcrtHostPtr(view);
+    ASSERT_EQ(ispcrtSize(view), 1ULL<<7);
+    ispcrtRelease(view);
+    view = ispcrtNewMemoryViewForContext(context, NULL, 1ULL<<20, &flags);
+    p = ispcrtHostPtr(view);
+    ASSERT_EQ(ispcrtSize(view), 1ULL<<20);
+    ispcrtRelease(view);
+    view = ispcrtNewMemoryViewForContext(context, NULL, (1ULL<<20) + 1, &flags);
+    p = ispcrtHostPtr(view);
+    ASSERT_EQ(ispcrtSize(view), 1ULL<<21);
+    ispcrtRelease(view);
+    ispcrtRelease(context);
+    unsetenv("ISPCRT_MEM_POOL");
+}
+
 /// C++ Device API
 TEST_F(MockTest, Device_DeviceCount1) {
     // CPU
