@@ -78,6 +78,27 @@ static void print_env(const char *env) {
     }
 }
 
+// Return true for name=1 and false for name=0. If any other value set (even empty string) then runtime error occures.
+static bool get_bool_envvar(const char *name) {
+    int parsed = 0;
+    const char *val = getenv_wr(name);
+    if (val) {
+        std::istringstream is(val);
+        is >> parsed;
+        if (is) {
+            if (parsed == 0) {
+                return false;
+            } else if (parsed == 1) {
+                return true;
+            }
+        }
+        std::stringstream ss;
+        ss << "Incorrect value of " << name << " variable, set 0 or 1.";
+        throw std::runtime_error(ss.str());
+    }
+    return false;
+}
+
 
 #if defined(_WIN32) || defined(_WIN64)
 #if defined(_WIN64)
@@ -735,7 +756,7 @@ struct MemoryView : public ispcrt::base::MemoryView {
           m_shared(flags->allocType == ISPCRT_ALLOC_TYPE_SHARED), m_smhint(flags->smHint), m_ctxtGPU(ctxt)
     {
         // Use MemPool only when it is explicitly enabled with env var and memory hint is not device/host read/write
-        m_useMemPool = (getenv_wr(ISPCRT_MEM_POOL) != nullptr) && (m_smhint != ISPCRT_SM_HOST_DEVICE_READ_WRITE);
+        m_useMemPool = get_bool_envvar(ISPCRT_MEM_POOL) && (m_smhint != ISPCRT_SM_HOST_DEVICE_READ_WRITE);
         if (m_ctxtGPU && m_useMemPool) {
             m_memPool = m_ctxtGPU->memPool(m_smhint);
             if (!m_memPool->hDev())
@@ -1362,7 +1383,7 @@ static std::vector<ze_device_handle_t> g_deviceList;
 
 static ze_driver_handle_t deviceDiscovery(bool *p_is_mock) {
     // Enable verbose if env var is set
-    is_verbose = getenv_wr(ISPCRT_VERBOSE) != nullptr;
+    is_verbose = get_bool_envvar(ISPCRT_VERBOSE);
     if (UNLIKELY(is_verbose)) {
         std::cout << "Verbose mode is on" << std::endl;
         print_env(ISPCRT_VERBOSE);
