@@ -1,4 +1,4 @@
-// Copyright 2020-2022 Intel Corporation
+// Copyright 2020-2023 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
@@ -64,6 +64,7 @@ void ispcrtSetErrorFunc(ISPCRTErrorFunc);
 
 // Object lifetime ////////////////////////////////////////////////////////////
 
+long long ispcrtUseCount(ISPCRTGenericHandle);
 void ispcrtRelease(ISPCRTGenericHandle);
 void ispcrtRetain(ISPCRTGenericHandle);
 

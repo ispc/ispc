@@ -1,4 +1,4 @@
-// Copyright 2020-2022 Intel Corporation
+// Copyright 2020-2023 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "ispcrt.h"
@@ -89,6 +89,12 @@ void ispcrtSetErrorFunc(ISPCRTErrorFunc fcn) { g_errorFcn = fcn; }
 ///////////////////////////////////////////////////////////////////////////////
 // Object lifetime ////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
+
+long long ispcrtUseCount(ISPCRTGenericHandle h) ISPCRT_CATCH_BEGIN {
+    auto &obj = referenceFromHandle(h);
+    return obj.useCount();
+}
+ISPCRT_CATCH_END(0)
 
 void ispcrtRelease(ISPCRTGenericHandle h) ISPCRT_CATCH_BEGIN {
     auto &obj = referenceFromHandle(h);
