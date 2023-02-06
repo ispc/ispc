@@ -47,6 +47,8 @@ DECLARE_ENV(ISPCRT_DISABLE_COPY_ENGINE)
 DECLARE_ENV(ISPCRT_IGC_OPTIONS)
 DECLARE_ENV(ISPCRT_USE_ZEBIN)
 DECLARE_ENV(ISPCRT_MEM_POOL)
+DECLARE_ENV(ISPCRT_MEM_POOL_MIN_CHUNK_POW2)
+DECLARE_ENV(ISPCRT_MEM_POOL_MAX_CHUNK_POW2)
 #undef DECLARE_ENV
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -99,6 +101,23 @@ static bool get_bool_envvar(const char *name) {
     return false;
 }
 
+// Parse numberic value of size_t type from value of name environment variable.
+// If no variable presented in environment then return default_value.
+static size_t get_number_envvar(const char *name, size_t default_value) {
+    size_t parsed = 0;
+    const char *val = getenv_wr(name);
+    if (val) {
+        std::istringstream is(val);
+        is >> parsed;
+        if (is) {
+            return parsed;
+        }
+        std::stringstream ss;
+        ss << "Incorrect value of " << name << " variable, set correct numeric value.";
+        throw std::runtime_error(ss.str());
+    }
+    return default_value;
+}
 
 #if defined(_WIN32) || defined(_WIN64)
 #if defined(_WIN64)
@@ -551,22 +570,14 @@ struct EventPool {
 // It is virtually splitted into smaller chunks of same size.
 class Bulk {
   public:
-    static const size_t MIN_POW_2 = 6;
-    static const size_t MAX_POW_2 = 21;
-
-    // Cut-off of chunking allocations 2 MB.
-    // 2MB corresponds with DG2 shared mem allocation. To utilize it with less
-    // overhead it may be useful to decrease it.
-    static constexpr size_t BULK_SIZE = (1ULL << MAX_POW_2);
-
     // No actual shared memory allocation happen in bulk constructor. It is
     // delayed until actual requests to allocate memory.
-    Bulk(size_t chunkSize, ze_context_handle_t ctxt, ze_device_handle_t dev) :
-      m_chunkSize(chunkSize), m_numChunks(BULK_SIZE / chunkSize), m_ctxt(ctxt), m_dev(dev) { }
+    Bulk(size_t chunkSize, size_t size, ze_context_handle_t ctxt, ze_device_handle_t dev) :
+      m_chunkSize(chunkSize), m_size(size), m_numChunks(size / chunkSize), m_ctxt(ctxt), m_dev(dev) { }
 
     // Note: when using that constructor, one should set device handle later.
-    Bulk(size_t chunkSize, ze_context_handle_t ctxt) :
-      m_chunkSize(chunkSize), m_numChunks(BULK_SIZE / chunkSize), m_ctxt(ctxt) { }
+    Bulk(size_t chunkSize, size_t size, ze_context_handle_t ctxt) :
+      m_chunkSize(chunkSize), m_size(size), m_numChunks(size / chunkSize), m_ctxt(ctxt) { }
 
     // Free memory hunk
     ~Bulk() {
@@ -575,7 +586,7 @@ class Bulk {
 
     // Allocate and return a pointer to free chunk inside bulk
     void *allocChunk() {
-        // Allocate BULK_SIZE hunk once lazily on the first real allocation.
+        // Allocate size hunk once lazily on the first real allocation.
         if (!m_memPtr)
             allocate();
 
@@ -626,6 +637,7 @@ class Bulk {
 
     char  *m_memPtr{nullptr};
 
+    size_t m_size{0};
     size_t m_chunkSize{0};
     size_t m_numChunks{0};
 
@@ -648,10 +660,10 @@ class Bulk {
         ze_host_mem_alloc_desc_t host_desc = {};
 
         // The best scenario would be if zeMemAllocShared was able to allocate
-        // memory aligned to BULK_SIZE. In that case, it would be easier to
+        // memory aligned to size. In that case, it would be easier to
         // found the Bulk that own a specific chunk. At least, 4 MB doesn't
         // work, so we need to track chuck(ptr)->Bulk map in the ChunkedPool.
-        status = zeMemAllocShared(m_ctxt, &dev_desc, &host_desc, BULK_SIZE, 64, m_dev, (void**)&m_memPtr);
+        status = zeMemAllocShared(m_ctxt, &dev_desc, &host_desc, m_size, 64, m_dev, (void**)&m_memPtr);
         L0_THROW_IF(status);
 
         return m_memPtr;
@@ -667,14 +679,22 @@ class Bulk {
 // for every size. If needed additional bulks are created.
 class ChunkedPool {
   public:
-    static constexpr size_t MIN_CHUNK_SIZE = 1ULL << Bulk::MIN_POW_2;
-    static constexpr size_t MAX_CHUNK_SIZE = 1ULL << Bulk::MAX_POW_2;
-
     ChunkedPool(ISPCRTSharedMemoryAllocationHint type, ze_context_handle_t ctxt) : m_type(type), m_ctxt(ctxt) {
+        m_minPow2 = get_number_envvar(ISPCRT_MEM_POOL_MIN_CHUNK_POW2, m_minPow2);
+        if (!(m_minPow2 >= 1 && m_minPow2 <= 30)) {
+            throw std::runtime_error("ISPCRT_MEM_POOL_MIN_CHUNK_POW2 is beyond reasonable limits");
+        }
+        m_maxPow2 = get_number_envvar(ISPCRT_MEM_POOL_MAX_CHUNK_POW2, m_maxPow2);
+        if (!(m_maxPow2 >= m_minPow2 && m_maxPow2 <= 30)) {
+            throw std::runtime_error("ISPCRT_MEM_POOL_MAX_CHUNK_POW2 is beyond reasonable limits");
+        }
+        m_minChunkSize = 1ULL << m_minPow2;
+        m_maxChunkSize = 1ULL << m_maxPow2;
+
         // Create empty Bulk objects for chunks of power of 2.
-        for (int i = Bulk::MIN_POW_2; i <= Bulk::MAX_POW_2; i++) {
+        for (size_t i = m_minPow2; i <= m_maxPow2 ; i++) {
             size_t chunkSize = 1ULL << i;
-            m_bulks[chunkSize] = std::list<Bulk*>( { new Bulk(chunkSize, m_ctxt) } );
+            m_bulks[chunkSize] = std::list<Bulk*>( { new Bulk(chunkSize, m_maxChunkSize, m_ctxt) } );
         }
     }
 
@@ -686,10 +706,8 @@ class ChunkedPool {
 
     void *allocate(size_t size) {
         assert(size == round_up_pow2(size));
-        assert(size <= MAX_CHUNK_SIZE);
-        if (size < MIN_CHUNK_SIZE) {
-            size = MIN_CHUNK_SIZE;
-        }
+        assert(size <= m_maxChunkSize);
+        assert(size >= m_minChunkSize);
 
         auto &bulks = m_bulks[size];
 
@@ -706,7 +724,7 @@ class ChunkedPool {
             break;
         }
         if (allFull) {
-            blk = new Bulk(size, m_ctxt, m_dev);
+            blk = new Bulk(size, m_maxChunkSize, m_ctxt, m_dev);
             bulks.push_back(blk);
         }
 
@@ -735,6 +753,9 @@ class ChunkedPool {
                     b->hDev(dev);
     }
 
+    size_t minChunkSize() const { return m_minChunkSize; }
+    size_t maxChunkSize() const { return m_maxChunkSize; }
+
   private:
     // Shared memory with allocation hint stored in this ChunkedPool
     ISPCRTSharedMemoryAllocationHint m_type;
@@ -747,6 +768,16 @@ class ChunkedPool {
 
     ze_context_handle_t m_ctxt{nullptr};
     ze_device_handle_t m_dev{nullptr};
+
+    size_t m_minPow2{6};
+    size_t m_maxPow2{21};
+
+    // Default values for minimal and maximal stored chunk sizes.
+    // Cut-off of chunking allocations 2 MB.
+    // 2MB corresponds with DG2 shared mem allocation. To utilize it with less
+    // overhead it may be useful to decrease it.
+    size_t m_minChunkSize{1ULL << 6};
+    size_t m_maxChunkSize{1ULL << 21};
 };
 
 struct MemoryView : public ispcrt::base::MemoryView {
@@ -771,8 +802,7 @@ struct MemoryView : public ispcrt::base::MemoryView {
 
     ~MemoryView() {
         if (m_devicePtr) {
-            if (m_shared && m_useMemPool && m_size <= ChunkedPool::MAX_CHUNK_SIZE) {
-                assert(m_ctxtGPU);
+            if (m_shared && m_useMemPool && m_size <= m_memPool->maxChunkSize()) {
                 m_memPool->deallocate(m_devicePtr);
                 if (UNLIKELY(is_verbose)) {
                     std::cout << "MemPool deallocation at " << m_devicePtr << std::endl;
@@ -833,8 +863,11 @@ struct MemoryView : public ispcrt::base::MemoryView {
     void allocate() {
         if (m_shared) {
 
-            if (m_useMemPool && m_size <= ChunkedPool::MAX_CHUNK_SIZE) {
+            if (m_useMemPool && m_size <= m_memPool->maxChunkSize()) {
                 m_size = round_up_pow2(m_requestedSize);
+                if (m_size < m_memPool->minChunkSize()) {
+                    m_size = m_memPool->minChunkSize();
+                }
 
                 m_devicePtr = m_memPool->allocate(m_size);
                 assert(m_devicePtr);
@@ -1407,6 +1440,8 @@ static ze_driver_handle_t deviceDiscovery(bool *p_is_mock) {
         print_env(ISPCRT_USE_ZEBIN);
         print_env(ISPCRT_MAX_KERNEL_LAUNCHES);
         print_env(ISPCRT_MEM_POOL);
+        print_env(ISPCRT_MEM_POOL_MIN_CHUNK_POW2);
+        print_env(ISPCRT_MEM_POOL_MAX_CHUNK_POW2);
     }
 
     static ze_driver_handle_t selectedDriver = nullptr;
