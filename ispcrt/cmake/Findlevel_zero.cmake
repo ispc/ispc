@@ -1,4 +1,4 @@
-## Copyright 2020 Intel Corporation
+## Copyright 2020-2023, Intel Corporation
 ## SPDX-License-Identifier: BSD-3-Clause
 
 find_path(LEVEL_ZERO_ROOT include/level_zero/ze_api.h
@@ -12,12 +12,17 @@ find_path(LEVEL_ZERO_ROOT include/level_zero/ze_api.h
 find_path(LEVEL_ZERO_INCLUDE_DIR level_zero/ze_api.h
   PATHS
     ${LEVEL_ZERO_ROOT}/include
+  PATH_SUFFIXES
+    include
 )
 
 find_library(LEVEL_ZERO_LIB_LOADER ze_loader
   HINTS
-    ${LEVEL_ZERO_ROOT}/lib
     ${LEVEL_ZERO_ROOT}/lib64
+    ${LEVEL_ZERO_ROOT}/lib
+  PATH_SUFFIXES
+    lib64
+    lib
 )
 
 set(LEVEL_ZERO_ERROR_MSG

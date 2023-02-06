@@ -1,8 +1,8 @@
-## Copyright 2021 Intel Corporation
+## Copyright 2021-2023, Intel Corporation
 ## SPDX-License-Identifier: BSD-3-Clause
 
 # First try to find the DPCPP compiler in the path
-find_program(DPCPP_COMPILER NAMES dpcpp
+find_program(DPCPP_COMPILER NAMES icpx
     PATHS ${DPCPP_DIR}
     PATH_SUFFIXES bin
 )
