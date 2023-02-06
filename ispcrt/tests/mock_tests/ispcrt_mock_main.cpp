@@ -1117,6 +1117,25 @@ TEST_F(MockTest, C_API_MemPoolRoundUpPow2) {
     unsetenv("ISPCRT_MEM_POOL");
 }
 
+TEST_F(MockTest, C_API_MemPoolLiveRange) {
+    setenv("ISPCRT_MEM_POOL", "1", 1);
+    void *p = NULL;
+    ISPCRTContext context = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
+    ASSERT_EQ(ispcrtUseCount(context), 1);
+    ISPCRTNewMemoryViewFlags flags = { ISPCRT_ALLOC_TYPE_SHARED, ISPCRT_SM_HOST_WRITE_DEVICE_READ };
+    ISPCRTMemoryView view = ispcrtNewMemoryViewForContext(context, NULL, 1ULL<<10, &flags);
+    ASSERT_EQ(ispcrtUseCount(context), 2);
+    ASSERT_EQ(ispcrtUseCount(view), 1);
+    p = ispcrtHostPtr(view);
+    // This should not destruct Context because there is one alive MemoryView
+    ispcrtRelease(context);
+    ASSERT_EQ(ispcrtUseCount(context), 1);
+    ASSERT_EQ(ispcrtUseCount(view), 1);
+    // Here we should trigger destruction of context
+    ispcrtRelease(view);
+    unsetenv("ISPCRT_MEM_POOL");
+}
+
 /// C++ Device API
 TEST_F(MockTest, Device_DeviceCount1) {
     // CPU

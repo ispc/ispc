@@ -755,6 +755,11 @@ struct MemoryView : public ispcrt::base::MemoryView {
         : m_hostPtr(appMem), m_size(numBytes), m_requestedSize(numBytes), m_context(context), m_device(device),
           m_shared(flags->allocType == ISPCRT_ALLOC_TYPE_SHARED), m_smhint(flags->smHint), m_ctxtGPU(ctxt)
     {
+        // We need context object to be alive until memoryview is alive
+        if (m_ctxtGPU) {
+            m_ctxtGPU->refInc();
+        }
+
         // Use MemPool only when it is explicitly enabled with env var and memory hint is not device/host read/write
         m_useMemPool = get_bool_envvar(ISPCRT_MEM_POOL) && (m_smhint != ISPCRT_SM_HOST_DEVICE_READ_WRITE);
         if (m_ctxtGPU && m_useMemPool) {
@@ -775,6 +780,10 @@ struct MemoryView : public ispcrt::base::MemoryView {
             } else {
                 L0_SAFE_CALL_NOEXCEPT(zeMemFree(m_context, m_devicePtr));
             }
+        }
+
+        if (m_ctxtGPU) {
+            m_ctxtGPU->refDec();
         }
     }
 
