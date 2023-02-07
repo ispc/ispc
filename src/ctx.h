@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -450,6 +450,27 @@ class FunctionEmitContext {
     llvm::Instruction *CastInst(llvm::Instruction::CastOps op, llvm::Value *value, llvm::Type *type,
                                 const llvm::Twine &name = "");
     llvm::Instruction *FPCastInst(llvm::Value *value, llvm::Type *type, const llvm::Twine &name = "");
+
+    /** float to half cast via float_to_float16. */
+    llvm::Value *F2HCastInst(llvm::Value *v, llvm::Type *t, const llvm::Twine &name = "");
+
+    /** half to float cast via float16_to_float. */
+    llvm::Value *H2FCastInst(llvm::Value *v, llvm::Type *t, const llvm::Twine &name = "");
+
+    /** double to half cast via float_to_float16. */
+    llvm::Value *D2HCastInst(llvm::Value *v, llvm::Type *t, const llvm::Twine &name = "");
+
+    /** half to double cast via float16_to_float. */
+    llvm::Value *H2DCastInst(llvm::Value *v, llvm::Type *t, const llvm::Twine &name = "");
+
+    /** int to half conversion via int to float, then float_to_float16. */
+    llvm::Value *I2HCastInst(llvm::Instruction::CastOps op, llvm::Value *v, llvm::Type *t,
+                             const llvm::Twine &name = "");
+
+    /** half to int conversion via float16_to_float, then float to int. */
+    llvm::Value *H2ICastInst(llvm::Instruction::CastOps op, llvm::Value *v, llvm::Type *t,
+                             const llvm::Twine &name = "");
+
     llvm::Instruction *SExtInst(llvm::Value *value, llvm::Type *type, const llvm::Twine &name = "");
     llvm::Instruction *ZExtInst(llvm::Value *value, llvm::Type *type, const llvm::Twine &name = "");
 
@@ -822,7 +843,6 @@ class FunctionEmitContext {
     std::map<std::string, llvm::BasicBlock *> labelMap;
 
     static bool initLabelBBlocks(ASTNode *node, void *data);
-
     llvm::Value *pointerVectorToVoidPointers(llvm::Value *value);
     static void addGSMetadata(llvm::Value *inst, SourcePos pos);
     bool ifsInCFAllUniform(int cfType) const;
@@ -848,5 +868,7 @@ class FunctionEmitContext {
     llvm::Value *gather(llvm::Value *ptr, const PointerType *ptrType, llvm::Value *mask, const llvm::Twine &name = "");
 
     llvm::Value *addVaryingOffsetsIfNeeded(llvm::Value *ptr, const Type *ptrType);
+
+    llvm::Value *Float2HalfHalf2FloatCast(Symbol *funcSym, llvm::Value *v, llvm::Type *t, const llvm::Twine &name = "");
 };
 } // namespace ispc

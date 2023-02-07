@@ -1,4 +1,13 @@
-// RUN: %{ispc} %s -O2 --target=host --emit-llvm-text --nostdlib --opt=fast-math -o - | FileCheck %s
+// RUN: %{ispc} %s -O2 --target=avx2-i32x4 --emit-llvm-text --nostdlib --opt=fast-math -o - | FileCheck %s
+// RUN: %{ispc} %s -O2 --target=avx512knl-x16 --emit-llvm-text --nostdlib --opt=fast-math -o - | FileCheck %s
+// RUN: %{ispc} %s -O2 --target=avx512skx-x4 --emit-llvm-text --nostdlib --opt=fast-math -o - | FileCheck %s
+// RUN: %{ispc} %s -O2 --target=neon-i32x4 --emit-llvm-text --nostdlib --opt=fast-math -o - | FileCheck %s
+
+// RUN: not %{ispc} %s -O2 --target=sse2-i32x4 --emit-llvm-text --nostdlib --opt=fast-math -o %t
+// RUN: not %{ispc} %s -O2 --target=sse4-i32x4 --emit-llvm-text --nostdlib --opt=fast-math -o %t
+// RUN: not %{ispc} %s -O2 --target=avx1-i32x4 --emit-llvm-text --nostdlib --opt=fast-math -o %t
+
+// REQUIRES: X86_ENABLED
 
 // CHECK: @retAddF16
 // CHECK: ret half 0xH4500

@@ -6053,25 +6053,31 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
         case AtomicType::TYPE_INT16:
         case AtomicType::TYPE_INT32:
         case AtomicType::TYPE_INT64:
-            cast = ctx->CastInst(llvm::Instruction::SIToFP, // signed int to float16
-                                 exprVal, targetType, cOpName);
+            cast = ctx->I2HCastInst(llvm::Instruction::SIToFP, exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_UINT8:
         case AtomicType::TYPE_UINT16:
         case AtomicType::TYPE_UINT32:
         case AtomicType::TYPE_UINT64:
-            cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int to float16
-                                 exprVal, targetType, cOpName);
+            cast = ctx->I2HCastInst(llvm::Instruction::UIToFP, exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT16:
             // No-op cast.
             cast = exprVal;
             break;
         case AtomicType::TYPE_FLOAT:
-            cast = ctx->FPCastInst(exprVal, targetType, cOpName);
+            if (g->target->hasHalf()) {
+                cast = ctx->FPCastInst(exprVal, targetType, cOpName);
+            } else {
+                cast = ctx->F2HCastInst(exprVal, targetType, cOpName);
+            }
             break;
         case AtomicType::TYPE_DOUBLE:
-            cast = ctx->FPCastInst(exprVal, targetType, cOpName);
+            if (g->target->hasHalf()) {
+                cast = ctx->FPCastInst(exprVal, targetType, cOpName);
+            } else {
+                cast = ctx->D2HCastInst(exprVal, targetType, cOpName);
+            }
             break;
         default:
             FATAL("unimplemented");
@@ -6113,7 +6119,11 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
                                  exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT16:
-            cast = ctx->FPCastInst(exprVal, targetType, cOpName);
+            if (g->target->hasHalf()) {
+                cast = ctx->FPCastInst(exprVal, targetType, cOpName);
+            } else {
+                cast = ctx->H2FCastInst(exprVal, targetType, cOpName);
+            }
             break;
         case AtomicType::TYPE_FLOAT:
             // No-op cast.
@@ -6152,7 +6162,11 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
                                  exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT16:
-            cast = ctx->FPCastInst(exprVal, targetType, cOpName);
+            if (g->target->hasHalf()) {
+                cast = ctx->FPCastInst(exprVal, targetType, cOpName);
+            } else {
+                cast = ctx->H2DCastInst(exprVal, targetType, cOpName);
+            }
             break;
         case AtomicType::TYPE_FLOAT:
             cast = ctx->FPCastInst(exprVal, targetType, cOpName);
@@ -6185,8 +6199,10 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
         case AtomicType::TYPE_UINT64:
             cast = ctx->TruncInst(exprVal, targetType, cOpName);
             break;
-        case AtomicType::TYPE_FLOAT:
         case AtomicType::TYPE_FLOAT16:
+            cast = ctx->H2ICastInst(llvm::Instruction::FPToSI, exprVal, targetType, cOpName);
+            break;
+        case AtomicType::TYPE_FLOAT:
         case AtomicType::TYPE_DOUBLE:
             cast = ctx->CastInst(llvm::Instruction::FPToSI, // signed int
                                  exprVal, targetType, cOpName);
@@ -6220,8 +6236,8 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             if (fromType->IsVaryingType())
                 PerformanceWarning(pos, "Conversion from float16 to unsigned int is slow. "
                                         "Use \"int\" if possible");
-            cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
-                                 exprVal, targetType, cOpName);
+            cast = ctx->H2ICastInst(llvm::Instruction::FPToUI, exprVal, targetType, cOpName);
+            break;
         case AtomicType::TYPE_FLOAT:
             if (fromType->IsVaryingType())
                 PerformanceWarning(pos, "Conversion from float to unsigned int is slow. "
@@ -6266,6 +6282,8 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             cast = ctx->TruncInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT16:
+            cast = ctx->H2ICastInst(llvm::Instruction::FPToSI, exprVal, targetType, cOpName);
+            break;
         case AtomicType::TYPE_FLOAT:
         case AtomicType::TYPE_DOUBLE:
             cast = ctx->CastInst(llvm::Instruction::FPToSI, // signed int
@@ -6304,8 +6322,7 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             if (fromType->IsVaryingType())
                 PerformanceWarning(pos, "Conversion from float16 to unsigned int is slow. "
                                         "Use \"int\" if possible");
-            cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
-                                 exprVal, targetType, cOpName);
+            cast = ctx->H2ICastInst(llvm::Instruction::FPToUI, exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT:
             if (fromType->IsVaryingType())
@@ -6351,6 +6368,8 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             cast = ctx->TruncInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT16:
+            cast = ctx->H2ICastInst(llvm::Instruction::FPToSI, exprVal, targetType, cOpName);
+            break;
         case AtomicType::TYPE_FLOAT:
         case AtomicType::TYPE_DOUBLE:
             cast = ctx->CastInst(llvm::Instruction::FPToSI, // signed int
@@ -6389,8 +6408,7 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             if (fromType->IsVaryingType())
                 PerformanceWarning(pos, "Conversion from float16 to unsigned int is slow. "
                                         "Use \"int\" if possible");
-            cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
-                                 exprVal, targetType, cOpName);
+            cast = ctx->H2ICastInst(llvm::Instruction::FPToUI, exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT:
             if (fromType->IsVaryingType())
@@ -6434,6 +6452,8 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             cast = exprVal;
             break;
         case AtomicType::TYPE_FLOAT16:
+            cast = ctx->H2ICastInst(llvm::Instruction::FPToSI, exprVal, targetType, cOpName);
+            break;
         case AtomicType::TYPE_FLOAT:
         case AtomicType::TYPE_DOUBLE:
             cast = ctx->CastInst(llvm::Instruction::FPToSI, // signed int
@@ -6470,8 +6490,7 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             if (fromType->IsVaryingType())
                 PerformanceWarning(pos, "Conversion from float16 to unsigned int64 is slow. "
                                         "Use \"int64\" if possible");
-            cast = ctx->CastInst(llvm::Instruction::FPToUI, // signed int
-                                 exprVal, targetType, cOpName);
+            cast = ctx->H2ICastInst(llvm::Instruction::FPToUI, exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT:
             if (fromType->IsVaryingType())

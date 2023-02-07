@@ -38,10 +38,6 @@ uint64 f10() {
   return (programIndex % 2) ? 15ULL : 16ULL;
 }
 
-float16 f11() {
-  return (programIndex % 2) ? 1.23f16 : 4.56f16;
-}
-
 float f12() {
   return (programIndex % 2) ? 1.23e+30f : 4.56e+30f;
 }
