@@ -154,12 +154,6 @@ def checkout_LLVM(component, version_LLVM, target_dir, from_validation, verbose)
     try_do_LLVM(f"clone {component} with tag {GIT_TAG} from {GIT_REPO_BASE} to {target_dir}",
                 git_clone_cmd, from_validation, verbose)
 
-# ISPC uses LLVM dumps for debug output, so build correctly it requires these functions to be
-# present in LLVM libraries. In LLVM 5.0 they are not there by default and require explicit enabling.
-# In later version this functionality is triggered by enabling assertions.
-def get_llvm_enable_dump_switch(version_LLVM):
-    return " -DLLVM_ENABLE_DUMP=ON "
-
 def get_llvm_disable_assertions_switch(llvm_disable_assertions):
     if llvm_disable_assertions == True:
         return "  -DLLVM_ENABLE_ASSERTIONS=OFF"
@@ -274,7 +268,6 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
                 "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN_selfbuild +
                 "  -DCMAKE_BUILD_TYPE=Release" +
                 llvm_enable_projects +
-                get_llvm_enable_dump_switch(version_LLVM) +
                 get_llvm_disable_assertions_switch(llvm_disable_assertions) +
                 "  -DLLVM_INSTALL_UTILS=ON" +
                 (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
@@ -309,7 +302,6 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
                     "  -DCMAKE_INSTALL_PREFIX=" + llvm_home + "/" + LLVM_BIN +
                     "  -DCMAKE_BUILD_TYPE=" + build_type +
                     llvm_enable_projects +
-                    get_llvm_enable_dump_switch(version_LLVM) +
                     get_llvm_disable_assertions_switch(llvm_disable_assertions) +
                     "  -DLLVM_INSTALL_UTILS=ON" +
                     (("  -DGCC_INSTALL_PREFIX=" + gcc_toolchain_path) if gcc_toolchain_path != "" else "") +
@@ -324,7 +316,6 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
                     'cmake -Thost=x64 -G ' + '\"' + generator + '\"' + ' -DCMAKE_INSTALL_PREFIX="..\\'+ LLVM_BIN + '" ' +
                     '  -DCMAKE_BUILD_TYPE=' + build_type +
                     llvm_enable_projects +
-                    get_llvm_enable_dump_switch(version_LLVM) +
                     get_llvm_disable_assertions_switch(llvm_disable_assertions) +
                     '  -DLLVM_INSTALL_UTILS=ON' +
                     targets_and_common_options +
