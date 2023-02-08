@@ -456,25 +456,18 @@ struct EventPool {
             m_timestampMaxValue = (uint64_t)-1;
         }
         // Create pool
-        auto poolSize = POOL_SIZE_CAP;
+        m_poolSize = POOL_SIZE_CAP;
         // For compute event pool check if ISPCRT_MAX_KERNEL_LAUNCHES is set
         if (type == ISPCRTEventPoolType::compute) {
             // User can set a lower limit for the pool size, which in fact limits
             // the number of possible kernel launches. To make it more clear for the user,
             // the variable is named ISPCRT_MAX_KERNEL_LAUNCHES
-            const char *poolSizeEnv = getenv_wr(ISPCRT_MAX_KERNEL_LAUNCHES);
-            if (poolSizeEnv) {
-                std::istringstream(poolSizeEnv) >> poolSize;
-            }
-            if (poolSize > POOL_SIZE_CAP) {
+            m_poolSize = get_number_envvar(ISPCRT_MAX_KERNEL_LAUNCHES, m_poolSize);
+            if (m_poolSize > POOL_SIZE_CAP) {
                 m_poolSize = POOL_SIZE_CAP;
                 std::cerr << "[ISPCRT][WARNING] " << ISPCRT_MAX_KERNEL_LAUNCHES << " value too large, using " << POOL_SIZE_CAP
                           << " instead." << std::endl;
-            } else {
-                m_poolSize = poolSize;
             }
-        } else {
-            m_poolSize = poolSize;
         }
         ze_event_pool_desc_t eventPoolDesc = {};
         eventPoolDesc.count = m_poolSize;
@@ -911,7 +904,7 @@ struct Module : public ispcrt::base::Module {
         if (!is_mock_dev) {
             // Try to open spv file by default if ISPCRT_USE_ZEBIN is not set.
             // TODO: change default to zebin when it gets more mature
-            const char *userZEBinFormatEnv = getenv_wr(ISPCRT_USE_ZEBIN);
+            bool userZEBinFormatEnv = get_bool_envvar(ISPCRT_USE_ZEBIN);
             if (userZEBinFormatEnv) {
                 is.open(m_file + ".bin", std::ios::binary);
                 moduleFormat = ZE_MODULE_FORMAT_NATIVE;
@@ -1019,7 +1012,7 @@ struct Module : public ispcrt::base::Module {
     }
 
     Module(ze_device_handle_t device, ze_context_handle_t context, Module** modules, const uint32_t numModules) {
-        bool useZEBinFormat = getenv_wr(ISPCRT_USE_ZEBIN) != NULL;
+        bool useZEBinFormat = get_bool_envvar(ISPCRT_USE_ZEBIN);
 
         std::vector<const char *> buildFlags;
         std::vector<size_t> inputSizes;
@@ -1159,8 +1152,8 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         uint32_t copyOrdinal = std::numeric_limits<uint32_t>::max();
         uint32_t computeOrdinal = 0;
         // Check env variable before queue configuration
-        bool isCopyEngineEnabled = getenv_wr(ISPCRT_DISABLE_COPY_ENGINE) == nullptr;
-        bool useMultipleCommandLists = getenv_wr(ISPCRT_DISABLE_MULTI_COMMAND_LISTS) == nullptr;
+        bool isCopyEngineEnabled = !get_bool_envvar(ISPCRT_DISABLE_COPY_ENGINE);
+        bool useMultipleCommandLists = !get_bool_envvar(ISPCRT_DISABLE_MULTI_COMMAND_LISTS);
         // No need to create copy queue if only one command list is requested.
         if (!is_mock_dev && isCopyEngineEnabled && useMultipleCommandLists) {
             // Discover all command queue groups
@@ -1445,7 +1438,7 @@ static ze_driver_handle_t deviceDiscovery(bool *p_is_mock) {
     }
 
     static ze_driver_handle_t selectedDriver = nullptr;
-    bool is_mock = getenv_wr(ISPCRT_MOCK_DEVICE) != nullptr;
+    bool is_mock = get_bool_envvar(ISPCRT_MOCK_DEVICE);
 
     // Allow reinitialization of device list for mock device
     if (!is_mock && selectedDriver != nullptr)
