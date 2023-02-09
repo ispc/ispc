@@ -476,11 +476,13 @@ static int ParsingPhaseName(char *stage, ArgErrors &errorHandler) {
     }
 }
 
-enum class VectorCallStatus { none, enabled, disabled };
+// For boolean command line options there are actually three states. Beyond "on" and "off", there's "unspecified",
+// which might trigger a different default behavior.
+enum class BooleanOptValue { none, enabled, disabled };
 
-static void setCallingConv(VectorCallStatus vectorCall, Arch arch) {
+static void setCallingConv(BooleanOptValue vectorCall, Arch arch) {
     // Restrict vectorcall to just x86_64 - vectorcall for x86 not supported yet.
-    if (g->target_os == TargetOS::windows && vectorCall == VectorCallStatus::enabled &&
+    if (g->target_os == TargetOS::windows && vectorCall == BooleanOptValue::enabled &&
         // Arch is not properly set yet, we assume none is x86_64.
         (arch == Arch::x86_64 || arch == Arch::none)) {
         g->calling_conv = CallingConv::x86_vectorcall;
@@ -624,7 +626,7 @@ int main(int Argc, char *Argv[]) {
     Arch arch = Arch::none;
     std::vector<ISPCTarget> targets;
     const char *cpu = NULL, *intelAsmSyntax = NULL;
-    VectorCallStatus vectorCall = VectorCallStatus::none;
+    BooleanOptValue vectorCall = BooleanOptValue::none;
 
     ArgErrors errorHandler;
 
@@ -837,9 +839,9 @@ int main(int Argc, char *Argv[]) {
                                       g->target_registry->getSupportedOSes().c_str());
             }
         } else if (!strcmp(argv[i], "--no-vectorcall")) {
-            vectorCall = VectorCallStatus::disabled;
+            vectorCall = BooleanOptValue::disabled;
         } else if (!strcmp(argv[i], "--vectorcall")) {
-            vectorCall = VectorCallStatus::enabled;
+            vectorCall = BooleanOptValue::enabled;
         } else if (!strncmp(argv[i], "--math-lib=", 11)) {
             const char *lib = argv[i] + 11;
             if (!strcmp(lib, "default"))
@@ -1144,7 +1146,7 @@ int main(int Argc, char *Argv[]) {
         Warning(SourcePos(), "--dllexport switch will be ignored, as the target OS is not Windows.");
     }
 
-    if (vectorCall != VectorCallStatus::none &&
+    if (vectorCall != BooleanOptValue::none &&
         (g->target_os != TargetOS::windows ||
          // This is a hacky check. Arch is properly set later, so we rely that default means x86_64.
          (arch != Arch::x86_64 && arch != Arch::none))) {
