@@ -1554,16 +1554,14 @@ static llvm::Value *lEmitBinaryArith(BinaryExpr::Op op, llvm::Value *value0, llv
         case BinaryExpr::Div:
             opName = "div";
             if (type0->IsVaryingType() && !isFloatOp)
-                PerformanceWarning(pos, "Division with varying integer types is "
-                                        "very inefficient.");
+                PerformanceWarning(pos, "Division with varying integer types is very inefficient.");
             inst = isFloatOp ? llvm::Instruction::FDiv
                              : (isUnsignedOp ? llvm::Instruction::UDiv : llvm::Instruction::SDiv);
             break;
         case BinaryExpr::Mod:
             opName = "mod";
             if (type0->IsVaryingType() && !isFloatOp)
-                PerformanceWarning(pos, "Modulus operator with varying types is "
-                                        "very inefficient.");
+                PerformanceWarning(pos, "Modulus operator with varying types is very inefficient.");
             inst = isFloatOp ? llvm::Instruction::FRem
                              : (isUnsignedOp ? llvm::Instruction::URem : llvm::Instruction::SRem);
             break;
@@ -2035,8 +2033,7 @@ llvm::Value *BinaryExpr::GetValue(FunctionEmitContext *ctx) const {
     case BitXor:
     case BitOr: {
         if (op == Shr && lIsDifficultShiftAmount(arg1))
-            PerformanceWarning(pos, "Shift right is inefficient for "
-                                    "varying shift amounts.");
+            PerformanceWarning(pos, "Shift right is inefficient for varying shift amounts.");
         return lEmitBinaryBitOp(op, value0, value1, arg0->GetType()->IsUnsignedType(), ctx);
     }
     case Comma:
@@ -6107,8 +6104,7 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             // arm/x86 cpu targets. Revisit for Xe/wasm.
             if (fromType->IsVaryingType() && (g->target->warnFtoU32IsExpensive() == true) &&
                 (fromType->basicType == AtomicType::TYPE_UINT32))
-                PerformanceWarning(pos, "Conversion from unsigned int to float is slow. "
-                                        "Use \"int\" if possible");
+                PerformanceWarning(pos, "Conversion from unsigned int to float is slow. Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int to float
                                  exprVal, targetType, cOpName);
             break;
@@ -6218,21 +6214,18 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             break;
         case AtomicType::TYPE_FLOAT16:
             if (fromType->IsVaryingType())
-                PerformanceWarning(pos, "Conversion from float16 to unsigned int is slow. "
-                                        "Use \"int\" if possible");
+                PerformanceWarning(pos, "Conversion from float16 to unsigned int is slow. Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
                                  exprVal, targetType, cOpName);
         case AtomicType::TYPE_FLOAT:
             if (fromType->IsVaryingType())
-                PerformanceWarning(pos, "Conversion from float to unsigned int is slow. "
-                                        "Use \"int\" if possible");
+                PerformanceWarning(pos, "Conversion from float to unsigned int is slow. Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
                                  exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_DOUBLE:
             if (fromType->IsVaryingType())
-                PerformanceWarning(pos, "Conversion from double to unsigned int is slow. "
-                                        "Use \"int\" if possible");
+                PerformanceWarning(pos, "Conversion from double to unsigned int is slow. Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
                                  exprVal, targetType, cOpName);
             break;
@@ -6302,22 +6295,19 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             break;
         case AtomicType::TYPE_FLOAT16:
             if (fromType->IsVaryingType())
-                PerformanceWarning(pos, "Conversion from float16 to unsigned int is slow. "
-                                        "Use \"int\" if possible");
+                PerformanceWarning(pos, "Conversion from float16 to unsigned int is slow. Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
                                  exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT:
             if (fromType->IsVaryingType())
-                PerformanceWarning(pos, "Conversion from float to unsigned int is slow. "
-                                        "Use \"int\" if possible");
+                PerformanceWarning(pos, "Conversion from float to unsigned int is slow. Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
                                  exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_DOUBLE:
             if (fromType->IsVaryingType())
-                PerformanceWarning(pos, "Conversion from double to unsigned int is slow. "
-                                        "Use \"int\" if possible");
+                PerformanceWarning(pos, "Conversion from double to unsigned int is slow. Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
                                  exprVal, targetType, cOpName);
             break;
@@ -6387,22 +6377,19 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             break;
         case AtomicType::TYPE_FLOAT16:
             if (fromType->IsVaryingType())
-                PerformanceWarning(pos, "Conversion from float16 to unsigned int is slow. "
-                                        "Use \"int\" if possible");
+                PerformanceWarning(pos, "Conversion from float16 to unsigned int is slow. Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
                                  exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT:
             if (fromType->IsVaryingType())
-                PerformanceWarning(pos, "Conversion from float to unsigned int is slow. "
-                                        "Use \"int\" if possible");
+                PerformanceWarning(pos, "Conversion from float to unsigned int is slow. Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
                                  exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_DOUBLE:
             if (fromType->IsVaryingType())
-                PerformanceWarning(pos, "Conversion from double to unsigned int is slow. "
-                                        "Use \"int\" if possible");
+                PerformanceWarning(pos, "Conversion from double to unsigned int is slow. Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
                                  exprVal, targetType, cOpName);
             break;
@@ -6468,22 +6455,19 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             break;
         case AtomicType::TYPE_FLOAT16:
             if (fromType->IsVaryingType())
-                PerformanceWarning(pos, "Conversion from float16 to unsigned int64 is slow. "
-                                        "Use \"int64\" if possible");
+                PerformanceWarning(pos, "Conversion from float16 to unsigned int64 is slow. Use \"int64\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // signed int
                                  exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT:
             if (fromType->IsVaryingType())
-                PerformanceWarning(pos, "Conversion from float to unsigned int64 is slow. "
-                                        "Use \"int64\" if possible");
+                PerformanceWarning(pos, "Conversion from float to unsigned int64 is slow. Use \"int64\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // signed int
                                  exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_DOUBLE:
             if (fromType->IsVaryingType())
-                PerformanceWarning(pos, "Conversion from double to unsigned int64 is slow. "
-                                        "Use \"int64\" if possible");
+                PerformanceWarning(pos, "Conversion from double to unsigned int64 is slow. Use \"int64\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // signed int
                                  exprVal, targetType, cOpName);
             break;
