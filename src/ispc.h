@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -157,6 +157,11 @@ struct SourcePos {
 /** Returns a SourcePos that encompasses the extent of both of the given
     extents. */
 SourcePos Union(const SourcePos &p1, const SourcePos &p2);
+
+/** An enum to represent different types of perfarmance warnings that should be triggered for specific target */
+enum class PerfWarningType {
+    UInt32ToFloatCVT = 0x1,
+};
 
 /** @brief Structure that defines a compilation target
 
@@ -327,7 +332,9 @@ class Target {
 
     bool hasFp64Support() const { return m_hasFp64Support; }
 
-    bool warnFtoU32IsExpensive() const { return m_warnFtoU32IsExpensive; }
+    void setWarning(PerfWarningType warningType) { m_warnings |= static_cast<unsigned int>(warningType); }
+
+    bool shouldWarn(PerfWarningType warningType) { return (m_warnings & static_cast<unsigned int>(warningType)) != 0; }
 
   private:
     /** llvm Target object representing this target. */
@@ -441,8 +448,8 @@ class Target {
     /** Indicates whether the target has FP64 support. */
     bool m_hasFp64Support;
 
-    /** Indicates whether the target has uint32 -> float cvt support **/
-    bool m_warnFtoU32IsExpensive;
+    /** A bitset of PerfWarningType values indicating the warnings that are relevant for the target. */
+    unsigned int m_warnings;
 };
 
 /** @brief Structure that collects optimization options
