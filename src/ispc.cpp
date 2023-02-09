@@ -607,7 +607,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
       m_maskingIsFree(false), m_maskBitCount(-1), m_hasHalf(false), m_hasRand(false), m_hasGather(false),
       m_hasScatter(false), m_hasTranscendentals(false), m_hasTrigonometry(false), m_hasRsqrtd(false), m_hasRcpd(false),
       m_hasVecPrefetch(false), m_hasSaturatingArithmetic(false), m_hasFp16Support(false), m_hasFp64Support(true),
-      m_warnFtoU32IsExpensive(false) {
+      m_warnings(0) {
     DeviceType CPUID = CPU_None, CPUfromISA = CPU_None;
     AllCPUs a;
     std::string featuresString;
@@ -819,7 +819,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 4;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        this->m_warnFtoU32IsExpensive = true;
+        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_x86_64;
         break;
     case ISPCTarget::sse2_i32x8:
@@ -830,7 +830,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 8;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        this->m_warnFtoU32IsExpensive = true;
+        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_Core2;
         break;
     case ISPCTarget::sse4_i8x16:
@@ -841,7 +841,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 16;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 8;
-        this->m_warnFtoU32IsExpensive = true;
+        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_Nehalem;
         break;
     case ISPCTarget::sse4_i16x8:
@@ -852,7 +852,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 8;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 16;
-        this->m_warnFtoU32IsExpensive = true;
+        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_Nehalem;
         break;
     case ISPCTarget::sse4_i32x4:
@@ -863,7 +863,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 4;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        this->m_warnFtoU32IsExpensive = true;
+        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_Nehalem;
         break;
     case ISPCTarget::sse4_i32x8:
@@ -874,7 +874,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 8;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        this->m_warnFtoU32IsExpensive = true;
+        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_Nehalem;
         break;
     case ISPCTarget::avx1_i32x4:
@@ -885,7 +885,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 4;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        this->m_warnFtoU32IsExpensive = true;
+        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_SandyBridge;
         break;
     case ISPCTarget::avx1_i32x8:
@@ -896,7 +896,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 8;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        this->m_warnFtoU32IsExpensive = true;
+        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_SandyBridge;
         break;
     case ISPCTarget::avx1_i32x16:
@@ -907,7 +907,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 16;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        this->m_warnFtoU32IsExpensive = true;
+        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_SandyBridge;
         break;
     case ISPCTarget::avx1_i64x4:
@@ -918,7 +918,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 4;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 64;
-        this->m_warnFtoU32IsExpensive = true;
+        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_SandyBridge;
         break;
     case ISPCTarget::avx2_i8x32:
@@ -932,7 +932,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasHalf = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
-        this->m_warnFtoU32IsExpensive = true;
+        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_Haswell;
         break;
     case ISPCTarget::avx2_i16x16:
@@ -946,7 +946,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasHalf = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
-        this->m_warnFtoU32IsExpensive = true;
+        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_Haswell;
         break;
     case ISPCTarget::avx2_i32x4:
@@ -960,7 +960,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasHalf = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
-        this->m_warnFtoU32IsExpensive = true;
+        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_Haswell;
         break;
     case ISPCTarget::avx2_i32x8:
@@ -974,7 +974,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasHalf = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
-        this->m_warnFtoU32IsExpensive = true;
+        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_Haswell;
         break;
     case ISPCTarget::avx2_i32x16:
@@ -988,7 +988,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasHalf = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
-        this->m_warnFtoU32IsExpensive = true;
+        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_Haswell;
         break;
     case ISPCTarget::avx2_i64x4:
@@ -1002,7 +1002,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasHalf = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
-        this->m_warnFtoU32IsExpensive = true;
+        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_Haswell;
         break;
     case ISPCTarget::avx512knl_x16:
