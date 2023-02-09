@@ -627,6 +627,7 @@ int main(int Argc, char *Argv[]) {
     std::vector<ISPCTarget> targets;
     const char *cpu = NULL, *intelAsmSyntax = NULL;
     BooleanOptValue vectorCall = BooleanOptValue::none;
+    BooleanOptValue discardValueNames = BooleanOptValue::none;
 
     ArgErrors errorHandler;
 
@@ -755,9 +756,9 @@ int main(int Argc, char *Argv[]) {
         else if (!strcmp(argv[i], "--debug-llvm"))
             llvm::DebugFlag = true;
         else if (!strcmp(argv[i], "--discard-value-names"))
-            g->ctx->setDiscardValueNames(true);
+            discardValueNames = BooleanOptValue::enabled;
         else if (!strcmp(argv[i], "--no-discard-value-names"))
-            g->ctx->setDiscardValueNames(false);
+            discardValueNames = BooleanOptValue::disabled;
         else if (!strcmp(argv[i], "--dllexport"))
             g->dllExport = true;
         else if (!strncmp(argv[i], "--dwarf-version=", 16)) {
@@ -1056,6 +1057,21 @@ int main(int Argc, char *Argv[]) {
     if (file == NULL) {
         Error(SourcePos(), "No input file were specified. To read text from stdin use \"-\" as file name.");
         exit(1);
+    }
+
+    // If [no]discard-value-names is explicitly specified, then use this value.
+    // Otherwise enable it only if the output is some form of bitcode.
+    // Note that discarding value names significantly saves compile time and memory consumption.
+    if (discardValueNames == BooleanOptValue::enabled) {
+        g->ctx->setDiscardValueNames(true);
+    } else if (discardValueNames == BooleanOptValue::disabled) {
+        g->ctx->setDiscardValueNames(false);
+    } else {
+        if (ot == Module::Bitcode || ot == Module::BitcodeText) {
+            g->ctx->setDiscardValueNames(false);
+        } else {
+            g->ctx->setDiscardValueNames(true);
+        }
     }
 
     // Default settings for PS4
