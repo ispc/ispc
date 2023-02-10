@@ -6218,6 +6218,7 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
                 PerformanceWarning(pos, "Conversion from float16 to unsigned int is slow. Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
                                  exprVal, targetType, cOpName);
+            break;
         case AtomicType::TYPE_FLOAT:
             if (fromType->IsVaryingType())
                 PerformanceWarning(pos, "Conversion from float to unsigned int is slow. Use \"int\" if possible");
