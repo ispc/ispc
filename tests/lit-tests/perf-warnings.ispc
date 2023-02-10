@@ -22,8 +22,13 @@
 // RUN: %{ispc} %s --nostdlib --nowrap --target=avx512skx-x16 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_AVX512
 // RUN: %{ispc} %s --nostdlib --nowrap --target=avx512skx-x32 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_AVX512
 // RUN: %{ispc} %s --nostdlib --nowrap --target=avx512skx-x64 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_AVX512
+// RUN: %{ispc} %s --nostdlib --nowrap --target=avx512spr-x4 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_AVX512
+// RUN: %{ispc} %s --nostdlib --nowrap --target=avx512spr-x8 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_AVX512
+// RUN: %{ispc} %s --nostdlib --nowrap --target=avx512spr-x16 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_AVX512
+// RUN: %{ispc} %s --nostdlib --nowrap --target=avx512spr-x32 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_AVX512
+// RUN: %{ispc} %s --nostdlib --nowrap --target=avx512spr-x64 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_AVX512
 
-// REQUIRES: X86_ENABLED
+// REQUIRES: X86_ENABLED && LLVM_14_0+
 
 // Float16 -> integers
 
