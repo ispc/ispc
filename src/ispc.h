@@ -158,8 +158,10 @@ struct SourcePos {
     extents. */
 SourcePos Union(const SourcePos &p1, const SourcePos &p2);
 
+typedef unsigned int PerfWarningTypeUnderlyingType;
+
 /** An enum to represent different types of perfarmance warnings that should be triggered for specific target */
-enum class PerfWarningType {
+enum class PerfWarningType : PerfWarningTypeUnderlyingType {
     // x86, SSE2/SSE4/AVX/AVX2.
     // Converts between [float|double] and uint[32|64] types (both directions) are much more expensive than similar
     // converts involving signed integers.
@@ -463,7 +465,7 @@ class Target {
     bool m_hasFp64Support;
 
     /** A bitset of PerfWarningType values indicating the warnings that are relevant for the target. */
-    unsigned int m_warnings;
+    PerfWarningTypeUnderlyingType m_warnings;
 };
 
 /** @brief Structure that collects optimization options
