@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021, Intel Corporation
+ * Copyright (c) 2019-2023, Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -30,19 +30,44 @@
 
 using namespace hostutil;
 
+bool get_bool_envvar(const char *name) {
+    int parsed = 0;
+    const char *val = getenv(name);
+    if (val) {
+        std::istringstream is(val);
+        is >> parsed;
+        if (is) {
+            if (parsed == 0) {
+                return false;
+            } else if (parsed == 1) {
+                return true;
+            }
+        }
+        std::stringstream ss;
+        ss << "Incorrect value of " << name << " variable, set 0 or 1.";
+        throw std::runtime_error(ss.str());
+    }
+    return false;
+}
+
+bool useZebin() {
+    bool flag = get_bool_envvar("ISPC_EXAMPLES_USE_ZEBIN");
+    if (!flag) {
+        flag = get_bool_envvar("ISPCRT_USE_ZEBIN");
+    }
+    return flag;
+}
+
 void SGEMMApp::initialize() {
     if (initialized)
         return;
 
-    auto useZebin = getenv("ISPC_EXAMPLES_USE_ZEBIN") != nullptr;
-    if (!useZebin) {
-        useZebin = getenv("ISPCRT_USE_ZEBIN") != nullptr;
-    }
+    bool useZebinFlag = useZebin();
 
 #ifdef CMKERNEL
     L0InitContext(m_driver, m_device, m_context, m_module, m_command_queue, "naive_sgemm_cm_mt.spv");
 #else
-    L0InitContext(m_driver, m_device, m_context, m_module, m_command_queue, "xe_sgemm", useZebin);
+    L0InitContext(m_driver, m_device, m_context, m_module, m_command_queue, "xe_sgemm", useZebinFlag);
 #endif
 
     // Get device timestamp resolution - needed for time measurments

@@ -19,7 +19,7 @@ class MockTest : public ::testing::Test {
         ResetError();
         Config::cleanup();
         CallCounters::resetAll();
-        setenv("ISPCRT_MOCK_DEVICE", "y", 1);
+        setenv("ISPCRT_MOCK_DEVICE", "1", 1);
         // hijak ispcrt errors - we need it to test error handling
         ispcrtSetErrorFunc([](ISPCRTError e, const char *m) { sm_rt_error = e; });
     }

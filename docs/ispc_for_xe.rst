@@ -210,7 +210,7 @@ Configuration
 The behavior of ``ISPCRT`` can be configured using the following environment
 variables:
 
-* ``ISPCRT_USE_ZEBIN`` - when defined forces to use experimental L0 native binary format.
+* ``ISPCRT_USE_ZEBIN`` - when defined as ``1`` forces to use experimental L0 native binary format.
   Unlike SPIR-V files, zebin files are not portable between different GPU types.
 
 * ``ISPCRT_IGC_OPTIONS`` - ``ISPCRT`` is using an Intel® Graphics Compiler (IGC)
@@ -233,6 +233,17 @@ variables:
   set to 100000, but can be lowered (for example for testing) using this environmental variable.
   Please note that the limit cannot be set to more than 100000. If a greater value is provided,
   the ``ISPCRT`` will set the limit to the default value and display a warning message.
+
+* ``ISPCRT_VERBOSE`` - when defined as ``1`` enables verbose output.
+
+* ``ISPCRT_MEM_POOL`` - when defined as ``1`` enables usage of memory pool for
+  memory view allocations that created with appropriate shared memory allocation hints.
+
+* ``ISCPRT_MEM_POOL_MIN_CHUNK_POW2`` - provide the power of 2 for minimal chunk
+  size that can be allocated without rounding up to the nearest power of 2.
+
+* ``ISCPRT_MEM_POOL_MAX_CHUNK_POW2`` - provide the power of 2 for maximal
+  memory allocation that can fit into the memory pool.
 
 Also you can use ``ISPCRTModuleOptions`` structure to pass specific options to GPU module.
 Currently we support only one setting - ``stackSize`` which determines the stack size
@@ -476,7 +487,7 @@ By default, examples use SPIR-V format. You can try them with L0 binary format:
 
     cd examples/xpu/build
     cmake -DISPC_XE_FORMAT=zebin ../ && make
-    export ISPCRT_USE_ZEBIN=y
+    export ISPCRT_USE_ZEBIN=1
     cd simple && ./host_simple --gpu
 
 Language Limitations and Known Issues
