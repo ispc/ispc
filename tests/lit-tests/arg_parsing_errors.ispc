@@ -27,6 +27,7 @@
 //; RUN: %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --help
 //; RUN: %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --help-dev
 //; RUN: %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 --support-matrix
+//; RUN: not %{ispc} 2>&1 | FileCheck %s -check-prefix=CHECK_ERROR_26
 
 //; RUN: not %{ispc} %s -o %t.o --nowrap --target=avx2-i32x8 -not-existing-opt --quiet 2>&1 | FileCheck %s --allow-empty -check-prefix=CHECK_ERROR_QUIET
 
@@ -66,6 +67,9 @@
 //; CHECK_ERROR_23: Unrecognized format of input file
 //; CHECK_ERROR_24: Error: Unknown option "--emit-obj"
 //; CHECK_ERROR_25: Warning: No output file name specified
+// The next check veryfies output of ispc executable without any other command line parameters,
+// so `--nowrap` was not passed, hence matching just the first word of the output.
+//; CHECK_ERROR_26: Error:
 
 //; CHECK_ERROR_QUIET-NOT: Error
 
