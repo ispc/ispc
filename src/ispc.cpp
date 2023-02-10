@@ -819,7 +819,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 4;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_x86_64;
         break;
     case ISPCTarget::sse2_i32x8:
@@ -830,7 +829,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 8;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_Core2;
         break;
     case ISPCTarget::sse4_i8x16:
@@ -841,7 +839,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 16;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 8;
-        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_Nehalem;
         break;
     case ISPCTarget::sse4_i16x8:
@@ -852,7 +849,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 8;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 16;
-        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_Nehalem;
         break;
     case ISPCTarget::sse4_i32x4:
@@ -863,7 +859,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 4;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_Nehalem;
         break;
     case ISPCTarget::sse4_i32x8:
@@ -874,7 +869,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 8;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_Nehalem;
         break;
     case ISPCTarget::avx1_i32x4:
@@ -885,7 +879,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 4;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_SandyBridge;
         break;
     case ISPCTarget::avx1_i32x8:
@@ -896,7 +889,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 8;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_SandyBridge;
         break;
     case ISPCTarget::avx1_i32x16:
@@ -907,7 +899,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 16;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_SandyBridge;
         break;
     case ISPCTarget::avx1_i64x4:
@@ -918,7 +909,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 4;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 64;
-        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_SandyBridge;
         break;
     case ISPCTarget::avx2_i8x32:
@@ -932,7 +922,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasHalf = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
-        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_Haswell;
         break;
     case ISPCTarget::avx2_i16x16:
@@ -946,7 +935,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasHalf = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
-        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_Haswell;
         break;
     case ISPCTarget::avx2_i32x4:
@@ -960,7 +948,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasHalf = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
-        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_Haswell;
         break;
     case ISPCTarget::avx2_i32x8:
@@ -974,7 +961,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasHalf = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
-        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_Haswell;
         break;
     case ISPCTarget::avx2_i32x16:
@@ -988,7 +974,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasHalf = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
-        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_Haswell;
         break;
     case ISPCTarget::avx2_i64x4:
@@ -1002,7 +987,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_hasHalf = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
-        this->setWarning(PerfWarningType::UInt32ToFloatCVT);
         CPUfromISA = CPU_Haswell;
         break;
     case ISPCTarget::avx512knl_x16:
@@ -1353,6 +1337,29 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         // Proper reporting about incorrect targets is done during options parsing.
         std::string target_string = "Problem with target (" + ISPCTargetToString(m_ispc_target) + ")";
         FATAL(target_string.c_str());
+    }
+
+    // Enable ISA-dependnent warnings
+    switch (this->m_isa) {
+    case Target::SSE2:
+    case Target::SSE4:
+    case Target::AVX:
+        this->setWarning(PerfWarningType::CVTUIntFloat);
+        this->setWarning(PerfWarningType::DIVModInt);
+        this->setWarning(PerfWarningType::VariableShiftRight);
+        break;
+    case Target::AVX2:
+        this->setWarning(PerfWarningType::CVTUIntFloat);
+        this->setWarning(PerfWarningType::CVTUIntFloat16);
+        this->setWarning(PerfWarningType::DIVModInt);
+        break;
+    case Target::KNL_AVX512:
+    case Target::SKX_AVX512:
+        this->setWarning(PerfWarningType::DIVModInt);
+        break;
+    default:
+        // Fall through
+        ;
     }
 
 #if defined(ISPC_ARM_ENABLED)

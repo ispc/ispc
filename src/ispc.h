@@ -160,7 +160,21 @@ SourcePos Union(const SourcePos &p1, const SourcePos &p2);
 
 /** An enum to represent different types of perfarmance warnings that should be triggered for specific target */
 enum class PerfWarningType {
-    UInt32ToFloatCVT = 0x1,
+    // x86, SSE2/SSE4/AVX/AVX2.
+    // Converts between [float|double] and uint[32|64] types (both directions) are much more expensive than similar
+    // converts involving signed integers.
+    CVTUIntFloat = 0x1,
+    // x86, AVX2.
+    // Converts between float16 and uint[32|64] types (both directions) are much more expensive than similar
+    // converts involving signed integers.
+    // SSE2/SSE4/AVX does not warn about FP16, as it is extreamly slow due to emulation of any FP16 ops.
+    CVTUIntFloat16 = 0x2,
+    // x86
+    // Varying integer division and modulo operations are not supported in hardware and are scalarized.
+    DIVModInt = 0x4,
+    // x86, SSE2, SSE4.
+    // Shift right by variable amount.
+    VariableShiftRight = 0x8,
 };
 
 /** @brief Structure that defines a compilation target
