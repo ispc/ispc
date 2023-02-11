@@ -57,7 +57,7 @@ RUN git checkout $SHA
 # or better do clang selfbuild and use it for ispc build as well (i.e. just "make").
 # "rm" are just to keep docker image small.
 RUN source /opt/rh/devtoolset-7/enable && \
-    ./alloy.py -b --version="$LLVM_VERSION" --selfbuild --llvm-disable-assertions && \
+    ./alloy.py -b --version="$LLVM_VERSION" --selfbuild --llvm-disable-assertions --full-checkout && \
     rm -rf "$LLVM_HOME"/build-"$LLVM_VERSION" "$LLVM_HOME"/llvm-"$LLVM_VERSION" "$LLVM_HOME"/bin-"$LLVM_VERSION"_temp "$LLVM_HOME"/build-"$LLVM_VERSION"_temp
 
 ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
