@@ -12,12 +12,12 @@ ARG LLVM_VERSION
 # otherwise LLVM build may fail, as it will use all the cores available to container.
 
 # Packages required to build ISPC and Clang. libtool is needed to build ncurses.
-RUN dnf -y update && dnf install -y wget-1.19.5 yum-utils-4.0.21 gcc-8.5.0 gcc-c++-8.5.0 git-2.31.1 python36-3.6.8 make-4.2.1 ncurses-devel-6.1 xz-5.2.4 libtool-2.4.6 && \
+RUN dnf -y update && dnf install -y wget yum-utils gcc gcc-c++ git python3 make ncurses-devel xz libtool && \
 #    yum install -y libtool autopoint gettext-devel texinfo help2man && \
     dnf clean -y all
 
 # These packages are required if you need to link IPSC with -static.
-RUN dnf -y --enablerepo=powertools install libstdc++-static-8.5.0 && \
+RUN dnf -y --enablerepo=powertools install libstdc++-static && \
     dnf clean -y all
 
 WORKDIR /usr/local/src
@@ -70,8 +70,8 @@ FROM llvm_only AS ispc_build
 
 ARG LLVM_VERSION
 
-RUN dnf -y update && dnf install -y m4-1.4.18 bison-3.0.4 flex-2.6.1 && dnf clean -y all
-RUN if [[ $(uname -m) =~ "x86" ]]; then dnf -y update && dnf install -y glibc-devel-2.28-189.5.el8_6.i686 && dnf clean -y all; fi
+RUN dnf -y update && dnf install -y m4 bison flex && dnf clean -y all
+RUN if [[ $(uname -m) =~ "x86" ]]; then dnf -y update && dnf install -y glibc-devel.i686 && dnf clean -y all; fi
 
 # Build ISPC
 RUN mkdir build

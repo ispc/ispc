@@ -16,9 +16,8 @@ RUN uname -a
 
 # Packages required to build ISPC and Clang.
 # Adding this repository is needed for Ubuntu 16.04 to install python3.6.
-RUN apt-get -y update && apt-get --no-install-recommends install -y software-properties-common=0.96.20.10 && add-apt-repository ppa:jblgf0/python \
-    wget=1.17.1-1ubuntu1.5 build-essential=12.1ubuntu2 gcc=4:5.3.1-1ubuntu1 g++=4:5.3.1-1ubuntu1 git=1:2.7.4-0ubuntu1.10 python3.6=3.6.10-1+xenial1 \
-    libncurses5-dev=6.0+20160213-1ubuntu1 libtinfo-dev=6.0+20160213-1ubuntu1 && \
+RUN apt-get -y update && apt-get --no-install-recommends install -y software-properties-common && add-apt-repository ppa:deadsnakes/ppa && \
+    apt-get -y update && apt-get --no-install-recommends install -y wget build-essential gcc g++ git python3.6 ncurses-dev libtinfo-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Download and install required version of cmake (3.13) for ISPC build
@@ -69,8 +68,8 @@ ARG LLVM_VERSION
 # ISPC builds in C++17 mode and will fail without modern libstdc++
 # Also install regular ISPC dependencies
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test -y && apt-get -y update && \
-    apt-get --no-install-recommends install -y libstdc++-9-dev=9.4.0-1ubuntu1~16.04 \
-    m4=1.4.17-5 bison=2:3.0.4.dfsg-1 flex=2.6.0-11 libc6-dev-i386=2.23-0ubuntu11.3 && \
+    apt-get --no-install-recommends install -y libstdc++-9-dev && \
+    apt-get --no-install-recommends install -y m4 bison flex libc6-dev-i386 && \
     rm -rf /var/lib/apt/lists/*
 
 # Configure ISPC build

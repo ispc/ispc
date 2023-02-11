@@ -15,8 +15,7 @@ ARG EXTRA_BUILD_ARG
 RUN uname -a
 
 # Packages
-RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends install -y wget=1.20.3-1ubuntu2 cmake=3.16.3-1ubuntu1 build-essential=12.8ubuntu1.1 \
-    gcc=4:9.3.0-1ubuntu2 g++=4:9.3.0-1ubuntu2 git=1:2.25.1-1ubuntu3.8 python3-dev=3.8.2-0ubuntu2 libncurses-dev=6.2-0ubuntu2 libtinfo-dev=6.2-0ubuntu2 ca-certificates=20211016ubuntu0.20.04.1 && \
+RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends install -y wget cmake build-essential gcc g++ git python3-dev ncurses-dev libtinfo-dev ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
 # If you are behind a proxy, you need to configure git.
@@ -40,8 +39,8 @@ FROM llvm_build_only AS ispc_build
 
 ARG LLVM_VERSION
 
-RUN apt-get -y update && apt-get --no-install-recommends install -y m4=1.4.18-4 bison=2:3.5.1+dfsg-1 flex=2.6.4-6.2 \
-    libc6-dev-i386-cross=2.31-0ubuntu9.9cross1 libc6-dev-arm64-cross=2.31-0ubuntu9.9cross1 libc6-dev-armhf-cross=2.31-0ubuntu9.9cross1 && \
+RUN apt-get -y update && apt-get --no-install-recommends install -y m4 bison flex \
+    libc6-dev-i386-cross libc6-dev-arm64-cross libc6-dev-armhf-cross && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /home/src/ispc
