@@ -5,10 +5,7 @@ SHELL ["/bin/bash", "-c"]
 ARG REPO=ispc/ispc
 ARG SHA=main
 ARG LLVM_VERSION=14.0
-ARG IGC_VER=12260
 ARG L0L_VER=1.9.4
-ARG CR_VER=22.41.24420
-ARG CR_VER_SUFFIX=24420
 ARG VC_INTRINSICS_COMMIT_SHA="907bc4a00be585a395abe17b97f357bfbc28b889"
 ARG SPIRV_TRANSLATOR_COMMIT_SHA="c469fa86d54380231123f2b5adb4e1239392b814"
 
@@ -18,7 +15,7 @@ ARG SPIRV_TRANSLATOR_COMMIT_SHA="c469fa86d54380231123f2b5adb4e1239392b814"
 # Packages
 RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends install -y clang-8 build-essential \
     libnuma1 opencl-headers ocl-icd-libopencl1 clinfo vim gcc g++ git python3-dev imagemagick m4 bison flex libncurses-dev \
-    libtinfo-dev libc6-dev-i386 cpio lsb-core wget netcat-openbsd libtbb-dev libglfw3-dev pkgconf gdb gcc-multilib g++-multilib curl libomp-dev ca-certificates && \
+    libtinfo-dev libc6-dev-i386 cpio lsb-core wget gnupg netcat-openbsd libtbb-dev libglfw3-dev pkgconf gdb gcc-multilib g++-multilib curl libomp-dev ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
 # Download and install required version of cmake (3.14) for ISPC build
@@ -41,14 +38,16 @@ RUN python3 ./alloy.py -b --version="$LLVM_VERSION" --selfbuild && \
 
 WORKDIR /home/packages
 
-# Compute runtime
-RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5  https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.${IGC_VER}.1/intel-igc-core_1.0.${IGC_VER}.1_amd64.deb && \
-    wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5  https://github.com/intel/intel-graphics-compiler/releases/download/igc-1.0.${IGC_VER}.1/intel-igc-opencl_1.0.${IGC_VER}.1_amd64.deb && \
-    wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5  https://github.com/intel/compute-runtime/releases/download/${CR_VER}/intel-level-zero-gpu-dbgsym_1.3.${CR_VER_SUFFIX}_amd64.ddeb && \
-    wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5  https://github.com/intel/compute-runtime/releases/download/${CR_VER}/intel-level-zero-gpu_1.3.${CR_VER_SUFFIX}_amd64.deb && \
-    wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5  https://github.com/intel/compute-runtime/releases/download/${CR_VER}/intel-opencl-icd-dbgsym_${CR_VER}_amd64.ddeb && \
-    wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5  https://github.com/intel/compute-runtime/releases/download/${CR_VER}/intel-opencl-icd_${CR_VER}_amd64.deb && \
-    wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5  https://github.com/intel/compute-runtime/releases/download/${CR_VER}/libigdgmm12_22.2.0_amd64.deb
+# Add package repository and install graphics packages
+RUN wget -qO - https://repositories.intel.com/graphics/intel-graphics.key | gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg && \
+    echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/graphics/ubuntu focal-devel main' | \
+    tee  /etc/apt/sources.list.d/intel.gpu.focal.list && \
+    apt-get -y update && apt-get --no-install-recommends install -y intel-opencl-icd intel-level-zero-gpu level-zero \
+    intel-media-va-driver-non-free libmfx1 libmfxgen1 libvpl2 \
+    libegl-mesa0 libegl1-mesa libegl1-mesa-dev libgbm1 libgl1-mesa-dev libgl1-mesa-dri \
+    libglapi-mesa libgles2-mesa-dev libglx-mesa0 libigdgmm11 libxatracker2 mesa-va-drivers \
+    mesa-vdpau-drivers mesa-vulkan-drivers va-driver-all && \
+    rm -rf /var/lib/apt/lists/*
 
 # L0 loaader
 RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/oneapi-src/level-zero/releases/download/v${L0L_VER}/level-zero-devel_${L0L_VER}+u18.04_amd64.deb && \
