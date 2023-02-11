@@ -1,4 +1,4 @@
-ARG LLVM_VERSION=13.0
+ARG LLVM_VERSION=14.0
 
 FROM ubuntu:18.04 AS llvm_build_step1
 LABEL maintainer="Dmitry Babokin <dmitry.y.babokin@intel.com>"
