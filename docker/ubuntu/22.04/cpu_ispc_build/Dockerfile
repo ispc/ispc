@@ -1,4 +1,4 @@
-ARG LLVM_VERSION=13.0
+ARG LLVM_VERSION=14.0
 
 FROM ubuntu:22.04 AS llvm_build_only
 LABEL maintainer="Dmitry Babokin <dmitry.y.babokin@intel.com>"
