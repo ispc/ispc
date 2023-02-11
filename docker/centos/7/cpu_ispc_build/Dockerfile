@@ -13,13 +13,13 @@ ARG LLVM_VERSION
 
 # Packages required to build ISPC and Clang.
 RUN yum -y update; yum -y install centos-release-scl epel-release; yum clean all
-RUN yum install -y vim-enhanced-7.4.629 wget-1.14 yum-utils-1.1.31 gcc-4.8.5 gcc-c++-4.8.5 git-1.8.3.1 python3-3.6.8 m4-1.4.16 bison-3.0.4 && \
-    yum install -y flex-2.5.37 patch-2.7.1 make-3.82 ncurses-devel-5.9 glibc-devel-2.17-326.el7_9.x86_64 glibc-devel-2.17-326.el7_9.i686 xz-5.2.2 devtoolset-7 && \
-    yum install -y libtool-2.4.2 gettext-devel-0.19.8.1 texinfo-5.1 help2man-1.41.1 && \
+RUN yum install -y vim wget yum-utils gcc gcc-c++ git python3 m4 bison && \
+    yum install -y flex patch make ncurses-devel glibc-devel.x86_64 glibc-devel.i686 xz devtoolset-7 && \
+    yum install -y libtool autopoint gettext-devel texinfo help2man && \
     yum clean -y all
 
 # These packages are required if you need to link IPSC with -static.
-RUN yum install -y ncurses-static-5.9 libstdc++-static-4.8.5 && \
+RUN yum install -y ncurses-static libstdc++-static && \
     yum clean -y all
 
 # Download and install required version of cmake (3.14 for x86, 3.20 for aarch64, as earlier versions are not available as binary distribution) for ISPC build

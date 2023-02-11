@@ -15,8 +15,7 @@ ARG EXTRA_BUILD_ARG
 RUN uname -a
 
 # Packages required to build ISPC and Clang.
-RUN apt-get -y update && apt-get --no-install-recommends install -y wget=1.19.4-1ubuntu* build-essential=12.4ubuntu* gcc=4:7.4.0-1ubuntu* \
-    g++=4:7.4.0-1ubuntu* git=1:2.17.1-1ubuntu* python3-dev=3.6.7-1~18.04 libncurses5-dev=6.1-1ubuntu* libtinfo-dev=6.1-1ubuntu* ca-certificates && \
+RUN apt-get -y update && apt-get --no-install-recommends install -y wget build-essential gcc g++ git python3-dev ncurses-dev libtinfo-dev ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
 # Download and install required version of cmake (3.14 for x86, 3.20 for aarch64, as earlier versions are not available as binary distribution) for ISPC build
@@ -68,10 +67,10 @@ ARG LLVM_VERSION
 # ISPC builds in C++17 mode and will fail without modern libstdc++
 # Also install regular ISPC dependencies
 RUN if [[ $(uname -m) =~ "x86" ]]; then export CROSS_LIBS="libc6-dev-i386=2.27-3ubuntu*"; else export CROSS_LIBS="libc6-dev-armhf-cross=2.27-3ubuntu*"; fi && \
-    apt-get -y update && apt-get --no-install-recommends install -y software-properties-common=0.96.24.32.18 && \
+    apt-get -y update && apt-get --no-install-recommends install -y software-properties-common && \
     add-apt-repository ppa:ubuntu-toolchain-r/test -y && apt-get -y update && \
-    apt-get --no-install-recommends install -y libstdc++-9-dev=9.4.0-1ubuntu* && \
-    apt-get --no-install-recommends install -y m4=1.4.18-1 bison=2:3.0.4.dfsg-1build1 flex=2.6.4-6 $CROSS_LIBS && \
+    apt-get --no-install-recommends install -y libstdc++-9-dev && \
+    apt-get --no-install-recommends install -y m4 bison flex $CROSS_LIBS && \
     rm -rf /var/lib/apt/lists/*
 
 # Configure ISPC build

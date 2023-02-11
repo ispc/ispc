@@ -7,9 +7,9 @@ ARG SHA=main
 
 # Packages required to build ISPC.
 # RUN echo "proxy=http://proxy.yourcompany.com:888" >> /etc/dnf/dnf.conf
-RUN dnf install -y git-2.39.0 cmake-3.25.1 && \
-    dnf install -y clang-devel-14.0.5 llvm-devel-14.0.5 glibc-devel-2.35-20.fc36.i686 && \
-    dnf install -y flex-2.6.4 bison-3.8.2 && \
+RUN dnf install -y git cmake && \
+    dnf install -y clang-devel-14.0.5 llvm-devel-14.0.5 glibc-devel.i686 && \
+    dnf install -y flex bison && \
     dnf clean -y all
 
 # If you are behind a proxy, you need to configure git and svn.
