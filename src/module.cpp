@@ -2417,7 +2417,7 @@ int Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *o
     else
         opts.addMacroDef("ISPC_POINTER_SIZE=64");
 
-    if (g->target->hasHalf())
+    if (g->target->hasHalfConverts())
         opts.addMacroDef("ISPC_TARGET_HAS_HALF");
     if (g->target->hasRand())
         opts.addMacroDef("ISPC_TARGET_HAS_RAND");
