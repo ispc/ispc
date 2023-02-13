@@ -325,7 +325,7 @@ class Target {
 
     int getMaskBitCount() const { return m_maskBitCount; }
 
-    bool hasHalf() const { return m_hasHalf; }
+    bool hasHalfConverts() const { return m_hasHalfConverts; }
 
     bool hasRand() const { return m_hasRand; }
 
@@ -427,9 +427,8 @@ class Target {
         is 32 on SSE/AVX, since that matches the HW better. */
     int m_maskBitCount;
 
-    /** Indicates whether the target has native support for float/half
-        conversions. */
-    bool m_hasHalf;
+    /** Indicates whether the target has native support for float/half conversions. */
+    bool m_hasHalfConverts;
 
     /** Indicates whether there is an ISA random number instruction. */
     bool m_hasRand;

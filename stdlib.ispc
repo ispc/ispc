@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -4183,7 +4183,7 @@ __declspec(safe) static inline uniform double pow(uniform double a, uniform doub
 // half-precision floats
 
 __declspec(safe) static inline uniform float half_to_float(uniform unsigned int16 h) {
-    if (__have_native_half) {
+    if (__have_native_half_converts) {
         return __half_to_float_uniform(h);
     } else {
         // https://gist.github.com/2144712
@@ -4208,7 +4208,7 @@ __declspec(safe) static inline uniform float half_to_float(uniform unsigned int1
 }
 
 __declspec(safe) static inline float half_to_float(unsigned int16 h) {
-    if (__have_native_half) {
+    if (__have_native_half_converts) {
         return __half_to_float_varying((unsigned int16)h);
     } else {
         // https://gist.github.com/2144712
@@ -4230,7 +4230,7 @@ __declspec(safe) static inline float half_to_float(unsigned int16 h) {
 }
 
 __declspec(safe) static inline uniform int16 float_to_half(uniform float f) {
-    if (__have_native_half) {
+    if (__have_native_half_converts) {
         return __float_to_half_uniform(f);
     } else {
         // via Fabian "ryg" Giesen.
@@ -4273,7 +4273,7 @@ __declspec(safe) static inline uniform int16 float_to_half(uniform float f) {
 }
 
 __declspec(safe) static inline int16 float_to_half(float f) {
-    if (__have_native_half) {
+    if (__have_native_half_converts) {
         return __float_to_half_varying(f);
     } else {
         // via Fabian "ryg" Giesen.
@@ -4333,7 +4333,7 @@ __declspec(safe) static inline int16 float_to_half(float f) {
 }
 
 __declspec(safe) static inline uniform float half_to_float_fast(uniform unsigned int16 h) {
-    if (__have_native_half) {
+    if (__have_native_half_converts) {
         return __half_to_float_uniform(h);
     } else {
         uniform unsigned int32 hs = h & (int32)0x8000u;  // Pick off sign bit
@@ -4349,7 +4349,7 @@ __declspec(safe) static inline uniform float half_to_float_fast(uniform unsigned
 }
 
 __declspec(safe) static inline float half_to_float_fast(unsigned int16 h) {
-    if (__have_native_half) {
+    if (__have_native_half_converts) {
         return __half_to_float_varying(h);
     } else {
         unsigned int32 hs = h & (int32)0x8000u;  // Pick off sign bit
@@ -4363,7 +4363,7 @@ __declspec(safe) static inline float half_to_float_fast(unsigned int16 h) {
 }
 
 __declspec(safe) static inline uniform int16 float_to_half_fast(uniform float f) {
-    if (__have_native_half) {
+    if (__have_native_half_converts) {
         return __float_to_half_uniform(f);
     } else {
         uniform int32 x = intbits(f);
@@ -4387,7 +4387,7 @@ __declspec(safe) static inline uniform int16 float_to_half_fast(uniform float f)
 }
 
 __declspec(safe) static inline int16 float_to_half_fast(float f) {
-    if (__have_native_half) {
+    if (__have_native_half_converts) {
         return __float_to_half_varying(f);
     } else {
         int32 x = intbits(f);

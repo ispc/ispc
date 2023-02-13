@@ -674,7 +674,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
     : m_target(NULL), m_targetMachine(NULL), m_dataLayout(NULL), m_valid(false), m_ispc_target(ispc_target),
       m_isa(SSE2), m_arch(Arch::none), m_is32Bit(true), m_cpu(""), m_attributes(""), m_tf_attributes(NULL),
       m_nativeVectorWidth(-1), m_nativeVectorAlignment(-1), m_dataTypeWidth(-1), m_vectorWidth(-1), m_generatePIC(pic),
-      m_maskingIsFree(false), m_maskBitCount(-1), m_hasHalf(false), m_hasRand(false), m_hasGather(false),
+      m_maskingIsFree(false), m_maskBitCount(-1), m_hasHalfConverts(false), m_hasRand(false), m_hasGather(false),
       m_hasScatter(false), m_hasTranscendentals(false), m_hasTrigonometry(false), m_hasRsqrtd(false), m_hasRcpd(false),
       m_hasVecPrefetch(false), m_hasSaturatingArithmetic(false), m_hasFp16Support(false), m_hasFp64Support(true),
       m_warnings(0) {
@@ -995,7 +995,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 32;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 8;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
         CPUfromISA = CPU_Haswell;
@@ -1008,7 +1008,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 16;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 16;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
         CPUfromISA = CPU_Haswell;
@@ -1021,7 +1021,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 4;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
         CPUfromISA = CPU_Haswell;
@@ -1034,7 +1034,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 8;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
         CPUfromISA = CPU_Haswell;
@@ -1047,7 +1047,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 16;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
         CPUfromISA = CPU_Haswell;
@@ -1060,7 +1060,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 4;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 64;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
         CPUfromISA = CPU_Haswell;
@@ -1073,7 +1073,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 16;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasTranscendentals = false;
@@ -1091,7 +1091,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 4;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasTranscendentals = false;
@@ -1110,7 +1110,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 8;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasTranscendentals = false;
@@ -1129,7 +1129,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 16;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasTranscendentals = false;
@@ -1157,7 +1157,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 64;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasTranscendentals = false;
@@ -1178,7 +1178,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 32;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasTranscendentals = false;
@@ -1196,7 +1196,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 4;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasTranscendentals = false;
@@ -1216,7 +1216,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 8;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasTranscendentals = false;
@@ -1236,7 +1236,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 16;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasTranscendentals = false;
@@ -1261,7 +1261,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 64;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasTranscendentals = false;
@@ -1279,7 +1279,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 32;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasTranscendentals = false;
@@ -1305,7 +1305,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 8;
         this->m_vectorWidth = 16;
-        this->m_hasHalf = true; // ??
+        this->m_hasHalfConverts = true; // ??
         // https://github.com/ispc/ispc/issues/2052
         // AArch64 disables Coherent Control Flow optimization because of a bug in
         // LLVM aarch64 back-end that reduces the efficiency of simplifyCFG.
@@ -1324,7 +1324,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 16;
         this->m_vectorWidth = 8;
-        this->m_hasHalf = true; // ??
+        this->m_hasHalfConverts = true; // ??
         this->m_maskingIsFree = (arch == Arch::aarch64);
         this->m_maskBitCount = 16;
         break;
@@ -1334,7 +1334,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 4;
-        this->m_hasHalf = true; // ??
+        this->m_hasHalfConverts = true; // ??
         this->m_maskingIsFree = (arch == Arch::aarch64);
         this->m_maskBitCount = 32;
         break;
@@ -1344,7 +1344,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 8;
-        this->m_hasHalf = true; // ??
+        this->m_hasHalfConverts = true; // ??
         this->m_maskingIsFree = (arch == Arch::aarch64);
         this->m_maskBitCount = 32;
         break;
@@ -1363,7 +1363,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 4;
-        this->m_hasHalf = false;
+        this->m_hasHalfConverts = false;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         this->m_hasTranscendentals = false;
@@ -1386,7 +1386,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 8;
         this->m_dataTypeWidth = 32;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasSaturatingArithmetic = true;
@@ -1401,7 +1401,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 8;
         this->m_dataTypeWidth = 32;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasSaturatingArithmetic = true;
@@ -1416,7 +1416,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 16;
         this->m_dataTypeWidth = 32;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasSaturatingArithmetic = true;
@@ -1431,7 +1431,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 16;
         this->m_dataTypeWidth = 32;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasSaturatingArithmetic = true;
@@ -1446,7 +1446,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 8;
         this->m_dataTypeWidth = 32;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasSaturatingArithmetic = true;
@@ -1461,7 +1461,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 16;
         this->m_dataTypeWidth = 32;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasSaturatingArithmetic = true;
@@ -1476,7 +1476,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 16;
         this->m_dataTypeWidth = 32;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasSaturatingArithmetic = true;
@@ -1491,7 +1491,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 32;
         this->m_dataTypeWidth = 32;
-        this->m_hasHalf = true;
+        this->m_hasHalfConverts = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasSaturatingArithmetic = true;
