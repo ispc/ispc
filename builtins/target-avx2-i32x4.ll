@@ -1,4 +1,4 @@
-;;  Copyright (c) 2019-2021, Intel Corporation
+;;  Copyright (c) 2019-2023, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -771,6 +771,10 @@ define_avgs()
 
 rsqrtd_decl()
 rcpd_decl()
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; rcp/rsqrt declarations for half
+rcph_rsqrth_decl
 
 transcendetals_decl()
 trigonometry_decl()

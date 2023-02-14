@@ -2,7 +2,7 @@
 ;; target-neon-16.ll
 ;;
 ;;  Copyright(c) 2013-2015 Google, Inc.
-;;  Copyright(c) 2019 Intel
+;;  Copyright(c) 2019-2023 Intel
 ;;
 ;;  All rights reserved.
 ;;
@@ -552,6 +552,10 @@ define <8 x i16> @__avg_down_int16(<8 x i16>, <8 x i16>) nounwind readnone alway
 
 rsqrtd_decl()
 rcpd_decl()
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; rcp/rsqrt declarations for half
+rcph_rsqrth_decl
 
 transcendetals_decl()
 trigonometry_decl()

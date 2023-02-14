@@ -1233,6 +1233,8 @@ void ispc::DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::
     lDefineConstantIntFunc("__fast_masked_vload", (int)g->opt.fastMaskedVload, module, symbolTable, debug_symbols);
 
     lDefineConstantInt("__have_native_half_converts", g->target->hasHalfConverts(), module, symbolTable, debug_symbols);
+    lDefineConstantInt("__have_native_half_full_support", g->target->hasHalfFullSupport(), module, symbolTable,
+                       debug_symbols);
     lDefineConstantInt("__have_native_rand", g->target->hasRand(), module, symbolTable, debug_symbols);
     lDefineConstantInt("__have_native_transcendentals", g->target->hasTranscendentals(), module, symbolTable,
                        debug_symbols);

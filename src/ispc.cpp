@@ -674,10 +674,10 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
     : m_target(NULL), m_targetMachine(NULL), m_dataLayout(NULL), m_valid(false), m_ispc_target(ispc_target),
       m_isa(SSE2), m_arch(Arch::none), m_is32Bit(true), m_cpu(""), m_attributes(""), m_tf_attributes(NULL),
       m_nativeVectorWidth(-1), m_nativeVectorAlignment(-1), m_dataTypeWidth(-1), m_vectorWidth(-1), m_generatePIC(pic),
-      m_maskingIsFree(false), m_maskBitCount(-1), m_hasHalfConverts(false), m_hasRand(false), m_hasGather(false),
-      m_hasScatter(false), m_hasTranscendentals(false), m_hasTrigonometry(false), m_hasRsqrtd(false), m_hasRcpd(false),
-      m_hasVecPrefetch(false), m_hasSaturatingArithmetic(false), m_hasFp16Support(false), m_hasFp64Support(true),
-      m_warnings(0) {
+      m_maskingIsFree(false), m_maskBitCount(-1), m_hasHalfConverts(false), m_hasHalfFullSupport(false),
+      m_hasRand(false), m_hasGather(false), m_hasScatter(false), m_hasTranscendentals(false), m_hasTrigonometry(false),
+      m_hasRsqrtd(false), m_hasRcpd(false), m_hasVecPrefetch(false), m_hasSaturatingArithmetic(false),
+      m_hasFp16Support(false), m_hasFp64Support(true), m_warnings(0) {
     DeviceType CPUID = CPU_None, CPUfromISA = CPU_None;
     AllCPUs a;
     std::string featuresString;
@@ -1197,6 +1197,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasTranscendentals = false;
@@ -1217,6 +1218,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasTranscendentals = false;
@@ -1237,6 +1239,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasTranscendentals = false;
@@ -1262,6 +1265,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasTranscendentals = false;
@@ -1280,6 +1284,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasTranscendentals = false;
@@ -1335,6 +1340,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 4;
         this->m_hasHalfConverts = true; // ??
+        // TODO: m_hasHalfFullSupport is not enabled here, as it's only supported starting from ARMv8.2 / Cortex A75
+        // We nned to defferentiate ARM target with and without float16 support.
         this->m_maskingIsFree = (arch == Arch::aarch64);
         this->m_maskBitCount = 32;
         break;
@@ -1364,6 +1371,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 4;
         this->m_hasHalfConverts = false;
+        this->m_hasHalfFullSupport = true;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         this->m_hasTranscendentals = false;
@@ -1387,6 +1395,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 8;
         this->m_dataTypeWidth = 32;
         this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasSaturatingArithmetic = true;
@@ -1402,6 +1411,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 8;
         this->m_dataTypeWidth = 32;
         this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasSaturatingArithmetic = true;
@@ -1417,6 +1427,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 16;
         this->m_dataTypeWidth = 32;
         this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasSaturatingArithmetic = true;
@@ -1432,6 +1443,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 16;
         this->m_dataTypeWidth = 32;
         this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasSaturatingArithmetic = true;
@@ -1447,6 +1459,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 8;
         this->m_dataTypeWidth = 32;
         this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasSaturatingArithmetic = true;
@@ -1462,6 +1475,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 16;
         this->m_dataTypeWidth = 32;
         this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasSaturatingArithmetic = true;
@@ -1477,6 +1491,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 16;
         this->m_dataTypeWidth = 32;
         this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasSaturatingArithmetic = true;
@@ -1492,6 +1507,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 32;
         this->m_dataTypeWidth = 32;
         this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasSaturatingArithmetic = true;

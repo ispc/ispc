@@ -1,4 +1,4 @@
-;;  Copyright (c) 2016-2021, Intel Corporation
+;;  Copyright (c) 2016-2023, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -33,6 +33,10 @@ define(`WIDTH',`8')
 define(`ISA',`AVX512SKX')
 
 include(`target-avx512-common-8.ll')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; rcp/rsqrt declarations for half
+rcph_rsqrth_decl
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp, rsqrt
