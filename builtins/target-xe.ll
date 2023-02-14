@@ -1,4 +1,4 @@
-;;  Copyright (c) 2019-2021, Intel Corporation
+;;  Copyright (c) 2019-2023, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -195,6 +195,7 @@ define float @__rcp_fast_uniform_float(float) nounwind readonly alwaysinline {
 ;; rsqrt
 
 declare float @llvm.genx.rsqrt.f32(float)
+declare half @llvm.genx.rsqrt.f16(half)
 define float @__rsqrt_uniform_float(float %v) nounwind readonly alwaysinline {
   %r = call float @llvm.genx.rsqrt.f32(float %v)
   ;; Newton-Raphson iteration to improve precision
@@ -215,9 +216,8 @@ define float @__rsqrt_fast_uniform_float(float) nounwind readonly alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; half precision rsqrt
 define half @__rsqrt_uniform_half(half %v) nounwind readonly alwaysinline {
-  %s = call half @__sqrt_uniform_half(half %v)
-  %r = call half @__rcp_uniform_half(half %s)
-  ret half %r
+  %res = call half @llvm.genx.rsqrt.f16(half %v)
+  ret half %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -603,6 +603,7 @@ define <WIDTH x half> @__rcp_fast_varying_half(<WIDTH x half>) nounwind readonly
 ; rsqrt
 
 declare <WIDTH x float> @llvm.genx.rsqrt.XE_SUFFIX(float)(<WIDTH x float>)
+declare <WIDTH x half> @llvm.genx.rsqrt.XE_SUFFIX(half)(<WIDTH x half>)
 define <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float> %v) nounwind readonly alwaysinline {
   %r = call <WIDTH x float> @llvm.genx.rsqrt.XE_SUFFIX(float)(<WIDTH x float> %v)
   ;; Newton-Raphson iteration to improve precision
@@ -624,9 +625,8 @@ define <WIDTH x float> @__rsqrt_fast_varying_float(<WIDTH x float>) nounwind rea
 ; half precision rsqrt
 
 define <WIDTH x half> @__rsqrt_varying_half(<WIDTH x half> %v) nounwind readonly alwaysinline {
-  %s = call <WIDTH x half> @__sqrt_varying_half(<WIDTH x half> %v)
-  %r = call <WIDTH x half> @__rcp_varying_half(<WIDTH x half> %s)
-  ret <WIDTH x half> %r
+  %res = call <WIDTH x half> @llvm.genx.rsqrt.XE_SUFFIX(half)(<WIDTH x half> %v)
+  ret <WIDTH x half> %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
