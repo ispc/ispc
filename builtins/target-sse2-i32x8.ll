@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2021, Intel Corporation
+;;  Copyright (c) 2010-2023, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -672,6 +672,10 @@ define <8 x double> @__max_varying_double(<8 x double>, <8 x double>) nounwind r
 
 rsqrtd_decl()
 rcpd_decl()
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; rcp/rsqrt declarations for half
+rcph_rsqrth_decl
 
 transcendetals_decl()
 trigonometry_decl()

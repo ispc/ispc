@@ -1,4 +1,4 @@
-;;  Copyright (c) 2015-2022, Intel Corporation
+;;  Copyright (c) 2015-2023, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -33,6 +33,10 @@ define(`WIDTH',`16')
 define(`ISA',`AVX512KNL')
 
 include(`target-avx512-common-16.ll')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; rcp/rsqrt declarations for half
+rcph_rsqrth_decl
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; svml

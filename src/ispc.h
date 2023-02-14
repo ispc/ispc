@@ -327,6 +327,8 @@ class Target {
 
     bool hasHalfConverts() const { return m_hasHalfConverts; }
 
+    bool hasHalfFullSupport() const { return m_hasHalfFullSupport; }
+
     bool hasRand() const { return m_hasRand; }
 
     bool hasGather() const { return m_hasGather; }
@@ -429,6 +431,13 @@ class Target {
 
     /** Indicates whether the target has native support for float/half conversions. */
     bool m_hasHalfConverts;
+
+    /** Indicates whether the target has full native support for float16 type, i.e.
+        arithmetic operations, rsqrt, rcp, etc.
+        TODO: this needs to be merged with m_hasFp16Support eventually, but we need to
+              define proper ARM targets with and without FP16 support first.
+    */
+    bool m_hasHalfFullSupport;
 
     /** Indicates whether there is an ISA random number instruction. */
     bool m_hasRand;

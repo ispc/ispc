@@ -1724,17 +1724,19 @@ __declspec(safe) static inline uniform double rcp_fast(uniform double v) {
 }
 
 __declspec(safe) static inline float16 rcp(float16 v) {
-    if (__is_xe_target)
+    if (__have_native_half_full_support) {
         return __rcp_varying_half(v);
-    else
+    } else {
         return (float16)(rcp((float)v));
+    }
 }
 
 __declspec(safe) static inline uniform float16 rcp(uniform float16 v) {
-    if (__is_xe_target)
+    if (__have_native_half_full_support) {
         return __rcp_uniform_half(v);
-    else
+    } else {
         return (uniform float16)(rcp((uniform float)v));
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -3640,9 +3642,21 @@ __declspec(safe) static inline float16 sqrt(float16 v) { return __sqrt_varying_h
 
 __declspec(safe) static inline uniform float16 sqrt(uniform float16 v) { return __sqrt_uniform_half(v); }
 
-__declspec(safe) static inline float16 rsqrt(float16 v) { return __rsqrt_varying_half(v); }
+__declspec(safe) static inline float16 rsqrt(float16 v) {
+    if (__have_native_half_full_support) {
+        return __rsqrt_varying_half(v);
+    } else {
+        return (float16)(rcp(sqrt((float)v)));
+    }
+}
 
-__declspec(safe) static inline uniform float16 rsqrt(uniform float16 v) { return __rsqrt_uniform_half(v); }
+__declspec(safe) static inline uniform float16 rsqrt(uniform float16 v) {
+    if (__have_native_half_full_support) {
+        return __rsqrt_uniform_half(v);
+    } else {
+        return (uniform float16)(rcp(sqrt((uniform float)v)));
+    }
+}
 
 __declspec(safe) static inline float16 ldexp(float16 x, int n) {
     unsigned int16 ex = 0x7c00u;
