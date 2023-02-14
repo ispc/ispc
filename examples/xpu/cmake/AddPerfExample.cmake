@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2019-2021, Intel Corporation
+#  Copyright (c) 2019-2023, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -72,7 +72,7 @@ function(add_perf_example)
     set(ISPC_XE_ADDITIONAL_ARGS ${parsed_ISPC_XE_ADDITIONAL_ARGS})
 
     # Add "ispcrt" suffix here to avoid CMake target conflicts with CPU examples
-    add_ispc_kernel("xe_${parsed_TEST_NAME}" "${parsed_ISPC_SRC_NAME}" "")
+    add_ispc_library(xe_${parsed_TEST_NAME} ${parsed_ISPC_SRC_NAME})
 
     # Show ispc source in VS solution:
     if (WIN32)

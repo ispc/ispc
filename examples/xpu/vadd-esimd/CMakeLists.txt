@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2021, Intel Corporation
+#  Copyright (c) 2021-2023, Intel Corporation
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -43,11 +43,10 @@ add_executable(${TARGET_NAME} vadd_usm.cpp)
 set(DPCPP_CUSTOM_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR})
 add_dpcpp_library(${TARGET_NAME}_esimd vadd_usm.cpp)
 
-set(ISPC_XE_FORMAT "bc")
-add_ispc_kernel(${TARGET_NAME}_ispc2esimd vadd_func.ispc "")
+add_ispc_library(${TARGET_NAME}_ispc2esimd vadd_func.ispc)
 
 # Link for GPU
-link_ispc_esimd(${TARGET_NAME}_ispc2esimd ${TARGET_NAME}_esimd)
+ispc_target_link_dpcpp_esimd_libraries(${TARGET_NAME}_ispc2esimd ${TARGET_NAME}_esimd)
 
 target_compile_options(${TARGET_NAME} PRIVATE "-fsycl" "-fPIE")
 target_include_directories(${TARGET_NAME} PRIVATE "${CMAKE_CURRENT_LIST_DIR}")

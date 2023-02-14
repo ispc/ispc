@@ -1,4 +1,4 @@
-// Copyright 2020-2022 Intel Corporation
+// Copyright 2020-2023, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "CPUDevice.h"
@@ -98,7 +98,7 @@ struct Module : public ispcrt::base::Module {
 #endif
 
             if (!lib)
-                throw std::logic_error("could not open CPU shared module file");
+                throw std::logic_error("could not open CPU shared module file lib" + m_file + ext);
             m_libs.push_back(lib);
         }
     }

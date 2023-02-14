@@ -17,11 +17,19 @@ macro (add_definitions_ispc)
   list(APPEND ISPC_DEFINITIONS ${ARGN})
 endmacro ()
 
-# We can't get the file dependencies property of the custom targets
-# so we use a custom property to propoage this information through
-define_property(TARGET PROPERTY ISPC_CUSTOM_DEPENDENCIES
-    BRIEF_DOCS "Tracks list of custom target dependencies"
-    FULL_DOCS "Tracks list of custom target dependencies"
+# We track DPCPP/ESIMD libraries that an ISPC GPU target links separately to
+# make some of the generator expressions easier to write. Instead of having
+# to do some list filtering on the single LINK_LIBRARIES property and do some
+# name matching heuristics we can just check this property to see if we link
+# and DPCPP libraries.
+define_property(TARGET PROPERTY ISPC_DPCPP_LINK_LIBRARIES
+  BRIEF_DOCS "Tracks list of DPCPP libraries linked by an ISPC GPU target"
+  FULL_DOCS "Tracks list of DPCPP libraries linked by an ISPC GPU target"
+)
+
+define_property(TARGET PROPERTY ISPC_DPCPP_LINKING_ESIMD
+  BRIEF_DOCS "Tracks if the DPCPP libraries linked by the ISPC library are ESIMD"
+  FULL_DOCS "Tracks if the DPCPP libraries linked by the ISPC library are ESIMD"
 )
 
 ###############################################################################
@@ -127,6 +135,8 @@ macro (ispc_read_dependencies ISPC_DEPENDENCIES_FILE)
 endmacro()
 
 macro (ispc_compile)
+  cmake_parse_arguments(ISPC_COMPILE "" "TARGET" "" ${ARGN})
+
   set(ISPC_ADDITIONAL_ARGS "")
   # Check if CPU target is passed externally
   if (NOT ISPC_TARGET_CPU)
@@ -191,9 +201,19 @@ macro (ispc_compile)
     list(APPEND ISPC_ADDITIONAL_ARGS --opt=fast-math)
   endif()
 
-  set(ISPC_OBJECTS "")
+  # Also set the target-local include directories and defines if
+  # we were given a target name
+  set(ISPC_INCLUDE_DIRS_EXPR "")
+  set(ISPC_COMPILE_DEFINITIONS_EXPR "")
+  if (NOT "${ISPC_COMPILE_TARGET}" STREQUAL "")
+    set(ISPC_INCLUDE_DIRS_EXPR
+      "$<TARGET_PROPERTY:${ISPC_COMPILE_TARGET},INCLUDE_DIRECTORIES>")
+    set(ISPC_COMPILE_DEFINITIONS_EXPR
+      "$<TARGET_PROPERTY:${ISPC_COMPILE_TARGET},COMPILE_DEFINITIONS>")
+  endif()
 
-  foreach(src ${ARGN})
+  set(ISPC_OBJECTS "")
+  foreach(src ${ISPC_COMPILE_UNPARSED_ARGUMENTS})
     get_filename_component(fname ${src} NAME_WE)
     # The src_relpath will usually be the same as getting the DIRECTORY
     # component of the src file name, but we go through the full path
@@ -228,7 +248,9 @@ macro (ispc_compile)
       COMMAND ${ISPC_EXECUTABLE}
         ${ISPC_DEFINITIONS}
         -I ${CMAKE_CURRENT_SOURCE_DIR}
+        "$<$<BOOL:${ISPC_INCLUDE_DIRS_EXPR}>:-I$<JOIN:${ISPC_INCLUDE_DIRS_EXPR},;-I>>"
         ${ISPC_INCLUDE_DIR_PARMS}
+        "$<$<BOOL:${ISPC_COMPILE_DEFINITIONS_EXPR}>:-D$<JOIN:${ISPC_COMPILE_DEFINITIONS_EXPR},;-D>>"
         --arch=${ISPC_ARCHITECTURE}
         --addressing=${ISPC_ADDRESSING}
         ${ISPC_OPT_FLAGS}
@@ -241,49 +263,13 @@ macro (ispc_compile)
         ${input}
       DEPENDS ${input} ${ISPC_DEPENDENCIES}
       COMMENT "Building ISPC object ${outdir}/${fname}.dev${ISPC_TARGET_EXT}"
+      COMMAND_EXPAND_LISTS
+      VERBATIM
     )
 
     set(ISPC_OBJECTS ${ISPC_OBJECTS} ${results})
   endforeach()
 endmacro()
-
-function(ispc_target_add_sources name)
-  ## Split-out C/C++ from ISPC files ##
-
-  set(ISPC_SOURCES "")
-  set(OTHER_SOURCES "")
-
-  foreach(src ${ARGN})
-    get_filename_component(ext ${src} EXT)
-    if (ext STREQUAL ".ispc")
-      set(ISPC_SOURCES ${ISPC_SOURCES} ${src})
-    else()
-      set(OTHER_SOURCES ${OTHER_SOURCES} ${src})
-    endif()
-  endforeach()
-
-  ## Get existing target definitions and include dirs ##
-
-  # NOTE(jda) - This needs work: BUILD_INTERFACE vs. INSTALL_INTERFACE isn't
-  #             handled automatically.
-
-  #get_property(TARGET_DEFINITIONS TARGET ${name} PROPERTY COMPILE_DEFINITIONS)
-  #get_property(TARGET_INCLUDES TARGET ${name} PROPERTY INCLUDE_DIRECTORIES)
-
-  #set(ISPC_DEFINITIONS ${TARGET_DEFINITIONS})
-  #set(ISPC_INCLUDE_DIR ${TARGET_INCLUDES})
-
-  ## Compile ISPC files ##
-
-  ispc_compile(${ISPC_SOURCES})
-
-  ## Set final sources on target ##
-
-  get_property(TARGET_SOURCES TARGET ${name} PROPERTY SOURCES)
-  list(APPEND TARGET_SOURCES ${ISPC_OBJECTS} ${OTHER_SOURCES})
-  set_target_properties(${name} PROPERTIES SOURCES "${TARGET_SOURCES}")
-endfunction()
-
 
 ###############################################################################
 ## GPU specific macros/options ################################################
@@ -293,12 +279,7 @@ define_ispc_isa_options(XE gen9-x8 gen9-x16 xelp-x8 xelp-x16 xehpc-x16 xehpc-x32
 
 set(ISPC_XE_ADDITIONAL_ARGS "" CACHE STRING "extra arguments to pass to ISPC for Xe targets")
 
-function (ispc_compile_gpu parent_target output_prefix)
-  if(ISPC_INCLUDE_DIR)
-    string(REPLACE ";" ";-I;" ISPC_INCLUDE_DIR_PARMS "${ISPC_INCLUDE_DIR}")
-    set(ISPC_INCLUDE_DIR_PARMS "-I" ${ISPC_INCLUDE_DIR_PARMS})
-  endif()
-
+function(ispc_gpu_target_add_sources TARGET_NAME PARENT_TARGET_NAME)
   # Check If GPU target is passed externally
   if (NOT ISPC_TARGET_XE)
     set(ISPC_TARGET_XE "gen9-x8")
@@ -348,16 +329,23 @@ function (ispc_compile_gpu parent_target output_prefix)
 
   if (ISPC_XE_FORMAT STREQUAL "spv")
     set(ISPC_GPU_OUTPUT_OPT "--emit-spirv")
-    set(ISPC_GPU_TARGET_NAME ${parent_target}_spv)
+    set(TARGET_OUTPUT_EXT "spv")
   elseif (ISPC_XE_FORMAT STREQUAL "zebin")
     set(ISPC_GPU_OUTPUT_OPT "--emit-zebin")
-    set(ISPC_GPU_TARGET_NAME ${parent_target}_bin)
+    set(TARGET_OUTPUT_EXT "bin")
   elseif (ISPC_XE_FORMAT STREQUAL "bc")
-    set(ISPC_GPU_OUTPUT_OPT "--emit-llvm")
-    set(ISPC_GPU_TARGET_NAME ${parent_target}_bc)
+    message(FATAL_ERROR "LLVM BC is an intermediate format and not valid for final output")
+  endif()
+
+  # Support old global includes as well
+  if (ISPC_INCLUDE_DIR)
+    string(REPLACE ";" ";-I;" ISPC_INCLUDE_DIR_PARMS "${ISPC_INCLUDE_DIR}")
+    set(ISPC_INCLUDE_DIR_PARMS "-I" ${ISPC_INCLUDE_DIR_PARMS})
   endif()
 
   set(ISPC_XE_COMPILE_OUTPUTS "")
+  set(ISPC_INCLUDE_DIRS_EXPR "$<TARGET_PROPERTY:${TARGET_NAME},INCLUDE_DIRECTORIES>")
+  set(ISPC_COMPILE_DEFINITIONS_EXPR "$<TARGET_PROPERTY:${TARGET_NAME},COMPILE_DEFINITIONS>")
   foreach(src ${ARGN})
     get_filename_component(fname ${src} NAME_WE)
     get_filename_component(dir ${src} PATH)
@@ -378,15 +366,12 @@ function (ispc_compile_gpu parent_target output_prefix)
     set(ISPC_DEPENDENCIES_FILE ${outdir}/${fname}.gpu.dev.idep)
     ispc_read_dependencies(${ISPC_DEPENDENCIES_FILE})
 
-    # We don't do any separate compilation or linking for SPV files right now,
-    # so we treat the output spv/bin/bc files as final targets and output to
-    # the ISPC_TARGET_DIR root
     if (ISPC_XE_FORMAT STREQUAL "spv")
-      set(result "${ISPC_TARGET_DIR}/${output_prefix}${parent_target}.spv")
+      # Add a .tmp suffix so we don't conflict with final SPV target name if it's the same
+      # as the file
+      set(result "${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}_${fname}.tmp.spv")
     elseif (ISPC_XE_FORMAT STREQUAL "zebin")
-      set(result "${ISPC_TARGET_DIR}/${output_prefix}${parent_target}.bin")
-    elseif (ISPC_XE_FORMAT STREQUAL "bc")
-      set(result "${ISPC_TARGET_DIR}/${output_prefix}${parent_target}.bc")
+      set(result "${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}_${fname}.tmp.bin")
     endif()
 
     add_custom_command(
@@ -395,9 +380,11 @@ function (ispc_compile_gpu parent_target output_prefix)
       COMMAND ${CMAKE_COMMAND} -E make_directory ${outdir}
       COMMAND ${ISPC_EXECUTABLE}
         -I ${CMAKE_CURRENT_SOURCE_DIR}
+        "$<$<BOOL:${ISPC_INCLUDE_DIRS_EXPR}>:-I$<JOIN:${ISPC_INCLUDE_DIRS_EXPR},;-I>>"
         ${ISPC_INCLUDE_DIR_PARMS}
         ${ISPC_XE_OPT_FLAGS}
         -DISPC_GPU
+        "$<$<BOOL:${ISPC_COMPILE_DEFINITIONS_EXPR}>:-D$<JOIN:${ISPC_COMPILE_DEFINITIONS_EXPR},;-D>>"
         ${ISPC_DEFINITIONS}
         --addressing=64
         --target=${ISPC_TARGET_XE}
@@ -408,38 +395,218 @@ function (ispc_compile_gpu parent_target output_prefix)
         ${input}
         -MMM ${ISPC_DEPENDENCIES_FILE}
       COMMENT "Building ISPC GPU object ${result}"
+      COMMAND_EXPAND_LISTS
+      VERBATIM
     )
     set_source_files_properties(${result} PROPERTIES GENERATED true)
 
     list(APPEND ISPC_XE_COMPILE_OUTPUTS ${result})
   endforeach()
 
-  add_custom_target(${ISPC_GPU_TARGET_NAME} DEPENDS ${ISPC_XE_COMPILE_OUTPUTS} )
-  set_target_properties(${ISPC_GPU_TARGET_NAME} PROPERTIES
-      ISPC_CUSTOM_DEPENDENCIES ${ISPC_XE_COMPILE_OUTPUTS}
+  add_custom_target(${TARGET_NAME} DEPENDS
+    ${ISPC_TARGET_DIR}/${PARENT_TARGET_NAME}.${TARGET_OUTPUT_EXT})
+  set_target_properties(${TARGET_NAME} PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY ${ISPC_TARGET_DIR}
+    LIBRARY_OUTPUT_NAME ${PARENT_TARGET_NAME}.${TARGET_OUTPUT_EXT}
   )
 
-  add_dependencies(${parent_target} ${ISPC_GPU_TARGET_NAME})
+  set(LINK_GPU_LIBRARIES_PROP "$<TARGET_PROPERTY:${TARGET_NAME},LINK_LIBRARIES>")
+  set(LINK_DPCPP_LIBRARIES_PROP "$<TARGET_PROPERTY:${TARGET_NAME},ISPC_DPCPP_LINK_LIBRARIES>")
 
-  target_compile_definitions(${parent_target}
-  PRIVATE
-    ISPC_GPU_PROGRAM_COUNT=${ISPC_PROGRAM_COUNT}
+  set(NEEDS_ISPC_LINK_EXPR
+      "$<OR:$<BOOL:${LINK_GPU_LIBRARIES_PROP}>,$<BOOL:${LINK_DPCPP_LIBRARIES_PROP}>>")
+  set(LINKS_DPCPP_LIBS "$<BOOL:${LINK_DPCPP_LIBRARIES_PROP}>")
+  set(LINKS_DPCPP_ESIMD_LIBS
+    "$<BOOL:$<TARGET_PROPERTY:${TARGET_NAME},ISPC_DPCPP_LINKING_ESIMD>>")
+  set(LINKS_DPCPP_SCALAR_LIBS
+    "$<AND:${LINKS_DPCPP_LIBS},$<NOT:${LINKS_DPCPP_ESIMD_LIBS}>>")
+
+  # If we have multiple files we need to link, even if we don't link any libraries.
+  list(LENGTH ISPC_XE_COMPILE_OUTPUTS NUM_ISPC_XE_COMPILE_OUTPUTS)
+  if (${NUM_ISPC_XE_COMPILE_OUTPUTS} GREATER 1)
+    set(NEEDS_ISPC_LINK_EXPR 1)
+  endif()
+
+  list(APPEND SYCL_POST_LINK_ARGS
+    "--emit-param-info"
+    "--symbols"
+    "--emit-exported-symbols"
+    "--lower-esimd"
+    "-O2"
+    "--spec-const=rt"
+    "--device-globals"
+  )
+
+  list(APPEND SPV_EXTENSIONS
+    "-all"
+    "+SPV_EXT_shader_atomic_float_add"
+    "+SPV_EXT_shader_atomic_float_min_max"
+    "+SPV_KHR_no_integer_wrap_decoration"
+    "+SPV_KHR_float_controls"
+    "+SPV_INTEL_subgroups"
+    "+SPV_INTEL_media_block_io"
+    "+SPV_INTEL_fpga_reg"
+    "+SPV_INTEL_device_side_avc_motion_estimation"
+    "+SPV_INTEL_fpga_loop_controls"
+    "+SPV_INTEL_fpga_memory_attributes"
+    "+SPV_INTEL_fpga_memory_accesses"
+    "+SPV_INTEL_unstructured_loop_controls"
+    "+SPV_INTEL_blocking_pipes"
+    "+SPV_INTEL_io_pipes"
+    "+SPV_INTEL_function_pointers"
+    "+SPV_INTEL_kernel_attributes"
+    "+SPV_INTEL_float_controls2"
+    "+SPV_INTEL_inline_assembly"
+    "+SPV_INTEL_optimization_hints"
+    "+SPV_INTEL_arbitrary_precision_integers"
+    "+SPV_INTEL_vector_compute"
+    "+SPV_INTEL_fast_composite"
+    "+SPV_INTEL_fpga_buffer_location"
+    "+SPV_INTEL_arbitrary_precision_fixed_point"
+    "+SPV_INTEL_arbitrary_precision_floating_point"
+    "+SPV_INTEL_variable_length_array"
+    "+SPV_INTEL_fp_fast_math_mode"
+    "+SPV_INTEL_fpga_cluster_attributes"
+    "+SPV_INTEL_loop_fuse"
+    "+SPV_INTEL_long_constant_composite"
+    "+SPV_INTEL_fpga_invocation_pipelining_attributes"
+  )
+  string(REPLACE ";" "," SPV_EXT_PARMS "${SPV_EXTENSIONS}")
+
+  list(APPEND DPCPP_LLVM_SPIRV_ARGS
+    "-spirv-debug-info-version=ocl-100"
+    "-spirv-allow-extra-diexpressions"
+    "-spirv-allow-unknown-intrinsics=llvm.genx."
+    # Not all extenstion are supported yet by VC backend
+    # so list here which are supported
+    #-spirv-ext=+all
+    "-spirv-ext=${SPV_EXT_PARMS}"
+  )
+
+  set(TARGET_OUTPUT_FILE "${ISPC_TARGET_DIR}/${PARENT_TARGET_NAME}")
+  add_custom_command(
+    DEPENDS
+      ${ISPC_XE_COMPILE_OUTPUTS}
+      ${LINK_GPU_LIBRARIES_PROP}
+      ${LINK_DPCPP_LIBRARIES_PROP}
+    OUTPUT ${ISPC_TARGET_DIR}/${PARENT_TARGET_NAME}.${TARGET_OUTPUT_EXT}
+    COMMAND
+      # True case: we're linking and run ispc link. Args we want separate with a space
+      # should be separate with a ; here so when the lists are expanded we get the
+      # desired space separate in the command
+      # False case: we're just going to copy the file with cmake -E copy
+      "$<IF:${NEEDS_ISPC_LINK_EXPR},${ISPC_EXECUTABLE};link,cmake;-E;copy>"
+
+      # True case arguments for ispc link
+      "$<${NEEDS_ISPC_LINK_EXPR}:${ISPC_XE_COMPILE_OUTPUTS};${LINK_GPU_LIBRARIES_PROP}>"
+      # For targets that are doing DPCPP linking we need to emit BC here
+      "$<${NEEDS_ISPC_LINK_EXPR}:$<IF:${LINKS_DPCPP_LIBS},--emit-llvm,--emit-spirv>>"
+      "$<${NEEDS_ISPC_LINK_EXPR}:-o>"
+      "$<${NEEDS_ISPC_LINK_EXPR}:${TARGET_OUTPUT_FILE}.$<IF:${LINKS_DPCPP_LIBS},bc,spv>>"
+
+      # False case arguments for cmake -E copy
+      # We also pick between zebin/spv suffixes here, zebin and spv are both valid
+      # outputs for single-file targets.
+      "$<$<NOT:${NEEDS_ISPC_LINK_EXPR}>:${ISPC_XE_COMPILE_OUTPUTS}>"
+      "$<$<NOT:${NEEDS_ISPC_LINK_EXPR}>:${TARGET_OUTPUT_FILE}.${TARGET_OUTPUT_EXT}>"
+
+    # For targets doing DPCPP linking we need to do the dpcpp link step against the
+    # extracted DPCPP library bitcode and then translate to the final SPV output target
+    # First we link the bitcode using DPCPP LLVM link. We have the ISPC targets
+    # linked to bitcode plus all the DPCPP library's extracted bitcode to combine here
+    COMMAND
+      "$<${LINKS_DPCPP_LIBS}:${DPCPP_LLVM_LINK};${TARGET_OUTPUT_FILE}.bc>"
+      ${LINK_DPCPP_LIBRARIES_PROP}
+      "$<${LINKS_DPCPP_LIBS}:-o;${TARGET_OUTPUT_FILE}.linked.bc>"
+
+    # Now we run SYCL post link if we're linking against a scalar DPCPP library
+    # ESIMD linking skips this step
+    COMMAND
+      "$<${LINKS_DPCPP_SCALAR_LIBS}:${DPCPP_SYCL_POST_LINK};${TARGET_OUTPUT_FILE}.linked.bc>"
+      "$<${LINKS_DPCPP_SCALAR_LIBS}:${SYCL_POST_LINK_ARGS}>"
+      "$<${LINKS_DPCPP_SCALAR_LIBS}:-o;${TARGET_OUTPUT_FILE}.postlink.bc>"
+
+    # And finally back to SPV to the original expected target SPV name
+    COMMAND
+      "$<${LINKS_DPCPP_LIBS}:${DPCPP_LLVM_SPIRV}>"
+      # Pick the right input to llvm-spirv based on if we're linking scalar or esimd
+      # DPCPP libraries.
+      "$<${LINKS_DPCPP_SCALAR_LIBS}:${TARGET_OUTPUT_FILE}.postlink_0.bc>"
+      "$<${LINKS_DPCPP_ESIMD_LIBS}:${TARGET_OUTPUT_FILE}.linked.bc>"
+
+      "$<${LINKS_DPCPP_LIBS}:${DPCPP_LLVM_SPIRV_ARGS}>"
+      "$<${LINKS_DPCPP_LIBS}:-o;${TARGET_OUTPUT_FILE}.spv>"
+
+    COMMENT "Making ISPC library ${TARGET_OUTPUT_FILE}.${TARGET_OUTPUT_EXT}"
+    COMMAND_EXPAND_LISTS
+    VERBATIM
   )
 
   unset(ISPC_PROGRAM_COUNT)
 endfunction()
 
+
 ###############################################################################
 ## Generic kernel compilation #################################################
 ###############################################################################
 
-function(add_ispc_kernel TARGET_NAME SOURCE PREFIX)
-if (WIN32)
+# Kept for backwards compatibility with existing CPU projects
+function(ispc_target_add_sources name)
+  ## Split-out C/C++ from ISPC files ##
+
+  set(ISPC_SOURCES "")
+  set(OTHER_SOURCES "")
+
+  foreach(src ${ARGN})
+    get_filename_component(ext ${src} EXT)
+    if (ext STREQUAL ".ispc")
+      set(ISPC_SOURCES ${ISPC_SOURCES} ${src})
+    else()
+      set(OTHER_SOURCES ${OTHER_SOURCES} ${src})
+    endif()
+  endforeach()
+
+  ## Get existing target definitions and include dirs ##
+
+  # NOTE(jda) - This needs work: BUILD_INTERFACE vs. INSTALL_INTERFACE isn't
+  #             handled automatically.
+
+  #get_property(TARGET_DEFINITIONS TARGET ${name} PROPERTY COMPILE_DEFINITIONS)
+  #get_property(TARGET_INCLUDES TARGET ${name} PROPERTY INCLUDE_DIRECTORIES)
+
+  #set(ISPC_DEFINITIONS ${TARGET_DEFINITIONS})
+  #set(ISPC_INCLUDE_DIR ${TARGET_INCLUDES})
+
+  ## Compile ISPC files ##
+
+  ispc_compile(${ISPC_SOURCES})
+
+  ## Set final sources on target ##
+
+  get_property(TARGET_SOURCES TARGET ${name} PROPERTY SOURCES)
+  list(APPEND TARGET_SOURCES ${ISPC_OBJECTS} ${OTHER_SOURCES})
+  set_target_properties(${name} PROPERTIES SOURCES "${TARGET_SOURCES}")
+endfunction()
+
+
+# Compile ISPC files
+function(ispc_cpu_target_add_sources TARGET_NAME)
+  # We'll only have ISPC files coming through this codepath now
+  ispc_compile(${ARGN} TARGET ${TARGET_NAME})
+
+  ## Set final sources on target ##
+  get_property(TARGET_SOURCES TARGET ${TARGET_NAME} PROPERTY SOURCES)
+  list(APPEND TARGET_SOURCES ${ISPC_OBJECTS})
+  set_target_properties(${TARGET_NAME} PROPERTIES SOURCES "${TARGET_SOURCES}")
+endfunction()
+
+function(add_ispc_library TARGET_NAME)
+  if (WIN32)
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-endif()
+  endif()
   add_library(${TARGET_NAME} SHARED)
   set_target_properties(${TARGET_NAME} PROPERTIES LINKER_LANGUAGE CXX)
-  set_target_properties(${TARGET_NAME} PROPERTIES OUTPUT_NAME "${PREFIX}${TARGET_NAME}")
+
   if (WIN32)
     target_link_libraries(${TARGET_NAME} PRIVATE msvcrt.lib)
     if (ISPC_BUILD)
@@ -448,8 +615,60 @@ endif()
        target_link_libraries(${TARGET_NAME} PRIVATE ispcrt::ispcrt)
     endif()
   endif()
-  ispc_target_add_sources(${TARGET_NAME} ${SOURCE})
+
+  ispc_cpu_target_add_sources(${TARGET_NAME} ${ARGN})
   if (BUILD_GPU)
-    ispc_compile_gpu(${TARGET_NAME} "${PREFIX}" ${SOURCE})
+    ispc_gpu_target_add_sources(${TARGET_NAME}_gpu ${TARGET_NAME} ${ARGN})
+    add_dependencies(${TARGET_NAME} ${TARGET_NAME}_gpu)
+    # TODO: Do still need to propage up the ISPC program width define
   endif()
 endfunction()
+
+function(ispc_target_include_directories TARGET_NAME)
+  get_property(ISPC_TARGET_INCLUDE_DIRS TARGET ${TARGET_NAME} PROPERTY INCLUDE_DIRECTORIES)
+  # Get the absolute path for each include directory
+  foreach (dir ${ARGN})
+    get_filename_component(ABS_PATH ${dir} ABSOLUTE)
+    list(APPEND ISPC_TARGET_INCLUDE_DIRS ${ABS_PATH})
+  endforeach()
+  set_target_properties(${TARGET_NAME}
+    PROPERTIES INCLUDE_DIRECTORIES "${ISPC_TARGET_INCLUDE_DIRS}")
+  if (BUILD_GPU)
+    set_target_properties(${TARGET_NAME}_gpu
+      PROPERTIES INCLUDE_DIRECTORIES "${ISPC_TARGET_INCLUDE_DIRS}")
+  endif()
+endfunction()
+
+function(ispc_target_link_libraries TARGET_NAME)
+    # For CPU I think we can just link normally
+    target_link_libraries(${TARGET_NAME} ${ARGN})
+    if (BUILD_GPU)
+      get_property(GPU_LINK_LIBRARIES TARGET ${TARGET_NAME}_gpu PROPERTY LINK_LIBRARIES)
+      # Get the library file name for each library we want to link
+      foreach (lib ${ARGN})
+        if (TARGET ${lib}_gpu)
+          # TODO: Need to propagate include directories from the targets over as well
+          # to match CMake public include behavior
+          get_property(LIB_OUTPUT_PATH TARGET ${lib}_gpu PROPERTY LIBRARY_OUTPUT_DIRECTORY)
+          get_property(LIB_OUTPUT_NAME TARGET ${lib}_gpu PROPERTY LIBRARY_OUTPUT_NAME)
+          list(APPEND GPU_LINK_LIBRARIES ${LIB_OUTPUT_PATH}/${LIB_OUTPUT_NAME})
+        endif()
+      endforeach()
+      set_target_properties(${TARGET_NAME}_gpu
+          PROPERTIES LINK_LIBRARIES "${GPU_LINK_LIBRARIES}")
+    endif()
+endfunction()
+
+function(ispc_target_compile_definitions TARGET_NAME)
+  get_property(ISPC_TARGET_COMPILE_DEFINITIONS
+    TARGET ${TARGET_NAME}
+    PROPERTY COMPILE_DEFINITIONS)
+  list(APPEND ISPC_TARGET_COMPILE_DEFINITIONS ${ARGN})
+  set_target_properties(${TARGET_NAME}
+    PROPERTIES COMPILE_DEFINITIONS "${ISPC_TARGET_COMPILE_DEFINITIONS}")
+  if (BUILD_GPU)
+    set_target_properties(${TARGET_NAME}_gpu
+      PROPERTIES COMPILE_DEFINITIONS "${ISPC_TARGET_COMPILE_DEFINITIONS}")
+  endif()
+endfunction()
+
