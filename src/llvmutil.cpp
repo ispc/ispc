@@ -1459,6 +1459,16 @@ static llvm::Value *lExtractFirstVectorElement(llvm::Value *v, std::map<llvm::PH
     if (llvm::ConstantDataVector *cdv = llvm::dyn_cast<llvm::ConstantDataVector>(v))
         return cdv->getElementAsConstant(0);
 
+    // Function argument value is neither constant nor instruction result, so generate
+    // extractelement %value, 0 in the start of function.
+    if (llvm::Argument *arg = llvm::dyn_cast<llvm::Argument>(v)) {
+        llvm::Function *func = arg->getParent();
+        Assert(func != NULL);
+        llvm::BasicBlock &bb = func->getEntryBlock();
+        llvm::Instruction *insertPoint = &*bb.getFirstInsertionPt();
+        return llvm::ExtractElementInst::Create(v, LLVMInt32(0), "first_elt", insertPoint);
+    }
+
     // Otherwise, all that we should have at this point is an instruction
     // of some sort
     Assert(llvm::isa<llvm::Constant>(v) == false);
