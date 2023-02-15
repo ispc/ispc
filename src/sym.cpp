@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -77,8 +77,8 @@ void SymbolTable::PushScope() {
 }
 
 void SymbolTable::PopScope() {
-    Assert(variables.size() > 1);
-    Assert(types.size() > 1);
+    Assert(variables.size() > 0);
+    Assert(types.size() > 0);
     freeSymbolMaps.push_back(variables.back());
     variables.pop_back();
     types.pop_back();
