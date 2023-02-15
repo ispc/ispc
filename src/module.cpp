@@ -194,15 +194,13 @@ static void lStripUnusedDebugInfo(llvm::Module *module) { return; }
 ///////////////////////////////////////////////////////////////////////////
 // Module
 
-Module::Module(const char *fn) : bufferCPP{nullptr} {
+Module::Module(const char *fn) : filename(fn) {
     // It's a hack to do this here, but it must be done after the target
     // information has been set (so e.g. the vector width is known...)  In
     // particular, if we're compiling to multiple targets with different
     // vector widths, this needs to be redone each time through.
     InitLLVMUtil(g->ctx, *g->target);
 
-    filename = fn;
-    errorCount = 0;
     symbolTable = new SymbolTable;
     ast = new AST;
 
@@ -210,9 +208,6 @@ Module::Module(const char *fn) : bufferCPP{nullptr} {
 
     module = new llvm::Module(!IsStdin(filename) ? filename : "<stdin>", *g->ctx);
     module->setTargetTriple(g->target->GetTripleString());
-
-    diBuilder = NULL;
-    diCompileUnit = NULL;
 
     // DataLayout information supposed to be managed in single place in Target class.
     module->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
@@ -265,6 +260,17 @@ Module::Module(const char *fn) : bufferCPP{nullptr} {
                                              0 /* run time version */);
         }
     }
+}
+
+Module::~Module() {
+    if (symbolTable)
+        delete symbolTable;
+    if (ast)
+        delete ast;
+    if (module)
+        delete module;
+    if (diBuilder)
+        delete diBuilder;
 }
 
 extern FILE *yyin;
@@ -2968,6 +2974,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             DHI.EmitBackMatter = false;
         }
 
+        std::vector<Module *> modules(targets.size());
         for (unsigned int i = 0; i < targets.size(); ++i) {
             g->target = new Target(arch, cpu, targets[i], 0 != (outputFlags & GeneratePIC), g->printTarget);
             if (!g->target->isValid())
@@ -2983,6 +2990,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             targetMachines[g->target->getISA()] = g->target->GetTargetMachine();
 
             m = new Module(srcFile);
+            modules.push_back(m);
             const int compileResult = m->CompileFile();
 
             llvm::TimeTraceScope TimeScope("Backend");
@@ -3116,6 +3124,10 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
                 targetName = "a.out";
             if (!m->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile))
                 return 1;
+        }
+
+        for (auto module : modules) {
+            delete module;
         }
 
         delete g->target;

@@ -71,6 +71,8 @@ class Module {
         module name. */
     Module(const char *filename);
 
+    ~Module();
+
     /** Compiles the source file passed to the Module constructor, adding
         its global variables and functions to both the llvm::Module and
         SymbolTable.  Returns the number of errors during compilation.  */
@@ -163,19 +165,19 @@ class Module {
     static int LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputType, const char *outFileName);
 
     /** Total number of errors encountered during compilation. */
-    int errorCount;
+    int errorCount{0};
 
     /** Symbol table to hold symbols visible in the current scope during
         compilation. */
-    SymbolTable *symbolTable;
+    SymbolTable *symbolTable{nullptr};
 
     /** llvm Module object into which globals and functions are added. */
-    llvm::Module *module;
+    llvm::Module *module{nullptr};
 
     /** The diBuilder manages generating debugging information */
-    llvm::DIBuilder *diBuilder;
+    llvm::DIBuilder *diBuilder{nullptr};
 
-    llvm::DICompileUnit *diCompileUnit;
+    llvm::DICompileUnit *diCompileUnit{nullptr};
 
     /** StructType cache.  This needs to be in the context of Module, so it's reset for
         any new Module in multi-target compilation.
@@ -188,8 +190,8 @@ class Module {
     std::map<std::string, llvm::StructType *> structTypeMap;
 
   private:
-    const char *filename;
-    AST *ast;
+    const char *filename{nullptr};
+    AST *ast{nullptr};
 
     // Definition and member object capturing preprocessing stream during Module lifetime.
     struct CPPBuffer {
@@ -199,7 +201,7 @@ class Module {
         std::unique_ptr<llvm::raw_string_ostream> os;
     };
 
-    std::unique_ptr<CPPBuffer> bufferCPP;
+    std::unique_ptr<CPPBuffer> bufferCPP{nullptr};
 
     std::vector<std::pair<const Type *, SourcePos>> exportedTypes;
 
