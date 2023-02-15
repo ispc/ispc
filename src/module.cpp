@@ -1165,10 +1165,21 @@ bool Module::writeBitcode(llvm::Module *module, const char *outFileName, OutputT
 }
 
 #ifdef ISPC_XE_ENABLED
+static llvm::cl::opt<bool>
+    SPIRVAllowExtraDIExpressions("spirv-allow-extra-diexpressions", llvm::cl::init(true),
+                                 llvm::cl::desc("Allow DWARF operations not listed in the OpenCL.DebugInfo.100 "
+                                                "specification (experimental, may produce incompatible SPIR-V "
+                                                "module)"));
+
 std::unique_ptr<llvm::Module> Module::translateFromSPIRV(std::ifstream &is) {
     std::string err;
     llvm::Module *m;
-    bool success = llvm::readSpirv(*g->ctx, is, m, err);
+    SPIRV::TranslatorOpts Opts;
+    Opts.enableAllExtensions();
+    Opts.setAllowExtraDIExpressionsEnabled(SPIRVAllowExtraDIExpressions);
+    Opts.setDesiredBIsRepresentation(SPIRV::BIsRepresentation::SPIRVFriendlyIR); // the most important
+
+    bool success = llvm::readSpirv(*g->ctx, Opts, is, m, err);
     if (!success) {
         fprintf(stderr, "Fails to read SPIR-V: %s \n", err.c_str());
         return nullptr;
@@ -1180,11 +1191,7 @@ bool Module::translateToSPIRV(llvm::Module *module, std::stringstream &ss) {
     std::string err;
     SPIRV::TranslatorOpts Opts;
     Opts.enableAllExtensions();
-    llvm::cl::opt<bool> SPIRVAllowExtraDIExpressions(
-        "spirv-allow-extra-diexpressions", llvm::cl::init(true),
-        llvm::cl::desc("Allow DWARF operations not listed in the OpenCL.DebugInfo.100 "
-                       "specification (experimental, may produce incompatible SPIR-V "
-                       "module)"));
+
     Opts.setSPIRVAllowUnknownIntrinsics({"llvm.genx"});
     Opts.setAllowExtraDIExpressionsEnabled(SPIRVAllowExtraDIExpressions);
     Opts.setDesiredBIsRepresentation(SPIRV::BIsRepresentation::SPIRVFriendlyIR);
