@@ -9,7 +9,7 @@
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_CPU
 
 // REQUIRES: XE_ENABLED
-// REQUIRES: LLVM_13_0+ && !LLVM_14_0+
+// REQUIRES: LLVM_13_0+
 
 struct Parameters
 {
@@ -27,4 +27,13 @@ task void test(void *uniform _p)
     int index        = y * p->width + x;
     p->output[index] = 1;
   }
+}
+
+// CHECK_XE-NOT: DW_OP_LLVM_arg
+// CHECK_CPU: DW_OP_LLVM_arg
+task void result(uniform float RET[]) {
+    uniform int sum = 0;
+    for (uniform int i = 0; i < programCount; ++i)
+        sum += i;
+    RET[programIndex] = sum;
 }
