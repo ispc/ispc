@@ -783,6 +783,7 @@ class FunctionSymbolExpr : public Expr {
     Symbol *matchingFunc;
 
     bool triedToResolve;
+    bool unresolvedButDependent;
 };
 
 /** @brief A sync statement in the program (waits for all launched tasks before

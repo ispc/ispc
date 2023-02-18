@@ -3730,13 +3730,16 @@ FunctionCallExpr::FunctionCallExpr(Expr *f, ExprList *a, SourcePos p, bool il, E
         launchCountExpr[0] = launchCountExpr[1] = launchCountExpr[2] = NULL;
 }
 
-static const FunctionType *lGetFunctionType(Expr *func) {
+static const Type *lGetFunctionType(Expr *func) {
     if (func == NULL)
         return NULL;
 
     const Type *type = func->GetType();
     if (type == NULL)
         return NULL;
+
+    if (type->IsDependentType())
+        return type;
 
     const FunctionType *ftype = CastType<FunctionType>(type);
     if (ftype == NULL) {
@@ -3760,7 +3763,11 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
         return NULL;
     }
 
-    const FunctionType *ft = lGetFunctionType(func);
+    const Type *type = lGetFunctionType(func);
+    if (type->IsDependentType()) {
+        Error(pos, "Can't call function with dependent type.");
+    }
+    const FunctionType *ft = CastType<FunctionType>(type);
     AssertPos(pos, ft != NULL);
     bool isVoidFunc = ft->GetReturnType()->IsVoidType();
 
@@ -3885,19 +3892,27 @@ const Type *FunctionCallExpr::GetType() const {
     std::vector<bool> argCouldBeNULL, argIsConstant;
     if (func == NULL || args == NULL)
         return NULL;
-    // TODO: bail in case of dependent types.
+
     if (lFullResolveOverloads(func, args, &argTypes, &argCouldBeNULL, &argIsConstant) == true) {
         FunctionSymbolExpr *fse = llvm::dyn_cast<FunctionSymbolExpr>(func);
         if (fse != NULL) {
             fse->ResolveOverloads(args->pos, argTypes, &argCouldBeNULL, &argIsConstant);
         }
     }
-    const FunctionType *ftype = lGetFunctionType(func);
+    const Type *type = lGetFunctionType(func);
+    if (type && type->IsDependentType()) {
+        return type;
+    }
+    const FunctionType *ftype = CastType<FunctionType>(type);
     return ftype ? ftype->GetReturnType() : NULL;
 }
 
 const Type *FunctionCallExpr::GetLValueType() const {
-    const FunctionType *ftype = lGetFunctionType(func);
+    const Type *type = lGetFunctionType(func);
+    if (type->IsDependentType()) {
+        return NULL;
+    }
+    const FunctionType *ftype = CastType<FunctionType>(type);
     if (ftype && (ftype->GetReturnType()->IsPointerType() || ftype->GetReturnType()->IsReferenceType())) {
         return ftype->GetReturnType();
     } else {
@@ -8044,19 +8059,21 @@ void SymbolExpr::Print(Indent &indent) const {
 // FunctionSymbolExpr
 
 FunctionSymbolExpr::FunctionSymbolExpr(const char *n, const std::vector<Symbol *> &candidates, SourcePos p)
-    : Expr(p, FunctionSymbolExprID), name(n), candidateFunctions(candidates), triedToResolve(false) {
+    : Expr(p, FunctionSymbolExprID), name(n), candidateFunctions(candidates), triedToResolve(false),
+      unresolvedButDependent(false) {
     matchingFunc = (candidates.size() == 1) ? candidates[0] : nullptr;
 }
 
 FunctionSymbolExpr::FunctionSymbolExpr(const char *n, const std::vector<TemplateSymbol *> &candidates,
                                        std::vector<std::pair<const Type *, SourcePos>> &types, SourcePos p)
     : Expr(p, FunctionSymbolExprID), name(n), candidateTemplateFunctions(candidates), templateArgs(types),
-      triedToResolve(false) {
-    matchingFunc = nullptr;
-}
+      matchingFunc(nullptr), triedToResolve(false), unresolvedButDependent(false) {}
 
 const Type *FunctionSymbolExpr::GetType() const {
-    // TODO: ???
+    if (unresolvedButDependent) {
+        return AtomicType::Dependent;
+    }
+
     if (triedToResolve == false && matchingFunc == NULL) {
         Error(pos, "Ambiguous use of overloaded function \"%s\".", name.c_str());
         return NULL;
@@ -8092,15 +8109,17 @@ FunctionSymbolExpr *FunctionSymbolExpr::Instantiate(TemplateInstantiation &templ
 }
 
 void FunctionSymbolExpr::Print(Indent &indent) const {
-    if (!matchingFunc || !GetType()) {
-        indent.Print("FunctionSymbolExpr: <NULL EXPR>\n");
-        indent.Done();
-        return;
-    }
+    const Type *type = GetType();
 
     indent.Print("FunctionSymbolExpr", pos);
 
-    printf("[%s] function name: %s\n", GetType()->GetString().c_str(), matchingFunc->name.c_str());
+    if (type && type->IsDependentType()) {
+        printf("[%s] %s\n", type->GetString().c_str(), name.c_str());
+    } else if (!matchingFunc || !type) {
+        indent.Print("FunctionSymbolExpr: <NULL EXPR>\n");
+    } else {
+        printf("[%s] function name: %s\n", type->GetString().c_str(), matchingFunc->name.c_str());
+    }
 
     indent.Done();
 }
@@ -8414,6 +8433,16 @@ bool FunctionSymbolExpr::ResolveOverloads(SourcePos argPos, const std::vector<co
         return true;
     }
     triedToResolve = true;
+
+    for (auto argType : argTypes) {
+        if (argType->IsDependentType()) {
+            unresolvedButDependent = true;
+            break;
+        }
+    }
+    if (unresolvedButDependent) {
+        return true;
+    }
 
     // First, find the subset of overload candidates that take the same
     // number of arguments as have parameters (including functions that
