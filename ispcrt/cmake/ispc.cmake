@@ -86,7 +86,7 @@ if (ISPC_X86_ENABLED)
   define_ispc_isa_options(AVX2 avx2-i32x8 avx2-i32x4 avx2-i32x16 avx2-i64x4)
   define_ispc_isa_options(AVX512KNL avx512knl-x16)
   define_ispc_isa_options(AVX512SKX avx512skx-x16 avx512skx-x8)
-  define_ispc_isa_options(AVX512SPR avx512spr-x32 avx512spr-x16 avx512spr-x8)
+  define_ispc_isa_options(AVX512SPR avx512spr-x16 avx512spr-x8)
 endif()
 
 macro(append_ispc_target_list ISA_NAME)
