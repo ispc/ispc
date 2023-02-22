@@ -8078,7 +8078,17 @@ Expr *FunctionSymbolExpr::Optimize() { return this; }
 int FunctionSymbolExpr::EstimateCost() const { return 0; }
 
 FunctionSymbolExpr *FunctionSymbolExpr::Instantiate(TemplateInstantiation &templInst) const {
-    return new FunctionSymbolExpr(name.c_str(), candidateFunctions, pos);
+    // TODO: interfaces for regular function call and template function call should be unified.
+    // Bonus: it is possbile that a call can possbily refer to both.
+    if (candidateFunctions.size() != 0) {
+        Assert(candidateTemplateFunctions.size() == 0);
+        return new FunctionSymbolExpr(name.c_str(), candidateFunctions, pos);
+    }
+    std::vector<std::pair<const Type *, SourcePos>> instTemplateArgs;
+    for (auto arg : templateArgs) {
+        instTemplateArgs.push_back(std::make_pair(arg.first->ResolveDependence(templInst), arg.second));
+    }
+    return new FunctionSymbolExpr(name.c_str(), candidateTemplateFunctions, instTemplateArgs, pos);
 }
 
 void FunctionSymbolExpr::Print(Indent &indent) const {
