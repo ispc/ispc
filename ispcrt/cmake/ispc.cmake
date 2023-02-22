@@ -104,7 +104,9 @@ if (ISPC_X86_ENABLED)
   append_ispc_target_list(AVX2)
   append_ispc_target_list(AVX512KNL)
   append_ispc_target_list(AVX512SKX)
-  append_ispc_target_list(AVX512SPR)
+  if (NOT APPLE)
+    append_ispc_target_list(AVX512SPR)
+  endif()
 endif()
 
 ## Macros ##
