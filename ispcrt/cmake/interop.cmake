@@ -52,10 +52,11 @@ function (add_dpcpp_library target_name)
         else()
             set(input ${src})
         endif()
+        set (TARGET_OUTPUT_FILE "${outdir}/${fname}")
         if (DPCPP_SPV)
-            set(result "${outdir}/${fname}.spv")
+            set(TARGET_OUTPUT_FILE_RESULT "${TARGET_OUTPUT_FILE}.spv")
         else()
-            set(result "${outdir}/${fname}.o")
+            set(TARGET_OUTPUT_FILE_RESULT "${TARGET_OUTPUT_FILE}.o")
         endif()
 
         if(DPCPP_CUSTOM_INCLUDE_DIR)
@@ -66,17 +67,70 @@ function (add_dpcpp_library target_name)
         # Allow function pointers in DPC++ and do not instrument SYCL code.
         list(APPEND DPCPP_CUSTOM_FLAGS "-Xclang" "-fsycl-allow-func-ptr" "-fno-sycl-instrument-device-code")
         if (DPCPP_SPV)
-            # Get only SYCL device code to SPIR-V
+            # Get only SYCL device code to bicode first
             # WA: SYCL assert implementation should be treated separately.
             # Disable usage of asserts for now with "-DSYCL_DISABLE_FALLBACK_ASSERT=1"
-            list(APPEND DPCPP_CUSTOM_FLAGS "-fsycl-device-only" "-fno-sycl-use-bitcode" "-DSYCL_DISABLE_FALLBACK_ASSERT=1")
+            list(APPEND DPCPP_CUSTOM_FLAGS "-fsycl-device-only" "-DSYCL_DISABLE_FALLBACK_ASSERT=1")
         else()
             list(APPEND DPCPP_CUSTOM_FLAGS "-c")
         endif()
 
+        list(APPEND SYCL_POST_LINK_ARGS
+            "--emit-param-info"
+            "--symbols"
+            "--emit-exported-symbols"
+            "--lower-esimd"
+            "-O2"
+            "--spec-const=rt"
+            "--device-globals"
+        )
+
+        list(APPEND SPV_EXTENSIONS
+            "-all"
+            "+SPV_EXT_shader_atomic_float_add"
+            "+SPV_EXT_shader_atomic_float_min_max"
+            "+SPV_KHR_no_integer_wrap_decoration"
+            "+SPV_KHR_float_controls"
+            "+SPV_INTEL_subgroups"
+            "+SPV_INTEL_media_block_io"
+            "+SPV_INTEL_fpga_reg"
+            "+SPV_INTEL_device_side_avc_motion_estimation"
+            "+SPV_INTEL_fpga_loop_controls"
+            "+SPV_INTEL_fpga_memory_attributes"
+            "+SPV_INTEL_fpga_memory_accesses"
+            "+SPV_INTEL_unstructured_loop_controls"
+            "+SPV_INTEL_blocking_pipes"
+            "+SPV_INTEL_io_pipes"
+            "+SPV_INTEL_function_pointers"
+            "+SPV_INTEL_kernel_attributes"
+            "+SPV_INTEL_float_controls2"
+            "+SPV_INTEL_inline_assembly"
+            "+SPV_INTEL_optimization_hints"
+            "+SPV_INTEL_arbitrary_precision_integers"
+            "+SPV_INTEL_vector_compute"
+            "+SPV_INTEL_fast_composite"
+            "+SPV_INTEL_fpga_buffer_location"
+            "+SPV_INTEL_arbitrary_precision_fixed_point"
+            "+SPV_INTEL_arbitrary_precision_floating_point"
+            "+SPV_INTEL_variable_length_array"
+            "+SPV_INTEL_fp_fast_math_mode"
+            "+SPV_INTEL_fpga_cluster_attributes"
+            "+SPV_INTEL_loop_fuse"
+            "+SPV_INTEL_long_constant_composite"
+            "+SPV_INTEL_fpga_invocation_pipelining_attributes"
+        )
+        string(REPLACE ";" "," SPV_EXT_PARMS "${SPV_EXTENSIONS}")
+
+        list(APPEND DPCPP_LLVM_SPIRV_ARGS
+            "-spirv-debug-info-version=ocl-100"
+            "-spirv-allow-extra-diexpressions"
+            "-spirv-allow-unknown-intrinsics=llvm.genx."
+            "-spirv-ext=${SPV_EXT_PARMS}"
+        )
+
         add_custom_command(
             DEPENDS ${input}
-            OUTPUT ${result}
+            OUTPUT "${TARGET_OUTPUT_FILE_RESULT}"
             COMMAND ${DPCPP_COMPILER}
                 -fsycl
                 -fPIE
@@ -84,13 +138,31 @@ function (add_dpcpp_library target_name)
                 ${DPCPP_CUSTOM_INCLUDE_DIR_PARMS}
                 ${DPCPP_CUSTOM_FLAGS}
                 -I ${CMAKE_CURRENT_SOURCE_DIR}
-                -o ${result}
+                -o "$<IF:$<BOOL:${DPCPP_SPV}>,${TARGET_OUTPUT_FILE}.bc,${TARGET_OUTPUT_FILE}.o>"
                 ${input}
-            COMMENT "Building DPCPP object ${result}"
+
+            # Run sycl-post-link on it
+            COMMAND
+            "$<$<BOOL:${DPCPP_SPV}>:${DPCPP_SYCL_POST_LINK}>"
+            "$<$<BOOL:${DPCPP_SPV}>:${SYCL_POST_LINK_ARGS};${TARGET_OUTPUT_FILE}.bc>"
+            "$<$<BOOL:${DPCPP_SPV}>:-o;${TARGET_OUTPUT_FILE}.postlink.bc>"
+
+            # And finally back to SPV to the original expected target SPV name
+            COMMAND
+            "$<$<BOOL:${DPCPP_SPV}>:${DPCPP_LLVM_SPIRV}>"
+            # Pick the right input to llvm-spirv based on if we're linking scalar or esimd
+            # DPCPP libraries.
+            "$<$<BOOL:${DPCPP_SPV}>:${TARGET_OUTPUT_FILE}.postlink_0.bc>"
+            "$<$<BOOL:${DPCPP_SPV}>:${DPCPP_LLVM_SPIRV_ARGS}>"
+            "$<$<BOOL:${DPCPP_SPV}>:-o;${TARGET_OUTPUT_FILE}.spv>"
+            COMMENT "Building DPCPP object ${TARGET_OUTPUT_FILE_RESULT}"
+            COMMAND_EXPAND_LISTS
+            VERBATIM
         )
 
-        list(APPEND DPCPP_RESULTS ${result})
+        list(APPEND DPCPP_RESULTS ${TARGET_OUTPUT_FILE_RESULT})
     endforeach()
+
     if (DPCPP_SPV)
         add_custom_target(${target_name} DEPENDS ${DPCPP_RESULTS})
     else()
