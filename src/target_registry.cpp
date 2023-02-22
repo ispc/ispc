@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019-2022, Intel Corporation
+  Copyright (c) 2019-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -161,6 +161,14 @@ const BitcodeLib *TargetLibRegistry::getISPCTargetLib(ISPCTarget target, TargetO
     // This is an alias. It might be a good idea generalize this.
     if (target == ISPCTarget::avx1_i32x4) {
         target = ISPCTarget::sse4_i32x4;
+    }
+
+    // There's no Mac that supports SPR, so the decision is not support these targets when targeting macOS.
+    // If these targets are linked in, then we still can use them for cross compilation, for example for Linux.
+    if (os == TargetOS::macos && (target == ISPCTarget::avx512spr_x4 || target == ISPCTarget::avx512spr_x8 ||
+                                  target == ISPCTarget::avx512spr_x16 || target == ISPCTarget::avx512spr_x32 ||
+                                  target == ISPCTarget::avx512spr_x64)) {
+        return nullptr;
     }
 
     // Canonicalize OS, as for the target we only differentiate between Windows, Unix, and Web (WASM target).
