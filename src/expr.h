@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2022, Intel Corporation
+  Copyright (c) 2010-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -369,6 +369,42 @@ class MemberExpr : public Expr {
 
   protected:
     mutable const Type *type, *lvalueType;
+};
+
+class StructMemberExpr : public MemberExpr {
+  public:
+    StructMemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos, bool derefLValue);
+
+    static inline bool classof(StructMemberExpr const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == StructMemberExprID; }
+
+    const Type *GetType() const;
+    const Type *GetLValueType() const;
+    int getElementNumber() const;
+    const Type *getElementType() const;
+
+  private:
+    const StructType *getStructType() const;
+};
+
+class VectorMemberExpr : public MemberExpr {
+  public:
+    VectorMemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos, bool derefLValue);
+
+    static inline bool classof(VectorMemberExpr const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == VectorMemberExprID; }
+
+    llvm::Value *GetValue(FunctionEmitContext *ctx) const;
+    llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
+    const Type *GetType() const;
+    const Type *GetLValueType() const;
+
+    int getElementNumber() const;
+    const Type *getElementType() const;
+
+  private:
+    const VectorType *exprVectorType;
+    const VectorType *memberType;
 };
 
 /** @brief Expression representing a compile-time constant value.
