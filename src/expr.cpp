@@ -4776,22 +4776,6 @@ static int lIdentifierToVectorElement(char id) {
 //////////////////////////////////////////////////
 // StructMemberExpr
 
-class StructMemberExpr : public MemberExpr {
-  public:
-    StructMemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos, bool derefLValue);
-
-    static inline bool classof(StructMemberExpr const *) { return true; }
-    static inline bool classof(ASTNode const *N) { return N->getValueID() == StructMemberExprID; }
-
-    const Type *GetType() const;
-    const Type *GetLValueType() const;
-    int getElementNumber() const;
-    const Type *getElementType() const;
-
-  private:
-    const StructType *getStructType() const;
-};
-
 StructMemberExpr::StructMemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos, bool derefLValue)
     : MemberExpr(e, id, p, idpos, derefLValue, StructMemberExprID) {}
 
@@ -4917,26 +4901,6 @@ const StructType *StructMemberExpr::getStructType() const {
 
 //////////////////////////////////////////////////
 // VectorMemberExpr
-
-class VectorMemberExpr : public MemberExpr {
-  public:
-    VectorMemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos, bool derefLValue);
-
-    static inline bool classof(VectorMemberExpr const *) { return true; }
-    static inline bool classof(ASTNode const *N) { return N->getValueID() == VectorMemberExprID; }
-
-    llvm::Value *GetValue(FunctionEmitContext *ctx) const;
-    llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
-    const Type *GetType() const;
-    const Type *GetLValueType() const;
-
-    int getElementNumber() const;
-    const Type *getElementType() const;
-
-  private:
-    const VectorType *exprVectorType;
-    const VectorType *memberType;
-};
 
 VectorMemberExpr::VectorMemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos, bool derefLValue)
     : MemberExpr(e, id, p, idpos, derefLValue, VectorMemberExprID) {
