@@ -1053,10 +1053,21 @@ llvm::DIType *PointerType::GetDIType(llvm::DIScope *scope) const {
     int ptrAlignBits = bitsSize;
     switch (variability.type) {
     case Variability::Uniform:
-        return m->diBuilder->createPointerType(diTargetType, bitsSize, ptrAlignBits);
+        // Specifying address space for Xe target is necessary for correct work of SPIR-V Translator and other SPIR-V
+        // tools like spirv-dis. If it's not specified the pointer storage class will be invalid, for example:
+        // "DebugTypePointer 22 4294967295 0". In such case the SPIR-V tools may fail to disassemble it and return an
+        // error: "221: Invalid storage class operand: 4294967295". What we really need to have here is one of the valid
+        // storage classes: https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_storage_class. For example:
+        // "DebugTypePointer 167 7 0"
+        return g->target->isXeTarget()
+                   ? m->diBuilder->createPointerType(diTargetType, bitsSize, ptrAlignBits, (unsigned)addrSpace)
+                   : m->diBuilder->createPointerType(diTargetType, bitsSize, ptrAlignBits);
     case Variability::Varying: {
         // emit them as an array of pointers
-        llvm::DIDerivedType *eltType = m->diBuilder->createPointerType(diTargetType, bitsSize, ptrAlignBits);
+        llvm::DIDerivedType *eltType =
+            g->target->isXeTarget()
+                ? m->diBuilder->createPointerType(diTargetType, bitsSize, ptrAlignBits, (unsigned)addrSpace)
+                : m->diBuilder->createPointerType(diTargetType, bitsSize, ptrAlignBits);
         return lCreateDIArray(eltType, g->target->getVectorWidth());
     }
     case Variability::SOA: {
@@ -2254,7 +2265,12 @@ llvm::DIType *ReferenceType::GetDIType(llvm::DIScope *scope) const {
         return NULL;
     }
     llvm::DIType *diTargetType = targetType->GetDIType(scope);
-    return m->diBuilder->createReferenceType(llvm::dwarf::DW_TAG_reference_type, diTargetType);
+    // Specifying address space for Xe target is necessary for correct work of SPIR-V Translator and other SPIR-V
+    // tools like spirv-dis. See more detailed description in PointerType::GetDIType
+    return g->target->isXeTarget()
+               ? m->diBuilder->createReferenceType(llvm::dwarf::DW_TAG_reference_type, diTargetType, 0, 0,
+                                                   (unsigned)addrSpace)
+               : m->diBuilder->createReferenceType(llvm::dwarf::DW_TAG_reference_type, diTargetType);
 }
 
 ///////////////////////////////////////////////////////////////////////////
