@@ -5246,15 +5246,21 @@ int MemberExpr::EstimateCost() const {
 }
 
 void MemberExpr::Print(Indent &indent) const {
+    if (getValueID() == StructMemberExprID) {
+        indent.Print("StructMemberExpr", pos);
+    } else if (getValueID() == VectorMemberExprID) {
+        indent.Print("VectorMemberExpr", pos);
+    } else {
+        indent.Print("MemberExpr", pos);
+    }
+
     if (!expr || !GetType()) {
-        indent.Print("MemberExpr: <NULL EXPR>\n");
+        indent.Print(" <NULL EXPR>\n");
         indent.Done();
         return;
     }
 
-    indent.Print("MemberExpr", pos);
-
-    printf("[%s] .%s\n", GetType()->GetString().c_str(), identifier.c_str());
+    printf("[%s] %s %s\n", GetType()->GetString().c_str(), dereferenceExpr ? "->" : ".", identifier.c_str());
     indent.pushSingle();
     expr->Print(indent);
 
