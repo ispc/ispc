@@ -348,7 +348,8 @@ class MemberExpr : public Expr {
 
     static inline bool classof(MemberExpr const *) { return true; }
     static inline bool classof(ASTNode const *N) {
-        return ((N->getValueID() == StructMemberExprID) || (N->getValueID() == VectorMemberExprID));
+        return ((N->getValueID() == StructMemberExprID) || (N->getValueID() == VectorMemberExprID) ||
+                (N->getValueID() == DependentMemberExprID));
     }
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
@@ -415,6 +416,17 @@ class VectorMemberExpr : public MemberExpr {
   private:
     const VectorType *exprVectorType;
     const VectorType *memberType;
+};
+
+class DependentMemberExpr : public MemberExpr {
+  public:
+    DependentMemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos, bool derefLValue);
+
+    static inline bool classof(DependentMemberExpr const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == DependentMemberExprID; }
+
+    int getElementNumber() const;
+    const Type *getElementType() const;
 };
 
 /** @brief Expression representing a compile-time constant value.

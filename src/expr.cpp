@@ -5192,6 +5192,21 @@ int VectorMemberExpr::getElementNumber() const {
 
 const Type *VectorMemberExpr::getElementType() const { return memberType; }
 
+//////////////////////////////////////////////////
+// DependentMemberExpr
+
+DependentMemberExpr::DependentMemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos, bool derefLValue)
+    : MemberExpr(e, id, p, idpos, derefLValue, DependentMemberExprID) {
+    Assert(e != NULL);
+    Assert(id != NULL);
+}
+
+int DependentMemberExpr::getElementNumber() const { UNREACHABLE(); };
+const Type *DependentMemberExpr::getElementType() const { UNREACHABLE(); };
+
+//////////////////////////////////////////////////
+// MemberExpr
+
 MemberExpr *MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos idpos, bool derefLValue) {
     // FIXME: we need to call TypeCheck() here so that we can call
     // e->GetType() in the following.  But really we just shouldn't try to
@@ -5202,6 +5217,10 @@ MemberExpr *MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos i
     const Type *exprType;
     if (e == NULL || (exprType = e->GetType()) == NULL)
         return NULL;
+
+    if (exprType->IsDependentType()) {
+        return new DependentMemberExpr(e, id, p, idpos, derefLValue);
+    }
 
     const ReferenceType *referenceType = CastType<ReferenceType>(exprType);
     if (referenceType != NULL) {
@@ -5374,6 +5393,8 @@ void MemberExpr::Print(Indent &indent) const {
         indent.Print("StructMemberExpr", pos);
     } else if (getValueID() == VectorMemberExprID) {
         indent.Print("VectorMemberExpr", pos);
+    } else if (getValueID() == DependentMemberExprID) {
+        indent.Print("DependentMemberExpr", pos);
     } else {
         indent.Print("MemberExpr", pos);
     }
