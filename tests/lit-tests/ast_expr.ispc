@@ -47,7 +47,9 @@ struct S {
     int fieldB;
 } s;
 
-int member() { return s.fieldA + s.fieldB; }
+int struct_member(struct S *p) { return p->fieldA + s.fieldB; }
+
+int vector_member(int<4> v, int<4> *p) { return v.x + p->x; }
 
 void const_expr() {
     bool b1 = true;
