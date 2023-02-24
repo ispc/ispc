@@ -158,6 +158,7 @@ class ASTNode : public Traceable {
         IndexExprID,
         StructMemberExprID,
         VectorMemberExprID,
+        DependentMemberExprID,
         NewExprID,
         NullPointerExprID,
         ReferenceExprID,
