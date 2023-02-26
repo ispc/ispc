@@ -165,7 +165,7 @@ def update_progress(fn, total_tests_arg, counter, max_test_length_arg):
         sys.stdout.write(progress_str)
         sys.stdout.flush()
 
-def run_command(cmd, timeout=600, cwd="."):
+def run_command(cmd, is_windows, timeout=600, cwd="."):
     if options.verbose:
         print_debug("Running: %s\n" % cmd, s, run_tests_log)
 
@@ -174,10 +174,7 @@ def run_command(cmd, timeout=600, cwd="."):
     # for this purpose, but by default it interprets escape sequences.
     # On Windows backslaches are all over the place and they are treates as
     # ESC-sequences, so we have to set manually to not interpret them.
-    lexer = shlex.shlex(cmd, posix=True)
-    lexer.whitespace_split = True
-    lexer.escape = ''
-    arg_list = list(lexer)
+    arg_list = shlex.split(cmd, posix=not is_windows)
 
     # prepare for OSError exceptions raised in the child process (re-raised in the parent)
     try:
@@ -211,9 +208,9 @@ def check_print_output(output):
         return lines[0:len(lines)//2] == lines[len(lines)//2:len(lines)]
 
 # run the commands in cmd_list
-def run_cmds(compile_cmds, run_cmd, filename, expect_failure, sig, exe_wd="."):
+def run_cmds(compile_cmds, run_cmd, filename, expect_failure, sig, exe_wd=".", is_windows = False):
     for cmd in compile_cmds:
-        (return_code, output, timeout) = run_command(cmd, options.test_time)
+        (return_code, output, timeout) = run_command(cmd, is_windows=is_windows, timeout=options.test_time, cwd=exe_wd)
         compile_failed = (return_code != 0)
         if compile_failed:
             print_debug("Compilation of test %s failed %s           \n" % (filename, "due to TIMEOUT" if timeout else ""), s, run_tests_log)
@@ -222,7 +219,7 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure, sig, exe_wd="."):
             return Status.Compfail
 
     if not options.save_bin:
-        (return_code, output, timeout) = run_command(run_cmd, options.test_time, cwd=exe_wd)
+        (return_code, output, timeout) = run_command(run_cmd, is_windows=is_windows, timeout=options.test_time, cwd=exe_wd)
         if sig < 32:
             run_failed = (return_code != 0) or timeout
         else:
@@ -357,7 +354,7 @@ def run_test(testname, host, target):
     if want_error == True:
         ispc_cmd = ispc_exe_rel + " --werror --nowrap %s --arch=%s --target=%s" % \
             (filename, target.arch, target.target)
-        (return_code, output, timeout) = run_command(ispc_cmd, options.test_time)
+        (return_code, output, timeout) = run_command(ispc_cmd, is_windows=host.is_windows() , timeout=options.test_time,)
         got_error = (return_code != 0) or timeout
 
         # figure out the error message we're expecting
@@ -415,15 +412,12 @@ def run_test(testname, host, target):
             return Status.Compfail
         else:
             xe_target = options.target
-            if host.is_windows():
+            if host.is_windows() and target.arch != "wasm32":
                 if target.is_xe():
                     obj_name = "test_xe.bin" if options.ispc_output == "ze" else "test_xe.spv"
                 else:
                     obj_name = "%s.obj" % os.path.basename(filename)
 
-                if target.arch == "wasm32":
-                    exe_name = "%s.js" % os.path.realpath(filename)
-                else:
                     exe_name = "%s.exe" % os.path.basename(filename)
 
                 cc_cmd = "%s /I. /Zi /nologo /DTEST_SIG=%d /DTEST_WIDTH=%d %s %s /Fe%s" % \
@@ -438,12 +432,12 @@ def run_test(testname, host, target):
                 if target.is_xe():
                     obj_name = "test_xe.bin" if options.ispc_output == "ze" else "test_xe.spv"
                 else:
-                    obj_name = "%s.o" % testname
+                    obj_name = "%s.o" % os.path.basename(testname)
 
                 if target.arch == "wasm32":
-                    exe_name = "%s.js" % os.path.realpath(testname)
+                    exe_name = "%s.js" % os.path.basename(testname)
                 else:
-                    exe_name = "%s.run" % testname
+                    exe_name = "%s.run" % os.path.basename(testname)
 
                 if target.arch == 'arm':
                     gcc_arch = '--with-fpu=hardfp -marm -mfpu=neon -mfloat-abi=hard'
@@ -454,8 +448,8 @@ def run_test(testname, host, target):
                 else:
                     gcc_arch = '-m64'
 
-                cc_cmd = "%s -O2 -I. %s test_static.cpp -DTEST_SIG=%d -DTEST_WIDTH=%d %s -o %s" % \
-                    (options.compiler_exe, gcc_arch, match, width, obj_name, exe_name)
+                cc_cmd = "%s -O2 -I. %s %s -DTEST_SIG=%d -DTEST_WIDTH=%d %s -o %s" % \
+                    (options.compiler_exe, gcc_arch, add_prefix("test_static.cpp", host, target) ,match, width, obj_name, exe_name)
 
                 # Produce position independent code for both c++ and ispc compilations.
                 # The motivation for this is that Clang 15 changed default
@@ -492,13 +486,27 @@ def run_test(testname, host, target):
         exe_wd = "."
         if target.arch == "wasm32":
             cc_cmd += " -D__WASM__"
-            options.wrapexe = "v8 --experimental-wasm-simd"
-            exe_wd = os.path.realpath("./tests")
+            if v8_path := check_file_in_PATH("v8" + (".exe" if host.is_windows() else "")):
+                options.wrapexe = v8_path + " --experimental-wasm-simd"
+            elif node_path := check_file_in_PATH("node"+ (".exe" if host.is_windows() else "")):
+                options.wrapexe = node_path + " --experimental-wasm-simd"
+            else:
+                error("Could not find either v8 or Node.js")
+
+            if host.is_windows(): # emcc is actually a .bat file, so we need to start it from cmd.exe for Popen to work
+                cc_cmd = "cmd.exe /c " + cc_cmd
+            #exe_wd = os.path.realpath("./tests")
         # compile the ispc code, make the executable, and run it...
         ispc_cmd += " -h " + filename + ".h"
-        cc_cmd += " -DTEST_HEADER=\"<" + filename + ".h>\""
+        # On windows, we can't just pass -DTEST_HEADER"<>" as quotes are removed if we are not setting shlex Posix=False. This is causing issues when calling cmd.exe (for emcc.bat) because using < > is taken as an invalid syntax.
+        # However keeping the quotes results in them actually being sent to the compiler, resulting in #include "<header.h>" which obviously doesn't work.
+        # Since we actually provide the full path to the header, we use -DTEST_HEADER="header.h" includes instead of -DTEST_HEADER="<header.h>".
+        if host.is_windows():
+            cc_cmd += " -DTEST_HEADER=\"" + filename + ".h\""
+        else:
+            cc_cmd += " -DTEST_HEADER=\"<" + filename + ".h>\""
         status = run_cmds([ispc_cmd, cc_cmd], options.wrapexe + " " + exe_name,
-                          testname, should_fail, match, exe_wd=exe_wd)
+                          testname, should_fail, match, exe_wd=exe_wd, is_windows=host.is_windows())
 
         # clean up after running the test
         try:
@@ -765,7 +773,7 @@ def populate_ex_state(options, target, total_tests, test_result):
 def set_compiler_exe(host, options):
     if options.compiler_exe == None:
         if options.arch == "wasm32":
-          options.compiler_exe = "emcc"
+          options.compiler_exe = "emcc" + (".bat" if host.is_windows() else "")
         elif host.is_windows():
             options.compiler_exe = "cl.exe"
         else:
@@ -808,12 +816,20 @@ def get_test_files(host, args):
                 files += [ f ]
     return files
 
+def check_file_in_PATH(file):
+    for path in os.environ["PATH"].split(os.pathsep):
+        potential_path = path + os.sep + file
+        if os.path.exists(potential_path):
+            return potential_path
+    return None
+
 # checks the required compiler in PATH otherwise prints an error message
 def check_compiler_exists(compiler_exe):
-    for path in os.environ["PATH"].split(os.pathsep):
-        if os.path.exists(path + os.sep + compiler_exe):
-            return
-    error("missing the required compiler: %s \n" % compiler_exe, 1)
+    file_full_path = check_file_in_PATH(compiler_exe)
+    if file_full_path is None:
+        error("missing the required compiler: %s \n" % compiler_exe, 1)
+    return file_full_path
+
 
 def print_result(status, results, s, run_tests_log, csv):
     title = StatusStr[status]
