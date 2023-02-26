@@ -89,7 +89,7 @@ def print_version(ispc_test, ispc_ref, ref_compiler, s, perf_log, is_windows):
     print_debug("\nUsing test compiler: " + take_lines(ispc_test + " --version", "first"), s, perf_log)
     if ispc_ref != "":
         print_debug("Using ref compiler:  " + take_lines(ispc_ref + " --version", "first"), s, perf_log)
-    if is_windows == False:
+    if is_windows == False or "emcc" in ref_compiler:
         temp1 = take_lines(ref_compiler + " --version", "first")
     else:
         os.system(ref_compiler + " 2>&1" + " 2> temp_detect_version > temp_detect_version1" )
