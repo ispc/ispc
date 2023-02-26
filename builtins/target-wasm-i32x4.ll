@@ -640,10 +640,22 @@ entry:
   ret <4 x float> %div.i
 }
 
+define hidden <4 x double> @__rcp_varying_double(<4 x double> %v) local_unnamed_addr #0 {
+entry:
+  %div.i = fdiv <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, %v
+  ret <4 x double> %div.i
+}
+
 define hidden <4 x float> @__rcp_fast_varying_float(<4 x float> %v) local_unnamed_addr #0 {
 entry:
   %div.i = fdiv <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, %v
   ret <4 x float> %div.i
+}
+
+define hidden <4 x double> @__rcp_fast_varying_double(<4 x double> %v) local_unnamed_addr #0 {
+entry:
+  %div.i = fdiv <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, %v
+  ret <4 x double> %div.i
 }
 
 define  float @__sqrt_uniform_float(float) nounwind readonly alwaysinline {
@@ -700,11 +712,6 @@ define  double @__rcp_fast_uniform_double(double) nounwind readonly alwaysinline
   ret double %r
 }
 
-define <4 x double> @__rcp_varying_double(<4 x double> %x) {
-entry:
-  %0 = fdiv <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, %x
-  ret <4 x double> %0
-}
 
 define i64 @__reduce_add_int64(<4 x i64>) nounwind readnone alwaysinline {
   %v0 = shufflevector <4 x i64> %0, <4 x i64> undef,
