@@ -8439,7 +8439,16 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
                     paramType = paramType->GetAsNonConstType();
 
                     // If P is not a reference:
-                    // TODO: - if A is an array type, apply array-to-pointer conversion.
+                    // - if A is an array type, apply array-to-pointer conversion.
+                    const ArrayType *at = CastType<ArrayType>(argType);
+                    if (at) {
+                        const Type *targetType = at->GetElementType();
+                        if (targetType == NULL) {
+                            deductionFailed = true;
+                            break;
+                        }
+                        argType = PointerType::GetUniform(targetType, at->IsSOAType());
+                    }
                     // TODO: - if A is a function type, apply function-to-pointer conversion.
                     // - if A is a cv-qualified type, remove the top level cv-qualifiers from A.
                     argType = argType->GetAsNonConstType();
