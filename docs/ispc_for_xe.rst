@@ -45,7 +45,7 @@ Using The ISPC Compiler
 =======================
 
 The output from ``ispc`` for Xe targets is SPIR-V file by default. It is used
-when one of ``gen9`` or ``xe`` targets is selected:
+when either ``gen9`` or ``xe`` target is selected:
 
 .. code-block:: console
 
@@ -54,22 +54,24 @@ when one of ``gen9`` or ``xe`` targets is selected:
 The SPIR-V file is consumed by the runtime for further compilation and execution
 on GPU.
 
-You can also generate L0 binary using ``--emit-zebin`` flag. Please note that
-currently SPIR-V format is more stable but feel free to experiment with L0 binary.
+You can also generate an L0 binary using ``--emit-zebin`` flag. Please note that the
+SPIR-V format is currently more stable, but feel free to experiment with
+the L0 binary format.
 
 Environment
 -----------
 ``Intel® ISPC for Xe`` is supported on Linux for quite a while (recommended
-and tested Linux distribution is Ubuntu 20.04) and it's got Windows support since
+and tested Linux distribution is Ubuntu 22.04) and it's got Windows support since
 v1.16.0.
 
 You need to have a system with ``Intel(R) Processor Graphics Gen9`` or later.
 
 For the execution of ISPC programs on GPU, please install `Intel(R)
-Graphics Compute Runtime <https://github.com/intel/compute-runtime/releases>`_
-and `Level Zero Loader <https://github.com/oneapi-src/level-zero/releases>`_.
+Graphics Compute Runtime <https://github.com/intel/compute-runtime/releases>`_ on Linux
+or `Intel(R) Graphics Driver for Windows <https://www.intel.com/content/www/us/en/download-center/home.html>`_ on Windows.
+Additionally you need `Level Zero Loader <https://github.com/oneapi-src/level-zero/releases>`_.
 
-To use ISPC Run Time for CPU you need to have ``OpenMP runtime`` installed on
+To use ISPC Run Time for CPU on Linux you need to have ``OpenMP runtime`` installed on
 your system. Consult your Linux distribution documentation for the installation
 of OpenMP runtime instructions.
 
@@ -77,8 +79,8 @@ of OpenMP runtime instructions.
 Basic Command-line Options
 --------------------------
 
-Four new targets were introduced for GPU support: ``gen9-x8``, ``gen9-x16``,
-``xelp-x8``, and ``xelp-x16``.
+A bunch of new targets were introduced for GPU support: ``gen9-x8``, ``gen9-x16``,
+``xelp-x8``, ``xelp-x16``, ``xehpg-x8``, ``xehpg-x16``, ``xehpc-x16`` and ``xehpc-x32``.
 
 If the ``-o`` flag is given, ``ispc`` will generate a SPIR-V output file.
 Optionally you can use ``--emit-spirv`` flag:
@@ -108,6 +110,22 @@ By default, 64-bit addressing is used. You can change it to 32-bit addressing by
 using ``--addressing=32`` or ``--arch=xe32`` however pointer size should be
 the same for host and device code so 32-bit addressing will only work with
 32-bit host programs.
+
+There is a new ``link`` mode in ``ispc`` allowing to link several LLVM bitcode
+or SPIR-V files to selected output format: LLVM bitcode (default), LLVM bitcode text or SPIR-V.
+
+Link two SPIR-V files to LLVM BC output:
+
+.. code-block:: console
+
+    ispc link test_a.spv test_b.spv --emit-llvm -o test.bc
+
+Link LLVM bitcode files to SPIR-V output:
+
+.. code-block:: console
+
+    ispc link test_a.bc test_b.bc --emit-spirv -o test.spv
+
 
 ISPC Run Time (ISPCRT)
 ======================
@@ -495,19 +513,12 @@ Language Limitations and Known Issues
 
 Below is the list of known limitations of ``Intel® ISPC for Xe``:
 
-* Limited function pointers support on Xe platforms. You may experience
-  incorrect program execution, so we recommend avoiding usage of function pointers.
-  Also ``print`` is not supported within functions called through function pointer.
-* Limited stack calls support. We recommend inlining functions as much as you can
-  by marking them ``inline``.
 * Floating point computations are not guaranteed to be bit-reproducible between
   CPU and GPU. Specifically this true for math library functions. Please consider
   it when designing your algorithms.
 * ``alloca`` with non-constant parameter is not supported yet.
 * Global variables are "kernel-local". Unlike on CPU, the value of global variable on GPU
   will not be kept between multiple launches.
-* VC backend does not support modules with unresolved dependencies, so before passing
-  SPIR-V module to ISPC Runtime, ensure that all dependencies are resolved.
 
 
 There are several features that we do not plan to implement for GPU:
