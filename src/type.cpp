@@ -128,6 +128,12 @@ std::string Variability::MangleString() const {
 ///////////////////////////////////////////////////////////////////////////
 // Type
 llvm::Type *Type::LLVMStorageType(llvm::LLVMContext *ctx) const { return LLVMType(ctx); }
+
+const Type *Type::ResolveDependenceForTopType(TemplateInstantiation &templInst) const {
+    const Type *temp = ResolveDependence(templInst);
+    const Type *result = temp->ResolveUnboundVariability(Variability::Varying);
+    return result;
+}
 ///////////////////////////////////////////////////////////////////////////
 // AtomicType
 
@@ -1105,7 +1111,6 @@ const PointerType *PointerType::ResolveDependence(TemplateInstantiation &templIn
     }
 
     const PointerType *pType = new PointerType(resType, variability, isConst, isSlice, isFrozen);
-    pType = pType->ResolveUnboundVariability(Variability::Varying);
     return pType;
 }
 
@@ -2618,7 +2623,7 @@ const FunctionType *FunctionType::ResolveDependence(TemplateInstantiation &templ
         Assert(m->errorCount > 0);
         return NULL;
     }
-    const Type *rt = returnType->ResolveDependence(templInst);
+    const Type *rt = returnType->ResolveDependenceForTopType(templInst);
 
     llvm::SmallVector<const Type *, 8> pt;
     for (unsigned int i = 0; i < paramTypes.size(); ++i) {
@@ -2626,7 +2631,7 @@ const FunctionType *FunctionType::ResolveDependence(TemplateInstantiation &templ
             Assert(m->errorCount > 0);
             return NULL;
         }
-        const Type *argt = paramTypes[i]->ResolveDependence(templInst);
+        const Type *argt = paramTypes[i]->ResolveDependenceForTopType(templInst);
         pt.push_back(argt);
     }
 

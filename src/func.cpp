@@ -1028,7 +1028,7 @@ Symbol *TemplateInstantiation::InstantiateSymbol(Symbol *sym) {
         return t->second;
     }
 
-    const Type *instType = sym->type->ResolveDependence(*this);
+    const Type *instType = sym->type->ResolveDependenceForTopType(*this);
     Symbol *instSym = new Symbol(sym->name, sym->pos, instType, sym->storageClass);
     instSym->constValue = sym->constValue ? sym->constValue->Instantiate(*this) : nullptr;
     instSym->varyingCFDepth = sym->varyingCFDepth;
@@ -1045,7 +1045,7 @@ Symbol *TemplateInstantiation::InstantiateTemplateSymbol(TemplateSymbol *sym) {
     Assert(sym && functionSym == nullptr);
 
     // Instantiate the function type
-    const Type *instType = sym->type->ResolveDependence(*this);
+    const Type *instType = sym->type->ResolveDependenceForTopType(*this);
 
     // Create a function symbol
     Symbol *instSym = new Symbol(sym->name, sym->pos, instType, SC_STATIC);
