@@ -214,7 +214,7 @@ static void lPrintVersion() {
     printf("    Link two SPIR-V files to LLVM BC output:\n");
     printf("        ispc link test_a.spv test_b.spv --emit-llvm -o test.bc\n");
     printf("    Link LLVM bitcode files to SPIR-V output:\n");
-    printf("        ispc link test_a.bc test_b.bc --emit-spirv -o test.bc\n");
+    printf("        ispc link test_a.bc test_b.bc --emit-spirv -o test.spv\n");
     exit(ret);
 }
 
