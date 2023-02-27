@@ -154,8 +154,15 @@ class Type : public Traceable {
         unbound. */
     bool HasUnboundVariability() const { return GetVariability() == Variability::Unbound; }
 
-    /** Resolves dependent type with mapping of template types to concrete type passed as argeument */
+    /** Resolves dependent type with mapping of template types to concrete type passed as argeument.
+        Do not handle variability resolution, which need to be done as a separate step.
+     */
     virtual const Type *ResolveDependence(TemplateInstantiation &templInst) const = 0;
+
+    /** Resolves dependent type with mapping of template types to concrete type passed as argeument.
+        Resolve variability of the type as well.
+     */
+    const Type *ResolveDependenceForTopType(TemplateInstantiation &templInst) const;
 
     /* Returns a type wherein any elements of the original type and
        contained types that have unbound variability have their variability

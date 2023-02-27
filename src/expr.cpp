@@ -7272,7 +7272,7 @@ int TypeCastExpr::EstimateCost() const {
 }
 
 TypeCastExpr *TypeCastExpr::Instantiate(TemplateInstantiation &templInst) const {
-    const Type *instType = type ? type->ResolveDependence(templInst) : nullptr;
+    const Type *instType = type ? type->ResolveDependenceForTopType(templInst) : nullptr;
     Expr *instExpr = expr ? expr->Instantiate(templInst) : nullptr;
     return new TypeCastExpr(instType, instExpr, pos);
 }
@@ -8086,7 +8086,7 @@ FunctionSymbolExpr *FunctionSymbolExpr::Instantiate(TemplateInstantiation &templ
     }
     std::vector<std::pair<const Type *, SourcePos>> instTemplateArgs;
     for (auto &arg : templateArgs) {
-        instTemplateArgs.push_back(std::make_pair(arg.first->ResolveDependence(templInst), arg.second));
+        instTemplateArgs.push_back(std::make_pair(arg.first->ResolveDependenceForTopType(templInst), arg.second));
     }
     return new FunctionSymbolExpr(name.c_str(), candidateTemplateFunctions, instTemplateArgs, pos);
 }
@@ -8805,7 +8805,7 @@ void NewExpr::Print(Indent &indent) const {
 int NewExpr::EstimateCost() const { return COST_NEW; }
 
 NewExpr *NewExpr::Instantiate(TemplateInstantiation &templInst) const {
-    const Type *instType = allocType ? allocType->ResolveDependence(templInst) : nullptr;
+    const Type *instType = allocType ? allocType->ResolveDependenceForTopType(templInst) : nullptr;
     Expr *instInit = initExpr ? initExpr->Instantiate(templInst) : nullptr;
     Expr *instCount = countExpr ? countExpr->Instantiate(templInst) : nullptr;
     return new NewExpr(instType, instCount, instInit, isVarying, pos);
