@@ -61,11 +61,22 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include <clang/Basic/CharInfo.h>
+#include <clang/Basic/FileManager.h>
+#include <clang/Basic/FileSystemOptions.h>
+#include <clang/Basic/MacroBuilder.h>
+#include <clang/Basic/SourceManager.h>
 #include <clang/Basic/TargetInfo.h>
 #include <clang/Basic/Version.h>
-#include <clang/Frontend/CompilerInstance.h>
+#include <clang/Frontend/FrontendDiagnostic.h>
+#include <clang/Frontend/FrontendOptions.h>
+#include <clang/Frontend/PreprocessorOutputOptions.h>
 #include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <clang/Frontend/Utils.h>
+#include <clang/Lex/HeaderSearch.h>
+#include <clang/Lex/HeaderSearchOptions.h>
+#include <clang/Lex/ModuleLoader.h>
+#include <clang/Lex/Preprocessor.h>
 #include <clang/Lex/PreprocessorOptions.h>
 #include <llvm/Analysis/TargetTransformInfo.h>
 #include <llvm/Bitcode/BitcodeWriter.h>
@@ -2490,67 +2501,118 @@ bool Module::writeDispatchHeader(DispatchHeaderInfo *DHI) {
     return true;
 }
 
-int Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostream) const {
-    clang::CompilerInstance inst;
-
-    llvm::raw_fd_ostream stderrRaw(2, false);
-
-    clang::DiagnosticOptions *diagOptions = new clang::DiagnosticOptions();
-    clang::TextDiagnosticPrinter *diagPrinter = new clang::TextDiagnosticPrinter(stderrRaw, diagOptions);
-
-    llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagIDs(new clang::DiagnosticIDs);
-    clang::DiagnosticsEngine *diagEngine = new clang::DiagnosticsEngine(diagIDs, diagOptions, diagPrinter);
-    diagEngine->setSuppressAllDiagnostics(g->ignoreCPPErrors);
-
-    inst.setDiagnostics(diagEngine);
-
-    inst.createFileManager();
-
-    const std::shared_ptr<clang::TargetOptions> &options = std::make_shared<clang::TargetOptions>(inst.getTargetOpts());
-
-    llvm::Triple triple(module->getTargetTriple());
-    if (triple.getTriple().empty()) {
-        triple.setTriple(llvm::sys::getDefaultTargetTriple());
+// Copied and reduced from CompilerInstance::InitializeSourceManager to avoid dependencies from CompilerInstance
+static void lInitializeSourceManager(clang::FrontendInputFile &input, clang::DiagnosticsEngine &diag,
+                                     clang::FileManager &fileMgr, clang::SourceManager &srcMgr) {
+    clang::SrcMgr::CharacteristicKind kind = clang::SrcMgr::C_User;
+    if (input.isBuffer()) {
+        srcMgr.setMainFileID(srcMgr.createFileID(input.getBuffer(), kind));
+        Assert(srcMgr.getMainFileID().isValid() && "Couldn't establish MainFileID");
+        return;
     }
 
-    options->Triple = triple.getTriple();
+    llvm::StringRef inputFile = input.getFile();
 
-    clang::TargetInfo *target = clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(), options);
-    inst.setTarget(target);
-    inst.createSourceManager(inst.getFileManager());
+    // Figure out where to get and map in the main file.
+    auto fileOrError = inputFile == "-" ? fileMgr.getSTDIN() : fileMgr.getFileRef(inputFile, true);
+    if (!fileOrError) {
+        // FIXME: include the error in the diagnostic even when it's not stdin.
+        auto errCode = llvm::errorToErrorCode(fileOrError.takeError());
+        if (inputFile != "-")
+            diag.Report(clang::diag::err_fe_error_reading) << inputFile;
+        else
+            diag.Report(clang::diag::err_fe_error_reading_stdin) << errCode.message();
+        return;
+    }
 
-    clang::FrontendInputFile inputFile(infilename, clang::InputKind());
+    srcMgr.setMainFileID(srcMgr.createFileID(*fileOrError, clang::SourceLocation(), kind));
+    Assert(srcMgr.getMainFileID().isValid() && "Couldn't establish MainFileID");
+    return;
+}
 
-    inst.InitializeSourceManager(inputFile);
+// Copied from InitPreprocessor.cpp
+static bool lMacroBodyEndsInBackslash(llvm::StringRef MacroBody) {
+    while (!MacroBody.empty() && clang::isWhitespace(MacroBody.back()))
+        MacroBody = MacroBody.drop_back();
+    return !MacroBody.empty() && MacroBody.back() == '\\';
+}
 
+// Copied from InitPreprocessor.cpp
+// Append a #define line to Buf for Macro.  Macro should be of the form XXX,
+// in which case we emit "#define XXX 1" or "XXX=Y z W" in which case we emit
+// "#define XXX Y z W".  To get a #define with no value, use "XXX=".
+static void lDefineBuiltinMacro(clang::MacroBuilder &Builder, llvm::StringRef Macro, clang::DiagnosticsEngine &Diags) {
+    std::pair<llvm::StringRef, llvm::StringRef> MacroPair = Macro.split('=');
+    llvm::StringRef MacroName = MacroPair.first;
+    llvm::StringRef MacroBody = MacroPair.second;
+    if (MacroName.size() != Macro.size()) {
+        // Per GCC -D semantics, the macro ends at \n if it exists.
+        llvm::StringRef::size_type End = MacroBody.find_first_of("\n\r");
+        if (End != llvm::StringRef::npos)
+            Diags.Report(clang::diag::warn_fe_macro_contains_embedded_newline) << MacroName;
+        MacroBody = MacroBody.substr(0, End);
+        // We handle macro bodies which end in a backslash by appending an extra
+        // backslash+newline.  This makes sure we don't accidentally treat the
+        // backslash as a line continuation marker.
+        if (lMacroBodyEndsInBackslash(MacroBody))
+            Builder.defineMacro(MacroName, llvm::Twine(MacroBody) + "\\\n");
+        else
+            Builder.defineMacro(MacroName, MacroBody);
+    } else {
+        // Push "macroname 1".
+        Builder.defineMacro(Macro);
+    }
+}
+
+// Core logic of buiding macros copied from clang::InitializePreprocessor from InitPreprocessor.cpp
+static void lInitializePreprocessor(clang::Preprocessor &PP, const clang::PreprocessorOptions &InitOpts) {
+    std::string PredefineBuffer;
+    PredefineBuffer.reserve(4080);
+    llvm::raw_string_ostream Predefines(PredefineBuffer);
+    clang::MacroBuilder Builder(Predefines);
+
+    // Process #define's and #undef's in the order they are given.
+    for (unsigned i = 0, e = InitOpts.Macros.size(); i != e; ++i) {
+        if (InitOpts.Macros[i].second) // isUndef
+            Builder.undefineMacro(InitOpts.Macros[i].first);
+        else
+            lDefineBuiltinMacro(Builder, InitOpts.Macros[i].first, PP.getDiagnostics());
+    }
+
+    // Copy PredefinedBuffer into the Preprocessor.
+    PP.setPredefines(std::move(PredefineBuffer));
+}
+
+static void lSetPreprocessorOutputOptions(clang::PreprocessorOutputOptions *opts) {
     // Don't remove comments in the preprocessor, so that we can accurately
     // track the source file position by handling them ourselves.
-    inst.getPreprocessorOutputOpts().ShowComments = 1;
+    opts->ShowComments = 1;
+    opts->ShowCPP = 1;
+}
 
-    inst.getPreprocessorOutputOpts().ShowCPP = 1;
-    clang::HeaderSearchOptions &headerOpts = inst.getHeaderSearchOpts();
-    headerOpts.UseBuiltinIncludes = 0;
-    headerOpts.UseStandardSystemIncludes = 0;
-    headerOpts.UseStandardCXXIncludes = 0;
+static void lSetHeaderSeachOptions(const std::shared_ptr<clang::HeaderSearchOptions> opts) {
+    opts->UseBuiltinIncludes = 0;
+    opts->UseStandardSystemIncludes = 0;
+    opts->UseStandardCXXIncludes = 0;
     if (g->debugPrint)
-        headerOpts.Verbose = 1;
+        opts->Verbose = 1;
     for (int i = 0; i < (int)g->includePath.size(); ++i) {
-        headerOpts.AddPath(g->includePath[i], clang::frontend::Angled, false /* not a framework */,
-                           true /* ignore sys root */);
+        opts->AddPath(g->includePath[i], clang::frontend::Angled, false /* not a framework */,
+                      true /* ignore sys root */);
     }
+}
 
-    clang::PreprocessorOptions &opts = inst.getPreprocessorOpts();
-
+static void lSetPreprocessorOptions(const std::shared_ptr<clang::PreprocessorOptions> opts) {
     // Add defs for ISPC and PI
-    opts.addMacroDef("ISPC");
-    opts.addMacroDef("PI=3.1415926535");
+    opts->addMacroDef("ISPC");
+    opts->addMacroDef("PI=3.1415926535");
 
     if (g->enableLLVMIntrinsics) {
-        opts.addMacroDef("ISPC_LLVM_INTRINSICS_ENABLED");
+        opts->addMacroDef("ISPC_LLVM_INTRINSICS_ENABLED");
     }
     // Add defs for ISPC_UINT_IS_DEFINED.
     // This lets the user know uint* is part of language.
-    opts.addMacroDef("ISPC_UINT_IS_DEFINED");
+    opts->addMacroDef("ISPC_UINT_IS_DEFINED");
 
     // Add #define for current compilation target
     char targetMacro[128];
@@ -2565,66 +2627,128 @@ int Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *o
 
     // Add 'TARGET_WIDTH' macro to expose vector width to user.
     std::string TARGET_WIDTH = "TARGET_WIDTH=" + std::to_string(g->target->getVectorWidth());
-    opts.addMacroDef(TARGET_WIDTH);
+    opts->addMacroDef(TARGET_WIDTH);
 
     // Add 'TARGET_ELEMENT_WIDTH' macro to expose element width to user.
     std::string TARGET_ELEMENT_WIDTH = "TARGET_ELEMENT_WIDTH=" + std::to_string(g->target->getDataTypeWidth() / 8);
-    opts.addMacroDef(TARGET_ELEMENT_WIDTH);
+    opts->addMacroDef(TARGET_ELEMENT_WIDTH);
 
-    opts.addMacroDef(targetMacro);
+    opts->addMacroDef(targetMacro);
 
     if (g->target->is32Bit())
-        opts.addMacroDef("ISPC_POINTER_SIZE=32");
+        opts->addMacroDef("ISPC_POINTER_SIZE=32");
     else
-        opts.addMacroDef("ISPC_POINTER_SIZE=64");
+        opts->addMacroDef("ISPC_POINTER_SIZE=64");
 
     if (g->target->hasHalfConverts())
-        opts.addMacroDef("ISPC_TARGET_HAS_HALF");
+        opts->addMacroDef("ISPC_TARGET_HAS_HALF");
     if (g->target->hasRand())
-        opts.addMacroDef("ISPC_TARGET_HAS_RAND");
+        opts->addMacroDef("ISPC_TARGET_HAS_RAND");
     if (g->target->hasTranscendentals())
-        opts.addMacroDef("ISPC_TARGET_HAS_TRANSCENDENTALS");
+        opts->addMacroDef("ISPC_TARGET_HAS_TRANSCENDENTALS");
     if (g->opt.forceAlignedMemory)
-        opts.addMacroDef("ISPC_FORCE_ALIGNED_MEMORY");
+        opts->addMacroDef("ISPC_FORCE_ALIGNED_MEMORY");
 
     constexpr int buf_size = 25;
     char ispc_major[buf_size], ispc_minor[buf_size];
     snprintf(ispc_major, buf_size, "ISPC_MAJOR_VERSION=%d", ISPC_VERSION_MAJOR);
     snprintf(ispc_minor, buf_size, "ISPC_MINOR_VERSION=%d", ISPC_VERSION_MINOR);
-    opts.addMacroDef(ispc_major);
-    opts.addMacroDef(ispc_minor);
+    opts->addMacroDef(ispc_major);
+    opts->addMacroDef(ispc_minor);
 
     if (g->target->hasFp16Support()) {
-        opts.addMacroDef("ISPC_FP16_SUPPORTED ");
+        opts->addMacroDef("ISPC_FP16_SUPPORTED ");
     }
 
     if (g->target->hasFp64Support()) {
-        opts.addMacroDef("ISPC_FP64_SUPPORTED ");
+        opts->addMacroDef("ISPC_FP64_SUPPORTED ");
     }
 
     if (g->includeStdlib) {
         if (g->opt.disableAsserts)
-            opts.addMacroDef("assert(x)=");
+            opts->addMacroDef("assert(x)=");
         else
-            opts.addMacroDef("assert(x)=__assert(#x, x)");
+            opts->addMacroDef("assert(x)=__assert(#x, x)");
     }
 
     for (unsigned int i = 0; i < g->cppArgs.size(); ++i) {
         // Sanity check--should really begin with -D
         if (g->cppArgs[i].substr(0, 2) == "-D") {
-            opts.addMacroDef(g->cppArgs[i].substr(2));
+            opts->addMacroDef(g->cppArgs[i].substr(2));
         }
     }
+}
 
-    inst.getLangOpts().LineComment = 1;
-    inst.createPreprocessor(clang::TU_Complete);
+static void lSetLangOptions(clang::LangOptions *opts) { opts->LineComment = 1; }
 
-    diagPrinter->BeginSourceFile(inst.getLangOpts(), &inst.getPreprocessor());
-    clang::DoPrintPreprocessedInput(inst.getPreprocessor(), ostream, inst.getPreprocessorOutputOpts());
-    diagPrinter->EndSourceFile();
+int Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostream) const {
+    clang::FrontendInputFile inputFile(infilename, clang::InputKind());
+    llvm::raw_fd_ostream stderrRaw(2, false);
+
+    // Create Diagnostic engine
+    llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagIDs(new clang::DiagnosticIDs);
+    llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> diagOptions(new clang::DiagnosticOptions);
+    clang::TextDiagnosticPrinter diagPrinter(stderrRaw, diagOptions.get(), false);
+    clang::DiagnosticsEngine diagEng(diagIDs, diagOptions, &diagPrinter, false);
+
+    diagEng.setSuppressAllDiagnostics(g->ignoreCPPErrors);
+
+    // Create TargetInfo
+    const std::shared_ptr<clang::TargetOptions> tgtOpts = std::make_shared<clang::TargetOptions>();
+    llvm::Triple triple(module->getTargetTriple());
+    if (triple.getTriple().empty()) {
+        triple.setTriple(llvm::sys::getDefaultTargetTriple());
+    }
+    tgtOpts->Triple = triple.getTriple();
+    clang::TargetInfo *tgtInfo = clang::TargetInfo::CreateTargetInfo(diagEng, tgtOpts);
+
+    // Create and initialize PreprocessorOutputOptions
+    clang::PreprocessorOutputOptions preProcOutOpts;
+    lSetPreprocessorOutputOptions(&preProcOutOpts);
+
+    // Create and initialize HeaderSearchOptions
+    const std::shared_ptr<clang::HeaderSearchOptions> hdrSearchOpts = std::make_shared<clang::HeaderSearchOptions>();
+    lSetHeaderSeachOptions(hdrSearchOpts);
+
+    // Create and initializer PreprocessorOptions
+    const std::shared_ptr<clang::PreprocessorOptions> preProcOpts = std::make_shared<clang::PreprocessorOptions>();
+    lSetPreprocessorOptions(preProcOpts);
+
+    // Create and initializer LangOptions
+    clang::LangOptions langOpts;
+    lSetLangOptions(&langOpts);
+
+    // Create and initialize SourceManager
+    clang::FileSystemOptions fsOpts;
+    clang::FileManager fileMgr(fsOpts);
+    clang::SourceManager srcMgr(diagEng, fileMgr);
+    lInitializeSourceManager(inputFile, diagEng, fileMgr, srcMgr);
+
+    // Create HeaderSearch and apply HeaderSearchOptions
+    clang::HeaderSearch hdrSearch(hdrSearchOpts, srcMgr, diagEng, langOpts, tgtInfo);
+    clang::ApplyHeaderSearchOptions(hdrSearch, *hdrSearchOpts, langOpts, triple);
+
+    // Finally, create an preprocessor object
+    clang::TrivialModuleLoader modLoader;
+    clang::Preprocessor prep(preProcOpts, diagEng, langOpts, srcMgr, hdrSearch, modLoader);
+
+    // intialize preprocessor
+    prep.Initialize(*tgtInfo);
+    prep.setPreprocessedOutput(preProcOutOpts.ShowCPP);
+    lInitializePreprocessor(prep, *preProcOpts);
+
+    // do actual preprocessing
+    diagPrinter.BeginSourceFile(langOpts, &prep);
+    clang::DoPrintPreprocessedInput(prep, ostream, preProcOutOpts);
+    diagPrinter.EndSourceFile();
+
+    // deallocate some objects
+    diagIDs.reset();
+    diagOptions.reset();
+    delete tgtInfo;
 
     // Return preprocessor diagnostic errors after processing
-    return static_cast<int>(diagEngine->hasErrorOccurred());
+    return static_cast<int>(diagEng.hasErrorOccurred());
 }
 
 // Given an output filename of the form "foo.obj", and an ISA name like

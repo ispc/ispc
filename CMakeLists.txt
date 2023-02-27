@@ -297,7 +297,7 @@ if (WASM_ENABLED)
     list(APPEND ISPC_TARGETS wasm-i32x4)
 endif()
 
-set(CLANG_LIBRARY_LIST clangFrontend clangDriver clangSerialization clangParse clangSema clangAnalysis clangAST clangBasic clangEdit clangLex)
+set(CLANG_LIBRARY_LIST clangFrontend clangBasic clangEdit clangLex)
 if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "15.0.0")
     list(APPEND CLANG_LIBRARY_LIST clangSupport)
 endif()
