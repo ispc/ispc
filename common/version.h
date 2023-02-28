@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022, Intel Corporation
+  Copyright (c) 2022-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -40,4 +40,4 @@
 #define ISPC_VERSION_MAJOR 1
 #define ISPC_VERSION_MINOR 19
 #define ISPC_VERSION_PATCH 0
-#define ISPC_VERSION "1.19.0dev"
+#define ISPC_VERSION "1.19.0"
