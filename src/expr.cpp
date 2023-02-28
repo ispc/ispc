@@ -8085,7 +8085,7 @@ FunctionSymbolExpr *FunctionSymbolExpr::Instantiate(TemplateInstantiation &templ
         return new FunctionSymbolExpr(name.c_str(), candidateFunctions, pos);
     }
     std::vector<std::pair<const Type *, SourcePos>> instTemplateArgs;
-    for (auto arg : templateArgs) {
+    for (auto &arg : templateArgs) {
         instTemplateArgs.push_back(std::make_pair(arg.first->ResolveDependence(templInst), arg.second));
     }
     return new FunctionSymbolExpr(name.c_str(), candidateTemplateFunctions, instTemplateArgs, pos);
