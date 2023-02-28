@@ -18,7 +18,7 @@ RUN yum install -y vim wget yum-utils gcc gcc-c++ git python3 m4 bison flex patc
     yum install -y libtool autopoint gettext-devel texinfo help2man && \
     yum clean -y all
 
-# These packages are required if you need to link IPSC with -static.
+# These packages are required if you need to link ISPC with -static.
 RUN yum install -y ncurses-static libstdc++-static && \
     yum clean -y all
 
