@@ -2,7 +2,7 @@
 " Language:		ISPC
 " Maintainer:		Dmitry Babokin <dmitry.y.babokin@intel.com>
 " Previous Maintainer:	Andreas Wendleder <andreas.wendleder@gmail.com>
-" Last Change:		May 19, 2022
+" Last Change:		February 27, 2023
 
 " Quit when a syntax file was already loaded
 if exists("b:current_syntax")
@@ -21,6 +21,7 @@ syn keyword	ispcBuiltin		programCount programIndex taskCount taskCount0 taskCoun
 syn keyword	ispcType		export uniform varying int8 int16 int32 int64 uint8 uint16 uint32 uint64 float16
 syn keyword	ispcOperator		operator in
 syn keyword	ispcStorageClass	noinline __vectorcall __regcall
+syn keyword	ispcTemplates		template typename
 syn keyword	ispcDefine		ISPC ISPC_POINTER_SIZE ISPC_MAJOR_VERSION ISPC_MINOR_VERSION TARGET_WIDTH PI
 					\ TARGET_ELEMENT_WIDTH ISPC_UINT_IS_DEFINED ISPC_FP16_SUPPORTED ISPC_FP64_SUPPORTED ISPC_LLVM_INTRINSICS_ENABLED
 					\ ISPC_TARGET_NEON ISPC_TARGET_SSE2 ISPC_TARGET_SSE4 ISPC_TARGET_AVX ISPC_TARGET_AVX2 ISPC_TARGET_AVX512KNL ISPC_TARGET_AVX512SKX
@@ -54,6 +55,7 @@ HiLink ispcConditional	Conditional
 HiLink ispcRepeat	Repeat
 HiLink ispcBuiltin	Statement
 HiLink ispcType		Type
+HiLink ispcTemplates	Type
 HiLink ispcOperator	Operator
 HiLink ispcDefine	Define
 HiLink ispcStorageClass	StorageClass
