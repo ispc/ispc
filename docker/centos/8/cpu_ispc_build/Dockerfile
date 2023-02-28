@@ -16,7 +16,7 @@ RUN dnf -y update && dnf install -y wget yum-utils gcc gcc-c++ git python3 make 
 #    yum install -y libtool autopoint gettext-devel texinfo help2man && \
     dnf clean -y all
 
-# These packages are required if you need to link IPSC with -static.
+# These packages are required if you need to link ISPC with -static.
 RUN dnf -y --enablerepo=powertools install libstdc++-static && \
     dnf clean -y all
 
