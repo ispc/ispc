@@ -17,7 +17,6 @@ RUN yum -y update; yum -y install centos-release-scl epel-release; yum clean all
 RUN yum install -y vim wget yum-utils gcc gcc-c++ git python3 m4 bison flex patch make && \
     yum install -y ncurses-devel glibc-devel.x86_64 glibc-devel.i686 xz devtoolset-7 && \
     yum install -y libtool autopoint gettext-devel texinfo help2man && \
-
     yum clean -y all
 
 # These packages are required if you need to link IPSC with -static.
