@@ -155,6 +155,7 @@ Contents:
       + `Task Parallelism: Runtime Requirements`_
 
   + `LLVM Intrinsic Functions`_
+  + `Function Templates`_
 
 * `The ISPC Standard Library`_
 
@@ -1759,9 +1760,10 @@ The following identifiers are reserved as language keywords: ``bool``,
 ``goto``, ``if``, ``in``, ``inline``, ``noinline``, ``int``, ``int8``,
 ``int16``, ``int32``, ``int64``, ``invoke_sycl``, ``launch``, ``NULL``,
 ``print``, ``return``, ``signed``, ``sizeof``, ``soa``, ``static``, ``struct``,
-``switch``, ``sync``, ``task``, ``true``, ``typedef``, ``uint``, ``uint8``,
-``uint16``, ``uint32``, ``uint64``, ``uniform``, ``union``, ``unsigned``,
-``varying``, ``__regcall``, ``__vectorcall``, ``void``, ``volatile``, ``while``.
+``switch``, ``sync``, ``task``, ``template``, ``true``, ``typedef``,
+``typename``, ``uint``, ``uint8``, ``uint16``, ``uint32``, ``uint64``,
+``uniform``, ``union``, ``unsigned``, ``varying``, ``__regcall``,
+``__vectorcall``, ``void``, ``volatile``, ``while``.
 
 ``ispc`` defines the following operators and punctuation:
 
@@ -3625,6 +3627,81 @@ For example:
 
 To detect if this feature is enabled during compile time, check if ``ISPC_LLVM_INTRINSICS_ENABLED``
 macro is defined.
+
+
+Function Templates
+------------------
+
+``ispc`` supports function templates with syntax and semantics similar to C++.
+The feature is currently experimental and may change in future versions of
+``ispc``. Please report any issues or suggestions about this feature on the
+``ispc`` `bug tracker`_ or `GitHub Discussions`_.
+
+What is currently supported:
+
+* Function templates definitions with template type parameters (i.e.
+  ``template<typename T> T add(T a, T b) { return a + b;}``).
+* Calling template functions through explicit template arguments specification
+  syntax (i.e. ``add<int>(1, 2);``).
+* Template argument deduction and calling template functions through regular
+  function call syntax (i.e. ``add(1, 2);``).
+* Explicit template function instantiations (i.e.
+  ``template int add<int>(int a, int b);``).
+
+What is currently not supported, but is planned to be supported:
+
+* Non-type template parameters.
+* Default values for template parameters.
+* Template function specializations.
+
+While template argument deduction rules generally follow C++, there are some
+differences caused by existence of ``uniform``, ``varying`` and ``unbound``
+types in ``ispc`` type system.  The template type parameter may resolve only to
+``uniform`` and ``varying`` types, but not to ``unbound`` type. Consider the
+following example:
+
+::
+
+    template <typename T> T add(T a, T b) { return a + b; }
+
+    void foo() {
+        // Note that these two lines call the same function:
+        int i1 = add<int>(1, 2);                 // T = varying int
+        varying int i2 = add<varying int>(1, 2); // T = varying int
+
+        // And this call a uniform version:
+        uniform int i3 = add<uniform int>(1, 2); // T = uniform int
+    }
+
+The variability of template type parameter ``T`` may be overwritten by
+``uniform`` and ``varying`` keywords, so ``uniform T`` and ``varying T``  are
+always valid types. But when ``uniform T`` and ``varying T`` are used to specify
+template function parameters it has an effect on template argument deduction
+process.  If variability keyword is specified and the type was successfully
+deduced, the default variability of type ``T`` is assumed to be the opposite of
+the variability keyword.  The logic behind it is that the keyword was specified
+"on purpose" to changed the variability of the type ``T``. Consider the
+following example:
+
+::
+
+    template <typename T> void foo1(T t);
+    template <typename T> void foo2(uniform T t);
+    template <typename T> void foo3(varying T t);
+
+    void bar() {
+        uniform int ui;
+        varying int vi;
+        foo1(ui); // T is uniform int
+        foo1(vi); // T is varying int
+        foo2(ui); // T is varying int!
+        foo2(vi); // error: varying type cannot be passed to uniform parameter
+        foo3(ui); // T is uniform int!
+        foo3(vi); // T is uniform int!
+    }
+
+Note, to get the insight of the results of template argument deduction, it might
+be useful to specify ``--ast-dump`` flag to ``ispc`` compiler.
 
 
 The ISPC Standard Library
