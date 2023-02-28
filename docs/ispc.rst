@@ -66,6 +66,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.16.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.17.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.18.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.19.0`_
 
 * `Getting Started with ISPC`_
 
@@ -515,6 +516,21 @@ was added to preserve this behavior.
 
 .. _Compiler Explorer: https://godbolt.org/
 
+Updating ISPC Programs For Changes In ISPC 1.19.0
+-------------------------------------------------
+
+New targets were added:
+
+* avx512spr-x4, avx512spr-x8, avx512spr-x16, avx512spr-x32, avx512spr-x64 for
+  4th generation Intel® Xeon® Scalable (codename Sapphire Rapids) CPUs. A macro
+  ISPC_TARGET_AVX512SPR was added.
+* xehpc-x16 and xehpc-x32 for Intel® Data Center GPU Max (codename Ponte Vecchio).
+
+Function templates were introduces to the langauge, please refer to `Function
+Templates`_ section for more details. Two new keywords were introduced: ``template``
+and ``typename``.
+
+``ISPC_FP16_SUPPORTED`` macro was introduced for the targets supporting FP16.
 
 Getting Started with ISPC
 =========================
