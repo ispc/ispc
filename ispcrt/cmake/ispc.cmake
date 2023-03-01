@@ -334,7 +334,8 @@ function(ispc_gpu_target_add_sources TARGET_NAME PARENT_TARGET_NAME)
     set(ISPC_GPU_OUTPUT_OPT "--emit-zebin")
     set(TARGET_OUTPUT_EXT "bin")
   elseif (ISPC_XE_FORMAT STREQUAL "bc")
-    message(FATAL_ERROR "LLVM BC is an intermediate format and not valid for final output")
+    set(ISPC_GPU_OUTPUT_OPT "--emit-llvm")
+    set(TARGET_OUTPUT_EXT "bc")
   endif()
 
   # Support old global includes as well
@@ -372,6 +373,8 @@ function(ispc_gpu_target_add_sources TARGET_NAME PARENT_TARGET_NAME)
       set(result "${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}_${fname}.tmp.spv")
     elseif (ISPC_XE_FORMAT STREQUAL "zebin")
       set(result "${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}_${fname}.tmp.bin")
+    elseif (ISPC_XE_FORMAT STREQUAL "bc")
+      set(result "${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}_${fname}.tmp.bc")
     endif()
 
     add_custom_command(
@@ -416,6 +419,7 @@ function(ispc_gpu_target_add_sources TARGET_NAME PARENT_TARGET_NAME)
   set(NEEDS_ISPC_LINK_EXPR
       "$<OR:$<BOOL:${LINK_GPU_LIBRARIES_PROP}>,$<BOOL:${LINK_DPCPP_LIBRARIES_PROP}>>")
   set(LINKS_DPCPP_LIBS "$<BOOL:${LINK_DPCPP_LIBRARIES_PROP}>")
+
   set(LINKS_DPCPP_ESIMD_LIBS
     "$<BOOL:$<TARGET_PROPERTY:${TARGET_NAME},ISPC_DPCPP_LINKING_ESIMD>>")
   set(LINKS_DPCPP_SCALAR_LIBS
@@ -499,10 +503,9 @@ function(ispc_gpu_target_add_sources TARGET_NAME PARENT_TARGET_NAME)
 
       # True case arguments for ispc link
       "$<${NEEDS_ISPC_LINK_EXPR}:${ISPC_XE_COMPILE_OUTPUTS};${LINK_GPU_LIBRARIES_PROP}>"
-      # For targets that are doing DPCPP linking we need to emit BC here
-      "$<${NEEDS_ISPC_LINK_EXPR}:$<IF:${LINKS_DPCPP_LIBS},--emit-llvm,--emit-spirv>>"
+      "$<${NEEDS_ISPC_LINK_EXPR}:--emit-spirv>"
       "$<${NEEDS_ISPC_LINK_EXPR}:-o>"
-      "$<${NEEDS_ISPC_LINK_EXPR}:${TARGET_OUTPUT_FILE}.$<IF:${LINKS_DPCPP_LIBS},bc,spv>>"
+      "$<${NEEDS_ISPC_LINK_EXPR}:${TARGET_OUTPUT_FILE}.spv>"
 
       # False case arguments for cmake -E copy
       # We also pick between zebin/spv suffixes here, zebin and spv are both valid
@@ -515,7 +518,7 @@ function(ispc_gpu_target_add_sources TARGET_NAME PARENT_TARGET_NAME)
     # First we link the bitcode using DPCPP LLVM link. We have the ISPC targets
     # linked to bitcode plus all the DPCPP library's extracted bitcode to combine here
     COMMAND
-      "$<${LINKS_DPCPP_LIBS}:${DPCPP_LLVM_LINK};${TARGET_OUTPUT_FILE}.bc>"
+      "$<${LINKS_DPCPP_LIBS}:${DPCPP_LLVM_LINK};${result}>"
       ${LINK_DPCPP_LIBRARIES_PROP}
       "$<${LINKS_DPCPP_LIBS}:-o;${TARGET_OUTPUT_FILE}.linked.bc>"
 

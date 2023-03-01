@@ -43,6 +43,8 @@ add_executable(${TARGET_NAME} vadd_usm.cpp)
 set(DPCPP_CUSTOM_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR})
 add_dpcpp_library(${TARGET_NAME}_esimd vadd_usm.cpp)
 
+# Use LLVM bitcode linking for interop with ESIMD
+set(ISPC_XE_FORMAT "bc")
 add_ispc_library(${TARGET_NAME}_ispc2esimd vadd_func.ispc)
 
 # Link for GPU
