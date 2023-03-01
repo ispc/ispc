@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019-2021, Intel Corporation
+  Copyright (c) 2019-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -40,6 +40,7 @@
 #include "bitcode_lib.h"
 
 #include <bitset>
+#include <cstdint>
 #include <map>
 #include <vector>
 
