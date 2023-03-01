@@ -42,6 +42,8 @@ set(TARGET_NAME "simple-esimd")
 add_executable(${TARGET_NAME} simple.cpp)
 add_dpcpp_library(${TARGET_NAME}_esimd simple-esimd.cpp)
 
+# Use LLVM bitcode linking for interop with ESIMD
+set(ISPC_XE_FORMAT "bc")
 add_ispc_library(${TARGET_NAME}_ispc2esimd simple-esimd.ispc)
 # Link for GPU
 ispc_target_link_dpcpp_esimd_libraries(${TARGET_NAME}_ispc2esimd ${TARGET_NAME}_esimd)
