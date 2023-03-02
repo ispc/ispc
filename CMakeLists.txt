@@ -517,6 +517,11 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED YES)
 
+# Set hidden visibility for inline functions.
+# This is needed to be in sync with LLVM libraries, we do include some template code from LLVM that requires
+# this options to be in sync with LLVM. Otherwise it causes link warnings.
+set_target_properties(${PROJECT_NAME} PROPERTIES VISIBILITY_INLINES_HIDDEN ON)
+
 if (NOT MSVC)
     set_target_properties(${PROJECT_NAME} PROPERTIES CXX_EXTENSIONS OFF)
     target_compile_options(${PROJECT_NAME} PRIVATE -Wno-c99-extensions -Wno-deprecated-register -fno-rtti)
