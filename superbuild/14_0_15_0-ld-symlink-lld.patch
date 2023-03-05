@@ -1,0 +1,29 @@
+From c8bc14609bc2e4a5f153ce92e4a251ba88f4821e Mon Sep 17 00:00:00 2001
+From: Aleksei Nurmukhametov <aleksei.nurmukhametov@intel.com>
+Date: Wed, 22 Mar 2023 06:13:14 -0700
+Subject: [PATCH] Create ld -> lld symlink
+
+Symlink is needed to be sure that all linking is done via lld not
+system-wide ld (literally always).
+lld allows us to use same linker options across all platforms (LTO
+included).
+---
+ lld/tools/lld/CMakeLists.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/lld/tools/lld/CMakeLists.txt b/lld/tools/lld/CMakeLists.txt
+index 12628395680b..bfaff2e1f2f7 100644
+--- a/lld/tools/lld/CMakeLists.txt
++++ b/lld/tools/lld/CMakeLists.txt
+@@ -33,7 +33,7 @@ install(TARGETS lld
+ 
+ if(NOT LLD_SYMLINKS_TO_CREATE)
+   set(LLD_SYMLINKS_TO_CREATE
+-      lld-link ld.lld ld64.lld wasm-ld)
++      lld-link ld.lld ld64.lld wasm-ld ld)
+ endif()
+ 
+ foreach(link ${LLD_SYMLINKS_TO_CREATE})
+-- 
+2.25.1
+

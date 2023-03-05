@@ -1,0 +1,31 @@
+From eb055d19a932940616568a3abfa1375e90d61efa Mon Sep 17 00:00:00 2001
+From: Aleksei Nurmukhametov <aleksei.nurmukhametov@intel.com>
+Date: Sat, 4 Mar 2023 05:24:18 -0800
+Subject: [PATCH] Enable install headers target for external project LLVM build
+
+It is needed to actually install all required to ISPC headers by target
+tools/vc-intrinsics/install.
+
+It is kind of bug of vc-intrinsics cmake because no headers actually
+installed when building as external project with LLVM
+(-DLLVM_EXTERNAL_PROJECT...), i.e., files llvm/GenXIntrinsics/GenXI*.h
+are misisng.
+---
+ CMakeLists.txt | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index a04f4b1..e20f883 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -48,6 +48,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+   message(STATUS "Found LLVM: ${LLVM_VERSION}")
+ else(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+   set(BUILD_EXTERNAL NO)
++  set(INSTALL_REQUIRED YES)
+ 
+   # LLVM_CMAKE_DIR is not set for non-standalone builds. Use LLVM_CMAKE_PATH
+   # instead. (see clang/CMakeLists.txt)
+-- 
+2.25.1
+
