@@ -859,11 +859,13 @@ bool GatherCoalescePass::coalesceGathersFactored(llvm::BasicBlock &bb) {
 
     bool modifiedAny = false;
 
-restart:
-    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
+    // Note: we do modify instruction list during the traversal, so the iterator
+    // is moved forward before the instruction is processed.
+    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e;) {
+        llvm::BasicBlock::iterator curIter = iter++;
         // Iterate over all of the instructions and look for calls to
         // __pseudo_gather_factored_base_offsets{32,64}_{i32,float} calls.
-        llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*iter);
+        llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*curIter);
         if (callInst == NULL)
             continue;
 
@@ -915,7 +917,7 @@ restart:
         // look at the remainder of instructions in the basic block (up
         // until we reach a write to memory) to try to find any other
         // gathers that can coalesce with this one.
-        llvm::BasicBlock::iterator fwdIter = iter;
+        llvm::BasicBlock::iterator fwdIter = curIter;
         ++fwdIter;
         for (; fwdIter != bb.end(); ++fwdIter) {
             // Must stop once we come to an instruction that may write to
@@ -960,6 +962,13 @@ restart:
                 offsetScale == fwdCall->getArgOperand(2) && mask == fwdCall->getArgOperand(4)) {
                 Debug(fwdPos, "This gather can be coalesced.");
                 coalesceGroup.push_back(fwdCall);
+                // We deal with a group of instructions handled in a single pass of the optimization.
+                // "iter" points to the insturction which needs to be handled on the next iteration.
+                // By default it's the next instruction after the first one in the gorup.
+                // If this happens to be another group instruction, move further.
+                if (fwdCall == &*iter) {
+                    iter++;
+                }
 
                 if (coalesceGroup.size() == 4)
                     // FIXME: untested heuristic: don't try to coalesce
@@ -977,7 +986,6 @@ restart:
         // into something more efficient than the original set of gathers.
         if (lCoalesceGathers(coalesceGroup, baseType)) {
             modifiedAny = true;
-            goto restart;
         }
     }
     DEBUG_END_BB("GatherCoalescePass");
