@@ -132,17 +132,19 @@ bool InstructionSimplifyPass::simplifyInstructions(llvm::BasicBlock &bb) {
 
     bool modifiedAny = false;
 
-restart:
-    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
-        llvm::SelectInst *selectInst = llvm::dyn_cast<llvm::SelectInst>(&*iter);
-        if (selectInst && lSimplifySelect(selectInst, iter)) {
+    // Note: we do modify instruction list during the traversal, so the iterator
+    // is moved forward before the instruction is processed.
+    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e;) {
+        llvm::BasicBlock::iterator curIter = iter++;
+        llvm::SelectInst *selectInst = llvm::dyn_cast<llvm::SelectInst>(&*curIter);
+        if (selectInst && lSimplifySelect(selectInst, curIter)) {
             modifiedAny = true;
-            goto restart;
+            continue;
         }
-        llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*iter);
-        if (callInst && lSimplifyCall(callInst, iter)) {
+        llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*curIter);
+        if (callInst && lSimplifyCall(callInst, curIter)) {
             modifiedAny = true;
-            goto restart;
+            continue;
         }
     }
 

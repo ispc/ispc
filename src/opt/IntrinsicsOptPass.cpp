@@ -78,9 +78,12 @@ bool IntrinsicsOpt::optimizeIntrinsics(llvm::BasicBlock &bb) {
         m->module->getFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_avx_maskstore_pd_256));
 
     bool modifiedAny = false;
-restart:
-    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
-        llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*iter);
+
+    // Note: we do modify instruction list during the traversal, so the iterator
+    // is moved forward before the instruction is processed.
+    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e;) {
+        llvm::BasicBlock::iterator curIter = iter++;
+        llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*(curIter));
         if (callInst == NULL || callInst->getCalledFunction() == NULL)
             continue;
 
@@ -91,9 +94,9 @@ restart:
 
             // If the values are the same, then no need to blend..
             if (v[0] == v[1]) {
-                ReplaceInstWithValueWrapper(iter, v[0]);
+                ReplaceInstWithValueWrapper(curIter, v[0]);
                 modifiedAny = true;
-                goto restart;
+                continue;
             }
 
             // If one of the two is undefined, we're allowed to replace
@@ -103,14 +106,14 @@ restart:
             // otherwise the result is undefined and any value is fine,
             // ergo the defined one is an acceptable result.)
             if (LLVMIsValueUndef(v[0])) {
-                ReplaceInstWithValueWrapper(iter, v[1]);
+                ReplaceInstWithValueWrapper(curIter, v[1]);
                 modifiedAny = true;
-                goto restart;
+                continue;
             }
             if (LLVMIsValueUndef(v[1])) {
-                ReplaceInstWithValueWrapper(iter, v[0]);
+                ReplaceInstWithValueWrapper(curIter, v[0]);
                 modifiedAny = true;
-                goto restart;
+                continue;
             }
 
             MaskStatus maskStatus = GetMaskStatusFromValue(factor);
@@ -124,9 +127,9 @@ restart:
             }
 
             if (value != NULL) {
-                ReplaceInstWithValueWrapper(iter, value);
+                ReplaceInstWithValueWrapper(curIter, value);
                 modifiedAny = true;
-                goto restart;
+                continue;
             }
         } else if (matchesMaskInstruction(callInst->getCalledFunction())) {
             llvm::Value *factor = callInst->getArgOperand(0);
@@ -136,9 +139,9 @@ restart:
                 // with the corresponding integer mask from its elements
                 // high bits.
                 llvm::Value *value = (callInst->getType() == LLVMTypes::Int32Type) ? LLVMInt32(mask) : LLVMInt64(mask);
-                ReplaceInstWithValueWrapper(iter, value);
+                ReplaceInstWithValueWrapper(curIter, value);
                 modifiedAny = true;
-                goto restart;
+                continue;
             }
         } else if (callInst->getCalledFunction() == avxMaskedLoad32 ||
                    callInst->getCalledFunction() == avxMaskedLoad64) {
@@ -149,9 +152,9 @@ restart:
                 llvm::Type *returnType = callInst->getType();
                 Assert(llvm::isa<llvm::VectorType>(returnType));
                 llvm::Value *undefValue = llvm::UndefValue::get(returnType);
-                ReplaceInstWithValueWrapper(iter, undefValue);
+                ReplaceInstWithValueWrapper(curIter, undefValue);
                 modifiedAny = true;
-                goto restart;
+                continue;
             } else if (maskStatus == MaskStatus::all_on) {
                 // all lanes active; replace with a regular load
                 llvm::Type *returnType = callInst->getType();
@@ -172,7 +175,7 @@ restart:
                 LLVMCopyMetadata(loadInst, callInst);
                 llvm::ReplaceInstWithInst(callInst, loadInst);
                 modifiedAny = true;
-                goto restart;
+                continue;
             }
         } else if (callInst->getCalledFunction() == avxMaskedStore32 ||
                    callInst->getCalledFunction() == avxMaskedStore64) {
@@ -183,7 +186,7 @@ restart:
                 // nothing actually being stored, just remove the inst
                 callInst->eraseFromParent();
                 modifiedAny = true;
-                goto restart;
+                continue;
             } else if (maskStatus == MaskStatus::all_on) {
                 // all lanes storing, so replace with a regular store
                 llvm::Value *rvalue = callInst->getArgOperand(2);
@@ -204,7 +207,7 @@ restart:
                 llvm::ReplaceInstWithInst(callInst, storeInst);
 
                 modifiedAny = true;
-                goto restart;
+                continue;
             }
         }
     }

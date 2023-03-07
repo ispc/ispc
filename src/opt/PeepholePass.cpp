@@ -1,7 +1,5 @@
-
-
 /*
-  Copyright (c) 2022, Intel Corporation
+  Copyright (c) 2022-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -280,9 +278,11 @@ bool PeepholePass::matchAndReplace(llvm::BasicBlock &bb) {
     DEBUG_START_BB("PeepholePass");
 
     bool modifiedAny = false;
-restart:
-    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
-        llvm::Instruction *inst = &*iter;
+
+    // Note: we do modify instruction list during the traversal, so the iterator
+    // is moved forward before the instruction is processed.
+    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e;) {
+        llvm::Instruction *inst = &*(iter++);
 
         llvm::Instruction *builtinCall = lMatchAvgUpUInt8(inst);
         if (!builtinCall)
@@ -302,7 +302,6 @@ restart:
         if (builtinCall != NULL) {
             llvm::ReplaceInstWithInst(inst, builtinCall);
             modifiedAny = true;
-            goto restart;
         }
     }
 
