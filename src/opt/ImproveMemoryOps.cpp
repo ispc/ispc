@@ -1951,34 +1951,38 @@ bool ImproveMemoryOpsPass::improveMemoryOps(llvm::BasicBlock &bb) {
     DEBUG_START_BB("ImproveMemoryOps");
 
     bool modifiedAny = false;
-restart:
+
     // Iterate through all of the instructions in the basic block.
-    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
-        llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*iter);
-        // If we don't have a call to one of the
-        // __pseudo_{gather,scatter}_* functions, then just go on to the
-        // next instruction.
-        if (callInst == NULL || callInst->getCalledFunction() == NULL)
-            continue;
-        if (lGSToGSBaseOffsets(callInst)) {
-            modifiedAny = true;
-            goto restart;
-        }
-        if (lGSBaseOffsetsGetMoreConst(callInst)) {
-            modifiedAny = true;
-            goto restart;
-        }
-        if (lGSToLoadStore(callInst)) {
-            modifiedAny = true;
-            goto restart;
-        }
-        if (lImproveMaskedStore(callInst)) {
-            modifiedAny = true;
-            goto restart;
-        }
-        if (lImproveMaskedLoad(callInst, iter)) {
-            modifiedAny = true;
-            goto restart;
+    // Note: we do modify instruction list during the traversal, so the iterator
+    // is moved forward before the instruction is processed.
+    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e;) {
+        llvm::BasicBlock::iterator curIter = iter++;
+        llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*curIter);
+
+        while (callInst && callInst->getCalledFunction()) {
+            llvm::Value *newValue = nullptr;
+
+            if ((newValue = lGSToGSBaseOffsets(callInst))) {
+                modifiedAny = true;
+            } else if ((newValue = lGSBaseOffsetsGetMoreConst(callInst))) {
+                modifiedAny = true;
+            } else if ((newValue = lGSToLoadStore(callInst))) {
+                modifiedAny = true;
+            } else if ((newValue = lImproveMaskedStore(callInst))) {
+                modifiedAny = true;
+            } else if ((newValue = lImproveMaskedLoad(callInst, curIter))) {
+                modifiedAny = true;
+            }
+
+            // More than one of optimizations above may be applied subsequently
+            // to a single call. If the returned value is another call instruction,
+            // try again.
+            callInst = llvm::dyn_cast_or_null<llvm::CallInst>(newValue);
+            // After the an old call instruction is removed, "curIter" is invalid,
+            // so we reestablish it be moving back from "iter", which looks one
+            // instruction ahead.
+            curIter = iter;
+            curIter--;
         }
     }
 
