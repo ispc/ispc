@@ -1665,45 +1665,45 @@ bool LLVMIsValueUndef(llvm::Value *value) {
     return false;
 }
 
-llvm::Instruction *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, const llvm::Twine &name,
-                                llvm::Instruction *insertBefore) {
+llvm::CallInst *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, const llvm::Twine &name,
+                             llvm::Instruction *insertBefore) {
     llvm::Value *args[2] = {arg0, arg1};
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[2]);
     return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
 }
 
-llvm::Instruction *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
-                                const llvm::Twine &name, llvm::Instruction *insertBefore) {
+llvm::CallInst *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
+                             const llvm::Twine &name, llvm::Instruction *insertBefore) {
     llvm::Value *args[3] = {arg0, arg1, arg2};
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[3]);
     return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
 }
 
-llvm::Instruction *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
-                                llvm::Value *arg3, const llvm::Twine &name, llvm::Instruction *insertBefore) {
+llvm::CallInst *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
+                             llvm::Value *arg3, const llvm::Twine &name, llvm::Instruction *insertBefore) {
     llvm::Value *args[4] = {arg0, arg1, arg2, arg3};
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[4]);
     return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
 }
 
-llvm::Instruction *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
-                                llvm::Value *arg3, llvm::Value *arg4, const llvm::Twine &name,
-                                llvm::Instruction *insertBefore) {
+llvm::CallInst *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
+                             llvm::Value *arg3, llvm::Value *arg4, const llvm::Twine &name,
+                             llvm::Instruction *insertBefore) {
     llvm::Value *args[5] = {arg0, arg1, arg2, arg3, arg4};
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[5]);
     return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
 }
 
-llvm::Instruction *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
-                                llvm::Value *arg3, llvm::Value *arg4, llvm::Value *arg5, const llvm::Twine &name,
-                                llvm::Instruction *insertBefore) {
+llvm::CallInst *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
+                             llvm::Value *arg3, llvm::Value *arg4, llvm::Value *arg5, const llvm::Twine &name,
+                             llvm::Instruction *insertBefore) {
     llvm::Value *args[6] = {arg0, arg1, arg2, arg3, arg4, arg5};
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[6]);
     return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
 }
 
-llvm::Instruction *LLVMGEPInst(llvm::Value *ptr, llvm::Type *ptrElType, llvm::Value *offset, const char *name,
-                               llvm::Instruction *insertBefore) {
+llvm::GetElementPtrInst *LLVMGEPInst(llvm::Value *ptr, llvm::Type *ptrElType, llvm::Value *offset, const char *name,
+                                     llvm::Instruction *insertBefore) {
     llvm::Value *index[1] = {offset};
     llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
     return llvm::GetElementPtrInst::Create(ptrElType, ptr, arrayRef, name, insertBefore);

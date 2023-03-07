@@ -42,6 +42,7 @@
 
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Instructions.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Type.h>
 
@@ -392,26 +393,25 @@ extern bool LLVMGetSourcePosFromMetadata(const llvm::Instruction *inst, SourcePo
 extern bool LLVMIsValueUndef(llvm::Value *value);
 
 /** Below are helper functions to construct LLVM instructions. */
-extern llvm::Instruction *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
-                                       const llvm::Twine &name, llvm::Instruction *insertBefore = NULL);
+extern llvm::CallInst *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, const llvm::Twine &name,
+                                    llvm::Instruction *insertBefore = NULL);
 
-extern llvm::Instruction *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
-                                       const llvm::Twine &name, llvm::Instruction *insertBefore = NULL);
+extern llvm::CallInst *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
+                                    const llvm::Twine &name, llvm::Instruction *insertBefore = NULL);
 
-extern llvm::Instruction *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
-                                       llvm::Value *arg3, const llvm::Twine &name,
-                                       llvm::Instruction *insertBefore = NULL);
+extern llvm::CallInst *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
+                                    llvm::Value *arg3, const llvm::Twine &name, llvm::Instruction *insertBefore = NULL);
 
-extern llvm::Instruction *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
-                                       llvm::Value *arg3, llvm::Value *arg4, const llvm::Twine &name,
-                                       llvm::Instruction *insertBefore = NULL);
+extern llvm::CallInst *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
+                                    llvm::Value *arg3, llvm::Value *arg4, const llvm::Twine &name,
+                                    llvm::Instruction *insertBefore = NULL);
 
-extern llvm::Instruction *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
-                                       llvm::Value *arg3, llvm::Value *arg4, llvm::Value *arg5, const llvm::Twine &name,
-                                       llvm::Instruction *insertBefore = NULL);
+extern llvm::CallInst *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
+                                    llvm::Value *arg3, llvm::Value *arg4, llvm::Value *arg5, const llvm::Twine &name,
+                                    llvm::Instruction *insertBefore = NULL);
 
-extern llvm::Instruction *LLVMGEPInst(llvm::Value *ptr, llvm::Type *ptrElType, llvm::Value *offset, const char *name,
-                                      llvm::Instruction *insertBefore);
+extern llvm::GetElementPtrInst *LLVMGEPInst(llvm::Value *ptr, llvm::Type *ptrElType, llvm::Value *offset,
+                                            const char *name, llvm::Instruction *insertBefore);
 
 /** Mask-related helpers */
 
