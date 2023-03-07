@@ -787,7 +787,7 @@ static bool lOffsets32BitSafe(llvm::Value **offsetPtr, llvm::Instruction *insert
         return false;
 }
 
-static bool lGSToGSBaseOffsets(llvm::CallInst *callInst) {
+static llvm::CallInst *lGSToGSBaseOffsets(llvm::CallInst *callInst) {
     struct GSInfo {
         GSInfo(const char *pgFuncName, const char *pgboFuncName, const char *pgbo32FuncName, bool ig, bool ip)
             : isGather(ig), isPrefetch(ip) {
@@ -1017,7 +1017,7 @@ static bool lGSToGSBaseOffsets(llvm::CallInst *callInst) {
             break;
         }
     if (info == NULL)
-        return false;
+        return nullptr;
 
     // Try to transform the array of pointers to a single base pointer
     // and an array of int32 offsets.  (All the hard work is done by
@@ -1031,7 +1031,7 @@ static bool lGSToGSBaseOffsets(llvm::CallInst *callInst) {
         // It's actually a fully general gather/scatter with a varying
         // set of base pointers, so leave it as is and continune onward
         // to the next instruction...
-        return false;
+        return nullptr;
     }
     // Cast the base pointer to a void *, since that's what the
     // __pseudo_*_base_offsets_* functions want.
@@ -1039,6 +1039,7 @@ static bool lGSToGSBaseOffsets(llvm::CallInst *callInst) {
                                      callInst);
     LLVMCopyMetadata(basePtr, callInst);
     llvm::Function *gatherScatterFunc = info->baseOffsetsFunc;
+    llvm::CallInst *newCall = nullptr;
 
     if ((info->isGather == true && g->target->hasGather()) ||
         (info->isGather == false && info->isPrefetch == false && g->target->hasScatter()) ||
@@ -1064,8 +1065,8 @@ static bool lGSToGSBaseOffsets(llvm::CallInst *callInst) {
             // llvm::Instruction to llvm::CallInst::Create; this means that
             // the instruction isn't inserted into a basic block and that
             // way we can then call ReplaceInstWithInst().
-            llvm::Instruction *newCall = LLVMCallInst(gatherScatterFunc, basePtr, offsetScale, offsetVector, mask,
-                                                      callInst->getName().str().c_str(), NULL);
+            newCall = LLVMCallInst(gatherScatterFunc, basePtr, offsetScale, offsetVector, mask,
+                                   callInst->getName().str().c_str(), NULL);
             LLVMCopyMetadata(newCall, callInst);
             llvm::ReplaceInstWithInst(callInst, newCall);
         } else {
@@ -1075,8 +1076,7 @@ static bool lGSToGSBaseOffsets(llvm::CallInst *callInst) {
             // Generate a new function call to the next pseudo scatter
             // base+offsets instruction.  See above for why passing NULL
             // for the Instruction * is intended.
-            llvm::Instruction *newCall =
-                LLVMCallInst(gatherScatterFunc, basePtr, offsetScale, offsetVector, storeValue, mask, "", NULL);
+            newCall = LLVMCallInst(gatherScatterFunc, basePtr, offsetScale, offsetVector, storeValue, mask, "", NULL);
             LLVMCopyMetadata(newCall, callInst);
             llvm::ReplaceInstWithInst(callInst, newCall);
         }
@@ -1115,8 +1115,8 @@ static bool lGSToGSBaseOffsets(llvm::CallInst *callInst) {
             // llvm::Instruction to llvm::CallInst::Create; this means that
             // the instruction isn't inserted into a basic block and that
             // way we can then call ReplaceInstWithInst().
-            llvm::Instruction *newCall = LLVMCallInst(gatherScatterFunc, basePtr, variableOffset, offsetScale,
-                                                      constOffset, mask, callInst->getName().str().c_str(), NULL);
+            newCall = LLVMCallInst(gatherScatterFunc, basePtr, variableOffset, offsetScale, constOffset, mask,
+                                   callInst->getName().str().c_str(), NULL);
             LLVMCopyMetadata(newCall, callInst);
             llvm::ReplaceInstWithInst(callInst, newCall);
         } else {
@@ -1126,13 +1126,13 @@ static bool lGSToGSBaseOffsets(llvm::CallInst *callInst) {
             // Generate a new function call to the next pseudo scatter
             // base+offsets instruction.  See above for why passing NULL
             // for the Instruction * is intended.
-            llvm::Instruction *newCall = LLVMCallInst(gatherScatterFunc, basePtr, variableOffset, offsetScale,
-                                                      constOffset, storeValue, mask, "", NULL);
+            newCall = LLVMCallInst(gatherScatterFunc, basePtr, variableOffset, offsetScale, constOffset, storeValue,
+                                   mask, "", NULL);
             LLVMCopyMetadata(newCall, callInst);
             llvm::ReplaceInstWithInst(callInst, newCall);
         }
     }
-    return true;
+    return newCall;
 }
 
 /** Try to improve the decomposition between compile-time constant and
@@ -1141,7 +1141,7 @@ static bool lGSToGSBaseOffsets(llvm::CallInst *callInst) {
     able to pull more terms out of the unknown part and add them into the
     compile-time-known part.
  */
-static bool lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
+static llvm::CallInst *lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
     struct GSBOInfo {
         GSBOInfo(const char *pgboFuncName, const char *pgbo32FuncName, bool ig, bool ip)
             : isGather(ig), isPrefetch(ip) {
@@ -1274,7 +1274,7 @@ static bool lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
             break;
         }
     if (info == NULL)
-        return false;
+        return nullptr;
 
     // Grab the old variable offset
     llvm::Value *origVariableOffset = callInst->getArgOperand(1);
@@ -1282,7 +1282,7 @@ static bool lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
     // If it's zero, we're done.  Don't go and think that we're clever by
     // adding these zeros to the constant offsets.
     if (llvm::isa<llvm::ConstantAggregateZero>(origVariableOffset))
-        return false;
+        return nullptr;
 
     // Try to decompose the old variable offset
     llvm::Value *constOffset = NULL;
@@ -1291,7 +1291,7 @@ static bool lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
 
     // No luck
     if (constOffset == NULL)
-        return false;
+        return nullptr;
 
     // Total luck: everything could be moved to the constant offset
     if (variableOffset == NULL)
@@ -1320,7 +1320,7 @@ static bool lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
     callInst->setArgOperand(1, variableOffset);
     callInst->setArgOperand(3, constOffset);
 
-    return true;
+    return callInst;
 }
 
 static llvm::Value *lComputeCommonPointer(llvm::Value *base, llvm::Type *baseType, llvm::Value *offsets,
@@ -1363,7 +1363,7 @@ static llvm::Constant *lGetOffsetScaleVec(llvm::Value *offsetScale, llvm::Type *
     shuffle or things that could be handled with hybrids of e.g. 2 4-wide
     vector loads with AVX, etc.
 */
-static bool lGSToLoadStore(llvm::CallInst *callInst) {
+static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
     struct GatherImpInfo {
         GatherImpInfo(const char *pName, const char *lmName, const char *bmName, llvm::Type *st, int a)
             : align(a), isFactored(!g->target->hasGather()) {
@@ -1513,7 +1513,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
         }
     }
     if (gatherInfo == NULL && scatterInfo == NULL)
-        return false;
+        return nullptr;
 
     SourcePos pos;
     LLVMGetSourcePosFromMetadata(callInst, &pos);
@@ -1581,11 +1581,12 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
                 llvm::ElementCount::get(llvm::dyn_cast<llvm::FixedVectorType>(callInst->getType())->getNumElements(),
                                         false),
                 llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
-            llvm::Value *shufValue = new llvm::ShuffleVectorInst(insertVec, undef2Value, zeroMask, callInst->getName());
+            llvm::Instruction *shufInst =
+                new llvm::ShuffleVectorInst(insertVec, undef2Value, zeroMask, callInst->getName());
 
-            LLVMCopyMetadata(shufValue, callInst);
-            llvm::ReplaceInstWithInst(callInst, llvm::dyn_cast<llvm::Instruction>(shufValue));
-            return true;
+            LLVMCopyMetadata(shufInst, callInst);
+            llvm::ReplaceInstWithInst(callInst, shufInst);
+            return shufInst;
         } else {
             // A scatter with everyone going to the same location is
             // undefined (if there's more than one program instance in
@@ -1601,7 +1602,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
             // case.  We'll just let a bunch of the program instances
             // do redundant writes, since this isn't important to make
             // fast anyway...
-            return false;
+            return nullptr;
         }
     } else {
         int step = gatherInfo ? gatherInfo->align : scatterInfo->align;
@@ -1611,6 +1612,7 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
             // offsetElements[0], with stride of 4 or 8 bytes (for 32 bit
             // and 64 bit gather/scatters, respectively.
             llvm::Value *ptr;
+            llvm::Instruction *newCall = nullptr;
 
             if (gatherInfo != NULL) {
                 ptr = lComputeCommonPointer(base, gatherInfo->baseType, fullOffsets, callInst);
@@ -1620,23 +1622,19 @@ static bool lGSToLoadStore(llvm::CallInst *callInst) {
 #ifdef ISPC_XE_ENABLED
                 doBlendLoad = g->target->isXeTarget() && g->opt.enableXeUnsafeMaskedLoad;
 #endif
-                llvm::Instruction *newCall =
-                    LLVMCallInst(doBlendLoad ? gatherInfo->blendMaskedFunc : gatherInfo->loadMaskedFunc, ptr, mask,
-                                 llvm::Twine(ptr->getName()) + "_masked_load");
-                LLVMCopyMetadata(newCall, callInst);
-                llvm::ReplaceInstWithInst(callInst, newCall);
-                return true;
+                newCall = LLVMCallInst(doBlendLoad ? gatherInfo->blendMaskedFunc : gatherInfo->loadMaskedFunc, ptr,
+                                       mask, llvm::Twine(ptr->getName()) + "_masked_load");
             } else {
                 Debug(pos, "Transformed scatter to unaligned vector store!");
                 ptr = lComputeCommonPointer(base, scatterInfo->baseType, fullOffsets, callInst);
                 ptr = new llvm::BitCastInst(ptr, scatterInfo->vecPtrType, "ptrcast", callInst);
-                llvm::Instruction *newCall = LLVMCallInst(scatterInfo->maskedStoreFunc, ptr, storeValue, mask, "");
-                LLVMCopyMetadata(newCall, callInst);
-                llvm::ReplaceInstWithInst(callInst, newCall);
-                return true;
+                newCall = LLVMCallInst(scatterInfo->maskedStoreFunc, ptr, storeValue, mask, "");
             }
+            LLVMCopyMetadata(newCall, callInst);
+            llvm::ReplaceInstWithInst(callInst, newCall);
+            return newCall;
         }
-        return false;
+        return nullptr;
     }
 }
 
@@ -1757,7 +1755,7 @@ static llvm::CallInst *lXeLoadInst(llvm::Value *ptr, llvm::Type *retType, llvm::
     with regular stores or removed entirely, for the cases of an 'all on'
     mask and an 'all off' mask, respectively.
 */
-static bool lImproveMaskedStore(llvm::CallInst *callInst) {
+static llvm::Value *lImproveMaskedStore(llvm::CallInst *callInst) {
     struct MSInfo {
         MSInfo(const char *name, const int a) : align(a) {
             func = m->module->getFunction(name);
@@ -1799,7 +1797,7 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
         }
     }
     if (info == NULL)
-        return false;
+        return nullptr;
 
     // Got one; grab the operands
     llvm::Value *lvalue = callInst->getArgOperand(0);
@@ -1812,7 +1810,8 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
         // may in turn lead to being able to optimize out instructions
         // that compute the rvalue...)
         callInst->eraseFromParent();
-        return true;
+        // Return some fake undef value to signal that we did transformation.
+        return llvm::UndefValue::get(LLVMTypes::Int32Type);
     } else if (maskStatus == MaskStatus::all_on) {
         // The mask is all on, so turn this into a regular store
         llvm::Type *rvalueType = rvalue->getType();
@@ -1840,12 +1839,12 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
         if (store != NULL) {
             LLVMCopyMetadata(store, callInst);
             llvm::ReplaceInstWithInst(callInst, store);
-            return true;
+            return store;
         }
 #ifdef ISPC_XE_ENABLED
     } else {
         if (g->target->isXeTarget() && GetAddressSpace(lvalue) == AddressSpace::ispc_global) {
-            // In thuis case we use masked_store which on Xe target causes scatter usage.
+            // In this case we use masked_store which on Xe target causes scatter usage.
             // Get the source position from the metadata attached to the call
             // instruction so that we can issue PerformanceWarning()s below.
             SourcePos pos;
@@ -1856,10 +1855,10 @@ static bool lImproveMaskedStore(llvm::CallInst *callInst) {
         }
 #endif
     }
-    return false;
+    return nullptr;
 }
 
-static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::iterator iter) {
+static llvm::Value *lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::iterator iter) {
     struct MLInfo {
         MLInfo(const char *name, const int a) : align(a) {
             func = m->module->getFunction(name);
@@ -1904,7 +1903,7 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
         }
     }
     if (info == NULL)
-        return false;
+        return nullptr;
 
     // Got one; grab the operands
     llvm::Value *ptr = callInst->getArgOperand(0);
@@ -1913,8 +1912,9 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
     MaskStatus maskStatus = GetMaskStatusFromValue(mask);
     if (maskStatus == MaskStatus::all_off) {
         // Zero mask - no-op, so replace the load with an undef value
-        ReplaceInstWithValueWrapper(iter, llvm::UndefValue::get(callInst->getType()));
-        return true;
+        llvm::Value *undef = llvm::UndefValue::get(callInst->getType());
+        ReplaceInstWithValueWrapper(iter, undef);
+        return undef;
     } else if (maskStatus == MaskStatus::all_on) {
         // The mask is all on, so turn this into a regular load
         llvm::Instruction *load = NULL;
@@ -1941,10 +1941,10 @@ static bool lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::itera
         if (load != NULL) {
             LLVMCopyMetadata(load, callInst);
             llvm::ReplaceInstWithInst(callInst, load);
-            return true;
+            return load;
         }
     }
-    return false;
+    return nullptr;
 }
 
 bool ImproveMemoryOpsPass::improveMemoryOps(llvm::BasicBlock &bb) {
