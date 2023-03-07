@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022, Intel Corporation
+  Copyright (c) 2022-2023, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -64,8 +64,10 @@ bool ReplaceStdlibShiftPass::replaceStdlibShiftBuiltin(llvm::BasicBlock &bb) {
     shifts[4] = m->module->getFunction("shift___vyfuni");
     shifts[5] = m->module->getFunction("shift___vyduni");
 
-    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
-        llvm::Instruction *inst = &*iter;
+    // Note: we do modify instruction list during the traversal, so the iterator
+    // is moved forward before the instruction is processed.
+    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e;) {
+        llvm::Instruction *inst = &*(iter++);
 
         if (llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst)) {
             llvm::Function *func = ci->getCalledFunction();

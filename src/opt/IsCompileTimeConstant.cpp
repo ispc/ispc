@@ -45,11 +45,14 @@ bool IsCompileTimeConstantPass::lowerCompileTimeConstant(llvm::BasicBlock &bb) {
                                m->module->getFunction("__is_compile_time_constant_varying_int32")};
 
     bool modifiedAny = false;
-restart:
-    for (llvm::BasicBlock::iterator i = bb.begin(), e = bb.end(); i != e; ++i) {
+
+    // Note: we do modify instruction list during the traversal, so the iterator
+    // is moved forward before the instruction is processed.
+    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e;) {
+        llvm::BasicBlock::iterator curIter = iter++;
         // Iterate through the instructions looking for calls to the
         // __is_compile_time_constant_*() functions
-        llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*i);
+        llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*(curIter));
         if (callInst == NULL)
             continue;
 
@@ -67,18 +70,18 @@ restart:
         // named) disableGatherScatterFlattening option and
         // disableMaskAllOnOptimizations.
         if (g->opt.disableGatherScatterFlattening || g->opt.disableMaskAllOnOptimizations) {
-            ReplaceInstWithValueWrapper(i, LLVMFalse);
+            ReplaceInstWithValueWrapper(curIter, LLVMFalse);
             modifiedAny = true;
-            goto restart;
+            continue;
         }
 
         // Is it a constant?  Bingo, turn the call's value into a constant
         // true value.
         llvm::Value *operand = callInst->getArgOperand(0);
         if (llvm::isa<llvm::Constant>(operand)) {
-            ReplaceInstWithValueWrapper(i, LLVMTrue);
+            ReplaceInstWithValueWrapper(curIter, LLVMTrue);
             modifiedAny = true;
-            goto restart;
+            continue;
         }
 
         // This pass runs multiple times during optimization.  Up until the
@@ -88,9 +91,9 @@ restart:
         // value.  The last time through, it eventually has to give up, and
         // replaces any remaining ones with 'false' constants.
         if (isLastTry) {
-            ReplaceInstWithValueWrapper(i, LLVMFalse);
+            ReplaceInstWithValueWrapper(curIter, LLVMFalse);
             modifiedAny = true;
-            goto restart;
+            continue;
         }
     }
 

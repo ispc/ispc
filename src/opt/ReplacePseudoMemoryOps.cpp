@@ -305,18 +305,17 @@ bool ReplacePseudoMemoryOpsPass::replacePseudoMemoryOps(llvm::BasicBlock &bb) {
 
     bool modifiedAny = false;
 
-restart:
-    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
-        llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*iter);
+    // Note: we do modify instruction list during the traversal, so the iterator
+    // is moved forward before the instruction is processed.
+    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e;) {
+        llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*(iter++));
         if (callInst == NULL || callInst->getCalledFunction() == NULL)
             continue;
 
         if (lReplacePseudoGS(callInst)) {
             modifiedAny = true;
-            goto restart;
         } else if (lReplacePseudoMaskedStore(callInst)) {
             modifiedAny = true;
-            goto restart;
         }
     }
 
