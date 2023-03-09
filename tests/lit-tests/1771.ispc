@@ -4,6 +4,8 @@
 // RUN: %{ispc} %s --target=sse2-i32x8 --emit-asm -o - | FileCheck %s -check-prefix=CHECKSSE2_I32X8
 // RUN: %{ispc} %s --target=sse4-i16x8 --emit-asm -o - | FileCheck %s -check-prefix=CHECKSSE4_I16X8
 // RUN: %{ispc} %s --target=sse4-i8x16 --emit-asm -o - | FileCheck %s -check-prefix=CHECKSSE4_I8X16
+// RUN: %{ispc} %s --target=sse4.1-i16x8 --emit-asm -o - | FileCheck %s -check-prefix=CHECKSSE4_I16X8
+// RUN: %{ispc} %s --target=sse4.1-i8x16 --emit-asm -o - | FileCheck %s -check-prefix=CHECKSSE4_I8X16
 
 // REQUIRES: X86_ENABLED
 
