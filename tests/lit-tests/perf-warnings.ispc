@@ -4,6 +4,12 @@
 // RUN: %{ispc} %s --nostdlib --nowrap --target=sse4-i16x8 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_SSE
 // RUN: %{ispc} %s --nostdlib --nowrap --target=sse4-i32x4 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_SSE
 // RUN: %{ispc} %s --nostdlib --nowrap --target=sse4-i32x8 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_SSE
+
+// RUN: %{ispc} %s --nostdlib --nowrap --target=sse4.1-i8x16 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_SSE
+// RUN: %{ispc} %s --nostdlib --nowrap --target=sse4.1-i16x8 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_SSE
+// RUN: %{ispc} %s --nostdlib --nowrap --target=sse4.1-i32x4 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_SSE
+// RUN: %{ispc} %s --nostdlib --nowrap --target=sse4.1-i32x8 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_SSE
+
 // RUN: %{ispc} %s --nostdlib --nowrap --target=avx1-i32x4 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_SSE
 // RUN: %{ispc} %s --nostdlib --nowrap --target=avx1-i32x8 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_SSE
 // RUN: %{ispc} %s --nostdlib --nowrap --target=avx1-i32x16 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_SSE

@@ -20,6 +20,16 @@
 // RUN: llvm-dis %t.bc -o - | FileCheck %s
 // RUN: %{ispc}  %s --emit-asm -h %t.h --target=sse4-i32x4 -o - | FileCheck %s -check-prefix=CHECK_SSE
 
+// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=sse4.1-i32x4 -o %t.bc
+// RUN: llvm-dis %t.bc -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=sse4.1-i32x8 -o %t.bc
+// RUN: llvm-dis %t.bc -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=sse4.1-i16x8 -o %t.bc
+// RUN: llvm-dis %t.bc -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=sse4.1-i8x16 -o %t.bc
+// RUN: llvm-dis %t.bc -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-asm -h %t.h --target=sse4.1-i32x4 -o - | FileCheck %s -check-prefix=CHECK_SSE
+
 // RUN: %{ispc}  %s --emit-llvm -h %t.h --target=avx1-i32x4 -o %t.bc
 // RUN: llvm-dis %t.bc -o - | FileCheck %s
 // RUN: %{ispc}  %s --emit-llvm -h %t.h --target=avx1-i32x8 -o %t.bc
