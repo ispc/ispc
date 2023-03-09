@@ -774,8 +774,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
             m_ispc_target = ISPCTarget::avx1_i32x8;
             break;
 
-            // Penryn is here because ISPC does not use SSE 4.2
         case CPU_Penryn:
+            m_ispc_target = ISPCTarget::sse41_i32x4;
+            break;
         case CPU_Nehalem:
         case CPU_Silvermont:
             m_ispc_target = ISPCTarget::sse4_i32x4;
@@ -908,6 +909,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         CPUfromISA = CPU_Core2;
         break;
     case ISPCTarget::sse4_i8x16:
+    case ISPCTarget::sse41_i8x16:
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 16;
@@ -915,9 +917,10 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 16;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 8;
-        CPUfromISA = CPU_Nehalem;
+        CPUfromISA = (m_ispc_target == ISPCTarget::sse4_i8x16) ? CPU_Nehalem : CPU_Penryn;
         break;
     case ISPCTarget::sse4_i16x8:
+    case ISPCTarget::sse41_i16x8:
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 8;
         this->m_nativeVectorAlignment = 16;
@@ -925,9 +928,10 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 8;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 16;
-        CPUfromISA = CPU_Nehalem;
+        CPUfromISA = (m_ispc_target == ISPCTarget::sse4_i16x8) ? CPU_Nehalem : CPU_Penryn;
         break;
     case ISPCTarget::sse4_i32x4:
+    case ISPCTarget::sse41_i32x4:
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 4;
         this->m_nativeVectorAlignment = 16;
@@ -935,9 +939,10 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 4;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        CPUfromISA = CPU_Nehalem;
+        CPUfromISA = (m_ispc_target == ISPCTarget::sse4_i32x4) ? CPU_Nehalem : CPU_Penryn;
         break;
     case ISPCTarget::sse4_i32x8:
+    case ISPCTarget::sse41_i32x8:
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 4;
         this->m_nativeVectorAlignment = 16;
@@ -945,7 +950,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         this->m_vectorWidth = 8;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        CPUfromISA = CPU_Nehalem;
+        CPUfromISA = (m_ispc_target == ISPCTarget::sse4_i32x8) ? CPU_Nehalem : CPU_Penryn;
         break;
     case ISPCTarget::avx1_i32x4:
         this->m_isa = Target::AVX;

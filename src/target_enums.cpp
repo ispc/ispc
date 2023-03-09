@@ -110,6 +110,14 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::sse4_i32x4;
     } else if (target == "sse4-i32x8" || target == "sse4-x2" || target == "sse4x2") {
         return ISPCTarget::sse4_i32x8;
+    } else if (target == "sse4.1-i8x16") {
+        return ISPCTarget::sse41_i8x16;
+    } else if (target == "sse4.1-i16x8") {
+        return ISPCTarget::sse41_i16x8;
+    } else if (target == "sse4.1-i32x4") {
+        return ISPCTarget::sse41_i32x4;
+    } else if (target == "sse4.1-i32x8") {
+        return ISPCTarget::sse41_i32x8;
     } else if (target == "avx1-i32x4") {
         return ISPCTarget::avx1_i32x4;
     } else if (target == "avx1-i32x8" || target == "avx" || target == "avx1") {
@@ -221,6 +229,14 @@ std::string ISPCTargetToString(ISPCTarget target) {
         return "sse2-i32x4";
     case ISPCTarget::sse2_i32x8:
         return "sse2-i32x8";
+    case ISPCTarget::sse41_i8x16:
+        return "sse4.1-i8x16";
+    case ISPCTarget::sse41_i16x8:
+        return "sse4.1-i16x8";
+    case ISPCTarget::sse41_i32x4:
+        return "sse4.1-i32x4";
+    case ISPCTarget::sse41_i32x8:
+        return "sse4.1-i32x8";
     case ISPCTarget::sse4_i8x16:
         return "sse4-i8x16";
     case ISPCTarget::sse4_i16x8:
@@ -310,6 +326,10 @@ bool ISPCTargetIsX86(ISPCTarget target) {
     switch (target) {
     case ISPCTarget::sse2_i32x4:
     case ISPCTarget::sse2_i32x8:
+    case ISPCTarget::sse41_i8x16:
+    case ISPCTarget::sse41_i16x8:
+    case ISPCTarget::sse41_i32x4:
+    case ISPCTarget::sse41_i32x8:
     case ISPCTarget::sse4_i8x16:
     case ISPCTarget::sse4_i16x8:
     case ISPCTarget::sse4_i32x4:
