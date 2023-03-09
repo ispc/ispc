@@ -163,6 +163,25 @@ const BitcodeLib *TargetLibRegistry::getISPCTargetLib(ISPCTarget target, TargetO
         target = ISPCTarget::sse4_i32x4;
     }
 
+    // sse41 is an alias for sse4
+    switch (target) {
+    case ISPCTarget::sse41_i8x16:
+        target = ISPCTarget::sse4_i8x16;
+        break;
+    case ISPCTarget::sse41_i16x8:
+        target = ISPCTarget::sse4_i16x8;
+        break;
+    case ISPCTarget::sse41_i32x4:
+        target = ISPCTarget::sse4_i32x4;
+        break;
+    case ISPCTarget::sse41_i32x8:
+        target = ISPCTarget::sse4_i32x8;
+        break;
+    default:
+        // Fall through
+        ;
+    }
+
     // There's no Mac that supports SPR, so the decision is not support these targets when targeting macOS.
     // If these targets are linked in, then we still can use them for cross compilation, for example for Linux.
     if (os == TargetOS::macos && (target == ISPCTarget::avx512spr_x4 || target == ISPCTarget::avx512spr_x8 ||
