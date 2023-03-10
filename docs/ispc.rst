@@ -805,8 +805,9 @@ neon         ARM NEON
 sse2         SSE2 (early 2000s era x86 CPUs)
 sse4         SSE4 (generally 2008-2010 Intel CPUs)
 gen9         Intel Gen9 GPU
-xehpg        Intel XeHPG GPU
 xelp         Intel XeLP GPU
+xehpg        Intel Arc GPU
+xehpc        Intel Ponte Vecchio GPU
 ============ =========================================================
 
 Consult your CPU's manual for specifics on which vector instruction set it
@@ -839,11 +840,34 @@ neon-16       n/a
 neon-32       n/a
 sse2-i32x4    sse2
 sse2-i32x8    sse2-x2
-sse4-i32x4    sse4
-sse4-i32x8    sse4-x2
-sse4-i8x16    n/a
-sse4-i16x8    n/a
+sse4.2-i32x4  sse4
+sse4.2-i32x8  sse4-x2
+sse4.2-i8x16  n/a
+sse4.2-i16x8  n/a
 ============= ===========
+
+The full list of supported targets is below.
+
+x86 targets:
+
+``sse2-i32x4``, ``sse2-i32x8``, ``sse4.1-i8x16``, ``sse4.1-i16x8``, ``sse4.1-i32x4``,
+``sse4.1-i32x8``, ``sse4.2-i8x16``, ``sse4.2-i16x8``, ``sse4.2-i32x4``, ``sse4.2-i32x8``,
+``avx1-i32x4``, ``avx1-i32x8``, ``avx1-i32x16``, ``avx1-i64x4``, ``avx2-i8x32``,
+``avx2-i16x16``, ``avx2-i32x4``, ``avx2-i32x8``, ``avx2-i32x16``, ``avx2-i64x4``,
+``avx512knl-x16``, ``avx512skx-x4``, ``avx512skx-x8``, ``avx512skx-x16``, ``avx512skx-x32``,
+``avx512skx-x64``, ``avx512spr-x4``, ``avx512spr-x8``, ``avx512spr-x16``, ``avx512spr-x32``,
+``avx512spr-x64``.
+
+Neon targets:
+
+``neon-i8x16``, ``neon-i16x8``, ``neon-i32x4``, ``neon-i32x8``.
+
+Xe targets:
+
+``gen9-x8``, ``gen9-x16``, ``xelp-x8``, ``xelp-x16``, ``xehpg-x8``, ``xehpg-x16``, ``xehpc-x16``, ``xehpc-x32``.
+
+Note that ``sse4.1`` and ``sse4.2`` targets have the same ``sse4`` target ISA and they can't be used together
+in multi-target compilation.
 
 Finally, ``--target-os`` selects the target operating system. Depending on
 your host ``ispc`` may support Windows, Linux, macOS, Android, iOS and PS4/PS5
