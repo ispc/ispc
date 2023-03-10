@@ -2018,7 +2018,7 @@ const char *Target::ISAToTargetString(ISA isa) {
     case Target::SSE2:
         return "sse2-i32x4";
     case Target::SSE4:
-        return "sse4-i32x4";
+        return "sse4.2-i32x4";
     case Target::AVX:
         return "avx1-i32x8";
     case Target::AVX2:
