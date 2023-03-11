@@ -62,3 +62,7 @@
 ./tests/pmulus-vi64.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
 ./tests/psubs-i64.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
 ./tests/psubs-vi64.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
+./tests/short-vec-6.ispc runfail    xe64        gen9-x8 unspec   Linux LLVM 15.0 clang++15.0 O0 spv *
+./tests/short-vec-6.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O0 spv *
+.\tests\idiv-uint32.ispc runfail    xe64        xelp-x8 tgllp Windows LLVM 15.0         cl O2 spv *
+.\tests\idiv-uint32.ispc runfail    xe64        xelp-x16 tgllp Windows LLVM 15.0         cl O2 spv *
