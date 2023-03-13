@@ -135,6 +135,15 @@ if (APPLE)
         )
         message(STATUS "Using macOS SDK path ${ISPC_MACOS_SDK_PATH}")
     endif()
+
+    # Workaround CMake/CPack issue https://gitlab.kitware.com/cmake/cmake/-/issues/24601
+    # When llvm toolchain is presented in PATH, llvm-strip is preferred over
+    # macOS strip. However, CPack fails to correctly call llvm-strip because it
+    # adds flags like `-u` that are macOS strip specific.
+    # It may be removed later when CMake fixes ambiguity.
+    if (${CMAKE_VERSION} VERSION_LESS "3.27.0")
+        set(CMAKE_STRIP strip)
+    endif()
 endif()
 
 set(ISPC_MACOS_ARM_TARGET OFF)
@@ -782,5 +791,9 @@ if (ISPC_PREPARE_PACKAGE)
         set(CPACK_PACKAGE_INSTALL_DIRECTORY "ISPC/${CPACK_PACKAGE_FILE_NAME}")
     endif()
     set(CPACK_PACKAGE_VENDOR "Intel Corporation")
+
+    # Strip binaries
+    set(CPACK_STRIP_FILES TRUE)
+
     include(CPack)
 endif()
