@@ -527,12 +527,22 @@ void XeGatherCoalescing::optimizePtr(llvm::Value *Ptr, PtrData &PD, llvm::Instru
         llvm::Constant *Offset = llvm::ConstantInt::get(LLVMTypes::Int64Type, MinIdx + i * ReqSize);
         llvm::PtrToIntInst *PtrToInt =
             new llvm::PtrToIntInst(Ptr, LLVMTypes::Int64Type, "vectorized_ptrtoint", InsertPoint);
+
         llvm::Instruction *Addr = llvm::BinaryOperator::CreateAdd(PtrToInt, Offset, "vectorized_address", InsertPoint);
         llvm::Type *RetType = llvm::FixedVectorType::get(LargestType, ReqSize / LargestTypeSize);
-        llvm::Instruction *LD = nullptr;
         llvm::IntToPtrInst *PtrForLd =
             new llvm::IntToPtrInst(Addr, llvm::PointerType::get(RetType, 0), "vectorized_address_ptr", InsertPoint);
-        LD = new llvm::LoadInst(RetType, PtrForLd, "vectorized_ld_exp", InsertPoint);
+        llvm::LoadInst *LD = new llvm::LoadInst(RetType, PtrForLd, "vectorized_ld_exp", InsertPoint);
+
+        //  If the Offset is zero, we generate a LD with default alignment for the target.
+        //  If the Offset is non-zero, we should re-align the LD based on its value.
+        if (Offset != nullptr && !Offset->isZeroValue()) {
+            const uint64_t offset{llvm::dyn_cast<llvm::ConstantInt>(Offset)->getZExtValue()};
+            const uint64_t alignment{
+                llvm::MinAlign(offset, std::min(llvm::PowerOf2Floor(offset), static_cast<uint64_t>(OWORD)))};
+            LD->setAlignment(llvm::Align{alignment});
+        }
+
         BlockLDs.push_back(LD);
     }
 
