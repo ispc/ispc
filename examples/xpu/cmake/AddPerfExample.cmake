@@ -4,9 +4,9 @@
 #  SPDX-License-Identifier: BSD-3-Clause
 
 function(add_perf_example)
-    set(options CM_TEST GBENCH)
-    set(oneValueArgs ISPC_SRC_NAME ISPC_TARGET_XE CM_SRC_NAME CM_OBJ_NAME TEST_NAME CM_TEST_NAME GBENCH_TEST_NAME)
-    set(multiValueArgs ISPC_XE_ADDITIONAL_ARGS HOST_SOURCES CM_HOST_SOURCES DPCPP_HOST_SOURCES GBENCH_SRC_NAME)
+    set(options GBENCH)
+    set(oneValueArgs ISPC_SRC_NAME ISPC_TARGET_XE TEST_NAME GBENCH_TEST_NAME)
+    set(multiValueArgs ISPC_XE_ADDITIONAL_ARGS HOST_SOURCES DPCPP_HOST_SOURCES GBENCH_SRC_NAME)
     cmake_parse_arguments("parsed" "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
     # Compile host code
@@ -86,30 +86,6 @@ function(add_perf_example)
                 target_link_libraries(${GBENCH_TEST_NAME} PRIVATE ispcrt::ispcrt benchmark::benchmark)
             endif()
             set_target_properties(${GBENCH_TEST_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-        endif()
-    endif()
-
-    # Compile CM kernel if present
-    if (parsed_CM_TEST AND CMC_EXECUTABLE)
-        set(parsed_TEST_NAME "${parsed_TEST_NAME}_cm")
-        set(CM_TEST_NAME "${parsed_TEST_NAME}")
-        set(CM_HOST_BINARY "host_${parsed_TEST_NAME}")
-        list(APPEND CM_BUILD_OUTPUT ${parsed_CM_OBJ_NAME})
-        add_executable(${CM_HOST_BINARY} ${parsed_CM_HOST_SOURCES} ${parsed_CM_OBJ_NAME})
-        if (WIN32)
-            message(WARNING "Xe examples are not supported on Windows")
-            set_target_properties(${CM_HOST_BINARY} PROPERTIES FOLDER "Xe_Examples")
-        else()
-            add_custom_command(
-                OUTPUT ${parsed_CM_OBJ_NAME}
-                COMMAND ${CMC_EXECUTABLE} -march=SKL -fcmocl "-DCM_PTRSIZE=64" -emit-spirv -o ${parsed_CM_OBJ_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/${parsed_CM_SRC_NAME}.cpp
-                VERBATIM
-                DEPENDS ${CMC_EXECUTABLE}
-            )
-            target_compile_definitions(${CM_HOST_BINARY} PRIVATE ISPCRT CMKERNEL)
-            target_include_directories(${CM_HOST_BINARY} PRIVATE ${COMMON_PATH})
-            target_link_libraries(${CM_HOST_BINARY} ${LEVEL_ZERO_LIB_LOADER})
-            set_target_properties(${CM_HOST_BINARY} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
         endif()
     endif()
 endfunction()
