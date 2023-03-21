@@ -46,6 +46,7 @@ parser.add_argument('-res_image', dest='res_image', type=str)
 parser.add_argument('-ref_image', dest='ref_image', type=str)
 parser.add_argument('-image_cmp_th', dest='image_cmp_th', type=float)
 parser.add_argument('-dpcpp_spv', dest='dpcpp_spv', type=str)
+parser.add_argument('-igc_simd', dest='igc_simd', type=str)
 args, unknown = parser.parse_known_args()
 
 print(f"Found additional arguments: {unknown} Will append these to cmd line.")
@@ -76,6 +77,8 @@ else:
 if args.dpcpp_spv:
   test_env["SYCL_PROGRAM_COMPILE_OPTIONS"] = "-vc-codegen"
   test_env["SYCL_USE_KERNEL_SPV"] = args.dpcpp_spv
+if args.igc_simd:
+  test_env["IGC_ForceOCLSIMDWidth"] = args.igc_simd
 
 host_name = args.exe_name
 executable = os.path.join(test_dir, host_name)

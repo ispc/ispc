@@ -1,0 +1,268 @@
+// Copyright 2023 Intel Corporation
+// SPDX-License-Identifier: BSD-3-Clause
+#pragma once
+
+// Embree-like API functions for rendering
+
+#define MAX_INSTANCE_LEVEL_COUNT 1
+#define INVALID_GEOMETRY_ID -1
+
+typedef float<3> vec3f;
+
+/* Ray structure */
+struct Ray {
+    float org_x; // x coordinate of ray origin
+    float org_y; // y coordinate of ray origin
+    float org_z; // z coordinate of ray origin
+    float tnear; // start of ray segment
+
+    float dir_x; // x coordinate of ray direction
+    float dir_y; // y coordinate of ray direction
+    float dir_z; // z coordinate of ray direction
+    float time;  // time of this ray for motion blur
+
+    float tfar;        // end of ray segment (set to hit distance)
+    unsigned int mask; // ray mask
+    unsigned int id;   // ray ID
+};
+
+/* Hit structure */
+struct Hit {
+    float Ng_x; // x coordinate of geometry normal
+    float Ng_y; // y coordinate of geometry normal
+    float Ng_z; // z coordinate of geometry normal
+
+    float u; // barycentric u coordinate of hit
+    float v; // barycentric v coordinate of hit
+
+    unsigned int primID;                           // primitive ID
+    unsigned int geomID;                           // geometry ID
+    unsigned int instID[MAX_INSTANCE_LEVEL_COUNT]; // instance ID
+};
+
+/* Combined ray/hit structure */
+struct RayHit {
+    Ray ray;
+    Hit hit;
+};
+
+// SIMD-width specific versions of the ray
+/* Ray structure */
+struct Ray16 {
+    float org_x[16]; // x coordinate of ray origin
+    float org_y[16]; // y coordinate of ray origin
+    float org_z[16]; // z coordinate of ray origin
+    float tnear[16]; // start of ray segment
+
+    float dir_x[16]; // x coordinate of ray direction
+    float dir_y[16]; // y coordinate of ray direction
+    float dir_z[16]; // z coordinate of ray direction
+    float time[16];  // time of this ray for motion blur
+
+    float tfar[16];        // end of ray segment (set to hit distance)
+    unsigned int mask[16]; // ray mask
+    unsigned int id[16];   // ray ID
+};
+
+/* Hit structure */
+struct Hit16 {
+    float Ng_x[16]; // x coordinate of geometry normal
+    float Ng_y[16]; // y coordinate of geometry normal
+    float Ng_z[16]; // z coordinate of geometry normal
+
+    float u[16]; // barycentric u coordinate of hit
+    float v[16]; // barycentric v coordinate of hit
+
+    unsigned int primID[16];                           // primitive ID
+    unsigned int geomID[16];                           // geometry ID
+    unsigned int instID[MAX_INSTANCE_LEVEL_COUNT][16]; // instance ID
+};
+
+/* Combined ray/hit structure */
+struct RayHit16 {
+    Ray16 ray;
+    Hit16 hit;
+};
+
+struct Sphere {
+    vec3f center;
+    float radius;
+};
+
+struct Plane {
+    vec3f p, n;
+};
+
+struct Scene {
+    Plane *uniform planes;
+    Sphere *uniform spheres;
+
+    unsigned int n_planes;
+    unsigned int n_spheres;
+};
+
+inline float dot(vec3f a, vec3f b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
+inline vec3f cross(vec3f a, vec3f b) {
+    vec3f c;
+    c.x = a.y * b.z - a.z * b.y;
+    c.y = a.z * b.x - a.x * b.z;
+    c.z = a.x * b.y - a.y * b.x;
+    return c;
+}
+inline vec3f normalized(vec3f a) {
+    float inv_len = rsqrt(dot(a, a));
+    return a * inv_len;
+}
+
+#ifdef AOBENCH_SYCL
+// SYCL functions used in invoke_sycl must be declared with extern "SYCL"
+// specifier and __regcall calling convention
+extern "SYCL" __regcall void intersect16(const int mask, uniform Scene *uniform scene,
+                                         uniform RayHit16 *uniform rayhit);
+
+extern "SYCL" __regcall void occluded16(const int mask, uniform Scene *uniform scene, uniform Ray16 *uniform ray);
+
+void intersectV(uniform Scene *uniform scene, varying RayHit *uniform rayhit) {
+    int mask = 0;
+    unmasked { mask = 0; }
+    mask = 1;
+    // Only 16-wide for this example
+    invoke_sycl(intersect16, mask, scene, (uniform RayHit16 * uniform) rayhit);
+}
+
+void occludedV(uniform Scene *uniform scene, varying Ray *uniform ray) {
+    int mask = 0;
+    unmasked { mask = 0; }
+    mask = 1;
+    // Only 16-wide for this example
+    invoke_sycl(occluded16, mask, scene, (uniform Ray16 * uniform) ray);
+}
+#else
+inline bool sphere_intersect(const uniform Sphere &sphere, RayHit &rayhit) {
+    const vec3f ray_org = {rayhit.ray.org_x, rayhit.ray.org_y, rayhit.ray.org_z};
+    const vec3f ray_dir = {rayhit.ray.dir_x, rayhit.ray.dir_y, rayhit.ray.dir_z};
+    vec3f rs = ray_org - sphere.center;
+
+    const float b = dot(rs, ray_dir);
+    const float c = dot(rs, rs) - sphere.radius * sphere.radius;
+    const float discrim = b * b - c;
+    if (discrim > 0.f) {
+        // Note: we will never hit the backface of the sphere
+        const float t = -b - sqrt(discrim);
+        if (t > rayhit.ray.tnear && t < rayhit.ray.tfar) {
+            vec3f hitp = ray_org + ray_dir * t;
+            vec3f n = normalized(hitp - sphere.center);
+
+            rayhit.ray.tfar = t;
+            rayhit.hit.primID = 0;
+            rayhit.hit.Ng_x = n.x;
+            rayhit.hit.Ng_y = n.y;
+            rayhit.hit.Ng_z = n.z;
+            rayhit.hit.u = 0;
+            rayhit.hit.v = 0;
+            return true;
+        }
+    }
+    return false;
+}
+
+inline bool plane_intersect(const uniform Plane &plane, RayHit &rayhit) {
+    const vec3f ray_org = {rayhit.ray.org_x, rayhit.ray.org_y, rayhit.ray.org_z};
+    const vec3f ray_dir = {rayhit.ray.dir_x, rayhit.ray.dir_y, rayhit.ray.dir_z};
+
+    const float d = -dot(plane.p, plane.n);
+    const float v = dot(ray_dir, plane.n);
+    if (abs(v) < 1e-6f) {
+        return false;
+    }
+
+    const float t = -(dot(ray_org, plane.n) + d) / v;
+    if (t > rayhit.ray.tnear && t < rayhit.ray.tfar) {
+        rayhit.ray.tfar = t;
+        rayhit.hit.primID = 0;
+        rayhit.hit.Ng_x = plane.n.x;
+        rayhit.hit.Ng_y = plane.n.y;
+        rayhit.hit.Ng_z = plane.n.z;
+        rayhit.hit.u = 0;
+        rayhit.hit.v = 0;
+        return true;
+    }
+    return false;
+}
+
+inline bool sphere_occluded(const uniform Sphere &sphere, Ray &ray) {
+    const vec3f ray_org = {ray.org_x, ray.org_y, ray.org_z};
+    const vec3f ray_dir = {ray.dir_x, ray.dir_y, ray.dir_z};
+    vec3f rs = ray_org - sphere.center;
+
+    const float b = dot(rs, ray_dir);
+    const float c = dot(rs, rs) - sphere.radius * sphere.radius;
+    const float discrim = b * b - c;
+    if (discrim > 0.f) {
+        // Note: we will never hit the backface of the sphere because
+        // of how the aobench scene is set up
+        const float t = -b - sqrt(discrim);
+        if (t > ray.tnear && t < ray.tfar) {
+            vec3f hitp = ray_org + ray_dir * t;
+            vec3f n = normalized(hitp - sphere.center);
+            ray.tfar = t;
+            return true;
+        }
+    }
+    return false;
+}
+
+inline bool plane_occluded(const uniform Plane &plane, Ray &ray) {
+    const vec3f ray_org = {ray.org_x, ray.org_y, ray.org_z};
+    const vec3f ray_dir = {ray.dir_x, ray.dir_y, ray.dir_z};
+
+    const float d = -dot(plane.p, plane.n);
+    const float v = dot(ray_dir, plane.n);
+    if (abs(v) < 1e-6f) {
+        return false;
+    }
+
+    const float t = -(dot(ray_org, plane.n) + d) / v;
+    if (t > ray.tnear && t < ray.tfar) {
+        ray.tfar = t;
+        return true;
+    }
+    return false;
+}
+
+void intersectV(uniform Scene *uniform scene, varying RayHit *uniform rayhit) {
+    // Each object in the "scene" is a different geometry within one instance,
+    // so here make up the geom id values.
+    unsigned int geom_id = 0;
+    for (uniform unsigned int i = 0; i < scene->n_planes; ++i, ++geom_id) {
+        if (plane_intersect(scene->planes[i], *rayhit)) {
+            rayhit->hit.geomID = geom_id;
+            rayhit->hit.instID[0] = 0;
+        }
+    }
+    for (uniform unsigned int i = 0; i < scene->n_spheres; ++i, ++geom_id) {
+        if (sphere_intersect(scene->spheres[i], *rayhit)) {
+            rayhit->hit.geomID = geom_id;
+            rayhit->hit.instID[0] = 0;
+        }
+    }
+}
+
+void occludedV(uniform Scene *uniform scene, varying Ray *uniform ray) {
+    // Each object in the "scene" is a different geometry within one instance,
+    // so here make up the geom id values.
+    unsigned int geom_id = 0;
+    for (uniform unsigned int i = 0; i < scene->n_planes; ++i, ++geom_id) {
+        if (plane_occluded(scene->planes[i], *ray)) {
+            ray->tfar = -1e20f;
+            return;
+        }
+    }
+    for (uniform unsigned int i = 0; i < scene->n_spheres; ++i, ++geom_id) {
+        if (sphere_occluded(scene->spheres[i], *ray)) {
+            ray->tfar = -1e20f;
+            return;
+        }
+    }
+}
+#endif
