@@ -39,23 +39,6 @@ find_program(CLANGPP_EXECUTABLE NAMES clang++
     endif()
     message(STATUS "CLANGPP_EXECUTABLE: ${CLANGPP_EXECUTABLE}")
 
-if (XE_ENABLED)
-    find_program(CMC_EXECUTABLE NAMES cmc
-        PATHS ${LLVM_TOOLS_BINARY_DIR} PATH_SUFFIXES bin NO_DEFAULT_PATH)
-    if (NOT CMC_EXECUTABLE)
-        message(STATUS "Failed to find cmc" )
-    endif()
-    message(STATUS "CMC_EXECUTABLE: ${CMC_EXECUTABLE}")
-    get_filename_component(CM_INSTALL_PATH ${CMC_EXECUTABLE} DIRECTORY)
-    set(CM_INSTALL_PATH ${CM_INSTALL_PATH}/..)
-    set(CM_INCLUDE_PATH ${CM_INSTALL_PATH}/include)
-    if (NOT EXISTS ${CM_INCLUDE_PATH} OR NOT EXISTS ${CM_INCLUDE_PATH}/cm)
-        message(STATUS "Cannot find path to CM library headers (CM_INCLUDE_PATH)")
-    endif()
-    message(STATUS "CM_INCLUDE_PATH: ${CM_INCLUDE_PATH}")
-    set(CM_LIBRARY_PATH ${CM_INSTALL_PATH}/lib)
-endif()
-
 find_program(LLVM_DIS_EXECUTABLE NAMES llvm-dis
     PATHS ${LLVM_TOOLS_BINARY_DIR} PATH_SUFFIXES bin NO_DEFAULT_PATH)
     if (NOT LLVM_DIS_EXECUTABLE)

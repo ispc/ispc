@@ -64,26 +64,16 @@ void SGEMMApp::initialize() {
 
     bool useZebinFlag = useZebin();
 
-#ifdef CMKERNEL
-    L0InitContext(m_driver, m_device, m_context, m_module, m_command_queue, "naive_sgemm_cm_mt.spv");
-#else
     L0InitContext(m_driver, m_device, m_context, m_module, m_command_queue, "xe_sgemm", useZebinFlag);
-#endif
 
     // Get device timestamp resolution - needed for time measurments
     ze_device_properties_t device_properties = {ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES};
     L0_SAFE_CALL(zeDeviceGetProperties(m_device, &device_properties));
     m_timestamp_freq = device_properties.timerResolution;
 
-#ifdef CMKERNEL
-    if (m_verbose)
-        std::cout << "Running CM kernel\n";
-    L0Create_Kernel(m_device, m_context, m_module, m_command_list, m_kernel, "sgemm_kernel");
-#else
     if (m_verbose)
         std::cout << "Running ISPC kernel\n";
     L0Create_Kernel(m_device, m_context, m_module, m_command_list, m_kernel, "SGEMM_naive_task");
-#endif
 
     L0Create_EventPool(m_device, m_context, 1, m_pool);
 

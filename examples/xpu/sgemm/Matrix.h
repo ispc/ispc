@@ -36,11 +36,7 @@ struct alignas(4096) aligned_struct_t {
 };
 
 class Matrix {
-#ifndef ISPCRT
-    float *M;
-#else
     aligned_struct_t M;
-#endif
     int _size_;
     int nrow;
     int ncol;
@@ -65,21 +61,13 @@ class Matrix {
         this->st = st;
         this->ncol = ncol;
         this->ld = ld;
-#ifndef ISPCRT
-        if (st == ColMajor)
-            _size_ = (__int64)(sizeof(M[0]) * this->ncol * this->ld);
-        else
-            _size_ = (__int64)(sizeof(M[0]) * this->nrow * this->ld);
-
-        M = (fptype *)CM_ALIGNED_MALLOC(_size_, 4096);
-#else
         if (st == ColMajor)
             _size_ = (uint64_t)(sizeof(M[0]) * this->ncol * this->ld);
         else
             _size_ = (uint64_t)(sizeof(M[0]) * this->nrow * this->ld);
 
         M.data = (float *)malloc(_size_);
-#endif
+
         this->mtxname = strdup(mtxname);
         for (int c = 0; c < this->ncol; c++) {
             for (int r = 0; r < this->nrow; r++) {
@@ -93,11 +81,7 @@ class Matrix {
 
         this->mtxname = strdup(mtxname);
         // printf("Allocating %s \n", mtxname);
-#ifndef ISPCRT
-        M = (fptype *)CM_ALIGNED_MALLOC(mat._size_, 4096);
-#else
         M.data = (float *)malloc(mat._size_);
-#endif
 
         for (int c = 0; c < this->ncol; c++)
             for (int r = 0; r < this->nrow; r++) {
@@ -148,11 +132,7 @@ class Matrix {
     int n_col() { return ncol; }
     int l_dim() { return ld; }
     ~Matrix() { /*printf("Deallocating %s \n", mtxname); */
-#ifndef ISPCRT
-        CM_ALIGNED_FREE(M);
-#else
         free(M.data);
-#endif
         free(mtxname);
     }
 };
