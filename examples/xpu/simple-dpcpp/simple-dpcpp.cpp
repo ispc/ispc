@@ -136,7 +136,7 @@ std::vector<float> DpcppApp::transformDpcpp(const std::vector<float> &in) {
 
     // Use accessor to transfer data from the device
     std::vector<float> res(count);
-    const auto out_host_access = out_buffer.get_access<cl::sycl::access::mode::read>();
+    const auto out_host_access = out_buffer.get_host_access();
     for (int i = 0; i < out_host_access.size(); i++) {
         res[i] = out_host_access[i];
     }

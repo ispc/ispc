@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Intel Corporation
+ * Copyright (c) 2020-2023, Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -48,7 +48,7 @@ template <typename T> inline T *gpu_allocator<T>::allocate(const size_t n) const
     void *ptr = nullptr;
 
     auto status =
-        zeMemAllocShared(m_context, &device_alloc_desc, &host_alloc_desc, n, alignof(T), m_device, (void **)&ptr);
+        zeMemAllocShared(m_context, &device_alloc_desc, &host_alloc_desc, n * sizeof(T), 64, m_device, (void **)&ptr);
     if (status != 0) {
         throw std::runtime_error("gpu_allocator<T>::allocate() - Level Zero error");
     }
