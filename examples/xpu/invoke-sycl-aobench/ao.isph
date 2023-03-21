@@ -1,0 +1,134 @@
+// Copyright 2023 Intel Corporation
+// SPDX-License-Identifier: BSD-3-Clause
+
+// This example is based on Syoyo Fujita's aobench:
+// https://github.com/syoyo/aobench also see the Google code page:
+// https://code.google.com/archive/p/aobench/
+
+#include "aobench_stub.ih"
+
+#define NUM_AO_SAMPLES 2
+
+struct Parameters {
+    int width;
+    int height;
+    int y_offset;
+    int n_samples;
+    Scene *uniform scene;
+    int *uniform rng_seeds;
+    float *uniform image;
+};
+
+inline void ortho_basis(vec3f basis[3], const vec3f n) {
+    basis[2] = n;
+    basis[1] = 0.f;
+
+    if (n.x < 0.6f && n.x > -0.6f) {
+        basis[1].x = 1.f;
+    } else if (n.y < 0.6f && n.y > -0.6f) {
+        basis[1].y = 1.f;
+    } else if (n.z < 0.6f && n.z > -0.6f) {
+        basis[1].z = 1.f;
+    } else {
+        basis[1].x = 1.f;
+    }
+    basis[0] = normalized(cross(basis[1], basis[2]));
+    basis[1] = normalized(cross(basis[2], basis[0]));
+}
+
+float ambient_occlusion(const RayHit &rayhit, Scene *uniform scene, RNGState &rng_state) {
+    const vec3f ray_org = {rayhit.ray.org_x, rayhit.ray.org_y, rayhit.ray.org_z};
+    const vec3f ray_dir = {rayhit.ray.dir_x, rayhit.ray.dir_y, rayhit.ray.dir_z};
+    const vec3f hitp = ray_org + rayhit.ray.tfar * ray_dir;
+    const vec3f n = {rayhit.hit.Ng_x, rayhit.hit.Ng_y, rayhit.hit.Ng_z};
+    vec3f basis[3];
+    ortho_basis(basis, n);
+    float occlusion = 0.f;
+
+    for (int j = 0; j < NUM_AO_SAMPLES; ++j) {
+        for (int i = 0; i < NUM_AO_SAMPLES; ++i) {
+            const float theta = sqrt(frandom(&rng_state));
+            const float phi = 2.0f * PI * frandom(&rng_state);
+
+            const float x = cos(phi) * theta;
+            const float y = sin(phi) * theta;
+            const float z = sqrt(1.f - theta * theta);
+
+            Ray ao_ray;
+            // Transform from object space to world space
+            ao_ray.org_x = hitp.x;
+            ao_ray.org_y = hitp.y;
+            ao_ray.org_z = hitp.z;
+            ao_ray.dir_x = x * basis[0].x + y * basis[1].x + z * basis[2].x;
+            ao_ray.dir_y = x * basis[0].y + y * basis[1].y + z * basis[2].y;
+            ao_ray.dir_z = x * basis[0].z + y * basis[1].z + z * basis[2].z;
+
+            ao_ray.time = 0;
+            ao_ray.tnear = 0.001f;
+            ao_ray.tfar = 1e20f;
+
+            occludedV(scene, &ao_ray);
+            if (ao_ray.tfar < 0.f) {
+                occlusion += 1.f;
+            }
+        }
+    }
+    occlusion = (NUM_AO_SAMPLES * NUM_AO_SAMPLES - occlusion) / (NUM_AO_SAMPLES * NUM_AO_SAMPLES);
+    return occlusion;
+}
+
+void compute_tile(Parameters *uniform p, const uniform int tile_x, const uniform int tile_y) {
+    const uniform float inv_samples = 1.f / p->n_samples;
+    // Now SIMD_WIDTH = programCount so we don't need the foreach
+    const int ix = tile_x * programCount + programIndex;
+    if (ix >= p->width) {
+        return;
+    }
+
+    RNGState rng_state;
+    // Seed RNG for this pixel
+    seed_rng(&rng_state, p->rng_seeds[tile_y * p->width + ix]);
+
+    p->image[tile_y * p->width + ix] = 0;
+
+    for (uniform int v = 0; v < p->n_samples; ++v) {
+        for (uniform int u = 0; u < p->n_samples; ++u) {
+            const float px = (ix + (u * inv_samples) - p->width / 2.f) / (p->width / 2.f);
+            const float py = -(tile_y + (v * inv_samples) - p->height / 2.f) / (p->height / 2.f);
+
+            RayHit rayhit;
+            rayhit.ray.org_x = 0.f;
+            rayhit.ray.org_y = 0.f;
+            rayhit.ray.org_z = 0.f;
+
+            vec3f dir = {px, py, -1.f};
+            dir = normalized(dir);
+            rayhit.ray.dir_x = dir.x;
+            rayhit.ray.dir_y = dir.y;
+            rayhit.ray.dir_z = dir.z;
+
+            rayhit.ray.time = 0;
+            rayhit.ray.tnear = 0;
+            rayhit.ray.tfar = 1e20f;
+
+            rayhit.hit.primID = INVALID_GEOMETRY_ID;
+            rayhit.hit.geomID = INVALID_GEOMETRY_ID;
+            rayhit.hit.instID[0] = INVALID_GEOMETRY_ID;
+
+            intersectV(p->scene, &rayhit);
+            if (rayhit.hit.primID != INVALID_GEOMETRY_ID) {
+                const float col = ambient_occlusion(rayhit, p->scene, rng_state);
+                // It's just a grayscale image
+                p->image[tile_y * p->width + ix] += col;
+            }
+        }
+    }
+    p->image[tile_y * p->width + ix] *= inv_samples * inv_samples;
+}
+
+task void compute_ao_tile(void *uniform _p) {
+    Parameters *uniform p = (Parameters * uniform) _p;
+    const uniform int tile_x = taskIndex0;
+    const uniform int tile_y = taskIndex1 + p->y_offset;
+    compute_tile(p, tile_x, tile_y);
+}

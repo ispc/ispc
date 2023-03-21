@@ -225,3 +225,28 @@ cmake -DCMAKE_C_COMPILER=<dpcpp_path>/bin/clang -DCMAKE_CXX_COMPILER=<dpcpp_path
 
 Running this example may require setting the LD_LIBRARY_PATH environmental variable to include
 oneAPI DPC++ Compiler libraries.
+
+invoke-sycl-aobench
+===========================================
+This is simple aobench-like example demonstrating call of SYCL from ISPC using binary and vISA linking.
+It has host part written in ISPC Runtime and uses `invoke_sycl` in ISPC code to call SYCL function.
+
+The CMake provided will build both an ISPC-only version (`invoke_sycl_aobench_ispc`)
+and a ISPC/SYCL version (`invoke_sycl_aobench_ispc_sycl_bin` for binary linking and
+`invoke_sycl_aobench_ispc_sycl_visa` for vISA linking)
+
+It is required to use include interop.cmake file to your CMakeLists.txt if you
+want to use ISPC/SYCL interoperability feature:
+
+include(${ISPCRT_DIR}/interop.cmake)
+
+It requires oneAPI DPC++ Compiler.
+
+To enable this example please configure the build of ISPC examples using the following
+command line:
+
+cmake -DCMAKE_C_COMPILER=<dpcpp_path>/bin/clang -DCMAKE_CXX_COMPILER=<dpcpp_path>/bin/clang++ \
+      -DISPC_INCLUDE_DPCPP_EXAMPLES=ON <examples source dir>
+
+Running this example may require setting the LD_LIBRARY_PATH environmental variable to include
+oneAPI DPC++ Compiler libraries.

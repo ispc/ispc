@@ -10,7 +10,7 @@ set(TEST_RUNNER "${CMAKE_CURRENT_BINARY_DIR}/runner.py")
 
 function(test_add)
     set(options TEST_IS_ISPC TEST_IS_ISPCRT_RUNTIME TEST_IS_DPCPP)
-    set(oneValueArgs NAME RES_IMAGE REF_IMAGE IMAGE_CMP_TH DPCPP_SPV)
+    set(oneValueArgs NAME RES_IMAGE REF_IMAGE IMAGE_CMP_TH DPCPP_SPV IGC_SIMD)
     cmake_parse_arguments("PARSED_ARGS" "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
     set(SUPPORTED 1)
@@ -36,6 +36,9 @@ function(test_add)
     if (PARSED_ARGS_DPCPP_SPV)
         set (DPCPP_SPV "-dpcpp_spv" ${PARSED_ARGS_DPCPP_SPV})
     endif()
+    if (PARSED_ARGS_IGC_SIMD)
+        set (IGC_SIMD "-igc_simd" ${PARSED_ARGS_IGC_SIMD})
+    endif()
 
 
     if (WIN32)
@@ -45,7 +48,7 @@ function(test_add)
     endif()
     if (SUPPORTED EQUAL 1)
         add_test(NAME ${result_test_name}
-            COMMAND ${Python3_EXECUTABLE} ${TEST_RUNNER} ${REF_IMAGE_OPT} ${RES_IMAGE_OPT} ${IMAGE_CMP_TH_OPT} ${DPCPP_SPV}
+            COMMAND ${Python3_EXECUTABLE} ${TEST_RUNNER} ${REF_IMAGE_OPT} ${RES_IMAGE_OPT} ${IMAGE_CMP_TH_OPT} ${DPCPP_SPV} ${IGC_SIMD}
             ${TEST_REL_PATH} ${PARSED_ARGS_UNPARSED_ARGUMENTS}
         )
     endif()
