@@ -250,3 +250,33 @@ cmake -DCMAKE_C_COMPILER=<dpcpp_path>/bin/clang -DCMAKE_CXX_COMPILER=<dpcpp_path
 
 Running this example may require setting the LD_LIBRARY_PATH environmental variable to include
 oneAPI DPC++ Compiler libraries.
+
+ISPC/SYCL interop tests are target Gen12+ HW.
+
+invoke-simd-vadd
+======================================
+This is simple vector_add example. It has host part written in SYCL and uses
+`invoke_simd` to call ISPC function with simple SIMD CF for vector addition/substraction.
+
+It is required to use include interop.cmake file to your CMakeLists.txt if you
+want to use ISPC/SYCL interoperability feature:
+
+include(${ISPCRT_DIR}/interop.cmake)
+
+It requires oneAPI DPC++ Compiler.
+
+To enable this example please configure the build of ISPC examples using the following
+command line:
+
+cmake -DCMAKE_C_COMPILER=<dpcpp_path>/bin/clang -DCMAKE_CXX_COMPILER=<dpcpp_path>/bin/clang++ \
+      -DISPC_INCLUDE_DPCPP_EXAMPLES=ON <examples source dir>
+
+Running the example requires setting of two environemnt variables:
+
+IGC_VCSaveStackCallLinkage=1
+IGC_ForceOCLSIMDWidth=<ISPC SIMD width> (which is set to 16 in CMakeLists.txt)
+
+Running this example may also require setting the LD_LIBRARY_PATH environmental variable to include
+oneAPI DPC++ Compiler libraries.
+
+ISPC/SYCL interop tests are target Gen12+ HW.
