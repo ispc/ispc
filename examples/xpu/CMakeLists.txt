@@ -75,6 +75,7 @@ if (NOT ISPC_BUILD AND ISPC_INCLUDE_DPCPP_EXAMPLES)
     add_subdirectory(vadd-esimd)
     add_subdirectory(callback-esimd)
     add_subdirectory(invoke-sycl-aobench)
+    add_subdirectory(invoke-simd-vadd)
 endif()
 
 include(TestLists.txt)
