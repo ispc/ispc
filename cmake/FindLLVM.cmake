@@ -33,20 +33,24 @@
 #
 # ispc FindLLVM.cmake
 #
-find_package(LLVM REQUIRED CONFIG)
-    if (NOT LLVM_FOUND )
-        message(FATAL_ERROR "LLVM package can't be found. \
-                Set CMAKE_PREFIX_PATH variable to LLVM's installation prefix.")
-    endif()
-    set(LLVM_VERSION "LLVM_${LLVM_VERSION_MAJOR}_${LLVM_VERSION_MINOR}")
-    message(STATUS "Found LLVM ${LLVM_VERSION}")
-
-find_program(LLVM_CONFIG_EXECUTABLE NAMES llvm-config
-    PATHS ${LLVM_TOOLS_BINARY_DIR} PATH_SUFFIXES bin NO_DEFAULT_PATH)
+if (NOT LLVM_CONFIG_EXECUTABLE)
+    find_program(LLVM_CONFIG_EXECUTABLE NAMES llvm-config)
     if (NOT LLVM_CONFIG_EXECUTABLE)
         message(FATAL_ERROR "Failed to find llvm-config")
     endif()
-    message(STATUS "LLVM_CONFIG_EXECUTABLE: ${LLVM_CONFIG_EXECUTABLE}")
+endif()
+message(STATUS "LLVM_CONFIG_EXECUTABLE: ${LLVM_CONFIG_EXECUTABLE}")
+# It is better to use cmake_path here if we are OK to raise CMake version up to 3.20.
+# cmake_path(GET LLVM_CONFIG_EXECUTABLE PARENT_PATH LLVM_TOOLS_BINARY_DIR)
+get_filename_component(LLVM_TOOLS_BINARY_DIR "${LLVM_CONFIG_EXECUTABLE}" DIRECTORY)
+message(STATUS "LLVM_TOOLS_BINARY_DIR: ${LLVM_TOOLS_BINARY_DIR}")
+
+if (NOT LLVM_DIR)
+    # It is better to use cmake_path here if we are OK to raise CMake version up to 3.20.
+    # cmake_path(SET LLVM_DIR NORMALIZE "${LLVM_TOOLS_BINARY_DIR}/../lib/cmake/llvm")
+    set(LLVM_DIR "${LLVM_TOOLS_BINARY_DIR}/../lib/cmake/llvm")
+endif()
+message(STATUS "LLVM_DIR is ${LLVM_DIR}")
 
 find_program(CLANG_EXECUTABLE NAMES clang
     PATHS ${LLVM_TOOLS_BINARY_DIR} PATH_SUFFIXES bin NO_DEFAULT_PATH)
@@ -148,6 +152,9 @@ if (NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
         endforeach()
     endif()
 endif()
+
+run_llvm_config(LLVM_LIBRARY_DIRS "--libdir")
+run_llvm_config(LLVM_INCLUDE_DIRS "--includedir")
 
 function(get_llvm_libfiles resultList)
     run_llvm_config(LLVM_LIBS "--libfiles" ${ARGN})

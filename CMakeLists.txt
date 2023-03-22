@@ -424,7 +424,6 @@ if (WIN32)
 endif()
 
 # Build definitions
-target_compile_definitions(${PROJECT_NAME} PRIVATE ${LLVM_VERSION})
 string(TIMESTAMP BUILD_DATE "%Y%m%d")
 target_compile_definitions(${PROJECT_NAME} PRIVATE BUILD_DATE=\"${BUILD_DATE}\"
                                                    BUILD_VERSION=\"${GIT_COMMIT_HASH}\")
