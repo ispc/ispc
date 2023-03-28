@@ -338,7 +338,7 @@ int Module::CompileFile() {
 
     if (g->NoOmitFramePointer)
         for (llvm::Function &f : *module)
-            f.addFnAttr("no-frame-pointer-elim", "true");
+            f.addFnAttr("frame-pointer", "all");
     for (llvm::Function &f : *module)
         g->target->markFuncWithTargetAttr(&f);
     ast->GenerateIR();
