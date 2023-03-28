@@ -283,7 +283,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
     ctx->EmitVariableDebugInfo(maskSymbol);
 
     if (g->NoOmitFramePointer)
-        function->addFnAttr("no-frame-pointer-elim", "true");
+        function->addFnAttr("frame-pointer", "all");
     if (g->target->getArch() == Arch::wasm32)
         function->addFnAttr("target-features", "+simd128");
 
