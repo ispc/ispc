@@ -326,7 +326,14 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 #if ISPC_LLVM_VERSION < ISPC_LLVM_15_0
         optPM.add(llvm::createLoopUnswitchPass(false));
 #else
-        optPM.add(llvm::createSimpleLoopUnswitchLegacyPass(false));
+        if (!g->target->isXeTarget()) {
+            // SimpleLoopUnswitch is not a full equivalent of LoopUnswitch pass.
+            // It produces much more basic blocks than LoopUnswitch which is
+            // not efficient for Xe targets. Moreover when this pass is used
+            // some integer division tests are failing on TGLLP Windows.
+            // Disable this pass on Xe until the problem is fixed on BE side.
+            optPM.add(llvm::createSimpleLoopUnswitchLegacyPass(false));
+        }
 #endif
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(CreateInstructionSimplifyPass());
