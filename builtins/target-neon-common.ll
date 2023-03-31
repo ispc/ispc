@@ -2,7 +2,7 @@
 ;; target-neon-common.ll
 ;;
 ;;  Copyright(c) 2013-2015 Google, Inc.
-;;  Copyright(c) 2019-2020 Intel
+;;  Copyright(c) 2019-2023 Intel
 ;;
 ;;  All rights reserved.
 ;;
