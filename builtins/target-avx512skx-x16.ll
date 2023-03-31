@@ -1,5 +1,4 @@
 ;;  Copyright (c) 2016-2023, Intel Corporation
-;;  All rights reserved.
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 

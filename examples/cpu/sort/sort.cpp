@@ -1,7 +1,6 @@
 /*
   Copyright (c) 2013, Durham University
   Copyright (c) 2023, Intel Corporation
-  All rights reserved.
 
   SPDX-License-Identifier: BSD-3-Clause
 */
