@@ -62,7 +62,7 @@ class Declarator;
  */
 class DeclSpecs {
   public:
-    DeclSpecs(const Type *t = NULL, StorageClass sc = SC_NONE, int tq = TYPEQUAL_NONE);
+    DeclSpecs(const Type *t = nullptr, StorageClass sc = SC_NONE, int tq = TYPEQUAL_NONE);
 
     void Print() const;
 
@@ -124,7 +124,7 @@ class Declarator {
         int). */
     const DeclaratorKind kind;
 
-    /** Child pointer if needed; this can only be non-NULL if the
+    /** Child pointer if needed; this can only be non-nullptr if the
         declarator's kind isn't DK_BASE. */
     Declarator *child;
 
@@ -140,10 +140,10 @@ class Declarator {
     /** Name associated with the declarator. */
     std::string name;
 
-    /** Initialization expression for the variable.  May be NULL. */
+    /** Initialization expression for the variable.  May be nullptr. */
     Expr *initExpr;
 
-    /** Type of the declarator.  This is NULL until InitFromDeclSpecs() or
+    /** Type of the declarator.  This is nullptr until InitFromDeclSpecs() or
         InitFromType() is called. */
     const Type *type;
 
@@ -157,7 +157,7 @@ class Declarator {
  */
 class Declaration {
   public:
-    Declaration(DeclSpecs *ds, std::vector<Declarator *> *dlist = NULL);
+    Declaration(DeclSpecs *ds, std::vector<Declarator *> *dlist = nullptr);
     Declaration(DeclSpecs *ds, Declarator *d);
 
     void Print() const;

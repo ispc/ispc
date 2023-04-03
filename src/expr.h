@@ -37,7 +37,7 @@ class Expr : public ASTNode {
         this function should emit IR that computes the expression's lvalue
         and returns the corresponding llvm::Value.  Expressions that can't
         provide an lvalue should leave this unimplemented; the default
-        implementation returns NULL.  */
+        implementation returns nullptr.  */
     virtual llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
 
     /** Returns the Type of the expression. */
@@ -57,7 +57,7 @@ class Expr : public ASTNode {
         corresponding llvm::Constant value and a flag denoting if it's
         valid for multi-target compilation for use as an initializer of
         a global variable. Otherwise it should return the llvm::constant
-        value as NULL. */
+        value as nullptr. */
     virtual std::pair<llvm::Constant *, bool> GetStorageConstant(const Type *type) const;
 
     /** If this is a constant expression that can be converted to a
@@ -65,18 +65,18 @@ class Expr : public ASTNode {
         corresponding llvm::Constant value and a flag denoting if it's
         valid for multi-target compilation for use as an initializer of
         a global variable. Otherwise it should return the llvm::constant
-        value as NULL. */
+        value as nullptr. */
     virtual std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
 
     /** This method should perform early optimizations of the expression
         (constant folding, etc.) and return a pointer to the resulting
-        expression.  If an error is encountered during optimization, NULL
+        expression.  If an error is encountered during optimization, nullptr
         should be returned. */
     virtual Expr *Optimize() = 0;
 
     /** This method should perform type checking of the expression and
         return a pointer to the resulting expression.  If an error is
-        encountered, NULL should be returned. */
+        encountered, nullptr should be returned. */
     virtual Expr *TypeCheck() = 0;
 
     virtual Expr *Instantiate(TemplateInstantiation &templInst) const = 0;
@@ -255,7 +255,7 @@ class ExprList : public Expr {
  */
 class FunctionCallExpr : public Expr {
   public:
-    FunctionCallExpr(Expr *func, ExprList *args, SourcePos p, bool isLaunch = false, Expr *launchCountExpr[3] = NULL,
+    FunctionCallExpr(Expr *func, ExprList *args, SourcePos p, bool isLaunch = false, Expr *launchCountExpr[3] = nullptr,
                      bool isInvoke = false);
 
     static inline bool classof(FunctionCallExpr const *) { return true; }
@@ -658,8 +658,8 @@ class SizeOfExpr : public Expr {
     SizeOfExpr *Instantiate(TemplateInstantiation &templInst) const;
     std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
 
-    /* One of expr or type should be non-NULL (but not both of them).  The
-       SizeOfExpr returns the size of whichever one of them isn't NULL. */
+    /* One of expr or type should be non-nullptr (but not both of them).  The
+       SizeOfExpr returns the size of whichever one of them isn't nullptr. */
     Expr *expr;
     const Type *type;
 };
@@ -734,18 +734,18 @@ class FunctionSymbolExpr : public Expr {
     /** Given the types of the function arguments, in the presence of
         function overloading, this method resolves which actual function
         the arguments match best.  If the argCouldBeNULL parameter is
-        non-NULL, each element indicates whether the corresponding argument
-        is the number zero, indicating that it could be a NULL pointer, and
-        if argIsConstant is non-NULL, each element indicates whether the
+        non-nullptr, each element indicates whether the corresponding argument
+        is the number zero, indicating that it could be a nullptr pointer, and
+        if argIsConstant is non-nullptr, each element indicates whether the
         corresponding argument is a compile-time constant value.  Both of
-        these parameters may be NULL (for cases where overload resolution
+        these parameters may be nullptr (for cases where overload resolution
         is being done just given type information without the parameter
         argument expressions being available.  This function returns true
         on success.
      */
     bool ResolveOverloads(SourcePos argPos, const std::vector<const Type *> &argTypes,
-                          const std::vector<bool> *argCouldBeNULL = NULL,
-                          const std::vector<bool> *argIsConstant = NULL);
+                          const std::vector<bool> *argCouldBeNULL = nullptr,
+                          const std::vector<bool> *argIsConstant = nullptr);
 
   private:
     std::vector<Symbol *> getCandidateFunctions(int argCount) const;
@@ -789,7 +789,7 @@ class SyncExpr : public Expr {
     SyncExpr *Instantiate(TemplateInstantiation &templInst) const;
 };
 
-/** @brief An expression that represents a NULL pointer. */
+/** @brief An expression that represents a nullptr pointer. */
 class NullPointerExpr : public Expr {
   public:
     NullPointerExpr(SourcePos p) : Expr(p, NullPointerExprID) {}
@@ -828,7 +828,7 @@ class NewExpr : public Expr {
     /** Type of object to allocate storage for. */
     const Type *allocType;
     /** Expression giving the number of elements to allocate, when the
-        "new Foo[expr]" form is used.  This may be NULL, in which case a
+        "new Foo[expr]" form is used.  This may be nullptr, in which case a
         single element of the given type will be allocated. */
     Expr *countExpr;
     /** Optional initializer expression used to initialize the allocated
@@ -849,12 +849,12 @@ class NewExpr : public Expr {
     are provided, then an error message is issued if the type conversion
     isn't possible.
  */
-bool CanConvertTypes(const Type *fromType, const Type *toType, const char *errorMsgBase = NULL,
+bool CanConvertTypes(const Type *fromType, const Type *toType, const char *errorMsgBase = nullptr,
                      SourcePos pos = SourcePos());
 
 /** This function attempts to convert the given expression to the given
     type, returning a pointer to a new expression that is the result.  If
-    the required type conversion is illegal, it returns NULL and prints an
+    the required type conversion is illegal, it returns nullptr and prints an
     error message using the provided string to indicate the context for
     which type conversion was being applied (e.g. "function call
     parameter").

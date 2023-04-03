@@ -92,12 +92,12 @@ class ASTNode : public Traceable {
         optimizations on the node (e.g. constant folding).  This method
         will be called after the node's children have already been
         optimized, and the caller will store the returned ASTNode * in
-        place of the original node.  This method should return NULL if an
+        place of the original node.  This method should return nullptr if an
         error is encountered during optimization. */
     virtual ASTNode *Optimize() = 0;
 
     /** Type checking should be performed by the node when this method is
-        called.  In the event of an error, a NULL value may be returned.
+        called.  In the event of an error, a nullptr value may be returned.
         As with ASTNode::Optimize(), the caller should store the returned
         pointer in place of the original ASTNode *. */
     virtual ASTNode *TypeCheck() = 0;
@@ -211,7 +211,7 @@ typedef bool (*ASTPreCallBackFunc)(ASTNode *node, void *data);
 typedef ASTNode *(*ASTPostCallBackFunc)(ASTNode *node, void *data);
 
 /** Walk (some portion of) an AST, starting from the given root node.  At
-    each node, if preFunc is non-NULL, call it, passing the given void
+    each node, if preFunc is non-nullptr, call it, passing the given void
     *data pointer; if the call to preFunc function returns false, then the
     children of the node aren't visited.  This function then makes
     recursive calls to WalkAST() to process the node's children; after

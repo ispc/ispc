@@ -94,7 +94,7 @@ bool MangleOpenCLBuiltins::mangleOpenCLBuiltins(llvm::BasicBlock &bb) {
         llvm::Instruction *inst = &*I;
         if (llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst)) {
             llvm::Function *func = ci->getCalledFunction();
-            if (func == NULL)
+            if (func == nullptr)
                 continue;
             if (func->getName().startswith("__spirv_")) {
                 std::string mangledName;

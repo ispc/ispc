@@ -111,7 +111,7 @@ enum class AddressSpace {
     lexing code).  Both lines and columns are counted starting from one.
  */
 struct SourcePos {
-    SourcePos(const char *n = NULL, int fl = 0, int fc = 0, int ll = 0, int lc = 0);
+    SourcePos(const char *n = nullptr, int fl = 0, int fc = 0, int ll = 0, int lc = 0);
 
     const char *name;
     int first_line;

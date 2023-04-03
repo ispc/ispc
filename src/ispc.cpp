@@ -644,8 +644,8 @@ class AllCPUs {
 };
 
 Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, bool printTarget)
-    : m_target(NULL), m_targetMachine(NULL), m_dataLayout(NULL), m_valid(false), m_ispc_target(ispc_target),
-      m_isa(SSE2), m_arch(Arch::none), m_is32Bit(true), m_cpu(""), m_attributes(""), m_tf_attributes(NULL),
+    : m_target(nullptr), m_targetMachine(nullptr), m_dataLayout(nullptr), m_valid(false), m_ispc_target(ispc_target),
+      m_isa(SSE2), m_arch(Arch::none), m_is32Bit(true), m_cpu(""), m_attributes(""), m_tf_attributes(nullptr),
       m_nativeVectorWidth(-1), m_nativeVectorAlignment(-1), m_dataTypeWidth(-1), m_vectorWidth(-1), m_generatePIC(pic),
       m_maskingIsFree(false), m_maskBitCount(-1), m_hasHalfConverts(false), m_hasHalfFullSupport(false),
       m_hasRand(false), m_hasGather(false), m_hasScatter(false), m_hasTranscendentals(false), m_hasTrigonometry(false),
@@ -805,7 +805,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         }
     }
     // For Xe target we do not need to create target/targetMachine
-    if (this->m_target == NULL && !ISPCTargetIsGen(m_ispc_target)) {
+    if (this->m_target == nullptr && !ISPCTargetIsGen(m_ispc_target)) {
         std::string error_message;
         error_message = "Invalid architecture \"";
         error_message += ArchToString(arch);
@@ -1632,7 +1632,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         // For Xe target we do not need to create target/targetMachine
         if (!isXeTarget()) {
             m_targetMachine = m_target->createTargetMachine(triple, m_cpu, featuresString, options, relocModel);
-            Assert(m_targetMachine != NULL);
+            Assert(m_targetMachine != nullptr);
 
             // Set Optimization level for llvm codegen based on Optimization level
             // requested by user via ISPC Optimization Flag. Mapping is :
@@ -1660,7 +1660,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, boo
         // Initialize TargetData/DataLayout in 3 steps.
         // 1. Get default data layout first
         std::string dl_string;
-        if (m_targetMachine != NULL)
+        if (m_targetMachine != nullptr)
             dl_string = m_targetMachine->createDataLayout().getStringRepresentation();
         if (isXeTarget())
             dl_string = m_arch == Arch::xe64 ? "e-p:64:64-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:"
@@ -2020,13 +2020,13 @@ llvm::Value *Target::SizeOf(llvm::Type *type, llvm::BasicBlock *insertAtEnd) {
 
 llvm::Value *Target::StructOffset(llvm::Type *type, int element, llvm::BasicBlock *insertAtEnd) {
     llvm::StructType *structType = llvm::dyn_cast<llvm::StructType>(type);
-    if (structType == NULL || structType->isSized() == false) {
+    if (structType == nullptr || structType->isSized() == false) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
 
     const llvm::StructLayout *sl = getDataLayout()->getStructLayout(structType);
-    Assert(sl != NULL);
+    Assert(sl != nullptr);
 
     uint64_t offset = sl->getElementOffset(element);
     if (m_is32Bit || g->opt.force32BitAddressing)
@@ -2094,7 +2094,7 @@ void Target::markFuncWithCallingConv(llvm::Function *func) {
                     argIter->addAttr(llvm::Attribute::InReg);
                     continue;
                 }
-                if (((llvm::dyn_cast<llvm::VectorType>(argType) != NULL) || argType->isFloatTy() ||
+                if (((llvm::dyn_cast<llvm::VectorType>(argType) != nullptr) || argType->isFloatTy() ||
                      argType->isDoubleTy())) {
                     numArgsVecInReg++;
                     argIter->addAttr(llvm::Attribute::InReg);
@@ -2226,7 +2226,7 @@ Globals::Globals() {
     enableTimeTrace = false;
     // set default granularity to 500.
     timeTraceGranularity = 500;
-    target = NULL;
+    target = nullptr;
     ctx = new llvm::LLVMContext;
 
 // Opaque pointers mode is supported starting from LLVM 14,
@@ -2254,7 +2254,7 @@ Globals::Globals() {
 #ifdef ISPC_HOST_IS_WINDOWS
     _getcwd(currentDirectory, sizeof(currentDirectory));
 #else
-    if (getcwd(currentDirectory, sizeof(currentDirectory)) == NULL)
+    if (getcwd(currentDirectory, sizeof(currentDirectory)) == nullptr)
         FATAL("Current directory path is too long!");
 #endif
     forceAlignment = -1;
@@ -2273,8 +2273,8 @@ Globals::Globals() {
 
 SourcePos::SourcePos(const char *n, int fl, int fc, int ll, int lc) {
     name = n;
-    if (name == NULL) {
-        if (m != NULL)
+    if (name == nullptr) {
+        if (m != nullptr)
             name = m->module->getModuleIdentifier().c_str();
         else
             name = "(unknown)";

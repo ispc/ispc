@@ -40,7 +40,7 @@ class Symbol {
   public:
     /** The Symbol constructor takes the name of the symbol, its
         position in a source file, and its type (if known). */
-    Symbol(const std::string &name, SourcePos pos, const Type *t = NULL, StorageClass sc = SC_NONE);
+    Symbol(const std::string &name, SourcePos pos, const Type *t = nullptr, StorageClass sc = SC_NONE);
 
     SourcePos pos;            /*!< Source file position where the symbol was defined */
     std::string name;         /*!< Symbol's name */
@@ -61,9 +61,9 @@ class Symbol {
                                     declaration around the symbol has been parsed.  */
     ConstExpr *constValue;     /*!< For symbols with const-qualified types, this may store
                                     the symbol's compile-time constant value.  This value may
-                                    validly be NULL for a const-qualified type, however; for
+                                    validly be nullptr for a const-qualified type, however; for
                                     example, the ConstExpr class can't currently represent
-                                    struct types.  For cases like these, ConstExpr is NULL,
+                                    struct types.  For cases like these, ConstExpr is nullptr,
                                     though for all const symbols, the value pointed to by the
                                     storageInfo pointer member will be its constant value.  (This
                                     messiness is due to needing an ispc ConstExpr for the early
@@ -148,7 +148,7 @@ class SymbolTable {
         returning the first match found.
 
         @param  name The name of the variable to be searched for.
-        @return A pointer to the Symbol, if a match is found.  NULL if no
+        @return A pointer to the Symbol, if a match is found.  nullptr if no
         Symbol with the given name is in the symbol table. */
     Symbol *LookupVariable(const char *name);
 
@@ -166,7 +166,7 @@ class SymbolTable {
         be returned in the provided vector and it's up the the caller to
         resolve which one (if any) to use.  Returns true if any matches
         were found. */
-    bool LookupFunction(const char *name, std::vector<Symbol *> *matches = NULL);
+    bool LookupFunction(const char *name, std::vector<Symbol *> *matches = nullptr);
 
     /** Adds the given function symbol for LLVM intrinsic to the symbol table.
         @param symbol The function symbol to be added.
@@ -178,13 +178,13 @@ class SymbolTable {
 
     /** Looks for a LLVM intrinsic function in the symbol table.
 
-        @return pointer to matching Symbol; NULL if none is found. */
+        @return pointer to matching Symbol; nullptr if none is found. */
     Symbol *LookupIntrinsics(llvm::Function *func);
 
     /** Looks for a function with the given name and type
         in the symbol table.
 
-        @return pointer to matching Symbol; NULL if none is found. */
+        @return pointer to matching Symbol; nullptr if none is found. */
     Symbol *LookupFunction(const char *name, const FunctionType *type);
 
     /** Adds the given function template to the symbol table.
@@ -206,7 +206,7 @@ class SymbolTable {
     /** Looks for a function template with the given name and type
         in the symbol table.
 
-        @return pointer to matching FunctionTemplate; NULL if none is found. */
+        @return pointer to matching FunctionTemplate; nullptr if none is found. */
     TemplateSymbol *LookupFunctionTemplate(const TemplateParms *templateParmList, const std::string &name,
                                            const FunctionType *type);
 
@@ -248,7 +248,7 @@ class SymbolTable {
 
     /** Looks for a type of the given name in the symbol table.
 
-        @return Pointer to the Type, if found; otherwise NULL is returned.
+        @return Pointer to the Type, if found; otherwise nullptr is returned.
     */
     const Type *LookupType(const char *name) const;
 

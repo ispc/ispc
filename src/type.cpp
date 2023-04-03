@@ -140,17 +140,17 @@ const AtomicType *AtomicType::Void = new AtomicType(TYPE_VOID, Variability::Unif
 
 AtomicType::AtomicType(BasicType bt, Variability v, bool ic)
     : Type(ATOMIC_TYPE), basicType(bt), variability(v), isConst(ic) {
-    asOtherConstType = NULL;
-    asUniformType = asVaryingType = NULL;
+    asOtherConstType = nullptr;
+    asUniformType = asVaryingType = nullptr;
 }
 
 Variability AtomicType::GetVariability() const { return variability; }
 
-bool Type::IsPointerType() const { return (CastType<PointerType>(this) != NULL); }
+bool Type::IsPointerType() const { return (CastType<PointerType>(this) != nullptr); }
 
-bool Type::IsArrayType() const { return (CastType<ArrayType>(this) != NULL); }
+bool Type::IsArrayType() const { return (CastType<ArrayType>(this) != nullptr); }
 
-bool Type::IsReferenceType() const { return (CastType<ReferenceType>(this) != NULL); }
+bool Type::IsReferenceType() const { return (CastType<ReferenceType>(this) != nullptr); }
 
 bool Type::IsVoidType() const { return EqualIgnoringConst(this, AtomicType::Void); }
 
@@ -220,7 +220,7 @@ const AtomicType *AtomicType::GetAsUnsignedType() const {
         return this;
 
     if (IsIntType() == false)
-        return NULL;
+        return nullptr;
 
     switch (basicType) {
     case TYPE_INT8:
@@ -233,7 +233,7 @@ const AtomicType *AtomicType::GetAsUnsignedType() const {
         return new AtomicType(TYPE_UINT64, variability, isConst);
     default:
         FATAL("Unexpected basicType in GetAsUnsignedType()");
-        return NULL;
+        return nullptr;
     }
 }
 
@@ -242,7 +242,7 @@ const AtomicType *AtomicType::GetAsConstType() const {
     if (isConst == true)
         return this;
 
-    if (asOtherConstType == NULL) {
+    if (asOtherConstType == nullptr) {
         asOtherConstType = new AtomicType(basicType, variability, true);
         asOtherConstType->asOtherConstType = this;
     }
@@ -254,7 +254,7 @@ const AtomicType *AtomicType::GetAsNonConstType() const {
     if (isConst == false)
         return this;
 
-    if (asOtherConstType == NULL) {
+    if (asOtherConstType == nullptr) {
         asOtherConstType = new AtomicType(basicType, variability, false);
         asOtherConstType->asOtherConstType = this;
     }
@@ -268,7 +268,7 @@ const AtomicType *AtomicType::GetAsVaryingType() const {
     if (variability == Variability::Varying)
         return this;
 
-    if (asVaryingType == NULL) {
+    if (asVaryingType == nullptr) {
         asVaryingType = new AtomicType(basicType, Variability::Varying, isConst);
         if (variability == Variability::Uniform)
             asVaryingType->asUniformType = this;
@@ -281,7 +281,7 @@ const AtomicType *AtomicType::GetAsUniformType() const {
     if (variability == Variability::Uniform)
         return this;
 
-    if (asUniformType == NULL) {
+    if (asUniformType == nullptr) {
         asUniformType = new AtomicType(basicType, Variability::Uniform, isConst);
         if (variability == Variability::Varying)
             asUniformType->asVaryingType = this;
@@ -533,7 +533,7 @@ static llvm::Type *lGetAtomicLLVMType(llvm::LLVMContext *ctx, const AtomicType *
         case AtomicType::TYPE_DEPENDENT:
         default:
             FATAL("logic error in lGetAtomicLLVMType");
-            return NULL;
+            return nullptr;
         }
     } else {
         ArrayType at(aType->GetAsUniformType(), variability.soaWidth);
@@ -557,7 +557,7 @@ llvm::DIType *AtomicType::GetDIType(llvm::DIScope *scope) const {
     if (variability.type == Variability::Uniform) {
         switch (basicType) {
         case TYPE_VOID:
-            return NULL;
+            return nullptr;
 
         case TYPE_BOOL:
             return m->diBuilder->createBasicType("bool", 32 /* size */, llvm::dwarf::DW_ATE_unsigned);
@@ -599,7 +599,7 @@ llvm::DIType *AtomicType::GetDIType(llvm::DIScope *scope) const {
         default:
             FATAL("unhandled basic type in AtomicType::GetDIType()");
 
-            return NULL;
+            return nullptr;
         }
     } else if (variability == Variability::Varying) {
 
@@ -623,8 +623,8 @@ llvm::DIType *AtomicType::GetDIType(llvm::DIScope *scope) const {
 
 TemplateTypeParmType::TemplateTypeParmType(std::string n, Variability v, bool ic, SourcePos p)
     : Type(TEMPLATE_TYPE_PARM_TYPE), name(n), variability(v), isConst(ic), pos(p) {
-    asOtherConstType = NULL;
-    asUniformType = asVaryingType = NULL;
+    asOtherConstType = nullptr;
+    asUniformType = asVaryingType = nullptr;
 }
 
 Variability TemplateTypeParmType::GetVariability() const { return variability; }
@@ -644,7 +644,7 @@ const Type *TemplateTypeParmType::GetBaseType() const { return this; }
 const Type *TemplateTypeParmType::GetAsVaryingType() const {
     if (variability == Variability::Varying)
         return this;
-    if (asVaryingType == NULL) {
+    if (asVaryingType == nullptr) {
         asVaryingType = new TemplateTypeParmType(name, Variability::Varying, isConst, pos);
         if (variability == Variability::Uniform)
             asVaryingType->asUniformType = this;
@@ -655,7 +655,7 @@ const Type *TemplateTypeParmType::GetAsVaryingType() const {
 const Type *TemplateTypeParmType::GetAsUniformType() const {
     if (variability == Variability::Uniform)
         return this;
-    if (asUniformType == NULL) {
+    if (asUniformType == nullptr) {
         asUniformType = new TemplateTypeParmType(name, Variability::Uniform, isConst, pos);
         if (variability == Variability::Varying)
             asUniformType->asVaryingType = this;
@@ -677,7 +677,7 @@ const Type *TemplateTypeParmType::GetAsSOAType(int width) const {
 
 const Type *TemplateTypeParmType::ResolveDependence(TemplateInstantiation &templInst) const {
     const Type *resolvedType = templInst.InstantiateType(GetName());
-    if (resolvedType == NULL) {
+    if (resolvedType == nullptr) {
         // Failed to resolve the type, return
         return this;
     }
@@ -711,7 +711,7 @@ const Type *TemplateTypeParmType::GetAsConstType() const {
     if (isConst == true)
         return this;
 
-    if (asOtherConstType == NULL) {
+    if (asOtherConstType == nullptr) {
         asOtherConstType = new TemplateTypeParmType(name, variability, true, pos);
         asOtherConstType->asOtherConstType = this;
     }
@@ -722,7 +722,7 @@ const Type *TemplateTypeParmType::GetAsNonConstType() const {
     if (isConst == false)
         return this;
 
-    if (asOtherConstType == NULL) {
+    if (asOtherConstType == nullptr) {
         asOtherConstType = new TemplateTypeParmType(name, variability, false, pos);
         asOtherConstType->asOtherConstType = this;
     }
@@ -941,7 +941,7 @@ llvm::Type *EnumType::LLVMType(llvm::LLVMContext *ctx) const {
     }
     default:
         FATAL("Unexpected variability in EnumType::LLVMType()");
-        return NULL;
+        return nullptr;
     }
 }
 
@@ -950,7 +950,7 @@ llvm::DIType *EnumType::GetDIType(llvm::DIScope *scope) const {
     std::vector<llvm::Metadata *> enumeratorDescriptors;
     for (unsigned int i = 0; i < enumerators.size(); ++i) {
         unsigned int enumeratorValue[1];
-        Assert(enumerators[i]->constValue != NULL);
+        Assert(enumerators[i]->constValue != nullptr);
         int count = enumerators[i]->constValue->GetValues(enumeratorValue);
         Assert(count == 1);
 
@@ -983,7 +983,7 @@ llvm::DIType *EnumType::GetDIType(llvm::DIScope *scope) const {
     }
     default:
         FATAL("Unexpected variability in EnumType::GetDIType()");
-        return NULL;
+        return nullptr;
     }
 }
 
@@ -1082,9 +1082,9 @@ const PointerType *PointerType::GetWithAddrSpace(AddressSpace as) const {
 }
 
 const PointerType *PointerType::ResolveDependence(TemplateInstantiation &templInst) const {
-    if (baseType == NULL) {
+    if (baseType == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
 
     const Type *resType = baseType->ResolveDependence(templInst);
@@ -1097,9 +1097,9 @@ const PointerType *PointerType::ResolveDependence(TemplateInstantiation &templIn
 }
 
 const PointerType *PointerType::ResolveUnboundVariability(Variability v) const {
-    if (baseType == NULL) {
+    if (baseType == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
 
     Assert(v != Variability::Unbound);
@@ -1123,7 +1123,7 @@ const PointerType *PointerType::GetAsNonConstType() const {
 }
 
 std::string PointerType::GetString() const {
-    if (baseType == NULL) {
+    if (baseType == nullptr) {
         Assert(m->errorCount > 0);
         return "";
     }
@@ -1144,7 +1144,7 @@ std::string PointerType::GetString() const {
 
 std::string PointerType::Mangle() const {
     Assert(variability != Variability::Unbound);
-    if (baseType == NULL) {
+    if (baseType == nullptr) {
         Assert(m->errorCount > 0);
         return "";
     }
@@ -1167,13 +1167,13 @@ std::string PointerType::GetCDeclaration(const std::string &name) const {
         return "";
     }
 
-    if (baseType == NULL) {
+    if (baseType == nullptr) {
         Assert(m->errorCount > 0);
         return "";
     }
 
     bool baseIsBasicVarying = (IsBasicType(baseType)) && (baseType->IsVaryingType());
-    bool baseIsFunction = (CastType<FunctionType>(baseType) != NULL);
+    bool baseIsFunction = (CastType<FunctionType>(baseType) != nullptr);
 
     std::string tempName;
     if (baseIsBasicVarying || baseIsFunction)
@@ -1209,9 +1209,9 @@ std::string PointerType::GetCDeclaration(const std::string &name) const {
 }
 
 llvm::Type *PointerType::LLVMType(llvm::LLVMContext *ctx) const {
-    if (baseType == NULL) {
+    if (baseType == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
 
     if (isSlice) {
@@ -1239,9 +1239,9 @@ llvm::Type *PointerType::LLVMType(llvm::LLVMContext *ctx) const {
 
     switch (variability.type) {
     case Variability::Uniform: {
-        llvm::Type *ptype = NULL;
+        llvm::Type *ptype = nullptr;
         const FunctionType *ftype = CastType<FunctionType>(baseType);
-        if (ftype != NULL)
+        if (ftype != nullptr)
             ptype = llvm::PointerType::get(ftype->LLVMFunctionType(ctx), (unsigned)addrSpace);
         else {
             if (baseType->IsVoidType())
@@ -1261,14 +1261,14 @@ llvm::Type *PointerType::LLVMType(llvm::LLVMContext *ctx) const {
     }
     default:
         FATAL("Unexpected variability in PointerType::LLVMType()");
-        return NULL;
+        return nullptr;
     }
 }
 
 llvm::DIType *PointerType::GetDIType(llvm::DIScope *scope) const {
-    if (baseType == NULL) {
+    if (baseType == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     llvm::DIType *diTargetType = baseType->GetDIType(scope);
     int bitsSize = g->target->is32Bit() ? 32 : 64;
@@ -1298,7 +1298,7 @@ llvm::DIType *PointerType::GetDIType(llvm::DIScope *scope) const {
     }
     default:
         FATAL("Unexpected variability in PointerType::GetDIType()");
-        return NULL;
+        return nullptr;
     }
 }
 
@@ -1317,15 +1317,15 @@ ArrayType::ArrayType(const Type *c, int a) : SequentialType(ARRAY_TYPE), child(c
 }
 
 llvm::ArrayType *ArrayType::LLVMType(llvm::LLVMContext *ctx) const {
-    if (child == NULL) {
+    if (child == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
 
     llvm::Type *ct = child->LLVMStorageType(ctx);
-    if (ct == NULL) {
+    if (ct == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     return llvm::ArrayType::get(ct, numElements);
 }
@@ -1356,41 +1356,41 @@ const Type *ArrayType::GetBaseType() const {
 }
 
 const ArrayType *ArrayType::GetAsVaryingType() const {
-    if (child == NULL) {
+    if (child == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     return new ArrayType(child->GetAsVaryingType(), numElements);
 }
 
 const ArrayType *ArrayType::GetAsUniformType() const {
-    if (child == NULL) {
+    if (child == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     return new ArrayType(child->GetAsUniformType(), numElements);
 }
 
 const ArrayType *ArrayType::GetAsUnboundVariabilityType() const {
-    if (child == NULL) {
+    if (child == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     return new ArrayType(child->GetAsUnboundVariabilityType(), numElements);
 }
 
 const ArrayType *ArrayType::GetAsSOAType(int width) const {
-    if (child == NULL) {
+    if (child == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     return new ArrayType(child->GetAsSOAType(width), numElements);
 }
 
 const ArrayType *ArrayType::ResolveDependence(TemplateInstantiation &templInst) const {
-    if (child == NULL) {
+    if (child == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
 
     const Type *resType = child->ResolveDependence(templInst);
@@ -1401,33 +1401,33 @@ const ArrayType *ArrayType::ResolveDependence(TemplateInstantiation &templInst) 
 }
 
 const ArrayType *ArrayType::ResolveUnboundVariability(Variability v) const {
-    if (child == NULL) {
+    if (child == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     return new ArrayType(child->ResolveUnboundVariability(v), numElements);
 }
 
 const ArrayType *ArrayType::GetAsUnsignedType() const {
-    if (child == NULL) {
+    if (child == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     return new ArrayType(child->GetAsUnsignedType(), numElements);
 }
 
 const ArrayType *ArrayType::GetAsConstType() const {
-    if (child == NULL) {
+    if (child == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     return new ArrayType(child->GetAsConstType(), numElements);
 }
 
 const ArrayType *ArrayType::GetAsNonConstType() const {
-    if (child == NULL) {
+    if (child == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     return new ArrayType(child->GetAsNonConstType(), numElements);
 }
@@ -1438,7 +1438,7 @@ const Type *ArrayType::GetElementType() const { return child; }
 
 std::string ArrayType::GetString() const {
     const Type *base = GetBaseType();
-    if (base == NULL) {
+    if (base == nullptr) {
         Assert(m->errorCount > 0);
         return "";
     }
@@ -1461,7 +1461,7 @@ std::string ArrayType::GetString() const {
 }
 
 std::string ArrayType::Mangle() const {
-    if (child == NULL) {
+    if (child == nullptr) {
         Assert(m->errorCount > 0);
         return "(error)";
     }
@@ -1477,7 +1477,7 @@ std::string ArrayType::Mangle() const {
 
 std::string ArrayType::GetCDeclaration(const std::string &name) const {
     const Type *base = GetBaseType();
-    if (base == NULL) {
+    if (base == nullptr) {
         Assert(m->errorCount > 0);
         return "";
     }
@@ -1517,16 +1517,16 @@ std::string ArrayType::GetCDeclaration(const std::string &name) const {
 
 int ArrayType::TotalElementCount() const {
     const ArrayType *ct = CastType<ArrayType>(child);
-    if (ct != NULL)
+    if (ct != nullptr)
         return numElements * ct->TotalElementCount();
     else
         return numElements;
 }
 
 llvm::DIType *ArrayType::GetDIType(llvm::DIScope *scope) const {
-    if (child == NULL) {
+    if (child == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     llvm::DIType *eltType = child->GetDIType(scope);
     return lCreateDIArray(eltType, numElements);
@@ -1539,11 +1539,11 @@ ArrayType *ArrayType::GetSizedArray(int sz) const {
 
 const Type *ArrayType::SizeUnsizedArrays(const Type *type, Expr *initExpr) {
     const ArrayType *at = CastType<ArrayType>(type);
-    if (at == NULL)
+    if (at == nullptr)
         return type;
 
     ExprList *exprList = llvm::dyn_cast_or_null<ExprList>(initExpr);
-    if (exprList == NULL || exprList->exprs.size() == 0)
+    if (exprList == nullptr || exprList->exprs.size() == 0)
         return type;
 
     // If the current dimension is unsized, then size it according to the
@@ -1558,13 +1558,13 @@ const Type *ArrayType::SizeUnsizedArrays(const Type *type, Expr *initExpr) {
     // (after checking below that it has the same length as all of the
     // other ones.
     ExprList *nextList = llvm::dyn_cast_or_null<ExprList>(exprList->exprs[0]);
-    if (nextList == NULL)
+    if (nextList == nullptr)
         return type;
 
     Assert(at);
     const Type *nextType = at->GetElementType();
     const ArrayType *nextArrayType = CastType<ArrayType>(nextType);
-    if (nextArrayType != NULL && nextArrayType->GetElementCount() == 0) {
+    if (nextArrayType != nullptr && nextArrayType->GetElementCount() == 0) {
         // If the recursive call to SizeUnsizedArrays at the bottom of the
         // function is going to size an unsized dimension, make sure that
         // all of the sub-expression lists are the same length--i.e. issue
@@ -1572,18 +1572,18 @@ const Type *ArrayType::SizeUnsizedArrays(const Type *type, Expr *initExpr) {
         // int x[][] = { { 1 }, { 1, 2, 3, 4 } };
         unsigned int nextSize = nextList->exprs.size();
         for (unsigned int i = 1; i < exprList->exprs.size(); ++i) {
-            if (exprList->exprs[i] == NULL) {
+            if (exprList->exprs[i] == nullptr) {
                 // We should have seen an error earlier in this case.
                 Assert(m->errorCount > 0);
                 continue;
             }
 
             ExprList *el = llvm::dyn_cast_or_null<ExprList>(exprList->exprs[i]);
-            if (el == NULL || el->exprs.size() != nextSize) {
+            if (el == nullptr || el->exprs.size() != nextSize) {
                 Error(Union(exprList->exprs[0]->pos, exprList->exprs[i]->pos),
                       "Inconsistent initializer expression list lengths "
                       "make it impossible to size unsized array dimensions.");
-                return NULL;
+                return nullptr;
             }
         }
     }
@@ -1598,7 +1598,7 @@ const Type *ArrayType::SizeUnsizedArrays(const Type *type, Expr *initExpr) {
 
 VectorType::VectorType(const AtomicType *b, int a) : SequentialType(VECTOR_TYPE), base(b), numElements(a) {
     Assert(numElements > 0);
-    Assert(base != NULL);
+    Assert(base != nullptr);
 }
 
 Variability VectorType::GetVariability() const { return base->GetVariability(); }
@@ -1634,9 +1634,9 @@ const VectorType *VectorType::ResolveUnboundVariability(Variability v) const {
 }
 
 const VectorType *VectorType::GetAsUnsignedType() const {
-    if (base == NULL) {
+    if (base == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     return new VectorType(base->GetAsUnsignedType(), numElements);
 }
@@ -1677,9 +1677,9 @@ static llvm::Type *lGetVectorLLVMType(llvm::LLVMContext *ctx, const VectorType *
     const Type *base = vType->GetBaseType();
     int numElements = vType->GetElementCount();
 
-    if (base == NULL) {
+    if (base == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
 
     llvm::Type *bt;
@@ -1690,7 +1690,7 @@ static llvm::Type *lGetVectorLLVMType(llvm::LLVMContext *ctx, const VectorType *
     else
         bt = base->LLVMType(ctx);
     if (!bt)
-        return NULL;
+        return nullptr;
 
     if (base->IsUniformType())
         // Vectors of uniform types are laid out across LLVM vectors, with
@@ -1708,7 +1708,7 @@ static llvm::Type *lGetVectorLLVMType(llvm::LLVMContext *ctx, const VectorType *
         return llvm::ArrayType::get(bt, numElements);
     else {
         FATAL("Unexpected variability in lGetVectorLLVMType()");
-        return NULL;
+        return nullptr;
     }
 }
 
@@ -1741,7 +1741,7 @@ llvm::DIType *VectorType::GetDIType(llvm::DIScope *scope) const {
         return at.GetDIType(scope);
     } else {
         FATAL("Unexpected variability in VectorType::GetDIType()");
-        return NULL;
+        return nullptr;
     }
 }
 
@@ -1814,8 +1814,8 @@ StructType::StructType(const std::string &n, const llvm::SmallVector<const Type 
                        Variability v, bool ia, SourcePos p)
     : CollectionType(STRUCT_TYPE), name(n), elementTypes(elts), elementNames(en), elementPositions(ep), variability(v),
       isConst(ic), isAnonymous(ia), pos(p) {
-    oppositeConstStructType = NULL;
-    finalElementTypes.resize(elts.size(), NULL);
+    oppositeConstStructType = nullptr;
+    finalElementTypes.resize(elts.size(), nullptr);
 
     static int count = 0;
     if (variability != Variability::Unbound) {
@@ -1847,10 +1847,10 @@ StructType::StructType(const std::string &n, const llvm::SmallVector<const Type 
         } else {
             for (int i = 0; i < nElements; ++i) {
                 const Type *type = GetElementType(i);
-                if (type == NULL) {
+                if (type == nullptr) {
                     Assert(m->errorCount > 0);
                     return;
-                } else if (CastType<FunctionType>(type) != NULL) {
+                } else if (CastType<FunctionType>(type) != nullptr) {
                     Error(elementPositions[i], "Method declarations are not "
                                                "supported.");
                     return;
@@ -1906,11 +1906,11 @@ bool StructType::IsDefined() const {
     for (int i = 0; i < GetElementCount(); i++) {
         const Type *t = GetElementType(i);
         const UndefinedStructType *ust = CastType<UndefinedStructType>(t);
-        if (ust != NULL) {
+        if (ust != nullptr) {
             return false;
         }
         const StructType *st = CastType<StructType>(t);
-        if (st != NULL) {
+        if (st != nullptr) {
             if (!st->IsDefined()) {
                 return false;
             }
@@ -1950,7 +1950,7 @@ const StructType *StructType::GetAsSOAType(int width) const {
         return this;
 
     if (checkIfCanBeSOA(this) == false)
-        return NULL;
+        return nullptr;
 
     return new StructType(name, elementTypes, elementNames, elementPositions, isConst,
                           Variability(Variability::SOA, width), isAnonymous, pos);
@@ -1974,7 +1974,7 @@ const StructType *StructType::ResolveUnboundVariability(Variability v) const {
 const StructType *StructType::GetAsConstType() const {
     if (isConst == true)
         return this;
-    else if (oppositeConstStructType != NULL)
+    else if (oppositeConstStructType != nullptr)
         return oppositeConstStructType;
     else {
         oppositeConstStructType =
@@ -1987,7 +1987,7 @@ const StructType *StructType::GetAsConstType() const {
 const StructType *StructType::GetAsNonConstType() const {
     if (isConst == false)
         return this;
-    else if (oppositeConstStructType != NULL)
+    else if (oppositeConstStructType != nullptr)
         return oppositeConstStructType;
     else {
         oppositeConstStructType =
@@ -2066,7 +2066,7 @@ llvm::Type *StructType::LLVMType(llvm::LLVMContext *ctx) const {
     std::string mname = lMangleStructName(name, variability);
     if (m->structTypeMap.find(mname) == m->structTypeMap.end()) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     return m->structTypeMap[mname];
 }
@@ -2105,18 +2105,18 @@ llvm::DIType *StructType::GetDIType(llvm::DIScope *scope) const {
                                           layout->getSizeInBits(),            // Size in bits
                                           layout->getAlignment().value() * 8, // Alignment in bits
                                           llvm::DINode::FlagZero,             // Flags
-                                          NULL, elements);
+                                          nullptr, elements);
 }
 
 const Type *StructType::GetElementType(int i) const {
     Assert(variability != Variability::Unbound);
     Assert(i < (int)elementTypes.size());
 
-    if (finalElementTypes[i] == NULL) {
+    if (finalElementTypes[i] == nullptr) {
         const Type *type = elementTypes[i];
-        if (type == NULL) {
+        if (type == nullptr) {
             Assert(m->errorCount > 0);
-            return NULL;
+            return nullptr;
         }
 
         // If the element has unbound variability, resolve its variability to
@@ -2139,7 +2139,7 @@ const Type *StructType::GetElementType(const std::string &n) const {
     for (unsigned int i = 0; i < elementNames.size(); ++i)
         if (elementNames[i] == n)
             return GetElementType(i);
-    return NULL;
+    return nullptr;
 }
 
 int StructType::GetElementNumber(const std::string &n) const {
@@ -2155,7 +2155,7 @@ bool StructType::checkIfCanBeSOA(const StructType *st) {
         const Type *eltType = st->elementTypes[i];
         const StructType *childStructType = CastType<StructType>(eltType);
 
-        if (childStructType != NULL)
+        if (childStructType != nullptr)
             ok &= checkIfCanBeSOA(childStructType);
         else if (eltType->HasUnboundVariability() == false) {
             Error(st->elementPositions[i],
@@ -2224,7 +2224,7 @@ const UndefinedStructType *UndefinedStructType::GetAsUnboundVariabilityType() co
 
 const UndefinedStructType *UndefinedStructType::GetAsSOAType(int width) const {
     FATAL("UndefinedStructType::GetAsSOAType() shouldn't be called.");
-    return NULL;
+    return nullptr;
 }
 
 const UndefinedStructType *UndefinedStructType::ResolveDependence(TemplateInstantiation &templInst) const {
@@ -2276,7 +2276,7 @@ llvm::Type *UndefinedStructType::LLVMType(llvm::LLVMContext *ctx) const {
     std::string mname = lMangleStructName(name, variability);
     if (m->structTypeMap.find(mname) == m->structTypeMap.end()) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     return m->structTypeMap[mname];
 }
@@ -2290,18 +2290,18 @@ llvm::DIType *UndefinedStructType::GetDIType(llvm::DIScope *scope) const {
                                           0,                      // Size
                                           0,                      // Align
                                           llvm::DINode::FlagZero, // Flags
-                                          NULL, elements);
+                                          nullptr, elements);
 }
 
 ///////////////////////////////////////////////////////////////////////////
 // ReferenceType
 
 ReferenceType::ReferenceType(const Type *t, AddressSpace as) : Type(REFERENCE_TYPE), targetType(t), addrSpace(as) {
-    asOtherConstType = NULL;
+    asOtherConstType = nullptr;
 }
 
 Variability ReferenceType::GetVariability() const {
-    if (targetType == NULL) {
+    if (targetType == nullptr) {
         Assert(m->errorCount > 0);
         return Variability(Variability::Unbound);
     }
@@ -2309,7 +2309,7 @@ Variability ReferenceType::GetVariability() const {
 }
 
 bool ReferenceType::IsBoolType() const {
-    if (targetType == NULL) {
+    if (targetType == nullptr) {
         Assert(m->errorCount > 0);
         return false;
     }
@@ -2317,7 +2317,7 @@ bool ReferenceType::IsBoolType() const {
 }
 
 bool ReferenceType::IsFloatType() const {
-    if (targetType == NULL) {
+    if (targetType == nullptr) {
         Assert(m->errorCount > 0);
         return false;
     }
@@ -2325,7 +2325,7 @@ bool ReferenceType::IsFloatType() const {
 }
 
 bool ReferenceType::IsIntType() const {
-    if (targetType == NULL) {
+    if (targetType == nullptr) {
         Assert(m->errorCount > 0);
         return false;
     }
@@ -2333,7 +2333,7 @@ bool ReferenceType::IsIntType() const {
 }
 
 bool ReferenceType::IsUnsignedType() const {
-    if (targetType == NULL) {
+    if (targetType == nullptr) {
         Assert(m->errorCount > 0);
         return false;
     }
@@ -2341,7 +2341,7 @@ bool ReferenceType::IsUnsignedType() const {
 }
 
 bool ReferenceType::IsConstType() const {
-    if (targetType == NULL) {
+    if (targetType == nullptr) {
         Assert(m->errorCount > 0);
         return false;
     }
@@ -2351,17 +2351,17 @@ bool ReferenceType::IsConstType() const {
 const Type *ReferenceType::GetReferenceTarget() const { return targetType; }
 
 const Type *ReferenceType::GetBaseType() const {
-    if (targetType == NULL) {
+    if (targetType == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     return targetType->GetBaseType();
 }
 
 const ReferenceType *ReferenceType::GetAsVaryingType() const {
-    if (targetType == NULL) {
+    if (targetType == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     if (IsVaryingType())
         return this;
@@ -2369,9 +2369,9 @@ const ReferenceType *ReferenceType::GetAsVaryingType() const {
 }
 
 const ReferenceType *ReferenceType::GetAsUniformType() const {
-    if (targetType == NULL) {
+    if (targetType == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     if (IsUniformType())
         return this;
@@ -2379,9 +2379,9 @@ const ReferenceType *ReferenceType::GetAsUniformType() const {
 }
 
 const ReferenceType *ReferenceType::GetAsUnboundVariabilityType() const {
-    if (targetType == NULL) {
+    if (targetType == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     if (HasUnboundVariability())
         return this;
@@ -2394,30 +2394,30 @@ const Type *ReferenceType::GetAsSOAType(int width) const {
 }
 
 const ReferenceType *ReferenceType::ResolveDependence(TemplateInstantiation &templInst) const {
-    if (targetType == NULL) {
+    if (targetType == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     return new ReferenceType(targetType->ResolveDependence(templInst));
 }
 
 const ReferenceType *ReferenceType::ResolveUnboundVariability(Variability v) const {
-    if (targetType == NULL) {
+    if (targetType == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     return new ReferenceType(targetType->ResolveUnboundVariability(v));
 }
 
 const ReferenceType *ReferenceType::GetAsConstType() const {
-    if (targetType == NULL) {
+    if (targetType == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     if (IsConstType())
         return this;
 
-    if (asOtherConstType == NULL) {
+    if (asOtherConstType == nullptr) {
         asOtherConstType = new ReferenceType(targetType->GetAsConstType());
         asOtherConstType->asOtherConstType = this;
     }
@@ -2425,14 +2425,14 @@ const ReferenceType *ReferenceType::GetAsConstType() const {
 }
 
 const ReferenceType *ReferenceType::GetAsNonConstType() const {
-    if (targetType == NULL) {
+    if (targetType == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     if (!IsConstType())
         return this;
 
-    if (asOtherConstType == NULL) {
+    if (asOtherConstType == nullptr) {
         asOtherConstType = new ReferenceType(targetType->GetAsNonConstType());
         asOtherConstType->asOtherConstType = this;
     }
@@ -2440,9 +2440,9 @@ const ReferenceType *ReferenceType::GetAsNonConstType() const {
 }
 
 const ReferenceType *ReferenceType::GetWithAddrSpace(AddressSpace as) const {
-    if (targetType == NULL) {
+    if (targetType == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     if (addrSpace == as)
         return this;
@@ -2451,7 +2451,7 @@ const ReferenceType *ReferenceType::GetWithAddrSpace(AddressSpace as) const {
 }
 
 std::string ReferenceType::GetString() const {
-    if (targetType == NULL) {
+    if (targetType == nullptr) {
         Assert(m->errorCount > 0);
         return "";
     }
@@ -2463,7 +2463,7 @@ std::string ReferenceType::GetString() const {
 }
 
 std::string ReferenceType::Mangle() const {
-    if (targetType == NULL) {
+    if (targetType == nullptr) {
         Assert(m->errorCount > 0);
         return "";
     }
@@ -2473,13 +2473,13 @@ std::string ReferenceType::Mangle() const {
 }
 
 std::string ReferenceType::GetCDeclaration(const std::string &name) const {
-    if (targetType == NULL) {
+    if (targetType == nullptr) {
         Assert(m->errorCount > 0);
         return "";
     }
 
     const ArrayType *at = CastType<ArrayType>(targetType);
-    if (at != NULL) {
+    if (at != nullptr) {
         if (at->GetElementCount() == 0) {
             // emit unsized arrays as pointers to the base type..
             std::string ret;
@@ -2501,24 +2501,24 @@ std::string ReferenceType::GetCDeclaration(const std::string &name) const {
 }
 
 llvm::Type *ReferenceType::LLVMType(llvm::LLVMContext *ctx) const {
-    if (targetType == NULL) {
+    if (targetType == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
 
     llvm::Type *t = targetType->LLVMStorageType(ctx);
-    if (t == NULL) {
+    if (t == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
 
     return llvm::PointerType::get(t, (unsigned)addrSpace);
 }
 
 llvm::DIType *ReferenceType::GetDIType(llvm::DIScope *scope) const {
-    if (targetType == NULL) {
+    if (targetType == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     llvm::DIType *diTargetType = targetType->GetDIType(scope);
     // Specifying address space for Xe target is necessary for correct work of SPIR-V Translator and other SPIR-V
@@ -2536,9 +2536,9 @@ FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 
     : Type(FUNCTION_TYPE), isTask(false), isExported(false), isExternC(false), isExternSYCL(false), isUnmasked(false),
       isVectorCall(false), isRegCall(false), returnType(r), paramTypes(a),
       paramNames(llvm::SmallVector<std::string, 8>(a.size(), "")),
-      paramDefaults(llvm::SmallVector<Expr *, 8>(a.size(), NULL)),
+      paramDefaults(llvm::SmallVector<Expr *, 8>(a.size(), nullptr)),
       paramPositions(llvm::SmallVector<SourcePos, 8>(a.size(), p)) {
-    Assert(returnType != NULL);
+    Assert(returnType != nullptr);
     isSafe = false;
     costOverride = -1;
 }
@@ -2552,7 +2552,7 @@ FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 
       paramPositions(ap) {
     Assert(paramTypes.size() == paramNames.size() && paramNames.size() == paramDefaults.size() &&
            paramDefaults.size() == paramPositions.size());
-    Assert(returnType != NULL);
+    Assert(returnType != nullptr);
     isSafe = false;
     costOverride = -1;
 }
@@ -2577,41 +2577,41 @@ bool FunctionType::IsISPCExternal() const {
 
 const Type *FunctionType::GetBaseType() const {
     FATAL("FunctionType::GetBaseType() shouldn't be called");
-    return NULL;
+    return nullptr;
 }
 
 const Type *FunctionType::GetAsVaryingType() const {
     FATAL("FunctionType::GetAsVaryingType shouldn't be called");
-    return NULL;
+    return nullptr;
 }
 
 const Type *FunctionType::GetAsUniformType() const {
     FATAL("FunctionType::GetAsUniformType shouldn't be called");
-    return NULL;
+    return nullptr;
 }
 
 const Type *FunctionType::GetAsUnboundVariabilityType() const {
     FATAL("FunctionType::GetAsUnboundVariabilityType shouldn't be called");
-    return NULL;
+    return nullptr;
 }
 
 const Type *FunctionType::GetAsSOAType(int width) const {
     FATAL("FunctionType::GetAsSOAType() shouldn't be called");
-    return NULL;
+    return nullptr;
 }
 
 const FunctionType *FunctionType::ResolveDependence(TemplateInstantiation &templInst) const {
-    if (returnType == NULL) {
+    if (returnType == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     const Type *rt = returnType->ResolveDependenceForTopType(templInst);
 
     llvm::SmallVector<const Type *, 8> pt;
     for (unsigned int i = 0; i < paramTypes.size(); ++i) {
-        if (paramTypes[i] == NULL) {
+        if (paramTypes[i] == nullptr) {
             Assert(m->errorCount > 0);
-            return NULL;
+            return nullptr;
         }
         const Type *argt = paramTypes[i]->ResolveDependenceForTopType(templInst);
         pt.push_back(argt);
@@ -2625,17 +2625,17 @@ const FunctionType *FunctionType::ResolveDependence(TemplateInstantiation &templ
 }
 
 const FunctionType *FunctionType::ResolveUnboundVariability(Variability v) const {
-    if (returnType == NULL) {
+    if (returnType == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
     const Type *rt = returnType->ResolveUnboundVariability(v);
 
     llvm::SmallVector<const Type *, 8> pt;
     for (unsigned int i = 0; i < paramTypes.size(); ++i) {
-        if (paramTypes[i] == NULL) {
+        if (paramTypes[i] == nullptr) {
             Assert(m->errorCount > 0);
-            return NULL;
+            return nullptr;
         }
         pt.push_back(paramTypes[i]->ResolveUnboundVariability(v));
     }
@@ -2658,7 +2658,7 @@ std::string FunctionType::GetString() const {
     ret += GetReturnTypeString();
     ret += "(";
     for (unsigned int i = 0; i < paramTypes.size(); ++i) {
-        if (paramTypes[i] == NULL) {
+        if (paramTypes[i] == nullptr) {
             ret += "/* ERROR */";
         } else {
             ret += paramTypes[i]->GetString();
@@ -2666,7 +2666,7 @@ std::string FunctionType::GetString() const {
 
         ret += " " + paramNames[i];
 
-        if (paramDefaults[i] != NULL) {
+        if (paramDefaults[i] != nullptr) {
             ret += " = init";
         }
 
@@ -2684,7 +2684,7 @@ std::string FunctionType::Mangle() const {
         ret += "UM_";
 
     for (unsigned int i = 0; i < paramTypes.size(); ++i)
-        if (paramTypes[i] == NULL)
+        if (paramTypes[i] == nullptr)
             Assert(m->errorCount > 0);
         else
             ret += paramTypes[i]->Mangle();
@@ -2705,7 +2705,7 @@ std::string FunctionType::GetCDeclaration(const std::string &fname) const {
         // to print out for multidimensional arrays (i.e. "float foo[][4] "
         // versus "float (foo *)[4]").
         const PointerType *pt = CastType<PointerType>(type);
-        if (pt != NULL && CastType<ArrayType>(pt->GetBaseType()) != NULL) {
+        if (pt != nullptr && CastType<ArrayType>(pt->GetBaseType()) != nullptr) {
             type = new ArrayType(pt->GetBaseType(), 0);
         }
 
@@ -2733,12 +2733,12 @@ std::string FunctionType::GetCDeclarationForDispatch(const std::string &fname) c
         // to print out for multidimensional arrays (i.e. "float foo[][4] "
         // versus "float (foo *)[4]").
         const PointerType *pt = CastType<PointerType>(type);
-        if (pt != NULL && CastType<ArrayType>(pt->GetBaseType()) != NULL) {
+        if (pt != nullptr && CastType<ArrayType>(pt->GetBaseType()) != nullptr) {
             type = new ArrayType(pt->GetBaseType(), 0);
         }
 
         // Change pointers to varying thingies to void *
-        if (pt != NULL && pt->GetBaseType()->IsVaryingType()) {
+        if (pt != nullptr && pt->GetBaseType()->IsVaryingType()) {
             PointerType *t = PointerType::Void;
 
             if (paramNames[i] != "")
@@ -2760,7 +2760,7 @@ std::string FunctionType::GetCDeclarationForDispatch(const std::string &fname) c
 
 llvm::Type *FunctionType::LLVMType(llvm::LLVMContext *ctx) const {
     FATAL("FunctionType::LLVMType() shouldn't be called");
-    return NULL;
+    return nullptr;
 }
 
 llvm::DIType *FunctionType::GetDIType(llvm::DIScope *scope) const {
@@ -2769,9 +2769,9 @@ llvm::DIType *FunctionType::GetDIType(llvm::DIScope *scope) const {
     retArgTypes.push_back(returnType->GetDIType(scope));
     for (int i = 0; i < GetNumParameters(); ++i) {
         const Type *t = GetParameterType(i);
-        if (t == NULL)
+        if (t == nullptr)
 
-            return NULL;
+            return nullptr;
         retArgTypes.push_back(t->GetDIType(scope));
     }
 
@@ -2781,7 +2781,7 @@ llvm::DIType *FunctionType::GetDIType(llvm::DIScope *scope) const {
 }
 
 const std::string FunctionType::GetReturnTypeString() const {
-    if (returnType == NULL)
+    if (returnType == nullptr)
         return "/* ERROR */";
 
     std::string ret;
@@ -2846,7 +2846,7 @@ std::vector<llvm::Type *> FunctionType::LLVMFunctionArgTypes(llvm::LLVMContext *
     // Get the LLVM Type *s for the function arguments
     std::vector<llvm::Type *> llvmArgTypes;
     for (unsigned int i = 0; i < paramTypes.size(); ++i) {
-        if (paramTypes[i] == NULL) {
+        if (paramTypes[i] == nullptr) {
             Assert(m->errorCount > 0);
             return llvmArgTypes;
         }
@@ -2877,7 +2877,7 @@ std::vector<llvm::Type *> FunctionType::LLVMFunctionArgTypes(llvm::LLVMContext *
             }
         }
 
-        if (castedArgType == NULL) {
+        if (castedArgType == nullptr) {
             Assert(m->errorCount > 0);
             return llvmArgTypes;
         }
@@ -2922,9 +2922,9 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
         callTypes = llvmArgTypes;
     }
 
-    if (returnType == NULL) {
+    if (returnType == nullptr) {
         Assert(m->errorCount > 0);
-        return NULL;
+        return nullptr;
     }
 
     const Type *retType = returnType;
@@ -2937,8 +2937,8 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
             llvmReturnType = retType->GetAsVaryingType()->LLVMType(ctx);
         }
     }
-    if (llvmReturnType == NULL)
-        return NULL;
+    if (llvmReturnType == nullptr)
+        return nullptr;
     return llvm::FunctionType::get(llvmReturnType, callTypes, false);
 }
 
@@ -3013,7 +3013,7 @@ const Type *Type::GetReferenceTarget() const {
 
 const Type *Type::GetAsUnsignedType() const {
     // For many types, this doesn't make any sesne
-    return NULL;
+    return nullptr;
 }
 
 /** Given an atomic or vector type, return a vector type of the given
@@ -3028,7 +3028,7 @@ static const Type *lVectorConvert(const Type *type, SourcePos pos, const char *r
                   "Implicit conversion between from vector type "
                   "\"%s\" to vector type of length %d for %s is not possible.",
                   type->GetString().c_str(), vecSize, reason);
-            return NULL;
+            return nullptr;
         }
         return vt;
     } else {
@@ -3038,7 +3038,7 @@ static const Type *lVectorConvert(const Type *type, SourcePos pos, const char *r
                   "Non-atomic type \"%s\" can't be converted to vector type "
                   "for %s.",
                   type->GetString().c_str(), reason);
-            return NULL;
+            return nullptr;
         }
         return new VectorType(at, vecSize);
     }
@@ -3046,7 +3046,7 @@ static const Type *lVectorConvert(const Type *type, SourcePos pos, const char *r
 
 const Type *Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos, const char *reason, bool forceVarying,
                                   int vecSize) {
-    Assert(reason != NULL);
+    Assert(reason != nullptr);
 
     // First, if one or both types are function types, convert them to
     // pointer to function types and then try again.
@@ -3071,7 +3071,7 @@ const Type *Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos,
         t0 = lVectorConvert(t0, pos, reason, vecSize);
         t1 = lVectorConvert(t1, pos, reason, vecSize);
         if (!t0 || !t1)
-            return NULL;
+            return nullptr;
     }
 
     // Are they both the same type?  If so, we're done, QED.
@@ -3084,7 +3084,7 @@ const Type *Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos,
     if (CastType<FunctionType>(t0) || CastType<FunctionType>(t1)) {
         Error(pos, "Incompatible function types \"%s\" and \"%s\" in %s.", t0->GetString().c_str(),
               t1->GetString().c_str(), reason);
-        return NULL;
+        return nullptr;
     }
 
     // Not the same types, but only a const/non-const difference?  Return
@@ -3094,7 +3094,7 @@ const Type *Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos,
 
     const PointerType *pt0 = CastType<PointerType>(t0);
     const PointerType *pt1 = CastType<PointerType>(t1);
-    if (pt0 != NULL && pt1 != NULL) {
+    if (pt0 != nullptr && pt1 != nullptr) {
         if (PointerType::IsVoidPointer(pt0))
             return pt1;
         else if (PointerType::IsVoidPointer(pt1))
@@ -3104,7 +3104,7 @@ const Type *Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos,
                   "Conversion between incompatible pointer types \"%s\" "
                   "and \"%s\" isn't possible.",
                   t0->GetString().c_str(), t1->GetString().c_str());
-            return NULL;
+            return nullptr;
         }
     }
 
@@ -3118,39 +3118,39 @@ const Type *Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos,
                   "Implicit conversion between differently sized vector types "
                   "(%s, %s) for %s is not possible.",
                   t0->GetString().c_str(), t1->GetString().c_str(), reason);
-            return NULL;
+            return nullptr;
         }
         const Type *t = MoreGeneralType(vt0->GetElementType(), vt1->GetElementType(), pos, reason, forceVarying);
         if (!t)
-            return NULL;
+            return nullptr;
 
         // The 'more general' version of the two vector element types must
         // be an AtomicType (that's all that vectors can hold...)
         const AtomicType *at = CastType<AtomicType>(t);
-        Assert(at != NULL);
+        Assert(at != nullptr);
 
         return new VectorType(at, vt0->GetElementCount());
     } else if (vt0) {
         // If one type is a vector type but the other isn't, see if we can
         // promote the other one to a vector type.  This will fail and
-        // return NULL if t1 is e.g. an array type and it's illegal to have
+        // return nullptr if t1 is e.g. an array type and it's illegal to have
         // a vector of it..
         const Type *t = MoreGeneralType(vt0->GetElementType(), t1, pos, reason, forceVarying);
         if (!t)
-            return NULL;
+            return nullptr;
 
         const AtomicType *at = CastType<AtomicType>(t);
-        Assert(at != NULL);
+        Assert(at != nullptr);
         return new VectorType(at, vt0->GetElementCount());
     } else if (vt1) {
         // As in the above case, see if we can promote t0 to make a vector
         // that matches vt1.
         const Type *t = MoreGeneralType(t0, vt1->GetElementType(), pos, reason, forceVarying);
         if (!t)
-            return NULL;
+            return nullptr;
 
         const AtomicType *at = CastType<AtomicType>(t);
-        Assert(at != NULL);
+        Assert(at != nullptr);
         return new VectorType(at, vt1->GetElementCount());
     }
 
@@ -3161,12 +3161,12 @@ const Type *Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos,
 
     const EnumType *et0 = CastType<EnumType>(t0->GetReferenceTarget());
     const EnumType *et1 = CastType<EnumType>(t1->GetReferenceTarget());
-    if (et0 != NULL && et1 != NULL) {
+    if (et0 != nullptr && et1 != nullptr) {
         // Two different enum types -> make them uint32s...
         Assert(et0->IsVaryingType() == et1->IsVaryingType());
         return et0->IsVaryingType() ? AtomicType::VaryingUInt32 : AtomicType::UniformUInt32;
-    } else if (et0 != NULL) {
-        if (at1 != NULL)
+    } else if (et0 != nullptr) {
+        if (at1 != nullptr)
             // Enum type and atomic type -> convert the enum to the atomic type
             // TODO: should we return uint32 here, unless the atomic type is
             // a 64-bit atomic type, in which case we return that?
@@ -3176,10 +3176,10 @@ const Type *Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos,
                   "Implicit conversion from enum type \"%s\" to "
                   "non-atomic type \"%s\" for %s not possible.",
                   t0->GetString().c_str(), t1->GetString().c_str(), reason);
-            return NULL;
+            return nullptr;
         }
-    } else if (et1 != NULL) {
-        if (at0 != NULL)
+    } else if (et1 != nullptr) {
+        if (at0 != nullptr)
             // Enum type and atomic type; see TODO above here as well...
             return at0;
         else {
@@ -3187,16 +3187,16 @@ const Type *Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos,
                   "Implicit conversion from enum type \"%s\" to "
                   "non-atomic type \"%s\" for %s not possible.",
                   t1->GetString().c_str(), t0->GetString().c_str(), reason);
-            return NULL;
+            return nullptr;
         }
     }
 
     // Now all we can do is promote atomic types...
-    if (at0 == NULL || at1 == NULL) {
-        Assert(reason != NULL);
+    if (at0 == nullptr || at1 == nullptr) {
+        Assert(reason != nullptr);
         Error(pos, "Implicit conversion from type \"%s\" to \"%s\" for %s not possible.", t0->GetString().c_str(),
               t1->GetString().c_str(), reason);
-        return NULL;
+        return nullptr;
     }
 
     // Finally, to determine which of the two atomic types is more general,
@@ -3205,12 +3205,12 @@ const Type *Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos,
 }
 
 bool Type::IsBasicType(const Type *type) {
-    return (CastType<AtomicType>(type) != NULL || CastType<EnumType>(type) != NULL ||
-            CastType<PointerType>(type) != NULL);
+    return (CastType<AtomicType>(type) != nullptr || CastType<EnumType>(type) != nullptr ||
+            CastType<PointerType>(type) != nullptr);
 }
 
 static bool lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
-    if (a == NULL || b == NULL)
+    if (a == nullptr || b == nullptr)
         return false;
 
     if (ignoreConst == false && a->IsConstType() != b->IsConstType())
@@ -3218,7 +3218,7 @@ static bool lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
 
     const AtomicType *ata = CastType<AtomicType>(a);
     const AtomicType *atb = CastType<AtomicType>(b);
-    if (ata != NULL && atb != NULL) {
+    if (ata != nullptr && atb != nullptr) {
         return ((ata->basicType == atb->basicType) && (ata->GetVariability() == atb->GetVariability()));
     }
 
@@ -3227,19 +3227,19 @@ static bool lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
     // see if all of the relevant bits are equal...
     const EnumType *eta = CastType<EnumType>(a);
     const EnumType *etb = CastType<EnumType>(b);
-    if (eta != NULL && etb != NULL)
+    if (eta != nullptr && etb != nullptr)
         // Kind of goofy, but this sufficies to check
         return (eta->pos == etb->pos && eta->GetVariability() == etb->GetVariability());
 
     const ArrayType *arta = CastType<ArrayType>(a);
     const ArrayType *artb = CastType<ArrayType>(b);
-    if (arta != NULL && artb != NULL)
+    if (arta != nullptr && artb != nullptr)
         return (arta->GetElementCount() == artb->GetElementCount() &&
                 lCheckTypeEquality(arta->GetElementType(), artb->GetElementType(), ignoreConst));
 
     const VectorType *vta = CastType<VectorType>(a);
     const VectorType *vtb = CastType<VectorType>(b);
-    if (vta != NULL && vtb != NULL)
+    if (vta != nullptr && vtb != nullptr)
         return (vta->GetElementCount() == vtb->GetElementCount() &&
                 lCheckTypeEquality(vta->GetElementType(), vtb->GetElementType(), ignoreConst));
 
@@ -3247,7 +3247,7 @@ static bool lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
     const StructType *stb = CastType<StructType>(b);
     const UndefinedStructType *usta = CastType<UndefinedStructType>(a);
     const UndefinedStructType *ustb = CastType<UndefinedStructType>(b);
-    if ((sta != NULL || usta != NULL) && (stb != NULL || ustb != NULL)) {
+    if ((sta != nullptr || usta != nullptr) && (stb != nullptr || ustb != nullptr)) {
         // Report both defuned and undefined structs as equal if their
         // names are the same.
         if (a->GetVariability() != b->GetVariability())
@@ -3260,19 +3260,19 @@ static bool lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
 
     const PointerType *pta = CastType<PointerType>(a);
     const PointerType *ptb = CastType<PointerType>(b);
-    if (pta != NULL && ptb != NULL)
+    if (pta != nullptr && ptb != nullptr)
         return (pta->IsUniformType() == ptb->IsUniformType() && pta->IsSlice() == ptb->IsSlice() &&
                 pta->IsFrozenSlice() == ptb->IsFrozenSlice() &&
                 lCheckTypeEquality(pta->GetBaseType(), ptb->GetBaseType(), ignoreConst));
 
     const ReferenceType *rta = CastType<ReferenceType>(a);
     const ReferenceType *rtb = CastType<ReferenceType>(b);
-    if (rta != NULL && rtb != NULL)
+    if (rta != nullptr && rtb != nullptr)
         return (lCheckTypeEquality(rta->GetReferenceTarget(), rtb->GetReferenceTarget(), ignoreConst));
 
     const FunctionType *fta = CastType<FunctionType>(a);
     const FunctionType *ftb = CastType<FunctionType>(b);
-    if (fta != NULL && ftb != NULL) {
+    if (fta != nullptr && ftb != nullptr) {
         // Both the return types and all of the argument types must match
         // for function types to match
         if (!lCheckTypeEquality(fta->GetReturnType(), ftb->GetReturnType(), ignoreConst))
@@ -3294,7 +3294,7 @@ static bool lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
 
     const TemplateTypeParmType *ttpa = CastType<TemplateTypeParmType>(a);
     const TemplateTypeParmType *ttpb = CastType<TemplateTypeParmType>(b);
-    if (ttpa != NULL && ttpb != NULL) {
+    if (ttpa != nullptr && ttpb != nullptr) {
         // Template type parameter types must have the same name to match.
         if (ttpa->GetName() != ttpb->GetName()) {
             return false;

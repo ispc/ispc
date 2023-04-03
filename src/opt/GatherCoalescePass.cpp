@@ -17,7 +17,7 @@ struct CoalescedLoadOp {
     CoalescedLoadOp(int64_t s, int c) {
         start = s;
         count = c;
-        load = element0 = element1 = NULL;
+        load = element0 = element1 = nullptr;
     }
 
     /** Starting offset of the load from the common base pointer (in terms
@@ -516,7 +516,7 @@ static llvm::Value *lAssemble4Vector(const std::vector<CoalescedLoadOp> &loadOps
 static llvm::Value *lApplyLoad4s(llvm::Value *result, const std::vector<CoalescedLoadOp> &loadOps,
                                  const int64_t offsets[4], bool set[4], llvm::Instruction *insertBefore) {
     int32_t firstMatchElements[4] = {-1, -1, -1, -1};
-    const CoalescedLoadOp *firstMatch = NULL;
+    const CoalescedLoadOp *firstMatch = nullptr;
 
     Assert(llvm::isa<llvm::UndefValue>(result));
 
@@ -542,7 +542,7 @@ static llvm::Value *lApplyLoad4s(llvm::Value *result, const std::vector<Coalesce
 
         if (anyMatched) {
             if (llvm::isa<llvm::UndefValue>(result)) {
-                if (firstMatch == NULL) {
+                if (firstMatch == nullptr) {
                     firstMatch = &loadop;
                     for (int i = 0; i < 4; ++i)
                         firstMatchElements[i] = matchElements[i];
@@ -555,7 +555,7 @@ static llvm::Value *lApplyLoad4s(llvm::Value *result, const std::vector<Coalesce
                             shuffle[i] = 4 + matchElements[i];
                     }
                     result = LLVMShuffleVectors(firstMatch->load, loadop.load, shuffle, 4, insertBefore);
-                    firstMatch = NULL;
+                    firstMatch = nullptr;
                 }
             } else {
                 int32_t shuffle[4] = {-1, -1, -1, -1};
@@ -570,7 +570,7 @@ static llvm::Value *lApplyLoad4s(llvm::Value *result, const std::vector<Coalesce
         }
     }
 
-    if (firstMatch != NULL && llvm::isa<llvm::UndefValue>(result))
+    if (firstMatch != nullptr && llvm::isa<llvm::UndefValue>(result))
         return LLVMShuffleVectors(firstMatch->load, result, firstMatchElements, 4, insertBefore);
     else
         return result;
@@ -642,7 +642,7 @@ static void lAssembleResultVectors(const std::vector<CoalescedLoadOp> &loadOps,
     // into 4, 8, or 16-wide final result vectors.
     int numGathers = constOffsets.size() / g->target->getVectorWidth();
     for (int i = 0; i < numGathers; ++i) {
-        llvm::Value *result = NULL;
+        llvm::Value *result = nullptr;
         switch (g->target->getVectorWidth()) {
         case 4:
             result = vec4s[i];
@@ -678,7 +678,7 @@ static llvm::Value *lComputeBasePtr(llvm::CallInst *gatherInst, llvm::Type *base
     // checking for this in GatherCoalescePass::runOnBasicBlock().  Thus,
     // extract the first value and use that as a scalar.
     llvm::Value *variable = LLVMExtractFirstVectorElement(variableOffsets);
-    Assert(variable != NULL);
+    Assert(variable != nullptr);
     if (variable->getType() == LLVMTypes::Int64Type)
         offsetScale = new llvm::ZExtInst(offsetScale, LLVMTypes::Int64Type, "scale_to64", insertBefore);
     llvm::Value *offset =
@@ -770,7 +770,7 @@ static bool lCoalesceGathers(const std::vector<llvm::CallInst *> &coalesceGroup,
     Assert(results.size() == coalesceGroup.size());
     for (int i = 0; i < (int)results.size(); ++i) {
         llvm::Instruction *ir = llvm::dyn_cast<llvm::Instruction>(results[i]);
-        Assert(ir != NULL);
+        Assert(ir != nullptr);
 
         llvm::Type *origType = coalesceGroup[i]->getType();
         if (origType != ir->getType())
@@ -806,9 +806,9 @@ static bool lInstructionMayWriteToMemory(llvm::Instruction *inst) {
     // indicating it won't write to memory has to be treated as a potential
     // store.
     llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst);
-    if (ci != NULL) {
+    if (ci != nullptr) {
         llvm::Function *calledFunc = ci->getCalledFunction();
-        if (calledFunc == NULL)
+        if (calledFunc == nullptr)
             return true;
 
         if (calledFunc->onlyReadsMemory() || calledFunc->doesNotAccessMemory())
@@ -839,16 +839,16 @@ bool GatherCoalescePass::coalesceGathersFactored(llvm::BasicBlock &bb) {
         // Iterate over all of the instructions and look for calls to
         // __pseudo_gather_factored_base_offsets{32,64}_{i32,float} calls.
         llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*curIter);
-        if (callInst == NULL)
+        if (callInst == nullptr)
             continue;
 
         llvm::Function *calledFunc = callInst->getCalledFunction();
-        if (calledFunc == NULL)
+        if (calledFunc == nullptr)
             continue;
 
         int i;
         for (i = 0; i < nGatherFuncs; ++i)
-            if (gatherFuncs[i] != NULL && calledFunc == gatherFuncs[i])
+            if (gatherFuncs[i] != nullptr && calledFunc == gatherFuncs[i])
                 break;
         if (i == nGatherFuncs)
             // Doesn't match any of the types of gathers we care about
@@ -900,7 +900,7 @@ bool GatherCoalescePass::coalesceGathersFactored(llvm::BasicBlock &bb) {
                 break;
 
             llvm::CallInst *fwdCall = llvm::dyn_cast<llvm::CallInst>(&*fwdIter);
-            if (fwdCall == NULL || fwdCall->getCalledFunction() != calledFunc)
+            if (fwdCall == nullptr || fwdCall->getCalledFunction() != calledFunc)
                 continue;
 
             SourcePos fwdPos;

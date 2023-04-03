@@ -175,7 +175,7 @@ std::pair<std::vector<ISPCTarget>, std::string> ParseISPCTargets(const char *tar
     bool done = false;
     while (!done) {
         const char *tend = strchr(tstart, ',');
-        if (tend == NULL) {
+        if (tend == nullptr) {
             done = true;
             tend = strchr(tstart, '\0');
         }

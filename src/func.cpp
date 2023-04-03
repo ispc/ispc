@@ -138,20 +138,20 @@ void Function::Print(Indent &indent) const {
 // Type checking and optimization is also done here.
 Function::Function(Symbol *s, Stmt *c) : sym(s), code(c) {
     maskSymbol = m->symbolTable->LookupVariable("__mask");
-    Assert(maskSymbol != NULL);
+    Assert(maskSymbol != nullptr);
 
     const FunctionType *type = CastType<FunctionType>(sym->type);
-    Assert(type != NULL);
+    Assert(type != nullptr);
 
     for (int i = 0; i < type->GetNumParameters(); ++i) {
         const char *paramName = type->GetParameterName(i).c_str();
         Symbol *paramSym = m->symbolTable->LookupVariable(paramName);
-        if (paramSym == NULL)
+        if (paramSym == nullptr)
             Assert(strncmp(paramName, "__anon_parameter_", 17) == 0);
         args.push_back(paramSym);
 
         const Type *t = type->GetParameterType(i);
-        if (paramSym != NULL && CastType<ReferenceType>(t) == NULL)
+        if (paramSym != nullptr && CastType<ReferenceType>(t) == nullptr)
             paramSym->parentFunction = this;
     }
 
@@ -179,9 +179,9 @@ Function::Function(Symbol *s, Stmt *c) : sym(s), code(c) {
         taskCountSym2 = m->symbolTable->LookupVariable("taskCount2");
         Assert(taskCountSym2);
     } else {
-        threadIndexSym = threadCountSym = taskIndexSym = taskCountSym = NULL;
-        taskIndexSym0 = taskIndexSym1 = taskIndexSym2 = NULL;
-        taskCountSym0 = taskCountSym1 = taskCountSym2 = NULL;
+        threadIndexSym = threadCountSym = taskIndexSym = taskCountSym = nullptr;
+        taskIndexSym0 = taskIndexSym1 = taskIndexSym2 = nullptr;
+        taskCountSym0 = taskCountSym1 = taskCountSym2 = nullptr;
     }
 
     typeCheckAndOptimize();
@@ -197,14 +197,14 @@ Function::Function(Symbol *s, Stmt *c, Symbol *ms, std::vector<Symbol *> &a)
 }
 
 void Function::typeCheckAndOptimize() {
-    if (code != NULL) {
+    if (code != nullptr) {
         debugPrintHelper(DebugPrintPoint::Initial);
 
         code = TypeCheck(code);
 
         debugPrintHelper(DebugPrintPoint::AfterTypeChecking);
 
-        if (code != NULL) {
+        if (code != nullptr) {
             code = Optimize(code);
 
             debugPrintHelper(DebugPrintPoint::AfterOptimization);
@@ -214,13 +214,13 @@ void Function::typeCheckAndOptimize() {
 
 const Type *Function::GetReturnType() const {
     const FunctionType *type = CastType<FunctionType>(sym->type);
-    Assert(type != NULL);
+    Assert(type != nullptr);
     return type->GetReturnType();
 }
 
 const FunctionType *Function::GetType() const {
     const FunctionType *type = CastType<FunctionType>(sym->type);
-    Assert(type != NULL);
+    Assert(type != nullptr);
     return type;
 }
 
@@ -242,7 +242,7 @@ static void lCopyInTaskParameter(int i, AddressInfo *structArgPtrInfo, const std
     // Get the type of the argument we're copying in and its Symbol pointer
     Symbol *sym = args[i];
 
-    if (sym == NULL)
+    if (sym == nullptr)
         // anonymous parameter, so don't worry about it
         return;
 
@@ -264,8 +264,8 @@ static void lCopyInTaskParameter(int i, AddressInfo *structArgPtrInfo, const std
 static llvm::Value *lXeGetTaskVariableValue(FunctionEmitContext *ctx, std::string taskFunc) {
     std::vector<llvm::Value *> args;
     llvm::Function *task_func = m->module->getFunction(taskFunc);
-    Assert(task_func != NULL);
-    return ctx->CallInst(task_func, NULL, args, taskFunc + "_call");
+    Assert(task_func != nullptr);
+    return ctx->CallInst(task_func, nullptr, args, taskFunc + "_call");
 }
 
 /** Given the statements implementing a function, emit the code that
@@ -292,7 +292,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
     llvm::BasicBlock *entryBBlock = ctx->GetCurrentBasicBlock();
 #endif
     const FunctionType *type = CastType<FunctionType>(sym->type);
-    Assert(type != NULL);
+    Assert(type != nullptr);
 
     // CPU tasks
     if (type->isTask == true && !g->target->isXeTarget()) {
@@ -327,7 +327,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
             int nArgs = (int)args.size();
             // The mask is the last parameter in the argument structure
             llvm::Value *ptr = ctx->AddElementOffset(stInfo, nArgs, "task_struct_mask");
-            llvm::Value *ptrval = ctx->LoadInst(new AddressInfo(ptr, LLVMTypes::MaskType), NULL, "mask");
+            llvm::Value *ptrval = ctx->LoadInst(new AddressInfo(ptr, LLVMTypes::MaskType), nullptr, "mask");
             ctx->SetFunctionMask(ptrval);
         }
 
@@ -367,7 +367,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         Assert(fType->getFunctionNumParams() >= args.size());
         for (unsigned int i = 0; i < args.size(); ++i, ++argIter) {
             Symbol *argSym = args[i];
-            if (argSym == NULL)
+            if (argSym == nullptr)
                 // anonymous function parameter
                 continue;
 
@@ -459,7 +459,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
     ctx->SetFunctionFTZ_DAZFlags();
 
     // Finally, we can generate code for the function
-    if (code != NULL) {
+    if (code != nullptr) {
         ctx->SetDebugPos(code->pos);
         ctx->AddInstrumentationPoint("function entry");
 
@@ -549,7 +549,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         // FIXME: would like to set the context's current position to
         // e.g. the end of the function code
 
-        // if bblock is non-NULL, it hasn't been terminated by e.g. a
+        // if bblock is non-nullptr, it hasn't been terminated by e.g. a
         // return instruction.  Need to add a return instruction.
         ctx->ReturnInst();
     }
@@ -627,12 +627,12 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
 }
 
 void Function::GenerateIR() {
-    if (sym == NULL)
-        // May be NULL due to error earlier in compilation
+    if (sym == nullptr)
+        // May be nullptr due to error earlier in compilation
         return;
 
     llvm::Function *function = sym->function;
-    Assert(function != NULL);
+    Assert(function != nullptr);
 
     // But if that function has a definition, we don't want to redefine it.
     if (function->empty() == false) {
@@ -641,7 +641,7 @@ void Function::GenerateIR() {
     }
 
     const FunctionType *type = CastType<FunctionType>(sym->type);
-    Assert(type != NULL);
+    Assert(type != nullptr);
 
     if (type->isExternSYCL) {
         Error(sym->pos, "\n\'extern \"SYCL\"\' function \"%s\" cannot be defined in ISPC.", sym->name.c_str());
@@ -654,7 +654,7 @@ void Function::GenerateIR() {
     SourcePos firstStmtPos = sym->pos;
     if (code) {
         StmtList *sl = llvm::dyn_cast<StmtList>(code);
-        if (sl && sl->stmts.size() > 0 && sl->stmts[0] != NULL)
+        if (sl && sl->stmts.size() > 0 && sl->stmts[0] != nullptr)
             firstStmtPos = sl->stmts[0]->pos;
         else
             firstStmtPos = code->pos;
@@ -815,15 +815,15 @@ bool TemplateArgs::IsEqual(TemplateArgs &otherArgs) const {
 
 FunctionTemplate::FunctionTemplate(TemplateSymbol *s, Stmt *c) : sym(s), code(c) {
     maskSymbol = m->symbolTable->LookupVariable("__mask");
-    Assert(maskSymbol != NULL);
+    Assert(maskSymbol != nullptr);
 
     const FunctionType *type = GetFunctionType();
-    Assert(type != NULL);
+    Assert(type != nullptr);
 
     for (int i = 0; i < type->GetNumParameters(); ++i) {
         const char *paramName = type->GetParameterName(i).c_str();
         Symbol *paramSym = m->symbolTable->LookupVariable(paramName);
-        if (paramSym == NULL) {
+        if (paramSym == nullptr) {
             Assert(strncmp(paramName, "__anon_parameter_", 17) == 0);
         }
         args.push_back(paramSym);
@@ -1091,12 +1091,12 @@ llvm::Function *TemplateInstantiation::createLLVMFunction(Symbol *functionSym, b
         // default.)  Set parameter attributes accordingly.  (Only for
         // uniform pointers, since varying pointers are int vectors...)
         if (!functionType->isTask && !functionType->isExternSYCL &&
-            ((CastType<PointerType>(argType) != NULL && argType->IsUniformType() &&
+            ((CastType<PointerType>(argType) != nullptr && argType->IsUniformType() &&
               // Exclude SOA argument because it is a pair {struct *, int}
               // instead of pointer
               !CastType<PointerType>(argType)->IsSlice()) ||
 
-             CastType<ReferenceType>(argType) != NULL)) {
+             CastType<ReferenceType>(argType) != nullptr)) {
 
             function->addParamAttr(i, llvm::Attribute::NoAlias);
         }

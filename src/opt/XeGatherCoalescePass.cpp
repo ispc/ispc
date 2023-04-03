@@ -179,7 +179,7 @@ void MemoryCoalescing::analyseInsts(llvm::BasicBlock &BB) {
     Assert(OptType == MemType::OPT_LOAD || OptType == MemType::OPT_STORE);
     OptBlock CurrentBlock;
     for (; (OptType == MemType::OPT_LOAD) ? (bi != be) : (rbi != rbe);) {
-        llvm::Instruction *Inst = NULL;
+        llvm::Instruction *Inst = nullptr;
         if (OptType == MemType::OPT_LOAD) {
             Inst = &*bi;
             ++bi;

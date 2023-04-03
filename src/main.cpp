@@ -262,7 +262,7 @@ class ArgFactory {
 
         if (c == '\0')
             // Reached the end so no more arguments
-            return NULL;
+            return nullptr;
 
         // c now has the first character of the next argument, so collect the rest
         while (c != '\0' && !(isspace(c) && !insideDQ && !insideSQ)) {
@@ -329,7 +329,7 @@ static void lAddSingleArg(char *arg, std::vector<char *> &argv);
 static void lAddArgsFromFactory(ArgFactory &Args, std::vector<char *> &argv) {
     while (true) {
         char *NextArg = Args.GetNextArg();
-        if (NextArg == NULL)
+        if (NextArg == nullptr)
             break;
         lAddSingleArg(NextArg, argv);
     }
@@ -355,13 +355,13 @@ static void lAddSingleArg(char *arg, std::vector<char *> &argv) {
     if (arg[0] == '@') {
         char *filename = &arg[1];
         FILE *file = fopen(filename, "r");
-        if (file != NULL) {
+        if (file != nullptr) {
             lAddArgsFromFile(file, argv);
             fclose(file);
-            arg = NULL;
+            arg = nullptr;
         }
     }
-    if (arg != NULL) {
+    if (arg != nullptr) {
         argv.push_back(arg);
     }
 }
@@ -545,7 +545,7 @@ int main(int Argc, char *Argv[]) {
     lGetAllArgs(Argc, Argv, argv);
     int argc = argv.size();
 
-    llvm::sys::AddSignalHandler(lSignal, NULL);
+    llvm::sys::AddSignalHandler(lSignal, nullptr);
 
     // initialize available LLVM targets
 #ifdef ISPC_X86_ENABLED
@@ -581,13 +581,13 @@ int main(int Argc, char *Argv[]) {
     LLVMInitializeWebAssemblyTargetInfo();
     LLVMInitializeWebAssemblyTargetMC();
 #endif
-    char *file = NULL;
-    const char *headerFileName = NULL;
-    const char *outFileName = NULL;
-    const char *depsFileName = NULL;
-    const char *depsTargetName = NULL;
-    const char *hostStubFileName = NULL;
-    const char *devStubFileName = NULL;
+    char *file = nullptr;
+    const char *headerFileName = nullptr;
+    const char *outFileName = nullptr;
+    const char *depsFileName = nullptr;
+    const char *depsTargetName = nullptr;
+    const char *hostStubFileName = nullptr;
+    const char *devStubFileName = nullptr;
 
     std::vector<std::string> linkFileNames;
     // Initiailize globals early so that we can set various option values
@@ -598,7 +598,7 @@ int main(int Argc, char *Argv[]) {
     Module::OutputFlags flags = Module::NoFlags;
     Arch arch = Arch::none;
     std::vector<ISPCTarget> targets;
-    const char *cpu = NULL, *intelAsmSyntax = NULL;
+    const char *cpu = nullptr, *intelAsmSyntax = nullptr;
     BooleanOptValue vectorCall = BooleanOptValue::none;
     BooleanOptValue discardValueNames = BooleanOptValue::none;
 
@@ -648,7 +648,7 @@ int main(int Argc, char *Argv[]) {
             exit(1);
         }
 
-        if (outFileName == NULL) {
+        if (outFileName == nullptr) {
             Warning(SourcePos(), "No output file name specified. "
                                  "The inputs will be linked and warnings/errors will "
                                  "be issued, but no output will be generated.");
@@ -710,7 +710,7 @@ int main(int Argc, char *Argv[]) {
         } else if (!strncmp(argv[i], "--x86-asm-syntax=", 17)) {
             intelAsmSyntax = argv[i] + 17;
             if (!((std::string(intelAsmSyntax) == "intel") || (std::string(intelAsmSyntax) == "att"))) {
-                intelAsmSyntax = NULL;
+                intelAsmSyntax = nullptr;
                 errorHandler.AddError("Invalid value for --x86-asm-syntax: \"%s\" -- "
                                       "only intel and att are allowed.",
                                       argv[i] + 17);
@@ -1013,7 +1013,7 @@ int main(int Argc, char *Argv[]) {
         } else if (argv[i][0] == '-') {
             errorHandler.AddError("Unknown option \"%s\".", argv[i]);
         } else {
-            if (file != NULL) {
+            if (file != nullptr) {
                 errorHandler.AddError("Multiple input files specified on command "
                                       "line: \"%s\" and \"%s\".",
                                       file, argv[i]);
@@ -1027,7 +1027,7 @@ int main(int Argc, char *Argv[]) {
     // All the rest of errors and warnigns will be processed in regullar way.
     errorHandler.Emit();
 
-    if (file == NULL) {
+    if (file == nullptr) {
         Error(SourcePos(), "No input file were specified. To read text from stdin use \"-\" as file name.");
         exit(1);
     }
@@ -1084,7 +1084,7 @@ int main(int Argc, char *Argv[]) {
     if (g->enableFuzzTest) {
         if (g->fuzzTestSeed == -1) {
 #ifdef ISPC_HOST_IS_WINDOWS
-            int seed = (unsigned)time(NULL);
+            int seed = (unsigned)time(nullptr);
 #else
             int seed = getpid();
 #endif
@@ -1098,14 +1098,14 @@ int main(int Argc, char *Argv[]) {
 #endif
     }
 
-    if (depsFileName != NULL)
+    if (depsFileName != nullptr)
         flags &= ~Module::OutputDepsToStdout;
 
-    if (depsFileName != NULL && 0 == (flags & (Module::GenerateFlatDeps | Module::GenerateMakeRuleForDeps))) {
+    if (depsFileName != nullptr && 0 == (flags & (Module::GenerateFlatDeps | Module::GenerateMakeRuleForDeps))) {
         Warning(SourcePos(), "Dependency file name specified with -MF, but no "
                              "mode specified; did you forget to specify -M or -MMM? "
                              "No dependency output will be generated.");
-        depsFileName = NULL;
+        depsFileName = nullptr;
     }
 
     if ((Module::GenerateFlatDeps | Module::GenerateMakeRuleForDeps) ==
@@ -1119,9 +1119,9 @@ int main(int Argc, char *Argv[]) {
         outFileName = "-"; // Assume stdout by default (-E mode)
     }
 
-    if (outFileName == NULL && headerFileName == NULL &&
-        (depsFileName == NULL && 0 == (flags & Module::OutputDepsToStdout)) && hostStubFileName == NULL &&
-        devStubFileName == NULL) {
+    if (outFileName == nullptr && headerFileName == nullptr &&
+        (depsFileName == nullptr && 0 == (flags & Module::OutputDepsToStdout)) && hostStubFileName == nullptr &&
+        devStubFileName == nullptr) {
         Warning(SourcePos(), "No output file or header file name specified. "
                              "Program will be compiled and warnings/errors will "
                              "be issued, but no output will be generated.");
@@ -1146,7 +1146,7 @@ int main(int Argc, char *Argv[]) {
     if (targets.size() > 1)
         g->isMultiTargetCompilation = true;
 
-    if ((ot == Module::Asm) && (intelAsmSyntax != NULL)) {
+    if ((ot == Module::Asm) && (intelAsmSyntax != nullptr)) {
         std::vector<const char *> Args(3);
         Args[0] = "ispc (LLVM option parsing)";
         Args[2] = nullptr;
@@ -1189,7 +1189,7 @@ int main(int Argc, char *Argv[]) {
 
     if (g->enableTimeTrace) {
         // Write to file only if compilation is successfull.
-        if ((ret == 0) && (outFileName != NULL)) {
+        if ((ret == 0) && (outFileName != nullptr)) {
             writeCompileTimeFile(outFileName);
         }
         llvm::timeTraceProfilerCleanup();

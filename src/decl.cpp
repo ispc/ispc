@@ -48,8 +48,8 @@ static void lPrintTypeQualifiers(int typeQualifiers) {
     the type, returning the type that is the result.
 */
 static const Type *lApplyTypeQualifiers(int typeQualifiers, const Type *type, SourcePos pos) {
-    if (type == NULL)
-        return NULL;
+    if (type == nullptr)
+        return nullptr;
 
     if ((typeQualifiers & TYPEQUAL_CONST) != 0) {
         type = type->GetAsConstType();
@@ -80,7 +80,7 @@ static const Type *lApplyTypeQualifiers(int typeQualifiers, const Type *type, So
                        "qualifiers.");
 
         const Type *unsignedType = type->GetAsUnsignedType();
-        if (unsignedType != NULL)
+        if (unsignedType != nullptr)
             type = unsignedType;
         else {
             const Type *resolvedType = type->ResolveUnboundVariability(Variability::Varying);
@@ -108,7 +108,7 @@ DeclSpecs::DeclSpecs(const Type *t, StorageClass sc, int tq) {
     typeQualifiers = tq;
     soaWidth = 0;
     vectorSize = 0;
-    if (t != NULL) {
+    if (t != nullptr) {
         if (m->symbolTable->ContainsType(t)) {
             // Typedefs might have uniform/varying qualifiers inside.
             if (t->IsVaryingType()) {
@@ -123,17 +123,17 @@ DeclSpecs::DeclSpecs(const Type *t, StorageClass sc, int tq) {
 const Type *DeclSpecs::GetBaseType(SourcePos pos) const {
     const Type *retType = baseType;
 
-    if (retType == NULL) {
+    if (retType == nullptr) {
         Warning(pos, "No type specified in declaration.  Assuming int32.");
         retType = AtomicType::UniformInt32->GetAsUnboundVariabilityType();
     }
 
     if (vectorSize > 0) {
         const AtomicType *atomicType = CastType<AtomicType>(retType);
-        if (atomicType == NULL) {
+        if (atomicType == nullptr) {
             Error(pos, "Only atomic types (int, float, ...) are legal for vector "
                        "types.");
-            return NULL;
+            return nullptr;
         }
         retType = new VectorType(atomicType, vectorSize);
     }
@@ -143,18 +143,18 @@ const Type *DeclSpecs::GetBaseType(SourcePos pos) const {
     if (soaWidth > 0) {
         const StructType *st = CastType<StructType>(retType);
 
-        if (st == NULL) {
+        if (st == nullptr) {
             Error(pos,
                   "Illegal to provide soa<%d> qualifier with non-struct "
                   "type \"%s\".",
                   soaWidth, retType ? retType->GetString().c_str() : "NULL");
-            return NULL;
+            return nullptr;
         } else if (soaWidth <= 0 || (soaWidth & (soaWidth - 1)) != 0) {
             Error(pos,
                   "soa<%d> width illegal. Value must be positive power "
                   "of two.",
                   soaWidth);
-            return NULL;
+            return nullptr;
         }
 
         if (st->IsUniformType()) {
@@ -162,13 +162,13 @@ const Type *DeclSpecs::GetBaseType(SourcePos pos) const {
                   "\"uniform\" qualifier and \"soa<%d>\" qualifier can't "
                   "both be used in a type declaration.",
                   soaWidth);
-            return NULL;
+            return nullptr;
         } else if (st->IsVaryingType()) {
             Error(pos,
                   "\"varying\" qualifier and \"soa<%d>\" qualifier can't "
                   "both be used in a type declaration.",
                   soaWidth);
-            return NULL;
+            return nullptr;
         } else
             retType = st->GetAsSOAType(soaWidth);
 
@@ -220,12 +220,12 @@ void DeclSpecs::Print() const {
 // Declarator
 
 Declarator::Declarator(DeclaratorKind dk, SourcePos p) : pos(p), kind(dk) {
-    child = NULL;
+    child = nullptr;
     typeQualifiers = 0;
     storageClass = SC_NONE;
     arraySize = -1;
-    type = NULL;
-    initExpr = NULL;
+    type = nullptr;
+    initExpr = nullptr;
 }
 
 void Declarator::InitFromDeclSpecs(DeclSpecs *ds) {
@@ -233,14 +233,14 @@ void Declarator::InitFromDeclSpecs(DeclSpecs *ds) {
 
     InitFromType(baseType, ds);
 
-    if (type == NULL) {
+    if (type == nullptr) {
         AssertPos(pos, m->errorCount > 0);
         return;
     }
 
     storageClass = ds->storageClass;
 
-    if (ds->declSpecList.size() > 0 && CastType<FunctionType>(type) == NULL) {
+    if (ds->declSpecList.size() > 0 && CastType<FunctionType>(type) == nullptr) {
         Error(pos,
               "__declspec specifiers for non-function type \"%s\" are "
               "not used.",
@@ -352,14 +352,14 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         // All of the type qualifiers should be in the DeclSpecs for the
         // base declarator
         AssertPos(pos, typeQualifiers == 0);
-        AssertPos(pos, child == NULL);
+        AssertPos(pos, child == nullptr);
         type = baseType;
     } else if (kind == DK_POINTER) {
         /* For now, any pointer to an SOA type gets the slice property; if
            we add the capability to declare pointers as slices or not,
            we'll want to set this based on a type qualifier here. */
         const Type *ptrType = new PointerType(baseType, variability, isConst, baseType->IsSOAType());
-        if (child != NULL) {
+        if (child != nullptr) {
             child->InitFromType(ptrType, ds);
             type = child->type;
             name = child->name;
@@ -379,13 +379,13 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             return;
         }
         // The parser should disallow this already, but double check.
-        if (CastType<ReferenceType>(baseType) != NULL) {
+        if (CastType<ReferenceType>(baseType) != nullptr) {
             Error(pos, "References to references are illegal.");
             return;
         }
 
         const Type *refType = new ReferenceType(baseType);
-        if (child != NULL) {
+        if (child != nullptr) {
             child->InitFromType(refType, ds);
             type = child->type;
             name = child->name;
@@ -402,7 +402,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         }
 
         const Type *arrayType = new ArrayType(baseType, arraySize);
-        if (child != NULL) {
+        if (child != nullptr) {
             child->InitFromType(arrayType, ds);
             type = child->type;
             name = child->name;
@@ -421,7 +421,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         for (unsigned int i = 0; i < functionParams.size(); ++i) {
             Declaration *d = functionParams[i];
 
-            if (d == NULL) {
+            if (d == nullptr) {
                 AssertPos(pos, m->errorCount > 0);
                 continue;
             }
@@ -434,7 +434,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
 
             AssertPos(pos, d->declarators.size() == 1);
             Declarator *decl = d->declarators[0];
-            if (decl == NULL || decl->type == NULL) {
+            if (decl == nullptr || decl->type == nullptr) {
                 AssertPos(pos, m->errorCount > 0);
                 continue;
             }
@@ -457,11 +457,11 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             if (decl->type->IsVoidType()) {
                 Error(decl->pos, "Parameter with type \"void\" illegal in function "
                                  "parameter list.");
-                decl->type = NULL;
+                decl->type = nullptr;
             }
 
             const ArrayType *at = CastType<ArrayType>(decl->type);
-            if (at != NULL) {
+            if (at != nullptr) {
                 // As in C, arrays are passed to functions as pointers to
                 // their element type.  We'll just immediately make this
                 // change now.  (One shortcoming of losing the fact that
@@ -471,7 +471,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                 // in the function, but it's not clear that this is a
                 // significant problem.)
                 const Type *targetType = at->GetElementType();
-                if (targetType == NULL) {
+                if (targetType == nullptr) {
                     AssertPos(pos, m->errorCount > 0);
                     return;
                 }
@@ -481,7 +481,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                 // Make sure there are no unsized arrays (other than the
                 // first dimension) in function parameter lists.
                 at = CastType<ArrayType>(targetType);
-                while (at != NULL) {
+                while (at != nullptr) {
                     if (at->GetElementCount() == 0)
                         Error(decl->pos, "Arrays with unsized dimensions in "
                                          "dimensions after the first one are illegal in "
@@ -494,17 +494,17 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             argNames.push_back(decl->name);
             argPos.push_back(decl->pos);
 
-            Expr *init = NULL;
+            Expr *init = nullptr;
             // Try to find an initializer expression.
-            while (decl != NULL) {
-                if (decl->initExpr != NULL) {
+            while (decl != nullptr) {
+                if (decl->initExpr != nullptr) {
                     decl->initExpr = TypeCheck(decl->initExpr);
                     decl->initExpr = Optimize(decl->initExpr);
-                    if (decl->initExpr != NULL) {
+                    if (decl->initExpr != nullptr) {
                         init = llvm::dyn_cast<ConstExpr>(decl->initExpr);
-                        if (init == NULL)
+                        if (init == nullptr)
                             init = llvm::dyn_cast<NullPointerExpr>(decl->initExpr);
-                        if (init == NULL)
+                        if (init == nullptr)
                             Error(decl->initExpr->pos,
                                   "Default value for parameter "
                                   "\"%s\" must be a compile-time constant.",
@@ -518,12 +518,12 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         }
 
         const Type *returnType = baseType;
-        if (returnType == NULL) {
+        if (returnType == nullptr) {
             Error(pos, "No return type provided in function declaration.");
             return;
         }
 
-        if (CastType<FunctionType>(returnType) != NULL) {
+        if (CastType<FunctionType>(returnType) != nullptr) {
             Error(pos, "Illegal to return function type from function.");
             return;
         }
@@ -569,7 +569,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             Warning(pos, "\"unmasked\" qualifier is redundant for exported "
                          "functions.");
 
-        if (child == NULL) {
+        if (child == nullptr) {
             AssertPos(pos, m->errorCount > 0);
             return;
         }
@@ -579,7 +579,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                              isExternSYCL, isUnmasked, isVectorCall, isRegCall);
 
         // handle any explicit __declspecs on the function
-        if (ds != NULL) {
+        if (ds != nullptr) {
             for (int i = 0; i < (int)ds->declSpecList.size(); ++i) {
                 std::string str = ds->declSpecList[i].first;
                 SourcePos ds_spec_pos = ds->declSpecList[i].second;
@@ -609,16 +609,16 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
 
 Declaration::Declaration(DeclSpecs *ds, std::vector<Declarator *> *dlist) {
     declSpecs = ds;
-    if (dlist != NULL)
+    if (dlist != nullptr)
         declarators = *dlist;
     for (unsigned int i = 0; i < declarators.size(); ++i)
-        if (declarators[i] != NULL)
+        if (declarators[i] != nullptr)
             declarators[i]->InitFromDeclSpecs(declSpecs);
 }
 
 Declaration::Declaration(DeclSpecs *ds, Declarator *d) {
     declSpecs = ds;
-    if (d != NULL) {
+    if (d != nullptr) {
         d->InitFromDeclSpecs(ds);
         declarators.push_back(d);
     }
@@ -630,7 +630,7 @@ std::vector<VariableDeclaration> Declaration::GetVariableDeclarations() const {
 
     for (unsigned int i = 0; i < declarators.size(); ++i) {
         Declarator *decl = declarators[i];
-        if (decl == NULL || decl->type == NULL) {
+        if (decl == nullptr || decl->type == nullptr) {
             // Ignore earlier errors
             Assert(m->errorCount > 0);
             continue;
@@ -638,7 +638,7 @@ std::vector<VariableDeclaration> Declaration::GetVariableDeclarations() const {
 
         if (decl->type->IsVoidType())
             Error(decl->pos, "\"void\" type variable illegal in declaration.");
-        else if (CastType<FunctionType>(decl->type) == NULL) {
+        else if (CastType<FunctionType>(decl->type) == nullptr) {
             if (!decl->type->IsDependentType()) {
                 decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
             }
@@ -658,14 +658,14 @@ void Declaration::DeclareFunctions() {
 
     for (unsigned int i = 0; i < declarators.size(); ++i) {
         Declarator *decl = declarators[i];
-        if (decl == NULL || decl->type == NULL) {
+        if (decl == nullptr || decl->type == nullptr) {
             // Ignore earlier errors
             Assert(m->errorCount > 0);
             continue;
         }
 
         const FunctionType *ftype = CastType<FunctionType>(decl->type);
-        if (ftype == NULL)
+        if (ftype == nullptr)
             continue;
 
         bool isInline = (declSpecs->typeQualifiers & TYPEQUAL_INLINE);
@@ -706,7 +706,7 @@ void ispc::GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &
     std::set<std::string> seenNames;
     for (unsigned int i = 0; i < sd.size(); ++i) {
         const Type *type = sd[i]->type;
-        if (type == NULL)
+        if (type == nullptr)
             continue;
 
         // FIXME: making this fake little DeclSpecs here is really
@@ -747,7 +747,7 @@ void ispc::GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &
     for (int i = 0; i < (int)elementTypes->size() - 1; ++i) {
         const ArrayType *arrayType = CastType<ArrayType>((*elementTypes)[i]);
 
-        if (arrayType != NULL && arrayType->GetElementCount() == 0)
+        if (arrayType != nullptr && arrayType->GetElementCount() == 0)
             Error((*elementPositions)[i], "Unsized arrays aren't allowed except "
                                           "for the last member in a struct definition.");
     }
