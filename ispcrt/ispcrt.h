@@ -168,7 +168,7 @@ void ispcrtCopyToDevice(ISPCRTTaskQueue, ISPCRTMemoryView);
 void ispcrtCopyToHost(ISPCRTTaskQueue, ISPCRTMemoryView);
 void ispcrtCopyMemoryView(ISPCRTTaskQueue, ISPCRTMemoryView, ISPCRTMemoryView, const size_t size);
 
-// NOTE: 'params' can be a NULL handle (NULL will get passed to the ISPC task as the function parameter)
+// NOTE: 'params' can be a nullptr handle (nullptr will get passed to the ISPC task as the function parameter)
 ISPCRTFuture ispcrtLaunch1D(ISPCRTTaskQueue, ISPCRTKernel, ISPCRTMemoryView params, size_t dim0);
 ISPCRTFuture ispcrtLaunch2D(ISPCRTTaskQueue, ISPCRTKernel, ISPCRTMemoryView params, size_t dim0, size_t dim1);
 ISPCRTFuture ispcrtLaunch3D(ISPCRTTaskQueue, ISPCRTKernel, ISPCRTMemoryView params, size_t dim0, size_t dim1,

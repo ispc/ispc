@@ -126,9 +126,9 @@ void SGEMMApp::run(SGEMMApp::RunResult &result, int m, int niter, int gx, int gy
         printf("Thread-group setting: %d x %d \n", gx, gy);
     }
     // Allocate matrices
-    Matrix A(m, k, lda, NULL, true, "A", st);
-    Matrix B(k, n, ldb, NULL, true, "B", st);
-    Matrix C(m, n, ldc, NULL, false, "C", st);
+    Matrix A(m, k, lda, nullptr, true, "A", st);
+    Matrix B(k, n, ldb, nullptr, true, "B", st);
+    Matrix C(m, n, ldc, nullptr, false, "C", st);
     Matrix C_gold(C, "C_gold");
 
     if (validate) {

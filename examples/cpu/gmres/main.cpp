@@ -20,13 +20,13 @@ int main(int argc, char **argv) {
 
     DEBUG_PRINT("Loading A...\n");
     Matrix *A = CRSMatrix::matrix_from_mtf(argv[1]);
-    if (A == NULL)
+    if (A == nullptr)
         return -1;
     DEBUG_PRINT("... size: %lu\n", A->cols());
 
     DEBUG_PRINT("Loading b...\n");
     Vector *b = Vector::vector_from_mtf(argv[2]);
-    if (b == NULL)
+    if (b == nullptr)
         return -1;
 
     Vector x(A->cols());

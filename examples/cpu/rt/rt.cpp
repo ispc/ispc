@@ -72,7 +72,7 @@ static void usage() {
 int main(int argc, char *argv[]) {
     static unsigned int test_iterations[] = {3, 7, 1};
     float scale = 1.f;
-    const char *filename = NULL;
+    const char *filename = nullptr;
     if (argc < 2)
         usage();
     filename = argv[1];
