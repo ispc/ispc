@@ -226,12 +226,12 @@ inline TaskGroupBase::TaskGroupBase() {
     memBuffers[0] = mem;
     memBufferSize[0] = sizeof(mem) / sizeof(mem[0]);
     for (int i = 1; i < NUM_MEM_BUFFERS; ++i) {
-        memBuffers[i] = NULL;
+        memBuffers[i] = nullptr;
         memBufferSize[i] = 0;
     }
 
     for (int i = 0; i < MAX_TASK_QUEUE_CHUNKS; ++i)
-        taskInfo[i] = NULL;
+        taskInfo[i] = nullptr;
 }
 
 inline TaskGroupBase::~TaskGroupBase() {
@@ -268,7 +268,7 @@ inline TaskInfo *TaskGroupBase::GetTaskInfo(int index) {
         exit(1);
     }
 
-    if (taskInfo[chunk] == NULL)
+    if (taskInfo[chunk] == nullptr)
         taskInfo[chunk] = new TaskInfo[TASK_QUEUE_CHUNK_SIZE];
     return &taskInfo[chunk][offset];
 }
@@ -454,14 +454,14 @@ static dispatch_queue_t gcdQueue;
 static volatile int32_t lock = 0;
 
 static void InitTaskSystem() {
-    if (gcdQueue != NULL)
+    if (gcdQueue != nullptr)
         return;
 
     while (1) {
         if (lAtomicCompareAndSwap32(&lock, 1, 0) == 0) {
-            if (gcdQueue == NULL) {
+            if (gcdQueue == nullptr) {
                 gcdQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
-                assert(gcdQueue != NULL);
+                assert(gcdQueue != nullptr);
                 lMemFence();
             }
             lock = 0;
@@ -542,7 +542,7 @@ inline void TaskGroup::Sync() {
 static volatile int32_t lock = 0;
 
 static int nThreads;
-static pthread_t *threads = NULL;
+static pthread_t *threads = nullptr;
 
 static pthread_mutex_t taskSysMutex;
 static std::vector<TaskGroup *> activeTaskGroups;
@@ -620,22 +620,22 @@ static void *lTaskEntry(void *arg) {
         lAtomicAdd(&tg->numUnfinishedTasks, -1);
     }
 
-    pthread_exit(NULL);
+    pthread_exit(nullptr);
     return 0;
 }
 
 static void InitTaskSystem() {
-    if (threads == NULL) {
+    if (threads == nullptr) {
         while (1) {
             if (lAtomicCompareAndSwap32(&lock, 1, 0) == 0) {
-                if (threads == NULL) {
+                if (threads == nullptr) {
                     // We launch one fewer thread than there are cores,
                     // since the main thread here will also grab jobs from
                     // the task queue itself.
                     nThreads = sysconf(_SC_NPROCESSORS_ONLN) - 1;
 
                     int err;
-                    if ((err = pthread_mutex_init(&taskSysMutex, NULL)) != 0) {
+                    if ((err = pthread_mutex_init(&taskSysMutex, nullptr)) != 0) {
                         fprintf(stderr, "Error creating mutex: %s\n", strerror(err));
                         exit(1);
                     }
@@ -643,7 +643,7 @@ static void InitTaskSystem() {
                     constexpr std::size_t SEM_NAME_MAX_SIZE{1024UL};
                     char semaphoreName[SEM_NAME_MAX_SIZE];
                     bool success = false;
-                    srand(time(NULL));
+                    srand(time(nullptr));
                     for (int i = 0; i < 10; i++) {
                         // Some platforms (e.g. FreeBSD) require the name to begin with a slash
                         snprintf(semaphoreName, SEM_NAME_MAX_SIZE, "/ispc_task.%d.%d", static_cast<int>(getpid()), static_cast<int>(rand()));
@@ -661,13 +661,13 @@ static void InitTaskSystem() {
                     }
 
                     threads = (pthread_t *)malloc(nThreads * sizeof(pthread_t));
-                    if (threads == NULL) {
+                    if (threads == nullptr) {
                         fprintf(stderr, "Error creating pthreads: %s\n", strerror(err));
                         exit(1);
                     }
 
                     for (int i = 0; i < nThreads; ++i) {
-                        err = pthread_create(&threads[i], NULL, &lTaskEntry, (void *)((long long)i));
+                        err = pthread_create(&threads[i], nullptr, &lTaskEntry, (void *)((long long)i));
                         if (err != 0) {
                             fprintf(stderr, "Error creating pthread %d: %s\n", i, strerror(err));
                             exit(1);
@@ -755,7 +755,7 @@ inline void TaskGroup::Sync() {
             exit(1);
         }
 
-        TaskInfo *myTask = NULL;
+        TaskInfo *myTask = nullptr;
         TaskGroup *runtg = this;
         if (waitingTasks.size() > 0) {
             int taskNumber = waitingTasks.back();
@@ -945,9 +945,9 @@ static TaskGroup *freeTaskGroups[MAX_FREE_TASK_GROUPS];
 static inline TaskGroup *AllocTaskGroup() {
     for (int i = 0; i < MAX_FREE_TASK_GROUPS; ++i) {
         TaskGroup *tg = freeTaskGroups[i];
-        if (tg != NULL) {
-            void *ptr = lAtomicCompareAndSwapPointer((void **)(&freeTaskGroups[i]), NULL, tg);
-            if (ptr != NULL) {
+        if (tg != nullptr) {
+            void *ptr = lAtomicCompareAndSwapPointer((void **)(&freeTaskGroups[i]), nullptr, tg);
+            if (ptr != nullptr) {
                 return (TaskGroup *)ptr;
             }
         }
@@ -960,9 +960,9 @@ static inline void FreeTaskGroup(TaskGroup *tg) {
     tg->Reset();
 
     for (int i = 0; i < MAX_FREE_TASK_GROUPS; ++i) {
-        if (freeTaskGroups[i] == NULL) {
-            void *ptr = lAtomicCompareAndSwapPointer((void **)&freeTaskGroups[i], tg, NULL);
-            if (ptr == NULL)
+        if (freeTaskGroups[i] == nullptr) {
+            void *ptr = lAtomicCompareAndSwapPointer((void **)&freeTaskGroups[i], tg, nullptr);
+            if (ptr == nullptr)
                 return;
         }
     }
@@ -975,7 +975,7 @@ static inline void FreeTaskGroup(TaskGroup *tg) {
 void ISPCLaunch(void **taskGroupPtr, void *func, void *data, int count0, int count1, int count2) {
     const int count = count0 * count1 * count2;
     TaskGroup *taskGroup;
-    if (*taskGroupPtr == NULL) {
+    if (*taskGroupPtr == nullptr) {
         InitTaskSystem();
         taskGroup = AllocTaskGroup();
         *taskGroupPtr = taskGroup;
@@ -997,7 +997,7 @@ void ISPCLaunch(void **taskGroupPtr, void *func, void *data, int count0, int cou
 
 void ISPCSync(void *h) {
     TaskGroup *taskGroup = (TaskGroup *)h;
-    if (taskGroup != NULL) {
+    if (taskGroup != nullptr) {
         taskGroup->Sync();
         FreeTaskGroup(taskGroup);
     }
@@ -1005,7 +1005,7 @@ void ISPCSync(void *h) {
 
 void *ISPCAlloc(void **taskGroupPtr, int64_t size, int32_t alignment) {
     TaskGroup *taskGroup;
-    if (*taskGroupPtr == NULL) {
+    if (*taskGroupPtr == nullptr) {
         InitTaskSystem();
         taskGroup = AllocTaskGroup();
         *taskGroupPtr = taskGroup;
@@ -1112,7 +1112,7 @@ class TaskSys {
         if (global)
             return;
         pthread_mutex_lock(&mutex);
-        if (global == NULL)
+        if (global == nullptr)
             global = new TaskSys;
         pthread_mutex_unlock(&mutex);
     }
@@ -1180,7 +1180,7 @@ inline void Task::run(int idx, int threadIdx) {
 
 void *_threadFct(void *data) {
     ((TaskSys *)data)->threadFct();
-    return NULL;
+    return nullptr;
 }
 
 void TaskSys::createThreads() {
@@ -1212,7 +1212,7 @@ void TaskSys::createThreads() {
     }
 }
 
-TaskSys *TaskSys::global = NULL;
+TaskSys *TaskSys::global = nullptr;
 int TaskSys::numThreadsRunning = 0;
 
 ///////////////////////////////////////////////////////////////////////////

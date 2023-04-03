@@ -97,7 +97,7 @@ InputData *CreateInputDataFromFile(const char *path) {
         fprintf(stderr, "Preumature EOF reading file \"%s\"\n", path);
         fclose(in);
         delete input;
-        return NULL;
+        return nullptr;
     }
 
     // Load data chunk and update pointers
@@ -106,7 +106,7 @@ InputData *CreateInputDataFromFile(const char *path) {
         fprintf(stderr, "Preumature EOF reading file \"%s\"\n", path);
         fclose(in);
         delete input;
-        return NULL;
+        return nullptr;
     }
 
     input->arrays.zBuffer = (float *)&input->chunk[input->header.inputDataArrayOffsets[idaZBuffer]];

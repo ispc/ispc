@@ -1163,7 +1163,7 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
                 queueGroupCount * sizeof(ze_command_queue_group_properties_t));
             zeDeviceGetCommandQueueGroupProperties(device, &queueGroupCount, queueGroupProperties);
 
-            if (queueGroupProperties != NULL) {
+            if (queueGroupProperties != nullptr) {
                 for (uint32_t i = 0; i < queueGroupCount; i++) {
                     if (queueGroupProperties[i].flags & ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) {
                         computeOrdinal = i;

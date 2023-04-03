@@ -16,13 +16,13 @@ __inline__ uint64_t rdtsc() {
     static bool first = true;
     static struct timeval tv_start;
     if (first) {
-        gettimeofday(&tv_start, NULL);
+        gettimeofday(&tv_start, nullptr);
         first = false;
         return 0;
     }
 
     struct timeval tv;
-    gettimeofday(&tv, NULL);
+    gettimeofday(&tv, nullptr);
     tv.tv_sec -= tv_start.tv_sec;
     tv.tv_usec -= tv_start.tv_usec;
     return (1000000ull * tv.tv_sec + tv.tv_usec) * 1000ull;

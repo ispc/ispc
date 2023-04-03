@@ -35,7 +35,7 @@ class Vector {
             entries = (double *)malloc(sizeof(double) * _size);
         else {
             shared_ptr = true;
-            entries = NULL;
+            entries = nullptr;
         }
     }
 

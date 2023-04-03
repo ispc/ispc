@@ -67,7 +67,7 @@ bool compare_entries(struct entry i, struct entry j) {
 #define ERR_OUT(...)                                                                                                   \
     do {                                                                                                               \
         fprintf(stderr, __VA_ARGS__);                                                                                  \
-        return NULL;                                                                                                   \
+        return nullptr;                                                                                                \
     } while(0)
 
 #define ERR_OUT_WITH_CLOSE(file, ...)                                                                                  \
@@ -82,7 +82,7 @@ CRSMatrix *CRSMatrix::matrix_from_mtf(char *path) {
 
     int m, n, nz;
 
-    if ((f = fopen(path, "r")) == NULL)
+    if ((f = fopen(path, "r")) == nullptr)
         ERR_OUT("Error: %s does not name a valid/readable file.\n", path);
 
     if (mm_read_banner(f, &matcode) != 0)
@@ -137,7 +137,7 @@ Vector *Vector::vector_from_mtf(char *path) {
 
     int m, n, nz;
 
-    if ((f = fopen(path, "r")) == NULL)
+    if ((f = fopen(path, "r")) == nullptr)
         ERR_OUT("Error: %s does not name a valid/readable file.\n", path);
 
     if (mm_read_banner(f, &matcode) != 0)
@@ -200,7 +200,7 @@ void Vector::to_mtf(char *path) {
     mm_set_dense(&matcode);
     mm_set_general(&matcode);
 
-    if ((f = fopen(path, "w")) == NULL)
+    if ((f = fopen(path, "w")) == nullptr)
         ERR("Error: cannot open/write to %s\n", path);
 
     mm_write_banner(f, matcode);

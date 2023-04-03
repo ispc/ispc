@@ -1,4 +1,4 @@
-// Copyright 2020-2022 Intel Corporation
+// Copyright 2020-2023 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "ze_mock.h"
@@ -281,7 +281,7 @@ ze_result_t zeModuleDestroy(ze_module_handle_t hModule) {
 ze_result_t zeModuleDynamicLink(uint32_t numModules, ze_module_handle_t *phModules,
                                 ze_module_build_log_handle_t *phLinkLog) {
     MOCK_CNT_CALL;
-    if (phModules == NULL)
+    if (phModules == nullptr)
         return ZE_RESULT_ERROR_INVALID_NULL_POINTER;
     MOCK_RET;
 }
@@ -294,17 +294,17 @@ ze_result_t zeModuleBuildLogGetString(ze_module_build_log_handle_t hModuleBuildL
 
 ze_result_t zeModuleBuildLogDestroy(ze_module_build_log_handle_t hModuleBuildLog) {
     MOCK_CNT_CALL;
-    if (hModuleBuildLog == NULL)
+    if (hModuleBuildLog == nullptr)
         return ZE_RESULT_ERROR_UNINITIALIZED;
     MOCK_RET;
 }
 
-static void *pfnFunctionMem = NULL;
+static void *pfnFunctionMem = nullptr;
 ze_result_t zeModuleGetFunctionPointer(ze_module_handle_t hModule, const char *pFunctionName, void **pfnFunction) {
     MOCK_CNT_CALL;
     if (hModule != ModuleHandle.get())
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
-    if (pFunctionName == NULL)
+    if (pFunctionName == nullptr)
         return ZE_RESULT_ERROR_INVALID_NULL_POINTER;
     *pfnFunction = &pfnFunctionMem;
     MOCK_RET;
@@ -346,7 +346,7 @@ ze_result_t zeKernelSuggestGroupSize(ze_kernel_handle_t hKernel, uint32_t global
     if (hKernel != KernelHandle.get()) {
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
     }
-    if (groupSizeX == NULL || groupSizeY == NULL || groupSizeZ == NULL) {
+    if (groupSizeX == nullptr || groupSizeY == nullptr || groupSizeZ == nullptr) {
         return ZE_RESULT_ERROR_INVALID_NULL_POINTER;
     }
     *groupSizeX = 1;
