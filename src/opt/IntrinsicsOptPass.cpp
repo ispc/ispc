@@ -57,11 +57,11 @@ bool IntrinsicsOpt::optimizeIntrinsics(llvm::BasicBlock &bb) {
     for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e;) {
         llvm::BasicBlock::iterator curIter = iter++;
         llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*(curIter));
-        if (callInst == NULL || callInst->getCalledFunction() == NULL)
+        if (callInst == nullptr || callInst->getCalledFunction() == nullptr)
             continue;
 
         BlendInstruction *blend = matchingBlendInstruction(callInst->getCalledFunction());
-        if (blend != NULL) {
+        if (blend != nullptr) {
             llvm::Value *v[2] = {callInst->getArgOperand(blend->op0), callInst->getArgOperand(blend->op1)};
             llvm::Value *factor = callInst->getArgOperand(blend->opFactor);
 
@@ -90,7 +90,7 @@ bool IntrinsicsOpt::optimizeIntrinsics(llvm::BasicBlock &bb) {
             }
 
             MaskStatus maskStatus = GetMaskStatusFromValue(factor);
-            llvm::Value *value = NULL;
+            llvm::Value *value = nullptr;
             if (maskStatus == MaskStatus::all_off) {
                 // Mask all off -> replace with the first blend value
                 value = v[0];
@@ -99,7 +99,7 @@ bool IntrinsicsOpt::optimizeIntrinsics(llvm::BasicBlock &bb) {
                 value = v[1];
             }
 
-            if (value != NULL) {
+            if (value != nullptr) {
                 ReplaceInstWithValueWrapper(curIter, value);
                 modifiedAny = true;
                 continue;
@@ -144,7 +144,7 @@ bool IntrinsicsOpt::optimizeIntrinsics(llvm::BasicBlock &bb) {
                     align = callInst->getCalledFunction() == avxMaskedLoad32 ? 4 : 8;
                 llvm::Instruction *loadInst = new llvm::LoadInst(
                     returnType, castPtr, llvm::Twine(callInst->getArgOperand(0)->getName()) + "_load",
-                    false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(), (llvm::Instruction *)NULL);
+                    false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(), (llvm::Instruction *)nullptr);
                 LLVMCopyMetadata(loadInst, callInst);
                 llvm::ReplaceInstWithInst(callInst, loadInst);
                 modifiedAny = true;
@@ -174,7 +174,7 @@ bool IntrinsicsOpt::optimizeIntrinsics(llvm::BasicBlock &bb) {
                     align = g->target->getNativeVectorAlignment();
                 else
                     align = callInst->getCalledFunction() == avxMaskedStore32 ? 4 : 8;
-                llvm::StoreInst *storeInst = new llvm::StoreInst(rvalue, castPtr, (llvm::Instruction *)NULL,
+                llvm::StoreInst *storeInst = new llvm::StoreInst(rvalue, castPtr, (llvm::Instruction *)nullptr,
                                                                  llvm::MaybeAlign(align).valueOrOne());
                 LLVMCopyMetadata(storeInst, callInst);
                 llvm::ReplaceInstWithInst(callInst, storeInst);
@@ -202,7 +202,7 @@ bool IntrinsicsOpt::runOnFunction(llvm::Function &F) {
 
 bool IntrinsicsOpt::matchesMaskInstruction(llvm::Function *function) {
     for (unsigned int i = 0; i < maskInstructions.size(); ++i) {
-        if (maskInstructions[i].function != NULL && function == maskInstructions[i].function) {
+        if (maskInstructions[i].function != nullptr && function == maskInstructions[i].function) {
             return true;
         }
     }
@@ -211,11 +211,11 @@ bool IntrinsicsOpt::matchesMaskInstruction(llvm::Function *function) {
 
 IntrinsicsOpt::BlendInstruction *IntrinsicsOpt::matchingBlendInstruction(llvm::Function *function) {
     for (unsigned int i = 0; i < blendInstructions.size(); ++i) {
-        if (blendInstructions[i].function != NULL && function == blendInstructions[i].function) {
+        if (blendInstructions[i].function != nullptr && function == blendInstructions[i].function) {
             return &blendInstructions[i];
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 llvm::Pass *CreateIntrinsicsOptPass() { return new IntrinsicsOpt; }

@@ -335,7 +335,7 @@ inline int ispcRand() {
         } \
         else if (r == 2) { \
             Symbol *sym = m->symbolTable->RandomSymbol(); \
-            if (sym != NULL) { \
+            if (sym != nullptr) { \
                 yylval.stringVal = new std::string(sym->name); \
                 Warning(yylloc, "Fuzz test replaced with identifier \"%s\".", sym->name.c_str()); \
                 return TOKEN_IDENTIFIER; \
@@ -468,7 +468,7 @@ L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERA
     /* We have an identifier--is it a type name or an identifier?
        The symbol table will straighten us out... */
     yylval.stringVal = new std::string(yytext);
-    if (m->symbolTable->LookupType(yytext) != NULL)
+    if (m->symbolTable->LookupType(yytext) != nullptr)
         return TOKEN_TYPE_NAME;
     else if (m->symbolTable->LookupFunctionTemplate(yytext))
         return TOKEN_TEMPLATE_NAME;
@@ -643,7 +643,7 @@ static int
 lParseInteger(bool dotdotdot) {
     int ls = 0, us = 0;
 
-    char *endPtr = NULL;
+    char *endPtr = nullptr;
     if (yytext[0] == '0' && yytext[1] == 'b')
         yylval.intVal = lParseBinary(yytext+2, yylloc, &endPtr);
     else {
@@ -819,7 +819,7 @@ static void lPragmaUnroll(YYSTYPE *yylval, SourcePos *pos, std::string fromUserR
         ++pos->last_column;
     }
 
-    char *endPtr = NULL;
+    char *endPtr = nullptr;
 #if defined(ISPC_HOST_IS_WINDOWS) && !defined(__MINGW32__)
     count = _strtoui64(currChar, &endPtr, 0);
 #else
@@ -1067,7 +1067,7 @@ lStringConst(YYSTYPE *yylval, SourcePos *pos)
     char *p;
     std::string str;
     p = strchr(yytext, '"') + 1;
-    if (p == NULL)
+    if (p == nullptr)
        return;
 
     while (*p != '\"') {
@@ -1105,7 +1105,7 @@ ipow2(int exponent) {
 */
 static double
 lParseHexFloat(const char *ptr) {
-    Assert(ptr != NULL);
+    Assert(ptr != nullptr);
 
     Assert(ptr[0] == '0' && (ptr[1] == 'x' || ptr[1] == 'X'));
     ptr += 2;
@@ -1149,7 +1149,7 @@ lParseHexFloat(const char *ptr) {
     ++ptr; // skip the 'p'/'P'
 
     // interestingly enough, the exponent is provided base 10..
-    char* endptr = NULL;
+    char* endptr = nullptr;
     int exponent = (int)strtol(ptr, &endptr, 10);
     Assert(ptr != endptr);
 

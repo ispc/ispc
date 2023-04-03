@@ -54,7 +54,7 @@ int ispc::TerminalWidth() {
 
 #if defined(ISPC_HOST_IS_WINDOWS)
     HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (h == INVALID_HANDLE_VALUE || h == NULL)
+    if (h == INVALID_HANDLE_VALUE || h == nullptr)
         return 80;
     CONSOLE_SCREEN_BUFFER_INFO bufferInfo = {{0}};
     GetConsoleScreenBufferInfo(h, &bufferInfo);
@@ -68,7 +68,7 @@ int ispc::TerminalWidth() {
 }
 
 static bool lHaveANSIColors() {
-    static bool r = (getenv("TERM") != NULL && strcmp(getenv("TERM"), "dumb") != 0);
+    static bool r = (getenv("TERM") != nullptr && strcmp(getenv("TERM"), "dumb") != 0);
 #ifndef ISPC_HOST_IS_WINDOWS
     r &= (bool)isatty(2);
     r |= g->forceColoredOutput;
@@ -251,8 +251,8 @@ void ispc::PrintWithWordBreaks(const char *buf, int indent, int columnWidth, FIL
 #ifdef ISPC_HOST_IS_WINDOWS
 // we cover for the lack vasprintf and asprintf on windows (also covers mingw)
 int vasprintf(char **sptr, const char *fmt, va_list argv) {
-    int wanted = vsnprintf(*sptr = NULL, 0, fmt, argv);
-    if ((wanted < 0) || ((*sptr = (char *)malloc(1 + wanted)) == NULL))
+    int wanted = vsnprintf(*sptr = nullptr, 0, fmt, argv);
+    if ((wanted < 0) || ((*sptr = (char *)malloc(1 + wanted)) == nullptr))
         return -1;
 
     return vsprintf(*sptr, fmt, argv);
@@ -324,7 +324,7 @@ static void lPrint(const char *type, bool isError, SourcePos p, const char *fmt,
 }
 
 void ispc::Error(SourcePos p, const char *fmt, ...) {
-    if (m != NULL) {
+    if (m != nullptr) {
         ++m->errorCount;
         if ((g->errorLimit != -1) && (g->errorLimit <= m->errorCount - 1))
             return;
@@ -355,7 +355,7 @@ void ispc::Warning(SourcePos p, const char *fmt, ...) {
     if ((turnOffWarnings_it != g->turnOffWarnings.end()) && (turnOffWarnings_it->second == false))
         return;
 
-    if (g->warningsAsErrors && m != NULL)
+    if (g->warningsAsErrors && m != nullptr)
         ++m->errorCount;
 
     if (g->disableWarnings || g->quiet)
@@ -381,7 +381,7 @@ void ispc::PerformanceWarning(SourcePos p, const char *fmt, ...) {
     if (turnOffWarnings_it != g->turnOffWarnings.end())
         return;
 
-    if (g->warningsAsErrors && m != NULL)
+    if (g->warningsAsErrors && m != nullptr)
         ++m->errorCount;
 
     va_list args;
@@ -491,7 +491,7 @@ void ispc::GetDirectoryAndFileName(const std::string &currentDirectory, const st
 #ifdef ISPC_HOST_IS_WINDOWS
     char path[MAX_PATH];
     const char *combPath = PathCombine(path, currentDirectory.c_str(), relativeName.c_str());
-    Assert(combPath != NULL);
+    Assert(combPath != nullptr);
     const char *filenamePtr = PathFindFileName(combPath);
     *filename = filenamePtr;
     *directory = std::string(combPath, filenamePtr - combPath);
@@ -513,7 +513,7 @@ void ispc::GetDirectoryAndFileName(const std::string &currentDirectory, const st
     // now, we need to separate it into the base name and the directory
     const char *fp = fullPath.c_str();
     const char *basenameStart = strrchr(fp, '/');
-    Assert(basenameStart != NULL);
+    Assert(basenameStart != nullptr);
     ++basenameStart;
     Assert(basenameStart[0] != '\0');
     *filename = basenameStart;

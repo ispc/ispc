@@ -19,7 +19,7 @@ char ReplacePseudoMemoryOpsPass::ID = 0;
 */
 static bool lIsSafeToBlend(llvm::Value *lvalue) {
     llvm::BitCastInst *bc = llvm::dyn_cast<llvm::BitCastInst>(lvalue);
-    if (bc != NULL)
+    if (bc != nullptr)
         return lIsSafeToBlend(bc->getOperand(0));
     else {
         llvm::AllocaInst *ai = llvm::dyn_cast<llvm::AllocaInst>(lvalue);
@@ -30,10 +30,10 @@ static bool lIsSafeToBlend(llvm::Value *lvalue) {
                 type = at->getElementType();
             }
             llvm::FixedVectorType *vt = llvm::dyn_cast<llvm::FixedVectorType>(type);
-            return (vt != NULL && (int)vt->getNumElements() == g->target->getVectorWidth());
+            return (vt != nullptr && (int)vt->getNumElements() == g->target->getVectorWidth());
         } else {
             llvm::GetElementPtrInst *gep = llvm::dyn_cast<llvm::GetElementPtrInst>(lvalue);
-            if (gep != NULL)
+            if (gep != nullptr)
                 return lIsSafeToBlend(gep->getOperand(0));
             else
                 return false;
@@ -47,7 +47,7 @@ static bool lReplacePseudoMaskedStore(llvm::CallInst *callInst) {
             pseudoFunc = m->module->getFunction(pname);
             blendFunc = m->module->getFunction(bname);
             maskedStoreFunc = m->module->getFunction(msname);
-            Assert(pseudoFunc != NULL && blendFunc != NULL && maskedStoreFunc != NULL);
+            Assert(pseudoFunc != nullptr && blendFunc != nullptr && maskedStoreFunc != nullptr);
         }
         llvm::Function *pseudoFunc;
         llvm::Function *blendFunc;
@@ -62,14 +62,14 @@ static bool lReplacePseudoMaskedStore(llvm::CallInst *callInst) {
         LMSInfo("__pseudo_masked_store_float", "__masked_store_blend_float", "__masked_store_float"),
         LMSInfo("__pseudo_masked_store_i64", "__masked_store_blend_i64", "__masked_store_i64"),
         LMSInfo("__pseudo_masked_store_double", "__masked_store_blend_double", "__masked_store_double")};
-    LMSInfo *info = NULL;
+    LMSInfo *info = nullptr;
     for (unsigned int i = 0; i < sizeof(msInfo) / sizeof(msInfo[0]); ++i) {
-        if (msInfo[i].pseudoFunc != NULL && callInst->getCalledFunction() == msInfo[i].pseudoFunc) {
+        if (msInfo[i].pseudoFunc != nullptr && callInst->getCalledFunction() == msInfo[i].pseudoFunc) {
             info = &msInfo[i];
             break;
         }
     }
-    if (info == NULL)
+    if (info == nullptr)
         return false;
 
     llvm::Value *lvalue = callInst->getArgOperand(0);
@@ -245,17 +245,17 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
 
     llvm::Function *calledFunc = callInst->getCalledFunction();
 
-    LowerGSInfo *info = NULL;
+    LowerGSInfo *info = nullptr;
     for (unsigned int i = 0; i < sizeof(lgsInfo) / sizeof(lgsInfo[0]); ++i) {
-        if (lgsInfo[i].pseudoFunc != NULL && calledFunc == lgsInfo[i].pseudoFunc) {
+        if (lgsInfo[i].pseudoFunc != nullptr && calledFunc == lgsInfo[i].pseudoFunc) {
             info = &lgsInfo[i];
             break;
         }
     }
-    if (info == NULL)
+    if (info == nullptr)
         return false;
 
-    Assert(info->actualFunc != NULL);
+    Assert(info->actualFunc != nullptr);
 
     // Get the source position from the metadata attached to the call
     // instruction so that we can issue PerformanceWarning()s below.
@@ -282,7 +282,7 @@ bool ReplacePseudoMemoryOpsPass::replacePseudoMemoryOps(llvm::BasicBlock &bb) {
     // is moved forward before the instruction is processed.
     for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e;) {
         llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*(iter++));
-        if (callInst == NULL || callInst->getCalledFunction() == NULL)
+        if (callInst == nullptr || callInst->getCalledFunction() == nullptr)
             continue;
 
         if (lReplacePseudoGS(callInst)) {

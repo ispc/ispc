@@ -26,13 +26,13 @@ bool IsCompileTimeConstantPass::lowerCompileTimeConstant(llvm::BasicBlock &bb) {
         // Iterate through the instructions looking for calls to the
         // __is_compile_time_constant_*() functions
         llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*(curIter));
-        if (callInst == NULL)
+        if (callInst == nullptr)
             continue;
 
         int j;
         int nFuncs = sizeof(funcs) / sizeof(funcs[0]);
         for (j = 0; j < nFuncs; ++j) {
-            if (funcs[j] != NULL && callInst->getCalledFunction() == funcs[j])
+            if (funcs[j] != nullptr && callInst->getCalledFunction() == funcs[j])
                 break;
         }
         if (j == nFuncs)

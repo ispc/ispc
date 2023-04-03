@@ -131,7 +131,7 @@ static const Type *lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) 
     else if (t == LLVMTypes::DoubleVectorPointerType)
         return PointerType::GetUniform(AtomicType::VaryingDouble);
 
-    return NULL;
+    return nullptr;
 }
 
 static void lCreateSymbol(const std::string &name, const Type *returnType, llvm::SmallVector<const Type *, 8> &argTypes,
@@ -190,7 +190,7 @@ static bool lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
         bool intAsUnsigned = (i == 1);
 
         const Type *returnType = lLLVMTypeToISPCType(ftype->getReturnType(), intAsUnsigned);
-        if (returnType == NULL) {
+        if (returnType == nullptr) {
             Debug(SourcePos(),
                   "Return type not representable for "
                   "builtin %s.",
@@ -206,7 +206,7 @@ static bool lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
         for (unsigned int j = 0; j < ftype->getNumParams(); ++j) {
             const llvm::Type *llvmArgType = ftype->getParamType(j);
             const Type *type = lLLVMTypeToISPCType(llvmArgType, intAsUnsigned);
-            if (type == NULL) {
+            if (type == nullptr) {
                 Debug(SourcePos(),
                       "Type of parameter %d not "
                       "representable for builtin %s",
@@ -228,7 +228,7 @@ static bool lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
 
 Symbol *ispc::CreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTable *symbolTable) {
     Symbol *existingSym = symbolTable->LookupIntrinsics(func);
-    if (existingSym != NULL) {
+    if (existingSym != nullptr) {
         return existingSym;
     }
     SourcePos noPos;
@@ -236,7 +236,7 @@ Symbol *ispc::CreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTable
     const llvm::FunctionType *ftype = func->getFunctionType();
     std::string name = std::string(func->getName());
     const Type *returnType = lLLVMTypeToISPCType(ftype->getReturnType(), false);
-    if (returnType == NULL) {
+    if (returnType == nullptr) {
         Error(SourcePos(),
               "Return type not representable for "
               "Intrinsic %s.",
@@ -248,7 +248,7 @@ Symbol *ispc::CreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTable
     for (unsigned int j = 0; j < ftype->getNumParams(); ++j) {
         const llvm::Type *llvmArgType = ftype->getParamType(j);
         const Type *type = lLLVMTypeToISPCType(llvmArgType, false);
-        if (type == NULL) {
+        if (type == nullptr) {
             Error(SourcePos(),
                   "Type of parameter %d not "
                   "representable for Intrinsic %s",
@@ -961,7 +961,7 @@ static void lSetInternalFunctions(llvm::Module *module) {
     // clang-format on
     for (auto name : names) {
         llvm::Function *f = module->getFunction(name);
-        if (f != NULL && f->empty() == false) {
+        if (f != nullptr && f->empty() == false) {
             f->setLinkage(llvm::GlobalValue::InternalLinkage);
             // TO-DO : Revisit adding this back for ARM support.
             // g->target->markFuncWithTargetAttr(f);
@@ -1059,7 +1059,7 @@ void ispc::AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, Symbo
 
         lSetInternalFunctions(module);
 
-        if (symbolTable != NULL)
+        if (symbolTable != nullptr)
             lAddModuleSymbols(module, symbolTable);
         lCheckModuleIntrinsics(module);
     }
@@ -1079,7 +1079,7 @@ static void lDefineConstantInt(const char *name, int val, llvm::Module *module, 
     sym->storageInfo = new AddressInfo(GV, GV->getValueType());
     symbolTable->AddVariable(sym);
 
-    if (m->diBuilder != NULL) {
+    if (m->diBuilder != nullptr) {
         llvm::DIFile *file = m->diCompileUnit->getFile();
         llvm::DICompileUnit *cu = m->diCompileUnit;
         llvm::DIType *diType = sym->type->GetDIType(file);
@@ -1107,7 +1107,7 @@ static void lDefineConstantIntFunc(const char *name, int val, llvm::Module *modu
 
     llvm::Function *func = module->getFunction(name);
     dbg_sym.push_back(func);
-    Assert(func != NULL); // it should be declared already...
+    Assert(func != nullptr); // it should be declared already...
     func->addFnAttr(llvm::Attribute::AlwaysInline);
     llvm::BasicBlock *bblock = llvm::BasicBlock::Create(*g->ctx, "entry", func, 0);
     llvm::ReturnInst::Create(*g->ctx, LLVMInt32(val), bblock);
@@ -1134,7 +1134,7 @@ static void lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable,
     sym->storageInfo = new AddressInfo(GV, GV->getValueType());
     symbolTable->AddVariable(sym);
 
-    if (m->diBuilder != NULL) {
+    if (m->diBuilder != nullptr) {
         llvm::DIFile *file = m->diCompileUnit->getFile();
         llvm::DICompileUnit *cu = m->diCompileUnit;
         llvm::DIType *diType = sym->type->GetDIType(file);

@@ -55,7 +55,7 @@ class Module {
     void AddTypeDef(const std::string &name, const Type *type, SourcePos pos);
 
     /** Add a new global variable corresponding to the given Symbol to the
-        module.  If non-NULL, initExpr gives the initiailizer expression
+        module.  If non-nullptr, initExpr gives the initiailizer expression
         for the global's inital value. */
     void AddGlobalVariable(const std::string &name, const Type *type, Expr *initExpr, bool isConst,
                            StorageClass storageClass, SourcePos pos);
@@ -139,7 +139,7 @@ class Module {
                             are specified in the "targets" parameter and if this
                             parameter is "foo.o", then we'll generate multiple
                             output files, like "foo.o", "foo_sse2.o", "foo_avx.o".
-        @param headerFileName If non-NULL, emit a header file suitable for
+        @param headerFileName If non-nullptr, emit a header file suitable for
                               inclusion from C/C++ code with declarations of
                               types and functions exported from the given ispc
                               source file.
@@ -195,14 +195,14 @@ class Module {
 
     /** Write the corresponding output type to the given file.  Returns
         true on success, false if there has been an error.  The given
-        filename may be NULL, indicating that output should go to standard
+        filename may be nullptr, indicating that output should go to standard
         output. */
-    bool writeOutput(OutputType ot, OutputFlags flags, const char *filename, const char *depTargetFileName = NULL,
-                     const char *sourceFileName = NULL, DispatchHeaderInfo *DHI = 0);
+    bool writeOutput(OutputType ot, OutputFlags flags, const char *filename, const char *depTargetFileName = nullptr,
+                     const char *sourceFileName = nullptr, DispatchHeaderInfo *DHI = 0);
     bool writeHeader(const char *filename);
     bool writeDispatchHeader(DispatchHeaderInfo *DHI);
-    bool writeDeps(const char *filename, bool generateMakeRule, const char *targetName = NULL,
-                   const char *srcFilename = NULL);
+    bool writeDeps(const char *filename, bool generateMakeRule, const char *targetName = nullptr,
+                   const char *srcFilename = nullptr);
     bool writeDevStub(const char *filename);
     bool writeHostStub(const char *filename);
     bool writeCPPStub(const char *outFileName);

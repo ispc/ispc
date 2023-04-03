@@ -226,7 +226,7 @@ Module::Module(const char *fn) : filename(fn) {
             Error(SourcePos(), "Can't emit debugging information with no source file on disk.\n");
             ++errorCount;
             delete diBuilder;
-            diBuilder = NULL;
+            diBuilder = nullptr;
         } else {
             std::string directory, name;
             GetDirectoryAndFileName(g->currentDirectory, filename, &directory, &name);
@@ -318,12 +318,12 @@ int Module::CompileFile() {
     } else {
         llvm::TimeTraceScope TimeScope("Frontend parser");
         // No preprocessor, just open up the file if it's not stdin..
-        FILE *f = NULL;
+        FILE *f = nullptr;
         if (IsStdin(filename)) {
             f = stdin;
         } else {
             f = fopen(filename, "r");
-            if (f == NULL) {
+            if (f == nullptr) {
                 perror(filename);
                 return 1;
             }
@@ -421,9 +421,9 @@ void Module::AddTypeDef(const std::string &name, const Type *type, SourcePos pos
 
 void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initExpr, bool isConst,
                                StorageClass storageClass, SourcePos pos) {
-    // These may be NULL due to errors in parsing; just gracefully return
+    // These may be nullptr due to errors in parsing; just gracefully return
     // here if so.
-    if (name == "" || type == NULL) {
+    if (name == "" || type == nullptr) {
         Assert(errorCount > 0);
         return;
     }
@@ -454,11 +454,11 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
     }
 
     type = ArrayType::SizeUnsizedArrays(type, initExpr);
-    if (type == NULL)
+    if (type == nullptr)
         return;
 
     const ArrayType *at = CastType<ArrayType>(type);
-    if (at != NULL && at->TotalElementCount() == 0) {
+    if (at != nullptr && at->TotalElementCount() == 0) {
         Error(pos, "Illegal to declare a global variable with unsized "
                    "array dimensions that aren't set with an initializer "
                    "expression.");
@@ -466,28 +466,28 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
     }
 
     llvm::Type *llvmType = type->LLVMStorageType(g->ctx);
-    if (llvmType == NULL)
+    if (llvmType == nullptr)
         return;
 
     // See if we have an initializer expression for the global.  If so,
     // make sure it's a compile-time constant!
-    llvm::Constant *llvmInitializer = NULL;
-    ConstExpr *constValue = NULL;
+    llvm::Constant *llvmInitializer = nullptr;
+    ConstExpr *constValue = nullptr;
     if (storageClass == SC_EXTERN) {
-        if (initExpr != NULL)
+        if (initExpr != nullptr)
             Error(pos, "Initializer can't be provided with \"extern\" global variable \"%s\".", name.c_str());
     } else {
-        if (initExpr != NULL) {
+        if (initExpr != nullptr) {
             initExpr = TypeCheck(initExpr);
-            if (initExpr != NULL) {
+            if (initExpr != nullptr) {
                 // We need to make sure the initializer expression is
                 // the same type as the global.  (But not if it's an
                 // ExprList; they don't have types per se / can't type
                 // convert themselves anyway.)
-                if (llvm::dyn_cast<ExprList>(initExpr) == NULL)
+                if (llvm::dyn_cast<ExprList>(initExpr) == nullptr)
                     initExpr = TypeConvertExpr(initExpr, type, "initializer");
 
-                if (initExpr != NULL) {
+                if (initExpr != nullptr) {
                     initExpr = Optimize(initExpr);
                     // Fingers crossed, now let's see if we've got a
                     // constant value..
@@ -496,7 +496,7 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
 
                     // If compiling for multitarget, skip initialization for
                     // indentified scenarios unless it's static
-                    if (llvmInitializer != NULL) {
+                    if (llvmInitializer != nullptr) {
                         if ((storageClass != SC_STATIC) && (initPair.second == true)) {
                             if (g->isMultiTargetCompilation == true) {
                                 Error(initExpr->pos,
@@ -528,13 +528,13 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
 
         // If no initializer was provided or if we couldn't get a value
         // above, initialize it with zeros..
-        if (llvmInitializer == NULL)
+        if (llvmInitializer == nullptr)
             llvmInitializer = llvm::Constant::getNullValue(llvmType);
     }
 
     Symbol *sym = symbolTable->LookupVariable(name.c_str());
-    llvm::GlobalVariable *oldGV = NULL;
-    if (sym != NULL) {
+    llvm::GlobalVariable *oldGV = nullptr;
+    if (sym != nullptr) {
         // We've already seen either a declaration or a definition of this
         // global.
 
@@ -548,7 +548,7 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
         }
 
         llvm::GlobalVariable *gv = llvm::dyn_cast<llvm::GlobalVariable>(sym->storageInfo->getPointer());
-        Assert(gv != NULL);
+        Assert(gv != nullptr);
 
         // And issue an error if this is a redefinition of a variable
         if (gv->hasInitializer() && sym->storageClass != SC_EXTERN && sym->storageClass != SC_EXTERN_C &&
@@ -571,7 +571,7 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
     llvm::GlobalValue::LinkageTypes linkage =
         (sym->storageClass == SC_STATIC) ? llvm::GlobalValue::InternalLinkage : llvm::GlobalValue::ExternalLinkage;
 
-    // Note that the NULL llvmInitializer is what leads to "extern"
+    // Note that the nullptr llvmInitializer is what leads to "extern"
     // declarations coming up extern and not defining storage (a bit
     // subtle)...
     sym->storageInfo = new AddressInfo(
@@ -579,7 +579,7 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
 
     // Patch up any references to the previous GlobalVariable (e.g. from a
     // declaration of a global that was later defined.)
-    if (oldGV != NULL) {
+    if (oldGV != nullptr) {
         oldGV->replaceAllUsesWith(sym->storageInfo->getPointer());
         oldGV->removeFromParent();
         sym->storageInfo->getPointer()->setName(sym->name.c_str());
@@ -616,7 +616,7 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
 static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soaOk, const std::string &name,
                                           SourcePos pos) {
     const StructType *st = CastType<StructType>(t);
-    if (st != NULL) {
+    if (st != nullptr) {
         for (int i = 0; i < st->GetElementCount(); ++i)
             if (!lRecursiveCheckValidParamType(st->GetElementType(i), soaOk, vectorOk, name, pos))
                 return false;
@@ -626,15 +626,15 @@ static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soa
     // Vector types are also not supported, pending ispc properly
     // supporting the platform ABI.  (Pointers to vector types are ok,
     // though.)  (https://github.com/ispc/ispc/issues/363)...
-    if (vectorOk == false && CastType<VectorType>(t) != NULL)
+    if (vectorOk == false && CastType<VectorType>(t) != nullptr)
         return false;
 
     const SequentialType *seqt = CastType<SequentialType>(t);
-    if (seqt != NULL)
+    if (seqt != nullptr)
         return lRecursiveCheckValidParamType(seqt->GetElementType(), soaOk, vectorOk, name, pos);
 
     const PointerType *pt = CastType<PointerType>(t);
-    if (pt != NULL) {
+    if (pt != nullptr) {
         // Only allow exported uniform pointers
         // Uniform pointers to varying data, however, are ok.
         if (pt->IsVaryingType())
@@ -715,7 +715,7 @@ static void lCheckTaskParameterTypes(const Type *type, const std::string &name, 
 static void lCheckForStructParameters(const FunctionType *ftype, SourcePos pos) {
     for (int i = 0; i < ftype->GetNumParameters(); ++i) {
         const Type *type = ftype->GetParameterType(i);
-        if (CastType<StructType>(type) != NULL) {
+        if (CastType<StructType>(type) != nullptr) {
             Error(pos, "Passing structs to/from application functions by value "
                        "is currently not supported. Use a reference, a const reference, "
                        "a pointer, or a const pointer to the struct instead.");
@@ -733,11 +733,11 @@ static void lCheckForStructParameters(const FunctionType *ftype, SourcePos pos) 
 void Module::AddFunctionDeclaration(const std::string &name, const FunctionType *functionType,
                                     StorageClass storageClass, bool isInline, bool isNoInline, bool isVectorCall,
                                     bool isRegCall, SourcePos pos) {
-    Assert(functionType != NULL);
+    Assert(functionType != nullptr);
 
     // If a global variable with the same name has already been declared
     // issue an error.
-    if (symbolTable->LookupVariable(name.c_str()) != NULL) {
+    if (symbolTable->LookupVariable(name.c_str()) != nullptr) {
         Error(pos, "Function \"%s\" shadows previously-declared global variable. Ignoring this definition.",
               name.c_str());
         return;
@@ -750,7 +750,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
             Symbol *overloadFunc = overloadFuncs[i];
 
             const FunctionType *overloadType = CastType<FunctionType>(overloadFunc->type);
-            if (overloadType == NULL) {
+            if (overloadType == nullptr) {
                 Assert(m->errorCount == 0);
                 continue;
             }
@@ -772,7 +772,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
             // different, return an error--overloading by return type isn't
             // allowed.
             const FunctionType *ofType = CastType<FunctionType>(overloadFunc->type);
-            Assert(ofType != NULL);
+            Assert(ofType != nullptr);
             if (ofType->GetNumParameters() == functionType->GetNumParameters()) {
                 int i;
                 for (i = 0; i < functionType->GetNumParameters(); ++i) {
@@ -830,7 +830,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     // Get the LLVM FunctionType
     bool disableMask = (storageClass == SC_EXTERN_C || storageClass == SC_EXTERN_SYCL);
     llvm::FunctionType *llvmFunctionType = functionType->LLVMFunctionType(g->ctx, disableMask);
-    if (llvmFunctionType == NULL)
+    if (llvmFunctionType == nullptr)
         return;
 
     // And create the llvm::Function
@@ -943,12 +943,12 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         // default.)  Set parameter attributes accordingly.  (Only for
         // uniform pointers, since varying pointers are int vectors...)
         if (!functionType->isTask && !functionType->isExternSYCL &&
-            ((CastType<PointerType>(argType) != NULL && argType->IsUniformType() &&
+            ((CastType<PointerType>(argType) != nullptr && argType->IsUniformType() &&
               // Exclude SOA argument because it is a pair {struct *, int}
               // instead of pointer
               !CastType<PointerType>(argType)->IsSlice()) ||
 
-             CastType<ReferenceType>(argType) != NULL)) {
+             CastType<ReferenceType>(argType) != nullptr)) {
 
             function->addParamAttr(i, llvm::Attribute::NoAlias);
 #if 0
@@ -966,7 +966,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
                     argName.c_str());
         }
 
-        if (defaultValue != NULL)
+        if (defaultValue != nullptr)
             seenDefaultArg = true;
         else if (seenDefaultArg) {
             // Once one parameter has provided a default value, then all of
@@ -998,7 +998,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
 
 void Module::AddFunctionDefinition(const std::string &name, const FunctionType *type, Stmt *code) {
     Symbol *sym = symbolTable->LookupFunction(name.c_str(), type);
-    if (sym == NULL || code == NULL) {
+    if (sym == nullptr || code == nullptr) {
         Assert(m->errorCount > 0);
         return;
     }
@@ -1019,12 +1019,12 @@ void Module::AddFunctionDefinition(const std::string &name, const FunctionType *
 void Module::AddFunctionTemplateDeclaration(const TemplateParms *templateParmList, const std::string &name,
                                             const FunctionType *ftype, StorageClass sc, bool isInline, bool isNoInline,
                                             bool isVectorCall, SourcePos pos) {
-    Assert(ftype != NULL);
-    Assert(templateParmList != NULL);
+    Assert(ftype != nullptr);
+    Assert(templateParmList != nullptr);
 
     // If a global variable with the same name has already been declared
     // issue an error.
-    if (symbolTable->LookupVariable(name.c_str()) != NULL) {
+    if (symbolTable->LookupVariable(name.c_str()) != nullptr) {
         Error(pos,
               "Function template \"%s\" shadows previously-declared global variable. "
               "Ignoring this definition.",
@@ -1079,7 +1079,7 @@ void Module::AddFunctionTemplateDefinition(const TemplateParms *templateParmList
     }
 
     TemplateSymbol *sym = symbolTable->LookupFunctionTemplate(templateParmList, name, ftype);
-    if (sym == NULL || code == NULL) {
+    if (sym == nullptr || code == nullptr) {
         Assert(m->errorCount > 0);
         return;
     }
@@ -1154,8 +1154,8 @@ void Module::AddFunctionTemplateInstantiation(const std::string &name,
 
 void Module::AddExportedTypes(const std::vector<std::pair<const Type *, SourcePos>> &types) {
     for (int i = 0; i < (int)types.size(); ++i) {
-        if (CastType<StructType>(types[i].first) == NULL && CastType<VectorType>(types[i].first) == NULL &&
-            CastType<EnumType>(types[i].first) == NULL)
+        if (CastType<StructType>(types[i].first) == nullptr && CastType<VectorType>(types[i].first) == nullptr &&
+            CastType<EnumType>(types[i].first) == nullptr)
             Error(types[i].second, "Only struct, vector, and enum types, not \"%s\", are allowed in type export lists.",
                   types[i].first->GetString().c_str());
         else
@@ -1188,9 +1188,9 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
         // file being created seem to mismatch.  This can help catch missing
         // command-line arguments specifying the output file type.
         const char *suffix = strrchr(outFileName, '.');
-        if (suffix != NULL) {
+        if (suffix != nullptr) {
             ++suffix;
-            const char *fileType = NULL;
+            const char *fileType = nullptr;
             switch (outputType) {
             case Asm:
                 if (strcasecmp(suffix, "s"))
@@ -1242,7 +1242,7 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
                 Assert(0 /* swtich case not handled */);
                 return 1;
             }
-            if (fileType != NULL)
+            if (fileType != nullptr)
                 Warning(SourcePos(), "Emitting %s file, but filename \"%s\" has suffix \"%s\"?", fileType, outFileName,
                         suffix);
         }
@@ -1533,14 +1533,14 @@ bool Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm:
     underlying struct type. */
 static const StructType *lGetElementStructType(const Type *t) {
     const StructType *st = CastType<StructType>(t);
-    if (st != NULL)
+    if (st != nullptr)
         return st;
 
     const ArrayType *at = CastType<ArrayType>(t);
-    if (at != NULL)
+    if (at != nullptr)
         return lGetElementStructType(at->GetElementType());
 
-    return NULL;
+    return nullptr;
 }
 
 static bool lContainsPtrToVarying(const StructType *st) {
@@ -1579,7 +1579,7 @@ static void lEmitStructDecl(const StructType *st, std::vector<const StructType *
     // Otherwise first make sure any contained structs have been declared.
     for (int i = 0; i < st->GetElementCount(); ++i) {
         const StructType *elementStructType = lGetElementStructType(st->GetElementType(i));
-        if (elementStructType != NULL)
+        if (elementStructType != nullptr)
             lEmitStructDecl(elementStructType, emittedStructs, file, emitUnifs);
     }
 
@@ -1599,7 +1599,7 @@ static void lEmitStructDecl(const StructType *st, std::vector<const StructType *
     if (!(pack = stypeStructType->isPacked())) {
         for (int i = 0; !needsAlign && (i < st->GetElementCount()); ++i) {
             const Type *ftype = st->GetElementType(i)->GetAsNonConstType();
-            needsAlign |= ftype->IsVaryingType() && (CastType<StructType>(ftype) == NULL);
+            needsAlign |= ftype->IsVaryingType() && (CastType<StructType>(ftype) == nullptr);
         }
     }
     if (st->GetSOAWidth() > 0) {
@@ -1620,14 +1620,14 @@ static void lEmitStructDecl(const StructType *st, std::vector<const StructType *
         std::string d = ftype->GetCDeclaration(st->GetElementName(i));
 
         fprintf(file, "    ");
-        if (needsAlign && ftype->IsVaryingType() && (CastType<StructType>(ftype) == NULL)) {
+        if (needsAlign && ftype->IsVaryingType() && (CastType<StructType>(ftype) == nullptr)) {
             unsigned uABI = DL->getABITypeAlign(ftype->LLVMStorageType(g->ctx)).value();
             fprintf(file, "__ISPC_ALIGN__(%u) ", uABI);
         }
         // Don't expand arrays, pointers and structures:
         // their insides will be expanded automatically.
         if (!ftype->IsArrayType() && !ftype->IsPointerType() && ftype->IsVaryingType() &&
-            (CastType<StructType>(ftype) == NULL)) {
+            (CastType<StructType>(ftype) == nullptr)) {
             fprintf(file, "%s[%d];\n", d.c_str(), g->target->getVectorWidth());
         } else {
             fprintf(file, "%s;\n", d.c_str());
@@ -1678,7 +1678,7 @@ static void lEmitEnumDecls(const std::vector<const EnumType *> &enumTypes, FILE 
         // Print the individual enumerators
         for (int j = 0; j < enumTypes[i]->GetEnumeratorCount(); ++j) {
             const Symbol *e = enumTypes[i]->GetEnumerator(j);
-            Assert(e->constValue != NULL);
+            Assert(e->constValue != nullptr);
             unsigned int enumValue[1];
             int count = e->constValue->GetValues(enumValue);
             Assert(count == 1);
@@ -1746,7 +1746,7 @@ template <typename T> static void lAddTypeIfNew(const Type *type, std::vector<co
             return;
 
     const T *castType = CastType<T>(type);
-    Assert(castType != NULL);
+    Assert(castType != nullptr);
     exportedTypes->push_back(castType);
 }
 
@@ -1761,25 +1761,25 @@ static void lGetExportedTypes(const Type *type, std::vector<const StructType *> 
     const StructType *structType = CastType<StructType>(type);
     const FunctionType *ftype = CastType<FunctionType>(type);
 
-    if (CastType<ReferenceType>(type) != NULL)
+    if (CastType<ReferenceType>(type) != nullptr)
         lGetExportedTypes(type->GetReferenceTarget(), exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
-    else if (CastType<PointerType>(type) != NULL)
+    else if (CastType<PointerType>(type) != nullptr)
         lGetExportedTypes(type->GetBaseType(), exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
-    else if (arrayType != NULL)
+    else if (arrayType != nullptr)
         lGetExportedTypes(arrayType->GetElementType(), exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
-    else if (structType != NULL) {
+    else if (structType != nullptr) {
         lAddTypeIfNew(type, exportedStructTypes);
         for (int i = 0; i < structType->GetElementCount(); ++i)
             lGetExportedTypes(structType->GetElementType(i), exportedStructTypes, exportedEnumTypes,
                               exportedVectorTypes);
-    } else if (CastType<UndefinedStructType>(type) != NULL)
+    } else if (CastType<UndefinedStructType>(type) != nullptr)
         // do nothing
         ;
-    else if (CastType<EnumType>(type) != NULL)
+    else if (CastType<EnumType>(type) != nullptr)
         lAddTypeIfNew(type, exportedEnumTypes);
-    else if (CastType<VectorType>(type) != NULL)
+    else if (CastType<VectorType>(type) != nullptr)
         lAddTypeIfNew(type, exportedVectorTypes);
-    else if (ftype != NULL) {
+    else if (ftype != nullptr) {
         // Handle Return Types
         lGetExportedTypes(ftype->GetReturnType(), exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
 
@@ -1787,7 +1787,7 @@ static void lGetExportedTypes(const Type *type, std::vector<const StructType *> 
         for (int j = 0; j < ftype->GetNumParameters(); ++j)
             lGetExportedTypes(ftype->GetParameterType(j), exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
     } else
-        Assert(CastType<AtomicType>(type) != NULL);
+        Assert(CastType<AtomicType>(type) != nullptr);
 }
 
 /** Given a set of functions, return the set of structure and vector types
@@ -1799,7 +1799,7 @@ static void lGetExportedParamTypes(const std::vector<Symbol *> &funcs,
                                    std::vector<const VectorType *> *exportedVectorTypes) {
     for (unsigned int i = 0; i < funcs.size(); ++i) {
         const FunctionType *ftype = CastType<FunctionType>(funcs[i]->type);
-        Assert(ftype != NULL);
+        Assert(ftype != nullptr);
 
         // Handle the return type
         lGetExportedTypes(ftype->GetReturnType(), exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
@@ -2743,19 +2743,19 @@ static std::string lGetTargetFileName(const char *outFileName, const std::string
     return targetOutFileName;
 }
 
-static bool lSymbolIsExported(const Symbol *s) { return s->exportedFunction != NULL; }
+static bool lSymbolIsExported(const Symbol *s) { return s->exportedFunction != nullptr; }
 
 // Small structure to hold pointers to the various different versions of a
 // llvm::Function that were compiled for different compilation target ISAs.
 struct FunctionTargetVariants {
     FunctionTargetVariants() {
         for (int i = 0; i < Target::NUM_ISAS; ++i) {
-            func[i] = NULL;
-            FTs[i] = NULL;
+            func[i] = nullptr;
+            FTs[i] = nullptr;
         }
     }
     // The func array is indexed with the Target::ISA enumerant.  Some
-    // values may be NULL, indicating that the original function wasn't
+    // values may be nullptr, indicating that the original function wasn't
     // compiled to the corresponding target ISA.
     llvm::Function *func[Target::NUM_ISAS];
     const FunctionType *FTs[Target::NUM_ISAS];
@@ -2776,10 +2776,10 @@ static void lGetExportedFunctions(SymbolTable *symbolTable, std::map<std::string
 
 static llvm::FunctionType *lGetVaryingDispatchType(FunctionTargetVariants &funcs) {
     llvm::Type *ptrToInt8Ty = llvm::Type::getInt8PtrTy(*g->ctx);
-    llvm::FunctionType *resultFuncTy = NULL;
+    llvm::FunctionType *resultFuncTy = nullptr;
 
     for (int i = 0; i < Target::NUM_ISAS; ++i) {
-        if (funcs.func[i] == NULL) {
+        if (funcs.func[i] == nullptr) {
             continue;
         } else {
             bool foundVarying = false;
@@ -2864,7 +2864,7 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
             targetFuncs[i]->setCallingConv(callingConv);
 
         } else
-            targetFuncs[i] = NULL;
+            targetFuncs[i] = nullptr;
     }
 
     bool voidReturn = ftype->getReturnType()->isVoidTy();
@@ -2899,7 +2899,7 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
     // the expectation that they are ordered in the Target::ISA enumerant
     // from least to most capable.
     for (int i = Target::NUM_ISAS - 1; i >= 0; --i) {
-        if (targetFuncs[i] == NULL)
+        if (targetFuncs[i] == nullptr)
             continue;
 
         // Emit code to see if the system can run the current candidate
@@ -2990,9 +2990,9 @@ static llvm::Module *lInitDispatchModule() {
 static void lEmitDispatchModule(llvm::Module *module, std::map<std::string, FunctionTargetVariants> &functions) {
     // Get pointers to things we need below
     llvm::Function *setFunc = module->getFunction("__set_system_isa");
-    Assert(setFunc != NULL);
+    Assert(setFunc != nullptr);
     llvm::Value *systemBestISAPtr = module->getGlobalVariable("__system_best_isa", true);
-    Assert(systemBestISAPtr != NULL);
+    Assert(systemBestISAPtr != nullptr);
 
     // For each exported function, create the dispatch function
     std::map<std::string, FunctionTargetVariants>::iterator iter;
@@ -3050,12 +3050,12 @@ static void lExtractOrCheckGlobals(llvm::Module *msrc, llvm::Module *mdst, bool 
         if (gv->getLinkage() == llvm::GlobalValue::ExternalLinkage && gv->hasInitializer()) {
             llvm::Type *type = gv->getValueType();
             Symbol *sym = m->symbolTable->LookupVariable(gv->getName().str().c_str());
-            Assert(sym != NULL);
+            Assert(sym != nullptr);
 
             // Check presence and compatibility for the current global
             if (check) {
                 llvm::GlobalVariable *exist = mdst->getGlobalVariable(gv->getName());
-                Assert(exist != NULL);
+                Assert(exist != nullptr);
 
                 // It is possible that the types may not match: for
                 // example, this happens with varying globals if we
@@ -3082,7 +3082,7 @@ static void lExtractOrCheckGlobals(llvm::Module *msrc, llvm::Module *mdst, bool 
             }
             // Turn this into an 'extern' declaration by clearing its
             // initializer.
-            gv->setInitializer(NULL);
+            gv->setInitializer(nullptr);
         }
     }
 }
@@ -3124,13 +3124,13 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
                 return 1;
             }
 #endif
-            if (outFileName != NULL)
+            if (outFileName != nullptr)
                 if (!m->writeOutput(outputType, outputFlags, outFileName))
                     return 1;
-            if (headerFileName != NULL)
+            if (headerFileName != nullptr)
                 if (!m->writeOutput(Module::Header, outputFlags, headerFileName))
                     return 1;
-            if (depsFileName != NULL || (outputFlags & Module::OutputDepsToStdout)) {
+            if (depsFileName != nullptr || (outputFlags & Module::OutputDepsToStdout)) {
                 std::string targetName;
                 if (depsTargetName)
                     targetName = depsTargetName;
@@ -3147,10 +3147,10 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
                 if (!m->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile))
                     return 1;
             }
-            if (hostStubFileName != NULL)
+            if (hostStubFileName != nullptr)
                 if (!m->writeOutput(Module::HostStub, outputFlags, hostStubFileName))
                     return 1;
-            if (devStubFileName != NULL)
+            if (devStubFileName != nullptr)
                 if (!m->writeOutput(Module::DevStub, outputFlags, devStubFileName))
                     return 1;
         } else {
@@ -3159,10 +3159,10 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
 
         int errorCount = m->errorCount;
         delete m;
-        m = NULL;
+        m = nullptr;
 
         delete g->target;
-        g->target = NULL;
+        g->target = nullptr;
 
         return errorCount > 0;
     } else {
@@ -3172,7 +3172,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
                                "an intermediate temporary file.");
             return 1;
         }
-        if (cpu != NULL) {
+        if (cpu != nullptr) {
             Error(SourcePos(), "Illegal to specify cpu type when compiling for multiple targets.");
             return 1;
         }
@@ -3180,7 +3180,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         // The user supplied multiple targets
         Assert(targets.size() > 1);
 
-        if (outFileName != NULL && strcmp(outFileName, "-") == 0) {
+        if (outFileName != nullptr && strcmp(outFileName, "-") == 0) {
             Error(SourcePos(), "Multi-target compilation can't generate output "
                                "to stdout.  Please provide an output filename.\n");
             return 1;
@@ -3192,9 +3192,9 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
 
         llvm::TargetMachine *targetMachines[Target::NUM_ISAS];
         for (int i = 0; i < Target::NUM_ISAS; ++i)
-            targetMachines[i] = NULL;
+            targetMachines[i] = nullptr;
 
-        llvm::Module *dispatchModule = NULL;
+        llvm::Module *dispatchModule = nullptr;
 
         std::map<std::string, FunctionTargetVariants> exportedFunctions;
         int errorCount = 0;
@@ -3202,7 +3202,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         // Handle creating a "generic" header file for multiple targets
         // that use exported varyings
         DispatchHeaderInfo DHI;
-        if (headerFileName != NULL) {
+        if (headerFileName != nullptr) {
             DHI.file = fopen(headerFileName, "w");
             if (!DHI.file) {
                 perror("fopen");
@@ -3228,7 +3228,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             // Issue an error if we've already compiled to a variant of
             // this target ISA.  (It doesn't make sense to compile to both
             // avx and avx-x2, for example.)
-            if (targetMachines[g->target->getISA()] != NULL) {
+            if (targetMachines[g->target->getISA()] != nullptr) {
                 Error(SourcePos(), "Can't compile to multiple variants of %s target!\n", g->target->GetISAString());
                 return 1;
             }
@@ -3243,7 +3243,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             if (compileResult == 0) {
                 // Create the dispatch module, unless already created;
                 // in the latter case, just do the checking
-                bool check = (dispatchModule != NULL);
+                bool check = (dispatchModule != nullptr);
                 if (!check)
                     dispatchModule = lInitDispatchModule();
                 lExtractOrCheckGlobals(m->module, dispatchModule, check);
@@ -3253,7 +3253,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
                 // later.
                 lGetExportedFunctions(m->symbolTable, exportedFunctions);
 
-                if (outFileName != NULL) {
+                if (outFileName != nullptr) {
                     std::string targetOutFileName;
                     std::string isaName{g->target->GetISAString()};
                     targetOutFileName = lGetTargetFileName(outFileName, isaName);
@@ -3272,7 +3272,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
 
             // Only write the generate header file, if desired, the first
             // time through the loop here.
-            if (headerFileName != NULL) {
+            if (headerFileName != nullptr) {
                 if (i == targets.size() - 1) {
                     // only print backmatter on the last target.
                     DHI.EmitBackMatter = true;
@@ -3294,43 +3294,43 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             }
 
             delete g->target;
-            g->target = NULL;
+            g->target = nullptr;
 
             // Important: Don't delete the llvm::Module *m here; we need to
             // keep it around so the llvm::Functions *s stay valid for when
             // we generate the dispatch module's functions...
         }
 
-        // Find the first non-NULL target machine from the targets we
+        // Find the first non-nullptr target machine from the targets we
         // compiled to above.  We'll use this as the target machine for
         // compiling the dispatch module--this is safe in that it is the
         // least-common-denominator of all of the targets we compiled to.
-        llvm::TargetMachine *firstTargetMachine = NULL;
+        llvm::TargetMachine *firstTargetMachine = nullptr;
         int i = 0;
         const char *firstISA = "";
         ISPCTarget firstTarget = ISPCTarget::none;
-        while (i < Target::NUM_ISAS && firstTargetMachine == NULL) {
+        while (i < Target::NUM_ISAS && firstTargetMachine == nullptr) {
             firstISA = Target::ISAToTargetString((Target::ISA)i);
             firstTarget = ParseISPCTarget(firstISA);
             firstTargetMachine = targetMachines[i++];
         }
         Assert(strcmp(firstISA, "") != 0);
         Assert(firstTarget != ISPCTarget::none);
-        Assert(firstTargetMachine != NULL);
+        Assert(firstTargetMachine != nullptr);
 
         g->target = new Target(arch, cpu, firstTarget, 0 != (outputFlags & GeneratePIC), false);
         if (!g->target->isValid()) {
             return 1;
         }
 
-        if (dispatchModule == NULL) {
+        if (dispatchModule == nullptr) {
             Error(SourcePos(), "Failed to create dispatch module.\n");
             return 1;
         }
 
         lEmitDispatchModule(dispatchModule, exportedFunctions);
 
-        if (outFileName != NULL) {
+        if (outFileName != nullptr) {
             switch (outputType) {
             case CPPStub:
                 // No preprocessor output for dispatch module.
@@ -3353,7 +3353,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             }
         }
 
-        if (depsFileName != NULL || (outputFlags & Module::OutputDepsToStdout)) {
+        if (depsFileName != nullptr || (outputFlags & Module::OutputDepsToStdout)) {
             std::string targetName;
             if (depsTargetName)
                 targetName = depsTargetName;
@@ -3376,7 +3376,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         }
 
         delete g->target;
-        g->target = NULL;
+        g->target = nullptr;
         return errorCount > 0;
     }
 }
@@ -3407,7 +3407,7 @@ int Module::LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputT
         }
         inputStream.close();
     }
-    if (outFileName != NULL) {
+    if (outFileName != nullptr) {
         if ((outputType == Bitcode) || (outputType == BitcodeText))
             writeBitcode(llvmLink.get(), outFileName, outputType);
 #ifdef ISPC_XE_ENABLED

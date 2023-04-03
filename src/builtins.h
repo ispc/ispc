@@ -28,7 +28,7 @@ namespace ispc {
  */
 void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *module, bool includeStdlib);
 
-void AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable *symbolTable = NULL);
+void AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable *symbolTable = nullptr);
 
 /** Create ISPC symbol for LLVM intrinsics and add it to the given module.
 

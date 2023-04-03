@@ -23,7 +23,7 @@ restart:
         llvm::Instruction *inst = &*I;
         if (llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst)) {
             llvm::Function *func = ci->getCalledFunction();
-            if (func == NULL || !func->isIntrinsic())
+            if (func == nullptr || !func->isIntrinsic())
                 continue;
 
             if (func->getName().equals("llvm.trap")) {
@@ -45,7 +45,7 @@ restart:
                 Args.push_back(zeroMask);
 
                 llvm::Instruction *newInst = llvm::CallInst::Create(Fn, Args, ci->getName());
-                if (newInst != NULL) {
+                if (newInst != nullptr) {
                     llvm::ReplaceInstWithInst(ci, newInst);
                     modifiedAny = true;
                     goto restart;
@@ -69,7 +69,7 @@ restart:
                 auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, xeAbsID, Tys);
                 Assert(Fn);
                 llvm::Instruction *newInst = llvm::CallInst::Create(Fn, ci->getOperand(0), "");
-                if (newInst != NULL) {
+                if (newInst != nullptr) {
                     LLVMCopyMetadata(newInst, ci);
                     llvm::ReplaceInstWithInst(ci, newInst);
                     modifiedAny = true;

@@ -12,7 +12,7 @@ char InstructionSimplifyPass::ID = 0;
 
 static llvm::Value *lSimplifyBoolVec(llvm::Value *value) {
     llvm::TruncInst *trunc = llvm::dyn_cast<llvm::TruncInst>(value);
-    if (trunc != NULL) {
+    if (trunc != nullptr) {
         // Convert trunc({sext,zext}(i1 vector)) -> (i1 vector)
         llvm::SExtInst *sext = llvm::dyn_cast<llvm::SExtInst>(value);
         if (sext && sext->getOperand(0)->getType() == LLVMTypes::Int1VectorType)
@@ -28,7 +28,7 @@ static llvm::Value *lSimplifyBoolVec(llvm::Value *value) {
       // On 3.4+ (maybe even older), it can result in illegal
       // operations, so it's being disabled.
     llvm::ICmpInst *icmp = llvm::dyn_cast<llvm::ICmpInst>(value);
-    if (icmp != NULL) {
+    if (icmp != nullptr) {
         // icmp(ne, {sext,zext}(foo), zeroinitializer) -> foo
         if (icmp->getSignedPredicate() == llvm::CmpInst::ICMP_NE) {
             llvm::Value *op1 = icmp->getOperand(1);
@@ -45,26 +45,26 @@ static llvm::Value *lSimplifyBoolVec(llvm::Value *value) {
 
     }
     */
-    return NULL;
+    return nullptr;
 }
 
 static bool lSimplifySelect(llvm::SelectInst *selectInst, llvm::BasicBlock::iterator iter) {
     if (selectInst->getType()->isVectorTy() == false)
         return false;
-    Assert(selectInst->getOperand(1) != NULL);
-    Assert(selectInst->getOperand(2) != NULL);
+    Assert(selectInst->getOperand(1) != nullptr);
+    Assert(selectInst->getOperand(2) != nullptr);
     llvm::Value *factor = selectInst->getOperand(0);
 
     // Simplify all-on or all-off mask values
     MaskStatus maskStatus = GetMaskStatusFromValue(factor);
-    llvm::Value *value = NULL;
+    llvm::Value *value = nullptr;
     if (maskStatus == MaskStatus::all_on)
         // Mask all on -> replace with the first select value
         value = selectInst->getOperand(1);
     else if (maskStatus == MaskStatus::all_off)
         // Mask all off -> replace with the second select value
         value = selectInst->getOperand(2);
-    if (value != NULL) {
+    if (value != nullptr) {
         ReplaceInstWithValueWrapper(iter, value);
         return true;
     }
@@ -74,7 +74,7 @@ static bool lSimplifySelect(llvm::SelectInst *selectInst, llvm::BasicBlock::iter
     // the code generators and leads to sub-optimal code (particularly for
     // 8 and 16-bit masks).  We'll try to simplify them out here so that
     // the code generator patterns match..
-    if ((factor = lSimplifyBoolVec(factor)) != NULL) {
+    if ((factor = lSimplifyBoolVec(factor)) != nullptr) {
         llvm::Instruction *newSelect = llvm::SelectInst::Create(factor, selectInst->getOperand(1),
                                                                 selectInst->getOperand(2), selectInst->getName());
         llvm::ReplaceInstWithInst(selectInst, newSelect);
@@ -89,7 +89,7 @@ static bool lSimplifyCall(llvm::CallInst *callInst, llvm::BasicBlock::iterator i
 
     // Turn a __movmsk call with a compile-time constant vector into the
     // equivalent scalar value.
-    if (calledFunc == NULL || calledFunc != m->module->getFunction("__movmsk"))
+    if (calledFunc == nullptr || calledFunc != m->module->getFunction("__movmsk"))
         return false;
 
     uint64_t mask;

@@ -62,7 +62,7 @@ class ExprStmt : public Stmt {
 };
 
 struct VariableDeclaration {
-    VariableDeclaration(Symbol *s = NULL, Expr *i = NULL) {
+    VariableDeclaration(Symbol *s = nullptr, Expr *i = nullptr) {
         sym = s;
         init = i;
     }
@@ -177,7 +177,7 @@ class ForStmt : public Stmt {
     int EstimateCost() const;
     ForStmt *Instantiate(TemplateInstantiation &templInst) const;
 
-    /** 'for' statment initializer; may be NULL, indicating no intitializer */
+    /** 'for' statment initializer; may be nullptr, indicating no intitializer */
     Stmt *init;
     /** expression that returns a value indicating whether the loop should
         continue for the next iteration */
