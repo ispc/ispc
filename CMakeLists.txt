@@ -718,12 +718,15 @@ if (ISPC_PREPARE_PACKAGE)
 
     # CPack configuration
     if (WIN32)
-        set(CPACK_GENERATOR "WIX" "ZIP")
+        set(CPACK_GENERATOR "ZIP")
         set(ISPC_SYSTEM_NAME "windows")
+        # WIX generator is currently turned off.
+        # To turn it on uncomment code below:
+        # set(CPACK_GENERATOR "WIX" "ZIP")
+        # set(CPACK_WIX_UPGRADE_GUID "EDD858F2-19B0-4E5B-B9B9-2A09B85D451C")
+        # set(CPACK_WIX_CMAKE_PACKAGE_REGISTRY "ISPC")
         # WIX generator expects version in format x.y.z where x, y, z are numbers
         set(CPACK_PACKAGE_VERSION "${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}.${ISPC_VERSION_PATCH}")
-        set(CPACK_WIX_UPGRADE_GUID "EDD858F2-19B0-4E5B-B9B9-2A09B85D451C")
-        set(CPACK_WIX_CMAKE_PACKAGE_REGISTRY "ISPC")
     else()
         set(CPACK_GENERATOR "TGZ")
         if (APPLE)
