@@ -1,3 +1,8 @@
+#
+#  Copyright (c) 2017-2023, Intel Corporation
+#
+#  SPDX-License-Identifier: BSD-3-Clause
+
 FROM ubuntu:20.04
 LABEL maintainer="Arina Neshlyaeva <arina.neshlyaeva@intel.com>"
 SHELL ["/bin/bash", "-c"]

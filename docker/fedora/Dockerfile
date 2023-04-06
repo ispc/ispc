@@ -1,3 +1,8 @@
+#
+#  Copyright (c) 2017-2023, Intel Corporation
+#
+#  SPDX-License-Identifier: BSD-3-Clause
+
 FROM fedora:36
 LABEL maintainer="Nurmukhametov, Aleksei <aleksei.nurmukhametov@intel.com>"
 SHELL ["/bin/bash", "-c"]
