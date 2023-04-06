@@ -21,7 +21,7 @@ ARG SPIRV_TRANSLATOR_COMMIT_SHA="c469fa86d54380231123f2b5adb4e1239392b814"
 RUN yum -y update; yum -y install centos-release-scl epel-release; yum clean all
 RUN yum install -y vim wget yum-utils gcc gcc-c++ git python3 m4 bison flex patch make && \
     yum install -y ncurses-devel glibc-devel.x86_64 glibc-devel.i686 xz devtoolset-7 && \
-    yum install -y libtool autopoint gettext-devel texinfo help2man && \
+    yum install -y libtool autopoint gettext-devel texinfo tbb-devel help2man && \
     yum clean -y all
 
 # These packages are required if you need to link ISPC with -static.

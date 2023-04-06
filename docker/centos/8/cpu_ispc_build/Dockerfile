@@ -17,7 +17,7 @@ ARG LLVM_VERSION
 # otherwise LLVM build may fail, as it will use all the cores available to container.
 
 # Packages required to build ISPC and Clang. libtool is needed to build ncurses.
-RUN dnf -y update && dnf install -y wget yum-utils gcc gcc-c++ git python3 make ncurses-devel xz libtool && \
+RUN dnf -y update && dnf install -y wget yum-utils gcc gcc-c++ git python3 make ncurses-devel xz libtool tbb-devel && \
 #    yum install -y libtool autopoint gettext-devel texinfo help2man && \
     dnf clean -y all
 

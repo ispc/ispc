@@ -74,9 +74,9 @@ or `Intel(R) Graphics Driver for Windows
 Windows.  Additionally you need `Level Zero Loader
 <https://github.com/oneapi-src/level-zero/releases>`_.
 
-To use ISPC Run Time for CPU on Linux you need to have ``OpenMP runtime``
+To use ISPC Run Time for CPU on Linux you need to have ``Intel(R) oneAPI Threading Basic Blocks``
 installed on your system. Consult your Linux distribution documentation for the
-installation of OpenMP runtime instructions.
+installation of TBB runtime instructions.
 
 
 Basic Command-line Options
