@@ -20,7 +20,7 @@ ARG EXTRA_BUILD_ARG
 RUN uname -a
 
 # Packages
-RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends install -y wget cmake build-essential gcc g++ git python3-dev ncurses-dev libtinfo-dev ca-certificates && \
+RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends install -y wget cmake build-essential gcc g++ git python3-dev ncurses-dev libtinfo-dev ca-certificates libtbb2-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # If you are behind a proxy, you need to configure git.

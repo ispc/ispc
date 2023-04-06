@@ -3401,7 +3401,7 @@ Task Parallelism: "launch" and "sync" Statements
 
 One option for combining task-parallelism with ``ispc`` is to just use
 regular task parallelism in the C/C++ application code (be it through
-Intel® Thread Building Blocks, OpenMP or another task system), and
+Intel® oneAPI Threading Building Blocks, OpenMP or another task system), and
 for tasks to use ``ispc`` for SPMD parallelism across the vector lanes as
 appropriate.  Alternatively, ``ispc`` also has support for launching tasks
 from ``ispc`` code.  (Check the ``examples/mandelbrot_tasks`` example to

@@ -22,7 +22,7 @@ RUN uname -a
 # Packages required to build ISPC and Clang.
 # Adding this repository is needed for Ubuntu 16.04 to install python3.6.
 RUN apt-get -y update && apt-get --no-install-recommends install -y software-properties-common && add-apt-repository ppa:deadsnakes/ppa && \
-    apt-get -y update && apt-get --no-install-recommends install -y wget build-essential gcc g++ git python3.6 ncurses-dev libtinfo-dev && \
+    apt-get -y update && apt-get --no-install-recommends install -y wget build-essential gcc g++ git python3.6 ncurses-dev libtinfo-dev libtbb-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Download and install required version of cmake (3.13) for ISPC build
