@@ -1,3 +1,8 @@
+#
+#  Copyright (c) 2017-2023, Intel Corporation
+#
+#  SPDX-License-Identifier: BSD-3-Clause
+
 FROM centos:7
 LABEL maintainer="Dmitry Babokin <dmitry.y.babokin@intel.com>"
 SHELL ["/bin/bash", "-c"]

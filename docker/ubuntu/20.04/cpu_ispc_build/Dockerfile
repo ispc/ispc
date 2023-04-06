@@ -1,3 +1,8 @@
+#
+#  Copyright (c) 2017-2023, Intel Corporation
+#
+#  SPDX-License-Identifier: BSD-3-Clause
+
 ARG LLVM_VERSION=14.0
 
 FROM ubuntu:20.04 AS llvm_build_only
