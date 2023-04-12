@@ -1,4 +1,4 @@
-// Copyright 2020-2022 Intel Corporation
+// Copyright 2020-2023 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
@@ -37,3 +37,10 @@ struct CPUDevice : public base::Device {
 };
 
 } // namespace ispcrt
+
+// Expose API of CPU device solib for dlsym.
+extern "C" {
+ispcrt::base::Device *load_cpu_device();
+uint32_t cpu_device_count();
+ISPCRTDeviceInfo cpu_device_info(uint32_t idx);
+}

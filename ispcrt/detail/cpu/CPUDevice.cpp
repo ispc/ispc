@@ -18,6 +18,21 @@
 #include <string>
 #include <vector>
 
+extern "C" {
+ispcrt::base::Device *load_cpu_device() {
+    return new ispcrt::CPUDevice;
+}
+uint32_t cpu_device_count() {
+    return ispcrt::cpu::deviceCount();
+}
+ISPCRTDeviceInfo cpu_device_info(uint32_t idx) {
+    return ispcrt::cpu::deviceInfo(idx);
+}
+ispcrt::base::Context *load_cpu_context() {
+    return new ispcrt::CPUContext;
+}
+}
+
 namespace ispcrt {
 namespace cpu {
 
