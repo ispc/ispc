@@ -34,6 +34,27 @@
 // level0
 #include <level_zero/ze_api.h>
 
+extern "C" {
+ispcrt::base::Device *load_gpu_device() {
+    return new ispcrt::GPUDevice;
+}
+ispcrt::base::Device *load_gpu_device_ctx(void* ctx, void* dev, uint32_t idx) {
+    return new ispcrt::GPUDevice(ctx, dev, idx);
+}
+uint32_t gpu_device_count() {
+    return ispcrt::gpu::deviceCount();
+}
+ISPCRTDeviceInfo gpu_device_info(uint32_t idx) {
+    return ispcrt::gpu::deviceInfo(idx);
+}
+ispcrt::base::Context *load_gpu_context() {
+    return new ispcrt::GPUContext;
+}
+ispcrt::base::Context *load_gpu_context_ctx(void *ctx) {
+    return new ispcrt::GPUContext(ctx);
+}
+}
+
 #define DECLARE_ENV(NAME) const char *NAME = #NAME;
 DECLARE_ENV(ISPCRT_VERBOSE)
 DECLARE_ENV(ISPCRT_MAX_KERNEL_LAUNCHES)

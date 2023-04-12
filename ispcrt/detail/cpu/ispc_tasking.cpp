@@ -161,9 +161,9 @@ struct TaskInfo {
 
 // ispc expects these functions to have C linkage / not be mangled
 extern "C" {
-void ISPCLaunch(void **handlePtr, void *f, void *data, int countx, int county, int countz);
-void *ISPCAlloc(void **handlePtr, int64_t size, int32_t alignment);
-void ISPCSync(void *handle);
+void ISPCLaunch_cpu(void **handlePtr, void *f, void *data, int countx, int county, int countz);
+void *ISPCAlloc_cpu(void **handlePtr, int64_t size, int32_t alignment);
+void ISPCSync_cpu(void *handle);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -207,7 +207,7 @@ class TaskGroupBase {
      */
     TaskInfo *taskInfo[MAX_TASK_QUEUE_CHUNKS];
 
-    /* We also allocate chunks of memory to service ISPCAlloc() calls.  The
+    /* We also allocate chunks of memory to service ISPCAlloc_cpu() calls.  The
        memBuffers[] array holds pointers to this memory.  The first element
        of this array is initialized to point to mem and then any subsequent
        elements required are initialized with dynamic allocation.
@@ -972,7 +972,7 @@ static inline void FreeTaskGroup(TaskGroup *tg) {
 
 ///////////////////////////////////////////////////////////////////////////
 
-void ISPCLaunch(void **taskGroupPtr, void *func, void *data, int count0, int count1, int count2) {
+void ISPCLaunch_cpu(void **taskGroupPtr, void *func, void *data, int count0, int count1, int count2) {
     const int count = count0 * count1 * count2;
     TaskGroup *taskGroup;
     if (*taskGroupPtr == nullptr) {
@@ -995,7 +995,7 @@ void ISPCLaunch(void **taskGroupPtr, void *func, void *data, int count0, int cou
     taskGroup->Launch(baseIndex, count);
 }
 
-void ISPCSync(void *h) {
+void ISPCSync_cpu(void *h) {
     TaskGroup *taskGroup = (TaskGroup *)h;
     if (taskGroup != nullptr) {
         taskGroup->Sync();
@@ -1003,7 +1003,7 @@ void ISPCSync(void *h) {
     }
 }
 
-void *ISPCAlloc(void **taskGroupPtr, int64_t size, int32_t alignment) {
+void *ISPCAlloc_cpu(void **taskGroupPtr, int64_t size, int32_t alignment) {
     TaskGroup *taskGroup;
     if (*taskGroupPtr == nullptr) {
         InitTaskSystem();
@@ -1217,7 +1217,7 @@ int TaskSys::numThreadsRunning = 0;
 
 ///////////////////////////////////////////////////////////////////////////
 
-void ISPCLaunch(void **taskGroupPtr, void *func, void *data, int count) {
+void ISPCLaunch_cpu(void **taskGroupPtr, void *func, void *data, int count) {
     Task *ti = *(Task **)taskGroupPtr;
     ti->func = (TaskFuncType)func;
     ti->data = data;
@@ -1226,13 +1226,13 @@ void ISPCLaunch(void **taskGroupPtr, void *func, void *data, int count) {
     TaskSys::global->schedule(ti);
 }
 
-void ISPCSync(void *h) {
+void ISPCSync_cpu(void *h) {
     Task *task = (Task *)h;
     assert(task);
     TaskSys::global->sync(task);
 }
 
-void *ISPCAlloc(void **taskGroupPtr, int64_t size, int32_t alignment) {
+void *ISPCAlloc_cpu(void **taskGroupPtr, int64_t size, int32_t alignment) {
     TaskSys::init();
     Task *task = TaskSys::global->allocOne();
     *taskGroupPtr = task;

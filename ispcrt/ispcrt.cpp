@@ -1,10 +1,19 @@
 // Copyright 2020-2023 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
+#if defined(_WIN32) || defined(_WIN64)
+#include <windows.h>
+#else
+#include <dlfcn.h>
+#include <stdio.h>
+#include <stdlib.h>
+#endif
+
 #include "ispcrt.h"
 // std
 #include <exception>
 #include <iostream>
+#include <string>
 // ispcrt
 #include "detail/Exception.h"
 #include "detail/Module.h"
@@ -78,6 +87,408 @@ static OBJECT_T &referenceFromHandle(HANDLE_T handle) {
         return a;                                                                                                      \
     }
 
+
+// Define names of devices libraries.
+#if defined(_WIN32) || defined(_WIN64)
+#define ISPCRT_SO_LIB_PREFIX ""
+#define ISPCRT_SO_LIB_SUFFIX "dll"
+#elif defined(__APPLE__)
+#define ISPCRT_SO_LIB_PREFIX "lib"
+#define ISPCRT_SO_LIB_SUFFIX "dylib"
+#else
+#define ISPCRT_SO_LIB_PREFIX "lib"
+#define ISPCRT_SO_LIB_SUFFIX "so"
+#endif
+
+#define ISPCRT_DEVICE_CPU_SOLIB_PREFIX ISPCRT_SO_LIB_PREFIX "ispcrt_device_cpu."
+#define ISPCRT_DEVICE_GPU_SOLIB_PREFIX ISPCRT_SO_LIB_PREFIX "ispcrt_device_gpu."
+#define ISPCRT_DEVICE_CPU_SOLIB_NAME ISPCRT_DEVICE_CPU_SOLIB_PREFIX ISPCRT_SO_LIB_SUFFIX
+#define ISPCRT_DEVICE_GPU_SOLIB_NAME ISPCRT_DEVICE_GPU_SOLIB_PREFIX ISPCRT_SO_LIB_SUFFIX
+
+#if defined(_WIN32) || defined(_WIN64)
+#define ISPCRT_DEVICE_CPU_SOLIB_MAJOR_VERSION_NAME nullptr
+#define ISPCRT_DEVICE_GPU_SOLIB_MAJOR_VERSION_NAME nullptr
+#define ISPCRT_DEVICE_CPU_SOLIB_FULL_VERSION_NAME  nullptr
+#define ISPCRT_DEVICE_GPU_SOLIB_FULL_VERSION_NAME  nullptr
+#elif defined(__APPLE__)
+#define ISPCRT_DEVICE_CPU_SOLIB_MAJOR_VERSION_NAME \
+    ISPCRT_DEVICE_CPU_SOLIB_PREFIX "." ISPCRT_VERSION_MAJOR "." ISPCRT_SO_LIB_SUFFIX
+#define ISPCRT_DEVICE_GPU_SOLIB_MAJOR_VERSION_NAME \
+    ISPCRT_DEVICE_GPU_SOLIB_PREFIX "." ISPCRT_VERSION_MAJOR "." ISPCRT_SO_LIB_SUFFIX
+#define ISPCRT_DEVICE_CPU_SOLIB_FULL_VERSION_NAME \
+    ISPCRT_DEVICE_CPU_SOLIB_PREFIX "." ISPCRT_VERSION_FULL "." ISPCRT_SO_LIB_SUFFIX
+#define ISPCRT_DEVICE_GPU_SOLIB_FULL_VERSION_NAME \
+    ISPCRT_DEVICE_GPU_SOLIB_PREFIX "." ISPCRT_VERSION_FULL "." ISPCRT_SO_LIB_SUFFIX
+#else
+#define ISPCRT_DEVICE_CPU_SOLIB_MAJOR_VERSION_NAME ISPCRT_DEVICE_CPU_SOLIB_NAME "." ISPCRT_VERSION_MAJOR
+#define ISPCRT_DEVICE_GPU_SOLIB_MAJOR_VERSION_NAME ISPCRT_DEVICE_GPU_SOLIB_NAME "." ISPCRT_VERSION_MAJOR
+#define ISPCRT_DEVICE_CPU_SOLIB_FULL_VERSION_NAME ISPCRT_DEVICE_CPU_SOLIB_NAME "." ISPCRT_VERSION_FULL
+#define ISPCRT_DEVICE_GPU_SOLIB_FULL_VERSION_NAME ISPCRT_DEVICE_GPU_SOLIB_NAME "." ISPCRT_VERSION_FULL
+#endif
+
+// OS agnostic function to dynamically load a shared library.
+void *dyn_load_lib(const char *name, const char *name_major_version, const char *name_full_version) {
+#if defined(_WIN32) || defined(_WIN64)
+    return LoadLibrary(name);
+#else
+    // Try to load a device library starting from the most specific name down to more general one.
+    void *handle = dlopen(name_full_version, RTLD_NOW | RTLD_LOCAL);
+    if (handle) {
+        return handle;
+    }
+    handle = dlopen(name_major_version, RTLD_NOW | RTLD_LOCAL);
+    if (handle) {
+        return handle;
+    }
+    // This is the most general name, e.g., libispcrt_device_cpu.so. Under some
+    // circumstances, it may points to older or newer version. This is probably
+    // not a big deal until incompatible changes are encountered between versions.
+    return dlopen(name, RTLD_NOW | RTLD_LOCAL);
+#endif
+}
+
+// OS agnostic function to get an address of symbol from the previously loaded shared library.
+void *dyn_load_sym(void *handle, const char *symbol) {
+#if defined(_WIN32) || defined(_WIN64)
+    return (void*) GetProcAddress((HMODULE)handle, symbol);
+#else
+    return dlsym(handle, symbol);
+#endif
+}
+
+
+// CPU device API.
+typedef void (*ISPCLaunchF)(void**, void*, void*, int, int, int);
+typedef void* (*ISPCAllocF)(void**, int64_t, int32_t);
+typedef void (*ISPCSyncF)(void*);
+static ISPCLaunchF ispc_launch_fptr = nullptr;
+static ISPCAllocF ispc_alloc_fptr = nullptr;
+static ISPCSyncF ispc_sync_fptr = nullptr;
+
+#ifndef ISPCRT_BUILD_STATIC
+// During static linking this API is delivered by linking the real implementation.
+// ispc expects these functions to have C linkage / not be mangled
+// Stubs to load and call actual implementations (*_cpu) from detail/cpu/ispc_tasking.cpp.
+extern "C" {
+void ISPCLaunch(void **handlePtr, void *f, void *data, int countx, int county, int countz) {
+    if (ispc_launch_fptr) {
+        return ispc_launch_fptr(handlePtr, f, data, countx, county, countz);
+    }
+    // TODO: this code can be called directly from ISPC code. Not sure how to exit error safely.
+    throw std::runtime_error("Missing ISPCLaunch symbol");
+}
+
+void *ISPCAlloc(void **handlePtr, int64_t size, int32_t alignment) {
+    if (ispc_alloc_fptr) {
+        return ispc_alloc_fptr(handlePtr, size, alignment);
+    }
+    // TODO: this code can be called directly from ISPC code. Not sure how to exit error safely.
+    throw std::runtime_error("Missing ISPCAlloc symbol");
+}
+
+void ISPCSync(void *handle) {
+    if (ispc_sync_fptr) {
+        return ispc_sync_fptr(handle);
+    }
+    // TODO: this code can be called directly from ISPC code. Not sure how to exit error safely.
+    throw std::runtime_error("Missing ISPCSync symbol");
+}
+}
+#endif
+
+// Auxiliary function to load device CPU solib and initialize tasking API pointers if build with tasking support.
+void *handleCPUDeviceLib() {
+    static void *handle = nullptr;
+    if (handle) {
+        return handle;
+    }
+    handle = dyn_load_lib(
+                ISPCRT_DEVICE_CPU_SOLIB_NAME,
+                ISPCRT_DEVICE_CPU_SOLIB_MAJOR_VERSION_NAME,
+                ISPCRT_DEVICE_CPU_SOLIB_FULL_VERSION_NAME);
+    if (!handle) {
+        throw std::runtime_error("Fail to load " ISPCRT_DEVICE_CPU_SOLIB_NAME " library");
+    }
+
+#ifdef ISPCRT_BUILD_TASKING
+    ispc_launch_fptr = (ISPCLaunchF) dyn_load_sym(handle, "ISPCLaunch_cpu");
+    if (!ispc_launch_fptr) {
+        throw std::runtime_error("Missing ISPCLaunch_cpu symbol");
+    }
+
+    ispc_alloc_fptr = (ISPCAllocF) dyn_load_sym(handle, "ISPCAlloc_cpu");
+    if (!ispc_alloc_fptr) {
+        throw std::runtime_error("Missing ISPCAlloc_cpu symbol");
+    }
+
+    ispc_sync_fptr = (ISPCSyncF) dyn_load_sym(handle, "ISPCSync_cpu");
+    if (!ispc_sync_fptr) {
+        throw std::runtime_error("Missing ISPCSync_cpu symbol");
+    }
+#endif
+
+    return handle;
+}
+
+// Auxiliary function to load device GPU solib.
+void *handleGPUDeviceLib() {
+    static void *handle = nullptr;
+    if (handle) {
+        return handle;
+    }
+    handle = dyn_load_lib(
+                ISPCRT_DEVICE_GPU_SOLIB_NAME,
+                ISPCRT_DEVICE_GPU_SOLIB_MAJOR_VERSION_NAME,
+                ISPCRT_DEVICE_GPU_SOLIB_FULL_VERSION_NAME);
+    if (!handle) {
+        throw std::runtime_error("Fail to load " ISPCRT_DEVICE_GPU_SOLIB_NAME " library");
+    }
+    return handle;
+}
+
+// Stubs around CPU device solibs API.
+uint32_t cpuDeviceCount();
+ISPCRTDeviceInfo cpuDeviceInfo(uint32_t idx);
+ispcrt::base::Device *loadCPUDevice();
+ispcrt::base::Context *loadCPUContext();
+
+// Stubs around GPU device solibs API.
+uint32_t gpuDeviceCount();
+ISPCRTDeviceInfo gpuDeviceInfo(uint32_t idx);
+ispcrt::base::Device *loadGPUDevice();
+ispcrt::base::Device *loadGPUDevice(void *ctx, void *dev, uint32_t idx);
+ispcrt::base::Context *loadGPUContext();
+ispcrt::base::Context *loadGPUContext(void *ctx);
+
+// Function pointer types declarations.
+typedef uint32_t (*DeviceCountF)();
+typedef ISPCRTDeviceInfo (*DeviceInfoF)(uint32_t);
+typedef ispcrt::base::Device* (*LoadDeviceF)();
+typedef ispcrt::base::Device* (*LoadDeviceCtxF)(void*, void*, uint32_t);
+typedef ispcrt::base::Context* (*LoadContextF)();
+typedef ispcrt::base::Context* (*LoadContextCtxF)(void *);
+
+
+// CPU stubs
+uint32_t cpuDeviceCount() {
+#ifdef ISPCRT_BUILD_STATIC
+#ifdef ISPCRT_BUILD_CPU
+    return ispcrt::cpu::deviceCount();
+#else
+    throw std::runtime_error("CPU support not enabled");
+#endif
+#else
+    static DeviceCountF device_count = nullptr;
+    if (device_count) {
+        return device_count();
+    }
+
+    device_count = (DeviceCountF) dyn_load_sym(handleCPUDeviceLib(), "cpu_device_count");
+    if (!device_count) {
+        throw std::runtime_error("Missing cpu_device_count symbol");
+    }
+    return device_count();
+#endif
+}
+
+ISPCRTDeviceInfo cpuDeviceInfo(uint32_t idx) {
+#ifdef ISPCRT_BUILD_STATIC
+#ifdef ISPCRT_BUILD_CPU
+    return ispcrt::cpu::deviceInfo(idx);
+#else
+    throw std::runtime_error("CPU support not enabled");
+#endif
+#else
+    static DeviceInfoF device_info = nullptr;
+    if (device_info) {
+        return device_info(idx);
+    }
+
+    device_info = (DeviceInfoF) dyn_load_sym(handleCPUDeviceLib(), "cpu_device_info");
+    if (!device_info) {
+        throw std::runtime_error("Missing cpu_device_info symbol");
+    }
+    return device_info(idx);
+#endif
+}
+
+ispcrt::base::Device *loadCPUDevice() {
+#ifdef ISPCRT_BUILD_STATIC
+#ifdef ISPCRT_BUILD_CPU
+    return new ispcrt::CPUDevice;
+#else
+    throw std::runtime_error("CPU support not enabled");
+#endif
+#else
+    static LoadDeviceF load_device = nullptr;
+    if (load_device) {
+        return load_device();
+    }
+
+    load_device = (LoadDeviceF) dyn_load_sym(handleCPUDeviceLib(), "load_cpu_device");
+    if (!load_device)  {
+        throw std::runtime_error("Missing load_cpu_device symbol");
+    }
+
+    return load_device();
+#endif
+}
+
+ispcrt::base::Context *loadCPUContext() {
+#ifdef ISPCRT_BUILD_STATIC
+#ifdef ISPCRT_BUILD_CPU
+    return new ispcrt::CPUContext;
+#else
+    throw std::runtime_error("CPU support not enabled");
+#endif
+#else
+    static LoadContextF load_context = nullptr;
+    if (load_context) {
+        return load_context();
+    }
+
+    load_context = (LoadContextF) dyn_load_sym(handleCPUDeviceLib(), "load_cpu_context");
+    if (!load_context) {
+        throw std::runtime_error("Missing load_cpu_context symbol");
+    }
+
+    return load_context();
+#endif
+}
+
+
+// GPU stubs.
+uint32_t gpuDeviceCount() {
+#ifdef ISPCRT_BUILD_STATIC
+#ifdef ISPCRT_BUILD_GPU
+    return ispcrt::gpu::deviceCount();
+#else
+    throw std::runtime_error("GPU support not enabled");
+#endif
+#else
+    static DeviceCountF device_count = nullptr;
+    if (device_count) {
+        return device_count();
+    }
+
+    device_count = (DeviceCountF) dyn_load_sym(handleGPUDeviceLib(), "gpu_device_count");
+    if (!device_count) {
+        throw std::runtime_error("Missing gpu_device_count symbol");
+    }
+    return device_count();
+#endif
+}
+
+ISPCRTDeviceInfo gpuDeviceInfo(uint32_t idx) {
+#ifdef ISPCRT_BUILD_STATIC
+#ifdef ISPCRT_BUILD_GPU
+    return ispcrt::gpu::deviceInfo(idx);
+#else
+    throw std::runtime_error("GPU support not enabled");
+#endif
+#else
+    static DeviceInfoF device_info = nullptr;
+    if (device_info) {
+        return device_info(idx);
+    }
+
+    device_info = (DeviceInfoF) dyn_load_sym(handleGPUDeviceLib(), "gpu_device_info");
+    if (!device_info) {
+        throw std::runtime_error("Missing gpu_device_info symbol");
+    }
+    return device_info(idx);
+#endif
+}
+
+ispcrt::base::Device *loadGPUDevice() {
+#ifdef ISPCRT_BUILD_STATIC
+#ifdef ISPCRT_BUILD_GPU
+    return new ispcrt::GPUDevice;
+#else
+    throw std::runtime_error("GPU support not enabled");
+#endif
+#else
+    static LoadDeviceF load_device = nullptr;
+    if (load_device) {
+        return load_device();
+    }
+
+    load_device = (LoadDeviceF) dyn_load_sym(handleGPUDeviceLib(), "load_gpu_device");
+    if (!load_device)  {
+        throw std::runtime_error("Missing load_gpu_device symbol");
+    }
+
+    return load_device();
+#endif
+}
+
+ispcrt::base::Device *loadGPUDevice(void *ctx, void *dev, uint32_t idx) {
+#ifdef ISPCRT_BUILD_STATIC
+#ifdef ISPCRT_BUILD_GPU
+    return new ispcrt::GPUDevice(ctx, dev, idx);
+#else
+    throw std::runtime_error("GPU support not enabled");
+#endif
+#else
+    static LoadDeviceCtxF load_device = nullptr;
+    if (load_device) {
+        return load_device(ctx, dev, idx);
+    }
+
+    load_device = (LoadDeviceCtxF) dyn_load_sym(handleGPUDeviceLib(), "load_gpu_device_ctx");
+    if (!load_device)  {
+        throw std::runtime_error("Missing load_gpu_device_ctx symbol");
+    }
+
+    return load_device(ctx, dev, idx);
+#endif
+}
+
+
+ispcrt::base::Context *loadGPUContext() {
+#ifdef ISPCRT_BUILD_STATIC
+#ifdef ISPCRT_BUILD_GPU
+    return new ispcrt::GPUContext;
+#else
+    throw std::runtime_error("GPU support not enabled");
+#endif
+#else
+    static LoadContextF load_context = nullptr;
+    if (load_context) {
+        return load_context();
+    }
+
+    load_context = (LoadContextF) dyn_load_sym(handleGPUDeviceLib(), "load_gpu_context");
+    if (!load_context) {
+        throw std::runtime_error("Missing load_gpu_context symbol");
+    }
+
+    return load_context();
+#endif
+}
+
+ispcrt::base::Context *loadGPUContext(void *ctx) {
+#ifdef ISPCRT_BUILD_STATIC
+#ifdef ISPCRT_BUILD_GPU
+    return new ispcrt::GPUContext(ctx);
+#else
+    throw std::runtime_error("GPU support not enabled");
+#endif
+#else
+    static LoadContextCtxF load_context = nullptr;
+    if (load_context) {
+        return load_context(ctx);
+    }
+
+    load_context = (LoadContextCtxF) dyn_load_sym(handleGPUDeviceLib(), "load_gpu_context_ctx");
+    if (!load_context) {
+        throw std::runtime_error("Missing load_gpu_context_ctx symbol");
+    }
+
+    return load_context(ctx);
+#endif
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 ////////////////////////// API DEFINITIONS ////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -123,29 +534,29 @@ static ISPCRTDevice getISPCRTDevice(ISPCRTDeviceType type, ISPCRTContext context
     case ISPCRT_DEVICE_TYPE_AUTO: {
 #if defined(ISPCRT_BUILD_GPU) && defined(ISPCRT_BUILD_CPU)
         try {
-            device = new ispcrt::GPUDevice;
+            device = loadGPUDevice();
         } catch (...) {
             if (device)
                 delete device;
-            device = new ispcrt::CPUDevice;
+            device = loadCPUDevice();
         }
 #elif defined(ISPCRT_BUILD_CPU)
-        device = new ispcrt::CPUDevice;
+        device = loadCPUDevice();
 #elif defined(ISPCRT_BUILD_GPU)
-        device = new ispcrt::GPUDevice;
+        device = loadGPUDevice();
 #endif
         break;
     }
     case ISPCRT_DEVICE_TYPE_GPU:
 #ifdef ISPCRT_BUILD_GPU
-        device = new ispcrt::GPUDevice(nativeContext, d, deviceIdx);
+        device = loadGPUDevice(nativeContext, d, deviceIdx);
 #else
         throw std::runtime_error("GPU support not enabled");
 #endif
         break;
     case ISPCRT_DEVICE_TYPE_CPU:
 #ifdef ISPCRT_BUILD_CPU
-        device = new ispcrt::CPUDevice;
+        device = loadCPUDevice();
 #else
         throw std::runtime_error("CPU support not enabled");
 #endif
@@ -181,14 +592,14 @@ uint32_t ispcrtGetDeviceCount(ISPCRTDeviceType type) ISPCRT_CATCH_BEGIN {
         break;
     case ISPCRT_DEVICE_TYPE_GPU:
 #ifdef ISPCRT_BUILD_GPU
-        devices = ispcrt::gpu::deviceCount();
+        devices = gpuDeviceCount();
 #else
         throw std::runtime_error("GPU support not enabled");
 #endif
         break;
     case ISPCRT_DEVICE_TYPE_CPU:
 #ifdef ISPCRT_BUILD_CPU
-        devices = ispcrt::cpu::deviceCount();
+        devices = cpuDeviceCount();
 #else
         throw std::runtime_error("CPU support not enabled");
 #endif
@@ -211,14 +622,14 @@ void ispcrtGetDeviceInfo(ISPCRTDeviceType type, uint32_t deviceIdx, ISPCRTDevice
         break;
     case ISPCRT_DEVICE_TYPE_GPU:
 #ifdef ISPCRT_BUILD_GPU
-        *info = ispcrt::gpu::deviceInfo(deviceIdx);
+        *info = gpuDeviceInfo(deviceIdx);
 #else
         throw std::runtime_error("GPU support not enabled");
 #endif
         break;
     case ISPCRT_DEVICE_TYPE_CPU:
 #ifdef ISPCRT_BUILD_CPU
-        *info = ispcrt::cpu::deviceInfo(deviceIdx);
+        *info = cpuDeviceInfo(deviceIdx);
 #else
         throw std::runtime_error("CPU support not enabled");
 #endif
@@ -239,29 +650,29 @@ static ISPCRTContext getISPCRTContext(ISPCRTDeviceType type, ISPCRTGenericHandle
     case ISPCRT_DEVICE_TYPE_AUTO: {
 #if defined(ISPCRT_BUILD_GPU) && defined(ISPCRT_BUILD_CPU)
         try {
-            context = new ispcrt::GPUContext;
+            context = loadGPUContext();
         } catch (...) {
             if (context)
                 delete context;
-            context = new ispcrt::CPUContext;
+            context = loadCPUContext();
         }
 #elif defined(ISPCRT_BUILD_CPU)
-        context = new ispcrt::CPUContext;
+        context = loadCPUContext();
 #elif defined(ISPCRT_BUILD_GPU)
-        context = new ispcrt::GPUContext;
+        context = loadGPUContext();
 #endif
         break;
     }
     case ISPCRT_DEVICE_TYPE_GPU:
 #ifdef ISPCRT_BUILD_GPU
-        context = new ispcrt::GPUContext(c);
+        context = loadGPUContext();
 #else
         throw std::runtime_error("GPU support not enabled");
 #endif
         break;
     case ISPCRT_DEVICE_TYPE_CPU:
 #ifdef ISPCRT_BUILD_CPU
-        context = new ispcrt::CPUContext;
+        context = loadCPUContext();
 #else
         throw std::runtime_error("CPU support not enabled");
 #endif

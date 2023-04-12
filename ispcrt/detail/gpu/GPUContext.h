@@ -1,4 +1,4 @@
-// Copyright 2022 Intel Corporation
+// Copyright 2022-2023 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
@@ -25,4 +25,10 @@ private:
     std::unique_ptr<gpu::ChunkedPool> m_memPoolHWDR;
     std::unique_ptr<gpu::ChunkedPool> m_memPoolHRDW;
 };
+}
+
+// Expose API of GPU device solib for dlsym.
+extern "C" {
+ispcrt::base::Context *load_gpu_context();
+ispcrt::base::Context *load_gpu_context_ctx(void *ctx);
 }

@@ -1,4 +1,4 @@
-// Copyright 2020-2022 Intel Corporation
+// Copyright 2020-2023 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
@@ -53,3 +53,11 @@ struct GPUDevice : public base::Device {
 };
 
 } // namespace ispcrt
+
+// Expose API of GPU device solib for dlsym.
+extern "C" {
+ispcrt::base::Device *load_gpu_device();
+ispcrt::base::Device *load_gpu_device_ctx(void* ctx, void* dev, uint32_t idx);
+uint32_t gpu_device_count();
+ISPCRTDeviceInfo gpu_device_info(uint32_t idx);
+}

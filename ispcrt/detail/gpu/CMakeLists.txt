@@ -1,0 +1,40 @@
+## Copyright 2023 Intel Corporation
+## SPDX-License-Identifier: BSD-3-Clause
+
+set(TARGET ${PROJECT_NAME}_device_gpu)
+
+find_package(level_zero REQUIRED)
+message(STATUS "${TARGET} LEVEL_ZERO_INCLUDE_DIR is ${LEVEL_ZERO_INCLUDE_DIR}")
+message(STATUS "${TARGET} LEVEL_ZERO_LIB_LOADER is ${LEVEL_ZERO_LIB_LOADER}")
+
+add_library(${TARGET} SHARED GPUDevice.cpp)
+target_compile_definitions(${TARGET} PRIVATE ISPCRT_BUILD_GPU)
+set_target_properties(${TARGET} PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+    )
+target_include_directories(${TARGET} PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>/../../
+	${LEVEL_ZERO_INCLUDE_DIR}
+    )
+target_link_libraries(${TARGET} PRIVATE ${LEVEL_ZERO_LIB_LOADER})
+
+set_target_properties(${TARGET} PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR}
+    )
+install(TARGETS ${TARGET}
+    EXPORT ${TARGET}_Exports
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      NAMELINK_SKIP
+    # on Windows put the dlls into bin
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    # ... and the import lib into the devel package
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    )
+install(TARGETS ${TARGET}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      NAMELINK_ONLY
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    )
