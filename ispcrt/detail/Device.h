@@ -33,6 +33,8 @@ struct Device : public RefCounted {
     virtual void *deviceNativeHandle() const = 0;
     virtual void *contextNativeHandle() const = 0;
 
+    virtual ISPCRTDeviceType getType() const = 0;
+
     virtual ISPCRTAllocationType getMemAllocType(void* appMemory) const = 0;
 };
 

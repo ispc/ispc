@@ -140,6 +140,7 @@ class Device : public GenericObject<ISPCRTDevice> {
     void* nativePlatformHandle() const;
     void* nativeDeviceHandle() const;
     void* nativeContextHandle() const;
+    ISPCRTDeviceType getType() const;
     // static methods to get information about available devices
     static uint32_t deviceCount(ISPCRTDeviceType type);
     static ISPCRTDeviceInfo deviceInformation(ISPCRTDeviceType type, uint32_t deviceIdx);
@@ -167,6 +168,10 @@ inline Device::Device(const Context &context, ISPCRTGenericHandle nativeDeviceHa
 inline void* Device::nativePlatformHandle() const { return ispcrtPlatformNativeHandle(handle()); }
 inline void* Device::nativeDeviceHandle() const { return ispcrtDeviceNativeHandle(handle()); }
 inline void* Device::nativeContextHandle() const { return ispcrtDeviceContextNativeHandle(handle()); }
+
+inline ISPCRTDeviceType Device::getType() const {
+    return ispcrtGetDeviceType(handle());
+}
 
 inline uint32_t Device::deviceCount(ISPCRTDeviceType type) {
     return ispcrtGetDeviceCount(type);

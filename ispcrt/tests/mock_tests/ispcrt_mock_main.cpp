@@ -191,6 +191,20 @@ TEST_F(MockTest, Device_Constructor_FromContext) {
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
+TEST_F(MockTest, Device_Type_CPU) {
+    ispcrt::Context c(ISPCRT_DEVICE_TYPE_CPU);
+    ispcrt::Device d(c);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_EQ(d.getType(), ISPCRT_DEVICE_TYPE_CPU);
+}
+
+TEST_F(MockTest, Device_Type_GPU) {
+    ispcrt::Context c(ISPCRT_DEVICE_TYPE_GPU);
+    ispcrt::Device d(c);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+    ASSERT_EQ(d.getType(), ISPCRT_DEVICE_TYPE_GPU);
+}
+
 /////////////////////////////////////////////////////////////////////
 // Context tests
 

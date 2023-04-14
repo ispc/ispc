@@ -1646,6 +1646,10 @@ void *GPUDevice::deviceNativeHandle() const { return m_device; }
 
 void *GPUDevice::contextNativeHandle() const { return m_context; }
 
+ISPCRTDeviceType GPUDevice::getType() const {
+    return ISPCRT_DEVICE_TYPE_GPU;
+}
+
 ISPCRTAllocationType GPUDevice::getMemAllocType(void *appMemory) const {
     ze_memory_allocation_properties_t memProperties = {ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES};
     ze_device_handle_t gpuDevice = (ze_device_handle_t)m_device;

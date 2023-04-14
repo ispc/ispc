@@ -33,6 +33,8 @@ struct CPUDevice : public base::Device {
     void *deviceNativeHandle() const override;
     void *contextNativeHandle() const override;
 
+    ISPCRTDeviceType getType() const override;
+
     ISPCRTAllocationType getMemAllocType(void* appMemory) const override;
 };
 
