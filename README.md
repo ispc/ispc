@@ -1,4 +1,5 @@
 [![Appveyor build status (Windows)](https://ci.appveyor.com/api/projects/status/xfllw9vkp3lj4l0v/branch/main?svg=true)](https://ci.appveyor.com/project/ispc/ispc/branch/main)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=1931356)
 
 Intel® Implicit SPMD Program Compiler (Intel® ISPC)
 ===================================================
