@@ -32,7 +32,7 @@ jobs:
         - sudo apt-get update
         - dpkg --print-architecture
         - dpkg --print-foreign-architectures
-        - sudo apt-get install flex libc6-dev libc6-dev-armhf-cross libc6-dev-i386-cross libc6-dev-i386-amd64-cross
+        - sudo apt-get install flex libc6-dev libc6-dev-armhf-cross libc6-dev-i386-cross libc6-dev-i386-amd64-cross libtbb-dev
         - find /usr -name cdefs.h
         - if [[ "${TRAVIS_CPU_ARCH}" == "arm64" ]]; then
             sudo apt-get install libuv1 rhash libstdc++6;

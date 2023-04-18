@@ -89,7 +89,7 @@ for:
   install:
     - sh: |-
         sudo apt-get update
-        sudo apt-get install -y flex libc6-dev-i386 g++-multilib lib32stdc++6
+        sudo apt-get install -y flex libc6-dev-i386 g++-multilib lib32stdc++6 libtbb-dev
         if [ "$LLVM_VERSION" = "latest" ]; then
           export LLVM_VERSION=$LLVM_LATEST
           export WASM=ON
