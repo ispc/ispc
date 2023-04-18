@@ -9,7 +9,7 @@ if (ISPCRT_BUILD_TASKING)
         if (WIN32 OR APPLE)
             set (ISPCRT_BUILD_TASK_MODEL "Threads")
         else()
-            set (ISPCRT_BUILD_TASK_MODEL "OpenMP")
+            set (ISPCRT_BUILD_TASK_MODEL "TBB")
         endif()
     endif()
 
