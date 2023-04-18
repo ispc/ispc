@@ -38,4 +38,8 @@ void AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable
  */
 Symbol *CreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTable *symbolTable);
 
+#ifdef ISPC_XE_ENABLED
+std::string mangleSPIRVBuiltin(const llvm::Function &func);
+#endif
+
 } // namespace ispc

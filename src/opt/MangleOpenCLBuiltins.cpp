@@ -75,7 +75,7 @@ static std::string mangleOCLBuiltin(const llvm::Function &func) {
     return mangleMathOCLBuiltin(func);
 }
 
-static std::string mangleSPIRVBuiltin(const llvm::Function &func) {
+std::string mangleSPIRVBuiltin(const llvm::Function &func) {
     Assert(func.getName().startswith("__spirv_") && "wrong argument: spirv builtin is expected");
     std::string mangledName;
     mangleOpenClBuiltin(func.getName().str(), func.getArg(0)->getType(),
