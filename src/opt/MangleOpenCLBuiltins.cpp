@@ -78,7 +78,11 @@ static std::string mangleOCLBuiltin(const llvm::Function &func) {
 std::string mangleSPIRVBuiltin(const llvm::Function &func) {
     Assert(func.getName().startswith("__spirv_") && "wrong argument: spirv builtin is expected");
     std::string mangledName;
-    mangleOpenClBuiltin(func.getName().str(), func.getArg(0)->getType(),
+    std::vector<llvm::Type *> tyArgs;
+    for (const auto &arg : func.args()) {
+        tyArgs.push_back(arg.getType());
+    }
+    mangleOpenClBuiltin(func.getName().str(), tyArgs,
 #if ISPC_LLVM_VERSION == ISPC_LLVM_15_0
                         // spirv builtins doesn't have pointer arguments
                         {},
