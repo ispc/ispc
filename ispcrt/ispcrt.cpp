@@ -583,6 +583,12 @@ ISPCRTDevice ispcrtGetDeviceFromNativeHandle(ISPCRTContext context, ISPCRTGeneri
     return getISPCRTDevice(c.getDeviceType(), context, d, 0);
 }
 
+ISPCRTDeviceType ispcrtGetDeviceType(ISPCRTDevice d) ISPCRT_CATCH_BEGIN {
+    const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
+    return device.getType();
+}
+ISPCRT_CATCH_END(ISPCRT_DEVICE_TYPE_AUTO)
+
 uint32_t ispcrtGetDeviceCount(ISPCRTDeviceType type) ISPCRT_CATCH_BEGIN {
     uint32_t devices = 0;
 

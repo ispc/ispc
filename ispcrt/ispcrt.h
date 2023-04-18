@@ -89,6 +89,8 @@ ISPCRTDevice ispcrtGetDeviceFromContext(ISPCRTContext, uint32_t deviceIdx);
 // Alternatively ISPCRTDevice can be constructed from device native handler
 ISPCRTDevice ispcrtGetDeviceFromNativeHandle(ISPCRTContext context, ISPCRTGenericHandle d);
 
+ISPCRTDeviceType ispcrtGetDeviceType(ISPCRTDevice d);
+
 uint32_t ispcrtGetDeviceCount(ISPCRTDeviceType);
 void ispcrtGetDeviceInfo(ISPCRTDeviceType, uint32_t deviceIdx, ISPCRTDeviceInfo*);
 

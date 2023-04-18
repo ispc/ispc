@@ -294,6 +294,10 @@ void *CPUDevice::deviceNativeHandle() const { return nullptr; }
 
 void *CPUDevice::contextNativeHandle() const { return nullptr; }
 
+ISPCRTDeviceType CPUDevice::getType() const {
+    return ISPCRT_DEVICE_TYPE_CPU;
+}
+
 ISPCRTAllocationType CPUDevice::getMemAllocType(void* appMemory) const {
     return ISPCRT_ALLOC_TYPE_UNKNOWN;
 }
