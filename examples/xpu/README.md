@@ -247,8 +247,9 @@ invoke-sycl-aobench
 This is simple aobench-like example demonstrating call of SYCL from ISPC using binary and vISA linking.  It has host
 part written in ISPC Runtime and uses `invoke_sycl` in ISPC code to call SYCL function.
 
-The CMake provided will build both an ISPC-only version (`invoke_sycl_aobench_ispc`) and a ISPC/SYCL version
-(`invoke_sycl_aobench_ispc_sycl_bin` for binary linking and `invoke_sycl_aobench_ispc_sycl_visa` for vISA linking)
+The CMake provided will build both an ISPC-only version (`invoke_sycl_aobench_ispc`), SYCL reference version
+(`aobench_sycl_bin`), and a ISPC/SYCL version (`invoke_sycl_aobench_ispc_sycl_bin` for binary linking and
+`invoke_sycl_aobench_ispc_sycl_visa` for vISA linking)
 
 It is required to use include interop.cmake file to your CMakeLists.txt if you want to use ISPC/SYCL interoperability
 feature:

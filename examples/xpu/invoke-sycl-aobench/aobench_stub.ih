@@ -7,7 +7,34 @@
 #define MAX_INSTANCE_LEVEL_COUNT 1
 #define INVALID_GEOMETRY_ID -1
 
+#ifndef AOBENCH_TARGET_SYCL
 typedef float<3> vec3f;
+#else
+#define PI (float)M_PI
+struct alignas(16) vec3f {
+    float x, y, z;
+
+    vec3f() = default;
+    vec3f(float s) : x(s), y(s), z(s){};
+    vec3f(float x, float y, float z) : x(x), y(y), z(z){};
+};
+
+inline vec3f operator*(const vec3f &v, const float s) { return vec3f(v.x * s, v.y * s, v.z * s); }
+inline vec3f operator*(const float s, const vec3f &v) { return v * s; }
+inline vec3f operator-(const vec3f &a, const vec3f &b) { return vec3f(a.x - b.x, a.y - b.y, a.z - b.z); }
+inline vec3f operator+(const vec3f &a, const vec3f &b) { return vec3f(a.x + b.x, a.y + b.y, a.z + b.z); }
+
+using sycl::native::rsqrt;
+using sycl::native::sqrt;
+using sycl::native::sin;
+using sycl::native::cos;
+using sycl::ldexp;
+
+inline float floatbits(unsigned int a)
+{
+  return sycl::bit_cast<float>(a);
+}
+#endif
 
 /* Ray structure */
 struct Ray {
@@ -114,7 +141,7 @@ inline vec3f normalized(vec3f a) {
     return a * inv_len;
 }
 
-#ifdef AOBENCH_SYCL
+#ifdef AOBENCH_SYCL_LINKING
 // SYCL functions used in invoke_sycl must be declared with extern "SYCL"
 // specifier and __regcall calling convention
 extern "SYCL" __regcall void intersect16(const int mask, uniform Scene *uniform scene,
@@ -158,8 +185,8 @@ inline bool sphere_intersect(const uniform Sphere &sphere, RayHit &rayhit) {
             rayhit.hit.Ng_x = n.x;
             rayhit.hit.Ng_y = n.y;
             rayhit.hit.Ng_z = n.z;
-            rayhit.hit.u = 0;
-            rayhit.hit.v = 0;
+            rayhit.hit.u = 0.f;
+            rayhit.hit.v = 0.f;
             return true;
         }
     }
@@ -183,8 +210,8 @@ inline bool plane_intersect(const uniform Plane &plane, RayHit &rayhit) {
         rayhit.hit.Ng_x = plane.n.x;
         rayhit.hit.Ng_y = plane.n.y;
         rayhit.hit.Ng_z = plane.n.z;
-        rayhit.hit.u = 0;
-        rayhit.hit.v = 0;
+        rayhit.hit.u = 0.f;
+        rayhit.hit.v = 0.f;
         return true;
     }
     return false;

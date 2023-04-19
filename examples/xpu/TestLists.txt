@@ -77,6 +77,7 @@ test_add(NAME callback-esimd  TEST_IS_DPCPP DPCPP_SPV "callback-esimd_ispc2esimd
 # ISPC->DPC++ interop tests
 # The order of tests is important. invoke_sycl_aobench_ispc produces validation image for other two.
 test_add(NAME invoke-sycl-aobench TEST_IS_DPCPP invoke_sycl_aobench_ispc)
+test_add(NAME invoke-sycl-aobench TEST_IS_DPCPP IGC_SIMD 16 RES_IMAGE "ao_sycl_reference_4.ppm" REF_IMAGE "ao_ispc_4.ppm" IMAGE_CMP_TH "0.002" aobench_sycl_bin)
 test_add(NAME invoke-sycl-aobench TEST_IS_DPCPP TEST_IS_INVOKE_SYCL IGC_SIMD 16 RES_IMAGE "ao_sycl_4.ppm" REF_IMAGE "ao_ispc_4.ppm" IMAGE_CMP_TH "0.002" invoke_sycl_aobench_ispc_sycl_bin)
 test_add(NAME invoke-sycl-aobench TEST_IS_DPCPP TEST_IS_INVOKE_SYCL IGC_SIMD 16 RES_IMAGE "ao_sycl_4.ppm" REF_IMAGE "ao_ispc_4.ppm" IMAGE_CMP_TH "0.002" invoke_sycl_aobench_ispc_sycl_visa)
 # DPC++->ISPC interop tests

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <fstream>
@@ -12,6 +13,14 @@
 #include <random>
 
 #include <ispcrt.h>
+
+#ifdef AOBENCH_TARGET_SYCL
+#include <sycl/sycl.hpp>
+// ze_api and sycl level zero backend must be in this order
+#include <sycl/ext/oneapi/backend/level_zero.hpp>
+// sycl include must come first
+#include "ao_sycl_kernel.inl"
+#endif
 
 #ifndef ISPC_SIMD_WIDTH
 #error "Pass -DISPC_SIMD_WIDTH=<ispc kernel simd width>"
@@ -34,6 +43,7 @@ static void savePPM(const char *fn, int w, int h, uint8_t *buf) {
     printf("Wrote image file %s\n", fn);
 }
 
+#ifndef AOBENCH_TARGET_SYCL
 struct alignas(16) vec3f {
     float x = 0;
     float y = 0;
@@ -66,6 +76,29 @@ struct Parameters {
     int *rng_seeds = nullptr;
     float *image = nullptr;
 };
+#else
+// We place the SYCL objects in a struct so we can
+// force them to be destroyed before the ISPCRT objects
+struct SYCLObjects {
+    sycl::platform platform;
+    sycl::device device;
+    sycl::context context;
+    sycl::queue queue;
+
+    SYCLObjects(ISPCRTDevice ispcdevice, ISPCRTTaskQueue ispcqueue) {
+        platform = sycl::ext::oneapi::level_zero::make_platform(
+            reinterpret_cast<pi_native_handle>(ispcrtPlatformNativeHandle(ispcdevice)));
+        device = sycl::ext::oneapi::level_zero::make_device(
+            platform, reinterpret_cast<pi_native_handle>(ispcrtDeviceNativeHandle(ispcdevice)));
+
+        context = sycl::ext::oneapi::level_zero::make_context(
+            std::vector<sycl::device>{device},
+            reinterpret_cast<pi_native_handle>(ispcrtDeviceContextNativeHandle(ispcdevice)), true);
+
+        queue = sycl::queue(context, device, {sycl::property::queue::enable_profiling()});
+    }
+};
+#endif
 
 int main(int argc, char *argv[]) {
     const int numIter = 3;
@@ -77,11 +110,12 @@ int main(int argc, char *argv[]) {
     // Init compute device (CPU or GPU) //
     auto device = ispcrtGetDevice(ISPCRT_DEVICE_TYPE_GPU, 0);
 
+#ifndef AOBENCH_TARGET_SYCL
     // Load ISPC module
     ISPCRTModuleOptions opts = {0};
     // libraryCompilation is needed when linking is required
     opts.libraryCompilation = true;
-#ifdef AOBENCH_SYCL
+#ifdef AOBENCH_SYCL_LINKING
     // Load ISPC module with invoke_sycl call to SYCL
     auto runModule = ispcrtLoadModule(device, "ao_ispc_sycl", opts);
 #else
@@ -89,7 +123,7 @@ int main(int argc, char *argv[]) {
     auto runModule = ispcrtLoadModule(device, "ao_ispc", opts);
 #endif
 
-#ifdef AOBENCH_SYCL
+#ifdef AOBENCH_SYCL_LINKING
     // Before loading SYCL library specify that it's a scalar module
     opts.moduleType = ISPCRTModuleType::ISPCRT_SCALAR_MODULE;
     auto libraryModule = ispcrtLoadModule(device, "ao_sycl_lib", opts);
@@ -106,6 +140,7 @@ int main(int argc, char *argv[]) {
 #endif
 #else
     auto kernel = ispcrtNewKernel(device, runModule, "compute_ao_tile");
+#endif
 #endif
 
     // Create task queue and execute kernel
@@ -153,20 +188,45 @@ int main(int argc, char *argv[]) {
     ispcrtCopyToDevice(queue, scene_dev);
     ispcrtCopyToDevice(queue, buf_rng_seeds);
     ispcrtCopyToDevice(queue, p_dev);
+    ispcrtSync(queue);
+
+#ifdef AOBENCH_TARGET_SYCL
+    auto syclObjects = std::make_unique<SYCLObjects>(device, queue);
+#endif
 
     // Now run the AO compute kernel
     for (int i = 0; i < numIter; i++) {
+#ifndef AOBENCH_TARGET_SYCL
         auto res = ispcrtLaunch2D(queue, kernel, p_dev, parameters.width / ISPC_SIMD_WIDTH, parameters.height);
         ispcrtRetain(res);
+#else
+        Parameters *p = reinterpret_cast<Parameters *>(ispcrtDevicePtr(p_dev));
+        auto syclEvent = syclObjects->queue.submit([&](sycl::handler &cgh) {
+            const sycl::range<2> launchDims(parameters.width, parameters.height);
+            cgh.parallel_for(launchDims, [=](sycl::item<2> taskIndex) {
+                const uniform int tile_x = taskIndex.get_id(0);
+                const uniform int tile_y = taskIndex.get_id(1) + p->y_offset;
+                compute_tile(p, tile_x, tile_y);
+            });
+        });
+        syclEvent.wait_and_throw();
+#endif
         ispcrtCopyToHost(queue, buf_image);
         ispcrtSync(queue);
 
         // Get the kernel execution time
         double kernelTicks = 1e30;
+#ifndef AOBENCH_TARGET_SYCL
         if (ispcrtFutureIsValid(res)) {
             kernelTicks = ispcrtFutureGetTimeNs(res) * 1e-6;
         }
         ispcrtRelease(res);
+#else
+        const uint64_t t0 = syclEvent.get_profiling_info<sycl::info::event_profiling::command_start>();
+        const uint64_t t1 = syclEvent.get_profiling_info<sycl::info::event_profiling::command_end>();
+        // SYCL times are also in nanoseconds
+        kernelTicks = (t1 - t0) * 1e-6;
+#endif
         printf("@time of #%i run:\t\t\t[%.3f] milliseconds\n", i, kernelTicks);
     }
 
@@ -178,10 +238,13 @@ int main(int argc, char *argv[]) {
         rgb_image.push_back(val);
     }
     // Write resulting images
+    const std::string sycl_reference_fname = "ao_sycl_reference_" + std::to_string(parameters.n_samples) + ".ppm";
     const std::string dpcpp_fname = "ao_sycl_" + std::to_string(parameters.n_samples) + ".ppm";
     const std::string validation_fname = "ao_ispc_" + std::to_string(parameters.n_samples) + ".ppm";
-#ifdef AOBENCH_SYCL
+#ifdef AOBENCH_SYCL_LINKING
     const std::string outname = dpcpp_fname;
+#elif defined(AOBENCH_TARGET_SYCL)
+    const std::string outname = sycl_reference_fname;
 #else
     const std::string outname = validation_fname;
 #endif
@@ -190,13 +253,19 @@ int main(int argc, char *argv[]) {
     // Free memory
     delete[] img;
 
+#ifdef AOBENCH_TARGET_SYCL
+    syclObjects = nullptr;
+#endif
+
     ispcrtRelease(queue);
+#ifndef AOBENCH_TARGET_SYCL
     ispcrtRelease(kernel);
     ispcrtRelease(runModule);
-#ifdef AOBENCH_SYCL
+#ifdef AOBENCH_SYCL_LINKING
     ispcrtRelease(libraryModule);
 #ifdef VISA_LINKING
     ispcrtRelease(linkedModule);
+#endif
 #endif
 #endif
     ispcrtRelease(buf_planes);
