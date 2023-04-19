@@ -9,6 +9,7 @@
 
 #define NUM_AO_SAMPLES 2
 
+#ifndef AOBENCH_TARGET_SYCL
 struct Parameters {
     int width;
     int height;
@@ -18,6 +19,52 @@ struct Parameters {
     int *uniform rng_seeds;
     float *uniform image;
 };
+#else
+struct Parameters {
+    int width = 256;
+    int height = 256;
+    int y_offset = 0;
+    int n_samples = 4;
+    Scene *scene = nullptr;
+    int *rng_seeds = nullptr;
+    float *image = nullptr;
+};
+
+// ISPC standard library's random number generator implementation
+// ported to SYCL to match the ISPC version
+struct RNGState {
+    unsigned int z1, z2, z3, z4;
+};
+
+inline unsigned int random(RNGState *state) {
+    unsigned int b;
+
+    b = ((state->z1 << 6) ^ state->z1) >> 13;
+    state->z1 = ((state->z1 & 4294967294U) << 18) ^ b;
+    b = ((state->z2 << 2) ^ state->z2) >> 27;
+    state->z2 = ((state->z2 & 4294967288U) << 2) ^ b;
+    b = ((state->z3 << 13) ^ state->z3) >> 21;
+    state->z3 = ((state->z3 & 4294967280U) << 7) ^ b;
+    b = ((state->z4 << 3) ^ state->z4) >> 12;
+    state->z4 = ((state->z4 & 4294967168U) << 13) ^ b;
+    return (state->z1 ^ state->z2 ^ state->z3 ^ state->z4);
+}
+
+inline float frandom(RNGState *state) {
+    unsigned int irand = random(state);
+    irand &= (1ul << 23) - 1;
+    return floatbits(0x3F800000 | irand) - 1.0f;
+}
+
+inline void seed_rng(RNGState *state, unsigned int seed) {
+    state->z1 = seed;
+    state->z2 = seed ^ 0xbeeff00d;
+    state->z3 = ((seed & 0xfffful) << 16) | (seed >> 16);
+    state->z4 =
+        (((seed & 0xfful) << 24) | ((seed & 0xff00ul) << 8) | ((seed & 0xff0000ul) >> 8) | (seed & 0xff000000ul) >> 24);
+}
+
+#endif
 
 inline void ortho_basis(vec3f basis[3], const vec3f n) {
     basis[2] = n;
@@ -86,7 +133,6 @@ void compute_tile(Parameters *uniform p, const uniform int tile_x, const uniform
     }
 
     RNGState rng_state;
-    // Seed RNG for this pixel
     seed_rng(&rng_state, p->rng_seeds[tile_y * p->width + ix]);
 
     p->image[tile_y * p->width + ix] = 0;
@@ -107,8 +153,8 @@ void compute_tile(Parameters *uniform p, const uniform int tile_x, const uniform
             rayhit.ray.dir_y = dir.y;
             rayhit.ray.dir_z = dir.z;
 
-            rayhit.ray.time = 0;
-            rayhit.ray.tnear = 0;
+            rayhit.ray.time = 0.f;
+            rayhit.ray.tnear = 0.f;
             rayhit.ray.tfar = 1e20f;
 
             rayhit.hit.primID = INVALID_GEOMETRY_ID;
@@ -126,9 +172,11 @@ void compute_tile(Parameters *uniform p, const uniform int tile_x, const uniform
     p->image[tile_y * p->width + ix] *= inv_samples * inv_samples;
 }
 
+#ifndef AOBENCH_TARGET_SYCL
 task void compute_ao_tile(void *uniform _p) {
     Parameters *uniform p = (Parameters * uniform) _p;
     const uniform int tile_x = taskIndex0;
     const uniform int tile_y = taskIndex1 + p->y_offset;
     compute_tile(p, tile_x, tile_y);
 }
+#endif
