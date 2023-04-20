@@ -264,7 +264,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: ispc_llvm15_win
-        path: build/ispc-trunk-windows.msi
+        path: build/ispc-trunk-windows.zip
 
 
   win-test-llvm15:
