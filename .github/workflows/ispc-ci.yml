@@ -498,7 +498,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: ispc_llvm13_win
-        path: build/ispc-trunk-windows.msi
+        path: build/ispc-trunk-windows.zip
 
   win-build-ispc-llvm14:
     needs: [define-flow]
@@ -539,7 +539,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: ispc_llvm14_win
-        path: build/ispc-trunk-windows.msi
+        path: build/ispc-trunk-windows.zip
 
   win-build-ispc-llvm15:
     needs: [define-flow]
@@ -581,7 +581,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: ispc_llvm15_win
-        path: build/ispc-trunk-windows.msi
+        path: build/ispc-trunk-windows.zip
 
   win-test-llvm13:
     needs: [define-flow, win-build-ispc-llvm13]
