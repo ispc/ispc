@@ -20,6 +20,9 @@ struct _ISPCRTTaskQueue;
 struct _ISPCRTModule;
 struct _ISPCRTKernel;
 struct _ISPCRTFuture;
+struct _ISPCRTFence;
+struct _ISPCRTCommandQueue;
+struct _ISPCRTCommandList;
 
 typedef _ISPCRTContext *ISPCRTContext;
 typedef _ISPCRTDevice *ISPCRTDevice;
@@ -28,6 +31,9 @@ typedef _ISPCRTTaskQueue *ISPCRTTaskQueue;
 typedef _ISPCRTModule *ISPCRTModule;
 typedef _ISPCRTKernel *ISPCRTKernel;
 typedef _ISPCRTFuture *ISPCRTFuture;
+typedef _ISPCRTFence *ISPCRTFence;
+typedef _ISPCRTCommandQueue *ISPCRTCommandQueue;
+typedef _ISPCRTCommandList *ISPCRTCommandList;
 #else
 typedef void *ISPCRTContext;
 typedef void *ISPCRTDevice;
@@ -36,6 +42,9 @@ typedef void *ISPCRTTaskQueue;
 typedef void *ISPCRTModule;
 typedef void *ISPCRTKernel;
 typedef void *ISPCRTFuture;
+typedef void *ISPCRTFence;
+typedef void *ISPCRTCommandQueue;
+typedef void *ISPCRTCommandList;
 #endif
 
 // NOTE: ISPCRTGenericHandle usage implies compatibility with any of the above
@@ -160,6 +169,30 @@ ISPCRTModule ispcrtStaticLinkModules(ISPCRTDevice, ISPCRTModule *modules, uint32
 void *ispcrtFunctionPtr(ISPCRTModule, const char *name);
 ISPCRTKernel ispcrtNewKernel(ISPCRTDevice, ISPCRTModule, const char *name);
 
+// Command lists //////////////////////////////////////////////////////////////
+void ispcrtCommandListBarrier(ISPCRTCommandList);
+
+ISPCRTFuture ispcrtCommandListCopyToDevice(ISPCRTCommandList, ISPCRTMemoryView);
+ISPCRTFuture ispcrtCommandListCopyToHost(ISPCRTCommandList, ISPCRTMemoryView);
+ISPCRTFuture ispcrtCommandListCopyMemoryView(ISPCRTCommandList, ISPCRTMemoryView, ISPCRTMemoryView, const size_t size);
+
+// NOTE: 'params' can be a nullptr handle (nullptr will get passed to the ISPC task as the function parameter)
+ISPCRTFuture ispcrtCommandListLaunch1D(ISPCRTCommandList, ISPCRTKernel, ISPCRTMemoryView params, size_t dim0);
+ISPCRTFuture ispcrtCommandListLaunch2D(ISPCRTCommandList, ISPCRTKernel, ISPCRTMemoryView params, size_t dim0, size_t dim1);
+ISPCRTFuture ispcrtCommandListLaunch3D(ISPCRTCommandList, ISPCRTKernel, ISPCRTMemoryView params, size_t dim0, size_t dim1,
+                            size_t dim2);
+
+void ispcrtCommandListClose(ISPCRTCommandList);
+ISPCRTFence ispcrtCommandListSubmit(ISPCRTCommandList);
+void ispcrtCommandListReset(ISPCRTCommandList);
+void ispcrtCommandListEnableTimestamps(ISPCRTCommandList);
+
+// Command queues /////////////////////////////////////////////////////////////
+ISPCRTCommandQueue ispcrtNewCommandQueue(ISPCRTDevice, uint32_t ordinal);
+
+ISPCRTCommandList ispcrtCommandQueueCreateCommandList(ISPCRTCommandQueue);
+void ispcrtCommandQueueSync(ISPCRTCommandQueue);
+
 // Task queues ////////////////////////////////////////////////////////////////
 
 ISPCRTTaskQueue ispcrtNewTaskQueue(ISPCRTDevice);
@@ -178,6 +211,16 @@ ISPCRTFuture ispcrtLaunch3D(ISPCRTTaskQueue, ISPCRTKernel, ISPCRTMemoryView para
 
 void ispcrtSync(ISPCRTTaskQueue);
 
+// Fence //////////////////////////////////////////////////////////////////////
+typedef enum {
+    ISPCRT_FENCE_UNSIGNALED = 0,
+    ISPCRT_FENCE_SIGNALED = 1,
+} ISPCRTFenceStatus;
+
+void ispcrtFenceSync(ISPCRTFence);
+ISPCRTFenceStatus ispcrtFenceStatus(ISPCRTFence);
+void ispcrtFenceReset(ISPCRTFence);
+
 // Futures and task timing ////////////////////////////////////////////////////
 
 uint64_t ispcrtFutureGetTimeNs(ISPCRTFuture);
@@ -189,7 +232,10 @@ ISPCRTGenericHandle ispcrtPlatformNativeHandle(ISPCRTDevice);
 ISPCRTGenericHandle ispcrtDeviceNativeHandle(ISPCRTDevice);
 ISPCRTGenericHandle ispcrtDeviceContextNativeHandle(ISPCRTDevice);
 ISPCRTGenericHandle ispcrtContextNativeHandle(ISPCRTContext);
+ISPCRTGenericHandle ispcrtCommandListNativeHandle(ISPCRTCommandList);
+ISPCRTGenericHandle ispcrtCommandQueueNativeHandle(ISPCRTCommandQueue);
 ISPCRTGenericHandle ispcrtTaskQueueNativeHandle(ISPCRTTaskQueue);
+ISPCRTGenericHandle ispcrtFenceNativeHandle(ISPCRTFence);
 
 #ifdef __cplusplus
 } // extern "C"

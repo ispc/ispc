@@ -1,4 +1,4 @@
-// Copyright 2020-2022 Intel Corporation
+// Copyright 2020-2023 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
@@ -8,6 +8,7 @@
 // internal
 #include "Kernel.h"
 #include "Module.h"
+#include "CommandQueue.h"
 #include "TaskQueue.h"
 
 namespace ispcrt {
@@ -19,6 +20,8 @@ struct Device : public RefCounted {
     virtual ~Device() = default;
 
     virtual MemoryView *newMemoryView(void *appMemory, size_t numBytes, const ISPCRTNewMemoryViewFlags *flags) const = 0;
+
+    virtual CommandQueue *newCommandQueue(uint32_t ordinal) const = 0;
 
     virtual TaskQueue *newTaskQueue() const = 0;
 

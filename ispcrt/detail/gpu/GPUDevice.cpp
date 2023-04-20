@@ -335,6 +335,50 @@ struct Future : public ispcrt::base::Future {
     bool m_valid{false};
 };
 
+struct Fence : public ispcrt::base::Fence {
+    Fence(ze_command_queue_handle_t q) {
+        ze_fence_desc_t fenceDesc = {};
+
+        fenceDesc.stype = ZE_STRUCTURE_TYPE_FENCE_DESC;
+        fenceDesc.pNext = nullptr;
+        fenceDesc.flags = 0;
+
+        L0_SAFE_CALL(zeFenceCreate(q, &fenceDesc, &m_handle));
+        if (!m_handle)
+            throw std::runtime_error("Failed to create fence!");
+    }
+
+    virtual ~Fence() {
+        L0_SAFE_CALL_NOEXCEPT(zeFenceDestroy(m_handle));
+    }
+
+    void sync() override {
+        uint64_t infinity = std::numeric_limits<uint64_t>::max();
+        L0_SAFE_CALL(zeFenceHostSynchronize(m_handle, infinity));
+    }
+
+    ISPCRTFenceStatus status() const override {
+        ze_result_t res = zeFenceQueryStatus(m_handle);
+        switch (res) {
+            case ZE_RESULT_NOT_READY:
+                return ISPCRT_FENCE_UNSIGNALED;
+            case ZE_RESULT_SUCCESS:
+                return ISPCRT_FENCE_SIGNALED;
+            default:
+                L0_THROW_IF(res);
+        }
+    }
+
+    void reset() override {
+        L0_SAFE_CALL(zeFenceReset(m_handle));
+    }
+
+    void *nativeHandle() const override { return m_handle; }
+
+  private:
+    ze_fence_handle_t m_handle;
+};
+
 struct Event {
     Event(ze_event_pool_handle_t pool, uint32_t index) : m_pool(pool), m_index(index) {}
 
@@ -1140,6 +1184,210 @@ struct Kernel : public ispcrt::base::Kernel {
     ze_kernel_handle_t m_kernel{nullptr};
 };
 
+struct CommandListImpl : ispcrt::base::CommandList {
+    CommandListImpl(ze_device_handle_t hDev, ze_context_handle_t hCtx,
+                    ze_command_queue_handle_t hQ, uint32_t ordinal)
+      : m_q(hQ) {
+        ze_command_list_desc_t desc = {};
+        desc.stype = ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC;
+        desc.pNext = nullptr;
+        desc.commandQueueGroupOrdinal = ordinal;
+        desc.flags = 0;
+
+        L0_SAFE_CALL(zeCommandListCreate(hCtx, hDev, &desc, &m_handle));
+
+        if (!m_handle)
+            throw std::runtime_error("Failed to create command list!");
+    }
+
+    ~CommandListImpl() {
+        clearFences();
+        clearFutures();
+        L0_SAFE_CALL_NOEXCEPT(zeCommandListDestroy(m_handle));
+    }
+
+    void barrier() override {
+        L0_SAFE_CALL(zeCommandListAppendBarrier(m_handle, nullptr, 0, nullptr));
+    }
+
+    ispcrt::base::Future *copyToHost(ispcrt::base::MemoryView &mv) override {
+        auto &view = (gpu::MemoryView &)mv;
+        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_handle, view.hostPtr(), view.devicePtr(),
+                                                   view.numBytes(), nullptr, 0, nullptr));
+        // TODO! Support timestamp events.
+        Future *f = new Future();
+        m_futures.push_back(f);
+        return f;
+    }
+
+    ispcrt::base::Future *copyToDevice(ispcrt::base::MemoryView &mv) override {
+        auto &view = (gpu::MemoryView &)mv;
+        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_handle, view.devicePtr(), view.hostPtr(),
+                                                   view.numBytes(), nullptr, 0, nullptr));
+        // TODO! Support timestamp events.
+        Future *f = new Future();
+        m_futures.push_back(f);
+        return f;
+    }
+
+    ispcrt::base::Future *copyMemoryView(base::MemoryView &mv_dst, base::MemoryView &mv_src, const size_t size) override {
+        auto &view_dst = (gpu::MemoryView &)mv_dst;
+        auto &view_src = (gpu::MemoryView &)mv_src;
+        L0_SAFE_CALL(zeCommandListAppendMemoryCopy(m_handle, view_dst.devicePtr(),
+                                                   view_src.devicePtr(), size, nullptr, 0, nullptr));
+        // TODO! Support timestamp events.
+        Future *f = new Future();
+        m_futures.push_back(f);
+        return f;
+    }
+
+    ispcrt::base::Future *launch(ispcrt::base::Kernel &k, ispcrt::base::MemoryView *params, size_t dim0, size_t dim1,
+                                 size_t dim2) override {
+        auto &kernel = (gpu::Kernel &)k;
+
+        void *param_ptr = nullptr;
+        if (params)
+            param_ptr = params->devicePtr();
+
+        // If param_ptr is nullptr, it was not set on host, so do not set kernel argument.
+        if (param_ptr != nullptr) {
+            L0_SAFE_CALL(zeKernelSetArgumentValue(kernel.handle(), 0, sizeof(void *), &param_ptr));
+        }
+
+        std::array<uint32_t, 3> groupSize = {0};
+        L0_SAFE_CALL(zeKernelSuggestGroupSize(kernel.handle(), uint32_t(dim0), uint32_t(dim1), uint32_t(dim2),
+                                              &groupSize[0], &groupSize[1], &groupSize[2]));
+        // TODO: Is this needed? Didn't find info in spec on the valid values that zeKernelSuggestGroupSize will return
+        groupSize[0] = std::max(groupSize[0], uint32_t(1));
+        groupSize[1] = std::max(groupSize[1], uint32_t(1));
+        groupSize[2] = std::max(groupSize[2], uint32_t(1));
+
+        L0_SAFE_CALL(zeKernelSetGroupSize(kernel.handle(), groupSize[0], groupSize[1], groupSize[2]));
+
+        const ze_group_count_t dispatchTraits = {uint32_t(dim0) / groupSize[0],
+                                                 uint32_t(dim1) / groupSize[1],
+                                                 uint32_t(dim2) / groupSize[2]};
+
+        L0_SAFE_CALL(zeCommandListAppendLaunchKernel(m_handle, kernel.handle(), &dispatchTraits,
+                                                     nullptr, 0, nullptr));
+        // TODO! Support timestamp events.
+        Future *f = new Future();
+        m_futures.push_back(f);
+        return f;
+    }
+
+    void close() override {
+        if (!m_closed) {
+            L0_SAFE_CALL(zeCommandListClose(m_handle));
+        }
+        m_closed = true;
+    }
+
+    ispcrt::base::Fence *submit() override {
+        close();
+
+        Fence *fence = new Fence(m_q);
+        m_fences.push_back(fence);
+        ze_fence_handle_t hFence = (ze_fence_handle_t) fence->nativeHandle();
+        L0_SAFE_CALL(zeCommandQueueExecuteCommandLists(m_q, 1, &m_handle, hFence));
+        return fence;
+    }
+
+    void reset() override {
+        m_closed = false;
+        clearFences();
+        clearFutures();
+        L0_SAFE_CALL(zeCommandListReset(m_handle));
+    }
+
+    // This has no effect at the moment.
+    void enableTimestamps() override { m_timestamps = true; }
+
+    void *nativeHandle() const override { return m_handle; }
+
+  private:
+    ze_command_list_handle_t m_handle{nullptr};
+    ze_command_queue_handle_t m_q{nullptr};
+
+    bool m_closed{false};
+    bool m_timestamps{false};
+
+    std::vector<Future*> m_futures;
+    std::vector<Fence*> m_fences;
+
+    void clearFences() {
+        if (m_fences.size()) {
+            for (const auto &f : m_fences) {
+                  f->refDec();
+            }
+            m_fences.clear();
+        }
+    }
+
+    void clearFutures() {
+        if (m_futures.size()) {
+            for (const auto &f : m_futures) {
+                  f->refDec();
+            }
+            m_futures.clear();
+        }
+    }
+};
+
+struct CommandQueueImpl : ispcrt::base::CommandQueue {
+    CommandQueueImpl(ze_device_handle_t hDev, ze_context_handle_t hCtx, uint32_t ordinal)
+      : m_dev(hDev), m_ctx(hCtx), m_ordinal(ordinal) {
+        ze_command_queue_desc_t desc = {};
+        desc.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
+        desc.pNext = nullptr;
+        desc.ordinal = ordinal;
+        desc.index = 0;
+        desc.flags = 0;
+        desc.mode = ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS;
+        desc.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
+
+        L0_SAFE_CALL(zeCommandQueueCreate(hCtx, hDev, &desc, &m_handle));
+
+        if (!m_handle)
+            throw std::runtime_error("Failed to create command queue!");
+    }
+
+    ~CommandQueueImpl() {
+        clearCommandList();
+        L0_SAFE_CALL_NOEXCEPT(zeCommandQueueDestroy(m_handle));
+    }
+
+    ispcrt::base::CommandList *createCommandList() override {
+        CommandListImpl *p = new CommandListImpl(m_dev, m_ctx, m_handle, m_ordinal);
+        m_cmdlists.push_back(p);
+        return p;
+    }
+
+    void sync() override {
+        uint64_t infinity = std::numeric_limits<uint64_t>::max();
+        L0_SAFE_CALL(zeCommandQueueSynchronize(m_handle, infinity));
+    }
+
+    void *nativeHandle() const override { return m_handle; }
+
+  private:
+    ze_command_queue_handle_t m_handle{nullptr};
+    ze_device_handle_t m_dev{nullptr};
+    ze_context_handle_t m_ctx{nullptr};
+    uint32_t m_ordinal{0};
+
+    std::vector<CommandListImpl*> m_cmdlists;
+
+    void clearCommandList() {
+        if (m_cmdlists.size()) {
+            for (const auto &l : m_cmdlists) {
+                l->refDec();
+            }
+            m_cmdlists.clear();
+        }
+    }
+};
+
 struct CommandQueue {
     CommandQueue(ze_device_handle_t dev, ze_context_handle_t ctxt, uint32_t ordinal) {
         // Create compute command queue
@@ -1422,7 +1670,7 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         return cmdq;
     }
 
-    void submit() override {
+    void submit() {
         m_cl_mem_h2d->submit(m_q_copy->handle());
         m_cl_compute->submit(m_q_compute->handle());
         m_cl_mem_d2h->submit(m_q_copy->handle());
@@ -1618,6 +1866,10 @@ GPUDevice::~GPUDevice() {
 base::MemoryView *GPUDevice::newMemoryView(void *appMem, size_t numBytes, const ISPCRTNewMemoryViewFlags *flags) const {
     return new gpu::MemoryView((ze_context_handle_t)m_context,
                                (ze_device_handle_t)m_device, appMem, numBytes, flags, nullptr);
+}
+
+base::CommandQueue *GPUDevice::newCommandQueue(uint32_t ordinal) const {
+    return new gpu::CommandQueueImpl((ze_device_handle_t)m_device, (ze_context_handle_t)m_context, ordinal);
 }
 
 base::TaskQueue *GPUDevice::newTaskQueue() const {

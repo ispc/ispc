@@ -798,6 +798,127 @@ ISPCRTKernel ispcrtNewKernel(ISPCRTDevice d, ISPCRTModule m, const char *name) I
 ISPCRT_CATCH_END(nullptr)
 
 ///////////////////////////////////////////////////////////////////////////////
+// Command lists //////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+void ispcrtCommandListBarrier(ISPCRTCommandList l) ISPCRT_CATCH_BEGIN {
+    auto &list = referenceFromHandle<ispcrt::base::CommandList>(l);
+    list.barrier();
+}
+ISPCRT_CATCH_END_NO_RETURN()
+
+ISPCRTFuture ispcrtCommandListCopyToDevice(ISPCRTCommandList l, ISPCRTMemoryView mv) ISPCRT_CATCH_BEGIN {
+    auto &list = referenceFromHandle<ispcrt::base::CommandList>(l);
+    auto &view = referenceFromHandle<ispcrt::base::MemoryView>(mv);
+    return (ISPCRTFuture) list.copyToDevice(view);
+}
+ISPCRT_CATCH_END(nullptr)
+
+ISPCRTFuture ispcrtCommandListCopyToHost(ISPCRTCommandList l, ISPCRTMemoryView mv) ISPCRT_CATCH_BEGIN {
+    auto &list = referenceFromHandle<ispcrt::base::CommandList>(l);
+    auto &view = referenceFromHandle<ispcrt::base::MemoryView>(mv);
+    return (ISPCRTFuture) list.copyToHost(view);
+}
+ISPCRT_CATCH_END(nullptr)
+
+ISPCRTFuture ispcrtCommandListCopyMemoryView(ISPCRTCommandList l, ISPCRTMemoryView mvDst, ISPCRTMemoryView mvSrc, const size_t size) ISPCRT_CATCH_BEGIN {
+    auto &list = referenceFromHandle<ispcrt::base::CommandList>(l);
+    auto &viewDst = referenceFromHandle<ispcrt::base::MemoryView>(mvDst);
+    auto &viewSrc = referenceFromHandle<ispcrt::base::MemoryView>(mvSrc);
+    if (size > viewDst.numBytes()) {
+        throw std::runtime_error("Requested copy size is bigger than destination buffer size!");
+    }
+    if (size > viewSrc.numBytes()) {
+        throw std::runtime_error("Requested copy size is bigger than source buffer size!");
+    }
+    return (ISPCRTFuture) list.copyMemoryView(viewDst, viewSrc, size);
+}
+ISPCRT_CATCH_END(nullptr)
+
+ISPCRTFuture ispcrtCommandListLaunch1D(ISPCRTCommandList l, ISPCRTKernel k, ISPCRTMemoryView p, size_t dim0) ISPCRT_CATCH_BEGIN {
+    return ispcrtCommandListLaunch3D(l, k, p, dim0, 1, 1);
+}
+ISPCRT_CATCH_END(nullptr)
+
+ISPCRTFuture ispcrtCommandListLaunch2D(ISPCRTCommandList l, ISPCRTKernel k, ISPCRTMemoryView p, size_t dim0,
+                                       size_t dim1) ISPCRT_CATCH_BEGIN {
+    return ispcrtCommandListLaunch3D(l, k, p, dim0, dim1, 1);
+}
+ISPCRT_CATCH_END(nullptr)
+
+ISPCRTFuture ispcrtCommandListLaunch3D(ISPCRTCommandList l, ISPCRTKernel k, ISPCRTMemoryView p, size_t dim0, size_t dim1,
+                                       size_t dim2) ISPCRT_CATCH_BEGIN {
+    auto &list = referenceFromHandle<ispcrt::base::CommandList>(l);
+    auto &kernel = referenceFromHandle<ispcrt::base::Kernel>(k);
+
+    ispcrt::base::MemoryView *params = nullptr;
+
+    if (p)
+        params = &referenceFromHandle<ispcrt::base::MemoryView>(p);
+
+    return (ISPCRTFuture)list.launch(kernel, params, dim0, dim1, dim2);
+}
+ISPCRT_CATCH_END(nullptr)
+
+void ispcrtCommandListClose(ISPCRTCommandList l) ISPCRT_CATCH_BEGIN {
+    auto &list = referenceFromHandle<ispcrt::base::CommandList>(l);
+    list.close();
+}
+ISPCRT_CATCH_END_NO_RETURN()
+
+ISPCRTFence ispcrtCommandListSubmit(ISPCRTCommandList l) ISPCRT_CATCH_BEGIN {
+    auto &list = referenceFromHandle<ispcrt::base::CommandList>(l);
+    return (ISPCRTFence) list.submit();
+}
+ISPCRT_CATCH_END(nullptr)
+
+void ispcrtCommandListReset(ISPCRTCommandList l) ISPCRT_CATCH_BEGIN {
+    auto &list = referenceFromHandle<ispcrt::base::CommandList>(l);
+    list.reset();
+}
+ISPCRT_CATCH_END_NO_RETURN()
+
+void ispcrtCommandListEnableTimestamps(ISPCRTCommandList l) ISPCRT_CATCH_BEGIN {
+    auto &list = referenceFromHandle<ispcrt::base::CommandList>(l);
+    return list.enableTimestamps();
+}
+ISPCRT_CATCH_END_NO_RETURN()
+
+ISPCRTGenericHandle ispcrtCommandListNativeHandle(ISPCRTCommandList l) ISPCRT_CATCH_BEGIN {
+    auto &list = referenceFromHandle<ispcrt::base::CommandList>(l);
+    return list.nativeHandle();
+}
+ISPCRT_CATCH_END(nullptr)
+
+///////////////////////////////////////////////////////////////////////////////
+// Command queues /////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+ISPCRTCommandQueue ispcrtNewCommandQueue(ISPCRTDevice d, uint32_t ordinal) ISPCRT_CATCH_BEGIN {
+    const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
+    return (ISPCRTCommandQueue)device.newCommandQueue(ordinal);
+}
+ISPCRT_CATCH_END(nullptr)
+
+ISPCRTCommandList ispcrtCommandQueueCreateCommandList(ISPCRTCommandQueue q) ISPCRT_CATCH_BEGIN {
+    auto &queue = referenceFromHandle<ispcrt::base::CommandQueue>(q);
+    return (ISPCRTCommandList) queue.createCommandList();
+}
+ISPCRT_CATCH_END(nullptr)
+
+void ispcrtCommandQueueSync(ISPCRTCommandQueue q) ISPCRT_CATCH_BEGIN {
+    auto &queue = referenceFromHandle<ispcrt::base::CommandQueue>(q);
+    queue.sync();
+}
+ISPCRT_CATCH_END_NO_RETURN()
+
+ISPCRTGenericHandle ispcrtCommandQueueNativeHandle(ISPCRTCommandQueue q) ISPCRT_CATCH_BEGIN {
+    auto &queue = referenceFromHandle<ispcrt::base::CommandQueue>(q);
+    return queue.nativeHandle();
+}
+ISPCRT_CATCH_END(nullptr)
+
+///////////////////////////////////////////////////////////////////////////////
 // Task queues ////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -871,6 +992,30 @@ void ispcrtSync(ISPCRTTaskQueue q) ISPCRT_CATCH_BEGIN {
     queue.sync();
 }
 ISPCRT_CATCH_END_NO_RETURN()
+
+void ispcrtFenceSync(ISPCRTFence f) ISPCRT_CATCH_BEGIN {
+    auto &fence = referenceFromHandle<ispcrt::base::Fence>(f);
+    fence.sync();
+}
+ISPCRT_CATCH_END_NO_RETURN()
+
+ISPCRTFenceStatus ispcrtFenceStatus(ISPCRTFence f) ISPCRT_CATCH_BEGIN {
+    auto &fence = referenceFromHandle<ispcrt::base::Fence>(f);
+    return fence.status();
+}
+ISPCRT_CATCH_END(ISPCRT_FENCE_SIGNALED)
+
+void ispcrtFenceReset(ISPCRTFence f) ISPCRT_CATCH_BEGIN {
+    auto &fence = referenceFromHandle<ispcrt::base::Fence>(f);
+    fence.reset();
+}
+ISPCRT_CATCH_END_NO_RETURN()
+
+ISPCRTGenericHandle ispcrtFenceNativeHandle(ISPCRTFence f) ISPCRT_CATCH_BEGIN {
+    auto &fence = referenceFromHandle<ispcrt::base::Fence>(f);
+    return fence.nativeHandle();
+}
+ISPCRT_CATCH_END(nullptr)
 
 uint64_t ispcrtFutureGetTimeNs(ISPCRTFuture f) ISPCRT_CATCH_BEGIN {
     if (!f)

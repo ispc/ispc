@@ -15,6 +15,11 @@ test_add(NAME simple-usm host_simple-usm "")
 test_add(NAME simple-usm host_simple-usm --cpu)
 test_add(NAME simple-usm host_simple-usm --gpu)
 
+# auto | --cpu | --gpu
+test_add(NAME simple-fence host_simple-fence "")
+test_add(NAME simple-fence host_simple-fence --cpu)
+test_add(NAME simple-fence host_simple-fence --gpu)
+
 test_add(NAME usm-mem host_usm-mem 1)
 test_add(NAME usm-mem host_usm-mem 2)
 

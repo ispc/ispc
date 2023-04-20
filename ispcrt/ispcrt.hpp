@@ -1,4 +1,4 @@
-// Copyright 2020-2022 Intel Corporation
+// Copyright 2020-2023 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #pragma once
@@ -98,6 +98,31 @@ inline Future::Future(ISPCRTFuture f) : GenericObject<ISPCRTFuture>(f) { if (f) 
 inline bool Future::valid() const { return handle() && ispcrtFutureIsValid(handle()); }
 
 inline uint64_t Future::time() const { return ispcrtFutureGetTimeNs(handle()); }
+
+/////////////////////////////////////////////////////////////////////////////
+// Fence wrapper ////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+
+class Fence : public GenericObject<ISPCRTFence> {
+  public:
+    Fence() = default;
+    Fence(ISPCRTFence f);
+    ~Fence() = default;
+    void sync();
+    ISPCRTFenceStatus status() const;
+    void reset();
+    void* nativeFenceHandle() const;
+};
+
+inline Fence::Fence(ISPCRTFence f) : GenericObject<ISPCRTFence>(f) { if (f) ispcrtRetain(f); }
+
+inline void Fence::sync() { ispcrtFenceSync(handle()); }
+
+inline ISPCRTFenceStatus Fence::status() const { return ispcrtFenceStatus(handle()); }
+
+inline void Fence::reset() { ispcrtFenceReset(handle()); }
+
+inline void* Fence::nativeFenceHandle() const { return ispcrtFenceNativeHandle(handle()); }
 
 /////////////////////////////////////////////////////////////////////////////
 // Context wrapper ///////////////////////////////////////////////////////////
@@ -477,6 +502,114 @@ inline Kernel::Kernel(const Device &device, const Module &module, const char *ke
     : GenericObject<ISPCRTKernel>(ispcrtNewKernel(device.handle(), module.handle(), kernelName)) {}
 
 /////////////////////////////////////////////////////////////////////////////
+// CommandList wrapper //////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+
+class CommandList : public GenericObject<ISPCRTCommandList> {
+  public:
+    CommandList() = default;
+    CommandList(ISPCRTCommandList);
+
+    void barrier();
+
+    template <typename T, AllocType AT> Future copyToDevice(const Array<T,AT> &arr) const;
+    template <typename T, AllocType AT> Future copyToHost(const Array<T,AT> &arr) const;
+    template <typename T, AllocType AT> Future copyArray(const Array<T,AT> &arrDst, const Array<T,AT> &arrSrc, const size_t size) const;
+
+    Future launch(const Kernel &k, size_t dim0) const;
+    Future launch(const Kernel &k, size_t dim0, size_t dim1) const;
+    Future launch(const Kernel &k, size_t dim0, size_t dim1, size_t dim2) const;
+
+    template <typename T, AllocType AT> Future launch(const Kernel &k, const Array<T,AT> &p, size_t dim0) const;
+    template <typename T, AllocType AT> Future launch(const Kernel &k, const Array<T,AT> &p, size_t dim0, size_t dim1) const;
+    template <typename T, AllocType AT>
+    Future launch(const Kernel &k, const Array<T,AT> &p, size_t dim0, size_t dim1, size_t dim2) const;
+
+    void close();
+    Fence submit();
+    void reset();
+
+    void enableTimestamps();
+    void *nativeHandle() const;
+};
+
+inline CommandList::CommandList(ISPCRTCommandList l) : GenericObject<ISPCRTCommandList>(l) { if (l) ispcrtRetain(l); }
+
+inline void CommandList::barrier() { ispcrtCommandListBarrier(handle()); }
+
+template <typename T, AllocType AT> inline Future CommandList::copyToDevice(const Array<T,AT> &arr) const {
+    return ispcrtCommandListCopyToDevice(handle(), arr.handle());
+}
+
+template <typename T, AllocType AT> inline Future CommandList::copyToHost(const Array<T,AT> &arr) const {
+    return ispcrtCommandListCopyToHost(handle(), arr.handle());
+}
+
+template <typename T, AllocType AT> inline Future CommandList::copyArray(const Array<T,AT> &arrDst, const Array<T,AT> &arrSrc, const size_t size) const {
+    return ispcrtCommandListCopyMemoryView(handle(), arrDst.handle(), arrSrc.handle(), size * sizeof(T));
+}
+
+inline Future CommandList::launch(const Kernel &k, size_t dim0) const {
+    return ispcrtCommandListLaunch1D(handle(), k.handle(), nullptr, dim0);
+}
+
+inline Future CommandList::launch(const Kernel &k, size_t dim0, size_t dim1) const {
+    return ispcrtCommandListLaunch2D(handle(), k.handle(), nullptr, dim0, dim1);
+}
+
+inline Future CommandList::launch(const Kernel &k, size_t dim0, size_t dim1, size_t dim2) const {
+    return ispcrtCommandListLaunch3D(handle(), k.handle(), nullptr, dim0, dim1, dim2);
+}
+
+template <typename T, AllocType AT> inline Future CommandList::launch(const Kernel &k, const Array<T,AT> &p, size_t dim0) const {
+    return ispcrtCommandListLaunch1D(handle(), k.handle(), p.handle(), dim0);
+}
+
+template <typename T, AllocType AT>
+inline Future CommandList::launch(const Kernel &k, const Array<T,AT> &p, size_t dim0, size_t dim1) const {
+    return ispcrtCommandListLaunch2D(handle(), k.handle(), p.handle(), dim0, dim1);
+}
+
+template <typename T, AllocType AT>
+inline Future CommandList::launch(const Kernel &k, const Array<T,AT> &p, size_t dim0, size_t dim1, size_t dim2) const {
+    return ispcrtCommandListLaunch3D(handle(), k.handle(), p.handle(), dim0, dim1, dim2);
+}
+
+inline void CommandList::close() { ispcrtCommandListClose(handle()); }
+
+inline Fence CommandList::submit() { return ispcrtCommandListSubmit(handle()); }
+
+inline void CommandList::reset() { ispcrtCommandListReset(handle()); }
+
+inline void CommandList::enableTimestamps() { ispcrtCommandListEnableTimestamps(handle()); }
+
+inline void *CommandList::nativeHandle() const { return ispcrtCommandListNativeHandle(handle()); }
+
+/////////////////////////////////////////////////////////////////////////////
+// CommandQueue wrapper /////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+
+class CommandQueue : public GenericObject<ISPCRTCommandQueue> {
+  public:
+    CommandQueue() = default;
+    CommandQueue(const Device &device, uint32_t ordinal);
+    CommandList createCommandList();
+    void sync();
+    void *nativeHandle() const;
+};
+
+// Inlined definitions //
+
+inline CommandQueue::CommandQueue(const Device &device, uint32_t ordinal)
+    : GenericObject<ISPCRTCommandQueue>(ispcrtNewCommandQueue(device.handle(), ordinal)) {}
+
+inline CommandList CommandQueue::createCommandList() { return ispcrtCommandQueueCreateCommandList(handle()); }
+
+inline void CommandQueue::sync() { ispcrtCommandQueueSync(handle()); }
+
+inline void *CommandQueue::nativeHandle() const { return ispcrtCommandQueueNativeHandle(handle()); }
+
+/////////////////////////////////////////////////////////////////////////////
 // TaskQueue wrapper ////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 
@@ -499,9 +632,6 @@ class TaskQueue : public GenericObject<ISPCRTTaskQueue> {
     template <typename T, AllocType AT> Future launch(const Kernel &k, const Array<T,AT> &p, size_t dim0, size_t dim1) const;
     template <typename T, AllocType AT>
     Future launch(const Kernel &k, const Array<T,AT> &p, size_t dim0, size_t dim1, size_t dim2) const;
-
-    // start executing, but don't wait for the completion
-    void submit() const;
 
     // wait for the command list to be executed (start the execution if needed as well)
     void sync() const;

@@ -44,10 +44,30 @@ struct Future : public ispcrt::base::Future {
     uint64_t time() override { return m_time; }
 
     friend struct TaskQueue;
+    friend struct CommandListImpl;
 
   private:
     uint64_t m_time{0};
     bool m_valid{false};
+};
+
+struct Fence : public ispcrt::base::Fence {
+    Fence() {}
+    virtual ~Fence() {}
+
+    void sync() override {
+        // no-op
+    }
+
+    ISPCRTFenceStatus status() const override {
+        return ISPCRT_FENCE_SIGNALED;
+    }
+
+    void reset() override {
+        // no-op
+    }
+
+    void *nativeHandle() const override { return nullptr; }
 };
 
 using CPUKernelEntryPoint = void (*)(void *, size_t, size_t, size_t);
@@ -191,6 +211,132 @@ struct Kernel : public ispcrt::base::Kernel {
     const ispcrt::base::Module *m_module{nullptr};
 };
 
+struct CommandListImpl : ispcrt::base::CommandList {
+    CommandListImpl() { /* no-op */ }
+    ~CommandListImpl() {
+        clearFences();
+        clearFutures();
+    }
+
+    void barrier() override { /* no-op */ }
+
+    ispcrt::base::Future *copyToHost(ispcrt::base::MemoryView &) override {
+        Future *f = new Future();
+        m_futures.push_back(f);
+        return f;
+    }
+
+    ispcrt::base::Future *copyToDevice(ispcrt::base::MemoryView &) override {
+        Future *f = new Future();
+        m_futures.push_back(f);
+        return f;
+    }
+
+    ispcrt::base::Future *copyMemoryView(base::MemoryView &mv_dst, base::MemoryView &mv_src, const size_t size) override {
+        auto view_dst_ptr = static_cast<std::byte*>(((cpu::MemoryView &)mv_dst).devicePtr());
+        auto view_src_ptr = static_cast<std::byte*>(((cpu::MemoryView &)mv_src).devicePtr());
+        std::copy(view_src_ptr, view_src_ptr + size, view_dst_ptr);
+        Future *f = new Future();
+        m_futures.push_back(f);
+        return f;
+    }
+
+    ispcrt::base::Future *launch(ispcrt::base::Kernel &k, ispcrt::base::MemoryView *params, size_t dim0, size_t dim1,
+                                 size_t dim2) override {
+        auto &kernel = (cpu::Kernel &)k;
+        auto *parameters = (cpu::MemoryView *)params;
+
+        auto *fcn = kernel.entryPoint();
+
+        auto *future = new cpu::Future;
+        assert(future);
+
+        auto start = std::chrono::high_resolution_clock::now();
+        fcn(parameters ? parameters->devicePtr() : nullptr, dim0, dim1, dim2);
+        auto end = std::chrono::high_resolution_clock::now();
+
+        if (m_timestamps) {
+            future->m_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+        }
+        future->m_valid = true;
+
+        m_futures.push_back(future);
+        return future;
+    }
+
+    void close() override { /* no-op */ }
+
+    ispcrt::base::Fence *submit() override {
+      Fence *f = new Fence;
+      m_fences.push_back(f);
+      return f;
+    }
+
+    void reset() override {
+        clearFences();
+        clearFutures();
+    }
+
+    // This has no effect at the moment.
+    void enableTimestamps() override { m_timestamps = true; }
+
+    void *nativeHandle() const override { return nullptr; }
+
+  private:
+    bool m_timestamps{false};
+
+    std::vector<Future*> m_futures;
+    std::vector<Fence*> m_fences;
+
+    void clearFences() {
+        if (m_fences.size()) {
+            for (const auto &f : m_fences) {
+                  f->refDec();
+            }
+            m_fences.clear();
+        }
+    }
+
+    void clearFutures() {
+        if (m_futures.size()) {
+            for (const auto &f : m_futures) {
+                  f->refDec();
+            }
+            m_futures.clear();
+        }
+    }
+};
+
+struct CommandQueueImpl : ispcrt::base::CommandQueue {
+    CommandQueueImpl() { /* no-op */ }
+
+    ~CommandQueueImpl() {
+        clearCommandList();
+    }
+
+    ispcrt::base::CommandList *createCommandList() override {
+        CommandListImpl *p = new CommandListImpl();
+        m_cmdlists.push_back(p);
+        return p;
+    }
+
+    void sync() override { /* no-op */ }
+
+    void *nativeHandle() const override { return nullptr; }
+
+  private:
+    std::vector<CommandListImpl*> m_cmdlists;
+
+    void clearCommandList() {
+        if (m_cmdlists.size()) {
+            for (const auto &l : m_cmdlists) {
+                l->refDec();
+            }
+            m_cmdlists.clear();
+        }
+    }
+};
+
 struct TaskQueue : public ispcrt::base::TaskQueue {
     TaskQueue() {
         // no-op
@@ -243,10 +389,6 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
         return future;
     }
 
-    void submit() override {
-        // no-op
-    }
-
     void sync() override {
         // no-op
     }
@@ -271,6 +413,8 @@ ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx) {
 ispcrt::base::MemoryView *CPUDevice::newMemoryView(void *appMem, size_t numBytes, const ISPCRTNewMemoryViewFlags *flags) const {
     return new cpu::MemoryView(appMem, numBytes, flags->allocType == ISPCRT_ALLOC_TYPE_SHARED);
 }
+
+ispcrt::base::CommandQueue *CPUDevice::newCommandQueue(uint32_t ordinal) const { return new cpu::CommandQueueImpl(); }
 
 ispcrt::base::TaskQueue *CPUDevice::newTaskQueue() const { return new cpu::TaskQueue(); }
 

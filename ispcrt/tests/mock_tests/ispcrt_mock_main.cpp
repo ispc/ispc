@@ -1464,6 +1464,263 @@ TEST_F(MockTest, Compilation_SharedArray) {
     ispcrt::SharedVector<float> v(16, sma);
 }
 
+/// C Command Queue/List/Fence API
+TEST_F(MockTest, C_API_ispcrtNewCommandQueue) {
+    ISPCRTContext ctx = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
+    ISPCRTDevice dev = ispcrtGetDeviceFromContext(ctx, 0);
+    ISPCRTCommandQueue q = ispcrtNewCommandQueue(dev, 0);
+    ASSERT_EQ(CallCounters::get("zeCommandQueueCreate"), 1);
+    ispcrtRelease(q);
+    ASSERT_EQ(CallCounters::get("zeCommandQueueDestroy"), 1);
+    ispcrtRelease(dev);
+    ispcrtRelease(ctx);
+}
+
+TEST_F(MockTest, C_API_ispcrtCommandQueueCreateCommandList) {
+    ISPCRTContext ctx = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
+    ISPCRTDevice dev = ispcrtGetDeviceFromContext(ctx, 0);
+    ISPCRTCommandQueue q = ispcrtNewCommandQueue(dev, 0);
+    ISPCRTCommandList l = ispcrtCommandQueueCreateCommandList(q);
+    ASSERT_EQ(CallCounters::get("zeCommandListCreate"), 1);
+    ispcrtRelease(l);
+    ASSERT_EQ(CallCounters::get("zeCommandListDestroy"), 1);
+    ispcrtRelease(q);
+    ispcrtRelease(dev);
+    ispcrtRelease(ctx);
+}
+
+TEST_F(MockTest, C_API_ispcrtCommandListBarrierCloseSubmitReset) {
+    ISPCRTContext ctx = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
+    ISPCRTDevice dev = ispcrtGetDeviceFromContext(ctx, 0);
+    ISPCRTCommandQueue q = ispcrtNewCommandQueue(dev, 0);
+    ISPCRTCommandList l = ispcrtCommandQueueCreateCommandList(q);
+    ASSERT_EQ(CallCounters::get("zeCommandListCreate"), 1);
+    ispcrtCommandListBarrier(l);
+    ASSERT_EQ(CallCounters::get("zeCommandListAppendBarrier"), 1);
+    ispcrtCommandListClose(l);
+    ASSERT_EQ(CallCounters::get("zeCommandListClose"), 1);
+    ispcrtCommandListClose(l);
+    ASSERT_EQ(CallCounters::get("zeCommandListClose"), 1);
+    ispcrtCommandListSubmit(l);
+    ASSERT_EQ(CallCounters::get("zeCommandQueueExecuteCommandLists"), 1);
+    ispcrtCommandListReset(l);
+    ASSERT_EQ(CallCounters::get("zeCommandListReset"), 1);
+    ispcrtRelease(l);
+    ASSERT_EQ(CallCounters::get("zeCommandListDestroy"), 1);
+    ispcrtRelease(q);
+    ispcrtRelease(dev);
+    ispcrtRelease(ctx);
+}
+
+TEST_F(MockTest, C_API_ispcrtCommandListCopyLaunchSyncQueue) {
+    ISPCRTContext ctx = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
+    ISPCRTDevice dev = ispcrtGetDeviceFromContext(ctx, 0);
+    ISPCRTModuleOptions opts;
+    ISPCRTModule m = ispcrtLoadModule(dev, "", opts);
+    ISPCRTKernel k = ispcrtNewKernel(dev, m, "");
+    ISPCRTNewMemoryViewFlags flags = {ISPCRT_ALLOC_TYPE_SHARED};
+    char mem[100] = { 0 };
+    ISPCRTMemoryView mem1 = ispcrtNewMemoryView(dev, &mem, 10, &flags);
+    ISPCRTMemoryView mem2 = ispcrtNewMemoryView(dev, &mem[15], 10, &flags);
+    ISPCRTMemoryView mem3 = ispcrtNewMemoryView(dev, &mem[50], 50, &flags);
+
+    ISPCRTCommandQueue q = ispcrtNewCommandQueue(dev, 0);
+    ISPCRTCommandList l = ispcrtCommandQueueCreateCommandList(q);
+    ASSERT_EQ(CallCounters::get("zeCommandListCreate"), 1);
+    ispcrtCommandListCopyToDevice(l, mem1);
+    ispcrtCommandListBarrier(l);
+    ispcrtCommandListLaunch1D(l, k, mem1, 128);
+    ispcrtCommandListBarrier(l);
+    ispcrtCommandListCopyMemoryView(l, mem1, mem2, 10);
+    ispcrtCommandListBarrier(l);
+    ispcrtCommandListLaunch2D(l, k, mem1, 128, 128);
+    ispcrtCommandListBarrier(l);
+    ispcrtCommandListLaunch3D(l, k, mem1, 128, 128, 128);
+    ispcrtCommandListBarrier(l);
+    ispcrtCommandListCopyToHost(l, mem3);
+    ASSERT_EQ(CallCounters::get("zeCommandListAppendLaunchKernel"), 3);
+    ASSERT_EQ(CallCounters::get("zeCommandListAppendMemoryCopy"), 3);
+    ispcrtCommandListSubmit(l);
+    ispcrtCommandQueueSync(q);
+    ASSERT_EQ(CallCounters::get("zeCommandListAppendBarrier"), 5);
+    ASSERT_EQ(CallCounters::get("zeCommandListClose"), 1);
+    ASSERT_EQ(CallCounters::get("zeCommandQueueExecuteCommandLists"), 1);
+    ASSERT_EQ(CallCounters::get("zeCommandQueueSynchronize"), 1);
+    ispcrtCommandListReset(l);
+    ASSERT_EQ(CallCounters::get("zeCommandListReset"), 1);
+    ispcrtRelease(l);
+    ASSERT_EQ(CallCounters::get("zeCommandListDestroy"), 1);
+    ispcrtRelease(q);
+    ispcrtRelease(mem3);
+    ispcrtRelease(mem2);
+    ispcrtRelease(mem1);
+    ispcrtRelease(k);
+    ispcrtRelease(m);
+    ispcrtRelease(dev);
+    ispcrtRelease(ctx);
+}
+
+TEST_F(MockTest, C_API_ispcrtCommandListCopyLaunchFence) {
+    ISPCRTContext ctx = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
+    ISPCRTDevice dev = ispcrtGetDeviceFromContext(ctx, 0);
+    ISPCRTModuleOptions opts;
+    ISPCRTModule m = ispcrtLoadModule(dev, "", opts);
+    ISPCRTKernel k = ispcrtNewKernel(dev, m, "");
+    ISPCRTNewMemoryViewFlags flags = {ISPCRT_ALLOC_TYPE_SHARED};
+    char mem[100] = { 0 };
+    ISPCRTMemoryView mem1 = ispcrtNewMemoryView(dev, &mem, 10, &flags);
+    ISPCRTMemoryView mem2 = ispcrtNewMemoryView(dev, &mem[15], 10, &flags);
+    ISPCRTMemoryView mem3 = ispcrtNewMemoryView(dev, &mem[50], 50, &flags);
+
+    ISPCRTCommandQueue q = ispcrtNewCommandQueue(dev, 0);
+    ISPCRTCommandList l = ispcrtCommandQueueCreateCommandList(q);
+    ASSERT_EQ(CallCounters::get("zeCommandListCreate"), 1);
+    ispcrtCommandListCopyToDevice(l, mem1);
+    ispcrtCommandListBarrier(l);
+    ispcrtCommandListLaunch1D(l, k, mem1, 128);
+    ispcrtCommandListBarrier(l);
+    ispcrtCommandListCopyMemoryView(l, mem1, mem2, 10);
+    ispcrtCommandListBarrier(l);
+    ispcrtCommandListLaunch2D(l, k, mem1, 128, 128);
+    ispcrtCommandListBarrier(l);
+    ispcrtCommandListLaunch3D(l, k, mem1, 128, 128, 128);
+    ispcrtCommandListBarrier(l);
+    ispcrtCommandListCopyToHost(l, mem3);
+    ASSERT_EQ(CallCounters::get("zeCommandListAppendLaunchKernel"), 3);
+    ASSERT_EQ(CallCounters::get("zeCommandListAppendMemoryCopy"), 3);
+    ISPCRTFence f = ispcrtCommandListSubmit(l);
+    ASSERT_EQ(CallCounters::get("zeFenceCreate"), 1);
+    ISPCRTFenceStatus status = ispcrtFenceStatus(f);
+    ASSERT_EQ(CallCounters::get("zeFenceQueryStatus"), 1);
+    ASSERT_EQ(status, ISPCRT_FENCE_UNSIGNALED);
+    ispcrtFenceSync(f);
+    status = ispcrtFenceStatus(f);
+    ASSERT_EQ(status, ISPCRT_FENCE_SIGNALED);
+    ASSERT_EQ(CallCounters::get("zeFenceHostSynchronize"), 1);
+    ASSERT_EQ(CallCounters::get("zeCommandListAppendBarrier"), 5);
+    ASSERT_EQ(CallCounters::get("zeCommandListClose"), 1);
+    ASSERT_EQ(CallCounters::get("zeCommandQueueExecuteCommandLists"), 1);
+    ASSERT_EQ(CallCounters::get("zeCommandQueueSynchronize"), 0);
+    ispcrtCommandListReset(l);
+    ASSERT_EQ(CallCounters::get("zeCommandListReset"), 1);
+    ispcrtRelease(l);
+    ASSERT_EQ(CallCounters::get("zeCommandListDestroy"), 1);
+    ispcrtRelease(q);
+    ispcrtRelease(mem3);
+    ispcrtRelease(mem2);
+    ispcrtRelease(mem1);
+    ispcrtRelease(k);
+    ispcrtRelease(m);
+    ispcrtRelease(dev);
+    ispcrtRelease(ctx);
+}
+
+/// C++ Command Queue/List/Fence API
+TEST_F(MockTest, CPP_API_NewCommandQueue) {
+    auto ctx = Context(ISPCRT_DEVICE_TYPE_GPU);
+    auto dev = Device(ctx);
+    auto q = CommandQueue(dev, 0);
+    ASSERT_EQ(CallCounters::get("zeCommandQueueCreate"), 1);
+}
+
+TEST_F(MockTest, CPP_API_CommandQueueCreateCommandList) {
+    auto ctx = Context(ISPCRT_DEVICE_TYPE_GPU);
+    auto dev = Device(ctx);
+    auto q = CommandQueue(dev, 0);
+    auto l = q.createCommandList();
+    ASSERT_EQ(CallCounters::get("zeCommandListCreate"), 1);
+}
+
+TEST_F(MockTest, CPP_API_CommandListBarrierCloseSubmitReset) {
+    auto ctx = Context(ISPCRT_DEVICE_TYPE_GPU);
+    auto dev = Device(ctx);
+    auto q = CommandQueue(dev, 0);
+    auto l = q.createCommandList();
+    ASSERT_EQ(CallCounters::get("zeCommandListCreate"), 1);
+    l.barrier();
+    ASSERT_EQ(CallCounters::get("zeCommandListAppendBarrier"), 1);
+    l.close();
+    ASSERT_EQ(CallCounters::get("zeCommandListClose"), 1);
+    l.close();
+    ASSERT_EQ(CallCounters::get("zeCommandListClose"), 1);
+    l.submit();
+    ASSERT_EQ(CallCounters::get("zeCommandQueueExecuteCommandLists"), 1);
+    l.reset();
+    ASSERT_EQ(CallCounters::get("zeCommandListReset"), 1);
+}
+
+TEST_F(MockTest, CPP_API_CommandListCopyLaunchSyncQueue) {
+    auto ctx = Context(ISPCRT_DEVICE_TYPE_GPU);
+    auto dev = Device(ctx);
+    auto m = Module(dev, "");
+    auto k = Kernel(dev, m, "");
+    std::vector<float> buf(64 * 1024);
+    ispcrt::Array<float> buf_dev(dev, buf);
+
+    auto q = CommandQueue(dev, 0);
+    auto l = q.createCommandList();
+    ASSERT_EQ(CallCounters::get("zeCommandListCreate"), 1);
+    l.copyToDevice(buf_dev);
+    l.barrier();
+    l.launch(k, 128);
+    l.barrier();
+    l.barrier();
+    l.launch(k, 128, 128);
+    l.barrier();
+    l.launch(k, 128, 128, 128);
+    l.barrier();
+    l.copyToHost(buf_dev);
+    ASSERT_EQ(CallCounters::get("zeCommandListAppendLaunchKernel"), 3);
+    ASSERT_EQ(CallCounters::get("zeCommandListAppendMemoryCopy"), 2);
+    l.submit();
+    q.sync();
+    ASSERT_EQ(CallCounters::get("zeCommandListAppendBarrier"), 5);
+    ASSERT_EQ(CallCounters::get("zeCommandListClose"), 1);
+    ASSERT_EQ(CallCounters::get("zeCommandQueueExecuteCommandLists"), 1);
+    ASSERT_EQ(CallCounters::get("zeCommandQueueSynchronize"), 1);
+    l.reset();
+    ASSERT_EQ(CallCounters::get("zeCommandListReset"), 1);
+}
+
+TEST_F(MockTest, CPP_API_CommandListCopyLaunchFence) {
+    auto ctx = Context(ISPCRT_DEVICE_TYPE_GPU);
+    auto dev = Device(ctx);
+    auto m = Module(dev, "");
+    auto k = Kernel(dev, m, "");
+    std::vector<float> buf(64 * 1024);
+    ispcrt::Array<float> buf_dev(dev, buf);
+
+    auto q = CommandQueue(dev, 0);
+    auto l = q.createCommandList();
+    ASSERT_EQ(CallCounters::get("zeCommandListCreate"), 1);
+    l.copyToDevice(buf_dev);
+    l.barrier();
+    l.launch(k, 128);
+    l.barrier();
+    l.barrier();
+    l.launch(k, 128, 128);
+    l.barrier();
+    l.launch(k, 128, 128, 128);
+    l.barrier();
+    l.copyToHost(buf_dev);
+    ASSERT_EQ(CallCounters::get("zeCommandListAppendLaunchKernel"), 3);
+    ASSERT_EQ(CallCounters::get("zeCommandListAppendMemoryCopy"), 2);
+    auto f = l.submit();
+    ASSERT_EQ(CallCounters::get("zeFenceCreate"), 1);
+    ISPCRTFenceStatus status = f.status();
+    ASSERT_EQ(CallCounters::get("zeFenceQueryStatus"), 1);
+    ASSERT_EQ(status, ISPCRT_FENCE_UNSIGNALED);
+    f.sync();
+    status = f.status();
+    ASSERT_EQ(status, ISPCRT_FENCE_SIGNALED);
+    ASSERT_EQ(CallCounters::get("zeCommandListAppendBarrier"), 5);
+    ASSERT_EQ(CallCounters::get("zeCommandListClose"), 1);
+    ASSERT_EQ(CallCounters::get("zeCommandQueueExecuteCommandLists"), 1);
+    ASSERT_EQ(CallCounters::get("zeCommandQueueSynchronize"), 0);
+    l.reset();
+    ASSERT_EQ(CallCounters::get("zeCommandListReset"), 1);
+}
+
 } // namespace mock
 } // namespace testing
 } // namespace ispcrt

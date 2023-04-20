@@ -59,6 +59,7 @@ add_subdirectory(aobench)
 add_subdirectory(mandelbrot)
 add_subdirectory(simple)
 add_subdirectory(simple-usm)
+add_subdirectory(simple-fence)
 add_subdirectory(usm-mem)
 
 # DPC++ related examples should not run as part of ISPC_BUILD

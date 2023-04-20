@@ -169,10 +169,28 @@ The ``ISPC Run Time`` uses the following abstractions to manage code execution:
   GPU. This is handled automatically by the ``oneAPI Level Zero`` runtime.
 
 * ``Task queue`` - Each ``device`` has a task (command) queue and executes
-  commands from it. The execution may be asynchronous, which means that
-  subsequent commands can begin executing before the previous ones complete.
-  There are synchronization primitives available to make the execution
-  synchronous.
+  commands from it. Commands may be executed simultaneously. To prevent that
+  one should explicitly insert barriers in places where synchronization is
+  required. ``Task queue`` ``sync`` method stops the host thread until GPU
+  computation completed. For asynchronous computation, one should utilize
+  ``CommandQueue`` and ``CommandList`` objects.
+
+* ``CommandQueue`` - represents a logical input stream to the device and
+  directly maps to L0 command queues. Queues are needed to be constructed to
+  submit the actual commands contained in command lists.
+
+* ``CommandList`` - represents commands to be executed on a command queue. It
+  can be created by calling ``createCommandList`` method of ``CommandQueue``
+  object. Synchronization between all commands in list has to be done
+  explicitly by putting barriers if needed. Fine-grained synchronization via
+  ``Events`` are not supported yet.
+
+* ``Fence`` - is a synchronization primitive to communicate to the host that
+  command list execution has completed. ``Fence`` is created upon command list
+  submission. It can be waited synchronously (``sync``) and asynchronously
+  (periodically checking ``status``). Fence has two states
+  ``ISPCRT_FENCE_UNSIGNALED`` and ``ISPCRT_FENCE_SIGNALED`` returned by
+  ``status`` method.
 
 * ``Barrier`` - synchronization primitive that can be inserted into a ``task
   queue`` to make sure that all tasks previously inserted into this queue have

@@ -6,6 +6,9 @@
 #include "../Context.h"
 #include "../Device.h"
 #include "../Future.h"
+#include "../Fence.h"
+#include "../CommandList.h"
+#include "../CommandQueue.h"
 
 // std
 #include <unordered_map>
@@ -28,6 +31,8 @@ struct GPUDevice : public base::Device {
     ~GPUDevice();
 
     base::MemoryView *newMemoryView(void *appMem, size_t numBytes, const ISPCRTNewMemoryViewFlags *flags) const override;
+
+    base::CommandQueue *newCommandQueue(uint32_t ordinal) const override;
 
     base::TaskQueue *newTaskQueue() const override;
 
