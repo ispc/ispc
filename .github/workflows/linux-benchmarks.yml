@@ -1,4 +1,4 @@
-name: Linux benchmarks / LLVM 13.0
+name: Linux benchmarks / LLVM 15.0
 
 on:
   pull_request_target:
@@ -10,9 +10,9 @@ on:
   workflow_dispatch:
 
 env:
-  LLVM_VERSION: "13.0"
+  LLVM_VERSION: "15.0"
   LLVM_REPO: https://github.com/ispc/ispc.dependencies
-  LLVM_TAR: llvm-13.0.1-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+  LLVM_TAR: llvm-15.0.7-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
 
 jobs:
   linux-build:
@@ -53,7 +53,7 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v3
       with:
-        name: ispc_llvm13_linux_bench
+        name: ispc_llvm15_linux_bench
         path: build/ispc-trunk-linux.tar.gz
 
   benchmarks:
@@ -64,7 +64,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@v3
       with:
-        name: ispc_llvm13_linux_bench
+        name: ispc_llvm15_linux_bench
     - name: Install dependencies and unpack artifacts
       run: |
         tar xvf ispc-trunk-linux.tar.gz
@@ -90,7 +90,7 @@ jobs:
     - name: Upload results
       uses: actions/upload-artifact@v3
       with:
-        name: ispc_llvm13_linux_bench_results
+        name: ispc_llvm15_linux_bench_results
         path: ispc-trunk-linux/benchmarks/out/*.json
     - name: Clean self-hosted runner
       run: rm -rf ${GITHUB_WORKSPACE:?}/* ${HOME:?}/* 
@@ -107,7 +107,7 @@ jobs:
       - name: Download benchmarks results
         uses: actions/download-artifact@v3
         with:
-          name: ispc_llvm13_linux_bench_results
+          name: ispc_llvm15_linux_bench_results
       - name: Upload bench datasets to calcite
         working-directory: .calcite
         run: |
