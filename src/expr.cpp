@@ -576,6 +576,8 @@ bool ispc::PossiblyResolveFunctionOverloads(Expr *expr, const Type *type) {
     return true;
 }
 
+static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llvm::Value *exprVal, const Type *toType,
+                                                   const Type *fromType, SourcePos pos);
 /** Utility routine that emits code to initialize a symbol given an
     initializer expression.
 
@@ -726,6 +728,56 @@ void ispc::InitSymbol(AddressInfo *ptrInfo, const Type *symType, Expr *initExpr,
                 return;
             }
 
+            // When we initialize uniform vector try to construct a vector from initializers and use a vector
+            // instruction for type conversion if needed. We can generate one instruction for type conversion when all
+            // initializers have the same atomic type. For example: const uniform float<4> f = {1.f, 2.f, 3.f, 4.f};
+            // const uniform double<4> d = {f[1], f[3], f.y, 0.0f};
+            // If it's not the case, or if initializer expression is not trivial (not of AtomicType), initialize vector
+            // per element.
+            if (symType->IsVectorType() && symType->IsUniformType() && nInits > 0) {
+                Expr *firstInit = exprList->exprs[0];
+                // Construct vector instruction only if initializer expression has AtomicType
+                // Get the type of first initializer expression
+                const AtomicType *firstInitType = CastType<AtomicType>(firstInit->GetType());
+                if (firstInitType) {
+                    bool isVectorIntializer = true;
+                    // Go through all initializer expressions and check if they are trivial and of the same type as
+                    // first expression
+                    for (int i = 0; i < nInits; ++i) {
+                        // Check if initializer expression is trivial AtomicType
+                        if (exprList->exprs[i]->GetType()->IsAtomicType() && exprList->exprs[i]->GetValue(ctx)) {
+                            if (!Type::EqualIgnoringConst(exprList->exprs[i]->GetType(), firstInitType)) {
+                                isVectorIntializer = false;
+                                break;
+                            }
+                        } else {
+                            isVectorIntializer = false;
+                            break;
+                        }
+                    }
+                    if (isVectorIntializer) {
+                        int nVectorElements = CastType<VectorType>(symType)->getVectorMemoryCount();
+                        llvm::Type *llvmInitType = firstInitType->LLVMType(g->ctx);
+                        llvm::Value *initCast =
+                            llvm::UndefValue::get(llvm::FixedVectorType::get(llvmInitType, nVectorElements));
+                        // Construct initializer vector
+                        for (int i = 0; i < nVectorElements; ++i) {
+                            if (i >= nInits) {
+                                // If we don't have enough initializer values, keep undef value
+                                continue;
+                            }
+                            llvm::Value *initializerValue = exprList->exprs[i]->GetValue(ctx);
+                            initCast = ctx->InsertInst(initCast, initializerValue, i);
+                        }
+                        // Construct ISPC type for resulting "initializer" vector
+                        const VectorType *vResType = new VectorType(firstInitType, nVectorElements);
+                        // Make type conversion
+                        llvm::Value *conv = lTypeConvAtomicOrUniformVector(ctx, initCast, symType, vResType, pos);
+                        ctx->StoreInst(conv, ptrInfo);
+                        return;
+                    }
+                }
+            }
             // Initialize each element with the corresponding value from
             // the ExprList
             for (int i = 0; i < nElements; ++i) {
@@ -733,7 +785,6 @@ void ispc::InitSymbol(AddressInfo *ptrInfo, const Type *symType, Expr *initExpr,
                 // of the underlying type
                 const Type *elementType =
                     collectionType ? collectionType->GetElementType(i) : symType->GetAsUniformType();
-
                 llvm::Value *ep;
                 if (CastType<StructType>(symType) != nullptr)
                     ep = ctx->AddElementOffset(new AddressInfo(ptrInfo->getPointer(), CastType<StructType>(symType)), i,
