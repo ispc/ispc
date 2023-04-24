@@ -19,5 +19,5 @@ examples/*/ref
 examples/*/test
 *.swp
 check_isa.exe
-
+build*
 
