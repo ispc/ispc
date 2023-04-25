@@ -17,6 +17,19 @@ if (UNIX)
     endif()
 endif()
 
+if (APPLE)
+    # We need to target different minimum macOS versions on x86 and arm by default, but before
+    # we execute project() command, the regular CMAKE_* variables with host info are not initialized,
+    # so we do this hack to detect the platform. It's not perfect, but good enough.
+    execute_process(COMMAND uname -m OUTPUT_VARIABLE UNAME)
+    if (UNAME MATCHES "x86_64")
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "10.12" CACHE STRING "Minimum macOS version to support")
+    else()
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version to support")
+    endif()
+    message(STATUS "Targeting minimum macOS version: ${CMAKE_OSX_DEPLOYMENT_TARGET}")
+endif()
+
 set(PROJECT_NAME ispc)
 set(ISPC_BUILD TRUE)
 project(${PROJECT_NAME})
