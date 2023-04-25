@@ -133,7 +133,7 @@ def get_llvm_disable_assertions_switch(llvm_disable_assertions):
     else:
         return "  -DLLVM_ENABLE_ASSERTIONS=ON"
 
-def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, force, make, gcc_toolchain_path, llvm_disable_assertions, verbose):
+def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, force, make, gcc_toolchain_path, llvm_disable_assertions, verbose, macos_version_min):
     print_debug("Building LLVM. Version: " + version_LLVM + ".\n", from_validation, alloy_build)
     # Here we understand what and where do we want to build
     current_path = os.getcwd()
@@ -205,6 +205,15 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
         # An option to build seems to be a better one.
         llvm_enable_runtimes +=" -DLLVM_ENABLE_RUNTIMES=\"libcxx;libcxxabi\""
 
+    # macOS deployment target sets the minimim OS requirement to run the compiled program.
+    # All of the object files and static libraries passed to the linker need to be compiled for the same
+    # version of the macOS to enable resulting executable to be able to run on the older macOS.
+    # So we build LLVM for old macOS to enable ISPC builds targeting an old macOS.
+    osx_deployment = ""
+    if current_OS == "MacOS" and macos_version_min != "":
+        osx_deployment = f"  -DCMAKE_OSX_DEPLOYMENT_TARGET={macos_version_min}"
+        print_debug(f"Targeting macOS {macos_version_min}\n", from_validation, alloy_build)
+
     llvm_enable_projects = llvm_enable_runtimes + " -DLLVM_ENABLE_PROJECTS=\"clang"
     if current_OS == "Linux":
         # OpenMP is needed for Xe enabled builds.
@@ -247,6 +256,7 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
                 (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" else "") +
                 (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" else "") +
                 (("  -DDEFAULT_SYSROOT=" + mac_system_root) if mac_system_root != "" else "") +
+                osx_deployment +
                 targets_and_common_options +
                 " ../" + cmakelists_path,
                 from_validation, verbose)
@@ -281,6 +291,7 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
                     (("  -DCMAKE_C_COMPILER=" + gcc_toolchain_path+"/bin/gcc") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
                     (("  -DCMAKE_CXX_COMPILER=" + gcc_toolchain_path+"/bin/g++") if gcc_toolchain_path != "" and selfbuild_compiler == "" else "") +
                     (("  -DDEFAULT_SYSROOT=" + mac_system_root) if mac_system_root != "" else "") +
+                    osx_deployment +
                     targets_and_common_options +
                     " ../" + cmakelists_path,
                     from_validation, verbose)
@@ -621,7 +632,7 @@ def validation_run(only, only_targets, reference_branch, number, update, speed_n
             LLVM = [newest_LLVM, "trunk"]
         need_LLVM = check_LLVM(LLVM)
         for i in range(0,len(need_LLVM)):
-            build_LLVM(need_LLVM[i], "", "", "", False, False, False, True, False, make, options.gcc_toolchain_path, False, True, False)
+            build_LLVM(need_LLVM[i], "", "", "", False, False, False, True, False, make, options.gcc_toolchain_path, False, True, options.macos_version_min)
 # begin validation run for stabitily
         common.remove_if_exists(stability.in_file)
         R = [[[],[]],[[],[]],[[],[]],[[],[]]]
@@ -702,7 +713,7 @@ def validation_run(only, only_targets, reference_branch, number, update, speed_n
 # prepare newest LLVM
         need_LLVM = check_LLVM([newest_LLVM])
         if len(need_LLVM) != 0:
-            build_LLVM(need_LLVM[0], "", "", "", False, False, False, True, False, make, options.gcc_toolchain_path, True, False)
+            build_LLVM(need_LLVM[0], "", "", "", False, False, False, True, False, make, options.gcc_toolchain_path, True, False, options.macos_version_min)
         if perf_llvm == False:
             # prepare reference point. build both test and reference compilers
             try_do_LLVM("apply git", "git branch", True)
@@ -820,7 +831,7 @@ def Main():
         start_time = time.time()
         if options.build_llvm:
             build_LLVM(options.version, options.folder,
-                    options.debug, selfbuild, options.extra, False, options.force, make, options.gcc_toolchain_path, options.llvm_disable_assertions, options.verbose)
+                    options.debug, selfbuild, options.extra, False, options.force, make, options.gcc_toolchain_path, options.llvm_disable_assertions, options.verbose, options.macos_version_min)
         if options.validation_run:
             validation_run(options.only, options.only_targets, options.branch,
                     options.number_for_performance, options.update, int(options.speed),
@@ -906,7 +917,7 @@ if __name__ == '__main__':
     llvm_group = OptionGroup(parser, "Options for building LLVM",
                     "These options must be used with -b option.")
     llvm_group.add_option('--version', dest='version',
-        help='version of llvm to build: 6.0 7.0 8.0 9.0 10.0 11.0 12.0 13.0 trunk. Default: trunk', default="trunk")
+        help='version of llvm to build: 6.0-16.0 trunk. Default: trunk', default="trunk")
     llvm_group.add_option('--full-checkout', dest='full_checkout', action='store_true', default=False,
         help=('Disable a shallow clone and checkout a whole LLVM repository.\n'
               'By default it clones LLVM with --depth=1 to save space and time'))
@@ -926,6 +937,8 @@ if __name__ == '__main__':
         help='make selfbuild of LLVM and clang, second phase only', default=False, action="store_true")
     llvm_group.add_option('--llvm-disable-assertions', dest='llvm_disable_assertions',
         help='build LLVM with assertions disabled', default=False, action="store_true")
+    llvm_group.add_option('--macos-version-min', dest='macos_version_min',
+        help='Minimal macOS version to target with this LLVM build (ignored on other OSes)', default="10.12" if platform.machine() == 'x86_64' else "11.0")
     llvm_group.add_option('--force', dest='force',
         help='rebuild LLVM', default=False, action='store_true')
     llvm_group.add_option('--extra', dest='extra',
