@@ -206,7 +206,10 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
         llvm_enable_runtimes +=" -DLLVM_ENABLE_RUNTIMES=\"libcxx;libcxxabi\""
 
     llvm_enable_projects = llvm_enable_runtimes + " -DLLVM_ENABLE_PROJECTS=\"clang"
-
+    if current_OS == "Linux":
+        # OpenMP is needed for Xe enabled builds.
+        # Starting from Ubuntu 20.04 libomp-dev package doesn't install omp.h to default location.
+        llvm_enable_projects +=";openmp"
     if extra == True:
         llvm_enable_projects +=";compiler-rt;clang-tools-extra"
     llvm_enable_projects += "\""
