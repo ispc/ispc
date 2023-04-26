@@ -6076,16 +6076,31 @@ TypeCastExpr::TypeCastExpr(const Type *t, Expr *e, SourcePos p) : Expr(p, TypeCa
     expr = e;
 }
 
-/** Handle all the grungy details of type conversion between atomic types.
+/** Handle all the grungy details of type conversion between atomic types and uniform vector types.
     Given an input value in exprVal of type fromType, convert it to the
     llvm::Value with type toType.
  */
-static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal, const AtomicType *toType,
-                                    const AtomicType *fromType, SourcePos pos) {
+static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llvm::Value *exprVal, const Type *toType,
+                                                   const Type *fromType, SourcePos pos) {
+    AtomicType::BasicType basicToType;
+    AtomicType::BasicType basicFromType;
+    if (toType->IsVectorType() && toType->IsUniformType() && fromType->IsVectorType() && fromType->IsUniformType()) {
+        const VectorType *vToType = CastType<VectorType>(toType);
+        const VectorType *vFromType = CastType<VectorType>(fromType);
+        basicToType = vToType->GetElementType()->basicType;
+        basicFromType = vFromType->GetElementType()->basicType;
+    } else if (toType->IsAtomicType() && fromType->IsAtomicType()) {
+        const AtomicType *aToType = CastType<AtomicType>(toType);
+        const AtomicType *aFromType = CastType<AtomicType>(fromType);
+        basicToType = aToType->basicType;
+        basicFromType = aFromType->basicType;
+    } else {
+        FATAL("Unexpected input type in lTypeConvAtomicOrUniformVector");
+    }
     llvm::Value *cast = nullptr;
 
     std::string opName = exprVal->getName().str();
-    switch (toType->basicType) {
+    switch (basicToType) {
     case AtomicType::TYPE_BOOL:
         opName += "_to_bool";
         break;
@@ -6130,11 +6145,11 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
     llvm::Type *targetType = fromType->IsUniformType() ? toType->GetAsUniformType()->LLVMType(g->ctx)
                                                        : toType->GetAsVaryingType()->LLVMType(g->ctx);
 
-    switch (toType->basicType) {
+    switch (basicToType) {
     case AtomicType::TYPE_FLOAT16: {
-        switch (fromType->basicType) {
+        switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingType())
+            if (fromType->IsVaryingAtomicOrUniformVectorType())
                 // If we have a bool vector of non-i1 elements, first
                 // truncate down to a single bit.
                 exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
@@ -6155,14 +6170,16 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
                                  exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_UINT32:
-            if (fromType->IsVaryingType() && g->target->shouldWarn(PerfWarningType::CVTUIntFloat16)) {
+            if (fromType->IsVaryingAtomicOrUniformVectorType() &&
+                g->target->shouldWarn(PerfWarningType::CVTUIntFloat16)) {
                 PerformanceWarning(pos, "Conversion from uint32 to float16 is slow. Use \"int32\" if possible");
             }
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int to float16
                                  exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_UINT64:
-            if (fromType->IsVaryingType() && g->target->shouldWarn(PerfWarningType::CVTUIntFloat16)) {
+            if (fromType->IsVaryingAtomicOrUniformVectorType() &&
+                g->target->shouldWarn(PerfWarningType::CVTUIntFloat16)) {
                 PerformanceWarning(pos, "Conversion from uint64 to float16 is slow. Use \"int32\" if possible");
             }
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int to float16
@@ -6184,9 +6201,9 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
         break;
     }
     case AtomicType::TYPE_FLOAT: {
-        switch (fromType->basicType) {
+        switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingType())
+            if (fromType->IsVaryingAtomicOrUniformVectorType())
                 // If we have a bool vector of non-i1 elements, first
                 // truncate down to a single bit.
                 exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
@@ -6207,14 +6224,16 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
                                  exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_UINT32:
-            if (fromType->IsVaryingType() && g->target->shouldWarn(PerfWarningType::CVTUIntFloat)) {
+            if (fromType->IsVaryingAtomicOrUniformVectorType() &&
+                g->target->shouldWarn(PerfWarningType::CVTUIntFloat)) {
                 PerformanceWarning(pos, "Conversion from uint32 to float is slow. Use \"int32\" if possible");
             }
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int to float
                                  exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_UINT64:
-            if (fromType->IsVaryingType() && g->target->shouldWarn(PerfWarningType::CVTUIntFloat)) {
+            if (fromType->IsVaryingAtomicOrUniformVectorType() &&
+                g->target->shouldWarn(PerfWarningType::CVTUIntFloat)) {
                 PerformanceWarning(pos, "Conversion from uint64 to float is slow. Use \"int64\" if possible");
             }
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int to float
@@ -6236,9 +6255,9 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
         break;
     }
     case AtomicType::TYPE_DOUBLE: {
-        switch (fromType->basicType) {
+        switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingType())
+            if (fromType->IsVaryingAtomicOrUniformVectorType())
                 // truncate bool vector values to i1s if necessary.
                 exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int to double
@@ -6257,14 +6276,16 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
                                  exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_UINT32:
-            if (fromType->IsVaryingType() && g->target->shouldWarn(PerfWarningType::CVTUIntFloat)) {
+            if (fromType->IsVaryingAtomicOrUniformVectorType() &&
+                g->target->shouldWarn(PerfWarningType::CVTUIntFloat)) {
                 PerformanceWarning(pos, "Conversion from uint32 to double is slow. Use \"int32\" if possible");
             }
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int
                                  exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_UINT64:
-            if (fromType->IsVaryingType() && g->target->shouldWarn(PerfWarningType::CVTUIntFloat)) {
+            if (fromType->IsVaryingAtomicOrUniformVectorType() &&
+                g->target->shouldWarn(PerfWarningType::CVTUIntFloat)) {
                 PerformanceWarning(pos, "Conversion from uint64 to double is slow. Use \"int32\" if possible");
             }
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int
@@ -6285,9 +6306,9 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
         break;
     }
     case AtomicType::TYPE_INT8: {
-        switch (fromType->basicType) {
+        switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingType())
+            if (fromType->IsVaryingAtomicOrUniformVectorType())
                 exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6315,9 +6336,9 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
         break;
     }
     case AtomicType::TYPE_UINT8: {
-        switch (fromType->basicType) {
+        switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingType())
+            if (fromType->IsVaryingAtomicOrUniformVectorType())
                 exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6351,9 +6372,9 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
         break;
     }
     case AtomicType::TYPE_INT16: {
-        switch (fromType->basicType) {
+        switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingType())
+            if (fromType->IsVaryingAtomicOrUniformVectorType())
                 exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6385,9 +6406,9 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
         break;
     }
     case AtomicType::TYPE_UINT16: {
-        switch (fromType->basicType) {
+        switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingType())
+            if (fromType->IsVaryingAtomicOrUniformVectorType())
                 exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6425,9 +6446,9 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
         break;
     }
     case AtomicType::TYPE_INT32: {
-        switch (fromType->basicType) {
+        switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingType())
+            if (fromType->IsVaryingAtomicOrUniformVectorType())
                 exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6459,9 +6480,9 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
         break;
     }
     case AtomicType::TYPE_UINT32: {
-        switch (fromType->basicType) {
+        switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingType())
+            if (fromType->IsVaryingAtomicOrUniformVectorType())
                 exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6482,21 +6503,24 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             cast = ctx->TruncInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT16:
-            if (fromType->IsVaryingType() && g->target->shouldWarn(PerfWarningType::CVTUIntFloat16)) {
+            if (fromType->IsVaryingAtomicOrUniformVectorType() &&
+                g->target->shouldWarn(PerfWarningType::CVTUIntFloat16)) {
                 PerformanceWarning(pos, "Conversion from float16 to uint32 is slow. Use \"int32\" if possible");
             }
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
                                  exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT:
-            if (fromType->IsVaryingType() && g->target->shouldWarn(PerfWarningType::CVTUIntFloat)) {
+            if (fromType->IsVaryingAtomicOrUniformVectorType() &&
+                g->target->shouldWarn(PerfWarningType::CVTUIntFloat)) {
                 PerformanceWarning(pos, "Conversion from float to uint32 is slow. Use \"int32\" if possible");
             }
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
                                  exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_DOUBLE:
-            if (fromType->IsVaryingType() && g->target->shouldWarn(PerfWarningType::CVTUIntFloat)) {
+            if (fromType->IsVaryingAtomicOrUniformVectorType() &&
+                g->target->shouldWarn(PerfWarningType::CVTUIntFloat)) {
                 PerformanceWarning(pos, "Conversion from double to uint32 is slow. Use \"int32\" if possible");
             }
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
@@ -6508,9 +6532,9 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
         break;
     }
     case AtomicType::TYPE_INT64: {
-        switch (fromType->basicType) {
+        switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingType())
+            if (fromType->IsVaryingAtomicOrUniformVectorType())
                 exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6540,9 +6564,9 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
         break;
     }
     case AtomicType::TYPE_UINT64: {
-        switch (fromType->basicType) {
+        switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingType())
+            if (fromType->IsVaryingAtomicOrUniformVectorType())
                 exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6561,21 +6585,24 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             cast = exprVal;
             break;
         case AtomicType::TYPE_FLOAT16:
-            if (fromType->IsVaryingType() && g->target->shouldWarn(PerfWarningType::CVTUIntFloat16)) {
+            if (fromType->IsVaryingAtomicOrUniformVectorType() &&
+                g->target->shouldWarn(PerfWarningType::CVTUIntFloat16)) {
                 PerformanceWarning(pos, "Conversion from float16 to uint64 is slow. Use \"int64\" if possible");
             }
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // signed int
                                  exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT:
-            if (fromType->IsVaryingType() && g->target->shouldWarn(PerfWarningType::CVTUIntFloat)) {
+            if (fromType->IsVaryingAtomicOrUniformVectorType() &&
+                g->target->shouldWarn(PerfWarningType::CVTUIntFloat)) {
                 PerformanceWarning(pos, "Conversion from float to uint64 is slow. Use \"int64\" if possible");
             }
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // signed int
                                  exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_DOUBLE:
-            if (fromType->IsVaryingType() && g->target->shouldWarn(PerfWarningType::CVTUIntFloat)) {
+            if (fromType->IsVaryingAtomicOrUniformVectorType() &&
+                g->target->shouldWarn(PerfWarningType::CVTUIntFloat)) {
                 PerformanceWarning(pos, "Conversion from double to uint64 is slow. Use \"int64\" if possible");
             }
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // signed int
@@ -6587,9 +6614,9 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
         break;
     }
     case AtomicType::TYPE_BOOL: {
-        switch (fromType->basicType) {
+        switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingType()) {
+            if (fromType->IsVaryingAtomicOrUniformVectorType()) {
                 // truncate bool vector values to i1s if necessary.
                 exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
             }
@@ -6639,7 +6666,8 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
         }
 
         if (fromType->IsUniformType()) {
-            if (toType->IsVaryingType() && LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType) {
+            if (toType->IsAtomicType() && toType->IsVaryingType() &&
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType) {
                 // extend out to an bool as an i8/i16/i32 from the i1 here.
                 // Then we'll turn that into a vector below, the way it
                 // does for everyone else...
@@ -6659,7 +6687,7 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
 
     // If we also want to go from uniform to varying, replicate out the
     // value across the vector elements..
-    if (toType->IsVaryingType() && fromType->IsUniformType())
+    if (toType->IsVaryingType() && toType->IsAtomicType() && fromType->IsUniformType())
         return ctx->SmearUniform(cast);
     else
         return cast;
@@ -6710,9 +6738,9 @@ static llvm::Value *lUniformValueToVarying(FunctionEmitContext *ctx, llvm::Value
 
     // Otherwise we must have a uniform atomic or pointer type, so smear
     // its value across the vector lanes.
-    if (CastType<AtomicType>(type)) {
-        return lTypeConvAtomic(ctx, value, CastType<AtomicType>(type->GetAsVaryingType()), CastType<AtomicType>(type),
-                               pos);
+    if (CastType<AtomicType>(type) && CastType<AtomicType>(type->GetAsVaryingType())) {
+        return lTypeConvAtomicOrUniformVector(ctx, value, CastType<AtomicType>(type->GetAsVaryingType()),
+                                              CastType<AtomicType>(type), pos);
     }
 
     Assert(CastType<PointerType>(type) != nullptr);
@@ -6949,26 +6977,34 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         if (!exprVal)
             return nullptr;
 
-        // Emit instructions to do type conversion of each of the elements
-        // of the vector.
-        // FIXME: since uniform vectors are represented as
-        // llvm::VectorTypes, we should just be able to issue the
-        // corresponding vector type convert, which should be more
-        // efficient by avoiding serialization!
-        llvm::Value *cast = llvm::UndefValue::get(toType->LLVMStorageType(g->ctx));
-        for (int i = 0; i < toVector->GetElementCount(); ++i) {
-            llvm::Value *ei = ctx->ExtractInst(exprVal, i);
-            llvm::Value *conv = lTypeConvAtomic(ctx, ei, toVector->GetElementType(), fromVector->GetElementType(), pos);
+        // Check if we have two uniform vectors
+        if (fromVector->IsUniformType() && toVector->IsUniformType()) {
+            llvm::Value *conv = lTypeConvAtomicOrUniformVector(ctx, exprVal, toVector, fromVector, pos);
             if (!conv)
                 return nullptr;
-            if ((toVector->GetElementType()->IsBoolType()) &&
-                (CastType<AtomicType>(toVector->GetElementType()) != nullptr)) {
-                conv = ctx->SwitchBoolSize(conv, toVector->GetElementType()->LLVMStorageType(g->ctx));
+            if ((toVector->GetElementType()->IsBoolType())) {
+                conv = ctx->SwitchBoolSize(conv, toVector->LLVMStorageType(g->ctx));
             }
+            return conv;
+        } else {
+            // Emit instructions to do type conversion of each of the elements
+            // of the vector.
+            llvm::Value *cast = llvm::UndefValue::get(toType->LLVMStorageType(g->ctx));
+            for (int i = 0; i < toVector->GetElementCount(); ++i) {
+                llvm::Value *ei = ctx->ExtractInst(exprVal, i);
+                llvm::Value *conv = lTypeConvAtomicOrUniformVector(ctx, ei, toVector->GetElementType(),
+                                                                   fromVector->GetElementType(), pos);
+                if (!conv)
+                    return nullptr;
+                if ((toVector->GetElementType()->IsBoolType()) &&
+                    (CastType<AtomicType>(toVector->GetElementType()) != nullptr)) {
+                    conv = ctx->SwitchBoolSize(conv, toVector->GetElementType()->LLVMStorageType(g->ctx));
+                }
 
-            cast = ctx->InsertInst(cast, conv, i);
+                cast = ctx->InsertInst(cast, conv, i);
+            }
+            return cast;
         }
-        return cast;
     }
 
     llvm::Value *exprVal = expr->GetValue(ctx);
@@ -6990,7 +7026,7 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
 
     if (toVector) {
         // scalar -> short vector conversion
-        llvm::Value *conv = lTypeConvAtomic(ctx, exprVal, toVector->GetElementType(), fromAtomic, pos);
+        llvm::Value *conv = lTypeConvAtomicOrUniformVector(ctx, exprVal, toVector->GetElementType(), fromAtomic, pos);
         if (!conv)
             return nullptr;
 
@@ -7030,7 +7066,7 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         // typechecking should ensure this is the case
         AssertPos(pos, toAtomic != nullptr);
 
-        return lTypeConvAtomic(ctx, exprVal, toAtomic, fromAtomic, pos);
+        return lTypeConvAtomicOrUniformVector(ctx, exprVal, toAtomic, fromAtomic, pos);
     }
 }
 
