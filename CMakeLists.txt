@@ -17,6 +17,10 @@ if (UNIX)
     endif()
 endif()
 
+# Generate compile_commands.json by default - this enables VSCode to do better job interpretting
+# C++ files form the project.
+set(CMAKE_EXPORT_COMPILE_COMMANDS "ON" CACHE BOOL "Export compile commands")
+
 if (APPLE)
     # We need to target different minimum macOS versions on x86 and arm by default, but before
     # we execute project() command, the regular CMAKE_* variables with host info are not initialized,

@@ -15,7 +15,7 @@
   },
   "remoteEnv": { "PATH": "/llvm/bin-15.0/bin:${containerEnv:PATH}" },
   "onCreateCommand": {
-    "command1": "cd ${containerWorkspaceFolder} && mkdir build && cd build && cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+    "command1": "cd ${containerWorkspaceFolder} && mkdir build && cd build && cmake .."
   },
   "customizations": {
     "codespaces": {
