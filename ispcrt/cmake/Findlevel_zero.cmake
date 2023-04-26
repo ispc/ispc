@@ -18,9 +18,11 @@ find_path(LEVEL_ZERO_INCLUDE_DIR level_zero/ze_api.h
 
 find_library(LEVEL_ZERO_LIB_LOADER ze_loader
   HINTS
+    ${LEVEL_ZERO_ROOT}/x86_64-linux-gnu
     ${LEVEL_ZERO_ROOT}/lib64
     ${LEVEL_ZERO_ROOT}/lib
   PATH_SUFFIXES
+    x86_64-linux-gnu
     lib64
     lib
 )
