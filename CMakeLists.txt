@@ -22,16 +22,27 @@ endif()
 set(CMAKE_EXPORT_COMPILE_COMMANDS "ON" CACHE BOOL "Export compile commands")
 
 if (APPLE)
+    # Setting ISPC_MACOS_UNIVERSAL_BINARIES to ON is conventional way of building ISPC as Universal Binary.
+    # If cross compilation is needed (arm64->x86_64 or x86_64->arm64), specify CMAKE_OSX_ARCHITECTURES
+    # on the command line explicitly
+    option(ISPC_MACOS_UNIVERSAL_BINARIES "Build Universal Binaries on macOS" OFF)
+    if (ISPC_MACOS_UNIVERSAL_BINARIES)
+        message(STATUS "Building Universal Binaries (x86_64+arm64)")
+        set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "OSX architectures")
+    endif()
+
     # We need to target different minimum macOS versions on x86 and arm by default, but before
     # we execute project() command, the regular CMAKE_* variables with host info are not initialized,
     # so we do this hack to detect the platform. It's not perfect, but good enough.
     execute_process(COMMAND uname -m OUTPUT_VARIABLE UNAME)
-    if (UNAME MATCHES "x86_64")
+    if (UNAME MATCHES "x86_64" OR CMAKE_OSX_ARCHITECTURES MATCHES "x86_64")
+        # Note: it's ok to have 10.12 for Universal Binaries.
         set(CMAKE_OSX_DEPLOYMENT_TARGET "10.12" CACHE STRING "Minimum macOS version to support")
     else()
         set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version to support")
     endif()
     message(STATUS "Targeting minimum macOS version: ${CMAKE_OSX_DEPLOYMENT_TARGET}")
+
 endif()
 
 set(PROJECT_NAME ispc)
@@ -768,16 +779,32 @@ if (ISPC_PREPARE_PACKAGE)
     set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
     # Allow use custom package name with -DISPC_PACKAGE_NAME
     if (NOT ISPC_PACKAGE_NAME)
+        set(ISPC_ARCH_SUFFIX)
+        if (APPLE)
+            if (CMAKE_OSX_ARCHITECTURES MATCHES "x86_64" AND CMAKE_OSX_ARCHITECTURES MATCHES "arm64")
+                set(ISPC_ARCH_SUFFIX ".universal")
+            elseif(CMAKE_OSX_ARCHITECTURES MATCHES "x86_64" OR
+                   (CMAKE_OSX_ARCHITECTURES STREQUAL "" AND CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "x86_64"))
+                set(ISPC_ARCH_SUFFIX ".x86_64")
+            elseif(CMAKE_OSX_ARCHITECTURES MATCHES "arm64" OR
+                   (CMAKE_OSX_ARCHITECTURES STREQUAL "" AND CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "arm64"))
+                set(ISPC_ARCH_SUFFIX ".arm64")
+            else()
+                message (FATAL_ERROR "Was not able to detect package architecture")
+            endif()
+        endif()
         if (${CPACK_PACKAGE_VERSION_PATCH} MATCHES ".*dev")
             string(CONCAT CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}"
                                 "-trunk"
-                                "-${ISPC_SYSTEM_NAME}")
+                                "-${ISPC_SYSTEM_NAME}"
+                                "${ISPC_ARCH_SUFFIX}")
         else()
             string(CONCAT CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}"
                                 "-v${CPACK_PACKAGE_VERSION_MAJOR}"
                                 ".${CPACK_PACKAGE_VERSION_MINOR}"
                                 ".${CPACK_PACKAGE_VERSION_PATCH}"
-                                "-${ISPC_SYSTEM_NAME}")
+                                "-${ISPC_SYSTEM_NAME}"
+                                "${ISPC_ARCH_SUFFIX}")
 
         endif()
     else()
