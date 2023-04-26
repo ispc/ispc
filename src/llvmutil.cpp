@@ -491,6 +491,22 @@ llvm::Constant *LLVMUIntAsType(uint64_t val, llvm::Type *type) {
         return llvm::ConstantInt::get(type, val, false /* unsigned */);
 }
 
+llvm::Constant *LLVMFPZeroAsType(llvm::Type *type) {
+    llvm::FixedVectorType *vecType = llvm::dyn_cast<llvm::FixedVectorType>(type);
+
+    if (vecType != nullptr) {
+        llvm::APFloat zf = llvm::APFloat::getZero(vecType->getElementType()->getFltSemantics());
+        llvm::Constant *v = llvm::ConstantFP::get(vecType->getElementType(), zf);
+        std::vector<llvm::Constant *> vals;
+        for (int i = 0; i < (int)vecType->getNumElements(); ++i)
+            vals.push_back(v);
+        return llvm::ConstantVector::get(vals);
+    } else {
+        llvm::APFloat zf = llvm::APFloat::getZero(type->getFltSemantics());
+        return llvm::ConstantFP::get(type, zf);
+    }
+}
+
 /** Conservative test to see if two llvm::Values are equal.  There are
     (potentially many) cases where the two values actually are equal but
     this will return false.  However, if it does return true, the two
