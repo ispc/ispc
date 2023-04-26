@@ -91,8 +91,17 @@ class Type : public Traceable {
     /** Returns true if the underlying type is a array type */
     bool IsArrayType() const;
 
+    /** Returns true if the underlying type is an atomic type */
+    bool IsAtomicType() const;
+
+    /** Returns true if the underlying type is an varying atomic or uniform vector type */
+    bool IsVaryingAtomicOrUniformVectorType() const;
+
     /** Returns true if the underlying type is a reference type */
     bool IsReferenceType() const;
+
+    /** Returns true if the underlying type is vector type */
+    bool IsVectorType() const;
 
     /** Returns true if the underlying type is either a pointer or an array */
     bool IsVoidType() const;

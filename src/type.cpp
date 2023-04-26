@@ -150,7 +150,16 @@ bool Type::IsPointerType() const { return (CastType<PointerType>(this) != nullpt
 
 bool Type::IsArrayType() const { return (CastType<ArrayType>(this) != nullptr); }
 
+bool Type::IsAtomicType() const { return (CastType<AtomicType>(this) != nullptr); }
+
+bool Type::IsVaryingAtomicOrUniformVectorType() const {
+    return ((CastType<AtomicType>(this) != nullptr && IsVaryingType()) ||
+            (CastType<VectorType>(this) != nullptr && IsUniformType()));
+}
+
 bool Type::IsReferenceType() const { return (CastType<ReferenceType>(this) != nullptr); }
+
+bool Type::IsVectorType() const { return (CastType<VectorType>(this) != nullptr); }
 
 bool Type::IsVoidType() const { return EqualIgnoringConst(this, AtomicType::Void); }
 
