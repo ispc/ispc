@@ -6597,50 +6597,40 @@ static llvm::Value *lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprV
             break;
         case AtomicType::TYPE_INT8:
         case AtomicType::TYPE_UINT8: {
-            llvm::Value *zero =
-                fromType->IsUniformType() ? (llvm::Value *)LLVMInt8(0) : (llvm::Value *)LLVMInt8Vector((int8_t)0);
+            llvm::Value *zero = LLVMIntAsType(0, fromType->LLVMType(g->ctx));
             cast = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, exprVal, zero, cOpName);
             break;
         }
         case AtomicType::TYPE_INT16:
         case AtomicType::TYPE_UINT16: {
-            llvm::Value *zero =
-                fromType->IsUniformType() ? (llvm::Value *)LLVMInt16(0) : (llvm::Value *)LLVMInt16Vector((int16_t)0);
+            llvm::Value *zero = LLVMIntAsType(0, fromType->LLVMType(g->ctx));
             cast = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, exprVal, zero, cOpName);
             break;
         }
         case AtomicType::TYPE_INT32:
         case AtomicType::TYPE_UINT32: {
-            llvm::Value *zero =
-                fromType->IsUniformType() ? (llvm::Value *)LLVMInt32(0) : (llvm::Value *)LLVMInt32Vector(0);
+            llvm::Value *zero = LLVMIntAsType(0, fromType->LLVMType(g->ctx));
             cast = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, exprVal, zero, cOpName);
             break;
         }
         case AtomicType::TYPE_INT64:
         case AtomicType::TYPE_UINT64: {
-            llvm::Value *zero =
-                fromType->IsUniformType() ? (llvm::Value *)LLVMInt64(0) : (llvm::Value *)LLVMInt64Vector((int64_t)0);
+            llvm::Value *zero = LLVMIntAsType(0, fromType->LLVMType(g->ctx));
             cast = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, exprVal, zero, cOpName);
             break;
         }
         case AtomicType::TYPE_FLOAT16: {
-            llvm::APFloat zf16 = llvm::APFloat::getZero((LLVMTypes::Float16Type)->getFltSemantics());
-            llvm::Value *zero =
-                fromType->IsUniformType() ? (llvm::Value *)LLVMFloat16(zf16) : (llvm::Value *)LLVMFloat16Vector(zf16);
+            llvm::Value *zero = LLVMFPZeroAsType(fromType->LLVMType(g->ctx));
             cast = ctx->CmpInst(llvm::Instruction::FCmp, llvm::CmpInst::FCMP_ONE, exprVal, zero, cOpName);
             break;
         }
         case AtomicType::TYPE_FLOAT: {
-            llvm::APFloat zf = llvm::APFloat::getZero((LLVMTypes::FloatType)->getFltSemantics());
-            llvm::Value *zero =
-                fromType->IsUniformType() ? (llvm::Value *)LLVMFloat(zf) : (llvm::Value *)LLVMFloatVector(zf);
+            llvm::Value *zero = LLVMFPZeroAsType(fromType->LLVMType(g->ctx));
             cast = ctx->CmpInst(llvm::Instruction::FCmp, llvm::CmpInst::FCMP_ONE, exprVal, zero, cOpName);
             break;
         }
         case AtomicType::TYPE_DOUBLE: {
-            llvm::APFloat zd = llvm::APFloat::getZero((LLVMTypes::DoubleType)->getFltSemantics());
-            llvm::Value *zero =
-                fromType->IsUniformType() ? (llvm::Value *)LLVMDouble(zd) : (llvm::Value *)LLVMDoubleVector(zd);
+            llvm::Value *zero = LLVMFPZeroAsType(fromType->LLVMType(g->ctx));
             cast = ctx->CmpInst(llvm::Instruction::FCmp, llvm::CmpInst::FCMP_ONE, exprVal, zero, cOpName);
             break;
         }

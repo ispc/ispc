@@ -180,6 +180,9 @@ extern llvm::Constant *LLVMIntAsType(int64_t, llvm::Type *t);
     the given unsigned integer value. */
 extern llvm::Constant *LLVMUIntAsType(uint64_t, llvm::Type *t);
 
+/** Returns a zero constant half/float/double or vector (according to the given type). */
+extern llvm::Constant *LLVMFPZeroAsType(llvm::Type *type);
+
 /** Returns an LLVM boolean vector based on the given array of values.
     The array should have g->target.vectorWidth elements. */
 extern llvm::Constant *LLVMBoolVector(const bool *v);
