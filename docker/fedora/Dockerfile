@@ -3,7 +3,7 @@
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
-FROM fedora:36
+FROM fedora:37
 LABEL maintainer="Nurmukhametov, Aleksei <aleksei.nurmukhametov@intel.com>"
 SHELL ["/bin/bash", "-c"]
 
@@ -13,7 +13,7 @@ ARG SHA=main
 # Packages required to build ISPC.
 # RUN echo "proxy=http://proxy.yourcompany.com:888" >> /etc/dnf/dnf.conf
 RUN dnf install -y git cmake && \
-    dnf install -y clang-devel-14.0.5 llvm-devel-14.0.5 glibc-devel.i686 && \
+    dnf install -y clang-devel-15.0.7 llvm-devel-15.0.7 glibc-devel.i686 && \
     dnf install -y flex bison tbb-devel && \
     dnf clean -y all
 
