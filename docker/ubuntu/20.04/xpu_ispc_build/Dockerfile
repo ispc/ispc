@@ -44,7 +44,7 @@ RUN python3 ./alloy.py -b --version="$LLVM_VERSION" --selfbuild && \
 WORKDIR /home/packages
 
 # Add package repository and install graphics packages
-RUN wget -qO - https://repositories.intel.com/graphics/intel-graphics.key | gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg && \
+RUN set -eux && wget -qO - https://repositories.intel.com/graphics/intel-graphics.key | gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg && \
     echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/graphics/ubuntu focal-devel main' | \
     tee  /etc/apt/sources.list.d/intel.gpu.focal.list && \
     apt-get -y update && apt-get --no-install-recommends install -y intel-opencl-icd intel-level-zero-gpu level-zero \
