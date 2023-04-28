@@ -19,12 +19,12 @@ ARG LLVM_VERSION
 # Packages required to build ISPC and Clang.
 RUN yum -y update; yum -y install centos-release-scl epel-release; yum clean all
 RUN yum install -y vim wget yum-utils gcc gcc-c++ git python3 m4 bison && \
-    yum install -y flex patch make ncurses-devel glibc-devel.x86_64 glibc-devel.i686 xz devtoolset-7 && \
+    yum install -y flex patch make glibc-devel.x86_64 glibc-devel.i686 xz devtoolset-7 && \
     yum install -y libtool autopoint gettext-devel texinfo tbb-devel help2man && \
     yum clean -y all
 
 # These packages are required if you need to link ISPC with -static.
-RUN yum install -y ncurses-static libstdc++-static && \
+RUN yum install -y libstdc++-static && \
     yum clean -y all
 
 # Download and install required version of cmake (3.14 for x86, 3.20 for aarch64, as earlier versions are not available as binary distribution) for ISPC build
@@ -67,6 +67,13 @@ FROM llvm_only AS ispc_build
 
 ARG LLVM_VERSION
 ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
+
+# Build ncurses with -fPIC: https://github.com/ispc/ispc/pull/2502#issuecomment-1526931698
+WORKDIR /usr/local/src
+RUN git clone https://github.com/mirror/ncurses.git
+WORKDIR /usr/local/src/ncurses
+# Checkout version with fix for CVE-2023-29491
+RUN git checkout 87c2c84 && CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --with-termlib && make -j"$(nproc)" && make install -j"$(nproc)"
 
 # Install news flex (2.6.4)
 WORKDIR /usr/local/src
