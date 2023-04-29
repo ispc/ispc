@@ -315,7 +315,7 @@ jobs:
         path: llvm/llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release-x86.arm.wasm.tar.7z
 
   mac-build:
-    runs-on: macos-11
+    runs-on: macos-12-xl
 
     steps:
     - uses: actions/checkout@v3
@@ -349,7 +349,7 @@ jobs:
         path: llvm/llvm-${{ inputs.full_version }}-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
 
   mac-build-release:
-    runs-on: macos-11
+    runs-on: macos-12-xl
 
     steps:
     - uses: actions/checkout@v3
