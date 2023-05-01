@@ -1,0 +1,35 @@
+#  Copyright (c) 2023, Intel Corporation
+#  SPDX-License-Identifier: BSD-3-Clause
+
+name: ispc
+base: core22 # ubuntu 22.04
+version: '1.19.0'
+license: BSD-3-Clause
+summary: Compiler for high-performance SIMD programming
+description: |
+  The Intel® Implicit SPMD Program Compiler (Intel® ISPC) is a compiler for
+  writing SPMD (single program multiple data) programs to run on the CPU and
+  GPU. The SPMD programming approach is widely known to graphics and GPGPU
+  programmers. The main idea behind SPMD is that one writes programs as if they
+  were operating on a single data element (a pixel for a pixel shader, for
+  example), but then the underlying hardware and runtime system executes
+  multiple invocations of the program in parallel with different inputs (the
+  values for different pixels, for example).
+
+website: https://ispc.github.io/
+contact: aleksei.nurmukhametov@intel.com
+issues: https://github.com/ispc/ispc/issues
+
+grade: stable # must be 'stable' to release into candidate/stable channels
+confinement: strict
+
+parts:
+  ispc:
+    plugin: dump
+    source: https://github.com/ispc/ispc/releases/download/v$SNAPCRAFT_PROJECT_VERSION/ispc-v$SNAPCRAFT_PROJECT_VERSION-linux.tar.gz
+    stage-packages:
+      - libomp-14-dev
+
+apps:
+  ispc:
+    command: bin/ispc
