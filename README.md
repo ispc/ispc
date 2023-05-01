@@ -74,10 +74,62 @@ architectures (Gen9 and Xe family).
   * Debugging with standard tools: `ispc` programs can be debugged with
     standard debuggers.
 
-## Additional Resources
+## Installation
+### Official Release Binaries
 
-Prebuilt `ispc` binaries for Windows, macOS and Linux can be downloaded from
-the [ispc downloads page](https://ispc.github.io/downloads.html).
+You can download the official release binaries from [the release
+page](https://github.com/ispc/ispc/releases). Choose the appropriate version
+for your operating system and architecture.
+
+### Linux (Snap Store)
+
+Linux users can install `ispc` using the Snap Store:
+
+```bash
+snap install ispc
+```
+
+### Intel® oneAPI Distribution
+
+`ispc` is distributed as part of the Intel® oneAPI. You can install it from the
+corresponding repositories for DEB-based and RPM-based Linux distributions.
+Follow the instructions below:
+
+DEB-based Linux (Ubuntu, Debian, etc.)
+First, download the key to the system keyring:
+
+```bash
+wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
+```
+
+Next, add the signed entry to apt sources and configure the APT client to use
+the Intel repository:
+
+```bash
+echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
+```
+
+Update the package list and install `ispc`:
+
+```bash
+sudo apt-get update
+sudo apt-get install intel-oneapi-ispc
+```
+
+The installation location is inside the `/opt/intel/` directory. To use `ispc`,
+either use the full path `/opt/intel/oneapi/ispc/latest/bin/ispc` or add the
+`bin`  directory to your `PATH`:
+
+```bash
+source /opt/intel/oneapi/ispc/latest/env/vars.sh
+```
+
+### Other Package Managers
+
+Thanks to community support, `ispc` is also available through a variety of
+package managers on multiple operating systems.
+
+## Additional Resources
 
 Latest `ispc` binaries corresponding to `main` branch can be downloaded from
 Appveyor for
