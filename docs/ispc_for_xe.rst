@@ -168,7 +168,7 @@ The ``ISPC Run Time`` uses the following abstractions to manage code execution:
   there is no need to explicitly handle data movement between the CPU and the
   GPU. This is handled automatically by the ``oneAPI Level Zero`` runtime.
 
-* ``Task queue`` - Each ``device`` has a task (command) queue and executes
+* ``Task queue`` - each ``device`` has a task (command) queue and executes
   commands from it. Commands may be executed simultaneously. To prevent that
   one should explicitly insert barriers in places where synchronization is
   required. ``Task queue`` ``sync`` method stops the host thread until GPU
@@ -176,8 +176,7 @@ The ``ISPC Run Time`` uses the following abstractions to manage code execution:
   ``CommandQueue`` and ``CommandList`` objects.
 
 * ``CommandQueue`` - represents a logical input stream to the device and
-  directly maps to L0 command queues. Queues are needed to be constructed to
-  submit the actual commands contained in command lists.
+  directly maps to L0 command queues.
 
 * ``CommandList`` - represents commands to be executed on a command queue. It
   can be created by calling ``createCommandList`` method of ``CommandQueue``
