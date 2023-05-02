@@ -29,13 +29,8 @@
 ;;                           : "0" (infoType));
 ;; }
 ;; 
-;; // Save %ebx in case it's the PIC register.
 ;; static void __cpuid_count(int info[4], int level, int count) {
-;;   __asm__ __volatile__ ("xchg{l}\t{%%}ebx, %1\n\t"
-;;                         "cpuid\n\t"
-;;                         "xchg{l}\t{%%}ebx, %1\n\t"
-;;                         : "=a" (info[0]), "=r" (info[1]), "=c" (info[2]), "=d" (info[3])
-;;                         : "0" (level), "2" (count));
+;;     __asm__ __volatile__("cpuid" : "=a"(info[0]), "=b"(info[1]), "=c"(info[2]), "=d"(info[3]) : "0"(level), "2"(count));
 ;; }
 ;; 
 ;; static int __os_has_avx_support() {
@@ -162,11 +157,11 @@ entry:
   %0 = tail call { i32, i32, i32, i32 } asm sideeffect "cpuid", "={ax},={bx},={cx},={dx},0,~{dirflag},~{fpsr},~{flags}"(i32 1) nounwind
   %asmresult5.i = extractvalue { i32, i32, i32, i32 } %0, 2
   %asmresult6.i = extractvalue { i32, i32, i32, i32 } %0, 3
-  %1 = tail call { i32, i32, i32, i32 } asm sideeffect "xchg$(l$)\09$(%$)ebx, $1\0A\09cpuid\0A\09xchg$(l$)\09$(%$)ebx, $1\0A\09", "={ax},=r,={cx},={dx},0,2,~{dirflag},~{fpsr},~{flags}"(i32 7, i32 0) nounwind
+  %1 = tail call { i32, i32, i32, i32 } asm sideeffect "cpuid", "={ax},={bx},={cx},={dx},0,2,~{dirflag},~{fpsr},~{flags}"(i32 7, i32 0) nounwind
   %asmresult4.i277 = extractvalue { i32, i32, i32, i32 } %1, 1
   %asmresult5.i278 = extractvalue { i32, i32, i32, i32 } %1, 2
   %asmresult6.i279 = extractvalue { i32, i32, i32, i32 } %1, 3
-  %2 = tail call { i32, i32, i32, i32 } asm sideeffect "xchg$(l$)\09$(%$)ebx, $1\0A\09cpuid\0A\09xchg$(l$)\09$(%$)ebx, $1\0A\09", "={ax},=r,={cx},={dx},0,2,~{dirflag},~{fpsr},~{flags}"(i32 7, i32 1) nounwind
+  %2 = tail call { i32, i32, i32, i32 } asm sideeffect "cpuid", "={ax},={bx},={cx},={dx},0,2,~{dirflag},~{fpsr},~{flags}"(i32 7, i32 1) nounwind
   %asmresult.i283 = extractvalue { i32, i32, i32, i32 } %2, 0
   %and = and i32 %asmresult6.i, 67108864
   %cmp.not = icmp ne i32 %and, 0
