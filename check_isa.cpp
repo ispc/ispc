@@ -25,13 +25,8 @@ static void __cpuid(int info[4], int infoType) {
     __asm__ __volatile__("cpuid" : "=a"(info[0]), "=b"(info[1]), "=c"(info[2]), "=d"(info[3]) : "0"(infoType));
 }
 
-/* Save %ebx in case it's the PIC register */
 static void __cpuidex(int info[4], int level, int count) {
-    __asm__ __volatile__("xchg{l}\t{%%}ebx, %1\n\t"
-                         "cpuid\n\t"
-                         "xchg{l}\t{%%}ebx, %1\n\t"
-                         : "=a"(info[0]), "=r"(info[1]), "=c"(info[2]), "=d"(info[3])
-                         : "0"(level), "2"(count));
+    __asm__ __volatile__("cpuid" : "=a"(info[0]), "=b"(info[1]), "=c"(info[2]), "=d"(info[3]) : "0"(level), "2"(count));
 }
 #endif // !HOST_IS_WINDOWS
 
