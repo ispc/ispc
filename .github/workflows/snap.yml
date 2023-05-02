@@ -1,0 +1,33 @@
+# Copyright 2023, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: Snap
+
+on: [workflow_dispatch]
+
+jobs:
+  snap:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: false
+
+      # Set up snapcraft and call it to build snap.
+      # The output snap is ${{ steps.build.outputs.snap }}.
+      - name: Install Snapcraft
+        uses: snapcore/action-build@v1
+        id: build
+
+      # To publish manually run:
+      # snapcraft push --channel=latest/stable ispc*.snap
+      - name: Publish snap
+        uses: snapcore/action-publish@v1
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        with:
+          snap: ${{ steps.build.outputs.snap }}
+          release: stable
