@@ -2,8 +2,7 @@
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=1931356)
 
-Intel® Implicit SPMD Program Compiler (Intel® ISPC)
-===================================================
+# Intel® Implicit SPMD Program Compiler (Intel® ISPC)
 
 ``ispc`` is a compiler for a variant of the C programming language, with
 extensions for
@@ -13,8 +12,7 @@ the programmer writes a program that generally appears to be a regular
 serial program, though the execution model is actually that a number of
 *program instances* execute in parallel on the hardware.
 
-Overview
---------
+## Overview
 
 ``ispc`` compiles a C-based SPMD programming language to run on the SIMD
 units of CPUs and GPUs; it frequently provides a 3x or more speedup on architectures
@@ -55,8 +53,7 @@ and PS4/PS5.  It currently supports multiple flavours of x86 (SSE2,
 SSE4, AVX, AVX2, and AVX512), ARM (NEON), and Intel® GPU architectures
 (Gen9 and Xe family).
 
-Features
---------
+## Features
 
 ``ispc`` provides a number of key features to developers:
 
@@ -86,8 +83,7 @@ Features
   * Debugging with standard tools: ``ispc``
     programs can be debugged with standard debuggers.
 
-Additional Resources
---------------------
+## Additional Resources
 
 Prebuilt ``ispc`` binaries for Windows, macOS and Linux can be downloaded
 from the [ispc downloads page](https://ispc.github.io/downloads.html).
