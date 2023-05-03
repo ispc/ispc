@@ -100,7 +100,8 @@ static const char *lGetSystemISA() {
 
     // clang-format off
     bool sse2 =                (info[3] & (1 << 26))  != 0;
-    bool sse4 =                (info[2] & (1 << 19))  != 0;
+    bool sse41 =               (info[2] & (1 << 19))  != 0;
+    bool sse42 =               (info[2] & (1 << 20))  != 0;
     bool avx_f16c =            (info[2] & (1 << 29))  != 0;
     bool avx_rdrand =          (info[2] & (1 << 30))  != 0;
     bool osxsave =             (info[2] & (1 << 27))  != 0;
@@ -190,8 +191,10 @@ static const char *lGetSystemISA() {
         }
         // Regular AVX
         return "AVX (codename Sandy Bridge)";
-    } else if (sse4) {
-        return "SSE4";
+    } else if (sse42) {
+        return "SSE4.2";
+    } else if (sse41) {
+        return "SSE4.1";
     } else if (sse2) {
         return "SSE2";
     } else {
