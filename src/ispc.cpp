@@ -127,7 +127,8 @@ static ISPCTarget lGetSystemISA() {
 
     // clang-format off
     bool sse2 =                (info[3] & (1 << 26))  != 0;
-    bool sse4 =                (info[2] & (1 << 19))  != 0;
+    bool sse41 =               (info[2] & (1 << 19))  != 0;
+    bool sse42 =               (info[2] & (1 << 20))  != 0;
     bool avx_f16c =            (info[2] & (1 << 29))  != 0;
     bool avx_rdrand =          (info[2] & (1 << 30))  != 0;
     bool osxsave =             (info[2] & (1 << 27))  != 0;
@@ -207,8 +208,10 @@ static ISPCTarget lGetSystemISA() {
         }
         // Regular AVX
         return ISPCTarget::avx1_i32x8;
-    } else if (sse4) {
+    } else if (sse42) {
         return ISPCTarget::sse4_i32x4;
+    } else if (sse41) {
+        return ISPCTarget::sse41_i32x4;
     } else if (sse2) {
         return ISPCTarget::sse2_i32x4;
     } else {

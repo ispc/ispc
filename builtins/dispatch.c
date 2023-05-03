@@ -77,7 +77,8 @@ int32_t __get_system_isa() {
 
     // clang-format off
     _Bool sse2 =                (info[3] & (1 << 26))  != 0;
-    _Bool sse4 =                (info[2] & (1 << 19))  != 0;
+    _Bool sse41 =               (info[2] & (1 << 19))  != 0;
+    _Bool sse42 =               (info[2] & (1 << 20))  != 0;
     _Bool avx =                 (info[2] & (1 << 28))  != 0;
     _Bool avx2 =                (info2[1] & (1 << 5))  != 0;
     _Bool avx_f16c =            (info[2] & (1 << 29))  != 0;
@@ -164,8 +165,10 @@ int32_t __get_system_isa() {
         }
         // Regular AVX
         return 2;
-    } else if (sse4) {
-        return 1; // SSE4
+    } else if (sse42) {
+        return 1; // SSE4.2
+    } else if (sse41) {
+        return 1; // SSE4.1
     } else if (sse2) {
         return 0; // SSE2
     } else {
