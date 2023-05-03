@@ -3228,7 +3228,9 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             // Issue an error if we've already compiled to a variant of
             // this target ISA.  (It doesn't make sense to compile to both
             // avx and avx-x2, for example.)
-            if (targetMachines[g->target->getISA()] != nullptr) {
+            if (targetMachines[g->target->getISA()] != nullptr ||
+                (targetMachines[Target::SSE41] != nullptr && g->target->getISA() == Target::SSE42) ||
+                (targetMachines[Target::SSE42] != nullptr && g->target->getISA() == Target::SSE41)) {
                 Error(SourcePos(), "Can't compile to multiple variants of %s target!\n", g->target->GetISAString());
                 return 1;
             }

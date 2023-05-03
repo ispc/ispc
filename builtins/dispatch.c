@@ -147,13 +147,13 @@ int32_t __get_system_isa() {
         _Bool spr =
             icl && avx512_bf16 && avx512_amx_bf16 && avx512_amx_tile && avx512_amx_int8 && avx_vnni && avx512_fp16;
         if (spr) {
-            return 6; // SPR
+            return 7; // SPR
         }
 #endif // !SPR && !MACOS
         if (skx) {
-            return 5; // SKX
+            return 6; // SKX
         } else if (knl) {
-            return 4; // KNL
+            return 5; // KNL
         }
         // If it's unknown AVX512 target, fall through and use AVX2
         // or whatever is available in the machine.
@@ -161,12 +161,12 @@ int32_t __get_system_isa() {
 
     if (osxsave && avx && __os_has_avx_support()) {
         if (avx_f16c && avx_rdrand && avx2) {
-            return 3;
+            return 4;
         }
         // Regular AVX
-        return 2;
+        return 3;
     } else if (sse42) {
-        return 1; // SSE4.2
+        return 2; // SSE4.2
     } else if (sse41) {
         return 1; // SSE4.1
     } else if (sse2) {

@@ -165,19 +165,20 @@ class Target {
     /** Enumerator giving the instruction sets that the compiler can
         target.  These should be ordered from "worse" to "better" in that
         if a processor supports multiple target ISAs, then the most
-        flexible/performant of them will apear last in the enumerant.  Note
+        flexible/performant of them will appear last in the enumeration.  Note
         also that __best_available_isa() needs to be updated if ISAs are
         added or the enumerant values are reordered.  */
     enum ISA {
         SSE2 = 0,
-        SSE4 = 1,
-        AVX = 2,
+        SSE41 = 1,
+        SSE42 = 2,
+        AVX = 3,
         // Not supported anymore. Use either AVX or AVX2.
-        // AVX11 = 3,
-        AVX2 = 3,
-        KNL_AVX512 = 4,
-        SKX_AVX512 = 5,
-        SPR_AVX512 = 6,
+        // AVX11 = 4,
+        AVX2 = 4,
+        KNL_AVX512 = 5,
+        SKX_AVX512 = 6,
+        SPR_AVX512 = 7,
 #ifdef ISPC_ARM_ENABLED
         NEON,
 #endif
