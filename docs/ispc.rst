@@ -797,13 +797,14 @@ The following target ISAs are supported:
 Target       Description
 ------------ ---------------------------------------------------------
 avx, avx1    AVX (2010-2011 era Intel CPUs)
-avx2         AVX 2 target (2013- Intel "Haswell" CPUs)
+avx2         AVX 2 target (2013- Intel codename Haswell CPUs)
 avx512knl    AVX 512 target (Xeon Phi chips codename Knights Landing)
 avx512skx    AVX 512 target (Skylake Xeon CPUs)
 avx512spr    AVX 512 target (Sapphire Rapids Xeon CPUs, 4th generation Xeon Scalable)
 neon         ARM NEON
 sse2         SSE2 (early 2000s era x86 CPUs)
-sse4         SSE4 (generally 2008-2010 Intel CPUs)
+sse4.1       SSE4.1 (2007 Intel codename Penryn CPUs)
+sse4.2       SSE4.2 (2008-2010 Intel codename Nehalem CPUs)
 gen9         Intel Gen9 GPU
 xelp         Intel XeLP GPU
 xehpg        Intel Arc GPU
@@ -866,8 +867,11 @@ Xe targets:
 
 ``gen9-x8``, ``gen9-x16``, ``xelp-x8``, ``xelp-x16``, ``xehpg-x8``, ``xehpg-x16``, ``xehpc-x16``, ``xehpc-x32``.
 
-Note that ``sse4.1`` and ``sse4.2`` targets have the same ``sse4`` target ISA and they can't be used together
-in multi-target compilation.
+Note that ``sse4.1`` and ``sse4.2`` targets may not be used together in
+multi-target compilation. While the auto-dispatch code will correctly detect
+the difference between these two ISAs, they both yield a binary with ``sse4``
+suffix. This limitation is to maintain backward compatibility with build
+systems expecting ``sse4`` suffix.
 
 Finally, ``--target-os`` selects the target operating system. Depending on
 your host ``ispc`` may support Windows, Linux, macOS, Android, iOS and PS4/PS5
