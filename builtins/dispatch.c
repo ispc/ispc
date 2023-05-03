@@ -97,9 +97,11 @@ int32_t __get_system_isa() {
         // as well as AVX512, because our targets are supposed
         // to use both.
 
+        int info3[4] = {0, 0, 0, 0};
+        int max_subleaf = info2[0];
         // Call cpuid with eax=7, ecx=1
-        int info3[4];
-        __cpuidex(info3, 7, 1);
+        if (max_subleaf >= 1)
+            __cpuidex(info3, 7, 1);
 
         // clang-format off
         _Bool avx512_dq =           (info2[1] & (1 << 17)) != 0;

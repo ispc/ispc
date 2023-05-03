@@ -98,10 +98,6 @@ static const char *lGetSystemISA() {
     // Call cpuid with eax=7, ecx=0
     __cpuidex(info2, 7, 0);
 
-    int info3[4];
-    // Call cpuid with eax=7, ecx=1
-    __cpuidex(info3, 7, 1);
-
     // clang-format off
     bool sse2 =                (info[3] & (1 << 26))  != 0;
     bool sse4 =                (info[2] & (1 << 19))  != 0;
@@ -111,32 +107,41 @@ static const char *lGetSystemISA() {
     bool avx =                 (info[2] & (1 << 28))  != 0;
     bool avx2 =                (info2[1] & (1 << 5))  != 0;
     bool avx512_f =            (info2[1] & (1 << 16)) != 0;
-    bool avx512_dq =           (info2[1] & (1 << 17)) != 0;
-    bool avx512_pf =           (info2[1] & (1 << 26)) != 0;
-    bool avx512_er =           (info2[1] & (1 << 27)) != 0;
-    bool avx512_cd =           (info2[1] & (1 << 28)) != 0;
-    bool avx512_bw =           (info2[1] & (1 << 30)) != 0;
-    bool avx512_vl =           (info2[1] & (1 << 31)) != 0;
-    bool avx512_vbmi2 =        (info2[2] & (1 << 6))  != 0;
-    bool avx512_gfni =         (info2[2] & (1 << 8))  != 0;
-    bool avx512_vaes =         (info2[2] & (1 << 9))  != 0;
-    bool avx512_vpclmulqdq =   (info2[2] & (1 << 10)) != 0;
-    bool avx512_vnni =         (info2[2] & (1 << 11)) != 0;
-    bool avx512_bitalg =       (info2[2] & (1 << 12)) != 0;
-    bool avx512_vpopcntdq =    (info2[2] & (1 << 14)) != 0;
-    bool avx_vnni =            (info3[0] & (1 << 4))  != 0;
-    bool avx512_bf16 =         (info3[0] & (1 << 5))  != 0;
-    bool avx512_vp2intersect = (info2[3] & (1 << 8))  != 0;
-    bool avx512_amx_bf16 =     (info2[3] & (1 << 22)) != 0;
-    bool avx512_amx_tile =     (info2[3] & (1 << 24)) != 0;
-    bool avx512_amx_int8 =     (info2[3] & (1 << 25)) != 0;
-    bool avx512_fp16 =         (info2[3] & (1 << 23)) != 0;
     // clang-format on
 
     if (osxsave && avx2 && avx512_f && __os_has_avx512_support()) {
         // We need to verify that AVX2 is also available,
         // as well as AVX512, because our targets are supposed
         // to use both.
+
+        int info3[4] = {0, 0, 0, 0};
+        int max_subleaf = info2[0];
+        // Call cpuid with eax=7, ecx=1
+        if (max_subleaf >= 1)
+            __cpuidex(info3, 7, 1);
+
+        // clang-format off
+        bool avx512_dq =           (info2[1] & (1 << 17)) != 0;
+        bool avx512_pf =           (info2[1] & (1 << 26)) != 0;
+        bool avx512_er =           (info2[1] & (1 << 27)) != 0;
+        bool avx512_cd =           (info2[1] & (1 << 28)) != 0;
+        bool avx512_bw =           (info2[1] & (1 << 30)) != 0;
+        bool avx512_vl =           (info2[1] & (1 << 31)) != 0;
+        bool avx512_vbmi2 =        (info2[2] & (1 << 6))  != 0;
+        bool avx512_gfni =         (info2[2] & (1 << 8))  != 0;
+        bool avx512_vaes =         (info2[2] & (1 << 9))  != 0;
+        bool avx512_vpclmulqdq =   (info2[2] & (1 << 10)) != 0;
+        bool avx512_vnni =         (info2[2] & (1 << 11)) != 0;
+        bool avx512_bitalg =       (info2[2] & (1 << 12)) != 0;
+        bool avx512_vpopcntdq =    (info2[2] & (1 << 14)) != 0;
+        bool avx_vnni =            (info3[0] & (1 << 4))  != 0;
+        bool avx512_bf16 =         (info3[0] & (1 << 5))  != 0;
+        bool avx512_vp2intersect = (info2[3] & (1 << 8))  != 0;
+        bool avx512_amx_bf16 =     (info2[3] & (1 << 22)) != 0;
+        bool avx512_amx_tile =     (info2[3] & (1 << 24)) != 0;
+        bool avx512_amx_int8 =     (info2[3] & (1 << 25)) != 0;
+        bool avx512_fp16 =         (info2[3] & (1 << 23)) != 0;
+        // clang-format on
 
         // Knights Landing:          KNL = F + PF + ER + CD
         // Skylake server:           SKX = F + DQ + CD + BW + VL
