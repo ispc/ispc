@@ -36,6 +36,24 @@ device. This is handled by the Level Zero.
 The ISPC Runtime enables using the USM via Array type and provides an allocator that can be used in standard C++
 containers, such as `std::vector`.
 
+
+Simple-fence
+============
+
+This example shows how one can use ISPCRT to asynchronously compute something on GPU with other work being
+done on CPU in parallel. It is derived from `Simple` example. The key difference is that `TaskQueue` object is not used
+here. `CommandQueue` and `CommandList` objects are explicitly constructed here instead. Commands are submitted with
+`copyToDevice`, `launch` and `copyToHost` methods of the command list object. It is important to notice that barriers
+should be inserted explicitly if needed between computations or memory copying. It can be done with `barrier` method
+of `CommandList` object. After filling the command list, `submit` method is called. It instructs GPU to execute
+the submitted commands. This method returns a `Fence` object. It has two states: unsignalled and signalled. GPU change
+the fence object state to signalled when execution is completed. Fence state is checked via `status` method. After
+submission, host CPU thread computes the validation result effectively in parallel with GPU computation. After that,
+fence object is waited in the loop until being signalled.
+
+`host_simple-fence [--gpu | --cpu ]`
+
+
 AOBench
 =======
 

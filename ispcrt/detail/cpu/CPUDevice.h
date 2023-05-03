@@ -5,6 +5,7 @@
 
 #include "../Device.h"
 #include "../Future.h"
+#include "../CommandQueue.h"
 
 namespace ispcrt {
 
@@ -19,6 +20,8 @@ struct CPUDevice : public base::Device {
     CPUDevice() = default;
 
     base::MemoryView *newMemoryView(void *appMem, size_t numBytes, const ISPCRTNewMemoryViewFlags *flags) const override;
+
+    base::CommandQueue *newCommandQueue(uint32_t ordinal) const override;
 
     base::TaskQueue *newTaskQueue() const override;
 

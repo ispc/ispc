@@ -35,6 +35,7 @@ MockHandle<ze_command_list_handle_t> CmdListHandle;
 MockHandle<ze_command_queue_handle_t> CmdQueueHandle;
 MockHandle<ze_event_pool_handle_t> EventPoolHandle;
 MockHandle<ze_event_handle_t> LaunchEventHandle;
+MockHandle<ze_fence_handle_t> FenceHandle;
 
 bool ExpectedDevice(ze_device_handle_t hDevice) {
     auto dp = reinterpret_cast<DeviceProperties *>(hDevice);
@@ -227,6 +228,47 @@ ze_result_t zeEventQueryKernelTimestamp(ze_event_handle_t hEvent, ze_kernel_time
 
 ze_result_t zeEventHostReset(ze_event_handle_t hEvent) {
     MOCK_CNT_CALL;
+    MOCK_RET;
+}
+
+static int fenceSignalTimerCounter = 0;
+ze_result_t zeFenceCreate(ze_command_queue_handle_t hCommandQueue, const ze_fence_desc_t *desc, ze_fence_handle_t *phFence) {
+    MOCK_CNT_CALL;
+    if (hCommandQueue != CmdQueueHandle.get() || !desc || !phFence)
+        return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
+    *phFence = FenceHandle.get();
+    fenceSignalTimerCounter = 0;
+    MOCK_RET;
+}
+
+ze_result_t zeFenceReset(ze_fence_handle_t hFence) {
+    MOCK_CNT_CALL;
+    if (hFence != FenceHandle.get())
+        return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
+    fenceSignalTimerCounter = 0;
+    MOCK_RET;
+}
+
+ze_result_t zeFenceQueryStatus(ze_fence_handle_t hFence) {
+    MOCK_CNT_CALL;
+    if (hFence != FenceHandle.get())
+        return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
+    return (fenceSignalTimerCounter++ >= 5) ? ZE_RESULT_SUCCESS : ZE_RESULT_NOT_READY;
+}
+
+ze_result_t zeFenceHostSynchronize(ze_fence_handle_t hFence, uint64_t timeout) {
+    MOCK_CNT_CALL;
+    if (hFence != FenceHandle.get())
+        return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
+    fenceSignalTimerCounter = 5;
+    MOCK_RET;
+}
+
+ze_result_t zeFenceDestroy(ze_fence_handle_t hFence) {
+    MOCK_CNT_CALL;
+    if (hFence != FenceHandle.get())
+        return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
+    fenceSignalTimerCounter = 0;
     MOCK_RET;
 }
 
@@ -471,10 +513,18 @@ ze_result_t zeGetModuleBuildLogProcAddrTable(ze_api_version_t version, ze_module
     return ZE_RESULT_SUCCESS;
 }
 
+ze_result_t zeGetFenceProcAddrTable(ze_api_version_t version, ze_fence_dditable_t *pDdiTable) {
+    pDdiTable->pfnCreate = ispcrt::testing::mock::driver::zeFenceCreate;
+    pDdiTable->pfnQueryStatus = ispcrt::testing::mock::driver::zeFenceQueryStatus;
+    pDdiTable->pfnReset = ispcrt::testing::mock::driver::zeFenceReset;
+    pDdiTable->pfnHostSynchronize = ispcrt::testing::mock::driver::zeFenceHostSynchronize;
+    pDdiTable->pfnDestroy = ispcrt::testing::mock::driver::zeFenceDestroy;
+    return ZE_RESULT_SUCCESS;
+}
+
 #define MOCK_DDI_FUN(Fn, TT)                                                                                           \
     ze_result_t Fn(ze_api_version_t version, TT *pDdiTable) { return ZE_RESULT_SUCCESS; }
 
-MOCK_DDI_FUN(zeGetFenceProcAddrTable, ze_fence_dditable_t)
 MOCK_DDI_FUN(zeGetImageProcAddrTable, ze_image_dditable_t)
 MOCK_DDI_FUN(zeGetPhysicalMemProcAddrTable, ze_physical_mem_dditable_t)
 MOCK_DDI_FUN(zeGetSamplerProcAddrTable, ze_sampler_dditable_t)
