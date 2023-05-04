@@ -28,120 +28,132 @@ entry:
   %asmresult5.i = extractvalue { i32, i32, i32, i32 } %0, 2
   %asmresult6.i = extractvalue { i32, i32, i32, i32 } %0, 3
   %1 = tail call { i32, i32, i32, i32 } asm sideeffect "cpuid", "={ax},={bx},={cx},={dx},0,2,~{dirflag},~{fpsr},~{flags}"(i32 7, i32 0) nounwind
-  %asmresult4.i277 = extractvalue { i32, i32, i32, i32 } %1, 1
-  %asmresult5.i278 = extractvalue { i32, i32, i32, i32 } %1, 2
-  %asmresult6.i279 = extractvalue { i32, i32, i32, i32 } %1, 3
-  %2 = tail call { i32, i32, i32, i32 } asm sideeffect "cpuid", "={ax},={bx},={cx},={dx},0,2,~{dirflag},~{fpsr},~{flags}"(i32 7, i32 1) nounwind
-  %asmresult.i283 = extractvalue { i32, i32, i32, i32 } %2, 0
+  %asmresult.i288 = extractvalue { i32, i32, i32, i32 } %1, 0
+  %asmresult4.i289 = extractvalue { i32, i32, i32, i32 } %1, 1
+  %asmresult5.i290 = extractvalue { i32, i32, i32, i32 } %1, 2
+  %asmresult6.i291 = extractvalue { i32, i32, i32, i32 } %1, 3
   %and = and i32 %asmresult6.i, 67108864
   %cmp.not = icmp ne i32 %and, 0
-  %and4 = and i32 %asmresult5.i, 524288
-  %cmp5.not = icmp ne i32 %and4, 0
-  %and16 = and i32 %asmresult5.i, 134217728
-  %cmp17.not = icmp eq i32 %and16, 0
-  %and24 = and i32 %asmresult4.i277, 32
-  %cmp25.not = icmp eq i32 %and24, 0
-  %and28 = and i32 %asmresult4.i277, 65536
-  %cmp29.not = icmp eq i32 %and28, 0
-  %and56 = and i32 %asmresult5.i278, 64
-  %cmp57.not = icmp eq i32 %and56, 0
-  %and60 = and i32 %asmresult5.i278, 256
-  %cmp61.not = icmp eq i32 %and60, 0
-  %and64 = and i32 %asmresult5.i278, 512
-  %cmp65.not = icmp eq i32 %and64, 0
-  %and68 = and i32 %asmresult5.i278, 1024
-  %cmp69.not = icmp eq i32 %and68, 0
-  %and72 = and i32 %asmresult5.i278, 2048
-  %cmp73 = icmp eq i32 %and72, 0
-  %and84 = and i32 %asmresult.i283, 16
-  %cmp85.not = icmp ne i32 %and84, 0
-  %and88 = and i32 %asmresult.i283, 32
-  %cmp89.not = icmp ne i32 %and88, 0
-  %and96 = and i32 %asmresult6.i279, 4194304
-  %cmp97.not = icmp ne i32 %and96, 0
-  %and100 = and i32 %asmresult6.i279, 16777216
-  %cmp101.not = icmp ne i32 %and100, 0
-  %and104 = and i32 %asmresult6.i279, 33554432
-  %cmp105.not = icmp ne i32 %and104, 0
-  %and108 = and i32 %asmresult6.i279, 8388608
-  %cmp109 = icmp ne i32 %and108, 0
-  %brmerge = select i1 %cmp17.not, i1 true, i1 %cmp25.not
-  %brmerge250 = select i1 %brmerge, i1 true, i1 %cmp29.not
-  br i1 %brmerge250, label %if.end190, label %land.lhs.true114
+  %and7 = and i32 %asmresult5.i, 1048576
+  %cmp8.not.not = icmp eq i32 %and7, 0
+  %and15 = and i32 %asmresult4.i289, 32
+  %cmp16.not = icmp eq i32 %and15, 0
+  %and27 = and i32 %asmresult5.i, 134217728
+  %cmp28.not = icmp eq i32 %and27, 0
+  %and31 = and i32 %asmresult4.i289, 65536
+  %cmp32.not = icmp eq i32 %and31, 0
+  %brmerge = select i1 %cmp28.not, i1 true, i1 %cmp16.not
+  %brmerge262 = select i1 %brmerge, i1 true, i1 %cmp32.not
+  br i1 %brmerge262, label %if.end219, label %land.lhs.true37
 
-land.lhs.true114:                                 ; preds = %entry
-  %3 = tail call { i32, i32 } asm sideeffect ".byte 0x0f, 0x01, 0xd0", "={ax},={dx},{cx},~{dirflag},~{fpsr},~{flags}"(i32 0) nounwind
-  %asmresult.i287 = extractvalue { i32, i32 } %3, 0
-  %and.i = and i32 %asmresult.i287, 230
+land.lhs.true37:                                  ; preds = %entry
+  %2 = tail call { i32, i32 } asm sideeffect ".byte 0x0f, 0x01, 0xd0", "={ax},={dx},{cx},~{dirflag},~{fpsr},~{flags}"(i32 0) nounwind
+  %asmresult.i292 = extractvalue { i32, i32 } %2, 0
+  %and.i = and i32 %asmresult.i292, 230
   %cmp.i.not = icmp eq i32 %and.i, 230
-  br i1 %cmp.i.not, label %if.then, label %if.end190
+  br i1 %cmp.i.not, label %if.then, label %if.end219
 
-if.then:                                          ; preds = %land.lhs.true114
-  %4 = and i32 %asmresult4.i277, 469762048
+if.then:                                          ; preds = %land.lhs.true37
+  %cmp40 = icmp sgt i32 %asmresult.i288, 0
+  br i1 %cmp40, label %if.then41, label %if.end
+
+if.then41:                                        ; preds = %if.then
+  %3 = tail call { i32, i32, i32, i32 } asm sideeffect "cpuid", "={ax},={bx},={cx},={dx},0,2,~{dirflag},~{fpsr},~{flags}"(i32 7, i32 1) nounwind
+  %asmresult.i296 = extractvalue { i32, i32, i32, i32 } %3, 0
+  br label %if.end
+
+if.end:                                           ; preds = %if.then41, %if.then
+  %info3.sroa.0.0 = phi i32 [ %asmresult.i296, %if.then41 ], [ 0, %if.then ]
+  %and96 = and i32 %info3.sroa.0.0, 16
+  %cmp97.not = icmp ne i32 %and96, 0
+  %and100 = and i32 %info3.sroa.0.0, 32
+  %cmp101.not = icmp ne i32 %and100, 0
+  %and108 = and i32 %asmresult6.i291, 4194304
+  %cmp109.not = icmp ne i32 %and108, 0
+  %and112 = and i32 %asmresult6.i291, 16777216
+  %cmp113.not = icmp ne i32 %and112, 0
+  %and116 = and i32 %asmresult6.i291, 33554432
+  %cmp117.not = icmp ne i32 %and116, 0
+  %and120 = and i32 %asmresult6.i291, 8388608
+  %cmp121 = icmp ne i32 %and120, 0
+  %4 = and i32 %asmresult4.i289, 469762048
   %.not = icmp eq i32 %4, 469762048
-  %5 = and i32 %asmresult4.i277, 268566528
-  %.not295 = icmp eq i32 %5, 268566528
-  %6 = icmp ugt i32 %asmresult4.i277, -1073741825
-  %spec.select272 = and i1 %6, %.not295
-  %not.spec.select272.demorgan = and i1 %6, %.not295
-  %not.spec.select272 = xor i1 %not.spec.select272.demorgan, true
-  %7 = select i1 %not.spec.select272, i1 true, i1 %cmp73
-  %brmerge253 = select i1 %7, i1 true, i1 %cmp57.not
-  %brmerge254 = select i1 %brmerge253, i1 true, i1 %cmp61.not
-  %brmerge255 = select i1 %brmerge254, i1 true, i1 %cmp65.not
-  %brmerge256 = select i1 %brmerge255, i1 true, i1 %cmp69.not
-  br i1 %brmerge256, label %if.else, label %land.lhs.true149
+  %5 = and i32 %asmresult4.i289, 268566528
+  %.not314 = icmp eq i32 %5, 268566528
+  br i1 %.not314, label %land.end135, label %cleanup
 
-land.lhs.true149:                                 ; preds = %if.then
-  %8 = and i32 %asmresult5.i278, 20480
-  %9 = icmp eq i32 %8, 20480
-  %brmerge258 = select i1 %9, i1 %cmp89.not, i1 false
-  %brmerge259 = select i1 %brmerge258, i1 %cmp97.not, i1 false
-  %brmerge260 = select i1 %brmerge259, i1 %cmp101.not, i1 false
-  %brmerge261 = select i1 %brmerge260, i1 %cmp105.not, i1 false
-  %10 = select i1 %brmerge261, i1 %cmp85.not, i1 false
-  %or.cond = select i1 %10, i1 %cmp109, i1 false
-  %brmerge267 = select i1 %or.cond, i1 true, i1 %spec.select272
-  %.mux = select i1 %or.cond, i32 6, i32 5
-  %brmerge299 = select i1 %brmerge267, i1 true, i1 %.not
-  %.mux.mux = select i1 %brmerge267, i32 %.mux, i32 4
-  br i1 %brmerge299, label %cleanup212, label %if.end190
+land.end135:                                      ; preds = %if.end
+  %6 = insertelement <4 x i32> poison, i32 %asmresult5.i290, i64 0
+  %shuffle = shufflevector <4 x i32> %6, <4 x i32> poison, <4 x i32> zeroinitializer
+  %shuffle.fr = freeze <4 x i32> %shuffle
+  %7 = and <4 x i32> %shuffle.fr, <i32 2048, i32 64, i32 256, i32 512>
+  %and80 = and i32 %asmresult5.i290, 1024
+  %cmp81.not = icmp eq i32 %and80, 0
+  %8 = icmp eq <4 x i32> %7, zeroinitializer
+  %9 = icmp ugt i32 %asmresult4.i289, -1073741825
+  %not. = xor i1 %9, true
+  %10 = bitcast <4 x i1> %8 to i4
+  %11 = icmp ne i4 %10, 0
+  %12 = select i1 %11, i1 true, i1 %cmp81.not
+  %op.rdx321 = select i1 %12, i1 true, i1 %not.
+  br i1 %op.rdx321, label %if.end184, label %land.lhs.true156
 
-if.else:                                          ; preds = %if.then
-  %brmerge297 = or i1 %.not, %spec.select272
-  %.mux298 = select i1 %spec.select272, i32 5, i32 4
-  br i1 %brmerge297, label %cleanup212, label %if.end190
+land.lhs.true156:                                 ; preds = %land.end135
+  %13 = and i32 %asmresult5.i290, 20480
+  %14 = icmp eq i32 %13, 20480
+  %brmerge269 = select i1 %14, i1 %cmp101.not, i1 false
+  %brmerge270 = select i1 %brmerge269, i1 %cmp109.not, i1 false
+  %brmerge271 = select i1 %brmerge270, i1 %cmp113.not, i1 false
+  %brmerge272 = select i1 %brmerge271, i1 %cmp117.not, i1 false
+  %15 = select i1 %brmerge272, i1 %cmp97.not, i1 false
+  %or.cond279 = select i1 %15, i1 %cmp121, i1 false
+  %brmerge280 = select i1 %or.cond279, i1 true, i1 %9
+  %.mux = select i1 %or.cond279, i32 7, i32 6
+  %brmerge320 = select i1 %brmerge280, i1 true, i1 %.not
+  %.mux.mux = select i1 %brmerge280, i32 %.mux, i32 5
+  br i1 %brmerge320, label %cleanup244, label %if.end219
 
-if.end190:                                        ; preds = %land.lhs.true149, %if.else, %entry, %land.lhs.true114
-  %11 = and i32 %asmresult5.i, 402653184
-  %.not296 = icmp eq i32 %11, 402653184
-  br i1 %.not296, label %land.lhs.true194, label %if.else205
+if.end184:                                        ; preds = %land.end135
+  %brmerge318 = or i1 %9, %.not
+  %.mux319 = select i1 %9, i32 6, i32 5
+  br i1 %brmerge318, label %cleanup244, label %if.end219
 
-land.lhs.true194:                                 ; preds = %if.end190
-  %12 = tail call { i32, i32 } asm sideeffect ".byte 0x0f, 0x01, 0xd0", "={ax},={dx},{cx},~{dirflag},~{fpsr},~{flags}"(i32 0) nounwind
-  %asmresult.i288 = extractvalue { i32, i32 } %12, 0
-  %and.i289 = and i32 %asmresult.i288, 6
-  %cmp.i290.not = icmp eq i32 %and.i289, 6
-  br i1 %cmp.i290.not, label %if.then197, label %if.else205
+cleanup:                                          ; preds = %if.end
+  br i1 %.not, label %cleanup244, label %if.end219
 
-if.then197:                                       ; preds = %land.lhs.true194
-  %13 = and i32 %asmresult5.i, 1610612736
-  %14 = icmp ne i32 %13, 1610612736
-  %brmerge266 = select i1 %14, i1 true, i1 %cmp25.not
-  %spec.select268 = select i1 %brmerge266, i32 2, i32 3
-  br label %cleanup212
+if.end219:                                        ; preds = %land.lhs.true156, %if.end184, %entry, %cleanup, %land.lhs.true37
+  %16 = and i32 %asmresult5.i, 402653184
+  %.not317 = icmp eq i32 %16, 402653184
+  br i1 %.not317, label %land.lhs.true223, label %if.else234
 
-if.else205:                                       ; preds = %if.end190, %land.lhs.true194
-  %brmerge269 = select i1 %cmp5.not, i1 true, i1 %cmp.not
-  %and4.lobit = lshr exact i32 %and4, 19
-  br i1 %brmerge269, label %cleanup212, label %if.else211
+land.lhs.true223:                                 ; preds = %if.end219
+  %17 = tail call { i32, i32 } asm sideeffect ".byte 0x0f, 0x01, 0xd0", "={ax},={dx},{cx},~{dirflag},~{fpsr},~{flags}"(i32 0) nounwind
+  %asmresult.i300 = extractvalue { i32, i32 } %17, 0
+  %and.i301 = and i32 %asmresult.i300, 6
+  %cmp.i302.not = icmp eq i32 %and.i301, 6
+  br i1 %cmp.i302.not, label %if.then226, label %if.else234
 
-if.else211:                                       ; preds = %if.else205
+if.then226:                                       ; preds = %land.lhs.true223
+  %18 = and i32 %asmresult5.i, 1610612736
+  %19 = icmp ne i32 %18, 1610612736
+  %brmerge277 = select i1 %19, i1 true, i1 %cmp16.not
+  %spec.select281 = select i1 %brmerge277, i32 3, i32 4
+  br label %cleanup244
+
+if.else234:                                       ; preds = %if.end219, %land.lhs.true223
+  %20 = and i32 %asmresult5.i, 1572864
+  %21 = icmp ne i32 %20, 0
+  %.mux283 = select i1 %cmp8.not.not, i32 1, i32 2
+  %brmerge284 = select i1 %21, i1 true, i1 %cmp.not
+  %.mux283.mux = select i1 %21, i32 %.mux283, i32 0
+  br i1 %brmerge284, label %cleanup244, label %if.else243
+
+if.else243:                                       ; preds = %if.else234
   tail call void @abort() noreturn nounwind
   unreachable
 
-cleanup212:                                       ; preds = %land.lhs.true149, %if.else, %if.then197, %if.else205
-  %retval.1 = phi i32 [ %and4.lobit, %if.else205 ], [ %spec.select268, %if.then197 ], [ %.mux.mux, %land.lhs.true149 ], [ %.mux298, %if.else ]
+cleanup244:                                       ; preds = %land.lhs.true156, %if.end184, %if.then226, %if.else234, %cleanup
+  %retval.1 = phi i32 [ 5, %cleanup ], [ %.mux283.mux, %if.else234 ], [ %spec.select281, %if.then226 ], [ %.mux.mux, %land.lhs.true156 ], [ %.mux319, %if.end184 ]
   ret i32 %retval.1
 }
 
