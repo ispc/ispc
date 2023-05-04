@@ -417,10 +417,10 @@ jobs:
 
   macos-build-ispc-llvm15:
     needs: [define-flow]
-    runs-on: macos-11
+    runs-on: macos-12
     env:
       LLVM_VERSION: "15.0"
-      LLVM_TAR: llvm-15.0.7-macos11-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-15.0.7-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@v3
