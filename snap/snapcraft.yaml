@@ -3,7 +3,7 @@
 
 name: ispc
 base: core22 # ubuntu 22.04
-version: '1.19.0'
+version: '1.20.0'
 license: BSD-3-Clause
 summary: Compiler for high-performance SIMD programming
 description: |
