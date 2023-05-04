@@ -1,4 +1,4 @@
-// Copyright 2022 Intel Corporation
+// Copyright 2022-2023 Intel Corporation
 
 #include "version.h"
 
@@ -23,7 +23,7 @@ BEGIN
             VALUE "FileDescription", "Intel(R) Implicit SPMD Program Compiler"
             VALUE "FileVersion", ISPC_VERSION
             VALUE "ProductVersion", ISPC_VERSION
-            VALUE "LegalCopyright", "Copyright 2010-2022 Intel Corporation"
+            VALUE "LegalCopyright", "Copyright 2010-2023 Intel Corporation"
             VALUE "InternalName", "Intel(R) ISPC"
             VALUE "ProductName", "Intel(R) ISPC"
         END
