@@ -3,12 +3,28 @@
 // RUN: %{ispc} %s --target=sse2-i32x4,sse4-i32x4,avx1-i32x8,avx2-i32x8,avx512knl-x16,avx512skx-x16,avx512spr-x16 -o %t_ispc.o --nostdlib
 // RUN: %{cc} -O2 %S/check_dispatch.c %t_ispc*.o -o check_dispatch.exe
 // RUN: sde -mrm -- check_dispatch.exe | FileCheck %s -check-prefix=CHECK_SSE2
+// Note sse4-i32x4 implies SSE4.2 ISA, while Penryn is SSE4.1, so should fall back to SSE2.
+// RUN: sde -pnr -- check_dispatch.exe | FileCheck %s -check-prefix=CHECK_SSE2
 // RUN: sde -nhm -- check_dispatch.exe | FileCheck %s -check-prefix=CHECK_SSE4
 // RUN: sde -snb -- check_dispatch.exe | FileCheck %s -check-prefix=CHECK_AVX1
 // RUN: sde -hsw -- check_dispatch.exe | FileCheck %s -check-prefix=CHECK_AVX2
 // RUN: sde -skx -- check_dispatch.exe | FileCheck %s -check-prefix=CHECK_SKX
 // RUN: sde -knl -- check_dispatch.exe | FileCheck %s -check-prefix=CHECK_KNL
 // RUN: sde -spr -- check_dispatch.exe | FileCheck %s -check-prefix=CHECK_SPR
+
+// RUN: %{ispc} %s --target=sse2-i32x4,sse4.1-i32x4,avx1-i32x8,avx2-i32x8,avx512knl-x16,avx512skx-x16,avx512spr-x16 -o %t_ispc.o --nostdlib
+// RUN: %{cc} -O2 %S/check_dispatch.c %t_ispc*.o -o check_dispatch.exe
+// RUN: sde -mrm -- check_dispatch.exe | FileCheck %s -check-prefix=CHECK_SSE2
+// sse4.1-i32x4 is specified, so both Penryn and Nehalem should use it.
+// RUN: sde -pnr -- check_dispatch.exe | FileCheck %s -check-prefix=CHECK_SSE4
+// RUN: sde -nhm -- check_dispatch.exe | FileCheck %s -check-prefix=CHECK_SSE4
+
+// RUN: %{ispc} %s --target=sse2-i32x4,sse4.2-i32x4,avx1-i32x8,avx2-i32x8,avx512knl-x16,avx512skx-x16,avx512spr-x16 -o %t_ispc.o --nostdlib
+// RUN: %{cc} -O2 %S/check_dispatch.c %t_ispc*.o -o check_dispatch.exe
+// RUN: sde -mrm -- check_dispatch.exe | FileCheck %s -check-prefix=CHECK_SSE2
+// sse4.2-i32x4 is specified, so Penryn should fall back to SSE2.
+// RUN: sde -pnr -- check_dispatch.exe | FileCheck %s -check-prefix=CHECK_SSE2
+// RUN: sde -nhm -- check_dispatch.exe | FileCheck %s -check-prefix=CHECK_SSE4
 
 // REQUIRES: X86_ENABLED && SDE_INSTALLED
 
