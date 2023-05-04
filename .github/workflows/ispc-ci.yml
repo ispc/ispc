@@ -447,7 +447,7 @@ jobs:
 
     - name: Build package
       run: |
-        .github/workflows/scripts/build-ispc.sh -DBENCHMARKS_ISPC_TARGETS=avx1-i32x4
+        .github/workflows/scripts/build-ispc.sh #-DBENCHMARKS_ISPC_TARGETS=avx1-i32x4
 
     - name: Sanity testing (make check-all, make test)
       run: |
@@ -458,6 +458,47 @@ jobs:
       with:
         name: ispc_llvm15_macos
         path: build/ispc-trunk-macos.tar.gz
+
+  macos-test-ispc-llvm15:
+    needs: [define-flow, macos-build-ispc-llvm15]
+    runs-on: macos-12
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v3
+    - name: Download package
+      uses: actions/download-artifact@v3
+      with:
+        name: ispc_llvm15_macos
+
+    - name: Install dependencies and unpack artifacts
+      run: |
+        tar xf ispc-trunk-macos.tar.gz
+        echo "$GITHUB_WORKSPACE/ispc-trunk-macos/bin" >> $GITHUB_PATH
+        echo "ISPC_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+        echo "LLVM_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+
+    - name: Check environment
+      run: |
+        sysctl -n machdep.cpu.brand_string
+
+    - name: Running tests
+      run: |
+        echo PATH=$PATH
+        ./alloy.py -r --only="stability current x86-64 -O0 -O2" --only-targets="sse4-i32x4" --time --update-errors=FP
+
+    - name: Check
+      run: |
+        # Print fails to the log.
+        git diff --exit-code
+
+    - name: Upload fail_db.txt
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: fail_db.llvm15.macos.sse4.txt
+        path: fail_db.txt
 
   win-build-ispc-llvm13:
     needs: [define-flow]
