@@ -189,8 +189,7 @@ static ISPCTarget lGetSystemISA() {
 #pragma unused(cpx, tgl)
         if (spr) {
             // We don't care if AMX is enabled or not here, as AMX support is not implemented yet.
-            // TODO: use SKX target, before SPR is introduced.
-            return ISPCTarget::avx512skx_x16;
+            return ISPCTarget::avx512spr_x16;
         } else if (skx) {
             return ISPCTarget::avx512skx_x16;
         } else if (knl) {
