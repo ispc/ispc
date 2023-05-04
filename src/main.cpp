@@ -164,6 +164,8 @@ static void lPrintVersion() {
     printf("    [--werror]\t\t\t\tTreat warnings as errors\n");
     printf("    [--woff]\t\t\t\tDisable warnings\n");
     printf("    [--wno-perf]\t\t\tDon't issue warnings related to performance-related issues\n");
+    printf("    [--[no-]wrap-signed-int]\t\t[Do not] preserve wraparound on signed integer overflow (default: do not "
+           "preserve)\n");
     printf("    [--x86-asm-syntax=<option>]\t\tSelect style of code if generating assembly\n");
     printf("        intel\t\t\t\tEmit Intel-style assembly\n");
     printf("        att\t\t\t\tEmit AT&T-style assembly\n");
@@ -626,6 +628,7 @@ int main(int Argc, char *Argv[]) {
     const char *cpu = nullptr, *intelAsmSyntax = nullptr;
     BooleanOptValue vectorCall = BooleanOptValue::none;
     BooleanOptValue discardValueNames = BooleanOptValue::none;
+    BooleanOptValue wrapSignedInt = BooleanOptValue::none;
 
     ArgErrors errorHandler;
 
@@ -933,6 +936,10 @@ int main(int Argc, char *Argv[]) {
             g->emitPerfWarnings = false;
         } else if (!strcmp(argv[i], "--werror"))
             g->warningsAsErrors = true;
+        else if (!strcmp(argv[i], "--wrap-signed-int"))
+            wrapSignedInt = BooleanOptValue::enabled;
+        else if (!strcmp(argv[i], "--no-wrap-signed-int"))
+            wrapSignedInt = BooleanOptValue::disabled;
         else if (!strncmp(argv[i], "--error-limit=", 14)) {
             int errLimit = atoi(argv[i] + 14);
             if (errLimit >= 0)
@@ -1203,6 +1210,7 @@ int main(int Argc, char *Argv[]) {
         llvm::cl::ParseCommandLineOptions(2, Args.data());
     }
 
+    bool targetIsGen = false;
     for (auto target : targets) {
         if (target == ISPCTarget::wasm_i32x4) {
             Assert(targets.size() == 1 && "wasm32 supports only one target: i32x4");
@@ -1211,6 +1219,7 @@ int main(int Argc, char *Argv[]) {
         }
 #ifdef ISPC_XE_ENABLED
         if (ISPCTargetIsGen(target)) {
+            targetIsGen = true;
             Assert(targets.size() == 1 && "multi-target is not supported for Xe targets yet.");
             // Generate .spv for Xe target instead of object by default.
             if (ot == Module::Object) {
@@ -1219,6 +1228,19 @@ int main(int Argc, char *Argv[]) {
             }
         }
 #endif
+    }
+
+    // If [no]wrap-signed-int is explicitly specified, then use this value.
+    // Disable NSW bit optimization by default due to performance regressions
+    // on some GPU workloads.  Otherwise enable it by default only for CPU targets.
+    if (wrapSignedInt == BooleanOptValue::enabled) {
+        g->wrapSignedInt = true;
+    } else if (wrapSignedInt == BooleanOptValue::disabled) {
+        g->wrapSignedInt = false;
+    } else if (targetIsGen) {
+        g->wrapSignedInt = true;
+    } else {
+        g->wrapSignedInt = false;
     }
 
     // This needs to happen after the TargetOS is decided.

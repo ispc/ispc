@@ -396,9 +396,25 @@ class FunctionEmitContext {
     /** Emit the binary operator given by the inst parameter.  If
         llvm::Values corresponding to VectorTypes are given as operands,
         this also handles applying the given operation to the vector
-        elements. */
+        elements.
+
+        The isSigned parameter toggles whether the nsw attribute is applied
+        to signed integer arithmetic operations.
+        The value of isSigned is determined either by
+        1.  the sign of the incoming generated expression's type
+            (e.g. using type->IsSignedType()), or
+        2.  the sign of a constructed expression (e.g. false for pointer
+            arithmetic, true for foreach induction variables).
+        The only arithmetic oparations modified by this parameter are Add, Sub, and Mul.
+        Shl supports the attribute (https://llvm.org/docs/LangRef.html#shl-instruction),
+        but we elect not to emit nsw for these operations to match Clang/GCC behavior.
+        Care should be used, as some optimizations may rely on undefined behavior
+        for signed integer overflow.
+        See the Expressions section of docs/ispc.rst for more information on this
+        optimization.
+    */
     llvm::Value *BinaryOperator(llvm::Instruction::BinaryOps inst, llvm::Value *v0, llvm::Value *v1,
-                                const llvm::Twine &name = "");
+                                WrapSemantics wrapSemantics, const llvm::Twine &name = "");
 
     /** Emit the "not" operator.  Like BinaryOperator(), this also handles
         a VectorType-based operand. */

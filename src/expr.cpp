@@ -1032,7 +1032,8 @@ static void lStoreAssignResult(llvm::Value *value, llvm::Value *ptr, const Type 
 /** Utility routine to emit code to do a {pre,post}-{inc,dec}rement of the
     given expresion.
  */
-static llvm::Value *lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos pos, FunctionEmitContext *ctx) {
+static llvm::Value *lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos pos, FunctionEmitContext *ctx,
+                                       WrapSemantics wrapSemantics) {
     const Type *type = expr->GetType();
     if (type == nullptr)
         return nullptr;
@@ -1080,9 +1081,9 @@ static llvm::Value *lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos p
     } else {
         llvm::Constant *dval = lLLVMConstantValue(type, g->ctx, delta);
         if (type->IsFloatType())
-            binop = ctx->BinaryOperator(llvm::Instruction::FAdd, rvalue, dval, opName.c_str());
+            binop = ctx->BinaryOperator(llvm::Instruction::FAdd, rvalue, dval, WrapSemantics::None, opName.c_str());
         else
-            binop = ctx->BinaryOperator(llvm::Instruction::Add, rvalue, dval, opName.c_str());
+            binop = ctx->BinaryOperator(llvm::Instruction::Add, rvalue, dval, wrapSemantics, opName.c_str());
     }
 
     // And store the result out to the lvalue
@@ -1097,7 +1098,7 @@ static llvm::Value *lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos p
 
 /** Utility routine to emit code to negate the given expression.
  */
-static llvm::Value *lEmitNegate(Expr *arg, SourcePos pos, FunctionEmitContext *ctx) {
+static llvm::Value *lEmitNegate(Expr *arg, SourcePos pos, FunctionEmitContext *ctx, WrapSemantics wrapSemantics) {
     const Type *type = arg->GetType();
     llvm::Value *argVal = arg->GetValue(ctx);
     if (type == nullptr || argVal == nullptr)
@@ -1110,7 +1111,8 @@ static llvm::Value *lEmitNegate(Expr *arg, SourcePos pos, FunctionEmitContext *c
     } else {
         llvm::Value *zero = lLLVMConstantValue(type, g->ctx, 0.);
         AssertPos(pos, type->IsIntType());
-        return ctx->BinaryOperator(llvm::Instruction::Sub, zero, argVal, llvm::Twine(argVal->getName()) + "_negate");
+        return ctx->BinaryOperator(llvm::Instruction::Sub, zero, argVal, wrapSemantics,
+                                   llvm::Twine(argVal->getName()) + "_negate");
     }
 }
 
@@ -1120,6 +1122,7 @@ llvm::Value *UnaryExpr::GetValue(FunctionEmitContext *ctx) const {
     if (expr == nullptr)
         return nullptr;
 
+    const auto wrapSemantics = this->GetType()->IsSignedType() ? WrapSemantics::NSW : WrapSemantics::None;
     ctx->SetDebugPos(pos);
 
     switch (op) {
@@ -1127,9 +1130,9 @@ llvm::Value *UnaryExpr::GetValue(FunctionEmitContext *ctx) const {
     case PreDec:
     case PostInc:
     case PostDec:
-        return lEmitPrePostIncDec(op, expr, pos, ctx);
+        return lEmitPrePostIncDec(op, expr, pos, ctx, wrapSemantics);
     case Negate:
-        return lEmitNegate(expr, pos, ctx);
+        return lEmitNegate(expr, pos, ctx, wrapSemantics);
     case LogicalNot: {
         llvm::Value *argVal = expr->GetValue(ctx);
         return ctx->NotOperator(argVal, llvm::Twine(argVal->getName()) + "_logicalnot");
@@ -1509,7 +1512,7 @@ static llvm::Value *lEmitBinaryBitOp(BinaryExpr::Op op, llvm::Value *arg0Val, ll
         return nullptr;
     }
 
-    return ctx->BinaryOperator(inst, arg0Val, arg1Val, "bitop");
+    return ctx->BinaryOperator(inst, arg0Val, arg1Val, WrapSemantics::None, "bitop");
 }
 
 static llvm::Value *lEmitBinaryPointerArith(BinaryExpr::Op op, llvm::Value *value0, llvm::Value *value1,
@@ -1521,7 +1524,6 @@ static llvm::Value *lEmitBinaryPointerArith(BinaryExpr::Op op, llvm::Value *valu
     case BinaryExpr::Add:
         // ptr + integer
         return ctx->GetElementPtrInst(value0, value1, ptrType, "ptrmath");
-        break;
     case BinaryExpr::Sub: {
         if (CastType<PointerType>(type1) != nullptr) {
             AssertPos(pos, Type::EqualIgnoringConst(type0, type1));
@@ -1536,15 +1538,17 @@ static llvm::Value *lEmitBinaryPointerArith(BinaryExpr::Op op, llvm::Value *valu
                 AssertPos(pos, soaWidth > 0);
                 llvm::Value *soaScale = LLVMIntAsType(soaWidth, majorDelta->getType());
 
-                llvm::Value *majorScale =
-                    ctx->BinaryOperator(llvm::Instruction::Mul, majorDelta, soaScale, "major_soa_scaled");
+                llvm::Value *majorScale = ctx->BinaryOperator(llvm::Instruction::Mul, majorDelta, soaScale,
+                                                              WrapSemantics::None, "major_soa_scaled");
 
                 llvm::Value *m0 = ctx->ExtractInst(value0, 1);
                 llvm::Value *m1 = ctx->ExtractInst(value1, 1);
-                llvm::Value *minorDelta = ctx->BinaryOperator(llvm::Instruction::Sub, m0, m1, "minor_soa_delta");
+                llvm::Value *minorDelta =
+                    ctx->BinaryOperator(llvm::Instruction::Sub, m0, m1, WrapSemantics::None, "minor_soa_delta");
 
                 ctx->MatchIntegerTypes(&majorScale, &minorDelta);
-                return ctx->BinaryOperator(llvm::Instruction::Add, majorScale, minorDelta, "soa_ptrdiff");
+                return ctx->BinaryOperator(llvm::Instruction::Add, majorScale, minorDelta, WrapSemantics::None,
+                                           "soa_ptrdiff");
             }
 
             // ptr - ptr
@@ -1554,7 +1558,8 @@ static llvm::Value *lEmitBinaryPointerArith(BinaryExpr::Op op, llvm::Value *valu
             }
 
             // Compute the difference in bytes
-            llvm::Value *delta = ctx->BinaryOperator(llvm::Instruction::Sub, value0, value1, "ptr_diff");
+            llvm::Value *delta =
+                ctx->BinaryOperator(llvm::Instruction::Sub, value0, value1, WrapSemantics::None, "ptr_diff");
 
             // Now divide by the size of the type that the pointer
             // points to in order to return the difference in elements.
@@ -1575,11 +1580,12 @@ static llvm::Value *lEmitBinaryPointerArith(BinaryExpr::Op op, llvm::Value *valu
             }
 
             // And now do the actual division
-            return ctx->BinaryOperator(llvm::Instruction::SDiv, delta, size, "element_diff");
+            return ctx->BinaryOperator(llvm::Instruction::SDiv, delta, size, WrapSemantics::None, "element_diff");
         } else {
             // ptr - integer
             llvm::Value *zero = lLLVMConstantValue(type1, g->ctx, 0.);
-            llvm::Value *negOffset = ctx->BinaryOperator(llvm::Instruction::Sub, zero, value1, "negate");
+            llvm::Value *negOffset =
+                ctx->BinaryOperator(llvm::Instruction::Sub, zero, value1, WrapSemantics::None, "negate");
             // Do a GEP as ptr + -integer
             return ctx->GetElementPtrInst(value0, negOffset, ptrType, "ptrmath");
         }
@@ -1594,7 +1600,8 @@ static llvm::Value *lEmitBinaryPointerArith(BinaryExpr::Op op, llvm::Value *valu
     BinaryExpr::Op.
 */
 static llvm::Value *lEmitBinaryArith(BinaryExpr::Op op, llvm::Value *value0, llvm::Value *value1, const Type *type0,
-                                     const Type *type1, FunctionEmitContext *ctx, SourcePos pos) {
+                                     const Type *type1, FunctionEmitContext *ctx, SourcePos pos,
+                                     WrapSemantics wrapSemantics) {
     const PointerType *ptrType = CastType<PointerType>(type0);
 
     if (ptrType != nullptr)
@@ -1641,7 +1648,7 @@ static llvm::Value *lEmitBinaryArith(BinaryExpr::Op op, llvm::Value *value0, llv
             return nullptr;
         }
 
-        return ctx->BinaryOperator(inst, value0, value1,
+        return ctx->BinaryOperator(inst, value0, value1, wrapSemantics,
                                    (((llvm::Twine(opName) + "_") + value0->getName()) + "_") + value1->getName());
     }
 }
@@ -1806,10 +1813,10 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
         }
 
         if (op == BinaryExpr::LogicalAnd)
-            return ctx->BinaryOperator(llvm::Instruction::And, value0, value1, "logical_and");
+            return ctx->BinaryOperator(llvm::Instruction::And, value0, value1, WrapSemantics::None, "logical_and");
         else {
             AssertPos(pos, op == BinaryExpr::LogicalOr);
-            return ctx->BinaryOperator(llvm::Instruction::Or, value0, value1, "logical_or");
+            return ctx->BinaryOperator(llvm::Instruction::Or, value0, value1, WrapSemantics::None, "logical_or");
         }
     }
 
@@ -1902,7 +1909,8 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
             // See if value0 is true for all currently executing
             // lanes--i.e. if (value0 & mask) == mask.  If so, we don't
             // need to evaluate the second operand of the expression.
-            llvm::Value *value0AndMask = ctx->BinaryOperator(llvm::Instruction::And, value0, oldFullMask, "op&mask");
+            llvm::Value *value0AndMask =
+                ctx->BinaryOperator(llvm::Instruction::And, value0, oldFullMask, WrapSemantics::None, "op&mask");
             llvm::Value *equalsMask = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, value0AndMask,
                                                    oldFullMask, "value0&mask==mask");
             equalsMask = ctx->I1VecToBoolVec(equalsMask);
@@ -1938,9 +1946,10 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
             // elements that were computed when the corresponding lane was
             // disabled have undefined values:
             // result = (value0 & old_mask) | (value1 & current_mask)
-            llvm::Value *value1AndMask =
-                ctx->BinaryOperator(llvm::Instruction::And, value1, ctx->GetInternalMask(), "op&mask");
-            llvm::Value *result = ctx->BinaryOperator(llvm::Instruction::Or, value0AndMask, value1AndMask, "or_result");
+            llvm::Value *value1AndMask = ctx->BinaryOperator(llvm::Instruction::And, value1, ctx->GetInternalMask(),
+                                                             WrapSemantics::None, "op&mask");
+            llvm::Value *result = ctx->BinaryOperator(llvm::Instruction::Or, value0AndMask, value1AndMask,
+                                                      WrapSemantics::None, "or_result");
             ctx->StoreInst(result, retPtrInfo, retType);
             ctx->BranchInst(bbLogicalDone);
         } else {
@@ -1950,8 +1959,8 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
             // overall result must be false: this corresponds to checking
             // if (mask & ~value0) == mask.
             llvm::Value *notValue0 = ctx->NotOperator(value0, "not_value0");
-            llvm::Value *notValue0AndMask =
-                ctx->BinaryOperator(llvm::Instruction::And, notValue0, oldFullMask, "not_value0&mask");
+            llvm::Value *notValue0AndMask = ctx->BinaryOperator(llvm::Instruction::And, notValue0, oldFullMask,
+                                                                WrapSemantics::None, "not_value0&mask");
             llvm::Value *equalsMask = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, notValue0AndMask,
                                                    oldFullMask, "not_value0&mask==mask");
             equalsMask = ctx->I1VecToBoolVec(equalsMask);
@@ -1985,11 +1994,12 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
             // And as in the || case, we compute the overall result by
             // masking off the valid lanes before we AND them together:
             // result = (value0 & old_mask) & (value1 & current_mask)
-            llvm::Value *value0AndMask = ctx->BinaryOperator(llvm::Instruction::And, value0, oldFullMask, "op&mask");
-            llvm::Value *value1AndMask =
-                ctx->BinaryOperator(llvm::Instruction::And, value1, ctx->GetInternalMask(), "value1&mask");
-            llvm::Value *result =
-                ctx->BinaryOperator(llvm::Instruction::And, value0AndMask, value1AndMask, "or_result");
+            llvm::Value *value0AndMask =
+                ctx->BinaryOperator(llvm::Instruction::And, value0, oldFullMask, WrapSemantics::None, "op&mask");
+            llvm::Value *value1AndMask = ctx->BinaryOperator(llvm::Instruction::And, value1, ctx->GetInternalMask(),
+                                                             WrapSemantics::None, "value1&mask");
+            llvm::Value *result = ctx->BinaryOperator(llvm::Instruction::And, value0AndMask, value1AndMask,
+                                                      WrapSemantics::None, "or_result");
             ctx->StoreInst(result, retPtrInfo, retType);
             ctx->BranchInst(bbLogicalDone);
         }
@@ -2087,10 +2097,14 @@ llvm::Value *BinaryExpr::GetValue(FunctionEmitContext *ctx) const {
     switch (op) {
     case Add:
     case Sub:
-    case Mul:
+    case Mul: {
+        const bool isSigned = this->GetType()->IsSignedType();
+        return lEmitBinaryArith(op, value0, value1, arg0->GetType(), arg1->GetType(), ctx, pos,
+                                (isSigned ? WrapSemantics::NSW : WrapSemantics::None));
+    }
     case Div:
     case Mod:
-        return lEmitBinaryArith(op, value0, value1, arg0->GetType(), arg1->GetType(), ctx, pos);
+        return lEmitBinaryArith(op, value0, value1, arg0->GetType(), arg1->GetType(), ctx, pos, WrapSemantics::None);
     case Lt:
     case Gt:
     case Le:
@@ -2106,7 +2120,7 @@ llvm::Value *BinaryExpr::GetValue(FunctionEmitContext *ctx) const {
         if (op == Shr && lIsDifficultShiftAmount(arg1) && g->target->shouldWarn(PerfWarningType::VariableShiftRight)) {
             PerformanceWarning(pos, "Shift right is inefficient for varying shift amounts.");
         }
-        return lEmitBinaryBitOp(op, value0, value1, arg0->GetType()->IsUnsignedType(), ctx);
+        return lEmitBinaryBitOp(op, value0, value1, this->GetType()->IsUnsignedType(), ctx);
     }
     case Comma:
         return value1;
@@ -3052,7 +3066,7 @@ static const char *lOpString(AssignExpr::Op op) {
 /** Emit code to do an "assignment + operation" operator, e.g. "+=".
  */
 static llvm::Value *lEmitOpAssign(AssignExpr::Op op, Expr *arg0, Expr *arg1, const Type *type, Symbol *baseSym,
-                                  SourcePos pos, FunctionEmitContext *ctx) {
+                                  SourcePos pos, FunctionEmitContext *ctx, WrapSemantics wrapSemantics) {
     llvm::Value *lv = arg0->GetLValue(ctx);
     if (!lv) {
         // FIXME: I think this test is unnecessary and that this case
@@ -3116,12 +3130,14 @@ static llvm::Value *lEmitOpAssign(AssignExpr::Op op, Expr *arg0, Expr *arg1, con
     // Emit the code to compute the new value
     llvm::Value *newValue = nullptr;
     switch (op) {
-    case AssignExpr::MulAssign:
     case AssignExpr::DivAssign:
     case AssignExpr::ModAssign:
+        newValue = lEmitBinaryArith(basicop, oldLHS, rvalue, type, arg1->GetType(), ctx, pos, WrapSemantics::None);
+        break;
+    case AssignExpr::MulAssign:
     case AssignExpr::AddAssign:
     case AssignExpr::SubAssign:
-        newValue = lEmitBinaryArith(basicop, oldLHS, rvalue, type, arg1->GetType(), ctx, pos);
+        newValue = lEmitBinaryArith(basicop, oldLHS, rvalue, type, arg1->GetType(), ctx, pos, wrapSemantics);
         break;
     case AssignExpr::ShlAssign:
     case AssignExpr::ShrAssign:
@@ -3183,10 +3199,17 @@ llvm::Value *AssignExpr::GetValue(FunctionEmitContext *ctx) const {
         return value;
     }
     case MulAssign:
+    case AddAssign:
+    case SubAssign: {
+        // This should be caught during type checking
+        AssertPos(pos, !CastType<ArrayType>(type) && !CastType<StructType>(type));
+        const auto wrapSemantics = (lvalue->GetType()->IsSignedType() && rvalue->GetType()->IsSignedType())
+                                       ? WrapSemantics::NSW
+                                       : WrapSemantics::None;
+        return lEmitOpAssign(op, lvalue, rvalue, type, baseSym, pos, ctx, wrapSemantics);
+    }
     case DivAssign:
     case ModAssign:
-    case AddAssign:
-    case SubAssign:
     case ShlAssign:
     case ShrAssign:
     case AndAssign:
@@ -3194,7 +3217,7 @@ llvm::Value *AssignExpr::GetValue(FunctionEmitContext *ctx) const {
     case OrAssign: {
         // This should be caught during type checking
         AssertPos(pos, !CastType<ArrayType>(type) && !CastType<StructType>(type));
-        return lEmitOpAssign(op, lvalue, rvalue, type, baseSym, pos, ctx);
+        return lEmitOpAssign(op, lvalue, rvalue, type, baseSym, pos, ctx, WrapSemantics::None);
     }
     default:
         FATAL("logic error in AssignExpr::GetValue()");
@@ -3399,12 +3422,14 @@ static void lEmitSelectExprCode(FunctionEmitContext *ctx, llvm::Value *testVal, 
 
     // Check to see if the test was true for any of the currently executing
     // program instances.
-    llvm::Value *testAndFullMask = ctx->BinaryOperator(llvm::Instruction::And, testVal, fullMask, "test&mask");
+    llvm::Value *testAndFullMask =
+        ctx->BinaryOperator(llvm::Instruction::And, testVal, fullMask, WrapSemantics::None, "test&mask");
     llvm::Value *anyOn = ctx->Any(testAndFullMask);
     ctx->BranchInst(bbEval, bbDone, anyOn);
 
     ctx->SetCurrentBasicBlock(bbEval);
-    llvm::Value *testAndMask = ctx->BinaryOperator(llvm::Instruction::And, testVal, oldMask, "test&mask");
+    llvm::Value *testAndMask =
+        ctx->BinaryOperator(llvm::Instruction::And, testVal, oldMask, WrapSemantics::None, "test&mask");
     ctx->SetInternalMask(testAndMask);
     llvm::Value *exprVal = expr->GetValue(ctx);
     ctx->StoreInst(exprVal, exprPtrInfo, expr->GetType());
@@ -8992,7 +9017,8 @@ llvm::Value *NewExpr::GetValue(FunctionEmitContext *ctx) const {
     llvm::Value *eltSize = g->target->SizeOf(llvmAllocType, ctx->GetCurrentBasicBlock());
     if (isVarying)
         eltSize = ctx->SmearUniform(eltSize, "smear_size");
-    llvm::Value *allocSize = ctx->BinaryOperator(llvm::Instruction::Mul, countValue, eltSize, "alloc_size");
+    llvm::Value *allocSize =
+        ctx->BinaryOperator(llvm::Instruction::Mul, countValue, eltSize, WrapSemantics::NSW, "alloc_size");
 
     // Determine which allocation builtin function to call: uniform or
     // varying, and taking 32-bit or 64-bit allocation counts.
