@@ -362,18 +362,22 @@ def check_targets():
     target_dict = OrderedDict([
       ("SSE2",   [["sse2-i32x4",  "sse2-i32x8"],
                  ["SSE2"], "-p4", False]),
-      ("SSE4",   [["sse4-i32x4",  "sse4-i32x8",   "sse4-i16x8", "sse4-i8x16"],
-                 ["SSE2", "SSE4"], "-wsm", False]),
+      ("SSE4.1", [["sse4.1-i32x4",  "sse4.1-i32x8",   "sse4.1-i16x8", "sse4.1-i8x16"],
+                 ["SSE2", "SSE4.1"], "-pnr", False]),
+      ("SSE4.2", [["sse4.2-i32x4",  "sse4.2-i32x8",   "sse4.2-i16x8", "sse4.2-i8x16", "sse4-i32x4",  "sse4-i32x8",   "sse4-i16x8", "sse4-i8x16"],
+                 ["SSE2", "SSE4.1", "SSE4.2"], "-nhm", False]),
       ("AVX",    [["avx1-i32x4",  "avx1-i32x8",  "avx1-i32x16",  "avx1-i64x4"],
-                 ["SSE2", "SSE4", "AVX"], "-snb", False]),
+                 ["SSE2", "SSE4.1", "SSE4.2", "AVX"], "-snb", False]),
       ("AVX1.1", [["avx1-i32x4",  "avx1-i32x8",  "avx1-i32x16",  "avx1-i64x4"],
-                 ["SSE2", "SSE4", "AVX"], "-snb", False]),
+                 ["SSE2", "SSE4.1", "SSE4.2", "AVX"], "-snb", False]),
       ("AVX2",   [["avx2-i32x4", "avx2-i32x8",  "avx2-i32x16",  "avx2-i64x4", "avx2-i8x32", "avx2-i16x16"],
-                 ["SSE2", "SSE4", "AVX", "AVX2"], "-hsw", False]),
+                 ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX2"], "-hsw", False]),
       ("KNL",    [["avx512knl-x16"],
-                 ["SSE2", "SSE4", "AVX", "AVX2", "KNL"], "-knl", False]),
+                 ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX2", "KNL"], "-knl", False]),
       ("SKX",    [["avx512skx-x16", "avx512skx-x8", "avx512skx-x4", "avx512skx-x64", "avx512skx-x32"],
-                 ["SSE2", "SSE4", "AVX", "AVX2", "SKX"], "-skx", False])
+                 ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX2", "SKX"], "-skx", False]),
+      ("SPR",    [["avx512spr-x16", "avx512spr-x8", "avx512spr-x4", "avx512spr-x64", "avx512spr-x32"],
+                 ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX2", "SKX", "SPR"], "-spr", False])
     ])
 
     hw_arch = take_lines("check_isa.exe", "first").split()[1]
