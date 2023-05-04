@@ -734,6 +734,12 @@ struct Globals {
     /** Indicates whether warnings should be issued as errors. */
     bool warningsAsErrors;
 
+    /** Preserve wrap-around on signed integer overflow by disabling the
+        nsw attribute when emitting arithmetic for signed integer
+        expressions.  Without this disabled, the compiler may rely on UB
+        behavior for optimizations on signed integer types.  */
+    bool wrapSignedInt;
+
     /** Indicates whether line wrapping of error messages to the terminal
         width should be disabled. */
     bool disableLineWrap;
@@ -911,5 +917,12 @@ class Traceable {
   public:
     void *operator new(size_t size) { return BookKeeper::in().add(static_cast<Traceable *>(::operator new(size))); }
     virtual ~Traceable() = default;
+};
+
+// An enum class enumerating wrap semantic settings for use with BinaryOperator and other
+// signed arithmetic IR emitters in cases of signed overflow
+enum class WrapSemantics {
+    NSW = 0, // Do not preserve wraparound behavior
+    None = 1 // Preserve wraparound behavior
 };
 } // namespace ispc
