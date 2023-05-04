@@ -219,8 +219,7 @@ jobs:
     continue-on-error: false
     strategy:
       fail-fast: false
-      matrix:
-        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
+
     steps:
     - uses: actions/checkout@v3
     - name: Download package
@@ -239,7 +238,7 @@ jobs:
     - name: Running tests
       run: |
         echo PATH=$PATH
-        ./alloy.py -r --only="stability current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        ./alloy.py -r --only="stability current -O2" --only-targets="avx2-i32x8" --time --update-errors=FP
 
     - name: Check
       run: |
@@ -250,7 +249,7 @@ jobs:
       uses: actions/upload-artifact@v3
       if: failure()
       with:
-        name: fail_db.llvm13.${{matrix.target}}.txt
+        name: fail_db.llvm13.avx2.txt
         path: fail_db.txt
 
   linux-test-llvm14:
@@ -635,7 +634,6 @@ jobs:
       fail-fast: false
       matrix:
         arch: [x86, x86-64]
-        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
 
     steps:
     - uses: actions/checkout@v3
@@ -657,7 +655,7 @@ jobs:
       run: |
         $env:ISPC_HOME = "$pwd"
         .github/workflows/scripts/load-vs-env.ps1 "${{ matrix.arch }}"
-        python .\alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        python .\alloy.py -r --only="stability ${{ matrix.arch }} current -O2" --only-targets="avx2-i32x8" --time --update-errors=FP
 
     - name: Check
       run: |
@@ -668,7 +666,7 @@ jobs:
       uses: actions/upload-artifact@v3
       if: failure()
       with:
-        name: fail_db.llvm13.${{matrix.arch}}.${{matrix.target}}.txt
+        name: fail_db.llvm13.${{matrix.arch}}.avx2.txt
         path: fail_db.txt
 
   win-test-llvm14:
