@@ -1,3 +1,69 @@
+=== v1.20.0 === (5 May 2023)
+
+ISPC release with compile time improvements, enhancements in the ISPC Runtime,
+and a number of code generation fixes. The release is based on patched LLVM
+15.0.7.
+
+ISPC distribution changes.
+
+ISPC binaries got faster and smaller. ISPC binaries got smaller approximately
+by 1/3 and a few percent faster. The distribution macOS now includes x86_64,
+arm64 and Universal Binaries. On Linux a snap package with the latest ISPC is
+available.
+
+ISPC Runtime.
+
+ - ispcrt was split under the hood into GPU and CPU parts, which are loaded
+   dynamically. This means you don't need GPU dependencies when running CPU-only
+   code using ispcrt.
+ - ispcrt got support for fences to enable CPU/GPU asynchronous computations.
+ - ispcrt does not depend on OpenMP runtime anymore, but requires TBB.
+
+New targets.
+
+For better fine-tuning when targeting old platforms, sse4 targets were split
+into sse4.1 and sse4.2 targets. All changes are backward compatible - sse4 are
+aliased to sse4.2 and multi-target compilation allows only one of sse4 target,
+so build systems are not confused.
+
+Improvements for contributors
+
+We got a brand new Github Codespaces config, so you are welcome to start
+hacking on ISPC in browser. Give it a try!
+
+Recommended versions of Runtime Dependencies when targeting GPU.
+
+Linux:
+
+ - Intel(R) Graphics Compute Runtime
+   https://github.com/intel/compute-runtime/releases/tag/23.09.25812.14
+ - Level Zero Loader
+   https://github.com/oneapi-src/level-zero/releases/tag/v1.10.0
+ - Threading Building Blocks (TBB)
+
+Alternatively, you can use a validated gfx driver stack supporting Intel® Arc™
+available at https://dgpu-docs.intel.com/releases/stable_602_20230323.html
+
+Windows:
+
+ - Intel(R) Graphics Windows(R) DCH Drivers 31.0.101.4146
+   https://www.intel.com/content/www/us/en/download/726609/772016/intel-arc-iris-xe-graphics-whql-windows.html
+ - Level Zero Loader
+   https://github.com/oneapi-src/level-zero/releases/tag/v1.10.0
+ - OpenCL™ Offline Compiler (OCLOC)
+   https://www.intel.com/content/www/us/en/developer/articles/tool/oneapi-standalone-components.html
+   (this is needed for AoT compilation on Windows only)
+ - Supported platforms: Intel(R) Arc Graphics, 11th-13th Gen Intel(R) Core
+   processor graphics
+
+Components revisions used in GPU-enabled build:
+ - https://github.com/KhronosGroup/SPIRV-LLVM-Translator/commit/855eb27
+ - https://github.com/intel/vc-intrinsics/commit/29fe787
+ - https://github.com/oneapi-src/level-zero/commit/0d56d8e (v1.10.0)
+ - https://github.com/llvm/llvm-project/commit/8dfdcc7 (llvmorg-15.0.7) +
+   patches from llvm_patches folder
+
+
 === v1.19.0 === (28 February 2022)
 
 ISPC release with long-awaited function templates technical preview; new
