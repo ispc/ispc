@@ -67,6 +67,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.17.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.18.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.19.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.20.0`_
 
 * `Getting Started with ISPC`_
 
@@ -531,6 +532,16 @@ Templates`_ section for more details. Two new keywords were introduced: ``templa
 and ``typename``.
 
 ``ISPC_FP16_SUPPORTED`` macro was introduced for the targets supporting FP16.
+
+Updating ISPC Programs For Changes In ISPC 1.20.0
+-------------------------------------------------
+
+New version of `sse4` targets were added, now you can specify either `sse4.1`
+or `sse4.2`, for example `sse4.2-i32x4`. The changes are fully backward
+compatible, meaning that `sse4` versions are still accepted and aliased to
+`sse4.2`. Multi-target compilation accepts only one of `sse4`/`sse4.1`/`sse4.2`
+targets. All of these targets will produce an object file with `sse4` suffix in
+multi-target compilation.
 
 Getting Started with ISPC
 =========================
