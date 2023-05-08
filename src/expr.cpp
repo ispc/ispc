@@ -5286,6 +5286,12 @@ MemberExpr *MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos i
     if (CastType<StructType>(exprType) != nullptr) {
         const StructType *st = CastType<StructType>(exprType);
         if (st->IsDefined()) {
+            std::string elemName(id);
+            const Type *elemType = st->GetElementType(elemName);
+            if (elemType == nullptr) {
+                Error(p, "'%s' has no member named \"%s\"", st->GetString().c_str(), id);
+                return nullptr;
+            }
             return new StructMemberExpr(e, id, p, idpos, derefLValue);
         } else {
             Error(p,
