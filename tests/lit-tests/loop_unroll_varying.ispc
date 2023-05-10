@@ -13,7 +13,7 @@
 // CHECKO0:         for_loop:
 // CHECKO0:         call void @goo_for___
 // CHECKO0-NOT:     call void @goo_for___
-// CHECKO0:         br label %{{[a-zA-Z_][a-zA-Z0-9_]*}}
+// CHECKO0:         br label %{{[a-zA-Z_][a-zA-Z0-9_.]*}}
 // CHECKO0:         }
 
 // CHECKO2:         for_loop{{.*}}:
@@ -23,7 +23,7 @@
 // CHECKO2:         for_loop{{.*}}:
 // CHECKO2:         call void @goo_for___
 // CHECKO2-NOT:     call void @goo_for___
-// CHECKO2:         br i1 %{{[a-zA-Z_][a-zA-Z0-9_]*}}
+// CHECKO2:         br {{(i1)|(label)}} %{{[a-zA-Z_][a-zA-Z0-9_.]*}}
 // CHECKO2:         }
 
 extern void goo_for(int);
@@ -40,7 +40,7 @@ void foo_for() {
 // CHECKO0:         for_loop:
 // CHECKO0:         call void @goo_for_unroll8___
 // CHECKO0-NOT:     call void @goo_for_unroll8___
-// CHECKO0:         br label %{{[a-zA-Z_][a-zA-Z0-9_]*}}
+// CHECKO0:         br label %{{[a-zA-Z_][a-zA-Z0-9_.]*}}
 // CHECKO0:         }
 
 // CHECKO2:         for_loop{{.*}}:
@@ -60,7 +60,7 @@ void foo_for() {
 // CHECKO2:         for_loop{{.*}}:
 // CHECKO2:         call void @goo_for_unroll8___
 // CHECKO2-NOT:     call void @goo_for_unroll8___
-// CHECKO2:         br i1 %{{[a-zA-Z_][a-zA-Z0-9_]*}}
+// CHECKO2:         br {{(i1)|(label)}} %{{[a-zA-Z_][a-zA-Z0-9_.]*}}
 // CHECKO2:         }
 
 extern void goo_for_unroll8(int);
@@ -77,7 +77,7 @@ void foo_for_unroll8() {
 // CHECKO0:         for_loop:
 // CHECKO0:         call void @goo_for_packed___
 // CHECKO0-NOT:     call void @goo_for_packed___
-// CHECKO0:         br label %{{[a-zA-Z_][a-zA-Z0-9_]*}}
+// CHECKO0:         br label %{{[a-zA-Z_][a-zA-Z0-9_.]*}}
 // CHECKO0:         }
 
 // CHECKO2:         for_loop{{.*}}:
@@ -89,7 +89,7 @@ void foo_for_unroll8() {
 // CHECKO2:         for_loop{{.*}}:
 // CHECKO2:         call void @goo_for_packed___
 // CHECK02-NOT:     call void @goo_for_packed___
-// CHECKO2:         br i1 %{{[a-zA-Z_][a-zA-Z0-9_]*}}
+// CHECKO2:         br {{(i1)|(label)}} %{{[a-zA-Z_][a-zA-Z0-9_.]*}}
 // CHECKO2:         }
 
 extern void goo_for_packed(int);
@@ -108,7 +108,7 @@ void foo_for_packed() {
 // COM: CHECKO0:         for_loop:
 // COM: CHECKO0:         load <{{[0-9]*}} x i32>, <{{[0-9]*}} x i32>* %iter1{{[0-9]*}}
 // COM: CHECKO0-NOT:     load <{{[0-9]*}} x i32>, <{{[0-9]*}} x i32>* %iter1{{[0-9]*}}
-// COM: CHECKO0:         br label %{{[a-zA-Z_][a-zA-Z0-9_]*}}
+// COM: CHECKO0:         br label %{{[a-zA-Z_][a-zA-Z0-9_.]*}}
 // COM: CHECKO0:         }
 
 // COM: CHECKO2:         for_loop{{.*}}:
@@ -120,7 +120,7 @@ void foo_for_packed() {
 // COM: CHECKO2:         for_loop{{.*}}:
 // COM: CHECKO2:         load <{{[0-9]*}} x i32>, <{{[0-9]*}} x i32>* %iter1{{[0-9]*}}
 // COM: CHECKO2-NOT:     load <{{[0-9]*}} x i32>, <{{[0-9]*}} x i32>* %iter1{{[0-9]*}}
-// COM: CHECKO2:         br i1 %{{[a-zA-Z_][a-zA-Z0-9_]*}}
+// COM: CHECKO2:         br {{(i1)|(label)}} %{{[a-zA-Z_][a-zA-Z0-9_.]*}}
 // COM: CHECKO2:         }
 
 //void foo_for_packed_nocall(uniform int _in[], uniform int _out[], const uniform int k) {
@@ -136,13 +136,13 @@ void foo_for_packed() {
 // CHECKO0:         foreach_full_body:
 // CHECKO0:         call <{{[0-9]*}} x i32> @goo_foreach___
 // CHECKO0-NOT:     call <{{[0-9]*}} x i32> @goo_foreach___
-// CHECKO0:         br label %{{[a-zA-Z_][a-zA-Z0-9_]*}}
+// CHECKO0:         br label %{{[a-zA-Z_][a-zA-Z0-9_.]*}}
 // CHECKO0:         }
 
 // CHECKO2:         foreach_full_body:
 // CHECKO2-COUNT-3: call <{{[0-9]*}} x i32> @goo_foreach___
 // CHECKO2-NOT:     call <{{[0-9]*}} x i32> @goo_foreach___
-// CHECKO2:         br {{(i1)|(label)}} %{{[a-zA-Z_][a-zA-Z0-9_]*}}
+// CHECKO2:         br {{(i1)|(label)}} %{{[a-zA-Z_][a-zA-Z0-9_.]*}}
 // CHECKO2:         }
 
 extern int goo_foreach(int);
@@ -161,13 +161,13 @@ int foo_foreach() {
 // CHECKO0:         foreach_full_body:
 // CHECKO0:         call <{{[0-9]*}} x i32> @goo_foreach_unroll8___
 // CHECKO0-NOT:     call <{{[0-9]*}} x i32> @goo_foreach_unroll8___
-// CHECKO0:         br label %{{[a-zA-Z_][a-zA-Z0-9_]*}}
+// CHECKO0:         br label %{{[a-zA-Z_][a-zA-Z0-9_.]*}}
 // CHECKO0:         }
 
 // CHECKO2:         foreach_full_body:
 // CHECKO2-COUNT-8: call <{{[0-9]*}} x i32> @goo_foreach_unroll8___
 // CHECKO2-NOT:     call <{{[0-9]*}} x i32> @goo_foreach_unroll8___
-// CHECKO2:         br {{(i1)|(label)}} %{{[a-zA-Z_][a-zA-Z0-9_]*}}
+// CHECKO2:         br {{(i1)|(label)}} %{{[a-zA-Z_][a-zA-Z0-9_.]*}}
 // CHECKO2:         }
 
 extern int goo_foreach_unroll8(int);
@@ -186,13 +186,13 @@ int foo_foreach_unroll8() {
 // CHECKO0:         foreach_full_body:
 // CHECKO0:         load <{{[0-9]*}} x i32>, {{.*}} %iter1{{[0-9]*}}
 // CHECKO0-NOT:     load <{{[0-9]*}} x i32>, {{.*}} %iter1{{[0-9]*}}
-// CHECKO0:         br label %{{[a-zA-Z_][a-zA-Z0-9_]*}}
+// CHECKO0:         br label %{{[a-zA-Z_][a-zA-Z0-9_.]*}}
 // CHECKO0:         }
 
 // CHECKO2:         foreach_full_body:
 // CHECKO2-COUNT-4: load <{{[0-9]*}} x i32>, {{.*}} %ptr
 // CHECKO2-NOT:     load <{{[0-9]*}} x i32>, {{.*}} %ptr
-// CHECKO2:         br {{(i1)|(label)}} %{{[a-zA-Z_][a-zA-Z0-9_]*}}
+// CHECKO2:         br {{(i1)|(label)}} %{{[a-zA-Z_][a-zA-Z0-9_.]*}}
 // CHECKO2:         }
 
 extern int goo_foreach_nocall(int);
