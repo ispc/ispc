@@ -366,6 +366,7 @@ struct Fence : public ispcrt::base::Fence {
                 return ISPCRT_FENCE_SIGNALED;
             default:
                 L0_THROW_IF(res);
+                return ISPCRT_FENCE_UNSIGNALED;
         }
     }
 
