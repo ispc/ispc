@@ -26,8 +26,10 @@
 #include <llvm/ADT/Triple.h>
 #include <llvm/Analysis/BasicAliasAnalysis.h>
 #include <llvm/Analysis/ConstantFolding.h>
+#include <llvm/Analysis/GlobalsModRef.h>
 #include <llvm/Analysis/OptimizationRemarkEmitter.h>
 #include <llvm/Analysis/Passes.h>
+#include <llvm/Analysis/ScopedNoAliasAA.h>
 #include <llvm/Analysis/TargetLibraryInfo.h>
 #include <llvm/Analysis/TargetTransformInfo.h>
 #include <llvm/Analysis/TypeBasedAliasAnalysis.h>
@@ -122,8 +124,29 @@ class DebugModulePassManager {
         // Add alias analysis for more aggressive optimizations
         if (m_optLevel != 0) {
             llvm::AAManager aam;
+            // The order in which these are registered determines their priority when
+            // being queried.
+
+            // First we register the basic alias analysis that provides the majority of
+            // per-function local AA logic. This is a stateless, on-demand local set of
+            // AA techniques.
             aam.registerFunctionAnalysis<llvm::BasicAA>();
+
+            // Next we query fast, specialized alias analyses that wrap IR-embedded
+            // information about aliasing.
+            aam.registerFunctionAnalysis<llvm::ScopedNoAliasAA>();
             aam.registerFunctionAnalysis<llvm::TypeBasedAA>();
+
+            // Add support for querying global aliasing information when available.
+            // Because the `AAManager` is a function analysis and `GlobalsAA` is a module
+            // analysis, all that the `AAManager` can do is query for any *cached*
+            // results from `GlobalsAA` through a readonly proxy.
+            // aam.registerModuleAnalysis<llvm::GlobalsAA>();
+
+            // Add target-specific alias analyses.
+            if (targetMachine) {
+                targetMachine->registerDefaultAliasAnalyses(aam);
+            }
             fam.registerPass([aam] { return std::move(aam); });
         }
     }
