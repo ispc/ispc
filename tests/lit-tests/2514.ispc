@@ -1,4 +1,4 @@
-// RUN: not %{ispc} --nostdlib --target=avx1-i32x4 %s > %t 2>&1
+// RUN: not %{ispc} --nostdlib --nowrap --target=avx1-i32x4 %s > %t 2>&1
 // RUN: FileCheck --input-file=%t %s
 
 // CHECK-NOT: FATAL ERROR: Unhandled signal sent to process
