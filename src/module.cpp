@@ -1253,7 +1253,7 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
         else
             return writeHeader(outFileName);
     } else if (outputType == Deps)
-        return writeDeps(outFileName, 0 != (flags & GenerateMakeRuleForDeps), depTargetFileName, sourceFileName);
+        return writeDeps(outFileName, flags.isMakeRuleDeps(), depTargetFileName, sourceFileName);
     else if (outputType == CPPStub)
         return writeCPPStub(outFileName);
     else if (outputType == HostStub)
@@ -3098,7 +3098,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         if (targets.size() == 1) {
             target = targets[0];
         }
-        g->target = new Target(arch, cpu, target, 0 != (outputFlags & GeneratePIC), g->printTarget);
+        g->target = new Target(arch, cpu, target, outputFlags.isPIC(), g->printTarget);
         if (!g->target->isValid())
             return 1;
 
@@ -3130,7 +3130,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             if (headerFileName != nullptr)
                 if (!m->writeOutput(Module::Header, outputFlags, headerFileName))
                     return 1;
-            if (depsFileName != nullptr || (outputFlags & Module::OutputDepsToStdout)) {
+            if (depsFileName != nullptr || outputFlags.isDepsToStdout()) {
                 std::string targetName;
                 if (depsTargetName)
                     targetName = depsTargetName;
@@ -3221,7 +3221,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
 
         std::vector<Module *> modules(targets.size());
         for (unsigned int i = 0; i < targets.size(); ++i) {
-            g->target = new Target(arch, cpu, targets[i], 0 != (outputFlags & GeneratePIC), g->printTarget);
+            g->target = new Target(arch, cpu, targets[i], outputFlags.isPIC(), g->printTarget);
             if (!g->target->isValid())
                 return 1;
 
@@ -3320,7 +3320,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         Assert(firstTarget != ISPCTarget::none);
         Assert(firstTargetMachine != nullptr);
 
-        g->target = new Target(arch, cpu, firstTarget, 0 != (outputFlags & GeneratePIC), false);
+        g->target = new Target(arch, cpu, firstTarget, outputFlags.isPIC(), false);
         if (!g->target->isValid()) {
             return 1;
         }
@@ -3355,7 +3355,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             }
         }
 
-        if (depsFileName != nullptr || (outputFlags & Module::OutputDepsToStdout)) {
+        if (depsFileName != nullptr || outputFlags.isDepsToStdout()) {
             std::string targetName;
             if (depsTargetName)
                 targetName = depsTargetName;

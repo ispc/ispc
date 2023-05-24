@@ -595,7 +595,7 @@ int main(int Argc, char *Argv[]) {
     g = new Globals;
 
     Module::OutputType ot = Module::Object;
-    Module::OutputFlags flags = Module::NoFlags;
+    Module::OutputFlags flags;
     Arch arch = Arch::none;
     std::vector<ISPCTarget> targets;
     const char *cpu = nullptr, *intelAsmSyntax = nullptr;
@@ -942,7 +942,7 @@ int main(int Argc, char *Argv[]) {
         else if (!strcmp(argv[i], "--nocpp"))
             g->runCPP = false;
         else if (!strcmp(argv[i], "--pic"))
-            flags |= Module::GeneratePIC;
+            flags.setPIC();
 #ifndef ISPC_IS_HOST_WINDOWS
         else if (!strcmp(argv[i], "--colored-output"))
             g->forceColoredOutput = true;
@@ -954,12 +954,13 @@ int main(int Argc, char *Argv[]) {
         } else if (!strcmp(argv[i], "-MMM")) {
             if (++i != argc) {
                 depsFileName = argv[i];
-                flags |= Module::GenerateFlatDeps;
+                flags.setFlatDeps();
             } else {
                 errorHandler.AddError("No output file name specified after -MMM option.");
             }
         } else if (!strcmp(argv[i], "-M")) {
-            flags |= Module::GenerateMakeRuleForDeps | Module::OutputDepsToStdout;
+            flags.setMakeRuleDeps();
+            flags.setDepsToStdout();
         } else if (!strcmp(argv[i], "-MF")) {
             depsFileName = nullptr;
             if (++i != argc) {
@@ -1049,7 +1050,7 @@ int main(int Argc, char *Argv[]) {
 
     // Default settings for PS4
     if (g->target_os == TargetOS::ps4 || g->target_os == TargetOS::ps5) {
-        flags |= Module::GeneratePIC;
+        flags.setPIC();
         if (!cpu) {
             if (g->target_os == TargetOS::ps4) {
                 // Default for PS4 is btver2, but do not enforce it.
@@ -1067,7 +1068,7 @@ int main(int Argc, char *Argv[]) {
 
     // Default setting for "custom_linux"
     if (g->target_os == TargetOS::custom_linux) {
-        flags |= Module::GeneratePIC;
+        flags.setPIC();
         if (!cpu) {
             cpu = "cortex-a57";
         }
@@ -1098,21 +1099,21 @@ int main(int Argc, char *Argv[]) {
 #endif
     }
 
-    if (depsFileName != nullptr)
-        flags &= ~Module::OutputDepsToStdout;
+    if (depsFileName != nullptr) {
+        flags.setDepsToStdout(false);
+    }
 
-    if (depsFileName != nullptr && 0 == (flags & (Module::GenerateFlatDeps | Module::GenerateMakeRuleForDeps))) {
+    if (depsFileName != nullptr && !flags.isFlatDeps() && !flags.isMakeRuleDeps()) {
         Warning(SourcePos(), "Dependency file name specified with -MF, but no "
                              "mode specified; did you forget to specify -M or -MMM? "
                              "No dependency output will be generated.");
         depsFileName = nullptr;
     }
 
-    if ((Module::GenerateFlatDeps | Module::GenerateMakeRuleForDeps) ==
-        (flags & (Module::GenerateFlatDeps | Module::GenerateMakeRuleForDeps))) {
+    if (flags.isFlatDeps() && flags.isMakeRuleDeps()) {
         Warning(SourcePos(), "Both -M and -MMM specified on the command line. "
                              "-MMM takes precedence.");
-        flags &= Module::GenerateMakeRuleForDeps;
+        flags.setFlatDeps(false);
     }
 
     if (g->onlyCPP && outFileName == nullptr) {
@@ -1120,14 +1121,14 @@ int main(int Argc, char *Argv[]) {
     }
 
     if (outFileName == nullptr && headerFileName == nullptr &&
-        (depsFileName == nullptr && 0 == (flags & Module::OutputDepsToStdout)) && hostStubFileName == nullptr &&
+        (depsFileName == nullptr && !flags.isDepsToStdout()) && hostStubFileName == nullptr &&
         devStubFileName == nullptr) {
         Warning(SourcePos(), "No output file or header file name specified. "
                              "Program will be compiled and warnings/errors will "
                              "be issued, but no output will be generated.");
     }
 
-    if (g->target_os == TargetOS::windows && (flags & Module::GeneratePIC) != 0) {
+    if (g->target_os == TargetOS::windows && flags.isPIC()) {
         Warning(SourcePos(), "--pic switch for Windows target will be ignored.");
     }
 
