@@ -113,9 +113,12 @@ class Module {
     };
 
     class OutputFlags {
-    public:
-        OutputFlags() : pic(false), flatDeps(false), makeRuleDeps(false), depsToStdout(false) {}
-        OutputFlags(OutputFlags &o) : pic(o.pic), flatDeps(o.flatDeps), makeRuleDeps(o.makeRuleDeps), depsToStdout(o.depsToStdout) {}
+      public:
+        OutputFlags()
+            : pic(false), flatDeps(false), makeRuleDeps(false), depsToStdout(false), mcModel(MCModel::Default) {}
+        OutputFlags(OutputFlags &o)
+            : pic(o.pic), flatDeps(o.flatDeps), makeRuleDeps(o.makeRuleDeps), depsToStdout(o.depsToStdout),
+              mcModel(o.mcModel) {}
 
         void setPIC(bool v = true) { pic = v; }
         bool isPIC() const { return pic; }
@@ -125,8 +128,10 @@ class Module {
         bool isMakeRuleDeps() const { return makeRuleDeps; }
         void setDepsToStdout(bool v = true) { depsToStdout = v; }
         bool isDepsToStdout() const { return depsToStdout; }
+        void setMCModel(MCModel m) { mcModel = m; }
+        MCModel getMCModel() const { return mcModel; }
 
-    private:
+      private:
         // --pic
         bool pic;
         // -MMM
@@ -135,6 +140,8 @@ class Module {
         bool makeRuleDeps;
         // deps output to stdout
         bool depsToStdout;
+        // --mcmodel value
+        MCModel mcModel;
     };
 
     /** Compile the given source file, generating assembly, object file, or

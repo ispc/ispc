@@ -106,6 +106,10 @@ static void lPrintVersion() {
     printf("        fast\t\t\t\tUse high-performance but lower-accuracy math functions\n");
     printf("        svml\t\t\t\tUse the Intel(r) SVML math libraries\n");
     printf("        system\t\t\t\tUse the system's math library (*may be quite slow*)\n");
+    printf("    [--mcmodel=<value>]\t\t\tDefine the code model to use for code generation\n");
+    printf("        small\t\t\t\tThe program and its symbols must be linked in the lower 2GB of the address space "
+           "(default)\n");
+    printf("        large\t\t\t\tThe program has no assumprion about addresses and sizes of sections\n");
     printf("    [-MMM <filename>]\t\t\tWrite #include dependencies to given file.\n");
     printf("    [-M]\t\t\t\tOutput a rule suitable for `make' describing the dependencies of the main source file to "
            "stdout.\n");
@@ -941,8 +945,18 @@ int main(int Argc, char *Argv[]) {
             g->includeStdlib = false;
         else if (!strcmp(argv[i], "--nocpp"))
             g->runCPP = false;
-        else if (!strcmp(argv[i], "--pic"))
-            flags.setPIC();
+        else if (!strncmp(argv[i], "--mcmodel=", 10)) {
+            const char *value = argv[i] + 10;
+            if (!strcmp(value, "small")) {
+                flags.setMCModel(MCModel::Small);
+            } else if (!strcmp(value, "large")) {
+                flags.setMCModel(MCModel::Large);
+            } else {
+                errorHandler.AddError("Unsupported code model \"%s\". Only small and large models are supported.",
+                                      value);
+            }
+        } else if (!strcmp(argv[i], "--pic"))
+            flags.setPIC(true);
 #ifndef ISPC_IS_HOST_WINDOWS
         else if (!strcmp(argv[i], "--colored-output"))
             g->forceColoredOutput = true;
@@ -1120,9 +1134,8 @@ int main(int Argc, char *Argv[]) {
         outFileName = "-"; // Assume stdout by default (-E mode)
     }
 
-    if (outFileName == nullptr && headerFileName == nullptr &&
-        (depsFileName == nullptr && !flags.isDepsToStdout()) && hostStubFileName == nullptr &&
-        devStubFileName == nullptr) {
+    if (outFileName == nullptr && headerFileName == nullptr && (depsFileName == nullptr && !flags.isDepsToStdout()) &&
+        hostStubFileName == nullptr && devStubFileName == nullptr) {
         Warning(SourcePos(), "No output file or header file name specified. "
                              "Program will be compiled and warnings/errors will "
                              "be issued, but no output will be generated.");
