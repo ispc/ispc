@@ -175,6 +175,26 @@ static void lDeclareSizeAndPtrIntTypes(SymbolTable *symbolTable) {
  */
 static void lStripUnusedDebugInfo(llvm::Module *module) { return; }
 
+/** Code model needs to be set twice - it's passed directly to the TargetMachine and it's set for the llvm::Module.
+    TargetMachine setting is directly governing the code generation, while setting it for the Module yields in
+    metadata node, which is used to ensure that the model setting survives through LTO. We don't necesseraly need
+    the latter, but it's possible to use LLVM IR from ISPC for LTO mode or pass it manually to llc.
+ */
+static void lSetCodeModel(llvm::Module *module) {
+    MCModel model = g->target->getMCModel();
+    switch (model) {
+    case ispc::MCModel::Small:
+        module->setCodeModel(llvm::CodeModel::Small);
+        break;
+    case ispc::MCModel::Large:
+        module->setCodeModel(llvm::CodeModel::Large);
+        break;
+    case ispc::MCModel::Default:
+        // Do nothing.
+        break;
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // Module
 
@@ -195,6 +215,7 @@ Module::Module(const char *fn) : filename(fn) {
 
     // DataLayout information supposed to be managed in single place in Target class.
     module->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
+    lSetCodeModel(module);
 
     // Version strings.
     // Have ISPC details and LLVM details as two separate strings attached to !llvm.ident.
@@ -2978,6 +2999,8 @@ static llvm::Module *lInitDispatchModule() {
     Assert(dispatch);
     AddBitcodeToModule(dispatch, module);
 
+    lSetCodeModel(module);
+
     return module;
 }
 
@@ -3098,7 +3121,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         if (targets.size() == 1) {
             target = targets[0];
         }
-        g->target = new Target(arch, cpu, target, outputFlags.isPIC(), g->printTarget);
+        g->target = new Target(arch, cpu, target, outputFlags.isPIC(), outputFlags.getMCModel(), g->printTarget);
         if (!g->target->isValid())
             return 1;
 
@@ -3221,7 +3244,8 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
 
         std::vector<Module *> modules(targets.size());
         for (unsigned int i = 0; i < targets.size(); ++i) {
-            g->target = new Target(arch, cpu, targets[i], outputFlags.isPIC(), g->printTarget);
+            g->target =
+                new Target(arch, cpu, targets[i], outputFlags.isPIC(), outputFlags.getMCModel(), g->printTarget);
             if (!g->target->isValid())
                 return 1;
 
@@ -3320,7 +3344,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         Assert(firstTarget != ISPCTarget::none);
         Assert(firstTargetMachine != nullptr);
 
-        g->target = new Target(arch, cpu, firstTarget, outputFlags.isPIC(), false);
+        g->target = new Target(arch, cpu, firstTarget, outputFlags.isPIC(), outputFlags.getMCModel(), false);
         if (!g->target->isValid()) {
             return 1;
         }
