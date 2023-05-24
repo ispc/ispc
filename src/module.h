@@ -112,12 +112,29 @@ class Module {
 #endif
     };
 
-    enum OutputFlags : int {
-        NoFlags = 0,
-        GeneratePIC = 0x1,
-        GenerateFlatDeps = 0x2,        /** Dependencies will be output as a flat list. */
-        GenerateMakeRuleForDeps = 0x4, /** Dependencies will be output in a make rule format instead of a flat list. */
-        OutputDepsToStdout = 0x8,      /** Dependency information will be output to stdout instead of file. */
+    class OutputFlags {
+    public:
+        OutputFlags() : pic(false), flatDeps(false), makeRuleDeps(false), depsToStdout(false) {}
+        OutputFlags(OutputFlags &o) : pic(o.pic), flatDeps(o.flatDeps), makeRuleDeps(o.makeRuleDeps), depsToStdout(o.depsToStdout) {}
+
+        void setPIC(bool v = true) { pic = v; }
+        bool isPIC() const { return pic; }
+        void setFlatDeps(bool v = true) { flatDeps = v; }
+        bool isFlatDeps() const { return flatDeps; }
+        void setMakeRuleDeps(bool v = true) { makeRuleDeps = v; }
+        bool isMakeRuleDeps() const { return makeRuleDeps; }
+        void setDepsToStdout(bool v = true) { depsToStdout = v; }
+        bool isDepsToStdout() const { return depsToStdout; }
+
+    private:
+        // --pic
+        bool pic;
+        // -MMM
+        bool flatDeps;
+        // -M
+        bool makeRuleDeps;
+        // deps output to stdout
+        bool depsToStdout;
     };
 
     /** Compile the given source file, generating assembly, object file, or
@@ -130,8 +147,7 @@ class Module {
         @param targets      %Target ISAs; this parameter may give a single target
                             ISA, or may give a comma-separated list of them in
                             case we are compiling to multiple ISAs.
-        @param generatePIC  Indicates whether position-independent code should
-                            be generated.
+        @param OutputFlags  A set of flags for output generation.
         @param outputType   %Type of output to generate (object files, assembly,
                             LLVM bitcode.)
         @param outFileName  Base name of output filename for object files, etc.
@@ -226,13 +242,4 @@ class Module {
     void clearCPPBuffer();
 };
 
-inline Module::OutputFlags &operator|=(Module::OutputFlags &lhs, const __underlying_type(Module::OutputFlags) rhs) {
-    return lhs = (Module::OutputFlags)((__underlying_type(Module::OutputFlags))lhs | rhs);
-}
-inline Module::OutputFlags &operator&=(Module::OutputFlags &lhs, const __underlying_type(Module::OutputFlags) rhs) {
-    return lhs = (Module::OutputFlags)((__underlying_type(Module::OutputFlags))lhs & rhs);
-}
-inline Module::OutputFlags operator|(const Module::OutputFlags lhs, const Module::OutputFlags rhs) {
-    return (Module::OutputFlags)((__underlying_type(Module::OutputFlags))lhs | rhs);
-}
 } // namespace ispc
