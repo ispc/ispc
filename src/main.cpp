@@ -109,31 +109,31 @@ static void lPrintVersion() {
     printf("        small\t\t\t\tThe program and its symbols must be linked in the lower 2GB of the address space "
            "(default)\n");
     printf("        large\t\t\t\tThe program has no assumprion about addresses and sizes of sections\n");
-    printf("    [-MMM <filename>]\t\t\tWrite #include dependencies to given file.\n");
+    printf("    [-MMM <filename>]\t\t\tWrite #include dependencies to given file\n");
     printf("    [-M]\t\t\t\tOutput a rule suitable for `make' describing the dependencies of the main source file to "
-           "stdout.\n");
-    printf("    [-MF <filename>]\t\t\tWhen used with `-M', specifies a file to write the dependencies to.\n");
+           "stdout\n");
+    printf("    [-MF <filename>]\t\t\tWhen used with `-M', specifies a file to write the dependencies to\n");
     printf("    [-MT <filename>]\t\t\tWhen used with `-M', changes the target of the rule emitted by dependency "
-           "generation.\n");
+           "generation\n");
     printf("    [--no-omit-frame-pointer]\t\tDisable frame pointer omission. It may be useful for profiling\n");
     printf("    [--nostdlib]\t\t\tDon't make the ispc standard library available\n");
     printf("    [--no-pragma-once]\t\t\tDon't use #pragma once in created headers\n");
     printf("    [--nocpp]\t\t\t\tDon't run the C preprocessor\n");
     printf("    [-o <name>/--outfile=<name>]\tOutput filename (may be \"-\" for standard output)\n");
-    printf("    [-O0/-O(1/2/3)]\t\t\tSet optimization level. Default behavior is to optimize for speed.\n");
-    printf("        -O0\t\t\t\tOptimizations disabled.\n");
-    printf("        -O1\t\t\t\tOptimization for size.\n");
-    printf("        -O2/O3\t\t\t\tOptimization for speed.\n");
+    printf("    [-O0/-O(1/2/3)]\t\t\tSet optimization level. Default behavior is to optimize for speed\n");
+    printf("        -O0\t\t\t\tOptimizations disabled\n");
+    printf("        -O1\t\t\t\tOptimization for size\n");
+    printf("        -O2/O3\t\t\t\tOptimization for speed\n");
     printf("    [--opt=<option>]\t\t\tSet optimization option\n");
-    printf("        disable-assertions\t\tRemove assertion statements from final code.\n");
+    printf("        disable-assertions\t\tRemove assertion statements from final code\n");
     printf("        disable-fma\t\t\tDisable 'fused multiply-add' instructions (on targets that support them)\n");
-    printf("        disable-loop-unroll\t\tDisable loop unrolling.\n");
+    printf("        disable-loop-unroll\t\tDisable loop unrolling\n");
     printf(
         "        disable-zmm\t\t\tDisable using zmm registers for avx512 targets in favour of ymm. This also affects "
-        "ABI.\n");
+        "ABI\n");
 #ifdef ISPC_XE_ENABLED
-    printf("        emit-xe-hardware-mask\t\tEnable emitting of Xe implicit hardware mask.\n");
-    printf("        enable-xe-foreach-varying\t\tEnable experimental foreach support inside varying control flow.\n");
+    printf("        emit-xe-hardware-mask\t\tEnable emitting of Xe implicit hardware mask\n");
+    printf("        enable-xe-foreach-varying\t\tEnable experimental foreach support inside varying control flow\n");
 #endif
     printf("        fast-masked-vload\t\tFaster masked vector loads on SSE (may go past end of array)\n");
     printf("        fast-math\t\t\tPerform non-IEEE-compliant optimizations of numeric expressions\n");
@@ -145,7 +145,7 @@ static void lPrintVersion() {
     printf("    ");
     char targetHelp[2048];
     snprintf(targetHelp, sizeof(targetHelp),
-             "[--target=<t>]\t\t\tSelect target ISA and width.\n"
+             "[--target=<t>]\t\t\tSelect target ISA and width\n"
              "<t>={%s}",
              g->target_registry->getSupportedTargets().c_str());
     PrintWithWordBreaks(targetHelp, 24, TerminalWidth(), stdout);
@@ -153,9 +153,9 @@ static void lPrintVersion() {
     snprintf(targetHelp, sizeof(targetHelp), "[--target-os=<os>]\t\t\tSelect target OS.  <os>={%s}",
              g->target_registry->getSupportedOSes().c_str());
     PrintWithWordBreaks(targetHelp, 24, TerminalWidth(), stdout);
-    printf("    [--time-trace]\t\t\tTurn on time profiler. Generates JSON file based on output filename.\n");
+    printf("    [--time-trace]\t\t\tTurn on time profiler. Generates JSON file based on output filename\n");
     printf("    [--time-trace-granularity=<value>]\tMinimum time granularity (in microseconds) traced by time "
-           "profiler.\n");
+           "profiler\n");
     printf("    [--vectorcall/--no-vectorcall]\tEnable/disable vectorcall calling convention on Windows (x64 only). "
            "Disabled by default\n");
     printf("    [--version]\t\t\t\tPrint ispc version\n");
@@ -169,7 +169,7 @@ static void lPrintVersion() {
     printf("        intel\t\t\t\tEmit Intel-style assembly\n");
     printf("        att\t\t\t\tEmit AT&T-style assembly\n");
 #ifdef ISPC_XE_ENABLED
-    printf("    [--xe-stack-mem-size=<value>\t\tSet size of stateless stack memory in VC backend.\n");
+    printf("    [--xe-stack-mem-size=<value>\t\tSet size of stateless stack memory in VC backend\n");
 #endif
     printf("    [@<filename>]\t\t\tRead additional arguments from the given file\n");
     printf("    <file to compile or \"-\" for stdin>\n");
@@ -204,7 +204,7 @@ static void lPrintVersion() {
     printf("    [--debug-llvm]\t\t\tEnable LLVM debugging information (dumps to stderr)\n");
     printf("    [--debug-phase=<value>]\t\tSet optimization phases to dump. "
            "--debug-phase=first,210:220,300,305,310:last\n");
-    printf("    [--[no-]discard-value-names]\tDo not discard/Discard value names when generating LLVM IR.\n");
+    printf("    [--[no-]discard-value-names]\tDo not discard/Discard value names when generating LLVM IR\n");
     printf("    [--dump-file[=<path>]]\t\tDump module IR to file(s) in "
            "current directory, or to <path> if specified\n");
     printf("    [--fuzz-seed=<value>]\t\tSeed value for RNG for fuzz testing\n");
@@ -224,9 +224,9 @@ static void lPrintVersion() {
 #ifdef ISPC_XE_ENABLED
     printf("        disable-xe-gather-coalescing\t\tDisable Xe gather coalescing\n");
     printf("        threshold-for-xe-gather-coalescing=<0>\tMinimal number of eliminated memory instructions for "
-           "Xe gather coalescing.\n");
+           "Xe gather coalescing\n");
     printf("        build-llvm-loads-on-xe-gather-coalescing\t\tExperimental: build standard llvm loads on "
-           "Xe gather coalescing.\n");
+           "Xe gather coalescing\n");
     printf("        enable-xe-unsafe-masked-load\t\tEnable Xe unsafe masked load\n");
 #endif
     printf("    [--print-target]\t\t\tPrint target's information\n");
