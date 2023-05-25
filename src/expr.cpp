@@ -728,54 +728,86 @@ void ispc::InitSymbol(AddressInfo *ptrInfo, const Type *symType, Expr *initExpr,
                 return;
             }
 
-            // When we initialize uniform vector try to construct a vector from initializers and use a vector
-            // instruction for type conversion if needed. We can generate one instruction for type conversion when all
-            // initializers have the same atomic type. For example: const uniform float<4> f = {1.f, 2.f, 3.f, 4.f};
-            // const uniform double<4> d = {f[1], f[3], f.y, 0.0f};
-            // If it's not the case, or if initializer expression is not trivial (not of AtomicType), initialize vector
-            // per element.
+            // When we initialize a uniform vector, try to construct a vector from initializers and use a vector
+            // instructions for type conversion if needed. It makes sense to generate vector instruction for type
+            // conversion when at least two initializers are of the same atomic type. For example: const uniform
+            // float<4> f = {1.f, 2.f, 3.f, 4.f}; const uniform double<4> d = {f[1], 1.d, f.y, 0.d};
             if (symType->IsVectorType() && symType->IsUniformType() && nInits > 0) {
-                Expr *firstInit = exprList->exprs[0];
-                // Construct vector instruction only if initializer expression has AtomicType
-                // Get the type of first initializer expression
-                const AtomicType *firstInitType = CastType<AtomicType>(firstInit->GetType());
-                if (firstInitType) {
-                    bool isVectorIntializer = true;
-                    // Go through all initializer expressions and check if they are trivial and of the same type as
-                    // first expression
-                    for (int i = 0; i < nInits; ++i) {
-                        // Check if initializer expression is trivial AtomicType
-                        if (exprList->exprs[i]->GetType()->IsAtomicType() && exprList->exprs[i]->GetValue(ctx)) {
-                            if (!Type::EqualIgnoringConst(exprList->exprs[i]->GetType(), firstInitType)) {
-                                isVectorIntializer = false;
-                                break;
+                std::map<AtomicType::BasicType, std::vector<ExprList::ExprPosMapping>> exprPerType;
+                if (exprList->HasAtomicInitializerList(exprPerType)) {
+                    const VectorType *symVectorType = CastType<VectorType>(symType);
+                    const int nVectorElements = symVectorType->getVectorMemoryCount();
+                    // The idea is to produce the sequence of instructions that performs the following:
+                    // 1. construct a vector of initializers of the same type
+                    // 2. convert it to target type
+                    // 3. shuffle it with resulting vector
+                    // For example:
+                    // uniform double<4> d = {f.x, d.x, f.y, d.y};
+                    // vResVal1 = <4 x float> <f.x, undef, f.y, undef>
+                    // vResVal1_conv = fpext <4 x float> <f.x, undef, f.y, undef> to <4 x double>
+                    // vResVal2 = <4 x double> <undef, d.x, undef, d.y>
+                    // initListVector = shufflevector %vResVal1_conv, <4 x double> %undef, <4 x i32> <i32 0, i32 5, i32
+                    // 3, i32 7>
+                    // initListVector = shufflevector %vResVal2, <4 x double> %initListVector, <4 x i32> <i32 4, i32 1,
+                    // i32 6, i32 3>
+
+                    // Our final vector which will be used for initialization
+                    llvm::Value *initListVector = llvm::UndefValue::get(
+                        llvm::FixedVectorType::get(symVectorType->GetElementType()->LLVMType(g->ctx), nVectorElements));
+                    for (const auto &[type, expr_map] : exprPerType) {
+                        // There is no good way to construct AtomicType from AtomicType::BasicType,
+                        // just use the first one
+                        Assert(expr_map.size() > 0);
+                        Expr *expr0 = expr_map[0].expr;
+                        const AtomicType *aType = CastType<AtomicType>(expr0->GetType());
+
+                        // If we have two or more initializers of the same type, generate vector instruction.
+                        if (expr_map.size() > 1) {
+                            // Construct ISPC vector type for resulting "initializer" vector for this type
+                            const VectorType *vResType = new VectorType(aType, nVectorElements);
+                            // Resulting LLVM vector for this type
+                            llvm::Value *initListVectorPerType = llvm::UndefValue::get(
+                                llvm::FixedVectorType::get(aType->LLVMType(g->ctx), nVectorElements));
+                            // Create a linear vector that will be used as a shuffle mask for
+                            // shufflevector with initListVector.
+                            std::vector<uint32_t> linearVector(nVectorElements);
+                            std::generate(linearVector.begin(), linearVector.end(),
+                                          [n = nVectorElements]() mutable { return n++; });
+                            // Insert initializers of this type to initListVectorPerType
+                            for (const auto &init_expr : expr_map) {
+                                llvm::Value *initializerValue = init_expr.expr->GetValue(ctx);
+                                initListVectorPerType =
+                                    ctx->InsertInst(initListVectorPerType, initializerValue, init_expr.pos);
+                                linearVector[init_expr.pos] = init_expr.pos;
+                            }
+
+                            // Make type conversion
+                            if (!Type::EqualIgnoringConst(symType, vResType)) {
+                                initListVectorPerType =
+                                    lTypeConvAtomicOrUniformVector(ctx, initListVectorPerType, symType, vResType, pos);
+                            }
+                            // If we have all initializers of the same type, we don't need to generate shuffle
+                            if (exprPerType.size() > 1) {
+                                // Construct LLVM vector for shuffle mask
+                                llvm::Value *initIndex =
+                                    llvm::ConstantDataVector::get(*g->ctx, llvm::ArrayRef<uint32_t>(linearVector));
+                                initListVector = ctx->ShuffleInst(initListVectorPerType, initListVector, initIndex);
+                            } else {
+                                initListVector = initListVectorPerType;
                             }
                         } else {
-                            isVectorIntializer = false;
-                            break;
-                        }
-                    }
-                    if (isVectorIntializer) {
-                        int nVectorElements = CastType<VectorType>(symType)->getVectorMemoryCount();
-                        llvm::Type *llvmInitType = firstInitType->LLVMType(g->ctx);
-                        llvm::Value *initCast =
-                            llvm::UndefValue::get(llvm::FixedVectorType::get(llvmInitType, nVectorElements));
-                        // Construct initializer vector
-                        for (int i = 0; i < nVectorElements; ++i) {
-                            if (i >= nInits) {
-                                // If we don't have enough initializer values, keep undef value
-                                continue;
+                            // Make type conversion if needed
+                            llvm::Value *conv = expr0->GetValue(ctx);
+                            if (!Type::EqualIgnoringConst(symVectorType->GetElementType(), aType)) {
+                                conv = lTypeConvAtomicOrUniformVector(ctx, expr0->GetValue(ctx),
+                                                                      symVectorType->GetElementType(), aType, pos);
                             }
-                            llvm::Value *initializerValue = exprList->exprs[i]->GetValue(ctx);
-                            initCast = ctx->InsertInst(initCast, initializerValue, i);
+                            // Insert initializer into initializer vector
+                            initListVector = ctx->InsertInst(initListVector, conv, expr_map[0].pos);
                         }
-                        // Construct ISPC type for resulting "initializer" vector
-                        const VectorType *vResType = new VectorType(firstInitType, nVectorElements);
-                        // Make type conversion
-                        llvm::Value *conv = lTypeConvAtomicOrUniformVector(ctx, initCast, symType, vResType, pos);
-                        ctx->StoreInst(conv, ptrInfo);
-                        return;
                     }
+                    ctx->StoreInst(initListVector, ptrInfo);
+                    return;
                 }
             }
             // Initialize each element with the corresponding value from
@@ -4352,6 +4384,23 @@ void ExprList::Print(Indent &indent) const {
     }
 
     indent.Done();
+}
+
+bool ExprList::HasAtomicInitializerList(std::map<AtomicType::BasicType, std::vector<ExprPosMapping>> &map) {
+    bool isAtomicInit = true;
+
+    // Go through all initializer expressions and check if they are atomic
+    for (int i = 0; i < exprs.size(); ++i) {
+        const AtomicType *at = CastType<AtomicType>(exprs[i]->GetType());
+        if (at) {
+            map[at->basicType].push_back({exprs[i], i});
+        } else {
+            isAtomicInit = false;
+            break;
+        }
+    }
+
+    return isAtomicInit;
 }
 
 ///////////////////////////////////////////////////////////////////////////

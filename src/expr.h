@@ -249,6 +249,27 @@ class ExprList : public Expr {
     bool HasAmbiguousVariability(std::vector<const Expr *> &warn) const;
 
     std::vector<Expr *> exprs;
+
+    // Utility structs to support initializers lists for vectors
+    struct ExprPosMapping {
+        Expr *expr;
+        int pos;
+        ExprPosMapping(Expr *e, int p) : expr(e), pos(p) {}
+    };
+
+    struct ExprPosMappingVectorForVector {
+        int vec_mem_pos_from;
+        int vec_mem_pos_to;
+        Expr *expr;
+        ExprPosMappingVectorForVector(int from, int to, Expr *e)
+            : vec_mem_pos_from(from), vec_mem_pos_to(to), expr(e) {}
+        ExprPosMappingVectorForVector(int from, ExprPosMapping map)
+            : vec_mem_pos_from(from), vec_mem_pos_to(map.pos), expr(map.expr) {}
+    };
+
+    // Returns true if each expression in expression list has AtomicType.
+    // It also constructs a map of initializers for each atomic basetype.
+    bool HasAtomicInitializerList(std::map<AtomicType::BasicType, std::vector<ExprPosMapping>> &map);
 };
 
 /** @brief Expression representing a function call.

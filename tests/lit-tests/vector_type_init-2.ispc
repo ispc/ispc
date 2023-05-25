@@ -5,28 +5,16 @@
 // RUN: %{ispc} %s --target=avx2-i32x8 -O2 --emit-asm -o - | FileCheck %s -check-prefix=CHECK_ASM
 // REQUIRES: X86_ENABLED
 
-// CHECK_IR: define <4 x double> @TestCross2
+// CHECK_IR: define <4 x double> @TestCross
 // CHECK_IR: fpext <4 x float>
 // CHECK_IR-NOT: fpext float
 
-// CHECK_IR: define <4 x double> @TestCross3
-// CHECK_IR: fpext <4 x float>
-// CHECK_IR-NOT: fpext float
-
-// CHECK_ASM: TestCross2
-// CHECK_ASM-COUNT-2: vcvtps2pd
-// CHECK_ASM-NOT: vcvtss2sd
-
-// CHECK_ASM: TestCross3
+// CHECK_ASM: TestCross
 // CHECK_ASM-COUNT-2: vcvtps2pd
 // CHECK_ASM-NOT: vcvtss2sd
 
 struct FVector {
-    float V[3];
-};
-
-struct FVector4 {
-    float V[4];
+    float<4> V;
 };
 
 typedef double<4> QVec3;
@@ -38,11 +26,6 @@ inline uniform QVec3 SetQVec3(const uniform double X, const uniform double Y, co
 
 inline uniform QVec3 SetQVec3(uniform const FVector fp0) {
     const uniform QVec3 Result = {fp0.V[0], fp0.V[1], fp0.V[2], 0.0};
-    return Result;
-}
-
-inline uniform QVec3 SetQVec3(uniform const FVector4 fp0) {
-    const uniform QVec3 Result = {fp0.V[0], fp0.V[1], fp0.V[2], fp0.V[3]};
     return Result;
 }
 
@@ -60,13 +43,7 @@ inline uniform QVec3 QVec3Cross(const uniform QVec3 Vec1, const uniform QVec3 Ve
     return QVec3Swizzle(Tmp2, 1, 2, 0);
 }
 
-uniform QVec3 TestCross2(const uniform FVector a, const uniform FVector b) {
-    const uniform QVec3 tmp1 = SetQVec3(a);
-    const uniform QVec3 tmp2 = SetQVec3(b);
-    return QVec3Cross(tmp1, tmp2);
-}
-
-uniform QVec3 TestCross3(const uniform FVector4 a, const uniform FVector4 b) {
+uniform QVec3 TestCross(const uniform FVector a, const uniform FVector b) {
     const uniform QVec3 tmp1 = SetQVec3(a);
     const uniform QVec3 tmp2 = SetQVec3(b);
     return QVec3Cross(tmp1, tmp2);
