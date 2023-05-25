@@ -59,12 +59,11 @@ static void lPrintVersion() {
 [[noreturn]] static void usage(int ret) {
     lPrintVersion();
     printf("\nusage: ispc\n");
-    printf("    [--addressing={32,64}]\t\tSelect 32- or 64-bit addressing. (Note that 32-bit\n");
-    printf("                          \t\taddressing calculations are done by default, even\n");
-    printf("                          \t\ton 64-bit target architectures.)\n");
+    printf("    [--addressing={32,64}]\t\tSelect 32- or 64-bit addressing. (Note that 32-bit addressing calculations "
+           "are done by default, even on 64-bit target architectures.)\n");
     printf("    [--arch={%s}]\t\tSelect target architecture\n", g->target_registry->getSupportedArchs().c_str());
 #ifndef ISPC_HOST_IS_WINDOWS
-    printf("    [--colored-output]\t\tAlways use terminal colors in error/warning messages\n");
+    printf("    [--colored-output]\t\t\tAlways use terminal colors in error/warning messages\n");
 #endif
     printf("    [--cpu=<type>]\t\t\tAn alias for [--device=<type>] switch\n");
     printf("    [-D<foo>]\t\t\t\t#define given value when running preprocessor\n");
@@ -129,8 +128,9 @@ static void lPrintVersion() {
     printf("        disable-assertions\t\tRemove assertion statements from final code.\n");
     printf("        disable-fma\t\t\tDisable 'fused multiply-add' instructions (on targets that support them)\n");
     printf("        disable-loop-unroll\t\tDisable loop unrolling.\n");
-    printf("        disable-zmm\t\tDisable using zmm registers for avx512 targets in favour of ymm. This also affects "
-           "ABI.\n");
+    printf(
+        "        disable-zmm\t\t\tDisable using zmm registers for avx512 targets in favour of ymm. This also affects "
+        "ABI.\n");
 #ifdef ISPC_XE_ENABLED
     printf("        emit-xe-hardware-mask\t\tEnable emitting of Xe implicit hardware mask.\n");
     printf("        enable-xe-foreach-varying\t\tEnable experimental foreach support inside varying control flow.\n");
