@@ -233,7 +233,7 @@ static const bool lIsTargetValidforArch(ISPCTarget target, Arch arch) {
         if (arch != Arch::arm && arch != Arch::aarch64)
             ret = false;
     } else if (ISPCTargetIsGen(target)) {
-        if (arch != Arch::xe32 && arch != Arch::xe64)
+        if (arch != Arch::xe64)
             ret = false;
     }
 
@@ -846,10 +846,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         m_hasFp64Support = false;
     }
 
-    // In case of Xe target addressing should correspond to host addressing. Otherwise SVM pointers will not work.
-    if (arch == Arch::xe32) {
-        g->opt.force32BitAddressing = true;
-    } else if (arch == Arch::xe64) {
+    // In case of Xe target addressing should correspond to host addressing. Otherwise pointers will not work.
+    if (arch == Arch::xe64) {
         g->opt.force32BitAddressing = false;
     }
 #endif
@@ -1782,8 +1780,6 @@ std::string Target::GetTripleString() const {
             exit(1);
         } else if (m_arch == Arch::aarch64) {
             triple.setArchName("aarch64");
-        } else if (m_arch == Arch::xe32) {
-            triple.setArchName("spir");
         } else if (m_arch == Arch::xe64) {
             triple.setArchName("spir64");
         } else {
@@ -1791,7 +1787,7 @@ std::string Target::GetTripleString() const {
             exit(1);
         }
 #ifdef ISPC_XE_ENABLED
-        if (m_arch == Arch::xe32 || m_arch == Arch::xe64) {
+        if (m_arch == Arch::xe64) {
             //"spir64-unknown-unknown"
             triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
             triple.setOS(llvm::Triple::OSType::UnknownOS);
@@ -1813,8 +1809,6 @@ std::string Target::GetTripleString() const {
             triple.setArchName("armv7");
         } else if (m_arch == Arch::aarch64) {
             triple.setArchName("aarch64");
-        } else if (m_arch == Arch::xe32) {
-            triple.setArchName("spir");
         } else if (m_arch == Arch::xe64) {
             triple.setArchName("spir64");
         } else {
@@ -1822,7 +1816,7 @@ std::string Target::GetTripleString() const {
             exit(1);
         }
 #ifdef ISPC_XE_ENABLED
-        if (m_arch == Arch::xe32 || m_arch == Arch::xe64) {
+        if (m_arch == Arch::xe64) {
             //"spir64-unknown-unknown"
             triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
             triple.setOS(llvm::Triple::OSType::UnknownOS);
@@ -1831,8 +1825,7 @@ std::string Target::GetTripleString() const {
 #endif
         triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
         triple.setOS(llvm::Triple::OSType::Linux);
-        if (m_arch == Arch::x86 || m_arch == Arch::x86_64 || m_arch == Arch::aarch64 || m_arch == Arch::xe32 ||
-            m_arch == Arch::xe64) {
+        if (m_arch == Arch::x86 || m_arch == Arch::x86_64 || m_arch == Arch::aarch64 || m_arch == Arch::xe64) {
             triple.setEnvironment(llvm::Triple::EnvironmentType::GNU);
         } else if (m_arch == Arch::arm) {
             triple.setEnvironment(llvm::Triple::EnvironmentType::GNUEABIHF);

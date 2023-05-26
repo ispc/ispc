@@ -18,24 +18,6 @@
 // RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -DMASKED_ST --emit-llvm-text --opt=enable-xe-unsafe-masked-load --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_MASKED_ST_WARN
 // RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_MASKED_ST_UNSAFE
 
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe32 -DUNIFORM --emit-llvm-text --nowrap -o %t.ll 2>&1
-// RUN: FileCheck --input-file=%t.ll -check-prefixes=CHECK_ALL,CHECK_UNIFORM %s
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe32 -DVARYING --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_VARYING_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_VARYING
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe32 -DMASKED_ST --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_MASKED_ST_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_MASKED_ST
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe32 -DMASKED_ST --emit-llvm-text --opt=enable-xe-unsafe-masked-load --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_MASKED_ST_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_MASKED_ST_UNSAFE
-
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe32 -DUNIFORM --emit-llvm-text --nowrap -o %t.ll 2>&1
-// RUN: FileCheck --input-file=%t.ll -check-prefixes=CHECK_ALL,CHECK_UNIFORM %s
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe32 -DVARYING --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_VARYING_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_VARYING
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe32 -DMASKED_ST --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_MASKED_ST_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_MASKED_ST
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe32 -DMASKED_ST --emit-llvm-text --opt=enable-xe-unsafe-masked-load --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefixes=CHECK_MASKED_ST_WARN
-// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=CHECK_ALL,CHECK_MASKED_ST_UNSAFE
-
 // Now process special cases
 // i8 simd16
 // RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -DUNIFORM -DTEST_I8 --emit-llvm-text --nowrap -o %t.ll

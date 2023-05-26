@@ -1,5 +1,4 @@
 // Can't convert from type "varying float" to type "uniform float" for initializer
-// rule: skip on arch=xe32
 // rule: skip on arch=xe64
 
 struct Point {

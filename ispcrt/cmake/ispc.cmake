@@ -80,7 +80,7 @@ endmacro()
 
 define_ispc_supported_arch(X86 "x86|x86-64")
 define_ispc_supported_arch(ARM "arm|aarch64")
-define_ispc_supported_arch(XE "xe32|xe64")
+define_ispc_supported_arch(XE "xe64")
 
 macro(define_ispc_isa_options ISA_NAME)
   set(ISPC_TARGET_${ISA_NAME} ${ARGV1} CACHE STRING "ispc target used for ${ISA_NAME} ISA")
