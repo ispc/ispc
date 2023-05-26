@@ -24,7 +24,7 @@ std::string OSToString(TargetOS os);
 std::string OSToLowerString(TargetOS os);
 TargetOS GetHostOS();
 
-enum class Arch { none, x86, x86_64, arm, aarch64, wasm32, xe32, xe64, error };
+enum class Arch { none, x86, x86_64, arm, aarch64, wasm32, xe64, error };
 
 Arch ParseArch(std::string arch);
 std::string ArchToString(Arch arch);

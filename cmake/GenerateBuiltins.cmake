@@ -52,6 +52,12 @@ function(target_ll_to_cpp llFileName bit os_name resultFileName)
         return()
     endif()
 
+    # Xe targets are implemented only for 64 bit.
+    string(REGEX MATCH "^target-xe" isXe "${llFileName}")
+    if ("${bit}" STREQUAL "32" AND isXe)
+        return()
+    endif()
+
     set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-${llFileName}-${bit}bit-${os_name}.cpp)
     add_custom_command(
         OUTPUT ${output}
@@ -290,11 +296,8 @@ function(builtin_xe_to_cpp bit resultFileName)
         set(os_name "linux")
     endif()
 
-    if ("${bit}" STREQUAL "32")
-        set(target_arch "xe32")
-    elseif ("${bit}" STREQUAL "64")
-        set(target_arch "xe64")
-    else()
+    set(target_arch "xe64")
+    if (NOT "${bit}" STREQUAL "64")
         set(SKIP ON)
     endif()
 
@@ -344,6 +347,7 @@ function (generate_target_builtins resultList)
             endforeach()
         endforeach()
     endforeach()
+
     # WASM targets.
     if (WASM_ENABLED)
         set(wasm_targets ${ARGN})
@@ -407,14 +411,13 @@ function (generate_common_builtins resultList)
         endforeach()
     endforeach()
     if (XE_ENABLED)
-        foreach (bit 32 64)
-            builtin_xe_to_cpp(${bit} res_xe_${bit})
-            list(APPEND tmpList ${res_xe_${bit}} )
-            if(MSVC)
-                # Group generated files inside Visual Studio
-                source_group("Generated Builtins" FILES ${res_xe_${bit}})
-            endif()
-        endforeach()
+        set(bit 64)
+        builtin_xe_to_cpp(${bit} res_xe_${bit})
+        list(APPEND tmpList ${res_xe_${bit}} )
+        if(MSVC)
+            # Group generated files inside Visual Studio
+            source_group("Generated Builtins" FILES ${res_xe_${bit}})
+        endif()
     endif()
     set(${resultList} ${tmpList} PARENT_SCOPE)
 endfunction()

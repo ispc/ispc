@@ -1,6 +1,5 @@
 // This test checks that ISPC_FP16_SUPPORTED macro is ON for XE and ARM platforms only.
 
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe32 --emit-llvm-text -o - | FileCheck %s --check-prefixes=CHECK_FP_16,CHECK
 // RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 --emit-llvm-text -o - | FileCheck %s --check-prefixes=CHECK_FP_16,CHECK
 // RUN: %{ispc} %s --target=neon-i8x16 --arch=arm --emit-llvm-text -o - | FileCheck %s --check-prefixes=CHECK_FP_16,CHECK
 // RUN: %{ispc} %s --target=neon-i32x4 --arch=aarch64 --emit-llvm-text -o - | FileCheck %s --check-prefixes=CHECK_FP_16,CHECK

@@ -1,6 +1,5 @@
 #include "../test_static.isph"
 // rule: skip on arch=*
-// rule: run on arch=xe32
 // rule: run on arch=xe64
 
 task void f_t(uniform float RET[]) {

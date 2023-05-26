@@ -97,9 +97,9 @@ To generate L0 binary, use ``--emit-zebin`` flag. When you use L0 binary you may
 want to pass some additional options to the vector backend. You can do this
 using ``--vc-options`` flag.
 
-Also two new ``arch`` options were introduced: ``xe32`` and ``xe64``.  ``xe64``
-is default and corresponds to 64-bit host and has 64-bit pointer size, ``xe32``
-corresponds to 32-bit host and has 32-bit pointer size.
+When targeting Xe targets, ``xe64`` architecture must be used. It corresponds to
+64-bit host and has 64-bit pointer size. We don't support 32-bit pointers for Xe
+targets.
 
 To generate LLVM bitcode, use the ``--emit-llvm`` flag.  To generate LLVM
 bitcode in textual form, use the ``--emit-llvm-text`` flag.
@@ -109,11 +109,6 @@ Optimizations are on by default; they can be turned off with ``-O0``.
 Generating a text assembly file using ``--emit-asm`` is not supported yet.  See
 `How to Get an Assembly File from SPIR-V?`_ section about how to get the
 assembly from SPIR-V file.
-
-By default, 64-bit addressing is used. You can change it to 32-bit addressing by
-using ``--addressing=32`` or ``--arch=xe32`` however pointer size should be the
-same for host and device code so 32-bit addressing will only work with 32-bit
-host programs.
 
 There is a new ``link`` mode in ``ispc`` allowing to link several LLVM bitcode
 or SPIR-V files to selected output format: LLVM bitcode (default), LLVM bitcode

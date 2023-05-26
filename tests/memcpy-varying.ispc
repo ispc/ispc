@@ -1,5 +1,4 @@
 #include "../test_static.isph"
-// rule: skip on arch=xe32
 // rule: skip on arch=xe64
 
 task void f_f(uniform float RET[], uniform float aFOO[]) {
