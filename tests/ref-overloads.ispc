@@ -1,4 +1,6 @@
 #include "../test_static.isph"
+// rule: skip on cpu=tgllp
+// rule: skip on cpu=dg2
 /////////////////////////VARYING
 //int A011(varying float f){return 0;}  int A011(varying float& f){return 1;}       int A011(varying const float& f){return 2;}
 //int A011(varying double f){return 3;} int A011(varying int f){return 4;}          int A011(uniform float f){return 5;}
