@@ -60,10 +60,10 @@
 ./tests/idiv-uint16.ispc runfail    xe64       gen9-x8 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
 ./tests/idiv-int16.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
 ./tests/idiv-uint16.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
-./tests/idiv-int16.ispc runfail    xe64       gen9-x8 unspec   Linux LLVM 15.0 clang++15.0 O2 ze *
-./tests/idiv-uint16.ispc runfail    xe64       gen9-x8 unspec   Linux LLVM 15.0 clang++15.0 O2 ze *
-./tests/idiv-int16.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O2 ze *
-./tests/idiv-uint16.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O2 ze *
+./tests/idiv-int32.ispc runfail    xe64       gen9-x8 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/idiv-uint32.ispc runfail    xe64       gen9-x8 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/idiv-int32.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/idiv-uint32.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
 ./tests/int8-wrap.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 15.0 clang++15.0 O2 spv *
 .\tests\idiv-uint16.ispc runfail    xe64        xelp-x8 tgllp Windows LLVM 15.0         cl O2 spv *
 .\tests\idiv-uint32.ispc runfail    xe64        xelp-x8 tgllp Windows LLVM 15.0         cl O2 spv *
