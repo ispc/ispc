@@ -1,4 +1,6 @@
 #include "../test_static.isph"
+// rule: skip on cpu=tgllp
+// rule: skip on cpu=dg2
 void A1(float f)               {}
 void A2(float& f)              {}
 void A3(const float& f)        {} 

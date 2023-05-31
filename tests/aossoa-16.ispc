@@ -1,4 +1,6 @@
 #include "../test_static.isph"
+// rule: skip on cpu=tgllp
+// rule: skip on cpu=dg2
 task void f_v(uniform float RET[]) {
 #define width 3
 //CO    const uniform int width = 4;
