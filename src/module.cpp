@@ -748,8 +748,7 @@ static void lCheckForStructParameters(const FunctionType *ftype, SourcePos pos) 
 /** We've got a declaration for a function to process.  This function does
     all the work of creating the corresponding llvm::Function instance,
     adding the symbol for the function to the symbol table and doing
-    various sanity checks.  This function returns true upon success and
-    false if any errors were encountered.
+    various sanity checks.
  */
 void Module::AddFunctionDeclaration(const std::string &name, const FunctionType *functionType,
                                     StorageClass storageClass, bool isInline, bool isNoInline, bool isVectorCall,
