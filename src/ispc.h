@@ -198,6 +198,9 @@ class Target {
         XEHPG,
         XEHPC,
         XELPG,
+#ifdef __INTEL_EMBARGO__
+        XE2HPG,
+#endif
 #endif
         NUM_ISAS
     };
@@ -208,6 +211,9 @@ class Target {
         xe_lp,
         xe_hpg,
         xe_lpg,
+#ifdef __INTEL_EMBARGO__
+        xe2_hpg,
+#endif
         xe_hpc,
     };
 #endif
@@ -289,7 +295,11 @@ class Target {
     bool isXeTarget() {
 #ifdef ISPC_XE_ENABLED
         return m_isa == Target::GEN9 || m_isa == Target::XELP || m_isa == Target::XEHPG || m_isa == Target::XEHPC ||
-               m_isa == Target::XELPG;
+               m_isa == Target::XELPG
+#ifdef __INTEL_EMBARGO__
+               || m_isa == Target::XE2HPG
+#endif
+            ;
 #else
         return false;
 #endif

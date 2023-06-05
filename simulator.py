@@ -28,7 +28,12 @@ class Simulator(object):
             fulsim_tbx = f"-socket tcp:{port}"
             fulsim_flags = f"-device mtl.2x4x16.a0 {flags}" \
                            f"-swsbcheck on"
-
+        elif platform == "elg":
+            fulsim_tbx = f"-socket tcp:{port}"
+            fulsim_flags = f"-device elg.7x4x8.A0 {flags}" \
+                           f"-swsbcheck on" \
+                           f"-disableFeature 1408789165 14014577542 2207445712" \
+                           f"-enableFeature 14015320709 1409780112 1408011598"
         elif simu_path != "":
             raise SystemError(f"Unsupported Fulsim platform \"{platform}\"")
 
@@ -39,11 +44,13 @@ class Simulator(object):
         self._environ = dict()
         self._environ['TbxPort'] = f"{self._tbxport}"
         self._environ['SetCommandStreamReceiver'] = "2"
+        self._environ['PrintDebugSettings'] = "1"
         # --- this is temp solution for problem with runtime pre-kernel code ---
         self._environ['OverrideRevision'] = "3"
         self._environ['RebuildPrecompiledKernels'] = "1"
         # ----------------------------------------------------------------------
         self._environ['ProductFamilyOverride'] = f"{self._platform}"
+
 # __INTEL_EMBARGO_END__
         pass
 
