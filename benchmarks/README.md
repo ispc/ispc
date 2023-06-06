@@ -33,7 +33,7 @@ taskset --cpu-list 0 bin/01_aossoa
 - Nested loops: multi-dimensional ``foreach`` loops vs separate ``foreach`` loops vs ``for`` loops. Different axis for vectorization need to be tested.
 - ``foreach_unique`` performance.
 - ``foreach_active`` performance.
-- memory operations: gather/scatter, vector load/store, masked load/store.
+- memory operations: gather/scatter, vector load/store.
 - ``aos_to_soa()``, ``soa_to_aos()`` functions.
 - other ``stdlib`` function.
 - ``select()`` vs ``cond ? t : f``.

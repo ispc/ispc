@@ -7,3 +7,4 @@
 - ``05_packed_load_store`` - test ``packed_[load|store]_active()`` stdlib functions performance.
 - ``06_math`` - test math functions performance.
 - ``07_loop_unroll_varying`` - test unrolling performance for varying index loop.
+- ``08_masked_load_store`` - test masked load/store implementation.
