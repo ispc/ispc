@@ -646,7 +646,8 @@ static void InitTaskSystem() {
                     srand(time(nullptr));
                     for (int i = 0; i < 10; i++) {
                         // Some platforms (e.g. FreeBSD) require the name to begin with a slash
-                        snprintf(semaphoreName, SEM_NAME_MAX_SIZE, "/ispc_task.%d.%d", static_cast<int>(getpid()), static_cast<int>(rand()));
+                        snprintf(semaphoreName, SEM_NAME_MAX_SIZE, "/ispc_task.%d.%d", static_cast<int>(getpid()),
+                                 static_cast<int>(rand()));
                         workerSemaphore = sem_open(semaphoreName, O_CREAT, S_IRUSR | S_IWUSR, 0);
                         if (workerSemaphore != SEM_FAILED) {
                             success = true;

@@ -3,12 +3,12 @@
 
 #pragma once
 
-#include "../Context.h"
-#include "../Device.h"
-#include "../Future.h"
-#include "../Fence.h"
 #include "../CommandList.h"
 #include "../CommandQueue.h"
+#include "../Context.h"
+#include "../Device.h"
+#include "../Fence.h"
+#include "../Future.h"
 
 // std
 #include <unordered_map>
@@ -21,16 +21,17 @@ namespace gpu {
 uint32_t deviceCount();
 ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx);
 
-}; // gpu
+}; // namespace gpu
 
 struct GPUDevice : public base::Device {
 
     GPUDevice();
-    GPUDevice(void* nativeContext, void* nativeDevice, uint32_t deviceIdx);
+    GPUDevice(void *nativeContext, void *nativeDevice, uint32_t deviceIdx);
 
     ~GPUDevice();
 
-    base::MemoryView *newMemoryView(void *appMem, size_t numBytes, const ISPCRTNewMemoryViewFlags *flags) const override;
+    base::MemoryView *newMemoryView(void *appMem, size_t numBytes,
+                                    const ISPCRTNewMemoryViewFlags *flags) const override;
 
     base::CommandQueue *newCommandQueue(uint32_t ordinal) const override;
 
@@ -49,14 +50,14 @@ struct GPUDevice : public base::Device {
 
     ISPCRTDeviceType getType() const override;
 
-    ISPCRTAllocationType getMemAllocType(void* appMemory) const override;
+    ISPCRTAllocationType getMemAllocType(void *appMemory) const override;
 
   private:
     void *m_driver{nullptr};
     void *m_device{nullptr};
     void *m_context{nullptr};
-    bool  m_is_mock{false};
-    bool  m_has_context_ownership{true};
+    bool m_is_mock{false};
+    bool m_has_context_ownership{true};
 };
 
 } // namespace ispcrt
@@ -64,7 +65,7 @@ struct GPUDevice : public base::Device {
 // Expose API of GPU device solib for dlsym.
 extern "C" {
 ispcrt::base::Device *load_gpu_device();
-ispcrt::base::Device *load_gpu_device_ctx(void* ctx, void* dev, uint32_t idx);
+ispcrt::base::Device *load_gpu_device_ctx(void *ctx, void *dev, uint32_t idx);
 uint32_t gpu_device_count();
 ISPCRTDeviceInfo gpu_device_info(uint32_t idx);
 }

@@ -17,7 +17,7 @@ struct Context : public RefCounted {
     virtual MemoryView *newMemoryView(void *appMem, size_t numBytes, const ISPCRTNewMemoryViewFlags *flags) const = 0;
     virtual ISPCRTDeviceType getDeviceType() const = 0;
 
-    virtual void* contextNativeHandle() const = 0;
+    virtual void *contextNativeHandle() const = 0;
 };
 
 } // namespace base

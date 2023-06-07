@@ -25,7 +25,7 @@ struct TaskQueue : public RefCounted {
 
     virtual void sync() = 0;
 
-    virtual void* taskQueueNativeHandle() const = 0;
+    virtual void *taskQueueNativeHandle() const = 0;
 };
 
 } // namespace base

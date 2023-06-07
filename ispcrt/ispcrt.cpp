@@ -20,13 +20,13 @@
 #include "detail/TaskQueue.h"
 
 #ifdef ISPCRT_BUILD_CPU
-#include "detail/cpu/CPUDevice.h"
 #include "detail/cpu/CPUContext.h"
+#include "detail/cpu/CPUDevice.h"
 #endif
 
 #ifdef ISPCRT_BUILD_GPU
-#include "detail/gpu/GPUDevice.h"
 #include "detail/gpu/GPUContext.h"
+#include "detail/gpu/GPUDevice.h"
 #endif
 
 static void defaultErrorFcn(ISPCRTError e, const char *msg) {
@@ -87,7 +87,6 @@ static OBJECT_T &referenceFromHandle(HANDLE_T handle) {
         return a;                                                                                                      \
     }
 
-
 // Define names of devices libraries.
 #if defined(_WIN32) || defined(_WIN64)
 #define ISPCRT_SO_LIB_PREFIX ""
@@ -108,16 +107,16 @@ static OBJECT_T &referenceFromHandle(HANDLE_T handle) {
 #if defined(_WIN32) || defined(_WIN64)
 #define ISPCRT_DEVICE_CPU_SOLIB_MAJOR_VERSION_NAME nullptr
 #define ISPCRT_DEVICE_GPU_SOLIB_MAJOR_VERSION_NAME nullptr
-#define ISPCRT_DEVICE_CPU_SOLIB_FULL_VERSION_NAME  nullptr
-#define ISPCRT_DEVICE_GPU_SOLIB_FULL_VERSION_NAME  nullptr
+#define ISPCRT_DEVICE_CPU_SOLIB_FULL_VERSION_NAME nullptr
+#define ISPCRT_DEVICE_GPU_SOLIB_FULL_VERSION_NAME nullptr
 #elif defined(__APPLE__)
-#define ISPCRT_DEVICE_CPU_SOLIB_MAJOR_VERSION_NAME \
+#define ISPCRT_DEVICE_CPU_SOLIB_MAJOR_VERSION_NAME                                                                     \
     ISPCRT_DEVICE_CPU_SOLIB_PREFIX "." ISPCRT_VERSION_MAJOR "." ISPCRT_SO_LIB_SUFFIX
-#define ISPCRT_DEVICE_GPU_SOLIB_MAJOR_VERSION_NAME \
+#define ISPCRT_DEVICE_GPU_SOLIB_MAJOR_VERSION_NAME                                                                     \
     ISPCRT_DEVICE_GPU_SOLIB_PREFIX "." ISPCRT_VERSION_MAJOR "." ISPCRT_SO_LIB_SUFFIX
-#define ISPCRT_DEVICE_CPU_SOLIB_FULL_VERSION_NAME \
+#define ISPCRT_DEVICE_CPU_SOLIB_FULL_VERSION_NAME                                                                      \
     ISPCRT_DEVICE_CPU_SOLIB_PREFIX "." ISPCRT_VERSION_FULL "." ISPCRT_SO_LIB_SUFFIX
-#define ISPCRT_DEVICE_GPU_SOLIB_FULL_VERSION_NAME \
+#define ISPCRT_DEVICE_GPU_SOLIB_FULL_VERSION_NAME                                                                      \
     ISPCRT_DEVICE_GPU_SOLIB_PREFIX "." ISPCRT_VERSION_FULL "." ISPCRT_SO_LIB_SUFFIX
 #else
 #define ISPCRT_DEVICE_CPU_SOLIB_MAJOR_VERSION_NAME ISPCRT_DEVICE_CPU_SOLIB_NAME "." ISPCRT_VERSION_MAJOR
@@ -150,17 +149,16 @@ void *dyn_load_lib(const char *name, const char *name_major_version, const char 
 // OS agnostic function to get an address of symbol from the previously loaded shared library.
 void *dyn_load_sym(void *handle, const char *symbol) {
 #if defined(_WIN32) || defined(_WIN64)
-    return (void*) GetProcAddress((HMODULE)handle, symbol);
+    return (void *)GetProcAddress((HMODULE)handle, symbol);
 #else
     return dlsym(handle, symbol);
 #endif
 }
 
-
 // CPU device API.
-typedef void (*ISPCLaunchF)(void**, void*, void*, int, int, int);
-typedef void* (*ISPCAllocF)(void**, int64_t, int32_t);
-typedef void (*ISPCSyncF)(void*);
+typedef void (*ISPCLaunchF)(void **, void *, void *, int, int, int);
+typedef void *(*ISPCAllocF)(void **, int64_t, int32_t);
+typedef void (*ISPCSyncF)(void *);
 static ISPCLaunchF ispc_launch_fptr = nullptr;
 static ISPCAllocF ispc_alloc_fptr = nullptr;
 static ISPCSyncF ispc_sync_fptr = nullptr;
@@ -202,26 +200,24 @@ void *handleCPUDeviceLib() {
     if (handle) {
         return handle;
     }
-    handle = dyn_load_lib(
-                ISPCRT_DEVICE_CPU_SOLIB_NAME,
-                ISPCRT_DEVICE_CPU_SOLIB_MAJOR_VERSION_NAME,
-                ISPCRT_DEVICE_CPU_SOLIB_FULL_VERSION_NAME);
+    handle = dyn_load_lib(ISPCRT_DEVICE_CPU_SOLIB_NAME, ISPCRT_DEVICE_CPU_SOLIB_MAJOR_VERSION_NAME,
+                          ISPCRT_DEVICE_CPU_SOLIB_FULL_VERSION_NAME);
     if (!handle) {
         throw std::runtime_error("Fail to load " ISPCRT_DEVICE_CPU_SOLIB_NAME " library");
     }
 
 #ifdef ISPCRT_BUILD_TASKING
-    ispc_launch_fptr = (ISPCLaunchF) dyn_load_sym(handle, "ISPCLaunch_cpu");
+    ispc_launch_fptr = (ISPCLaunchF)dyn_load_sym(handle, "ISPCLaunch_cpu");
     if (!ispc_launch_fptr) {
         throw std::runtime_error("Missing ISPCLaunch_cpu symbol");
     }
 
-    ispc_alloc_fptr = (ISPCAllocF) dyn_load_sym(handle, "ISPCAlloc_cpu");
+    ispc_alloc_fptr = (ISPCAllocF)dyn_load_sym(handle, "ISPCAlloc_cpu");
     if (!ispc_alloc_fptr) {
         throw std::runtime_error("Missing ISPCAlloc_cpu symbol");
     }
 
-    ispc_sync_fptr = (ISPCSyncF) dyn_load_sym(handle, "ISPCSync_cpu");
+    ispc_sync_fptr = (ISPCSyncF)dyn_load_sym(handle, "ISPCSync_cpu");
     if (!ispc_sync_fptr) {
         throw std::runtime_error("Missing ISPCSync_cpu symbol");
     }
@@ -236,10 +232,8 @@ void *handleGPUDeviceLib() {
     if (handle) {
         return handle;
     }
-    handle = dyn_load_lib(
-                ISPCRT_DEVICE_GPU_SOLIB_NAME,
-                ISPCRT_DEVICE_GPU_SOLIB_MAJOR_VERSION_NAME,
-                ISPCRT_DEVICE_GPU_SOLIB_FULL_VERSION_NAME);
+    handle = dyn_load_lib(ISPCRT_DEVICE_GPU_SOLIB_NAME, ISPCRT_DEVICE_GPU_SOLIB_MAJOR_VERSION_NAME,
+                          ISPCRT_DEVICE_GPU_SOLIB_FULL_VERSION_NAME);
     if (!handle) {
         throw std::runtime_error("Fail to load " ISPCRT_DEVICE_GPU_SOLIB_NAME " library");
     }
@@ -263,11 +257,10 @@ ispcrt::base::Context *loadGPUContext(void *ctx);
 // Function pointer types declarations.
 typedef uint32_t (*DeviceCountF)();
 typedef ISPCRTDeviceInfo (*DeviceInfoF)(uint32_t);
-typedef ispcrt::base::Device* (*LoadDeviceF)();
-typedef ispcrt::base::Device* (*LoadDeviceCtxF)(void*, void*, uint32_t);
-typedef ispcrt::base::Context* (*LoadContextF)();
-typedef ispcrt::base::Context* (*LoadContextCtxF)(void *);
-
+typedef ispcrt::base::Device *(*LoadDeviceF)();
+typedef ispcrt::base::Device *(*LoadDeviceCtxF)(void *, void *, uint32_t);
+typedef ispcrt::base::Context *(*LoadContextF)();
+typedef ispcrt::base::Context *(*LoadContextCtxF)(void *);
 
 // CPU stubs
 uint32_t cpuDeviceCount() {
@@ -283,7 +276,7 @@ uint32_t cpuDeviceCount() {
         return device_count();
     }
 
-    device_count = (DeviceCountF) dyn_load_sym(handleCPUDeviceLib(), "cpu_device_count");
+    device_count = (DeviceCountF)dyn_load_sym(handleCPUDeviceLib(), "cpu_device_count");
     if (!device_count) {
         throw std::runtime_error("Missing cpu_device_count symbol");
     }
@@ -304,7 +297,7 @@ ISPCRTDeviceInfo cpuDeviceInfo(uint32_t idx) {
         return device_info(idx);
     }
 
-    device_info = (DeviceInfoF) dyn_load_sym(handleCPUDeviceLib(), "cpu_device_info");
+    device_info = (DeviceInfoF)dyn_load_sym(handleCPUDeviceLib(), "cpu_device_info");
     if (!device_info) {
         throw std::runtime_error("Missing cpu_device_info symbol");
     }
@@ -325,8 +318,8 @@ ispcrt::base::Device *loadCPUDevice() {
         return load_device();
     }
 
-    load_device = (LoadDeviceF) dyn_load_sym(handleCPUDeviceLib(), "load_cpu_device");
-    if (!load_device)  {
+    load_device = (LoadDeviceF)dyn_load_sym(handleCPUDeviceLib(), "load_cpu_device");
+    if (!load_device) {
         throw std::runtime_error("Missing load_cpu_device symbol");
     }
 
@@ -347,7 +340,7 @@ ispcrt::base::Context *loadCPUContext() {
         return load_context();
     }
 
-    load_context = (LoadContextF) dyn_load_sym(handleCPUDeviceLib(), "load_cpu_context");
+    load_context = (LoadContextF)dyn_load_sym(handleCPUDeviceLib(), "load_cpu_context");
     if (!load_context) {
         throw std::runtime_error("Missing load_cpu_context symbol");
     }
@@ -355,7 +348,6 @@ ispcrt::base::Context *loadCPUContext() {
     return load_context();
 #endif
 }
-
 
 // GPU stubs.
 uint32_t gpuDeviceCount() {
@@ -371,7 +363,7 @@ uint32_t gpuDeviceCount() {
         return device_count();
     }
 
-    device_count = (DeviceCountF) dyn_load_sym(handleGPUDeviceLib(), "gpu_device_count");
+    device_count = (DeviceCountF)dyn_load_sym(handleGPUDeviceLib(), "gpu_device_count");
     if (!device_count) {
         throw std::runtime_error("Missing gpu_device_count symbol");
     }
@@ -392,7 +384,7 @@ ISPCRTDeviceInfo gpuDeviceInfo(uint32_t idx) {
         return device_info(idx);
     }
 
-    device_info = (DeviceInfoF) dyn_load_sym(handleGPUDeviceLib(), "gpu_device_info");
+    device_info = (DeviceInfoF)dyn_load_sym(handleGPUDeviceLib(), "gpu_device_info");
     if (!device_info) {
         throw std::runtime_error("Missing gpu_device_info symbol");
     }
@@ -413,8 +405,8 @@ ispcrt::base::Device *loadGPUDevice() {
         return load_device();
     }
 
-    load_device = (LoadDeviceF) dyn_load_sym(handleGPUDeviceLib(), "load_gpu_device");
-    if (!load_device)  {
+    load_device = (LoadDeviceF)dyn_load_sym(handleGPUDeviceLib(), "load_gpu_device");
+    if (!load_device) {
         throw std::runtime_error("Missing load_gpu_device symbol");
     }
 
@@ -435,15 +427,14 @@ ispcrt::base::Device *loadGPUDevice(void *ctx, void *dev, uint32_t idx) {
         return load_device(ctx, dev, idx);
     }
 
-    load_device = (LoadDeviceCtxF) dyn_load_sym(handleGPUDeviceLib(), "load_gpu_device_ctx");
-    if (!load_device)  {
+    load_device = (LoadDeviceCtxF)dyn_load_sym(handleGPUDeviceLib(), "load_gpu_device_ctx");
+    if (!load_device) {
         throw std::runtime_error("Missing load_gpu_device_ctx symbol");
     }
 
     return load_device(ctx, dev, idx);
 #endif
 }
-
 
 ispcrt::base::Context *loadGPUContext() {
 #ifdef ISPCRT_BUILD_STATIC
@@ -458,7 +449,7 @@ ispcrt::base::Context *loadGPUContext() {
         return load_context();
     }
 
-    load_context = (LoadContextF) dyn_load_sym(handleGPUDeviceLib(), "load_gpu_context");
+    load_context = (LoadContextF)dyn_load_sym(handleGPUDeviceLib(), "load_gpu_context");
     if (!load_context) {
         throw std::runtime_error("Missing load_gpu_context symbol");
     }
@@ -480,7 +471,7 @@ ispcrt::base::Context *loadGPUContext(void *ctx) {
         return load_context(ctx);
     }
 
-    load_context = (LoadContextCtxF) dyn_load_sym(handleGPUDeviceLib(), "load_gpu_context_ctx");
+    load_context = (LoadContextCtxF)dyn_load_sym(handleGPUDeviceLib(), "load_gpu_context_ctx");
     if (!load_context) {
         throw std::runtime_error("Missing load_gpu_context_ctx symbol");
     }
@@ -522,10 +513,11 @@ ISPCRT_CATCH_END_NO_RETURN()
 ///////////////////////////////////////////////////////////////////////////////
 // Device initialization //////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
-static ISPCRTDevice getISPCRTDevice(ISPCRTDeviceType type, ISPCRTContext context, ISPCRTGenericHandle d, uint32_t deviceIdx) ISPCRT_CATCH_BEGIN {
+static ISPCRTDevice getISPCRTDevice(ISPCRTDeviceType type, ISPCRTContext context, ISPCRTGenericHandle d,
+                                    uint32_t deviceIdx) ISPCRT_CATCH_BEGIN {
     ispcrt::base::Device *device = nullptr;
 
-    void* nativeContext = nullptr;
+    void *nativeContext = nullptr;
     if (context) {
         auto &c = referenceFromHandle<ispcrt::base::Context>(context);
         nativeContext = c.contextNativeHandle();
@@ -691,11 +683,9 @@ static ISPCRTContext getISPCRTContext(ISPCRTDeviceType type, ISPCRTGenericHandle
 }
 ISPCRT_CATCH_END(0)
 
-ISPCRTContext ispcrtNewContext(ISPCRTDeviceType type) {
-    return getISPCRTContext(type, nullptr);
-}
+ISPCRTContext ispcrtNewContext(ISPCRTDeviceType type) { return getISPCRTContext(type, nullptr); }
 
-ISPCRTContext ispcrtGetContextFromNativeHandle(ISPCRTDeviceType type, ISPCRTGenericHandle c){
+ISPCRTContext ispcrtGetContextFromNativeHandle(ISPCRTDeviceType type, ISPCRTGenericHandle c) {
     return getISPCRTContext(type, c);
 }
 ///////////////////////////////////////////////////////////////////////////////
@@ -747,7 +737,7 @@ ISPCRTAllocationType ispcrtGetMemoryViewAllocType(ISPCRTMemoryView h) ISPCRT_CAT
 }
 ISPCRT_CATCH_END(ISPCRTAllocationType::ISPCRT_ALLOC_TYPE_UNKNOWN)
 
-ISPCRTAllocationType ispcrtGetMemoryAllocType(ISPCRTDevice d, void* memBuffer) ISPCRT_CATCH_BEGIN {
+ISPCRTAllocationType ispcrtGetMemoryAllocType(ISPCRTDevice d, void *memBuffer) ISPCRT_CATCH_BEGIN {
     const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
     return device.getMemAllocType(memBuffer);
 }
@@ -768,7 +758,6 @@ ISPCRTModule ispcrtLoadModule(ISPCRTDevice d, const char *moduleFile,
     const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
     auto module = (ISPCRTModule)device.newModule(moduleFile, moduleOpts);
     return module;
-
 }
 ISPCRT_CATCH_END(nullptr)
 
@@ -778,7 +767,8 @@ void ispcrtDynamicLinkModules(ISPCRTDevice d, ISPCRTModule *modules, const uint3
 }
 ISPCRT_CATCH_END()
 
-ISPCRTModule ispcrtStaticLinkModules(ISPCRTDevice d, ISPCRTModule *modules, const uint32_t numModules) ISPCRT_CATCH_BEGIN {
+ISPCRTModule ispcrtStaticLinkModules(ISPCRTDevice d, ISPCRTModule *modules,
+                                     const uint32_t numModules) ISPCRT_CATCH_BEGIN {
     const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
     return (ISPCRTModule)device.staticLinkModules((ispcrt::base::Module **)modules, numModules);
 }
@@ -810,18 +800,19 @@ ISPCRT_CATCH_END_NO_RETURN()
 ISPCRTFuture ispcrtCommandListCopyToDevice(ISPCRTCommandList l, ISPCRTMemoryView mv) ISPCRT_CATCH_BEGIN {
     auto &list = referenceFromHandle<ispcrt::base::CommandList>(l);
     auto &view = referenceFromHandle<ispcrt::base::MemoryView>(mv);
-    return (ISPCRTFuture) list.copyToDevice(view);
+    return (ISPCRTFuture)list.copyToDevice(view);
 }
 ISPCRT_CATCH_END(nullptr)
 
 ISPCRTFuture ispcrtCommandListCopyToHost(ISPCRTCommandList l, ISPCRTMemoryView mv) ISPCRT_CATCH_BEGIN {
     auto &list = referenceFromHandle<ispcrt::base::CommandList>(l);
     auto &view = referenceFromHandle<ispcrt::base::MemoryView>(mv);
-    return (ISPCRTFuture) list.copyToHost(view);
+    return (ISPCRTFuture)list.copyToHost(view);
 }
 ISPCRT_CATCH_END(nullptr)
 
-ISPCRTFuture ispcrtCommandListCopyMemoryView(ISPCRTCommandList l, ISPCRTMemoryView mvDst, ISPCRTMemoryView mvSrc, const size_t size) ISPCRT_CATCH_BEGIN {
+ISPCRTFuture ispcrtCommandListCopyMemoryView(ISPCRTCommandList l, ISPCRTMemoryView mvDst, ISPCRTMemoryView mvSrc,
+                                             const size_t size) ISPCRT_CATCH_BEGIN {
     auto &list = referenceFromHandle<ispcrt::base::CommandList>(l);
     auto &viewDst = referenceFromHandle<ispcrt::base::MemoryView>(mvDst);
     auto &viewSrc = referenceFromHandle<ispcrt::base::MemoryView>(mvSrc);
@@ -831,11 +822,12 @@ ISPCRTFuture ispcrtCommandListCopyMemoryView(ISPCRTCommandList l, ISPCRTMemoryVi
     if (size > viewSrc.numBytes()) {
         throw std::runtime_error("Requested copy size is bigger than source buffer size!");
     }
-    return (ISPCRTFuture) list.copyMemoryView(viewDst, viewSrc, size);
+    return (ISPCRTFuture)list.copyMemoryView(viewDst, viewSrc, size);
 }
 ISPCRT_CATCH_END(nullptr)
 
-ISPCRTFuture ispcrtCommandListLaunch1D(ISPCRTCommandList l, ISPCRTKernel k, ISPCRTMemoryView p, size_t dim0) ISPCRT_CATCH_BEGIN {
+ISPCRTFuture ispcrtCommandListLaunch1D(ISPCRTCommandList l, ISPCRTKernel k, ISPCRTMemoryView p,
+                                       size_t dim0) ISPCRT_CATCH_BEGIN {
     return ispcrtCommandListLaunch3D(l, k, p, dim0, 1, 1);
 }
 ISPCRT_CATCH_END(nullptr)
@@ -846,8 +838,8 @@ ISPCRTFuture ispcrtCommandListLaunch2D(ISPCRTCommandList l, ISPCRTKernel k, ISPC
 }
 ISPCRT_CATCH_END(nullptr)
 
-ISPCRTFuture ispcrtCommandListLaunch3D(ISPCRTCommandList l, ISPCRTKernel k, ISPCRTMemoryView p, size_t dim0, size_t dim1,
-                                       size_t dim2) ISPCRT_CATCH_BEGIN {
+ISPCRTFuture ispcrtCommandListLaunch3D(ISPCRTCommandList l, ISPCRTKernel k, ISPCRTMemoryView p, size_t dim0,
+                                       size_t dim1, size_t dim2) ISPCRT_CATCH_BEGIN {
     auto &list = referenceFromHandle<ispcrt::base::CommandList>(l);
     auto &kernel = referenceFromHandle<ispcrt::base::Kernel>(k);
 
@@ -868,7 +860,7 @@ ISPCRT_CATCH_END_NO_RETURN()
 
 ISPCRTFence ispcrtCommandListSubmit(ISPCRTCommandList l) ISPCRT_CATCH_BEGIN {
     auto &list = referenceFromHandle<ispcrt::base::CommandList>(l);
-    return (ISPCRTFence) list.submit();
+    return (ISPCRTFence)list.submit();
 }
 ISPCRT_CATCH_END(nullptr)
 
@@ -902,7 +894,7 @@ ISPCRT_CATCH_END(nullptr)
 
 ISPCRTCommandList ispcrtCommandQueueCreateCommandList(ISPCRTCommandQueue q) ISPCRT_CATCH_BEGIN {
     auto &queue = referenceFromHandle<ispcrt::base::CommandQueue>(q);
-    return (ISPCRTCommandList) queue.createCommandList();
+    return (ISPCRTCommandList)queue.createCommandList();
 }
 ISPCRT_CATCH_END(nullptr)
 
@@ -948,7 +940,8 @@ void ispcrtCopyToHost(ISPCRTTaskQueue q, ISPCRTMemoryView mv) ISPCRT_CATCH_BEGIN
 }
 ISPCRT_CATCH_END_NO_RETURN()
 
-void ispcrtCopyMemoryView(ISPCRTTaskQueue q, ISPCRTMemoryView mvDst, ISPCRTMemoryView mvSrc, const size_t size) ISPCRT_CATCH_BEGIN {
+void ispcrtCopyMemoryView(ISPCRTTaskQueue q, ISPCRTMemoryView mvDst, ISPCRTMemoryView mvSrc,
+                          const size_t size) ISPCRT_CATCH_BEGIN {
     auto &queue = referenceFromHandle<ispcrt::base::TaskQueue>(q);
     auto &viewDst = referenceFromHandle<ispcrt::base::MemoryView>(mvDst);
     auto &viewSrc = referenceFromHandle<ispcrt::base::MemoryView>(mvSrc);

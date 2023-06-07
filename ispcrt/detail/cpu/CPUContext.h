@@ -9,10 +9,11 @@ namespace ispcrt {
 
 struct CPUContext : public base::Context {
     CPUContext() = default;
-    base::MemoryView *newMemoryView(void *appMem, size_t numBytes, const ISPCRTNewMemoryViewFlags *flags) const override;
+    base::MemoryView *newMemoryView(void *appMem, size_t numBytes,
+                                    const ISPCRTNewMemoryViewFlags *flags) const override;
     ISPCRTDeviceType getDeviceType() const override;
 
-    virtual void* contextNativeHandle() const override;
+    virtual void *contextNativeHandle() const override;
 };
 
 } // namespace ispcrt

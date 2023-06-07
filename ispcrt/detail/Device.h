@@ -6,9 +6,9 @@
 // public
 #include "../ispcrt.h"
 // internal
+#include "CommandQueue.h"
 #include "Kernel.h"
 #include "Module.h"
-#include "CommandQueue.h"
 #include "TaskQueue.h"
 
 namespace ispcrt {
@@ -19,7 +19,8 @@ struct Device : public RefCounted {
 
     virtual ~Device() = default;
 
-    virtual MemoryView *newMemoryView(void *appMemory, size_t numBytes, const ISPCRTNewMemoryViewFlags *flags) const = 0;
+    virtual MemoryView *newMemoryView(void *appMemory, size_t numBytes,
+                                      const ISPCRTNewMemoryViewFlags *flags) const = 0;
 
     virtual CommandQueue *newCommandQueue(uint32_t ordinal) const = 0;
 
@@ -28,7 +29,7 @@ struct Device : public RefCounted {
     virtual Module *newModule(const char *moduleFile, const ISPCRTModuleOptions &opts) const = 0;
 
     virtual void dynamicLinkModules(Module **modules, uint32_t numModules) const = 0;
-    virtual Module* staticLinkModules(Module **modules, uint32_t numModules) const = 0;
+    virtual Module *staticLinkModules(Module **modules, uint32_t numModules) const = 0;
 
     virtual Kernel *newKernel(const Module &module, const char *name) const = 0;
 
@@ -38,7 +39,7 @@ struct Device : public RefCounted {
 
     virtual ISPCRTDeviceType getType() const = 0;
 
-    virtual ISPCRTAllocationType getMemAllocType(void* appMemory) const = 0;
+    virtual ISPCRTAllocationType getMemAllocType(void *appMemory) const = 0;
 };
 
 } // namespace base

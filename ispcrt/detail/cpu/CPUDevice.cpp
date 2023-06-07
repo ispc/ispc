@@ -19,18 +19,10 @@
 #include <vector>
 
 extern "C" {
-ispcrt::base::Device *load_cpu_device() {
-    return new ispcrt::CPUDevice;
-}
-uint32_t cpu_device_count() {
-    return ispcrt::cpu::deviceCount();
-}
-ISPCRTDeviceInfo cpu_device_info(uint32_t idx) {
-    return ispcrt::cpu::deviceInfo(idx);
-}
-ispcrt::base::Context *load_cpu_context() {
-    return new ispcrt::CPUContext;
-}
+ispcrt::base::Device *load_cpu_device() { return new ispcrt::CPUDevice; }
+uint32_t cpu_device_count() { return ispcrt::cpu::deviceCount(); }
+ISPCRTDeviceInfo cpu_device_info(uint32_t idx) { return ispcrt::cpu::deviceInfo(idx); }
+ispcrt::base::Context *load_cpu_context() { return new ispcrt::CPUContext; }
 }
 
 namespace ispcrt {
@@ -59,9 +51,7 @@ struct Fence : public ispcrt::base::Fence {
         // no-op
     }
 
-    ISPCRTFenceStatus status() const override {
-        return ISPCRT_FENCE_SIGNALED;
-    }
+    ISPCRTFenceStatus status() const override { return ISPCRT_FENCE_SIGNALED; }
 
     void reset() override {
         // no-op
@@ -73,7 +63,8 @@ struct Fence : public ispcrt::base::Fence {
 using CPUKernelEntryPoint = void (*)(void *, size_t, size_t, size_t);
 
 struct MemoryView : public ispcrt::base::MemoryView {
-    MemoryView(void *appMem, size_t numBytes, bool shared) : m_hostPtr(appMem), m_devicePtr(appMem), m_size(numBytes), m_shared(shared) {}
+    MemoryView(void *appMem, size_t numBytes, bool shared)
+        : m_hostPtr(appMem), m_devicePtr(appMem), m_size(numBytes), m_shared(shared) {}
 
     ~MemoryView() {
         if (!m_external_alloc && m_devicePtr)
@@ -85,10 +76,9 @@ struct MemoryView : public ispcrt::base::MemoryView {
     void *hostPtr() {
         if (m_shared) {
             return devicePtr();
-        }
-        else {
+        } else {
             if (!m_hostPtr)
-                 throw std::logic_error("pointer to the host memory is NULL");
+                throw std::logic_error("pointer to the host memory is NULL");
             return m_hostPtr;
         }
     };
@@ -125,7 +115,7 @@ struct Module : public ispcrt::base::Module {
 #else
             std::string ext = ".so";
 #endif
-            void* lib = nullptr;
+            void *lib = nullptr;
 #if defined _WIN32
             lib = LoadLibrary((m_file + ext).c_str());
 #else
@@ -139,7 +129,7 @@ struct Module : public ispcrt::base::Module {
     }
 
     Module(Module **modules, const uint32_t numModules) {
-        for (uint32_t i = 0; i < numModules; i++ ) {
+        for (uint32_t i = 0; i < numModules; i++) {
             for (auto lib : modules[i]->libs()) {
                 m_libs.push_back(lib);
             }
@@ -176,11 +166,11 @@ struct Module : public ispcrt::base::Module {
         return fptr;
     }
 
-    std::vector<void*> libs() { return m_libs; };
+    std::vector<void *> libs() { return m_libs; };
 
   private:
     std::string m_file;
-    std::vector<void*>m_libs;
+    std::vector<void *> m_libs;
 };
 
 struct Kernel : public ispcrt::base::Kernel {
@@ -188,7 +178,7 @@ struct Kernel : public ispcrt::base::Kernel {
         const cpu::Module &module = (const cpu::Module &)_module;
 
         auto name = std::string(_name) + "_cpu_entry_point";
-        void* fcn = module.functionPtr(name.c_str());
+        void *fcn = module.functionPtr(name.c_str());
 
         if (!fcn)
             throw std::logic_error("could not find CPU kernel function");
@@ -212,13 +202,15 @@ struct Kernel : public ispcrt::base::Kernel {
 };
 
 struct CommandListImpl : ispcrt::base::CommandList {
-    CommandListImpl() { /* no-op */ }
+    CommandListImpl() { /* no-op */
+    }
     ~CommandListImpl() {
         clearFences();
         clearFutures();
     }
 
-    void barrier() override { /* no-op */ }
+    void barrier() override { /* no-op */
+    }
 
     ispcrt::base::Future *copyToHost(ispcrt::base::MemoryView &) override {
         Future *f = new Future();
@@ -232,9 +224,10 @@ struct CommandListImpl : ispcrt::base::CommandList {
         return f;
     }
 
-    ispcrt::base::Future *copyMemoryView(base::MemoryView &mv_dst, base::MemoryView &mv_src, const size_t size) override {
-        auto view_dst_ptr = static_cast<std::byte*>(((cpu::MemoryView &)mv_dst).devicePtr());
-        auto view_src_ptr = static_cast<std::byte*>(((cpu::MemoryView &)mv_src).devicePtr());
+    ispcrt::base::Future *copyMemoryView(base::MemoryView &mv_dst, base::MemoryView &mv_src,
+                                         const size_t size) override {
+        auto view_dst_ptr = static_cast<std::byte *>(((cpu::MemoryView &)mv_dst).devicePtr());
+        auto view_src_ptr = static_cast<std::byte *>(((cpu::MemoryView &)mv_src).devicePtr());
         std::copy(view_src_ptr, view_src_ptr + size, view_dst_ptr);
         Future *f = new Future();
         m_futures.push_back(f);
@@ -264,12 +257,13 @@ struct CommandListImpl : ispcrt::base::CommandList {
         return future;
     }
 
-    void close() override { /* no-op */ }
+    void close() override { /* no-op */
+    }
 
     ispcrt::base::Fence *submit() override {
-      Fence *f = new Fence;
-      m_fences.push_back(f);
-      return f;
+        Fence *f = new Fence;
+        m_fences.push_back(f);
+        return f;
     }
 
     void reset() override {
@@ -285,13 +279,13 @@ struct CommandListImpl : ispcrt::base::CommandList {
   private:
     bool m_timestamps{false};
 
-    std::vector<Future*> m_futures;
-    std::vector<Fence*> m_fences;
+    std::vector<Future *> m_futures;
+    std::vector<Fence *> m_fences;
 
     void clearFences() {
         if (m_fences.size()) {
             for (const auto &f : m_fences) {
-                  f->refDec();
+                f->refDec();
             }
             m_fences.clear();
         }
@@ -300,7 +294,7 @@ struct CommandListImpl : ispcrt::base::CommandList {
     void clearFutures() {
         if (m_futures.size()) {
             for (const auto &f : m_futures) {
-                  f->refDec();
+                f->refDec();
             }
             m_futures.clear();
         }
@@ -308,11 +302,10 @@ struct CommandListImpl : ispcrt::base::CommandList {
 };
 
 struct CommandQueueImpl : ispcrt::base::CommandQueue {
-    CommandQueueImpl() { /* no-op */ }
-
-    ~CommandQueueImpl() {
-        clearCommandList();
+    CommandQueueImpl() { /* no-op */
     }
+
+    ~CommandQueueImpl() { clearCommandList(); }
 
     ispcrt::base::CommandList *createCommandList() override {
         CommandListImpl *p = new CommandListImpl();
@@ -320,12 +313,13 @@ struct CommandQueueImpl : ispcrt::base::CommandQueue {
         return p;
     }
 
-    void sync() override { /* no-op */ }
+    void sync() override { /* no-op */
+    }
 
     void *nativeHandle() const override { return nullptr; }
 
   private:
-    std::vector<CommandListImpl*> m_cmdlists;
+    std::vector<CommandListImpl *> m_cmdlists;
 
     void clearCommandList() {
         if (m_cmdlists.size()) {
@@ -362,8 +356,8 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
     }
 
     void copyMemoryView(base::MemoryView &mv_dst, base::MemoryView &mv_src, const size_t size) override {
-        auto view_dst_ptr = static_cast<std::byte*>(((cpu::MemoryView &)mv_dst).devicePtr());
-        auto view_src_ptr = static_cast<std::byte*>(((cpu::MemoryView &)mv_src).devicePtr());
+        auto view_dst_ptr = static_cast<std::byte *>(((cpu::MemoryView &)mv_dst).devicePtr());
+        auto view_src_ptr = static_cast<std::byte *>(((cpu::MemoryView &)mv_src).devicePtr());
         std::copy(view_src_ptr, view_src_ptr + size, view_dst_ptr);
     }
 
@@ -396,7 +390,7 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
     void *taskQueueNativeHandle() const override { return nullptr; }
 
   private:
-    std::vector<cpu::Future*> m_futures;
+    std::vector<cpu::Future *> m_futures;
 };
 
 uint32_t deviceCount() { return 1; }
@@ -410,7 +404,8 @@ ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx) {
 
 } // namespace cpu
 
-ispcrt::base::MemoryView *CPUDevice::newMemoryView(void *appMem, size_t numBytes, const ISPCRTNewMemoryViewFlags *flags) const {
+ispcrt::base::MemoryView *CPUDevice::newMemoryView(void *appMem, size_t numBytes,
+                                                   const ISPCRTNewMemoryViewFlags *flags) const {
     return new cpu::MemoryView(appMem, numBytes, flags->allocType == ISPCRT_ALLOC_TYPE_SHARED);
 }
 
@@ -425,7 +420,7 @@ ispcrt::base::Module *CPUDevice::newModule(const char *moduleFile, const ISPCRTM
 void CPUDevice::dynamicLinkModules(base::Module **modules, const uint32_t numModules) const {}
 
 ispcrt::base::Module *CPUDevice::staticLinkModules(base::Module **modules, const uint32_t numModules) const {
-    return new cpu::Module((cpu::Module**)modules, numModules);
+    return new cpu::Module((cpu::Module **)modules, numModules);
 }
 
 ispcrt::base::Kernel *CPUDevice::newKernel(const ispcrt::base::Module &module, const char *name) const {
@@ -438,21 +433,16 @@ void *CPUDevice::deviceNativeHandle() const { return nullptr; }
 
 void *CPUDevice::contextNativeHandle() const { return nullptr; }
 
-ISPCRTDeviceType CPUDevice::getType() const {
-    return ISPCRT_DEVICE_TYPE_CPU;
-}
+ISPCRTDeviceType CPUDevice::getType() const { return ISPCRT_DEVICE_TYPE_CPU; }
 
-ISPCRTAllocationType CPUDevice::getMemAllocType(void* appMemory) const {
-    return ISPCRT_ALLOC_TYPE_UNKNOWN;
-}
+ISPCRTAllocationType CPUDevice::getMemAllocType(void *appMemory) const { return ISPCRT_ALLOC_TYPE_UNKNOWN; }
 
-ispcrt::base::MemoryView *CPUContext::newMemoryView(void *appMem, size_t numBytes, const ISPCRTNewMemoryViewFlags *flags) const {
+ispcrt::base::MemoryView *CPUContext::newMemoryView(void *appMem, size_t numBytes,
+                                                    const ISPCRTNewMemoryViewFlags *flags) const {
     return new cpu::MemoryView(appMem, numBytes, flags->allocType == ISPCRT_ALLOC_TYPE_SHARED);
 }
 
-ISPCRTDeviceType CPUContext::getDeviceType() const {
-    return ISPCRTDeviceType::ISPCRT_DEVICE_TYPE_CPU;
-}
+ISPCRTDeviceType CPUContext::getDeviceType() const { return ISPCRTDeviceType::ISPCRT_DEVICE_TYPE_CPU; }
 
 void *CPUContext::contextNativeHandle() const { return nullptr; }
 

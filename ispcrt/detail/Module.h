@@ -12,7 +12,7 @@ struct Module : public RefCounted {
     Module() = default;
     virtual ~Module() = default;
 
-    virtual void* functionPtr(const char *name) const = 0;
+    virtual void *functionPtr(const char *name) const = 0;
 };
 
 } // namespace base

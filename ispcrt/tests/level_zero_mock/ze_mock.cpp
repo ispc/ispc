@@ -11,20 +11,12 @@ namespace mock {
 
 std::unordered_map<std::string, int> CallCounters::counters;
 
-void CallCounters::inc(const std::string& fun) {
-    counters[fun]++;
-}
+void CallCounters::inc(const std::string &fun) { counters[fun]++; }
 
-int  CallCounters::get(const std::string& fun) {
-    return counters[fun];
-}
-void CallCounters::resetAll() {
-    counters.clear();
-}
+int CallCounters::get(const std::string &fun) { return counters[fun]; }
+void CallCounters::resetAll() { counters.clear(); }
 
-void CallCounters::resetOne(const std::string& fun) {
-    counters[fun] = 0;
-}
+void CallCounters::resetOne(const std::string &fun) { counters[fun] = 0; }
 
 // Config
 
@@ -61,30 +53,22 @@ void Config::closeCmdList() { cmdListOpened = false; }
 
 bool Config::isCmdListClosed() { return !cmdListOpened; }
 
-bool Config::checkCmdList(const std::vector<CmdListElem>& expected) { return expected == cmdList; }
+bool Config::checkCmdList(const std::vector<CmdListElem> &expected) { return expected == cmdList; }
 
 void Config::setDeviceCount(uint32_t count) {
     devices.clear();
     devices.resize(count, DefaultGpuDevice);
 }
 
-void Config::setExpectedDevice(uint32_t deviceIdx) {
-    expectedDevice = deviceIdx;
-}
+void Config::setExpectedDevice(uint32_t deviceIdx) { expectedDevice = deviceIdx; }
 
-uint32_t Config::getExpectedDevice() {
-    return expectedDevice;
-}
+uint32_t Config::getExpectedDevice() { return expectedDevice; }
 
-uint32_t Config::getDeviceCount() {
-    return devices.size();
-}
+uint32_t Config::getDeviceCount() { return devices.size(); }
 
-DeviceProperties* Config::getDevicePtr(uint32_t deviceIdx) {
-    return &devices[deviceIdx];
-}
+DeviceProperties *Config::getDevicePtr(uint32_t deviceIdx) { return &devices[deviceIdx]; }
 
-void Config::setDeviceProperties(uint32_t deviceIdx, const DeviceProperties& dp) {
+void Config::setDeviceProperties(uint32_t deviceIdx, const DeviceProperties &dp) {
     if (deviceIdx >= devices.size())
         throw std::runtime_error("Config::setDeviceProperties: invalid device number");
     devices[deviceIdx] = dp;

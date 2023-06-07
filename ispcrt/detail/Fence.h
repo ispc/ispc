@@ -19,7 +19,7 @@ struct Fence : public RefCounted {
     virtual ISPCRTFenceStatus status() const = 0;
     virtual void reset() = 0;
 
-    virtual void* nativeHandle() const = 0;
+    virtual void *nativeHandle() const = 0;
 };
 
 } // namespace base

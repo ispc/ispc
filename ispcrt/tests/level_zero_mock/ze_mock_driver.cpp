@@ -232,7 +232,8 @@ ze_result_t zeEventHostReset(ze_event_handle_t hEvent) {
 }
 
 static int fenceSignalTimerCounter = 0;
-ze_result_t zeFenceCreate(ze_command_queue_handle_t hCommandQueue, const ze_fence_desc_t *desc, ze_fence_handle_t *phFence) {
+ze_result_t zeFenceCreate(ze_command_queue_handle_t hCommandQueue, const ze_fence_desc_t *desc,
+                          ze_fence_handle_t *phFence) {
     MOCK_CNT_CALL;
     if (hCommandQueue != CmdQueueHandle.get() || !desc || !phFence)
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
