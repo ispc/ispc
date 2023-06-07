@@ -24,7 +24,21 @@ fi
 
 # Check all source files.
 # For benchmarks folder do not check 03_complex, as these tests come from real projects with their formatting.
-FILES=`ls src/*.{cpp,h} src/opt/*.{cpp,h} *.cpp builtins/*{cpp,hpp,c} benchmarks/{01,02}*/*{cpp,ispc} common/*.h stdlib.ispc`
+FILES=$(ls                                  \
+    src/*.{cpp,h}                           \
+    src/opt/*.{cpp,h}                       \
+    *.cpp                                   \
+    builtins/*{cpp,hpp,c}                   \
+    benchmarks/{01,02}*/*{cpp,ispc}         \
+    common/*.h                              \
+    stdlib.ispc                             \
+    ispcrt/*.{h,hpp,cpp}                    \
+    ispcrt/detail/*.h                       \
+    ispcrt/detail/cpu/*.{h,cpp}             \
+    ispcrt/detail/gpu/*.{h,cpp}             \
+    ispcrt/tests/level_zero_mock/*.{h,cpp}  \
+    ispcrt/tests/mock_tests/*.cpp           \
+)
 for FILE in $FILES; do
     diff -uN --label original/$FILE --label formatted/$FILE <(cat $FILE) <($CLANG_FORMAT $FILE)
     if [ $? -ne 0 ]; then
