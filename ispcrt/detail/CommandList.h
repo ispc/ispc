@@ -8,9 +8,9 @@
 // internal
 #include "Fence.h"
 #include "Future.h"
+#include "IntrusivePtr.h"
 #include "Kernel.h"
 #include "MemoryView.h"
-#include "IntrusivePtr.h"
 
 namespace ispcrt {
 namespace base {

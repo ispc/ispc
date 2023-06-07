@@ -101,7 +101,7 @@ ISPCRTDevice ispcrtGetDeviceFromNativeHandle(ISPCRTContext context, ISPCRTGeneri
 ISPCRTDeviceType ispcrtGetDeviceType(ISPCRTDevice d);
 
 uint32_t ispcrtGetDeviceCount(ISPCRTDeviceType);
-void ispcrtGetDeviceInfo(ISPCRTDeviceType, uint32_t deviceIdx, ISPCRTDeviceInfo*);
+void ispcrtGetDeviceInfo(ISPCRTDeviceType, uint32_t deviceIdx, ISPCRTDeviceInfo *);
 
 // Context initialization //////////////////////////////////////////////////////
 
@@ -137,7 +137,8 @@ typedef struct {
 } ISPCRTNewMemoryViewFlags;
 
 ISPCRTMemoryView ispcrtNewMemoryView(ISPCRTDevice, void *appMemory, size_t numBytes, ISPCRTNewMemoryViewFlags *flags);
-ISPCRTMemoryView ispcrtNewMemoryViewForContext(ISPCRTContext c, void *appMemory, size_t numBytes, ISPCRTNewMemoryViewFlags *flags);
+ISPCRTMemoryView ispcrtNewMemoryViewForContext(ISPCRTContext c, void *appMemory, size_t numBytes,
+                                               ISPCRTNewMemoryViewFlags *flags);
 
 void *ispcrtHostPtr(ISPCRTMemoryView);
 void *ispcrtDevicePtr(ISPCRTMemoryView);
@@ -146,7 +147,7 @@ void *ispcrtSharedPtr(ISPCRTMemoryView);
 size_t ispcrtSize(ISPCRTMemoryView);
 
 ISPCRTAllocationType ispcrtGetMemoryViewAllocType(ISPCRTMemoryView);
-ISPCRTAllocationType ispcrtGetMemoryAllocType(ISPCRTDevice d, void* memBuffer);
+ISPCRTAllocationType ispcrtGetMemoryAllocType(ISPCRTDevice d, void *memBuffer);
 
 // Modules ////////////////////////////////////////////////////////////////////
 typedef enum {
@@ -178,9 +179,10 @@ ISPCRTFuture ispcrtCommandListCopyMemoryView(ISPCRTCommandList, ISPCRTMemoryView
 
 // NOTE: 'params' can be a nullptr handle (nullptr will get passed to the ISPC task as the function parameter)
 ISPCRTFuture ispcrtCommandListLaunch1D(ISPCRTCommandList, ISPCRTKernel, ISPCRTMemoryView params, size_t dim0);
-ISPCRTFuture ispcrtCommandListLaunch2D(ISPCRTCommandList, ISPCRTKernel, ISPCRTMemoryView params, size_t dim0, size_t dim1);
-ISPCRTFuture ispcrtCommandListLaunch3D(ISPCRTCommandList, ISPCRTKernel, ISPCRTMemoryView params, size_t dim0, size_t dim1,
-                            size_t dim2);
+ISPCRTFuture ispcrtCommandListLaunch2D(ISPCRTCommandList, ISPCRTKernel, ISPCRTMemoryView params, size_t dim0,
+                                       size_t dim1);
+ISPCRTFuture ispcrtCommandListLaunch3D(ISPCRTCommandList, ISPCRTKernel, ISPCRTMemoryView params, size_t dim0,
+                                       size_t dim1, size_t dim2);
 
 void ispcrtCommandListClose(ISPCRTCommandList);
 ISPCRTFence ispcrtCommandListSubmit(ISPCRTCommandList);

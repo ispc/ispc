@@ -3,9 +3,9 @@
 
 #pragma once
 
+#include "../CommandQueue.h"
 #include "../Device.h"
 #include "../Future.h"
-#include "../CommandQueue.h"
 
 namespace ispcrt {
 
@@ -14,12 +14,13 @@ namespace cpu {
 uint32_t deviceCount();
 ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx);
 
-}; // cpu
+}; // namespace cpu
 
 struct CPUDevice : public base::Device {
     CPUDevice() = default;
 
-    base::MemoryView *newMemoryView(void *appMem, size_t numBytes, const ISPCRTNewMemoryViewFlags *flags) const override;
+    base::MemoryView *newMemoryView(void *appMem, size_t numBytes,
+                                    const ISPCRTNewMemoryViewFlags *flags) const override;
 
     base::CommandQueue *newCommandQueue(uint32_t ordinal) const override;
 
@@ -38,7 +39,7 @@ struct CPUDevice : public base::Device {
 
     ISPCRTDeviceType getType() const override;
 
-    ISPCRTAllocationType getMemAllocType(void* appMemory) const override;
+    ISPCRTAllocationType getMemAllocType(void *appMemory) const override;
 };
 
 } // namespace ispcrt
