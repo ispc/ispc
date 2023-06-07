@@ -39,6 +39,31 @@ define(`MfORi32',
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Helper functions for mangling overloaded LLVM intrinsics
+define(`LLVM_OVERLOADED_TYPE',
+`ifelse($1, `i1', `i1',
+        $1, `i8', `i8',
+        $1, `i16', `i16',
+        $1, `half', `f16',
+        $1, `i32', `i32',
+        $1, `float', `f32',
+        $1, `double', `f64',
+        $1, `i64', `i64')')
+
+define(`SIZEOF',
+`ifelse($1, `i1', 1,
+        $1, `i8', 1,
+        $1, `i16', 2,
+        $1, `half', 2,
+        $1, `i32', 4,
+        $1, `float', 4,
+        $1, `double', 8,
+        $1, `i64', 8)')
+
+define(`CONCAT',`$1$2')
+define(`TYPE_SUFFIX',`CONCAT(`v', CONCAT(WIDTH, LLVM_OVERLOADED_TYPE($1)))')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Reduce function based on the WIDTH
 define(`reduce_func',
 `ifelse(WIDTH, `64', `reduce64($1, $2, $3)',
@@ -7150,6 +7175,8 @@ halfReduce(WIDTH)
 ;; $2: alignment for elements of type $1 (4, 8, ...)
 
 define(`masked_load', `
+declare <WIDTH x $1> @llvm.masked.load.TYPE_SUFFIX($1)(<WIDTH x $1>*, i32, <WIDTH x i1>, <WIDTH x $1>)
+
 define <WIDTH x $1> @__masked_load_$1(i8 *, <WIDTH x MASK> %mask) nounwind alwaysinline {
 entry:
   %mm = call i64 @__movmsk(<WIDTH x MASK> %mask)
@@ -7170,41 +7197,22 @@ entry:
   ; if we are not able to do a singe vload, we will accumulate lanes in this memory..
   %retptr = alloca <WIDTH x $1>
   %retptr32 = bitcast <WIDTH x $1> * %retptr to $1 *
+  %ptr = bitcast i8* %0 to <WIDTH x $1>*
   br i1 %can_vload_maybe_fast, label %load, label %loop
 
 load:
-  %ptr = bitcast i8 * %0 to <WIDTH x $1> *
   %valall = load PTR_OP_ARGS(`<WIDTH x $1> ')  %ptr, align $2
   ret <WIDTH x $1> %valall
 
 loop:
-  ; loop over the lanes and see if each one is on...
-  %lane = phi i32 [ 0, %entry ], [ %next_lane, %lane_done ]
-  %lane64 = zext i32 %lane to i64
-  %lanemask = shl i64 1, %lane64
-  %mask_and = and i64 %mm, %lanemask
-  %do_lane = icmp ne i64 %mask_and, 0
-  br i1 %do_lane, label %load_lane, label %lane_done
-
-load_lane:
-  ; yes!  do the load and store the result into the appropriate place in the
-  ; allocaed memory above
-  %ptr32 = bitcast i8 * %0 to $1 *
-  %lane_ptr = getelementptr PTR_OP_ARGS(`$1') %ptr32, i32 %lane
-  %val = load PTR_OP_ARGS(`$1 ')  %lane_ptr
-  %store_ptr = getelementptr PTR_OP_ARGS(`$1') %retptr32, i32 %lane
-  store $1 %val, $1 * %store_ptr
-  br label %lane_done
-
-lane_done:
-  %next_lane = add i32 %lane, 1
-  %done = icmp eq i32 %lane, eval(WIDTH-1)
-  br i1 %done, label %return, label %loop
-
-return:
-  %r = load PTR_OP_ARGS(`<WIDTH x $1> ')  %retptr
-  ret <WIDTH x $1> %r
-}
+ifelse(MASK,i1, `
+  %res = call <WIDTH x $1> @llvm.masked.load.TYPE_SUFFIX($1)(<WIDTH x $1>* %ptr, i32 SIZEOF($1), <WIDTH x i1> %mask, <WIDTH x $1> undef)
+', `
+  %maski1 = trunc <WIDTH x MASK> %mask to <WIDTH x i1>
+  %res = call <WIDTH x $1> @llvm.masked.load.TYPE_SUFFIX($1)(<WIDTH x $1>* %ptr, i32 SIZEOF($1), <WIDTH x i1> %maski1, <WIDTH x $1> undef)
+')
+  ret <WIDTH x $1> %res
+ }
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
