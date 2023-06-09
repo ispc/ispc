@@ -777,6 +777,13 @@ if (ISPC_PREPARE_PACKAGE)
     set(CPACK_PACKAGE_VERSION_PATCH ${ISPC_VERSION_PATCH}${ISPC_VERSION_SUFFIX})
     set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
     set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+
+    # Sign files in the package if ISPC_SIGN_KEY is set
+    if (DEFINED ISPC_SIGN_KEY)
+        configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Signing.cmake.in"
+                       "${CMAKE_CURRENT_BINARY_DIR}/Signing.cmake" @ONLY)
+        set(CPACK_PRE_BUILD_SCRIPTS "${CMAKE_CURRENT_BINARY_DIR}/Signing.cmake")
+    endif()
     # Allow use custom package name with -DISPC_PACKAGE_NAME
     if (NOT ISPC_PACKAGE_NAME)
         set(ISPC_ARCH_SUFFIX)
