@@ -1,0 +1,39 @@
+#
+#  Copyright (c) 2023, Intel Corporation
+#
+#  SPDX-License-Identifier: BSD-3-Clause
+
+#
+# ispc Signing.cmake.in
+#
+# Signing of build artifacts
+
+if (WIN32)
+    set(ISPC_SIGN_COMMAND signtool.exe)
+    set(ISPC_SIGN_ARGS sign /fd sha256 /sha1 @ISPC_SIGN_KEY@ /tr http://timestamp.comodoca.com/rfc3161 /td sha256)
+    file(GLOB ISPC_SIGN_FILES ${CPACK_TEMPORARY_INSTALL_DIRECTORY}/bin/ispc.exe ${CPACK_TEMPORARY_INSTALL_DIRECTORY}/bin/*.dll)
+elseif (APPLE)
+    set(ISPC_SIGN_COMMAND codesign)
+    set(ISPC_SIGN_ARGS -fs "@ISPC_SIGN_KEY@" --strict --timestamp --options=runtime)
+    file(GLOB ISPC_SIGN_FILES ${CPACK_TEMPORARY_INSTALL_DIRECTORY}/bin/ispc ${CPACK_TEMPORARY_INSTALL_DIRECTORY}/lib/*.dylib)
+endif()
+
+# Execute the signing command
+execute_process(
+    COMMAND ${ISPC_SIGN_COMMAND} ${ISPC_SIGN_ARGS} ${ISPC_SIGN_FILES}
+    RESULT_VARIABLE ISPC_SIGN_RESULT
+    OUTPUT_VARIABLE ISPC_SIGN_OUTPUT
+    ERROR_VARIABLE ISPC_SIGN_ERROR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_STRIP_TRAILING_WHITESPACE
+)
+
+if (ISPC_SIGN_RESULT EQUAL 0)
+    message(STATUS "Successfully signed:" )
+    foreach(file ${ISPC_SIGN_FILES})
+        get_filename_component(SHORT_NAME ${file} NAME)
+        message(STATUS " - ${SHORT_NAME}")
+    endforeach()
+else ()
+    message(FATAL_ERROR "Cannot sign ${ISPC_SIGN_FILES}: ${ISPC_SIGN_OUTPUT} ${ISPC_SIGN_ERROR}")
+endif()
