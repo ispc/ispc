@@ -30,6 +30,7 @@
 
 // ispcrt
 #include "detail/Exception.h"
+#include "detail/ModuleOptions.h"
 
 // level0
 #include <level_zero/ze_api.h>
@@ -941,9 +942,28 @@ struct MemoryView : public ispcrt::base::MemoryView {
     ChunkedPool *m_memPool{nullptr};
 };
 
+struct ModuleOptions : public ispcrt::base::ModuleOptions {
+    ModuleOptions() = default;
+    ModuleOptions(ISPCRTModuleType moduleType, bool libraryCompilation = false, uint32_t stackSize = 0)
+        : m_moduleType{moduleType}, m_libraryCompilation{libraryCompilation}, m_stackSize{stackSize} {}
+
+    uint32_t stackSize() const { return m_stackSize; }
+    bool libraryCompilation() const { return m_libraryCompilation; }
+    ISPCRTModuleType moduleType() const { return m_moduleType; }
+
+    void setStackSize(uint32_t size) { m_stackSize = size; }
+    void setLibraryCompilation(bool isLibraryCompilation) { m_libraryCompilation = isLibraryCompilation; }
+    void setModuleType(ISPCRTModuleType type) { m_moduleType = type; }
+
+  private:
+    uint32_t m_stackSize{0};
+    bool m_libraryCompilation{false};
+    ISPCRTModuleType m_moduleType{ISPCRTModuleType::ISPCRT_VECTOR_MODULE};
+};
+
 struct Module : public ispcrt::base::Module {
     Module(ze_device_handle_t device, ze_context_handle_t context, const char *moduleFile, const bool is_mock_dev,
-           const ISPCRTModuleOptions &opts)
+           const base::ModuleOptions &opts)
         : m_file(moduleFile) {
         std::ifstream is;
         ze_module_format_t moduleFormat = ZE_MODULE_FORMAT_IL_SPIRV;
@@ -988,7 +1008,7 @@ struct Module : public ispcrt::base::Module {
         m_igc_options = "";
         // If scalar module is passed to ISPC Runtime, do not use VC backend
         // options on it
-        if (opts.moduleType != ISPCRTModuleType::ISPCRT_SCALAR_MODULE) {
+        if (opts.moduleType() != ISPCRTModuleType::ISPCRT_SCALAR_MODULE) {
             m_igc_options += "-vc-codegen -no-optimize -Xfinalizer '-presched'";
 #if defined(__linux__)
             // `newspillcost` is not yet supported on Windows in open source
@@ -998,11 +1018,11 @@ struct Module : public ispcrt::base::Module {
         }
         // If stackSize has default value 0, do not set -stateless-stack-mem-size,
         // it will be set to 8192 in VC backend by default.
-        if (opts.stackSize > 0) {
-            m_igc_options += " -stateless-stack-mem-size=" + std::to_string(opts.stackSize);
+        if (opts.stackSize() > 0) {
+            m_igc_options += " -stateless-stack-mem-size=" + std::to_string(opts.stackSize());
         }
         // If module is a library for the kernel, add " -library-compilation"
-        if (opts.libraryCompilation) {
+        if (opts.libraryCompilation()) {
             m_igc_options += " -library-compilation";
         }
         constexpr auto MAX_ISPCRT_IGC_OPTIONS = 2000UL;
@@ -1856,7 +1876,14 @@ base::TaskQueue *GPUDevice::newTaskQueue() const {
     return new gpu::TaskQueue((ze_device_handle_t)m_device, (ze_context_handle_t)m_context, m_is_mock);
 }
 
-base::Module *GPUDevice::newModule(const char *moduleFile, const ISPCRTModuleOptions &opts) const {
+base::ModuleOptions *GPUDevice::newModuleOptions() const { return new gpu::ModuleOptions(); }
+
+base::ModuleOptions *GPUDevice::newModuleOptions(ISPCRTModuleType moduleType, bool libraryCompilation,
+                                                 uint32_t stackSize) const {
+    return new gpu::ModuleOptions(moduleType, libraryCompilation, stackSize);
+}
+
+base::Module *GPUDevice::newModule(const char *moduleFile, const base::ModuleOptions &opts) const {
     return new gpu::Module((ze_device_handle_t)m_device, (ze_context_handle_t)m_context, moduleFile, m_is_mock, opts);
 }
 

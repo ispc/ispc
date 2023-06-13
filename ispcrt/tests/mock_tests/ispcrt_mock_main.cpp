@@ -357,17 +357,33 @@ TEST_F(MockTestWithDevice, Module_Constructor) {
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
+TEST_F(MockTestWithDevice, Module_Constructor_zeModuleCreateWithOptionsEmpty) {
+    // Create module with options
+    ispcrt::ModuleOptions opts{m_device};
+    ispcrt::Module m(m_device, "", opts);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
 TEST_F(MockTestWithDevice, Module_Constructor_zeModuleCreateWithOptions) {
     // Create module with options
-    ISPCRTModuleOptions opts = {};
+    ispcrt::ModuleOptions opts{m_device, ISPCRTModuleType::ISPCRT_VECTOR_MODULE, false, 0};
     ispcrt::Module m(m_device, "", opts);
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
 
 TEST_F(MockTestWithDevice, Module_Constructor_zeModuleCreateWithStackSize) {
     // Create module with stack size
-    ISPCRTModuleOptions opts;
-    opts.stackSize = 32000;
+    ispcrt::ModuleOptions opts{m_device, ISPCRTModuleType::ISPCRT_VECTOR_MODULE, false, 32000};
+    ispcrt::Module m(m_device, "", opts);
+    ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
+}
+
+TEST_F(MockTestWithDevice, Module_Constructor_zeModuleCreateWithOptionsSetters) {
+    // Create module with stack size
+    ispcrt::ModuleOptions opts{m_device};
+    opts.setStackSize(32000);
+    opts.setLibraryCompilation(true);
+    opts.setModuleType(ISPCRTModuleType::ISPCRT_SCALAR_MODULE);
     ispcrt::Module m(m_device, "", opts);
     ASSERT_EQ(sm_rt_error, ISPCRT_NO_ERROR);
 }
@@ -1478,8 +1494,7 @@ TEST_F(MockTest, C_API_ispcrtCommandListBarrierCloseSubmitReset) {
 TEST_F(MockTest, C_API_ispcrtCommandListCopyLaunchSyncQueue) {
     ISPCRTContext ctx = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
     ISPCRTDevice dev = ispcrtGetDeviceFromContext(ctx, 0);
-    ISPCRTModuleOptions opts;
-    ISPCRTModule m = ispcrtLoadModule(dev, "", opts);
+    ISPCRTModule m = ispcrtLoadModule(dev, "");
     ISPCRTKernel k = ispcrtNewKernel(dev, m, "");
     ISPCRTNewMemoryViewFlags flags = {ISPCRT_ALLOC_TYPE_SHARED};
     char mem[100] = {0};
@@ -1526,8 +1541,7 @@ TEST_F(MockTest, C_API_ispcrtCommandListCopyLaunchSyncQueue) {
 TEST_F(MockTest, C_API_ispcrtCommandListCopyLaunchFence) {
     ISPCRTContext ctx = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
     ISPCRTDevice dev = ispcrtGetDeviceFromContext(ctx, 0);
-    ISPCRTModuleOptions opts;
-    ISPCRTModule m = ispcrtLoadModule(dev, "", opts);
+    ISPCRTModule m = ispcrtLoadModule(dev, "");
     ISPCRTKernel k = ispcrtNewKernel(dev, m, "");
     ISPCRTNewMemoryViewFlags flags = {ISPCRT_ALLOC_TYPE_SHARED};
     char mem[100] = {0};

@@ -17,6 +17,7 @@
 // ispcrt
 #include "detail/Exception.h"
 #include "detail/Module.h"
+#include "detail/ModuleOptions.h"
 #include "detail/TaskQueue.h"
 
 #ifdef ISPCRT_BUILD_CPU
@@ -765,11 +766,70 @@ ISPCRT_CATCH_END(nullptr)
 // Modules ////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-ISPCRTModule ispcrtLoadModule(ISPCRTDevice d, const char *moduleFile,
-                              ISPCRTModuleOptions moduleOpts) ISPCRT_CATCH_BEGIN {
+ISPCRTModuleOptions ispcrtNewModuleOptionsEmpty(ISPCRTDevice d) ISPCRT_CATCH_BEGIN {
     const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
-    auto module = (ISPCRTModule)device.newModule(moduleFile, moduleOpts);
+    return (ISPCRTModuleOptions)device.newModuleOptions();
+}
+ISPCRT_CATCH_END(nullptr)
+
+ISPCRTModuleOptions ispcrtNewModuleOptions(ISPCRTDevice d, ISPCRTModuleType moduleType, bool libraryCompilation,
+                                           uint32_t stackSize) ISPCRT_CATCH_BEGIN {
+    const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
+    return (ISPCRTModuleOptions)device.newModuleOptions(moduleType, libraryCompilation, stackSize);
+}
+ISPCRT_CATCH_END(nullptr)
+
+uint32_t ispcrtModuleOptionsGetStackSize(ISPCRTModuleOptions o) ISPCRT_CATCH_BEGIN {
+    const auto &opts = referenceFromHandle<ispcrt::base::ModuleOptions>(o);
+    return opts.stackSize();
+}
+ISPCRT_CATCH_END(0)
+
+bool ispcrtModuleOptionsGetLibraryCompilation(ISPCRTModuleOptions o) ISPCRT_CATCH_BEGIN {
+    const auto &opts = referenceFromHandle<ispcrt::base::ModuleOptions>(o);
+    return opts.libraryCompilation();
+}
+ISPCRT_CATCH_END(false)
+
+ISPCRTModuleType ispcrtModuleOptionsGetModuleType(ISPCRTModuleOptions o) ISPCRT_CATCH_BEGIN {
+    const auto &opts = referenceFromHandle<ispcrt::base::ModuleOptions>(o);
+    return opts.moduleType();
+}
+ISPCRT_CATCH_END(ISPCRTModuleType::ISPCRT_VECTOR_MODULE)
+
+void ispcrtModuleOptionsSetStackSize(ISPCRTModuleOptions o, uint32_t size) ISPCRT_CATCH_BEGIN {
+    auto &opts = referenceFromHandle<ispcrt::base::ModuleOptions>(o);
+    opts.setStackSize(size);
+}
+ISPCRT_CATCH_END_NO_RETURN()
+
+void ispcrtModuleOptionsSetLibraryCompilation(ISPCRTModuleOptions o, bool isLibraryCompilation) ISPCRT_CATCH_BEGIN {
+    auto &opts = referenceFromHandle<ispcrt::base::ModuleOptions>(o);
+    opts.setLibraryCompilation(isLibraryCompilation);
+}
+ISPCRT_CATCH_END_NO_RETURN()
+
+void ispcrtModuleOptionsSetModuleType(ISPCRTModuleOptions o, ISPCRTModuleType type) ISPCRT_CATCH_BEGIN {
+    auto &opts = referenceFromHandle<ispcrt::base::ModuleOptions>(o);
+    opts.setModuleType(type);
+}
+ISPCRT_CATCH_END_NO_RETURN()
+
+ISPCRTModule ispcrtLoadModule(ISPCRTDevice d, const char *moduleFile) ISPCRT_CATCH_BEGIN {
+    ISPCRTModule module;
+    const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
+    const auto &o = (ISPCRTModuleOptions)device.newModuleOptions();
+    module = ispcrtLoadModuleWithOptions(d, moduleFile, o);
+    ispcrtRelease(o);
     return module;
+}
+ISPCRT_CATCH_END(nullptr)
+
+ISPCRTModule ispcrtLoadModuleWithOptions(ISPCRTDevice d, const char *moduleFile,
+                                         ISPCRTModuleOptions o) ISPCRT_CATCH_BEGIN {
+    const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
+    const auto &opts = referenceFromHandle<ispcrt::base::ModuleOptions>(o);
+    return (ISPCRTModule)device.newModule(moduleFile, opts);
 }
 ISPCRT_CATCH_END(nullptr)
 

@@ -9,6 +9,7 @@
 #include "CommandQueue.h"
 #include "Kernel.h"
 #include "Module.h"
+#include "ModuleOptions.h"
 #include "TaskQueue.h"
 
 namespace ispcrt {
@@ -26,7 +27,11 @@ struct Device : public RefCounted {
 
     virtual TaskQueue *newTaskQueue() const = 0;
 
-    virtual Module *newModule(const char *moduleFile, const ISPCRTModuleOptions &opts) const = 0;
+    virtual ModuleOptions *newModuleOptions() const = 0;
+    virtual ModuleOptions *newModuleOptions(ISPCRTModuleType moduleType, bool libraryCompilation,
+                                            uint32_t stackSize) const = 0;
+
+    virtual Module *newModule(const char *moduleFile, const ModuleOptions &opts) const = 0;
 
     virtual void dynamicLinkModules(Module **modules, uint32_t numModules) const = 0;
     virtual Module *staticLinkModules(Module **modules, uint32_t numModules) const = 0;
