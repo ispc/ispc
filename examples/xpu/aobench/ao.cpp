@@ -123,8 +123,7 @@ static int run() {
         auto p_dev = ispcrtNewMemoryView(device, &p, sizeof(p), &flags);
 
         // Create module and kernel to execute
-        ISPCRTModuleOptions options = {};
-        auto module = ispcrtLoadModule(device, "xe_aobench", options);
+        auto module = ispcrtLoadModule(device, "xe_aobench");
         auto kernel = ispcrtNewKernel(device, module, "ao_ispc");
         // Create task queue and execute kernel
         auto queue = ispcrtNewTaskQueue(device);
