@@ -1,7 +1,6 @@
 #include <benchmark/benchmark.h>
 #include <iostream>
 
-#include "../../ispcrt/ispcrt.hpp"
 #include "../common.h"
 
 #include "07_loop_unroll_varying_ispc.h"

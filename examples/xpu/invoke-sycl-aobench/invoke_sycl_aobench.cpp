@@ -112,21 +112,20 @@ int main(int argc, char *argv[]) {
 
 #ifndef AOBENCH_TARGET_SYCL
     // Load ISPC module
-    ISPCRTModuleOptions opts = {0};
     // libraryCompilation is needed when linking is required
-    opts.libraryCompilation = true;
+    ISPCRTModuleOptions opts_vector = ispcrtNewModuleOptions(device, ISPCRT_VECTOR_MODULE, false, 0);
 #ifdef AOBENCH_SYCL_LINKING
     // Load ISPC module with invoke_sycl call to SYCL
-    auto runModule = ispcrtLoadModule(device, "ao_ispc_sycl", opts);
+    auto runModule = ispcrtLoadModuleWithOptions(device, "ao_ispc_sycl", opts_vector);
 #else
     // Load ISPC-only module
-    auto runModule = ispcrtLoadModule(device, "ao_ispc", opts);
+    auto runModule = ispcrtLoadModuleWithOptions(device, "ao_ispc", opts_vector);
 #endif
 
 #ifdef AOBENCH_SYCL_LINKING
-    // Before loading SYCL library specify that it's a scalar module
-    opts.moduleType = ISPCRTModuleType::ISPCRT_SCALAR_MODULE;
-    auto libraryModule = ispcrtLoadModule(device, "ao_sycl_lib", opts);
+    // For loading the SYCL library, specify that it's a scalar module
+    ISPCRTModuleOptions opts_scalar = ispcrtNewModuleOptions(device, ISPCRT_SCALAR_MODULE, true, 0);
+    auto libraryModule = ispcrtLoadModuleWithOptions(device, "ao_sycl_lib", opts_scalar);
     std::array<ISPCRTModule, 2> modules = {runModule, libraryModule};
 #ifdef VISA_LINKING
     // vISA linking, the result of a linking is a new module
@@ -261,8 +260,10 @@ int main(int argc, char *argv[]) {
 #ifndef AOBENCH_TARGET_SYCL
     ispcrtRelease(kernel);
     ispcrtRelease(runModule);
+    ispcrtRelease(opts_vector);
 #ifdef AOBENCH_SYCL_LINKING
     ispcrtRelease(libraryModule);
+    ispcrtRelease(opts_scalar);
 #ifdef VISA_LINKING
     ispcrtRelease(linkedModule);
 #endif
