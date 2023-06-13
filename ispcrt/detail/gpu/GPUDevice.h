@@ -37,7 +37,11 @@ struct GPUDevice : public base::Device {
 
     base::TaskQueue *newTaskQueue() const override;
 
-    base::Module *newModule(const char *moduleFile, const ISPCRTModuleOptions &opts) const override;
+    base::ModuleOptions *newModuleOptions() const override;
+    base::ModuleOptions *newModuleOptions(ISPCRTModuleType moduleType, bool libraryCompilation,
+                                          uint32_t stackSize) const override;
+
+    base::Module *newModule(const char *moduleFile, const base::ModuleOptions &opts) const override;
 
     void dynamicLinkModules(base::Module **modules, const uint32_t numModules) const override;
     base::Module *staticLinkModules(base::Module **modules, const uint32_t numModules) const override;

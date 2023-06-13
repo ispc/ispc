@@ -105,6 +105,25 @@ struct MemoryView : public ispcrt::base::MemoryView {
     size_t m_size{0};
 };
 
+struct ModuleOptions : public ispcrt::base::ModuleOptions {
+    ModuleOptions() = default;
+    ModuleOptions(ISPCRTModuleType moduleType, bool libraryCompilation, uint32_t stackSize)
+        : m_moduleType{moduleType}, m_libraryCompilation{libraryCompilation}, m_stackSize{stackSize} {}
+
+    uint32_t stackSize() const { return m_stackSize; }
+    bool libraryCompilation() const { return m_libraryCompilation; }
+    ISPCRTModuleType moduleType() const { return m_moduleType; }
+
+    void setStackSize(uint32_t size) { m_stackSize = size; }
+    void setLibraryCompilation(bool isLibraryCompilation) { m_libraryCompilation = isLibraryCompilation; }
+    void setModuleType(ISPCRTModuleType type) { m_moduleType = type; }
+
+  private:
+    uint32_t m_stackSize{0};
+    bool m_libraryCompilation{false};
+    ISPCRTModuleType m_moduleType{ISPCRTModuleType::ISPCRT_VECTOR_MODULE};
+};
+
 struct Module : public ispcrt::base::Module {
     Module(const char *moduleFile) : m_file(moduleFile) {
         if (!m_file.empty()) {
@@ -413,7 +432,15 @@ ispcrt::base::CommandQueue *CPUDevice::newCommandQueue(uint32_t ordinal) const {
 
 ispcrt::base::TaskQueue *CPUDevice::newTaskQueue() const { return new cpu::TaskQueue(); }
 
-ispcrt::base::Module *CPUDevice::newModule(const char *moduleFile, const ISPCRTModuleOptions &moduleOpts) const {
+ispcrt::base::ModuleOptions *CPUDevice::newModuleOptions() const { return new cpu::ModuleOptions(); }
+
+ispcrt::base::ModuleOptions *CPUDevice::newModuleOptions(ISPCRTModuleType moduleType, bool libraryCompilation,
+                                                         uint32_t stackSize) const {
+    return new cpu::ModuleOptions(moduleType, libraryCompilation, stackSize);
+}
+
+ispcrt::base::Module *CPUDevice::newModule(const char *moduleFile,
+                                           const ispcrt::base::ModuleOptions &moduleOpts) const {
     return new cpu::Module(moduleFile);
 }
 

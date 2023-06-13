@@ -18,6 +18,7 @@ struct _ISPCRTDevice;
 struct _ISPCRTMemoryView;
 struct _ISPCRTTaskQueue;
 struct _ISPCRTModule;
+struct _ISPCRTModuleOptions;
 struct _ISPCRTKernel;
 struct _ISPCRTFuture;
 struct _ISPCRTFence;
@@ -29,6 +30,7 @@ typedef _ISPCRTDevice *ISPCRTDevice;
 typedef _ISPCRTMemoryView *ISPCRTMemoryView;
 typedef _ISPCRTTaskQueue *ISPCRTTaskQueue;
 typedef _ISPCRTModule *ISPCRTModule;
+typedef _ISPCRTModuleOptions *ISPCRTModuleOptions;
 typedef _ISPCRTKernel *ISPCRTKernel;
 typedef _ISPCRTFuture *ISPCRTFuture;
 typedef _ISPCRTFence *ISPCRTFence;
@@ -40,6 +42,7 @@ typedef void *ISPCRTDevice;
 typedef void *ISPCRTMemoryView;
 typedef void *ISPCRTTaskQueue;
 typedef void *ISPCRTModule;
+typedef void *ISPCRTModuleOptions;
 typedef void *ISPCRTKernel;
 typedef void *ISPCRTFuture;
 typedef void *ISPCRTFence;
@@ -168,14 +171,18 @@ typedef enum {
     ISPCRT_SCALAR_MODULE,
 } ISPCRTModuleType;
 
-struct ISPCRTModuleOptions_ {
-    uint32_t stackSize{0};
-    bool libraryCompilation{false};
-    ISPCRTModuleType moduleType{ISPCRTModuleType::ISPCRT_VECTOR_MODULE};
-};
-typedef struct ISPCRTModuleOptions_ ISPCRTModuleOptions;
+ISPCRTModuleOptions ispcrtNewModuleOptionsEmpty(ISPCRTDevice);
+ISPCRTModuleOptions ispcrtNewModuleOptions(ISPCRTDevice, ISPCRTModuleType moduleType, bool libraryCompilation = false,
+                                           uint32_t stackSize = 0);
+uint32_t ispcrtModuleOptionsGetStackSize(ISPCRTModuleOptions);
+bool ispcrtModuleOptionsGetLibraryCompilation(ISPCRTModuleOptions);
+ISPCRTModuleType ispcrtModuleOptionsGetModuleType(ISPCRTModuleOptions);
+void ispcrtModuleOptionsSetStackSize(ISPCRTModuleOptions, uint32_t);
+void ispcrtModuleOptionsSetLibraryCompilation(ISPCRTModuleOptions, bool);
+void ispcrtModuleOptionsSetModuleType(ISPCRTModuleOptions, ISPCRTModuleType);
 
-ISPCRTModule ispcrtLoadModule(ISPCRTDevice, const char *moduleFile, ISPCRTModuleOptions);
+ISPCRTModule ispcrtLoadModule(ISPCRTDevice, const char *moduleFile);
+ISPCRTModule ispcrtLoadModuleWithOptions(ISPCRTDevice, const char *moduleFile, ISPCRTModuleOptions);
 void ispcrtDynamicLinkModules(ISPCRTDevice, ISPCRTModule *modules, uint32_t numModules);
 ISPCRTModule ispcrtStaticLinkModules(ISPCRTDevice, ISPCRTModule *modules, uint32_t numModules);
 void *ispcrtFunctionPtr(ISPCRTModule, const char *name);

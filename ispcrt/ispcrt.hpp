@@ -154,6 +154,7 @@ inline void *Context::nativeContextHandle() const { return ispcrtContextNativeHa
 // Device wrapper ///////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 class Module;
+class ModuleOptions;
 class Device : public GenericObject<ISPCRTDevice> {
   public:
     Device() = default;
@@ -464,21 +465,71 @@ template <typename T> inline void SharedMemoryAllocator<T>::deallocate(T *const 
 template <typename T> using SharedVector = std::vector<T, ispcrt::SharedMemoryAllocator<T>>;
 
 /////////////////////////////////////////////////////////////////////////////
+// ModuleOptions wrapper ////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+
+class ModuleOptions : public GenericObject<ISPCRTModuleOptions> {
+  public:
+    ModuleOptions(const Device &device);
+    ModuleOptions(const Device &device, ISPCRTModuleType moduleType, bool libraryCompilation = false,
+                  uint32_t stackSize = 0);
+    ModuleOptions(ISPCRTModuleOptions);
+    uint32_t stackSize();
+    bool libraryCompilation();
+    ISPCRTModuleType moduleType();
+    void setStackSize(uint32_t);
+    void setLibraryCompilation(bool);
+    void setModuleType(ISPCRTModuleType);
+};
+
+// Inlined definitions //
+
+inline ModuleOptions::ModuleOptions(const Device &device)
+    : GenericObject<ISPCRTModuleOptions>(ispcrtNewModuleOptionsEmpty(device.handle())) {}
+
+inline ModuleOptions::ModuleOptions(const Device &device, ISPCRTModuleType moduleType, bool libraryCompilation,
+                                    uint32_t stackSize)
+    : GenericObject<ISPCRTModuleOptions>(
+          ispcrtNewModuleOptions(device.handle(), moduleType, libraryCompilation, stackSize)) {}
+
+inline ModuleOptions::ModuleOptions(ISPCRTModuleOptions opts) : GenericObject<ISPCRTModuleOptions>(opts) {}
+
+inline uint32_t ModuleOptions::stackSize() { return ispcrtModuleOptionsGetStackSize(handle()); }
+
+inline bool ModuleOptions::libraryCompilation() { return ispcrtModuleOptionsGetLibraryCompilation(handle()); }
+
+inline ISPCRTModuleType ModuleOptions::moduleType() { return ispcrtModuleOptionsGetModuleType(handle()); }
+
+inline void ModuleOptions::setStackSize(uint32_t size) { return ispcrtModuleOptionsSetStackSize(handle(), size); }
+
+inline void ModuleOptions::setLibraryCompilation(bool isLibraryCompilation) {
+    return ispcrtModuleOptionsSetLibraryCompilation(handle(), isLibraryCompilation);
+}
+
+inline void ModuleOptions::setModuleType(ISPCRTModuleType type) {
+    return ispcrtModuleOptionsSetModuleType(handle(), type);
+}
+
+/////////////////////////////////////////////////////////////////////////////
 // Module wrapper ///////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 
 class Module : public GenericObject<ISPCRTModule> {
   public:
     Module() = default;
-    Module(const Device &device, const char *moduleName, const ISPCRTModuleOptions &opts = ISPCRTModuleOptions{});
+    Module(const Device &device, const char *moduleName);
+    Module(const Device &device, const char *moduleName, const ModuleOptions &opts);
     Module(ISPCRTModule module);
     void *functionPtr(const char *functionName);
 };
 
 // Inlined definitions //
 
-inline Module::Module(const Device &device, const char *moduleName, const ISPCRTModuleOptions &opts)
-    : GenericObject<ISPCRTModule>(ispcrtLoadModule(device.handle(), moduleName, opts)) {}
+inline Module::Module(const Device &device, const char *moduleName)
+    : GenericObject<ISPCRTModule>(ispcrtLoadModule(device.handle(), moduleName)) {}
+
+inline Module::Module(const Device &device, const char *moduleName, const ModuleOptions &opts)
+    : GenericObject<ISPCRTModule>(ispcrtLoadModuleWithOptions(device.handle(), moduleName, opts.handle())) {}
 
 inline Module::Module(ISPCRTModule module) : GenericObject<ISPCRTModule>(module) {}
 
