@@ -11,12 +11,19 @@
 if (WIN32)
     set(ISPC_SIGN_COMMAND signtool.exe)
     set(ISPC_SIGN_ARGS sign /fd sha256 /sha1 @ISPC_SIGN_KEY@ /tr http://timestamp.comodoca.com/rfc3161 /td sha256)
-    file(GLOB ISPC_SIGN_FILES ${CPACK_TEMPORARY_INSTALL_DIRECTORY}/bin/ispc.exe ${CPACK_TEMPORARY_INSTALL_DIRECTORY}/bin/*.dll)
+    file(GLOB ISPC_SIGN_FILES_ALL ${CPACK_TEMPORARY_INSTALL_DIRECTORY}/bin/ispc.exe ${CPACK_TEMPORARY_INSTALL_DIRECTORY}/bin/*.dll)
 elseif (APPLE)
     set(ISPC_SIGN_COMMAND codesign)
     set(ISPC_SIGN_ARGS -fs "@ISPC_SIGN_KEY@" --strict --timestamp --options=runtime)
-    file(GLOB ISPC_SIGN_FILES ${CPACK_TEMPORARY_INSTALL_DIRECTORY}/bin/ispc ${CPACK_TEMPORARY_INSTALL_DIRECTORY}/lib/*.dylib)
+    file(GLOB ISPC_SIGN_FILES_ALL ${CPACK_TEMPORARY_INSTALL_DIRECTORY}/bin/ispc ${CPACK_TEMPORARY_INSTALL_DIRECTORY}/lib/*.dylib)
 endif()
+
+# If we have symlinks, we sign the symlink target twice, so filter out symlinks
+foreach(file ${ISPC_SIGN_FILES_ALL})
+    if(NOT IS_SYMLINK "${file}")
+        list(APPEND ISPC_SIGN_FILES "${file}")
+    endif()
+endforeach()
 
 # Execute the signing command
 execute_process(
