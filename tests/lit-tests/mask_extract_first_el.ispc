@@ -2,7 +2,6 @@
 // RUN: %{ispc} %s --target=sse2-i32x4 --emit-llvm-text --debug-phase=261:261 -o %t.o 2>&1 | FileCheck  %s --check-prefixes CHECK
 
 // REQUIRES: X86_ENABLED
-
 // CHECK: %first_elt = extractelement <4 x i32> %__mask, i32 0
 
 struct vec3ui { unsigned int x, y, z; };
