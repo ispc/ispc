@@ -11,7 +11,7 @@
 // RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -h %t.h --emit-llvm-text --debug-phase=325:325 --dump-file=%t -o /dev/null
 // RUN: FileCheck --input-file %t/ir_325_LoadStoreVectorizerPass.ll %s --check-prefixes CHECK_ALL,CHECK
 // RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -h %t.h --emit-llvm-text --debug-phase=325:325 --dump-file=%t -o /dev/null
-// RUN: FileCheck --input-file %t/ir_325_GPULoadandStoreVectorizer.ll %s --check-prefixes CHECK_ALL,CHECK
+// RUN: FileCheck --input-file %t/ir_325_LoadStoreVectorizerPass.ll %s --check-prefixes CHECK_ALL,CHECK
 
 // REQUIRES: XE_ENABLED && LLVM_14_0+
 

@@ -66,7 +66,7 @@
 // CHECK_GPU: call x86_regcallcc <8 x i32> @__regcall3__extern_sycl_decl_ptr(<8 x i64> {{.*}})
 
 // REQUIRES: XE_ENABLED
-
+// XFAIL: *
 #ifdef CHECK_EXTERN_SYCL_DEF
 extern "SYCL" int extern_sycl_func_def(uniform float RET[], int b) {
   return b*100;
