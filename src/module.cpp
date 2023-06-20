@@ -853,10 +853,11 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     if (llvmFunctionType == nullptr)
         return;
 
-    // And create the llvm::Function
-    llvm::GlobalValue::LinkageTypes linkage = (storageClass == SC_STATIC || isInline)
-                                                  ? llvm::GlobalValue::InternalLinkage
-                                                  : llvm::GlobalValue::ExternalLinkage;
+    // According to the LLVM philosophy, function declaration itself can't have internal linkage.
+    // Function may have internal linkage only if it is defined in the module.
+    // So here we set external linkage for all function declarations. It will be changed to internal
+    // if the function is defined in the module in Function::GenerateIR().
+    llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
 
     auto [name_pref, name_suf] = functionType->GetFunctionMangledName(false);
     std::string functionName = name_pref + name + name_suf;

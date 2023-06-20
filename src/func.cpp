@@ -744,6 +744,19 @@ void Function::GenerateIR() {
                 }
             }
         } else {
+            // Set linkage for the function
+            ispc::StorageClass sc = sym->storageClass;
+            bool isInline =
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
+                (function->getAttributes().getFnAttrs().hasAttribute(llvm::Attribute::AlwaysInline));
+#else
+                (function->getAttributes().getFnAttributes().hasAttribute(llvm::Attribute::AlwaysInline));
+#endif
+            llvm::GlobalValue::LinkageTypes linkage =
+                (sc == SC_STATIC || isInline) ? llvm::GlobalValue::InternalLinkage : llvm::GlobalValue::ExternalLinkage;
+
+            function->setLinkage(linkage);
+
             if (g->target->isXeTarget()) {
                 // Mark all internal ISPC functions as a stack call
                 function->addFnAttr("CMStackCall");
