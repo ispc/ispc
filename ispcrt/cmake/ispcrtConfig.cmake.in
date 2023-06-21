@@ -1,4 +1,4 @@
-## Copyright 2020-2022 Intel Corporation
+## Copyright 2020-2023 Intel Corporation
 ## SPDX-License-Identifier: BSD-3-Clause
 
 @PACKAGE_INIT@
@@ -20,21 +20,6 @@ if (@ISPCRT_BUILD_TASKING@)
   set(ISPCRT_TASKING_MODEL @ISPCRT_BUILD_TASK_MODEL@)
 else()
   set(ISPCRT_TASKING_ENABLED FALSE)
-endif()
-
-## Find level_zero if required ##
-
-if(@ISPCRT_BUILD_GPU@)
-  include(CMakeFindDependencyMacro)
-
-  set(OLD_CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH})
-
-  list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
-
-  find_dependency(level_zero)
-
-  set(CMAKE_MODULE_PATH ${OLD_CMAKE_MODULE_PATH})
-  unset(OLD_CMAKE_MODULE_PATH)
 endif()
 
 ## Print info about found ISPCRT version
