@@ -148,9 +148,9 @@ void SGEMMApp::run(SGEMMApp::RunResult &result, int m, int niter, int gx, int gy
 
     ze_device_mem_alloc_desc_t alloc_desc = {};
 
-    L0_SAFE_CALL(zeMemAllocDevice(m_context, &alloc_desc, mtA_size * sizeof(float), 0, m_device, &a_buf));
-    L0_SAFE_CALL(zeMemAllocDevice(m_context, &alloc_desc, mtB_size * sizeof(float), 0, m_device, &b_buf));
-    L0_SAFE_CALL(zeMemAllocDevice(m_context, &alloc_desc, mtC_size * sizeof(float), 0, m_device, &c_buf));
+    L0_SAFE_CALL(zeMemAllocDevice(m_context, &alloc_desc, mtA_size * sizeof(float), 64, m_device, &a_buf));
+    L0_SAFE_CALL(zeMemAllocDevice(m_context, &alloc_desc, mtB_size * sizeof(float), 64, m_device, &b_buf));
+    L0_SAFE_CALL(zeMemAllocDevice(m_context, &alloc_desc, mtC_size * sizeof(float), 64, m_device, &c_buf));
 
     L0_SAFE_CALL(zeCommandListReset(m_command_list));
     L0_SAFE_CALL(
