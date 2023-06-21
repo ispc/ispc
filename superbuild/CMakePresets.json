@@ -11,12 +11,22 @@
     "minor": 23
   },
   "include": [
-    "osPresets.json"
+    "osPresets.json",
+    "intPresets.json",
+    "os-intPresets.json"
   ],
   "configurePresets": [
     {
       "name": "os",
       "inherits": "dependency-versions-os"
+    },
+    {
+      "name": "int",
+      "inherits": "dependency-versions-int"
+    },
+    {
+      "name": "os-int",
+      "inherits": "dependency-versions-os-int"
     }
   ]
 }

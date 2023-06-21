@@ -65,3 +65,23 @@ real world source codes complemented with scripts to build them. It allows us
 to collect profile meaningful from the customer point of view. On the last
 third stage, stage1 compiler uses that profile to optimize LLVM and ISPC code
 with PGO.
+
+# Status
+
+- Tested in base, LTO, PGO regimes on both Linux and Windows.
+- Covers principal APPLE specific paths but not tested due to lack of available
+  environment.
+- Stages of incorporating it CIs.
+1. Start with LLVM in internal Ci (deps) and rebuild it either replacing
+   `alloy.py` or calling superbuild under `-b`.
+1. Use that rebuilt LLVM to test that all internal ISPC builds are OK.
+1. Enable LTO in ISPC builds.
+1. If OK, unembargo superbuild fully or partially. If fully then we need to
+   open-source `ispc-corpus`. If partially then we need make code using
+   `ispc-corpus` embargo.
+1. After promoting to open-source repo, adjust LLVM job there.
+1. Rebuild open-source LLVM and proceed further to ISPC.
+1. Enable LTO there.
+1. Incorporate LTO enabled build in the release process.
+1. Create PGO enabled jobs in CI.
+1. Test them then decide on incorporating it to the release process.
