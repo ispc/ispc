@@ -71,6 +71,17 @@ typedef void (*ISPCRTErrorFunc)(ISPCRTError, const char *errorMessage);
 
 void ispcrtSetErrorFunc(ISPCRTErrorFunc);
 
+// Tasking ////////////////////////////////////////////////////////////////////
+// Tasking is CPU specific part of API.
+
+// Callback types definition.
+typedef void (*ISPCRTTaskingLaunchFType)(void **, void *, void *, int, int, int);
+typedef void *(*ISPCRTTaskingAllocFType)(void **, int64_t, int32_t);
+typedef void (*ISPCRTTaskingSyncFType)(void *);
+
+// Applications can provide their own implementation of ISPCLaunch/ISPCAlloc/ISPCSync tasking API.
+void ispcrtSetTaskingCallbacks(ISPCRTTaskingLaunchFType, ISPCRTTaskingAllocFType, ISPCRTTaskingSyncFType);
+
 // Object lifetime ////////////////////////////////////////////////////////////
 
 long long ispcrtUseCount(ISPCRTGenericHandle);

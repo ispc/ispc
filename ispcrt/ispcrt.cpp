@@ -156,12 +156,17 @@ void *dyn_load_sym(void *handle, const char *symbol) {
 }
 
 // CPU device API.
-typedef void (*ISPCLaunchF)(void **, void *, void *, int, int, int);
-typedef void *(*ISPCAllocF)(void **, int64_t, int32_t);
-typedef void (*ISPCSyncF)(void *);
-static ISPCLaunchF ispc_launch_fptr = nullptr;
-static ISPCAllocF ispc_alloc_fptr = nullptr;
-static ISPCSyncF ispc_sync_fptr = nullptr;
+static ISPCRTTaskingLaunchFType ispc_launch_fptr = nullptr;
+static ISPCRTTaskingAllocFType ispc_alloc_fptr = nullptr;
+static ISPCRTTaskingSyncFType ispc_sync_fptr = nullptr;
+
+// Applications can provide their own implementation of ISPCLaunch/ISPCAlloc/ISPCSync tasking API.
+void ispcrtSetTaskingCallbacks(ISPCRTTaskingLaunchFType launch, ISPCRTTaskingAllocFType alloc,
+                               ISPCRTTaskingSyncFType sync) {
+    ispc_launch_fptr = launch;
+    ispc_alloc_fptr = alloc;
+    ispc_sync_fptr = sync;
+}
 
 #ifndef ISPCRT_BUILD_STATIC
 // During static linking this API is delivered by linking the real implementation.
@@ -207,19 +212,26 @@ void *handleCPUDeviceLib() {
     }
 
 #ifdef ISPCRT_BUILD_TASKING
-    ispc_launch_fptr = (ISPCLaunchF)dyn_load_sym(handle, "ISPCLaunch_cpu");
+    // Pointers to ISPCLaunch/ISPCAlloc/ISPCSync tasking API may be already initialized by ispcSetTaskingCallbacks.
     if (!ispc_launch_fptr) {
-        throw std::runtime_error("Missing ISPCLaunch_cpu symbol");
+        ispc_launch_fptr = (ISPCRTTaskingLaunchFType)dyn_load_sym(handle, "ISPCLaunch_cpu");
+        if (!ispc_launch_fptr) {
+            throw std::runtime_error("Missing ISPCLaunch_cpu symbol");
+        }
     }
 
-    ispc_alloc_fptr = (ISPCAllocF)dyn_load_sym(handle, "ISPCAlloc_cpu");
     if (!ispc_alloc_fptr) {
-        throw std::runtime_error("Missing ISPCAlloc_cpu symbol");
+        ispc_alloc_fptr = (ISPCRTTaskingAllocFType)dyn_load_sym(handle, "ISPCAlloc_cpu");
+        if (!ispc_alloc_fptr) {
+            throw std::runtime_error("Missing ISPCAlloc_cpu symbol");
+        }
     }
 
-    ispc_sync_fptr = (ISPCSyncF)dyn_load_sym(handle, "ISPCSync_cpu");
     if (!ispc_sync_fptr) {
-        throw std::runtime_error("Missing ISPCSync_cpu symbol");
+        ispc_sync_fptr = (ISPCRTTaskingSyncFType)dyn_load_sym(handle, "ISPCSync_cpu");
+        if (!ispc_sync_fptr) {
+            throw std::runtime_error("Missing ISPCSync_cpu symbol");
+        }
     }
 #endif
 
