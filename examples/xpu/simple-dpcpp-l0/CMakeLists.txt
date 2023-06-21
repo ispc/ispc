@@ -20,5 +20,6 @@ if(UNIX)
         TEST_NAME ${TEST_NAME}
         ISPC_TARGET_XE ${ISPC_TARGET_XE}
         DPCPP_HOST_SOURCES ${DPCPP_HOST_SOURCES}
+        LINK_L0
     )
 endif()

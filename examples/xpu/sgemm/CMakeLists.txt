@@ -22,4 +22,5 @@ add_perf_example(
     GBENCH
     GBENCH_TEST_NAME bench-sgemm
     GBENCH_SRC_NAME bench.cpp sgemm.cpp
+    LINK_L0
 )
