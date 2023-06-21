@@ -4,7 +4,7 @@
 #  SPDX-License-Identifier: BSD-3-Clause
 
 function(add_perf_example)
-    set(options GBENCH)
+    set(options GBENCH LINK_L0)
     set(oneValueArgs ISPC_SRC_NAME ISPC_TARGET_XE TEST_NAME GBENCH_TEST_NAME)
     set(multiValueArgs ISPC_XE_ADDITIONAL_ARGS HOST_SOURCES DPCPP_HOST_SOURCES GBENCH_SRC_NAME)
     cmake_parse_arguments("parsed" "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
@@ -55,6 +55,11 @@ function(add_perf_example)
     if (DPCPP_HOST_SOURCES)
         target_compile_options(${HOST_EXECUTABLE} PRIVATE "-fsycl")
         target_link_options(${HOST_EXECUTABLE} PRIVATE "-fsycl")
+    endif()
+
+    if (parsed_LINK_L0)
+        target_include_directories(${HOST_EXECUTABLE} PUBLIC ${LEVEL_ZERO_INCLUDE_DIR})
+        target_link_libraries(${HOST_EXECUTABLE} PRIVATE ${LEVEL_ZERO_LIB_LOADER})
     endif()
 
     target_compile_definitions(${HOST_EXECUTABLE} PRIVATE ISPCRT)
