@@ -63,9 +63,9 @@ std::vector<float> DpcppApp::transformIspc(const std::vector<float> &in) {
     ze_device_mem_alloc_desc_t alloc_desc = {};
 
     // Allocate memory on the device
-    L0_SAFE_CALL(zeMemAllocDevice(m_context, &alloc_desc, count * sizeof(float), 0, m_device, &in_dev));
-    L0_SAFE_CALL(zeMemAllocDevice(m_context, &alloc_desc, count * sizeof(float), 0, m_device, &out_dev));
-    L0_SAFE_CALL(zeMemAllocDevice(m_context, &alloc_desc, sizeof(Parameters), 0, m_device, &params_dev));
+    L0_SAFE_CALL(zeMemAllocDevice(m_context, &alloc_desc, count * sizeof(float), 64, m_device, &in_dev));
+    L0_SAFE_CALL(zeMemAllocDevice(m_context, &alloc_desc, count * sizeof(float), 64, m_device, &out_dev));
+    L0_SAFE_CALL(zeMemAllocDevice(m_context, &alloc_desc, sizeof(Parameters), 64, m_device, &params_dev));
 
     params.in = reinterpret_cast<float *>(in_dev);
     params.out = reinterpret_cast<float *>(out_dev);

@@ -876,7 +876,7 @@ struct MemoryView : public ispcrt::base::MemoryView {
             throw std::runtime_error("Device handle is NULL!");
 
         ze_device_mem_alloc_desc_t allocDesc = {};
-        ze_result_t status = zeMemAllocDevice(m_context, &allocDesc, m_size, m_size, m_device, &m_devicePtr);
+        ze_result_t status = zeMemAllocDevice(m_context, &allocDesc, m_size, 64, m_device, &m_devicePtr);
 
         if (status != ZE_RESULT_SUCCESS)
             m_devicePtr = nullptr;
