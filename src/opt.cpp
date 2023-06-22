@@ -184,7 +184,8 @@ class DebugModulePassManager {
     llvm::ModuleAnalysisManager mam;
     llvm::ModulePassManager mpm;
     llvm::PassInstrumentationCallbacks PIC;
-    llvm::StandardInstrumentations SI{/*DebugLogging*/ llvm::DebugFlag};
+    llvm::PrintPassOptions PrintPassOpts{/*Verbose*/ true, /*SkipAnalyses*/ true, /*Indent*/ true};
+    llvm::StandardInstrumentations SI{/*DebugLogging*/ g->debugPM, false, PrintPassOpts};
     llvm::OptNoneInstrumentation OptNoneInst{/*DebugLogging*/ false};
 
     std::vector<std::unique_ptr<llvm::raw_fd_ostream>> outputDebugDumps;

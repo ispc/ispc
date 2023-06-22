@@ -666,6 +666,11 @@ struct Globals {
         ispc's execution. */
     bool debugPrint;
 
+    /** When \c true, print verbose output from PassManager.
+     * (Default is false.)
+     */
+    bool debugPM;
+
     /** When \c true, dump AST.
         None - don't dump AST
         User - dump AST only for user code, but not for stdlib functions
