@@ -2212,6 +2212,7 @@ Globals::Globals() {
     onlyCPP = false;
     ignoreCPPErrors = false;
     debugPrint = false;
+    debugPM = false;
     astDump = Globals::ASTDumpKind::None;
     dumpFile = false;
     printTarget = false;
