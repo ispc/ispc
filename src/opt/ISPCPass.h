@@ -29,6 +29,8 @@
 #include <llvm/IR/Verifier.h>
 #include <llvm/InitializePasses.h>
 #include <llvm/Pass.h>
+#include <llvm/Support/FileSystem.h>
+#include <llvm/Support/Regex.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/FunctionAttrs.h>

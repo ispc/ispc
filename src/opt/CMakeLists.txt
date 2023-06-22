@@ -7,8 +7,6 @@ target_sources(${PROJECT_NAME}
     PRIVATE
         "CheckIRForXeTarget.cpp"
         "CheckIRForXeTarget.h"
-        "DebugPass.cpp"
-        "DebugPass.h"
         "GatherCoalescePass.cpp"
         "GatherCoalescePass.h"
         "IsCompileTimeConstant.cpp"
