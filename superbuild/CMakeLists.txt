@@ -32,27 +32,33 @@ check_cache_var_declaration(L0_TAG "Level Zero url")
 check_cache_var_declaration(ISPC_CORPUS_URL "ispc-corpus url")
 
 set(GNUWIN32 "c:/gnuwin32" CACHE STRING "Set path to gnuwin32 root dir (Windows only)")
-set(CCACHE_VERSION "4.7.4" CACHE STRING "ccache version ")
+set(CCACHE_VERSION "4.8.2" CACHE STRING "ccache version ")
 set(CCACHE_DIR "default" CACHE STRING "ccache cache directory")
+set(PREBUILT_STAGE1 "NO" CACHE STRING "Provide pre-built stage1 archive to skip stage1 jobs")
+set(PREBUILT_STAGE1_PATH "NO" CACHE STRING "Provide pre-built stage1 toolchain path")
 set(PREBUILT_STAGE2 "NO" CACHE STRING "Provide pre-built stage2 archive to skip pre ispc-stage2 jobs")
 set(PREBUILT_STAGE2_PATH "NO" CACHE STRING "Provide pre-built stage2 toolchain path")
-set(STAGE2_TOOLCHAIN_INSTALL_PREFIX "NO" CACHE STRING "Path to install stage2 Clang/LLVM to")
 set(BUILD_TYPE_ISPC "Release" CACHE STRING "Set the build type for ISPC build")
 set(BUILD_TYPE_LLVM "Release" CACHE STRING "Set the build type for LLVM build")
 set(BUILD_TYPE_SPIRV_TRANSLATOR "Release" CACHE STRING "Set the build type for SPIR-V Translator build")
 set(BUILD_TYPE_VC_INTRINSICS "Release" CACHE STRING "Set the build type for VC Intrinsics build")
 set(BUILD_TYPE_L0 "Release" CACHE STRING "Set the build type for L0 build")
+set(ISPC_ANDROID_NDK_PATH "NO" CACHE STRING "Path to Android NDK. It is needed to ISPC_CROSS=ON on macOS.")
 option(LLVM_DISABLE_ASSERTIONS "Enable LLVM build without assertions" ON)
 option(EXTERNAL_VERBOSE "Enable verbose for external project build and install commands" OFF)
 option(CCACHE "Enable ccache to speed up repetitive builds" OFF)
 option(FULL_STAGE2_LLVM "Enable full llvm stage2 build" OFF)
 option(LTO "Enable LTO" OFF)
 option(PGO "Enale PGO (implicitly enable LTO)" OFF)
+option(BUILD_STAGE1_TOOLCHAIN_ONLY "Enable build of stage1 toolchain only." OFF)
 option(BUILD_STAGE2_TOOLCHAIN_ONLY "Enable build of stage2 toolchain only, i.e., skip ispc building and stage3." OFF)
 option(BUILD_SPIRV_TRANSLATOR_ONLY "Enable only build of SPIRV-LLVM-Translator" OFF)
 option(BUILD_VC_INTRINSICS_ONLY "Enable only build of vc-intrinsics" OFF)
 option(BUILD_L0_LOADER_ONLY "Enable only build of level-zero loader" OFF)
-option(XE_DEPS "Enable build of XE dependencies (L0 loader, vc-intrinsics, SPIRV-LLVM-Translator" ON)
+option(INSTALL_ISPC "Enable installation of ISPC to CMAKE_INSTALL_PREFIX" OFF)
+option(INSTALL_WITH_XE_DEPS "Enable installation ISPC or stage2 toolchain with XE_DEPS to CMAKE_INSTALL_PREFIX" OFF)
+option(XE_DEPS "Enable build of all XE dependencies (L0 loader, vc-intrinsics, SPIRV-LLVM-Translator" ON)
+option(MACOS_UNIVERSAL_BIN "Enable build of universal binaries for macOS" ON)
 
 # Force LTO when PGO enabled to the sake of simplicity and less number of
 # possible build variants.
@@ -60,8 +66,19 @@ if (PGO)
     set(LTO ON)
 endif()
 
+set(SKIP_STAGE1 OFF)
+if (NOT PREBUILT_STAGE1 STREQUAL "NO" OR NOT PREBUILT_STAGE1_PATH STREQUAL "NO")
+    set(SKIP_STAGE1 ON)
+    set(FULL_STAGE2_LLVM ON)
+endif()
+
+if (NOT PREBUILT_STAGE1 STREQUAL "NO" AND NOT PREBUILT_STAGE1_PATH STREQUAL "NO")
+    message(FATAL_ERROR "Provide only one source of stage1 toolchain.")
+endif()
+
+set(SKIP_STAGE2 OFF)
 if (NOT PREBUILT_STAGE2 STREQUAL "NO" OR NOT PREBUILT_STAGE2_PATH STREQUAL "NO")
-    set(SKIP_STAGE2_DEPS ON)
+    set(SKIP_STAGE2 ON)
 endif()
 
 if (NOT PREBUILT_STAGE2 STREQUAL "NO" AND NOT PREBUILT_STAGE2_PATH STREQUAL "NO")
@@ -69,9 +86,57 @@ if (NOT PREBUILT_STAGE2 STREQUAL "NO" AND NOT PREBUILT_STAGE2_PATH STREQUAL "NO"
 endif()
 
 set(STAGE2_PATH "${CMAKE_BINARY_DIR}/stage2")
+if (NOT PREBUILT_STAGE1_PATH STREQUAL "NO")
+    set(STAGE2_PATH "${PREBUILT_STAGE1_PATH}")
+endif()
 if (NOT PREBUILT_STAGE2_PATH STREQUAL "NO")
     set(STAGE2_PATH "${PREBUILT_STAGE2_PATH}")
 endif()
+set(STAGE3_PATH "${CMAKE_BINARY_DIR}/stage3")
+
+if (NOT PREBUILT_STAGE1_PATH STREQUAL "NO" AND NOT PREBUILT_STAGE2_PATH STREQUAL "NO")
+    message(FATAL_ERROR "PREBUILT_STAGE1_PATH and PREBUILT_STAGE2_PATH is incompatible together.")
+endif()
+
+if (BUILD_STAGE1_TOOLCHAIN_ONLY OR
+    BUILD_SPIRV_TRANSLATOR_ONLY OR BUILD_VC_INTRINSICS_ONLY OR BUILD_L0_LOADER_ONLY)
+    set(XE_DEPS OFF)
+endif()
+
+set(BUILD_SPIRV_STANDALONE OFF)
+set(BUILD_VC_INTRINSICS_STANDALONE OFF)
+set(BUILD_L0_LOADER_STANDALONE OFF)
+if (INSTALL_WITH_XE_DEPS)
+    set(BUILD_SPIRV_STANDALONE ON)
+    set(BUILD_VC_INTRINSICS_STANDALONE ON)
+    set(BUILD_L0_LOADER_STANDALONE ON)
+endif()
+if (BUILD_SPIRV_TRANSLATOR_ONLY)
+    set(BUILD_SPIRV_STANDALONE ON)
+endif()
+if (BUILD_VC_INTRINSICS_ONLY)
+    set(BUILD_VC_INTRINSICS_STANDALONE ON)
+endif()
+if (BUILD_L0_LOADER_ONLY)
+    set(BUILD_L0_LOADER_STANDALONE ON)
+endif()
+
+if (APPLE)
+    # XE are not supported on macOS targets
+    set(XE_DEPS OFF)
+
+    set(FULL_STAGE2_LLVM ON)
+
+    set(MACOS_VERSION_MIN 10.12)
+    if (NOT MACOS_UNIVERSAL_BIN AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
+        set(MACOS_VERSION_MIN 11.0)
+    endif()
+
+    if (APPLE AND ISPC_ANDROID_NDK_PATH STREQUAL "NO")
+        message(FATAL_ERROR "You need provide path to ANDROID NDK on macOS via -DISPC_ANDROID_NDK_PATH=..")
+    endif()
+endif()
+
 
 string(APPEND LIT_TOOLS_DIR ${GNUWIN32} "/bin")
 
@@ -157,11 +222,13 @@ message(STATUS "ISPC_CORPUS_URL is ${ISPC_CORPUS_URL}")
 message(STATUS "CCACHE_VERSION is ${CCACHE_VERSION}")
 message(STATUS "CCACHE_DIR is ${CCACHE_DIR}")
 message(STATUS "CCACHE is ${CCACHE}")
+message(STATUS "PREBUILT_STAGE1 is ${PREBUILT_STAGE1}")
+message(STATUS "PREBUILT_STAGE1_PATH is ${PREBUILT_STAGE1_PATH}")
 message(STATUS "PREBUILT_STAGE2 is ${PREBUILT_STAGE2}")
 message(STATUS "PREBUILT_STAGE2_PATH is ${PREBUILT_STAGE2_PATH}")
 message(STATUS "EXTERNAL_VERBOSE is ${EXTERNAL_VERBOSE}")
 message(STATUS "FULL_STAGE2_LLVM is ${FULL_STAGE2_LLVM}")
-message(STATUS "STAGE2_TOOLCHAIN_INSTALL_PREFIX is ${STAGE2_TOOLCHAIN_INSTALL_PREFIX}")
+message(STATUS "ISPC_ANDROID_NDK_PATH is ${ISPC_ANDROID_NDK_PATH}")
 message(STATUS "LLVM_DISABLE_ASSERTIONS is ${LLVM_DISABLE_ASSERTIONS}")
 message(STATUS "LTO is ${LTO}")
 message(STATUS "PGO is ${PGO}")
@@ -176,12 +243,30 @@ message(STATUS "BUILD_STAGE2_TOOLCHAIN_ONLY is ${BUILD_STAGE2_TOOLCHAIN_ONLY}")
 message(STATUS "BUILD_SPIRV_TRANSLATOR_ONLY is ${BUILD_SPIRV_TRANSLATOR_ONLY}")
 message(STATUS "BUILD_VC_INTRINSICS_ONLY is ${BUILD_VC_INTRINSICS_ONLY}")
 message(STATUS "BUILD_L0_LOADER_ONLY is ${BUILD_L0_LOADER_ONLY}")
+message(STATUS "BUILD_SPIRV_STANDALONE is ${BUILD_SPIRV_STANDALONE}")
+message(STATUS "BUILD_VC_INTRINSICS_STANDALONE is ${BUILD_VC_INTRINSICS_STANDALONE}")
+message(STATUS "BUILD_L0_LOADER_STANDALONE is ${BUILD_L0_LOADER_STANDALONE}")
+message(STATUS "INSTALL_ISPC is ${INSTALL_ISPC}")
+message(STATUS "INSTALL_WITH_XE_DEPS is ${INSTALL_WITH_XE_DEPS}")
 message(STATUS "XE_DEPS is ${XE_DEPS}")
 message(STATUS "LLVM_TAG is ${LLVM_TAG}")
 message(STATUS "LLVM_VERSION_DOTTED is ${LLVM_VERSION_DOTTED}")
-message(STATUS "SKIP_STAGE2_DEPS is ${SKIP_STAGE2_DEPS}")
-message(STATUS "STAGE2_BIN is ${STAGE2_BIN}")
+message(STATUS "SKIP_STAGE1 is ${SKIP_STAGE1}")
+message(STATUS "SKIP_STAGE2 is ${SKIP_STAGE2}")
+message(STATUS "STAGE2_PATH is ${STAGE2_PATH}")
 message(STATUS "CMAKE_INSTALL_PREFIX is ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "CMAKE_C_FLAGS is ${CMAKE_C_FLAGS}")
+message(STATUS "CMAKE_CXX_FLAGS is ${CMAKE_CXX_FLAGS}")
+message(STATUS "MACOS_VERSION_MIN is ${MACOS_VERSION_MIN}")
+message(STATUS "MACOS_UNIVERSAL_BIN is ${MACOS_UNIVERSAL_BIN}")
+
+
+if (NOT XE_DEPS)
+    # To suppress CMake warnings about unused user-provided variables.
+    set(ignoreMe "${VC_INTRINSICS_URL}${VC_INTRINSICS_SHA}")
+    set(ignoreMe "${SPIRV_TRANSLATOR_URL}${SPIRV_TRANSLATOR_SHA}${SPIRV_TRANSLATOR_BRANCH}")
+    set(ignoreMe "${L0_URL}${L0_TAG}")
+endif()
 
 
 # Ninja is hard-coded for two reasons:
@@ -201,12 +286,12 @@ foreach(patch IN LISTS LLVM_PATCHES_ALL)
         list(APPEND LLVM_PATCHES_VER ${patch})
     endif()
 endforeach()
-file(GLOB_RECURSE SUPERBUILD_LLVM_PATCHES_ALL ${PROJECT_SOURCE_DIR}/*.patch)
-foreach(patch IN LISTS SUPERBUILD_LLVM_PATCHES_ALL)
-    if (${patch} MATCHES ".*${LLVM_VERSION}.*")
-        list(APPEND LLVM_PATCHES_VER ${patch})
+
+if (NOT APPLE)
+    if (${LLVM_VERSION} STREQUAL 15_0 OR ${LLVM_VERSION} STREQUAL 14_0)
+        list(APPEND LLVM_PATCHES_VER ${PROJECT_SOURCE_DIR}/14_0_15_0-ld-symlink-lld.patch)
     endif()
-endforeach()
+endif()
 message(STATUS "For llvm version ${LLVM_VERSION} found patches ${LLVM_PATCHES_VER}")
 
 
@@ -259,6 +344,9 @@ hash_dir = false
     if (WIN32)
         string(APPEND CCACHE_URL
             https://github.com/ccache/ccache/releases/download/v${CCACHE_VERSION}/ccache-${CCACHE_VERSION}-windows-x86_64.zip)
+    elseif (APPLE)
+        string(APPEND CCACHE_URL
+            https://github.com/ccache/ccache/releases/download/v${CCACHE_VERSION}/ccache-${CCACHE_VERSION}-darwin.tar.gz)
     else()
         string(APPEND CCACHE_URL
             https://github.com/ccache/ccache/releases/download/v${CCACHE_VERSION}/ccache-${CCACHE_VERSION}-linux-x86_64.tar.xz)
@@ -266,9 +354,6 @@ hash_dir = false
 
     find_program(CCACHE_EXE NAMES ccache)
     if (NOT CCACHE_EXE)
-        if (APPLE)
-            message(FATAL_ERROR "No ccache found.")
-        endif()
         # Download and unpack ccache executable when no ccache in system.
         FetchContent_Populate(ccache
             URL ${CCACHE_URL}
@@ -330,7 +415,6 @@ list(APPEND LLVM_COMMON_CMAKE_ARGS
 list(APPEND LLVM_COMMON_CMAKE_ARGS
     -DCOMPILER_RT_BUILD_PROFILE=ON
     -DCOMPILER_RT_BUILD_SANITIZERS=ON
-    -DCOMPILER_RT_BUILD_BUILTINS=OFF
     -DCOMPILER_RT_BUILD_CRT=OFF
     -DCOMPILER_RT_CRT_USE_EH_FRAME_REGISTRY=OFF
     -DCOMPILER_RT_BUILD_XRAY=OFF
@@ -339,6 +423,31 @@ list(APPEND LLVM_COMMON_CMAKE_ARGS
     -DCOMPILER_RT_BUILD_ORC=OFF
     -DCOMPILER_RT_BUILD_GWP_ASAN=OFF
     )
+
+if (APPLE)
+    # On macOS, we need builtins also.
+    list(APPEND LLVM_COMMON_CMAKE_ARGS
+        -DCOMPILER_RT_BUILD_BUILTINS=ON
+        -DCOMPILER_RT_ENABLE_IOS=OFF
+        )
+
+    # LLVM has lib/Support/BLAKE3 component that consists of C and ASM
+    # (optionally) code. ASM code is x86 specific. They are linked together
+    # into static library. Under LTO for macOS universal binary scenario,
+    # libtool produces an error that it is unable to mix object code with
+    # bitcode. LLVM toolchain can't produce bitcode for asm. So, we disable the
+    # usage of assembly files that can cause performance penalty. At the
+    # moment, LLVM_DISABLE_ASSEMBLY_FILES is used only in BLAKE3.
+    if (LTO)
+        list(APPEND LLVM_COMMON_CMAKE_ARGS
+            -DLLVM_DISABLE_ASSEMBLY_FILES=ON
+            )
+    endif()
+else()
+    list(APPEND LLVM_COMMON_CMAKE_ARGS
+        -DCOMPILER_RT_BUILD_BUILTINS=OFF
+        )
+endif()
 
 # Enable or disable assertions.
 if (LLVM_DISABLE_ASSERTIONS)
@@ -359,10 +468,7 @@ list(APPEND LLVM_COMMON_CMAKE_ARGS
     )
 
 # Enable LLVM subprojects.
-set(LLVM_PROJECTS clang$<SEMICOLON>lld$<SEMICOLON>compiler-rt)
-if (NOT WIN32)
-    set(LLVM_PROJECTS ${LLVM_PROJECTS}$<SEMICOLON>openmp)
-endif()
+set(LLVM_PROJECTS clang$<SEMICOLON>lld)
 list(APPEND LLVM_COMMON_CMAKE_ARGS
     -DLLVM_ENABLE_PROJECTS=${LLVM_PROJECTS}
     )
@@ -378,6 +484,18 @@ if (WIN32)
     list(APPEND LLVM_COMMON_CMAKE_ARGS
         -DLLVM_LIT_TOOLS_DIR=${LIT_TOOLS_DIR}
         )
+endif()
+if (APPLE)
+    list(APPEND LLVM_COMMON_CMAKE_ARGS
+        -DLLVM_INSTALL_CCTOOLS_SYMLINKS=ON
+        )
+endif()
+
+# Enable LLVM runtimes.
+set(LLVM_RUNTIMES compiler-rt)
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+    # OpenMP may be needed for Xe enabled builds.
+    set(LLVM_RUNTIMES ${LLVM_RUNTIMES}$<SEMICOLON>openmp)
 endif()
 
 if (APPLE AND CMAKE_SYSTEM_VERSION VERSION_GREATER_EQUAL 13)
@@ -399,10 +517,15 @@ if (APPLE AND CMAKE_SYSTEM_VERSION VERSION_GREATER_EQUAL 13)
     # or build and use it, otherwise a build error will occure (attempt to use
     # just built libcxxabi, which was not built).  An option to build seems to be
     # a better one.
-    list(APPEND LLVM_COMMON_CMAKE_ARGS
-        -DLLVM_ENABLE_RUNTIMES=libcxx$<SEMICOLON>libcxxabi
+    set(LLVM_RUNTIMES
+        ${LLVM_RUNTIMES}$<SEMICOLON>libcxx$<SEMICOLON>libcxxabi
         )
 endif()
+
+# LLVM_ENABLE_RUNTIMES is a proper place for compiler-rt and openmp not LLVM_ENABLE_PROJECTS.
+list(APPEND LLVM_COMMON_CMAKE_ARGS
+    -DLLVM_ENABLE_RUNTIMES=${LLVM_RUNTIMES}
+    )
 
 # stage1 specific LLVM cmake arguments.
 list(APPEND LLVM_STAGE1_CMAKE_ARGS
@@ -435,12 +558,6 @@ else()
             tools/SPIRV-LLVM-Translator/install
             )
     endif()
-
-    if (NOT WIN32)
-        list(APPEND LLVM_STAGE2_INSTALL_TARGETS
-            projects/openmp/runtime/install
-            )
-    endif()
 endif()
 message(STATUS "LLVM stage2 install targets ${LLVM_STAGE2_INSTALL_TARGETS}")
 
@@ -470,6 +587,28 @@ else()
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/stage2-toolchain.cmake
         )
 endif()
+
+if (APPLE)
+    list(APPEND LLVM_STAGE2_CMAKE_ARGS
+        -DLD64_EXECUTABLE=${STAGE2_PATH}/bin/ld64.lld
+        )
+
+    # macOS deployment target sets the minimim OS requirement to run the
+    # compiled program. All of the object files and static libraries passed to
+    # the linker need to be compiled for the same version of the macOS to
+    # enable resulting executable to be able to run on the older macOS. So we
+    # build LLVM for old macOS to enable ISPC builds targeting an old macOS.
+    list(APPEND LLVM_STAGE2_CMAKE_ARGS
+        -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOS_VERSION_MIN}
+        )
+
+    if (MACOS_UNIVERSAL_BIN)
+        # macOS Universal Binaries is a fat binary for x86_64 and arm64.
+        list(APPEND LLVM_STAGE2_CMAKE_ARGS
+            -DCMAKE_OSX_ARCHITECTURES=x86_64$<SEMICOLON>arm64
+            )
+    endif()
+endif()
 message(STATUS "LLVM stage2 cmake arguments ${LLVM_STAGE2_CMAKE_ARGS}")
 
 
@@ -477,9 +616,13 @@ message(STATUS "LLVM stage2 cmake arguments ${LLVM_STAGE2_CMAKE_ARGS}")
 list(APPEND ISPC_COMMON_CMAKE_ARGS
     -DCMAKE_BUILD_TYPE=${BUILD_TYPE_ISPC}
     -DISPC_CROSS=ON
-    -DXE_ENABLED=ON
     -DISPC_PREPARE_PACKAGE=ON
     )
+if (XE_DEPS)
+    list(APPEND ISPC_COMMON_CMAKE_ARGS
+        -DXE_ENABLED=ON
+        )
+endif()
 if (WIN32)
     # XPU examples are not buildable on windows, issue: TODO!
     list(APPEND ISPC_COMMON_CMAKE_ARGS
@@ -488,12 +631,48 @@ if (WIN32)
         -DISPC_INCLUDE_XE_EXAMPLES=OFF
         )
 endif()
+if (APPLE)
+    # It is needed because of ISPC_CROSS=ON
+    list(APPEND ISPC_COMMON_CMAKE_ARGS
+        -DISPC_ANDROID_NDK_PATH=${ISPC_ANDROID_NDK_PATH}
+        )
+
+    # For APPLE explicitly eanbled both arch.
+    list(APPEND ISPC_COMMON_CMAKE_ARGS
+        -DX86_ENABLED=ON
+        -DARM_ENABLED=ON
+        )
+
+    list(APPEND ISPC_COMMON_CMAKE_ARGS
+        -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOS_VERSION_MIN}
+        )
+
+    if(MACOS_UNIVERSAL_BIN)
+        list(APPEND ISPC_COMMON_CMAKE_ARGS
+            -DISPC_MACOS_UNIVERSAL_BINARIES=ON
+            )
+    endif()
+endif()
 
 list(APPEND ISPC_STAGE2_CMAKE_ARGS
     ${ISPC_COMMON_CMAKE_ARGS}
-    -DXE_DEPS_DIR=${STAGE2_PATH}
-    -DLEVEL_ZERO_ROOT=${STAGE2_PATH}
     )
+if (XE_DEPS)
+    list(APPEND ISPC_STAGE2_CMAKE_ARGS
+        -DLEVEL_ZERO_ROOT=${STAGE2_PATH}
+        )
+endif()
+if (XE_DEPS)
+    if (INSTALL_WITH_XE_DEPS)
+        list(APPEND ISPC_STAGE2_CMAKE_ARGS
+            -DXE_DEPS_DIR=${CMAKE_INSTALL_PREFIX}
+            )
+    else()
+        list(APPEND ISPC_STAGE2_CMAKE_ARGS
+            -DXE_DEPS_DIR=${STAGE2_PATH}
+            )
+    endif()
+endif()
 if (WIN32)
     list(APPEND ISPC_STAGE2_CMAKE_ARGS
         -DLLVM_DIR=${STAGE2_PATH}/lib/cmake/llvm
@@ -510,7 +689,30 @@ else()
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/stage2-toolchain.cmake
         )
 endif()
-message(STATUS ISPC_STAGE2_CMAKE_ARGS "ISPC stage2 cmake arguments ${ISPC_STAGE2_CMAKE_ARGS}")
+
+# It may be slightly confusing but stage1 and stage2 effectively are installed
+# into same directory.
+set(TOOLCHAIN_STAGE1_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/stage2)
+if (BUILD_STAGE1_TOOLCHAIN_ONLY)
+    set(TOOLCHAIN_STAGE1_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
+endif()
+set(TOOLCHAIN_STAGE2_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/stage2)
+if (BUILD_STAGE2_TOOLCHAIN_ONLY)
+    set(TOOLCHAIN_STAGE1_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
+    set(TOOLCHAIN_STAGE2_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
+endif()
+message(STATUS "TOOLCHAIN_STAGE2_INSTALL_PREFIX is ${TOOLCHAIN_STAGE2_INSTALL_PREFIX}")
+message(STATUS "TOOLCHAIN_STAGE1_INSTALL_PREFIX is ${TOOLCHAIN_STAGE1_INSTALL_PREFIX}")
+
+set(ISPC_STAGE2_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/ispc-stage2)
+set(ISPC_STAGE3_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/ispc-stage3)
+if (INSTALL_WITH_XE_DEPS OR INSTALL_ISPC)
+    set(ISPC_STAGE2_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
+    set(ISPC_STAGE3_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
+endif()
+message(STATUS "ISPC_STAGE2_INSTALL_PREFIX is ${ISPC_STAGE2_INSTALL_PREFIX}")
+message(STATUS "ISPC_STAGE3_INSTALL_PREFIX is ${ISPC_STAGE3_INSTALL_PREFIX}")
+message(STATUS "ISPC_STAGE2_CMAKE_ARGS is ${ISPC_STAGE2_CMAKE_ARGS}")
 
 
 # LLVM stage3 specific cmake arguments, here we imply that PGO always works with LTO.
@@ -521,14 +723,23 @@ if (PGO)
         -DLLVM_ENABLE_LTO=Thin
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/stage3-pgo-toolchain.cmake
         )
+    if (APPLE)
+        list(APPEND LLVM_STAGE3_CMAKE_ARGS
+            -DLD64_EXECUTABLE=${STAGE3_PATH}/bin/ld64.lld
+            )
+    endif()
     message(STATUS "LLVM stage3 cmake arguments ${LLVM_STAGE3_CMAKE_ARGS}")
 
     list(APPEND ISPC_STAGE3_CMAKE_ARGS
         ${ISPC_COMMON_CMAKE_ARGS}
         -DXE_DEPS_DIR=${CMAKE_BINARY_DIR}/stage3
-        -DLEVEL_ZERO_ROOT=${CMAKE_BINARY_DIR}/stage3
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/stage3-pgo-toolchain.cmake
         )
+    if (XE_DEPS)
+        list(APPEND ISPC_STAGE3_CMAKE_ARGS
+            -DLEVEL_ZERO_ROOT=${CMAKE_BINARY_DIR}/stage3
+            )
+    endif()
     if (WIN32)
         list(APPEND ISPC_STAGE3_CMAKE_ARGS
             -DLLVM_DIR=${CMAKE_BINARY_DIR}/stage3/lib/cmake/llvm
@@ -572,8 +783,10 @@ message(STATUS "ENV_PATH_STAGE3 is ${ENV_PATH_STAGE3}")
 # because it is easier to check them.
 # The stage1 compiler are built with system toolchain.
 file(CONFIGURE OUTPUT stage1-toolchain.cmake CONTENT [[
-${CCACHE_LAUNCHER_ACTION}(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_EXE})
-${CCACHE_LAUNCHER_ACTION}(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_EXE})
+@CCACHE_LAUNCHER_ACTION@(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_EXE})
+@CCACHE_LAUNCHER_ACTION@(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_EXE})
+set(CMAKE_C_FLAGS   "@CMAKE_C_FLAGS@")
+set(CMAKE_CXX_FLAGS "@CMAKE_CXX_FLAGS@")
 if (WIN32)
     set(CMAKE_C_COMPILER   cl)
     set(CMAKE_CXX_COMPILER cl)
@@ -582,14 +795,15 @@ else()
     set(CMAKE_C_COMPILER   cc)
     set(CMAKE_CXX_COMPILER c++)
 endif()
-]])
+]] @ONLY)
 
 # Base toolchain file for building ISPC and LLVM dependencies.
 file(CONFIGURE OUTPUT stage2-toolchain.cmake CONTENT [[
 @CCACHE_LAUNCHER_ACTION@(CMAKE_C_COMPILER_LAUNCHER   @CCACHE_EXE@)
 @CCACHE_LAUNCHER_ACTION@(CMAKE_CXX_COMPILER_LAUNCHER @CCACHE_EXE@)
-set(ENV{PATH} "@ENV_PATH_STAGE2@")
+set(ENV{PATH}       "@ENV_PATH_STAGE2@")
 set(WIN_C_FLAGS     "-fuse-ld=lld-link /EHa")
+set(APPLE_C_FLAGS   "-fuse-ld=lld")
 if (WIN32)
     set(CMAKE_C_COMPILER   clang-cl)
     set(CMAKE_CXX_COMPILER clang-cl)
@@ -597,12 +811,25 @@ if (WIN32)
     set(CMAKE_AR           llvm-lib)
     set(CMAKE_RC_COMPILER  llvm-rc)
     set(CMAKE_MT           mt)
-    set(CMAKE_C_FLAGS      "${WIN_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS    "${WIN_C_FLAGS}")
+    set(CMAKE_C_FLAGS      "@CMAKE_C_FLAGS@ ${WIN_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS    "@CMAKE_CXX_FLAGS@ ${WIN_C_FLAGS}")
+elseif(APPLE)
+    set(CMAKE_C_COMPILER   clang)
+    set(CMAKE_CXX_COMPILER clang++)
+    set(CMAKE_LINKER       ld64.lld)
+    set(CMAKE_LIBTOOL      llvm-libtool-darwin)
+    set(CMAKE_RANLIB       llvm-ranlib)
+    set(CMAKE_C_FLAGS      "@CMAKE_C_FLAGS@")
+    set(CMAKE_CXX_FLAGS    "@CMAKE_CXX_FLAGS@")
+    set(CMAKE_MODULE_LINKER_FLAGS "${APPLE_C_FLAGS}")
+    set(CMAKE_SHARED_LINKER_FLAGS "${APPLE_C_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS    "${APPLE_C_FLAGS}")
 else()
     set(CMAKE_C_COMPILER   clang)
     set(CMAKE_CXX_COMPILER clang++)
     set(CMAKE_LINKER       lld)
+    set(CMAKE_C_FLAGS      "@CMAKE_C_FLAGS@")
+    set(CMAKE_CXX_FLAGS    "@CMAKE_CXX_FLAGS@")
 endif()
 ]] @ONLY)
 
@@ -612,11 +839,12 @@ file(CONFIGURE OUTPUT stage2-lto-toolchain.cmake CONTENT [[
 @CCACHE_LAUNCHER_ACTION@(CMAKE_CXX_COMPILER_LAUNCHER @CCACHE_EXE@)
 set(ENV{PATH} "@ENV_PATH_STAGE2@")
 set(COMMON_FLAGS    "-flto=thin @PGO_FLAGS@")
-set(COMMON_C_FLAGS  "")
+set(COMMON_C_FLAGS  "@CMAKE_C_FLAGS@")
 # Note: -O3 --lto-O3 --icf=...  that these flags lld specific
 set(COMMON_LD_FLAGS "-Wl,-O3 -Wl,--lto-O3 -Wl,--icf=all")
 set(WIN_C_FLAGS     "-fuse-ld=lld-link /EHa")
 set(WIN_LD_FLAGS    "@CLANG_RT_PROFLIB@")
+set(APPLE_C_FLAGS   "-fuse-ld=lld")
 if (WIN32)
     set(CMAKE_C_COMPILER   clang-cl)
     set(CMAKE_CXX_COMPILER clang-cl)
@@ -625,16 +853,27 @@ if (WIN32)
     set(CMAKE_RC_COMPILER  llvm-rc)
     set(CMAKE_MT           mt)
     set(CMAKE_C_FLAGS             "${COMMON_FLAGS} ${COMMON_C_FLAGS} ${WIN_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS           "${COMMON_FLAGS} ${COMMON_C_FLAGS} ${WIN_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS           "@CMAKE_CXX_FLAGS@ ${COMMON_FLAGS} ${COMMON_C_FLAGS} ${WIN_C_FLAGS}")
     set(CMAKE_MODULE_LINKER_FLAGS "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${WIN_LD_FLAGS}")
     set(CMAKE_SHARED_LINKER_FLAGS "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${WIN_LD_FLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS    "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${WIN_LD_FLAGS}")
+elseif(APPLE)
+    set(CMAKE_C_COMPILER   clang)
+    set(CMAKE_CXX_COMPILER clang++)
+    set(CMAKE_LINKER       ld64.lld)
+    set(CMAKE_LIBTOOL      llvm-libtool-darwin)
+    set(CMAKE_RANLIB       llvm-ranlib)
+    set(CMAKE_C_FLAGS             "${COMMON_FLAGS} ${COMMON_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS           "@CMAKE_CXX_FLAGS@ ${COMMON_FLAGS} ${COMMON_C_FLAGS}")
+    set(CMAKE_MODULE_LINKER_FLAGS "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${APPLE_C_FLAGS}")
+    set(CMAKE_SHARED_LINKER_FLAGS "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${APPLE_C_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS    "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${APPLE_C_FLAGS}")
 else()
     set(CMAKE_C_COMPILER   clang)
     set(CMAKE_CXX_COMPILER clang++)
     set(CMAKE_LINKER       lld)
     set(CMAKE_C_FLAGS             "${COMMON_FLAGS} ${COMMON_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS           "${COMMON_FLAGS} ${COMMON_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS           "@CMAKE_CXX_FLAGS@ ${COMMON_FLAGS} ${COMMON_C_FLAGS}")
     set(CMAKE_MODULE_LINKER_FLAGS "${COMMON_FLAGS} ${COMMON_LD_FLAGS}")
     set(CMAKE_SHARED_LINKER_FLAGS "${COMMON_FLAGS} ${COMMON_LD_FLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS    "${COMMON_FLAGS} ${COMMON_LD_FLAGS}")
@@ -649,6 +888,7 @@ file(CONFIGURE OUTPUT stage2-l0-toolchain.cmake CONTENT [[
 @CCACHE_LAUNCHER_ACTION@(CMAKE_CXX_COMPILER_LAUNCHER @CCACHE_EXE@)
 set(ENV{PATH} "@ENV_PATH_STAGE2@")
 set(WIN_C_FLAGS "-Wno-error=unused-command-line-argument -Wno-error=unused-but-set-variable")
+set(APPLE_C_FLAGS   "-fuse-ld=lld")
 if (WIN32)
     set(CMAKE_C_COMPILER   clang-cl)
     set(CMAKE_CXX_COMPILER clang-cl)
@@ -656,12 +896,25 @@ if (WIN32)
     set(CMAKE_AR           llvm-lib)
     set(CMAKE_RC_COMPILER  llvm-rc)
     set(CMAKE_MT           mt)
-    set(CMAKE_C_FLAGS      "${WIN_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS    "${WIN_C_FLAGS}")
+    set(CMAKE_C_FLAGS      "@CMAKE_C_FLAGS@ ${WIN_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS    "@CMAKE_CXX_FLAGS@ ${WIN_C_FLAGS}")
+elseif(APPLE)
+    set(CMAKE_C_COMPILER   clang)
+    set(CMAKE_CXX_COMPILER clang++)
+    set(CMAKE_LINKER       ld64.lld)
+    set(CMAKE_LIBTOOL      llvm-libtool-darwin)
+    set(CMAKE_RANLIB       llvm-ranlib)
+    set(CMAKE_C_FLAGS      "@CMAKE_C_FLAGS@")
+    set(CMAKE_CXX_FLAGS    "@CMAKE_CXX_FLAGS@")
+    set(CMAKE_MODULE_LINKER_FLAGS "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${APPLE_C_FLAGS}")
+    set(CMAKE_SHARED_LINKER_FLAGS "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${APPLE_C_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS    "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${APPLE_C_FLAGS}")
 else()
     set(CMAKE_C_COMPILER   clang)
     set(CMAKE_CXX_COMPILER clang++)
     set(CMAKE_LINKER       lld)
+    set(CMAKE_C_FLAGS      "@CMAKE_C_FLAGS@")
+    set(CMAKE_CXX_FLAGS    "@CMAKE_CXX_FLAGS@")
 endif()
 ]] @ONLY)
 
@@ -669,11 +922,12 @@ endif()
 file(CONFIGURE OUTPUT stage3-pgo-toolchain.cmake CONTENT [[
 set(ENV{PATH} "@ENV_PATH_STAGE3@")
 set(COMMON_FLAGS    "-flto=thin -fprofile-instr-use=@CODE_PROFDATA@")
-set(COMMON_C_FLAGS  "")
+set(COMMON_C_FLAGS  "@CMAKE_C_FLAGS@")
 # Note: -O3 --lto-O3 --icf=...  that these flags lld specific
 set(COMMON_LD_FLAGS "-Wl,-O3 -Wl,--lto-O3 -Wl,--icf=all")
 set(WIN_C_FLAGS     "-fuse-ld=lld-link /EHa")
 set(WIN_LD_FLAGS    "")
+set(APPLE_C_FLAGS   "-fuse-ld=lld")
 if (WIN32)
     set(CMAKE_C_COMPILER   clang-cl)
     set(CMAKE_CXX_COMPILER clang-cl)
@@ -682,16 +936,27 @@ if (WIN32)
     set(CMAKE_RC_COMPILER  llvm-rc)
     set(CMAKE_MT           mt)
     set(CMAKE_C_FLAGS             "${COMMON_FLAGS} ${COMMON_C_FLAGS} ${WIN_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS           "${COMMON_FLAGS} ${COMMON_C_FLAGS} ${WIN_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS           "@CMAKE_CXX_FLAGS@ ${COMMON_FLAGS} ${COMMON_C_FLAGS} ${WIN_C_FLAGS}")
     set(CMAKE_MODULE_LINKER_FLAGS "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${WIN_LD_FLAGS}")
     set(CMAKE_SHARED_LINKER_FLAGS "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${WIN_LD_FLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS    "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${WIN_LD_FLAGS}")
+elseif(APPLE)
+    set(CMAKE_C_COMPILER   clang)
+    set(CMAKE_CXX_COMPILER clang++)
+    set(CMAKE_LINKER       ld64.lld)
+    set(CMAKE_LIBTOOL      llvm-libtool-darwin)
+    set(CMAKE_RANLIB       llvm-ranlib)
+    set(CMAKE_C_FLAGS             "${COMMON_FLAGS} ${COMMON_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS           "@CMAKE_CXX_FLAGS@ ${COMMON_FLAGS} ${COMMON_C_FLAGS}")
+    set(CMAKE_MODULE_LINKER_FLAGS "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${APPLE_C_FLAGS}")
+    set(CMAKE_SHARED_LINKER_FLAGS "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${APPLE_C_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS    "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${APPLE_C_FLAGS}")
 else()
     set(CMAKE_C_COMPILER   clang)
     set(CMAKE_CXX_COMPILER clang++)
     set(CMAKE_LINKER       lld)
     set(CMAKE_C_FLAGS             "${COMMON_FLAGS} ${COMMON_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS           "${COMMON_FLAGS} ${COMMON_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS           "@CMAKE_CXX_FLAGS@ ${COMMON_FLAGS} ${COMMON_C_FLAGS}")
     set(CMAKE_MODULE_LINKER_FLAGS "${COMMON_FLAGS} ${COMMON_LD_FLAGS}")
     set(CMAKE_SHARED_LINKER_FLAGS "${COMMON_FLAGS} ${COMMON_LD_FLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS    "${COMMON_FLAGS} ${COMMON_LD_FLAGS}")
@@ -701,7 +966,7 @@ endif()
 
 # Fetch source code of dependencies. They fetched during cmake configuration run.
 # Patch command applies LLVM version specific patches.
-if (PGO OR NOT SKIP_STAGE2_DEPS)
+if (PGO OR NOT SKIP_STAGE2)
     FetchContent_Populate(llvm-source
         GIT_REPOSITORY ${LLVM_URL}
         GIT_TAG ${LLVM_TAG}
@@ -712,38 +977,7 @@ if (PGO OR NOT SKIP_STAGE2_DEPS)
         SOURCE_DIR llvm-source
         )
 
-    if (XE_DEPS)
-        # Checkout level-zero needed for XE
-        FetchContent_Populate(l0-source
-            GIT_REPOSITORY ${L0_URL}
-            GIT_TAG ${L0_TAG}
-            GIT_SHALLOW ON
-            GIT_PROGRESS ON
-            SOURCE_DIR l0-source
-            )
-
-        # Checkout LLVM-SPIRV-Translator needed for XE
-        FetchContent_Populate(spirv-translator
-            GIT_REPOSITORY ${SPIRV_TRANSLATOR_URL}
-            GIT_TAG ${SPIRV_TRANSLATOR_SHA}
-            GIT_SHALLOW OFF
-            GIT_PROGRESS ON
-            SOURCE_DIR spirv-translator
-            )
-
-        # Checkout vc-intrinsics needed for XE
-        FetchContent_Populate(vc-intrinsics
-            GIT_REPOSITORY ${VC_INTRINSICS_URL}
-            GIT_TAG ${VC_INTRINSICS_SHA}
-            GIT_SHALLOW OFF
-            GIT_PROGRESS ON
-            SOURCE_DIR vc-intrinsics
-            UPDATE_COMMAND git checkout .
-            PATCH_COMMAND git apply ${PROJECT_SOURCE_DIR}/vc_intrinsics.patch
-            )
-    endif()
-
-    if (NOT BUILD_STAGE2_TOOLCHAIN_ONLY)
+    if (NOT BUILD_STAGE2_TOOLCHAIN_ONLY AND NOT ${ISPC_CORPUS_URL} STREQUAL "null")
         # May be profiles from examples or less set of programs just enough?
         FetchContent_Populate(ispc-corpus
             GIT_REPOSITORY ${ISPC_CORPUS_URL}
@@ -756,7 +990,7 @@ if (PGO OR NOT SKIP_STAGE2_DEPS)
     endif()
 endif()
 
-if (SKIP_STAGE2_DEPS AND BUILD_SPIRV_TRANSLATOR_ONLY)
+if (XE_DEPS OR (SKIP_STAGE2 AND BUILD_SPIRV_TRANSLATOR_ONLY))
     # Checkout LLVM-SPIRV-Translator needed for XE
     FetchContent_Populate(spirv-translator
         GIT_REPOSITORY ${SPIRV_TRANSLATOR_URL}
@@ -767,7 +1001,7 @@ if (SKIP_STAGE2_DEPS AND BUILD_SPIRV_TRANSLATOR_ONLY)
         )
 endif()
 
-if (SKIP_STAGE2_DEPS AND BUILD_VC_INTRINSICS_ONLY)
+if (XE_DEPS OR (SKIP_STAGE2 AND BUILD_VC_INTRINSICS_ONLY))
     # Checkout vc-intrinsics needed for XE
     FetchContent_Populate(vc-intrinsics
         GIT_REPOSITORY ${VC_INTRINSICS_URL}
@@ -780,7 +1014,7 @@ if (SKIP_STAGE2_DEPS AND BUILD_VC_INTRINSICS_ONLY)
         )
 endif()
 
-if (SKIP_STAGE2_DEPS AND BUILD_L0_LOADER_ONLY)
+if (XE_DEPS OR (SKIP_STAGE2 AND BUILD_L0_LOADER_ONLY))
     # Checkout level-zero needed for XE
     FetchContent_Populate(l0-source
         GIT_REPOSITORY ${L0_URL}
@@ -827,7 +1061,7 @@ message(STATUS "NINJA_COMMAND_WITH_ENV_STAGE1 is ${NINJA_COMMAND_WITH_ENV_STAGE1
 message(STATUS "NINJA_COMMAND_WITH_ENV_STAGE2 is ${NINJA_COMMAND_WITH_ENV_STAGE2}")
 message(STATUS "NINJA_COMMAND_WITH_ENV_STAGE3 is ${NINJA_COMMAND_WITH_ENV_STAGE3}")
 
-if (BUILD_SPIRV_TRANSLATOR_ONLY)
+if (BUILD_SPIRV_STANDALONE)
     message(STATUS "BUILD SPIRV-LLVM-Translator only")
     ExternalProject_Add(spirv-translator
         DOWNLOAD_COMMAND ""
@@ -848,10 +1082,12 @@ if (BUILD_SPIRV_TRANSLATOR_ONLY)
         BUILD_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE2}
         INSTALL_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE2} install
         )
-    return()
+    if (BUILD_SPIRV_TRANSLATOR_ONLY)
+        return()
+    endif()
 endif()
 
-if (BUILD_VC_INTRINSICS_ONLY)
+if (BUILD_VC_INTRINSICS_STANDALONE)
     message(STATUS "BUILD vc-intrinsics only")
     ExternalProject_Add(vc-intrinsics
         DOWNLOAD_COMMAND ""
@@ -872,10 +1108,12 @@ if (BUILD_VC_INTRINSICS_ONLY)
         BUILD_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE2}
         INSTALL_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE2} install
         )
-    return()
+    if (BUILD_VC_INTRINSICS_ONLY)
+        return()
+    endif()
 endif()
 
-if (BUILD_L0_LOADER_ONLY)
+if (BUILD_L0_LOADER_STANDALONE)
     # Level-zero
     ExternalProject_Add(l0
         DOWNLOAD_COMMAND ""
@@ -894,43 +1132,85 @@ if (BUILD_L0_LOADER_ONLY)
         BUILD_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE2}
         INSTALL_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE2} install
         )
-    return()
+    if (BUILD_L0_LOADER_ONLY)
+        return()
+    endif()
 endif()
 
 
 # Stage1 job to build bootstrap compiler for building required Clang/LLVM libraries and ISPC itself.
-if (PGO OR NOT SKIP_STAGE2_DEPS)
-    ExternalProject_Add(stage1
-        DOWNLOAD_COMMAND ""
-        UPDATE_COMMAND ""
-        SOURCE_DIR llvm-source
-        SOURCE_SUBDIR llvm
-        PREFIX bstage1
-        STAMP_DIR bstage1/s
-        BINARY_DIR bstage1/b
-        TMP_DIR bstage1/t
-        INSTALL_DIR stage2
-        CMAKE_GENERATOR Ninja
-        CMAKE_ARGS ${LLVM_STAGE1_CMAKE_ARGS} -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/stage2
-        BUILD_IN_SOURCE OFF
-        BUILD_COMMAND ""
-        BUILD_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE1}
-        INSTALL_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE1} install
-        )
-    # Note: We may rebuild instead stage2 clang/lld with stage1 toolchain to
-    # generate more performant stage2 compiler.
+if (PGO OR NOT SKIP_STAGE2)
+
+    # It may be empty when PREBUILT_STAGE1_PATH provided otherwise we need to depend on the stage1 external project
+    list(APPEND LLVM_STAGE2_DEPS)
+
+    if (NOT SKIP_STAGE1)
+        ExternalProject_Add(stage1
+            DOWNLOAD_COMMAND ""
+            UPDATE_COMMAND ""
+            SOURCE_DIR llvm-source
+            SOURCE_SUBDIR llvm
+            PREFIX bstage1
+            STAMP_DIR bstage1/s
+            BINARY_DIR bstage1/b
+            TMP_DIR bstage1/t
+            INSTALL_DIR ${TOOLCHAIN_STAGE1_INSTALL_PREFIX}
+            CMAKE_GENERATOR Ninja
+            CMAKE_ARGS ${LLVM_STAGE1_CMAKE_ARGS} -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_STAGE1_INSTALL_PREFIX}
+            BUILD_IN_SOURCE OFF
+            BUILD_COMMAND ""
+            BUILD_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE1}
+            INSTALL_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE1} install
+            )
+        # Note: We may rebuild instead stage2 clang/lld with stage1 toolchain to
+        # generate more performant stage2 compiler.
+
+        list(APPEND LLVM_STAGE2_DEPS stage1)
+
+        if (BUILD_STAGE1_TOOLCHAIN_ONLY)
+            # Custom target to package stage1 tooclhain
+            add_custom_target(package-stage1
+                DEPENDS stage1
+                COMMENT "Packaging stage1 archive to llvm-stage1-${LLVM_VERSION_DOTTED}.tgz"
+                COMMAND ${CMAKE_COMMAND} -E tar cfvz "llvm-stage1-${LLVM_VERSION_DOTTED}.tgz" stage2
+                WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
+            return()
+        endif()
+
+    else()
+
+        if (NOT PREBUILT_STAGE1 STREQUAL "NO")
+            # Extract pre-built stage1, path should be provided in PREBUILT_STAGE1.
+            ExternalProject_Add(stage1
+                URL ${PREBUILT_STAGE1}
+                DOWNLOAD_EXTRACT_TIMESTAMP OFF
+                UPDATE_COMMAND ""
+                SOURCE_DIR stage2
+                CONFIGURE_COMMAND ""
+                BUILD_COMMAND ""
+                INSTALL_COMMAND ""
+                )
+
+            list(APPEND LLVM_STAGE2_DEPS stage1)
+        endif()
+
+    endif()
 
 
     list(APPEND L0_DEPS)
     if (XE_DEPS)
         # Level-zero
+        list(APPEND STAGE1_DEPS)
+        if (NOT SKIP_STAGE1)
+            list(APPEND STAGE1_DEPS stage1)
+        endif()
         ExternalProject_Add(l0
-            DEPENDS stage1
+            DEPENDS ${STAGE1_DEPS}
             DOWNLOAD_COMMAND ""
             CMAKE_GENERATOR Ninja
             CMAKE_ARGS
                 -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/stage2-l0-toolchain.cmake
-                -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/stage2
+                -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_STAGE2_INSTALL_PREFIX}
                 -DCMAKE_BUILD_TYPE=${BUILD_TYPE_L0}
             SOURCE_DIR l0-source
             BUILD_IN_SOURCE OFF
@@ -938,7 +1218,7 @@ if (PGO OR NOT SKIP_STAGE2_DEPS)
             STAMP_DIR bl0/s
             BINARY_DIR bl0/b
             TMP_DIR bl0/t
-            INSTALL_DIR stage2
+            INSTALL_DIR ${TOOLCHAIN_STAGE2_INSTALL_PREFIX}
             BUILD_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE2}
             INSTALL_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE2} install
             )
@@ -965,7 +1245,7 @@ if (PGO OR NOT SKIP_STAGE2_DEPS)
     # When LTO, this stage has barely only -flto extra flag comparing with base build.
     # When PGO, this step produces instrumented Clang/LLVM static libraries.
     ExternalProject_Add(stage2
-        DEPENDS stage1 ${L0_DEPS}
+        DEPENDS ${LLVM_STAGE2_DEPS} ${L0_DEPS}
         DOWNLOAD_COMMAND ""
         UPDATE_COMMAND ""
         SOURCE_DIR llvm-source
@@ -974,33 +1254,24 @@ if (PGO OR NOT SKIP_STAGE2_DEPS)
         STAMP_DIR bstage2/s
         BINARY_DIR bstage2/b
         TMP_DIR bstage2/t
-        INSTALL_DIR stage2
+        INSTALL_DIR ${TOOLCHAIN_STAGE2_INSTALL_PREFIX}
         CMAKE_GENERATOR Ninja
-        CMAKE_ARGS ${LLVM_STAGE2_CMAKE_ARGS} -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/stage2
+        CMAKE_ARGS ${LLVM_STAGE2_CMAKE_ARGS} -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_STAGE2_INSTALL_PREFIX}
         BUILD_IN_SOURCE OFF
         BUILD_COMMAND ""
         INSTALL_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE2} ${LLVM_STAGE2_INSTALL_TARGETS}
         )
 
-
-    # Custom target to install stage2 toolchain with libraries in the user-provided directory.
-    if (NOT STAGE2_TOOLCHAIN_INSTALL_PREFIX STREQUAL "NO")
-        add_custom_target(install-stage2-toolchain
-            COMMENT "Install stage2 to ${STAGE2_TOOLCHAIN_INSTALL_PREFIX}"
-            COMMAND ${CMAKE_COMMAND} -E copy_directory stage2 ${STAGE2_TOOLCHAIN_INSTALL_PREFIX}
-            )
-    endif()
-
     # Custom target to package stage2 tooclhain to use after skipping its repetitive build.
     add_custom_target(package-stage2
         DEPENDS stage2
         COMMENT "Packaging stage2 archive to llvm-stage2-${LLVM_VERSION_DOTTED}.tgz"
-        COMMAND ${CMAKE_COMMAND} -E tar cfvz "llvm-stage2-${LLVM_VERSION_DOTTED}.tgz" stage2
+        COMMAND ${CMAKE_COMMAND} -E tar cfvz "llvm-stage2-${LLVM_VERSION_DOTTED}.tgz" ${TOOLCHAIN_STAGE2_INSTALL_PREFIX}
         WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
 endif()
 
 list(APPEND ISPC_STAGE2_DEPS)
-if (SKIP_STAGE2_DEPS)
+if (SKIP_STAGE2)
     if (NOT PREBUILT_STAGE2 STREQUAL "NO")
         # Extract pre-built stage2, path should be provided in PREBUILT_STAGE2.
         ExternalProject_Add(stage2
@@ -1027,12 +1298,19 @@ if (NOT BUILD_STAGE2_TOOLCHAIN_ONLY)
         UPDATE_COMMAND ""
         PREFIX build-ispc-stage2
         SOURCE_DIR ${PROJECT_SOURCE_DIR}/..
-        INSTALL_DIR ispc-stage2
+        INSTALL_DIR ${ISPC_STAGE2_INSTALL_PREFIX}
         BUILD_IN_SOURCE OFF
         CMAKE_GENERATOR Ninja
-        CMAKE_ARGS ${ISPC_STAGE2_CMAKE_ARGS} -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/ispc-stage2
+        CMAKE_ARGS ${ISPC_STAGE2_CMAKE_ARGS} -DCMAKE_INSTALL_PREFIX=${ISPC_STAGE2_INSTALL_PREFIX}
         BUILD_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE2}
         INSTALL_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE2} install package
+        )
+
+    # Custom target to run stage2 ISPC tests
+    add_custom_target(ispc-stage2-check-all
+        DEPENDS ispc-stage2
+        COMMENT "Run ISPC stage2 check-all target"
+        COMMAND ${CMAKE_COMMAND} -E chdir build-ispc-stage2/src/ispc-stage2-build ${NINJA_COMMAND_WITH_ENV_STAGE2} check-all
         )
 
     # The following steps applicable only for PGO type build.
@@ -1077,10 +1355,10 @@ if (NOT BUILD_STAGE2_TOOLCHAIN_ONLY)
             UPDATE_COMMAND ""
             PREFIX build-ispc-stage3
             SOURCE_DIR ${PROJECT_SOURCE_DIR}/..
-            INSTALL_DIR ispc-stage3
+            INSTALL_DIR ${ISPC_STAGE3_INSTALL_PREFIX}
             BUILD_IN_SOURCE OFF
             CMAKE_GENERATOR Ninja
-            CMAKE_ARGS ${ISPC_STAGE3_CMAKE_ARGS} -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/ispc-stage3
+            CMAKE_ARGS ${ISPC_STAGE3_CMAKE_ARGS} -DCMAKE_INSTALL_PREFIX=${ISPC_STAGE3_INSTALL_PREFIX}
             BUILD_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE3}
             INSTALL_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE3} install package
             )
