@@ -11,36 +11,56 @@ Typical use cases:
 
 ```bash
 # Basic configuration.
-$ cmake ${ISPC}/superbuild --preset os
+$ cmake ${ISPC_HOME}/superbuild --preset os
 $ cmake --build .
 # Produce an archive with dependencies.
 $ cmake --build . --target package-stage2
 # On Windows, one may want to use nmake generators
-$ cmake ${ISPC}/superbuild --preset os -G "NMake Makefiles"
+$ cmake ${ISPC_HOME}/superbuild --preset os -G "NMake Makefiles"
 
 # Enable LTO.
-$ cmake ${ISPC}/superbuild --preset os -DLTO=ON
+$ cmake ${ISPC_HOME}/superbuild --preset os -DLTO=ON
 # Enable LTO and PGO.
-$ cmake ${ISPC}/superbuild --preset os -DPGO=ON
+$ cmake ${ISPC_HOME}/superbuild --preset os -DPGO=ON
 # Provide LLVM version and source url or directory (same for other dependencies).
-$ cmake ${ISPC}/superbuild --preset os -DLLVM_VERSION=15.0 -DLLVM_URL=/home/llvm-project
-$ cmake ${ISPC}/superbuild --preset os -DLLVM_VERSION=13_0
+$ cmake ${ISPC_HOME}/superbuild --preset os -DLLVM_VERSION=15.0 -DLLVM_URL=/home/llvm-project
+$ cmake ${ISPC_HOME}/superbuild --preset os -DLLVM_VERSION=13_0
 # Enable cache using.
-$ cmake ${ISPC}/superbuild --preset os -DCCACHE=ON
+$ cmake ${ISPC_HOME}/superbuild --preset os -DCCACHE=ON
 # Enable cache using where cache located in not default directory.
-$ cmake ${ISPC}/superbuild --preset os -DCCACHE=ON -DCCACHE_DIR=/tmp/shared-ispc-ccache
+$ cmake ${ISPC_HOME}/superbuild --preset os -DCCACHE=ON -DCCACHE_DIR=/tmp/shared-ispc-ccache
 # Consume pre-built dependencies as archive.
-$ cmake ${ISPC}/superbuild --preset os -DPREBUILT_STAGE2=/path/to/stage2-archive.tgz
+$ cmake ${ISPC_HOME}/superbuild --preset os -DPREBUILT_STAGE2=/path/to/stage2-archive.tgz
 
 # Build and install only stage2 toolchain
-$ cmake ${ISPC}/superbuild --preset os -DSTAGE2_TOOLCHAIN_INSTALL_PREFIX=/tmp/stage2-path -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON
+$ cmake ${ISPC_HOME}/superbuild --preset os -DCMAKE_INSTALL_PREFIX=/tmp/stage2-path -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON
 $ cmake --build .
-$ cmake --buidl . --target install-stage2-toolchain
 # Consume pre-build dependencies as path with installed stage2 toolchain and libs.
-$ cmake ${ISPC}/superbuild --preset os -DPREBUILT_STAGE2_PATH=/tmp/stage2-path
+$ cmake ${ISPC_HOME}/superbuild --preset os -DPREBUILT_STAGE2_PATH=/tmp/stage2-path
+
+# Build and install stage2 toolchain with XE deps
+$ cmake ${ISPC_HOME}/superbuild --preset os -DCMAKE_INSTALL_PREFIX=/tmp/stage2-path -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DINSTALL_WITH_XE_DEPS=ON
+$ cmake --build .
+
+# Build and install only stage2 ISPC
+$ cmake ${ISPC_HOME}/superbuild --preset os -DCMAKE_INSTALL_PREFIX=/tmp/ispc -DBUILD_ISPC_ONLY=ON -DPREBUILD_STAGE2=/path/to/stage2-archive.tar.gz
+$ cmake ${ISPC_HOME}/superbuild --preset os -DCMAKE_INSTALL_PREFIX=/tmp/ispc -DBUILD_ISPC_ONLY=ON -DLTO=ON -DPREBUILD_STAGE2=/path/to/stage2-lto-archive.tar.gz
+$ cmake ${ISPC_HOME}/superbuild --preset os -DCMAKE_INSTALL_PREFIX=/tmp/ispc -DBUILD_ISPC_ONLY=ON -DPGO=ON -DPREBUILD_STAGE2=/path/to/stage2-pgo-archive.tar.gz
+
+# Build and install only dependencies
+$ cmake ${ISPC_HOME}/superbuild --preset os -DCMAKE_INSTALL_PREFIX=/opt/spirv-translator -DBUILD_SPIRV_TRANSLATOR_ONLY=ON
+$ cmake --build .
+$ cmake ${ISPC_HOME}/superbuild --preset os -DCMAKE_INSTALL_PREFIX=/opt/vc-intrinsics -DBUILD_VC_INTRINSICS_ONLY=ON
+$ cmake --build .
+$ cmake ${ISPC_HOME}/superbuild --preset os -DCMAKE_INSTALL_PREFIX=/opt/l0-loader -DBUILD_L0_LOADER_ONLY=ON
+$ cmake --build .
+
+# Build and install ISPC with XE dependencies
+$ cmake ${ISPC_HOME}/superbuild --preset os -DPREBUILT_STAGE2_PATH=/tmp/stage2-path -DCMAKE_INSTALL_PREFIX=/opt/ispc-with-xe/ -DINSTALL_WITH_XE_DEPS=ON
+$ cmake --build .
 ```
 
-# Building Process.
+# Build Process
 
 The building process consists of several stages.
 Base and LTO build consists of two stages. The only difference between them
