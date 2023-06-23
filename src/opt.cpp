@@ -114,6 +114,10 @@ class DebugModulePassManager {
         // This ensures that any function with optnone will not be optimized.
         OptNoneInst.registerCallbacks(PIC);
 
+        if (g->debugPM) {
+            // Enable time traces for optimization passes.
+            TimePasses.registerCallbacks(PIC);
+        }
         // Create the new pass manager builder using our target machine.
         pb = llvm::PassBuilder(targetMachine, llvm::PipelineTuningOptions(), llvm::None, &PIC);
 
@@ -187,6 +191,7 @@ class DebugModulePassManager {
     llvm::PrintPassOptions PrintPassOpts{/*Verbose*/ true, /*SkipAnalyses*/ true, /*Indent*/ true};
     llvm::StandardInstrumentations SI{/*DebugLogging*/ g->debugPM, false, PrintPassOpts};
     llvm::OptNoneInstrumentation OptNoneInst{/*DebugLogging*/ false};
+    llvm::TimePassesHandler TimePasses{true};
 
     std::vector<std::unique_ptr<llvm::raw_fd_ostream>> outputDebugDumps;
     std::vector<std::unique_ptr<llvm::FunctionPassManager>> fpmVec;
