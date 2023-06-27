@@ -262,6 +262,11 @@ static bool checkInit(const Type *type, Expr **init) {
         return false;
     }
 
+    if (*init == nullptr) {
+        // Return error if an initializer expression is malformed, e.g., undeclared symbol is used.
+        return true;
+    }
+
     // get the right type for stuff like const float foo = 2; so that
     // the int->float type conversion is in there and we don't return
     // an int as the constValue later...
