@@ -296,6 +296,7 @@ primary_expression
             std::string alts = lGetAlternates(alternates);
             Error(@1, "Undeclared symbol \"%s\".%s", name, alts.c_str());
         }
+        delete yylval.stringVal;
     }
     | TOKEN_INT8_CONSTANT {
         $$ = new ConstExpr(AtomicType::UniformInt8->GetAsConstType(),
@@ -483,9 +484,15 @@ postfix_expression
       { $$ = nullptr; }
     | launch_expression
     | postfix_expression '.' TOKEN_IDENTIFIER
-      { $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, false); }
+      {
+          $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, false);
+          delete yylval.stringVal;
+      }
     | postfix_expression TOKEN_PTR_OP TOKEN_IDENTIFIER
-      { $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, true); }
+      {
+          $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, true);
+          delete yylval.stringVal;
+      }
     | postfix_expression TOKEN_INC_OP
       { $$ = new UnaryExpr(UnaryExpr::PostInc, $1, Union(@1,@2)); }
     | postfix_expression TOKEN_DEC_OP
@@ -850,6 +857,7 @@ declspec_item
         p->first = *(yylval.stringVal);
         p->second = @1;
         $$ = p;
+        delete yylval.stringVal;
     }
     ;
 
@@ -1012,6 +1020,7 @@ type_specifier
     {
         const Type *t = m->symbolTable->LookupType(yytext);
         $$ = t;
+        delete yylval.stringVal;
     }
     | struct_or_union_specifier { $$ = $1; }
     | enum_specifier { $$ = $1; }
@@ -1063,8 +1072,16 @@ short_vec_specifier
     ;
 
 struct_or_union_name
-    : TOKEN_IDENTIFIER { $$ = strdup(yytext); }
-    | TOKEN_TYPE_NAME  { $$ = strdup(yytext); }
+    : TOKEN_IDENTIFIER
+    {
+        $$ = strdup(yytext);
+        delete yylval.stringVal;
+    }
+    | TOKEN_TYPE_NAME
+    {
+        $$ = strdup(yytext);
+        delete yylval.stringVal;
+    }
     ;
 
 struct_or_union_and_name
@@ -1298,7 +1315,12 @@ struct_declarator
     ;
 
 enum_identifier
-    : TOKEN_IDENTIFIER { $$ = strdup(yytext); }
+    : TOKEN_IDENTIFIER
+      {
+          $$ = strdup(yytext);
+          delete yylval.stringVal;
+      }
+    ;
 
 enum_specifier
     : TOKEN_ENUM '{' enumerator_list '}'
@@ -1450,6 +1472,7 @@ direct_declarator
           Declarator *d = new Declarator(DK_BASE, @1);
           d->name = yytext;
           $$ = d;
+          delete yylval.stringVal;
       }
     // For the purpose of declaration, template_name token is no different from identifier token,
     // it needs to be processed in the same way. Semantic checks will be done later.
@@ -1458,6 +1481,7 @@ direct_declarator
           Declarator *d = new Declarator(DK_BASE, @1);
           d->name = yytext;
           $$ = d;
+          delete yylval.stringVal;
       }
     | '(' declarator ')'
     {
@@ -1918,6 +1942,7 @@ foreach_identifier
     : TOKEN_IDENTIFIER
     {
         $$ = new Symbol(yytext, @1, AtomicType::VaryingInt32->GetAsConstType());
+        delete yylval.stringVal;
     }
     ;
 
@@ -1929,6 +1954,7 @@ foreach_active_identifier
     : TOKEN_IDENTIFIER
     {
         $$ = new Symbol(yytext, @1, AtomicType::UniformInt64->GetAsConstType());
+        delete yylval.stringVal;
     }
     ;
 
@@ -1986,7 +2012,11 @@ foreach_unique_scope
     ;
 
 foreach_unique_identifier
-    : TOKEN_IDENTIFIER { $$ = yylval.stringVal->c_str(); }
+    : TOKEN_IDENTIFIER
+      {
+          $$ = strdup(yylval.stringVal->c_str());
+          delete yylval.stringVal;
+      }
     ;
 
 iteration_statement
@@ -2102,7 +2132,11 @@ iteration_statement
     ;
 
 goto_identifier
-    : TOKEN_IDENTIFIER { $$ = yylval.stringVal->c_str(); }
+    : TOKEN_IDENTIFIER
+      {
+          $$ = strdup(yylval.stringVal->c_str());
+          delete yylval.stringVal;
+      }
     ;
 
 jump_statement
@@ -2224,10 +2258,12 @@ template_type_parameter
     : TOKEN_TYPENAME TOKEN_IDENTIFIER
       {
           $$ = new TemplateTypeParmType(*$<stringVal>2, Variability::VarType::Unbound, false, Union(@1, @2));
+          delete yylval.stringVal;
       }
     | TOKEN_TYPENAME TOKEN_IDENTIFIER '=' type_specifier
       {
           $$ = new TemplateTypeParmType(*$<stringVal>2, Variability::VarType::Unbound, false, Union(@1, @2));
+          delete yylval.stringVal;
           // TODO: implement
           Error(@4, "Default values for template type parameters are not yet supported.");
       }
@@ -2237,6 +2273,7 @@ template_int_parameter
     : TOKEN_INT TOKEN_IDENTIFIER
       {
           $$ = nullptr;
+          delete yylval.stringVal;
           // TODO: implement
           Error(Union(@1, @2), "Non-type template paramters are not yet supported.");
       }
@@ -2341,7 +2378,11 @@ template_argument_list
     ;
 
 template_identifier
-    : TOKEN_TEMPLATE_NAME { $$ = strdup(yytext); }
+    : TOKEN_TEMPLATE_NAME
+    {
+        $$ = strdup(yytext);
+        delete yylval.stringVal;
+    }
     ;
 
 simple_template_id
