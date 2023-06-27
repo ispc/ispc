@@ -3745,7 +3745,10 @@ void PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
     }
 #endif /* ISPC_XE_ENABLED */
     auto printImplArgs = getDoPrintArgs(ctx);
-    Assert(!printImplArgs.empty() && "Haven't managed to produce __do_print args");
+    if (printImplArgs.empty()) {
+        AssertPos(pos, m->errorCount > 0);
+        return;
+    }
     auto printImplFunc = getPrintImplFunc();
     AssertPos(pos, printImplFunc);
     ctx->CallInst(printImplFunc, nullptr, printImplArgs, "");
