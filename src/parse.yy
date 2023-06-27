@@ -1818,6 +1818,8 @@ attributed_statement
             $2->SetLoopAttribute(unrollVal);
         }
         $$ = $2;
+        // deallocate yylval.pragmaAttributes returned from pragma and allocated in lPragmaUnroll
+        delete $1;
     }
     | statement
     ;
