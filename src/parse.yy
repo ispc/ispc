@@ -268,12 +268,14 @@ struct ForeachDimension {
 %%
 
 string_constant
-    : TOKEN_STRING_LITERAL { $$ = new std::string(*yylval.stringVal); }
+    : TOKEN_STRING_LITERAL { $$ = yylval.stringVal; }
     | string_constant TOKEN_STRING_LITERAL
     {
-        std::string s = *((std::string *)$1);
-        s += *yylval.stringVal;
-        $$ = new std::string(s);
+        std::string *p_str_cst = (std::string *)$1;
+        p_str_cst->append(*yylval.stringVal);
+        $$ = p_str_cst;
+        // Allocated in lStringConst
+        delete yylval.stringVal;
     }
     ;
 
@@ -2178,10 +2180,14 @@ print_statement
     : TOKEN_PRINT '(' string_constant ')' ';'
       {
            $$ = new PrintStmt(*$3, nullptr, @1);
+           // deallocate std::string of string_constant
+           delete $3;
       }
     | TOKEN_PRINT '(' string_constant ',' argument_expression_list ')' ';'
       {
            $$ = new PrintStmt(*$3, $5, @1);
+           // deallocate std::string of string_constant
+           delete $3;
       }
     ;
 
@@ -2189,6 +2195,8 @@ assert_statement
     : TOKEN_ASSERT '(' string_constant ',' expression ')' ';'
       {
           $$ = new AssertStmt(*$3, $5, @1);
+          // deallocate std::string of string_constant
+          delete $3;
       }
     ;
 
