@@ -332,6 +332,7 @@ primary_expression
     }
     | TOKEN_FLOAT16_CONSTANT {
          std::string sval = *(yylval.stringVal);
+         delete yylval.stringVal;
          llvm::Type *hType = llvm::Type::getHalfTy(*g->ctx);
          const llvm::fltSemantics &FS = hType->getFltSemantics();
          llvm::APFloat f16(FS, sval);
