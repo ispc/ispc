@@ -519,7 +519,7 @@ intrincall_expression
           if (sym != nullptr)
               fSym = new FunctionSymbolExpr(fname, funcs, @1);
           $$ = new FunctionCallExpr(fSym, $3, Union(@1,@4));
-
+          delete name;
       }
     ;
 
