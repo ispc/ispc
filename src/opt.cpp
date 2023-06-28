@@ -486,7 +486,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addModulePass(llvm::ReversePostOrderFunctionAttrsPass());
 
         // Next inline pass will remove functions, saved by __keep_funcs_live
-        optPM.addModulePass(llvm::ModuleInlinerPass());
+        optPM.addModulePass(llvm::ModuleInlinerWrapperPass());
 
         optPM.initFunctionPassManager();
         optPM.addFunctionPass(llvm::InstSimplifyPass());
