@@ -153,9 +153,6 @@ static void lPrintVersion() {
     snprintf(targetHelp, sizeof(targetHelp), "[--target-os=<os>]\t\t\tSelect target OS.  <os>={%s}",
              g->target_registry->getSupportedOSes().c_str());
     PrintWithWordBreaks(targetHelp, 24, TerminalWidth(), stdout);
-    printf("    [--time-trace]\t\t\tTurn on time profiler. Generates JSON file based on output filename\n");
-    printf("    [--time-trace-granularity=<value>]\tMinimum time granularity (in microseconds) traced by time "
-           "profiler\n");
     printf("    [--vectorcall/--no-vectorcall]\tEnable/disable vectorcall calling convention on Windows (x64 only). "
            "Disabled by default\n");
     printf("    [--version]\t\t\t\tPrint ispc version\n");
@@ -230,6 +227,9 @@ static void lPrintVersion() {
            "Xe gather coalescing\n");
     printf("        enable-xe-unsafe-masked-load\t\tEnable Xe unsafe masked load\n");
 #endif
+    printf("    [--time-trace]\t\t\tTurn on time profiler. Generates JSON file based on output filename\n");
+    printf("    [--time-trace-granularity=<value>]\tMinimum time granularity (in microseconds) traced by time "
+           "profiler\n");
     printf("    [--time-trace-pm]\t\t\tPrint time tracing information from ispc pass manager\n");
     printf("    [--print-target]\t\t\tPrint target's information\n");
     printf("    [--yydebug]\t\t\t\tPrint debugging information during parsing\n");
