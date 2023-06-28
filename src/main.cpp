@@ -200,6 +200,7 @@ static void lPrintVersion() {
     printf("    [--debug]\t\t\t\tPrint information useful for debugging ispc\n");
     printf("    [--debug-llvm]\t\t\tEnable LLVM debugging information (dumps to stderr)\n");
     printf("    [--debug-pm]\t\t\tPrint verbose information from ispc pass manager\n");
+    printf("    [--debug-pm-time-trace]\t\t\tPrint time tracing information from ispc pass manager\n");
     printf("    [--debug-phase=<value>]\t\tSet optimization phases to dump. "
            "--debug-phase=first,210:220,300,305,310:last\n");
     printf("    [--[no-]discard-value-names]\tDo not discard/Discard value names when generating LLVM IR\n");
@@ -736,6 +737,8 @@ int main(int Argc, char *Argv[]) {
             llvm::DebugFlag = true;
         else if (!strcmp(argv[i], "--debug-pm"))
             g->debugPM = true;
+        else if (!strcmp(argv[i], "--debug-pm-time-trace"))
+            g->debugPMTimeTrace = true;
         else if (!strcmp(argv[i], "--discard-value-names"))
             discardValueNames = BooleanOptValue::enabled;
         else if (!strcmp(argv[i], "--no-discard-value-names"))
