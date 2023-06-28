@@ -671,6 +671,11 @@ struct Globals {
      */
     bool debugPM;
 
+    /** When \c true, print time trace output from PassManager.
+     * (Default is false.)
+     */
+    bool debugPMTimeTrace;
+
     /** When \c true, dump AST.
         None - don't dump AST
         User - dump AST only for user code, but not for stdlib functions
