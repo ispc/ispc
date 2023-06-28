@@ -114,7 +114,7 @@ class DebugModulePassManager {
         // This ensures that any function with optnone will not be optimized.
         OptNoneInst.registerCallbacks(PIC);
 
-        if (g->debugPM) {
+        if (g->debugPMTimeTrace) {
             // Enable time traces for optimization passes.
             TimePasses.registerCallbacks(PIC);
         }

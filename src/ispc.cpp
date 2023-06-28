@@ -2213,6 +2213,7 @@ Globals::Globals() {
     ignoreCPPErrors = false;
     debugPrint = false;
     debugPM = false;
+    debugPMTimeTrace = false;
     astDump = Globals::ASTDumpKind::None;
     dumpFile = false;
     printTarget = false;

@@ -230,6 +230,7 @@ static void lPrintVersion() {
            "Xe gather coalescing\n");
     printf("        enable-xe-unsafe-masked-load\t\tEnable Xe unsafe masked load\n");
 #endif
+    printf("    [--time-trace-pm]\t\t\tPrint time tracing information from ispc pass manager\n");
     printf("    [--print-target]\t\t\tPrint target's information\n");
     printf("    [--yydebug]\t\t\t\tPrint debugging information during parsing\n");
     exit(ret);
@@ -898,6 +899,8 @@ int main(int Argc, char *Argv[]) {
             g->enableTimeTrace = true;
         } else if (!strncmp(argv[i], "--time-trace-granularity=", 25)) {
             g->timeTraceGranularity = atoi(argv[i] + 25);
+        } else if (!strcmp(argv[i], "--time-trace-pm")) {
+            g->debugPMTimeTrace = true;
         } else if (!strcmp(argv[i], "--woff") || !strcmp(argv[i], "-woff")) {
             g->disableWarnings = true;
             g->emitPerfWarnings = false;
