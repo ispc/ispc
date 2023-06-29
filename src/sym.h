@@ -134,6 +134,10 @@ class SymbolTable {
         that scope. */
     void PopScope();
 
+    /** Pop all scopes except the outermost scope. It's needed to clean up SymbolTable in case of any error during
+        parsing to avoid assertion in destructor. */
+    void PopInnerScopes();
+
     /** Adds the given variable symbol to the symbol table.
         @param symbol The symbol to be added
 

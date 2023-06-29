@@ -67,6 +67,12 @@ void SymbolTable::PopScope() {
     types.pop_back();
 }
 
+void SymbolTable::PopInnerScopes() {
+    while (variables.size() > 1) {
+        PopScope();
+    }
+}
+
 bool SymbolTable::AddVariable(Symbol *symbol) {
     Assert(symbol != nullptr);
 

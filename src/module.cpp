@@ -3180,6 +3180,10 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         }
 
         int errorCount = m->errorCount;
+        // In case of error, clean up symbolTable
+        if (errorCount > 0) {
+            m->symbolTable->PopInnerScopes();
+        }
         delete m;
         m = nullptr;
 
