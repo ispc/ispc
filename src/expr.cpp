@@ -3069,6 +3069,8 @@ static llvm::Value *lEmitOpAssign(AssignExpr::Op op, Expr *arg0, Expr *arg1, con
     // Get the value on the right-hand side of the assignment+operation
     // operator and load the current value on the left-hand side.
     llvm::Value *rvalue = arg1->GetValue(ctx);
+    if (rvalue == nullptr)
+        return nullptr;
     llvm::Value *mask = lMaskForSymbol(baseSym, ctx);
     ctx->SetDebugPos(arg0->pos);
     llvm::Value *oldLHS = ctx->LoadInst(lv, mask, lvalueType);
