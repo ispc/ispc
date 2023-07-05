@@ -120,7 +120,7 @@ void L0InitContext(ze_driver_handle_t &hDriver, ze_device_handle_t &hDevice, ze_
     moduleDesc.format = use_zebin ? ZE_MODULE_FORMAT_NATIVE : ZE_MODULE_FORMAT_IL_SPIRV;
     moduleDesc.inputSize = codeSize;
     moduleDesc.pInputModule = codeBin;
-    moduleDesc.pBuildFlags = "-vc-codegen -no-optimize -Xfinalizer '-presched'";
+    moduleDesc.pBuildFlags = "-vc-codegen -no-optimize -Xfinalizer '-presched' -Xfinalizer '-newspillcostispc'";
     L0_SAFE_CALL(zeModuleCreate(hContext, hDevice, &moduleDesc, &hModule, nullptr));
 
     delete[] codeBin;
