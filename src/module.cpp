@@ -1435,12 +1435,7 @@ bool Module::writeZEBin(llvm::Module *module, const char *outFileName) {
         return false;
     }
 
-    std::string options{"-vc-codegen -no-optimize -Xfinalizer '-presched'"};
-#ifdef ISPC_IS_LINUX
-    // `newspillcost` is not yet supported on Windows in open source
-    // TODO: use `newspillcost` for all platforms as soon as it available
-    options += " -Xfinalizer '-newspillcost'";
-#endif
+    std::string options{"-vc-codegen -no-optimize -Xfinalizer '-presched' -Xfinalizer '-newspillcostispc'"};
     // Add debug option to VC backend of "-g" is set to ISPC
     if (g->generateDebuggingSymbols) {
         options.append(" -g");
