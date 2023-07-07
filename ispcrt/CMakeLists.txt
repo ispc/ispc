@@ -66,8 +66,18 @@ add_subdirectory(detail)
 
 # RPATH to find devices libraries when run mock tests from the build directory.
 list(APPEND CMAKE_BUILD_RPATH ${CMAKE_BINARY_DIR}/ispcrt/detail/cpu ${CMAKE_BINARY_DIR}/ispcrt/detail/gpu)
-# RPATH for ispcrt library to find devices libraries.
-set(CMAKE_INSTALL_RPATH $ORIGIN)
+# Set rpath for ispcrt library to find devices libraries.
+# Enable installation of the runtime search path
+set(CMAKE_SKIP_INSTALL_RPATH OFF)
+if (APPLE)
+  # Enable the use of @loader_path as the rpath for macOS
+  set(CMAKE_MACOSX_RPATH ON)
+  # Set the rpath to use the @loader_path token for macOS
+  set(CMAKE_INSTALL_RPATH "@loader_path/")
+else()
+  # Set the rpath to use the $ORIGIN token for non-macOS platforms
+  set(CMAKE_INSTALL_RPATH "$ORIGIN")
+endif()
 
 # Shared library target.
 list(APPEND LIB_LIST ${PROJECT_NAME})
