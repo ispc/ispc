@@ -591,13 +591,13 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 
         optPM.initLoopPassManager();
         // Loop passes using MemorySSA
-        optPM.addLoopPass(llvm::LoopRotatePass(), 290);
+        optPM.addLoopPass(llvm::LoopRotatePass(), 291);
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_15_0
         // Use LLVM default options
         llvm::LICMOptions licmOpts;
-        optPM.addLoopPass(llvm::LICMPass(licmOpts), 291);
+        optPM.addLoopPass(llvm::LICMPass(licmOpts), 292);
 #else
-        optPM.addLoopPass(llvm::LICMPass(), 291);
+        optPM.addLoopPass(llvm::LICMPass(), 292);
 #endif
         if (!g->target->isXeTarget()) {
             // SimpleLoopUnswitch is not a full equivalent of LoopUnswitch pass.
@@ -605,7 +605,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
             // not efficient for Xe targets. Moreover when this pass is used
             // some integer division tests are failing on TGLLP Windows.
             // Disable this pass on Xe until the problem is fixed on BE side.
-            optPM.addLoopPass(llvm::SimpleLoopUnswitchPass(false), 292);
+            optPM.addLoopPass(llvm::SimpleLoopUnswitchPass(false), 293);
         }
         optPM.commitLoopToFunctionPassManager(true, true);
 
