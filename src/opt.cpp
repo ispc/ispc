@@ -470,6 +470,9 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addFunctionPass(llvm::SimplifyCFGPass(simplifyCFGopt));
         optPM.addFunctionPass(llvm::PromotePass());
         optPM.addFunctionPass(llvm::ReassociatePass());
+        optPM.initLoopPassManager();
+        optPM.addLoopPass(llvm::LoopFullUnrollPass());
+        optPM.commitLoopToFunctionPassManager(false, true);
         optPM.addFunctionPass(ReplaceStdlibShiftPass(), 229);
         optPM.addFunctionPass(llvm::InstCombinePass());
         optPM.addFunctionPass(llvm::SimplifyCFGPass(simplifyCFGopt));
