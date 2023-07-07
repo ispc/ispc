@@ -11,9 +11,7 @@
     "minor": 23
   },
   "include": [
-    "intPresets.json",
-    "osPresets.json",
-    "os-intPresets.json"
+    "osPresets.json"
   ],
   "configurePresets": [
     {
