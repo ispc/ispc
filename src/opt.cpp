@@ -74,6 +74,7 @@
 #include <llvm/Transforms/Scalar/LowerExpectIntrinsic.h>
 #include <llvm/Transforms/Scalar/LowerMatrixIntrinsics.h>
 #include <llvm/Transforms/Scalar/MemCpyOptimizer.h>
+#include <llvm/Transforms/Scalar/NewGVN.h>
 #include <llvm/Transforms/Scalar/Reassociate.h>
 #include <llvm/Transforms/Scalar/SCCP.h>
 #include <llvm/Transforms/Scalar/SROA.h>
@@ -653,11 +654,15 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         if (g->opt.unrollLoops) {
             optPM.addFunctionPass(llvm::LoopUnrollPass(), 300);
         }
-
-        // Still use old GVN pass for 1:1 mapping with new PM
-        // optPM.addModuleToFunctionPass(llvm::NewGVNPass(), 301);
+        // For Xe targets NewGVN pass produces more efficient code due to better resolving of branches.
+        // On CPU targets it is effective in optimizing certain types of code,
+        // but it is not be beneficial in all cases.
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
-        optPM.addFunctionPass(llvm::GVNPass(), 301);
+        if (g->target->isXeTarget()) {
+            optPM.addFunctionPass(llvm::NewGVNPass(), 301);
+        } else {
+            optPM.addFunctionPass(llvm::GVNPass(), 301);
+        }
 #else
         optPM.addFunctionPass(llvm::GVN(), 301);
 #endif
