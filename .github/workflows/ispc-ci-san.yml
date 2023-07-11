@@ -1,0 +1,47 @@
+name: Sanitizers
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  LLVM_REPO: https://github.com/ispc/ispc.dependencies
+
+jobs:
+  linux-ispc-llvm15-asan:
+    runs-on: ubuntu-latest
+    env:
+      LLVM_VERSION: "15.0"
+      LLVM_TAR: llvm-15.0.7-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+      ISPC_OPAQUE_PTR_MODE: "ON"
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.sh
+
+    # We will use system gcc until we rebuild LLVM with compiler-rt.
+    - name: Check environment
+      run: |
+        ./check_env.py
+        which -a gcc
+        cat /proc/cpuinfo
+
+    - name: Build ISPC with ASAN
+      run: |
+          cmake -B build -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_FLAGS="-fsanitize=address -O0 -g3" -DCMAKE_CXX_FLAGS="-fsanitize=address -O0 -g3"
+
+    # Address sanitizer includes leak sanitizer but we don't want it to report
+    # all leaks at the moment because there are quite a lot if them.
+    # So, we disable leaks detection to have clean report.
+    - name: Run check-all with ASAN
+      run: |
+          ASAN_OPTIONS=detect_leaks=0 cmake --build build --target check-all
+
+    - name: Run tests with ASAN
+      run: |
+          ASAN_OPTIONS=detect_leaks=0 PATH=`pwd`/build/bin:$PATH ./run_tests.py --target=avx2-i32x8 --arch=x86-64 ./tests/*.ispc
