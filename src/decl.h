@@ -180,8 +180,9 @@ class Declaration : public Traceable {
 
 /** The parser creates instances of StructDeclaration for the members of
     structs as it's parsing their declarations. */
-struct StructDeclaration {
+struct StructDeclaration : public Traceable {
     StructDeclaration(const Type *t, std::vector<Declarator *> *d) : type(t), declarators(d) {}
+    ~StructDeclaration() { delete declarators; }
 
     const Type *type;
     std::vector<Declarator *> *declarators;
