@@ -1142,6 +1142,8 @@ struct_or_union_specifier
                                               Variability::Unbound, false, @1);
               m->symbolTable->AddType(name.c_str(), st, @1);
               $$ = st;
+              // struct_declaration_list returns a vector that is not needed anymore.
+              delete $3;
           }
           else
               $$ = nullptr;
@@ -1156,6 +1158,8 @@ struct_or_union_specifier
                                            &elementPositions);
               $$ = new StructType("", elementTypes, elementNames, elementPositions,
                                   false, Variability::Unbound, true, @1);
+              // struct_declaration_list returns a vector that is not needed anymore.
+              delete $3;
           }
           else
               $$ = nullptr;
