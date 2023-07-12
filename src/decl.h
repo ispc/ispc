@@ -60,7 +60,7 @@ class Declarator;
     In other words, this represents all of the stuff that applies to all of
     the (possibly multiple) variables in a declaration.
  */
-class DeclSpecs {
+class DeclSpecs : public Traceable {
   public:
     DeclSpecs(const Type *t = nullptr, StorageClass sc = SC_NONE, int tq = TYPEQUAL_NONE);
 
