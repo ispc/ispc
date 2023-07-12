@@ -1117,7 +1117,6 @@ define <WIDTH x $1>
       ret <WIDTH x $1> %res
   ')
 }
-
 ')
 xe_gather(i8)
 xe_gather(i16)
@@ -1126,6 +1125,15 @@ xe_gather(i32)
 xe_gather(float)
 xe_gather(i64)
 xe_gather(double)
+
+; We need factored generic implementations when --opt=disable-gathers is used
+gen_gather_factored_generic(i8)
+gen_gather_factored_generic(i16)
+gen_gather_factored_generic(half)
+gen_gather_factored_generic(i32)
+gen_gather_factored_generic(float)
+gen_gather_factored_generic(i64)
+gen_gather_factored_generic(double)
 
 define(`xe_scatter', `
 ifelse(WIDTH, 32,`
@@ -1213,6 +1221,15 @@ xe_scatter(i32)
 xe_scatter(float)
 xe_scatter(i64)
 xe_scatter(double)
+
+; We need factored generic implementations when --opt=disable-scatters is used
+gen_scatter_factored(i8)
+gen_scatter_factored(i16)
+gen_scatter_factored(half)
+gen_scatter_factored(i32)
+gen_scatter_factored(float)
+gen_scatter_factored(i64)
+gen_scatter_factored(double)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int8/int16 builtins

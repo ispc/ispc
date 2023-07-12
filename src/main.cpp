@@ -127,6 +127,8 @@ static void lPrintVersion() {
     printf("    [--opt=<option>]\t\t\tSet optimization option\n");
     printf("        disable-assertions\t\tRemove assertion statements from final code\n");
     printf("        disable-fma\t\t\tDisable 'fused multiply-add' instructions (on targets that support them)\n");
+    printf("        disable-gathers\t\t\tDisable gathers generation on targets that support them\n");
+    printf("        disable-scatters\t\tDisable scatters generation on targets that support them\n");
     printf("        disable-loop-unroll\t\tDisable loop unrolling\n");
     printf(
         "        disable-zmm\t\t\tDisable using zmm registers for avx512 targets in favour of ymm. This also affects "
@@ -848,6 +850,10 @@ int main(int Argc, char *Argv[]) {
                 g->opt.fastMaskedVload = true;
             else if (!strcmp(opt, "disable-assertions"))
                 g->opt.disableAsserts = true;
+            else if (!strcmp(opt, "disable-gathers"))
+                g->opt.disableGathers = true;
+            else if (!strcmp(opt, "disable-scatters"))
+                g->opt.disableScatters = true;
             else if (!strcmp(opt, "disable-loop-unroll"))
                 g->opt.unrollLoops = false;
             else if (!strcmp(opt, "disable-fma"))

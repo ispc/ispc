@@ -4348,6 +4348,51 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
 
 ifelse(HAVE_GATHER, `1',
 `
+  ;; generic gathers
+  %g32_8_generic = call <WIDTH x i8>  @__gather32_generic_i8(<WIDTH x i32> %v32,
+                                                     <WIDTH x MASK> %mask)
+  call void @__use_vi8(<WIDTH x i8> %g32_8_generic)
+  %g32_16_generic = call <WIDTH x i16>  @__gather32_generic_i16(<WIDTH x i32> %v32,
+                                                        <WIDTH x MASK> %mask)
+  call void @__use_vi16(<WIDTH x i16> %g32_16_generic)
+  %g32_h_generic = call <WIDTH x half>  @__gather32_generic_half(<WIDTH x i32> %v32,
+                                                        <WIDTH x MASK> %mask)
+  call void @__usef16(<WIDTH x half> %g32_h_generic)
+  %g32_32_generic = call <WIDTH x i32>  @__gather32_generic_i32(<WIDTH x i32> %v32,
+                                                        <WIDTH x MASK> %mask)
+  call void @__use_vi32(<WIDTH x i32> %g32_32_generic)
+  %g32_f_generic = call <WIDTH x float>  @__gather32_generic_float(<WIDTH x i32> %v32,
+                                                        <WIDTH x MASK> %mask)
+  call void @__use_vf(<WIDTH x float> %g32_f_generic)
+  %g32_64_generic = call <WIDTH x i64>  @__gather32_generic_i64(<WIDTH x i32> %v32,
+                                                        <WIDTH x MASK> %mask)
+  call void @__use_vi64(<WIDTH x i64> %g32_64_generic)
+  %g32_d_generic = call <WIDTH x double>  @__gather32_generic_double(<WIDTH x i32> %v32,
+                                                        <WIDTH x MASK> %mask)
+  call void @__use_vd(<WIDTH x double> %g32_d_generic)
+  %g64_8_generic = call <WIDTH x i8>  @__gather64_generic_i8(<WIDTH x i64> %v64,
+                                                     <WIDTH x MASK> %mask)
+  call void @__use_vi8(<WIDTH x i8> %g64_8_generic)
+  %g64_16_generic = call <WIDTH x i16>  @__gather64_generic_i16(<WIDTH x i64> %v64,
+                                                        <WIDTH x MASK> %mask)
+  call void @__use_vi16(<WIDTH x i16> %g64_16_generic)
+  %g64_h_generic = call <WIDTH x half>  @__gather64_generic_half(<WIDTH x i64> %v64,
+                                                        <WIDTH x MASK> %mask)
+  call void @__usef16(<WIDTH x half> %g64_h_generic)
+  %g64_32_generic = call <WIDTH x i32>  @__gather64_generic_i32(<WIDTH x i64> %v64,
+                                                        <WIDTH x MASK> %mask)
+  call void @__use_vi32(<WIDTH x i32> %g64_32_generic)
+  %g64_f_generic = call <WIDTH x float>  @__gather64_generic_float(<WIDTH x i64> %v64,
+                                                        <WIDTH x MASK> %mask)
+  call void @__use_vf(<WIDTH x float> %g64_f_generic)
+  %g64_64_generic = call <WIDTH x i64>  @__gather64_generic_i64(<WIDTH x i64> %v64,
+                                                        <WIDTH x MASK> %mask)
+  call void @__use_vi64(<WIDTH x i64> %g64_64_generic)
+  %g64_d_generic = call <WIDTH x double>  @__gather64_generic_double(<WIDTH x i64> %v64,
+                                                        <WIDTH x MASK> %mask)
+  call void @__use_vd(<WIDTH x double> %g64_d_generic)
+
+  ;; base/offsets gathers
   %nfpgbo32_8 = call <WIDTH x i8>
        @__pseudo_gather_base_offsets32_i8(i8 * %ptr, i32 0,
                                           <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
@@ -4463,8 +4508,7 @@ ifelse(HAVE_GATHER, `1',
        @__gather_base_offsets64_double(i8 * %ptr, i32 0,
                                            <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
   call void @__use_vd(<WIDTH x double> %nfgbo64_d)
-',
-`
+')
   %pgbo32_8 = call <WIDTH x i8>
        @__pseudo_gather_factored_base_offsets32_i8(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
                                           <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
@@ -4580,7 +4624,6 @@ ifelse(HAVE_GATHER, `1',
        @__gather_factored_base_offsets64_double(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
                                            <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
   call void @__use_vd(<WIDTH x double> %pgbo64_d)
-')
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; scatters
@@ -4619,6 +4662,24 @@ ifelse(HAVE_GATHER, `1',
 
 ifelse(HAVE_SCATTER, `1',
 `
+  ;; generic scatters
+  call void @__scatter32_generic_i8(<WIDTH x i32> %v32, <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
+  call void @__scatter32_generic_i16(<WIDTH x i32> %v32, <WIDTH x i16> %v16, <WIDTH x MASK> %mask)
+  call void @__scatter32_generic_half(<WIDTH x i32> %v32, <WIDTH x half> %vh, <WIDTH x MASK> %mask)
+  call void @__scatter32_generic_i32(<WIDTH x i32> %v32, <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__scatter32_generic_float(<WIDTH x i32> %v32, <WIDTH x float> %vf, <WIDTH x MASK> %mask)
+  call void @__scatter32_generic_i64(<WIDTH x i32> %v32, <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__scatter32_generic_double(<WIDTH x i32> %v32, <WIDTH x double> %vd, <WIDTH x MASK> %mask)
+
+  call void @__scatter64_generic_i8(<WIDTH x i64> %v64, <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
+  call void @__scatter64_generic_i16(<WIDTH x i64> %v64, <WIDTH x i16> %v16, <WIDTH x MASK> %mask)
+  call void @__scatter64_generic_half(<WIDTH x i64> %v64, <WIDTH x half> %vh, <WIDTH x MASK> %mask)
+  call void @__scatter64_generic_i32(<WIDTH x i64> %v64, <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__scatter64_generic_float(<WIDTH x i64> %v64, <WIDTH x float> %vf, <WIDTH x MASK> %mask)
+  call void @__scatter64_generic_i64(<WIDTH x i64> %v64, <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__scatter64_generic_double(<WIDTH x i64> %v64, <WIDTH x double> %vd, <WIDTH x MASK> %mask)
+
+  ;; base/offset scatters
   call void @__pseudo_scatter_base_offsets32_i8(i8 * %ptr, i32 0, <WIDTH x i32> %v32,
                                                 <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
   call void @__pseudo_scatter_base_offsets32_i16(i8 * %ptr, i32 0, <WIDTH x i32> %v32,
@@ -4678,8 +4739,7 @@ ifelse(HAVE_SCATTER, `1',
                                                  <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
   call void @__scatter_base_offsets64_double(i8 * %ptr, i32 0, <WIDTH x i64> %v64,
                                                     <WIDTH x double> %vd, <WIDTH x MASK> %mask)
-',
-`
+')
   call void @__pseudo_scatter_factored_base_offsets32_i8(i8 * %ptr, <WIDTH x i32> %v32, i32 0, <WIDTH x i32> %v32,
                                                 <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
   call void @__pseudo_scatter_factored_base_offsets32_i16(i8 * %ptr, <WIDTH x i32> %v32, i32 0, <WIDTH x i32> %v32,
@@ -4739,7 +4799,6 @@ ifelse(HAVE_SCATTER, `1',
                                                  <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
   call void @__scatter_factored_base_offsets64_double(i8 * %ptr, <WIDTH x i64> %v64, i32 0, <WIDTH x i64> %v64,
                                                     <WIDTH x double> %vd, <WIDTH x MASK> %mask)
-')
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; prefetchs
@@ -6335,8 +6394,43 @@ define <WIDTH x $1> @__gather64_$1(<WIDTH x i64> %ptrs,
 }
 ')
 
+; For the targets which have gathers but --disable-gather is requested
+define(`gen_gather_generic', `
+; fully general 32-bit gather, takes array of pointers encoded as vector of i32s
+define <WIDTH x $1> @__gather32_generic_$1(<WIDTH x i32> %ptrs,
+                                   <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
+  %ret_ptr = alloca <WIDTH x $1>
+  per_lane(WIDTH, <WIDTH x MASK> %vecmask, `
+  %iptr_LANE_ID = extractelement <WIDTH x i32> %ptrs, i32 LANE
+  %ptr_LANE_ID = inttoptr i32 %iptr_LANE_ID to $1 *
+  %val_LANE_ID = load PTR_OP_ARGS(`$1 ')  %ptr_LANE_ID
+  %store_ptr_LANE_ID = getelementptr PTR_OP_ARGS(`<WIDTH x $1>') %ret_ptr, i32 0, i32 LANE
+  store $1 %val_LANE_ID, $1 * %store_ptr_LANE_ID
+ ')
+
+  %ret = load PTR_OP_ARGS(`<WIDTH x $1> ')  %ret_ptr
+  ret <WIDTH x $1> %ret
+}
+
+; fully general 64-bit gather, takes array of pointers encoded as vector of i64s
+define <WIDTH x $1> @__gather64_generic_$1(<WIDTH x i64> %ptrs,
+                                   <WIDTH x MASK> %vecmask) nounwind readonly alwaysinline {
+  %ret_ptr = alloca <WIDTH x $1>
+  per_lane(WIDTH, <WIDTH x MASK> %vecmask, `
+  %iptr_LANE_ID = extractelement <WIDTH x i64> %ptrs, i32 LANE
+  %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to $1 *
+  %val_LANE_ID = load PTR_OP_ARGS(`$1 ')  %ptr_LANE_ID
+  %store_ptr_LANE_ID = getelementptr PTR_OP_ARGS(`<WIDTH x $1>') %ret_ptr, i32 0, i32 LANE
+  store $1 %val_LANE_ID, $1 * %store_ptr_LANE_ID
+ ')
+
+  %ret = load PTR_OP_ARGS(`<WIDTH x $1> ')  %ret_ptr
+  ret <WIDTH x $1> %ret
+}
+')
+
 ; vec width, type
-define(`gen_gather_factored', `
+define(`gen_gather_factored_generic', `
 ;; Define the utility function to do the gather operation for a single element
 ;; of the type
 define <WIDTH x $1> @__gather_elt32_$1(i8 * %ptr, <WIDTH x i32> %offsets, i32 %offset_scale,
@@ -6446,7 +6540,17 @@ define <WIDTH x $1> @__gather_factored_base_offsets64_$1(i8 * %ptr, <WIDTH x i64
   ret <WIDTH x $1> %ret`'eval(WIDTH-1)
 }
 
-gen_gather_general($1)
+ifelse(HAVE_GATHER, `1',
+`
+  gen_gather_generic($1)
+')
+
+'
+)
+
+define(`gen_gather_factored', `
+  gen_gather_factored_generic($1)
+  gen_gather_general($1)
 '
 )
 
@@ -6492,7 +6596,35 @@ define <WIDTH x $1>
 ;;
 ;; $1: scalar type for which we want to generate code to scatter
 
-define(`gen_scatter', `
+define(`gen_scatter_generic', `
+; fully general 32-bit scatter, takes array of pointers encoded as vector of i32s
+define void @__scatter32_generic_$1(<WIDTH x i32> %ptrs, <WIDTH x $1> %values,
+                            <WIDTH x MASK> %mask) nounwind alwaysinline {
+  per_lane(WIDTH, <WIDTH x MASK> %mask, `
+  %iptr_LANE_ID = extractelement <WIDTH x i32> %ptrs, i32 LANE
+  %ptr_LANE_ID = inttoptr i32 %iptr_LANE_ID to $1 *
+  %val_LANE_ID = extractelement <WIDTH x $1> %values, i32 LANE
+  store $1 %val_LANE_ID, $1 * %ptr_LANE_ID
+ ')
+  ret void
+}
+
+; fully general 64-bit scatter, takes array of pointers encoded as vector of i64s
+define void @__scatter64_generic_$1(<WIDTH x i64> %ptrs, <WIDTH x $1> %values,
+                            <WIDTH x MASK> %mask) nounwind alwaysinline {
+  per_lane(WIDTH, <WIDTH x MASK> %mask, `
+  %iptr_LANE_ID = extractelement <WIDTH x i64> %ptrs, i32 LANE
+  %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to $1 *
+  %val_LANE_ID = extractelement <WIDTH x $1> %values, i32 LANE
+  store $1 %val_LANE_ID, $1 * %ptr_LANE_ID
+ ')
+  ret void
+}
+
+'
+)
+
+define(`gen_scatter_factored', `
 ;; Define the function that descripes the work to do to scatter a single
 ;; value
 define void @__scatter_elt32_$1(i8 * %ptr, <WIDTH x i32> %offsets, i32 %offset_scale,
@@ -6554,6 +6686,17 @@ define void @__scatter_factored_base_offsets64_$1(i8* %base, <WIDTH x i64> %offs
                                     <WIDTH x i64> %offset_delta, <WIDTH x $1> %values, i32 LANE)')
   ret void
 }
+
+ifelse(HAVE_SCATTER, `1',
+`
+  gen_scatter_generic($1)
+')
+
+'
+)
+
+define(`gen_scatter', `
+gen_scatter_factored($1)
 
 ; fully general 32-bit scatter, takes array of pointers encoded as vector of i32s
 define void @__scatter32_$1(<WIDTH x i32> %ptrs, <WIDTH x $1> %values,

@@ -320,7 +320,11 @@ class Target {
 
     bool hasGather() const { return m_hasGather; }
 
+    bool useGather() const;
+
     bool hasScatter() const { return m_hasScatter; }
+
+    bool useScatter() const;
 
     bool hasTranscendentals() const { return m_hasTranscendentals; }
 
@@ -503,6 +507,14 @@ struct Opt {
     /** Indicates whether Assert() statements should be ignored (for
         performance in the generated code). */
     bool disableAsserts;
+
+    /** Indicates whether gathers should be disabled for the targets that support them (for
+        performance in the generated code). */
+    bool disableGathers;
+
+    /** Indicates whether scatters should be disabled for the targets that support them (for
+        performance in the generated code). */
+    bool disableScatters;
 
     /** Indicates whether FMA instructions should be disabled (on targets
         that support them). */
