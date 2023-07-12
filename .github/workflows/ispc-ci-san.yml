@@ -34,14 +34,19 @@ jobs:
     - name: Build ISPC with ASAN
       run: |
           cmake -B build -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_FLAGS="-fsanitize=address -O0 -g3" -DCMAKE_CXX_FLAGS="-fsanitize=address -O0 -g3"
+          cmake --build build --target ispc -j4
 
     # Address sanitizer includes leak sanitizer but we don't want it to report
     # all leaks at the moment because there are quite a lot if them.
     # So, we disable leaks detection to have clean report.
-    - name: Run check-all with ASAN
+    - name: Build examples with ASAN
+      run: |
+          ASAN_OPTIONS=detect_leaks=0 cmake --build build --target ispc_cpu_examples -j4
+
+    - name: Build LIT tests with ASAN
       run: |
           ASAN_OPTIONS=detect_leaks=0 cmake --build build --target check-all
 
-    - name: Run tests with ASAN
+    - name: Build runtime tests with ASAN
       run: |
           ASAN_OPTIONS=detect_leaks=0 PATH=`pwd`/build/bin:$PATH ./run_tests.py --target=avx2-i32x8 --arch=x86-64 ./tests/*.ispc
