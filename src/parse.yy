@@ -1531,8 +1531,11 @@ direct_declarator
           if ($1 != nullptr) {
               Declarator *d = new Declarator(DK_FUNCTION, Union(@1, @4));
               d->child = $1;
-              if ($3 != nullptr)
+              if ($3 != nullptr) {
                   d->functionParams = *$3;
+                  // parameter_type_list returns vector of Declarations that is not needed anymore.
+                  delete $3;
+              }
               $$ = d;
           }
           else
@@ -1760,7 +1763,11 @@ direct_abstract_declarator
     | '(' parameter_type_list ')'
       {
           Declarator *d = new Declarator(DK_FUNCTION, Union(@1, @3));
-          if ($2 != nullptr) d->functionParams = *$2;
+          if ($2 != nullptr) {
+              d->functionParams = *$2;
+              // parameter_type_list returns vector of Declarations that is not needed anymore.
+              delete $2;
+          }
           $$ = d;
       }
     | direct_abstract_declarator '(' ')'
@@ -1780,7 +1787,11 @@ direct_abstract_declarator
           else {
               Declarator *d = new Declarator(DK_FUNCTION, Union(@1, @4));
               d->child = $1;
-              if ($3 != nullptr) d->functionParams = *$3;
+              if ($3 != nullptr) {
+                  d->functionParams = *$3;
+                  // parameter_type_list returns vector of Declarations that is not needed anymore.
+                  delete $3;
+              }
               $$ = d;
           }
       }
@@ -2434,6 +2445,8 @@ template_function_instantiation
           d->child = simpleTemplID->first;
           if ($5 != nullptr) {
               d->functionParams = *$5;
+              // parameter_type_list returns vector of Declarations that is not needed anymore.
+              delete $5;
           }
 
           d->InitFromDeclSpecs($2);
