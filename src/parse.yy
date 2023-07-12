@@ -872,11 +872,16 @@ declspec_list
     {
         $$ = new std::vector<std::pair<std::string, SourcePos> >;
         $$->push_back(*$1);
+        // declspec_item returns pair that was copied so it is not needed anymore.
+        delete $1;
     }
     | declspec_list ',' declspec_item
     {
-        if ($1 != nullptr)
+        if ($1 != nullptr) {
             $1->push_back(*$3);
+            // declspec_item returns pair that was copied so it is not needed anymore.
+            delete $3;
+        }
         $$ = $1;
     }
     ;
@@ -884,6 +889,7 @@ declspec_list
 declspec_specifier
     : TOKEN_DECLSPEC '(' declspec_list ')'
     {
+        // declspec_list returns heap allocated vector that passed up here.
         $$ = $3;
     }
     ;
@@ -910,8 +916,11 @@ declaration_specifiers
     | declspec_specifier
       {
           $$ = new DeclSpecs;
-          if ($1 != nullptr)
+          if ($1 != nullptr) {
               $$->declSpecList = *$1;
+              // declspec_specifier returns a vector that was copied and it is not needed anymore.
+              delete $1;
+          }
       }
     | declspec_specifier declaration_specifiers
       {
@@ -920,6 +929,9 @@ declaration_specifiers
           if (ds != nullptr && declSpecList != nullptr) {
               for (int i = 0; i < (int)declSpecList->size(); ++i)
                   ds->declSpecList.push_back((*declSpecList)[i]);
+
+              // declspec_specifier returns a vector that was copied and it is not needed anymore.
+              delete declSpecList;
           }
           $$ = ds;
       }
