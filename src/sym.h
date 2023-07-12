@@ -36,7 +36,7 @@ class ConstExpr;
    function symbols (and vice versa, for non-function symbols)?
  */
 
-class Symbol {
+class Symbol : public Traceable {
   public:
     /** The Symbol constructor takes the name of the symbol, its
         position in a source file, and its type (if known). */
