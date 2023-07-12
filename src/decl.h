@@ -155,7 +155,7 @@ class Declarator {
 /** @brief Representation of a full declaration of one or more variables,
     including the shared DeclSpecs as well as the per-variable Declarators.
  */
-class Declaration {
+class Declaration : public Traceable {
   public:
     Declaration(DeclSpecs *ds, std::vector<Declarator *> *dlist = nullptr);
     Declaration(DeclSpecs *ds, Declarator *d);
