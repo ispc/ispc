@@ -100,7 +100,7 @@ enum DeclaratorKind { DK_BASE, DK_POINTER, DK_REFERENCE, DK_ARRAY, DK_FUNCTION }
     In conjunction with an instance of the DeclSpecs, this gives us
     everything we need for a full variable declaration.
  */
-class Declarator {
+class Declarator : public Traceable {
   public:
     Declarator(DeclaratorKind dk, SourcePos p);
 
