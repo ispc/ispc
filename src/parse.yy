@@ -845,6 +845,9 @@ declaration
     | declaration_specifiers init_declarator_list ';'
       {
           $$ = new Declaration($1, $2);
+          // init_declarator_list returns vector of declarators, its copy is
+          // saved in Declaration constructor, so it is not needed anymore.
+          delete $2;
       }
     ;
 
