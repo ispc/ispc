@@ -524,9 +524,16 @@ define void @__masked_store_blend_i64(<4 x i64>* nocapture %ptr, <4 x i64> %new,
 
 declare void @llvm.trap() noreturn nounwind
 
+;; We need factored generic implementations when --opt=disable-gathers is used.
+;; The util functions for gathers already include factored implementations,
+;; so use factored ones here explicitely for remaining types only.
 gen_gather(i8)
 gen_gather(i16)
 gen_gather(half)
+gen_gather_factored_generic(i32)
+gen_gather_factored_generic(float)
+gen_gather_factored_generic(i64)
+gen_gather_factored_generic(double)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int32 gathers

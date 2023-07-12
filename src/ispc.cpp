@@ -1929,6 +1929,9 @@ std::string Target::GetTripleString() const {
     return triple.str();
 }
 
+bool Target::useGather() const { return m_hasGather && !g->opt.disableGathers; }
+bool Target::useScatter() const { return m_hasScatter && !g->opt.disableScatters; }
+
 // This function returns string representation of ISA for the purpose of
 // mangling. And may return any unique string, preferably short, like
 // sse4, avx and etc.
@@ -2175,6 +2178,8 @@ Opt::Opt() {
     force32BitAddressing = true;
     unrollLoops = true;
     disableAsserts = false;
+    disableGathers = false;
+    disableScatters = false;
     disableFMA = false;
     forceAlignedMemory = false;
     disableMaskAllOnOptimizations = false;

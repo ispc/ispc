@@ -519,6 +519,10 @@ define void @__masked_store_blend_double(<4 x double>* nocapture,
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter
 
+;; We need factored generic implementations when --opt=disable-gathers is used.
+;; The util functions for gathers already include factored implementations,
+;; so use factored ones here explicitely for remaining types only.
+
 ;; gather - i8
 gen_gather(i8)
 
@@ -527,6 +531,11 @@ gen_gather(i16)
 
 ;; gather - half
 gen_gather(half)
+
+gen_gather_factored_generic(i32)
+gen_gather_factored_generic(float)
+gen_gather_factored_generic(i64)
+gen_gather_factored_generic(double)
 
 ;; gather - i32
 declare <4 x i32> @llvm.x86.avx512.gather3siv4.si(<4 x i32>, i8*, <4 x i32>, i8, i32)
@@ -657,6 +666,10 @@ define void @__scatter_base_offsets64_$1(i8* %ptr, i32 %scale, <WIDTH x i64> %of
 }
 ')
 
+;; We need factored generic implementations when --opt=disable-scatters is used.
+;; The util functions for scatters already include factored implementations,
+;; so use factored ones here explicitely for remaining types only.
+
 ;; scatter - i8
 scatterbo32_64(i8)
 gen_scatter(i8)
@@ -668,6 +681,11 @@ gen_scatter(i16)
 ;; scatter - half
 scatterbo32_64(half)
 gen_scatter(half)
+
+gen_scatter_factored(i32)
+gen_scatter_factored(float)
+gen_scatter_factored(i64)
+gen_scatter_factored(double)
 
 ;; scatter - i32
 declare void @llvm.x86.avx512.scattersiv4.si(i8*, i8, <4 x i32>, <4 x i32>, i32)
