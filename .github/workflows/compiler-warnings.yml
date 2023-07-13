@@ -1,0 +1,69 @@
+# Copyright 2023, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: Compiler Warnings
+
+on:
+# Turned off until all jobs are green.
+#  pull_request:
+  workflow_dispatch:
+
+env:
+  LLVM_REPO: https://github.com/ispc/ispc.dependencies
+
+jobs:
+  clang-15:
+    runs-on: ubuntu-latest
+    env:
+      LLVM_VERSION: "15.0"
+      LLVM_TAR: llvm-15.0.7-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+      ISPC_OPAQUE_PTR_MODE: "ON"
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.sh
+
+    - name: Check environment
+      run: |
+        ./check_env.py
+        cat /proc/cpuinfo
+        which -a clang
+        clang -v
+
+    - name: Build ISPC with clang in -Werror mode
+      run: |
+          cmake -B build -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_FLAGS="-Werror" -DCMAKE_CXX_FLAGS="-Werror"
+          cmake --build build --target ispc -j4
+
+  gcc-11:
+    runs-on: ubuntu-latest
+    env:
+      LLVM_VERSION: "15.0"
+      LLVM_TAR: llvm-15.0.7-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+      ISPC_OPAQUE_PTR_MODE: "ON"
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.sh
+
+    - name: Check environment
+      run: |
+        ./check_env.py
+        cat /proc/cpuinfo
+        which -a clang
+        gcc-11 -v
+
+    - name: Build ISPC with gcc in -Werror mode
+      run: |
+          cmake -B build -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=gcc++-11 -DCMAKE_C_FLAGS="-Werror" -DCMAKE_CXX_FLAGS="-Werror"
+          cmake --build build --target ispc -j4
