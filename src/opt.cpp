@@ -243,7 +243,7 @@ template <typename T> void DebugModulePassManager::addModulePass(T &&P, int stag
     Assert(!m_isFPMOpen && "FunctionPassManager must be committed before adding module passes.");
     Assert(!m_isLPMOpen && "LoopPassManager must be committed before adding module passes.");
     // taking number of optimization
-    m_passNumber = (stage == -1) ? ++m_passNumber : stage;
+    m_passNumber = (stage == -1) ? (m_passNumber + 1) : stage;
     if (g->off_stages.find(m_passNumber) == g->off_stages.end()) {
         mpm.addPass(std::move(P));
         addPassAndDebugPrint(T::name().str(), DebugModulePassManager::Passes::Module);
@@ -254,7 +254,7 @@ template <typename T> void DebugModulePassManager::addPostOrderCGSCCPass(T &&P, 
     Assert(!m_isFPMOpen && "FunctionPassManager must be committed before adding PostOrderCGSCC passes.");
     Assert(!m_isLPMOpen && "LoopPassManager must be committed before adding PostOrderCGSCC passes.");
     // taking number of optimization
-    m_passNumber = (stage == -1) ? ++m_passNumber : stage;
+    m_passNumber = (stage == -1) ? (m_passNumber + 1) : stage;
     if (g->off_stages.find(m_passNumber) == g->off_stages.end()) {
         // Add PostOrderCGSCC pass to the ModulePassManager directly through adaptor
         mpm.addPass(llvm::createModuleToPostOrderCGSCCPassAdaptor(std::move(P)));
@@ -265,7 +265,7 @@ template <typename T> void DebugModulePassManager::addPostOrderCGSCCPass(T &&P, 
 template <typename T> void DebugModulePassManager::addFunctionPass(T &&P, int stage) {
     Assert(m_isFPMOpen && "FunctionPassManager must be initialized before adding function passes");
     // taking number of optimization
-    m_passNumber = (stage == -1) ? ++m_passNumber : stage;
+    m_passNumber = (stage == -1) ? (m_passNumber + 1) : stage;
     if (g->off_stages.find(m_passNumber) == g->off_stages.end()) {
         fpmVec.back()->addPass(std::move(P));
         addPassAndDebugPrint(T::name().str(), DebugModulePassManager::Passes::Function);
@@ -275,7 +275,7 @@ template <typename T> void DebugModulePassManager::addFunctionPass(T &&P, int st
 template <typename T> void DebugModulePassManager::addLoopPass(T &&P, int stage) {
     Assert(m_isLPMOpen && "LoopPassManager must be initialized before adding function passes");
     // taking number of optimization
-    m_passNumber = (stage == -1) ? ++m_passNumber : stage;
+    m_passNumber = (stage == -1) ? (m_passNumber + 1) : stage;
     if (g->off_stages.find(m_passNumber) == g->off_stages.end()) {
         // if not debug stage, add pass to loop pass manager
         lpmVec.back()->addPass(std::move(P));
