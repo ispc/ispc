@@ -5729,7 +5729,9 @@ static const uniform int64 __idiv_table_s32[][3] = {
 
 __declspec(safe) static unmasked inline unsigned int8
     __fast_idiv(unsigned int8 numerator, uniform unsigned int8 divisor) {
-    if (__is_xe_target) {
+    if (divisor == 1) {
+        return numerator;
+    } else if (__is_xe_target) {
         return __idiv_uint8(numerator, divisor);
     }
     uniform int64 method = __idiv_table_u8[divisor - 2][0];
@@ -5751,7 +5753,9 @@ __declspec(safe) static unmasked inline unsigned int8
 }
 
 __declspec(safe) static unmasked inline int8 __fast_idiv(int8 numerator, uniform int8 divisor) {
-    if (__is_xe_target) {
+    if (divisor == 1) {
+        return numerator;
+    } else if (__is_xe_target) {
         return __idiv_int8(numerator, divisor);
     }
     uniform int8 method = __idiv_table_s8[divisor - 2][0];
@@ -5771,7 +5775,9 @@ __declspec(safe) static unmasked inline int8 __fast_idiv(int8 numerator, uniform
 
 __declspec(safe) static unmasked inline unsigned int16
     __fast_idiv(unsigned int16 numerator, uniform unsigned int16 divisor) {
-    if (__is_xe_target) {
+    if (divisor == 1) {
+        return numerator;
+    } else if (__is_xe_target) {
         return __idiv_uint16(numerator, divisor);
     }
     uniform int64 method = __idiv_table_u16[divisor - 2][0];
@@ -5793,7 +5799,9 @@ __declspec(safe) static unmasked inline unsigned int16
 }
 
 __declspec(safe) static unmasked inline int16 __fast_idiv(int16 numerator, uniform int16 divisor) {
-    if (__is_xe_target) {
+    if (divisor == 1) {
+        return numerator;
+    } else if (__is_xe_target) {
         return __idiv_int16(numerator, divisor);
     }
     uniform int64 method = __idiv_table_s16[divisor - 2][0];
@@ -5814,7 +5822,9 @@ __declspec(safe) static unmasked inline int16 __fast_idiv(int16 numerator, unifo
 
 __declspec(safe) static unmasked inline inline unsigned int32
     __fast_idiv(unsigned int32 numerator, uniform unsigned int32 divisor) {
-    if (__is_xe_target) {
+    if (divisor == 1) {
+        return numerator;
+    } else if (__is_xe_target) {
         return __idiv_uint32(numerator, divisor);
     }
     uniform int64 method = __idiv_table_u32[divisor - 2][0];
@@ -5836,7 +5846,9 @@ __declspec(safe) static unmasked inline inline unsigned int32
 }
 
 __declspec(safe) static unmasked inline int32 __fast_idiv(int32 numerator, uniform int32 divisor) {
-    if (__is_xe_target) {
+    if (divisor == 1) {
+        return numerator;
+    } else if (__is_xe_target) {
         return __idiv_int32(numerator, divisor);
     }
     uniform int64 method = __idiv_table_s32[divisor - 2][0];
