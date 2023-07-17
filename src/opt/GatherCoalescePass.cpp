@@ -654,6 +654,35 @@ static void lAssembleResultVectors(const std::vector<CoalescedLoadOp> &loadOps,
             result = LLVMConcatVectors(v1, v2, insertBefore);
             break;
         }
+        // The code for 32 and 64 width may be triggered when --opt=disable-gathers option is used.
+        case 32: {
+            llvm::Value *v1 = LLVMConcatVectors(vec4s[4 * i], vec4s[4 * i + 1], insertBefore);
+            llvm::Value *v2 = LLVMConcatVectors(vec4s[4 * i + 2], vec4s[4 * i + 3], insertBefore);
+            llvm::Value *v3 = LLVMConcatVectors(vec4s[4 * i + 4], vec4s[4 * i + 5], insertBefore);
+            llvm::Value *v4 = LLVMConcatVectors(vec4s[4 * i + 6], vec4s[4 * i + 7], insertBefore);
+            llvm::Value *res1 = LLVMConcatVectors(v1, v2, insertBefore);
+            llvm::Value *res2 = LLVMConcatVectors(v3, v4, insertBefore);
+            result = LLVMConcatVectors(res1, res2, insertBefore);
+            break;
+        }
+        case 64: {
+            llvm::Value *v1 = LLVMConcatVectors(vec4s[4 * i], vec4s[4 * i + 1], insertBefore);
+            llvm::Value *v2 = LLVMConcatVectors(vec4s[4 * i + 2], vec4s[4 * i + 3], insertBefore);
+            llvm::Value *v3 = LLVMConcatVectors(vec4s[4 * i + 4], vec4s[4 * i + 5], insertBefore);
+            llvm::Value *v4 = LLVMConcatVectors(vec4s[4 * i + 6], vec4s[4 * i + 7], insertBefore);
+            llvm::Value *v5 = LLVMConcatVectors(vec4s[4 * i + 8], vec4s[4 * i + 9], insertBefore);
+            llvm::Value *v6 = LLVMConcatVectors(vec4s[4 * i + 10], vec4s[4 * i + 11], insertBefore);
+            llvm::Value *v7 = LLVMConcatVectors(vec4s[4 * i + 12], vec4s[4 * i + 13], insertBefore);
+            llvm::Value *v8 = LLVMConcatVectors(vec4s[4 * i + 14], vec4s[4 * i + 15], insertBefore);
+            llvm::Value *res1 = LLVMConcatVectors(v1, v2, insertBefore);
+            llvm::Value *res2 = LLVMConcatVectors(v3, v4, insertBefore);
+            llvm::Value *res3 = LLVMConcatVectors(v5, v6, insertBefore);
+            llvm::Value *res4 = LLVMConcatVectors(v7, v8, insertBefore);
+            llvm::Value *res12 = LLVMConcatVectors(res1, res2, insertBefore);
+            llvm::Value *res34 = LLVMConcatVectors(res3, res4, insertBefore);
+            result = LLVMConcatVectors(res12, res34, insertBefore);
+            break;
+        }
         default:
             FATAL("Unhandled vector width in lAssembleResultVectors()");
         }
