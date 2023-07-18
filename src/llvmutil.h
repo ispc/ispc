@@ -18,6 +18,9 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Type.h>
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
+#include <llvm/Support/ModRef.h>
+#endif
 
 // In the transition to Opaque Pointers getElementType() was deprecated, getPointerElementType() will live a little
 // longer. But we need another solution eventually. Issue #2245 was filed to track this.
@@ -413,5 +416,12 @@ extern MaskStatus GetMaskStatusFromValue(llvm::Value *mask, int vecWidth = -1);
     Generic is currently used to identify Global variables
 */
 extern AddressSpace GetAddressSpace(llvm::Value *v);
+
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
+/** Fix function attribute by removing input function attr and adding memory effect instead.
+    https://reviews.llvm.org/D135780
+*/
+extern void FixFunctionAttribute(llvm::Function &Fn, llvm::Attribute::AttrKind attr, llvm::MemoryEffects memEf);
+#endif
 #endif
 } // namespace ispc

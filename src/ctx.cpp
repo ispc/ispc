@@ -3882,7 +3882,11 @@ llvm::Constant *FunctionEmitContext::XeCreateConstantString(llvm::StringRef str,
                                         /* const */ true, llvm::GlobalValue::InternalLinkage, initializer, name,
                                         nullptr, llvm::GlobalVariable::NotThreadLocal,
                                         /* Constant Addrspace */ 2);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
+    GV->setAlignment(llvm::MaybeAlign(g->target->getDataLayout()->getABITypeAlign(initializer->getType())));
+#else
     GV->setAlignment(llvm::MaybeAlign(g->target->getDataLayout()->getABITypeAlignment(initializer->getType())));
+#endif
     GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
     return llvm::ConstantExpr::getInBoundsGetElementPtr(GV->getValueType(), GV,

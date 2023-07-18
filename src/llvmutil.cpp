@@ -1904,5 +1904,22 @@ AddressSpace GetAddressSpace(llvm::Value *v) {
     }
     return AddressSpace::ispc_default;
 }
+
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
+/** Fix function attribute by removing input function attr and adding memory effect instead.
+    https://reviews.llvm.org/D135780
+*/
+void FixFunctionAttribute(llvm::Function &Fn, llvm::Attribute::AttrKind attr, llvm::MemoryEffects memEf) {
+    if (Fn.getFnAttribute(attr).isValid()) {
+        for (auto &U : Fn.uses()) {
+            if (auto *Call = llvm::dyn_cast<llvm::CallInst>(&*U)) {
+                Call->setMemoryEffects(memEf);
+            }
+        }
+        Fn.removeFnAttr(attr);
+    }
+}
+#endif
+
 #endif
 } // namespace ispc
