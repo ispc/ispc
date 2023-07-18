@@ -7,6 +7,9 @@
 #include "MangleOpenCLBuiltins.h"
 
 #ifdef ISPC_XE_ENABLED
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
+#include "llvm/IR/TypedPointerType.h"
+#endif
 
 namespace ispc {
 
@@ -32,17 +35,26 @@ static std::string mangleMathOCLBuiltin(const llvm::Function &func) {
         funcName.erase(pos, 8);
     }
     for (auto &arg : func.args()) {
-        ArgTy.push_back(arg.getType());
         // In LLVM15 SPIR-V translator requires to pass pointer type information to mangleBuiltin
         // https://github.com/KhronosGroup/SPIRV-LLVM-Translator/commit/0eb9a7d2937542e1f95a4e1f9aa9850e669dc45f
         // It changes again in LLVM16 SPIR-V translator where TypedPointerType is required
         // https://github.com/KhronosGroup/SPIRV-LLVM-Translator/commit/42cf770344bb8d0a32db1ec892bee63f43d793b1
-#if ISPC_LLVM_VERSION == ISPC_LLVM_15_0
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
+        if (arg.getType()->isPointerTy()) {
+            ArgTy.push_back(
+                llvm::TypedPointerType::get(isVaryingFunc ? LLVMTypes::DoubleVectorType : LLVMTypes::DoubleType, 0));
+        } else {
+            ArgTy.push_back(arg.getType());
+        }
+#elif ISPC_LLVM_VERSION == ISPC_LLVM_15_0
+        ArgTy.push_back(arg.getType());
         SPIRV::PointerIndirectPair PtrElemTy;
         if (arg.getType()->isPointerTy()) {
             PtrElemTy.setPointer(isVaryingFunc ? LLVMTypes::DoubleVectorType : LLVMTypes::DoubleType);
         }
         PointerElementTys.push_back(PtrElemTy);
+#else
+        ArgTy.push_back(arg.getType());
 #endif
     }
 
