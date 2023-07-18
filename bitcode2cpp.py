@@ -14,6 +14,8 @@ parser.add_argument("--runtime", help="Runtime", choices=['32', '64'], nargs='?'
 parser.add_argument("--os", help="Target OS", choices=['windows', 'linux', 'macos', 'freebsd', 'android', 'ios', 'ps4', 'web', 'WINDOWS', 'UNIX', 'WEB'], default='')
 parser.add_argument("--arch", help="Target architecture", choices=['i686', 'x86_64', 'armv7', 'arm64', 'aarch64', 'wasm32', 'xe64'], default='')
 parser.add_argument("--llvm_as", help="Path to LLVM assembler executable", dest="path_to_llvm_as")
+parser.add_argument("--opaque_flags", help="Flags to enable/disable opaque pointers", default='')
+
 args = parser.parse_known_args()
 src = args[0].src
 length=0
@@ -33,8 +35,14 @@ else:
     if platform.system() == 'Windows' or platform.system().find("CYGWIN_NT") != -1:
         llvm_as = os.getenv("LLVM_INSTALL_DIR").replace("\\", "/") + "/bin/" + llvm_as
 
+opaque_flags = args[0].opaque_flags
+
+llvm_as_command = [llvm_as, "-", "-o", "-"]
+if opaque_flags != '':
+    llvm_as_command.insert(2, opaque_flags)
+
 try:
-    as_out=subprocess.Popen([llvm_as, "-", "-o", "-"], stdout=subprocess.PIPE)
+    as_out=subprocess.Popen(llvm_as_command, stdout=subprocess.PIPE)
 except IOError:
     sys.stderr.write("Couldn't open " + src + "\n")
     sys.exit(1)

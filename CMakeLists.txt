@@ -347,8 +347,9 @@ if (XE_ENABLED)
     list(APPEND XE_LIBRARY_LIST LLVMGenXIntrinsics LLVMSPIRVLib)
 endif()
 
-# Set the flag responsible for generation of opaque pointers in builtins
+# Set the flags responsible for generation of opaque pointers in builtins
 set(ISPC_OPAQUE_FLAGS)
+set(LLVM_TOOLS_OPAQUE_FLAGS)
 # On Xe-enabled build, turn off opaque pointers.
 # IGC software stack is not ready yet.
 if (XE_ENABLED)
@@ -364,9 +365,10 @@ if (ISPC_OPAQUE_PTR_MODE)
         message(FATAL_ERROR "ISPC opaque pointers mode is not supported with LLVM " ${LLVM_VERSION_NUMBER})
     endif()
 else()
-    # Explicitly disable opaque pointers starting LLVM 15.0
-    if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "15.0.0")
+    # Explicitly disable opaque pointers starting LLVM 15.0 till LLVM 17.0
+    if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "15.0.0" AND ${LLVM_VERSION_NUMBER} VERSION_LESS "17.0.0")
         set(ISPC_OPAQUE_FLAGS "-Xclang" "-no-opaque-pointers")
+        set(LLVM_TOOLS_OPAQUE_FLAGS "-opaque-pointers=0")
     endif()
 endif()
 message(STATUS "ISPC opaque pointers mode is " ${ISPC_OPAQUE_PTR_MODE})
