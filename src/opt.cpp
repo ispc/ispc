@@ -35,7 +35,11 @@
 #include <llvm/Analysis/TypeBasedAliasAnalysis.h>
 #include <llvm/BinaryFormat/Dwarf.h>
 #include <llvm/IR/DataLayout.h>
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
+#include <llvm/IRPrinter/IRPrintingPasses.h>
+#else
 #include <llvm/IR/IRPrintingPasses.h>
+#endif
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/PassRegistry.h>
 #include <llvm/Passes/PassBuilder.h>
@@ -119,7 +123,11 @@ class DebugModulePassManager {
             TimePasses.registerCallbacks(PIC);
         }
         // Create the new pass manager builder using our target machine.
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
+        pb = llvm::PassBuilder(targetMachine, llvm::PipelineTuningOptions(), std::nullopt, &PIC);
+#else
         pb = llvm::PassBuilder(targetMachine, llvm::PipelineTuningOptions(), llvm::None, &PIC);
+#endif
 
         // Register all the basic analyses with the managers.
         pb.registerModuleAnalyses(mam);
@@ -189,7 +197,11 @@ class DebugModulePassManager {
     llvm::ModulePassManager mpm;
     llvm::PassInstrumentationCallbacks PIC;
     llvm::PrintPassOptions PrintPassOpts{/*Verbose*/ true, /*SkipAnalyses*/ true, /*Indent*/ true};
-    llvm::StandardInstrumentations SI{/*DebugLogging*/ g->debugPM, false, PrintPassOpts};
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
+    llvm::StandardInstrumentations SI{*g->ctx, /*DebugLogging*/ g->debugPM, /*VerifyEach*/ false, PrintPassOpts};
+#else
+    llvm::StandardInstrumentations SI{/*DebugLogging*/ g->debugPM, /*VerifyEach*/ false, PrintPassOpts};
+#endif
     llvm::OptNoneInstrumentation OptNoneInst{/*DebugLogging*/ false};
     llvm::TimePassesHandler TimePasses{true};
 
@@ -413,7 +425,11 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
             optPM.initFunctionPassManager();
             optPM.addFunctionPass(llvm::PromotePass());
             // This pass is needed for correct prints work
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
+            // We don't have any LICM or SimplifyCFG passes scheduled after us, that would cleanup
+            // the CFG mess SROAPass may created if allowed to modify CFG, so forbid that.
+            optPM.addFunctionPass(llvm::SROAPass(llvm::SROAOptions::PreserveCFG));
+#elif ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
             optPM.addFunctionPass(llvm::SROAPass());
 #else
             optPM.addFunctionPass(llvm::SROA());
@@ -433,7 +449,9 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 
         optPM.initFunctionPassManager();
         optPM.addFunctionPass(llvm::SimplifyCFGPass(simplifyCFGopt), 192);
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
+        optPM.addFunctionPass(llvm::SROAPass(llvm::SROAOptions::ModifyCFG));
+#elif ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
         optPM.addFunctionPass(llvm::SROAPass());
 #else
         optPM.addFunctionPass(llvm::SROA());
@@ -461,7 +479,9 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addFunctionPass(llvm::DCEPass(), 220);
 
         // On to more serious optimizations
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
+        optPM.addFunctionPass(llvm::SROAPass(llvm::SROAOptions::ModifyCFG));
+#elif ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
         optPM.addFunctionPass(llvm::SROAPass());
 #else
         optPM.addFunctionPass(llvm::SROA());
@@ -499,7 +519,9 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addFunctionPass(llvm::InstCombinePass(), 241);
         optPM.addFunctionPass(llvm::JumpThreadingPass());
         optPM.addFunctionPass(llvm::SimplifyCFGPass(simplifyCFGopt));
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
+        optPM.addFunctionPass(llvm::SROAPass(llvm::SROAOptions::ModifyCFG));
+#elif ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
         optPM.addFunctionPass(llvm::SROAPass());
 #else
         optPM.addFunctionPass(llvm::SROA());
@@ -578,7 +600,9 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addPostOrderCGSCCPass(llvm::ArgumentPromotionPass());
 
         optPM.initFunctionPassManager();
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
+        optPM.addFunctionPass(llvm::SROAPass(llvm::SROAOptions::ModifyCFG));
+#elif ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
         optPM.addFunctionPass(llvm::SROAPass());
 #else
         optPM.addFunctionPass(llvm::SROA());
