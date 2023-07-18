@@ -63,7 +63,7 @@ function(target_ll_to_cpp llFileName bit os_name resultFileName)
         OUTPUT ${output}
         COMMAND ${M4_EXECUTABLE} -I${includePath}
             -DLLVM_VERSION=${LLVM_VERSION} -DBUILD_OS=${os_name_macro} -DRUNTIME=${bit} ${inputFilePath}
-            | \"${Python3_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} --type=ispc-target --runtime=${bit} --os=${os_name_macro} --llvm_as ${LLVM_AS_EXECUTABLE}
+            | \"${Python3_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} --type=ispc-target --runtime=${bit} --os=${os_name_macro} --llvm_as ${LLVM_AS_EXECUTABLE} --opaque_flags="${LLVM_TOOLS_OPAQUE_FLAGS}"
             > ${output}
         DEPENDS ${inputFilePath} bitcode2cpp.py ${M4_IMPLICIT_DEPENDENCIES}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -78,7 +78,7 @@ function(dispatch_ll_to_cpp llFileName os_name resultFileName)
     add_custom_command(
         OUTPUT ${output}
         COMMAND ${M4_EXECUTABLE} -DLLVM_VERSION=${LLVM_VERSION} ${inputFilePath}
-            | \"${Python3_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} --type=dispatch --os=${os_name} --llvm_as ${LLVM_AS_EXECUTABLE}
+            | \"${Python3_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} --type=dispatch --os=${os_name} --llvm_as ${LLVM_AS_EXECUTABLE} --opaque_flags="${LLVM_TOOLS_OPAQUE_FLAGS}"
             > ${output}
         DEPENDS ${inputFilePath} bitcode2cpp.py
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -264,8 +264,8 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
         add_custom_command(
             OUTPUT ${output}
             COMMAND ${EMCC_EXECUTABLE} -DWASM -s WASM_OBJECT_FILES=0 -I${CMAKE_SOURCE_DIR} -c ${inputFilePath} --std=gnu++17 -emit-llvm -c -o -
-                | (\"${LLVM_DIS_EXECUTABLE}\" - || echo "builtins-c-*.cpp compile error")
-                | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --type=builtins-c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE}
+                | (\"${LLVM_DIS_EXECUTABLE}\" ${LLVM_TOOLS_OPAQUE_FLAGS} - || echo "builtins-c-*.cpp compile error")
+                | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --type=builtins-c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE} --opaque_flags="${LLVM_TOOLS_OPAQUE_FLAGS}"
                 > ${output}
             DEPENDS ${inputFilePath} bitcode2cpp.py
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -273,8 +273,8 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
     else()
         add_custom_command(
             OUTPUT ${output}
-            COMMAND ${CLANGPP_EXECUTABLE} ${target_flags} -I${CMAKE_SOURCE_DIR} -m${bit} -emit-llvm ${ISPC_OPAQUE_FLAGS} --std=gnu++17 -c ${inputFilePath} -o - | (\"${LLVM_DIS_EXECUTABLE}\" - || echo "builtins-c-*.cpp compile error")
-                | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --type=builtins-c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE}
+            COMMAND ${CLANGPP_EXECUTABLE} ${target_flags} -I${CMAKE_SOURCE_DIR} -m${bit} -emit-llvm ${ISPC_OPAQUE_FLAGS} --std=gnu++17 -c ${inputFilePath} -o - | (\"${LLVM_DIS_EXECUTABLE}\" ${LLVM_TOOLS_OPAQUE_FLAGS} - || echo "builtins-c-*.cpp compile error")
+                | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --type=builtins-c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE} --opaque_flags="${LLVM_TOOLS_OPAQUE_FLAGS}"
                 > ${output}
             DEPENDS ${inputFilePath} bitcode2cpp.py
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -307,7 +307,7 @@ function(builtin_xe_to_cpp bit resultFileName)
           OUTPUT ${output}
           COMMAND cat ${inputFilePath}
               | \"${Python3_EXECUTABLE}\" bitcode2cpp.py cm --type=builtins-c --runtime=${bit}
-              --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE}
+              --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE} --opaque_flags="${LLVM_TOOLS_OPAQUE_FLAGS}"
               > ${output}
           DEPENDS ${inputFilePath} bitcode2cpp.py
           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
