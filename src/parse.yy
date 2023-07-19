@@ -2121,6 +2121,13 @@ iteration_statement
          }
          $$ = new ForeachStmt(syms, begins, ends, $6, false, @1);
          m->symbolTable->PopScope();
+
+         // deallocate ForeachDimension elements allocated in foreach_dimension_specifier
+         for (unsigned int i = 0; i < dims->size(); ++i)
+             delete (*dims)[i];
+
+         // deallocate std::vector<ForeachDimension*> allocated in foreach_dimension_list
+         delete dims;
      }
     | foreach_tiled_scope '(' foreach_dimension_list ')'
      {
@@ -2150,6 +2157,13 @@ iteration_statement
          }
          $$ = new ForeachStmt(syms, begins, ends, $6, true, @1);
          m->symbolTable->PopScope();
+
+         // deallocate ForeachDimension elements allocated in foreach_dimension_specifier
+         for (unsigned int i = 0; i < dims->size(); ++i)
+             delete (*dims)[i];
+
+         // deallocate std::vector<ForeachDimension*> allocated in foreach_dimension_list
+         delete dims;
      }
     | foreach_active_scope '(' foreach_active_identifier ')'
      {
