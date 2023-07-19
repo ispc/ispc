@@ -29,7 +29,7 @@ static bool lConsumePragma(YYSTYPE *, SourcePos *);
 static void lHandleCppHash(SourcePos *);
 static void lStringConst(YYSTYPE *, SourcePos *);
 static double lParseHexFloat(const char *ptr);
-extern void RegisterDependency(const std::string &fileName);
+extern const char *RegisterDependency(const std::string &fileName);
 
 #define YY_USER_ACTION \
     yylloc.first_line = yylloc.last_line; \
@@ -1004,8 +1004,7 @@ static void lHandleCppHash(SourcePos *pos) {
         filename.push_back(*src);
         ++src;
     }
-    pos->name = strdup(filename.c_str());
-    RegisterDependency(filename);
+    pos->name = RegisterDependency(filename);
 }
 
 
