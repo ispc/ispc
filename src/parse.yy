@@ -1354,6 +1354,8 @@ enum_specifier
     | TOKEN_ENUM enum_identifier '{' enumerator_list '}'
       {
           $$ = lCreateEnumType($2, $4, @2);
+          // allocated by strdup in enum_identifier
+          free((char*)$2);
       }
     | TOKEN_ENUM '{' enumerator_list ',' '}'
       {
@@ -1362,6 +1364,8 @@ enum_specifier
     | TOKEN_ENUM enum_identifier '{' enumerator_list ',' '}'
       {
           $$ = lCreateEnumType($2, $4, @2);
+          // allocated by strdup in enum_identifier
+          free((char*)$2);
       }
     | TOKEN_ENUM enum_identifier
       {
@@ -1382,6 +1386,8 @@ enum_specifier
               else
                   $$ = enumType;
           }
+          // allocated by strdup in enum_identifier
+          free((char*)$2);
       }
     ;
 
@@ -1413,6 +1419,8 @@ enumerator
     : enum_identifier
       {
           $$ = new Symbol($1, @1);
+          // allocated by strdup in enum_identifier
+          free((char*)$1);
       }
     | enum_identifier '=' constant_expression
       {
@@ -1426,6 +1434,9 @@ enumerator
           }
           else
               $$ = nullptr;
+
+          // allocated by strdup in enum_identifier
+          free((char*)$1);
       }
     ;
 
