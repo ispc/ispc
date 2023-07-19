@@ -1350,22 +1350,32 @@ enum_specifier
     : TOKEN_ENUM '{' enumerator_list '}'
       {
           $$ = lCreateEnumType(nullptr, $3, @1);
+          // enumerator_list returns aux vector that is not needed anymore.
+          delete $3;
       }
     | TOKEN_ENUM enum_identifier '{' enumerator_list '}'
       {
           $$ = lCreateEnumType($2, $4, @2);
           // allocated by strdup in enum_identifier
           free((char*)$2);
+
+          // enumerator_list returns aux vector that is not needed anymore.
+          delete $4;
       }
     | TOKEN_ENUM '{' enumerator_list ',' '}'
       {
           $$ = lCreateEnumType(nullptr, $3, @1);
+          // enumerator_list returns aux vector that is not needed anymore.
+          delete $3;
       }
     | TOKEN_ENUM enum_identifier '{' enumerator_list ',' '}'
       {
           $$ = lCreateEnumType($2, $4, @2);
           // allocated by strdup in enum_identifier
           free((char*)$2);
+
+          // enumerator_list returns aux vector that is not needed anymore.
+          delete $4;
       }
     | TOKEN_ENUM enum_identifier
       {
