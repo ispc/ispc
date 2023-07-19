@@ -2451,6 +2451,8 @@ simple_template_id
           // Template ID declartor
           Declarator *d = new Declarator(DK_BASE, @1);
           d->name = $1;
+          // allocated by strdup in template_identifier
+          free((char*)$1);
           // Arguments vector
           std::vector<std::pair<const Type *, SourcePos>> *vec = (std::vector<std::pair<const Type *, SourcePos>> *) $3;
           // Bundle template ID declarator and type list.
@@ -2461,6 +2463,8 @@ simple_template_id
           // Template ID declartor
           Declarator *d = new Declarator(DK_BASE, @1);
           d->name = $1;
+          // allocated by strdup in template_identifier
+          free((char*)$1);
           // Arguments vector
           std::vector<std::pair<const Type *, SourcePos>> *vec = new std::vector<std::pair<const Type *, SourcePos>>;
           // Bundle template ID declarator and empty type list.
