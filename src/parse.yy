@@ -1893,6 +1893,8 @@ labeled_statement
     : goto_identifier ':' attributed_statement
     {
         $$ = new LabeledStmt($1, $3, @1);
+        // allocated by strdup in goto_identifier
+        free((char*)$1);
     }
     | TOKEN_CASE constant_expression ':' attributed_statement
       {
@@ -2189,7 +2191,11 @@ goto_identifier
 
 jump_statement
     : TOKEN_GOTO goto_identifier ';'
-      { $$ = new GotoStmt($2, @1, @2); }
+      {
+          $$ = new GotoStmt($2, @1, @2);
+          // allocated by strdup in goto_identifier
+          free((char*)$2);
+      }
     | TOKEN_CONTINUE ';'
       { $$ = new ContinueStmt(@1); }
     | TOKEN_BREAK ';'
