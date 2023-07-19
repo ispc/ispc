@@ -44,6 +44,10 @@ SymbolTable::~SymbolTable() {
     // Otherwise we have mismatched push/pop scopes
     Assert(variables.size() == 1);
     PopScope();
+
+    for (auto p : freeSymbolMaps) {
+        delete p;
+    }
 }
 
 void SymbolTable::PushScope() {
