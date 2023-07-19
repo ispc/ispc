@@ -85,6 +85,11 @@ class Type : public Traceable {
         integer types. */
     virtual bool IsUnsignedType() const = 0;
 
+    /** Returns true if the underlying type is signed.  In other words,
+        this is true for signed integers and short vectors of signed
+        integer types. */
+    virtual bool IsSignedType() const = 0;
+
     /** Returns true if the underlying type is either a pointer type */
     bool IsPointerType() const;
 
@@ -167,6 +172,10 @@ class Type : public Traceable {
     /** If this is a signed integer type, return the unsigned version of
         the type.  Otherwise, return the original type. */
     virtual const Type *GetAsUnsignedType() const;
+
+    /** If this is a signed integer type, return the unsigned version of
+        the type.  Otherwise, return the original type. */
+    virtual const Type *GetAsSignedType() const;
 
     /** Returns the basic root type of the given type.  For example, for an
         array or short-vector, this returns the element type.  For a struct
@@ -273,6 +282,7 @@ class AtomicType : public Type {
     bool IsFloatType() const;
     bool IsIntType() const;
     bool IsUnsignedType() const;
+    bool IsSignedType() const;
     bool IsConstType() const;
 
     /** For AtomicTypes, the base type is just the same as the AtomicType
@@ -286,6 +296,7 @@ class AtomicType : public Type {
     const AtomicType *ResolveDependence(TemplateInstantiation &templInst) const;
     const AtomicType *ResolveUnboundVariability(Variability v) const;
     const AtomicType *GetAsUnsignedType() const;
+    const AtomicType *GetAsSignedType() const;
     const AtomicType *GetAsConstType() const;
     const AtomicType *GetAsNonConstType() const;
 
@@ -357,6 +368,7 @@ class TemplateTypeParmType : public Type {
     bool IsFloatType() const;
     bool IsIntType() const;
     bool IsUnsignedType() const;
+    bool IsSignedType() const;
     bool IsConstType() const;
 
     const Type *GetBaseType() const;
@@ -405,6 +417,7 @@ class EnumType : public Type {
     bool IsFloatType() const;
     bool IsIntType() const;
     bool IsUnsignedType() const;
+    bool IsSignedType() const;
     bool IsConstType() const;
 
     const EnumType *GetBaseType() const;
@@ -485,6 +498,7 @@ class PointerType : public Type {
     bool IsFloatType() const;
     bool IsIntType() const;
     bool IsUnsignedType() const;
+    bool IsSignedType() const;
     bool IsConstType() const;
 
     bool IsSlice() const { return isSlice; }
@@ -594,6 +608,7 @@ class ArrayType : public SequentialType {
     bool IsFloatType() const;
     bool IsIntType() const;
     bool IsUnsignedType() const;
+    bool IsSignedType() const;
     bool IsConstType() const;
 
     const Type *GetBaseType() const;
@@ -605,6 +620,7 @@ class ArrayType : public SequentialType {
     const ArrayType *ResolveUnboundVariability(Variability v) const;
 
     const ArrayType *GetAsUnsignedType() const;
+    const ArrayType *GetAsSignedType() const;
     const ArrayType *GetAsConstType() const;
     const ArrayType *GetAsNonConstType() const;
 
@@ -662,6 +678,7 @@ class VectorType : public SequentialType {
     bool IsFloatType() const;
     bool IsIntType() const;
     bool IsUnsignedType() const;
+    bool IsSignedType() const;
     bool IsConstType() const;
 
     const Type *GetBaseType() const;
@@ -673,6 +690,7 @@ class VectorType : public SequentialType {
     const VectorType *ResolveUnboundVariability(Variability v) const;
 
     const VectorType *GetAsUnsignedType() const;
+    const VectorType *GetAsSignedType() const;
     const VectorType *GetAsConstType() const;
     const VectorType *GetAsNonConstType() const;
 
@@ -715,6 +733,7 @@ class StructType : public CollectionType {
     bool IsFloatType() const;
     bool IsIntType() const;
     bool IsUnsignedType() const;
+    bool IsSignedType() const;
     bool IsConstType() const;
     bool IsDefined() const;
 
@@ -808,6 +827,7 @@ class UndefinedStructType : public Type {
     bool IsFloatType() const;
     bool IsIntType() const;
     bool IsUnsignedType() const;
+    bool IsSignedType() const;
     bool IsConstType() const;
 
     const Type *GetBaseType() const;
@@ -851,6 +871,7 @@ class ReferenceType : public Type {
     bool IsFloatType() const;
     bool IsIntType() const;
     bool IsUnsignedType() const;
+    bool IsSignedType() const;
     bool IsConstType() const;
 
     const Type *GetBaseType() const;
@@ -909,6 +930,7 @@ class FunctionType : public Type {
     bool IsFloatType() const;
     bool IsIntType() const;
     bool IsUnsignedType() const;
+    bool IsSignedType() const;
     bool IsConstType() const;
 
     bool IsISPCKernel() const;

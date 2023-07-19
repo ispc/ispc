@@ -220,6 +220,10 @@ bool AtomicType::IsUnsignedType() const {
             basicType == TYPE_UINT64);
 }
 
+bool AtomicType::IsSignedType() const {
+    return (basicType == TYPE_INT8 || basicType == TYPE_INT16 || basicType == TYPE_INT32 || basicType == TYPE_INT64);
+}
+
 bool AtomicType::IsBoolType() const { return basicType == TYPE_BOOL; }
 
 bool AtomicType::IsConstType() const { return isConst; }
@@ -242,6 +246,28 @@ const AtomicType *AtomicType::GetAsUnsignedType() const {
         return new AtomicType(TYPE_UINT64, variability, isConst);
     default:
         FATAL("Unexpected basicType in GetAsUnsignedType()");
+        return nullptr;
+    }
+}
+
+const AtomicType *AtomicType::GetAsSignedType() const {
+    if (IsSignedType() == true)
+        return this;
+
+    if (IsIntType() == false)
+        return nullptr;
+
+    switch (basicType) {
+    case TYPE_UINT8:
+        return new AtomicType(TYPE_INT8, variability, isConst);
+    case TYPE_UINT16:
+        return new AtomicType(TYPE_INT16, variability, isConst);
+    case TYPE_UINT32:
+        return new AtomicType(TYPE_INT32, variability, isConst);
+    case TYPE_UINT64:
+        return new AtomicType(TYPE_INT64, variability, isConst);
+    default:
+        FATAL("Unexpected basicType in GetAsSignedType()");
         return nullptr;
     }
 }
@@ -646,6 +672,8 @@ bool TemplateTypeParmType::IsIntType() const { return false; }
 
 bool TemplateTypeParmType::IsUnsignedType() const { return false; }
 
+bool TemplateTypeParmType::IsSignedType() const { return false; }
+
 bool TemplateTypeParmType::IsConstType() const { return isConst; }
 
 const Type *TemplateTypeParmType::GetBaseType() const { return this; }
@@ -807,6 +835,8 @@ bool EnumType::IsFloatType() const { return false; }
 bool EnumType::IsIntType() const { return true; }
 
 bool EnumType::IsUnsignedType() const { return true; }
+
+bool EnumType::IsSignedType() const { return false; }
 
 bool EnumType::IsConstType() const { return isConst; }
 
@@ -1033,6 +1063,8 @@ bool PointerType::IsFloatType() const { return false; }
 bool PointerType::IsIntType() const { return false; }
 
 bool PointerType::IsUnsignedType() const { return false; }
+
+bool PointerType::IsSignedType() const { return false; }
 
 bool PointerType::IsConstType() const { return isConst; }
 
@@ -1349,6 +1381,8 @@ bool ArrayType::IsIntType() const { return false; }
 
 bool ArrayType::IsUnsignedType() const { return false; }
 
+bool ArrayType::IsSignedType() const { return false; }
+
 bool ArrayType::IsBoolType() const { return false; }
 
 bool ArrayType::IsConstType() const { return child ? child->IsConstType() : false; }
@@ -1423,6 +1457,14 @@ const ArrayType *ArrayType::GetAsUnsignedType() const {
         return nullptr;
     }
     return new ArrayType(child->GetAsUnsignedType(), numElements);
+}
+
+const ArrayType *ArrayType::GetAsSignedType() const {
+    if (child == nullptr) {
+        Assert(m->errorCount > 0);
+        return nullptr;
+    }
+    return new ArrayType(child->GetAsSignedType(), numElements);
 }
 
 const ArrayType *ArrayType::GetAsConstType() const {
@@ -1618,6 +1660,8 @@ bool VectorType::IsIntType() const { return base->IsIntType(); }
 
 bool VectorType::IsUnsignedType() const { return base->IsUnsignedType(); }
 
+bool VectorType::IsSignedType() const { return base->IsSignedType(); }
+
 bool VectorType::IsBoolType() const { return base->IsBoolType(); }
 
 bool VectorType::IsConstType() const { return base->IsConstType(); }
@@ -1648,6 +1692,14 @@ const VectorType *VectorType::GetAsUnsignedType() const {
         return nullptr;
     }
     return new VectorType(base->GetAsUnsignedType(), numElements);
+}
+
+const VectorType *VectorType::GetAsSignedType() const {
+    if (base == nullptr) {
+        Assert(m->errorCount > 0);
+        return nullptr;
+    }
+    return new VectorType(base->GetAsSignedType(), numElements);
 }
 
 const VectorType *VectorType::GetAsConstType() const { return new VectorType(base->GetAsConstType(), numElements); }
@@ -1908,6 +1960,8 @@ bool StructType::IsFloatType() const { return false; }
 bool StructType::IsIntType() const { return false; }
 
 bool StructType::IsUnsignedType() const { return false; }
+
+bool StructType::IsSignedType() const { return false; }
 
 bool StructType::IsConstType() const { return isConst; }
 
@@ -2209,6 +2263,8 @@ bool UndefinedStructType::IsIntType() const { return false; }
 
 bool UndefinedStructType::IsUnsignedType() const { return false; }
 
+bool UndefinedStructType::IsSignedType() const { return false; }
+
 bool UndefinedStructType::IsConstType() const { return isConst; }
 
 const Type *UndefinedStructType::GetBaseType() const { return this; }
@@ -2347,6 +2403,14 @@ bool ReferenceType::IsUnsignedType() const {
         return false;
     }
     return targetType->IsUnsignedType();
+}
+
+bool ReferenceType::IsSignedType() const {
+    if (targetType == nullptr) {
+        Assert(m->errorCount > 0);
+        return false;
+    }
+    return targetType->IsSignedType();
 }
 
 bool ReferenceType::IsConstType() const {
@@ -2575,6 +2639,8 @@ bool FunctionType::IsIntType() const { return false; }
 bool FunctionType::IsBoolType() const { return false; }
 
 bool FunctionType::IsUnsignedType() const { return false; }
+
+bool FunctionType::IsSignedType() const { return false; }
 
 bool FunctionType::IsConstType() const { return false; }
 
@@ -3021,7 +3087,12 @@ const Type *Type::GetReferenceTarget() const {
 }
 
 const Type *Type::GetAsUnsignedType() const {
-    // For many types, this doesn't make any sesne
+    // For many types, this doesn't make any sense
+    return nullptr;
+}
+
+const Type *Type::GetAsSignedType() const {
+    // For many types, this doesn't make any sense
     return nullptr;
 }
 
