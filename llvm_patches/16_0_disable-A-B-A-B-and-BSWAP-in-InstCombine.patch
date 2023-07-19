@@ -1,0 +1,60 @@
+# This patch is needed for ISPC for Xe only
+
+# 1. Transformation of add to or is not safe for VC backend.
+# 2. bswap intrinsics is not supported in VC backend yet.
+diff --git a/llvm/lib/Transforms/InstCombine/InstCombineAddSub.cpp b/llvm/lib/Transforms/InstCombine/InstCombineAddSub.cpp
+index b68efc993..92889a962 100644
+--- a/llvm/lib/Transforms/InstCombine/InstCombineAddSub.cpp
++++ b/llvm/lib/Transforms/InstCombine/InstCombineAddSub.cpp
+@@ -15,6 +15,7 @@
+ #include "llvm/ADT/APInt.h"
+ #include "llvm/ADT/STLExtras.h"
+ #include "llvm/ADT/SmallVector.h"
++#include "llvm/ADT/Triple.h"
+ #include "llvm/Analysis/InstructionSimplify.h"
+ #include "llvm/Analysis/ValueTracking.h"
+ #include "llvm/IR/Constant.h"
+@@ -1451,9 +1452,12 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
+        match(RHS, m_ZExt(m_NUWSub(m_Value(B), m_Specific(A))))))
+     return new ZExtInst(B, LHS->getType());
+ 
+-  // A+B --> A|B iff A and B have no bits set in common.
+-  if (haveNoCommonBitsSet(LHS, RHS, DL, &AC, &I, &DT))
+-    return BinaryOperator::CreateOr(LHS, RHS);
++  // Disable this transformation for ISPC SPIR-V
++  if (!Triple(I.getModule()->getTargetTriple()).isSPIR()) {
++    // A+B --> A|B iff A and B have no bits set in common.
++    if (haveNoCommonBitsSet(LHS, RHS, DL, &AC, &I, &DT))
++      return BinaryOperator::CreateOr(LHS, RHS);
++  }
+ 
+   if (Instruction *Ext = narrowMathIfNoOverflow(I))
+     return Ext;
+diff --git a/llvm/lib/Transforms/InstCombine/InstCombineAndOrXor.cpp b/llvm/lib/Transforms/InstCombine/InstCombineAndOrXor.cpp
+index 97a001b2e..f711e6685 100644
+--- a/llvm/lib/Transforms/InstCombine/InstCombineAndOrXor.cpp
++++ b/llvm/lib/Transforms/InstCombine/InstCombineAndOrXor.cpp
+@@ -11,6 +11,7 @@
+ //===----------------------------------------------------------------------===//
+ 
+ #include "InstCombineInternal.h"
++#include "llvm/ADT/Triple.h"
+ #include "llvm/Analysis/CmpInstAnalysis.h"
+ #include "llvm/Analysis/InstructionSimplify.h"
+ #include "llvm/IR/ConstantRange.h"
+@@ -2988,9 +2989,12 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
+   if (Instruction *FoldedLogic = foldBinOpIntoSelectOrPhi(I))
+     return FoldedLogic;
+ 
+-  if (Instruction *BitOp = matchBSwapOrBitReverse(I, /*MatchBSwaps*/ true,
+-                                                  /*MatchBitReversals*/ true))
+-    return BitOp;
++  // Disable this transformation for ISPC SPIR-V
++  if (!Triple(I.getModule()->getTargetTriple()).isSPIR()) {
++    if (Instruction *BitOp = matchBSwapOrBitReverse(I, /*MatchBSwaps*/ true,
++                                                    /*MatchBitReversals*/ true))
++      return BitOp;
++  }
+ 
+   if (Instruction *Funnel = matchFunnelShift(I, *this))
+     return Funnel;

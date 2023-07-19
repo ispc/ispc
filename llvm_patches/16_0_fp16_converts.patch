@@ -1,0 +1,135 @@
+# Backport of commits 7f12efa88 and 6a6c527ee287 (available in 17.0).
+# They enable better code geneartion for FP16 converts on SPR:
+# - first one enables half -> int16/uint16 (vcvttph2w / vcvttph2uw) for x16 target
+# - second one enables int64/uint64 -> half (vcvtqq2ph / vcvtuqq2ph) for x8 target
+diff --git a/llvm/lib/Target/X86/X86ISelLowering.cpp b/llvm/lib/Target/X86/X86ISelLowering.cpp
+index e43b33eed470..b017d7695b9b 100644
+--- a/llvm/lib/Target/X86/X86ISelLowering.cpp
++++ b/llvm/lib/Target/X86/X86ISelLowering.cpp
+@@ -1680,16 +1680,20 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
+       setOperationAction(ISD::FCOPYSIGN, VT, Custom);
+     }
+ 
+-    for (MVT VT : { MVT::v16i1, MVT::v16i8, MVT::v16i16 }) {
++    for (MVT VT : { MVT::v16i1, MVT::v16i8 }) {
+       setOperationPromotedToType(ISD::FP_TO_SINT       , VT, MVT::v16i32);
+       setOperationPromotedToType(ISD::FP_TO_UINT       , VT, MVT::v16i32);
+       setOperationPromotedToType(ISD::STRICT_FP_TO_SINT, VT, MVT::v16i32);
+       setOperationPromotedToType(ISD::STRICT_FP_TO_UINT, VT, MVT::v16i32);
+     }
+-    setOperationAction(ISD::FP_TO_SINT,        MVT::v16i32, Custom);
+-    setOperationAction(ISD::FP_TO_UINT,        MVT::v16i32, Custom);
+-    setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::v16i32, Custom);
+-    setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::v16i32, Custom);
++
++    for (MVT VT : { MVT::v16i16, MVT::v16i32 }) {
++      setOperationAction(ISD::FP_TO_SINT,        VT, Custom);
++      setOperationAction(ISD::FP_TO_UINT,        VT, Custom);
++      setOperationAction(ISD::STRICT_FP_TO_SINT, VT, Custom);
++      setOperationAction(ISD::STRICT_FP_TO_UINT, VT, Custom);
++    }
++
+     setOperationAction(ISD::SINT_TO_FP,        MVT::v16i32, Custom);
+     setOperationAction(ISD::UINT_TO_FP,        MVT::v16i32, Custom);
+     setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::v16i32, Custom);
+@@ -22800,19 +22804,24 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
+       return Res;
+     }
+ 
+-    if (VT == MVT::v8i16 && (SrcVT == MVT::v8f32 || SrcVT == MVT::v8f64)) {
++    // v8f32/v16f32/v8f64->v8i16/v16i16 need to widen first.
++    if (VT.getVectorElementType() == MVT::i16) {
++      assert((SrcVT.getVectorElementType() == MVT::f32 ||
++              SrcVT.getVectorElementType() == MVT::f64) &&
++             "Expected f32/f64 vector!");
++      MVT NVT = VT.changeVectorElementType(MVT::i32);
+       if (IsStrict) {
+         Res = DAG.getNode(IsSigned ? ISD::STRICT_FP_TO_SINT
+                                    : ISD::STRICT_FP_TO_UINT,
+-                          dl, {MVT::v8i32, MVT::Other}, {Chain, Src});
++                          dl, {NVT, MVT::Other}, {Chain, Src});
+         Chain = Res.getValue(1);
+       } else {
+         Res = DAG.getNode(IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT, dl,
+-                          MVT::v8i32, Src);
++                          NVT, Src);
+       }
+ 
+       // TODO: Need to add exception check code for strict FP.
+-      Res = DAG.getNode(ISD::TRUNCATE, dl, MVT::v8i16, Res);
++      Res = DAG.getNode(ISD::TRUNCATE, dl, VT, Res);
+ 
+       if (IsStrict)
+         return DAG.getMergeValues({Res, Chain}, dl);
+@@ -56313,9 +56322,6 @@ static SDValue combineFP_ROUND(SDNode *N, SelectionDAG &DAG,
+   if (!Subtarget.hasF16C() || Subtarget.useSoftFloat())
+     return SDValue();
+ 
+-  if (Subtarget.hasFP16())
+-    return SDValue();
+-
+   bool IsStrict = N->isStrictFPOpcode();
+   EVT VT = N->getValueType(0);
+   SDValue Src = N->getOperand(IsStrict ? 1 : 0);
+@@ -56325,11 +56331,47 @@ static SDValue combineFP_ROUND(SDNode *N, SelectionDAG &DAG,
+       SrcVT.getVectorElementType() != MVT::f32)
+     return SDValue();
+ 
++  SDLoc dl(N);
++
++  SDValue Cvt, Chain;
+   unsigned NumElts = VT.getVectorNumElements();
+-  if (NumElts == 1 || !isPowerOf2_32(NumElts))
++  if (Subtarget.hasFP16()) {
++    // Combine (v8f16 fp_round(concat_vectors(v4f32 (xint_to_fp v4i64), ..)))
++    // into (v8f16 vector_shuffle(v8f16 (CVTXI2P v4i64), ..))
++    if (NumElts == 8 && Src.getOpcode() == ISD::CONCAT_VECTORS) {
++      SDValue Cvt0, Cvt1;
++      SDValue Op0 = Src.getOperand(0);
++      SDValue Op1 = Src.getOperand(1);
++      bool IsOp0Strict = Op0->isStrictFPOpcode();
++      if (Op0.getOpcode() != Op1.getOpcode() ||
++          Op0.getOperand(IsOp0Strict ? 1 : 0).getValueType() != MVT::v4i64 ||
++          Op1.getOperand(IsOp0Strict ? 1 : 0).getValueType() != MVT::v4i64) {
++        return SDValue();
++      }
++      int Mask[8] = {0, 1, 2, 3, 8, 9, 10, 11};
++      if (IsStrict) {
++        assert(IsOp0Strict && "Op0 must be strict node");
++        unsigned Opc = Op0.getOpcode() == ISD::STRICT_SINT_TO_FP
++                           ? X86ISD::STRICT_CVTSI2P
++                           : X86ISD::STRICT_CVTUI2P;
++        Cvt0 = DAG.getNode(Opc, dl, {MVT::v8f16, MVT::Other},
++                           {Op0.getOperand(0), Op0.getOperand(1)});
++        Cvt1 = DAG.getNode(Opc, dl, {MVT::v8f16, MVT::Other},
++                           {Op1.getOperand(0), Op1.getOperand(1)});
++        Cvt = DAG.getVectorShuffle(MVT::v8f16, dl, Cvt0, Cvt1, Mask);
++        return DAG.getMergeValues({Cvt, Cvt0.getValue(1)}, dl);
++      }
++      unsigned Opc = Op0.getOpcode() == ISD::SINT_TO_FP ? X86ISD::CVTSI2P
++                                                        : X86ISD::CVTUI2P;
++      Cvt0 = DAG.getNode(Opc, dl, MVT::v8f16, Op0.getOperand(0));
++      Cvt1 = DAG.getNode(Opc, dl, MVT::v8f16, Op1.getOperand(0));
++      return Cvt = DAG.getVectorShuffle(MVT::v8f16, dl, Cvt0, Cvt1, Mask);
++    }
+     return SDValue();
++  }
+ 
+-  SDLoc dl(N);
++  if (NumElts == 1 || !isPowerOf2_32(NumElts))
++    return SDValue();
+ 
+   // Widen to at least 4 input elements.
+   if (NumElts < 4)
+@@ -56337,9 +56379,8 @@ static SDValue combineFP_ROUND(SDNode *N, SelectionDAG &DAG,
+                       DAG.getConstantFP(0.0, dl, SrcVT));
+ 
+   // Destination is v8i16 with at least 8 elements.
+-  EVT CvtVT = EVT::getVectorVT(*DAG.getContext(), MVT::i16,
+-                               std::max(8U, NumElts));
+-  SDValue Cvt, Chain;
++  EVT CvtVT =
++      EVT::getVectorVT(*DAG.getContext(), MVT::i16, std::max(8U, NumElts));
+   SDValue Rnd = DAG.getTargetConstant(4, dl, MVT::i32);
+   if (IsStrict) {
+     Cvt = DAG.getNode(X86ISD::STRICT_CVTPS2PH, dl, {CvtVT, MVT::Other},
