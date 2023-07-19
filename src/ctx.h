@@ -809,6 +809,10 @@ class FunctionEmitContext {
     bool inSwitchStatement() const;
     llvm::Value *getMaskAtSwitchEntry();
 
+    // Returns pointer to CFInfo object allocated on heap. This function
+    // doesn't create or allocate this object. It removes CFInfo object from
+    // controlFlowInfo vector and passes the ownership to the outer context.
+    // The outer context should deconstruct this object.
     CFInfo *popCFState();
 
     void scatter(llvm::Value *value, llvm::Value *ptr, const Type *valueType, const Type *ptrType, llvm::Value *mask);

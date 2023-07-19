@@ -500,7 +500,7 @@ void FunctionEmitContext::StartVaryingIf(llvm::Value *oldMask) {
 }
 
 void FunctionEmitContext::EndIf() {
-    CFInfo *ci = popCFState();
+    std::unique_ptr<CFInfo> ci(popCFState());
     // Make sure we match up with a Start{Uniform,Varying}If().
     AssertPos(currentPos, ci->IsIf());
 
@@ -583,7 +583,7 @@ void FunctionEmitContext::StartLoop(llvm::BasicBlock *bt, llvm::BasicBlock *ct, 
 }
 
 void FunctionEmitContext::EndLoop() {
-    CFInfo *ci = popCFState();
+    std::unique_ptr<CFInfo> ci(popCFState());
     AssertPos(currentPos, ci->IsLoop());
 
     if (!ci->IsUniform())
@@ -632,7 +632,7 @@ void FunctionEmitContext::StartForeach(ForeachType ft, bool isEmulatedUniform) {
 }
 
 void FunctionEmitContext::EndForeach() {
-    CFInfo *ci = popCFState();
+    std::unique_ptr<CFInfo> ci(popCFState());
     AssertPos(currentPos, ci->IsForeach());
 }
 
@@ -885,7 +885,7 @@ void FunctionEmitContext::StartSwitch(bool cfIsUniform, llvm::BasicBlock *bbBrea
 void FunctionEmitContext::EndSwitch() {
     AssertPos(currentPos, bblock != nullptr);
 
-    CFInfo *ci = popCFState();
+    std::unique_ptr<CFInfo> ci(popCFState());
     if (ci->IsVarying() && bblock != nullptr)
         restoreMaskGivenReturns(ci->savedMask);
 }
