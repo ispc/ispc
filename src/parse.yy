@@ -1121,6 +1121,8 @@ struct_or_union_and_name
               else
                   $$ = st;
          }
+         // allocated by strdup in struct_or_union_name
+         free((char*)$2);
       }
     ;
 
