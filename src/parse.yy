@@ -2178,6 +2178,9 @@ iteration_statement
      {
          $$ = new ForeachUniqueStmt($3, $5, $8, @1);
          m->symbolTable->PopScope();
+
+         // allocated by strdup in foreach_unique_identifier
+         free((char*)$3);
      }
     ;
 
