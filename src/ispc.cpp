@@ -1727,6 +1727,13 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
     return;
 }
 
+Target::~Target() {
+    if (m_dataLayout)
+        delete m_dataLayout;
+    if (m_tf_attributes)
+        delete m_tf_attributes;
+}
+
 bool Target::checkIntrinsticSupport(llvm::StringRef name, SourcePos pos) {
     if (name.consume_front("llvm.") == false) {
         return false;

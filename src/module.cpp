@@ -3117,6 +3117,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             target = targets[0];
         }
         g->target = new Target(arch, cpu, target, outputFlags.isPIC(), outputFlags.getMCModel(), g->printTarget);
+        llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
         if (!g->target->isValid())
             return 1;
 
@@ -3185,6 +3186,8 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
 
         delete g->target;
         g->target = nullptr;
+
+        delete targetMachine;
 
         return errorCount > 0;
     } else {
@@ -3402,6 +3405,12 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
 
         delete g->target;
         g->target = nullptr;
+
+        for (int i = 0; i < Target::NUM_ISAS; ++i) {
+            if (targetMachines[i] != nullptr)
+                delete targetMachines[i];
+        }
+
         return errorCount > 0;
     }
 }
