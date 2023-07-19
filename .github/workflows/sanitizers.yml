@@ -44,7 +44,7 @@ jobs:
     # So, we disable leaks detection to have clean report.
     - name: Build examples with ASAN
       run: |
-          ASAN_OPTIONS=detect_leaks=0 cmake --build build --target ispc_cpu_examples -j4
+          ASAN_OPTIONS=detect_leaks=1 cmake --build build --target ispc_cpu_examples -j4
 
     - name: Build LIT tests with ASAN
       run: |
@@ -52,4 +52,4 @@ jobs:
 
     - name: Build runtime tests with ASAN
       run: |
-          ASAN_OPTIONS=detect_leaks=0 PATH=`pwd`/build/bin:$PATH ./run_tests.py --target=avx2-i32x8 --arch=x86-64 ./tests/*.ispc
+          ASAN_OPTIONS=detect_leaks=0 PATH=`pwd`/build/bin:$PATH ./run_tests.py --target=avx2-i32x8 --arch=x86-64
