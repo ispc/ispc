@@ -106,7 +106,7 @@ class DebugModulePassManager {
     DebugModulePassManager(llvm::Module &M, int optLevel) : m_passNumber(0), m_optLevel(optLevel) {
         m = &M;
         llvm::Triple targetTriple = llvm::Triple(m->getTargetTriple());
-        llvm::TargetLibraryInfoImpl *targetLibraryInfo = new llvm::TargetLibraryInfoImpl(targetTriple);
+        llvm::TargetLibraryInfoImpl targetLibraryInfo(targetTriple);
         targetMachine = g->target->GetTargetMachine();
 
         // We have to register an llvm::OptNoneInstrumentation with a llvm::PassInstrumentationCallbacks,
@@ -132,7 +132,7 @@ class DebugModulePassManager {
 
         // Register all the analysis passes
         fam.registerPass([&] { return targetMachine->getTargetIRAnalysis(); });
-        fam.registerPass([&] { return llvm::TargetLibraryAnalysis(*targetLibraryInfo); });
+        fam.registerPass([&] { return llvm::TargetLibraryAnalysis(targetLibraryInfo); });
 
         // Add alias analysis for more aggressive optimizations
         if (m_optLevel != 0) {
