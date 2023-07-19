@@ -111,6 +111,15 @@ void ASTNode::Print() const {
 ///////////////////////////////////////////////////////////////////////////
 // AST
 
+AST::~AST() {
+    for (auto p : functions) {
+        delete p;
+    }
+    for (auto p : functionTemplates) {
+        delete p;
+    }
+}
+
 void AST::AddFunction(Symbol *sym, Stmt *code) {
     if (sym == nullptr)
         return;

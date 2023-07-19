@@ -183,6 +183,8 @@ class ASTNode : public Traceable {
 
 class AST {
   public:
+    ~AST();
+
     /** Add the AST for a function described by the given declaration
         information and source code. */
     void AddFunction(Symbol *sym, Stmt *code);
