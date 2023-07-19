@@ -2193,7 +2193,6 @@ Opt::Opt() {
     disableXeGatherCoalescing = false;
     thresholdForXeGatherCoalescing = 0;
     enableForeachInsideVarying = false;
-    emitXeHardwareMask = false;
     enableXeUnsafeMaskedLoad = false;
 #endif
 }

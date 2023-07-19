@@ -587,14 +587,6 @@ class FunctionEmitContext {
                                 const std::vector<llvm::Value *> &args);
 
 #ifdef ISPC_XE_ENABLED
-    /** Emit genx_simdcf_any intrinsic.
-        Required when Xe hardware mask is emitted. */
-    llvm::Value *XeSimdCFAny(llvm::Value *value);
-
-    /** Emit genx_simdcf_predicate intrinsic
-        Required when Xe hardware mask is emitted. */
-    llvm::Value *XeSimdCFPredicate(llvm::Value *values, llvm::Value *defaults = nullptr);
-
     /** Start unmasked region. Sets execution mask to all-active, and return the old mask.*/
     llvm::Value *XeStartUnmaskedRegion();
 
@@ -613,20 +605,10 @@ class FunctionEmitContext {
         and returns pointer to its first element. */
     llvm::Constant *XeGetOrCreateConstantString(llvm::StringRef str, llvm::StringRef name);
 
-    /** Change scalar condition to vector condition before branching if
-        emulated uniform condition was found in external scopes and start SIMD control
-        flow with simdcf.any intrinsic.
-        Required when Xe hardware mask is emitted. */
-    llvm::Value *XePrepareVectorBranch(llvm::Value *value);
-
     /** Emit ISPC-Uniform metadata to llvm instruction. Instruction with
         such metadata will not be predicated in ISPCSIMDCFLowering pass.
         Required when Xe hardware mask is emitted. */
     void XeUniformMetadata(llvm::Value *v);
-
-    /** Check if current control flow block is inside Xe SIND CF
-        Required when Xe hardware mask is emitted. */
-    bool inXeSimdCF() const;
 
     /** This function checks addrspace of function parameter on paramIndex and returns
         val with casted addrspace if required. If cast is not required, original val is returned*/
@@ -634,10 +616,6 @@ class FunctionEmitContext {
                                            const unsigned int paramIndex, bool atEntryBlock = false);
 
 #endif
-    /** Enables emitting of genx.any intrinsics and the control flow which is
-        based on impliit hardware mask. Forces generation of goto/join instructions
-        in assembly. */
-    bool emitXeHardwareMask();
 
     /** @} */
 
@@ -704,12 +682,6 @@ class FunctionEmitContext {
     /** If we're inside a loop, this gives the block to jump to if all of
         the running lanes have executed a 'continue' statement. */
     llvm::BasicBlock *continueTarget;
-
-#ifdef ISPC_XE_ENABLED
-    /** Final basic block of the function. It is used for Xe to
-        disable returned lanes until return point is reached. */
-    llvm::BasicBlock *returnPoint;
-#endif
 
     /** @name Switch statement state
 

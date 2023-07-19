@@ -407,17 +407,6 @@ void IfStmt::EmitCode(FunctionEmitContext *ctx) const {
         return;
 
     bool emulateUniform = false;
-    if (ctx->emitXeHardwareMask() && !isUniform) {
-        /* With Xe target we generate uniform control flow but
-           emit varying using CM simdcf.any intrinsic. We mark the scope as
-           emulateUniform = true to let nested scopes know that they should
-           generate vector conditions before branching.
-           This is needed because CM does not support scalar control flow inside
-           simd control flow.
-         */
-        isUniform = true;
-        emulateUniform = true;
-    }
 
     if (isUniform) {
         ctx->StartUniformIf(emulateUniform);
@@ -819,17 +808,6 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
     llvm::BasicBlock *bexit = ctx->CreateBasicBlock("do_exit", btest);
     bool emulateUniform = false;
     llvm::Instruction *branchInst = nullptr;
-    if (ctx->emitXeHardwareMask() && !uniformTest) {
-        /* With Xe target we generate uniform control flow but
-           emit varying using CM simdcf.any intrinsic. We mark the scope as
-           emulateUniform = true to let nested scopes know that they should
-           generate vector conditions before branching.
-           This is needed because CM does not support scalar control flow inside
-           simd control flow.
-         */
-        uniformTest = true;
-        emulateUniform = true;
-    }
     ctx->StartLoop(bexit, btest, uniformTest, emulateUniform);
 
     // Start by jumping into the loop body
@@ -1020,17 +998,6 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
     bool uniformTest = test ? test->GetType()->IsUniformType()
                             : (!g->opt.disableUniformControlFlow && !lHasVaryingBreakOrContinue(stmts));
     bool emulateUniform = false;
-    if (ctx->emitXeHardwareMask() && !uniformTest) {
-        /* With Xe target we generate uniform control flow but
-           emit varying using CM simdcf.any intrinsic. We mark the scope as
-           emulateUniform = true to let nested scopes know that they should
-           generate vector conditions before branching.
-           This is needed because CM does not support scalar control flow inside
-           simd control flow.
-         */
-        uniformTest = true;
-        emulateUniform = true;
-    }
     ctx->StartLoop(bexit, bstep, uniformTest, emulateUniform);
     ctx->SetDebugPos(pos);
 
@@ -1070,8 +1037,7 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
             if (test)
                 Warning(test->pos, "Uniform condition supplied to cfor/cwhile "
                                    "statement.");
-        if (!ctx->emitXeHardwareMask())
-            AssertPos(pos, ltest->getType() == LLVMTypes::BoolType);
+        AssertPos(pos, ltest->getType() == LLVMTypes::BoolType);
         ctx->BranchInst(bloop, bexit, ltest);
     } else {
         llvm::Value *mask = ctx->GetInternalMask();
@@ -1373,13 +1339,6 @@ static void lGetSpans(int dimsLeft, int nDims, int itemsLeft, bool isTiled, int 
    to process.
  */
 void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
-
-#ifdef ISPC_XE_ENABLED
-    if (ctx->emitXeHardwareMask()) {
-        EmitCodeForXe(ctx);
-        return;
-    }
-#endif
 
     if (ctx->GetCurrentBasicBlock() == nullptr || stmts == nullptr)
         return;
@@ -1810,170 +1769,6 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->EndScope();
 }
 
-#ifdef ISPC_XE_ENABLED
-/* Emit code for a foreach statement on Xe. We effectively emit code to run
-   the set of n-dimensional nested loops corresponding to the dimensionality of
-   the foreach statement along with the extra logic to deal with mismatches
-   between the vector width we're compiling to and the number of elements
-   to process. Handler logic is different from the other targets due to
-   Xe Execution Mask usage. We do not need to generate different bodies
-   for full and partial masks due to it.
-*/
-void ForeachStmt::EmitCodeForXe(FunctionEmitContext *ctx) const {
-    AssertPos(pos, g->target->isXeTarget());
-
-    if (ctx->GetCurrentBasicBlock() == nullptr || stmts == nullptr)
-        return;
-
-    // We store current EM and reset it to AllOn state.
-    llvm::Value *oldMask = ctx->GetInternalMask();
-    llvm::Value *oldFunctionMask = ctx->GetFunctionMask();
-
-    llvm::Value *execMask = nullptr;
-    if (g->opt.enableForeachInsideVarying) {
-        Warning(pos, "\"foreach\" statement is not optimized for Xe targets yet.");
-        ctx->SetInternalMask(LLVMMaskAllOn);
-        ctx->SetFunctionMask(LLVMMaskAllOn);
-        execMask = ctx->XeStartUnmaskedRegion();
-    } else {
-        Warning(pos, "\"foreach\" statement is not supported under varying CF for Xe targets yet. Make sure that"
-                     " it is not called under varying CF or use \"--opt=enable-xe-foreach-varying\" to enable its "
-                     "experimental support.");
-    }
-    llvm::BasicBlock *bbBody = ctx->CreateBasicBlock("foreach_body", ctx->GetCurrentBasicBlock());
-    llvm::BasicBlock *bbExit = ctx->CreateBasicBlock("foreach_exit", bbBody);
-
-    ctx->SetDebugPos(pos);
-    ctx->StartScope();
-
-    // This should be caught during typechecking
-    AssertPos(pos, startExprs.size() == dimVariables.size() && endExprs.size() == dimVariables.size());
-    int nDims = (int)dimVariables.size();
-
-    ///////////////////////////////////////////////////////////////////////
-    // Setup: compute the number of items we have to work on in each
-    // dimension and a number of derived values.
-    std::vector<llvm::BasicBlock *> bbReset, bbTest, bbStep;
-    std::vector<llvm::Value *> startVals, endVals;
-    std::vector<llvm::Constant *> steps;
-    std::vector<int> span(nDims, 0);
-    lGetSpans(nDims - 1, nDims, g->target->getVectorWidth(), isTiled, &span[0]);
-    for (int i = 0; i < nDims; ++i) {
-        // Basic blocks that we'll fill in later with the looping logic for
-        // this dimension.
-        bbTest.push_back(ctx->CreateBasicBlock("foreach_test", i == 0 ? ctx->GetCurrentBasicBlock() : bbTest[i - 1]));
-        bbStep.push_back(ctx->CreateBasicBlock("foreach_step", bbBody));
-        bbReset.push_back(ctx->CreateBasicBlock("foreach_reset", bbStep[i]));
-
-        llvm::Value *sv = startExprs[i]->GetValue(ctx);
-        llvm::Value *ev = endExprs[i]->GetValue(ctx);
-        if (sv == nullptr || ev == nullptr)
-            return;
-
-        // Store varying start
-        sv = ctx->BroadcastValue(sv, LLVMTypes::Int32VectorType, "start_broadcast");
-        llvm::Constant *delta = lCalculateDeltaForVaryingCounter(i, nDims, span);
-        sv = ctx->BinaryOperator(llvm::Instruction::Add, sv, delta, "varying_start");
-        startVals.push_back(sv);
-
-        // Store broadcasted end values
-        ev = ctx->BroadcastValue(ev, LLVMTypes::Int32VectorType, "end_broadcast");
-        endVals.push_back(ev);
-
-        // Store vectorized step
-        llvm::Constant *step = LLVMInt32Vector(span[i]);
-        steps.push_back(step);
-
-        // Init vectorized counters
-        dimVariables[i]->storageInfo = ctx->AllocaInst(LLVMTypes::Int32VectorType, dimVariables[i]->name.c_str());
-        dimVariables[i]->parentFunction = ctx->GetFunction();
-        ctx->StoreInst(sv, dimVariables[i]->storageInfo);
-        ctx->EmitVariableDebugInfo(dimVariables[i]);
-    }
-
-    // Officially start foreach. Emulating uniform for proper continue handlers.
-    ctx->StartForeach(FunctionEmitContext::FOREACH_REGULAR, true);
-
-    // Jump to outermost test block
-    ctx->BranchInst(bbTest[0]);
-
-    ///////////////////////////////////////////////////////////////////////////
-    // foreach_reset: this code runs when we need to reset the counter for
-    // a given dimension in preparation for running through its loop again,
-    // after the enclosing level advances its counter.
-    for (int i = 0; i < nDims; ++i) {
-        ctx->SetCurrentBasicBlock(bbReset[i]);
-        if (i == 0)
-            // Outermost loop finished - exit
-            ctx->BranchInst(bbExit);
-        else {
-            // Reset counter for this dimension, iterate over previous one
-            ctx->StoreInst(startVals[i], dimVariables[i]->storageInfo);
-            ctx->BranchInst(bbStep[i - 1]);
-        }
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    // foreach_step: iterate counters with step that was calculated before
-    // entering foreach.
-    for (int i = 0; i < nDims; ++i) {
-        ctx->SetCurrentBasicBlock(bbStep[i]);
-        llvm::Value *counter = ctx->LoadInst(dimVariables[i]->storageInfo);
-        llvm::Value *newCounter = ctx->BinaryOperator(llvm::Instruction::Add, counter, steps[i], "new_counter");
-        ctx->StoreInst(newCounter, dimVariables[i]->storageInfo);
-        ctx->BranchInst(bbTest[i]);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    // foreach_test: compare varying counter with end value and branch to
-    // target or reset. Xe EM magic happens here: we turn off all lanes
-    // that fail check until reset is reached. And reset is reached only when
-    // all lanes fail this check due to test -> target -> step -> test loop.
-    //
-    // It looks tricky for multidimensional case. Suppose we have 3 dimensional
-    // loop, some lanes were turn off in the second dimension. When we reach
-    // reset in the innermost one (3rd) we won't be able to reset lanes that were
-    // turned off in the second dimension. But we don't actually need to reset
-    // them: they were reseted right before test of the second dimension turned
-    // them off. So after 2nd dimension's reset there will be reseted 2nd and 3rd
-    // counters. If some of lanes were turned off in the first dimension all
-    // this stuff doesn't matter: we will exit loop after this iteration anyway.
-    for (int i = 0; i < nDims; ++i) {
-        ctx->SetCurrentBasicBlock(bbTest[i]);
-        llvm::Value *val = ctx->LoadInst(dimVariables[i]->storageInfo, nullptr, "val");
-        llvm::Value *checkVal = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT, val, endVals[i]);
-        // Target is body for innermost dimension, next dimension test for others
-        llvm::BasicBlock *targetBB = (i < nDims - 1) ? bbTest[i + 1] : bbBody;
-        // Turn off lanes untill reset is reached
-        ctx->BranchInst(targetBB, bbReset[i], checkVal);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    // foreach_body: emit code for loop body. Execution is driven by
-    // Xe Execution Mask.
-    ctx->SetCurrentBasicBlock(bbBody);
-    ctx->SetContinueTarget(bbStep[nDims - 1]);
-    ctx->AddInstrumentationPoint("foreach loop body");
-    stmts->EmitCode(ctx);
-    AssertPos(pos, ctx->GetCurrentBasicBlock() != nullptr);
-    ctx->BranchInst(bbStep[nDims - 1]);
-
-    ///////////////////////////////////////////////////////////////////////////
-    // foreach_exit: All done. Restore the old mask and clean up
-    ctx->SetCurrentBasicBlock(bbExit);
-
-    // Restore execution mask from value that was saved at the beginning
-    if (execMask != nullptr) {
-        ctx->XeEndUnmaskedRegion(execMask);
-        ctx->SetInternalMask(oldMask);
-        ctx->SetFunctionMask(oldFunctionMask);
-    }
-
-    ctx->EndForeach();
-    ctx->EndScope();
-}
-#endif
-
 Stmt *ForeachStmt::TypeCheck() {
     for (auto expr : startExprs) {
         const Type *t = expr ? expr->GetType() : nullptr;
@@ -2159,15 +1954,7 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
     // to this)...
     llvm::Value *oldFullMask = nullptr;
     bool uniformEmulated = false;
-#ifdef ISPC_XE_ENABLED
-    if (ctx->emitXeHardwareMask()) {
-        // Emulate uniform to make proper continue handler
-        uniformEmulated = true;
-        // Current mask will be calculated according to EM mask
-        oldFullMask = ctx->XeSimdCFPredicate(LLVMMaskAllOn);
-    } else
-#endif
-        oldFullMask = ctx->GetFullMask();
+    oldFullMask = ctx->GetFullMask();
 
     AddressInfo *maskBitsPtrInfo = ctx->AllocaInst(LLVMTypes::Int64Type, "mask_bits");
     llvm::Value *movmsk = ctx->LaneMask(oldFullMask);
@@ -2213,10 +2000,7 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
             ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, firstSet32Smear, programIndex);
         iterMask = ctx->I1VecToBoolVec(iterMask);
 
-        // Don't need to change this mask in XE: execution
-        // is performed according to Xe EM
-        if (!ctx->emitXeHardwareMask())
-            ctx->SetInternalMask(iterMask);
+        ctx->SetInternalMask(iterMask);
 
         // Also update the bitvector of lanes left to turn off the bit for
         // the lane we're about to run.
@@ -2227,13 +2011,7 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
         ctx->StoreInst(newRemaining, maskBitsPtrInfo);
 
         // and onward to run the loop body...
-        // Set Xe EM through simdcf.goto
-        // The EM will be restored when CheckForMore is reached
-        if (ctx->emitXeHardwareMask()) {
-            ctx->BranchInst(bbBody, bbCheckForMore, iterMask);
-        } else {
-            ctx->BranchInst(bbBody);
-        }
+        ctx->BranchInst(bbBody);
     }
 
     ctx->SetCurrentBasicBlock(bbBody);
@@ -2369,15 +2147,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
     // off going in to this)...
     llvm::Value *oldFullMask = nullptr;
     bool emulatedUniform = false;
-#ifdef ISPC_XE_ENABLED
-    if (ctx->emitXeHardwareMask()) {
-        // Emulating uniform behavior for proper continue handling
-        emulatedUniform = true;
-        // Current mask will be calculated according to EM mask
-        oldFullMask = ctx->XeSimdCFPredicate(LLVMMaskAllOn);
-    } else
-#endif
-        oldFullMask = ctx->GetFullMask();
+    oldFullMask = ctx->GetFullMask();
 
     AddressInfo *maskBitsPtrInfo = ctx->AllocaInst(LLVMTypes::Int64Type, "mask_bits");
     llvm::Value *movmsk = ctx->LaneMask(oldFullMask);
@@ -2452,10 +2222,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *loopMask =
             ctx->BinaryOperator(llvm::Instruction::And, oldMask, matchingLanes, "foreach_unique_loop_mask");
 
-        // Don't need to change this mask in XE: execution
-        // is performed according to Xe EM
-        if (!ctx->emitXeHardwareMask())
-            ctx->SetInternalMask(loopMask);
+        ctx->SetInternalMask(loopMask);
 
         // Also update the bitvector of lanes left to process in subsequent
         // loop iterations:
@@ -2467,13 +2234,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         ctx->StoreInst(newRemaining, maskBitsPtrInfo);
 
         // and onward...
-        // Set Xe EM through simdcf.goto
-        // The EM will be restored when CheckForMore is reached
-        if (ctx->emitXeHardwareMask()) {
-            ctx->BranchInst(bbBody, bbCheckForMore, loopMask);
-        } else {
-            ctx->BranchInst(bbBody);
-        }
+        ctx->BranchInst(bbBody);
     }
 
     ctx->SetCurrentBasicBlock(bbBody);
@@ -2785,26 +2546,6 @@ void SwitchStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     bool isUniformCF = (type->IsUniformType() && lHasVaryingBreakOrContinue(stmts) == false);
     bool emulateUniform = false;
-#ifdef ISPC_XE_ENABLED
-    if (ctx->emitXeHardwareMask()) {
-        if (isUniformCF && ctx->inXeSimdCF()) {
-            // Broadcast value to work with EM. We are doing
-            // it here because it is too late to make CMP
-            // broadcast through BranchInst: we need vectorized
-            // case checks to be able to reenable fall through
-            // cases under emulated uniform CF.
-            llvm::Type *vecType = (exprValue->getType() == LLVMTypes::Int32Type) ? LLVMTypes::Int32VectorType
-                                                                                 : LLVMTypes::Int64VectorType;
-            exprValue = ctx->BroadcastValue(exprValue, vecType, "switch_expr_broadcast");
-            emulateUniform = true;
-        }
-
-        if (!isUniformCF) {
-            isUniformCF = true;
-            emulateUniform = true;
-        }
-    }
-#endif
 
     ctx->StartSwitch(isUniformCF, bbDone, emulateUniform);
     ctx->SetBlockEntryMask(ctx->GetFullMask());
@@ -2895,17 +2636,7 @@ void UnmaskedStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     ctx->SetInternalMask(LLVMMaskAllOn);
     ctx->SetFunctionMask(LLVMMaskAllOn);
-    if (!ctx->emitXeHardwareMask()) {
-        stmts->EmitCode(ctx);
-    } else {
-#ifdef ISPC_XE_ENABLED
-        // For Xe we insert special intrinsics at the beginning and end of unmasked region.
-        // Correct execution mask will be set in CMSIMDCFLowering
-        llvm::Value *oldInternalMask = ctx->XeStartUnmaskedRegion();
-        stmts->EmitCode(ctx);
-        ctx->XeEndUnmaskedRegion(oldInternalMask);
-#endif
-    }
+    stmts->EmitCode(ctx);
     // Do not restore old mask if our basic block is over. This happends if we emit code
     // for something like 'unmasked{return;}', for example.
     if (ctx->GetCurrentBasicBlock() == nullptr)
@@ -3010,11 +2741,7 @@ void GotoStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock())
         return;
 
-#ifdef ISPC_XE_ENABLED
-    if ((ctx->emitXeHardwareMask() && ctx->inXeSimdCF()) || ctx->VaryingCFDepth() > 0) {
-#else
     if (ctx->VaryingCFDepth() > 0) {
-#endif
         Error(pos, "\"goto\" statements are only legal under \"uniform\" "
                    "control flow.");
         return;
@@ -3302,10 +3029,7 @@ class PrintArgsBuilder {
 
         AdditionalData() {}
         AdditionalData(FunctionEmitContext *ctx) {
-            if (ctx->emitXeHardwareMask())
-                mask = ctx->XeSimdCFPredicate(LLVMMaskAllOn);
-            else
-                mask = ctx->GetFullMask();
+            mask = ctx->GetFullMask();
             strings[AdditionalData::LeftParenthesisIdx] =
                 ctx->XeGetOrCreateConstantString("((", "ispc.print.left.parenthesis");
             strings[AdditionalData::RightParenthesisIdx] =
@@ -3821,14 +3545,7 @@ void AssertStmt::EmitAssertCode(FunctionEmitContext *ctx, const Type *type) cons
         return;
     }
     args.push_back(exprValue);
-#ifdef ISPC_XE_ENABLED
-    if (ctx->emitXeHardwareMask())
-        // This will create mask according to current EM on SIMD CF Lowering.
-        // The result will be like       mask = select (EM, AllOn, AllFalse)
-        args.push_back(ctx->XeSimdCFPredicate(LLVMMaskAllOn));
-    else
-#endif
-        args.push_back(ctx->GetFullMask());
+    args.push_back(ctx->GetFullMask());
     ctx->CallInst(assertFunc, nullptr, args, "");
 
     free(errorString);

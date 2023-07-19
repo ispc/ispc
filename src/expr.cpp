@@ -1907,13 +1907,8 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
             llvm::Value *equalsMask = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, value0AndMask,
                                                    oldFullMask, "value0&mask==mask");
             equalsMask = ctx->I1VecToBoolVec(equalsMask);
-            if (!ctx->emitXeHardwareMask()) {
-                llvm::Value *allMatch = ctx->All(equalsMask);
-                ctx->BranchInst(bbSkipEvalValue1, bbEvalValue1, allMatch);
-            } else {
-                // If uniform CF is emulated, pass vector value to BranchInst
-                ctx->BranchInst(bbSkipEvalValue1, bbEvalValue1, equalsMask);
-            }
+            llvm::Value *allMatch = ctx->All(equalsMask);
+            ctx->BranchInst(bbSkipEvalValue1, bbEvalValue1, allMatch);
 
             // value0 is true for all running lanes, so it can be used for
             // the final result
@@ -1956,13 +1951,8 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
             llvm::Value *equalsMask = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, notValue0AndMask,
                                                    oldFullMask, "not_value0&mask==mask");
             equalsMask = ctx->I1VecToBoolVec(equalsMask);
-            if (!ctx->emitXeHardwareMask()) {
-                llvm::Value *allMatch = ctx->All(equalsMask);
-                ctx->BranchInst(bbSkipEvalValue1, bbEvalValue1, allMatch);
-            } else {
-                // If uniform CF is emulated, pass vector value to BranchInst
-                ctx->BranchInst(bbSkipEvalValue1, bbEvalValue1, equalsMask);
-            }
+            llvm::Value *allMatch = ctx->All(equalsMask);
+            ctx->BranchInst(bbSkipEvalValue1, bbEvalValue1, allMatch);
 
             // value0 was false for all running lanes, so use its value as
             // the overall result.
@@ -8108,13 +8098,6 @@ llvm::Value *SymbolExpr::GetValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
 
     std::string loadName = symbol->name + std::string("_load");
-#ifdef ISPC_XE_ENABLED
-    // TODO: this is a temporary workaround and will be changed as part
-    // of SPIR-V emitting solution
-    if (ctx->emitXeHardwareMask() && symbol->name == "__mask") {
-        return ctx->XeSimdCFPredicate(LLVMMaskAllOn);
-    }
-#endif
     return ctx->LoadInst(symbol->storageInfo, symbol->type, loadName.c_str());
 }
 

@@ -599,11 +599,6 @@ struct Opt {
         implementation of unmasked.*/
     bool enableForeachInsideVarying;
 
-    /** Enables emitting of genx.any intrinsics and the control flow which is
-        based on impliit hardware mask. Forces generation of goto/join instructions
-        in assembly.*/
-    bool emitXeHardwareMask;
-
     /** Enables generation of masked loads implemented using svm loads which
      * may lead to out of bound reads but bring prformance improvement in
      * most of the cases.

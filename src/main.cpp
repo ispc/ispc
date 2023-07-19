@@ -132,7 +132,6 @@ static void lPrintVersion() {
         "        disable-zmm\t\t\tDisable using zmm registers for avx512 targets in favour of ymm. This also affects "
         "ABI\n");
 #ifdef ISPC_XE_ENABLED
-    printf("        emit-xe-hardware-mask\t\tEnable emitting of Xe implicit hardware mask\n");
     printf("        enable-xe-foreach-varying\t\tEnable experimental foreach support inside varying control flow\n");
 #endif
     printf("        fast-masked-vload\t\tFaster masked vector loads on SSE (may go past end of array)\n");
@@ -886,8 +885,6 @@ int main(int Argc, char *Argv[]) {
                 g->opt.disableXeGatherCoalescing = true;
             else if (!strncmp(opt, "threshold-for-xe-gather-coalescing=", 37))
                 g->opt.thresholdForXeGatherCoalescing = atoi(opt + 37);
-            else if (!strcmp(opt, "emit-xe-hardware-mask"))
-                g->opt.emitXeHardwareMask = true;
             else if (!strcmp(opt, "enable-xe-foreach-varying"))
                 g->opt.enableForeachInsideVarying = true;
             else if (!strcmp(opt, "enable-xe-unsafe-masked-load"))
