@@ -215,6 +215,8 @@ class Target {
         target was initialized and false if the name is unknown. */
     Target(Arch arch, const char *cpu, ISPCTarget isa, bool pic, MCModel code_model, bool printTarget);
 
+    ~Target();
+
     /** Check if LLVM intrinsic is supported for the current target. */
     bool checkIntrinsticSupport(llvm::StringRef name, SourcePos pos);
 
@@ -351,6 +353,8 @@ class Target {
         Module::CompileAndOutput() uses TargetMachines after Target is destroyed.
         This needs to be changed. */
     llvm::TargetMachine *m_targetMachine;
+
+    /** This is deconstructed in ~Target. */
     llvm::DataLayout *m_dataLayout;
 
     /** flag to report invalid state after construction
