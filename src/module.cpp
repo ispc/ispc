@@ -146,11 +146,20 @@ static bool lIsSpirVBitcode(std::ifstream &is) {
     the module file's dependencies via the -MMM option */
 std::set<std::string> registeredDependencies;
 
+/* This set is used to store strings that is referenced in yylloc (SourcePos)
+   in lexer once and not to lost memory via just strduping them. */
+std::set<std::string> pseudoDependencies;
+
 /*! this is where the parser tells us that it has seen the given file
     name in the CPP hash */
-void RegisterDependency(const std::string &fileName) {
-    if (fileName[0] != '<' && fileName != "stdlib.ispc")
-        registeredDependencies.insert(fileName);
+const char *RegisterDependency(const std::string &fileName) {
+    if (fileName[0] != '<' && fileName != "stdlib.ispc") {
+        auto res = registeredDependencies.insert(fileName);
+        return res.first->c_str();
+    } else {
+        auto res = pseudoDependencies.insert(fileName);
+        return res.first->c_str();
+    }
 }
 
 static void lDeclareSizeAndPtrIntTypes(SymbolTable *symbolTable) {
