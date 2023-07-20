@@ -47,6 +47,8 @@
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 
+#define UNUSED(x) (void)(x)
+
 using namespace ispc;
 
 Globals *ispc::g;
@@ -186,7 +188,8 @@ static ISPCTarget lGetSystemISA() {
         bool tgl = icl && avx512_vp2intersect;
         bool spr =
             icl && avx512_bf16 && avx512_amx_bf16 && avx512_amx_tile && avx512_amx_int8 && avx_vnni && avx512_fp16;
-#pragma unused(cpx, tgl)
+        UNUSED(cpx);
+        UNUSED(tgl);
         if (spr) {
             // We don't care if AMX is enabled or not here, as AMX support is not implemented yet.
             return ISPCTarget::avx512spr_x16;
