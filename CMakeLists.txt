@@ -539,6 +539,9 @@ if (NOT MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE -fno-rtti)
     if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         target_compile_options(${PROJECT_NAME} PRIVATE -Wno-register -Wno-error=comment)
+        # The GCC warning issues false positives when one of the allocation and
+        # deallocation functions is inlined into its caller but not the other.
+        target_compile_options(${PROJECT_NAME} PRIVATE -Wno-mismatched-new-delete)
     else()
         target_compile_options(${PROJECT_NAME} PRIVATE -Wno-c99-extensions -Wno-deprecated-register)
     endif()
