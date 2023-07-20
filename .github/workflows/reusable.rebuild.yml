@@ -85,6 +85,7 @@ jobs:
     - name: Pack LLVM
       run: |
         cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
+        rm -rf cache.local
         tar xvf result.tar usr/local/src/llvm
         mv usr/local/src/llvm/bin-${{ inputs.version }} .
         tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release+Asserts-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
@@ -148,6 +149,7 @@ jobs:
     - name: Pack LLVM
       run: |
         cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
+        rm -rf cache.local
         tar xvf result.tar usr/local/src/llvm
         mv usr/local/src/llvm/bin-${{ inputs.version }} .
         tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
