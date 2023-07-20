@@ -1,10 +1,19 @@
 #include "../test_static.isph"
 task void f_v(uniform float RET[]) {
-    float f = 65535;
-    unsigned int16 h = float_to_half(f);
-    RET[programIndex] = half_to_float(h);
+    RET[programIndex] = 0;
+    RET[programIndex + programCount] = 0;
+
+    float f1 = 65535;
+    unsigned int16 h1 = float_to_half(f1);
+
+    float f2 = 32768;
+    unsigned int16 h2 = float_to_half(f2);
+
+    RET[programIndex] = half_to_float(h1);
+    RET[programIndex + programCount] = half_to_float(h2);
 }
 
 task void result(uniform float RET[]) {
     RET[programIndex] = 65535;
+    RET[programIndex + programCount] = 32768;
 }
