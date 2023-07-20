@@ -246,7 +246,9 @@ class ArgFactory {
   private:
     char *AllocateString(std::string string) {
         int len = string.length();
-        char *ptr = new char[len + 1];
+        // We use malloc here because of strdup in lAddSingleArg
+        char *ptr = (char *)malloc(len + 1);
+        memset(ptr, 0, len + 1);
         strncpy(ptr, string.c_str(), len);
         ptr[len] = '\0';
         return ptr;
@@ -330,7 +332,7 @@ class StringArgFactory : public ArgFactory {
 };
 
 // Forward reference
-static void lAddSingleArg(char *arg, std::vector<char *> &argv);
+static void lAddSingleArg(char *arg, std::vector<char *> &argv, bool duplicate);
 
 /** Add all args from a given factory to the argv passed as parameters, which could
  *  include recursing into another ArgFactory.
@@ -340,7 +342,7 @@ static void lAddArgsFromFactory(ArgFactory &Args, std::vector<char *> &argv) {
         char *NextArg = Args.GetNextArg();
         if (NextArg == nullptr)
             break;
-        lAddSingleArg(NextArg, argv);
+        lAddSingleArg(NextArg, argv, false);
     }
 }
 
@@ -360,7 +362,7 @@ static void lAddArgsFromString(const char *string, std::vector<char *> &argv) {
  *  form @<filename> and <filename> exists and is readable, the arguments in the file will be
  *  inserted into argv in place of the original argument.
  */
-static void lAddSingleArg(char *arg, std::vector<char *> &argv) {
+static void lAddSingleArg(char *arg, std::vector<char *> &argv, bool duplicate) {
     if (arg[0] == '@') {
         char *filename = &arg[1];
         FILE *file = fopen(filename, "r");
@@ -371,7 +373,12 @@ static void lAddSingleArg(char *arg, std::vector<char *> &argv) {
         }
     }
     if (arg != nullptr) {
-        argv.push_back(arg);
+        if (duplicate) {
+            // duplicate arg from main argv to make deallocation straightforward.
+            argv.push_back(strdup(arg));
+        } else {
+            argv.push_back(arg);
+        }
     }
 }
 
@@ -383,7 +390,7 @@ static void lAddSingleArg(char *arg, std::vector<char *> &argv) {
 static void lGetAllArgs(int Argc, char *Argv[], std::vector<char *> &argv) {
     // Copy over the command line arguments (passed in)
     for (int i = 0; i < Argc; ++i)
-        lAddSingleArg(Argv[i], argv);
+        lAddSingleArg(Argv[i], argv, true);
 
     // See if we have any set via the environment variable
     const char *env = getenv("ISPC_ARGS");
@@ -547,6 +554,15 @@ static void lParseInclude(const char *path) {
     } while (pos_end != std::string::npos);
 }
 
+void lFreeArgv(std::vector<char *> &argv) {
+    // argv vector consists of pointers to arguments as C strings alloced on
+    // heap and collected form three source:  environment variable ISPC_ARGS,
+    // @filename, inputs argv. They are needed to be deallocated.
+    for (auto p : argv) {
+        free(p);
+    }
+}
+
 extern int yydebug;
 
 int main(int Argc, char *Argv[]) {
@@ -663,7 +679,9 @@ int main(int Argc, char *Argv[]) {
                                  "be issued, but no output will be generated.");
         }
 
-        return Module::LinkAndOutput(linkFileNames, ot, outFileName);
+        int ret = Module::LinkAndOutput(linkFileNames, ot, outFileName);
+        lFreeArgv(argv);
+        return ret;
     }
 
     for (int i = 1; i < argc; ++i) {
@@ -1037,6 +1055,7 @@ int main(int Argc, char *Argv[]) {
 #endif
         } else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--version")) {
             lPrintVersion();
+            lFreeArgv(argv);
             return 0;
         } else if (argv[i][0] == '-') {
             errorHandler.AddError("Unknown option \"%s\".", argv[i]);
@@ -1225,5 +1244,6 @@ int main(int Argc, char *Argv[]) {
     // Free all bookkeeped objects.
     BookKeeper::in().freeAll();
 
+    lFreeArgv(argv);
     return ret;
 }
