@@ -12,7 +12,6 @@
 define(`WIDTH',`4')
 ;; FIXME: Workaround for "BUILD_OS should be defined to either UNIX or WINDOWS" error
 define(`BUILD_OS',`UNIX')
-define(`RUNTIME',`32')
 define(`MASK',`i32')
 define(`ISA',`WASM')
 ;; Wasm has custom clock function
@@ -34,6 +33,13 @@ svml_stubs(double,d,WIDTH)
 define_avgs()
 saturation_arithmetic()
 halfTypeGenericImplementation()
+
+;; rcp/rsqrt for double
+rsqrtd_decl()
+rcpd_decl()
+
+;; rcp/rsqrt for half
+rcph_rsqrth_decl
 
 declare <4 x double> @llvm.sqrt.v4f64(<4 x double>)
 declare float @__half_to_float_uniform(i16 %v) nounwind readnone
@@ -86,20 +92,6 @@ define i32 @__set_ftz_daz_flags() nounwind alwaysinline {
 
 define void @__restore_ftz_daz_flags(i32 %oldVal) nounwind alwaysinline {
   ret void
-}
-
-define <4 x double> @__rsqrt_varying_double(<4 x double> %v) nounwind readnone alwaysinline {
-entry:
-  %0 = tail call <4 x double> @llvm.sqrt.v4f64(<4 x double> %v)
-  %mul.i16 = fdiv <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, %0
-  ret <4 x double> %mul.i16
-}
-
-define <4 x double> @__rsqrt_fast_varying_double(<4 x double> %v) nounwind readnone alwaysinline {
-entry:
-  %0 = tail call <4 x double> @llvm.sqrt.v4f64(<4 x double> %v)
-  %mul.i16 = fdiv <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, %0
-  ret <4 x double> %mul.i16
 }
 
 define <WIDTH x double> @__sqrt_varying_double(<WIDTH x double>) nounwind readnone alwaysinline {
@@ -641,18 +633,6 @@ define  float @__rsqrt_fast_uniform_float(float) nounwind readonly alwaysinline 
   ret float %r
 }
 
-define  double @__rsqrt_uniform_double(double) nounwind readonly alwaysinline {
-  %s = call double @__sqrt_uniform_double(double %0)
-  %r = call double @__rcp_uniform_double(double %s)
-  ret double %r
-}
-
-define  double @__rsqrt_fast_uniform_double(double) nounwind readonly alwaysinline {
-  %s = call double @__sqrt_uniform_double(double %0)
-  %r = call double @__rcp_uniform_double(double %s)
-  ret double %r
-}
-
 define  float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
   %r = fdiv float 1.,%0
   ret float %r
@@ -661,22 +641,6 @@ define  float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
 define  float @__rcp_fast_uniform_float(float) nounwind readonly alwaysinline {
   %r = fdiv float 1.,%0
   ret float %r
-}
-
-define  double @__rcp_uniform_double(double) nounwind readonly alwaysinline {
-  %r = fdiv double 1.,%0
-  ret double %r
-}
-
-define  double @__rcp_fast_uniform_double(double) nounwind readonly alwaysinline {
-  %r = fdiv double 1.,%0
-  ret double %r
-}
-
-define <4 x double> @__rcp_varying_double(<4 x double> %x) {
-entry:
-  %0 = fdiv <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, %x
-  ret <4 x double> %0
 }
 
 define i64 @__reduce_add_int64(<4 x i64>) nounwind readnone alwaysinline {
