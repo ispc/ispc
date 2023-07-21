@@ -315,9 +315,8 @@ jobs:
         path: llvm/llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release-x86.arm.wasm.tar.7z
 
   mac-build:
-    runs-on: macos-12
-    # Disable job, as it's not able to complete on regular runner, while -xl runner is not free.
-    if: false
+    # This job is not capable to build on a shared runner, so need to use self-hosted.
+    runs-on: [self-hosted, macOS]
 
     steps:
     - uses: actions/checkout@v3
@@ -351,9 +350,8 @@ jobs:
         path: llvm/llvm-${{ inputs.full_version }}-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
 
   mac-build-release:
-    runs-on: macos-12
-    # Disable job, as it's not able to complete on regular runner, while -xl runner is not free.
-    if: false
+    # This job is not capable to build on a shared runner, so need to use self-hosted.
+    runs-on: [self-hosted, macOS]
 
     steps:
     - uses: actions/checkout@v3
