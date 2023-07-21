@@ -1442,7 +1442,7 @@ llvm::Value *FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2
     // And see if it's all on
     return All(cmp);
 #else
-    if (g->target->getArch() == Arch::wasm32) {
+    if (g->target->getArch() == Arch::wasm32 || g->target->getArch() == Arch::wasm64) {
         llvm::Function *fmm = m->module->getFunction("__wasm_cmp_msk_eq");
         return CallInst(fmm, nullptr, {v1, v2},
                         ((llvm::Twine("wasm_cmp_msk_eq_") + v1->getName()) + "_") + v2->getName());

@@ -1969,11 +1969,15 @@ std::string Target::GetTripleString() const {
         triple.setOS(llvm::Triple::OSType::PS4);
         break;
     case TargetOS::web:
-        if (m_arch != Arch::wasm32) {
-            Error(SourcePos(), "Web target supports only wasm32.");
+        if (m_arch != Arch::wasm32 && m_arch != Arch::wasm64) {
+            Error(SourcePos(), "Web target supports only wasm32 and wasm64.");
             exit(1);
         }
-        triple.setArch(llvm::Triple::ArchType::wasm32);
+        if (m_arch == Arch::wasm32) {
+            triple.setArch(llvm::Triple::ArchType::wasm32);
+        } else if (m_arch == Arch::wasm64) {
+            triple.setArch(llvm::Triple::ArchType::wasm64);
+        }
         triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
         triple.setOS(llvm::Triple::OSType::UnknownOS);
         break;

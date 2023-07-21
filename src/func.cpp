@@ -284,7 +284,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
 
     if (g->NoOmitFramePointer)
         function->addFnAttr("frame-pointer", "all");
-    if (g->target->getArch() == Arch::wasm32)
+    if (g->target->getArch() == Arch::wasm32 || g->target->getArch() == Arch::wasm64)
         function->addFnAttr("target-features", "+simd128");
 
     g->target->markFuncWithTargetAttr(function);

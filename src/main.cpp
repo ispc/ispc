@@ -1213,8 +1213,9 @@ int main(int Argc, char *Argv[]) {
     bool targetIsGen = false;
     for (auto target : targets) {
         if (target == ISPCTarget::wasm_i32x4) {
-            Assert(targets.size() == 1 && "wasm32 supports only one target: i32x4");
-            arch = Arch::wasm32;
+            if (arch == Arch::none) {
+                arch = Arch::wasm32;
+            }
             g->target_os = TargetOS::web;
         }
 #ifdef ISPC_XE_ENABLED
