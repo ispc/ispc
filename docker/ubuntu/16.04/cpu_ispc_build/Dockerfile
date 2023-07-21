@@ -25,9 +25,14 @@ RUN apt-get -y update && apt-get --no-install-recommends install -y software-pro
     apt-get -y update && apt-get --no-install-recommends install -y wget build-essential gcc g++ git python3.6 ncurses-dev libtinfo-dev libtbb-dev && \
     rm -rf /var/lib/apt/lists/*
 
-# Download and install required version of cmake (3.13) for ISPC build
-RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/Kitware/CMake/releases/download/v3.13.5/cmake-3.13.5-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.13.5-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && \
-    ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm cmake-3.13.5-Linux-x86_64.sh
+# ISPC and LLVM starting 16.0 build in C++17 mode and will fail without modern libstdc++
+RUN add-apt-repository ppa:ubuntu-toolchain-r/test -y && apt-get -y update && \
+    apt-get --no-install-recommends install -y libstdc++-9-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# Download and install required version of cmake (3.20) for ISPC build
+RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/Kitware/CMake/releases/download/v3.20.5/cmake-3.20.5-linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.20.5-linux-x86_64.sh --prefix=/opt/cmake --skip-license && \
+    ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm cmake-3.20.5-linux-x86_64.sh
 
 # If you are behind a proxy, you need to configure git.
 RUN if [ -v "$http_proxy" ]; then git config --global --add http.proxy "$http_proxy"; fi
@@ -70,11 +75,8 @@ ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
 FROM llvm_build_step2 AS ispc_build
 ARG LLVM_VERSION
 
-# ISPC builds in C++17 mode and will fail without modern libstdc++
-# Also install regular ISPC dependencies
-RUN add-apt-repository ppa:ubuntu-toolchain-r/test -y && apt-get -y update && \
-    apt-get --no-install-recommends install -y libstdc++-9-dev && \
-    apt-get --no-install-recommends install -y m4 bison flex libc6-dev-i386 && \
+# Install regular ISPC dependencies
+RUN apt-get -y update && apt-get --no-install-recommends install -y m4 bison flex libc6-dev-i386 && \
     rm -rf /var/lib/apt/lists/*
 
 # Configure ISPC build

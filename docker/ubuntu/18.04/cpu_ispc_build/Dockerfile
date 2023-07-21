@@ -23,8 +23,14 @@ RUN uname -a
 RUN apt-get -y update && apt-get --no-install-recommends install -y wget build-essential gcc g++ git python3-dev ncurses-dev libtinfo-dev ca-certificates libtbb-dev && \
     rm -rf /var/lib/apt/lists/*
 
-# Download and install required version of cmake (3.14 for x86, 3.20 for aarch64, as earlier versions are not available as binary distribution) for ISPC build
-RUN if [[ $(uname -m) =~ "x86" ]]; then export CMAKE_URL="https://cmake.org/files/v3.14/cmake-3.14.0-Linux-x86_64.sh"; else export CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v3.20.3/cmake-3.20.3-linux-aarch64.sh"; fi && \
+# ISPC and LLVM starting 16.0 build in C++17 mode and will fail without modern libstdc++
+RUN apt-get -y update && apt-get --no-install-recommends install -y software-properties-common && \
+    add-apt-repository ppa:ubuntu-toolchain-r/test -y && apt-get -y update && \
+    apt-get --no-install-recommends install -y libstdc++-9-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# Download and install required version of CMake. CMake 3.20 is required starting from LLVM 16.0.
+RUN if [[ $(uname -m) =~ "x86" ]]; then export CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v3.20.5/cmake-3.20.5-linux-x86_64.sh"; else export CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v3.20.5/cmake-3.20.5-linux-aarch64.sh"; fi && \
     wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 $CMAKE_URL && mkdir /opt/cmake && sh cmake-*.sh --prefix=/opt/cmake --skip-license && \
     ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm -rf cmake-*.sh
 
@@ -69,13 +75,9 @@ ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
 FROM llvm_build_step2 AS ispc_build
 ARG LLVM_VERSION
 
-# ISPC builds in C++17 mode and will fail without modern libstdc++
-# Also install regular ISPC dependencies
+# Install regular ISPC dependencies
 RUN if [[ $(uname -m) =~ "x86" ]]; then export CROSS_LIBS="libc6-dev-i386=2.27-3ubuntu*"; else export CROSS_LIBS="libc6-dev-armhf-cross=2.27-3ubuntu*"; fi && \
-    apt-get -y update && apt-get --no-install-recommends install -y software-properties-common && \
-    add-apt-repository ppa:ubuntu-toolchain-r/test -y && apt-get -y update && \
-    apt-get --no-install-recommends install -y libstdc++-9-dev && \
-    apt-get --no-install-recommends install -y m4 bison flex $CROSS_LIBS && \
+    apt-get -y update && apt-get --no-install-recommends install -y m4 bison flex $CROSS_LIBS && \
     rm -rf /var/lib/apt/lists/*
 
 # Configure ISPC build
