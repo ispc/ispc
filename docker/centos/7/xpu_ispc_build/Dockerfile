@@ -20,7 +20,7 @@ ARG SPIRV_TRANSLATOR_COMMIT_SHA="855eb2798599356631bce6e6e4971c312e84b756"
 # Packages required to build ISPC and Clang.
 RUN yum -y update; yum -y install centos-release-scl epel-release; yum clean all
 RUN yum install -y vim wget yum-utils gcc gcc-c++ git python3 m4 bison flex patch make && \
-    yum install -y glibc-devel.x86_64 glibc-devel.i686 xz devtoolset-7 && \
+    yum install -y glibc-devel.x86_64 glibc-devel.i686 xz devtoolset-8 && \
     yum install -y libtool autopoint gettext-devel texinfo tbb-devel help2man && \
     yum clean -y all
 
@@ -28,9 +28,9 @@ RUN yum install -y vim wget yum-utils gcc gcc-c++ git python3 m4 bison flex patc
 RUN yum install -y libstdc++-static && \
     yum clean -y all
 
-# Download and install required version of cmake (3.14) for ISPC build
-RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://cmake.org/files/v3.14/cmake-3.14.0-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.14.0-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && \
-    ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm cmake-3.14.0-Linux-x86_64.sh
+# Download and install required version of CMake. CMake 3.20 is required starting from LLVM 16.0.
+RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/Kitware/CMake/releases/download/v3.20.5/cmake-3.20.5-linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.20.5-linux-x86_64.sh --prefix=/opt/cmake --skip-license && \
+    ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm cmake-3.20.5-linux-x86_64.sh
 
 # If you are behind a proxy, you need to configure git.
 RUN if [ -v "$http_proxy" ]; then git config --global --add http.proxy "$http_proxy"; fi
@@ -60,7 +60,7 @@ RUN git checkout $SHA
 # i.e. if clang was built by gcc, you may need to use gcc to build ispc (i.e. run "make gcc"),
 # or better do clang selfbuild and use it for ispc build as well (i.e. just "make").
 # "rm" are just to keep docker image small.
-RUN source /opt/rh/devtoolset-7/enable && \
+RUN source /opt/rh/devtoolset-8/enable && \
     ./alloy.py -b --version="$LLVM_VERSION" --selfbuild --llvm-disable-assertions --full-checkout && \
     rm -rf "$LLVM_HOME"/build-"$LLVM_VERSION" "$LLVM_HOME"/llvm-"$LLVM_VERSION" "$LLVM_HOME"/bin-"$LLVM_VERSION"_temp "$LLVM_HOME"/build-"$LLVM_VERSION"_temp
 
