@@ -86,6 +86,7 @@ extern char *yytext;
 
 void yyerror(const char *s);
 
+void lCleanUpyylvalStringVal();
 static int lYYTNameErr(char *yyres, const char *yystr);
 
 static void lSuggestBuiltinAlternates();
@@ -275,7 +276,7 @@ string_constant
         p_str_cst->append(*yylval.stringVal);
         $$ = p_str_cst;
         // Allocated in lStringConst
-        delete yylval.stringVal;
+        lCleanUpyylvalStringVal();
     }
     ;
 
@@ -298,7 +299,7 @@ primary_expression
             std::string alts = lGetAlternates(alternates);
             Error(@1, "Undeclared symbol \"%s\".%s", name, alts.c_str());
         }
-        delete yylval.stringVal;
+        lCleanUpyylvalStringVal();
     }
     | TOKEN_INT8_CONSTANT {
         $$ = new ConstExpr(AtomicType::UniformInt8->GetAsConstType(),
@@ -334,7 +335,7 @@ primary_expression
     }
     | TOKEN_FLOAT16_CONSTANT {
          std::string sval = *(yylval.stringVal);
-         delete yylval.stringVal;
+         lCleanUpyylvalStringVal();
          llvm::Type *hType = llvm::Type::getHalfTy(*g->ctx);
          const llvm::fltSemantics &FS = hType->getFltSemantics();
          llvm::APFloat f16(FS, sval);
@@ -489,12 +490,12 @@ postfix_expression
     | postfix_expression '.' TOKEN_IDENTIFIER
       {
           $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, false);
-          delete yylval.stringVal;
+          lCleanUpyylvalStringVal();
       }
     | postfix_expression TOKEN_PTR_OP TOKEN_IDENTIFIER
       {
           $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, true);
-          delete yylval.stringVal;
+          lCleanUpyylvalStringVal();
       }
     | postfix_expression TOKEN_INC_OP
       { $$ = new UnaryExpr(UnaryExpr::PostInc, $1, Union(@1,@2)); }
@@ -863,7 +864,7 @@ declspec_item
         p->first = *(yylval.stringVal);
         p->second = @1;
         $$ = p;
-        delete yylval.stringVal;
+        lCleanUpyylvalStringVal();
     }
     ;
 
@@ -1038,7 +1039,7 @@ type_specifier
     {
         const Type *t = m->symbolTable->LookupType(yytext);
         $$ = t;
-        delete yylval.stringVal;
+        lCleanUpyylvalStringVal();
     }
     | struct_or_union_specifier { $$ = $1; }
     | enum_specifier { $$ = $1; }
@@ -1093,12 +1094,12 @@ struct_or_union_name
     : TOKEN_IDENTIFIER
     {
         $$ = strdup(yytext);
-        delete yylval.stringVal;
+        lCleanUpyylvalStringVal();
     }
     | TOKEN_TYPE_NAME
     {
         $$ = strdup(yytext);
-        delete yylval.stringVal;
+        lCleanUpyylvalStringVal();
     }
     ;
 
@@ -1342,7 +1343,7 @@ enum_identifier
     : TOKEN_IDENTIFIER
       {
           $$ = strdup(yytext);
-          delete yylval.stringVal;
+          lCleanUpyylvalStringVal();
       }
     ;
 
@@ -1517,7 +1518,7 @@ direct_declarator
           Declarator *d = new Declarator(DK_BASE, @1);
           d->name = yytext;
           $$ = d;
-          delete yylval.stringVal;
+          lCleanUpyylvalStringVal();
       }
     // For the purpose of declaration, template_name token is no different from identifier token,
     // it needs to be processed in the same way. Semantic checks will be done later.
@@ -1526,7 +1527,7 @@ direct_declarator
           Declarator *d = new Declarator(DK_BASE, @1);
           d->name = yytext;
           $$ = d;
-          delete yylval.stringVal;
+          lCleanUpyylvalStringVal();
       }
     | '(' declarator ')'
     {
@@ -2002,7 +2003,7 @@ foreach_identifier
     : TOKEN_IDENTIFIER
     {
         $$ = new Symbol(yytext, @1, AtomicType::VaryingInt32->GetAsConstType());
-        delete yylval.stringVal;
+        lCleanUpyylvalStringVal();
     }
     ;
 
@@ -2014,7 +2015,7 @@ foreach_active_identifier
     : TOKEN_IDENTIFIER
     {
         $$ = new Symbol(yytext, @1, AtomicType::UniformInt64->GetAsConstType());
-        delete yylval.stringVal;
+        lCleanUpyylvalStringVal();
     }
     ;
 
@@ -2075,7 +2076,7 @@ foreach_unique_identifier
     : TOKEN_IDENTIFIER
       {
           $$ = strdup(yylval.stringVal->c_str());
-          delete yylval.stringVal;
+          lCleanUpyylvalStringVal();
       }
     ;
 
@@ -2212,7 +2213,7 @@ goto_identifier
     : TOKEN_IDENTIFIER
       {
           $$ = strdup(yylval.stringVal->c_str());
-          delete yylval.stringVal;
+          lCleanUpyylvalStringVal();
       }
     ;
 
@@ -2345,12 +2346,12 @@ template_type_parameter
     : TOKEN_TYPENAME TOKEN_IDENTIFIER
       {
           $$ = new TemplateTypeParmType(*$<stringVal>2, Variability::VarType::Unbound, false, Union(@1, @2));
-          delete yylval.stringVal;
+          lCleanUpyylvalStringVal();
       }
     | TOKEN_TYPENAME TOKEN_IDENTIFIER '=' type_specifier
       {
           $$ = new TemplateTypeParmType(*$<stringVal>2, Variability::VarType::Unbound, false, Union(@1, @2));
-          delete yylval.stringVal;
+          lCleanUpyylvalStringVal();
           // TODO: implement
           Error(@4, "Default values for template type parameters are not yet supported.");
       }
@@ -2360,7 +2361,7 @@ template_int_parameter
     : TOKEN_INT TOKEN_IDENTIFIER
       {
           $$ = nullptr;
-          delete yylval.stringVal;
+          lCleanUpyylvalStringVal();
           // TODO: implement
           Error(Union(@1, @2), "Non-type template paramters are not yet supported.");
       }
@@ -2468,7 +2469,7 @@ template_identifier
     : TOKEN_TEMPLATE_NAME
     {
         $$ = strdup(yytext);
-        delete yylval.stringVal;
+        lCleanUpyylvalStringVal();
     }
     ;
 
@@ -2553,12 +2554,19 @@ template_function_specialization
 
 
 void yyerror(const char *s) {
+    lCleanUpyylvalStringVal();
     if (strlen(yytext) == 0)
         Error(yylloc, "Premature end of file: %s.", s);
     else
         Error(yylloc, "%s.", s);
 }
 
+void lCleanUpyylvalStringVal() {
+    if (yylval.stringVal) {
+        delete yylval.stringVal;
+        yylval.stringVal = nullptr;
+    }
+}
 
 static int
 lYYTNameErr (char *yyres, const char *yystr)
