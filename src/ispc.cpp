@@ -1732,6 +1732,8 @@ Target::~Target() {
         delete m_dataLayout;
     if (m_tf_attributes)
         delete m_tf_attributes;
+    if (m_targetMachine)
+        delete m_targetMachine;
 }
 
 bool Target::checkIntrinsticSupport(llvm::StringRef name, SourcePos pos) {
