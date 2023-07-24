@@ -2446,6 +2446,8 @@ template_declaration
 template_function_declaration_or_definition
     : template_declaration ';'
       {
+          // deallocate TemplateSymbol created in template_declaration
+          delete $1;
           // End templates parameters definition scope
           m->symbolTable->PopScope();
       }
@@ -2455,6 +2457,8 @@ template_function_declaration_or_definition
               Stmt *code = $2;
               if (code == nullptr) code = new StmtList(@2);
               m->AddFunctionTemplateDefinition($1->templateParms, $1->name, $1->type, code);
+              // deallocate TemplateSymbol created in template_declaration
+              delete $1;
           }
 
           // End templates parameters definition scope
