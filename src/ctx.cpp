@@ -3779,6 +3779,14 @@ CFInfo *FunctionEmitContext::popCFState() {
         switchExpr = ci->savedSwitchExpr;
         switchFallThroughMaskAddressInfo = ci->savedSwitchFallThroughMaskAddressInfo;
         defaultBlock = ci->savedDefaultBlock;
+        if (caseBlocks) {
+            // Allocated in FunctionEmitContext::SwitchInst
+            delete caseBlocks;
+        }
+        if (nextBlocks) {
+            // Allocated in FunctionEmitContext::SwitchInst
+            delete nextBlocks;
+        }
         caseBlocks = ci->savedCaseBlocks;
         nextBlocks = ci->savedNextBlocks;
         switchConditionWasUniform = ci->savedSwitchConditionWasUniform;
