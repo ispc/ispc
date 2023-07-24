@@ -325,7 +325,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        .github/workflows/scripts/install-llvm-deps-mac.sh
+        .github/workflows/scripts/install-llvm-deps-mac-hosted.sh
 
     - name: Check environment
       run: |
@@ -360,7 +360,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        .github/workflows/scripts/install-llvm-deps-mac.sh
+        .github/workflows/scripts/install-llvm-deps-mac-hosted.sh
 
     - name: Check environment
       run: |
