@@ -3132,7 +3132,6 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             target = targets[0];
         }
         g->target = new Target(arch, cpu, target, outputFlags.isPIC(), outputFlags.getMCModel(), g->printTarget);
-        llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
         if (!g->target->isValid())
             return 1;
 
@@ -3202,8 +3201,6 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         delete g->target;
         g->target = nullptr;
 
-        delete targetMachine;
-
         return errorCount > 0;
     } else {
         if (IsStdin(srcFile)) {
@@ -3230,9 +3227,8 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         // the target ISA appended to them.
         g->mangleFunctionsWithTarget = true;
 
-        llvm::TargetMachine *targetMachines[Target::NUM_ISAS];
-        for (int i = 0; i < Target::NUM_ISAS; ++i)
-            targetMachines[i] = nullptr;
+        // Array initialized with all false
+        bool compiledTargets[Target::NUM_ISAS] = {};
 
         llvm::Module *dispatchModule = nullptr;
 
@@ -3269,13 +3265,13 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             // Issue an error if we've already compiled to a variant of
             // this target ISA.  (It doesn't make sense to compile to both
             // avx and avx-x2, for example.)
-            if (targetMachines[g->target->getISA()] != nullptr ||
-                (targetMachines[Target::SSE41] != nullptr && g->target->getISA() == Target::SSE42) ||
-                (targetMachines[Target::SSE42] != nullptr && g->target->getISA() == Target::SSE41)) {
+            auto targetISA = g->target->getISA();
+            if (compiledTargets[targetISA] || (compiledTargets[Target::SSE41] && targetISA == Target::SSE42) ||
+                (compiledTargets[Target::SSE42] && targetISA == Target::SSE41)) {
                 Error(SourcePos(), "Can't compile to multiple variants of %s target!\n", g->target->GetISAString());
                 return 1;
             }
-            targetMachines[g->target->getISA()] = g->target->GetTargetMachine();
+            compiledTargets[targetISA] = true;
 
             m = new Module(srcFile);
             modules.push_back(m);
@@ -3344,25 +3340,22 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             // we generate the dispatch module's functions...
         }
 
-        // Find the first non-nullptr target machine from the targets we
+        // Find the first initialized target machine from the targets we
         // compiled to above.  We'll use this as the target machine for
         // compiling the dispatch module--this is safe in that it is the
         // least-common-denominator of all of the targets we compiled to.
-        llvm::TargetMachine *firstTargetMachine = nullptr;
-        int i = 0;
-        const char *firstISA = "";
-        ISPCTarget firstTarget = ISPCTarget::none;
-        while (i < Target::NUM_ISAS && firstTargetMachine == nullptr) {
-            firstISA = Target::ISAToTargetString((Target::ISA)i);
-            firstTarget = ParseISPCTarget(firstISA);
-            firstTargetMachine = targetMachines[i++];
+        int firstTargetISA = 0;
+        while (!compiledTargets[firstTargetISA]) {
+            firstTargetISA++;
         }
+        const char *firstISA = Target::ISAToTargetString((Target::ISA)firstTargetISA);
+        ISPCTarget firstTarget = ParseISPCTarget(firstISA);
         Assert(strcmp(firstISA, "") != 0);
         Assert(firstTarget != ISPCTarget::none);
-        Assert(firstTargetMachine != nullptr);
 
         g->target = new Target(arch, cpu, firstTarget, outputFlags.isPIC(), outputFlags.getMCModel(), false);
-        llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
+        llvm::TargetMachine *firstTargetMachine = g->target->GetTargetMachine();
+        Assert(firstTargetMachine);
         if (!g->target->isValid()) {
             return 1;
         }
@@ -3421,13 +3414,6 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
 
         delete g->target;
         g->target = nullptr;
-
-        for (int i = 0; i < Target::NUM_ISAS; ++i) {
-            if (targetMachines[i] != nullptr)
-                delete targetMachines[i];
-        }
-
-        delete targetMachine;
 
         return errorCount > 0;
     }

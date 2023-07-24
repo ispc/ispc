@@ -352,10 +352,7 @@ class Target {
     /** llvm Target object representing this target. */
     const llvm::Target *m_target;
 
-    /** llvm TargetMachine.
-        Note that it's not destroyed during Target destruction, as
-        Module::CompileAndOutput() uses TargetMachines after Target is destroyed.
-        This needs to be changed. */
+    /** llvm TargetMachine. Deconstrcted in ~Target. */
     llvm::TargetMachine *m_targetMachine;
 
     /** This is deconstructed in ~Target. */
