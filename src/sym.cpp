@@ -48,6 +48,14 @@ SymbolTable::~SymbolTable() {
     for (auto p : freeSymbolMaps) {
         delete p;
     }
+
+    for (auto const &x : functionTemplates) {
+        for (auto *p : x.second) {
+            if (p) {
+                delete p;
+            }
+        }
+    }
 }
 
 void SymbolTable::PushScope() {
