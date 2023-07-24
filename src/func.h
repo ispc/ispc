@@ -53,7 +53,7 @@ class Function {
 };
 
 // A helper class to manage template parameters list.
-class TemplateParms {
+class TemplateParms : public Traceable {
   public:
     TemplateParms();
     void Add(const TemplateTypeParmType *);
