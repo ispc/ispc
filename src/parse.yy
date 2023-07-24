@@ -87,6 +87,7 @@ extern char *yytext;
 void yyerror(const char *s);
 
 void lCleanUpyylvalStringVal();
+void lFreeSimpleTemplateID(void *p);
 static int lYYTNameErr(char *yyres, const char *yystr);
 
 static void lSuggestBuiltinAlternates();
@@ -550,6 +551,9 @@ funcall_expression
               Error(@1, "No matching template functions were declared.");
               $$ = nullptr;
           }
+
+          // deallocate SimpleTemplateIDType returned by simple_template_id
+          lFreeSimpleTemplateID($1);
       }
     | simple_template_id '(' argument_expression_list ')'
       {
@@ -567,9 +571,17 @@ funcall_expression
               Error(@1, "No matching template functions were declared.");
               $$ = nullptr;
           }
+
+          // deallocate SimpleTemplateIDType returned by simple_template_id
+          lFreeSimpleTemplateID($1);
       }
     | simple_template_id '(' error ')'
-      { $$ = nullptr; }
+      {
+          $$ = nullptr;
+
+          // deallocate SimpleTemplateIDType returned by simple_template_id
+          lFreeSimpleTemplateID($1);
+      }
     ;
 
 argument_expression_list
@@ -2520,6 +2532,9 @@ template_function_instantiation
           const FunctionType *ftype = CastType<FunctionType>(d->type);
 
           m->AddFunctionTemplateInstantiation($3->first->name, *$3->second, ftype, Union(@1, @6));
+
+          // deallocate SimpleTemplateIDType returned by simple_template_id
+          lFreeSimpleTemplateID(simpleTemplID);
       }
     | TOKEN_TEMPLATE declaration_specifiers simple_template_id '(' ')' ';'
       {
@@ -2533,8 +2548,15 @@ template_function_instantiation
           const FunctionType *ftype = CastType<FunctionType>(d->type);
 
           m->AddFunctionTemplateInstantiation($3->first->name, *$3->second, ftype, Union(@1, @5));
+
+          // deallocate SimpleTemplateIDType returned by simple_template_id
+          lFreeSimpleTemplateID(simpleTemplID);
       }
     | TOKEN_TEMPLATE declaration_specifiers simple_template_id '(' error ')' ';'
+      {
+          // deallocate SimpleTemplateIDType returned by simple_template_id
+          lFreeSimpleTemplateID($3);
+      }
     ;
 
 // Template specialization, a-la
@@ -2565,6 +2587,17 @@ void lCleanUpyylvalStringVal() {
     if (yylval.stringVal) {
         delete yylval.stringVal;
         yylval.stringVal = nullptr;
+    }
+}
+
+void lFreeSimpleTemplateID(void *p) {
+    SimpleTemplateIDType *sid = (SimpleTemplateIDType*) p;
+    std::vector<std::pair<const Type *, SourcePos>> *templArgs = sid->second;
+    if (templArgs) {
+        delete templArgs;
+    }
+    if (sid) {
+        delete sid;
     }
 }
 
