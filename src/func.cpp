@@ -846,6 +846,19 @@ FunctionTemplate::FunctionTemplate(TemplateSymbol *s, Stmt *c) : sym(s), code(c)
     }
 }
 
+FunctionTemplate::~FunctionTemplate() {
+    for (const auto &inst : instantiations) {
+        Function *func = const_cast<Function *>(inst.second->parentFunction);
+        if (func) {
+            delete func;
+        }
+        TemplateArgs *templArgs = const_cast<TemplateArgs *>(inst.first);
+        if (templArgs) {
+            delete templArgs;
+        }
+    }
+}
+
 std::string FunctionTemplate::GetName() const {
     Assert(sym);
     return sym->name;

@@ -76,6 +76,7 @@ class TemplateArgs {
 class FunctionTemplate {
   public:
     FunctionTemplate(TemplateSymbol *sym, Stmt *code);
+    ~FunctionTemplate();
     std::string GetName() const;
     const TemplateParms *GetTemplateParms() const;
     const FunctionType *GetFunctionType() const;
