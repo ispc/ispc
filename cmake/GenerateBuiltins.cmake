@@ -267,7 +267,7 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
         endif()
         add_custom_command(
             OUTPUT ${output}
-            COMMAND ${EMCC_EXECUTABLE} -DWASM -s WASM_OBJECT_FILES=0 ${emcc_flags} ${LLVM_TOOLS_OPAQUE_FLAGS} -I${CMAKE_SOURCE_DIR} -c ${inputFilePath} --std=gnu++17 -emit-llvm -c -o -
+            COMMAND ${EMCC_EXECUTABLE} -DWASM -s WASM_OBJECT_FILES=0 ${emcc_flags} ${ISPC_OPAQUE_FLAGS} -I${CMAKE_SOURCE_DIR} -c ${inputFilePath} --std=gnu++17 -emit-llvm -c -o -
                 | (\"${LLVM_DIS_EXECUTABLE}\" ${LLVM_TOOLS_OPAQUE_FLAGS} - || echo "builtins-c-*.cpp compile error")
                 | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --type=builtins-c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE} --opaque_flags="${LLVM_TOOLS_OPAQUE_FLAGS}"
                 > ${output}
