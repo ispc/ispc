@@ -1142,6 +1142,7 @@ int main(int Argc, char *Argv[]) {
     }
     for (auto target : targets) {
         if (target == ISPCTarget::wasm_i32x4) {
+            Assert(targets.size() == 1 && "wasm supports only one target: i32x4");
             g->target_os = TargetOS::web;
             if (arch == Arch::none) {
                 arch = Arch::wasm32;
