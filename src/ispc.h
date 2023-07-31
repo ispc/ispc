@@ -219,6 +219,12 @@ class Target {
 
     ~Target();
 
+    // We don't copy Target objects at the moment. If we will then proper
+    // implementations are needed considering the ownership of heap-allocated
+    // fields like m_dataLayout.
+    Target(const Target &) = delete;
+    Target &operator=(const Target &) = delete;
+
     /** Check if LLVM intrinsic is supported for the current target. */
     bool checkIntrinsticSupport(llvm::StringRef name, SourcePos pos);
 

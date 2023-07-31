@@ -184,6 +184,11 @@ struct StructDeclaration : public Traceable {
     StructDeclaration(const Type *t, std::vector<Declarator *> *d) : type(t), declarators(d) {}
     ~StructDeclaration() { delete declarators; }
 
+    // We don't copy these objects at the moment. If we will then proper
+    // implementations are needed considering the ownership of declarators.
+    StructDeclaration(const StructDeclaration &) = delete;
+    StructDeclaration &operator=(const StructDeclaration &) = delete;
+
     const Type *type;
     std::vector<Declarator *> *declarators;
 };
