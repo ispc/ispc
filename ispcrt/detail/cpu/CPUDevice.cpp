@@ -136,7 +136,9 @@ struct Module : public ispcrt::base::Module {
 #endif
             void *lib = nullptr;
 #if defined _WIN32
-            lib = LoadLibrary((m_file + ext).c_str());
+            // Removes CWD from the search path to reduce the risk of DLL injection.
+            SetDllDirectory("");
+            lib = LoadLibraryEx((m_file + ext).c_str(), NULL, 0);
 #else
             lib = dlopen(("lib" + m_file + ext).c_str(), RTLD_LAZY | RTLD_LOCAL);
 #endif
