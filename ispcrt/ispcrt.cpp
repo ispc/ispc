@@ -129,7 +129,9 @@ static OBJECT_T &referenceFromHandle(HANDLE_T handle) {
 // OS agnostic function to dynamically load a shared library.
 void *dyn_load_lib(const char *name, const char *name_major_version, const char *name_full_version) {
 #if defined(_WIN32) || defined(_WIN64)
-    return LoadLibrary(name);
+    // Removes CWD from the search path to reduce the risk of DLL injection.
+    SetDllDirectory("");
+    return LoadLibraryEx(name, NULL, 0);
 #else
     // Try to load a device library starting from the most specific name down to more general one.
     void *handle = dlopen(name_full_version, RTLD_NOW | RTLD_LOCAL);
