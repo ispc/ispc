@@ -46,6 +46,12 @@ class Module {
 
     ~Module();
 
+    // We don't copy Module objects at the moment. If we will then proper
+    // implementations are needed considering the ownership of heap-allocated
+    // fields like symbolTable.
+    Module(const Module &) = delete;
+    Module &operator=(const Module &) = delete;
+
     /** Compiles the source file passed to the Module constructor, adding
         its global variables and functions to both the llvm::Module and
         SymbolTable.  Returns the number of errors during compilation.  */
@@ -119,6 +125,15 @@ class Module {
         OutputFlags(OutputFlags &o)
             : pic(o.pic), flatDeps(o.flatDeps), makeRuleDeps(o.makeRuleDeps), depsToStdout(o.depsToStdout),
               mcModel(o.mcModel) {}
+
+        OutputFlags &operator=(const OutputFlags &o) {
+            pic = o.pic;
+            flatDeps = o.flatDeps;
+            makeRuleDeps = o.makeRuleDeps;
+            depsToStdout = o.depsToStdout;
+            mcModel = o.mcModel;
+            return *this;
+        };
 
         void setPIC(bool v = true) { pic = v; }
         bool isPIC() const { return pic; }
