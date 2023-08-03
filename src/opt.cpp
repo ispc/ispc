@@ -141,7 +141,11 @@ class DebugModulePassManager {
         pb.registerLoopAnalyses(lam);
         pb.crossRegisterProxies(lam, fam, cgam, mam);
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_17_0
+        SI.registerCallbacks(PIC, &mam);
+#else
         SI.registerCallbacks(PIC, &fam);
+#endif
 
         // Register all the analysis passes
         fam.registerPass([&] { return targetMachine->getTargetIRAnalysis(); });
