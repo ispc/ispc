@@ -1,4 +1,4 @@
-// This test checks that swizzle operation does not cause any compiler 
+// This test checks that swizzle operation does not cause any compiler
 // internal error when it is applied to binary expression.
 // Swizzle operation is implemented through memory using insert instructions.
 // The test also checks that inserts are transformed to shuffles during
@@ -82,7 +82,7 @@ unmasked vec4 test_shuffle(uniform vec4 offs0) {
 // CHECK_SSE-COUNT-3: shufps {{.*#+}}
 
 // CHECK_AVX: test_shuffle
-// CHECK_AVX-COUNT-3: vpermilps {{.*#+}}
+// CHECK_AVX-COUNT-3: {{(vpermilps|vshufps)}} {{.*#+}}
 
     return (uv.xyxy + offs0).xwwz;
 }
