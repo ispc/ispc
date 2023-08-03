@@ -404,6 +404,9 @@ class FunctionEmitContext {
         a VectorType-based operand. */
     llvm::Value *NotOperator(llvm::Value *v, const llvm::Twine &name = "");
 
+    /** Emit FNeg instruction. */
+    llvm::Value *FNegInst(llvm::Value *v, const llvm::Twine &name = "");
+
     /** Emit a comparison instruction.  If the operands are VectorTypes,
         then a value for the corresponding boolean VectorType is
         returned. */

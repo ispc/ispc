@@ -1685,6 +1685,17 @@ llvm::Value *FunctionEmitContext::NotOperator(llvm::Value *v, const llvm::Twine 
     }
 }
 
+llvm::Value *FunctionEmitContext::FNegInst(llvm::Value *v, const llvm::Twine &name) {
+    if (v == nullptr) {
+        AssertPos(currentPos, m->errorCount > 0);
+        return nullptr;
+    }
+
+    llvm::Instruction *fneg = llvm::UnaryOperator::CreateFNeg(v, name.isTriviallyEmpty() ? "fneg" : name, bblock);
+    AddDebugPos(fneg);
+    return fneg;
+}
+
 // Given the llvm Type that represents an ispc VectorType, return an
 // equally-shaped type with boolean elements.  (This is the type that will
 // be returned from CmpInst with ispc VectorTypes).
