@@ -68,6 +68,7 @@
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Linker/Linker.h>
 #include <llvm/PassRegistry.h>
+#include <llvm/Passes/PassBuilder.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/DynamicLibrary.h>
 #include <llvm/Support/FileUtilities.h>
@@ -83,6 +84,7 @@
 #include <llvm/Support/Host.h>
 #endif
 #include <llvm/Transforms/IPO.h>
+#include <llvm/Transforms/IPO/GlobalDCE.h>
 #include <llvm/Transforms/Utils/ValueMapper.h>
 
 #ifdef ISPC_XE_ENABLED
@@ -3038,10 +3040,13 @@ static void lEmitDispatchModule(llvm::Module *module, std::map<std::string, Func
 
     // Do some rudimentary cleanup of the final result and make sure that
     // the module is all ok.
-    llvm::legacy::PassManager optPM;
-    optPM.add(llvm::createGlobalDCEPass());
-    optPM.add(llvm::createVerifierPass());
-    optPM.run(*module);
+    llvm::ModulePassManager mpm;
+    llvm::ModuleAnalysisManager mam;
+    llvm::PassBuilder pb = llvm::PassBuilder();
+    pb.registerModuleAnalyses(mam);
+    mpm.addPass(llvm::GlobalDCEPass());
+    mpm.addPass(llvm::VerifierPass());
+    mpm.run(*module, mam);
 }
 
 // Determines if two types are compatible.
