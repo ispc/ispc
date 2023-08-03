@@ -4,53 +4,34 @@
 // The test also checks that inserts are transformed to shuffles during
 // optimization when vector size equals number of program instances.
 
-// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=sse2-i32x4 -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
-// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=sse2-i32x8 -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
-// RUN: %{ispc}  %s --emit-asm -h %t.h --target=sse2-i32x4 -o - | FileCheck %s -check-prefix=CHECK_SSE
+// RUN: %{ispc}  %s --emit-llvm-text -h %t.h --nostdlib --target=sse2-i32x4    -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-llvm-text -h %t.h --nostdlib --target=sse2-i32x8    -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-asm       -h %t.h --nostdlib --target=sse2-i32x4    -o - | FileCheck %s -check-prefix=CHECK_SSE
 
-// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=sse4-i32x4 -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
-// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=sse4-i32x8 -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
-// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=sse4-i16x8 -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
-// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=sse4-i8x16 -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
-// RUN: %{ispc}  %s --emit-asm -h %t.h --target=sse4-i32x4 -o - | FileCheck %s -check-prefix=CHECK_SSE
+// RUN: %{ispc}  %s --emit-llvm-text -h %t.h --nostdlib --target=sse4-i32x4    -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-llvm-text -h %t.h --nostdlib --target=sse4-i32x8    -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-llvm-text -h %t.h --nostdlib --target=sse4-i16x8    -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-llvm-text -h %t.h --nostdlib --target=sse4-i8x16    -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-asm       -h %t.h --nostdlib --target=sse4-i32x4    -o - | FileCheck %s -check-prefix=CHECK_SSE
 
-// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=sse4.1-i32x4 -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
-// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=sse4.1-i32x8 -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
-// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=sse4.1-i16x8 -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
-// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=sse4.1-i8x16 -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
-// RUN: %{ispc}  %s --emit-asm -h %t.h --target=sse4.1-i32x4 -o - | FileCheck %s -check-prefix=CHECK_SSE
+// RUN: %{ispc}  %s --emit-llvm-text -h %t.h --nostdlib --target=sse4.1-i32x4  -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-llvm-text -h %t.h --nostdlib --target=sse4.1-i32x8  -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-llvm-text -h %t.h --nostdlib --target=sse4.1-i16x8  -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-llvm-text -h %t.h --nostdlib --target=sse4.1-i8x16  -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-asm       -h %t.h --nostdlib --target=sse4.1-i32x4  -o - | FileCheck %s -check-prefix=CHECK_SSE
 
-// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=avx1-i32x4 -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
-// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=avx1-i32x8 -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
-// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=avx1-i32x16 -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
-// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=avx1-i64x4 -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
-// RUN: %{ispc}  %s --emit-asm -h %t.h --target=avx1-i32x4 -o - | FileCheck %s -check-prefix=CHECK_AVX
+// RUN: %{ispc}  %s --emit-llvm-text -h %t.h --nostdlib --target=avx1-i32x4    -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-llvm-text -h %t.h --nostdlib --target=avx1-i32x8    -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-llvm-text -h %t.h --nostdlib --target=avx1-i32x16   -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-llvm-text -h %t.h --nostdlib --target=avx1-i64x4    -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-asm       -h %t.h --nostdlib --target=avx1-i32x4    -o - | FileCheck %s -check-prefix=CHECK_AVX
 
-// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=avx2-i32x8 -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
-// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=avx2-i32x16 -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
-// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=avx2-i64x4 -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-llvm-text -h %t.h --nostdlib --target=avx2-i32x8    -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-llvm-text -h %t.h --nostdlib --target=avx2-i32x16   -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-llvm-text -h %t.h --nostdlib --target=avx2-i64x4    -o - | FileCheck %s
 
-// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=avx512knl-x16 -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
-// RUN: %{ispc}  %s --emit-llvm -h %t.h --target=avx512skx-x16 -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-llvm-text -h %t.h --nostdlib --target=avx512knl-x16 -o - | FileCheck %s
+// RUN: %{ispc}  %s --emit-llvm-text -h %t.h --nostdlib --target=avx512skx-x16 -o - | FileCheck %s
 
 // REQUIRES: X86_ENABLED
 
