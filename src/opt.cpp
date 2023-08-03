@@ -23,7 +23,6 @@
 #include <stdio.h>
 
 #include <llvm/ADT/SmallSet.h>
-#include <llvm/ADT/Triple.h>
 #include <llvm/Analysis/BasicAliasAnalysis.h>
 #include <llvm/Analysis/ConstantFolding.h>
 #include <llvm/Analysis/GlobalsModRef.h>
@@ -46,6 +45,11 @@
 #include <llvm/Passes/StandardInstrumentations.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_17_0
+#include <llvm/TargetParser/Triple.h>
+#else
+#include <llvm/ADT/Triple.h>
+#endif
 #include <llvm/Transforms/IPO/ArgumentPromotion.h>
 #include <llvm/Transforms/IPO/ConstantMerge.h>
 #include <llvm/Transforms/IPO/DeadArgumentElimination.h>
