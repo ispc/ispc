@@ -2375,7 +2375,7 @@ template_int_parameter
           $$ = nullptr;
           lCleanUpyylvalStringVal();
           // TODO: implement
-          Error(Union(@1, @2), "Non-type template paramters are not yet supported.");
+          Error(Union(@1, @2), "Non-type template parameters are not yet supported.");
       }
     ;
 
