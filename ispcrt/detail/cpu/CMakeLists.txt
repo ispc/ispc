@@ -90,34 +90,22 @@ add_library(${TARGET} SHARED
     CPUDevice.cpp
     $<$<BOOL:${ISPCRT_BUILD_TASKING}>:ispc_tasking.cpp>
     )
+
 target_link_libraries(${TARGET} PRIVATE
     $<$<BOOL:${ISPCRT_BUILD_TASKING}>:ispcrt_tasking>
-    )
-target_compile_definitions(${TARGET} PRIVATE ISPCRT_BUILD_CPU)
-set_target_properties(${TARGET} PROPERTIES
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED ON
     )
 target_include_directories(${TARGET} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>/../../
     )
+target_link_libraries(${TARGET} PRIVATE ispcrt_interface_lib)
 
 set_target_properties(${TARGET} PROPERTIES
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}
     )
+
 install(TARGETS ${TARGET}
-    EXPORT ${TARGET}_Exports
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-      NAMELINK_SKIP
-    # on Windows put the dlls into bin
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    # ... and the import lib into the devel package
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    )
-install(TARGETS ${TARGET}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-      NAMELINK_ONLY
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    )
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)

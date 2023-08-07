@@ -6,7 +6,9 @@
 #
 # ispc CMakeLists.txt
 #
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.14)
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 if (UNIX)
     if (NOT CMAKE_C_COMPILER)
@@ -48,6 +50,14 @@ endif()
 set(PROJECT_NAME ispc)
 set(ISPC_BUILD TRUE)
 project(${PROJECT_NAME})
+
+## Check PIE support
+include(CheckPIESupported)
+check_pie_supported(OUTPUT_VARIABLE CHECK_PIE_OUTPUT LANGUAGES CXX)
+if(NOT CMAKE_CXX_LINK_PIE_SUPPORTED)
+    message(WARNING "PIE is not supported at link time: ${CHECK_PIE_OUTPUT}.\n"
+                    "PIE link options will not be passed to linker.")
+endif()
 
 set(X86_HOST FALSE)
 if (${CMAKE_HOST_SYSTEM_PROCESSOR} MATCHES "amd64|AMD64|86")
@@ -515,7 +525,7 @@ else()
     # Security options
     target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector-strong
                            -fdata-sections -ffunction-sections -fno-delete-null-pointer-checks
-                           -Wformat -Wformat-security -fpie -fwrapv)
+                           -Wformat -Wformat-security -fwrapv)
     # LLVM 14 switches default DWARF version from v4 to v5
     # but gdb < 10.1 can't read DWARF v5.
     # https://discourse.llvm.org/t/gdb-10-1-cant-read-clangs-dwarf-v5/6035

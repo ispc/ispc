@@ -1,7 +1,7 @@
 ## Copyright 2020-2023 Intel Corporation
 ## SPDX-License-Identifier: BSD-3-Clause
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.14)
 
 ## Global setup ##
 
@@ -9,7 +9,7 @@ set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 
 set(CMAKE_C_STANDARD   11)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 
 set(CMAKE_C_STANDARD_REQUIRED   ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -62,8 +62,6 @@ if (WIN32)
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endif()
 
-add_subdirectory(detail)
-
 # RPATH to find devices libraries when run mock tests from the build directory.
 list(APPEND CMAKE_BUILD_RPATH ${CMAKE_BINARY_DIR}/ispcrt/detail/cpu ${CMAKE_BINARY_DIR}/ispcrt/detail/gpu)
 # Set rpath for ispcrt library to find devices libraries.
@@ -79,6 +77,49 @@ else()
   set(CMAKE_INSTALL_RPATH "$ORIGIN")
 endif()
 
+
+# INTERACE library to hold common target properties (compiltation flags).
+add_library(ispcrt_interface_lib INTERFACE)
+
+target_compile_definitions(ispcrt_interface_lib INTERFACE ISPCRT_VERSION_MAJOR="${PROJECT_VERSION_MAJOR}")
+target_compile_definitions(ispcrt_interface_lib INTERFACE ISPCRT_VERSION_FULL="${PROJECT_VERSION}")
+
+if (ISPCRT_BUILD_GPU)
+    target_compile_definitions(ispcrt_interface_lib INTERFACE ISPCRT_BUILD_GPU)
+endif()
+
+if (ISPCRT_BUILD_CPU)
+    target_compile_definitions(ispcrt_interface_lib INTERFACE ISPCRT_BUILD_CPU)
+endif()
+
+if (ISPCRT_BUILD_TASKING)
+    target_compile_definitions(ispcrt_interface_lib INTERFACE ISPCRT_BUILD_TASKING)
+endif()
+
+# Security options
+if (MSVC)
+    # Stack canaries
+    target_compile_options(ispcrt_interface_lib INTERFACE /GS)
+    # Control flow guard
+    target_link_options(ispcrt_interface_lib INTERFACE /GUARD:CF)
+else()
+    # Enable stack protector
+    # NOT to assume that null pointer deference does not exist
+    # Assume that signed overflow always wraps
+    target_compile_options(ispcrt_interface_lib INTERFACE
+                           -fstack-protector-strong -fno-delete-null-pointer-checks -fwrapv)
+    target_compile_definitions(ispcrt_interface_lib INTERFACE "_FORTIFY_SOURCE=2")
+    if (NOT APPLE)
+        target_link_options(ispcrt_interface_lib INTERFACE
+                   "SHELL: -z noexecstack"
+                   "SHELL: -z relro"
+                   "SHELL: -z now")
+    endif()
+endif()
+
+install(TARGETS ispcrt_interface_lib EXPORT ${PROJECT_NAME}_Exports)
+
+
 # Shared library target.
 list(APPEND LIB_LIST ${PROJECT_NAME})
 add_library(${PROJECT_NAME} SHARED
@@ -86,6 +127,11 @@ add_library(${PROJECT_NAME} SHARED
   ${CMAKE_CURRENT_LIST_DIR}/../common/version.rc
 )
 target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_DL_LIBS})
+
+# We need to find level_zero before the first usage that can happen under ISPCRT_BUILD_STATIC
+if (ISPCRT_BUILD_GPU)
+    find_package(level_zero REQUIRED)
+endif()
 
 # Static library target.
 if (ISPCRT_BUILD_STATIC)
@@ -98,54 +144,27 @@ if (ISPCRT_BUILD_STATIC)
       ${CMAKE_CURRENT_LIST_DIR}/../common/version.rc
     )
     target_compile_definitions(${PROJECT_NAME}_static PRIVATE ISPCRT_BUILD_STATIC)
-    target_include_directories(${PROJECT_NAME}_static PUBLIC
-      $<BUILD_INTERFACE:${LEVEL_ZERO_INCLUDE_DIR}>
-    )
+    if (ISPCRT_BUILD_GPU)
+        target_include_directories(${PROJECT_NAME}_static PUBLIC
+          $<BUILD_INTERFACE:${LEVEL_ZERO_INCLUDE_DIR}>
+        )
+    endif()
 endif()
 
 foreach(PRNAME ${LIB_LIST})
-    set_target_properties(${PRNAME} PROPERTIES
-      CXX_STANDARD 17
-      CXX_STANDARD_REQUIRED ON
-    )
-
     target_include_directories(${PRNAME} PUBLIC
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/../common>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>
       $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/ispcrt>
     )
 
-    if (ISPCRT_BUILD_GPU)
-        target_compile_definitions(${PRNAME} PRIVATE ISPCRT_BUILD_GPU)
-    endif()
-
-    if (ISPCRT_BUILD_CPU)
-        target_compile_definitions(${PRNAME} PRIVATE ISPCRT_BUILD_CPU)
-    endif()
-
-    if (ISPCRT_BUILD_TASKING)
-        target_compile_definitions(${PRNAME} PRIVATE ISPCRT_BUILD_TASKING)
-    endif()
-
-    target_compile_definitions(${PRNAME} PRIVATE ISPCRT_VERSION_MAJOR="${PROJECT_VERSION_MAJOR}")
-    target_compile_definitions(${PRNAME} PRIVATE ISPCRT_VERSION_FULL="${PROJECT_VERSION}")
-
-
-    # Security options
-    if (MSVC)
-      # Stack canaries
-      target_compile_options(${PRNAME} PRIVATE /GS)
-      # Control flow guard
-      target_link_options(${PRNAME} PRIVATE /GUARD:CF)
-    elseif (APPLE)
-    else()
-      # Enable stack protector
-      # NOT to assume that null pointer deference does not exist
-      # Assume that signed overflow always wraps
-      target_compile_options(${PRNAME} PRIVATE -fstack-protector-strong -fno-delete-null-pointer-checks -fwrapv)
-    endif()
+    target_link_libraries(${PRNAME} PRIVATE ispcrt_interface_lib)
 
     ## Install targets + exports ##
+    set_target_properties(${PRNAME} PROPERTIES
+        VERSION ${PROJECT_VERSION}
+        SOVERSION ${PROJECT_VERSION_MAJOR}
+        )
 
     install(TARGETS ${PRNAME}
       EXPORT ${PROJECT_NAME}_Exports
@@ -164,6 +183,10 @@ foreach(PRNAME ${LIB_LIST})
       ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
 endforeach()
+
+# Device specifc shared libraries
+add_subdirectory(detail)
+
 
 install(EXPORT ${PROJECT_NAME}_Exports
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}-${PROJECT_VERSION}
