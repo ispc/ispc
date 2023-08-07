@@ -47,7 +47,7 @@ struct PragmaAttributes {
         aType = AttributeType::none;
         unrollType =  Globals::pragmaUnrollType::none;
         count = -1;
-    }    
+    }
     AttributeType aType;
     Globals::pragmaUnrollType unrollType;
     int count;
@@ -95,6 +95,7 @@ static void lSuggestParamListAlternates();
 
 static void lAddDeclaration(DeclSpecs *ds, Declarator *decl);
 static void lAddTemplateDeclaration(TemplateParms *templateParmList, DeclSpecs *ds, Declarator *decl);
+static void lAddTemplateSpecialization(const std::vector<std::pair<const Type *, SourcePos>> &types, DeclSpecs *ds, Declarator *decl);
 static void lAddFunctionParams(Declarator *decl);
 static void lAddMaskToSymbolTable(SourcePos pos);
 static void lAddThreadIndexCountToSymbolTable(SourcePos pos);
@@ -261,7 +262,7 @@ struct ForeachDimension {
 
 %type <constCharPtr> template_identifier
 %type <typeList> template_argument_list
-%type <simpleTemplateID> simple_template_id
+%type <simpleTemplateID> simple_template_id template_function_specialization_declaration
 %type <templateParm> template_type_parameter template_int_parameter template_parameter
 %type <templateParmList> template_parameter_list template_head
 %type <functionTemplateSym> template_declaration
@@ -383,60 +384,60 @@ launch_expression
        }
 
     | TOKEN_LAUNCH '[' assignment_expression ']' postfix_expression '(' argument_expression_list ')'
-      { 
+      {
           ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @5);
           Expr *launchCount[3] = {$3, oneExpr, oneExpr};
           $$ = new FunctionCallExpr($5, $7, Union(@5,@8), true, launchCount);
       }
     | TOKEN_LAUNCH '[' assignment_expression ']' postfix_expression '(' ')'
-      { 
+      {
           ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @5);
           Expr *launchCount[3] = {$3, oneExpr, oneExpr};
           $$ = new FunctionCallExpr($5, new ExprList(Union(@5,@6)), Union(@5,@7), true, launchCount);
       }
 
     | TOKEN_LAUNCH '[' assignment_expression ',' assignment_expression ']' postfix_expression '(' argument_expression_list ')'
-      { 
+      {
           ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @7);
           Expr *launchCount[3] = {$3, $5, oneExpr};
           $$ = new FunctionCallExpr($7, $9, Union(@7,@10), true, launchCount);
       }
     | TOKEN_LAUNCH '[' assignment_expression ',' assignment_expression ']' postfix_expression '(' ')'
-      { 
+      {
           ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @7);
           Expr *launchCount[3] = {$3, $5, oneExpr};
           $$ = new FunctionCallExpr($7, new ExprList(Union(@7,@8)), Union(@7,@9), true, launchCount);
       }
     | TOKEN_LAUNCH '[' assignment_expression ']' '[' assignment_expression ']' postfix_expression '(' argument_expression_list ')'
-      { 
+      {
           ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @8);
           Expr *launchCount[3] = {$6, $3, oneExpr};
           $$ = new FunctionCallExpr($8, $10, Union(@8,@11), true, launchCount);
       }
     | TOKEN_LAUNCH '[' assignment_expression ']' '[' assignment_expression ']' postfix_expression '(' ')'
-      { 
+      {
           ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @8);
           Expr *launchCount[3] = {$6, $3, oneExpr};
           $$ = new FunctionCallExpr($8, new ExprList(Union(@8,@9)), Union(@8,@10), true, launchCount);
       }
 
     | TOKEN_LAUNCH '[' assignment_expression ',' assignment_expression ',' assignment_expression ']' postfix_expression '(' argument_expression_list ')'
-      { 
+      {
           Expr *launchCount[3] = {$3, $5, $7};
           $$ = new FunctionCallExpr($9, $11, Union(@9,@12), true, launchCount);
       }
     | TOKEN_LAUNCH '[' assignment_expression ',' assignment_expression ',' assignment_expression ']' postfix_expression '(' ')'
-      { 
+      {
           Expr *launchCount[3] = {$3, $5, $7};
           $$ = new FunctionCallExpr($9, new ExprList(Union(@9,@10)), Union(@9,@11), true, launchCount);
       }
     | TOKEN_LAUNCH '[' assignment_expression ']' '[' assignment_expression ']' '[' assignment_expression ']' postfix_expression '(' argument_expression_list ')'
-      { 
+      {
           Expr *launchCount[3] = {$9, $6, $3};
           $$ = new FunctionCallExpr($11, $13, Union(@11,@14), true, launchCount);
       }
     | TOKEN_LAUNCH '[' assignment_expression ']' '[' assignment_expression ']' '[' assignment_expression ']' postfix_expression '(' ')'
-      { 
+      {
           Expr *launchCount[3] = {$9, $6, $3};
           $$ = new FunctionCallExpr($11, new ExprList(Union(@11,@12)), Union(@11,@13), true, launchCount);
       }
@@ -2565,14 +2566,77 @@ template_function_instantiation
 
 // Template specialization, a-la
 // template <> int foo<int>(int) { ... }
-template_function_specialization
-    : TOKEN_TEMPLATE '<' '>' declaration_specifiers declarator ';'
+template_function_specialization_declaration
+    : TOKEN_TEMPLATE '<' '>' declaration_specifiers simple_template_id '(' parameter_type_list ')'
       {
-        Error(@$, "Template function specialization not yet supported.");
+        // Function declarator
+        Declarator *d = new Declarator(DK_FUNCTION, Union(@1, @8));
+        d->child = $5->first;
+
+        if ($7 != nullptr) {
+            d->functionParams = *$7;
+            // parameter_type_list returns vector of Declarations that is not needed anymore.
+            delete $7;
+        }
+        std::vector<std::pair<const Type *, SourcePos>> *templArgs = new std::vector<std::pair<const Type *, SourcePos>>(*$5->second);
+        Assert(templArgs);
+        lAddTemplateSpecialization(*templArgs, $4, d);
+        m->symbolTable->PushScope();
+
+        lAddFunctionParams(d);
+        lAddMaskToSymbolTable(@5);
+        // deallocate SimpleTemplateIDType returned by simple_template_id
+        lFreeSimpleTemplateID($5);
+        $$ = new std::pair(d, templArgs);
       }
-    | TOKEN_TEMPLATE '<' '>' declaration_specifiers declarator compound_statement
+    | TOKEN_TEMPLATE '<' '>' declaration_specifiers simple_template_id '(' ')'
       {
-        Error(@$, "Template function specialization not yet supported.");
+        Declarator *d = new Declarator(DK_FUNCTION, Union(@1, @5));
+        d->child = $5->first;
+        std::vector<std::pair<const Type *, SourcePos>> *templArgs = new std::vector<std::pair<const Type *, SourcePos>>(*$5->second);
+        Assert(templArgs);
+        lAddTemplateSpecialization(*templArgs, $4, d);
+        m->symbolTable->PushScope();
+
+        lAddMaskToSymbolTable(@5);
+        // deallocate SimpleTemplateIDType returned by simple_template_id
+        lFreeSimpleTemplateID($5);
+        $$ = new std::pair(d, templArgs);
+      }
+    | TOKEN_TEMPLATE '<' '>' declaration_specifiers simple_template_id '(' error ')'
+      {
+        m->symbolTable->PushScope();
+        // deallocate SimpleTemplateIDType returned by simple_template_id
+        lFreeSimpleTemplateID($5);
+        $$ = nullptr;
+      }
+    ;
+
+template_function_specialization
+    : template_function_specialization_declaration ';'
+      {
+          if ($1 != nullptr) {
+            // deallocate TemplateSymbol created in template_declaration
+            lFreeSimpleTemplateID($1);
+          }
+          // End templates parameters definition scope
+          m->symbolTable->PopScope();
+      }
+    | template_function_specialization_declaration compound_statement
+      {
+        if ($1 != nullptr) {
+            Declarator *d = $1->first;
+            const FunctionType *ftype = CastType<FunctionType>(d->type);
+            if (ftype == nullptr)
+                AssertPos(@1, m->errorCount > 0);
+            else {
+                Stmt *code = $2;
+                if (code == nullptr) code = new StmtList(@2);
+                m->AddFunctionTemplateSpecializationDefinition(d->name, ftype, *$1->second, Union(@1, @2), code);
+            }
+           lFreeSimpleTemplateID($1);
+        }
+        m->symbolTable->PopScope();
       }
     ;
 
@@ -2751,6 +2815,43 @@ lAddTemplateDeclaration(TemplateParms *templateParmList, DeclSpecs *ds, Declarat
     }
 }
 
+static void
+lAddTemplateSpecialization(const std::vector<std::pair<const Type *, SourcePos>> &types, DeclSpecs *ds, Declarator *decl) {
+    if (ds == nullptr || decl == nullptr)
+        // Error happened earlier during parsing
+        return;
+
+    decl->InitFromDeclSpecs(ds);
+    if (ds->typeQualifiers & TYPEQUAL_TASK) {
+        Error(decl->pos, "'task' not supported for template specializations.");
+        return;
+    }
+    if (ds->typeQualifiers & TYPEQUAL_EXPORT) {
+        Error(decl->pos, "'export' not supported for template specializations.");
+        return;
+    }
+    if (ds->storageClass == SC_TYPEDEF) {
+        Error(decl->pos, "Illegal \"typedef\" provided with function template specialization.");
+        return;
+    } else {
+        if (decl->type == nullptr) {
+            Assert(m->errorCount > 0);
+            return;
+        }
+
+        if (types.size() == 0) {
+            Error(decl->pos, "Template arguments deduction is not yet supported in template function specialization.");
+            return;
+        }
+        const FunctionType *ftype = CastType<FunctionType>(decl->type);
+        if (ftype != nullptr) {
+            m->AddFunctionTemplateSpecializationDeclaration(decl->name, ftype, types, decl->pos);
+        }
+        else {
+            Error(decl->pos, "Only function template specializations are supported.");
+        }
+    }
+}
 
 /** We're about to start parsing the body of a function; add all of the
     parameters to the symbol table so that they're available.
@@ -2839,10 +2940,10 @@ static void lAddThreadIndexCountToSymbolTable(SourcePos pos) {
 
     Symbol *taskIndexSym = new Symbol("taskIndex", pos, type);
     m->symbolTable->AddVariable(taskIndexSym);
-    
+
     Symbol *taskCountSym = new Symbol("taskCount", pos, type);
     m->symbolTable->AddVariable(taskCountSym);
-    
+
     Symbol *taskIndexSym0 = new Symbol("taskIndex0", pos, type);
     m->symbolTable->AddVariable(taskIndexSym0);
     Symbol *taskIndexSym1 = new Symbol("taskIndex1", pos, type);
@@ -2850,7 +2951,7 @@ static void lAddThreadIndexCountToSymbolTable(SourcePos pos) {
     Symbol *taskIndexSym2 = new Symbol("taskIndex2", pos, type);
     m->symbolTable->AddVariable(taskIndexSym2);
 
-    
+
     Symbol *taskCountSym0 = new Symbol("taskCount0", pos, type);
     m->symbolTable->AddVariable(taskCountSym0);
     Symbol *taskCountSym1 = new Symbol("taskCount1", pos, type);

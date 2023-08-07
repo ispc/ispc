@@ -1136,62 +1136,111 @@ void Module::AddFunctionTemplateDefinition(const TemplateParms *templateParmList
     ast->AddFunctionTemplate(sym, code);
 }
 
-void Module::AddFunctionTemplateInstantiation(const std::string &name,
-                                              const std::vector<std::pair<const Type *, SourcePos>> &types,
-                                              const FunctionType *ftype, SourcePos pos) {
+FunctionTemplate *Module::MatchFunctionTemplate(const std::string &name, const FunctionType *ftype,
+                                                std::vector<std::pair<const Type *, SourcePos>> &normTypes,
+                                                SourcePos pos) {
+    if (ftype == nullptr) {
+        Assert(m->errorCount > 0);
+        return nullptr;
+    }
     std::vector<TemplateSymbol *> matches;
     bool found = symbolTable->LookupFunctionTemplate(name, &matches);
+    if (!found) {
+        Error(pos, "No matching function template was found.");
+        return nullptr;
+    }
+    // Do template argument "normalization", i.e apply "varying type default":
+    //
+    // template <typename T> void foo(T t);
+    // foo<int>(1); // T is assumed to be "varying int" here.
+    for (auto &arg : normTypes) {
+        if (arg.first->GetVariability() == Variability::Unbound) {
+            arg.first = arg.first->GetAsVaryingType();
+        }
+    }
 
-    if (found) {
-        // TODO: need to outline this copy-paste code.
-        // Do template argument "normalization", i.e apply "varying type default":
-        //
-        // template <typename T> void foo(T t);
-        // foo<int>(1); // T is assumed to be "varying int" here.
-        std::vector<std::pair<const Type *, SourcePos>> normTypes(types);
-        for (auto &arg : normTypes) {
-            if (arg.first->GetVariability() == Variability::Unbound) {
-                arg.first = arg.first->GetAsVaryingType();
-            }
+    FunctionTemplate *templ = nullptr;
+    for (auto &templateSymbol : matches) {
+        // Number of template parameters must match.
+        if (normTypes.size() != templateSymbol->templateParms->GetCount()) {
+            // We don't have default parameters yet, so just matching the size exactly.
+            continue;
         }
 
-        FunctionTemplate *templ = nullptr;
-        for (auto &templateSymbol : matches) {
-            // Number of template parameters must match.
-            if (normTypes.size() != templateSymbol->templateParms->GetCount()) {
-                // We don't have default parameters yet, so just matching the size exactly.
-                continue;
-            }
-
-            // Number of function parameters must match.
-            if (!ftype || !templateSymbol->type ||
-                ftype->GetNumParameters() != templateSymbol->type->GetNumParameters()) {
-                continue;
-            }
-
-            TemplateInstantiation inst(*(templateSymbol->templateParms), normTypes);
-            bool matched = true;
-            for (int i = 0; i < ftype->GetNumParameters(); i++) {
-                const Type *instParam = ftype->GetParameterType(i);
-                const Type *templateParam = templateSymbol->type->GetParameterType(i)->ResolveDependence(inst);
-                if (!Type::Equal(instParam, templateParam)) {
-                    matched = false;
-                    break;
-                }
-            }
-
-            if (matched) {
-                templ = templateSymbol->functionTemplate;
+        // Number of function parameters must match.
+        if (!ftype || !templateSymbol->type || ftype->GetNumParameters() != templateSymbol->type->GetNumParameters()) {
+            continue;
+        }
+        bool matched = true;
+        TemplateInstantiation inst(*(templateSymbol->templateParms), normTypes);
+        for (int i = 0; i < ftype->GetNumParameters(); i++) {
+            const Type *instParam = ftype->GetParameterType(i);
+            const Type *templateParam = templateSymbol->type->GetParameterType(i)->ResolveDependence(inst);
+            if (!Type::Equal(instParam, templateParam)) {
+                matched = false;
                 break;
             }
         }
-
-        if (templ) {
-            templ->AddInstantiation(normTypes);
-        } else {
-            Error(pos, "No matching function template found for instantiation.");
+        if (matched) {
+            templ = templateSymbol->functionTemplate;
+            break;
         }
     }
+    return templ;
+}
+
+void Module::AddFunctionTemplateInstantiation(const std::string &name,
+                                              const std::vector<std::pair<const Type *, SourcePos>> &types,
+                                              const FunctionType *ftype, SourcePos pos) {
+    std::vector<std::pair<const Type *, SourcePos>> normTypes(types);
+    FunctionTemplate *templ = MatchFunctionTemplate(name, ftype, normTypes, pos);
+    if (templ) {
+        templ->AddInstantiation(normTypes);
+    } else {
+        Error(pos, "No matching function template found for instantiation.");
+    }
+}
+
+void Module::AddFunctionTemplateSpecializationDefinition(const std::string &name, const FunctionType *ftype,
+                                                         const std::vector<std::pair<const Type *, SourcePos>> &types,
+                                                         SourcePos pos, Stmt *code) {
+    std::vector<std::pair<const Type *, SourcePos>> normTypes(types);
+    FunctionTemplate *templ = MatchFunctionTemplate(name, ftype, normTypes, pos);
+    if (templ == nullptr) {
+        Error(pos, "No matching function template found for specialization.");
+        return;
+    }
+    Symbol *sym = templ->LookupInstantiation(normTypes);
+    if (sym == nullptr || code == nullptr) {
+        Assert(m->errorCount > 0);
+        return;
+    }
+    sym->pos = code->pos;
+
+    // Update already created symbol with real function type and function implementation
+    sym->type = ftype;
+    Function *inst = new Function(sym, code);
+    sym->parentFunction = inst;
+}
+
+void Module::AddFunctionTemplateSpecializationDeclaration(const std::string &name, const FunctionType *ftype,
+                                                          const std::vector<std::pair<const Type *, SourcePos>> &types,
+                                                          SourcePos pos) {
+    std::vector<std::pair<const Type *, SourcePos>> normTypes(types);
+    FunctionTemplate *templ = MatchFunctionTemplate(name, ftype, normTypes, pos);
+    if (templ == nullptr) {
+        Error(pos, "No matching function template found for specialization.");
+        return;
+    }
+    Symbol *sym = templ->LookupInstantiation(normTypes);
+    if (sym != nullptr) {
+        if (Type::Equal(sym->type, ftype) && sym->parentFunction != nullptr) {
+            Error(pos, "Template function specialization was already defined.");
+            return;
+        }
+    }
+
+    templ->AddSpecialization(ftype, normTypes, pos);
 }
 
 void Module::AddExportedTypes(const std::vector<std::pair<const Type *, SourcePos>> &types) {

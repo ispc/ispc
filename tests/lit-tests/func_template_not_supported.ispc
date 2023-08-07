@@ -9,8 +9,8 @@ template <typename T = int, int I> T foo(T t) {
   return tt;
 }
 
-// CHECK: Template function specialization not yet supported.
+// CHECK: Template arguments deduction is not yet supported in template function specialization.
 template <> int foo(int t);
 
-// CHECK: Template function specialization not yet supported.
+// CHECK: Template arguments deduction is not yet supported in template function specialization.
 template <> int foo(int t) { return 1; }

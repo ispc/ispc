@@ -83,8 +83,10 @@ class FunctionTemplate {
 
     Symbol *LookupInstantiation(const std::vector<std::pair<const Type *, SourcePos>> &types);
     Symbol *AddInstantiation(const std::vector<std::pair<const Type *, SourcePos>> &types);
+    Symbol *AddSpecialization(const FunctionType *ftype, const std::vector<std::pair<const Type *, SourcePos>> &types,
+                              SourcePos pos);
 
-    // Generate code for instantiations
+    // Generate code for instantiations and specializations.
     void GenerateIR() const;
 
     void Print() const;

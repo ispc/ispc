@@ -3702,12 +3702,14 @@ What is currently supported:
   function call syntax (i.e. ``add(1, 2);``).
 * Explicit template function instantiations (i.e.
   ``template int add<int>(int a, int b);``).
+* Explicit template function specializations (i.e.
+  ``template<> int add<int>(int a, int b) { return a - b;}``).
 
 What is currently not supported, but is planned to be supported:
 
 * Non-type template parameters.
 * Default values for template parameters.
-* Template function specializations.
+* Template arguments deduction in template function specializations.
 
 While template argument deduction rules generally follow C++, there are some
 differences caused by existence of ``uniform``, ``varying`` and ``unbound``
@@ -3757,6 +3759,48 @@ following example:
 
 Note, to get the insight of the results of template argument deduction, it might
 be useful to specify ``--ast-dump`` flag to ``ispc`` compiler.
+
+ISPC supports template function specializations that can be used to provide alternative
+implementations for a specific set of template parameters. To define template function
+specialization, the primary template should be already present in the program. If specialization
+is defined after it was used, the error will be issued. Template arguments deduction in
+template function specializations is not yet supported. Consider the following example:
+
+::
+
+    // primary template
+    template <typename T> int goo(T a1, T a2) {
+      return a1 + a2;
+    }
+
+    // declaration of specialization for int type
+    template <> int goo<int>(int a1, int a2);
+
+    // error: no matching function template found for specialization.
+    template <> int goo<float, int>(float a1, int a2) {
+      return a1 + a2;
+    }
+
+    // error: template arguments deduction is not yet supported in template function specialization.
+    template <> int goo(float a1, float a2) {
+      return a1 + a2;
+    }
+
+    float foo(int a1, float a2) {
+      float a = goo<int>(a1, (int)a2); //specialization for int type will be called
+      double b = goo<double>((double)a1, (double)a2); //primary template will be instantiated for double type
+      return a + b;
+    }
+
+    // definition of specialization for int type
+    template <> int goo<int>(int a1, int a2) {
+      return a1 * a2;
+    }
+
+    // error: template function specialization was already defined
+    template <> int goo<int>(int a1, int a2) {
+      return a1 * a2;
+    }
 
 
 The ISPC Standard Library

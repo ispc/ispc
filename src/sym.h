@@ -105,6 +105,7 @@ class TemplateSymbol {
     // The reason to keep them here for now is that for regular functions it's not stored anywhere in AST,
     // but attached as attrubutes to llvm::Function when it's created. For templates we need to store this
     // information in here and use later when the template is instantiated.
+    // These attributes will be inherited by template functions specializations.
     bool isInline;
     bool isNoInline;
 };
