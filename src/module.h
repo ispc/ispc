@@ -90,6 +90,14 @@ class Module {
                                           const std::vector<std::pair<const Type *, SourcePos>> &types,
                                           const FunctionType *ftype, SourcePos pos);
 
+    void AddFunctionTemplateSpecializationDeclaration(const std::string &name, const FunctionType *ftype,
+                                                      const std::vector<std::pair<const Type *, SourcePos>> &types,
+                                                      SourcePos pos);
+
+    void AddFunctionTemplateSpecializationDefinition(const std::string &name, const FunctionType *ftype,
+                                                     const std::vector<std::pair<const Type *, SourcePos>> &types,
+                                                     SourcePos pos, Stmt *code);
+
     /** Adds the given type to the set of types that have their definitions
         included in automatically generated header files. */
     void AddExportedTypes(const std::vector<std::pair<const Type *, SourcePos>> &types);
@@ -97,6 +105,14 @@ class Module {
     /** Verify LLVM intrinsic called from ISPC source code is valid and return
         function symbol for it. */
     Symbol *AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, SourcePos po);
+
+    /** Returns pointer to FunctionTemplate based on template name and template argument types provided. Also makes
+       template argument types normalization, i.e apply "varying type default":
+       template <typename T> void foo(T t);
+       foo<int>(1); // T is assumed to be "varying int" here.
+    */
+    FunctionTemplate *MatchFunctionTemplate(const std::string &name, const FunctionType *ftype,
+                                            std::vector<std::pair<const Type *, SourcePos>> &normTypes, SourcePos pos);
 
     /** After a source file has been compiled, output can be generated in a
         number of different formats. */

@@ -884,7 +884,11 @@ void FunctionTemplate::Print() const {
 void FunctionTemplate::GenerateIR() const {
     for (const auto &inst : instantiations) {
         Function *func = const_cast<Function *>(inst.second->parentFunction);
-        func->GenerateIR();
+        if (func != nullptr) {
+            func->GenerateIR();
+        } else {
+            Error(inst.second->pos, "Template function specialization was declared but never defined.");
+        }
     }
 }
 
@@ -981,6 +985,31 @@ Symbol *FunctionTemplate::AddInstantiation(const std::vector<std::pair<const Typ
     TemplateArgs *templArgs = new TemplateArgs(types);
     instantiations.push_back(std::make_pair(templArgs, instSym));
 
+    return instSym;
+}
+
+Symbol *FunctionTemplate::AddSpecialization(const FunctionType *ftype,
+                                            const std::vector<std::pair<const Type *, SourcePos>> &types,
+                                            SourcePos pos) {
+    const TemplateParms *typenames = GetTemplateParms();
+    Assert(typenames);
+    TemplateInstantiation templInst(*typenames, types);
+
+    // Create a function symbol
+    Symbol *instSym = templInst.InstantiateTemplateSymbol(sym);
+    instSym->type = ftype;
+    instSym->pos = pos;
+
+    TemplateArgs *templArgs = new TemplateArgs(types);
+
+    // Check if we have previously declared specialization and we are about to define it.
+    Symbol *funcSym = LookupInstantiation(types);
+    if (funcSym != nullptr) {
+        delete templArgs;
+        return funcSym;
+    } else {
+        instantiations.push_back(std::make_pair(templArgs, instSym));
+    }
     return instSym;
 }
 
