@@ -18,7 +18,8 @@ static std::string mangleMathOCLBuiltin(const llvm::Function &func) {
     std::string mangledName;
     llvm::Type *retType = func.getReturnType();
     // spirv OpenCL builtins are used for double types only
-    Assert(retType->isVectorTy() && llvm::dyn_cast<llvm::FixedVectorType>(retType)->getElementType()->isDoubleTy() ||
+    Assert(retType->isVectorTy() && (llvm::isa<llvm::FixedVectorType>(retType) &&
+                                     llvm::dyn_cast<llvm::FixedVectorType>(retType)->getElementType()->isDoubleTy()) ||
            retType->isSingleValueType() && retType->isDoubleTy());
 
     std::string funcName = func.getName().str();
