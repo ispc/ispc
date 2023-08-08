@@ -3868,7 +3868,7 @@ llvm::Value *FunctionEmitContext::XeSimdCFAny(llvm::Value *value) {
 }
 
 llvm::Value *FunctionEmitContext::XeSimdCFPredicate(llvm::Value *value, llvm::Value *defaults) {
-    AssertPos(currentPos, llvm::isa<llvm::VectorType>(value->getType()));
+    AssertPos(currentPos, llvm::isa<llvm::FixedVectorType>(value->getType()));
     llvm::FixedVectorType *vt = llvm::dyn_cast<llvm::FixedVectorType>(value->getType());
     if (defaults == nullptr) {
         defaults = llvm::ConstantVector::getSplat(
