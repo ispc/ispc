@@ -29,7 +29,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/AddISPCExample.cmake)
 if(WIN32)
     add_compile_definitions(WIN32)
     if(MSVC)
-        add_compile_options(/EHsc)
+        add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/EHsc>)
     endif()
 endif()
 
