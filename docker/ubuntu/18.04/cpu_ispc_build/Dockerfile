@@ -77,7 +77,7 @@ ARG LLVM_VERSION
 
 # Install regular ISPC dependencies
 RUN if [[ $(uname -m) =~ "x86" ]]; then export CROSS_LIBS="libc6-dev-i386=2.27-3ubuntu*"; else export CROSS_LIBS="libc6-dev-armhf-cross=2.27-3ubuntu*"; fi && \
-    apt-get -y update && apt-get --no-install-recommends install -y m4 bison flex $CROSS_LIBS && \
+    apt-get -y update && apt-get --no-install-recommends install -y m4 bison flex "$CROSS_LIBS" && \
     rm -rf /var/lib/apt/lists/*
 
 # Configure ISPC build
