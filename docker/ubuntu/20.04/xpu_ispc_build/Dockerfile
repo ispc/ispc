@@ -5,7 +5,7 @@
 
 FROM ubuntu:20.04
 LABEL maintainer="Arina Neshlyaeva <arina.neshlyaeva@intel.com>"
-SHELL ["/bin/bash", "-c"]
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG REPO=ispc/ispc
 ARG SHA=main
