@@ -678,7 +678,7 @@ static ISPCRTContext getISPCRTContext(ISPCRTDeviceType type, ISPCRTGenericHandle
     }
     case ISPCRT_DEVICE_TYPE_GPU:
 #ifdef ISPCRT_BUILD_GPU
-        context = loadGPUContext();
+        context = loadGPUContext(c);
 #else
         throw std::runtime_error("GPU support not enabled");
 #endif
