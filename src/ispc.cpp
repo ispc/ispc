@@ -47,8 +47,6 @@
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 
-#define UNUSED(x) (void)(x)
-
 using namespace ispc;
 
 Globals *ispc::g;
@@ -182,14 +180,12 @@ static ISPCTarget lGetSystemISA() {
         bool knl = avx512_pf && avx512_er && avx512_cd;
         bool skx = avx512_dq && avx512_cd && avx512_bw && avx512_vl;
         bool clx = skx && avx512_vnni;
-        bool cpx = clx && avx512_bf16;
+        [[maybe_unused]] bool cpx = clx && avx512_bf16;
         bool icl =
             clx && avx512_vbmi2 && avx512_gfni && avx512_vaes && avx512_vpclmulqdq && avx512_bitalg && avx512_vpopcntdq;
-        bool tgl = icl && avx512_vp2intersect;
+        [[maybe_unused]] bool tgl = icl && avx512_vp2intersect;
         bool spr =
             icl && avx512_bf16 && avx512_amx_bf16 && avx512_amx_tile && avx512_amx_int8 && avx_vnni && avx512_fp16;
-        UNUSED(cpx);
-        UNUSED(tgl);
         if (spr) {
             // We don't care if AMX is enabled or not here, as AMX support is not implemented yet.
             return ISPCTarget::avx512spr_x16;
