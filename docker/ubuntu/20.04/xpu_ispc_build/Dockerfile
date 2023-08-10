@@ -54,14 +54,13 @@ RUN set -eux && wget -qO - https://repositories.intel.com/graphics/intel-graphic
     mesa-vdpau-drivers mesa-vulkan-drivers va-driver-all && \
     rm -rf /var/lib/apt/lists/*
 
-# L0 loaader
-RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/oneapi-src/level-zero/releases/download/v${L0L_VER}/level-zero-devel_${L0L_VER}+u18.04_amd64.deb && \
-    wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/oneapi-src/level-zero/releases/download/v${L0L_VER}/level-zero_${L0L_VER}+u18.04_amd64.deb
-
-# Install packages and clean up
-RUN dpkg -i ./*.deb
-WORKDIR /home
-RUN rm -rf packages
+# L0 loader
+WORKDIR /home/src
+RUN git clone https://github.com/oneapi-src/level-zero.git
+WORKDIR /home/src/level-zero
+RUN git checkout v$L0L_VER && mkdir -p build
+WORKDIR /home/src/level-zero/build
+RUN cmake -DCMAKE_INSTALL_PREFIX=/home/deps ../ && make install -j"$(nproc)"
 
 # vc-intrinsics
 WORKDIR /home/src
@@ -84,6 +83,6 @@ ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
 WORKDIR /home/src/ispc
 RUN mkdir -p build
 WORKDIR /home/src/ispc/build
-RUN cmake -DXE_ENABLED=ON -DCMAKE_INSTALL_PREFIX=/home/ispc/ -DXE_DEPS_DIR=/home/deps ../ && make install -j"$(nproc)" && make check-all -j"$(nproc)"
+RUN cmake -DXE_ENABLED=ON -DCMAKE_INSTALL_PREFIX=/home/ispc/ -DXE_DEPS_DIR=/home/deps -DLEVEL_ZERO_ROOT=/home/deps ../ && make install -j"$(nproc)" && make check-all -j"$(nproc)"
 # Add ISPC to PATH
 ENV PATH=/home/ispc/bin:$PATH
