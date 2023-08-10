@@ -724,6 +724,9 @@ class Bulk {
 class ChunkedPool {
   public:
     ChunkedPool(ISPCRTSharedMemoryAllocationHint type, ze_context_handle_t ctxt) : m_type(type), m_ctxt(ctxt) {
+        if (UNLIKELY(is_verbose)) {
+            std::cout << "ChunkedPool for " << m_type << " shared memory allocation hint created." << std::endl;
+        }
         m_minPow2 = get_number_envvar(ISPCRT_MEM_POOL_MIN_CHUNK_POW2, m_minPow2);
         if (!(m_minPow2 >= 1 && m_minPow2 <= 30)) {
             throw std::runtime_error("ISPCRT_MEM_POOL_MIN_CHUNK_POW2 is beyond reasonable limits");
