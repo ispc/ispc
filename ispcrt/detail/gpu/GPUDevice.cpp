@@ -1025,7 +1025,6 @@ struct Module : public ispcrt::base::Module {
         if (opts.libraryCompilation()) {
             m_igc_options += " -library-compilation";
         }
-        constexpr auto MAX_ISPCRT_IGC_OPTIONS = 2000UL;
         const char *userIgcOptionsEnv = getenv_wr(ISPCRT_IGC_OPTIONS);
         if (userIgcOptionsEnv) {
             // Copy at most MAX_ISPCRT_IGC_OPTIONS characters from the env - just to be safe
