@@ -521,7 +521,7 @@ if (MSVC)
     set_source_files_properties(${FLEX_OUTPUT} PROPERTIES COMPILE_FLAGS "/wd4005 /wd4003")
     set_source_files_properties(${BISON_OUTPUT} PROPERTIES COMPILE_FLAGS "/wd4005 /wd4065")
 else()
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wno-sign-compare -Wno-unused-function ${LLVM_CPP_FLAGS})
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare -Wno-unused-function ${LLVM_CPP_FLAGS})
     # Security options
     target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector-strong
                            -fdata-sections -ffunction-sections -fno-delete-null-pointer-checks
