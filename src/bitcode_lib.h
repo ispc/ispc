@@ -42,10 +42,10 @@ class BitcodeLib {
 
     BitcodeLibType getType() const;
     const unsigned char *getLib() const;
-    const size_t getSize() const;
-    const TargetOS getOS() const;
-    const Arch getArch() const;
-    const ISPCTarget getISPCTarget() const;
+    size_t getSize() const;
+    TargetOS getOS() const;
+    Arch getArch() const;
+    ISPCTarget getISPCTarget() const;
 };
 
 } // namespace ispc

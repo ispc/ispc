@@ -153,7 +153,7 @@ static size_t round_up_pow2(size_t x) {
 namespace ispcrt {
 namespace gpu {
 
-static const ISPCRTError getIspcrtError(ze_result_t err) {
+static ISPCRTError getIspcrtError(ze_result_t err) {
     auto res = ISPCRT_UNKNOWN_ERROR;
     switch (err) {
     case ZE_RESULT_SUCCESS:

@@ -3017,7 +3017,7 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
     return llvm::FunctionType::get(llvmReturnType, callTypes, false);
 }
 
-const unsigned int FunctionType::GetCallingConv() const {
+unsigned int FunctionType::GetCallingConv() const {
     // Default calling convention on CPU targets is CallingConv::C.
     // If __vectorcall or __regcall is specified explicitly, corresponding
     // llvm::CallingConv will be used.

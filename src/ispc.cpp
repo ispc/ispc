@@ -223,7 +223,7 @@ static ISPCTarget lGetSystemISA() {
 #endif
 }
 
-static const bool lIsTargetValidforArch(ISPCTarget target, Arch arch) {
+static bool lIsTargetValidforArch(ISPCTarget target, Arch arch) {
     bool ret = true;
     // If target name starts with sse or avx, has to be x86 or x86-64.
     if (ISPCTargetIsX86(target)) {
