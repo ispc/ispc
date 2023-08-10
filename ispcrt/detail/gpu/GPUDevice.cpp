@@ -757,7 +757,7 @@ class ChunkedPool {
 
         bool allFull = true;
         Bulk *blk = bulks.front();
-        for (int i = 0; i < bulks.size(); i++) {
+        for (size_t i = 0; i < bulks.size(); i++) {
             if (blk->full()) {
                 bulks.pop_front();
                 bulks.push_back(blk);
@@ -1088,7 +1088,7 @@ struct Module : public ispcrt::base::Module {
         std::vector<const char *> buildFlags;
         std::vector<size_t> inputSizes;
         std::vector<const uint8_t *> inputModules;
-        for (int i = 0; i < numModules; i++) {
+        for (uint32_t i = 0; i < numModules; i++) {
             buildFlags.push_back(modules[i]->m_module_desc.pBuildFlags);
             inputSizes.push_back(modules[i]->m_module_desc.inputSize);
             inputModules.push_back(modules[i]->m_module_desc.pInputModule);
@@ -1774,13 +1774,13 @@ ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx) {
 
 void dynamicLinkModules(gpu::Module **modules, const uint32_t numModules) {
     std::vector<ze_module_handle_t> moduleHandles;
-    for (int i = 0; i < numModules; i++) {
+    for (uint32_t i = 0; i < numModules; i++) {
         moduleHandles.push_back(modules[i]->handle());
     }
 
     if (UNLIKELY(is_verbose)) {
         std::cout << "Binary linking of " << numModules << " modules: ";
-        for (int i = 0; i < numModules; i++) {
+        for (uint32_t i = 0; i < numModules; i++) {
             std::cout << modules[i]->filename() << " ";
         }
         std::cout << std::endl;
@@ -1803,13 +1803,13 @@ void dynamicLinkModules(gpu::Module **modules, const uint32_t numModules) {
 base::Module *staticLinkModules(gpu::Module **modules, const uint32_t numModules, ze_device_handle_t device,
                                 ze_context_handle_t context) {
     std::vector<ze_module_handle_t> moduleHandles;
-    for (int i = 0; i < numModules; i++) {
+    for (uint32_t i = 0; i < numModules; i++) {
         moduleHandles.push_back(modules[i]->handle());
     }
 
     if (UNLIKELY(is_verbose)) {
         std::cout << "vISA linking of " << numModules << " modules: ";
-        for (int i = 0; i < numModules; i++) {
+        for (uint32_t i = 0; i < numModules; i++) {
             std::cout << modules[i]->filename() << " ";
         }
         std::cout << std::endl;
