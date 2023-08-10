@@ -416,7 +416,7 @@ struct TaskQueue : public ispcrt::base::TaskQueue {
 
 uint32_t deviceCount() { return 1; }
 
-ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx) {
+ISPCRTDeviceInfo deviceInfo([[maybe_unused]] uint32_t deviceIdx) {
     ISPCRTDeviceInfo info;
     info.deviceId = 0; // for CPU we don't support it yet
     info.vendorId = 0;
@@ -430,7 +430,9 @@ ispcrt::base::MemoryView *CPUDevice::newMemoryView(void *appMem, size_t numBytes
     return new cpu::MemoryView(appMem, numBytes, flags->allocType == ISPCRT_ALLOC_TYPE_SHARED);
 }
 
-ispcrt::base::CommandQueue *CPUDevice::newCommandQueue(uint32_t ordinal) const { return new cpu::CommandQueueImpl(); }
+ispcrt::base::CommandQueue *CPUDevice::newCommandQueue([[maybe_unused]] uint32_t ordinal) const {
+    return new cpu::CommandQueueImpl();
+}
 
 ispcrt::base::TaskQueue *CPUDevice::newTaskQueue() const { return new cpu::TaskQueue(); }
 
@@ -442,11 +444,12 @@ ispcrt::base::ModuleOptions *CPUDevice::newModuleOptions(ISPCRTModuleType module
 }
 
 ispcrt::base::Module *CPUDevice::newModule(const char *moduleFile,
-                                           const ispcrt::base::ModuleOptions &moduleOpts) const {
+                                           [[maybe_unused]] const ispcrt::base::ModuleOptions &moduleOpts) const {
     return new cpu::Module(moduleFile);
 }
 
-void CPUDevice::dynamicLinkModules(base::Module **modules, const uint32_t numModules) const {}
+void CPUDevice::dynamicLinkModules([[maybe_unused]] base::Module **modules,
+                                   [[maybe_unused]] const uint32_t numModules) const {}
 
 ispcrt::base::Module *CPUDevice::staticLinkModules(base::Module **modules, const uint32_t numModules) const {
     return new cpu::Module((cpu::Module **)modules, numModules);
@@ -464,7 +467,9 @@ void *CPUDevice::contextNativeHandle() const { return nullptr; }
 
 ISPCRTDeviceType CPUDevice::getType() const { return ISPCRT_DEVICE_TYPE_CPU; }
 
-ISPCRTAllocationType CPUDevice::getMemAllocType(void *appMemory) const { return ISPCRT_ALLOC_TYPE_UNKNOWN; }
+ISPCRTAllocationType CPUDevice::getMemAllocType([[maybe_unused]] void *appMemory) const {
+    return ISPCRT_ALLOC_TYPE_UNKNOWN;
+}
 
 ispcrt::base::MemoryView *CPUContext::newMemoryView(void *appMem, size_t numBytes,
                                                     const ISPCRTNewMemoryViewFlags *flags) const {

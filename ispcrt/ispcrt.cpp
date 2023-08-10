@@ -127,7 +127,8 @@ static OBJECT_T &referenceFromHandle(HANDLE_T handle) {
 #endif
 
 // OS agnostic function to dynamically load a shared library.
-void *dyn_load_lib(const char *name, const char *name_major_version, const char *name_full_version) {
+void *dyn_load_lib(const char *name, [[maybe_unused]] const char *name_major_version,
+                   [[maybe_unused]] const char *name_full_version) {
 #if defined(_WIN32) || defined(_WIN64)
     // Removes CWD from the search path to reduce the risk of DLL injection.
     SetDllDirectory("");
@@ -386,7 +387,7 @@ uint32_t gpuDeviceCount() {
 #endif
 }
 
-ISPCRTDeviceInfo gpuDeviceInfo(uint32_t idx) {
+ISPCRTDeviceInfo gpuDeviceInfo([[maybe_unused]] uint32_t idx) {
 #ifdef ISPCRT_BUILD_STATIC
 #ifdef ISPCRT_BUILD_GPU
     return ispcrt::gpu::deviceInfo(idx);
@@ -429,7 +430,8 @@ ispcrt::base::Device *loadGPUDevice() {
 #endif
 }
 
-ispcrt::base::Device *loadGPUDevice(void *ctx, void *dev, uint32_t idx) {
+ispcrt::base::Device *loadGPUDevice([[maybe_unused]] void *ctx, [[maybe_unused]] void *dev,
+                                    [[maybe_unused]] uint32_t idx) {
 #ifdef ISPCRT_BUILD_STATIC
 #ifdef ISPCRT_BUILD_GPU
     return new ispcrt::GPUDevice(ctx, dev, idx);
@@ -473,7 +475,7 @@ ispcrt::base::Context *loadGPUContext() {
 #endif
 }
 
-ispcrt::base::Context *loadGPUContext(void *ctx) {
+ispcrt::base::Context *loadGPUContext([[maybe_unused]] void *ctx) {
 #ifdef ISPCRT_BUILD_STATIC
 #ifdef ISPCRT_BUILD_GPU
     return new ispcrt::GPUContext(ctx);
@@ -528,11 +530,12 @@ ISPCRT_CATCH_END_NO_RETURN()
 ///////////////////////////////////////////////////////////////////////////////
 // Device initialization //////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
-static ISPCRTDevice getISPCRTDevice(ISPCRTDeviceType type, ISPCRTContext context, ISPCRTGenericHandle d,
-                                    uint32_t deviceIdx) ISPCRT_CATCH_BEGIN {
+static ISPCRTDevice getISPCRTDevice(ISPCRTDeviceType type, ISPCRTContext context,
+                                    [[maybe_unused]] ISPCRTGenericHandle d,
+                                    [[maybe_unused]] uint32_t deviceIdx) ISPCRT_CATCH_BEGIN {
     ispcrt::base::Device *device = nullptr;
 
-    void *nativeContext = nullptr;
+    [[maybe_unused]] void *nativeContext = nullptr;
     if (context) {
         auto &c = referenceFromHandle<ispcrt::base::Context>(context);
         nativeContext = c.contextNativeHandle();
@@ -656,7 +659,8 @@ ISPCRT_CATCH_END_NO_RETURN()
 ///////////////////////////////////////////////////////////////////////////////
 // Context initialization //////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
-static ISPCRTContext getISPCRTContext(ISPCRTDeviceType type, ISPCRTGenericHandle c) ISPCRT_CATCH_BEGIN {
+static ISPCRTContext getISPCRTContext(ISPCRTDeviceType type,
+                                      [[maybe_unused]] ISPCRTGenericHandle c) ISPCRT_CATCH_BEGIN {
     ispcrt::base::Context *context = nullptr;
 
     switch (type) {
