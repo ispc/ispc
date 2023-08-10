@@ -843,7 +843,7 @@ void ispcrtDynamicLinkModules(ISPCRTDevice d, ISPCRTModule *modules, const uint3
     const auto &device = referenceFromHandle<ispcrt::base::Device>(d);
     device.dynamicLinkModules((ispcrt::base::Module **)modules, numModules);
 }
-ISPCRT_CATCH_END()
+ISPCRT_CATCH_END_NO_RETURN()
 
 ISPCRTModule ispcrtStaticLinkModules(ISPCRTDevice d, ISPCRTModule *modules,
                                      const uint32_t numModules) ISPCRT_CATCH_BEGIN {
