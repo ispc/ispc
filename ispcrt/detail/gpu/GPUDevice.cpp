@@ -535,7 +535,7 @@ struct EventPool {
             throw std::runtime_error(ss.str());
         }
         // Put all event ids into a freelist
-        for (uint32_t i = 0; i < m_poolSize; i++) {
+        for (size_t i = 0; i < m_poolSize; i++) {
             m_freeList.push_back(i);
         }
     }
@@ -607,8 +607,8 @@ struct EventPool {
     ze_event_pool_handle_t m_pool{nullptr};
     uint64_t m_timestampFreq;
     uint64_t m_timestampMaxValue;
-    uint32_t m_poolSize;
-    std::deque<uint32_t> m_freeList;
+    size_t m_poolSize;
+    std::deque<size_t> m_freeList;
     // Events pool for reuse
     std::vector<Event *> m_events_pool;
 };
