@@ -480,8 +480,8 @@ struct CommandList {
 
   private:
     ze_command_list_handle_t m_handle{nullptr};
-    ze_context_handle_t m_context{nullptr};
     ze_device_handle_t m_device{nullptr};
+    ze_context_handle_t m_context{nullptr};
     const uint32_t m_ordinal{0};
     bool m_submitted{false};
     uint32_t m_numCommands{0};
@@ -680,8 +680,8 @@ class Bulk {
   private:
     char *m_memPtr{nullptr};
 
-    size_t m_size{0};
     size_t m_chunkSize{0};
+    size_t m_size{0};
     size_t m_numChunks{0};
 
     // Index of free chunk during initial linear allocation.
@@ -926,19 +926,20 @@ struct MemoryView : public ispcrt::base::MemoryView {
         }
     }
 
-    ISPCRTSharedMemoryAllocationHint m_smhint{ISPCRT_SM_HOST_DEVICE_READ_WRITE};
-    bool m_shared{false};
-    bool m_useMemPool{false};
-
     void *m_hostPtr{nullptr};
-    void *m_devicePtr{nullptr};
     size_t m_size{0};
     size_t m_requestedSize{0};
 
-    ze_device_handle_t m_device{nullptr};
     ze_context_handle_t m_context{nullptr};
+    ze_device_handle_t m_device{nullptr};
 
+    void *m_devicePtr{nullptr};
+
+    bool m_shared{false};
+    ISPCRTSharedMemoryAllocationHint m_smhint{ISPCRT_SM_HOST_DEVICE_READ_WRITE};
     const GPUContext *m_ctxtGPU{nullptr};
+
+    bool m_useMemPool{false};
     ChunkedPool *m_memPool{nullptr};
 };
 
@@ -956,9 +957,9 @@ struct ModuleOptions : public ispcrt::base::ModuleOptions {
     void setModuleType(ISPCRTModuleType type) { m_moduleType = type; }
 
   private:
-    uint32_t m_stackSize{0};
-    bool m_libraryCompilation{false};
     ISPCRTModuleType m_moduleType{ISPCRTModuleType::ISPCRT_VECTOR_MODULE};
+    bool m_libraryCompilation{false};
+    uint32_t m_stackSize{0};
 };
 
 struct Module : public ispcrt::base::Module {

@@ -64,7 +64,7 @@ using CPUKernelEntryPoint = void (*)(void *, size_t, size_t, size_t);
 
 struct MemoryView : public ispcrt::base::MemoryView {
     MemoryView(void *appMem, size_t numBytes, bool shared)
-        : m_hostPtr(appMem), m_devicePtr(appMem), m_size(numBytes), m_shared(shared) {}
+        : m_shared(shared), m_hostPtr(appMem), m_devicePtr(appMem), m_size(numBytes) {}
 
     ~MemoryView() {
         if (!m_external_alloc && m_devicePtr)
@@ -119,9 +119,9 @@ struct ModuleOptions : public ispcrt::base::ModuleOptions {
     void setModuleType(ISPCRTModuleType type) { m_moduleType = type; }
 
   private:
-    uint32_t m_stackSize{0};
-    bool m_libraryCompilation{false};
     ISPCRTModuleType m_moduleType{ISPCRTModuleType::ISPCRT_VECTOR_MODULE};
+    bool m_libraryCompilation{false};
+    uint32_t m_stackSize{0};
 };
 
 struct Module : public ispcrt::base::Module {
