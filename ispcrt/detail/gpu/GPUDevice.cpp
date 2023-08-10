@@ -498,7 +498,8 @@ struct EventPool {
               ISPCRTEventPoolType type = ISPCRTEventPoolType::compute)
         : m_context(context), m_device(device) {
         // Get device timestamp resolution
-        ze_device_properties_t device_properties = {ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES};
+        ze_device_properties_t device_properties{};
+        device_properties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
         L0_SAFE_CALL(zeDeviceGetProperties(m_device, &device_properties));
         m_timestampFreq = device_properties.timerResolution;
         if (device_properties.kernelTimestampValidBits < 64) {
@@ -966,6 +967,9 @@ struct Module : public ispcrt::base::Module {
     Module(ze_device_handle_t device, ze_context_handle_t context, const char *moduleFile, const bool is_mock_dev,
            const base::ModuleOptions &opts)
         : m_file(moduleFile) {
+        m_module_desc.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
+        m_module_desc_exp.stype = ZE_STRUCTURE_TYPE_MODULE_PROGRAM_EXP_DESC;
+
         std::ifstream is;
         ze_module_format_t moduleFormat = ZE_MODULE_FORMAT_IL_SPIRV;
 
@@ -1076,6 +1080,9 @@ struct Module : public ispcrt::base::Module {
     }
 
     Module(ze_device_handle_t device, ze_context_handle_t context, Module **modules, const uint32_t numModules) {
+        m_module_desc.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
+        m_module_desc_exp.stype = ZE_STRUCTURE_TYPE_MODULE_PROGRAM_EXP_DESC;
+
         bool useZEBinFormat = get_bool_envvar(ISPCRT_USE_ZEBIN);
 
         std::vector<const char *> buildFlags;
@@ -1141,8 +1148,8 @@ struct Module : public ispcrt::base::Module {
     std::string m_file;
     std::vector<unsigned char> m_code;
 
-    ze_module_desc_t m_module_desc{ZE_STRUCTURE_TYPE_MODULE_DESC};
-    ze_module_program_exp_desc_t m_module_desc_exp{ZE_STRUCTURE_TYPE_MODULE_PROGRAM_EXP_DESC};
+    ze_module_desc_t m_module_desc{};
+    ze_module_program_exp_desc_t m_module_desc_exp{};
     ze_module_handle_t m_module{nullptr};
 
     std::string m_igc_options;
@@ -1731,7 +1738,8 @@ static ze_driver_handle_t deviceDiscovery(bool *p_is_mock) {
         std::vector<ze_device_handle_t> allDevices(deviceCount);
         L0_SAFE_CALL(zeDeviceGet(driver, &deviceCount, allDevices.data()));
         for (auto &device : allDevices) {
-            ze_device_properties_t device_properties = {ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES};
+            ze_device_properties_t device_properties{};
+            device_properties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
             L0_SAFE_CALL(zeDeviceGetProperties(device, &device_properties));
             if (device_properties.type == ZE_DEVICE_TYPE_GPU && device_properties.vendorId == 0x8086) {
                 if (selectedDriver != nullptr && driver != selectedDriver)
@@ -1756,7 +1764,8 @@ ISPCRTDeviceInfo deviceInfo(uint32_t deviceIdx) {
     if (deviceIdx >= g_deviceList.size())
         throw std::runtime_error("Invalid device number");
     ISPCRTDeviceInfo info;
-    ze_device_properties_t dp = {ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES};
+    ze_device_properties_t dp{};
+    dp.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
     L0_SAFE_CALL(zeDeviceGetProperties(g_deviceList[deviceIdx], &dp));
     info.deviceId = dp.deviceId;
     info.vendorId = dp.vendorId;
@@ -1905,7 +1914,8 @@ void *GPUDevice::contextNativeHandle() const { return m_context; }
 ISPCRTDeviceType GPUDevice::getType() const { return ISPCRT_DEVICE_TYPE_GPU; }
 
 ISPCRTAllocationType GPUDevice::getMemAllocType(void *appMemory) const {
-    ze_memory_allocation_properties_t memProperties = {ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES};
+    ze_memory_allocation_properties_t memProperties{};
+    memProperties.stype = ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES;
     ze_device_handle_t gpuDevice = (ze_device_handle_t)m_device;
     L0_SAFE_CALL(zeMemGetAllocProperties((ze_context_handle_t)m_context, appMemory, &memProperties, &gpuDevice));
     switch (memProperties.type) {
