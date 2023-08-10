@@ -493,7 +493,31 @@ postfix_expression
           $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, false);
           lCleanUpyylvalStringVal();
       }
+    /* When we have postfix_expression inside template definition, we need to allow cases when
+       member name equals to template name or template parameter name. */
+    | postfix_expression '.' TOKEN_TYPE_NAME
+      {
+          $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, false);
+          lCleanUpyylvalStringVal();
+      }
+    | postfix_expression '.' TOKEN_TEMPLATE_NAME
+      {
+          $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, false);
+          lCleanUpyylvalStringVal();
+      }
     | postfix_expression TOKEN_PTR_OP TOKEN_IDENTIFIER
+      {
+          $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, true);
+          lCleanUpyylvalStringVal();
+      }
+    /* When we have postfix_expression inside template definition, we need to allow cases when
+       member name equals to template name or template parameter name. */
+    | postfix_expression TOKEN_PTR_OP TOKEN_TYPE_NAME
+      {
+          $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, true);
+          lCleanUpyylvalStringVal();
+      }
+    | postfix_expression TOKEN_PTR_OP TOKEN_TEMPLATE_NAME
       {
           $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, true);
           lCleanUpyylvalStringVal();
