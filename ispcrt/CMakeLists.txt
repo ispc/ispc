@@ -108,6 +108,7 @@ else()
     # Assume that signed overflow always wraps
     target_compile_options(ispcrt_interface_lib INTERFACE
                            -fstack-protector-strong -fno-delete-null-pointer-checks -fwrapv)
+    target_compile_options(ispcrt_interface_lib INTERFACE -Wall -Wextra -Wno-unused-private-field)
     target_compile_definitions(ispcrt_interface_lib INTERFACE "_FORTIFY_SOURCE=2")
     if (NOT APPLE)
         target_link_options(ispcrt_interface_lib INTERFACE
