@@ -978,7 +978,7 @@ class FunctionType : public Type {
     llvm::FunctionType *LLVMFunctionType(llvm::LLVMContext *ctx, bool disableMask = false) const;
 
     /* This method returns appropriate llvm::CallingConv for the function*/
-    const unsigned int GetCallingConv() const;
+    unsigned int GetCallingConv() const;
 
     /* Get string representation of calling convention */
     const std::string GetNameForCallConv() const;
