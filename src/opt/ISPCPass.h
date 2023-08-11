@@ -59,24 +59,28 @@ namespace ispc {
 enum { BYTE = 1, WORD = 2, DWORD = 4, QWORD = 8, OWORD = 16, GRF = 32 };
 
 #define DEBUG_START_BB(NAME)                                                                                           \
-    if (g->debugPrint && (getenv("FUNC") == nullptr ||                                                                 \
-                          (getenv("FUNC") != nullptr && !strncmp(bb.getParent()->getName().str().c_str(),              \
-                                                                 getenv("FUNC"), strlen(getenv("FUNC")))))) {          \
-        fprintf(stderr, "Start of " NAME "\n");                                                                        \
-        fprintf(stderr, "---------------\n");                                                                          \
-        bb.print(llvm::errs());                                                                                        \
-        fprintf(stderr, "---------------\n\n");                                                                        \
-    } else /* eat semicolon */
+    do {                                                                                                               \
+        if (g->debugPrint && (getenv("FUNC") == nullptr ||                                                             \
+                              (getenv("FUNC") != nullptr && !strncmp(bb.getParent()->getName().str().c_str(),          \
+                                                                     getenv("FUNC"), strlen(getenv("FUNC")))))) {      \
+            fprintf(stderr, "Start of " NAME "\n");                                                                    \
+            fprintf(stderr, "---------------\n");                                                                      \
+            bb.print(llvm::errs());                                                                                    \
+            fprintf(stderr, "---------------\n\n");                                                                    \
+        }                                                                                                              \
+    } while (0)
 
 #define DEBUG_END_BB(NAME)                                                                                             \
-    if (g->debugPrint && (getenv("FUNC") == nullptr ||                                                                 \
-                          (getenv("FUNC") != nullptr && !strncmp(bb.getParent()->getName().str().c_str(),              \
-                                                                 getenv("FUNC"), strlen(getenv("FUNC")))))) {          \
-        fprintf(stderr, "End of " NAME " %s\n", modifiedAny ? "** CHANGES **" : "");                                   \
-        fprintf(stderr, "---------------\n");                                                                          \
-        bb.print(llvm::errs());                                                                                        \
-        fprintf(stderr, "---------------\n\n");                                                                        \
-    } else /* eat semicolon */
+    do {                                                                                                               \
+        if (g->debugPrint && (getenv("FUNC") == nullptr ||                                                             \
+                              (getenv("FUNC") != nullptr && !strncmp(bb.getParent()->getName().str().c_str(),          \
+                                                                     getenv("FUNC"), strlen(getenv("FUNC")))))) {      \
+            fprintf(stderr, "End of " NAME " %s\n", modifiedAny ? "** CHANGES **" : "");                               \
+            fprintf(stderr, "---------------\n");                                                                      \
+            bb.print(llvm::errs());                                                                                    \
+            fprintf(stderr, "---------------\n\n");                                                                    \
+        }                                                                                                              \
+    } while (0)
 
 /** A helper that reduced LLVM versioning in the code. */
 inline void ReplaceInstWithValueWrapper(llvm::BasicBlock::iterator &BI, llvm::Value *V) {

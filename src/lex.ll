@@ -320,6 +320,7 @@ inline int ispcRand() {
 }
 
 #define RT \
+    do { \
     if (g->enableFuzzTest) { \
         int r = ispcRand() % 40; \
         if (r == 0) { \
@@ -342,7 +343,7 @@ inline int ispcRand() {
             } \
         } \
         /*  TOKEN_TYPE_NAME */ \
-     } else /* swallow semicolon */
+     } } while(0)
 
 %}
 
