@@ -86,7 +86,7 @@ extern char *yytext;
 
 void yyerror(const char *s);
 
-void lCleanUpyylvalStringVal();
+void lCleanUpString(std::string *str);
 void lFreeSimpleTemplateID(void *p);
 static int lYYTNameErr(char *yyres, const char *yystr);
 
@@ -271,7 +271,7 @@ struct ForeachDimension {
 %type <templateParmList> template_parameter_list template_head
 %type <functionTemplateSym> template_declaration
 
-%destructor { lCleanUpyylvalStringVal(); } <stringVal>
+%destructor { lCleanUpString($$); } <stringVal>
 // TODO! destructos for all semantic types that return pointer to heap-allocated memory
 // e.g., tests/lit-tests/2599.ispc
 
@@ -279,20 +279,26 @@ struct ForeachDimension {
 %%
 
 string_constant
-    : TOKEN_STRING_LITERAL { $$ = yylval.stringVal; }
+    : TOKEN_STRING_LITERAL
+    {
+        $$ = new std::string(*$1);
+        lCleanUpString($1);
+    }
     | string_constant TOKEN_STRING_LITERAL
     {
-        std::string *p_str_cst = (std::string *)$1;
-        p_str_cst->append(*yylval.stringVal);
+        std::string *p_str_cst = new std::string();
+        p_str_cst->append(*$1);
+        p_str_cst->append(*$2);
         $$ = p_str_cst;
         // Allocated in lStringConst
-        lCleanUpyylvalStringVal();
+        lCleanUpString($1);
+        lCleanUpString($2);
     }
     ;
 
 primary_expression
     : TOKEN_IDENTIFIER {
-        const char *name = yylval.stringVal->c_str();
+        const char *name = $1->c_str();
         Symbol *s = m->symbolTable->LookupVariable(name);
         $$ = nullptr;
         if (s)
@@ -309,7 +315,7 @@ primary_expression
             std::string alts = lGetAlternates(alternates);
             Error(@1, "Undeclared symbol \"%s\".%s", name, alts.c_str());
         }
-        lCleanUpyylvalStringVal();
+        lCleanUpString($1);
     }
     | TOKEN_INT8_CONSTANT {
         $$ = new ConstExpr(AtomicType::UniformInt8->GetAsConstType(),
@@ -344,8 +350,8 @@ primary_expression
                            (uint64_t)yylval.intVal, @1);
     }
     | TOKEN_FLOAT16_CONSTANT {
-         std::string sval = *(yylval.stringVal);
-         lCleanUpyylvalStringVal();
+         std::string sval = *$1;
+         lCleanUpString($1);
          llvm::Type *hType = llvm::Type::getHalfTy(*g->ctx);
          const llvm::fltSemantics &FS = hType->getFltSemantics();
          llvm::APFloat f16(FS, sval);
@@ -500,36 +506,36 @@ postfix_expression
     | postfix_expression '.' TOKEN_IDENTIFIER
       {
           $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, false);
-          lCleanUpyylvalStringVal();
+          lCleanUpString($3);
       }
     /* When we have postfix_expression inside template definition, we need to allow cases when
        member name equals to template name or template parameter name. */
     | postfix_expression '.' TOKEN_TYPE_NAME
       {
           $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, false);
-          lCleanUpyylvalStringVal();
+          lCleanUpString($3);
       }
     | postfix_expression '.' TOKEN_TEMPLATE_NAME
       {
           $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, false);
-          lCleanUpyylvalStringVal();
+          lCleanUpString($3);
       }
     | postfix_expression TOKEN_PTR_OP TOKEN_IDENTIFIER
       {
           $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, true);
-          lCleanUpyylvalStringVal();
+          lCleanUpString($3);
       }
     /* When we have postfix_expression inside template definition, we need to allow cases when
        member name equals to template name or template parameter name. */
     | postfix_expression TOKEN_PTR_OP TOKEN_TYPE_NAME
       {
           $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, true);
-          lCleanUpyylvalStringVal();
+          lCleanUpString($3);
       }
     | postfix_expression TOKEN_PTR_OP TOKEN_TEMPLATE_NAME
       {
           $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, true);
-          lCleanUpyylvalStringVal();
+          lCleanUpString($3);
       }
     | postfix_expression TOKEN_INC_OP
       { $$ = new UnaryExpr(UnaryExpr::PostInc, $1, Union(@1,@2)); }
@@ -540,7 +546,7 @@ postfix_expression
 intrinsic_name
     : TOKEN_INTRINSIC_CALL
       {
-          $$ = yylval.stringVal;
+          $$ = $1;
       }
     ;
 
@@ -906,10 +912,10 @@ declspec_item
     : TOKEN_IDENTIFIER
     {
         std::pair<std::string, SourcePos> *p = new std::pair<std::string, SourcePos>;
-        p->first = *(yylval.stringVal);
+        p->first = *$1;
         p->second = @1;
         $$ = p;
-        lCleanUpyylvalStringVal();
+        lCleanUpString($1);
     }
     ;
 
@@ -1084,7 +1090,7 @@ type_specifier
     {
         const Type *t = m->symbolTable->LookupType(yytext);
         $$ = t;
-        lCleanUpyylvalStringVal();
+        lCleanUpString($1);
     }
     | struct_or_union_specifier { $$ = $1; }
     | enum_specifier { $$ = $1; }
@@ -1139,12 +1145,12 @@ struct_or_union_name
     : TOKEN_IDENTIFIER
     {
         $$ = strdup(yytext);
-        lCleanUpyylvalStringVal();
+        lCleanUpString($1);
     }
     | TOKEN_TYPE_NAME
     {
         $$ = strdup(yytext);
-        lCleanUpyylvalStringVal();
+        lCleanUpString($1);
     }
     ;
 
@@ -1388,7 +1394,7 @@ enum_identifier
     : TOKEN_IDENTIFIER
       {
           $$ = strdup(yytext);
-          lCleanUpyylvalStringVal();
+          lCleanUpString($1);
       }
     ;
 
@@ -1563,7 +1569,7 @@ direct_declarator
           Declarator *d = new Declarator(DK_BASE, @1);
           d->name = yytext;
           $$ = d;
-          lCleanUpyylvalStringVal();
+          lCleanUpString($1);
       }
     // For the purpose of declaration, template_name token is no different from identifier token,
     // it needs to be processed in the same way. Semantic checks will be done later.
@@ -1572,7 +1578,7 @@ direct_declarator
           Declarator *d = new Declarator(DK_BASE, @1);
           d->name = yytext;
           $$ = d;
-          lCleanUpyylvalStringVal();
+          lCleanUpString($1);
       }
     | '(' declarator ')'
     {
@@ -2048,7 +2054,7 @@ foreach_identifier
     : TOKEN_IDENTIFIER
     {
         $$ = new Symbol(yytext, @1, AtomicType::VaryingInt32->GetAsConstType());
-        lCleanUpyylvalStringVal();
+        lCleanUpString($1);
     }
     ;
 
@@ -2060,7 +2066,7 @@ foreach_active_identifier
     : TOKEN_IDENTIFIER
     {
         $$ = new Symbol(yytext, @1, AtomicType::UniformInt64->GetAsConstType());
-        lCleanUpyylvalStringVal();
+        lCleanUpString($1);
     }
     ;
 
@@ -2120,8 +2126,8 @@ foreach_unique_scope
 foreach_unique_identifier
     : TOKEN_IDENTIFIER
       {
-          $$ = strdup(yylval.stringVal->c_str());
-          lCleanUpyylvalStringVal();
+          $$ = strdup($1->c_str());
+          lCleanUpString($1);
       }
     ;
 
@@ -2257,8 +2263,8 @@ iteration_statement
 goto_identifier
     : TOKEN_IDENTIFIER
       {
-          $$ = strdup(yylval.stringVal->c_str());
-          lCleanUpyylvalStringVal();
+          $$ = strdup($1->c_str());
+          lCleanUpString($1);
       }
     ;
 
@@ -2303,13 +2309,13 @@ print_statement
       {
            $$ = new PrintStmt(*$3, nullptr, @1);
            // deallocate std::string of string_constant
-           delete $3;
+           lCleanUpString($3);
       }
     | TOKEN_PRINT '(' string_constant ',' argument_expression_list ')' ';'
       {
            $$ = new PrintStmt(*$3, $5, @1);
            // deallocate std::string of string_constant
-           delete $3;
+           lCleanUpString($3);
       }
     ;
 
@@ -2318,7 +2324,7 @@ assert_statement
       {
           $$ = new AssertStmt(*$3, $5, @1);
           // deallocate std::string of string_constant
-          delete $3;
+          lCleanUpString($3);
       }
     ;
 
@@ -2391,12 +2397,12 @@ template_type_parameter
     : TOKEN_TYPENAME TOKEN_IDENTIFIER
       {
           $$ = new TemplateTypeParmType(*$<stringVal>2, Variability::VarType::Unbound, false, Union(@1, @2));
-          lCleanUpyylvalStringVal();
+          lCleanUpString($<stringVal>2);
       }
     | TOKEN_TYPENAME TOKEN_IDENTIFIER '=' type_specifier
       {
           $$ = new TemplateTypeParmType(*$<stringVal>2, Variability::VarType::Unbound, false, Union(@1, @2));
-          lCleanUpyylvalStringVal();
+          lCleanUpString($<stringVal>2);
           // TODO: implement
           Error(@4, "Default values for template type parameters are not yet supported.");
       }
@@ -2406,7 +2412,7 @@ template_int_parameter
     : TOKEN_INT TOKEN_IDENTIFIER
       {
           $$ = nullptr;
-          lCleanUpyylvalStringVal();
+          lCleanUpString($2);
           // TODO: implement
           Error(Union(@1, @2), "Non-type template parameters are not yet supported.");
       }
@@ -2518,7 +2524,7 @@ template_identifier
     : TOKEN_TEMPLATE_NAME
     {
         $$ = strdup(yytext);
-        lCleanUpyylvalStringVal();
+        lCleanUpString($1);
     }
     ;
 
@@ -2682,10 +2688,9 @@ void yyerror(const char *s) {
         Error(yylloc, "%s.", s);
 }
 
-void lCleanUpyylvalStringVal() {
-    if (yylval.stringVal) {
-        delete yylval.stringVal;
-        yylval.stringVal = nullptr;
+void lCleanUpString(std::string *s) {
+    if (s) {
+         delete s;
     }
 }
 
