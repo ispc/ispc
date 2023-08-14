@@ -44,6 +44,7 @@ set(BUILD_TYPE_SPIRV_TRANSLATOR "Release" CACHE STRING "Set the build type for S
 set(BUILD_TYPE_VC_INTRINSICS "Release" CACHE STRING "Set the build type for VC Intrinsics build")
 set(BUILD_TYPE_L0 "Release" CACHE STRING "Set the build type for L0 build")
 set(ISPC_ANDROID_NDK_PATH "NO" CACHE STRING "Path to Android NDK. It is needed to ISPC_CROSS=ON on macOS.")
+set(ISPC_SIGN_KEY "NO" CACHE STRING "Key to sign macOS build.")
 option(LLVM_DISABLE_ASSERTIONS "Enable LLVM build without assertions" ON)
 option(EXTERNAL_VERBOSE "Enable verbose for external project build and install commands" OFF)
 option(CCACHE "Enable ccache to speed up repetitive builds" OFF)
@@ -134,6 +135,11 @@ if (APPLE)
 
     if (APPLE AND ISPC_ANDROID_NDK_PATH STREQUAL "NO")
         message(FATAL_ERROR "You need provide path to ANDROID NDK on macOS via -DISPC_ANDROID_NDK_PATH=..")
+    endif()
+
+    if (MACOS_UNIVERSAL_BIN AND CMAKE_OSX_ARCHITECTURES)
+        message(WARNING "CMAKE_OSX_ARCHITECTURES value ${CMAKE_OSX_ARCHITECTURES} is "
+                        "discarded due to MACOS_UNIVERSAL_BIN is ON")
     endif()
 endif()
 
@@ -229,6 +235,11 @@ message(STATUS "PREBUILT_STAGE2_PATH is ${PREBUILT_STAGE2_PATH}")
 message(STATUS "EXTERNAL_VERBOSE is ${EXTERNAL_VERBOSE}")
 message(STATUS "FULL_STAGE2_LLVM is ${FULL_STAGE2_LLVM}")
 message(STATUS "ISPC_ANDROID_NDK_PATH is ${ISPC_ANDROID_NDK_PATH}")
+if (ISPC_SIGN_KEY STREQUAL "NO")
+    message(STATUS "ISPC_SIGN_KEY is not set.")
+else()
+    message(STATUS "ISPC_SIGN_KEY is set to some value.")
+endif()
 message(STATUS "LLVM_DISABLE_ASSERTIONS is ${LLVM_DISABLE_ASSERTIONS}")
 message(STATUS "LTO is ${LTO}")
 message(STATUS "PGO is ${PGO}")
@@ -259,6 +270,7 @@ message(STATUS "CMAKE_C_FLAGS is ${CMAKE_C_FLAGS}")
 message(STATUS "CMAKE_CXX_FLAGS is ${CMAKE_CXX_FLAGS}")
 message(STATUS "MACOS_VERSION_MIN is ${MACOS_VERSION_MIN}")
 message(STATUS "MACOS_UNIVERSAL_BIN is ${MACOS_UNIVERSAL_BIN}")
+message(STATUS "CMAKE_OSX_ARCHITECTURES is ${CMAKE_OSX_ARCHITECTURES}")
 
 
 if (NOT XE_DEPS)
@@ -607,6 +619,10 @@ if (APPLE)
         list(APPEND LLVM_STAGE2_CMAKE_ARGS
             -DCMAKE_OSX_ARCHITECTURES=x86_64$<SEMICOLON>arm64
             )
+    else()
+        list(APPEND LLVM_STAGE2_CMAKE_ARGS
+            -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}
+            )
     endif()
 endif()
 message(STATUS "LLVM stage2 cmake arguments ${LLVM_STAGE2_CMAKE_ARGS}")
@@ -637,7 +653,7 @@ if (APPLE)
         -DISPC_ANDROID_NDK_PATH=${ISPC_ANDROID_NDK_PATH}
         )
 
-    # For APPLE explicitly eanbled both arch.
+    # For APPLE explicitly enabled both arch.
     list(APPEND ISPC_COMMON_CMAKE_ARGS
         -DX86_ENABLED=ON
         -DARM_ENABLED=ON
@@ -647,9 +663,19 @@ if (APPLE)
         -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOS_VERSION_MIN}
         )
 
+    if (ISPC_SIGN_KEY)
+        list(APPEND ISPC_COMMON_CMAKE_ARGS
+            -DISPC_SIGN_KEY=${ISPC_SIGN_KEY}
+            )
+    endif()
+
     if(MACOS_UNIVERSAL_BIN)
         list(APPEND ISPC_COMMON_CMAKE_ARGS
             -DISPC_MACOS_UNIVERSAL_BINARIES=ON
+            )
+    else()
+        list(APPEND ISPC_COMMON_CMAKE_ARGS
+            -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}
             )
     endif()
 endif()
