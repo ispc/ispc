@@ -182,7 +182,8 @@ void ISPCLaunch(void **handlePtr, void *f, void *data, int countx, int county, i
         return ispc_launch_fptr(handlePtr, f, data, countx, county, countz);
     }
     // TODO: this code can be called directly from ISPC code. Not sure how to exit error safely.
-    throw std::runtime_error("Missing ISPCLaunch symbol");
+    fprintf(stderr, "Missing ISPCLaunch symbol");
+    abort();
 }
 
 void *ISPCAlloc(void **handlePtr, int64_t size, int32_t alignment) {
@@ -190,7 +191,8 @@ void *ISPCAlloc(void **handlePtr, int64_t size, int32_t alignment) {
         return ispc_alloc_fptr(handlePtr, size, alignment);
     }
     // TODO: this code can be called directly from ISPC code. Not sure how to exit error safely.
-    throw std::runtime_error("Missing ISPCAlloc symbol");
+    fprintf(stderr, "Missing ISPCAlloc symbol");
+    abort();
 }
 
 void ISPCSync(void *handle) {
@@ -198,7 +200,8 @@ void ISPCSync(void *handle) {
         return ispc_sync_fptr(handle);
     }
     // TODO: this code can be called directly from ISPC code. Not sure how to exit error safely.
-    throw std::runtime_error("Missing ISPCSync symbol");
+    fprintf(stderr, "Missing ISPCSync symbol");
+    abort();
 }
 }
 #endif
