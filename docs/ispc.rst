@@ -112,6 +112,7 @@ Contents:
   + `Types`_
 
     * `Basic Types and Type Qualifiers`_
+    * `Signed and Unsigned Integer Types_`
     * `"uniform" and "varying" Qualifiers`_
     * `Defining New Names For Types`_
     * `Pointer Types`_
@@ -1933,6 +1934,35 @@ global variable defined in another source file, and the ``static``
 qualifier can be used to define a variable or function that is only visible
 in the current scope.  The values of ``static`` variables declared in
 functions are preserved across function calls.
+
+Signed and Unsigned Integer Types
+---------------------------------
+
+Like in C and C++ signed and unsigned integer types behave differently with
+respect to overflow. Unsigned integer types have defined behavior in case of
+overflow and underflow, they are guaranteed to wraparound. I.e. maximum
+unsigned integer value plus one is guaranteed to be zero. Signed integer types
+have **undefined** behavior in case of overflow and underflow, they are **not**
+guaranteed to wraparound. This is done on purpose to enable compiler to be more
+aggressive with optimizations of signed types.
+
+There is a subtle difference with C and C++ for 8 and 16 bit integer types. In
+C and C++ binary operations require *integer promotions* for both operands,
+while ``ispc`` does not. This means that C and C++ do not have 8 and 16 bit
+arithmetic and all operations are promoted to at least to 32 bits, and hence,
+overflow and underflow do not happen for these types. If the resulting value is
+outside the 8 and 16 bit type range and it is assigned to 8 or 16 bit variable,
+the result is truncated. In ``ispc`` there are no *integer promotions* rules,
+and hence, overflow and underflow may happen for 8 and 16 bit types.
+
+Note that undefined behavior for signed integer overflow was introduced in
+``ispc`` only starting from version ``1.21.0``, which may cause compatibility
+issues. This behavior can be managed by ``--[no-]wrap-signed-int`` compiler
+switch. ``--no-wrap-signed-int`` enables undefined behavior for signed integer
+overflow / underflow and it is the default. If the old behavior (before
+``1.21.0``) needs to be preserved, use ``--wrap-signed-int``, which cause
+signed integers to have defined wraparound behavior (keep in mind that it will
+prevent some compiler optimizations).
 
 "uniform" and "varying" Qualifiers
 ----------------------------------
