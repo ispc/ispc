@@ -6,9 +6,22 @@
 #
 # ispc CMakeLists.txt
 #
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.15)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+
+# Set C++ standard to C++17.
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+
+# Set C standard to C11
+set(CMAKE_C_STANDARD   11)
+set(CMAKE_C_STANDARD_REQUIRED   ON)
+set(CMAKE_C_EXTENSIONS OFF)
+
 
 if (UNIX)
     if (NOT CMAKE_C_COMPILER)
@@ -557,10 +570,6 @@ else()
     endif()
 endif()
 
-# Set C++ standard to C++17.
-set_target_properties(${PROJECT_NAME} PROPERTIES
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED YES)
 
 # Set hidden visibility for inline functions.
 # This is needed to be in sync with LLVM libraries, we do include some template code from LLVM that requires
