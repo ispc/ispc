@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #ifdef ISPC_HOST_IS_WINDOWS
 #include <time.h>
+#include <windows.h>
 #else
 #include <unistd.h>
 #endif // ISPC_HOST_IS_WINDOWS
@@ -569,9 +570,17 @@ int main(int Argc, char *Argv[]) {
     std::vector<char *> argv;
     lGetAllArgs(Argc, Argv, argv);
     int argc = argv.size();
-
+#ifdef ISPC_HOST_IS_WINDOWS
+    // While ispc doesn't load any libraries explicitly using LoadLibrary API (or alternatives), it uses vcruntime that
+    // loads vcruntime140.dll and msvcp140.dll. Moreover LLVM loads dbghelp.dll.
+    // There is no way to modify DLL search order for vcruntime140.dll and msvcp140.dll but we
+    // can prevent searching in CWD while loading dbghelp.dll.
+    // So before initiating any LLVM call, remove CWD from the search path to reduce the risk of DLL injection
+    // when Safe DLL search mode is OFF.
+    // https://learn.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-search-order
+    SetDllDirectory("");
+#endif
     llvm::sys::AddSignalHandler(lSignal, nullptr);
-
     // initialize available LLVM targets
 #ifdef ISPC_X86_ENABLED
     LLVMInitializeX86TargetInfo();
