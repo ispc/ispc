@@ -99,7 +99,7 @@ endif()
 # Security options
 if (MSVC)
     # Stack canaries
-    target_compile_options(ispcrt_interface_lib INTERFACE /GS)
+    target_compile_options(ispcrt_interface_lib INTERFACE /GS /EHsc)
     # Control flow guard
     target_link_options(ispcrt_interface_lib INTERFACE /GUARD:CF)
 else()
