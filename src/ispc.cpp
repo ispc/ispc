@@ -1362,7 +1362,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 4;
         this->m_hasHalfConverts = false;
-        this->m_hasHalfFullSupport = true;
+        this->m_hasHalfFullSupport = false;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         this->m_hasTranscendentals = false;
