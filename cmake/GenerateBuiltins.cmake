@@ -95,9 +95,8 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
         set(SKIP ON)
     endif()
 
-    if ((    ${os_name} STREQUAL "web" AND NOT ${arch} STREQUAL "wasm32") OR
-        (NOT ${os_name} STREQUAL "web" AND     ${arch} STREQUAL "wasm32") OR
-        (    ${os_name} STREQUAL "web" AND     ${arch} STREQUAL "wasm32" AND NOT "${bit}" STREQUAL "32"))
+    if ((    ${os_name} STREQUAL "web" AND NOT ${arch} STREQUAL "wasm") OR
+        (NOT ${os_name} STREQUAL "web" AND     ${arch} STREQUAL "wasm"))
         return()
     endif()
 
@@ -109,8 +108,10 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
         set(target_arch "armv7")
     elseif ("${bit}" STREQUAL "64" AND ${arch} STREQUAL "arm")
         set(target_arch "aarch64")
-    elseif ("${bit}" STREQUAL "32" AND ${arch} STREQUAL "wasm32")
+    elseif ("${bit}" STREQUAL "32" AND ${arch} STREQUAL "wasm")
         set(target_arch "wasm32")
+    elseif ("${bit}" STREQUAL "64" AND ${arch} STREQUAL "wasm")
+        set(target_arch "wasm64")
     else()
         message(FATAL_ERROR "Error")
     endif()
@@ -261,9 +262,12 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
 
     set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-cpp-${bit}-${os_name}-${target_arch}.cpp)
     if (${os_name} STREQUAL "web")
+        if("${bit}" STREQUAL "64")
+            list(APPEND emcc_flags "-sMEMORY64")
+        endif()
         add_custom_command(
             OUTPUT ${output}
-            COMMAND ${EMCC_EXECUTABLE} -DWASM -s WASM_OBJECT_FILES=0 -I${CMAKE_SOURCE_DIR} -c ${inputFilePath} --std=gnu++17 -emit-llvm -c -o -
+            COMMAND ${EMCC_EXECUTABLE} -DWASM -s WASM_OBJECT_FILES=0 ${emcc_flags} ${ISPC_OPAQUE_FLAGS} -I${CMAKE_SOURCE_DIR} -c ${inputFilePath} --std=gnu++17 -emit-llvm -c -o -
                 | (\"${LLVM_DIS_EXECUTABLE}\" ${LLVM_TOOLS_OPAQUE_FLAGS} - || echo "builtins-c-*.cpp compile error")
                 | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --type=builtins-c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE} --opaque_flags="${LLVM_TOOLS_OPAQUE_FLAGS}"
                 > ${output}
@@ -354,7 +358,11 @@ function (generate_target_builtins resultList)
         list(FILTER wasm_targets INCLUDE REGEX wasm)
         foreach (wasm_target ${wasm_targets})
             target_ll_to_cpp(target-${wasm_target} 32 web outputweb32)
-            list(APPEND tmpList ${outputweb32})
+            target_ll_to_cpp(target-${wasm_target} 64 web outputweb64)
+            list(APPEND tmpList ${outputweb32} ${outputweb64})
+            if(MSVC)
+                source_group("Generated Builtins" FILES ${outputweb32} ${outputweb64})
+            endif()
         endforeach()
     endif()
     # Return the list
@@ -370,7 +378,7 @@ function (generate_common_builtins resultList)
         list (APPEND supported_archs "arm")
     endif()
     if (WASM_ENABLED)
-        list (APPEND supported_archs "wasm32")
+        list (APPEND supported_archs "wasm")
         list (APPEND supported_oses "web")
     endif()
 
@@ -400,7 +408,7 @@ function (generate_common_builtins resultList)
     message (STATUS "ISPC will be built with support of ${supported_oses} for ${supported_archs}")
     foreach (bit 32 64)
         foreach (os_name "windows" "linux" "freebsd" "macos" "android" "ios" "ps4" "web")
-            foreach (arch "x86" "arm" "wasm32")
+            foreach (arch "x86" "arm" "wasm")
                 builtin_to_cpp(${bit} ${os_name} ${arch} "${supported_archs}" "${supported_oses}" res${bit}${os_name}${arch})
                 list(APPEND tmpList ${res${bit}${os_name}${arch}} )
                 if(MSVC)

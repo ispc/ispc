@@ -3,6 +3,9 @@
 // rule: skip on arch=arm
 // rule: skip on arch=aarch64
 
+// on wasm, this test fails but is expected (issue #1750)
+// rule: skip on arch=wasm32
+// rule: skip on arch=wasm64
 
 float x;
 

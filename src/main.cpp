@@ -1144,6 +1144,30 @@ int main(int Argc, char *Argv[]) {
         }
     }
 
+#ifdef ISPC_WASM_ENABLED
+    // Default setting for wasm
+    if (arch == Arch::wasm32 || arch == Arch::wasm64) {
+        g->target_os = TargetOS::web;
+    }
+    for (auto target : targets) {
+        if (target == ISPCTarget::wasm_i32x4) {
+            Assert(targets.size() == 1 && "wasm supports only one target: i32x4");
+            g->target_os = TargetOS::web;
+            if (arch == Arch::none) {
+                arch = Arch::wasm32;
+            }
+        }
+    }
+    if (g->target_os == TargetOS::web) {
+        if (arch == Arch::none) {
+            arch = Arch::wasm32;
+        }
+        if (targets.empty()) {
+            targets.push_back(ISPCTarget::wasm_i32x4);
+        }
+    }
+#endif
+
     if (g->enableFuzzTest) {
         if (g->fuzzTestSeed == -1) {
 #ifdef ISPC_HOST_IS_WINDOWS
@@ -1220,13 +1244,8 @@ int main(int Argc, char *Argv[]) {
     }
 
     bool targetIsGen = false;
-    for (auto target : targets) {
-        if (target == ISPCTarget::wasm_i32x4) {
-            Assert(targets.size() == 1 && "wasm32 supports only one target: i32x4");
-            arch = Arch::wasm32;
-            g->target_os = TargetOS::web;
-        }
 #ifdef ISPC_XE_ENABLED
+    for (auto target : targets) {
         if (ISPCTargetIsGen(target)) {
             targetIsGen = true;
             Assert(targets.size() == 1 && "multi-target is not supported for Xe targets yet.");
@@ -1236,8 +1255,8 @@ int main(int Argc, char *Argv[]) {
                 ot = Module::SPIRV;
             }
         }
-#endif
     }
+#endif
 
     // If [no]wrap-signed-int is explicitly specified, then use this value.
     // Disable NSW bit optimization by default due to performance regressions

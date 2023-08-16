@@ -28,6 +28,8 @@ Arch ParseArch(std::string arch) {
         return Arch::aarch64;
     } else if (arch == "wasm32") {
         return Arch::wasm32;
+    } else if (arch == "wasm64") {
+        return Arch::wasm64;
     } else if (arch == "xe64") {
         return Arch::xe64;
     }
@@ -48,6 +50,8 @@ std::string ArchToString(Arch arch) {
         return "aarch64";
     case Arch::wasm32:
         return "wasm32";
+    case Arch::wasm64:
+        return "wasm64";
     case Arch::xe64:
         return "xe64";
     case Arch::error:
