@@ -469,7 +469,7 @@ def run_test(testname, host, target):
         exe_wd = "."
         if target.arch == "wasm32" or target.arch == "wasm64":
             cc_cmd += " -D__WASM__"
-            options.wrapexe = "v8"
+            options.wrapexe = os.environ["EMSDK_NODE"]
             if target.arch == "wasm64":
                 options.wrapexe += " --experimental-wasm-memory64"
             exe_wd = os.path.realpath("./tests")
