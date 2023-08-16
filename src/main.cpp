@@ -1235,8 +1235,8 @@ int main(int Argc, char *Argv[]) {
     }
 
     bool targetIsGen = false;
-    for (auto target : targets) {
 #ifdef ISPC_XE_ENABLED
+    for (auto target : targets) {
         if (ISPCTargetIsGen(target)) {
             targetIsGen = true;
             Assert(targets.size() == 1 && "multi-target is not supported for Xe targets yet.");
@@ -1246,8 +1246,8 @@ int main(int Argc, char *Argv[]) {
                 ot = Module::SPIRV;
             }
         }
-#endif
     }
+#endif
 
     // If [no]wrap-signed-int is explicitly specified, then use this value.
     // Disable NSW bit optimization by default due to performance regressions
