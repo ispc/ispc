@@ -521,7 +521,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 if (MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /W3 /wd4018 /wd4065 /wd4141 /wd4146 /wd4244 /wd4267 /wd4291 /wd4355 /wd4624 /wd4800 /wd4996)
     # Security options
-    target_compile_options(${PROJECT_NAME} PRIVATE /GS)
+    target_compile_options(${PROJECT_NAME} PRIVATE /GS /EHsc)
     set_source_files_properties(${FLEX_OUTPUT} PROPERTIES COMPILE_FLAGS "/wd4005 /wd4003")
     set_source_files_properties(${BISON_OUTPUT} PROPERTIES COMPILE_FLAGS "/wd4005 /wd4065")
 else()
