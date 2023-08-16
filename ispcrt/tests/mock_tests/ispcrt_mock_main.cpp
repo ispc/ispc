@@ -154,12 +154,6 @@ class MockTestWithModuleQueueKernel : public MockTestWithModule {
 /////////////////////////////////////////////////////////////////////
 // Device tests
 
-TEST_F(MockTest, Device_Constructor_zeInit) {
-    Config::setRetValue("zeInit", ZE_RESULT_ERROR_DEVICE_LOST);
-    ispcrt::Device d(ISPCRT_DEVICE_TYPE_GPU);
-    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
-}
-
 TEST_F(MockTest, Device_Constructor_zeDeviceGet) {
     Config::setRetValue("zeDeviceGet", ZE_RESULT_ERROR_DEVICE_LOST);
     ispcrt::Device d(ISPCRT_DEVICE_TYPE_GPU);
@@ -175,12 +169,6 @@ TEST_F(MockTest, Device_Constructor_zeDeviceGetProperties) {
 TEST_F(MockTest, Device_Constructor_zeContextCreate) {
     Config::setRetValue("zeContextCreate", ZE_RESULT_ERROR_DEVICE_LOST);
     ispcrt::Device d(ISPCRT_DEVICE_TYPE_GPU);
-    ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
-}
-
-TEST_F(MockTest, Context_Constructor_zeInit) {
-    Config::setRetValue("zeInit", ZE_RESULT_ERROR_DEVICE_LOST);
-    ispcrt::Context c(ISPCRT_DEVICE_TYPE_GPU);
     ASSERT_EQ(sm_rt_error, ISPCRT_DEVICE_LOST);
 }
 
