@@ -1,3 +1,84 @@
+=== v1.21.0 === (18 August 2023)
+
+ISPC release with template function specializations support; changed rules for signed integer overflow, which match
+C/C++ behavior and lead to more aggressive optimizations; an enhanced ISPC Runtime; multiple stability and performance
+fixes and more. The release is based on patched LLVM 15.0.7.
+
+Language changes:
+
+ - Added support for function template specializations with explicit template arguments.
+   For more details please refer to Function Templates section of documentation.
+
+ - Modified behavior for signed integer overflow.
+   Now, in case of signed integer overflow, `ispc` will assume undefined behavior similar to C and C++. This change may
+   cause compatibility issues. You can manage this behavior by using the `--[no-]wrap-signed-int` compiler switch. The default
+   behavior (before version 1.21.0) can be preserved by using `--wrap-signed-int`, which maintains defined wraparound
+   behavior for signed integers, though it may limit some compiler optimizations.
+
+New hardware support:
+
+Added support of Intel Meteor Lake Xe-LPG graphics:
+
+ - Added two new ISPC targets: `xelpg-x16` and `xelpg-x8`
+ - Added two new device names: `mtl-m` and `mtl-p`
+
+Infrastructure changes:
+
+ - ISPC now uses LLVM's new pass manager. Optimization pipeline was modified by introducing early LoopFullUnrollPass
+   which matches ISPC unrolled loops with manually unrolled loops in many cases.
+ - Introduced ISPC superbuild, which facilitates building ISPC with Xe dependencies (LLVM, L0, vc-intrinsics,
+   SPIRV-Translator). It can generate an archive with dependencies or consume a pre-built archive to build ISPC only.
+   It also enables generating LTO or LTO+PGO enabled builds of LLVM and ISPC.
+ - Supported building ISPC with LLVM 16.
+
+New compiler switches:
+
+ - `--mcmodel` switch, which accepts `small` and `large` values. The definition is similar to gcc/clang. When `large`
+   model is used, it enables programs larger than 2Gb.
+ - `--opt=disable-gathers` and `--opt=disable-scatters` options, which disable generation of gathers and scatters
+   instructions on platforms that support them (for performance experiments).
+ - `--[no-]wrap-signed-int` switches, which [does not] preserve(s) wrap-around behavior on signed integer overflow.
+
+ISPC Runtime improvements:
+
+ - Added `ispcrtSetTaskingCallbacks` to the ISPCRT API, allowing the override of default implementations of
+   `ISPCLaunch`, `ISPCAlloc`, and `ISPCSync`.
+ - Removed compile-time Level Zero dependency from ISPCRT, no longer necessary after the ISPCRT split into CPU and GPU
+   parts.
+
+
+Recommended versions of Runtime Dependencies when targeting GPU:
+
+Linux:
+
+ - Intel(R) Graphics Compute Runtime
+   https://github.com/intel/compute-runtime/releases/tag/23.22.26516.18
+ - Level Zero Loader
+   https://github.com/oneapi-src/level-zero/releases/tag/v1.13.5
+ - Threading Building Blocks (TBB)
+
+Alternatively, you can use a validated gfx driver stack supporting Intel® Arc™
+available at https://dgpu-docs.intel.com/driver/installation.html
+
+Windows:
+
+ - Intel(R) Graphics Windows(R) DCH Drivers 31.0.101.4644
+   https://www.intel.com/content/www/us/en/download/726609/intel-arc-iris-xe-graphics-whql-windows.html
+ - Level Zero Loader
+   https://github.com/oneapi-src/level-zero/releases/tag/v1.13.5
+ - OpenCL™ Offline Compiler (OCLOC)
+   https://www.intel.com/content/www/us/en/developer/articles/tool/oneapi-standalone-components.html
+   (this is needed for AoT compilation on Windows only)
+ - Supported GPU platforms: Intel(R) Arc Graphics, 11th-13th Gen Intel(R) Core
+   processor graphics
+
+Components revisions used in GPU-enabled build:
+ - https://github.com/KhronosGroup/SPIRV-LLVM-Translator/commit/e82ecc2
+ - https://github.com/intel/vc-intrinsics/commit/910db48
+ - https://github.com/oneapi-src/level-zero/commit/e1f09b4 (v1.13.5)
+ - https://github.com/llvm/llvm-project/commit/8dfdcc7 (llvmorg-15.0.7) +
+   patches from llvm_patches folder
+
 === v1.20.0 === (5 May 2023)
 
 ISPC release with compile time improvements, enhancements in the ISPC Runtime,
