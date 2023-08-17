@@ -760,6 +760,7 @@ void ispc::InitSymbol(AddressInfo *ptrInfo, const Type *symType, Expr *initExpr,
                         Assert(expr_map.size() > 0);
                         Expr *expr0 = expr_map[0].expr;
                         const AtomicType *aType = CastType<AtomicType>(expr0->GetType());
+                        Assert(aType);
 
                         // If we have two or more initializers of the same type, generate vector instruction.
                         if (expr_map.size() > 1) {
