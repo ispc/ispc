@@ -113,7 +113,7 @@ Contents:
   + `Types`_
 
     * `Basic Types and Type Qualifiers`_
-    * `Signed and Unsigned Integer Types_`
+    * `Signed and Unsigned Integer Types`_
     * `"uniform" and "varying" Qualifiers`_
     * `Defining New Names For Types`_
     * `Pointer Types`_
