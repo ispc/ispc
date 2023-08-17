@@ -3,16 +3,14 @@
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
-ARG LLVM_VERSION=15.0
 
 FROM ubuntu:18.04 AS llvm_build_step1
 LABEL maintainer="Dmitry Babokin <dmitry.y.babokin@intel.com>"
 SHELL ["/bin/bash", "-c"]
 
 ARG REPO=ispc/ispc
-ARG SHA=main
-ARG LLVM_VERSION
-ARG EXTRA_BUILD_ARG
+ARG SHA=v1.21.0
+ARG LLVM_VERSION=15.0
 
 # !!! Make sure that your docker config provides enough memory to the container,
 # otherwise LLVM build may fail, as it will use all the cores available to container.
@@ -61,19 +59,10 @@ RUN git checkout $SHA
 # i.e. if clang was built by gcc, you may need to use gcc to build ispc (i.e. run "make gcc"),
 # or better do clang selfbuild and use it for ispc build as well (i.e. just "make").
 # "rm" are just to keep docker image small.
-RUN python3 ./alloy.py -b --version="$LLVM_VERSION" --selfbuild-phase1 --verbose "$EXTRA_BUILD_ARG" && \
+RUN python3 ./alloy.py -b --version="$LLVM_VERSION" --selfbuild --llvm-disable-assertions --verbose && \
     rm -rf "$LLVM_HOME"/build-"$LLVM_VERSION"_temp
 
-FROM llvm_build_step1 AS llvm_build_step2
-ARG LLVM_VERSION
-ARG EXTRA_BUILD_ARG
-
-RUN python3 ./alloy.py -b --version="$LLVM_VERSION" --selfbuild-phase2 --verbose "$EXTRA_BUILD_ARG" && \
-    rm -rf "$LLVM_HOME"/build-"$LLVM_VERSION" "$LLVM_HOME"/llvm-"$LLVM_VERSION" "$LLVM_HOME"/bin-"$LLVM_VERSION"_temp
-ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
-
-FROM llvm_build_step2 AS ispc_build
-ARG LLVM_VERSION
+ENV PATH=$LLVM_HOME/bin-"$LLVM_VERSION"/bin:$PATH
 
 # Install regular ISPC dependencies
 RUN if [[ $(uname -m) =~ "x86" ]]; then export CROSS_LIBS="libc6-dev-i386=2.27-3ubuntu*"; else export CROSS_LIBS="libc6-dev-armhf-cross=2.27-3ubuntu*"; fi && \
@@ -82,14 +71,9 @@ RUN if [[ $(uname -m) =~ "x86" ]]; then export CROSS_LIBS="libc6-dev-i386=2.27-3
 
 # Configure ISPC build
 WORKDIR /usr/local/src/ispc
-RUN mkdir build_$LLVM_VERSION
-WORKDIR /usr/local/src/ispc/build_$LLVM_VERSION
-RUN cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/src/ispc/bin-$LLVM_VERSION -DCMAKE_CXX_FLAGS=-Werror
+RUN mkdir build_"$LLVM_VERSION"
+WORKDIR /usr/local/src/ispc/build_"$LLVM_VERSION"
+RUN cmake .. -DISPC_PREPARE_PACKAGE=ON
 
 # Build ISPC
-RUN make ispc -j"$(nproc)" && make check-all && make install
-WORKDIR /usr/local/src/ispc
-RUN rm -rf build_$LLVM_VERSION
-
-#export path for ispc
-ENV PATH=/usr/local/src/ispc/bin-$LLVM_VERSION/bin:$PATH
+RUN make package -j"$(nproc)" && make check-all
