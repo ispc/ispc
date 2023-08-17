@@ -84,7 +84,7 @@ RUN if [[ $(uname -m) =~ "x86" ]]; then export CROSS_LIBS="libc6-dev-i386=2.27-3
 WORKDIR /usr/local/src/ispc
 RUN mkdir build_$LLVM_VERSION
 WORKDIR /usr/local/src/ispc/build_$LLVM_VERSION
-RUN cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/src/ispc/bin-$LLVM_VERSION -DCMAKE_CXX_FLAGS=-Werror
+RUN cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/src/ispc/bin-$LLVM_VERSION -DCMAKE_CXX_FLAGS=-Werror -DISPC_PREPARE_PACKAGE=ON -DISPC_CROSS=ON -DX86_ENABLED=ON
 
 # Build ISPC
 RUN make ispc -j"$(nproc)" && make check-all && make install
