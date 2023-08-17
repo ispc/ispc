@@ -816,9 +816,9 @@ if (ISPC_PREPARE_PACKAGE)
             else()
                 message (FATAL_ERROR "Was not able to detect package architecture")
             endif()
-        endif()
-        if (UNIX)
-            # Add .aarch64 suffix if the package is built on AARCH64 system
+        elseif (UNIX)
+            # Add .aarch64 suffix if the package is built on AARCH64 system.
+	    # On Linux we don't build cross packages, so host corresponds to target platform.
             if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
                 set(ISPC_ARCH_SUFFIX ".aarch64")
             endif()
