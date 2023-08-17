@@ -817,6 +817,13 @@ if (ISPC_PREPARE_PACKAGE)
                 message (FATAL_ERROR "Was not able to detect package architecture")
             endif()
         endif()
+        if (UNIX)
+            # Add .aarch64 suffix if the package is built on AARCH64 system
+            if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+                set(ISPC_ARCH_SUFFIX ".aarch64")
+            endif()
+        endif()
+
         if (${CPACK_PACKAGE_VERSION_PATCH} MATCHES ".*dev")
             string(CONCAT CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}"
                                 "-trunk"
