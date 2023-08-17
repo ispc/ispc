@@ -3204,9 +3204,14 @@ llvm::Value *AssignExpr::GetValue(FunctionEmitContext *ctx) const {
     case SubAssign: {
         // This should be caught during type checking
         AssertPos(pos, !CastType<ArrayType>(type) && !CastType<StructType>(type));
-        const auto wrapSemantics = (lvalue->GetType()->IsSignedType() && rvalue->GetType()->IsSignedType())
-                                       ? WrapSemantics::NSW
-                                       : WrapSemantics::None;
+        const Type *lvalueType = lvalue->GetType();
+        const Type *rvalueType = rvalue->GetType();
+        if (lvalueType == nullptr || rvalueType == nullptr) {
+            AssertPos(pos, m->errorCount > 0);
+            return nullptr;
+        }
+        const auto wrapSemantics =
+            (lvalueType->IsSignedType() && rvalueType->IsSignedType()) ? WrapSemantics::NSW : WrapSemantics::None;
         return lEmitOpAssign(op, lvalue, rvalue, type, baseSym, pos, ctx, wrapSemantics);
     }
     case DivAssign:
