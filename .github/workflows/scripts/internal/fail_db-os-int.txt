@@ -75,3 +75,4 @@
 ./tests/print_uniform-i32.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
 ./tests/print_uniform-i64.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
 ./tests/print_uniform-i8.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O2 spv *
+./tests/print_uniform-i8.ispc runfail    xe64       xehpg-x16 dg2   Linux LLVM 15.0 clang++15.0 O2 spv *
