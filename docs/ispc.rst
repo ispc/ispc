@@ -68,6 +68,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.18.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.19.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.20.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.21.0`_
 
 * `Getting Started with ISPC`_
 
@@ -543,6 +544,18 @@ compatible, meaning that `sse4` versions are still accepted and aliased to
 `sse4.2`. Multi-target compilation accepts only one of `sse4`/`sse4.1`/`sse4.2`
 targets. All of these targets will produce an object file with `sse4` suffix in
 multi-target compilation.
+
+Updating ISPC Programs For Changes In ISPC 1.21.0
+-------------------------------------------------
+
+Now, in case of signed integer overflow, `ispc` will assume undefined behavior similar to
+C and C++. This change may cause compatibility issues. You can manage this behavior by
+using the `--[no-]wrap-signed-int` compiler switch. The default behavior (before version
+1.21.0) can be preserved by using `--wrap-signed-int`, which maintains defined wraparound
+behavior for signed integers, though it may limit some compiler optimizations.
+
+Template function specializations with explicit template arguments were introduced to the
+language, please refer to `Function Templates`_ section for more details.
 
 Getting Started with ISPC
 =========================
