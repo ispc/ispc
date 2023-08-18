@@ -340,18 +340,20 @@ def unsupported_llvm_targets(LLVM_VERSION):
 # native - native targets run natively on current hardware.
 # sde - native target, which need to be emulated on current hardware.
 def check_targets():
+    from os.path import join
+
     result = []
     result_sde = []
-    # check what native targets do we have
-    if current_OS != "Windows":
-        if options.ispc_build_compiler == "clang":
-            cisa_compiler = "clang"
-        elif options.ispc_build_compiler == "gcc":
-            cisa_compiler = "g++"
 
-        try_do_LLVM("build check_ISA", cisa_compiler + " check_isa.cpp -o check_isa.exe", True)
-    else:
-        try_do_LLVM("build check_ISA", "cl check_isa.cpp", True)
+    cmd_conf = "cmake . -B check_isa_build -DISPC_INCLUDE_UTILS_ONLY=ON"
+    cmd_build = "cmake --build check_isa_build --target check_isa --config Release"
+    check_isa = "check_isa"
+    if current_OS == "Windows":
+        check_isa = join("Release", "check_isa.exe")
+    check_isa = join("check_isa_build", "bin", check_isa)
+
+    try_do_LLVM("build_check_isa configure", cmd_conf, True, True)
+    try_do_LLVM("build_check_isa build", cmd_build, True, True)
 
     # Dictionary mapping hardware architecture to its targets.
     # The value in the dictionary is:
@@ -382,7 +384,7 @@ def check_targets():
                  ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX2", "SKX", "SPR"], "-spr", False])
     ])
 
-    hw_arch = take_lines("check_isa.exe", "first").split()[1]
+    hw_arch = take_lines(check_isa, "first").split()[1]
 
     if not (hw_arch in target_dict):
         alloy_error("Architecture " + hw_arch + " was not recognized", 1)
