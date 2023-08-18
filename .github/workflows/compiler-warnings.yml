@@ -4,8 +4,7 @@
 name: Compiler Warnings
 
 on:
-# Turned off until all jobs are green.
-#  pull_request:
+  pull_request:
   workflow_dispatch:
 
 env:
