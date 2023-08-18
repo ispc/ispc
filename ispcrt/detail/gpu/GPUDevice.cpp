@@ -830,11 +830,17 @@ class ChunkedPool {
 struct MemoryView : public ispcrt::base::MemoryView {
     MemoryView(ze_context_handle_t context, ze_device_handle_t device, void *appMem, size_t numBytes,
                const ISPCRTNewMemoryViewFlags *flags, const GPUContext *ctxt)
-        : m_hostPtr(appMem), m_size(numBytes), m_requestedSize(numBytes), m_context(context), m_device(device),
+        : m_size(numBytes), m_requestedSize(numBytes), m_context(context), m_device(device),
           m_shared(flags->allocType == ISPCRT_ALLOC_TYPE_SHARED), m_smhint(flags->smHint), m_ctxtGPU(ctxt) {
         // We need context object to be alive until memoryview is alive
         if (m_ctxtGPU) {
             m_ctxtGPU->refInc();
+        }
+
+        if (flags->smHint == ISPCRT_SM_APPLICATION_MANAGED_DEVICE) {
+            m_devicePtr = appMem;
+        } else {
+            m_hostPtr = appMem;
         }
 
         // Use MemPool only when it is explicitly enabled with env var and memory hint is not device/host read/write
@@ -847,7 +853,7 @@ struct MemoryView : public ispcrt::base::MemoryView {
     }
 
     ~MemoryView() {
-        if (m_devicePtr) {
+        if (m_devicePtr && m_smhint != ISPCRT_SM_APPLICATION_MANAGED_DEVICE) {
             if (m_shared && m_useMemPool && m_size <= m_memPool->maxChunkSize()) {
                 m_memPool->deallocate(m_devicePtr);
                 if (UNLIKELY(is_verbose)) {

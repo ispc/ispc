@@ -231,7 +231,12 @@ inline ISPCRTAllocationType Device::getMemoryAllocType(void *memBuffer) {
 
 enum class AllocType { Device, Shared };
 
-enum class SharedMemoryUsageHint { HostDeviceReadWrite, HostWriteDeviceRead, HostReadDeviceWrite };
+enum class SharedMemoryUsageHint {
+    HostDeviceReadWrite,
+    HostWriteDeviceRead,
+    HostReadDeviceWrite,
+    ApplicationManagedDevice
+};
 
 template <typename T, AllocType AT = AllocType::Device> class Array : public GenericObject<ISPCRTMemoryView> {
   public:
@@ -351,6 +356,9 @@ inline void set_shared_memory_view_flags(ISPCRTNewMemoryViewFlags *p, SharedMemo
         break;
     case SharedMemoryUsageHint::HostReadDeviceWrite:
         p->smHint = ISPCRT_SM_HOST_READ_DEVICE_WRITE;
+        break;
+    case SharedMemoryUsageHint::ApplicationManagedDevice:
+        p->smHint = ISPCRT_SM_APPLICATION_MANAGED_DEVICE;
         break;
     default:
         throw std::bad_alloc();
