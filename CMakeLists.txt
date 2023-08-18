@@ -74,6 +74,7 @@ option(ISPC_INCLUDE_TESTS "Generate build targets for the ISPC tests." ON)
 option(ISPC_INCLUDE_BENCHMARKS "Generate build targets for the ISPC tests." OFF)
 option(ISPC_INCLUDE_RT "Generate build targets for ISPC runtime." ON)
 option(ISPC_INCLUDE_UTILS "Generate build targets for the utils." ON)
+option(ISPC_INCLUDE_UTILS_ONLY "Generate build targets only for the utils." OFF)
 option(ISPC_PREPARE_PACKAGE "Generate build targets for ispc package" OFF)
 
 option(ISPC_OPAQUE_PTR_MODE "Build ISPC with usage of opaque pointers" OFF)
@@ -233,6 +234,22 @@ else(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release")
     message(STATUS "Build type not specified: Use Release by default.")
 endif(CMAKE_BUILD_TYPE)
+
+
+# Build target for utility checking host ISA
+if (ISPC_INCLUDE_UTILS)
+    add_executable(check_isa "")
+    target_sources(check_isa PRIVATE check_isa.cpp)
+    set_target_properties(check_isa PROPERTIES FOLDER "Utils")
+    if (NOT ISPC_PREPARE_PACKAGE)
+        install (TARGETS check_isa DESTINATION bin)
+    endif()
+    if (ISPC_INCLUDE_UTILS_ONLY)
+        # Skip the below part of CMake. It is useful when only check_isa compiling is needed.
+        return()
+    endif()
+endif()
+
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/ispcrt/cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FixWindowsPath.cmake)
@@ -643,16 +660,6 @@ else()
             target_link_libraries(${PROJECT_NAME} ${CURSES_EXTRA_LIBRARY})
         endif()
         target_link_libraries(${PROJECT_NAME} pthread ${CURSES_CURSES_LIBRARY})
-    endif()
-endif()
-
-# Build target for utility checking host ISA
-if (ISPC_INCLUDE_UTILS)
-    add_executable(check_isa "")
-    target_sources(check_isa PRIVATE check_isa.cpp)
-    set_target_properties(check_isa PROPERTIES FOLDER "Utils")
-    if (NOT ISPC_PREPARE_PACKAGE)
-        install (TARGETS check_isa DESTINATION bin)
     endif()
 endif()
 
