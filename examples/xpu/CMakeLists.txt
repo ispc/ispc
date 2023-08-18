@@ -36,10 +36,11 @@ if (ISPC_BUILD)
     set(GBENCH_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/../../benchmarks/vendor/google/benchmark/include)
     include_directories_ispc(${ISPCRT_INCLUDE_DIR})
 else()
+    list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR}/../../lib64/cmake)
     find_package(ispcrt REQUIRED)
 
     # L0 is required, e.g., for sgemm
-    set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/../../ispcrt/cmake)
+    list(APPEND CMAKE_MODULE_PATH ${ISPCRT_DIR})
     find_package(level_zero REQUIRED)
     message(STATUS "LEVEL_ZERO_INCLUDE_DIR is ${LEVEL_ZERO_INCLUDE_DIR}")
     message(STATUS "LEVEL_ZERO_LIB_LOADER is ${LEVEL_ZERO_LIB_LOADER}")
