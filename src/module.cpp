@@ -925,6 +925,16 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         function->addFnAttr(llvm::Attribute::NoInline);
     }
 
+    if (g->target_os == TargetOS::windows) {
+        // Enable generation an unwind table during codegen.
+        // It is needed to generate backtraces during debugging and to unwind callstack.
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_14_0
+        function->setHasUWTable();
+#else
+        function->setUWTableKind(llvm::UWTableKind::Default);
+#endif
+    }
+
     if (functionType->isTask) {
         if (!g->target->isXeTarget()) {
             // This also applies transitively to members I think?
