@@ -247,10 +247,17 @@ Module::Module(const char *fn) : filename(fn) {
         llvm::TimeTraceScope TimeScope("Create Debug Data");
         // To enable debug information on Windows, we have to let llvm know, that
         // debug information should be emitted in CodeView format.
-        if (g->target_os == TargetOS::windows) {
+
+        switch (g->debugInfoType) {
+        case Globals::DebugInfoType::CodeView:
             module->addModuleFlag(llvm::Module::Warning, "CodeView", 1);
-        } else {
+            break;
+        case Globals::DebugInfoType::DWARF:
             module->addModuleFlag(llvm::Module::Warning, "Dwarf Version", g->generateDWARFVersion);
+            break;
+        default:
+            FATAL("Incorrect debugInfoType");
+            break;
         }
         diBuilder = new llvm::DIBuilder(*module);
 
