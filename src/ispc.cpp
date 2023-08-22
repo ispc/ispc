@@ -1714,7 +1714,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
             m_targetMachine->Options.MCOptions.AsmVerbose = true;
 
             // Change default version of generated DWARF.
-            if (g->generateDWARFVersion != 0) {
+            if (g->generateDWARFVersion) {
                 m_targetMachine->Options.MCOptions.DwarfVersion = g->generateDWARFVersion;
             }
         }
@@ -2303,6 +2303,7 @@ Globals::Globals() {
     emitInstrumentation = false;
     noPragmaOnce = false;
     generateDebuggingSymbols = false;
+    debugInfoType = Globals::DebugInfoType::None;
     generateDWARFVersion = 3;
     enableFuzzTest = false;
     enableLLVMIntrinsics = false;
@@ -2350,6 +2351,12 @@ Globals::Globals() {
 
     // Target OS defaults to host OS.
     target_os = GetHostOS();
+
+    if (target_os == TargetOS::windows) {
+        debugInfoType = Globals::DebugInfoType::CodeView;
+    } else {
+        debugInfoType = Globals::DebugInfoType::DWARF;
+    }
 
     // Set calling convention to 'uninitialized'.
     // This needs to be set once target OS is decided.

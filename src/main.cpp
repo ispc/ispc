@@ -76,7 +76,7 @@ static void lPrintVersion() {
     PrintWithWordBreaks(cpuHelp, 16, TerminalWidth(), stdout);
     printf("    [--dllexport]\t\t\tMake non-static functions DLL exported.  Windows target only\n");
     printf("    [--dwarf-version={2,3,4}]\t\tGenerate source-level debug information with given DWARF version "
-           "(triggers -g).  Ignored for Windows target\n");
+           "(triggers -g).  It forces the usage of DWARF debug info on Windows target\n");
     printf("    [-E]\t\t\t\tRun only the preprocessor\n");
     printf("    [--emit-asm]\t\t\tGenerate assembly language file as output\n");
     printf("    [--emit-llvm]\t\t\tEmit LLVM bitcode file as output\n");
@@ -782,6 +782,7 @@ int main(int Argc, char *Argv[]) {
             if (2 <= val && val <= 4) {
                 g->generateDebuggingSymbols = true;
                 g->generateDWARFVersion = val;
+                g->debugInfoType = Globals::DebugInfoType::DWARF;
             } else {
                 errorHandler.AddError("Invalid value for DWARF version: \"%s\" -- "
                                       "only 2, 3 and 4 are allowed.",
