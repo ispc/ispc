@@ -1,9 +1,12 @@
 #  Copyright (c) 2023, Intel Corporation
 #  SPDX-License-Identifier: BSD-3-Clause
 
+# This is a template file for the actual snapcraft.yaml that is configured by
+# github CI action snap.yml.
+
 name: ispc
 base: core22 # ubuntu 22.04
-version: '1.21.0'
+version: '@ISPC_VERSION@'
 license: BSD-3-Clause
 summary: Compiler for high-performance SIMD programming
 description: |
@@ -26,7 +29,7 @@ confinement: strict
 parts:
   ispc:
     plugin: dump
-    source: https://github.com/ispc/ispc/releases/download/v$SNAPCRAFT_PROJECT_VERSION/ispc-v$SNAPCRAFT_PROJECT_VERSION-linux.tar.gz
+    source: @ISPC_ARCHIVE@
     stage-packages:
       - libomp-14-dev
 
