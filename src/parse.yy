@@ -2829,26 +2829,33 @@ lAddTemplateDeclaration(TemplateParms *templateParmList, DeclSpecs *ds, Declarat
         // FIXME: source position
         Error(decl->pos, "Illegal \"typedef\" provided with function template.");
         return;
-    } else {
-        if (decl->type == nullptr) {
-            Assert(m->errorCount > 0);
-            return;
-        }
-
-        //decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
-
-        const FunctionType *ft = CastType<FunctionType>(decl->type);
-        if (ft != nullptr) {
-            bool isInline = (ds->typeQualifiers & TYPEQUAL_INLINE);
-            bool isNoInline = (ds->typeQualifiers & TYPEQUAL_NOINLINE);
-            bool isVectorCall = (ds->typeQualifiers & TYPEQUAL_VECTORCALL);
-            m->AddFunctionTemplateDeclaration(templateParmList, decl->name, ft, ds->storageClass,
-                                              isInline, isNoInline, isVectorCall, decl->pos);
-        }
-        else {
-            Error(decl->pos, "Only function templates are supported.");
-        }
     }
+    // We can't support extern "C"/extern "SYCL" for templates because
+    // we need mangling information.
+    if (ds->storageClass == SC_EXTERN_C || ds->storageClass == SC_EXTERN_SYCL) {
+        Error(decl->pos, "Illegal linkage provided with function template.");
+        return;
+    }
+
+    if (decl->type == nullptr) {
+        Assert(m->errorCount > 0);
+        return;
+    }
+
+    //decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
+
+    const FunctionType *ft = CastType<FunctionType>(decl->type);
+    if (ft != nullptr) {
+        bool isInline = (ds->typeQualifiers & TYPEQUAL_INLINE);
+        bool isNoInline = (ds->typeQualifiers & TYPEQUAL_NOINLINE);
+        bool isVectorCall = (ds->typeQualifiers & TYPEQUAL_VECTORCALL);
+        m->AddFunctionTemplateDeclaration(templateParmList, decl->name, ft, ds->storageClass,
+                                            isInline, isNoInline, isVectorCall, decl->pos);
+    }
+    else {
+        Error(decl->pos, "Only function templates are supported.");
+    }
+
 }
 
 static void
