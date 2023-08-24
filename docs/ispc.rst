@@ -1008,8 +1008,10 @@ Debugging
 The ``-g`` command-line flag can be supplied to the compiler, which causes
 it to generate debugging symbols.  The debug info is emitted in DWARF format
 on Linux\* and macOS\*.  The version of the DWARF can be controlled by
-command-line switch ``--dwarf-version={2,3,4}``.  On Windows\* CodeView format
-is used (not PDB), it's natively supported by Microsoft Visual Studio\*.
+command-line switch ``--dwarf-version={2,3,4,5}``.  On Windows\* CodeView format
+is used by default (it's natively supported by Microsoft Visual Studio\*) but
+this switch can force the generation of DWARF format that can be used, e.g.,
+together with MinGW generated code.
 Running ``ispc`` programs in the debugger, setting breakpoints, printing out
 variables is just the same as debugging C/C++ programs.  Similarly, you can
 directly step up and down the call stack between ``ispc`` code and C/C++
