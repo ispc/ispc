@@ -31,9 +31,10 @@ Symbol::Symbol(const std::string &n, SourcePos p, const Type *t, StorageClass sc
 ///////////////////////////////////////////////////////////////////////////
 // TemplateSymbol
 
-TemplateSymbol::TemplateSymbol(const TemplateParms *parms, const std::string &n, const FunctionType *t,
+TemplateSymbol::TemplateSymbol(const TemplateParms *parms, const std::string &n, const FunctionType *t, StorageClass sc,
                                const SourcePos p, bool inl, bool noinl)
-    : pos(p), name(n), type(t), templateParms(parms), functionTemplate(nullptr), isInline(inl), isNoInline(noinl) {}
+    : pos(p), name(n), type(t), storageClass(sc), templateParms(parms), functionTemplate(nullptr), isInline(inl),
+      isNoInline(noinl) {}
 
 ///////////////////////////////////////////////////////////////////////////
 // SymbolTable

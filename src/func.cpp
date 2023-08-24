@@ -1082,7 +1082,7 @@ Symbol *TemplateInstantiation::InstantiateTemplateSymbol(TemplateSymbol *sym) {
     const Type *instType = sym->type->ResolveDependenceForTopType(*this);
 
     // Create a function symbol
-    Symbol *instSym = new Symbol(sym->name, sym->pos, instType, SC_STATIC);
+    Symbol *instSym = new Symbol(sym->name, sym->pos, instType, sym->storageClass);
     functionSym = instSym;
 
     // Create llvm::Function and attach to the symbol, so the symbol is complete and ready for use.

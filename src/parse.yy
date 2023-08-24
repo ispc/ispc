@@ -2478,7 +2478,7 @@ template_declaration
           }
           const FunctionType *ft = CastType<FunctionType>($4->type);
           // Creating a new TemplateSymbol just to pass it further seems to be a waste
-          $$ = new TemplateSymbol($1, $4->name, ft, @4, false /*not used*/, false /*not used*/);
+          $$ = new TemplateSymbol($1, $4->name, ft, $3->storageClass, @4, false /*not used*/, false /*not used*/);
       }
     ;
 
@@ -2830,6 +2830,14 @@ lAddTemplateDeclaration(TemplateParms *templateParmList, DeclSpecs *ds, Declarat
         Error(decl->pos, "Illegal \"typedef\" provided with function template.");
         return;
     }
+    if (ds->typeQualifiers & TYPEQUAL_TASK){
+        Error(decl->pos, "'task' not supported for templates.");
+        return;
+    }
+    if (ds->typeQualifiers & TYPEQUAL_EXPORT) {
+        Error(decl->pos, "'export' not supported for templates.");
+        return;
+    }
     // We can't support extern "C"/extern "SYCL" for templates because
     // we need mangling information.
     if (ds->storageClass == SC_EXTERN_C || ds->storageClass == SC_EXTERN_SYCL) {
@@ -2842,6 +2850,7 @@ lAddTemplateDeclaration(TemplateParms *templateParmList, DeclSpecs *ds, Declarat
         return;
     }
 
+    Assert(ds->storageClass == SC_NONE || ds->storageClass == SC_STATIC || ds->storageClass == SC_EXTERN);
     //decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
 
     const FunctionType *ft = CastType<FunctionType>(decl->type);
@@ -2849,8 +2858,16 @@ lAddTemplateDeclaration(TemplateParms *templateParmList, DeclSpecs *ds, Declarat
         bool isInline = (ds->typeQualifiers & TYPEQUAL_INLINE);
         bool isNoInline = (ds->typeQualifiers & TYPEQUAL_NOINLINE);
         bool isVectorCall = (ds->typeQualifiers & TYPEQUAL_VECTORCALL);
+        if (isVectorCall) {
+            Error(decl->pos, "Illegal to use \"__vectorcall\" qualifier on non-extern function \"%s\".", decl->name.c_str());
+        }
+        bool isRegCall = (ds->typeQualifiers & TYPEQUAL_REGCALL);
+        if (isRegCall) {
+            Error(decl->pos, "Illegal to use \"__regcall\" qualifier on non-extern function \"%s\".", decl->name.c_str());
+        }
+
         m->AddFunctionTemplateDeclaration(templateParmList, decl->name, ft, ds->storageClass,
-                                            isInline, isNoInline, isVectorCall, decl->pos);
+                                          isInline, isNoInline, decl->pos);
     }
     else {
         Error(decl->pos, "Only function templates are supported.");
