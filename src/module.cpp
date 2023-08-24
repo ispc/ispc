@@ -1115,8 +1115,6 @@ void Module::AddFunctionTemplateDeclaration(const TemplateParms *templateParmLis
         }
     }
 
-    // TODO: extern "C" - do we allow it?
-
     // TODO: Xe adjust linkage
 
     // No mangling for template, only instantiations.
