@@ -1710,9 +1710,25 @@ llvm::Value *FunctionEmitContext::FNegInst(llvm::Value *v, const llvm::Twine &na
         return nullptr;
     }
 
-    llvm::Instruction *fneg = llvm::UnaryOperator::CreateFNeg(v, name.isTriviallyEmpty() ? "fneg" : name, bblock);
-    AddDebugPos(fneg);
-    return fneg;
+    // Similarly to BinaryOperator, do the operation on all the elements of
+    // the array if we're given an array type; otherwise just do the
+    // regular llvm operation.
+    llvm::Type *type = v->getType();
+    int arraySize = lArrayVectorWidth(type);
+    if (arraySize == 0) {
+        llvm::Instruction *fneg = llvm::UnaryOperator::CreateFNeg(v, name.isTriviallyEmpty() ? "fneg" : name, bblock);
+        AddDebugPos(fneg);
+        return fneg;
+    } else {
+        llvm::Value *ret = llvm::UndefValue::get(type);
+        for (int i = 0; i < arraySize; ++i) {
+            llvm::Value *a = ExtractInst(v, i);
+            llvm::Value *op = llvm::UnaryOperator::CreateFNeg(a, name.isTriviallyEmpty() ? "fneg" : name, bblock);
+            AddDebugPos(op);
+            ret = InsertInst(ret, op, i);
+        }
+        return ret;
+    }
 }
 
 // Given the llvm Type that represents an ispc VectorType, return an
