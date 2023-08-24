@@ -780,7 +780,7 @@ struct Globals {
     enum class DebugInfoType { None = 0, DWARF, CodeView };
     DebugInfoType debugInfoType;
 
-    /** Require generation of DWARF of certain version (2, 3, 4). For
+    /** Require generation of DWARF of certain version (2, 3, 4, 5). For
         default version, this field is set to 3. */
     // Hint: to verify dwarf version in the object file, run on Linux:
     // readelf --debug-dump=info object.o | grep -A 2 'Compilation Unit @'

@@ -37,7 +37,7 @@
 //; CHECK_ERROR_1: Error: Invalid value for --x86-asm-syntax: "amd" -- only intel and att are allowed.
 //; CHECK_ERROR_1: Error: --fast-math option has been renamed to --opt=fast-math!
 //; CHECK_ERROR_1: Error: --fast-masked-vload option has been renamed to --opt=fast-masked-vload!
-//; CHECK_ERROR_1: Error: Invalid value for DWARF version: "15" -- only 2, 3 and 4 are allowed.
+//; CHECK_ERROR_1: Error: Invalid value for DWARF version: "15" -- only 2, 3, 4 and 5 are allowed.
 //; CHECK_ERROR_1: Error: Unknown --math-lib= option "fast2".
 //; CHECK_ERROR_1: Error: Unknown option "-opt=make_me_happy".
 //; CHECK_ERROR_1: Error: Unknown option "-not-existing-opt".
