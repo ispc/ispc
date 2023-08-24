@@ -73,6 +73,7 @@ class TemplateArgs {
     std::vector<std::pair<const Type *, SourcePos>> args;
 };
 
+enum class TemplateInstantiationKind { Implicit, Explicit, Specialization };
 class FunctionTemplate {
   public:
     FunctionTemplate(TemplateSymbol *sym, Stmt *code);
@@ -82,7 +83,8 @@ class FunctionTemplate {
     const FunctionType *GetFunctionType() const;
 
     Symbol *LookupInstantiation(const std::vector<std::pair<const Type *, SourcePos>> &types);
-    Symbol *AddInstantiation(const std::vector<std::pair<const Type *, SourcePos>> &types);
+    Symbol *AddInstantiation(const std::vector<std::pair<const Type *, SourcePos>> &types,
+                             TemplateInstantiationKind kind);
     Symbol *AddSpecialization(const FunctionType *ftype, const std::vector<std::pair<const Type *, SourcePos>> &types,
                               SourcePos pos);
 
@@ -108,7 +110,8 @@ class FunctionTemplate {
 class TemplateInstantiation {
   public:
     TemplateInstantiation(const TemplateParms &typeParms,
-                          const std::vector<std::pair<const Type *, SourcePos>> &typeArgs);
+                          const std::vector<std::pair<const Type *, SourcePos>> &typeArgs,
+                          TemplateInstantiationKind kind);
     const Type *InstantiateType(const std::string &name);
     Symbol *InstantiateSymbol(Symbol *sym);
     Symbol *InstantiateTemplateSymbol(TemplateSymbol *sym);
@@ -125,6 +128,8 @@ class TemplateInstantiation {
     std::unordered_map<std::string, const Type *> argsMap;
     // Template arguments in the order of the template parameters.
     std::vector<const Type *> templateArgs;
+    // Kind of instantiation (explicit, implicit, specialization).
+    TemplateInstantiationKind kind;
 
     llvm::Function *createLLVMFunction(Symbol *functionSym, bool isInline, bool isNoInline);
 };

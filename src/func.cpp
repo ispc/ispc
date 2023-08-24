@@ -752,10 +752,11 @@ void Function::GenerateIR() {
 #else
                 (function->getAttributes().getFnAttributes().hasAttribute(llvm::Attribute::AlwaysInline));
 #endif
-            llvm::GlobalValue::LinkageTypes linkage =
-                (sc == SC_STATIC || isInline) ? llvm::GlobalValue::InternalLinkage : llvm::GlobalValue::ExternalLinkage;
-
-            function->setLinkage(linkage);
+            // We create regular functions with ExternalLinkage by default.
+            // Fix it to InternalLinkage only if the function is static or inline
+            if (sc == SC_STATIC || isInline) {
+                function->setLinkage(llvm::GlobalValue::InternalLinkage);
+            }
 
             if (g->target->isXeTarget()) {
                 // Mark all internal ISPC functions as a stack call
@@ -965,10 +966,11 @@ Symbol *FunctionTemplate::LookupInstantiation(const std::vector<std::pair<const 
     return nullptr;
 }
 
-Symbol *FunctionTemplate::AddInstantiation(const std::vector<std::pair<const Type *, SourcePos>> &types) {
+Symbol *FunctionTemplate::AddInstantiation(const std::vector<std::pair<const Type *, SourcePos>> &types,
+                                           TemplateInstantiationKind kind) {
     const TemplateParms *typenames = GetTemplateParms();
     Assert(typenames);
-    TemplateInstantiation templInst(*typenames, types);
+    TemplateInstantiation templInst(*typenames, types, kind);
 
     Symbol *instSym = templInst.InstantiateTemplateSymbol(sym);
     Symbol *instMaskSym = templInst.InstantiateSymbol(maskSymbol);
@@ -993,7 +995,7 @@ Symbol *FunctionTemplate::AddSpecialization(const FunctionType *ftype,
                                             SourcePos pos) {
     const TemplateParms *typenames = GetTemplateParms();
     Assert(typenames);
-    TemplateInstantiation templInst(*typenames, types);
+    TemplateInstantiation templInst(*typenames, types, TemplateInstantiationKind::Specialization);
 
     // Create a function symbol
     Symbol *instSym = templInst.InstantiateTemplateSymbol(sym);
@@ -1017,8 +1019,9 @@ Symbol *FunctionTemplate::AddSpecialization(const FunctionType *ftype,
 // TemplateInstantiation
 
 TemplateInstantiation::TemplateInstantiation(const TemplateParms &typeParms,
-                                             const std::vector<std::pair<const Type *, SourcePos>> &typeArgs)
-    : functionSym(nullptr) {
+                                             const std::vector<std::pair<const Type *, SourcePos>> &typeArgs,
+                                             TemplateInstantiationKind k)
+    : functionSym(nullptr), kind(k) {
     Assert(typeArgs.size() <= typeParms.GetCount());
     // Create a mapping from the template parameters to the arguments.
     // Note we do that for all specified templates arguments, which number may be less than a number of template
@@ -1119,9 +1122,32 @@ llvm::Function *TemplateInstantiation::createLLVMFunction(Symbol *functionSym, b
     auto [name_pref, name_suf] = functionType->GetFunctionMangledName(false, &templateArgs);
     std::string functionName = name_pref + functionSym->name + name_suf;
 
+    llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
+    if (functionSym->storageClass == SC_STATIC || isInline) {
+        linkage = llvm::GlobalValue::InternalLinkage;
+    } else {
+        // If the linkage is not internal, apply the Clang linkage rules for templates.
+        switch (kind) {
+        // Function can be defined multiple times across different translation units without causing conflicts.
+        // The linker will choose a definition for the function based on its default behavior.
+        case TemplateInstantiationKind::Explicit:
+            linkage = llvm::GlobalValue::WeakODRLinkage;
+            break;
+        // The function is only allowed to be defined once across all translation units, but it can be discarded if
+        // unused. If multiple definitions of the function are present across different translation units, the linker
+        // will keep only one of them, discarding the rest.
+        case TemplateInstantiationKind::Implicit:
+            linkage = llvm::GlobalValue::LinkOnceODRLinkage;
+            break;
+        case TemplateInstantiationKind::Specialization:
+            linkage = llvm::GlobalValue::ExternalLinkage;
+            break;
+        default:
+            break;
+        }
+    }
     // And create the llvm::Function
-    llvm::Function *function =
-        llvm::Function::Create(llvmFunctionType, llvm::GlobalValue::InternalLinkage, functionName.c_str(), m->module);
+    llvm::Function *function = llvm::Function::Create(llvmFunctionType, linkage, functionName.c_str(), m->module);
 
     // Set function attributes: we never throw exceptions
     function->setDoesNotThrow();

@@ -1114,10 +1114,12 @@ void Module::AddFunctionTemplateDeclaration(const TemplateParms *templateParmLis
 
     // TODO: inline / noinline check.
 
-    // TODO: vectorcall checks
-
     // ...
 
+    // We don't need to worry here about passing vectorcall/regcall specifier since we support these
+    // conventions for extern "C"/extern "SYCL" functions only. And we don't support extern "C"/extern "SYCL" functions
+    // for templates. In case when --vectorcall option is passed on Windows, we will generate vectorcall functions for
+    // all functions.
     TemplateSymbol *funcTemplSym = new TemplateSymbol(templateParmList, name, ftype, sc, pos, isInline, isNoInline);
     symbolTable->AddFunctionTemplate(funcTemplSym);
 }
@@ -1180,7 +1182,7 @@ FunctionTemplate *Module::MatchFunctionTemplate(const std::string &name, const F
             continue;
         }
         bool matched = true;
-        TemplateInstantiation inst(*(templateSymbol->templateParms), normTypes);
+        TemplateInstantiation inst(*(templateSymbol->templateParms), normTypes, TemplateInstantiationKind::Implicit);
         for (int i = 0; i < ftype->GetNumParameters(); i++) {
             const Type *instParam = ftype->GetParameterType(i);
             const Type *templateParam = templateSymbol->type->GetParameterType(i)->ResolveDependence(inst);
@@ -1203,7 +1205,7 @@ void Module::AddFunctionTemplateInstantiation(const std::string &name,
     std::vector<std::pair<const Type *, SourcePos>> normTypes(types);
     FunctionTemplate *templ = MatchFunctionTemplate(name, ftype, normTypes, pos);
     if (templ) {
-        templ->AddInstantiation(normTypes);
+        templ->AddInstantiation(normTypes, TemplateInstantiationKind::Explicit);
     } else {
         Error(pos, "No matching function template found for instantiation.");
     }
