@@ -2470,12 +2470,6 @@ template_declaration
           lAddTemplateDeclaration($1, $3, $4);
           lAddFunctionParams($4);
           lAddMaskToSymbolTable(@4);
-          if ($3->typeQualifiers & TYPEQUAL_TASK) {
-              Error(@3, "'task' not supported for templates.");
-          }
-          if ($3->typeQualifiers & TYPEQUAL_EXPORT) {
-              Error(@3, "'export' not supported for templates.");
-          }
           const FunctionType *ft = CastType<FunctionType>($4->type);
           // Creating a new TemplateSymbol just to pass it further seems to be a waste
           $$ = new TemplateSymbol($1, $4->name, ft, $3->storageClass, @4, false /*not used*/, false /*not used*/);
