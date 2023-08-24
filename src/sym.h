@@ -91,12 +91,13 @@ class Symbol : public Traceable {
  */
 class TemplateSymbol {
   public:
-    TemplateSymbol(const TemplateParms *parms, const std::string &n, const FunctionType *t, const SourcePos p,
-                   bool isInline, bool inNoInline);
+    TemplateSymbol(const TemplateParms *parms, const std::string &n, const FunctionType *t, StorageClass sc,
+                   const SourcePos p, bool isInline, bool inNoInline);
 
     SourcePos pos;
     const std::string name;
     const FunctionType *type;
+    StorageClass storageClass;
     const TemplateParms *templateParms;
     FunctionTemplate *functionTemplate;
 

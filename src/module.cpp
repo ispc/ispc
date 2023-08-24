@@ -1077,7 +1077,7 @@ void Module::AddFunctionDefinition(const std::string &name, const FunctionType *
 //
 void Module::AddFunctionTemplateDeclaration(const TemplateParms *templateParmList, const std::string &name,
                                             const FunctionType *ftype, StorageClass sc, bool isInline, bool isNoInline,
-                                            bool isVectorCall, SourcePos pos) {
+                                            SourcePos pos) {
     Assert(ftype != nullptr);
     Assert(templateParmList != nullptr);
 
@@ -1125,7 +1125,7 @@ void Module::AddFunctionTemplateDeclaration(const TemplateParms *templateParmLis
 
     // ...
 
-    TemplateSymbol *funcTemplSym = new TemplateSymbol(templateParmList, name, ftype, pos, isInline, isNoInline);
+    TemplateSymbol *funcTemplSym = new TemplateSymbol(templateParmList, name, ftype, sc, pos, isInline, isNoInline);
     symbolTable->AddFunctionTemplate(funcTemplSym);
 }
 

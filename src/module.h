@@ -79,7 +79,7 @@ class Module {
         symbol to the module. */
     void AddFunctionTemplateDeclaration(const TemplateParms *templateParmList, const std::string &name,
                                         const FunctionType *ftype, StorageClass sc, bool isInline, bool isNoInline,
-                                        bool isVectorCall, SourcePos pos);
+                                        SourcePos pos);
 
     /** Add the function described by the declaration information and the
         provided statements to the module. */
