@@ -53,7 +53,7 @@ jobs:
             PACKAGE_NAME="ispc-trunk"
             DOCKER_PATH="ispc/docker/centos/7/xpu_ispc_build"
             DOCKER_PATH_ONEAPI=""
-            if [[ ${{ inputs.core_ref}} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            # if [[ ${{ inputs.core_ref}} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
               PACKAGE_NAME="ispc-${{ inputs.core_ref}}"
               DOCKER_PATH="ispc/docker/${{ inputs.core_ref}}/centos7"
               if [ -d "ispc/docker/${{ inputs.core_ref}}/centos7_oneapi" ]; then
@@ -61,7 +61,7 @@ jobs:
               else
                 echo "Dockerfile for oneAPI does not exist!" >> $GITHUB_STEP_SUMMARY
               fi
-            fi
+            # fi
             echo "package_linux_name=${PACKAGE_NAME}-linux.tar.gz" >> $GITHUB_OUTPUT
             echo "package_linux_name=${PACKAGE_NAME}-linux.tar.gz" >> $GITHUB_STEP_SUMMARY
             echo "package_win_name=${PACKAGE_NAME}-windows.zip" >> $GITHUB_OUTPUT
