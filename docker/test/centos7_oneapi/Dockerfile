@@ -14,13 +14,6 @@ ARG L0L_VER=1.13.5
 ARG VC_INTRINSICS_COMMIT_SHA="910db4801d4a029834606e3e42a8d60358e74fdf"
 ARG SPIRV_TRANSLATOR_COMMIT_SHA="e82ecc2bd7295604fcf1824e47c95fa6a09c6e63"
 
-ARG NO_PROXY
-ARG HTTP_PROXY
-ARG HTTPS_PROXY
-ENV no_proxy=$NO_PROXY
-ENV http_proxy=$HTTP_PROXY
-ENV https_proxy=$HTTPS_PROXY
-
 # !!! Make sure that your docker config provides enough memory to the container,
 # otherwise LLVM build may fail, as it will use all the cores available to container.
 
@@ -35,15 +28,9 @@ RUN yum install -y vim wget yum-utils gcc gcc-c++ git python3 m4 bison flex patc
 RUN yum install -y libstdc++-static && \
     yum clean -y all
 
-# ENV https_proxy=http://proxy-dmz.intel.com:912/
-# ENV http_proxy=http://proxy-dmz.intel.com:912/
-
 # Install TBB
-RUN wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://registrationcenter-download.intel.com/akdlm/IRC_NAS/c95cd995-586b-4688-b7e8-2d4485a1b5bf/l_tbb_oneapi_p_2021.10.0.49543_offline.sh && \
-    chmod u+x ./l_tbb_oneapi_p_2021.10.0.49543_offline.sh && \
-    ./l_tbb_oneapi_p_2021.10.0.49543_offline.sh -s -a --action install --eula accept --intel-sw-improvement-program-consent decline --silent --install-dir /opt/intel && \
-    source /opt/intel/oneapi/setvars.sh && \
-    rm ./l_tbb_oneapi_p_2021.10.0.49543_offline.sh
+ADD oneAPI.repo /etc/yum.repos.d/oneAPI.repo
+RUN yum -y install intel-oneapi-tbb-devel intel-oneapi-tbb && yum clean -y all
 
 # Download and install required version of CMake. CMake 3.20 is required starting from LLVM 16.0.
 RUN wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/Kitware/CMake/releases/download/v3.20.5/cmake-3.20.5-linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.20.5-linux-x86_64.sh --prefix=/opt/cmake --skip-license && \
