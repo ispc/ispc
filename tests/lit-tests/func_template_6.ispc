@@ -13,8 +13,8 @@ template <typename T> noinline void goo() {
 // CHECK: call void @goo___vyi___
 // CHECK: call void @goo___vys___
 
-// CHECK: define internal void @goo___vyi___
-// CHECK: define internal void @goo___vys___
+// CHECK: define linkonce_odr void @goo___vyi___
+// CHECK: define linkonce_odr void @goo___vys___
 void foo() {
     goo<int>();
     goo<int16>();
