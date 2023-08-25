@@ -13,6 +13,7 @@ ARG LLVM_VERSION=15.0
 ARG L0L_VER=1.13.5
 ARG VC_INTRINSICS_COMMIT_SHA="910db4801d4a029834606e3e42a8d60358e74fdf"
 ARG SPIRV_TRANSLATOR_COMMIT_SHA="e82ecc2bd7295604fcf1824e47c95fa6a09c6e63"
+ARG TBB=default
 
 # !!! Make sure that your docker config provides enough memory to the container,
 # otherwise LLVM build may fail, as it will use all the cores available to container.
@@ -21,8 +22,13 @@ ARG SPIRV_TRANSLATOR_COMMIT_SHA="e82ecc2bd7295604fcf1824e47c95fa6a09c6e63"
 RUN yum -y update; yum -y install centos-release-scl epel-release; yum clean all
 RUN yum install -y vim wget yum-utils gcc gcc-c++ git python3 m4 bison flex patch make && \
     yum install -y glibc-devel.x86_64 glibc-devel.i686 xz devtoolset-8 && \
-    yum install -y libtool autopoint gettext-devel texinfo tbb-devel help2man && \
+    yum install -y libtool autopoint gettext-devel texinfo help2man && \
     yum clean -y all
+
+# TBB is parameter to build both packge usual and oneapi-tbb.
+RUN if [ "$TBB" == "default" ]; then  yum -y install tbb tbb-devel && yum clean -y all; fi
+ADD oneAPI.repo /etc/yum.repos.d/oneAPI.repo
+RUN if [ "$TBB" == "oneapi" ]; then yum -y install intel-oneapi-tbb-devel intel-oneapi-tbb && yum clean -y all; fi
 
 # These packages are required if you need to link ISPC with -static.
 RUN yum install -y libstdc++-static && \
