@@ -668,7 +668,12 @@ else()
             # this contains the tinfo library, if found
             target_link_libraries(${PROJECT_NAME} ${CURSES_EXTRA_LIBRARY})
         endif()
-        target_link_libraries(${PROJECT_NAME} pthread ${CURSES_CURSES_LIBRARY})
+        # Recommended way to get Curses library is to use CURSES_LIBRARIES variable
+        # https://cmake.org/cmake/help/v3.27/module/FindCurses.html
+        # but it contains both libform.so and libcurses.so.
+        # We need libcurses.so only, so exclude libform.so from the list.
+        list(FILTER CURSES_LIBRARIES EXCLUDE REGEX ".*libform.*")
+        target_link_libraries(${PROJECT_NAME} pthread ${CURSES_LIBRARIES})
     endif()
 endif()
 
