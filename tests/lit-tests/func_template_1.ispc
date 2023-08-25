@@ -5,16 +5,16 @@
 // RUN: %{ispc}  %s --emit-llvm-text --target=host --nostdlib -o - | FileCheck %s
 
 // CHECK-LABEL: define <{{[0-9]*}} x float> @foo0
-// CHECK: call {{.*}} <{{[0-9]*}} x i32> @goo___vyfvyi___vyfuni(<{{[0-9]*}} x float>
-// CHECK: call {{.*}} <{{[0-9]*}} x i32> @goo___vyivyi___vyiuni(<{{[0-9]*}} x i32>
+// CHECK: call <{{[0-9]*}} x i32> @goo___vyfvyi___vyfuni(<{{[0-9]*}} x float>
+// CHECK: call <{{[0-9]*}} x i32> @goo___vyivyi___vyiuni(<{{[0-9]*}} x i32>
 
 // CHECK-LABEL: define <{{[0-9]*}} x float> @foo1___uniuni
-// CHECK: call {{.*}} <{{[0-9]*}} x i32> @goo___vyivyi___vyiuni(<{{[0-9]*}} x i32>
-// CHECK: call {{.*}} <{{[0-9]*}} x i32> @goo___univyi___uniuni(i32
+// CHECK: call <{{[0-9]*}} x i32> @goo___vyivyi___vyiuni(<{{[0-9]*}} x i32>
+// CHECK: call <{{[0-9]*}} x i32> @goo___univyi___uniuni(i32
 
 // CHECK-LABEL: define <{{[0-9]*}} x float> @foo2___uniuni
-// CHECK: call {{.*}} <{{[0-9]*}} x i32> @goo___vyivyi___vyiuni(<{{[0-9]*}} x i32>
-// CHECK: call {{.*}} <{{[0-9]*}} x i32> @goo___vyfvyi___vyfuni(<{{[0-9]*}} x float>
+// CHECK: call <{{[0-9]*}} x i32> @goo___vyivyi___vyiuni(<{{[0-9]*}} x i32>
+// CHECK: call <{{[0-9]*}} x i32> @goo___vyfvyi___vyfuni(<{{[0-9]*}} x float>
 
 template <typename T, typename C> noinline int goo(T argGooOne, uniform int argGooTwo) {
     C val = argGooTwo;

@@ -4,8 +4,8 @@
 // RUN: %{ispc}  %s --emit-llvm-text --target=host -o - | FileCheck %s
 
 // CHECK: define void @foo
-// CHECK: call {{.*}} void @aos_to_soa2_ispc___vyivyi___un_3C_uni_3E_un_3C_vyi_3E_un_3C_vyi_3E_REFCvyi({{(i32*|ptr)}}
-// CHECK: call {{.*}} void @aos_to_soa2_ispc___vyfvyi___un_3C_unf_3E_un_3C_vyf_3E_un_3C_vyf_3E_REFCvyi({{(float*|ptr)}}
+// CHECK: call void @aos_to_soa2_ispc___vyivyi___un_3C_uni_3E_un_3C_vyi_3E_un_3C_vyi_3E_REFCvyi({{(i32*|ptr)}}
+// CHECK: call void @aos_to_soa2_ispc___vyfvyi___un_3C_unf_3E_un_3C_vyf_3E_un_3C_vyf_3E_REFCvyi({{(float*|ptr)}}
 
 template <typename T, typename C>
 noinline void aos_to_soa2_ispc(uniform T src[], varying T *uniform v0, varying T *uniform v1, const C &ind) {

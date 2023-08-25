@@ -5,16 +5,16 @@
 // CHECK-LABEL: define <{{[0-9]*}} x i32> @goo___vyivyf(<{{[0-9]*}} x i32> %argGooOne, <{{[0-9]*}} x float> %argGooTwo, <{{[0-9]*}} x {{.*}}> %__mask)
 
 // Specialized function
-// CHECK-LABEL: define {{.*}} <{{[0-9]*}} x i32> @goo___vyivyf___vyivyf(<{{[0-9]*}} x i32> %argGooOne, <{{[0-9]*}} x float> %argGooTwo)
+// CHECK-LABEL: define <{{[0-9]*}} x i32> @goo___vyivyf___vyivyf(<{{[0-9]*}} x i32> %argGooOne, <{{[0-9]*}} x float> %argGooTwo, <{{[0-9]*}} x {{.*}}> %__mask)
 // Check that implementation of specialized function is generated from specialization
 // CHECK: fmul
 
 // CHECK-LABEL: define <{{[0-9]*}} x float> @foo
-// CHECK: call {{.*}} <{{[0-9]*}} x i32> @goo___vyivyf___vyivyf(<{{[0-9]*}} x i32> %argFoo0, <{{[0-9]*}} x float> %argFoo1)
-// CHECK: call {{.*}} <{{[0-9]*}} x i32> @goo___vyivyi___vyivyi(<{{[0-9]*}} x i32> %argFoo0, <{{[0-9]*}} x i32> %argFoo0)
+// CHECK: call <{{[0-9]*}} x i32> @goo___vyivyf___vyivyf(<{{[0-9]*}} x i32> %argFoo0, <{{[0-9]*}} x float> %argFoo1, <{{[0-9]*}} x {{.*}}> {{.*}})
+// CHECK: call <{{[0-9]*}} x i32> @goo___vyivyi___vyivyi(<{{[0-9]*}} x i32> %argFoo0, <{{[0-9]*}} x i32> %argFoo0, <{{[0-9]*}} x {{.*}}> {{.*}})
 
 // Instantiated function
-// CHECK-LABEL: define {{.*}} <{{[0-9]*}} x i32> @goo___vyivyi___vyivyi(<{{[0-9]*}} x i32> %argGooOne, <{{[0-9]*}} x i32> %argGooTwo)
+// CHECK-LABEL: define linkonce_odr <{{[0-9]*}} x i32> @goo___vyivyi___vyivyi(<{{[0-9]*}} x i32> %argGooOne, <{{[0-9]*}} x i32> %argGooTwo, <{{[0-9]*}} x {{.*}}> %__mask)
 // Check that implementation of instantiated function is generated from primary template
 // CHECK: add
 
