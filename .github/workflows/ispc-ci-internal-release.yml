@@ -138,7 +138,13 @@ jobs:
       - name: Build CentOS 7 docker image
         run: |
           cd ${{ needs.define-package-params.outputs.docker_path_oneapi }}
-          docker build --no-cache --build-arg https_proxy=$https_proxy --build-arg http_proxy=$http_proxy --build-arg no_proxy=$no_proxy --build-arg SHA=${{ inputs.core_ref }} -t centos_7_ispc_xpu_oneapi -f Dockerfile .
+          echo "http_proxy=$http_proxy"
+          echo "https_proxy=$https_proxy"
+          export http_proxy=http://proxy-dmz.intel.com:912/
+          export https_proxy=http://proxy-dmz.intel.com:912/
+          echo "http_proxy=$http_proxy"
+          echo "https_proxy=$https_proxy"
+          docker build --no-cache --build-arg https_proxy=$https_proxy --build-arg http_proxy=$http_proxy  --build-arg no_proxy=$no_proxy --build-arg SHA=${{ inputs.core_ref }} -t centos_7_ispc_xpu_oneapi -f Dockerfile .
         shell: bash
 
       - name: Copy ISPC release package from docker
