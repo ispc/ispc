@@ -1737,17 +1737,36 @@ bool lCreateBinaryOperatorCall(const BinaryExpr::Op bop, Expr *a0, Expr *a1, Exp
         std::string opName = std::string("operator") + lOpString(bop);
         std::vector<Symbol *> funs;
         m->symbolTable->LookupFunction(opName.c_str(), &funs);
-        if (funs.size() == 0) {
+        if (funs.size() > 0) {
+            Expr *func = new FunctionSymbolExpr(opName.c_str(), funs, sp);
+            ExprList *args = new ExprList(sp);
+            args->exprs.push_back(arg0);
+            args->exprs.push_back(arg1);
+            op = new FunctionCallExpr(func, args, sp);
+            return abort;
+        }
+
+        // templates
+        std::vector<TemplateSymbol *> funcTempls;
+        m->symbolTable->LookupFunctionTemplate(opName.c_str(), &funcTempls);
+        if (funcTempls.size() > 0) {
+            std::vector<std::pair<const Type *, SourcePos>> vec;
+            FunctionSymbolExpr *functionSymbolExpr = new FunctionSymbolExpr(opName.c_str(), funcTempls, vec, sp);
+            Assert(functionSymbolExpr != nullptr);
+            ExprList *args = new ExprList(sp);
+            args->exprs.push_back(arg0);
+            args->exprs.push_back(arg1);
+            op = new FunctionCallExpr(functionSymbolExpr, args, sp);
+            return abort;
+        }
+
+        if (funs.size() == 0 && funcTempls.size() == 0) {
             Error(sp, "operator %s(%s, %s) is not defined.", opName.c_str(), (type0->GetString()).c_str(),
                   (type1->GetString()).c_str());
             abort = true;
             return abort;
         }
-        Expr *func = new FunctionSymbolExpr(opName.c_str(), funs, sp);
-        ExprList *args = new ExprList(sp);
-        args->exprs.push_back(arg0);
-        args->exprs.push_back(arg1);
-        op = new FunctionCallExpr(func, args, sp);
+
         return abort;
     }
     return abort;
@@ -8468,7 +8487,6 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
     //    In this case template type parameters deduction need to happen.
     //    And then the same step for ICS to be done for the candidate.
     //
-    // NOTE: #2 is not implemented yet.
 
     std::vector<Symbol *> ret;
     for (TemplateSymbol *templSym : candidateTemplateFunctions) {
