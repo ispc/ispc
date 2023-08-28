@@ -844,7 +844,8 @@ struct MemoryView : public ispcrt::base::MemoryView {
         }
 
         // Use MemPool only when it is explicitly enabled with env var and memory hint is not device/host read/write
-        m_useMemPool = get_bool_envvar(ISPCRT_MEM_POOL) && (m_smhint != ISPCRT_SM_HOST_DEVICE_READ_WRITE);
+        m_useMemPool = get_bool_envvar(ISPCRT_MEM_POOL) && (m_smhint != ISPCRT_SM_HOST_DEVICE_READ_WRITE) &&
+                       (m_smhint != ISPCRT_SM_APPLICATION_MANAGED_DEVICE);
         if (m_ctxtGPU && m_useMemPool) {
             m_memPool = m_ctxtGPU->memPool(m_smhint);
             if (!m_memPool->hDev())
