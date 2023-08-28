@@ -1026,6 +1026,28 @@ TEST_F(MockTest, C_API_AllocateDeviceMemory) {
     ASSERT_EQ(sm_rt_error, ISPCRT_UNKNOWN_ERROR);
 }
 
+TEST_F(MockTest, C_API_ApplicationManagedDevMem) {
+    ISPCRTContext context = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
+    ISPCRTNewMemoryViewFlags flags = {ISPCRT_ALLOC_TYPE_SHARED, ISPCRT_SM_APPLICATION_MANAGED_DEVICE};
+    char appMem[100] = {};
+    ISPCRTMemoryView view = ispcrtNewMemoryViewForContext(context, appMem, 10, &flags);
+    void *devPtr = ispcrtDevicePtr(view);
+    ASSERT_EQ(devPtr, appMem);
+    void *hostPtr = ispcrtHostPtr(view);
+    ASSERT_EQ(hostPtr, appMem);
+}
+
+TEST_F(MockTest, C_API_ApplicationManagedDevMemNotShared) {
+    ISPCRTDevice device = ispcrtGetDevice(ISPCRT_DEVICE_TYPE_GPU, 0);
+    ISPCRTNewMemoryViewFlags flags = {ISPCRT_ALLOC_TYPE_DEVICE, ISPCRT_SM_APPLICATION_MANAGED_DEVICE};
+    char appMem[100] = {};
+    ISPCRTMemoryView view = ispcrtNewMemoryView(device, appMem, 10, &flags);
+    void *devPtr = ispcrtDevicePtr(view);
+    ASSERT_EQ(devPtr, appMem);
+    void *hostPtr = ispcrtHostPtr(view);
+    ASSERT_EQ(hostPtr, nullptr);
+}
+
 TEST_F(MockTest, C_API_CreateContextFromNativeHandler) {
     ISPCRTContext context1 = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
     auto handle = ispcrtContextNativeHandle(context1);
