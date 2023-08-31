@@ -8541,8 +8541,8 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
             // Easy, we have all template arguments specified explicitly, no deduction is needed.
             Symbol *funcSym = templSym->functionTemplate->LookupInstantiation(templateArgs);
             if (funcSym == nullptr) {
-                funcSym =
-                    templSym->functionTemplate->AddInstantiation(templateArgs, TemplateInstantiationKind::Implicit);
+                funcSym = templSym->functionTemplate->AddInstantiation(
+                    templateArgs, TemplateInstantiationKind::Implicit, templSym->isInline, templSym->isNoInline);
             }
             AssertPos(pos, funcSym);
             // Success
@@ -8554,7 +8554,8 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
         }
 
         // Create substitution map for specified template parameters
-        TemplateInstantiation inst(*templateParms, templateArgs, TemplateInstantiationKind::Implicit);
+        TemplateInstantiation inst(*templateParms, templateArgs, TemplateInstantiationKind::Implicit,
+                                   templSym->isInline, templSym->isNoInline);
 
         std::vector<const Type *> substitutedParamTypes;
         // Instantiate function parameter types with explicitly specified template arguments
@@ -8665,7 +8666,8 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
         // All template arguments were either explicitly specified or deduced, now get the instantiation.
         Symbol *funcSym = templSym->functionTemplate->LookupInstantiation(deducedArgs);
         if (funcSym == nullptr) {
-            funcSym = templSym->functionTemplate->AddInstantiation(deducedArgs, TemplateInstantiationKind::Implicit);
+            funcSym = templSym->functionTemplate->AddInstantiation(deducedArgs, TemplateInstantiationKind::Implicit,
+                                                                   templSym->isInline, templSym->isNoInline);
         }
         AssertPos(pos, funcSym);
         // Success

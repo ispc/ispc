@@ -2572,8 +2572,9 @@ template_function_instantiation
           d->InitFromDeclSpecs($2);
           lCheckTemplateDeclSpecs($2, d->pos, TemplateType::Instantiation, $3->first->name.c_str());
           const FunctionType *ftype = CastType<FunctionType>(d->type);
-
-          m->AddFunctionTemplateInstantiation($3->first->name, *$3->second, ftype, Union(@1, @6));
+          bool isInline = ($2->typeQualifiers & TYPEQUAL_INLINE);
+          bool isNoInline = ($2->typeQualifiers & TYPEQUAL_NOINLINE);
+          m->AddFunctionTemplateInstantiation($3->first->name, *$3->second, ftype, $2->storageClass, isInline, isNoInline, Union(@1, @6));
 
           // deallocate SimpleTemplateIDType returned by simple_template_id
           lFreeSimpleTemplateID(simpleTemplID);
@@ -2589,8 +2590,9 @@ template_function_instantiation
           d->InitFromDeclSpecs($2);
           lCheckTemplateDeclSpecs($2, d->pos, TemplateType::Instantiation, $3->first->name.c_str());
           const FunctionType *ftype = CastType<FunctionType>(d->type);
-
-          m->AddFunctionTemplateInstantiation($3->first->name, *$3->second, ftype, Union(@1, @5));
+          bool isInline = ($2->typeQualifiers & TYPEQUAL_INLINE);
+          bool isNoInline = ($2->typeQualifiers & TYPEQUAL_NOINLINE);
+          m->AddFunctionTemplateInstantiation($3->first->name, *$3->second, ftype, $2->storageClass, isInline, isNoInline, Union(@1, @5));
 
           // deallocate SimpleTemplateIDType returned by simple_template_id
           lFreeSimpleTemplateID(simpleTemplID);
@@ -2912,7 +2914,10 @@ lAddTemplateSpecialization(const std::vector<std::pair<const Type *, SourcePos>>
 
     const FunctionType *ftype = CastType<FunctionType>(decl->type);
     if (ftype != nullptr) {
-        m->AddFunctionTemplateSpecializationDeclaration(decl->name, ftype, types, decl->pos);
+        bool isInline = (ds->typeQualifiers & TYPEQUAL_INLINE);
+        bool isNoInline = (ds->typeQualifiers & TYPEQUAL_NOINLINE);
+        m->AddFunctionTemplateSpecializationDeclaration(decl->name, ftype, types, ds->storageClass, 
+                                                        isInline, isNoInline, decl->pos);
     }
     else {
         Error(decl->pos, "Only function template specializations are supported.");

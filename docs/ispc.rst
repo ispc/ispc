@@ -3848,6 +3848,23 @@ template function specializations is not yet supported. Consider the following e
     }
 
 
+You can use limited number of function specifiers with function templates:
+
+* The keywords ``export``, ``task``, ``typedef``, ``extern "C"`` and ``extern "SYCL"``
+  are not allowed.
+* Calling conventions such as ``__vectorcall`` and ``__regcall`` must be used in conjunction
+  with ``extern "C"`` or ``extern "SYCL"``, so they are not allowed as well.
+* Performance hints like ``inline`` and ``noinline`` are allowed. Primary template, template
+  specializations and explicit instantiations may have different ``inline`` hints.
+* Storage types ``extern`` and ``static`` are allowed. Template specializations and explicit
+  instantiations must share the same storage type as the primary template.
+  If not specified, the storage type will be inherited from the primary template.
+* ``unmasked`` specifier is allowed. Template specializations and explicit instantiations
+  must maintain consistency with the primary template regarding the ``unmasked`` specifier.
+  You cannot specify ``unmasked`` for a template specialization if it was not previously
+  specified for the primary template. If unspecified, it will be inherited from the
+  primary template.
+
 The ISPC Standard Library
 =========================
 

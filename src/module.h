@@ -88,11 +88,12 @@ class Module {
 
     void AddFunctionTemplateInstantiation(const std::string &name,
                                           const std::vector<std::pair<const Type *, SourcePos>> &types,
-                                          const FunctionType *ftype, SourcePos pos);
+                                          const FunctionType *ftype, StorageClass sc, bool isInline, bool isNoInline,
+                                          SourcePos pos);
 
     void AddFunctionTemplateSpecializationDeclaration(const std::string &name, const FunctionType *ftype,
                                                       const std::vector<std::pair<const Type *, SourcePos>> &types,
-                                                      SourcePos pos);
+                                                      StorageClass sc, bool isInline, bool isNoInline, SourcePos pos);
 
     void AddFunctionTemplateSpecializationDefinition(const std::string &name, const FunctionType *ftype,
                                                      const std::vector<std::pair<const Type *, SourcePos>> &types,

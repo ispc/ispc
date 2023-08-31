@@ -1189,7 +1189,8 @@ FunctionTemplate *Module::MatchFunctionTemplate(const std::string &name, const F
             continue;
         }
         bool matched = true;
-        TemplateInstantiation inst(*(templateSymbol->templateParms), normTypes, TemplateInstantiationKind::Implicit);
+        TemplateInstantiation inst(*(templateSymbol->templateParms), normTypes, TemplateInstantiationKind::Implicit,
+                                   templateSymbol->isInline, templateSymbol->isNoInline);
         for (int i = 0; i < ftype->GetNumParameters(); i++) {
             const Type *instParam = ftype->GetParameterType(i);
             const Type *templateParam = templateSymbol->type->GetParameterType(i)->ResolveDependence(inst);
@@ -1208,11 +1209,32 @@ FunctionTemplate *Module::MatchFunctionTemplate(const std::string &name, const F
 
 void Module::AddFunctionTemplateInstantiation(const std::string &name,
                                               const std::vector<std::pair<const Type *, SourcePos>> &types,
-                                              const FunctionType *ftype, SourcePos pos) {
+                                              const FunctionType *ftype, StorageClass sc, bool isInline,
+                                              bool isNoInline, SourcePos pos) {
     std::vector<std::pair<const Type *, SourcePos>> normTypes(types);
     FunctionTemplate *templ = MatchFunctionTemplate(name, ftype, normTypes, pos);
     if (templ) {
-        templ->AddInstantiation(normTypes, TemplateInstantiationKind::Explicit);
+        // If primary template has default storage class, but explicit instantiation has non-default storage class,
+        // report an error
+        if (templ->GetStorageClass() == SC_NONE && sc != SC_NONE) {
+            Error(pos, "Template instantiation has inconsistent storage class. Consider assigning it to the primary "
+                       "template to inherit it's signature.");
+            return;
+        }
+        // If primary template has non-default storage class, but explicit instantiation has different non-default
+        // storage class, report an error
+        if (templ->GetStorageClass() != SC_NONE && sc != SC_NONE && sc != templ->GetStorageClass()) {
+            Error(pos, "Template instantiation has inconsistent storage class.");
+            return;
+        }
+        // If primary template doesn't have unmasked specifier, but explicit instantiation has it,
+        // report an error
+        if (!templ->GetFunctionType()->isUnmasked && ftype->isUnmasked) {
+            Error(pos, "Template instantiation has inconsistent \"unmasked\" specifier. Consider moving the specifier "
+                       "inside the function or assigning it to the primary template to inherit it's signature.");
+            return;
+        }
+        templ->AddInstantiation(normTypes, TemplateInstantiationKind::Explicit, isInline, isNoInline);
     } else {
         Error(pos, "No matching function template found for instantiation.");
     }
@@ -1233,20 +1255,43 @@ void Module::AddFunctionTemplateSpecializationDefinition(const std::string &name
         return;
     }
     sym->pos = code->pos;
-
-    // Update already created symbol with real function type and function implementation
-    sym->type = ftype;
+    // Update already created symbol with real function type and function implementation.
+    // Inherit unmasked specifier from the basic template.
+    const FunctionType *instType = CastType<FunctionType>(sym->type);
+    bool instUnmasked = instType ? instType->isUnmasked : false;
+    sym->type = instUnmasked ? ftype->GetAsUnmaskedType() : ftype->GetAsNonUnmaskedType();
     Function *inst = new Function(sym, code);
     sym->parentFunction = inst;
 }
 
 void Module::AddFunctionTemplateSpecializationDeclaration(const std::string &name, const FunctionType *ftype,
                                                           const std::vector<std::pair<const Type *, SourcePos>> &types,
+                                                          StorageClass sc, bool isInline, bool isNoInline,
                                                           SourcePos pos) {
     std::vector<std::pair<const Type *, SourcePos>> normTypes(types);
     FunctionTemplate *templ = MatchFunctionTemplate(name, ftype, normTypes, pos);
     if (templ == nullptr) {
         Error(pos, "No matching function template found for specialization.");
+        return;
+    }
+    // If primary template has default storage class, but specialization has non-default storage class,
+    // report an error
+    if (templ->GetStorageClass() == SC_NONE && sc != SC_NONE) {
+        Error(pos, "Template specialization has inconsistent storage class. Consider assigning it to the primary "
+                   "template to inherit it's signature.");
+        return;
+    }
+    // If primary template has non-default storage class, but specialization has different non-default storage class,
+    // report an error
+    if (templ->GetStorageClass() != SC_NONE && sc != SC_NONE && sc != templ->GetStorageClass()) {
+        Error(pos, "Template specialization has inconsistent storage class.");
+        return;
+    }
+    // If primary template doesn't have unmasked specifier, but specialization has it,
+    // report an error
+    if (!templ->GetFunctionType()->isUnmasked && ftype->isUnmasked) {
+        Error(pos, "Template specialization has inconsistent \"unmasked\" specifier. Consider moving the specifier "
+                   "inside the function or assigning it to the primary template to inherit it's signature.");
         return;
     }
     Symbol *sym = templ->LookupInstantiation(normTypes);
@@ -1256,8 +1301,7 @@ void Module::AddFunctionTemplateSpecializationDeclaration(const std::string &nam
             return;
         }
     }
-
-    templ->AddSpecialization(ftype, normTypes, pos);
+    templ->AddSpecialization(ftype, normTypes, isInline, isNoInline, pos);
 }
 
 void Module::AddExportedTypes(const std::vector<std::pair<const Type *, SourcePos>> &types) {

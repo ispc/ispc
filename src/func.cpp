@@ -875,6 +875,11 @@ const FunctionType *FunctionTemplate::GetFunctionType() const {
     return sym->type;
 }
 
+StorageClass FunctionTemplate::GetStorageClass() {
+    Assert(sym);
+    return sym->storageClass;
+}
+
 void FunctionTemplate::Print() const {
     Indent indent;
     indent.pushSingle();
@@ -967,10 +972,10 @@ Symbol *FunctionTemplate::LookupInstantiation(const std::vector<std::pair<const 
 }
 
 Symbol *FunctionTemplate::AddInstantiation(const std::vector<std::pair<const Type *, SourcePos>> &types,
-                                           TemplateInstantiationKind kind) {
+                                           TemplateInstantiationKind kind, bool isInline, bool isNoinline) {
     const TemplateParms *typenames = GetTemplateParms();
     Assert(typenames);
-    TemplateInstantiation templInst(*typenames, types, kind);
+    TemplateInstantiation templInst(*typenames, types, kind, isInline, isNoinline);
 
     Symbol *instSym = templInst.InstantiateTemplateSymbol(sym);
     Symbol *instMaskSym = templInst.InstantiateSymbol(maskSymbol);
@@ -991,16 +996,20 @@ Symbol *FunctionTemplate::AddInstantiation(const std::vector<std::pair<const Typ
 }
 
 Symbol *FunctionTemplate::AddSpecialization(const FunctionType *ftype,
-                                            const std::vector<std::pair<const Type *, SourcePos>> &types,
-                                            SourcePos pos) {
+                                            const std::vector<std::pair<const Type *, SourcePos>> &types, bool isInline,
+                                            bool isNoInline, SourcePos pos) {
     const TemplateParms *typenames = GetTemplateParms();
     Assert(typenames);
-    TemplateInstantiation templInst(*typenames, types, TemplateInstantiationKind::Specialization);
+    TemplateInstantiation templInst(*typenames, types, TemplateInstantiationKind::Specialization, isInline, isNoInline);
 
     // Create a function symbol
     Symbol *instSym = templInst.InstantiateTemplateSymbol(sym);
-    instSym->type = ftype;
+    // Inherit unmasked specifier and storageClass from the basic template.
+    const FunctionType *instType = CastType<FunctionType>(sym->type);
+    bool instUnmasked = instType ? instType->isUnmasked : false;
+    instSym->type = instUnmasked ? ftype->GetAsUnmaskedType() : ftype->GetAsNonUnmaskedType();
     instSym->pos = pos;
+    instSym->storageClass = sym->storageClass;
 
     TemplateArgs *templArgs = new TemplateArgs(types);
 
@@ -1020,8 +1029,8 @@ Symbol *FunctionTemplate::AddSpecialization(const FunctionType *ftype,
 
 TemplateInstantiation::TemplateInstantiation(const TemplateParms &typeParms,
                                              const std::vector<std::pair<const Type *, SourcePos>> &typeArgs,
-                                             TemplateInstantiationKind k)
-    : functionSym(nullptr), kind(k) {
+                                             TemplateInstantiationKind k, bool ii, bool ini)
+    : functionSym(nullptr), kind(k), isInline(ii), isNoInline(ini) {
     Assert(typeArgs.size() <= typeParms.GetCount());
     // Create a mapping from the template parameters to the arguments.
     // Note we do that for all specified templates arguments, which number may be less than a number of template
@@ -1089,7 +1098,7 @@ Symbol *TemplateInstantiation::InstantiateTemplateSymbol(TemplateSymbol *sym) {
     functionSym = instSym;
 
     // Create llvm::Function and attach to the symbol, so the symbol is complete and ready for use.
-    llvm::Function *llvmFunc = createLLVMFunction(instSym, sym->isInline, sym->isNoInline);
+    llvm::Function *llvmFunc = createLLVMFunction(instSym);
     instSym->function = llvmFunc;
     return instSym;
 }
@@ -1108,7 +1117,7 @@ void TemplateInstantiation::SetFunction(Function *func) {
 // For function templates we need llvm::Function when instantiation is created, so we do it here.
 // TODO: change the design to unify llvm::Function creation for both regular functions and instantiations of
 // function templates.
-llvm::Function *TemplateInstantiation::createLLVMFunction(Symbol *functionSym, bool isInline, bool isNoInline) {
+llvm::Function *TemplateInstantiation::createLLVMFunction(Symbol *functionSym) {
     Assert(functionSym && functionSym->type && CastType<FunctionType>(functionSym->type));
     const FunctionType *functionType = CastType<FunctionType>(functionSym->type);
 
