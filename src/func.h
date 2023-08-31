@@ -81,12 +81,13 @@ class FunctionTemplate {
     std::string GetName() const;
     const TemplateParms *GetTemplateParms() const;
     const FunctionType *GetFunctionType() const;
+    StorageClass GetStorageClass();
 
     Symbol *LookupInstantiation(const std::vector<std::pair<const Type *, SourcePos>> &types);
     Symbol *AddInstantiation(const std::vector<std::pair<const Type *, SourcePos>> &types,
-                             TemplateInstantiationKind kind);
+                             TemplateInstantiationKind kind, bool isInline, bool isNoInline);
     Symbol *AddSpecialization(const FunctionType *ftype, const std::vector<std::pair<const Type *, SourcePos>> &types,
-                              SourcePos pos);
+                              bool isInline, bool isNoInline, SourcePos pos);
 
     // Generate code for instantiations and specializations.
     void GenerateIR() const;
@@ -111,7 +112,7 @@ class TemplateInstantiation {
   public:
     TemplateInstantiation(const TemplateParms &typeParms,
                           const std::vector<std::pair<const Type *, SourcePos>> &typeArgs,
-                          TemplateInstantiationKind kind);
+                          TemplateInstantiationKind kind, bool IsInline, bool IsNoInline);
     const Type *InstantiateType(const std::string &name);
     Symbol *InstantiateSymbol(Symbol *sym);
     Symbol *InstantiateTemplateSymbol(TemplateSymbol *sym);
@@ -131,7 +132,10 @@ class TemplateInstantiation {
     // Kind of instantiation (explicit, implicit, specialization).
     TemplateInstantiationKind kind;
 
-    llvm::Function *createLLVMFunction(Symbol *functionSym, bool isInline, bool isNoInline);
+    bool isInline;
+    bool isNoInline;
+
+    llvm::Function *createLLVMFunction(Symbol *functionSym);
 };
 
 } // namespace ispc
