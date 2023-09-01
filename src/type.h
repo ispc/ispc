@@ -947,6 +947,9 @@ class FunctionType : public Type {
     const Type *GetAsConstType() const;
     const Type *GetAsNonConstType() const;
 
+    const Type *GetAsUnmaskedType() const;
+    const Type *GetAsNonUnmaskedType() const;
+
     std::string GetString() const;
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &fname) const;
@@ -1041,6 +1044,8 @@ class FunctionType : public Type {
         and the like and so not affect testing function types for equality,
         etc. */
     const llvm::SmallVector<SourcePos, 8> paramPositions;
+
+    mutable const FunctionType *asMaskedType, *asUnmaskedType;
 };
 
 /* Efficient dynamic casting of Types.  First, we specify a default

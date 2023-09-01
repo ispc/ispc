@@ -2614,6 +2614,7 @@ FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 
     Assert(returnType != nullptr);
     isSafe = false;
     costOverride = -1;
+    asUnmaskedType = asMaskedType = nullptr;
 }
 
 FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 8> &a,
@@ -2628,6 +2629,7 @@ FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 
     Assert(returnType != nullptr);
     isSafe = false;
     costOverride = -1;
+    asUnmaskedType = asMaskedType = nullptr;
 }
 
 Variability FunctionType::GetVariability() const { return Variability(Variability::Uniform); }
@@ -2726,6 +2728,36 @@ const FunctionType *FunctionType::ResolveUnboundVariability(Variability v) const
 const Type *FunctionType::GetAsConstType() const { return this; }
 
 const Type *FunctionType::GetAsNonConstType() const { return this; }
+
+const Type *FunctionType::GetAsUnmaskedType() const {
+    if (isUnmasked)
+        return this;
+    if (asUnmaskedType == nullptr) {
+        FunctionType *ft = new FunctionType(returnType, paramTypes, paramNames, paramDefaults, paramPositions, isTask,
+                                            isExported, isExternC, isExternSYCL, true, isVectorCall, isRegCall);
+        ft->isSafe = isSafe;
+        ft->costOverride = costOverride;
+        asUnmaskedType = ft;
+        if (!isUnmasked)
+            asUnmaskedType->asMaskedType = this;
+    }
+    return asUnmaskedType;
+}
+
+const Type *FunctionType::GetAsNonUnmaskedType() const {
+    if (!isUnmasked)
+        return this;
+    if (asMaskedType == nullptr) {
+        FunctionType *ft = new FunctionType(returnType, paramTypes, paramNames, paramDefaults, paramPositions, isTask,
+                                            isExported, isExternC, isExternSYCL, false, isVectorCall, isRegCall);
+        ft->isSafe = isSafe;
+        ft->costOverride = costOverride;
+        asMaskedType = ft;
+        if (isUnmasked)
+            asMaskedType->asUnmaskedType = this;
+    }
+    return asMaskedType;
+}
 
 std::string FunctionType::GetString() const {
     std::string ret = GetNameForCallConv();
