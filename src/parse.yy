@@ -102,6 +102,10 @@ static void lAddThreadIndexCountToSymbolTable(SourcePos pos);
 static std::string lGetAlternates(std::vector<std::string> &alternates);
 static const char *lGetStorageClassString(StorageClass sc);
 static bool lGetConstantInt(Expr *expr, int *value, SourcePos pos, const char *usage);
+
+enum class TemplateType { Template, Instantiation, Specialization };
+static void lCheckTemplateDeclSpecs(DeclSpecs *ds, SourcePos pos, TemplateType type, const char* name);
+
 static EnumType *lCreateEnumType(const char *name, std::vector<Symbol *> *enums,
                                  SourcePos pos);
 static void lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
@@ -2566,6 +2570,7 @@ template_function_instantiation
           }
 
           d->InitFromDeclSpecs($2);
+          lCheckTemplateDeclSpecs($2, d->pos, TemplateType::Instantiation, $3->first->name.c_str());
           const FunctionType *ftype = CastType<FunctionType>(d->type);
 
           m->AddFunctionTemplateInstantiation($3->first->name, *$3->second, ftype, Union(@1, @6));
@@ -2582,6 +2587,7 @@ template_function_instantiation
           d->child = simpleTemplID->first;
 
           d->InitFromDeclSpecs($2);
+          lCheckTemplateDeclSpecs($2, d->pos, TemplateType::Instantiation, $3->first->name.c_str());
           const FunctionType *ftype = CastType<FunctionType>(d->type);
 
           m->AddFunctionTemplateInstantiation($3->first->name, *$3->second, ftype, Union(@1, @5));
@@ -2813,53 +2819,69 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
 }
 
 static void
-lAddTemplateDeclaration(TemplateParms *templateParmList, DeclSpecs *ds, Declarator *decl) {
-    if (ds == nullptr || decl == nullptr)
-        // Error happened earlier during parsing
-        return;
-
-    decl->InitFromDeclSpecs(ds);
-    if (ds->storageClass == SC_TYPEDEF) {
-        // FIXME: source position
-        Error(decl->pos, "Illegal \"typedef\" provided with function template.");
-        return;
+lCheckTemplateDeclSpecs(DeclSpecs *ds, SourcePos pos, TemplateType type, const char* name) {
+    std::string templateTypeStr;
+    switch (type) {
+        case TemplateType::Template:
+            templateTypeStr = "function template";
+            break;
+        case TemplateType::Instantiation:
+            templateTypeStr = "template instantiation";
+            break;
+        case TemplateType::Specialization:
+            templateTypeStr = "template specialization";
+            break;
+        default:
+            FATAL("Unhandled template type in lCheckTemplateDeclSpecs");
     }
     if (ds->typeQualifiers & TYPEQUAL_TASK){
-        Error(decl->pos, "'task' not supported for templates.");
+        Error(pos, "'task' not supported for %s.", templateTypeStr.c_str());
         return;
     }
     if (ds->typeQualifiers & TYPEQUAL_EXPORT) {
-        Error(decl->pos, "'export' not supported for templates.");
+        Error(pos, "'export' not supported for %s.", templateTypeStr.c_str());
+        return;
+    }
+    if (ds->storageClass == SC_TYPEDEF) {
+        Error(pos, "Illegal \"typedef\" provided with %s.", templateTypeStr.c_str());
         return;
     }
     // We can't support extern "C"/extern "SYCL" for templates because
     // we need mangling information.
     if (ds->storageClass == SC_EXTERN_C || ds->storageClass == SC_EXTERN_SYCL) {
-        Error(decl->pos, "Illegal linkage provided with function template.");
+        Error(pos, "Illegal linkage provided with %s.", templateTypeStr.c_str());
         return;
     }
+    Assert(ds->storageClass == SC_NONE || ds->storageClass == SC_STATIC || ds->storageClass == SC_EXTERN);
+    bool isVectorCall = (ds->typeQualifiers & TYPEQUAL_VECTORCALL);
+    if (isVectorCall) {
+        Error(pos, "Illegal to use \"__vectorcall\" qualifier on non-extern function \"%s\".", name);
+    }
+    bool isRegCall = (ds->typeQualifiers & TYPEQUAL_REGCALL);
+    if (isRegCall) {
+        Error(pos, "Illegal to use \"__regcall\" qualifier on non-extern function \"%s\".", name);
+    }
+}
+
+static void
+lAddTemplateDeclaration(TemplateParms *templateParmList, DeclSpecs *ds, Declarator *decl) {
+    if (ds == nullptr || decl == nullptr) {
+        // Error happened earlier during parsing
+        return;
+    }
+
+    decl->InitFromDeclSpecs(ds);
+    lCheckTemplateDeclSpecs(ds, decl->pos, TemplateType::Template, decl->name.c_str());
 
     if (decl->type == nullptr) {
         Assert(m->errorCount > 0);
         return;
     }
 
-    Assert(ds->storageClass == SC_NONE || ds->storageClass == SC_STATIC || ds->storageClass == SC_EXTERN);
-    //decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
-
     const FunctionType *ft = CastType<FunctionType>(decl->type);
     if (ft != nullptr) {
         bool isInline = (ds->typeQualifiers & TYPEQUAL_INLINE);
         bool isNoInline = (ds->typeQualifiers & TYPEQUAL_NOINLINE);
-        bool isVectorCall = (ds->typeQualifiers & TYPEQUAL_VECTORCALL);
-        if (isVectorCall) {
-            Error(decl->pos, "Illegal to use \"__vectorcall\" qualifier on non-extern function \"%s\".", decl->name.c_str());
-        }
-        bool isRegCall = (ds->typeQualifiers & TYPEQUAL_REGCALL);
-        if (isRegCall) {
-            Error(decl->pos, "Illegal to use \"__regcall\" qualifier on non-extern function \"%s\".", decl->name.c_str());
-        }
-
         m->AddFunctionTemplateDeclaration(templateParmList, decl->name, ft, ds->storageClass,
                                           isInline, isNoInline, decl->pos);
     }
@@ -2876,34 +2898,24 @@ lAddTemplateSpecialization(const std::vector<std::pair<const Type *, SourcePos>>
         return;
 
     decl->InitFromDeclSpecs(ds);
-    if (ds->typeQualifiers & TYPEQUAL_TASK) {
-        Error(decl->pos, "'task' not supported for template specializations.");
-        return;
-    }
-    if (ds->typeQualifiers & TYPEQUAL_EXPORT) {
-        Error(decl->pos, "'export' not supported for template specializations.");
-        return;
-    }
-    if (ds->storageClass == SC_TYPEDEF) {
-        Error(decl->pos, "Illegal \"typedef\" provided with function template specialization.");
-        return;
-    } else {
-        if (decl->type == nullptr) {
-            Assert(m->errorCount > 0);
-            return;
-        }
+    lCheckTemplateDeclSpecs(ds, decl->pos, TemplateType::Specialization, decl->name.c_str());
 
-        if (types.size() == 0) {
-            Error(decl->pos, "Template arguments deduction is not yet supported in template function specialization.");
-            return;
-        }
-        const FunctionType *ftype = CastType<FunctionType>(decl->type);
-        if (ftype != nullptr) {
-            m->AddFunctionTemplateSpecializationDeclaration(decl->name, ftype, types, decl->pos);
-        }
-        else {
-            Error(decl->pos, "Only function template specializations are supported.");
-        }
+    if (decl->type == nullptr) {
+        Assert(m->errorCount > 0);
+        return;
+    }
+
+    if (types.size() == 0) {
+        Error(decl->pos, "Template arguments deduction is not yet supported in template function specialization.");
+        return;
+    }
+
+    const FunctionType *ftype = CastType<FunctionType>(decl->type);
+    if (ftype != nullptr) {
+        m->AddFunctionTemplateSpecializationDeclaration(decl->name, ftype, types, decl->pos);
+    }
+    else {
+        Error(decl->pos, "Only function template specializations are supported.");
     }
 }
 
