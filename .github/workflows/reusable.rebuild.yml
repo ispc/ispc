@@ -48,7 +48,7 @@ jobs:
       run: |
         cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }}:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=${{ inputs.version }} .
+        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }}:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg LLVM_DISABLE_ASSERTIONS=OFF .
 
     - name: Upload package
       uses: actions/upload-artifact@v3
@@ -80,7 +80,7 @@ jobs:
         cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
         ls -al
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }}:stage2 --target=llvm_build_step2 --cache-from=type=local,src=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=${{ inputs.version }} --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }}:stage2 --target=llvm_build_step2 --cache-from=type=local,src=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg LLVM_DISABLE_ASSERTIONS=OFF --output=type=tar,dest=result.tar .
 
     - name: Pack LLVM
       run: |
@@ -111,7 +111,7 @@ jobs:
       run: |
         cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }}:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg EXTRA_BUILD_ARG="--llvm-disable-assertions" .
+        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }}:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg LLVM_DISABLE_ASSERTIONS=ON .
 
     - name: Upload package
       uses: actions/upload-artifact@v3
@@ -143,7 +143,7 @@ jobs:
         cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
         ls -al
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }}:stage2 --target=llvm_build_step2 --cache-from=type=local,src=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg EXTRA_BUILD_ARG="--llvm-disable-assertions" --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }}:stage2 --target=llvm_build_step2 --cache-from=type=local,src=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg LLVM_DISABLE_ASSERTIONS=ON --output=type=tar,dest=result.tar .
 
     - name: Pack LLVM
       run: |
@@ -175,7 +175,7 @@ jobs:
       run: |
         cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }} --no-cache --target=llvm_build_step2 --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=${{ inputs.version }} --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }} --no-cache --target=llvm_build_step2 --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=${{ inputs.version }} --output=type=tar,dest=result.tar --build-arg LLVM_DISABLE_ASSERTIONS=OFF .
         docker buildx rm
 
     - name: Pack LLVM
@@ -209,7 +209,7 @@ jobs:
       run: |
         cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }} --no-cache --target=llvm_build_step2 --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg EXTRA_BUILD_ARG="--llvm-disable-assertions" --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }} --no-cache --target=llvm_build_step2 --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg LLVM_DISABLE_ASSERTIONS=ON --output=type=tar,dest=result.tar .
         docker buildx rm
 
     - name: Pack LLVM
@@ -234,12 +234,10 @@ jobs:
       with:
         submodules: true
 
-    - name: Setup MSBuild.exe
-      uses: microsoft/setup-msbuild@v1
-
     - name: Check environment
       shell: cmd
       run: |
+        cmake --version
         wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
 
     - name: Install dependencies
@@ -252,14 +250,16 @@ jobs:
     - name: Build LLVM
       shell: cmd
       run: |
-        python ./alloy.py -b --version=${{ inputs.version }} --verbose --generator="${{ inputs.vs_generator }}"
-        cd alloy_results* && type alloy_build.log
+        set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        call %VSVARS%
+        cmake %ISPC_HOME%\superbuild -B build-${{ inputs.version }} --preset os -DLLVM_VERSION=${{ inputs.version }} -DCMAKE_INSTALL_PREFIX=%LLVM_HOME%\bin-${{ inputs.version }} -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DXE_DEPS=OFF -DLLVM_DISABLE_ASSERTIONS=OFF
+        cmake --build build-${{ inputs.version }}
+        rmdir /s /q build-${{ inputs.version }}
 
     - name: Pack LLVM
       shell: cmd
       run: |
         cd llvm
-        rmdir /s /q build-${{ inputs.version }}
         set TAR_BASE_NAME=llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release+Asserts-x86.arm.wasm
         7z.exe a -ttar -snl %TAR_BASE_NAME%.tar bin-${{ inputs.version }}
         7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
@@ -278,12 +278,10 @@ jobs:
       with:
         submodules: true
 
-    - name: Setup MSBuild.exe
-      uses: microsoft/setup-msbuild@v1
-
     - name: Check environment
       shell: cmd
       run: |
+        cmake --version
         wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
 
     - name: Install dependencies
@@ -296,14 +294,16 @@ jobs:
     - name: Build LLVM
       shell: cmd
       run: |
-        python ./alloy.py -b --version=${{ inputs.version }} --verbose --llvm-disable-assertions --generator="${{ inputs.vs_generator }}"
-        cd alloy_results* && type alloy_build.log
+        set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        call %VSVARS%
+        cmake %ISPC_HOME%\superbuild -B build-${{ inputs.version }} --preset os -DLLVM_VERSION=${{ inputs.version }} -DCMAKE_INSTALL_PREFIX=%LLVM_HOME%\bin-${{ inputs.version }} -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DXE_DEPS=OFF -DLLVM_DISABLE_ASSERTIONS=ON
+        cmake --build build-${{ inputs.version }}
+        rmdir /s /q build-${{ inputs.version }}
 
     - name: Pack LLVM
       shell: cmd
       run: |
         cd llvm
-        rmdir /s /q build-${{ inputs.version }}
         set TAR_BASE_NAME=llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release-x86.arm.wasm
         7z.exe a -ttar -snl %TAR_BASE_NAME%.tar bin-${{ inputs.version }}
         7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
@@ -336,7 +336,9 @@ jobs:
 
     - name: Build LLVM
       run: |
-        ./alloy.py -b --version=${{ inputs.version }} --selfbuild --macos-universal-binary --verbose
+        cmake $ISPC_HOME/superbuild -B build-${{ inputs.version }} --preset os -DLLVM_VERSION=${{ inputs.version }} -DCMAKE_INSTALL_PREFIX=$LLVM_HOME/bin-${{ inputs.version }} -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DXE_DEPS=OFF -DMACOS_UNIVERSAL_BIN=ON -DLLVM_DISABLE_ASSERTIONS=OFF
+        cmake --build build-${{ inputs.version }}
+        rmdir /s /q build-${{ inputs.version }}
 
     - name: Pack LLVM
       run: |
@@ -371,7 +373,9 @@ jobs:
 
     - name: Build LLVM
       run: |
-        ./alloy.py -b --version=${{ inputs.version }} --selfbuild --macos-universal-binary --verbose --llvm-disable-assertions
+        cmake $ISPC_HOME/superbuild -B build-${{ inputs.version }} --preset os -DLLVM_VERSION=${{ inputs.version }} -DCMAKE_INSTALL_PREFIX=$LLVM_HOME/bin-${{ inputs.version }} -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DXE_DEPS=OFF -DMACOS_UNIVERSAL_BIN=ON -DLLVM_DISABLE_ASSERTIONS=ON
+        cmake --build build-${{ inputs.version }}
+        rmdir /s /q build-${{ inputs.version }}
 
     - name: Pack LLVM
       run: |
