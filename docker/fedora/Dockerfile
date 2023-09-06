@@ -3,44 +3,35 @@
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
-FROM fedora:37
+FROM fedora:39
 LABEL maintainer="Nurmukhametov, Aleksei <aleksei.nurmukhametov@intel.com>"
 SHELL ["/bin/bash", "-c"]
 
 ARG REPO=ispc/ispc
 ARG SHA=main
 
+# If you are behind a proxy, you need to configure dnf to use it.
+RUN if [ -v http_proxy ]; then echo "proxy=$http_proxy" >> /etc/dnf/dnf.conf; fi
+
 # Packages required to build ISPC.
-# RUN echo "proxy=http://proxy.yourcompany.com:888" >> /etc/dnf/dnf.conf
-RUN dnf install -y git cmake && \
-    dnf install -y clang-devel-15.0.7 llvm-devel-15.0.7 glibc-devel.i686 && \
+RUN dnf install -y git cmake python3-setuptools && \
+    dnf install -y clang-devel llvm-devel glibc-devel.i686 && \
     dnf install -y flex bison tbb-devel && \
     dnf clean -y all
 
-# If you are behind a proxy, you need to configure git and svn.
-# RUN git config --global --add http.proxy http://proxy.yourcompany.com:888
-
-WORKDIR /usr/local/src
-
-# Fork ispc on github and clone *your* fork.
-RUN git clone --depth=1 -b $SHA https://github.com/$REPO.git ispc
-
-ENV ISPC_HOME=/usr/local/src/ispc
-
-# If you are going to run test for future platforms, go to
-# http://www.intel.com/software/sde and download the latest version,
-# extract it, add to path and set SDE_HOME.
-
-# Configure ISPC build
-RUN mkdir /usr/local/src/ispc/build
-WORKDIR /usr/local/src/ispc/build
-RUN cmake ../ -DCMAKE_INSTALL_PREFIX=/usr
+# If you are behind a proxy, you need to configure git to use it.
+RUN if [ -v http_proxy ]; then git config --global --add http.proxy "$http_proxy"; fi
 
 # LLVM
 # We don't build llvm here because we use system shared libraries.
 
-# Build ISPC
-RUN make VERBOSE=1 ispc -j"$(nproc)" && make install
-RUN make check-all && (echo "shared libs deps of ispc" && ldd ./bin/ispc)
-WORKDIR /usr/local/src/ispc
-RUN rm -rf build
+# Clone, configure and build ISPC
+WORKDIR /usr/local/src
+RUN git clone --depth=1 https://github.com/$REPO.git ispc && \
+    git -C ispc checkout $SHA && \
+    cmake ispc -B build-ispc -DCMAKE_INSTALL_PREFIX=/usr && \
+    cmake --build build-ispc -v -j "$(nproc)" && \
+    cmake --build build-ispc --target check-all && \
+    (echo "shared libs deps of ispc" && ldd ./build-ispc/bin/ispc) && \
+    cmake --install build-ispc && \
+    rm -rf build ispc
