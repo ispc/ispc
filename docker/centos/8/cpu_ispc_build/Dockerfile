@@ -35,29 +35,27 @@ RUN ./configure --with-termlib --with-libtool --with-libtool-opts=-static --enab
 
 # Download and install required version of CMake. CMake 3.20 is required starting from LLVM 16.0.
 RUN if [[ $(uname -m) =~ "x86" ]]; then export CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v3.20.5/cmake-3.20.5-linux-x86_64.sh"; else export CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v3.20.5/cmake-3.20.5-linux-aarch64.sh"; fi && \
-    wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 $CMAKE_URL && mkdir /opt/cmake && sh cmake-*.sh --prefix=/opt/cmake --skip-license && \
-    ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && rm -rf cmake-*.sh
+    wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 $CMAKE_URL && \
+    sh cmake-*.sh --prefix=/usr/local --skip-license && rm -rf cmake-*.sh
 
 # If you are behind a proxy, you need to configure git.
-RUN if [ -v "$http_proxy" ]; then git config --global --add http.proxy "$http_proxy"; fi
+RUN if [ -v http_proxy ]; then git config --global --add http.proxy "$http_proxy"; fi
 
 WORKDIR /usr/local/src
 
 # Fork ispc on github and clone *your* fork.
-RUN git clone https://github.com/$REPO.git ispc
+RUN mkdir /usr/local/src/llvm && \
+    git clone https://github.com/$REPO.git ispc
 
 # This is home for Clang builds
-RUN mkdir /usr/local/src/llvm
-
-ENV ISPC_HOME=/usr/local/src/ispc
 ENV LLVM_HOME=/usr/local/src/llvm
+ENV ISPC_HOME=/usr/local/src/ispc
 
 # If you are going to run test for future platforms, go to
 # http://www.intel.com/software/sde and download the latest version,
 # extract it, add to path and set SDE_HOME.
 
 WORKDIR /usr/local/src/ispc
-RUN git checkout $SHA
 
 # Build Clang with all required patches.
 # Pass required LLVM_VERSION with --build-arg LLVM_VERSION=<version>.
@@ -66,12 +64,14 @@ RUN git checkout $SHA
 # or better do clang selfbuild and use it for ispc build as well (i.e. just "make").
 # "rm" are just to keep docker image small.
 # Add --llvm-disable-assertions for building "release" version.
-RUN ./alloy.py -b --version="$LLVM_VERSION" --selfbuild --verbose && \
+RUN git checkout $SHA && \
+    ./alloy.py -b --version="$LLVM_VERSION" --selfbuild --verbose && \
     rm -rf "$LLVM_HOME"/build-"$LLVM_VERSION" "$LLVM_HOME"/llvm-"$LLVM_VERSION" "$LLVM_HOME"/bin-"$LLVM_VERSION"_temp "$LLVM_HOME"/build-"$LLVM_VERSION"_temp
 
 ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
 
 FROM llvm_only AS ispc_build
+SHELL ["/bin/bash", "-c"]
 
 ARG LLVM_VERSION
 
