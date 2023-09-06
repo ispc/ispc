@@ -1732,6 +1732,8 @@ static void lEmitStructDecl(const StructType *st, std::vector<const StructType *
         if (!ftype->IsArrayType() && !ftype->IsPointerType() && ftype->IsVaryingType() &&
             (CastType<StructType>(ftype) == nullptr)) {
             fprintf(file, "%s[%d];\n", d.c_str(), g->target->getVectorWidth());
+        } else if (CastType<VectorType>(ftype) != nullptr) {
+            fprintf(file, "struct %s;\n", d.c_str());
         } else {
             fprintf(file, "%s;\n", d.c_str());
         }
