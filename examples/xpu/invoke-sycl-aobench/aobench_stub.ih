@@ -28,7 +28,6 @@ using sycl::native::rsqrt;
 using sycl::native::sqrt;
 using sycl::native::sin;
 using sycl::native::cos;
-using sycl::ldexp;
 
 inline float floatbits(unsigned int a)
 {

@@ -76,13 +76,14 @@ function (add_dpcpp_library target_name)
         endif()
 
         list(APPEND SYCL_POST_LINK_ARGS
-            "--emit-param-info"
-            "--symbols"
-            "--emit-exported-symbols"
-            "--lower-esimd"
+            "-split=auto"
+            "-symbols"
+            "-lower-esimd"
+            "-emit-param-info"
+            "-emit-exported-symbols"
+            "-spec-const=native"
+            "-device-globals"
             "-O2"
-            "--spec-const=rt"
-            "--device-globals"
         )
 
         list(APPEND SPV_EXTENSIONS
@@ -204,14 +205,16 @@ function (dpcpp_get_esimd_bitcode target_name library)
         COMMAND ${DPCPP_SYCL_POST_LINK}
             -split=auto
             -symbols
-            -split-esimd
             -lower-esimd
-            -spec-const=rt
+            -emit-param-info
+            -emit-exported-symbols
+            -spec-const=native
+            -device-globals
+            -O2
             -o ${lower_post_link}
             ${bundler_result}
         COMMENT "Extracting ESIMD Bitcode ${bundler_result_tmp}"
     )
-
     add_custom_target(${target_name} DEPENDS ${post_link_result})
     set_target_properties(${target_name} PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY ${outdir}
