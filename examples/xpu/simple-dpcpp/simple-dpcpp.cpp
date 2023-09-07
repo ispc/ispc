@@ -107,8 +107,9 @@ std::vector<float> DpcppApp::transformDpcpp(const std::vector<float> &in) {
     auto ctx =
         sycl::ext::oneapi::level_zero::make_context(platform.get_devices(), (uintptr_t)nativeContext,
                                                     /*keep ownership of nativeContext handler on ISPC side*/ true);
-    auto q = sycl::ext::oneapi::level_zero::make_queue(ctx, device, (uintptr_t)nativeQueue,
-                                                       /*keep ownership of nativeQueue handler on ISPC side*/ true);
+    auto q = sycl::ext::oneapi::level_zero::make_queue(
+        ctx, device, (uintptr_t)nativeQueue, /* immediate command list*/ false,
+        /*keep ownership of m_command_queue handler on ISPC side*/ true, sycl::property_list{});
 
     // Set problem space
     sycl::range<1> range{count};

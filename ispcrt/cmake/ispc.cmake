@@ -432,13 +432,14 @@ function(ispc_gpu_target_add_sources TARGET_NAME PARENT_TARGET_NAME)
   endif()
 
   list(APPEND SYCL_POST_LINK_ARGS
-    "--emit-param-info"
-    "--symbols"
-    "--emit-exported-symbols"
-    "--lower-esimd"
+    "-split=auto"
+    "-symbols"
+    "-lower-esimd"
+    "-emit-param-info"
+    "-emit-exported-symbols"
+    "-spec-const=native"
+    "-device-globals"
     "-O2"
-    "--spec-const=rt"
-    "--device-globals"
   )
 
   list(APPEND SPV_EXTENSIONS
