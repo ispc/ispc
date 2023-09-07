@@ -2693,11 +2693,7 @@ llvm::Value *FunctionEmitContext::AddrSpaceCastInst(llvm::Value *val, AddressSpa
     if (pt->getAddressSpace() == (unsigned)as) {
         return val;
     }
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_13_0
     llvm::PointerType *newType = llvm::PointerType::getWithSamePointeeType(pt, (unsigned)as);
-#else
-    llvm::PointerType *newType = llvm::PointerType::get(pt->getPointerElementType(), (unsigned)as);
-#endif
     llvm::AddrSpaceCastInst *inst;
     if (atEntryBlock) {
         inst = new llvm::AddrSpaceCastInst(val, newType, val->getName() + "__cast", allocaBlock->getTerminator());
