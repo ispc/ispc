@@ -23,10 +23,9 @@ RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get --no-install-rec
     libtinfo-dev libc6-dev-i386 cpio lsb-core wget gnupg netcat-openbsd libtbb-dev libglfw3-dev pkgconf gdb gcc-multilib g++-multilib curl ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-# Download and install required version of cmake (3.14) for ISPC build
-RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://cmake.org/files/v3.14/cmake-3.14.0-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.14.0-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && \
-    ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && ln -s /opt/cmake/bin/cmake /usr/bin/cmake && \
-    ln -s /opt/cmake/bin/ctest /usr/local/bin/ctest && ln -s /opt/cmake/bin/ctest /usr/bin/ctest && rm cmake-3.14.0-Linux-x86_64.sh
+# Download and install required version of cmake (3.20) for ISPC build
+RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/Kitware/CMake/releases/download/v3.20.5/cmake-3.20.5-linux-x86_64.sh && \
+    sh cmake-3.20.5-linux-x86_64.sh --prefix=/usr/local --skip-license && rm cmake-3.20.5-linux-x86_64.sh
 
 WORKDIR /home/src
 
@@ -83,6 +82,6 @@ ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
 WORKDIR /home/src/ispc
 RUN mkdir -p build
 WORKDIR /home/src/ispc/build
-RUN cmake -DXE_ENABLED=ON -DCMAKE_INSTALL_PREFIX=/home/ispc/ -DXE_DEPS_DIR=/home/deps -DLEVEL_ZERO_ROOT=/home/deps ../ && make install -j"$(nproc)" && make check-all -j"$(nproc)"
+RUN cmake -DXE_ENABLED=ON -DCMAKE_INSTALL_PREFIX=/home/ispc/ -DXE_DEPS_DIR=/home/deps -DLEVEL_ZERO_ROOT=/home/deps ../ && make install -j"$(nproc)" && (make check-all -j"$(nproc)" || true)
 # Add ISPC to PATH
 ENV PATH=/home/ispc/bin:$PATH

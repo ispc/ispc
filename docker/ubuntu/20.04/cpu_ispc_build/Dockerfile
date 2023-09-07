@@ -20,11 +20,15 @@ ARG EXTRA_BUILD_ARG
 RUN uname -a
 
 # Packages
-RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends install -y wget cmake build-essential gcc g++ git python3-dev ncurses-dev libtinfo-dev ca-certificates libtbb-dev && \
+RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends install -y wget build-essential gcc g++ git python3-dev ncurses-dev libtinfo-dev ca-certificates libtbb-dev && \
     rm -rf /var/lib/apt/lists/*
 
+# Download and install required version of cmake (3.20) for ISPC build
+RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/Kitware/CMake/releases/download/v3.20.5/cmake-3.20.5-linux-x86_64.sh && \
+    sh cmake-3.20.5-linux-x86_64.sh --prefix=/usr/local --skip-license && rm cmake-3.20.5-linux-x86_64.sh
+
 # If you are behind a proxy, you need to configure git.
-RUN if [ -v "$http_proxy" ]; then git config --global --add http.proxy "$http_proxy"; fi
+RUN if [ -v http_proxy ]; then git config --global --add http.proxy "$http_proxy"; fi
 
 WORKDIR /home/src
 

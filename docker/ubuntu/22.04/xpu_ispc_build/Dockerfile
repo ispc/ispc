@@ -22,13 +22,8 @@ ARG SPIRV_TRANSLATOR_COMMIT_SHA="e82ecc2bd7295604fcf1824e47c95fa6a09c6e63"
 
 # Packages
 RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends install -y clang-12 build-essential libnuma1 opencl-headers ocl-icd-libopencl1 clinfo vim gcc g++ git python3-dev imagemagick \
-    m4 bison flex libncurses-dev libtinfo-dev libc6-dev-i386 cpio lsb-core wget netcat-openbsd libtbb2-dev libglfw3-dev pkgconf gdb gcc-multilib g++-multilib curl ca-certificates && \
+    m4 bison flex libncurses-dev libtinfo-dev libc6-dev-i386 cpio lsb-core wget netcat-openbsd libtbb2-dev libglfw3-dev pkgconf gdb gcc-multilib g++-multilib curl ca-certificates cmake && \
     rm -rf /var/lib/apt/lists/*
-
-# Download and install required version of cmake (3.14) for ISPC build
-RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://cmake.org/files/v3.14/cmake-3.14.0-Linux-x86_64.sh && mkdir /opt/cmake && sh cmake-3.14.0-Linux-x86_64.sh --prefix=/opt/cmake --skip-license && \
-    ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake && ln -s /opt/cmake/bin/cmake /usr/bin/cmake && \
-    ln -s /opt/cmake/bin/ctest /usr/local/bin/ctest && ln -s /opt/cmake/bin/ctest /usr/bin/ctest && rm cmake-3.14.0-Linux-x86_64.sh
 
 WORKDIR /home/src
 

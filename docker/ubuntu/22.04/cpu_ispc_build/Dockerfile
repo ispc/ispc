@@ -24,7 +24,7 @@ RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get --no-install-rec
     rm -rf /var/lib/apt/lists/*
 
 # If you are behind a proxy, you need to configure git.
-RUN if [ -v "$http_proxy" ]; then git config --global --add http.proxy "$http_proxy"; fi
+RUN if [ -v http_proxy ]; then git config --global --add http.proxy "$http_proxy"; fi
 
 WORKDIR /home/src
 
