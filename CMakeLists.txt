@@ -393,12 +393,14 @@ set(LLVM_TOOLS_OPAQUE_FLAGS)
 # Starting LLVM version 17.0 enable opaque pointers by default for CPU build
 if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "17.0.0")
     set(ISPC_OPAQUE_PTR_MODE ON)
+else()
+    # On Xe-enabled build, turn off opaque pointers before 17.0.
+    # IGC software stack is not ready yet.
+    if (XE_ENABLED)
+        set(ISPC_OPAQUE_PTR_MODE OFF)
+    endif()
 endif()
-# On Xe-enabled build, turn off opaque pointers.
-# IGC software stack is not ready yet.
-if (XE_ENABLED)
-    set(ISPC_OPAQUE_PTR_MODE OFF)
-endif()
+
 if (ISPC_OPAQUE_PTR_MODE)
     if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "15.0.0")
     # Do nothing, opaque pointers mode is default

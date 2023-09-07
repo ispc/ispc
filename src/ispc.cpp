@@ -37,7 +37,11 @@
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Support/CodeGen.h>
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_17_0
+#include <llvm/TargetParser/Host.h>
+#else
 #include <llvm/Support/Host.h>
+#endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
 #include <llvm/MC/TargetRegistry.h>
 #else
