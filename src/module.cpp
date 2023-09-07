@@ -1751,7 +1751,7 @@ static void lEmitStructDecl(const StructType *st, std::vector<const StructType *
     }
     if (st->GetSOAWidth() > 0) {
         // This has to match the naming scheme in
-        // StructType::GetCDeclaration().
+        // StructType::GetDeclaration().
         snprintf(sSOA, sizeof(sSOA), "_SOA%d", st->GetSOAWidth());
     } else {
         *sSOA = '\0';
@@ -1763,23 +1763,52 @@ static void lEmitStructDecl(const StructType *st, std::vector<const StructType *
         fprintf(file, "__ISPC_ALIGNED_STRUCT__(%u) %s%s {\n", uABI, st->GetCStructName().c_str(), sSOA);
     }
     for (int i = 0; i < st->GetElementCount(); ++i) {
+        std::string name = st->GetElementName(i);
         const Type *ftype = st->GetElementType(i)->GetAsNonConstType();
-        std::string d = ftype->GetCDeclaration(st->GetElementName(i));
+        std::string d_cpp = ftype->GetDeclaration(name, DeclarationSyntax::CPP);
+        std::string d_c = ftype->GetDeclaration(name, DeclarationSyntax::C);
+        bool same_decls = d_c == d_cpp;
 
-        fprintf(file, "    ");
         if (needsAlign && ftype->IsVaryingType() && (CastType<StructType>(ftype) == nullptr)) {
             unsigned uABI = DL->getABITypeAlign(ftype->LLVMStorageType(g->ctx)).value();
-            fprintf(file, "__ISPC_ALIGN__(%u) ", uABI);
+            fprintf(file, "    __ISPC_ALIGN__(%u) ", uABI);
         }
+
+        if (!same_decls) {
+            fprintf(file, "\n#if defined(__cplusplus)\n");
+        }
+
         // Don't expand arrays, pointers and structures:
         // their insides will be expanded automatically.
         if (!ftype->IsArrayType() && !ftype->IsPointerType() && ftype->IsVaryingType() &&
             (CastType<StructType>(ftype) == nullptr)) {
-            fprintf(file, "%s[%d];\n", d.c_str(), g->target->getVectorWidth());
+            fprintf(file, "    %s[%d];\n", d_cpp.c_str(), g->target->getVectorWidth());
+            if (!same_decls) {
+                fprintf(file,
+                        "#else\n"
+                        "    %s[%d];\n",
+                        d_c.c_str(), g->target->getVectorWidth());
+            }
         } else if (CastType<VectorType>(ftype) != nullptr) {
-            fprintf(file, "struct %s;\n", d.c_str());
+            fprintf(file, "    struct %s;\n", d_cpp.c_str());
+            if (!same_decls) {
+                fprintf(file,
+                        "#else\n"
+                        "    struct %s;\n",
+                        d_c.c_str());
+            }
         } else {
-            fprintf(file, "%s;\n", d.c_str());
+            fprintf(file, "    %s;\n", d_cpp.c_str());
+            if (!same_decls) {
+                fprintf(file,
+                        "#else\n"
+                        "    %s;\n",
+                        d_c.c_str());
+            }
+        }
+
+        if (!same_decls) {
+            fprintf(file, "#endif // %s field\n", name.c_str());
         }
     }
     fprintf(file, "};\n");
@@ -1821,7 +1850,7 @@ static void lEmitEnumDecls(const std::vector<const EnumType *> &enumTypes, FILE 
     for (unsigned int i = 0; i < enumTypes.size(); ++i) {
         fprintf(file, "#ifndef __ISPC_ENUM_%s__\n", enumTypes[i]->GetEnumName().c_str());
         fprintf(file, "#define __ISPC_ENUM_%s__\n", enumTypes[i]->GetEnumName().c_str());
-        std::string declaration = enumTypes[i]->GetCDeclaration("");
+        std::string declaration = enumTypes[i]->GetDeclaration("", DeclarationSyntax::CPP);
         fprintf(file, "%s {\n", declaration.c_str());
 
         // Print the individual enumerators
@@ -1869,7 +1898,7 @@ static void lEmitVectorTypedefs(const std::vector<const VectorType *> &types, FI
 
         llvm::Type *ty = vt->LLVMStorageType(g->ctx);
         int align = g->target->getDataLayout()->getABITypeAlign(ty).value();
-        baseDecl = vt->GetBaseType()->GetCDeclaration("");
+        baseDecl = vt->GetBaseType()->GetDeclaration("", DeclarationSyntax::CPP);
         fprintf(file, "#ifndef __ISPC_VECTOR_%s%d__\n", baseDecl.c_str(), size);
         fprintf(file, "#define __ISPC_VECTOR_%s%d__\n", baseDecl.c_str(), size);
         fprintf(file, "#ifdef _MSC_VER\n__declspec( align(%d) ) ", align);
@@ -1969,17 +1998,31 @@ static void lPrintFunctionDeclarations(FILE *file, const std::vector<Symbol *> &
     for (unsigned int i = 0; i < funcs.size(); ++i) {
         const FunctionType *ftype = CastType<FunctionType>(funcs[i]->type);
         Assert(ftype);
-        std::string decl;
+        std::string c_decl, cpp_decl;
         std::string fname = funcs[i]->name;
         if (g->calling_conv == CallingConv::x86_vectorcall) {
             fname = "__vectorcall " + fname;
         }
         if (rewriteForDispatch) {
-            decl = ftype->GetCDeclarationForDispatch(fname);
+            c_decl = ftype->GetDeclarationForDispatch(fname, DeclarationSyntax::C);
+            cpp_decl = ftype->GetDeclarationForDispatch(fname, DeclarationSyntax::CPP);
         } else {
-            decl = ftype->GetCDeclaration(fname);
+            c_decl = ftype->GetDeclaration(fname, DeclarationSyntax::C);
+            cpp_decl = ftype->GetDeclaration(fname, DeclarationSyntax::CPP);
         }
-        fprintf(file, "    extern %s;\n", decl.c_str());
+        if (c_decl == cpp_decl) {
+            fprintf(file, "    extern %s;\n", c_decl.c_str());
+        } else {
+            fprintf(file,
+                    "#if defined(__cplusplus)\n"
+                    "    extern %s;\n",
+                    cpp_decl.c_str());
+            fprintf(file,
+                    "#else\n"
+                    "    extern %s;\n",
+                    c_decl.c_str());
+            fprintf(file, "#endif // %s function declaraion\n", fname.c_str());
+        }
     }
     if (useExternC)
 
@@ -2096,7 +2139,7 @@ std::string emitOffloadParamStruct(const std::string &paramStructName, const Sym
         std::string paramName = fct->GetParameterName(i);
         std::string paramTypeName = paramType->GetString();
 
-        std::string tmpArgDecl = paramType->GetCDeclaration(paramName);
+        std::string tmpArgDecl = paramType->GetDeclaration(paramName, DeclarationSyntax::CPP);
         out << "   " << tmpArgDecl << ";" << std::endl;
     }
 
@@ -2218,7 +2261,7 @@ bool Module::writeDevStub(const char *fn) {
                 funcall << ", ";
             std::string tmpArgName = std::string("_") + paramName;
             if (paramType->IsPointerType() || paramType->IsArrayType()) {
-                std::string tmpArgDecl = paramType->GetCDeclaration(tmpArgName);
+                std::string tmpArgDecl = paramType->GetDeclaration(tmpArgName, DeclarationSyntax::CPP);
                 fprintf(file, "  %s;\n", tmpArgDecl.c_str());
                 fprintf(file, "  (void *&)%s = ispc_dev_translate_pointer(*in_ppBufferPointers++);\n",
                         tmpArgName.c_str());
@@ -2334,7 +2377,7 @@ bool Module::writeHostStub(const char *fn) {
         // then, emit a fct stub that unpacks the parameters and pointers
         // -------------------------------------------------------
 
-        std::string decl = fct->GetCDeclaration(sym->name);
+        std::string decl = fct->GetDeclaration(sym->name, DeclarationSyntax::CPP);
         fprintf(file, "extern %s {\n", decl.c_str());
         int numPointers = 0;
         fprintf(file, "  %s __args;\n", paramStructName.c_str());
@@ -2420,6 +2463,14 @@ bool Module::writeHeader(const char *fn) {
         fprintf(f, "#pragma once\n");
 
     fprintf(f, "#include <stdint.h>\n\n");
+
+    fprintf(f, "#if !defined(__cplusplus)\n"
+               "#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)\n"
+               "#include <stdbool.h>\n"
+               "#else\n"
+               "typedef int bool;\n"
+               "#endif\n"
+               "#endif\n\n");
 
     if (g->emitInstrumentation) {
         fprintf(f, "#define ISPC_INSTRUMENTATION 1\n");

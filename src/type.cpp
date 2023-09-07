@@ -463,7 +463,7 @@ std::string AtomicType::Mangle() const {
     return ret;
 }
 
-std::string AtomicType::GetCDeclaration(const std::string &name) const {
+std::string AtomicType::GetDeclaration(const std::string &name, DeclarationSyntax syntax) const {
     Assert(basicType != TYPE_DEPENDENT);
     std::string ret;
     if (variability == Variability::Unbound) {
@@ -514,7 +514,7 @@ std::string AtomicType::GetCDeclaration(const std::string &name) const {
         ret += "double";
         break;
     default:
-        FATAL("Logic error in AtomicType::GetCDeclaration()");
+        FATAL("Logic error in AtomicType::GetDeclaration()");
     }
 
     if (lShouldPrintName(name)) {
@@ -790,7 +790,7 @@ std::string TemplateTypeParmType::Mangle() const {
     return ret;
 }
 
-std::string TemplateTypeParmType::GetCDeclaration(const std::string &cname) const {
+std::string TemplateTypeParmType::GetDeclaration(const std::string &cname, DeclarationSyntax syntax) const {
     std::string ret;
     if (variability == Variability::Unbound) {
         Assert(m->errorCount > 0);
@@ -938,7 +938,7 @@ std::string EnumType::Mangle() const {
     return ret;
 }
 
-std::string EnumType::GetCDeclaration(const std::string &varName) const {
+std::string EnumType::GetDeclaration(const std::string &varName, DeclarationSyntax syntax) const {
     if (variability == Variability::Unbound) {
         Assert(m->errorCount > 0);
         return "";
@@ -1202,7 +1202,7 @@ std::string PointerType::Mangle() const {
     return ret + baseType->Mangle() + std::string("_3E_"); // >
 }
 
-std::string PointerType::GetCDeclaration(const std::string &name) const {
+std::string PointerType::GetDeclaration(const std::string &name, DeclarationSyntax syntax) const {
     if (isSlice || (variability == Variability::Unbound)) {
         Assert(m->errorCount > 0);
         return "";
@@ -1229,10 +1229,10 @@ std::string PointerType::GetCDeclaration(const std::string &name) const {
 
     std::string ret;
     if (!baseIsFunction) {
-        ret = baseType->GetCDeclaration("");
+        ret = baseType->GetDeclaration("", syntax);
         ret += tempName;
     } else {
-        ret += baseType->GetCDeclaration(tempName);
+        ret += baseType->GetDeclaration(tempName, syntax);
     }
     if (variability == Variability::SOA) {
         char buf[32];
@@ -1526,7 +1526,7 @@ std::string ArrayType::Mangle() const {
     return s + "_5B_" + buf + "_5D_";
 }
 
-std::string ArrayType::GetCDeclaration(const std::string &name) const {
+std::string ArrayType::GetDeclaration(const std::string &name, DeclarationSyntax syntax) const {
     const Type *base = GetBaseType();
     if (base == nullptr) {
         Assert(m->errorCount > 0);
@@ -1537,7 +1537,7 @@ std::string ArrayType::GetCDeclaration(const std::string &name) const {
     int vWidth = (base->IsVaryingType()) ? g->target->getVectorWidth() : 0;
     base = base->GetAsUniformType();
 
-    std::string s = base->GetCDeclaration(name);
+    std::string s = base->GetDeclaration(name, syntax);
 
     const ArrayType *at = this;
     Assert(at);
@@ -1722,8 +1722,8 @@ std::string VectorType::Mangle() const {
     return s + std::string(buf);
 }
 
-std::string VectorType::GetCDeclaration(const std::string &name) const {
-    std::string s = base->GetCDeclaration("");
+std::string VectorType::GetDeclaration(const std::string &name, DeclarationSyntax syntax) const {
+    std::string s = base->GetDeclaration("", syntax);
     char buf[16];
     snprintf(buf, sizeof(buf), "%d", numElements);
     return s + std::string(buf) + "  " + name;
@@ -2102,7 +2102,7 @@ static std::string lMangleStruct(Variability variability, bool isConst, const st
 
 std::string StructType::Mangle() const { return lMangleStruct(variability, isConst, name); }
 
-std::string StructType::GetCDeclaration(const std::string &n) const {
+std::string StructType::GetDeclaration(const std::string &n, DeclarationSyntax syntax) const {
     std::string ret;
     if (isConst)
         ret += "const ";
@@ -2326,7 +2326,7 @@ std::string UndefinedStructType::GetString() const {
 
 std::string UndefinedStructType::Mangle() const { return lMangleStruct(variability, isConst, name); }
 
-std::string UndefinedStructType::GetCDeclaration(const std::string &n) const {
+std::string UndefinedStructType::GetDeclaration(const std::string &n, DeclarationSyntax syntax) const {
     std::string ret;
     if (isConst)
         ret += "const ";
@@ -2545,7 +2545,7 @@ std::string ReferenceType::Mangle() const {
     return ret;
 }
 
-std::string ReferenceType::GetCDeclaration(const std::string &name) const {
+std::string ReferenceType::GetDeclaration(const std::string &name, DeclarationSyntax syntax) const {
     if (targetType == nullptr) {
         Assert(m->errorCount > 0);
         return "";
@@ -2556,17 +2556,18 @@ std::string ReferenceType::GetCDeclaration(const std::string &name) const {
         if (at->GetElementCount() == 0) {
             // emit unsized arrays as pointers to the base type..
             std::string ret;
-            ret += at->GetElementType()->GetAsNonConstType()->GetCDeclaration("") + std::string(" *");
+            ret += at->GetElementType()->GetAsNonConstType()->GetDeclaration("", syntax) + std::string(" *");
             if (lShouldPrintName(name))
                 ret += name;
             return ret;
         } else
             // otherwise forget about the reference part if it's an
             // array since C already passes arrays by reference...
-            return targetType->GetCDeclaration(name);
+            return targetType->GetDeclaration(name, syntax);
     } else {
         std::string ret;
-        ret += targetType->GetCDeclaration("") + std::string(" &");
+        ret += targetType->GetDeclaration("", syntax);
+        ret += syntax == DeclarationSyntax::CPP ? std::string(" &") : std::string(" *");
         if (lShouldPrintName(name))
             ret += name;
         return ret;
@@ -2799,9 +2800,9 @@ std::string FunctionType::Mangle() const {
     return ret;
 }
 
-std::string FunctionType::GetCDeclaration(const std::string &fname) const {
+std::string FunctionType::GetDeclaration(const std::string &fname, DeclarationSyntax syntax) const {
     std::string ret;
-    ret += returnType->GetCDeclaration("");
+    ret += returnType->GetDeclaration("", syntax);
     ret += " ";
     ret += fname;
     ret += "(";
@@ -2817,7 +2818,7 @@ std::string FunctionType::GetCDeclaration(const std::string &fname) const {
         }
 
         if (paramNames[i] != "")
-            ret += type->GetCDeclaration(paramNames[i]);
+            ret += type->GetDeclaration(paramNames[i], syntax);
         else
             ret += type->GetString();
         if (i != paramTypes.size() - 1)
@@ -2827,9 +2828,9 @@ std::string FunctionType::GetCDeclaration(const std::string &fname) const {
     return ret;
 }
 
-std::string FunctionType::GetCDeclarationForDispatch(const std::string &fname) const {
+std::string FunctionType::GetDeclarationForDispatch(const std::string &fname, DeclarationSyntax syntax) const {
     std::string ret;
-    ret += returnType->GetCDeclaration("");
+    ret += returnType->GetDeclaration("", syntax);
     ret += " ";
     ret += fname;
     ret += "(";
@@ -2849,12 +2850,12 @@ std::string FunctionType::GetCDeclarationForDispatch(const std::string &fname) c
             PointerType *t = PointerType::Void;
 
             if (paramNames[i] != "")
-                ret += t->GetCDeclaration(paramNames[i]);
+                ret += t->GetDeclaration(paramNames[i], syntax);
             else
                 ret += t->GetString();
         } else {
             if (paramNames[i] != "")
-                ret += type->GetCDeclaration(paramNames[i]);
+                ret += type->GetDeclaration(paramNames[i], syntax);
             else
                 ret += type->GetString();
         }
