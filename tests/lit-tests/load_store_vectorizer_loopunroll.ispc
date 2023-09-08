@@ -23,11 +23,11 @@
 
 // CHECK_ALL-LABEL: @scatter_coalescing_loopunroll4pragma
 
-// CHECK:           %{{[0-9]+}} = insertelement <4 x float> {{undef|poison}}, float %_in{{.*}}, i{{(32|64)}} 0
-// CHECK:           %{{[0-9]+}} = insertelement <4 x float> %{{[0-9]+}}, float %_in{{.*}}, i{{(32|64)}} 1
-// CHECK:           %{{[0-9]+}} = insertelement <4 x float> %{{[0-9]+}}, float %_in{{.*}}, i{{(32|64)}} 2
-// CHECK:           %{{[0-9]+}} = insertelement <4 x float> %{{[0-9]+}}, float %_in{{.*}}, i{{(32|64)}} 3
-// CHECK:           store <4 x float> %{{[0-9]+}}, <4 x float>* %{{[0-9]+}}
+// CHECK:           %{{.*}} = insertelement <4 x float> {{undef|poison}}, float %_in{{.*}}, i{{(32|64)}} 0
+// CHECK:           %{{.*}} = insertelement <4 x float> %{{.*}}, float %_in{{.*}}, i{{(32|64)}} 1
+// CHECK:           %{{.*}} = insertelement <4 x float> %{{.*}}, float %_in{{.*}}, i{{(32|64)}} 2
+// CHECK:           %{{.*}} = insertelement <4 x float> %{{.*}}, float %_in{{.*}}, i{{(32|64)}} 3
+// CHECK:           store <4 x float> %{{.*}}, {{(<4 x float>\*)|ptr}} %{{.*}}
 
 task void scatter_coalescing_loopunroll4pragma(uniform float _out[], uniform float _in[]) {
     uniform float a[NUM];
@@ -50,11 +50,11 @@ task void scatter_coalescing_loopunroll4pragma(uniform float _out[], uniform flo
 
 // CHECK_ALL-LABEL: @scatter_coalescing_loopunroll4inline
 
-// CHECK:           %{{[0-9]+}} = insertelement <4 x float> {{undef|poison}}, float %_in{{.*}}, i{{(32|64)}} 0
-// CHECK:           %{{[0-9]+}} = insertelement <4 x float> %{{[0-9]+}}, float %_in{{.*}}, i{{(32|64)}} 1
-// CHECK:           %{{[0-9]+}} = insertelement <4 x float> %{{[0-9]+}}, float %_in{{.*}}, i{{(32|64)}} 2
-// CHECK:           %{{[0-9]+}} = insertelement <4 x float> %{{[0-9]+}}, float %_in{{.*}}, i{{(32|64)}} 3
-// CHECK:           store <4 x float> %{{[0-9]+}}, <4 x float>* %{{[0-9]+}}
+// CHECK:           %{{.*}} = insertelement <4 x float> {{undef|poison}}, float %_in{{.*}}, i{{(32|64)}} 0
+// CHECK:           %{{.*}} = insertelement <4 x float> %{{.*}}, float %_in{{.*}}, i{{(32|64)}} 1
+// CHECK:           %{{.*}} = insertelement <4 x float> %{{.*}}, float %_in{{.*}}, i{{(32|64)}} 2
+// CHECK:           %{{.*}} = insertelement <4 x float> %{{.*}}, float %_in{{.*}}, i{{(32|64)}} 3
+// CHECK:           store <4 x float> %{{.*}}, {{(<4 x float>\*)|ptr}} %{{.*}}
 
 task void scatter_coalescing_loopunroll4inline(uniform float _out[], uniform float _in[]) {
     uniform float a[NUM];
@@ -82,16 +82,16 @@ task void scatter_coalescing_loopunroll4inline(uniform float _out[], uniform flo
 
 // CHECK_ALL-LABEL: @scatter_coalescing_loopunroll8inline
 
-// CHECK:           %{{[0-9]+}} = insertelement <4 x float> {{undef|poison}}, float %_in{{.*}}, i{{(32|64)}} 0
-// CHECK:           %{{[0-9]+}} = insertelement <4 x float> %{{[0-9]+}}, float %_in{{.*}}, i{{(32|64)}} 1
-// CHECK:           %{{[0-9]+}} = insertelement <4 x float> %{{[0-9]+}}, float %_in{{.*}}, i{{(32|64)}} 2
-// CHECK:           %{{[0-9]+}} = insertelement <4 x float> %{{[0-9]+}}, float %_in{{.*}}, i{{(32|64)}} 3
-// CHECK:           store <4 x float> %{{[0-9]+}}, <4 x float>* %{{[0-9]+}}
-// CHECK:           %{{[0-9]+}} = insertelement <4 x float> {{undef|poison}}, float %_in{{.*}}, i{{(32|64)}} 0
-// CHECK:           %{{[0-9]+}} = insertelement <4 x float> %{{[0-9]+}}, float %_in{{.*}}, i{{(32|64)}} 1
-// CHECK:           %{{[0-9]+}} = insertelement <4 x float> %{{[0-9]+}}, float %_in{{.*}}, i{{(32|64)}} 2
-// CHECK:           %{{[0-9]+}} = insertelement <4 x float> %{{[0-9]+}}, float %_in{{.*}}, i{{(32|64)}} 3
-// CHECK:           store <4 x float> %{{[0-9]+}}, <4 x float>* %{{[0-9]+}}
+// CHECK:           %{{.*}} = insertelement <4 x float> {{undef|poison}}, float %_in{{.*}}, i{{(32|64)}} 0
+// CHECK:           %{{.*}} = insertelement <4 x float> %{{.*}}, float %_in{{.*}}, i{{(32|64)}} 1
+// CHECK:           %{{.*}} = insertelement <4 x float> %{{.*}}, float %_in{{.*}}, i{{(32|64)}} 2
+// CHECK:           %{{.*}} = insertelement <4 x float> %{{.*}}, float %_in{{.*}}, i{{(32|64)}} 3
+// CHECK:           store <4 x float> %{{.*}}, {{(<4 x float>\*)|ptr}} %{{.*}}
+// CHECK:           %{{.*}} = insertelement <4 x float> {{undef|poison}}, float %_in{{.*}}, i{{(32|64)}} 0
+// CHECK:           %{{.*}} = insertelement <4 x float> %{{.*}}, float %_in{{.*}}, i{{(32|64)}} 1
+// CHECK:           %{{.*}} = insertelement <4 x float> %{{.*}}, float %_in{{.*}}, i{{(32|64)}} 2
+// CHECK:           %{{.*}} = insertelement <4 x float> %{{.*}}, float %_in{{.*}}, i{{(32|64)}} 3
+// CHECK:           store <4 x float> %{{.*}}, {{(<4 x float>\*)|ptr}} %{{.*}}
 
 task void scatter_coalescing_loopunroll8inline(uniform float _out[], uniform float _in[]) {
     uniform float a[NUM];

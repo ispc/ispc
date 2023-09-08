@@ -28,21 +28,21 @@
 // INVOKE_SYCL_NO_REGCALL: "invoke_sycl" expression can be only used with '__regcall'-qualified function.
 // REQUIRES: XE_ENABLED
 
-// CHECK_CPU: x86_regcallcc <8 x i32> @__regcall3__extern_sycl_decl(float*, i32)
-// CHECK_CPU: x86_regcallcc i32 @__regcall3__extern_sycl_decl_uniform(float*)
+// CHECK_CPU: x86_regcallcc <8 x i32> @__regcall3__extern_sycl_decl({{(float\*)|ptr}}, i32)
+// CHECK_CPU: x86_regcallcc i32 @__regcall3__extern_sycl_decl_uniform({{(float\*)|ptr}})
 
-// CHECK_CPU: call x86_regcallcc i32 @__regcall3__extern_sycl_decl_uniform(float* {{.*}})
-// CHECK_CPU: call x86_regcallcc <8 x i32> @__regcall3__extern_sycl_decl(float* {{.*}}, i32 {{.*}})
-// CHECK_CPU: call x86_regcallcc void @__regcall3__extern_sycl_decl_void(float* {{.*}})
+// CHECK_CPU: call x86_regcallcc i32 @__regcall3__extern_sycl_decl_uniform({{(float\*)|ptr}} {{.*}})
+// CHECK_CPU: call x86_regcallcc <8 x i32> @__regcall3__extern_sycl_decl({{(float\*)|ptr}} {{.*}}, i32 {{.*}})
+// CHECK_CPU: call x86_regcallcc void @__regcall3__extern_sycl_decl_void({{(float\*)|ptr}} {{.*}})
 // CHECK_CPU: call x86_regcallcc void @__regcall3__extern_sycl_decl_noarg()
-// CHECK_CPU: call x86_regcallcc <8 x i32> @__regcall3__extern_sycl_decl_ptr(float* {{.*}})
+// CHECK_CPU: call x86_regcallcc <8 x i32> @__regcall3__extern_sycl_decl_ptr({{(float\*)|ptr}} {{.*}})
 
-// CHECK_MULTI_CPU1: declare x86_regcallcc <8 x i32> @__regcall3__extern_sycl_decl(float*, i32)
-// CHECK_MULTI_CPU1: declare x86_regcallcc i32 @__regcall3__extern_sycl_decl_uniform(float*)
+// CHECK_MULTI_CPU1: declare x86_regcallcc <8 x i32> @__regcall3__extern_sycl_decl({{(float\*)|ptr}}, i32)
+// CHECK_MULTI_CPU1: declare x86_regcallcc i32 @__regcall3__extern_sycl_decl_uniform({{(float\*)|ptr}})
 // CHECK_MULTI_CPU1: declare x86_regcallcc <8 x i32> @__regcall3__extern_sycl_decl_ptr(
 
-// CHECK_MULTI_CPU2: declare x86_regcallcc <8 x i32> @__regcall3__extern_sycl_decl(float*, i32)
-// CHECK_MULTI_CPU2: declare x86_regcallcc i32 @__regcall3__extern_sycl_decl_uniform(float*)
+// CHECK_MULTI_CPU2: declare x86_regcallcc <8 x i32> @__regcall3__extern_sycl_decl({{(float\*)|ptr}}, i32)
+// CHECK_MULTI_CPU2: declare x86_regcallcc i32 @__regcall3__extern_sycl_decl_uniform({{(float\*)|ptr}})
 // CHECK_MULTI_CPU2: declare x86_regcallcc <8 x i32> @__regcall3__extern_sycl_decl_ptr(
 
 // CHECK-GPU: x86_regcallcc <8 x i32> @__regcall3__extern_sycl_decl(<8 x i64> %{{.*}}), <8 x i32> %{{.*}})>)

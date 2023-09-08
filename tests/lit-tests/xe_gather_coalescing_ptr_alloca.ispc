@@ -60,10 +60,10 @@ static inline vec3f get_color(const uniform Linear *uniform self, int index) {
 
 // CHECK_ALL-LABEL: @gather_coalescing_i
 
-// CHECK_LOAD:      %vectorized_ptrtoint = ptrtoint float* %_in to i64
+// CHECK_LOAD:      %vectorized_ptrtoint = ptrtoint {{(float\*)|ptr}} %_in to i64
 // CHECK_LOAD:      %vectorized_address = add i64 %vectorized_ptrtoint, 0
-// CHECK_LOAD:      %vectorized_address_ptr = inttoptr i64 %vectorized_address to <4 x float>*
-// CHECK_LOAD:      %vectorized_ld_exp = load <4 x float>, <4 x float>* %vectorized_address_ptr
+// CHECK_LOAD:      %vectorized_address_ptr = inttoptr i64 %vectorized_address to {{(<4 x float>\*)|ptr}}
+// CHECK_LOAD:      %vectorized_ld_exp = load <4 x float>, {{(<4 x float>\*)|ptr}} %vectorized_address_ptr
 // CHECK_LOAD:      %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 0
 // CHECK_LOAD:      %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 1
 // CHECK_LOAD:      %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 2
@@ -79,10 +79,10 @@ task void gather_coalescing_i(uniform float _out[], uniform float _in[], uniform
 
 // CHECK_ALL-LABEL: @gather_coalescing_inogetter
 
-// CHECK_LOAD:      %vectorized_ptrtoint = ptrtoint float* %_in to i64
+// CHECK_LOAD:      %vectorized_ptrtoint = ptrtoint {{(float\*)|ptr}} %_in to i64
 // CHECK_LOAD:      %vectorized_address = add i64 %vectorized_ptrtoint, 0
-// CHECK_LOAD:      %vectorized_address_ptr = inttoptr i64 %vectorized_address to <4 x float>*
-// CHECK_LOAD:      %vectorized_ld_exp = load <4 x float>, <4 x float>* %vectorized_address_ptr
+// CHECK_LOAD:      %vectorized_address_ptr = inttoptr i64 %vectorized_address to {{(<4 x float>\*)|ptr}}
+// CHECK_LOAD:      %vectorized_ld_exp = load <4 x float>, {{(<4 x float>\*)|ptr}} %vectorized_address_ptr
 // CHECK_LOAD:      %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 0
 // CHECK_LOAD:      %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 1
 // CHECK_LOAD:      %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 2
@@ -99,10 +99,10 @@ task void gather_coalescing_inogetter(uniform float _out[], uniform float _in[],
 
 // CHECK_ALL-LABEL: @gather_coalescing_ivarying
 
-// CHECK_LOAD:      %vectorized_ptrtoint = ptrtoint float* %_in to i64
+// CHECK_LOAD:      %vectorized_ptrtoint = ptrtoint {{(float\*)|ptr}} %_in to i64
 // CHECK_LOAD:      %vectorized_address = add i64 %vectorized_ptrtoint, 0
-// CHECK_LOAD:      %vectorized_address_ptr = inttoptr i64 %vectorized_address to <4 x float>*
-// CHECK_LOAD:      %vectorized_ld_exp = load <4 x float>, <4 x float>* %vectorized_address_ptr
+// CHECK_LOAD:      %vectorized_address_ptr = inttoptr i64 %vectorized_address to {{(<4 x float>\*)|ptr}}
+// CHECK_LOAD:      %vectorized_ld_exp = load <4 x float>, {{(<4 x float>\*)|ptr}} %vectorized_address_ptr
 // CHECK_LOAD:      %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 0
 // CHECK_LOAD:      %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 1
 // CHECK_LOAD:      %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 2
@@ -118,10 +118,10 @@ task void gather_coalescing_ivarying(uniform float _out[], uniform float _in[], 
 
 // CHECK_ALL-LABEL: @gather_coalescing_ivaryingnogetter
 
-// CHECK_LOAD:      %vectorized_ptrtoint = ptrtoint float* %_in to i64
+// CHECK_LOAD:      %vectorized_ptrtoint = ptrtoint {{(float\*)|ptr}} %_in to i64
 // CHECK_LOAD:      %vectorized_address = add i64 %vectorized_ptrtoint, 0
-// CHECK_LOAD:      %vectorized_address_ptr = inttoptr i64 %vectorized_address to <4 x float>*
-// CHECK_LOAD:      %vectorized_ld_exp = load <4 x float>, <4 x float>* %vectorized_address_ptr
+// CHECK_LOAD:      %vectorized_address_ptr = inttoptr i64 %vectorized_address to {{(<4 x float>\*)|ptr}}
+// CHECK_LOAD:      %vectorized_ld_exp = load <4 x float>, {{(<4 x float>\*)|ptr}} %vectorized_address_ptr
 // CHECK_LOAD:      %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 0
 // CHECK_LOAD:      %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 1
 // CHECK_LOAD:      %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 2
