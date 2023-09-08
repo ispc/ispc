@@ -10,7 +10,7 @@ set(ISPC_TARGET_XE "xehpg-x16")
 
 # ISPC-only version
 add_executable(invoke_sycl_aobench_ispc invoke_sycl_aobench.cpp)
-target_link_libraries(invoke_sycl_aobench_ispc PRIVATE ispcrt::ispcrt ze_loader)
+target_link_libraries(invoke_sycl_aobench_ispc PRIVATE ispcrt::ispcrt ${LEVEL_ZERO_LIB_LOADER})
 target_compile_definitions(invoke_sycl_aobench_ispc PRIVATE ISPC_SIMD_WIDTH=16)
 
 add_ispc_library(ao_ispc ao.ispc)
@@ -19,12 +19,12 @@ target_link_libraries(ao_ispc PRIVATE ispcrt::ispcrt)
 # ISPC-SYCL version with binary linking
 add_executable(invoke_sycl_aobench_ispc_sycl_bin invoke_sycl_aobench.cpp)
 target_compile_definitions(invoke_sycl_aobench_ispc_sycl_bin PRIVATE ISPC_SIMD_WIDTH=16 AOBENCH_SYCL_LINKING)
-target_link_libraries(invoke_sycl_aobench_ispc_sycl_bin PRIVATE ispcrt::ispcrt ze_loader)
+target_link_libraries(invoke_sycl_aobench_ispc_sycl_bin PRIVATE ispcrt::ispcrt ${LEVEL_ZERO_LIB_LOADER})
 
 # ISPC-SYCL version with vISA linking
 add_executable(invoke_sycl_aobench_ispc_sycl_visa invoke_sycl_aobench.cpp)
 target_compile_definitions(invoke_sycl_aobench_ispc_sycl_visa PRIVATE ISPC_SIMD_WIDTH=16 AOBENCH_SYCL_LINKING VISA_LINKING)
-target_link_libraries(invoke_sycl_aobench_ispc_sycl_visa PRIVATE ispcrt::ispcrt ze_loader)
+target_link_libraries(invoke_sycl_aobench_ispc_sycl_visa PRIVATE ispcrt::ispcrt ${LEVEL_ZERO_LIB_LOADER})
 
 # Compile ISPC kernel
 add_ispc_library(ao_ispc_sycl ao_sycl.ispc)
