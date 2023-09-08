@@ -1029,23 +1029,31 @@ TEST_F(MockTest, C_API_AllocateDeviceMemory) {
 TEST_F(MockTest, C_API_ApplicationManagedDevMem) {
     ISPCRTContext context = ispcrtNewContext(ISPCRT_DEVICE_TYPE_GPU);
     ISPCRTNewMemoryViewFlags flags = {ISPCRT_ALLOC_TYPE_SHARED, ISPCRT_SM_APPLICATION_MANAGED_DEVICE};
-    char appMem[100] = {};
-    ISPCRTMemoryView view = ispcrtNewMemoryViewForContext(context, appMem, 10, &flags);
+    char appMem[100] = {0};
+    ISPCRTMemoryView view = ispcrtNewMemoryViewForContext(context, &appMem, 10, &flags);
     void *devPtr = ispcrtDevicePtr(view);
-    ASSERT_EQ(devPtr, appMem);
+    ASSERT_EQ(devPtr, &appMem);
+    ispcrtRelease(view);
+    view = ispcrtNewMemoryViewForContext(context, &appMem, 10, &flags);
     void *hostPtr = ispcrtHostPtr(view);
-    ASSERT_EQ(hostPtr, appMem);
+    ASSERT_EQ(hostPtr, &appMem);
+    ispcrtRelease(view);
+    ispcrtRelease(context);
 }
 
 TEST_F(MockTest, C_API_ApplicationManagedDevMemNotShared) {
     ISPCRTDevice device = ispcrtGetDevice(ISPCRT_DEVICE_TYPE_GPU, 0);
     ISPCRTNewMemoryViewFlags flags = {ISPCRT_ALLOC_TYPE_DEVICE, ISPCRT_SM_APPLICATION_MANAGED_DEVICE};
-    char appMem[100] = {};
-    ISPCRTMemoryView view = ispcrtNewMemoryView(device, appMem, 10, &flags);
+    char appMem[100] = {0};
+    ISPCRTMemoryView view = ispcrtNewMemoryView(device, &appMem, 10, &flags);
     void *devPtr = ispcrtDevicePtr(view);
-    ASSERT_EQ(devPtr, appMem);
+    ASSERT_EQ(devPtr, &appMem);
+    ispcrtRelease(view);
+    view = ispcrtNewMemoryView(device, &appMem, 10, &flags);
     void *hostPtr = ispcrtHostPtr(view);
     ASSERT_EQ(hostPtr, nullptr);
+    ispcrtRelease(view);
+    ispcrtRelease(device);
 }
 
 TEST_F(MockTest, C_API_CreateContextFromNativeHandler) {
