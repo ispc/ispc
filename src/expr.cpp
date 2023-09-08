@@ -1748,8 +1748,8 @@ bool lCreateBinaryOperatorCall(const BinaryExpr::Op bop, Expr *a0, Expr *a1, Exp
 
         // templates
         std::vector<TemplateSymbol *> funcTempls;
-        m->symbolTable->LookupFunctionTemplate(opName.c_str(), &funcTempls);
-        if (funcTempls.size() > 0) {
+        bool foundAny = m->symbolTable->LookupFunctionTemplate(opName.c_str(), &funcTempls);
+        if (foundAny && funcTempls.size() > 0) {
             std::vector<std::pair<const Type *, SourcePos>> vec;
             FunctionSymbolExpr *functionSymbolExpr = new FunctionSymbolExpr(opName.c_str(), funcTempls, vec, sp);
             Assert(functionSymbolExpr != nullptr);
