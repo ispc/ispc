@@ -18,8 +18,8 @@
 
 // CHECK_ALL-LABEL: @gather_coalescing_loop
 
-// CHECK:           %_in_load_offset = getelementptr float, float* %_in
-// CHECK:           %_in_load_offset_load = load float, float* %_in_load_offset
+// CHECK:           %_in_load_offset = getelementptr float, {{(float\*)|ptr}} %_in
+// CHECK:           %_in_load_offset_load = load float, {{(float\*)|ptr}} %_in_load_offset
 
 task void gather_coalescing_loop(uniform float _out[], uniform float _in[]) {
     uniform float a[NUM];

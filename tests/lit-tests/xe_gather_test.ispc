@@ -10,7 +10,7 @@ struct vec3f {
 };
 
 // CHECK: alloca [3 x %v16_varying_vec3f]
-// CHECK: load <16 x float>, <16 x float>* %ptr_cast_for_load
+// CHECK: load <16 x float>, {{(<16 x float>\*)|ptr}} %
 // CHECK: store <16 x float> %
 export void checkAddrSpace(uniform float _out[], uniform float _in[]) {
     float a = _in[programIndex];
