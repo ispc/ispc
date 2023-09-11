@@ -38,6 +38,7 @@ set(PREBUILT_STAGE1 "NO" CACHE STRING "Provide pre-built stage1 archive to skip 
 set(PREBUILT_STAGE1_PATH "NO" CACHE STRING "Provide pre-built stage1 toolchain path")
 set(PREBUILT_STAGE2 "NO" CACHE STRING "Provide pre-built stage2 archive to skip pre ispc-stage2 jobs")
 set(PREBUILT_STAGE2_PATH "NO" CACHE STRING "Provide pre-built stage2 toolchain path")
+set(PREBUILT_XE_STAGE2_PATH "NO" CACHE STRING "Provide path to pre-built dependencies for ISPC stage2")
 set(BUILD_TYPE_ISPC "Release" CACHE STRING "Set the build type for ISPC build")
 set(BUILD_TYPE_LLVM "Release" CACHE STRING "Set the build type for LLVM build")
 set(BUILD_TYPE_SPIRV_TRANSLATOR "Release" CACHE STRING "Set the build type for SPIR-V Translator build")
@@ -86,6 +87,15 @@ endif()
 
 if (NOT PREBUILT_STAGE2 STREQUAL "NO" AND NOT PREBUILT_STAGE2_PATH STREQUAL "NO")
     message(FATAL_ERROR "Provide only one source of stage2 toolchain.")
+endif()
+
+if (NOT PREBUILT_XE_STAGE2_PATH STREQUAL "NO")
+    if (NOT SKIP_STAGE2)
+        message(FATAL_ERROR "Provide PREBUILT_XE_STAGE2_PATH only when stage2 is skipped")
+    endif()
+    if (INSTALL_WITH_XE_DEPS)
+        message(FATAL_ERROR "INSTALL_WITH_XE_DEPS requires to rebuild XE deps")
+    endif()
 endif()
 
 set(STAGE2_PATH "${CMAKE_BINARY_DIR}/stage2")
@@ -262,6 +272,7 @@ message(STATUS "PREBUILT_STAGE1 is ${PREBUILT_STAGE1}")
 message(STATUS "PREBUILT_STAGE1_PATH is ${PREBUILT_STAGE1_PATH}")
 message(STATUS "PREBUILT_STAGE2 is ${PREBUILT_STAGE2}")
 message(STATUS "PREBUILT_STAGE2_PATH is ${PREBUILT_STAGE2_PATH}")
+message(STATUS "PREBUILT_XE_STAGE2_PATH is ${PREBUILT_XE_STAGE2_PATH}")
 message(STATUS "EXTERNAL_VERBOSE is ${EXTERNAL_VERBOSE}")
 message(STATUS "FULL_STAGE2_LLVM is ${FULL_STAGE2_LLVM}")
 message(STATUS "ISPC_ANDROID_NDK_PATH is ${ISPC_ANDROID_NDK_PATH}")
@@ -716,9 +727,15 @@ list(APPEND ISPC_STAGE2_CMAKE_ARGS
     ${ISPC_COMMON_CMAKE_ARGS}
     )
 if (XE_DEPS)
-    list(APPEND ISPC_STAGE2_CMAKE_ARGS
-        -DLEVEL_ZERO_ROOT=${STAGE2_PATH}
-        )
+    if (NOT PREBUILT_XE_STAGE2_PATH STREQUAL "NO")
+        list(APPEND ISPC_STAGE2_CMAKE_ARGS
+            -DLEVEL_ZERO_ROOT=${PREBUILT_XE_STAGE2_PATH}
+            )
+    else()
+        list(APPEND ISPC_STAGE2_CMAKE_ARGS
+            -DLEVEL_ZERO_ROOT=${STAGE2_PATH}
+            )
+    endif()
 endif()
 if (XE_DEPS)
     if (INSTALL_WITH_XE_DEPS)
@@ -726,9 +743,15 @@ if (XE_DEPS)
             -DXE_DEPS_DIR=${CMAKE_INSTALL_PREFIX}
             )
     else()
-        list(APPEND ISPC_STAGE2_CMAKE_ARGS
-            -DXE_DEPS_DIR=${STAGE2_PATH}
-            )
+        if (NOT PREBUILT_XE_STAGE2_PATH STREQUAL "NO")
+            list(APPEND ISPC_STAGE2_CMAKE_ARGS
+                -DXE_DEPS_DIR=${PREBUILT_XE_STAGE2_PATH}
+                )
+        else()
+            list(APPEND ISPC_STAGE2_CMAKE_ARGS
+                -DXE_DEPS_DIR=${STAGE2_PATH}
+                )
+        endif()
     endif()
 endif()
 if (WIN32)
