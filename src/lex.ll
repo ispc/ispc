@@ -29,6 +29,7 @@ static bool lConsumePragma(YYSTYPE *, SourcePos *);
 static void lHandleCppHash(SourcePos *);
 static void lStringConst(YYSTYPE *, SourcePos *);
 static double lParseHexFloat(const char *ptr);
+static yytokentype lParseOperator(const char *ptr);
 extern const char *RegisterDependency(const std::string &fileName);
 
 #define YY_USER_ACTION \
@@ -454,13 +455,13 @@ while { RT; return TOKEN_WHILE; }
 \"SYCL\" { RT; return TOKEN_STRING_SYCL_LITERAL; }
 \.\.\. { RT; return TOKEN_DOTDOTDOT; }
 
-"operator*"  { yylval.stringVal = new std::string(yytext); return TOKEN_IDENTIFIER; }
-"operator+"  { yylval.stringVal = new std::string(yytext); return TOKEN_IDENTIFIER; }
-"operator-"  { yylval.stringVal = new std::string(yytext); return TOKEN_IDENTIFIER; }
-"operator<<" { yylval.stringVal = new std::string(yytext); return TOKEN_IDENTIFIER; }
-"operator>>" { yylval.stringVal = new std::string(yytext); return TOKEN_IDENTIFIER; }
-"operator/"  { yylval.stringVal = new std::string(yytext); return TOKEN_IDENTIFIER; }
-"operator%"  { yylval.stringVal = new std::string(yytext); return TOKEN_IDENTIFIER; }
+"operator*"  { return lParseOperator(yytext); }
+"operator+"  { return lParseOperator(yytext); }
+"operator-"  { return lParseOperator(yytext); }
+"operator<<" { return lParseOperator(yytext); }
+"operator>>" { return lParseOperator(yytext); }
+"operator/"  { return lParseOperator(yytext); }
+"operator%"  { return lParseOperator(yytext); }
 
 L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERAL; }
 
@@ -1157,4 +1158,15 @@ lParseHexFloat(const char *ptr) {
     // be represented exactly as doubles?  I would hope so but am not sure,
     // so let's be sure.
     return mantissa * ipow2(exponent);
+}
+
+/** Parse an operator.
+*/
+static yytokentype
+lParseOperator(const char *ptr) {
+    yylval.stringVal = new std::string(ptr);
+    if (m->symbolTable->LookupFunctionTemplate(yytext))
+        return TOKEN_TEMPLATE_NAME;
+    else
+        return TOKEN_IDENTIFIER;
 }
