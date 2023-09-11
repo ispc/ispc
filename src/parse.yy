@@ -2574,6 +2574,9 @@ template_function_instantiation
           const FunctionType *ftype = CastType<FunctionType>(d->type);
           bool isInline = ($2->typeQualifiers & TYPEQUAL_INLINE);
           bool isNoInline = ($2->typeQualifiers & TYPEQUAL_NOINLINE);
+          if ($3->second->size() == 0) {
+              Error(d->pos, "Template arguments deduction is not yet supported in explicit template instantiation.");
+          }
           m->AddFunctionTemplateInstantiation($3->first->name, *$3->second, ftype, $2->storageClass, isInline, isNoInline, Union(@1, @6));
 
           // deallocate SimpleTemplateIDType returned by simple_template_id
@@ -2592,6 +2595,9 @@ template_function_instantiation
           const FunctionType *ftype = CastType<FunctionType>(d->type);
           bool isInline = ($2->typeQualifiers & TYPEQUAL_INLINE);
           bool isNoInline = ($2->typeQualifiers & TYPEQUAL_NOINLINE);
+          if ($3->second->size() == 0) {
+              Error(d->pos, "Template arguments deduction is not yet supported in explicit template instantiation.");
+          }
           m->AddFunctionTemplateInstantiation($3->first->name, *$3->second, ftype, $2->storageClass, isInline, isNoInline, Union(@1, @5));
 
           // deallocate SimpleTemplateIDType returned by simple_template_id
