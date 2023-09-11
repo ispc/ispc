@@ -136,6 +136,7 @@ RUN cmake . \
     cmake --build build --target package -j"$(nproc)" && \
     (cmake --build build --target check-all || true) && \
     cmake --install build && \
+    mv build/*.tar.gz ./ && \
     rm -rf build
 
 # Export path for ispc
