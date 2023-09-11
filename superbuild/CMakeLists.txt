@@ -997,15 +997,26 @@ endif()
 # Fetch source code of dependencies. They fetched during cmake configuration run.
 # Patch command applies LLVM version specific patches.
 if (PGO OR NOT SKIP_STAGE2)
-    FetchContent_Populate(llvm-source
-        GIT_REPOSITORY ${LLVM_URL}
-        GIT_TAG ${LLVM_TAG}
-        GIT_SHALLOW ON
-        GIT_PROGRESS ON
-        UPDATE_COMMAND git checkout .
-        PATCH_COMMAND git apply ${LLVM_PATCHES_VER}
-        SOURCE_DIR llvm-source
-        )
+    if (LLVM_PATCHES_VER)
+        FetchContent_Populate(llvm-source
+            GIT_REPOSITORY ${LLVM_URL}
+            GIT_TAG ${LLVM_TAG}
+            GIT_SHALLOW ON
+            GIT_PROGRESS ON
+            UPDATE_COMMAND git checkout .
+            PATCH_COMMAND git apply ${LLVM_PATCHES_VER}
+            SOURCE_DIR llvm-source
+            )
+    else()
+        FetchContent_Populate(llvm-source
+            GIT_REPOSITORY ${LLVM_URL}
+            GIT_TAG ${LLVM_TAG}
+            GIT_SHALLOW ON
+            GIT_PROGRESS ON
+            UPDATE_COMMAND git checkout .
+            SOURCE_DIR llvm-source
+            )
+    endif()
 
     if (NOT BUILD_STAGE2_TOOLCHAIN_ONLY AND NOT ${ISPC_CORPUS_URL} STREQUAL "null")
         # May be profiles from examples or less set of programs just enough?
