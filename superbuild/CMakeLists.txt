@@ -411,6 +411,7 @@ hash_dir = false
     if (NOT CCACHE_EXE)
         # Download and unpack ccache executable when no ccache in system.
         FetchContent_Populate(ccache
+            QUIET
             URL ${CCACHE_URL}
             SOURCE_DIR ccache
             )
@@ -1029,6 +1030,7 @@ endif()
 if (PGO OR NOT SKIP_STAGE2)
     if (LLVM_PATCHES_VER)
         FetchContent_Populate(llvm-source
+            QUIET
             GIT_REPOSITORY ${LLVM_URL}
             GIT_TAG ${LLVM_TAG}
             GIT_SHALLOW ON
@@ -1039,6 +1041,7 @@ if (PGO OR NOT SKIP_STAGE2)
             )
     else()
         FetchContent_Populate(llvm-source
+            QUIET
             GIT_REPOSITORY ${LLVM_URL}
             GIT_TAG ${LLVM_TAG}
             GIT_SHALLOW ON
@@ -1051,6 +1054,7 @@ if (PGO OR NOT SKIP_STAGE2)
     if (NOT BUILD_STAGE2_TOOLCHAIN_ONLY AND NOT ${ISPC_CORPUS_URL} STREQUAL "null")
         # May be profiles from examples or less set of programs just enough?
         FetchContent_Populate(ispc-corpus
+            QUIET
             GIT_REPOSITORY ${ISPC_CORPUS_URL}
             GIT_TAG main
             GIT_SHALLOW ON
@@ -1064,6 +1068,7 @@ endif()
 if (XE_DEPS OR (SKIP_STAGE2 AND BUILD_SPIRV_TRANSLATOR_ONLY))
     # Checkout LLVM-SPIRV-Translator needed for XE
     FetchContent_Populate(spirv-translator
+        QUIET
         GIT_REPOSITORY ${SPIRV_TRANSLATOR_URL}
         GIT_TAG ${SPIRV_TRANSLATOR_SHA}
         GIT_SHALLOW OFF
@@ -1075,6 +1080,7 @@ endif()
 if (XE_DEPS OR (SKIP_STAGE2 AND BUILD_VC_INTRINSICS_ONLY))
     # Checkout vc-intrinsics needed for XE
     FetchContent_Populate(vc-intrinsics
+        QUIET
         GIT_REPOSITORY ${VC_INTRINSICS_URL}
         GIT_TAG ${VC_INTRINSICS_SHA}
         GIT_SHALLOW OFF
@@ -1088,6 +1094,7 @@ endif()
 if (XE_DEPS OR (SKIP_STAGE2 AND BUILD_L0_LOADER_ONLY))
     # Checkout level-zero needed for XE
     FetchContent_Populate(l0-source
+        QUIET
         GIT_REPOSITORY ${L0_URL}
         GIT_TAG ${L0_TAG}
         GIT_SHALLOW ON
