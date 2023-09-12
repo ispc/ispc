@@ -955,6 +955,9 @@ if (WIN32)
     set(CMAKE_MT           mt)
     set(CMAKE_C_FLAGS      "@CMAKE_C_FLAGS@ ${WIN_C_FLAGS}")
     set(CMAKE_CXX_FLAGS    "@CMAKE_CXX_FLAGS@ ${WIN_C_FLAGS}")
+    # Since v1.3 at least this version is requited,
+    # see  https://github.com/oneapi-src/level-zero/issues/61
+    set(CMAKE_SYSTEM_VERSION 10.0.19041.0)
 elseif(APPLE)
     set(CMAKE_C_COMPILER   clang)
     set(CMAKE_CXX_COMPILER clang++)
