@@ -45,7 +45,7 @@ set(BUILD_TYPE_SPIRV_TRANSLATOR "Release" CACHE STRING "Set the build type for S
 set(BUILD_TYPE_VC_INTRINSICS "Release" CACHE STRING "Set the build type for VC Intrinsics build")
 set(BUILD_TYPE_L0 "Release" CACHE STRING "Set the build type for L0 build")
 set(ISPC_ANDROID_NDK_PATH "NO" CACHE STRING "Path to Android NDK. It is needed to ISPC_CROSS=ON on macOS.")
-set(ISPC_SIGN_KEY "NO" CACHE STRING "Key to sign macOS build.")
+set(ISPC_SIGN_KEY "NO" CACHE STRING "Key to sign macOS or Windows build.")
 option(LLVM_DISABLE_ASSERTIONS "Enable LLVM build without assertions" ON)
 option(LLVM_BUILD_OPENMP "Build OpenMP as part of LLVM" OFF)
 option(EXTERNAL_VERBOSE "Enable verbose for external project build and install commands" OFF)
@@ -691,6 +691,13 @@ if (WIN32)
         -DISPC_INCLUDE_XE_EXAMPLES=OFF
         )
 endif()
+if (WIN32 OR APPLE)
+    if (ISPC_SIGN_KEY)
+        list(APPEND ISPC_COMMON_CMAKE_ARGS
+            -DISPC_SIGN_KEY=${ISPC_SIGN_KEY}
+            )
+    endif()
+endif()
 if (APPLE)
     # It is needed because of ISPC_CROSS=ON
     list(APPEND ISPC_COMMON_CMAKE_ARGS
@@ -706,12 +713,6 @@ if (APPLE)
     list(APPEND ISPC_COMMON_CMAKE_ARGS
         -DCMAKE_OSX_DEPLOYMENT_TARGET=${MACOS_VERSION_MIN}
         )
-
-    if (ISPC_SIGN_KEY)
-        list(APPEND ISPC_COMMON_CMAKE_ARGS
-            -DISPC_SIGN_KEY=${ISPC_SIGN_KEY}
-            )
-    endif()
 
     if(MACOS_UNIVERSAL_BIN)
         list(APPEND ISPC_COMMON_CMAKE_ARGS
