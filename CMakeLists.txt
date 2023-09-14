@@ -89,6 +89,7 @@ option(ISPC_INCLUDE_RT "Generate build targets for ISPC runtime." ON)
 option(ISPC_INCLUDE_UTILS "Generate build targets for the utils." ON)
 option(ISPC_INCLUDE_UTILS_ONLY "Generate build targets only for the utils." OFF)
 option(ISPC_PREPARE_PACKAGE "Generate build targets for ispc package" OFF)
+option(ISPC_PACKAGE_EXAMPLES "Pack examples into the ISPC package" ON)
 
 option(ISPC_OPAQUE_PTR_MODE "Build ISPC with usage of opaque pointers" OFF)
 
@@ -763,10 +764,12 @@ endif()
 # Install
 install (TARGETS ${PROJECT_NAME} DESTINATION bin)
 if (ISPC_PREPARE_PACKAGE)
-    if (XE_ENABLED)
-        install (DIRECTORY "${PROJECT_SOURCE_DIR}/examples/" DESTINATION examples)
-    else()
-        install (DIRECTORY "${PROJECT_SOURCE_DIR}/examples/" DESTINATION examples PATTERN "xpu" EXCLUDE)
+    if (ISPC_PACKAGE_EXAMPLES)
+        if (XE_ENABLED)
+            install (DIRECTORY "${PROJECT_SOURCE_DIR}/examples/" DESTINATION examples)
+        else()
+            install (DIRECTORY "${PROJECT_SOURCE_DIR}/examples/" DESTINATION examples PATTERN "xpu" EXCLUDE)
+        endif()
     endif()
     install (DIRECTORY "${PROJECT_SOURCE_DIR}/contrib/" DESTINATION contrib)
     install (FILES "${PROJECT_SOURCE_DIR}/LICENSE.txt" DESTINATION .)
@@ -856,6 +859,7 @@ if (ISPC_PREPARE_PACKAGE)
                                 "-trunk"
                                 "-${ISPC_SYSTEM_NAME}"
                                 "${ISPC_ARCH_SUFFIX}")
+            string(CONCAT EXAMPLES_PACKAGE_FILE_NAME "ispc-examples-trunk")
         else()
             string(CONCAT CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}"
                                 "-v${CPACK_PACKAGE_VERSION_MAJOR}"
@@ -863,7 +867,10 @@ if (ISPC_PREPARE_PACKAGE)
                                 ".${CPACK_PACKAGE_VERSION_PATCH}"
                                 "-${ISPC_SYSTEM_NAME}"
                                 "${ISPC_ARCH_SUFFIX}")
-
+            string(CONCAT EXAMPLES_PACKAGE_FILE_NAME "ispc-examples"
+                                "-v${CPACK_PACKAGE_VERSION_MAJOR}"
+                                ".${CPACK_PACKAGE_VERSION_MINOR}"
+                                ".${CPACK_PACKAGE_VERSION_PATCH}")
         endif()
     else()
         set (CPACK_PACKAGE_FILE_NAME ${ISPC_PACKAGE_NAME})
@@ -878,4 +885,20 @@ if (ISPC_PREPARE_PACKAGE)
     set(CPACK_STRIP_FILES TRUE)
 
     include(CPack)
+
+    # Custom target to pack only examples
+    if (WIN32)
+        add_custom_target(package-examples
+            COMMENT "Package examples directory to ${EXAMPLES_PACKAGE_FILE_NAME}.zip"
+            COMMAND ${CMAKE_COMMAND} -E tar cf "${CMAKE_BINARY_DIR}/${EXAMPLES_PACKAGE_FILE_NAME}.zip" --format=zip examples
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            )
+    else()
+        add_custom_target(package-examples
+            COMMENT "Package examples directory to ${EXAMPLES_PACKAGE_FILE_NAME}.tar.gz"
+            COMMAND ${CMAKE_COMMAND} -E tar cfz "${CMAKE_BINARY_DIR}/${EXAMPLES_PACKAGE_FILE_NAME}.tar.gz" examples
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            )
+    endif()
+
 endif()
