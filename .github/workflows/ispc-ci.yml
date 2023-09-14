@@ -1103,3 +1103,64 @@ jobs:
         name: fail_db.llvm17.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
 
+  win-package-examples:
+    needs: [define-flow]
+    runs-on: windows-2019
+    env:
+      LLVM_VERSION: "15.0"
+      LLVM_TAR: llvm-15.0.7-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      LLVM_HOME: "C:\\projects\\llvm"
+      CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
+      BUILD_TYPE: "Release"
+      ISPC_OPAQUE_PTR_MODE: "ON"
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v1
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.ps1
+
+    - name: Build examples package
+      run: |
+        cmake -B build ./ -DISPC_PREPARE_PACKAGE=ON
+        cmake --build build --target package-examples
+
+    - name: Upload examples package
+      uses: actions/upload-artifact@v3
+      with:
+        name: examples_zip
+        path: build/ispc-examples-trunk.zip
+
+  linux-package-examples:
+    needs: [define-flow]
+    runs-on: ubuntu-latest
+    env:
+      LLVM_VERSION: "15.0"
+      LLVM_TAR: llvm-15.0.7-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+      ISPC_OPAQUE_PTR_MODE: "ON"
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.sh
+
+    - name: Build examples package
+      run: |
+        cmake -B build ./ -DISPC_PREPARE_PACKAGE=ON
+        cmake --build build --target package-examples
+
+    - name: Upload package
+      uses: actions/upload-artifact@v3
+      with:
+        name: examples_tgz
+        path: build/ispc-examples-trunk.tar.gz
