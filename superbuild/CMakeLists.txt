@@ -46,10 +46,12 @@ set(BUILD_TYPE_VC_INTRINSICS "Release" CACHE STRING "Set the build type for VC I
 set(BUILD_TYPE_L0 "Release" CACHE STRING "Set the build type for L0 build")
 set(ISPC_ANDROID_NDK_PATH "NO" CACHE STRING "Path to Android NDK. It is needed to ISPC_CROSS=ON on macOS.")
 set(ISPC_SIGN_KEY "NO" CACHE STRING "Key to sign macOS or Windows build.")
+option(ISPC_INCLUDE_BENCHMARKS "Include ISPC benchmarks (ispc_benchmarks target)" OFF)
 option(LLVM_DISABLE_ASSERTIONS "Enable LLVM build without assertions" ON)
 option(LLVM_BUILD_OPENMP "Build OpenMP as part of LLVM" OFF)
 option(EXTERNAL_VERBOSE "Enable verbose for external project build and install commands" OFF)
 option(CCACHE "Enable ccache to speed up repetitive builds" OFF)
+option(EXPLICIT_ENV_PATH "Enable explicit ENV PATH setting for external projects" ON)
 option(FULL_STAGE2_LLVM "Enable full llvm stage2 build" OFF)
 option(LTO "Enable LTO" OFF)
 option(PGO "Enale PGO (implicitly enable LTO)" OFF)
@@ -274,6 +276,7 @@ message(STATUS "PREBUILT_STAGE2 is ${PREBUILT_STAGE2}")
 message(STATUS "PREBUILT_STAGE2_PATH is ${PREBUILT_STAGE2_PATH}")
 message(STATUS "PREBUILT_XE_STAGE2_PATH is ${PREBUILT_XE_STAGE2_PATH}")
 message(STATUS "EXTERNAL_VERBOSE is ${EXTERNAL_VERBOSE}")
+message(STATUS "EXPLICIT_ENV_PATH is ${EXPLICIT_ENV_PATH}")
 message(STATUS "FULL_STAGE2_LLVM is ${FULL_STAGE2_LLVM}")
 message(STATUS "ISPC_ANDROID_NDK_PATH is ${ISPC_ANDROID_NDK_PATH}")
 if (ISPC_SIGN_KEY STREQUAL "NO")
@@ -281,6 +284,7 @@ if (ISPC_SIGN_KEY STREQUAL "NO")
 else()
     message(STATUS "ISPC_SIGN_KEY is set to some value.")
 endif()
+message(STATUS "ISPC_INCLUDE_BENCHMARKS is ${ISPC_INCLUDE_BENCHMARKS}")
 message(STATUS "LLVM_DISABLE_ASSERTIONS is ${LLVM_DISABLE_ASSERTIONS}")
 message(STATUS "LLVM_BUILD_OPENMP is ${LLVM_BUILD_OPENMP}")
 message(STATUS "LTO is ${LTO}")
@@ -683,6 +687,11 @@ if (XE_DEPS)
         -DXE_ENABLED=ON
         )
 endif()
+if (ISPC_INCLUDE_BENCHMARKS)
+    list(APPEND ISPC_COMMON_CMAKE_ARGS
+        -DISPC_INCLUDE_BENCHMARKS=${ISPC_INCLUDE_BENCHMARKS}
+        )
+endif()
 if (WIN32)
     # XPU examples are not buildable on windows, issue: TODO!
     list(APPEND ISPC_COMMON_CMAKE_ARGS
@@ -729,14 +738,20 @@ list(APPEND ISPC_STAGE2_CMAKE_ARGS
     ${ISPC_COMMON_CMAKE_ARGS}
     )
 if (XE_DEPS)
-    if (NOT PREBUILT_XE_STAGE2_PATH STREQUAL "NO")
+    if (INSTALL_WITH_XE_DEPS)
         list(APPEND ISPC_STAGE2_CMAKE_ARGS
-            -DLEVEL_ZERO_ROOT=${PREBUILT_XE_STAGE2_PATH}
+            -DLEVEL_ZERO_ROOT=${CMAKE_INSTALL_PREFIX}
             )
     else()
-        list(APPEND ISPC_STAGE2_CMAKE_ARGS
-            -DLEVEL_ZERO_ROOT=${STAGE2_PATH}
-            )
+        if (NOT PREBUILT_XE_STAGE2_PATH STREQUAL "NO")
+            list(APPEND ISPC_STAGE2_CMAKE_ARGS
+                -DLEVEL_ZERO_ROOT=${PREBUILT_XE_STAGE2_PATH}
+                )
+        else()
+            list(APPEND ISPC_STAGE2_CMAKE_ARGS
+                -DLEVEL_ZERO_ROOT=${STAGE2_PATH}
+                )
+        endif()
     endif()
 endif()
 if (XE_DEPS)
@@ -1121,7 +1136,14 @@ list(APPEND NINJA_COMMAND_WITH_ENV_STAGE2
     -E
     env
     "CCACHE_CONFIGPATH=${CCACHE_CLANG_V_CONF}"
-    "PATH=${ENV_PATH_STAGE2_ESC_SEM}"
+    )
+# Workaround of Windows cmd related issue with cmd with too big PATH effectively doing nothing.
+if (EXPLICIT_ENV_PATH)
+    list(APPEND NINJA_COMMAND_WITH_ENV_STAGE2
+        "PATH=${ENV_PATH_STAGE2_ESC_SEM}"
+        )
+endif()
+list(APPEND NINJA_COMMAND_WITH_ENV_STAGE2
     ${NINJA_EXE}
     ${EXTERNAL_VERBOSE_FLAG}
     ${NINJA_JOBS}
@@ -1131,7 +1153,13 @@ list(APPEND NINJA_COMMAND_WITH_ENV_STAGE3
     -E
     env
     "CCACHE_CONFIGPATH=${CCACHE_CLANG_V_CONF}"
-    "PATH=${ENV_PATH_STAGE3_ESC_SEM}"
+    )
+if (EXPLICIT_ENV_PATH)
+    list(APPEND NINJA_COMMAND_WITH_ENV_STAGE3
+        "PATH=${ENV_PATH_STAGE3_ESC_SEM}"
+        )
+endif()
+list(APPEND NINJA_COMMAND_WITH_ENV_STAGE3
     ${NINJA_EXE}
     ${EXTERNAL_VERBOSE_FLAG}
     ${NINJA_JOBS}
@@ -1141,7 +1169,6 @@ message(STATUS "NINJA_COMMAND_WITH_ENV_STAGE2 is ${NINJA_COMMAND_WITH_ENV_STAGE2
 message(STATUS "NINJA_COMMAND_WITH_ENV_STAGE3 is ${NINJA_COMMAND_WITH_ENV_STAGE3}")
 
 if (BUILD_SPIRV_STANDALONE)
-    message(STATUS "BUILD SPIRV-LLVM-Translator only")
     ExternalProject_Add(spirv-translator
         DOWNLOAD_COMMAND ""
         UPDATE_COMMAND ""
@@ -1162,12 +1189,14 @@ if (BUILD_SPIRV_STANDALONE)
         INSTALL_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE2} install
         )
     if (BUILD_SPIRV_TRANSLATOR_ONLY)
+        message(STATUS "BUILD SPIRV-LLVM-Translator only")
         return()
+    else()
+        message(STATUS "BUILD SPIRV-LLVM-Translator")
     endif()
 endif()
 
 if (BUILD_VC_INTRINSICS_STANDALONE)
-    message(STATUS "BUILD vc-intrinsics only")
     ExternalProject_Add(vc-intrinsics
         DOWNLOAD_COMMAND ""
         UPDATE_COMMAND ""
@@ -1188,7 +1217,10 @@ if (BUILD_VC_INTRINSICS_STANDALONE)
         INSTALL_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE2} install
         )
     if (BUILD_VC_INTRINSICS_ONLY)
+        message(STATUS "BUILD vc-intrinsics only")
         return()
+    else()
+        message(STATUS "BUILD vc-intrinsics")
     endif()
 endif()
 
@@ -1212,7 +1244,10 @@ if (BUILD_L0_LOADER_STANDALONE)
         INSTALL_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE2} install
         )
     if (BUILD_L0_LOADER_ONLY)
+        message(STATUS "BUILD l0 loader only")
         return()
+    else()
+        message(STATUS "BUILD l0 loader")
     endif()
 endif()
 
@@ -1367,6 +1402,9 @@ if (SKIP_STAGE2)
             )
         list(APPEND ISPC_STAGE2_DEPS stage2)
     endif()
+    if (INSTALL_WITH_XE_DEPS)
+        list(APPEND ISPC_STAGE2_DEPS spirv-translator vc-intrinsics l0)
+    endif()
 else()
     list(APPEND ISPC_STAGE2_DEPS ${L0_DEPS} stage2)
 endif()
@@ -1374,6 +1412,7 @@ endif()
 if (NOT BUILD_STAGE2_TOOLCHAIN_ONLY)
     # Build ispc first time with stage2 compiler/libraries.
     # For LTO only build, this ispc is final artifact.
+    message(STATUS "ISPC stage2 depends on ${ISPC_STAGE2_DEPS}")
     ExternalProject_Add(ispc-stage2
         DEPENDS ${ISPC_STAGE2_DEPS}
         DOWNLOAD_COMMAND ""
@@ -1393,6 +1432,13 @@ if (NOT BUILD_STAGE2_TOOLCHAIN_ONLY)
         DEPENDS ispc-stage2
         COMMENT "Run ISPC stage2 check-all target"
         COMMAND ${CMAKE_COMMAND} -E chdir build-ispc-stage2/src/ispc-stage2-build ${NINJA_COMMAND_WITH_ENV_STAGE2} check-all
+        )
+
+    # Custom target to run stage2 ISPC check-all, ispc_benchmarks and test
+    add_custom_target(ispc-stage2-check
+        DEPENDS ispc-stage2
+        COMMENT "Run ISPC stage2 check-all target"
+        COMMAND ${CMAKE_COMMAND} -E chdir build-ispc-stage2/src/ispc-stage2-build ${NINJA_COMMAND_WITH_ENV_STAGE2} check-all ispc_benchmarks test
         )
 
     # The following steps applicable only for PGO type build.
