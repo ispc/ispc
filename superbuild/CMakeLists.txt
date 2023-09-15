@@ -1067,7 +1067,7 @@ if (PGO OR NOT SKIP_STAGE2)
             )
     endif()
 
-    if (NOT BUILD_STAGE2_TOOLCHAIN_ONLY AND NOT ${ISPC_CORPUS_URL} STREQUAL "null")
+    if (NOT BUILD_STAGE2_TOOLCHAIN_ONLY AND PGO AND NOT ${ISPC_CORPUS_URL} STREQUAL "null")
         # May be profiles from examples or less set of programs just enough?
         FetchContent_Populate(ispc-corpus
             QUIET
