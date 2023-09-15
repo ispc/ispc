@@ -254,6 +254,59 @@ jobs:
         name: ispc_llvm17_linux
         path: build/ispc-trunk-linux.tar.gz
 
+  linux-build-ispc-xe-llvm16-release:
+    needs: [define-flow]
+    runs-on: ubuntu-latest
+    env:
+      LLVM_VERSION: "16.0"
+      LLVM_TAR: llvm-16.0.6-ubuntu18.04-Release-x86.arm.wasm.tar.xz
+      ISPC_OPAQUE_PTR_MODE: "OFF"
+      INSTALL_COMPUTE_RUNTIME: 1
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.sh
+
+    - name: Check environment
+      run: |
+        ./check_env.py
+        which -a clang
+        cat /proc/cpuinfo
+
+    - name: Build package
+      run: |
+        cmake superbuild \
+            -B build \
+            --preset os \
+            -DINSTALL_WITH_XE_DEPS=ON \
+            -DISPC_INCLUDE_BENCHMARKS=ON \
+            -DPREBUILT_STAGE2_PATH=${GITHUB_WORKSPACE}/bin-${LLVM_VERSION} \
+            -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/ispc-xe
+        cmake --build build
+
+    - name: Sanity testing (make check-all, make test)
+      run: |
+        find build -name check_isa -exec {} \;
+        find build -name ispc -exec {} --support-matrix \;
+        cmake --build build --target ispc-stage2-check
+
+    - name: Upload XE enabled package
+      uses: actions/upload-artifact@v3
+      with:
+        name: ispc_xe_llvm16rel_linux
+        path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-linux.tar.gz
+
+    - name: Upload ISPC with XE dependencies
+      uses: actions/upload-artifact@v3
+      with:
+        name: ispc_xe_deps_llvm16rel_linux
+        path: ispc-xe
+
   linux-test-llvm14:
     needs: [define-flow, linux-build-ispc-llvm14]
     runs-on: ubuntu-latest
@@ -494,6 +547,48 @@ jobs:
       if: failure()
       with:
         name: fail_db.llvm17.${{matrix.target}}.txt
+        path: fail_db.txt
+
+  # Test xe release version
+  linux-test-xe-llvm16-release:
+    needs: [define-flow, linux-build-ispc-xe-llvm16-release]
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+    env:
+      INSTALL_COMPUTE_RUNTIME: 0
+    steps:
+    - uses: actions/checkout@v3
+    - name: Download package
+      uses: actions/download-artifact@v3
+      with:
+        name: ispc_xe_llvm16rel_linux
+
+    - name: Install dependencies and unpack artifacts
+      run: |
+        .github/workflows/scripts/install-test-deps.sh
+
+    - name: Check environment
+      run: |
+        cat /proc/cpuinfo
+
+    - name: Running tests
+      run: |
+        echo PATH=$PATH
+        # github runners son't have GPU so run CPU tests at least
+        ./alloy.py -r --only="stability current -O0 -O2" --only-targets="avx2-i32x8" --time --update-errors=FP
+
+    - name: Check
+      run: |
+        # Print fails to the log.
+        git diff --exit-code
+
+    - name: Upload fail_db.txt
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: fail_db.xe.llvm16rel.${{matrix.target}}.txt
         path: fail_db.txt
 
   macos-build-ispc-llvm15:
@@ -918,6 +1013,64 @@ jobs:
         name: ispc_llvm17_win
         path: build/ispc-trunk-windows.zip
 
+  win-build-ispc-xe-llvm16-release:
+    needs: [define-flow]
+    runs-on: windows-2019
+    env:
+      LLVM_VERSION: "16.0"
+      LLVM_TAR: llvm-16.0.6-win.vs2019-Release-x86.arm.wasm.tar.7z
+      LLVM_HOME: "C:\\projects\\llvm"
+      CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
+      BUILD_TYPE: "Release"
+      ISPC_OPAQUE_PTR_MODE: "OFF"
+      ISPC_DIR: "build\\build-ispc-stage2\\src\\ispc-stage2-build"
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v1
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.ps1
+
+    - name: Check environment
+      shell: cmd
+      run: |
+        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+
+    - name: Build package
+      shell: cmd
+      run: |
+        set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        call %VSVARS%
+        cmake superbuild -B build --preset os -G "NMake Makefiles" -DINSTALL_WITH_XE_DEPS=ON -DPREBUILT_STAGE2_PATH=%LLVM_HOME%/bin-%LLVM_VERSION% -DCMAKE_INSTALL_PREFIX=%GITHUB_WORKSPACE%\ispc-xe -DISPC_INCLUDE_BENCHMARKS=ON -DEXPLICIT_ENV_PATH=OFF -DGNUWIN32=%CROSS_TOOLS_GNUWIN32%
+        cmake --build build
+
+    - name: Sanity testing (make check-all, make test)
+      shell: cmd
+      run: |
+        set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        call %VSVARS%
+        %ISPC_DIR%\bin\check_isa
+        %ISPC_DIR%\bin\ispc --support-matrix
+        cmake --build build --target ispc-stage2-check
+
+    - name: Upload XE enabled package
+      uses: actions/upload-artifact@v3
+      with:
+        name: ispc_xe_llvm16rel_win
+        path: ${{ env.ISPC_DIR }}/ispc-trunk-windows.zip
+
+    - name: Upload ISPC with XE dependencies
+      uses: actions/upload-artifact@v3
+      with:
+        name: ispc_xe_deps_llvm16rel_win
+        path: ispc-xe
+
   win-test-llvm14:
     needs: [define-flow, win-build-ispc-llvm14]
     env:
@@ -1101,6 +1254,52 @@ jobs:
       if: failure()
       with:
         name: fail_db.llvm17.${{matrix.arch}}.${{matrix.target}}.txt
+        path: fail_db.txt
+
+  win-test-xe-llvm16-release:
+    needs: [define-flow, win-build-ispc-xe-llvm16-release]
+    env:
+      LLVM_HOME: "C:\\projects\\llvm"
+    runs-on: windows-2022
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86, x86-64]
+        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Download package
+      uses: actions/download-artifact@v3
+      with:
+        name: ispc_xe_llvm16rel_win
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-test-deps.ps1
+
+    - name: Check environment
+      shell: cmd
+      run: |
+        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+
+    - name: Running tests
+      run: |
+        $env:ISPC_HOME = "$pwd"
+        .github/workflows/scripts/load-vs-env.ps1 "${{ matrix.arch }}"
+        python .\alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+
+    - name: Check
+      run: |
+        # Print fails to the log.
+        git diff --exit-code
+
+    - name: Upload fail_db.txt
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: fail_db.xe.llvm16rel.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
 
   win-package-examples:
