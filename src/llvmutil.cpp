@@ -1916,7 +1916,21 @@ void FixFunctionAttribute(llvm::Function &Fn, llvm::Attribute::AttrKind attr, ll
                 Call->setMemoryEffects(memEf);
             }
         }
+        // Fix function declaration
         Fn.removeFnAttr(attr);
+        switch (attr) {
+        case llvm::Attribute::ReadNone:
+            Fn.setDoesNotAccessMemory();
+            break;
+        case llvm::Attribute::ReadOnly:
+            Fn.setOnlyReadsMemory();
+            break;
+        case llvm::Attribute::WriteOnly:
+            Fn.setOnlyWritesMemory();
+            break;
+        default:
+            break;
+        }
     }
 }
 #endif
