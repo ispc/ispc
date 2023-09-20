@@ -70,42 +70,6 @@ jobs:
         $RUN_SMOKE && echo "optsets=${OPTSETS_SMOKE}" >> $GITHUB_OUTPUT || true
         $RUN_FULL &&  echo "optsets=${OPTSETS_FULL}" >> $GITHUB_OUTPUT || true
 
-  linux-build-ispc-llvm13:
-    needs: [define-flow]
-    runs-on: ubuntu-latest
-    env:
-      LLVM_VERSION: "13.0"
-      LLVM_TAR: llvm-13.0.1-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
-
-    steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: true
-
-    - name: Install dependencies
-      run: |
-        .github/workflows/scripts/install-build-deps.sh
-
-    - name: Check environment
-      run: |
-        ./check_env.py
-        which -a clang
-        cat /proc/cpuinfo
-
-    - name: Build package
-      run: |
-        .github/workflows/scripts/build-ispc.sh
-
-    - name: Sanity testing (make check-all, make test)
-      run: |
-        .github/workflows/scripts/check-ispc.sh
-
-    - name: Upload package
-      uses: actions/upload-artifact@v3
-      with:
-        name: ispc_llvm13_linux
-        path: build/ispc-trunk-linux.tar.gz
-
   linux-build-ispc-llvm14:
     needs: [define-flow]
     runs-on: ubuntu-latest
@@ -289,45 +253,6 @@ jobs:
       with:
         name: ispc_llvm17_linux
         path: build/ispc-trunk-linux.tar.gz
-
-  linux-test-llvm13:
-    needs: [define-flow, linux-build-ispc-llvm13]
-    runs-on: ubuntu-latest
-    continue-on-error: false
-    strategy:
-      fail-fast: false
-
-    steps:
-    - uses: actions/checkout@v3
-    - name: Download package
-      uses: actions/download-artifact@v3
-      with:
-        name: ispc_llvm13_linux
-
-    - name: Install dependencies and unpack artifacts
-      run: |
-        .github/workflows/scripts/install-test-deps.sh
-
-    - name: Check environment
-      run: |
-        cat /proc/cpuinfo
-
-    - name: Running tests
-      run: |
-        echo PATH=$PATH
-        ./alloy.py -r --only="stability current -O2" --only-targets="avx2-i32x8" --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v3
-      if: failure()
-      with:
-        name: fail_db.llvm13.avx2.txt
-        path: fail_db.txt
 
   linux-test-llvm14:
     needs: [define-flow, linux-build-ispc-llvm14]
@@ -826,47 +751,6 @@ jobs:
         name: fail_db.llvm17.macos.sse4.txt
         path: fail_db.txt
 
-  win-build-ispc-llvm13:
-    needs: [define-flow]
-    runs-on: windows-2019
-    env:
-      LLVM_VERSION: "13.0"
-      LLVM_TAR: llvm-13.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
-      LLVM_HOME: "C:\\projects\\llvm"
-      CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
-      BUILD_TYPE: "Release"
-
-    steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: true
-
-    - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1
-
-    - name: Install dependencies
-      run: |
-        .github/workflows/scripts/install-build-deps.ps1
-
-    - name: Check environment
-      shell: cmd
-      run: |
-        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
-
-    - name: Build package
-      run: |
-        .github/workflows/scripts/build-ispc.ps1
-
-    - name: Sanity testing (make check-all, make test)
-      run: |
-        .github/workflows/scripts/check-ispc.ps1
-
-    - name: Upload package
-      uses: actions/upload-artifact@v3
-      with:
-        name: ispc_llvm13_win
-        path: build/ispc-trunk-windows.zip
-
   win-build-ispc-llvm14:
     needs: [define-flow]
     runs-on: windows-2019
@@ -1033,52 +917,6 @@ jobs:
       with:
         name: ispc_llvm17_win
         path: build/ispc-trunk-windows.zip
-
-  win-test-llvm13:
-    needs: [define-flow, win-build-ispc-llvm13]
-    env:
-      LLVM_HOME: "C:\\projects\\llvm"
-    # Test vs2019 build on vs2022 worker
-    runs-on: windows-2022
-    continue-on-error: false
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [x86, x86-64]
-
-    steps:
-    - uses: actions/checkout@v3
-    - name: Download package
-      uses: actions/download-artifact@v3
-      with:
-        name: ispc_llvm13_win
-
-    - name: Install dependencies
-      run: |
-        .github/workflows/scripts/install-test-deps.ps1
-
-    - name: Check environment
-      shell: cmd
-      run: |
-        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
-
-    - name: Running tests
-      run: |
-        $env:ISPC_HOME = "$pwd"
-        .github/workflows/scripts/load-vs-env.ps1 "${{ matrix.arch }}"
-        python .\alloy.py -r --only="stability ${{ matrix.arch }} current -O2" --only-targets="avx2-i32x8" --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v3
-      if: failure()
-      with:
-        name: fail_db.llvm13.${{matrix.arch}}.avx2.txt
-        path: fail_db.txt
 
   win-test-llvm14:
     needs: [define-flow, win-build-ispc-llvm14]
