@@ -253,6 +253,43 @@ jobs:
         name: ispc_llvm16_linux
         path: build/ispc-trunk-linux.tar.gz
 
+  linux-build-ispc-llvm17:
+    needs: [define-flow]
+    runs-on: ubuntu-latest
+    env:
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.1-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+      ISPC_OPAQUE_PTR_MODE: "ON"
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.sh
+
+    - name: Check environment
+      run: |
+        ./check_env.py
+        which -a clang
+        cat /proc/cpuinfo
+
+    - name: Build package
+      run: |
+        .github/workflows/scripts/build-ispc.sh
+
+    - name: Sanity testing (make check-all, make test)
+      run: |
+        .github/workflows/scripts/check-ispc.sh
+
+    - name: Upload package
+      uses: actions/upload-artifact@v3
+      with:
+        name: ispc_llvm17_linux
+        path: build/ispc-trunk-linux.tar.gz
+
   linux-test-llvm13:
     needs: [define-flow, linux-build-ispc-llvm13]
     runs-on: ubuntu-latest
@@ -494,6 +531,46 @@ jobs:
         name: fail_db.llvm16.${{matrix.target}}.txt
         path: fail_db.txt
 
+  linux-test-llvm17:
+    needs: [define-flow, linux-build-ispc-llvm17]
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
+    steps:
+    - uses: actions/checkout@v3
+    - name: Download package
+      uses: actions/download-artifact@v3
+      with:
+        name: ispc_llvm17_linux
+
+    - name: Install dependencies and unpack artifacts
+      run: |
+        .github/workflows/scripts/install-test-deps.sh
+
+    - name: Check environment
+      run: |
+        cat /proc/cpuinfo
+
+    - name: Running tests
+      run: |
+        echo PATH=$PATH
+        ./alloy.py -r --only="stability current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+
+    - name: Check
+      run: |
+        # Print fails to the log.
+        git diff --exit-code
+
+    - name: Upload fail_db.txt
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: fail_db.llvm17.${{matrix.target}}.txt
+        path: fail_db.txt
+
   macos-build-ispc-llvm15:
     needs: [define-flow]
     runs-on: macos-12
@@ -582,6 +659,50 @@ jobs:
         name: ispc_llvm16_macos
         path: build/ispc-trunk-macos.tar.gz
 
+  macos-build-ispc-llvm17:
+    needs: [define-flow]
+    runs-on: macos-12
+    env:
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.1-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        ls -al /Library/Developer/CommandLineTools/SDKs/
+        xcrun --show-sdk-path
+        [ -n "$LLVM_REPO" ] && wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 --no-verbose $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
+        tar xf $LLVM_TAR
+        echo "${GITHUB_WORKSPACE}/bin-$LLVM_VERSION/bin" >> $GITHUB_PATH
+        brew install bison flex
+        echo "/usr/local/opt/bison/bin" >> $GITHUB_PATH
+        echo "/usr/local/opt/flex/bin" >> $GITHUB_PATH
+
+    - name: Check environment
+      run: |
+        ./check_env.py
+        which -a clang
+        llvm-config --system-libs
+        sysctl -n machdep.cpu.brand_string
+
+    - name: Build package
+      run: |
+        .github/workflows/scripts/build-ispc.sh #-DBENCHMARKS_ISPC_TARGETS=avx1-i32x4
+
+    - name: Sanity testing (make check-all, make test)
+      run: |
+        .github/workflows/scripts/check-ispc.sh
+
+    - name: Upload package
+      uses: actions/upload-artifact@v3
+      with:
+        name: ispc_llvm17_macos
+        path: build/ispc-trunk-macos.tar.gz
+
   macos-test-ispc-llvm15:
     needs: [define-flow, macos-build-ispc-llvm15]
     runs-on: macos-12
@@ -662,6 +783,47 @@ jobs:
       if: failure()
       with:
         name: fail_db.llvm16.macos.sse4.txt
+        path: fail_db.txt
+
+  macos-test-ispc-llvm17:
+    needs: [define-flow, macos-build-ispc-llvm17]
+    runs-on: macos-12
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v3
+    - name: Download package
+      uses: actions/download-artifact@v3
+      with:
+        name: ispc_llvm17_macos
+
+    - name: Install dependencies and unpack artifacts
+      run: |
+        tar xf ispc-trunk-macos.tar.gz
+        echo "$GITHUB_WORKSPACE/ispc-trunk-macos/bin" >> $GITHUB_PATH
+        echo "ISPC_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+        echo "LLVM_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+
+    - name: Check environment
+      run: |
+        sysctl -n machdep.cpu.brand_string
+
+    - name: Running tests
+      run: |
+        echo PATH=$PATH
+        ./alloy.py -r --only="stability current x86-64 -O0 -O2" --only-targets="sse4-i32x4" --time --update-errors=FP
+
+    - name: Check
+      run: |
+        # Print fails to the log.
+        git diff --exit-code
+
+    - name: Upload fail_db.txt
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: fail_db.llvm17.macos.sse4.txt
         path: fail_db.txt
 
   win-build-ispc-llvm13:
@@ -828,6 +990,48 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: ispc_llvm16_win
+        path: build/ispc-trunk-windows.zip
+
+  win-build-ispc-llvm17:
+    needs: [define-flow]
+    runs-on: windows-2019
+    env:
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      LLVM_HOME: "C:\\projects\\llvm"
+      CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
+      BUILD_TYPE: "Release"
+      ISPC_OPAQUE_PTR_MODE: "ON"
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v1
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.ps1
+
+    - name: Check environment
+      shell: cmd
+      run: |
+        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+
+    - name: Build package
+      run: |
+        .github/workflows/scripts/build-ispc.ps1
+
+    - name: Sanity testing (make check-all, make test)
+      run: |
+        .github/workflows/scripts/check-ispc.ps1
+
+    - name: Upload package
+      uses: actions/upload-artifact@v3
+      with:
+        name: ispc_llvm17_win
         path: build/ispc-trunk-windows.zip
 
   win-test-llvm13:
@@ -1013,5 +1217,51 @@ jobs:
       if: failure()
       with:
         name: fail_db.llvm16.${{matrix.arch}}.${{matrix.target}}.txt
+        path: fail_db.txt
+
+  win-test-llvm17:
+    needs: [define-flow, win-build-ispc-llvm17]
+    env:
+      LLVM_HOME: "C:\\projects\\llvm"
+    runs-on: windows-2022
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86, x86-64]
+        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Download package
+      uses: actions/download-artifact@v3
+      with:
+        name: ispc_llvm17_win
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-test-deps.ps1
+
+    - name: Check environment
+      shell: cmd
+      run: |
+        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+
+    - name: Running tests
+      run: |
+        $env:ISPC_HOME = "$pwd"
+        .github/workflows/scripts/load-vs-env.ps1 "${{ matrix.arch }}"
+        python .\alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+
+    - name: Check
+      run: |
+        # Print fails to the log.
+        git diff --exit-code
+
+    - name: Upload fail_db.txt
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: fail_db.llvm17.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
 
