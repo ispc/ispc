@@ -34,3 +34,12 @@
 ./tests/short-vec-6.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O0 spv *
 ./tests/int8-wrap.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 15.0 clang++15.0 O2 spv *
 ./tests/ind-var-bounds-and-types.ispc runfail    xe64        xehpg-x8 dg2   Linux LLVM 15.0 clang++15.0 O0 spv *
+./tests/soa-6.ispc runfail    xe64        gen9-x8 unspec   Linux LLVM 16.0 clang++16.0 O2 spv *
+./tests/soa-7.ispc runfail    xe64        gen9-x8 unspec   Linux LLVM 16.0 clang++16.0 O2 spv *
+./tests/soa-6.ispc runfail    xe64       xehpg-x8 dg2   Linux LLVM 16.0 clang++16.0 O2 ze *
+./tests/soa-7.ispc runfail    xe64       xehpg-x8 dg2   Linux LLVM 16.0 clang++16.0 O2 ze *
+./tests/soa-6.ispc runfail    xe64       xehpg-x8 dg2   Linux LLVM 16.0 clang++16.0 O2 spv *
+./tests/soa-7.ispc runfail    xe64       xehpg-x8 dg2   Linux LLVM 16.0 clang++16.0 O2 spv *
+./tests/int8-wrap.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 16.0 clang++16.0 O2 spv *
+.\tests\soa-6.ispc runfail    xe64        xelp-x8 tgllp Windows LLVM 16.0         cl O2 spv *
+.\tests\soa-7.ispc runfail    xe64        xelp-x8 tgllp Windows LLVM 16.0         cl O2 spv *
