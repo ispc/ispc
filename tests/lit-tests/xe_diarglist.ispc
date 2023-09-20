@@ -9,7 +9,7 @@
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=CHECK_CPU
 
 // REQUIRES: XE_ENABLED
-// REQUIRES: LLVM_13_0+ && !LLVM_16_0+
+// REQUIRES: !LLVM_16_0+
 
 struct Parameters
 {
