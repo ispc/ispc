@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  llvm16:
+  llvm17:
     uses: ./.github/workflows/reusable.rebuild.yml
     with:
       version: '17.0'
