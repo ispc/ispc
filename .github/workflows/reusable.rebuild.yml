@@ -26,6 +26,10 @@ on:
         description: VS version string to use in artifact naming. For example, 'vs2019'.
         required: true
         type: string
+      win_sdk:
+        description: Win SDK version string. For example, '10.0.18362.0'.
+        required: true
+        type: string
 
 jobs:
   # Building LLVM in docker, as using native Ubuntu 18.04 github-hosted image contains newer-than-expected libs and
@@ -254,7 +258,7 @@ jobs:
       run: |
         set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
         call %VSVARS%
-        cmake %ISPC_HOME%\superbuild -B build-${{ inputs.version }} --preset os -DLLVM_VERSION=${{ inputs.version }} -DCMAKE_INSTALL_PREFIX=%LLVM_HOME%\bin-${{ inputs.version }} -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DXE_DEPS=OFF -DLLVM_DISABLE_ASSERTIONS=OFF
+        cmake %ISPC_HOME%\superbuild -B build-${{ inputs.version }} --preset os -DLLVM_VERSION=${{ inputs.version }} -DCMAKE_SYSTEM_VERSION=${{ inputs.win_sdk }} -DCMAKE_INSTALL_PREFIX=%LLVM_HOME%\bin-${{ inputs.version }} -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DXE_DEPS=OFF -DLLVM_DISABLE_ASSERTIONS=OFF
         cmake --build build-${{ inputs.version }}
         rmdir /s /q build-${{ inputs.version }}
 
@@ -298,7 +302,7 @@ jobs:
       run: |
         set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
         call %VSVARS%
-        cmake %ISPC_HOME%\superbuild -B build-${{ inputs.version }} --preset os -DLLVM_VERSION=${{ inputs.version }} -DCMAKE_INSTALL_PREFIX=%LLVM_HOME%\bin-${{ inputs.version }} -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DXE_DEPS=OFF -DLLVM_DISABLE_ASSERTIONS=ON
+        cmake %ISPC_HOME%\superbuild -B build-${{ inputs.version }} --preset os -DLLVM_VERSION=${{ inputs.version }} -DCMAKE_SYSTEM_VERSION=${{ inputs.win_sdk }} -DCMAKE_INSTALL_PREFIX=%LLVM_HOME%\bin-${{ inputs.version }} -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DXE_DEPS=OFF -DLLVM_DISABLE_ASSERTIONS=ON
         cmake --build build-${{ inputs.version }}
         rmdir /s /q build-${{ inputs.version }}
 
