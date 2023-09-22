@@ -1336,26 +1336,26 @@ define <WIDTH x half> @__exp_varying_half(<WIDTH x half>) nounwind readnone {
 ;; Generates double math builtins for unfiorm and varying
 ;; $1 operation (e.g. pow, sin etc)
 define(`xe_double_math', `
-declare double @__spirv_ocl_$1(double) nounwind readnone
+declare double @__spirv_ocl_$1_DvWIDTH1d(double) nounwind readnone
 define double @__$1_uniform_double(double) nounwind readnone {
-  %res = call double @__spirv_ocl_$1(double %0)
+  %res = call double @__spirv_ocl_$1_DvWIDTH1d(double %0)
   ret double %res
 }
 
 ifelse(WIDTH,32,`
-  declare <16 x double> @__spirv_ocl_$1_DvWIDTH(<16 x double>)
+  declare <16 x double> @__spirv_ocl_$1_DvWIDTHd(<16 x double>)
 ',`
-  declare <WIDTH x double> @__spirv_ocl_$1_DvWIDTH(<WIDTH x double>)
+  declare <WIDTH x double> @__spirv_ocl_$1_DvWIDTHd(<WIDTH x double>)
 ')
 define <WIDTH x double> @__$1_varying_double(<WIDTH x double>) nounwind readnone {
   ifelse(WIDTH,32,`
     %in1 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
     %in2 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-    %res1 = call <16 x double> @__spirv_ocl_$1_DvWIDTH(<16 x double> %in1)
-    %res2 = call <16 x double> @__spirv_ocl_$1_DvWIDTH(<16 x double> %in2)
+    %res1 = call <16 x double> @__spirv_ocl_$1_DvWIDTHd(<16 x double> %in1)
+    %res2 = call <16 x double> @__spirv_ocl_$1_DvWIDTHd(<16 x double> %in2)
     %res = shufflevector <16 x double> %res1, <16 x double> %res2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ',`
-    %res = call <WIDTH x double> @__spirv_ocl_$1_DvWIDTH(<WIDTH x double> %0)
+    %res = call <WIDTH x double> @__spirv_ocl_$1_DvWIDTHd(<WIDTH x double> %0)
   ')
   ret <WIDTH x double> %res
 }
@@ -1372,19 +1372,19 @@ xe_double_math(atan)
 
 ;; sin is returned value
 ;; cos is returned through pointer
-declare double @__spirv_ocl_sincos(double, double*) nounwind
+declare double @__spirv_ocl_sincos_DvWIDTH1d(double, double*) nounwind
 define void @__sincos_uniform_double(double, i8*, i8*) nounwind {
   %ptr1 = bitcast i8* %1 to double*
   %ptr2 = bitcast i8* %2 to double*
-  %sin = call double @__spirv_ocl_sincos(double %0, double* %ptr2)
+  %sin = call double @__spirv_ocl_sincos_DvWIDTH1d(double %0, double* %ptr2)
   store double %sin, double* %ptr1
   ret void
 }
 
 ifelse(WIDTH,32,`
-  declare <16 x double> @__spirv_ocl_sincos_DvWIDTH(<16 x double>, <16 x double>*) nounwind
+  declare <16 x double> @__spirv_ocl_sincos_DvWIDTHd(<16 x double>, <16 x double>*) nounwind
 ',`
-  declare <WIDTH x double> @__spirv_ocl_sincos_DvWIDTH(<WIDTH x double>, <WIDTH x double>*) nounwind
+  declare <WIDTH x double> @__spirv_ocl_sincos_DvWIDTHd(<WIDTH x double>, <WIDTH x double>*) nounwind
 ')
 
 define void @__sincos_varying_double(<WIDTH x double>, i8*, i8*) nounwind {
@@ -1397,26 +1397,26 @@ define void @__sincos_varying_double(<WIDTH x double>, i8*, i8*) nounwind {
     %ptrtoint = ptrtoint <32 x double>* %ptr2 to i64
     %ptrtoint_add = add i64 %ptrtoint, 128
     %ptr2_16_2 = inttoptr i64 %ptrtoint_add to <16 x double>*
-    %sin1 = call <16 x double> @__spirv_ocl_sincos_DvWIDTH(<16 x double> %in0_1, <16 x double>* %ptr2_16_1)
-    %sin2 = call <16 x double> @__spirv_ocl_sincos_DvWIDTH(<16 x double> %in0_2, <16 x double>* %ptr2_16_2)
+    %sin1 = call <16 x double> @__spirv_ocl_sincos_DvWIDTHd(<16 x double> %in0_1, <16 x double>* %ptr2_16_1)
+    %sin2 = call <16 x double> @__spirv_ocl_sincos_DvWIDTHd(<16 x double> %in0_2, <16 x double>* %ptr2_16_2)
     %sin = shufflevector <16 x double> %sin1, <16 x double> %sin2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ',`
-    %sin = call <WIDTH x double> @__spirv_ocl_sincos_DvWIDTH(<WIDTH x double> %0, <WIDTH x double>* %ptr2)
+    %sin = call <WIDTH x double> @__spirv_ocl_sincos_DvWIDTHd(<WIDTH x double> %0, <WIDTH x double>* %ptr2)
   ')
   store <WIDTH x double> %sin, <WIDTH x double>* %ptr1
   ret void
 }
 
-declare double @__spirv_ocl_pow(double, double) nounwind readnone
+declare double @__spirv_ocl_pow_DvWIDTH1d(double, double) nounwind readnone
 define double @__pow_uniform_double(double, double) nounwind {
-  %res = call double @__spirv_ocl_pow(double %0, double %1)
+  %res = call double @__spirv_ocl_pow_DvWIDTH1d(double %0, double %1)
   ret double %res
 }
 
 ifelse(WIDTH,32,`
-  declare <16 x double> @__spirv_ocl_pow_DvWIDTH(<16 x double>, <16 x double>) nounwind readnone
+  declare <16 x double> @__spirv_ocl_pow_DvWIDTHd(<16 x double>, <16 x double>) nounwind readnone
 ',`
-  declare <WIDTH x double> @__spirv_ocl_pow_DvWIDTH(<WIDTH x double>, <WIDTH x double>) nounwind readnone
+  declare <WIDTH x double> @__spirv_ocl_pow_DvWIDTHd(<WIDTH x double>, <WIDTH x double>) nounwind readnone
 ')
 define <WIDTH x double> @__pow_varying_double(<WIDTH x double>, <WIDTH x double>) nounwind {
   ifelse(WIDTH,32,`
@@ -1424,26 +1424,26 @@ define <WIDTH x double> @__pow_varying_double(<WIDTH x double>, <WIDTH x double>
     %in1_2 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
     %in2_1 = shufflevector <32 x double> %1, <32 x double> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
     %in2_2 = shufflevector <32 x double> %1, <32 x double> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-    %res1 = call <16 x double> @__spirv_ocl_pow_DvWIDTH(<16 x double> %in1_1, <16 x double> %in2_1)
-    %res2 = call <16 x double> @__spirv_ocl_pow_DvWIDTH(<16 x double> %in1_2, <16 x double> %in2_2)
+    %res1 = call <16 x double> @__spirv_ocl_pow_DvWIDTHd(<16 x double> %in1_1, <16 x double> %in2_1)
+    %res2 = call <16 x double> @__spirv_ocl_pow_DvWIDTHd(<16 x double> %in1_2, <16 x double> %in2_2)
     %res = shufflevector <16 x double> %res1, <16 x double> %res2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ',`
-    %res = call <WIDTH x double> @__spirv_ocl_pow_DvWIDTH(<WIDTH x double> %0, <WIDTH x double> %1)
+    %res = call <WIDTH x double> @__spirv_ocl_pow_DvWIDTHd(<WIDTH x double> %0, <WIDTH x double> %1)
   ')
 
   ret <WIDTH x double> %res
 }
 
-declare double @__spirv_ocl_atan2(double, double) nounwind readnone
+declare double @__spirv_ocl_atan2_DvWIDTH1d(double, double) nounwind readnone
 define double @__atan2_uniform_double(double, double) nounwind {
-  %res = call double @__spirv_ocl_atan2(double %0, double %1)
+  %res = call double @__spirv_ocl_atan2_DvWIDTH1d(double %0, double %1)
   ret double %res
 }
 
 ifelse(WIDTH,32,`
-  declare <16 x double> @__spirv_ocl_atan2_DvWIDTH(<16 x double>, <16 x double>) nounwind readnone
+  declare <16 x double> @__spirv_ocl_atan2_DvWIDTHd(<16 x double>, <16 x double>) nounwind readnone
 ',`
-  declare <WIDTH x double> @__spirv_ocl_atan2_DvWIDTH(<WIDTH x double>, <WIDTH x double>) nounwind readnone
+  declare <WIDTH x double> @__spirv_ocl_atan2_DvWIDTHd(<WIDTH x double>, <WIDTH x double>) nounwind readnone
 ')
 
 define <WIDTH x double> @__atan2_varying_double(<WIDTH x double>, <WIDTH x double>) nounwind {
@@ -1452,11 +1452,11 @@ define <WIDTH x double> @__atan2_varying_double(<WIDTH x double>, <WIDTH x doubl
     %in1_2 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
     %in2_1 = shufflevector <32 x double> %1, <32 x double> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
     %in2_2 = shufflevector <32 x double> %1, <32 x double> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-    %res1 = call <16 x double> @__spirv_ocl_atan2_DvWIDTH(<16 x double> %in1_1, <16 x double> %in2_1)
-    %res2 = call <16 x double> @__spirv_ocl_atan2_DvWIDTH(<16 x double> %in1_2, <16 x double> %in2_2)
+    %res1 = call <16 x double> @__spirv_ocl_atan2_DvWIDTHd(<16 x double> %in1_1, <16 x double> %in2_1)
+    %res2 = call <16 x double> @__spirv_ocl_atan2_DvWIDTHd(<16 x double> %in1_2, <16 x double> %in2_2)
     %res = shufflevector <16 x double> %res1, <16 x double> %res2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ',`
-    %res = call <WIDTH x double> @__spirv_ocl_atan2_DvWIDTH(<WIDTH x double> %0, <WIDTH x double> %1)
+    %res = call <WIDTH x double> @__spirv_ocl_atan2_DvWIDTHd(<WIDTH x double> %0, <WIDTH x double> %1)
   ')
 
   ret <WIDTH x double> %res
