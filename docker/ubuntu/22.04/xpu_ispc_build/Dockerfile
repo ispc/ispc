@@ -9,13 +9,13 @@ SHELL ["/bin/bash", "-c"]
 
 ARG REPO=ispc/ispc
 ARG SHA=main
-ARG LLVM_VERSION=15.0
+ARG LLVM_VERSION=16.0
 ARG IGC_VER=14062.11
-ARG L0L_VER=1.13.5
+ARG L0L_VER=1.14.0
 ARG CR_VER=23.22.26516.18
 ARG CR_VER_SUFFIX=26516.18
-ARG VC_INTRINSICS_COMMIT_SHA="910db4801d4a029834606e3e42a8d60358e74fdf"
-ARG SPIRV_TRANSLATOR_COMMIT_SHA="e82ecc2bd7295604fcf1824e47c95fa6a09c6e63"
+ARG VC_INTRINSICS_COMMIT_SHA="77f069b71fa9042bc4b2f68d06942a43c8ecec73"
+ARG SPIRV_TRANSLATOR_COMMIT_SHA="8703d43bd14d000fc630c2d3918d918819d23741"
 
 # !!! Make sure that your docker config provides enough memory to the container,
 # otherwise LLVM build may fail, as it will use all the cores available to container.
