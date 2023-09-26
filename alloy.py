@@ -135,7 +135,7 @@ def get_llvm_disable_assertions_switch(llvm_disable_assertions):
     else:
         return "  -DLLVM_ENABLE_ASSERTIONS=ON"
 
-def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, force, make, gcc_toolchain_path, llvm_disable_assertions, verbose, macos_version_min, macos_universal_bin):
+def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, openmp, from_validation, force, make, gcc_toolchain_path, llvm_disable_assertions, verbose, macos_version_min, macos_universal_bin):
     print_debug("Building LLVM. Version: " + version_LLVM + ".\n", from_validation, alloy_build)
     # Here we understand what and where do we want to build
     current_path = os.getcwd()
@@ -224,8 +224,8 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, from_validation, f
         print_debug("Building Universal Binary for macOS (x86_64 + arm64)\n", from_validation, alloy_build)
 
     llvm_enable_projects = llvm_enable_runtimes + " -DLLVM_ENABLE_PROJECTS=\"clang"
-    if current_OS == "Linux":
-        # OpenMP is needed for Xe enabled builds.
+    if current_OS == "Linux" and openmp == True:
+        # OpenMP may be needed for Xe enabled builds.
         # Starting from Ubuntu 20.04 libomp-dev package doesn't install omp.h to default location.
         llvm_enable_projects +=";openmp"
     if extra == True:
@@ -847,7 +847,7 @@ def Main():
         start_time = time.time()
         if options.build_llvm:
             build_LLVM(options.version, options.folder,
-                    options.debug, selfbuild, options.extra, False, options.force, make, options.gcc_toolchain_path, options.llvm_disable_assertions, options.verbose, options.macos_version_min, options.macos_universal_bin)
+                    options.debug, selfbuild, options.extra, options.openmp, False, options.force, make, options.gcc_toolchain_path, options.llvm_disable_assertions, options.verbose, options.macos_version_min, options.macos_universal_bin)
         if options.validation_run:
             validation_run(options.only, options.only_targets, options.branch,
                     options.number_for_performance, options.update, int(options.speed),
@@ -961,6 +961,8 @@ if __name__ == '__main__':
         help='rebuild LLVM', default=False, action='store_true')
     llvm_group.add_option('--extra', dest='extra',
         help='load extra clang tools', default=False, action='store_true')
+    llvm_group.add_option('--openmp', dest='openmp',
+        help='build OpenMP as part of LLVM', default=False, action='store_true')
     llvm_group.add_option('--verbose', dest='verbose',
         help='verbose output during the build', default=False, action='store_true')
     parser.add_option_group(llvm_group)
