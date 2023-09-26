@@ -3,7 +3,7 @@
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
-ARG LLVM_VERSION=15.0
+ARG LLVM_VERSION=16.0
 
 FROM centos:7 AS llvm_only
 LABEL maintainer="Dmitry Babokin <dmitry.y.babokin@intel.com>"
