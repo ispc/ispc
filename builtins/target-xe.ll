@@ -215,9 +215,9 @@ define half @__sqrt_uniform_half(half) nounwind readonly alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision sqrt
 
-declare double @llvm.genx.ieee.sqrt.d64(double)
+declare double @llvm.genx.ieee.sqrt.f64(double)
 define double @__sqrt_uniform_double(double) nounwind alwaysinline {
-  %res = call double @llvm.genx.ieee.sqrt.d64(double %0)
+  %res = call double @llvm.genx.ieee.sqrt.f64(double %0)
   ret double %res
 }
 
@@ -624,9 +624,9 @@ define <WIDTH x half> @__sqrt_varying_half(<WIDTH x half>) nounwind readonly alw
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision sqrt
 
-declare <WIDTH x double> @llvm.genx.ieee.sqrt.XE_SUFFIX(d64)(<WIDTH x double>)
+declare <WIDTH x double> @llvm.genx.ieee.sqrt.XE_SUFFIX(double)(<WIDTH x double>)
 define <WIDTH x double> @__sqrt_varying_double(<WIDTH x double>) nounwind alwaysinline {
-  %res = call <WIDTH x double> @llvm.genx.ieee.sqrt.XE_SUFFIX(d64)(<WIDTH x double> %0)
+  %res = call <WIDTH x double> @llvm.genx.ieee.sqrt.XE_SUFFIX(double)(<WIDTH x double> %0)
   ret <WIDTH x double> %res
 }
 
