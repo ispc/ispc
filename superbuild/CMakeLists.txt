@@ -350,9 +350,7 @@ foreach(patch IN LISTS LLVM_PATCHES_ALL)
 endforeach()
 
 if (NOT APPLE)
-    if (${LLVM_VERSION} STREQUAL 15_0 OR ${LLVM_VERSION} STREQUAL 14_0)
-        list(APPEND LLVM_PATCHES_VER ${PROJECT_SOURCE_DIR}/14_0_15_0-ld-symlink-lld.patch)
-    endif()
+    list(APPEND LLVM_PATCHES_VER ${PROJECT_SOURCE_DIR}/ld-symlink-lld.patch)
 endif()
 message(STATUS "For llvm version ${LLVM_VERSION} found patches ${LLVM_PATCHES_VER}")
 
