@@ -47,6 +47,7 @@ set(BUILD_TYPE_L0 "Release" CACHE STRING "Set the build type for L0 build")
 set(ISPC_ANDROID_NDK_PATH "NO" CACHE STRING "Path to Android NDK. It is needed to ISPC_CROSS=ON on macOS.")
 set(ISPC_SIGN_KEY "NO" CACHE STRING "Key to sign macOS or Windows build.")
 option(ISPC_INCLUDE_BENCHMARKS "Include ISPC benchmarks (ispc_benchmarks target)" OFF)
+option(ISPC_CROSS "Enable ISPC build with cross compilation support" ON)
 option(LLVM_DISABLE_ASSERTIONS "Enable LLVM build without assertions" ON)
 option(LLVM_BUILD_OPENMP "Build OpenMP as part of LLVM" OFF)
 option(EXTERNAL_VERBOSE "Enable verbose for external project build and install commands" OFF)
@@ -681,9 +682,13 @@ message(STATUS "LLVM stage2 cmake arguments ${LLVM_STAGE2_CMAKE_ARGS}")
 # ISPC cmake arguments.
 list(APPEND ISPC_COMMON_CMAKE_ARGS
     -DCMAKE_BUILD_TYPE=${BUILD_TYPE_ISPC}
-    -DISPC_CROSS=ON
     -DISPC_PREPARE_PACKAGE=ON
     )
+if (ISPC_CROSS)
+    list(APPEND ISPC_COMMON_CMAKE_ARGS
+        -DISPC_CROSS=ON
+        )
+endif()
 if (XE_DEPS)
     list(APPEND ISPC_COMMON_CMAKE_ARGS
         -DXE_ENABLED=ON
@@ -711,9 +716,11 @@ if (WIN32 OR APPLE)
 endif()
 if (APPLE)
     # It is needed because of ISPC_CROSS=ON
-    list(APPEND ISPC_COMMON_CMAKE_ARGS
-        -DISPC_ANDROID_NDK_PATH=${ISPC_ANDROID_NDK_PATH}
-        )
+    if (ISPC_CROSS)
+        list(APPEND ISPC_COMMON_CMAKE_ARGS
+            -DISPC_ANDROID_NDK_PATH=${ISPC_ANDROID_NDK_PATH}
+            )
+    endif()
 
     # For APPLE explicitly enabled both arch.
     list(APPEND ISPC_COMMON_CMAKE_ARGS
