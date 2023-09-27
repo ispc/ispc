@@ -91,7 +91,9 @@ if (NOT PREBUILT_STAGE2 STREQUAL "NO" AND NOT PREBUILT_STAGE2_PATH STREQUAL "NO"
     message(FATAL_ERROR "Provide only one source of stage2 toolchain.")
 endif()
 
+set(SKIP_FETCHING_XE_DEPS OFF)
 if (NOT PREBUILT_XE_STAGE2_PATH STREQUAL "NO")
+    set(SKIP_FETCHING_XE_DEPS ON)
     if (NOT SKIP_STAGE2)
         message(FATAL_ERROR "Provide PREBUILT_XE_STAGE2_PATH only when stage2 is skipped")
     endif()
@@ -303,6 +305,7 @@ message(STATUS "BUILD_XE_DEPS_ONLY is ${BUILD_XE_DEPS_ONLY}")
 message(STATUS "INSTALL_ISPC is ${INSTALL_ISPC}")
 message(STATUS "INSTALL_WITH_XE_DEPS is ${INSTALL_WITH_XE_DEPS}")
 message(STATUS "XE_DEPS is ${XE_DEPS}")
+message(STATUS "SKIP_FETCHING_XE_DEPS is ${SKIP_FETCHING_XE_DEPS}")
 message(STATUS "LLVM_TAG is ${LLVM_TAG}")
 message(STATUS "LLVM_VERSION_DOTTED is ${LLVM_VERSION_DOTTED}")
 message(STATUS "LLVM_VERSION_MAJOR is ${LLVM_VERSION_MAJOR}")
@@ -1091,42 +1094,44 @@ if (PGO OR NOT SKIP_STAGE2)
     endif()
 endif()
 
-if (XE_DEPS OR (SKIP_STAGE2 AND BUILD_SPIRV_TRANSLATOR_ONLY))
-    # Checkout LLVM-SPIRV-Translator needed for XE
-    FetchContent_Populate(spirv-translator
-        QUIET
-        GIT_REPOSITORY ${SPIRV_TRANSLATOR_URL}
-        GIT_TAG ${SPIRV_TRANSLATOR_SHA}
-        GIT_SHALLOW OFF
-        GIT_PROGRESS ON
-        SOURCE_DIR spirv-translator
-        )
-endif()
+if (NOT SKIP_FETCHING_XE_DEPS)
+    if (XE_DEPS OR (SKIP_STAGE2 AND BUILD_SPIRV_TRANSLATOR_ONLY))
+        # Checkout LLVM-SPIRV-Translator needed for XE
+        FetchContent_Populate(spirv-translator
+            QUIET
+            GIT_REPOSITORY ${SPIRV_TRANSLATOR_URL}
+            GIT_TAG ${SPIRV_TRANSLATOR_SHA}
+            GIT_SHALLOW OFF
+            GIT_PROGRESS ON
+            SOURCE_DIR spirv-translator
+            )
+    endif()
 
-if (XE_DEPS OR (SKIP_STAGE2 AND BUILD_VC_INTRINSICS_ONLY))
-    # Checkout vc-intrinsics needed for XE
-    FetchContent_Populate(vc-intrinsics
-        QUIET
-        GIT_REPOSITORY ${VC_INTRINSICS_URL}
-        GIT_TAG ${VC_INTRINSICS_SHA}
-        GIT_SHALLOW OFF
-        GIT_PROGRESS ON
-        SOURCE_DIR vc-intrinsics
-        UPDATE_COMMAND git checkout .
-        PATCH_COMMAND git apply ${PROJECT_SOURCE_DIR}/vc_intrinsics.patch
-        )
-endif()
+    if (XE_DEPS OR (SKIP_STAGE2 AND BUILD_VC_INTRINSICS_ONLY))
+        # Checkout vc-intrinsics needed for XE
+        FetchContent_Populate(vc-intrinsics
+            QUIET
+            GIT_REPOSITORY ${VC_INTRINSICS_URL}
+            GIT_TAG ${VC_INTRINSICS_SHA}
+            GIT_SHALLOW OFF
+            GIT_PROGRESS ON
+            SOURCE_DIR vc-intrinsics
+            UPDATE_COMMAND git checkout .
+            PATCH_COMMAND git apply ${PROJECT_SOURCE_DIR}/vc_intrinsics.patch
+            )
+    endif()
 
-if (XE_DEPS OR (SKIP_STAGE2 AND BUILD_L0_LOADER_ONLY))
-    # Checkout level-zero needed for XE
-    FetchContent_Populate(l0-source
-        QUIET
-        GIT_REPOSITORY ${L0_URL}
-        GIT_TAG ${L0_TAG}
-        GIT_SHALLOW ON
-        GIT_PROGRESS ON
-        SOURCE_DIR l0-source
-        )
+    if (XE_DEPS OR (SKIP_STAGE2 AND BUILD_L0_LOADER_ONLY))
+        # Checkout level-zero needed for XE
+        FetchContent_Populate(l0-source
+            QUIET
+            GIT_REPOSITORY ${L0_URL}
+            GIT_TAG ${L0_TAG}
+            GIT_SHALLOW ON
+            GIT_PROGRESS ON
+            SOURCE_DIR l0-source
+            )
+    endif()
 endif()
 
 
