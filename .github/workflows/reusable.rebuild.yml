@@ -344,7 +344,7 @@ jobs:
       run: |
         cmake $ISPC_HOME/superbuild -B build-${{ inputs.version }} --preset os -DLLVM_VERSION=${{ inputs.version }} -DCMAKE_INSTALL_PREFIX=$LLVM_HOME/bin-${{ inputs.version }} -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DXE_DEPS=OFF -DMACOS_UNIVERSAL_BIN=ON -DLLVM_DISABLE_ASSERTIONS=OFF -DISPC_ANDROID_NDK_PATH=/Users/Shared/android-ndk-r20b
         cmake --build build-${{ inputs.version }}
-        rmdir /s /q build-${{ inputs.version }}
+        rm -rf build-${{ inputs.version }}
 
     - name: Pack LLVM
       run: |
@@ -381,7 +381,7 @@ jobs:
       run: |
         cmake $ISPC_HOME/superbuild -B build-${{ inputs.version }} --preset os -DLLVM_VERSION=${{ inputs.version }} -DCMAKE_INSTALL_PREFIX=$LLVM_HOME/bin-${{ inputs.version }} -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DXE_DEPS=OFF -DMACOS_UNIVERSAL_BIN=ON -DLLVM_DISABLE_ASSERTIONS=ON -DISPC_ANDROID_NDK_PATH=/Users/Shared/android-ndk-r20b
         cmake --build build-${{ inputs.version }}
-        rmdir /s /q build-${{ inputs.version }}
+        rm -rf build-${{ inputs.version }}
 
     - name: Pack LLVM
       run: |
