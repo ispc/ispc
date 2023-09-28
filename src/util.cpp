@@ -40,6 +40,23 @@
 
 #include <llvm/IR/DataLayout.h>
 
+#ifdef ISPC_HOST_IS_APPLE
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_17_0
+// Provide own definition of std::__libcpp_verbose_abort to avoid missing
+// symbols error in macOS builds.
+// See https://libcxx.llvm.org/UsingLibcxx.html#overriding-the-default-termination-handler
+// It is not quite clear why and where this symbol is used.
+void std::__libcpp_verbose_abort(char const *format, ...) {
+    std::va_list list;
+    va_start(list, format);
+    std::vfprintf(stderr, format, list);
+    va_end(list);
+
+    std::abort();
+}
+#endif // ISPV_LLVM_17_0
+#endif // ISPC_HOST_IS_APPLE
+
 using namespace ispc;
 
 /** Returns the width of the terminal where the compiler is running.
