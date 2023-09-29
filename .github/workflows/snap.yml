@@ -23,6 +23,16 @@ on:
         required: true
         defaule: false
         type: boolean
+      channel:
+        description: 'Choose the channel to publish to'
+        required: true
+        default: 'stable'
+        type: choice
+        options:
+          - 'stable'
+          - 'candidate'
+          - 'beta'
+          - 'edge'
 
 jobs:
   snap-arm64:
@@ -45,6 +55,7 @@ jobs:
           sed "s|@ISPC_ARCHIVE@|$ISPC_ARCHIVE|g" -i snap/snapcraft.yaml
           echo "ISPC_VERSION=$ISPC_VERSION" >> $GITHUB_STEP_SUMMARY
           echo "ISPC_ARCHIVE=$ISPC_ARCHIVE" >> $GITHUB_STEP_SUMMARY
+          echo "channel is ${{ inputs.channel }}" >> $GITHUB_STEP_SUMMARY
           echo "Configured snapcraft.yaml:"
           echo "--------------------------"
           cat snap/snapcraft.yaml
@@ -64,7 +75,13 @@ jobs:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         with:
           snap: ${{ steps.build.outputs.snap }}
-          release: stable
+          release: ${{ inputs.channel }}
+
+      - name: Upload snap package
+        uses: actions/upload-artifact@v3
+        with:
+          name: ispc_snap
+          path: ispc_*.snap
 
   snap-amd64:
     runs-on: ubuntu-latest
@@ -86,6 +103,7 @@ jobs:
           sed "s|@ISPC_ARCHIVE@|$ISPC_ARCHIVE|g" -i snap/snapcraft.yaml
           echo "ISPC_VERSION=$ISPC_VERSION" >> $GITHUB_STEP_SUMMARY
           echo "ISPC_ARCHIVE=$ISPC_ARCHIVE" >> $GITHUB_STEP_SUMMARY
+          echo "channel is ${{ inputs.channel }}" >> $GITHUB_STEP_SUMMARY
           echo "Configured snapcraft.yaml:"
           echo "--------------------------"
           cat snap/snapcraft.yaml
@@ -105,4 +123,10 @@ jobs:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         with:
           snap: ${{ steps.build.outputs.snap }}
-          release: stable
+          release: ${{ inputs.channel }}
+
+      - name: Upload snap package
+        uses: actions/upload-artifact@v3
+        with:
+          name: ispc_snap
+          path: ispc_*.snap
