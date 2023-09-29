@@ -36,3 +36,5 @@ parts:
 apps:
   ispc:
     command: bin/ispc
+    plugs:
+      - home
