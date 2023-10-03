@@ -60,10 +60,10 @@ Module *ispc::m;
 // Target
 
 #if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64)
-#define ARM_HOST
+#define ISPC_HOST_IS_ARM 
 #endif
 
-#if !defined(ISPC_HOST_IS_WINDOWS) && !defined(ARM_HOST)
+#if !defined(ISPC_HOST_IS_WINDOWS) && !defined(ISPC_HOST_IS_ARM)
 // __cpuid() and __cpuidex() are defined on Windows in <intrin.h> for x86/x64.
 // On *nix they need to be defined manually through inline assembler.
 static void __cpuid(int info[4], int infoType) {
@@ -75,7 +75,7 @@ static void __cpuidex(int info[4], int level, int count) {
 }
 #endif // !ISPC_HOST_IS_WINDOWS && !__ARM__ && !__AARCH64__
 
-#ifndef ARM_HOST
+#ifndef ISPC_HOST_IS_ARM 
 static bool __os_has_avx_support() {
 #if defined(ISPC_HOST_IS_WINDOWS)
     // Check if the OS will save the YMM registers
@@ -116,10 +116,10 @@ static bool __os_has_avx512_support() {
     return (rEAX & 0xE6) == 0xE6;
 #endif // !defined(ISPC_HOST_IS_WINDOWS)
 }
-#endif // !ARM_HOST
+#endif // !ISPC_HOST_IS_ARM
 
 static ISPCTarget lGetSystemISA() {
-#ifdef ARM_HOST
+#ifdef ISPC_HOST_IS_ARM
     return ISPCTarget::neon_i32x4;
 #else
     int info[4];
