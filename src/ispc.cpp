@@ -60,10 +60,12 @@ Module *ispc::m;
 // Target
 
 #if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64)
-#define ISPC_HOST_IS_ARM 
+#define ISPC_HOST_IS_ARM
+#elif defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
+#define ISPC_HOST_IS_X86
 #endif
 
-#if !defined(ISPC_HOST_IS_WINDOWS) && !defined(ISPC_HOST_IS_ARM)
+#if !defined(ISPC_HOST_IS_WINDOWS) && defined(ISPC_HOST_IS_X86)
 // __cpuid() and __cpuidex() are defined on Windows in <intrin.h> for x86/x64.
 // On *nix they need to be defined manually through inline assembler.
 static void __cpuid(int info[4], int infoType) {
@@ -73,9 +75,9 @@ static void __cpuid(int info[4], int infoType) {
 static void __cpuidex(int info[4], int level, int count) {
     __asm__ __volatile__("cpuid" : "=a"(info[0]), "=b"(info[1]), "=c"(info[2]), "=d"(info[3]) : "0"(level), "2"(count));
 }
-#endif // !ISPC_HOST_IS_WINDOWS && !__ARM__ && !__AARCH64__
+#endif // !ISPC_HOST_IS_WINDOWS && __x86_64__
 
-#ifndef ISPC_HOST_IS_ARM 
+#ifdef ISPC_HOST_IS_X86
 static bool __os_has_avx_support() {
 #if defined(ISPC_HOST_IS_WINDOWS)
     // Check if the OS will save the YMM registers
@@ -116,12 +118,12 @@ static bool __os_has_avx512_support() {
     return (rEAX & 0xE6) == 0xE6;
 #endif // !defined(ISPC_HOST_IS_WINDOWS)
 }
-#endif // !ISPC_HOST_IS_ARM
+#endif // ISPC_HOST_IS_X86
 
 static ISPCTarget lGetSystemISA() {
-#ifdef ISPC_HOST_IS_ARM
+#if defined(ISPC_HOST_IS_ARM)
     return ISPCTarget::neon_i32x4;
-#else
+#elif defined(ISPC_HOST_IS_X86)
     int info[4];
     __cpuid(info, 1);
 
@@ -220,6 +222,8 @@ static ISPCTarget lGetSystemISA() {
         Error(SourcePos(), "Unable to detect supported SSE/AVX ISA.  Exiting.");
         exit(1);
     }
+#else
+#error "Unsupported host CPU architecture."
 #endif
 }
 
