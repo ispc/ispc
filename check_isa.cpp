@@ -19,7 +19,7 @@
 #define HOST_IS_APPLE
 #endif
 
-#if !defined(__arm__) && !defined(__aarch64__) && !defined(_M_ARM64)
+#if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
 #if !defined(HOST_IS_WINDOWS)
 static void __cpuid(int info[4], int infoType) {
     __asm__ __volatile__("cpuid" : "=a"(info[0]), "=b"(info[1]), "=c"(info[2]), "=d"(info[3]) : "0"(infoType));
@@ -85,12 +85,12 @@ static bool __os_enabled_amx_support() {
     return (rEAX & 0x60000) == 0x60000;
 #endif // !defined(HOST_IS_WINDOWS)
 }
-#endif // !__arm__
+#endif // !__x86_64__
 
 static const char *lGetSystemISA() {
 #if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64)
     return "ARM NEON";
-#else
+#elif defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
     int info[4];
     __cpuid(info, 1);
 
@@ -199,6 +199,8 @@ static const char *lGetSystemISA() {
     } else {
         return "Error";
     }
+#else
+#error "Unsupported host CPU architecture."
 #endif
 }
 
