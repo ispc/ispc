@@ -1,3 +1,10 @@
+=== v1.21.1 === (10 October 2023)
+
+A minor ISPC update with interop related fixes for ISPCRT needed to oneAPI Render Kit release.
+
+This update contains only Linux oneAPI x86, macOS universal and Windows release
+binaries. Use v1.21.0 binaries for other platforms.
+
 === v1.21.0 === (18 August 2023)
 
 ISPC release with template function specializations support; changed rules for signed integer overflow, which match
