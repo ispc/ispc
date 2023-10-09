@@ -24,7 +24,8 @@ if (DPCPP_COMPILER)
     endif()
 
     # oneAPI distributions ship the llvm utility binaries under bin-llvm
-    set(DPCPP_LLVM_BIN_HINT "bin-llvm")
+    # or under bin/compiler (since oneAPI release 2023.3?)
+    set(DPCPP_LLVM_BIN_HINT "bin-llvm" "bin/compiler")
 else()
     if(DEFINED ENV{SYCL_BUNDLE_ROOT})
         set(DPCPP_DIR "$ENV{SYCL_BUNDLE_ROOT}")
@@ -52,7 +53,12 @@ else()
     set(DPCPP_LLVM_BIN_HINT "bin")
 endif()
 
-find_library(DPCPP_LIB sycl HINTS ${DPCPP_DIR}/lib)
+# Under windows oneAPI releases sycl, library has version number in name,
+# so add extra names with explicit versions.
+# TODO! it is needed to be updated to support newer releases.
+find_library(DPCPP_LIB
+    NAMES sycl sycl7
+    HINTS ${DPCPP_DIR}/lib)
 if (NOT DPCPP_LIB)
     set(FAILURE_REASON "${FAILURE_REASON};Failed to find sycl library under ${DPCPP_DIR}/lib/")
 endif()
