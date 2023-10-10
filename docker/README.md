@@ -19,14 +19,16 @@ Note that adding all of these `Dockerfile`s to regular CI runs is currently prob
 
 By default `Dockerfile`s are assumed to be built as `x86` images, but some can be built as `aarch64` images (note that `ispc` is a cross-compiler, so regardless the host arch, it can target any supported CPU architecuture, if it's enabled in `ispc` build).
 
- * [ubuntu/16.04/cpu\_ispc\_build/Dockerfile](ubuntu/16.04/cpu_ispc_build/Dockerfile) `Ubuntu 16.04` image. CPU only. It's outdated due to EOL for Python 3.6 repo for Ubuntu 16.04.
+ * [ubuntu/16.04/cpu\_ispc\_build/Dockerfile](ubuntu/16.04/cpu_ispc_build/Dockerfile) `Ubuntu 16.04` image. CPU only.
  * [ubuntu/18.04/cpu\_ispc\_build/Dockerfile](ubuntu/18.04/cpu_ispc_build/Dockerfile) `Ubuntu 18.04` image. CPU only. Ubuntu 18.04 is used to enabled maximum compatibility. This Dockerfile does LLVM selfbuild in two stages, which enables splitting it to two separate CI jobs. The image is used in CI for nightly LLVM builds. Works on both `x86` and `aarch64`.
  * [ubuntu/20.04/cpu\_ispc\_build/Dockerfile](ubuntu/20.04/cpu_ispc_build/Dockerfile) `Ubuntu 20.04` image. CPU only. Works on both `x86` and `aarch64`.
  * [ubuntu/20.04/xpu\_ispc\_build/Dockerfile](ubuntu/20.04/xpu_ispc_build/Dockerfile) `Ubuntu 20.04` image. XPU (CPU+GPU). This is the recommended environment for XPU experiments.
+ * [ubuntu/22.04/cpu\_ispc\_build/Dockerfile](ubuntu/22.04/cpu_ispc_build/Dockerfile) `Ubuntu 22.04` image. CPU only. Works on both `x86` and `aarch64`.
+ * [ubuntu/22.04/xpu\_ispc\_build/Dockerfile](ubuntu/22.04/xpu_ispc_build/Dockerfile) `Ubuntu 22.04` image. XPU (CPU+GPU).
  * [centos/7/cpu\_ispc\_build/Dockerfile](centos/7/cpu_ispc_build/Dockerfile) `CentOS 7` image. CPU only. Works on both `x86` and `aarch64`.
  * [centos/7/xpu\_ispc\_build/Dockerfile](centos/7/xpu_ispc_build/Dockerfile) `CentOS 7` image. XPU (CPU+GPU). `x86` image only. This image is used for building `ispc` package for future binary releases.
  * [centos/8/cpu\_ispc\_build/Dockerfile](centos/8/cpu_ispc_build/Dockerfile) `CentOS 8` image. CPU only. Works on both `x86` and `aarch64`.
- * [fedora/Dockerfile](fedora/Dockerfile) Fedora 36 with CPU only build linked with system LLVM and Clang shared libraries.
+ * [fedora/Dockerfile](fedora/Dockerfile) Fedora 39 with CPU only build linked with system LLVM and Clang shared libraries.
 
 XPU-enabled builds
 ------------------
@@ -41,6 +43,11 @@ cd docker/ubuntu/xpu_ispc_build
 docker build -t ispc_xpu_env:latest .
 docker run -it --device=/dev/dri:/dev/dri --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -v $HOME:$HOME ispc_xpu_env:latest /bin/bash
 ```
+
+XPU docker `CentOS 7` has build argument `TBB`. It has two possible values
+`default` and `oneapi`. Under `default`, tbb dependencies is installed from
+system repository. When `oneapi` provided, intel-oneapi-tbb is installed
+instead of.
 
 Docker switches used in the command line above are:
  * `--device=/dev/dri:/dev/dri` is required to share GPU device between the host and the container.
