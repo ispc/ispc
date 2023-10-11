@@ -11,6 +11,7 @@ on:
     paths:
       - "llvm_patches/*17_0*"
       - "alloy.py"
+      - "superbuild/*"
       - ".github/workflows/rebuild-llvm17.yml"
       - ".github/workflows/reusable.rebuild.yml"
   workflow_dispatch:
