@@ -9,10 +9,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG REPO=ispc/ispc
 ARG SHA=main
-ARG LLVM_VERSION=16.0
-ARG L0L_VER=1.14.0
-ARG VC_INTRINSICS_COMMIT_SHA="77f069b71fa9042bc4b2f68d06942a43c8ecec73"
-ARG SPIRV_TRANSLATOR_COMMIT_SHA="8703d43bd14d000fc630c2d3918d918819d23741"
+ARG LTO=OFF
 
 # !!! Make sure that your docker config provides enough memory to the container,
 # otherwise LLVM build may fail, as it will use all the cores available to container.
@@ -21,26 +18,17 @@ ARG SPIRV_TRANSLATOR_COMMIT_SHA="8703d43bd14d000fc630c2d3918d918819d23741"
 RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends install -y clang-8 build-essential \
     libnuma1 opencl-headers ocl-icd-libopencl1 clinfo vim gcc g++ git python3-dev imagemagick m4 bison flex libncurses-dev \
     libtinfo-dev libc6-dev-i386 cpio lsb-core wget gnupg netcat-openbsd libtbb-dev libglfw3-dev pkgconf gdb gcc-multilib g++-multilib curl ca-certificates && \
+    apt-get --no-install-recommends install -y ninja-build && \
     rm -rf /var/lib/apt/lists/*
 
-# Download and install required version of cmake (3.20) for ISPC build
-RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://github.com/Kitware/CMake/releases/download/v3.20.5/cmake-3.20.5-linux-x86_64.sh && \
-    sh cmake-3.20.5-linux-x86_64.sh --prefix=/usr/local --skip-license && rm cmake-3.20.5-linux-x86_64.sh
-
-WORKDIR /home/src
-
-RUN git clone https://github.com/$REPO.git ispc
-
-WORKDIR /home/src/ispc
-RUN git checkout $SHA
-ENV ISPC_HOME=/home/src/ispc
-
-# LLVM
-ENV LLVM_HOME=/home/tools/llvm
-RUN python3 ./alloy.py -b --version="$LLVM_VERSION" --selfbuild && \
-    rm -rf "$LLVM_HOME"/build-"$LLVM_VERSION" "$LLVM_HOME"/llvm-"$LLVM_VERSION" "$LLVM_HOME"/bin-"$LLVM_VERSION"_temp "$LLVM_HOME"/build-"$LLVM_VERSION"_temp
-
-WORKDIR /home/packages
+# Download and install required version of cmake (3.23.5 for both x86 and aarch64) as required for superbuild preset jsons.
+RUN if [[ $(uname -m) =~ "x86" ]]; then \
+        export CMAKE_URL="https://cmake.org/files/v3.23/cmake-3.23.5-linux-x86_64.sh"; \
+    else \
+        export CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v3.23.5/cmake-3.23.5-linux-aarch64.sh"; \
+    fi && \
+    wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 $CMAKE_URL && \
+    sh cmake-*.sh --prefix=/usr/local --skip-license && rm -rf cmake-*.sh
 
 # Add package repository and install graphics packages
 RUN set -eux && wget -qO - https://repositories.intel.com/graphics/intel-graphics.key | gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg && \
@@ -53,35 +41,20 @@ RUN set -eux && wget -qO - https://repositories.intel.com/graphics/intel-graphic
     mesa-vdpau-drivers mesa-vulkan-drivers va-driver-all && \
     rm -rf /var/lib/apt/lists/*
 
-# L0 loader
 WORKDIR /home/src
-RUN git clone https://github.com/oneapi-src/level-zero.git
-WORKDIR /home/src/level-zero
-RUN git checkout v$L0L_VER && mkdir -p build
-WORKDIR /home/src/level-zero/build
-RUN cmake -DCMAKE_INSTALL_PREFIX=/home/deps ../ && make install -j"$(nproc)"
+RUN git clone https://github.com/$REPO.git ispc
 
-# vc-intrinsics
-WORKDIR /home/src
-RUN git clone https://github.com/intel/vc-intrinsics.git
-WORKDIR /home/src/vc-intrinsics
-RUN git checkout $VC_INTRINSICS_COMMIT_SHA && mkdir -p build
-WORKDIR /home/src/vc-intrinsics/build
-RUN cmake -DLLVM_DIR=$LLVM_HOME/bin-$LLVM_VERSION/lib/cmake/llvm -DCMAKE_INSTALL_PREFIX=/home/deps ../ && make install -j"$(nproc)"
-
-# SPIRV Translator
-WORKDIR /home/src
-RUN git clone https://github.com/KhronosGroup/SPIRV-LLVM-Translator.git
-WORKDIR /home/src/SPIRV-LLVM-Translator
-RUN git checkout $SPIRV_TRANSLATOR_COMMIT_SHA && mkdir -p build
-WORKDIR /home/src/SPIRV-LLVM-Translator/build
-RUN cmake -DLLVM_DIR=$LLVM_HOME/bin-$LLVM_VERSION/lib/cmake/llvm/ -DCMAKE_INSTALL_PREFIX=/home/deps ../ && make install -j"$(nproc)"
-
-# ISPC build
-ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
 WORKDIR /home/src/ispc
-RUN mkdir -p build
-WORKDIR /home/src/ispc/build
-RUN cmake -DXE_ENABLED=ON -DCMAKE_INSTALL_PREFIX=/home/ispc/ -DXE_DEPS_DIR=/home/deps -DLEVEL_ZERO_ROOT=/home/deps ../ && make install -j"$(nproc)" && (make check-all -j"$(nproc)" || true)
-# Add ISPC to PATH
-ENV PATH=/home/ispc/bin:$PATH
+# Build Clang/LLVM, XE dependencies and then ISPC.
+RUN git checkout $SHA && \
+    cmake superbuild \
+        -B build \
+        --preset os \
+        -DLTO=$LTO \
+        -DINSTALL_ISPC=ON \
+        -DINSTALL_TOOLCHAIN=ON \
+        -DCMAKE_INSTALL_PREFIX=/usr/local && \
+    cmake --build build && \
+    (cmake --build build --target ispc-stage2-check-all || true) && \
+    mv build/build-ispc-stage2/src/ispc-stage2-build/*.tar.gz ./ && \
+    rm -rf build
