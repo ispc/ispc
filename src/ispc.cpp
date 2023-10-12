@@ -1802,7 +1802,7 @@ bool Target::checkIntrinsticSupport(llvm::StringRef name, SourcePos pos) {
         AllCPUs a;
         std::string featureName = name.substr(0, name.find('.')).str();
         if (CPUFeatures[a.GetTypeFromName(this->getCPU())].count(featureName) == 0) {
-            Error(pos, "Target specfic LLVM intrinsic \"%s\" not supported on \"%s\" CPU.", name.data(),
+            Error(pos, "Target specific LLVM intrinsic \"%s\" not supported on \"%s\" CPU.", name.data(),
                   this->getCPU().c_str());
             return false;
         }
