@@ -2742,7 +2742,7 @@ static bool lSwitchASTPreVisit(ASTNode *node, void *d) {
     } else if (ds != nullptr) {
         // And complain if we've seen another 'default' label..
         if (svi->defaultBlock != nullptr) {
-            Error(ds->pos, "Multiple \"default\" lables in switch statement.");
+            Error(ds->pos, "Multiple \"default\" labels in switch statement.");
             return true;
         } else {
             // Otherwise create a basic block for the code following the
