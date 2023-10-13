@@ -67,10 +67,12 @@ RUN git clone https://github.com/$REPO.git ispc
 # extract it, add to path and set SDE_HOME.
 
 WORKDIR /usr/local/src/ispc
+# Set PATH and LD_LIBRARY_PATH instead of `source /opt/rh/devtoolset-8/enable` due to hadolint warning.
+ENV PATH=/opt/rh/devtoolset-8/root/usr/bin:$PATH
+ENV LD_LIBRARY_PATH=/opt/rh/devtoolset-8/root/usr/lib64:/opt/rh/devtoolset-8/root/usr/lib:/opt/rh/devtoolset-8/root/usr/lib64/dyninst:/opt/rh/devtoolset-8/root/usr/lib/dyninst:/opt/rh/devtoolset-8/root/usr/lib64:/opt/rh/devtoolset-8/root/usr/lib:$LD_LIBRARY_PATH
 
 # Build Clang/LLVM, XE dependencies and then ISPC.
 RUN git checkout $SHA && \
-    source /opt/rh/devtoolset-8/enable && \
     cmake superbuild \
         -B build \
         --preset os \
