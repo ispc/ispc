@@ -641,7 +641,8 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
             // not efficient for Xe targets. Moreover when this pass is used
             // some integer division tests are failing on TGLLP Windows.
             // Disable this pass on Xe until the problem is fixed on BE side.
-            optPM.addLoopPass(llvm::SimpleLoopUnswitchPass(false), 293);
+            // Note: enable both trivial and non-trivial loop unswitching.
+            optPM.addLoopPass(llvm::SimpleLoopUnswitchPass(true /* NonTrivial */, true /* Trivial */), 293);
         }
         optPM.commitLoopToFunctionPassManager(true, true);
 
