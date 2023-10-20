@@ -333,8 +333,7 @@ jobs:
     - name: Running tests
       run: |
         echo PATH=$PATH
-        # Just sanity check for 14.0
-        ./alloy.py -r --only="stability current -O2" --only-targets="avx2-i32x8" --time --update-errors=FP
+        ./alloy.py -r --only="stability current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Check
       run: |
@@ -1104,8 +1103,7 @@ jobs:
       run: |
         $env:ISPC_HOME = "$pwd"
         .github/workflows/scripts/load-vs-env.ps1 "${{ matrix.arch }}"
-        # Just sanity check for 14.0
-        python .\alloy.py -r --only="stability ${{ matrix.arch }} current -O2" --only-targets="avx2-i32x8" --time --update-errors=FP
+        python .\alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Check
       run: |
