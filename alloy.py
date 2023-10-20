@@ -363,6 +363,8 @@ def check_targets():
     #   flag for sde to emulate this platform,
     #   flag is this is supported on current platform
     # ]
+    # Note: we have to put AVX and AVX1.1 both to the list of natively supported targets in target_dict,
+    # otherwise it results in bizarre situation when on, e.g., AVX2 we run AVX1 targets under SDE.
     target_dict = OrderedDict([
       ("SSE2",   [["sse2-i32x4",  "sse2-i32x8"],
                  ["SSE2"], "-p4", False]),
@@ -375,13 +377,13 @@ def check_targets():
       ("AVX1.1", [["avx1-i32x4",  "avx1-i32x8",  "avx1-i32x16",  "avx1-i64x4"],
                  ["SSE2", "SSE4.1", "SSE4.2", "AVX"], "-snb", False]),
       ("AVX2",   [["avx2-i32x4", "avx2-i32x8",  "avx2-i32x16",  "avx2-i64x4", "avx2-i8x32", "avx2-i16x16"],
-                 ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX2"], "-hsw", False]),
+                 ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2"], "-hsw", False]),
       ("KNL",    [["avx512knl-x16"],
-                 ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX2", "KNL"], "-knl", False]),
+                 ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "KNL"], "-knl", False]),
       ("SKX",    [["avx512skx-x16", "avx512skx-x8", "avx512skx-x4", "avx512skx-x64", "avx512skx-x32"],
-                 ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX2", "SKX"], "-skx", False]),
+                 ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "SKX"], "-skx", False]),
       ("SPR",    [["avx512spr-x16", "avx512spr-x8", "avx512spr-x4", "avx512spr-x64", "avx512spr-x32"],
-                 ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX2", "SKX", "SPR"], "-spr", False])
+                 ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "SKX", "SPR"], "-spr", False])
     ])
 
     hw_arch = take_lines(check_isa, "first").split()[1]
@@ -390,6 +392,8 @@ def check_targets():
         alloy_error("Architecture " + hw_arch + " was not recognized", 1)
 
     # Mark all compatible architecutres in the dictionary.
+    # Note: we have to put AVX and AVX1.1 both to the list of natively supported targets target_dict,
+    # otherwise it results in bizarre situation when on, e.g., AVX2 we run AVX1 targets under SDE.
     for compatible_arch in target_dict[hw_arch][1]:
         target_dict[compatible_arch][3] = True
 
@@ -399,11 +403,16 @@ def check_targets():
         targets = item[0]
         if item[3]:
             # Supported natively
-            result = result + targets
+            for t in targets:
+                # AVX1.1 and AVX aliased each other so avoid adding twice same arch.
+                if t not in result:
+                    result.append(t)
         else:
             # Supported through SDE
             for target in targets:
-                result_sde = result_sde + [[item[2], target]]
+                # AVX1.1 and AVX aliased each other so avoid adding twice same arch.
+                if [item[2], target] not in result_sde:
+                    result_sde.append([item[2], target])
 
     # now check what targets we have with the help of SDE
     sde_exists = get_sde()
