@@ -105,6 +105,12 @@ class Type : public Traceable {
     /** Returns true if the underlying type is an varying atomic or uniform vector type */
     bool IsVaryingAtomicOrUniformVectorType() const;
 
+    /** Returns true if the underlying type is a varying atomic type */
+    bool IsVaryingAtomic() const;
+
+    /** Returns true if the underlying type is an uniform vector type */
+    bool IsUniformVector() const;
+
     /** Returns true if the underlying type is a reference type */
     bool IsReferenceType() const;
 

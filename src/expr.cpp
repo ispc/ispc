@@ -6301,7 +6301,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     case AtomicType::TYPE_FLOAT16: {
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingAtomicOrUniformVectorType())
+            if (fromType->IsVaryingAtomic())
                 // If we have a bool vector of non-i1 elements, first
                 // truncate down to a single bit.
                 exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
@@ -6355,7 +6355,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     case AtomicType::TYPE_FLOAT: {
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingAtomicOrUniformVectorType())
+            if (fromType->IsVaryingAtomic())
                 // If we have a bool vector of non-i1 elements, first
                 // truncate down to a single bit.
                 exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
@@ -6409,7 +6409,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     case AtomicType::TYPE_DOUBLE: {
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingAtomicOrUniformVectorType())
+            if (fromType->IsVaryingAtomic())
                 // truncate bool vector values to i1s if necessary.
                 exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int to double
@@ -6460,7 +6460,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     case AtomicType::TYPE_INT8: {
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingAtomicOrUniformVectorType())
+            if (fromType->IsVaryingAtomic())
                 exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6490,8 +6490,9 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     case AtomicType::TYPE_UINT8: {
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingAtomicOrUniformVectorType())
+            if (fromType->IsVaryingAtomic()) {
                 exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
+            }
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
@@ -6526,7 +6527,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     case AtomicType::TYPE_INT16: {
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingAtomicOrUniformVectorType())
+            if (fromType->IsVaryingAtomic())
                 exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6560,7 +6561,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     case AtomicType::TYPE_UINT16: {
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingAtomicOrUniformVectorType())
+            if (fromType->IsVaryingAtomic())
                 exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6600,7 +6601,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     case AtomicType::TYPE_INT32: {
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingAtomicOrUniformVectorType())
+            if (fromType->IsVaryingAtomic())
                 exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6634,7 +6635,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     case AtomicType::TYPE_UINT32: {
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingAtomicOrUniformVectorType())
+            if (fromType->IsVaryingAtomic())
                 exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6686,7 +6687,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     case AtomicType::TYPE_INT64: {
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingAtomicOrUniformVectorType())
+            if (fromType->IsVaryingAtomic())
                 exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6718,7 +6719,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     case AtomicType::TYPE_UINT64: {
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingAtomicOrUniformVectorType())
+            if (fromType->IsVaryingAtomic())
                 exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6768,7 +6769,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     case AtomicType::TYPE_BOOL: {
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingAtomicOrUniformVectorType()) {
+            if (fromType->IsVaryingAtomic()) {
                 // truncate bool vector values to i1s if necessary.
                 exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
             }
