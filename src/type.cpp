@@ -157,6 +157,10 @@ bool Type::IsVaryingAtomicOrUniformVectorType() const {
             (CastType<VectorType>(this) != nullptr && IsUniformType()));
 }
 
+bool Type::IsVaryingAtomic() const { return IsAtomicType() && IsVaryingType(); }
+
+bool Type::IsUniformVector() const { return IsVectorType() && IsUniformType(); }
+
 bool Type::IsReferenceType() const { return (CastType<ReferenceType>(this) != nullptr); }
 
 bool Type::IsVectorType() const { return (CastType<VectorType>(this) != nullptr); }
