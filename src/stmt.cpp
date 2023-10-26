@@ -160,7 +160,7 @@ void DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             }
         }
 
-        llvm::Type *llvmType = sym->type->LLVMType(g->ctx);
+        llvm::Type *llvmType = sym->type->LLVMStorageType(g->ctx);
         if (llvmType == nullptr) {
             AssertPos(pos, m->errorCount > 0);
             return;
@@ -185,7 +185,7 @@ void DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
                     initExpr = ::Optimize(initExpr);
                 }
 
-                std::pair<llvm::Constant *, bool> cinitPair = initExpr->GetConstant(sym->type);
+                std::pair<llvm::Constant *, bool> cinitPair = initExpr->GetStorageConstant(sym->type);
                 cinit = cinitPair.first;
                 if (cinit == nullptr)
                     Error(initExpr->pos,
