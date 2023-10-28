@@ -5299,9 +5299,8 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
 
             llvm::Value *ptmp =
                 ctx->AddElementOffset(resultPtrInfo, i, llvm::Twine(resultPtrInfo->getPointer()->getName()) + idStr);
-            // TODO: when we have swizzle on bool type, it breaks here on StoreInst.
-            // The condition in StoreInst checking that SwitchBoolSize is needed doesn't detect it.
-            ctx->StoreInst(elementValue, new AddressInfo(ptmp, exprVectorType->GetElementType()), elementPtrType);
+            ctx->StoreInst(elementValue, new AddressInfo(ptmp, exprVectorType->GetElementType()),
+                           elementPtrType->GetBaseType());
         }
 
         return ctx->LoadInst(resultPtrInfo, memberType, llvm::Twine(basePtr->getName()) + "_swizzle");
