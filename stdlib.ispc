@@ -1635,15 +1635,33 @@ __declspec(safe, cost2) static inline uniform double ceil(uniform double x) { re
 ///////////////////////////
 __declspec(safe, cost2) static inline float16 trunc(float16 x) { return __trunc_varying_half(x); }
 
+__declspec(safe, cost2) static inline float16 fmodf(float16 x, float16 y) { return x - trunc(x / y) * y; }
+
 __declspec(safe, cost2) static inline uniform float16 trunc(uniform float16 x) { return __trunc_uniform_half(x); }
+
+__declspec(safe, cost2) static inline uniform float16 fmodf(uniform float16 x, uniform float16 y) {
+    return x - trunc(x / y) * y;
+}
 
 __declspec(safe, cost2) static inline float trunc(float x) { return __trunc_varying_float(x); }
 
+__declspec(safe, cost2) static inline float fmodf(float x, float y) { return x - trunc(x / y) * y; }
+
 __declspec(safe, cost2) static inline uniform float trunc(uniform float x) { return __trunc_uniform_float(x); }
+
+__declspec(safe, cost2) static inline uniform float fmodf(uniform float x, uniform float y) {
+    return x - trunc(x / y) * y;
+}
 
 __declspec(safe, cost2) static inline double trunc(double x) { return __trunc_varying_double(x); }
 
+__declspec(safe, cost2) static inline double fmodf(double x, double y) { return x - trunc(x / y) * y; }
+
 __declspec(safe, cost2) static inline uniform double trunc(uniform double x) { return __trunc_uniform_double(x); }
+
+__declspec(safe, cost2) static inline uniform double fmodf(uniform double x, uniform double y) {
+    return x - trunc(x / y) * y;
+}
 
 __declspec(safe) static inline float rcp(float v) { return __rcp_varying_float(v); }
 
