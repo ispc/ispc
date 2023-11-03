@@ -9,6 +9,8 @@
 // RUN: %{cc} %t.o %t.cpp.o -o %t.cpp.bin
 // RUN: %t.cpp.bin | FileCheck %s
 
+// REQUIRES: !MACOS_HOST
+
 // CHECK: uint x=99
 
 #ifdef ISPC
