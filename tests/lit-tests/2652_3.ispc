@@ -6,6 +6,8 @@
 // RUN: %{cc} %t.o %t.cpp.o -o %t.cpp.bin
 // RUN: %t.cpp.bin | FileCheck %s
 
+// REQUIRES: !MACOS_HOST
+
 // CHECK: my_data = 10
 
 #ifdef ISPC

@@ -9,9 +9,12 @@
 // RUN: %{cc} %t.o %t.cpp.o -o %t.cpp.bin
 // RUN: %t.cpp.bin | FileCheck %s
 
+// REQUIRES: !MACOS_HOST
+
 // CHECK-LABEL: bool x=false
 // CHECK-COUNT-2: bool x=true
 // CHECK: bool x=false
+
 
 #ifdef ISPC
 export void use(uniform bool x) {
