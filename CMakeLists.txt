@@ -6,7 +6,7 @@
 #
 # ispc CMakeLists.txt
 #
-cmake_minimum_required(VERSION 3.19)
+cmake_minimum_required(VERSION 3.15)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -276,10 +276,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Version.cmake)
 # Get ispc version
 get_ispc_version("${CMAKE_CURRENT_SOURCE_DIR}/common/version.h")
 
-# tests/lit-tests/lit.cfg uses distutils that removed since python3.12
-# GitHub Windows images has recently installed this although they have older versions alongside.
-# Unfortunately, range syntax requires cmake 3.19 at least.
-find_package(Python3 3.6...<3.12 REQUIRED)
+find_package(Python3 REQUIRED)
     if (NOT Python3_Interpreter_FOUND)
         message(FATAL_ERROR "Python interpreter is not found")
     endif()
