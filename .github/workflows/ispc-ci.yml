@@ -88,7 +88,6 @@ jobs:
 
     - name: Check environment
       run: |
-        ./check_env.py
         which -a clang
         cat /proc/cpuinfo
 
@@ -125,7 +124,6 @@ jobs:
 
     - name: Check environment
       run: |
-        ./check_env.py
         which -a clang
         cat /proc/cpuinfo
 
@@ -162,7 +160,6 @@ jobs:
 
     - name: Check environment
       run: |
-        ./check_env.py
         which -a clang
         cat /proc/cpuinfo
 
@@ -199,7 +196,6 @@ jobs:
 
     - name: Check environment
       run: |
-        ./check_env.py
         which -a clang
         cat /proc/cpuinfo
 
@@ -236,7 +232,6 @@ jobs:
 
     - name: Check environment
       run: |
-        ./check_env.py
         which -a clang
         cat /proc/cpuinfo
 
@@ -274,7 +269,6 @@ jobs:
 
     - name: Check environment
       run: |
-        ./check_env.py
         which -a clang
         cat /proc/cpuinfo
 
@@ -616,7 +610,6 @@ jobs:
 
     - name: Check environment
       run: |
-        ./check_env.py
         which -a clang
         llvm-config --system-libs
         sysctl -n machdep.cpu.brand_string
@@ -660,7 +653,6 @@ jobs:
 
     - name: Check environment
       run: |
-        ./check_env.py
         which -a clang
         llvm-config --system-libs
         sysctl -n machdep.cpu.brand_string
@@ -704,7 +696,6 @@ jobs:
 
     - name: Check environment
       run: |
-        ./check_env.py
         which -a clang
         llvm-config --system-libs
         sysctl -n machdep.cpu.brand_string

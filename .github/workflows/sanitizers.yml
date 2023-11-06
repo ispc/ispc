@@ -30,7 +30,6 @@ jobs:
     # We will use system gcc until we rebuild LLVM with compiler-rt.
     - name: Check environment
       run: |
-        ./check_env.py
         which -a gcc
         cat /proc/cpuinfo
 

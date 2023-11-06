@@ -29,7 +29,6 @@ jobs:
 
     - name: Check environment
       run: |
-        ./check_env.py
         cat /proc/cpuinfo
         which -a clang
         clang -v
@@ -57,7 +56,6 @@ jobs:
 
     - name: Check environment
       run: |
-        ./check_env.py
         cat /proc/cpuinfo
         which -a clang
         gcc-11 -v
