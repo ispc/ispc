@@ -335,7 +335,6 @@ jobs:
 
     - name: Check environment
       run: |
-        ./check_env.py
         which -a clang
         sysctl -n machdep.cpu.brand_string
         sysctl -n hw.ncpu
@@ -372,7 +371,6 @@ jobs:
 
     - name: Check environment
       run: |
-        ./check_env.py
         which -a clang
         sysctl -n machdep.cpu.brand_string
         sysctl -n hw.ncpu

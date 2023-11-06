@@ -112,7 +112,6 @@ jobs:
 
     - name: Check environment
       run: |
-        ./check_env.py
         which -a clang
         cat /proc/cpuinfo
 

@@ -58,11 +58,9 @@ for:
         7z.exe x -ttar llvm*tar
         set PATH=%LLVM_HOME%\bin-%LLVM_VERSION%\bin;%PATH%
   before_build:
-      # check_env.py script relies on pkg_resources that removed from python 3.12
     - cmd: |-
         call %vspath%\Community\VC\Auxiliary\Build\vcvars64.bat
         cd %ISPC_HOME%
-        C:\Python311\python.exe check_env.py
         mkdir build && cd build
         cmake .. -Thost=x64 -G %generator% -DCMAKE_BUILD_TYPE=%configuration% -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%\install -DISPC_PREPARE_PACKAGE=ON -DM4_EXECUTABLE=C:\cygwin64\bin\m4.exe -DISPC_CROSS=ON -DISPC_GNUWIN32_PATH=%CROSS_TOOLS%\gnuwin32 -DWASM_ENABLED=%WASM% -DISPC_INCLUDE_BENCHMARKS=ON
   build_script:
