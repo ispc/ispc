@@ -140,7 +140,6 @@ if (INSTALL_WITH_XE_DEPS OR INSTALL_ISPC)
 endif()
 message(STATUS "ISPC_STAGE2_INSTALL_PREFIX is ${ISPC_STAGE2_INSTALL_PREFIX}")
 message(STATUS "ISPC_STAGE3_INSTALL_PREFIX is ${ISPC_STAGE3_INSTALL_PREFIX}")
-message(STATUS "ISPC_STAGE2_CMAKE_ARGS is ${ISPC_STAGE2_CMAKE_ARGS}")
 
 if (BUILD_STAGE1_TOOLCHAIN_ONLY OR
     BUILD_SPIRV_TRANSLATOR_ONLY OR BUILD_VC_INTRINSICS_ONLY OR BUILD_L0_LOADER_ONLY)
@@ -800,7 +799,7 @@ else()
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/stage2-toolchain.cmake
         )
 endif()
-
+message(STATUS "ISPC_STAGE2_CMAKE_ARGS is ${ISPC_STAGE2_CMAKE_ARGS}")
 
 # LLVM stage3 specific cmake arguments, here we imply that PGO always works with LTO.
 # PGO specific compiler flags is inside toolchain file.
