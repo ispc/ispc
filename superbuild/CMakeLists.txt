@@ -48,6 +48,7 @@ set(ISPC_ANDROID_NDK_PATH "NO" CACHE STRING "Path to Android NDK. It is needed t
 set(ISPC_SIGN_KEY "NO" CACHE STRING "Key to sign macOS or Windows build.")
 option(ISPC_INCLUDE_BENCHMARKS "Include ISPC benchmarks (ispc_benchmarks target)" OFF)
 option(ISPC_CROSS "Enable ISPC build with cross compilation support" ON)
+option(ISPC_PACKAGE_EXAMPLES "Package examples into the same archive with ISPC binaries" ON)
 option(LLVM_DISABLE_ASSERTIONS "Enable LLVM build without assertions" ON)
 option(LLVM_BUILD_OPENMP "Build OpenMP as part of LLVM" OFF)
 option(EXTERNAL_VERBOSE "Enable verbose for external project build and install commands" OFF)
@@ -287,6 +288,8 @@ else()
     message(STATUS "ISPC_SIGN_KEY is set to some value.")
 endif()
 message(STATUS "ISPC_INCLUDE_BENCHMARKS is ${ISPC_INCLUDE_BENCHMARKS}")
+message(STATUS "ISPC_CROSS is ${ISPC_CROSS}")
+message(STATUS "ISPC_PACKAGE_EXAMPLES is ${ISPC_PACKAGE_EXAMPLES}")
 message(STATUS "LLVM_DISABLE_ASSERTIONS is ${LLVM_DISABLE_ASSERTIONS}")
 message(STATUS "LLVM_BUILD_OPENMP is ${LLVM_BUILD_OPENMP}")
 message(STATUS "LTO is ${LTO}")
@@ -685,7 +688,7 @@ message(STATUS "LLVM stage2 cmake arguments ${LLVM_STAGE2_CMAKE_ARGS}")
 list(APPEND ISPC_COMMON_CMAKE_ARGS
     -DCMAKE_BUILD_TYPE=${BUILD_TYPE_ISPC}
     -DISPC_PREPARE_PACKAGE=ON
-    -DISPC_PACKAGE_EXAMPLES=OFF
+    -DISPC_PACKAGE_EXAMPLES=${ISPC_PACKAGE_EXAMPLES}
     )
 if (ISPC_CROSS)
     list(APPEND ISPC_COMMON_CMAKE_ARGS
@@ -799,7 +802,13 @@ else()
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/stage2-toolchain.cmake
         )
 endif()
+
+list(APPEND ISPC_STAGE2_CMAKE_TARGETS install package)
+if (NOT ISPC_PACKAGE_EXAMPLES)
+    list(APPEND package_examples)
+endif()
 message(STATUS "ISPC_STAGE2_CMAKE_ARGS is ${ISPC_STAGE2_CMAKE_ARGS}")
+message(STATUS "ISPC_STAGE2_CMAKE_TARGETS is ${ISPC_STAGE2_CMAKE_TARGETS}")
 
 # LLVM stage3 specific cmake arguments, here we imply that PGO always works with LTO.
 # PGO specific compiler flags is inside toolchain file.
@@ -1455,7 +1464,7 @@ if (NOT BUILD_STAGE2_TOOLCHAIN_ONLY)
         CMAKE_GENERATOR Ninja
         CMAKE_ARGS ${ISPC_STAGE2_CMAKE_ARGS} -DCMAKE_INSTALL_PREFIX=${ISPC_STAGE2_INSTALL_PREFIX}
         BUILD_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE2}
-        INSTALL_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE2} install package package-examples
+        INSTALL_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE2} ${ISPC_STAGE2_CMAKE_TARGETS}
         )
 
     # Custom target to run stage2 ISPC tests
