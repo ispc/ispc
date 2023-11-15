@@ -557,6 +557,16 @@ behavior for signed integers, though it may limit some compiler optimizations.
 Template function specializations with explicit template arguments were introduced to the
 language, please refer to `Function Templates`_ section for more details.
 
+Updating ISPC Programs For Changes In ISPC 1.22.0
+-------------------------------------------------
+
+Template operators with explicit specializations and instantiations were introduced to
+the language. The usage of different function specifiers with templates were fixed and
+aligned, please refer to `Function Templates`_ section for more details.
+
+Now, command-line switch `--dwarf-version=<n>` forces DWARF format debug info generation
+on Windows. It allows to debug ISPC code linked with MinGW generated code.
+
 Getting Started with ISPC
 =========================
 
