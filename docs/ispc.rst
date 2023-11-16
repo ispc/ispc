@@ -69,6 +69,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.19.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.20.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.21.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.22.0`_
 
 * `Getting Started with ISPC`_
 
