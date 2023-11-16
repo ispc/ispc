@@ -77,8 +77,8 @@ architectures (Gen9 and Xe family).
 ## Installation
 ### Official Release Binaries
 
-You can download the official release binaries from [the release
-page](https://github.com/ispc/ispc/releases). Choose the appropriate version
+You can download the official release binaries from [the latest release
+page](https://github.com/ispc/ispc/releases/latest). Choose the appropriate version
 for your operating system and architecture.
 
 ### Linux (Snap Store)
@@ -128,6 +128,20 @@ source /opt/intel/oneapi/ispc/latest/env/vars.sh
 
 Thanks to community support, `ispc` is also available through a variety of
 package managers on multiple operating systems.
+
+### Windows
+
+To install `ispc` on Windows, you can download the latest release as `zip`
+archive from
+[the latest release page](https://github.com/ispc/ispc/releases/latest).
+Then you need to unpack that to some directory. It is user's responsibility to
+set-up permissions for this directory according to the principle of least
+privilege.
+
+Moreover, `ispc` depends on run-time components of Visual C++ (DLLs). These
+libraries can be installed with Microsoft Visual C++ Redistributable package.
+Instruction to install them can be found
+[here](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist).
 
 ## Additional Resources
 
