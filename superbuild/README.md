@@ -43,9 +43,9 @@ $ cmake ${ISPC_HOME}/superbuild --preset os -DCMAKE_INSTALL_PREFIX=/tmp/stage2-p
 $ cmake --build .
 
 # Build and install only stage2 ISPC
-$ cmake ${ISPC_HOME}/superbuild --preset os -DCMAKE_INSTALL_PREFIX=/tmp/ispc -DBUILD_ISPC_ONLY=ON -DPREBUILD_STAGE2=/path/to/stage2-archive.tar.gz
-$ cmake ${ISPC_HOME}/superbuild --preset os -DCMAKE_INSTALL_PREFIX=/tmp/ispc -DBUILD_ISPC_ONLY=ON -DLTO=ON -DPREBUILD_STAGE2=/path/to/stage2-lto-archive.tar.gz
-$ cmake ${ISPC_HOME}/superbuild --preset os -DCMAKE_INSTALL_PREFIX=/tmp/ispc -DBUILD_ISPC_ONLY=ON -DPGO=ON -DPREBUILD_STAGE2=/path/to/stage2-pgo-archive.tar.gz
+$ cmake ${ISPC_HOME}/superbuild --preset os -DCMAKE_INSTALL_PREFIX=/tmp/ispc -DPREBUILT_STAGE2=/path/to/stage2-archive.tar.gz
+$ cmake ${ISPC_HOME}/superbuild --preset os -DCMAKE_INSTALL_PREFIX=/tmp/ispc -DLTO=ON -DPREBUILT_STAGE2=/path/to/stage2-lto-archive.tar.gz
+$ cmake ${ISPC_HOME}/superbuild --preset os -DCMAKE_INSTALL_PREFIX=/tmp/ispc -DPGO=ON -DPREBUILT_STAGE2=/path/to/stage2-pgo-archive.tar.gz
 
 # Build and install only dependencies
 $ cmake ${ISPC_HOME}/superbuild --preset os -DCMAKE_INSTALL_PREFIX=/opt/spirv-translator -DBUILD_SPIRV_TRANSLATOR_ONLY=ON
@@ -58,6 +58,26 @@ $ cmake --build .
 # Build and install ISPC with XE dependencies
 $ cmake ${ISPC_HOME}/superbuild --preset os -DPREBUILT_STAGE2_PATH=/tmp/stage2-path -DCMAKE_INSTALL_PREFIX=/opt/ispc-with-xe/ -DINSTALL_WITH_XE_DEPS=ON
 $ cmake --build .
+
+# Run check-all target of ISPC stage2
+$ cmake --build . --target ispc-stage2-check-all
+
+# Run check-all, test and ispc_benchmarks targers of ISPC stage2
+$ cmake --build . --target ispc-stage2-check
+
+# Package llvm stage2 toolchain that can be used as -DPREBUILT_STAGE2 argument
+$ cmake --build . --target package-stage2
+
+# Disable LLVM assertions
+$ cmake ${ISPC_HOME}/superbuild --preset os -DLLVM_DISABLE_ASSERTIONS=OFF
+
+# macOS universal builds
+$ cmake ${ISPC_HOME}/superbuild --preset os DMACOS_UNIVERSAL_BIN=ON -DISPC_ANDROID_NDK_PATH=<ndk-path>
+
+# macOS x86_64 and arm64 only builds
+$ cmake ${ISPC_HOME}/superbuild --preset os DMACOS_UNIVERSAL_BIN=OFF -DCMAKE_OSX_ARCHITECTURES=arm64 -DISPC_ANDROID_NDK_PATH=<ndk-path>
+$ cmake ${ISPC_HOME}/superbuild --preset os DMACOS_UNIVERSAL_BIN=OFF -DCMAKE_OSX_ARCHITECTURES=x86_64 -DISPC_ANDROID_NDK_PATH=<ndk-path>
+
 ```
 
 # Build Process
