@@ -20,6 +20,7 @@ using namespace ispc;
 static uint64_t lParseBinary(const char *ptr, SourcePos pos, char **endPtr);
 static int lParseInteger(bool dotdotdot);
 static int lParseFP();
+static int lParseOperator(const char *ptr);
 static void lCComment(SourcePos *);
 static void lCppComment(SourcePos *);
 static void lNextValidChar(SourcePos *, char const*&);
@@ -29,7 +30,6 @@ static bool lConsumePragma(YYSTYPE *, SourcePos *);
 static void lHandleCppHash(SourcePos *);
 static void lStringConst(YYSTYPE *, SourcePos *);
 static double lParseHexFloat(const char *ptr);
-static yytokentype lParseOperator(const char *ptr);
 extern const char *RegisterDependency(const std::string &fileName);
 
 #define YY_USER_ACTION \
@@ -1162,7 +1162,7 @@ lParseHexFloat(const char *ptr) {
 
 /** Parse an operator.
 */
-static yytokentype
+static int
 lParseOperator(const char *ptr) {
     yylval.stringVal = new std::string(ptr);
     if (m->symbolTable->LookupFunctionTemplate(yytext))
