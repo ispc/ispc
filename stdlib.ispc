@@ -399,7 +399,7 @@ static inline void memcpy(void *uniform dst, void *uniform src, uniform int32 co
             ((int8 * uniform) dst)[j] = ((int8 * uniform) src)[j];
         }
     } else {
-        __memcpy32((int8 * uniform) dst, (int8 * uniform) src, count);
+        __memcpy32((uniform int8 * uniform) dst, (uniform int8 * uniform) src, count);
     }
 }
 
@@ -409,7 +409,7 @@ static inline void memcpy64(void *uniform dst, void *uniform src, uniform int64 
             ((int8 * uniform) dst)[j] = ((int8 * uniform) src)[j];
         }
     } else {
-        __memcpy64((int8 * uniform) dst, (int8 * uniform) src, count);
+        __memcpy64((uniform int8 * uniform) dst, (uniform int8 * uniform) src, count);
     }
 }
 
@@ -427,7 +427,7 @@ static inline void memcpy(void *varying dst, void *varying src, int32 count) {
                 ((int8 * uniform) d)[j] = ((int8 * uniform) s)[j];
             }
         } else {
-            __memcpy32((int8 * uniform) d, (int8 * uniform) s, extract(count, i));
+            __memcpy32((uniform int8 * uniform) d, (uniform int8 * uniform) s, extract(count, i));
         }
     }
 }
@@ -446,7 +446,7 @@ static inline void memcpy64(void *varying dst, void *varying src, int64 count) {
                 ((int8 * uniform) d)[j] = ((int8 * uniform) s)[j];
             }
         } else {
-            __memcpy64((int8 * uniform) d, (int8 * uniform) s, extract(count, i));
+            __memcpy64((uniform int8 * uniform) d, (uniform int8 * uniform) s, extract(count, i));
         }
     }
 }
@@ -463,7 +463,7 @@ static inline void memmove(void *uniform dst, void *uniform src, uniform int32 c
             }
         }
     } else {
-        __memmove32((int8 * uniform) dst, (int8 * uniform) src, count);
+        __memmove32((uniform int8 * uniform) dst, (uniform int8 * uniform) src, count);
     }
 }
 
@@ -479,7 +479,7 @@ static inline void memmove64(void *uniform dst, void *uniform src, uniform int64
             }
         }
     } else {
-        __memmove64((int8 * uniform) dst, (int8 * uniform) src, count);
+        __memmove64((uniform int8 * uniform) dst, (uniform int8 * uniform) src, count);
     }
 }
 
@@ -504,7 +504,7 @@ static inline void memmove(void *varying dst, void *varying src, int32 count) {
                 }
             }
         } else {
-            __memmove32((int8 * uniform) d, (int8 * uniform) s, c);
+            __memmove32((uniform int8 * uniform) d, (uniform int8 * uniform) s, c);
         }
     }
 }
@@ -530,7 +530,7 @@ static inline void memmove64(void *varying dst, void *varying src, int64 count) 
                 }
             }
         } else {
-            __memmove64((int8 * uniform) d, (int8 * uniform) s, c);
+            __memmove64((uniform int8 * uniform) d, (uniform int8 * uniform) s, c);
         }
     }
 }
@@ -541,7 +541,7 @@ static inline void memset(void *uniform ptr, uniform int8 val, uniform int32 cou
             ((int8 * uniform) ptr)[j] = val;
         }
     } else {
-        __memset32((int8 * uniform) ptr, val, count);
+        __memset32((uniform int8 * uniform) ptr, val, count);
     }
 }
 
@@ -551,7 +551,7 @@ static inline void memset64(void *uniform ptr, uniform int8 val, uniform int64 c
             ((int8 * uniform) ptr)[j] = val;
         }
     } else {
-        __memset64((int8 * uniform) ptr, val, count);
+        __memset64((uniform int8 * uniform) ptr, val, count);
     }
 }
 
@@ -566,7 +566,7 @@ static inline void memset(void *varying ptr, int8 val, int32 count) {
                 ((int8 * uniform) d)[j] = extract(val, i);
             }
         } else {
-            __memset32((int8 * uniform) pa[i], extract(val, i), extract(count, i));
+            __memset32((uniform int8 * uniform) pa[i], extract(val, i), extract(count, i));
         }
     }
 }
@@ -582,7 +582,7 @@ static inline void memset64(void *varying ptr, int8 val, int64 count) {
                 ((int8 * uniform) d)[j] = extract(val, i);
             }
         } else {
-            __memset64((int8 * uniform) pa[i], extract(val, i), extract(count, i));
+            __memset64((uniform int8 * uniform) pa[i], extract(val, i), extract(count, i));
         }
     }
 }
@@ -2147,11 +2147,11 @@ ATOMIC_DECL_CMPXCHG(double, double, IntMaskType, int64)
 // void * variants of swap and compare exchange
 
 static inline void *atomic_swap_global(void **uniform ptr, void *value) {
-    return (void *)atomic_swap_global((intptr_t * uniform) ptr, (intptr_t)value);
+    return (void *)atomic_swap_global((uniform intptr_t * uniform) ptr, (intptr_t)value);
 }
 
 static inline void *uniform atomic_swap_global(void **uniform ptr, void *uniform value) {
-    return (void *uniform)atomic_swap_global((intptr_t * uniform) ptr, (uniform intptr_t)value);
+    return (void *uniform)atomic_swap_global((uniform intptr_t * uniform) ptr, (uniform intptr_t)value);
 }
 
 static inline void *atomic_swap_global(void **ptr, void *value) {
@@ -2159,12 +2159,12 @@ static inline void *atomic_swap_global(void **ptr, void *value) {
 }
 
 static inline void *atomic_compare_exchange_global(void **uniform ptr, void *oldval, void *newval) {
-    return (void *)atomic_compare_exchange_global((intptr_t * uniform) ptr, (intptr_t)oldval, (intptr_t)newval);
+    return (void *)atomic_compare_exchange_global((uniform intptr_t * uniform) ptr, (intptr_t)oldval, (intptr_t)newval);
 }
 
 static inline void *uniform atomic_compare_exchange_global(void **uniform ptr, void *uniform oldval,
                                                            void *uniform newval) {
-    return (void *uniform)atomic_compare_exchange_global((intptr_t * uniform) ptr, (uniform intptr_t)oldval,
+    return (void *uniform)atomic_compare_exchange_global((uniform intptr_t * uniform) ptr, (uniform intptr_t)oldval,
                                                          (uniform intptr_t)newval);
 }
 
@@ -2329,11 +2329,11 @@ LOCAL_CMPXCHG(double)
 // void * variants of swap and compare exchange
 
 static inline void *atomic_swap_local(void **uniform ptr, void *value) {
-    return (void *)atomic_swap_local((intptr_t * uniform) ptr, (intptr_t)value);
+    return (void *)atomic_swap_local((uniform intptr_t * uniform) ptr, (intptr_t)value);
 }
 
 static inline void *uniform atomic_swap_local(void **uniform ptr, void *uniform value) {
-    return (void *uniform)atomic_swap_local((intptr_t * uniform) ptr, (uniform intptr_t)value);
+    return (void *uniform)atomic_swap_local((uniform intptr_t * uniform) ptr, (uniform intptr_t)value);
 }
 
 static inline void *atomic_swap_local(void **ptr, void *value) {
@@ -2341,12 +2341,12 @@ static inline void *atomic_swap_local(void **ptr, void *value) {
 }
 
 static inline void *atomic_compare_exchange_local(void **uniform ptr, void *oldval, void *newval) {
-    return (void *)atomic_compare_exchange_local((intptr_t * uniform) ptr, (intptr_t)oldval, (intptr_t)newval);
+    return (void *)atomic_compare_exchange_local((uniform intptr_t * uniform) ptr, (intptr_t)oldval, (intptr_t)newval);
 }
 
 static inline void *uniform atomic_compare_exchange_local(void **uniform ptr, void *uniform oldval,
                                                           void *uniform newval) {
-    return (void *uniform)atomic_compare_exchange_local((intptr_t * uniform) ptr, (uniform intptr_t)oldval,
+    return (void *uniform)atomic_compare_exchange_local((uniform intptr_t * uniform) ptr, (uniform intptr_t)oldval,
                                                         (uniform intptr_t)newval);
 }
 
@@ -5299,7 +5299,7 @@ static inline uniform bool rdrand(int16 *uniform ptr) {
     if (__have_native_rand == false)
         return false;
     else
-        return __rdrand_i16((int8 * uniform) ptr);
+        return __rdrand_i16((uniform int8 * uniform) ptr);
 }
 
 static inline bool rdrand(varying int16 *uniform ptr) {
@@ -5341,7 +5341,7 @@ static inline uniform bool rdrand(int32 *uniform ptr) {
     if (__have_native_rand == false)
         return false;
     else
-        return __rdrand_i32((int8 * uniform) ptr);
+        return __rdrand_i32((uniform int8 * uniform) ptr);
 }
 
 static inline bool rdrand(varying int32 *uniform ptr) {
@@ -5383,7 +5383,7 @@ static inline uniform bool rdrand(int64 *uniform ptr) {
     if (__have_native_rand == false)
         return false;
     else
-        return __rdrand_i64((int8 * uniform) ptr);
+        return __rdrand_i64((uniform int8 * uniform) ptr);
 }
 
 static inline bool rdrand(varying int64 *uniform ptr) {
