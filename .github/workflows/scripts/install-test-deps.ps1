@@ -1,5 +1,5 @@
-# Choco-Install is GH Actions wrappers around choco, which does retries
-Choco-Install -PackageName wget
+# Install-ChocoPackage is GH Actions wrappers around choco, which does retries
+Install-ChocoPackage wget
 
 # Install ISPC package
 Expand-Archive $pwd\ispc-trunk-windows.zip -DestinationPath $pwd
