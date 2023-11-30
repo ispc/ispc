@@ -599,7 +599,7 @@ def file_check(results, host, target):
     ispc_output = options.ispc_output
 # Detect LLVM version
     temp1 = common.take_lines(host.ispc_exe + " --version", "first")
-    temp2 = re.search(r'LLVM [0-9]*.[0-9]*', temp1)
+    temp2 = re.search(r'LLVM [0-9]*\.[0-9]*', temp1)
     if temp2 != None:
         llvm_version = temp2.group()
     else:
@@ -607,11 +607,11 @@ def file_check(results, host, target):
 # Detect compiler version
     if OS != "Windows":
         temp1 = common.take_lines(options.compiler_exe + " --version", "first")
-        temp2 = re.search(r"[0-9]*.[0-9]*.[0-9]", temp1)
+        temp2 = re.search(r"[0-9]*\.[0-9]*\.[0-9]", temp1)
         if temp2 == None:
-            temp3 = re.search(r"[0-9]*.[0-9]*", temp1)
+            temp3 = re.search(r"[0-9]*\.[0-9]*", temp1)
         else:
-            temp3 = re.search(r"[0-9]*.[0-9]*", temp2.group())
+            temp3 = re.search(r"[0-9]*\.[0-9]*", temp2.group())
         compiler_version = options.compiler_exe + temp3.group()
     else:
         compiler_version = "cl"
