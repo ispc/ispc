@@ -21,7 +21,7 @@ jobs:
     uses: ./.github/workflows/reusable.rebuild.yml
     with:
       version: '17.0'
-      full_version: '17.0.1'
+      full_version: '17.0.6'
       ubuntu: '18.04'
       vs_generator: 'Visual Studio 16 2019'
       vs_version_str: 'vs2019'
