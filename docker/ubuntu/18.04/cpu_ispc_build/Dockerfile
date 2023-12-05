@@ -11,6 +11,8 @@ SHELL ["/bin/bash", "-c"]
 
 ARG REPO=ispc/ispc
 ARG SHA=main
+ARG LTO=OFF
+ARG PGO=OFF
 ARG LLVM_VERSION
 ARG LLVM_DISABLE_ASSERTIONS
 
@@ -69,6 +71,7 @@ RUN git clone https://github.com/$REPO.git ispc && \
     cmake ispc/superbuild \
         -B build \
         --preset os \
+        -DLTO=$LTO \
         -DXE_DEPS=OFF \
         -DLLVM_VERSION="$LLVM_VERSION" \
         -DBUILD_STAGE1_TOOLCHAIN_ONLY=ON \
@@ -86,6 +89,7 @@ WORKDIR /usr/local/src
 RUN cmake ispc/superbuild \
         -B build \
         --preset os \
+        -DLTO=$LTO \
         -DXE_DEPS=OFF \
         -DLLVM_VERSION="$LLVM_VERSION" \
         -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON \
@@ -110,6 +114,7 @@ WORKDIR /usr/local/src
 RUN cmake ispc/superbuild \
         -B build \
         --preset os \
+        -DLTO=$LTO \
         -DXE_DEPS=OFF \
         -DCMAKE_CXX_FLAGS=-Werror \
         -DPREBUILT_STAGE2_PATH="$LLVM_HOME"/bin-"$LLVM_VERSION" \
