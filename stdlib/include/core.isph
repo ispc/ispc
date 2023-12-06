@@ -28,7 +28,8 @@
 #define ISPC_ATTRIBUTE_SUPPORTED
 
 #if defined(ISPC_TARGET_GEN9) || defined(ISPC_TARGET_XELP) || defined(ISPC_TARGET_XEHPG) ||                            \
-    defined(ISPC_TARGET_XEHPC) || defined(ISPC_TARGET_XELPG) || defined(ISPC_TARGET_XE2HPG)
+    defined(ISPC_TARGET_XEHPC) || defined(ISPC_TARGET_XELPG) || defined(ISPC_TARGET_XE2HPG) ||                         \
+    defined(ISPC_TARGET_XE2LPG)
 #define ISPC_TARGET_XE
 #endif
 

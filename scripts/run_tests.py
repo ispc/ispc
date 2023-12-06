@@ -841,6 +841,9 @@ def run_tests(options1, args, print_version):
 
     target = TargetConfig(options.arch, options.target, options.device)
 
+    if target.target.startswith("xe2lpg") and not 'ISPCRT_IGC_OPTIONS' in os.environ:
+       os.environ['ISPCRT_IGC_OPTIONS'] = '+ -ftranslate-legacy-memory-intrinsics'
+
     if options.debug_check and (not target.is_xe() or not host.is_linux()):
         print("--debug_check is supported only for xe target and only on Linux OS")
         exit_code = 1
@@ -849,6 +852,7 @@ def run_tests(options1, args, print_version):
     print_debug("Testing ISPC compiler: " + host.ispc_exe + "\n", s, run_tests_log)
     print_debug("Testing ISPC target: %s\n" % options.target, s, run_tests_log)
     print_debug("Testing ISPC arch: %s\n" % options.arch, s, run_tests_log)
+    print_debug("ISPCRT_IGC_OPTIONS: %s\n" % os.environ.get('ISPCRT_IGC_OPTIONS', None), s, run_tests_log)
 
     set_compiler_exe(host, options)
     set_ispc_output(target, options)

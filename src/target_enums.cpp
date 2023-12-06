@@ -223,7 +223,13 @@ ISPCTarget operator++(ISPCTarget &target, int dummy) {
     static_assert(static_cast<underlying>(ISPCTarget::xe2hpg_x32) ==
                       static_cast<underlying>(ISPCTarget::xe2hpg_x16) + 1,
                   "Enum ISPCTarget is not sequential");
-    static_assert(static_cast<underlying>(ISPCTarget::error) == static_cast<underlying>(ISPCTarget::xe2hpg_x32) + 1,
+    static_assert(static_cast<underlying>(ISPCTarget::xe2lpg_x16) ==
+                      static_cast<underlying>(ISPCTarget::xe2hpg_x32) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::xe2lpg_x32) ==
+                      static_cast<underlying>(ISPCTarget::xe2lpg_x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::error) == static_cast<underlying>(ISPCTarget::xe2lpg_x32) + 1,
                   "Enum ISPCTarget is not sequential");
     return target = static_cast<ISPCTarget>(static_cast<underlying>(target) + 1);
 }
@@ -394,6 +400,10 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::xe2hpg_x16;
     } else if (target == "xe2hpg-x32") {
         return ISPCTarget::xe2hpg_x32;
+    } else if (target == "xe2lpg-x16") {
+        return ISPCTarget::xe2lpg_x16;
+    } else if (target == "xe2lpg-x32") {
+        return ISPCTarget::xe2lpg_x32;
     }
 
     return ISPCTarget::error;
@@ -545,6 +555,10 @@ std::string ISPCTargetToString(ISPCTarget target) {
         return "xe2hpg-x16";
     case ISPCTarget::xe2hpg_x32:
         return "xe2hpg-x32";
+    case ISPCTarget::xe2lpg_x16:
+        return "xe2lpg-x16";
+    case ISPCTarget::xe2lpg_x32:
+        return "xe2lpg-x32";
     case ISPCTarget::none:
         return "none";
     case ISPCTarget::error:
@@ -637,6 +651,8 @@ bool ISPCTargetIsGen(ISPCTarget target) {
     case ISPCTarget::xelpg_x16:
     case ISPCTarget::xe2hpg_x16:
     case ISPCTarget::xe2hpg_x32:
+    case ISPCTarget::xe2lpg_x16:
+    case ISPCTarget::xe2lpg_x32:
         return true;
     default:
         return false;
