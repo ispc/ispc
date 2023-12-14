@@ -218,7 +218,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       LLVM_VERSION: "17.0"
-      LLVM_TAR: llvm-17.0.1-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
@@ -676,7 +676,7 @@ jobs:
     runs-on: macos-12
     env:
       LLVM_VERSION: "17.0"
-      LLVM_TAR: llvm-17.0.1-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-17.0.6-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@v3
@@ -967,7 +967,7 @@ jobs:
     runs-on: windows-2019
     env:
       LLVM_VERSION: "17.0"
-      LLVM_TAR: llvm-17.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      LLVM_TAR: llvm-17.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
       LLVM_HOME: "C:\\projects\\llvm"
       CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       BUILD_TYPE: "Release"
