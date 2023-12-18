@@ -4,6 +4,7 @@ Install-ChocoPackage wget
 Install-ChocoPackage 7zip
 Install-ChocoPackage cygwin
 Install-ChocoPackage cyg-get
+Install-ChocoPackage ninja
 
 # Install M4 exec and put it into PATH
 cyg-get m4
