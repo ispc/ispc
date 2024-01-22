@@ -1,7 +1,9 @@
-# Copyright 2022 Intel Corporation
+# Copyright 2022-2024 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
 name: Rebuild LLVM 14.0
+
+permissions: read-all
 
 on:
   push:

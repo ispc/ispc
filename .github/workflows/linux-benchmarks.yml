@@ -1,7 +1,9 @@
-# Copyright 2020-2023, Intel Corporation
+# Copyright 2020-2024, Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
 name: Linux benchmarks / LLVM 16.0
+
+permissions: read-all
 
 on:
   pull_request_target:
