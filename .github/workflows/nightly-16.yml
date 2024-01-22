@@ -1,4 +1,4 @@
-# Copyright 2022-2023, Intel Corporation
+# Copyright 2022-2024, Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
 # Nightly Linux run.
@@ -8,6 +8,8 @@
 ####################################################################
 
 name: Nightly tests / LLVM 16.0
+
+permissions: read-all
 
 # Run daily - test sse2-avx512 targets @ -O0/-O1/-O2
 on:

@@ -1,7 +1,9 @@
-# Copyright 2022 Intel Corporation
+# Copyright 2022-2024 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
 name: Reusable LLVM rebuild
+
+permissions: read-all
 
 on:
   workflow_call:

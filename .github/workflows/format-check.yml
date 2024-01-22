@@ -1,7 +1,9 @@
-# Copyright 2020-2023, Intel Corporation
+# Copyright 2020-2024, Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
 name: Check code formatting
+
+permissions: read-all
 
 on: [push, pull_request]
 
