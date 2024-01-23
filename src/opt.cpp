@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -309,7 +309,7 @@ void DebugModulePassManager::addPassAndDebugPrint(std::string name, DebugModuleP
     if (g->off_stages.find(m_passNumber) == g->off_stages.end()) {
         if (g->debug_stages.find(m_passNumber) != g->debug_stages.end()) {
             char banner[100];
-            snprintf(banner, sizeof(banner), "\n\n*****LLVM IR after phase : %s*****\n\n", name.c_str());
+            snprintf(banner, sizeof(banner), "\n\n; *****LLVM IR after phase : %s*****\n\n", name.c_str());
             llvm::raw_ostream *outputStream = nullptr;
             if (g->dumpFile) {
                 std::error_code EC;
@@ -320,12 +320,29 @@ void DebugModulePassManager::addPassAndDebugPrint(std::string name, DebugModuleP
                     outputStream = outputDebugDumps.back().get();
                 }
             }
-            if (kind == Passes::Function) {
-                fpmVec.back()->addPass(llvm::PrintFunctionPass(outputStream ? *outputStream : llvm::outs(), banner));
-            } else if (kind == Passes::Module) {
-                mpm.addPass(llvm::PrintModulePass(outputStream ? *outputStream : llvm::outs(), banner));
-            } else if (kind == Passes::Loop) {
-                lpmVec.back()->addPass(llvm::PrintLoopPass(outputStream ? *outputStream : llvm::outs(), banner));
+            if (g->dumpFile) {
+                if (kind == Passes::Function) {
+                    commitFunctionToModulePassManager();
+                    mpm.addPass(llvm::PrintModulePass(outputStream ? *outputStream : llvm::outs(), banner));
+                    initFunctionPassManager();
+                } else if (kind == Passes::Loop) {
+                    commitLoopToFunctionPassManager();
+                    commitFunctionToModulePassManager();
+                    mpm.addPass(llvm::PrintModulePass(outputStream ? *outputStream : llvm::outs(), banner));
+                    initFunctionPassManager();
+                    initLoopPassManager();
+                } else if (kind == Passes::Module) {
+                    mpm.addPass(llvm::PrintModulePass(outputStream ? *outputStream : llvm::outs(), banner));
+                }
+            } else {
+                if (kind == Passes::Function) {
+                    fpmVec.back()->addPass(
+                        llvm::PrintFunctionPass(outputStream ? *outputStream : llvm::outs(), banner));
+                } else if (kind == Passes::Module) {
+                    mpm.addPass(llvm::PrintModulePass(outputStream ? *outputStream : llvm::outs(), banner));
+                } else if (kind == Passes::Loop) {
+                    lpmVec.back()->addPass(llvm::PrintLoopPass(outputStream ? *outputStream : llvm::outs(), banner));
+                }
             }
         }
     }
