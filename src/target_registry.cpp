@@ -98,7 +98,7 @@ TargetLibRegistry::TargetLibRegistry() {
             }
             // PS5 is an alias to PS4 in terms of target files. All the tuning is done through CPU flags.
             if (lib->getOS() == TargetOS::ps4) {
-                m_builtins[Triple(lib->getISPCTarget(), TargetOS::ps5, lib->getArch()).encode()] = lib;
+                m_targets[Triple(lib->getISPCTarget(), TargetOS::ps5, lib->getArch()).encode()] = lib;
             }
             break;
         }
