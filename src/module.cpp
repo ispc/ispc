@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -471,6 +471,107 @@ void Module::AddTypeDef(const std::string &name, const Type *type, SourcePos pos
     symbolTable->AddType(name.c_str(), type, pos);
 }
 
+// Construct ConstExpr as initializer for varying const value from given expression list if possible
+template <class T>
+Expr *lCreateConstExpr(ExprList *exprList, const AtomicType::BasicType basicType, const Type *type,
+                       const std::string &name, SourcePos pos) {
+    const int N = g->target->getVectorWidth();
+    bool canConstructConstExpr = true;
+    T vals;
+    if constexpr (std::is_same_v<T, std::vector<llvm::APFloat>>) {
+        switch (basicType) {
+        case AtomicType::TYPE_FLOAT16:
+            vals.resize(N, llvm::APFloat::getZero(llvm::APFloat::IEEEhalf()));
+            break;
+        case AtomicType::TYPE_FLOAT:
+            vals.resize(N, llvm::APFloat::getZero(llvm::APFloat::IEEEsingle()));
+            break;
+        case AtomicType::TYPE_DOUBLE:
+            vals.resize(N, llvm::APFloat::getZero(llvm::APFloat::IEEEdouble()));
+            break;
+        default:
+            return nullptr;
+        }
+    } else {
+        // T equals int8_t* and etc.
+        using PointToType = typename std::remove_pointer<T>::type;
+        vals = (T)alloca(N * sizeof(PointToType));
+        memset(vals, 0, N * sizeof(PointToType));
+    }
+
+    int i = 0;
+    for (Expr *expr : exprList->exprs) {
+        const ConstExpr *ce = llvm::dyn_cast<ConstExpr>(Optimize(expr));
+        // ConstExpr of length 1 implies that it contains uniform value
+        if (!ce || ce->Count() != 1) {
+            canConstructConstExpr = false;
+            break;
+        }
+
+        if constexpr (std::is_same_v<T, std::vector<llvm::APFloat>>) {
+            std::vector<llvm::APFloat> ce_vals;
+            llvm::Type *to_type = type->GetAsUniformType()->LLVMType(g->ctx);
+            ce->GetValues(ce_vals, to_type);
+            vals[i++] = ce_vals[0];
+        } else {
+            ce->GetValues(&vals[i++]);
+        }
+    }
+
+    if (i == 1) {
+        // In case when, e.g., { 1, }, we need to set all values as equaled to
+        // the first one to match the behaviour with other initializations.
+        while (i < N) {
+            vals[i++] = vals[0];
+        }
+    } else if (i != N) {
+        // In other cases when number of values in initializer don't match the
+        // vector width, we report error to match the other behaviour.
+        Error(pos, "Initializer list for %s \"%s\" must have %d elements (has %d).", name.c_str(),
+              type->GetString().c_str(), N, (int)exprList->exprs.size());
+    }
+
+    if (canConstructConstExpr) {
+        return new ConstExpr(type, vals, pos);
+    }
+    return nullptr;
+}
+
+Expr *lConvertExprListToConstExpr(Expr *initExpr, const Type *type, const std::string &name, SourcePos pos) {
+    ExprList *exprList = llvm::dyn_cast<ExprList>(initExpr);
+    if (type->IsConstType() && type->IsVaryingType() && type->IsAtomicType()) {
+        const AtomicType::BasicType basicType = CastType<AtomicType>(type)->basicType;
+        switch (basicType) {
+        case AtomicType::TYPE_BOOL:
+            return lCreateConstExpr<bool *>(exprList, basicType, type, name, pos);
+        case AtomicType::TYPE_INT8:
+            return lCreateConstExpr<int8_t *>(exprList, basicType, type, name, pos);
+        case AtomicType::TYPE_UINT8:
+            return lCreateConstExpr<uint8_t *>(exprList, basicType, type, name, pos);
+        case AtomicType::TYPE_INT16:
+            return lCreateConstExpr<int16_t *>(exprList, basicType, type, name, pos);
+        case AtomicType::TYPE_UINT16:
+            return lCreateConstExpr<uint16_t *>(exprList, basicType, type, name, pos);
+        case AtomicType::TYPE_INT32:
+            return lCreateConstExpr<int32_t *>(exprList, basicType, type, name, pos);
+        case AtomicType::TYPE_UINT32:
+            return lCreateConstExpr<uint32_t *>(exprList, basicType, type, name, pos);
+        case AtomicType::TYPE_INT64:
+            return lCreateConstExpr<int64_t *>(exprList, basicType, type, name, pos);
+        case AtomicType::TYPE_UINT64:
+            return lCreateConstExpr<uint64_t *>(exprList, basicType, type, name, pos);
+        case AtomicType::TYPE_FLOAT16:
+        case AtomicType::TYPE_FLOAT:
+        case AtomicType::TYPE_DOUBLE:
+            return lCreateConstExpr<std::vector<llvm::APFloat>>(exprList, basicType, type, name, pos);
+        default:
+            // Unsupported types.
+            break;
+        }
+    }
+    return nullptr;
+}
+
 void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initExpr, bool isConst,
                                StorageClass storageClass, SourcePos pos) {
     // These may be nullptr due to errors in parsing; just gracefully return
@@ -533,11 +634,22 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
             initExpr = TypeCheck(initExpr);
             if (initExpr != nullptr) {
                 // We need to make sure the initializer expression is
-                // the same type as the global.  (But not if it's an
-                // ExprList; they don't have types per se / can't type
-                // convert themselves anyway.)
-                if (llvm::dyn_cast<ExprList>(initExpr) == nullptr)
+                // the same type as the global.
+                if (llvm::dyn_cast<ExprList>(initExpr) == nullptr) {
                     initExpr = TypeConvertExpr(initExpr, type, "initializer");
+                } else {
+                    // The alternative is to create ConstExpr initializing
+                    // expression with correct type and value from ExprList.
+                    // If we have exprList that initalizes const varying int, e.g.:
+                    // static const int x = { 0, 1, 2, 3 };
+                    // then we need to convert rvalue to varying ConstExpr value.
+                    // It will be utilized later in arithmetic expressions that can be
+                    // calculated in compile time (Optimize function call below),
+                    Expr *ce = lConvertExprListToConstExpr(initExpr, type, name, pos);
+                    if (ce) {
+                        initExpr = ce;
+                    }
+                }
 
                 if (initExpr != nullptr) {
                     initExpr = Optimize(initExpr);

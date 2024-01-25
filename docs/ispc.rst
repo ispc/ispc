@@ -2662,6 +2662,19 @@ guarded with ``#if TARGET_WIDTH``:
         ...
     #endif
 
+However, there is a special case when the only one value is in braces. All
+vector elements are initialized with this value:
+
+::
+
+    varying int x = { 3, };
+
+It is effectively equivalent to:
+
+::
+
+    varying int x = 3;
+
 Arrays can be initialized with individual element values in braces:
 
 ::
@@ -2693,6 +2706,18 @@ the expected syntax:
     struct Foo { int x; float bar[3]; };
     Foo fa[2] = { { 1, { 2, 3, 4 } }, { 10, { 20, 30, 40 } } };
     // now, fa[1].bar[2] == 40, and so forth
+
+Variables with const qualifiers can be initialized using the values of
+previously initialized const variables including arithmetic operations above
+them:
+
+::
+
+    const uniform int x = 1;
+    const uniform int y = 1 + 2;
+    ...
+    const varying int x = { 1, 2, 3, 2 + 2 };
+    const varying int y = x * 2;
 
 Expressions
 -----------
