@@ -37,6 +37,7 @@ env:
                    "avx512spr-x4", "avx512spr-x8", "avx512spr-x16", "avx512spr-x64", "avx512spr-x32"]'
   OPTSETS_FULL: "-O0 -O1 -O2"
   ISPC_OPAQUE_PTR_MODE: "OFF"
+  ISPC_ANDROID_NDK_PATH: "/usr/local/share/android-ndk"
 
 jobs:
   define-flow:
@@ -752,8 +753,6 @@ jobs:
 
   macos-build-ispc-llvm16-lto:
     needs: [define-flow]
-    # TODO! ISPC_ANDROID_NDK_PATH ?
-    if: false
     runs-on: macos-12
     env:
       LLVM_VERSION: "16.0"
@@ -771,7 +770,7 @@ jobs:
         [ -n "$LLVM_REPO" ] && wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 --no-verbose $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
         tar xf $LLVM_TAR
         echo "${GITHUB_WORKSPACE}/bin-$LLVM_VERSION/bin" >> $GITHUB_PATH
-        brew install bison flex
+        brew install bison flex ninja
         echo "/usr/local/opt/bison/bin" >> $GITHUB_PATH
         echo "/usr/local/opt/flex/bin" >> $GITHUB_PATH
 
@@ -783,7 +782,7 @@ jobs:
 
     - name: Build package
       run: |
-        cmake -B build superbuild --preset os -DLTO=ON -DXE_DEPS=OFF -DCMAKE_CXX_FLAGS=-Werror -DPREBUILT_STAGE2_PATH="${GITHUB_WORKSPACE}/bin-$LLVM_VERSION" -DMACOS_UNIVERSAL_BIN=ON
+        cmake -B build superbuild --preset os -DLTO=ON -DXE_DEPS=OFF -DCMAKE_CXX_FLAGS=-Werror -DPREBUILT_STAGE2_PATH="${GITHUB_WORKSPACE}/bin-$LLVM_VERSION" -DMACOS_UNIVERSAL_BIN=ON -DISPC_ANDROID_NDK_PATH=${{ env.ISPC_ANDROID_NDK_PATH }}
         cmake --build build
 
     - name: Sanity testing (make check-all)
@@ -794,7 +793,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: ispc_llvm16_lto_macos
-        path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-linux.tar.gz
+        path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-macOS.universal.tar.gz
 
   macos-build-ispc-llvm17:
     needs: [define-flow]
@@ -936,8 +935,8 @@ jobs:
 
     - name: Install dependencies and unpack artifacts
       run: |
-        tar xf ispc-trunk-macos.tar.gz
-        echo "$GITHUB_WORKSPACE/ispc-trunk-macos/bin" >> $GITHUB_PATH
+        tar xf ispc-trunk-macOS.universal.tar.gz
+        echo "$GITHUB_WORKSPACE/ispc-trunk-macOS.universal/bin" >> $GITHUB_PATH
         echo "ISPC_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
         echo "LLVM_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
 
