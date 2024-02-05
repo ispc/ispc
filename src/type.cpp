@@ -173,12 +173,18 @@ bool Type::IsDependentType() const {
         return CastType<AtomicType>(this)->basicType == AtomicType::TYPE_DEPENDENT;
     case ENUM_TYPE:
         return false;
-    case POINTER_TYPE:
-        return CastType<PointerType>(this)->GetBaseType()->IsDependentType();
-    case ARRAY_TYPE:
-        return CastType<ArrayType>(this)->GetElementType()->IsDependentType();
-    case VECTOR_TYPE:
-        return CastType<VectorType>(this)->GetElementType()->IsDependentType();
+    case POINTER_TYPE: {
+        const Type *baseType = CastType<PointerType>(this)->GetBaseType();
+        return baseType && baseType->IsDependentType();
+    }
+    case ARRAY_TYPE: {
+        const Type *elemType = CastType<ArrayType>(this)->GetElementType();
+        return elemType && elemType->IsDependentType();
+    }
+    case VECTOR_TYPE: {
+        const Type *elemType = CastType<VectorType>(this)->GetElementType();
+        return elemType && elemType->IsDependentType();
+    }
     case STRUCT_TYPE: {
         const StructType *st = CastType<StructType>(this);
         for (int i = 0; i < st->GetElementCount(); ++i) {
