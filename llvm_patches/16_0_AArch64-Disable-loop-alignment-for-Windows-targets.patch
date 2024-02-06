@@ -1,0 +1,31 @@
+From 5367729457dece6302159dabb6d3230e0de5cb39 Mon Sep 17 00:00:00 2001
+From: "Nurmukhametov, Aleksei" <aleksei.nurmukhametov@intel.com>
+Date: Tue, 6 Feb 2024 04:26:30 -0800
+Subject: [PATCH] [AArch64] Disable loop alignment for Windows targets
+
+backported to llvmorg-16.0.6 from 6ae36c01272
+---
+ llvm/lib/Target/AArch64/AArch64ISelLowering.cpp | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/llvm/lib/Target/AArch64/AArch64ISelLowering.cpp b/llvm/lib/Target/AArch64/AArch64ISelLowering.cpp
+index 6f2058c721..b9d6b5089f 100644
+--- a/llvm/lib/Target/AArch64/AArch64ISelLowering.cpp
++++ b/llvm/lib/Target/AArch64/AArch64ISelLowering.cpp
+@@ -998,7 +998,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
+   // Set required alignment.
+   setMinFunctionAlignment(Align(4));
+   // Set preferred alignments.
+-  setPrefLoopAlignment(Align(1ULL << STI.getPrefLoopLogAlignment()));
++
++  // Don't align loops on Windows. The SEH unwind info generation needs to
++  // know the exact length of functions before the alignments have been
++  // expanded.
++  if (!Subtarget->isTargetWindows())
++    setPrefLoopAlignment(Align(1ULL << STI.getPrefLoopLogAlignment()));
+   setMaxBytesForAlignment(STI.getMaxBytesForLoopAlignment());
+   setPrefFunctionAlignment(Align(1ULL << STI.getPrefFunctionLogAlignment()));
+ 
+-- 
+2.41.0.windows.1
+
