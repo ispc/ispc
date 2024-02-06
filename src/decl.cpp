@@ -230,6 +230,10 @@ Declarator::Declarator(DeclaratorKind dk, SourcePos p) : pos(p), kind(dk) {
 
 void Declarator::InitFromDeclSpecs(DeclSpecs *ds) {
     const Type *baseType = ds->GetBaseType(pos);
+    if (!baseType) {
+        AssertPos(pos, m->errorCount > 0);
+        return;
+    }
 
     InitFromType(baseType, ds);
 
