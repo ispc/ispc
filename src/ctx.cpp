@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -2341,15 +2341,59 @@ llvm::Value *FunctionEmitContext::SwitchBoolSize(llvm::Value *value, llvm::Type 
 
     llvm::Type *fromType = value->getType();
 
-    llvm::Value *newBool = value;
-    if (g->target->getDataLayout()->getTypeSizeInBits(fromType) >
-        g->target->getDataLayout()->getTypeSizeInBits(toType)) {
-        newBool =
-            TruncInst(value, toType, name.isTriviallyEmpty() ? (llvm::Twine(value->getName()) + "_switchBool") : name);
-    } else if (g->target->getDataLayout()->getTypeSizeInBits(fromType) <
-               g->target->getDataLayout()->getTypeSizeInBits(toType)) {
-        newBool =
-            SExtInst(value, toType, name.isTriviallyEmpty() ? (llvm::Twine(value->getName()) + "_switchBool") : name);
+    if (fromType == toType) {
+        // No cast is needed
+        return value;
+    }
+
+    // Internal representation of bool matches mask behaviour that requires
+    // true value to be -1. It is an implication of some instruction
+    // requirements, e.g., blendvps (the most significant bit should be 1).
+    // Whereas, storage representation matches SystemV ABI. It requires bool to
+    // be presented as byte with the least significant bit equal 0 or 1 and
+    // others 7 bits equal to 0, i.e., true is 1 when we read or write values
+    // to/from C/C++.
+    // Both fromType and toType can be vector or scalar and storage or internal
+    // bool representation. E.g., we need to support here conversion from
+    // internal vector to storage vector type, it may be conversion from
+    // 1) <4 x i32> to <4 x i8> or 2) <4 x i8> to <4 x i32>.
+    // 1) <-1, 0,...> to <1, 0,...>
+    // 2) <1, 0,...> to <-1, 0,...>
+    // To support all cases with less code do bool casting in two stages:
+    // 1) truncate to LLVM IR native bool types i1 or <N x i1>
+    // 2) zero or sign extend from native bool types to storage or internal correspondingly.
+    llvm::Value *i1Bool = value;
+    llvm::Twine newName = name.isTriviallyEmpty() ? (llvm::Twine(value->getName()) + "_toi1") : name;
+    if (llvm::dyn_cast<llvm::FixedVectorType>(fromType)) {
+        llvm::VectorType *i1VecType = LLVMVECTOR::get(
+            llvm::Type::getInt1Ty(*g->ctx), llvm::dyn_cast<llvm::FixedVectorType>(fromType)->getNumElements());
+        // trunc only if needed
+        if (fromType != i1VecType) {
+            i1Bool = TruncInst(value, i1VecType, newName);
+        }
+        // return if we already have requested type
+        if (toType == i1VecType) {
+            return i1Bool;
+        }
+    } else {
+        llvm::Type *i1Type = llvm::Type::getInt1Ty(*g->ctx);
+        if (fromType != i1Type) {
+            i1Bool = TruncInst(value, i1Type, newName);
+        }
+        if (toType == i1Type) {
+            return i1Bool;
+        }
+    }
+
+    llvm::Value *newBool = nullptr;
+    if (toType == LLVMTypes::BoolVectorStorageType || toType == LLVMTypes::BoolStorageType) {
+        // zero extend to storage types to comply with ABI
+        llvm::Twine toSorageBool = name.isTriviallyEmpty() ? (llvm::Twine(value->getName()) + "_toStorageBool") : name;
+        newBool = ZExtInst(i1Bool, toType, toSorageBool);
+    } else {
+        // sign extend to internal representation
+        llvm::Twine toMaskBool = name.isTriviallyEmpty() ? (llvm::Twine(value->getName()) + "_toMaskBool") : name;
+        newBool = SExtInst(i1Bool, toType, toMaskBool);
     }
 
     return newBool;

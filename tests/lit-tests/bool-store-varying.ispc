@@ -18,7 +18,7 @@ uniform bool x;
 // COMMON-LABEL: @foo___vyTvyT(
 // COMMON-NEXT: allocas:
 // COMMON-NEXT: [[CMP:%.*]] = icmp ult <[[WIDTH]] x i8> %a, %b
-// COMMON-NEXT: [[CAST:%.*]] = sext <[[WIDTH]] x i1> [[CMP]] to <[[WIDTH]] x i8>
+// COMMON-NEXT: [[CAST:%.*]] = zext <[[WIDTH]] x i1> [[CMP]] to <[[WIDTH]] x i8>
 // COMMON-NEXT: store <[[WIDTH]] x i8> [[CAST]], {{.*}} @y
 // COMMON-NEXT: ret void
 
@@ -37,13 +37,14 @@ void foo(uint8 a, uint8 b)
 
 // AVX2: define void @boo___vyb(<[[WIDTH]] x [[RTYPE:i[0-9]+]]> %a, <[[WIDTH]] x [[RTYPE]]> %__mask)
 // AVX2-NEXT: allocas:
-// AVX2-NEXT: [[CAST:%.*]] = trunc <[[WIDTH]] x [[RTYPE]]> %a to <[[WIDTH]] x i8>
+// AVX2-NEXT: [[TRUNC:%.*]] = trunc <[[WIDTH]] x [[RTYPE]]> %a to <[[WIDTH]] x i8>
+// AVX2-NEXT: [[CAST:%.*]] = and <[[WIDTH]] x i8> [[TRUNC]], <i8 1, i8 1, i8 1, i8 1>
 // AVX2-NEXT: store <[[WIDTH]] x i8> [[CAST]], {{.*}} @y
 // AVX2-NEXT: ret void
 
 // AVX512: define void @boo___vyb(<[[WIDTH]] x [[RTYPE:i[0-9]+]]> %a, <[[WIDTH]] x [[RTYPE]]> %__mask)
 // AVX512-NEXT: allocas:
-// AVX512-NEXT: [[CAST:%.*]] = sext <[[WIDTH]] x [[RTYPE]]> %a to <[[WIDTH]] x i8>
+// AVX512-NEXT: [[CAST:%.*]] = zext <[[WIDTH]] x [[RTYPE]]> %a to <[[WIDTH]] x i8>
 // AVX512-NEXT: store <[[WIDTH]] x i8> [[CAST]], {{.*}} @y
 // AVX512-NEXT: ret void
 
@@ -53,7 +54,7 @@ void boo(bool a) {
 
 // COMMON: define void @coo___unb(i1 %a
 // COMMON-NEXT: allocas:
-// COMMON-NEXT: [[CAST:%.*]] = sext i1 %a to i8
+// COMMON-NEXT: [[CAST:%.*]] = zext i1 %a to i8
 // COMMON-NEXT: store i8 [[CAST]], {{.*}} @x
 // COMMON-NEXT: ret void
 
