@@ -3648,6 +3648,15 @@ const Type *SelectExpr::GetType() const {
                                  becomesVarying, vectorSize);
 }
 
+const Type *SelectExpr::GetLValueType() const {
+    const Type *t = GetType();
+    if (CastType<PointerType>(t) != nullptr) {
+        return t;
+    } else {
+        return nullptr;
+    }
+}
+
 template <typename T>
 Expr *lConstFoldSelect(const bool bv[], ConstExpr *constExpr1, ConstExpr *constExpr2, const Type *exprType,
                        SourcePos pos) {
@@ -4619,8 +4628,9 @@ llvm::Value *IndexExpr::GetValue(FunctionEmitContext *ctx) const {
         mask = LLVMMaskAllOn;
     } else {
         Symbol *baseSym = GetBaseSymbol();
-        if (llvm::dyn_cast<FunctionCallExpr>(baseExpr) == nullptr && llvm::dyn_cast<BinaryExpr>(baseExpr) == nullptr) {
-            // Don't check if we're doing a function call or pointer arith
+        if (llvm::dyn_cast<FunctionCallExpr>(baseExpr) == nullptr && llvm::dyn_cast<BinaryExpr>(baseExpr) == nullptr &&
+            llvm::dyn_cast<SelectExpr>(baseExpr) == nullptr) {
+            // Don't check if we're doing a function call or pointer arith or select
             AssertPos(pos, baseSym != nullptr);
         }
         mask = lMaskForSymbol(baseSym, ctx);
