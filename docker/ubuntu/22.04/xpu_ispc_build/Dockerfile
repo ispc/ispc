@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2017-2023, Intel Corporation
+#  Copyright (c) 2017-2024, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -9,9 +9,9 @@ SHELL ["/bin/bash", "-c"]
 
 ARG REPO=ispc/ispc
 ARG SHA=main
-ARG IGC_VER=14062.11
-ARG CR_VER=23.22.26516.18
-ARG CR_VER_SUFFIX=26516.18
+ARG IGC_VER=15610.11
+ARG CR_VER=23.48.27912.11
+ARG CR_VER_SUFFIX=27912.11
 ARG LTO
 
 # !!! Make sure that your docker config provides enough memory to the container,
@@ -39,7 +39,7 @@ RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 
     wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5  https://github.com/intel/compute-runtime/releases/download/${CR_VER}/intel-level-zero-gpu_1.3.${CR_VER_SUFFIX}_amd64.deb && \
     wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5  https://github.com/intel/compute-runtime/releases/download/${CR_VER}/intel-opencl-icd-dbgsym_${CR_VER}_amd64.ddeb && \
     wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5  https://github.com/intel/compute-runtime/releases/download/${CR_VER}/intel-opencl-icd_${CR_VER}_amd64.deb && \
-    wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5  https://github.com/intel/compute-runtime/releases/download/${CR_VER}/libigdgmm12_22.3.0_amd64.deb && \
+    wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5  https://github.com/intel/compute-runtime/releases/download/${CR_VER}/libigdgmm12_22.3.11_amd64.deb && \
     dpkg -i ./*.deb && \
     rm ./*.deb
 
