@@ -4,19 +4,19 @@
 // RUN: %{ispc} %s --target=avx2 --arch=x86 --nostdlib --emit-llvm-text --opt=reset-ftz-daz -o - | FileCheck %s
 // RUN: %{ispc} %s --target=avx2 --arch=x86 --nostdlib --emit-llvm-text -o - | FileCheck --check-prefixes=CHECK_NO_FTZ_DAZ %s
 
-// CHECK: define float @test_ftz_daz___
+// CHECK-LABEL: @test_ftz_daz___
 // CHECK-NOT: stmxcsr
 // CHECK-NOT: ldmxcsr
-// CHECK: define float @export_test_ftz_daz___
+// CHECK-LABEL: @export_test_ftz_daz___
 // CHECK-NOT: stmxcsr
 // CHECK-NOT: ldmxcsr
-// CHECK: define void @export_void_test_ftz_daz___
+// CHECK-LABEL: @export_void_test_ftz_daz___
 // CHECK-NOT: stmxcsr
 // CHECK-NOT: ldmxcsr
-// CHECK: define float @externC_test_ftz_daz()
+// CHECK-LABEL: @externC_test_ftz_daz()
 // CHECK: stmxcsr
 // CHECK-COUNT-2: ldmxcsr
-// CHECK: define float @export_test_ftz_daz(
+// CHECK-LABEL: @export_test_ftz_daz(
 // CHECK: stmxcsr
 // CHECK-COUNT-2: ldmxcsr
 

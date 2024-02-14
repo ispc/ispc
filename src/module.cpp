@@ -115,6 +115,14 @@
 #define strcasecmp stricmp
 #endif
 
+// Clang defines alloca which interferes with standard library function.
+// It happenned after newly included clang/Basic/Builtins.h in PR71709
+#if ISPC_LLVM_VERSION > ISPC_LLVM_17_0
+#define ALLOCA __builtin_alloca
+#else
+#define ALLOCA alloca
+#endif
+
 using namespace ispc;
 
 // The magic constants are derived from https://github.com/intel/compute-runtime repo
@@ -495,7 +503,7 @@ Expr *lCreateConstExpr(ExprList *exprList, const AtomicType::BasicType basicType
     } else {
         // T equals int8_t* and etc.
         using PointToType = typename std::remove_pointer<T>::type;
-        vals = (T)alloca(N * sizeof(PointToType));
+        vals = (T)ALLOCA(N * sizeof(PointToType));
         memset(vals, 0, N * sizeof(PointToType));
     }
 
@@ -1751,9 +1759,15 @@ bool Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm:
                                        const char *outFileName) {
     // Figure out if we're generating object file or assembly output, and
     // set binary output for object files
+#if ISPC_LLVM_VERSION > ISPC_LLVM_17_0
+    llvm::CodeGenFileType fileType =
+        (outputType == Object) ? llvm::CodeGenFileType::ObjectFile : llvm::CodeGenFileType::AssemblyFile;
+    bool binary = (fileType == llvm::CodeGenFileType::ObjectFile);
+#else
     llvm::CodeGenFileType fileType = (outputType == Object) ? llvm::CGFT_ObjectFile : llvm::CGFT_AssemblyFile;
     bool binary = (fileType == llvm::CGFT_ObjectFile);
 
+#endif
     llvm::sys::fs::OpenFlags flags = binary ? llvm::sys::fs::OF_None : llvm::sys::fs::OF_Text;
 
     std::error_code error;
@@ -3084,7 +3098,6 @@ static void lGetExportedFunctions(SymbolTable *symbolTable, std::map<std::string
 }
 
 static llvm::FunctionType *lGetVaryingDispatchType(FunctionTargetVariants &funcs) {
-    llvm::Type *ptrToInt8Ty = llvm::Type::getInt8PtrTy(*g->ctx);
     llvm::FunctionType *resultFuncTy = nullptr;
 
     for (int i = 0; i < Target::NUM_ISAS; ++i) {
@@ -3109,7 +3122,7 @@ static llvm::FunctionType *lGetVaryingDispatchType(FunctionTargetVariants &funcs
                     // For each varying type pointed to, swap the LLVM pointer type
                     // with i8 * (as close as we can get to void *)
                     if (baseType->IsVaryingType()) {
-                        ftype[j] = ptrToInt8Ty;
+                        ftype[j] = LLVMTypes::Int8PointerType;
                         foundVarying = true;
                     }
                 }
