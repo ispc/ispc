@@ -32,6 +32,7 @@ check_cache_var_declaration(L0_TAG "Level Zero url")
 check_cache_var_declaration(ISPC_CORPUS_URL "ispc-corpus url")
 
 set(GNUWIN32 "c:/gnuwin32" CACHE STRING "Set path to gnuwin32 root dir (Windows only)")
+set(MINGW_DIR "/usr" CACHE STRING "Set path to mingw root dir (Linux only)")
 set(CCACHE_VERSION "4.8.2" CACHE STRING "ccache version ")
 set(CCACHE_DIR "default" CACHE STRING "ccache cache directory")
 set(PREBUILT_STAGE1 "NO" CACHE STRING "Provide pre-built stage1 archive to skip stage1 jobs")
@@ -268,6 +269,7 @@ message(STATUS "SPIRV_TRANSLATOR_SHA is ${SPIRV_TRANSLATOR_SHA}")
 message(STATUS "L0_URL is ${L0_URL}")
 message(STATUS "L0_TAG is ${L0_TAG}")
 message(STATUS "GNUWIN32 is ${GNUWIN32}")
+message(STATUS "MINGW_DIR is ${MINGW_DIR}")
 message(STATUS "LIT_TOOLS_DIR is ${LIT_TOOLS_DIR}")
 message(STATUS "ISPC_CORPUS_URL is ${ISPC_CORPUS_URL}")
 message(STATUS "CCACHE_VERSION is ${CCACHE_VERSION}")
@@ -694,6 +696,11 @@ if (ISPC_CROSS)
     list(APPEND ISPC_COMMON_CMAKE_ARGS
         -DISPC_CROSS=ON
         )
+    if (NOT WIN32 AND NOT APPLE)
+        list(APPEND ISPC_COMMON_CMAKE_ARGS
+            -DISPC_MINGW_PATH=${MINGW_DIR}
+            )
+    endif()
 endif()
 if (XE_DEPS)
     list(APPEND ISPC_COMMON_CMAKE_ARGS

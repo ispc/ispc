@@ -204,7 +204,7 @@ jobs:
 
     - name: Build package
       run: |
-        cmake -B build superbuild --preset os -DLTO=ON -DXE_DEPS=OFF -DCMAKE_CXX_FLAGS=-Werror -DPREBUILT_STAGE2_PATH="${GITHUB_WORKSPACE}/bin-$LLVM_VERSION"
+        cmake -B build superbuild --preset os -DLTO=ON -DXE_DEPS=OFF -DCMAKE_CXX_FLAGS=-Werror -DMINGW_DIR=$(pwd)/llvm-mingw -DPREBUILT_STAGE2_PATH="${GITHUB_WORKSPACE}/bin-$LLVM_VERSION"
         cmake --build build
 
     - name: Sanity testing (make check-all)
@@ -319,6 +319,7 @@ jobs:
             --preset os \
             -DINSTALL_WITH_XE_DEPS=ON \
             -DISPC_INCLUDE_BENCHMARKS=ON \
+            -DMINGW_DIR=$(pwd)/llvm-mingw \
             -DPREBUILT_STAGE2_PATH=${GITHUB_WORKSPACE}/bin-${LLVM_VERSION} \
             -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/ispc-xe
         cmake --build build

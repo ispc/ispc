@@ -106,10 +106,16 @@ for:
         wget https://github.com/ispc/ispc.dependencies/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
         tar xvf $LLVM_TAR
         export PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
+        mkdir llvm-mingw
+        cd llvm-mingw
+        wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 -O llvm-mingw.tar.xz https://github.com/mstorsjo/llvm-mingw/releases/download/20231128/llvm-mingw-20231128-ucrt-ubuntu-20.04-x86_64.tar.xz
+        tar --strip-components=1 -xf llvm-mingw.tar.xz
+        rm llvm-mingw.tar.xz
+        cd ..
   before_build:
     - sh: |-
         cd $ISPC_HOME && mkdir build && cd build
-        cmake ../ -DISPC_PREPARE_PACKAGE=ON -DCMAKE_INSTALL_PREFIX=$ISPC_HOME/install -DISPC_CROSS=ON -DWASM_ENABLED=$WASM -DCMAKE_CXX_FLAGS="-Werror"
+        cmake ../ -DISPC_PREPARE_PACKAGE=ON -DCMAKE_INSTALL_PREFIX=$ISPC_HOME/install -DISPC_CROSS=ON -DWASM_ENABLED=$WASM -DISPC_MINGW_PATH=$(pwd)/llvm-mingw -DCMAKE_CXX_FLAGS="-Werror"
   build_script:
     - sh: make package -j4
 
