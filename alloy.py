@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-#  Copyright (c) 2013-2023, Intel Corporation
+#  Copyright (c) 2013-2024, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -93,6 +93,8 @@ def checkout_LLVM(component, version_LLVM, target_dir, from_validation, verbose)
     # git: "release/16.x"
     if  version_LLVM == "trunk":
         GIT_TAG="main"
+    elif  version_LLVM == "18_1":
+        GIT_TAG="llvmorg-18.1.1"
     elif  version_LLVM == "17_0":
         GIT_TAG="llvmorg-17.0.6"
     elif  version_LLVM == "16_0":

@@ -51,6 +51,12 @@
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 
+#if ISPC_LLVM_VERSION > ISPC_LLVM_17_0
+using CodegenOptLevel = llvm::CodeGenOptLevel;
+#else
+using CodegenOptLevel = llvm::CodeGenOpt::Level;
+#endif
+
 using namespace ispc;
 
 Globals *ispc::g;
@@ -1707,14 +1713,14 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
             // requested by user via ISPC Optimization Flag. Mapping is :
             // ISPC O0 -> Codegen O0
             // ISPC O1,O2,O3,default -> Codegen O3
-            llvm::CodeGenOpt::Level cOptLevel = llvm::CodeGenOpt::Level::Aggressive;
+            CodegenOptLevel cOptLevel = CodegenOptLevel::Aggressive;
             switch (g->codegenOptLevel) {
             case Globals::CodegenOptLevel::None:
-                cOptLevel = llvm::CodeGenOpt::Level::None;
+                cOptLevel = CodegenOptLevel::None;
                 break;
 
             case Globals::CodegenOptLevel::Aggressive:
-                cOptLevel = llvm::CodeGenOpt::Level::Aggressive;
+                cOptLevel = CodegenOptLevel::Aggressive;
                 break;
             }
             m_targetMachine->setOptLevel(cOptLevel);
