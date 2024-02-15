@@ -1,5 +1,7 @@
 // RUN: %{ispc} --target=host --nowrap --nostdlib -O2 --emit-llvm-text %s -o - | FileCheck %s
 
+// REQUIRES: X86_ENABLED && !ARM_ENABLED
+
 uniform bool<4> x;
 
 // CHECK-LABEL: @foo___unT_3C_4_3E_unT_3C_4_3E_(

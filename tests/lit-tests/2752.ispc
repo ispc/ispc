@@ -1,6 +1,8 @@
 // RUN: %{ispc} --target=host --nowrap --nostdlib -O2 --emit-llvm-text %s -o - | FileCheck %s --check-prefix=LLVM
 // RUN: %{ispc} --target=host --nowrap --nostdlib -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefix=ASM
 
+// REQUIRES: X86_ENABLED && !ARM_ENABLED
+
 // LLVM-LABEL: @set_ref(
 // LLVM-NEXT: allocas:
 // LLVM-NEXT: store i8 1, {{.*}} %result
