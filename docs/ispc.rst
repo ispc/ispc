@@ -70,6 +70,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.20.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.21.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.22.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.23.0`_
 
 * `Getting Started with ISPC`_
 
@@ -567,6 +568,29 @@ aligned, please refer to `Function Templates`_ section for more details.
 
 Now, command-line switch `--dwarf-version=<n>` forces DWARF format debug info generation
 on Windows. It allows to debug ISPC code linked with MinGW generated code.
+
+Updating ISPC Programs For Changes In ISPC 1.23.0
+-------------------------------------------------
+
+This release contains the following changes that may affect compatibility with
+older versions:
+
+* `true` `bool` values in storage were changed from `-1` to `1` to match C/C++ ABI.
+  Previously, ISPC treated `bool` values similarly to C/C++ in terms of size, but
+  incorrectly interpreted their actual values. This meant that `true` in ISPC
+  might not have translated correctly to true in C/C++. This issue was introduced
+  in version 1.13.0. Starting now, ISPC correctly stores and interprets `true`
+  values in a way that aligns with C/C++ expectations.
+
+A couple of improvements have been made to variables initialization:
+
+* Variables with const qualifiers can be initialized using the values of
+  previously initialized const variables including arithmetic operations above
+  them. It now works also with varying types.
+* Enumeration type values can be used as constants.
+
+The result of selection operator can now be used as lvalue if it has suitable
+type.
 
 Getting Started with ISPC
 =========================
