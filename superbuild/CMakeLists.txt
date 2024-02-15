@@ -805,7 +805,9 @@ endif()
 
 list(APPEND ISPC_STAGE2_CMAKE_TARGETS install package)
 if (NOT ISPC_PACKAGE_EXAMPLES)
-    list(APPEND package_examples)
+    list(APPEND ISPC_STAGE2_CMAKE_TARGETS
+        package-examples
+        )
 endif()
 message(STATUS "ISPC_STAGE2_CMAKE_ARGS is ${ISPC_STAGE2_CMAKE_ARGS}")
 message(STATUS "ISPC_STAGE2_CMAKE_TARGETS is ${ISPC_STAGE2_CMAKE_TARGETS}")
