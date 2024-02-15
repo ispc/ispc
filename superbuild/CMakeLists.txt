@@ -48,7 +48,7 @@ set(ISPC_ANDROID_NDK_PATH "NO" CACHE STRING "Path to Android NDK. It is needed t
 set(ISPC_SIGN_KEY "NO" CACHE STRING "Key to sign macOS or Windows build.")
 option(ISPC_INCLUDE_BENCHMARKS "Include ISPC benchmarks (ispc_benchmarks target)" OFF)
 option(ISPC_CROSS "Enable ISPC build with cross compilation support" ON)
-option(ISPC_PACKAGE_EXAMPLES "Package examples into the same archive with ISPC binaries" ON)
+option(ISPC_PACKAGE_EXAMPLES "Package examples into the same archive with ISPC binaries" OFF)
 option(LLVM_DISABLE_ASSERTIONS "Enable LLVM build without assertions" ON)
 option(LLVM_BUILD_OPENMP "Build OpenMP as part of LLVM" OFF)
 option(EXTERNAL_VERBOSE "Enable verbose for external project build and install commands" OFF)
