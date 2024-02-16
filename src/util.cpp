@@ -47,7 +47,7 @@
 // See https://libcxx.llvm.org/UsingLibcxx.html#overriding-the-default-termination-handler
 // It is not quite clear why and where this symbol is used.
 void std::__libcpp_verbose_abort(char const *format, ...) {
-    std::va_list list;
+    va_list list;
     va_start(list, format);
     std::vfprintf(stderr, format, list);
     va_end(list);
