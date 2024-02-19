@@ -1161,7 +1161,7 @@ static llvm::CallInst *lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
                  false, false),
         GSBOInfo(g->target->useScatter() ? __pseudo_scatter_base_offsets64_half
                                          : __pseudo_scatter_factored_base_offsets64_half,
-                 g->target->useScatter() ? __pseudo_scatter_base_offsets32_i16
+                 g->target->useScatter() ? __pseudo_scatter_base_offsets32_half
                                          : __pseudo_scatter_factored_base_offsets32_half,
                  false, false),
         GSBOInfo(g->target->useScatter() ? __pseudo_scatter_base_offsets64_i32
