@@ -42,35 +42,34 @@ static bool lIsSafeToBlend(llvm::Value *lvalue) {
     }
 }
 
+struct LMSInfo {
+    LMSInfo(const char *bname, const char *msname) : blend(bname), store(msname) {}
+    llvm::Function *blendFunc() const { return m->module->getFunction(blend); }
+    llvm::Function *maskedStoreFunc() const { return m->module->getFunction(store); }
+
+  private:
+    const char *blend;
+    const char *store;
+};
+
 static bool lReplacePseudoMaskedStore(llvm::CallInst *callInst) {
-    struct LMSInfo {
-        LMSInfo(const char *pname, const char *bname, const char *msname) {
-            pseudoFunc = m->module->getFunction(pname);
-            blendFunc = m->module->getFunction(bname);
-            maskedStoreFunc = m->module->getFunction(msname);
-            Assert(pseudoFunc != nullptr && blendFunc != nullptr && maskedStoreFunc != nullptr);
-        }
-        llvm::Function *pseudoFunc;
-        llvm::Function *blendFunc;
-        llvm::Function *maskedStoreFunc;
+    static std::unordered_map<std::string, LMSInfo> replacementRules = {
+        {__pseudo_masked_store_i8, LMSInfo(__masked_store_blend_i8, __masked_store_i8)},
+        {__pseudo_masked_store_i16, LMSInfo(__masked_store_blend_i16, __masked_store_i16)},
+        {__pseudo_masked_store_half, LMSInfo(__masked_store_blend_half, __masked_store_half)},
+        {__pseudo_masked_store_i32, LMSInfo(__masked_store_blend_i32, __masked_store_i32)},
+        {__pseudo_masked_store_float, LMSInfo(__masked_store_blend_float, __masked_store_float)},
+        {__pseudo_masked_store_i64, LMSInfo(__masked_store_blend_i64, __masked_store_i64)},
+        {__pseudo_masked_store_double, LMSInfo(__masked_store_blend_double, __masked_store_double)},
     };
 
-    LMSInfo msInfo[] = {LMSInfo(__pseudo_masked_store_i8, __masked_store_blend_i8, __masked_store_i8),
-                        LMSInfo(__pseudo_masked_store_i16, __masked_store_blend_i16, __masked_store_i16),
-                        LMSInfo(__pseudo_masked_store_half, __masked_store_blend_half, __masked_store_half),
-                        LMSInfo(__pseudo_masked_store_i32, __masked_store_blend_i32, __masked_store_i32),
-                        LMSInfo(__pseudo_masked_store_float, __masked_store_blend_float, __masked_store_float),
-                        LMSInfo(__pseudo_masked_store_i64, __masked_store_blend_i64, __masked_store_i64),
-                        LMSInfo(__pseudo_masked_store_double, __masked_store_blend_double, __masked_store_double)};
-    LMSInfo *info = nullptr;
-    for (unsigned int i = 0; i < sizeof(msInfo) / sizeof(msInfo[0]); ++i) {
-        if (msInfo[i].pseudoFunc != nullptr && callInst->getCalledFunction() == msInfo[i].pseudoFunc) {
-            info = &msInfo[i];
-            break;
-        }
-    }
-    if (info == nullptr)
+    auto name = callInst->getCalledFunction()->getName().str();
+    auto it = replacementRules.find(name);
+    if (it == replacementRules.end()) {
+        // it is not a call of __pseudo function stored in replacementRules
         return false;
+    }
+    LMSInfo *info = &it->second;
 
     llvm::Value *lvalue = callInst->getArgOperand(0);
     llvm::Value *rvalue = callInst->getArgOperand(1);
@@ -84,7 +83,7 @@ static bool lReplacePseudoMaskedStore(llvm::CallInst *callInst) {
 
     // Generate the call to the appropriate masked store function and
     // replace the __pseudo_* one with it.
-    llvm::Function *fms = doBlend ? info->blendFunc : info->maskedStoreFunc;
+    llvm::Function *fms = doBlend ? info->blendFunc() : info->maskedStoreFunc();
     llvm::Instruction *inst = LLVMCallInst(fms, lvalue, rvalue, mask, "", callInst);
     LLVMCopyMetadata(inst, callInst);
 
