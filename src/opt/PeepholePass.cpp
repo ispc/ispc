@@ -1,10 +1,11 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
 
 #include "PeepholePass.h"
+#include "builtins-decl.h"
 
 namespace ispc {
 
@@ -154,7 +155,7 @@ static llvm::Instruction *lMatchAvgUpUInt8(llvm::Value *inst) {
         if (delta->isIntN(1) == false)
             return nullptr;
 
-        return lGetBinaryIntrinsic("__avg_up_uint8", opa, opb);
+        return lGetBinaryIntrinsic(builtin::__avg_up_uint8, opa, opb);
     }
     return nullptr;
 }
@@ -163,7 +164,7 @@ static llvm::Instruction *lMatchAvgDownUInt8(llvm::Value *inst) {
     // (unsigned int8)(((unsigned int16)a + (unsigned int16)b)/2)
     llvm::Value *opa, *opb;
     if (match(inst, m_Trunc16To8(m_UDiv2(m_Add(m_ZExt8To16(m_Value(opa)), m_ZExt8To16(m_Value(opb))))))) {
-        return lGetBinaryIntrinsic("__avg_down_uint8", opa, opb);
+        return lGetBinaryIntrinsic(builtin::__avg_down_uint8, opa, opb);
     }
     return nullptr;
 }
@@ -180,7 +181,7 @@ static llvm::Instruction *lMatchAvgUpUInt16(llvm::Value *inst) {
         if (delta->isIntN(1) == false)
             return nullptr;
 
-        return lGetBinaryIntrinsic("__avg_up_uint16", opa, opb);
+        return lGetBinaryIntrinsic(builtin::__avg_up_uint16, opa, opb);
     }
     return nullptr;
 }
@@ -189,7 +190,7 @@ static llvm::Instruction *lMatchAvgDownUInt16(llvm::Value *inst) {
     // (unsigned int16)(((unsigned int32)a + (unsigned int32)b)/2)
     llvm::Value *opa, *opb;
     if (match(inst, m_Trunc32To16(m_UDiv2(m_Add(m_ZExt16To32(m_Value(opa)), m_ZExt16To32(m_Value(opb))))))) {
-        return lGetBinaryIntrinsic("__avg_down_uint16", opa, opb);
+        return lGetBinaryIntrinsic(builtin::__avg_down_uint16, opa, opb);
     }
     return nullptr;
 }
@@ -205,7 +206,7 @@ static llvm::Instruction *lMatchAvgUpInt8(llvm::Value *inst) {
         if (delta->isIntN(1) == false)
             return nullptr;
 
-        return lGetBinaryIntrinsic("__avg_up_int8", opa, opb);
+        return lGetBinaryIntrinsic(builtin::__avg_up_int8, opa, opb);
     }
     return nullptr;
 }
@@ -214,7 +215,7 @@ static llvm::Instruction *lMatchAvgDownInt8(llvm::Value *inst) {
     // (int8)(((int16)a + (int16)b)/2)
     llvm::Value *opa, *opb;
     if (match(inst, m_Trunc16To8(m_SDiv2(m_Add(m_SExt8To16(m_Value(opa)), m_SExt8To16(m_Value(opb))))))) {
-        return lGetBinaryIntrinsic("__avg_down_int8", opa, opb);
+        return lGetBinaryIntrinsic(builtin::__avg_down_int8, opa, opb);
     }
     return nullptr;
 }
@@ -231,7 +232,7 @@ static llvm::Instruction *lMatchAvgUpInt16(llvm::Value *inst) {
         if (delta->isIntN(1) == false)
             return nullptr;
 
-        return lGetBinaryIntrinsic("__avg_up_int16", opa, opb);
+        return lGetBinaryIntrinsic(builtin::__avg_up_int16, opa, opb);
     }
     return nullptr;
 }
@@ -240,7 +241,7 @@ static llvm::Instruction *lMatchAvgDownInt16(llvm::Value *inst) {
     // (int16)(((int32)a + (int32)b)/2)
     llvm::Value *opa, *opb;
     if (match(inst, m_Trunc32To16(m_SDiv2(m_Add(m_SExt16To32(m_Value(opa)), m_SExt16To32(m_Value(opb))))))) {
-        return lGetBinaryIntrinsic("__avg_down_int16", opa, opb);
+        return lGetBinaryIntrinsic(builtin::__avg_down_int16, opa, opb);
     }
     return nullptr;
 }

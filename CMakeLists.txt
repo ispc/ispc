@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2023, Intel Corporation
+#  Copyright (c) 2018-2024, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -440,6 +440,8 @@ target_sources(${PROJECT_NAME}
         "src/bitcode_lib.h"
         "src/builtins.cpp"
         "src/builtins.h"
+        "src/builtins-decl.cpp"
+        "src/builtins-decl.h"
         "src/ctx.cpp"
         "src/ctx.h"
         "src/decl.cpp"

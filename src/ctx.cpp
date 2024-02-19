@@ -9,6 +9,7 @@
 */
 
 #include "ctx.h"
+#include "builtins-decl.h"
 #include "expr.h"
 #include "func.h"
 #include "llvmutil.h"
@@ -1345,7 +1346,7 @@ void FunctionEmitContext::SetFunctionFTZ_DAZFlags() {
     if (functionFTZ_DAZValue == nullptr)
         return;
     std::vector<Symbol *> mm;
-    m->symbolTable->LookupFunction("__set_ftz_daz_flags", &mm);
+    m->symbolTable->LookupFunction(builtin::__set_ftz_daz_flags, &mm);
     AssertPos(currentPos, mm.size() >= 1);
     llvm::Function *fmm = mm[0]->function;
     std::vector<llvm::Value *> args;
@@ -1357,7 +1358,7 @@ void FunctionEmitContext::RestoreFunctionFTZ_DAZFlags() {
     if (functionFTZ_DAZValue == nullptr)
         return;
     std::vector<Symbol *> mm;
-    m->symbolTable->LookupFunction("__restore_ftz_daz_flags", &mm);
+    m->symbolTable->LookupFunction(builtin::__restore_ftz_daz_flags, &mm);
     AssertPos(currentPos, mm.size() >= 1);
     llvm::Function *fmm = mm[0]->function;
     llvm::Value *oldFTZ = LoadInst(functionFTZ_DAZValue);
@@ -1370,7 +1371,7 @@ llvm::Value *FunctionEmitContext::Any(llvm::Value *mask) {
     // Call the target-dependent any function to test that the mask is non-zero
 
     std::vector<Symbol *> mm;
-    m->symbolTable->LookupFunction("__any", &mm);
+    m->symbolTable->LookupFunction(builtin::__any, &mm);
     if (g->target->getMaskBitCount() == 1)
         AssertPos(currentPos, mm.size() == 1);
     else
@@ -1386,7 +1387,7 @@ llvm::Value *FunctionEmitContext::All(llvm::Value *mask) {
     // Call the target-dependent movmsk function to turn the vector mask
     // into an i64 value
     std::vector<Symbol *> mm;
-    m->symbolTable->LookupFunction("__all", &mm);
+    m->symbolTable->LookupFunction(builtin::__all, &mm);
     if (g->target->getMaskBitCount() == 1)
         AssertPos(currentPos, mm.size() == 1);
     else
@@ -1402,7 +1403,7 @@ llvm::Value *FunctionEmitContext::None(llvm::Value *mask) {
     // Call the target-dependent movmsk function to turn the vector mask
     // into an i64 value
     std::vector<Symbol *> mm;
-    m->symbolTable->LookupFunction("__none", &mm);
+    m->symbolTable->LookupFunction(builtin::__none, &mm);
     if (g->target->getMaskBitCount() == 1)
         AssertPos(currentPos, mm.size() == 1);
     else
@@ -1415,12 +1416,10 @@ llvm::Value *FunctionEmitContext::None(llvm::Value *mask) {
 }
 
 llvm::Value *FunctionEmitContext::LaneMask(llvm::Value *v) {
-    const char *__movmsk = "__movmsk";
-
     // Call the target-dependent movmsk function to turn the vector mask
     // into an i64 value
     std::vector<Symbol *> mm;
-    m->symbolTable->LookupFunction(__movmsk, &mm);
+    m->symbolTable->LookupFunction(builtin::__movmsk, &mm);
     if (g->target->getMaskBitCount() == 1)
         AssertPos(currentPos, mm.size() == 1);
     else
@@ -2570,7 +2569,7 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
         // Call the target-dependent movmsk function to turn the vector mask
         // into an i64 value
         std::vector<Symbol *> mm;
-        m->symbolTable->LookupFunction("__movmsk", &mm);
+        m->symbolTable->LookupFunction(builtin::__movmsk, &mm);
         if (g->target->getMaskBitCount() == 1)
             AssertPos(currentPos, mm.size() == 1);
         else
@@ -2581,7 +2580,7 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
         llvm::Function *fmm = mm[0]->function;
         llvm::Value *int_mask = CallInst(fmm, nullptr, mask, llvm::Twine(mask->getName()) + "_movmsk");
         std::vector<Symbol *> lz;
-        m->symbolTable->LookupFunction("__count_trailing_zeros_i64", &lz);
+        m->symbolTable->LookupFunction(builtin::__count_trailing_zeros_i64, &lz);
         llvm::Function *flz = lz[0]->function;
         llvm::Value *elem_idx = CallInst(flz, nullptr, int_mask, llvm::Twine(mask->getName()) + "_clz");
         llvm::Value *elem = llvm::ExtractElementInst::Create(
@@ -2644,25 +2643,25 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
     const PointerType *pt = CastType<PointerType>(returnType);
     const char *funcName = nullptr;
     if (pt != nullptr)
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_i32" : "__pseudo_gather64_i64";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_gather32_i32 : builtin::__pseudo_gather64_i64;
     // bool type is stored as i8.
     else if (returnType->IsBoolType())
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_i8" : "__pseudo_gather64_i8";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_gather32_i8 : builtin::__pseudo_gather64_i8;
     else if (llvmReturnType == LLVMTypes::DoubleVectorType)
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_double" : "__pseudo_gather64_double";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_gather32_double : builtin::__pseudo_gather64_double;
     else if (llvmReturnType == LLVMTypes::Int64VectorType)
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_i64" : "__pseudo_gather64_i64";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_gather32_i64 : builtin::__pseudo_gather64_i64;
     else if (llvmReturnType == LLVMTypes::FloatVectorType)
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_float" : "__pseudo_gather64_float";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_gather32_float : builtin::__pseudo_gather64_float;
     else if (llvmReturnType == LLVMTypes::Float16VectorType)
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_half" : "__pseudo_gather64_half";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_gather32_half : builtin::__pseudo_gather64_half;
     else if (llvmReturnType == LLVMTypes::Int32VectorType)
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_i32" : "__pseudo_gather64_i32";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_gather32_i32 : builtin::__pseudo_gather64_i32;
     else if (llvmReturnType == LLVMTypes::Int16VectorType)
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_i16" : "__pseudo_gather64_i16";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_gather32_i16 : builtin::__pseudo_gather64_i16;
     else {
         AssertPos(currentPos, llvmReturnType == LLVMTypes::Int8VectorType);
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_i8" : "__pseudo_gather64_i8";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_gather32_i8 : builtin::__pseudo_gather64_i8;
     }
 
     llvm::Function *gatherFunc = m->module->getFunction(funcName);
@@ -2921,9 +2920,9 @@ void FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr, cons
         }
 
         if (g->target->is32Bit())
-            maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i32");
+            maskedStoreFunc = m->module->getFunction(builtin::__pseudo_masked_store_i32);
         else
-            maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i64");
+            maskedStoreFunc = m->module->getFunction(builtin::__pseudo_masked_store_i64);
     } else if (llvmValueType == LLVMTypes::Int1VectorType) {
         llvm::Value *notMask =
             BinaryOperator(llvm::Instruction::Xor, mask, LLVMMaskAllOn, WrapSemantics::None, "~mask");
@@ -2936,19 +2935,19 @@ void FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr, cons
         StoreInst(final, ptrInfo, valueType);
         return;
     } else if (llvmValueStorageType == LLVMTypes::DoubleVectorType) {
-        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_double");
+        maskedStoreFunc = m->module->getFunction(builtin::__pseudo_masked_store_double);
     } else if (llvmValueStorageType == LLVMTypes::Int64VectorType) {
-        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i64");
+        maskedStoreFunc = m->module->getFunction(builtin::__pseudo_masked_store_i64);
     } else if (llvmValueStorageType == LLVMTypes::FloatVectorType) {
-        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_float");
+        maskedStoreFunc = m->module->getFunction(builtin::__pseudo_masked_store_float);
     } else if (llvmValueStorageType == LLVMTypes::Float16VectorType) {
-        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_half");
+        maskedStoreFunc = m->module->getFunction(builtin::__pseudo_masked_store_half);
     } else if (llvmValueStorageType == LLVMTypes::Int32VectorType) {
-        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i32");
+        maskedStoreFunc = m->module->getFunction(builtin::__pseudo_masked_store_i32);
     } else if (llvmValueStorageType == LLVMTypes::Int16VectorType) {
-        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i16");
+        maskedStoreFunc = m->module->getFunction(builtin::__pseudo_masked_store_i16);
     } else if (llvmValueStorageType == LLVMTypes::Int8VectorType) {
-        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i8");
+        maskedStoreFunc = m->module->getFunction(builtin::__pseudo_masked_store_i8);
         value = SwitchBoolSize(value, llvmValueStorageType);
     }
     AssertPos(currentPos, maskedStoreFunc != nullptr);
@@ -3046,21 +3045,21 @@ void FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr, const Ty
     }
     const char *funcName = nullptr;
     if (pt != nullptr) {
-        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i32" : "__pseudo_scatter64_i64";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_scatter32_i32 : builtin::__pseudo_scatter64_i64;
     } else if (llvmStorageType == LLVMTypes::DoubleVectorType) {
-        funcName = g->target->is32Bit() ? "__pseudo_scatter32_double" : "__pseudo_scatter64_double";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_scatter32_double : builtin::__pseudo_scatter64_double;
     } else if (llvmStorageType == LLVMTypes::Int64VectorType) {
-        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i64" : "__pseudo_scatter64_i64";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_scatter32_i64 : builtin::__pseudo_scatter64_i64;
     } else if (llvmStorageType == LLVMTypes::FloatVectorType) {
-        funcName = g->target->is32Bit() ? "__pseudo_scatter32_float" : "__pseudo_scatter64_float";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_scatter32_float : builtin::__pseudo_scatter64_float;
     } else if (llvmStorageType == LLVMTypes::Float16VectorType) {
-        funcName = g->target->is32Bit() ? "__pseudo_scatter32_half" : "__pseudo_scatter64_half";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_scatter32_half : builtin::__pseudo_scatter64_half;
     } else if (llvmStorageType == LLVMTypes::Int32VectorType) {
-        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i32" : "__pseudo_scatter64_i32";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_scatter32_i32 : builtin::__pseudo_scatter64_i32;
     } else if (llvmStorageType == LLVMTypes::Int16VectorType) {
-        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i16" : "__pseudo_scatter64_i16";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_scatter32_i16 : builtin::__pseudo_scatter64_i16;
     } else if (llvmStorageType == LLVMTypes::Int8VectorType) {
-        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i8" : "__pseudo_scatter64_i8";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_scatter32_i8 : builtin::__pseudo_scatter64_i8;
     }
 
     llvm::Function *scatterFunc = m->module->getFunction(funcName);
@@ -3577,7 +3576,7 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
             // Figure out the first lane that still needs its function
             // pointer to be called.
             llvm::Value *currentMask = LoadInst(maskPtrInfo);
-            llvm::Function *cttz = m->module->getFunction("__count_trailing_zeros_i64");
+            llvm::Function *cttz = m->module->getFunction(builtin::__count_trailing_zeros_i64);
             AssertPos(currentPos, cttz != nullptr);
             llvm::Value *firstLane64 = CallInst(cttz, nullptr, LaneMask(currentMask), "first_lane64");
             llvm::Value *firstLane = TruncInst(firstLane64, LLVMTypes::Int32Type, "first_lane32");
