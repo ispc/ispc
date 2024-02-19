@@ -922,135 +922,95 @@ static llvm::CallInst *lGSToGSBaseOffsets(llvm::CallInst *callInst) {
 
 /** Try to improve the decomposition between compile-time constant and
     compile-time unknown offsets in calls to the __pseudo_*_base_offsets*
-    functions.  Other other optimizations have run, we will sometimes be
+    functions. After other optimizations have run, we will sometimes be
     able to pull more terms out of the unknown part and add them into the
     compile-time-known part.
  */
 static llvm::CallInst *lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
-    struct GSBOInfo {
-        GSBOInfo(const char *pgboFuncName, const char *pgbo32FuncName, bool ig, bool ip)
-            : isGather(ig), isPrefetch(ip) {
-            baseOffsetsFunc = m->module->getFunction(pgboFuncName);
-            baseOffsets32Func = m->module->getFunction(pgbo32FuncName);
-        }
-        llvm::Function *baseOffsetsFunc, *baseOffsets32Func;
-        const bool isGather;
-        const bool isPrefetch;
+    static std::unordered_map<std::string, int> checksDecompositionOfArgs = {
+        {__pseudo_gather_base_offsets64_i8, 1},
+        {__pseudo_gather_base_offsets64_i16, 1},
+        {__pseudo_gather_base_offsets64_half, 1},
+        {__pseudo_gather_base_offsets64_i32, 1},
+        {__pseudo_gather_base_offsets64_float, 1},
+        {__pseudo_gather_base_offsets64_i64, 1},
+        {__pseudo_gather_base_offsets64_double, 1},
+        {__pseudo_gather_base_offsets32_i8, 1},
+        {__pseudo_gather_base_offsets32_i16, 1},
+        {__pseudo_gather_base_offsets32_half, 1},
+        {__pseudo_gather_base_offsets32_i32, 1},
+        {__pseudo_gather_base_offsets32_float, 1},
+        {__pseudo_gather_base_offsets32_i64, 1},
+        {__pseudo_gather_base_offsets32_double, 1},
+        {__pseudo_gather_factored_base_offsets64_i8, 1},
+        {__pseudo_gather_factored_base_offsets64_i16, 1},
+        {__pseudo_gather_factored_base_offsets64_half, 1},
+        {__pseudo_gather_factored_base_offsets64_i32, 1},
+        {__pseudo_gather_factored_base_offsets64_float, 1},
+        {__pseudo_gather_factored_base_offsets64_i64, 1},
+        {__pseudo_gather_factored_base_offsets64_double, 1},
+        {__pseudo_gather_factored_base_offsets32_i8, 1},
+        {__pseudo_gather_factored_base_offsets32_i16, 1},
+        {__pseudo_gather_factored_base_offsets32_half, 1},
+        {__pseudo_gather_factored_base_offsets32_i32, 1},
+        {__pseudo_gather_factored_base_offsets32_float, 1},
+        {__pseudo_gather_factored_base_offsets32_i64, 1},
+        {__pseudo_gather_factored_base_offsets32_double, 1},
+        {__pseudo_scatter_base_offsets64_i8, 1},
+        {__pseudo_scatter_base_offsets64_i16, 1},
+        {__pseudo_scatter_base_offsets64_half, 1},
+        {__pseudo_scatter_base_offsets64_i32, 1},
+        {__pseudo_scatter_base_offsets64_float, 1},
+        {__pseudo_scatter_base_offsets64_i64, 1},
+        {__pseudo_scatter_base_offsets64_double, 1},
+        {__pseudo_scatter_base_offsets32_i8, 1},
+        {__pseudo_scatter_base_offsets32_i16, 1},
+        {__pseudo_scatter_base_offsets32_half, 1},
+        {__pseudo_scatter_base_offsets32_i32, 1},
+        {__pseudo_scatter_base_offsets32_float, 1},
+        {__pseudo_scatter_base_offsets32_i64, 1},
+        {__pseudo_scatter_base_offsets32_double, 1},
+        {__pseudo_scatter_factored_base_offsets64_i8, 1},
+        {__pseudo_scatter_factored_base_offsets64_i16, 1},
+        {__pseudo_scatter_factored_base_offsets64_half, 1},
+        {__pseudo_scatter_factored_base_offsets64_i32, 1},
+        {__pseudo_scatter_factored_base_offsets64_float, 1},
+        {__pseudo_scatter_factored_base_offsets64_i64, 1},
+        {__pseudo_scatter_factored_base_offsets64_double, 1},
+        {__pseudo_scatter_factored_base_offsets32_i8, 1},
+        {__pseudo_scatter_factored_base_offsets32_i16, 1},
+        {__pseudo_scatter_factored_base_offsets32_half, 1},
+        {__pseudo_scatter_factored_base_offsets32_i32, 1},
+        {__pseudo_scatter_factored_base_offsets32_float, 1},
+        {__pseudo_scatter_factored_base_offsets32_i64, 1},
+        {__pseudo_scatter_factored_base_offsets32_double, 1},
+        {__pseudo_prefetch_read_varying_1_native, 1},
+        {__pseudo_prefetch_read_varying_2_native, 1},
+        {__pseudo_prefetch_read_varying_3_native, 1},
+        {__pseudo_prefetch_read_varying_nt_native, 1},
+        {__prefetch_read_varying_1, 1},
+        {__prefetch_read_varying_2, 1},
+        {__prefetch_read_varying_3, 1},
+        {__prefetch_read_varying_nt, 1},
+        {__pseudo_prefetch_write_varying_1_native, 1},
+        {__pseudo_prefetch_write_varying_2_native, 1},
+        {__pseudo_prefetch_write_varying_3_native, 1},
+        {__prefetch_write_varying_1, 1},
+        {__prefetch_write_varying_2, 1},
+        {__prefetch_write_varying_3, 1},
     };
-
-    GSBOInfo gsFuncs[] = {
-        GSBOInfo(
-            g->target->useGather() ? __pseudo_gather_base_offsets64_i8 : __pseudo_gather_factored_base_offsets64_i8,
-            g->target->useGather() ? __pseudo_gather_base_offsets32_i8 : __pseudo_gather_factored_base_offsets32_i8,
-            true, false),
-        GSBOInfo(
-            g->target->useGather() ? __pseudo_gather_base_offsets64_i16 : __pseudo_gather_factored_base_offsets64_i16,
-            g->target->useGather() ? __pseudo_gather_base_offsets32_i16 : __pseudo_gather_factored_base_offsets32_i16,
-            true, false),
-        GSBOInfo(
-            g->target->useGather() ? __pseudo_gather_base_offsets64_half : __pseudo_gather_factored_base_offsets64_half,
-            g->target->useGather() ? __pseudo_gather_base_offsets32_half : __pseudo_gather_factored_base_offsets32_half,
-            true, false),
-        GSBOInfo(
-            g->target->useGather() ? __pseudo_gather_base_offsets64_i32 : __pseudo_gather_factored_base_offsets64_i32,
-            g->target->useGather() ? __pseudo_gather_base_offsets32_i32 : __pseudo_gather_factored_base_offsets32_i32,
-            true, false),
-        GSBOInfo(g->target->useGather() ? __pseudo_gather_base_offsets64_float
-                                        : __pseudo_gather_factored_base_offsets64_float,
-                 g->target->useGather() ? __pseudo_gather_base_offsets32_float
-                                        : __pseudo_gather_factored_base_offsets32_float,
-                 true, false),
-        GSBOInfo(
-            g->target->useGather() ? __pseudo_gather_base_offsets64_i64 : __pseudo_gather_factored_base_offsets64_i64,
-            g->target->useGather() ? __pseudo_gather_base_offsets32_i64 : __pseudo_gather_factored_base_offsets32_i64,
-            true, false),
-        GSBOInfo(g->target->useGather() ? __pseudo_gather_base_offsets64_double
-                                        : __pseudo_gather_factored_base_offsets64_double,
-                 g->target->useGather() ? __pseudo_gather_base_offsets32_double
-                                        : __pseudo_gather_factored_base_offsets32_double,
-                 true, false),
-
-        GSBOInfo(
-            g->target->useScatter() ? __pseudo_scatter_base_offsets64_i8 : __pseudo_scatter_factored_base_offsets64_i8,
-            g->target->useScatter() ? __pseudo_scatter_base_offsets32_i8 : __pseudo_scatter_factored_base_offsets32_i8,
-            false, false),
-        GSBOInfo(g->target->useScatter() ? __pseudo_scatter_base_offsets64_i16
-                                         : __pseudo_scatter_factored_base_offsets64_i16,
-                 g->target->useScatter() ? __pseudo_scatter_base_offsets32_i16
-                                         : __pseudo_scatter_factored_base_offsets32_i16,
-                 false, false),
-        GSBOInfo(g->target->useScatter() ? __pseudo_scatter_base_offsets64_half
-                                         : __pseudo_scatter_factored_base_offsets64_half,
-                 g->target->useScatter() ? __pseudo_scatter_base_offsets32_half
-                                         : __pseudo_scatter_factored_base_offsets32_half,
-                 false, false),
-        GSBOInfo(g->target->useScatter() ? __pseudo_scatter_base_offsets64_i32
-                                         : __pseudo_scatter_factored_base_offsets64_i32,
-                 g->target->useScatter() ? __pseudo_scatter_base_offsets32_i32
-                                         : __pseudo_scatter_factored_base_offsets32_i32,
-                 false, false),
-        GSBOInfo(g->target->useScatter() ? __pseudo_scatter_base_offsets64_float
-                                         : __pseudo_scatter_factored_base_offsets64_float,
-                 g->target->useScatter() ? __pseudo_scatter_base_offsets32_float
-                                         : __pseudo_scatter_factored_base_offsets32_float,
-                 false, false),
-        GSBOInfo(g->target->useScatter() ? __pseudo_scatter_base_offsets64_i64
-                                         : __pseudo_scatter_factored_base_offsets64_i64,
-                 g->target->useScatter() ? __pseudo_scatter_base_offsets32_i64
-                                         : __pseudo_scatter_factored_base_offsets32_i64,
-                 false, false),
-        GSBOInfo(g->target->useScatter() ? __pseudo_scatter_base_offsets64_double
-                                         : __pseudo_scatter_factored_base_offsets64_double,
-                 g->target->useScatter() ? __pseudo_scatter_base_offsets32_double
-                                         : __pseudo_scatter_factored_base_offsets32_double,
-                 false, false),
-
-        GSBOInfo(g->target->hasVecPrefetch() ? __pseudo_prefetch_read_varying_1_native : __prefetch_read_varying_1,
-                 g->target->hasVecPrefetch() ? __pseudo_prefetch_read_varying_1_native : __prefetch_read_varying_1,
-                 false, true),
-
-        GSBOInfo(g->target->hasVecPrefetch() ? __pseudo_prefetch_read_varying_2_native : __prefetch_read_varying_2,
-                 g->target->hasVecPrefetch() ? __pseudo_prefetch_read_varying_2_native : __prefetch_read_varying_2,
-                 false, true),
-
-        GSBOInfo(g->target->hasVecPrefetch() ? __pseudo_prefetch_read_varying_3_native : __prefetch_read_varying_3,
-                 g->target->hasVecPrefetch() ? __pseudo_prefetch_read_varying_3_native : __prefetch_read_varying_3,
-                 false, true),
-
-        GSBOInfo(g->target->hasVecPrefetch() ? __pseudo_prefetch_read_varying_nt_native : __prefetch_read_varying_nt,
-                 g->target->hasVecPrefetch() ? __pseudo_prefetch_read_varying_nt_native : __prefetch_read_varying_nt,
-                 false, true),
-
-        GSBOInfo(g->target->hasVecPrefetch() ? __pseudo_prefetch_write_varying_1_native : __prefetch_write_varying_1,
-                 g->target->hasVecPrefetch() ? __pseudo_prefetch_write_varying_1_native : __prefetch_write_varying_1,
-                 false, true),
-
-        GSBOInfo(g->target->hasVecPrefetch() ? __pseudo_prefetch_write_varying_2_native : __prefetch_write_varying_2,
-                 g->target->hasVecPrefetch() ? __pseudo_prefetch_write_varying_2_native : __prefetch_write_varying_2,
-                 false, true),
-
-        GSBOInfo(g->target->hasVecPrefetch() ? __pseudo_prefetch_write_varying_3_native : __prefetch_write_varying_3,
-                 g->target->hasVecPrefetch() ? __pseudo_prefetch_write_varying_3_native : __prefetch_write_varying_3,
-                 false, true),
-    };
-
-    int numGSFuncs = sizeof(gsFuncs) / sizeof(gsFuncs[0]);
-    for (int i = 0; i < numGSFuncs; ++i)
-        Assert(gsFuncs[i].baseOffsetsFunc != nullptr && gsFuncs[i].baseOffsets32Func != nullptr);
 
     llvm::Function *calledFunc = callInst->getCalledFunction();
     Assert(calledFunc != nullptr);
 
     // Is one of the gather/scatter functins that decompose into
     // base+offsets being called?
-    GSBOInfo *info = nullptr;
-    for (int i = 0; i < numGSFuncs; ++i)
-        if (calledFunc == gsFuncs[i].baseOffsetsFunc || calledFunc == gsFuncs[i].baseOffsets32Func) {
-            info = &gsFuncs[i];
-            break;
-        }
-    if (info == nullptr)
+    auto name = calledFunc->getName().str();
+    auto it = checksDecompositionOfArgs.find(name);
+    if (it == checksDecompositionOfArgs.end()) {
+        // it is not a call of function stored in checksDecompositionOfArgs
         return nullptr;
+    }
 
     // Grab the old variable offset
     llvm::Value *origVariableOffset = callInst->getArgOperand(1);
