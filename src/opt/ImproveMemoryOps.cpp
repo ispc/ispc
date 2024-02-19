@@ -1443,49 +1443,22 @@ static llvm::Value *lImproveMaskedStore(llvm::CallInst *callInst) {
 }
 
 static llvm::Value *lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::iterator iter) {
-    struct MLInfo {
-        MLInfo(const char *name, const int a) : align(a) {
-            func = m->module->getFunction(name);
-            Assert(func != nullptr);
-        }
-        llvm::Function *func;
-        const int align;
+    static std::unordered_map<std::string, int> maskedLoadAlign = {
+        {__masked_load_i8, 1},         {__masked_load_i16, 2},          {__masked_load_half, 2},
+        {__masked_load_i32, 4},        {__masked_load_float, 4},        {__masked_load_i64, 8},
+        {__masked_load_double, 8},     {__masked_load_blend_i8, 1},     {__masked_load_blend_i16, 2},
+        {__masked_load_blend_half, 2}, {__masked_load_blend_i32, 4},    {__masked_load_blend_float, 4},
+        {__masked_load_blend_i64, 8},  {__masked_load_blend_double, 8},
     };
 
     llvm::Function *called = callInst->getCalledFunction();
-    // TODO: we should use dynamic data structure for MLInfo and fill
-    // it differently for Xe and CPU targets. It will also help
-    // to avoid declaration of Xe intrinsics for CPU targets.
-    // It should be changed seamlessly here and in all similar places in this file.
-    MLInfo mlInfo[] = {MLInfo(__masked_load_i8, 1),    MLInfo(__masked_load_i16, 2),   MLInfo(__masked_load_half, 2),
-                       MLInfo(__masked_load_i32, 4),   MLInfo(__masked_load_float, 4), MLInfo(__masked_load_i64, 8),
-                       MLInfo(__masked_load_double, 8)};
-    MLInfo xeInfo[] = {
-        MLInfo(__masked_load_i8, 1),         MLInfo(__masked_load_i16, 2),         MLInfo(__masked_load_half, 2),
-        MLInfo(__masked_load_i32, 4),        MLInfo(__masked_load_float, 4),       MLInfo(__masked_load_i64, 8),
-        MLInfo(__masked_load_double, 8),     MLInfo(__masked_load_blend_i8, 1),    MLInfo(__masked_load_blend_i16, 2),
-        MLInfo(__masked_load_blend_half, 2), MLInfo(__masked_load_blend_i32, 4),   MLInfo(__masked_load_blend_float, 4),
-        MLInfo(__masked_load_blend_i64, 8),  MLInfo(__masked_load_blend_double, 8)};
-    MLInfo *info = nullptr;
-    if (g->target->isXeTarget()) {
-        int nFuncs = sizeof(xeInfo) / sizeof(xeInfo[0]);
-        for (int i = 0; i < nFuncs; ++i) {
-            if (xeInfo[i].func != nullptr && called == xeInfo[i].func) {
-                info = &xeInfo[i];
-                break;
-            }
-        }
-    } else {
-        int nFuncs = sizeof(mlInfo) / sizeof(mlInfo[0]);
-        for (int i = 0; i < nFuncs; ++i) {
-            if (mlInfo[i].func != nullptr && called == mlInfo[i].func) {
-                info = &mlInfo[i];
-                break;
-            }
-        }
-    }
-    if (info == nullptr)
+    auto name = called->getName().str();
+    auto it = maskedLoadAlign.find(name);
+    if (it == maskedLoadAlign.end()) {
+        // it is not a call of function stored in maskedLoadAlign
         return nullptr;
+    }
+    int align = it->second;
 
     // Got one; grab the operands
     llvm::Value *ptr = callInst->getArgOperand(0);
@@ -1505,8 +1478,7 @@ static llvm::Value *lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBloc
         Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
         load = new llvm::LoadInst(
             callInst->getType(), ptr, callInst->getName(), false /* not volatile */,
-            llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align)
-                .valueOrOne(),
+            llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : align).valueOrOne(),
             (llvm::Instruction *)NULL);
 
         if (load != nullptr) {
