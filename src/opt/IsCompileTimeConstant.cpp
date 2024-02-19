@@ -1,19 +1,20 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
 
 #include "IsCompileTimeConstant.h"
+#include "builtins-decl.h"
 
 namespace ispc {
 
 bool IsCompileTimeConstantPass::lowerCompileTimeConstant(llvm::BasicBlock &bb) {
     DEBUG_START_BB("IsCompileTimeConstantPass");
 
-    llvm::Function *funcs[] = {m->module->getFunction("__is_compile_time_constant_mask"),
-                               m->module->getFunction("__is_compile_time_constant_uniform_int32"),
-                               m->module->getFunction("__is_compile_time_constant_varying_int32")};
+    llvm::Function *funcs[] = {m->module->getFunction(builtin::__is_compile_time_constant_mask),
+                               m->module->getFunction(builtin::__is_compile_time_constant_uniform_int32),
+                               m->module->getFunction(builtin::__is_compile_time_constant_varying_int32)};
 
     bool modifiedAny = false;
 

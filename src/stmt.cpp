@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -9,6 +9,7 @@
 */
 
 #include "stmt.h"
+#include "builtins-decl.h"
 #include "builtins-info.h"
 #include "ctx.h"
 #include "expr.h"
@@ -2195,7 +2196,7 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtrInfo, nullptr, "remaining_bits");
 
         // Find the index of the first set bit in the mask
-        llvm::Function *ctlzFunc = m->module->getFunction("__count_trailing_zeros_i64");
+        llvm::Function *ctlzFunc = m->module->getFunction(builtin::__count_trailing_zeros_i64);
         Assert(ctlzFunc != nullptr);
         llvm::Value *firstSet = ctx->CallInst(ctlzFunc, nullptr, remainingBits, "first_set");
 
@@ -2420,7 +2421,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtrInfo, nullptr, "remaining_bits");
 
         // Find the index of the first set bit in the mask
-        llvm::Function *ctlzFunc = m->module->getFunction("__count_trailing_zeros_i64");
+        llvm::Function *ctlzFunc = m->module->getFunction(builtin::__count_trailing_zeros_i64);
         Assert(ctlzFunc != nullptr);
         llvm::Value *firstSet = ctx->CallInst(ctlzFunc, nullptr, remainingBits, "first_set");
 
@@ -3280,7 +3281,7 @@ static ExprWithType lProcessPrintArgType(Expr *expr) {
 // Returns pointer to __do_print function
 static llvm::Function *getPrintImplFunc() {
     Assert(g->target->isXeTarget() == false);
-    llvm::Function *printImplFunc = m->module->getFunction("__do_print");
+    llvm::Function *printImplFunc = m->module->getFunction(builtin::__do_print);
     return printImplFunc;
 }
 
@@ -3803,8 +3804,8 @@ void AssertStmt::EmitAssertCode(FunctionEmitContext *ctx, const Type *type) cons
 
     // The actual functionality to do the check and then handle failure is
     // done via a builtin written in bitcode in builtins/util.m4.
-    llvm::Function *assertFunc =
-        isUniform ? m->module->getFunction("__do_assert_uniform") : m->module->getFunction("__do_assert_varying");
+    llvm::Function *assertFunc = isUniform ? m->module->getFunction(builtin::__do_assert_uniform)
+                                           : m->module->getFunction(builtin::__do_assert_varying);
     AssertPos(pos, assertFunc != nullptr);
 
     char *errorString;
@@ -3853,7 +3854,7 @@ void AssertStmt::EmitAssumeCode(FunctionEmitContext *ctx, const Type *type) cons
 
     // The actual functionality to insert an 'llvm.assume' intrinsic is
     // done via a builtin written in bitcode in builtins/util.m4.
-    llvm::Function *assumeFunc = m->module->getFunction("__do_assume_uniform");
+    llvm::Function *assumeFunc = m->module->getFunction(builtin::__do_assume_uniform);
     AssertPos(pos, assumeFunc != nullptr);
 
     llvm::Value *exprValue = expr->GetValue(ctx);
@@ -3950,9 +3951,9 @@ void DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
         exprValue = ctx->BitCastInst(exprValue, LLVMTypes::VoidPointerType, "ptr_to_void");
         llvm::Function *func;
         if (g->target->is32Bit()) {
-            func = m->module->getFunction("__delete_uniform_32rt");
+            func = m->module->getFunction(builtin::__delete_uniform_32rt);
         } else {
-            func = m->module->getFunction("__delete_uniform_64rt");
+            func = m->module->getFunction(builtin::__delete_uniform_64rt);
         }
         AssertPos(pos, func != nullptr);
 
@@ -3964,9 +3965,9 @@ void DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
         // calling it.
         llvm::Function *func;
         if (g->target->is32Bit()) {
-            func = m->module->getFunction("__delete_varying_32rt");
+            func = m->module->getFunction(builtin::__delete_varying_32rt);
         } else {
-            func = m->module->getFunction("__delete_varying_64rt");
+            func = m->module->getFunction(builtin::__delete_varying_64rt);
         }
         AssertPos(pos, func != nullptr);
         if (g->target->is32Bit())

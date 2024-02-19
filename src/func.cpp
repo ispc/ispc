@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2023, Intel Corporation
+  Copyright (c) 2011-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -9,6 +9,7 @@
 */
 
 #include "func.h"
+#include "builtins-decl.h"
 #include "ctx.h"
 #include "expr.h"
 #include "llvmutil.h"
@@ -427,31 +428,31 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
             // Assign threadIndex and threadCount to the result of calling of corresponding builtins.
             // On Xe threadIndex equals to taskIndex and threadCount to taskCount.
             threadIndexSym->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "threadIndex");
-            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_index"), threadIndexSym->storageInfo);
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, builtin::__task_index), threadIndexSym->storageInfo);
 
             threadCountSym->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "threadCount");
-            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_count"), threadCountSym->storageInfo);
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, builtin::__task_count), threadCountSym->storageInfo);
 
             // Assign taskIndex and taskCount to the result of calling of corresponding builtins.
             taskIndexSym->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex");
-            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_index"), taskIndexSym->storageInfo);
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, builtin::__task_index), taskIndexSym->storageInfo);
 
             taskCountSym->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount");
-            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_count"), taskCountSym->storageInfo);
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, builtin::__task_count), taskCountSym->storageInfo);
 
             taskIndexSym0->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex0");
-            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_index0"), taskIndexSym0->storageInfo);
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, builtin::__task_index0), taskIndexSym0->storageInfo);
             taskIndexSym1->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex1");
-            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_index1"), taskIndexSym1->storageInfo);
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, builtin::__task_index1), taskIndexSym1->storageInfo);
             taskIndexSym2->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex2");
-            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_index2"), taskIndexSym2->storageInfo);
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, builtin::__task_index2), taskIndexSym2->storageInfo);
 
             taskCountSym0->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount0");
-            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_count0"), taskCountSym0->storageInfo);
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, builtin::__task_count0), taskCountSym0->storageInfo);
             taskCountSym1->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount1");
-            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_count1"), taskCountSym1->storageInfo);
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, builtin::__task_count1), taskCountSym1->storageInfo);
             taskCountSym2->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount2");
-            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_count2"), taskCountSym2->storageInfo);
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, builtin::__task_count2), taskCountSym2->storageInfo);
         }
     }
 
