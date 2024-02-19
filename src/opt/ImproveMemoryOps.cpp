@@ -1375,53 +1375,29 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
     mask and an 'all off' mask, respectively.
 */
 static llvm::Value *lImproveMaskedStore(llvm::CallInst *callInst) {
-    struct MSInfo {
-        MSInfo(const char *name, const int a) : align(a) {
-            func = m->module->getFunction(name);
-            Assert(func != nullptr);
-        }
-        llvm::Function *func;
-        const int align;
+    static std::unordered_map<std::string, int> maskedStoreAlign = {
+        {__pseudo_masked_store_i8, 1},     {__pseudo_masked_store_i16, 2},   {__pseudo_masked_store_half, 2},
+        {__pseudo_masked_store_i32, 4},    {__pseudo_masked_store_float, 4}, {__pseudo_masked_store_i64, 8},
+        {__pseudo_masked_store_double, 8}, {__masked_store_blend_i8, 1},     {__masked_store_blend_i16, 2},
+        {__masked_store_blend_half, 2},    {__masked_store_blend_i32, 4},    {__masked_store_blend_float, 4},
+        {__masked_store_blend_i64, 8},     {__masked_store_blend_double, 8}, {__masked_store_i8, 1},
+        {__masked_store_i16, 2},           {__masked_store_half, 2},         {__masked_store_i32, 4},
+        {__masked_store_float, 4},         {__masked_store_i64, 8},          {__masked_store_double, 8},
     };
 
-    MSInfo msInfo[] = {MSInfo(__pseudo_masked_store_i8, 1),
-                       MSInfo(__pseudo_masked_store_i16, 2),
-                       MSInfo(__pseudo_masked_store_half, 2),
-                       MSInfo(__pseudo_masked_store_i32, 4),
-                       MSInfo(__pseudo_masked_store_float, 4),
-                       MSInfo(__pseudo_masked_store_i64, 8),
-                       MSInfo(__pseudo_masked_store_double, 8),
-                       MSInfo(__masked_store_blend_i8, 1),
-                       MSInfo(__masked_store_blend_i16, 2),
-                       MSInfo(__masked_store_blend_half, 2),
-                       MSInfo(__masked_store_blend_i32, 4),
-                       MSInfo(__masked_store_blend_float, 4),
-                       MSInfo(__masked_store_blend_i64, 8),
-                       MSInfo(__masked_store_blend_double, 8),
-                       MSInfo(__masked_store_i8, 1),
-                       MSInfo(__masked_store_i16, 2),
-                       MSInfo(__masked_store_half, 2),
-                       MSInfo(__masked_store_i32, 4),
-                       MSInfo(__masked_store_float, 4),
-                       MSInfo(__masked_store_i64, 8),
-                       MSInfo(__masked_store_double, 8)};
     llvm::Function *called = callInst->getCalledFunction();
-
-    int nMSFuncs = sizeof(msInfo) / sizeof(msInfo[0]);
-    MSInfo *info = nullptr;
-    for (int i = 0; i < nMSFuncs; ++i) {
-        if (msInfo[i].func != nullptr && called == msInfo[i].func) {
-            info = &msInfo[i];
-            break;
-        }
-    }
-    if (info == nullptr)
+    auto name = called->getName().str();
+    auto it = maskedStoreAlign.find(name);
+    if (it == maskedStoreAlign.end()) {
+        // it is not a call of function stored in maskedStoreAlign
         return nullptr;
+    }
 
     // Got one; grab the operands
     llvm::Value *lvalue = callInst->getArgOperand(0);
     llvm::Value *rvalue = callInst->getArgOperand(1);
     llvm::Value *mask = callInst->getArgOperand(2);
+    int align = it->second;
 
     MaskStatus maskStatus = GetMaskStatusFromValue(mask);
     if (maskStatus == MaskStatus::all_off) {
@@ -1441,8 +1417,7 @@ static llvm::Value *lImproveMaskedStore(llvm::CallInst *callInst) {
         LLVMCopyMetadata(lvalue, callInst);
         store = new llvm::StoreInst(
             rvalue, lvalue, false /* not volatile */,
-            llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : info->align)
-                .valueOrOne());
+            llvm::MaybeAlign(g->opt.forceAlignedMemory ? g->target->getNativeVectorAlignment() : align).valueOrOne());
 
         if (store != nullptr) {
             LLVMCopyMetadata(store, callInst);
