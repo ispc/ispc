@@ -1084,6 +1084,44 @@ static llvm::Constant *lGetOffsetScaleVec(llvm::Value *offsetScale, llvm::Type *
     return llvm::ConstantVector::get(scales);
 }
 
+struct GatherImpInfo {
+    GatherImpInfo(const char *lmName, const char *bmName, llvm::Type **st, int a)
+        : align(a), load(lmName), blend(bmName), sType(st) {}
+    bool isFactored() const { return !g->target->useGather(); }
+    llvm::Function *loadMaskedFunc() const { return m->module->getFunction(load); }
+    llvm::Function *blendMaskedFunc() const { return m->module->getFunction(blend); }
+    llvm::Type *scalarType() const { return *sType; }
+    llvm::Type *baseType() const {
+        // Pseudo gather base pointer element type (the 1st argument of the intrinsic) is int8
+        // e.g. @__pseudo_gather_base_offsets32_i8(i8 *, i32, <WIDTH x i32>, <WIDTH x MASK>)
+        return LLVMTypes::Int8Type;
+    }
+    const int align;
+
+  private:
+    const char *load;
+    const char *blend;
+    llvm::Type **sType;
+};
+
+struct ScatterImpInfo {
+    ScatterImpInfo(const char *msName, llvm::Type **vpt, int a) : align(a), store(msName), vpType(vpt) {}
+    bool isFactored() const { return !g->target->useScatter(); }
+    llvm::Function *maskedStoreFunc() const { return m->module->getFunction(store); }
+    llvm::Type *vecPtrType() const { return *vpType; }
+    llvm::Type *baseType() const {
+        // Pseudo scatter base pointer element type (the 1st argument of the intrinsic) is int8
+        // e.g. @__pseudo_scatter_base_offsets32_i8(i8 * nocapture, i32, <WIDTH x i32>, <WIDTH x i8>, <WIDTH x
+        // MASK>)
+        return LLVMTypes::Int8Type;
+    }
+    const int align;
+
+  private:
+    const char *store;
+    llvm::Type **vpType;
+};
+
 /** After earlier optimization passes have run, we are sometimes able to
     determine that gathers/scatters are actually accessing memory in a more
     regular fashion and then change the operation to something simpler and
@@ -1100,154 +1138,106 @@ static llvm::Constant *lGetOffsetScaleVec(llvm::Value *offsetScale, llvm::Type *
     vector loads with AVX, etc.
 */
 static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
-    struct GatherImpInfo {
-        GatherImpInfo(const char *pName, const char *lmName, const char *bmName, llvm::Type *st, int a)
-            : align(a), isFactored(!g->target->useGather()) {
-            pseudoFunc = m->module->getFunction(pName);
-            loadMaskedFunc = m->module->getFunction(lmName);
-            blendMaskedFunc = m->module->getFunction(bmName);
-            Assert(pseudoFunc != nullptr && loadMaskedFunc != nullptr);
-            scalarType = st;
-            // Pseudo gather base pointer element type (the 1st argument of the intrinsic) is int8
-            // e.g. @__pseudo_gather_base_offsets32_i8(i8 *, i32, <WIDTH x i32>, <WIDTH x MASK>)
-            baseType = LLVMTypes::Int8Type;
-        }
 
-        llvm::Function *pseudoFunc;
-        llvm::Function *loadMaskedFunc;
-        llvm::Function *blendMaskedFunc;
-        llvm::Type *scalarType;
-        llvm::Type *baseType;
-        const int align;
-        const bool isFactored;
+    static GatherImpInfo GII_i8 = GatherImpInfo(__masked_load_i8, __masked_load_blend_i8, &LLVMTypes::Int8Type, 1);
+    static GatherImpInfo GII_i16 = GatherImpInfo(__masked_load_i16, __masked_load_blend_i16, &LLVMTypes::Int16Type, 2);
+    static GatherImpInfo GII_half =
+        GatherImpInfo(__masked_load_half, __masked_load_blend_half, &LLVMTypes::Float16Type, 2);
+    static GatherImpInfo GII_i32 = GatherImpInfo(__masked_load_i32, __masked_load_blend_i32, &LLVMTypes::Int32Type, 4);
+    static GatherImpInfo GII_float =
+        GatherImpInfo(__masked_load_float, __masked_load_blend_float, &LLVMTypes::FloatType, 4);
+    static GatherImpInfo GII_i64 = GatherImpInfo(__masked_load_i64, __masked_load_blend_i64, &LLVMTypes::Int64Type, 8);
+    static GatherImpInfo GII_double =
+        GatherImpInfo(__masked_load_double, __masked_load_blend_double, &LLVMTypes::DoubleType, 8);
+
+    static std::unordered_map<std::string, GatherImpInfo *> replGatherToLoad = {
+        {__pseudo_gather_base_offsets32_i8, &GII_i8},
+        {__pseudo_gather_factored_base_offsets32_i8, &GII_i8},
+        {__pseudo_gather_base_offsets32_i16, &GII_i16},
+        {__pseudo_gather_factored_base_offsets32_i16, &GII_i16},
+        {__pseudo_gather_base_offsets32_half, &GII_half},
+        {__pseudo_gather_factored_base_offsets32_half, &GII_half},
+        {__pseudo_gather_base_offsets32_i32, &GII_i32},
+        {__pseudo_gather_factored_base_offsets32_i32, &GII_i32},
+        {__pseudo_gather_base_offsets32_float, &GII_float},
+        {__pseudo_gather_factored_base_offsets32_float, &GII_float},
+        {__pseudo_gather_base_offsets32_i64, &GII_i64},
+        {__pseudo_gather_factored_base_offsets32_i64, &GII_i64},
+        {__pseudo_gather_base_offsets32_double, &GII_double},
+        {__pseudo_gather_factored_base_offsets32_double, &GII_double},
+        {__pseudo_gather_base_offsets64_i8, &GII_i8},
+        {__pseudo_gather_factored_base_offsets64_i8, &GII_i8},
+        {__pseudo_gather_base_offsets64_i16, &GII_i16},
+        {__pseudo_gather_factored_base_offsets64_i16, &GII_i16},
+        {__pseudo_gather_base_offsets64_half, &GII_half},
+        {__pseudo_gather_factored_base_offsets64_half, &GII_half},
+        {__pseudo_gather_base_offsets64_i32, &GII_i32},
+        {__pseudo_gather_factored_base_offsets64_i32, &GII_i32},
+        {__pseudo_gather_base_offsets64_float, &GII_float},
+        {__pseudo_gather_factored_base_offsets64_float, &GII_float},
+        {__pseudo_gather_base_offsets64_i64, &GII_i64},
+        {__pseudo_gather_factored_base_offsets64_i64, &GII_i64},
+        {__pseudo_gather_base_offsets64_double, &GII_double},
+        {__pseudo_gather_factored_base_offsets64_double, &GII_double},
     };
 
-    GatherImpInfo gInfo[] = {
-        GatherImpInfo(g->target->useGather() ? __pseudo_gather_base_offsets32_i8
-                                             : __pseudo_gather_factored_base_offsets32_i8,
-                      __masked_load_i8, __masked_load_blend_i8, LLVMTypes::Int8Type, 1),
-        GatherImpInfo(g->target->useGather() ? __pseudo_gather_base_offsets32_i16
-                                             : __pseudo_gather_factored_base_offsets32_i16,
-                      __masked_load_i16, __masked_load_blend_i16, LLVMTypes::Int16Type, 2),
-        GatherImpInfo(g->target->useGather() ? __pseudo_gather_base_offsets32_half
-                                             : __pseudo_gather_factored_base_offsets32_half,
-                      __masked_load_half, __masked_load_blend_half, LLVMTypes::Float16Type, 2),
-        GatherImpInfo(g->target->useGather() ? __pseudo_gather_base_offsets32_i32
-                                             : __pseudo_gather_factored_base_offsets32_i32,
-                      __masked_load_i32, __masked_load_blend_i32, LLVMTypes::Int32Type, 4),
-        GatherImpInfo(g->target->useGather() ? __pseudo_gather_base_offsets32_float
-                                             : __pseudo_gather_factored_base_offsets32_float,
-                      __masked_load_float, __masked_load_blend_float, LLVMTypes::FloatType, 4),
-        GatherImpInfo(g->target->useGather() ? __pseudo_gather_base_offsets32_i64
-                                             : __pseudo_gather_factored_base_offsets32_i64,
-                      __masked_load_i64, __masked_load_blend_i64, LLVMTypes::Int64Type, 8),
-        GatherImpInfo(g->target->useGather() ? __pseudo_gather_base_offsets32_double
-                                             : __pseudo_gather_factored_base_offsets32_double,
-                      __masked_load_double, __masked_load_blend_double, LLVMTypes::DoubleType, 8),
-        GatherImpInfo(g->target->useGather() ? __pseudo_gather_base_offsets64_i8
-                                             : __pseudo_gather_factored_base_offsets64_i8,
-                      __masked_load_i8, __masked_load_blend_i8, LLVMTypes::Int8Type, 1),
-        GatherImpInfo(g->target->useGather() ? __pseudo_gather_base_offsets64_i16
-                                             : __pseudo_gather_factored_base_offsets64_i16,
-                      __masked_load_i16, __masked_load_blend_i16, LLVMTypes::Int16Type, 2),
-        GatherImpInfo(g->target->useGather() ? __pseudo_gather_base_offsets64_half
-                                             : __pseudo_gather_factored_base_offsets64_half,
-                      __masked_load_half, __masked_load_blend_half, LLVMTypes::Float16Type, 2),
-        GatherImpInfo(g->target->useGather() ? __pseudo_gather_base_offsets64_i32
-                                             : __pseudo_gather_factored_base_offsets64_i32,
-                      __masked_load_i32, __masked_load_blend_i32, LLVMTypes::Int32Type, 4),
-        GatherImpInfo(g->target->useGather() ? __pseudo_gather_base_offsets64_float
-                                             : __pseudo_gather_factored_base_offsets64_float,
-                      __masked_load_float, __masked_load_blend_float, LLVMTypes::FloatType, 4),
-        GatherImpInfo(g->target->useGather() ? __pseudo_gather_base_offsets64_i64
-                                             : __pseudo_gather_factored_base_offsets64_i64,
-                      __masked_load_i64, __masked_load_blend_i64, LLVMTypes::Int64Type, 8),
-        GatherImpInfo(g->target->useGather() ? __pseudo_gather_base_offsets64_double
-                                             : __pseudo_gather_factored_base_offsets64_double,
-                      __masked_load_double, __masked_load_blend_double, LLVMTypes::DoubleType, 8),
-    };
+    static ScatterImpInfo SII_i8 = ScatterImpInfo(__pseudo_masked_store_i8, &LLVMTypes::Int8VectorPointerType, 1);
+    static ScatterImpInfo SII_i16 = ScatterImpInfo(__pseudo_masked_store_i16, &LLVMTypes::Int16VectorPointerType, 2);
+    static ScatterImpInfo SII_half =
+        ScatterImpInfo(__pseudo_masked_store_half, &LLVMTypes::Float16VectorPointerType, 2);
+    static ScatterImpInfo SII_i32 = ScatterImpInfo(__pseudo_masked_store_i32, &LLVMTypes::Int32VectorPointerType, 4);
+    static ScatterImpInfo SII_float =
+        ScatterImpInfo(__pseudo_masked_store_float, &LLVMTypes::FloatVectorPointerType, 4);
+    static ScatterImpInfo SII_i64 = ScatterImpInfo(__pseudo_masked_store_i64, &LLVMTypes::Int64VectorPointerType, 8);
+    static ScatterImpInfo SII_double =
+        ScatterImpInfo(__pseudo_masked_store_double, &LLVMTypes::DoubleVectorPointerType, 8);
 
-    struct ScatterImpInfo {
-        ScatterImpInfo(const char *pName, const char *msName, llvm::Type *vpt, int a)
-            : align(a), isFactored(!g->target->useScatter()) {
-            pseudoFunc = m->module->getFunction(pName);
-            maskedStoreFunc = m->module->getFunction(msName);
-            vecPtrType = vpt;
-            // Pseudo scatter base pointer element type (the 1st argument of the intrinsic) is int8
-            // e.g. @__pseudo_scatter_base_offsets32_i8(i8 * nocapture, i32, <WIDTH x i32>, <WIDTH x i8>, <WIDTH x
-            // MASK>)
-            baseType = LLVMTypes::Int8Type;
-            Assert(pseudoFunc != nullptr && maskedStoreFunc != nullptr);
-        }
-        llvm::Function *pseudoFunc;
-        llvm::Function *maskedStoreFunc;
-        llvm::Type *vecPtrType;
-        llvm::Type *baseType;
-        const int align;
-        const bool isFactored;
+    static std::unordered_map<std::string, ScatterImpInfo *> replScatterToStore = {
+        {__pseudo_scatter_base_offsets32_i8, &SII_i8},
+        {__pseudo_scatter_factored_base_offsets32_i8, &SII_i8},
+        {__pseudo_scatter_base_offsets32_i16, &SII_i16},
+        {__pseudo_scatter_factored_base_offsets32_i16, &SII_i16},
+        {__pseudo_scatter_base_offsets32_half, &SII_half},
+        {__pseudo_scatter_factored_base_offsets32_half, &SII_half},
+        {__pseudo_scatter_base_offsets32_i32, &SII_i32},
+        {__pseudo_scatter_factored_base_offsets32_i32, &SII_i32},
+        {__pseudo_scatter_base_offsets32_float, &SII_float},
+        {__pseudo_scatter_factored_base_offsets32_float, &SII_float},
+        {__pseudo_scatter_base_offsets32_i64, &SII_i64},
+        {__pseudo_scatter_factored_base_offsets32_i64, &SII_i64},
+        {__pseudo_scatter_base_offsets32_double, &SII_double},
+        {__pseudo_scatter_factored_base_offsets32_double, &SII_double},
+        {__pseudo_scatter_base_offsets64_i8, &SII_i8},
+        {__pseudo_scatter_factored_base_offsets64_i8, &SII_i8},
+        {__pseudo_scatter_base_offsets64_i16, &SII_i16},
+        {__pseudo_scatter_factored_base_offsets64_i16, &SII_i16},
+        {__pseudo_scatter_base_offsets64_half, &SII_half},
+        {__pseudo_scatter_factored_base_offsets64_half, &SII_half},
+        {__pseudo_scatter_base_offsets64_i32, &SII_i32},
+        {__pseudo_scatter_factored_base_offsets64_i32, &SII_i32},
+        {__pseudo_scatter_base_offsets64_float, &SII_float},
+        {__pseudo_scatter_factored_base_offsets64_float, &SII_float},
+        {__pseudo_scatter_base_offsets64_i64, &SII_i64},
+        {__pseudo_scatter_factored_base_offsets64_i64, &SII_i64},
+        {__pseudo_scatter_base_offsets64_double, &SII_double},
+        {__pseudo_scatter_factored_base_offsets64_double, &SII_double},
     };
-
-    ScatterImpInfo sInfo[] = {
-        ScatterImpInfo(g->target->useScatter() ? __pseudo_scatter_base_offsets32_i8
-                                               : __pseudo_scatter_factored_base_offsets32_i8,
-                       __pseudo_masked_store_i8, LLVMTypes::Int8VectorPointerType, 1),
-        ScatterImpInfo(g->target->useScatter() ? __pseudo_scatter_base_offsets32_i16
-                                               : __pseudo_scatter_factored_base_offsets32_i16,
-                       __pseudo_masked_store_i16, LLVMTypes::Int16VectorPointerType, 2),
-        ScatterImpInfo(g->target->useScatter() ? __pseudo_scatter_base_offsets32_half
-                                               : __pseudo_scatter_factored_base_offsets32_half,
-                       __pseudo_masked_store_half, LLVMTypes::Float16VectorPointerType, 2),
-        ScatterImpInfo(g->target->useScatter() ? __pseudo_scatter_base_offsets32_i32
-                                               : __pseudo_scatter_factored_base_offsets32_i32,
-                       __pseudo_masked_store_i32, LLVMTypes::Int32VectorPointerType, 4),
-        ScatterImpInfo(g->target->useScatter() ? __pseudo_scatter_base_offsets32_float
-                                               : __pseudo_scatter_factored_base_offsets32_float,
-                       __pseudo_masked_store_float, LLVMTypes::FloatVectorPointerType, 4),
-        ScatterImpInfo(g->target->useScatter() ? __pseudo_scatter_base_offsets32_i64
-                                               : __pseudo_scatter_factored_base_offsets32_i64,
-                       __pseudo_masked_store_i64, LLVMTypes::Int64VectorPointerType, 8),
-        ScatterImpInfo(g->target->useScatter() ? __pseudo_scatter_base_offsets32_double
-                                               : __pseudo_scatter_factored_base_offsets32_double,
-                       __pseudo_masked_store_double, LLVMTypes::DoubleVectorPointerType, 8),
-        ScatterImpInfo(g->target->useScatter() ? __pseudo_scatter_base_offsets64_i8
-                                               : __pseudo_scatter_factored_base_offsets64_i8,
-                       __pseudo_masked_store_i8, LLVMTypes::Int8VectorPointerType, 1),
-        ScatterImpInfo(g->target->useScatter() ? __pseudo_scatter_base_offsets64_i16
-                                               : __pseudo_scatter_factored_base_offsets64_i16,
-                       __pseudo_masked_store_i16, LLVMTypes::Int16VectorPointerType, 2),
-        ScatterImpInfo(g->target->useScatter() ? __pseudo_scatter_base_offsets64_half
-                                               : __pseudo_scatter_factored_base_offsets64_half,
-                       __pseudo_masked_store_half, LLVMTypes::Float16VectorPointerType, 2),
-        ScatterImpInfo(g->target->useScatter() ? __pseudo_scatter_base_offsets64_i32
-                                               : __pseudo_scatter_factored_base_offsets64_i32,
-                       __pseudo_masked_store_i32, LLVMTypes::Int32VectorPointerType, 4),
-        ScatterImpInfo(g->target->useScatter() ? __pseudo_scatter_base_offsets64_float
-                                               : __pseudo_scatter_factored_base_offsets64_float,
-                       __pseudo_masked_store_float, LLVMTypes::FloatVectorPointerType, 4),
-        ScatterImpInfo(g->target->useScatter() ? __pseudo_scatter_base_offsets64_i64
-                                               : __pseudo_scatter_factored_base_offsets64_i64,
-                       __pseudo_masked_store_i64, LLVMTypes::Int64VectorPointerType, 8),
-        ScatterImpInfo(g->target->useScatter() ? __pseudo_scatter_base_offsets64_double
-                                               : __pseudo_scatter_factored_base_offsets64_double,
-                       __pseudo_masked_store_double, LLVMTypes::DoubleVectorPointerType, 8),
-    };
-
-    llvm::Function *calledFunc = callInst->getCalledFunction();
 
     GatherImpInfo *gatherInfo = nullptr;
     ScatterImpInfo *scatterInfo = nullptr;
-    for (unsigned int i = 0; i < sizeof(gInfo) / sizeof(gInfo[0]); ++i) {
-        if (gInfo[i].pseudoFunc != nullptr && calledFunc == gInfo[i].pseudoFunc) {
-            gatherInfo = &gInfo[i];
-            break;
-        }
+    llvm::Function *calledFunc = callInst->getCalledFunction();
+    auto name = calledFunc->getName().str();
+
+    auto itG = replGatherToLoad.find(name);
+    if (itG != replGatherToLoad.end()) {
+        gatherInfo = itG->second;
     }
-    for (unsigned int i = 0; i < sizeof(sInfo) / sizeof(sInfo[0]); ++i) {
-        if (sInfo[i].pseudoFunc != nullptr && calledFunc == sInfo[i].pseudoFunc) {
-            scatterInfo = &sInfo[i];
-            break;
-        }
+
+    auto itS = replScatterToStore.find(name);
+    if (itS != replScatterToStore.end()) {
+        scatterInfo = itS->second;
     }
+
     if (gatherInfo == nullptr && scatterInfo == nullptr)
         return nullptr;
 
@@ -1258,7 +1248,7 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
     llvm::Value *fullOffsets = nullptr;
     llvm::Value *storeValue = nullptr;
     llvm::Value *mask = nullptr;
-    if ((gatherInfo != nullptr && gatherInfo->isFactored) || (scatterInfo != nullptr && scatterInfo->isFactored)) {
+    if ((gatherInfo != nullptr && gatherInfo->isFactored()) || (scatterInfo != nullptr && scatterInfo->isFactored())) {
         llvm::Value *varyingOffsets = callInst->getArgOperand(1);
         llvm::Value *offsetScale = callInst->getArgOperand(2);
         llvm::Value *constOffsets = callInst->getArgOperand(3);
@@ -1288,7 +1278,7 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
 
     Debug(SourcePos(), "GSToLoadStore: %s.", fullOffsets->getName().str().c_str());
     llvm::Type *scalarType =
-        (gatherInfo != nullptr) ? gatherInfo->scalarType : scatterInfo->vecPtrType->getScalarType();
+        (gatherInfo != nullptr) ? gatherInfo->scalarType() : scatterInfo->vecPtrType()->getScalarType();
 
     if (LLVMVectorValuesAllEqual(fullOffsets)) {
         // If all the offsets are equal, then compute the single
@@ -1299,7 +1289,7 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
             // handled as a scalar load and broadcast across the lanes.
             Debug(pos, "Transformed gather to scalar load and broadcast!");
             llvm::Value *ptr;
-            ptr = lComputeCommonPointer(base, gatherInfo->baseType, fullOffsets, callInst);
+            ptr = lComputeCommonPointer(base, gatherInfo->baseType(), fullOffsets, callInst);
             ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(scalarType, 0), base->getName(), callInst);
 
             LLVMCopyMetadata(ptr, callInst);
@@ -1352,20 +1342,20 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
             llvm::Instruction *newCall = nullptr;
 
             if (gatherInfo != nullptr) {
-                ptr = lComputeCommonPointer(base, gatherInfo->baseType, fullOffsets, callInst);
+                ptr = lComputeCommonPointer(base, gatherInfo->baseType(), fullOffsets, callInst);
                 LLVMCopyMetadata(ptr, callInst);
                 Debug(pos, "Transformed gather to unaligned vector load!");
                 bool doBlendLoad = false;
 #ifdef ISPC_XE_ENABLED
                 doBlendLoad = g->target->isXeTarget() && g->opt.enableXeUnsafeMaskedLoad;
 #endif
-                newCall = LLVMCallInst(doBlendLoad ? gatherInfo->blendMaskedFunc : gatherInfo->loadMaskedFunc, ptr,
+                newCall = LLVMCallInst(doBlendLoad ? gatherInfo->blendMaskedFunc() : gatherInfo->loadMaskedFunc(), ptr,
                                        mask, llvm::Twine(ptr->getName()) + "_masked_load");
             } else {
                 Debug(pos, "Transformed scatter to unaligned vector store!");
-                ptr = lComputeCommonPointer(base, scatterInfo->baseType, fullOffsets, callInst);
-                ptr = new llvm::BitCastInst(ptr, scatterInfo->vecPtrType, "ptrcast", callInst);
-                newCall = LLVMCallInst(scatterInfo->maskedStoreFunc, ptr, storeValue, mask, "");
+                ptr = lComputeCommonPointer(base, scatterInfo->baseType(), fullOffsets, callInst);
+                ptr = new llvm::BitCastInst(ptr, scatterInfo->vecPtrType(), "ptrcast", callInst);
+                newCall = LLVMCallInst(scatterInfo->maskedStoreFunc(), ptr, storeValue, mask, "");
             }
             LLVMCopyMetadata(newCall, callInst);
             llvm::ReplaceInstWithInst(callInst, newCall);
@@ -1600,6 +1590,14 @@ bool ImproveMemoryOpsPass::improveMemoryOps(llvm::BasicBlock &bb) {
 llvm::PreservedAnalyses ImproveMemoryOpsPass::run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM) {
     llvm::TimeTraceScope FuncScope("ImproveMemoryOpsPass::run", F.getName());
     bool modifiedAny = false;
+
+    // Skip __keep_funcs_live because it breaks some assumptions used here.
+    // For example, lGSToLoadStore assumes that factored pseudo calls are
+    // generated only when gathers are not used (useGather == false).
+    if (F.getName().equals(__keep_funcs_live)) {
+        return llvm::PreservedAnalyses::all();
+    }
+
     for (llvm::BasicBlock &BB : F) {
         modifiedAny |= improveMemoryOps(BB);
     }
