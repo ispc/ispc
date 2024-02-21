@@ -20,7 +20,7 @@
         "VC_INTRINSICS_SHA": "b16218b8a00c5c1d4db32085dfab4d5eb9a03ad7",
         "SPIRV_TRANSLATOR_URL": "https://github.com/KhronosGroup/SPIRV-LLVM-Translator.git",
         "SPIRV_TRANSLATOR_BRANCH": "llvm_release_160",
-        "SPIRV_TRANSLATOR_SHA": "d1c69c3365dffed67124eb1692cb941cbae5bb2e",
+        "SPIRV_TRANSLATOR_SHA": "101de014d032b5e9eb2aafc982bf43d5a3dd4f7b",
         "L0_URL": "https://github.com/oneapi-src/level-zero.git",
         "L0_TAG": "v1.15.1",
         "ISPC_CORPUS_URL": "null"
