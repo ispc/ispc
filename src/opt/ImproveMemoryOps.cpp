@@ -1084,9 +1084,18 @@ static llvm::Constant *lGetOffsetScaleVec(llvm::Value *offsetScale, llvm::Type *
     return llvm::ConstantVector::get(scales);
 }
 
+// alignment in bytes
+enum class Alignment : int {
+    A1 = 1,
+    A2 = 2,
+    A4 = 4,
+    A8 = 8,
+    A16 = 16,
+};
+
 struct GatherImpInfo {
-    GatherImpInfo(const char *lmName, const char *bmName, llvm::Type **st, int a)
-        : align(a), load(lmName), blend(bmName), sType(st) {}
+    GatherImpInfo(const char *lmName, const char *bmName, llvm::Type **st, Alignment a)
+        : load(lmName), blend(bmName), sType(st), alignment(a) {}
     bool isFactored() const { return !g->target->useGather(); }
     llvm::Function *loadMaskedFunc() const { return m->module->getFunction(load); }
     llvm::Function *blendMaskedFunc() const { return m->module->getFunction(blend); }
@@ -1096,16 +1105,17 @@ struct GatherImpInfo {
         // e.g. @__pseudo_gather_base_offsets32_i8(i8 *, i32, <WIDTH x i32>, <WIDTH x MASK>)
         return LLVMTypes::Int8Type;
     }
-    const int align;
+    int align() const { return static_cast<int>(alignment); }
 
   private:
     const char *load;
     const char *blend;
     llvm::Type **sType;
+    const Alignment alignment;
 };
 
 struct ScatterImpInfo {
-    ScatterImpInfo(const char *msName, llvm::Type **vpt, int a) : align(a), store(msName), vpType(vpt) {}
+    ScatterImpInfo(const char *msName, llvm::Type **vpt, Alignment a) : store(msName), vpType(vpt), alignment(a) {}
     bool isFactored() const { return !g->target->useScatter(); }
     llvm::Function *maskedStoreFunc() const { return m->module->getFunction(store); }
     llvm::Type *vecPtrType() const { return *vpType; }
@@ -1115,11 +1125,12 @@ struct ScatterImpInfo {
         // MASK>)
         return LLVMTypes::Int8Type;
     }
-    const int align;
+    int align() const { return static_cast<int>(alignment); }
 
   private:
     const char *store;
     llvm::Type **vpType;
+    const Alignment alignment;
 };
 
 /** After earlier optimization passes have run, we are sometimes able to
@@ -1139,16 +1150,20 @@ struct ScatterImpInfo {
 */
 static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
 
-    static GatherImpInfo GII_i8 = GatherImpInfo(__masked_load_i8, __masked_load_blend_i8, &LLVMTypes::Int8Type, 1);
-    static GatherImpInfo GII_i16 = GatherImpInfo(__masked_load_i16, __masked_load_blend_i16, &LLVMTypes::Int16Type, 2);
+    static GatherImpInfo GII_i8 =
+        GatherImpInfo(__masked_load_i8, __masked_load_blend_i8, &LLVMTypes::Int8Type, Alignment::A1);
+    static GatherImpInfo GII_i16 =
+        GatherImpInfo(__masked_load_i16, __masked_load_blend_i16, &LLVMTypes::Int16Type, Alignment::A2);
     static GatherImpInfo GII_half =
-        GatherImpInfo(__masked_load_half, __masked_load_blend_half, &LLVMTypes::Float16Type, 2);
-    static GatherImpInfo GII_i32 = GatherImpInfo(__masked_load_i32, __masked_load_blend_i32, &LLVMTypes::Int32Type, 4);
+        GatherImpInfo(__masked_load_half, __masked_load_blend_half, &LLVMTypes::Float16Type, Alignment::A2);
+    static GatherImpInfo GII_i32 =
+        GatherImpInfo(__masked_load_i32, __masked_load_blend_i32, &LLVMTypes::Int32Type, Alignment::A4);
     static GatherImpInfo GII_float =
-        GatherImpInfo(__masked_load_float, __masked_load_blend_float, &LLVMTypes::FloatType, 4);
-    static GatherImpInfo GII_i64 = GatherImpInfo(__masked_load_i64, __masked_load_blend_i64, &LLVMTypes::Int64Type, 8);
+        GatherImpInfo(__masked_load_float, __masked_load_blend_float, &LLVMTypes::FloatType, Alignment::A4);
+    static GatherImpInfo GII_i64 =
+        GatherImpInfo(__masked_load_i64, __masked_load_blend_i64, &LLVMTypes::Int64Type, Alignment::A8);
     static GatherImpInfo GII_double =
-        GatherImpInfo(__masked_load_double, __masked_load_blend_double, &LLVMTypes::DoubleType, 8);
+        GatherImpInfo(__masked_load_double, __masked_load_blend_double, &LLVMTypes::DoubleType, Alignment::A8);
 
     static std::unordered_map<std::string, GatherImpInfo *> replGatherToLoad = {
         {__pseudo_gather_base_offsets32_i8, &GII_i8},
@@ -1181,16 +1196,20 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
         {__pseudo_gather_factored_base_offsets64_double, &GII_double},
     };
 
-    static ScatterImpInfo SII_i8 = ScatterImpInfo(__pseudo_masked_store_i8, &LLVMTypes::Int8VectorPointerType, 1);
-    static ScatterImpInfo SII_i16 = ScatterImpInfo(__pseudo_masked_store_i16, &LLVMTypes::Int16VectorPointerType, 2);
+    static ScatterImpInfo SII_i8 =
+        ScatterImpInfo(__pseudo_masked_store_i8, &LLVMTypes::Int8VectorPointerType, Alignment::A1);
+    static ScatterImpInfo SII_i16 =
+        ScatterImpInfo(__pseudo_masked_store_i16, &LLVMTypes::Int16VectorPointerType, Alignment::A2);
     static ScatterImpInfo SII_half =
-        ScatterImpInfo(__pseudo_masked_store_half, &LLVMTypes::Float16VectorPointerType, 2);
-    static ScatterImpInfo SII_i32 = ScatterImpInfo(__pseudo_masked_store_i32, &LLVMTypes::Int32VectorPointerType, 4);
+        ScatterImpInfo(__pseudo_masked_store_half, &LLVMTypes::Float16VectorPointerType, Alignment::A2);
+    static ScatterImpInfo SII_i32 =
+        ScatterImpInfo(__pseudo_masked_store_i32, &LLVMTypes::Int32VectorPointerType, Alignment::A4);
     static ScatterImpInfo SII_float =
-        ScatterImpInfo(__pseudo_masked_store_float, &LLVMTypes::FloatVectorPointerType, 4);
-    static ScatterImpInfo SII_i64 = ScatterImpInfo(__pseudo_masked_store_i64, &LLVMTypes::Int64VectorPointerType, 8);
+        ScatterImpInfo(__pseudo_masked_store_float, &LLVMTypes::FloatVectorPointerType, Alignment::A4);
+    static ScatterImpInfo SII_i64 =
+        ScatterImpInfo(__pseudo_masked_store_i64, &LLVMTypes::Int64VectorPointerType, Alignment::A8);
     static ScatterImpInfo SII_double =
-        ScatterImpInfo(__pseudo_masked_store_double, &LLVMTypes::DoubleVectorPointerType, 8);
+        ScatterImpInfo(__pseudo_masked_store_double, &LLVMTypes::DoubleVectorPointerType, Alignment::A8);
 
     static std::unordered_map<std::string, ScatterImpInfo *> replScatterToStore = {
         {__pseudo_scatter_base_offsets32_i8, &SII_i8},
@@ -1332,7 +1351,7 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
             return nullptr;
         }
     } else {
-        int step = gatherInfo ? gatherInfo->align : scatterInfo->align;
+        int step = gatherInfo ? gatherInfo->align() : scatterInfo->align();
         if (step > 0 && LLVMVectorIsLinear(fullOffsets, step)) {
             // We have a linear sequence of memory locations being accessed
             // starting with the location given by the offset from
@@ -1375,14 +1394,28 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
     mask and an 'all off' mask, respectively.
 */
 static llvm::Value *lImproveMaskedStore(llvm::CallInst *callInst) {
-    static std::unordered_map<std::string, int> maskedStoreAlign = {
-        {__pseudo_masked_store_i8, 1},     {__pseudo_masked_store_i16, 2},   {__pseudo_masked_store_half, 2},
-        {__pseudo_masked_store_i32, 4},    {__pseudo_masked_store_float, 4}, {__pseudo_masked_store_i64, 8},
-        {__pseudo_masked_store_double, 8}, {__masked_store_blend_i8, 1},     {__masked_store_blend_i16, 2},
-        {__masked_store_blend_half, 2},    {__masked_store_blend_i32, 4},    {__masked_store_blend_float, 4},
-        {__masked_store_blend_i64, 8},     {__masked_store_blend_double, 8}, {__masked_store_i8, 1},
-        {__masked_store_i16, 2},           {__masked_store_half, 2},         {__masked_store_i32, 4},
-        {__masked_store_float, 4},         {__masked_store_i64, 8},          {__masked_store_double, 8},
+    static std::unordered_map<std::string, Alignment> maskedStoreAlign = {
+        {__pseudo_masked_store_i8, Alignment::A1},
+        {__pseudo_masked_store_i16, Alignment::A2},
+        {__pseudo_masked_store_half, Alignment::A2},
+        {__pseudo_masked_store_i32, Alignment::A4},
+        {__pseudo_masked_store_float, Alignment::A4},
+        {__pseudo_masked_store_i64, Alignment::A8},
+        {__pseudo_masked_store_double, Alignment::A8},
+        {__masked_store_blend_i8, Alignment::A1},
+        {__masked_store_blend_i16, Alignment::A2},
+        {__masked_store_blend_half, Alignment::A2},
+        {__masked_store_blend_i32, Alignment::A4},
+        {__masked_store_blend_float, Alignment::A4},
+        {__masked_store_blend_i64, Alignment::A8},
+        {__masked_store_blend_double, Alignment::A8},
+        {__masked_store_i8, Alignment::A1},
+        {__masked_store_i16, Alignment::A2},
+        {__masked_store_half, Alignment::A2},
+        {__masked_store_i32, Alignment::A4},
+        {__masked_store_float, Alignment::A4},
+        {__masked_store_i64, Alignment::A8},
+        {__masked_store_double, Alignment::A8},
     };
 
     llvm::Function *called = callInst->getCalledFunction();
@@ -1397,7 +1430,7 @@ static llvm::Value *lImproveMaskedStore(llvm::CallInst *callInst) {
     llvm::Value *lvalue = callInst->getArgOperand(0);
     llvm::Value *rvalue = callInst->getArgOperand(1);
     llvm::Value *mask = callInst->getArgOperand(2);
-    int align = it->second;
+    int align = static_cast<int>(it->second);
 
     MaskStatus maskStatus = GetMaskStatusFromValue(mask);
     if (maskStatus == MaskStatus::all_off) {
@@ -1443,12 +1476,14 @@ static llvm::Value *lImproveMaskedStore(llvm::CallInst *callInst) {
 }
 
 static llvm::Value *lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBlock::iterator iter) {
-    static std::unordered_map<std::string, int> maskedLoadAlign = {
-        {__masked_load_i8, 1},         {__masked_load_i16, 2},          {__masked_load_half, 2},
-        {__masked_load_i32, 4},        {__masked_load_float, 4},        {__masked_load_i64, 8},
-        {__masked_load_double, 8},     {__masked_load_blend_i8, 1},     {__masked_load_blend_i16, 2},
-        {__masked_load_blend_half, 2}, {__masked_load_blend_i32, 4},    {__masked_load_blend_float, 4},
-        {__masked_load_blend_i64, 8},  {__masked_load_blend_double, 8},
+    static std::unordered_map<std::string, Alignment> maskedLoadAlign = {
+        {__masked_load_i8, Alignment::A1},        {__masked_load_i16, Alignment::A2},
+        {__masked_load_half, Alignment::A2},      {__masked_load_i32, Alignment::A4},
+        {__masked_load_float, Alignment::A4},     {__masked_load_i64, Alignment::A8},
+        {__masked_load_double, Alignment::A8},    {__masked_load_blend_i8, Alignment::A1},
+        {__masked_load_blend_i16, Alignment::A2}, {__masked_load_blend_half, Alignment::A2},
+        {__masked_load_blend_i32, Alignment::A4}, {__masked_load_blend_float, Alignment::A4},
+        {__masked_load_blend_i64, Alignment::A8}, {__masked_load_blend_double, Alignment::A8},
     };
 
     llvm::Function *called = callInst->getCalledFunction();
@@ -1458,7 +1493,7 @@ static llvm::Value *lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBloc
         // it is not a call of function stored in maskedLoadAlign
         return nullptr;
     }
-    int align = it->second;
+    int align = static_cast<int>(it->second);
 
     // Got one; grab the operands
     llvm::Value *ptr = callInst->getArgOperand(0);
