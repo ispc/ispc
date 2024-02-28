@@ -1751,8 +1751,8 @@ bool lCreateBinaryOperatorCall(const BinaryExpr::Op bop, Expr *a0, Expr *a1, Exp
         std::vector<TemplateSymbol *> funcTempls;
         bool foundAny = m->symbolTable->LookupFunctionTemplate(opName.c_str(), &funcTempls);
         if (foundAny && funcTempls.size() > 0) {
-            std::vector<std::pair<const Type *, SourcePos>> vec;
-            FunctionSymbolExpr *functionSymbolExpr = new FunctionSymbolExpr(opName.c_str(), funcTempls, vec, sp);
+            TemplateArgs templArgs;
+            FunctionSymbolExpr *functionSymbolExpr = new FunctionSymbolExpr(opName.c_str(), funcTempls, templArgs, sp);
             Assert(functionSymbolExpr != nullptr);
             ExprList *args = new ExprList(sp);
             args->exprs.push_back(arg0);
@@ -8243,17 +8243,15 @@ FunctionSymbolExpr::FunctionSymbolExpr(const char *n, const std::vector<Symbol *
 }
 
 FunctionSymbolExpr::FunctionSymbolExpr(const char *n, const std::vector<TemplateSymbol *> &candidates,
-                                       const std::vector<std::pair<const Type *, SourcePos>> &types, SourcePos p)
-    : Expr(p, FunctionSymbolExprID), name(n), candidateTemplateFunctions(candidates), templateArgs(types),
+                                       const TemplateArgs &templArgs, SourcePos p)
+    : Expr(p, FunctionSymbolExprID), name(n), candidateTemplateFunctions(candidates), templateArgs(templArgs),
       matchingFunc(nullptr), triedToResolve(false), unresolvedButDependent(false) {
     // Do template argument "normalization", i.e apply "varying type default":
     //
     // template <typename T> void foo(T t);
     // foo<int>(1); // T is assumed to be "varying int" here.
     for (auto &arg : templateArgs) {
-        if (arg.first->GetVariability() == Variability::Unbound) {
-            arg.first = arg.first->GetAsVaryingType();
-        }
+        arg.SetAsVaryingType();
     }
 }
 
@@ -8289,9 +8287,10 @@ FunctionSymbolExpr *FunctionSymbolExpr::Instantiate(TemplateInstantiation &templ
         Assert(candidateTemplateFunctions.size() == 0);
         return new FunctionSymbolExpr(name.c_str(), candidateFunctions, pos);
     }
-    std::vector<std::pair<const Type *, SourcePos>> instTemplateArgs;
+    TemplateArgs instTemplateArgs;
     for (auto &arg : templateArgs) {
-        instTemplateArgs.push_back(std::make_pair(arg.first->ResolveDependenceForTopType(templInst), arg.second));
+        instTemplateArgs.AddArg(
+            arg.IsType() ? TemplateArg(arg.GetAsType()->ResolveDependenceForTopType(templInst), arg.GetPos()) : arg);
     }
     return new FunctionSymbolExpr(name.c_str(), candidateTemplateFunctions, instTemplateArgs, pos);
 }
@@ -8545,7 +8544,7 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
         }
 
         // This looks like a candidate, so now we need get to instantiation and add it to candidate list.
-        if (templateArgs.size() == templateParms->GetCount()) {
+        if (templateArgs.Size() == templateParms->GetCount()) {
             // Easy, we have all template arguments specified explicitly, no deduction is needed.
             Symbol *funcSym = templSym->functionTemplate->LookupInstantiation(templateArgs);
             if (funcSym == nullptr) {
@@ -8556,7 +8555,7 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
             // Success
             ret.push_back(funcSym);
             continue;
-        } else if (templateArgs.size() > templateParms->GetCount()) {
+        } else if (templateArgs.Size() > templateParms->GetCount()) {
             // Too many template arguments specified
             continue;
         }
@@ -8623,12 +8622,12 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
 
                     if (previousDeductionResult == nullptr) {
                         // This tempalte parameter was deducted for the first time. Add it to the map.
-                        inst.AddArgument(deduction.first, deduction.second);
+                        inst.AddArgument(deduction.first, TemplateArg(deduction.second, pos));
                     } else if (!Type::Equal(previousDeductionResult, deduction.second)) {
                         if (previousDeductionResult->IsUniformType() && deduction.second->IsVaryingType() &&
                             Type::Equal(previousDeductionResult->GetAsVaryingType(), deduction.second)) {
                             // override previous deduction with varying type
-                            inst.AddArgument(deduction.first, deduction.second);
+                            inst.AddArgument(deduction.first, TemplateArg(deduction.second, pos));
                         } else if (previousDeductionResult->IsVaryingType() && deduction.second->IsUniformType()) {
                             // That's fine, uniform will be broadcasted.
                         } else {
@@ -8652,10 +8651,10 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
         }
 
         // Build a complete vector of deduced template arguments.
-        std::vector<std::pair<const Type *, SourcePos>> deducedArgs;
+        TemplateArgs deducedArgs;
         for (int i = 0; i < templateParms->GetCount(); ++i) {
-            if (i < templateArgs.size()) {
-                deducedArgs.push_back(templateArgs[i]);
+            if (i < templateArgs.Size()) {
+                deducedArgs.AddArg(templateArgs[i]);
             } else {
                 const Type *deducedArg = inst.InstantiateType((*templateParms)[i]->GetName());
                 if (!deducedArg || deducedArg->IsDependentType()) {
@@ -8664,7 +8663,7 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
                     deductionFailed = true;
                     break;
                 }
-                deducedArgs.push_back(std::pair<const Type *, SourcePos>(deducedArg, pos));
+                deducedArgs.AddArg(TemplateArg(deducedArg, pos));
             }
         }
         if (deductionFailed) {

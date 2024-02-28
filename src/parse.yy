@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -53,7 +53,7 @@ struct PragmaAttributes {
     int count;
 };
 
-typedef std::pair<Declarator *, std::vector<std::pair<const Type *, SourcePos>>*> SimpleTemplateIDType;
+typedef std::pair<Declarator *, TemplateArgs *> SimpleTemplateIDType;
 
 }
 
@@ -95,7 +95,7 @@ static void lSuggestParamListAlternates();
 
 static void lAddDeclaration(DeclSpecs *ds, Declarator *decl);
 static void lAddTemplateDeclaration(TemplateParms *templateParmList, DeclSpecs *ds, Declarator *decl);
-static void lAddTemplateSpecialization(const std::vector<std::pair<const Type *, SourcePos>> &types, DeclSpecs *ds, Declarator *decl);
+static void lAddTemplateSpecialization(const TemplateArgs &templArgs, DeclSpecs *ds, Declarator *decl);
 static void lAddFunctionParams(Declarator *decl);
 static void lAddMaskToSymbolTable(SourcePos pos);
 static void lAddThreadIndexCountToSymbolTable(SourcePos pos);
@@ -173,6 +173,7 @@ struct ForeachDimension {
     std::vector<std::pair<std::string, SourcePos> > *declspecList;
     PragmaAttributes *pragmaAttributes;
     const TemplateTypeParmType *templateParm;
+    const TemplateArgs *templateArgs;
     TemplateParms *templateParmList;
     TemplateSymbol *functionTemplateSym;
     SimpleTemplateIDType *simpleTemplateID;
@@ -269,7 +270,7 @@ struct ForeachDimension {
 %type <declspecList> declspec_specifier declspec_list
 
 %type <constCharPtr> template_identifier
-%type <typeList> template_argument_list
+%type <templateArgs> template_argument_list
 %type <simpleTemplateID> simple_template_id template_function_specialization_declaration
 %type <templateParm> template_type_parameter template_int_parameter template_parameter
 %type <templateParmList> template_parameter_list template_head
@@ -586,7 +587,7 @@ funcall_expression
           const std::string name = $1->first->name;
           m->symbolTable->LookupFunctionTemplate(name, &funcTempls);
           if (funcTempls.size() > 0) {
-              std::vector<std::pair<const Type *, SourcePos>> *templArgs = $1->second;
+              TemplateArgs *templArgs = $1->second;
               Assert(templArgs);
               functionSymbolExpr = new FunctionSymbolExpr(name.c_str(), funcTempls, *templArgs, @1);
               $$ = new FunctionCallExpr(functionSymbolExpr, new ExprList(Union(@1,@2)), Union(@1,@3));
@@ -606,7 +607,7 @@ funcall_expression
           const std::string name = $1->first->name;
           m->symbolTable->LookupFunctionTemplate(name, &funcTempls);
           if (funcTempls.size() > 0) {
-              std::vector<std::pair<const Type *, SourcePos>> *templArgs = $1->second;
+              TemplateArgs *templArgs = $1->second;
               Assert(templArgs);
               functionSymbolExpr = new FunctionSymbolExpr(name.c_str(), funcTempls, *templArgs, @1);
               $$ = new FunctionCallExpr(functionSymbolExpr, $3, Union(@1,@4));
@@ -2506,15 +2507,15 @@ template_function_declaration_or_definition
 template_argument_list
     : rate_qualified_type_specifier
       {
-          std::vector<std::pair<const Type *, SourcePos>> *vec = new std::vector<std::pair<const Type *, SourcePos>>;
-          vec->push_back(std::make_pair($1, @1));
-          $$ = vec;
+          TemplateArgs *templArgs = new TemplateArgs();
+          templArgs->AddArg(TemplateArg($1, @1));
+          $$ = templArgs;
       }
     | template_argument_list ',' rate_qualified_type_specifier
       {
-          std::vector<std::pair<const Type *, SourcePos>> *vec = (std::vector<std::pair<const Type *, SourcePos>> *) $1;
-          vec->push_back(std::make_pair($3, @3));
-          $$ = vec;
+          TemplateArgs *templArgs = (TemplateArgs *) $1;
+          templArgs->AddArg(TemplateArg($3, @3));
+          $$ = templArgs;
       }
     ;
 
@@ -2535,9 +2536,9 @@ simple_template_id
           // allocated by strdup in template_identifier
           free((char*)$1);
           // Arguments vector
-          std::vector<std::pair<const Type *, SourcePos>> *vec = (std::vector<std::pair<const Type *, SourcePos>> *) $3;
+          TemplateArgs *templArgs = (TemplateArgs *) $3;
           // Bundle template ID declarator and type list.
-          $$ = new std::pair(d, vec);
+          $$ = new std::pair(d, templArgs);
       }
     | template_identifier
       {
@@ -2547,9 +2548,9 @@ simple_template_id
           // allocated by strdup in template_identifier
           free((char*)$1);
           // Arguments vector
-          std::vector<std::pair<const Type *, SourcePos>> *vec = new std::vector<std::pair<const Type *, SourcePos>>;
+          TemplateArgs *templArgs = new TemplateArgs();
           // Bundle template ID declarator and empty type list.
-          $$ = new std::pair(d, vec);
+          $$ = new std::pair(d, templArgs);
       }
 
     ;
@@ -2574,7 +2575,7 @@ template_function_instantiation
           const FunctionType *ftype = CastType<FunctionType>(d->type);
           bool isInline = ($2->typeQualifiers & TYPEQUAL_INLINE);
           bool isNoInline = ($2->typeQualifiers & TYPEQUAL_NOINLINE);
-          if ($3->second->size() == 0) {
+          if ($3->second->Size() == 0) {
               Error(d->pos, "Template arguments deduction is not yet supported in explicit template instantiation.");
           }
           m->AddFunctionTemplateInstantiation($3->first->name, *$3->second, ftype, $2->storageClass, isInline, isNoInline, Union(@1, @6));
@@ -2595,7 +2596,7 @@ template_function_instantiation
           const FunctionType *ftype = CastType<FunctionType>(d->type);
           bool isInline = ($2->typeQualifiers & TYPEQUAL_INLINE);
           bool isNoInline = ($2->typeQualifiers & TYPEQUAL_NOINLINE);
-          if ($3->second->size() == 0) {
+          if ($3->second->Size() == 0) {
               Error(d->pos, "Template arguments deduction is not yet supported in explicit template instantiation.");
           }
           m->AddFunctionTemplateInstantiation($3->first->name, *$3->second, ftype, $2->storageClass, isInline, isNoInline, Union(@1, @5));
@@ -2624,7 +2625,7 @@ template_function_specialization_declaration
             // parameter_type_list returns vector of Declarations that is not needed anymore.
             delete $7;
         }
-        std::vector<std::pair<const Type *, SourcePos>> *templArgs = new std::vector<std::pair<const Type *, SourcePos>>(*$5->second);
+        TemplateArgs *templArgs = new TemplateArgs(*$5->second);
         Assert(templArgs);
         lAddTemplateSpecialization(*templArgs, $4, d);
         m->symbolTable->PushScope();
@@ -2639,7 +2640,7 @@ template_function_specialization_declaration
       {
         Declarator *d = new Declarator(DK_FUNCTION, Union(@1, @5));
         d->child = $5->first;
-        std::vector<std::pair<const Type *, SourcePos>> *templArgs = new std::vector<std::pair<const Type *, SourcePos>>(*$5->second);
+        TemplateArgs *templArgs = new TemplateArgs(*$5->second);
         Assert(templArgs);
         lAddTemplateSpecialization(*templArgs, $4, d);
         m->symbolTable->PushScope();
@@ -2704,7 +2705,7 @@ void lCleanUpString(std::string *s) {
 
 void lFreeSimpleTemplateID(void *p) {
     SimpleTemplateIDType *sid = (SimpleTemplateIDType*) p;
-    std::vector<std::pair<const Type *, SourcePos>> *templArgs = sid->second;
+    TemplateArgs *templArgs = sid->second;
     if (templArgs) {
         delete templArgs;
     }
@@ -2900,7 +2901,7 @@ lAddTemplateDeclaration(TemplateParms *templateParmList, DeclSpecs *ds, Declarat
 }
 
 static void
-lAddTemplateSpecialization(const std::vector<std::pair<const Type *, SourcePos>> &types, DeclSpecs *ds, Declarator *decl) {
+lAddTemplateSpecialization(const TemplateArgs &templArgs, DeclSpecs *ds, Declarator *decl) {
     if (ds == nullptr || decl == nullptr)
         // Error happened earlier during parsing
         return;
@@ -2913,7 +2914,7 @@ lAddTemplateSpecialization(const std::vector<std::pair<const Type *, SourcePos>>
         return;
     }
 
-    if (types.size() == 0) {
+    if (templArgs.Size() == 0) {
         Error(decl->pos, "Template arguments deduction is not yet supported in template function specialization.");
         return;
     }
@@ -2922,7 +2923,7 @@ lAddTemplateSpecialization(const std::vector<std::pair<const Type *, SourcePos>>
     if (ftype != nullptr) {
         bool isInline = (ds->typeQualifiers & TYPEQUAL_INLINE);
         bool isNoInline = (ds->typeQualifiers & TYPEQUAL_NOINLINE);
-        m->AddFunctionTemplateSpecializationDeclaration(decl->name, ftype, types, ds->storageClass, 
+        m->AddFunctionTemplateSpecializationDeclaration(decl->name, ftype, templArgs, ds->storageClass,
                                                         isInline, isNoInline, decl->pos);
     }
     else {

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -86,18 +86,15 @@ class Module {
     void AddFunctionTemplateDefinition(const TemplateParms *templateParmList, const std::string &name,
                                        const FunctionType *ftype, Stmt *code);
 
-    void AddFunctionTemplateInstantiation(const std::string &name,
-                                          const std::vector<std::pair<const Type *, SourcePos>> &types,
-                                          const FunctionType *ftype, StorageClass sc, bool isInline, bool isNoInline,
-                                          SourcePos pos);
+    void AddFunctionTemplateInstantiation(const std::string &name, const TemplateArgs &tArgs, const FunctionType *ftype,
+                                          StorageClass sc, bool isInline, bool isNoInline, SourcePos pos);
 
     void AddFunctionTemplateSpecializationDeclaration(const std::string &name, const FunctionType *ftype,
-                                                      const std::vector<std::pair<const Type *, SourcePos>> &types,
-                                                      StorageClass sc, bool isInline, bool isNoInline, SourcePos pos);
+                                                      const TemplateArgs &tArgs, StorageClass sc, bool isInline,
+                                                      bool isNoInline, SourcePos pos);
 
     void AddFunctionTemplateSpecializationDefinition(const std::string &name, const FunctionType *ftype,
-                                                     const std::vector<std::pair<const Type *, SourcePos>> &types,
-                                                     SourcePos pos, Stmt *code);
+                                                     const TemplateArgs &tArgs, SourcePos pos, Stmt *code);
 
     /** Adds the given type to the set of types that have their definitions
         included in automatically generated header files. */
@@ -112,8 +109,8 @@ class Module {
        template <typename T> void foo(T t);
        foo<int>(1); // T is assumed to be "varying int" here.
     */
-    FunctionTemplate *MatchFunctionTemplate(const std::string &name, const FunctionType *ftype,
-                                            std::vector<std::pair<const Type *, SourcePos>> &normTypes, SourcePos pos);
+    FunctionTemplate *MatchFunctionTemplate(const std::string &name, const FunctionType *ftype, TemplateArgs &normTypes,
+                                            SourcePos pos);
 
     /** After a source file has been compiled, output can be generated in a
         number of different formats. */

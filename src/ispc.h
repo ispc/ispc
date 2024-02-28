@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -86,6 +86,8 @@ class PointerType;
 class Stmt;
 class Symbol;
 class SymbolTable;
+class TemplateArg;
+class TemplateArgs;
 class TemplateInstantiation;
 class TemplateParms;
 class TemplateSymbol;

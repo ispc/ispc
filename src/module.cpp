@@ -1269,8 +1269,7 @@ void Module::AddFunctionTemplateDefinition(const TemplateParms *templateParmList
 }
 
 FunctionTemplate *Module::MatchFunctionTemplate(const std::string &name, const FunctionType *ftype,
-                                                std::vector<std::pair<const Type *, SourcePos>> &normTypes,
-                                                SourcePos pos) {
+                                                TemplateArgs &normTypes, SourcePos pos) {
     if (ftype == nullptr) {
         Assert(m->errorCount > 0);
         return nullptr;
@@ -1286,15 +1285,13 @@ FunctionTemplate *Module::MatchFunctionTemplate(const std::string &name, const F
     // template <typename T> void foo(T t);
     // foo<int>(1); // T is assumed to be "varying int" here.
     for (auto &arg : normTypes) {
-        if (arg.first->GetVariability() == Variability::Unbound) {
-            arg.first = arg.first->GetAsVaryingType();
-        }
+        arg.SetAsVaryingType();
     }
 
     FunctionTemplate *templ = nullptr;
     for (auto &templateSymbol : matches) {
         // Number of template parameters must match.
-        if (normTypes.size() != templateSymbol->templateParms->GetCount()) {
+        if (normTypes.Size() != templateSymbol->templateParms->GetCount()) {
             // We don't have default parameters yet, so just matching the size exactly.
             continue;
         }
@@ -1322,11 +1319,10 @@ FunctionTemplate *Module::MatchFunctionTemplate(const std::string &name, const F
     return templ;
 }
 
-void Module::AddFunctionTemplateInstantiation(const std::string &name,
-                                              const std::vector<std::pair<const Type *, SourcePos>> &types,
+void Module::AddFunctionTemplateInstantiation(const std::string &name, const TemplateArgs &tArgs,
                                               const FunctionType *ftype, StorageClass sc, bool isInline,
                                               bool isNoInline, SourcePos pos) {
-    std::vector<std::pair<const Type *, SourcePos>> normTypes(types);
+    TemplateArgs normTypes(tArgs);
     FunctionTemplate *templ = MatchFunctionTemplate(name, ftype, normTypes, pos);
     if (templ) {
         // If primary template has default storage class, but explicit instantiation has non-default storage class,
@@ -1356,9 +1352,8 @@ void Module::AddFunctionTemplateInstantiation(const std::string &name,
 }
 
 void Module::AddFunctionTemplateSpecializationDefinition(const std::string &name, const FunctionType *ftype,
-                                                         const std::vector<std::pair<const Type *, SourcePos>> &types,
-                                                         SourcePos pos, Stmt *code) {
-    std::vector<std::pair<const Type *, SourcePos>> normTypes(types);
+                                                         const TemplateArgs &tArgs, SourcePos pos, Stmt *code) {
+    TemplateArgs normTypes(tArgs);
     FunctionTemplate *templ = MatchFunctionTemplate(name, ftype, normTypes, pos);
     if (templ == nullptr) {
         Error(pos, "No matching function template found for specialization.");
@@ -1380,10 +1375,9 @@ void Module::AddFunctionTemplateSpecializationDefinition(const std::string &name
 }
 
 void Module::AddFunctionTemplateSpecializationDeclaration(const std::string &name, const FunctionType *ftype,
-                                                          const std::vector<std::pair<const Type *, SourcePos>> &types,
-                                                          StorageClass sc, bool isInline, bool isNoInline,
-                                                          SourcePos pos) {
-    std::vector<std::pair<const Type *, SourcePos>> normTypes(types);
+                                                          const TemplateArgs &tArgs, StorageClass sc, bool isInline,
+                                                          bool isNoInline, SourcePos pos) {
+    TemplateArgs normTypes(tArgs);
     FunctionTemplate *templ = MatchFunctionTemplate(name, ftype, normTypes, pos);
     if (templ == nullptr) {
         Error(pos, "No matching function template found for specialization.");

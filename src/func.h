@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2023, Intel Corporation
+  Copyright (c) 2011-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -65,12 +65,65 @@ class TemplateParms : public Traceable {
     std::vector<const TemplateTypeParmType *> parms;
 };
 
+// Represents a single argument in a template instantiation. This can either be a type
+// or a non-type (constant expression).
+class TemplateArg {
+  public:
+    enum class ArgType { Type, /*To be extended with NoneType*/ };
+
+  private:
+    ArgType argType;
+    union {
+        const Type *type;
+    };
+    SourcePos pos;
+
+  public:
+    TemplateArg(const Type *t, SourcePos pos);
+
+    // Returns ISPC type of the argument.
+    const Type *GetAsType() const;
+    // Returns the source position associated with this template argument.
+    SourcePos GetPos() const;
+    // Produces a string representation of the argument.
+    std::string GetString() const;
+    // Returns `true` if this argument is a Type.
+    bool IsType() const;
+    // Compares two `TemplateArg` instances for equality.
+    bool IsEqual(const TemplateArg &other) const;
+    // Mangles the stored type to a string representation.
+    std::string Mangle() const;
+    // Transforms the stored type to its varying equivalent.
+    void SetAsVaryingType();
+};
+
+// Represents a list of template arguments. This is used
+// to store all arguments provided to a template, preserving their order and types.
 class TemplateArgs {
   public:
-    TemplateArgs(const std::vector<std::pair<const Type *, SourcePos>> &args);
-    bool IsEqual(TemplateArgs &otherArgs) const;
+    TemplateArgs() = default;
+    TemplateArgs(const std::vector<TemplateArg> &args);
 
-    std::vector<std::pair<const Type *, SourcePos>> args;
+    // Adds a new TemplateArg to the list of arguments.
+    void AddArg(const TemplateArg &arg);
+    // Returns a constant reference to the internal vector of template arguments.
+    const std::vector<TemplateArg> &GetArgs() const;
+    // Compares this TemplateArgs instance with another for equality. Two TemplateArgs instances are considered equal if
+    // they contain the same number of arguments and each corresponding pair of arguments is equal.
+    bool IsEqual(const TemplateArgs &other) const;
+    // Returns the number of template arguments
+    size_t Size() const;
+    // Iterators support, both in const and non-const contexts.
+    std::vector<TemplateArg>::iterator begin();
+    std::vector<TemplateArg>::iterator end();
+    std::vector<TemplateArg>::const_iterator begin() const;
+    std::vector<TemplateArg>::const_iterator end() const;
+    // Access to individual arguments by index, both in const and non-const contexts.
+    const TemplateArg &operator[](std::size_t index);
+    const TemplateArg &operator[](std::size_t index) const;
+
+  private:
+    std::vector<TemplateArg> args;
 };
 
 enum class TemplateInstantiationKind { Implicit, Explicit, Specialization };
@@ -83,11 +136,10 @@ class FunctionTemplate {
     const FunctionType *GetFunctionType() const;
     StorageClass GetStorageClass();
 
-    Symbol *LookupInstantiation(const std::vector<std::pair<const Type *, SourcePos>> &types);
-    Symbol *AddInstantiation(const std::vector<std::pair<const Type *, SourcePos>> &types,
-                             TemplateInstantiationKind kind, bool isInline, bool isNoInline);
-    Symbol *AddSpecialization(const FunctionType *ftype, const std::vector<std::pair<const Type *, SourcePos>> &types,
-                              bool isInline, bool isNoInline, SourcePos pos);
+    Symbol *LookupInstantiation(const TemplateArgs &tArgs);
+    Symbol *AddInstantiation(const TemplateArgs &tArgs, TemplateInstantiationKind kind, bool isInline, bool isNoInline);
+    Symbol *AddSpecialization(const FunctionType *ftype, const TemplateArgs &tArgs, bool isInline, bool isNoInline,
+                              SourcePos pos);
 
     // Generate code for instantiations and specializations.
     void GenerateIR() const;
@@ -110,15 +162,14 @@ class FunctionTemplate {
 // - type instantiation
 class TemplateInstantiation {
   public:
-    TemplateInstantiation(const TemplateParms &typeParms,
-                          const std::vector<std::pair<const Type *, SourcePos>> &typeArgs,
-                          TemplateInstantiationKind kind, bool IsInline, bool IsNoInline);
+    TemplateInstantiation(const TemplateParms &typeParms, const TemplateArgs &tArgs, TemplateInstantiationKind kind,
+                          bool IsInline, bool IsNoInline);
     const Type *InstantiateType(const std::string &name);
     Symbol *InstantiateSymbol(Symbol *sym);
     Symbol *InstantiateTemplateSymbol(TemplateSymbol *sym);
     void SetFunction(Function *func);
 
-    void AddArgument(std::string paramName, const Type *argType);
+    void AddArgument(std::string paramName, TemplateArg argType);
 
   private:
     // Function Symbol of the instantiation.
@@ -126,9 +177,9 @@ class TemplateInstantiation {
     // Mapping of the symbols in the template to correspoding symbols in the instantiation.
     std::unordered_map<Symbol *, Symbol *> symMap;
     // Mapping of template parameter names to the types in the instantiation.
-    std::unordered_map<std::string, const Type *> argsMap;
+    std::unordered_map<std::string, const Type *> argsTypeMap;
     // Template arguments in the order of the template parameters.
-    std::vector<const Type *> templateArgs;
+    TemplateArgs templateArgs;
     // Kind of instantiation (explicit, implicit, specialization).
     TemplateInstantiationKind kind;
 
