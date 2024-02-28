@@ -12,6 +12,7 @@
 
 #include "ast.h"
 #include "ctx.h"
+#include "func.h"
 #include "ispc.h"
 #include "type.h"
 
@@ -737,8 +738,8 @@ class SymbolExpr : public Expr {
 class FunctionSymbolExpr : public Expr {
   public:
     FunctionSymbolExpr(const char *name, const std::vector<Symbol *> &candFuncs, SourcePos pos);
-    FunctionSymbolExpr(const char *name, const std::vector<TemplateSymbol *> &candFuncs,
-                       const std::vector<std::pair<const Type *, SourcePos>> &types, SourcePos pos);
+    FunctionSymbolExpr(const char *name, const std::vector<TemplateSymbol *> &candFuncs, const TemplateArgs &templArgs,
+                       SourcePos pos);
 
     static inline bool classof(FunctionSymbolExpr const *) { return true; }
     static inline bool classof(ASTNode const *N) { return N->getValueID() == FunctionSymbolExprID; }
@@ -784,7 +785,7 @@ class FunctionSymbolExpr : public Expr {
         overload is the best match. */
     std::vector<Symbol *> candidateFunctions;
     std::vector<TemplateSymbol *> candidateTemplateFunctions;
-    std::vector<std::pair<const Type *, SourcePos>> templateArgs;
+    TemplateArgs templateArgs;
 
     /** The actual matching function found after overload resolution. */
     Symbol *matchingFunc;

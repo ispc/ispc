@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -2924,23 +2924,19 @@ const std::string FunctionType::GetReturnTypeString() const {
     return ret + returnType->GetString();
 }
 
-std::string FunctionType::mangleTemplateArgs(std::vector<const Type *> *templateArgs) const {
+std::string FunctionType::mangleTemplateArgs(TemplateArgs *templateArgs) const {
     if (templateArgs == nullptr) {
         return "";
     }
     std::string ret = "___";
-    for (const Type *arg : *templateArgs) {
-        if (arg) {
-            ret += arg->Mangle();
-        } else {
-            Assert(m->errorCount > 0);
-        }
+    for (const auto &arg : *templateArgs) {
+        ret += arg.Mangle();
     }
     return ret;
 }
 
 FunctionType::FunctionMangledName FunctionType::GetFunctionMangledName(bool appFunction,
-                                                                       std::vector<const Type *> *templateArgs) const {
+                                                                       TemplateArgs *templateArgs) const {
     FunctionMangledName mangle = {};
     // Mangle internal functions name.
     if (!(isExternC || isExternSYCL || appFunction)) {
