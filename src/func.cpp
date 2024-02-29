@@ -811,8 +811,9 @@ bool TemplateParms::IsEqual(const TemplateParms *p) const {
 ///////////////////////////////////////////////////////////////////////////
 // TemplateArg
 
-TemplateArg::TemplateArg(const Type *t, SourcePos pos) : argType(ArgType::Type), type(t), pos(pos) {}
-TemplateArg::TemplateArg(const ConstExpr *c, SourcePos pos) : argType(ArgType::NoneType), constExpr(c), pos(pos) {
+TemplateArg::TemplateArg(const Type *t, SourcePos pos) : argType(TemplateElementType::Type), type(t), pos(pos) {}
+TemplateArg::TemplateArg(const ConstExpr *c, SourcePos pos)
+    : argType(TemplateElementType::NoneType), constExpr(c), pos(pos) {
     unsigned int constValue[1];
     int count = constExpr->GetValues(constValue);
     Assert(count == 1);
@@ -821,7 +822,7 @@ TemplateArg::TemplateArg(const ConstExpr *c, SourcePos pos) : argType(ArgType::N
 
 const Type *TemplateArg::GetAsType() const {
     switch (argType) {
-    case ArgType::Type:
+    case TemplateElementType::Type:
         return type;
     case TemplateElementType::NonType:
         return constExpr->GetType();
@@ -844,26 +845,26 @@ uint32_t TemplateArg::GetNonTypeValue() const {
 
 std::string TemplateArg::GetString() const {
     switch (argType) {
-    case ArgType::Type:
+    case TemplateElementType::Type:
         return type->GetString();
-    case ArgType::NoneType:
+    case TemplateElementType::NoneType:
         return std::to_string(nonTypeValue);
     default:
-        return "Unknown ArgType";
+        return "Unknown TemplateElementType";
     }
 }
 
-bool TemplateArg::IsNonType() const { return argType == ArgType::NoneType; };
+bool TemplateArg::IsNonType() const { return argType == TemplateElementType::NoneType; };
 
-bool TemplateArg::IsType() const { return argType == ArgType::Type; }
+bool TemplateArg::IsType() const { return argType == TemplateElementType::Type; }
 
 bool TemplateArg::operator==(const TemplateArg &other) const {
     if (argType != other.argType)
         return false;
     switch (argType) {
-    case ArgType::Type:
+    case TemplateElementType::Type:
         return Type::Equal(type, other.type);
-    case ArgType::NoneType:
+    case TemplateElementType::NoneType:
         return nonTypeValue == other.GetNonTypeValue();
     default:
         return false;
@@ -873,12 +874,12 @@ bool TemplateArg::operator==(const TemplateArg &other) const {
 
 std::string TemplateArg::Mangle() const {
     switch (argType) {
-    case ArgType::Type:
+    case TemplateElementType::Type:
         return type->Mangle();
-    case ArgType::NoneType:
+    case TemplateElementType::NoneType:
         return std::to_string(nonTypeValue);
     default:
-        return "Unknown ArgType";
+        return "Unknown TemplateElementType";
     }
 }
 

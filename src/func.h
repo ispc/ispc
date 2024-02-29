@@ -52,6 +52,7 @@ class Function {
     Symbol *taskIndexSym2, *taskCountSym2;
 };
 
+enum class TemplateElementType { Type, NoneType };
 // A helper class to manage template parameters list.
 class TemplateParms : public Traceable {
   public:
@@ -68,11 +69,8 @@ class TemplateParms : public Traceable {
 // Represents a single argument in a template instantiation. This can either be a type
 // or a non-type (constant expression).
 class TemplateArg {
-  public:
-    enum class ArgType { Type, NoneType };
-
   private:
-    ArgType argType;
+    TemplateElementType argType;
     union {
         const Type *type;
         const ConstExpr *constExpr;
