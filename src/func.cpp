@@ -812,26 +812,48 @@ bool TemplateParms::IsEqual(const TemplateParms *p) const {
 // TemplateArg
 
 TemplateArg::TemplateArg(const Type *t, SourcePos pos) : argType(ArgType::Type), type(t), pos(pos) {}
+TemplateArg::TemplateArg(const ConstExpr *c, SourcePos pos) : argType(ArgType::NoneType), constExpr(c), pos(pos) {
+    unsigned int constValue[1];
+    int count = constExpr->GetValues(constValue);
+    Assert(count == 1);
+    nonTypeValue = constValue[0];
+}
 
 const Type *TemplateArg::GetAsType() const {
     switch (argType) {
     case ArgType::Type:
         return type;
+    case TemplateElementType::NonType:
+        return constExpr->GetType();
     default:
         return nullptr;
     }
 }
 
+const ConstExpr *TemplateArg::GetConstExpr() const {
+    Assert(IsNonType());
+    return constExpr;
+}
+
 SourcePos TemplateArg::GetPos() const { return pos; }
+
+uint32_t TemplateArg::GetNonTypeValue() const {
+    Assert(IsNonType());
+    return nonTypeValue;
+}
 
 std::string TemplateArg::GetString() const {
     switch (argType) {
     case ArgType::Type:
         return type->GetString();
+    case ArgType::NoneType:
+        return std::to_string(nonTypeValue);
     default:
         return "Unknown ArgType";
     }
 }
+
+bool TemplateArg::IsNonType() const { return argType == ArgType::NoneType; };
 
 bool TemplateArg::IsType() const { return argType == ArgType::Type; }
 
@@ -841,6 +863,8 @@ bool TemplateArg::operator==(const TemplateArg &other) const {
     switch (argType) {
     case ArgType::Type:
         return Type::Equal(type, other.type);
+    case ArgType::NoneType:
+        return nonTypeValue == other.GetNonTypeValue();
     default:
         return false;
     }
@@ -851,6 +875,8 @@ std::string TemplateArg::Mangle() const {
     switch (argType) {
     case ArgType::Type:
         return type->Mangle();
+    case ArgType::NoneType:
+        return std::to_string(nonTypeValue);
     default:
         return "Unknown ArgType";
     }
