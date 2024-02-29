@@ -1,0 +1,40 @@
+# This patch is required to fix the issue #2777
+From 7aa6ddfea210b6b114ac649c4d3219138e9cc52a Mon Sep 17 00:00:00 2001
+From: Simon Pilgrim <llvm-dev@redking.me.uk>
+Date: Thu, 29 Feb 2024 10:32:37 +0000
+Subject: [PATCH] [X86] getFauxShuffleMask - handle
+ insert_vector_elt(bitcast(extract_vector_elt(x))) shuffle patterns
+
+If the bitcast is between types of equal scalar size (i.e. fp<->int bitcasts), then we can safely peek through them
+
+Fixes #83289
+---
+ llvm/lib/Target/X86/X86ISelLowering.cpp | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/llvm/lib/Target/X86/X86ISelLowering.cpp b/llvm/lib/Target/X86/X86ISelLowering.cpp
+index e43b33eed470..22eea8b3d43d 100644
+--- a/llvm/lib/Target/X86/X86ISelLowering.cpp
++++ b/llvm/lib/Target/X86/X86ISelLowering.cpp
+@@ -8477,13 +8477,16 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
+       }
+     }
+ 
+-    // Peek through trunc/aext/zext.
++    // Peek through trunc/aext/zext/bitcast.
+     // TODO: aext shouldn't require SM_SentinelZero padding.
+     // TODO: handle shift of scalars.
+     unsigned MinBitsPerElt = Scl.getScalarValueSizeInBits();
+     while (Scl.getOpcode() == ISD::TRUNCATE ||
+            Scl.getOpcode() == ISD::ANY_EXTEND ||
+-           Scl.getOpcode() == ISD::ZERO_EXTEND) {
++           Scl.getOpcode() == ISD::ZERO_EXTEND ||
++           (Scl.getOpcode() == ISD::BITCAST &&
++            Scl.getScalarValueSizeInBits() ==
++                Scl.getOperand(0).getScalarValueSizeInBits())) {
+       Scl = Scl.getOperand(0);
+       MinBitsPerElt =
+           std::min<unsigned>(MinBitsPerElt, Scl.getScalarValueSizeInBits());
+-- 
+2.25.1
+
