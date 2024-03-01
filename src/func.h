@@ -52,23 +52,63 @@ class Function {
     Symbol *taskIndexSym2, *taskCountSym2;
 };
 
-enum class TemplateElementType { Type, NoneType };
-// A helper class to manage template parameters list.
+enum class TemplateElementType { Type, NonType };
+
+// Represents a single template parameter, which can either be a type (TemplateElementType) or a non-type (AtomicType or
+// EnumType) parameter.
+class TemplateParam : public Traceable {
+  private:
+    TemplateElementType paramType;
+    union {
+        const TemplateTypeParmType *typeParam;
+        const Type *nonTypeParam;
+    };
+    std::string name;
+    SourcePos pos;
+    Symbol *symbol;
+
+  public:
+    TemplateParam(const TemplateTypeParmType *typeParam);
+    TemplateParam(std::string name, const Type *nonTypeParam, SourcePos pos);
+
+    // Checks if the parameter is a type parameter.
+    bool IsTypeParam() const;
+    // Checks if the parameter is a non-type parameter.
+    bool IsNonTypeParam() const;
+    // Compares two `TemplateParam` instances for equality.
+    bool IsEqual(const TemplateParam &other) const;
+    // Returns the source position associated with this template parameter.
+    SourcePos GetPos() const;
+    // Gets the name of the parameter.
+    std::string GetName() const;
+    // Returns the type parameter.
+    const TemplateTypeParmType *GetTypeParam() const;
+    // Returns the non-type parameter.
+    const Type *GetNonTypeParam() const;
+    // Returns the symbol for the non-type parameter.
+    Symbol *GetSymbol() const;
+    // Sets symbol for the non-type parameter.
+    void SetSymbol(Symbol *sym);
+};
+
+// A helper class to manage template parameters list. In addition to
+// encapsulation of the list of parameters, it helps with memory management.
 class TemplateParms : public Traceable {
   public:
     TemplateParms();
-    void Add(const TemplateTypeParmType *);
+    void Add(const TemplateParam *);
     size_t GetCount() const;
-    const TemplateTypeParmType *operator[](size_t i) const;
+    const TemplateParam *operator[](size_t i) const;
+    const TemplateParam *operator[](size_t i);
     bool IsEqual(const TemplateParms *p) const;
 
   private:
-    std::vector<const TemplateTypeParmType *> parms;
+    std::vector<const TemplateParam *> parms;
 };
 
 // Represents a single argument in a template instantiation. This can either be a type
 // or a non-type (constant expression).
-class TemplateArg {
+class TemplateArg : public Traceable {
   private:
     TemplateElementType argType;
     union {

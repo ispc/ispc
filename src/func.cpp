@@ -780,15 +780,68 @@ void Function::GenerateIR() {
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// TemplateParam
+
+TemplateParam::TemplateParam(const TemplateTypeParmType *typeParam)
+    : paramType(TemplateElementType::Type), typeParam(typeParam) {
+    name = typeParam->GetName();
+    pos = typeParam->GetSourcePos();
+}
+
+TemplateParam::TemplateParam(std::string n, const Type *nonTypeParam, SourcePos p)
+    : paramType(TemplateElementType::NonType), nonTypeParam(nonTypeParam), name(n), pos(p) {
+    Assert(CastType<AtomicType>(nonTypeParam) || CastType<EnumType>(nonTypeParam));
+}
+
+bool TemplateParam::IsTypeParam() const { return paramType == TemplateElementType::Type; }
+
+bool TemplateParam::IsNonTypeParam() const { return paramType == TemplateElementType::NonType; }
+
+bool TemplateParam::IsEqual(const TemplateParam &other) const {
+    if (IsTypeParam()) {
+        return Type::Equal(typeParam, other.typeParam);
+    } else if (IsNonTypeParam()) {
+        return Type::Equal(nonTypeParam, other.nonTypeParam);
+    }
+    return false;
+}
+
+std::string TemplateParam::GetName() const { return name; }
+
+SourcePos TemplateParam::GetPos() const { return pos; }
+
+const TemplateTypeParmType *TemplateParam::GetTypeParam() const {
+    Assert(IsTypeParam());
+    return typeParam;
+}
+
+const Type *TemplateParam::GetNonTypeParam() const {
+    Assert(IsNonTypeParam());
+    return nonTypeParam;
+}
+
+Symbol *TemplateParam::GetSymbol() const {
+    Assert(IsNonTypeParam());
+    return symbol;
+}
+
+void TemplateParam::SetSymbol(Symbol *sym) {
+    Assert(IsNonTypeParam());
+    symbol = sym;
+}
+
+///////////////////////////////////////////////////////////////////////////
 // TemplateParms
 
 TemplateParms::TemplateParms() {}
 
-void TemplateParms::Add(const TemplateTypeParmType *p) { parms.push_back(p); }
+void TemplateParms::Add(const TemplateParam *p) { parms.push_back(p); }
 
 size_t TemplateParms::GetCount() const { return parms.size(); }
 
-const TemplateTypeParmType *TemplateParms::operator[](size_t i) const { return parms[i]; }
+const TemplateParam *TemplateParms::operator[](size_t i) const { return parms[i]; }
+
+const TemplateParam *TemplateParms::operator[](size_t i) { return parms[i]; }
 
 bool TemplateParms::IsEqual(const TemplateParms *p) const {
     if (p == nullptr) {
@@ -800,7 +853,8 @@ bool TemplateParms::IsEqual(const TemplateParms *p) const {
     }
 
     for (size_t i = 0; i < GetCount(); i++) {
-        if (!Type::Equal((*this)[i], (*p)[i])) {
+        const TemplateParam *other = (*p)[i];
+        if (!(parms[i]->IsEqual(*other))) {
             return false;
         }
     }
@@ -813,7 +867,7 @@ bool TemplateParms::IsEqual(const TemplateParms *p) const {
 
 TemplateArg::TemplateArg(const Type *t, SourcePos pos) : argType(TemplateElementType::Type), type(t), pos(pos) {}
 TemplateArg::TemplateArg(const ConstExpr *c, SourcePos pos)
-    : argType(TemplateElementType::NoneType), constExpr(c), pos(pos) {
+    : argType(TemplateElementType::NonType), constExpr(c), pos(pos) {
     unsigned int constValue[1];
     int count = constExpr->GetValues(constValue);
     Assert(count == 1);
@@ -847,14 +901,14 @@ std::string TemplateArg::GetString() const {
     switch (argType) {
     case TemplateElementType::Type:
         return type->GetString();
-    case TemplateElementType::NoneType:
+    case TemplateElementType::NonType:
         return std::to_string(nonTypeValue);
     default:
         return "Unknown TemplateElementType";
     }
 }
 
-bool TemplateArg::IsNonType() const { return argType == TemplateElementType::NoneType; };
+bool TemplateArg::IsNonType() const { return argType == TemplateElementType::NonType; };
 
 bool TemplateArg::IsType() const { return argType == TemplateElementType::Type; }
 
@@ -864,7 +918,7 @@ bool TemplateArg::operator==(const TemplateArg &other) const {
     switch (argType) {
     case TemplateElementType::Type:
         return Type::Equal(type, other.type);
-    case TemplateElementType::NoneType:
+    case TemplateElementType::NonType:
         return nonTypeValue == other.GetNonTypeValue();
     default:
         return false;
@@ -876,7 +930,7 @@ std::string TemplateArg::Mangle() const {
     switch (argType) {
     case TemplateElementType::Type:
         return type->Mangle();
-    case TemplateElementType::NoneType:
+    case TemplateElementType::NonType:
         return std::to_string(nonTypeValue);
     default:
         return "Unknown TemplateElementType";
@@ -984,7 +1038,7 @@ void FunctionTemplate::Print(Indent &indent) const {
             snprintf(buffer, BUFSIZE, "template param %d", i);
             indent.setNextLabel(buffer);
             if ((*typenames)[i]) {
-                indent.Print("TemplateTypeParmType", (*typenames)[i]->GetSourcePos());
+                indent.Print("TemplateTypeParmType", (*typenames)[i]->GetPos());
                 printf("\"%s\"\n", (*typenames)[i]->GetName().c_str());
                 indent.Done();
             } else {

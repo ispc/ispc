@@ -172,10 +172,11 @@ struct ForeachDimension {
     std::pair<std::string, SourcePos> *declspecPair;
     std::vector<std::pair<std::string, SourcePos> > *declspecList;
     PragmaAttributes *pragmaAttributes;
-    const TemplateTypeParmType *templateParm;
     const TemplateArgs *templateArgs;
+    const TemplateParam *templateParm;
     TemplateParms *templateParmList;
     TemplateSymbol *functionTemplateSym;
+    const TemplateTypeParmType *templateTypeParm;
     SimpleTemplateIDType *simpleTemplateID;
 }
 
@@ -272,7 +273,8 @@ struct ForeachDimension {
 %type <constCharPtr> template_identifier
 %type <templateArgs> template_argument_list
 %type <simpleTemplateID> simple_template_id template_function_specialization_declaration
-%type <templateParm> template_type_parameter template_int_parameter template_parameter
+%type <templateParm> template_parameter template_int_parameter
+%type <templateTypeParm> template_type_parameter
 %type <templateParmList> template_parameter_list template_head
 %type <functionTemplateSym> template_declaration
 
@@ -2420,12 +2422,19 @@ template_int_parameter
           lCleanUpString($2);
           // TODO: implement
           Error(Union(@1, @2), "Non-type template parameters are not yet supported.");
+
       }
     ;
 
 template_parameter
     : template_type_parameter
+    {
+        $$ = new TemplateParam($1);
+    }
     | template_int_parameter
+    {
+        $$ = $1;
+    }
     ;
 
 template_parameter_list
@@ -2466,8 +2475,10 @@ template_declaration
           TemplateParms *list = (TemplateParms *) $1;
           for(size_t i = 0; i < list->GetCount(); i++) {
               std::string name = (*list)[i]->GetName();
-              SourcePos pos = (*list)[i]->GetSourcePos();
-              m->AddTypeDef(name, (*list)[i], pos);
+              SourcePos pos = (*list)[i]->GetPos();
+              if ((*list)[i]->IsTypeParam()) {
+                  m->AddTypeDef(name, (*list)[i]->GetTypeParam(), pos);
+              }
           }
       }
       declaration_specifiers declarator
