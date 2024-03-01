@@ -1291,7 +1291,7 @@ FunctionTemplate *Module::MatchFunctionTemplate(const std::string &name, const F
     FunctionTemplate *templ = nullptr;
     for (auto &templateSymbol : matches) {
         // Number of template parameters must match.
-        if (normTypes.Size() != templateSymbol->templateParms->GetCount()) {
+        if (normTypes.size() != templateSymbol->templateParms->GetCount()) {
             // We don't have default parameters yet, so just matching the size exactly.
             continue;
         }

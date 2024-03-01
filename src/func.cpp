@@ -835,7 +835,7 @@ std::string TemplateArg::GetString() const {
 
 bool TemplateArg::IsType() const { return argType == ArgType::Type; }
 
-bool TemplateArg::IsEqual(const TemplateArg &other) const {
+bool TemplateArg::operator==(const TemplateArg &other) const {
     if (argType != other.argType)
         return false;
     switch (argType) {
@@ -861,37 +861,6 @@ void TemplateArg::SetAsVaryingType() {
         type = type->GetAsVaryingType();
     }
 }
-///////////////////////////////////////////////////////////////////////////
-// TemplateArgs
-TemplateArgs::TemplateArgs(const std::vector<TemplateArg> &args) : args(args) {}
-
-void TemplateArgs::AddArg(const TemplateArg &arg) { args.push_back(arg); }
-
-const std::vector<TemplateArg> &TemplateArgs::GetArgs() const { return args; }
-
-bool TemplateArgs::IsEqual(const TemplateArgs &other) const {
-    if (args.size() != other.args.size())
-        return false;
-    for (size_t i = 0; i < args.size(); ++i) {
-        if (!args[i].IsEqual(other.args[i]))
-            return false;
-    }
-    return true;
-}
-
-size_t TemplateArgs::Size() const { return args.size(); }
-
-std::vector<TemplateArg>::iterator TemplateArgs::begin() { return args.begin(); }
-
-std::vector<TemplateArg>::iterator TemplateArgs::end() { return args.end(); }
-
-std::vector<TemplateArg>::const_iterator TemplateArgs::begin() const { return args.begin(); }
-
-std::vector<TemplateArg>::const_iterator TemplateArgs::end() const { return args.end(); }
-
-const TemplateArg &TemplateArgs::operator[](std::size_t index) { return args[index]; }
-
-const TemplateArg &TemplateArgs::operator[](std::size_t index) const { return args[index]; }
 
 ///////////////////////////////////////////////////////////////////////////
 // FunctionTemplate
@@ -1005,10 +974,10 @@ void FunctionTemplate::Print(Indent &indent) const {
 
     for (const auto &inst : instantiations) {
         std::string args;
-        for (size_t i = 0; i < inst.first->Size(); i++) {
+        for (size_t i = 0; i < inst.first->size(); i++) {
             const TemplateArg &arg = (*inst.first)[i];
             args += arg.GetString();
-            if (i + 1 < inst.first->Size()) {
+            if (i + 1 < inst.first->size()) {
                 args += ", ";
             }
         }
@@ -1033,7 +1002,7 @@ bool FunctionTemplate::IsStdlibSymbol() const {
 Symbol *FunctionTemplate::LookupInstantiation(const TemplateArgs &tArgs) {
     TemplateArgs argsToMatch(tArgs);
     for (const auto &inst : instantiations) {
-        if (inst.first->IsEqual(argsToMatch)) {
+        if (*(inst.first) == argsToMatch) {
             return inst.second;
         }
     }
@@ -1098,16 +1067,16 @@ Symbol *FunctionTemplate::AddSpecialization(const FunctionType *ftype, const Tem
 TemplateInstantiation::TemplateInstantiation(const TemplateParms &typeParms, const TemplateArgs &tArgs,
                                              TemplateInstantiationKind k, bool ii, bool ini)
     : functionSym(nullptr), kind(k), isInline(ii), isNoInline(ini) {
-    Assert(tArgs.Size() <= typeParms.GetCount());
+    Assert(tArgs.size() <= typeParms.GetCount());
     // Create a mapping from the template parameters to the arguments.
     // Note we do that for all specified templates arguments, which number may be less than a number of template
     // parameters. In this case the rest of template parameters will be deduced later during template argumnet
     // deduction.
-    for (int i = 0; i < tArgs.Size(); i++) {
+    for (int i = 0; i < tArgs.size(); i++) {
         std::string name = typeParms[i]->GetName();
         const Type *type = tArgs[i].GetAsType();
         argsTypeMap[name] = type;
-        templateArgs.AddArg(tArgs[i]);
+        templateArgs.push_back(tArgs[i]);
     }
 }
 
