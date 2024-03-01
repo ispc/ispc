@@ -2508,13 +2508,13 @@ template_argument_list
     : rate_qualified_type_specifier
       {
           TemplateArgs *templArgs = new TemplateArgs();
-          templArgs->AddArg(TemplateArg($1, @1));
+          templArgs->push_back(TemplateArg($1, @1));
           $$ = templArgs;
       }
     | template_argument_list ',' rate_qualified_type_specifier
       {
           TemplateArgs *templArgs = (TemplateArgs *) $1;
-          templArgs->AddArg(TemplateArg($3, @3));
+          templArgs->push_back(TemplateArg($3, @3));
           $$ = templArgs;
       }
     ;
@@ -2575,7 +2575,7 @@ template_function_instantiation
           const FunctionType *ftype = CastType<FunctionType>(d->type);
           bool isInline = ($2->typeQualifiers & TYPEQUAL_INLINE);
           bool isNoInline = ($2->typeQualifiers & TYPEQUAL_NOINLINE);
-          if ($3->second->Size() == 0) {
+          if ($3->second->size() == 0) {
               Error(d->pos, "Template arguments deduction is not yet supported in explicit template instantiation.");
           }
           m->AddFunctionTemplateInstantiation($3->first->name, *$3->second, ftype, $2->storageClass, isInline, isNoInline, Union(@1, @6));
@@ -2596,7 +2596,7 @@ template_function_instantiation
           const FunctionType *ftype = CastType<FunctionType>(d->type);
           bool isInline = ($2->typeQualifiers & TYPEQUAL_INLINE);
           bool isNoInline = ($2->typeQualifiers & TYPEQUAL_NOINLINE);
-          if ($3->second->Size() == 0) {
+          if ($3->second->size() == 0) {
               Error(d->pos, "Template arguments deduction is not yet supported in explicit template instantiation.");
           }
           m->AddFunctionTemplateInstantiation($3->first->name, *$3->second, ftype, $2->storageClass, isInline, isNoInline, Union(@1, @5));
@@ -2914,7 +2914,7 @@ lAddTemplateSpecialization(const TemplateArgs &templArgs, DeclSpecs *ds, Declara
         return;
     }
 
-    if (templArgs.Size() == 0) {
+    if (templArgs.size() == 0) {
         Error(decl->pos, "Template arguments deduction is not yet supported in template function specialization.");
         return;
     }

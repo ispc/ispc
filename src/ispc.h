@@ -87,12 +87,12 @@ class Stmt;
 class Symbol;
 class SymbolTable;
 class TemplateArg;
-class TemplateArgs;
 class TemplateInstantiation;
 class TemplateParms;
 class TemplateSymbol;
 class Type;
 struct VariableDeclaration;
+typedef std::vector<TemplateArg> TemplateArgs;
 
 enum StorageClass { SC_NONE, SC_EXTERN, SC_STATIC, SC_TYPEDEF, SC_EXTERN_C, SC_EXTERN_SYCL };
 

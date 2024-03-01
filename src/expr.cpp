@@ -8289,7 +8289,7 @@ FunctionSymbolExpr *FunctionSymbolExpr::Instantiate(TemplateInstantiation &templ
     }
     TemplateArgs instTemplateArgs;
     for (auto &arg : templateArgs) {
-        instTemplateArgs.AddArg(
+        instTemplateArgs.push_back(
             arg.IsType() ? TemplateArg(arg.GetAsType()->ResolveDependenceForTopType(templInst), arg.GetPos()) : arg);
     }
     return new FunctionSymbolExpr(name.c_str(), candidateTemplateFunctions, instTemplateArgs, pos);
@@ -8544,7 +8544,7 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
         }
 
         // This looks like a candidate, so now we need get to instantiation and add it to candidate list.
-        if (templateArgs.Size() == templateParms->GetCount()) {
+        if (templateArgs.size() == templateParms->GetCount()) {
             // Easy, we have all template arguments specified explicitly, no deduction is needed.
             Symbol *funcSym = templSym->functionTemplate->LookupInstantiation(templateArgs);
             if (funcSym == nullptr) {
@@ -8555,7 +8555,7 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
             // Success
             ret.push_back(funcSym);
             continue;
-        } else if (templateArgs.Size() > templateParms->GetCount()) {
+        } else if (templateArgs.size() > templateParms->GetCount()) {
             // Too many template arguments specified
             continue;
         }
@@ -8653,8 +8653,8 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
         // Build a complete vector of deduced template arguments.
         TemplateArgs deducedArgs;
         for (int i = 0; i < templateParms->GetCount(); ++i) {
-            if (i < templateArgs.Size()) {
-                deducedArgs.AddArg(templateArgs[i]);
+            if (i < templateArgs.size()) {
+                deducedArgs.push_back(templateArgs[i]);
             } else {
                 const Type *deducedArg = inst.InstantiateType((*templateParms)[i]->GetName());
                 if (!deducedArg || deducedArg->IsDependentType()) {
@@ -8663,7 +8663,7 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
                     deductionFailed = true;
                     break;
                 }
-                deducedArgs.AddArg(TemplateArg(deducedArg, pos));
+                deducedArgs.push_back(TemplateArg(deducedArg, pos));
             }
         }
         if (deductionFailed) {

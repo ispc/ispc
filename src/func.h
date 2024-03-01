@@ -89,41 +89,12 @@ class TemplateArg {
     std::string GetString() const;
     // Returns `true` if this argument is a Type.
     bool IsType() const;
-    // Compares two `TemplateArg` instances for equality.
-    bool IsEqual(const TemplateArg &other) const;
     // Mangles the stored type to a string representation.
     std::string Mangle() const;
     // Transforms the stored type to its varying equivalent.
     void SetAsVaryingType();
-};
-
-// Represents a list of template arguments. This is used
-// to store all arguments provided to a template, preserving their order and types.
-class TemplateArgs {
-  public:
-    TemplateArgs() = default;
-    TemplateArgs(const std::vector<TemplateArg> &args);
-
-    // Adds a new TemplateArg to the list of arguments.
-    void AddArg(const TemplateArg &arg);
-    // Returns a constant reference to the internal vector of template arguments.
-    const std::vector<TemplateArg> &GetArgs() const;
-    // Compares this TemplateArgs instance with another for equality. Two TemplateArgs instances are considered equal if
-    // they contain the same number of arguments and each corresponding pair of arguments is equal.
-    bool IsEqual(const TemplateArgs &other) const;
-    // Returns the number of template arguments
-    size_t Size() const;
-    // Iterators support, both in const and non-const contexts.
-    std::vector<TemplateArg>::iterator begin();
-    std::vector<TemplateArg>::iterator end();
-    std::vector<TemplateArg>::const_iterator begin() const;
-    std::vector<TemplateArg>::const_iterator end() const;
-    // Access to individual arguments by index, both in const and non-const contexts.
-    const TemplateArg &operator[](std::size_t index);
-    const TemplateArg &operator[](std::size_t index) const;
-
-  private:
-    std::vector<TemplateArg> args;
+    // Operator support
+    bool operator==(const TemplateArg &other) const;
 };
 
 enum class TemplateInstantiationKind { Implicit, Explicit, Specialization };
