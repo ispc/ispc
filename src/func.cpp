@@ -1102,6 +1102,20 @@ Symbol *FunctionTemplate::AddInstantiation(const TemplateArgs &tArgs, TemplateIn
     for (auto arg : args) {
         instArgs.push_back(templInst.InstantiateSymbol(arg));
     }
+    for (int i = 0; i < typenames->GetCount(); i++) {
+        const TemplateParam *param = (*typenames)[i];
+        // Update constValue for non-type template parameters
+        if (param->IsNonTypeParam()) {
+            Symbol *sym = param->GetSymbol();
+            if (sym) {
+                const ConstExpr *constExpr = tArgs[i].GetConstExpr();
+                Assert(constExpr != nullptr);
+                Expr *castExpr = new TypeCastExpr(sym->type, const_cast<ConstExpr *>(constExpr), tArgs[i].GetPos());
+                castExpr = Optimize(castExpr);
+                sym->constValue = llvm::dyn_cast<ConstExpr>(castExpr);
+            }
+        }
+    }
 
     Stmt *instCode = code->Instantiate(templInst);
     Function *inst = new Function(instSym, instCode, instMaskSym, instArgs);

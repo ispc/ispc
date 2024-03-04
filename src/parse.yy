@@ -172,6 +172,7 @@ struct ForeachDimension {
     std::pair<std::string, SourcePos> *declspecPair;
     std::vector<std::pair<std::string, SourcePos> > *declspecList;
     PragmaAttributes *pragmaAttributes;
+    const TemplateArg *templateArg;
     const TemplateArgs *templateArgs;
     const TemplateParam *templateParm;
     TemplateParms *templateParmList;
@@ -251,7 +252,7 @@ struct ForeachDimension {
 %type <type> type_specifier type_name rate_qualified_type_specifier
 %type <type> short_vec_specifier
 %type <typeList> type_specifier_list
-%type <atomicType> atomic_var_type_specifier
+%type <atomicType> atomic_var_type_specifier int_constant_type
 
 %type <typeQualifier> type_qualifier type_qualifier_list
 %type <storageClass> storage_class_specifier
@@ -271,6 +272,7 @@ struct ForeachDimension {
 %type <declspecList> declspec_specifier declspec_list
 
 %type <constCharPtr> template_identifier
+%type <templateArg> template_argument
 %type <templateArgs> template_argument_list
 %type <simpleTemplateID> simple_template_id template_function_specialization_declaration
 %type <templateParm> template_parameter template_int_parameter
@@ -2415,14 +2417,29 @@ template_type_parameter
       }
     ;
 
+int_constant_type
+    : TOKEN_INT8  { $$ = AtomicType::UniformInt8->GetAsConstType(); }
+    | TOKEN_INT16 { $$ = AtomicType::UniformInt16->GetAsConstType(); }
+    | TOKEN_INT   { $$ = AtomicType::UniformInt32->GetAsConstType(); }
+    | TOKEN_INT64 { $$ = AtomicType::UniformInt64->GetAsConstType(); }
+    | TOKEN_UINT8 { $$ = AtomicType::UniformUInt8->GetAsConstType(); }
+    | TOKEN_UINT16{ $$ = AtomicType::UniformUInt16->GetAsConstType(); }
+    | TOKEN_UINT  { $$ = AtomicType::UniformUInt32->GetAsConstType(); }
+    | TOKEN_UINT64{ $$ = AtomicType::UniformUInt64->GetAsConstType(); }
+    ;
+
 template_int_parameter
-    : TOKEN_INT TOKEN_IDENTIFIER
+    : int_constant_type TOKEN_IDENTIFIER
       {
-          $$ = nullptr;
+          $$ = new TemplateParam(*$<stringVal>2, $1, Union(@1, @2));
+          lCleanUpString($2);
+      }
+      | int_constant_type TOKEN_IDENTIFIER '=' int_constant
+      {
+          $$ = new TemplateParam(*$<stringVal>2, $1, Union(@1, @2));
           lCleanUpString($2);
           // TODO: implement
-          Error(Union(@1, @2), "Non-type template parameters are not yet supported.");
-
+          Error(@4, "Default values for template non-type parameters are not yet supported.");
       }
     ;
 
@@ -2478,7 +2495,12 @@ template_declaration
               SourcePos pos = (*list)[i]->GetPos();
               if ((*list)[i]->IsTypeParam()) {
                   m->AddTypeDef(name, (*list)[i]->GetTypeParam(), pos);
+              } else if ((*list)[i]->IsNonTypeParam()) {
+                  Symbol *sym = new Symbol(name, pos, (*list)[i]->GetNonTypeParam());
+                  m->symbolTable->AddVariable(sym);
+                  const_cast<TemplateParam*>((*list)[i])->SetSymbol(sym);
               }
+
           }
       }
       declaration_specifiers declarator
@@ -2515,17 +2537,59 @@ template_function_declaration_or_definition
       }
     ;
 
-template_argument_list
+template_argument
     : rate_qualified_type_specifier
+    {
+        $$ = new TemplateArg($1, @1);
+    }
+    // Ideally we should use here constant_expression, however, there is grammar ambiguitiy between
+    // template_identifier '<' template_argument_list '>' in simple_template_id and
+    // relational_expression '<' shift_expression in relational_expression (part of constant_expression).
+    | TOKEN_INT8_CONSTANT {
+        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformInt8->GetAsConstType(),
+                           (int8_t)yylval.intVal, @1), @1);
+    }
+    | TOKEN_UINT8_CONSTANT {
+        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformUInt8->GetAsConstType(),
+                           (uint8_t)yylval.intVal, @1), @1);
+    }
+    | TOKEN_INT16_CONSTANT {
+        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformInt16->GetAsConstType(),
+                           (int16_t)yylval.intVal, @1), @1);
+    }
+    | TOKEN_UINT16_CONSTANT {
+        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformUInt16->GetAsConstType(),
+                           (uint16_t)yylval.intVal, @1), @1);
+    }
+    | TOKEN_INT32_CONSTANT {
+        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformInt32->GetAsConstType(),
+                           (int32_t)yylval.intVal, @1), @1);
+    }
+    | TOKEN_UINT32_CONSTANT {
+        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformUInt32->GetAsConstType(),
+                           (uint32_t)yylval.intVal, @1), @1);
+    }
+    | TOKEN_INT64_CONSTANT {
+        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformInt64->GetAsConstType(),
+                           (int64_t)yylval.intVal, @1), @1);
+    }
+    | TOKEN_UINT64_CONSTANT {
+        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformUInt64->GetAsConstType(),
+                           (uint64_t)yylval.intVal, @1), @1);
+    }
+    ;
+
+template_argument_list
+    : template_argument
       {
           TemplateArgs *templArgs = new TemplateArgs();
-          templArgs->push_back(TemplateArg($1, @1));
+          templArgs->push_back(*$1);
           $$ = templArgs;
       }
-    | template_argument_list ',' rate_qualified_type_specifier
+    | template_argument_list ',' template_argument
       {
           TemplateArgs *templArgs = (TemplateArgs *) $1;
-          templArgs->push_back(TemplateArg($3, @3));
+          templArgs->push_back(*$3);
           $$ = templArgs;
       }
     ;
