@@ -212,7 +212,10 @@ bool Type::IsDependentType() const {
     }
     case TEMPLATE_TYPE_PARM_TYPE:
         return true;
+    case TEMPLATE_NONTYPE_PARM_TYPE:
+        return true;
     }
+
     UNREACHABLE();
 }
 
@@ -821,6 +824,165 @@ llvm::Type *TemplateTypeParmType::LLVMType(llvm::LLVMContext *ctx) const { UNREA
 
 // This should never be called.
 llvm::DIType *TemplateTypeParmType::GetDIType(llvm::DIScope *scope) const { UNREACHABLE(); }
+
+///////////////////////////////////////////////////////////////////////////
+// TemplateNonTypeParmType
+
+TemplateNonTypeParmType::TemplateNonTypeParmType(std::string n, Variability v, const Type *t, bool ic, SourcePos p)
+    : Type(TEMPLATE_NONTYPE_PARM_TYPE), name(n), variability(v), type(t), isConst(ic), pos(p) {
+    asOtherConstType = nullptr;
+    asUniformType = asVaryingType = nullptr;
+}
+
+Variability TemplateNonTypeParmType::GetVariability() const { return variability; }
+
+bool TemplateNonTypeParmType::IsBoolType() const { return false; }
+
+bool TemplateNonTypeParmType::IsFloatType() const { return false; }
+
+bool TemplateNonTypeParmType::IsIntType() const { return type->IsIntType(); }
+
+bool TemplateNonTypeParmType::IsUnsignedType() const { return type->IsUnsignedType(); }
+
+bool TemplateNonTypeParmType::IsSignedType() const { return type->IsSignedType(); }
+
+bool TemplateNonTypeParmType::IsConstType() const { return true; }
+
+const Type *TemplateNonTypeParmType::GetBaseType() const { return type; }
+
+const Type *TemplateNonTypeParmType::GetAsVaryingType() const {
+    if (variability == Variability::Varying)
+        return this;
+    if (asVaryingType == nullptr) {
+        asVaryingType = new TemplateNonTypeParmType(name, Variability::Varying, type, isConst, pos);
+        if (variability == Variability::Uniform)
+            asVaryingType->asUniformType = this;
+    }
+    return asVaryingType;
+}
+
+const Type *TemplateNonTypeParmType::GetAsUniformType() const {
+    if (variability == Variability::Uniform)
+        return this;
+    if (asUniformType == nullptr) {
+        asUniformType = new TemplateNonTypeParmType(name, Variability::Uniform, type, isConst, pos);
+        if (variability == Variability::Varying)
+            asUniformType->asVaryingType = this;
+    }
+    return asUniformType;
+}
+
+const Type *TemplateNonTypeParmType::GetAsUnboundVariabilityType() const {
+    if (variability == Variability::Unbound)
+        return this;
+    return new TemplateNonTypeParmType(name, Variability::Unbound, type, isConst, pos);
+}
+
+// Revisit: Should soa type be supported for template type param?
+const Type *TemplateNonTypeParmType::GetAsSOAType(int width) const {
+    Error(pos, "soa type not supported for template type parameter.");
+    return this;
+}
+
+const Type *TemplateNonTypeParmType::ResolveDependence(TemplateInstantiation &templInst) const {
+    const Type *resolvedType = templInst.InstantiateType(GetName());
+    if (resolvedType == nullptr) {
+        // Failed to resolve the type, return
+        return this;
+    }
+
+    if (variability == Variability::Unbound) {
+        // Use resolved type variability
+    } else if (variability == Variability::Uniform) {
+        // Enforce uniform variability
+        resolvedType = resolvedType->GetAsUniformType();
+    } else if (variability == Variability::Varying) {
+        // Enforce varying variability
+        resolvedType = resolvedType->GetAsVaryingType();
+    } else {
+        UNREACHABLE();
+    }
+
+    if (isConst) {
+        resolvedType = resolvedType->GetAsConstType();
+    }
+    return resolvedType;
+}
+
+const Type *TemplateNonTypeParmType::ResolveUnboundVariability(Variability v) const {
+    Assert(v != Variability::Unbound);
+    if (variability != Variability::Unbound)
+        return this;
+    return new TemplateNonTypeParmType(name, v, type, isConst, pos);
+}
+
+const Type *TemplateNonTypeParmType::GetAsConstType() const {
+    if (isConst == true)
+        return this;
+
+    if (asOtherConstType == nullptr) {
+        asOtherConstType = new TemplateNonTypeParmType(name, variability, type, true, pos);
+        asOtherConstType->asOtherConstType = this;
+    }
+    return asOtherConstType;
+}
+
+const Type *TemplateNonTypeParmType::GetAsNonConstType() const {
+    if (isConst == false)
+        return this;
+
+    if (asOtherConstType == nullptr) {
+        asOtherConstType = new TemplateNonTypeParmType(name, variability, type, false, pos);
+        asOtherConstType->asOtherConstType = this;
+    }
+    return asOtherConstType;
+}
+
+std::string TemplateNonTypeParmType::GetName() const { return name; }
+
+const SourcePos &TemplateNonTypeParmType::GetSourcePos() const { return pos; }
+
+std::string TemplateNonTypeParmType::GetString() const {
+    std::string ret;
+    if (isConst)
+        ret += "const ";
+
+    ret += variability.GetString();
+    ret += " ";
+    ret += name;
+    return ret;
+}
+
+std::string TemplateNonTypeParmType::Mangle() const {
+    std::string ret;
+    if (isConst)
+        ret += "C";
+    ret += variability.MangleString();
+    ret += name;
+    return ret;
+}
+
+std::string TemplateNonTypeParmType::GetDeclaration(const std::string &cname, DeclarationSyntax syntax) const {
+    std::string ret;
+    if (variability == Variability::Unbound) {
+        Assert(m->errorCount > 0);
+        return ret;
+    }
+    if (isConst)
+        ret += "const ";
+    ret += name;
+    if (lShouldPrintName(cname)) {
+        ret += " ";
+        ret += cname;
+    }
+    return ret;
+}
+
+// This should never be called.
+llvm::Type *TemplateNonTypeParmType::LLVMType(llvm::LLVMContext *ctx) const { UNREACHABLE(); }
+
+// This should never be called.
+llvm::DIType *TemplateNonTypeParmType::GetDIType(llvm::DIScope *scope) const { UNREACHABLE(); }
 
 ///////////////////////////////////////////////////////////////////////////
 // EnumType
@@ -3420,6 +3582,24 @@ static bool lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
         }
         // Variability should match, otherwise they are not equal.
         if (ttpa->GetVariability() != ttpb->GetVariability()) {
+            return false;
+        }
+        return true;
+    }
+
+    const TemplateNonTypeParmType *ttnpa = CastType<TemplateNonTypeParmType>(a);
+    const TemplateNonTypeParmType *ttnpb = CastType<TemplateNonTypeParmType>(b);
+    if (ttnpa != nullptr && ttnpb != nullptr) {
+        // Template type parameter types must have the same name to match.
+        if (ttnpa->GetName() != ttnpb->GetName()) {
+            return false;
+        }
+        // Variability should match, otherwise they are not equal.
+        if (ttnpa->GetVariability() != ttnpb->GetVariability()) {
+            return false;
+        }
+        // Type should match
+        if (!Type::Equal(ttnpa->GetBaseType(), ttnpb->GetBaseType())) {
             return false;
         }
         return true;
