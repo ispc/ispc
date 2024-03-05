@@ -1149,6 +1149,7 @@ TemplateInstantiation::TemplateInstantiation(const TemplateParms &typeParms, con
         std::string name = typeParms[i]->GetName();
         const Type *type = tArgs[i].GetAsType();
         argsTypeMap[name] = type;
+        argsNonTypeMap[name] = typeParms[i]->IsNonTypeParam() ? tArgs[i].GetExpr() : nullptr;
         templateArgs.push_back(tArgs[i]);
     }
 }
@@ -1187,7 +1188,21 @@ Symbol *TemplateInstantiation::InstantiateSymbol(Symbol *sym) {
 
     const Type *instType = sym->type->ResolveDependenceForTopType(*this);
     Symbol *instSym = new Symbol(sym->name, sym->pos, instType, sym->storageClass);
-    instSym->constValue = sym->constValue ? sym->constValue->Instantiate(*this) : nullptr;
+    // Update constValue for non-type template parameters
+    if (argsNonTypeMap.find(sym->name) != argsNonTypeMap.end()) {
+        const Expr *expr = argsNonTypeMap[sym->name];
+        Assert(expr != nullptr);
+        const ConstExpr *ce = llvm::dyn_cast<ConstExpr>(expr);
+        if (ce == nullptr) {
+            const SymbolExpr *se = llvm::dyn_cast<SymbolExpr>(expr);
+            if (se && se->GetBaseSymbol()->constValue != nullptr) {
+                ce = llvm::dyn_cast<ConstExpr>(se->GetBaseSymbol()->constValue);
+            }
+        }
+        instSym->constValue = ce ? ce->Instantiate(*this) : nullptr;
+    } else {
+        instSym->constValue = sym->constValue ? sym->constValue->Instantiate(*this) : nullptr;
+    }
     instSym->varyingCFDepth = sym->varyingCFDepth;
     instSym->parentFunction = nullptr;
     instSym->storageInfo = sym->storageInfo;

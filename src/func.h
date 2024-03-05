@@ -191,6 +191,8 @@ class TemplateInstantiation {
     std::unordered_map<Symbol *, Symbol *> symMap;
     // Mapping of template parameter names to the types in the instantiation.
     std::unordered_map<std::string, const Type *> argsTypeMap;
+    // Mapping of template parameter names to the const expression in the instantiation.
+    std::unordered_map<std::string, const Expr *> argsNonTypeMap;
     // Template arguments in the order of the template parameters.
     TemplateArgs templateArgs;
     // Kind of instantiation (explicit, implicit, specialization).
