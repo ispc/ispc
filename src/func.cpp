@@ -812,26 +812,57 @@ bool TemplateParms::IsEqual(const TemplateParms *p) const {
 // TemplateArg
 
 TemplateArg::TemplateArg(const Type *t, SourcePos pos) : argType(ArgType::Type), type(t), pos(pos) {}
+TemplateArg::TemplateArg(const Expr *c, SourcePos pos) : argType(ArgType::NonType), expr(c), pos(pos) {
+    const ConstExpr *ce = llvm::dyn_cast<ConstExpr>(c);
+    if (ce == nullptr) {
+        const SymbolExpr *se = llvm::dyn_cast<SymbolExpr>(c);
+        if (se && se->GetBaseSymbol()->constValue != nullptr) {
+            ce = llvm::dyn_cast<ConstExpr>(se->GetBaseSymbol()->constValue);
+        }
+    }
+    if (ce) {
+        unsigned int constValue[1];
+        int count = ce->GetValues(constValue);
+        Assert(count == 1);
+        nonTypeValue = constValue[0];
+    }
+}
 
 const Type *TemplateArg::GetAsType() const {
     switch (argType) {
     case ArgType::Type:
         return type;
+    case ArgType::NonType:
+        return expr->GetType();
     default:
         return nullptr;
     }
 }
 
+const Expr *TemplateArg::GetExpr() const {
+    Assert(IsNonType());
+    return expr;
+}
+
 SourcePos TemplateArg::GetPos() const { return pos; }
+
+uint32_t TemplateArg::GetNonTypeValue() const {
+    Assert(IsNonType());
+    return nonTypeValue;
+}
 
 std::string TemplateArg::GetString() const {
     switch (argType) {
     case ArgType::Type:
         return type->GetString();
+    case ArgType::NonType:
+        return std::to_string(nonTypeValue);
     default:
         return "Unknown ArgType";
     }
 }
+
+bool TemplateArg::IsNonType() const { return argType == ArgType::NonType; };
 
 bool TemplateArg::IsType() const { return argType == ArgType::Type; }
 
@@ -841,6 +872,8 @@ bool TemplateArg::operator==(const TemplateArg &other) const {
     switch (argType) {
     case ArgType::Type:
         return Type::Equal(type, other.type);
+    case ArgType::NonType:
+        return nonTypeValue == other.GetNonTypeValue();
     default:
         return false;
     }
@@ -851,6 +884,8 @@ std::string TemplateArg::Mangle() const {
     switch (argType) {
     case ArgType::Type:
         return type->Mangle();
+    case ArgType::NonType:
+        return std::to_string(nonTypeValue);
     default:
         return "Unknown ArgType";
     }

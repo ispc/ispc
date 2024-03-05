@@ -67,26 +67,36 @@ class TemplateParms : public Traceable {
 
 // Represents a single argument in a template instantiation. This can either be a type
 // or a non-type (constant expression).
-class TemplateArg {
+class TemplateArg : public Traceable {
   public:
-    enum class ArgType { Type, /*To be extended with NoneType*/ };
+    enum class ArgType { Type, NonType };
 
   private:
     ArgType argType;
     union {
         const Type *type;
+        const Expr *expr;
     };
     SourcePos pos;
 
+    uint32_t nonTypeValue;
+
   public:
     TemplateArg(const Type *t, SourcePos pos);
+    TemplateArg(const Expr *c, SourcePos pos);
 
     // Returns ISPC type of the argument.
     const Type *GetAsType() const;
+    // Returns expression if this argument is a non-type.
+    const Expr *GetExpr() const;
     // Returns the source position associated with this template argument.
     SourcePos GetPos() const;
+    // Returns int value if this argument is a non-type.
+    uint32_t GetNonTypeValue() const;
     // Produces a string representation of the argument.
     std::string GetString() const;
+    // Returns `true` if this argument is a non-type.
+    bool IsNonType() const;
     // Returns `true` if this argument is a Type.
     bool IsType() const;
     // Mangles the stored type to a string representation.
