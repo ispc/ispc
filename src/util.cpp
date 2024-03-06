@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -49,10 +49,10 @@
 void std::__libcpp_verbose_abort(char const *format, ...) {
     va_list list;
     va_start(list, format);
-    std::vfprintf(stderr, format, list);
+    vfprintf(stderr, format, list);
     va_end(list);
 
-    std::abort();
+    abort();
 }
 #endif // ISPV_LLVM_17_0
 #endif // ISPC_HOST_IS_APPLE
