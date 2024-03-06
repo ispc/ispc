@@ -172,9 +172,10 @@ struct ForeachDimension {
     std::pair<std::string, SourcePos> *declspecPair;
     std::vector<std::pair<std::string, SourcePos> > *declspecList;
     PragmaAttributes *pragmaAttributes;
-    const TemplateTypeParmType *templateParm;
     const TemplateArgs *templateArgs;
+    const TemplateParam *templateParm;
     TemplateParms *templateParmList;
+    const TemplateTypeParmType *templateTypeParm;
     TemplateSymbol *functionTemplateSym;
     SimpleTemplateIDType *simpleTemplateID;
 }
@@ -272,7 +273,8 @@ struct ForeachDimension {
 %type <constCharPtr> template_identifier
 %type <templateArgs> template_argument_list
 %type <simpleTemplateID> simple_template_id template_function_specialization_declaration
-%type <templateParm> template_type_parameter template_int_parameter template_parameter
+%type <templateTypeParm> template_type_parameter
+%type <templateParm> template_parameter template_int_parameter
 %type <templateParmList> template_parameter_list template_head
 %type <functionTemplateSym> template_declaration
 
@@ -2425,6 +2427,9 @@ template_int_parameter
 
 template_parameter
     : template_type_parameter
+    {
+        $$ = new TemplateParam($1);
+    }
     | template_int_parameter
     ;
 
@@ -2467,7 +2472,9 @@ template_declaration
           for(size_t i = 0; i < list->GetCount(); i++) {
               std::string name = (*list)[i]->GetName();
               SourcePos pos = (*list)[i]->GetSourcePos();
-              m->AddTypeDef(name, (*list)[i], pos);
+              if ((*list)[i]->IsTypeParam()) {
+                  m->AddTypeDef(name, (*list)[i]->GetParam(), pos);
+              }
           }
       }
       declaration_specifiers declarator

@@ -52,17 +52,49 @@ class Function {
     Symbol *taskIndexSym2, *taskCountSym2;
 };
 
+// Represents a single template parameter, which can either be a type (TemplateTypeParmType) or a non-type
+// (TemplateNonTypeParmType).
+class TemplateParam : public Traceable {
+  private:
+    std::string name;
+    SourcePos pos;
+    Symbol *symbol;
+    const Type *paramType;
+
+  public:
+    TemplateParam(const TemplateTypeParmType *typeParam);
+    TemplateParam(const TemplateNonTypeParmType *typeParam);
+
+    // Checks if the parameter is a type parameter.
+    bool IsTypeParam() const;
+    // Checks if the parameter is a non-type parameter.
+    bool IsNonTypeParam() const;
+    // Compares two `TemplateParam` instances for equality.
+    bool IsEqual(const TemplateParam &other) const;
+    // Gets the name of the parameter.
+    std::string GetName() const;
+    // Returns parameter.
+    const Type *GetParam() const;
+    // Returns the source position associated with this template parameter.
+    SourcePos GetSourcePos() const;
+    // Returns the symbol for the non-type parameter.
+    Symbol *GetSymbol() const;
+    // Sets symbol for the non-type parameter.
+    void SetSymbol(Symbol *sym);
+};
+
 // A helper class to manage template parameters list.
 class TemplateParms : public Traceable {
   public:
     TemplateParms();
-    void Add(const TemplateTypeParmType *);
+    void Add(const TemplateParam *);
     size_t GetCount() const;
-    const TemplateTypeParmType *operator[](size_t i) const;
+    const TemplateParam *operator[](size_t i) const;
+    const TemplateParam *operator[](size_t i);
     bool IsEqual(const TemplateParms *p) const;
 
   private:
-    std::vector<const TemplateTypeParmType *> parms;
+    std::vector<const TemplateParam *> parms;
 };
 
 // Represents a single argument in a template instantiation. This can either be a type
