@@ -277,7 +277,7 @@ struct ForeachDimension {
 %type <templateArgs> template_argument_list
 %type <simpleTemplateID> simple_template_id template_function_specialization_declaration
 %type <templateTypeParm> template_type_parameter
-%type <templateNonTypeParm> template_int_parameter
+%type <templateNonTypeParm> template_int_parameter template_enum_parameter
 %type <templateParm> template_parameter
 %type <templateParmList> template_parameter_list template_head
 %type <functionTemplateSym> template_declaration
@@ -2445,12 +2445,30 @@ template_int_parameter
       }
     ;
 
+template_enum_parameter
+    : TOKEN_TYPE_NAME TOKEN_IDENTIFIER
+      {
+          const Type *type = m->symbolTable->LookupType($1->c_str());
+          const EnumType *enumType = CastType<EnumType>(type);
+          if (enumType == nullptr) {
+            Error(@1, "Only enum types and integral types are allowed as non-type template parameters.");
+          }
+          $$ = new TemplateNonTypeParmType(*$<stringVal>2, Variability::VarType::Uniform, enumType->GetAsConstType()->GetAsUniformType(), true, Union(@1, @2));
+          lCleanUpString($1);
+          lCleanUpString($2);
+      }
+    ;
+
 template_parameter
     : template_type_parameter
     {
         $$ = new TemplateParam($1);
     }
     | template_int_parameter
+    {
+        $$ = new TemplateParam($1);
+    }
+    | template_enum_parameter
     {
         $$ = new TemplateParam($1);
     }
@@ -2578,15 +2596,18 @@ template_argument
         $$ = new TemplateArg(new ConstExpr(AtomicType::UniformUInt64->GetAsConstType(),
                            (uint64_t)yylval.intVal, @1), @1);
     }
-    | TOKEN_IDENTIFIER {
-        // TODO: implement support of nested templates
-        $$ = nullptr;
-        lCleanUpString($1);
-        /*const char *name = $1->c_str();
+    // Enums and nested templates case:
+    | TOKEN_IDENTIFIER
+    {
+        const char *name = $1->c_str();
         Symbol *s = m->symbolTable->LookupVariable(name);
-        if (s)
+        if (s) {
             $$ = new TemplateArg(new SymbolExpr(s, @1), @1);
-        */
+        } else {
+            Error(@1, "Unknown identifier");
+            $$ = nullptr;
+        }
+        lCleanUpString($1);
     }
     ;
 
