@@ -21,5 +21,6 @@
 #include "PeepholePass.h"
 #include "ReplacePseudoMemoryOps.h"
 #include "ReplaceStdlibShiftPass.h"
+#include "ShrinkVectors.h"
 #include "XeGatherCoalescePass.h"
 #include "XeReplaceLLVMIntrinsics.h"

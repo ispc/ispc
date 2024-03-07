@@ -27,6 +27,8 @@ target_sources(${PROJECT_NAME}
         "ReplacePseudoMemoryOps.h"
         "ReplaceStdlibShiftPass.cpp"
         "ReplaceStdlibShiftPass.h"
+        "ShrinkVectors.cpp"
+        "ShrinkVectors.h"
         "XeGatherCoalescePass.cpp"
         "XeGatherCoalescePass.h"
         "XeReplaceLLVMIntrinsics.cpp"
