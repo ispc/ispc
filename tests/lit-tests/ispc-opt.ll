@@ -9,6 +9,7 @@
 ; CHECK-PRINT-NEXT:   intrinsics-opt
 ; CHECK-PRINT-NEXT:   is-compile-time-constant
 ; CHECK-PRINT-NEXT:   peephole
+; CHECK-PRINT-NEXT:   replace-masked-memory-ops
 ; CHECK-PRINT-NEXT:   replace-pseudo-memory-ops
 ; CHECK-PRINT-NEXT:   replace-stdlib-shift
 

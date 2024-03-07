@@ -606,6 +606,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 #else
         optPM.addFunctionPass(llvm::GVN(), 301);
 #endif
+        optPM.addFunctionPass(ReplaceMaskedMemOpsPass());
         optPM.addFunctionPass(IsCompileTimeConstantPass(true));
         optPM.addFunctionPass(IntrinsicsOpt());
         optPM.addFunctionPass(InstructionSimplifyPass());
