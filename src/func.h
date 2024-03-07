@@ -58,7 +58,6 @@ class TemplateParam : public Traceable {
   private:
     std::string name;
     SourcePos pos;
-    Symbol *symbol;
     const Type *paramType;
 
   public:
@@ -77,10 +76,6 @@ class TemplateParam : public Traceable {
     const Type *GetParam() const;
     // Returns the source position associated with this template parameter.
     SourcePos GetSourcePos() const;
-    // Returns the symbol for the non-type parameter.
-    Symbol *GetSymbol() const;
-    // Sets symbol for the non-type parameter.
-    void SetSymbol(Symbol *sym);
 };
 
 // A helper class to manage template parameters list.

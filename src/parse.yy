@@ -2518,7 +2518,6 @@ template_declaration
               } else if ((*list)[i]->IsNonTypeParam()) {
                   Symbol *sym = new Symbol(name, pos, (*list)[i]->GetParam());
                   m->symbolTable->AddVariable(sym);
-                  const_cast<TemplateParam*>((*list)[i])->SetSymbol(sym);
               }
           }
       }

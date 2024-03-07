@@ -804,16 +804,6 @@ const Type *TemplateParam::GetParam() const { return paramType; }
 
 SourcePos TemplateParam::GetSourcePos() const { return pos; }
 
-Symbol *TemplateParam::GetSymbol() const {
-    Assert(IsNonTypeParam());
-    return symbol;
-}
-
-void TemplateParam::SetSymbol(Symbol *sym) {
-    Assert(IsNonTypeParam());
-    symbol = sym;
-}
-
 ///////////////////////////////////////////////////////////////////////////
 // TemplateParms
 
