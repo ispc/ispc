@@ -19,6 +19,7 @@
 #include "MakeInternalFuncsStatic.h"
 #include "MangleOpenCLBuiltins.h"
 #include "PeepholePass.h"
+#include "ReplaceMaskedMemOps.h"
 #include "ReplacePseudoMemoryOps.h"
 #include "ReplaceStdlibShiftPass.h"
 #include "ScalarizePass.h"

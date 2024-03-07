@@ -503,6 +503,8 @@ list(APPEND OPT_SOURCES
     src/opt/MakeInternalFuncsStatic.h
     src/opt/PeepholePass.cpp
     src/opt/PeepholePass.h
+    src/opt/ReplaceMaskedMemOps.cpp
+    src/opt/ReplaceMaskedMemOps.h
     src/opt/ReplacePseudoMemoryOps.cpp
     src/opt/ReplacePseudoMemoryOps.h
     src/opt/ReplaceStdlibShiftPass.cpp
