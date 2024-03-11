@@ -172,6 +172,7 @@ struct ForeachDimension {
     std::pair<std::string, SourcePos> *declspecPair;
     std::vector<std::pair<std::string, SourcePos> > *declspecList;
     PragmaAttributes *pragmaAttributes;
+    const TemplateArg *templateArg;
     const TemplateArgs *templateArgs;
     const TemplateParam *templateParm;
     TemplateParms *templateParmList;
@@ -271,6 +272,7 @@ struct ForeachDimension {
 %type <declspecList> declspec_specifier declspec_list
 
 %type <constCharPtr> template_identifier
+%type <templateArg> template_argument
 %type <templateArgs> template_argument_list
 %type <simpleTemplateID> simple_template_id template_function_specialization_declaration
 %type <templateTypeParm> template_type_parameter
@@ -2518,17 +2520,29 @@ template_function_declaration_or_definition
       }
     ;
 
-template_argument_list
+template_argument
     : rate_qualified_type_specifier
+    {
+        $$ = new TemplateArg($1, @1);
+    }
+    ;
+
+template_argument_list
+    : template_argument
       {
           TemplateArgs *templArgs = new TemplateArgs();
-          templArgs->push_back(TemplateArg($1, @1));
+          if ($1 != nullptr) {
+            templArgs->push_back(*$1);
+          }
           $$ = templArgs;
+
       }
-    | template_argument_list ',' rate_qualified_type_specifier
+    | template_argument_list ',' template_argument
       {
           TemplateArgs *templArgs = (TemplateArgs *) $1;
-          templArgs->push_back(TemplateArg($3, @3));
+          if ($3 != nullptr) {
+            templArgs->push_back(*$3);
+          }
           $$ = templArgs;
       }
     ;
