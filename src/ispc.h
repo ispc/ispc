@@ -88,6 +88,7 @@ class Symbol;
 class SymbolTable;
 class TemplateArg;
 class TemplateInstantiation;
+class TemplateParam;
 class TemplateParms;
 class TemplateSymbol;
 class Type;
