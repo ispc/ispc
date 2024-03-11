@@ -515,10 +515,16 @@ class ConstExpr : public Expr {
     int GetValues(uint64_t *, bool forceVarying = false) const;
     int GetValues(std::vector<llvm::APFloat> &) const;
 
+    /** Return the ConstExpr's values as a string. */
+    std::string GetValuesAsStr(const std::string &separator) const;
+
     /** Return the number of values in the ConstExpr; should be either 1,
         if it has uniform type, or the target's vector width if it's
         varying. */
     int Count() const;
+
+    /** Return true if the type and values of two ConstExpr are the same. */
+    bool IsEqual(const ConstExpr *ce) const;
 
   private:
     AtomicType::BasicType getBasicType() const;

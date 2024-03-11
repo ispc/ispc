@@ -32,6 +32,7 @@
 #include <algorithm>
 #include <list>
 #include <set>
+#include <sstream>
 #include <stdio.h>
 
 #include <llvm/ExecutionEngine/GenericValue.h>
@@ -5852,6 +5853,64 @@ llvm::Value *ConstExpr::GetValue(FunctionEmitContext *ctx) const {
     }
 }
 
+bool ConstExpr::IsEqual(const ConstExpr *ce) const {
+    if (ce == nullptr)
+        return false;
+
+    if (!Type::EqualIgnoringConst(type, ce->type))
+        return false;
+
+    for (int i = 0; i < Count(); ++i) {
+        switch (getBasicType()) {
+        case AtomicType::TYPE_BOOL:
+            if (boolVal[i] != ce->boolVal[i])
+                return false;
+            break;
+        case AtomicType::TYPE_INT8:
+            if (int8Val[i] != ce->int8Val[i])
+                return false;
+            break;
+        case AtomicType::TYPE_UINT8:
+            if (uint8Val[i] != ce->uint8Val[i])
+                return false;
+            break;
+        case AtomicType::TYPE_INT16:
+            if (int16Val[i] != ce->int16Val[i])
+                return false;
+            break;
+        case AtomicType::TYPE_UINT16:
+            if (uint16Val[i] != ce->uint16Val[i])
+                return false;
+            break;
+        case AtomicType::TYPE_INT32:
+            if (int32Val[i] != ce->int32Val[i])
+                return false;
+            break;
+        case AtomicType::TYPE_UINT32:
+            if (uint32Val[i] != ce->uint32Val[i])
+                return false;
+            break;
+        case AtomicType::TYPE_INT64:
+            if (int64Val[i] != ce->int64Val[i])
+                return false;
+            break;
+        case AtomicType::TYPE_UINT64:
+            if (uint64Val[i] != ce->uint64Val[i])
+                return false;
+            break;
+        case AtomicType::TYPE_FLOAT16:
+        case AtomicType::TYPE_FLOAT:
+        case AtomicType::TYPE_DOUBLE:
+            if (fpVal[i] != ce->fpVal[i])
+                return false;
+            break;
+        default:
+            FATAL("unimplemented const type");
+            return false;
+        }
+    }
+    return true;
+}
 /* Type conversion templates: take advantage of C++ function overloading
    rules to get the one we want to match. */
 
@@ -6177,56 +6236,59 @@ int ConstExpr::EstimateCost() const { return 0; }
 
 ConstExpr *ConstExpr::Instantiate(TemplateInstantiation &templInst) const { return new ConstExpr(this, pos); }
 
-void ConstExpr::Print(Indent &indent) const {
-    indent.Print("ConstExpr", pos);
-
-    printf("[%s] (", GetType()->GetString().c_str());
+std::string ConstExpr::GetValuesAsStr(const std::string &separator) const {
+    std::stringstream result;
     for (int i = 0; i < Count(); ++i) {
+        if (i != 0) {
+            result << separator;
+        }
         switch (getBasicType()) {
         case AtomicType::TYPE_BOOL:
-            printf("%s", boolVal[i] ? "true" : "false");
+            result << (boolVal[i] ? "true" : "false");
             break;
         case AtomicType::TYPE_INT8:
-            printf("%d", (int)int8Val[i]);
+            result << static_cast<int>(int8Val[i]);
             break;
         case AtomicType::TYPE_UINT8:
-            printf("%u", (int)uint8Val[i]);
+            result << static_cast<unsigned int>(uint8Val[i]);
             break;
         case AtomicType::TYPE_INT16:
-            printf("%d", (int)int16Val[i]);
+            result << static_cast<int>(int16Val[i]);
             break;
         case AtomicType::TYPE_UINT16:
-            printf("%u", (int)uint16Val[i]);
+            result << static_cast<unsigned int>(uint16Val[i]);
             break;
         case AtomicType::TYPE_INT32:
-            printf("%d", int32Val[i]);
+            result << int32Val[i];
             break;
         case AtomicType::TYPE_UINT32:
-            printf("%u", uint32Val[i]);
+            result << uint32Val[i];
             break;
         case AtomicType::TYPE_INT64:
-            printf("%" PRId64, int64Val[i]);
+            result << int64Val[i];
             break;
         case AtomicType::TYPE_UINT64:
-            printf("%" PRIu64, uint64Val[i]);
+            result << uint64Val[i];
             break;
-        case AtomicType::TYPE_FLOAT16: {
-            llvm::APFloat V(fpVal[i]);
-            printf("%f", V.convertToFloat());
-            break;
-        }
+        case AtomicType::TYPE_FLOAT16:
         case AtomicType::TYPE_FLOAT:
-            printf("%f", fpVal[i].convertToFloat());
+            result << std::to_string(fpVal[i].convertToFloat());
             break;
         case AtomicType::TYPE_DOUBLE:
-            printf("%f", fpVal[i].convertToDouble());
+            result << std::to_string(fpVal[i].convertToDouble());
             break;
         default:
             FATAL("unimplemented const type");
         }
-        if (i != Count() - 1)
-            printf(", ");
     }
+    return result.str();
+}
+
+void ConstExpr::Print(Indent &indent) const {
+    indent.Print("ConstExpr", pos);
+
+    printf("[%s] (", GetType()->GetString().c_str());
+    printf("%s", GetValuesAsStr((char *)", ").c_str());
     printf(")\n");
 
     indent.Done();
