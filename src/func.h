@@ -52,17 +52,54 @@ class Function {
     Symbol *taskIndexSym2, *taskCountSym2;
 };
 
-// A helper class to manage template parameters list.
+// Represents a single template parameter, which can either be a type (TemplateTypeParmType) or a non-type
+// (Symbol).
+class TemplateParam : public Traceable {
+  public:
+    enum class ParamType { Type, NonType };
+
+  private:
+    ParamType paramType;
+    union {
+        const TemplateTypeParmType *typeParam;
+        Symbol *nonTypeParam;
+    };
+
+    std::string name;
+    SourcePos pos;
+
+  public:
+    TemplateParam(const TemplateTypeParmType *tp);
+    TemplateParam(Symbol *ntp);
+
+    // Checks if the parameter is a type parameter.
+    bool IsTypeParam() const;
+    // Checks if the parameter is a non-type parameter.
+    bool IsNonTypeParam() const;
+    // Compares two `TemplateParam` instances for equality.
+    bool IsEqual(const TemplateParam &other) const;
+    // Gets the name of the parameter.
+    std::string GetName() const;
+    // Returns type parameter.
+    const TemplateTypeParmType *GetTypeParam() const;
+    // Returns type parameter.
+    Symbol *GetNonTypeParam() const;
+    // Returns the source position associated with this template parameter.
+    SourcePos GetSourcePos() const;
+};
+
+// A helper class to manage template parameters list and clean up allocated memory.
 class TemplateParms : public Traceable {
   public:
     TemplateParms();
-    void Add(const TemplateTypeParmType *);
+    void Add(const TemplateParam *);
     size_t GetCount() const;
-    const TemplateTypeParmType *operator[](size_t i) const;
+    const TemplateParam *operator[](size_t i) const;
+    const TemplateParam *operator[](size_t i);
     bool IsEqual(const TemplateParms *p) const;
 
   private:
-    std::vector<const TemplateTypeParmType *> parms;
+    std::vector<const TemplateParam *> parms;
 };
 
 // Represents a single argument in a template instantiation. This can either be a type

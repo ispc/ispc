@@ -172,9 +172,10 @@ struct ForeachDimension {
     std::pair<std::string, SourcePos> *declspecPair;
     std::vector<std::pair<std::string, SourcePos> > *declspecList;
     PragmaAttributes *pragmaAttributes;
-    const TemplateTypeParmType *templateParm;
     const TemplateArgs *templateArgs;
+    const TemplateParam *templateParm;
     TemplateParms *templateParmList;
+    const TemplateTypeParmType *templateTypeParm;
     TemplateSymbol *functionTemplateSym;
     SimpleTemplateIDType *simpleTemplateID;
 }
@@ -242,7 +243,7 @@ struct ForeachDimension {
 %type <structDeclarationList> struct_declaration_list
 
 %type <symbolList> enumerator_list
-%type <symbol> enumerator foreach_identifier foreach_active_identifier
+%type <symbol> enumerator foreach_identifier foreach_active_identifier template_int_parameter
 %type <enumType> enum_specifier
 
 %type <type> specifier_qualifier_list struct_or_union_specifier
@@ -272,7 +273,8 @@ struct ForeachDimension {
 %type <constCharPtr> template_identifier
 %type <templateArgs> template_argument_list
 %type <simpleTemplateID> simple_template_id template_function_specialization_declaration
-%type <templateParm> template_type_parameter template_int_parameter template_parameter
+%type <templateTypeParm> template_type_parameter
+%type <templateParm> template_parameter
 %type <templateParmList> template_parameter_list template_head
 %type <functionTemplateSym> template_declaration
 
@@ -2425,7 +2427,17 @@ template_int_parameter
 
 template_parameter
     : template_type_parameter
+      {
+        if ($1 != nullptr) {
+          $$ = new TemplateParam($1);
+        }
+      }
     | template_int_parameter
+      {
+        if ($1 != nullptr) {
+          $$ = new TemplateParam($1);
+        }
+      }
     ;
 
 template_parameter_list
@@ -2467,7 +2479,9 @@ template_declaration
           for(size_t i = 0; i < list->GetCount(); i++) {
               std::string name = (*list)[i]->GetName();
               SourcePos pos = (*list)[i]->GetSourcePos();
-              m->AddTypeDef(name, (*list)[i], pos);
+              if ((*list)[i]->IsTypeParam()) {
+                  m->AddTypeDef(name, (*list)[i]->GetTypeParam(), pos);
+              }
           }
       }
       declaration_specifiers declarator

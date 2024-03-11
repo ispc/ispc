@@ -780,15 +780,58 @@ void Function::GenerateIR() {
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// TemplateParam
+
+TemplateParam::TemplateParam(const TemplateTypeParmType *p) : paramType(ParamType::Type), typeParam(p) {
+    name = p->GetName();
+    pos = p->GetSourcePos();
+}
+
+TemplateParam::TemplateParam(Symbol *s) : paramType(ParamType::NonType), nonTypeParam(s) {
+    name = s->name;
+    pos = s->pos;
+}
+
+bool TemplateParam::IsTypeParam() const { return paramType == ParamType::Type; }
+
+bool TemplateParam::IsNonTypeParam() const { return paramType == ParamType::NonType; }
+
+bool TemplateParam::IsEqual(const TemplateParam &other) const {
+    if (IsTypeParam()) {
+        return Type::Equal(typeParam, other.typeParam);
+    } else if (IsNonTypeParam()) {
+        return nonTypeParam->name == other.nonTypeParam->name &&
+               Type::Equal(nonTypeParam->type, other.nonTypeParam->type);
+    }
+    return false;
+}
+
+std::string TemplateParam::GetName() const { return name; }
+
+const TemplateTypeParmType *TemplateParam::GetTypeParam() const {
+    Assert(IsTypeParam());
+    return typeParam;
+}
+
+Symbol *TemplateParam::GetNonTypeParam() const {
+    Assert(IsNonTypeParam());
+    return nonTypeParam;
+}
+
+SourcePos TemplateParam::GetSourcePos() const { return pos; }
+
+///////////////////////////////////////////////////////////////////////////
 // TemplateParms
 
 TemplateParms::TemplateParms() {}
 
-void TemplateParms::Add(const TemplateTypeParmType *p) { parms.push_back(p); }
+void TemplateParms::Add(const TemplateParam *p) { parms.push_back(p); }
 
 size_t TemplateParms::GetCount() const { return parms.size(); }
 
-const TemplateTypeParmType *TemplateParms::operator[](size_t i) const { return parms[i]; }
+const TemplateParam *TemplateParms::operator[](size_t i) const { return parms[i]; }
+
+const TemplateParam *TemplateParms::operator[](size_t i) { return parms[i]; }
 
 bool TemplateParms::IsEqual(const TemplateParms *p) const {
     if (p == nullptr) {
@@ -800,7 +843,8 @@ bool TemplateParms::IsEqual(const TemplateParms *p) const {
     }
 
     for (size_t i = 0; i < GetCount(); i++) {
-        if (!Type::Equal((*this)[i], (*p)[i])) {
+        const TemplateParam *other = (*p)[i];
+        if (!(parms[i]->IsEqual(*other))) {
             return false;
         }
     }
@@ -957,7 +1001,10 @@ void FunctionTemplate::Print(Indent &indent) const {
             snprintf(buffer, BUFSIZE, "template param %d", i);
             indent.setNextLabel(buffer);
             if ((*typenames)[i]) {
-                indent.Print("TemplateTypeParmType", (*typenames)[i]->GetSourcePos());
+                indent.Print((*typenames)[i]->IsTypeParam()
+                                 ? "TemplateTypeParmType"
+                                 : (*typenames)[i]->GetNonTypeParam()->type->GetString().c_str(),
+                             (*typenames)[i]->GetSourcePos());
                 printf("\"%s\"\n", (*typenames)[i]->GetName().c_str());
                 indent.Done();
             } else {
