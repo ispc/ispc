@@ -856,15 +856,20 @@ bool TemplateParms::IsEqual(const TemplateParms *p) const {
 // TemplateArg
 
 TemplateArg::TemplateArg(const Type *t, SourcePos pos) : argType(ArgType::Type), type(t), pos(pos) {}
+TemplateArg::TemplateArg(const Expr *c, SourcePos pos) : argType(ArgType::NonType), expr(c), pos(pos) {}
 
 const Type *TemplateArg::GetAsType() const {
     switch (argType) {
     case ArgType::Type:
         return type;
+    case ArgType::NonType:
+        return expr->GetType();
     default:
         return nullptr;
     }
 }
+
+const Expr *TemplateArg::GetAsExpr() const { return IsNonType() ? expr : nullptr; }
 
 SourcePos TemplateArg::GetPos() const { return pos; }
 
@@ -872,10 +877,17 @@ std::string TemplateArg::GetString() const {
     switch (argType) {
     case ArgType::Type:
         return type->GetString();
+    case ArgType::NonType:
+        if (const ConstExpr *constExpr = GetAsConstExpr()) {
+            return constExpr->GetValuesAsStr(", ");
+        }
+        return "Missing const expression";
     default:
         return "Unknown ArgType";
     }
 }
+
+bool TemplateArg::IsNonType() const { return argType == ArgType::NonType; };
 
 bool TemplateArg::IsType() const { return argType == ArgType::Type; }
 
@@ -885,6 +897,14 @@ bool TemplateArg::operator==(const TemplateArg &other) const {
     switch (argType) {
     case ArgType::Type:
         return Type::Equal(type, other.type);
+    case ArgType::NonType: {
+        const ConstExpr *constExpr = GetAsConstExpr();
+        const ConstExpr *otherConstExpr = other.GetAsConstExpr();
+        if (constExpr && otherConstExpr) {
+            return constExpr->IsEqual(otherConstExpr);
+        }
+        return false;
+    }
     default:
         return false;
     }
@@ -895,6 +915,12 @@ std::string TemplateArg::Mangle() const {
     switch (argType) {
     case ArgType::Type:
         return type->Mangle();
+    case ArgType::NonType: {
+        if (const ConstExpr *constExpr = GetAsConstExpr()) {
+            return GetAsType()->Mangle() + constExpr->GetValuesAsStr("_");
+        }
+        return "Missing const expression";
+    }
     default:
         return "Unknown ArgType";
     }
@@ -904,6 +930,20 @@ void TemplateArg::SetAsVaryingType() {
     if (IsType() && type->GetVariability() == Variability::Unbound) {
         type = type->GetAsVaryingType();
     }
+}
+
+const ConstExpr *TemplateArg::GetAsConstExpr() const {
+    if (IsNonType()) {
+        const ConstExpr *constExpr = llvm::dyn_cast<ConstExpr>(expr);
+        if (!constExpr) {
+            const SymbolExpr *symExpr = llvm::dyn_cast<SymbolExpr>(expr);
+            if (symExpr->GetBaseSymbol()->constValue) {
+                constExpr = llvm::dyn_cast<ConstExpr>(symExpr->GetBaseSymbol()->constValue);
+            }
+        }
+        return constExpr;
+    }
+    return nullptr;
 }
 
 ///////////////////////////////////////////////////////////////////////////
