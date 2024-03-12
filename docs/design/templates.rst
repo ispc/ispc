@@ -11,9 +11,9 @@ Implementation design
 ---------------------
 
 An AST node for template function is `FunctionTemplate`, which is similar to `Function`, but stores type parameters
-(represented by `TemplateTypeParmType``).  The body of `FunctionTemplate` contains `TemplateTypeParmType`, which implies
-that some of type checking may not be done until after the function is instantiated.  This requires redesigning type
-checking, which needs to be decoupled from AST creation.
+(represented by `TemplateTypeParmType``) or non-type parameters (represented by `Symbol`).  The body of 
+`FunctionTemplate` contains `TemplateTypeParmType`, which implies that some of type checking may not be done until
+after the function is instantiated.  This requires redesigning type checking, which needs to be decoupled from AST creation.
 
 Implementation details
 ----------------------

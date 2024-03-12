@@ -3809,10 +3809,10 @@ What is currently supported:
   ``template int add<int>(int a, int b);``).
 * Explicit template function specializations (i.e.
   ``template<> int add<int>(int a, int b) { return a - b;}``).
+* Non-type template parametrs (integral and enumeration types).
 
 What is currently not supported, but is planned to be supported:
 
-* Non-type template parameters.
 * Default values for template parameters.
 * Template arguments deduction in template function specializations.
 
@@ -3906,6 +3906,36 @@ template function specializations is not yet supported. Consider the following e
     template <> int goo<int>(int a1, int a2) {
       return a1 * a2;
     }
+
+For non-type template parameters, the following rules apply:
+
+* Uniform integral types (``int8``, ``uint8``, ``int16``, ``uint16``, ``int``, ``uint``, ``int64``, ``uint64``)
+  and enum types can be used as non-type template parameters.
+  For example:
+
+  ::
+
+      template <int N> int foo(int a) {
+        return a * N;
+      }
+
+      int bar() {
+        return foo<2>(3); // returns 6
+      }
+
+      enum AB { A = 1, B = 2 };
+      template <AB ab> int baz(int a) {
+        return a * ab;
+      }
+
+      int qux() {
+        return baz<B>(3); // returns 6
+      }
+
+* Varying types are not allowed.
+* Integral constants, enumeration constants and template parameters (in the context of the nested templates)
+  can be used as non-type template arguments. Constant expressions are not allowed.
+* Partial specialization of function templates with non-type template parameters is not allowed.
 
 
 You can use limited number of function specifiers with function templates:
