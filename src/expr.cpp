@@ -8352,7 +8352,8 @@ FunctionSymbolExpr *FunctionSymbolExpr::Instantiate(TemplateInstantiation &templ
     TemplateArgs instTemplateArgs;
     for (auto &arg : templateArgs) {
         instTemplateArgs.push_back(
-            arg.IsType() ? TemplateArg(arg.GetAsType()->ResolveDependenceForTopType(templInst), arg.GetPos()) : arg);
+            arg.IsType() ? TemplateArg(arg.GetAsType()->ResolveDependenceForTopType(templInst), arg.GetPos())
+                         : TemplateArg(arg.GetAsExpr()->Instantiate(templInst), arg.GetPos()));
     }
     return new FunctionSymbolExpr(name.c_str(), candidateTemplateFunctions, instTemplateArgs, pos);
 }
@@ -8608,6 +8609,22 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
         // This looks like a candidate, so now we need get to instantiation and add it to candidate list.
         if (templateArgs.size() == templateParms->GetCount()) {
             // Easy, we have all template arguments specified explicitly, no deduction is needed.
+            // First, check types of non-type parameters (non-type parameters can't be used in partially specified
+            // template instantiations)
+            bool argsMatchingPassed = true;
+            for (int i = 0; i < templateParms->GetCount(); ++i) {
+                if ((*templateParms)[i]->IsNonTypeParam()) {
+                    const Type *argType = templateArgs[i].GetAsType();
+                    const Type *paramType = (*templateParms)[i]->GetNonTypeParam()->type;
+                    if (!CanConvertTypes(argType, paramType)) {
+                        argsMatchingPassed = false;
+                        break;
+                    }
+                }
+            }
+            if (!argsMatchingPassed) {
+                continue;
+            }
             Symbol *funcSym = templSym->functionTemplate->LookupInstantiation(templateArgs);
             if (funcSym == nullptr) {
                 funcSym = templSym->functionTemplate->AddInstantiation(
