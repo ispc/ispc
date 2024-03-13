@@ -1,4 +1,4 @@
-;;  Copyright (c) 2020-2023, Intel Corporation
+;;  Copyright (c) 2020-2024, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -199,14 +199,14 @@ define double @__ceil_uniform_double(double) nounwind readonly alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; round/floor/ceil varying float/doubles
 
-declare <8 x float> @llvm.nearbyint.v8f32(<8 x float> %p)
+declare <8 x float> @llvm.roundeven.v8f32(<8 x float> %p)
 declare <8 x float> @llvm.floor.v8f32(<8 x float> %p)
 declare <8 x float> @llvm.ceil.v8f32(<8 x float> %p)
 
 define <16 x float> @__round_varying_float(<16 x float> %v) nounwind readonly alwaysinline {
   v16tov8(float, %v, %v0, %v1)
-  %r0 = call <8 x float> @llvm.nearbyint.v8f32(<8 x float> %v0)
-  %r1 = call <8 x float> @llvm.nearbyint.v8f32(<8 x float> %v1)
+  %r0 = call <8 x float> @llvm.roundeven.v8f32(<8 x float> %v0)
+  %r1 = call <8 x float> @llvm.roundeven.v8f32(<8 x float> %v1)
   v8tov16(float, %r0, %r1, %r)
   ret <16 x float> %r
 }
@@ -227,16 +227,16 @@ define <16 x float> @__ceil_varying_float(<16 x float> %v) nounwind readonly alw
   ret <16 x float> %r
 }
 
-declare <4 x double> @llvm.nearbyint.v4f64(<4 x double> %p)
+declare <4 x double> @llvm.roundeven.v4f64(<4 x double> %p)
 declare <4 x double> @llvm.floor.v4f64(<4 x double> %p)
 declare <4 x double> @llvm.ceil.v4f64(<4 x double> %p)
 
 define <16 x double> @__round_varying_double(<16 x double> %v) nounwind readonly alwaysinline {
   v16tov4(double, %v, %v0, %v1, %v2, %v3)
-  %r0 = call <4 x double> @llvm.nearbyint.v4f64(<4 x double> %v0)
-  %r1 = call <4 x double> @llvm.nearbyint.v4f64(<4 x double> %v1)
-  %r2 = call <4 x double> @llvm.nearbyint.v4f64(<4 x double> %v2)
-  %r3 = call <4 x double> @llvm.nearbyint.v4f64(<4 x double> %v3)
+  %r0 = call <4 x double> @llvm.roundeven.v4f64(<4 x double> %v0)
+  %r1 = call <4 x double> @llvm.roundeven.v4f64(<4 x double> %v1)
+  %r2 = call <4 x double> @llvm.roundeven.v4f64(<4 x double> %v2)
+  %r3 = call <4 x double> @llvm.roundeven.v4f64(<4 x double> %v3)
   v4tov16(double, %r0, %r1, %r2, %r3, %r)
   ret <16 x double> %r
 }
