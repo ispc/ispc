@@ -1,4 +1,4 @@
-;;  Copyright (c) 2015-2023, Intel Corporation
+;;  Copyright (c) 2015-2024, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -65,12 +65,12 @@ define <16 x i16> @__float_to_half_varying(<16 x float> %v) nounwind readnone {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding floats
 
-declare <16 x float> @llvm.nearbyint.v16f32(<16 x float> %p)
+declare <16 x float> @llvm.roundeven.v16f32(<16 x float> %p)
 declare <16 x float> @llvm.floor.v16f32(<16 x float> %p)
 declare <16 x float> @llvm.ceil.v16f32(<16 x float> %p)
 
 define <16 x float> @__round_varying_float(<16 x float>) nounwind readonly alwaysinline {
-  %res = call <16 x float> @llvm.nearbyint.v16f32(<16 x float> %0)
+  %res = call <16 x float> @llvm.roundeven.v16f32(<16 x float> %0)
   ret <16 x float> %res
 }
 
@@ -87,15 +87,15 @@ define <16 x float> @__ceil_varying_float(<16 x float>) nounwind readonly always
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding doubles
 
-declare <8 x double> @llvm.nearbyint.v8f64(<8 x double> %p)
+declare <8 x double> @llvm.roundeven.v8f64(<8 x double> %p)
 declare <8 x double> @llvm.floor.v8f64(<8 x double> %p)
 declare <8 x double> @llvm.ceil.v8f64(<8 x double> %p)
 
 define <16 x double> @__round_varying_double(<16 x double>) nounwind readonly alwaysinline {
   %v0 = shufflevector <16 x double> %0, <16 x double> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %v1 = shufflevector <16 x double> %0, <16 x double> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %r0 = call <8 x double> @llvm.nearbyint.v8f64(<8 x double> %v0)
-  %r1 = call <8 x double> @llvm.nearbyint.v8f64(<8 x double> %v1)
+  %r0 = call <8 x double> @llvm.roundeven.v8f64(<8 x double> %v0)
+  %r1 = call <8 x double> @llvm.roundeven.v8f64(<8 x double> %v1)
   %res = shufflevector <8 x double> %r0, <8 x double> %r1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                                                                        i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x double> %res
