@@ -342,7 +342,7 @@ jobs:
       uses: actions/upload-artifact@v4
       if: failure()
       with:
-        name: fail_db.llvm16_lto.${{matrix.arch}}.${{matrix.target}}.txt
+        name: fail_db.llvm17_lto.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
 
     - name: Upload alloy logs
