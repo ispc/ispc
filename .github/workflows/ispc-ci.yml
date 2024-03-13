@@ -180,79 +180,6 @@ jobs:
         name: ispc_llvm16_linux
         path: build/ispc-trunk-linux.tar.gz
 
-  linux-build-ispc-llvm16-lto:
-    needs: [define-flow]
-    runs-on: ubuntu-latest
-    env:
-      LLVM_VERSION: "16.0"
-      LLVM_TAR: llvm-16.0.6-ubuntu18.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
-      ISPC_OPAQUE_PTR_MODE: "ON"
-
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
-
-    - name: Install dependencies
-      run: |
-        .github/workflows/scripts/install-build-deps.sh
-
-    - name: Check environment
-      run: |
-        which -a clang
-        cat /proc/cpuinfo
-
-    - name: Build package
-      run: |
-        cmake -B build superbuild --preset os -DLTO=ON -DXE_DEPS=OFF -DCMAKE_CXX_FLAGS=-Werror -DPREBUILT_STAGE2_PATH="${GITHUB_WORKSPACE}/bin-$LLVM_VERSION"
-        cmake --build build
-
-    - name: Sanity testing (make check-all)
-      run: |
-        cmake --build build --target ispc-stage2-check-all
-
-    - name: Upload package
-      uses: actions/upload-artifact@v4
-      with:
-        name: ispc_llvm16_lto_linux
-        path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-linux.tar.gz
-
-  linux-build-ispc-llvm16-release:
-    needs: [define-flow]
-    runs-on: ubuntu-latest
-    env:
-      LLVM_VERSION: "16.0"
-      LLVM_TAR: llvm-16.0.6-ubuntu18.04-Release-x86.arm.wasm.tar.xz
-      ISPC_OPAQUE_PTR_MODE: "ON"
-
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
-
-    - name: Install dependencies
-      run: |
-        .github/workflows/scripts/install-build-deps.sh
-
-    - name: Check environment
-      run: |
-        which -a clang
-        cat /proc/cpuinfo
-
-    - name: Build package
-      run: |
-        .github/workflows/scripts/build-ispc.sh
-
-    - name: Sanity testing (make check-all, make test)
-      run: |
-        .github/workflows/scripts/check-ispc.sh
-
-    - name: Upload package
-      uses: actions/upload-artifact@v4
-      with:
-        name: ispc_llvm16rel_linux
-        path: build/ispc-trunk-linux.tar.gz
-
   linux-build-ispc-llvm17:
     needs: [define-flow]
     runs-on: ubuntu-latest
@@ -288,14 +215,87 @@ jobs:
       with:
         name: ispc_llvm17_linux
         path: build/ispc-trunk-linux.tar.gz
-
-  linux-build-ispc-xe-llvm16-release:
+  
+  linux-build-ispc-llvm17-lto:
     needs: [define-flow]
     runs-on: ubuntu-latest
     env:
-      LLVM_VERSION: "16.0"
-      LLVM_TAR: llvm-16.0.6-ubuntu18.04-Release-x86.arm.wasm.tar.xz
-      ISPC_OPAQUE_PTR_MODE: "OFF"
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.6-ubuntu18.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
+      ISPC_OPAQUE_PTR_MODE: "ON"
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.sh
+
+    - name: Check environment
+      run: |
+        which -a clang
+        cat /proc/cpuinfo
+
+    - name: Build package
+      run: |
+        cmake -B build superbuild --preset os -DLTO=ON -DXE_DEPS=OFF -DCMAKE_CXX_FLAGS=-Werror -DPREBUILT_STAGE2_PATH="${GITHUB_WORKSPACE}/bin-$LLVM_VERSION"
+        cmake --build build
+
+    - name: Sanity testing (make check-all)
+      run: |
+        cmake --build build --target ispc-stage2-check-all
+
+    - name: Upload package
+      uses: actions/upload-artifact@v4
+      with:
+        name: ispc_llvm17_lto_linux
+        path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-linux.tar.gz
+
+  linux-build-ispc-llvm17-release:
+    needs: [define-flow]
+    runs-on: ubuntu-latest
+    env:
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.6-ubuntu18.04-Release-x86.arm.wasm.tar.xz
+      ISPC_OPAQUE_PTR_MODE: "ON"
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.sh
+
+    - name: Check environment
+      run: |
+        which -a clang
+        cat /proc/cpuinfo
+
+    - name: Build package
+      run: |
+        .github/workflows/scripts/build-ispc.sh
+
+    - name: Sanity testing (make check-all, make test)
+      run: |
+        .github/workflows/scripts/check-ispc.sh
+
+    - name: Upload package
+      uses: actions/upload-artifact@v4
+      with:
+        name: ispc_llvm17rel_linux
+        path: build/ispc-trunk-linux.tar.gz
+
+  linux-build-ispc-xe-llvm17-release:
+    needs: [define-flow]
+    runs-on: ubuntu-latest
+    env:
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.6-ubuntu18.04-Release-x86.arm.wasm.tar.xz
+      ISPC_OPAQUE_PTR_MODE: "ON"
       INSTALL_COMPUTE_RUNTIME: 1
 
     steps:
@@ -332,13 +332,13 @@ jobs:
     - name: Upload XE enabled package
       uses: actions/upload-artifact@v4
       with:
-        name: ispc_xe_llvm16rel_linux
+        name: ispc_xe_llvm17rel_linux
         path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-linux.tar.gz
 
     - name: Upload ISPC with XE dependencies
       uses: actions/upload-artifact@v4
       with:
-        name: ispc_xe_deps_llvm16rel_linux
+        name: ispc_xe_deps_llvm17rel_linux
         path: ispc-xe
 
   linux-test-llvm14:
@@ -485,155 +485,6 @@ jobs:
         name: alloy_results.llvm16.${{matrix.arch}}.${{matrix.target}}
         path: alloy_results_*
 
-  linux-test-llvm16-lto:
-    needs: [define-flow, linux-build-ispc-llvm16-lto]
-    runs-on: ubuntu-latest
-    continue-on-error: false
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [x86, x86-64]
-        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
-    steps:
-    - uses: actions/checkout@v4
-    - name: Download package
-      uses: actions/download-artifact@v4
-      with:
-        name: ispc_llvm16_lto_linux
-
-    - name: Install dependencies and unpack artifacts
-      run: |
-        .github/workflows/scripts/install-test-deps.sh
-
-    - name: Check environment
-      run: |
-        cat /proc/cpuinfo
-
-    - name: Running tests
-      run: |
-        echo PATH=$PATH
-        ./alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v4
-      if: failure()
-      with:
-        name: fail_db.llvm16_lto.${{matrix.arch}}.${{matrix.target}}.txt
-        path: fail_db.txt
-
-    - name: Upload alloy logs
-      uses: actions/upload-artifact@v3
-      if: failure()
-      with:
-        name: alloy_results.llvm16_lto.${{matrix.arch}}.${{matrix.target}}
-        path: alloy_results_*
-
-  # Test release version
-  linux-test-llvm16-release:
-    needs: [define-flow, linux-build-ispc-llvm16-release]
-    runs-on: ubuntu-latest
-    continue-on-error: false
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [x86, x86-64]
-        target: [avx2-i32x8]
-    steps:
-    - uses: actions/checkout@v4
-    - name: Download package
-      uses: actions/download-artifact@v4
-      with:
-        name: ispc_llvm16rel_linux
-
-    - name: Install dependencies and unpack artifacts
-      run: |
-        .github/workflows/scripts/install-test-deps.sh
-
-    - name: Check environment
-      run: |
-        cat /proc/cpuinfo
-
-    - name: Running tests
-      run: |
-        echo PATH=$PATH
-        ./alloy.py -r --only="stability ${{ matrix.arch}} current -O0 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v4
-      if: failure()
-      with:
-        name: fail_db.llvm16rel.${{matrix.arch}}.${{matrix.target}}.txt
-        path: fail_db.txt
-
-    - name: Upload alloy logs
-      uses: actions/upload-artifact@v3
-      if: failure()
-      with:
-        name: alloy_results.llvm16rel.${{matrix.arch}}.${{matrix.target}}
-        path: alloy_results_*
-
-  # Debug run is experimental with the purpose to see if it's capable to catch anything.
-  # So it's running in "full" mode only for now.
-  # Single target, as it should be representative enough.
-  linux-test-debug-llvm16:
-    needs: [define-flow, linux-build-ispc-llvm16]
-    if: ${{ needs.define-flow.outputs.flow_type == 'full' }}
-    runs-on: ubuntu-latest
-    continue-on-error: false
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [x86, x86-64]
-        target: [avx2-i32x8]
-    steps:
-    - uses: actions/checkout@v4
-    - name: Download package
-      uses: actions/download-artifact@v4
-      with:
-        name: ispc_llvm16_linux
-
-    - name: Install dependencies and unpack artifacts
-      run: |
-        .github/workflows/scripts/install-test-deps.sh
-
-    - name: Check environment
-      run: |
-        cat /proc/cpuinfo
-
-    - name: Running tests
-      run: |
-        echo PATH=$PATH
-        ./alloy.py -r --only="stability ${{ matrix.arch }} current debug -O0 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v4
-      if: failure()
-      with:
-        name: fail_db.llvm16.debug.${{matrix.arch}}.${{matrix.target}}.txt
-        path: fail_db.txt
-
-    - name: Upload alloy logs
-      uses: actions/upload-artifact@v3
-      if: failure()
-      with:
-        name: alloy_results.llvm16.debug.${{matrix.arch}}.${{matrix.target}}
-        path: alloy_results_*
-
   linux-test-llvm17:
     needs: [define-flow, linux-build-ispc-llvm17]
     runs-on: ubuntu-latest
@@ -682,9 +533,158 @@ jobs:
         name: alloy_results.llvm17.${{matrix.arch}}.${{matrix.target}}
         path: alloy_results_*
 
+  linux-test-llvm17-lto:
+    needs: [define-flow, linux-build-ispc-llvm17-lto]
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86, x86-64]
+        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
+    steps:
+    - uses: actions/checkout@v4
+    - name: Download package
+      uses: actions/download-artifact@v4
+      with:
+        name: ispc_llvm17_lto_linux
+
+    - name: Install dependencies and unpack artifacts
+      run: |
+        .github/workflows/scripts/install-test-deps.sh
+
+    - name: Check environment
+      run: |
+        cat /proc/cpuinfo
+
+    - name: Running tests
+      run: |
+        echo PATH=$PATH
+        ./alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+
+    - name: Check
+      run: |
+        # Print fails to the log.
+        git diff --exit-code
+
+    - name: Upload fail_db.txt
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: fail_db.llvm17_lto.${{matrix.arch}}.${{matrix.target}}.txt
+        path: fail_db.txt
+
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: alloy_results.llvm17_lto.${{matrix.arch}}.${{matrix.target}}
+        path: alloy_results_*
+
+  # Test release version
+  linux-test-llvm17-release:
+    needs: [define-flow, linux-build-ispc-llvm17-release]
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86, x86-64]
+        target: [avx2-i32x8]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Download package
+      uses: actions/download-artifact@v4
+      with:
+        name: ispc_llvm17rel_linux
+
+    - name: Install dependencies and unpack artifacts
+      run: |
+        .github/workflows/scripts/install-test-deps.sh
+
+    - name: Check environment
+      run: |
+        cat /proc/cpuinfo
+
+    - name: Running tests
+      run: |
+        echo PATH=$PATH
+        ./alloy.py -r --only="stability ${{ matrix.arch}} current -O0 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+
+    - name: Check
+      run: |
+        # Print fails to the log.
+        git diff --exit-code
+
+    - name: Upload fail_db.txt
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: fail_db.llvm17rel.${{matrix.arch}}.${{matrix.target}}.txt
+        path: fail_db.txt
+
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: alloy_results.llvm17rel.${{matrix.arch}}.${{matrix.target}}
+        path: alloy_results_*
+
+  # Debug run is experimental with the purpose to see if it's capable to catch anything.
+  # So it's running in "full" mode only for now.
+  # Single target, as it should be representative enough.
+  linux-test-debug-llvm17:
+    needs: [define-flow, linux-build-ispc-llvm17]
+    if: ${{ needs.define-flow.outputs.flow_type == 'full' }}
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86, x86-64]
+        target: [avx2-i32x8]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Download package
+      uses: actions/download-artifact@v4
+      with:
+        name: ispc_llvm17_linux
+
+    - name: Install dependencies and unpack artifacts
+      run: |
+        .github/workflows/scripts/install-test-deps.sh
+
+    - name: Check environment
+      run: |
+        cat /proc/cpuinfo
+
+    - name: Running tests
+      run: |
+        echo PATH=$PATH
+        ./alloy.py -r --only="stability ${{ matrix.arch }} current debug -O0 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+
+    - name: Check
+      run: |
+        # Print fails to the log.
+        git diff --exit-code
+
+    - name: Upload fail_db.txt
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: fail_db.llvm17.debug.${{matrix.arch}}.${{matrix.target}}.txt
+        path: fail_db.txt
+
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: alloy_results.llvm17.debug.${{matrix.arch}}.${{matrix.target}}
+        path: alloy_results_*
+
   # Test xe release version
-  linux-test-xe-llvm16-release:
-    needs: [define-flow, linux-build-ispc-xe-llvm16-release]
+  linux-test-xe-llvm17-release:
+    needs: [define-flow, linux-build-ispc-xe-llvm17-release]
     if: ${{ needs.define-flow.outputs.flow_type == 'smoke' }}
     runs-on: ubuntu-latest
     continue-on-error: false
@@ -700,7 +700,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@v4
       with:
-        name: ispc_xe_llvm16rel_linux
+        name: ispc_xe_llvm17rel_linux
 
     - name: Install dependencies and unpack artifacts
       run: |
@@ -725,14 +725,14 @@ jobs:
       uses: actions/upload-artifact@v4
       if: failure()
       with:
-        name: fail_db.xe.llvm16rel.${{matrix.arch}}.${{matrix.target}}.txt
+        name: fail_db.xe.llvm17rel.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
 
     - name: Upload alloy logs
       uses: actions/upload-artifact@v3
       if: failure()
       with:
-        name: alloy_results.xe.llvm16rel.${{matrix.arch}}.${{matrix.target}}
+        name: alloy_results.xe.llvm17rel.${{matrix.arch}}.${{matrix.target}}
         path: alloy_results_*
 
   macos-build-ispc-llvm15:
@@ -821,50 +821,6 @@ jobs:
         name: ispc_llvm16_macos
         path: build/ispc-trunk-macos.tar.gz
 
-  macos-build-ispc-llvm16-lto:
-    needs: [define-flow]
-    runs-on: macos-12
-    env:
-      LLVM_VERSION: "16.0"
-      LLVM_TAR: llvm-16.0.6-macos-Release+Asserts-lto-universal-x86.arm.wasm.tar.xz
-
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
-
-    - name: Install dependencies
-      run: |
-        ls -al /Library/Developer/CommandLineTools/SDKs/
-        xcrun --show-sdk-path
-        [ -n "$LLVM_REPO" ] && wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 --no-verbose $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
-        tar xf $LLVM_TAR
-        echo "${GITHUB_WORKSPACE}/bin-$LLVM_VERSION/bin" >> $GITHUB_PATH
-        brew install bison flex ninja
-        echo "/usr/local/opt/bison/bin" >> $GITHUB_PATH
-        echo "/usr/local/opt/flex/bin" >> $GITHUB_PATH
-
-    - name: Check environment
-      run: |
-        which -a clang
-        llvm-config --system-libs
-        sysctl -n machdep.cpu.brand_string
-
-    - name: Build package
-      run: |
-        cmake -B build superbuild --preset os -DLTO=ON -DXE_DEPS=OFF -DCMAKE_CXX_FLAGS=-Werror -DPREBUILT_STAGE2_PATH="${GITHUB_WORKSPACE}/bin-$LLVM_VERSION" -DMACOS_UNIVERSAL_BIN=ON -DISPC_ANDROID_NDK_PATH=${{ env.ISPC_ANDROID_NDK_PATH }}
-        cmake --build build
-
-    - name: Sanity testing (make check-all)
-      run: |
-        cmake --build build --target ispc-stage2-check-all
-
-    - name: Upload package
-      uses: actions/upload-artifact@v4
-      with:
-        name: ispc_llvm16_lto_macos
-        path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-macOS.universal.tar.gz
-
   macos-build-ispc-llvm17:
     needs: [define-flow]
     runs-on: macos-12
@@ -907,6 +863,50 @@ jobs:
       with:
         name: ispc_llvm17_macos
         path: build/ispc-trunk-macos.tar.gz
+
+  macos-build-ispc-llvm17-lto:
+    needs: [define-flow]
+    runs-on: macos-12
+    env:
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.6-macos-Release+Asserts-lto-universal-x86.arm.wasm.tar.xz
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        ls -al /Library/Developer/CommandLineTools/SDKs/
+        xcrun --show-sdk-path
+        [ -n "$LLVM_REPO" ] && wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 --no-verbose $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
+        tar xf $LLVM_TAR
+        echo "${GITHUB_WORKSPACE}/bin-$LLVM_VERSION/bin" >> $GITHUB_PATH
+        brew install bison flex ninja
+        echo "/usr/local/opt/bison/bin" >> $GITHUB_PATH
+        echo "/usr/local/opt/flex/bin" >> $GITHUB_PATH
+
+    - name: Check environment
+      run: |
+        which -a clang
+        llvm-config --system-libs
+        sysctl -n machdep.cpu.brand_string
+
+    - name: Build package
+      run: |
+        cmake -B build superbuild --preset os -DLTO=ON -DXE_DEPS=OFF -DCMAKE_CXX_FLAGS=-Werror -DPREBUILT_STAGE2_PATH="${GITHUB_WORKSPACE}/bin-$LLVM_VERSION" -DMACOS_UNIVERSAL_BIN=ON -DISPC_ANDROID_NDK_PATH=${{ env.ISPC_ANDROID_NDK_PATH }}
+        cmake --build build
+
+    - name: Sanity testing (make check-all)
+      run: |
+        cmake --build build --target ispc-stage2-check-all
+
+    - name: Upload package
+      uses: actions/upload-artifact@v4
+      with:
+        name: ispc_llvm17_lto_macos
+        path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-macOS.universal.tar.gz
 
   macos-test-ispc-llvm15:
     needs: [define-flow, macos-build-ispc-llvm15]
@@ -1004,54 +1004,6 @@ jobs:
         name: alloy_results.llvm16.macos.sse4
         path: alloy_results_*
 
-  macos-test-ispc-llvm16-lto:
-    needs: [define-flow, macos-build-ispc-llvm16-lto]
-    runs-on: macos-12
-    continue-on-error: false
-    strategy:
-      fail-fast: false
-    steps:
-    - uses: actions/checkout@v4
-    - name: Download package
-      uses: actions/download-artifact@v4
-      with:
-        name: ispc_llvm16_lto_macos
-
-    - name: Install dependencies and unpack artifacts
-      run: |
-        tar xf ispc-trunk-macOS.universal.tar.gz
-        echo "$GITHUB_WORKSPACE/ispc-trunk-macOS.universal/bin" >> $GITHUB_PATH
-        echo "ISPC_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
-        echo "LLVM_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
-
-    - name: Check environment
-      run: |
-        sysctl -n machdep.cpu.brand_string
-
-    - name: Running tests
-      run: |
-        echo PATH=$PATH
-        ./alloy.py -r --only="stability current x86-64 -O0 -O2" --only-targets="sse4-i32x4" --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v4
-      if: failure()
-      with:
-        name: fail_db.llvm16_lto.macos.sse4.txt
-        path: fail_db.txt
-
-    - name: Upload alloy logs
-      uses: actions/upload-artifact@v3
-      if: failure()
-      with:
-        name: alloy_results.llvm16_lto.macos.sse4
-        path: alloy_results_*
-
   macos-test-ispc-llvm17:
     needs: [define-flow, macos-build-ispc-llvm17]
     runs-on: macos-12
@@ -1098,6 +1050,54 @@ jobs:
       if: failure()
       with:
         name: alloy_results.llvm17.macos.sse4
+        path: alloy_results_*
+
+  macos-test-ispc-llvm17-lto:
+    needs: [define-flow, macos-build-ispc-llvm17-lto]
+    runs-on: macos-12
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v4
+    - name: Download package
+      uses: actions/download-artifact@v4
+      with:
+        name: ispc_llvm17_lto_macos
+
+    - name: Install dependencies and unpack artifacts
+      run: |
+        tar xf ispc-trunk-macOS.universal.tar.gz
+        echo "$GITHUB_WORKSPACE/ispc-trunk-macOS.universal/bin" >> $GITHUB_PATH
+        echo "ISPC_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+        echo "LLVM_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+
+    - name: Check environment
+      run: |
+        sysctl -n machdep.cpu.brand_string
+
+    - name: Running tests
+      run: |
+        echo PATH=$PATH
+        ./alloy.py -r --only="stability current x86-64 -O0 -O2" --only-targets="sse4-i32x4" --time --update-errors=FP
+
+    - name: Check
+      run: |
+        # Print fails to the log.
+        git diff --exit-code
+
+    - name: Upload fail_db.txt
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: fail_db.llvm17_lto.macos.sse4.txt
+        path: fail_db.txt
+
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: alloy_results.llvm17_lto.macos.sse4
         path: alloy_results_*
 
   win-build-ispc-llvm14:
@@ -1225,55 +1225,6 @@ jobs:
         name: ispc_llvm16_win
         path: build/ispc-trunk-windows.zip
 
-  win-build-ispc-llvm16-lto:
-    needs: [define-flow]
-    runs-on: windows-2019
-    env:
-      LLVM_VERSION: "16.0"
-      LLVM_TAR: llvm-16.0.6-win.vs2019-Release+Asserts-lto-x86.arm.wasm.tar.7z
-      LLVM_HOME: "C:\\projects\\llvm"
-      CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
-      BUILD_TYPE: "Release"
-      ISPC_OPAQUE_PTR_MODE: "ON"
-
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
-
-    - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v2
-
-    - name: Install dependencies
-      run: |
-        .github/workflows/scripts/install-build-deps.ps1
-
-    - name: Check environment
-      shell: cmd
-      run: |
-        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
-
-    - name: Build package
-      shell: cmd
-      run: |
-        set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-        call %VSVARS%
-        cmake -B build superbuild --preset os -G "NMake Makefiles" -DLTO=ON -DXE_DEPS=OFF -DPREBUILT_STAGE2_PATH=%LLVM_HOME%\bin-%LLVM_VERSION% -DEXPLICIT_ENV_PATH=OFF -DGNUWIN32=%CROSS_TOOLS_GNUWIN32%
-        cmake --build build
-
-    - name: Sanity testing (make check-all)
-      shell: cmd
-      run: |
-        set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-        call %VSVARS%
-        cmake --build build --target ispc-stage2-check-all
-
-    - name: Upload package
-      uses: actions/upload-artifact@v4
-      with:
-        name: ispc_llvm16_lto_win
-        path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-windows.zip
-
   win-build-ispc-llvm17:
     needs: [define-flow]
     runs-on: windows-2019
@@ -1315,17 +1266,66 @@ jobs:
       with:
         name: ispc_llvm17_win
         path: build/ispc-trunk-windows.zip
-
-  win-build-ispc-xe-llvm16-release:
+  
+  win-build-ispc-llvm17-lto:
     needs: [define-flow]
     runs-on: windows-2019
     env:
-      LLVM_VERSION: "16.0"
-      LLVM_TAR: llvm-16.0.6-win.vs2019-Release-x86.arm.wasm.tar.7z
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.6-win.vs2019-Release+Asserts-lto-x86.arm.wasm.tar.7z
       LLVM_HOME: "C:\\projects\\llvm"
       CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       BUILD_TYPE: "Release"
-      ISPC_OPAQUE_PTR_MODE: "OFF"
+      ISPC_OPAQUE_PTR_MODE: "ON"
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.ps1
+
+    - name: Check environment
+      shell: cmd
+      run: |
+        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+
+    - name: Build package
+      shell: cmd
+      run: |
+        set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        call %VSVARS%
+        cmake -B build superbuild --preset os -G "NMake Makefiles" -DLTO=ON -DXE_DEPS=OFF -DPREBUILT_STAGE2_PATH=%LLVM_HOME%\bin-%LLVM_VERSION% -DEXPLICIT_ENV_PATH=OFF -DGNUWIN32=%CROSS_TOOLS_GNUWIN32%
+        cmake --build build
+
+    - name: Sanity testing (make check-all)
+      shell: cmd
+      run: |
+        set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        call %VSVARS%
+        cmake --build build --target ispc-stage2-check-all
+
+    - name: Upload package
+      uses: actions/upload-artifact@v4
+      with:
+        name: ispc_llvm17_lto_win
+        path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-windows.zip
+
+  win-build-ispc-xe-llvm17-release:
+    needs: [define-flow]
+    runs-on: windows-2019
+    env:
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.6-win.vs2019-Release-x86.arm.wasm.tar.7z
+      LLVM_HOME: "C:\\projects\\llvm"
+      CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
+      BUILD_TYPE: "Release"
+      ISPC_OPAQUE_PTR_MODE: "ON"
       ISPC_DIR: "build\\build-ispc-stage2\\src\\ispc-stage2-build"
 
     steps:
@@ -1365,13 +1365,13 @@ jobs:
     - name: Upload XE enabled package
       uses: actions/upload-artifact@v4
       with:
-        name: ispc_xe_llvm16rel_win
+        name: ispc_xe_llvm17rel_win
         path: ${{ env.ISPC_DIR }}/ispc-trunk-windows.zip
 
     - name: Upload ISPC with XE dependencies
       uses: actions/upload-artifact@v4
       with:
-        name: ispc_xe_deps_llvm16rel_win
+        name: ispc_xe_deps_llvm17rel_win
         path: ispc-xe
 
   win-test-llvm14:
@@ -1533,59 +1533,6 @@ jobs:
         name: alloy_results.llvm16.${{matrix.arch}}.${{matrix.target}}
         path: alloy_results_*
 
-  win-test-llvm16-lto:
-    needs: [define-flow, win-build-ispc-llvm16-lto]
-    env:
-      LLVM_HOME: "C:\\projects\\llvm"
-    runs-on: windows-2022
-    continue-on-error: false
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [x86, x86-64]
-        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
-
-    steps:
-    - uses: actions/checkout@v4
-    - name: Download package
-      uses: actions/download-artifact@v4
-      with:
-        name: ispc_llvm16_lto_win
-
-    - name: Install dependencies
-      run: |
-        .github/workflows/scripts/install-test-deps.ps1
-
-    - name: Check environment
-      shell: cmd
-      run: |
-        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
-
-    - name: Running tests
-      run: |
-        $env:ISPC_HOME = "$pwd"
-        .github/workflows/scripts/load-vs-env.ps1 "${{ matrix.arch }}"
-        python .\alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v4
-      if: failure()
-      with:
-        name: fail_db.llvm16_lto.${{matrix.arch}}.${{matrix.target}}.txt
-        path: fail_db.txt
-
-    - name: Upload alloy logs
-      uses: actions/upload-artifact@v3
-      if: failure()
-      with:
-        name: alloy_results.llvm16_lto.${{matrix.arch}}.${{matrix.target}}
-        path: alloy_results_*
-
   win-test-llvm17:
     needs: [define-flow, win-build-ispc-llvm17]
     env:
@@ -1639,9 +1586,8 @@ jobs:
         name: alloy_results.llvm17.${{matrix.arch}}.${{matrix.target}}
         path: alloy_results_*
 
-  win-test-xe-llvm16-release:
-    needs: [define-flow, win-build-ispc-xe-llvm16-release]
-    if: ${{ needs.define-flow.outputs.flow_type == 'smoke' }}
+  win-test-llvm17-lto:
+    needs: [define-flow, win-build-ispc-llvm17-lto]
     env:
       LLVM_HOME: "C:\\projects\\llvm"
     runs-on: windows-2022
@@ -1657,7 +1603,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@v4
       with:
-        name: ispc_xe_llvm16rel_win
+        name: ispc_llvm17_lto_win
 
     - name: Install dependencies
       run: |
@@ -1683,22 +1629,76 @@ jobs:
       uses: actions/upload-artifact@v4
       if: failure()
       with:
-        name: fail_db.xe.llvm16rel.${{matrix.arch}}.${{matrix.target}}.txt
+        name: fail_db.llvm17_lto.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
 
     - name: Upload alloy logs
       uses: actions/upload-artifact@v3
       if: failure()
       with:
-        name: alloy_results.llvm16rel.${{matrix.arch}}.${{matrix.target}}
+        name: alloy_results.llvm17_lto.${{matrix.arch}}.${{matrix.target}}
+        path: alloy_results_*
+
+  win-test-xe-llvm17-release:
+    needs: [define-flow, win-build-ispc-xe-llvm17-release]
+    if: ${{ needs.define-flow.outputs.flow_type == 'smoke' }}
+    env:
+      LLVM_HOME: "C:\\projects\\llvm"
+    runs-on: windows-2022
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86, x86-64]
+        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Download package
+      uses: actions/download-artifact@v4
+      with:
+        name: ispc_xe_llvm17rel_win
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-test-deps.ps1
+
+    - name: Check environment
+      shell: cmd
+      run: |
+        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+
+    - name: Running tests
+      run: |
+        $env:ISPC_HOME = "$pwd"
+        .github/workflows/scripts/load-vs-env.ps1 "${{ matrix.arch }}"
+        python .\alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+
+    - name: Check
+      run: |
+        # Print fails to the log.
+        git diff --exit-code
+
+    - name: Upload fail_db.txt
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: fail_db.xe.llvm17rel.${{matrix.arch}}.${{matrix.target}}.txt
+        path: fail_db.txt
+
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: alloy_results.llvm17rel.${{matrix.arch}}.${{matrix.target}}
         path: alloy_results_*
 
   win-package-examples:
     needs: [define-flow]
     runs-on: windows-2019
     env:
-      LLVM_VERSION: "16.0"
-      LLVM_TAR: llvm-16.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
       LLVM_HOME: "C:\\projects\\llvm"
       CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       BUILD_TYPE: "Release"
@@ -1731,8 +1731,8 @@ jobs:
     needs: [define-flow]
     runs-on: ubuntu-latest
     env:
-      LLVM_VERSION: "16.0"
-      LLVM_TAR: llvm-16.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:

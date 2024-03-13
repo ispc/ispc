@@ -1,7 +1,7 @@
 # Copyright 2020-2024, Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
-name: Linux benchmarks / LLVM 16.0
+name: Linux benchmarks / LLVM 17.0
 
 permissions: read-all
 
@@ -15,9 +15,9 @@ on:
   workflow_dispatch:
 
 env:
-  LLVM_VERSION: "16.0"
+  LLVM_VERSION: "17.0"
   LLVM_REPO: https://github.com/ispc/ispc.dependencies
-  LLVM_TAR: llvm-16.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+  LLVM_TAR: llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
 
 jobs:
   linux-build:
@@ -57,7 +57,7 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v4
       with:
-        name: ispc_llvm16_linux_bench
+        name: ispc_llvm17_linux_bench
         path: build/ispc-trunk-linux.tar.gz
 
   benchmarks:
@@ -68,7 +68,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@v4
       with:
-        name: ispc_llvm16_linux_bench
+        name: ispc_llvm17_linux_bench
     - name: Install dependencies and unpack artifacts
       run: |
         tar xvf ispc-trunk-linux.tar.gz
@@ -94,7 +94,7 @@ jobs:
     - name: Upload results
       uses: actions/upload-artifact@v4
       with:
-        name: ispc_llvm16_linux_bench_results
+        name: ispc_llvm17_linux_bench_results
         path: ispc-trunk-linux/benchmarks/out/*.json
     - name: Clean self-hosted runner
       run: rm -rf ${GITHUB_WORKSPACE:?}/* ${HOME:?}/* 
@@ -111,7 +111,7 @@ jobs:
       - name: Download benchmarks results
         uses: actions/download-artifact@v4
         with:
-          name: ispc_llvm16_linux_bench_results
+          name: ispc_llvm17_linux_bench_results
       - name: Upload bench datasets to calcite
         working-directory: .calcite
         run: |

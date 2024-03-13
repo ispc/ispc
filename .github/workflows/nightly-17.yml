@@ -4,10 +4,10 @@
 # Nightly Linux run.
 
 ####################################################################
-# Currently disabled. To be reenabled for 16.0 when it's branched. #
+# Currently disabled. To be reenabled for 17.0.                    #
 ####################################################################
 
-name: Nightly tests / LLVM 16.0
+name: Nightly tests / LLVM 17.0
 
 permissions: read-all
 
@@ -27,7 +27,7 @@ jobs:
   # makes the resulting build not usable on other Ubuntu 18.04 images.
   # Doing Linux build in two stages, as self-build is required, but Github Action runners are not always capable
   # to finish the full job in less than 6 hours.
-  linux-build-llvm-16-1:
+  linux-build-llvm-17-1:
     runs-on: ubuntu-latest
 
     steps:
@@ -43,16 +43,16 @@ jobs:
       run: |
         cd docker/ubuntu/18.04/cpu_ispc_build
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu18.04:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=16.0 .
+        docker buildx build --tag ispc/ubuntu18.04:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=17.0 .
 
     - name: Upload package
       uses: actions/upload-artifact@v4
       with:
-        name: llvm16_linux_stage1_cache
+        name: llvm17_linux_stage1_cache
         path: docker/ubuntu/18.04/cpu_ispc_build/cache.local
 
-  linux-build-llvm-16-2:
-    needs: [linux-build-llvm-16-1]
+  linux-build-llvm-17-2:
+    needs: [linux-build-llvm-17-1]
     runs-on: ubuntu-latest
 
     steps:
@@ -67,7 +67,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@v4
       with:
-        name: llvm16_linux_stage1_cache
+        name: llvm17_linux_stage1_cache
         path: docker/ubuntu/18.04/cpu_ispc_build/cache.local
 
     - name: Build LLVM
@@ -75,28 +75,28 @@ jobs:
         cd docker/ubuntu/18.04/cpu_ispc_build
         ls -al
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu18.04:stage2 --target=llvm_build_step2 --cache-from=type=local,src=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=16.0 --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu18.04:stage2 --target=llvm_build_step2 --cache-from=type=local,src=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=17.0 --output=type=tar,dest=result.tar .
 
     - name: Pack LLVM
       run: |
         cd docker/ubuntu/18.04/cpu_ispc_build
         tar xvf result.tar usr/local/src/llvm
-        mv usr/local/src/llvm/bin-16.0 .
+        mv usr/local/src/llvm/bin-17.0 .
         # Note using gzip here, instead of xz - trading of space for speed, as it's just for passing to another stage.
-        tar czvf llvm-16.0.7-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz bin-16.0
+        tar czvf llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz bin-17.0
 
     - name: Upload package
       uses: actions/upload-artifact@v4
       with:
-        name: llvm_16_linux
-        path: docker/ubuntu/18.04/cpu_ispc_build/llvm-16.0.7-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz
+        name: llvm_17_linux
+        path: docker/ubuntu/18.04/cpu_ispc_build/llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz
 
-  linux-build-ispc-llvm-16:
-    needs: [linux-build-llvm-16-2]
+  linux-build-ispc-llvm-17:
+    needs: [linux-build-llvm-17-2]
     runs-on: ubuntu-latest
     env:
-      LLVM_VERSION: "16.0"
-      LLVM_TAR: llvm-16.0.7-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz
 
     steps:
     - uses: actions/checkout@v4
@@ -106,7 +106,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@v4
       with:
-        name: llvm_16_linux
+        name: llvm_17_linux
 
     - name: Install dependencies
       run: |
@@ -128,11 +128,11 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v4
       with:
-        name: ispc_llvm_16_linux
+        name: ispc_llvm_17_linux
         path: build/ispc-trunk-linux.tar.gz
 
-  linux-test-llvm-16:
-    needs: [linux-build-ispc-llvm-16]
+  linux-test-llvm-17:
+    needs: [linux-build-ispc-llvm-17]
     runs-on: ubuntu-latest
     continue-on-error: false
     strategy:
@@ -149,7 +149,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@v4
       with:
-        name: ispc_llvm_16_linux
+        name: ispc_llvm_17_linux
 
     - name: Install dependencies and unpack artifacts
       run: |
@@ -179,7 +179,7 @@ jobs:
         [ -z "`git diff`" ]
 
 
-  win-build-llvm-16:
+  win-build-llvm-17:
     runs-on: windows-2022
 
     steps:
@@ -205,30 +205,30 @@ jobs:
     - name: Build LLVM
       shell: cmd
       run: |
-        python ./alloy.py -b --version=16.0 --verbose
+        python ./alloy.py -b --version=17.0 --verbose
         cd alloy_results* && type alloy_build.log
 
     - name: Pack LLVM
       shell: cmd
       run: |
         cd llvm
-        set TAR_BASE_NAME=llvm-16.0.7-win.vs2019-Release+Asserts-x86.arm.wasm
-        7z.exe a -ttar -snl %TAR_BASE_NAME%.tar bin-16.0
+        set TAR_BASE_NAME=llvm-17.0.6-win.vs2019-Release+Asserts-x86.arm.wasm
+        7z.exe a -ttar -snl %TAR_BASE_NAME%.tar bin-17.0
         7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
 
     - name: Upload package
       uses: actions/upload-artifact@v4
       with:
-        name: llvm_16_win
-        path: llvm/llvm-16.0.7-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+        name: llvm_17_win
+        path: llvm/llvm-17.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
 
 
-  win-build-ispc-llvm-16:
-    needs: [win-build-llvm-16]
+  win-build-ispc-llvm-17:
+    needs: [win-build-llvm-17]
     runs-on: windows-2022
     env:
-      LLVM_VERSION: "16.0"
-      LLVM_TAR: llvm-16.0.7-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
       LLVM_HOME: "C:\\projects\\llvm"
       CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       BUILD_TYPE: "Release"
@@ -241,7 +241,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@v4
       with:
-        name: llvm_16_win
+        name: llvm_17_win
         path: ${{env.LLVM_HOME}}
 
     - name: Add msbuild to PATH
@@ -267,12 +267,12 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v4
       with:
-        name: ispc_llvm16_win
+        name: ispc_llvm17_win
         path: build/ispc-trunk-windows.zip
 
 
-  win-test-llvm16:
-    needs: [win-build-ispc-llvm-16]
+  win-test-llvm17:
+    needs: [win-build-ispc-llvm-17]
     env:
       LLVM_HOME: "C:\\projects\\llvm"
     runs-on: windows-2022
@@ -293,7 +293,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@v4
       with:
-        name: ispc_llvm16_win
+        name: ispc_llvm17_win
 
     - name: Install dependencies
       run: |
@@ -319,6 +319,6 @@ jobs:
       uses: actions/upload-artifact@v4
       if: failure()
       with:
-        name: fail_db.llvm16.${{matrix.arch}}.${{matrix.target}}.txt
+        name: fail_db.llvm17.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
 
