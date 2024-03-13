@@ -326,7 +326,7 @@ static void lCheckModuleIntrinsics(llvm::Module *module) {
         const std::string funcName = func->getName().str();
         // Work around http://llvm.org/bugs/show_bug.cgi?id=10438; only
         // check the llvm.x86.* intrinsics for now...
-        if (!strncmp(funcName.c_str(), "llvm.x86.", 9)) {
+        if (funcName.size() >= 9 && !strncmp(funcName.c_str(), "llvm.x86.", 9)) {
             llvm::Intrinsic::ID id = (llvm::Intrinsic::ID)func->getIntrinsicID();
             if (id == 0) {
                 std::string error_message = "Intrinsic is not found: ";
