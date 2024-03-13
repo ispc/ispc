@@ -1,11 +1,11 @@
-#  Copyright (c) 2018-2023, Intel Corporation
+#  Copyright (c) 2018-2024, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
 configuration: Release
 
 environment:
-  LLVM_LATEST: 16.0
+  LLVM_LATEST: 17.0
   DOCKER_PATH: "ispc/test_repo"
   matrix:
     - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
@@ -13,7 +13,7 @@ environment:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       LLVM_VERSION: latest
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-      LLVM_VERSION: 15.0
+      LLVM_VERSION: 16.0
 
 for:
 -
@@ -31,7 +31,8 @@ for:
         if "%LLVM_VERSION%"=="latest" (set WASM=ON)
         if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2019" ( (set generator="Visual Studio 16") & (set vspath="C:\Program Files (x86)\Microsoft Visual Studio\2019"))
         if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2022" ( (set generator="Visual Studio 17") & (set vspath="C:\Program Files\Microsoft Visual Studio\2022"))
-        set LLVM_TAR=llvm-16.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+        set LLVM_TAR=llvm-17.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+        if "%LLVM_VERSION%"=="16.0" (set LLVM_TAR=llvm-16.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z)
         if "%LLVM_VERSION%"=="15.0" (set LLVM_TAR=llvm-15.0.7-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z)
         if "%LLVM_VERSION%"=="14.0" (set LLVM_TAR=llvm-14.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z)
         if "%LLVM_VERSION%"=="13.0" (set LLVM_TAR=llvm-13.0.1-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z)
@@ -85,7 +86,7 @@ for:
         export LLVM_HOME=$APPVEYOR_BUILD_FOLDER/llvm
         export CROSS_TOOLS=/usr/local/src/cross
         export WASM=OFF
-        export LLVM_TAR=llvm-16.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+        export LLVM_TAR=llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
   install:
     - sh: |-
         sudo apt-get update
