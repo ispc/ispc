@@ -131,13 +131,13 @@ jobs:
         rm -rf cache.local
         tar xvf result.tar usr/local/src/llvm
         mv usr/local/src/llvm/bin-${{ inputs.version }} .
-        tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release+Asserts-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
+        tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
 
     - name: Upload package
       uses: actions/upload-artifact@v3
       with:
         name: llvm_linux_x86
-        path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release+Asserts-x86.arm.wasm.tar.xz
+        path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
 
   linux-build-release-1:
     runs-on: ubuntu-latest
@@ -195,13 +195,13 @@ jobs:
         rm -rf cache.local
         tar xvf result.tar usr/local/src/llvm
         mv usr/local/src/llvm/bin-${{ inputs.version }} .
-        tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
+        tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
 
     - name: Upload package
       uses: actions/upload-artifact@v3
       with:
         name: llvmrel_linux_x86
-        path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release-x86.arm.wasm.tar.xz
+        path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
 
   linux-arm-build-1:
     runs-on: [self-hosted, linux, ARM64]
@@ -263,14 +263,14 @@ jobs:
         rm -rf cache.local
         tar xvf result.tar usr/local/src/llvm
         mv usr/local/src/llvm/bin-${{ inputs.version }} .
-        tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release+Asserts-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
+        tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
         rm -rf result.tar usr bin-${{ inputs.version }}
 
     - name: Upload package
       uses: actions/upload-artifact@v3
       with:
         name: llvm_linux_aarch64
-        path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release+Asserts-x86.arm.wasm.tar.xz
+        path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
 
   linux-arm-build-release-1:
     runs-on: [self-hosted, linux, ARM64]
@@ -331,14 +331,14 @@ jobs:
         cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
         tar xvf result.tar usr/local/src/llvm
         mv usr/local/src/llvm/bin-${{ inputs.version }} .
-        tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
+        tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release-x86${{ inputs.lto == 'ON' && '-lto' || '' }}.arm.wasm.tar.xz bin-${{ inputs.version }}
         rm -rf result.tar usr bin-${{ inputs.version }}
 
     - name: Upload package
       uses: actions/upload-artifact@v3
       with:
         name: llvmrel_linux_aarch64
-        path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release-x86.arm.wasm.tar.xz
+        path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
 
   win-build:
     runs-on: windows-2019
@@ -374,7 +374,7 @@ jobs:
       shell: cmd
       run: |
         cd llvm
-        set TAR_BASE_NAME=llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release+Asserts-x86.arm.wasm
+        set TAR_BASE_NAME=llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm
         7z.exe a -ttar -snl %TAR_BASE_NAME%.tar bin-${{ inputs.version }}
         7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
 
@@ -382,7 +382,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: llvm_win_x86
-        path: llvm/llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release+Asserts-x86.arm.wasm.tar.7z
+        path: llvm/llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.7z
 
   win-build-release:
     runs-on: windows-2019
@@ -418,7 +418,7 @@ jobs:
       shell: cmd
       run: |
         cd llvm
-        set TAR_BASE_NAME=llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release-x86.arm.wasm
+        set TAR_BASE_NAME=llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm
         7z.exe a -ttar -snl %TAR_BASE_NAME%.tar bin-${{ inputs.version }}
         7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
 
@@ -426,7 +426,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: llvmrel_win_x86
-        path: llvm/llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release-x86.arm.wasm.tar.7z
+        path: llvm/llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.7z
 
   mac-build:
     # This job is not capable to build on a shared runner, so need to use self-hosted.
@@ -456,13 +456,13 @@ jobs:
     - name: Pack LLVM
       run: |
         cd llvm
-        tar cJvf llvm-${{ inputs.full_version }}-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
+        tar cJvf llvm-${{ inputs.full_version }}-macos-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
 
     - name: Upload package
       uses: actions/upload-artifact@v3
       with:
         name: llvm_macos_universal
-        path: llvm/llvm-${{ inputs.full_version }}-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
+        path: llvm/llvm-${{ inputs.full_version }}-macos-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz
 
   mac-build-release:
     # This job is not capable to build on a shared runner, so need to use self-hosted.
@@ -492,10 +492,10 @@ jobs:
     - name: Pack LLVM
       run: |
         cd llvm
-        tar cJvf llvm-${{ inputs.full_version }}-macos-Release-universal-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
+        tar cJvf llvm-${{ inputs.full_version }}-macos-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
 
     - name: Upload package
       uses: actions/upload-artifact@v3
       with:
         name: llvmrel_macos_universal
-        path: llvm/llvm-${{ inputs.full_version }}-macos-Release-universal-x86.arm.wasm.tar.xz
+        path: llvm/llvm-${{ inputs.full_version }}-macos-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz
