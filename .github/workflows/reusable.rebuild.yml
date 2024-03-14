@@ -43,10 +43,12 @@ on:
         description: Version to build in major.minor format For example '14.0'.
         required: true
         type: string
+        default: '17.0'
       full_version:
         description: Version to build in major.minor.patch format. For example '14.0.6'.
         required: true
         type: string
+        default: '17.0.6'
       lto:
         description: Build LTO-enabled LLVM toolchain.
         required: true
@@ -56,18 +58,22 @@ on:
         description: Version of Ubuntu Dockerfile to use. For example '18.04'.
         required: true
         type: string
+        default: '18.04'
       vs_generator:
         description: VS generator to use. For example 'Visual Studio 16 2019'.
         required: true
         type: string
+        default: 'Visual Studio 16 2019'
       vs_version_str:
         description: VS version string to use in artifact naming. For example, 'vs2019'.
         required: true
         type: string
+        default: 'vs2019'
       win_sdk:
         description: Win SDK version string. For example, '10.0.18362.0'.
         required: true
         type: string
+        default: '10.0.18362.0'
 
 
 jobs:
