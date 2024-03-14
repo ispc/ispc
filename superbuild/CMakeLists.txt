@@ -857,10 +857,18 @@ set(CLANG_RT_VERSION ${LLVM_VERSION_DOTTED})
 if (${LLVM_VERSION_MAJOR} VERSION_GREATER_EQUAL 16)
     set(CLANG_RT_VERSION ${LLVM_VERSION_MAJOR})
 endif()
+set(CLANG_RT_TARGET x86_64-pc-windows-msvc)
+if (${LLVM_VERSION_MAJOR} VERSION_GREATER_EQUAL 17)
+    set(CLANG_RT_TARGET windows)
+endif()
+set(CLANG_RT_LIB clang_rt.profile.lib)
+if (${LLVM_VERSION_MAJOR} VERSION_GREATER_EQUAL 17)
+    set(CLANG_RT_LIB clang_rt.profile-x86_64.lib)
+endif()
 # MSVC has an outdated clang_rt.profile lib in its SDK.
 # We need to enforce explicitly our freshly built library to avoid profile mismatch errors.
 cmake_path(CONVERT
-           ${STAGE2_PATH}/lib/clang/${CLANG_RT_VERSION}/lib/x86_64-pc-windows-msvc/clang_rt.profile.lib
+           ${STAGE2_PATH}/lib/clang/${CLANG_RT_VERSION}/lib/${CLANG_RT_TARGET}/${CLANG_RT_LIB}
            TO_CMAKE_PATH_LIST
            CLANG_RT_PROFLIB
            NORMALIZE)
