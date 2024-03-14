@@ -102,7 +102,7 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v3
       with:
-        name: llvm_linux_x86_stage1_cache
+        name: llvm_linux_x86_lto_${{ inputs.lto }}_stage1_cache
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
 
   linux-build-2:
@@ -121,7 +121,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@v3
       with:
-        name: llvm_linux_x86_stage1_cache
+        name: llvm_linux_x86_lto_${{ inputs.lto }}_stage1_cache
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
 
     - name: Build LLVM
@@ -142,7 +142,7 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v3
       with:
-        name: llvm_linux_x86
+        name: llvm_linux_x86_lto_${{ inputs.lto }}
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
 
   linux-build-release-1:
@@ -166,7 +166,7 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v3
       with:
-        name: llvmrel_linux_x86_stage1_cache
+        name: llvmrel_linux_x86_lto_${{ inputs.lto }}_stage1_cache
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
 
   linux-build-release-2:
@@ -185,7 +185,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@v3
       with:
-        name: llvmrel_linux_x86_stage1_cache
+        name: llvmrel_linux_x86_lto_${{ inputs.lto }}_stage1_cache
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
 
     - name: Build LLVM
@@ -206,7 +206,7 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v3
       with:
-        name: llvmrel_linux_x86
+        name: llvmrel_linux_x86_lto_${{ inputs.lto }}
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
 
   linux-arm-build-1:
@@ -232,7 +232,7 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v3
       with:
-        name: llvm_linux_aarch64_stage1_cache
+        name: llvm_linux_aarch64_lto_${{ inputs.lto }}_stage1_cache
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
 
   linux-arm-build-2:
@@ -253,7 +253,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@v3
       with:
-        name: llvm_linux_aarch64_stage1_cache
+        name: llvm_linux_aarch64_lto_${{ inputs.lto }}_stage1_cache
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
 
     - name: Build LLVM
@@ -275,7 +275,7 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v3
       with:
-        name: llvm_linux_aarch64
+        name: llvm_linux_aarch64_lto_${{ inputs.lto }}
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
 
   linux-arm-build-release-1:
@@ -301,7 +301,7 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v3
       with:
-        name: llvmrel_linux_aarch64_stage1_cache
+        name: llvmrel_linux_aarch64_lto_${{ inputs.lto }}_stage1_cache
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
 
   linux-arm-build-release-2:
@@ -322,7 +322,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@v3
       with:
-        name: llvmrel_linux_aarch64_stage1_cache
+        name: llvmrel_linux_aarch64_lto_${{ inputs.lto }}_stage1_cache
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
 
     - name: Build LLVM
@@ -343,7 +343,7 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v3
       with:
-        name: llvmrel_linux_aarch64
+        name: llvmrel_linux_aarch64_lto_${{ inputs.lto }}
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
 
   win-build:
@@ -387,7 +387,7 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v3
       with:
-        name: llvm_win_x86
+        name: llvm_win_x86_lto_${{ inputs.lto }}
         path: llvm/llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.7z
 
   win-build-release:
@@ -431,7 +431,7 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v3
       with:
-        name: llvmrel_win_x86
+        name: llvmrel_win_x86_lto_${{ inputs.lto }}
         path: llvm/llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.7z
 
   mac-build:
@@ -467,7 +467,7 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v3
       with:
-        name: llvm_macos_universal
+        name: llvm_macos_universal_lto_${{ inputs.lto }}
         path: llvm/llvm-${{ inputs.full_version }}-macos-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz
 
   mac-build-release:
@@ -503,5 +503,5 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v3
       with:
-        name: llvmrel_macos_universal
+        name: llvmrel_macos_universal_lto_${{ inputs.lto }}
         path: llvm/llvm-${{ inputs.full_version }}-macos-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz

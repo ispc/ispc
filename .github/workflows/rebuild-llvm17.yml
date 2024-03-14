@@ -20,11 +20,15 @@ on:
 
 jobs:
   llvm17:
+    strategy:
+      fail-fast: false
+      matrix:
+        lto: ['ON', 'OFF']
     uses: ./.github/workflows/reusable.rebuild.yml
     with:
       version: '17.0'
       full_version: '17.0.6'
-      lto: 'OFF'
+      lto: ${{ matrix.lto }}
       ubuntu: '18.04'
       vs_generator: 'Visual Studio 16 2019'
       vs_version_str: 'vs2019'
