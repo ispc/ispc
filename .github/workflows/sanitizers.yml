@@ -29,7 +29,6 @@ jobs:
       run: |
         .github/workflows/scripts/install-build-deps.sh
 
-    # We will use system gcc until we rebuild LLVM with compiler-rt.
     - name: Check environment
       run: |
         which -a gcc
@@ -37,12 +36,9 @@ jobs:
 
     - name: Build ISPC with ASAN
       run: |
-          cmake -B build -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_FLAGS="-fsanitize=address -O0 -g3" -DCMAKE_CXX_FLAGS="-fsanitize=address -O0 -g3"
+          cmake -B build -DCMAKE_C_FLAGS="-fsanitize=address -O0 -g3" -DCMAKE_CXX_FLAGS="-fsanitize=address -O0 -g3"
           cmake --build build --target ispc -j4
 
-    # Address sanitizer includes leak sanitizer but we don't want it to report
-    # all leaks at the moment because there are quite a lot if them.
-    # So, we disable leaks detection to have clean report.
     - name: Build examples with ASAN
       run: |
           ASAN_OPTIONS=detect_leaks=1 cmake --build build --target ispc_cpu_examples -j4
