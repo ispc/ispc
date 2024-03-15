@@ -561,10 +561,14 @@ if (MSVC)
     set_source_files_properties(${BISON_OUTPUT} PROPERTIES COMPILE_FLAGS /wd4005)
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare -Wno-unused-function ${LLVM_CPP_FLAGS})
-    # Security options
+    # Security options for both Debug and Release builds
     target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector-strong
-                           -fdata-sections -ffunction-sections -fno-delete-null-pointer-checks
-                           -Wformat -Wformat-security -fwrapv)
+                           -fno-delete-null-pointer-checks -Wformat -Wformat-security -fwrapv)
+    # Additional security options for Release mode
+    # Should be combined with link-time optimization (-Wl,--gc-sections during the linking phase)
+    if (CMAKE_BUILD_TYPE STREQUAL "Release")
+        target_compile_options(${PROJECT_NAME} PRIVATE -fdata-sections -ffunction-sections)
+    endif()
     # LLVM 14 switches default DWARF version from v4 to v5
     # but gdb < 10.1 can't read DWARF v5.
     # https://discourse.llvm.org/t/gdb-10-1-cant-read-clangs-dwarf-v5/6035
@@ -607,12 +611,15 @@ if (WIN32)
     endif()
 elseif (APPLE)
 else()
-    # Link options for security hardening.
+    # Common security hardening options for both Debug and Release
     target_link_options(${PROJECT_NAME}
         PUBLIC "SHELL: -z noexecstack"
                "SHELL: -z relro"
-               "SHELL: -z now"
-               "SHELL: -Wl,--gc-sections")
+               "SHELL: -z now")
+    # Additional options for Release mode
+    if(CMAKE_BUILD_TYPE MATCHES Release)
+        target_link_options(${PROJECT_NAME} PUBLIC "SHELL: -Wl,--gc-sections")
+    endif()
 endif()
 
 if (ISPC_STATIC_STDCXX_LINK OR ISPC_STATIC_LINK)
