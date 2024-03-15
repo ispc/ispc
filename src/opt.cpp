@@ -88,15 +88,6 @@
 #include <llvm/Transforms/Utils/Mem2Reg.h>
 #include <llvm/Transforms/Vectorize/LoadStoreVectorizer.h>
 
-#ifdef ISPC_HOST_IS_LINUX
-#include <alloca.h>
-#elif defined(ISPC_HOST_IS_WINDOWS)
-#include <malloc.h>
-#ifndef __MINGW32__
-#define alloca _alloca
-#endif
-#endif // ISPC_HOST_IS_WINDOWS
-
 #ifdef ISPC_XE_ENABLED
 #include <llvm/GenXIntrinsics/GenXSPIRVWriterAdaptor.h>
 #endif
