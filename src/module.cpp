@@ -115,14 +115,6 @@
 #define strcasecmp stricmp
 #endif
 
-// Clang defines alloca which interferes with standard library function.
-// It happenned after newly included clang/Basic/Builtins.h in PR71709
-#if ISPC_LLVM_VERSION > ISPC_LLVM_17_0
-#define ALLOCA __builtin_alloca
-#else
-#define ALLOCA alloca
-#endif
-
 using namespace ispc;
 
 // The magic constants are derived from https://github.com/intel/compute-runtime repo
@@ -480,11 +472,26 @@ void Module::AddTypeDef(const std::string &name, const Type *type, SourcePos pos
 }
 
 // Construct ConstExpr as initializer for varying const value from given expression list if possible
+// T is bool* or std::vector<llvm::APFloat> or int8_t* (and others integer types) here.
+// Although, it looks like very unlogical this is the probably most reasonable
+// approach to unify usage of vals variable inside function.
+// Approach with T is bool, llvm::APFloat, int8_t, ... doesn't work because
+// 1) We can't dereference &vals[i++] when it is std::vector<bool>. The
+// specialization of vector with bool doesn't necessarily store its elements as
+// contiguous array.
+// 2) MSVC doesn't support VLAs, so T vals[N] is not an option.
+// 3) T vals[64] is not an option because llvm::APFloat doesn't have the
+// default constructor. Same applicable for std::array.
 template <class T>
 Expr *lCreateConstExpr(ExprList *exprList, const AtomicType::BasicType basicType, const Type *type,
                        const std::string &name, SourcePos pos) {
     const int N = g->target->getVectorWidth();
     bool canConstructConstExpr = true;
+    using ManagedType =
+        typename std::conditional<std::is_pointer<T>::value, std::unique_ptr<typename std::remove_pointer<T>::type[]>,
+                                  int // unused placeholder
+                                  >::type;
+    ManagedType managedMemory;
     T vals;
     if constexpr (std::is_same_v<T, std::vector<llvm::APFloat>>) {
         switch (basicType) {
@@ -502,8 +509,10 @@ Expr *lCreateConstExpr(ExprList *exprList, const AtomicType::BasicType basicType
         }
     } else {
         // T equals int8_t* and etc.
+        // We allocate PointToType[N] on the heap. It is managed by unique_ptr.
         using PointToType = typename std::remove_pointer<T>::type;
-        vals = (T)ALLOCA(N * sizeof(PointToType));
+        managedMemory = std::make_unique<PointToType[]>(N);
+        vals = managedMemory.get();
         memset(vals, 0, N * sizeof(PointToType));
     }
 
