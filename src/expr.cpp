@@ -3608,12 +3608,12 @@ llvm::Value *SelectExpr::GetValue(FunctionEmitContext *ctx) const {
             if (testType->IsUniformType()) {
                 // Extracting uniform vector bool to uniform bool require
                 // switching from i8 -> i1
-                ti = ctx->SwitchBoolSize(ti, LLVMTypes::BoolType);
+                ti = ctx->SwitchBoolToMaskType(ti, LLVMTypes::BoolType);
                 sel = ctx->SelectInst(ti, e1i, e2i);
             } else {
                 // Extracting varying vector bools to varying bools require
                 // switching from <WIDTH x i8> -> <WIDTH x MaskType>
-                ti = ctx->SwitchBoolSize(ti, LLVMTypes::BoolVectorType);
+                ti = ctx->SwitchBoolToMaskType(ti, LLVMTypes::BoolVectorType);
                 sel = lEmitVaryingSelect(ctx, ti, e1i, e2i, vt->GetElementType());
             }
             result = ctx->InsertInst(result, sel, i);
@@ -6316,7 +6316,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
             if (fromType->IsVaryingAtomic())
                 // If we have a bool vector of non-i1 elements, first
                 // truncate down to a single bit.
-                exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
+                exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
             // And then do an unisgned int->float cast
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int
                                  exprVal, targetType, cOpName);
@@ -6370,7 +6370,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
             if (fromType->IsVaryingAtomic())
                 // If we have a bool vector of non-i1 elements, first
                 // truncate down to a single bit.
-                exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
+                exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
             // And then do an unisgned int->float cast
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int
                                  exprVal, targetType, cOpName);
@@ -6423,7 +6423,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingAtomic())
                 // truncate bool vector values to i1s if necessary.
-                exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
+                exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int to double
                                  exprVal, targetType, cOpName);
             break;
@@ -6473,7 +6473,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingAtomic())
-                exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
+                exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
@@ -6503,7 +6503,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingAtomic()) {
-                exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
+                exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
             }
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6540,7 +6540,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingAtomic())
-                exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
+                exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
@@ -6574,7 +6574,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingAtomic())
-                exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
+                exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
@@ -6614,7 +6614,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingAtomic())
-                exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
+                exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
@@ -6648,7 +6648,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingAtomic())
-                exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
+                exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
@@ -6700,7 +6700,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingAtomic())
-                exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
+                exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
@@ -6732,7 +6732,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingAtomic())
-                exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
+                exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
@@ -6783,7 +6783,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingAtomic()) {
                 // truncate bool vector values to i1s if necessary.
-                exprVal = ctx->SwitchBoolSize(exprVal, LLVMTypes::Int1VectorType, cOpName);
+                exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
             }
             cast = exprVal;
             break;
@@ -6837,8 +6837,8 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
                 // Then we'll turn that into a vector below, the way it
                 // does for everyone else...
                 Assert(cast);
-                cast = ctx->SwitchBoolSize(cast, LLVMTypes::BoolVectorType->getElementType(),
-                                           llvm::Twine(cast->getName()) + "to_i_bool");
+                cast = ctx->SwitchBoolToMaskType(cast, LLVMTypes::BoolVectorType->getElementType(),
+                                                 llvm::Twine(cast->getName()) + "to_i_bool");
             }
         } else {
             // fromType->IsVaryingType())
@@ -6893,7 +6893,7 @@ static llvm::Value *lUniformValueToVarying(FunctionEmitContext *ctx, llvm::Value
                 // If the extracted element if bool and varying needs to be
                 // converted back to i8 vector to insert into varying struct.
                 if ((elemType->IsBoolType()) && (CastType<AtomicType>(elemType) != nullptr)) {
-                    v = ctx->SwitchBoolSize(v, LLVMTypes::BoolVectorStorageType);
+                    v = ctx->SwitchBoolToStorageType(v, LLVMTypes::BoolVectorStorageType);
                 }
             }
             retValue = ctx->InsertInst(retValue, v, i, "set_element");
@@ -7148,7 +7148,7 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             if (!conv)
                 return nullptr;
             if ((toVector->GetElementType()->IsBoolType())) {
-                conv = ctx->SwitchBoolSize(conv, toVector->LLVMStorageType(g->ctx));
+                conv = ctx->SwitchBoolToStorageType(conv, toVector->LLVMStorageType(g->ctx));
             }
             return conv;
         } else {
@@ -7163,7 +7163,7 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
                     return nullptr;
                 if ((toVector->GetElementType()->IsBoolType()) &&
                     (CastType<AtomicType>(toVector->GetElementType()) != nullptr)) {
-                    conv = ctx->SwitchBoolSize(conv, toVector->GetElementType()->LLVMStorageType(g->ctx));
+                    conv = ctx->SwitchBoolToStorageType(conv, toVector->GetElementType()->LLVMStorageType(g->ctx));
                 }
 
                 cast = ctx->InsertInst(cast, conv, i);
@@ -7206,7 +7206,7 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             for (int i = 0; i < toVector->GetElementCount(); ++i) {
                 if ((toVector->GetElementType()->IsBoolType()) &&
                     (CastType<AtomicType>(toVector->GetElementType()) != nullptr)) {
-                    conv = ctx->SwitchBoolSize(conv, toVector->GetElementType()->LLVMStorageType(g->ctx));
+                    conv = ctx->SwitchBoolToStorageType(conv, toVector->GetElementType()->LLVMStorageType(g->ctx));
                 }
                 // Here's InsertInst produces InsertValueInst.
                 cast = ctx->InsertInst(cast, conv, i);
