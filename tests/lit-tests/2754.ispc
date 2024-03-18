@@ -10,7 +10,7 @@ varying float test_orig(uniform bool bCond, uniform float* uniform * uniform ptr
 // CHECK-LABEL: @test(
 // CHECK-NEXT: allocas:
 // CHECK-NEXT:   [[SELECT:%.*]] = select i1 %bCond, {{.*}} %a, {{.*}} %b
-// CHECK-NEXT:   [[PTR:%.*]] = getelementptr i32, {{.*}} [[SELECT]], i64 4
+// CHECK-NEXT:   [[PTR:%.*]] = getelementptr i{{(32|8)}}, {{.*}} [[SELECT]], i64 {{(4|16)}}
 // CHECK-NEXT:   [[LOAD:%.*]] = load i32, {{.*}} [[PTR]]
 // CHECK-NEXT:   ret i32 [[LOAD]]
 // CHECK-NEXT: }
