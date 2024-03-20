@@ -174,8 +174,11 @@ Contents:
 
     * `Basic Math Functions`_
     * `Transcendental Functions`_
+    * `Saturating Arithmetic`_
+    * `Dot product`_
     * `Pseudo-Random Numbers`_
     * `Random Numbers`_
+
 
   + `Output Functions`_
   + `Assertions`_
@@ -4344,6 +4347,37 @@ division of all integer types are provided by the ``ispc`` standard library.
 In addition to the ``int8`` variants of saturating arithmetic functions listed
 above, there are versions that supports ``int16``, ``int32`` and ``int64``
 values as well.
+
+
+Dot product
+-----------
+ISPC supports dot product operations for unsigned/signed ``int8`` and ``int16`` data types,
+utilizing the AVX-VNNI and AVX512-VNNI instruction sets. These operations are designed to work
+with *packed* input vectors, requiring the programmer to pack the input vectors appropriately
+before use.
+
+For 8-bit Integer Vectors:
+
+The functions multiply groups of 4 unsigned 8-bit integers packed in `a` with corresponding
+4 signed 8-bit integers packed in `b`, producing 4 intermediate signed 16-bit results.
+The sum of these results, combined with the `acc` accumulator, is then returned as the final result.
+
+::
+
+    varying int32 dot4add_u8i8packed(varying int32 a, varying int32 b, varying int32 acc)
+    varying int32 dot4add_u8i8packed_sat(varying int32 a, varying int32 b, varying int32 acc) // saturate the result
+
+
+For 16-bit Integer Vectors:
+
+The functions multiply groups of 2 signed 16-bit integers packed in `a` with corresponding
+2 signed 16-bit integers packed in `b`, producing 2 intermediate signed 32-bit results.
+The sum of these results, combined with the `acc` accumulator, is then returned as the final result.
+
+::
+
+    varying int32 dot2add_i16packed(varying int32 a, varying int32 b, varying int32 acc)
+    varying int32 dot2add_i16packed_sat(varying int32 a, varying int32 b, varying int32 acc) // saturate the result
 
 
 Pseudo-Random Numbers

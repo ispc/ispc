@@ -231,6 +231,9 @@ class Target {
     /** Check if LLVM intrinsic is supported for the current target. */
     bool checkIntrinsticSupport(llvm::StringRef name, SourcePos pos);
 
+    /** Check if the feature supported by the current target. */
+    bool IsFeatureSupported(const std::string &featureName);
+
     /** Returns a comma-delimited string giving the names of the currently
         supported CPUs. */
     static std::string SupportedCPUs();
@@ -325,6 +328,8 @@ class Target {
     bool getMaskingIsFree() const { return m_maskingIsFree; }
 
     int getMaskBitCount() const { return m_maskBitCount; }
+
+    bool hasDotProductVNNI() const { return m_hasDotProductVNNI; }
 
     bool hasHalfConverts() const { return m_hasHalfConverts; }
 
@@ -435,6 +440,9 @@ class Target {
     /** How many bits are used to store each element of the mask: e.g. this
         is 32 on SSE/AVX, since that matches the HW better. */
     int m_maskBitCount;
+
+    /** Indicates whether the target has native support for VNNI dot product. */
+    bool m_hasDotProductVNNI;
 
     /** Indicates whether the target has native support for float/half conversions. */
     bool m_hasHalfConverts;
