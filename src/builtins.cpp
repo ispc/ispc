@@ -187,6 +187,22 @@ static bool lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
         return true;
     }
 
+    // Special case for dot product functions which have mix of signed and unsigned types.
+    if (name.find("__dot2add") != std::string::npos || name.find("__dot4add") != std::string::npos) {
+        const Type *returnType = AtomicType::VaryingInt32;
+        llvm::SmallVector<const Type *, 8> argTypes;
+        argTypes.push_back(AtomicType::VaryingUInt32); // packed value, must be uint32
+        argTypes.push_back(AtomicType::VaryingUInt32); // packed value, must be uint32
+        argTypes.push_back(AtomicType::VaryingInt32);
+
+        FunctionType *funcType = new FunctionType(returnType, argTypes, noPos);
+
+        Symbol *sym = new Symbol(name, noPos, funcType);
+        sym->function = func;
+        symbolTable->AddFunction(sym);
+        return true;
+    }
+
     // If the function has any parameters with integer types, we'll make
     // two Symbols for two overloaded versions of the function, one with
     // all of the integer types treated as signed integers and one with all
@@ -481,6 +497,10 @@ static void lSetInternalFunctions(llvm::Module *module) {
         __do_assert_uniform,
         __do_assert_varying,
         __do_print,
+        __dot2add_i16packed,
+        __dot2add_i16packed_sat,
+        __dot4add_u8i8packed,
+        __dot4add_u8i8packed_sat,
         __send_eot,
         __doublebits_uniform_int64,
         __doublebits_varying_int64,
@@ -1224,6 +1244,7 @@ void ispc::DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::
     lDefineConstantInt("__have_native_rsqrtd", g->target->hasRsqrtd(), module, symbolTable, debug_symbols);
     lDefineConstantInt("__have_native_rcpd", g->target->hasRcpd(), module, symbolTable, debug_symbols);
     lDefineConstantInt("__have_saturating_arithmetic", g->target->hasSatArith(), module, symbolTable, debug_symbols);
+    lDefineConstantInt("__have_dot_product_vnni", g->target->hasDotProductVNNI(), module, symbolTable, debug_symbols);
 #ifdef ISPC_XE_ENABLED
     lDefineConstantInt("__have_xe_prefetch", g->target->hasXePrefetch(), module, symbolTable, debug_symbols);
 #else

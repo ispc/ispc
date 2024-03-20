@@ -174,8 +174,11 @@ Contents:
 
     * `Basic Math Functions`_
     * `Transcendental Functions`_
+    * `Saturating Arithmetic`_
+    * `Dot product`_
     * `Pseudo-Random Numbers`_
     * `Random Numbers`_
+
 
   + `Output Functions`_
   + `Assertions`_
@@ -915,8 +918,10 @@ x86 targets:
 ``sse4.1-i32x8``, ``sse4.2-i8x16``, ``sse4.2-i16x8``, ``sse4.2-i32x4``, ``sse4.2-i32x8``,
 ``avx1-i32x4``, ``avx1-i32x8``, ``avx1-i32x16``, ``avx1-i64x4``, ``avx2-i8x32``,
 ``avx2-i16x16``, ``avx2-i32x4``, ``avx2-i32x8``, ``avx2-i32x16``, ``avx2-i64x4``,
+``avx2vnni-i32x4``, ``avx2vnni-i32x8``, ``avx2vnni-i32x16``,
 ``avx512knl-x16``, ``avx512skx-x4``, ``avx512skx-x8``, ``avx512skx-x16``, ``avx512skx-x32``,
-``avx512skx-x64``, ``avx512spr-x4``, ``avx512spr-x8``, ``avx512spr-x16``, ``avx512spr-x32``,
+``avx512skx-x64``, ``avx512icl-x4``, ``avx512icl-x8``, ``avx512icl-x16``, ``avx512icl-x32``,
+``avx512icl-x64``, ``avx512spr-x4``, ``avx512spr-x8``, ``avx512spr-x16``, ``avx512spr-x32``,
 ``avx512spr-x64``.
 
 Neon targets:
@@ -4351,6 +4356,40 @@ division of all integer types are provided by the ``ispc`` standard library.
 In addition to the ``int8`` variants of saturating arithmetic functions listed
 above, there are versions that supports ``int16``, ``int32`` and ``int64``
 values as well.
+
+
+Dot product
+-----------
+
+ISPC supports dot product operations for unsigned and signed ``int8`` and ``int16`` data types,
+leveraging the AVX-VNNI and AVX512-VNNI instruction sets. The ISPC targets that support
+native VNNI instruction sets are ``avx2vnni-i32x*``, ``avx512icl-i32x*``, and ``avx512spr-i32x*``.
+For other targets these operations are emulated.
+These dot product operations are specifically designed to operate on *packed* input vectors,
+necessitating proper packing of input vectors by the programmer before use.
+
+For 8-bit Integer Vectors:
+
+The functions multiply groups of four unsigned 8-bit integers packed in `a`` with corresponding
+four signed 8-bit integers packed in `b`, resulting in four intermediate signed 16-bit values.
+The sum of these values, in combination with the `acc`` accumulator, is then returned as the final result.
+
+::
+
+    varying int32 dot4add_u8i8packed(varying uint32 a, varying uint32 b, varying int32 acc)
+    varying int32 dot4add_u8i8packed_sat(varying uint32 a, varying uint32 b, varying int32 acc) // saturate the result
+
+
+For 16-bit Integer Vectors:
+
+The functions multiply groups of two signed 16-bit integers packed in `a`` with corresponding
+two signed 16-bit integers packed in `b`, yielding two intermediate signed 32-bit results.
+The sum of these results, combined with the `acc`` accumulator, is then returned as the final result.
+
+::
+
+    varying int32 dot2add_i16packed(varying uint32 a, varying uint32 b, varying int32 acc)
+    varying int32 dot2add_i16packed_sat(varying uint32 a, varying uint32 b, varying int32 acc) // saturate the result
 
 
 Pseudo-Random Numbers

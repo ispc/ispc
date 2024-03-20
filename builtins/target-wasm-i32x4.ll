@@ -1,4 +1,4 @@
-;;  Copyright (c) 2020-2023, Intel Corporation
+;;  Copyright (c) 2020-2024, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -33,6 +33,7 @@ svml_stubs(double,d,WIDTH)
 define_avgs()
 saturation_arithmetic()
 halfTypeGenericImplementation()
+dot_product_vnni_decl()
 
 ;; rcp/rsqrt for double
 rsqrtd_decl()
