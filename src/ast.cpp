@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2023, Intel Corporation
+  Copyright (c) 2011-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -101,7 +101,7 @@ void Indent::Done() {
 
 ASTNode::~ASTNode() {}
 
-void ASTNode::Print() const {
+void ASTNode::Dump() const {
     Indent indent;
     indent.pushSingle();
     Print(indent);
