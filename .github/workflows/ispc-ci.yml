@@ -348,6 +348,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        arch: [x86, x86-64]
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
     steps:
     - uses: actions/checkout@v3
@@ -367,7 +368,7 @@ jobs:
     - name: Running tests
       run: |
         echo PATH=$PATH
-        ./alloy.py -r --only="stability current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        ./alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Check
       run: |
@@ -378,8 +379,15 @@ jobs:
       uses: actions/upload-artifact@v3
       if: failure()
       with:
-        name: fail_db.llvm14.${{matrix.target}}.txt
+        name: fail_db.llvm14.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
+
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: alloy_results.llvm14.${{matrix.arch}}.${{matrix.target}}
+        path: alloy_results_*
 
   linux-test-llvm15:
     needs: [define-flow, linux-build-ispc-llvm15]
@@ -388,6 +396,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        arch: [x86, x86-64]
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
     steps:
     - uses: actions/checkout@v3
@@ -407,7 +416,7 @@ jobs:
     - name: Running tests
       run: |
         echo PATH=$PATH
-        ./alloy.py -r --only="stability current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        ./alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Check
       run: |
@@ -418,8 +427,15 @@ jobs:
       uses: actions/upload-artifact@v3
       if: failure()
       with:
-        name: fail_db.llvm15.${{matrix.target}}.txt
+        name: fail_db.llvm15.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
+
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: alloy_results.llvm15.${{matrix.arch}}.${{matrix.target}}
+        path: alloy_results_*
 
   linux-test-llvm16:
     needs: [define-flow, linux-build-ispc-llvm16]
@@ -428,6 +444,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        arch: [x86, x86-64]
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
     steps:
     - uses: actions/checkout@v3
@@ -447,7 +464,7 @@ jobs:
     - name: Running tests
       run: |
         echo PATH=$PATH
-        ./alloy.py -r --only="stability current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        ./alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Check
       run: |
@@ -458,8 +475,15 @@ jobs:
       uses: actions/upload-artifact@v3
       if: failure()
       with:
-        name: fail_db.llvm16.${{matrix.target}}.txt
+        name: fail_db.llvm16.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
+
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: alloy_results.llvm16.${{matrix.arch}}.${{matrix.target}}
+        path: alloy_results_*
 
   linux-test-llvm16-lto:
     needs: [define-flow, linux-build-ispc-llvm16-lto]
@@ -468,6 +492,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        arch: [x86, x86-64]
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
     steps:
     - uses: actions/checkout@v3
@@ -487,7 +512,7 @@ jobs:
     - name: Running tests
       run: |
         echo PATH=$PATH
-        ./alloy.py -r --only="stability current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        ./alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Check
       run: |
@@ -498,8 +523,15 @@ jobs:
       uses: actions/upload-artifact@v3
       if: failure()
       with:
-        name: fail_db.llvm16_lto.${{matrix.target}}.txt
+        name: fail_db.llvm16_lto.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
+
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: alloy_results.llvm16_lto.${{matrix.arch}}.${{matrix.target}}
+        path: alloy_results_*
 
   # Test release version
   linux-test-llvm16-release:
@@ -508,6 +540,9 @@ jobs:
     continue-on-error: false
     strategy:
       fail-fast: false
+      matrix:
+        arch: [x86, x86-64]
+        target: [avx2-i32x8]
     steps:
     - uses: actions/checkout@v3
     - name: Download package
@@ -526,7 +561,7 @@ jobs:
     - name: Running tests
       run: |
         echo PATH=$PATH
-        ./alloy.py -r --only="stability current -O0 -O2" --only-targets="avx2-i32x8" --time --update-errors=FP
+        ./alloy.py -r --only="stability ${{ matrix.arch}} current -O0 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Check
       run: |
@@ -537,8 +572,15 @@ jobs:
       uses: actions/upload-artifact@v3
       if: failure()
       with:
-        name: fail_db.llvm16rel.${{matrix.target}}.txt
+        name: fail_db.llvm16rel.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
+
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: alloy_results.llvm16rel.${{matrix.arch}}.${{matrix.target}}
+        path: alloy_results_*
 
   # Debug run is experimental with the purpose to see if it's capable to catch anything.
   # So it's running in "full" mode only for now.
@@ -550,6 +592,9 @@ jobs:
     continue-on-error: false
     strategy:
       fail-fast: false
+      matrix:
+        arch: [x86, x86-64]
+        target: [avx2-i32x8]
     steps:
     - uses: actions/checkout@v3
     - name: Download package
@@ -568,7 +613,7 @@ jobs:
     - name: Running tests
       run: |
         echo PATH=$PATH
-        ./alloy.py -r --only="stability current debug -O0 -O2" --only-targets="avx2-i32x8" --time --update-errors=FP
+        ./alloy.py -r --only="stability ${{ matrix.arch }} current debug -O0 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Check
       run: |
@@ -579,8 +624,15 @@ jobs:
       uses: actions/upload-artifact@v3
       if: failure()
       with:
-        name: fail_db.llvm16.debug.txt
+        name: fail_db.llvm16.debug.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
+
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: alloy_results.llvm16.debug.${{matrix.arch}}.${{matrix.target}}
+        path: alloy_results_*
 
   linux-test-llvm17:
     needs: [define-flow, linux-build-ispc-llvm17]
@@ -589,6 +641,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        arch: [x86, x86-64]
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
     steps:
     - uses: actions/checkout@v3
@@ -608,7 +661,7 @@ jobs:
     - name: Running tests
       run: |
         echo PATH=$PATH
-        ./alloy.py -r --only="stability current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        ./alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Check
       run: |
@@ -619,8 +672,15 @@ jobs:
       uses: actions/upload-artifact@v3
       if: failure()
       with:
-        name: fail_db.llvm17.${{matrix.target}}.txt
+        name: fail_db.llvm17.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
+
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: alloy_results.llvm17.${{matrix.arch}}.${{matrix.target}}
+        path: alloy_results_*
 
   # Test xe release version
   linux-test-xe-llvm16-release:
@@ -630,6 +690,9 @@ jobs:
     continue-on-error: false
     strategy:
       fail-fast: false
+      matrix:
+        arch: [x86, x86-64]
+        target: [avx2-i32x8]
     env:
       INSTALL_COMPUTE_RUNTIME: 0
     steps:
@@ -650,8 +713,8 @@ jobs:
     - name: Running tests
       run: |
         echo PATH=$PATH
-        # github runners son't have GPU so run CPU tests at least
-        ./alloy.py -r --only="stability current -O0 -O2" --only-targets="avx2-i32x8" --time --update-errors=FP
+        # github runners don't have GPU so run CPU tests at least
+        ./alloy.py -r --only="stability ${{ matrix.arch }} current -O0 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Check
       run: |
@@ -662,8 +725,15 @@ jobs:
       uses: actions/upload-artifact@v3
       if: failure()
       with:
-        name: fail_db.xe.llvm16rel.${{matrix.target}}.txt
+        name: fail_db.xe.llvm16rel.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
+
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: alloy_results.xe.llvm16rel.${{matrix.arch}}.${{matrix.target}}
+        path: alloy_results_*
 
   macos-build-ispc-llvm15:
     needs: [define-flow]
@@ -879,6 +949,13 @@ jobs:
         name: fail_db.llvm15.macos.sse4.txt
         path: fail_db.txt
 
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: alloy_results.llvm15.macos.sse4
+        path: alloy_results_*
+
   macos-test-ispc-llvm16:
     needs: [define-flow, macos-build-ispc-llvm16]
     runs-on: macos-12
@@ -919,6 +996,13 @@ jobs:
       with:
         name: fail_db.llvm16.macos.sse4.txt
         path: fail_db.txt
+
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: alloy_results.llvm16.macos.sse4
+        path: alloy_results_*
 
   macos-test-ispc-llvm16-lto:
     needs: [define-flow, macos-build-ispc-llvm16-lto]
@@ -961,6 +1045,13 @@ jobs:
         name: fail_db.llvm16_lto.macos.sse4.txt
         path: fail_db.txt
 
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: alloy_results.llvm16_lto.macos.sse4
+        path: alloy_results_*
+
   macos-test-ispc-llvm17:
     needs: [define-flow, macos-build-ispc-llvm17]
     runs-on: macos-12
@@ -1001,6 +1092,13 @@ jobs:
       with:
         name: fail_db.llvm17.macos.sse4.txt
         path: fail_db.txt
+
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: alloy_results.llvm17.macos.sse4
+        path: alloy_results_*
 
   win-build-ispc-llvm14:
     needs: [define-flow]
@@ -1322,6 +1420,13 @@ jobs:
         name: fail_db.llvm14.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
 
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: alloy_results.llvm14.${{matrix.arch}}.${{matrix.target}}
+        path: alloy_results_*
+
   win-test-llvm15:
     needs: [define-flow, win-build-ispc-llvm15]
     env:
@@ -1367,6 +1472,13 @@ jobs:
       with:
         name: fail_db.llvm15.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
+
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: alloy_results.llvm15.${{matrix.arch}}.${{matrix.target}}
+        path: alloy_results_*
 
   win-test-llvm16:
     needs: [define-flow, win-build-ispc-llvm16]
@@ -1414,6 +1526,13 @@ jobs:
         name: fail_db.llvm16.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
 
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: alloy_results.llvm16.${{matrix.arch}}.${{matrix.target}}
+        path: alloy_results_*
+
   win-test-llvm16-lto:
     needs: [define-flow, win-build-ispc-llvm16-lto]
     env:
@@ -1459,6 +1578,13 @@ jobs:
       with:
         name: fail_db.llvm16_lto.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
+
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: alloy_results.llvm16_lto.${{matrix.arch}}.${{matrix.target}}
+        path: alloy_results_*
 
   win-test-llvm17:
     needs: [define-flow, win-build-ispc-llvm17]
@@ -1506,6 +1632,13 @@ jobs:
         name: fail_db.llvm17.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
 
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: alloy_results.llvm17.${{matrix.arch}}.${{matrix.target}}
+        path: alloy_results_*
+
   win-test-xe-llvm16-release:
     needs: [define-flow, win-build-ispc-xe-llvm16-release]
     if: ${{ needs.define-flow.outputs.flow_type == 'smoke' }}
@@ -1552,6 +1685,13 @@ jobs:
       with:
         name: fail_db.xe.llvm16rel.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
+
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: alloy_results.llvm16rel.${{matrix.arch}}.${{matrix.target}}
+        path: alloy_results_*
 
   win-package-examples:
     needs: [define-flow]
