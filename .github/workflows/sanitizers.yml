@@ -13,11 +13,11 @@ env:
   LLVM_REPO: https://github.com/ispc/ispc.dependencies
 
 jobs:
-  linux-ispc-llvm16-asan:
+  linux-ispc-llvm17-asan:
     runs-on: ubuntu-latest
     env:
-      LLVM_VERSION: "16.0"
-      LLVM_TAR: llvm-16.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
