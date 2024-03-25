@@ -3328,13 +3328,13 @@ static llvm::Module *lInitDispatchModule() {
     // DataLayout information supposed to be managed in single place in Target class.
     module->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
 
+    lSetCodeModel(module);
+    lSetPICLevel(module);
+
     // First, link in the definitions from the builtins-dispatch.ll file.
     const BitcodeLib *dispatch = g->target_registry->getDispatchLib(g->target_os);
     Assert(dispatch);
     AddBitcodeToModule(dispatch, module);
-
-    lSetCodeModel(module);
-    lSetPICLevel(module);
 
     return module;
 }

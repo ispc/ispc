@@ -4,16 +4,12 @@
   SPDX-License-Identifier: BSD-3-Clause
 */
 
-// This is the source code of __get_system_isa() function in the following files:
-// - dispatch.ll
-// - dispatch-macos.ll
+// This is the source code of __get_system_isa and __set_system_isa functions
+// for dispatch built-in module.
 //
-// Compile in the following way:
+// This file is compiled with clang during ISPC build in the following way:
 // - clang dispatch.c -O2 -emit-llvm -S -c -DREGULAR -o isa_dispatch.ll
 // - clang dispatch.c -O2 -emit-llvm -S -c -DMACOS   -o isa_dispatch-macos.ll
-//
-// Use the definition of __get_system_isa() from .ll file to update dispatch*.ll files.
-// Note that attributes and metadata need to be defined "in-place" instead of by number.
 //
 // MACOS version: the key difference is absence of OS support check for AVX512
 // - see issue #1854 for more details. Also it does not support ISAs newer than
@@ -27,6 +23,8 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+
+static int __system_best_isa = -1;
 
 static void __cpuid(int info[4], int infoType) {
     __asm__ __volatile__("cpuid" : "=a"(info[0]), "=b"(info[1]), "=c"(info[2]), "=d"(info[3]) : "0"(infoType));
@@ -172,5 +170,11 @@ int32_t __get_system_isa() {
         return 0; // SSE2
     } else {
         abort();
+    }
+}
+
+void __set_system_isa() {
+    if (__system_best_isa == -1) {
+        __system_best_isa = __get_system_isa();
     }
 }
