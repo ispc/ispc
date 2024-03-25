@@ -53,6 +53,4 @@ add_subdirectory(level_zero_mock)
 add_subdirectory(mock_tests)
 
 # Install gtest libraries
-install(
-    TARGETS gtest gtest_main
-    LIBRARY DESTINATION ${CMAKE_BINARY_DIR}/tests)
+install(TARGETS gtest gtest_main LIBRARY COMPONENT ispcrt-tests EXCLUDE_FROM_ALL)
