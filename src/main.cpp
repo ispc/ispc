@@ -1273,6 +1273,13 @@ int main(int Argc, char *Argv[]) {
     }
 
     // This needs to happen after the TargetOS is decided.
+    if (g->generateDebuggingSymbols && g->debugInfoType == Globals::DebugInfoType::None) {
+        if (g->target_os == TargetOS::windows) {
+            g->debugInfoType = Globals::DebugInfoType::CodeView;
+        } else {
+            g->debugInfoType = Globals::DebugInfoType::DWARF;
+        }
+    }
     setCallingConv(vectorCall, arch);
     if (g->enableTimeTrace) {
         llvm::timeTraceProfilerInitialize(g->timeTraceGranularity, "ispc");

@@ -15,7 +15,7 @@ find_program(M4_EXECUTABLE m4)
 if (WIN32)
     set(TARGET_OS_LIST_FOR_LL "windows" "unix")
 elseif (UNIX)
-    set(TARGET_OS_LIST_FOR_LL "unix")
+    set(TARGET_OS_LIST_FOR_LL "unix" "windows")
 endif()
 
 # Explicitly enumerate .ll and .m4 files included by target .ll files.
@@ -128,9 +128,7 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
             set(SKIP ON)
         endif()
     else()
-        if (${os_name} STREQUAL "windows")
-            set(SKIP ON)
-        elseif (${os_name} STREQUAL "ps4")
+        if (${os_name} STREQUAL "ps4")
             set(SKIP ON)
         elseif (${os_name} STREQUAL "ios")
             set(SKIP ON)
@@ -175,7 +173,12 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
     set(fpic "")
     set(debian_triple)
     if (${os_name} STREQUAL "windows")
-        set(triple ${target_arch}-pc-win32)
+        if (NOT WIN32)
+            set(triple ${target_arch}-pc-windows-gnu)
+        else()
+            set(triple ${target_arch}-pc-win32)
+        endif()
+        set(debian_triple ${target_arch}-w64-mingw32)
     elseif (${os_name} STREQUAL "linux")
         if (${target_arch} STREQUAL "i686" OR ${target_arch} STREQUAL "x86_64" OR ${target_arch} STREQUAL "aarch64")
             set(triple ${target_arch}-unknown-linux-gnu)
@@ -244,16 +247,20 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
             # -isystem/iusers/MacOSX10.14.sdk.tar/MacOSX10.14.sdk/usr/include
             set(includePath -isystem${ISPC_MACOS_SDK_PATH}/usr/include)
         elseif(NOT ${debian_triple} STREQUAL "")
-            # When compiling on Linux, there are two way to support cross targets:
-            # - add "foreign" architecture to the set of supported architectures and install corresponding toolchain.
-            #   For example on aarch64: "dpkg --add-architecture armhf" and "apt-get install libc6-dev:armhf".
-            #   In this case the headers will be installed in /usr/include/arm-linux-gnueabihf and will be
-            #   automatically picked up by clang.
-            # - install cross library. For example: "apt-get install libc6-dev-armhf-cross".
-            #   In this case headers will be installed in /usr/arm-linux-gnueabihf/include and will not be picked up
-            #   by clang by default. So the following line adds such path explicitly. If this path doesn't exist and
-            #   the headers can be found in other locations, this should not be a problem.
-            set(includePath -isystem/usr/${debian_triple}/include)
+            if (${os_name} STREQUAL "windows")
+                set(includePath -isystem${ISPC_MINGW_PATH}/${debian_triple}/include)
+            else()
+                # When compiling on Linux, there are two way to support cross targets:
+                # - add "foreign" architecture to the set of supported architectures and install corresponding toolchain.
+                #   For example on aarch64: "dpkg --add-architecture armhf" and "apt-get install libc6-dev:armhf".
+                #   In this case the headers will be installed in /usr/include/arm-linux-gnueabihf and will be
+                #   automatically picked up by clang.
+                # - install cross library. For example: "apt-get install libc6-dev-armhf-cross".
+                #   In this case headers will be installed in /usr/arm-linux-gnueabihf/include and will not be picked up
+                #   by clang by default. So the following line adds such path explicitly. If this path doesn't exist and
+                #   the headers can be found in other locations, this should not be a problem.
+                set(includePath -isystem/usr/${debian_triple}/include)
+            endif()
         endif()
     endif()
 
