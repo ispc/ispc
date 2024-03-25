@@ -72,13 +72,19 @@ function(target_ll_to_cpp llFileName bit os_name resultFileName)
     set_source_files_properties(${resultFileName} PROPERTIES GENERATED true)
 endfunction()
 
-function(dispatch_ll_to_cpp llFileName os_name resultFileName)
-    set(inputFilePath builtins/${llFileName}.ll)
-    set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-${llFileName}.cpp)
+function(dispatch_to_cpp os_name resultFileName)
+    set(inputFilePath builtins/dispatch.c)
+    set(DISP_TYPE -DREGULAR)
+    set(DISP_NAME "dispatch")
+    if (${os_name} STREQUAL "macos")
+        set(DISP_TYPE -DMACOS)
+        set(DISP_NAME "dispatch-macos")
+    endif()
+    set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-${DISP_NAME}.cpp)
     add_custom_command(
         OUTPUT ${output}
-        COMMAND ${M4_EXECUTABLE} -DLLVM_VERSION=${LLVM_VERSION} ${inputFilePath}
-            | \"${Python3_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} --type=dispatch --os=${os_name} --llvm_as ${LLVM_AS_EXECUTABLE} --opaque_flags="${LLVM_TOOLS_OPAQUE_FLAGS}"
+        COMMAND ${CLANGPP_EXECUTABLE} -x c ${ISPC_OPAQUE_FLAGS} ${DISP_TYPE} -O2 -emit-llvm -S -c ${inputFilePath} -o -
+            | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --type=dispatch --os=${os_name} --llvm_as ${LLVM_AS_EXECUTABLE} --opaque_flags="${LLVM_TOOLS_OPAQUE_FLAGS}"
             > ${output}
         DEPENDS ${inputFilePath} bitcode2cpp.py
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -321,8 +327,12 @@ function(builtin_xe_to_cpp bit resultFileName)
 endfunction()
 
 function (generate_target_builtins resultList)
-    dispatch_ll_to_cpp(dispatch "linux" output_generic)
-    dispatch_ll_to_cpp(dispatch-macos "macos" output_macos)
+    if (X86_ENABLED)
+        # If we build ISPC without X86 support, we don't need to generate x86
+        # specific dispatch code.
+        dispatch_to_cpp("linux" output_generic)
+        dispatch_to_cpp("macos" output_macos)
+    endif()
     list(APPEND tmpList ${output_generic} ${output_macos})
     if(MSVC)
         # Group generated files inside Visual Studio

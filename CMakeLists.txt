@@ -813,6 +813,11 @@ if (ISPC_INCLUDE_RT)
     add_subdirectory(ispcrt)
 endif()
 
+if (NOT X86_ENABLED)
+    # examples use x86 targets
+    set(ISPC_INCLUDE_EXAMPLES OFF)
+endif()
+
 if (ISPC_INCLUDE_EXAMPLES AND NOT ISPC_PREPARE_PACKAGE)
     include(ExternalProject)
     ExternalProject_Add(ispc_cpu_examples
