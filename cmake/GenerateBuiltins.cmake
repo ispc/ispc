@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2023, Intel Corporation
+#  Copyright (c) 2018-2024, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -321,13 +321,7 @@ function(builtin_xe_to_cpp bit resultFileName)
 endfunction()
 
 function (generate_target_builtins resultList)
-    # Dispatch module for macOS and all the rest of targets.
-    if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "14.0.0")
-        dispatch_ll_to_cpp(dispatch "linux" output_generic)
-    else()
-        dispatch_ll_to_cpp(dispatch-no-spr "linux" output_generic)
-    endif()
-
+    dispatch_ll_to_cpp(dispatch "linux" output_generic)
     dispatch_ll_to_cpp(dispatch-macos "macos" output_macos)
     list(APPEND tmpList ${output_generic} ${output_macos})
     if(MSVC)
