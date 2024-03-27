@@ -384,16 +384,16 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {CPU_Skylake, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
     {CPU_KNL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
     {CPU_SKX, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
-    {CPU_ICL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
+    {CPU_ICL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx512_vnni"}},
     {CPU_Silvermont, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42"}},
-    {CPU_ICX, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
-    {CPU_TGL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
-    {CPU_ADL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
+    {CPU_ICX, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx512_vnni"}},
+    {CPU_TGL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx512_vnni"}},
+    {CPU_ADL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
-    {CPU_MTL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
+    {CPU_MTL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
 #endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
-    {CPU_SPR, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
+    {CPU_SPR, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx_vnni", "avx512_vnni"}},
 #endif
     {CPU_ZNVER1, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
     {CPU_ZNVER2, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
@@ -671,8 +671,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
     : m_target(nullptr), m_targetMachine(nullptr), m_dataLayout(nullptr), m_valid(false), m_ispc_target(ispc_target),
       m_isa(SSE2), m_arch(Arch::none), m_is32Bit(true), m_cpu(""), m_attributes(""), m_tf_attributes(nullptr),
       m_nativeVectorWidth(-1), m_nativeVectorAlignment(-1), m_dataTypeWidth(-1), m_vectorWidth(-1), m_generatePIC(pic),
-      m_codeModel(code_model), m_maskingIsFree(false), m_maskBitCount(-1), m_hasHalfConverts(false),
-      m_hasHalfFullSupport(false), m_hasRand(false), m_hasGather(false), m_hasScatter(false),
+      m_codeModel(code_model), m_maskingIsFree(false), m_maskBitCount(-1), m_hasDotProductVNNI(false),
+      m_hasHalfConverts(false), m_hasHalfFullSupport(false), m_hasRand(false), m_hasGather(false), m_hasScatter(false),
       m_hasTranscendentals(false), m_hasTrigonometry(false), m_hasRsqrtd(false), m_hasRcpd(false),
       m_hasVecPrefetch(false), m_hasSaturatingArithmetic(false), m_hasFp16Support(false), m_hasFp64Support(true),
       m_warnings(0) {
@@ -960,6 +960,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         this->m_vectorWidth = 4;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
+        this->m_hasDotProductVNNI = false;
         CPUfromISA = CPU_SandyBridge;
         break;
     case ISPCTarget::avx1_i32x8:
@@ -970,6 +971,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         this->m_vectorWidth = 8;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
+        this->m_hasDotProductVNNI = true;
         CPUfromISA = CPU_SandyBridge;
         break;
     case ISPCTarget::avx1_i32x16:
@@ -980,6 +982,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         this->m_vectorWidth = 16;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
+        this->m_hasDotProductVNNI = true;
         CPUfromISA = CPU_SandyBridge;
         break;
     case ISPCTarget::avx1_i64x4:
@@ -990,6 +993,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         this->m_vectorWidth = 4;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 64;
+        this->m_hasDotProductVNNI = true;
         CPUfromISA = CPU_SandyBridge;
         break;
     case ISPCTarget::avx2_i8x32:
@@ -1003,6 +1007,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
+        this->m_hasDotProductVNNI = true;
         CPUfromISA = CPU_Haswell;
         break;
     case ISPCTarget::avx2_i16x16:
@@ -1016,6 +1021,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
+        this->m_hasDotProductVNNI = true;
         CPUfromISA = CPU_Haswell;
         break;
     case ISPCTarget::avx2_i32x4:
@@ -1029,6 +1035,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
+        this->m_hasDotProductVNNI = true;
         CPUfromISA = CPU_Haswell;
         break;
     case ISPCTarget::avx2_i32x8:
@@ -1042,6 +1049,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
+        this->m_hasDotProductVNNI = true;
         CPUfromISA = CPU_Haswell;
         break;
     case ISPCTarget::avx2_i32x16:
@@ -1055,6 +1063,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
+        this->m_hasDotProductVNNI = true;
         CPUfromISA = CPU_Haswell;
         break;
     case ISPCTarget::avx2_i64x4:
@@ -1068,6 +1077,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
+        this->m_hasDotProductVNNI = true;
         CPUfromISA = CPU_Haswell;
         break;
     case ISPCTarget::avx512knl_x16:
@@ -1103,6 +1113,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         this->m_hasTrigonometry = false;
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
+        this->m_hasDotProductVNNI = true;
         CPUfromISA = CPU_SKX;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1122,6 +1133,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         this->m_hasTrigonometry = false;
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
+        this->m_hasDotProductVNNI = true;
         CPUfromISA = CPU_SKX;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1141,6 +1153,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         this->m_hasTrigonometry = false;
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
+        this->m_hasDotProductVNNI = true;
         CPUfromISA = CPU_SKX;
         if (g->opt.disableZMM) {
             this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
@@ -1169,6 +1182,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         this->m_hasTrigonometry = false;
         this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
+        this->m_hasDotProductVNNI = true;
         CPUfromISA = CPU_SKX;
         break;
     case ISPCTarget::avx512skx_x32:
@@ -1190,6 +1204,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         this->m_hasTrigonometry = false;
         this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
+        this->m_hasDotProductVNNI = true;
         CPUfromISA = CPU_SKX;
         break;
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
@@ -1210,6 +1225,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
         this->m_hasFp16Support = true;
+        this->m_hasDotProductVNNI = true;
         CPUfromISA = CPU_SPR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1231,6 +1247,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
         this->m_hasFp16Support = true;
+        this->m_hasDotProductVNNI = true;
         CPUfromISA = CPU_SPR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1252,6 +1269,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
         this->m_hasFp16Support = true;
+        this->m_hasDotProductVNNI = true;
         CPUfromISA = CPU_SPR;
         if (g->opt.disableZMM) {
             this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
@@ -1278,6 +1296,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
         this->m_hasFp16Support = true;
+        this->m_hasDotProductVNNI = true;
         CPUfromISA = CPU_SPR;
         break;
     case ISPCTarget::avx512spr_x32:
@@ -1297,6 +1316,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
         this->m_hasFp16Support = true;
+        this->m_hasDotProductVNNI = true;
         CPUfromISA = CPU_SPR;
         break;
 #else
@@ -1638,6 +1658,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         }
         cpu = a.GetDefaultNameFromType(CPUID).c_str();
     }
+
     this->m_cpu = cpu;
 
     if (!error) {
@@ -1695,6 +1716,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
             featuresString = "+neon";
         }
 #endif
+        // Check VNNI support for requested CPU
+        m_hasDotProductVNNI &= (IsFeatureSupported("avx_vnni") || IsFeatureSupported("avx512_vnni"));
 
         // Support 'i64' and 'double' types in cm
         if (isXeTarget())
@@ -1830,6 +1853,10 @@ bool Target::checkIntrinsticSupport(llvm::StringRef name, SourcePos pos) {
         return true;
     }
     return true;
+}
+
+bool Target::IsFeatureSupported(const std::string &featureName) {
+    return CPUFeatures[AllCPUs().GetTypeFromName(m_cpu)].count(featureName) != 0;
 }
 
 std::string Target::SupportedCPUs() {

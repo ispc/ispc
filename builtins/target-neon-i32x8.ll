@@ -1,7 +1,7 @@
 ;;
 ;; target-neon-32-x2.ll
 ;;
-;;  Copyright(c) 2019-2023 Intel
+;;  Copyright(c) 2019-2024 Intel
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -742,3 +742,7 @@ rcph_rsqrth_decl
 
 transcendetals_decl()
 trigonometry_decl()
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; dot product
+dot_product_vnni_decl()

@@ -1,4 +1,4 @@
-;;  Copyright (c) 2020-2023, Intel Corporation
+;;  Copyright (c) 2020-2024, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -881,3 +881,57 @@ transcendetals_decl()
 trigonometry_decl()
 
 saturation_arithmetic_novec()
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; dot product
+declare <8 x i32> @llvm.x86.avx512.vpdpbusd.256(<8 x i32>, <8 x i32>, <8 x i32>) nounwind readnone
+define <32 x i32> @__dot4add_u8i8packed(<32 x i32> %a, <32 x i32> %b, <32 x i32> %acc) nounwind readnone alwaysinline {
+  v32tov8(i32, %a, %a0, %a1, %a2, %a3)
+  v32tov8(i32, %b, %b0, %b1, %b2, %b3)
+  v32tov8(i32, %acc, %acc0, %acc1, %acc2, %acc3)
+  %ret0 = call <8 x i32> @llvm.x86.avx512.vpdpbusd.256(<8 x i32> %acc0, <8 x i32> %a0, <8 x i32> %b0)
+  %ret1 = call <8 x i32> @llvm.x86.avx512.vpdpbusd.256(<8 x i32> %acc1, <8 x i32> %a1, <8 x i32> %b1)
+  %ret2 = call <8 x i32> @llvm.x86.avx512.vpdpbusd.256(<8 x i32> %acc2, <8 x i32> %a2, <8 x i32> %b2)
+  %ret3 = call <8 x i32> @llvm.x86.avx512.vpdpbusd.256(<8 x i32> %acc3, <8 x i32> %a3, <8 x i32> %b3)
+  v8tov32(i32, %ret0, %ret1, %ret2, %ret3, %ret)
+  ret <32 x i32> %ret
+}
+
+declare <8 x i32> @llvm.x86.avx512.vpdpbusds.256(<8 x i32>, <8 x i32>, <8 x i32>) nounwind readnone
+define <32 x i32> @__dot4add_u8i8packed_sat(<32 x i32> %a, <32 x i32> %b, <32 x i32> %acc) nounwind readnone alwaysinline {
+  v32tov8(i32, %a, %a0, %a1, %a2, %a3)
+  v32tov8(i32, %b, %b0, %b1, %b2, %b3)
+  v32tov8(i32, %acc, %acc0, %acc1, %acc2, %acc3)
+  %ret0 = call <8 x i32> @llvm.x86.avx512.vpdpbusds.256(<8 x i32> %acc0, <8 x i32> %a0, <8 x i32> %b0)
+  %ret1 = call <8 x i32> @llvm.x86.avx512.vpdpbusds.256(<8 x i32> %acc1, <8 x i32> %a1, <8 x i32> %b1)
+  %ret2 = call <8 x i32> @llvm.x86.avx512.vpdpbusds.256(<8 x i32> %acc2, <8 x i32> %a2, <8 x i32> %b2)
+  %ret3 = call <8 x i32> @llvm.x86.avx512.vpdpbusds.256(<8 x i32> %acc3, <8 x i32> %a3, <8 x i32> %b3)
+  v8tov32(i32, %ret0, %ret1, %ret2, %ret3, %ret)
+  ret <32 x i32> %ret
+}
+
+declare <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32>, <8 x i32>, <8 x i32>) nounwind readnone
+define <32 x i32> @__dot2add_i16packed(<32 x i32> %a, <32 x i32> %b, <32 x i32> %acc) nounwind readnone alwaysinline {
+  v32tov8(i32, %a, %a0, %a1, %a2, %a3)
+  v32tov8(i32, %b, %b0, %b1, %b2, %b3)
+  v32tov8(i32, %acc, %acc0, %acc1, %acc2, %acc3)
+  %ret0 = call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %acc0, <8 x i32> %a0, <8 x i32> %b0)
+  %ret1 = call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %acc1, <8 x i32> %a1, <8 x i32> %b1)
+  %ret2 = call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %acc2, <8 x i32> %a2, <8 x i32> %b2)
+  %ret3 = call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %acc3, <8 x i32> %a3, <8 x i32> %b3)
+  v8tov32(i32, %ret0, %ret1, %ret2, %ret3, %ret)
+  ret <32 x i32> %ret
+}
+
+declare <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32>, <8 x i32>, <8 x i32>) nounwind readnone
+define <32 x i32> @__dot2add_i16packed_sat(<32 x i32> %a, <32 x i32> %b, <32 x i32> %acc) nounwind readnone alwaysinline {
+  v32tov8(i32, %a, %a0, %a1, %a2, %a3)
+  v32tov8(i32, %b, %b0, %b1, %b2, %b3)
+  v32tov8(i32, %acc, %acc0, %acc1, %acc2, %acc3)
+  %ret0 = call <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32> %acc0, <8 x i32> %a0, <8 x i32> %b0)
+  %ret1 = call <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32> %acc1, <8 x i32> %a1, <8 x i32> %b1)
+  %ret2 = call <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32> %acc2, <8 x i32> %a2, <8 x i32> %b2)
+  %ret3 = call <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32> %acc3, <8 x i32> %a3, <8 x i32> %b3)
+  v8tov32(i32, %ret0, %ret1, %ret2, %ret3, %ret)
+  ret <32 x i32> %ret
+}
