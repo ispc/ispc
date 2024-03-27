@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -44,7 +44,7 @@ jobs:
         docker buildx build --tag ispc/ubuntu18.04:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=trunk .
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: llvm_trunk_linux_stage1_cache
         path: docker/ubuntu/18.04/cpu_ispc_build/cache.local
@@ -54,7 +54,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -63,7 +63,7 @@ jobs:
         cat /proc/cpuinfo
 
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: llvm_trunk_linux_stage1_cache
         path: docker/ubuntu/18.04/cpu_ispc_build/cache.local
@@ -84,7 +84,7 @@ jobs:
         tar czvf llvm-trunk-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz bin-trunk
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: llvm_trunk_linux
         path: docker/ubuntu/18.04/cpu_ispc_build/llvm-trunk-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz
@@ -97,12 +97,12 @@ jobs:
       LLVM_TAR: llvm-trunk-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: llvm_trunk_linux
 
@@ -124,7 +124,7 @@ jobs:
         .github/workflows/scripts/check-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ispc_llvm_trunk_linux
         path: build/ispc-trunk-linux.tar.gz
@@ -143,9 +143,9 @@ jobs:
                  avx512knl-x16,
                  avx512skx-x4, avx512skx-x8, avx512skx-x16, avx512skx-x64, avx512skx-x32]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ispc_llvm_trunk_linux
 
@@ -163,7 +163,7 @@ jobs:
         ./alloy.py -r --only="stability current -O0 -O1 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: fail_db.${{matrix.target}}.txt

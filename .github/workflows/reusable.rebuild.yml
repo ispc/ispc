@@ -85,7 +85,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -100,7 +100,7 @@ jobs:
         docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }}:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LTO=${{ inputs.lto }} --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg LLVM_DISABLE_ASSERTIONS=OFF .
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: llvm_linux_x86_lto_${{ inputs.lto }}_stage1_cache
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
@@ -110,7 +110,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -119,7 +119,7 @@ jobs:
         cat /proc/cpuinfo
 
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: llvm_linux_x86_lto_${{ inputs.lto }}_stage1_cache
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
@@ -140,7 +140,7 @@ jobs:
         tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: llvm_linux_x86_lto_${{ inputs.lto }}
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
@@ -149,7 +149,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -164,7 +164,7 @@ jobs:
         docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }}:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LTO=${{ inputs.lto }} --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg LLVM_DISABLE_ASSERTIONS=ON .
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: llvmrel_linux_x86_lto_${{ inputs.lto }}_stage1_cache
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
@@ -174,7 +174,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -183,7 +183,7 @@ jobs:
         cat /proc/cpuinfo
 
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: llvmrel_linux_x86_lto_${{ inputs.lto }}_stage1_cache
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
@@ -204,7 +204,7 @@ jobs:
         tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: llvmrel_linux_x86_lto_${{ inputs.lto }}
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
@@ -214,7 +214,7 @@ jobs:
     # Disabling this rebuild for non ispc/ispc repo, as it requires self-hosted runner
     if: github.repository == 'ispc/ispc'
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -230,7 +230,7 @@ jobs:
         docker buildx rm
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: llvm_linux_aarch64_lto_${{ inputs.lto }}_stage1_cache
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
@@ -242,7 +242,7 @@ jobs:
     if: github.repository == 'ispc/ispc'
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -251,7 +251,7 @@ jobs:
         cat /proc/cpuinfo
 
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: llvm_linux_aarch64_lto_${{ inputs.lto }}_stage1_cache
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
@@ -273,7 +273,7 @@ jobs:
         rm -rf result.tar usr bin-${{ inputs.version }}
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: llvm_linux_aarch64_lto_${{ inputs.lto }}
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
@@ -283,7 +283,7 @@ jobs:
     # Disabling this rebuild for non ispc/ispc repo, as it requires self-hosted runner
     if: github.repository == 'ispc/ispc'
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -299,7 +299,7 @@ jobs:
         docker buildx rm
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: llvmrel_linux_aarch64_lto_${{ inputs.lto }}_stage1_cache
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
@@ -311,7 +311,7 @@ jobs:
     if: github.repository == 'ispc/ispc'
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -320,7 +320,7 @@ jobs:
         cat /proc/cpuinfo
 
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: llvmrel_linux_aarch64_lto_${{ inputs.lto }}_stage1_cache
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
@@ -341,7 +341,7 @@ jobs:
         rm -rf result.tar usr bin-${{ inputs.version }}
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: llvmrel_linux_aarch64_lto_${{ inputs.lto }}
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
@@ -350,7 +350,7 @@ jobs:
     runs-on: windows-2019
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -385,7 +385,7 @@ jobs:
         7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: llvm_win_x86_lto_${{ inputs.lto }}
         path: llvm/llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.7z
@@ -394,7 +394,7 @@ jobs:
     runs-on: windows-2019
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -429,7 +429,7 @@ jobs:
         7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: llvmrel_win_x86_lto_${{ inputs.lto }}
         path: llvm/llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.7z
@@ -439,7 +439,7 @@ jobs:
     runs-on: [self-hosted, macOS]
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -465,7 +465,7 @@ jobs:
         tar cJvf llvm-${{ inputs.full_version }}-macos-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: llvm_macos_universal_lto_${{ inputs.lto }}
         path: llvm/llvm-${{ inputs.full_version }}-macos-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz
@@ -475,7 +475,7 @@ jobs:
     runs-on: [self-hosted, macOS]
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -501,7 +501,7 @@ jobs:
         tar cJvf llvm-${{ inputs.full_version }}-macos-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: llvmrel_macos_universal_lto_${{ inputs.lto }}
         path: llvm/llvm-${{ inputs.full_version }}-macos-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz
