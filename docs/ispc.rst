@@ -4124,9 +4124,16 @@ is on (i.e. the value is negative) and zero if it is off.
     unsigned int64 signbits(double x)
     uniform unsigned int64 signbits(uniform double x)
 
-Standard rounding functions are provided for ``float16``, ``float`` and ``double``
-types.  (On machines that support Intel®SSE or Intel® AVX, these functions all
-map to variants of the ``roundss`` and ``roundps`` instructions, respectively.)
+The standard library provides four rounding functions: ``round``, ``floor``,
+``ceil`` and ``trunc`` for ``float16``, ``float`` and ``double`` data types. On
+machines that support Intel®SSE or Intel® AVX, these functions all map to a
+single instruction, specifically a variant of the ``roundss`` and ``roundps``
+instructions. This offers enhanced performance, despite a minor semantic
+difference in the ``round`` function when compared to the ``C`` math library
+``round`` function. It computes the nearest integer value, rounding halfway
+cases to nearest even integer, i.e., corresponds to the ``C`` math library
+``roundeven`` function. These function operate regardless of the current
+rounding mode and do not signal precision exceptions.
 
 ::
 
