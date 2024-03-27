@@ -16,7 +16,7 @@
 // CHECK-LABEL: define linkonce_odr i64 @foo3___Cuni8___
 // CHECK: ret i64 10
 
-template<typename T, int N>
+template<typename T, uniform int N>
 noinline T foo1() {
     T value = N;
     return value;
