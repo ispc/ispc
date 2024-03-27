@@ -252,7 +252,7 @@ struct ForeachDimension {
 %type <type> type_specifier type_name rate_qualified_type_specifier
 %type <type> short_vec_specifier
 %type <typeList> type_specifier_list
-%type <atomicType> atomic_var_type_specifier int_constant_type
+%type <atomicType> atomic_var_type_specifier int_constant_type template_int_constant_type
 
 %type <typeQualifier> type_qualifier type_qualifier_list
 %type <storageClass> storage_class_specifier
@@ -2428,13 +2428,18 @@ int_constant_type
     | TOKEN_UINT64{ $$ = AtomicType::UniformUInt64->GetAsConstType(); }
     ;
 
+template_int_constant_type
+    : TOKEN_UNIFORM int_constant_type { $$ = $2; }
+    | int_constant_type { $$ = $1;}
+    ;
+
 template_int_parameter
-    : int_constant_type TOKEN_IDENTIFIER
+    : template_int_constant_type TOKEN_IDENTIFIER
       {
           $$ = new Symbol(*$<stringVal>2, Union(@1, @2), $1);
           lCleanUpString($2);
       }
-      | int_constant_type TOKEN_IDENTIFIER '=' int_constant
+      | template_int_constant_type TOKEN_IDENTIFIER '=' int_constant
       {
           $$ = new Symbol(*$<stringVal>2, Union(@1, @2), $1);
           lCleanUpString($2);

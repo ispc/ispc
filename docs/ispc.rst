@@ -3910,12 +3910,12 @@ template function specializations is not yet supported. Consider the following e
 For non-type template parameters, the following rules apply:
 
 * Uniform integral types (``int8``, ``uint8``, ``int16``, ``uint16``, ``int``, ``uint``, ``int64``, ``uint64``)
-  and enum types can be used as non-type template parameters.
+  and enum types can be used as non-type template parameters. Unbound types are treated as uniform.
   For example:
 
   ::
 
-      template <int N> int foo(int a) {
+      template <int N> int foo(int a) { // N is uniform int
         return a * N;
       }
 
