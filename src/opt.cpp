@@ -731,6 +731,18 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 
         optPM.addFunctionPass(PeepholePass());
         optPM.addFunctionPass(llvm::ADCEPass());
+        optPM.addFunctionPass(ShrinkVectorsPass());
+        optPM.addFunctionPass(llvm::InstCombinePass());
+        // TODO! do we need SROA afterwards?
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
+            // We don't have any LICM or SimplifyCFG passes scheduled after us, that would cleanup
+            // the CFG mess SROAPass may created if allowed to modify CFG, so forbid that.
+            optPM.addFunctionPass(llvm::SROAPass(llvm::SROAOptions::PreserveCFG));
+#elif ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
+            optPM.addFunctionPass(llvm::SROAPass());
+#else
+            optPM.addFunctionPass(llvm::SROA());
+#endif
         optPM.commitFunctionToModulePassManager();
         optPM.addModulePass(llvm::ModuleInlinerWrapperPass());
         optPM.addModulePass(llvm::StripDeadPrototypesPass());
