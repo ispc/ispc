@@ -1,4 +1,4 @@
-// RUN: %{ispc} --target=host --nowrap --nostdlib --debug-phase=first:first --emit-llvm-text %s -o - | FileCheck %s
+// RUN: %{ispc} --target=host --nowrap --nostdlib --debug-phase=first:first %s -o t.o | FileCheck %s
 
 // CHECK: [[TYPE:%.*]] = type { <[[WIDTH:[0-9]+]] x i8> }
 // CHECK: [[VAL:%.*]] = insertvalue [[TYPE]] undef, <[[WIDTH]] x i8> [[BUF:%.*]], 0

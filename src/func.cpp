@@ -756,7 +756,10 @@ void Function::GenerateIR() {
             // We create regular functions with ExternalLinkage by default.
             // Fix it to InternalLinkage only if the function is static or inline
             if (sc == SC_STATIC || isInline) {
-                function->setLinkage(llvm::GlobalValue::InternalLinkage);
+                if (!g->genStdlib) {
+                    // We use stdlib as library so do not add internal attr for its functions.
+                    function->setLinkage(llvm::GlobalValue::InternalLinkage);
+                }
             }
 
             if (g->target->isXeTarget()) {
@@ -1258,7 +1261,10 @@ llvm::Function *TemplateInstantiation::createLLVMFunction(Symbol *functionSym) {
 
     llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
     if (functionSym->storageClass == SC_STATIC || isInline) {
-        linkage = llvm::GlobalValue::InternalLinkage;
+        if (!g->genStdlib) {
+            // We use stdlib as library so do not add internal attr for its functions.
+            linkage = llvm::GlobalValue::InternalLinkage;
+        }
     } else {
         // If the linkage is not internal, apply the Clang linkage rules for templates.
         switch (kind) {

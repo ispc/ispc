@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -27,6 +27,7 @@
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/Debug.h>
 #include <llvm/Support/FileSystem.h>
+#include <llvm/Support/Path.h>
 #include <llvm/Support/Signals.h>
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
 #include <llvm/MC/TargetRegistry.h>
@@ -117,7 +118,7 @@ static void lPrintVersion() {
     printf("    [-MT <filename>]\t\t\tWhen used with `-M', changes the target of the rule emitted by dependency "
            "generation\n");
     printf("    [--no-omit-frame-pointer]\t\tDisable frame pointer omission. It may be useful for profiling\n");
-    printf("    [--nostdlib]\t\t\tDon't make the ispc standard library available\n");
+    printf("    [--nostdlib]\t\t\t Don't make the ispc standard library available\n");
     printf("    [--no-pragma-once]\t\t\tDon't use #pragma once in created headers\n");
     printf("    [--nocpp]\t\t\t\tDon't run the C preprocessor\n");
     printf("    [-o <name>/--outfile=<name>]\tOutput filename (may be \"-\" for standard output)\n");
@@ -200,20 +201,20 @@ static void lPrintVersion() {
 [[noreturn]] static void devUsage(int ret) {
     lPrintVersion();
     printf("\nusage (developer options): ispc\n");
-    printf("    [--ast-dump=user|all]\t\tDump AST for user code or all the code including stdlib. If no argument is "
-           "given, dump AST for user code only\n");
+    printf("    [--ast-dump]\t\tDump AST for user code or all the code including stdlib.\n");
     printf("    [--debug]\t\t\t\tPrint information useful for debugging ispc\n");
     printf("    [--debug-llvm]\t\t\tEnable LLVM debugging information (dumps to stderr)\n");
     printf("    [--debug-pm]\t\t\tPrint verbose information from ispc pass manager\n");
     printf("    [--debug-pm-time-trace]\t\tPrint time tracing information from ispc pass manager\n");
-    printf("    [--debug-phase=<value>]\t\tSet optimization phases to dump. "
-           "--debug-phase=first,210:220,300,305,310:last\n");
+    printf("    [--debug-phase=<value>]\t\tSet optimization or construction phases to dump. "
+           "--debug-phase=pre:first,210:220,300,305,310:last\n");
     printf("    [--[no-]discard-value-names]\tDo not discard/Discard value names when generating LLVM IR\n");
     printf("    [--dump-file[=<path>]]\t\tDump module IR to file(s) in "
            "current directory, or to <path> if specified\n");
+    printf("    [--gen-stdlib]\t\tEnable special compilation mode to generate LLVM IR for stdlib.ispc.");
     printf("    [--fuzz-seed=<value>]\t\tSeed value for RNG for fuzz testing\n");
     printf("    [--fuzz-test]\t\t\tRandomly perturb program input to test error conditions\n");
-    printf("    [--off-phase=<value>]\t\tSwitch off optimization phases. --off-phase=first,210:220,300,305,310:last\n");
+    printf("    [--off-phase=<value>]\t\tSwitch off optimization phases. --off-phase=pre:first,210:220,300,305,310:last\n");
     printf("    [--opt=<option>]\t\t\tSet optimization option\n");
     printf("        disable-all-on-optimizations\t\tDisable optimizations that take advantage of \"all on\" mask\n");
     printf("        disable-blended-masked-stores\t\tScalarize masked stores on SSE (vs. using vblendps)\n");
@@ -453,8 +454,10 @@ class ArgErrors {
 };
 
 static int ParsingPhaseName(char *stage, ArgErrors &errorHandler) {
-    if (strncmp(stage, "first", 5) == 0) {
-        return 0;
+    if (strncmp(stage, "pre", 3) == 0) {
+        return PRE_OPT_NUMBER;
+    } else if (strncmp(stage, "first", 5) == 0) {
+        return INIT_OPT_NUMBER;
     } else if (strncmp(stage, "last", 4) == 0) {
         return LAST_OPT_NUMBER;
     } else {
@@ -639,6 +642,16 @@ int main(int Argc, char *Argv[]) {
     BooleanOptValue discardValueNames = BooleanOptValue::none;
     BooleanOptValue wrapSignedInt = BooleanOptValue::none;
 
+    std::string ISPCExecutableAbsPath = llvm::sys::fs::getMainExecutable(argv[0], (void *)(intptr_t)main);
+    llvm::SmallString<128> includeDir(ISPCExecutableAbsPath);
+    llvm::sys::path::remove_filename(includeDir);
+    llvm::sys::path::remove_filename(includeDir);
+    llvm::SmallString<128> shareDir(includeDir);
+    llvm::sys::path::append(includeDir, "include");
+    lParseInclude(includeDir.c_str());
+    llvm::sys::path::append(shareDir, "share", "ispc");
+    g->shareDirPath = std::string(shareDir.str());
+
     ArgErrors errorHandler;
 
     // If the first argument is "link"
@@ -705,7 +718,12 @@ int main(int Argc, char *Argv[]) {
             errorHandler.AddError(
                 "Option \"link\" can't be used in compilation mode. Use \"ispc link --help\" for details");
         } else if (!strcmp(argv[i], "--support-matrix")) {
-            g->target_registry->printSupportMatrix();
+            std::vector<std::string> missedFiles;
+            g->target_registry->printSupportMatrix(missedFiles);
+            for (auto &name : missedFiles) {
+                errorHandler.AddError("Missed builtins/stdlib library: \"%s\"", name.c_str());
+            }
+            errorHandler.Emit();
             exit(0);
         } else if (!strncmp(argv[i], "-D", 2)) {
             g->cppArgs.push_back(argv[i]);
@@ -1059,9 +1077,9 @@ int main(int Argc, char *Argv[]) {
             g->dumpFilePath = ParsePath(argv[i] + strlen("--dump-file="), errorHandler);
         } else if (strncmp(argv[i], "--dump-file", 11) == 0) {
             g->dumpFile = true;
-        }
-
-        else if (strncmp(argv[i], "--off-phase=", 12) == 0) {
+        } else if (strncmp(argv[i], "--gen-stdlib", 12) == 0) {
+            g->genStdlib = true;
+        } else if (strncmp(argv[i], "--off-phase=", 12) == 0) {
             g->off_stages = ParsingPhases(argv[i] + strlen("--off-phase="), errorHandler);
 #ifdef ISPC_XE_ENABLED
         } else if (!strncmp(argv[i], "--vc-options=", 13)) {

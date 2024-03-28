@@ -1,4 +1,4 @@
-#  Copyright (c) 2018-2023, Intel Corporation
+#  Copyright (c) 2018-2024, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -64,7 +64,12 @@ for:
         mkdir build && cd build
         cmake .. -Thost=x64 -G %generator% -DCMAKE_BUILD_TYPE=%configuration% -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%\install -DISPC_PREPARE_PACKAGE=ON -DM4_EXECUTABLE=C:\cygwin64\bin\m4.exe -DISPC_CROSS=ON -DISPC_GNUWIN32_PATH=%CROSS_TOOLS%\gnuwin32 -DWASM_ENABLED=%WASM% -DISPC_INCLUDE_BENCHMARKS=ON
   build_script:
-    - cmd: msbuild %ISPC_HOME%\build\PACKAGE.vcxproj /p:Platform=x64 /p:Configuration=%configuration%
+  # Some builtins failed to build from the first time in parallel.
+  # It only happens with msbuild.
+    - cmd: |-
+        msbuild %ISPC_HOME%\build\builtins.vcxproj /p:Platform=x64 /p:Configuration=%configuration%
+        msbuild %ISPC_HOME%\build\builtins.vcxproj /p:Platform=x64 /p:Configuration=%configuration% /m:1
+        msbuild %ISPC_HOME%\build\PACKAGE.vcxproj /p:Platform=x64 /p:Configuration=%configuration%
   test_script:
   # Perf tests require Win64 configuration. "Visual Studio 16" generator is Win64 by default but for older versions
   # we need to specify it manually.

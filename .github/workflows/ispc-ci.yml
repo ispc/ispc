@@ -852,7 +852,7 @@ jobs:
 
     - name: Build package
       run: |
-        cmake -B build superbuild --preset os -DLTO=ON -DXE_DEPS=OFF -DCMAKE_CXX_FLAGS=-Werror -DPREBUILT_STAGE2_PATH="${GITHUB_WORKSPACE}/bin-$LLVM_VERSION" -DMACOS_UNIVERSAL_BIN=ON -DISPC_ANDROID_NDK_PATH=${{ env.ISPC_ANDROID_NDK_PATH }}
+        cmake -B build superbuild --preset os -DLTO=ON -DXE_DEPS=OFF -DCMAKE_CXX_FLAGS=-Werror -DPREBUILT_STAGE2_PATH="${GITHUB_WORKSPACE}/bin-$LLVM_VERSION" -DMACOS_UNIVERSAL_BIN=ON -DISPC_CROSS=OFF -DISPC_ANDROID_NDK_PATH=${{ env.ISPC_ANDROID_NDK_PATH }}
         cmake --build build
 
     - name: Sanity testing (make check-all)

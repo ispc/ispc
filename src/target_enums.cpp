@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019-2023, Intel Corporation
+  Copyright (c) 2019-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -295,6 +295,7 @@ std::string ISPCTargetToString(ISPCTarget target) {
     case ISPCTarget::xelpg_x16:
         return "xelpg-x16";
     case ISPCTarget::none:
+        return "none";
     case ISPCTarget::error:
         // Fall through
         ;

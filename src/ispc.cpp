@@ -2304,6 +2304,7 @@ Globals::Globals() {
     debugPMTimeTrace = false;
     astDump = Globals::ASTDumpKind::None;
     dumpFile = false;
+    genStdlib = false;
     printTarget = false;
     NoOmitFramePointer = false;
     debugIR = -1;

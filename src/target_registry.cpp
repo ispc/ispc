@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019-2023, Intel Corporation
+  Copyright (c) 2019-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -58,58 +58,68 @@ class Triple {
     };
 };
 
-std::vector<const BitcodeLib *> *TargetLibRegistry::libs = nullptr;
+extern std::vector<BitcodeLib> TargetBuiltinsBitcodeLibArray;
+extern std::vector<BitcodeLib> CommonBuiltinsBitcodeLibArray;
+extern std::vector<BitcodeLib> DispatchBitcodeLibArray;
+extern std::vector<BitcodeLib> StdlibBitcodeLibArray;
 
 TargetLibRegistry::TargetLibRegistry() {
     // TODO: sort before adding - to canonicalize.
     // TODO: check for conflicts / duplicates.
     m_dispatch = nullptr;
     m_dispatch_macos = nullptr;
-    for (auto lib : *libs) {
-        switch (lib->getType()) {
-        case BitcodeLib::BitcodeLibType::Dispatch:
-            if (lib->getOS() == TargetOS::macos) {
-                m_dispatch_macos = lib;
-            } else {
-                m_dispatch = lib;
-            }
-            break;
-        case BitcodeLib::BitcodeLibType::Builtins_c:
-            m_builtins[Triple(lib->getISPCTarget(), lib->getOS(), lib->getArch()).encode()] = lib;
-            m_supported_oses[(int)lib->getOS()] = true;
-            // "custom_linux" target is regular "linux" target for ARM with a few tweaks.
-            // So, create it as an alias.
-            if (lib->getOS() == TargetOS::linux && (lib->getArch() == Arch::arm || lib->getArch() == Arch::aarch64)) {
-                m_builtins[Triple(lib->getISPCTarget(), TargetOS::custom_linux, lib->getArch()).encode()] = lib;
-                m_supported_oses[(int)TargetOS::custom_linux] = true;
-            }
-            // PS5 is an alias to PS4 in terms of target files. All the tuning is done through CPU flags.
-            if (lib->getOS() == TargetOS::ps4) {
-                m_builtins[Triple(lib->getISPCTarget(), TargetOS::ps5, lib->getArch()).encode()] = lib;
-                m_supported_oses[(int)TargetOS::ps5] = true;
-            }
-            break;
-        case BitcodeLib::BitcodeLibType::ISPC_target:
-            m_targets[Triple(lib->getISPCTarget(), lib->getOS(), lib->getArch()).encode()] = lib;
-            // "custom_linux" target is regular "linux" target for ARM with a few tweaks.
-            // So, create it as an alias.
-            if (lib->getOS() == TargetOS::linux && (lib->getArch() == Arch::arm || lib->getArch() == Arch::aarch64)) {
-                m_targets[Triple(lib->getISPCTarget(), TargetOS::custom_linux, lib->getArch()).encode()] = lib;
-            }
-            // PS5 is an alias to PS4 in terms of target files. All the tuning is done through CPU flags.
-            if (lib->getOS() == TargetOS::ps4) {
-                m_targets[Triple(lib->getISPCTarget(), TargetOS::ps5, lib->getArch()).encode()] = lib;
-            }
-            break;
+
+    for (auto &bclib : DispatchBitcodeLibArray) {
+        if (bclib.getOS() == TargetOS::macos) {
+            m_dispatch_macos = &bclib;
+        } else {
+            m_dispatch = &bclib;
         }
     }
-}
 
-void TargetLibRegistry::RegisterTarget(const BitcodeLib *lib) {
-    if (!libs) {
-        libs = new std::vector<const BitcodeLib *>();
+    for (auto &bclib : CommonBuiltinsBitcodeLibArray) {
+        auto target = bclib.getISPCTarget();
+        auto arch = bclib.getArch();
+        auto os = bclib.getOS();
+        Triple triple(target, os, arch);
+        m_builtins[triple.encode()] = &bclib;
+        m_supported_oses[(int)os] = true;
+
+        // "custom_linux" target is regular "linux" target for ARM with a few tweaks.
+        // So, create it as an alias.
+        if (os == TargetOS::linux && (arch == Arch::arm || arch == Arch::aarch64)) {
+            m_builtins[Triple(target, TargetOS::custom_linux, arch).encode()] = &bclib;
+            m_supported_oses[(int)TargetOS::custom_linux] = true;
+        }
+        // PS5 is an alias to PS4 in terms of target files. All the tuning is done through CPU flags.
+        if (os == TargetOS::ps4) {
+            m_builtins[Triple(target, TargetOS::ps5, arch).encode()] = &bclib;
+            m_supported_oses[(int)TargetOS::ps5] = true;
+        }
     }
-    libs->push_back(lib);
+
+    for (auto &bclib : TargetBuiltinsBitcodeLibArray) {
+        auto target = bclib.getISPCTarget();
+        auto arch = bclib.getArch();
+        auto os = bclib.getOS();
+        Triple triple(target, os, arch);
+        m_targets[triple.encode()] = &bclib;
+
+        // "custom_linux" target is regular "linux" target for ARM with a few tweaks.
+        // So, create it as an alias.
+        if (os == TargetOS::linux && (arch == Arch::arm || arch == Arch::aarch64)) {
+            m_targets[Triple(target, TargetOS::custom_linux, arch).encode()] = &bclib;
+        }
+        // PS5 is an alias to PS4 in terms of target files. All the tuning is done through CPU flags.
+        if (os == TargetOS::ps4) {
+            m_targets[Triple(target, TargetOS::ps5, arch).encode()] = &bclib;
+        }
+    }
+
+    for (auto &bclib : StdlibBitcodeLibArray) {
+        Triple triple(bclib.getISPCTarget(), bclib.getOS(), bclib.getArch());
+        m_stdlibs[triple.encode()] = &bclib;
+    }
 }
 
 TargetLibRegistry *TargetLibRegistry::getTargetLibRegistry() {
@@ -128,7 +138,9 @@ const BitcodeLib *TargetLibRegistry::getBuiltinsCLib(TargetOS os, Arch arch) con
     }
     return nullptr;
 }
-const BitcodeLib *TargetLibRegistry::getISPCTargetLib(ISPCTarget target, TargetOS os, Arch arch) const {
+
+static const BitcodeLib *lGetTargetLib(const std::map<uint32_t, const BitcodeLib *> &libs, ISPCTarget target,
+                                       TargetOS os, Arch arch) {
     // TODO: validate parameters not to be errors or forbidden values.
 
     // This is an alias. It might be a good idea generalize this.
@@ -183,15 +195,23 @@ const BitcodeLib *TargetLibRegistry::getISPCTargetLib(ISPCTarget target, TargetO
         UNREACHABLE();
     }
 
-    auto result = m_targets.find(Triple(target, os, arch).encode());
-    if (result != m_targets.end()) {
+    auto result = libs.find(Triple(target, os, arch).encode());
+    if (result != libs.end()) {
         return result->second;
     }
     return nullptr;
 }
 
+const BitcodeLib *TargetLibRegistry::getISPCTargetLib(ISPCTarget target, TargetOS os, Arch arch) const {
+    return lGetTargetLib(m_targets, target, os, arch);
+}
+
+const BitcodeLib *TargetLibRegistry::getISPCStdLib(ISPCTarget target, TargetOS os, Arch arch) const {
+    return lGetTargetLib(m_stdlibs, target, os, arch);
+}
+
 // Print user-friendly message about supported targets
-void TargetLibRegistry::printSupportMatrix() const {
+void TargetLibRegistry::printSupportMatrix(std::vector<std::string> &missedFiles) const {
     // Vector of rows, which are vectors of cells.
     std::vector<std::vector<std::string>> table;
 
@@ -216,6 +236,18 @@ void TargetLibRegistry::printSupportMatrix() const {
             for (int k = (int)Arch::none; k < (int)Arch::error; k++) {
                 Arch arch = (Arch)k;
                 if (isSupported(target, os, arch)) {
+                    const BitcodeLib *clib = getBuiltinsCLib(os, arch);
+                    const BitcodeLib *tlib = getISPCTargetLib(target, os, arch);
+                    const BitcodeLib *slib = getISPCStdLib(target, os, arch);
+                    if (!clib->fileExists()) {
+                        missedFiles.push_back(clib->getFilename());
+                    }
+                    if (!tlib->fileExists()) {
+                        missedFiles.push_back(tlib->getFilename());
+                    }
+                    if (!slib->fileExists()) {
+                        missedFiles.push_back(slib->getFilename());
+                    }
                     if (!arch_list_os.empty()) {
                         arch_list_os += ", ";
                     }

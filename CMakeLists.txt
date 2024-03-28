@@ -423,12 +423,11 @@ message(STATUS "ISPC opaque pointers mode is " ${ISPC_OPAQUE_PTR_MODE})
 get_llvm_libfiles(LLVM_LIBRARY_LIST ${LLVM_COMPONENTS})
 get_llvm_cppflags(LLVM_CPP_FLAGS)
 
-generate_target_builtins(BUILTIN_FILES ${ISPC_TARGETS})
-generate_common_builtins(BUILTIN_CPP_FILES)
-generate_stdlib(STDLIB_FILES ${ISPC_MASKS})
+set(TARGET_LIBS_FILE "${CMAKE_BINARY_DIR}/target_libs.cpp")
 
-add_executable(${PROJECT_NAME} ${BUILTIN_FILES} ${BUILTIN_CPP_FILES}
-               ${STDLIB_FILES} ${BISON_CPP_OUTPUT} ${FLEX_OUTPUT}
+add_executable(${PROJECT_NAME}
+               ${TARGET_LIBS_FILE}
+               ${BISON_CPP_OUTPUT} ${FLEX_OUTPUT}
                ${CMAKE_CURRENT_SOURCE_DIR}/stdlib.ispc
                ${CMAKE_CURRENT_SOURCE_DIR}/common/version.rc)
 
@@ -475,7 +474,26 @@ target_sources(${PROJECT_NAME}
         "src/parse.yy"
         "src/lex.ll"
         "common/version.h"
+        "src/target_libs.cpp.in"
 )
+
+set(BITCODE_FOLDER ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/../share/ispc)
+set(INCLUDE_FOLDER ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/../include)
+message(STATUS "BITCODE_FOLDER is ${BITCODE_FOLDER}")
+file(MAKE_DIRECTORY ${BITCODE_FOLDER})
+
+generate_target_builtins(TARGET_BUILTINS_BCLIB_INITIALIZER DISPATCH_BCLIB_INITIALIZER ${ISPC_TARGETS})
+generate_common_builtins(COMMON_BUILTINS_BCLIB_INITIALIZER)
+
+add_custom_target(
+    builtins ALL
+    DEPENDS common-builtins target-builtins dispatch-builtins
+)
+
+create_stdlib_commands(STDLIB_BCLIB_INITIALIZER)
+
+message(STATUS "Configure target registry lists of bitcode libraries ${TARGET_LIBS_FILE}")
+configure_file("src/target_libs.cpp.in" ${TARGET_LIBS_FILE} @ONLY)
 
 # ISPC passes
 add_subdirectory(src/opt)
@@ -485,6 +503,16 @@ if (WIN32)
     set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/stdlib.ispc" PROPERTIES HEADER_FILE_ONLY TRUE)
     source_group("ISPC" FILES "${CMAKE_CURRENT_SOURCE_DIR}/stdlib.ispc")
 endif()
+
+add_custom_command(
+    OUTPUT ${INCLUDE_FOLDER}/stdlib.isph
+    DEPENDS ${CMAKE_SOURCE_DIR}/stdlib.isph
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/stdlib.isph ${INCLUDE_FOLDER}/stdlib.isph)
+
+add_custom_target(
+    stdlib-header ALL
+    DEPENDS ${INCLUDE_FOLDER}/stdlib.isph
+)
 
 # Build definitions
 string(TIMESTAMP BUILD_DATE "%Y%m%d" UTC)
@@ -706,7 +734,7 @@ if (ISPC_INCLUDE_EXAMPLES AND NOT ISPC_PREPARE_PACKAGE)
     include(ExternalProject)
     ExternalProject_Add(ispc_cpu_examples
         PREFIX cpu_examples
-        DEPENDS ispc
+        DEPENDS ispc stdlib
         SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/examples/cpu"
         CMAKE_CACHE_ARGS
             -DISPC_BUILD:BOOL=TRUE
@@ -732,7 +760,7 @@ if (ISPC_INCLUDE_XE_EXAMPLES AND ISPC_INCLUDE_RT AND NOT ISPC_PREPARE_PACKAGE)
         # using cmake generator conditional expressions were unsuccessful.
         ExternalProject_Add(ispc_xpu_examples
             PREFIX xpu_examples
-            DEPENDS ispc ispcrt benchmark
+            DEPENDS ispc stdlib ispcrt benchmark
             SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/examples/xpu"
             CMAKE_CACHE_ARGS
                 -DISPC_BUILD:BOOL=TRUE
@@ -752,7 +780,7 @@ if (ISPC_INCLUDE_XE_EXAMPLES AND ISPC_INCLUDE_RT AND NOT ISPC_PREPARE_PACKAGE)
     else()
         ExternalProject_Add(ispc_xpu_examples
             PREFIX xpu_examples
-            DEPENDS ispc ispcrt
+            DEPENDS ispc stdlib ispcrt
             SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/examples/xpu"
             CMAKE_CACHE_ARGS
                 -DISPC_BUILD:BOOL=TRUE
@@ -772,6 +800,8 @@ endif()
 
 # Install
 install (TARGETS ${PROJECT_NAME} DESTINATION bin)
+install(FILES stdlib.isph DESTINATION include)
+install(DIRECTORY ${BITCODE_FOLDER} DESTINATION share)
 if (ISPC_PREPARE_PACKAGE)
     if (ISPC_PACKAGE_EXAMPLES)
         if (XE_ENABLED)

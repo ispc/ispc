@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -11,70 +11,12 @@
            ispc code
 */
 
-#if (ISPC_MASK_BITS == 1)
-#define IntMaskType bool
-#define UIntMaskType bool
-#elif (ISPC_MASK_BITS == 8)
-#define IntMaskType int8
-#define UIntMaskType unsigned int8
-#elif (ISPC_MASK_BITS == 16)
-#define IntMaskType int16
-#define UIntMaskType unsigned int16
-#elif (ISPC_MASK_BITS == 32)
-#define IntMaskType int32
-#define UIntMaskType unsigned int32
-#elif (ISPC_MASK_BITS == 64)
-#define IntMaskType int64
-#define UIntMaskType unsigned int64
-#else
-#error Unknown value of ISPC_MASK_BITS
-#endif
+// Ideally we need to have here header with builtins API
+#define ISPC_INTERNAL_STDLIB_COMPILATION
+#include "stdlib.isph"
+#include "target.isph"
+#undef ISPC_INTERNAL_STDLIB_COMPILATION
 
-typedef uniform int8 *uniform opaque_ptr_t;
-///////////////////////////////////////////////////////////////////////////
-/* Limits of integral types. */
-#ifndef INT8_MAX
-#define INT8_MAX (127)
-#endif
-#ifndef INT16_MAX
-#define INT16_MAX (32767)
-#endif
-#ifndef INT32_MAX
-#define INT32_MAX (2147483647)
-#endif
-#ifndef INT64_MAX
-#define INT64_MAX (9223372036854775807)
-#endif
-#ifndef UINT8_MAX
-#define UINT8_MAX (255)
-#endif
-#ifndef UINT16_MAX
-#define UINT16_MAX (65535)
-#endif
-#ifndef UINT32_MAX
-#define UINT32_MAX (4294967295)
-#endif
-#ifndef UINT64_MAX
-#define UINT64_MAX (18446744073709551615)
-#endif
-#ifndef INT8_MIN
-#define INT8_MIN (-INT8_MAX - 1)
-#endif
-#ifndef INT16_MIN
-#define INT16_MIN (-INT16_MAX - 1)
-#endif
-#ifndef INT32_MIN
-#define INT32_MIN (-INT32_MAX - 1)
-#endif
-#ifndef INT64_MIN
-#define INT64_MIN (-INT64_MAX - 1)
-#endif
-///////////////////////////////////////////////////////////////////////////
-// GEN target specific
-// 4 bytes by default
-#ifndef PREFETCH_DATASIZE_DEFAULT
-#define PREFETCH_DATASIZE_DEFAULT 4
-#endif
 ///////////////////////////////////////////////////////////////////////////
 // Low level primitives
 
@@ -4493,10 +4435,6 @@ __declspec(safe) static inline uniform int float_to_srgb8(uniform float inval) {
 
 ///////////////////////////////////////////////////////////////////////////
 // RNG stuff
-
-struct RNGState {
-    unsigned int z1, z2, z3, z4;
-};
 
 static inline unsigned int random(varying RNGState *uniform state) {
     unsigned int b;

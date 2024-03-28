@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -261,6 +261,12 @@ void Declarator::Print() const {
 
 void Declarator::Print(Indent &indent) const {
     indent.Print("Declarator", pos);
+
+    if (type) {
+        printf("[type: %s] ", type->GetString().c_str());
+    } else {
+        printf("[type: none] ");
+    }
 
     printf("[");
     lPrintTypeQualifiers(typeQualifiers);

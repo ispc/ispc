@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -28,12 +28,16 @@ bool ReplaceStdlibShiftPass::replaceStdlibShiftBuiltin(llvm::BasicBlock &bb) {
     bool modifiedAny = false;
 
     llvm::Function *shifts[6];
-    shifts[0] = m->module->getFunction("shift___vytuni");
-    shifts[1] = m->module->getFunction("shift___vysuni");
-    shifts[2] = m->module->getFunction("shift___vyiuni");
-    shifts[3] = m->module->getFunction("shift___vyIuni");
-    shifts[4] = m->module->getFunction("shift___vyfuni");
-    shifts[5] = m->module->getFunction("shift___vyduni");
+    std::string targetSuffix = std::string("_") + g->target->GetISAString();
+    if (g->singleTargetCompilation) {
+        targetSuffix = "";
+    }
+    shifts[0] = m->module->getFunction(std::string("shift___vytuni") + targetSuffix);
+    shifts[1] = m->module->getFunction(std::string("shift___vysuni") + targetSuffix);
+    shifts[2] = m->module->getFunction(std::string("shift___vyiuni") + targetSuffix);
+    shifts[3] = m->module->getFunction(std::string("shift___vyIuni") + targetSuffix);
+    shifts[4] = m->module->getFunction(std::string("shift___vyfuni") + targetSuffix);
+    shifts[5] = m->module->getFunction(std::string("shift___vyduni") + targetSuffix);
 
     // Note: we do modify instruction list during the traversal, so the iterator
     // is moved forward before the instruction is processed.

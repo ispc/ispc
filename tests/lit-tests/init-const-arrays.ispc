@@ -1,4 +1,4 @@
-// RUN: %{ispc} --target=host --nowrap --nostdlib --debug-phase=first:first --emit-llvm-text %s -o - | FileCheck %s
+// RUN: %{ispc} --target=host --nowrap --nostdlib --debug-phase=first:first %s -o t.o | FileCheck %s
 
 // CHECK: @glb_goo_bool = global [4 x i8] c"\FF\00\FF\00"
 // CHECK: @glb_goo_int8 = global [4 x i8] c"\01\00\01\00"

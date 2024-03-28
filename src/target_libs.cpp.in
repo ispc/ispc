@@ -1,0 +1,33 @@
+//
+//  Copyright (c) 2024, Intel Corporation
+//
+//  SPDX-License-Identifier: BSD-3-Clause
+
+
+// Template file for the list of bitcode files containing target-specific functions.
+
+#include <vector>
+#include <string>
+#include "bitcode_lib.h"
+
+using namespace ispc;
+
+std::vector<BitcodeLib> DispatchBitcodeLibArray = {
+    // BitcodeLib("builtins-dispatch.bc", TargetOS::linux),
+    @DISPATCH_BCLIB_INITIALIZER@
+};
+
+std::vector<BitcodeLib> CommonBuiltinsBitcodeLibArray = {
+    // BitcodeLib("builtins-cpp-linux-x86_64.bc", TargetOS::linux, Arch::x86_64),
+    @COMMON_BUILTINS_BCLIB_INITIALIZER@
+};
+
+std::vector<BitcodeLib> TargetBuiltinsBitcodeLibArray = {
+    // BitcodeLib("builtins-target-sse2_i32x4_x86_linux.bc", ISPCTarget::sse2_i32x4, TargetOS::linux, Arch::x86_64),
+    @TARGET_BUILTINS_BCLIB_INITIALIZER@
+};
+
+std::vector<BitcodeLib> StdlibBitcodeLibArray = {
+    // BitcodeLib("stdlib-sse2_i32x4_x86_linux.bc", ISPCTarget::sse2_i32x4, TargetOS::linux, Arch::x86_64),
+    @STDLIB_BCLIB_INITIALIZER@
+};

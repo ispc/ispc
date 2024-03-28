@@ -16,6 +16,7 @@
 
 namespace ispc {
 
+// TOOD! rewrite docs
 /** Adds declarations and definitions of ispc standard library functions
     and types to the given module.
 
@@ -27,9 +28,26 @@ namespace ispc {
     @param includeStdlib   Indicates whether the definitions from the stdlib.ispc
                            file should be added to the module.
  */
-void DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *module, bool includeStdlib);
 
-void AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable *symbolTable = nullptr);
+void LinkDispatcher(llvm::Module *module);
+
+void LinkCommonBuiltins(SymbolTable *symbolTable, llvm::Module *module);
+
+void LinkTargetBuiltins(SymbolTable *symbolTable, llvm::Module *module);
+
+void LinkStdlib(SymbolTable *symbolTable, llvm::Module *module);
+
+void addPersistentToLLVMUsed(llvm::Module &M);
+
+void removeUnused(llvm::Module *M);
+
+void debugDumpModule(llvm::Module *module, std::string name, int stage);
+
+void AddModuleSymbols(llvm::Module *module, SymbolTable *symbolTable);
+
+void AddBitcodeToModule(llvm::Module *lib, llvm::Module *module);
+
+void AddDeclarationsToModule(llvm::Module *lib, llvm::Module *module);
 
 /** Create ISPC symbol for LLVM intrinsics and add it to the given module.
 

@@ -42,6 +42,12 @@
  */
 #define ISPC_MAX_NVEC 64
 
+// Number of first construction phase
+#define PRE_OPT_NUMBER 0
+
+// Number of initial optimization phase
+#define INIT_OPT_NUMBER 10
+
 // Number of final optimization phase
 #define LAST_OPT_NUMBER 1000
 
@@ -721,8 +727,14 @@ struct Globals {
     /** Whether to dump IR to file. */
     bool dumpFile;
 
+    /** Wherther we are in special mode of generating IR for stdlib. */
+    bool genStdlib;
+
     /** Store the path to directory for IR file dumps. */
     std::string dumpFilePath;
+
+    /** Store the absolute path to share/ispc directory. */
+    std::string shareDirPath;
 
     /** Indicates after which optimization we want to generate
         DebugIR information. */
@@ -794,6 +806,9 @@ struct Globals {
     /** If true, function names are mangled by appending the target ISA and
         vector width to them. */
     bool mangleFunctionsWithTarget;
+
+    /** If enabled, it means that we generate code only for one target. */
+    bool singleTargetCompilation;
 
     /** If enabled, the lexer will randomly replace some tokens returned
         with other tokens, in order to test error condition handling in the
