@@ -81,7 +81,7 @@ jobs:
       LLVM_TAR: llvm-14.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -103,7 +103,7 @@ jobs:
         .github/workflows/scripts/check-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ispc_llvm14_linux
         path: build/ispc-trunk-linux.tar.gz
@@ -117,7 +117,7 @@ jobs:
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -139,7 +139,7 @@ jobs:
         .github/workflows/scripts/check-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ispc_llvm15_linux
         path: build/ispc-trunk-linux.tar.gz
@@ -153,7 +153,7 @@ jobs:
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -175,7 +175,7 @@ jobs:
         .github/workflows/scripts/check-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ispc_llvm16_linux
         path: build/ispc-trunk-linux.tar.gz
@@ -189,7 +189,7 @@ jobs:
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -212,7 +212,7 @@ jobs:
         cmake --build build --target ispc-stage2-check-all
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ispc_llvm16_lto_linux
         path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-linux.tar.gz
@@ -226,7 +226,7 @@ jobs:
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -248,7 +248,7 @@ jobs:
         .github/workflows/scripts/check-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ispc_llvm16rel_linux
         path: build/ispc-trunk-linux.tar.gz
@@ -262,7 +262,7 @@ jobs:
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -284,7 +284,7 @@ jobs:
         .github/workflows/scripts/check-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ispc_llvm17_linux
         path: build/ispc-trunk-linux.tar.gz
@@ -299,7 +299,7 @@ jobs:
       INSTALL_COMPUTE_RUNTIME: 1
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -330,13 +330,13 @@ jobs:
         cmake --build build --target ispc-stage2-check
 
     - name: Upload XE enabled package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ispc_xe_llvm16rel_linux
         path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-linux.tar.gz
 
     - name: Upload ISPC with XE dependencies
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ispc_xe_deps_llvm16rel_linux
         path: ispc-xe
@@ -351,9 +351,9 @@ jobs:
         arch: [x86, x86-64]
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ispc_llvm14_linux
 
@@ -376,7 +376,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: fail_db.llvm14.${{matrix.arch}}.${{matrix.target}}.txt
@@ -399,9 +399,9 @@ jobs:
         arch: [x86, x86-64]
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ispc_llvm15_linux
 
@@ -424,7 +424,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: fail_db.llvm15.${{matrix.arch}}.${{matrix.target}}.txt
@@ -447,9 +447,9 @@ jobs:
         arch: [x86, x86-64]
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ispc_llvm16_linux
 
@@ -472,7 +472,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: fail_db.llvm16.${{matrix.arch}}.${{matrix.target}}.txt
@@ -495,9 +495,9 @@ jobs:
         arch: [x86, x86-64]
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ispc_llvm16_lto_linux
 
@@ -520,7 +520,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: fail_db.llvm16_lto.${{matrix.arch}}.${{matrix.target}}.txt
@@ -544,9 +544,9 @@ jobs:
         arch: [x86, x86-64]
         target: [avx2-i32x8]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ispc_llvm16rel_linux
 
@@ -569,7 +569,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: fail_db.llvm16rel.${{matrix.arch}}.${{matrix.target}}.txt
@@ -596,9 +596,9 @@ jobs:
         arch: [x86, x86-64]
         target: [avx2-i32x8]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ispc_llvm16_linux
 
@@ -621,7 +621,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: fail_db.llvm16.debug.${{matrix.arch}}.${{matrix.target}}.txt
@@ -644,9 +644,9 @@ jobs:
         arch: [x86, x86-64]
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ispc_llvm17_linux
 
@@ -669,7 +669,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: fail_db.llvm17.${{matrix.arch}}.${{matrix.target}}.txt
@@ -696,9 +696,9 @@ jobs:
     env:
       INSTALL_COMPUTE_RUNTIME: 0
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ispc_xe_llvm16rel_linux
 
@@ -722,7 +722,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: fail_db.xe.llvm16rel.${{matrix.arch}}.${{matrix.target}}.txt
@@ -743,7 +743,7 @@ jobs:
       LLVM_TAR: llvm-15.0.7-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -773,7 +773,7 @@ jobs:
         .github/workflows/scripts/check-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ispc_llvm15_macos
         path: build/ispc-trunk-macos.tar.gz
@@ -786,7 +786,7 @@ jobs:
       LLVM_TAR: llvm-16.0.6-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -816,7 +816,7 @@ jobs:
         .github/workflows/scripts/check-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ispc_llvm16_macos
         path: build/ispc-trunk-macos.tar.gz
@@ -829,7 +829,7 @@ jobs:
       LLVM_TAR: llvm-16.0.6-macos-Release+Asserts-lto-universal-x86.arm.wasm.tar.xz
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -860,7 +860,7 @@ jobs:
         cmake --build build --target ispc-stage2-check-all
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ispc_llvm16_lto_macos
         path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-macOS.universal.tar.gz
@@ -873,7 +873,7 @@ jobs:
       LLVM_TAR: llvm-17.0.6-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -903,7 +903,7 @@ jobs:
         .github/workflows/scripts/check-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ispc_llvm17_macos
         path: build/ispc-trunk-macos.tar.gz
@@ -915,9 +915,9 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ispc_llvm15_macos
 
@@ -943,7 +943,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: fail_db.llvm15.macos.sse4.txt
@@ -963,9 +963,9 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ispc_llvm16_macos
 
@@ -991,7 +991,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: fail_db.llvm16.macos.sse4.txt
@@ -1011,9 +1011,9 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ispc_llvm16_lto_macos
 
@@ -1039,7 +1039,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: fail_db.llvm16_lto.macos.sse4.txt
@@ -1059,9 +1059,9 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ispc_llvm17_macos
 
@@ -1087,7 +1087,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: fail_db.llvm17.macos.sse4.txt
@@ -1111,12 +1111,12 @@ jobs:
       BUILD_TYPE: "Release"
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
     - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1
+      uses: microsoft/setup-msbuild@v2
 
     - name: Install dependencies
       run: |
@@ -1136,7 +1136,7 @@ jobs:
         .github/workflows/scripts/check-ispc.ps1
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ispc_llvm14_win
         path: build/ispc-trunk-windows.zip
@@ -1153,12 +1153,12 @@ jobs:
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
     - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1
+      uses: microsoft/setup-msbuild@v2
 
     - name: Install dependencies
       run: |
@@ -1178,7 +1178,7 @@ jobs:
         .github/workflows/scripts/check-ispc.ps1
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ispc_llvm15_win
         path: build/ispc-trunk-windows.zip
@@ -1195,12 +1195,12 @@ jobs:
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
     - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1
+      uses: microsoft/setup-msbuild@v2
 
     - name: Install dependencies
       run: |
@@ -1220,7 +1220,7 @@ jobs:
         .github/workflows/scripts/check-ispc.ps1
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ispc_llvm16_win
         path: build/ispc-trunk-windows.zip
@@ -1237,12 +1237,12 @@ jobs:
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
     - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1
+      uses: microsoft/setup-msbuild@v2
 
     - name: Install dependencies
       run: |
@@ -1269,7 +1269,7 @@ jobs:
         cmake --build build --target ispc-stage2-check-all
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ispc_llvm16_lto_win
         path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-windows.zip
@@ -1286,12 +1286,12 @@ jobs:
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
     - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1
+      uses: microsoft/setup-msbuild@v2
 
     - name: Install dependencies
       run: |
@@ -1311,7 +1311,7 @@ jobs:
         .github/workflows/scripts/check-ispc.ps1
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ispc_llvm17_win
         path: build/ispc-trunk-windows.zip
@@ -1329,12 +1329,12 @@ jobs:
       ISPC_DIR: "build\\build-ispc-stage2\\src\\ispc-stage2-build"
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
     - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1
+      uses: microsoft/setup-msbuild@v2
 
     - name: Install dependencies
       run: |
@@ -1363,13 +1363,13 @@ jobs:
         cmake --build build --target ispc-stage2-check
 
     - name: Upload XE enabled package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ispc_xe_llvm16rel_win
         path: ${{ env.ISPC_DIR }}/ispc-trunk-windows.zip
 
     - name: Upload ISPC with XE dependencies
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ispc_xe_deps_llvm16rel_win
         path: ispc-xe
@@ -1387,9 +1387,9 @@ jobs:
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ispc_llvm14_win
 
@@ -1414,7 +1414,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: fail_db.llvm14.${{matrix.arch}}.${{matrix.target}}.txt
@@ -1440,9 +1440,9 @@ jobs:
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ispc_llvm15_win
 
@@ -1467,7 +1467,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: fail_db.llvm15.${{matrix.arch}}.${{matrix.target}}.txt
@@ -1493,9 +1493,9 @@ jobs:
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ispc_llvm16_win
 
@@ -1520,7 +1520,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: fail_db.llvm16.${{matrix.arch}}.${{matrix.target}}.txt
@@ -1546,9 +1546,9 @@ jobs:
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ispc_llvm16_lto_win
 
@@ -1573,7 +1573,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: fail_db.llvm16_lto.${{matrix.arch}}.${{matrix.target}}.txt
@@ -1599,9 +1599,9 @@ jobs:
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ispc_llvm17_win
 
@@ -1626,7 +1626,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: fail_db.llvm17.${{matrix.arch}}.${{matrix.target}}.txt
@@ -1653,9 +1653,9 @@ jobs:
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ispc_xe_llvm16rel_win
 
@@ -1680,7 +1680,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: fail_db.xe.llvm16rel.${{matrix.arch}}.${{matrix.target}}.txt
@@ -1705,12 +1705,12 @@ jobs:
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
     - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1
+      uses: microsoft/setup-msbuild@v2
 
     - name: Install dependencies
       run: |
@@ -1722,7 +1722,7 @@ jobs:
         cmake --build build --target package-examples
 
     - name: Upload examples package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: examples_zip
         path: build/ispc-examples-trunk.zip
@@ -1736,7 +1736,7 @@ jobs:
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -1750,7 +1750,7 @@ jobs:
         cmake --build build --target package-examples
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: examples_tgz
         path: build/ispc-examples-trunk.tar.gz

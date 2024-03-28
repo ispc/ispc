@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-20.04
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -55,7 +55,7 @@ jobs:
         make ispc_benchmarks && make test
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ispc_llvm16_linux_bench
         path: build/ispc-trunk-linux.tar.gz
@@ -66,7 +66,7 @@ jobs:
     needs: linux-build
     steps:
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ispc_llvm16_linux_bench
     - name: Install dependencies and unpack artifacts
@@ -92,7 +92,7 @@ jobs:
       run: curl http://$StabilizerServer:7373/release
       if: always()
     - name: Upload results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ispc_llvm16_linux_bench_results
         path: ispc-trunk-linux/benchmarks/out/*.json
@@ -107,9 +107,9 @@ jobs:
     env:
       CALCITE_CLI: '@siliceum/calcite-cli@0.7.2'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Download benchmarks results
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ispc_llvm16_linux_bench_results
       - name: Upload bench datasets to calcite
