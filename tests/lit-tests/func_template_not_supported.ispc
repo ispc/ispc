@@ -3,8 +3,13 @@
 // CHECK-NOT: Please file a bug report
 
 // CHECK: Default values for template type parameters are not yet supported.
-// CHECK: Non-type template parameters are not yet supported.
+// CHECK: Default values for template non-type parameters are not yet supported.
 template <typename T = int, int I> T foo(T t) {
+  T tt = t + 1;
+  return tt;
+}
+
+template <typename T, int I=10> T foo(T t) {
   T tt = t + 1;
   return tt;
 }

@@ -244,7 +244,7 @@ struct ForeachDimension {
 %type <structDeclarationList> struct_declaration_list
 
 %type <symbolList> enumerator_list
-%type <symbol> enumerator foreach_identifier foreach_active_identifier template_int_parameter
+%type <symbol> enumerator foreach_identifier foreach_active_identifier template_int_parameter template_enum_parameter
 %type <enumType> enum_specifier
 
 %type <type> specifier_qualifier_list struct_or_union_specifier
@@ -252,7 +252,7 @@ struct ForeachDimension {
 %type <type> type_specifier type_name rate_qualified_type_specifier
 %type <type> short_vec_specifier
 %type <typeList> type_specifier_list
-%type <atomicType> atomic_var_type_specifier
+%type <atomicType> atomic_var_type_specifier int_constant_type template_int_constant_type
 
 %type <typeQualifier> type_qualifier type_qualifier_list
 %type <storageClass> storage_class_specifier
@@ -2417,29 +2417,69 @@ template_type_parameter
       }
     ;
 
+int_constant_type
+    : TOKEN_INT8  { $$ = AtomicType::UniformInt8->GetAsConstType(); }
+    | TOKEN_INT16 { $$ = AtomicType::UniformInt16->GetAsConstType(); }
+    | TOKEN_INT   { $$ = AtomicType::UniformInt32->GetAsConstType(); }
+    | TOKEN_INT64 { $$ = AtomicType::UniformInt64->GetAsConstType(); }
+    | TOKEN_UINT8 { $$ = AtomicType::UniformUInt8->GetAsConstType(); }
+    | TOKEN_UINT16{ $$ = AtomicType::UniformUInt16->GetAsConstType(); }
+    | TOKEN_UINT  { $$ = AtomicType::UniformUInt32->GetAsConstType(); }
+    | TOKEN_UINT64{ $$ = AtomicType::UniformUInt64->GetAsConstType(); }
+    ;
+
+template_int_constant_type
+    : TOKEN_UNIFORM int_constant_type { $$ = $2; }
+    | int_constant_type { $$ = $1;}
+    ;
+
 template_int_parameter
-    : TOKEN_INT TOKEN_IDENTIFIER
+    : template_int_constant_type TOKEN_IDENTIFIER
       {
-          $$ = nullptr;
+          $$ = new Symbol(*$<stringVal>2, Union(@1, @2), $1);
+          lCleanUpString($2);
+      }
+      | template_int_constant_type TOKEN_IDENTIFIER '=' int_constant
+      {
+          $$ = new Symbol(*$<stringVal>2, Union(@1, @2), $1);
           lCleanUpString($2);
           // TODO: implement
-          Error(Union(@1, @2), "Non-type template parameters are not yet supported.");
+          Error(@4, "Default values for template non-type parameters are not yet supported.");
       }
     ;
 
+template_enum_parameter
+    : TOKEN_TYPE_NAME TOKEN_IDENTIFIER
+      {
+          const Type *type = m->symbolTable->LookupType($1->c_str());
+          const EnumType *enumType = CastType<EnumType>(type);
+          if (enumType == nullptr) {
+            Error(@1, "Only enum types and integral types are allowed as non-type template parameters.");
+          }
+          $$ = new Symbol(*$<stringVal>2, Union(@1, @2), enumType->GetAsConstType()->GetAsUniformType());
+          lCleanUpString($1);
+          lCleanUpString($2);
+      }
+
 template_parameter
     : template_type_parameter
-      {
+    {
         if ($1 != nullptr) {
-          $$ = new TemplateParam($1);
+            $$ = new TemplateParam($1);
         }
-      }
+    }
     | template_int_parameter
-      {
+    {
         if ($1 != nullptr) {
-          $$ = new TemplateParam($1);
+            $$ = new TemplateParam($1);
         }
-      }
+    }
+    | template_enum_parameter
+    {
+        if ($1 != nullptr) {
+            $$ = new TemplateParam($1);
+        }
+    }
     ;
 
 template_parameter_list
@@ -2483,6 +2523,8 @@ template_declaration
               SourcePos pos = (*list)[i]->GetSourcePos();
               if ((*list)[i]->IsTypeParam()) {
                   m->AddTypeDef(name, (*list)[i]->GetTypeParam(), pos);
+              } else if ((*list)[i]->IsNonTypeParam()) {
+                  m->symbolTable->AddVariable((*list)[i]->GetNonTypeParam());
               }
           }
       }
@@ -2524,6 +2566,54 @@ template_argument
     : rate_qualified_type_specifier
     {
         $$ = new TemplateArg($1, @1);
+    }
+    // Ideally we should use here constant_expression, however, there is grammar ambiguitiy between
+    // template_identifier '<' template_argument_list '>' in simple_template_id and
+    // relational_expression '<' shift_expression in relational_expression (part of constant_expression).
+    | TOKEN_INT8_CONSTANT {
+        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformInt8->GetAsConstType(),
+                           (int8_t)yylval.intVal, @1), @1);
+    }
+    | TOKEN_UINT8_CONSTANT {
+        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformUInt8->GetAsConstType(),
+                           (uint8_t)yylval.intVal, @1), @1);
+    }
+    | TOKEN_INT16_CONSTANT {
+        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformInt16->GetAsConstType(),
+                           (int16_t)yylval.intVal, @1), @1);
+    }
+    | TOKEN_UINT16_CONSTANT {
+        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformUInt16->GetAsConstType(),
+                           (uint16_t)yylval.intVal, @1), @1);
+    }
+    | TOKEN_INT32_CONSTANT {
+        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformInt32->GetAsConstType(),
+                           (int32_t)yylval.intVal, @1), @1);
+    }
+    | TOKEN_UINT32_CONSTANT {
+        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformUInt32->GetAsConstType(),
+                           (uint32_t)yylval.intVal, @1), @1);
+    }
+    | TOKEN_INT64_CONSTANT {
+        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformInt64->GetAsConstType(),
+                           (int64_t)yylval.intVal, @1), @1);
+    }
+    | TOKEN_UINT64_CONSTANT {
+        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformUInt64->GetAsConstType(),
+                           (uint64_t)yylval.intVal, @1), @1);
+    }
+    // Enums and nested templates case:
+    | TOKEN_IDENTIFIER
+    {
+        const char *name = $1->c_str();
+        Symbol *s = m->symbolTable->LookupVariable(name);
+        if (s) {
+            $$ = new TemplateArg(new SymbolExpr(s, @1), @1);
+        } else {
+            Error(@1, "Unknown identifier");
+            $$ = nullptr;
+        }
+        lCleanUpString($1);
     }
     ;
 
