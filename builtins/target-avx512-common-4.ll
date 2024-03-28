@@ -1,4 +1,4 @@
-;;  Copyright (c) 2020-2023, Intel Corporation
+;;  Copyright (c) 2020-2024, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -41,12 +41,12 @@ define <4 x i16> @__float_to_half_varying(<4 x float> %v) nounwind readnone {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding floats
 
-declare <4 x float> @llvm.nearbyint.v4f32(<4 x float> %p)
+declare <4 x float> @llvm.roundeven.v4f32(<4 x float> %p)
 declare <4 x float> @llvm.floor.v4f32(<4 x float> %p)
 declare <4 x float> @llvm.ceil.v4f32(<4 x float> %p)
 
 define <4 x float> @__round_varying_float(<4 x float>) nounwind readonly alwaysinline {
-  %res = call <4 x float> @llvm.nearbyint.v4f32(<4 x float> %0)
+  %res = call <4 x float> @llvm.roundeven.v4f32(<4 x float> %0)
   ret <4 x float> %res
 }
 
@@ -63,12 +63,12 @@ define <4 x float> @__ceil_varying_float(<4 x float>) nounwind readonly alwaysin
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding doubles
 
-declare <4 x double> @llvm.nearbyint.v4f64(<4 x double> %p)
+declare <4 x double> @llvm.roundeven.v4f64(<4 x double> %p)
 declare <4 x double> @llvm.floor.v4f64(<4 x double> %p)
 declare <4 x double> @llvm.ceil.v4f64(<4 x double> %p)
 
 define <4 x double> @__round_varying_double(<4 x double>) nounwind readonly alwaysinline {
-  %res = call <4 x double> @llvm.nearbyint.v4f64(<4 x double> %0)
+  %res = call <4 x double> @llvm.roundeven.v4f64(<4 x double> %0)
   ret <4 x double> %res
 }
 
