@@ -90,6 +90,7 @@ option(ISPC_INCLUDE_UTILS "Generate build targets for the utils." ON)
 option(ISPC_INCLUDE_UTILS_ONLY "Generate build targets only for the utils." OFF)
 option(ISPC_PREPARE_PACKAGE "Generate build targets for ispc package" OFF)
 option(ISPC_PACKAGE_EXAMPLES "Pack examples into the ISPC package" ON)
+option(ISPC_SLIM_BINARY "Build ISPC as slim binary" OFF)
 
 option(ISPC_OPAQUE_PTR_MODE "Build ISPC with usage of opaque pointers" OFF)
 
@@ -149,6 +150,12 @@ else()
     else()
         set(ISPC_LINUX_TARGET ON)
     endif()
+endif()
+if (ISPC_LINUX_TARGET OR ISPC_ANDROID_TARGET OR ISPC_PS_TARGET
+    OR ISPC_FREEBSD_TARGET OR ISPC_IOS_TARGET OR ISPC_MACOS_TARGET)
+    set(ISPC_UNIX_TARGET ON)
+else()
+    set(ISPC_UNIX_TARGET OFF)
 endif()
 
 if (APPLE)
@@ -319,33 +326,45 @@ if (NOT X86_ENABLED AND NOT ARM_ENABLED AND NOT WASM_ENABLED AND NOT XE_ENABLED)
     message( FATAL_ERROR "Either X86, ARM, WASM or XE targets need to be enabled.")
 endif ()
 
+# All possible ISPC targets
+list(APPEND X86_TARGETS
+    sse2-i32x4 sse2-i32x8
+    sse4-i32x4 sse4-i32x8 sse4-i8x16 sse4-i16x8
+    # Note here that avx1-i32x4 is aliased to sse4-i32x4 plus avx attribute,
+    # sse41* targets are aliased to corresponding sse4 targets.
+    avx1-i32x8 avx1-i32x16 avx1-i64x4
+    avx2-i8x32 avx2-i16x16
+    avx2-i32x4 avx2-i32x8 avx2-i32x16 avx2-i64x4
+    avx2vnni-i32x4 avx2vnni-i32x8 avx2vnni-i32x16
+    avx512knl-x16
+    avx512skx-x4 avx512skx-x8 avx512skx-x16
+    avx512skx-x32 avx512skx-x64
+    avx512icl-x4 avx512icl-x8 avx512icl-x16
+    avx512icl-x32 avx512icl-x64
+    avx512spr-x4 avx512spr-x8 avx512spr-x16 avx512spr-x32 avx512spr-x64)
+list(APPEND ARM_TARGETS neon-i8x16 neon-i16x8 neon-i32x4 neon-i32x8)
+list(APPEND WASM_TARGETS wasm-i32x4)
+list(APPEND XE_TARGETS gen9-x16 gen9-x8 xelp-x16 xelp-x8 xehpg-x16 xehpg-x8 xehpc-x16 xehpc-x32 xelpg-x16 xelpg-x8)
+
 if (X86_ENABLED)
-    list(APPEND ISPC_TARGETS
-        sse2-i32x4 sse2-i32x8
-        sse4-i32x4 sse4-i32x8 sse4-i8x16 sse4-i16x8
-        # Note here that avx1-i32x4 is aliased to sse4-i32x4 plus avx attribute,
-        # sse41* targets are aliased to corresponding sse4 targets.
-        avx1-i32x8 avx1-i32x16 avx1-i64x4
-        avx2-i8x32 avx2-i16x16
-        avx2-i32x4 avx2-i32x8 avx2-i32x16 avx2-i64x4
-        avx2vnni-i32x4 avx2vnni-i32x8 avx2vnni-i32x16
-        avx512knl-x16
-        avx512skx-x4 avx512skx-x8 avx512skx-x16
-        avx512skx-x32 avx512skx-x64
-        avx512icl-x4 avx512icl-x8 avx512icl-x16
-        avx512icl-x32 avx512icl-x64
-        avx512spr-x4 avx512spr-x8 avx512spr-x16 avx512spr-x32 avx512spr-x64)
+    list(APPEND ISPC_TARGETS ${X86_TARGETS})
 endif()
 if (ARM_ENABLED)
-    list(APPEND ISPC_TARGETS neon-i8x16 neon-i16x8 neon-i32x4 neon-i32x8)
+    list(APPEND ISPC_TARGETS ${ARM_TARGETS})
 endif()
+if (WASM_ENABLED)
+    list(APPEND ISPC_TARGETS ${WASM_TARGETS})
+endif()
+if (XE_ENABLED)
+    list(APPEND ISPC_TARGETS ${XE_TARGETS})
+endif()
+
 if (WASM_ENABLED)
     find_program(EMCC_EXECUTABLE emcc)
     if (NOT EMCC_EXECUTABLE)
         message(FATAL_ERROR "emcc not found!")
     endif()
     message(STATUS "EMCC_EXECUTABLE: ${EMCC_EXECUTABLE}")
-    list(APPEND ISPC_TARGETS wasm-i32x4)
 endif()
 
 if (${LLVM_VERSION_NUMBER} VERSION_LESS "15.0.0")
@@ -375,7 +394,6 @@ if (WASM_ENABLED)
     list(APPEND LLVM_COMPONENTS webassembly)
 endif()
 if (XE_ENABLED)
-    list(APPEND ISPC_TARGETS gen9-x16 gen9-x8 xelp-x16 xelp-x8 xehpg-x16 xehpg-x8 xehpc-x16 xehpc-x32 xelpg-x16 xelpg-x8)
     if(CMAKE_SIZEOF_VOID_P EQUAL 4)
         set(TARGET_MODIFIER "32")
         set(PB_PATH_MODIFIER "x86")
@@ -413,9 +431,41 @@ message(STATUS "ISPC opaque pointers mode is " ${ISPC_OPAQUE_PTR_MODE})
 get_llvm_libfiles(LLVM_LIBRARY_LIST ${LLVM_COMPONENTS})
 get_llvm_cppflags(LLVM_CPP_FLAGS)
 
-generate_target_builtins(BUILTIN_FILES ${ISPC_TARGETS})
-generate_common_builtins(BUILTIN_CPP_FILES)
+if(CMAKE_GENERATOR MATCHES "Visual Studio")
+    # Visual Studio generator places binaries under bin/$(Configuration) subdirectory.
+    set(BITCODE_FOLDER ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/share/ispc)
+else()
+    set(BITCODE_FOLDER ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../share/ispc)
+endif()
+message(STATUS "BITCODE_FOLDER is ${BITCODE_FOLDER}")
+file(MAKE_DIRECTORY ${BITCODE_FOLDER})
+# Defines DISPATCH_BUILTIN_BC_FILES DISPATCH_BUILTIN_CPP_FILES
+generate_dispatch_builtins()
+# Defines COMMON_BUILTIN_CPP_FILES COMMON_BUILTIN_BC_FILES
+generate_common_builtins()
+# Defines TARGET_BUILTIN_CPP_FILES TARGET_BUILTIN_BC_FILES
+generate_target_builtins()
 generate_stdlib(STDLIB_FILES ${ISPC_MASKS})
+
+add_custom_target(dispatch-builtins-bc DEPENDS ${DISPATCH_BUILTIN_BC_FILES})
+add_custom_target(common-builtins-bc DEPENDS ${COMMON_BUILTIN_BC_FILES})
+add_custom_target(target-builtins-bc DEPENDS ${TARGET_BUILTIN_BC_FILES})
+add_custom_target(builtins-bc DEPENDS dispatch-builtins-bc target-builtins-bc common-builtins-bc)
+
+add_custom_target(dispatch-builtins-cpp DEPENDS dispatch-builtins-bc)
+add_custom_target(common-builtins-cpp DEPENDS common-builtins-bc)
+add_custom_target(target-builtins-cpp DEPENDS target-builtins-bc)
+add_custom_target(builtins-cpp DEPENDS dispatch-builtins-cpp target-builtins-cpp common-builtins-cpp)
+
+if (MSVC)
+    # Group generated files inside Visual Studio
+    source_group("Generated Dispatch Builtins" FILES ${DISPATCH_BUILTIN_CPP_FILES})
+    source_group("Generated Common Builtins" FILES ${COMMON_BUILTIN_CPP_FILES})
+    source_group("Generated Target Builtins" FILES ${TARGET_BUILTIN_CPP_FILES})
+endif()
+set_source_files_properties(${DISPATCH_BUILTIN_CPP_FILES} PROPERTIES GENERATED true)
+set_source_files_properties(${COMMON_BUILTIN_CPP_FILES} PROPERTIES GENERATED true)
+set_source_files_properties(${TARGET_BUILTIN_CPP_FILES} PROPERTIES GENERATED true)
 
 # Common sources between ispc-opt and ispc
 list(APPEND COMMON_SOURCES
@@ -526,6 +576,10 @@ else()
     endif()
 endif()
 
+# TODO: It may be confusing that some CMake variables start with ISPC but some
+# not. It can be also useful to have same name for CMake var and the
+# corresponding macro definition. It is not clear why it make sense to have
+# different ones.
 if (X86_ENABLED)
     list(APPEND COMPILE_DEFINITIONS ISPC_X86_ENABLED)
 endif()
@@ -543,26 +597,45 @@ if (WASM_ENABLED)
 endif()
 
 # Compile definitions for cross compilation
-if (NOT ISPC_WINDOWS_TARGET)
+if (ISPC_WINDOWS_TARGET)
+    list(APPEND COMPILE_DEFINITIONS ISPC_WINDOWS_TARGET_ON)
+else()
     list(APPEND COMPILE_DEFINITIONS ISPC_WINDOWS_TARGET_OFF)
 endif()
-if (NOT ISPC_LINUX_TARGET)
+if (ISPC_LINUX_TARGET)
+    list(APPEND COMPILE_DEFINITIONS ISPC_LINUX_TARGET_ON)
+else()
     list(APPEND COMPILE_DEFINITIONS ISPC_LINUX_TARGET_OFF)
 endif()
-if (NOT ISPC_FREEBSD_TARGET)
+if (ISPC_FREEBSD_TARGET)
+    list(APPEND COMPILE_DEFINITIONS ISPC_FREEBSD_TARGET_ON)
+else()
     list(APPEND COMPILE_DEFINITIONS ISPC_FREEBSD_TARGET_OFF)
 endif()
-if (NOT ISPC_MACOS_TARGET)
+if (ISPC_MACOS_TARGET)
+    list(APPEND COMPILE_DEFINITIONS ISPC_MACOS_TARGET_ON)
+else()
     list(APPEND COMPILE_DEFINITIONS ISPC_MACOS_TARGET_OFF)
 endif()
-if (NOT ISPC_IOS_TARGET)
+if (ISPC_IOS_TARGET)
+    list(APPEND COMPILE_DEFINITIONS ISPC_IOS_TARGET_ON)
+else()
     list(APPEND COMPILE_DEFINITIONS ISPC_IOS_TARGET_OFF)
 endif()
-if (NOT ISPC_ANDROID_TARGET)
+if (ISPC_ANDROID_TARGET)
+    list(APPEND COMPILE_DEFINITIONS ISPC_ANDROID_TARGET_ON)
+else()
     list(APPEND COMPILE_DEFINITIONS ISPC_ANDROID_TARGET_OFF)
 endif()
-if (NOT ISPC_PS_TARGET)
+if (ISPC_PS_TARGET)
+    list(APPEND COMPILE_DEFINITIONS ISPC_PS_TARGET_ON)
+else()
     list(APPEND COMPILE_DEFINITIONS ISPC_PS_TARGET_OFF)
+endif()
+if (ISPC_UNIX_TARGET)
+    list(APPEND COMPILE_DEFINITIONS ISPC_UNIX_TARGET_ON)
+else()
+    list(APPEND COMPILE_DEFINITIONS ISPC_UNIX_TARGET_OFF)
 endif()
 
 # Compile definition for opaque pointers mode
@@ -766,27 +839,52 @@ function(configure_ispc_exe TARGET)
 endfunction()
 
 # Define libraries that are built in the project. Some of them are shared across multiple executable targets.
-add_library(builtin OBJECT ${BUILTIN_FILES} ${BUILTIN_CPP_FILES})
+add_library(builtin OBJECT EXCLUDE_FROM_ALL
+    ${DISPATCH_BUILTIN_CPP_FILES} ${COMMON_BUILTIN_CPP_FILES} ${TARGET_BUILTIN_CPP_FILES})
+add_dependencies(builtin builtins-cpp)
 configure_ispc_obj(builtin)
 
-add_library(optimization OBJECT ${OPT_SOURCES})
+add_library(optimization OBJECT EXCLUDE_FROM_ALL ${OPT_SOURCES})
 configure_ispc_obj(optimization)
 
-add_library(common OBJECT ${COMMON_SOURCES})
+add_library(common OBJECT EXCLUDE_FROM_ALL ${COMMON_SOURCES})
 configure_ispc_obj(common)
 
-add_library(frontend OBJECT ${FRONTEND_SOURCES})
+add_library(frontend OBJECT EXCLUDE_FROM_ALL ${FRONTEND_SOURCES})
 configure_ispc_obj(frontend)
 
 # Define executable targets
-add_executable(${PROJECT_NAME} src/main.cpp)
-configure_ispc_exe(${PROJECT_NAME})
-target_link_libraries(${PROJECT_NAME} ${LINK_LIBRARIES} builtin optimization common frontend)
-
 add_executable(ispc-opt ispc-opt.cpp)
 configure_ispc_exe(ispc-opt)
-# TODO! should we link against all the same LLVM/Clang libraries? Clang libs is definetely is not needed
+# TODO! should we link against all the same LLVM/Clang libraries? Clang libs is definetely not needed
 target_link_libraries(ispc-opt ${LINK_LIBRARIES} builtin optimization common)
+
+# The final target has to be ispc due to two use-cases we do not want to
+# interfere with: make ispc and $<TARGET_FILE:ispc>.
+if (ISPC_SLIM_BINARY)
+    add_executable(ispc src/main.cpp src/binary_slim.cpp)
+    configure_ispc_exe(ispc)
+    target_link_libraries(ispc ${LINK_LIBRARIES} optimization common frontend)
+    add_dependencies(ispc builtins-bc)
+    message(STATUS "ISPC will be built as a slim binary")
+else()
+    add_executable(ispc-slim src/main.cpp src/binary_slim.cpp)
+    configure_ispc_exe(ispc-slim)
+    target_link_libraries(ispc-slim ${LINK_LIBRARIES} optimization common frontend)
+    add_dependencies(ispc-slim builtins-bc)
+
+    add_executable(ispc src/main.cpp src/binary_composite.cpp)
+    configure_ispc_exe(ispc)
+    target_link_libraries(ispc ${LINK_LIBRARIES} builtin optimization common frontend)
+    # TODO! it is not the real dependency at the moment
+    add_dependencies(ispc ispc-slim)
+    message(STATUS "ISPC will be built as a composite binary")
+endif()
+
+install (TARGETS ispc DESTINATION bin)
+if (ISPC_SLIM_BINARY)
+    install(DIRECTORY ${BITCODE_FOLDER} DESTINATION share)
+endif()
 
 
 if (ISPC_INCLUDE_TESTS)
@@ -875,8 +973,6 @@ if (ISPC_INCLUDE_XE_EXAMPLES AND ISPC_INCLUDE_RT AND NOT ISPC_PREPARE_PACKAGE)
     endif()
 endif()
 
-# Install
-install (TARGETS ${PROJECT_NAME} DESTINATION bin)
 if (ISPC_PREPARE_PACKAGE)
     if (ISPC_PACKAGE_EXAMPLES)
         if (XE_ENABLED)

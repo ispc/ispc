@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+#
+#  Copyright (c) 2024, Intel Corporation
+#
+#  SPDX-License-Identifier: BSD-3-Clause
 
 import sys
 import re
@@ -6,6 +10,7 @@ import subprocess
 import platform
 import os
 import argparse
+from os.path import basename
 
 parser = argparse.ArgumentParser()
 parser.add_argument("src", help="Source file to process")
@@ -13,39 +18,20 @@ parser.add_argument("--type", help="Type of processed file", choices=['dispatch'
 parser.add_argument("--runtime", help="Runtime", choices=['32', '64'], nargs='?', default='')
 parser.add_argument("--os", help="Target OS", choices=['windows', 'linux', 'macos', 'freebsd', 'android', 'ios', 'ps4', 'web', 'WINDOWS', 'UNIX', 'WEB'], default='')
 parser.add_argument("--arch", help="Target architecture", choices=['i686', 'x86_64', 'armv7', 'arm64', 'aarch64', 'wasm32', 'wasm64', 'xe64'], default='')
-parser.add_argument("--llvm_as", help="Path to LLVM assembler executable", dest="path_to_llvm_as")
-parser.add_argument("--opaque_flags", help="Flags to enable/disable opaque pointers", default='')
 
 args = parser.parse_known_args()
 src = args[0].src
 length=0
 
-target = re.sub(".*builtins/target-", "", src)
-target = re.sub(r".*builtins\\target-", "", target)
-target = re.sub(".*builtins/", "", target)
-target = re.sub(r".*builtins\\", "", target)
+target = basename(src)
+target = re.sub(r"^builtins-", "", target)
+target = re.sub(r"^target-", "", target)
+target = re.sub(r"\.bc$", "", target)
 target = re.sub(r"\.ll$", "", target)
 target = re.sub(r"\.c$", "", target)
+target = re.sub(r"-32bit.*$$", "", target)
+target = re.sub(r"-64bit.*$$", "", target)
 target = re.sub("-", "_", target)
-
-llvm_as="llvm-as"
-if args[0].path_to_llvm_as:
-    llvm_as = args[0].path_to_llvm_as
-else:
-    if platform.system() == 'Windows' or platform.system().find("CYGWIN_NT") != -1:
-        llvm_as = os.getenv("LLVM_INSTALL_DIR").replace("\\", "/") + "/bin/" + llvm_as
-
-opaque_flags = args[0].opaque_flags
-
-llvm_as_command = [llvm_as, "-", "-o", "-"]
-if opaque_flags != '':
-    llvm_as_command.insert(2, opaque_flags)
-
-try:
-    as_out=subprocess.Popen(llvm_as_command, stdout=subprocess.PIPE)
-except IOError:
-    sys.stderr.write("Couldn't open " + src + "\n")
-    sys.exit(1)
 
 name = target
 if args[0].runtime != '':
@@ -100,13 +86,14 @@ sys.stdout.write("using namespace ispc;\n\n")
 sys.stdout.write("extern const unsigned char " + name + "[] = {\n")
 
 # Read input data and put it in the form of byte array in the source file.
-data = as_out.stdout.read()
-for i in range(0, len(data), 1):
-    sys.stdout.write("0x%0.2X," % ord(data[i:i+1]))
-    if i%width == (width-1):
-        sys.stdout.write("\n")
-    else:
-        sys.stdout.write(" ")
+with open(src, 'rb') as file:
+    data = file.read()
+    for i in range(0, len(data), 1):
+        sys.stdout.write("0x%0.2X," % ord(data[i:i+1]))
+        if i%width == (width-1):
+            sys.stdout.write("\n")
+        else:
+            sys.stdout.write(" ")
 
 sys.stdout.write("0x00 };\n\n")
 sys.stdout.write("int " + name + "_length = " + str(len(data)) + ";\n")
@@ -152,6 +139,3 @@ elif args[0].type == 'ispc-target':
 else:
     sys.stderr.write("Unknown argument for --type: " + args[0].type + "\n")
     sys.exit(1)
-
-as_out.wait()
-sys.exit(as_out.returncode)

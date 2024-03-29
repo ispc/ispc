@@ -12,12 +12,6 @@ find_program(M4_EXECUTABLE m4)
     endif()
     message(STATUS "M4 macro processor: " ${M4_EXECUTABLE})
 
-if (WIN32)
-    set(TARGET_OS_LIST_FOR_LL "windows" "unix")
-elseif (UNIX)
-    set(TARGET_OS_LIST_FOR_LL "unix")
-endif()
-
 # Explicitly enumerate .ll and .m4 files included by target .ll files.
 # This is overly conservative, as they are added to every target .ll file.
 # But m4 doesn't support building depfile, so explicit enumeration is the
@@ -41,173 +35,147 @@ list(APPEND M4_IMPLICIT_DEPENDENCIES
     builtins/util-xe.m4
     builtins/util.m4)
 
-function(target_ll_to_cpp llFileName bit os_name resultFileName)
-    set(inputFilePath builtins/${llFileName}.ll)
-    set(includePath builtins)
-    string(TOUPPER ${os_name} os_name_macro)
+function(target_ll_to_cpp target bit os)
+    set(input builtins/target-${target}.ll)
+    set(include builtins)
+    string(TOUPPER ${os} OS_UP)
 
-    # Neon targets constrains: neon-i8x16 and neon-i16x8 are implemented only for 32 bit ARM.
-    if ("${bit}" STREQUAL "64" AND
-        (${llFileName} STREQUAL "target-neon-i8x16" OR ${llFileName} STREQUAL "target-neon-i16x8"))
-        return()
-    endif()
+    set(name builtins-target-${target}-${bit}bit-${os})
+    set(cpp ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${name}.cpp)
+    set(bc ${BITCODE_FOLDER}/${name}.bc)
 
-    # Xe targets are implemented only for 64 bit.
-    string(REGEX MATCH "^target-xe" isXe "${llFileName}")
-    if ("${bit}" STREQUAL "32" AND isXe)
-        return()
-    endif()
-
-    set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-${llFileName}-${bit}bit-${os_name}.cpp)
     add_custom_command(
-        OUTPUT ${output}
-        COMMAND ${M4_EXECUTABLE} -I${includePath}
-            -DLLVM_VERSION=${LLVM_VERSION} -DBUILD_OS=${os_name_macro} -DRUNTIME=${bit} ${inputFilePath}
-            | \"${Python3_EXECUTABLE}\" bitcode2cpp.py ${inputFilePath} --type=ispc-target --runtime=${bit} --os=${os_name_macro} --llvm_as ${LLVM_AS_EXECUTABLE} --opaque_flags="${LLVM_TOOLS_OPAQUE_FLAGS}"
-            > ${output}
-        DEPENDS ${inputFilePath} bitcode2cpp.py ${M4_IMPLICIT_DEPENDENCIES}
+        OUTPUT ${bc}
+        COMMAND ${M4_EXECUTABLE} -I${include} -DBUILD_OS=${OS_UP} -DRUNTIME=${bit} ${input}
+            | \"${LLVM_AS_EXECUTABLE}\" ${LLVM_TOOLS_OPAQUE_FLAGS} -o ${bc}
+        DEPENDS ${input} ${M4_IMPLICIT_DEPENDENCIES}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
-    set(${resultFileName} ${output} PARENT_SCOPE)
-    set_source_files_properties(${resultFileName} PROPERTIES GENERATED true)
+
+    add_custom_command(
+        OUTPUT ${cpp}
+        COMMAND ${Python3_EXECUTABLE} bitcode2cpp.py ${bc} --type=ispc-target --runtime=${bit} --os=${OS_UP}
+            > ${cpp}
+        DEPENDS ${bc} bitcode2cpp.py
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+    set(tmp_list_cpp ${TARGET_BUILTIN_CPP_FILES})
+    list(APPEND tmp_list_cpp ${cpp})
+    set(TARGET_BUILTIN_CPP_FILES ${tmp_list_cpp} PARENT_SCOPE)
+
+    set(tmp_list_bc ${TARGET_BUILTIN_BC_FILES})
+    list(APPEND tmp_list_bc ${bc})
+    set(TARGET_BUILTIN_BC_FILES ${tmp_list_bc} PARENT_SCOPE)
 endfunction()
 
-function(dispatch_to_cpp os_name resultFileName)
-    set(inputFilePath builtins/dispatch.c)
+function(generate_dispatcher os)
+    set(input builtins/dispatch.c)
     set(DISP_TYPE -DREGULAR)
-    set(DISP_NAME "dispatch")
-    if (${os_name} STREQUAL "macos")
+    set(name "builtins-dispatch")
+    if (${os} STREQUAL "macos")
         set(DISP_TYPE -DMACOS)
-        set(DISP_NAME "dispatch-macos")
+        set(name "builtins-dispatch-macos")
     endif()
-    set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-${DISP_NAME}.cpp)
+    set(cpp ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${name}.cpp)
+    set(bc ${BITCODE_FOLDER}/${name}.bc)
+
     add_custom_command(
-        OUTPUT ${output}
-        COMMAND ${CLANGPP_EXECUTABLE} -x c ${ISPC_OPAQUE_FLAGS} ${DISP_TYPE} -O2 -emit-llvm -S -c ${inputFilePath} -o -
-            | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --type=dispatch --os=${os_name} --llvm_as ${LLVM_AS_EXECUTABLE} --opaque_flags="${LLVM_TOOLS_OPAQUE_FLAGS}"
-            > ${output}
-        DEPENDS ${inputFilePath} bitcode2cpp.py
+        OUTPUT ${bc}
+        COMMAND ${CLANGPP_EXECUTABLE} -x c ${ISPC_OPAQUE_FLAGS} ${DISP_TYPE} -O2 -emit-llvm -c ${input} -o ${bc}
+        DEPENDS ${input}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
-    set(${resultFileName} ${output} PARENT_SCOPE)
-    set_source_files_properties(${resultFileName} PROPERTIES GENERATED true)
+
+    add_custom_command(
+        OUTPUT ${cpp}
+        COMMAND ${Python3_EXECUTABLE} bitcode2cpp.py ${bc} --type=dispatch --os=${os} > ${cpp}
+        DEPENDS ${bc} bitcode2cpp.py
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+    set(tmp_list_cpp ${DISPATCH_BUILTIN_CPP_FILES})
+    list(APPEND tmp_list_cpp ${cpp})
+    set(DISPATCH_BUILTIN_CPP_FILES ${tmp_list_cpp} PARENT_SCOPE)
+
+    set(tmp_list_bc ${DISPATCH_BUILTIN_BC_FILES})
+    list(APPEND tmp_list_bc ${bc})
+    set(DISPATCH_BUILTIN_BC_FILES ${tmp_list_bc} PARENT_SCOPE)
 endfunction()
 
-function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFileName)
-    set(inputFilePath builtins/builtins-c-cpu.cpp)
-    set(includePath "")
-    set(SKIP OFF)
-    if (NOT ${arch} IN_LIST supported_archs OR NOT ${os_name} IN_LIST supported_oses)
-        set(SKIP ON)
-    endif()
-
-    if ((    ${os_name} STREQUAL "web" AND NOT ${arch} STREQUAL "wasm") OR
-        (NOT ${os_name} STREQUAL "web" AND     ${arch} STREQUAL "wasm"))
-        return()
-    endif()
-
-    if ("${bit}" STREQUAL "32" AND ${arch} STREQUAL "x86")
-        set(target_arch "i686")
-    elseif ("${bit}" STREQUAL "64" AND ${arch} STREQUAL "x86")
-        set(target_arch "x86_64")
-    elseif ("${bit}" STREQUAL "32" AND ${arch} STREQUAL "arm")
-        set(target_arch "armv7")
-    elseif ("${bit}" STREQUAL "64" AND ${arch} STREQUAL "arm")
-        set(target_arch "aarch64")
-    elseif ("${bit}" STREQUAL "32" AND ${arch} STREQUAL "wasm")
-        set(target_arch "wasm32")
-    elseif ("${bit}" STREQUAL "64" AND ${arch} STREQUAL "wasm")
-        set(target_arch "wasm64")
-    else()
-        message(FATAL_ERROR "Error")
-    endif()
-
-    # Host to target OS constrains
-    if (WIN32)
-        if (${os_name} STREQUAL "ios")
-            set(SKIP ON)
-        endif()
-    elseif (APPLE)
-        if (${os_name} STREQUAL "windows")
-            set(SKIP ON)
-        elseif (${os_name} STREQUAL "ps4")
-            set(SKIP ON)
-        endif()
-    else()
-        if (${os_name} STREQUAL "windows")
-            set(SKIP ON)
-        elseif (${os_name} STREQUAL "ps4")
-            set(SKIP ON)
-        elseif (${os_name} STREQUAL "ios")
-            set(SKIP ON)
-        endif()
-    endif()
-
-    # OS to arch constrains
-    if (${os_name} STREQUAL "windows" AND ${arch} STREQUAL "arm" AND "${bit}" STREQUAL "32")
-        set(SKIP ON)
-
-    endif()
-    if (${os_name} STREQUAL "macos")
-        if (${target_arch} STREQUAL "x86_64")
-            # Fall through (do not set SKIP to OFF!)
-        elseif(${target_arch} STREQUAL "aarch64" AND ISPC_MACOS_ARM_TARGET)
-            set(target_arch "arm64")
-            # Fall through (do not set SKIP to OFF!)
-        else()
-            set(SKIP ON)
-        endif()
-    endif()
-    if (${os_name} STREQUAL "ps4" AND NOT ${target_arch} STREQUAL "x86_64")
-        set(SKIP ON)
-    endif()
-    if (${os_name} STREQUAL "ios")
-        if (${target_arch} STREQUAL "aarch64")
-            set(target_arch "arm64")
-        else()
-            set(SKIP ON)
-        endif()
-    endif()
-
-    # Return if the target is not supported.
-    if (${SKIP})
-        return()
-    endif()
+function(builtin_wasm_to_cpp bit os arch)
+    set(input builtins/builtins-c-cpu.cpp)
+    set(name builtins-cpp-${bit}-${os}-${arch})
 
     # Report supported targets.
-    message (STATUS "Enabling target: ${os_name} / ${target_arch}")
+    message (STATUS "Enabling target: ${os} / ${arch}")
 
+    set(cpp ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${name}.cpp)
+    set(bc ${BITCODE_FOLDER}/${name}.bc)
+
+    list(APPEND flags
+        -DWASM -s WASM_OBJECT_FILES=0 ${ISPC_OPAQUE_FLAGS} -I${CMAKE_SOURCE_DIR} --std=gnu++17 -S -emit-llvm -c)
+    if("${bit}" STREQUAL "64")
+        list(APPEND flags "-sMEMORY64")
+    endif()
+
+    add_custom_command(
+        OUTPUT ${bc}
+        COMMAND ${EMCC_EXECUTABLE} ${flags} ${input} -o -
+            | \"${LLVM_AS_EXECUTABLE}\" ${LLVM_TOOLS_OPAQUE_FLAGS} -o ${bc}
+        DEPENDS ${input}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+    add_custom_command(
+        OUTPUT ${cpp}
+        COMMAND ${Python3_EXECUTABLE} bitcode2cpp.py ${bc} --type=builtins-c --runtime=${bit} --os=${os} --arch=${arch}
+            > ${cpp}
+        DEPENDS ${bc} bitcode2cpp.py
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+    set(tmp_list_cpp ${COMMON_BUILTIN_CPP_FILES})
+    list(APPEND tmp_list_cpp ${cpp})
+    set(COMMON_BUILTIN_CPP_FILES ${tmp_list_cpp} PARENT_SCOPE)
+
+    set(tmp_list_bc ${COMMON_BUILTIN_BC_FILES})
+    list(APPEND tmp_list_bc ${bc})
+    set(COMMON_BUILTIN_BC_FILES ${tmp_list_bc} PARENT_SCOPE)
+endfunction()
+
+function (get_target_flags os arch out)
     # Determine triple
     set(fpic "")
     set(debian_triple)
-    if (${os_name} STREQUAL "windows")
-        set(triple ${target_arch}-pc-win32)
-    elseif (${os_name} STREQUAL "linux")
-        if (${target_arch} STREQUAL "i686" OR ${target_arch} STREQUAL "x86_64" OR ${target_arch} STREQUAL "aarch64")
-            set(triple ${target_arch}-unknown-linux-gnu)
-            set(debian_triple ${target_arch}-linux-gnu)
-        elseif (${target_arch} STREQUAL "armv7")
-            set(triple ${target_arch}-unknown-linux-gnueabihf)
+    if (${os} STREQUAL "windows")
+        set(triple ${arch}-pc-win32)
+    elseif (${os} STREQUAL "linux")
+        if (${arch} STREQUAL "i686" OR ${arch} STREQUAL "x86_64" OR ${arch} STREQUAL "aarch64")
+            set(triple ${arch}-unknown-linux-gnu)
+            set(debian_triple ${arch}-linux-gnu)
+        elseif (${arch} STREQUAL "armv7")
+            set(triple ${arch}-unknown-linux-gnueabihf)
             set(debian_triple arm-linux-gnueabihf)
         else()
             message(FATAL_ERROR "Error")
         endif()
         set(fpic -fPIC)
-    elseif (${os_name} STREQUAL "freebsd")
-        set(triple ${target_arch}-unknown-freebsd)
+    elseif (${os} STREQUAL "freebsd")
+        set(triple ${arch}-unknown-freebsd)
         set(fpic -fPIC)
-    elseif (${os_name} STREQUAL "macos")
-        set(triple ${target_arch}-apple-macosx)
-    elseif (${os_name} STREQUAL "android")
-        set(triple ${target_arch}-unknown-linux-android)
+    elseif (${os} STREQUAL "macos")
+        set(triple ${arch}-apple-macosx)
+    elseif (${os} STREQUAL "android")
+        set(triple ${arch}-unknown-linux-android)
         set(fpic -fPIC)
-    elseif (${os_name} STREQUAL "ios")
-        set(triple ${target_arch}-apple-ios)
-    elseif (${os_name} STREQUAL "ps4")
-        set(triple ${target_arch}-scei-ps)
+    elseif (${os} STREQUAL "ios")
+        set(triple ${arch}-apple-ios)
+    elseif (${os} STREQUAL "ps4")
+        set(triple ${arch}-scei-ps)
         set(fpic -fPIC)
-    elseif (${os_name} STREQUAL "web")
-        set(triple ${target_arch}-unknown-unknown)
+    elseif (${os} STREQUAL "web")
+        set(triple ${arch}-unknown-unknown)
         set(fpic -fPIC)
     else()
         message(FATAL_ERROR "Error")
@@ -215,40 +183,40 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
 
     # Determine include path
     if (WIN32)
-        if (${os_name} STREQUAL "windows")
-            set(includePath "")
-        elseif(${os_name} STREQUAL "macos")
+        if (${os} STREQUAL "windows")
+            set(include "")
+        elseif(${os} STREQUAL "macos")
             # -isystemC:/iusers/MacOSX10.14.sdk.tar/MacOSX10.14.sdk/usr/include
-            set(includePath -isystem${ISPC_MACOS_SDK_PATH}/usr/include)
+            set(include -isystem${ISPC_MACOS_SDK_PATH}/usr/include)
         else()
             # -isystemC:/gnuwin32/include/glibc
-            set(includePath -isystem${ISPC_GNUWIN32_PATH}/include/glibc)
+            set(include -isystem${ISPC_GNUWIN32_PATH}/include/glibc)
         endif()
     elseif (APPLE)
-        if (${os_name} STREQUAL "ios")
+        if (${os} STREQUAL "ios")
             # -isystem/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/usr/include/
-            set(includePath -isystem${ISPC_IOS_SDK_PATH}/usr/include)
-        elseif (${os_name} STREQUAL "linux" OR ${os_name} STREQUAL "android" OR ${os_name} STREQUAL "freebsd")
-            if (${target_arch} STREQUAL "armv7")
+            set(include -isystem${ISPC_IOS_SDK_PATH}/usr/include)
+        elseif (${os} STREQUAL "linux" OR ${os} STREQUAL "android" OR ${os} STREQUAL "freebsd")
+            if (${arch} STREQUAL "armv7")
                 # -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include/arm-linux-androideabi
-                set(includePath -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/arm-linux-androideabi)
-            elseif (${target_arch} STREQUAL "aarch64")
+                set(include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/arm-linux-androideabi)
+            elseif (${arch} STREQUAL "aarch64")
                 # -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include/aarch64-linux-android
-                set(includePath -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/aarch64-linux-android)
-            elseif(${target_arch} STREQUAL "i686")
+                set(include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/aarch64-linux-android)
+            elseif(${arch} STREQUAL "i686")
                 # -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include/i686-linux-android
-                set(includePath -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/i686-linux-android)
+                set(include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/i686-linux-android)
             else()
                 # -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include -isystem/Users/Shared/android-ndk-r20/sysroot/usr/include/x86_64-linux-android
-                set(includePath -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/x86_64-linux-android)
+                set(include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include -isystem${ISPC_ANDROID_NDK_PATH}/sysroot/usr/include/x86_64-linux-android)
             endif()
-        elseif (${os_name} STREQUAL "macos")
-            set(includePath -isystem${ISPC_MACOS_SDK_PATH}/usr/include)
+        elseif (${os} STREQUAL "macos")
+            set(include -isystem${ISPC_MACOS_SDK_PATH}/usr/include)
         endif()
     else()
-        if (${os_name} STREQUAL "macos")
+        if (${os} STREQUAL "macos")
             # -isystem/iusers/MacOSX10.14.sdk.tar/MacOSX10.14.sdk/usr/include
-            set(includePath -isystem${ISPC_MACOS_SDK_PATH}/usr/include)
+            set(include -isystem${ISPC_MACOS_SDK_PATH}/usr/include)
         elseif(NOT ${debian_triple} STREQUAL "")
             # When compiling on Linux, there are two way to support cross targets:
             # - add "foreign" architecture to the set of supported architectures and install corresponding toolchain.
@@ -259,176 +227,239 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
             #   In this case headers will be installed in /usr/arm-linux-gnueabihf/include and will not be picked up
             #   by clang by default. So the following line adds such path explicitly. If this path doesn't exist and
             #   the headers can be found in other locations, this should not be a problem.
-            set(includePath -isystem/usr/${debian_triple}/include)
+            set(include -isystem/usr/${debian_triple}/include)
         endif()
     endif()
 
     # Compose target flags
-    set(target_flags --target=${triple} ${fpic} ${includePath})
+    set(${out} --target=${triple} ${fpic} ${include} PARENT_SCOPE)
+endfunction()
 
-    set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-cpp-${bit}-${os_name}-${target_arch}.cpp)
-    if (${os_name} STREQUAL "web")
-        if("${bit}" STREQUAL "64")
-            list(APPEND emcc_flags "-sMEMORY64")
-        endif()
-        add_custom_command(
-            OUTPUT ${output}
-            COMMAND ${EMCC_EXECUTABLE} -DWASM -s WASM_OBJECT_FILES=0 ${emcc_flags} ${ISPC_OPAQUE_FLAGS} -I${CMAKE_SOURCE_DIR} -c ${inputFilePath} --std=gnu++17 -S -emit-llvm -c -o -
-                | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --type=builtins-c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE} --opaque_flags="${LLVM_TOOLS_OPAQUE_FLAGS}"
-                > ${output}
-            DEPENDS ${inputFilePath} bitcode2cpp.py
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        )
+function(builtin_to_cpp bit os generic_arch)
+    set(input builtins/builtins-c-cpu.cpp)
+    set(include "")
+
+    if ("${bit}" STREQUAL "32" AND ${generic_arch} STREQUAL "x86")
+        set(arch "i686")
+    elseif ("${bit}" STREQUAL "64" AND ${generic_arch} STREQUAL "x86")
+        set(arch "x86_64")
+    elseif ("${bit}" STREQUAL "32" AND ${generic_arch} STREQUAL "arm")
+        set(arch "armv7")
+    elseif ("${bit}" STREQUAL "64" AND ${generic_arch} STREQUAL "arm")
+        set(arch "aarch64")
     else()
-        add_custom_command(
-            OUTPUT ${output}
-            COMMAND ${CLANGPP_EXECUTABLE} ${target_flags} -I${CMAKE_SOURCE_DIR} -m${bit} -S -emit-llvm ${ISPC_OPAQUE_FLAGS} --std=gnu++17 -c ${inputFilePath} -o -
-                | \"${Python3_EXECUTABLE}\" bitcode2cpp.py c --type=builtins-c --runtime=${bit} --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE} --opaque_flags="${LLVM_TOOLS_OPAQUE_FLAGS}"
-                > ${output}
-            DEPENDS ${inputFilePath} bitcode2cpp.py
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        message(FATAL_ERROR "Error")
+    endif()
+
+    # Report supported targets.
+    message (STATUS "Enabling target: ${os} / ${arch}")
+
+    get_target_flags(${os} ${arch} target_flags)
+    list(APPEND flags ${target_flags}
+        -I${CMAKE_SOURCE_DIR} -m${bit} -S -emit-llvm ${ISPC_OPAQUE_FLAGS} --std=gnu++17 -c
+    )
+
+    set(name builtins-cpp-${bit}-${os}-${arch})
+    set(cpp ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${name}.cpp)
+    set(bc ${BITCODE_FOLDER}/${name}.bc)
+
+    add_custom_command(
+        OUTPUT ${bc}
+        COMMAND ${CLANGPP_EXECUTABLE} ${flags} ${input} -o -
+            | \"${LLVM_AS_EXECUTABLE}\" ${LLVM_TOOLS_OPAQUE_FLAGS} -o ${bc}
+        DEPENDS ${input}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+    add_custom_command(
+        OUTPUT ${cpp}
+        COMMAND ${Python3_EXECUTABLE} bitcode2cpp.py ${bc} --type=builtins-c --runtime=${bit} --os=${os} --arch=${arch}
+            > ${cpp}
+        DEPENDS ${bc} bitcode2cpp.py
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+    set(tmp_list_cpp ${COMMON_BUILTIN_CPP_FILES})
+    list(APPEND tmp_list_cpp ${cpp})
+    set(COMMON_BUILTIN_CPP_FILES ${tmp_list_cpp} PARENT_SCOPE)
+
+    set(tmp_list_bc ${COMMON_BUILTIN_BC_FILES})
+    list(APPEND tmp_list_bc ${bc})
+    set(COMMON_BUILTIN_BC_FILES ${tmp_list_bc} PARENT_SCOPE)
+endfunction()
+
+function(builtin_xe_to_cpp os)
+    set(bit 64)
+    set(arch xe64)
+    set(name builtins-cm-${bit})
+    set(input builtins/${name}.ll)
+
+    set(cpp ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${name}.cpp)
+    set(bc ${BITCODE_FOLDER}/${name}.bc)
+
+    add_custom_command(
+        OUTPUT ${bc}
+        COMMAND cat ${input} | \"${LLVM_AS_EXECUTABLE}\" ${LLVM_TOOLS_OPAQUE_FLAGS} -o ${bc}
+        DEPENDS ${input}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         )
-    endif()
 
-    set(${resultFileName} ${output} PARENT_SCOPE)
-    set_source_files_properties(${resultFileName} PROPERTIES GENERATED true)
+    add_custom_command(
+        OUTPUT ${cpp}
+        COMMAND ${Python3_EXECUTABLE} bitcode2cpp.py ${bc} --type=builtins-c --runtime=${bit} --os=${os} --arch=${arch}
+            > ${cpp}
+        DEPENDS ${bc} bitcode2cpp.py
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        )
+
+    set(tmp_list_cpp ${COMMON_BUILTIN_CPP_FILES})
+    list(APPEND tmp_list_cpp ${cpp})
+    set(COMMON_BUILTIN_CPP_FILES ${tmp_list_cpp} PARENT_SCOPE)
+
+    set(tmp_list_bc ${COMMON_BUILTIN_BC_FILES})
+    list(APPEND tmp_list_bc ${bc})
+    set(COMMON_BUILTIN_BC_FILES ${tmp_list_bc} PARENT_SCOPE)
 endfunction()
 
-function(builtin_xe_to_cpp bit resultFileName)
-    set(inputFilePath builtins/builtins-cm-${bit}.ll)
-    set(SKIP OFF)
-    if (WIN32)
-        set(os_name "windows")
-    elseif (APPLE)
-        set(SKIP ON)
-    else ()
-        set(os_name "linux")
-    endif()
-
-    set(target_arch "xe64")
-    if (NOT "${bit}" STREQUAL "64")
-        set(SKIP ON)
-    endif()
-
-    if (NOT SKIP)
-      set(output ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/builtins-cm-${bit}.cpp)
-      add_custom_command(
-          OUTPUT ${output}
-          COMMAND cat ${inputFilePath}
-              | \"${Python3_EXECUTABLE}\" bitcode2cpp.py cm --type=builtins-c --runtime=${bit}
-              --os=${os_name} --arch=${target_arch} --llvm_as ${LLVM_AS_EXECUTABLE} --opaque_flags="${LLVM_TOOLS_OPAQUE_FLAGS}"
-              > ${output}
-          DEPENDS ${inputFilePath} bitcode2cpp.py
-          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-          )
-      set(${resultFileName} ${output} PARENT_SCOPE)
-      set_source_files_properties(${resultFileName} PROPERTIES GENERATED true)
-    endif()
-endfunction()
-
-function (generate_target_builtins resultList)
+function (generate_dispatch_builtins)
     if (X86_ENABLED)
         # If we build ISPC without X86 support, we don't need to generate x86
         # specific dispatch code.
-        dispatch_to_cpp("linux" output_generic)
-        dispatch_to_cpp("macos" output_macos)
-    endif()
-    list(APPEND tmpList ${output_generic} ${output_macos})
-    if(MSVC)
-        # Group generated files inside Visual Studio
-        source_group("Generated Builtins" FILES ${output_generic} ${output_macos})
+        generate_dispatcher("linux")
+        generate_dispatcher("macos")
     endif()
 
-    # "Regular" targets, targeting specific real ISA: sse/avx/neon
-    set(regular_targets ${ARGN})
-    list(FILTER regular_targets EXCLUDE REGEX wasm)
-    foreach (ispc_target ${regular_targets})
-        foreach (bit 32 64)
-            foreach (os_name ${TARGET_OS_LIST_FOR_LL})
-                target_ll_to_cpp(target-${ispc_target} ${bit} ${os_name} output${os_name}${bit})
-                list(APPEND tmpList ${output${os_name}${bit}})
-                if(MSVC)
-                    # Group generated files inside Visual Studio
-                    source_group("Generated Builtins" FILES ${output${os_name}${bit}})
-                endif()
+    set(DISPATCH_BUILTIN_CPP_FILES ${DISPATCH_BUILTIN_CPP_FILES} PARENT_SCOPE)
+    set(DISPATCH_BUILTIN_BC_FILES ${DISPATCH_BUILTIN_BC_FILES} PARENT_SCOPE)
+endfunction()
+
+function (generate_target_builtins)
+    list(APPEND os_list)
+    if (ISPC_WINDOWS_TARGET)
+        list(APPEND os_list "windows")
+    endif()
+    if (ISPC_UNIX_TARGET)
+        list(APPEND os_list "unix")
+    endif()
+
+    if (NOT os_list)
+        message(FATAL_ERROR "Windows or Linux target has to be enabled")
+    endif()
+
+    # "Regular" targets, targeting specific real ISA: sse/avx
+    if (X86_ENABLED)
+        foreach (target ${X86_TARGETS})
+            foreach (bit 32 64)
+                foreach (os ${os_list})
+                    target_ll_to_cpp(${target} ${bit} ${os})
+                endforeach()
             endforeach()
         endforeach()
-    endforeach()
+    endif()
+
+    # XE targets
+    if (XE_ENABLED)
+        foreach (target ${XE_TARGETS})
+            foreach (os ${os_list})
+                target_ll_to_cpp(${target} 64 ${os})
+            endforeach()
+        endforeach()
+    endif()
+
+    # ARM targets
+    if (ARM_ENABLED)
+        foreach (os ${os_list})
+            foreach (target ${ARM_TARGETS})
+                target_ll_to_cpp(${target} 32 ${os})
+            endforeach()
+            # Not all targets have 64bit
+            target_ll_to_cpp(neon-i32x4 64 ${os})
+            target_ll_to_cpp(neon-i32x8 64 ${os})
+        endforeach()
+    endif()
 
     # WASM targets.
     if (WASM_ENABLED)
-        set(wasm_targets ${ARGN})
-        list(FILTER wasm_targets INCLUDE REGEX wasm)
-        foreach (wasm_target ${wasm_targets})
-            target_ll_to_cpp(target-${wasm_target} 32 web outputweb32)
-            target_ll_to_cpp(target-${wasm_target} 64 web outputweb64)
-            list(APPEND tmpList ${outputweb32} ${outputweb64})
-            if(MSVC)
-                source_group("Generated Builtins" FILES ${outputweb32} ${outputweb64})
-            endif()
-        endforeach()
-    endif()
-    # Return the list
-    set(${resultList} ${tmpList} PARENT_SCOPE)
-endfunction()
-
-function (generate_common_builtins resultList)
-    # Supported architectures
-    if (X86_ENABLED)
-        list (APPEND supported_archs "x86")
-    endif()
-    if (ARM_ENABLED)
-        list (APPEND supported_archs "arm")
-    endif()
-    if (WASM_ENABLED)
-        list (APPEND supported_archs "wasm")
-        list (APPEND supported_oses "web")
-    endif()
-
-    # Supported OSes.
-    if (ISPC_WINDOWS_TARGET)
-        list (APPEND supported_oses "windows")
-    endif()
-    if (ISPC_LINUX_TARGET)
-        list (APPEND supported_oses "linux")
-    endif()
-    if (ISPC_FREEBSD_TARGET)
-        list (APPEND supported_oses "freebsd")
-    endif()
-    if (ISPC_MACOS_TARGET)
-        list (APPEND supported_oses "macos")
-    endif()
-    if (ISPC_ANDROID_TARGET)
-        list (APPEND supported_oses "android")
-    endif()
-    if (ISPC_IOS_TARGET)
-        list (APPEND supported_oses "ios")
-    endif()
-    if (ISPC_PS_TARGET)
-        list (APPEND supported_oses "ps4")
-    endif()
-
-    message (STATUS "ISPC will be built with support of ${supported_oses} for ${supported_archs}")
-    foreach (bit 32 64)
-        foreach (os_name "windows" "linux" "freebsd" "macos" "android" "ios" "ps4" "web")
-            foreach (arch "x86" "arm" "wasm")
-                builtin_to_cpp(${bit} ${os_name} ${arch} "${supported_archs}" "${supported_oses}" res${bit}${os_name}${arch})
-                list(APPEND tmpList ${res${bit}${os_name}${arch}} )
-                if(MSVC)
-                    # Group generated files inside Visual Studio
-                    source_group("Generated Builtins" FILES ${res${bit}${os_name}${arch}})
-                endif()
+        foreach (target ${WASM_TARGETS})
+            foreach (bit 32 64)
+                target_ll_to_cpp(${target} ${bit} web)
             endforeach()
         endforeach()
-    endforeach()
-    if (XE_ENABLED)
-        set(bit 64)
-        builtin_xe_to_cpp(${bit} res_xe_${bit})
-        list(APPEND tmpList ${res_xe_${bit}} )
-        if(MSVC)
-            # Group generated files inside Visual Studio
-            source_group("Generated Builtins" FILES ${res_xe_${bit}})
-        endif()
     endif()
-    set(${resultList} ${tmpList} PARENT_SCOPE)
+
+    set(TARGET_BUILTIN_CPP_FILES ${TARGET_BUILTIN_CPP_FILES} PARENT_SCOPE)
+    set(TARGET_BUILTIN_BC_FILES ${TARGET_BUILTIN_BC_FILES} PARENT_SCOPE)
+endfunction()
+
+function (generate_common_builtins)
+    if (ISPC_LINUX_TARGET AND ARM_ENABLED)
+        builtin_to_cpp(32 linux arm)
+        builtin_to_cpp(64 linux arm)
+    endif()
+
+    if (ISPC_LINUX_TARGET AND X86_ENABLED)
+        builtin_to_cpp(32 linux x86)
+        builtin_to_cpp(64 linux x86)
+    endif()
+
+    if (ISPC_ANDROID_TARGET AND ARM_ENABLED)
+        builtin_to_cpp(32 android arm)
+        builtin_to_cpp(64 android arm)
+    endif()
+
+    if (ISPC_ANDROID_TARGET AND X86_ENABLED)
+        builtin_to_cpp(32 android x86)
+        builtin_to_cpp(64 android x86)
+    endif()
+
+    if (ISPC_FREEBSD_TARGET AND ARM_ENABLED)
+        builtin_to_cpp(32 freebsd arm)
+        builtin_to_cpp(64 freebsd arm)
+    endif()
+
+    if (ISPC_FREEBSD_TARGET AND X86_ENABLED)
+        builtin_to_cpp(32 freebsd x86)
+        builtin_to_cpp(64 freebsd x86)
+    endif()
+
+    if (ISPC_WINDOWS_TARGET AND ARM_ENABLED)
+        builtin_to_cpp(64 windows arm)
+    endif()
+
+    if (ISPC_WINDOWS_TARGET AND X86_ENABLED)
+        builtin_to_cpp(32 windows x86)
+        builtin_to_cpp(64 windows x86)
+    endif()
+
+    if (ISPC_MACOS_TARGET AND ARM_ENABLED)
+        builtin_to_cpp(64 macos arm)
+    endif()
+
+    if (ISPC_MACOS_TARGET AND X86_ENABLED)
+        builtin_to_cpp(64 macos x86)
+    endif()
+
+    if (ISPC_IOS_TARGET AND ARM_ENABLED)
+        builtin_to_cpp(64 ios arm)
+    endif()
+
+    if (ISPC_PS_TARGET AND X86_ENABLED)
+        builtin_to_cpp(64 ps4 x86)
+    endif()
+
+    if (WIN32)
+        builtin_xe_to_cpp(windows)
+    elseif (APPLE)
+        # no xe support
+    else()
+        builtin_xe_to_cpp(linux)
+    endif()
+
+    if (WASM_ENABLED)
+        builtin_wasm_to_cpp(32 web wasm32)
+        builtin_wasm_to_cpp(64 web wasm64)
+    endif()
+
+    set(COMMON_BUILTIN_CPP_FILES ${COMMON_BUILTIN_CPP_FILES} PARENT_SCOPE)
+    set(COMMON_BUILTIN_BC_FILES ${COMMON_BUILTIN_BC_FILES} PARENT_SCOPE)
 endfunction()

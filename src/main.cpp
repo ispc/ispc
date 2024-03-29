@@ -8,6 +8,7 @@
     @brief main() entrypoint implementation for ispc
 */
 
+#include "binary_type.h"
 #include "ispc.h"
 #include "module.h"
 #include "target_registry.h"
@@ -200,6 +201,7 @@ static void lPrintVersion() {
     printf("\nusage (developer options): ispc\n");
     printf("    [--ast-dump=user|all]\t\tDump AST for user code or all the code including stdlib. If no argument is "
            "given, dump AST for user code only\n");
+    printf("    [--binary-type]\t\t\tPrint binary type (slim or composite).\n");
     printf("    [--debug]\t\t\t\tPrint information useful for debugging ispc\n");
     printf("    [--debug-llvm]\t\t\tEnable LLVM debugging information (dumps to stderr)\n");
     printf("    [--debug-pm]\t\t\tPrint verbose information from ispc pass manager\n");
@@ -637,6 +639,9 @@ int main(int Argc, char *Argv[]) {
     BooleanOptValue discardValueNames = BooleanOptValue::none;
     BooleanOptValue wrapSignedInt = BooleanOptValue::none;
 
+    std::string ISPCAbsPath = llvm::sys::fs::getMainExecutable(argv[0], (void *)(intptr_t)main);
+    initializeBinaryType(ISPCAbsPath.c_str());
+
     ArgErrors errorHandler;
 
     // If the first argument is "link"
@@ -744,6 +749,9 @@ int main(int Argc, char *Argv[]) {
             else {
                 errorHandler.AddError("Unknown --ast-dump= value \"%s\".", ast);
             }
+        } else if (!strcmp(argv[i], "--binary-type")) {
+            printBinaryType();
+            exit(0);
         } else if (!strncmp(argv[i], "--x86-asm-syntax=", 17)) {
             intelAsmSyntax = argv[i] + 17;
             if (!((std::string(intelAsmSyntax) == "intel") || (std::string(intelAsmSyntax) == "att"))) {
