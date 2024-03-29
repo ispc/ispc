@@ -1002,67 +1002,60 @@ static void lSetInternalFunctions(llvm::Module *module) {
     @param symbolTable Symbol table to add definitions to
  */
 void ispc::AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable *symbolTable) {
-    llvm::StringRef sb = llvm::StringRef((const char *)lib->getLib(), lib->getSize());
-    llvm::MemoryBufferRef bcBuf = llvm::MemoryBuffer::getMemBuffer(sb)->getMemBufferRef();
+    llvm::Module *bcModule = lib->getLLVMModule();
 
-    llvm::Expected<std::unique_ptr<llvm::Module>> ModuleOrErr = llvm::parseBitcodeFile(bcBuf, *g->ctx);
-    if (!ModuleOrErr) {
-        Error(SourcePos(), "Error parsing stdlib bitcode: %s", toString(ModuleOrErr.takeError()).c_str());
-    } else {
-        llvm::Module *bcModule = ModuleOrErr.get().release();
-        // FIXME: this feels like a bad idea, but the issue is that when we
-        // set the llvm::Module's target triple in the ispc Module::Module
-        // constructor, we start by calling llvm::sys::getHostTriple() (and
-        // then change the arch if needed).  Somehow that ends up giving us
-        // strings like 'x86_64-apple-darwin11.0.0', while the stuff we
-        // compile to bitcode with clang has module triples like
-        // 'i386-apple-macosx10.7.0'.  And then LLVM issues a warning about
-        // linking together modules with incompatible target triples..
-        llvm::Triple mTriple(m->module->getTargetTriple());
-        llvm::Triple bcTriple(bcModule->getTargetTriple());
-        Debug(SourcePos(), "module triple: %s\nbitcode triple: %s\n", mTriple.str().c_str(), bcTriple.str().c_str());
+    // FIXME: this feels like a bad idea, but the issue is that when we
+    // set the llvm::Module's target triple in the ispc Module::Module
+    // constructor, we start by calling llvm::sys::getHostTriple() (and
+    // then change the arch if needed). Somehow that ends up giving us
+    // strings like 'x86_64-apple-darwin11.0.0', while the stuff we
+    // compile to bitcode with clang has module triples like
+    // 'i386-apple-macosx10.7.0'. And then LLVM issues a warning about
+    // linking together modules with incompatible target triples..
+    llvm::Triple mTriple(m->module->getTargetTriple());
+    llvm::Triple bcTriple(bcModule->getTargetTriple());
+    Debug(SourcePos(), "module triple: %s\nbitcode triple: %s\n", mTriple.str().c_str(), bcTriple.str().c_str());
 
-        bcModule->setTargetTriple(mTriple.str());
-        bcModule->setDataLayout(module->getDataLayout());
+    bcModule->setTargetTriple(mTriple.str());
+    bcModule->setDataLayout(module->getDataLayout());
 
-        if (g->target->isXeTarget()) {
-            // Maybe we will use it for other targets in future,
-            // but now it is needed only by Xe. We need
-            // to update attributes because Xe intrinsics are
-            // separated from the others and it is not done by default
-            lUpdateIntrinsicsAttributes(bcModule);
-        }
-
-        // A hack to move over declaration, which have no definition.
-        // New linker is kind of smart and think it knows better what to do, so
-        // it removes unused declarations without definitions.
-        // This trick should be legal, as both modules use the same LLVMContext.
-        for (llvm::Function &f : *bcModule) {
-            if (f.isDeclaration()) {
-                // Declarations with uses will be moved by Linker.
-                if (f.getNumUses() > 0)
-                    continue;
-                module->getOrInsertFunction(f.getName(), f.getFunctionType(), f.getAttributes());
-            }
-        }
-
-        // Remove clang ID metadata from the bitcode module, as we don't need it.
-        llvm::NamedMDNode *identMD = bcModule->getNamedMetadata("llvm.ident");
-        if (identMD) {
-            identMD->eraseFromParent();
-        }
-
-        std::unique_ptr<llvm::Module> M(bcModule);
-        if (llvm::Linker::linkModules(*module, std::move(M))) {
-            Error(SourcePos(), "Error linking stdlib bitcode.");
-        }
-
-        lSetInternalFunctions(module);
-
-        if (symbolTable != nullptr)
-            lAddModuleSymbols(module, symbolTable);
-        lCheckModuleIntrinsics(module);
+    if (g->target->isXeTarget()) {
+        // Maybe we will use it for other targets in future,
+        // but now it is needed only by Xe. We need
+        // to update attributes because Xe intrinsics are
+        // separated from the others and it is not done by default
+        lUpdateIntrinsicsAttributes(bcModule);
     }
+
+    // A hack to move over declaration, which have no definition.
+    // New linker is kind of smart and think it knows better what to do, so
+    // it removes unused declarations without definitions.
+    // This trick should be legal, as both modules use the same LLVMContext.
+    for (llvm::Function &f : *bcModule) {
+        if (f.isDeclaration()) {
+            // Declarations with uses will be moved by Linker.
+            if (f.getNumUses() > 0)
+                continue;
+            module->getOrInsertFunction(f.getName(), f.getFunctionType(), f.getAttributes());
+        }
+    }
+
+    // Remove clang ID metadata from the bitcode module, as we don't need it.
+    llvm::NamedMDNode *identMD = bcModule->getNamedMetadata("llvm.ident");
+    if (identMD) {
+        identMD->eraseFromParent();
+    }
+
+    std::unique_ptr<llvm::Module> M(bcModule);
+    if (llvm::Linker::linkModules(*module, std::move(M))) {
+        Error(SourcePos(), "Error linking stdlib bitcode.");
+    }
+
+    lSetInternalFunctions(module);
+
+    if (symbolTable != nullptr)
+        lAddModuleSymbols(module, symbolTable);
+    lCheckModuleIntrinsics(module);
 }
 
 /** Utility routine that defines a constant int32 with given value, adding
