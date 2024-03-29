@@ -737,6 +737,9 @@ struct Globals {
     /** Store the path to directory for IR file dumps. */
     std::string dumpFilePath;
 
+    /** Store the absolute path to share/ispc directory. */
+    std::string shareDirPath;
+
     /** Indicates after which optimization we want to generate
         DebugIR information. */
     int debugIR;
