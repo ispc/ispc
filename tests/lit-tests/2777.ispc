@@ -1,8 +1,6 @@
 // RUN: %{ispc} %s --target=avx2-i32x8 --emit-asm -o - | FileCheck %s
 
-// REQUIRES: X86_ENABLED && LLVM_16_0+
-
-// XFAIL: *
+// REQUIRES: X86_ENABLED && LLVM_17_0+
 
 // CHECK-NOT: vmovd
 // CHECK-NOT: vpinsrd
