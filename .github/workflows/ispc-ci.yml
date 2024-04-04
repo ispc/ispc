@@ -877,7 +877,7 @@ jobs:
         name: ispc_xe_deps_llvm17rel_win
         path: ispc-xe
 
-  win-test-llvm14:
+  win-test:
     needs: [define-flow, win-build-ispc]
     env:
       LLVM_HOME: "C:\\projects\\llvm"
@@ -886,6 +886,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        version: [14, 15, 16, 17]
         arch: [x86, x86-64]
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
 
@@ -894,7 +895,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@v4
       with:
-        name: ispc_llvm14_win
+        name: ispc_llvm${{matrix.version}}_win
 
     - name: Install dependencies
       run: |
@@ -920,120 +921,14 @@ jobs:
       uses: actions/upload-artifact@v4
       if: failure()
       with:
-        name: fail_db.llvm14.${{matrix.arch}}.${{matrix.target}}.txt
+        name: fail_db.llvm${{matrix.version}}.${{matrix.arch}}.${{matrix.target}}.txt
         path: fail_db.txt
 
     - name: Upload alloy logs
       uses: actions/upload-artifact@v3
       if: failure()
       with:
-        name: alloy_results.llvm14.${{matrix.arch}}.${{matrix.target}}
-        path: alloy_results_*
-
-  win-test-llvm15:
-    needs: [define-flow, win-build-ispc]
-    env:
-      LLVM_HOME: "C:\\projects\\llvm"
-    runs-on: windows-2022
-    continue-on-error: false
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [x86, x86-64]
-        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
-
-    steps:
-    - uses: actions/checkout@v4
-    - name: Download package
-      uses: actions/download-artifact@v4
-      with:
-        name: ispc_llvm15_win
-
-    - name: Install dependencies
-      run: |
-        .github/workflows/scripts/install-test-deps.ps1
-
-    - name: Check environment
-      shell: cmd
-      run: |
-        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
-
-    - name: Running tests
-      run: |
-        $env:ISPC_HOME = "$pwd"
-        .github/workflows/scripts/load-vs-env.ps1 "${{ matrix.arch }}"
-        python .\alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v4
-      if: failure()
-      with:
-        name: fail_db.llvm15.${{matrix.arch}}.${{matrix.target}}.txt
-        path: fail_db.txt
-
-    - name: Upload alloy logs
-      uses: actions/upload-artifact@v3
-      if: failure()
-      with:
-        name: alloy_results.llvm15.${{matrix.arch}}.${{matrix.target}}
-        path: alloy_results_*
-
-  win-test-llvm16:
-    needs: [define-flow, win-build-ispc]
-    env:
-      LLVM_HOME: "C:\\projects\\llvm"
-    runs-on: windows-2022
-    continue-on-error: false
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [x86, x86-64]
-        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
-
-    steps:
-    - uses: actions/checkout@v4
-    - name: Download package
-      uses: actions/download-artifact@v4
-      with:
-        name: ispc_llvm16_win
-
-    - name: Install dependencies
-      run: |
-        .github/workflows/scripts/install-test-deps.ps1
-
-    - name: Check environment
-      shell: cmd
-      run: |
-        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
-
-    - name: Running tests
-      run: |
-        $env:ISPC_HOME = "$pwd"
-        .github/workflows/scripts/load-vs-env.ps1 "${{ matrix.arch }}"
-        python .\alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v4
-      if: failure()
-      with:
-        name: fail_db.llvm16.${{matrix.arch}}.${{matrix.target}}.txt
-        path: fail_db.txt
-
-    - name: Upload alloy logs
-      uses: actions/upload-artifact@v3
-      if: failure()
-      with:
-        name: alloy_results.llvm16.${{matrix.arch}}.${{matrix.target}}
+        name: alloy_results.llvm${{matrix.version}}.${{matrix.arch}}.${{matrix.target}}
         path: alloy_results_*
 
   win-test-llvm17-lto:
@@ -1087,59 +982,6 @@ jobs:
       if: failure()
       with:
         name: alloy_results.llvm17_lto.${{matrix.arch}}.${{matrix.target}}
-        path: alloy_results_*
-
-  win-test-llvm17:
-    needs: [define-flow, win-build-ispc]
-    env:
-      LLVM_HOME: "C:\\projects\\llvm"
-    runs-on: windows-2022
-    continue-on-error: false
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [x86, x86-64]
-        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
-
-    steps:
-    - uses: actions/checkout@v4
-    - name: Download package
-      uses: actions/download-artifact@v4
-      with:
-        name: ispc_llvm17_win
-
-    - name: Install dependencies
-      run: |
-        .github/workflows/scripts/install-test-deps.ps1
-
-    - name: Check environment
-      shell: cmd
-      run: |
-        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
-
-    - name: Running tests
-      run: |
-        $env:ISPC_HOME = "$pwd"
-        .github/workflows/scripts/load-vs-env.ps1 "${{ matrix.arch }}"
-        python .\alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v4
-      if: failure()
-      with:
-        name: fail_db.llvm17.${{matrix.arch}}.${{matrix.target}}.txt
-        path: fail_db.txt
-
-    - name: Upload alloy logs
-      uses: actions/upload-artifact@v3
-      if: failure()
-      with:
-        name: alloy_results.llvm17.${{matrix.arch}}.${{matrix.target}}
         path: alloy_results_*
 
   win-test-xe-llvm17-release:
