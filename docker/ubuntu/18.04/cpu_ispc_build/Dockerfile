@@ -82,6 +82,9 @@ RUN git clone https://github.com/$REPO.git ispc && \
 
 FROM llvm_build_step1 AS llvm_build_step2
 SHELL ["/bin/bash", "-c"]
+
+ARG LTO=OFF
+ARG PGO=OFF
 ARG LLVM_VERSION
 ARG LLVM_DISABLE_ASSERTIONS
 
@@ -103,6 +106,9 @@ ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
 
 FROM llvm_build_step2 AS ispc_build
 SHELL ["/bin/bash", "-c"]
+
+ARG LTO=OFF
+ARG PGO=OFF
 ARG LLVM_VERSION
 
 # Install regular ISPC dependencies
