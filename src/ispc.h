@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -86,11 +86,14 @@ class PointerType;
 class Stmt;
 class Symbol;
 class SymbolTable;
+class TemplateArg;
 class TemplateInstantiation;
+class TemplateParam;
 class TemplateParms;
 class TemplateSymbol;
 class Type;
 struct VariableDeclaration;
+typedef std::vector<TemplateArg> TemplateArgs;
 
 enum StorageClass { SC_NONE, SC_EXTERN, SC_STATIC, SC_TYPEDEF, SC_EXTERN_C, SC_EXTERN_SYCL };
 

@@ -256,6 +256,13 @@ variables:
   ``ISPCRT`` to replace the default options with the content of the environment
   variable.
 
+* ``ISPCRT_GPU_DRIVER`` - if more than one supported GPU is present in the
+  system, they may be managed by several GPU drivers. The user can select 
+  the GPU driver to be used by the ``ISPCRT`` using ``ISPCRT_GPU_DRIVER``
+  variable. It should be set to a corresponding driver number as enumerated
+  by the Level Zero runtime. For example, in a system with two GPU drivers present, 
+  the variable can be set to ``0`` or ``1``.
+
 * ``ISPCRT_GPU_DEVICE`` - if more than one supported GPU is present in the
   system, the user can select the GPU device to be used by the ``ISPCRT`` using
   ``ISPCRT_GPU_DEVICE`` variable. It should be set to a number of a device as

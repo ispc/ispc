@@ -69,6 +69,8 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.19.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.20.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.21.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.22.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.23.0`_
 
 * `Getting Started with ISPC`_
 
@@ -556,6 +558,39 @@ behavior for signed integers, though it may limit some compiler optimizations.
 
 Template function specializations with explicit template arguments were introduced to the
 language, please refer to `Function Templates`_ section for more details.
+
+Updating ISPC Programs For Changes In ISPC 1.22.0
+-------------------------------------------------
+
+Template operators with explicit specializations and instantiations were introduced to
+the language. The usage of different function specifiers with templates were fixed and
+aligned, please refer to `Function Templates`_ section for more details.
+
+Now, command-line switch `--dwarf-version=<n>` forces DWARF format debug info generation
+on Windows. It allows to debug ISPC code linked with MinGW generated code.
+
+Updating ISPC Programs For Changes In ISPC 1.23.0
+-------------------------------------------------
+
+This release contains the following changes that may affect compatibility with
+older versions:
+
+* `true` `bool` values in storage were changed from `-1` to `1` to match C/C++ ABI.
+  Previously, ISPC treated `bool` values similarly to C/C++ in terms of size, but
+  incorrectly interpreted their actual values. This meant that `true` in ISPC
+  might not have translated correctly to true in C/C++. This issue was introduced
+  in version 1.13.0. Starting now, ISPC correctly stores and interprets `true`
+  values in a way that aligns with C/C++ expectations.
+
+A couple of improvements have been made to variables initialization:
+
+* Variables with const qualifiers can be initialized using the values of
+  previously initialized const variables including arithmetic operations above
+  them. It now works also with varying types.
+* Enumeration type values can be used as constants.
+
+The result of selection operator can now be used as lvalue if it has suitable
+type.
 
 Getting Started with ISPC
 =========================
@@ -2651,6 +2686,19 @@ guarded with ``#if TARGET_WIDTH``:
         ...
     #endif
 
+However, there is a special case when the only one value is in braces. All
+vector elements are initialized with this value:
+
+::
+
+    varying int x = { 3, };
+
+It is effectively equivalent to:
+
+::
+
+    varying int x = 3;
+
 Arrays can be initialized with individual element values in braces:
 
 ::
@@ -2682,6 +2730,18 @@ the expected syntax:
     struct Foo { int x; float bar[3]; };
     Foo fa[2] = { { 1, { 2, 3, 4 } }, { 10, { 20, 30, 40 } } };
     // now, fa[1].bar[2] == 40, and so forth
+
+Variables with const qualifiers can be initialized using the values of
+previously initialized const variables including arithmetic operations above
+them:
+
+::
+
+    const uniform int x = 1;
+    const uniform int y = 1 + 2;
+    ...
+    const varying int x = { 1, 2, 3, 2 + 2 };
+    const varying int y = x * 2;
 
 Expressions
 -----------
@@ -4064,9 +4124,16 @@ is on (i.e. the value is negative) and zero if it is off.
     unsigned int64 signbits(double x)
     uniform unsigned int64 signbits(uniform double x)
 
-Standard rounding functions are provided for ``float16``, ``float`` and ``double``
-types.  (On machines that support Intel®SSE or Intel® AVX, these functions all
-map to variants of the ``roundss`` and ``roundps`` instructions, respectively.)
+The standard library provides four rounding functions: ``round``, ``floor``,
+``ceil`` and ``trunc`` for ``float16``, ``float`` and ``double`` data types. On
+machines that support Intel®SSE or Intel® AVX, these functions all map to a
+single instruction, specifically a variant of the ``roundss`` and ``roundps``
+instructions. This offers enhanced performance, despite a minor semantic
+difference in the ``round`` function when compared to the ``C`` math library
+``round`` function. It computes the nearest integer value, rounding halfway
+cases to nearest even integer, i.e., corresponds to the ``C`` math library
+``roundeven`` function. These function operate regardless of the current
+rounding mode and do not signal precision exceptions.
 
 ::
 

@@ -1,0 +1,25 @@
+From 659197dc3478301765e358303aeeaa9fc944e56a Mon Sep 17 00:00:00 2001
+From: Aleksei Nurmukhametov <aleksei.nurmukhametov@intel.com>
+Date: Wed, 1 Nov 2023 06:50:35 -0700
+Subject: [PATCH] Do not consider application path when loading DbgHelp.dll
+
+---
+ llvm/lib/Support/Windows/Signals.inc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/llvm/lib/Support/Windows/Signals.inc b/llvm/lib/Support/Windows/Signals.inc
+index cb82f55fc38b..de708aba7038 100644
+--- a/llvm/lib/Support/Windows/Signals.inc
++++ b/llvm/lib/Support/Windows/Signals.inc
+@@ -168,7 +168,7 @@ static bool isDebugHelpInitialized() {
+ }
+ 
+ static bool load64BitDebugHelp(void) {
+-  HMODULE hLib = ::LoadLibraryW(L"Dbghelp.dll");
++  HMODULE hLib = ::LoadLibraryExW(L"Dbghelp.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
+   if (hLib) {
+     fMiniDumpWriteDump =
+         (fpMiniDumpWriteDump)::GetProcAddress(hLib, "MiniDumpWriteDump");
+-- 
+2.25.1
+

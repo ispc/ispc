@@ -1,12 +1,15 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
 
 #include "ReplacePseudoMemoryOps.h"
+#include "builtins-decl.h"
 
 namespace ispc {
+
+using namespace builtin;
 
 /** This routine attempts to determine if the given pointer in lvalue is
     pointing to stack-allocated memory.  It's conservative in that it
@@ -39,36 +42,34 @@ static bool lIsSafeToBlend(llvm::Value *lvalue) {
     }
 }
 
+struct LMSInfo {
+    LMSInfo(const char *bname, const char *msname) : blend(bname), store(msname) {}
+    llvm::Function *blendFunc() const { return m->module->getFunction(blend); }
+    llvm::Function *maskedStoreFunc() const { return m->module->getFunction(store); }
+
+  private:
+    const char *blend;
+    const char *store;
+};
+
 static bool lReplacePseudoMaskedStore(llvm::CallInst *callInst) {
-    struct LMSInfo {
-        LMSInfo(const char *pname, const char *bname, const char *msname) {
-            pseudoFunc = m->module->getFunction(pname);
-            blendFunc = m->module->getFunction(bname);
-            maskedStoreFunc = m->module->getFunction(msname);
-            Assert(pseudoFunc != nullptr && blendFunc != nullptr && maskedStoreFunc != nullptr);
-        }
-        llvm::Function *pseudoFunc;
-        llvm::Function *blendFunc;
-        llvm::Function *maskedStoreFunc;
+    static std::unordered_map<std::string, LMSInfo> replacementRules = {
+        {__pseudo_masked_store_i8, LMSInfo(__masked_store_blend_i8, __masked_store_i8)},
+        {__pseudo_masked_store_i16, LMSInfo(__masked_store_blend_i16, __masked_store_i16)},
+        {__pseudo_masked_store_half, LMSInfo(__masked_store_blend_half, __masked_store_half)},
+        {__pseudo_masked_store_i32, LMSInfo(__masked_store_blend_i32, __masked_store_i32)},
+        {__pseudo_masked_store_float, LMSInfo(__masked_store_blend_float, __masked_store_float)},
+        {__pseudo_masked_store_i64, LMSInfo(__masked_store_blend_i64, __masked_store_i64)},
+        {__pseudo_masked_store_double, LMSInfo(__masked_store_blend_double, __masked_store_double)},
     };
 
-    LMSInfo msInfo[] = {
-        LMSInfo("__pseudo_masked_store_i8", "__masked_store_blend_i8", "__masked_store_i8"),
-        LMSInfo("__pseudo_masked_store_i16", "__masked_store_blend_i16", "__masked_store_i16"),
-        LMSInfo("__pseudo_masked_store_half", "__masked_store_blend_half", "__masked_store_half"),
-        LMSInfo("__pseudo_masked_store_i32", "__masked_store_blend_i32", "__masked_store_i32"),
-        LMSInfo("__pseudo_masked_store_float", "__masked_store_blend_float", "__masked_store_float"),
-        LMSInfo("__pseudo_masked_store_i64", "__masked_store_blend_i64", "__masked_store_i64"),
-        LMSInfo("__pseudo_masked_store_double", "__masked_store_blend_double", "__masked_store_double")};
-    LMSInfo *info = nullptr;
-    for (unsigned int i = 0; i < sizeof(msInfo) / sizeof(msInfo[0]); ++i) {
-        if (msInfo[i].pseudoFunc != nullptr && callInst->getCalledFunction() == msInfo[i].pseudoFunc) {
-            info = &msInfo[i];
-            break;
-        }
-    }
-    if (info == nullptr)
+    auto name = callInst->getCalledFunction()->getName().str();
+    auto it = replacementRules.find(name);
+    if (it == replacementRules.end()) {
+        // it is not a call of __pseudo function stored in replacementRules
         return false;
+    }
+    LMSInfo *info = &it->second;
 
     llvm::Value *lvalue = callInst->getArgOperand(0);
     llvm::Value *rvalue = callInst->getArgOperand(1);
@@ -82,7 +83,7 @@ static bool lReplacePseudoMaskedStore(llvm::CallInst *callInst) {
 
     // Generate the call to the appropriate masked store function and
     // replace the __pseudo_* one with it.
-    llvm::Function *fms = doBlend ? info->blendFunc : info->maskedStoreFunc;
+    llvm::Function *fms = doBlend ? info->blendFunc() : info->maskedStoreFunc();
     llvm::Instruction *inst = LLVMCallInst(fms, lvalue, rvalue, mask, "", callInst);
     LLVMCopyMetadata(inst, callInst);
 
@@ -90,242 +91,185 @@ static bool lReplacePseudoMaskedStore(llvm::CallInst *callInst) {
     return true;
 }
 
-static bool lReplacePseudoGS(llvm::CallInst *callInst) {
-    struct LowerGSInfo {
-        LowerGSInfo(const char *pName, const char *aName, bool ig, bool ip) : isGather(ig), isPrefetch(ip) {
-            pseudoFunc = m->module->getFunction(pName);
-            actualFunc = m->module->getFunction(aName);
-        }
-        llvm::Function *pseudoFunc;
-        llvm::Function *actualFunc;
-        const bool isGather;
-        const bool isPrefetch;
+struct LowerGSInfo {
+    enum class Type {
+        Gather,
+        Scatter,
+        Prefetch,
     };
+    LowerGSInfo(const char *aName, Type type) : generic(aName), name(aName), type(type) {}
+    LowerGSInfo(const char *gName, const char *aName, Type type) : generic(gName), name(aName), type(type) {}
+    static LowerGSInfo Gather(const char *aName) { return LowerGSInfo(aName, Type::Gather); }
+    static LowerGSInfo Gather(const char *gName, const char *aName) { return LowerGSInfo(gName, aName, Type::Gather); }
+    static LowerGSInfo Scatter(const char *aName) { return LowerGSInfo(aName, Type::Scatter); }
+    static LowerGSInfo Scatter(const char *gName, const char *aName) {
+        return LowerGSInfo(gName, aName, Type::Scatter);
+    }
+    static LowerGSInfo Prefetch(const char *aName) { return LowerGSInfo(aName, Type::Prefetch); }
+    llvm::Function *actualFunc() const {
+        const char *func = name;
+        if (isGather()) {
+            func = g->target->hasGather() && g->opt.disableGathers ? generic : name;
+        }
+        if (isScatter()) {
+            func = g->target->hasScatter() && g->opt.disableScatters ? generic : name;
+        }
+        return m->module->getFunction(func);
+    }
+    bool isGather() const { return type == Type::Gather; }
+    bool isScatter() const { return type == Type::Scatter; }
+    bool isPrefetch() const { return type == Type::Prefetch; }
 
-    LowerGSInfo lgsInfo[] = {
-        LowerGSInfo("__pseudo_gather32_i8",
-                    g->target->hasGather() && g->opt.disableGathers ? "__gather32_generic_i8" : "__gather32_i8", true,
-                    false),
-        LowerGSInfo("__pseudo_gather32_i16",
-                    g->target->hasGather() && g->opt.disableGathers ? "__gather32_generic_i16" : "__gather32_i16", true,
-                    false),
-        LowerGSInfo("__pseudo_gather32_half",
-                    g->target->hasGather() && g->opt.disableGathers ? "__gather32_generic_half" : "__gather32_half",
-                    true, false),
-        LowerGSInfo("__pseudo_gather32_i32",
-                    g->target->hasGather() && g->opt.disableGathers ? "__gather32_generic_i32" : "__gather32_i32", true,
-                    false),
-        LowerGSInfo("__pseudo_gather32_float",
-                    g->target->hasGather() && g->opt.disableGathers ? "__gather32_generic_float" : "__gather32_float",
-                    true, false),
-        LowerGSInfo("__pseudo_gather32_i64",
-                    g->target->hasGather() && g->opt.disableGathers ? "__gather32_generic_i64" : "__gather32_i64", true,
-                    false),
-        LowerGSInfo("__pseudo_gather32_double",
-                    g->target->hasGather() && g->opt.disableGathers ? "__gather32_generic_double" : "__gather32_double",
-                    true, false),
+  private:
+    const char *generic;
+    const char *name;
+    Type type;
+};
 
-        LowerGSInfo("__pseudo_gather64_i8",
-                    g->target->hasGather() && g->opt.disableGathers ? "__gather64_generic_i8" : "__gather64_i8", true,
-                    false),
-        LowerGSInfo("__pseudo_gather64_i16",
-                    g->target->hasGather() && g->opt.disableGathers ? "__gather64_generic_i16" : "__gather64_i16", true,
-                    false),
-        LowerGSInfo("__pseudo_gather64_half",
-                    g->target->hasGather() && g->opt.disableGathers ? "__gather64_generic_half" : "__gather64_half",
-                    true, false),
-        LowerGSInfo("__pseudo_gather64_i32",
-                    g->target->hasGather() && g->opt.disableGathers ? "__gather64_generic_i32" : "__gather64_i32", true,
-                    false),
-        LowerGSInfo("__pseudo_gather64_float",
-                    g->target->hasGather() && g->opt.disableGathers ? "__gather64_generic_float" : "__gather64_float",
-                    true, false),
-        LowerGSInfo("__pseudo_gather64_i64",
-                    g->target->hasGather() && g->opt.disableGathers ? "__gather64_generic_i64" : "__gather64_i64", true,
-                    false),
-        LowerGSInfo("__pseudo_gather64_double",
-                    g->target->hasGather() && g->opt.disableGathers ? "__gather64_generic_double" : "__gather64_double",
-                    true, false),
+static bool lReplacePseudoGS(llvm::CallInst *callInst) {
 
-        LowerGSInfo("__pseudo_gather_factored_base_offsets32_i8", "__gather_factored_base_offsets32_i8", true, false),
-        LowerGSInfo("__pseudo_gather_factored_base_offsets32_i16", "__gather_factored_base_offsets32_i16", true, false),
-        LowerGSInfo("__pseudo_gather_factored_base_offsets32_half", "__gather_factored_base_offsets32_half", true,
-                    false),
-        LowerGSInfo("__pseudo_gather_factored_base_offsets32_i32", "__gather_factored_base_offsets32_i32", true, false),
-        LowerGSInfo("__pseudo_gather_factored_base_offsets32_float", "__gather_factored_base_offsets32_float", true,
-                    false),
-        LowerGSInfo("__pseudo_gather_factored_base_offsets32_i64", "__gather_factored_base_offsets32_i64", true, false),
-        LowerGSInfo("__pseudo_gather_factored_base_offsets32_double", "__gather_factored_base_offsets32_double", true,
-                    false),
+    static std::unordered_map<std::string, LowerGSInfo> replacementRules = {
+        {__pseudo_gather32_i8, LowerGSInfo::Gather(__gather32_generic_i8, __gather32_i8)},
+        {__pseudo_gather32_i16, LowerGSInfo::Gather(__gather32_generic_i16, __gather32_i16)},
+        {__pseudo_gather32_half, LowerGSInfo::Gather(__gather32_generic_half, __gather32_half)},
+        {__pseudo_gather32_i32, LowerGSInfo::Gather(__gather32_generic_i32, __gather32_i32)},
+        {__pseudo_gather32_float, LowerGSInfo::Gather(__gather32_generic_float, __gather32_float)},
+        {__pseudo_gather32_i64, LowerGSInfo::Gather(__gather32_generic_i64, __gather32_i64)},
+        {__pseudo_gather32_double, LowerGSInfo::Gather(__gather32_generic_double, __gather32_double)},
 
-        LowerGSInfo("__pseudo_gather_factored_base_offsets64_i8", "__gather_factored_base_offsets64_i8", true, false),
-        LowerGSInfo("__pseudo_gather_factored_base_offsets64_i16", "__gather_factored_base_offsets64_i16", true, false),
-        LowerGSInfo("__pseudo_gather_factored_base_offsets64_half", "__gather_factored_base_offsets64_half", true,
-                    false),
-        LowerGSInfo("__pseudo_gather_factored_base_offsets64_i32", "__gather_factored_base_offsets64_i32", true, false),
-        LowerGSInfo("__pseudo_gather_factored_base_offsets64_float", "__gather_factored_base_offsets64_float", true,
-                    false),
-        LowerGSInfo("__pseudo_gather_factored_base_offsets64_i64", "__gather_factored_base_offsets64_i64", true, false),
-        LowerGSInfo("__pseudo_gather_factored_base_offsets64_double", "__gather_factored_base_offsets64_double", true,
-                    false),
+        {__pseudo_gather64_i8, LowerGSInfo::Gather(__gather64_generic_i8, __gather64_i8)},
+        {__pseudo_gather64_i16, LowerGSInfo::Gather(__gather64_generic_i16, __gather64_i16)},
+        {__pseudo_gather64_half, LowerGSInfo::Gather(__gather64_generic_half, __gather64_half)},
+        {__pseudo_gather64_i32, LowerGSInfo::Gather(__gather64_generic_i32, __gather64_i32)},
+        {__pseudo_gather64_float, LowerGSInfo::Gather(__gather64_generic_float, __gather64_float)},
+        {__pseudo_gather64_i64, LowerGSInfo::Gather(__gather64_generic_i64, __gather64_i64)},
+        {__pseudo_gather64_double, LowerGSInfo::Gather(__gather64_generic_double, __gather64_double)},
 
-        LowerGSInfo("__pseudo_gather_base_offsets32_i8", "__gather_base_offsets32_i8", true, false),
-        LowerGSInfo("__pseudo_gather_base_offsets32_i16", "__gather_base_offsets32_i16", true, false),
-        LowerGSInfo("__pseudo_gather_base_offsets32_half", "__gather_base_offsets32_half", true, false),
-        LowerGSInfo("__pseudo_gather_base_offsets32_i32", "__gather_base_offsets32_i32", true, false),
-        LowerGSInfo("__pseudo_gather_base_offsets32_float", "__gather_base_offsets32_float", true, false),
-        LowerGSInfo("__pseudo_gather_base_offsets32_i64", "__gather_base_offsets32_i64", true, false),
-        LowerGSInfo("__pseudo_gather_base_offsets32_double", "__gather_base_offsets32_double", true, false),
+        {__pseudo_gather_factored_base_offsets32_i8, LowerGSInfo::Gather(__gather_factored_base_offsets32_i8)},
+        {__pseudo_gather_factored_base_offsets32_i16, LowerGSInfo::Gather(__gather_factored_base_offsets32_i16)},
+        {__pseudo_gather_factored_base_offsets32_half, LowerGSInfo::Gather(__gather_factored_base_offsets32_half)},
+        {__pseudo_gather_factored_base_offsets32_i32, LowerGSInfo::Gather(__gather_factored_base_offsets32_i32)},
+        {__pseudo_gather_factored_base_offsets32_float, LowerGSInfo::Gather(__gather_factored_base_offsets32_float)},
+        {__pseudo_gather_factored_base_offsets32_i64, LowerGSInfo::Gather(__gather_factored_base_offsets32_i64)},
+        {__pseudo_gather_factored_base_offsets32_double, LowerGSInfo::Gather(__gather_factored_base_offsets32_double)},
 
-        LowerGSInfo("__pseudo_gather_base_offsets64_i8", "__gather_base_offsets64_i8", true, false),
-        LowerGSInfo("__pseudo_gather_base_offsets64_i16", "__gather_base_offsets64_i16", true, false),
-        LowerGSInfo("__pseudo_gather_base_offsets64_half", "__gather_base_offsets64_half", true, false),
-        LowerGSInfo("__pseudo_gather_base_offsets64_i32", "__gather_base_offsets64_i32", true, false),
-        LowerGSInfo("__pseudo_gather_base_offsets64_float", "__gather_base_offsets64_float", true, false),
-        LowerGSInfo("__pseudo_gather_base_offsets64_i64", "__gather_base_offsets64_i64", true, false),
-        LowerGSInfo("__pseudo_gather_base_offsets64_double", "__gather_base_offsets64_double", true, false),
+        {__pseudo_gather_factored_base_offsets64_i8, LowerGSInfo::Gather(__gather_factored_base_offsets64_i8)},
+        {__pseudo_gather_factored_base_offsets64_i16, LowerGSInfo::Gather(__gather_factored_base_offsets64_i16)},
+        {__pseudo_gather_factored_base_offsets64_half, LowerGSInfo::Gather(__gather_factored_base_offsets64_half)},
+        {__pseudo_gather_factored_base_offsets64_i32, LowerGSInfo::Gather(__gather_factored_base_offsets64_i32)},
+        {__pseudo_gather_factored_base_offsets64_float, LowerGSInfo::Gather(__gather_factored_base_offsets64_float)},
+        {__pseudo_gather_factored_base_offsets64_i64, LowerGSInfo::Gather(__gather_factored_base_offsets64_i64)},
+        {__pseudo_gather_factored_base_offsets64_double, LowerGSInfo::Gather(__gather_factored_base_offsets64_double)},
 
-        LowerGSInfo("__pseudo_scatter32_i8",
-                    g->target->hasScatter() && g->opt.disableScatters ? "__scatter32_generic_i8" : "__scatter32_i8",
-                    false, false),
-        LowerGSInfo("__pseudo_scatter32_i16",
-                    g->target->hasScatter() && g->opt.disableScatters ? "__scatter32_generic_i16" : "__scatter32_i16",
-                    false, false),
-        LowerGSInfo("__pseudo_scatter32_half",
-                    g->target->hasScatter() && g->opt.disableScatters ? "__scatter32_generic_half" : "__scatter32_half",
-                    false, false),
-        LowerGSInfo("__pseudo_scatter32_i32",
-                    g->target->hasScatter() && g->opt.disableScatters ? "__scatter32_generic_i32" : "__scatter32_i32",
-                    false, false),
-        LowerGSInfo("__pseudo_scatter32_float",
-                    g->target->hasScatter() && g->opt.disableScatters ? "__scatter32_generic_float"
-                                                                      : "__scatter32_float",
-                    false, false),
-        LowerGSInfo("__pseudo_scatter32_i64",
-                    g->target->hasScatter() && g->opt.disableScatters ? "__scatter32_generic_i64" : "__scatter32_i64",
-                    false, false),
-        LowerGSInfo("__pseudo_scatter32_double",
-                    g->target->hasScatter() && g->opt.disableScatters ? "__scatter32_generic_double"
-                                                                      : "__scatter32_double",
-                    false, false),
+        {__pseudo_gather_base_offsets32_i8, LowerGSInfo::Gather(__gather_base_offsets32_i8)},
+        {__pseudo_gather_base_offsets32_i16, LowerGSInfo::Gather(__gather_base_offsets32_i16)},
+        {__pseudo_gather_base_offsets32_half, LowerGSInfo::Gather(__gather_base_offsets32_half)},
+        {__pseudo_gather_base_offsets32_i32, LowerGSInfo::Gather(__gather_base_offsets32_i32)},
+        {__pseudo_gather_base_offsets32_float, LowerGSInfo::Gather(__gather_base_offsets32_float)},
+        {__pseudo_gather_base_offsets32_i64, LowerGSInfo::Gather(__gather_base_offsets32_i64)},
+        {__pseudo_gather_base_offsets32_double, LowerGSInfo::Gather(__gather_base_offsets32_double)},
 
-        LowerGSInfo("__pseudo_scatter64_i8",
-                    g->target->hasScatter() && g->opt.disableScatters ? "__scatter64_generic_i8" : "__scatter64_i8",
-                    false, false),
-        LowerGSInfo("__pseudo_scatter64_i16",
-                    g->target->hasScatter() && g->opt.disableScatters ? "__scatter64_generic_i16" : "__scatter64_i16",
-                    false, false),
-        LowerGSInfo("__pseudo_scatter64_half",
-                    g->target->hasScatter() && g->opt.disableScatters ? "__scatter64_generic_half" : "__scatter64_half",
-                    false, false),
-        LowerGSInfo("__pseudo_scatter64_i32",
-                    g->target->hasScatter() && g->opt.disableScatters ? "__scatter64_generic_i32" : "__scatter64_i32",
-                    false, false),
-        LowerGSInfo("__pseudo_scatter64_float",
-                    g->target->hasScatter() && g->opt.disableScatters ? "__scatter64_generic_float"
-                                                                      : "__scatter64_float",
-                    false, false),
-        LowerGSInfo("__pseudo_scatter64_i64",
-                    g->target->hasScatter() && g->opt.disableScatters ? "__scatter64_generic_i64" : "__scatter64_i64",
-                    false, false),
-        LowerGSInfo("__pseudo_scatter64_double",
-                    g->target->hasScatter() && g->opt.disableScatters ? "__scatter64_generic_double"
-                                                                      : "__scatter64_double",
-                    false, false),
+        {__pseudo_gather_base_offsets64_i8, LowerGSInfo::Gather(__gather_base_offsets64_i8)},
+        {__pseudo_gather_base_offsets64_i16, LowerGSInfo::Gather(__gather_base_offsets64_i16)},
+        {__pseudo_gather_base_offsets64_half, LowerGSInfo::Gather(__gather_base_offsets64_half)},
+        {__pseudo_gather_base_offsets64_i32, LowerGSInfo::Gather(__gather_base_offsets64_i32)},
+        {__pseudo_gather_base_offsets64_float, LowerGSInfo::Gather(__gather_base_offsets64_float)},
+        {__pseudo_gather_base_offsets64_i64, LowerGSInfo::Gather(__gather_base_offsets64_i64)},
+        {__pseudo_gather_base_offsets64_double, LowerGSInfo::Gather(__gather_base_offsets64_double)},
 
-        LowerGSInfo("__pseudo_scatter_factored_base_offsets32_i8", "__scatter_factored_base_offsets32_i8", false,
-                    false),
-        LowerGSInfo("__pseudo_scatter_factored_base_offsets32_i16", "__scatter_factored_base_offsets32_i16", false,
-                    false),
-        LowerGSInfo("__pseudo_scatter_factored_base_offsets32_half", "__scatter_factored_base_offsets32_half", false,
-                    false),
-        LowerGSInfo("__pseudo_scatter_factored_base_offsets32_i32", "__scatter_factored_base_offsets32_i32", false,
-                    false),
-        LowerGSInfo("__pseudo_scatter_factored_base_offsets32_float", "__scatter_factored_base_offsets32_float", false,
-                    false),
-        LowerGSInfo("__pseudo_scatter_factored_base_offsets32_i64", "__scatter_factored_base_offsets32_i64", false,
-                    false),
-        LowerGSInfo("__pseudo_scatter_factored_base_offsets32_double", "__scatter_factored_base_offsets32_double",
-                    false, false),
+        {__pseudo_scatter32_i8, LowerGSInfo::Scatter(__scatter32_generic_i8, __scatter32_i8)},
+        {__pseudo_scatter32_i16, LowerGSInfo::Scatter(__scatter32_generic_i16, __scatter32_i16)},
+        {__pseudo_scatter32_half, LowerGSInfo::Scatter(__scatter32_generic_half, __scatter32_half)},
+        {__pseudo_scatter32_i32, LowerGSInfo::Scatter(__scatter32_generic_i32, __scatter32_i32)},
+        {__pseudo_scatter32_float, LowerGSInfo::Scatter(__scatter32_generic_float, __scatter32_float)},
+        {__pseudo_scatter32_i64, LowerGSInfo::Scatter(__scatter32_generic_i64, __scatter32_i64)},
+        {__pseudo_scatter32_double, LowerGSInfo::Scatter(__scatter32_generic_double, __scatter32_double)},
 
-        LowerGSInfo("__pseudo_scatter_factored_base_offsets64_i8", "__scatter_factored_base_offsets64_i8", false,
-                    false),
-        LowerGSInfo("__pseudo_scatter_factored_base_offsets64_i16", "__scatter_factored_base_offsets64_i16", false,
-                    false),
-        LowerGSInfo("__pseudo_scatter_factored_base_offsets64_half", "__scatter_factored_base_offsets64_half", false,
-                    false),
-        LowerGSInfo("__pseudo_scatter_factored_base_offsets64_i32", "__scatter_factored_base_offsets64_i32", false,
-                    false),
-        LowerGSInfo("__pseudo_scatter_factored_base_offsets64_float", "__scatter_factored_base_offsets64_float", false,
-                    false),
-        LowerGSInfo("__pseudo_scatter_factored_base_offsets64_i64", "__scatter_factored_base_offsets64_i64", false,
-                    false),
-        LowerGSInfo("__pseudo_scatter_factored_base_offsets64_double", "__scatter_factored_base_offsets64_double",
-                    false, false),
+        {__pseudo_scatter64_i8, LowerGSInfo::Scatter(__scatter64_generic_i8, __scatter64_i8)},
+        {__pseudo_scatter64_i16, LowerGSInfo::Scatter(__scatter64_generic_i16, __scatter64_i16)},
+        {__pseudo_scatter64_half, LowerGSInfo::Scatter(__scatter64_generic_half, __scatter64_half)},
+        {__pseudo_scatter64_i32, LowerGSInfo::Scatter(__scatter64_generic_i32, __scatter64_i32)},
+        {__pseudo_scatter64_float, LowerGSInfo::Scatter(__scatter64_generic_float, __scatter64_float)},
+        {__pseudo_scatter64_i64, LowerGSInfo::Scatter(__scatter64_generic_i64, __scatter64_i64)},
+        {__pseudo_scatter64_double, LowerGSInfo::Scatter(__scatter64_generic_double, __scatter64_double)},
 
-        LowerGSInfo("__pseudo_scatter_base_offsets32_i8", "__scatter_base_offsets32_i8", false, false),
-        LowerGSInfo("__pseudo_scatter_base_offsets32_i16", "__scatter_base_offsets32_i16", false, false),
-        LowerGSInfo("__pseudo_scatter_base_offsets32_half", "__scatter_base_offsets32_half", false, false),
-        LowerGSInfo("__pseudo_scatter_base_offsets32_i32", "__scatter_base_offsets32_i32", false, false),
-        LowerGSInfo("__pseudo_scatter_base_offsets32_float", "__scatter_base_offsets32_float", false, false),
-        LowerGSInfo("__pseudo_scatter_base_offsets32_i64", "__scatter_base_offsets32_i64", false, false),
-        LowerGSInfo("__pseudo_scatter_base_offsets32_double", "__scatter_base_offsets32_double", false, false),
+        {__pseudo_scatter_factored_base_offsets32_i8, LowerGSInfo::Scatter(__scatter_factored_base_offsets32_i8)},
+        {__pseudo_scatter_factored_base_offsets32_i16, LowerGSInfo::Scatter(__scatter_factored_base_offsets32_i16)},
+        {__pseudo_scatter_factored_base_offsets32_half, LowerGSInfo::Scatter(__scatter_factored_base_offsets32_half)},
+        {__pseudo_scatter_factored_base_offsets32_i32, LowerGSInfo::Scatter(__scatter_factored_base_offsets32_i32)},
+        {__pseudo_scatter_factored_base_offsets32_float, LowerGSInfo::Scatter(__scatter_factored_base_offsets32_float)},
+        {__pseudo_scatter_factored_base_offsets32_i64, LowerGSInfo::Scatter(__scatter_factored_base_offsets32_i64)},
+        {__pseudo_scatter_factored_base_offsets32_double,
+         LowerGSInfo::Scatter(__scatter_factored_base_offsets32_double)},
 
-        LowerGSInfo("__pseudo_scatter_base_offsets64_i8", "__scatter_base_offsets64_i8", false, false),
-        LowerGSInfo("__pseudo_scatter_base_offsets64_i16", "__scatter_base_offsets64_i16", false, false),
-        LowerGSInfo("__pseudo_scatter_base_offsets64_half", "__scatter_base_offsets64_half", false, false),
-        LowerGSInfo("__pseudo_scatter_base_offsets64_i32", "__scatter_base_offsets64_i32", false, false),
-        LowerGSInfo("__pseudo_scatter_base_offsets64_float", "__scatter_base_offsets64_float", false, false),
-        LowerGSInfo("__pseudo_scatter_base_offsets64_i64", "__scatter_base_offsets64_i64", false, false),
-        LowerGSInfo("__pseudo_scatter_base_offsets64_double", "__scatter_base_offsets64_double", false, false),
+        {__pseudo_scatter_factored_base_offsets64_i8, LowerGSInfo::Scatter(__scatter_factored_base_offsets64_i8)},
+        {__pseudo_scatter_factored_base_offsets64_i16, LowerGSInfo::Scatter(__scatter_factored_base_offsets64_i16)},
+        {__pseudo_scatter_factored_base_offsets64_half, LowerGSInfo::Scatter(__scatter_factored_base_offsets64_half)},
+        {__pseudo_scatter_factored_base_offsets64_i32, LowerGSInfo::Scatter(__scatter_factored_base_offsets64_i32)},
+        {__pseudo_scatter_factored_base_offsets64_float, LowerGSInfo::Scatter(__scatter_factored_base_offsets64_float)},
+        {__pseudo_scatter_factored_base_offsets64_i64, LowerGSInfo::Scatter(__scatter_factored_base_offsets64_i64)},
+        {__pseudo_scatter_factored_base_offsets64_double,
+         LowerGSInfo::Scatter(__scatter_factored_base_offsets64_double)},
 
-        LowerGSInfo("__pseudo_prefetch_read_varying_1", "__prefetch_read_varying_1", false, true),
-        LowerGSInfo("__pseudo_prefetch_read_varying_1_native", "__prefetch_read_varying_1_native", false, true),
+        {__pseudo_scatter_base_offsets32_i8, LowerGSInfo::Scatter(__scatter_base_offsets32_i8)},
+        {__pseudo_scatter_base_offsets32_i16, LowerGSInfo::Scatter(__scatter_base_offsets32_i16)},
+        {__pseudo_scatter_base_offsets32_half, LowerGSInfo::Scatter(__scatter_base_offsets32_half)},
+        {__pseudo_scatter_base_offsets32_i32, LowerGSInfo::Scatter(__scatter_base_offsets32_i32)},
+        {__pseudo_scatter_base_offsets32_float, LowerGSInfo::Scatter(__scatter_base_offsets32_float)},
+        {__pseudo_scatter_base_offsets32_i64, LowerGSInfo::Scatter(__scatter_base_offsets32_i64)},
+        {__pseudo_scatter_base_offsets32_double, LowerGSInfo::Scatter(__scatter_base_offsets32_double)},
 
-        LowerGSInfo("__pseudo_prefetch_read_varying_2", "__prefetch_read_varying_2", false, true),
-        LowerGSInfo("__pseudo_prefetch_read_varying_2_native", "__prefetch_read_varying_2_native", false, true),
+        {__pseudo_scatter_base_offsets64_i8, LowerGSInfo::Scatter(__scatter_base_offsets64_i8)},
+        {__pseudo_scatter_base_offsets64_i16, LowerGSInfo::Scatter(__scatter_base_offsets64_i16)},
+        {__pseudo_scatter_base_offsets64_half, LowerGSInfo::Scatter(__scatter_base_offsets64_half)},
+        {__pseudo_scatter_base_offsets64_i32, LowerGSInfo::Scatter(__scatter_base_offsets64_i32)},
+        {__pseudo_scatter_base_offsets64_float, LowerGSInfo::Scatter(__scatter_base_offsets64_float)},
+        {__pseudo_scatter_base_offsets64_i64, LowerGSInfo::Scatter(__scatter_base_offsets64_i64)},
+        {__pseudo_scatter_base_offsets64_double, LowerGSInfo::Scatter(__scatter_base_offsets64_double)},
 
-        LowerGSInfo("__pseudo_prefetch_read_varying_3", "__prefetch_read_varying_3", false, true),
-        LowerGSInfo("__pseudo_prefetch_read_varying_3_native", "__prefetch_read_varying_3_native", false, true),
+        {__pseudo_prefetch_read_varying_1, LowerGSInfo::Prefetch(__prefetch_read_varying_1)},
+        {__pseudo_prefetch_read_varying_1_native, LowerGSInfo::Prefetch(__prefetch_read_varying_1_native)},
 
-        LowerGSInfo("__pseudo_prefetch_read_varying_nt", "__prefetch_read_varying_nt", false, true),
-        LowerGSInfo("__pseudo_prefetch_read_varying_nt_native", "__prefetch_read_varying_nt_native", false, true),
+        {__pseudo_prefetch_read_varying_2, LowerGSInfo::Prefetch(__prefetch_read_varying_2)},
+        {__pseudo_prefetch_read_varying_2_native, LowerGSInfo::Prefetch(__prefetch_read_varying_2_native)},
 
-        LowerGSInfo("__pseudo_prefetch_write_varying_1", "__prefetch_write_varying_1", false, true),
-        LowerGSInfo("__pseudo_prefetch_write_varying_1_native", "__prefetch_write_varying_1_native", false, true),
+        {__pseudo_prefetch_read_varying_3, LowerGSInfo::Prefetch(__prefetch_read_varying_3)},
+        {__pseudo_prefetch_read_varying_3_native, LowerGSInfo::Prefetch(__prefetch_read_varying_3_native)},
 
-        LowerGSInfo("__pseudo_prefetch_write_varying_2", "__prefetch_write_varying_2", false, true),
-        LowerGSInfo("__pseudo_prefetch_write_varying_2_native", "__prefetch_write_varying_2_native", false, true),
+        {__pseudo_prefetch_read_varying_nt, LowerGSInfo::Prefetch(__prefetch_read_varying_nt)},
+        {__pseudo_prefetch_read_varying_nt_native, LowerGSInfo::Prefetch(__prefetch_read_varying_nt_native)},
 
-        LowerGSInfo("__pseudo_prefetch_write_varying_3", "__prefetch_write_varying_3", false, true),
-        LowerGSInfo("__pseudo_prefetch_write_varying_3_native", "__prefetch_write_varying_3_native", false, true),
+        {__pseudo_prefetch_write_varying_1, LowerGSInfo::Prefetch(__prefetch_write_varying_1)},
+        {__pseudo_prefetch_write_varying_1_native, LowerGSInfo::Prefetch(__prefetch_write_varying_1_native)},
+
+        {__pseudo_prefetch_write_varying_2, LowerGSInfo::Prefetch(__prefetch_write_varying_2)},
+        {__pseudo_prefetch_write_varying_2_native, LowerGSInfo::Prefetch(__prefetch_write_varying_2_native)},
+
+        {__pseudo_prefetch_write_varying_3, LowerGSInfo::Prefetch(__prefetch_write_varying_3)},
+        {__pseudo_prefetch_write_varying_3_native, LowerGSInfo::Prefetch(__prefetch_write_varying_3_native)},
     };
 
     llvm::Function *calledFunc = callInst->getCalledFunction();
 
-    LowerGSInfo *info = nullptr;
-    for (unsigned int i = 0; i < sizeof(lgsInfo) / sizeof(lgsInfo[0]); ++i) {
-        if (lgsInfo[i].pseudoFunc != nullptr && calledFunc == lgsInfo[i].pseudoFunc) {
-            info = &lgsInfo[i];
-            break;
-        }
-    }
-    if (info == nullptr)
+    auto name = calledFunc->getName().str();
+    auto it = replacementRules.find(name);
+    if (it == replacementRules.end()) {
+        // it is not a call of __pseudo function stored in replacementRules
         return false;
-
-    Assert(info->actualFunc != nullptr);
+    }
+    LowerGSInfo *info = &it->second;
 
     // Get the source position from the metadata attached to the call
     // instruction so that we can issue PerformanceWarning()s below.
     SourcePos pos;
     bool gotPosition = LLVMGetSourcePosFromMetadata(callInst, &pos);
 
-    callInst->setCalledFunction(info->actualFunc);
+    callInst->setCalledFunction(info->actualFunc());
     // Check for alloca and if not alloca - generate __gather and change arguments
     if (gotPosition && (g->target->getVectorWidth() > 1) && (g->opt.level > 0)) {
-        if (info->isGather)
+        if (info->isGather())
             PerformanceWarning(pos, "Gather required to load value.");
-        else if (!info->isPrefetch)
+        else if (!info->isPrefetch())
             PerformanceWarning(pos, "Scatter required to store value.");
     }
     return true;

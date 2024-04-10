@@ -1,7 +1,9 @@
-# Copyright 2021-2023, Intel Corporation
+# Copyright 2021-2024, Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
 name: Docs check
+
+permissions: read-all
 
 on:
   push:
@@ -17,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Check environment
       run: |

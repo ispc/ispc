@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2023, Intel Corporation
+  Copyright (c) 2011-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -9,6 +9,7 @@
 */
 
 #include "func.h"
+#include "builtins-decl.h"
 #include "ctx.h"
 #include "expr.h"
 #include "llvmutil.h"
@@ -427,31 +428,31 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
             // Assign threadIndex and threadCount to the result of calling of corresponding builtins.
             // On Xe threadIndex equals to taskIndex and threadCount to taskCount.
             threadIndexSym->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "threadIndex");
-            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_index"), threadIndexSym->storageInfo);
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, builtin::__task_index), threadIndexSym->storageInfo);
 
             threadCountSym->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "threadCount");
-            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_count"), threadCountSym->storageInfo);
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, builtin::__task_count), threadCountSym->storageInfo);
 
             // Assign taskIndex and taskCount to the result of calling of corresponding builtins.
             taskIndexSym->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex");
-            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_index"), taskIndexSym->storageInfo);
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, builtin::__task_index), taskIndexSym->storageInfo);
 
             taskCountSym->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount");
-            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_count"), taskCountSym->storageInfo);
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, builtin::__task_count), taskCountSym->storageInfo);
 
             taskIndexSym0->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex0");
-            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_index0"), taskIndexSym0->storageInfo);
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, builtin::__task_index0), taskIndexSym0->storageInfo);
             taskIndexSym1->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex1");
-            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_index1"), taskIndexSym1->storageInfo);
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, builtin::__task_index1), taskIndexSym1->storageInfo);
             taskIndexSym2->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex2");
-            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_index2"), taskIndexSym2->storageInfo);
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, builtin::__task_index2), taskIndexSym2->storageInfo);
 
             taskCountSym0->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount0");
-            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_count0"), taskCountSym0->storageInfo);
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, builtin::__task_count0), taskCountSym0->storageInfo);
             taskCountSym1->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount1");
-            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_count1"), taskCountSym1->storageInfo);
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, builtin::__task_count1), taskCountSym1->storageInfo);
             taskCountSym2->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount2");
-            ctx->StoreInst(lXeGetTaskVariableValue(ctx, "__task_count2"), taskCountSym2->storageInfo);
+            ctx->StoreInst(lXeGetTaskVariableValue(ctx, builtin::__task_count2), taskCountSym2->storageInfo);
         }
     }
 
@@ -779,15 +780,58 @@ void Function::GenerateIR() {
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// TemplateParam
+
+TemplateParam::TemplateParam(const TemplateTypeParmType *p) : paramType(ParamType::Type), typeParam(p) {
+    name = p->GetName();
+    pos = p->GetSourcePos();
+}
+
+TemplateParam::TemplateParam(Symbol *s) : paramType(ParamType::NonType), nonTypeParam(s) {
+    name = s->name;
+    pos = s->pos;
+}
+
+bool TemplateParam::IsTypeParam() const { return paramType == ParamType::Type; }
+
+bool TemplateParam::IsNonTypeParam() const { return paramType == ParamType::NonType; }
+
+bool TemplateParam::IsEqual(const TemplateParam &other) const {
+    if (IsTypeParam()) {
+        return Type::Equal(typeParam, other.typeParam);
+    } else if (IsNonTypeParam()) {
+        return nonTypeParam->name == other.nonTypeParam->name &&
+               Type::Equal(nonTypeParam->type, other.nonTypeParam->type);
+    }
+    return false;
+}
+
+std::string TemplateParam::GetName() const { return name; }
+
+const TemplateTypeParmType *TemplateParam::GetTypeParam() const {
+    Assert(IsTypeParam());
+    return typeParam;
+}
+
+Symbol *TemplateParam::GetNonTypeParam() const {
+    Assert(IsNonTypeParam());
+    return nonTypeParam;
+}
+
+SourcePos TemplateParam::GetSourcePos() const { return pos; }
+
+///////////////////////////////////////////////////////////////////////////
 // TemplateParms
 
 TemplateParms::TemplateParms() {}
 
-void TemplateParms::Add(const TemplateTypeParmType *p) { parms.push_back(p); }
+void TemplateParms::Add(const TemplateParam *p) { parms.push_back(p); }
 
 size_t TemplateParms::GetCount() const { return parms.size(); }
 
-const TemplateTypeParmType *TemplateParms::operator[](size_t i) const { return parms[i]; }
+const TemplateParam *TemplateParms::operator[](size_t i) const { return parms[i]; }
+
+const TemplateParam *TemplateParms::operator[](size_t i) { return parms[i]; }
 
 bool TemplateParms::IsEqual(const TemplateParms *p) const {
     if (p == nullptr) {
@@ -799,7 +843,8 @@ bool TemplateParms::IsEqual(const TemplateParms *p) const {
     }
 
     for (size_t i = 0; i < GetCount(); i++) {
-        if (!Type::Equal((*this)[i], (*p)[i])) {
+        const TemplateParam *other = (*p)[i];
+        if (!(parms[i]->IsEqual(*other))) {
             return false;
         }
     }
@@ -808,20 +853,97 @@ bool TemplateParms::IsEqual(const TemplateParms *p) const {
 }
 
 ///////////////////////////////////////////////////////////////////////////
-// TemplateArgs
+// TemplateArg
 
-TemplateArgs::TemplateArgs(const std::vector<std::pair<const Type *, SourcePos>> &a) : args(a) {}
+TemplateArg::TemplateArg(const Type *t, SourcePos pos) : argType(ArgType::Type), type(t), pos(pos) {}
+TemplateArg::TemplateArg(const Expr *c, SourcePos pos) : argType(ArgType::NonType), expr(c), pos(pos) {}
 
-bool TemplateArgs::IsEqual(TemplateArgs &otherArgs) const {
-    if (args.size() != otherArgs.args.size()) {
+const Type *TemplateArg::GetAsType() const {
+    switch (argType) {
+    case ArgType::Type:
+        return type;
+    case ArgType::NonType:
+        return expr->GetType();
+    default:
+        return nullptr;
+    }
+}
+
+const Expr *TemplateArg::GetAsExpr() const { return IsNonType() ? expr : nullptr; }
+
+SourcePos TemplateArg::GetPos() const { return pos; }
+
+std::string TemplateArg::GetString() const {
+    switch (argType) {
+    case ArgType::Type:
+        return type->GetString();
+    case ArgType::NonType:
+        if (const ConstExpr *constExpr = GetAsConstExpr()) {
+            return constExpr->GetValuesAsStr(", ");
+        }
+        return "Missing const expression";
+    default:
+        return "Unknown ArgType";
+    }
+}
+
+bool TemplateArg::IsNonType() const { return argType == ArgType::NonType; };
+
+bool TemplateArg::IsType() const { return argType == ArgType::Type; }
+
+bool TemplateArg::operator==(const TemplateArg &other) const {
+    if (argType != other.argType)
+        return false;
+    switch (argType) {
+    case ArgType::Type:
+        return Type::Equal(type, other.type);
+    case ArgType::NonType: {
+        const ConstExpr *constExpr = GetAsConstExpr();
+        const ConstExpr *otherConstExpr = other.GetAsConstExpr();
+        if (constExpr && otherConstExpr) {
+            return constExpr->IsEqual(otherConstExpr);
+        }
         return false;
     }
-    for (int i = 0; i < args.size(); i++) {
-        if (!Type::Equal(args[i].first, otherArgs.args[i].first)) {
-            return false;
-        }
+    default:
+        return false;
     }
-    return true;
+    return false;
+}
+
+std::string TemplateArg::Mangle() const {
+    switch (argType) {
+    case ArgType::Type:
+        return type->Mangle();
+    case ArgType::NonType: {
+        if (const ConstExpr *constExpr = GetAsConstExpr()) {
+            return GetAsType()->Mangle() + constExpr->GetValuesAsStr("_");
+        }
+        return "Missing const expression";
+    }
+    default:
+        return "Unknown ArgType";
+    }
+}
+
+void TemplateArg::SetAsVaryingType() {
+    if (IsType() && type->GetVariability() == Variability::Unbound) {
+        type = type->GetAsVaryingType();
+    }
+}
+
+const ConstExpr *TemplateArg::GetAsConstExpr() const {
+    if (IsNonType()) {
+        const ConstExpr *constExpr = llvm::dyn_cast<ConstExpr>(expr);
+        if (!constExpr) {
+            const SymbolExpr *symExpr = llvm::dyn_cast<SymbolExpr>(expr);
+            if (symExpr->GetBaseSymbol()->constValue) {
+                constExpr = llvm::dyn_cast<ConstExpr>(symExpr->GetBaseSymbol()->constValue);
+            }
+        }
+        return constExpr;
+    }
+    return nullptr;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -919,7 +1041,10 @@ void FunctionTemplate::Print(Indent &indent) const {
             snprintf(buffer, BUFSIZE, "template param %d", i);
             indent.setNextLabel(buffer);
             if ((*typenames)[i]) {
-                indent.Print("TemplateTypeParmType", (*typenames)[i]->GetSourcePos());
+                indent.Print((*typenames)[i]->IsTypeParam()
+                                 ? "TemplateTypeParmType"
+                                 : (*typenames)[i]->GetNonTypeParam()->type->GetString().c_str(),
+                             (*typenames)[i]->GetSourcePos());
                 printf("\"%s\"\n", (*typenames)[i]->GetName().c_str());
                 indent.Done();
             } else {
@@ -936,10 +1061,10 @@ void FunctionTemplate::Print(Indent &indent) const {
 
     for (const auto &inst : instantiations) {
         std::string args;
-        for (size_t i = 0; i < inst.first->args.size(); i++) {
-            auto &arg = inst.first->args[i];
-            args += arg.first->GetString();
-            if (i + 1 < inst.first->args.size()) {
+        for (size_t i = 0; i < inst.first->size(); i++) {
+            const TemplateArg &arg = (*inst.first)[i];
+            args += arg.GetString();
+            if (i + 1 < inst.first->size()) {
                 args += ", ";
             }
         }
@@ -961,21 +1086,21 @@ bool FunctionTemplate::IsStdlibSymbol() const {
     return false;
 };
 
-Symbol *FunctionTemplate::LookupInstantiation(const std::vector<std::pair<const Type *, SourcePos>> &types) {
-    TemplateArgs argsToMatch(types);
+Symbol *FunctionTemplate::LookupInstantiation(const TemplateArgs &tArgs) {
+    TemplateArgs argsToMatch(tArgs);
     for (const auto &inst : instantiations) {
-        if (inst.first->IsEqual(argsToMatch)) {
+        if (*(inst.first) == argsToMatch) {
             return inst.second;
         }
     }
     return nullptr;
 }
 
-Symbol *FunctionTemplate::AddInstantiation(const std::vector<std::pair<const Type *, SourcePos>> &types,
-                                           TemplateInstantiationKind kind, bool isInline, bool isNoinline) {
+Symbol *FunctionTemplate::AddInstantiation(const TemplateArgs &tArgs, TemplateInstantiationKind kind, bool isInline,
+                                           bool isNoinline) {
     const TemplateParms *typenames = GetTemplateParms();
     Assert(typenames);
-    TemplateInstantiation templInst(*typenames, types, kind, isInline, isNoinline);
+    TemplateInstantiation templInst(*typenames, tArgs, kind, isInline, isNoinline);
 
     Symbol *instSym = templInst.InstantiateTemplateSymbol(sym);
     Symbol *instMaskSym = templInst.InstantiateSymbol(maskSymbol);
@@ -989,18 +1114,17 @@ Symbol *FunctionTemplate::AddInstantiation(const std::vector<std::pair<const Typ
 
     templInst.SetFunction(inst);
 
-    TemplateArgs *templArgs = new TemplateArgs(types);
+    TemplateArgs *templArgs = new TemplateArgs(tArgs);
     instantiations.push_back(std::make_pair(templArgs, instSym));
 
     return instSym;
 }
 
-Symbol *FunctionTemplate::AddSpecialization(const FunctionType *ftype,
-                                            const std::vector<std::pair<const Type *, SourcePos>> &types, bool isInline,
+Symbol *FunctionTemplate::AddSpecialization(const FunctionType *ftype, const TemplateArgs &tArgs, bool isInline,
                                             bool isNoInline, SourcePos pos) {
     const TemplateParms *typenames = GetTemplateParms();
     Assert(typenames);
-    TemplateInstantiation templInst(*typenames, types, TemplateInstantiationKind::Specialization, isInline, isNoInline);
+    TemplateInstantiation templInst(*typenames, tArgs, TemplateInstantiationKind::Specialization, isInline, isNoInline);
 
     // Create a function symbol
     Symbol *instSym = templInst.InstantiateTemplateSymbol(sym);
@@ -1011,10 +1135,10 @@ Symbol *FunctionTemplate::AddSpecialization(const FunctionType *ftype,
     instSym->pos = pos;
     instSym->storageClass = sym->storageClass;
 
-    TemplateArgs *templArgs = new TemplateArgs(types);
+    TemplateArgs *templArgs = new TemplateArgs(tArgs);
 
     // Check if we have previously declared specialization and we are about to define it.
-    Symbol *funcSym = LookupInstantiation(types);
+    Symbol *funcSym = LookupInstantiation(tArgs);
     if (funcSym != nullptr) {
         delete templArgs;
         return funcSym;
@@ -1027,28 +1151,29 @@ Symbol *FunctionTemplate::AddSpecialization(const FunctionType *ftype,
 ///////////////////////////////////////////////////////////////////////////
 // TemplateInstantiation
 
-TemplateInstantiation::TemplateInstantiation(const TemplateParms &typeParms,
-                                             const std::vector<std::pair<const Type *, SourcePos>> &typeArgs,
+TemplateInstantiation::TemplateInstantiation(const TemplateParms &typeParms, const TemplateArgs &tArgs,
                                              TemplateInstantiationKind k, bool ii, bool ini)
     : functionSym(nullptr), kind(k), isInline(ii), isNoInline(ini) {
-    Assert(typeArgs.size() <= typeParms.GetCount());
+    Assert(tArgs.size() <= typeParms.GetCount());
     // Create a mapping from the template parameters to the arguments.
     // Note we do that for all specified templates arguments, which number may be less than a number of template
     // parameters. In this case the rest of template parameters will be deduced later during template argumnet
     // deduction.
-    for (int i = 0; i < typeArgs.size(); i++) {
+    for (int i = 0; i < tArgs.size(); i++) {
         std::string name = typeParms[i]->GetName();
-        const Type *type = typeArgs[i].first;
-        argsMap[name] = type;
-        templateArgs.push_back(typeArgs[i].first);
+        const Type *type = tArgs[i].GetAsType();
+        argsTypeMap[name] = type;
+        templateArgs.push_back(tArgs[i]);
     }
 }
 
-void TemplateInstantiation::AddArgument(std::string paramName, const Type *argType) { argsMap[paramName] = argType; }
+void TemplateInstantiation::AddArgument(std::string paramName, TemplateArg argType) {
+    argsTypeMap[paramName] = argType.GetAsType();
+}
 
 const Type *TemplateInstantiation::InstantiateType(const std::string &name) {
-    auto t = argsMap.find(name);
-    if (t == argsMap.end()) {
+    auto t = argsTypeMap.find(name);
+    if (t == argsTypeMap.end()) {
         return nullptr;
     }
 

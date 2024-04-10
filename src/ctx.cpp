@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -9,6 +9,7 @@
 */
 
 #include "ctx.h"
+#include "builtins-decl.h"
 #include "expr.h"
 #include "func.h"
 #include "llvmutil.h"
@@ -1345,7 +1346,7 @@ void FunctionEmitContext::SetFunctionFTZ_DAZFlags() {
     if (functionFTZ_DAZValue == nullptr)
         return;
     std::vector<Symbol *> mm;
-    m->symbolTable->LookupFunction("__set_ftz_daz_flags", &mm);
+    m->symbolTable->LookupFunction(builtin::__set_ftz_daz_flags, &mm);
     AssertPos(currentPos, mm.size() >= 1);
     llvm::Function *fmm = mm[0]->function;
     std::vector<llvm::Value *> args;
@@ -1357,7 +1358,7 @@ void FunctionEmitContext::RestoreFunctionFTZ_DAZFlags() {
     if (functionFTZ_DAZValue == nullptr)
         return;
     std::vector<Symbol *> mm;
-    m->symbolTable->LookupFunction("__restore_ftz_daz_flags", &mm);
+    m->symbolTable->LookupFunction(builtin::__restore_ftz_daz_flags, &mm);
     AssertPos(currentPos, mm.size() >= 1);
     llvm::Function *fmm = mm[0]->function;
     llvm::Value *oldFTZ = LoadInst(functionFTZ_DAZValue);
@@ -1370,7 +1371,7 @@ llvm::Value *FunctionEmitContext::Any(llvm::Value *mask) {
     // Call the target-dependent any function to test that the mask is non-zero
 
     std::vector<Symbol *> mm;
-    m->symbolTable->LookupFunction("__any", &mm);
+    m->symbolTable->LookupFunction(builtin::__any, &mm);
     if (g->target->getMaskBitCount() == 1)
         AssertPos(currentPos, mm.size() == 1);
     else
@@ -1386,7 +1387,7 @@ llvm::Value *FunctionEmitContext::All(llvm::Value *mask) {
     // Call the target-dependent movmsk function to turn the vector mask
     // into an i64 value
     std::vector<Symbol *> mm;
-    m->symbolTable->LookupFunction("__all", &mm);
+    m->symbolTable->LookupFunction(builtin::__all, &mm);
     if (g->target->getMaskBitCount() == 1)
         AssertPos(currentPos, mm.size() == 1);
     else
@@ -1402,7 +1403,7 @@ llvm::Value *FunctionEmitContext::None(llvm::Value *mask) {
     // Call the target-dependent movmsk function to turn the vector mask
     // into an i64 value
     std::vector<Symbol *> mm;
-    m->symbolTable->LookupFunction("__none", &mm);
+    m->symbolTable->LookupFunction(builtin::__none, &mm);
     if (g->target->getMaskBitCount() == 1)
         AssertPos(currentPos, mm.size() == 1);
     else
@@ -1415,12 +1416,10 @@ llvm::Value *FunctionEmitContext::None(llvm::Value *mask) {
 }
 
 llvm::Value *FunctionEmitContext::LaneMask(llvm::Value *v) {
-    const char *__movmsk = "__movmsk";
-
     // Call the target-dependent movmsk function to turn the vector mask
     // into an i64 value
     std::vector<Symbol *> mm;
-    m->symbolTable->LookupFunction(__movmsk, &mm);
+    m->symbolTable->LookupFunction(builtin::__movmsk, &mm);
     if (g->target->getMaskBitCount() == 1)
         AssertPos(currentPos, mm.size() == 1);
     else
@@ -1491,22 +1490,24 @@ llvm::Value *FunctionEmitContext::I1VecToBoolVec(llvm::Value *b) {
     if (at) {
         // If we're given an array of vectors of i1s, then do the
         // conversion for each of the elements.
-        // Using 'LLVMTypes::BoolVectorStorageType' since it's a varying short
-        // vector and stored as an array in IR.
-        llvm::Type *boolArrayType = llvm::ArrayType::get(LLVMTypes::BoolVectorStorageType, at->getNumElements());
+        // Although it is a varying short vector stored as array, use
+        // 'LLVMTypes::BoolVectorType' since it can't be exported to C/C++.
+        // BoolVectorStorageType is to be used only for entites that can be
+        // interfaced with C/C++.
+        llvm::Type *boolArrayType = llvm::ArrayType::get(LLVMTypes::BoolVectorType, at->getNumElements());
         llvm::Value *ret = llvm::UndefValue::get(boolArrayType);
 
         for (unsigned int i = 0; i < at->getNumElements(); ++i) {
             llvm::Value *elt = ExtractInst(b, i);
             llvm::Value *sext =
-                SwitchBoolSize(elt, LLVMTypes::BoolVectorStorageType, llvm::Twine(elt->getName()) + "_to_boolvec");
+                SwitchBoolToMaskType(elt, LLVMTypes::BoolVectorType, llvm::Twine(elt->getName()) + "_to_boolvec");
             ret = InsertInst(ret, sext, i);
         }
         return ret;
     } else {
         // For non-array types, convert to 'LLVMTypes::BoolVectorType' if
         // necessary.
-        return SwitchBoolSize(b, LLVMTypes::BoolVectorType, llvm::Twine(b->getName()) + "_to_boolvec");
+        return SwitchBoolToMaskType(b, LLVMTypes::BoolVectorType, llvm::Twine(b->getName()) + "_to_boolvec");
     }
 }
 
@@ -1600,8 +1601,14 @@ void FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
 
     llvm::DebugLoc diLoc =
         llvm::DILocation::get(scope->getContext(), sym->pos.first_line, sym->pos.first_column, scope, nullptr, false);
-    llvm::Instruction *declareInst = m->diBuilder->insertDeclare(sym->storageInfo->getPointer(), var,
-                                                                 m->diBuilder->createExpression(), diLoc, bblock);
+    llvm::Instruction *declareInst =
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_19_0
+        llvm::cast<llvm::Instruction *>(m->diBuilder->insertDeclare(sym->storageInfo->getPointer(), var,
+                                                                    m->diBuilder->createExpression(), diLoc, bblock));
+#else
+        m->diBuilder->insertDeclare(sym->storageInfo->getPointer(), var, m->diBuilder->createExpression(), diLoc,
+                                    bblock);
+#endif
     AddDebugPos(declareInst, &sym->pos, scope);
 }
 
@@ -1618,8 +1625,14 @@ void FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum
 
     llvm::DebugLoc diLoc =
         llvm::DILocation::get(scope->getContext(), sym->pos.first_line, sym->pos.first_column, scope, nullptr, false);
-    llvm::Instruction *declareInst = m->diBuilder->insertDeclare(sym->storageInfo->getPointer(), var,
-                                                                 m->diBuilder->createExpression(), diLoc, bblock);
+    llvm::Instruction *declareInst =
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_19_0
+        llvm::cast<llvm::Instruction *>(m->diBuilder->insertDeclare(sym->storageInfo->getPointer(), var,
+                                                                    m->diBuilder->createExpression(), diLoc, bblock));
+#else
+        m->diBuilder->insertDeclare(sym->storageInfo->getPointer(), var, m->diBuilder->createExpression(), diLoc,
+                                    bblock);
+#endif
     AddDebugPos(declareInst, &sym->pos, scope);
 }
 
@@ -2333,7 +2346,8 @@ llvm::Value *FunctionEmitContext::AddElementOffset(AddressInfo *fullBasePtrInfo,
         return resultPtr;
 }
 
-llvm::Value *FunctionEmitContext::SwitchBoolSize(llvm::Value *value, llvm::Type *toType, const llvm::Twine &name) {
+llvm::Value *FunctionEmitContext::lSwitchBoolSize_2(llvm::Value *value, llvm::Type *toType, bool toStorageType,
+                                                    const llvm::Twine &name) {
     if ((value == nullptr) || (toType == nullptr)) {
         AssertPos(currentPos, m->errorCount > 0);
         return nullptr;
@@ -2341,18 +2355,95 @@ llvm::Value *FunctionEmitContext::SwitchBoolSize(llvm::Value *value, llvm::Type 
 
     llvm::Type *fromType = value->getType();
 
-    llvm::Value *newBool = value;
-    if (g->target->getDataLayout()->getTypeSizeInBits(fromType) >
-        g->target->getDataLayout()->getTypeSizeInBits(toType)) {
-        newBool =
-            TruncInst(value, toType, name.isTriviallyEmpty() ? (llvm::Twine(value->getName()) + "_switchBool") : name);
-    } else if (g->target->getDataLayout()->getTypeSizeInBits(fromType) <
-               g->target->getDataLayout()->getTypeSizeInBits(toType)) {
-        newBool =
-            SExtInst(value, toType, name.isTriviallyEmpty() ? (llvm::Twine(value->getName()) + "_switchBool") : name);
+    if (fromType == toType) {
+        // No cast is needed
+        return value;
+    }
+
+    // Internal representation of bool matches mask behaviour that requires
+    // true value to be -1. It is an implication of some instruction
+    // requirements, e.g., blendvps (the most significant bit should be 1).
+    // Whereas, storage representation matches SystemV ABI. It requires bool to
+    // be presented as byte with the least significant bit equal 0 or 1 and
+    // others 7 bits equal to 0, i.e., true is 1 when we read or write values
+    // to/from C/C++.
+    // Both fromType and toType can be vector or scalar and storage or internal
+    // bool representation. E.g., we need to support here conversion from
+    // internal vector to storage vector type, it may be conversion from
+    // 1) <4 x i32> to <4 x i8> or 2) <4 x i8> to <4 x i32>.
+    // 1) <-1, 0,...> to <1, 0,...>
+    // 2) <1, 0,...> to <-1, 0,...>
+    // To support all cases with less code do bool casting in two stages:
+    // 1) truncate to LLVM IR native bool types i1 or <N x i1>
+    // 2) zero or sign extend from native bool types to storage or internal correspondingly.
+    llvm::Value *i1Bool = value;
+    llvm::Twine newName = name.isTriviallyEmpty() ? (llvm::Twine(value->getName()) + "_toi1") : name;
+    if (llvm::dyn_cast<llvm::FixedVectorType>(fromType)) {
+        llvm::VectorType *i1VecType = LLVMVECTOR::get(
+            llvm::Type::getInt1Ty(*g->ctx), llvm::dyn_cast<llvm::FixedVectorType>(fromType)->getNumElements());
+        // trunc only if needed
+        if (fromType != i1VecType) {
+            i1Bool = TruncInst(value, i1VecType, newName);
+        }
+        // return if we already have requested type
+        if (toType == i1VecType) {
+            return i1Bool;
+        }
+    } else {
+        llvm::Type *i1Type = llvm::Type::getInt1Ty(*g->ctx);
+        if (fromType != i1Type) {
+            i1Bool = TruncInst(value, i1Type, newName);
+        }
+        if (toType == i1Type) {
+            return i1Bool;
+        }
+    }
+
+    llvm::Value *newBool = nullptr;
+    // We can't distinguish bool storage and mask type comparing the type sizes
+    // only because the width of storage and mask type can be same, e.g., for
+    // i8xN targets. Although, these types have same width they has to be
+    // extended in different way to match ABI or ISPC internals. Utilize
+    // toStorageType argument to distinguish these cases.
+    if (toStorageType) {
+        // zero extend to storage types to comply with ABI
+        llvm::Twine toSorageBool = name.isTriviallyEmpty() ? (llvm::Twine(value->getName()) + "_toStorageBool") : name;
+        newBool = ZExtInst(i1Bool, toType, toSorageBool);
+    } else {
+        // sign extend to internal representation
+        llvm::Twine toMaskBool = name.isTriviallyEmpty() ? (llvm::Twine(value->getName()) + "_toMaskBool") : name;
+        newBool = SExtInst(i1Bool, toType, toMaskBool);
     }
 
     return newBool;
+}
+
+llvm::Value *FunctionEmitContext::lSwitchBoolSize_1(llvm::Value *value, llvm::Type *toType, bool toStorageType,
+                                                    const llvm::Twine &name) {
+    llvm::ArrayType *at = llvm::dyn_cast<llvm::ArrayType>(toType);
+    if (at) {
+        // We're given an array of vectors (short vector).
+        llvm::Type *eltType = at->getElementType();
+        llvm::Value *ret = llvm::UndefValue::get(toType);
+        for (unsigned int i = 0; i < at->getNumElements(); ++i) {
+            llvm::Value *elt = ExtractInst(value, i);
+            llvm::Value *x = lSwitchBoolSize_2(elt, eltType, toStorageType, llvm::Twine(elt->getName()) + "_bv");
+            ret = InsertInst(ret, x, i);
+        }
+        return ret;
+    } else {
+        return lSwitchBoolSize_2(value, toType, toStorageType, name);
+    }
+}
+
+llvm::Value *FunctionEmitContext::SwitchBoolToMaskType(llvm::Value *value, llvm::Type *toType,
+                                                       const llvm::Twine &name) {
+    return lSwitchBoolSize_1(value, toType, false, name);
+}
+
+llvm::Value *FunctionEmitContext::SwitchBoolToStorageType(llvm::Value *value, llvm::Type *toType,
+                                                          const llvm::Twine &name) {
+    return lSwitchBoolSize_1(value, toType, true, name);
 }
 
 llvm::Value *FunctionEmitContext::LoadInst(AddressInfo *ptrInfo, const Type *type, const llvm::Twine &name) {
@@ -2378,11 +2469,11 @@ llvm::Value *FunctionEmitContext::LoadInst(AddressInfo *ptrInfo, const Type *typ
     // bool type is stored as i8. So, it requires some processing.
     if ((type != nullptr) && (type->IsBoolType())) {
         if (CastType<AtomicType>(type) != nullptr) {
-            loadVal = SwitchBoolSize(loadVal, type->LLVMType(g->ctx));
+            loadVal = SwitchBoolToMaskType(loadVal, type->LLVMType(g->ctx));
         } else if ((CastType<VectorType>(type) != nullptr)) {
             const VectorType *vType = CastType<VectorType>(type);
             if (CastType<AtomicType>(vType->GetElementType()) != nullptr) {
-                loadVal = SwitchBoolSize(loadVal, type->LLVMType(g->ctx));
+                loadVal = SwitchBoolToMaskType(loadVal, type->LLVMType(g->ctx));
             }
         }
     }
@@ -2507,7 +2598,7 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
             llvm::Value *loadVal = inst;
             // bool type is stored as i8. So, it requires some processing.
             if (elType->IsBoolType() && (CastType<AtomicType>(elType) != nullptr)) {
-                loadVal = SwitchBoolSize(loadVal, elType->LLVMType(g->ctx));
+                loadVal = SwitchBoolToMaskType(loadVal, elType->LLVMType(g->ctx));
             }
             return loadVal;
         }
@@ -2526,7 +2617,7 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
         // Call the target-dependent movmsk function to turn the vector mask
         // into an i64 value
         std::vector<Symbol *> mm;
-        m->symbolTable->LookupFunction("__movmsk", &mm);
+        m->symbolTable->LookupFunction(builtin::__movmsk, &mm);
         if (g->target->getMaskBitCount() == 1)
             AssertPos(currentPos, mm.size() == 1);
         else
@@ -2537,7 +2628,7 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
         llvm::Function *fmm = mm[0]->function;
         llvm::Value *int_mask = CallInst(fmm, nullptr, mask, llvm::Twine(mask->getName()) + "_movmsk");
         std::vector<Symbol *> lz;
-        m->symbolTable->LookupFunction("__count_trailing_zeros_i64", &lz);
+        m->symbolTable->LookupFunction(builtin::__count_trailing_zeros_i64, &lz);
         llvm::Function *flz = lz[0]->function;
         llvm::Value *elem_idx = CallInst(flz, nullptr, int_mask, llvm::Twine(mask->getName()) + "_clz");
         llvm::Value *elem = llvm::ExtractElementInst::Create(
@@ -2566,13 +2657,20 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
             llvm::Value *eltPtr = AddElementOffset(new AddressInfo(ptr, ptrType), i, "gather_elt_ptr", &eltPtrType);
 
             eltPtr = addVaryingOffsetsIfNeeded(eltPtr, eltPtrType);
+            const Type *eltType = nullptr;
+            if (returnCollectionType) {
+                eltType = returnCollectionType->GetElementType(i);
+            }
 
             // It is a kludge. When we dereference varying pointer to uniform struct
             // with "bound uniform" member, we should return first unmasked member.
-            int need_one_elem = CastType<StructType>(ptrType->GetBaseType()) && returnCollectionType &&
-                                returnCollectionType->GetElementType(i)->IsUniformType();
+            int need_one_elem = CastType<StructType>(ptrType->GetBaseType()) && eltType && eltType->IsUniformType();
             // This in turn will be another gather
             llvm::Value *eltValues = LoadInst(eltPtr, mask, eltPtrType, name, need_one_elem);
+            if (eltType && eltType->IsBoolType()) {
+                eltValues =
+                    SwitchBoolToStorageType(eltValues, eltType->LLVMStorageType(g->ctx), "bool_storage_convert");
+            }
 
             retValue = InsertInst(retValue, eltValues, i, "set_value");
         }
@@ -2594,25 +2692,25 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
     const PointerType *pt = CastType<PointerType>(returnType);
     const char *funcName = nullptr;
     if (pt != nullptr)
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_i32" : "__pseudo_gather64_i64";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_gather32_i32 : builtin::__pseudo_gather64_i64;
     // bool type is stored as i8.
     else if (returnType->IsBoolType())
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_i8" : "__pseudo_gather64_i8";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_gather32_i8 : builtin::__pseudo_gather64_i8;
     else if (llvmReturnType == LLVMTypes::DoubleVectorType)
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_double" : "__pseudo_gather64_double";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_gather32_double : builtin::__pseudo_gather64_double;
     else if (llvmReturnType == LLVMTypes::Int64VectorType)
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_i64" : "__pseudo_gather64_i64";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_gather32_i64 : builtin::__pseudo_gather64_i64;
     else if (llvmReturnType == LLVMTypes::FloatVectorType)
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_float" : "__pseudo_gather64_float";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_gather32_float : builtin::__pseudo_gather64_float;
     else if (llvmReturnType == LLVMTypes::Float16VectorType)
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_half" : "__pseudo_gather64_half";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_gather32_half : builtin::__pseudo_gather64_half;
     else if (llvmReturnType == LLVMTypes::Int32VectorType)
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_i32" : "__pseudo_gather64_i32";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_gather32_i32 : builtin::__pseudo_gather64_i32;
     else if (llvmReturnType == LLVMTypes::Int16VectorType)
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_i16" : "__pseudo_gather64_i16";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_gather32_i16 : builtin::__pseudo_gather64_i16;
     else {
         AssertPos(currentPos, llvmReturnType == LLVMTypes::Int8VectorType);
-        funcName = g->target->is32Bit() ? "__pseudo_gather32_i8" : "__pseudo_gather64_i8";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_gather32_i8 : builtin::__pseudo_gather64_i8;
     }
 
     llvm::Function *gatherFunc = m->module->getFunction(funcName);
@@ -2871,9 +2969,9 @@ void FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr, cons
         }
 
         if (g->target->is32Bit())
-            maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i32");
+            maskedStoreFunc = m->module->getFunction(builtin::__pseudo_masked_store_i32);
         else
-            maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i64");
+            maskedStoreFunc = m->module->getFunction(builtin::__pseudo_masked_store_i64);
     } else if (llvmValueType == LLVMTypes::Int1VectorType) {
         llvm::Value *notMask =
             BinaryOperator(llvm::Instruction::Xor, mask, LLVMMaskAllOn, WrapSemantics::None, "~mask");
@@ -2886,20 +2984,20 @@ void FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr, cons
         StoreInst(final, ptrInfo, valueType);
         return;
     } else if (llvmValueStorageType == LLVMTypes::DoubleVectorType) {
-        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_double");
+        maskedStoreFunc = m->module->getFunction(builtin::__pseudo_masked_store_double);
     } else if (llvmValueStorageType == LLVMTypes::Int64VectorType) {
-        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i64");
+        maskedStoreFunc = m->module->getFunction(builtin::__pseudo_masked_store_i64);
     } else if (llvmValueStorageType == LLVMTypes::FloatVectorType) {
-        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_float");
+        maskedStoreFunc = m->module->getFunction(builtin::__pseudo_masked_store_float);
     } else if (llvmValueStorageType == LLVMTypes::Float16VectorType) {
-        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_half");
+        maskedStoreFunc = m->module->getFunction(builtin::__pseudo_masked_store_half);
     } else if (llvmValueStorageType == LLVMTypes::Int32VectorType) {
-        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i32");
+        maskedStoreFunc = m->module->getFunction(builtin::__pseudo_masked_store_i32);
     } else if (llvmValueStorageType == LLVMTypes::Int16VectorType) {
-        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i16");
+        maskedStoreFunc = m->module->getFunction(builtin::__pseudo_masked_store_i16);
     } else if (llvmValueStorageType == LLVMTypes::Int8VectorType) {
-        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i8");
-        value = SwitchBoolSize(value, llvmValueStorageType);
+        maskedStoreFunc = m->module->getFunction(builtin::__pseudo_masked_store_i8);
+        value = SwitchBoolToStorageType(value, llvmValueStorageType);
     }
     AssertPos(currentPos, maskedStoreFunc != nullptr);
 
@@ -2992,25 +3090,25 @@ void FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr, const Ty
     // bool type is stored as i8. So, it requires some processing.
     if ((pt == nullptr) && (valueType->IsBoolType())) {
         llvmStorageType = LLVMTypes::BoolVectorStorageType;
-        value = SwitchBoolSize(value, llvmStorageType);
+        value = SwitchBoolToStorageType(value, llvmStorageType);
     }
     const char *funcName = nullptr;
     if (pt != nullptr) {
-        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i32" : "__pseudo_scatter64_i64";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_scatter32_i32 : builtin::__pseudo_scatter64_i64;
     } else if (llvmStorageType == LLVMTypes::DoubleVectorType) {
-        funcName = g->target->is32Bit() ? "__pseudo_scatter32_double" : "__pseudo_scatter64_double";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_scatter32_double : builtin::__pseudo_scatter64_double;
     } else if (llvmStorageType == LLVMTypes::Int64VectorType) {
-        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i64" : "__pseudo_scatter64_i64";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_scatter32_i64 : builtin::__pseudo_scatter64_i64;
     } else if (llvmStorageType == LLVMTypes::FloatVectorType) {
-        funcName = g->target->is32Bit() ? "__pseudo_scatter32_float" : "__pseudo_scatter64_float";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_scatter32_float : builtin::__pseudo_scatter64_float;
     } else if (llvmStorageType == LLVMTypes::Float16VectorType) {
-        funcName = g->target->is32Bit() ? "__pseudo_scatter32_half" : "__pseudo_scatter64_half";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_scatter32_half : builtin::__pseudo_scatter64_half;
     } else if (llvmStorageType == LLVMTypes::Int32VectorType) {
-        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i32" : "__pseudo_scatter64_i32";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_scatter32_i32 : builtin::__pseudo_scatter64_i32;
     } else if (llvmStorageType == LLVMTypes::Int16VectorType) {
-        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i16" : "__pseudo_scatter64_i16";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_scatter32_i16 : builtin::__pseudo_scatter64_i16;
     } else if (llvmStorageType == LLVMTypes::Int8VectorType) {
-        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i8" : "__pseudo_scatter64_i8";
+        funcName = g->target->is32Bit() ? builtin::__pseudo_scatter32_i8 : builtin::__pseudo_scatter64_i8;
     }
 
     llvm::Function *scatterFunc = m->module->getFunction(funcName);
@@ -3046,11 +3144,11 @@ void FunctionEmitContext::StoreInst(llvm::Value *value, AddressInfo *ptrInfo, co
     AssertPos(currentPos, pt != nullptr);
     if ((ptrType != nullptr) && (ptrType->IsBoolType())) {
         if ((CastType<AtomicType>(ptrType) != nullptr)) {
-            value = SwitchBoolSize(value, ptrType->LLVMStorageType(g->ctx));
+            value = SwitchBoolToStorageType(value, ptrType->LLVMStorageType(g->ctx));
         } else if (CastType<VectorType>(ptrType) != nullptr) {
             const VectorType *vType = CastType<VectorType>(ptrType);
             if (CastType<AtomicType>(vType->GetElementType()) != nullptr) {
-                value = SwitchBoolSize(value, ptrType->LLVMStorageType(g->ctx));
+                value = SwitchBoolToStorageType(value, ptrType->LLVMStorageType(g->ctx));
             }
         }
     }
@@ -3527,7 +3625,7 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
             // Figure out the first lane that still needs its function
             // pointer to be called.
             llvm::Value *currentMask = LoadInst(maskPtrInfo);
-            llvm::Function *cttz = m->module->getFunction("__count_trailing_zeros_i64");
+            llvm::Function *cttz = m->module->getFunction(builtin::__count_trailing_zeros_i64);
             AssertPos(currentPos, cttz != nullptr);
             llvm::Value *firstLane64 = CallInst(cttz, nullptr, LaneMask(currentMask), "first_lane64");
             llvm::Value *firstLane = TruncInst(firstLane64, LLVMTypes::Int32Type, "first_lane32");

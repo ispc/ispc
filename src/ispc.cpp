@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -50,6 +50,12 @@
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
+
+#if ISPC_LLVM_VERSION > ISPC_LLVM_17_0
+using CodegenOptLevel = llvm::CodeGenOptLevel;
+#else
+using CodegenOptLevel = llvm::CodeGenOpt::Level;
+#endif
 
 using namespace ispc;
 
@@ -900,7 +906,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         this->m_vectorWidth = 8;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        CPUfromISA = CPU_Core2;
+        CPUfromISA = CPU_x86_64;
         break;
     case ISPCTarget::sse4_i8x16:
     case ISPCTarget::sse41_i8x16:
@@ -1707,14 +1713,14 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
             // requested by user via ISPC Optimization Flag. Mapping is :
             // ISPC O0 -> Codegen O0
             // ISPC O1,O2,O3,default -> Codegen O3
-            llvm::CodeGenOpt::Level cOptLevel = llvm::CodeGenOpt::Level::Aggressive;
+            CodegenOptLevel cOptLevel = CodegenOptLevel::Aggressive;
             switch (g->codegenOptLevel) {
             case Globals::CodegenOptLevel::None:
-                cOptLevel = llvm::CodeGenOpt::Level::None;
+                cOptLevel = CodegenOptLevel::None;
                 break;
 
             case Globals::CodegenOptLevel::Aggressive:
-                cOptLevel = llvm::CodeGenOpt::Level::Aggressive;
+                cOptLevel = CodegenOptLevel::Aggressive;
                 break;
             }
             m_targetMachine->setOptLevel(cOptLevel);

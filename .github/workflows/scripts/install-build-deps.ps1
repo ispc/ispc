@@ -1,9 +1,10 @@
-# Choco-Install is GH Actions wrappers around choco, which does retries
-Choco-Install -PackageName winflexbison3
-Choco-Install -PackageName wget
-Choco-Install -PackageName 7zip
-Choco-Install -PackageName cygwin
-Choco-Install -PackageName cyg-get
+# Install-ChocoPackage is GH Actions wrappers around choco, which does retries
+Install-ChocoPackage winflexbison3
+Install-ChocoPackage wget
+Install-ChocoPackage 7zip
+Install-ChocoPackage cygwin
+Install-ChocoPackage cyg-get
+Install-ChocoPackage ninja
 
 # Install M4 exec and put it into PATH
 cyg-get m4

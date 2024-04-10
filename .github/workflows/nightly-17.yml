@@ -1,0 +1,324 @@
+# Copyright 2022-2024, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+# Nightly Linux run.
+
+####################################################################
+# Currently disabled. To be reenabled for 17.0.                    #
+####################################################################
+
+name: Nightly tests / LLVM 17.0
+
+permissions: read-all
+
+# Run daily - test sse2-avx512 targets @ -O0/-O1/-O2
+on:
+  #  schedule:
+  #    - cron:  '0 7 * * *'
+  workflow_dispatch:
+
+env:
+  SDE_MIRROR_ID: 813591
+  SDE_TAR_NAME: sde-external-9.33.0-2024-01-07
+  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
+
+jobs:
+  # Building LLVM in docker, as using native Ubuntu 18.04 github-hosted image contains newer-than-expected libs and
+  # makes the resulting build not usable on other Ubuntu 18.04 images.
+  # Doing Linux build in two stages, as self-build is required, but Github Action runners are not always capable
+  # to finish the full job in less than 6 hours.
+  linux-build-llvm-17-1:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Check environment
+      run: |
+        cat /proc/cpuinfo
+
+    - name: Build LLVM
+      run: |
+        cd docker/ubuntu/18.04/cpu_ispc_build
+        docker buildx create --use
+        docker buildx build --tag ispc/ubuntu18.04:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=17.0 .
+
+    - name: Upload package
+      uses: actions/upload-artifact@v4
+      with:
+        name: llvm17_linux_stage1_cache
+        path: docker/ubuntu/18.04/cpu_ispc_build/cache.local
+
+  linux-build-llvm-17-2:
+    needs: [linux-build-llvm-17-1]
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Check environment
+      run: |
+        cat /proc/cpuinfo
+
+    - name: Download package
+      uses: actions/download-artifact@v4
+      with:
+        name: llvm17_linux_stage1_cache
+        path: docker/ubuntu/18.04/cpu_ispc_build/cache.local
+
+    - name: Build LLVM
+      run: |
+        cd docker/ubuntu/18.04/cpu_ispc_build
+        ls -al
+        docker buildx create --use
+        docker buildx build --tag ispc/ubuntu18.04:stage2 --target=llvm_build_step2 --cache-from=type=local,src=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=17.0 --output=type=tar,dest=result.tar .
+
+    - name: Pack LLVM
+      run: |
+        cd docker/ubuntu/18.04/cpu_ispc_build
+        tar xvf result.tar usr/local/src/llvm
+        mv usr/local/src/llvm/bin-17.0 .
+        # Note using gzip here, instead of xz - trading of space for speed, as it's just for passing to another stage.
+        tar czvf llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz bin-17.0
+
+    - name: Upload package
+      uses: actions/upload-artifact@v4
+      with:
+        name: llvm_17_linux
+        path: docker/ubuntu/18.04/cpu_ispc_build/llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz
+
+  linux-build-ispc-llvm-17:
+    needs: [linux-build-llvm-17-2]
+    runs-on: ubuntu-latest
+    env:
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Download package
+      uses: actions/download-artifact@v4
+      with:
+        name: llvm_17_linux
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.sh
+
+    - name: Check environment
+      run: |
+        which -a clang
+        cat /proc/cpuinfo
+
+    - name: Build package
+      run: |
+        .github/workflows/scripts/build-ispc.sh
+
+    - name: Sanity testing (make check-all, make test)
+      run: |
+        .github/workflows/scripts/check-ispc.sh
+
+    - name: Upload package
+      uses: actions/upload-artifact@v4
+      with:
+        name: ispc_llvm_17_linux
+        path: build/ispc-trunk-linux.tar.gz
+
+  linux-test-llvm-17:
+    needs: [linux-build-ispc-llvm-17]
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [sse2-i32x4, sse2-i32x8,
+                 sse4-i8x16, sse4-i16x8, sse4-i32x4, sse4-i32x8,
+                 avx1-i32x4, avx1-i32x8, avx1-i32x16, avx1-i64x4,
+                 avx2-i8x32, avx2-i16x16, avx2-i32x4, avx2-i32x8, avx2-i32x16, avx2-i64x4,
+                 avx512knl-x16,
+                 avx512skx-x4, avx512skx-x8, avx512skx-x16, avx512skx-x64, avx512skx-x32]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Download package
+      uses: actions/download-artifact@v4
+      with:
+        name: ispc_llvm_17_linux
+
+    - name: Install dependencies and unpack artifacts
+      run: |
+        .github/workflows/scripts/install-test-deps.sh
+
+    - name: Check environment
+      run: |
+        cat /proc/cpuinfo
+
+    - name: Running tests
+      run: |
+        echo PATH=$PATH
+        ./alloy.py -r --only="stability current -O0 -O1 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+
+    - name: Upload fail_db.txt
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: fail_db.${{matrix.target}}.txt
+        path: fail_db.txt
+
+    - name: Check
+      run: |
+        # Print fails to the log.
+        git diff
+        # Exit with error code if there are fails.
+        [ -z "`git diff`" ]
+
+
+  win-build-llvm-17:
+    runs-on: windows-2022
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Setup MSBuild.exe
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Check environment
+      shell: cmd
+      run: |
+        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+
+    - name: Install dependencies
+      shell: cmd
+      run: |
+        mkdir llvm
+        echo LLVM_HOME=%GITHUB_WORKSPACE%\llvm>> %GITHUB_ENV%
+        echo ISPC_HOME=%GITHUB_WORKSPACE%>> %GITHUB_ENV%
+
+    - name: Build LLVM
+      shell: cmd
+      run: |
+        python ./alloy.py -b --version=17.0 --verbose
+        cd alloy_results* && type alloy_build.log
+
+    - name: Pack LLVM
+      shell: cmd
+      run: |
+        cd llvm
+        set TAR_BASE_NAME=llvm-17.0.6-win.vs2019-Release+Asserts-x86.arm.wasm
+        7z.exe a -ttar -snl %TAR_BASE_NAME%.tar bin-17.0
+        7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
+
+    - name: Upload package
+      uses: actions/upload-artifact@v4
+      with:
+        name: llvm_17_win
+        path: llvm/llvm-17.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+
+
+  win-build-ispc-llvm-17:
+    needs: [win-build-llvm-17]
+    runs-on: windows-2022
+    env:
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      LLVM_HOME: "C:\\projects\\llvm"
+      CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
+      BUILD_TYPE: "Release"
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Download package
+      uses: actions/download-artifact@v4
+      with:
+        name: llvm_17_win
+        path: ${{env.LLVM_HOME}}
+
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.ps1
+
+    - name: Check environment
+      shell: cmd
+      run: |
+        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+
+    - name: Build package
+      run: |
+        .github/workflows/scripts/build-ispc.ps1
+
+    - name: Sanity testing (make check-all, make test)
+      run: |
+        .github/workflows/scripts/check-ispc.ps1
+
+    - name: Upload package
+      uses: actions/upload-artifact@v4
+      with:
+        name: ispc_llvm17_win
+        path: build/ispc-trunk-windows.zip
+
+
+  win-test-llvm17:
+    needs: [win-build-ispc-llvm-17]
+    env:
+      LLVM_HOME: "C:\\projects\\llvm"
+    runs-on: windows-2022
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86, x86-64]
+        target: [sse2-i32x4, sse2-i32x8,
+                 sse4-i8x16, sse4-i16x8, sse4-i32x4, sse4-i32x8,
+                 avx1-i32x4, avx1-i32x8, avx1-i32x16, avx1-i64x4,
+                 avx2-i8x32, avx2-i16x16, avx2-i32x4, avx2-i32x8, avx2-i32x16, avx2-i64x4,
+                 avx512knl-x16,
+                 avx512skx-x4, avx512skx-x8, avx512skx-x16, avx512skx-x64, avx512skx-x32]
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Download package
+      uses: actions/download-artifact@v4
+      with:
+        name: ispc_llvm17_win
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-test-deps.ps1
+
+    - name: Check environment
+      shell: cmd
+      run: |
+        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+
+    - name: Running tests
+      run: |
+        $env:ISPC_HOME = "$pwd"
+        .github/workflows/scripts/load-vs-env.ps1 "${{ matrix.arch }}"
+        python .\alloy.py -r --only="stability ${{ matrix.arch }} current -O0 -O1 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+
+    - name: Check
+      run: |
+        # Print fails to the log.
+        git diff --exit-code
+
+    - name: Upload fail_db.txt
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: fail_db.llvm17.${{matrix.arch}}.${{matrix.target}}.txt
+        path: fail_db.txt
+

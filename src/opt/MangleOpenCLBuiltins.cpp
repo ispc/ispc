@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -17,23 +17,27 @@ static std::string mangleMathOCLBuiltin(const llvm::Function &func) {
     Assert(func.getName().startswith("__spirv_ocl") && "wrong argument: ocl builtin is expected");
     std::string mangledName;
     llvm::Type *retType = func.getReturnType();
-    // spirv OpenCL builtins are used for double types only
-    Assert(retType->isVectorTy() && (llvm::isa<llvm::FixedVectorType>(retType) &&
-                                     llvm::dyn_cast<llvm::FixedVectorType>(retType)->getElementType()->isDoubleTy()) ||
-           retType->isSingleValueType() && retType->isDoubleTy());
+    // spirv OpenCL builtins are used for half/float/double types only
+    llvm::Type *retElementType = (retType->isVectorTy() && llvm::isa<llvm::FixedVectorType>(retType))
+                                     ? llvm::dyn_cast<llvm::FixedVectorType>(retType)->getElementType()
+                                     : retType;
+    Assert(retElementType->isHalfTy() || retElementType->isFloatTy() || retElementType->isDoubleTy());
 
     std::string funcName = func.getName().str();
     std::vector<llvm::Type *> ArgTy;
 #if ISPC_LLVM_VERSION == ISPC_LLVM_15_0
     std::vector<SPIRV::PointerIndirectPair> PointerElementTys;
 #endif
-    // _DvWIDTH suffix is used in target file to differentiate scalar
-    // and vector versions of intrinsics. Here we remove this
+    // _DvWIDTH suffix is used in target file to differentiate scalar (DvWIDTH1<type>)
+    // and vector (DvWIDTH<type>) versions of intrinsics for different types. Here we remove this
     // suffix and mangle the name.
+    // We don't use mangled names in target file for 2 reasons:
+    // 1. target file is used for different vector widths
+    // 2. spirv builtins may be used as part of macros (e.g. see xe_double_math)
     size_t pos = funcName.find("_DvWIDTH");
-    bool isVaryingFunc = pos != std::string::npos;
-    if (isVaryingFunc) {
-        funcName.erase(pos, 8);
+    bool suffixPos = pos != std::string::npos;
+    if (suffixPos) {
+        funcName.erase(pos, funcName.length() - pos);
     }
     for (auto &arg : func.args()) {
         // In LLVM15 SPIR-V translator requires to pass pointer type information to mangleBuiltin
@@ -42,8 +46,9 @@ static std::string mangleMathOCLBuiltin(const llvm::Function &func) {
         // https://github.com/KhronosGroup/SPIRV-LLVM-Translator/commit/42cf770344bb8d0a32db1ec892bee63f43d793b1
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
         if (arg.getType()->isPointerTy()) {
-            ArgTy.push_back(
-                llvm::TypedPointerType::get(isVaryingFunc ? LLVMTypes::DoubleVectorType : LLVMTypes::DoubleType, 0));
+            // In SPIR-V OpenCL builtins it's safe to assume that pointer argument is either pointer to <type>
+            // or pointer to <WIDTH x type> which is basically type of retType.
+            ArgTy.push_back(llvm::TypedPointerType::get(retType, 0));
         } else {
             ArgTy.push_back(arg.getType());
         }
@@ -51,7 +56,7 @@ static std::string mangleMathOCLBuiltin(const llvm::Function &func) {
         ArgTy.push_back(arg.getType());
         SPIRV::PointerIndirectPair PtrElemTy;
         if (arg.getType()->isPointerTy()) {
-            PtrElemTy.setPointer(isVaryingFunc ? LLVMTypes::DoubleVectorType : LLVMTypes::DoubleType);
+            PtrElemTy.setPointer(retType);
         }
         PointerElementTys.push_back(PtrElemTy);
 #else

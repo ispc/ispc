@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -104,6 +104,12 @@ class Type : public Traceable {
 
     /** Returns true if the underlying type is an varying atomic or uniform vector type */
     bool IsVaryingAtomicOrUniformVectorType() const;
+
+    /** Returns true if the underlying type is a varying atomic type */
+    bool IsVaryingAtomic() const;
+
+    /** Returns true if the underlying type is an uniform vector type */
+    bool IsUniformVector() const;
 
     /** Returns true if the underlying type is a reference type */
     bool IsReferenceType() const;
@@ -969,8 +975,7 @@ class FunctionType : public Type {
     /** This method returns the FunctionMangledName depending on Function type.
         The \c appFunction parameter indicates whether the function is generated for
         internal ISPC call or for external call from application.*/
-    FunctionMangledName GetFunctionMangledName(bool appFunction,
-                                               std::vector<const Type *> *templateArgs = nullptr) const;
+    FunctionMangledName GetFunctionMangledName(bool appFunction, TemplateArgs *templateArgs = nullptr) const;
 
     /** This method returns std::vector of LLVM types of function arguments.
         The \c disableMask parameter indicates whether the mask parameter should be
@@ -1031,7 +1036,7 @@ class FunctionType : public Type {
     int costOverride;
 
   private:
-    std::string mangleTemplateArgs(std::vector<const Type *> *templateArgs) const;
+    std::string mangleTemplateArgs(TemplateArgs *templateArgs) const;
 
     const Type *const returnType;
 

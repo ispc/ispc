@@ -1,7 +1,9 @@
-# Copyright 2021-2023, Intel Corporation
+# Copyright 2021-2024, Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
 name: SVML
+
+permissions: read-all
 
 on:
   workflow_dispatch:
@@ -11,8 +13,8 @@ on:
         required: true
         default: 'full'
 env:
-  SDE_MIRROR_ID: 751535
-  SDE_TAR_NAME: sde-external-9.14.0-2022-10-25
+  SDE_MIRROR_ID: 813591
+  SDE_TAR_NAME: sde-external-9.33.0-2024-01-07
   USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
   LLVM_REPO: https://github.com/ispc/ispc.dependencies
   TARGETS_SMOKE: '["avx2-i32x8"]'
@@ -59,15 +61,15 @@ jobs:
         $RUN_SMOKE && echo "optsets=${OPTSETS_SMOKE}" >> $GITHUB_OUTPUT || true
         $RUN_FULL &&  echo "optsets=${OPTSETS_FULL}" >> $GITHUB_OUTPUT || true
 
-  linux-build-ispc-llvm16:
+  linux-build-ispc-llvm17:
     needs: [define-flow]
     runs-on: ubuntu-latest
     env:
-      LLVM_VERSION: "16.0"
-      LLVM_TAR: llvm-16.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -77,7 +79,6 @@ jobs:
 
     - name: Check environment
       run: |
-        ./check_env.py
         which -a clang
         cat /proc/cpuinfo
 
@@ -90,14 +91,14 @@ jobs:
         .github/workflows/scripts/check-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: ispc_llvm16_linux
+        name: ispc_llvm17_linux
         path: build/ispc-trunk-linux.tar.gz
 
 
-  linux-test-llvm16:
-    needs: [define-flow, linux-build-ispc-llvm16]
+  linux-test-llvm17:
+    needs: [define-flow, linux-build-ispc-llvm17]
     runs-on: ubuntu-latest
     continue-on-error: false
     strategy:
@@ -105,11 +106,11 @@ jobs:
       matrix:
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download package
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
-        name: ispc_llvm16_linux
+        name: ispc_llvm17_linux
 
     - name: Install dependencies and unpack artifacts
       run: |
@@ -131,9 +132,9 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
-        name: fail_db.llvm16.${{matrix.target}}.txt
+        name: fail_db.llvm17.${{matrix.target}}.txt
         path: fail_db.txt
 

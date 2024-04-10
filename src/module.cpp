@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -471,6 +471,124 @@ void Module::AddTypeDef(const std::string &name, const Type *type, SourcePos pos
     symbolTable->AddType(name.c_str(), type, pos);
 }
 
+// Construct ConstExpr as initializer for varying const value from given expression list if possible
+// T is bool* or std::vector<llvm::APFloat> or int8_t* (and others integer types) here.
+// Although, it looks like very unlogical this is the probably most reasonable
+// approach to unify usage of vals variable inside function.
+// Approach with T is bool, llvm::APFloat, int8_t, ... doesn't work because
+// 1) We can't dereference &vals[i++] when it is std::vector<bool>. The
+// specialization of vector with bool doesn't necessarily store its elements as
+// contiguous array.
+// 2) MSVC doesn't support VLAs, so T vals[N] is not an option.
+// 3) T vals[64] is not an option because llvm::APFloat doesn't have the
+// default constructor. Same applicable for std::array.
+template <class T>
+Expr *lCreateConstExpr(ExprList *exprList, const AtomicType::BasicType basicType, const Type *type,
+                       const std::string &name, SourcePos pos) {
+    const int N = g->target->getVectorWidth();
+    bool canConstructConstExpr = true;
+    using ManagedType =
+        typename std::conditional<std::is_pointer<T>::value, std::unique_ptr<typename std::remove_pointer<T>::type[]>,
+                                  int // unused placeholder
+                                  >::type;
+    ManagedType managedMemory;
+    T vals;
+    if constexpr (std::is_same_v<T, std::vector<llvm::APFloat>>) {
+        switch (basicType) {
+        case AtomicType::TYPE_FLOAT16:
+            vals.resize(N, llvm::APFloat::getZero(llvm::APFloat::IEEEhalf()));
+            break;
+        case AtomicType::TYPE_FLOAT:
+            vals.resize(N, llvm::APFloat::getZero(llvm::APFloat::IEEEsingle()));
+            break;
+        case AtomicType::TYPE_DOUBLE:
+            vals.resize(N, llvm::APFloat::getZero(llvm::APFloat::IEEEdouble()));
+            break;
+        default:
+            return nullptr;
+        }
+    } else {
+        // T equals int8_t* and etc.
+        // We allocate PointToType[N] on the heap. It is managed by unique_ptr.
+        using PointToType = typename std::remove_pointer<T>::type;
+        managedMemory = std::make_unique<PointToType[]>(N);
+        vals = managedMemory.get();
+        memset(vals, 0, N * sizeof(PointToType));
+    }
+
+    int i = 0;
+    for (Expr *expr : exprList->exprs) {
+        const ConstExpr *ce = llvm::dyn_cast<ConstExpr>(Optimize(expr));
+        // ConstExpr of length 1 implies that it contains uniform value
+        if (!ce || ce->Count() != 1) {
+            canConstructConstExpr = false;
+            break;
+        }
+
+        if constexpr (std::is_same_v<T, std::vector<llvm::APFloat>>) {
+            std::vector<llvm::APFloat> ce_vals;
+            llvm::Type *to_type = type->GetAsUniformType()->LLVMType(g->ctx);
+            ce->GetValues(ce_vals, to_type);
+            vals[i++] = ce_vals[0];
+        } else {
+            ce->GetValues(&vals[i++]);
+        }
+    }
+
+    if (i == 1) {
+        // In case when, e.g., { 1, }, we need to set all values as equaled to
+        // the first one to match the behaviour with other initializations.
+        while (i < N) {
+            vals[i++] = vals[0];
+        }
+    } else if (i != N) {
+        // In other cases when number of values in initializer don't match the
+        // vector width, we report error to match the other behaviour.
+        Error(pos, "Initializer list for %s \"%s\" must have %d elements (has %d).", name.c_str(),
+              type->GetString().c_str(), N, (int)exprList->exprs.size());
+    }
+
+    if (canConstructConstExpr) {
+        return new ConstExpr(type, vals, pos);
+    }
+    return nullptr;
+}
+
+Expr *lConvertExprListToConstExpr(Expr *initExpr, const Type *type, const std::string &name, SourcePos pos) {
+    ExprList *exprList = llvm::dyn_cast<ExprList>(initExpr);
+    if (type->IsConstType() && type->IsVaryingType() && type->IsAtomicType()) {
+        const AtomicType::BasicType basicType = CastType<AtomicType>(type)->basicType;
+        switch (basicType) {
+        case AtomicType::TYPE_BOOL:
+            return lCreateConstExpr<bool *>(exprList, basicType, type, name, pos);
+        case AtomicType::TYPE_INT8:
+            return lCreateConstExpr<int8_t *>(exprList, basicType, type, name, pos);
+        case AtomicType::TYPE_UINT8:
+            return lCreateConstExpr<uint8_t *>(exprList, basicType, type, name, pos);
+        case AtomicType::TYPE_INT16:
+            return lCreateConstExpr<int16_t *>(exprList, basicType, type, name, pos);
+        case AtomicType::TYPE_UINT16:
+            return lCreateConstExpr<uint16_t *>(exprList, basicType, type, name, pos);
+        case AtomicType::TYPE_INT32:
+            return lCreateConstExpr<int32_t *>(exprList, basicType, type, name, pos);
+        case AtomicType::TYPE_UINT32:
+            return lCreateConstExpr<uint32_t *>(exprList, basicType, type, name, pos);
+        case AtomicType::TYPE_INT64:
+            return lCreateConstExpr<int64_t *>(exprList, basicType, type, name, pos);
+        case AtomicType::TYPE_UINT64:
+            return lCreateConstExpr<uint64_t *>(exprList, basicType, type, name, pos);
+        case AtomicType::TYPE_FLOAT16:
+        case AtomicType::TYPE_FLOAT:
+        case AtomicType::TYPE_DOUBLE:
+            return lCreateConstExpr<std::vector<llvm::APFloat>>(exprList, basicType, type, name, pos);
+        default:
+            // Unsupported types.
+            break;
+        }
+    }
+    return nullptr;
+}
+
 void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initExpr, bool isConst,
                                StorageClass storageClass, SourcePos pos) {
     // These may be nullptr due to errors in parsing; just gracefully return
@@ -533,11 +651,22 @@ void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *
             initExpr = TypeCheck(initExpr);
             if (initExpr != nullptr) {
                 // We need to make sure the initializer expression is
-                // the same type as the global.  (But not if it's an
-                // ExprList; they don't have types per se / can't type
-                // convert themselves anyway.)
-                if (llvm::dyn_cast<ExprList>(initExpr) == nullptr)
+                // the same type as the global.
+                if (llvm::dyn_cast<ExprList>(initExpr) == nullptr) {
                     initExpr = TypeConvertExpr(initExpr, type, "initializer");
+                } else {
+                    // The alternative is to create ConstExpr initializing
+                    // expression with correct type and value from ExprList.
+                    // If we have exprList that initalizes const varying int, e.g.:
+                    // static const int x = { 0, 1, 2, 3 };
+                    // then we need to convert rvalue to varying ConstExpr value.
+                    // It will be utilized later in arithmetic expressions that can be
+                    // calculated in compile time (Optimize function call below),
+                    Expr *ce = lConvertExprListToConstExpr(initExpr, type, name, pos);
+                    if (ce) {
+                        initExpr = ce;
+                    }
+                }
 
                 if (initExpr != nullptr) {
                     initExpr = Optimize(initExpr);
@@ -1157,8 +1286,7 @@ void Module::AddFunctionTemplateDefinition(const TemplateParms *templateParmList
 }
 
 FunctionTemplate *Module::MatchFunctionTemplate(const std::string &name, const FunctionType *ftype,
-                                                std::vector<std::pair<const Type *, SourcePos>> &normTypes,
-                                                SourcePos pos) {
+                                                TemplateArgs &normTypes, SourcePos pos) {
     if (ftype == nullptr) {
         Assert(m->errorCount > 0);
         return nullptr;
@@ -1174,9 +1302,7 @@ FunctionTemplate *Module::MatchFunctionTemplate(const std::string &name, const F
     // template <typename T> void foo(T t);
     // foo<int>(1); // T is assumed to be "varying int" here.
     for (auto &arg : normTypes) {
-        if (arg.first->GetVariability() == Variability::Unbound) {
-            arg.first = arg.first->GetAsVaryingType();
-        }
+        arg.SetAsVaryingType();
     }
 
     FunctionTemplate *templ = nullptr;
@@ -1210,11 +1336,10 @@ FunctionTemplate *Module::MatchFunctionTemplate(const std::string &name, const F
     return templ;
 }
 
-void Module::AddFunctionTemplateInstantiation(const std::string &name,
-                                              const std::vector<std::pair<const Type *, SourcePos>> &types,
+void Module::AddFunctionTemplateInstantiation(const std::string &name, const TemplateArgs &tArgs,
                                               const FunctionType *ftype, StorageClass sc, bool isInline,
                                               bool isNoInline, SourcePos pos) {
-    std::vector<std::pair<const Type *, SourcePos>> normTypes(types);
+    TemplateArgs normTypes(tArgs);
     FunctionTemplate *templ = MatchFunctionTemplate(name, ftype, normTypes, pos);
     if (templ) {
         // If primary template has default storage class, but explicit instantiation has non-default storage class,
@@ -1244,9 +1369,8 @@ void Module::AddFunctionTemplateInstantiation(const std::string &name,
 }
 
 void Module::AddFunctionTemplateSpecializationDefinition(const std::string &name, const FunctionType *ftype,
-                                                         const std::vector<std::pair<const Type *, SourcePos>> &types,
-                                                         SourcePos pos, Stmt *code) {
-    std::vector<std::pair<const Type *, SourcePos>> normTypes(types);
+                                                         const TemplateArgs &tArgs, SourcePos pos, Stmt *code) {
+    TemplateArgs normTypes(tArgs);
     FunctionTemplate *templ = MatchFunctionTemplate(name, ftype, normTypes, pos);
     if (templ == nullptr) {
         Error(pos, "No matching function template found for specialization.");
@@ -1268,10 +1392,9 @@ void Module::AddFunctionTemplateSpecializationDefinition(const std::string &name
 }
 
 void Module::AddFunctionTemplateSpecializationDeclaration(const std::string &name, const FunctionType *ftype,
-                                                          const std::vector<std::pair<const Type *, SourcePos>> &types,
-                                                          StorageClass sc, bool isInline, bool isNoInline,
-                                                          SourcePos pos) {
-    std::vector<std::pair<const Type *, SourcePos>> normTypes(types);
+                                                          const TemplateArgs &tArgs, StorageClass sc, bool isInline,
+                                                          bool isNoInline, SourcePos pos) {
+    TemplateArgs normTypes(tArgs);
     FunctionTemplate *templ = MatchFunctionTemplate(name, ftype, normTypes, pos);
     if (templ == nullptr) {
         Error(pos, "No matching function template found for specialization.");
@@ -1645,9 +1768,15 @@ bool Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm:
                                        const char *outFileName) {
     // Figure out if we're generating object file or assembly output, and
     // set binary output for object files
+#if ISPC_LLVM_VERSION > ISPC_LLVM_17_0
+    llvm::CodeGenFileType fileType =
+        (outputType == Object) ? llvm::CodeGenFileType::ObjectFile : llvm::CodeGenFileType::AssemblyFile;
+    bool binary = (fileType == llvm::CodeGenFileType::ObjectFile);
+#else
     llvm::CodeGenFileType fileType = (outputType == Object) ? llvm::CGFT_ObjectFile : llvm::CGFT_AssemblyFile;
     bool binary = (fileType == llvm::CGFT_ObjectFile);
 
+#endif
     llvm::sys::fs::OpenFlags flags = binary ? llvm::sys::fs::OF_None : llvm::sys::fs::OF_Text;
 
     std::error_code error;
@@ -2978,7 +3107,6 @@ static void lGetExportedFunctions(SymbolTable *symbolTable, std::map<std::string
 }
 
 static llvm::FunctionType *lGetVaryingDispatchType(FunctionTargetVariants &funcs) {
-    llvm::Type *ptrToInt8Ty = llvm::Type::getInt8PtrTy(*g->ctx);
     llvm::FunctionType *resultFuncTy = nullptr;
 
     for (int i = 0; i < Target::NUM_ISAS; ++i) {
@@ -3003,7 +3131,7 @@ static llvm::FunctionType *lGetVaryingDispatchType(FunctionTargetVariants &funcs
                     // For each varying type pointed to, swap the LLVM pointer type
                     // with i8 * (as close as we can get to void *)
                     if (baseType->IsVaryingType()) {
-                        ftype[j] = ptrToInt8Ty;
+                        ftype[j] = LLVMTypes::Int8PointerType;
                         foundVarying = true;
                     }
                 }

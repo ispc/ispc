@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2023, Intel Corporation
+#  Copyright (c) 2023-2024, Intel Corporation
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
@@ -48,6 +48,7 @@ set(ISPC_ANDROID_NDK_PATH "NO" CACHE STRING "Path to Android NDK. It is needed t
 set(ISPC_SIGN_KEY "NO" CACHE STRING "Key to sign macOS or Windows build.")
 option(ISPC_INCLUDE_BENCHMARKS "Include ISPC benchmarks (ispc_benchmarks target)" OFF)
 option(ISPC_CROSS "Enable ISPC build with cross compilation support" ON)
+option(ISPC_PACKAGE_EXAMPLES "Package examples into the same archive with ISPC binaries" OFF)
 option(LLVM_DISABLE_ASSERTIONS "Enable LLVM build without assertions" ON)
 option(LLVM_BUILD_OPENMP "Build OpenMP as part of LLVM" OFF)
 option(EXTERNAL_VERBOSE "Enable verbose for external project build and install commands" OFF)
@@ -140,7 +141,6 @@ if (INSTALL_WITH_XE_DEPS OR INSTALL_ISPC)
 endif()
 message(STATUS "ISPC_STAGE2_INSTALL_PREFIX is ${ISPC_STAGE2_INSTALL_PREFIX}")
 message(STATUS "ISPC_STAGE3_INSTALL_PREFIX is ${ISPC_STAGE3_INSTALL_PREFIX}")
-message(STATUS "ISPC_STAGE2_CMAKE_ARGS is ${ISPC_STAGE2_CMAKE_ARGS}")
 
 if (BUILD_STAGE1_TOOLCHAIN_ONLY OR
     BUILD_SPIRV_TRANSLATOR_ONLY OR BUILD_VC_INTRINSICS_ONLY OR BUILD_L0_LOADER_ONLY)
@@ -172,7 +172,7 @@ if (APPLE)
     set(FULL_STAGE2_LLVM ON)
 
     set(MACOS_VERSION_MIN 10.12)
-    if (NOT MACOS_UNIVERSAL_BIN AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
+    if (NOT MACOS_UNIVERSAL_BIN AND CMAKE_OSX_ARCHITECTURES MATCHES "arm64")
         set(MACOS_VERSION_MIN 11.0)
     endif()
 
@@ -192,9 +192,10 @@ string(APPEND LIT_TOOLS_DIR ${GNUWIN32} "/bin")
 unset(LLVM_TAG)
 unset(LLVM_VERSION_DOTTED)
 string(REPLACE "." "_" LLVM_VERSION "${LLVM_VERSION}")
-if     (${LLVM_VERSION} STREQUAL 17_0)
-    set(LLVM_TAG    llvmorg-17.0.1)
-    set(LLVM_VERSION_DOTTED 17.0.1)
+if (${LLVM_VERSION} STREQUAL 18_1)
+    set(LLVM_TAG    llvmorg-18.1.2)
+elseif (${LLVM_VERSION} STREQUAL 17_0)
+    set(LLVM_TAG    llvmorg-17.0.6)
 elseif (${LLVM_VERSION} STREQUAL 16_0)
     set(LLVM_TAG    llvmorg-16.0.6)
 elseif (${LLVM_VERSION} STREQUAL 15_0)
@@ -288,6 +289,8 @@ else()
     message(STATUS "ISPC_SIGN_KEY is set to some value.")
 endif()
 message(STATUS "ISPC_INCLUDE_BENCHMARKS is ${ISPC_INCLUDE_BENCHMARKS}")
+message(STATUS "ISPC_CROSS is ${ISPC_CROSS}")
+message(STATUS "ISPC_PACKAGE_EXAMPLES is ${ISPC_PACKAGE_EXAMPLES}")
 message(STATUS "LLVM_DISABLE_ASSERTIONS is ${LLVM_DISABLE_ASSERTIONS}")
 message(STATUS "LLVM_BUILD_OPENMP is ${LLVM_BUILD_OPENMP}")
 message(STATUS "LTO is ${LTO}")
@@ -686,6 +689,7 @@ message(STATUS "LLVM stage2 cmake arguments ${LLVM_STAGE2_CMAKE_ARGS}")
 list(APPEND ISPC_COMMON_CMAKE_ARGS
     -DCMAKE_BUILD_TYPE=${BUILD_TYPE_ISPC}
     -DISPC_PREPARE_PACKAGE=ON
+    -DISPC_PACKAGE_EXAMPLES=${ISPC_PACKAGE_EXAMPLES}
     )
 if (ISPC_CROSS)
     list(APPEND ISPC_COMMON_CMAKE_ARGS
@@ -800,6 +804,14 @@ else()
         )
 endif()
 
+list(APPEND ISPC_STAGE2_CMAKE_TARGETS install package)
+if (NOT ISPC_PACKAGE_EXAMPLES)
+    list(APPEND ISPC_STAGE2_CMAKE_TARGETS
+        package-examples
+        )
+endif()
+message(STATUS "ISPC_STAGE2_CMAKE_ARGS is ${ISPC_STAGE2_CMAKE_ARGS}")
+message(STATUS "ISPC_STAGE2_CMAKE_TARGETS is ${ISPC_STAGE2_CMAKE_TARGETS}")
 
 # LLVM stage3 specific cmake arguments, here we imply that PGO always works with LTO.
 # PGO specific compiler flags is inside toolchain file.
@@ -845,10 +857,18 @@ set(CLANG_RT_VERSION ${LLVM_VERSION_DOTTED})
 if (${LLVM_VERSION_MAJOR} VERSION_GREATER_EQUAL 16)
     set(CLANG_RT_VERSION ${LLVM_VERSION_MAJOR})
 endif()
+set(CLANG_RT_TARGET x86_64-pc-windows-msvc)
+if (${LLVM_VERSION_MAJOR} VERSION_GREATER_EQUAL 17)
+    set(CLANG_RT_TARGET windows)
+endif()
+set(CLANG_RT_LIB clang_rt.profile.lib)
+if (${LLVM_VERSION_MAJOR} VERSION_GREATER_EQUAL 17)
+    set(CLANG_RT_LIB clang_rt.profile-x86_64.lib)
+endif()
 # MSVC has an outdated clang_rt.profile lib in its SDK.
 # We need to enforce explicitly our freshly built library to avoid profile mismatch errors.
 cmake_path(CONVERT
-           ${STAGE2_PATH}/lib/clang/${CLANG_RT_VERSION}/lib/x86_64-pc-windows-msvc/clang_rt.profile.lib
+           ${STAGE2_PATH}/lib/clang/${CLANG_RT_VERSION}/lib/${CLANG_RT_TARGET}/${CLANG_RT_LIB}
            TO_CMAKE_PATH_LIST
            CLANG_RT_PROFLIB
            NORMALIZE)
@@ -1455,7 +1475,7 @@ if (NOT BUILD_STAGE2_TOOLCHAIN_ONLY)
         CMAKE_GENERATOR Ninja
         CMAKE_ARGS ${ISPC_STAGE2_CMAKE_ARGS} -DCMAKE_INSTALL_PREFIX=${ISPC_STAGE2_INSTALL_PREFIX}
         BUILD_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE2}
-        INSTALL_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE2} install package
+        INSTALL_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE2} ${ISPC_STAGE2_CMAKE_TARGETS}
         )
 
     # Custom target to run stage2 ISPC tests

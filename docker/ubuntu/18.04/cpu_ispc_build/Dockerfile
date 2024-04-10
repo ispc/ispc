@@ -1,9 +1,9 @@
 #
-#  Copyright (c) 2017-2023, Intel Corporation
+#  Copyright (c) 2017-2024, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
-ARG LLVM_VERSION=16.0
+ARG LLVM_VERSION=17.0
 
 FROM ubuntu:18.04 AS llvm_build_step1
 LABEL maintainer="Dmitry Babokin <dmitry.y.babokin@intel.com>"
@@ -11,6 +11,8 @@ SHELL ["/bin/bash", "-c"]
 
 ARG REPO=ispc/ispc
 ARG SHA=main
+ARG LTO=OFF
+ARG PGO=OFF
 ARG LLVM_VERSION
 ARG LLVM_DISABLE_ASSERTIONS
 
@@ -69,6 +71,7 @@ RUN git clone https://github.com/$REPO.git ispc && \
     cmake ispc/superbuild \
         -B build \
         --preset os \
+        -DLTO=$LTO \
         -DXE_DEPS=OFF \
         -DLLVM_VERSION="$LLVM_VERSION" \
         -DBUILD_STAGE1_TOOLCHAIN_ONLY=ON \
@@ -79,6 +82,9 @@ RUN git clone https://github.com/$REPO.git ispc && \
 
 FROM llvm_build_step1 AS llvm_build_step2
 SHELL ["/bin/bash", "-c"]
+
+ARG LTO=OFF
+ARG PGO=OFF
 ARG LLVM_VERSION
 ARG LLVM_DISABLE_ASSERTIONS
 
@@ -86,6 +92,7 @@ WORKDIR /usr/local/src
 RUN cmake ispc/superbuild \
         -B build \
         --preset os \
+        -DLTO=$LTO \
         -DXE_DEPS=OFF \
         -DLLVM_VERSION="$LLVM_VERSION" \
         -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON \
@@ -99,6 +106,9 @@ ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
 
 FROM llvm_build_step2 AS ispc_build
 SHELL ["/bin/bash", "-c"]
+
+ARG LTO=OFF
+ARG PGO=OFF
 ARG LLVM_VERSION
 
 # Install regular ISPC dependencies
@@ -110,6 +120,7 @@ WORKDIR /usr/local/src
 RUN cmake ispc/superbuild \
         -B build \
         --preset os \
+        -DLTO=$LTO \
         -DXE_DEPS=OFF \
         -DCMAKE_CXX_FLAGS=-Werror \
         -DPREBUILT_STAGE2_PATH="$LLVM_HOME"/bin-"$LLVM_VERSION" \

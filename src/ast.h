@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2023, Intel Corporation
+  Copyright (c) 2011-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -173,7 +173,7 @@ class ASTNode : public Traceable {
     unsigned getValueID() const { return SubclassID; }
 
     /** A function for interactive debugging */
-    void Print() const;
+    void Dump() const;
 
     /** A function that should be used for hierarchical AST dump. */
     virtual void Print(Indent &indent) const = 0;

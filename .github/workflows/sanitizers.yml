@@ -1,7 +1,9 @@
-# Copyright 2023, Intel Corporation
+# Copyright 2023-2024, Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
 name: Sanitizers
+
+permissions: read-all
 
 on:
   pull_request:
@@ -11,15 +13,15 @@ env:
   LLVM_REPO: https://github.com/ispc/ispc.dependencies
 
 jobs:
-  linux-ispc-llvm16-asan:
+  linux-ispc-llvm17-asan:
     runs-on: ubuntu-latest
     env:
-      LLVM_VERSION: "16.0"
-      LLVM_TAR: llvm-16.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -30,7 +32,6 @@ jobs:
     # We will use system gcc until we rebuild LLVM with compiler-rt.
     - name: Check environment
       run: |
-        ./check_env.py
         which -a gcc
         cat /proc/cpuinfo
 

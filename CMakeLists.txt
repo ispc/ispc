@@ -1,12 +1,12 @@
 #
-#  Copyright (c) 2018-2023, Intel Corporation
+#  Copyright (c) 2018-2024, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
 #
 # ispc CMakeLists.txt
 #
-cmake_minimum_required(VERSION 3.19)
+cmake_minimum_required(VERSION 3.15)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -276,10 +276,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Version.cmake)
 # Get ispc version
 get_ispc_version("${CMAKE_CURRENT_SOURCE_DIR}/common/version.h")
 
-# tests/lit-tests/lit.cfg uses distutils that removed since python3.12
-# GitHub Windows images has recently installed this although they have older versions alongside.
-# Unfortunately, range syntax requires cmake 3.19 at least.
-find_package(Python3 3.6...<3.12 REQUIRED)
+find_package(Python3 REQUIRED)
     if (NOT Python3_Interpreter_FOUND)
         message(FATAL_ERROR "Python interpreter is not found")
     endif()
@@ -443,6 +440,8 @@ target_sources(${PROJECT_NAME}
         "src/bitcode_lib.h"
         "src/builtins.cpp"
         "src/builtins.h"
+        "src/builtins-decl.cpp"
+        "src/builtins-decl.h"
         "src/ctx.cpp"
         "src/ctx.h"
         "src/decl.cpp"
@@ -488,7 +487,7 @@ if (WIN32)
 endif()
 
 # Build definitions
-string(TIMESTAMP BUILD_DATE "%Y%m%d")
+string(TIMESTAMP BUILD_DATE "%Y%m%d" UTC)
 target_compile_definitions(${PROJECT_NAME} PRIVATE BUILD_DATE=\"${BUILD_DATE}\"
                                                    BUILD_VERSION=\"${GIT_COMMIT_HASH}\")
 if (UNIX)
@@ -562,10 +561,14 @@ if (MSVC)
     set_source_files_properties(${BISON_OUTPUT} PROPERTIES COMPILE_FLAGS /wd4005)
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare -Wno-unused-function ${LLVM_CPP_FLAGS})
-    # Security options
+    # Security options for both Debug and Release builds
     target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector-strong
-                           -fdata-sections -ffunction-sections -fno-delete-null-pointer-checks
-                           -Wformat -Wformat-security -fwrapv)
+                           -fno-delete-null-pointer-checks -Wformat -Wformat-security -fwrapv)
+    # Additional security options for Release mode
+    # Should be combined with link-time optimization (-Wl,--gc-sections during the linking phase)
+    if (CMAKE_BUILD_TYPE STREQUAL "Release")
+        target_compile_options(${PROJECT_NAME} PRIVATE -fdata-sections -ffunction-sections)
+    endif()
     # LLVM 14 switches default DWARF version from v4 to v5
     # but gdb < 10.1 can't read DWARF v5.
     # https://discourse.llvm.org/t/gdb-10-1-cant-read-clangs-dwarf-v5/6035
@@ -608,12 +611,15 @@ if (WIN32)
     endif()
 elseif (APPLE)
 else()
-    # Link options for security hardening.
+    # Common security hardening options for both Debug and Release
     target_link_options(${PROJECT_NAME}
         PUBLIC "SHELL: -z noexecstack"
                "SHELL: -z relro"
-               "SHELL: -z now"
-               "SHELL: -Wl,--gc-sections")
+               "SHELL: -z now")
+    # Additional options for Release mode
+    if(CMAKE_BUILD_TYPE MATCHES Release)
+        target_link_options(${PROJECT_NAME} PUBLIC "SHELL: -Wl,--gc-sections")
+    endif()
 endif()
 
 if (ISPC_STATIC_STDCXX_LINK OR ISPC_STATIC_LINK)

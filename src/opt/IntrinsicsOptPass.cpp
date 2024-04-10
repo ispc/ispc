@@ -1,10 +1,11 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
 
 #include "IntrinsicsOptPass.h"
+#include "builtins-decl.h"
 
 namespace ispc {
 
@@ -25,8 +26,8 @@ bool IntrinsicsOpt::optimizeIntrinsics(llvm::BasicBlock &bb) {
             m->module->getFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_sse_movmsk_ps))) {
         maskInstructions.push_back(sseFloatMovmsk);
     }
-    if (llvm::Function *__movmsk = m->module->getFunction("__movmsk")) {
-        maskInstructions.push_back(__movmsk);
+    if (llvm::Function *movmsk = m->module->getFunction(builtin::__movmsk)) {
+        maskInstructions.push_back(movmsk);
     }
     if (llvm::Function *avxFloatMovmsk =
             m->module->getFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_avx_movmsk_ps_256))) {

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -157,6 +157,10 @@ bool Type::IsVaryingAtomicOrUniformVectorType() const {
             (CastType<VectorType>(this) != nullptr && IsUniformType()));
 }
 
+bool Type::IsVaryingAtomic() const { return IsAtomicType() && IsVaryingType(); }
+
+bool Type::IsUniformVector() const { return IsVectorType() && IsUniformType(); }
+
 bool Type::IsReferenceType() const { return (CastType<ReferenceType>(this) != nullptr); }
 
 bool Type::IsVectorType() const { return (CastType<VectorType>(this) != nullptr); }
@@ -169,12 +173,18 @@ bool Type::IsDependentType() const {
         return CastType<AtomicType>(this)->basicType == AtomicType::TYPE_DEPENDENT;
     case ENUM_TYPE:
         return false;
-    case POINTER_TYPE:
-        return CastType<PointerType>(this)->GetBaseType()->IsDependentType();
-    case ARRAY_TYPE:
-        return CastType<ArrayType>(this)->GetElementType()->IsDependentType();
-    case VECTOR_TYPE:
-        return CastType<VectorType>(this)->GetElementType()->IsDependentType();
+    case POINTER_TYPE: {
+        const Type *baseType = CastType<PointerType>(this)->GetBaseType();
+        return baseType && baseType->IsDependentType();
+    }
+    case ARRAY_TYPE: {
+        const Type *elemType = CastType<ArrayType>(this)->GetElementType();
+        return elemType && elemType->IsDependentType();
+    }
+    case VECTOR_TYPE: {
+        const Type *elemType = CastType<VectorType>(this)->GetElementType();
+        return elemType && elemType->IsDependentType();
+    }
     case STRUCT_TYPE: {
         const StructType *st = CastType<StructType>(this);
         for (int i = 0; i < st->GetElementCount(); ++i) {
@@ -1003,7 +1013,11 @@ llvm::DIType *EnumType::GetDIType(llvm::DIScope *scope) const {
     llvm::DIType *underlyingType = AtomicType::UniformInt32->GetDIType(scope);
     llvm::DIType *diType =
         m->diBuilder->createEnumerationType(diSpace, GetString(), diFile, pos.first_line, 32 /* size in bits */,
-                                            32 /* align in bits */, elementArray, underlyingType, name);
+                                            32 /* align in bits */, elementArray, underlyingType,
+#if ISPC_LLVM_VERSION > ISPC_LLVM_17_0
+                                            0,
+#endif
+                                            name);
     switch (variability.type) {
     case Variability::Uniform:
         return diType;
@@ -2914,23 +2928,19 @@ const std::string FunctionType::GetReturnTypeString() const {
     return ret + returnType->GetString();
 }
 
-std::string FunctionType::mangleTemplateArgs(std::vector<const Type *> *templateArgs) const {
+std::string FunctionType::mangleTemplateArgs(TemplateArgs *templateArgs) const {
     if (templateArgs == nullptr) {
         return "";
     }
     std::string ret = "___";
-    for (const Type *arg : *templateArgs) {
-        if (arg) {
-            ret += arg->Mangle();
-        } else {
-            Assert(m->errorCount > 0);
-        }
+    for (const auto &arg : *templateArgs) {
+        ret += arg.Mangle();
     }
     return ret;
 }
 
 FunctionType::FunctionMangledName FunctionType::GetFunctionMangledName(bool appFunction,
-                                                                       std::vector<const Type *> *templateArgs) const {
+                                                                       TemplateArgs *templateArgs) const {
     FunctionMangledName mangle = {};
     // Mangle internal functions name.
     if (!(isExternC || isExternSYCL || appFunction)) {

@@ -1,7 +1,9 @@
-# Copyright 2023, Intel Corporation
+# Copyright 2023-2024, Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
 name: Compiler Warnings
+
+permissions: read-all
 
 on:
   pull_request:
@@ -14,12 +16,12 @@ jobs:
   clang-16:
     runs-on: ubuntu-latest
     env:
-      LLVM_VERSION: "16.0"
-      LLVM_TAR: llvm-16.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -29,7 +31,6 @@ jobs:
 
     - name: Check environment
       run: |
-        ./check_env.py
         cat /proc/cpuinfo
         which -a clang
         clang -v
@@ -42,12 +43,12 @@ jobs:
   gcc-11:
     runs-on: ubuntu-latest
     env:
-      LLVM_VERSION: "16.0"
-      LLVM_TAR: llvm-16.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 
@@ -57,14 +58,13 @@ jobs:
 
     - name: Check environment
       run: |
-        ./check_env.py
         cat /proc/cpuinfo
         which -a clang
         gcc-11 -v
 
     - name: Build ISPC with gcc in -Werror mode
       # Disable attribute-related warnings
-      # LLVM 16.0 causes error here because of incorrect visibility in SROAPass:
+      # LLVM 16.0-17.0 causes error here because of incorrect visibility in SROAPass:
       # error: 'llvm::SROAPass' declared with greater visibility than the type of its field 'llvm::SROAPass::SelectsToRewrite'
       run: |
           cmake -B build -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11 -DCMAKE_C_FLAGS="-Werror -Wno-attributes" -DCMAKE_CXX_FLAGS="-Werror -Wno-attributes"
@@ -73,15 +73,15 @@ jobs:
   msvc-2022:
     runs-on: windows-2022
     env:
-      LLVM_VERSION: "16.0"
-      LLVM_TAR: llvm-16.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
       LLVM_HOME: "C:\\projects\\llvm"
       CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       BUILD_TYPE: "Release"
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: true
 

@@ -1,7 +1,9 @@
-# Copyright 2023 Intel Corporation
+# Copyright 2023-2024 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
 name: Rebuild LLVM 16.0
+
+permissions: read-all
 
 on:
   push:
@@ -22,6 +24,7 @@ jobs:
     with:
       version: '16.0'
       full_version: '16.0.6'
+      lto: 'ON'
       ubuntu: '18.04'
       vs_generator: 'Visual Studio 16 2019'
       vs_version_str: 'vs2019'

@@ -24,8 +24,8 @@ target = re.sub(".*builtins/target-", "", src)
 target = re.sub(r".*builtins\\target-", "", target)
 target = re.sub(".*builtins/", "", target)
 target = re.sub(r".*builtins\\", "", target)
-target = re.sub("\.ll$", "", target)
-target = re.sub("\.c$", "", target)
+target = re.sub(r"\.ll$", "", target)
+target = re.sub(r"\.c$", "", target)
 target = re.sub("-", "_", target)
 
 llvm_as="llvm-as"

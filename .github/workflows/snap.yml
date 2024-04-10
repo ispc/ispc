@@ -1,7 +1,9 @@
-# Copyright 2023, Intel Corporation
+# Copyright 2023-2024, Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
 name: Snap
+
+permissions: read-all
 
 on:
   workflow_dispatch:
@@ -41,7 +43,7 @@ jobs:
 
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: false
@@ -63,14 +65,14 @@ jobs:
       # Set up snapcraft and call it to build snap.
       # The output snap is ${{ steps.build.outputs.snap }}.
       - name: Install Snapcraft
-        uses: snapcore/action-build@v1.1.3
+        uses: snapcore/action-build@v1.2.0
         id: build
 
       # To publish manually run:
       # snapcraft push --channel=latest/stable ispc*.snap
       - name: Publish snap
         if: inputs.publish
-        uses: snapcore/action-publish@v1
+        uses: snapcore/action-publish@v1.2.0
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         with:
@@ -78,7 +80,7 @@ jobs:
           release: ${{ inputs.channel }}
 
       - name: Upload snap package
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ispc_snap
           path: ispc_*.snap
@@ -89,7 +91,7 @@ jobs:
 
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: false
@@ -111,14 +113,14 @@ jobs:
       # Set up snapcraft and call it to build snap.
       # The output snap is ${{ steps.build.outputs.snap }}.
       - name: Install Snapcraft
-        uses: snapcore/action-build@v1.1.3
+        uses: snapcore/action-build@v1.2.0
         id: build
 
       # To publish manually run:
       # snapcraft push --channel=latest/stable ispc*.snap
       - name: Publish snap
         if: inputs.publish
-        uses: snapcore/action-publish@v1
+        uses: snapcore/action-publish@v1.2.0
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         with:
@@ -126,7 +128,7 @@ jobs:
           release: ${{ inputs.channel }}
 
       - name: Upload snap package
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ispc_snap
           path: ispc_*.snap

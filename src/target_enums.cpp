@@ -136,7 +136,7 @@ ISPCTarget ParseISPCTarget(std::string target) {
     } else if (target == "neon-i8x16") {
         return ISPCTarget::neon_i8x16;
     } else if (target == "neon-i16x8") {
-        return ISPCTarget::neon_i8x16;
+        return ISPCTarget::neon_i16x8;
     } else if (target == "neon-i32x4" || target == "neon") {
         return ISPCTarget::neon_i32x4;
     } else if (target == "neon-i32x8") {

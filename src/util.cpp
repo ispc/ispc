@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -47,12 +47,12 @@
 // See https://libcxx.llvm.org/UsingLibcxx.html#overriding-the-default-termination-handler
 // It is not quite clear why and where this symbol is used.
 void std::__libcpp_verbose_abort(char const *format, ...) {
-    std::va_list list;
+    va_list list;
     va_start(list, format);
-    std::vfprintf(stderr, format, list);
+    vfprintf(stderr, format, list);
     va_end(list);
 
-    std::abort();
+    abort();
 }
 #endif // ISPV_LLVM_17_0
 #endif // ISPC_HOST_IS_APPLE

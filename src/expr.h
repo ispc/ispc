@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -12,6 +12,7 @@
 
 #include "ast.h"
 #include "ctx.h"
+#include "func.h"
 #include "ispc.h"
 #include "type.h"
 
@@ -212,6 +213,7 @@ class SelectExpr : public Expr {
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
+    const Type *GetLValueType() const;
     void Print(Indent &indent) const;
 
     Expr *Optimize();
@@ -513,10 +515,16 @@ class ConstExpr : public Expr {
     int GetValues(uint64_t *, bool forceVarying = false) const;
     int GetValues(std::vector<llvm::APFloat> &) const;
 
+    /** Return the ConstExpr's values as a string. */
+    std::string GetValuesAsStr(const std::string &separator) const;
+
     /** Return the number of values in the ConstExpr; should be either 1,
         if it has uniform type, or the target's vector width if it's
         varying. */
     int Count() const;
+
+    /** Return true if the type and values of two ConstExpr are the same. */
+    bool IsEqual(const ConstExpr *ce) const;
 
   private:
     AtomicType::BasicType getBasicType() const;
@@ -736,8 +744,8 @@ class SymbolExpr : public Expr {
 class FunctionSymbolExpr : public Expr {
   public:
     FunctionSymbolExpr(const char *name, const std::vector<Symbol *> &candFuncs, SourcePos pos);
-    FunctionSymbolExpr(const char *name, const std::vector<TemplateSymbol *> &candFuncs,
-                       const std::vector<std::pair<const Type *, SourcePos>> &types, SourcePos pos);
+    FunctionSymbolExpr(const char *name, const std::vector<TemplateSymbol *> &candFuncs, const TemplateArgs &templArgs,
+                       SourcePos pos);
 
     static inline bool classof(FunctionSymbolExpr const *) { return true; }
     static inline bool classof(ASTNode const *N) { return N->getValueID() == FunctionSymbolExprID; }
@@ -783,7 +791,7 @@ class FunctionSymbolExpr : public Expr {
         overload is the best match. */
     std::vector<Symbol *> candidateFunctions;
     std::vector<TemplateSymbol *> candidateTemplateFunctions;
-    std::vector<std::pair<const Type *, SourcePos>> templateArgs;
+    TemplateArgs templateArgs;
 
     /** The actual matching function found after overload resolution. */
     Symbol *matchingFunc;

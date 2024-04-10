@@ -1,4 +1,4 @@
-;;  Copyright (c) 2019-2023, Intel Corporation
+;;  Copyright (c) 2019-2024, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -136,7 +136,7 @@ truncate()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp
-declare half @llvm.genx.inv.f16(half)
+declare half @__spirv_ocl_native_recip_DvWIDTH1Dh(half)
 
 define half @__rcp_uniform_half(half) nounwind readonly alwaysinline {
   ;; No need to make NR iteration to improve precision since precision
@@ -146,11 +146,11 @@ define half @__rcp_uniform_half(half) nounwind readonly alwaysinline {
 }
 
 define half @__rcp_fast_uniform_half(half) nounwind readonly alwaysinline {
-  %res = call half @llvm.genx.inv.f16(half %0)
+  %res = call half @__spirv_ocl_native_recip_DvWIDTH1Dh(half %0)
   ret half %res
 }
 
-declare float @llvm.genx.inv.f32(float)
+declare float @__spirv_ocl_native_recip_DvWIDTH1f(float)
 
 define float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
   ;; No need to make NR iteration to improve precision since precision
@@ -160,17 +160,16 @@ define float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
 }
 
 define float @__rcp_fast_uniform_float(float) nounwind readonly alwaysinline {
-  %res = call float @llvm.genx.inv.f32(float %0)
+  %res = call float @__spirv_ocl_native_recip_DvWIDTH1f(float %0)
   ret float %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rsqrt
 
-declare float @llvm.genx.rsqrt.f32(float)
-declare half @llvm.genx.rsqrt.f16(half)
+declare float @__spirv_ocl_native_rsqrt_DvWIDTH1f(float)
 define float @__rsqrt_uniform_float(float %v) nounwind readonly alwaysinline {
-  %r = call float @llvm.genx.rsqrt.f32(float %v)
+  %r = call float @__spirv_ocl_native_rsqrt_DvWIDTH1f(float %v)
   ;; Newton-Raphson iteration to improve precision
   ;;  return 0.5 * r * (3. - (v * r) * r);
   %mult = fmul float %v, %r
@@ -182,41 +181,43 @@ define float @__rsqrt_uniform_float(float %v) nounwind readonly alwaysinline {
 }
 
 define float @__rsqrt_fast_uniform_float(float) nounwind readonly alwaysinline {
-  %res = call float @llvm.genx.rsqrt.f32(float %0)
+  %res = call float @__spirv_ocl_native_rsqrt_DvWIDTH1f(float %0)
   ret float %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; half precision rsqrt
+
+declare half @__spirv_ocl_native_rsqrt_DvWIDTH1Dh(half)
 define half @__rsqrt_uniform_half(half %v) nounwind readonly alwaysinline {
-  %res = call half @llvm.genx.rsqrt.f16(half %v)
+  %res = call half @__spirv_ocl_native_rsqrt_DvWIDTH1Dh(half %v)
   ret half %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; sqrt
 
-declare float @llvm.genx.sqrt.f32(float)
+declare float @__spirv_ocl_native_sqrt_DvWIDTH1f(float)
 define float @__sqrt_uniform_float(float) nounwind readonly alwaysinline {
-  %res = call float @llvm.genx.sqrt.f32(float %0)
+  %res = call float @__spirv_ocl_native_sqrt_DvWIDTH1f(float %0)
   ret float %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; half precision sqrt
 
-declare half @llvm.genx.sqrt.f16(half)
+declare half @__spirv_ocl_native_sqrt_DvWIDTH1Dh(half)
 define half @__sqrt_uniform_half(half) nounwind readonly alwaysinline {
-  %res = call half @llvm.genx.sqrt.f16(half %0)
+  %res = call half @__spirv_ocl_native_sqrt_DvWIDTH1Dh(half %0)
   ret half %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision sqrt
 
-declare double @llvm.genx.ieee.sqrt.d64(double)
+declare double @llvm.genx.ieee.sqrt.f64(double)
 define double @__sqrt_uniform_double(double) nounwind alwaysinline {
-  %res = call double @llvm.genx.ieee.sqrt.d64(double %0)
+  %res = call double @llvm.genx.ieee.sqrt.f64(double %0)
   ret double %res
 }
 
@@ -544,7 +545,7 @@ define <WIDTH x i16> @__float_to_half_varying(<WIDTH x float> %v) nounwind readn
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp
-declare <WIDTH x float> @llvm.genx.inv.XE_SUFFIX(float)(<WIDTH x float> %0)
+declare <WIDTH x float> @__spirv_ocl_native_recip_DvWIDTHf(<WIDTH x float> %0)
 define <WIDTH x float> @__rcp_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
   ;; No need to make NR iteration to improve precision since precision
   ;; on Xe is high already (1UP)
@@ -553,12 +554,12 @@ define <WIDTH x float> @__rcp_varying_float(<WIDTH x float>) nounwind readonly a
 }
 
 define <WIDTH x float> @__rcp_fast_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
-  %res = call <WIDTH x float> @llvm.genx.inv.XE_SUFFIX(float)(<WIDTH x float> %0)
+  %res = call <WIDTH x float> @__spirv_ocl_native_recip_DvWIDTHf(<WIDTH x float> %0)
   ret <WIDTH x float> %res
 }
 
 ;; rcp
-declare <WIDTH x half> @llvm.genx.inv.XE_SUFFIX(half)(<WIDTH x half> %0)
+declare <WIDTH x half> @__spirv_ocl_native_recip_DvWIDTHDh(<WIDTH x half> %0)
 define <WIDTH x half> @__rcp_varying_half(<WIDTH x half>) nounwind readonly alwaysinline {
   ;; No need to make NR iteration to improve precision since precision
   ;; on Xe is high already (1UP)
@@ -567,7 +568,7 @@ define <WIDTH x half> @__rcp_varying_half(<WIDTH x half>) nounwind readonly alwa
 }
 
 define <WIDTH x half> @__rcp_fast_varying_half(<WIDTH x half>) nounwind readonly alwaysinline {
-  %res = call <WIDTH x half> @llvm.genx.inv.XE_SUFFIX(half)(<WIDTH x half> %0)
+  %res = call <WIDTH x half> @__spirv_ocl_native_recip_DvWIDTHDh(<WIDTH x half> %0)
   ret <WIDTH x half> %res
 }
 
@@ -575,10 +576,9 @@ define <WIDTH x half> @__rcp_fast_varying_half(<WIDTH x half>) nounwind readonly
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; rsqrt
 
-declare <WIDTH x float> @llvm.genx.rsqrt.XE_SUFFIX(float)(<WIDTH x float>)
-declare <WIDTH x half> @llvm.genx.rsqrt.XE_SUFFIX(half)(<WIDTH x half>)
+declare <WIDTH x float> @__spirv_ocl_native_rsqrt_DvWIDTHf(<WIDTH x float>)
 define <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float> %v) nounwind readonly alwaysinline {
-  %r = call <WIDTH x float> @llvm.genx.rsqrt.XE_SUFFIX(float)(<WIDTH x float> %v)
+  %r = call <WIDTH x float> @__spirv_ocl_native_rsqrt_DvWIDTHf(<WIDTH x float> %v)
   ;; Newton-Raphson iteration to improve precision
   ;;  return 0.5 * r * (3. - (v * r) * r);
   %mult = fmul <WIDTH x float> %v, %r
@@ -590,42 +590,43 @@ define <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float> %v) nounwind reado
 }
 
 define <WIDTH x float> @__rsqrt_fast_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
-  %res = call <WIDTH x float> @llvm.genx.rsqrt.XE_SUFFIX(float)(<WIDTH x float> %0)
+  %res = call <WIDTH x float> @__spirv_ocl_native_rsqrt_DvWIDTHf(<WIDTH x float> %0)
   ret <WIDTH x float> %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; half precision rsqrt
 
+declare <WIDTH x half> @__spirv_ocl_native_rsqrt_DvWIDTHDh(<WIDTH x half>)
 define <WIDTH x half> @__rsqrt_varying_half(<WIDTH x half> %v) nounwind readonly alwaysinline {
-  %res = call <WIDTH x half> @llvm.genx.rsqrt.XE_SUFFIX(half)(<WIDTH x half> %v)
+  %res = call <WIDTH x half> @__spirv_ocl_native_rsqrt_DvWIDTHDh(<WIDTH x half> %v)
   ret <WIDTH x half> %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; sqrt
 
-declare <WIDTH x float> @llvm.genx.sqrt.XE_SUFFIX(float)(<WIDTH x float>)
+declare <WIDTH x float> @__spirv_ocl_native_sqrt_DvWIDTHf(<WIDTH x float>)
 define <WIDTH x float> @__sqrt_varying_float(<WIDTH x float>) nounwind readonly alwaysinline {
-  %res = call <WIDTH x float> @llvm.genx.sqrt.XE_SUFFIX(float)(<WIDTH x float> %0)
+  %res = call <WIDTH x float> @__spirv_ocl_native_sqrt_DvWIDTHf(<WIDTH x float> %0)
   ret <WIDTH x float> %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; half precision sqrt
 
-declare <WIDTH x half> @llvm.genx.sqrt.XE_SUFFIX(half)(<WIDTH x half>)
+declare <WIDTH x half> @__spirv_ocl_native_sqrt_DvWIDTHDh(<WIDTH x half>)
 define <WIDTH x half> @__sqrt_varying_half(<WIDTH x half>) nounwind readonly alwaysinline {
-  %res = call <WIDTH x half> @llvm.genx.sqrt.XE_SUFFIX(half)(<WIDTH x half> %0)
+  %res = call <WIDTH x half> @__spirv_ocl_native_sqrt_DvWIDTHDh(<WIDTH x half> %0)
   ret <WIDTH x half> %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision sqrt
 
-declare <WIDTH x double> @llvm.genx.ieee.sqrt.XE_SUFFIX(d64)(<WIDTH x double>)
+declare <WIDTH x double> @llvm.genx.ieee.sqrt.XE_SUFFIX(double)(<WIDTH x double>)
 define <WIDTH x double> @__sqrt_varying_double(<WIDTH x double>) nounwind alwaysinline {
-  %res = call <WIDTH x double> @llvm.genx.ieee.sqrt.XE_SUFFIX(d64)(<WIDTH x double> %0)
+  %res = call <WIDTH x double> @llvm.genx.ieee.sqrt.XE_SUFFIX(double)(<WIDTH x double> %0)
   ret <WIDTH x double> %res
 }
 
@@ -1248,16 +1249,16 @@ rcpd_decl()
 define(`EXP', `0x4005BF0A80000000')
 define(`LOG2E', `0x3FF7154760000000') ;; LOG2E = log(2, e)
 
-declare float @llvm.genx.log.f32(float) nounwind readnone
+declare float @__spirv_ocl_native_log2_DvWIDTH1f(float) nounwind readnone
 define float @__log_uniform_float(float) nounwind readnone {
-  %res2base = call float @llvm.genx.log.f32(float %0)
+  %res2base = call float @__spirv_ocl_native_log2_DvWIDTH1f(float %0)
   %res = fdiv float %res2base, LOG2E
   ret float %res
 }
 
-declare <WIDTH x float> @llvm.genx.log.XE_SUFFIX(float)(<WIDTH x float>) nounwind readnone
+declare <WIDTH x float> @__spirv_ocl_native_log2_DvWIDTHf(<WIDTH x float>) nounwind readnone
 define <WIDTH x float> @__log_varying_float(<WIDTH x float>) nounwind readnone {
-  %res2base = call <WIDTH x float> @llvm.genx.log.XE_SUFFIX(float)(<WIDTH x float> %0)
+  %res2base = call <WIDTH x float> @__spirv_ocl_native_log2_DvWIDTHf(<WIDTH x float> %0)
   %log2e = insertelement <WIDTH x float> undef, float LOG2E, i32 0
   %log2e_shuffle = shufflevector <WIDTH x float> %log2e, <WIDTH x float> undef, <WIDTH x i32> zeroinitializer
   %res = fdiv <WIDTH x float> %res2base, %log2e_shuffle
@@ -1267,68 +1268,67 @@ define <WIDTH x float> @__log_varying_float(<WIDTH x float>) nounwind readnone {
 
 define(`EXPF16', `0xH4170')
 define(`LOG2EF16', `0xH3DC5') ;; LOG2EF16 = log(2, e)
-declare half @llvm.genx.log.f16(half) nounwind readnone
+declare half @__spirv_ocl_native_log2_DvWIDTH1Dh(half) nounwind readnone
 define half @__log_uniform_half(half) nounwind readnone {
-  %res2base = call half @llvm.genx.log.f16(half %0)
+  %res2base = call half @__spirv_ocl_native_log2_DvWIDTH1Dh(half %0)
   %res = fdiv half %res2base, LOG2EF16
   ret half %res
 }
 
-declare <WIDTH x half> @llvm.genx.log.XE_SUFFIX(half)(<WIDTH x half>) nounwind readnone
+declare <WIDTH x half> @__spirv_ocl_native_log2_DvWIDTHDh(<WIDTH x half>) nounwind readnone
 define <WIDTH x half> @__log_varying_half(<WIDTH x half>) nounwind readnone {
-  %res2base = call <WIDTH x half> @llvm.genx.log.XE_SUFFIX(half)(<WIDTH x half> %0)
+  %res2base = call <WIDTH x half> @__spirv_ocl_native_log2_DvWIDTHDh(<WIDTH x half> %0)
   %log2e = insertelement <WIDTH x half> undef, half LOG2EF16, i32 0
   %log2e_shuffle = shufflevector <WIDTH x half> %log2e, <WIDTH x half> undef, <WIDTH x i32> zeroinitializer
   %res = fdiv <WIDTH x half> %res2base, %log2e_shuffle
   ret <WIDTH x half> %res
 }
 
-declare float @llvm.genx.pow.f32(float, float) nounwind readnone
+declare float @__spirv_ocl_native_powr_DvWIDTH1f(float, float) nounwind readnone
 define float @__pow_uniform_float(float, float) nounwind readnone {
-  %res = call float @llvm.genx.pow.f32(float %0, float %1)
+  %res = call float @__spirv_ocl_native_powr_DvWIDTH1f(float %0, float %1)
   ret float %res
 }
 
-declare <WIDTH x float> @llvm.genx.pow.XE_SUFFIX(float).XE_SUFFIX(float)(<WIDTH x float>, <WIDTH x float>) nounwind readnone
+declare <WIDTH x float> @__spirv_ocl_native_powr_DvWIDTHf(<WIDTH x float>, <WIDTH x float>) nounwind readnone
 define <WIDTH x float> @__pow_varying_float(<WIDTH x float>, <WIDTH x float>) nounwind readnone {
-  %res = call <WIDTH x float> @llvm.genx.pow.XE_SUFFIX(float).XE_SUFFIX(float)(<WIDTH x float> %0, <WIDTH x float> %1)
+  %res = call <WIDTH x float> @__spirv_ocl_native_powr_DvWIDTHf(<WIDTH x float> %0, <WIDTH x float> %1)
   ret <WIDTH x float> %res
 }
 
-declare half @llvm.genx.pow.f16(half, half) nounwind readnone
+declare half @__spirv_ocl_native_powr_DvWIDTH1Dh(half, half) nounwind readnone
 define half @__pow_uniform_half(half, half) nounwind readnone {
-  %res = call half @llvm.genx.pow.f16(half %0, half %1)
+  %res = call half @__spirv_ocl_native_powr_DvWIDTH1Dh(half %0, half %1)
   ret half %res
 }
 
-declare <WIDTH x half> @llvm.genx.pow.XE_SUFFIX(half).XE_SUFFIX(half)(<WIDTH x half>, <WIDTH x half>) nounwind readnone
+declare <WIDTH x half> @__spirv_ocl_native_powr_DvWIDTHDh(<WIDTH x half>, <WIDTH x half>) nounwind readnone
 define <WIDTH x half> @__pow_varying_half(<WIDTH x half>, <WIDTH x half>) nounwind readnone {
-  %res = call <WIDTH x half> @llvm.genx.pow.XE_SUFFIX(half).XE_SUFFIX(half)(<WIDTH x half> %0, <WIDTH x half> %1)
+  %res = call <WIDTH x half> @__spirv_ocl_native_powr_DvWIDTHDh(<WIDTH x half> %0, <WIDTH x half> %1)
   ret <WIDTH x half> %res
 }
 
 define float @__exp_uniform_float(float) nounwind readnone {
-  %res = call float @llvm.genx.pow.f32(float EXP, float %0)
+  %res = call float @__spirv_ocl_native_powr_DvWIDTH1f(float EXP, float %0)
   ret float %res
 }
 
 define <WIDTH x float> @__exp_varying_float(<WIDTH x float>) nounwind readnone {
   %exp = insertelement <WIDTH x float> undef, float EXP, i32 0
   %exp_shuffle = shufflevector <WIDTH x float> %exp, <WIDTH x float> undef, <WIDTH x i32> zeroinitializer
-  %res = call <WIDTH x float> @llvm.genx.pow.XE_SUFFIX(float).XE_SUFFIX(float)(<WIDTH x float> %exp_shuffle, <WIDTH x float> %0)
+  %res = call <WIDTH x float> @__spirv_ocl_native_powr_DvWIDTHf(<WIDTH x float> %exp_shuffle, <WIDTH x float> %0)
   ret <WIDTH x float> %res
 }
 
 define half @__exp_uniform_half(half) nounwind readnone {
-  %res = call half @llvm.genx.pow.f16(half EXPF16, half %0)
+  %res = call half @__spirv_ocl_native_powr_DvWIDTH1Dh(half EXPF16, half %0)
   ret half %res
 }
 
 define <WIDTH x half> @__exp_varying_half(<WIDTH x half>) nounwind readnone {
   %exp = insertelement <WIDTH x half> undef, half EXPF16, i32 0
   %exp_shuffle = shufflevector <WIDTH x half> %exp, <WIDTH x half> undef, <WIDTH x i32> zeroinitializer
-  %res = call <WIDTH x half> @llvm.genx.pow.XE_SUFFIX(half).XE_SUFFIX(half)(<WIDTH x half>
-          %exp_shuffle, <WIDTH x half> %0)
+  %res = call <WIDTH x half> @__spirv_ocl_native_powr_DvWIDTHDh(<WIDTH x half> %exp_shuffle, <WIDTH x half> %0)
   ret <WIDTH x half> %res
 }
 
@@ -1336,26 +1336,26 @@ define <WIDTH x half> @__exp_varying_half(<WIDTH x half>) nounwind readnone {
 ;; Generates double math builtins for unfiorm and varying
 ;; $1 operation (e.g. pow, sin etc)
 define(`xe_double_math', `
-declare double @__spirv_ocl_$1(double) nounwind readnone
+declare double @__spirv_ocl_$1_DvWIDTH1d(double) nounwind readnone
 define double @__$1_uniform_double(double) nounwind readnone {
-  %res = call double @__spirv_ocl_$1(double %0)
+  %res = call double @__spirv_ocl_$1_DvWIDTH1d(double %0)
   ret double %res
 }
 
 ifelse(WIDTH,32,`
-  declare <16 x double> @__spirv_ocl_$1_DvWIDTH(<16 x double>)
+  declare <16 x double> @__spirv_ocl_$1_DvWIDTHd(<16 x double>)
 ',`
-  declare <WIDTH x double> @__spirv_ocl_$1_DvWIDTH(<WIDTH x double>)
+  declare <WIDTH x double> @__spirv_ocl_$1_DvWIDTHd(<WIDTH x double>)
 ')
 define <WIDTH x double> @__$1_varying_double(<WIDTH x double>) nounwind readnone {
   ifelse(WIDTH,32,`
     %in1 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
     %in2 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-    %res1 = call <16 x double> @__spirv_ocl_$1_DvWIDTH(<16 x double> %in1)
-    %res2 = call <16 x double> @__spirv_ocl_$1_DvWIDTH(<16 x double> %in2)
+    %res1 = call <16 x double> @__spirv_ocl_$1_DvWIDTHd(<16 x double> %in1)
+    %res2 = call <16 x double> @__spirv_ocl_$1_DvWIDTHd(<16 x double> %in2)
     %res = shufflevector <16 x double> %res1, <16 x double> %res2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ',`
-    %res = call <WIDTH x double> @__spirv_ocl_$1_DvWIDTH(<WIDTH x double> %0)
+    %res = call <WIDTH x double> @__spirv_ocl_$1_DvWIDTHd(<WIDTH x double> %0)
   ')
   ret <WIDTH x double> %res
 }
@@ -1372,19 +1372,19 @@ xe_double_math(atan)
 
 ;; sin is returned value
 ;; cos is returned through pointer
-declare double @__spirv_ocl_sincos(double, double*) nounwind
+declare double @__spirv_ocl_sincos_DvWIDTH1d(double, double*) nounwind
 define void @__sincos_uniform_double(double, i8*, i8*) nounwind {
   %ptr1 = bitcast i8* %1 to double*
   %ptr2 = bitcast i8* %2 to double*
-  %sin = call double @__spirv_ocl_sincos(double %0, double* %ptr2)
+  %sin = call double @__spirv_ocl_sincos_DvWIDTH1d(double %0, double* %ptr2)
   store double %sin, double* %ptr1
   ret void
 }
 
 ifelse(WIDTH,32,`
-  declare <16 x double> @__spirv_ocl_sincos_DvWIDTH(<16 x double>, <16 x double>*) nounwind
+  declare <16 x double> @__spirv_ocl_sincos_DvWIDTHd(<16 x double>, <16 x double>*) nounwind
 ',`
-  declare <WIDTH x double> @__spirv_ocl_sincos_DvWIDTH(<WIDTH x double>, <WIDTH x double>*) nounwind
+  declare <WIDTH x double> @__spirv_ocl_sincos_DvWIDTHd(<WIDTH x double>, <WIDTH x double>*) nounwind
 ')
 
 define void @__sincos_varying_double(<WIDTH x double>, i8*, i8*) nounwind {
@@ -1397,26 +1397,26 @@ define void @__sincos_varying_double(<WIDTH x double>, i8*, i8*) nounwind {
     %ptrtoint = ptrtoint <32 x double>* %ptr2 to i64
     %ptrtoint_add = add i64 %ptrtoint, 128
     %ptr2_16_2 = inttoptr i64 %ptrtoint_add to <16 x double>*
-    %sin1 = call <16 x double> @__spirv_ocl_sincos_DvWIDTH(<16 x double> %in0_1, <16 x double>* %ptr2_16_1)
-    %sin2 = call <16 x double> @__spirv_ocl_sincos_DvWIDTH(<16 x double> %in0_2, <16 x double>* %ptr2_16_2)
+    %sin1 = call <16 x double> @__spirv_ocl_sincos_DvWIDTHd(<16 x double> %in0_1, <16 x double>* %ptr2_16_1)
+    %sin2 = call <16 x double> @__spirv_ocl_sincos_DvWIDTHd(<16 x double> %in0_2, <16 x double>* %ptr2_16_2)
     %sin = shufflevector <16 x double> %sin1, <16 x double> %sin2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ',`
-    %sin = call <WIDTH x double> @__spirv_ocl_sincos_DvWIDTH(<WIDTH x double> %0, <WIDTH x double>* %ptr2)
+    %sin = call <WIDTH x double> @__spirv_ocl_sincos_DvWIDTHd(<WIDTH x double> %0, <WIDTH x double>* %ptr2)
   ')
   store <WIDTH x double> %sin, <WIDTH x double>* %ptr1
   ret void
 }
 
-declare double @__spirv_ocl_pow(double, double) nounwind readnone
+declare double @__spirv_ocl_pow_DvWIDTH1d(double, double) nounwind readnone
 define double @__pow_uniform_double(double, double) nounwind {
-  %res = call double @__spirv_ocl_pow(double %0, double %1)
+  %res = call double @__spirv_ocl_pow_DvWIDTH1d(double %0, double %1)
   ret double %res
 }
 
 ifelse(WIDTH,32,`
-  declare <16 x double> @__spirv_ocl_pow_DvWIDTH(<16 x double>, <16 x double>) nounwind readnone
+  declare <16 x double> @__spirv_ocl_pow_DvWIDTHd(<16 x double>, <16 x double>) nounwind readnone
 ',`
-  declare <WIDTH x double> @__spirv_ocl_pow_DvWIDTH(<WIDTH x double>, <WIDTH x double>) nounwind readnone
+  declare <WIDTH x double> @__spirv_ocl_pow_DvWIDTHd(<WIDTH x double>, <WIDTH x double>) nounwind readnone
 ')
 define <WIDTH x double> @__pow_varying_double(<WIDTH x double>, <WIDTH x double>) nounwind {
   ifelse(WIDTH,32,`
@@ -1424,26 +1424,26 @@ define <WIDTH x double> @__pow_varying_double(<WIDTH x double>, <WIDTH x double>
     %in1_2 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
     %in2_1 = shufflevector <32 x double> %1, <32 x double> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
     %in2_2 = shufflevector <32 x double> %1, <32 x double> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-    %res1 = call <16 x double> @__spirv_ocl_pow_DvWIDTH(<16 x double> %in1_1, <16 x double> %in2_1)
-    %res2 = call <16 x double> @__spirv_ocl_pow_DvWIDTH(<16 x double> %in1_2, <16 x double> %in2_2)
+    %res1 = call <16 x double> @__spirv_ocl_pow_DvWIDTHd(<16 x double> %in1_1, <16 x double> %in2_1)
+    %res2 = call <16 x double> @__spirv_ocl_pow_DvWIDTHd(<16 x double> %in1_2, <16 x double> %in2_2)
     %res = shufflevector <16 x double> %res1, <16 x double> %res2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ',`
-    %res = call <WIDTH x double> @__spirv_ocl_pow_DvWIDTH(<WIDTH x double> %0, <WIDTH x double> %1)
+    %res = call <WIDTH x double> @__spirv_ocl_pow_DvWIDTHd(<WIDTH x double> %0, <WIDTH x double> %1)
   ')
 
   ret <WIDTH x double> %res
 }
 
-declare double @__spirv_ocl_atan2(double, double) nounwind readnone
+declare double @__spirv_ocl_atan2_DvWIDTH1d(double, double) nounwind readnone
 define double @__atan2_uniform_double(double, double) nounwind {
-  %res = call double @__spirv_ocl_atan2(double %0, double %1)
+  %res = call double @__spirv_ocl_atan2_DvWIDTH1d(double %0, double %1)
   ret double %res
 }
 
 ifelse(WIDTH,32,`
-  declare <16 x double> @__spirv_ocl_atan2_DvWIDTH(<16 x double>, <16 x double>) nounwind readnone
+  declare <16 x double> @__spirv_ocl_atan2_DvWIDTHd(<16 x double>, <16 x double>) nounwind readnone
 ',`
-  declare <WIDTH x double> @__spirv_ocl_atan2_DvWIDTH(<WIDTH x double>, <WIDTH x double>) nounwind readnone
+  declare <WIDTH x double> @__spirv_ocl_atan2_DvWIDTHd(<WIDTH x double>, <WIDTH x double>) nounwind readnone
 ')
 
 define <WIDTH x double> @__atan2_varying_double(<WIDTH x double>, <WIDTH x double>) nounwind {
@@ -1452,11 +1452,11 @@ define <WIDTH x double> @__atan2_varying_double(<WIDTH x double>, <WIDTH x doubl
     %in1_2 = shufflevector <32 x double> %0, <32 x double> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
     %in2_1 = shufflevector <32 x double> %1, <32 x double> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
     %in2_2 = shufflevector <32 x double> %1, <32 x double> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-    %res1 = call <16 x double> @__spirv_ocl_atan2_DvWIDTH(<16 x double> %in1_1, <16 x double> %in2_1)
-    %res2 = call <16 x double> @__spirv_ocl_atan2_DvWIDTH(<16 x double> %in1_2, <16 x double> %in2_2)
+    %res1 = call <16 x double> @__spirv_ocl_atan2_DvWIDTHd(<16 x double> %in1_1, <16 x double> %in2_1)
+    %res2 = call <16 x double> @__spirv_ocl_atan2_DvWIDTHd(<16 x double> %in1_2, <16 x double> %in2_2)
     %res = shufflevector <16 x double> %res1, <16 x double> %res2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ',`
-    %res = call <WIDTH x double> @__spirv_ocl_atan2_DvWIDTH(<WIDTH x double> %0, <WIDTH x double> %1)
+    %res = call <WIDTH x double> @__spirv_ocl_atan2_DvWIDTHd(<WIDTH x double> %0, <WIDTH x double> %1)
   ')
 
   ret <WIDTH x double> %res
@@ -1465,40 +1465,40 @@ define <WIDTH x double> @__atan2_varying_double(<WIDTH x double>, <WIDTH x doubl
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; native trigonometry
 
-declare float @llvm.genx.sin.f32(float) nounwind readnone
+declare float @__spirv_ocl_native_sin_DvWIDTH1f(float) nounwind readnone
 define float @__sin_uniform_float(float) nounwind readnone {
-  %res = call float @llvm.genx.sin.f32(float %0)
+  %res = call float @__spirv_ocl_native_sin_DvWIDTH1f(float %0)
   ret float %res
 }
 
-declare <WIDTH x float> @llvm.genx.sin.XE_SUFFIX(float)(<WIDTH x float>) nounwind readnone
+declare <WIDTH x float> @__spirv_ocl_native_sin_DvWIDTHf(<WIDTH x float>) nounwind readnone
 define <WIDTH x float> @__sin_varying_float(<WIDTH x float>) nounwind readnone {
-  %res = call <WIDTH x float> @llvm.genx.sin.XE_SUFFIX(float)(<WIDTH x float> %0)
+  %res = call <WIDTH x float> @__spirv_ocl_native_sin_DvWIDTHf(<WIDTH x float> %0)
   ret <WIDTH x float> %res
 }
 
-declare float @llvm.genx.cos.f32(float) nounwind readnone
+declare float @__spirv_ocl_native_cos_DvWIDTH1f(float) nounwind readnone
 define float @__cos_uniform_float(float) nounwind readnone {
-  %res = call float @llvm.genx.cos.f32(float %0)
+  %res = call float @__spirv_ocl_native_cos_DvWIDTH1f(float %0)
   ret float %res
 }
 
-declare <WIDTH x float> @llvm.genx.cos.XE_SUFFIX(float)(<WIDTH x float>) nounwind readnone
+declare <WIDTH x float> @__spirv_ocl_native_cos_DvWIDTHf(<WIDTH x float>) nounwind readnone
 define <WIDTH x float> @__cos_varying_float(<WIDTH x float>) nounwind readnone {
-  %res = call <WIDTH x float> @llvm.genx.cos.XE_SUFFIX(float)(<WIDTH x float> %0)
+  %res = call <WIDTH x float> @__spirv_ocl_native_cos_DvWIDTHf(<WIDTH x float> %0)
   ret <WIDTH x float> %res
 }
 
 define float @__tan_uniform_float(float) nounwind readnone {
-  %cos = call float @llvm.genx.cos.f32(float %0)
-  %sin = call float @llvm.genx.sin.f32(float %0)
+  %cos = call float @__spirv_ocl_native_cos_DvWIDTH1f(float %0)
+  %sin = call float @__spirv_ocl_native_sin_DvWIDTH1f(float %0)
   %res = fdiv float %sin, %cos
   ret float %res
 }
 
 define <WIDTH x float> @__tan_varying_float(<WIDTH x float>) nounwind readnone {
-  %cos = call <WIDTH x float> @llvm.genx.cos.XE_SUFFIX(float)(<WIDTH x float> %0)
-  %sin = call <WIDTH x float> @llvm.genx.sin.XE_SUFFIX(float)(<WIDTH x float> %0)
+  %cos = call <WIDTH x float> @__spirv_ocl_native_cos_DvWIDTHf(<WIDTH x float> %0)
+  %sin = call <WIDTH x float> @__spirv_ocl_native_sin_DvWIDTHf(<WIDTH x float> %0)
   %res = fdiv <WIDTH x float> %sin, %cos
   ret <WIDTH x float> %res
 }
@@ -1506,8 +1506,8 @@ define <WIDTH x float> @__tan_varying_float(<WIDTH x float>) nounwind readnone {
 define void @__sincos_uniform_float(float, i8*, i8*) nounwind {
   %ptr1 = bitcast i8* %1 to float*
   %ptr2 = bitcast i8* %2 to float*
-  %cos = call float @llvm.genx.cos.f32(float %0)
-  %sin = call float @llvm.genx.sin.f32(float %0)
+  %cos = call float @__spirv_ocl_native_cos_DvWIDTH1f(float %0)
+  %sin = call float @__spirv_ocl_native_sin_DvWIDTH1f(float %0)
   store float %sin, float* %ptr1
   store float %cos, float* %ptr2
   ret void
@@ -1516,47 +1516,47 @@ define void @__sincos_uniform_float(float, i8*, i8*) nounwind {
 define void @__sincos_varying_float(<WIDTH x float>, i8*, i8*) nounwind {
   %ptr1 = bitcast i8* %1 to <WIDTH x float>*
   %ptr2 = bitcast i8* %2 to <WIDTH x float>*
-  %cos = call <WIDTH x float> @llvm.genx.cos.XE_SUFFIX(float)(<WIDTH x float> %0)
-  %sin = call <WIDTH x float> @llvm.genx.sin.XE_SUFFIX(float)(<WIDTH x float> %0)
+  %cos = call <WIDTH x float> @__spirv_ocl_native_cos_DvWIDTHf(<WIDTH x float> %0)
+  %sin = call <WIDTH x float> @__spirv_ocl_native_sin_DvWIDTHf(<WIDTH x float> %0)
   store <WIDTH x float> %sin, <WIDTH x float>* %ptr1
   store <WIDTH x float> %cos, <WIDTH x float>* %ptr2
   ret void
 }
 
-declare half @llvm.genx.sin.f16(half) nounwind readnone
+declare half @__spirv_ocl_native_sin_DvWIDTH1Dh(half) nounwind readnone
 define half @__sin_uniform_half(half) nounwind readnone {
-  %res = call half @llvm.genx.sin.f16(half %0)
+  %res = call half @__spirv_ocl_native_sin_DvWIDTH1Dh(half %0)
   ret half %res
 }
 
-declare <WIDTH x half> @llvm.genx.sin.XE_SUFFIX(half)(<WIDTH x half>) nounwind readnone
+declare <WIDTH x half> @__spirv_ocl_native_sin_DvWIDTHDh(<WIDTH x half>) nounwind readnone
 define <WIDTH x half> @__sin_varying_half(<WIDTH x half>) nounwind readnone {
-  %res = call <WIDTH x half> @llvm.genx.sin.XE_SUFFIX(half)(<WIDTH x half> %0)
+  %res = call <WIDTH x half> @__spirv_ocl_native_sin_DvWIDTHDh(<WIDTH x half> %0)
   ret <WIDTH x half> %res
 }
 
-declare half @llvm.genx.cos.f16(half) nounwind readnone
+declare half @__spirv_ocl_native_cos_DvWIDTH1Dh(half) nounwind readnone
 define half @__cos_uniform_half(half) nounwind readnone {
-  %res = call half @llvm.genx.cos.f16(half %0)
+  %res = call half @__spirv_ocl_native_cos_DvWIDTH1Dh(half %0)
   ret half %res
 }
 
-declare <WIDTH x half> @llvm.genx.cos.XE_SUFFIX(half)(<WIDTH x half>) nounwind readnone
+declare <WIDTH x half> @__spirv_ocl_native_cos_DvWIDTHDh(<WIDTH x half>) nounwind readnone
 define <WIDTH x half> @__cos_varying_half(<WIDTH x half>) nounwind readnone {
-  %res = call <WIDTH x half> @llvm.genx.cos.XE_SUFFIX(half)(<WIDTH x half> %0)
+  %res = call <WIDTH x half> @__spirv_ocl_native_cos_DvWIDTHDh(<WIDTH x half> %0)
   ret <WIDTH x half> %res
 }
 
 define half @__tan_uniform_half(half) nounwind readnone {
-  %cos = call half @llvm.genx.cos.f16(half %0)
-  %sin = call half @llvm.genx.sin.f16(half %0)
+  %cos = call half @__spirv_ocl_native_cos_DvWIDTH1Dh(half %0)
+  %sin = call half @__spirv_ocl_native_sin_DvWIDTH1Dh(half %0)
   %res = fdiv half %sin, %cos
   ret half %res
 }
 
 define <WIDTH x half> @__tan_varying_half(<WIDTH x half>) nounwind readnone {
-  %cos = call <WIDTH x half> @llvm.genx.cos.XE_SUFFIX(half)(<WIDTH x half> %0)
-  %sin = call <WIDTH x half> @llvm.genx.sin.XE_SUFFIX(half)(<WIDTH x half> %0)
+  %cos = call <WIDTH x half> @__spirv_ocl_native_cos_DvWIDTHDh(<WIDTH x half> %0)
+  %sin = call <WIDTH x half> @__spirv_ocl_native_sin_DvWIDTHDh(<WIDTH x half> %0)
   %res = fdiv <WIDTH x half> %sin, %cos
   ret <WIDTH x half> %res
 }
@@ -1564,8 +1564,8 @@ define <WIDTH x half> @__tan_varying_half(<WIDTH x half>) nounwind readnone {
 define void @__sincos_uniform_half(half, i8*, i8*) nounwind {
   %ptr1 = bitcast i8* %1 to half*
   %ptr2 = bitcast i8* %2 to half*
-  %cos = call half @llvm.genx.cos.f16(half %0)
-  %sin = call half @llvm.genx.sin.f16(half %0)
+  %cos = call half @__spirv_ocl_native_cos_DvWIDTH1Dh(half %0)
+  %sin = call half @__spirv_ocl_native_sin_DvWIDTH1Dh(half %0)
   store half %sin, half* %ptr1
   store half %cos, half* %ptr2
   ret void
@@ -1574,8 +1574,8 @@ define void @__sincos_uniform_half(half, i8*, i8*) nounwind {
 define void @__sincos_varying_half(<WIDTH x half>, i8*, i8*) nounwind {
   %ptr1 = bitcast i8* %1 to <WIDTH x half>*
   %ptr2 = bitcast i8* %2 to <WIDTH x half>*
-  %cos = call <WIDTH x half> @llvm.genx.cos.XE_SUFFIX(half)(<WIDTH x half> %0)
-  %sin = call <WIDTH x half> @llvm.genx.sin.XE_SUFFIX(half)(<WIDTH x half> %0)
+  %cos = call <WIDTH x half> @__spirv_ocl_native_cos_DvWIDTHDh(<WIDTH x half> %0)
+  %sin = call <WIDTH x half> @__spirv_ocl_native_sin_DvWIDTHDh(<WIDTH x half> %0)
   store <WIDTH x half> %sin, <WIDTH x half>* %ptr1
   store <WIDTH x half> %cos, <WIDTH x half>* %ptr2
   ret void
