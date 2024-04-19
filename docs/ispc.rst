@@ -3909,8 +3909,7 @@ template function specializations is not yet supported. Consider the following e
 
 For non-type template parameters, the following rules apply:
 
-* Uniform integral types (``int8``, ``uint8``, ``int16``, ``uint16``, ``int``, ``uint``, ``int64``, ``uint64``)
-  and enum types can be used as non-type template parameters. Unbound types are treated as uniform.
+* Uniform integral types and enum types can be used as non-type template parameters. Unbound types are treated as uniform.
   For example:
 
   ::
