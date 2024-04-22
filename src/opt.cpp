@@ -68,6 +68,9 @@
 #include <llvm/Transforms/Scalar/EarlyCSE.h>
 #include <llvm/Transforms/Scalar/GVN.h>
 #include <llvm/Transforms/Scalar/IndVarSimplify.h>
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+#include <llvm/Transforms/Scalar/InferAlignment.h>
+#endif
 #include <llvm/Transforms/Scalar/InstSimplifyPass.h>
 #include <llvm/Transforms/Scalar/JumpThreading.h>
 #include <llvm/Transforms/Scalar/LICM.h>
@@ -489,6 +492,17 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addFunctionPass(llvm::PromotePass());
         optPM.addFunctionPass(llvm::ADCEPass());
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        // Note: this pass has been added since LLVM 18.1.
+        // InstCombine contains similar functionality. It can be enabled back
+        // (at the moment) with enable-infer-alignment-pass=false option.
+        // It looks like it is enough to call it once before the last call to
+        // InstCombine pass. But maybe more clear way to preserve previous
+        // functionality is to call it before InstCombine every time.
+        // Let us call it once before the first InstCombine invocation and
+        // before the last one.
+        optPM.addFunctionPass(llvm::InferAlignmentPass());
+#endif
         if (g->opt.disableGatherScatterOptimizations == false && g->target->getVectorWidth() > 1) {
             optPM.addFunctionPass(llvm::InstCombinePass(), 210);
             optPM.addFunctionPass(ImproveMemoryOpsPass());
@@ -721,6 +735,9 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addFunctionPass(llvm::DSEPass());
         optPM.addFunctionPass(llvm::ADCEPass());
         optPM.addFunctionPass(llvm::SimplifyCFGPass(simplifyCFGopt));
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        optPM.addFunctionPass(llvm::InferAlignmentPass());
+#endif
         optPM.addFunctionPass(llvm::InstCombinePass());
         optPM.addFunctionPass(InstructionSimplifyPass());
 #ifdef ISPC_XE_ENABLED
