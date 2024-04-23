@@ -38,3 +38,12 @@ fi
 [ -n "$LLVM_REPO" ] && wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
 tar xf $LLVM_TAR
 echo "${GITHUB_WORKSPACE}/bin-$LLVM_VERSION/bin" >> $GITHUB_PATH
+
+# Fetch xwin to get Windows VcTools and SDK (windows cross-compile on linux)
+mkdir xwin-install
+cd xwin-install
+wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 -O xwin.tar.gz https://github.com/Jake-Shadle/xwin/releases/download/0.5.1/xwin-0.5.1-x86_64-unknown-linux-musl.tar.gz
+tar --strip-components=1 -xf xwin.tar.gz
+./xwin --accept-license splat --output ../xwin
+cd ..
+rm -rf xwin-install

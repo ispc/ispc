@@ -15,7 +15,7 @@ find_program(M4_EXECUTABLE m4)
 if (WIN32)
     set(TARGET_OS_LIST_FOR_LL "windows" "unix")
 elseif (UNIX)
-    set(TARGET_OS_LIST_FOR_LL "unix")
+    set(TARGET_OS_LIST_FOR_LL "unix" "windows")
 endif()
 
 # Explicitly enumerate .ll and .m4 files included by target .ll files.
@@ -128,9 +128,7 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
             set(SKIP ON)
         endif()
     else()
-        if (${os_name} STREQUAL "windows")
-            set(SKIP ON)
-        elseif (${os_name} STREQUAL "ps4")
+        if (${os_name} STREQUAL "ps4")
             set(SKIP ON)
         elseif (${os_name} STREQUAL "ios")
             set(SKIP ON)
@@ -243,6 +241,9 @@ function(builtin_to_cpp bit os_name arch supported_archs supported_oses resultFi
         if (${os_name} STREQUAL "macos")
             # -isystem/iusers/MacOSX10.14.sdk.tar/MacOSX10.14.sdk/usr/include
             set(includePath -isystem${ISPC_MACOS_SDK_PATH}/usr/include)
+        elseif (${os_name} STREQUAL "windows")
+            # -isystem/xwin/crt/include -isystem/xwin/sdk/include/ucrt
+            set(includePath -isystem${ISPC_WINDOWS_SDK_PATH}/crt/include -isystem${ISPC_WINDOWS_SDK_PATH}/sdk/include/ucrt)
         elseif(NOT ${debian_triple} STREQUAL "")
             # When compiling on Linux, there are two way to support cross targets:
             # - add "foreign" architecture to the set of supported architectures and install corresponding toolchain.
@@ -291,6 +292,7 @@ endfunction()
 function(builtin_xe_to_cpp bit resultFileName)
     set(inputFilePath builtins/builtins-cm-${bit}.ll)
     set(SKIP OFF)
+    # TODO: Look into cross-compiling for windows/linux
     if (WIN32)
         set(os_name "windows")
     elseif (APPLE)

@@ -87,6 +87,8 @@ for:
         export CROSS_TOOLS=/usr/local/src/cross
         export WASM=OFF
         export LLVM_TAR=llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+        export XWIN_HOME=$APPVEYOR_BUILD_FOLDER/xwin
+        export XWIN_URL=https://github.com/Jake-Shadle/xwin/releases/download/0.5.1/xwin-0.5.1-x86_64-unknown-linux-musl.tar.gz
   install:
     - sh: |-
         sudo apt-get update
@@ -107,10 +109,15 @@ for:
         wget https://github.com/ispc/ispc.dependencies/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
         tar xvf $LLVM_TAR
         export PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
+        cd $ISPC_HOME && mkdir xwin-install && cd xwin-install
+        wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 -O xwin.tar.gz $XWIN_URL
+        tar --strip-components=1 -xf xwin.tar.gz
+        ./xwin --accept-license splat --output $XWIN_HOME
+        rm -rf $ISPC_HOME/xwin-install
   before_build:
     - sh: |-
         cd $ISPC_HOME && mkdir build && cd build
-        cmake ../ -DISPC_PREPARE_PACKAGE=ON -DCMAKE_INSTALL_PREFIX=$ISPC_HOME/install -DISPC_CROSS=ON -DWASM_ENABLED=$WASM -DCMAKE_CXX_FLAGS="-Werror"
+        cmake ../ -DISPC_PREPARE_PACKAGE=ON -DCMAKE_INSTALL_PREFIX=$ISPC_HOME/install -DISPC_CROSS=ON -DWASM_ENABLED=$WASM -DCMAKE_CXX_FLAGS="-Werror" -DISPC_WINDOWS_SDK_PATH=$XWIN_HOME
   build_script:
     - sh: make package -j4
 
