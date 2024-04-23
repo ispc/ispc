@@ -1273,6 +1273,15 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
     }
 
     // This needs to happen after the TargetOS is decided.
+    if (g->debugInfoType == Globals::DebugInfoType::None) {
+        if (g->target_os == TargetOS::windows) {
+            g->debugInfoType = Globals::DebugInfoType::CodeView;
+        } else {
+            g->debugInfoType = Globals::DebugInfoType::DWARF;
+        }
+    }
+
+    // This needs to happen after the TargetOS is decided.
     setCallingConv(vectorCall, arch);
     return ArgsParseResult::success;
 }
