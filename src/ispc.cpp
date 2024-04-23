@@ -3291,12 +3291,6 @@ Globals::Globals() {
     // Target OS defaults to host OS.
     target_os = GetHostOS();
 
-    if (target_os == TargetOS::windows) {
-        debugInfoType = Globals::DebugInfoType::CodeView;
-    } else {
-        debugInfoType = Globals::DebugInfoType::DWARF;
-    }
-
     // Set calling convention to 'uninitialized'.
     // This needs to be set once target OS is decided.
     calling_conv = CallingConv::uninitialized;

@@ -45,6 +45,8 @@ set(BUILD_TYPE_SPIRV_TRANSLATOR "Release" CACHE STRING "Set the build type for S
 set(BUILD_TYPE_VC_INTRINSICS "Release" CACHE STRING "Set the build type for VC Intrinsics build")
 set(BUILD_TYPE_L0 "Release" CACHE STRING "Set the build type for L0 build")
 set(ISPC_ANDROID_NDK_PATH "NO" CACHE STRING "Path to Android NDK. It is needed to ISPC_CROSS=ON on macOS.")
+set(ISPC_WINDOWS_SDK_PATH "NO" CACHE STRING "Path to Windows SDK. It is needed to ISPC_CROSS=ON on Linux.")
+set(ISPC_WINDOWS_VCTOOLS_PATH "NO" CACHE STRING "Path to Windows VC Tools. It is needed to ISPC_CROSS=ON on Linux.")
 set(ISPC_SIGN_KEY "NO" CACHE STRING "Key to sign macOS or Windows build.")
 option(ISPC_INCLUDE_BENCHMARKS "Include ISPC benchmarks (ispc_benchmarks target)" OFF)
 option(ISPC_CROSS "Enable ISPC build with cross compilation support" ON)
@@ -296,6 +298,8 @@ message(STATUS "EXTERNAL_VERBOSE is ${EXTERNAL_VERBOSE}")
 message(STATUS "EXPLICIT_ENV_PATH is ${EXPLICIT_ENV_PATH}")
 message(STATUS "FULL_STAGE2_LLVM is ${FULL_STAGE2_LLVM}")
 message(STATUS "ISPC_ANDROID_NDK_PATH is ${ISPC_ANDROID_NDK_PATH}")
+message(STATUS "ISPC_WINDOWS_SDK_PATH is ${ISPC_WINDOWS_SDK_PATH}")
+message(STATUS "ISPC_WINDOWS_VCTOOLS_PATH is ${ISPC_WINDOWS_VCTOOLS_PATH}")
 if (ISPC_SIGN_KEY STREQUAL "NO")
     message(STATUS "ISPC_SIGN_KEY is not set.")
 else()
@@ -757,6 +761,12 @@ if (WIN32 OR APPLE)
             -DISPC_SIGN_KEY=${ISPC_SIGN_KEY}
             )
     endif()
+endif()
+if (NOT WIN32 AND ISPC_CROSS)
+    list(APPEND ISPC_COMMON_CMAKE_ARGS
+        -DISPC_WINDOWS_SDK_PATH=${ISPC_WINDOWS_SDK_PATH}
+        -DISPC_WINDOWS_VCTOOLS_PATH=${ISPC_WINDOWS_VCTOOLS_PATH}
+    )
 endif()
 if (APPLE)
     # It is needed because of ISPC_CROSS=ON
