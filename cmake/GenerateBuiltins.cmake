@@ -267,6 +267,8 @@ function (get_target_flags os arch out)
             else()
                 set(include -isystem/usr/${debian_triple}/include)
             endif()
+        elseif(${os} STREQUAL "windows")
+            set(include -isystem${ISPC_WINDOWS_VCTOOLS_PATH}/include -isystem${ISPC_WINDOWS_SDK_PATH}/include/ucrt)
         endif()
     endif()
 
