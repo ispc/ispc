@@ -1064,15 +1064,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         function->addFnAttr(llvm::Attribute::NoInline);
     }
 
-    if (g->target_os == TargetOS::windows) {
-        // Enable generation an unwind table during codegen.
-        // It is needed to generate backtraces during debugging and to unwind callstack.
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_14_0
-        function->setHasUWTable();
-#else
-        function->setUWTableKind(llvm::UWTableKind::Default);
-#endif
-    }
+    AddUWTableFuncAttr(function);
 
     if (functionType->isTask) {
         if (!g->target->isXeTarget()) {
@@ -3193,7 +3185,7 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
             // Calling convention should be the same for all dispatched functions
             callingConv = funcs.FTs[i]->GetCallingConv();
             targetFuncs[i]->setCallingConv(callingConv);
-
+            AddUWTableFuncAttr(targetFuncs[i]);
         } else
             targetFuncs[i] = nullptr;
     }
@@ -3209,6 +3201,7 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
     llvm::Function *dispatchFunc =
         llvm::Function::Create(ftype, llvm::GlobalValue::ExternalLinkage, functionName.c_str(), module);
     dispatchFunc->setCallingConv(callingConv);
+    AddUWTableFuncAttr(dispatchFunc);
 
     // Make dispatch function callable from DLLs.
     if ((g->target_os == TargetOS::windows) && (g->dllExport)) {

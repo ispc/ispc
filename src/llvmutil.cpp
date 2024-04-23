@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -1812,6 +1812,18 @@ MaskStatus GetMaskStatusFromValue(llvm::Value *mask, int vecWidth) {
             return MaskStatus::mixed;
     }
     return MaskStatus::all_on;
+}
+
+void AddUWTableFuncAttr(llvm::Function *fn) {
+    if (g->target_os == TargetOS::windows) {
+        // Enable generation an unwind table during codegen.
+        // It is needed to generate backtraces during debugging and to unwind callstack.
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_14_0
+        fn->setHasUWTable();
+#else
+        fn->setUWTableKind(llvm::UWTableKind::Default);
+#endif
+    }
 }
 
 #ifdef ISPC_XE_ENABLED
