@@ -705,6 +705,8 @@ void Function::GenerateIR() {
             appFunction->setDoesNotThrow();
             appFunction->setCallingConv(type->GetCallingConv());
 
+            AddUWTableFuncAttr(appFunction);
+
             // Xe kernel should have "dllexport" and "CMGenxMain" attribute,
             // otherss have "CMStackCall" attribute
             if (g->target->isXeTarget()) {
@@ -1311,6 +1313,8 @@ llvm::Function *TemplateInstantiation::createLLVMFunction(Symbol *functionSym) {
     if (isNoInline) {
         function->addFnAttr(llvm::Attribute::NoInline);
     }
+
+    AddUWTableFuncAttr(function);
 
     // Add NoAlias attribute to function arguments if needed.
     int nArgs = functionType->GetNumParameters();

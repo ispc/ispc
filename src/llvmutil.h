@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -407,6 +407,10 @@ extern bool GetMaskFromValue(llvm::Value *factor, uint64_t *mask);
     unknown at compile time.
 */
 extern MaskStatus GetMaskStatusFromValue(llvm::Value *mask, int vecWidth = -1);
+
+/** Add uwtable attribute for function, windows specific.
+ */
+extern void AddUWTableFuncAttr(llvm::Function *fn);
 
 #ifdef ISPC_XE_ENABLED
 /** This is utility function to determine memory in which pointer was created.
