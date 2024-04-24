@@ -507,6 +507,8 @@ list(APPEND OPT_SOURCES
     src/opt/ReplacePseudoMemoryOps.h
     src/opt/ReplaceStdlibShiftPass.cpp
     src/opt/ReplaceStdlibShiftPass.h
+    src/opt/ScalarizePass.cpp
+    src/opt/ScalarizePass.h
     src/opt/XeGatherCoalescePass.cpp
     src/opt/XeGatherCoalescePass.h
     src/opt/XeReplaceLLVMIntrinsics.cpp
