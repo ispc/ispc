@@ -646,6 +646,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 #endif
 
         optPM.addFunctionPass(PeepholePass());
+        optPM.addFunctionPass(ScalarizePass());
         optPM.addFunctionPass(llvm::ADCEPass());
         optPM.commitFunctionToModulePassManager();
         optPM.addModulePass(llvm::ModuleInlinerWrapperPass());

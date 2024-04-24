@@ -15,6 +15,7 @@ FUNCTION_PASS("is-compile-time-constant", IsCompileTimeConstantPass())
 FUNCTION_PASS("peephole", PeepholePass())
 FUNCTION_PASS("replace-pseudo-memory-ops", ReplacePseudoMemoryOpsPass())
 FUNCTION_PASS("replace-stdlib-shift", ReplaceStdlibShiftPass())
+FUNCTION_PASS("scalarize", ScalarizePass())
 #ifdef ISPC_XE_ENABLED
 FUNCTION_PASS("check-ir-for-xe-target", CheckIRForXeTarget())
 FUNCTION_PASS("mangle-opencl-builtins", MangleOpenCLBuiltins())
