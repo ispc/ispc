@@ -44,8 +44,8 @@ static bool lIsSafeToBlend(llvm::Value *lvalue) {
 
 struct LMSInfo {
     LMSInfo(const char *bname, const char *msname) : blend(bname), store(msname) {}
-    llvm::Function *blendFunc() const { return m->module->getFunction(blend); }
-    llvm::Function *maskedStoreFunc() const { return m->module->getFunction(store); }
+    llvm::Function *blendFunc(llvm::Module *M) const { return M->getFunction(blend); }
+    llvm::Function *maskedStoreFunc(llvm::Module *M) const { return M->getFunction(store); }
 
   private:
     const char *blend;
@@ -83,7 +83,8 @@ static bool lReplacePseudoMaskedStore(llvm::CallInst *callInst) {
 
     // Generate the call to the appropriate masked store function and
     // replace the __pseudo_* one with it.
-    llvm::Function *fms = doBlend ? info->blendFunc() : info->maskedStoreFunc();
+    llvm::Module *M = callInst->getModule();
+    llvm::Function *fms = doBlend ? info->blendFunc(M) : info->maskedStoreFunc(M);
     llvm::Instruction *inst = LLVMCallInst(fms, lvalue, rvalue, mask, "", callInst);
     LLVMCopyMetadata(inst, callInst);
 
@@ -106,7 +107,7 @@ struct LowerGSInfo {
         return LowerGSInfo(gName, aName, Type::Scatter);
     }
     static LowerGSInfo Prefetch(const char *aName) { return LowerGSInfo(aName, Type::Prefetch); }
-    llvm::Function *actualFunc() const {
+    llvm::Function *actualFunc(llvm::Module *M) const {
         const char *func = name;
         if (isGather()) {
             func = g->target->hasGather() && g->opt.disableGathers ? generic : name;
@@ -114,7 +115,7 @@ struct LowerGSInfo {
         if (isScatter()) {
             func = g->target->hasScatter() && g->opt.disableScatters ? generic : name;
         }
-        return m->module->getFunction(func);
+        return M->getFunction(func);
     }
     bool isGather() const { return type == Type::Gather; }
     bool isScatter() const { return type == Type::Scatter; }
@@ -264,7 +265,8 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
     SourcePos pos;
     bool gotPosition = LLVMGetSourcePosFromMetadata(callInst, &pos);
 
-    callInst->setCalledFunction(info->actualFunc());
+    llvm::Module *M = callInst->getModule();
+    callInst->setCalledFunction(info->actualFunc(M));
     // Check for alloca and if not alloca - generate __gather and change arguments
     if (gotPosition && (g->target->getVectorWidth() > 1) && (g->opt.level > 0)) {
         if (info->isGather())

@@ -128,6 +128,7 @@ static bool lHasIntrinsicInDefinition(llvm::Function *func) {
 }
 
 static llvm::Instruction *lGetBinaryIntrinsic(const char *name, llvm::Value *opa, llvm::Value *opb) {
+    // TODO! It is just wrong. We need only to create call. No module needed at all.
     llvm::Function *func = m->module->getFunction(name);
     Assert(func != nullptr);
 

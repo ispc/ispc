@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -27,13 +27,14 @@ bool ReplaceStdlibShiftPass::replaceStdlibShiftBuiltin(llvm::BasicBlock &bb) {
     DEBUG_START_BB("ReplaceStdlibShiftPass");
     bool modifiedAny = false;
 
+    llvm::Module *M = bb.getModule();
     llvm::Function *shifts[6];
-    shifts[0] = m->module->getFunction("shift___vytuni");
-    shifts[1] = m->module->getFunction("shift___vysuni");
-    shifts[2] = m->module->getFunction("shift___vyiuni");
-    shifts[3] = m->module->getFunction("shift___vyIuni");
-    shifts[4] = m->module->getFunction("shift___vyfuni");
-    shifts[5] = m->module->getFunction("shift___vyduni");
+    shifts[0] = M->getFunction("shift___vytuni");
+    shifts[1] = M->getFunction("shift___vysuni");
+    shifts[2] = M->getFunction("shift___vyiuni");
+    shifts[3] = M->getFunction("shift___vyIuni");
+    shifts[4] = M->getFunction("shift___vyfuni");
+    shifts[5] = M->getFunction("shift___vyduni");
 
     // Note: we do modify instruction list during the traversal, so the iterator
     // is moved forward before the instruction is processed.

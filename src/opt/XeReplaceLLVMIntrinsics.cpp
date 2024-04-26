@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -14,6 +14,7 @@ bool ReplaceLLVMIntrinsics::replaceUnspportedIntrinsics(llvm::BasicBlock &bb) {
     DEBUG_START_BB("LLVM intrinsics replacement");
     std::vector<llvm::AllocaInst *> Allocas;
 
+    llvm::Module *M = bb.getModule();
     bool modifiedAny = false;
 
 restart:
@@ -27,8 +28,8 @@ restart:
             if (func->getName().equals("llvm.trap")) {
                 llvm::Type *argTypes[] = {LLVMTypes::Int1VectorType, LLVMTypes::Int16VectorType};
                 // Description of parameters for genx_raw_send_noresult can be found in target-genx.ll
-                auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(
-                    m->module, llvm::GenXIntrinsic::genx_raw_send_noresult, argTypes);
+                auto Fn =
+                    llvm::GenXIntrinsic::getGenXDeclaration(M, llvm::GenXIntrinsic::genx_raw_send_noresult, argTypes);
                 llvm::SmallVector<llvm::Value *, 8> Args;
                 Args.push_back(llvm::ConstantInt::get(LLVMTypes::Int32Type, 0));
                 Args.push_back(llvm::ConstantVector::getSplat(
@@ -64,7 +65,7 @@ restart:
 
                 llvm::GenXIntrinsic::ID xeAbsID =
                     argType->isIntOrIntVectorTy() ? llvm::GenXIntrinsic::genx_absi : llvm::GenXIntrinsic::genx_absf;
-                auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(m->module, xeAbsID, Tys);
+                auto Fn = llvm::GenXIntrinsic::getGenXDeclaration(M, xeAbsID, Tys);
                 Assert(Fn);
                 llvm::Instruction *newInst = llvm::CallInst::Create(Fn, ci->getOperand(0), "");
                 if (newInst != nullptr) {
