@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -18,7 +18,6 @@ class ReplacePseudoMemoryOpsPass : public llvm::PassInfoMixin<ReplacePseudoMemor
   public:
     explicit ReplacePseudoMemoryOpsPass() {}
 
-    static llvm::StringRef getPassName() { return "Replace Pseudo Memory Ops"; }
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:

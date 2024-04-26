@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -33,7 +33,6 @@ class GatherCoalescePass : public llvm::PassInfoMixin<GatherCoalescePass> {
   public:
     explicit GatherCoalescePass() {}
 
-    static llvm::StringRef getPassName() { return "Gather Coalescing"; }
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:

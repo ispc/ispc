@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -24,7 +24,6 @@ class ImproveMemoryOpsPass : public llvm::PassInfoMixin<ImproveMemoryOpsPass> {
   public:
     explicit ImproveMemoryOpsPass() {}
 
-    static llvm::StringRef getPassName() { return "Improve Memory Ops"; }
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -272,7 +272,6 @@ class XeGatherCoalescing : public MemoryCoalescing {
   public:
     explicit XeGatherCoalescing() : MemoryCoalescing(MemoryCoalescing::MemType::OPT_LOAD, AddressSpace::ispc_global) {}
 
-    llvm::StringRef getPassName() const { return "Xe Gather Coalescing"; }
 };
 
 } // namespace ispc

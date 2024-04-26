@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -21,7 +21,6 @@ class InstructionSimplifyPass : public llvm::PassInfoMixin<InstructionSimplifyPa
   public:
     explicit InstructionSimplifyPass() {}
 
-    static llvm::StringRef getPassName() { return "Vector Select Optimization"; }
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:

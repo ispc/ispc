@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -27,7 +27,6 @@ class IsCompileTimeConstantPass : public llvm::PassInfoMixin<IsCompileTimeConsta
   public:
     explicit IsCompileTimeConstantPass(bool last = false) { isLastTry = last; }
 
-    static llvm::StringRef getPassName() { return "Resolve \"is compile time constant\""; }
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:
