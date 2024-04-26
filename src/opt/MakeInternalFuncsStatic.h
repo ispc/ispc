@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -24,7 +24,6 @@ class MakeInternalFuncsStaticPass : public llvm::PassInfoMixin<MakeInternalFuncs
   public:
     explicit MakeInternalFuncsStaticPass() {}
 
-    static llvm::StringRef getPassName() { return "Make internal funcs \"static\""; }
     llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &MAM);
 };
 

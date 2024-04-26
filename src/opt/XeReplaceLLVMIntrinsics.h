@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -18,7 +18,6 @@ class ReplaceLLVMIntrinsics : public llvm::PassInfoMixin<ReplaceLLVMIntrinsics> 
   public:
     explicit ReplaceLLVMIntrinsics() {}
 
-    static llvm::StringRef getPassName() { return "LLVM intrinsics replacement"; }
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:

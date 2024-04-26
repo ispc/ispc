@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -16,7 +16,6 @@ class PeepholePass : public llvm::PassInfoMixin<PeepholePass> {
   public:
     explicit PeepholePass(){};
 
-    static llvm::StringRef getPassName() { return "Peephole Optimizations"; }
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:
