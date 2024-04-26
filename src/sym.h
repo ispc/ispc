@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -274,11 +274,10 @@ class SymbolTable {
         @return vector of zero or more strings that approximately match \c name.
     */
     std::vector<std::string> ClosestVariableOrFunctionMatch(const char *name) const;
-    /** This method returns zero or more strings with the names of types
+
+    /** This method returns zero or more strings with the names of enum types
         in the symbol table that nearly (but not exactly) match the given
         name. */
-    std::vector<std::string> ClosestTypeMatch(const char *name) const;
-
     std::vector<std::string> ClosestEnumTypeMatch(const char *name) const;
 
     /** Prints out the entire contents of the symbol table to standard error.
