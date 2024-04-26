@@ -10,9 +10,7 @@
 
 namespace ispc {
 
-class ReplaceStdlibShiftPass : public llvm::PassInfoMixin<ReplaceStdlibShiftPass> {
-  public:
-    explicit ReplaceStdlibShiftPass() {}
+struct ReplaceStdlibShiftPass : public llvm::PassInfoMixin<ReplaceStdlibShiftPass> {
 
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 

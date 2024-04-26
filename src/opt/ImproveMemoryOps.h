@@ -20,9 +20,7 @@ namespace ispc {
     See for example the comments discussing the __pseudo_gather functions
     in builtins.cpp for more information about this.
  */
-class ImproveMemoryOpsPass : public llvm::PassInfoMixin<ImproveMemoryOpsPass> {
-  public:
-    explicit ImproveMemoryOpsPass() {}
+struct ImproveMemoryOpsPass : public llvm::PassInfoMixin<ImproveMemoryOpsPass> {
 
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 

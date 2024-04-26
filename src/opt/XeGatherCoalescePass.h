@@ -50,8 +50,8 @@ namespace ispc {
  * directly, but can be used by several coalescing implementations.
  * Such helpers contains some general stuff.
  */
-class MemoryCoalescing : public llvm::PassInfoMixin<MemoryCoalescing> {
-  public:
+struct MemoryCoalescing : public llvm::PassInfoMixin<MemoryCoalescing> {
+
     // Optimization runner
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
@@ -257,7 +257,10 @@ class MemoryCoalescing : public llvm::PassInfoMixin<MemoryCoalescing> {
     unsigned getScalarTypeSize(llvm::Type *Ty) const;
 };
 
-class XeGatherCoalescing : public MemoryCoalescing {
+struct XeGatherCoalescing : public MemoryCoalescing {
+
+    XeGatherCoalescing() : MemoryCoalescing(MemoryCoalescing::MemType::OPT_LOAD, AddressSpace::ispc_global) {}
+
   private:
     bool isOptimizationTarget(llvm::Instruction *Inst) const;
     llvm::Value *getPointer(llvm::Instruction *Inst) const;
@@ -268,10 +271,6 @@ class XeGatherCoalescing : public MemoryCoalescing {
 
     llvm::CallInst *getPseudoGatherConstOffset(llvm::Instruction *Inst) const;
     bool isConstOffsetPseudoGather(llvm::CallInst *CI) const;
-
-  public:
-    explicit XeGatherCoalescing() : MemoryCoalescing(MemoryCoalescing::MemType::OPT_LOAD, AddressSpace::ispc_global) {}
-
 };
 
 } // namespace ispc

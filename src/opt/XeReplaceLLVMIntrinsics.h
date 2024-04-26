@@ -14,9 +14,7 @@ namespace ispc {
 /** This pass replaces LLVM intrinsics unsupported on Xe
  */
 
-class ReplaceLLVMIntrinsics : public llvm::PassInfoMixin<ReplaceLLVMIntrinsics> {
-  public:
-    explicit ReplaceLLVMIntrinsics() {}
+struct ReplaceLLVMIntrinsics : public llvm::PassInfoMixin<ReplaceLLVMIntrinsics> {
 
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 

@@ -16,9 +16,7 @@ namespace ispc {
 /** This pass mangles SPIR-V OpenCL builtins used in Xe target file
  */
 
-class MangleOpenCLBuiltins : public llvm::PassInfoMixin<MangleOpenCLBuiltins> {
-  public:
-    explicit MangleOpenCLBuiltins() {}
+struct MangleOpenCLBuiltins : public llvm::PassInfoMixin<MangleOpenCLBuiltins> {
 
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 

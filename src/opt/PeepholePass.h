@@ -12,9 +12,7 @@ namespace ispc {
 
 // PeepholePass
 
-class PeepholePass : public llvm::PassInfoMixin<PeepholePass> {
-  public:
-    explicit PeepholePass(){};
+struct PeepholePass : public llvm::PassInfoMixin<PeepholePass> {
 
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 

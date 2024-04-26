@@ -19,9 +19,7 @@ namespace ispc {
     2. prefetch support by target and fixing prefetch args
  */
 
-class CheckIRForXeTarget : public llvm::PassInfoMixin<CheckIRForXeTarget> {
-  public:
-    explicit CheckIRForXeTarget() {}
+struct CheckIRForXeTarget : public llvm::PassInfoMixin<CheckIRForXeTarget> {
 
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 

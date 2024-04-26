@@ -29,9 +29,7 @@ namespace ispc {
 //  in this case, we're often able to generate wide vector loads and
 //  appropriate shuffles automatically.
 
-class GatherCoalescePass : public llvm::PassInfoMixin<GatherCoalescePass> {
-  public:
-    explicit GatherCoalescePass() {}
+struct GatherCoalescePass : public llvm::PassInfoMixin<GatherCoalescePass> {
 
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
