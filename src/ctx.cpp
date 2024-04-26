@@ -483,15 +483,6 @@ void FunctionEmitContext::BranchIfMaskAll(llvm::BasicBlock *btrue, llvm::BasicBl
     bblock = nullptr;
 }
 
-void FunctionEmitContext::BranchIfMaskNone(llvm::BasicBlock *btrue, llvm::BasicBlock *bfalse) {
-    AssertPos(currentPos, bblock != nullptr);
-    // switch sense of true/false bblocks
-    BranchIfMaskAny(bfalse, btrue);
-    // It's illegal to add any additional instructions to the basic block
-    // now that it's terminated, so set bblock to nullptr to be safe
-    bblock = nullptr;
-}
-
 void FunctionEmitContext::StartUniformIf(bool emulateUniform) {
     controlFlowInfo.push_back(CFInfo::GetIf(true, emulateUniform, GetInternalMask()));
 }
