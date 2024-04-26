@@ -23,9 +23,9 @@ namespace ispc {
     See stdlib.m4 for a number of uses of this idiom.
  */
 
-class IsCompileTimeConstantPass : public llvm::PassInfoMixin<IsCompileTimeConstantPass> {
-  public:
-    explicit IsCompileTimeConstantPass(bool last = false) { isLastTry = last; }
+struct IsCompileTimeConstantPass : public llvm::PassInfoMixin<IsCompileTimeConstantPass> {
+
+    IsCompileTimeConstantPass(bool last = false) : isLastTry(last) {}
 
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 

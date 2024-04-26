@@ -14,9 +14,7 @@ namespace ispc {
     runs, we need to turn them into actual native gathers and scatters.
     This task is handled by the ReplacePseudoMemoryOpsPass here.
  */
-class ReplacePseudoMemoryOpsPass : public llvm::PassInfoMixin<ReplacePseudoMemoryOpsPass> {
-  public:
-    explicit ReplacePseudoMemoryOpsPass() {}
+struct ReplacePseudoMemoryOpsPass : public llvm::PassInfoMixin<ReplacePseudoMemoryOpsPass> {
 
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 

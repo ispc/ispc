@@ -17,9 +17,7 @@ namespace ispc {
     @todo The better thing to do would be to submit a patch to LLVM to get
     these; they're presumably pretty simple patterns to match.
 */
-class InstructionSimplifyPass : public llvm::PassInfoMixin<InstructionSimplifyPass> {
-  public:
-    explicit InstructionSimplifyPass() {}
+struct InstructionSimplifyPass : public llvm::PassInfoMixin<InstructionSimplifyPass> {
 
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
