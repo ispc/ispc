@@ -290,11 +290,6 @@ Symbol *ispc::CreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTable
     module.
  */
 static void lAddModuleSymbols(llvm::Module *module, SymbolTable *symbolTable) {
-#if 0
-    // FIXME: handle globals?
-    Assert(module->global_empty());
-#endif
-
     llvm::Module::iterator iter;
     for (iter = module->begin(); iter != module->end(); ++iter) {
         llvm::Function *func = &*iter;
@@ -1026,30 +1021,6 @@ void ispc::AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, Symbo
         llvm::Triple mTriple(m->module->getTargetTriple());
         llvm::Triple bcTriple(bcModule->getTargetTriple());
         Debug(SourcePos(), "module triple: %s\nbitcode triple: %s\n", mTriple.str().c_str(), bcTriple.str().c_str());
-
-        // Disable this code for cross compilation
-#if 0
-            {
-                Assert(bcTriple.getArch() == llvm::Triple::UnknownArch || mTriple.getArch() == bcTriple.getArch());
-                Assert(bcTriple.getVendor() == llvm::Triple::UnknownVendor ||
-                       mTriple.getVendor() == bcTriple.getVendor());
-
-                // We unconditionally set module DataLayout to library, but we must
-                // ensure that library and module DataLayouts are compatible.
-                // If they are not, we should recompile the library for problematic
-                // architecture and investigate what happened.
-                // Generally we allow library DataLayout to be subset of module
-                // DataLayout or library DataLayout to be empty.
-                if (!VerifyDataLayoutCompatibility(module->getDataLayoutStr(), bcModule->getDataLayoutStr())) {
-                    Warning(SourcePos(),
-                            "Module DataLayout is incompatible with "
-                            "library DataLayout:\n"
-                            "Module  DL: %s\n"
-                            "Library DL: %s\n",
-                            module->getDataLayoutStr().c_str(), bcModule->getDataLayoutStr().c_str());
-                }
-            }
-#endif
 
         bcModule->setTargetTriple(mTriple.str());
         bcModule->setDataLayout(module->getDataLayout());

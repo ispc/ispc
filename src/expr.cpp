@@ -75,48 +75,6 @@ Symbol *Expr::GetBaseSymbol() const {
 
 bool Expr::HasAmbiguousVariability(std::vector<const Expr *> &warn) const { return false; }
 
-#if 0
-/** If a conversion from 'fromAtomicType' to 'toAtomicType' may cause lost
-    precision, issue a warning.  Don't warn for conversions to bool and
-    conversions between signed and unsigned integers of the same size.
- */
-static void
-lMaybeIssuePrecisionWarning(const AtomicType *toAtomicType,
-                            const AtomicType *fromAtomicType,
-                            SourcePos pos, const char *errorMsgBase) {
-    switch (toAtomicType->basicType) {
-    case AtomicType::TYPE_BOOL:
-    case AtomicType::TYPE_INT8:
-    case AtomicType::TYPE_UINT8:
-    case AtomicType::TYPE_INT16:
-    case AtomicType::TYPE_UINT16:
-    case AtomicType::TYPE_INT32:
-    case AtomicType::TYPE_UINT32:
-    case AtomicType::TYPE_FLOAT:
-    case AtomicType::TYPE_INT64:
-    case AtomicType::TYPE_UINT64:
-    case AtomicType::TYPE_DOUBLE:
-        if ((int)toAtomicType->basicType < (int)fromAtomicType->basicType &&
-            toAtomicType->basicType != AtomicType::TYPE_BOOL &&
-            !(toAtomicType->basicType == AtomicType::TYPE_INT8 &&
-              fromAtomicType->basicType == AtomicType::TYPE_UINT8) &&
-            !(toAtomicType->basicType == AtomicType::TYPE_INT16 &&
-              fromAtomicType->basicType == AtomicType::TYPE_UINT16) &&
-            !(toAtomicType->basicType == AtomicType::TYPE_INT32 &&
-              fromAtomicType->basicType == AtomicType::TYPE_UINT32) &&
-            !(toAtomicType->basicType == AtomicType::TYPE_INT64 &&
-              fromAtomicType->basicType == AtomicType::TYPE_UINT64))
-            Warning(pos, "Conversion from type \"%s\" to type \"%s\" for %s"
-                    " may lose information.",
-                    fromAtomicType->GetString().c_str(), toAtomicType->GetString().c_str(),
-                    errorMsgBase);
-        break;
-    default:
-        FATAL("logic error in lMaybeIssuePrecisionWarning()");
-    }
-}
-#endif
-
 ///////////////////////////////////////////////////////////////////////////
 
 static llvm::APFloat lCreateAPFloat(llvm::APFloat f, llvm::Type *type) {
@@ -545,11 +503,6 @@ bool ispc::CanConvertTypes(const Type *fromType, const Type *toType, const char 
 Expr *ispc::TypeConvertExpr(Expr *expr, const Type *toType, const char *errorMsgBase) {
     if (expr == nullptr)
         return nullptr;
-
-#if 0
-    Debug(expr->pos, "type convert %s -> %s.", expr->GetType()->GetString().c_str(),
-          toType->GetString().c_str());
-#endif
 
     const Type *fromType = expr->GetType();
     Expr *e = expr;

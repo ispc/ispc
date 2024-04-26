@@ -1134,10 +1134,6 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
              CastType<ReferenceType>(argType) != nullptr)) {
 
             function->addParamAttr(i, llvm::Attribute::NoAlias);
-#if 0
-            int align = 4 * RoundUpPow2(g->target->nativeVectorWidth);
-            function->addAttribute(i+1, llvm::Attribute::constructAlignmentFromInt(align));
-#endif
         }
 
         if (symbolTable->LookupFunction(argName.c_str())) {
@@ -2648,15 +2644,6 @@ bool Module::writeHeader(const char *fn) {
         fprintf(f, "///////////////////////////////////////////////////////////////////////////\n");
         lPrintFunctionDeclarations(f, exportedFuncs);
     }
-#if 0
-    if (externCFuncs.size() > 0) {
-        fprintf(f, "\n");
-        fprintf(f, "///////////////////////////////////////////////////////////////////////////\n");
-        fprintf(f, "// External C functions used by ispc code\n");
-        fprintf(f, "///////////////////////////////////////////////////////////////////////////\n");
-        lPrintFunctionDeclarations(f, externCFuncs);
-    }
-#endif
 
     // end namespace
     fprintf(f, "\n");
