@@ -229,12 +229,6 @@ class SymbolTable {
      */
     template <typename Predicate> void GetMatchingFunctions(Predicate pred, std::vector<Symbol *> *matches) const;
 
-    /** Returns all of the variable symbols in the symbol table that match
-        the given predicate.  The predicate is defined as in the
-        GetMatchingFunctions() method.
-     */
-    template <typename Predicate> void GetMatchingVariables(Predicate pred, std::vector<Symbol *> *matches) const;
-
     /** Adds the named type to the symbol table.  This is used for both
         struct definitions (where <tt>struct Foo</tt> causes type \c Foo to
         be added to the symbol table) as well as for <tt>typedef</tt>s.
@@ -352,15 +346,4 @@ void SymbolTable::GetMatchingFunctions(Predicate pred, std::vector<Symbol *> *ma
     }
 }
 
-template <typename Predicate>
-void SymbolTable::GetMatchingVariables(Predicate pred, std::vector<Symbol *> *matches) const {
-    for (unsigned int i = 0; i < variables.size(); ++i) {
-        SymbolMapType &sm = *(variables[i]);
-        SymbolMapType::const_iterator iter;
-        for (iter = sm.begin(); iter != sm.end(); ++iter) {
-            if (pred(iter->second))
-                matches->push_back(iter->second);
-        }
-    }
-}
 } // namespace ispc
