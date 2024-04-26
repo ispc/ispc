@@ -300,7 +300,7 @@ jobs:
         path: fail_db.txt
 
     - name: Upload alloy logs
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: alloy_results.llvm${{matrix.version}}.${{matrix.arch}}.${{matrix.target}}
@@ -348,7 +348,7 @@ jobs:
         path: fail_db.txt
 
     - name: Upload alloy logs
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: alloy_results.llvm17_lto.${{matrix.arch}}.${{matrix.target}}
@@ -397,7 +397,7 @@ jobs:
         path: fail_db.txt
 
     - name: Upload alloy logs
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: alloy_results.llvm17rel.${{matrix.arch}}.${{matrix.target}}
@@ -449,7 +449,7 @@ jobs:
         path: fail_db.txt
 
     - name: Upload alloy logs
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: alloy_results.llvm17.debug.${{matrix.arch}}.${{matrix.target}}
@@ -502,7 +502,7 @@ jobs:
         path: fail_db.txt
 
     - name: Upload alloy logs
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: alloy_results.xe.llvm17rel.${{matrix.arch}}.${{matrix.target}}
@@ -656,7 +656,7 @@ jobs:
         path: fail_db.txt
 
     - name: Upload alloy logs
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: alloy_results.llvm${{matrix.version}}.macos.sse4
@@ -704,7 +704,7 @@ jobs:
         path: fail_db.txt
 
     - name: Upload alloy logs
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: alloy_results.llvm17_lto.macos.sse4
@@ -927,7 +927,7 @@ jobs:
         path: fail_db.txt
 
     - name: Upload alloy logs
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: alloy_results.llvm${{matrix.version}}.${{matrix.arch}}.${{matrix.target}}
@@ -980,7 +980,7 @@ jobs:
         path: fail_db.txt
 
     - name: Upload alloy logs
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: alloy_results.llvm17_lto.${{matrix.arch}}.${{matrix.target}}
@@ -1034,7 +1034,7 @@ jobs:
         path: fail_db.txt
 
     - name: Upload alloy logs
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: alloy_results.llvm17rel.${{matrix.arch}}.${{matrix.target}}
