@@ -289,9 +289,6 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         function->addFnAttr("target-features", "+simd128");
 
     g->target->markFuncWithTargetAttr(function);
-#if 0
-    llvm::BasicBlock *entryBBlock = ctx->GetCurrentBasicBlock();
-#endif
     const FunctionType *type = CastType<FunctionType>(sym->type);
     Assert(type != nullptr);
 
