@@ -128,10 +128,11 @@ static bool lHasIntrinsicInDefinition(llvm::Function *func) {
 }
 
 static llvm::Instruction *lGetBinaryIntrinsic(llvm::Module *M, const char *name, llvm::Value *opa, llvm::Value *opb) {
-    // TODO! It is just wrong. We need only to create call. No module needed at all.
     llvm::Function *func = M->getFunction(name);
     Assert(func != nullptr);
 
+    // TODO: does it do something on, e.g., avx2-i32x4 target at all?
+    //
     // Make sure that the definition of the llvm::Function has a call to an
     // intrinsic function in its instructions; otherwise we will generate
     // infinite loops where we "helpfully" turn the default implementations
