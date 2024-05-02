@@ -430,23 +430,37 @@ generate_target_builtins(BUILTIN_FILES ${ISPC_TARGETS})
 generate_common_builtins(BUILTIN_CPP_FILES)
 generate_stdlib(STDLIB_FILES ${ISPC_MASKS})
 
+# Common sources between ispc-opt and ispc
 list(APPEND COMMON_SOURCES
-    ${BUILTIN_FILES}
-    ${BUILTIN_CPP_FILES}
+    common/version.rc
+    common/version.h
+    src/bitcode_lib.cpp
+    src/bitcode_lib.h
+    src/builtins-decl.cpp
+    src/builtins-decl.h
+    src/ispc.cpp
+    src/ispc.h
+    src/ispc_version.h
+    src/llvmutil.cpp
+    src/llvmutil.h
+    src/target_enums.cpp
+    src/target_enums.h
+    src/target_registry.cpp
+    src/target_registry.h
+    src/util.cpp
+    src/util.h
+)
+
+# Source files used only in ispc
+list(APPEND FRONTEND_SOURCES
     ${STDLIB_FILES}
     ${BISON_CPP_OUTPUT}
     ${FLEX_OUTPUT}
     ${CMAKE_CURRENT_SOURCE_DIR}/stdlib.ispc
-    ${CMAKE_CURRENT_SOURCE_DIR}/common/version.rc
-    common/version.h
     src/ast.cpp
     src/ast.h
-    src/bitcode_lib.cpp
-    src/bitcode_lib.h
     src/builtins.cpp
     src/builtins.h
-    src/builtins-decl.cpp
-    src/builtins-decl.h
     src/ctx.cpp
     src/ctx.h
     src/decl.cpp
@@ -455,34 +469,22 @@ list(APPEND COMMON_SOURCES
     src/expr.h
     src/func.cpp
     src/func.h
-    src/ispc.cpp
-    src/ispc.h
-    src/ispc_version.h
-    src/llvmutil.cpp
-    src/llvmutil.h
-    src/main.cpp
     src/module.cpp
     src/module.h
-    src/opt.cpp
-    src/opt.h
     src/stmt.cpp
     src/stmt.h
     src/sym.cpp
     src/sym.h
-    src/target_enums.cpp
-    src/target_enums.h
-    src/target_registry.cpp
-    src/target_registry.h
     src/type.cpp
     src/type.h
-    src/util.cpp
-    src/util.h
     src/parse.yy
     src/lex.ll
 )
 
-# ISPC passes
-list(APPEND COMMON_SOURCES
+# ISPC optimization passes shared between ispc and ispc-opt
+list(APPEND OPT_SOURCES
+    src/opt.cpp
+    src/opt.h
     src/opt/CheckIRForXeTarget.cpp
     src/opt/CheckIRForXeTarget.h
     src/opt/GatherCoalescePass.cpp
@@ -760,22 +762,51 @@ else()
     endif()
 endif()
 
+# This function configures compile definitions, options and include dirs.
+# It can be used for any objects or libraries that are built in the project.
+function(configure_ispc_obj TARGET)
+    target_compile_definitions(${TARGET} PRIVATE ${COMPILE_DEFINITIONS})
+    target_include_directories(${TARGET} PRIVATE ${INCLUDE_DIRECTORIES})
+    target_compile_options(${TARGET} PRIVATE ${COMPILE_OPTIONS})
 
-add_executable(${PROJECT_NAME} ${COMMON_SOURCES})
-target_compile_definitions(${PROJECT_NAME} PRIVATE ${COMPILE_DEFINITIONS})
-target_include_directories(${PROJECT_NAME} PRIVATE ${INCLUDE_DIRECTORIES})
-target_compile_options(${PROJECT_NAME} PRIVATE ${COMPILE_OPTIONS})
-target_link_options(${PROJECT_NAME} PRIVATE ${LINK_OPTIONS_PRIVATE})
-target_link_options(${PROJECT_NAME} PUBLIC ${LINK_OPTIONS_PUBLIC})
-target_link_libraries(${PROJECT_NAME} ${LINK_LIBRARIES})
+    # Set hidden visibility for inline functions. This is needed to be in sync
+    # with LLVM libraries, we do include some template code from LLVM that requires
+    # this options to be in sync with LLVM. Otherwise it causes link warnings.
+    set_target_properties(${TARGET} PROPERTIES VISIBILITY_INLINES_HIDDEN ON)
+    if (NOT MSVC)
+        set_target_properties(${TARGET} PROPERTIES CXX_EXTENSIONS OFF)
+    endif()
+endfunction()
 
-# Set hidden visibility for inline functions.  This is needed to be in sync
-# with LLVM libraries, we do include some template code from LLVM that requires
-# this options to be in sync with LLVM. Otherwise it causes link warnings.
-set_target_properties(${PROJECT_NAME} PROPERTIES VISIBILITY_INLINES_HIDDEN ON)
-if (NOT MSVC)
-    set_target_properties(${PROJECT_NAME} PROPERTIES CXX_EXTENSIONS OFF)
-endif()
+# This function configures executable targets.
+function(configure_ispc_exe TARGET)
+    configure_ispc_obj(${TARGET})
+    target_link_options(${TARGET} PRIVATE ${LINK_OPTIONS_PRIVATE})
+    target_link_options(${TARGET} PUBLIC ${LINK_OPTIONS_PUBLIC})
+endfunction()
+
+# Define libraries that are built in the project. Some of them are shared across multiple executable targets.
+add_library(builtin OBJECT ${BUILTIN_FILES} ${BUILTIN_CPP_FILES})
+configure_ispc_obj(builtin)
+
+add_library(optimization OBJECT ${OPT_SOURCES})
+configure_ispc_obj(optimization)
+
+add_library(common OBJECT ${COMMON_SOURCES})
+configure_ispc_obj(common)
+
+add_library(frontend OBJECT ${FRONTEND_SOURCES})
+configure_ispc_obj(frontend)
+
+# Define executable targets
+add_executable(${PROJECT_NAME} src/main.cpp)
+configure_ispc_exe(${PROJECT_NAME})
+target_link_libraries(${PROJECT_NAME} ${LINK_LIBRARIES} builtin optimization common frontend)
+
+add_executable(ispc-opt ispc-opt.cpp)
+configure_ispc_exe(ispc-opt)
+# TODO! should we link against all the same LLVM/Clang libraries? Clang libs is definetely is not needed
+target_link_libraries(ispc-opt ${LINK_LIBRARIES} builtin optimization common)
 
 
 if (ISPC_INCLUDE_TESTS)
