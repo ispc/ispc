@@ -13,6 +13,9 @@
 ; CHECK-PRINT-NEXT:   replace-pseudo-memory-ops
 ; CHECK-PRINT-NEXT:   replace-stdlib-shift
 
+; RUN: not %{ispc-opt} --passes=unknown %s -o - 2>&1 | FileCheck --check-prefix=CHECK-UNKNOWN %s
+; CHECK-UNKNOWN: Error: Unknown pass: unknown
+
 ; RUN: %{ispc-opt} --target=neon-i32x4 --passes=peephole %s -o - | FileCheck --check-prefix=CHECK-PEEPHOLE %s
 
 declare <4 x i16> @llvm.aarch64.neon.uhadd.v4i16(<4 x i16>, <4 x i16>)

@@ -58,19 +58,24 @@ static void lPrintPasses(raw_ostream &OS) {
 #include "opt/ISPCPassRegistry.def"
 }
 
-static void lAddPass(ispc::DebugModulePassManager &PM, const std::string &PassName) {
+static bool lAddPass(ispc::DebugModulePassManager &PM, const std::string &PassName) {
     using namespace ispc;
 #define MODULE_PASS(NAME, CREATE_PASS)                                                                                 \
     if (PassName == NAME) {                                                                                            \
         PM.addModulePass(CREATE_PASS);                                                                                 \
+        return true;                                                                                                   \
     }
 #define FUNCTION_PASS(NAME, CREATE_PASS)                                                                               \
     if (PassName == NAME) {                                                                                            \
         PM.initFunctionPassManager();                                                                                  \
         PM.addFunctionPass(CREATE_PASS);                                                                               \
         PM.commitFunctionToModulePassManager();                                                                        \
+        return true;                                                                                                   \
     }
 #include "opt/ISPCPassRegistry.def"
+
+    ispc::Error(ispc::SourcePos(), "Unknown pass: %s", PassName.c_str());
+    return false;
 }
 
 int main(int argc, char **argv) {
@@ -159,7 +164,9 @@ int main(int argc, char **argv) {
     ispc::DebugModulePassManager PM(*M, 0);
 
     // TODO: support multiple passes separated by comma.
-    lAddPass(PM, Passes);
+    if (!lAddPass(PM, Passes)) {
+        return 1;
+    }
     PM.addModulePass(PrintModulePass(Out.os(), ""));
 
     PM.run();
