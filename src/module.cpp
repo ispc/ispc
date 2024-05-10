@@ -2891,6 +2891,26 @@ static void lSetPreprocessorOptions(const std::shared_ptr<clang::PreprocessorOpt
     opts->addMacroDef("ISPC");
     opts->addMacroDef("PI=3.1415926535");
 
+    // Add definitions of limits for integers and float types.
+    opts->addMacroDef("INT8_MIN=-128");
+    opts->addMacroDef("INT8_MAX=127");
+    opts->addMacroDef("UINT8_MAX=255U");
+    opts->addMacroDef("INT16_MIN=-32768");
+    opts->addMacroDef("INT16_MAX=32767");
+    opts->addMacroDef("UINT16_MAX=65535U");
+    opts->addMacroDef("INT32_MIN=-2147483648L");
+    opts->addMacroDef("INT32_MAX=2147483647L");
+    opts->addMacroDef("UINT32_MAX=4294967295UL");
+    opts->addMacroDef("INT64_MIN=-9223372036854775808LL");
+    opts->addMacroDef("INT64_MAX=9223372036854775807LL");
+    opts->addMacroDef("UINT64_MAX=18446744073709551615ULL");
+    opts->addMacroDef("F16_MIN=6.103515625e-05F16");
+    opts->addMacroDef("F16_MAX=65504.0F16");
+    opts->addMacroDef("FLT_MIN=1.17549435082228750796873653722224568e-38F");
+    opts->addMacroDef("FLT_MAX=3.40282346638528859811704183484516925e+38F");
+    opts->addMacroDef("DBL_MIN=2.22507385850720138309023271733240406e-308D");
+    opts->addMacroDef("DBL_MAX=1.79769313486231570814527423731704357e+308D");
+
     if (g->enableLLVMIntrinsics) {
         opts->addMacroDef("ISPC_LLVM_INTRINSICS_ENABLED");
     }
