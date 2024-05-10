@@ -737,7 +737,7 @@ if (WIN32)
     list(APPEND LINK_LIBRARIES version.lib shlwapi.lib odbc32.lib odbccp32.lib)
 else()
     if (ISPC_STATIC_LINK)
-        list(APPEND LINK_LIBRARIES pthread tinfo.a curses.a)
+        list(APPEND LINK_LIBRARIES tinfo.a curses.a)
     else()
         find_package(Curses REQUIRED)
         if (CURSES_EXTRA_LIBRARY)
@@ -749,8 +749,12 @@ else()
         # but it contains both libform.so and libcurses.so.
         # We need libcurses.so only, so exclude libform.so from the list.
         list(FILTER CURSES_LIBRARIES EXCLUDE REGEX ".*libform.*")
-        list(APPEND LINK_LIBRARIES pthread ${CURSES_LIBRARIES})
+        list(APPEND LINK_LIBRARIES ${CURSES_LIBRARIES})
     endif()
+    # ISPC doesn't use pthreads directly, but LLVM does. Although, it looks
+    # like we do not use LLVM code that depend on pthreads, don't we?
+    find_library(PTHREAD_LIB REQUIRED NAMES pthread)
+    list(APPEND LINK_LIBRARIES ${PTHREAD_LIB})
 endif()
 
 # This function configures compile definitions, options and include dirs.
