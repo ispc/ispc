@@ -32,6 +32,10 @@
 
 typedef uniform int8 *uniform opaque_ptr_t;
 ///////////////////////////////////////////////////////////////////////////
+// Note: we run clang preprocessing on this file to generate the
+// stdlib_maskN_ispc.cpp files. So, these definitions are needed even after
+// ISPC introduces same definitions. We will be able to remove them after we
+// switch to ISPC preprocessor for this file.
 /* Limits of integral types. */
 #ifndef INT8_MAX
 #define INT8_MAX (127)
