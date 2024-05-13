@@ -210,6 +210,14 @@ static void lSetCodeModel(llvm::Module *module) {
     }
 }
 
+/** We need to set the correct value inside "PIC Level" metadata as it can be
+    used by some targets to generate code in the different way. Unlike code
+    model, it is not passed to the TargetMachine, so it is the only place for
+    codegen to access the correct value. */
+static void lSetPicLevel(llvm::Module *module) {
+    module->setPICLevel(g->target->getGeneratePIC() ? llvm::PICLevel::SmallPIC : llvm::PICLevel::NotPIC);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // Module
 
@@ -231,6 +239,7 @@ Module::Module(const char *fn) : filename(fn) {
     // DataLayout information supposed to be managed in single place in Target class.
     module->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
     lSetCodeModel(module);
+    module->setPICLevel(g->target->getGeneratePIC() ? llvm::PICLevel::SmallPIC : llvm::PICLevel::NotPIC);
 
     // Version strings.
     // Have ISPC details and LLVM details as two separate strings attached to !llvm.ident.
@@ -3310,6 +3319,7 @@ static llvm::Module *lInitDispatchModule() {
     AddBitcodeToModule(dispatch, module);
 
     lSetCodeModel(module);
+    module->setPICLevel(g->target->getGeneratePIC() ? llvm::PICLevel::SmallPIC : llvm::PICLevel::NotPIC);
 
     return module;
 }
