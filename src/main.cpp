@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -143,6 +143,8 @@ static void lPrintVersion() {
     printf("        force-aligned-memory\t\tAlways issue \"aligned\" vector load and store instructions\n");
     printf("        reset-ftz-daz\t\t\tReset FTZ/DAZ flags on ISPC extern function entrance / restore on return\n");
     printf("    [--pic]\t\t\t\tGenerate position-independent code.  Ignored for Windows target\n");
+    printf("    [--PIC]\t\t\t\tGenerate position-independent code avoiding any limit on the size of the global offset "
+           "table. Ignored for Windows target\n");
     printf("    [--quiet]\t\t\t\tSuppress all output\n");
     printf("    [--support-matrix]\t\t\tPrint full matrix of supported targets, architectures and OSes\n");
     printf("    ");
@@ -1004,7 +1006,9 @@ int main(int Argc, char *Argv[]) {
                                       value);
             }
         } else if (!strcmp(argv[i], "--pic"))
-            flags.setPIC(true);
+            flags.setPICLevel(PICLevel::SmallPIC);
+        else if (!strcmp(argv[i], "--PIC"))
+            flags.setPICLevel(PICLevel::BigPIC);
 #ifndef ISPC_IS_HOST_WINDOWS
         else if (!strcmp(argv[i], "--colored-output"))
             g->forceColoredOutput = true;
@@ -1113,7 +1117,7 @@ int main(int Argc, char *Argv[]) {
 
     // Default settings for PS4
     if (g->target_os == TargetOS::ps4 || g->target_os == TargetOS::ps5) {
-        flags.setPIC();
+        flags.setPICLevel(PICLevel::BigPIC);
         if (!cpu) {
             if (g->target_os == TargetOS::ps4) {
                 // Default for PS4 is btver2, but do not enforce it.
@@ -1131,7 +1135,7 @@ int main(int Argc, char *Argv[]) {
 
     // Default setting for "custom_linux"
     if (g->target_os == TargetOS::custom_linux) {
-        flags.setPIC();
+        flags.setPICLevel();
         if (!cpu) {
             cpu = "cortex-a57";
         }
@@ -1215,7 +1219,7 @@ int main(int Argc, char *Argv[]) {
     }
 
     if (g->target_os == TargetOS::windows && flags.isPIC()) {
-        Warning(SourcePos(), "--pic switch for Windows target will be ignored.");
+        Warning(SourcePos(), "--pic|--PIC switches for Windows target will be ignored.");
     }
 
     if (g->target_os != TargetOS::windows && g->dllExport) {

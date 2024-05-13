@@ -123,7 +123,8 @@ int main(int argc, char **argv) {
     ispc::ISPCTarget target = ispc::ParseISPCTarget(TargetTarget);
 
     // TODO: here, we rely on arch and cpu autodetection in ispc::Target constructor.
-    ispc::g->target = new ispc::Target(ispc::Arch::none, nullptr, target, false, ispc::MCModel::Default, false);
+    ispc::g->target =
+        new ispc::Target(ispc::Arch::none, nullptr, target, ispc::PICLevel::NotPIC, ispc::MCModel::Default, false);
     if (!ispc::g->target->isValid()) {
         ispc::Error(ispc::SourcePos(), "Unsupported target\n");
         return 1;

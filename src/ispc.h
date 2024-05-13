@@ -166,6 +166,14 @@ enum class MCModel {
     Large,   /** large model */
 };
 
+/** PIC level. It corresponds to llvm::PICLevel. */
+enum class PICLevel {
+    Default,  /** default model - i.e. not specified on the command line */
+    NotPIC,   /** not PIC */
+    SmallPIC, /** small PIC */
+    BigPIC,   /** big PIC */
+};
+
 /** @brief Structure that defines a compilation target
 
     This structure defines a compilation target for the ispc compiler.
@@ -220,7 +228,7 @@ class Target {
     /** Initializes the given Target pointer for a target of the given
         name, if the name is a known target.  Returns true if the
         target was initialized and false if the name is unknown. */
-    Target(Arch arch, const char *cpu, ISPCTarget isa, bool pic, MCModel code_model, bool printTarget);
+    Target(Arch arch, const char *cpu, ISPCTarget isa, PICLevel picLevel, MCModel code_model, bool printTarget);
 
     ~Target();
 
@@ -320,7 +328,7 @@ class Target {
 
     int getVectorWidth() const { return m_vectorWidth; }
 
-    bool getGeneratePIC() const { return m_generatePIC; }
+    PICLevel getPICLevel() const { return m_picLevel; }
 
     MCModel getMCModel() const { return m_codeModel; }
 
@@ -425,7 +433,7 @@ class Target {
     int m_vectorWidth;
 
     /** Indicates whether position independent code should be generated. */
-    bool m_generatePIC;
+    PICLevel m_picLevel;
 
     /** Code model */
     MCModel m_codeModel;
