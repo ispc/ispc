@@ -214,8 +214,24 @@ static void lSetCodeModel(llvm::Module *module) {
     used by some targets to generate code in the different way. Unlike code
     model, it is not passed to the TargetMachine, so it is the only place for
     codegen to access the correct value. */
-static void lSetPicLevel(llvm::Module *module) {
-    module->setPICLevel(g->target->getGeneratePIC() ? llvm::PICLevel::SmallPIC : llvm::PICLevel::NotPIC);
+static void lSetPICLevel(llvm::Module *module) {
+    PICLevel picLevel = g->target->getPICLevel();
+    switch (picLevel) {
+    case ispc::PICLevel::Default:
+        // We're leaving the default. There's a similar case in the LLVM
+        // frontend code where they don't set the level when pic flag is
+        // omitted in the command line.
+        break;
+    case ispc::PICLevel::NotPIC:
+        module->setPICLevel(llvm::PICLevel::NotPIC);
+        break;
+    case ispc::PICLevel::SmallPIC:
+        module->setPICLevel(llvm::PICLevel::SmallPIC);
+        break;
+    case ispc::PICLevel::BigPIC:
+        module->setPICLevel(llvm::PICLevel::BigPIC);
+        break;
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -239,7 +255,7 @@ Module::Module(const char *fn) : filename(fn) {
     // DataLayout information supposed to be managed in single place in Target class.
     module->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
     lSetCodeModel(module);
-    module->setPICLevel(g->target->getGeneratePIC() ? llvm::PICLevel::SmallPIC : llvm::PICLevel::NotPIC);
+    lSetPICLevel(module);
 
     // Version strings.
     // Have ISPC details and LLVM details as two separate strings attached to !llvm.ident.
@@ -3299,7 +3315,7 @@ static llvm::Module *lInitDispatchModule() {
     AddBitcodeToModule(dispatch, module);
 
     lSetCodeModel(module);
-    module->setPICLevel(g->target->getGeneratePIC() ? llvm::PICLevel::SmallPIC : llvm::PICLevel::NotPIC);
+    lSetPICLevel(module);
 
     return module;
 }
@@ -3424,7 +3440,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         if (targets.size() == 1) {
             target = targets[0];
         }
-        g->target = new Target(arch, cpu, target, outputFlags.isPIC(), outputFlags.getMCModel(), g->printTarget);
+        g->target = new Target(arch, cpu, target, outputFlags.getPICLevel(), outputFlags.getMCModel(), g->printTarget);
         if (!g->target->isValid())
             return 1;
 
@@ -3551,7 +3567,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         std::vector<Module *> modules(targets.size());
         for (unsigned int i = 0; i < targets.size(); ++i) {
             g->target =
-                new Target(arch, cpu, targets[i], outputFlags.isPIC(), outputFlags.getMCModel(), g->printTarget);
+                new Target(arch, cpu, targets[i], outputFlags.getPICLevel(), outputFlags.getMCModel(), g->printTarget);
             if (!g->target->isValid())
                 return 1;
 
@@ -3646,7 +3662,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         Assert(strcmp(firstISA, "") != 0);
         Assert(firstTarget != ISPCTarget::none);
 
-        g->target = new Target(arch, cpu, firstTarget, outputFlags.isPIC(), outputFlags.getMCModel(), false);
+        g->target = new Target(arch, cpu, firstTarget, outputFlags.getPICLevel(), outputFlags.getMCModel(), false);
         llvm::TargetMachine *firstTargetMachine = g->target->GetTargetMachine();
         Assert(firstTargetMachine);
         if (!g->target->isValid()) {

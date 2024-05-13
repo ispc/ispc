@@ -674,15 +674,16 @@ class AllCPUs {
     }
 };
 
-Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCModel code_model, bool printTarget)
+Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picLevel, MCModel code_model,
+               bool printTarget)
     : m_target(nullptr), m_targetMachine(nullptr), m_dataLayout(nullptr), m_valid(false), m_ispc_target(ispc_target),
       m_isa(SSE2), m_arch(Arch::none), m_is32Bit(true), m_cpu(""), m_attributes(""), m_tf_attributes(nullptr),
-      m_nativeVectorWidth(-1), m_nativeVectorAlignment(-1), m_dataTypeWidth(-1), m_vectorWidth(-1), m_generatePIC(pic),
-      m_codeModel(code_model), m_maskingIsFree(false), m_maskBitCount(-1), m_hasDotProductVNNI(false),
-      m_hasHalfConverts(false), m_hasHalfFullSupport(false), m_hasRand(false), m_hasGather(false), m_hasScatter(false),
-      m_hasTranscendentals(false), m_hasTrigonometry(false), m_hasRsqrtd(false), m_hasRcpd(false),
-      m_hasVecPrefetch(false), m_hasSaturatingArithmetic(false), m_hasFp16Support(false), m_hasFp64Support(true),
-      m_warnings(0) {
+      m_nativeVectorWidth(-1), m_nativeVectorAlignment(-1), m_dataTypeWidth(-1), m_vectorWidth(-1),
+      m_picLevel(picLevel), m_codeModel(code_model), m_maskingIsFree(false), m_maskBitCount(-1),
+      m_hasDotProductVNNI(false), m_hasHalfConverts(false), m_hasHalfFullSupport(false), m_hasRand(false),
+      m_hasGather(false), m_hasScatter(false), m_hasTranscendentals(false), m_hasTrigonometry(false),
+      m_hasRsqrtd(false), m_hasRcpd(false), m_hasVecPrefetch(false), m_hasSaturatingArithmetic(false),
+      m_hasFp16Support(false), m_hasFp64Support(true), m_warnings(0) {
     DeviceType CPUID = CPU_None, CPUfromISA = CPU_None;
     AllCPUs a;
     std::string featuresString;
@@ -1693,7 +1694,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, bool pic, MCM
         llvm::Optional<llvm::CodeModel::Model> mcModel;
 #endif
 
-        if (m_generatePIC) {
+        if (m_picLevel == PICLevel::SmallPIC || m_picLevel == PICLevel::BigPIC) {
             relocModel = llvm::Reloc::PIC_;
         }
         switch (m_codeModel) {

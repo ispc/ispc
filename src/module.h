@@ -135,13 +135,14 @@ class Module {
     class OutputFlags {
       public:
         OutputFlags()
-            : pic(false), flatDeps(false), makeRuleDeps(false), depsToStdout(false), mcModel(MCModel::Default) {}
+            : picLevel(PICLevel::Default), flatDeps(false), makeRuleDeps(false), depsToStdout(false),
+              mcModel(MCModel::Default) {}
         OutputFlags(OutputFlags &o)
-            : pic(o.pic), flatDeps(o.flatDeps), makeRuleDeps(o.makeRuleDeps), depsToStdout(o.depsToStdout),
+            : picLevel(o.picLevel), flatDeps(o.flatDeps), makeRuleDeps(o.makeRuleDeps), depsToStdout(o.depsToStdout),
               mcModel(o.mcModel) {}
 
         OutputFlags &operator=(const OutputFlags &o) {
-            pic = o.pic;
+            picLevel = o.picLevel;
             flatDeps = o.flatDeps;
             makeRuleDeps = o.makeRuleDeps;
             depsToStdout = o.depsToStdout;
@@ -149,8 +150,9 @@ class Module {
             return *this;
         };
 
-        void setPIC(bool v = true) { pic = v; }
-        bool isPIC() const { return pic; }
+        void setPICLevel(PICLevel v = PICLevel::Default) { picLevel = v; }
+        PICLevel getPICLevel() const { return picLevel; }
+        bool isPIC() const { return picLevel != PICLevel::Default; }
         void setFlatDeps(bool v = true) { flatDeps = v; }
         bool isFlatDeps() const { return flatDeps; }
         void setMakeRuleDeps(bool v = true) { makeRuleDeps = v; }
@@ -161,8 +163,8 @@ class Module {
         MCModel getMCModel() const { return mcModel; }
 
       private:
-        // --pic
-        bool pic;
+        // --pic --PIC
+        PICLevel picLevel;
         // -MMM
         bool flatDeps;
         // -M
