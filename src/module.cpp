@@ -296,8 +296,7 @@ Module::Module(const char *fn) : filename(fn) {
             delete diBuilder;
             diBuilder = nullptr;
         } else {
-            std::string directory, name;
-            GetDirectoryAndFileName(g->currentDirectory, filename, &directory, &name);
+            auto [directory, name] = GetDirectoryAndFileName(g->currentDirectory, filename);
             auto srcFile = diBuilder->createFile(name, directory);
             // Use DW_LANG_C_plus_plus to avoid problems with debigging on Xe.
             // The debugger reads symbols partially when a solib file is loaded.
