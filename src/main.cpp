@@ -1100,6 +1100,20 @@ int main(int Argc, char *Argv[]) {
         exit(1);
     }
 
+    if (strncmp(file, "-", 2)) {
+        // If the input is not stdin then check that the file exists and it is
+        // not a directory.
+        if (!llvm::sys::fs::exists(file)) {
+            Error(SourcePos(), "File \"%s\" does not exist.", file);
+            exit(1);
+        }
+
+        if (llvm::sys::fs::is_directory(file)) {
+            Error(SourcePos(), "File \"%s\" is a directory.", file);
+            exit(1);
+        }
+    }
+
     // If [no]discard-value-names is explicitly specified, then use this value.
     // Otherwise enable it only if the output is some form of bitcode.
     // Note that discarding value names significantly saves compile time and memory consumption.
