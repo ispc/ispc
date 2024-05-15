@@ -2437,8 +2437,7 @@ SourcePos::SourcePos(const char *n, int fl, int fc, int ll, int lc) {
 llvm::DIFile *
 // llvm::MDFile*
 SourcePos::GetDIFile() const {
-    std::string directory, filename;
-    GetDirectoryAndFileName(g->currentDirectory, name, &directory, &filename);
+    auto [directory, filename] = GetDirectoryAndFileName(g->currentDirectory, name);
     llvm::DIFile *ret = m->diBuilder->createFile(filename, directory);
     return ret;
 }

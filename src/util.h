@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -147,8 +147,8 @@ std::vector<std::string> MatchStrings(const std::string &str, const std::vector<
 /** Given the current working directory and a filename relative to that
     directory, this function returns the final directory that the resulting
     file is in and the base name of the file itself. */
-void GetDirectoryAndFileName(const std::string &currentDir, const std::string &relativeName, std::string *directory,
-                             std::string *filename);
+std::pair<std::string, std::string> GetDirectoryAndFileName(const std::string &currentDir,
+                                                            const std::string &relativeName);
 
 /** Verification routine, which ensures that DataLayout of the module being
     compiled is compatible with DataLayout of the library. At the moment we
