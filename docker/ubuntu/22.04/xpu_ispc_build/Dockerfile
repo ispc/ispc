@@ -9,9 +9,9 @@ SHELL ["/bin/bash", "-c"]
 
 ARG REPO=ispc/ispc
 ARG SHA=main
-ARG IGC_VER=15610.11
-ARG CR_VER=23.48.27912.11
-ARG CR_VER_SUFFIX=27912.11
+ARG IGC_VER=15985.7
+ARG CR_VER=24.05.28454.6
+ARG CR_VER_SUFFIX=28454.6
 ARG LTO
 
 # !!! Make sure that your docker config provides enough memory to the container,
