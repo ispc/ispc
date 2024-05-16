@@ -796,8 +796,11 @@ silenced with the ``--wno-perf`` flag (or by using ``--woff``, which turns
 off all compiler warnings.)  Furthermore, ``--werror`` can be provided to
 direct the compiler to treat any warnings as errors.
 
-Position-independent code (for use in shared libraries) is generated if the
-``--pic`` command-line argument is provided.
+The ``--pic`` flag can be used to generate position-independent code suitable
+for use in a shared library. The ``--PIC`` flag can be used to generate
+position-independent code suitable for dynamic linking avoiding any limit on
+the size of the global offset table. When no ``--pic`` or ``--PIC`` flag is
+provided, the compiler enforces target-specific default behavior.
 
 Selecting The Compilation Target
 --------------------------------
