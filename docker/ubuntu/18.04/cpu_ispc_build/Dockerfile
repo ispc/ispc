@@ -127,6 +127,7 @@ RUN cmake ispc/superbuild \
         -DCMAKE_INSTALL_PREFIX=/usr/local/src/ispc/bin-"$LLVM_VERSION" && \
     cmake --build build && \
     cmake --build build --target ispc-stage2-check-all && \
+    mv build/build-ispc-stage2/src/ispc-stage2-build/*.tar.gz ./ && \
     rm -rf build
 
 #export path for ispc
