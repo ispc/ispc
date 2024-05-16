@@ -1026,6 +1026,21 @@ preprocessor runs:
   * - ISPC_LLVM_INTRINSICS_ENABLED
     - 1
     - The macro is defined if LLVM intrinsics support is enabled
+  * - INT8_MIN, INT16_MIN, INT32_MIN, INT64_MIN
+    -
+    - Minimum value of signed integer types of the corresponding size
+  * - INT8_MAX, INT16_MAX, INT32_MAX, INT64_MAX
+    -
+    - Maximum value of signed integer types of the corresponding size
+  * - UINT8_MAX, UINT16_MAX, UINT32_MAX, UINT64_MAX
+    -
+    - Maximum value of unsigned integer types of the corresponding size
+  * - FLT16_MIN, FLT_MIN, DBL_MIN
+    -
+    - Smallest positive normal number of the corresponding floating-point type
+  * - FLT16_MAX, FLT_MAX, DBL_MAX
+    -
+    - Largest normal number of the corresponding floating-point type
 
 ``ispc`` supports the following ``#pragma`` directives.
 
