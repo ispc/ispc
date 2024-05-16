@@ -71,6 +71,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.21.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.22.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.23.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.24.0`_
 
 * `Getting Started with ISPC`_
 
@@ -594,6 +595,36 @@ A couple of improvements have been made to variables initialization:
 
 The result of selection operator can now be used as lvalue if it has suitable
 type.
+
+Updating ISPC Programs For Changes In ISPC 1.24.0
+-------------------------------------------------
+
+This release extends the standard library with new functions performing dot
+product operations. These functions utilize specific hardware instructions from
+AVX-VNNI and AVX512-VNNI. The ISPC targets that support native VNNI
+instructions are ``avx2vnni-i32x*``, ``avx512icl-*`` and ``avx512spr-*``. The
+first two targets (``avx2vnni-*`` and ``avx512icl-*``) were introduced in this
+release. Please refer to `Dot product`_ for more details.
+
+Now, uniform integers and enums can be used as non-type template parameters.
+Please refer to `Function Templates`_ for more details.
+
+The release contains the following changes that may affect compatibility with
+older versions:
+
+* ``--pic`` command line flag now corresponds to the ``-fpic`` flag of Clang
+  and GCC, whereas the newly introduced ``--PIC`` corresponds to ``-fPIC``.
+  The previous behavior of ``--pic`` flag corresponded to ``-fPIC`` flag. In
+  some cases, to preserve previous behavior, users may need to switch to
+  ``--PIC``.
+* Newly introduced macro definitions for numeric limits can cause conflicts
+  with user-defined macros with same names. When this happens, ISPC emits
+  warnings about macro redefinition. Please, refer to `The Preprocessor`_ for
+  the full list of macro definitions.
+* The implementation of ``round`` standard library function was aligned across
+  all targets. It may potentially affect the results of the code that uses this
+  function for the following targets: ``avx2-i16x16``, ``avx2-i8x32`` and all
+  ``avx512`` targets. Please, refer to `Basic Math Functions`_ for more details.
 
 Getting Started with ISPC
 =========================
