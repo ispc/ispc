@@ -1,3 +1,81 @@
+=== v1.24.0 === (16 May 2024)
+
+ISPC release with dot product functions, non-type template parameters, and
+generated code improvements. This release is based on patched LLVM 17.0.6.
+
+Language changes:
+
+ - Added support for non-type template parameters. Uniform integers and enums
+   can be used now as template parameters.
+ - Added dot product functions for unsigned and signed `int8` and `int16`
+   types. They leverage AVX-VNNI and AVX512-VNNI instructions if supported by
+   targets.
+ - Added macro definitions for numeric limits.
+
+New targets:
+
+ - Added targets:
+
+   1. `avx2vnni-i32x4`, `avx2vnni-i32x8`, `avx2vnni-i32x16` with AVX-VNNI
+   instruction support,
+   2.  `avx512icl-x4`, `avx512icl-x8`, `avx512icl-x16`, `avx512icl-x32` and
+   `avx512icl-x64` with AVX512-VNNI instruction support.
+
+Code generation:
+
+ - Fixed generation of code for GPU when unnecessary vectorized instruction are
+   used during address arithmetic, e.g., for accessing fields of varying
+   structures.
+ - Improved generated code for cases when `foreach` loop iteration domain is
+   less than the target width.
+
+Compiler switches behavior:
+
+ - `--pic` command line flag now corresponds to the `-fpic` flag of Clang
+   and GCC, whereas the newly introduced `--PIC` corresponds to `-fPIC`.
+
+Bug fixes:
+
+ - The implementation of `round` standard library function was aligned across
+   all targets. It may potentially affect the results of the code that uses
+   this function for the following targets: `avx2-i16x16`, `avx2-i8x32` and
+   all `avx512` targets.
+ - Fixed cases when unwind info were not generated for functions. This impacted
+   debugging and profiling on Windows.
+ - Fixed broken targets `sse4-i8xN` and `avx2-i8xN`.
+
+Recommended versions of Runtime Dependencies when targeting GPU:
+
+Linux:
+
+ - Intel(R) Graphics Compute Runtime
+   https://github.com/intel/compute-runtime/releases/tag/24.05.28454.6
+ - Level Zero Loader
+   https://github.com/oneapi-src/level-zero/releases/tag/v1.16.9
+ - Threading Building Blocks (TBB)
+
+Alternatively, you can use a validated gfx driver stack supporting Intel® Arc™
+available at https://dgpu-docs.intel.com/driver/installation.html
+
+Windows:
+
+ - Intel(R) Graphics Windows(R) DCH Drivers 31.0.101.5518
+   https://www.intel.com/content/www/us/en/download/785597/intel-arc-iris-xe-graphics-windows.html
+ - Level Zero Loader
+   https://github.com/oneapi-src/level-zero/releases/tag/v1.16.9
+ - OpenCL™ Offline Compiler (OCLOC)
+   https://www.intel.com/content/www/us/en/developer/articles/tool/oneapi-standalone-components.html
+   (this is needed for AoT compilation on Windows only)
+ - Supported GPU platforms: Intel(R) Arc Graphics, 11th-13th Gen Intel(R) Core
+   processor graphics
+
+Components revisions used in GPU-enabled build:
+ - https://github.com/KhronosGroup/SPIRV-LLVM-Translator/commit/89ab5df3
+ - https://github.com/intel/vc-intrinsics/commit/f9c34404
+ - https://github.com/oneapi-src/level-zero/commit/61c97c87 (v1.16.9)
+ - https://github.com/llvm/llvm-project/commit/6009708(llvmorg-17.0.6) +
+   patches from llvm_patches folder
+
 === v1.23.0 === (14 February 2024)
 
 ISPC release with bug fixes and a few language improvements. The release is based on patched LLVM 16.0.6.
