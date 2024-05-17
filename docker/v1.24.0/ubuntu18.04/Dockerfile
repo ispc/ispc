@@ -10,7 +10,7 @@ LABEL maintainer="Dmitry Babokin <dmitry.y.babokin@intel.com>"
 SHELL ["/bin/bash", "-c"]
 
 ARG REPO=ispc/ispc
-ARG SHA=main
+ARG SHA=v1.24.0
 ARG LTO=OFF
 ARG PGO=OFF
 ARG LLVM_VERSION
