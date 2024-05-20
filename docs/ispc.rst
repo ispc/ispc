@@ -4448,26 +4448,30 @@ necessitating proper packing of input vectors by the programmer before use.
 
 For 8-bit Integer Vectors:
 
-The functions multiply groups of four unsigned 8-bit integers packed in `a`` with corresponding
-four signed 8-bit integers packed in `b`, resulting in four intermediate signed 16-bit values.
-The sum of these values, in combination with the `acc`` accumulator, is then returned as the final result.
+The functions multiply groups of four unsigned 8-bit integers packed in ``a`` with corresponding
+four signed 8-bit integers packed in ``b``, resulting in four intermediate signed 16-bit values.
+The sum of these values, in combination with the ``acc`` accumulator, is then returned as the final result.
 
 ::
 
-    varying int32 dot4add_u8i8packed(varying uint32 a, varying uint32 b, varying int32 acc)
-    varying int32 dot4add_u8i8packed_sat(varying uint32 a, varying uint32 b, varying int32 acc) // saturate the result
+    varying int32 dot4add_u8i8packed(varying uint32 a, varying uint32 b,
+                                     varying int32 acc)
+    varying int32 dot4add_u8i8packed_sat(varying uint32 a, varying uint32 b,
+                                         varying int32 acc) // saturate the result
 
 
 For 16-bit Integer Vectors:
 
-The functions multiply groups of two signed 16-bit integers packed in `a`` with corresponding
-two signed 16-bit integers packed in `b`, yielding two intermediate signed 32-bit results.
-The sum of these results, combined with the `acc`` accumulator, is then returned as the final result.
+The functions multiply groups of two signed 16-bit integers packed in ``a`` with corresponding
+two signed 16-bit integers packed in ``b``, yielding two intermediate signed 32-bit results.
+The sum of these results, combined with the ``acc`` accumulator, is then returned as the final result.
 
 ::
 
-    varying int32 dot2add_i16packed(varying uint32 a, varying uint32 b, varying int32 acc)
-    varying int32 dot2add_i16packed_sat(varying uint32 a, varying uint32 b, varying int32 acc) // saturate the result
+    varying int32 dot2add_i16packed(varying uint32 a, varying uint32 b,
+                                    varying int32 acc)
+    varying int32 dot2add_i16packed_sat(varying uint32 a, varying uint32 b,
+                                        varying int32 acc) // saturate the result
 
 
 Pseudo-Random Numbers
