@@ -85,10 +85,11 @@ static bool lSimplifySelect(llvm::SelectInst *selectInst, llvm::BasicBlock::iter
 
 static bool lSimplifyCall(llvm::CallInst *callInst, llvm::BasicBlock::iterator iter) {
     llvm::Function *calledFunc = callInst->getCalledFunction();
+    llvm::Module *M = callInst->getModule();
 
     // Turn a __movmsk call with a compile-time constant vector into the
     // equivalent scalar value.
-    if (calledFunc == nullptr || calledFunc != m->module->getFunction(builtin::__movmsk))
+    if (calledFunc == nullptr || calledFunc != M->getFunction(builtin::__movmsk))
         return false;
 
     uint64_t mask;

@@ -71,6 +71,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.21.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.22.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.23.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.24.0`_
 
 * `Getting Started with ISPC`_
 
@@ -174,8 +175,11 @@ Contents:
 
     * `Basic Math Functions`_
     * `Transcendental Functions`_
+    * `Saturating Arithmetic`_
+    * `Dot product`_
     * `Pseudo-Random Numbers`_
     * `Random Numbers`_
+
 
   + `Output Functions`_
   + `Assertions`_
@@ -592,6 +596,36 @@ A couple of improvements have been made to variables initialization:
 The result of selection operator can now be used as lvalue if it has suitable
 type.
 
+Updating ISPC Programs For Changes In ISPC 1.24.0
+-------------------------------------------------
+
+This release extends the standard library with new functions performing dot
+product operations. These functions utilize specific hardware instructions from
+AVX-VNNI and AVX512-VNNI. The ISPC targets that support native VNNI
+instructions are ``avx2vnni-i32x*``, ``avx512icl-*`` and ``avx512spr-*``. The
+first two targets (``avx2vnni-*`` and ``avx512icl-*``) were introduced in this
+release. Please refer to `Dot product`_ for more details.
+
+Now, uniform integers and enums can be used as non-type template parameters.
+Please refer to `Function Templates`_ for more details.
+
+The release contains the following changes that may affect compatibility with
+older versions:
+
+* ``--pic`` command line flag now corresponds to the ``-fpic`` flag of Clang
+  and GCC, whereas the newly introduced ``--PIC`` corresponds to ``-fPIC``.
+  The previous behavior of ``--pic`` flag corresponded to ``-fPIC`` flag. In
+  some cases, to preserve previous behavior, users may need to switch to
+  ``--PIC``.
+* Newly introduced macro definitions for numeric limits can cause conflicts
+  with user-defined macros with same names. When this happens, ISPC emits
+  warnings about macro redefinition. Please, refer to `The Preprocessor`_ for
+  the full list of macro definitions.
+* The implementation of ``round`` standard library function was aligned across
+  all targets. It may potentially affect the results of the code that uses this
+  function for the following targets: ``avx2-i16x16``, ``avx2-i8x32`` and all
+  ``avx512`` targets. Please, refer to `Basic Math Functions`_ for more details.
+
 Getting Started with ISPC
 =========================
 
@@ -793,8 +827,11 @@ silenced with the ``--wno-perf`` flag (or by using ``--woff``, which turns
 off all compiler warnings.)  Furthermore, ``--werror`` can be provided to
 direct the compiler to treat any warnings as errors.
 
-Position-independent code (for use in shared libraries) is generated if the
-``--pic`` command-line argument is provided.
+The ``--pic`` flag can be used to generate position-independent code suitable
+for use in a shared library. The ``--PIC`` flag can be used to generate
+position-independent code suitable for dynamic linking avoiding any limit on
+the size of the global offset table. When no ``--pic`` or ``--PIC`` flag is
+provided, the compiler enforces target-specific default behavior.
 
 Selecting The Compilation Target
 --------------------------------
@@ -915,8 +952,10 @@ x86 targets:
 ``sse4.1-i32x8``, ``sse4.2-i8x16``, ``sse4.2-i16x8``, ``sse4.2-i32x4``, ``sse4.2-i32x8``,
 ``avx1-i32x4``, ``avx1-i32x8``, ``avx1-i32x16``, ``avx1-i64x4``, ``avx2-i8x32``,
 ``avx2-i16x16``, ``avx2-i32x4``, ``avx2-i32x8``, ``avx2-i32x16``, ``avx2-i64x4``,
+``avx2vnni-i32x4``, ``avx2vnni-i32x8``, ``avx2vnni-i32x16``,
 ``avx512knl-x16``, ``avx512skx-x4``, ``avx512skx-x8``, ``avx512skx-x16``, ``avx512skx-x32``,
-``avx512skx-x64``, ``avx512spr-x4``, ``avx512spr-x8``, ``avx512spr-x16``, ``avx512spr-x32``,
+``avx512skx-x64``, ``avx512icl-x4``, ``avx512icl-x8``, ``avx512icl-x16``, ``avx512icl-x32``,
+``avx512icl-x64``, ``avx512spr-x4``, ``avx512spr-x8``, ``avx512spr-x16``, ``avx512spr-x32``,
 ``avx512spr-x64``.
 
 Neon targets:
@@ -1018,6 +1057,21 @@ preprocessor runs:
   * - ISPC_LLVM_INTRINSICS_ENABLED
     - 1
     - The macro is defined if LLVM intrinsics support is enabled
+  * - INT8_MIN, INT16_MIN, INT32_MIN, INT64_MIN
+    -
+    - Minimum value of signed integer types of the corresponding size
+  * - INT8_MAX, INT16_MAX, INT32_MAX, INT64_MAX
+    -
+    - Maximum value of signed integer types of the corresponding size
+  * - UINT8_MAX, UINT16_MAX, UINT32_MAX, UINT64_MAX
+    -
+    - Maximum value of unsigned integer types of the corresponding size
+  * - FLT16_MIN, FLT_MIN, DBL_MIN
+    -
+    - Smallest positive normal number of the corresponding floating-point type
+  * - FLT16_MAX, FLT_MAX, DBL_MAX
+    -
+    - Largest normal number of the corresponding floating-point type
 
 ``ispc`` supports the following ``#pragma`` directives.
 
@@ -3809,10 +3863,10 @@ What is currently supported:
   ``template int add<int>(int a, int b);``).
 * Explicit template function specializations (i.e.
   ``template<> int add<int>(int a, int b) { return a - b;}``).
+* Non-type template parametrs (integral and enumeration types).
 
 What is currently not supported, but is planned to be supported:
 
-* Non-type template parameters.
 * Default values for template parameters.
 * Template arguments deduction in template function specializations.
 
@@ -3906,6 +3960,35 @@ template function specializations is not yet supported. Consider the following e
     template <> int goo<int>(int a1, int a2) {
       return a1 * a2;
     }
+
+For non-type template parameters, the following rules apply:
+
+* Uniform integral types and enum types can be used as non-type template parameters. Unbound types are treated as uniform.
+  For example:
+
+  ::
+
+      template <int N> int foo(int a) { // N is uniform int
+        return a * N;
+      }
+
+      int bar() {
+        return foo<2>(3); // returns 6
+      }
+
+      enum AB { A = 1, B = 2 };
+      template <AB ab> int baz(int a) {
+        return a * ab;
+      }
+
+      int qux() {
+        return baz<B>(3); // returns 6
+      }
+
+* Varying types are not allowed.
+* Integral constants, enumeration constants and template parameters (in the context of the nested templates)
+  can be used as non-type template arguments. Constant expressions are not allowed.
+* Partial specialization of function templates with non-type template parameters is not allowed.
 
 
 You can use limited number of function specifiers with function templates:
@@ -4351,6 +4434,44 @@ division of all integer types are provided by the ``ispc`` standard library.
 In addition to the ``int8`` variants of saturating arithmetic functions listed
 above, there are versions that supports ``int16``, ``int32`` and ``int64``
 values as well.
+
+
+Dot product
+-----------
+
+ISPC supports dot product operations for unsigned and signed ``int8`` and ``int16`` data types,
+leveraging the AVX-VNNI and AVX512-VNNI instruction sets. The ISPC targets that support
+native VNNI instruction sets are ``avx2vnni-i32x*``, ``avx512icl-i32x*``, and ``avx512spr-i32x*``.
+For other targets these operations are emulated.
+These dot product operations are specifically designed to operate on *packed* input vectors,
+necessitating proper packing of input vectors by the programmer before use.
+
+For 8-bit Integer Vectors:
+
+The functions multiply groups of four unsigned 8-bit integers packed in ``a`` with corresponding
+four signed 8-bit integers packed in ``b``, resulting in four intermediate signed 16-bit values.
+The sum of these values, in combination with the ``acc`` accumulator, is then returned as the final result.
+
+::
+
+    varying int32 dot4add_u8i8packed(varying uint32 a, varying uint32 b,
+                                     varying int32 acc)
+    varying int32 dot4add_u8i8packed_sat(varying uint32 a, varying uint32 b,
+                                         varying int32 acc) // saturate the result
+
+
+For 16-bit Integer Vectors:
+
+The functions multiply groups of two signed 16-bit integers packed in ``a`` with corresponding
+two signed 16-bit integers packed in ``b``, yielding two intermediate signed 32-bit results.
+The sum of these results, combined with the ``acc`` accumulator, is then returned as the final result.
+
+::
+
+    varying int32 dot2add_i16packed(varying uint32 a, varying uint32 b,
+                                    varying int32 acc)
+    varying int32 dot2add_i16packed_sat(varying uint32 a, varying uint32 b,
+                                        varying int32 acc) // saturate the result
 
 
 Pseudo-Random Numbers

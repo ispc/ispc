@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -19,11 +19,8 @@ namespace ispc {
     2. prefetch support by target and fixing prefetch args
  */
 
-class CheckIRForXeTarget : public llvm::PassInfoMixin<CheckIRForXeTarget> {
-  public:
-    explicit CheckIRForXeTarget() {}
+struct CheckIRForXeTarget : public llvm::PassInfoMixin<CheckIRForXeTarget> {
 
-    static llvm::StringRef getPassName() { return "Check and fix IR for Xe target"; }
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:

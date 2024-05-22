@@ -38,7 +38,7 @@ jobs:
     - name: Build ISPC with ASAN
       run: |
           cmake -B build -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_FLAGS="-fsanitize=address -O0 -g3" -DCMAKE_CXX_FLAGS="-fsanitize=address -O0 -g3"
-          cmake --build build --target ispc -j4
+          cmake --build build --target ispc ispc-opt -j4
 
     # Address sanitizer includes leak sanitizer but we don't want it to report
     # all leaks at the moment because there are quite a lot if them.

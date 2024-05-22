@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -29,11 +29,8 @@ namespace ispc {
 //  in this case, we're often able to generate wide vector loads and
 //  appropriate shuffles automatically.
 
-class GatherCoalescePass : public llvm::PassInfoMixin<GatherCoalescePass> {
-  public:
-    explicit GatherCoalescePass() {}
+struct GatherCoalescePass : public llvm::PassInfoMixin<GatherCoalescePass> {
 
-    static llvm::StringRef getPassName() { return "Gather Coalescing"; }
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:

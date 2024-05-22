@@ -1636,3 +1636,7 @@ xe_idiv_decl(i32, int32, sdiv)
 xe_idiv_decl(i8, uint8, udiv)
 xe_idiv_decl(i16, uint16, udiv)
 xe_idiv_decl(i32, uint32, udiv)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; dot product
+dot_product_vnni_decl()

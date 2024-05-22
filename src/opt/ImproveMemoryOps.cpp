@@ -569,9 +569,13 @@ static bool lOffsets32BitSafe(llvm::Value **variableOffsetPtr, llvm::Value **con
 
     if (variableOffset->getType() != LLVMTypes::Int32VectorType) {
         llvm::SExtInst *sext = llvm::dyn_cast<llvm::SExtInst>(variableOffset);
+        llvm::ZExtInst *zext = llvm::dyn_cast<llvm::ZExtInst>(variableOffset);
         if (sext != nullptr && sext->getOperand(0)->getType() == LLVMTypes::Int32VectorType)
             // sext of a 32-bit vector -> the 32-bit vector is good
             variableOffset = sext->getOperand(0);
+        else if (zext != nullptr && zext->getOperand(0)->getType() == LLVMTypes::Int32VectorType)
+            // zext of a 32-bit vector -> the 32-bit vector is good
+            variableOffset = zext->getOperand(0);
         else if (lVectorIs32BitInts(variableOffset))
             // The only constant vector we should have here is a vector of
             // all zeros (i.e. a ConstantAggregateZero, but just in case,
@@ -654,7 +658,7 @@ static bool lOffsets32BitSafe(llvm::Value **offsetPtr, llvm::Instruction *insert
 }
 
 // Contains a function call substitution info for gather/scatter/prefetch calls.
-// We construct this class objects in program constructors phase, i.e., before initialization of m->module, g->target
+// We construct this class objects in program constructors phase, i.e., before initialization of g->target
 // and any of LLVMTypes values. Moreover, g->target values are not same during multi-target compilation. Because of
 // that, we postpone evaluation of types, choosing the proper function before actual call replacement here and in
 // similar types across this file.
@@ -680,13 +684,13 @@ struct GSInfo {
     bool isGather() const { return type == GSInfo::Type::Gather; }
     bool isScatter() const { return type == GSInfo::Type::Scatter; }
     bool isPrefetch() const { return type == GSInfo::Type::Prefetch; }
-    llvm::Function *baseOffsets64Func() const {
+    llvm::Function *baseOffsets64Func(llvm::Module *M) const {
         const char *name = chooseBaseOrFactoredFunc() ? pgbo64 : pgfbo64;
-        return m->module->getFunction(name);
+        return M->getFunction(name);
     }
-    llvm::Function *baseOffsets32Func() const {
+    llvm::Function *baseOffsets32Func(llvm::Module *M) const {
         const char *name = chooseBaseOrFactoredFunc() ? pgbo32 : pgfbo32;
-        return m->module->getFunction(name);
+        return M->getFunction(name);
     }
 
   private:
@@ -823,7 +827,8 @@ static llvm::CallInst *lGSToGSBaseOffsets(llvm::CallInst *callInst) {
     basePtr = new llvm::IntToPtrInst(basePtr, LLVMTypes::VoidPointerType, llvm::Twine(basePtr->getName()) + "_2void",
                                      callInst);
     LLVMCopyMetadata(basePtr, callInst);
-    llvm::Function *gatherScatterFunc = info->baseOffsets64Func();
+    llvm::Module *M = callInst->getModule();
+    llvm::Function *gatherScatterFunc = info->baseOffsets64Func(M);
     llvm::CallInst *newCall = nullptr;
 
     if ((info->isGather() && g->target->useGather()) || (info->isScatter() && g->target->useScatter()) ||
@@ -838,7 +843,7 @@ static llvm::CallInst *lGSToGSBaseOffsets(llvm::CallInst *callInst) {
         // will see if we can call one of the 32-bit variants of the pseudo
         // gather/scatter functions.
         if (g->opt.force32BitAddressing && lOffsets32BitSafe(&offsetVector, callInst)) {
-            gatherScatterFunc = info->baseOffsets32Func();
+            gatherScatterFunc = info->baseOffsets32Func(M);
         }
 
         if (info->isGather() || info->isPrefetch()) {
@@ -889,7 +894,7 @@ static llvm::CallInst *lGSToGSBaseOffsets(llvm::CallInst *callInst) {
         // will see if we can call one of the 32-bit variants of the pseudo
         // gather/scatter functions.
         if (g->opt.force32BitAddressing && lOffsets32BitSafe(&variableOffset, &constOffset, callInst)) {
-            gatherScatterFunc = info->baseOffsets32Func();
+            gatherScatterFunc = info->baseOffsets32Func(M);
         }
 
         if (info->isGather() || info->isPrefetch()) {
@@ -1097,8 +1102,8 @@ struct GatherImpInfo {
     GatherImpInfo(const char *lmName, const char *bmName, llvm::Type **st, Alignment a)
         : load(lmName), blend(bmName), sType(st), alignment(a) {}
     bool isFactored() const { return !g->target->useGather(); }
-    llvm::Function *loadMaskedFunc() const { return m->module->getFunction(load); }
-    llvm::Function *blendMaskedFunc() const { return m->module->getFunction(blend); }
+    llvm::Function *loadMaskedFunc(llvm::Module *M) const { return M->getFunction(load); }
+    llvm::Function *blendMaskedFunc(llvm::Module *M) const { return M->getFunction(blend); }
     llvm::Type *scalarType() const { return *sType; }
     llvm::Type *baseType() const {
         // Pseudo gather base pointer element type (the 1st argument of the intrinsic) is int8
@@ -1117,7 +1122,7 @@ struct GatherImpInfo {
 struct ScatterImpInfo {
     ScatterImpInfo(const char *msName, llvm::Type **vpt, Alignment a) : store(msName), vpType(vpt), alignment(a) {}
     bool isFactored() const { return !g->target->useScatter(); }
-    llvm::Function *maskedStoreFunc() const { return m->module->getFunction(store); }
+    llvm::Function *maskedStoreFunc(llvm::Module *M) const { return M->getFunction(store); }
     llvm::Type *vecPtrType() const { return *vpType; }
     llvm::Type *baseType() const {
         // Pseudo scatter base pointer element type (the 1st argument of the intrinsic) is int8
@@ -1359,6 +1364,7 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
             // and 64 bit gather/scatters, respectively.
             llvm::Value *ptr;
             llvm::Instruction *newCall = nullptr;
+            llvm::Module *M = callInst->getModule();
 
             if (gatherInfo != nullptr) {
                 ptr = lComputeCommonPointer(base, gatherInfo->baseType(), fullOffsets, callInst);
@@ -1368,13 +1374,13 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
 #ifdef ISPC_XE_ENABLED
                 doBlendLoad = g->target->isXeTarget() && g->opt.enableXeUnsafeMaskedLoad;
 #endif
-                newCall = LLVMCallInst(doBlendLoad ? gatherInfo->blendMaskedFunc() : gatherInfo->loadMaskedFunc(), ptr,
-                                       mask, llvm::Twine(ptr->getName()) + "_masked_load");
+                newCall = LLVMCallInst(doBlendLoad ? gatherInfo->blendMaskedFunc(M) : gatherInfo->loadMaskedFunc(M),
+                                       ptr, mask, llvm::Twine(ptr->getName()) + "_masked_load");
             } else {
                 Debug(pos, "Transformed scatter to unaligned vector store!");
                 ptr = lComputeCommonPointer(base, scatterInfo->baseType(), fullOffsets, callInst);
                 ptr = new llvm::BitCastInst(ptr, scatterInfo->vecPtrType(), "ptrcast", callInst);
-                newCall = LLVMCallInst(scatterInfo->maskedStoreFunc(), ptr, storeValue, mask, "");
+                newCall = LLVMCallInst(scatterInfo->maskedStoreFunc(M), ptr, storeValue, mask, "");
             }
             LLVMCopyMetadata(newCall, callInst);
             llvm::ReplaceInstWithInst(callInst, newCall);

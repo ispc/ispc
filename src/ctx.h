@@ -129,11 +129,6 @@ class FunctionEmitContext {
         lanes of current mask are on and bfalse if none are on. */
     void BranchIfMaskAll(llvm::BasicBlock *btrue, llvm::BasicBlock *bfalse);
 
-    /** Emits a branch instruction to the basic block btrue if none of the
-        lanes of current mask are on and bfalse if none are on. */
-    void BranchIfMaskNone(llvm::BasicBlock *btrue, llvm::BasicBlock *bfalse);
-    /** @} */
-
     /** @name Control flow management
         @{
     */

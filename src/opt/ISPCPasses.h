@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -19,7 +19,9 @@
 #include "MakeInternalFuncsStatic.h"
 #include "MangleOpenCLBuiltins.h"
 #include "PeepholePass.h"
+#include "ReplaceMaskedMemOps.h"
 #include "ReplacePseudoMemoryOps.h"
 #include "ReplaceStdlibShiftPass.h"
+#include "ScalarizePass.h"
 #include "XeGatherCoalescePass.h"
 #include "XeReplaceLLVMIntrinsics.h"

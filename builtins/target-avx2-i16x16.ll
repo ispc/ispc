@@ -857,3 +857,7 @@ transcendetals_decl()
 trigonometry_decl()
 
 saturation_arithmetic_novec()
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; dot product
+dot_product_vnni_decl()

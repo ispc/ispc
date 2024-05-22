@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -16,11 +16,8 @@ namespace ispc {
 /** This pass mangles SPIR-V OpenCL builtins used in Xe target file
  */
 
-class MangleOpenCLBuiltins : public llvm::PassInfoMixin<MangleOpenCLBuiltins> {
-  public:
-    explicit MangleOpenCLBuiltins() {}
+struct MangleOpenCLBuiltins : public llvm::PassInfoMixin<MangleOpenCLBuiltins> {
 
-    static llvm::StringRef getPassName() { return "Mangle OpenCL builtins"; }
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:

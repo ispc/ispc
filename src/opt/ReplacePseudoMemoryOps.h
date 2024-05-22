@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -14,11 +14,8 @@ namespace ispc {
     runs, we need to turn them into actual native gathers and scatters.
     This task is handled by the ReplacePseudoMemoryOpsPass here.
  */
-class ReplacePseudoMemoryOpsPass : public llvm::PassInfoMixin<ReplacePseudoMemoryOpsPass> {
-  public:
-    explicit ReplacePseudoMemoryOpsPass() {}
+struct ReplacePseudoMemoryOpsPass : public llvm::PassInfoMixin<ReplacePseudoMemoryOpsPass> {
 
-    static llvm::StringRef getPassName() { return "Replace Pseudo Memory Ops"; }
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2021-2023, Intel Corporation
+  Copyright (c) 2021-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -54,3 +54,25 @@ task void print_result();
 export void print_result_cpu_entry_point() { launch[1] print_result(); }
 #endif
 #endif
+
+template <typename T>
+void pack4toint(uniform T * uniform input, uniform uint32 * uniform packedOutput, uniform int32 inputSize) {
+    for (uniform int i = 0; i < inputSize; i += 4) {
+        uniform uint32 packedValue = 0;
+        packedValue = ((uniform int32)input[i] << 24) |
+                      ((uniform int32)(uniform uint8)input[i+1] << 16) |
+                      ((uniform int32)(uniform uint8)input[i+2] << 8) |
+                      (uniform int32)(uniform uint8)input[i+3];
+        packedOutput[i / 4] = packedValue;
+    }
+}
+
+template <typename T>
+void pack2toint(uniform T * uniform input, uniform uint32 * uniform packedOutput, uniform int32 inputSize) {
+    for (uniform int i = 0; i < inputSize; i += 2) {
+        uniform uint32 packedValue = 0;
+        packedValue = ((uniform int32)input[i] << 16) |
+                      (uniform int32)(uniform uint16)input[i+1];
+        packedOutput[i / 2] = packedValue;
+    }
+}

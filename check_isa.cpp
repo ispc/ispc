@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2013-2023, Intel Corporation
+  Copyright (c) 2013-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -98,6 +98,12 @@ static const char *lGetSystemISA() {
     // Call cpuid with eax=7, ecx=0
     __cpuidex(info2, 7, 0);
 
+    int info3[4] = {0, 0, 0, 0};
+    int max_subleaf = info2[0];
+    // Call cpuid with eax=7, ecx=1
+    if (max_subleaf >= 1)
+        __cpuidex(info3, 7, 1);
+
     // clang-format off
     bool sse2 =                (info[3] & (1 << 26))  != 0;
     bool sse41 =               (info[2] & (1 << 19))  != 0;
@@ -107,6 +113,7 @@ static const char *lGetSystemISA() {
     bool osxsave =             (info[2] & (1 << 27))  != 0;
     bool avx =                 (info[2] & (1 << 28))  != 0;
     bool avx2 =                (info2[1] & (1 << 5))  != 0;
+    bool avx_vnni =            (info3[0] & (1 << 4))  != 0;
     bool avx512_f =            (info2[1] & (1 << 16)) != 0;
     // clang-format on
 
@@ -114,13 +121,6 @@ static const char *lGetSystemISA() {
         // We need to verify that AVX2 is also available,
         // as well as AVX512, because our targets are supposed
         // to use both.
-
-        int info3[4] = {0, 0, 0, 0};
-        int max_subleaf = info2[0];
-        // Call cpuid with eax=7, ecx=1
-        if (max_subleaf >= 1)
-            __cpuidex(info3, 7, 1);
-
         // clang-format off
         bool avx512_dq =           (info2[1] & (1 << 17)) != 0;
         bool avx512_pf =           (info2[1] & (1 << 26)) != 0;
@@ -135,7 +135,6 @@ static const char *lGetSystemISA() {
         bool avx512_vnni =         (info2[2] & (1 << 11)) != 0;
         bool avx512_bitalg =       (info2[2] & (1 << 12)) != 0;
         bool avx512_vpopcntdq =    (info2[2] & (1 << 14)) != 0;
-        bool avx_vnni =            (info3[0] & (1 << 4))  != 0;
         bool avx512_bf16 =         (info3[0] & (1 << 5))  != 0;
         bool avx512_vp2intersect = (info2[3] & (1 << 8))  != 0;
         bool avx512_amx_bf16 =     (info2[3] & (1 << 22)) != 0;
@@ -166,6 +165,8 @@ static const char *lGetSystemISA() {
             } else {
                 return "SPR (AMX off)";
             }
+        } else if (icl) {
+            return "ICL";
         } else if (skx) {
             return "SKX";
         } else if (knl) {
@@ -176,6 +177,9 @@ static const char *lGetSystemISA() {
     }
 
     if (osxsave && avx && __os_has_avx_support()) {
+        if (avx_vnni) {
+            return "AVX2VNNI (codename Alder Lake)";
+        }
         // AVX1 for sure....
         // Ivy Bridge?
         if (avx_f16c && avx_rdrand) {

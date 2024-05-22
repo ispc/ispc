@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019-2023, Intel Corporation
+  Copyright (c) 2019-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -111,6 +111,12 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::avx2_i64x4;
     } else if (target == "avx2-i32x16" || target == "avx2-x2") {
         return ISPCTarget::avx2_i32x16;
+    } else if (target == "avx2vnni-i32x4") {
+        return ISPCTarget::avx2vnni_i32x4;
+    } else if (target == "avx2vnni-i32x8") {
+        return ISPCTarget::avx2vnni_i32x8;
+    } else if (target == "avx2vnni-i32x16") {
+        return ISPCTarget::avx2vnni_i32x16;
     } else if (target == "avx512knl-x16" || target == "avx512knl-i32x16") {
         return ISPCTarget::avx512knl_x16;
     } else if (target == "avx512skx-x4" || target == "avx512skx-i32x4") {
@@ -123,6 +129,16 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::avx512skx_x32;
     } else if (target == "avx512skx-x64" || target == "avx512skx-i8x64") {
         return ISPCTarget::avx512skx_x64;
+    } else if (target == "avx512icl-x4") {
+        return ISPCTarget::avx512icl_x4;
+    } else if (target == "avx512icl-x8") {
+        return ISPCTarget::avx512icl_x8;
+    } else if (target == "avx512icl-x16") {
+        return ISPCTarget::avx512icl_x16;
+    } else if (target == "avx512icl-x32") {
+        return ISPCTarget::avx512icl_x32;
+    } else if (target == "avx512icl-x64") {
+        return ISPCTarget::avx512icl_x64;
     } else if (target == "avx512spr-x4") {
         return ISPCTarget::avx512spr_x4;
     } else if (target == "avx512spr-x8") {
@@ -242,6 +258,12 @@ std::string ISPCTargetToString(ISPCTarget target) {
         return "avx2-i32x16";
     case ISPCTarget::avx2_i64x4:
         return "avx2-i64x4";
+    case ISPCTarget::avx2vnni_i32x4:
+        return "avx2vnni-i32x4";
+    case ISPCTarget::avx2vnni_i32x8:
+        return "avx2vnni-i32x8";
+    case ISPCTarget::avx2vnni_i32x16:
+        return "avx2vnni-i32x16";
     case ISPCTarget::avx512knl_x16:
         return "avx512knl-x16";
     case ISPCTarget::avx512skx_x4:
@@ -254,6 +276,16 @@ std::string ISPCTargetToString(ISPCTarget target) {
         return "avx512skx-x32";
     case ISPCTarget::avx512skx_x64:
         return "avx512skx-x64";
+    case ISPCTarget::avx512icl_x4:
+        return "avx512icl-x4";
+    case ISPCTarget::avx512icl_x8:
+        return "avx512icl-x8";
+    case ISPCTarget::avx512icl_x16:
+        return "avx512icl-x16";
+    case ISPCTarget::avx512icl_x32:
+        return "avx512icl-x32";
+    case ISPCTarget::avx512icl_x64:
+        return "avx512icl-x64";
     case ISPCTarget::avx512spr_x4:
         return "avx512spr-x4";
     case ISPCTarget::avx512spr_x8:
@@ -325,12 +357,20 @@ bool ISPCTargetIsX86(ISPCTarget target) {
     case ISPCTarget::avx2_i32x8:
     case ISPCTarget::avx2_i32x16:
     case ISPCTarget::avx2_i64x4:
+    case ISPCTarget::avx2vnni_i32x4:
+    case ISPCTarget::avx2vnni_i32x8:
+    case ISPCTarget::avx2vnni_i32x16:
     case ISPCTarget::avx512knl_x16:
     case ISPCTarget::avx512skx_x4:
     case ISPCTarget::avx512skx_x8:
     case ISPCTarget::avx512skx_x16:
     case ISPCTarget::avx512skx_x32:
     case ISPCTarget::avx512skx_x64:
+    case ISPCTarget::avx512icl_x4:
+    case ISPCTarget::avx512icl_x8:
+    case ISPCTarget::avx512icl_x16:
+    case ISPCTarget::avx512icl_x32:
+    case ISPCTarget::avx512icl_x64:
     case ISPCTarget::avx512spr_x4:
     case ISPCTarget::avx512spr_x8:
     case ISPCTarget::avx512spr_x16:

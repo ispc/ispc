@@ -2,7 +2,7 @@
 ;; target-neon-common.ll
 ;;
 ;;  Copyright(c) 2013-2015 Google, Inc.
-;;  Copyright(c) 2019-2023 Intel
+;;  Copyright(c) 2019-2024 Intel
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -129,6 +129,7 @@ aossoa()
 ctlztz()
 popcnt()
 halfTypeGenericImplementation()
+dot_product_vnni_decl()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; half conversion routines

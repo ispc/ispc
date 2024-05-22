@@ -39,6 +39,8 @@
 #include <set>
 
 #include <llvm/IR/DataLayout.h>
+#include <llvm/Support/FileSystem.h>
+#include <llvm/Support/Path.h>
 
 #ifdef ISPC_HOST_IS_APPLE
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_17_0
@@ -503,39 +505,23 @@ std::vector<std::string> ispc::MatchStrings(const std::string &str, const std::v
     return std::vector<std::string>();
 }
 
-void ispc::GetDirectoryAndFileName(const std::string &currentDirectory, const std::string &relativeName,
-                                   std::string *directory, std::string *filename) {
-#ifdef ISPC_HOST_IS_WINDOWS
-    char path[MAX_PATH];
-    const char *combPath = PathCombine(path, currentDirectory.c_str(), relativeName.c_str());
-    Assert(combPath != nullptr);
-    const char *filenamePtr = PathFindFileName(combPath);
-    *filename = filenamePtr;
-    *directory = std::string(combPath, filenamePtr - combPath);
-#else
-    // We need a fully qualified path.  First, see if the current file name
-    // is fully qualified itself--in that case, the current working
-    // directory isn't needed.
-    // @todo This probably needs to be smarter for Windows...
-    std::string fullPath;
-    if (relativeName[0] == '/')
+std::pair<std::string, std::string> ispc::GetDirectoryAndFileName(const std::string &currentDirectory,
+                                                                  const std::string &relativeName) {
+    llvm::SmallString<256> fullPath;
+
+    if (llvm::sys::path::is_absolute(relativeName)) {
+        // We may actually get not relative path but absolute, then just use it.
         fullPath = relativeName;
-    else {
-        fullPath = g->currentDirectory;
-        if (fullPath[fullPath.size() - 1] != '/')
-            fullPath.push_back('/');
-        fullPath += relativeName;
+    } else {
+        fullPath = currentDirectory;
+        llvm::sys::path::append(fullPath, relativeName);
     }
 
-    // now, we need to separate it into the base name and the directory
-    const char *fp = fullPath.c_str();
-    const char *basenameStart = strrchr(fp, '/');
-    Assert(basenameStart != nullptr);
-    ++basenameStart;
-    Assert(basenameStart[0] != '\0');
-    *filename = basenameStart;
-    *directory = std::string(fp, basenameStart - fp);
-#endif // ISPC_HOST_IS_WINDOWS
+    // Extract the directory and file name from the full path
+    std::string filename = llvm::sys::path::filename(fullPath).str();
+    std::string dirname = llvm::sys::path::parent_path(fullPath).str();
+
+    return std::make_pair(dirname, filename);
 }
 
 static std::set<std::string> lGetStringArray(const std::string &str) {

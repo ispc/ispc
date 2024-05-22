@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -20,11 +20,8 @@ namespace ispc {
     See for example the comments discussing the __pseudo_gather functions
     in builtins.cpp for more information about this.
  */
-class ImproveMemoryOpsPass : public llvm::PassInfoMixin<ImproveMemoryOpsPass> {
-  public:
-    explicit ImproveMemoryOpsPass() {}
+struct ImproveMemoryOpsPass : public llvm::PassInfoMixin<ImproveMemoryOpsPass> {
 
-    static llvm::StringRef getPassName() { return "Improve Memory Ops"; }
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:

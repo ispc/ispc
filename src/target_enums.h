@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019-2023, Intel Corporation
+  Copyright (c) 2019-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -52,12 +52,20 @@ enum class ISPCTarget {
     avx2_i32x8,
     avx2_i32x16,
     avx2_i64x4,
+    avx2vnni_i32x4,
+    avx2vnni_i32x8,
+    avx2vnni_i32x16,
     avx512knl_x16,
     avx512skx_x4,
     avx512skx_x8,
     avx512skx_x16,
     avx512skx_x32,
     avx512skx_x64,
+    avx512icl_x4,
+    avx512icl_x8,
+    avx512icl_x16,
+    avx512icl_x32,
+    avx512icl_x64,
     avx512spr_x4,
     avx512spr_x8,
     avx512spr_x16,

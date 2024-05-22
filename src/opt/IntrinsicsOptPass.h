@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -19,11 +19,8 @@ namespace ispc {
     @todo The better thing to do would be to submit a patch to LLVM to get
     these; they're presumably pretty simple patterns to match.
 */
-class IntrinsicsOpt : public llvm::PassInfoMixin<IntrinsicsOpt> {
-  public:
-    explicit IntrinsicsOpt(){};
+struct IntrinsicsOpt : public llvm::PassInfoMixin<IntrinsicsOpt> {
 
-    static llvm::StringRef getPassName() { return "Intrinsics Cleanup Optimization"; }
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:

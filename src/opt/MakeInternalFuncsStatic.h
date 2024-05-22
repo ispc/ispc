@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -20,11 +20,8 @@ namespace ispc {
     even though we may need to generate calls to them during later
     optimization passes.
  */
-class MakeInternalFuncsStaticPass : public llvm::PassInfoMixin<MakeInternalFuncsStaticPass> {
-  public:
-    explicit MakeInternalFuncsStaticPass() {}
+struct MakeInternalFuncsStaticPass : public llvm::PassInfoMixin<MakeInternalFuncsStaticPass> {
 
-    static llvm::StringRef getPassName() { return "Make internal funcs \"static\""; }
     llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &MAM);
 };
 

@@ -1,0 +1,26 @@
+#ifndef MODULE_PASS
+#define MODULE_PASS(NAME, CREATE_PASS)
+#endif
+MODULE_PASS("make-internal-funcs-static", MakeInternalFuncsStaticPass())
+#undef MODULE_PASS
+
+#ifndef FUNCTION_PASS
+#define FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+FUNCTION_PASS("gather-coalesce", GatherCoalescePass())
+FUNCTION_PASS("improve-memory-ops", ImproveMemoryOpsPass())
+FUNCTION_PASS("instruction-simplify", InstructionSimplifyPass())
+FUNCTION_PASS("intrinsics-opt", IntrinsicsOpt())
+FUNCTION_PASS("is-compile-time-constant", IsCompileTimeConstantPass())
+FUNCTION_PASS("peephole", PeepholePass())
+FUNCTION_PASS("replace-masked-memory-ops", ReplaceMaskedMemOpsPass())
+FUNCTION_PASS("replace-pseudo-memory-ops", ReplacePseudoMemoryOpsPass())
+FUNCTION_PASS("replace-stdlib-shift", ReplaceStdlibShiftPass())
+FUNCTION_PASS("scalarize", ScalarizePass())
+#ifdef ISPC_XE_ENABLED
+FUNCTION_PASS("check-ir-for-xe-target", CheckIRForXeTarget())
+FUNCTION_PASS("mangle-opencl-builtins", MangleOpenCLBuiltins())
+FUNCTION_PASS("xe-gather-coalesce", XeGatherCoalescing())
+FUNCTION_PASS("xe-replace-llvm-intrinsics", ReplaceLLVMIntrinsics())
+#endif // ISPC_XE_ENABLED
+#undef FUNCTION_PASS

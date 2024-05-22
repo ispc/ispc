@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -314,13 +314,7 @@ std::vector<std::string> SymbolTable::ClosestVariableOrFunctionMatch(const char 
     return std::vector<std::string>();
 }
 
-std::vector<std::string> SymbolTable::ClosestTypeMatch(const char *str) const { return closestTypeMatch(str, true); }
-
 std::vector<std::string> SymbolTable::ClosestEnumTypeMatch(const char *str) const {
-    return closestTypeMatch(str, false);
-}
-
-std::vector<std::string> SymbolTable::closestTypeMatch(const char *str, bool structsVsEnums) const {
     // This follows the same approach as ClosestVariableOrFunctionMatch()
     // above; compute all edit distances, keep the ones shorter than
     // maxDelta, return the first non-empty vector of one or more sets of
@@ -333,9 +327,7 @@ std::vector<std::string> SymbolTable::closestTypeMatch(const char *str, bool str
             // Skip over either StructTypes or EnumTypes, depending on the
             // value of the structsVsEnums parameter
             bool isEnum = (CastType<EnumType>(entry.second) != nullptr);
-            if (isEnum && structsVsEnums)
-                continue;
-            else if (!isEnum && !structsVsEnums)
+            if (!isEnum)
                 continue;
 
             int dist = StringEditDistance(str, entry.first, maxDelta + 1);

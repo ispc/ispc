@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2023, Intel Corporation
+;;  Copyright (c) 2010-2024, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -6951,4 +6951,11 @@ define(`trigonometry_decl',`
     declare float @__acos_uniform_float(float) nounwind readnone
     declare float @__atan_uniform_float(float) nounwind readnone
     declare float @__atan2_uniform_float(float,float) nounwind readnone
+')
+
+define(`dot_product_vnni_decl',`
+    declare <WIDTH x i32> @__dot4add_u8i8packed(<WIDTH x i32>, <WIDTH x i32>, <WIDTH x i32>) nounwind readnone
+    declare <WIDTH x i32> @__dot4add_u8i8packed_sat(<WIDTH x i32>, <WIDTH x i32>, <WIDTH x i32>) nounwind readnone
+    declare <WIDTH x i32> @__dot2add_i16packed(<WIDTH x i32>, <WIDTH x i32>, <WIDTH x i32>) nounwind readnone
+    declare <WIDTH x i32> @__dot2add_i16packed_sat(<WIDTH x i32>, <WIDTH x i32>, <WIDTH x i32>) nounwind readnone
 ')

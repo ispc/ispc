@@ -1,4 +1,4 @@
-;;  Copyright (c) 2016-2023, Intel Corporation
+;;  Copyright (c) 2016-2024, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -133,3 +133,7 @@ define <16 x double> @__rsqrt_varying_double(<16 x double> %v) nounwind readonly
 }
 
 ;;saturation_arithmetic_novec()
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; dot product
+dot_product_vnni_decl()

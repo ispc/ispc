@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -23,11 +23,10 @@ namespace ispc {
     See stdlib.m4 for a number of uses of this idiom.
  */
 
-class IsCompileTimeConstantPass : public llvm::PassInfoMixin<IsCompileTimeConstantPass> {
-  public:
-    explicit IsCompileTimeConstantPass(bool last = false) { isLastTry = last; }
+struct IsCompileTimeConstantPass : public llvm::PassInfoMixin<IsCompileTimeConstantPass> {
 
-    static llvm::StringRef getPassName() { return "Resolve \"is compile time constant\""; }
+    IsCompileTimeConstantPass(bool last = false) : isLastTry(last) {}
+
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:

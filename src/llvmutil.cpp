@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -989,12 +989,6 @@ static bool lVectorShiftRightAllEqual(llvm::Value *val, llvm::Value *shift, int 
     bool canAdd = true;
     std::vector<llvm::PHINode *> seenPhis;
     bool eq = lAllDivBaseEqual(val, pow2, vectorLength, seenPhis, canAdd);
-#if 0
-    fprintf(stderr, "check all div base equal:\n");
-    LLVMDumpValue(shift);
-    LLVMDumpValue(val);
-    fprintf(stderr, "----> %s\n\n", eq ? "true" : "false");
-#endif
     return eq;
 }
 
@@ -1096,18 +1090,6 @@ static bool lVectorValuesAllEqual(llvm::Value *v, int vectorLength, std::vector<
         // TODO: handle more general cases?
         return false;
     }
-
-#if 0
-    fprintf(stderr, "all equal: ");
-    v->dump();
-    fprintf(stderr, "\n");
-    llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(v);
-    if (inst) {
-        inst->getParent()->dump();
-        fprintf(stderr, "\n");
-        fprintf(stderr, "\n");
-    }
-#endif
 
     return false;
 }
@@ -1374,18 +1356,6 @@ static bool lVectorIsLinear(llvm::Value *v, int vectorLength, int stride, std::v
     llvm::ShuffleVectorInst *shuffle = llvm::dyn_cast<llvm::ShuffleVectorInst>(v);
     if (shuffle != nullptr)
         return false;
-
-#if 0
-    fprintf(stderr, "linear check: ");
-    v->dump();
-    fprintf(stderr, "\n");
-    llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(v);
-    if (inst) {
-        inst->getParent()->dump();
-        fprintf(stderr, "\n");
-        fprintf(stderr, "\n");
-    }
-#endif
 
     return false;
 }
@@ -1776,18 +1746,6 @@ bool GetMaskFromValue(llvm::Value *factor, uint64_t *mask) {
         *mask = 0;
         return true;
     } else {
-#if 0
-        llvm::ConstantExpr *ce = llvm::dyn_cast<llvm::ConstantExpr>(factor);
-        if (ce != nullptr) {
-            llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
-            const llvm::TargetData *td = targetMachine->getTargetData();
-            llvm::Constant *c = llvm::ConstantFoldConstantExpression(ce, td);
-            c->dump();
-            factor = c;
-        }
-        // else we should be able to handle it above...
-        Assert(!llvm::isa<llvm::Constant>(factor));
-#endif
         return false;
     }
 }
@@ -1812,6 +1770,18 @@ MaskStatus GetMaskStatusFromValue(llvm::Value *mask, int vecWidth) {
             return MaskStatus::mixed;
     }
     return MaskStatus::all_on;
+}
+
+void AddUWTableFuncAttr(llvm::Function *fn) {
+    if (g->target_os == TargetOS::windows) {
+        // Enable generation an unwind table during codegen.
+        // It is needed to generate backtraces during debugging and to unwind callstack.
+#if ISPC_LLVM_VERSION <= ISPC_LLVM_14_0
+        fn->setHasUWTable();
+#else
+        fn->setUWTableKind(llvm::UWTableKind::Default);
+#endif
+    }
 }
 
 #ifdef ISPC_XE_ENABLED

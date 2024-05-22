@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2023, Intel Corporation
+;;  Copyright (c) 2010-2024, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -60,3 +60,7 @@ gen_gather_factored(i32)
 gen_gather_factored(float)
 gen_gather_factored(i64)
 gen_gather_factored(double)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; dot product
+dot_product_vnni_decl()

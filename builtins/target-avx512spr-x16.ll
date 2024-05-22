@@ -1,4 +1,4 @@
-;;  Copyright (c) 2016-2023, Intel Corporation
+;;  Copyright (c) 2016-2024, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -160,4 +160,28 @@ declare <16 x half> @llvm.x86.avx512fp16.mask.rsqrt.ph.256(<16 x half>, <16 x ha
 define <16 x half> @__rsqrt_varying_half(<16 x half>) nounwind readnone alwaysinline {
   %ret = tail call <16 x half> @llvm.x86.avx512fp16.mask.rsqrt.ph.256(<16 x half> %0, <16 x half> undef, i16 -1)
   ret <16 x half> %ret
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; dot product
+declare <16 x i32> @llvm.x86.avx512.vpdpbusd.512(<16 x i32>, <16 x i32>, <16 x i32>) nounwind readnone
+define <16 x i32> @__dot4add_u8i8packed(<16 x i32> %a, <16 x i32> %b, <16 x i32> %acc) nounwind readnone alwaysinline {
+  %ret = call <16 x i32> @llvm.x86.avx512.vpdpbusd.512(<16 x i32> %acc, <16 x i32> %a, <16 x i32> %b)
+  ret <16 x i32> %ret
+}
+declare <16 x i32> @llvm.x86.avx512.vpdpbusds.512(<16 x i32>, <16 x i32>, <16 x i32>) nounwind readnone
+define <16 x i32> @__dot4add_u8i8packed_sat(<16 x i32> %a, <16 x i32> %b, <16 x i32> %acc) nounwind readnone alwaysinline {
+  %ret = call <16 x i32> @llvm.x86.avx512.vpdpbusds.512(<16 x i32> %acc, <16 x i32> %a, <16 x i32> %b)
+  ret <16 x i32> %ret
+}
+
+declare <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32>, <16 x i32>, <16 x i32>) nounwind readnone
+define <16 x i32> @__dot2add_i16packed(<16 x i32> %a, <16 x i32> %b, <16 x i32> %acc) nounwind readnone alwaysinline {
+  %ret = call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %acc, <16 x i32> %a, <16 x i32> %b)
+  ret <16 x i32> %ret
+}
+declare <16 x i32> @llvm.x86.avx512.vpdpwssds.512(<16 x i32>, <16 x i32>, <16 x i32>) nounwind readnone
+define <16 x i32> @__dot2add_i16packed_sat(<16 x i32> %a, <16 x i32> %b, <16 x i32> %acc) nounwind readnone alwaysinline {
+  %ret = call <16 x i32> @llvm.x86.avx512.vpdpwssds.512(<16 x i32> %acc, <16 x i32> %a, <16 x i32> %b)
+  ret <16 x i32> %ret
 }

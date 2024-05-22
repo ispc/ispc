@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -10,11 +10,8 @@
 
 namespace ispc {
 
-class ReplaceStdlibShiftPass : public llvm::PassInfoMixin<ReplaceStdlibShiftPass> {
-  public:
-    explicit ReplaceStdlibShiftPass() {}
+struct ReplaceStdlibShiftPass : public llvm::PassInfoMixin<ReplaceStdlibShiftPass> {
 
-    static llvm::StringRef getPassName() { return "Resolve \"replace extract insert chains\""; }
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:

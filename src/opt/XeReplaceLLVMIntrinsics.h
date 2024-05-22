@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -14,11 +14,8 @@ namespace ispc {
 /** This pass replaces LLVM intrinsics unsupported on Xe
  */
 
-class ReplaceLLVMIntrinsics : public llvm::PassInfoMixin<ReplaceLLVMIntrinsics> {
-  public:
-    explicit ReplaceLLVMIntrinsics() {}
+struct ReplaceLLVMIntrinsics : public llvm::PassInfoMixin<ReplaceLLVMIntrinsics> {
 
-    static llvm::StringRef getPassName() { return "LLVM intrinsics replacement"; }
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
 
   private:

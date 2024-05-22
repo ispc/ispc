@@ -166,6 +166,14 @@ enum class MCModel {
     Large,   /** large model */
 };
 
+/** PIC level. It corresponds to llvm::PICLevel. */
+enum class PICLevel {
+    Default,  /** default model - i.e. not specified on the command line */
+    NotPIC,   /** not PIC */
+    SmallPIC, /** small PIC */
+    BigPIC,   /** big PIC */
+};
+
 /** @brief Structure that defines a compilation target
 
     This structure defines a compilation target for the ispc compiler.
@@ -186,9 +194,11 @@ class Target {
         // Not supported anymore. Use either AVX or AVX2.
         // AVX11 = 4,
         AVX2 = 4,
-        KNL_AVX512 = 5,
-        SKX_AVX512 = 6,
-        SPR_AVX512 = 7,
+        AVX2VNNI = 5,
+        KNL_AVX512 = 6,
+        SKX_AVX512 = 7,
+        ICL_AVX512 = 8,
+        SPR_AVX512 = 9,
 #ifdef ISPC_ARM_ENABLED
         NEON,
 #endif
@@ -218,7 +228,7 @@ class Target {
     /** Initializes the given Target pointer for a target of the given
         name, if the name is a known target.  Returns true if the
         target was initialized and false if the name is unknown. */
-    Target(Arch arch, const char *cpu, ISPCTarget isa, bool pic, MCModel code_model, bool printTarget);
+    Target(Arch arch, const char *cpu, ISPCTarget isa, PICLevel picLevel, MCModel code_model, bool printTarget);
 
     ~Target();
 
@@ -318,13 +328,15 @@ class Target {
 
     int getVectorWidth() const { return m_vectorWidth; }
 
-    bool getGeneratePIC() const { return m_generatePIC; }
+    PICLevel getPICLevel() const { return m_picLevel; }
 
     MCModel getMCModel() const { return m_codeModel; }
 
     bool getMaskingIsFree() const { return m_maskingIsFree; }
 
     int getMaskBitCount() const { return m_maskBitCount; }
+
+    bool hasDotProductVNNI() const { return m_hasDotProductVNNI; }
 
     bool hasHalfConverts() const { return m_hasHalfConverts; }
 
@@ -421,7 +433,7 @@ class Target {
     int m_vectorWidth;
 
     /** Indicates whether position independent code should be generated. */
-    bool m_generatePIC;
+    PICLevel m_picLevel;
 
     /** Code model */
     MCModel m_codeModel;
@@ -435,6 +447,9 @@ class Target {
     /** How many bits are used to store each element of the mask: e.g. this
         is 32 on SSE/AVX, since that matches the HW better. */
     int m_maskBitCount;
+
+    /** Indicates whether the target has native support for VNNI dot product. */
+    bool m_hasDotProductVNNI;
 
     /** Indicates whether the target has native support for float/half conversions. */
     bool m_hasHalfConverts;

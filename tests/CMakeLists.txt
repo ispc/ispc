@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2023, Intel Corporation
+#  Copyright (c) 2018-2024, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -25,6 +25,8 @@ list(APPEND LIT_ARGS "-Dwasm_enabled=$<IF:$<BOOL:${WASM_ENABLED}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Dxe_enabled=$<IF:$<BOOL:${XE_ENABLED}>,ON,OFF>")
 # ISPC enabled OS.
 list(APPEND LIT_ARGS "-Dwindows_enabled=$<IF:$<BOOL:${ISPC_WINDOWS_TARGET}>,ON,OFF>")
+list(APPEND LIT_ARGS "-Dlinux_enabled=$<IF:$<BOOL:${ISPC_LINUX_TARGET}>,ON,OFF>")
+list(APPEND LIT_ARGS "-Dps_enabled=$<IF:$<BOOL:${ISPC_PS_TARGET}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Dmacos_arm_enabled=$<IF:$<BOOL:${ISPC_MACOS_ARM_TARGET}>,ON,OFF>")
 # ISPC opaque pointers
 list(APPEND LIT_ARGS "-Dopaque_mode=$<IF:$<BOOL:${ISPC_OPAQUE_PTR_MODE}>,ON,OFF>")

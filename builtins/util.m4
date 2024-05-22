@@ -8572,3 +8572,10 @@ define(`trigonometry_decl',`
     declare double @__atan2_uniform_double(double,double) nounwind readnone
 ')
 
+define(`dot_product_vnni_decl',`
+    declare <WIDTH x i32> @__dot4add_u8i8packed(<WIDTH x i32>, <WIDTH x i32>, <WIDTH x i32>) nounwind readnone
+    declare <WIDTH x i32> @__dot4add_u8i8packed_sat(<WIDTH x i32>, <WIDTH x i32>, <WIDTH x i32>) nounwind readnone
+    declare <WIDTH x i32> @__dot2add_i16packed(<WIDTH x i32>, <WIDTH x i32>, <WIDTH x i32>) nounwind readnone
+    declare <WIDTH x i32> @__dot2add_i16packed_sat(<WIDTH x i32>, <WIDTH x i32>, <WIDTH x i32>) nounwind readnone
+')
+

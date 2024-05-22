@@ -69,12 +69,19 @@ int32_t __get_system_isa() {
     int info2[4];
     __cpuidex(info2, 7, 0);
 
+    int info3[4] = {0, 0, 0, 0};
+    int max_subleaf = info2[0];
+    // Call cpuid with eax=7, ecx=1
+    if (max_subleaf >= 1)
+        __cpuidex(info3, 7, 1);
+
     // clang-format off
     _Bool sse2 =                (info[3] & (1 << 26))  != 0;
     _Bool sse41 =               (info[2] & (1 << 19))  != 0;
     _Bool sse42 =               (info[2] & (1 << 20))  != 0;
     _Bool avx =                 (info[2] & (1 << 28))  != 0;
     _Bool avx2 =                (info2[1] & (1 << 5))  != 0;
+    _Bool avx_vnni =            (info3[0] & (1 << 4))  != 0;
     _Bool avx_f16c =            (info[2] & (1 << 29))  != 0;
     _Bool avx_rdrand =          (info[2] & (1 << 30))  != 0;
     _Bool osxsave =             (info[2] & (1 << 27))  != 0;
@@ -92,12 +99,6 @@ int32_t __get_system_isa() {
         // as well as AVX512, because our targets are supposed
         // to use both.
 
-        int info3[4] = {0, 0, 0, 0};
-        int max_subleaf = info2[0];
-        // Call cpuid with eax=7, ecx=1
-        if (max_subleaf >= 1)
-            __cpuidex(info3, 7, 1);
-
         // clang-format off
         _Bool avx512_dq =           (info2[1] & (1 << 17)) != 0;
         _Bool avx512_pf =           (info2[1] & (1 << 26)) != 0;
@@ -113,7 +114,6 @@ int32_t __get_system_isa() {
         _Bool avx512_vnni =         (info2[2] & (1 << 11)) != 0;
         _Bool avx512_bitalg =       (info2[2] & (1 << 12)) != 0;
         _Bool avx512_vpopcntdq =    (info2[2] & (1 << 14)) != 0;
-        _Bool avx_vnni =            (info3[0] & (1 << 4))  != 0;
         _Bool avx512_bf16 =         (info3[0] & (1 << 5))  != 0;
         _Bool avx512_vp2intersect = (info2[3] & (1 << 8))  != 0;
         _Bool avx512_amx_bf16 =     (info2[3] & (1 << 22)) != 0;
@@ -141,19 +141,24 @@ int32_t __get_system_isa() {
         _Bool spr =
             icl && avx512_bf16 && avx512_amx_bf16 && avx512_amx_tile && avx512_amx_int8 && avx_vnni && avx512_fp16;
         if (spr) {
-            return 7; // SPR
+            return 9; // SPR
+        } else if (icl) {
+            return 8; // ICL
         }
 #endif // !MACOS
         if (skx) {
-            return 6; // SKX
+            return 7; // SKX
         } else if (knl) {
-            return 5; // KNL
+            return 6; // KNL
         }
         // If it's unknown AVX512 target, fall through and use AVX2
         // or whatever is available in the machine.
     }
 
     if (osxsave && avx && __os_has_avx_support()) {
+        if (avx_vnni) {
+            return 5; // ADL
+        }
         if (avx_f16c && avx_rdrand && avx2) {
             return 4;
         }

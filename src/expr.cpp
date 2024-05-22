@@ -75,48 +75,6 @@ Symbol *Expr::GetBaseSymbol() const {
 
 bool Expr::HasAmbiguousVariability(std::vector<const Expr *> &warn) const { return false; }
 
-#if 0
-/** If a conversion from 'fromAtomicType' to 'toAtomicType' may cause lost
-    precision, issue a warning.  Don't warn for conversions to bool and
-    conversions between signed and unsigned integers of the same size.
- */
-static void
-lMaybeIssuePrecisionWarning(const AtomicType *toAtomicType,
-                            const AtomicType *fromAtomicType,
-                            SourcePos pos, const char *errorMsgBase) {
-    switch (toAtomicType->basicType) {
-    case AtomicType::TYPE_BOOL:
-    case AtomicType::TYPE_INT8:
-    case AtomicType::TYPE_UINT8:
-    case AtomicType::TYPE_INT16:
-    case AtomicType::TYPE_UINT16:
-    case AtomicType::TYPE_INT32:
-    case AtomicType::TYPE_UINT32:
-    case AtomicType::TYPE_FLOAT:
-    case AtomicType::TYPE_INT64:
-    case AtomicType::TYPE_UINT64:
-    case AtomicType::TYPE_DOUBLE:
-        if ((int)toAtomicType->basicType < (int)fromAtomicType->basicType &&
-            toAtomicType->basicType != AtomicType::TYPE_BOOL &&
-            !(toAtomicType->basicType == AtomicType::TYPE_INT8 &&
-              fromAtomicType->basicType == AtomicType::TYPE_UINT8) &&
-            !(toAtomicType->basicType == AtomicType::TYPE_INT16 &&
-              fromAtomicType->basicType == AtomicType::TYPE_UINT16) &&
-            !(toAtomicType->basicType == AtomicType::TYPE_INT32 &&
-              fromAtomicType->basicType == AtomicType::TYPE_UINT32) &&
-            !(toAtomicType->basicType == AtomicType::TYPE_INT64 &&
-              fromAtomicType->basicType == AtomicType::TYPE_UINT64))
-            Warning(pos, "Conversion from type \"%s\" to type \"%s\" for %s"
-                    " may lose information.",
-                    fromAtomicType->GetString().c_str(), toAtomicType->GetString().c_str(),
-                    errorMsgBase);
-        break;
-    default:
-        FATAL("logic error in lMaybeIssuePrecisionWarning()");
-    }
-}
-#endif
-
 ///////////////////////////////////////////////////////////////////////////
 
 static llvm::APFloat lCreateAPFloat(llvm::APFloat f, llvm::Type *type) {
@@ -545,11 +503,6 @@ bool ispc::CanConvertTypes(const Type *fromType, const Type *toType, const char 
 Expr *ispc::TypeConvertExpr(Expr *expr, const Type *toType, const char *errorMsgBase) {
     if (expr == nullptr)
         return nullptr;
-
-#if 0
-    Debug(expr->pos, "type convert %s -> %s.", expr->GetType()->GetString().c_str(),
-          toType->GetString().c_str());
-#endif
 
     const Type *fromType = expr->GetType();
     Expr *e = expr;
@@ -8352,7 +8305,8 @@ FunctionSymbolExpr *FunctionSymbolExpr::Instantiate(TemplateInstantiation &templ
     TemplateArgs instTemplateArgs;
     for (auto &arg : templateArgs) {
         instTemplateArgs.push_back(
-            arg.IsType() ? TemplateArg(arg.GetAsType()->ResolveDependenceForTopType(templInst), arg.GetPos()) : arg);
+            arg.IsType() ? TemplateArg(arg.GetAsType()->ResolveDependenceForTopType(templInst), arg.GetPos())
+                         : TemplateArg(arg.GetAsExpr()->Instantiate(templInst), arg.GetPos()));
     }
     return new FunctionSymbolExpr(name.c_str(), candidateTemplateFunctions, instTemplateArgs, pos);
 }
@@ -8608,6 +8562,22 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
         // This looks like a candidate, so now we need get to instantiation and add it to candidate list.
         if (templateArgs.size() == templateParms->GetCount()) {
             // Easy, we have all template arguments specified explicitly, no deduction is needed.
+            // First, check types of non-type parameters (non-type parameters can't be used in partially specified
+            // template instantiations)
+            bool argsMatchingPassed = true;
+            for (int i = 0; i < templateParms->GetCount(); ++i) {
+                if ((*templateParms)[i]->IsNonTypeParam()) {
+                    const Type *argType = templateArgs[i].GetAsType();
+                    const Type *paramType = (*templateParms)[i]->GetNonTypeParam()->type;
+                    if (!CanConvertTypes(argType, paramType)) {
+                        argsMatchingPassed = false;
+                        break;
+                    }
+                }
+            }
+            if (!argsMatchingPassed) {
+                continue;
+            }
             Symbol *funcSym = templSym->functionTemplate->LookupInstantiation(templateArgs);
             if (funcSym == nullptr) {
                 funcSym = templSym->functionTemplate->AddInstantiation(

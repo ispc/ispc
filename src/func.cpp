@@ -289,9 +289,6 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         function->addFnAttr("target-features", "+simd128");
 
     g->target->markFuncWithTargetAttr(function);
-#if 0
-    llvm::BasicBlock *entryBBlock = ctx->GetCurrentBasicBlock();
-#endif
     const FunctionType *type = CastType<FunctionType>(sym->type);
     Assert(type != nullptr);
 
@@ -704,6 +701,8 @@ void Function::GenerateIR() {
             llvm::Function *appFunction = llvm::Function::Create(ftype, linkage, functionName.c_str(), m->module);
             appFunction->setDoesNotThrow();
             appFunction->setCallingConv(type->GetCallingConv());
+
+            AddUWTableFuncAttr(appFunction);
 
             // Xe kernel should have "dllexport" and "CMGenxMain" attribute,
             // otherss have "CMStackCall" attribute
@@ -1161,23 +1160,24 @@ TemplateInstantiation::TemplateInstantiation(const TemplateParms &typeParms, con
     // deduction.
     for (int i = 0; i < tArgs.size(); i++) {
         std::string name = typeParms[i]->GetName();
-        const Type *type = tArgs[i].GetAsType();
-        argsTypeMap[name] = type;
+        const TemplateArg *arg = new TemplateArg(tArgs[i]);
+        argsMap[name] = arg;
         templateArgs.push_back(tArgs[i]);
     }
 }
 
-void TemplateInstantiation::AddArgument(std::string paramName, TemplateArg argType) {
-    argsTypeMap[paramName] = argType.GetAsType();
+void TemplateInstantiation::AddArgument(std::string paramName, TemplateArg arg) {
+    const TemplateArg *argPtr = new TemplateArg(arg);
+    argsMap[paramName] = argPtr;
 }
 
 const Type *TemplateInstantiation::InstantiateType(const std::string &name) {
-    auto t = argsTypeMap.find(name);
-    if (t == argsTypeMap.end()) {
+    auto t = argsMap.find(name);
+    if (t == argsMap.end()) {
         return nullptr;
     }
 
-    return t->second;
+    return t->second->GetAsType();
 }
 
 Symbol *TemplateInstantiation::InstantiateSymbol(Symbol *sym) {
@@ -1201,7 +1201,22 @@ Symbol *TemplateInstantiation::InstantiateSymbol(Symbol *sym) {
 
     const Type *instType = sym->type->ResolveDependenceForTopType(*this);
     Symbol *instSym = new Symbol(sym->name, sym->pos, instType, sym->storageClass);
-    instSym->constValue = sym->constValue ? sym->constValue->Instantiate(*this) : nullptr;
+    // Update constValue for non-type template parameters
+    if (argsMap.find(sym->name) != argsMap.end()) {
+        const TemplateArg *arg = argsMap[sym->name];
+        Assert(arg != nullptr);
+        const ConstExpr *ce = arg->GetAsConstExpr();
+        if (ce != nullptr) {
+            // Do a little type cast to the actual template parameter type here and optimize it
+            Expr *castExpr = new TypeCastExpr(sym->type, const_cast<ConstExpr *>(ce), sym->pos);
+            castExpr = Optimize(castExpr);
+            ce = llvm::dyn_cast<ConstExpr>(castExpr);
+        }
+        instSym->constValue = ce ? ce->Instantiate(*this) : nullptr;
+    } else {
+        instSym->constValue = sym->constValue ? sym->constValue->Instantiate(*this) : nullptr;
+    }
+
     instSym->varyingCFDepth = sym->varyingCFDepth;
     instSym->parentFunction = nullptr;
     instSym->storageInfo = sym->storageInfo;
@@ -1295,6 +1310,8 @@ llvm::Function *TemplateInstantiation::createLLVMFunction(Symbol *functionSym) {
     if (isNoInline) {
         function->addFnAttr(llvm::Attribute::NoInline);
     }
+
+    AddUWTableFuncAttr(function);
 
     // Add NoAlias attribute to function arguments if needed.
     int nArgs = functionType->GetNumParameters();

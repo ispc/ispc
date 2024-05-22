@@ -483,15 +483,6 @@ void FunctionEmitContext::BranchIfMaskAll(llvm::BasicBlock *btrue, llvm::BasicBl
     bblock = nullptr;
 }
 
-void FunctionEmitContext::BranchIfMaskNone(llvm::BasicBlock *btrue, llvm::BasicBlock *bfalse) {
-    AssertPos(currentPos, bblock != nullptr);
-    // switch sense of true/false bblocks
-    BranchIfMaskAny(bfalse, btrue);
-    // It's illegal to add any additional instructions to the basic block
-    // now that it's terminated, so set bblock to nullptr to be safe
-    bblock = nullptr;
-}
-
 void FunctionEmitContext::StartUniformIf(bool emulateUniform) {
     controlFlowInfo.push_back(CFInfo::GetIf(true, emulateUniform, GetInternalMask()));
 }
@@ -1432,15 +1423,6 @@ llvm::Value *FunctionEmitContext::LaneMask(llvm::Value *v) {
 }
 
 llvm::Value *FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2) {
-#if 0
-    // Compare the two masks to get a vector of i1s
-    llvm::Value *cmp = CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ,
-        v1, v2, "v1==v2");
-    // Turn that into a bool vector type (often i32s)
-    cmp = I1VecToBoolVec(cmp);
-    // And see if it's all on
-    return All(cmp);
-#else
     if (g->target->getArch() == Arch::wasm32 || g->target->getArch() == Arch::wasm64) {
         llvm::Function *fmm = m->module->getFunction("__wasm_cmp_msk_eq");
         return CallInst(fmm, nullptr, {v1, v2},
@@ -1450,7 +1432,6 @@ llvm::Value *FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2
     llvm::Value *mm2 = LaneMask(v2);
     return CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, mm1, mm2,
                    ((llvm::Twine("equal_") + v1->getName()) + "_") + v2->getName());
-#endif
 }
 
 llvm::Value *FunctionEmitContext::ProgramIndexVector(bool is32bits) {

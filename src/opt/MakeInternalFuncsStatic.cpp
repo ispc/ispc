@@ -202,7 +202,7 @@ llvm::PreservedAnalyses MakeInternalFuncsStaticPass::run(llvm::Module &M, llvm::
 
     int count = sizeof(names) / sizeof(names[0]);
     for (int i = 0; i < count; ++i) {
-        llvm::Function *f = m->module->getFunction(names[i]);
+        llvm::Function *f = M.getFunction(names[i]);
         if (f != nullptr && f->empty() == false) {
             f->setLinkage(llvm::GlobalValue::InternalLinkage);
         }

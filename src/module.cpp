@@ -210,6 +210,30 @@ static void lSetCodeModel(llvm::Module *module) {
     }
 }
 
+/** We need to set the correct value inside "PIC Level" metadata as it can be
+    used by some targets to generate code in the different way. Unlike code
+    model, it is not passed to the TargetMachine, so it is the only place for
+    codegen to access the correct value. */
+static void lSetPICLevel(llvm::Module *module) {
+    PICLevel picLevel = g->target->getPICLevel();
+    switch (picLevel) {
+    case ispc::PICLevel::Default:
+        // We're leaving the default. There's a similar case in the LLVM
+        // frontend code where they don't set the level when pic flag is
+        // omitted in the command line.
+        break;
+    case ispc::PICLevel::NotPIC:
+        module->setPICLevel(llvm::PICLevel::NotPIC);
+        break;
+    case ispc::PICLevel::SmallPIC:
+        module->setPICLevel(llvm::PICLevel::SmallPIC);
+        break;
+    case ispc::PICLevel::BigPIC:
+        module->setPICLevel(llvm::PICLevel::BigPIC);
+        break;
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // Module
 
@@ -231,6 +255,7 @@ Module::Module(const char *fn) : filename(fn) {
     // DataLayout information supposed to be managed in single place in Target class.
     module->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
     lSetCodeModel(module);
+    lSetPICLevel(module);
 
     // Version strings.
     // Have ISPC details and LLVM details as two separate strings attached to !llvm.ident.
@@ -271,8 +296,7 @@ Module::Module(const char *fn) : filename(fn) {
             delete diBuilder;
             diBuilder = nullptr;
         } else {
-            std::string directory, name;
-            GetDirectoryAndFileName(g->currentDirectory, filename, &directory, &name);
+            auto [directory, name] = GetDirectoryAndFileName(g->currentDirectory, filename);
             auto srcFile = diBuilder->createFile(name, directory);
             // Use DW_LANG_C_plus_plus to avoid problems with debigging on Xe.
             // The debugger reads symbols partially when a solib file is loaded.
@@ -1064,15 +1088,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         function->addFnAttr(llvm::Attribute::NoInline);
     }
 
-    if (g->target_os == TargetOS::windows) {
-        // Enable generation an unwind table during codegen.
-        // It is needed to generate backtraces during debugging and to unwind callstack.
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_14_0
-        function->setHasUWTable();
-#else
-        function->setUWTableKind(llvm::UWTableKind::Default);
-#endif
-    }
+    AddUWTableFuncAttr(function);
 
     if (functionType->isTask) {
         if (!g->target->isXeTarget()) {
@@ -1142,10 +1158,6 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
              CastType<ReferenceType>(argType) != nullptr)) {
 
             function->addParamAttr(i, llvm::Attribute::NoAlias);
-#if 0
-            int align = 4 * RoundUpPow2(g->target->nativeVectorWidth);
-            function->addAttribute(i+1, llvm::Attribute::constructAlignmentFromInt(align));
-#endif
         }
 
         if (symbolTable->LookupFunction(argName.c_str())) {
@@ -2656,15 +2668,6 @@ bool Module::writeHeader(const char *fn) {
         fprintf(f, "///////////////////////////////////////////////////////////////////////////\n");
         lPrintFunctionDeclarations(f, exportedFuncs);
     }
-#if 0
-    if (externCFuncs.size() > 0) {
-        fprintf(f, "\n");
-        fprintf(f, "///////////////////////////////////////////////////////////////////////////\n");
-        fprintf(f, "// External C functions used by ispc code\n");
-        fprintf(f, "///////////////////////////////////////////////////////////////////////////\n");
-        lPrintFunctionDeclarations(f, externCFuncs);
-    }
-#endif
 
     // end namespace
     fprintf(f, "\n");
@@ -2911,6 +2914,26 @@ static void lSetPreprocessorOptions(const std::shared_ptr<clang::PreprocessorOpt
     // Add defs for ISPC and PI
     opts->addMacroDef("ISPC");
     opts->addMacroDef("PI=3.1415926535");
+
+    // Add definitions of limits for integers and float types.
+    opts->addMacroDef("INT8_MIN=-128");
+    opts->addMacroDef("INT8_MAX=127");
+    opts->addMacroDef("UINT8_MAX=255U");
+    opts->addMacroDef("INT16_MIN=-32768");
+    opts->addMacroDef("INT16_MAX=32767");
+    opts->addMacroDef("UINT16_MAX=65535U");
+    opts->addMacroDef("INT32_MIN=-2147483648L");
+    opts->addMacroDef("INT32_MAX=2147483647L");
+    opts->addMacroDef("UINT32_MAX=4294967295UL");
+    opts->addMacroDef("INT64_MIN=-9223372036854775808LL");
+    opts->addMacroDef("INT64_MAX=9223372036854775807LL");
+    opts->addMacroDef("UINT64_MAX=18446744073709551615ULL");
+    opts->addMacroDef("F16_MIN=6.103515625e-05F16");
+    opts->addMacroDef("F16_MAX=65504.0F16");
+    opts->addMacroDef("FLT_MIN=1.17549435082228750796873653722224568e-38F");
+    opts->addMacroDef("FLT_MAX=3.40282346638528859811704183484516925e+38F");
+    opts->addMacroDef("DBL_MIN=2.22507385850720138309023271733240406e-308D");
+    opts->addMacroDef("DBL_MAX=1.79769313486231570814527423731704357e+308D");
 
     if (g->enableLLVMIntrinsics) {
         opts->addMacroDef("ISPC_LLVM_INTRINSICS_ENABLED");
@@ -3193,7 +3216,7 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
             // Calling convention should be the same for all dispatched functions
             callingConv = funcs.FTs[i]->GetCallingConv();
             targetFuncs[i]->setCallingConv(callingConv);
-
+            AddUWTableFuncAttr(targetFuncs[i]);
         } else
             targetFuncs[i] = nullptr;
     }
@@ -3209,6 +3232,7 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
     llvm::Function *dispatchFunc =
         llvm::Function::Create(ftype, llvm::GlobalValue::ExternalLinkage, functionName.c_str(), module);
     dispatchFunc->setCallingConv(callingConv);
+    AddUWTableFuncAttr(dispatchFunc);
 
     // Make dispatch function callable from DLLs.
     if ((g->target_os == TargetOS::windows) && (g->dllExport)) {
@@ -3310,6 +3334,7 @@ static llvm::Module *lInitDispatchModule() {
     AddBitcodeToModule(dispatch, module);
 
     lSetCodeModel(module);
+    lSetPICLevel(module);
 
     return module;
 }
@@ -3434,7 +3459,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         if (targets.size() == 1) {
             target = targets[0];
         }
-        g->target = new Target(arch, cpu, target, outputFlags.isPIC(), outputFlags.getMCModel(), g->printTarget);
+        g->target = new Target(arch, cpu, target, outputFlags.getPICLevel(), outputFlags.getMCModel(), g->printTarget);
         if (!g->target->isValid())
             return 1;
 
@@ -3561,7 +3586,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         std::vector<Module *> modules(targets.size());
         for (unsigned int i = 0; i < targets.size(); ++i) {
             g->target =
-                new Target(arch, cpu, targets[i], outputFlags.isPIC(), outputFlags.getMCModel(), g->printTarget);
+                new Target(arch, cpu, targets[i], outputFlags.getPICLevel(), outputFlags.getMCModel(), g->printTarget);
             if (!g->target->isValid())
                 return 1;
 
@@ -3656,7 +3681,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         Assert(strcmp(firstISA, "") != 0);
         Assert(firstTarget != ISPCTarget::none);
 
-        g->target = new Target(arch, cpu, firstTarget, outputFlags.isPIC(), outputFlags.getMCModel(), false);
+        g->target = new Target(arch, cpu, firstTarget, outputFlags.getPICLevel(), outputFlags.getMCModel(), false);
         llvm::TargetMachine *firstTargetMachine = g->target->GetTargetMachine();
         Assert(firstTargetMachine);
         if (!g->target->isValid()) {

@@ -10,7 +10,7 @@ LABEL maintainer="Aleksei Nurmukhametov <aleksei.nurmukhametov@intel.com>"
 SHELL ["/bin/bash", "-c"]
 
 ARG REPO=ispc/ispc
-ARG SHA=main
+ARG SHA=v1.22.0
 ARG LLVM_VERSION
 ARG LLVM_DISABLE_ASSERTIONS
 

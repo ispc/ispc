@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2023, Intel Corporation
+;;  Copyright (c) 2010-2024, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -652,3 +652,7 @@ rcph_rsqrth_decl
 
 transcendetals_decl()
 trigonometry_decl()
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; dot product
+dot_product_vnni_decl()
