@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2017-2023, Intel Corporation
+#  Copyright (c) 2017-2024, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -70,8 +70,9 @@ WORKDIR /usr/local/src/ispc
 # Set PATH and LD_LIBRARY_PATH instead of `source /opt/rh/devtoolset-8/enable` due to hadolint warning.
 # Same with CMAKE_PREFIX_PATH and LD_LIBRARY_PATH for `source /opt/intel/oneapi/setvars.sh`.
 ENV PATH=/opt/rh/devtoolset-8/root/usr/bin:$PATH
-ENV LD_LIBRARY_PATH=/opt/intel/oneapi/tbb/2021.11/lib/intel64/gcc4.8:/opt/rh/devtoolset-8/root/usr/lib64:/opt/rh/devtoolset-8/root/usr/lib:/opt/rh/devtoolset-8/root/usr/lib64/dyninst:/opt/rh/devtoolset-8/root/usr/lib/dyninst:/opt/rh/devtoolset-8/root/usr/lib64:/opt/rh/devtoolset-8/root/usr/lib:$LD_LIBRARY_PATH
-ENV CMAKE_PREFIX_PATH=/opt/intel/oneapi/tbb/2021.11
+# When oneapi-tbb version changed we need to update it here.
+ENV LD_LIBRARY_PATH=/opt/intel/oneapi/tbb/2021.12/lib/intel64/gcc4.8:/opt/rh/devtoolset-8/root/usr/lib64:/opt/rh/devtoolset-8/root/usr/lib:/opt/rh/devtoolset-8/root/usr/lib64/dyninst:/opt/rh/devtoolset-8/root/usr/lib/dyninst:/opt/rh/devtoolset-8/root/usr/lib64:/opt/rh/devtoolset-8/root/usr/lib:$LD_LIBRARY_PATH
+ENV CMAKE_PREFIX_PATH=/opt/intel/oneapi/tbb/2021.12
 
 # Build Clang/LLVM, XE dependencies and then ISPC.
 RUN git checkout $SHA && \
