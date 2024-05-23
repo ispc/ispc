@@ -569,13 +569,9 @@ static bool lOffsets32BitSafe(llvm::Value **variableOffsetPtr, llvm::Value **con
 
     if (variableOffset->getType() != LLVMTypes::Int32VectorType) {
         llvm::SExtInst *sext = llvm::dyn_cast<llvm::SExtInst>(variableOffset);
-        llvm::ZExtInst *zext = llvm::dyn_cast<llvm::ZExtInst>(variableOffset);
         if (sext != nullptr && sext->getOperand(0)->getType() == LLVMTypes::Int32VectorType)
             // sext of a 32-bit vector -> the 32-bit vector is good
             variableOffset = sext->getOperand(0);
-        else if (zext != nullptr && zext->getOperand(0)->getType() == LLVMTypes::Int32VectorType)
-            // zext of a 32-bit vector -> the 32-bit vector is good
-            variableOffset = zext->getOperand(0);
         else if (lVectorIs32BitInts(variableOffset))
             // The only constant vector we should have here is a vector of
             // all zeros (i.e. a ConstantAggregateZero, but just in case,
