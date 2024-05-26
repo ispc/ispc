@@ -615,6 +615,16 @@ else()
         install-clangEdit
         install-clangLex
         )
+    if (${LLVM_VERSION_MAJOR} VERSION_GREATER_EQUAL 15)
+        list(APPEND LLVM_STAGE2_INSTALL_TARGETS
+            install-clangSupport
+            )
+    endif()
+    if (${LLVM_VERSION_MAJOR} VERSION_GREATER_EQUAL 16)
+        list(APPEND LLVM_STAGE2_INSTALL_TARGETS
+            install-clangASTMatchers
+            )
+    endif()
     list(APPEND LLVM_STAGE2_INSTALL_TARGETS
         install-llvm-headers
         install-llvm-libraries
