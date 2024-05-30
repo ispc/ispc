@@ -9,11 +9,11 @@ on:
   workflow_call:
     inputs:
       version:
-        description: Version to build in major.minor format For example '14.0'.
+        description: Version to build in major.minor format For example '17.0'.
         required: true
         type: string
       full_version:
-        description: Version to build in major.minor.patch format. For example '14.0.6'.
+        description: Version to build in major.minor.patch format. For example '17.0.6'.
         required: true
         type: string
       lto:
@@ -40,12 +40,12 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Version to build in major.minor format For example '14.0'.
+        description: Version to build in major.minor format For example '17.0'.
         required: true
         type: string
         default: '17.0'
       full_version:
-        description: Version to build in major.minor.patch format. For example '14.0.6'.
+        description: Version to build in major.minor.patch format. For example '17.0.6'.
         required: true
         type: string
         default: '17.0.6'
