@@ -348,23 +348,18 @@ if (WASM_ENABLED)
     list(APPEND ISPC_TARGETS wasm-i32x4)
 endif()
 
-set(CLANG_LIBRARY_LIST clangFrontend clangBasic clangEdit clangLex)
-if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "15.0.0")
-    list(APPEND CLANG_LIBRARY_LIST clangSupport)
-endif()
+set(CLANG_LIBRARY_LIST clangFrontend clangBasic clangEdit clangLex clangSupport)
 if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "16.0.0")
     list(APPEND CLANG_LIBRARY_LIST clangASTMatchers)
 endif()
 
 set(LLVM_COMPONENTS engine ipo bitreader bitwriter instrumentation linker option frontendopenmp passes)
 
-if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "15.0.0")
-    # windowsdriver is a small library introduced in LLVM 15. While it's targeted at Windows only,
-    # it's used in the LLVM code without any ifdef and is needed on all platforms.
-    # An interesting fact, that on Linux it is not required, because linker is smart enough to optimize out
-    # the calls to unresolved symbols. It's not the case on macOS though.
-    list(APPEND LLVM_COMPONENTS windowsdriver)
-endif()
+# windowsdriver is a small library introduced in LLVM 15. While it's targeted at Windows only,
+# it's used in the LLVM code without any ifdef and is needed on all platforms.
+# An interesting fact, that on Linux it is not required, because linker is smart enough to optimize out
+# the calls to unresolved symbols. It's not the case on macOS though.
+list(APPEND LLVM_COMPONENTS windowsdriver)
 
 if (X86_ENABLED)
     list(APPEND LLVM_COMPONENTS x86)
@@ -404,7 +399,7 @@ endif()
 
 if (NOT ISPC_OPAQUE_PTR_MODE)
     # Explicitly disable opaque pointers starting LLVM 15.0 till LLVM 17.0
-    if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "15.0.0" AND ${LLVM_VERSION_NUMBER} VERSION_LESS "17.0.0")
+    if (${LLVM_VERSION_NUMBER} VERSION_LESS "17.0.0")
         set(ISPC_OPAQUE_FLAGS "-Xclang" "-no-opaque-pointers")
         set(LLVM_TOOLS_OPAQUE_FLAGS "-opaque-pointers=0")
     endif()

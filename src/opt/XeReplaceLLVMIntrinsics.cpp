@@ -76,10 +76,9 @@ restart:
                 }
             }
         }
-// SPIR-V translator v15.0 doesn't support LLVM freeze instruction.
-// https://github.com/KhronosGroup/SPIRV-LLVM-Translator/issues/1140
-// Since it's used for optimization only, it's safe to just remove it.
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_15_0
+        // SPIR-V translator v15.0 doesn't support LLVM freeze instruction.
+        // https://github.com/KhronosGroup/SPIRV-LLVM-Translator/issues/1140
+        // Since it's used for optimization only, it's safe to just remove it.
         else if (llvm::FreezeInst *freeze = llvm::dyn_cast<llvm::FreezeInst>(inst)) {
             llvm::Value *val = freeze->getOperand(0);
             freeze->replaceAllUsesWith(val);
@@ -87,7 +86,6 @@ restart:
             modifiedAny = true;
             goto restart;
         }
-#endif
     }
     DEBUG_END_BB("LLVM intrinsics replacement");
     return modifiedAny;
