@@ -1776,11 +1776,7 @@ void AddUWTableFuncAttr(llvm::Function *fn) {
     if (g->target_os == TargetOS::windows) {
         // Enable generation an unwind table during codegen.
         // It is needed to generate backtraces during debugging and to unwind callstack.
-#if ISPC_LLVM_VERSION <= ISPC_LLVM_14_0
-        fn->setHasUWTable();
-#else
         fn->setUWTableKind(llvm::UWTableKind::Default);
-#endif
     }
 }
 

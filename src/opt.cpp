@@ -352,10 +352,8 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
             // We don't have any LICM or SimplifyCFG passes scheduled after us, that would cleanup
             // the CFG mess SROAPass may created if allowed to modify CFG, so forbid that.
             optPM.addFunctionPass(llvm::SROAPass(llvm::SROAOptions::PreserveCFG));
-#elif ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
-            optPM.addFunctionPass(llvm::SROAPass());
 #else
-            optPM.addFunctionPass(llvm::SROA());
+            optPM.addFunctionPass(llvm::SROAPass());
 #endif
             optPM.addFunctionPass(ReplaceLLVMIntrinsics());
             optPM.addFunctionPass(CheckIRForXeTarget());
@@ -374,10 +372,8 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addFunctionPass(llvm::SimplifyCFGPass(simplifyCFGopt), 192);
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
         optPM.addFunctionPass(llvm::SROAPass(llvm::SROAOptions::ModifyCFG));
-#elif ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
-        optPM.addFunctionPass(llvm::SROAPass());
 #else
-        optPM.addFunctionPass(llvm::SROA());
+        optPM.addFunctionPass(llvm::SROAPass());
 #endif
         optPM.addFunctionPass(llvm::EarlyCSEPass());
         optPM.addFunctionPass(llvm::LowerExpectIntrinsicPass());
@@ -415,10 +411,8 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         // On to more serious optimizations
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
         optPM.addFunctionPass(llvm::SROAPass(llvm::SROAOptions::ModifyCFG));
-#elif ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
-        optPM.addFunctionPass(llvm::SROAPass());
 #else
-        optPM.addFunctionPass(llvm::SROA());
+        optPM.addFunctionPass(llvm::SROAPass());
 #endif
         optPM.addFunctionPass(llvm::InstCombinePass());
         optPM.addFunctionPass(llvm::SimplifyCFGPass(simplifyCFGopt));
@@ -457,10 +451,8 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addFunctionPass(llvm::SimplifyCFGPass(simplifyCFGopt));
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
         optPM.addFunctionPass(llvm::SROAPass(llvm::SROAOptions::ModifyCFG));
-#elif ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
-        optPM.addFunctionPass(llvm::SROAPass());
 #else
-        optPM.addFunctionPass(llvm::SROA());
+        optPM.addFunctionPass(llvm::SROAPass());
 #endif
         optPM.addFunctionPass(llvm::InstCombinePass());
         optPM.commitFunctionToModulePassManager();
@@ -538,10 +530,8 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.initFunctionPassManager();
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
         optPM.addFunctionPass(llvm::SROAPass(llvm::SROAOptions::ModifyCFG));
-#elif ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
-        optPM.addFunctionPass(llvm::SROAPass());
 #else
-        optPM.addFunctionPass(llvm::SROA());
+        optPM.addFunctionPass(llvm::SROAPass());
 #endif
 
         optPM.addFunctionPass(llvm::InstCombinePass());
@@ -597,15 +587,11 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         // For Xe targets NewGVN pass produces more efficient code due to better resolving of branches.
         // On CPU targets it is effective in optimizing certain types of code,
         // but it is not be beneficial in all cases.
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
         if (g->target->isXeTarget()) {
             optPM.addFunctionPass(llvm::NewGVNPass(), 301);
         } else {
             optPM.addFunctionPass(llvm::GVNPass(), 301);
         }
-#else
-        optPM.addFunctionPass(llvm::GVN(), 301);
-#endif
         optPM.addFunctionPass(ReplaceMaskedMemOpsPass());
         optPM.addFunctionPass(IsCompileTimeConstantPass(true));
         optPM.addFunctionPass(IntrinsicsOpt());

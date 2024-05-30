@@ -42,11 +42,7 @@
 #else
 #include <llvm/Support/Host.h>
 #endif
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
 #include <llvm/MC/TargetRegistry.h>
-#else
-#include <llvm/Support/TargetRegistry.h>
-#endif
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
@@ -325,9 +321,7 @@ typedef enum {
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
     CPU_MTL,
 #endif
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
     CPU_SPR,
-#endif
 
     // Zen 1-2-3
     CPU_ZNVER1,
@@ -399,9 +393,7 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
     {CPU_MTL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
 #endif
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
     {CPU_SPR, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx_vnni", "avx512_vnni"}},
-#endif
     {CPU_ZNVER1, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
     {CPU_ZNVER2, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
     {CPU_ZNVER3, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
@@ -504,12 +496,8 @@ class AllCPUs {
         names[CPU_MTL].push_back("meteorlake");
         names[CPU_MTL].push_back("mtl");
 #endif
-// Note for SPR support: it's suported starting LLVM 12, but the support is complete and correct
-// only starting LLVM 15.0.3. LLVM 14 is ok if it's properly patched.
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
         names[CPU_SPR].push_back("sapphirerapids");
         names[CPU_SPR].push_back("spr");
-#endif
 
         names[CPU_ZNVER1].push_back("znver1");
         names[CPU_ZNVER2].push_back("znver2");
@@ -556,11 +544,9 @@ class AllCPUs {
 
         compat[CPU_SKX] = Set(CPU_SKX, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                               CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_None);
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
         compat[CPU_SPR] = Set(CPU_SPR, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                               CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX, CPU_ICL,
                               CPU_ICX, CPU_TGL, CPU_ADL, CPU_None);
-#endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
         compat[CPU_MTL] =
             Set(CPU_MTL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
@@ -756,9 +742,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             m_ispc_target = ISPCTarget::avx512knl_x16;
             break;
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
         case CPU_SPR:
-#endif
         case CPU_TGL:
         case CPU_ICX:
         case CPU_ICL:
@@ -1216,7 +1200,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasDotProductVNNI = (m_ispc_target == ISPCTarget::avx512icl_x32) ? true : false;
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x32) ? CPU_ICL : CPU_SKX;
         break;
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
     case ISPCTarget::avx512spr_x4:
         this->m_isa = Target::SPR_AVX512;
         this->m_nativeVectorWidth = 16;
@@ -1328,15 +1311,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasDotProductVNNI = true;
         CPUfromISA = CPU_SPR;
         break;
-#else
-    case ISPCTarget::avx512spr_x4:
-    case ISPCTarget::avx512spr_x8:
-    case ISPCTarget::avx512spr_x16:
-    case ISPCTarget::avx512spr_x32:
-    case ISPCTarget::avx512spr_x64:
-        unsupported_target = true;
-        break;
-#endif
 #ifdef ISPC_ARM_ENABLED
     case ISPCTarget::neon_i8x16:
         this->m_isa = Target::NEON;
@@ -1784,11 +1758,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_is32Bit = (getDataLayout()->getPointerSize() == 4);
 
         // TO-DO : Revisit addition of "target-features" and "target-cpu" for ARM support.
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
         llvm::AttrBuilder *fattrBuilder = new llvm::AttrBuilder(*g->ctx);
-#else
-        llvm::AttrBuilder *fattrBuilder = new llvm::AttrBuilder();
-#endif
 #ifdef ISPC_ARM_ENABLED
         if (m_isa == Target::NEON)
             fattrBuilder->addAttribute("target-cpu", this->m_cpu);
@@ -2172,11 +2142,7 @@ void Target::markFuncNameWithRegCallPrefix(std::string &funcName) const { funcNa
 
 void Target::markFuncWithTargetAttr(llvm::Function *func) {
     if (m_tf_attributes) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
         func->addFnAttrs(*m_tf_attributes);
-#else
-        func->addAttributes(llvm::AttributeList::FunctionIndex, *m_tf_attributes);
-#endif
     }
 }
 
@@ -2374,20 +2340,9 @@ Globals::Globals() {
 
 // Opaque pointers mode is supported starting from LLVM 14,
 // became default in LLVM 15
-#ifdef ISPC_OPAQUE_PTR_MODE
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_15_0
-// Do nothing, opaque pointers mode is default
-#elif ISPC_LLVM_VERSION == ISPC_LLVM_14_0
-    // Explicitly enable opaque pointers mode for LLVM 14.0
-    ctx->setOpaquePointers(true);
-#else
-    FATAL("Opaque pointers mode is not supported with this LLVM version!");
-#endif
-#else
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_15_0
+#ifndef ISPC_OPAQUE_PTR_MODE
     // Explicitly disable opaque pointers starting LLVM 15.0
     ctx->setOpaquePointers(false);
-#endif
 #endif
 
 #ifdef ISPC_XE_ENABLED

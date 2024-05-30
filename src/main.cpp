@@ -24,15 +24,11 @@
 #include <unistd.h>
 #endif // ISPC_HOST_IS_WINDOWS
 
+#include <llvm/MC/TargetRegistry.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/Debug.h>
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/Signals.h>
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
-#include <llvm/MC/TargetRegistry.h>
-#else
-#include <llvm/Support/TargetRegistry.h>
-#endif
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/ToolOutputFile.h>
 

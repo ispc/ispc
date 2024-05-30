@@ -470,11 +470,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         // isn't worth the code bloat / overhead.
         bool checkMask =
             (!g->target->isXeTarget() && type->isTask == true) ||
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
             ((function->getAttributes().getFnAttrs().hasAttribute(llvm::Attribute::AlwaysInline) == false) &&
-#else
-            ((function->getAttributes().getFnAttributes().hasAttribute(llvm::Attribute::AlwaysInline) == false) &&
-#endif
              costEstimate > CHECK_MASK_AT_FUNCTION_START_COST);
         checkMask &= (type->isUnmasked == false);
         checkMask &= (g->target->getMaskingIsFree() == false);
@@ -746,12 +742,7 @@ void Function::GenerateIR() {
         } else {
             // Set linkage for the function
             ispc::StorageClass sc = sym->storageClass;
-            bool isInline =
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
-                (function->getAttributes().getFnAttrs().hasAttribute(llvm::Attribute::AlwaysInline));
-#else
-                (function->getAttributes().getFnAttributes().hasAttribute(llvm::Attribute::AlwaysInline));
-#endif
+            bool isInline = (function->getAttributes().getFnAttrs().hasAttribute(llvm::Attribute::AlwaysInline));
             // We create regular functions with ExternalLinkage by default.
             // Fix it to InternalLinkage only if the function is static or inline
             if (sc == SC_STATIC || isInline) {
@@ -763,14 +754,8 @@ void Function::GenerateIR() {
                 function->addFnAttr("CMStackCall");
                 // Mark all internal ISPC functions as AlwaysInline to facilitate inlining on GPU
                 // if it's not marked as "noinline" explicitly
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
                 if (!(function->getAttributes().getFnAttrs().hasAttribute(llvm::Attribute::NoInline) ||
-                      function->getAttributes().getFnAttrs().hasAttribute(llvm::Attribute::AlwaysInline)))
-#else
-                if (!(function->getAttributes().getFnAttributes().hasAttribute(llvm::Attribute::NoInline) ||
-                      function->getAttributes().getFnAttributes().hasAttribute(llvm::Attribute::AlwaysInline)))
-#endif
-                {
+                      function->getAttributes().getFnAttrs().hasAttribute(llvm::Attribute::AlwaysInline))) {
                     function->addFnAttr(llvm::Attribute::AlwaysInline);
                 }
             }

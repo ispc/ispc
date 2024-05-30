@@ -3517,11 +3517,7 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
         llvm::CallInst *cc = llvm::dyn_cast<llvm::CallInst>(ci);
         if (cc && cc->getCalledFunction()) {
             if (cc->getCalledFunction()->returnDoesNotAlias()) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
                 cc->addRetAttr(llvm::Attribute::NoAlias);
-#else
-                cc->addAttribute(llvm::AttributeList::ReturnIndex, llvm::Attribute::NoAlias);
-#endif
             }
             // TO DO:Add x86 changes as a separate commit
             /* unsigned int argSize = cc->arg_size();
