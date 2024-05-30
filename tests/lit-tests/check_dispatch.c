@@ -20,12 +20,18 @@ int main() {
       printf("AVX2\n");
       break;
     case 5:
-      printf("AVX512KNL\n");
+      printf("AVX2VNNI\n");
       break;
     case 6:
-      printf("AVX512SKX\n");
+      printf("AVX512KNL\n");
       break;
     case 7:
+      printf("AVX512SKX\n");
+      break;
+    case 8:
+      printf("AVX512ICL\n");
+      break;
+    case 9:
       printf("AVX512SPR\n");
       break;
     default:
