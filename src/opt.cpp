@@ -547,13 +547,9 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.initLoopPassManager();
         // Loop passes using MemorySSA
         optPM.addLoopPass(llvm::LoopRotatePass(), 291);
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_15_0
         // Use LLVM default options
         llvm::LICMOptions licmOpts;
         optPM.addLoopPass(llvm::LICMPass(licmOpts), 292);
-#else
-        optPM.addLoopPass(llvm::LICMPass(), 292);
-#endif
         if (!g->target->isXeTarget()) {
             // SimpleLoopUnswitch is not a full equivalent of LoopUnswitch pass.
             // It produces much more basic blocks than LoopUnswitch which is
