@@ -22,16 +22,6 @@
 #include <llvm/Support/ModRef.h>
 #endif
 
-// In the transition to Opaque Pointers getElementType() was deprecated, getPointerElementType() will live a little
-// longer. But we need another solution eventually. Issue #2245 was filed to track this.
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_14_0
-#define PTR_ELT_TYPE getPointerElementType
-#else
-#define PTR_ELT_TYPE getElementType
-#endif
-
-#define PTYPE(p) (llvm::cast<llvm::PointerType>((p)->getType()->getScalarType())->PTR_ELT_TYPE())
-
 namespace llvm {
 class PHINode;
 class InsertElementInst;

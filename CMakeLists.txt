@@ -333,11 +333,8 @@ if (X86_ENABLED)
         avx512skx-x4 avx512skx-x8 avx512skx-x16
         avx512skx-x32 avx512skx-x64
         avx512icl-x4 avx512icl-x8 avx512icl-x16
-        avx512icl-x32 avx512icl-x64)
-    if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "14.0.0")
-        list(APPEND ISPC_TARGETS
-            avx512spr-x4 avx512spr-x8 avx512spr-x16 avx512spr-x32 avx512spr-x64)
-    endif()
+        avx512icl-x32 avx512icl-x64
+        avx512spr-x4 avx512spr-x8 avx512spr-x16 avx512spr-x32 avx512spr-x64)
 endif()
 if (ARM_ENABLED)
     list(APPEND ISPC_TARGETS neon-i8x16 neon-i16x8 neon-i32x4 neon-i32x8)
@@ -405,16 +402,7 @@ else()
     endif()
 endif()
 
-if (ISPC_OPAQUE_PTR_MODE)
-    if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "15.0.0")
-    # Do nothing, opaque pointers mode is default
-    elseif (${LLVM_VERSION_NUMBER} VERSION_EQUAL "14.0.0")
-    # Explicitly enable opaque pointers for LLVM 14.0
-        set(ISPC_OPAQUE_FLAGS "-Xclang" "-opaque-pointers")
-    else()
-        message(FATAL_ERROR "ISPC opaque pointers mode is not supported with LLVM " ${LLVM_VERSION_NUMBER})
-    endif()
-else()
+if (NOT ISPC_OPAQUE_PTR_MODE)
     # Explicitly disable opaque pointers starting LLVM 15.0 till LLVM 17.0
     if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "15.0.0" AND ${LLVM_VERSION_NUMBER} VERSION_LESS "17.0.0")
         set(ISPC_OPAQUE_FLAGS "-Xclang" "-no-opaque-pointers")
@@ -637,12 +625,12 @@ else()
             -ffunction-sections
         )
     endif()
-    # LLVM 14 switches default DWARF version from v4 to v5
+    # Since 14.0 LLVM has switched default DWARF version from v4 to v5
     # but gdb < 10.1 can't read DWARF v5.
     # https://discourse.llvm.org/t/gdb-10-1-cant-read-clangs-dwarf-v5/6035
     # Use DWARF v4 for ISPC build to allow debugging of ispc binary with gdb
     # on Ubuntu 20.04
-    if (NOT CMAKE_BUILD_TYPE STREQUAL "Release" AND ${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "14.0.0")
+    if (NOT CMAKE_BUILD_TYPE STREQUAL "Release")
         list(APPEND COMPILE_OPTIONS -gdwarf-4)
     endif()
 endif()
