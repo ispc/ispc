@@ -75,6 +75,55 @@ jobs:
         $RUN_SMOKE && echo "optsets=${OPTSETS_SMOKE}" >> $GITHUB_OUTPUT || true
         $RUN_FULL &&  echo "optsets=${OPTSETS_FULL}" >> $GITHUB_OUTPUT || true
 
+  linux-aarch64-build-ispc:
+    needs: [define-flow]
+    runs-on: [self-hosted, Linux, ARM64]
+    container: ubuntu:22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        llvm:
+          - version: "17.0"
+            full_version: "17.0.6"
+            short_version: 17
+            opaque_ptr_mode: "ON"
+    env:
+      LLVM_VERSION: ${{ matrix.llvm.version }}
+      LLVM_TAR: llvm-${{ matrix.llvm.full_version }}-ubuntu18.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
+      ISPC_OPAQUE_PTR_MODE: ${{ matrix.llvm.opaque_ptr_mode }}
+
+    steps:
+    - name: Install git
+      run: |
+        apt-get -y update && apt-get install -y git
+
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps-aarch64.sh
+
+    - name: Check environment
+      run: |
+        which -a clang
+        cat /proc/cpuinfo
+
+    - name: Build package
+      run: |
+        .github/workflows/scripts/build-ispc.sh
+
+    - name: Sanity testing (make check-all, make test)
+      run: |
+        .github/workflows/scripts/check-ispc.sh
+
+    - name: Upload package
+      uses: actions/upload-artifact@v4
+      with:
+        name: ispc_llvm${{ matrix.llvm.short_version }}_linux.aarch64
+        path: build/ispc-trunk-linux.aarch64.tar.gz
+
   linux-build-ispc:
     needs: [define-flow]
     runs-on: ubuntu-latest
