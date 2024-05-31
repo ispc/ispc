@@ -506,10 +506,11 @@ jobs:
 
   macos-build-ispc:
     needs: [define-flow]
-    runs-on: macos-12
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
+        runner: [macos-12, macos-14]
         llvm:
           - version: "15.0"
             full_version: "15.0.7"
@@ -540,8 +541,13 @@ jobs:
         tar xf $LLVM_TAR
         echo "${GITHUB_WORKSPACE}/bin-$LLVM_VERSION/bin" >> $GITHUB_PATH
         brew install bison flex
-        echo "/usr/local/opt/bison/bin" >> $GITHUB_PATH
-        echo "/usr/local/opt/flex/bin" >> $GITHUB_PATH
+        if [ "${{ matrix.runner }}" == "macos-14" ]; then
+          echo "/opt/homebrew/opt/bison/bin" >> $GITHUB_PATH
+          echo "opt/homebrew/opt/flex/bin" >> $GITHUB_PATH
+        else
+          echo "/usr/local/opt/bison/bin" >> $GITHUB_PATH
+          echo "/usr/local/opt/flex/bin" >> $GITHUB_PATH
+        fi
 
     - name: Check environment
       run: |
@@ -560,7 +566,7 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v4
       with:
-        name: ispc_llvm${{ matrix.llvm.short_version }}_macos
+        name: ispc_llvm${{ matrix.llvm.short_version }}_${{ matrix.runner }}
         path: build/ispc-trunk-macos.tar.gz
 
   macos-build-ispc-llvm17-lto:
@@ -621,7 +627,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@v4
       with:
-        name: ispc_llvm${{matrix.version}}_macos
+        name: ispc_llvm${{matrix.version}}_macos-12
 
     - name: Install dependencies and unpack artifacts
       run: |
