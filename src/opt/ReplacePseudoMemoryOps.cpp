@@ -7,6 +7,8 @@
 #include "ReplacePseudoMemoryOps.h"
 #include "builtins-decl.h"
 
+#include <unordered_map>
+
 namespace ispc {
 
 using namespace builtin;
