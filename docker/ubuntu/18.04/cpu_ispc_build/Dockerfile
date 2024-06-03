@@ -25,12 +25,6 @@ RUN uname -a
 RUN apt-get -y update && apt-get --no-install-recommends install -y wget build-essential gcc g++ git python3-dev ncurses-dev libtinfo-dev ca-certificates libtbb-dev ninja-build && \
     rm -rf /var/lib/apt/lists/*
 
-# ISPC and LLVM starting 16.0 build in C++17 mode and will fail without modern libstdc++
-RUN apt-get -y update && apt-get --no-install-recommends install -y software-properties-common && \
-    add-apt-repository ppa:ubuntu-toolchain-r/test -y && apt-get -y update && \
-    apt-get --no-install-recommends install -y libstdc++-9-dev && \
-    rm -rf /var/lib/apt/lists/*
-
 # Install multilib libc needed to build clang_rt
 RUN if [[ $(uname -m) =~ "x86" ]]; then \
         export CROSS_LIBS="libc6-dev-i386=2.27-3ubuntu*"; \
