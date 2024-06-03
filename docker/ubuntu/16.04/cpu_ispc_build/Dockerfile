@@ -24,9 +24,9 @@ RUN apt-get -y update && apt-get --no-install-recommends install -y software-pro
     apt-get --no-install-recommends install -y wget build-essential git ncurses-dev libtinfo-dev libtbb-dev && \
     rm -rf /var/lib/apt/lists/*
 
-# ISPC and LLVM starting 16.0 build in C++17 mode and will fail without modern libstdc++ and modern compiler (gcc>=7).
+# ISPC and LLVM starting 16.0 build in C++17 mode and will fail without modern compiler (gcc>=7).
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test -y && apt-get -y update && \
-    apt-get --no-install-recommends install -y libstdc++-9-dev gcc-7 g++-7 && \
+    apt-get --no-install-recommends install -y gcc-7 g++-7 && \
     rm -rf /var/lib/apt/lists/*
 
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 10 && \
