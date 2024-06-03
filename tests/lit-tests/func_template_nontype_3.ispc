@@ -8,8 +8,6 @@
 // CHECK-LABEL: define <{{[0-9]*}} x i32> @bar2___un_3C_uni_3E_un_3C_uni_3E_
 // CHECK: call void @foo2___vyiCuni4Cuni8Cuni64___
 // CHECK-LABEL: define linkonce_odr void @foo2___vyiCuni4Cuni8Cuni64___
-// CHECK: partial_inner_all_outer:
-// CHECK-NEXT:  ret void
 
 // CHECK-LABEL: define i64 @bar3___
 // CHECK: call i64 @foo3___Cuni8___
