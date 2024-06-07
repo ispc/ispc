@@ -56,8 +56,9 @@ define <4 x float> @__rsqrt_fast_varying_float(<4 x float> %v) nounwind readonly
   %ret = call <4 x float> @llvm.x86.avx512.rsqrt14.ps.128(<4 x float> %v,  <4 x float> undef,  i8 -1)
   ret <4 x float> %ret
 }
+declare <4 x float> @llvm.x86.sse.rsqrt.ps(<4 x float>) nounwind readnone
 define <4 x float> @__rsqrt_varying_float(<4 x float> %v) nounwind readonly alwaysinline {
-  %is = call <4 x float> @__rsqrt_fast_varying_float(<4 x float> %v)
+  %is = call <4 x float> @llvm.x86.sse.rsqrt.ps(<4 x float> %v)
   ; Newton-Raphson iteration to improve precision
   ;  float is = __rsqrt_v(v);
   ;  return 0.5 * is * (3. - (v * is) * is);
