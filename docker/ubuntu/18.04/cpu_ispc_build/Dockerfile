@@ -5,7 +5,7 @@
 
 ARG LLVM_VERSION=17.0
 
-FROM ubuntu:18.04 AS llvm_build_step1
+FROM ubuntu:18.04 AS llvm_build
 LABEL maintainer="Dmitry Babokin <dmitry.y.babokin@intel.com>"
 SHELL ["/bin/bash", "-c"]
 
@@ -68,37 +68,15 @@ RUN git clone https://github.com/$REPO.git ispc && \
         -DLTO=$LTO \
         -DXE_DEPS=OFF \
         -DLLVM_VERSION="$LLVM_VERSION" \
-        -DBUILD_STAGE1_TOOLCHAIN_ONLY=ON \
-        -DCMAKE_INSTALL_PREFIX="$LLVM_HOME"/bin-"$LLVM_VERSION" \
-        -DLLVM_DISABLE_ASSERTIONS="$LLVM_DISABLE_ASSERTIONS" && \
-    cmake --build build && \
-    rm -rf build
-
-FROM llvm_build_step1 AS llvm_build_step2
-SHELL ["/bin/bash", "-c"]
-
-ARG LTO=OFF
-ARG PGO=OFF
-ARG LLVM_VERSION
-ARG LLVM_DISABLE_ASSERTIONS
-
-WORKDIR /usr/local/src
-RUN cmake ispc/superbuild \
-        -B build \
-        --preset os \
-        -DLTO=$LTO \
-        -DXE_DEPS=OFF \
-        -DLLVM_VERSION="$LLVM_VERSION" \
         -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON \
         -DCMAKE_INSTALL_PREFIX="$LLVM_HOME"/bin-"$LLVM_VERSION" \
-        -DPREBUILT_STAGE1_PATH="$LLVM_HOME"/bin-"$LLVM_VERSION" \
         -DLLVM_DISABLE_ASSERTIONS="$LLVM_DISABLE_ASSERTIONS" && \
     cmake --build build && \
     rm -rf build
 
 ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
 
-FROM llvm_build_step2 AS ispc_build
+FROM llvm_build AS ispc_build
 SHELL ["/bin/bash", "-c"]
 
 ARG LTO=OFF
