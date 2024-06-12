@@ -72,6 +72,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.22.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.23.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.24.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.25.0`_
 
 * `Getting Started with ISPC`_
 
@@ -625,6 +626,11 @@ older versions:
   all targets. It may potentially affect the results of the code that uses this
   function for the following targets: ``avx2-i16x16``, ``avx2-i8x32`` and all
   ``avx512`` targets. Please, refer to `Basic Math Functions`_ for more details.
+
+Updating ISPC Programs For Changes In ISPC 1.25.0
+-------------------------------------------------
+
+``avx512knl-x16`` target is deprecated and will be removed in future releases.
 
 Getting Started with ISPC
 =========================
