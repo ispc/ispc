@@ -79,9 +79,7 @@ on:
 jobs:
   # Building LLVM in docker, as using native Ubuntu 18.04 github-hosted image contains newer-than-expected libs and
   # makes the resulting build not usable on other Ubuntu 18.04 images.
-  # Doing Linux build in two stages, as self-build is required, but Github Action runners are not always capable
-  # to finish the full job in less than 6 hours.
-  linux-build-1:
+  linux-build:
     runs-on: ubuntu-latest
 
     steps:
@@ -97,39 +95,7 @@ jobs:
       run: |
         cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }}:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LTO=${{ inputs.lto }} --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg LLVM_DISABLE_ASSERTIONS=OFF .
-
-    - name: Upload package
-      uses: actions/upload-artifact@v4
-      with:
-        name: llvm_linux_x86_lto_${{ inputs.lto }}_stage1_cache
-        path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
-
-  linux-build-2:
-    needs: [linux-build-1]
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
-
-    - name: Check environment
-      run: |
-        cat /proc/cpuinfo
-
-    - name: Download package
-      uses: actions/download-artifact@v4
-      with:
-        name: llvm_linux_x86_lto_${{ inputs.lto }}_stage1_cache
-        path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
-
-    - name: Build LLVM
-      run: |
-        cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
-        ls -al
-        docker buildx create --use
-        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }}:stage2 --target=llvm_build_step2 --cache-from=type=local,src=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LTO=${{ inputs.lto }} --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg LLVM_DISABLE_ASSERTIONS=OFF --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }} --target=llvm_build --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LTO=${{ inputs.lto }} --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg LLVM_DISABLE_ASSERTIONS=OFF --output=type=tar,dest=result.tar .
 
     - name: Pack LLVM
       run: |
@@ -145,7 +111,7 @@ jobs:
         name: llvm_linux_x86_lto_${{ inputs.lto }}
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
 
-  linux-build-release-1:
+  linux-build-release:
     runs-on: ubuntu-latest
 
     steps:
@@ -156,44 +122,13 @@ jobs:
     - name: Check environment
       run: |
         cat /proc/cpuinfo
-
-    - name: Build LLVM
-      run: |
-        cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
-        docker buildx create --use
-        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }}:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LTO=${{ inputs.lto }} --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg LLVM_DISABLE_ASSERTIONS=ON .
-
-    - name: Upload package
-      uses: actions/upload-artifact@v4
-      with:
-        name: llvmrel_linux_x86_lto_${{ inputs.lto }}_stage1_cache
-        path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
-
-  linux-build-release-2:
-    needs: [linux-build-release-1]
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
-
-    - name: Check environment
-      run: |
-        cat /proc/cpuinfo
-
-    - name: Download package
-      uses: actions/download-artifact@v4
-      with:
-        name: llvmrel_linux_x86_lto_${{ inputs.lto }}_stage1_cache
-        path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
 
     - name: Build LLVM
       run: |
         cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
         ls -al
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }}:stage2 --target=llvm_build_step2 --cache-from=type=local,src=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LTO=${{ inputs.lto }} --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg LLVM_DISABLE_ASSERTIONS=ON --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }} --target=llvm_build --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LTO=${{ inputs.lto }} --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg LLVM_DISABLE_ASSERTIONS=ON --output=type=tar,dest=result.tar .
 
     - name: Pack LLVM
       run: |
@@ -209,34 +144,7 @@ jobs:
         name: llvmrel_linux_x86_lto_${{ inputs.lto }}
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
 
-  linux-arm-build-1:
-    runs-on: [self-hosted, linux, ARM64]
-    # Disabling this rebuild for non ispc/ispc repo, as it requires self-hosted runner
-    if: github.repository == 'ispc/ispc'
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
-
-    - name: Check environment
-      run: |
-        cat /proc/cpuinfo
-
-    - name: Build LLVM
-      run: |
-        cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
-        docker buildx create --use
-        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }}:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LTO=${{ inputs.lto }} --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg LLVM_DISABLE_ASSERTIONS=OFF .
-        docker buildx rm
-
-    - name: Upload package
-      uses: actions/upload-artifact@v4
-      with:
-        name: llvm_linux_aarch64_lto_${{ inputs.lto }}_stage1_cache
-        path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
-
-  linux-arm-build-2:
-    needs: [linux-arm-build-1]
+  linux-arm-build:
     runs-on: [self-hosted, linux, ARM64]
     # Disabling this rebuild for non ispc/ispc repo, as it requires self-hosted runner
     if: github.repository == 'ispc/ispc'
@@ -250,17 +158,11 @@ jobs:
       run: |
         cat /proc/cpuinfo
 
-    - name: Download package
-      uses: actions/download-artifact@v4
-      with:
-        name: llvm_linux_aarch64_lto_${{ inputs.lto }}_stage1_cache
-        path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
-
     - name: Build LLVM
       run: |
         cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }}:stage2 --target=llvm_build_step2 --cache-from=type=local,src=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LTO=${{ inputs.lto }} --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg LLVM_DISABLE_ASSERTIONS=OFF --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }} --target=llvm_build --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LTO=${{ inputs.lto }} --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg LLVM_DISABLE_ASSERTIONS=OFF --output=type=tar,dest=result.tar .
         docker buildx rm
 
     - name: Pack LLVM
@@ -278,34 +180,7 @@ jobs:
         name: llvm_linux_aarch64_lto_${{ inputs.lto }}
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
 
-  linux-arm-build-release-1:
-    runs-on: [self-hosted, linux, ARM64]
-    # Disabling this rebuild for non ispc/ispc repo, as it requires self-hosted runner
-    if: github.repository == 'ispc/ispc'
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
-
-    - name: Check environment
-      run: |
-        cat /proc/cpuinfo
-
-    - name: Build LLVM
-      run: |
-        cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
-        docker buildx create --use
-        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }}:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LTO=${{ inputs.lto }} --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg LLVM_DISABLE_ASSERTIONS=ON .
-        docker buildx rm
-
-    - name: Upload package
-      uses: actions/upload-artifact@v4
-      with:
-        name: llvmrel_linux_aarch64_lto_${{ inputs.lto }}_stage1_cache
-        path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
-
-  linux-arm-build-release-2:
-    needs: [linux-arm-build-release-1]
+  linux-arm-build-release:
     runs-on: [self-hosted, linux, ARM64]
     # Disabling this rebuild for non ispc/ispc repo, as it requires self-hosted runner
     if: github.repository == 'ispc/ispc'
@@ -319,17 +194,11 @@ jobs:
       run: |
         cat /proc/cpuinfo
 
-    - name: Download package
-      uses: actions/download-artifact@v4
-      with:
-        name: llvmrel_linux_aarch64_lto_${{ inputs.lto }}_stage1_cache
-        path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/cache.local
-
     - name: Build LLVM
       run: |
         cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }}:stage2 --target=llvm_build_step2 --cache-from=type=local,src=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LTO=${{ inputs.lto }} --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg LLVM_DISABLE_ASSERTIONS=ON --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }} --target=llvm_build --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LTO=${{ inputs.lto }} --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg LLVM_DISABLE_ASSERTIONS=ON --output=type=tar,dest=result.tar .
         docker buildx rm
 
     - name: Pack LLVM
