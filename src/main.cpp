@@ -1273,6 +1273,12 @@ int main(int Argc, char *Argv[]) {
     }
 #endif
 
+    for (auto target : targets) {
+        if (target == ISPCTarget::avx512knl_x16) {
+            Warning(SourcePos(), "The target avx512knl_x16 is deprecated and will be removed in the future.");
+        }
+    }
+
     // If [no]wrap-signed-int is explicitly specified, then use this value.
     // Disable NSW bit optimization by default due to performance regressions
     // on some GPU workloads.  Otherwise enable it by default only for CPU targets.
