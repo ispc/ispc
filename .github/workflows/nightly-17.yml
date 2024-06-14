@@ -13,8 +13,8 @@ permissions: read-all
 
 # Run daily - test sse2-avx512 targets @ -O0/-O1/-O2
 on:
-  #  schedule:
-  #    - cron:  '0 7 * * *'
+  schedule:
+    - cron:  '0 7 * * *'
   workflow_dispatch:
 
 env:
@@ -25,9 +25,7 @@ env:
 jobs:
   # Building LLVM in docker, as using native Ubuntu 18.04 github-hosted image contains newer-than-expected libs and
   # makes the resulting build not usable on other Ubuntu 18.04 images.
-  # Doing Linux build in two stages, as self-build is required, but Github Action runners are not always capable
-  # to finish the full job in less than 6 hours.
-  linux-build-llvm-17-1:
+  linux-build-llvm-17:
     runs-on: ubuntu-latest
 
     steps:
@@ -38,44 +36,13 @@ jobs:
     - name: Check environment
       run: |
         cat /proc/cpuinfo
-
-    - name: Build LLVM
-      run: |
-        cd docker/ubuntu/18.04/cpu_ispc_build
-        docker buildx create --use
-        docker buildx build --tag ispc/ubuntu18.04:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=17.0 .
-
-    - name: Upload package
-      uses: actions/upload-artifact@v4
-      with:
-        name: llvm17_linux_stage1_cache
-        path: docker/ubuntu/18.04/cpu_ispc_build/cache.local
-
-  linux-build-llvm-17-2:
-    needs: [linux-build-llvm-17-1]
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
-
-    - name: Check environment
-      run: |
-        cat /proc/cpuinfo
-
-    - name: Download package
-      uses: actions/download-artifact@v4
-      with:
-        name: llvm17_linux_stage1_cache
-        path: docker/ubuntu/18.04/cpu_ispc_build/cache.local
 
     - name: Build LLVM
       run: |
         cd docker/ubuntu/18.04/cpu_ispc_build
         ls -al
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu18.04:stage2 --target=llvm_build_step2 --cache-from=type=local,src=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=17.0 --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu18.04:stage2 --target=llvm_build --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=17.0 --output=type=tar,dest=result.tar .
 
     - name: Pack LLVM
       run: |
@@ -92,7 +59,7 @@ jobs:
         path: docker/ubuntu/18.04/cpu_ispc_build/llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz
 
   linux-build-ispc-llvm-17:
-    needs: [linux-build-llvm-17-2]
+    needs: [linux-build-llvm-17]
     runs-on: ubuntu-latest
     env:
       LLVM_VERSION: "17.0"
@@ -190,6 +157,10 @@ jobs:
     - name: Setup MSBuild.exe
       uses: microsoft/setup-msbuild@v2
 
+    - name: Install dependencies
+      run: |
+        Install-ChocoPackage ninja
+
     - name: Check environment
       shell: cmd
       run: |
@@ -205,8 +176,11 @@ jobs:
     - name: Build LLVM
       shell: cmd
       run: |
-        python ./alloy.py -b --version=17.0 --verbose
-        cd alloy_results* && type alloy_build.log
+        set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        call %VSVARS%
+        cmake %ISPC_HOME%\superbuild -B build --preset os -DLTO=ON -DLLVM_VERSION=17.0 -DCMAKE_SYSTEM_VERSION=10.0.18362.0 -DCMAKE_INSTALL_PREFIX=%LLVM_HOME%\bin-17.0 -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DXE_DEPS=OFF -DLLVM_DISABLE_ASSERTIONS=ON
+        cmake --build build
+        rmdir /s /q build
 
     - name: Pack LLVM
       shell: cmd
