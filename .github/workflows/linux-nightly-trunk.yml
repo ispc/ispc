@@ -23,9 +23,7 @@ env:
 jobs:
   # Building LLVM in docker, as using native Ubuntu 18.04 github-hosted image contains newer-than-expected libs and
   # makes the resulting build not usable on other Ubuntu 18.04 images.
-  # Doing Linux build in two stages, as self-build is required, but Github Action runners are not always capable
-  # to finish the full job in less than 6 hours.
-  linux-build-llvm-trunk-1:
+  linux-build-llvm-trunk:
     runs-on: ubuntu-latest
 
     steps:
@@ -36,44 +34,13 @@ jobs:
     - name: Check environment
       run: |
         cat /proc/cpuinfo
-
-    - name: Build LLVM
-      run: |
-        cd docker/ubuntu/18.04/cpu_ispc_build
-        docker buildx create --use
-        docker buildx build --tag ispc/ubuntu18.04:stage1 --target=llvm_build_step1 --cache-to=type=local,dest=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=trunk .
-
-    - name: Upload package
-      uses: actions/upload-artifact@v4
-      with:
-        name: llvm_trunk_linux_stage1_cache
-        path: docker/ubuntu/18.04/cpu_ispc_build/cache.local
-
-  linux-build-llvm-trunk-2:
-    needs: [linux-build-llvm-trunk-1]
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
-
-    - name: Check environment
-      run: |
-        cat /proc/cpuinfo
-
-    - name: Download package
-      uses: actions/download-artifact@v4
-      with:
-        name: llvm_trunk_linux_stage1_cache
-        path: docker/ubuntu/18.04/cpu_ispc_build/cache.local
 
     - name: Build LLVM
       run: |
         cd docker/ubuntu/18.04/cpu_ispc_build
         ls -al
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu18.04:stage2 --target=llvm_build_step2 --cache-from=type=local,src=cache.local --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=trunk --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu18.04 --target=llvm_build --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=trunk --output=type=tar,dest=result.tar .
 
     - name: Pack LLVM
       run: |
@@ -90,7 +57,7 @@ jobs:
         path: docker/ubuntu/18.04/cpu_ispc_build/llvm-trunk-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz
 
   linux-build-ispc-llvm-trunk:
-    needs: [linux-build-llvm-trunk-2]
+    needs: [linux-build-llvm-trunk]
     runs-on: ubuntu-latest
     env:
       LLVM_VERSION: "trunk"
