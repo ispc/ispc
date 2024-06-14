@@ -43,3 +43,12 @@ fi
 tar xf $LLVM_TAR
 echo "${GITHUB_WORKSPACE}/$SDE_TAR_NAME-lin" >> $GITHUB_PATH
 echo "${GITHUB_WORKSPACE}/bin-$LLVM_VERSION/bin" >> $GITHUB_PATH
+
+# Fetch llvm-mingw: version of llvm doesn't matter as building only needs the headers in it
+mkdir llvm-mingw
+cd llvm-mingw
+wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 -O llvm-mingw.tar.xz https://github.com/mstorsjo/llvm-mingw/releases/download/20231128/llvm-mingw-20231128-ucrt-ubuntu-20.04-x86_64.tar.xz
+tar --strip-components=1 -xf llvm-mingw.tar.xz
+rm llvm-mingw.tar.xz
+cd ..
+
