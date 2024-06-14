@@ -56,10 +56,6 @@ WORKDIR /usr/local/src
 
 # Build Clang with all required patches.
 # Pass required LLVM_VERSION with --build-arg LLVM_VERSION=<version>.
-# Note self-build options, it's required to build clang and ispc with the same compiler,
-# i.e. if clang was built by gcc, you may need to use gcc to build ispc (i.e. run "make gcc"),
-# or better do clang selfbuild and use it for ispc build as well (i.e. just "make").
-# "rm" are just to keep docker image small.
 RUN git clone https://github.com/$REPO.git ispc && \
     git -C ispc checkout $SHA && \
     cmake ispc/superbuild \
