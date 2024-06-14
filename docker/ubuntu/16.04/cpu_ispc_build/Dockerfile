@@ -45,12 +45,13 @@ RUN if [ -v http_proxy ]; then git config --global --add http.proxy "$http_proxy
 
 WORKDIR /usr/local/src
 
-# Zlib is required to build Python3.6.
+# Zlib is required to build Python3
 RUN apt-get -y update && \
     apt-get -y --no-install-recommends install zlib1g-dev zlib1g && \
     rm -rf /var/lib/apt/lists/*
-RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://www.python.org/ftp/python/3.6.15/Python-3.6.15.tgz && \
-    tar xf Python-3.6.15.tgz && pushd Python-3.6.15 && \
+ENV PYTHON_VERSION=3.8.19
+RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz && \
+    tar xf Python-${PYTHON_VERSION}.tgz && pushd Python-${PYTHON_VERSION} && \
     ./configure CFLAGS=-fPIC CXXFLAGS=-fPIC && make -j"$(nproc)" && make install && \
     popd && rm -rf /usr/local/src/*
 

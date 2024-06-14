@@ -22,7 +22,7 @@ ARG LLVM_DISABLE_ASSERTIONS
 RUN uname -a
 
 # Packages required to build ISPC and Clang.
-RUN apt-get -y update && apt-get --no-install-recommends install -y wget build-essential gcc g++ git python3-dev ncurses-dev libtinfo-dev ca-certificates libtbb-dev ninja-build && \
+RUN apt-get -y update && apt-get --no-install-recommends install -y wget build-essential gcc g++ git ncurses-dev libtinfo-dev ca-certificates libtbb-dev ninja-build && \
     rm -rf /var/lib/apt/lists/*
 
 # Install multilib libc needed to build clang_rt
@@ -42,6 +42,16 @@ RUN if [[ $(uname -m) =~ "x86" ]]; then \
     fi && \
     wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 $CMAKE_URL && \
     sh cmake-*.sh --prefix=/usr/local --skip-license && rm -rf cmake-*.sh
+
+# Zlib is required to build Python3
+RUN apt-get -y update && \
+    apt-get -y --no-install-recommends install zlib1g-dev zlib1g && \
+    rm -rf /var/lib/apt/lists/*
+ENV PYTHON_VERSION=3.8.19
+RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz && \
+    tar xf Python-${PYTHON_VERSION}.tgz && pushd Python-${PYTHON_VERSION} && \
+    ./configure CFLAGS=-fPIC CXXFLAGS=-fPIC && make -j"$(nproc)" && make install && \
+    popd && rm -rf /usr/local/src/*
 
 # If you are behind a proxy, you need to configure git.
 RUN if [ -v http_proxy ]; then git config --global --add http.proxy "$http_proxy"; fi
