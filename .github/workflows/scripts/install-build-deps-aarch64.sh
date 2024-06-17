@@ -5,7 +5,7 @@
 
 add-apt-repository ppa:ubuntu-toolchain-r/test -y && apt-get -y update
 
-apt-get --no-install-recommends install -y wget build-essential gcc g++ git python3-dev ncurses-dev libtinfo-dev ca-certificates libtbb-dev ninja-build
+apt-get --no-install-recommends install -y wget build-essential gcc g++ git python3-dev ca-certificates libtbb-dev ninja-build
 
 # ISPC and LLVM starting 16.0 build in C++17 mode and will fail without modern libstdc++
 apt-get --no-install-recommends install -y software-properties-common libstdc++-9-dev
