@@ -22,7 +22,7 @@ ARG LLVM_DISABLE_ASSERTIONS
 RUN uname -a
 
 # Packages required to build ISPC and Clang.
-RUN apt-get -y update && apt-get --no-install-recommends install -y wget build-essential gcc g++ git ncurses-dev libtinfo-dev ca-certificates libtbb-dev ninja-build && \
+RUN apt-get -y update && apt-get --no-install-recommends install -y wget build-essential gcc g++ git ca-certificates libtbb-dev ninja-build && \
     rm -rf /var/lib/apt/lists/*
 
 # Install multilib libc needed to build clang_rt

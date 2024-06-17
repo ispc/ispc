@@ -21,7 +21,7 @@ RUN uname -a
 
 # Packages required to build ISPC and Clang.
 RUN apt-get -y update && apt-get --no-install-recommends install -y software-properties-common && \
-    apt-get --no-install-recommends install -y wget build-essential git ncurses-dev libtinfo-dev libtbb-dev && \
+    apt-get --no-install-recommends install -y wget build-essential git libtbb-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # ISPC and LLVM starting 16.0 build in C++17 mode and will fail without modern compiler (gcc>=7).

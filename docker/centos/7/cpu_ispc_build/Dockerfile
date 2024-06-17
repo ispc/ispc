@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2017-2023, Intel Corporation
+#  Copyright (c) 2017-2024, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -19,7 +19,7 @@ RUN yum -y update && \
     yum install -y centos-release-scl epel-release && \
     yum install -y vim wget yum-utils gcc gcc-c++ git python3 m4 bison && \
     yum install -y flex patch make glibc-devel.x86_64 glibc-devel.i686 xz devtoolset-8 && \
-    yum install -y libtool autopoint gettext-devel texinfo tbb-devel help2man && \
+    yum install -y autopoint gettext-devel texinfo tbb-devel help2man && \
     yum install -y ninja-build && \
     yum install -y libstdc++-static && \
     yum clean -y all
@@ -65,13 +65,6 @@ RUN git checkout $SHA && \
     rm -rf build
 
 FROM llvm_only AS ispc_build
-
-# Build ncurses with -fPIC: https://github.com/ispc/ispc/pull/2502#issuecomment-1526931698
-WORKDIR /usr/local/src
-RUN git clone https://github.com/mirror/ncurses.git
-WORKDIR /usr/local/src/ncurses
-# Checkout version with fix for CVE-2023-29491
-RUN git checkout 87c2c84 && CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --with-termlib && make -j"$(nproc)" && make install -j"$(nproc)"
 
 # Install new flex (2.6.4)
 WORKDIR /usr/local/src

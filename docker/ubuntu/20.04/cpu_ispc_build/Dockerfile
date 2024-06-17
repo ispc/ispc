@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2017-2023, Intel Corporation
+#  Copyright (c) 2017-2024, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -16,7 +16,7 @@ ARG SHA=main
 RUN uname -a
 
 # Packages
-RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends install -y wget build-essential gcc g++ git python3-dev ncurses-dev libtinfo-dev ca-certificates libtbb-dev ninja-build && \
+RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends install -y wget build-essential gcc g++ git python3-dev ca-certificates libtbb-dev ninja-build && \
     rm -rf /var/lib/apt/lists/*
 
 # Install multilib libc needed to build clang_rt
