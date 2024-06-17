@@ -736,21 +736,6 @@ endif()
 if (WIN32)
     list(APPEND LINK_LIBRARIES version.lib shlwapi.lib odbc32.lib odbccp32.lib)
 else()
-    if (ISPC_STATIC_LINK)
-        list(APPEND LINK_LIBRARIES tinfo.a curses.a)
-    else()
-        find_package(Curses REQUIRED)
-        if (CURSES_EXTRA_LIBRARY)
-            # this contains the tinfo library, if found
-            list(APPEND LINK_LIBRARIES ${CURSES_EXTRA_LIBRARY})
-        endif()
-        # Recommended way to get Curses library is to use CURSES_LIBRARIES variable
-        # https://cmake.org/cmake/help/v3.27/module/FindCurses.html
-        # but it contains both libform.so and libcurses.so.
-        # We need libcurses.so only, so exclude libform.so from the list.
-        list(FILTER CURSES_LIBRARIES EXCLUDE REGEX ".*libform.*")
-        list(APPEND LINK_LIBRARIES ${CURSES_LIBRARIES})
-    endif()
     # ISPC doesn't use pthreads directly, but LLVM does. Although, it looks
     # like we do not use LLVM code that depend on pthreads, don't we?
     find_library(PTHREAD_LIB REQUIRED NAMES pthread)
