@@ -19,7 +19,7 @@ ARG LTO
 
 # Packages
 RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends install -y clang-12 build-essential libnuma1 opencl-headers ocl-icd-libopencl1 clinfo vim gcc g++ git python3-dev imagemagick \
-    m4 bison flex libncurses-dev libtinfo-dev libc6-dev-i386 cpio lsb-core wget netcat-openbsd libtbb2-dev libglfw3-dev pkgconf gdb gcc-multilib g++-multilib curl ca-certificates ninja-build && \
+    m4 bison flex libc6-dev-i386 cpio lsb-core wget netcat-openbsd libtbb2-dev libglfw3-dev pkgconf gdb gcc-multilib g++-multilib curl ca-certificates ninja-build && \
     rm -rf /var/lib/apt/lists/*
 
 # Download and install required version of cmake (3.23.5 for both x86 and aarch64) as required for superbuild preset jsons.

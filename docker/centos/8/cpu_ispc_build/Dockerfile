@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2017-2023, Intel Corporation
+#  Copyright (c) 2017-2024, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -13,8 +13,8 @@ ARG SHA=main
 # !!! Make sure that your docker config provides enough memory to the container,
 # otherwise LLVM build may fail, as it will use all the cores available to container.
 
-# Packages required to build ISPC and Clang. libtool is needed to build ncurses.
-RUN dnf -y update && dnf install -y wget yum-utils gcc gcc-c++ git python3 make ncurses-devel xz libtool tbb-devel && \
+# Packages required to build ISPC and Clang.
+RUN dnf -y update && dnf install -y wget yum-utils gcc gcc-c++ git python3 make xz tbb-devel && \
     dnf clean -y all
 
 # These packages are required if you need to link ISPC with -static.
@@ -25,12 +25,6 @@ RUN dnf -y --enablerepo=powertools install ninja-build libstdc++-static && \
 RUN if [[ $(uname -m) =~ "x86" ]]; then dnf -y update && dnf install -y glibc-devel.i686 && dnf clean -y all; fi
 
 WORKDIR /usr/local/src
-
-# Ncurses for g++ --static -lcurses -ltinfo. Despite setting --enable-overwrite it doesn't link(only static not linked?) libncurses as libcurses so symlinked manually
-RUN git clone https://github.com/ThomasDickey/ncurses-snapshots.git --depth=1 --branch=v6_3
-WORKDIR /usr/local/src/ncurses-snapshots
-RUN CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --with-termlib --with-libtool --with-libtool-opts=-static --enable-static --enable-overwrite && make -j"$(nproc)" && make install && \
-  ln -s /usr/lib/libncurses.a /usr/lib/libcurses.a && ln -s /usr/lib/libncurses++.a /usr/lib/libcurses++.a
 
 # Download and install required version of cmake (3.23.5 for both x86 and aarch64) as required for superbuild preset jsons.
 RUN if [[ $(uname -m) =~ "x86" ]]; then \

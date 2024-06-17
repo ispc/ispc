@@ -22,7 +22,7 @@ RUN yum -y update && \
     yum install -y centos-release-scl epel-release && \
     yum install -y vim wget yum-utils gcc gcc-c++ git python3 m4 bison flex patch make && \
     yum install -y glibc-devel.x86_64 glibc-devel.i686 xz devtoolset-8 && \
-    yum install -y libtool autopoint gettext-devel texinfo help2man && \
+    yum install -y autopoint gettext-devel texinfo help2man && \
     yum install -y ninja-build && \
     yum install -y libstdc++-static && \
     yum clean -y all
@@ -40,13 +40,6 @@ RUN if [[ $(uname -m) =~ "x86" ]]; then \
     fi && \
     wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 $CMAKE_URL && \
     sh cmake-*.sh --prefix=/usr/local --skip-license && rm -rf cmake-*.sh
-
-# Build ncurses with -fPIC: https://github.com/ispc/ispc/pull/2502#issuecomment-1526931698
-WORKDIR /usr/local/src
-RUN git clone https://github.com/mirror/ncurses.git
-WORKDIR /usr/local/src/ncurses
-# Checkout version with fix for CVE-2023-29491
-RUN git checkout 87c2c84 && CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --with-termlib && make -j"$(nproc)" && make install -j"$(nproc)"
 
 # Install new flex (2.6.4)
 WORKDIR /usr/local/src
