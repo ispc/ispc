@@ -105,3 +105,27 @@ real world source codes complemented with scripts to build them. It allows us
 to collect profile meaningful from the customer point of view. On the last
 third stage, stage1 compiler uses that profile to optimize LLVM and ISPC code
 with PGO.
+
+# Usage of Pre-Built LLVM Libraries
+
+CI typically builds ISPC by statically linking Clang and LLVM libraries into
+ISPC binaries. Usually, Clang and LLVM libraries are built in a different
+environment than the subsequent ISPC builds. For example, currently, CI builds
+libraries in Ubuntu 18.04 but builds ISPC in Ubuntu 22.04. This means that the
+libraries are built with a different version of the C++ standard library than
+the ISPC code. We need to provide the same version alongside the compiler or
+use the same OS when building Clang and ISPC.
+
+There are the following options to provide the same C++ standard library version:
+1. Copy it from the Clang and LLVM build environment.
+2. Build it from source and install it alongside the compiler, then use it to
+   build Clang/LLVM libraries and ISPC.
+
+The first option is tricky and probably impractical unless we build `libstdc++`
+stand-alone or as a part of GCC toolchain. The second option can be
+implemented using two different implementations of the C++ standard library:
+GCC's `libstdc++` and LLVM's `libc++`.
+
+Superbuild CMake has `USE_LLVM_LIBCXX` to build Clang and LLVM libraries with
+LLVM's `libc++`. ISPC CMake has the corresponding option `ISPC_USE_LLVM_LIBCXX`
+to link with that C++ library instead of the system one.
