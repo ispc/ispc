@@ -58,16 +58,16 @@
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelpg-x8 --device=acm-g10
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelpg-x8 --device=acm-g11
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelpg-x8 --device=acm-g12
-// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelpg-x8 --device=mtl-m
-// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelpg-x8 --device=mtl-p
+// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelpg-x8 --device=mtl-u
+// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelpg-x8 --device=mtl-h
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelpg-x16 --device=skl
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelpg-x16 --device=tgllp
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelpg-x16 --device=dg1
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelpg-x16 --device=acm-g10
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelpg-x16 --device=acm-g11
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelpg-x16 --device=acm-g12
-// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelpg-x16 --device=mtl-m
-// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelpg-x16 --device=mtl-p
+// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelpg-x16 --device=mtl-u
+// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelpg-x16 --device=mtl-h
 
 // REQUIRES: XE_ENABLED
 // REQUIRES: LINUX_HOST
