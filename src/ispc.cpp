@@ -358,8 +358,8 @@ typedef enum {
     GPU_ACM_G11,
     GPU_ACM_G12,
     GPU_PVC,
-    GPU_MTL_M,
-    GPU_MTL_P,
+    GPU_MTL_U,
+    GPU_MTL_H,
 #endif
     sizeofDeviceType
 } DeviceType;
@@ -418,8 +418,8 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {GPU_ACM_G11, {}},
     {GPU_ACM_G12, {}},
     {GPU_PVC, {}},
-    {GPU_MTL_M, {}},
-    {GPU_MTL_P, {}},
+    {GPU_MTL_U, {}},
+    {GPU_MTL_H, {}},
 #endif
 };
 
@@ -530,8 +530,8 @@ class AllCPUs {
         // ACM 256EU version
         names[GPU_ACM_G12].push_back("acm-g12");
         names[GPU_PVC].push_back("pvc");
-        names[GPU_MTL_M].push_back("mtl-m");
-        names[GPU_MTL_P].push_back("mtl-p");
+        names[GPU_MTL_U].push_back("mtl-u");
+        names[GPU_MTL_H].push_back("mtl-h");
 #endif
 
         Assert(names.size() == sizeofDeviceType);
@@ -615,10 +615,10 @@ class AllCPUs {
         compat[GPU_ACM_G11] = Set(GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_TGLLP, GPU_SKL, CPU_None);
         compat[GPU_ACM_G12] = Set(GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_TGLLP, GPU_SKL, CPU_None);
         compat[GPU_PVC] = Set(GPU_PVC, GPU_SKL, CPU_None);
-        compat[GPU_MTL_M] =
-            Set(GPU_MTL_M, GPU_MTL_P, GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_ACM_G11, GPU_TGLLP, GPU_SKL, CPU_None);
-        compat[GPU_MTL_P] =
-            Set(GPU_MTL_M, GPU_MTL_P, GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_ACM_G11, GPU_TGLLP, GPU_SKL, CPU_None);
+        compat[GPU_MTL_U] =
+            Set(GPU_MTL_U, GPU_MTL_H, GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_ACM_G11, GPU_TGLLP, GPU_SKL, CPU_None);
+        compat[GPU_MTL_H] =
+            Set(GPU_MTL_U, GPU_MTL_H, GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_ACM_G11, GPU_TGLLP, GPU_SKL, CPU_None);
 #endif
     }
 
@@ -739,8 +739,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         case GPU_PVC:
             m_ispc_target = ISPCTarget::xehpc_x16;
             break;
-        case GPU_MTL_M:
-        case GPU_MTL_P:
+        case GPU_MTL_U:
+        case GPU_MTL_H:
             m_ispc_target = ISPCTarget::xelpg_x16;
             break;
 #endif
@@ -1545,7 +1545,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasTranscendentals = true;
         this->m_hasTrigonometry = true;
         this->m_hasGather = this->m_hasScatter = true;
-        CPUfromISA = GPU_MTL_P;
+        CPUfromISA = GPU_MTL_H;
         break;
     case ISPCTarget::xelpg_x16:
         this->m_isa = Target::XELPG;
@@ -1561,7 +1561,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasTranscendentals = true;
         this->m_hasTrigonometry = true;
         this->m_hasGather = this->m_hasScatter = true;
-        CPUfromISA = GPU_MTL_P;
+        CPUfromISA = GPU_MTL_H;
         break;
 #else
     case ISPCTarget::gen9_x8:
@@ -2239,8 +2239,8 @@ Target::XePlatform Target::getXePlatform() const {
         return XePlatform::xe_hpg;
     case GPU_PVC:
         return XePlatform::xe_hpc;
-    case GPU_MTL_M:
-    case GPU_MTL_P:
+    case GPU_MTL_U:
+    case GPU_MTL_H:
         return XePlatform::xe_lpg;
     default:
         return XePlatform::gen9;
