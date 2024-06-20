@@ -78,7 +78,7 @@
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x16 --device=acm-g12
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x16 --device=mtl-u
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x16 --device=mtl-h
-// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x16 --device=xe2-hpg-x2-a0
+// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x16 --device=bmg-g21
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x32 --device=skl
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x32 --device=tgllp
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x32 --device=dg1
@@ -87,7 +87,7 @@
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x32 --device=acm-g12
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x32 --device=mtl-u
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x32 --device=mtl-h
-// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x32 --device=xe2-hpg-x2-a0
+// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x32 --device=bmg-g21
 
 // REQUIRES: XE_ENABLED
 // REQUIRES: LINUX_HOST
