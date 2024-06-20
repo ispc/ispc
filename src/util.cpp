@@ -42,7 +42,7 @@
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/Path.h>
 
-#ifdef ISPC_HOST_IS_APPLE
+#ifdef _LIBCPP_VERSION
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_17_0
 // Provide own definition of std::__libcpp_verbose_abort to avoid missing
 // symbols error in macOS builds.
@@ -57,7 +57,7 @@ void std::__libcpp_verbose_abort(char const *format, ...) {
     abort();
 }
 #endif // ISPV_LLVM_17_0
-#endif // ISPC_HOST_IS_APPLE
+#endif // _LIBCPP_VERSION
 
 using namespace ispc;
 
