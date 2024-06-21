@@ -1584,8 +1584,9 @@ void FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
         llvm::DILocation::get(scope->getContext(), sym->pos.first_line, sym->pos.first_column, scope, nullptr, false);
     llvm::Instruction *declareInst =
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_19_0
-        llvm::cast<llvm::Instruction *>(m->diBuilder->insertDeclare(sym->storageInfo->getPointer(), var,
-                                                                    m->diBuilder->createExpression(), diLoc, bblock));
+        m->diBuilder
+            ->insertDeclare(sym->storageInfo->getPointer(), var, m->diBuilder->createExpression(), diLoc, bblock)
+            .get<llvm::Instruction *>();
 #else
         m->diBuilder->insertDeclare(sym->storageInfo->getPointer(), var, m->diBuilder->createExpression(), diLoc,
                                     bblock);

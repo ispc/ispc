@@ -257,6 +257,11 @@ Module::Module(const char *fn) : filename(fn) {
     lSetCodeModel(module);
     lSetPICLevel(module);
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_19_0
+    // LLVM is transitioning to new debug info representation, use "old" style for now.
+    module->setIsNewDbgInfoFormat(false);
+#endif
+
     // Version strings.
     // Have ISPC details and LLVM details as two separate strings attached to !llvm.ident.
     llvm::NamedMDNode *identMetadata = module->getOrInsertNamedMetadata("llvm.ident");
@@ -3330,6 +3335,11 @@ static llvm::Module *lInitDispatchModule() {
 
     lSetCodeModel(module);
     lSetPICLevel(module);
+
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_19_0
+    // LLVM is transitioning to new debug info representation, use "old" style for now.
+    module->setIsNewDbgInfoFormat(false);
+#endif
 
     // First, link in the definitions from the builtins-dispatch.ll file.
     const BitcodeLib *dispatch = g->target_registry->getDispatchLib(g->target_os);
