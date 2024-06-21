@@ -1580,7 +1580,7 @@ llvm::PreservedAnalyses ImproveMemoryOpsPass::run(llvm::Function &F, llvm::Funct
     // Skip __keep_funcs_live because it breaks some assumptions used here.
     // For example, lGSToLoadStore assumes that factored pseudo calls are
     // generated only when gathers are not used (useGather == false).
-    if (F.getName().equals(__keep_funcs_live)) {
+    if (F.getName() == __keep_funcs_live) {
         return llvm::PreservedAnalyses::all();
     }
 
