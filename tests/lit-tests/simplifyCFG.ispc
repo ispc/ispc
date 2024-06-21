@@ -12,7 +12,7 @@ void foo(uniform int &arg0, uniform int &arg1) {
     }
 }
 
-//; CHECK: define i32 @test_cond__uni___uniuni
+//; CHECK: define {{.*}} @test_cond__uni___uniuni
 //; CHECK-NOT: all_on
 //; CHECK-NOT: some_on
 uniform int test_cond__uni(uniform int arg0, uniform int arg1) {
