@@ -207,7 +207,7 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, openmp, from_valid
         # We either need to explicitly opt-out from using libcxxabi from this repo, or build and use it,
         # otherwise a build error will occure (attempt to use just built libcxxabi, which was not built).
         # An option to build seems to be a better one.
-        llvm_enable_runtimes +=" -DLLVM_ENABLE_RUNTIMES=\"libcxx;libcxxabi\""
+        llvm_enable_runtimes +=" -DLLVM_ENABLE_RUNTIMES=\"libcxx;libcxxabi;libunwind\""
 
     # macOS deployment target sets the minimim OS requirement to run the compiled program.
     # All of the object files and static libraries passed to the linker need to be compiled for the same
