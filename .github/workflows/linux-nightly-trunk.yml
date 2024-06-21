@@ -24,7 +24,7 @@ jobs:
   # Building LLVM in docker, as using native Ubuntu 18.04 github-hosted image contains newer-than-expected libs and
   # makes the resulting build not usable on other Ubuntu 18.04 images.
   linux-build-llvm-trunk:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
     - uses: actions/checkout@v4
@@ -58,7 +58,7 @@ jobs:
 
   linux-build-ispc-llvm-trunk:
     needs: [linux-build-llvm-trunk]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       LLVM_VERSION: "trunk"
       LLVM_TAR: llvm-trunk-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz
@@ -98,7 +98,7 @@ jobs:
 
   linux-test-llvm-trunk:
     needs: [linux-build-ispc-llvm-trunk]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     continue-on-error: false
     strategy:
       fail-fast: false
