@@ -89,7 +89,7 @@ jobs:
             opaque_ptr_mode: "ON"
     env:
       LLVM_VERSION: ${{ matrix.llvm.version }}
-      LLVM_TAR: llvm-${{ matrix.llvm.full_version }}-ubuntu18.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-${{ matrix.llvm.full_version }}-ubuntu22.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: ${{ matrix.llvm.opaque_ptr_mode }}
 
     steps:
@@ -145,7 +145,7 @@ jobs:
             opaque_ptr_mode: "ON"
     env:
       LLVM_VERSION: ${{ matrix.llvm.version }}
-      LLVM_TAR: llvm-${{ matrix.llvm.full_version }}-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-${{ matrix.llvm.full_version }}-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: ${{ matrix.llvm.opaque_ptr_mode }}
 
     steps:
@@ -181,7 +181,7 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       LLVM_VERSION: "17.0"
-      LLVM_TAR: llvm-17.0.6-ubuntu18.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-17.0.6-ubuntu22.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
@@ -218,7 +218,7 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       LLVM_VERSION: "17.0"
-      LLVM_TAR: llvm-17.0.6-ubuntu18.04-Release-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-17.0.6-ubuntu22.04-Release-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
@@ -254,7 +254,7 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       LLVM_VERSION: "17.0"
-      LLVM_TAR: llvm-17.0.6-ubuntu18.04-Release-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-17.0.6-ubuntu22.04-Release-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: "OFF"
       INSTALL_COMPUTE_RUNTIME: 1
 
@@ -1126,7 +1126,7 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       LLVM_VERSION: "16.0"
-      LLVM_TAR: llvm-16.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-16.0.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
