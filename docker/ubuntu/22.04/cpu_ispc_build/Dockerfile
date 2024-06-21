@@ -1,14 +1,20 @@
 #
-#  Copyright (c) 2017-2023, Intel Corporation
+#  Copyright (c) 2017-2024, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
-FROM ubuntu:22.04 AS llvm_build_only
+ARG LLVM_VERSION=17.0
+
+FROM ubuntu:22.04 AS llvm_build
 LABEL maintainer="Dmitry Babokin <dmitry.y.babokin@intel.com>"
 SHELL ["/bin/bash", "-c"]
 
 ARG REPO=ispc/ispc
 ARG SHA=main
+ARG LTO=OFF
+ARG PGO=OFF
+ARG LLVM_VERSION
+ARG LLVM_DISABLE_ASSERTIONS
 
 # !!! Make sure that your docker config provides enough memory to the container,
 # otherwise LLVM build may fail, as it will use all the cores available to container.
@@ -43,21 +49,29 @@ RUN if [[ $(uname -m) =~ "x86" ]]; then \
 # If you are behind a proxy, you need to configure git.
 RUN if [ -v http_proxy ]; then git config --global --add http.proxy "$http_proxy"; fi
 
-WORKDIR /home/src
-RUN git clone https://github.com/$REPO.git ispc
-
-WORKDIR /home/src/ispc
-RUN git checkout $SHA && \
-    cmake superbuild \
+ENV LLVM_HOME=/usr/local/src/llvm
+WORKDIR /usr/local/src
+RUN git clone https://github.com/$REPO.git ispc && \
+    git -C ispc checkout $SHA && \
+    cmake ispc/superbuild \
         -B build \
         --preset os \
+        -DLTO=$LTO \
         -DXE_DEPS=OFF \
         -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON \
-        -DCMAKE_INSTALL_PREFIX=/usr/local && \
+        -DLLVM_VERSION="$LLVM_VERSION" \
+        -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON \
+        -DCMAKE_INSTALL_PREFIX="$LLVM_HOME"/bin-"$LLVM_VERSION" \
+        -DLLVM_DISABLE_ASSERTIONS="$LLVM_DISABLE_ASSERTIONS" && \
     cmake --build build && \
     rm -rf build
 
-FROM llvm_build_only AS ispc_build
+FROM llvm_build AS ispc_build
+SHELL ["/bin/bash", "-c"]
+
+ARG LTO=OFF
+ARG PGO=OFF
+ARG LLVM_VERSION
 
 RUN apt-get -y update && \
     apt-get --no-install-recommends install -y \
@@ -65,13 +79,16 @@ RUN apt-get -y update && \
     rm -rf /var/lib/apt/lists/*
 
 # Build ISPC
-WORKDIR /home/src/ispc
-RUN cmake . \
+WORKDIR /usr/local/src
+RUN cmake ispc/superbuild \
         -B build \
-        -DCMAKE_INSTALL_PREFIX=/usr/local \
         -DX86_ENABLED=ON \
         -DARM_ENABLED=ON \
-        -DCMAKE_CXX_FLAGS="-Werror" && \
+        -DLTO=$LTO \
+        -DXE_DEPS=OFF \
+        -DCMAKE_CXX_FLAGS=-Werror \
+        -DPREBUILT_STAGE2_PATH="$LLVM_HOME"/bin-"$LLVM_VERSION" \
+        -DCMAKE_INSTALL_PREFIX=/usr/local/src/ispc/bin-"$LLVM_VERSION" && \
     cmake --build build -j"$(nproc)" && \
     cmake --build build --target check-all && \
     cmake --install build && \
