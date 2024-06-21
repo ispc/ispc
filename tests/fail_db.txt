@@ -6,30 +6,6 @@
 % folder). The recommended way to build LLVM on Unix is to use "alloy.py".
 %
  List of known fails.
-./tests/short-vec-6.ispc runfail    xe64        gen9-x8 unspec   Linux LLVM 14.0 clang++14.0 O0 spv *
-./tests/short-vec-6.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 14.0 clang++14.0 O0 spv *
-./tests/int8-wrap.ispc runfail    xe64      xehpc-x16 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
-./tests/padds-i64.ispc runfail    xe64      xehpc-x16 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
-./tests/padds-vi64.ispc runfail    xe64      xehpc-x16 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
-./tests/paddus-i64.ispc runfail    xe64      xehpc-x16 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
-./tests/paddus-vi64.ispc runfail    xe64      xehpc-x16 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
-./tests/pmuls-i64.ispc runfail    xe64      xehpc-x16 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
-./tests/pmuls-vi64.ispc runfail    xe64      xehpc-x16 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
-./tests/pmulus-i64.ispc runfail    xe64      xehpc-x16 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
-./tests/pmulus-vi64.ispc runfail    xe64      xehpc-x16 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
-./tests/psubs-i64.ispc runfail    xe64      xehpc-x16 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
-./tests/psubs-vi64.ispc runfail    xe64      xehpc-x16 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
-./tests/int8-wrap.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
-./tests/padds-i64.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
-./tests/padds-vi64.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
-./tests/paddus-i64.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
-./tests/paddus-vi64.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
-./tests/pmuls-i64.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
-./tests/pmuls-vi64.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
-./tests/pmulus-i64.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
-./tests/pmulus-vi64.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
-./tests/psubs-i64.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
-./tests/psubs-vi64.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 14.0 clang++14.0 O2 spv *
 ./tests/short-vec-6.ispc runfail    xe64        gen9-x8 unspec   Linux LLVM 15.0 clang++15.0 O0 spv *
 ./tests/short-vec-6.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O0 spv *
 ./tests/int8-wrap.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 15.0 clang++15.0 O2 spv *
