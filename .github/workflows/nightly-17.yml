@@ -23,10 +23,8 @@ env:
   USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
 
 jobs:
-  # Building LLVM in docker, as using native Ubuntu 18.04 github-hosted image contains newer-than-expected libs and
-  # makes the resulting build not usable on other Ubuntu 18.04 images.
   linux-build-llvm-17:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
     - uses: actions/checkout@v4
@@ -39,31 +37,31 @@ jobs:
 
     - name: Build LLVM
       run: |
-        cd docker/ubuntu/18.04/cpu_ispc_build
+        cd docker/ubuntu/22.04/cpu_ispc_build
         ls -al
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu18.04:stage2 --target=llvm_build --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=17.0 --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu22.04:stage2 --target=llvm_build --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=17.0 --output=type=tar,dest=result.tar .
 
     - name: Pack LLVM
       run: |
-        cd docker/ubuntu/18.04/cpu_ispc_build
+        cd docker/ubuntu/22.04/cpu_ispc_build
         tar xvf result.tar usr/local/src/llvm
         mv usr/local/src/llvm/bin-17.0 .
         # Note using gzip here, instead of xz - trading of space for speed, as it's just for passing to another stage.
-        tar czvf llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz bin-17.0
+        tar czvf llvm-17.0.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.gz bin-17.0
 
     - name: Upload package
       uses: actions/upload-artifact@v4
       with:
         name: llvm_17_linux
-        path: docker/ubuntu/18.04/cpu_ispc_build/llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz
+        path: docker/ubuntu/22.04/cpu_ispc_build/llvm-17.0.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.gz
 
   linux-build-ispc-llvm-17:
     needs: [linux-build-llvm-17]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       LLVM_VERSION: "17.0"
-      LLVM_TAR: llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz
+      LLVM_TAR: llvm-17.0.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.gz
 
     steps:
     - uses: actions/checkout@v4
@@ -100,7 +98,7 @@ jobs:
 
   linux-test-llvm-17:
     needs: [linux-build-ispc-llvm-17]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     continue-on-error: false
     strategy:
       fail-fast: false

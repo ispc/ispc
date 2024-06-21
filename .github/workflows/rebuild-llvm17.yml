@@ -29,7 +29,7 @@ jobs:
       version: '17.0'
       full_version: '17.0.6'
       lto: ${{ matrix.lto }}
-      ubuntu: '18.04'
+      ubuntu: '22.04'
       vs_generator: 'Visual Studio 16 2019'
       vs_version_str: 'vs2019'
       win_sdk: '10.0.18362.0'

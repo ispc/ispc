@@ -22,7 +22,7 @@ on:
         type: string
         default: 'OFF'
       ubuntu:
-        description: Version of Ubuntu Dockerfile to use. For example '18.04'.
+        description: Version of Ubuntu Dockerfile to use. For example '22.04'.
         required: true
         type: string
       vs_generator:
@@ -55,10 +55,10 @@ on:
         type: string
         default: 'OFF'
       ubuntu:
-        description: Version of Ubuntu Dockerfile to use. For example '18.04'.
+        description: Version of Ubuntu Dockerfile to use. For example '22.04'.
         required: true
         type: string
-        default: '18.04'
+        default: '22.04'
       vs_generator:
         description: VS generator to use. For example 'Visual Studio 16 2019'.
         required: true
@@ -77,8 +77,6 @@ on:
 
 
 jobs:
-  # Building LLVM in docker, as using native Ubuntu 18.04 github-hosted image contains newer-than-expected libs and
-  # makes the resulting build not usable on other Ubuntu 18.04 images.
   linux-build:
     runs-on: ubuntu-latest
 

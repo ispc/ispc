@@ -43,7 +43,7 @@ env:
 
 jobs:
   define-flow:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       tests_matrix_targets: ${{ steps.set-flow.outputs.matrix }}
       tests_optsets: ${{ steps.set-flow.outputs.optsets }}
@@ -89,7 +89,7 @@ jobs:
             opaque_ptr_mode: "ON"
     env:
       LLVM_VERSION: ${{ matrix.llvm.version }}
-      LLVM_TAR: llvm-${{ matrix.llvm.full_version }}-ubuntu18.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-${{ matrix.llvm.full_version }}-ubuntu22.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: ${{ matrix.llvm.opaque_ptr_mode }}
 
     steps:
@@ -126,7 +126,7 @@ jobs:
 
   linux-build-ispc:
     needs: [define-flow]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -145,7 +145,7 @@ jobs:
             opaque_ptr_mode: "ON"
     env:
       LLVM_VERSION: ${{ matrix.llvm.version }}
-      LLVM_TAR: llvm-${{ matrix.llvm.full_version }}-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-${{ matrix.llvm.full_version }}-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: ${{ matrix.llvm.opaque_ptr_mode }}
 
     steps:
@@ -178,10 +178,10 @@ jobs:
 
   linux-build-ispc-llvm17-lto:
     needs: [define-flow]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       LLVM_VERSION: "17.0"
-      LLVM_TAR: llvm-17.0.6-ubuntu18.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-17.0.6-ubuntu22.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
@@ -215,10 +215,10 @@ jobs:
 
   linux-build-ispc-llvm17-release:
     needs: [define-flow]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       LLVM_VERSION: "17.0"
-      LLVM_TAR: llvm-17.0.6-ubuntu18.04-Release-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-17.0.6-ubuntu22.04-Release-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
@@ -251,10 +251,10 @@ jobs:
 
   linux-build-ispc-xe-llvm17-release:
     needs: [define-flow]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       LLVM_VERSION: "17.0"
-      LLVM_TAR: llvm-17.0.6-ubuntu18.04-Release-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-17.0.6-ubuntu22.04-Release-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: "OFF"
       INSTALL_COMPUTE_RUNTIME: 1
 
@@ -303,7 +303,7 @@ jobs:
 
   linux-test:
     needs: [define-flow, linux-build-ispc]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -353,7 +353,7 @@ jobs:
 
   linux-test-llvm17-lto:
     needs: [define-flow, linux-build-ispc-llvm17-lto]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -402,7 +402,7 @@ jobs:
   # Test release version
   linux-test-llvm17-release:
     needs: [define-flow, linux-build-ispc-llvm17-release]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -454,7 +454,7 @@ jobs:
   linux-test-debug-llvm17:
     needs: [define-flow, linux-build-ispc]
     if: ${{ needs.define-flow.outputs.flow_type == 'full' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -504,7 +504,7 @@ jobs:
   linux-test-xe-llvm17-release:
     needs: [define-flow, linux-build-ispc-xe-llvm17-release]
     if: ${{ needs.define-flow.outputs.flow_type == 'smoke' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -1123,10 +1123,10 @@ jobs:
 
   linux-package-examples:
     needs: [define-flow]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       LLVM_VERSION: "16.0"
-      LLVM_TAR: llvm-16.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-16.0.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
