@@ -24,7 +24,7 @@ jobs:
     with:
       version: '16.0'
       full_version: '16.0.6'
-      lto: 'ON'
+      lto: 'OFF'
       ubuntu: '22.04'
       vs_generator: 'Visual Studio 16 2019'
       vs_version_str: 'vs2019'
