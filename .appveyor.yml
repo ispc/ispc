@@ -79,14 +79,14 @@ for:
 -
   matrix:
     only:
-      - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
+      - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu2204
   init:
     - sh: |-
         export ISPC_HOME=$APPVEYOR_BUILD_FOLDER
         export LLVM_HOME=$APPVEYOR_BUILD_FOLDER/llvm
         export CROSS_TOOLS=/usr/local/src/cross
         export WASM=OFF
-        export LLVM_TAR=llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+        export LLVM_TAR=llvm-17.0.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
   install:
     - sh: |-
         sudo apt-get update

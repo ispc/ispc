@@ -21,10 +21,8 @@ env:
   SDE_TAR_NAME: sde-external-9.33.0-2024-01-07
 
 jobs:
-  # Building LLVM in docker, as using native Ubuntu 18.04 github-hosted image contains newer-than-expected libs and
-  # makes the resulting build not usable on other Ubuntu 18.04 images.
   linux-build-llvm-trunk:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
     - uses: actions/checkout@v4
@@ -37,31 +35,31 @@ jobs:
 
     - name: Build LLVM
       run: |
-        cd docker/ubuntu/18.04/cpu_ispc_build
+        cd docker/ubuntu/22.04/cpu_ispc_build
         ls -al
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu18.04 --target=llvm_build --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=trunk --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu22.04 --target=llvm_build --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=trunk --output=type=tar,dest=result.tar .
 
     - name: Pack LLVM
       run: |
-        cd docker/ubuntu/18.04/cpu_ispc_build
+        cd docker/ubuntu/22.04/cpu_ispc_build
         tar xvf result.tar usr/local/src/llvm
         mv usr/local/src/llvm/bin-trunk .
         # Note using gzip here, instead of xz - trading of space for speed, as it's just for passing to another stage.
-        tar czvf llvm-trunk-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz bin-trunk
+        tar czvf llvm-trunk-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.gz bin-trunk
 
     - name: Upload package
       uses: actions/upload-artifact@v4
       with:
         name: llvm_trunk_linux
-        path: docker/ubuntu/18.04/cpu_ispc_build/llvm-trunk-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz
+        path: docker/ubuntu/22.04/cpu_ispc_build/llvm-trunk-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.gz
 
   linux-build-ispc-llvm-trunk:
     needs: [linux-build-llvm-trunk]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       LLVM_VERSION: "trunk"
-      LLVM_TAR: llvm-trunk-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.gz
+      LLVM_TAR: llvm-trunk-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.gz
 
     steps:
     - uses: actions/checkout@v4
@@ -98,7 +96,7 @@ jobs:
 
   linux-test-llvm-trunk:
     needs: [linux-build-ispc-llvm-trunk]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     continue-on-error: false
     strategy:
       fail-fast: false

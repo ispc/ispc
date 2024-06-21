@@ -17,10 +17,10 @@ env:
 
 jobs:
   clang-16:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       LLVM_VERSION: "17.0"
-      LLVM_TAR: llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-17.0.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
@@ -44,10 +44,10 @@ jobs:
           cmake --build build --target all -j4
 
   gcc-11:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       LLVM_VERSION: "17.0"
-      LLVM_TAR: llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-17.0.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:

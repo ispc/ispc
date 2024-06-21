@@ -25,7 +25,7 @@ jobs:
       version: '15.0'
       full_version: '15.0.7'
       lto: 'OFF'
-      ubuntu: '18.04'
+      ubuntu: '22.04'
       vs_generator: 'Visual Studio 16 2019'
       vs_version_str: 'vs2019'
       win_sdk: '10.0.17763.0'
