@@ -101,6 +101,10 @@ jobs:
       with:
         submodules: false
 
+    - name: Set git safe directory
+      run: |
+        git config --global --add safe.directory /__w/ispc/ispc
+
     - name: Install dependencies
       run: |
         .github/workflows/scripts/install-build-deps-aarch64.sh
