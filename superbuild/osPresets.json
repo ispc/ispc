@@ -17,7 +17,7 @@
         "LLVM_VERSION": "17.0",
         "LLVM_URL": "https://github.com/llvm/llvm-project.git",
         "VC_INTRINSICS_URL": "https://github.com/intel/vc-intrinsics.git",
-        "VC_INTRINSICS_SHA": "f9c34404d0ea9abad83875a10bd48d88cea90ebd",
+        "VC_INTRINSICS_SHA": "261f128dbb57b460d76f7d2e9b27e442e893d82b",
         "SPIRV_TRANSLATOR_URL": "https://github.com/KhronosGroup/SPIRV-LLVM-Translator.git",
         "SPIRV_TRANSLATOR_BRANCH": "llvm_release_170",
         "SPIRV_TRANSLATOR_SHA": "89ab5df345a36940c3a313b3cbd875e32bae366e",
