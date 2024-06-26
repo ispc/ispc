@@ -36,6 +36,14 @@ void lCheckVariableTypeQualifiers(int typeQualifiers, SourcePos pos) {
         Error(pos, "\"export\" qualifier illegal in variable declaration.");
         return;
     }
+    if (typeQualifiers & TYPEQUAL_INLINE) {
+        Error(pos, "\"inline\" qualifier illegal in variable declaration.");
+        return;
+    }
+    if (typeQualifiers & TYPEQUAL_NOINLINE) {
+        Error(pos, "\"noinline\" qualifier illegal in variable declaration.");
+        return;
+    }
 }
 
 void lCheckTypeQualifiers(int typeQualifiers, DeclaratorKind kind, SourcePos pos) {
