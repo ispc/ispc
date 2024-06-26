@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -22,6 +22,40 @@
 #include <string.h>
 
 using namespace ispc;
+
+void lCheckVariableTypeQualifiers(int typeQualifiers, SourcePos pos) {
+    if (typeQualifiers & TYPEQUAL_TASK) {
+        Error(pos, "\"task\" qualifier illegal in variable declaration.");
+        return;
+    }
+    if (typeQualifiers & TYPEQUAL_UNMASKED) {
+        Error(pos, "\"unmasked\" qualifier illegal in variable declaration.");
+        return;
+    }
+    if (typeQualifiers & TYPEQUAL_EXPORT) {
+        Error(pos, "\"export\" qualifier illegal in variable declaration.");
+        return;
+    }
+}
+
+void lCheckTypeQualifiers(int typeQualifiers, DeclaratorKind kind, SourcePos pos) {
+    if (kind != DK_FUNCTION) {
+        lCheckVariableTypeQualifiers(typeQualifiers, pos);
+    }
+}
+
+bool lIsFunctionKind(Declarator *d) {
+    if (!d)
+        return false;
+
+    if (d->kind == DK_FUNCTION)
+        return true;
+
+    if (d->child)
+        return lIsFunctionKind(d->child);
+
+    return false;
+}
 
 static void lPrintTypeQualifiers(int typeQualifiers) {
     if (typeQualifiers & TYPEQUAL_INLINE)
@@ -235,6 +269,10 @@ void Declarator::InitFromDeclSpecs(DeclSpecs *ds) {
         return;
     }
 
+    if (!lIsFunctionKind(this)) {
+        lCheckVariableTypeQualifiers(ds->typeQualifiers, pos);
+    }
+
     InitFromType(baseType, ds);
 
     if (type == nullptr) {
@@ -324,27 +362,14 @@ void Declarator::Print(Indent &indent) const {
 void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
     bool hasUniformQual = ((typeQualifiers & TYPEQUAL_UNIFORM) != 0);
     bool hasVaryingQual = ((typeQualifiers & TYPEQUAL_VARYING) != 0);
-    bool isTask = ((typeQualifiers & TYPEQUAL_TASK) != 0);
-    bool isExported = ((typeQualifiers & TYPEQUAL_EXPORT) != 0);
     bool isConst = ((typeQualifiers & TYPEQUAL_CONST) != 0);
-    bool isUnmasked = ((typeQualifiers & TYPEQUAL_UNMASKED) != 0);
 
     if (hasUniformQual && hasVaryingQual) {
         Error(pos, "Can't provide both \"uniform\" and \"varying\" qualifiers.");
         return;
     }
-    if (kind != DK_FUNCTION && isTask) {
-        Error(pos, "\"task\" qualifier illegal in variable declaration.");
-        return;
-    }
-    if (kind != DK_FUNCTION && isUnmasked) {
-        Error(pos, "\"unmasked\" qualifier illegal in variable declaration.");
-        return;
-    }
-    if (kind != DK_FUNCTION && isExported) {
-        Error(pos, "\"export\" qualifier illegal in variable declaration.");
-        return;
-    }
+
+    lCheckTypeQualifiers(typeQualifiers, kind, pos);
 
     Variability variability(Variability::Unbound);
     if (hasUniformQual)
