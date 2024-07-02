@@ -57,9 +57,9 @@ define <8 x double> @__rcp_varying_double(<8 x double>) nounwind readonly always
 
 rsqrt14_uniform()
 ;; rsqrt float
-declare <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float>,  <8 x float>,  i8) nounwind readnone
+declare <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float> %v) nounwind readnone
 define <8 x float> @__rsqrt_varying_float(<8 x float> %v) nounwind readonly alwaysinline {
-  %is = call <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float> %v,  <8 x float> undef,  i8 -1)
+  %is = call <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float> %v)
   ; Newton-Raphson iteration to improve precision
   ;  float is = __rsqrt_v(v);
   ;  return 0.5 * is * (3. - (v * is) * is);
@@ -72,6 +72,7 @@ define <8 x float> @__rsqrt_varying_float(<8 x float> %v) nounwind readonly alwa
                                   float 0.5, float 0.5, float 0.5, float 0.5>, %is_mul
   ret <8 x float> %half_scale
 }
+declare <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float>,  <8 x float>,  i8) nounwind readnone
 define <8 x float> @__rsqrt_fast_varying_float(<8 x float> %v) nounwind readonly alwaysinline {
   %ret = call <8 x float> @llvm.x86.avx512.rsqrt14.ps.256(<8 x float> %v,  <8 x float> undef,  i8 -1)
   ret <8 x float> %ret

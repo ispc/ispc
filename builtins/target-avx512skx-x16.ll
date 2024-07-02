@@ -72,8 +72,14 @@ define <16 x float> @__rsqrt_fast_varying_float(<16 x float> %v) nounwind readon
   %ret = call <16 x float> @llvm.x86.avx512.rsqrt14.ps.512(<16 x float> %v,  <16 x float> undef,  i16 -1)
   ret <16 x float> %ret
 }
+declare <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float> %v) nounwind readnone
 define <16 x float> @__rsqrt_varying_float(<16 x float> %v) nounwind readonly alwaysinline {
-  %is = call <16 x float> @__rsqrt_fast_varying_float(<16 x float> %v)
+  %v1 = shufflevector <16 x float> %v, <16 x float> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v2 = shufflevector <16 x float> %v, <16 x float> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %is_1 = call <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float> %v1)
+  %is_2 = call <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float> %v2)
+  %is = shufflevector <8 x float> %is_1, <8 x float> %is_2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ;%is = call <16 x float> @__rsqrt_fast_varying_float(<16 x float> %v)
   ; Newton-Raphson iteration to improve precision
   ;  float is = __rsqrt_v(v);
   ;  return 0.5 * is * (3. - (v * is) * is);
