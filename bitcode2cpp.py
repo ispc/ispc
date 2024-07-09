@@ -24,14 +24,13 @@ src = args[0].src
 length=0
 
 target = basename(src)
-target = re.sub(r"^builtins-", "", target)
-target = re.sub(r"^target-", "", target)
+target = re.sub(r"^builtins_", "", target)
+target = re.sub(r"^target_", "", target)
 target = re.sub(r"\.bc$", "", target)
 target = re.sub(r"\.ll$", "", target)
 target = re.sub(r"\.c$", "", target)
-target = re.sub(r"-32bit.*$$", "", target)
-target = re.sub(r"-64bit.*$$", "", target)
-target = re.sub("-", "_", target)
+target = re.sub(r"_32bit.*$$", "", target)
+target = re.sub(r"_64bit.*$$", "", target)
 
 name = target
 if args[0].runtime != '':
