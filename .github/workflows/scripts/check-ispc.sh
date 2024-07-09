@@ -5,6 +5,7 @@
 
 cd build
 bin/check_isa
+bin/ispc --binary-type
 bin/ispc --support-matrix
 if [[ $OSTYPE == 'darwin'* ]]; then
   cmake --build . --target check-all
