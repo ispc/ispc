@@ -41,6 +41,7 @@ function(target_ll_to_cpp target bit os)
     string(TOUPPER ${os} OS_UP)
 
     set(name builtins-target-${target}-${bit}bit-${os})
+    string(REPLACE "-" "_" name ${name})
     set(cpp ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${name}.cpp)
     set(bc ${BITCODE_FOLDER}/${name}.bc)
 
@@ -77,6 +78,7 @@ function(generate_dispatcher os)
         set(DISP_TYPE -DMACOS)
         set(name "builtins-dispatch-macos")
     endif()
+    string(REPLACE "-" "_" name ${name})
     set(cpp ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${name}.cpp)
     set(bc ${BITCODE_FOLDER}/${name}.bc)
 
@@ -106,6 +108,7 @@ endfunction()
 function(builtin_wasm_to_cpp bit os arch)
     set(input builtins/builtins-c-cpu.cpp)
     set(name builtins-cpp-${bit}-${os}-${arch})
+    string(REPLACE "-" "_" name ${name})
 
     # Report supported targets.
     message (STATUS "Enabling target: ${os} / ${arch}")
@@ -260,6 +263,7 @@ function(builtin_to_cpp bit os generic_arch)
     )
 
     set(name builtins-cpp-${bit}-${os}-${arch})
+    string(REPLACE "-" "_" name ${name})
     set(cpp ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${name}.cpp)
     set(bc ${BITCODE_FOLDER}/${name}.bc)
 
@@ -294,6 +298,7 @@ function(builtin_xe_to_cpp os)
     set(name builtins-cm-${bit})
     set(input builtins/${name}.ll)
 
+    string(REPLACE "-" "_" name ${name})
     set(cpp ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${name}.cpp)
     set(bc ${BITCODE_FOLDER}/${name}.bc)
 
