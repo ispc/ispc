@@ -1,0 +1,149 @@
+# Copyright 2024, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: Slim Binary
+
+permissions: read-all
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  SDE_MIRROR_ID: 813591
+  SDE_TAR_NAME: sde-external-9.33.0-2024-01-07
+  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
+  LLVM_REPO: https://github.com/ispc/ispc.dependencies
+
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    env:
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      ISPC_OPAQUE_PTR_MODE: "ON"
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.sh
+
+    - name: Check environment
+      run: |
+        which -a clang
+        cat /proc/cpuinfo
+
+    - name: Build ISPC
+      run: |
+        .github/workflows/scripts/build-ispc.sh -DISPC_SLIM_BINARY=ON
+
+    - name: Sanity testing (make check-all, make test)
+      run: |
+        .github/workflows/scripts/check-ispc.sh
+
+    - name: Runtime tests
+      run: |
+        PATH=`pwd`/build/bin:$PATH ./run_tests.py --target=avx2-i32x8 --arch=x86-64
+
+  macos:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-12
+            target: avx2-i32x8
+            arch: x86-64
+          - runner: macos-14
+            target: neon-i32x8
+            arch: aarch64
+    env:
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.6-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
+      ISPC_OPAQUE_PTR_MODE: "ON"
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        ls -al /Library/Developer/CommandLineTools/SDKs/
+        xcrun --show-sdk-path
+        [ -n "$LLVM_REPO" ] && wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 --no-verbose $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
+        tar xf $LLVM_TAR
+        echo "${GITHUB_WORKSPACE}/bin-$LLVM_VERSION/bin" >> $GITHUB_PATH
+        brew install bison flex
+        if [ "${{ matrix.runner }}" == "macos-14" ]; then
+          echo "/opt/homebrew/opt/bison/bin" >> $GITHUB_PATH
+          echo "opt/homebrew/opt/flex/bin" >> $GITHUB_PATH
+        else
+          echo "/usr/local/opt/bison/bin" >> $GITHUB_PATH
+          echo "/usr/local/opt/flex/bin" >> $GITHUB_PATH
+        fi
+
+    - name: Check environment
+      run: |
+        which -a clang
+        llvm-config --system-libs
+        sysctl -n machdep.cpu.brand_string
+
+    - name: Build package
+      run: |
+        .github/workflows/scripts/build-ispc.sh -DISPC_SLIM_BINARY=ON
+
+    - name: Sanity testing (make check-all, make test)
+      run: |
+        .github/workflows/scripts/check-ispc.sh
+
+    - name: Runtime tests
+      run: |
+        PATH=`pwd`/build/bin:$PATH ./run_tests.py --verbose --compiler=cc --target=${{ matrix.target }} --arch=${{ matrix.arch }}
+
+  windows:
+    runs-on: windows-2019
+    env:
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      ISPC_OPAQUE_PTR_MODE: "ON"
+      LLVM_HOME: "C:\\projects\\llvm"
+      CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
+      BUILD_TYPE: "Release"
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.ps1
+
+    - name: Check environment
+      shell: cmd
+      run: |
+        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+
+    - name: Build package
+      run: |
+        .github/workflows/scripts/build-ispc.ps1 -DISPC_SLIM_BINARY=ON
+
+    - name: Sanity testing (make check-all, make test)
+      run: |
+        .github/workflows/scripts/check-ispc.ps1
+
+    - name: Running tests
+      run: |
+        $currentDir = (Get-Location).Path
+        $newPath = "$currentDir\\build\\bin\\${{ env.BUILD_TYPE }}"
+        $env:PATH = "$env:PATH;$newPath"
+        .github/workflows/scripts/load-vs-env.ps1 x86-64
+        python run_tests.py --target=avx2-i32x8 --arch=x86-64
