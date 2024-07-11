@@ -439,33 +439,10 @@ else()
 endif()
 message(STATUS "BITCODE_FOLDER is ${BITCODE_FOLDER}")
 file(MAKE_DIRECTORY ${BITCODE_FOLDER})
-# Defines DISPATCH_BUILTIN_BC_FILES DISPATCH_BUILTIN_CPP_FILES
-generate_dispatch_builtins()
-# Defines COMMON_BUILTIN_CPP_FILES COMMON_BUILTIN_BC_FILES
-generate_common_builtins()
-# Defines TARGET_BUILTIN_CPP_FILES TARGET_BUILTIN_BC_FILES
-generate_target_builtins()
+
+# Defines builtin target
+generate_builtins()
 generate_stdlib(STDLIB_FILES ${ISPC_MASKS})
-
-add_custom_target(dispatch-builtins-bc DEPENDS ${DISPATCH_BUILTIN_BC_FILES})
-add_custom_target(common-builtins-bc DEPENDS ${COMMON_BUILTIN_BC_FILES})
-add_custom_target(target-builtins-bc DEPENDS ${TARGET_BUILTIN_BC_FILES})
-add_custom_target(builtins-bc DEPENDS dispatch-builtins-bc target-builtins-bc common-builtins-bc)
-
-add_custom_target(dispatch-builtins-cpp DEPENDS dispatch-builtins-bc)
-add_custom_target(common-builtins-cpp DEPENDS common-builtins-bc)
-add_custom_target(target-builtins-cpp DEPENDS target-builtins-bc)
-add_custom_target(builtins-cpp DEPENDS dispatch-builtins-cpp target-builtins-cpp common-builtins-cpp)
-
-if (MSVC)
-    # Group generated files inside Visual Studio
-    source_group("Generated Dispatch Builtins" FILES ${DISPATCH_BUILTIN_CPP_FILES})
-    source_group("Generated Common Builtins" FILES ${COMMON_BUILTIN_CPP_FILES})
-    source_group("Generated Target Builtins" FILES ${TARGET_BUILTIN_CPP_FILES})
-endif()
-set_source_files_properties(${DISPATCH_BUILTIN_CPP_FILES} PROPERTIES GENERATED true)
-set_source_files_properties(${COMMON_BUILTIN_CPP_FILES} PROPERTIES GENERATED true)
-set_source_files_properties(${TARGET_BUILTIN_CPP_FILES} PROPERTIES GENERATED true)
 
 # Common sources between ispc-opt and ispc
 list(APPEND COMMON_SOURCES
@@ -839,11 +816,6 @@ function(configure_ispc_exe TARGET)
 endfunction()
 
 # Define libraries that are built in the project. Some of them are shared across multiple executable targets.
-add_library(builtin OBJECT EXCLUDE_FROM_ALL
-    ${DISPATCH_BUILTIN_CPP_FILES} ${COMMON_BUILTIN_CPP_FILES} ${TARGET_BUILTIN_CPP_FILES})
-add_dependencies(builtin builtins-cpp)
-configure_ispc_obj(builtin)
-
 add_library(optimization OBJECT EXCLUDE_FROM_ALL ${OPT_SOURCES})
 configure_ispc_obj(optimization)
 
@@ -852,6 +824,9 @@ configure_ispc_obj(common)
 
 add_library(frontend OBJECT EXCLUDE_FROM_ALL ${FRONTEND_SOURCES})
 configure_ispc_obj(frontend)
+
+# builtin target is created in GenerateBuiltins.cmake
+configure_ispc_obj(builtin)
 
 # Define executable targets
 add_executable(ispc-opt ispc-opt.cpp)
