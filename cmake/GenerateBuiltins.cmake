@@ -7,10 +7,10 @@
 # ispc GenerateBuiltins.cmake
 #
 find_program(M4_EXECUTABLE m4)
-    if (NOT M4_EXECUTABLE)
-        message(FATAL_ERROR "Failed to find M4 macro processor" )
-    endif()
-    message(STATUS "M4 macro processor: " ${M4_EXECUTABLE})
+if (NOT M4_EXECUTABLE)
+    message(FATAL_ERROR "Failed to find M4 macro processor" )
+endif()
+message(STATUS "M4 macro processor: " ${M4_EXECUTABLE})
 
 # Explicitly enumerate .ll and .m4 files included by target .ll files.
 # This is overly conservative, as they are added to every target .ll file.
@@ -334,6 +334,18 @@ function (generate_dispatch_builtins)
         generate_dispatcher("macos")
     endif()
 
+    if (MSVC)
+        # Group generated files inside Visual Studio
+        source_group("Generated Dispatch Builtins" FILES ${DISPATCH_BUILTIN_CPP_FILES})
+    endif()
+    set_source_files_properties(${DISPATCH_BUILTIN_CPP_FILES} PROPERTIES GENERATED true)
+
+    add_custom_target(dispatch-builtins-bc DEPENDS ${DISPATCH_BUILTIN_BC_FILES})
+    add_custom_target(dispatch-builtins-cpp DEPENDS dispatch-builtins-bc)
+    set_target_properties(dispatch-builtins-cpp PROPERTIES SOURCES "${DISPATCH_BUILTIN_CPP_FILES}")
+    add_dependencies(builtins-cpp dispatch-builtins-cpp)
+    add_dependencies(builtins-bc dispatch-builtins-bc)
+
     set(DISPATCH_BUILTIN_CPP_FILES ${DISPATCH_BUILTIN_CPP_FILES} PARENT_SCOPE)
     set(DISPATCH_BUILTIN_BC_FILES ${DISPATCH_BUILTIN_BC_FILES} PARENT_SCOPE)
 endfunction()
@@ -391,6 +403,18 @@ function (generate_target_builtins)
             endforeach()
         endforeach()
     endif()
+
+    if (MSVC)
+        # Group generated files inside Visual Studio
+        source_group("Generated Target Builtins" FILES ${TARGET_BUILTIN_CPP_FILES})
+    endif()
+    set_source_files_properties(${TARGET_BUILTIN_CPP_FILES} PROPERTIES GENERATED true)
+
+    add_custom_target(target-builtins-bc DEPENDS ${TARGET_BUILTIN_BC_FILES})
+    add_custom_target(target-builtins-cpp DEPENDS target-builtins-bc)
+    set_target_properties(target-builtins-cpp PROPERTIES SOURCES "${TARGET_BUILTIN_CPP_FILES}")
+    add_dependencies(builtins-cpp target-builtins-cpp)
+    add_dependencies(builtins-bc target-builtins-bc)
 
     set(TARGET_BUILTIN_CPP_FILES ${TARGET_BUILTIN_CPP_FILES} PARENT_SCOPE)
     set(TARGET_BUILTIN_BC_FILES ${TARGET_BUILTIN_BC_FILES} PARENT_SCOPE)
@@ -465,6 +489,31 @@ function (generate_common_builtins)
         builtin_wasm_to_cpp(64 web wasm64)
     endif()
 
+    if (MSVC)
+        # Group generated files inside Visual Studio
+        source_group("Generated Common Builtins" FILES ${COMMON_BUILTIN_CPP_FILES})
+    endif()
+    set_source_files_properties(${COMMON_BUILTIN_CPP_FILES} PROPERTIES GENERATED true)
+
+    add_custom_target(common-builtins-bc DEPENDS ${COMMON_BUILTIN_BC_FILES})
+    add_custom_target(common-builtins-cpp DEPENDS common-builtins-bc)
+    set_target_properties(common-builtins-cpp PROPERTIES SOURCES "${COMMON_BUILTIN_CPP_FILES}")
+    add_dependencies(builtins-cpp common-builtins-cpp)
+    add_dependencies(builtins-bc common-builtins-bc)
+
     set(COMMON_BUILTIN_CPP_FILES ${COMMON_BUILTIN_CPP_FILES} PARENT_SCOPE)
     set(COMMON_BUILTIN_BC_FILES ${COMMON_BUILTIN_BC_FILES} PARENT_SCOPE)
+endfunction()
+
+function (generate_builtins)
+    add_custom_target(builtins-bc)
+    add_custom_target(builtins-cpp)
+
+    generate_dispatch_builtins()
+    generate_target_builtins()
+    generate_common_builtins()
+
+    add_library(builtin OBJECT EXCLUDE_FROM_ALL
+        ${DISPATCH_BUILTIN_CPP_FILES} ${COMMON_BUILTIN_CPP_FILES} ${TARGET_BUILTIN_CPP_FILES})
+    add_dependencies(builtin builtins-cpp)
 endfunction()
