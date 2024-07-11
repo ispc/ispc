@@ -6,6 +6,64 @@
 #
 # ispc GenerateBuiltins.cmake
 #
+function(write_target_bitcode_lib name target os bit)
+    set(arch "error")
+    if ("${target}" MATCHES "sse|avx")
+        if ("${bit}" STREQUAL "32")
+            set(arch "x86")
+        elseif ("${bit}" STREQUAL "64")
+            set(arch "x86_64")
+        else()
+            set(arch "error")
+        endif()
+    elseif ("${target}" MATCHES "neon")
+        if ("${bit}" STREQUAL "32")
+            set(arch "arm")
+        elseif ("${bit}" STREQUAL "64")
+            set(arch "aarch64")
+        else()
+            set(arch "error")
+        endif()
+    elseif ("${target}" MATCHES "wasm")
+        if ("${bit}" STREQUAL "32")
+            set(arch "wasm32")
+        elseif ("${bit}" STREQUAL "64")
+            set(arch "wasm64")
+        else()
+            set(arch "error")
+        endif()
+    elseif ("${target}" MATCHES "gen9|xe")
+        set(arch "xe64")
+    endif()
+    if ("${arch}" STREQUAL "error")
+        message(FATAL_ERROR "Incorrect target or bit passed to write_target_bitcode_lib ${target} ${os} ${bit}")
+    endif()
+
+    if ("${os}" STREQUAL "unix")
+        set(os "linux")
+    endif()
+
+    string(REPLACE "-" "_" target ${target})
+    file(APPEND ${CMAKE_BINARY_DIR}/bitcode_libs_generated.cpp
+      "static BitcodeLib ${name}(\"${name}.bc\", ISPCTarget::${target}, TargetOS::${os}, Arch::${arch});\n")
+endfunction()
+
+function(write_common_bitcode_lib name os arch)
+    if ("${arch}" STREQUAL "i686")
+        set(arch "x86")
+    elseif ("${arch}" STREQUAL "armv7")
+        set(arch "arm")
+    endif()
+
+    file(APPEND ${CMAKE_BINARY_DIR}/bitcode_libs_generated.cpp
+      "static BitcodeLib ${name}(\"${name}.bc\", TargetOS::${os}, Arch::${arch});\n")
+endfunction()
+
+function(write_dispatch_bitcode_lib name os)
+    file(APPEND ${CMAKE_BINARY_DIR}/bitcode_libs_generated.cpp
+      "static BitcodeLib ${name}(\"${name}.bc\", TargetOS::${os});\n")
+endfunction()
+
 find_program(M4_EXECUTABLE m4)
 if (NOT M4_EXECUTABLE)
     message(FATAL_ERROR "Failed to find M4 macro processor" )
@@ -45,6 +103,8 @@ function(target_ll_to_cpp target bit os)
     set(cpp ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${name}.cpp)
     set(bc ${BITCODE_FOLDER}/${name}.bc)
 
+    write_target_bitcode_lib(${name} ${target} ${os} ${bit})
+
     add_custom_command(
         OUTPUT ${bc}
         COMMAND ${M4_EXECUTABLE} -I${include} -DBUILD_OS=${OS_UP} -DRUNTIME=${bit} ${input}
@@ -80,6 +140,8 @@ function(generate_dispatcher os)
     string(REPLACE "-" "_" name ${name})
     set(cpp ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${name}.cpp)
     set(bc ${BITCODE_FOLDER}/${name}.bc)
+
+    write_dispatch_bitcode_lib(${name} ${os})
 
     add_custom_command(
         OUTPUT ${bc}
@@ -264,6 +326,8 @@ function(builtin_to_cpp bit os generic_arch)
     string(REPLACE "-" "_" name ${name})
     set(cpp ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${name}.cpp)
     set(bc ${BITCODE_FOLDER}/${name}.bc)
+
+    write_common_bitcode_lib(${name} ${os} ${arch})
 
     add_custom_command(
         OUTPUT ${bc}
@@ -502,6 +566,8 @@ function (generate_common_builtins)
 endfunction()
 
 function (generate_builtins)
+    file(WRITE ${CMAKE_BINARY_DIR}/bitcode_libs_generated.cpp)
+
     add_custom_target(builtins-bc)
     add_custom_target(builtins-cpp)
 
