@@ -1,10 +1,12 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
 
 #include "CheckIRForXeTarget.h"
+
+#include <regex>
 
 #ifdef ISPC_XE_ENABLED
 
@@ -50,6 +52,18 @@ bool CheckIRForXeTarget::checkAndFixIRForXe(llvm::BasicBlock &bb) {
                 }
                 llvm::Value *dataSizeGen = llvm::ConstantInt::get(LLVMTypes::Int8Type, genSize);
                 ci->setArgOperand(6, dataSizeGen);
+            } else {
+                llvm::Function *func = ci->getCalledFunction();
+                if (func == nullptr)
+                    continue;
+                // Check if the function name corresponds to the unsupported pattern
+                std::string funcName = func->getName().str();
+                static const std::regex unsupportedAtomicFuncs(
+                    "__atomic_f(add|sub|min|max)_(float|double)_global|"
+                    "__atomic_f(add|sub|min|max)_uniform_(float|double)_global");
+                if (std::regex_match(funcName, unsupportedAtomicFuncs)) {
+                    Error(pos, "This atomic operation is not supported for FP types on Xe target");
+                }
             }
         }
         // Report error if double type is not supported by the target

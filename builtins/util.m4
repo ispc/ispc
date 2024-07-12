@@ -2297,6 +2297,32 @@ define <$1 x $3> @__atomic_$2_$4_global(i8 * %ptr, <$1 x $3> %val,
 }
 ')
 
+;; This is a basic atomic operation implementation for atomics that are associative
+;; for float types.
+;;
+;; Takes four parameters:
+;; $1: vector width of the target
+;; $2: operation being performed (w.r.t. LLVM atomic intrinsic names)
+;;     (fadd, fsub...)
+;; $3: return type of the LLVM atomic (e.g. float)
+;; $4: return type of the LLVM atomic type, in ispc naming paralance (e.g. float)
+
+define(`global_atomic_associative_fp', `
+define <$1 x $3> @__atomic_$2_$4_global(i8* %ptr, <$1 x $3> %val,
+                                        <$1 x MASK> %m) nounwind alwaysinline {
+  %ret_ptr = alloca <$1 x $3>
+  per_lane($1, <$1 x MASK> %m, `
+    %val_LANE_ID = extractelement <$1 x $3> %val, i32 LANE
+    %res_LANE_ID = call $3 @__atomic_$2_uniform_$4_global(i8 * %ptr, $3 %val_LANE_ID)
+    %store_ptr_LANE_ID = getelementptr PTR_OP_ARGS(`<$1 x $3>') %ret_ptr, i32 0, i32 LANE
+    store $3 %res_LANE_ID, $3 * %store_ptr_LANE_ID
+  ')
+  %res = load PTR_OP_ARGS(`<$1 x $3> ')  %ret_ptr
+
+  ret <$1 x $3> %res
+}
+')
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; global_atomic_uniform
 ;; Defines the implementation of a function that handles the mapping from
@@ -6902,6 +6928,13 @@ global_atomic_uniform(WIDTH, max, i32, int32)
 global_atomic_uniform(WIDTH, umin, i32, uint32)
 global_atomic_uniform(WIDTH, umax, i32, uint32)
 
+global_atomic_associative_fp(WIDTH, fadd, float, float)
+global_atomic_associative_fp(WIDTH, fsub, float, float)
+global_atomic_uniform(WIDTH, fadd, float, float)
+global_atomic_uniform(WIDTH, fsub, float, float)
+global_atomic_uniform(WIDTH, fmin, float, float)
+global_atomic_uniform(WIDTH, fmax, float, float)
+
 global_atomic_associative(WIDTH, add, i64, int64, 0)
 global_atomic_associative(WIDTH, sub, i64, int64, 0)
 global_atomic_associative(WIDTH, and, i64, int64, -1)
@@ -6916,6 +6949,13 @@ global_atomic_uniform(WIDTH, min, i64, int64)
 global_atomic_uniform(WIDTH, max, i64, int64)
 global_atomic_uniform(WIDTH, umin, i64, uint64)
 global_atomic_uniform(WIDTH, umax, i64, uint64)
+
+global_atomic_associative_fp(WIDTH, fadd, double, double)
+global_atomic_associative_fp(WIDTH, fsub, double, double)
+global_atomic_uniform(WIDTH, fadd, double, double)
+global_atomic_uniform(WIDTH, fsub, double, double)
+global_atomic_uniform(WIDTH, fmin, double, double)
+global_atomic_uniform(WIDTH, fmax, double, double)
 
 global_swap(WIDTH, i32, int32)
 global_swap(WIDTH, i64, int64)
@@ -8490,6 +8530,11 @@ global_atomic_varying(WIDTH, max, i32, int32)
 global_atomic_varying(WIDTH, umin, i32, uint32)
 global_atomic_varying(WIDTH, umax, i32, uint32)
 
+global_atomic_varying(WIDTH, fadd, float, float)
+global_atomic_varying(WIDTH, fsub, float, float)
+global_atomic_varying(WIDTH, fmin, float, float)
+global_atomic_varying(WIDTH, fmax, float, float)
+
 global_atomic_varying(WIDTH, add, i64, int64)
 global_atomic_varying(WIDTH, sub, i64, int64)
 global_atomic_varying(WIDTH, and, i64, int64)
@@ -8499,6 +8544,11 @@ global_atomic_varying(WIDTH, min, i64, int64)
 global_atomic_varying(WIDTH, max, i64, int64)
 global_atomic_varying(WIDTH, umin, i64, uint64)
 global_atomic_varying(WIDTH, umax, i64, uint64)
+
+global_atomic_varying(WIDTH, fadd, double, double)
+global_atomic_varying(WIDTH, fsub, double, double)
+global_atomic_varying(WIDTH, fmin, double, double)
+global_atomic_varying(WIDTH, fmax, double, double)
 
 define(`transcendetals_decl',`
     declare float @__log_uniform_float(float) nounwind readnone
