@@ -1544,6 +1544,15 @@ define $3 @__atomic_$2_uniform_$4_global(i8 * %ptr, $3 %val) nounwind alwaysinli
 }
 ')
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; global_atomic_uniform_decl
+;; Declares the implementation of a uniform and non-uniform functions.
+define(`global_atomic_uniform_decl', `
+declare $3 @__atomic_$2_uniform_$4_global(i8 * %ptr, $3 %val)
+declare <$1 x $3> @__atomic_$2_$4_global(i8* %ptr, <$1 x $3> %val,
+                                        <$1 x MASK> %m)
+')
+
 ;; Macro to declare the function that implements the swap atomic.
 ;; Takes three parameters:
 ;; $1: vector width of the target
@@ -5629,6 +5638,11 @@ global_atomic_uniform_minmax(WIDTH, max, i32, int32, imax)
 global_atomic_uniform_minmax(WIDTH, umin, i32, uint32, min)
 global_atomic_uniform_minmax(WIDTH, umax, i32, uint32, max)
 
+global_atomic_uniform_decl(WIDTH, fadd, float, float)
+global_atomic_uniform_decl(WIDTH, fsub, float, float)
+global_atomic_uniform_decl(WIDTH, fmin, float, float)
+global_atomic_uniform_decl(WIDTH, fmax, float, float)
+
 global_atomic_associative(WIDTH, add, i64, int64, 0)
 global_atomic_associative(WIDTH, sub, i64, int64, 0)
 global_atomic_associative(WIDTH, and, i64, int64, -1)
@@ -5643,6 +5657,11 @@ global_atomic_uniform_minmax(WIDTH, min, i64, int64, imin)
 global_atomic_uniform_minmax(WIDTH, max, i64, int64, imax)
 global_atomic_uniform_minmax(WIDTH, umin, i64, uint64, min)
 global_atomic_uniform_minmax(WIDTH, umax, i64, uint64, max)
+
+global_atomic_uniform_decl(WIDTH, fadd, double, double)
+global_atomic_uniform_decl(WIDTH, fsub, double, double)
+global_atomic_uniform_decl(WIDTH, fmin, double, double)
+global_atomic_uniform_decl(WIDTH, fmax, double, double)
 
 global_swap(WIDTH, i32, int32)
 global_swap(WIDTH, i64, int64)
@@ -6920,6 +6939,10 @@ global_atomic_varying(WIDTH, min, i32, int32)
 global_atomic_varying(WIDTH, max, i32, int32)
 global_atomic_varying(WIDTH, umin, i32, uint32)
 global_atomic_varying(WIDTH, umax, i32, uint32)
+global_atomic_varying(WIDTH, fadd, float, float)
+global_atomic_varying(WIDTH, fsub, float, float)
+global_atomic_varying(WIDTH, fmin, float, float)
+global_atomic_varying(WIDTH, fmax, float, float)
 
 global_atomic_varying(WIDTH, add, i64, int64)
 global_atomic_varying(WIDTH, sub, i64, int64)
@@ -6930,6 +6953,10 @@ global_atomic_varying(WIDTH, min, i64, int64)
 global_atomic_varying(WIDTH, max, i64, int64)
 global_atomic_varying(WIDTH, umin, i64, uint64)
 global_atomic_varying(WIDTH, umax, i64, uint64)
+global_atomic_varying(WIDTH, fadd, double, double)
+global_atomic_varying(WIDTH, fsub, double, double)
+global_atomic_varying(WIDTH, fmin, double, double)
+global_atomic_varying(WIDTH, fmax, double, double)
 
 define(`trigonometry_decl',`
     declare <WIDTH x half> @__asin_varying_half(<WIDTH x half>) nounwind readnone

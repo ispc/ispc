@@ -2085,6 +2085,10 @@ DEFINE_ATOMIC_OP(unsigned int32, int32, or, or, UIntMaskType, unsigned int64)
 DEFINE_ATOMIC_OP(unsigned int32, int32, xor, xor, UIntMaskType, unsigned int64)
 DEFINE_ATOMIC_SWAP(unsigned int32, int32, UIntMaskType, unsigned int64)
 
+DEFINE_ATOMIC_OP(float, float, add, fadd, IntMaskType, int64)
+DEFINE_ATOMIC_OP(float, float, subtract, fsub, IntMaskType, int64)
+DEFINE_ATOMIC_MINMAX_OP(float, float, min, fmin, IntMaskType, int64)
+DEFINE_ATOMIC_MINMAX_OP(float, float, max, fmax, IntMaskType, int64)
 DEFINE_ATOMIC_SWAP(float, float, IntMaskType, int64)
 
 DEFINE_ATOMIC_OP(int64, int64, add, add, IntMaskType, int64)
@@ -2107,6 +2111,10 @@ DEFINE_ATOMIC_OP(unsigned int64, int64, or, or, UIntMaskType, unsigned int64)
 DEFINE_ATOMIC_OP(unsigned int64, int64, xor, xor, UIntMaskType, unsigned int64)
 DEFINE_ATOMIC_SWAP(unsigned int64, int64, UIntMaskType, unsigned int64)
 
+DEFINE_ATOMIC_OP(double, double, add, fadd, IntMaskType, int64)
+DEFINE_ATOMIC_OP(double, double, subtract, fsub, IntMaskType, int64)
+DEFINE_ATOMIC_MINMAX_OP(double, double, min, fmin, IntMaskType, int64)
+DEFINE_ATOMIC_MINMAX_OP(double, double, max, fmax, IntMaskType, int64)
 DEFINE_ATOMIC_SWAP(double, double, IntMaskType, int64)
 
 #undef DEFINE_ATOMIC_OP

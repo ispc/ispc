@@ -5471,23 +5471,16 @@ There are also ``int64`` equivalents as well as variants that take
   int32 atomic_swap_{local,global}(uniform int32 * uniform ptr, int32 value)
 
 Support for ``float`` and ``double`` types is also available.  For local
-atomics, all but the logical operations are available.  (There are
+and global atomics, all but the logical operations are available.  (There are
 corresponding ``double`` variants of these, not listed here.)
 
 ::
 
-  float atomic_add_local(uniform float * uniform ptr, float value)
-  float atomic_subtract_local(uniform float * uniform ptr, float value)
-  float atomic_min_local(uniform float * uniform ptr, float value)
-  float atomic_max_local(uniform float * uniform ptr, float value)
-  float atomic_swap_local(uniform float * uniform ptr, float value)
-
-For global atomics, only atomic swap is available for these types:
-
-::
-
-  float atomic_swap_global(uniform float * uniform ptr, float value)
-  double atomic_swap_global(uniform double * uniform ptr, double value)
+  float atomic_add_{local,global}(uniform float * uniform ptr, float value)
+  float atomic_subtract_{local,global}(uniform float * uniform ptr, float value)
+  float atomic_min_{local,global}(uniform float * uniform ptr, float value)
+  float atomic_max_{local,global}(uniform float * uniform ptr, float value)
+  float atomic_swap_{local,global}(uniform float * uniform ptr, float value)
 
 Finally, "swap" (but none of these other atomics) is available for pointer
 types:
