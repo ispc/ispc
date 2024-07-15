@@ -1,5 +1,4 @@
 // RUN: %{ispc} %s -g -O2 -o %t.o --target=avx512skx-x16
-// RUN: %{ispc} %s -g -O2 -o %t.o --target=avx512knl-x16
 
 // REQUIRES: X86_ENABLED
 

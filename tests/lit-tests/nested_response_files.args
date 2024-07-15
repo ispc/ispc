@@ -1,1 +1,1 @@
---target=sse2-i32x8,avx2,avx512knl-x16 @missing_response_file.args
+--target=sse2-i32x8,avx2 @missing_response_file.args

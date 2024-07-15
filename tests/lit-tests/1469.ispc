@@ -2,7 +2,6 @@
 // RUN: %{ispc} --target=sse4 -h %t.h %s
 // RUN: %{ispc} --target=avx1 -h %t.h %s
 // RUN: %{ispc} --target=avx2 -h %t.h %s
-// RUN: %{ispc} --target=avx512knl-x16 -h %t.h %s
 // RUN: %{ispc} --target=avx512skx-x16 -h %t.h %s
 
 // REQUIRES: X86_ENABLED

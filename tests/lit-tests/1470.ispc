@@ -30,7 +30,6 @@
 // RUN: %{ispc}  %s --emit-llvm-text -h %t.h --nostdlib --target=avx2-i32x16   -o - | FileCheck %s
 // RUN: %{ispc}  %s --emit-llvm-text -h %t.h --nostdlib --target=avx2-i64x4    -o - | FileCheck %s
 
-// RUN: %{ispc}  %s --emit-llvm-text -h %t.h --nostdlib --target=avx512knl-x16 -o - | FileCheck %s
 // RUN: %{ispc}  %s --emit-llvm-text -h %t.h --nostdlib --target=avx512skx-x16 -o - | FileCheck %s
 
 // REQUIRES: X86_ENABLED

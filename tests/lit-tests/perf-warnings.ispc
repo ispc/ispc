@@ -22,7 +22,6 @@
 // RUN: %{ispc} %s --nostdlib --nowrap --target=avx2-i32x16 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_AVX2
 // RUN: %{ispc} %s --nostdlib --nowrap --target=avx2-i64x4 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_AVX2
 
-// RUN: %{ispc} %s --nostdlib --nowrap --target=avx512knl-x16 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_AVX512
 // RUN: %{ispc} %s --nostdlib --nowrap --target=avx512skx-x4 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_AVX512
 // RUN: %{ispc} %s --nostdlib --nowrap --target=avx512skx-x8 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_AVX512
 // RUN: %{ispc} %s --nostdlib --nowrap --target=avx512skx-x16 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_AVX512
