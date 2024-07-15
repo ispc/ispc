@@ -1,4 +1,3 @@
-//; RUN: %{ispc} %s --target=avx512knl-x16 --emit-asm -o - | FileCheck %s --implicit-check-not "vpcmpeqb"
 //; RUN: %{ispc} %s --target=avx512skx-x16 --emit-asm -o - | FileCheck %s --implicit-check-not "vpcmpeqb"
 //; RUN: %{ispc} %s --target=avx512skx-x8 --emit-asm -o - | FileCheck %s --implicit-check-not "vpcmpeqw" --implicit-check-not "vpcmpneqw"
 //; RUN: %{ispc} %s --target=avx512skx-x4 --emit-asm -o - | FileCheck %s --implicit-check-not "vpcmpeqw" --implicit-check-not "vpcmpneqw"

@@ -35,8 +35,6 @@
 // RUN: %{ispc} %s -O2 --woff --target=avx2-i32x16 --addressing=64 --nostdlib --emit-llvm-text --opt=disable-gathers --opt=disable-scatters -o - | FileCheck %s
 // RUN: %{ispc} %s -O2 --woff --target=avx2-i64x4 --addressing=32 --nostdlib --emit-llvm-text --opt=disable-gathers --opt=disable-scatters -o - | FileCheck %s
 // RUN: %{ispc} %s -O2 --woff --target=avx2-i64x4 --addressing=64 --nostdlib --emit-llvm-text --opt=disable-gathers --opt=disable-scatters -o - | FileCheck %s
-// RUN: %{ispc} %s -O2 --woff --target=avx512knl-x16 --addressing=32 --nostdlib --emit-llvm-text --opt=disable-gathers --opt=disable-scatters -o - | FileCheck %s
-// RUN: %{ispc} %s -O2 --woff --target=avx512knl-x16 --addressing=64 --nostdlib --emit-llvm-text --opt=disable-gathers --opt=disable-scatters -o - | FileCheck %s
 // RUN: %{ispc} %s -O2 --woff --target=avx512skx-x4 --addressing=32 --nostdlib --emit-llvm-text --opt=disable-gathers --opt=disable-scatters -o - | FileCheck %s
 // RUN: %{ispc} %s -O2 --woff --target=avx512skx-x4 --addressing=64 --nostdlib --emit-llvm-text --opt=disable-gathers --opt=disable-scatters -o - | FileCheck %s
 // RUN: %{ispc} %s -O2 --woff --target=avx512skx-x8 --addressing=32 --nostdlib --emit-llvm-text --opt=disable-gathers --opt=disable-scatters -o - | FileCheck %s

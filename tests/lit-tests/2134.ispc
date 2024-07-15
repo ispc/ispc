@@ -1,4 +1,4 @@
-// RUN: %{ispc} %s --target=sse2-i32x4,sse4-i32x8,avx1-i32x8,avx2-i32x8,avx512knl-x16,avx512skx-x16 -h %t.h --emit-llvm -o %t.bc
+// RUN: %{ispc} %s --target=sse2-i32x4,sse4-i32x8,avx1-i32x8,avx2-i32x8,avx512skx-x16 -h %t.h --emit-llvm -o %t.bc
 // RUN: FileCheck --input-file=%t.h %s -check-prefix=CHECK_ALIGN
 
 // REQUIRES: X86_ENABLED

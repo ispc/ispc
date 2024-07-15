@@ -11,8 +11,6 @@
 // RUN: %{ispc} %s -O2 --woff --target=avx2-i32x16 --addressing=64 --emit-asm -o - | FileCheck %s -check-prefix=CHECK_AVX2_X16_64
 // avx2-i16x16 is missing gathers.
 // avx2-i8x32 is missing gathers.
-// RUN: %{ispc} %s -O2 --woff --target=avx512knl-x16 --addressing=32 --emit-asm -o - | FileCheck %s -check-prefix=CHECK_AVX512_X16_32
-// RUN: %{ispc} %s -O2 --woff --target=avx512knl-x16 --addressing=64 --emit-asm -o - | FileCheck %s -check-prefix=CHECK_AVX512_X16_64
 // RUN: %{ispc} %s -O2 --woff --target=avx512skx-x4 --addressing=32 --emit-asm -o - | FileCheck %s -check-prefix=CHECK_AVX512_X4_32
 // RUN: %{ispc} %s -O2 --woff --target=avx512skx-x4 --addressing=64 --emit-asm -o - | FileCheck %s -check-prefix=CHECK_AVX512_X4_64
 // RUN: %{ispc} %s -O2 --woff --target=avx512skx-x8 --addressing=32 --emit-asm -o - | FileCheck %s -check-prefix=CHECK_AVX512_X8_32
