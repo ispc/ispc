@@ -10,6 +10,7 @@
 */
 
 #include "module.h"
+#include "binary_type.h"
 #include "builtins.h"
 #include "ctx.h"
 #include "expr.h"
@@ -33,6 +34,7 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <unordered_map>
 
 #include <clang/Basic/CharInfo.h>
 #include <clang/Basic/FileManager.h>
@@ -73,6 +75,7 @@
 #include <llvm/Support/DynamicLibrary.h>
 #include <llvm/Support/FileUtilities.h>
 #include <llvm/Support/FormattedStream.h>
+#include <llvm/Support/Path.h>
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Support/raw_ostream.h>
@@ -338,73 +341,70 @@ extern YY_BUFFER_STATE yy_create_buffer(FILE *, int);
 extern void yy_delete_buffer(YY_BUFFER_STATE);
 extern void ParserInit();
 
+int Module::preprocessAndParse() {
+    llvm::SmallVector<llvm::StringRef, 6> refs;
+
+    initCPPBuffer();
+
+    const int numErrors = execPreprocessor(filename, bufferCPP->os.get());
+    errorCount += (g->ignoreCPPErrors) ? 0 : numErrors;
+
+    if (g->onlyCPP) {
+        return errorCount; // Return early
+    }
+
+    parseCPPBuffer();
+    clearCPPBuffer();
+
+    return 0;
+}
+
+int Module::parse() {
+    // No preprocessor, just open up the file if it's not stdin..
+    FILE *f = nullptr;
+    if (IsStdin(filename)) {
+        f = stdin;
+    } else {
+        f = fopen(filename, "r");
+        if (f == nullptr) {
+            perror(filename);
+            return 1;
+        }
+    }
+    yyin = f;
+    yy_switch_to_buffer(yy_create_buffer(yyin, 4096));
+    yyparse();
+    fclose(f);
+
+    return 0;
+}
+
 int Module::CompileFile() {
     llvm::TimeTraceScope CompileFileTimeScope(
         "CompileFile", llvm::StringRef(filename + ("_" + std::string(g->target->GetISAString()))));
     ParserInit();
 
-    // FIXME: it'd be nice to do this in the Module constructor, but this
-    // function ends up calling into routines that expect the global
-    // variable 'm' to be initialized and available (which it isn't until
-    // the Module constructor returns...)
-    {
-        llvm::TimeTraceScope TimeScope("DefineStdlib");
-        DefineStdlib(symbolTable, g->ctx, module, g->includeStdlib);
+    if (g->forceAlignment != -1) {
+        llvm::GlobalVariable *alignment = module->getGlobalVariable("memory_alignment", true);
+        alignment->setInitializer(LLVMInt32(g->forceAlignment));
     }
 
-    bool runPreprocessor = g->runCPP;
+    int pre_stage = PRE_OPT_NUMBER;
+    debugDumpModule(module, "Empty", pre_stage++);
 
-    if (runPreprocessor) {
+    if (g->runCPP) {
         llvm::TimeTraceScope TimeScope("Frontend parser");
-        if (!IsStdin(filename)) {
-            // Try to open the file first, since otherwise we crash in the
-            // preprocessor if the file doesn't exist.
-            FILE *f = fopen(filename, "r");
-            if (!f) {
-                perror(filename);
-                return 1;
-            }
-            fclose(f);
+        if (int err = preprocessAndParse()) {
+            return err;
         }
-
-        // If the CPP stream has been initialized, we have unexpected behavior.
-        if (bufferCPP) {
-            perror(filename);
-            return 1;
-        }
-
-        // Replace the CPP stream with a newly allocated one.
-        bufferCPP.reset(new CPPBuffer{});
-
-        const int numErrors = execPreprocessor(!IsStdin(filename) ? filename : "-", bufferCPP->os.get());
-        errorCount += (g->ignoreCPPErrors) ? 0 : numErrors;
-
-        if (g->onlyCPP) {
-            return errorCount; // Return early
-        }
-
-        YY_BUFFER_STATE strbuf = yy_scan_string(bufferCPP->str.c_str());
-        yyparse();
-        yy_delete_buffer(strbuf);
-        clearCPPBuffer();
     } else {
         llvm::TimeTraceScope TimeScope("Frontend parser");
-        // No preprocessor, just open up the file if it's not stdin..
-        FILE *f = nullptr;
-        if (IsStdin(filename)) {
-            f = stdin;
-        } else {
-            f = fopen(filename, "r");
-            if (f == nullptr) {
-                perror(filename);
-                return 1;
-            }
+        if (int err = parse()) {
+            return err;
         }
-        yyin = f;
-        yy_switch_to_buffer(yy_create_buffer(yyin, 4096));
-        yyparse();
-        fclose(f);
     }
+
+    debugDumpModule(module, "Parsed", pre_stage++);
 
     ast->Print(g->astDump);
 
@@ -415,11 +415,26 @@ int Module::CompileFile() {
         g->target->markFuncWithTargetAttr(&f);
     ast->GenerateIR();
 
+    debugDumpModule(module, "GenerateIR", pre_stage++);
+
+    if (!g->genStdlib) {
+        llvm::TimeTraceScope TimeScope("DefineStdlib");
+        LinkStandardLibraries(module, pre_stage);
+    }
+
+    for (llvm::Function &f : *module)
+        g->target->markFuncWithTargetAttr(&f);
+
     if (diBuilder)
         diBuilder->finalize();
-    llvm::TimeTraceScope TimeScope("Optimize");
-    if (errorCount == 0)
-        Optimize(module, g->opt.level);
+
+    // Skip optimization for stdlib. We need to consider shipping optimized
+    // stdlibs library but at the moment it is not so.
+    if (!g->genStdlib) {
+        llvm::TimeTraceScope TimeScope("Optimize");
+        if (errorCount == 0)
+            Optimize(module, g->opt.level);
+    }
 
     return errorCount;
 }
@@ -2856,7 +2871,6 @@ bool Module::writeDispatchHeader(DispatchHeaderInfo *DHI) {
     return true;
 }
 
-// Copied and reduced from CompilerInstance::InitializeSourceManager to avoid dependencies from CompilerInstance
 static void lInitializeSourceManager(clang::FrontendInputFile &input, clang::DiagnosticsEngine &diag,
                                      clang::FileManager &fileMgr, clang::SourceManager &srcMgr) {
     clang::SrcMgr::CharacteristicKind kind = clang::SrcMgr::C_User;
@@ -2919,8 +2933,41 @@ static void lDefineBuiltinMacro(clang::MacroBuilder &Builder, llvm::StringRef Ma
     }
 }
 
+void lCreateVirtualHeader(clang::FileManager &fileMgr, clang::SourceManager &srcMgr, llvm::StringRef Filename,
+                          llvm::StringRef Content) {
+    std::unique_ptr<llvm::MemoryBuffer> Buffer = llvm::MemoryBuffer::getMemBuffer(Content);
+    clang::FileEntryRef FE = fileMgr.getVirtualFileRef(Filename, Buffer->getBufferSize(), 0);
+    srcMgr.overrideFileContents(FE, std::move(Buffer));
+}
+
+void lBuilderAppendHeader(clang::MacroBuilder &Builder, std::string &header) {
+    Builder.append(llvm::Twine("#include \"") + header + "\"");
+}
+
+using StringRefFunc = llvm::StringRef (*)();
+void lAddImplicitInclude(clang::MacroBuilder &Builder, clang::FileManager &fileMgr, clang::SourceManager &srcMgr,
+                         const char *header, StringRefFunc contentFunc) {
+#ifdef ISPC_HOST_IS_WINDOWS
+    std::string headerPath = "c:/";
+#else
+    std::string headerPath = "/";
+#endif // ISPC_HOST_IS_WINDOWS
+
+    std::string name = header;
+    // Slim binary fetches headers from the file system whereas composite
+    // binary fetches them from in-memory buffers creating virtual files.
+    if (g->isSlimBinary) {
+        lBuilderAppendHeader(Builder, name);
+    } else {
+        name = headerPath + name;
+        lBuilderAppendHeader(Builder, name);
+        lCreateVirtualHeader(fileMgr, srcMgr, name, contentFunc());
+    }
+}
+
 // Core logic of buiding macros copied from clang::InitializePreprocessor from InitPreprocessor.cpp
-static void lInitializePreprocessor(clang::Preprocessor &PP, const clang::PreprocessorOptions &InitOpts) {
+static void lInitializePreprocessor(clang::Preprocessor &PP, clang::PreprocessorOptions &InitOpts,
+                                    clang::FileManager &fileMgr, clang::SourceManager &srcMgr) {
     std::string PredefineBuffer;
     PredefineBuffer.reserve(4080);
     llvm::raw_string_ostream Predefines(PredefineBuffer);
@@ -2932,6 +2979,13 @@ static void lInitializePreprocessor(clang::Preprocessor &PP, const clang::Prepro
             Builder.undefineMacro(InitOpts.Macros[i].first);
         else
             lDefineBuiltinMacro(Builder, InitOpts.Macros[i].first, PP.getDiagnostics());
+    }
+
+    if (!g->genStdlib) {
+        lAddImplicitInclude(Builder, fileMgr, srcMgr, "core.isph", getCoreISPHRef);
+        if (g->includeStdlib) {
+            lAddImplicitInclude(Builder, fileMgr, srcMgr, "stdlib.isph", getStdlibISPHRef);
+        }
     }
 
     // Copy PredefinedBuffer into the Preprocessor.
@@ -2957,41 +3011,7 @@ static void lSetHeaderSeachOptions(const std::shared_ptr<clang::HeaderSearchOpti
     }
 }
 
-static void lSetPreprocessorOptions(const std::shared_ptr<clang::PreprocessorOptions> opts) {
-    // Add defs for ISPC and PI
-    opts->addMacroDef("ISPC");
-    opts->addMacroDef("PI=3.1415926535");
-
-    // Add definitions of limits for integers and float types.
-    opts->addMacroDef("INT8_MIN=-128");
-    opts->addMacroDef("INT8_MAX=127");
-    opts->addMacroDef("UINT8_MAX=255U");
-    opts->addMacroDef("INT16_MIN=-32768");
-    opts->addMacroDef("INT16_MAX=32767");
-    opts->addMacroDef("UINT16_MAX=65535U");
-    opts->addMacroDef("INT32_MIN=-2147483648L");
-    opts->addMacroDef("INT32_MAX=2147483647L");
-    opts->addMacroDef("UINT32_MAX=4294967295UL");
-    opts->addMacroDef("INT64_MIN=-9223372036854775808LL");
-    opts->addMacroDef("INT64_MAX=9223372036854775807LL");
-    opts->addMacroDef("UINT64_MAX=18446744073709551615ULL");
-    opts->addMacroDef("F16_MIN=6.103515625e-05F16");
-    opts->addMacroDef("F16_MAX=65504.0F16");
-    opts->addMacroDef("FLT_MIN=1.17549435082228750796873653722224568e-38F");
-    opts->addMacroDef("FLT_MAX=3.40282346638528859811704183484516925e+38F");
-    opts->addMacroDef("DBL_MIN=2.22507385850720138309023271733240406e-308D");
-    opts->addMacroDef("DBL_MAX=1.79769313486231570814527423731704357e+308D");
-
-    if (g->enableLLVMIntrinsics) {
-        opts->addMacroDef("ISPC_LLVM_INTRINSICS_ENABLED");
-    }
-    // Add defs for ISPC_UINT_IS_DEFINED.
-    // This lets the user know uint* is part of language.
-    opts->addMacroDef("ISPC_UINT_IS_DEFINED");
-
-    // Let users know if __attribute__ syntax is supported.
-    opts->addMacroDef("ISPC_ATTRIBUTE_SUPPORTED");
-
+static void lSetTargetSpecificMacroDefinitions(const std::shared_ptr<clang::PreprocessorOptions> opts) {
     // Add #define for current compilation target
     char targetMacro[128];
     snprintf(targetMacro, sizeof(targetMacro), "ISPC_TARGET_%s", g->target->GetISAString());
@@ -3002,30 +3022,106 @@ static void lSetPreprocessorOptions(const std::shared_ptr<clang::PreprocessorOpt
             *p = '_';
         ++p;
     }
-
-    // Add 'TARGET_WIDTH' macro to expose vector width to user.
-    std::string TARGET_WIDTH = "TARGET_WIDTH=" + std::to_string(g->target->getVectorWidth());
-    opts->addMacroDef(TARGET_WIDTH);
-
-    // Add 'TARGET_ELEMENT_WIDTH' macro to expose element width to user.
-    std::string TARGET_ELEMENT_WIDTH = "TARGET_ELEMENT_WIDTH=" + std::to_string(g->target->getDataTypeWidth() / 8);
-    opts->addMacroDef(TARGET_ELEMENT_WIDTH);
-
     opts->addMacroDef(targetMacro);
 
-    if (g->target->is32Bit())
-        opts->addMacroDef("ISPC_POINTER_SIZE=32");
-    else
-        opts->addMacroDef("ISPC_POINTER_SIZE=64");
+    // Add 'TARGET_WIDTH' macro to expose vector width to user.
+    std::string target_width = "TARGET_WIDTH=" + std::to_string(g->target->getVectorWidth());
+    opts->addMacroDef(target_width);
 
-    if (g->target->hasHalfConverts())
+    // Add 'TARGET_ELEMENT_WIDTH' macro to expose element width to user.
+    std::string target_element_width = "TARGET_ELEMENT_WIDTH=" + std::to_string(g->target->getDataTypeWidth() / 8);
+    opts->addMacroDef(target_element_width);
+
+    if (g->target->hasHalfConverts()) {
         opts->addMacroDef("ISPC_TARGET_HAS_HALF");
-    if (g->target->hasRand())
+    }
+    if (g->target->hasHalfFullSupport()) {
+        opts->addMacroDef("ISPC_TARGET_HAS_HALF_FULL_SUPPORT");
+    }
+    if (g->target->hasRand()) {
         opts->addMacroDef("ISPC_TARGET_HAS_RAND");
-    if (g->target->hasTranscendentals())
+    }
+    if (g->target->hasTranscendentals()) {
         opts->addMacroDef("ISPC_TARGET_HAS_TRANSCENDENTALS");
-    if (g->opt.forceAlignedMemory)
+    }
+    if (g->target->hasTrigonometry()) {
+        opts->addMacroDef("ISPC_TARGET_HAS_TRIGONOMETRY");
+    }
+    if (g->target->hasRsqrtd()) {
+        opts->addMacroDef("ISPC_TARGET_HAS_RSQRTD");
+    }
+    if (g->target->hasRcpd()) {
+        opts->addMacroDef("ISPC_TARGET_HAS_RCPD");
+    }
+    if (g->target->hasSatArith()) {
+        opts->addMacroDef("ISPC_TARGET_HAS_SATURATING_ARITHMETIC");
+    }
+    if (g->target->hasDotProductVNNI()) {
+        opts->addMacroDef("ISPC_TARGET_HAS_DOT_PRODUCT_VNNI");
+    }
+    // TODO! what is the problem to have g->target->hasXePrefetch function returning bool for non XE_ENABLED builds??
+#ifdef ISPC_XE_ENABLED
+    if (g->target->hasXePrefetch()) {
+        opts->addMacroDef("ISPC_TARGET_HAS_XE_PREFETCH");
+    }
+#endif
+
+    // Define mask bits
+    std::string ispc_mask_bits = "ISPC_MASK_BITS=" + std::to_string(g->target->getMaskBitCount());
+    opts->addMacroDef(ispc_mask_bits);
+
+    if (g->target->is32Bit()) {
+        opts->addMacroDef("ISPC_POINTER_SIZE=32");
+    } else {
+        opts->addMacroDef("ISPC_POINTER_SIZE=64");
+    }
+
+    if (g->target->hasFp16Support()) {
+        // TODO! rename/alias to ISPC_TARGET_HAS_FP16_SUPPORT
+        opts->addMacroDef("ISPC_FP16_SUPPORTED");
+    }
+
+    if (g->target->hasFp64Support()) {
+        // TODO! rename/alias to ISPC_TARGET_HAS_FP64_SUPPORT
+        opts->addMacroDef("ISPC_FP64_SUPPORTED");
+    }
+}
+
+static void lSetCmdlineDependentMacroDefinitions(const std::shared_ptr<clang::PreprocessorOptions> opts) {
+    if (g->opt.disableAsserts) {
+        opts->addMacroDef("ISPC_ASSERTS_DISABLED");
+    }
+
+    if (g->opt.forceAlignedMemory) {
         opts->addMacroDef("ISPC_FORCE_ALIGNED_MEMORY");
+    }
+
+    if (g->opt.fastMaskedVload) {
+        opts->addMacroDef("ISPC_FAST_MASKED_VLOAD");
+    }
+
+    if (g->enableLLVMIntrinsics) {
+        opts->addMacroDef("ISPC_LLVM_INTRINSICS_ENABLED");
+    }
+
+    std::string math_lib = "ISPC_MATH_LIB_VAL=" + std::to_string((int)g->mathLib);
+    opts->addMacroDef(math_lib);
+}
+
+static void lSetPreprocessorOptions(const std::shared_ptr<clang::PreprocessorOptions> opts) {
+    if (g->includeStdlib) {
+        opts->addMacroDef("ISPC_INCLUDE_STDLIB");
+    }
+
+    std::string math_lib_ispc = "ISPC_MATH_LIB_ISPC_VAL=" + std::to_string((int)Globals::MathLib::Math_ISPC);
+    opts->addMacroDef(math_lib_ispc);
+    std::string math_lib_ispc_fast =
+        "ISPC_MATH_LIB_ISPC_FAST_VAL=" + std::to_string((int)Globals::MathLib::Math_ISPCFast);
+    opts->addMacroDef(math_lib_ispc_fast);
+    std::string math_lib_svml = "ISPC_MATH_LIB_SVML_VAL=" + std::to_string((int)Globals::MathLib::Math_SVML);
+    opts->addMacroDef(math_lib_svml);
+    std::string math_lib_system = "ISPC_MATH_LIB_SYSTEM_VAL=" + std::to_string((int)Globals::MathLib::Math_System);
+    opts->addMacroDef(math_lib_system);
 
     constexpr int buf_size = 25;
     char ispc_major[buf_size], ispc_minor[buf_size];
@@ -3034,20 +3130,11 @@ static void lSetPreprocessorOptions(const std::shared_ptr<clang::PreprocessorOpt
     opts->addMacroDef(ispc_major);
     opts->addMacroDef(ispc_minor);
 
-    if (g->target->hasFp16Support()) {
-        opts->addMacroDef("ISPC_FP16_SUPPORTED ");
-    }
+    // Target specific macro definitions
+    lSetTargetSpecificMacroDefinitions(opts);
 
-    if (g->target->hasFp64Support()) {
-        opts->addMacroDef("ISPC_FP64_SUPPORTED ");
-    }
-
-    if (g->includeStdlib) {
-        if (g->opt.disableAsserts)
-            opts->addMacroDef("assert(x)=");
-        else
-            opts->addMacroDef("assert(x)=__assert(#x, x)");
-    }
+    // Set macro definitions that depends on command line flags of ISPC invocation.
+    lSetCmdlineDependentMacroDefinitions(opts);
 
     for (unsigned int i = 0; i < g->cppArgs.size(); ++i) {
         // Sanity check--should really begin with -D
@@ -3113,7 +3200,7 @@ int Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *o
     // intialize preprocessor
     prep.Initialize(*tgtInfo);
     prep.setPreprocessedOutput(preProcOutOpts.ShowCPP);
-    lInitializePreprocessor(prep, *preProcOpts);
+    lInitializePreprocessor(prep, *preProcOpts, fileMgr, srcMgr);
 
     // do actual preprocessing
     diagPrinter.BeginSourceFile(langOpts, &prep);
@@ -3386,10 +3473,10 @@ static llvm::Module *lInitDispatchModule() {
     module->setIsNewDbgInfoFormat(false);
 #endif
 
-    // First, link in the definitions from the builtins-dispatch.ll file.
-    const BitcodeLib *dispatch = g->target_registry->getDispatchLib(g->target_os);
-    Assert(dispatch);
-    AddBitcodeToModule(dispatch, module);
+    if (!g->genStdlib) {
+        // First, link in the definitions from the builtins-dispatch.ll file.
+        LinkDispatcher(module);
+    }
 
     return module;
 }
@@ -3402,7 +3489,7 @@ static llvm::Module *lInitDispatchModule() {
 // appropriate compiled variant of the function.
 static void lEmitDispatchModule(llvm::Module *module, std::map<std::string, FunctionTargetVariants> &functions) {
     // Get pointers to things we need below
-    llvm::Function *setFunc = module->getFunction("__set_system_isa");
+    llvm::Function *setFunc = module->getFunction(builtin::__set_system_isa);
     Assert(setFunc != nullptr);
     llvm::Value *systemBestISAPtr = module->getGlobalVariable("__system_best_isa", true);
     Assert(systemBestISAPtr != nullptr);
@@ -3838,6 +3925,22 @@ int Module::LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputT
         return 0;
     }
     return 1;
+}
+
+void Module::initCPPBuffer() {
+    // If the CPP stream has been initialized, we have unexpected behavior.
+    if (bufferCPP) {
+        Assert("CPP stream has already been initialized.");
+    }
+
+    // Replace the CPP stream with a newly allocated one.
+    bufferCPP.reset(new CPPBuffer{});
+}
+
+void Module::parseCPPBuffer() {
+    YY_BUFFER_STATE strbuf = yy_scan_string(bufferCPP->str.c_str());
+    yyparse();
+    yy_delete_buffer(strbuf);
 }
 
 void Module::clearCPPBuffer() {

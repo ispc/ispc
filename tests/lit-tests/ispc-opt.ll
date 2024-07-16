@@ -1,7 +1,7 @@
 ; RUN: %{ispc-opt} --print-passes | FileCheck --check-prefix=CHECK-PRINT %s
 
 ; CHECK-PRINT: Module passes:
-; CHECK-PRINT-NEXT:   make-internal-funcs-static
+; CHECK-PRINT-NEXT:   remove-persistent-funcs
 ; CHECK-PRINT-NEXT: Function passes:
 ; CHECK-PRINT-NEXT:   gather-coalesce
 ; CHECK-PRINT-NEXT:   improve-memory-ops

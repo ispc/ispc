@@ -276,6 +276,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/ispcrt/cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FixWindowsPath.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindLLVM.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Git.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/CommonStdlibBuiltins.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateBuiltins.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Stdlib.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Version.cmake)
@@ -319,8 +320,6 @@ find_package(FLEX 2.6 REQUIRED)
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         )
     endif()
-
-set (ISPC_MASKS 1 8 16 32 64)
 
 if (NOT X86_ENABLED AND NOT ARM_ENABLED AND NOT WASM_ENABLED AND NOT XE_ENABLED)
     message( FATAL_ERROR "Either X86, ARM, WASM or XE targets need to be enabled.")
@@ -439,15 +438,16 @@ get_llvm_cppflags(LLVM_CPP_FLAGS)
 if(CMAKE_GENERATOR MATCHES "Visual Studio")
     # Visual Studio generator places binaries under bin/$(Configuration) subdirectory.
     set(BITCODE_FOLDER ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/share/ispc)
+    set(INCLUDE_FOLDER ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/include)
 else()
     set(BITCODE_FOLDER ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../share/ispc)
+    set(INCLUDE_FOLDER ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../include)
 endif()
 message(STATUS "BITCODE_FOLDER is ${BITCODE_FOLDER}")
 file(MAKE_DIRECTORY ${BITCODE_FOLDER})
 
 # Defines builtin target
 generate_builtins()
-generate_stdlib(STDLIB_FILES ${ISPC_MASKS})
 
 # Common sources between ispc-opt and ispc
 list(APPEND COMMON_SOURCES
@@ -475,7 +475,7 @@ list(APPEND FRONTEND_SOURCES
     ${STDLIB_FILES}
     ${BISON_CPP_OUTPUT}
     ${FLEX_OUTPUT}
-    ${CMAKE_CURRENT_SOURCE_DIR}/stdlib.ispc
+    ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/stdlib.ispc
     src/ast.cpp
     src/ast.h
     src/builtins.cpp
@@ -518,10 +518,10 @@ list(APPEND OPT_SOURCES
     src/opt/IntrinsicsOptPass.h
     src/opt/MangleOpenCLBuiltins.cpp
     src/opt/MangleOpenCLBuiltins.h
-    src/opt/MakeInternalFuncsStatic.cpp
-    src/opt/MakeInternalFuncsStatic.h
     src/opt/PeepholePass.cpp
     src/opt/PeepholePass.h
+    src/opt/RemovePersistentFuncs.cpp
+    src/opt/RemovePersistentFuncs.h
     src/opt/ReplaceMaskedMemOps.cpp
     src/opt/ReplaceMaskedMemOps.h
     src/opt/ReplacePseudoMemoryOps.cpp
@@ -536,10 +536,23 @@ list(APPEND OPT_SOURCES
     src/opt/XeReplaceLLVMIntrinsics.h
 )
 
+set(STDLIB_HEADERS core.isph stdlib.isph)
+set(ALL_STDLIB_HEADERS
+  builtins.isph
+  core.isph
+  stdlib.isph
+  svml.isph
+  target.isph
+)
+set(STDLIB_ISPC_FILES stdlib/stdlib.ispc)
+foreach (header ${ALL_STDLIB_HEADERS})
+    list(APPEND STDLIB_ISPC_FILES stdlib/include/${header})
+endforeach()
+
 # To show stdlib.ispc in VS solution:
 if (WIN32)
-    set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/stdlib.ispc" PROPERTIES HEADER_FILE_ONLY TRUE)
-    source_group("ISPC" FILES "${CMAKE_CURRENT_SOURCE_DIR}/stdlib.ispc")
+    set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/stdlib/stdlib.ispc" PROPERTIES HEADER_FILE_ONLY TRUE)
+    source_group("ISPC" FILES "${CMAKE_CURRENT_SOURCE_DIR}/stdlib/stdlib.ispc")
 endif()
 
 # Build definitions
@@ -823,6 +836,23 @@ function(configure_ispc_exe TARGET)
     target_link_options(${TARGET} PUBLIC ${LINK_OPTIONS_PUBLIC})
 endfunction()
 
+# This function creates and configures ispc-slim executable target under the given NAME.
+function(add_ispc_slim NAME)
+    # Defines stdlib target
+    generate_stdlibs(${NAME})
+
+    # stdlib, stdlibs-bc, stdlibs-cpp targets are created in Stdlib.cmake
+    configure_ispc_obj(stdlib)
+
+    add_executable(${NAME} src/main.cpp src/binary_slim.cpp)
+    configure_ispc_exe(${NAME})
+    target_link_libraries(${NAME} ${LINK_LIBRARIES} optimization common frontend)
+    add_dependencies(${NAME} builtins-bc)
+    if (${NAME} STREQUAL "ispc")
+        set_target_properties(stdlibs-bc PROPERTIES EXCLUDE_FROM_ALL OFF)
+    endif()
+endfunction()
+
 # Define libraries that are built in the project. Some of them are shared across multiple executable targets.
 add_library(optimization OBJECT EXCLUDE_FROM_ALL ${OPT_SOURCES})
 configure_ispc_obj(optimization)
@@ -845,27 +875,23 @@ target_link_libraries(ispc-opt ${LINK_LIBRARIES} builtin optimization common)
 # The final target has to be ispc due to two use-cases we do not want to
 # interfere with: make ispc and $<TARGET_FILE:ispc>.
 if (ISPC_SLIM_BINARY)
-    add_executable(ispc src/main.cpp src/binary_slim.cpp)
-    configure_ispc_exe(ispc)
-    target_link_libraries(ispc ${LINK_LIBRARIES} optimization common frontend)
-    add_dependencies(ispc builtins-bc)
+    add_ispc_slim(ispc)
     message(STATUS "ISPC will be built as a slim binary")
 else()
-    add_executable(ispc-slim src/main.cpp src/binary_slim.cpp)
-    configure_ispc_exe(ispc-slim)
-    target_link_libraries(ispc-slim ${LINK_LIBRARIES} optimization common frontend)
-    add_dependencies(ispc-slim builtins-bc)
+    add_ispc_slim(ispc-slim)
 
     add_executable(ispc src/main.cpp src/binary_composite.cpp)
     configure_ispc_exe(ispc)
-    target_link_libraries(ispc ${LINK_LIBRARIES} builtin optimization common frontend)
-    # TODO! it is not the real dependency at the moment
+    target_link_libraries(ispc ${LINK_LIBRARIES} builtin stdlib optimization common frontend)
     add_dependencies(ispc ispc-slim)
     message(STATUS "ISPC will be built as a composite binary")
 endif()
 
 install (TARGETS ispc DESTINATION bin)
 if (ISPC_SLIM_BINARY)
+    foreach (header ${STDLIB_HEADERS})
+        install (FILES "stdlib/include/${header}" DESTINATION include)
+    endforeach()
     install(DIRECTORY ${BITCODE_FOLDER} DESTINATION share)
 endif()
 
@@ -892,7 +918,7 @@ if (ISPC_INCLUDE_EXAMPLES AND NOT ISPC_PREPARE_PACKAGE)
     include(ExternalProject)
     ExternalProject_Add(ispc_cpu_examples
         PREFIX cpu_examples
-        DEPENDS ispc
+        DEPENDS ispc stdlibs-bc stdlib-headers
         SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/examples/cpu"
         CMAKE_CACHE_ARGS
             -DISPC_BUILD:BOOL=TRUE
@@ -918,7 +944,7 @@ if (ISPC_INCLUDE_XE_EXAMPLES AND ISPC_INCLUDE_RT AND NOT ISPC_PREPARE_PACKAGE)
         # using cmake generator conditional expressions were unsuccessful.
         ExternalProject_Add(ispc_xpu_examples
             PREFIX xpu_examples
-            DEPENDS ispc ispcrt benchmark
+            DEPENDS ispc stdlibs-bc stdlib-headers ispcrt benchmark
             SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/examples/xpu"
             CMAKE_CACHE_ARGS
                 -DISPC_BUILD:BOOL=TRUE
@@ -938,7 +964,7 @@ if (ISPC_INCLUDE_XE_EXAMPLES AND ISPC_INCLUDE_RT AND NOT ISPC_PREPARE_PACKAGE)
     else()
         ExternalProject_Add(ispc_xpu_examples
             PREFIX xpu_examples
-            DEPENDS ispc ispcrt
+            DEPENDS ispc stdlibs-bc stdlib-headers ispcrt
             SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/examples/xpu"
             CMAKE_CACHE_ARGS
                 -DISPC_BUILD:BOOL=TRUE

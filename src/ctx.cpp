@@ -1363,13 +1363,7 @@ llvm::Value *FunctionEmitContext::Any(llvm::Value *mask) {
 
     std::vector<Symbol *> mm;
     m->symbolTable->LookupFunction(builtin::__any, &mm);
-    if (g->target->getMaskBitCount() == 1)
-        AssertPos(currentPos, mm.size() == 1);
-    else
-        // There should be one with signed int signature, one unsigned int.
-        AssertPos(currentPos, mm.size() == 2);
-    // We can actually call either one, since both are i32s as far as
-    // LLVM's type system is concerned...
+    AssertPos(currentPos, mm.size() == 1);
     llvm::Function *fmm = mm[0]->function;
     return CallInst(fmm, nullptr, mask, llvm::Twine(mask->getName()) + "_any");
 }
@@ -1379,13 +1373,7 @@ llvm::Value *FunctionEmitContext::All(llvm::Value *mask) {
     // into an i64 value
     std::vector<Symbol *> mm;
     m->symbolTable->LookupFunction(builtin::__all, &mm);
-    if (g->target->getMaskBitCount() == 1)
-        AssertPos(currentPos, mm.size() == 1);
-    else
-        // There should be one with signed int signature, one unsigned int.
-        AssertPos(currentPos, mm.size() == 2);
-    // We can actually call either one, since both are i32s as far as
-    // LLVM's type system is concerned...
+    AssertPos(currentPos, mm.size() == 1);
     llvm::Function *fmm = mm[0]->function;
     return CallInst(fmm, nullptr, mask, llvm::Twine(mask->getName()) + "_all");
 }
@@ -1395,13 +1383,7 @@ llvm::Value *FunctionEmitContext::None(llvm::Value *mask) {
     // into an i64 value
     std::vector<Symbol *> mm;
     m->symbolTable->LookupFunction(builtin::__none, &mm);
-    if (g->target->getMaskBitCount() == 1)
-        AssertPos(currentPos, mm.size() == 1);
-    else
-        // There should be one with signed int signature, one unsigned int.
-        AssertPos(currentPos, mm.size() == 2);
-    // We can actually call either one, since both are i32s as far as
-    // LLVM's type system is concerned...
+    AssertPos(currentPos, mm.size() == 1);
     llvm::Function *fmm = mm[0]->function;
     return CallInst(fmm, nullptr, mask, llvm::Twine(mask->getName()) + "_none");
 }
@@ -1411,22 +1393,16 @@ llvm::Value *FunctionEmitContext::LaneMask(llvm::Value *v) {
     // into an i64 value
     std::vector<Symbol *> mm;
     m->symbolTable->LookupFunction(builtin::__movmsk, &mm);
-    if (g->target->getMaskBitCount() == 1)
-        AssertPos(currentPos, mm.size() == 1);
-    else
-        // There should be one with signed int signature, one unsigned int.
-        AssertPos(currentPos, mm.size() == 2);
-    // We can actually call either one, since both are i32s as far as
-    // LLVM's type system is concerned...
+    AssertPos(currentPos, mm.size() == 1);
     llvm::Function *fmm = mm[0]->function;
     return CallInst(fmm, nullptr, v, llvm::Twine(v->getName()) + "_movmsk");
 }
 
 llvm::Value *FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2) {
     if (g->target->getArch() == Arch::wasm32 || g->target->getArch() == Arch::wasm64) {
-        llvm::Function *fmm = m->module->getFunction("__wasm_cmp_msk_eq");
+        llvm::Function *fmm = m->module->getFunction(builtin::__wasm_cmp_msk_eq);
         return CallInst(fmm, nullptr, {v1, v2},
-                        ((llvm::Twine("wasm_cmp_msk_eq_") + v1->getName()) + "_") + v2->getName());
+                        ((llvm::Twine(builtin::__wasm_cmp_msk_eq) + "_" + v1->getName()) + "_") + v2->getName());
     }
     llvm::Value *mm1 = LaneMask(v1);
     llvm::Value *mm2 = LaneMask(v2);
@@ -1519,7 +1495,7 @@ void FunctionEmitContext::AddInstrumentationPoint(const char *note) {
     // arg 4: current mask, movmsk'ed down to an int64
     args.push_back(LaneMask(GetFullMask()));
 
-    llvm::Function *finst = m->module->getFunction("ISPCInstrument");
+    llvm::Function *finst = m->module->getFunction(builtin::ISPCInstrument);
     CallInst(finst, nullptr, args, "");
 }
 
@@ -2600,13 +2576,7 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
         // into an i64 value
         std::vector<Symbol *> mm;
         m->symbolTable->LookupFunction(builtin::__movmsk, &mm);
-        if (g->target->getMaskBitCount() == 1)
-            AssertPos(currentPos, mm.size() == 1);
-        else
-            // There should be one with signed int signature, one unsigned int.
-            AssertPos(currentPos, mm.size() == 2);
-        // We can actually call either one, since both are i32s as far as
-        // LLVM's type system is concerned...
+        AssertPos(currentPos, mm.size() == 1);
         llvm::Function *fmm = mm[0]->function;
         llvm::Value *int_mask = CallInst(fmm, nullptr, mask, llvm::Twine(mask->getName()) + "_movmsk");
         std::vector<Symbol *> lz;
@@ -3780,7 +3750,7 @@ llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<ll
     llvm::StructType *argStructType = llvm::StructType::get(*g->ctx, llvmArgTypes);
     AssertPos(currentPos, argStructType != nullptr);
 
-    llvm::Function *falloc = m->module->getFunction("ISPCAlloc");
+    llvm::Function *falloc = m->module->getFunction(builtin::ISPCAlloc);
     AssertPos(currentPos, falloc != nullptr);
     llvm::Value *structSize = g->target->SizeOf(argStructType, bblock);
     if (structSize->getType() != LLVMTypes::Int64Type)
@@ -3816,7 +3786,7 @@ llvm::Value *FunctionEmitContext::LaunchInst(llvm::Value *callee, std::vector<ll
     // a pointer to the task function being called and a pointer to the
     // argument block we just filled in
     llvm::Value *fptr = BitCastInst(callee, LLVMTypes::VoidPointerType);
-    llvm::Function *flaunch = m->module->getFunction("ISPCLaunch");
+    llvm::Function *flaunch = m->module->getFunction(builtin::ISPCLaunch);
     AssertPos(currentPos, flaunch != nullptr);
     std::vector<llvm::Value *> args;
     args.push_back(launchGroupHandleAddressInfo->getPointer());
@@ -3842,7 +3812,7 @@ void FunctionEmitContext::SyncInst() {
     BranchInst(bSync, bPostSync, nonNull);
 
     SetCurrentBasicBlock(bSync);
-    llvm::Function *fsync = m->module->getFunction("ISPCSync");
+    llvm::Function *fsync = m->module->getFunction(builtin::ISPCSync);
     if (fsync == nullptr)
         FATAL("Couldn't find ISPCSync declaration?!");
     CallInst(fsync, nullptr, launchGroupHandle, "");

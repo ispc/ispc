@@ -15,6 +15,7 @@
 #include "decl.h"
 #include "ispc.h"
 
+#include <clang/Frontend/FrontendOptions.h>
 #include <llvm/IR/DebugInfo.h>
 
 #include <llvm/Support/TimeProfiler.h>
@@ -270,9 +271,18 @@ class Module {
     static bool writeZEBin(llvm::Module *module, const char *outFileName);
 #endif
 
+    int preprocessAndParse();
+    int parse();
+
     /** Run the preprocessor on the given file, writing to the output stream.
         Returns the number of diagnostic errors encountered. */
-    int execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostream) const;
+    int execPreprocessor(const char *filename, llvm::raw_string_ostream *ostream) const;
+
+    /** Helper function to initialize the internal CPP buffer. **/
+    void initCPPBuffer();
+
+    /** Helper function to parse internal CPP buffer. **/
+    void parseCPPBuffer();
 
     /** Helper function to clean internal CPP buffer. **/
     void clearCPPBuffer();

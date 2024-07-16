@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019-2023, Intel Corporation
+  Copyright (c) 2019-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -101,6 +101,17 @@ TargetLibRegistry::TargetLibRegistry() {
                 m_targets[Triple(lib->getISPCTarget(), TargetOS::ps5, lib->getArch()).encode()] = lib;
             }
             break;
+        case BitcodeLib::BitcodeLibType::Stdlib:
+            m_stdlibs[Triple(lib->getISPCTarget(), lib->getOS(), lib->getArch()).encode()] = lib;
+            // "custom_linux" target is regular "linux" target for ARM with a few tweaks.
+            if (lib->getOS() == TargetOS::linux && (lib->getArch() == Arch::arm || lib->getArch() == Arch::aarch64)) {
+                m_stdlibs[Triple(lib->getISPCTarget(), TargetOS::custom_linux, lib->getArch()).encode()] = lib;
+            }
+            // PS5 is an alias to PS4 in terms of target files. All the tuning is done through CPU flags.
+            if (lib->getOS() == TargetOS::ps4) {
+                m_stdlibs[Triple(lib->getISPCTarget(), TargetOS::ps5, lib->getArch()).encode()] = lib;
+            }
+            break;
         }
     }
 }
@@ -128,7 +139,8 @@ const BitcodeLib *TargetLibRegistry::getBuiltinsCLib(TargetOS os, Arch arch) con
     }
     return nullptr;
 }
-const BitcodeLib *TargetLibRegistry::getISPCTargetLib(ISPCTarget target, TargetOS os, Arch arch) const {
+static const BitcodeLib *lGetTargetLib(const std::map<uint32_t, const BitcodeLib *> &libs, ISPCTarget target,
+                                       TargetOS os, Arch arch) {
     // TODO: validate parameters not to be errors or forbidden values.
 
     // This is an alias. It might be a good idea generalize this.
@@ -183,15 +195,23 @@ const BitcodeLib *TargetLibRegistry::getISPCTargetLib(ISPCTarget target, TargetO
         UNREACHABLE();
     }
 
-    auto result = m_targets.find(Triple(target, os, arch).encode());
-    if (result != m_targets.end()) {
+    auto result = libs.find(Triple(target, os, arch).encode());
+    if (result != libs.end()) {
         return result->second;
     }
     return nullptr;
 }
 
+const BitcodeLib *TargetLibRegistry::getISPCTargetLib(ISPCTarget target, TargetOS os, Arch arch) const {
+    return lGetTargetLib(m_targets, target, os, arch);
+}
+
+const BitcodeLib *TargetLibRegistry::getISPCStdLib(ISPCTarget target, TargetOS os, Arch arch) const {
+    return lGetTargetLib(m_stdlibs, target, os, arch);
+}
+
 // Print user-friendly message about supported targets
-void TargetLibRegistry::printSupportMatrix() const {
+void TargetLibRegistry::printSupportMatrix(std::vector<std::string> &missedFiles) const {
     // Vector of rows, which are vectors of cells.
     std::vector<std::vector<std::string>> table;
 
@@ -216,6 +236,18 @@ void TargetLibRegistry::printSupportMatrix() const {
             for (int k = (int)Arch::none; k < (int)Arch::error; k++) {
                 Arch arch = (Arch)k;
                 if (isSupported(target, os, arch)) {
+                    const BitcodeLib *clib = getBuiltinsCLib(os, arch);
+                    const BitcodeLib *tlib = getISPCTargetLib(target, os, arch);
+                    const BitcodeLib *slib = getISPCStdLib(target, os, arch);
+                    if (!clib->fileExists()) {
+                        missedFiles.push_back(clib->getFilename());
+                    }
+                    if (!tlib->fileExists()) {
+                        missedFiles.push_back(tlib->getFilename());
+                    }
+                    if (!slib->fileExists()) {
+                        missedFiles.push_back(slib->getFilename());
+                    }
                     if (!arch_list_os.empty()) {
                         arch_list_os += ", ";
                     }

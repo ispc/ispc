@@ -11,74 +11,15 @@
            ispc code
 */
 
-#if (ISPC_MASK_BITS == 1)
-#define IntMaskType bool
-#define UIntMaskType bool
-#elif (ISPC_MASK_BITS == 8)
-#define IntMaskType int8
-#define UIntMaskType unsigned int8
-#elif (ISPC_MASK_BITS == 16)
-#define IntMaskType int16
-#define UIntMaskType unsigned int16
-#elif (ISPC_MASK_BITS == 32)
-#define IntMaskType int32
-#define UIntMaskType unsigned int32
-#elif (ISPC_MASK_BITS == 64)
-#define IntMaskType int64
-#define UIntMaskType unsigned int64
-#else
-#error Unknown value of ISPC_MASK_BITS
-#endif
+#define ISPC_INTERNAL_STDLIB_COMPILATION
+#include "core.isph"
 
-typedef uniform int8 *uniform opaque_ptr_t;
-///////////////////////////////////////////////////////////////////////////
-// Note: we run clang preprocessing on this file to generate the
-// stdlib_maskN_ispc.cpp files. So, these definitions are needed even after
-// ISPC introduces same definitions. We will be able to remove them after we
-// switch to ISPC preprocessor for this file.
-/* Limits of integral types. */
-#ifndef INT8_MAX
-#define INT8_MAX (127)
-#endif
-#ifndef INT16_MAX
-#define INT16_MAX (32767)
-#endif
-#ifndef INT32_MAX
-#define INT32_MAX (2147483647)
-#endif
-#ifndef INT64_MAX
-#define INT64_MAX (9223372036854775807)
-#endif
-#ifndef UINT8_MAX
-#define UINT8_MAX (255)
-#endif
-#ifndef UINT16_MAX
-#define UINT16_MAX (65535)
-#endif
-#ifndef UINT32_MAX
-#define UINT32_MAX (4294967295)
-#endif
-#ifndef UINT64_MAX
-#define UINT64_MAX (18446744073709551615)
-#endif
-#ifndef INT8_MIN
-#define INT8_MIN (-INT8_MAX - 1)
-#endif
-#ifndef INT16_MIN
-#define INT16_MIN (-INT16_MAX - 1)
-#endif
-#ifndef INT32_MIN
-#define INT32_MIN (-INT32_MAX - 1)
-#endif
-#ifndef INT64_MIN
-#define INT64_MIN (-INT64_MAX - 1)
-#endif
-///////////////////////////////////////////////////////////////////////////
-// GEN target specific
-// 4 bytes by default
-#ifndef PREFETCH_DATASIZE_DEFAULT
-#define PREFETCH_DATASIZE_DEFAULT 4
-#endif
+#include "builtins.isph"
+#include "stdlib.isph"
+#include "svml.isph"
+#include "target.isph"
+#undef ISPC_INTERNAL_STDLIB_COMPILATION
+
 ///////////////////////////////////////////////////////////////////////////
 // Low level primitives
 
@@ -625,28 +566,28 @@ __declspec(safe, cost1) static inline uniform int64 count_trailing_zeros(uniform
 __declspec(safe) static inline unsigned int32 count_leading_zeros(unsigned int32 v) {
     unsigned int32 r;
     for (uniform int i = 0; i < programCount; ++i)
-        r = insert(r, i, __count_leading_zeros_i32(extract(v, i)));
+        r = insert(r, i, (uniform unsigned int32)__count_leading_zeros_i32(extract(v, i)));
     return r;
 }
 
 __declspec(safe) static inline unsigned int64 count_leading_zeros(unsigned int64 v) {
     unsigned int64 r;
     for (uniform int i = 0; i < programCount; ++i)
-        r = insert(r, i, __count_leading_zeros_i64(extract(v, i)));
+        r = insert(r, i, (uniform unsigned int64)__count_leading_zeros_i64(extract(v, i)));
     return r;
 }
 
 __declspec(safe) static inline unsigned int32 count_trailing_zeros(unsigned int32 v) {
     unsigned int32 r;
     for (uniform int i = 0; i < programCount; ++i)
-        r = insert(r, i, __count_trailing_zeros_i32(extract(v, i)));
+        r = insert(r, i, (uniform unsigned int32)__count_trailing_zeros_i32(extract(v, i)));
     return r;
 }
 
 __declspec(safe) static inline unsigned int64 count_trailing_zeros(unsigned int64 v) {
     unsigned int64 r;
     for (uniform int i = 0; i < programCount; ++i)
-        r = insert(r, i, __count_trailing_zeros_i64(extract(v, i)));
+        r = insert(r, i, (uniform unsigned int64)__count_trailing_zeros_i64(extract(v, i)));
     return r;
 }
 
@@ -4684,10 +4625,6 @@ __declspec(safe) static inline uniform int float_to_srgb8(uniform float inval) {
 
 ///////////////////////////////////////////////////////////////////////////
 // RNG stuff
-
-struct RNGState {
-    unsigned int z1, z2, z3, z4;
-};
 
 static inline unsigned int random(varying RNGState *uniform state) {
     unsigned int b;

@@ -21,10 +21,44 @@
 // This file has to be the only place to declare builtin names that used across
 // ISPC code base. The list is alphabetically sorted for convenience.
 
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 namespace ispc {
 
 namespace builtin {
 
+// Groups of persistent functions.
+enum class PersistentGroup {
+    GATHER_DOUBLE = 0,
+    GATHER_FLOAT,
+    GATHER_HALF,
+    GATHER_I16,
+    GATHER_I32,
+    GATHER_I64,
+    GATHER_I8,
+    PREFETCH_READ,
+    PREFETCH_WRITE,
+    SCATTER_DOUBLE,
+    SCATTER_FLOAT,
+    SCATTER_HALF,
+    SCATTER_I16,
+    SCATTER_I32,
+    SCATTER_I64,
+    SCATTER_I8,
+};
+
+// Functions that should be preserved across optimization pipeline unconditionally.
+extern std::unordered_map<std::string, int> persistentFuncs;
+
+// Groups of function that should be preserved across optimization pipeline.
+// The logic is following: the whole group is to be preserved if any of
+// function from the group is actually used.
+extern std::unordered_map<PersistentGroup, std::vector<const char *>> persistentGroups;
+
+// TODO: only functions from core.isph should be listed here. As we suppose,
+// that only they can be used in the code.
 extern const char *const __acos_uniform_double;
 extern const char *const __acos_uniform_float;
 extern const char *const __acos_uniform_half;
@@ -344,7 +378,7 @@ extern const char *const __is_compile_time_constant_varying_int32;
 extern const char *const ISPCAlloc;
 extern const char *const ISPCLaunch;
 extern const char *const ISPCSync;
-extern const char *const __keep_funcs_live;
+extern const char *const ISPCInstrument;
 extern const char *const __log_uniform_double;
 extern const char *const __log_uniform_float;
 extern const char *const __log_uniform_half;
@@ -950,6 +984,7 @@ extern const char *const __vec4_add_float;
 extern const char *const __vec4_add_int32;
 extern const char *const __vselect_float;
 extern const char *const __vselect_i32;
+extern const char *const __wasm_cmp_msk_eq;
 
 } // namespace builtin
 

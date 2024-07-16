@@ -327,6 +327,7 @@ std::string ISPCTargetToString(ISPCTarget target) {
     case ISPCTarget::xelpg_x16:
         return "xelpg-x16";
     case ISPCTarget::none:
+        return "none";
     case ISPCTarget::error:
         // Fall through
         ;

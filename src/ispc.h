@@ -40,6 +40,12 @@
  */
 #define ISPC_MAX_NVEC 64
 
+// Number of first construction phase
+#define PRE_OPT_NUMBER 0
+
+// Number of initial optimization phase
+#define INIT_OPT_NUMBER 10
+
 // Number of final optimization phase
 #define LAST_OPT_NUMBER 1000
 
@@ -263,6 +269,9 @@ class Target {
     /** Returns a string like "avx2-i32x8" encoding the target.
         This may be used for Target initialization. */
     const char *GetISATargetString() const;
+
+    /** Return the suffix to use for target-specific functions.  */
+    std::string GetTargetSuffix();
 
     /** Returns the size of the given type */
     llvm::Value *SizeOf(llvm::Type *type, llvm::BasicBlock *insertAtEnd);
@@ -733,6 +742,12 @@ struct Globals {
 
     /** Whether to dump IR to file. */
     bool dumpFile;
+
+    /** Whether we are in special mode of generating IR for stdlib. */
+    bool genStdlib;
+
+    /** Whether ISPC binary is slim. */
+    bool isSlimBinary;
 
     /** Store the path to directory for IR file dumps. */
     std::string dumpFilePath;
