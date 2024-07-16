@@ -932,7 +932,8 @@ class FunctionType : public Type {
     FunctionType(const Type *returnType, const llvm::SmallVector<const Type *, 8> &argTypes,
                  const llvm::SmallVector<std::string, 8> &argNames, const llvm::SmallVector<Expr *, 8> &argDefaults,
                  const llvm::SmallVector<SourcePos, 8> &argPos, bool isTask, bool isExported, bool isExternC,
-                 bool isExternSYCL, bool isUnmasked, bool isUnmangled, bool isVectorCall, bool isRegCall);
+                 bool isExternSYCL, bool isUnmasked, bool isUnmangled, bool isVectorCall, bool isRegCall, bool isCdecl,
+                 SourcePos p);
     // Structure holding the mangling suffix and prefix for function
     struct FunctionMangledName {
         std::string prefix;
@@ -1005,6 +1006,8 @@ class FunctionType : public Type {
     /* Get string representation of calling convention */
     const std::string GetNameForCallConv() const;
 
+    const SourcePos &GetSourcePos() const { return pos; };
+
     int GetNumParameters() const { return (int)paramTypes.size(); }
     const Type *GetParameterType(int i) const;
     Expr *GetParameterDefault(int i) const;
@@ -1040,6 +1043,11 @@ class FunctionType : public Type {
     /** Indicates whether the function has __regcall attribute. */
     const bool isRegCall;
 
+    /** Indicates whether the function has __cdecl attribute (default C calling
+        convention). It is useful when --vectorcall is provided globally to not
+        call some function with vectorcall. */
+    const bool isCdecl;
+
     /** Indicates whether this function has been declared to be safe to run
         with an all-off mask. */
     bool isSafe;
@@ -1067,6 +1075,8 @@ class FunctionType : public Type {
     const llvm::SmallVector<SourcePos, 8> paramPositions;
 
     mutable const FunctionType *asMaskedType, *asUnmaskedType;
+
+    const SourcePos pos;
 };
 
 /* Efficient dynamic casting of Types.  First, we specify a default

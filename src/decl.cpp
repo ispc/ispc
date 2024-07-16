@@ -201,6 +201,7 @@ bool Attribute::IsKnownAttribute() const {
         {"address_space", 1},
         {"unmangled", 1},
         {"memory", 1},
+        {"cdecl", 1},
     };
 
     if (lKnownParamAttrs.find(name) != lKnownParamAttrs.end()) {
@@ -771,6 +772,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         bool isVectorCall = ds && ((ds->typeQualifiers & TYPEQUAL_VECTORCALL) != 0);
         bool isRegCall = ds && ((ds->typeQualifiers & TYPEQUAL_REGCALL) != 0);
         bool isUnmangled = ds && ds->attributeList && ds->attributeList->HasAttribute("unmangled");
+        bool isCdecl = ds && ds->attributeList && ds->attributeList->HasAttribute("cdecl");
 
         if (isExported && isTask) {
             Error(pos, "Function can't have both \"task\" and \"export\" "
@@ -823,7 +825,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
 
         const FunctionType *functionType =
             new FunctionType(returnType, args, argNames, argDefaults, argPos, isTask, isExported, isExternC,
-                             isExternSYCL, isUnmasked, isUnmangled, isVectorCall, isRegCall);
+                             isExternSYCL, isUnmasked, isUnmangled, isVectorCall, isRegCall, isCdecl, pos);
 
         // handle any explicit __declspecs on the function
         if (ds != nullptr) {

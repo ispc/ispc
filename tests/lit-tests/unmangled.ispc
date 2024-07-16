@@ -1,5 +1,5 @@
 // RUN: %{ispc} --target=host %s -o - --emit-llvm-text | FileCheck %s
-// RUN: %{ispc} --target=host --debug-phase=0:0 %s -o t.o | FileCheck %s --check-prefix=CHECK-BAR
+// RUN: %{ispc} --target=host --debug-phase=2:2 %s -o t.o | FileCheck %s --check-prefix=CHECK-BAR
 
 // CHECK: define <[[WIDTH:[0-9]+]] x i32> @foo(i32 %x, <[[WIDTH]] x i32> {{.*}} %y, <[[WIDTH]] x {{.*}}> %__mask)
 __attribute__((unmangled)) int foo(uniform int x, int y) { return y; }

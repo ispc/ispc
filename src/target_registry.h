@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019-2023, Intel Corporation
+  Copyright (c) 2019-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -57,6 +57,10 @@ class TargetLibRegistry {
     // Target x OS (Win/Unix) x Arch [32/64/none]
     std::map<uint32_t, const BitcodeLib *> m_targets;
 
+    // Stdlib targets
+    // Target x OS x Arch
+    std::map<uint32_t, const BitcodeLib *> m_stdlibs;
+
     // Bitset with supported OSes
     std::bitset<(int)TargetOS::error> m_supported_oses;
 
@@ -73,8 +77,12 @@ class TargetLibRegistry {
     // Return target module if available, otherwise nullptr.
     const BitcodeLib *getISPCTargetLib(ISPCTarget target, TargetOS os, Arch arch) const;
 
-    // Print user-friendly message about supported targets
-    void printSupportMatrix() const;
+    // Return stdlib module if available, otherwise nullptr.
+    const BitcodeLib *getISPCStdLib(ISPCTarget target, TargetOS os, Arch arch) const;
+
+    // Print user-friendly message about supported targets and return missed
+    // bitcode files (if any).
+    void printSupportMatrix(std::vector<std::string> &missedFiles) const;
 
     std::string getSupportedArchs();
     std::string getSupportedTargets();

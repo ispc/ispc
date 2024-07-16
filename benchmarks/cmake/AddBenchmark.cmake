@@ -124,7 +124,7 @@ function(add_ispc_to_target)
             OUTPUT ${ISPC_TARGET_OBJS} ${ISPC_TARGET_HEADERS}
             COMMENT "Compiling ${ISPC_SRC_FILE} for ${BENCHMARKS_ISPC_TARGETS} target(s)"
             COMMAND           ${ISPC_EXECUTABLE} ${SRC_LOCATION} -o ${ISPC_OBJ} -h ${ISPC_HEADER} --arch=${ISPC_ARCH} --target=${BENCHMARKS_ISPC_TARGETS} ${ISPC_PIC} "$<JOIN:${FLAGS},;>"
-            DEPENDS ${ISPC_EXECUTABLE}
+            DEPENDS ${ISPC_EXECUTABLE} stdlibs-bc
             DEPENDS ${ISPC_SRC_FILE}
             COMMAND_EXPAND_LISTS
         )

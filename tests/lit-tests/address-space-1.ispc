@@ -1,4 +1,4 @@
-// RUN: %{ispc} --target=host --nowrap --nostdlib --debug-phase=0:0 %s --no-discard-value-names -o t.o | FileCheck %s
+// RUN: %{ispc} --target=host --nowrap --nostdlib --debug-phase=2:2 %s --no-discard-value-names -o t.o | FileCheck %s
 
 #define A(N) __attribute__((address_space(N)))
 

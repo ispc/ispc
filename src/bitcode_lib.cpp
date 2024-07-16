@@ -62,6 +62,20 @@ BitcodeLib::BitcodeLib(const char *filename, ISPCTarget target, TargetOS os, Arc
     TargetLibRegistry::RegisterTarget(this);
 }
 
+// General constructors
+BitcodeLib::BitcodeLib(BitcodeLibType type, const unsigned char lib[], int size, ISPCTarget target, TargetOS os,
+                       Arch arch)
+    : m_type(type), m_storage(BitcodeLibStorage::Embedded), m_lib(lib), m_size(size), m_os(os), m_arch(arch),
+      m_target(target) {
+    TargetLibRegistry::RegisterTarget(this);
+}
+
+BitcodeLib::BitcodeLib(BitcodeLibType type, const char *filename, ISPCTarget target, TargetOS os, Arch arch)
+    : m_type(type), m_storage(BitcodeLibStorage::FileSystem), m_lib(nullptr), m_size(0), m_os(os), m_arch(arch),
+      m_target(target), m_filename(filename) {
+    TargetLibRegistry::RegisterTarget(this);
+}
+
 // TODO: this is debug version: either remove or make it use friendly.
 void BitcodeLib::print() const {
     std::string os = OSToString(m_os);
@@ -82,6 +96,13 @@ void BitcodeLib::print() const {
                target.c_str(), arch.c_str());
         break;
     }
+    case BitcodeLibType::Stdlib: {
+        std::string target = ISPCTargetToString(m_target);
+        std::string arch = ArchToString(m_arch);
+        printf("Type: stdlib.      size: %zu, OS: %s, target: %s, arch(runtime) %s\n", m_size, os.c_str(),
+               target.c_str(), arch.c_str());
+        break;
+    }
     }
 }
 
@@ -92,6 +113,18 @@ TargetOS BitcodeLib::getOS() const { return m_os; }
 Arch BitcodeLib::getArch() const { return m_arch; }
 ISPCTarget BitcodeLib::getISPCTarget() const { return m_target; }
 const std::string &BitcodeLib::getFilename() const { return m_filename; }
+
+bool BitcodeLib::fileExists() const {
+    llvm::SmallString<128> filePath(g->shareDirPath);
+    llvm::sys::path::append(filePath, m_filename);
+    if (m_filename.empty()) {
+        // If filename is empty, it means that the library is embedded.
+        // So both true and false are meaningless, so return true to not fill
+        // the missedFiles in printSupportMatrix.
+        return true;
+    }
+    return llvm::sys::fs::exists(filePath);
+}
 
 llvm::Module *BitcodeLib::getLLVMModule() const {
     switch (m_storage) {

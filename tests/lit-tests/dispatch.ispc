@@ -1,4 +1,4 @@
-// RUN: %{ispc} -DISPC --pic --target=sse2-i32x4,sse4.1-i32x4,avx1-i32x4,avx2-i32x4,avx2vnni-i32x4,avx512icl-x4,avx512skx-x4,avx512spr-x4 -h %t.h %s -o %t.o -g
+// RUN: %{ispc} --pic --target=sse2-i32x4,sse4.1-i32x4,avx1-i32x4,avx2-i32x4,avx2vnni-i32x4,avx512icl-x4,avx512skx-x4,avx512spr-x4 -h %t.h %s -o %t.o -g
 // RUN: %{cc} -x c -c %s -o %t.c.o --include %t.h -g
 // RUN: %{cc} %t.c.o -o %t.c.bin -g -rdynamic %t.o %t_sse2.o %t_sse4.o %t_avx.o %t_avx2.o %t_avx2vnni.o %t_avx512icl.o %t_avx512skx.o %t_avx512spr.o
 

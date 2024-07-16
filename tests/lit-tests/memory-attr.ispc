@@ -1,5 +1,5 @@
 // RUN: %{ispc} --target=host %s -o - --emit-llvm-text | FileCheck %s
-// RUN: %{ispc} --target=host --debug-phase=0:0 %s -o t.o | FileCheck %s --check-prefix=CHECK-DECL
+// RUN: %{ispc} --target=host --debug-phase=2:2 %s -o t.o | FileCheck %s --check-prefix=CHECK-DECL
 
 // Before LLVM 16.0, the memory attribute was displayed as readonly, readnone
 // not as memory(read), memory(none).

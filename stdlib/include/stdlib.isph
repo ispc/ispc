@@ -1,0 +1,1131 @@
+// -*- mode: c++ -*-
+/*
+  Copyright (c) 2024, Intel Corporation
+
+  SPDX-License-Identifier: BSD-3-Clause
+*/
+
+/** @file stdlib.isph
+
+    @brief Portion of the ISPC standard library declarations
+           that are implementated in ISPC.
+*/
+
+// This whole file in included for every user code compilation unless
+// --nostdlib provided.
+
+#ifndef ISPC_STDLIB_ISPH
+#define ISPC_STDLIB_ISPH
+
+///////////////////////////////////////////////////////////////////////////
+// Low level primitives
+
+__declspec(safe, cost0) inline float16 float16bits(unsigned int16 a);
+__declspec(safe, cost0) inline uniform float16 float16bits(uniform unsigned int16 a);
+__declspec(safe, cost0) inline float16 float16bits(int16 a);
+__declspec(safe, cost0) inline uniform float16 float16bits(uniform int16 a);
+__declspec(safe, cost0) inline float floatbits(unsigned int a);
+__declspec(safe, cost0) inline uniform float floatbits(uniform unsigned int a);
+__declspec(safe, cost0) inline float floatbits(int a);
+__declspec(safe, cost0) inline uniform float floatbits(uniform int a);
+__declspec(safe, cost0) inline double doublebits(unsigned int64 a);
+__declspec(safe, cost0) inline uniform double doublebits(uniform unsigned int64 a);
+__declspec(safe, cost0) inline unsigned int16 intbits(float16 a);
+__declspec(safe, cost0) inline uniform unsigned int16 intbits(uniform float16 a);
+__declspec(safe, cost0) inline unsigned int intbits(float a);
+__declspec(safe, cost0) inline uniform unsigned int intbits(uniform float a);
+__declspec(safe, cost0) inline unsigned int64 intbits(double d);
+__declspec(safe, cost0) inline uniform unsigned int64 intbits(uniform double d);
+
+__declspec(safe) inline float broadcast(float v, uniform int i);
+__declspec(safe) inline int8 broadcast(int8 v, uniform int i);
+__declspec(safe) inline int16 broadcast(int16 v, uniform int i);
+__declspec(safe) inline float16 broadcast(float16 v, uniform int i);
+__declspec(safe) inline int32 broadcast(int32 v, uniform int i);
+__declspec(safe) inline double broadcast(double v, uniform int i);
+__declspec(safe) inline int64 broadcast(int64 v, uniform int i);
+
+__declspec(safe) inline float rotate(float v, uniform int i);
+__declspec(safe) inline int8 rotate(int8 v, uniform int i);
+__declspec(safe) inline int16 rotate(int16 v, uniform int i);
+__declspec(safe) inline float16 rotate(float16 v, uniform int i);
+__declspec(safe) inline int32 rotate(int32 v, uniform int i);
+__declspec(safe) inline double rotate(double v, uniform int i);
+__declspec(safe) inline int64 rotate(int64 v, uniform int i);
+
+__declspec(safe) inline float shift(float v, uniform int i);
+__declspec(safe) inline int8 shift(int8 v, uniform int i);
+__declspec(safe) inline int16 shift(int16 v, uniform int i);
+__declspec(safe) inline float16 shift(float16 v, uniform int i);
+__declspec(safe) inline int32 shift(int32 v, uniform int i);
+__declspec(safe) inline double shift(double v, uniform int i);
+__declspec(safe) inline int64 shift(int64 v, uniform int i);
+
+__declspec(safe) inline float shuffle(float v, int i);
+__declspec(safe) inline int8 shuffle(int8 v, int i);
+__declspec(safe) inline int16 shuffle(int16 v, int i);
+__declspec(safe) inline float16 shuffle(float16 v, int i);
+__declspec(safe) inline int32 shuffle(int32 v, int i);
+__declspec(safe) inline double shuffle(double v, int i);
+__declspec(safe) inline int64 shuffle(int64 v, int i);
+__declspec(safe) inline float shuffle(float v0, float v1, int i);
+__declspec(safe) inline int8 shuffle(int8 v0, int8 v1, int i);
+__declspec(safe) inline int16 shuffle(int16 v0, int16 v1, int i);
+__declspec(safe) inline float16 shuffle(float16 v0, float16 v1, int i);
+__declspec(safe) inline int32 shuffle(int32 v0, int32 v1, int i);
+__declspec(safe) inline double shuffle(double v0, double v1, int i);
+__declspec(safe) inline int64 shuffle(int64 v0, int64 v1, int i);
+
+// x[i]
+__declspec(safe, cost1) inline uniform float extract(float x, uniform int i);
+__declspec(safe, cost1) inline uniform bool extract(bool x, uniform int i);
+__declspec(safe, cost1) inline uniform int8 extract(int8 x, uniform int i);
+__declspec(safe, cost1) inline uniform unsigned int8 extract(unsigned int8 x, uniform int i);
+__declspec(safe, cost1) inline uniform int16 extract(int16 x, uniform int i);
+__declspec(safe, cost1) inline uniform unsigned int16 extract(unsigned int16 x, uniform int i);
+__declspec(safe, cost1) inline uniform float16 extract(float16 x, uniform int i);
+__declspec(safe, cost1) inline uniform int32 extract(int32 x, uniform int i);
+__declspec(safe, cost1) inline uniform unsigned int32 extract(unsigned int32 x, uniform int i);
+__declspec(safe, cost1) inline uniform double extract(double x, uniform int i);
+__declspec(safe, cost1) inline uniform int64 extract(int64 x, uniform int i);
+__declspec(safe, cost1) inline uniform unsigned int64 extract(unsigned int64 x, uniform int i);
+
+// x[i] = v
+__declspec(safe, cost1) inline float insert(float x, uniform int i, uniform float v);
+__declspec(safe, cost1) inline bool insert(bool x, uniform int i, uniform bool v);
+__declspec(safe, cost1) inline int8 insert(int8 x, uniform int i, uniform int8 v);
+__declspec(safe, cost1) inline unsigned int8 insert(unsigned int8 x, uniform int i, uniform unsigned int8 v);
+__declspec(safe, cost1) inline float16 insert(float16 x, uniform int i, uniform float16 v);
+__declspec(safe, cost1) inline int16 insert(int16 x, uniform int i, uniform int16 v);
+__declspec(safe, cost1) inline unsigned int16 insert(unsigned int16 x, uniform int i, uniform unsigned int16 v);
+__declspec(safe, cost1) inline int32 insert(int32 x, uniform int i, uniform int32 v);
+__declspec(safe, cost1) inline unsigned int32 insert(unsigned int32 x, uniform int i, uniform unsigned int32 v);
+__declspec(safe, cost1) inline double insert(double x, uniform int i, uniform double v);
+__declspec(safe, cost1) inline int64 insert(int64 x, uniform int i, uniform int64 v);
+__declspec(safe, cost1) inline unsigned int64 insert(unsigned int64 x, uniform int i, uniform unsigned int64 v);
+
+__declspec(safe, cost1) inline uniform int32 sign_extend(uniform bool v);
+__declspec(safe, cost1) inline int32 sign_extend(bool v);
+__declspec(safe) inline uniform bool any(bool v);
+__declspec(safe) inline uniform bool all(bool v);
+__declspec(safe) inline uniform bool none(bool v);
+__declspec(safe) inline uniform int32 popcnt(uniform int32 v);
+__declspec(safe) inline uniform int popcnt(uniform int64 v);
+__declspec(safe) inline int popcnt(int v);
+__declspec(safe) inline int popcnt(int64 v);
+__declspec(safe) inline uniform int popcnt(bool v);
+__declspec(safe) inline uniform unsigned int64 lanemask();
+__declspec(safe) inline uniform unsigned int64 packmask(bool v);
+
+///////////////////////////////////////////////////////////////////////////
+// memcpy/memmove/memset
+
+inline void memcpy(void *uniform dst, void *uniform src, uniform int32 count);
+inline void memcpy64(void *uniform dst, void *uniform src, uniform int64 count);
+inline void memcpy(void *varying dst, void *varying src, int32 count);
+inline void memcpy64(void *varying dst, void *varying src, int64 count);
+inline void memmove(void *uniform dst, void *uniform src, uniform int32 count);
+inline void memmove64(void *uniform dst, void *uniform src, uniform int64 count);
+inline void memmove(void *varying dst, void *varying src, int32 count);
+inline void memmove64(void *varying dst, void *varying src, int64 count);
+inline void memset(void *uniform ptr, uniform int8 val, uniform int32 count);
+inline void memset64(void *uniform ptr, uniform int8 val, uniform int64 count);
+inline void memset(void *varying ptr, int8 val, int32 count);
+inline void memset64(void *varying ptr, int8 val, int64 count);
+
+///////////////////////////////////////////////////////////////////////////
+// count leading/trailing zeros
+
+__declspec(safe, cost1) inline uniform unsigned int32 count_leading_zeros(uniform unsigned int32 v);
+__declspec(safe, cost1) inline uniform unsigned int64 count_leading_zeros(uniform unsigned int64 v);
+__declspec(safe, cost1) inline uniform unsigned int32 count_trailing_zeros(uniform unsigned int32 v);
+__declspec(safe, cost1) inline uniform unsigned int64 count_trailing_zeros(uniform unsigned int64 v);
+__declspec(safe, cost1) inline uniform int32 count_leading_zeros(uniform int32 v);
+__declspec(safe, cost1) inline uniform int64 count_leading_zeros(uniform int64 v);
+__declspec(safe, cost1) inline uniform int32 count_trailing_zeros(uniform int32 v);
+__declspec(safe, cost1) inline uniform int64 count_trailing_zeros(uniform int64 v);
+__declspec(safe) inline unsigned int32 count_leading_zeros(unsigned int32 v);
+__declspec(safe) inline unsigned int64 count_leading_zeros(unsigned int64 v);
+__declspec(safe) inline unsigned int32 count_trailing_zeros(unsigned int32 v);
+__declspec(safe) inline unsigned int64 count_trailing_zeros(unsigned int64 v);
+__declspec(safe) inline int32 count_leading_zeros(int32 v);
+__declspec(safe) inline int64 count_leading_zeros(int64 v);
+__declspec(safe) inline int32 count_trailing_zeros(int32 v);
+__declspec(safe) inline int64 count_trailing_zeros(int64 v);
+
+///////////////////////////////////////////////////////////////////////////
+// AOS/SOA conversion
+
+inline void aos_to_soa2(uniform float a[], varying float *uniform v0, varying float *uniform v1);
+inline void soa_to_aos2(float v0, float v1, uniform float a[]);
+inline void aos_to_soa3(uniform float a[], varying float *uniform v0, varying float *uniform v1,
+                        varying float *uniform v2);
+inline void soa_to_aos3(float v0, float v1, float v2, uniform float a[]);
+inline void aos_to_soa4(uniform float a[], varying float *uniform v0, varying float *uniform v1,
+                        varying float *uniform v2, varying float *uniform v3);
+inline void soa_to_aos4(float v0, float v1, float v2, float v3, uniform float a[]);
+inline void aos_to_soa2(uniform int32 a[], varying int32 *uniform v0, varying int32 *uniform v1);
+inline void soa_to_aos2(int32 v0, int32 v1, uniform int32 a[]);
+inline void aos_to_soa3(uniform int32 a[], varying int32 *uniform v0, varying int32 *uniform v1,
+                        varying int32 *uniform v2);
+inline void soa_to_aos3(int32 v0, int32 v1, int32 v2, uniform int32 a[]);
+inline void aos_to_soa4(uniform int32 a[], varying int32 *uniform v0, varying int32 *uniform v1,
+                        varying int32 *uniform v2, varying int32 *uniform v3);
+inline void soa_to_aos4(int32 v0, int32 v1, int32 v2, int32 v3, uniform int32 a[]);
+inline void aos_to_soa2(uniform double a[], varying double *uniform v0, varying double *uniform v1);
+inline void soa_to_aos2(double v0, double v1, uniform double a[]);
+inline void aos_to_soa3(uniform double a[], varying double *uniform v0, varying double *uniform v1,
+                        varying double *uniform v2);
+inline void soa_to_aos3(double v0, double v1, double v2, uniform double a[]);
+inline void aos_to_soa4(uniform double a[], varying double *uniform v0, varying double *uniform v1,
+                        varying double *uniform v2, varying double *uniform v3);
+inline void soa_to_aos4(double v0, double v1, double v2, double v3, uniform double a[]);
+inline void aos_to_soa2(uniform int64 a[], varying int64 *uniform v0, varying int64 *uniform v1);
+inline void soa_to_aos2(int64 v0, int64 v1, uniform int64 a[]);
+inline void aos_to_soa3(uniform int64 a[], varying int64 *uniform v0, varying int64 *uniform v1,
+                        varying int64 *uniform v2);
+inline void soa_to_aos3(int64 v0, int64 v1, int64 v2, uniform int64 a[]);
+inline void aos_to_soa4(uniform int64 a[], varying int64 *uniform v0, varying int64 *uniform v1,
+                        varying int64 *uniform v2, varying int64 *uniform v3);
+inline void soa_to_aos4(int64 v0, int64 v1, int64 v2, int64 v3, uniform int64 a[]);
+///////////////////////////////////////////////////////////////////////////
+// Prefetching
+
+__declspec(safe, cost1) inline void prefetch_l1(const void *uniform ptr);
+__declspec(safe, cost1) inline void prefetch_l1(const void *uniform ptr, uniform int8 size);
+__declspec(safe, cost1) inline void prefetch_l2(const void *uniform ptr);
+__declspec(safe, cost1) inline void prefetch_l2(const void *uniform ptr, uniform int8 size);
+__declspec(safe, cost1) inline void prefetch_l3(const void *uniform ptr);
+__declspec(safe, cost1) inline void prefetch_l3(const void *uniform ptr, uniform int8 size);
+__declspec(safe, cost1) inline void prefetch_nt(const void *uniform ptr);
+__declspec(safe, cost1) inline void prefetch_nt(const void *uniform ptr, uniform int8 size);
+__declspec(safe, cost1) inline void prefetchw_l1(const void *uniform ptr);
+__declspec(safe, cost1) inline void prefetchw_l2(const void *uniform ptr);
+__declspec(safe, cost1) inline void prefetchw_l3(const void *uniform ptr);
+inline void prefetch_l1(const void *varying ptr);
+inline void prefetch_l1(const void *varying ptr, uniform int8 size);
+inline void prefetch_l2(const void *varying ptr);
+inline void prefetch_l2(const void *varying ptr, uniform int8 size);
+inline void prefetch_l3(const void *varying ptr);
+inline void prefetch_l3(const void *varying ptr, uniform int8 size);
+inline void prefetch_nt(const void *varying ptr);
+inline void prefetch_nt(const void *varying ptr, uniform int8 size);
+__declspec(safe, cost1) inline void prefetchw_l1(const void *varying ptr);
+__declspec(safe, cost1) inline void prefetchw_l2(const void *varying ptr);
+__declspec(safe, cost1) inline void prefetchw_l3(const void *varying ptr);
+
+///////////////////////////////////////////////////////////////////////////
+// non-short-circuiting alternatives
+
+__declspec(safe, cost1) inline bool and (bool a, bool b);
+__declspec(safe, cost1) inline uniform bool and (uniform bool a, uniform bool b);
+__declspec(safe, cost1) inline bool or (bool a, bool b);
+__declspec(safe, cost1) inline uniform bool or (uniform bool a, uniform bool b);
+__declspec(safe, cost1) inline int8 select(bool cond, int8 t, int8 f);
+__declspec(safe, cost1) inline int8 select(uniform bool cond, int8 t, int8 f);
+__declspec(safe, cost1) inline uniform int8 select(uniform bool cond, uniform int8 t, uniform int8 f);
+__declspec(safe, cost1) inline int16 select(bool cond, int16 t, int16 f);
+__declspec(safe, cost1) inline int16 select(uniform bool cond, int16 t, int16 f);
+__declspec(safe, cost1) inline uniform int16 select(uniform bool cond, uniform int16 t, uniform int16 f);
+__declspec(safe, cost1) inline float16 select(bool cond, float16 t, float16 f);
+__declspec(safe, cost1) inline float16 select(uniform bool cond, float16 t, float16 f);
+__declspec(safe, cost1) inline uniform float16 select(uniform bool cond, uniform float16 t, uniform float16 f);
+__declspec(safe, cost1) inline int32 select(bool cond, int32 t, int32 f);
+__declspec(safe, cost1) inline int32 select(uniform bool cond, int32 t, int32 f);
+__declspec(safe, cost1) inline uniform int32 select(uniform bool cond, uniform int32 t, uniform int32 f);
+__declspec(safe, cost1) inline int64 select(bool cond, int64 t, int64 f);
+__declspec(safe, cost1) inline int64 select(uniform bool cond, int64 t, int64 f);
+__declspec(safe, cost1) inline uniform int64 select(uniform bool cond, uniform int64 t, uniform int64 f);
+__declspec(safe, cost1) inline float select(bool cond, float t, float f);
+__declspec(safe, cost1) inline float select(uniform bool cond, float t, float f);
+__declspec(safe, cost1) inline uniform float select(uniform bool cond, uniform float t, uniform float f);
+__declspec(safe, cost1) inline double select(bool cond, double t, double f);
+__declspec(safe, cost1) inline double select(uniform bool cond, double t, double f);
+__declspec(safe, cost1) inline uniform double select(uniform bool cond, uniform double t, uniform double f);
+
+///////////////////////////////////////////////////////////////////////////
+// Horizontal ops / reductions
+
+__declspec(safe) inline uniform int16 reduce_add(int8 x);
+__declspec(safe) inline uniform unsigned int16 reduce_add(unsigned int8 x);
+__declspec(safe) inline uniform int32 reduce_add(int16 x);
+__declspec(safe) inline uniform unsigned int32 reduce_add(unsigned int16 x);
+__declspec(safe) inline uniform float16 reduce_add(float16 x);
+__declspec(safe) inline uniform float16 reduce_min(float16 v);
+__declspec(safe) inline uniform float16 reduce_max(float16 v);
+__declspec(safe) inline uniform float reduce_add(float x);
+__declspec(safe) inline uniform float reduce_min(float v);
+__declspec(safe) inline uniform float reduce_max(float v);
+__declspec(safe) inline uniform int64 reduce_add(int32 x);
+__declspec(safe) inline uniform int reduce_min(int v);
+__declspec(safe) inline uniform int reduce_max(int v);
+__declspec(safe) inline uniform unsigned int64 reduce_add(unsigned int32 x);
+__declspec(safe) inline uniform unsigned int reduce_min(unsigned int v);
+__declspec(safe) inline uniform unsigned int reduce_max(unsigned int v);
+__declspec(safe) inline uniform double reduce_add(double x);
+__declspec(safe) inline uniform double reduce_min(double v);
+__declspec(safe) inline uniform double reduce_max(double v);
+__declspec(safe) inline uniform int64 reduce_add(int64 x);
+__declspec(safe) inline uniform int64 reduce_min(int64 v);
+__declspec(safe) inline uniform int64 reduce_max(int64 v);
+__declspec(safe) inline uniform unsigned int64 reduce_add(unsigned int64 x);
+__declspec(safe) inline uniform unsigned int64 reduce_min(unsigned int64 v);
+__declspec(safe) inline uniform unsigned int64 reduce_max(unsigned int64 v);
+
+#define REDUCE_EQUAL_DECL(TYPE, FUNCTYPE, MASKTYPE)                                                                    \
+    __declspec(safe) inline uniform bool reduce_equal(TYPE v);                                                         \
+    __declspec(safe) inline uniform bool reduce_equal(TYPE v, uniform TYPE *uniform value);
+
+REDUCE_EQUAL_DECL(float16, half, UIntMaskType)
+REDUCE_EQUAL_DECL(int32, int32, UIntMaskType)
+REDUCE_EQUAL_DECL(unsigned int32, int32, UUIntMaskType)
+REDUCE_EQUAL_DECL(float, float, UIntMaskType)
+REDUCE_EQUAL_DECL(int64, int64, UIntMaskType)
+REDUCE_EQUAL_DECL(unsigned int64, int64, UUIntMaskType)
+REDUCE_EQUAL_DECL(double, double, UIntMaskType)
+
+#undef REDUCE_EQUAL_DECL
+
+inline float16 exclusive_scan_add(float16 v);
+inline int32 exclusive_scan_add(int32 v);
+inline unsigned int32 exclusive_scan_add(unsigned int32 v);
+inline float exclusive_scan_add(float v);
+inline int64 exclusive_scan_add(int64 v);
+inline unsigned int64 exclusive_scan_add(unsigned int64 v);
+inline double exclusive_scan_add(double v);
+inline int32 exclusive_scan_and(int32 v);
+inline unsigned int32 exclusive_scan_and(unsigned int32 v);
+inline int64 exclusive_scan_and(int64 v);
+inline unsigned int64 exclusive_scan_and(unsigned int64 v);
+inline int32 exclusive_scan_or(int32 v);
+inline unsigned int32 exclusive_scan_or(unsigned int32 v);
+inline int64 exclusive_scan_or(int64 v);
+inline unsigned int64 exclusive_scan_or(unsigned int64 v);
+
+///////////////////////////////////////////////////////////////////////////
+// packed load, store
+
+/* unsigned int32 implementations. */
+// unsigned int32 load.
+inline uniform int packed_load_active(uniform unsigned int a[], varying unsigned int *uniform vals);
+
+// unsigned int32 store.
+inline uniform int packed_store_active(uniform unsigned int a[], unsigned int vals);
+
+// unsigned int32 store2.
+inline uniform int packed_store_active2(uniform unsigned int a[], unsigned int vals);
+
+/* int32 implementations. */
+// int32 load.
+inline uniform int packed_load_active(uniform int a[], varying int *uniform vals);
+
+// int32 store.
+inline uniform int packed_store_active(uniform int a[], int vals);
+
+// int32 store2.
+inline uniform int packed_store_active2(uniform int a[], int vals);
+
+// int32 store with lanes.
+inline uniform int packed_store_active(bool active, uniform int a[], int vals);
+
+/* unsigned int64 implementations. */
+// unsigned int64 load.
+inline uniform int packed_load_active(uniform unsigned int64 a[], varying unsigned int64 *uniform vals);
+
+// unsigned int64 store.
+inline uniform int packed_store_active(uniform unsigned int64 a[], unsigned int64 vals);
+
+// unsigned int64 store2.
+inline uniform int packed_store_active2(uniform unsigned int64 a[], unsigned int64 vals);
+
+/* int64 implementations. */
+// int64 load.
+inline uniform int packed_load_active(uniform int64 a[], varying int64 *uniform vals);
+
+// int64 store.
+inline uniform int packed_store_active(uniform int64 a[], int64 vals);
+
+// int64 store2.
+inline uniform int packed_store_active2(uniform int64 a[], int64 vals);
+
+// int64 store with lanes.
+inline uniform int packed_store_active(bool active, uniform int64 a[], int64 vals);
+
+///////////////////////////////////////////////////////////////////////////
+// streaming store
+
+__declspec(safe, cost1) inline void streaming_store(uniform unsigned int8 a[], unsigned int8 vals);
+__declspec(safe, cost1) inline void streaming_store(uniform int8 a[], int8 vals);
+__declspec(safe, cost1) inline void streaming_store(uniform unsigned int16 a[], unsigned int16 vals);
+__declspec(safe, cost1) inline void streaming_store(uniform int16 a[], int16 vals);
+__declspec(safe, cost1) inline void streaming_store(uniform float16 a[], float16 vals);
+__declspec(safe, cost1) inline void streaming_store(uniform unsigned int a[], unsigned int vals);
+__declspec(safe, cost1) inline void streaming_store(uniform int a[], int vals);
+__declspec(safe, cost1) inline void streaming_store(uniform unsigned int64 a[], unsigned int64 vals);
+__declspec(safe, cost1) inline void streaming_store(uniform int64 a[], int64 vals);
+__declspec(safe, cost1) inline void streaming_store(uniform float a[], float vals);
+__declspec(safe, cost1) inline void streaming_store(uniform double a[], double vals);
+__declspec(safe, cost1) inline void streaming_store(uniform unsigned int8 a[], uniform unsigned int8 vals);
+__declspec(safe, cost1) inline void streaming_store(uniform int8 a[], uniform int8 vals);
+__declspec(safe, cost1) inline void streaming_store(uniform unsigned int16 a[], uniform unsigned int16 vals);
+__declspec(safe, cost1) inline void streaming_store(uniform int16 a[], uniform int16 vals);
+__declspec(safe, cost1) inline void streaming_store(uniform float16 a[], uniform float16 vals);
+__declspec(safe, cost1) inline void streaming_store(uniform unsigned int a[], uniform unsigned int vals);
+__declspec(safe, cost1) inline void streaming_store(uniform int a[], uniform int vals);
+__declspec(safe, cost1) inline void streaming_store(uniform unsigned int64 a[], uniform unsigned int64 vals);
+__declspec(safe, cost1) inline void streaming_store(uniform int64 a[], uniform int64 vals);
+__declspec(safe, cost1) inline void streaming_store(uniform float a[], uniform float vals);
+__declspec(safe, cost1) inline void streaming_store(uniform double a[], uniform double vals);
+
+///////////////////////////////////////////////////////////////////////////
+// streaming load
+
+__declspec(safe, cost1) inline varying unsigned int8 streaming_load(uniform unsigned int8 a[]);
+__declspec(safe, cost1) inline varying int8 streaming_load(uniform int8 a[]);
+__declspec(safe, cost1) inline uniform unsigned int8 streaming_load_uniform(uniform unsigned int8 a[]);
+__declspec(safe, cost1) inline uniform int8 streaming_load_uniform(uniform int8 a[]);
+__declspec(safe, cost1) inline varying unsigned int16 streaming_load(uniform unsigned int16 a[]);
+__declspec(safe, cost1) inline varying int16 streaming_load(uniform int16 a[]);
+__declspec(safe, cost1) inline uniform unsigned int16 streaming_load_uniform(uniform unsigned int16 a[]);
+__declspec(safe, cost1) inline uniform int16 streaming_load_uniform(uniform int16 a[]);
+__declspec(safe, cost1) inline varying float16 streaming_load(uniform float16 a[]);
+__declspec(safe, cost1) inline uniform float16 streaming_load_uniform(uniform float16 a[]);
+__declspec(safe, cost1) inline varying unsigned int streaming_load(uniform unsigned int a[]);
+__declspec(safe, cost1) inline varying int streaming_load(uniform int a[]);
+__declspec(safe, cost1) inline uniform unsigned int streaming_load_uniform(uniform unsigned int a[]);
+__declspec(safe, cost1) inline uniform int streaming_load_uniform(uniform int a[]);
+__declspec(safe, cost1) inline varying unsigned int64 streaming_load(uniform unsigned int64 a[]);
+__declspec(safe, cost1) inline varying int64 streaming_load(uniform int64 a[]);
+__declspec(safe, cost1) inline uniform unsigned int64 streaming_load_uniform(uniform unsigned int64 a[]);
+__declspec(safe, cost1) inline uniform int64 streaming_load_uniform(uniform int64 a[]);
+__declspec(safe, cost1) inline varying float streaming_load(uniform float a[]);
+__declspec(safe, cost1) inline uniform float streaming_load_uniform(uniform float a[]);
+__declspec(safe, cost1) inline varying double streaming_load(uniform double a[]);
+__declspec(safe, cost1) inline uniform double streaming_load_uniform(uniform double a[]);
+
+///////////////////////////////////////////////////////////////////////////
+// System information
+
+inline uniform int num_cores();
+__declspec(safe) inline uniform int64 clock();
+
+///////////////////////////////////////////////////////////////////////////
+// Floating-Point Math
+
+__declspec(safe, cost1) inline uniform bool isnan(uniform float16 v);
+__declspec(safe, cost1) inline bool isnan(float16 v);
+__declspec(safe, cost1) inline uniform bool isnan(uniform float v);
+__declspec(safe, cost1) inline bool isnan(float v);
+__declspec(safe, cost1) inline uniform bool isnan(uniform double v);
+__declspec(safe, cost1) inline bool isnan(double v);
+
+__declspec(safe, cost1) inline int8 abs(int8 a);
+__declspec(safe, cost1) inline uniform int8 abs(uniform int8 a);
+__declspec(safe, cost1) inline int16 abs(int16 a);
+__declspec(safe, cost1) inline uniform int16 abs(uniform int16 a);
+__declspec(safe, cost1) inline int abs(int a);
+__declspec(safe, cost1) inline uniform int abs(uniform int a);
+__declspec(safe, cost1) inline int64 abs(int64 a);
+__declspec(safe, cost1) inline uniform int64 abs(uniform int64 a);
+__declspec(safe, cost1) inline float16 abs(float16 a);
+__declspec(safe, cost1) inline uniform float16 abs(uniform float16 a);
+__declspec(safe, cost1) inline float abs(float a);
+__declspec(safe, cost1) inline uniform float abs(uniform float a);
+__declspec(safe, cost1) inline double abs(double a);
+__declspec(safe, cost1) inline uniform double abs(uniform double a);
+
+__declspec(safe, cost1) inline unsigned int16 signbits(float16 x);
+__declspec(safe, cost1) inline uniform unsigned int16 signbits(uniform float16 x);
+__declspec(safe, cost1) inline unsigned int signbits(float x);
+__declspec(safe, cost1) inline uniform unsigned int signbits(uniform float x);
+__declspec(safe, cost1) inline unsigned int64 signbits(double x);
+__declspec(safe, cost1) inline uniform unsigned int64 signbits(uniform double x);
+
+__declspec(safe, cost2) inline float16 round(float16 x);
+__declspec(safe, cost2) inline uniform float16 round(uniform float16 x);
+__declspec(safe, cost2) inline float round(float x);
+__declspec(safe, cost2) inline uniform float round(uniform float x);
+__declspec(safe, cost2) inline double round(double x);
+__declspec(safe, cost2) inline uniform double round(uniform double x);
+
+__declspec(safe, cost2) inline float16 floor(float16 x);
+__declspec(safe, cost2) inline uniform float16 floor(uniform float16 x);
+__declspec(safe, cost2) inline float floor(float x);
+__declspec(safe, cost2) inline uniform float floor(uniform float x);
+__declspec(safe, cost2) inline double floor(double x);
+__declspec(safe, cost2) inline uniform double floor(uniform double x);
+
+__declspec(safe, cost2) inline float16 ceil(float16 x);
+__declspec(safe, cost2) inline uniform float16 ceil(uniform float16 x);
+__declspec(safe, cost2) inline float ceil(float x);
+__declspec(safe, cost2) inline uniform float ceil(uniform float x);
+__declspec(safe, cost2) inline double ceil(double x);
+__declspec(safe, cost2) inline uniform double ceil(uniform double x);
+
+///////////////////////////
+__declspec(safe, cost2) inline float16 fmod(float16 x, float16 y);
+__declspec(safe, cost2) inline uniform float16 fmod(uniform float16 x, uniform float16 y);
+__declspec(safe, cost2) inline float fmod(float x, float y);
+__declspec(safe, cost2) inline uniform float fmod(uniform float x, uniform float y);
+__declspec(safe, cost2) inline double fmod(double x, double y);
+__declspec(safe, cost2) inline uniform double fmod(uniform double x, uniform double y);
+
+__declspec(safe, cost2) inline float16 trunc(float16 x);
+__declspec(safe, cost2) inline uniform float16 trunc(uniform float16 x);
+__declspec(safe, cost2) inline float trunc(float x);
+__declspec(safe, cost2) inline uniform float trunc(uniform float x);
+__declspec(safe, cost2) inline double trunc(double x);
+__declspec(safe, cost2) inline uniform double trunc(uniform double x);
+
+__declspec(safe) inline float rcp(float v);
+__declspec(safe) inline uniform float rcp(uniform float v);
+__declspec(safe) inline float rcp_fast(float v);
+__declspec(safe) inline uniform float rcp_fast(uniform float v);
+
+#define RCPD_DECL(QUAL)                                                                                                \
+    __declspec(safe) inline QUAL double __rcp_iterate_##QUAL##_double(QUAL double v, QUAL double iv);                  \
+    __declspec(safe) inline QUAL double __rcp_safe_##QUAL##_double(QUAL double x);
+
+RCPD_DECL(varying)
+
+__declspec(safe) inline double rcp(double v);
+
+RCPD_DECL(uniform)
+#undef RCPD_DECL
+
+__declspec(safe) inline uniform double rcp(uniform double v);
+__declspec(safe) inline double rcp_fast(double v);
+__declspec(safe) inline uniform double rcp_fast(uniform double v);
+__declspec(safe) inline float16 rcp(float16 v);
+__declspec(safe) inline uniform float16 rcp(uniform float16 v);
+
+///////////////////////////////////////////////////////////////////////////
+// min/max
+
+// float16
+__declspec(safe, cost1) inline float16 min(float16 a, float16 b);
+__declspec(safe, cost1) inline uniform float16 min(uniform float16 a, uniform float16 b);
+__declspec(safe, cost1) inline float16 max(float16 a, float16 b);
+__declspec(safe, cost1) inline uniform float16 max(uniform float16 a, uniform float16 b);
+
+// float
+__declspec(safe, cost1) inline float min(float a, float b);
+__declspec(safe, cost1) inline uniform float min(uniform float a, uniform float b);
+__declspec(safe, cost1) inline float max(float a, float b);
+__declspec(safe, cost1) inline uniform float max(uniform float a, uniform float b);
+
+// double
+__declspec(safe) inline double min(double a, double b);
+__declspec(safe) inline uniform double min(uniform double a, uniform double b);
+__declspec(safe) inline double max(double a, double b);
+__declspec(safe) inline uniform double max(uniform double a, uniform double b);
+
+// int8
+__declspec(safe, cost1) inline uniform unsigned int8 min(uniform unsigned int8 a, uniform unsigned int8 b);
+__declspec(safe, cost1) inline uniform unsigned int8 max(uniform unsigned int8 a, uniform unsigned int8 b);
+__declspec(safe, cost1) inline uniform int8 min(uniform int8 a, uniform int8 b);
+__declspec(safe, cost1) inline uniform int8 max(uniform int8 a, uniform int8 b);
+__declspec(safe, cost1) inline unsigned int8 min(unsigned int8 a, unsigned int8 b);
+__declspec(safe, cost1) inline unsigned int8 max(unsigned int8 a, unsigned int8 b);
+__declspec(safe, cost1) inline int8 min(int8 a, int8 b);
+__declspec(safe, cost1) inline int8 max(int8 a, int8 b);
+
+// int16
+__declspec(safe, cost1) inline uniform unsigned int16 min(uniform unsigned int16 a, uniform unsigned int16 b);
+__declspec(safe, cost1) inline uniform unsigned int16 max(uniform unsigned int16 a, uniform unsigned int16 b);
+__declspec(safe, cost1) inline uniform int16 min(uniform int16 a, uniform int16 b);
+__declspec(safe, cost1) inline uniform int16 max(uniform int16 a, uniform int16 b);
+__declspec(safe, cost1) inline unsigned int16 min(unsigned int16 a, unsigned int16 b);
+__declspec(safe, cost1) inline unsigned int16 max(unsigned int16 a, unsigned int16 b);
+__declspec(safe, cost1) inline int16 min(int16 a, int16 b);
+__declspec(safe, cost1) inline int16 max(int16 a, int16 b);
+
+// int32
+
+__declspec(safe, cost1) inline unsigned int min(unsigned int a, unsigned int b);
+__declspec(safe, cost1) inline uniform unsigned int min(uniform unsigned int a, uniform unsigned int b);
+__declspec(safe, cost1) inline unsigned int max(unsigned int a, unsigned int b);
+__declspec(safe, cost1) inline uniform unsigned int max(uniform unsigned int a, uniform unsigned int b);
+__declspec(safe, cost1) inline int min(int a, int b);
+__declspec(safe, cost1) inline uniform int min(uniform int a, uniform int b);
+__declspec(safe, cost1) inline int max(int a, int b);
+__declspec(safe, cost1) inline uniform int max(uniform int a, uniform int b);
+
+// int64
+__declspec(safe, cost1) inline unsigned int64 min(unsigned int64 a, unsigned int64 b);
+__declspec(safe, cost1) inline uniform unsigned int64 min(uniform unsigned int64 a, uniform unsigned int64 b);
+__declspec(safe, cost1) inline unsigned int64 max(unsigned int64 a, unsigned int64 b);
+__declspec(safe, cost1) inline uniform unsigned int64 max(uniform unsigned int64 a, uniform unsigned int64 b);
+__declspec(safe, cost1) inline int64 min(int64 a, int64 b);
+__declspec(safe, cost1) inline uniform int64 min(uniform int64 a, uniform int64 b);
+__declspec(safe, cost1) inline int64 max(int64 a, int64 b);
+__declspec(safe, cost1) inline uniform int64 max(uniform int64 a, uniform int64 b);
+
+///////////////////////////////////////////////////////////////////////////
+// clamps
+
+// float16
+__declspec(safe, cost2) inline float16 clamp(float16 v, float16 low, float16 high);
+__declspec(safe, cost2) inline uniform float16 clamp(uniform float16 v, uniform float16 low, uniform float16 high);
+
+// float
+__declspec(safe, cost2) inline float clamp(float v, float low, float high);
+__declspec(safe, cost2) inline uniform float clamp(uniform float v, uniform float low, uniform float high);
+
+// double
+__declspec(safe, cost2) inline double clamp(double v, double low, double high);
+__declspec(safe, cost2) inline uniform double clamp(uniform double v, uniform double low, uniform double high);
+
+// int8
+__declspec(safe, cost2) inline unsigned int8 clamp(unsigned int8 v, unsigned int8 low, unsigned int8 high);
+__declspec(safe, cost2) inline uniform unsigned int8
+    clamp(uniform unsigned int8 v, uniform unsigned int8 low, uniform unsigned int8 high);
+__declspec(safe, cost2) inline int8 clamp(int8 v, int8 low, int8 high);
+__declspec(safe, cost2) inline uniform int8 clamp(uniform int8 v, uniform int8 low, uniform int8 high);
+
+// int16
+__declspec(safe, cost2) inline unsigned int16 clamp(unsigned int16 v, unsigned int16 low, unsigned int16 high);
+__declspec(safe, cost2) inline uniform unsigned int16
+    clamp(uniform unsigned int16 v, uniform unsigned int16 low, uniform unsigned int16 high);
+__declspec(safe, cost2) inline int16 clamp(int16 v, int16 low, int16 high);
+__declspec(safe, cost2) inline uniform int16 clamp(uniform int16 v, uniform int16 low, uniform int16 high);
+
+// int32
+__declspec(safe, cost2) inline unsigned int clamp(unsigned int v, unsigned int low, unsigned int high);
+__declspec(safe, cost2) inline uniform
+    unsigned int clamp(uniform unsigned int v, uniform unsigned int low, uniform unsigned int high);
+__declspec(safe, cost2) inline int clamp(int v, int low, int high);
+__declspec(safe, cost2) inline uniform int clamp(uniform int v, uniform int low, uniform int high);
+
+// int64
+__declspec(safe, cost2) inline unsigned int64 clamp(unsigned int64 v, unsigned int64 low, unsigned int64 high);
+__declspec(safe, cost2) inline uniform unsigned int64
+    clamp(uniform unsigned int64 v, uniform unsigned int64 low, uniform unsigned int64 high);
+__declspec(safe, cost2) inline int64 clamp(int64 v, int64 low, int64 high);
+__declspec(safe, cost2) inline uniform int64 clamp(uniform int64 v, uniform int64 low, uniform int64 high);
+
+///////////////////////////////////////////////////////////////////////////
+// Global atomics and memory barriers
+
+inline void memory_barrier();
+
+#define DEFINE_ATOMIC_OP_DECL(TA, TB, OPA, OPB, MASKTYPE, TC)                                                          \
+    inline TA atomic_##OPA##_global(uniform TA *uniform ptr, TA value);                                                \
+    inline uniform TA atomic_##OPA##_global(uniform TA *uniform ptr, uniform TA value);                                \
+    inline TA atomic_##OPA##_global(uniform TA *varying ptr, TA value);
+
+#define DEFINE_ATOMIC_SWAP_DECL(TA, TB, MASKTYPE, TC)                                                                  \
+    inline TA atomic_swap_global(uniform TA *uniform ptr, TA value);                                                   \
+    inline uniform TA atomic_swap_global(uniform TA *uniform ptr, uniform TA value);                                   \
+    inline TA atomic_swap_global(uniform TA *varying ptr, TA value);
+
+#define DEFINE_ATOMIC_MINMAX_OP_DECL(TA, TB, OPA, OPB, MASKTYPE, TC)                                                   \
+    inline TA atomic_##OPA##_global(uniform TA *uniform ptr, TA value);                                                \
+    inline uniform TA atomic_##OPA##_global(uniform TA *uniform ptr, uniform TA value);                                \
+    inline TA atomic_##OPA##_global(uniform TA *varying ptr, TA value);
+
+DEFINE_ATOMIC_OP_DECL(int32, int32, add, add, IntMaskType, int64)
+DEFINE_ATOMIC_OP_DECL(int32, int32, subtract, sub, IntMaskType, int64)
+DEFINE_ATOMIC_MINMAX_OP_DECL(int32, int32, min, min, IntMaskType, int64)
+DEFINE_ATOMIC_MINMAX_OP_DECL(int32, int32, max, max, IntMaskType, int64)
+DEFINE_ATOMIC_OP_DECL(int32, int32, and, and, IntMaskType, int64)
+DEFINE_ATOMIC_OP_DECL(int32, int32, or, or, IntMaskType, int64)
+DEFINE_ATOMIC_OP_DECL(int32, int32, xor, xor, IntMaskType, int64)
+DEFINE_ATOMIC_SWAP_DECL(int32, int32, IntMaskType, int64)
+
+// For everything but atomic min and max, we can use the same
+// implementations for unsigned as for signed.
+DEFINE_ATOMIC_OP_DECL(unsigned int32, int32, add, add, UIntMaskType, unsigned int64)
+DEFINE_ATOMIC_OP_DECL(unsigned int32, int32, subtract, sub, UIntMaskType, unsigned int64)
+DEFINE_ATOMIC_MINMAX_OP_DECL(unsigned int32, uint32, min, umin, UIntMaskType, unsigned int64)
+DEFINE_ATOMIC_MINMAX_OP_DECL(unsigned int32, uint32, max, umax, UIntMaskType, unsigned int64)
+DEFINE_ATOMIC_OP_DECL(unsigned int32, int32, and, and, UIntMaskType, unsigned int64)
+DEFINE_ATOMIC_OP_DECL(unsigned int32, int32, or, or, UIntMaskType, unsigned int64)
+DEFINE_ATOMIC_OP_DECL(unsigned int32, int32, xor, xor, UIntMaskType, unsigned int64)
+DEFINE_ATOMIC_SWAP_DECL(unsigned int32, int32, UIntMaskType, unsigned int64)
+
+DEFINE_ATOMIC_OP_DECL(float, float, add, fadd, IntMaskType, int64)
+DEFINE_ATOMIC_OP_DECL(float, float, subtract, fsub, IntMaskType, int64)
+DEFINE_ATOMIC_MINMAX_OP_DECL(float, float, min, fmin, IntMaskType, int64)
+DEFINE_ATOMIC_MINMAX_OP_DECL(float, float, max, fmax, IntMaskType, int64)
+DEFINE_ATOMIC_SWAP_DECL(float, float, IntMaskType, int64)
+
+DEFINE_ATOMIC_OP_DECL(int64, int64, add, add, IntMaskType, int64)
+DEFINE_ATOMIC_OP_DECL(int64, int64, subtract, sub, IntMaskType, int64)
+DEFINE_ATOMIC_MINMAX_OP_DECL(int64, int64, min, min, IntMaskType, int64)
+DEFINE_ATOMIC_MINMAX_OP_DECL(int64, int64, max, max, IntMaskType, int64)
+DEFINE_ATOMIC_OP_DECL(int64, int64, and, and, IntMaskType, int64)
+DEFINE_ATOMIC_OP_DECL(int64, int64, or, or, IntMaskType, int64)
+DEFINE_ATOMIC_OP_DECL(int64, int64, xor, xor, IntMaskType, int64)
+DEFINE_ATOMIC_SWAP_DECL(int64, int64, IntMaskType, int64)
+
+// For everything but atomic min and max, we can use the same
+// implementations for unsigned as for signed.
+DEFINE_ATOMIC_OP_DECL(unsigned int64, int64, add, add, UIntMaskType, unsigned int64)
+DEFINE_ATOMIC_OP_DECL(unsigned int64, int64, subtract, sub, UIntMaskType, unsigned int64)
+DEFINE_ATOMIC_MINMAX_OP_DECL(unsigned int64, uint64, min, umin, UIntMaskType, unsigned int64)
+DEFINE_ATOMIC_MINMAX_OP_DECL(unsigned int64, uint64, max, umax, UIntMaskType, unsigned int64)
+DEFINE_ATOMIC_OP_DECL(unsigned int64, int64, and, and, UIntMaskType, unsigned int64)
+DEFINE_ATOMIC_OP_DECL(unsigned int64, int64, or, or, UIntMaskType, unsigned int64)
+DEFINE_ATOMIC_OP_DECL(unsigned int64, int64, xor, xor, UIntMaskType, unsigned int64)
+DEFINE_ATOMIC_SWAP_DECL(unsigned int64, int64, UIntMaskType, unsigned int64)
+
+DEFINE_ATOMIC_OP_DECL(double, double, add, fadd, IntMaskType, int64)
+DEFINE_ATOMIC_OP_DECL(double, double, subtract, fsub, IntMaskType, int64)
+DEFINE_ATOMIC_MINMAX_OP_DECL(double, double, min, fmin, IntMaskType, int64)
+DEFINE_ATOMIC_MINMAX_OP_DECL(double, double, max, fmax, IntMaskType, int64)
+DEFINE_ATOMIC_SWAP_DECL(double, double, IntMaskType, int64)
+
+#undef DEFINE_ATOMIC_OP_DECL
+#undef DEFINE_ATOMIC_MINMAX_OP_DECL
+#undef DEFINE_ATOMIC_SWAP_DECL
+
+#define ATOMIC_DECL_CMPXCHG_DECL(TA, TB, MASKTYPE, TC)                                                                 \
+    inline uniform TA atomic_compare_exchange_global(uniform TA *uniform ptr, uniform TA oldval, uniform TA newval);   \
+    inline TA atomic_compare_exchange_global(uniform TA *uniform ptr, TA oldval, TA newval);                           \
+    inline TA atomic_compare_exchange_global(uniform TA *varying ptr, TA oldval, TA newval);
+
+ATOMIC_DECL_CMPXCHG_DECL(int32, int32, IntMaskType, int64)
+ATOMIC_DECL_CMPXCHG_DECL(unsigned int32, int32, UIntMaskType, unsigned int64)
+ATOMIC_DECL_CMPXCHG_DECL(float, float, IntMaskType, int64)
+ATOMIC_DECL_CMPXCHG_DECL(int64, int64, IntMaskType, int64)
+ATOMIC_DECL_CMPXCHG_DECL(unsigned int64, int64, UIntMaskType, unsigned int64)
+ATOMIC_DECL_CMPXCHG_DECL(double, double, IntMaskType, int64)
+
+#undef ATOMIC_DECL_CMPXCHG_DECL
+
+// void * variants of swap and compare exchange
+inline void *atomic_swap_global(void **uniform ptr, void *value);
+inline void *uniform atomic_swap_global(void **uniform ptr, void *uniform value);
+inline void *atomic_swap_global(void **ptr, void *value);
+inline void *atomic_compare_exchange_global(void **uniform ptr, void *oldval, void *newval);
+inline void *uniform atomic_compare_exchange_global(void **uniform ptr, void *uniform oldval, void *uniform newval);
+inline void *atomic_compare_exchange_global(void **ptr, void *oldval, void *newval);
+
+///////////////////////////////////////////////////////////////////////////
+// local atomics
+
+#define LOCAL_ATOMIC_DECL(TYPE, NAME, OPFUNC)                                                                          \
+    inline uniform TYPE atomic_##NAME##_local(uniform TYPE *uniform ptr, uniform TYPE value);                          \
+    inline TYPE atomic_##NAME##_local(uniform TYPE *uniform ptr, TYPE value);                                          \
+    inline TYPE atomic_##NAME##_local(uniform TYPE *p, TYPE value);
+
+inline uniform int32 __add(uniform int32 a, uniform int32 b);
+inline uniform int32 __sub(uniform int32 a, uniform int32 b);
+inline uniform int32 __and(uniform int32 a, uniform int32 b);
+inline uniform int32 __or(uniform int32 a, uniform int32 b);
+inline uniform int32 __xor(uniform int32 a, uniform int32 b);
+inline uniform int32 __swap(uniform int32 a, uniform int32 b);
+
+inline uniform unsigned int32 __add(uniform unsigned int32 a, uniform unsigned int32 b);
+inline uniform unsigned int32 __sub(uniform unsigned int32 a, uniform unsigned int32 b);
+inline uniform unsigned int32 __and(uniform unsigned int32 a, uniform unsigned int32 b);
+inline uniform unsigned int32 __or(uniform unsigned int32 a, uniform unsigned int32 b);
+inline uniform unsigned int32 __xor(uniform unsigned int32 a, uniform unsigned int32 b);
+inline uniform unsigned int32 __swap(uniform unsigned int32 a, uniform unsigned int32 b);
+
+inline uniform float __add(uniform float a, uniform float b);
+inline uniform float __sub(uniform float a, uniform float b);
+inline uniform float __swap(uniform float a, uniform float b);
+
+inline uniform int64 __add(uniform int64 a, uniform int64 b);
+inline uniform int64 __sub(uniform int64 a, uniform int64 b);
+inline uniform int64 __and(uniform int64 a, uniform int64 b);
+inline uniform int64 __or(uniform int64 a, uniform int64 b);
+inline uniform int64 __xor(uniform int64 a, uniform int64 b);
+inline uniform int64 __swap(uniform int64 a, uniform int64 b);
+
+inline uniform unsigned int64 __add(uniform unsigned int64 a, uniform unsigned int64 b);
+inline uniform unsigned int64 __sub(uniform unsigned int64 a, uniform unsigned int64 b);
+inline uniform unsigned int64 __and(uniform unsigned int64 a, uniform unsigned int64 b);
+inline uniform unsigned int64 __or(uniform unsigned int64 a, uniform unsigned int64 b);
+inline uniform unsigned int64 __xor(uniform unsigned int64 a, uniform unsigned int64 b);
+inline uniform unsigned int64 __swap(uniform unsigned int64 a, uniform unsigned int64 b);
+
+inline uniform double __add(uniform double a, uniform double b);
+inline uniform double __sub(uniform double a, uniform double b);
+inline uniform double __swap(uniform double a, uniform double b);
+
+LOCAL_ATOMIC_DECL(int32, add, __add)
+LOCAL_ATOMIC_DECL(int32, subtract, __sub)
+LOCAL_ATOMIC_DECL(int32, and, __and)
+LOCAL_ATOMIC_DECL(int32, or, __or)
+LOCAL_ATOMIC_DECL(int32, xor, __xor)
+LOCAL_ATOMIC_DECL(int32, min, min)
+LOCAL_ATOMIC_DECL(int32, max, max)
+LOCAL_ATOMIC_DECL(int32, swap, __swap)
+
+LOCAL_ATOMIC_DECL(unsigned int32, add, __add)
+LOCAL_ATOMIC_DECL(unsigned int32, subtract, __sub)
+LOCAL_ATOMIC_DECL(unsigned int32, and, __and)
+LOCAL_ATOMIC_DECL(unsigned int32, or, __or)
+LOCAL_ATOMIC_DECL(unsigned int32, xor, __xor)
+LOCAL_ATOMIC_DECL(unsigned int32, min, min)
+LOCAL_ATOMIC_DECL(unsigned int32, max, max)
+LOCAL_ATOMIC_DECL(unsigned int32, swap, __swap)
+
+LOCAL_ATOMIC_DECL(float, add, __add)
+LOCAL_ATOMIC_DECL(float, subtract, __sub)
+LOCAL_ATOMIC_DECL(float, min, min)
+LOCAL_ATOMIC_DECL(float, max, max)
+LOCAL_ATOMIC_DECL(float, swap, __swap)
+
+LOCAL_ATOMIC_DECL(int64, add, __add)
+LOCAL_ATOMIC_DECL(int64, subtract, __sub)
+LOCAL_ATOMIC_DECL(int64, and, __and)
+LOCAL_ATOMIC_DECL(int64, or, __or)
+LOCAL_ATOMIC_DECL(int64, xor, __xor)
+LOCAL_ATOMIC_DECL(int64, min, min)
+LOCAL_ATOMIC_DECL(int64, max, max)
+LOCAL_ATOMIC_DECL(int64, swap, __swap)
+
+LOCAL_ATOMIC_DECL(unsigned int64, add, __add)
+LOCAL_ATOMIC_DECL(unsigned int64, subtract, __sub)
+LOCAL_ATOMIC_DECL(unsigned int64, and, __and)
+LOCAL_ATOMIC_DECL(unsigned int64, or, __or)
+LOCAL_ATOMIC_DECL(unsigned int64, xor, __xor)
+LOCAL_ATOMIC_DECL(unsigned int64, min, min)
+LOCAL_ATOMIC_DECL(unsigned int64, max, max)
+LOCAL_ATOMIC_DECL(unsigned int64, swap, __swap)
+
+LOCAL_ATOMIC_DECL(double, add, __add)
+LOCAL_ATOMIC_DECL(double, subtract, __sub)
+LOCAL_ATOMIC_DECL(double, min, min)
+LOCAL_ATOMIC_DECL(double, max, max)
+LOCAL_ATOMIC_DECL(double, swap, __swap)
+
+// compare exchange
+#define LOCAL_CMPXCHG_DECL(TYPE)                                                                                       \
+    inline uniform TYPE atomic_compare_exchange_local(uniform TYPE *uniform ptr, uniform TYPE cmp,                     \
+                                                      uniform TYPE update);                                            \
+    inline TYPE atomic_compare_exchange_local(uniform TYPE *uniform ptr, TYPE cmp, TYPE update);                       \
+    inline TYPE atomic_compare_exchange_local(uniform TYPE *varying p, TYPE cmp, TYPE update);
+
+LOCAL_CMPXCHG_DECL(int32)
+LOCAL_CMPXCHG_DECL(unsigned int32)
+LOCAL_CMPXCHG_DECL(float)
+LOCAL_CMPXCHG_DECL(int64)
+LOCAL_CMPXCHG_DECL(unsigned int64)
+LOCAL_CMPXCHG_DECL(double)
+
+#undef LOCAL_ATOMIC_DECL
+#undef LOCAL_CMPXCHG_DECL
+
+// void * variants of swap and compare exchange
+inline void *atomic_swap_local(void **uniform ptr, void *value);
+inline void *uniform atomic_swap_local(void **uniform ptr, void *uniform value);
+inline void *atomic_swap_local(void **ptr, void *value);
+inline void *atomic_compare_exchange_local(void **uniform ptr, void *oldval, void *newval);
+inline void *uniform atomic_compare_exchange_local(void **uniform ptr, void *uniform oldval, void *uniform newval);
+inline void *atomic_compare_exchange_local(void **ptr, void *oldval, void *newval);
+
+// Transcendentals (float precision)
+
+__declspec(safe) inline float sqrt(float v);
+__declspec(safe) inline uniform float sqrt(uniform float v);
+__declspec(safe) inline float rsqrt(float v);
+__declspec(safe) inline uniform float rsqrt(uniform float v);
+__declspec(safe) inline float rsqrt_fast(float v);
+__declspec(safe) inline uniform float rsqrt_fast(uniform float v);
+__declspec(safe) inline float ldexp(float x, int n);
+__declspec(safe) inline uniform float ldexp(uniform float x, uniform int n);
+__declspec(safe) inline float frexp(float x, varying int *uniform pw2);
+__declspec(safe) inline uniform float frexp(uniform float x, uniform int *uniform pw2);
+
+// Most of the transcendental implementations in ispc code here come from
+// Solomon Boulos's "syrah": https://github.com/boulos/syrah/
+__declspec(safe) inline float sin(float x_full);
+__declspec(safe) inline uniform float sin(uniform float x_full);
+__declspec(safe) inline float asin(float x0);
+__declspec(safe) inline uniform float asin(uniform float x0);
+__declspec(safe) inline float cos(float x_full);
+__declspec(safe) inline uniform float cos(uniform float x_full);
+__declspec(safe) inline float acos(float v);
+__declspec(safe) inline uniform float acos(uniform float v);
+__declspec(safe) inline void sincos(float x_full, varying float *uniform sin_result, varying float *uniform cos_result);
+__declspec(safe) inline void sincos(uniform float x_full, uniform float *uniform sin_result,
+                                    uniform float *uniform cos_result);
+__declspec(safe) inline float tan(float x_full);
+__declspec(safe) inline uniform float tan(uniform float x_full);
+__declspec(safe) inline float atan(float x_full);
+__declspec(safe) inline uniform float atan(uniform float x_full);
+__declspec(safe) inline float atan2(float y, float x);
+__declspec(safe) inline uniform float atan2(uniform float y, uniform float x);
+__declspec(safe) inline float exp(float x_full);
+__declspec(safe) inline uniform float exp(uniform float x_full);
+
+// Range reduction for logarithms takes log(x) -> log(2^n * y) -> n
+// * log(2) + log(y) where y is the reduced range (usually in [1/2,
+// 1)).
+__declspec(safe) inline void __range_reduce_log(float input, varying float *uniform reduced,
+                                                varying int *uniform exponent);
+__declspec(safe) inline void __range_reduce_log(uniform float input, uniform float *uniform reduced,
+                                                uniform int *uniform exponent);
+__declspec(safe) inline float log(float x_full);
+__declspec(safe) inline uniform float log(uniform float x_full);
+__declspec(safe) inline float pow(float a, float b);
+__declspec(safe) inline uniform float pow(uniform float a, uniform float b);
+
+///////////////////////////////////////////////////////////////////////////
+// Transcendentals (16-bit float precision)
+
+__declspec(safe) inline float16 sqrt(float16 v);
+__declspec(safe) inline uniform float16 sqrt(uniform float16 v);
+__declspec(safe) inline float16 rsqrt(float16 v);
+__declspec(safe) inline uniform float16 rsqrt(uniform float16 v);
+__declspec(safe) inline float16 ldexp(float16 x, int n);
+__declspec(safe) inline uniform float16 ldexp(uniform float16 x, uniform int n);
+__declspec(safe) inline float16 frexp(float16 x, varying int *uniform pw2);
+__declspec(safe) inline uniform float16 frexp(uniform float16 x, uniform int *uniform pw2);
+
+// If no native trigonometry support, convert to float, get asin and convert to half back
+__declspec(safe) inline float16 sin(float16 x_full);
+__declspec(safe) inline uniform float16 sin(uniform float16 x_full);
+__declspec(safe) inline float16 asin(float16 x_full);
+__declspec(safe) inline uniform float16 asin(uniform float16 x_full);
+__declspec(safe) inline float16 cos(float16 x_full);
+__declspec(safe) inline uniform float16 cos(uniform float16 x_full);
+__declspec(safe) inline float16 tan(float16 x_full);
+__declspec(safe) inline uniform float16 tan(uniform float16 x_full);
+__declspec(safe) inline float16 acos(float16 x_full);
+__declspec(safe) inline uniform float16 acos(uniform float16 x_full);
+__declspec(safe) inline void sincos(float16 x_full, varying float16 *uniform sin_result,
+                                    varying float16 *uniform cos_result);
+__declspec(safe) inline void sincos(uniform float16 x_full, uniform float16 *uniform sin_result,
+                                    uniform float16 *uniform cos_result);
+__declspec(safe) inline float16 atan(float16 x_full);
+__declspec(safe) inline uniform float16 atan(uniform float16 x_full);
+__declspec(safe) inline float16 atan2(float16 y, float16 x);
+__declspec(safe) inline uniform float16 atan2(uniform float16 y, uniform float16 x);
+__declspec(safe) inline float16 exp(float16 x_full);
+__declspec(safe) inline uniform float16 exp(uniform float16 x_full);
+__declspec(safe) inline float16 log(float16 x_full);
+__declspec(safe) inline uniform float16 log(uniform float16 x_full);
+__declspec(safe) inline float16 pow(float16 a, float16 b);
+__declspec(safe) inline uniform float16 pow(uniform float16 a, uniform float16 b);
+
+///////////////////////////////////////////////////////////////////////////
+// Transcendentals (double precision)
+
+__declspec(safe) inline double sqrt(double v);
+__declspec(safe) inline uniform double sqrt(uniform double v);
+
+#define RSQRTD_DECL(QUAL)                                                                                              \
+    __declspec(safe) inline QUAL double __rsqrt_iterate_##QUAL##_double(QUAL double x, QUAL double y);                 \
+    __declspec(safe) inline QUAL double __rsqrt_safe_##QUAL##_double(QUAL double x);
+
+RSQRTD_DECL(varying)
+
+__declspec(safe) inline double rsqrt(double v);
+
+RSQRTD_DECL(uniform)
+#undef RSQRTD_DECL
+
+__declspec(safe) inline uniform double rsqrt(uniform double v);
+__declspec(safe) inline double rsqrt_fast(double v);
+__declspec(safe) inline uniform double rsqrt_fast(uniform double v);
+__declspec(safe) inline double ldexp(double x, int n);
+__declspec(safe) inline uniform double ldexp(uniform double x, uniform int n);
+__declspec(safe) inline double frexp(double x, varying int *uniform pw2);
+__declspec(safe) inline uniform double frexp(uniform double x, uniform int *uniform pw2);
+__declspec(safe) inline double sin(double x);
+__declspec(safe) inline uniform double sin(uniform double x);
+__declspec(safe) inline uniform double asin(uniform double x);
+__declspec(safe) inline double asin(const double x);
+__declspec(safe) inline double cos(const double x);
+__declspec(safe) inline uniform double cos(uniform double x);
+__declspec(safe) inline double acos(const double v);
+__declspec(safe) inline uniform double acos(const uniform double v);
+__declspec(safe) inline void sincos(double x, varying double *uniform sin_result, varying double *uniform cos_result);
+__declspec(safe) inline void sincos(uniform double x, uniform double *uniform sin_result,
+                                    uniform double *uniform cos_result);
+__declspec(safe) inline double tan(double x);
+__declspec(safe) inline uniform double tan(uniform double x);
+__declspec(safe) inline double atan(double x);
+__declspec(safe) inline uniform double atan(uniform double x);
+__declspec(safe) inline double atan2(double y, double x);
+__declspec(safe) inline uniform double atan2(uniform double y, uniform double x);
+__declspec(safe) inline double exp(double x);
+__declspec(safe) inline uniform double exp(uniform double x);
+__declspec(safe) inline double log(double x);
+__declspec(safe) inline uniform double log(uniform double x);
+__declspec(safe) inline double pow(double a, double b);
+__declspec(safe) inline uniform double pow(uniform double a, uniform double b);
+
+///////////////////////////////////////////////////////////////////////////
+// half-precision floats
+
+__declspec(safe) inline uniform float half_to_float(uniform unsigned int16 h);
+__declspec(safe) inline float half_to_float(unsigned int16 h);
+__declspec(safe) inline uniform int16 float_to_half(uniform float f);
+__declspec(safe) inline int16 float_to_half(float f);
+__declspec(safe) inline uniform float half_to_float_fast(uniform unsigned int16 h);
+__declspec(safe) inline float half_to_float_fast(unsigned int16 h);
+__declspec(safe) inline uniform int16 float_to_half_fast(uniform float f);
+__declspec(safe) inline int16 float_to_half_fast(float f);
+
+///////////////////////////////////////////////////////////////////////////
+// float -> srgb8
+
+// https://gist.github.com/2246678, from Fabian "rygorous" Giesen.
+//
+// The basic ideas are still the same, only this time, we squeeze
+// everything into the table, even the linear part of the range; since we
+// are approximating the function as piecewise linear anyway, this is
+// fairly easy.
+//
+// In the exact version of the conversion, any value that produces an
+// output float less than 0.5 will be rounded to an integer of
+// zero. Inverting the linear part of the transform, we get:
+//
+//   log2(0.5 / (255 * 12.92)) =~ -12.686
+//
+// which in turn means that any value smaller than about 2^(-12.687) will
+// return 0.  What this means is that we can adapt the clamping code to
+// just clamp to [2^(-13), 1-eps] and we're covered. This means our table
+// needs to cover a range of 13 different exponents from -13 to -1.
+//
+// The table lookup, storage and interpolation works exactly the same way
+// as in the code above.
+//
+// Max error for the whole function (integer-rounded result minus "exact"
+// value, as computed in floats using the official formula): 0.544403 at
+// 0x3e9f8000
+
+__declspec(safe) inline int float_to_srgb8(float inval);
+__declspec(safe) inline uniform int float_to_srgb8(uniform float inval);
+
+///////////////////////////////////////////////////////////////////////////
+// RNG stuff
+
+inline unsigned int random(varying RNGState *uniform state);
+inline uniform unsigned int random(uniform RNGState *uniform state);
+inline float frandom(varying RNGState *uniform state);
+inline uniform float frandom(uniform RNGState *uniform state);
+inline void seed_rng(varying RNGState *uniform state, unsigned int seed);
+inline void seed_rng(uniform RNGState *uniform state, uniform unsigned int seed);
+inline void fastmath();
+
+///////////////////////////////////////////////////////////////////////////
+// saturation arithmetic
+
+inline uniform int8 saturating_add(uniform int8 a, uniform int8 b);
+inline varying int8 saturating_add(varying int8 a, varying int8 b);
+inline uniform int16 saturating_add(uniform int16 a, uniform int16 b);
+inline varying int16 saturating_add(varying int16 a, varying int16 b);
+inline uniform int32 saturating_add(uniform int32 a, uniform int32 b);
+inline varying int32 saturating_add(varying int32 a, varying int32 b);
+inline uniform int64 saturating_add(uniform int64 a, uniform int64 b);
+inline varying int64 saturating_add(varying int64 a, varying int64 b);
+inline uniform unsigned int8 saturating_add(uniform unsigned int8 a, uniform unsigned int8 b);
+inline varying unsigned int8 saturating_add(varying unsigned int8 a, varying unsigned int8 b);
+inline uniform unsigned int16 saturating_add(uniform unsigned int16 a, uniform unsigned int16 b);
+inline varying unsigned int16 saturating_add(varying unsigned int16 a, varying unsigned int16 b);
+inline uniform unsigned int32 saturating_add(uniform unsigned int32 a, uniform unsigned int32 b);
+inline varying unsigned int32 saturating_add(varying unsigned int32 a, varying unsigned int32 b);
+inline uniform unsigned int64 saturating_add(uniform unsigned int64 a, uniform unsigned int64 b);
+inline varying unsigned int64 saturating_add(varying unsigned int64 a, varying unsigned int64 b);
+inline uniform int8 saturating_sub(uniform int8 a, uniform int8 b);
+inline varying int8 saturating_sub(varying int8 a, varying int8 b);
+inline uniform int16 saturating_sub(uniform int16 a, uniform int16 b);
+inline varying int16 saturating_sub(varying int16 a, varying int16 b);
+inline uniform int32 saturating_sub(uniform int32 a, uniform int32 b);
+inline varying int32 saturating_sub(varying int32 a, varying int32 b);
+inline uniform int64 saturating_sub(uniform int64 a, uniform int64 b);
+inline varying int64 saturating_sub(varying int64 a, varying int64 b);
+inline uniform unsigned int8 saturating_sub(uniform unsigned int8 a, uniform unsigned int8 b);
+inline varying unsigned int8 saturating_sub(varying unsigned int8 a, varying unsigned int8 b);
+inline uniform unsigned int16 saturating_sub(uniform unsigned int16 a, uniform unsigned int16 b);
+inline varying unsigned int16 saturating_sub(varying unsigned int16 a, varying unsigned int16 b);
+inline uniform unsigned int32 saturating_sub(uniform unsigned int32 a, uniform unsigned int32 b);
+inline varying unsigned int32 saturating_sub(varying unsigned int32 a, varying unsigned int32 b);
+inline uniform unsigned int64 saturating_sub(uniform unsigned int64 a, uniform unsigned int64 b);
+inline varying unsigned int64 saturating_sub(varying unsigned int64 a, varying unsigned int64 b);
+inline uniform int8 saturating_div(uniform int8 a, uniform int8 b);
+inline varying int8 saturating_div(varying int8 a, varying int8 b);
+inline uniform int16 saturating_div(uniform int16 a, uniform int16 b);
+inline varying int16 saturating_div(varying int16 a, varying int16 b);
+inline uniform int32 saturating_div(uniform int32 a, uniform int32 b);
+inline varying int32 saturating_div(varying int32 a, varying int32 b);
+inline uniform int64 saturating_div(uniform int64 a, uniform int64 b);
+inline varying int64 saturating_div(varying int64 a, varying int64 b);
+inline uniform unsigned int8 saturating_div(uniform unsigned int8 a, uniform unsigned int8 b);
+inline varying unsigned int8 saturating_div(varying unsigned int8 a, varying unsigned int8 b);
+inline uniform unsigned int16 saturating_div(uniform unsigned int16 a, uniform unsigned int16 b);
+inline varying unsigned int16 saturating_div(varying unsigned int16 a, varying unsigned int16 b);
+inline uniform unsigned int32 saturating_div(uniform unsigned int32 a, uniform unsigned int32 b);
+inline varying unsigned int32 saturating_div(varying unsigned int32 a, varying unsigned int32 b);
+inline uniform unsigned int64 saturating_div(uniform unsigned int64 a, uniform unsigned int64 b);
+inline varying unsigned int64 saturating_div(varying unsigned int64 a, varying unsigned int64 b);
+inline uniform int8 saturating_mul(uniform int8 a, uniform int8 b);
+inline varying int8 saturating_mul(varying int8 a, varying int8 b);
+inline uniform int16 saturating_mul(uniform int16 a, uniform int16 b);
+inline varying int16 saturating_mul(varying int16 a, varying int16 b);
+inline uniform int32 saturating_mul(uniform int32 a, uniform int32 b);
+inline varying int32 saturating_mul(varying int32 a, varying int32 b);
+inline uniform unsigned int8 saturating_mul(uniform unsigned int8 a, uniform unsigned int8 b);
+inline varying unsigned int8 saturating_mul(varying unsigned int8 a, varying unsigned int8 b);
+inline uniform unsigned int16 saturating_mul(uniform unsigned int16 a, uniform unsigned int16 b);
+inline varying unsigned int16 saturating_mul(varying unsigned int16 a, varying unsigned int16 b);
+inline uniform unsigned int32 saturating_mul(uniform unsigned int32 a, uniform unsigned int32 b);
+inline varying unsigned int32 saturating_mul(varying unsigned int32 a, varying unsigned int32 b);
+inline uniform int64 saturating_mul(uniform int64 a, uniform int64 b);
+inline varying int64 saturating_mul(varying int64 a, varying int64 b);
+inline uniform unsigned int64 saturating_mul(uniform unsigned int64 a, uniform unsigned int64 b);
+inline varying unsigned int64 saturating_mul(varying unsigned int64 a, varying unsigned int64 b);
+
+///////////////////////////////////////////////////////////////////////////
+// rdrand
+
+inline uniform bool rdrand(float *uniform ptr);
+inline bool rdrand(varying float *uniform ptr);
+inline bool rdrand(float *ptr);
+inline uniform bool rdrand(int16 *uniform ptr);
+inline bool rdrand(varying int16 *uniform ptr);
+inline bool rdrand(int16 *ptr);
+inline uniform bool rdrand(int32 *uniform ptr);
+inline bool rdrand(varying int32 *uniform ptr);
+inline bool rdrand(int32 *ptr);
+inline uniform bool rdrand(int64 *uniform ptr);
+inline bool rdrand(varying int64 *uniform ptr);
+inline bool rdrand(int64 *ptr);
+
+///////////////////////////////////////////////////////////////////////////
+// Saturating int8/int16 ops
+
+__declspec(safe) inline unmasked unsigned int8 avg_up(unsigned int8 a, unsigned int8 b);
+__declspec(safe) inline unmasked int8 avg_up(int8 a, int8 b);
+__declspec(safe) inline unmasked unsigned int16 avg_up(unsigned int16 a, unsigned int16 b);
+__declspec(safe) inline unmasked int16 avg_up(int16 a, int16 b);
+__declspec(safe) inline unmasked unsigned int8 avg_down(unsigned int8 a, unsigned int8 b);
+__declspec(safe) inline unmasked int8 avg_down(int8 a, int8 b);
+__declspec(safe) inline unmasked unsigned int16 avg_down(unsigned int16 a, unsigned int16 b);
+__declspec(safe) inline unmasked int16 avg_down(int16 a, int16 b);
+
+///////////////////////////////////////////////////////////////////////////
+// Assume uniform/varying ops
+__declspec(safe) inline void assume(uniform bool test);
+
+///////////////////////////////////////////////////////////////////////////
+// Dot product and accumulate
+// Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in a with corresponding signed
+// 8-bit integers in b, producing 4 intermediate signed 16-bit results.
+// Sum these 4 results with the corresponding 32-bit integer in acc, and return the result.
+__declspec(safe) inline varying int32 dot4add_u8i8packed(varying uint32 a, varying uint32 b, varying int32 acc);
+
+// Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in a with corresponding signed
+// 8-bit integers in b, producing 4 intermediate signed 16-bit results.
+// Sum these 4 results with the corresponding 32-bit integer in acc using signed saturation, and return the result.
+__declspec(safe) inline varying int32 dot4add_u8i8packed_sat(varying uint32 a, varying uint32 b, varying int32 acc);
+
+// Multiply groups of 2 adjacent pairs of signed 16-bit integers in a
+// with corresponding 16-bit integers in b, producing 2 intermediate signed 32-bit results.
+// Sum these 2 results with the corresponding 32-bit integer in src, and return the result.
+__declspec(safe) inline varying int32 dot2add_i16packed(varying uint32 a, varying uint32 b, varying int32 acc);
+
+// Multiply groups of 2 adjacent pairs of signed 16-bit integers in a
+// with corresponding 16-bit integers in b, producing 2 intermediate signed 32-bit results.
+// Sum these 2 results with the corresponding 32-bit integer in src using signed saturation, and return the result.
+__declspec(safe) inline varying int32 dot2add_i16packed_sat(varying uint32 a, varying uint32 b, varying int32 acc);
+
+#endif // ISPC_STDLIB_ISPH

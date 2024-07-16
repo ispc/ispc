@@ -1,4 +1,4 @@
-// RUN: %{ispc} --target=host --nowrap --nostdlib --debug-phase=first:first %s --emit-llvm-text -o - | FileCheck %s
+// RUN: %{ispc} --target=host --nowrap --nostdlib --debug-phase=2:2 %s --no-discard-value-names -o t.o | FileCheck %s
 
 // CHECK: @programCount = internal constant i32 [[WIDTH:[0-9]+]]
 

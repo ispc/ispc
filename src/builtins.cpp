@@ -21,17 +21,28 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include <unordered_set>
+
+#include <llvm/ADT/StringRef.h>
+#include <llvm/ADT/StringSet.h>
 #include <llvm/Bitcode/BitcodeReader.h>
 #include <llvm/IR/Attributes.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Intrinsics.h>
 #include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
 #include <llvm/Linker/Linker.h>
+#include <llvm/Passes/PassBuilder.h>
+#include <llvm/Support/FileSystem.h>
 #include <llvm/Support/MemoryBuffer.h>
+#include <llvm/Support/Path.h>
+#include <llvm/Support/raw_ostream.h>
 #include <llvm/Target/TargetMachine.h>
+#include <llvm/Transforms/IPO.h>
+#include <llvm/Transforms/IPO/GlobalDCE.h>
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_17_0
 #include <llvm/TargetParser/Triple.h>
 #else
@@ -44,12 +55,6 @@
 
 using namespace ispc;
 using namespace ispc::builtin;
-
-extern int yyparse();
-struct yy_buffer_state;
-extern yy_buffer_state *yy_scan_string(const char *);
-typedef struct yy_buffer_state *YY_BUFFER_STATE;
-extern void yy_delete_buffer(YY_BUFFER_STATE);
 
 /** Given an LLVM type, try to find the equivalent ispc type.  Note that
     this is an under-constrained problem due to LLVM's type representations
@@ -139,114 +144,6 @@ static const Type *lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) 
     return nullptr;
 }
 
-static void lCreateSymbol(const std::string &name, const Type *returnType, llvm::SmallVector<const Type *, 8> &argTypes,
-                          const llvm::FunctionType *ftype, llvm::Function *func, SymbolTable *symbolTable) {
-    SourcePos noPos;
-    noPos.name = "__stdlib";
-
-    FunctionType *funcType = new FunctionType(returnType, argTypes, noPos);
-
-    Debug(noPos, "Created builtin symbol \"%s\" [%s]\n", name.c_str(), funcType->GetString().c_str());
-
-    Symbol *sym = new Symbol(name, noPos, funcType);
-    sym->function = func;
-    symbolTable->AddFunction(sym);
-}
-
-/** Given an LLVM function declaration, synthesize the equivalent ispc
-    symbol for the function (if possible).  Returns true on success, false
-    on failure.
- */
-static bool lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
-    SourcePos noPos;
-    noPos.name = "__stdlib";
-
-    const llvm::FunctionType *ftype = func->getFunctionType();
-    std::string name = std::string(func->getName());
-
-    if (name.size() < 3 || name[0] != '_' || name[1] != '_')
-        return false;
-
-    Debug(SourcePos(), "Attempting to create ispc symbol for function \"%s\".", name.c_str());
-
-    // An unfortunate hack: we want this builtin function to have the
-    // signature "int __sext_varying_bool(bool)", but the ispc function
-    // symbol creation code below assumes that any LLVM vector of i32s is a
-    // varying int32.  Here, we need that to be interpreted as a varying
-    // bool, so just have a one-off override for that one...
-    if (g->target->getMaskBitCount() != 1 && name == builtin::__sext_varying_bool) {
-        const Type *returnType = AtomicType::VaryingInt32;
-        llvm::SmallVector<const Type *, 8> argTypes;
-        argTypes.push_back(AtomicType::VaryingBool);
-
-        FunctionType *funcType = new FunctionType(returnType, argTypes, noPos);
-
-        Symbol *sym = new Symbol(name, noPos, funcType);
-        sym->function = func;
-        symbolTable->AddFunction(sym);
-        return true;
-    }
-
-    // Special case for dot product functions which have mix of signed and unsigned types.
-    if (name.find("__dot2add") != std::string::npos || name.find("__dot4add") != std::string::npos) {
-        const Type *returnType = AtomicType::VaryingInt32;
-        llvm::SmallVector<const Type *, 8> argTypes;
-        argTypes.push_back(AtomicType::VaryingUInt32); // packed value, must be uint32
-        argTypes.push_back(AtomicType::VaryingUInt32); // packed value, must be uint32
-        argTypes.push_back(AtomicType::VaryingInt32);
-
-        FunctionType *funcType = new FunctionType(returnType, argTypes, noPos);
-
-        Symbol *sym = new Symbol(name, noPos, funcType);
-        sym->function = func;
-        symbolTable->AddFunction(sym);
-        return true;
-    }
-
-    // If the function has any parameters with integer types, we'll make
-    // two Symbols for two overloaded versions of the function, one with
-    // all of the integer types treated as signed integers and one with all
-    // of them treated as unsigned.
-    for (int i = 0; i < 2; ++i) {
-        bool intAsUnsigned = (i == 1);
-
-        const Type *returnType = lLLVMTypeToISPCType(ftype->getReturnType(), intAsUnsigned);
-        if (returnType == nullptr) {
-            Debug(SourcePos(),
-                  "Return type not representable for "
-                  "builtin %s.",
-                  name.c_str());
-            // return type not representable in ispc -> not callable from ispc
-            return false;
-        }
-
-        // Iterate over the arguments and try to find their equivalent ispc
-        // types.  Track if any of the arguments has an integer type.
-        bool anyIntArgs = false;
-        llvm::SmallVector<const Type *, 8> argTypes;
-        for (unsigned int j = 0; j < ftype->getNumParams(); ++j) {
-            const llvm::Type *llvmArgType = ftype->getParamType(j);
-            const Type *type = lLLVMTypeToISPCType(llvmArgType, intAsUnsigned);
-            if (type == nullptr) {
-                Debug(SourcePos(),
-                      "Type of parameter %d not "
-                      "representable for builtin %s",
-                      j, name.c_str());
-                return false;
-            }
-            anyIntArgs |= (Type::Equal(type, lLLVMTypeToISPCType(llvmArgType, !intAsUnsigned)) == false);
-            argTypes.push_back(type);
-        }
-
-        // Always create the symbol the first time through, in particular
-        // so that we get symbols for things with no integer types!
-        if (i == 0 || anyIntArgs == true)
-            lCreateSymbol(name, returnType, argTypes, ftype, func, symbolTable);
-    }
-
-    return true;
-}
-
 Symbol *ispc::CreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTable *symbolTable) {
     Symbol *existingSym = symbolTable->LookupIntrinsics(func);
     if (existingSym != nullptr) {
@@ -286,14 +183,34 @@ Symbol *ispc::CreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTable
     return sym;
 }
 
-/** Given an LLVM module, create ispc symbols for the functions in the
-    module.
- */
-static void lAddModuleSymbols(llvm::Module *module, SymbolTable *symbolTable) {
+/** In many of the builtins-*.ll files, we have declarations of various LLVM
+    intrinsics that are then used in the implementation of various target-
+    specific functions.  This function loops over all of the intrinsic
+    declarations and makes sure that the signature we have in our .ll file
+    matches the signature of the actual intrinsic.
+*/
+static void lCheckModuleIntrinsics(llvm::Module *module) {
     llvm::Module::iterator iter;
     for (iter = module->begin(); iter != module->end(); ++iter) {
         llvm::Function *func = &*iter;
-        lCreateISPCSymbol(func, symbolTable);
+        if (!func->isIntrinsic())
+            continue;
+
+        const std::string funcName = func->getName().str();
+        const std::string llvm_x86 = "llvm.x86.";
+        // Work around http://llvm.org/bugs/show_bug.cgi?id=10438; only
+        // check the llvm.x86.* intrinsics for now...
+        if (funcName.length() >= llvm_x86.length() && !funcName.compare(0, llvm_x86.length(), llvm_x86)) {
+            llvm::Intrinsic::ID id = (llvm::Intrinsic::ID)func->getIntrinsicID();
+            if (id == 0) {
+                std::string error_message = "Intrinsic is not found: ";
+                error_message += funcName;
+                FATAL(error_message.c_str());
+            }
+            llvm::Type *intrinsicType = llvm::Intrinsic::getType(*g->ctx, id);
+            intrinsicType = llvm::PointerType::get(intrinsicType, 0);
+            Assert(func->getType() == intrinsicType);
+        }
     }
 }
 
@@ -321,957 +238,381 @@ static void lUpdateIntrinsicsAttributes(llvm::Module *module) {
 #endif
 }
 
-/** In many of the builtins-*.ll files, we have declarations of various LLVM
-    intrinsics that are then used in the implementation of various target-
-    specific functions.  This function loops over all of the intrinsic
-    declarations and makes sure that the signature we have in our .ll file
-    matches the signature of the actual intrinsic.
-*/
-static void lCheckModuleIntrinsics(llvm::Module *module) {
-    llvm::Module::iterator iter;
-    for (iter = module->begin(); iter != module->end(); ++iter) {
-        llvm::Function *func = &*iter;
-        if (!func->isIntrinsic())
-            continue;
+static void lSetAsInternal(llvm::Module *module, llvm::StringSet<> &functions) {
+    for (llvm::Function &F : module->functions()) {
+        if (!F.isDeclaration() && functions.find(F.getName()) != functions.end()) {
+            F.setLinkage(llvm::GlobalValue::InternalLinkage);
+        }
+    }
+}
 
-        const std::string funcName = func->getName().str();
-        // Work around http://llvm.org/bugs/show_bug.cgi?id=10438; only
-        // check the llvm.x86.* intrinsics for now...
-        if (funcName.size() >= 9 && !strncmp(funcName.c_str(), "llvm.x86.", 9)) {
-            llvm::Intrinsic::ID id = (llvm::Intrinsic::ID)func->getIntrinsicID();
-            if (id == 0) {
-                std::string error_message = "Intrinsic is not found: ";
-                error_message += funcName;
-                FATAL(error_message.c_str());
+void lSetInternalLinkageGlobals(llvm::Module *module) {
+    llvm::GlobalValue *fastMaskedVload = module->getNamedGlobal("__fast_masked_vload");
+    llvm::GlobalValue *mathLib = module->getNamedGlobal("__math_lib");
+    if (fastMaskedVload) {
+        fastMaskedVload->setLinkage(llvm::GlobalValue::InternalLinkage);
+    }
+    if (mathLib) {
+        mathLib->setLinkage(llvm::GlobalValue::InternalLinkage);
+    }
+}
+
+void lAddBitcodeToModule(llvm::Module *bcModule, llvm::Module *module) {
+    if (!bcModule) {
+        Error(SourcePos(), "Error library module is nullptr");
+    } else {
+        if (g->target->isXeTarget()) {
+            // Maybe we will use it for other targets in future,
+            // but now it is needed only by Xe. We need
+            // to update attributes because Xe intrinsics are
+            // separated from the others and it is not done by default
+            lUpdateIntrinsicsAttributes(bcModule);
+        }
+
+        for (llvm::Function &f : *bcModule) {
+            if (f.isDeclaration()) {
+                // Declarations with uses will be moved by Linker.
+                if (f.getNumUses() > 0)
+                    continue;
+                // Declarations with 0 uses are moved by hands.
+                module->getOrInsertFunction(f.getName(), f.getFunctionType(), f.getAttributes());
             }
-            llvm::Type *intrinsicType = llvm::Intrinsic::getType(*g->ctx, id);
-            intrinsicType = llvm::PointerType::get(intrinsicType, 0);
-            Assert(func->getType() == intrinsicType);
+        }
+
+        // Remove clang ID metadata from the bitcode module, as we don't need it.
+        llvm::NamedMDNode *identMD = bcModule->getNamedMetadata("llvm.ident");
+        if (identMD) {
+            identMD->eraseFromParent();
+        }
+
+        std::unique_ptr<llvm::Module> M(bcModule);
+        if (llvm::Linker::linkModules(*module, std::move(M), llvm::Linker::Flags::LinkOnlyNeeded)) {
+            Error(SourcePos(), "Error linking stdlib bitcode.");
         }
     }
 }
 
-/** We'd like to have all of these functions declared as 'internal' in
-    their respective bitcode files so that if they aren't needed by the
-    user's program they are elimiated from the final output.  However, if
-    we do so, then they aren't brought in by the LinkModules() call below
-    since they aren't yet used by anything in the module they're being
-    linked with (in LLVM 3.1, at least).
+void lAddDeclarationsToModule(llvm::Module *bcModule, llvm::Module *module) {
+    if (!bcModule) {
+        Error(SourcePos(), "Error library module is nullptr");
+    } else {
+        // FIXME: this feels like a bad idea, but the issue is that when we
+        // set the llvm::Module's target triple in the ispc Module::Module
+        // constructor, we start by calling llvm::sys::getHostTriple() (and
+        // then change the arch if needed).  Somehow that ends up giving us
+        // strings like 'x86_64-apple-darwin11.0.0', while the stuff we
+        // compile to bitcode with clang has module triples like
+        // 'i386-apple-macosx10.7.0'.  And then LLVM issues a warning about
+        // linking together modules with incompatible target triples..
+        llvm::Triple mTriple(m->module->getTargetTriple());
+        llvm::Triple bcTriple(bcModule->getTargetTriple());
+        Debug(SourcePos(), "module triple: %s\nbitcode triple: %s\n", mTriple.str().c_str(), bcTriple.str().c_str());
 
-    Therefore, we don't declare them as internal when we first define them,
-    but instead mark them as internal after they've been linked in.  This
-    is admittedly a kludge.
- */
-static void lSetInternalFunctions(llvm::Module *module) {
-    // clang-format off
-    const char *names[] = {
-        __add_float,
-        __add_int32,
-        __add_uniform_double,
-        __add_uniform_int32,
-        __add_uniform_int64,
-        __add_varying_double,
-        __add_varying_int32,
-        __add_varying_int64,
-        __all,
-        __any,
-        __aos_to_soa2_double,
-        __aos_to_soa2_double1,
-        __aos_to_soa2_double16,
-        __aos_to_soa2_double32,
-        __aos_to_soa2_double4,
-        __aos_to_soa2_double64,
-        __aos_to_soa2_double8,
-        __aos_to_soa2_float,
-        __aos_to_soa2_float1,
-        __aos_to_soa2_float16,
-        __aos_to_soa2_float32,
-        __aos_to_soa2_float4,
-        __aos_to_soa2_float64,
-        __aos_to_soa2_float8,
-        __aos_to_soa3_double,
-        __aos_to_soa3_double1,
-        __aos_to_soa3_double16,
-        __aos_to_soa3_double32,
-        __aos_to_soa3_double4,
-        __aos_to_soa3_double64,
-        __aos_to_soa3_double8,
-        __aos_to_soa3_float,
-        __aos_to_soa3_float1,
-        __aos_to_soa3_float16,
-        __aos_to_soa3_float32,
-        __aos_to_soa3_float4,
-        __aos_to_soa3_float64,
-        __aos_to_soa3_float8,
-        __aos_to_soa4_double,
-        __aos_to_soa4_double1,
-        __aos_to_soa4_double16,
-        __aos_to_soa4_double32,
-        __aos_to_soa4_double4,
-        __aos_to_soa4_double64,
-        __aos_to_soa4_double8,
-        __aos_to_soa4_float,
-        __aos_to_soa4_float1,
-        __aos_to_soa4_float16,
-        __aos_to_soa4_float32,
-        __aos_to_soa4_float4,
-        __aos_to_soa4_float64,
-        __aos_to_soa4_float8,
-        __atomic_add_int32_global,
-        __atomic_add_int64_global,
-        __atomic_add_uniform_int32_global,
-        __atomic_add_uniform_int64_global,
-        __atomic_and_int32_global,
-        __atomic_and_int64_global,
-        __atomic_and_uniform_int32_global,
-        __atomic_and_uniform_int64_global,
-        __atomic_compare_exchange_double_global,
-        __atomic_compare_exchange_float_global,
-        __atomic_compare_exchange_int32_global,
-        __atomic_compare_exchange_int64_global,
-        __atomic_compare_exchange_uniform_double_global,
-        __atomic_compare_exchange_uniform_float_global,
-        __atomic_compare_exchange_uniform_int32_global,
-        __atomic_compare_exchange_uniform_int64_global,
-        __atomic_fadd_float_global,
-        __atomic_fadd_uniform_float_global,
-        __atomic_fadd_double_global,
-        __atomic_fadd_uniform_double_global,
-        __atomic_fsub_float_global,
-        __atomic_fsub_uniform_float_global,
-        __atomic_fsub_double_global,
-        __atomic_fsub_uniform_double_global,
-        __atomic_fmax_float_global,
-        __atomic_fmax_uniform_float_global,
-        __atomic_fmax_double_global,
-        __atomic_fmax_uniform_double_global,
-        __atomic_fmin_float_global,
-        __atomic_fmin_uniform_float_global,
-        __atomic_fmin_double_global,
-        __atomic_fmin_uniform_double_global,
-        __atomic_max_uniform_int32_global,
-        __atomic_max_uniform_int64_global,
-        __atomic_min_uniform_int32_global,
-        __atomic_min_uniform_int64_global,
-        __atomic_or_int32_global,
-        __atomic_or_int64_global,
-        __atomic_or_uniform_int32_global,
-        __atomic_or_uniform_int64_global,
-        __atomic_sub_int32_global,
-        __atomic_sub_int64_global,
-        __atomic_sub_uniform_int32_global,
-        __atomic_sub_uniform_int64_global,
-        __atomic_swap_double_global,
-        __atomic_swap_float_global,
-        __atomic_swap_int32_global,
-        __atomic_swap_int64_global,
-        __atomic_swap_uniform_double_global,
-        __atomic_swap_uniform_float_global,
-        __atomic_swap_uniform_int32_global,
-        __atomic_swap_uniform_int64_global,
-        __atomic_umax_uniform_uint32_global,
-        __atomic_umax_uniform_uint64_global,
-        __atomic_umin_uniform_uint32_global,
-        __atomic_umin_uniform_uint64_global,
-        __atomic_xor_int32_global,
-        __atomic_xor_int64_global,
-        __atomic_xor_uniform_int32_global,
-        __atomic_xor_uniform_int64_global,
-        __broadcast_double,
-        __broadcast_float,
-        __broadcast_half,
-        __broadcast_i16,
-        __broadcast_i32,
-        __broadcast_i64,
-        __broadcast_i8,
-        __cast_mask_to_i1,
-        __cast_mask_to_i8,
-        __cast_mask_to_i16,
-        __cast_mask_to_i32,
-        __cast_mask_to_i64,
-        __ceil_uniform_double,
-        __ceil_uniform_float,
-        __ceil_uniform_half,
-        __ceil_varying_double,
-        __ceil_varying_float,
-        __ceil_varying_half,
-        __clock,
-        __count_trailing_zeros_i32,
-        __count_trailing_zeros_i64,
-        __count_leading_zeros_i32,
-        __count_leading_zeros_i64,
-        __delete_uniform_32rt,
-        __delete_uniform_64rt,
-        __delete_varying_32rt,
-        __delete_varying_64rt,
-        __do_assume_uniform,
-        __do_assert_uniform,
-        __do_assert_varying,
-        __do_print,
-        __dot2add_i16packed,
-        __dot2add_i16packed_sat,
-        __dot4add_u8i8packed,
-        __dot4add_u8i8packed_sat,
-        __send_eot,
-        __doublebits_uniform_int64,
-        __doublebits_varying_int64,
-        __exclusive_scan_add_double,
-        __exclusive_scan_add_float,
-        __exclusive_scan_add_half,
-        __exclusive_scan_add_i32,
-        __exclusive_scan_add_i64,
-        __exclusive_scan_and_i32,
-        __exclusive_scan_and_i64,
-        __exclusive_scan_or_i32,
-        __exclusive_scan_or_i64,
-        __extract_bool,
-        __extract_int16,
-        __extract_int32,
-        __extract_int64,
-        __extract_int8,
-        __extract_mask_low,
-        __extract_mask_hi,
-        __fastmath,
-        __float_to_half_uniform,
-        __float_to_half_varying,
-        __halfbits_uniform_int16,
-        __halfbits_varying_int16,
-        __floatbits_uniform_int32,
-        __floatbits_varying_int32,
-        __floor_uniform_double,
-        __floor_uniform_float,
-        __floor_uniform_half,
-        __floor_varying_double,
-        __floor_varying_float,
-        __floor_varying_half,
-        __get_system_isa,
-        __half_to_float_uniform,
-        __half_to_float_varying,
-        __idiv_uint8,
-        __idiv_uint16,
-        __idiv_uint32,
-        __idiv_int8,
-        __idiv_int16,
-        __idiv_int32,
-        __insert_bool,
-        __insert_int16,
-        __insert_int32,
-        __insert_int64,
-        __insert_int8,
-        __intbits_uniform_double,
-        __intbits_uniform_float,
-        __intbits_uniform_half,
-        __intbits_varying_double,
-        __intbits_varying_float,
-        __intbits_varying_half,
-        __max_uniform_double,
-        __max_uniform_float,
-        __max_uniform_half,
-        __max_uniform_int32,
-        __max_uniform_int64,
-        __max_uniform_uint32,
-        __max_uniform_uint64,
-        __max_varying_double,
-        __max_varying_float,
-        __max_varying_half,
-        __max_varying_int32,
-        __max_varying_int64,
-        __max_varying_uint32,
-        __max_varying_uint64,
-        __memory_barrier,
-        __memcpy32,
-        __memcpy64,
-        __memmove32,
-        __memmove64,
-        __memset32,
-        __memset64,
-        __min_uniform_double,
-        __min_uniform_float,
-        __min_uniform_half,
-        __min_uniform_int32,
-        __min_uniform_int64,
-        __min_uniform_uint32,
-        __min_uniform_uint64,
-        __min_varying_double,
-        __min_varying_float,
-        __min_varying_half,
-        __min_varying_int32,
-        __min_varying_int64,
-        __min_varying_uint32,
-        __min_varying_uint64,
-        __movmsk,
-        __new_uniform_32rt,
-        __new_uniform_64rt,
-        __new_varying32_32rt,
-        __new_varying32_64rt,
-        __new_varying64_64rt,
-        __none,
-        __num_cores,
-        __packed_load_activei32,
-        __packed_load_activei64,
-        __packed_store_activei32,
-        __packed_store_activei64,
-        __packed_store_active2i32,
-        __packed_store_active2i64,
-        __padds_ui8,
-        __padds_ui16,
-        __padds_ui32,
-        __padds_ui64,
-        __padds_vi8,
-        __padds_vi16,
-        __padds_vi32,
-        __padds_vi64,
-        __paddus_ui8,
-        __paddus_ui16,
-        __paddus_ui32,
-        __paddus_ui64,
-        __paddus_vi8,
-        __paddus_vi16,
-        __paddus_vi32,
-        __paddus_vi64,
-        __pmuls_ui8,
-        __pmuls_ui16,
-        __pmuls_ui32,
-        __pmuls_vi8,
-        __pmuls_vi16,
-        __pmuls_vi32,
-        __pmulus_ui8,
-        __pmulus_ui16,
-        __pmulus_ui32,
-        __pmulus_vi8,
-        __pmulus_vi16,
-        __pmulus_vi32,
-        __popcnt_int32,
-        __popcnt_int64,
-        __prefetch_read_uniform_1,
-        __prefetch_read_uniform_2,
-        __prefetch_read_uniform_3,
-        __prefetch_read_uniform_nt,
-        __prefetch_write_uniform_1,
-        __prefetch_write_uniform_2,
-        __prefetch_write_uniform_3,
-        __prefetch_read_sized_uniform_1,
-        __prefetch_read_sized_uniform_2,
-        __prefetch_read_sized_uniform_3,
-        __prefetch_read_sized_uniform_nt,
-        __pseudo_prefetch_read_varying_1,
-        __pseudo_prefetch_read_varying_2,
-        __pseudo_prefetch_read_varying_3,
-        __pseudo_prefetch_read_varying_nt,
-        __pseudo_prefetch_write_varying_1,
-        __pseudo_prefetch_write_varying_2,
-        __pseudo_prefetch_write_varying_3,
-        __prefetch_read_sized_varying_1,
-        __prefetch_read_sized_varying_2,
-        __prefetch_read_sized_varying_3,
-        __prefetch_read_sized_varying_nt,
-        __psubs_ui8,
-        __psubs_ui16,
-        __psubs_ui32,
-        __psubs_ui64,
-        __psubs_vi8,
-        __psubs_vi16,
-        __psubs_vi32,
-        __psubs_vi64,
-        __psubus_ui8,
-        __psubus_ui16,
-        __psubus_ui32,
-        __psubus_ui64,
-        __psubus_vi8,
-        __psubus_vi16,
-        __psubus_vi32,
-        __psubus_vi64,
-        __rcp_fast_uniform_double,
-        __rcp_fast_uniform_float,
-        __rcp_fast_uniform_half,
-        __rcp_fast_varying_double,
-        __rcp_fast_varying_float,
-        __rcp_fast_varying_half,
-        __rcp_uniform_double,
-        __rcp_uniform_float,
-        __rcp_uniform_half,
-        __rcp_varying_double,
-        __rcp_varying_float,
-        __rcp_varying_half,
-        __rdrand_i16,
-        __rdrand_i32,
-        __rdrand_i64,
-        __reduce_add_double,
-        __reduce_add_float,
-        __reduce_add_half,
-        __reduce_add_int8,
-        __reduce_add_int16,
-        __reduce_add_int32,
-        __reduce_add_int64,
-        __reduce_equal_double,
-        __reduce_equal_float,
-        __reduce_equal_half,
-        __reduce_equal_int32,
-        __reduce_equal_int64,
-        __reduce_max_double,
-        __reduce_max_float,
-        __reduce_max_half,
-        __reduce_max_int32,
-        __reduce_max_int64,
-        __reduce_max_uint32,
-        __reduce_max_uint64,
-        __reduce_min_double,
-        __reduce_min_float,
-        __reduce_min_half,
-        __reduce_min_int32,
-        __reduce_min_int64,
-        __reduce_min_uint32,
-        __reduce_min_uint64,
-        __restore_ftz_daz_flags,
-        __rotate_double,
-        __rotate_float,
-        __rotate_half,
-        __rotate_i16,
-        __rotate_i32,
-        __rotate_i64,
-        __rotate_i8,
-        __round_uniform_double,
-        __round_uniform_float,
-        __round_uniform_half,
-        __round_varying_double,
-        __round_varying_float,
-        __round_varying_half,
-        __rsqrt_fast_uniform_double,
-        __rsqrt_fast_uniform_float,
-        __rsqrt_fast_varying_double,
-        __rsqrt_fast_varying_float,
-        __rsqrt_uniform_double,
-        __rsqrt_uniform_float,
-        __rsqrt_uniform_half,
-        __rsqrt_varying_double,
-        __rsqrt_varying_float,
-        __rsqrt_varying_half,
-        __saturating_add_i8,
-        __saturating_add_i16,
-        __saturating_add_i32,
-        __saturating_add_i64,
-        __saturating_add_ui8,
-        __saturating_add_ui16,
-        __saturating_add_ui32,
-        __saturating_add_ui64,
-        __saturating_mul_i8,
-        __saturating_mul_i16,
-        __saturating_mul_i32,
-        __saturating_mul_ui8,
-        __saturating_mul_ui16,
-        __saturating_mul_ui32,
-        __set_ftz_daz_flags,
-        __set_system_isa,
-        __sext_uniform_bool,
-        __sext_varying_bool,
-        __shift_double,
-        __shift_float,
-        __shift_half,
-        __shift_i16,
-        __shift_i32,
-        __shift_i64,
-        __shift_i8,
-        __shuffle2_double,
-        __shuffle2_float,
-        __shuffle2_half,
-        __shuffle2_i16,
-        __shuffle2_i32,
-        __shuffle2_i64,
-        __shuffle2_i8,
-        __shuffle_double,
-        __shuffle_float,
-        __shuffle_half,
-        __shuffle_i16,
-        __shuffle_i32,
-        __shuffle_i64,
-        __shuffle_i8,
-        __soa_to_aos2_double,
-        __soa_to_aos2_double1,
-        __soa_to_aos2_double16,
-        __soa_to_aos2_double32,
-        __soa_to_aos2_double4,
-        __soa_to_aos2_double64,
-        __soa_to_aos2_double8,
-        __soa_to_aos2_float,
-        __soa_to_aos2_float1,
-        __soa_to_aos2_float16,
-        __soa_to_aos2_float32,
-        __soa_to_aos2_float4,
-        __soa_to_aos2_float64,
-        __soa_to_aos2_float8,
-        __soa_to_aos3_double,
-        __soa_to_aos3_double1,
-        __soa_to_aos3_double16,
-        __soa_to_aos3_double32,
-        __soa_to_aos3_double4,
-        __soa_to_aos3_double64,
-        __soa_to_aos3_double8,
-        __soa_to_aos3_float,
-        __soa_to_aos3_float1,
-        __soa_to_aos3_float16,
-        __soa_to_aos3_float32,
-        __soa_to_aos3_float4,
-        __soa_to_aos3_float64,
-        __soa_to_aos3_float8,
-        __soa_to_aos4_double,
-        __soa_to_aos4_double1,
-        __soa_to_aos4_double16,
-        __soa_to_aos4_double32,
-        __soa_to_aos4_double4,
-        __soa_to_aos4_double64,
-        __soa_to_aos4_double8,
-        __soa_to_aos4_float,
-        __soa_to_aos4_float1,
-        __soa_to_aos4_float16,
-        __soa_to_aos4_float32,
-        __soa_to_aos4_float4,
-        __soa_to_aos4_float64,
-        __soa_to_aos4_float8,
-        __sqrt_uniform_double,
-        __sqrt_uniform_float,
-        __sqrt_uniform_half,
-        __sqrt_varying_double,
-        __sqrt_varying_float,
-        __sqrt_varying_half,
-        __stdlib_acosf,
-        __stdlib_asinf,
-        __stdlib_atan,
-        __stdlib_atan2,
-        __stdlib_atan2f,
-        __stdlib_atanf,
-        __stdlib_cos,
-        __stdlib_cosf,
-        __stdlib_exp,
-        __stdlib_expf,
-        __stdlib_log,
-        __stdlib_logf,
-        __stdlib_pow,
-        __stdlib_powf,
-        __stdlib_sin,
-        __stdlib_asin,
-        __stdlib_sincos,
-        __stdlib_sincosf,
-        __stdlib_sinf,
-        __stdlib_tan,
-        __stdlib_tanf,
-        __streaming_load_uniform_double,
-        __streaming_load_uniform_float,
-        __streaming_load_uniform_half,
-        __streaming_load_uniform_i8,
-        __streaming_load_uniform_i16,
-        __streaming_load_uniform_i32,
-        __streaming_load_uniform_i64,
-        __streaming_load_varying_double,
-        __streaming_load_varying_float,
-        __streaming_load_varying_half,
-        __streaming_load_varying_i8,
-        __streaming_load_varying_i16,
-        __streaming_load_varying_i32,
-        __streaming_load_varying_i64,
-        __streaming_store_uniform_double,
-        __streaming_store_uniform_float,
-        __streaming_store_uniform_half,
-        __streaming_store_uniform_i8,
-        __streaming_store_uniform_i16,
-        __streaming_store_uniform_i32,
-        __streaming_store_uniform_i64,
-        __streaming_store_varying_double,
-        __streaming_store_varying_float,
-        __streaming_store_varying_half,
-        __streaming_store_varying_i8,
-        __streaming_store_varying_i16,
-        __streaming_store_varying_i32,
-        __streaming_store_varying_i64,
-        __svml_sind,
-        __svml_asind,
-        __svml_cosd,
-        __svml_acosd,
-        __svml_sincosd,
-        __svml_tand,
-        __svml_atand,
-        __svml_atan2d,
-        __svml_expd,
-        __svml_logd,
-        __svml_powd,
-        __svml_sqrtd,
-        __svml_invsqrtd,
-        __svml_sinf,
-        __svml_asinf,
-        __svml_cosf,
-        __svml_acosf,
-        __svml_sincosf,
-        __svml_tanf,
-        __svml_atanf,
-        __svml_atan2f,
-        __svml_expf,
-        __svml_logf,
-        __svml_powf,
-        __svml_sqrtf,
-        __svml_invsqrtf,
-        __trunc_uniform_double,
-        __trunc_uniform_float,
-        __trunc_uniform_half,
-        __trunc_varying_double,
-        __trunc_varying_float,
-        __trunc_varying_half,
-        __log_uniform_half,
-        __log_varying_half,
-        __exp_uniform_half,
-        __exp_varying_half,
-        __pow_uniform_half,
-        __pow_varying_half,
-        __log_uniform_float,
-        __log_varying_float,
-        __exp_uniform_float,
-        __exp_varying_float,
-        __pow_uniform_float,
-        __pow_varying_float,
-        __log_uniform_double,
-        __log_varying_double,
-        __exp_uniform_double,
-        __exp_varying_double,
-        __pow_uniform_double,
-        __pow_varying_double,
-        __sin_varying_float,
-        __asin_varying_float,
-        __cos_varying_float,
-        __acos_varying_float,
-        __sincos_varying_float,
-        __tan_varying_float,
-        __atan_varying_float,
-        __atan2_varying_float,
-        __sin_uniform_float,
-        __asin_uniform_float,
-        __cos_uniform_float,
-        __acos_uniform_float,
-        __sincos_uniform_float,
-        __tan_uniform_float,
-        __atan_uniform_float,
-        __atan2_uniform_float,
-        __sin_varying_half,
-        __asin_varying_half,
-        __cos_varying_half,
-        __acos_varying_half,
-        __sincos_varying_half,
-        __tan_varying_half,
-        __atan_varying_half,
-        __atan2_varying_half,
-        __sin_uniform_half,
-        __asin_uniform_half,
-        __cos_uniform_half,
-        __acos_uniform_half,
-        __sincos_uniform_half,
-        __tan_uniform_half,
-        __atan_uniform_half,
-        __atan2_uniform_half,
-        __sin_varying_double,
-        __asin_varying_double,
-        __cos_varying_double,
-        __acos_varying_double,
-        __sincos_varying_double,
-        __tan_varying_double,
-        __atan_varying_double,
-        __atan2_varying_double,
-        __sin_uniform_double,
-        __asin_uniform_double,
-        __cos_uniform_double,
-        __acos_uniform_double,
-        __sincos_uniform_double,
-        __tan_uniform_double,
-        __atan_uniform_double,
-        __atan2_uniform_double,
-        __undef_uniform,
-        __undef_varying,
-        __vec4_add_float,
-        __vec4_add_int32,
-        __vselect_float,
-        __vselect_i32,
-        ISPCAlloc,
-        ISPCLaunch,
-        ISPCSync,
-        __task_index0,
-        __task_index1,
-        __task_index2,
-        __task_index,
-        __task_count0,
-        __task_count1,
-        __task_count2,
-        __task_count,
-    };
-    // clang-format on
-    for (auto name : names) {
-        llvm::Function *f = module->getFunction(name);
-        if (f != nullptr && f->empty() == false) {
-            f->setLinkage(llvm::GlobalValue::InternalLinkage);
-            // TO-DO : Revisit adding this back for ARM support.
-            // g->target->markFuncWithTargetAttr(f);
+        bcModule->setTargetTriple(mTriple.str());
+        bcModule->setDataLayout(module->getDataLayout());
+
+        if (g->target->isXeTarget()) {
+            // Maybe we will use it for other targets in future,
+            // but now it is needed only by Xe. We need
+            // to update attributes because Xe intrinsics are
+            // separated from the others and it is not done by default
+            lUpdateIntrinsicsAttributes(bcModule);
+        }
+
+        for (llvm::Function &f : *bcModule) {
+            // TODO! do we really try to define already included symbol?
+            if (!module->getFunction(f.getName())) {
+                module->getOrInsertFunction(f.getName(), f.getFunctionType(), f.getAttributes());
+            }
         }
     }
 }
 
-/** This utility function takes serialized binary LLVM bitcode and adds its
-    definitions to the given module.  Functions in the bitcode that can be
-    mapped to ispc functions are also added to the symbol table.
-
-    @param lib         Pointer to BitcodeLib class representing LLVM bitcode (e.g. the contents of a *.bc file)
-    @param module      Module to link the bitcode into
-    @param symbolTable Symbol table to add definitions to
- */
-void ispc::AddBitcodeToModule(const BitcodeLib *lib, llvm::Module *module, SymbolTable *symbolTable) {
-    llvm::Module *bcModule = lib->getLLVMModule();
-
-    // FIXME: this feels like a bad idea, but the issue is that when we
-    // set the llvm::Module's target triple in the ispc Module::Module
-    // constructor, we start by calling llvm::sys::getHostTriple() (and
-    // then change the arch if needed). Somehow that ends up giving us
-    // strings like 'x86_64-apple-darwin11.0.0', while the stuff we
-    // compile to bitcode with clang has module triples like
-    // 'i386-apple-macosx10.7.0'. And then LLVM issues a warning about
-    // linking together modules with incompatible target triples..
-    llvm::Triple mTriple(m->module->getTargetTriple());
-    llvm::Triple bcTriple(bcModule->getTargetTriple());
-    Debug(SourcePos(), "module triple: %s\nbitcode triple: %s\n", mTriple.str().c_str(), bcTriple.str().c_str());
-
-    bcModule->setTargetTriple(mTriple.str());
-    bcModule->setDataLayout(module->getDataLayout());
-
-    if (g->target->isXeTarget()) {
-        // Maybe we will use it for other targets in future,
-        // but now it is needed only by Xe. We need
-        // to update attributes because Xe intrinsics are
-        // separated from the others and it is not done by default
-        lUpdateIntrinsicsAttributes(bcModule);
+llvm::Constant *lFuncAsConstInt8Ptr(llvm::Module &M, const char *name) {
+    llvm::LLVMContext &Context = M.getContext();
+    llvm::Function *F = M.getFunction(name);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_17_0
+    llvm::Type *type = llvm::PointerType::getUnqual(Context);
+#else
+    llvm::Type *type = llvm::Type::getInt8PtrTy(Context);
+#endif
+    if (F) {
+        return llvm::ConstantExpr::getBitCast(F, type);
     }
+    return nullptr;
+}
 
-    // A hack to move over declaration, which have no definition.
-    // New linker is kind of smart and think it knows better what to do, so
-    // it removes unused declarations without definitions.
-    // This trick should be legal, as both modules use the same LLVMContext.
-    for (llvm::Function &f : *bcModule) {
-        if (f.isDeclaration()) {
-            // Declarations with uses will be moved by Linker.
-            if (f.getNumUses() > 0)
-                continue;
-            module->getOrInsertFunction(f.getName(), f.getFunctionType(), f.getAttributes());
+void lRemoveUnused(llvm::Module *M) {
+    llvm::FunctionAnalysisManager FAM;
+    llvm::ModuleAnalysisManager MAM;
+    llvm::ModulePassManager PM;
+    llvm::PassBuilder PB;
+    PB.registerModuleAnalyses(MAM);
+    PM.addPass(llvm::GlobalDCEPass());
+    PM.run(*M, MAM);
+}
+
+// Extract functions from llvm.compiler.used that are currently used in the module.
+void lExtractUsedFunctions(llvm::GlobalVariable *llvmUsed, std::unordered_set<llvm::Function *> &usedFunctions) {
+    llvm::ConstantArray *initList = llvm::cast<llvm::ConstantArray>(llvmUsed->getInitializer());
+    for (unsigned i = 0; i < initList->getNumOperands(); i++) {
+        auto *C = initList->getOperand(i);
+        llvm::ConstantExpr *CE = llvm::dyn_cast<llvm::ConstantExpr>(C);
+        // Bitcast as ConstExpr when opaque pointer is not used, otherwise C is just an opaque pointer.
+        llvm::Value *val = CE ? CE->getOperand(0) : C;
+        Assert(val);
+        if (val->getNumUses() > 1) {
+            Assert(llvm::isa<llvm::Function>(val));
+            usedFunctions.insert(llvm::cast<llvm::Function>(val));
         }
     }
-
-    // Remove clang ID metadata from the bitcode module, as we don't need it.
-    llvm::NamedMDNode *identMD = bcModule->getNamedMetadata("llvm.ident");
-    if (identMD) {
-        identMD->eraseFromParent();
-    }
-
-    std::unique_ptr<llvm::Module> M(bcModule);
-    if (llvm::Linker::linkModules(*module, std::move(M))) {
-        Error(SourcePos(), "Error linking stdlib bitcode.");
-    }
-
-    lSetInternalFunctions(module);
-
-    if (symbolTable != nullptr)
-        lAddModuleSymbols(module, symbolTable);
-    lCheckModuleIntrinsics(module);
 }
 
-/** Utility routine that defines a constant int32 with given value, adding
-    the symbol to both the ispc symbol table and the given LLVM module.
- */
-static void lDefineConstantInt(const char *name, int val, llvm::Module *module, SymbolTable *symbolTable,
-                               std::vector<llvm::Constant *> &dbg_sym) {
-    Symbol *sym = new Symbol(name, SourcePos(), AtomicType::UniformInt32->GetAsConstType(), SC_STATIC);
-    sym->constValue = new ConstExpr(sym->type, val, SourcePos());
-    llvm::Type *ltype = LLVMTypes::Int32Type;
-    llvm::Constant *linit = LLVMInt32(val);
-    auto GV = new llvm::GlobalVariable(*module, ltype, true, llvm::GlobalValue::InternalLinkage, linit, name);
-    dbg_sym.push_back(GV);
-    sym->storageInfo = new AddressInfo(GV, GV->getValueType());
-    symbolTable->AddVariable(sym);
-
-    if (m->diBuilder != nullptr) {
-        llvm::DIFile *file = m->diCompileUnit->getFile();
-        llvm::DICompileUnit *cu = m->diCompileUnit;
-        llvm::DIType *diType = sym->type->GetDIType(file);
-        // FIXME? DWARF says that this (and programIndex below) should
-        // have the DW_AT_artifical attribute.  It's not clear if this
-        // matters for anything though.
-        llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storageInfo->getPointer());
-        Assert(sym_GV_storagePtr);
-        llvm::DIGlobalVariableExpression *var =
-            m->diBuilder->createGlobalVariableExpression(cu, name, name, file, 0 /* line */, diType, true /* static */);
-        sym_GV_storagePtr->addDebugInfo(var);
-        /*#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-                Assert(var.Verify());
-        #else // LLVM 3.7+
-              // coming soon
-        #endif*/
+// Find persistent groups that are used in the module.
+void lFindUsedPersistentGroups(llvm::Module *M, std::unordered_set<llvm::Function *> &usedFunctions,
+                               std::unordered_set<const builtin::PersistentGroup *> &usedPersistentGroups) {
+    for (auto const &[group, functions] : builtin::persistentGroups) {
+        for (auto const &name : functions) {
+            llvm::Function *F = M->getFunction(name);
+            if (usedFunctions.find(F) != usedFunctions.end()) {
+                usedPersistentGroups.insert(&group);
+                break;
+            }
+        }
     }
 }
 
-static void lDefineConstantIntFunc(const char *name, int val, llvm::Module *module, SymbolTable *symbolTable,
-                                   std::vector<llvm::Constant *> &dbg_sym) {
-    llvm::SmallVector<const Type *, 8> args;
-    FunctionType *ft = new FunctionType(AtomicType::UniformInt32, args, SourcePos());
-    Symbol *sym = new Symbol(name, SourcePos(), ft, SC_STATIC);
-
-    llvm::Function *func = module->getFunction(name);
-    dbg_sym.push_back(func);
-    Assert(func != nullptr); // it should be declared already...
-    func->addFnAttr(llvm::Attribute::AlwaysInline);
-    llvm::BasicBlock *bblock = llvm::BasicBlock::Create(*g->ctx, "entry", func, 0);
-    llvm::ReturnInst::Create(*g->ctx, LLVMInt32(val), bblock);
-
-    sym->function = func;
-    symbolTable->AddVariable(sym);
-}
-
-static void lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable,
-                                std::vector<llvm::Constant *> &dbg_sym) {
-    Symbol *sym = new Symbol("programIndex", SourcePos(), AtomicType::VaryingInt32->GetAsConstType(), SC_STATIC);
-
-    int pi[ISPC_MAX_NVEC];
-    for (int i = 0; i < g->target->getVectorWidth(); ++i)
-        pi[i] = i;
-    sym->constValue = new ConstExpr(sym->type, pi, SourcePos());
-
-    llvm::Type *ltype = LLVMTypes::Int32VectorType;
-    llvm::Constant *linit = LLVMInt32Vector(pi);
-
-    auto GV =
-        new llvm::GlobalVariable(*module, ltype, true, llvm::GlobalValue::InternalLinkage, linit, sym->name.c_str());
-    dbg_sym.push_back(GV);
-    sym->storageInfo = new AddressInfo(GV, GV->getValueType());
-    symbolTable->AddVariable(sym);
-
-    if (m->diBuilder != nullptr) {
-        llvm::DIFile *file = m->diCompileUnit->getFile();
-        llvm::DICompileUnit *cu = m->diCompileUnit;
-        llvm::DIType *diType = sym->type->GetDIType(file);
-        llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storageInfo->getPointer());
-        Assert(sym_GV_storagePtr);
-        llvm::DIGlobalVariableExpression *var = m->diBuilder->createGlobalVariableExpression(
-            cu, sym->name.c_str(), sym->name.c_str(), file, 0 /* line */, diType, false /* static */);
-        sym_GV_storagePtr->addDebugInfo(var);
-        /*#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-                Assert(var.Verify());
-        #else // LLVM 3.7+
-              // coming soon
-        #endif*/
+// Collect functions that should be preserved in the module based on the used persistent groups.
+void lCollectPreservedFunctions(llvm::Module *M, std::vector<llvm::Constant *> &newElements,
+                                std::unordered_set<const builtin::PersistentGroup *> &usedPersistentGroups) {
+    for (auto const &[group, functions] : builtin::persistentGroups) {
+        if (usedPersistentGroups.find(&group) != usedPersistentGroups.end()) {
+            for (auto const &name : functions) {
+                if (llvm::Constant *C = lFuncAsConstInt8Ptr(*M, name)) {
+                    newElements.push_back(C);
+                }
+            }
+        }
+    }
+    // Extend the list of preserved functions with the functions from corresponding persistent groups.
+    for (auto const &[name, val] : builtin::persistentFuncs) {
+        if (llvm::Constant *C = lFuncAsConstInt8Ptr(*M, name.c_str())) {
+            newElements.push_back(C);
+        }
     }
 }
 
-static void emitLLVMUsed(llvm::Module &module, std::vector<llvm::Constant *> &list) {
-    // Convert list to what ConstantArray needs.
-    llvm::SmallVector<llvm::Constant *, 8> UsedArray;
-    UsedArray.reserve(list.size());
-    for (auto c : list) {
-        UsedArray.push_back(llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(llvm::cast<llvm::Constant>(c),
-                                                                                 LLVMTypes::Int8PointerType));
-    }
+void lCreateLLVMUsed(llvm::Module &M, std::vector<llvm::Constant *> &ConstPtrs) {
+    llvm::LLVMContext &Context = M.getContext();
 
-    llvm::ArrayType *ATy = llvm::ArrayType::get(LLVMTypes::Int8PointerType, UsedArray.size());
+    // Create the array of i8* that llvm.used will hold
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_17_0
+    llvm::Type *type = llvm::PointerType::getUnqual(Context);
+#else
+    llvm::Type *type = llvm::Type::getInt8PtrTy(Context);
+#endif
+    llvm::ArrayType *ATy = llvm::ArrayType::get(type, ConstPtrs.size());
+    llvm::Constant *ArrayInit = llvm::ConstantArray::get(ATy, ConstPtrs);
 
-    auto *GV = new llvm::GlobalVariable(module, ATy, false, llvm::GlobalValue::AppendingLinkage,
-                                        llvm::ConstantArray::get(ATy, UsedArray), "llvm.used");
-
-    GV->setSection("llvm.metadata");
+    // Create llvm.used and initialize it with the functions
+    llvm::GlobalVariable *llvmUsed = new llvm::GlobalVariable(
+        M, ArrayInit->getType(), false, llvm::GlobalValue::AppendingLinkage, ArrayInit, "llvm.compiler.used");
+    llvmUsed->setSection("llvm.metadata");
 }
 
-void ispc::DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *module,
-                        bool includeStdlibISPC) {
-    // debug_symbols are symbols that supposed to be preserved in debug information.
-    // They will be referenced in llvm.used intrinsic to prevent they removal from
-    // the object file.
-    std::vector<llvm::Constant *> debug_symbols;
+// Update llvm.compiler.used with the new list of preserved functions.
+void lUpdateLLVMUsed(llvm::Module *M, llvm::GlobalVariable *llvmUsed, std::vector<llvm::Constant *> &newElements) {
+    llvmUsed->eraseFromParent();
+    lCreateLLVMUsed(*M, newElements);
+}
+
+void lRemoveUnusedPersistentFunctions(llvm::Module *M) {
+    // The idea here is to preserve only the needed subset of persistent functions.
+    // Inspect llvm.compiler.used and find all functions that are used in the
+    // module and re-create it with only those functions (and corresponding
+    // persistent groups).
+    llvm::GlobalVariable *llvmUsed = M->getNamedGlobal("llvm.compiler.used");
+    if (llvmUsed) {
+        std::unordered_set<llvm::Function *> usedFunctions;
+        lExtractUsedFunctions(llvmUsed, usedFunctions);
+
+        std::unordered_set<const builtin::PersistentGroup *> usedPersistentGroups;
+        lFindUsedPersistentGroups(M, usedFunctions, usedPersistentGroups);
+
+        std::vector<llvm::Constant *> newElements;
+        lCollectPreservedFunctions(M, newElements, usedPersistentGroups);
+
+        lUpdateLLVMUsed(M, llvmUsed, newElements);
+        lRemoveUnused(M);
+    }
+}
+
+void ispc::debugDumpModule(llvm::Module *module, std::string name, int stage) {
+    if (!(g->off_stages.find(stage) == g->off_stages.end() && g->debug_stages.find(stage) != g->debug_stages.end())) {
+        return;
+    }
+
+    name = std::string("pre_") + std::to_string(stage) + "_" + name + ".ll";
+    if (g->dumpFile && !g->dumpFilePath.empty()) {
+        std::error_code EC;
+        llvm::SmallString<128> path(g->dumpFilePath);
+
+        if (!llvm::sys::fs::exists(path)) {
+            llvm::sys::fs::create_directories(g->dumpFilePath);
+        }
+
+        if (g->isMultiTargetCompilation) {
+            name += std::string("_") + g->target->GetISAString();
+        }
+        llvm::sys::path::append(path, name);
+        llvm::raw_fd_ostream OS(path, EC);
+
+        if (EC) {
+            llvm::errs() << "Error: " << EC.message();
+            return;
+        }
+
+        module->print(OS, nullptr);
+        OS.flush();
+    } else {
+        // dump to stdout
+        module->print(llvm::outs(), nullptr);
+    }
+}
+
+void ispc::LinkDispatcher(llvm::Module *module) {
+    const BitcodeLib *dispatch = g->target_registry->getDispatchLib(g->target_os);
+    Assert(dispatch);
+    llvm::Module *dispatchBCModule = dispatch->getLLVMModule();
+    lAddDeclarationsToModule(dispatchBCModule, module);
+    lAddBitcodeToModule(dispatchBCModule, module);
+}
+
+void lLinkCommonBuiltins(llvm::Module *module) {
+    const BitcodeLib *builtins = g->target_registry->getBuiltinsCLib(g->target_os, g->target->getArch());
+    Assert(builtins);
+    llvm::Module *builtinsBCModule = builtins->getLLVMModule();
 
     // Unlike regular builtins and dispatch module, which don't care about mangling of external functions,
     // so they only differentiate Windows/Unix and 32/64 bit, builtins-c need to take care about mangling.
     // Hence, different version for all potentially supported OSes.
-    const BitcodeLib *builtins = g->target_registry->getBuiltinsCLib(g->target_os, g->target->getArch());
-    Assert(builtins);
-    AddBitcodeToModule(builtins, module, symbolTable);
+    lAddBitcodeToModule(builtinsBCModule, module);
 
-    // Next, add the target's custom implementations of the various needed
-    // builtin functions (e.g. __masked_store_32(), etc).
+    llvm::StringSet<> commonBuiltins = {builtin::__do_print, builtin::__num_cores};
+    lSetAsInternal(module, commonBuiltins);
+}
+
+void lAddPersistentToLLVMUsed(llvm::Module &M) {
+    // Bitcast all function pointer to i8*
+    std::vector<llvm::Constant *> ConstPtrs;
+    for (auto const &[group, functions] : persistentGroups) {
+        bool isGroupUsed = false;
+        for (auto const &name : functions) {
+            llvm::Function *F = M.getFunction(name);
+            if (F && F->getNumUses() > 0) {
+                isGroupUsed = true;
+                break;
+            }
+        }
+        // TODO! comment that we don't need to preserve unused symbols chains
+        if (isGroupUsed) {
+            for (auto const &name : functions) {
+                if (llvm::Constant *C = lFuncAsConstInt8Ptr(M, name)) {
+                    ConstPtrs.push_back(C);
+                }
+            }
+        }
+    }
+
+    for (auto const &[name, val] : persistentFuncs) {
+        if (llvm::Constant *C = lFuncAsConstInt8Ptr(M, name.c_str())) {
+            ConstPtrs.push_back(C);
+        }
+    }
+
+    if (ConstPtrs.empty()) {
+        return;
+    }
+
+    lCreateLLVMUsed(M, ConstPtrs);
+}
+
+bool lStartsWithLLVM(llvm::StringRef name) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_17_0
+    return name.starts_with("llvm.");
+#else
+    return name.startswith("llvm.");
+#endif
+}
+
+void lLinkTargetBuiltins(llvm::Module *module) {
     const BitcodeLib *target =
         g->target_registry->getISPCTargetLib(g->target->getISPCTarget(), g->target_os, g->target->getArch());
     Assert(target);
-    AddBitcodeToModule(target, module, symbolTable);
+    llvm::Module *targetBCModule = target->getLLVMModule();
 
-    // define the 'programCount' builtin variable
-    lDefineConstantInt("programCount", g->target->getVectorWidth(), module, symbolTable, debug_symbols);
-
-    // define the 'programIndex' builtin
-    lDefineProgramIndex(module, symbolTable, debug_symbols);
-
-    // Define __math_lib stuff.  This is used by stdlib.ispc, for example, to
-    // figure out which math routines to end up calling...
-    lDefineConstantInt("__math_lib", (int)g->mathLib, module, symbolTable, debug_symbols);
-    lDefineConstantInt("__math_lib_ispc", (int)Globals::MathLib::Math_ISPC, module, symbolTable, debug_symbols);
-    lDefineConstantInt("__math_lib_ispc_fast", (int)Globals::MathLib::Math_ISPCFast, module, symbolTable,
-                       debug_symbols);
-    lDefineConstantInt("__math_lib_svml", (int)Globals::MathLib::Math_SVML, module, symbolTable, debug_symbols);
-    lDefineConstantInt("__math_lib_system", (int)Globals::MathLib::Math_System, module, symbolTable, debug_symbols);
-    lDefineConstantIntFunc("__fast_masked_vload", (int)g->opt.fastMaskedVload, module, symbolTable, debug_symbols);
-
-    lDefineConstantInt("__have_native_half_converts", g->target->hasHalfConverts(), module, symbolTable, debug_symbols);
-    lDefineConstantInt("__have_native_half_full_support", g->target->hasHalfFullSupport(), module, symbolTable,
-                       debug_symbols);
-    lDefineConstantInt("__have_native_rand", g->target->hasRand(), module, symbolTable, debug_symbols);
-    lDefineConstantInt("__have_native_transcendentals", g->target->hasTranscendentals(), module, symbolTable,
-                       debug_symbols);
-    lDefineConstantInt("__have_native_trigonometry", g->target->hasTrigonometry(), module, symbolTable, debug_symbols);
-    lDefineConstantInt("__have_native_rsqrtd", g->target->hasRsqrtd(), module, symbolTable, debug_symbols);
-    lDefineConstantInt("__have_native_rcpd", g->target->hasRcpd(), module, symbolTable, debug_symbols);
-    lDefineConstantInt("__have_saturating_arithmetic", g->target->hasSatArith(), module, symbolTable, debug_symbols);
-    lDefineConstantInt("__have_dot_product_vnni", g->target->hasDotProductVNNI(), module, symbolTable, debug_symbols);
-#ifdef ISPC_XE_ENABLED
-    lDefineConstantInt("__have_xe_prefetch", g->target->hasXePrefetch(), module, symbolTable, debug_symbols);
-#else
-    lDefineConstantInt("__have_xe_prefetch", false, module, symbolTable, debug_symbols);
-#endif
-    lDefineConstantInt("__is_xe_target", (int)(g->target->isXeTarget()), module, symbolTable, debug_symbols);
-
-    if (g->forceAlignment != -1) {
-        llvm::GlobalVariable *alignment = module->getGlobalVariable("memory_alignment", true);
-        alignment->setInitializer(LLVMInt32(g->forceAlignment));
-    }
-
-    // IGC cannot deal with global references, so to keep debug capabilities
-    // on Xe target, ISPC should not generate any global relocations.
-    // When llvm.used is not generated, all previously defined global debug contants will be eliminated,
-    // so there will not be any global relocations passed to IGC.
-    if (!g->target->isXeTarget() && g->generateDebuggingSymbols) {
-        emitLLVMUsed(*module, debug_symbols);
-    }
-
-    if (includeStdlibISPC) {
-        // If the user wants the standard library to be included, parse the
-        // serialized version of the stdlib.ispc file to get its
-        // definitions added.
-        extern const char stdlib_mask1_code[], stdlib_mask8_code[];
-        extern const char stdlib_mask16_code[], stdlib_mask32_code[], stdlib_mask64_code[];
-        YY_BUFFER_STATE strbuf;
-        switch (g->target->getMaskBitCount()) {
-        case 1:
-            strbuf = yy_scan_string(stdlib_mask1_code);
-            break;
-        case 8:
-            strbuf = yy_scan_string(stdlib_mask8_code);
-            break;
-        case 16:
-            strbuf = yy_scan_string(stdlib_mask16_code);
-            break;
-        case 32:
-            strbuf = yy_scan_string(stdlib_mask32_code);
-            break;
-        case 64:
-            strbuf = yy_scan_string(stdlib_mask64_code);
-            break;
-        default:
-            FATAL("Unhandled mask bit size for stdlib.ispc");
+    llvm::StringSet<> targetBuiltins;
+    for (llvm::Function &F : targetBCModule->functions()) {
+        auto name = F.getName();
+        if (!lStartsWithLLVM(name)) {
+            targetBuiltins.insert(name);
         }
-        yyparse();
-        yy_delete_buffer(strbuf);
     }
+
+    // TODO! it is to suppress warning about mismatch datalayout
+    targetBCModule->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
+
+    // Next, add the target's custom implementations of the various needed
+    // builtin functions (e.g. __masked_store_32(), etc).
+    lAddBitcodeToModule(targetBCModule, module);
+
+    lSetAsInternal(module, targetBuiltins);
+}
+
+void lLinkStdlib(llvm::Module *module) {
+    const BitcodeLib *stdlib =
+        g->target_registry->getISPCStdLib(g->target->getISPCTarget(), g->target_os, g->target->getArch());
+    Assert(stdlib);
+    llvm::Module *stdlibBCModule = stdlib->getLLVMModule();
+
+    if (g->isMultiTargetCompilation) {
+        for (llvm::Function &F : stdlibBCModule->functions()) {
+            if (!F.isDeclaration() && !lStartsWithLLVM(F.getName())) {
+                F.setName(F.getName() + g->target->GetTargetSuffix());
+            }
+        }
+    }
+
+    llvm::StringSet<> stdlibFunctions;
+    for (llvm::Function &F : stdlibBCModule->functions()) {
+        stdlibFunctions.insert(F.getName());
+    }
+
+    lAddBitcodeToModule(stdlibBCModule, module);
+    lSetAsInternal(module, stdlibFunctions);
+}
+
+void ispc::LinkStandardLibraries(llvm::Module *module, int &debug_num) {
+    if (g->includeStdlib) {
+        lLinkStdlib(module);
+        // Remove from module here only function definitions that unused (or
+        // cannot be used) in module.
+        lAddPersistentToLLVMUsed(*module);
+        lRemoveUnused(module);
+        lRemoveUnusedPersistentFunctions(module);
+        debugDumpModule(module, "LinkStdlib", debug_num++);
+    } else {
+        lAddPersistentToLLVMUsed(*module);
+    }
+
+    lLinkCommonBuiltins(module);
+    lRemoveUnused(module);
+    debugDumpModule(module, "LinkCommonBuiltins", debug_num++);
+
+    lLinkTargetBuiltins(module);
+    lRemoveUnused(module);
+    debugDumpModule(module, "LinkTargetBuiltins", debug_num++);
+
+    lSetInternalLinkageGlobals(module);
+    lCheckModuleIntrinsics(module);
 }

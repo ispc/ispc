@@ -2121,6 +2121,14 @@ const char *Target::ISAToTargetString(ISA isa) {
 
 const char *Target::GetISATargetString() const { return ISAToTargetString(m_isa); }
 
+std::string Target::GetTargetSuffix() {
+    if (g->isMultiTargetCompilation) {
+        return std::string("_") + GetISAString();
+    } else {
+        return "";
+    }
+}
+
 llvm::Value *Target::SizeOf(llvm::Type *type, llvm::BasicBlock *insertAtEnd) {
     uint64_t byteSize = getDataLayout()->getTypeStoreSize(type);
     if (m_is32Bit || g->opt.force32BitAddressing)
@@ -2318,6 +2326,8 @@ Globals::Globals() {
     debugPMTimeTrace = false;
     astDump = Globals::ASTDumpKind::None;
     dumpFile = false;
+    genStdlib = false;
+    isSlimBinary = false;
     printTarget = false;
     NoOmitFramePointer = false;
     debugIR = -1;

@@ -30,7 +30,7 @@ list(APPEND LIT_ARGS "-Dps_enabled=$<IF:$<BOOL:${ISPC_PS_TARGET}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Dmacos_arm_enabled=$<IF:$<BOOL:${ISPC_MACOS_ARM_TARGET}>,ON,OFF>")
 # ISPC opaque pointers
 list(APPEND LIT_ARGS "-Dopaque_mode=$<IF:$<BOOL:${ISPC_OPAQUE_PTR_MODE}>,ON,OFF>")
-add_custom_target(check-all DEPENDS ispc
+add_custom_target(check-all DEPENDS ispc ispc-opt stdlibs-bc stdlib-headers
     COMMAND ${LIT_COMMAND} ${LIT_ARGS} "--verbose"
     COMMENT "Running lit tests"
     USES_TERMINAL

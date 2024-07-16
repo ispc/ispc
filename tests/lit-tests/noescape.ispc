@@ -1,4 +1,4 @@
-// RUN: %{ispc} --target=host --nowrap --nostdlib --debug-phase=0:0 %s --no-discard-value-names -o t.o | FileCheck %s
+// RUN: %{ispc} --target=host --nowrap --nostdlib --debug-phase=2:2 %s --no-discard-value-names -o t.o | FileCheck %s
 
 // CHECK: declare void @foo___un_3C_uni_3E_({{.*}} nocapture, {{.*}}
 void foo(__attribute__((noescape)) uniform int *uniform ptr);

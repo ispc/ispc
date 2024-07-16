@@ -1,7 +1,7 @@
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
-MODULE_PASS("make-internal-funcs-static", MakeInternalFuncsStaticPass())
+MODULE_PASS("remove-persistent-funcs", RemovePersistentFuncsPass())
 #undef MODULE_PASS
 
 #ifndef FUNCTION_PASS

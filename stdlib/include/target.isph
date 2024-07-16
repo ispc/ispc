@@ -1,0 +1,128 @@
+// -*- mode: c++ -*-
+/*
+  Copyright (c) 2024, Intel Corporation
+
+  SPDX-License-Identifier: BSD-3-Clause
+*/
+
+/** @file stdlib.isph
+
+    @brief A piece of ISPC standard library code that contains target dependent
+    variable definitions.
+*/
+#ifndef ISPC_TARGET_ISPH
+#define ISPC_TARGET_ISPH
+
+#ifndef ISPC_MATH_LIB_ISPC_VAL
+#error ISPC_MATH_LIB_ISPC_VAL undefined
+#endif
+
+static const uniform int32 __math_lib_ispc = ISPC_MATH_LIB_ISPC_VAL;
+
+#ifndef ISPC_MATH_LIB_ISPC_FAST_VAL
+#error ISPC_MATH_LIB_ISPC_FAST_VAL undefined
+#endif
+
+static const uniform int32 __math_lib_ispc_fast = ISPC_MATH_LIB_ISPC_FAST_VAL;
+
+#ifndef ISPC_MATH_LIB_SVML_VAL
+#error ISPC_MATH_LIB_SVML_VAL undefined
+#endif
+
+static const uniform int32 __math_lib_svml = ISPC_MATH_LIB_SVML_VAL;
+
+#ifndef ISPC_MATH_LIB_SYSTEM_VAL
+#error ISPC_MATH_LIB_SYSTEM_VAL undefined
+#endif
+
+static const uniform int32 __math_lib_system = ISPC_MATH_LIB_SYSTEM_VAL;
+
+#ifdef ISPC_TARGET_HAS_HALF
+#define ISPC_TARGET_HAS_HALF_VAL 1
+#else
+#define ISPC_TARGET_HAS_HALF_VAL 0
+#endif
+
+static const uniform int32 __have_native_half_converts = ISPC_TARGET_HAS_HALF_VAL;
+
+#ifdef ISPC_TARGET_HAS_HALF_FULL_SUPPORT
+#define ISPC_TARGET_HAS_HALF_FULL_SUPPORT_VAL 1
+#else
+#define ISPC_TARGET_HAS_HALF_FULL_SUPPORT_VAL 0
+#endif
+
+static const uniform int32 __have_native_half_full_support = ISPC_TARGET_HAS_HALF_FULL_SUPPORT_VAL;
+
+#ifdef ISPC_TARGET_HAS_RAND
+#define ISPC_TARGET_HAS_RAND_VAL 1
+#else
+#define ISPC_TARGET_HAS_RAND_VAL 0
+#endif
+
+static const uniform int32 __have_native_rand = ISPC_TARGET_HAS_RAND_VAL;
+
+#ifdef ISPC_TARGET_HAS_TRANSCENDENTALS
+#define ISPC_TARGET_HAS_TRANSCENDENTALS_VAL 1
+#else
+#define ISPC_TARGET_HAS_TRANSCENDENTALS_VAL 0
+#endif
+
+static const uniform int32 __have_native_transcendentals = ISPC_TARGET_HAS_TRANSCENDENTALS_VAL;
+
+#ifdef ISPC_TARGET_HAS_TRIGONOMETRY
+#define ISPC_TARGET_HAS_TRIGONOMETRY_VAL 1
+#else
+#define ISPC_TARGET_HAS_TRIGONOMETRY_VAL 0
+#endif
+
+static const uniform int32 __have_native_trigonometry = ISPC_TARGET_HAS_TRIGONOMETRY_VAL;
+
+#ifdef ISPC_TARGET_HAS_RSQRTD
+#define ISPC_TARGET_HAS_RSQRTD_VAL 1
+#else
+#define ISPC_TARGET_HAS_RSQRTD_VAL 0
+#endif
+
+static const uniform int32 __have_native_rsqrtd = ISPC_TARGET_HAS_RSQRTD_VAL;
+
+#ifdef ISPC_TARGET_HAS_RCPD
+#define ISPC_TARGET_HAS_RCPD_VAL 1
+#else
+#define ISPC_TARGET_HAS_RCPD_VAL 0
+#endif
+
+static const uniform int32 __have_native_rcpd = ISPC_TARGET_HAS_RCPD_VAL;
+
+#ifdef ISPC_TARGET_HAS_SATURATING_ARITHMETIC
+#define ISPC_TARGET_HAS_SATURATING_ARITHMETIC_VAL 1
+#else
+#define ISPC_TARGET_HAS_SATURATING_ARITHMETIC_VAL 0
+#endif
+
+static const uniform int32 __have_saturating_arithmetic = ISPC_TARGET_HAS_SATURATING_ARITHMETIC_VAL;
+
+#ifdef ISPC_TARGET_HAS_DOT_PRODUCT_VNNI
+#define ISPC_TARGET_HAS_DOT_PRODUCT_VNNI_VAL 1
+#else
+#define ISPC_TARGET_HAS_DOT_PRODUCT_VNNI_VAL 0
+#endif
+
+static const uniform int32 __have_dot_product_vnni = ISPC_TARGET_HAS_DOT_PRODUCT_VNNI_VAL;
+
+#ifdef ISPC_TARGET_HAS_XE_PREFETCH
+#define ISPC_TARGET_HAS_XE_PREFETCH_VAL 1
+#else
+#define ISPC_TARGET_HAS_XE_PREFETCH_VAL 0
+#endif
+
+static const uniform int32 __have_xe_prefetch = ISPC_TARGET_HAS_XE_PREFETCH_VAL;
+
+#ifdef ISPC_TARGET_XE
+#define ISPC_IS_XE_TARGET_VAL 1
+#else
+#define ISPC_IS_XE_TARGET_VAL 0
+#endif
+
+static const uniform int32 __is_xe_target = ISPC_IS_XE_TARGET_VAL;
+
+#endif // ISPC_TARGET_ISPH

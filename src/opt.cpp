@@ -296,10 +296,12 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         // Required for matrix intrinsics. This needs to happen before VerifierPass.
         // TODO : Limit pass to only when llvm.matrix.* intrinsics are used.
         optPM.initFunctionPassManager();
-        optPM.addFunctionPass(llvm::LowerMatrixIntrinsicsPass()); // llvm.matrix
+        optPM.addFunctionPass(llvm::LowerMatrixIntrinsicsPass(), INIT_OPT_NUMBER); // llvm.matrix
         optPM.commitFunctionToModulePassManager();
+        optPM.addModulePass(llvm::VerifierPass());
+    } else {
+        optPM.addModulePass(llvm::VerifierPass(), INIT_OPT_NUMBER);
     }
-    optPM.addModulePass(llvm::VerifierPass(), 0);
 
     optPM.initFunctionPassManager();
     optPM.initLoopPassManager();
@@ -335,7 +337,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.commitFunctionToModulePassManager();
 
         optPM.addModulePass(llvm::ModuleInlinerWrapperPass());
-        optPM.addModulePass(MakeInternalFuncsStaticPass());
+        optPM.addModulePass(RemovePersistentFuncsPass());
 
         optPM.initFunctionPassManager();
         optPM.addFunctionPass(llvm::SimplifyCFGPass(simplifyCFGopt));
@@ -631,7 +633,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.commitFunctionToModulePassManager();
         optPM.addModulePass(llvm::ModuleInlinerWrapperPass());
         optPM.addModulePass(llvm::StripDeadPrototypesPass());
-        optPM.addModulePass(MakeInternalFuncsStaticPass());
+        optPM.addModulePass(RemovePersistentFuncsPass());
         optPM.addModulePass(llvm::GlobalDCEPass());
         optPM.addModulePass(llvm::ConstantMergePass());
 #ifdef ISPC_XE_ENABLED

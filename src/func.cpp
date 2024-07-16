@@ -758,7 +758,10 @@ void Function::GenerateIR() {
             // We create regular functions with ExternalLinkage by default.
             // Fix it to InternalLinkage only if the function is static or inline
             if (IsInternal()) {
-                UpdateLinkage(llvm::GlobalValue::InternalLinkage);
+                if (!g->genStdlib) {
+                    // We use stdlib as library so do not add internal attr for its functions.
+                    UpdateLinkage(llvm::GlobalValue::InternalLinkage);
+                }
             }
 
             if (g->target->isXeTarget()) {
