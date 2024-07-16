@@ -336,12 +336,17 @@ list(APPEND X86_TARGETS
     avx2-i8x32 avx2-i16x16
     avx2-i32x4 avx2-i32x8 avx2-i32x16 avx2-i64x4
     avx2vnni-i32x4 avx2vnni-i32x8 avx2vnni-i32x16
-    avx512knl-x16
     avx512skx-x4 avx512skx-x8 avx512skx-x16
     avx512skx-x32 avx512skx-x64
     avx512icl-x4 avx512icl-x8 avx512icl-x16
     avx512icl-x32 avx512icl-x64
     avx512spr-x4 avx512spr-x8 avx512spr-x16 avx512spr-x32 avx512spr-x64)
+
+# LLVM is removing support for Xeon Phi in 19.0
+if (${LLVM_VERSION_NUMBER} VERSION_LESS "19.0.0")
+    list(APPEND X86_TARGETS avx512knl-x16)
+endif()
+
 list(APPEND ARM_TARGETS neon-i8x16 neon-i16x8 neon-i32x4 neon-i32x8)
 list(APPEND WASM_TARGETS wasm-i32x4)
 list(APPEND XE_TARGETS gen9-x16 gen9-x8 xelp-x16 xelp-x8 xehpg-x16 xehpg-x8 xehpc-x16 xehpc-x32 xelpg-x16 xelpg-x8)
