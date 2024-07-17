@@ -1,0 +1,176 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/centos/7/cpu_ispc_build
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/centos/7/xpu_ispc_build
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/centos/8/cpu_ispc_build
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/fedora
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/ubuntu/16.04/cpu_ispc_build
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/ubuntu/18.04/cpu_ispc_build
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/ubuntu/20.04/cpu_ispc_build
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/ubuntu/20.04/xpu_ispc_build
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/ubuntu/22.04/cpu_ispc_build
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/ubuntu/22.04/xpu_ispc_build
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/v1.10.0/centos7
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/v1.11.0/centos7
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/v1.12.0/centos7
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/v1.13.0/centos7
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/v1.14.0/centos7
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/v1.14.1/centos7
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/v1.15.0/centos7
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/v1.16.0/centos7
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/v1.17.0/centos7
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/v1.18.0/centos7
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/v1.19.0/centos7
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/v1.20.0/centos7
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/v1.20.0/centos7_oneapi
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/v1.21.0/centos7
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/v1.21.0/centos7_oneapi
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/v1.21.0/ubuntu18.04
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/v1.22.0/centos7
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/v1.22.0/ubuntu18.04
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/v1.23.0/centos7
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/v1.23.0/ubuntu18.04
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/v1.24.0/centos7
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/v1.24.0/ubuntu18.04
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/v1.9.1/centos7
+    schedule:
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /docker/v1.9.2/centos7
+    schedule:
+      interval: daily
