@@ -346,7 +346,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 
-5. GNU libstdc++
+4. GNU libstdc++
 
    libgcc
 
@@ -1974,7 +1974,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 
-6. libLLVMGenXIntrinsics
+5. libLLVMGenXIntrinsics
     MIT License
     Copyright (c) 2020 Intel Corporation
 
@@ -1997,7 +1997,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 
-7. libLLVMSPIRVLib
+6. libLLVMSPIRVLib
 	==============================================================================
 	LLVM Release License
 	==============================================================================
