@@ -1,0 +1,62 @@
+# Copyright 2024, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: Coverity
+# It runs static analysis build - Coverity. It requires special token (set in CI's secret).
+
+permissions: read-all
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run every day at 22:00 UTC
+    - cron: '0 22 * * *'
+
+env:
+  SDE_MIRROR_ID: 813591
+  SDE_TAR_NAME: sde-external-9.33.0-2024-01-07
+  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
+  LLVM_REPO: https://github.com/ispc/ispc.dependencies
+
+jobs:
+  linux:
+    name: Coverity
+    runs-on: ubuntu-22.04
+    env:
+      COVERITY_SCAN_BUILD_COMMAND: "cmake --build ${{github.workspace}}/build"
+      COVERITY_SCAN_BRANCH_PATTERN: "main"
+      COVERITY_SCAN_NOTIFICATION_EMAIL: ${{ secrets.COVERITY_SCAN_NOTIFICATION_EMAIL }}
+      COVERITY_SCAN_PROJECT_NAME: ${{ secrets.COVERITY_SCAN_PROJECT_NAME }}
+      COVERITY_SCAN_TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+
+    # Disabling this workflow for non ispc/ispc repo, since number of build submissions is limited.
+    if: github.repository == 'ispc/ispc'
+
+    steps:
+      - name: Clone the git repo
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Install dependencies
+        run: |
+         .github/workflows/scripts/install-build-deps.sh
+
+      - name: Check environment
+        run: |
+          which -a clang
+          cat /proc/cpuinfo
+
+      - name: Build package
+        run: |
+          .github/workflows/scripts/build-ispc.sh
+
+      - name: Run Coverity
+        run: |
+          .github/workflows/scripts/run-coverity.sh
+
+      - name: Upload Coverity artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: scm_log.txt
+          path: cov-int/scm_log.txt
