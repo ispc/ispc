@@ -68,7 +68,7 @@ jobs:
       LLVM_TAR: llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       with:
         submodules: true
 
@@ -90,7 +90,7 @@ jobs:
         .github/workflows/scripts/check-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
       with:
         name: ispc_llvm17_linux
         path: build/ispc-trunk-linux.tar.gz
@@ -105,9 +105,9 @@ jobs:
       matrix:
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
     - name: Download package
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
         name: ispc_llvm17_linux
 
@@ -131,7 +131,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
       if: failure()
       with:
         name: fail_db.llvm17.${{matrix.target}}.txt

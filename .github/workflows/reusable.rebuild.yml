@@ -81,7 +81,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       with:
         submodules: true
 
@@ -104,7 +104,7 @@ jobs:
         tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
 
     - name: Upload package
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
       with:
         name: llvm_linux_x86_lto_${{ inputs.lto }}
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
@@ -113,7 +113,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       with:
         submodules: true
 
@@ -137,7 +137,7 @@ jobs:
         tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
 
     - name: Upload package
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
       with:
         name: llvmrel_linux_x86_lto_${{ inputs.lto }}
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
@@ -148,7 +148,7 @@ jobs:
     if: github.repository == 'ispc/ispc'
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       with:
         submodules: true
 
@@ -173,7 +173,7 @@ jobs:
         rm -rf result.tar usr bin-${{ inputs.version }}
 
     - name: Upload package
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
       with:
         name: llvm_linux_aarch64_lto_${{ inputs.lto }}
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
@@ -184,7 +184,7 @@ jobs:
     if: github.repository == 'ispc/ispc'
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       with:
         submodules: true
 
@@ -208,7 +208,7 @@ jobs:
         rm -rf result.tar usr bin-${{ inputs.version }}
 
     - name: Upload package
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
       with:
         name: llvmrel_linux_aarch64_lto_${{ inputs.lto }}
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
@@ -217,7 +217,7 @@ jobs:
     runs-on: windows-2019
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       with:
         submodules: true
 
@@ -252,7 +252,7 @@ jobs:
         7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
 
     - name: Upload package
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
       with:
         name: llvm_win_x86_lto_${{ inputs.lto }}
         path: llvm/llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.7z
@@ -261,7 +261,7 @@ jobs:
     runs-on: windows-2019
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       with:
         submodules: true
 
@@ -296,7 +296,7 @@ jobs:
         7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
 
     - name: Upload package
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
       with:
         name: llvmrel_win_x86_lto_${{ inputs.lto }}
         path: llvm/llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.7z
@@ -306,7 +306,7 @@ jobs:
     runs-on: [self-hosted, macOS]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       with:
         submodules: true
 
@@ -332,7 +332,7 @@ jobs:
         tar cJvf llvm-${{ inputs.full_version }}-macos-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
 
     - name: Upload package
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
       with:
         name: llvm_macos_universal_lto_${{ inputs.lto }}
         path: llvm/llvm-${{ inputs.full_version }}-macos-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz
@@ -342,7 +342,7 @@ jobs:
     runs-on: [self-hosted, macOS]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       with:
         submodules: true
 
@@ -368,7 +368,7 @@ jobs:
         tar cJvf llvm-${{ inputs.full_version }}-macos-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
 
     - name: Upload package
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
       with:
         name: llvmrel_macos_universal_lto_${{ inputs.lto }}
         path: llvm/llvm-${{ inputs.full_version }}-macos-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz
