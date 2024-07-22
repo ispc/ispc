@@ -1,0 +1,58 @@
+# Copyright 2024, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+# Runs linter for Docker files
+name: Trivy
+
+permissions: read-all
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+    paths:
+      - '**/Dockerfile'
+      - '.github/workflows/trivy.yml'
+      - '.trivyignore'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Trivy
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+
+    steps:
+      - name: Clone the git repo
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Run Trivy
+        uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9bd0d8 # v0.24.0
+        with:
+          scan-type: 'config'
+          hide-progress: false
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          trivyignores: '.trivyignore'
+          # Skip released versions
+          skip-dirs: 'docker/v1.24.0,docker/v1.23.0,docker/v1.22.0,docker/v1.21.0,docker/v1.20.0,docker/v1.19.0,docker/v1.18.0,docker/v1.17.0,docker/v1.16.0,docker/v1.15.0,docker/v1.14.1,docker/v1.14.0,docker/v1.13.0,docker/v1.12.0,docker/v1.11.0,docker/v1.10.0,docker/v1.9.2,docker/v1.9.1'
+
+      - name: Print report
+        run: |
+          echo "### Trivy report:"
+          cat trivy-results.sarif
+
+      - name: Upload Trivy results to Github Security tab
+        uses: github/codeql-action/upload-sarif@2d790406f505036ef40ecba973cc774a50395aac # v3.25.13
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Upload Trivy results
+        uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
+        with:
+            name: trivy-results.sarif
+            path: trivy-results.sarif
