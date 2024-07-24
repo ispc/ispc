@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -55,6 +55,85 @@ class Declarator;
 #define TYPEQUAL_VECTORCALL (1 << 10)
 #define TYPEQUAL_REGCALL (1 << 11)
 
+enum AttrArgKind { ATTR_ARG_UINT32, ATTR_ARG_STRING, ATTR_ARG_UNKNOWN };
+
+/** @brief Representation of an argument to an attribute.
+
+    Attribute can have an argument, which can be either an integer or a string.
+    This class is used to represent those arguments.
+ */
+class AttrArgument {
+  public:
+    AttrArgument();
+    AttrArgument(int64_t i);
+    AttrArgument(const std::string &s);
+
+    void Print() const;
+
+    AttrArgKind kind;
+    int64_t intVal;
+    std::string stringVal;
+};
+
+/** @brief Representation of a single attribute.
+
+    Attributes are used to provide additional information about a
+    declaration that isn't captured by the basic type, storage class, etc.
+    Its semantics are contained in the name and the argument, if any.
+ */
+class Attribute {
+  public:
+    Attribute(const std::string &n);
+    Attribute(const std::string &n, AttrArgument a);
+    Attribute(const Attribute &a);
+
+    /** Returns true if the attribute is known/supported false otherwise. */
+    bool IsKnownAttribute() const;
+
+    void Print() const;
+
+    std::string name;
+    AttrArgument arg;
+};
+
+/** @brief List of attributes associated with declaration/declarator/declspecs.
+
+    This class is used to hold a list of attributes that are associated with
+    a declaration.
+ */
+class AttributeList {
+  public:
+    AttributeList();
+    AttributeList(const AttributeList &attrList);
+    ~AttributeList();
+
+    /** Adds a new attribute to the list of attributes. It copies the
+        attribute and adds it to the list. */
+    void AddAttribute(const Attribute &a);
+
+    /** Returns true if the attribute with the given name exists, false
+        otherwise. */
+    bool HasAttribute(const std::string &name) const;
+
+    /** Returns the attribute with the given name if it exists, nullptr
+        otherwise. */
+    Attribute *GetAttribute(const std::string &name) const;
+
+    /** Merges the attributes from the given list into the current list.
+        It copies the attributes from the given list and adds them to the
+        current list. */
+    void MergeAttrList(const AttributeList &attrList);
+
+    /** Checks if the attributes are known/supported otherwise it will
+        issue a warning. */
+    void CheckForUnknownAttributes(SourcePos pos) const;
+
+    void Print() const;
+
+  private:
+    std::vector<Attribute *> attributes;
+};
+
 /** @brief Representation of the declaration specifiers in a declaration.
 
     In other words, this represents all of the stuff that applies to all of
@@ -63,6 +142,7 @@ class Declarator;
 class DeclSpecs : public Traceable {
   public:
     DeclSpecs(const Type *t = nullptr, StorageClass sc = SC_NONE, int tq = TYPEQUAL_NONE);
+    ~DeclSpecs();
 
     void Print() const;
 
@@ -91,6 +171,12 @@ class DeclSpecs : public Traceable {
     int soaWidth;
 
     std::vector<std::pair<std::string, SourcePos>> declSpecList;
+
+    /** Attributes associated with the declaration specifiers. */
+    AttributeList *attributeList;
+
+    /** Append copies of given attributes to the list of attributes. */
+    void AddAttrList(const AttributeList &attrList);
 };
 
 enum DeclaratorKind { DK_BASE, DK_POINTER, DK_REFERENCE, DK_ARRAY, DK_FUNCTION };
@@ -103,6 +189,7 @@ enum DeclaratorKind { DK_BASE, DK_POINTER, DK_REFERENCE, DK_ARRAY, DK_FUNCTION }
 class Declarator : public Traceable {
   public:
     Declarator(DeclaratorKind dk, SourcePos p);
+    ~Declarator();
 
     /** Once a DeclSpecs instance is available, this method completes the
         initialization of the type member.
@@ -146,6 +233,9 @@ class Declarator : public Traceable {
     /** Type of the declarator.  This is nullptr until InitFromDeclSpecs() or
         InitFromType() is called. */
     const Type *type;
+
+    /** Attributes associated with the declarator. */
+    AttributeList *attributeList;
 
     /** For function declarations, this holds the Declaration *s for the
         function's parameters. */

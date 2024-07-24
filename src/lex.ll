@@ -91,6 +91,7 @@ void ParserInit() {
     tokenToName[TOKEN_UINT64] = "uint64";
     tokenToName[TOKEN_LAUNCH] = "launch";
     tokenToName[TOKEN_INVOKE_SYCL] = "invoke_sycl";
+    tokenToName[TOKEN_ATTRIBUTE] = "__attribute__";
     tokenToName[TOKEN_NEW] = "new";
     tokenToName[TOKEN_NULL] = "NULL";
     tokenToName[TOKEN_PRINT] = "print";
@@ -220,6 +221,7 @@ void ParserInit() {
     tokenNameRemap["TOKEN_UINT64"] = "\'uint64\'";
     tokenNameRemap["TOKEN_LAUNCH"] = "\'launch\'";
     tokenNameRemap["TOKEN_INVOKE_SYCL"] = "\'invoke_sycl\'";
+    tokenNameRemap["TOKEN_ATTRIBUTE"] = "\'__attribute__\'";
     tokenNameRemap["TOKEN_NEW"] = "\'new\'";
     tokenNameRemap["TOKEN_NULL"] = "\'NULL\'";
     tokenNameRemap["TOKEN_PRINT"] = "\'print\'";
@@ -363,6 +365,7 @@ int64 { return TOKEN_INT64; }
 uint64 { return TOKEN_UINT64; }
 launch { return TOKEN_LAUNCH; }
 invoke_sycl { return TOKEN_INVOKE_SYCL; }
+__attribute__ { return TOKEN_ATTRIBUTE; }
 new { return TOKEN_NEW; }
 NULL { return TOKEN_NULL; }
 print { return TOKEN_PRINT; }
