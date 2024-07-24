@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2023, Intel Corporation
+;;  Copyright (c) 2010-2024, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -14,6 +14,7 @@ packed_load_and_store(FALSE)
 scans()
 int64minmax()
 saturation_arithmetic()
+define_shuffles()
 
 include(`target-avx-utils.ll')
 

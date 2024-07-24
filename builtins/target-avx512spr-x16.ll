@@ -8,6 +8,31 @@ define(`ISA',`AVX512SKX')
 include(`target-avx512-common-16.ll')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; shuffles
+
+declare <16 x i8> @llvm.x86.avx512.mask.permvar.qi.128(<16 x i8>, <16 x i8>, <16 x i8>, i16)
+define <16 x i8> @__shuffle_i8(<16 x i8>, <16 x i32>) nounwind readnone alwaysinline {
+  %ind = trunc <WIDTH x i32> %1 to <WIDTH x i8>
+  %res = call <16 x i8> @llvm.x86.avx512.mask.permvar.qi.128(<16 x i8> %0, <16 x i8> %ind, <16 x i8> zeroinitializer, i16 -1)
+  ret <16 x i8> %res
+}
+
+declare <WIDTH x i8> @llvm.x86.avx512.vpermi2var.qi.128(<WIDTH x i8>, <WIDTH x i8>, <WIDTH x i8>)
+define <WIDTH x i8> @__shuffle2_i8(<WIDTH x i8>, <WIDTH x i8>, <WIDTH x i32>) nounwind readnone alwaysinline {
+  %isc = call i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32> %2)
+  br i1 %isc, label %is_const, label %not_const
+
+is_const:
+  %res_const = tail call <WIDTH x i8> @__shuffle2_const_i8(<WIDTH x i8> %0, <WIDTH x i8> %1, <WIDTH x i32> %2)
+  ret <WIDTH x i8> %res_const
+
+not_const:
+  %ind = trunc <WIDTH x i32> %2 to <WIDTH x i8>
+  %res = call <WIDTH x i8> @llvm.x86.avx512.vpermi2var.qi.128(<WIDTH x i8> %0, <WIDTH x i8> %ind, <WIDTH x i8> %1)
+  ret <WIDTH x i8> %res
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; svml
 
 include(`svml.m4')

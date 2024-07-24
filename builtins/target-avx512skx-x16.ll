@@ -8,6 +8,12 @@ define(`ISA',`AVX512SKX')
 include(`target-avx512-common-16.ll')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; shuffles
+
+shuffle1(i8)
+shuffle2(i8)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp/rsqrt declarations for half
 rcph_rsqrth_decl
 

@@ -56,6 +56,7 @@ define i1 @__none(<WIDTH x MASK> %mask) nounwind readnone alwaysinline {
 ;; broadcast/rotate/shift/shuffle
 
 define_shuffles()
+define_vector_permutations()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; aos/soa

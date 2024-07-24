@@ -19,6 +19,8 @@ saturation_arithmetic()
 
 include(`target-sse4-common.ll')
 
+define_shuffles()
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; half conversion routines
 
