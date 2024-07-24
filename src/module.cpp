@@ -618,13 +618,29 @@ Expr *lConvertExprListToConstExpr(Expr *initExpr, const Type *type, const std::s
     return nullptr;
 }
 
-void Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initExpr, bool isConst,
-                               StorageClass storageClass, SourcePos pos) {
+void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
+    const std::string &name = decl->name;
+    const Type *type = decl->type;
+    Expr *initExpr = decl->initExpr;
+    StorageClass storageClass = decl->storageClass;
+    SourcePos pos = decl->pos;
+
     // These may be nullptr due to errors in parsing; just gracefully return
     // here if so.
     if (name == "" || type == nullptr) {
         Assert(errorCount > 0);
         return;
+    }
+
+    // Check attrbutes for global variables.
+    AttributeList *attrList = decl->attributeList;
+    if (attrList) {
+        // Check for unknown attributes for global variable declarations.
+        attrList->CheckForUnknownAttributes(pos);
+
+        if (attrList->HasAttribute("noescape")) {
+            Warning(pos, "Ignoring \"noescape\" attribute for global variable \"%s\".", name.c_str());
+        }
     }
 
     if (symbolTable->LookupFunction(name.c_str())) {
@@ -940,8 +956,8 @@ static void lCheckForStructParameters(const FunctionType *ftype, SourcePos pos) 
     various sanity checks.
  */
 void Module::AddFunctionDeclaration(const std::string &name, const FunctionType *functionType,
-                                    StorageClass storageClass, bool isInline, bool isNoInline, bool isVectorCall,
-                                    bool isRegCall, SourcePos pos) {
+                                    StorageClass storageClass, Declarator *decl, bool isInline, bool isNoInline,
+                                    bool isVectorCall, bool isRegCall, SourcePos pos) {
     Assert(functionType != nullptr);
 
     // If a global variable with the same name has already been declared
@@ -1163,6 +1179,28 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
              CastType<ReferenceType>(argType) != nullptr)) {
 
             function->addParamAttr(i, llvm::Attribute::NoAlias);
+        }
+
+        Assert(decl && decl->functionParams.size() == nArgs);
+        DeclSpecs *declSpecs = decl->functionParams[i]->declSpecs;
+        AttributeList *attrList = declSpecs ? declSpecs->attributeList : nullptr;
+        if (attrList) {
+            // Check for unknown attributes for parameters in function declarations.
+            attrList->CheckForUnknownAttributes(decl->pos);
+
+            if (attrList->HasAttribute("noescape")) {
+                if (argType->IsPointerType() && argType->IsUniformType()) {
+                    function->addParamAttr(i, llvm::Attribute::NoCapture);
+                }
+
+                if (argType->IsVaryingType()) {
+                    Error(argPos, "\"noescape\" attribute illegal with \"varying\" parameter \"%s\".", argName.c_str());
+                }
+
+                if (!argType->IsPointerType()) {
+                    Error(argPos, "\"noescape\" attribute illegal with non-pointer parameter \"%s\".", argName.c_str());
+                }
+            }
         }
 
         if (symbolTable->LookupFunction(argName.c_str())) {
@@ -2946,6 +2984,9 @@ static void lSetPreprocessorOptions(const std::shared_ptr<clang::PreprocessorOpt
     // Add defs for ISPC_UINT_IS_DEFINED.
     // This lets the user know uint* is part of language.
     opts->addMacroDef("ISPC_UINT_IS_DEFINED");
+
+    // Let users know if __attribute__ syntax is supported.
+    opts->addMacroDef("ISPC_ATTRIBUTE_SUPPORTED");
 
     // Add #define for current compilation target
     char targetMacro[128];

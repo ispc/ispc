@@ -512,6 +512,7 @@ class PointerType : public Type {
 
     bool IsSlice() const { return isSlice; }
     bool IsFrozenSlice() const { return isFrozen; }
+    AddressSpace GetAddressSpace() const { return addrSpace; }
     const PointerType *GetAsSlice() const;
     const PointerType *GetAsNonSlice() const;
     const PointerType *GetAsFrozenSlice() const;
@@ -882,6 +883,7 @@ class ReferenceType : public Type {
     bool IsUnsignedType() const;
     bool IsSignedType() const;
     bool IsConstType() const;
+    AddressSpace GetAddressSpace() const { return addrSpace; }
 
     const Type *GetBaseType() const;
     const Type *GetReferenceTarget() const;
@@ -958,6 +960,7 @@ class FunctionType : public Type {
 
     const Type *GetAsUnmaskedType() const;
     const Type *GetAsNonUnmaskedType() const;
+    const Type *GetWithReturnType(const Type *t) const;
 
     std::string GetString() const;
     std::string Mangle() const;

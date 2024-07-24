@@ -1160,7 +1160,7 @@ const PointerType *PointerType::ResolveUnboundVariability(Variability v) const {
     Assert(v != Variability::Unbound);
     Variability ptrVariability = (variability == Variability::Unbound) ? v : variability;
     const Type *resolvedBaseType = baseType->ResolveUnboundVariability(Variability::Uniform);
-    return new PointerType(resolvedBaseType, ptrVariability, isConst, isSlice, isFrozen);
+    return new PointerType(resolvedBaseType, ptrVariability, isConst, isSlice, isFrozen, addrSpace);
 }
 
 const PointerType *PointerType::GetAsConstType() const {
@@ -1184,6 +1184,10 @@ std::string PointerType::GetString() const {
     }
 
     std::string ret = baseType->GetString();
+
+    if (addrSpace != AddressSpace::ispc_default) {
+        ret += std::string(" addrspace(") + std::to_string((int)addrSpace) + std::string(")");
+    }
 
     ret += std::string(" * ");
     if (isConst)
@@ -2493,7 +2497,7 @@ const ReferenceType *ReferenceType::ResolveUnboundVariability(Variability v) con
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return new ReferenceType(targetType->ResolveUnboundVariability(v));
+    return new ReferenceType(targetType->ResolveUnboundVariability(v), addrSpace);
 }
 
 const ReferenceType *ReferenceType::GetAsConstType() const {
@@ -2544,6 +2548,10 @@ std::string ReferenceType::GetString() const {
     }
 
     std::string ret = targetType->GetString();
+
+    if (addrSpace != AddressSpace::ispc_default) {
+        ret += std::string(" addrspace(") + std::to_string((int)addrSpace) + std::string(")");
+    }
 
     ret += std::string(" &");
     return ret;
@@ -2774,6 +2782,17 @@ const Type *FunctionType::GetAsNonUnmaskedType() const {
     return asMaskedType;
 }
 
+const Type *FunctionType::GetWithReturnType(const Type *newReturnType) const {
+    if (returnType == newReturnType)
+        return this;
+
+    FunctionType *ft = new FunctionType(newReturnType, paramTypes, paramNames, paramDefaults, paramPositions, isTask,
+                                        isExported, isExternC, isExternSYCL, isUnmasked, isVectorCall, isRegCall);
+    ft->isSafe = isSafe;
+    ft->costOverride = costOverride;
+    return ft;
+}
+
 std::string FunctionType::GetString() const {
     std::string ret = GetNameForCallConv();
     ret += " ";
@@ -2978,15 +2997,20 @@ std::vector<llvm::Type *> FunctionType::LLVMFunctionArgTypes(llvm::LLVMContext *
 
         if (IsISPCExternal() && removeMask) {
             if (argType->IsPointerType()) {
-                const PointerType *argPtr =
-                    (CastType<PointerType>(argType))->GetWithAddrSpace(AddressSpace::ispc_generic);
+                const PointerType *argPtr = CastType<PointerType>(argType);
+                if (argPtr->GetAddressSpace() == AddressSpace::ispc_default) {
+                    argPtr = argPtr->GetWithAddrSpace(AddressSpace::ispc_generic);
+                }
                 castedArgType = argPtr->LLVMType(ctx);
             } else if (argType->IsReferenceType()) {
-                const ReferenceType *refPtr =
-                    (CastType<ReferenceType>(argType))->GetWithAddrSpace(AddressSpace::ispc_generic);
+                const ReferenceType *refPtr = CastType<ReferenceType>(argType);
+                if (refPtr->GetAddressSpace() == AddressSpace::ispc_default) {
+                    refPtr = refPtr->GetWithAddrSpace(AddressSpace::ispc_generic);
+                }
                 castedArgType = refPtr->LLVMType(ctx);
             }
         }
+
         // For extern "SYCL" functions on Xe targets broadcast uniform parameters
         // to varying to match IGC signature by vISA level.
         if (g->target->isXeTarget() && isExternSYCL) {
@@ -3385,13 +3409,14 @@ static bool lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
     const PointerType *ptb = CastType<PointerType>(b);
     if (pta != nullptr && ptb != nullptr)
         return (pta->IsUniformType() == ptb->IsUniformType() && pta->IsSlice() == ptb->IsSlice() &&
-                pta->IsFrozenSlice() == ptb->IsFrozenSlice() &&
+                pta->IsFrozenSlice() == ptb->IsFrozenSlice() && pta->GetAddressSpace() == ptb->GetAddressSpace() &&
                 lCheckTypeEquality(pta->GetBaseType(), ptb->GetBaseType(), ignoreConst));
 
     const ReferenceType *rta = CastType<ReferenceType>(a);
     const ReferenceType *rtb = CastType<ReferenceType>(b);
     if (rta != nullptr && rtb != nullptr)
-        return (lCheckTypeEquality(rta->GetReferenceTarget(), rtb->GetReferenceTarget(), ignoreConst));
+        return (rta->GetAddressSpace() == rtb->GetAddressSpace() &&
+                lCheckTypeEquality(rta->GetReferenceTarget(), rtb->GetReferenceTarget(), ignoreConst));
 
     const FunctionType *fta = CastType<FunctionType>(a);
     const FunctionType *ftb = CastType<FunctionType>(b);

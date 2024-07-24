@@ -120,13 +120,13 @@ static const char *lBuiltinTokens[] = {
     "int", "int8", "int16", "int32", "int64", "invoke_sycl", "launch", "new", "NULL",
     "print", "return", "signed", "sizeof", "static", "struct", "switch",
     "sync", "task", "true", "typedef", "uniform", "unmasked", "unsigned",
-    "varying", "void", "while", NULL
+    "varying", "void", "while", "__attribute__", NULL
 };
 
 static const char *lParamListTokens[] = {
     "bool", "const", "double", "enum", "false", "float16", "float", "int",
     "int8", "int16", "int32", "int64", "signed", "struct", "true",
-    "uniform", "unsigned", "varying", "void", NULL
+    "uniform", "unsigned", "varying", "void", "__attribute__", NULL
 };
 
 struct ForeachDimension {
@@ -157,6 +157,9 @@ struct ForeachDimension {
     StorageClass storageClass;
     Stmt *stmt;
     DeclSpecs *declSpecs;
+    AttributeList *attributeList;
+    Attribute *attr;
+    AttrArgument *attrArg;
     Declaration *declaration;
     std::vector<Declarator *> *declarators;
     std::vector<Declaration *> *declarationList;
@@ -215,6 +218,7 @@ struct ForeachDimension {
 %token TOKEN_FOR TOKEN_GOTO TOKEN_CONTINUE TOKEN_BREAK TOKEN_RETURN
 %token TOKEN_CIF TOKEN_CDO TOKEN_CFOR TOKEN_CWHILE
 %token TOKEN_SYNC TOKEN_PRINT TOKEN_ASSERT TOKEN_INVOKE_SYCL
+%token TOKEN_ATTRIBUTE
 
 %type <expr> primary_expression postfix_expression integer_dotdotdot
 %type <expr> unary_expression cast_expression funcall_expression launch_expression intrincall_expression
@@ -257,6 +261,10 @@ struct ForeachDimension {
 %type <typeQualifier> type_qualifier type_qualifier_list
 %type <storageClass> storage_class_specifier
 %type <declSpecs> declaration_specifiers
+
+%type <attributeList> attribute_list attribute_specifier
+%type <attr> attribute
+%type <attrArg> attribute_argument
 
 %type <stringVal> string_constant intrinsic_name
 %type <constCharPtr> struct_or_union_name enum_identifier goto_identifier
@@ -1051,6 +1059,85 @@ declaration_specifiers
           if (ds != nullptr)
               ds->typeQualifiers |= $1;
           $$ = ds;
+      }
+    | attribute_specifier
+      {
+          AttributeList *al = $1;
+          DeclSpecs *ds = new DeclSpecs();
+          if (al) {
+              ds->AddAttrList(*al);
+              delete al;
+          }
+          $$ = ds;
+      }
+    | attribute_specifier declaration_specifiers
+      {
+          DeclSpecs *ds = (DeclSpecs *)$2;
+          AttributeList *al = $1;
+          if (ds && al) {
+              ds->AddAttrList(*al);
+              delete al;
+          }
+          $$ = ds;
+      }
+    ;
+
+attribute_specifier
+    : TOKEN_ATTRIBUTE '(' '(' attribute_list ')' ')'
+      {
+          $$ = $4;
+      }
+    ;
+
+attribute_list
+    : attribute
+      {
+          Attribute *attr = $1;
+          AttributeList *al = new AttributeList;
+          al->AddAttribute(*attr);
+          $$ = al;
+          delete attr;
+      }
+    | attribute_list ',' attribute
+      {
+          Attribute *attr = $3;
+          AttributeList *al = $1;
+          al->AddAttribute(*attr);
+          $$ = al;
+          delete attr;
+      }
+    ;
+
+attribute
+    : TOKEN_IDENTIFIER
+      {
+          std::string *str = $1;;
+          $$ = new Attribute(*str);
+          // cleanup TOKEN_IDENTIFIER string
+          lCleanUpString(str);
+      }
+    | TOKEN_IDENTIFIER '(' attribute_argument ')'
+      {
+          std::string *str = $1;;
+          AttrArgument *arg = $3;
+          $$ = new Attribute(*str, *arg);
+          delete arg;
+          // cleanup TOKEN_IDENTIFIER string
+          lCleanUpString(str);
+      }
+    ;
+
+attribute_argument
+    : int_constant
+      {
+          $$ = new AttrArgument($1);
+      }
+    | string_constant
+      {
+          std::string *str = $1;;
+          $$ = new AttrArgument(*str);
+          // deallocate std::string of string_constant
+          lCleanUpString(str);
       }
     ;
 
@@ -2934,13 +3021,16 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
             bool isNoInline = (ds->typeQualifiers & TYPEQUAL_NOINLINE);
             bool isVectorCall = (ds->typeQualifiers & TYPEQUAL_VECTORCALL);
             bool isRegCall = (ds->typeQualifiers & TYPEQUAL_REGCALL);
-            m->AddFunctionDeclaration(decl->name, ft, ds->storageClass,
+            Declarator *funcDecl = decl;
+            if (decl->kind == DK_POINTER || decl->kind == DK_REFERENCE) {
+                funcDecl = decl->child;
+            }
+            m->AddFunctionDeclaration(decl->name, ft, ds->storageClass, funcDecl,
                                       isInline, isNoInline, isVectorCall, isRegCall, decl->pos);
         }
         else {
             bool isConst = (ds->typeQualifiers & TYPEQUAL_CONST) != 0;
-            m->AddGlobalVariable(decl->name, decl->type, decl->initExpr,
-                                 isConst, decl->storageClass, decl->pos);
+            m->AddGlobalVariable(decl, isConst);
         }
     }
 }
@@ -3079,6 +3169,12 @@ lAddFunctionParams(Declarator *decl) {
         else {
             Symbol *sym = new Symbol(declarator->name, declarator->pos,
                                      declarator->type, declarator->storageClass);
+
+            AttributeList *AL = declarator->attributeList;
+            if (AL) {
+                // Check for unknown attributes for parameters in function definitions.
+                AL->CheckForUnknownAttributes(declarator->pos);
+            }
 #ifndef NDEBUG
             bool ok = m->symbolTable->AddVariable(sym);
             if (ok == false)

@@ -202,6 +202,8 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
     const AtomicType *fromAtomicType = CastType<AtomicType>(fromType);
     const PointerType *fromPointerType = CastType<PointerType>(fromType);
     const PointerType *toPointerType = CastType<PointerType>(toType);
+    const ReferenceType *fromReferenceType = CastType<ReferenceType>(fromType);
+    const ReferenceType *toReferenceType = CastType<ReferenceType>(toType);
 
     // Do this early, since for the case of a conversion like
     // "float foo[10]" -> "float * uniform foo", we have what's seemingly
@@ -235,6 +237,32 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
             Error(pos, "Can't convert from type \"%s\" to type \"%s\" for %s.", fromType->GetString().c_str(),
                   toType->GetString().c_str(), errorMsgBase);
         return false;
+    }
+
+    if (fromReferenceType && toReferenceType) {
+        if (Type::Equal(fromReferenceType->GetReferenceTarget(), toReferenceType->GetReferenceTarget()) &&
+            fromReferenceType->GetAddressSpace() != toReferenceType->GetAddressSpace()) {
+
+            if (!failureOk)
+                Error(pos,
+                      "Can't convert from reference type \"%s\" to "
+                      "incompatible reference type \"%s\" for %s.",
+                      fromReferenceType->GetString().c_str(), toReferenceType->GetString().c_str(), errorMsgBase);
+            return false;
+        }
+    }
+
+    if (fromPointerType && toPointerType) {
+        if (Type::Equal(fromPointerType->GetBaseType(), toPointerType->GetBaseType()) &&
+            fromPointerType->GetAddressSpace() != toPointerType->GetAddressSpace()) {
+
+            if (!failureOk)
+                Error(pos,
+                      "Can't convert between pointer types with different "
+                      "address spaces \"%s\" and \"%s\" for %s.",
+                      fromPointerType->GetString().c_str(), toPointerType->GetString().c_str(), errorMsgBase);
+            return false;
+        }
     }
 
     if (fromPointerType != nullptr) {
