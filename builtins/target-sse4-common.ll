@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2023, Intel Corporation
+;;  Copyright (c) 2010-2024, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -8,10 +8,10 @@
 ctlztz()
 popcnt()
 define_prefetches()
-define_shuffles()
 aossoa()
 rdrand_decls()
 halfTypeGenericImplementation()
+define_vector_permutations()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding floats

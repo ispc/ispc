@@ -2014,7 +2014,92 @@ divert`'dnl
 ;; target's vector width
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-define(`shuffles', `
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Generic macros for shuffle and shuffle2 operations
+
+;; shuffle1 macro matches stdlib shuffle(T, int)
+;; $1: type
+
+define(`shuffle1', `
+define <WIDTH x $1> @__shuffle_$1(<WIDTH x $1>, <WIDTH x i32>) nounwind readnone alwaysinline {
+forloop(i, 0, eval(WIDTH-1), `
+  %index_`'i = extractelement <WIDTH x i32> %1, i32 i')
+forloop(i, 0, eval(WIDTH-1), `
+  %v_`'i = extractelement <WIDTH x $1> %0, i32 %index_`'i')
+
+  %ret_0 = insertelement <WIDTH x $1> undef, $1 %v_0, i32 0
+forloop(i, 1, eval(WIDTH-1), `  %ret_`'i = insertelement <WIDTH x $1> %ret_`'eval(i-1), $1 %v_`'i, i32 i
+')
+  ret <WIDTH x $1> %ret_`'eval(WIDTH-1)
+}
+')
+
+;; Helper internal function for shuffles2 with constant index.
+;; $1: type
+
+define(`shuffle2_const', `
+define internal <WIDTH x $1> @__shuffle2_const_$1(<WIDTH x $1>, <WIDTH x $1>, <WIDTH x i32>) nounwind readnone alwaysinline {
+  %v2 = shufflevector <WIDTH x $1> %0, <WIDTH x $1> %1, <eval(2*WIDTH) x i32> <
+      forloop(i, 0, eval(2*WIDTH-2), `i32 i, ') i32 eval(2*WIDTH-1)
+  >
+forloop(i, 0, eval(WIDTH-1), `
+  %index_`'i = extractelement <WIDTH x i32> %2, i32 i')
+
+  ; extract from the requested lanes and insert into the result; LLVM turns
+  ; this into simple shufflevector during InstCombine pass.
+forloop(i, 0, eval(WIDTH-1), `
+  %v_`'i = extractelement <eval(2*WIDTH) x $1> %v2, i32 %index_`'i')
+
+  %ret_0 = insertelement <WIDTH x $1> undef, $1 %v_0, i32 0
+forloop(i, 1, eval(WIDTH-1), `  %ret_`'i = insertelement <WIDTH x $1> %ret_`'eval(i-1), $1 %v_`'i, i32 i
+')
+  ret <WIDTH x $1> %ret_`'eval(WIDTH-1)
+  }
+')
+
+;; shuffle2 macro matches stdlib shuffle2(T, T, int)
+;; $1: type
+
+define(`shuffle2', `
+define <WIDTH x $1> @__shuffle2_$1(<WIDTH x $1>, <WIDTH x $1>, <WIDTH x i32>) nounwind readnone alwaysinline {
+  %isc = call i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32> %2)
+  br i1 %isc, label %is_const, label %not_const
+
+is_const:
+  %res = tail call <WIDTH x $1> @__shuffle2_const_$1(<WIDTH x $1> %0, <WIDTH x $1> %1, <WIDTH x i32> %2)
+  ret <WIDTH x $1> %res
+
+not_const:
+  ; otherwise store the two vectors onto the stack and then use the given
+  ; permutation vector to get indices into that array...
+  %v2 = shufflevector <WIDTH x $1> %0, <WIDTH x $1> %1, <eval(2*WIDTH) x i32> <
+      forloop(i, 0, eval(2*WIDTH-2), `i32 i, ') i32 eval(2*WIDTH-1)
+  >
+  forloop(i, 0, eval(WIDTH-1), `
+  %index_`'i = extractelement <WIDTH x i32> %2, i32 i')
+
+  %ptr = alloca <eval(2*WIDTH) x $1>
+  store <eval(2*WIDTH) x $1> %v2, <eval(2*WIDTH) x $1> * %ptr
+  %baseptr = bitcast <eval(2*WIDTH) x $1> * %ptr to $1 *
+
+  %ptr_0 = getelementptr PTR_OP_ARGS(`$1') %baseptr, i32 %index_0
+  %val_0 = load PTR_OP_ARGS(`$1 ')  %ptr_0
+  %result_0 = insertelement <WIDTH x $1> undef, $1 %val_0, i32 0
+
+forloop(i, 1, eval(WIDTH-1), `
+  %ptr_`'i = getelementptr PTR_OP_ARGS(`$1') %baseptr, i32 %index_`'i
+  %val_`'i = load PTR_OP_ARGS(`$1 ')  %ptr_`'i
+  %result_`'i = insertelement <WIDTH x $1> %result_`'eval(i-1), $1 %val_`'i, i32 i
+')
+  ret <WIDTH x $1> %result_`'eval(WIDTH-1)
+}
+')
+
+;; broadcast/rotate/shift macros
+;; $1: type
+;; $1: type size
+
+define(`vector_permutations', `
 define <WIDTH x $1> @__broadcast_$1(<WIDTH x $1>, i32) nounwind readnone alwaysinline {
   %v = extractelement <WIDTH x $1> %0, i32 %1
   %broadcast_init = insertelement <WIDTH x $1> undef, $1 %v, i32 0
@@ -2071,70 +2156,53 @@ define <WIDTH x $1> @__shift_$1(<WIDTH x $1>, i32) nounwind readnone alwaysinlin
   %result = load PTR_OP_ARGS(`<WIDTH x $1> ')  %load_ptr_vec, align $2
   ret <WIDTH x $1> %result
 }
-
-
-define <WIDTH x $1> @__shuffle_$1(<WIDTH x $1>, <WIDTH x i32>) nounwind readnone alwaysinline {
-forloop(i, 0, eval(WIDTH-1), `
-  %index_`'i = extractelement <WIDTH x i32> %1, i32 i')
-forloop(i, 0, eval(WIDTH-1), `
-  %v_`'i = extractelement <WIDTH x $1> %0, i32 %index_`'i')
-
-  %ret_0 = insertelement <WIDTH x $1> undef, $1 %v_0, i32 0
-forloop(i, 1, eval(WIDTH-1), `  %ret_`'i = insertelement <WIDTH x $1> %ret_`'eval(i-1), $1 %v_`'i, i32 i
-')
-  ret <WIDTH x $1> %ret_`'eval(WIDTH-1)
-}
-
-define <WIDTH x $1> @__shuffle2_$1(<WIDTH x $1>, <WIDTH x $1>, <WIDTH x i32>) nounwind readnone alwaysinline {
-  %v2 = shufflevector <WIDTH x $1> %0, <WIDTH x $1> %1, <eval(2*WIDTH) x i32> <
-      forloop(i, 0, eval(2*WIDTH-2), `i32 i, ') i32 eval(2*WIDTH-1)
-  >
-forloop(i, 0, eval(WIDTH-1), `
-  %index_`'i = extractelement <WIDTH x i32> %2, i32 i')
-
-  %isc = call i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32> %2)
-  br i1 %isc, label %is_const, label %not_const
-
-is_const:
-  ; extract from the requested lanes and insert into the result; LLVM turns
-  ; this into good code in the end
-forloop(i, 0, eval(WIDTH-1), `
-  %v_`'i = extractelement <eval(2*WIDTH) x $1> %v2, i32 %index_`'i')
-
-  %ret_0 = insertelement <WIDTH x $1> undef, $1 %v_0, i32 0
-forloop(i, 1, eval(WIDTH-1), `  %ret_`'i = insertelement <WIDTH x $1> %ret_`'eval(i-1), $1 %v_`'i, i32 i
-')
-  ret <WIDTH x $1> %ret_`'eval(WIDTH-1)
-
-not_const:
-  ; otherwise store the two vectors onto the stack and then use the given
-  ; permutation vector to get indices into that array...
-  %ptr = alloca <eval(2*WIDTH) x $1>
-  store <eval(2*WIDTH) x $1> %v2, <eval(2*WIDTH) x $1> * %ptr
-  %baseptr = bitcast <eval(2*WIDTH) x $1> * %ptr to $1 *
-
-  %ptr_0 = getelementptr PTR_OP_ARGS(`$1') %baseptr, i32 %index_0
-  %val_0 = load PTR_OP_ARGS(`$1 ')  %ptr_0
-  %result_0 = insertelement <WIDTH x $1> undef, $1 %val_0, i32 0
-
-forloop(i, 1, eval(WIDTH-1), `
-  %ptr_`'i = getelementptr PTR_OP_ARGS(`$1') %baseptr, i32 %index_`'i
-  %val_`'i = load PTR_OP_ARGS(`$1 ')  %ptr_`'i
-  %result_`'i = insertelement <WIDTH x $1> %result_`'eval(i-1), $1 %val_`'i, i32 i
 ')
 
-  ret <WIDTH x $1> %result_`'eval(WIDTH-1)
-}
+
+define(`define_shuffle1',`
+shuffle1(i8)
+shuffle1(i16)
+shuffle1(half)
+shuffle1(float)
+shuffle1(i32)
+shuffle1(double)
+shuffle1(i64)
+')
+
+define(`define_shuffle2_const',`
+shuffle2_const(i8)
+shuffle2_const(i16)
+shuffle2_const(half)
+shuffle2_const(float)
+shuffle2_const(i32)
+shuffle2_const(double)
+shuffle2_const(i64)
+')
+
+define(`define_shuffle2',`
+shuffle2(i8)
+shuffle2(i16)
+shuffle2(half)
+shuffle2(float)
+shuffle2(i32)
+shuffle2(double)
+shuffle2(i64)
 ')
 
 define(`define_shuffles',`
-shuffles(i8, 1)
-shuffles(i16, 2)
-shuffles(half, 2)
-shuffles(float, 4)
-shuffles(i32, 4)
-shuffles(double, 8)
-shuffles(i64, 8)
+define_shuffle1()
+define_shuffle2_const()
+define_shuffle2()
+')
+
+define(`define_vector_permutations',`
+vector_permutations(i8, 1)
+vector_permutations(i16, 2)
+vector_permutations(half, 2)
+vector_permutations(float, 4)
+vector_permutations(i32, 4)
+vector_permutations(double, 8)
+vector_permutations(i64, 8)
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

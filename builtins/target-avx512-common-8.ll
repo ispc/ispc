@@ -9,6 +9,82 @@ define(`HAVE_SCATTER',`1')
 include(`target-avx512-utils.ll')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; shuffles
+
+shuffle1(i8)
+shuffle1(half)
+shuffle1(double)
+shuffle1(i64)
+
+declare <WIDTH x i16> @llvm.x86.avx512.mask.permvar.hi.128(<WIDTH x i16>, <WIDTH x i16>, <WIDTH x i16>, i8)
+define <WIDTH x i16> @__shuffle_i16(<WIDTH x i16>, <WIDTH x i32>) nounwind readnone alwaysinline {
+  %ind = trunc <WIDTH x i32> %1 to <WIDTH x i16>
+  %res = call <WIDTH x i16> @llvm.x86.avx512.mask.permvar.hi.128(<WIDTH x i16> %0, <WIDTH x i16> %ind, <WIDTH x i16> zeroinitializer, i8 -1)
+  ret <WIDTH x i16> %res
+}
+
+declare <WIDTH x i32> @llvm.x86.avx512.mask.permvar.si.256(<WIDTH x i32>, <WIDTH x i32>, <WIDTH x i32>, i8)
+define <WIDTH x i32> @__shuffle_i32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone alwaysinline {
+  %res = call <WIDTH x i32>@llvm.x86.avx512.mask.permvar.si.256(<WIDTH x i32> %0, <WIDTH x i32> %1, <WIDTH x i32> zeroinitializer, i8 -1)
+  ret <WIDTH x i32> %res
+}
+
+declare <WIDTH x float> @llvm.x86.avx512.mask.permvar.sf.256(<WIDTH x float>, <WIDTH x i32>, <WIDTH x float>, i8)
+define <WIDTH x float> @__shuffle_float(<WIDTH x float>, <WIDTH x i32>) nounwind readnone alwaysinline {
+  %res = call <WIDTH x float> @llvm.x86.avx512.mask.permvar.sf.256(<WIDTH x float> %0, <WIDTH x i32> %1, <WIDTH x float> zeroinitializer, i8 -1)
+  ret <WIDTH x float> %res
+}
+
+define_shuffle2_const()
+shuffle2(i8)
+shuffle2(half)
+shuffle2(double)
+shuffle2(i64)
+
+declare <WIDTH x i16> @llvm.x86.avx512.vpermi2var.hi.128(<WIDTH x i16>, <WIDTH x i16>, <WIDTH x i16>)
+define <WIDTH x i16> @__shuffle2_i16(<WIDTH x i16>, <WIDTH x i16>, <WIDTH x i32>) nounwind readnone alwaysinline {
+  %isc = call i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32> %2)
+  br i1 %isc, label %is_const, label %not_const
+
+is_const:
+  %res_const = tail call <WIDTH x i16> @__shuffle2_const_i16(<WIDTH x i16> %0, <WIDTH x i16> %1, <WIDTH x i32> %2)
+  ret <WIDTH x i16> %res_const
+
+not_const:
+  %ind = trunc <WIDTH x i32> %2 to <WIDTH x i16>
+  %res = call <WIDTH x i16> @llvm.x86.avx512.vpermi2var.hi.128(<WIDTH x i16> %0, <WIDTH x i16> %ind, <WIDTH x i16> %1)
+  ret <WIDTH x i16> %res
+}
+
+declare <WIDTH x i32> @llvm.x86.avx512.vpermi2var.d.256(<WIDTH x i32>, <WIDTH x i32>, <WIDTH x i32>)
+define <WIDTH x i32> @__shuffle2_i32(<WIDTH x i32>, <WIDTH x i32>, <WIDTH x i32>) nounwind readnone alwaysinline {
+  %isc = call i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32> %2)
+  br i1 %isc, label %is_const, label %not_const
+
+is_const:
+  %res_const = tail call <WIDTH x i32> @__shuffle2_const_i32(<WIDTH x i32> %0, <WIDTH x i32> %1, <WIDTH x i32> %2)
+  ret <WIDTH x i32> %res_const
+
+not_const:
+  %res = call <WIDTH x i32> @llvm.x86.avx512.vpermi2var.d.256(<WIDTH x i32> %0, <WIDTH x i32> %2, <WIDTH x i32> %1)
+  ret <WIDTH x i32> %res
+}
+
+declare <WIDTH x float> @llvm.x86.avx512.vpermi2var.ps.256(<WIDTH x float>, <WIDTH x i32>, <WIDTH x float>)
+define <WIDTH x float> @__shuffle2_float(<WIDTH x float>, <WIDTH x float>, <WIDTH x i32>) nounwind readnone alwaysinline {
+  %isc = call i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32> %2)
+  br i1 %isc, label %is_const, label %not_const
+
+is_const:
+  %res_const = tail call <WIDTH x float> @__shuffle2_const_float(<WIDTH x float> %0, <WIDTH x float> %1, <WIDTH x i32> %2)
+  ret <WIDTH x float> %res_const
+
+not_const:
+  %res = call <WIDTH x float> @llvm.x86.avx512.vpermi2var.ps.256(<WIDTH x float> %0, <WIDTH x i32> %2, <WIDTH x float> %1)
+  ret <WIDTH x float> %res
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Stub for mask conversion. LLVM's intrinsics want i1 mask, but we use i8
 
 define i8 @__cast_mask_to_i8 (<WIDTH x MASK> %mask) alwaysinline {
