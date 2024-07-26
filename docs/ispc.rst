@@ -4730,7 +4730,7 @@ set if the i'th program instance lane is currently active.
 
 ::
 
-    uniform int lanemask()
+    uniform unsigned int64 lanemask()
 
 To broadcast a value from one program instance to all of the others, a
 ``broadcast()`` function is available.  It broadcasts the value of the
