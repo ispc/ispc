@@ -1,0 +1,117 @@
+# Copyright 2024, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+# Runs YARPGEN
+name: YARPGEN
+
+permissions: read-all
+
+on:
+  workflow_dispatch:
+    inputs:
+      timeout:
+        description: "Timeout for test system in minutes. -1 means infinity (default: 1)"
+        required: true
+        type: number
+        default: 1
+
+  schedule:
+    # Run every Saturday at 23:00 UTC
+    - cron: '0 23 * * 6'
+
+env:
+  SDE_MIRROR_ID: 813591
+  SDE_TAR_NAME: sde-external-9.33.0-2024-01-07
+  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
+  LLVM_REPO: https://github.com/ispc/ispc.dependencies
+
+jobs:
+    linux-build-ispc:
+      runs-on: ubuntu-22.04
+      env:
+        LLVM_VERSION: "17.0"
+        LLVM_TAR: llvm-17.0.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+
+      steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          submodules: true
+
+      - name: Install dependencies
+        run: |
+          .github/workflows/scripts/install-build-deps.sh
+
+      - name: Check environment
+        run: |
+          which -a clang
+          cat /proc/cpuinfo
+
+      - name: Build package
+        run: |
+          .github/workflows/scripts/build-ispc.sh
+
+      - name: Sanity testing (make check-all, make test)
+        run: |
+          .github/workflows/scripts/check-ispc.sh
+
+      - name: Upload package
+        uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
+        with:
+          name: ispc_linux_package
+          path: build/ispc-trunk-linux.tar.gz
+
+    yarpgen-build-and-run:
+        runs-on: ubuntu-22.04
+        needs: [linux-build-ispc]
+        steps:
+
+        - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+          with:
+            submodules: true
+
+        - name: Download package
+          uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+          with:
+            name: ispc_linux_package
+
+        - name: Install dependencies and unpack artifacts
+          run: |
+            .github/workflows/scripts/install-test-deps.sh
+
+        - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+          with:
+            repository: 'intel/yarpgen'
+            submodules: true
+
+        - name: Build YARPGEN
+          run: |
+            cmake -B build && cmake --build build
+
+        - name: Set up PATH
+          run: |
+            echo "YARPGEN_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+            echo "$GITHUB_WORKSPACE/build:$GITHUB_WORKSPACE/scripts" >> $GITHUB_PATH
+
+        - name: Set timeout for dispatched run
+          if: github.event_name == 'workflow_dispatch'
+          run: echo "TIMEOUT=${{ github.event.inputs.timeout }}" >> $GITHUB_ENV
+
+        - name: Set timeout for scheduled run
+          if: github.event_name == 'schedule'
+          run: echo "TIMEOUT=240" >> $GITHUB_ENV
+
+        - name: Run YARPGEN
+          run: |
+            $YARPGEN_HOME/scripts/run_gen.py --std ispc --target ispc --timeout $TIMEOUT
+            tar -czvf yarpgen.tar.gz testing
+
+        - name: Print seeds
+          run: |
+            ls -al testing/*/*
+
+        - name: Upload YARPGEN results
+          uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
+          with:
+            name: yarpgen
+            path: yarpgen.tar.gz
+
