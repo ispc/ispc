@@ -13,8 +13,10 @@ ARG SHA=main
 # !!! Make sure that your docker config provides enough memory to the container,
 # otherwise LLVM build may fail, as it will use all the cores available to container.
 
-# Packages required to build ISPC and Clang.
-# libstdc++-static is required if you need to link ISPC with -static.
+# Use an alternative mirror list
+RUN sed -i 's|^mirrorlist=|#mirrorlist=|g' /etc/yum.repos.d/CentOS-Base.repo \
+    && sed -i 's|^#baseurl=http://mirror.centos.org|baseurl=http://mirror.centos.org|g' /etc/yum.repos.d/CentOS-Base.repo
+
 RUN yum -y update && \
     yum install -y centos-release-scl epel-release && \
     yum install -y vim wget yum-utils gcc gcc-c++ git python3 m4 bison && \
