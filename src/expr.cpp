@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -8799,6 +8799,40 @@ void FunctionSymbolExpr::Print(Indent &indent) const {
     indent.Done();
 }
 
+void lWarnDeprecatedFunction(Symbol *sym, SourcePos pos, const std::vector<const Type *> &argTypes) {
+    if (!sym || sym->GetSymbolKind() != Symbol::SymbolKind::Function) {
+        return;
+    }
+
+    const char *name = sym->name.c_str();
+    AttributeList *attrs = sym->attrs;
+    if (attrs) {
+        std::string args_str = "(";
+        for (unsigned int i = 0; i < argTypes.size(); ++i) {
+            if (argTypes[i] != nullptr) {
+                args_str += argTypes[i]->GetString();
+            } else {
+                args_str += "(unknown type)";
+            }
+            if (i < argTypes.size() - 1) {
+                args_str += ", ";
+            }
+        }
+        args_str += ")";
+
+        // Warn if deprecated attribute is provided.
+        if (attrs->HasAttribute("deprecated")) {
+            Attribute *attr = attrs->GetAttribute("deprecated");
+            if (attr->arg.kind == ATTR_ARG_STRING) {
+                Warning(pos, "Function \"%s%s\" is deprecated: %s.", name, args_str.c_str(),
+                        attr->arg.stringVal.c_str());
+            } else {
+                Warning(pos, "Function \"%s%s\" is deprecated.", name, args_str.c_str());
+            }
+        }
+    }
+}
+
 std::pair<llvm::Constant *, bool> FunctionSymbolExpr::GetConstant(const Type *type) const {
     if (matchingFunc == nullptr || matchingFunc->function == nullptr) {
         return std::pair<llvm::Constant *, bool>(nullptr, false);
@@ -9466,17 +9500,20 @@ bool FunctionSymbolExpr::ResolveOverloads(SourcePos argPos, const std::vector<co
             // Choose the one with the lower cost
             matchingFunc = (bestTemplateMatchCost < bestFuncMatchCost) ? templateMatches[0] : funcMatches[0];
         }
+        lWarnDeprecatedFunction(matchingFunc, pos, argTypes);
         return true;
     }
 
     // Handle single matches: function
     if (funcMatches.size() == 1 && templateMatches.empty()) {
         matchingFunc = funcMatches[0];
+        lWarnDeprecatedFunction(matchingFunc, pos, argTypes);
         return true;
     }
     // Handle single matches: template
     if (templateMatches.size() == 1 && funcMatches.empty()) {
         matchingFunc = templateMatches[0];
+        lWarnDeprecatedFunction(matchingFunc, pos, argTypes);
         return true;
     }
 

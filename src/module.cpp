@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -1227,7 +1227,8 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
 
     // Finally, we know all is good and we can add the function to the
     // symbol table
-    Symbol *funSym = new Symbol(name, pos, Symbol::SymbolKind::Function, functionType, storageClass);
+    Symbol *funSym =
+        new Symbol(name, pos, Symbol::SymbolKind::Function, functionType, storageClass, decl->attributeList);
     funSym->function = function;
     bool ok = symbolTable->AddFunction(funSym);
     Assert(ok);

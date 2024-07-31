@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -213,8 +213,8 @@ Attribute::Attribute(const Attribute &a) : name(a.name), arg(a.arg) {}
 
 bool Attribute::IsKnownAttribute() const {
     // Known/supported attributes.
-    static std::unordered_set<std::string> lKnownParamAttrs = {"noescape", "address_space", "unmangled",
-                                                               "memory",   "cdecl",         "external_only"};
+    static std::unordered_set<std::string> lKnownParamAttrs = {"noescape", "address_space", "unmangled", "memory",
+                                                               "cdecl",    "external_only", "deprecated"};
 
     if (lKnownParamAttrs.find(name) != lKnownParamAttrs.end()) {
         return true;

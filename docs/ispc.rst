@@ -676,6 +676,10 @@ refer to `The Preprocessor`_ for more details.
 
 ``--nocpp`` command line flag is deprecated and will be removed in future.
 
+``__attribute__((deprecated))`` can be applied to a function to mark it as
+deprecated. It leads to a warning when the function is called.
+
+
 Getting Started with ISPC
 =========================
 
@@ -3009,6 +3013,19 @@ from C/C++ in case when the user wants to reduce the size of the generated
 code. Same effect can be achieved by using ``-ffunction-sections`` compiler
 option but not in all cases (e.g., shared libraries with ISPC code), so this
 attribute is provided as a more fine-grained control.
+
+deprecated
+----------
+
+``__attribute__((deprecated))`` can be applied to a function to mark it as
+deprecated. The compiler will issue a warning when the function is called.
+There are two ways to use this attribute in ISPC with or without a message:
+
+::
+
+    __attribute__((deprecated)) void foo();
+    __attribute__((deprecated("Use bar() instead."))) void foo();
+
 
 Expressions
 -----------

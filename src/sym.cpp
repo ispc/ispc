@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -24,9 +24,16 @@ using namespace ispc;
 ///////////////////////////////////////////////////////////////////////////
 // Symbol
 
-Symbol::Symbol(const std::string &n, SourcePos p, SymbolKind st, const Type *t, StorageClass sc)
+Symbol::Symbol(const std::string &n, SourcePos p, SymbolKind st, const Type *t, StorageClass sc, AttributeList *a)
     : pos(p), name(n), storageInfo(nullptr), function(nullptr), exportedFunction(nullptr), type(t), constValue(nullptr),
-      storageClass(sc), varyingCFDepth(0), parentFunction(nullptr), kind(st) {}
+      storageClass(sc), varyingCFDepth(0), parentFunction(nullptr),
+      attrs(a != nullptr ? new AttributeList(*a) : nullptr), kind(st) {}
+
+Symbol::~Symbol() {
+    if (attrs != nullptr) {
+        delete attrs;
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////
 // TemplateSymbol

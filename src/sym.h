@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -53,7 +53,8 @@ class Symbol : public Traceable {
     /** The Symbol constructor takes the name of the symbol, its
         position in a source file, and its type (if known). */
     Symbol(const std::string &name, SourcePos pos, SymbolKind st = SymbolKind::Default, const Type *t = nullptr,
-           StorageClass sc = SC_NONE);
+           StorageClass sc = SC_NONE, AttributeList *a = nullptr);
+    ~Symbol();
 
     SourcePos pos;            /*!< Source file position where the symbol was defined */
     std::string name;         /*!< Symbol's name */
@@ -93,6 +94,10 @@ class Symbol : public Traceable {
     /*!< For symbols that are parameters to functions or are
          variables declared inside functions, this gives the
          function they're in. */
+
+    /** Attributes associated with the symbol. */
+    AttributeList *attrs;
+
     /* */
     SymbolKind GetSymbolKind() const { return kind; }
 
