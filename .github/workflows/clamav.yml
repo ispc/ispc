@@ -1,0 +1,54 @@
+# Copyright 2024, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: Scan trunk archives with ClamAV
+
+permissions: read-all
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run every day at 22:00 UTC
+    - cron: '0 22 * * *'
+
+env:
+  zip_url: https://ci.appveyor.com/api/projects/ispc/ispc/artifacts/build%2Fispc-trunk-windows.zip?job=Environment%3A%20APPVEYOR_BUILD_WORKER_IMAGE%3DVisual%20Studio%202019%2C%20LLVM_VERSION%3Dlatest
+  tar_url: https://ci.appveyor.com/api/projects/ispc/ispc/artifacts/build%2Fispc-trunk-linux.tar.gz?job=Environment%3A%20APPVEYOR_BUILD_WORKER_IMAGE%3DUbuntu1804%2C%20LLVM_VERSION%3Dlatest
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+    - name: Install ClamAV
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clamav
+
+    - name: Update ClamAV database
+      run: |
+        sudo systemctl stop clamav-freshclam
+        sudo freshclam
+        sudo systemctl start clamav-freshclam
+
+    - name: Download archives
+      run: |
+        wget -O archive.zip ${{ env.zip_url }}
+        unzip -q archive.zip
+        wget -O archive.tar.gz ${{ env.tar_url }}
+        gunzip archive.tar.gz
+
+    - name: Scan archvies and source code with ClamAV
+      run: |
+        clamscan --recursive --scan-archive --archive-verbose --verbose ./ 2>&1 | tee ispc-trunk-clamscan.log
+
+    - name: Upload ClamAV logs
+      uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
+      if: always()
+      with:
+        name: clamav-logs
+        path: |
+          ispc-trunk-clamscan.log
