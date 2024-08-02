@@ -8,7 +8,7 @@ environment:
   LLVM_LATEST: 17.0
   DOCKER_PATH: "ispc/test_repo"
   matrix:
-    - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
+    - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu2204
       LLVM_VERSION: latest
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       LLVM_VERSION: latest
