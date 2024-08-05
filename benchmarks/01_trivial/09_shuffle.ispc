@@ -1,3 +1,6 @@
+// Copyright (c) 2024, Intel Corporation
+// SPDX-License-Identifier: BSD-3-Clause
+
 // For easier checking on the C++ side:
 // The value of PERMUTE_VAL should match the value of 'perm' parameter defined in the C++ code.
 // This ensures that during runtime, the shuffle index simplifies to just programIndex.

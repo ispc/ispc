@@ -1,3 +1,6 @@
+// Copyright (c) 2021-2024, Intel Corporation
+// SPDX-License-Identifier: BSD-3-Clause
+
 // [int32, int64] x [uniform, varying] x [all, even]
 #define op(arg) popcnt(arg)
 #define popcnt8(arg) op(op(op(op(op(op(op(op(arg))))))))

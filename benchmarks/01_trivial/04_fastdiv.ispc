@@ -1,4 +1,7 @@
 
+// Copyright (c) 2021-2024, Intel Corporation
+// SPDX-License-Identifier: BSD-3-Clause
+
 #define FASTDIVISPC(T_ISPC, DIV_VAL)                                                                                   \
     export void fastdiv_##T_ISPC##_##DIV_VAL(uniform T_ISPC *uniform src, uniform T_ISPC *uniform dst,                 \
                                              uniform int count) {                                                      \

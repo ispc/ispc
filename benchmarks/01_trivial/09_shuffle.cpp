@@ -1,3 +1,6 @@
+// Copyright (c) 2024, Intel Corporation
+// SPDX-License-Identifier: BSD-3-Clause
+
 #include "../common.h"
 #include "09_shuffle_ispc.h"
 #include <benchmark/benchmark.h>
