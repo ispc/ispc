@@ -1,3 +1,6 @@
+// Copyright (c) 2021-2024, Intel Corporation
+// SPDX-License-Identifier: BSD-3-Clause
+
 // math:
 // sqrt, rsqrt / rsqrt_fast, rcp / rcp_fast, ldexp, frexp,
 // sin, asin, cos, acos, sincos, tan, atan, atan2, exp, log, pow

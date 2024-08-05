@@ -1,3 +1,6 @@
+// Copyright (c) 2023-2024, Intel Corporation
+// SPDX-License-Identifier: BSD-3-Clause
+
 #define MASKED_LOAD_STORE(T_ISPC)                                                                                      \
     export void masked_load_store_##T_ISPC(uniform T_ISPC aIN[], uniform T_ISPC bIN[], uniform T_ISPC cOUT[],          \
                                            uniform int n, uniform bool aMask[]) {                                      \

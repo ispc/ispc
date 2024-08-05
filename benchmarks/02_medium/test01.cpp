@@ -1,3 +1,6 @@
+// Copyright (c) 2021-2024, Intel Corporation
+// SPDX-License-Identifier: BSD-3-Clause
+
 #include <benchmark/benchmark.h>
 #include <cmath>
 #include <stdio.h>
