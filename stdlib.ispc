@@ -3250,6 +3250,9 @@ __declspec(safe) static inline float exp(float x_full) {
         x_full = ldexp(z, n);
         return x_full;
     } else if (__math_lib == __math_lib_ispc) {
+
+        // See the uniform version for more information
+
         const float ln2_part1 = 0.6931457519;
         const float ln2_part2 = 1.4286067653e-6;
         const float one_over_ln2 = 1.44269502162933349609375;
@@ -3283,11 +3286,11 @@ __declspec(safe) static inline float exp(float x_full) {
         // it for now and just do floats)
         const int fpbias = 127;
         int biased_n = k + fpbias;
-        bool overflow = k > fpbias;
+        bool overflow = k_real > fpbias;
         // Minimum exponent is -126, so if k is <= -127 (k + 127 <= 0)
         // we've got underflow. -127 * ln(2) -> -88.02. So the most
         // negative float input that doesn't result in zero is like -88.
-        bool underflow = (biased_n <= 0);
+        bool underflow = k_real <= -fpbias;
         const int InfBits = 0x7f800000;
         biased_n <<= 23;
         // Reinterpret this thing as float
@@ -3325,6 +3328,10 @@ __declspec(safe) static inline uniform float exp(uniform float x_full) {
         x_full = ldexp(z, n);
         return x_full;
     } else if (__math_lib == __math_lib_ispc) {
+
+        // Precision: <5 ULP for normal numbers (possibly much higher for subnormal like exp(-87.34)).
+        // Support special input values like NaN, -Inf, +Inf and subnormal numbers correctly.
+
         const uniform float ln2_part1 = 0.6931457519;
         const uniform float ln2_part2 = 1.4286067653e-6;
         const uniform float one_over_ln2 = 1.44269502162933349609375;
@@ -3358,11 +3365,11 @@ __declspec(safe) static inline uniform float exp(uniform float x_full) {
         // it for now and just do uniform floats)
         const uniform int fpbias = 127;
         uniform int biased_n = k + fpbias;
-        uniform bool overflow = k > fpbias;
+        uniform bool overflow = k_real > fpbias;
         // Minimum exponent is -126, so if k is <= -127 (k + 127 <= 0)
         // we've got underflow. -127 * ln(2) -> -88.02. So the most
         // negative uniform float input that doesn't result in zero is like -88.
-        uniform bool underflow = (biased_n <= 0);
+        uniform bool underflow = k_real <= -fpbias;
         const uniform int InfBits = 0x7f800000;
         biased_n <<= 23;
         // Reuniform interpret this thing as uniform float
