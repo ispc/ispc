@@ -211,8 +211,6 @@ static void lPrintVersion() {
     printf("    [--[no-]discard-value-names]\tDo not discard/Discard value names when generating LLVM IR\n");
     printf("    [--dump-file[=<path>]]\t\tDump module IR to file(s) in "
            "current directory, or to <path> if specified\n");
-    printf("    [--fuzz-seed=<value>]\t\tSeed value for RNG for fuzz testing\n");
-    printf("    [--fuzz-test]\t\t\tRandomly perturb program input to test error conditions\n");
     printf("    [--off-phase=<value>]\t\tSwitch off optimization phases. --off-phase=first,210:220,300,305,310:last\n");
     printf("    [--opt=<option>]\t\t\tSet optimization option\n");
     printf("        disable-all-on-optimizations\t\tDisable optimizations that take advantage of \"all on\" mask\n");
@@ -833,11 +831,7 @@ int main(int Argc, char *Argv[]) {
             lParseInclude(argv[i] + 2);
         } else if (!strcmp(argv[i], "--ignore-preprocessor-errors")) {
             g->ignoreCPPErrors = true;
-        } else if (!strcmp(argv[i], "--fuzz-test"))
-            g->enableFuzzTest = true;
-        else if (!strncmp(argv[i], "--fuzz-seed=", 12))
-            g->fuzzTestSeed = atoi(argv[i] + 12);
-        else if (!strcmp(argv[i], "--target")) {
+        } else if (!strcmp(argv[i], "--target")) {
             // FIXME: should remove this way of specifying the target...
             if (++i != argc) {
                 auto result = ParseISPCTargets(argv[i]);
@@ -1190,23 +1184,6 @@ int main(int Argc, char *Argv[]) {
         }
     }
 #endif
-
-    if (g->enableFuzzTest) {
-        if (g->fuzzTestSeed == -1) {
-#ifdef ISPC_HOST_IS_WINDOWS
-            int seed = (unsigned)time(nullptr);
-#else
-            int seed = getpid();
-#endif
-            g->fuzzTestSeed = seed;
-            Warning(SourcePos(), "Using seed %d for fuzz testing", g->fuzzTestSeed);
-        }
-#ifdef ISPC_HOST_IS_WINDOWS
-        srand(g->fuzzTestSeed);
-#else
-        srand48(g->fuzzTestSeed);
-#endif
-    }
 
     if (depsFileName != nullptr) {
         flags.setDepsToStdout(false);
