@@ -381,33 +381,3 @@ void SymbolTable::Print() {
         depth += 4;
     }
 }
-
-inline int ispcRand() {
-#ifdef ISPC_HOST_IS_WINDOWS
-    return rand();
-#else
-    return lrand48();
-#endif
-}
-
-Symbol *SymbolTable::RandomSymbol() {
-    int v = ispcRand() % variables.size();
-    if (variables[v]->size() == 0)
-        return nullptr;
-    int count = ispcRand() % variables[v]->size();
-    SymbolMapType::iterator iter = variables[v]->begin();
-    while (count-- > 0) {
-        ++iter;
-        Assert(iter != variables[v]->end());
-    }
-    return iter->second;
-}
-
-const Type *SymbolTable::RandomType() {
-
-    int randomScopeIndex = ispcRand() % types.size();
-
-    int randomTypeIndex = ispcRand() % types[randomScopeIndex].size();
-
-    return std::next(types[randomScopeIndex].cbegin(), randomTypeIndex)->second;
-}

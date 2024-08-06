@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -42,36 +42,6 @@ inline int isatty(int) { return 0; }
 #else
 #include <unistd.h>
 #endif // ISPC_HOST_IS_WINDOWS
-
-static int allTokens[] = {
-  TOKEN_ASSERT, TOKEN_BOOL, TOKEN_BREAK, TOKEN_CASE,
-  TOKEN_CDO, TOKEN_CFOR, TOKEN_CIF, TOKEN_CWHILE,
-  TOKEN_CONST, TOKEN_CONTINUE, TOKEN_DEFAULT, TOKEN_DO,
-  TOKEN_DELETE, TOKEN_DOUBLE, TOKEN_ELSE, TOKEN_ENUM,
-  TOKEN_EXPORT, TOKEN_EXTERN, TOKEN_FALSE, TOKEN_FLOAT, TOKEN_FLOAT16, TOKEN_FOR,
-  TOKEN_FOREACH, TOKEN_FOREACH_ACTIVE, TOKEN_FOREACH_TILED,
-  TOKEN_FOREACH_UNIQUE, TOKEN_GOTO, TOKEN_IF, TOKEN_IN, TOKEN_INLINE,
-  TOKEN_INT, TOKEN_INT8, TOKEN_INT16, TOKEN_INT, TOKEN_INT64, TOKEN_LAUNCH,
-  TOKEN_UINT, TOKEN_UINT8, TOKEN_UINT16, TOKEN_UINT64,
-  TOKEN_NEW, TOKEN_NULL, TOKEN_PRINT, TOKEN_RETURN, TOKEN_SOA, TOKEN_SIGNED,
-  TOKEN_SIZEOF, TOKEN_ALLOCA, TOKEN_STATIC, TOKEN_STRUCT, TOKEN_SWITCH, TOKEN_SYNC,
-  TOKEN_TASK, TOKEN_TEMPLATE, TOKEN_TRUE, TOKEN_TYPEDEF, TOKEN_TYPENAME,
-  TOKEN_UNIFORM, TOKEN_UNMASKED, TOKEN_UNSIGNED, TOKEN_VARYING, TOKEN_VOID, TOKEN_WHILE,
-  TOKEN_STRING_C_LITERAL, TOKEN_STRING_SYCL_LITERAL, TOKEN_DOTDOTDOT,
-  TOKEN_FLOAT_CONSTANT, TOKEN_FLOAT16_CONSTANT, TOKEN_DOUBLE_CONSTANT,
-  TOKEN_INT8_CONSTANT, TOKEN_UINT8_CONSTANT,
-  TOKEN_INT16_CONSTANT, TOKEN_UINT16_CONSTANT,
-  TOKEN_INT32_CONSTANT, TOKEN_UINT32_CONSTANT,
-  TOKEN_INT64_CONSTANT, TOKEN_UINT64_CONSTANT,
-  TOKEN_INC_OP, TOKEN_DEC_OP, TOKEN_LEFT_OP, TOKEN_RIGHT_OP, TOKEN_LE_OP,
-  TOKEN_GE_OP, TOKEN_EQ_OP, TOKEN_NE_OP, TOKEN_AND_OP, TOKEN_OR_OP,
-  TOKEN_MUL_ASSIGN, TOKEN_DIV_ASSIGN, TOKEN_MOD_ASSIGN, TOKEN_ADD_ASSIGN,
-  TOKEN_SUB_ASSIGN, TOKEN_LEFT_ASSIGN, TOKEN_RIGHT_ASSIGN, TOKEN_AND_ASSIGN,
-  TOKEN_XOR_ASSIGN, TOKEN_OR_ASSIGN, TOKEN_PTR_OP, TOKEN_NOINLINE, TOKEN_VECTORCALL,
-  TOKEN_REGCALL, TOKEN_INVOKE_SYCL,
-  ';', '{', '}', ',', ':', '=', '(', ')', '[', ']', '.', '&', '!', '~', '-',
-  '+', '*', '/', '%', '<', '>', '^', '|', '?',
-};
 
 std::map<int, std::string> tokenToName;
 std::map<std::string, std::string> tokenNameRemap;
@@ -311,41 +281,6 @@ void ParserInit() {
     tokenNameRemap["$end"] = "end of file";
 }
 
-
-inline int ispcRand() {
-#ifdef ISPC_HOST_IS_WINDOWS
-    return rand();
-#else
-    return lrand48();
-#endif
-}
-
-#define RT \
-    do { \
-    if (g->enableFuzzTest) { \
-        int r = ispcRand() % 40; \
-        if (r == 0) { \
-            Warning(yylloc, "Fuzz test dropping token"); \
-        } \
-        else if (r == 1) { \
-            Assert (tokenToName.size() > 0); \
-            int nt = sizeof(allTokens) / sizeof(allTokens[0]); \
-            int tn = ispcRand() % nt; \
-            yylval.stringVal = new std::string(yytext); /* just in case */\
-            Warning(yylloc, "Fuzz test replaced token with \"%s\"", tokenToName[allTokens[tn]].c_str()); \
-            return allTokens[tn]; \
-        } \
-        else if (r == 2) { \
-            Symbol *sym = m->symbolTable->RandomSymbol(); \
-            if (sym != nullptr) { \
-                yylval.stringVal = new std::string(sym->name); \
-                Warning(yylloc, "Fuzz test replaced with identifier \"%s\".", sym->name.c_str()); \
-                return TOKEN_IDENTIFIER; \
-            } \
-        } \
-        /*  TOKEN_TYPE_NAME */ \
-     } } while(0)
-
 %}
 
 %option nounput
@@ -378,82 +313,82 @@ ZO_SWIZZLE ([01]+[w-z]+)+|([01]+[rgba]+)+|([01]+[uv]+)+
 }
 
 
-__assert { RT; return TOKEN_ASSERT; }
-bool { RT; return TOKEN_BOOL; }
-break { RT; return TOKEN_BREAK; }
-case { RT; return TOKEN_CASE; }
-cbreak { RT; Warning(yylloc, "\"cbreak\" is deprecated. Use \"break\"."); return TOKEN_BREAK; }
-ccontinue { RT; Warning(yylloc, "\"ccontinue\" is deprecated. Use \"continue\"."); return TOKEN_CONTINUE; }
-cdo { RT; return TOKEN_CDO; }
-cfor { RT; return TOKEN_CFOR; }
-cif { RT; return TOKEN_CIF; }
-cwhile { RT; return TOKEN_CWHILE; }
-const { RT; return TOKEN_CONST; }
-continue { RT; return TOKEN_CONTINUE; }
-creturn { RT; Warning(yylloc, "\"creturn\" is deprecated. Use \"return\"."); return TOKEN_RETURN; }
-__declspec { RT; return TOKEN_DECLSPEC; }
-default { RT; return TOKEN_DEFAULT; }
-do { RT; return TOKEN_DO; }
-delete { RT; return TOKEN_DELETE; }
-delete\[\] { RT; return TOKEN_DELETE; }
-double { RT; return TOKEN_DOUBLE; }
-else { RT; return TOKEN_ELSE; }
-enum { RT; return TOKEN_ENUM; }
-export { RT; return TOKEN_EXPORT; }
-extern { RT; return TOKEN_EXTERN; }
-false { RT; return TOKEN_FALSE; }
-float { RT; return TOKEN_FLOAT; }
-for { RT; return TOKEN_FOR; }
-foreach { RT; return TOKEN_FOREACH; }
-foreach_active { RT; return TOKEN_FOREACH_ACTIVE; }
-foreach_tiled { RT; return TOKEN_FOREACH_TILED; }
-foreach_unique { RT; return TOKEN_FOREACH_UNIQUE; }
-float16 { RT; return TOKEN_FLOAT16; }
-goto { RT; return TOKEN_GOTO; }
-if { RT; return TOKEN_IF; }
-in { RT; return TOKEN_IN; }
-inline { RT; return TOKEN_INLINE; }
-noinline { RT; return TOKEN_NOINLINE; }
-__vectorcall { RT; return TOKEN_VECTORCALL; }
-__regcall { RT; return TOKEN_REGCALL; }
-int { RT; return TOKEN_INT; }
-uint { RT; return TOKEN_UINT; }
-int8 { RT; return TOKEN_INT8; }
-uint8 { RT; return TOKEN_UINT8; }
-int16 { RT; return TOKEN_INT16; }
-uint16 { RT; return TOKEN_UINT16; }
-int32 { RT; return TOKEN_INT; }
-uint32 { RT; return TOKEN_UINT; }
-int64 { RT; return TOKEN_INT64; }
-uint64 { RT; return TOKEN_UINT64; }
-launch { RT; return TOKEN_LAUNCH; }
-invoke_sycl { RT; return TOKEN_INVOKE_SYCL; }
-new { RT; return TOKEN_NEW; }
-NULL { RT; return TOKEN_NULL; }
-print { RT; return TOKEN_PRINT; }
-return { RT; return TOKEN_RETURN; }
-soa { RT; return TOKEN_SOA; }
-signed { RT; return TOKEN_SIGNED; }
-sizeof { RT; return TOKEN_SIZEOF; }
-alloca { RT; return TOKEN_ALLOCA; }
-static { RT; return TOKEN_STATIC; }
-struct { RT; return TOKEN_STRUCT; }
-switch { RT; return TOKEN_SWITCH; }
-sync { RT; return TOKEN_SYNC; }
-task { RT; return TOKEN_TASK; }
-template { RT; return TOKEN_TEMPLATE; }
-true { RT; return TOKEN_TRUE; }
-typedef { RT; return TOKEN_TYPEDEF; }
-typename { RT; return TOKEN_TYPENAME; }
-uniform { RT; return TOKEN_UNIFORM; }
-unmasked { RT; return TOKEN_UNMASKED; }
-unsigned { RT; return TOKEN_UNSIGNED; }
-varying { RT; return TOKEN_VARYING; }
-void { RT; return TOKEN_VOID; }
-while { RT; return TOKEN_WHILE; }
-\"C\" { RT; return TOKEN_STRING_C_LITERAL; }
-\"SYCL\" { RT; return TOKEN_STRING_SYCL_LITERAL; }
-\.\.\. { RT; return TOKEN_DOTDOTDOT; }
+__assert { return TOKEN_ASSERT; }
+bool { return TOKEN_BOOL; }
+break { return TOKEN_BREAK; }
+case { return TOKEN_CASE; }
+cbreak { Warning(yylloc, "\"cbreak\" is deprecated. Use \"break\"."); return TOKEN_BREAK; }
+ccontinue { Warning(yylloc, "\"ccontinue\" is deprecated. Use \"continue\"."); return TOKEN_CONTINUE; }
+cdo { return TOKEN_CDO; }
+cfor { return TOKEN_CFOR; }
+cif { return TOKEN_CIF; }
+cwhile { return TOKEN_CWHILE; }
+const { return TOKEN_CONST; }
+continue { return TOKEN_CONTINUE; }
+creturn { Warning(yylloc, "\"creturn\" is deprecated. Use \"return\"."); return TOKEN_RETURN; }
+__declspec { return TOKEN_DECLSPEC; }
+default { return TOKEN_DEFAULT; }
+do { return TOKEN_DO; }
+delete { return TOKEN_DELETE; }
+delete\[\] { return TOKEN_DELETE; }
+double { return TOKEN_DOUBLE; }
+else { return TOKEN_ELSE; }
+enum { return TOKEN_ENUM; }
+export { return TOKEN_EXPORT; }
+extern { return TOKEN_EXTERN; }
+false { return TOKEN_FALSE; }
+float { return TOKEN_FLOAT; }
+for { return TOKEN_FOR; }
+foreach { return TOKEN_FOREACH; }
+foreach_active { return TOKEN_FOREACH_ACTIVE; }
+foreach_tiled { return TOKEN_FOREACH_TILED; }
+foreach_unique { return TOKEN_FOREACH_UNIQUE; }
+float16 { return TOKEN_FLOAT16; }
+goto { return TOKEN_GOTO; }
+if { return TOKEN_IF; }
+in { return TOKEN_IN; }
+inline { return TOKEN_INLINE; }
+noinline { return TOKEN_NOINLINE; }
+__vectorcall { return TOKEN_VECTORCALL; }
+__regcall { return TOKEN_REGCALL; }
+int { return TOKEN_INT; }
+uint { return TOKEN_UINT; }
+int8 { return TOKEN_INT8; }
+uint8 { return TOKEN_UINT8; }
+int16 { return TOKEN_INT16; }
+uint16 { return TOKEN_UINT16; }
+int32 { return TOKEN_INT; }
+uint32 { return TOKEN_UINT; }
+int64 { return TOKEN_INT64; }
+uint64 { return TOKEN_UINT64; }
+launch { return TOKEN_LAUNCH; }
+invoke_sycl { return TOKEN_INVOKE_SYCL; }
+new { return TOKEN_NEW; }
+NULL { return TOKEN_NULL; }
+print { return TOKEN_PRINT; }
+return { return TOKEN_RETURN; }
+soa { return TOKEN_SOA; }
+signed { return TOKEN_SIGNED; }
+sizeof { return TOKEN_SIZEOF; }
+alloca { return TOKEN_ALLOCA; }
+static { return TOKEN_STATIC; }
+struct { return TOKEN_STRUCT; }
+switch { return TOKEN_SWITCH; }
+sync { return TOKEN_SYNC; }
+task { return TOKEN_TASK; }
+template { return TOKEN_TEMPLATE; }
+true { return TOKEN_TRUE; }
+typedef { return TOKEN_TYPEDEF; }
+typename { return TOKEN_TYPENAME; }
+uniform { return TOKEN_UNIFORM; }
+unmasked { return TOKEN_UNMASKED; }
+unsigned { return TOKEN_UNSIGNED; }
+varying { return TOKEN_VARYING; }
+void { return TOKEN_VOID; }
+while { return TOKEN_WHILE; }
+\"C\" { return TOKEN_STRING_C_LITERAL; }
+\"SYCL\" { return TOKEN_STRING_SYCL_LITERAL; }
+\.\.\. { return TOKEN_DOTDOTDOT; }
 
 "operator*"  { return lParseOperator(yytext); }
 "operator+"  { return lParseOperator(yytext); }
@@ -466,7 +401,6 @@ while { RT; return TOKEN_WHILE; }
 L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERAL; }
 
 {IDENT} {
-    RT;
     /* We have an identifier--is it a type name or an identifier?
        The symbol table will straighten us out... */
     yylval.stringVal = new std::string(yytext);
@@ -479,24 +413,20 @@ L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERA
 }
 
 {INTRINSIC_CALL} {
-    RT;
     /* We have a potential llvm intrinsic call.*/
     yylval.stringVal = new std::string(yytext);
     return TOKEN_INTRINSIC_CALL;
 }
 
 {INT_NUMBER} {
-    RT;
     return lParseInteger(false);
 }
 
 {INT_NUMBER_DOTDOTDOT} {
-    RT;
     return lParseInteger(true);
 }
 
 {FORTRAN_DOUBLE_NUMBER} {
-    RT;
     {
       int i = 0;
       while (yytext[i] != 'd' && yytext[i] != 'D') i++;
@@ -507,24 +437,20 @@ L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERA
 }
 
 {FLOAT_NUMBER_DECIMAL}|{FLOAT_NUMBER_SCIENTIFIC} {
-    RT;
     return lParseFP();
 }
 
 {FLOAT_NUMBER_DECIMAL_DEPRECATED} {
-    RT;
     Warning(yylloc, "single precision floating point literal should have a radix separator (dot)");
     return lParseFP();
 }
 
 {FLOAT_NUMBER_DECIMAL_ILLEGAL} {
-    RT;
     Error(yylloc, "floating point literal should have a radix separator (dot)");
     return lParseFP();
 }
 
 {FLOAT_NUMBER_HEXADECIMAL} {
-    RT;
     std::string val(yytext);
     std::string fp16S("f16");
     std::string fp16C("F16");
@@ -547,51 +473,51 @@ L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERA
 
 
 
-"++" { RT; return TOKEN_INC_OP; }
-"--" { RT; return TOKEN_DEC_OP; }
-"<<" { RT; return TOKEN_LEFT_OP; }
-">>" { RT; return TOKEN_RIGHT_OP; }
-"<=" { RT; return TOKEN_LE_OP; }
-">=" { RT; return TOKEN_GE_OP; }
-"==" { RT; return TOKEN_EQ_OP; }
-"!=" { RT; return TOKEN_NE_OP; }
-"&&" { RT; return TOKEN_AND_OP; }
-"||" { RT; return TOKEN_OR_OP; }
-"*=" { RT; return TOKEN_MUL_ASSIGN; }
-"/=" { RT; return TOKEN_DIV_ASSIGN; }
-"%=" { RT; return TOKEN_MOD_ASSIGN; }
-"+=" { RT; return TOKEN_ADD_ASSIGN; }
-"-=" { RT; return TOKEN_SUB_ASSIGN; }
-"<<=" { RT; return TOKEN_LEFT_ASSIGN; }
-">>=" { RT; return TOKEN_RIGHT_ASSIGN; }
-"&=" { RT; return TOKEN_AND_ASSIGN; }
-"^=" { RT; return TOKEN_XOR_ASSIGN; }
-"|=" { RT; return TOKEN_OR_ASSIGN; }
-"->" { RT; return TOKEN_PTR_OP; }
-";"             { RT; return ';'; }
-("{"|"<%")      { RT; return '{'; }
-("}"|"%>")      { RT; return '}'; }
-","             { RT; return ','; }
-":"             { RT; return ':'; }
-"="             { RT; return '='; }
-"("             { RT; return '('; }
-")"             { RT; return ')'; }
-("["|"<:")      { RT; return '['; }
-("]"|":>")      { RT; return ']'; }
-"."             { RT; return '.'; }
-"&"             { RT; return '&'; }
-"!"             { RT; return '!'; }
-"~"             { RT; return '~'; }
-"-"             { RT; return '-'; }
-"+"             { RT; return '+'; }
-"*"             { RT; return '*'; }
-"/"             { RT; return '/'; }
-"%"             { RT; return '%'; }
-"<"             { RT; return '<'; }
-">"             { RT; return '>'; }
-"^"             { RT; return '^'; }
-"|"             { RT; return '|'; }
-"?"             { RT; return '?'; }
+"++" { return TOKEN_INC_OP; }
+"--" { return TOKEN_DEC_OP; }
+"<<" { return TOKEN_LEFT_OP; }
+">>" { return TOKEN_RIGHT_OP; }
+"<=" { return TOKEN_LE_OP; }
+">=" { return TOKEN_GE_OP; }
+"==" { return TOKEN_EQ_OP; }
+"!=" { return TOKEN_NE_OP; }
+"&&" { return TOKEN_AND_OP; }
+"||" { return TOKEN_OR_OP; }
+"*=" { return TOKEN_MUL_ASSIGN; }
+"/=" { return TOKEN_DIV_ASSIGN; }
+"%=" { return TOKEN_MOD_ASSIGN; }
+"+=" { return TOKEN_ADD_ASSIGN; }
+"-=" { return TOKEN_SUB_ASSIGN; }
+"<<=" { return TOKEN_LEFT_ASSIGN; }
+">>=" { return TOKEN_RIGHT_ASSIGN; }
+"&=" { return TOKEN_AND_ASSIGN; }
+"^=" { return TOKEN_XOR_ASSIGN; }
+"|=" { return TOKEN_OR_ASSIGN; }
+"->" { return TOKEN_PTR_OP; }
+";"             { return ';'; }
+("{"|"<%")      { return '{'; }
+("}"|"%>")      { return '}'; }
+","             { return ','; }
+":"             { return ':'; }
+"="             { return '='; }
+"("             { return '('; }
+")"             { return ')'; }
+("["|"<:")      { return '['; }
+("]"|":>")      { return ']'; }
+"."             { return '.'; }
+"&"             { return '&'; }
+"!"             { return '!'; }
+"~"             { return '~'; }
+"-"             { return '-'; }
+"+"             { return '+'; }
+"*"             { return '*'; }
+"/"             { return '/'; }
+"%"             { return '%'; }
+"<"             { return '<'; }
+">"             { return '>'; }
+"^"             { return '^'; }
+"|"             { return '|'; }
+"?"             { return '?'; }
 
 {WHITESPACE} { }
 

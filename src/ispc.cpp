@@ -2325,9 +2325,7 @@ Globals::Globals() {
     generateDebuggingSymbols = false;
     debugInfoType = Globals::DebugInfoType::None;
     generateDWARFVersion = 3;
-    enableFuzzTest = false;
     enableLLVMIntrinsics = false;
-    fuzzTestSeed = -1;
     mangleFunctionsWithTarget = false;
     isMultiTargetCompilation = false;
     errorLimit = -1;
