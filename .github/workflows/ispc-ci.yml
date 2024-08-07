@@ -316,6 +316,44 @@ jobs:
         version: [15, 16, 17]
         arch: [x86, x86-64]
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
+        # See issue #2818 for more deatils. It's SDE problem running on AMD runner.
+        exclude:
+          - arch: x86
+            target: "avx2vnni-i32x4"
+          - arch: x86
+            target: "avx2vnni-i32x8"
+          - arch: x86
+            target: "avx2vnni-i32x16"
+          - arch: x86
+            target: "avx512skx-x4"
+          - arch: x86
+            target: "avx512skx-x8"
+          - arch: x86
+            target: "avx512skx-x16"
+          - arch: x86
+            target: "avx512skx-x32"
+          - arch: x86
+            target: "avx512skx-x64"
+          - arch: x86
+            target: "avx512icl-x4"
+          - arch: x86
+            target: "avx512icl-x8"
+          - arch: x86
+            target: "avx512icl-x16"
+          - arch: x86
+            target: "avx512icl-x32"
+          - arch: x86
+            target: "avx512icl-x64"
+          - arch: x86
+            target: "avx512spr-x4"
+          - arch: x86
+            target: "avx512spr-x8"
+          - arch: x86
+            target: "avx512spr-x16"
+          - arch: x86
+            target: "avx512spr-x32"
+          - arch: x86
+            target: "avx512spr-x64"
 
     steps:
     - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -365,6 +403,44 @@ jobs:
       matrix:
         arch: [x86, x86-64]
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
+        # See issue #2818 for more deatils. It's SDE problem running on AMD runner.
+        exclude:
+          - arch: x86
+            target: "avx2vnni-i32x4"
+          - arch: x86
+            target: "avx2vnni-i32x8"
+          - arch: x86
+            target: "avx2vnni-i32x16"
+          - arch: x86
+            target: "avx512skx-x4"
+          - arch: x86
+            target: "avx512skx-x8"
+          - arch: x86
+            target: "avx512skx-x16"
+          - arch: x86
+            target: "avx512skx-x32"
+          - arch: x86
+            target: "avx512skx-x64"
+          - arch: x86
+            target: "avx512icl-x4"
+          - arch: x86
+            target: "avx512icl-x8"
+          - arch: x86
+            target: "avx512icl-x16"
+          - arch: x86
+            target: "avx512icl-x32"
+          - arch: x86
+            target: "avx512icl-x64"
+          - arch: x86
+            target: "avx512spr-x4"
+          - arch: x86
+            target: "avx512spr-x8"
+          - arch: x86
+            target: "avx512spr-x16"
+          - arch: x86
+            target: "avx512spr-x32"
+          - arch: x86
+            target: "avx512spr-x64"
     steps:
     - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
     - name: Download package
