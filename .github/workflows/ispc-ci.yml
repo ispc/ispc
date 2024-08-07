@@ -77,6 +77,8 @@ jobs:
   linux-aarch64-build-ispc:
     needs: [define-flow]
     runs-on: [self-hosted, Linux, ARM64]
+    # Disable self-hosted jobs for forks.
+    if: github.repository == 'ispc/ispc'
     container: ubuntu:22.04
     strategy:
       fail-fast: false
