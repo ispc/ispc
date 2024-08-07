@@ -3464,49 +3464,53 @@ __declspec(safe) static inline float log(float x_full) {
         z = x_full + y;
         return z + 0.693359375 * fe;
     } else if (__math_lib == __math_lib_ispc) {
+
+        // See the uniform version for more information
+
         float reduced;
         int exponent;
 
-        const int NaN_bits = 0x7fc00000;
-        const int Neg_Inf_bits = 0xFF800000;
+        const int NaN_bits = 0x7FFFFFFF;
+        const int Inf_bits = 0x7F800000;
         const float NaN = floatbits(NaN_bits);
-        const float neg_inf = floatbits(Neg_Inf_bits);
-        bool use_nan = x_full < 0.;
-        bool use_inf = x_full == 0.;
-        bool exceptional = use_nan || use_inf;
+        const float inf = floatbits(Inf_bits);
+        const bool use_nan = !(x_full >= 0.);
+        const bool use_inf = x_full == 0. || x_full == inf;
+        const bool exceptional = use_nan || use_inf;
         const float one = 1.0;
 
-        float patched = exceptional ? one : x_full;
+        const float patched = select(exceptional, one, x_full);
         __range_reduce_log(patched, &reduced, &exponent);
 
-        const float ln2 = 0.693147182464599609375;
+        const float ln2 = 6.931471825e-01;
+        const float c1 = +4.999968200e-01;
+        const float c2 = +3.333395239e-01;
+        const float c3 = +2.506880353e-01;
+        const float c4 = +1.964300405e-01;
+        const float c5 = +1.429149029e-01;
+        const float c6 = +3.786718051e-01;
+        const float c7 = -5.571787647e-01;
+        const float c8 = +8.494745916e-01;
 
-        float x1 = one - reduced;
-        const float c1 = 0.50000095367431640625;
-        const float c2 = 0.33326041698455810546875;
-        const float c3 = 0.2519190013408660888671875;
-        const float c4 = 0.17541764676570892333984375;
-        const float c5 = 0.3424419462680816650390625;
-        const float c6 = -0.599632322788238525390625;
-        const float c7 = +1.98442304134368896484375;
-        const float c8 = -2.4899270534515380859375;
-        const float c9 = +1.7491014003753662109375;
+        const bool close_to_one = abs(x_full - one) < 0.12;
+        reduced = select(close_to_one, x_full, reduced);
+        const float log_from_exponent = select(close_to_one, 0.0, (float)exponent * ln2);
 
-        float result = x1 * c9 + c8;
-        result = x1 * result + c7;
-        result = x1 * result + c6;
-        result = x1 * result + c5;
-        result = x1 * result + c4;
-        result = x1 * result + c3;
-        result = x1 * result + c2;
-        result = x1 * result + c1;
-        result = x1 * result + one;
+        const float x = one - reduced;
+        float result = c8;
+        result = x * result + c7;
+        result = x * result + c6;
+        result = x * result + c5;
+        result = x * result + c4;
+        result = x * result + c3;
+        result = x * result + c2;
+        result = x * result + c1;
+        result = x * result + one;
 
-        // Equation was for -(ln(red)/(1-red))
-        result *= -x1;
-        result += (float)(exponent)*ln2;
+        result = log_from_exponent - x * result;
 
-        return exceptional ? (use_nan ? NaN : neg_inf) : result;
+        const float exceptional_result = select(use_nan, NaN, select(x_full == inf, x_full, -inf));
+        return select(exceptional, exceptional_result, result);
     }
 }
 
@@ -3546,49 +3550,70 @@ __declspec(safe) static inline uniform float log(uniform float x_full) {
         z = x_full + y;
         return z + 0.693359375 * fe;
     } else if (__math_lib == __math_lib_ispc) {
+
+        // Precision: <15 ULP (for normal numbers). The error can be much higher for subnormal numbers.
+        // Support special input values like NaN, -Inf, +Inf and subnormal numbers correctly.
+
         uniform float reduced;
         uniform int exponent;
 
-        const uniform int NaN_bits = 0x7fc00000;
-        const uniform int Neg_Inf_bits = 0xFF800000;
+        const uniform int NaN_bits = 0x7FFFFFFF;
+        const uniform int Inf_bits = 0x7F800000;
         const uniform float NaN = floatbits(NaN_bits);
-        const uniform float neg_inf = floatbits(Neg_Inf_bits);
-        uniform bool use_nan = x_full < 0.;
-        uniform bool use_inf = x_full == 0.;
-        uniform bool exceptional = use_nan || use_inf;
+        const uniform float inf = floatbits(Inf_bits);
+        const uniform bool use_nan = !(x_full >= 0.); // Check if x_full is either NaN or less than 0
+        const uniform bool use_inf = x_full == 0. || x_full == inf;
+        const uniform bool exceptional = use_nan || use_inf;
         const uniform float one = 1.0;
 
-        uniform float patched = exceptional ? one : x_full;
+        const uniform float patched = select(exceptional, one, x_full);
         __range_reduce_log(patched, &reduced, &exponent);
 
-        const uniform float ln2 = 0.693147182464599609375;
+        // Use a 8-degree polynomial to approximate the expression `-(ln(reduced)/(1-reduced))`.
+        // Then, we multiply the polynomial by `reduced-1` so the resulting value is guaranteed
+        // to approximate `ln(reduced)` pretty accurately when `reduced ~= 1`.
+        // This is critical for the relative error to be small since `ln(1) = 0`.
+        // Besides, note the Taylor expansion of `ln(reduced)` is `reduced - 1 + O(1)`.
+        // Coefficients can be found with `curve_fit` from `scipy.optimize` in Python.
+        // There is a catch though: `reduced` lies in the [0.5;1.0] interval and
+        // there is a wrap-around when `x_full` is just above 1.0.
+        // In this specific case, `reduced` is set to ~0.5 and the approximation is
+        // not guaranteed to be very accurate anymore.
+        // Moreover, a catastrophic cancellation happens because we need to add `ln(2**exponent)`.
+        // To avoid this problem, we extend the right bound of the wrap-around slightly above 1.
+        // As a result, the domain of definition for the polynomial is [0.50;1.12]
+        // instead of simply [0.5;1.0].
 
-        uniform float x1 = one - reduced;
-        const uniform float c1 = 0.50000095367431640625;
-        const uniform float c2 = 0.33326041698455810546875;
-        const uniform float c3 = 0.2519190013408660888671875;
-        const uniform float c4 = 0.17541764676570892333984375;
-        const uniform float c5 = 0.3424419462680816650390625;
-        const uniform float c6 = -0.599632322788238525390625;
-        const uniform float c7 = +1.98442304134368896484375;
-        const uniform float c8 = -2.4899270534515380859375;
-        const uniform float c9 = +1.7491014003753662109375;
+        const uniform float ln2 = 6.931471825e-01;
+        const uniform float c1 = +4.999968200e-01;
+        const uniform float c2 = +3.333395239e-01;
+        const uniform float c3 = +2.506880353e-01;
+        const uniform float c4 = +1.964300405e-01;
+        const uniform float c5 = +1.429149029e-01;
+        const uniform float c6 = +3.786718051e-01;
+        const uniform float c7 = -5.571787647e-01;
+        const uniform float c8 = +8.494745916e-01;
 
-        uniform float result = x1 * c9 + c8;
-        result = x1 * result + c7;
-        result = x1 * result + c6;
-        result = x1 * result + c5;
-        result = x1 * result + c4;
-        result = x1 * result + c3;
-        result = x1 * result + c2;
-        result = x1 * result + c1;
-        result = x1 * result + one;
+        const uniform bool close_to_one = abs(x_full - one) < 0.12;
+        reduced = select(close_to_one, x_full, reduced);
+        const uniform float log_from_exponent = select(close_to_one, 0.0, (uniform float)exponent * ln2);
 
-        // Equation was for -(ln(red)/(1-red))
-        result *= -x1;
-        result += (uniform float)(exponent)*ln2;
+        const uniform float x = one - reduced;
+        uniform float result = c8;
+        result = x * result + c7;
+        result = x * result + c6;
+        result = x * result + c5;
+        result = x * result + c4;
+        result = x * result + c3;
+        result = x * result + c2;
+        result = x * result + c1;
+        result = x * result + one;
 
-        return exceptional ? (use_nan ? NaN : neg_inf) : result;
+        // The equation was for -(ln(reduced)/(1-reduced))
+        result = log_from_exponent - x * result;
+
+        const uniform float exceptional_result = select(use_nan, NaN, select(x_full == inf, x_full, -inf));
+        return select(exceptional, exceptional_result, result);
     }
 }
 
