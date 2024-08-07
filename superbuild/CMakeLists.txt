@@ -592,6 +592,12 @@ if (APPLE AND CMAKE_SYSTEM_VERSION VERSION_GREATER_EQUAL 13)
     set(LLVM_RUNTIMES
         ${LLVM_RUNTIMES}$<SEMICOLON>libcxx$<SEMICOLON>libcxxabi
         )
+
+    if (${LLVM_VERSION_MAJOR} VERSION_GREATER_EQUAL 18)
+        set(LLVM_RUNTIMES
+            ${LLVM_RUNTIMES}$<SEMICOLON>libunwind
+            )
+    endif()
 endif()
 
 # LLVM_ENABLE_RUNTIMES is a proper place for compiler-rt and openmp not LLVM_ENABLE_PROJECTS.
