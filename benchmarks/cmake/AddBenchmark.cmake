@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2020-2023, Intel Corporation
+#  Copyright (c) 2020-2024, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -172,13 +172,15 @@ macro(compile_benchmark_test name)
         PRIVATE BENCHMARKS_ISPC_TARGETS=\"${BENCHMARKS_ISPC_TARGETS}\"
                 BENCHMARKS_ISPC_FLAGS=\"${BENCHMARKS_ISPC_FLAGS}\")
 
-    # Turn on AVX2 support in the C++ compiler to be able to use AVX2 intrinsics.
-    if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
-        add_compile_options(-mavx2)
-    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
-        add_compile_options(/QxAVX2)
-    elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-        add_compile_options(/arch:AVX2)
+    if(${ISPC_ARCH} MATCHES "x86|x86-64")
+        # Turn on AVX2 support in the C++ compiler to be able to use AVX2 intrinsics.
+        if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
+            add_compile_options(-mavx2)
+        elseif(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+            add_compile_options(/QxAVX2)
+        elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+            add_compile_options(/arch:AVX2)
+        endif()
     endif()
 
     # To enable google benchmarks:
