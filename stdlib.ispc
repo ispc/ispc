@@ -1635,33 +1635,15 @@ __declspec(safe, cost2) static inline uniform double ceil(uniform double x) { re
 ///////////////////////////
 __declspec(safe, cost2) static inline float16 trunc(float16 x) { return __trunc_varying_half(x); }
 
-__declspec(safe, cost2) static inline float16 fmodf(float16 x, float16 y) { return x - trunc(x / y) * y; }
-
 __declspec(safe, cost2) static inline uniform float16 trunc(uniform float16 x) { return __trunc_uniform_half(x); }
-
-__declspec(safe, cost2) static inline uniform float16 fmodf(uniform float16 x, uniform float16 y) {
-    return x - trunc(x / y) * y;
-}
 
 __declspec(safe, cost2) static inline float trunc(float x) { return __trunc_varying_float(x); }
 
-__declspec(safe, cost2) static inline float fmodf(float x, float y) { return x - trunc(x / y) * y; }
-
 __declspec(safe, cost2) static inline uniform float trunc(uniform float x) { return __trunc_uniform_float(x); }
-
-__declspec(safe, cost2) static inline uniform float fmodf(uniform float x, uniform float y) {
-    return x - trunc(x / y) * y;
-}
 
 __declspec(safe, cost2) static inline double trunc(double x) { return __trunc_varying_double(x); }
 
-__declspec(safe, cost2) static inline double fmodf(double x, double y) { return x - trunc(x / y) * y; }
-
 __declspec(safe, cost2) static inline uniform double trunc(uniform double x) { return __trunc_uniform_double(x); }
-
-__declspec(safe, cost2) static inline uniform double fmodf(uniform double x, uniform double y) {
-    return x - trunc(x / y) * y;
-}
 
 __declspec(safe) static inline float rcp(float v) { return __rcp_varying_float(v); }
 
@@ -1732,6 +1714,178 @@ __declspec(safe) static inline uniform float16 rcp(uniform float16 v) {
     } else {
         return (uniform float16)(rcp((uniform float)v));
     }
+}
+
+__declspec(safe, cost2) static inline float16 fmod(float16 x, float16 y) {
+    // Handle special cases: NaN and division by zero
+    if (isnan(x) || isnan(y) || y == 0.0f) {
+        return (signbits(x) == 0) ? float16bits((uniform int16)0x7E00) : float16bits((uniform int16)0xFE00);
+    }
+
+    const int16 Neg_Inf_bits = 0xFC00;
+    const int16 Pos_Inf_bits = 0x7C00;
+
+    // Handle cases where y is infinity
+    if (intbits(y) == Neg_Inf_bits || intbits(y) == Pos_Inf_bits) {
+        return x;
+    }
+
+    // Handle cases where x is infinity
+    if (intbits(x) == Neg_Inf_bits || intbits(x) == Pos_Inf_bits) {
+        return (signbits(x) == 0) ? float16bits((uniform int16)0x7E00) : float16bits((uniform int16)0xFE00);
+    }
+
+    // Handle cases where x is zero
+    if (x == 0.0f16 || x == -0.0F16) {
+        return x;
+    }
+
+    // Compute the floating-point remainder using truncation and reciprocal
+    return x - trunc(x * rcp(y)) * y;
+}
+
+__declspec(safe, cost2) static inline uniform float16 fmod(uniform float16 x, uniform float16 y) {
+    // Handle special cases: NaN and division by zero
+    if (isnan(x) || isnan(y) || y == 0.0f) {
+        return (signbits(x) == 0) ? float16bits((uniform int16)0x7E00) : float16bits((uniform int16)0xFE00);
+    }
+
+    const uniform int16 Neg_Inf_bits = 0xFC00;
+    const uniform int16 Pos_Inf_bits = 0x7C00;
+
+    // Handle cases where y is infinity
+    if (intbits(y) == Neg_Inf_bits || intbits(y) == Pos_Inf_bits) {
+        return x;
+    }
+
+    // Handle cases where x is infinity
+    if (intbits(x) == Neg_Inf_bits || intbits(x) == Pos_Inf_bits) {
+        return (signbits(x) == 0) ? float16bits((uniform int16)0x7E00) : float16bits((uniform int16)0xFE00);
+    }
+
+    // Handle cases where x is zero
+    if (x == 0.0f16 || x == -0.0F16) {
+        return x;
+    }
+
+    // Compute the floating-point remainder using truncation and reciprocal
+    return x - trunc(x * rcp(y)) * y;
+}
+
+__declspec(safe, cost2) static inline float fmod(float x, float y) {
+    // Handle special cases: NaN and division by zero
+    if (isnan(x) || isnan(y) || y == 0.0f) {
+        return (signbits(x) == 0) ? floatbits(0x7FC00000) : floatbits(0xFFC00000);
+    }
+
+    const int Neg_Inf_bits = 0xFF800000;
+    const int Pos_Inf_bits = 0x7F800000;
+
+    // Handle cases where y is infinity
+    if (intbits(y) == Neg_Inf_bits || intbits(y) == Pos_Inf_bits) {
+        return x;
+    }
+
+    // Handle cases where x is infinity
+    if (intbits(x) == Neg_Inf_bits || intbits(x) == Pos_Inf_bits) {
+        return (signbits(x) == 0) ? floatbits(0x7FC00000) : floatbits(0xFFC00000);
+    }
+
+    // Handle cases where x is zero
+    if (x == 0.0f || x == -0.0f) {
+        return x;
+    }
+
+    // Compute the floating-point remainder using truncation and reciprocal
+    return x - trunc(x * rcp(y)) * y;
+}
+
+__declspec(safe, cost2) static inline uniform float fmod(uniform float x, uniform float y) {
+    // Handle special cases: NaN and division by zero
+    if (isnan(x) || isnan(y) || y == 0.0f) {
+        return (signbits(x) == 0) ? floatbits(0x7FC00000) : floatbits(0xFFC00000);
+    }
+
+    const uniform int Neg_Inf_bits = 0xFF800000;
+    const uniform int Pos_Inf_bits = 0x7F800000;
+
+    // Handle cases where y is infinity
+    if (intbits(y) == Neg_Inf_bits || intbits(y) == Pos_Inf_bits) {
+        return x;
+    }
+
+    // Handle cases where x is infinity
+    if (intbits(x) == Neg_Inf_bits || intbits(x) == Pos_Inf_bits) {
+        return (signbits(x) == 0) ? floatbits(0x7FC00000) : floatbits(0xFFC00000);
+    }
+
+    // Handle cases where x is zero
+    if (x == 0.0f || x == -0.0f) {
+        return x;
+    }
+
+    // Compute the floating-point remainder using truncation and reciprocal
+    return x - trunc(x * rcp(y)) * y;
+}
+
+__declspec(safe, cost2) static inline double fmod(double x, double y) {
+    // Handle special cases: NaN and division by zero
+    if (isnan(x) || isnan(y) || y == 0.0f) {
+        return (signbits(x) == 0) ? doublebits((uniform int64)0x7FF8000000000000)
+                                  : doublebits((uniform int64)0xFFF8000000000000);
+    }
+
+    const int64 Neg_Inf_bits = 0xFFF0000000000000;
+    const int64 Pos_Inf_bits = 0x7FF0000000000000;
+
+    // Handle cases where y is infinity
+    if (intbits(y) == Neg_Inf_bits || intbits(y) == Pos_Inf_bits) {
+        return x;
+    }
+
+    // Handle cases where x is infinity
+    if (intbits(x) == Neg_Inf_bits || intbits(x) == Pos_Inf_bits) {
+        return (signbits(x) == 0) ? doublebits((uniform int64)0x7FF8000000000000)
+                                  : doublebits((uniform int64)0xFFF8000000000000);
+    }
+
+    // Handle cases where x is zero
+    if (x == 0.0d || x == -0.0D) {
+        return x;
+    }
+
+    // Compute the floating-point remainder using truncation and reciprocal
+    return x - trunc(x * rcp(y)) * y;
+}
+
+__declspec(safe, cost2) static inline uniform double fmod(uniform double x, uniform double y) {
+    // Handle special cases: NaN and division by zero
+    if (isnan(x) || isnan(y) || y == 0.0f) {
+        return (signbits(x) == 0) ? doublebits((uniform int64)0x7FF8000000000000)
+                                  : doublebits((uniform int64)0xFFF8000000000000);
+    }
+
+    const int64 Neg_Inf_bits = 0xFFF0000000000000;
+    const int64 Pos_Inf_bits = 0x7FF0000000000000;
+
+    // Handle cases where y is infinity
+    if (intbits(y) == Neg_Inf_bits || intbits(y) == Pos_Inf_bits) {
+        return x;
+    }
+
+    // Handle cases where x is infinity
+    if (intbits(x) == Neg_Inf_bits || intbits(x) == Pos_Inf_bits) {
+        return (signbits(x) == 0) ? doublebits((uniform int64)0x7FF8000000000000)
+                                  : doublebits((uniform int64)0xFFF8000000000000);
+    }
+
+    // Handle cases where x is zero
+    if (x == 0.0d || x == -0.0D) {
+        return x;
+    }
+
+    // Compute the floating-point remainder using truncation and reciprocal
+    return x - trunc(x * rcp(y)) * y;
 }
 
 ///////////////////////////////////////////////////////////////////////////
