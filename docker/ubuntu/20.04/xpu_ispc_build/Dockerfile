@@ -33,12 +33,9 @@ RUN if [[ $(uname -m) =~ "x86" ]]; then \
 # Add package repository and install graphics packages
 RUN set -eux && wget -qO - https://repositories.intel.com/graphics/intel-graphics.key | gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg && \
     echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/graphics/ubuntu focal-devel main' | \
-    tee  /etc/apt/sources.list.d/intel.gpu.focal.list && \
+    tee -a /etc/apt/sources.list.d/intel.list && \
     apt-get -y update && apt-get --no-install-recommends install -y intel-opencl-icd intel-level-zero-gpu level-zero \
-    intel-media-va-driver-non-free libmfx1 libmfxgen1 libvpl2 \
-    libegl-mesa0 libegl1-mesa libegl1-mesa-dev libgbm1 libgl1-mesa-dev libgl1-mesa-dri \
-    libglapi-mesa libgles2-mesa-dev libglx-mesa0 libigdgmm11 libxatracker2 mesa-va-drivers \
-    mesa-vdpau-drivers mesa-vulkan-drivers va-driver-all && \
+    intel-media-va-driver-non-free libmfx1 libmfxgen1 libvpl2 && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /home/src
