@@ -27,14 +27,14 @@ shuffle1(double)
 shuffle1(i64)
 
 declare <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float>, <4 x i32>)
-define internal <4 x i32> @__shuffle_i32(<4 x i32>, <4 x i32>) nounwind readnone alwaysinline {
+define <4 x i32> @__shuffle_i32(<4 x i32>, <4 x i32>) nounwind readnone alwaysinline {
   %vec = bitcast <4 x i32> %0 to <4 x float>
   %res = call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %vec, <4 x i32> %1)
   %res_casted = bitcast <4 x float> %res to <4 x i32>
   ret <4 x i32> %res_casted
 }
 
-define internal <4 x float> @__shuffle_float(<4 x float>, <4 x i32>) nounwind readnone alwaysinline {
+define <4 x float> @__shuffle_float(<4 x float>, <4 x i32>) nounwind readnone alwaysinline {
   %res = call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %0, <4 x i32> %1)
   ret <4 x float> %res
 }

@@ -20,13 +20,13 @@ shuffle1(double)
 shuffle1(i64)
 
 declare <8 x i32> @llvm.x86.avx2.permd(<8 x i32>, <8 x i32>)
-define internal <8 x i32> @__shuffle_i32(<8 x i32>, <8 x i32>) nounwind readnone alwaysinline {
+define <8 x i32> @__shuffle_i32(<8 x i32>, <8 x i32>) nounwind readnone alwaysinline {
   %res = call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %0, <8 x i32> %1)
   ret <8 x i32> %res
 }
 
 declare <8 x float> @llvm.x86.avx2.permps(<8 x float>, <8 x i32>)
-define internal <8 x float> @__shuffle_float(<8 x float>, <8 x i32>) nounwind readnone alwaysinline {
+define <8 x float> @__shuffle_float(<8 x float>, <8 x i32>) nounwind readnone alwaysinline {
   %res = call <8 x float> @llvm.x86.avx2.permps(<8 x float> %0, <8 x i32> %1)
   ret <8 x float> %res
 }
