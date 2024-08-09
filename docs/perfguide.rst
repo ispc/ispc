@@ -115,7 +115,7 @@ multi-dimensional iteration like:
 
 ::
 
-    foreach (i = 0 ... width, j = 0 ... height) {
+    foreach (j = 0 ... height, i = 0 ... width) {
         // do computation on element (i,j)
     }
 
