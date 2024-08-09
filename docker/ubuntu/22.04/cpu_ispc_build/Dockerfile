@@ -89,6 +89,7 @@ USER ispc_user
 # Build ISPC
 RUN cmake ispc/superbuild \
         -B build \
+        --preset os \
         -DX86_ENABLED=ON \
         -DARM_ENABLED=ON \
         -DLTO=$LTO \
