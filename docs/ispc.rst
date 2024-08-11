@@ -386,7 +386,7 @@ Updating ISPC Programs For Changes In ISPC 1.10.0
 -------------------------------------------------
 
 The release has several new language features, which do not affect compatibility.
-Namely, new streaming stores, aos_to_soa/soa_to_aos instrinsics for 64 bit types,
+Namely, new streaming stores, aos_to_soa/soa_to_aos intrinsics for 64 bit types,
 and a "#pragma ignore".
 
 One change that potentially may affect compatibility - changed size of short vector
@@ -434,7 +434,7 @@ older versions:
 
 * Representation of ``bool`` type in storage was changed from target-specific to
   one byte per boolean value.  So size of ``varying bool`` is target width (in
-  bytes), and size of ``unform bool`` is one.  This definition is compatible
+  bytes), and size of ``uniform bool`` is one.  This definition is compatible
   with C/C++, hence improves interoperability.
 
 * type aliases for unsigned types were added: ``uint8``, ``uint16``, ``uint32``,
@@ -475,7 +475,7 @@ unroll pragmas: "#pragma unroll" and "#pragma nounroll".
 Updating ISPC Programs For Changes In ISPC 1.16.0
 -------------------------------------------------
 
-The release has several new functions in the standard library, that can possbily
+The release has several new functions in the standard library, that can possibly
 affect compatibility:
 
 * ``alloca()`` - refer to `Stack Memory Allocation`_ for more details.
@@ -536,7 +536,7 @@ New targets were added:
   ISPC_TARGET_AVX512SPR was added.
 * xehpc-x16 and xehpc-x32 for Intel® Data Center GPU Max (codename Ponte Vecchio).
 
-Function templates were introduces to the langauge, please refer to `Function
+Function templates were introduces to the language, please refer to `Function
 Templates`_ section for more details. Two new keywords were introduced: ``template``
 and ``typename``.
 
@@ -920,7 +920,7 @@ supports.
 The mask size may be 8, 16, 32, or 64 bits, though not all combinations of ISA
 and mask size are supported.  For best performance, the best general
 approach is to choose a mask size equal to the size of the most common
-datatype in your programs.  For example, if most of the computations are done using
+data type in your programs.  For example, if most of the computations are done using
 32-bit floating-point values, an ``i32`` target is appropriate.  However,
 if you're mostly doing computation with 8-bit data types, ``i8`` is a better choice.
 
@@ -2175,9 +2175,9 @@ pointer that is itself ``const`` (as opposed to pointing to a ``const``
 type) is declared in C.  (Reading the declaration from right to left gives
 its meaning: a uniform pointer to a float that is varying.)
 
-A subtlety comes in in cases like the where a uniform pointer points to a
-varying datatype.  In this case, each program instance accesses a distinct
-location in memory (because the underlying varying datatype is itself laid
+A subtlety comes in in cases like the where a ``uniform`` pointer points to a
+``varying`` data type. In this case, each program instance accesses a distinct
+location in memory (because the underlying ``varying`` data type is itself laid
 out with a separate location in memory for each program instance.)
 
 ::
@@ -2329,8 +2329,8 @@ but enumerations of different types can be explicitly cast to one other.
 Enumerators are implicitly converted to integer types, however, so they can
 be directly passed to routines that take integer parameters and can be used
 in expressions including integers, for example.  However, the integer
-result of such an expression must be explicitly cast back to the enumerant
-type if it to be assigned to a variable with the enumerant type.
+result of such an expression must be explicitly cast back to the enumerated
+type if it to be assigned to a variable with the enumerated type.
 
 ::
 
@@ -2621,7 +2621,7 @@ Structure of Array Types
 
 If data can be laid out in memory so that the executing program instances
 access it via loads and stores of contiguous sections of memory, overall
-performance can be improved noticably.  One way to improve this memory
+performance can be improved noticeably.  One way to improve this memory
 access coherence is to lay out structures in "structure of arrays" (SOA)
 format in memory; the benefits from SOA layout are discussed in more detail
 in the `Use "Structure of Arrays" Layout When Possible`_ section in the
@@ -3869,7 +3869,7 @@ What is currently supported:
   ``template int add<int>(int a, int b);``).
 * Explicit template function specializations (i.e.
   ``template<> int add<int>(int a, int b) { return a - b;}``).
-* Non-type template parametrs (integral and enumeration types).
+* Non-type template parameters (integral and enumeration types).
 
 What is currently not supported, but is planned to be supported:
 
@@ -4411,7 +4411,7 @@ All transcendental functions are provided for ``float16``, ``float`` and
 
 Saturating Arithmetic
 ---------------------
-A saturation (no overflow possible) addition, substraction, multiplication and
+A saturation (no overflow possible) addition, subtraction, multiplication and
 division of all integer types are provided by the ``ispc`` standard library.
 
 ::
@@ -4496,7 +4496,7 @@ library.  State for the RNG is maintained in an instance of the
 Note that if the same ``varying`` seed value is used for all of the program
 instances (e.g. ``RNGState state; seed_rng(&state, 1);``), then all of the
 program instances in the gang will see the same sequence of pseudo-random
-numbers.  If this behavior isn't desred, you may want to add the
+numbers.  If this behavior isn't desired, you may want to add the
 ``programIndex`` value to the provided seed or otherwise ensure that the
 seed has a unique value for each program instance.
 
@@ -4900,7 +4900,7 @@ across all of the currently-executing program instances.
     uniform float reduce_min(float a)
     uniform double reduce_min(double a)
 
-Equivalent functions are available to comptue the maximum of the given
+Equivalent functions are available to compute the maximum of the given
 varying variable over the active program instances.
 
 ::
@@ -5022,8 +5022,8 @@ Setting and Copying Values In Memory
 
 There are a few functions for copying blocks of memory and initializing
 values in memory.  Along the lines of the equivalently-named routines in
-the C Standard libary, ``memcpy`` copies a given number of bytes starting
-from a source location in memory to a destination locaiton, where the two
+the C Standard library, ``memcpy`` copies a given number of bytes starting
+from a source location in memory to a destination location, where the two
 regions of memory are guaranteed by the caller to be non-overlapping.
 Alternatively, ``memmove`` can be used to copy data if the buffers may
 overlap.
@@ -5742,7 +5742,7 @@ And this C++ code:
 
 Both the ``foo`` and ``bar`` global variables can be accessed on each
 side.  Note that the ``extern "C"`` declaration is necessary from C++,
-since ``ispc`` uses C linkage for functions and globals.
+since ``ispc`` uses C linkage for functions and global variables.
 
 ``ispc`` code can also call back to C/C++.  On the ``ispc`` side, any
 application functions to be called must be declared with the ``extern "C"``
@@ -5873,7 +5873,7 @@ Data Layout
 -----------
 
 In general, ``ispc`` tries to ensure that ``struct`` types and other
-complex datatypes are laid out in the same way in memory as they are in
+complex data types are laid out in the same way in memory as they are in
 C/C++.  Matching structure layout is important for easy interoperability
 between C/C++ code and ``ispc`` code.
 
@@ -5904,7 +5904,7 @@ have a declaration like:
   };
 
 Because ``varying`` types have size that depends on the size of the gang of
-program instances, ``ispc`` has restrictrictions on using varying types in
+program instances, ``ispc`` has restrictions on using varying types in
 parameters to functions with the ``export`` qualifier.  ``ispc`` prohibits
 parameters to exported functions to have varying type unless the parameter is
 of pointer type.  (That is, ``varying float`` isn't allowed, but ``varying float * uniform``
@@ -5945,7 +5945,7 @@ the generated header file will have a definition like (for 8-wide SIMD):
 
 In the case of multiple target compilation, ``ispc`` will generate multiple
 header files and a "general" header file with definitions for multiple sizes.
-Any pointers to varyings in exported functions will be rewritten as ``void *``.
+Any pointers to varying variables in exported functions will be rewritten as ``void *``.
 At runtime, the ``ispc`` dispatch mechanism will cast these pointers to the appropriate
 types.  Programmers can
 provide C/C++ code with a mechanism to determine the gang width used
