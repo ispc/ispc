@@ -78,8 +78,15 @@ RUN apt-get -y update && \
         m4 bison flex libc6-dev-i386-cross libc6-dev-arm64-cross libc6-dev-armhf-cross && \
     rm -rf /var/lib/apt/lists/*
 
-# Build ISPC
 WORKDIR /usr/local/src
+
+# Create new non-root user and switch to it
+RUN useradd -m -d /home/ispc_user -s /bin/bash -U ispc_user && \
+chown -R ispc_user:ispc_user /usr
+
+USER ispc_user
+
+# Build ISPC
 RUN cmake ispc/superbuild \
         -B build \
         -DX86_ENABLED=ON \

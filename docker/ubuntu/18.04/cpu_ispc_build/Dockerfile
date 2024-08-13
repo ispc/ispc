@@ -93,8 +93,15 @@ ARG LLVM_VERSION
 RUN apt-get -y update && apt-get --no-install-recommends install -y m4 bison flex && \
     rm -rf /var/lib/apt/lists/*
 
-# Configure and build ISPC
 WORKDIR /usr/local/src
+
+# Create new non-root user and switch to it
+RUN useradd -m -d /home/ispc_user -s /bin/bash -U ispc_user && \
+    chown -R ispc_user:ispc_user /usr
+
+USER ispc_user
+
+# Configure and build ISPC
 RUN cmake ispc/superbuild \
         -B build \
         --preset os \
@@ -108,5 +115,5 @@ RUN cmake ispc/superbuild \
     mv build/build-ispc-stage2/src/ispc-stage2-build/*.tar.gz ./ && \
     rm -rf build
 
-#export path for ispc
+# Export path for ispc
 ENV PATH=/usr/local/src/ispc/bin-$LLVM_VERSION/bin:$PATH
