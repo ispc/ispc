@@ -42,6 +42,14 @@ RUN set -eux && wget -qO - https://repositories.intel.com/graphics/intel-graphic
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /home/src
+
+# Create new non-root user and switch to it
+RUN useradd -m -d /home/ispc_user -s /bin/bash -U ispc_user && \
+    chown -R ispc_user:ispc_user /home/src && \
+    chown -R ispc_user:ispc_user /usr
+
+USER ispc_user
+
 RUN git clone https://github.com/$REPO.git ispc
 
 WORKDIR /home/src/ispc

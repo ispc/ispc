@@ -44,6 +44,14 @@ RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 
     rm ./*.deb
 
 WORKDIR /home/src
+
+# Create new non-root user and switch to it
+RUN useradd -m -d /home/ispc_user -s /bin/bash -U ispc_user && \
+    chown -R ispc_user:ispc_user /home/src && \
+    chown -R ispc_user:ispc_user /usr
+
+USER ispc_user
+
 RUN git clone https://github.com/$REPO.git ispc
 
 WORKDIR /home/src/ispc

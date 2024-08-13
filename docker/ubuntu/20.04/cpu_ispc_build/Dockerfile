@@ -61,6 +61,13 @@ RUN apt-get -y update && apt-get --no-install-recommends install -y m4 bison fle
     libc6-dev-i386-cross libc6-dev-arm64-cross libc6-dev-armhf-cross && \
     rm -rf /var/lib/apt/lists/*
 
+# Create new non-root user and switch to it
+RUN useradd -m -d /home/ispc_user -s /bin/bash -U ispc_user && \
+    chown -R ispc_user:ispc_user /home/src && \
+    chown -R ispc_user:ispc_user /usr
+
+USER ispc_user
+
 # Build ISPC
 WORKDIR /home/src/ispc
 RUN cmake . \

@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2017-2023, Intel Corporation
+#  Copyright (c) 2017-2024, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -25,8 +25,15 @@ RUN if [ -v http_proxy ]; then git config --global --add http.proxy "$http_proxy
 # LLVM
 # We don't build llvm here because we use system shared libraries.
 
-# Clone, configure and build ISPC
 WORKDIR /usr/local/src
+
+# Create new non-root user and switch to it
+RUN useradd -m -d /home/ispc_user -s /bin/bash -U ispc_user && \
+    chown -R ispc_user:ispc_user /usr
+
+USER ispc_user
+
+# Clone, configure and build ISPC
 RUN git clone --depth=1 https://github.com/$REPO.git ispc && \
     git -C ispc checkout $SHA && \
     cmake ispc -B build-ispc -DCMAKE_INSTALL_PREFIX=/usr && \

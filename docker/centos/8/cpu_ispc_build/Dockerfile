@@ -73,7 +73,7 @@ RUN dnf -y update && dnf install -y m4 bison flex && dnf clean -y all
 
 # Create new non-root user and switch to it
 RUN useradd -m -d /home/ispc_user -s /bin/bash -U ispc_user && \
-    chown -R ispc_user:ispc_user /usr/local
+    chown -R ispc_user:ispc_user /usr
 
 USER ispc_user
 
