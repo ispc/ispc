@@ -2558,8 +2558,6 @@ define void @__prefetch_read_varying_1(<WIDTH x i64> %addr, <WIDTH x MASK> %mask
   ret void
 }
 
-declare void @__prefetch_read_varying_1_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
-
 define void @__prefetch_read_varying_2(<WIDTH x i64> %addr, <WIDTH x MASK> %mask) alwaysinline {
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
   %iptr_LANE_ID = extractelement <WIDTH x i64> %addr, i32 LANE
@@ -2568,8 +2566,6 @@ define void @__prefetch_read_varying_2(<WIDTH x i64> %addr, <WIDTH x MASK> %mask
   ')
   ret void
 }
-
-declare void @__prefetch_read_varying_2_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
 
 define void @__prefetch_read_varying_3(<WIDTH x i64> %addr, <WIDTH x MASK> %mask) alwaysinline {
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
@@ -2580,8 +2576,6 @@ define void @__prefetch_read_varying_3(<WIDTH x i64> %addr, <WIDTH x MASK> %mask
   ret void
 }
 
-declare void @__prefetch_read_varying_3_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
-
 define void @__prefetch_read_varying_nt(<WIDTH x i64> %addr, <WIDTH x MASK> %mask) alwaysinline {
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
   %iptr_LANE_ID = extractelement <WIDTH x i64> %addr, i32 LANE
@@ -2590,8 +2584,6 @@ define void @__prefetch_read_varying_nt(<WIDTH x i64> %addr, <WIDTH x MASK> %mas
   ')
   ret void
 }
-
-declare void @__prefetch_read_varying_nt_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
 
 define void @__prefetch_write_varying_1(<WIDTH x i64> %addr, <WIDTH x MASK> %mask) alwaysinline {
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
@@ -2602,8 +2594,6 @@ define void @__prefetch_write_varying_1(<WIDTH x i64> %addr, <WIDTH x MASK> %mas
   ret void
 }
 
-declare void @__prefetch_write_varying_1_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
-
 define void @__prefetch_write_varying_2(<WIDTH x i64> %addr, <WIDTH x MASK> %mask) alwaysinline {
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
   %iptr_LANE_ID = extractelement <WIDTH x i64> %addr, i32 LANE
@@ -2612,8 +2602,6 @@ define void @__prefetch_write_varying_2(<WIDTH x i64> %addr, <WIDTH x MASK> %mas
   ')
   ret void
 }
-
-declare void @__prefetch_write_varying_2_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
 
 define void @__prefetch_write_varying_3(<WIDTH x i64> %addr, <WIDTH x MASK> %mask) alwaysinline {
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
@@ -2624,17 +2612,6 @@ define void @__prefetch_write_varying_3(<WIDTH x i64> %addr, <WIDTH x MASK> %mas
   ret void
 }
 
-declare void @__prefetch_write_varying_3_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
-
-declare void @__prefetch_read_sized_uniform_1(i8 *, i8)
-declare void @__prefetch_read_sized_uniform_2(i8 *, i8)
-declare void @__prefetch_read_sized_uniform_3(i8 *, i8)
-declare void @__prefetch_read_sized_uniform_nt(i8 *, i8)
-
-declare void @__prefetch_read_sized_varying_1(<WIDTH x i64>, i8, <WIDTH x MASK>)
-declare void @__prefetch_read_sized_varying_2(<WIDTH x i64>, i8, <WIDTH x MASK>)
-declare void @__prefetch_read_sized_varying_3(<WIDTH x i64>, i8, <WIDTH x MASK>)
-declare void @__prefetch_read_sized_varying_nt(<WIDTH x i64>, i8, <WIDTH x MASK>)
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5197,8 +5174,6 @@ define(`stdlib_core', `
 
 @__fast_masked_vload = external global i32
 
-declare_gen()
-
 declare i1 @__is_compile_time_constant_mask(<WIDTH x MASK> %mask)
 declare i1 @__is_compile_time_constant_uniform_int32(i32)
 declare i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32>)
@@ -7290,15 +7265,6 @@ define void @__scatter64_$1(<WIDTH x i64> %ptrs, <WIDTH x $1> %values,
 '
 )
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; rdrand
-
-define(`rdrand_decls', `
-declare i1 @__rdrand_i16(i8 * nocapture)
-declare i1 @__rdrand_i32(i8 * nocapture)
-declare i1 @__rdrand_i64(i8 * nocapture)
-')
-
 define(`rdrand_definition', `
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rdrand
@@ -7443,186 +7409,3 @@ define(`define_avgs', `
 define_up_avgs()
 define_down_avgs()
 ')
-
-define(`rsqrtd_decl', `
-declare  double @__rsqrt_fast_uniform_double(double)
-declare  double @__rsqrt_uniform_double(double)
-declare <WIDTH x double> @__rsqrt_fast_varying_double(<WIDTH x double>)
-declare <WIDTH x double> @__rsqrt_varying_double(<WIDTH x double>)
-')
-
-define(`rcph_rsqrth_decl', `
-declare half @__rcp_uniform_half(half)
-declare <WIDTH x half> @__rcp_varying_half(<WIDTH x half>)
-declare half @__rsqrt_uniform_half(half)
-declare <WIDTH x half> @__rsqrt_varying_half(<WIDTH x half>)
-')
-
-define(`rcpd_decl', `
-declare  double @__rcp_fast_uniform_double(double)
-declare  double @__rcp_uniform_double(double)
-declare <WIDTH x double> @__rcp_fast_varying_double(<WIDTH x double>)
-declare <WIDTH x double> @__rcp_varying_double(<WIDTH x double>)
-')
-
-define(`declare_gen',
-`
-declare i32 @__task_index0()  nounwind readnone alwaysinline
-declare i32 @__task_index1()  nounwind readnone alwaysinline
-declare i32 @__task_index2()  nounwind readnone alwaysinline
-declare i32 @__task_index()  nounwind readnone alwaysinline
-declare i32 @__task_count0()  nounwind readnone alwaysinline
-declare i32 @__task_count1()  nounwind readnone alwaysinline
-declare i32 @__task_count2()  nounwind readnone alwaysinline
-declare i32 @__task_count()  nounwind readnone alwaysinline
-
-declare <WIDTH x i8> @__idiv_int8(<WIDTH x i8>, <WIDTH x i8>) nounwind readnone
-declare <WIDTH x i16> @__idiv_int16(<WIDTH x i16>, <WIDTH x i16>) nounwind readnone
-declare <WIDTH x i32> @__idiv_int32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone
-declare <WIDTH x i8> @__idiv_uint8(<WIDTH x i8>, <WIDTH x i8>) nounwind readnone
-declare <WIDTH x i16> @__idiv_uint16(<WIDTH x i16>, <WIDTH x i16>) nounwind readnone
-declare <WIDTH x i32> @__idiv_uint32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone
-
-declare <WIDTH x i8> @__masked_load_private_i8(i8 *, <WIDTH x MASK> %mask)
-declare <WIDTH x i16> @__masked_load_private_i16(i8 *, <WIDTH x MASK> %mask)
-declare <WIDTH x i32> @__masked_load_private_i32(i8 *, <WIDTH x MASK> %mask)
-declare <WIDTH x i64> @__masked_load_private_i64(i8 *, <WIDTH x MASK> %mask)
-declare <WIDTH x float> @__masked_load_private_float(i8 *, <WIDTH x MASK> %mask)
-declare <WIDTH x double> @__masked_load_private_double(i8 *, <WIDTH x MASK> %mask)
-
-declare <WIDTH x i8> @__masked_load_blend_i8(i8 *, <WIDTH x MASK> %mask)
-declare <WIDTH x i16> @__masked_load_blend_i16(i8 *, <WIDTH x MASK> %mask)
-declare <WIDTH x half> @__masked_load_blend_half(i8 *, <WIDTH x MASK> %mask)
-declare <WIDTH x i32> @__masked_load_blend_i32(i8 *, <WIDTH x MASK> %mask)
-declare <WIDTH x i64> @__masked_load_blend_i64(i8 *, <WIDTH x MASK> %mask)
-declare <WIDTH x float> @__masked_load_blend_float(i8 *, <WIDTH x MASK> %mask)
-declare <WIDTH x double> @__masked_load_blend_double(i8 *, <WIDTH x MASK> %mask)
-')
-
-define(`global_atomic_varying',`
-declare <$1 x $3> @__atomic_$2_varying_$4_global(<$1 x i64> %ptr, <$1 x $3> %val, <$1 x MASK> %maskv) nounwind alwaysinline
-')
-
-define(`global_atomic_cas_varying',`
-declare <$1 x $3> @__atomic_$2_varying_$4_global(<$1 x i64> %ptr, <$1 x $3> %cmp, <$1 x $3> %val, <$1 x MASK> %maskv) nounwind alwaysinline
-')
-
-global_atomic_cas_varying(WIDTH, compare_exchange, i32, int32)
-global_atomic_cas_varying(WIDTH, compare_exchange, i64, int64)
-global_atomic_cas_varying(WIDTH, compare_exchange, float, float)
-global_atomic_cas_varying(WIDTH, compare_exchange, double, double)
-
-global_atomic_varying(WIDTH, swap, i32, int32)
-global_atomic_varying(WIDTH, swap, i64, int64)
-global_atomic_varying(WIDTH, swap, float, float)
-global_atomic_varying(WIDTH, swap, double, double)
-
-global_atomic_varying(WIDTH, add, i32, int32)
-global_atomic_varying(WIDTH, sub, i32, int32)
-global_atomic_varying(WIDTH, and, i32, int32)
-global_atomic_varying(WIDTH, or, i32, int32)
-global_atomic_varying(WIDTH, xor, i32, int32)
-global_atomic_varying(WIDTH, min, i32, int32)
-global_atomic_varying(WIDTH, max, i32, int32)
-global_atomic_varying(WIDTH, umin, i32, uint32)
-global_atomic_varying(WIDTH, umax, i32, uint32)
-
-global_atomic_varying(WIDTH, fadd, float, float)
-global_atomic_varying(WIDTH, fsub, float, float)
-global_atomic_varying(WIDTH, fmin, float, float)
-global_atomic_varying(WIDTH, fmax, float, float)
-
-global_atomic_varying(WIDTH, add, i64, int64)
-global_atomic_varying(WIDTH, sub, i64, int64)
-global_atomic_varying(WIDTH, and, i64, int64)
-global_atomic_varying(WIDTH, or, i64, int64)
-global_atomic_varying(WIDTH, xor, i64, int64)
-global_atomic_varying(WIDTH, min, i64, int64)
-global_atomic_varying(WIDTH, max, i64, int64)
-global_atomic_varying(WIDTH, umin, i64, uint64)
-global_atomic_varying(WIDTH, umax, i64, uint64)
-
-global_atomic_varying(WIDTH, fadd, double, double)
-global_atomic_varying(WIDTH, fsub, double, double)
-global_atomic_varying(WIDTH, fmin, double, double)
-global_atomic_varying(WIDTH, fmax, double, double)
-
-define(`transcendetals_decl',`
-    declare float @__log_uniform_float(float) nounwind readnone
-    declare <WIDTH x float> @__log_varying_float(<WIDTH x float>) nounwind readnone
-    declare float @__exp_uniform_float(float) nounwind readnone
-    declare <WIDTH x float> @__exp_varying_float(<WIDTH x float>) nounwind readnone
-    declare float @__pow_uniform_float(float, float) nounwind readnone
-    declare <WIDTH x float> @__pow_varying_float(<WIDTH x float>, <WIDTH x float>) nounwind readnone
-
-    declare double @__log_uniform_double(double) nounwind readnone
-    declare <WIDTH x double> @__log_varying_double(<WIDTH x double>) nounwind readnone
-    declare double @__exp_uniform_double(double) nounwind readnone
-    declare <WIDTH x double> @__exp_varying_double(<WIDTH x double>) nounwind readnone
-    declare double @__pow_uniform_double(double, double) nounwind readnone
-    declare <WIDTH x double> @__pow_varying_double(<WIDTH x double>, <WIDTH x double>) nounwind readnone
-')
-
-define(`trigonometry_decl',`
-    declare <WIDTH x half> @__sin_varying_half(<WIDTH x half>) nounwind readnone
-    declare <WIDTH x half> @__asin_varying_half(<WIDTH x half>) nounwind readnone
-    declare <WIDTH x half> @__cos_varying_half(<WIDTH x half>) nounwind readnone
-    declare <WIDTH x half> @__acos_varying_half(<WIDTH x half>) nounwind readnone
-    declare void @__sincos_varying_half(<WIDTH x half>, i8*, i8*) nounwind
-    declare <WIDTH x half> @__tan_varying_half(<WIDTH x half>) nounwind readnone
-    declare <WIDTH x half> @__atan_varying_half(<WIDTH x half>) nounwind readnone
-    declare <WIDTH x half> @__atan2_varying_half(<WIDTH x half>,<WIDTH x half>) nounwind readnone
-
-    declare half @__sin_uniform_half(half) nounwind readnone
-    declare half @__asin_uniform_half(half) nounwind readnone
-    declare half @__cos_uniform_half(half) nounwind readnone
-    declare half @__acos_uniform_half(half) nounwind readnone
-    declare void @__sincos_uniform_half(half, i8*, i8*) nounwind
-    declare half @__tan_uniform_half(half) nounwind readnone
-    declare half @__atan_uniform_half(half) nounwind readnone
-    declare half @__atan2_uniform_half(half,half) nounwind readnone
-
-    declare <WIDTH x float> @__sin_varying_float(<WIDTH x float>) nounwind readnone
-    declare <WIDTH x float> @__asin_varying_float(<WIDTH x float>) nounwind readnone
-    declare <WIDTH x float> @__cos_varying_float(<WIDTH x float>) nounwind readnone
-    declare <WIDTH x float> @__acos_varying_float(<WIDTH x float>) nounwind readnone
-    declare void @__sincos_varying_float(<WIDTH x float>, i8*, i8*) nounwind
-    declare <WIDTH x float> @__tan_varying_float(<WIDTH x float>) nounwind readnone
-    declare <WIDTH x float> @__atan_varying_float(<WIDTH x float>) nounwind readnone
-    declare <WIDTH x float> @__atan2_varying_float(<WIDTH x float>,<WIDTH x float>) nounwind readnone
-
-    declare float @__sin_uniform_float(float) nounwind readnone
-    declare float @__asin_uniform_float(float) nounwind readnone
-    declare float @__cos_uniform_float(float) nounwind readnone
-    declare float @__acos_uniform_float(float) nounwind readnone
-    declare void @__sincos_uniform_float(float, i8*, i8*) nounwind
-    declare float @__tan_uniform_float(float) nounwind readnone
-    declare float @__atan_uniform_float(float) nounwind readnone
-    declare float @__atan2_uniform_float(float,float) nounwind readnone
-
-    declare <WIDTH x double> @__sin_varying_double(<WIDTH x double>) nounwind readnone
-    declare <WIDTH x double> @__asin_varying_double(<WIDTH x double>) nounwind readnone
-    declare <WIDTH x double> @__cos_varying_double(<WIDTH x double>) nounwind readnone
-    declare <WIDTH x double> @__acos_varying_double(<WIDTH x double>) nounwind readnone
-    declare void @__sincos_varying_double(<WIDTH x double>, i8*, i8*) nounwind
-    declare <WIDTH x double> @__tan_varying_double(<WIDTH x double>) nounwind readnone
-    declare <WIDTH x double> @__atan_varying_double(<WIDTH x double>) nounwind readnone
-    declare <WIDTH x double> @__atan2_varying_double(<WIDTH x double>,<WIDTH x double>) nounwind readnone
-
-    declare double @__sin_uniform_double(double) nounwind readnone
-    declare double @__asin_uniform_double(double) nounwind readnone
-    declare double @__cos_uniform_double(double) nounwind readnone
-    declare double @__acos_uniform_double(double) nounwind readnone
-    declare void @__sincos_uniform_double(double, i8*, i8*) nounwind
-    declare double @__tan_uniform_double(double) nounwind readnone
-    declare double @__atan_uniform_double(double) nounwind readnone
-    declare double @__atan2_uniform_double(double,double) nounwind readnone
-')
-
-define(`dot_product_vnni_decl',`
-    declare <WIDTH x i32> @__dot4add_u8i8packed(<WIDTH x i32>, <WIDTH x i32>, <WIDTH x i32>) nounwind readnone
-    declare <WIDTH x i32> @__dot4add_u8i8packed_sat(<WIDTH x i32>, <WIDTH x i32>, <WIDTH x i32>) nounwind readnone
-    declare <WIDTH x i32> @__dot2add_i16packed(<WIDTH x i32>, <WIDTH x i32>, <WIDTH x i32>) nounwind readnone
-    declare <WIDTH x i32> @__dot2add_i16packed_sat(<WIDTH x i32>, <WIDTH x i32>, <WIDTH x i32>) nounwind readnone
-')
-

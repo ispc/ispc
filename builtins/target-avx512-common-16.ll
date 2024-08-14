@@ -1110,7 +1110,5 @@ define_avgs()
 ;; Transcendentals are not defined because target definitions for all avx512
 ;; targets has false for m_hasTranscendentals. This means that no real use of
 ;; these functions happens in stdlib.ispc.
-transcendetals_decl()
 
 ;; Trigonometry
-trigonometry_decl()

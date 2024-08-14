@@ -9,7 +9,6 @@ ctlztz()
 popcnt()
 define_prefetches()
 aossoa()
-rdrand_decls()
 halfTypeGenericImplementation()
 define_vector_permutations()
 

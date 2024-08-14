@@ -2,7 +2,7 @@
 ;; target-neon-8.ll
 ;;
 ;;  Copyright(c) 2013-2015 Google, Inc.
-;;  Copyright(c) 2019-2023 Intel
+;;  Copyright(c) 2019-2024 Intel
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -87,10 +87,7 @@ define <16 x float> @__ceil_varying_float(<16 x float>) nounwind readonly always
   ret <16 x float> %binop.i
 }
 
-;; FIXME: rounding doubles and double vectors needs to be implemented
-declare <WIDTH x double> @__round_varying_double(<WIDTH x double>) nounwind readnone 
-declare <WIDTH x double> @__floor_varying_double(<WIDTH x double>) nounwind readnone 
-declare <WIDTH x double> @__ceil_varying_double(<WIDTH x double>) nounwind readnone 
+;; TODO: rounding doubles and double vectors needs to be implemented
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; trunc float/double
@@ -588,13 +585,8 @@ define <16 x i16> @__avg_down_int16(<16 x i16>, <16 x i16>) nounwind readnone al
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reciprocals in double precision, if supported
 
-rsqrtd_decl()
-rcpd_decl()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp/rsqrt declarations for half
-rcph_rsqrth_decl
 
-transcendetals_decl()
-trigonometry_decl()
 saturation_arithmetic()

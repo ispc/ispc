@@ -8,7 +8,6 @@ define_prefetches()
 define_shuffles()
 define_vector_permutations()
 aossoa()
-rdrand_decls()
 halfTypeGenericImplementation()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
