@@ -1081,5 +1081,3 @@ define_prefetches()
 define_avgs()
 
 ;; Trigonometry
-transcendetals_decl()
-trigonometry_decl()

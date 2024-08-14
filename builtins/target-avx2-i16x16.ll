@@ -12,7 +12,6 @@ include(`util.m4')
 stdlib_core()
 scans()
 reduce_equal(WIDTH)
-rdrand_decls()
 halfTypeGenericImplementation()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -503,21 +502,6 @@ define <16 x float> @__rcp_fast_varying_float(<16 x float> %v) nounwind readnone
   ret <16 x float> %ret
 }
 
-
-;declare float @__rsqrt_uniform_float(float) nounwind readnone
-;declare float @__rcp_uniform_float(float) nounwind readnone
-;declare float @__rcp_fast_uniform_float(float) nounwind readnone
-;declare float @__rsqrt_fast_uniform_float(float) nounwind readnone
-;declare <WIDTH x float> @__rcp_varying_float(<WIDTH x float>) nounwind readnone
-;declare <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float>) nounwind readnone
-;declare <WIDTH x float> @__rcp_fast_varying_float(<WIDTH x float>) nounwind readnone
-;declare <WIDTH x float> @__rsqrt_fast_varying_float(<WIDTH x float>) nounwind readnone
-
-;declare float @__sqrt_uniform_float(float) nounwind readnone
-;declare <WIDTH x float> @__sqrt_varying_float(<WIDTH x float>) nounwind readnone
-;declare double @__sqrt_uniform_double(double) nounwind readnone
-;declare <WIDTH x double> @__sqrt_varying_double(<WIDTH x double>) nounwind readnone
-
 ;; bit ops
 
 popcnt()
@@ -531,34 +515,6 @@ svml(ISA)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reductions
-
-;declare i64 @__movmsk(<WIDTH x i1>) nounwind readnone
-;declare i1 @__any(<WIDTH x i1>) nounwind readnone
-;declare i1 @__all(<WIDTH x i1>) nounwind readnone
-;declare i1 @__none(<WIDTH x i1>) nounwind readnone
-
-;declare i16 @__reduce_add_int8(<WIDTH x i8>) nounwind readnone
-;declare i32 @__reduce_add_int16(<WIDTH x i16>) nounwind readnone
-
-;declare float @__reduce_add_float(<WIDTH x float>) nounwind readnone
-;declare float @__reduce_min_float(<WIDTH x float>) nounwind readnone
-;declare float @__reduce_max_float(<WIDTH x float>) nounwind readnone
-
-;declare i64 @__reduce_add_int32(<WIDTH x i32>) nounwind readnone alwaysinline
-;declare i32 @__reduce_min_int32(<WIDTH x i32>) nounwind readnone
-;declare i32 @__reduce_max_int32(<WIDTH x i32>) nounwind readnone
-;declare i32 @__reduce_min_uint32(<WIDTH x i32>) nounwind readnone
-;declare i32 @__reduce_max_uint32(<WIDTH x i32>) nounwind readnone
-
-;declare double @__reduce_add_double(<WIDTH x double>) nounwind readnone
-;declare double @__reduce_min_double(<WIDTH x double>) nounwind readnone
-;declare double @__reduce_max_double(<WIDTH x double>) nounwind readnone
-
-;declare i64 @__reduce_add_int64(<WIDTH x i64>) nounwind readnone
-;declare i64 @__reduce_min_int64(<WIDTH x i64>) nounwind readnone
-;declare i64 @__reduce_max_int64(<WIDTH x i64>) nounwind readnone
-;declare i64 @__reduce_min_uint64(<WIDTH x i64>) nounwind readnone
-;declare i64 @__reduce_max_uint64(<WIDTH x i64>) nounwind readnone
 
 ;; 8 bit
 declare <4 x i64> @llvm.x86.avx2.psad.bw(<32 x i8>, <32 x i8>) nounwind readnone
@@ -812,12 +768,6 @@ scatterbo32_64(double)
 
 ;; TODO better intrinsic implementation is available
 packed_load_and_store(FALSE)
-;declare i32 @__packed_load_active(i8 * nocapture, i8 * nocapture,
-;                                  <WIDTH x i1>) nounwind
-;declare i32 @__packed_store_active(i8 * nocapture, <WIDTH x i32> %vals,
-;                                   <WIDTH x i1>) nounwind
-;declare i32 @__packed_store_active2(i8 * nocapture, <WIDTH x i32> %vals,
-;                                   <WIDTH x i1>) nounwind
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -826,19 +776,6 @@ packed_load_and_store(FALSE)
 ;; TODO: need to defined with intrinsics.
 define_prefetches()
 
-;declare void @__prefetch_read_uniform_1(i8 * nocapture) nounwind
-;declare void @__prefetch_read_uniform_2(i8 * nocapture) nounwind
-;declare void @__prefetch_read_uniform_3(i8 * nocapture) nounwind
-;declare void @__prefetch_read_uniform_nt(i8 * nocapture) nounwind
-
-;declare void @__prefetch_read_varying_1(<WIDTH x i64> %addr, <WIDTH x MASK> %mask) nounwind
-;declare void @__prefetch_read_varying_1_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
-;declare void @__prefetch_read_varying_2(<WIDTH x i64> %addr, <WIDTH x MASK> %mask) nounwind
-;declare void @__prefetch_read_varying_2_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
-;declare void @__prefetch_read_varying_3(<WIDTH x i64> %addr, <WIDTH x MASK> %mask) nounwind
-;declare void @__prefetch_read_varying_3_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
-;declare void @__prefetch_read_varying_nt(<WIDTH x i64> %addr, <WIDTH x MASK> %mask) nounwind
-;declare void @__prefetch_read_varying_nt_native(i8 * %base, i32 %scale, <WIDTH x i32> %offsets, <WIDTH x MASK> %mask) nounwind
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int8/int16 builtins
 
@@ -847,18 +784,12 @@ define_avgs()
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reciprocals in double precision, if supported
 
-rsqrtd_decl()
-rcpd_decl()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp/rsqrt declarations for half
-rcph_rsqrth_decl
 
-transcendetals_decl()
-trigonometry_decl()
 
 saturation_arithmetic_novec()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; dot product
-dot_product_vnni_decl()

@@ -20,14 +20,6 @@ saturation_arithmetic()
 include(`target-sse2-common.ll')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; half conversion routines
-
-declare float @__half_to_float_uniform(i16 %v) nounwind readnone
-declare <WIDTH x float> @__half_to_float_varying(<WIDTH x i16> %v) nounwind readnone
-declare i16 @__float_to_half_uniform(float %v) nounwind readnone
-declare <WIDTH x i16> @__float_to_half_varying(<WIDTH x float> %v) nounwind readnone
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding
 ;;
 ;; There are not any rounding instructions in SSE2, so we have to emulate
@@ -576,16 +568,10 @@ gen_scatter(double)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reciprocals in double precision, if supported
 
-rsqrtd_decl()
-rcpd_decl()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp/rsqrt declarations for half
-rcph_rsqrth_decl
 
-transcendetals_decl()
-trigonometry_decl()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; dot product
-dot_product_vnni_decl()

@@ -3,7 +3,7 @@
 ;;
 ;;  Copyright(c) 2012-2013 Matt Pharr
 ;;  Copyright(c) 2013, 2015 Google, Inc.
-;;  Copyright(c) 2019-2023 Intel
+;;  Copyright(c) 2019-2024 Intel
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -731,12 +731,7 @@ define <4 x i16> @__psubus_vi16(<4 x i16>, <4 x i16>) {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reciprocals in double precision, if supported
 
-rsqrtd_decl()
-rcpd_decl()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp/rsqrt declarations for half
-rcph_rsqrth_decl
 
-transcendetals_decl()
-trigonometry_decl()

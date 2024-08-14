@@ -1,11 +1,10 @@
-;;  Copyright (c) 2013-2023, Intel Corporation
+;;  Copyright (c) 2013-2024, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
 define(`ISA',`AVX1')
 include(`target-avx1-i64x4base.ll')
 
-rdrand_decls()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; svml
@@ -39,16 +38,6 @@ define <4 x i32> @__max_varying_uint32(<4 x i32>, <4 x i32>) nounwind readonly a
   %call = call <4 x i32> @llvm.x86.sse41.pmaxud(<4 x i32> %0, <4 x i32> %1)
   ret <4 x i32> %call
 }
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; half conversion routines
-
-ifelse(NO_HALF_DECLARES, `1', `', `
-declare float @__half_to_float_uniform(i16 %v) nounwind readnone
-declare <WIDTH x float> @__half_to_float_varying(<WIDTH x i16> %v) nounwind readnone
-declare i16 @__float_to_half_uniform(float %v) nounwind readnone
-declare <WIDTH x i16> @__float_to_half_varying(<WIDTH x float> %v) nounwind readnone
-')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather

@@ -21,33 +21,22 @@ include(`util.m4')
 
 stdlib_core()
 scans()
-rdrand_decls()
 define_shuffles()
 define_vector_permutations()
 aossoa()
 ctlztz()
-trigonometry_decl()
-transcendetals_decl()
 include(`svml.m4')
 svml_stubs(float,f,WIDTH)
 svml_stubs(double,d,WIDTH)
 define_avgs()
 saturation_arithmetic()
 halfTypeGenericImplementation()
-dot_product_vnni_decl()
 
 ;; rcp/rsqrt for double
-rsqrtd_decl()
-rcpd_decl()
 
 ;; rcp/rsqrt for half
-rcph_rsqrth_decl
 
 declare <4 x double> @llvm.sqrt.v4f64(<4 x double>)
-declare float @__half_to_float_uniform(i16 %v) nounwind readnone
-declare <WIDTH x float> @__half_to_float_varying(<WIDTH x i16> %v) nounwind readnone
-declare i16 @__float_to_half_uniform(float %v) nounwind readnone
-declare <WIDTH x i16> @__float_to_half_varying(<WIDTH x float> %v) nounwind readnone
 declare i32 @llvm.wasm.anytrue.v4i32(<4 x i32>)
 declare i32 @llvm.wasm.alltrue.v4i32(<4 x i32>)
 declare <4 x float> @llvm.sqrt.v4f32(<4 x float>)

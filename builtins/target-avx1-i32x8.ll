@@ -5,7 +5,6 @@
 define(`ISA',`AVX1')
 
 include(`target-avx-common-8.ll')
-rdrand_decls()
 saturation_arithmetic()
 define_shuffles()
 
@@ -44,16 +43,6 @@ define <8 x i32> @__max_varying_uint32(<8 x i32>, <8 x i32>) nounwind readonly a
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; half conversion routines
-
-ifelse(NO_HALF_DECLARES, `1', `', `
-declare float @__half_to_float_uniform(i16 %v) nounwind readnone
-declare <WIDTH x float> @__half_to_float_varying(<WIDTH x i16> %v) nounwind readnone
-declare i16 @__float_to_half_uniform(float %v) nounwind readnone
-declare <WIDTH x i16> @__float_to_half_varying(<WIDTH x float> %v) nounwind readnone
-')
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather
 
 gen_gather_factored(i8)
@@ -66,4 +55,3 @@ gen_gather_factored(double)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; dot product
-dot_product_vnni_decl()

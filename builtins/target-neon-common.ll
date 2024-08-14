@@ -123,14 +123,12 @@ define(`NEON_PREFIX_RSQRTSQ',
 stdlib_core()
 scans()
 reduce_equal(WIDTH)
-rdrand_decls()
 define_shuffles()
 define_vector_permutations()
 aossoa()
 ctlztz()
 popcnt()
 halfTypeGenericImplementation()
-dot_product_vnni_decl()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; half conversion routines
