@@ -82,15 +82,19 @@ jobs:
           with:
             repository: 'intel/yarpgen'
             submodules: true
+            path: 'yarpgen'
 
         - name: Build YARPGEN
           run: |
             cmake -B build && cmake --build build
+          working-directory: yarpgen
 
         - name: Set up PATH
           run: |
-            echo "YARPGEN_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
-            echo "$GITHUB_WORKSPACE/build:$GITHUB_WORKSPACE/scripts" >> $GITHUB_PATH
+            echo "YARPGEN_HOME=$GITHUB_WORKSPACE/yarpgen" >> $GITHUB_ENV
+            echo "$GITHUB_WORKSPACE/yarpgen/build:$GITHUB_WORKSPACE/yarpgen/scripts" >> $GITHUB_PATH
+            echo "$GITHUB_WORKSPACE/ispc-trunk-linux/bin" >> $GITHUB_PATH
+            echo "$SDE_HOME" >> $GITHUB_PATH
 
         - name: Set timeout for dispatched run
           if: github.event_name == 'workflow_dispatch'
@@ -102,16 +106,19 @@ jobs:
 
         - name: Run YARPGEN
           run: |
+            ispc --version
             $YARPGEN_HOME/scripts/run_gen.py --std ispc --target ispc --timeout $TIMEOUT
             tar -czvf yarpgen.tar.gz testing
+          working-directory: yarpgen
 
         - name: Print seeds
           run: |
-            ls -al testing/*/*
+            ls -al testing/*/*/*
+          working-directory: yarpgen
 
         - name: Upload YARPGEN results
           uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
           with:
             name: yarpgen
-            path: yarpgen.tar.gz
+            path: yarpgen/yarpgen.tar.gz
 
