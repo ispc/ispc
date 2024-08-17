@@ -22,7 +22,7 @@
         "SPIRV_TRANSLATOR_BRANCH": "llvm_release_170",
         "SPIRV_TRANSLATOR_SHA": "89ab5df345a36940c3a313b3cbd875e32bae366e",
         "L0_URL": "https://github.com/oneapi-src/level-zero.git",
-        "L0_TAG": "v1.17.6",
+        "L0_TAG": "v1.17.28",
         "ISPC_CORPUS_URL": "null"
       }
     }
