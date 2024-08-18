@@ -3620,6 +3620,112 @@ __declspec(safe) static inline uniform float pow(uniform float a, uniform float 
     }
 }
 
+__declspec(safe) static inline uniform uint32 _fast_div3(uniform uint32 x) {
+    return ((uniform uint64)x * (uniform uint64)1431655766) >> (uniform uint64)32;
+}
+
+__declspec(safe) static inline varying uint32 _fast_div3(varying uint32 x) {
+    return ((varying uint64)x * (varying uint64)1431655766) >> (varying uint64)32;
+}
+
+// Cube root approximation using bit hacks for 32-bit float adapted from Kahan's cbrt.
+// See "Computing a Real Cube Root" by W. Kahan (https://csclub.uwaterloo.ca/~pbarfuss/qbrt.pdf).
+// Improvement of the algorithm provided in https://web.archive.org/20131227144655/http://metamerist.com/cbrt/cbrt.htm.
+// The template is only meant to support both uniform and varying input variables in a single function.
+// It only supports floats.
+template <typename T> __declspec(safe) static inline T _cbrtf_base(T x) {
+    // Note: using memcpy is strangelly a bit faster, but also unsafe
+    return floatbits(_fast_div3(intbits(x)) + 709921077u);
+}
+
+// Compute a Newton-Raphson iteration (applied to the cube root function).
+// Support both simple and double precision as well as both uniform and varying types.
+// This method has a quadratic convergance rate (only close to the target value).
+template <typename T> __declspec(safe) static inline T _cbrt_newton_iter(T a, T b) {
+    const uniform T third = (uniform T)1 / (uniform T)3;
+    return a - third * (a - b / (a * a));
+}
+
+// Compute an iteration of the Halley's method (applied to the cube root function).
+// Support both simple and double precision as well as both uniform and varying types.
+// See "Machine Method for the Extraction of Cube Root" by Otis E. Lancaster (https://www.jstor.org/stable/2279437).
+// This method has a cubic convergance rate (only close to the target value).
+template <typename T> __declspec(safe) static inline T _cbrt_halley_iter(T a, T b) {
+    // Note: the order of the operation matters since numbers can quickly overflow
+    // while computing the cubic root of really huge/tiny numbers.
+    const uniform T two = (uniform T)2;
+    const T a3 = a * a * a;
+    const T correction_factor = (a3 + two * b) / (two * a3 + b);
+    return a * correction_factor;
+}
+
+// Compute the cubic root of a given number.
+// The template is only meant to support both uniform and varying input variables in a single function.
+// It only supports floats.
+// Support special values like NaN, Inf, -Inf, -0.0 and subnormal numbers.
+// Precision for all numbers:
+//  - if precise is true:   <5 ULP
+//  - if precise is false: <30 ULP
+template <typename T> __declspec(safe) static inline T _cbrtf(T x, uniform bool precise) {
+    const T x_abs = abs(x);
+    T res;
+
+    // Correct the input value so it is neither too big nor too small
+    const T xFactor = select(x_abs < 1e-12, 1e18, select(x_abs > 1e12, 1e-18, (uniform T)1));
+    const T x_corr = x_abs * xFactor;
+
+    // Compute an initial guess value and iteratively improve it.
+    // This methods converge very quickly if the initial guess is good.
+    // This approach only actually work well only if the numbers are neither
+    // very small or very big ones.
+    res = _cbrtf_base(x_corr);
+
+    if (precise) {
+        res = _cbrt_halley_iter(res, x_corr);
+        res = _cbrt_halley_iter(res, x_corr);
+    } else {
+        res = _cbrt_newton_iter(res, x_corr);
+        res = _cbrt_newton_iter(res, x_corr);
+    }
+
+    // Correct the result based on the (above) input correction
+    const T resFactor = select(x_abs < 1e-12, 1e-6, select(x_abs > 1e12, 1e6, (uniform T)1));
+    res *= resFactor;
+
+    // Transfer the sign
+    const T signed_res = floatbits(intbits(res) | signbits(x));
+
+    // Special values are: NaN, +Inf, -Inf, -0, +0
+    return select((intbits(x) & 0x7F800000) == 0x7F800000 || x == 0.0f, x, signed_res);
+}
+
+__declspec(safe) static inline uniform float cbrt(uniform float x) {
+    if (__math_lib == __math_lib_system || __math_lib == __math_lib_svml) {
+        return __stdlib_cbrtf(x);
+    } else if (__math_lib == __math_lib_ispc_fast) {
+        return _cbrtf(x, false);
+    } else if (__math_lib == __math_lib_ispc) {
+        return _cbrtf(x, true);
+    }
+}
+
+__declspec(safe) static inline float cbrt(float x) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_cbrtf(x);
+    } else if (__math_lib == __math_lib_system) {
+        float ret;
+        foreach_active(i) {
+            uniform float r = __stdlib_cbrtf(extract(x, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    } else if (__math_lib == __math_lib_ispc_fast) {
+        return _cbrtf(x, false);
+    } else if (__math_lib == __math_lib_ispc) {
+        return _cbrtf(x, true);
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // Transcendentals (16-bit float precision)
 
@@ -4177,6 +4283,21 @@ __declspec(safe) static inline uniform double pow(uniform double a, uniform doub
     } else
         return __stdlib_pow(a, b);
 }
+
+__declspec(safe) static inline double cbrt(double a) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_cbrtd(a);
+    } else {
+        double ret;
+        foreach_active(i) {
+            uniform double r = __stdlib_cbrt(extract(a, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+}
+
+__declspec(safe) static inline uniform double cbrt(uniform double a) { return __stdlib_cbrt(a); }
 
 ///////////////////////////////////////////////////////////////////////////
 // half-precision floats

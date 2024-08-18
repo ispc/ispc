@@ -22,6 +22,7 @@ define(`svml_stubs',`
   declare <$3 x $1> @__svml_log$2(<$3 x $1>) nounwind readnone alwaysinline
   declare <$3 x $1> @__svml_pow$2(<$3 x $1>, <$3 x $1>) nounwind readnone alwaysinline
   declare <$3 x $1> @__svml_sqrt$2(<$3 x $1>) nounwind readnone alwaysinline
+  declare <$3 x $1> @__svml_cbrt$2(<$3 x $1>) nounwind readnone alwaysinline
   declare <$3 x $1> @__svml_invsqrt$2(<$3 x $1>) nounwind readnone alwaysinline
 ')
 
@@ -45,6 +46,7 @@ define(`svml_declare',`
   declare <$3 x $1> @__svml_log$2(<$3 x $1>) nounwind readnone
   declare <$3 x $1> @__svml_pow$2(<$3 x $1>, <$3 x $1>) nounwind readnone
   declare <$3 x $1> @__svml_sqrt$2(<$3 x $1>) nounwind readnone
+  declare <$3 x $1> @__svml_cbrt$2(<$3 x $1>) nounwind readnone
   declare <$3 x $1> @__svml_invsqrt$2(<$3 x $1>) nounwind readnone
 ');
 
@@ -121,6 +123,11 @@ define(`svml_define',`
 
   define <$3 x $1> @__svml_sqrt$4(<$3 x $1>) nounwind readnone alwaysinline {
     %ret = call <$3 x $1> @__svml_sqrt$2(<$3 x $1> %0)
+    ret <$3 x $1> %ret
+  }
+
+  define <$3 x $1> @__svml_cbrt$4(<$3 x $1>) nounwind readnone alwaysinline {
+    %ret = call <$3 x $1> @__svml_cbrt$2(<$3 x $1> %0)
     ret <$3 x $1> %ret
   }
 
@@ -227,6 +234,10 @@ define(`svml_define_x',`
   }
   define <$5 x $1> @__svml_sqrt$4(<$5 x $1>) nounwind readnone alwaysinline {
     unary$3to$5(ret, $1, @__svml_sqrt$2, %0)
+    ret <$5 x $1> %ret
+  }
+  define <$5 x $1> @__svml_cbrt$4(<$5 x $1>) nounwind readnone alwaysinline {
+    unary$3to$5(ret, $1, @__svml_cbrt$2, %0)
     ret <$5 x $1> %ret
   }
   define <$5 x $1> @__svml_invsqrt$4(<$5 x $1>) nounwind readnone alwaysinline {
