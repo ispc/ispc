@@ -600,6 +600,8 @@ EXT inline READNONE uniform float __stdlib_logf(uniform float);
 EXT inline READNONE uniform double __stdlib_log(uniform double);
 EXT inline READNONE uniform float __stdlib_powf(uniform float, uniform float);
 EXT inline READNONE uniform double __stdlib_pow(uniform double, uniform double);
+EXT inline READNONE uniform float __stdlib_cbrtf(uniform float);
+EXT inline READNONE uniform double __stdlib_cbrt(uniform double);
 EXT inline READNONE void __stdlib_sincosf(uniform float, uniform int8 *uniform, uniform int8 *uniform);
 EXT inline READNONE void __stdlib_sincos(uniform double, uniform int8 *uniform, uniform int8 *uniform);
 EXT inline READNONE uniform float __stdlib_sinf(uniform float);
