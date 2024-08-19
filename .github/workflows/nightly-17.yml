@@ -3,10 +3,6 @@
 
 # Nightly Linux run.
 
-####################################################################
-# Currently disabled. To be reenabled for 17.0.                    #
-####################################################################
-
 name: Nightly tests / LLVM 17.0
 
 permissions: read-all
@@ -21,57 +17,19 @@ env:
   SDE_MIRROR_ID: 813591
   SDE_TAR_NAME: sde-external-9.33.0-2024-01-07
   USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
+  LLVM_REPO: https://github.com/ispc/ispc.dependencies
 
 jobs:
-  linux-build-llvm-17:
-    runs-on: ubuntu-22.04
-
-    steps:
-    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-      with:
-        submodules: true
-
-    - name: Check environment
-      run: |
-        cat /proc/cpuinfo
-
-    - name: Build LLVM
-      run: |
-        cd docker/ubuntu/22.04/cpu_ispc_build
-        ls -al
-        docker buildx create --use
-        docker buildx build --tag ispc/ubuntu22.04:stage2 --target=llvm_build --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LLVM_VERSION=17.0 --output=type=tar,dest=result.tar .
-
-    - name: Pack LLVM
-      run: |
-        cd docker/ubuntu/22.04/cpu_ispc_build
-        tar xvf result.tar usr/local/src/llvm
-        mv usr/local/src/llvm/bin-17.0 .
-        # Note using gzip here, instead of xz - trading of space for speed, as it's just for passing to another stage.
-        tar czvf llvm-17.0.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.gz bin-17.0
-
-    - name: Upload package
-      uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
-      with:
-        name: llvm_17_linux
-        path: docker/ubuntu/22.04/cpu_ispc_build/llvm-17.0.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.gz
-
   linux-build-ispc-llvm-17:
-    needs: [linux-build-llvm-17]
     runs-on: ubuntu-22.04
     env:
       LLVM_VERSION: "17.0"
-      LLVM_TAR: llvm-17.0.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.gz
+      LLVM_TAR: llvm-17.0.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       with:
         submodules: true
-
-    - name: Download package
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-      with:
-        name: llvm_17_linux
 
     - name: Install dependencies
       run: |
@@ -183,60 +141,8 @@ jobs:
         [ -z "`git diff`" ]
 
 
-  win-build-llvm-17:
-    runs-on: windows-2022
-
-    steps:
-    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-      with:
-        submodules: true
-
-    - name: Setup MSBuild.exe
-      uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2.0.0
-
-    - name: Install dependencies
-      run: |
-        Install-ChocoPackage ninja
-
-    - name: Check environment
-      shell: cmd
-      run: |
-        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
-
-    - name: Install dependencies
-      shell: cmd
-      run: |
-        mkdir llvm
-        echo LLVM_HOME=%GITHUB_WORKSPACE%\llvm>> %GITHUB_ENV%
-        echo ISPC_HOME=%GITHUB_WORKSPACE%>> %GITHUB_ENV%
-
-    - name: Build LLVM
-      shell: cmd
-      run: |
-        set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-        call %VSVARS%
-        cmake %ISPC_HOME%\superbuild -B build --preset os -DLTO=ON -DLLVM_VERSION=17.0 -DCMAKE_SYSTEM_VERSION=10.0.18362.0 -DCMAKE_INSTALL_PREFIX=%LLVM_HOME%\bin-17.0 -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DXE_DEPS=OFF -DLLVM_DISABLE_ASSERTIONS=ON
-        cmake --build build
-        rmdir /s /q build
-
-    - name: Pack LLVM
-      shell: cmd
-      run: |
-        cd llvm
-        set TAR_BASE_NAME=llvm-17.0.6-win.vs2019-Release+Asserts-x86.arm.wasm
-        7z.exe a -ttar -snl %TAR_BASE_NAME%.tar bin-17.0
-        7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
-
-    - name: Upload package
-      uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
-      with:
-        name: llvm_17_win
-        path: llvm/llvm-17.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
-
-
   win-build-ispc-llvm-17:
-    needs: [win-build-llvm-17]
-    runs-on: windows-2022
+    runs-on: windows-2019
     env:
       LLVM_VERSION: "17.0"
       LLVM_TAR: llvm-17.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
@@ -248,12 +154,6 @@ jobs:
     - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       with:
         submodules: true
-
-    - name: Download package
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-      with:
-        name: llvm_17_win
-        path: ${{env.LLVM_HOME}}
 
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2.0.0
