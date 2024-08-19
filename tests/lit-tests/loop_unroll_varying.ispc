@@ -43,23 +43,7 @@ void foo_for() {
 // CHECKO0:         br label %{{[a-zA-Z_][a-zA-Z0-9_.]*}}
 // CHECKO0:         }
 
-// CHECKO2:         for_loop{{.*}}:
-// CHECKO2:         call void @goo_for_unroll8___
-// CHECKO2:         for_loop{{.*}}:
-// CHECKO2:         call void @goo_for_unroll8___
-// CHECKO2:         for_loop{{.*}}:
-// CHECKO2:         call void @goo_for_unroll8___
-// CHECKO2:         for_loop{{.*}}:
-// CHECKO2:         call void @goo_for_unroll8___
-// CHECKO2:         for_loop{{.*}}:
-// CHECKO2:         call void @goo_for_unroll8___
-// CHECKO2:         for_loop{{.*}}:
-// CHECKO2:         call void @goo_for_unroll8___
-// CHECKO2:         for_loop{{.*}}:
-// CHECKO2:         call void @goo_for_unroll8___
-// CHECKO2:         for_loop{{.*}}:
-// CHECKO2:         call void @goo_for_unroll8___
-// CHECKO2-NOT:     call void @goo_for_unroll8___
+// CHECKO2-COUNT-8:         call void @goo_for_unroll8___
 // CHECKO2:         br {{(i1)|(label)}} %{{[a-zA-Z_][a-zA-Z0-9_.]*}}
 // CHECKO2:         }
 

@@ -150,14 +150,15 @@ unmasked uint16 shl_u16(uint16 a, uint16 b) { return a << b; }
 
 unmasked uint8 shl_u8(uint8 a, uint8 b) { return a << b; }
 
-
-// CHECK_NSW-LABEL:         define <{{[0-9]*}} x i64> @neg_64
+// Starting LLVM 19.0 there is a range attribute in @neg* functions:
+// For example: define range(i8 -127, -128) <8 x i8>
+// CHECK_NSW-LABEL:         define {{.*}}<{{[0-9]*}} x i64> @neg_64
 // CHECK_NSW-COUNT-1:         %{{.*}}= sub{{.*}}nsw{{.*}}i64
-// CHECK_NSW-LABEL:         define <{{[0-9]*}} x i32> @neg_32
+// CHECK_NSW-LABEL:         define {{.*}}<{{[0-9]*}} x i32> @neg_32
 // CHECK_NSW-COUNT-1:         %{{.*}}= sub{{.*}}nsw{{.*}}i32
-// CHECK_NSW-LABEL:         define <{{[0-9]*}} x i16> @neg_16
+// CHECK_NSW-LABEL:         define {{.*}}<{{[0-9]*}} x i16> @neg_16
 // CHECK_NSW-COUNT-1:         %{{.*}}= sub{{.*}}nsw{{.*}}i16
-// CHECK_NSW-LABEL:         define <{{[0-9]*}} x i8> @neg_8
+// CHECK_NSW-LABEL:         define {{.*}}<{{[0-9]*}} x i8> @neg_8
 // CHECK_NSW-COUNT-1:         %{{.*}}= sub{{.*}}nsw{{.*}}i8
 
 unmasked int64 neg_64(int64 a) { return -a; }

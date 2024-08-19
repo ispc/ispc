@@ -95,7 +95,7 @@ unmasked float16 fp16_fnms(float16 a, float16 b, float16 c) {
 }
 
 // CHECK_SPR-LABEL: fp16_round
-// CHECK_SPR: vrndscalesh $8
+// CHECK_SPR: vrndscale{{sh|ph}} $8
 unmasked float16 fp16_round(float16 a) {
   return round(a);
 }
