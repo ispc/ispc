@@ -3,6 +3,9 @@
 // RUN: %{ispc} %s --target=sse4 -O2 --opt=fast-math  -h %t.h --emit-asm -o - | FileCheck %s -check-prefix=CHECK_SSE
 // RUN: %{ispc} %s --target=sse2 -O2 --opt=fast-math  -h %t.h --emit-asm -o - | FileCheck %s -check-prefix=CHECK_SSE
 // REQUIRES: X86_ENABLED && LLVM_14_0+
+// The test is failing starting LLVM 18.0
+// Related issues: #2813, #2870 and PR2864
+// XFAIL: LLVM_18_0+
 export void test_interleaved(const uniform float xin[],
                              const uniform float yin[],
                              const uniform float zin[],
