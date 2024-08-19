@@ -103,12 +103,51 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        arch: [x86, x86-64]
         target: [sse2-i32x4, sse2-i32x8,
                  sse4-i8x16, sse4-i16x8, sse4-i32x4, sse4-i32x8,
                  avx1-i32x4, avx1-i32x8, avx1-i32x16, avx1-i64x4,
                  avx2-i8x32, avx2-i16x16, avx2-i32x4, avx2-i32x8, avx2-i32x16, avx2-i64x4,
                  avx512knl-x16,
                  avx512skx-x4, avx512skx-x8, avx512skx-x16, avx512skx-x64, avx512skx-x32]
+        # See issue #2818 for more deatils. It's SDE problem running on AMD runner.
+        exclude:
+          - arch: x86
+            target: "avx2vnni-i32x4"
+          - arch: x86
+            target: "avx2vnni-i32x8"
+          - arch: x86
+            target: "avx2vnni-i32x16"
+          - arch: x86
+            target: "avx512skx-x4"
+          - arch: x86
+            target: "avx512skx-x8"
+          - arch: x86
+            target: "avx512skx-x16"
+          - arch: x86
+            target: "avx512skx-x32"
+          - arch: x86
+            target: "avx512skx-x64"
+          - arch: x86
+            target: "avx512icl-x4"
+          - arch: x86
+            target: "avx512icl-x8"
+          - arch: x86
+            target: "avx512icl-x16"
+          - arch: x86
+            target: "avx512icl-x32"
+          - arch: x86
+            target: "avx512icl-x64"
+          - arch: x86
+            target: "avx512spr-x4"
+          - arch: x86
+            target: "avx512spr-x8"
+          - arch: x86
+            target: "avx512spr-x16"
+          - arch: x86
+            target: "avx512spr-x32"
+          - arch: x86
+            target: "avx512spr-x64"
     steps:
     - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
     - name: Download package
@@ -127,7 +166,7 @@ jobs:
     - name: Running tests
       run: |
         echo PATH=$PATH
-        ./alloy.py -r --only="stability current -O0 -O1 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        ./alloy.py -r --only="stability ${{ matrix.arch }} current -O0 -O1 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Upload fail_db.txt
       uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
