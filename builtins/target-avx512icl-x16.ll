@@ -32,6 +32,28 @@ not_const:
   ret <WIDTH x i8> %res
 }
 
+declare <WIDTH x i16> @llvm.x86.avx512.mask.permvar.hi.256(<WIDTH x i16>, <WIDTH x i16>, <WIDTH x i16>, i16)
+define <WIDTH x i16> @__shuffle_i16(<WIDTH x i16>, <WIDTH x i32>) nounwind readnone alwaysinline {
+  %ind = trunc <WIDTH x i32> %1 to <WIDTH x i16>
+  %res = call <WIDTH x i16> @llvm.x86.avx512.mask.permvar.hi.256(<WIDTH x i16> %0, <WIDTH x i16> %ind, <WIDTH x i16> zeroinitializer, i16 -1)
+  ret <WIDTH x i16> %res
+}
+
+declare <WIDTH x i16> @llvm.x86.avx512.vpermi2var.hi.256(<WIDTH x i16>, <WIDTH x i16>, <WIDTH x i16>)
+define <WIDTH x i16> @__shuffle2_i16(<WIDTH x i16>, <WIDTH x i16>, <WIDTH x i32>) nounwind readnone alwaysinline {
+  %isc = call i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32> %2)
+  br i1 %isc, label %is_const, label %not_const
+
+is_const:
+  %res_const = tail call <WIDTH x i16> @__shuffle2_const_i16(<WIDTH x i16> %0, <WIDTH x i16> %1, <WIDTH x i32> %2)
+  ret <WIDTH x i16> %res_const
+
+not_const:
+  %ind = trunc <WIDTH x i32> %2 to <WIDTH x i16>
+  %res = call <WIDTH x i16> @llvm.x86.avx512.vpermi2var.hi.256(<WIDTH x i16> %0, <WIDTH x i16> %ind, <WIDTH x i16> %1)
+  ret <WIDTH x i16> %res
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp/rsqrt declarations for half
 rcph_rsqrth_decl

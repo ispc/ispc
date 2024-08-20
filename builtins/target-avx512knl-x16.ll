@@ -12,6 +12,8 @@ include(`target-avx512-common-16.ll')
 
 shuffle1(i8)
 shuffle2(i8)
+shuffle1(i16)
+shuffle2(i16)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp/rsqrt declarations for half
