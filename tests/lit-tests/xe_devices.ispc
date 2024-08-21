@@ -69,6 +69,26 @@
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelpg-x16 --device=mtl-m
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelpg-x16 --device=mtl-p
 
+// Xe2HPG
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x16 --device=skl
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x16 --device=tgllp
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x16 --device=dg1
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x16 --device=acm-g10
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x16 --device=acm-g11
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x16 --device=acm-g12
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x16 --device=mtl-m
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x16 --device=mtl-p
+// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x16 --device=xe2-hpg-x2-a0
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x32 --device=skl
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x32 --device=tgllp
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x32 --device=dg1
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x32 --device=acm-g10
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x32 --device=acm-g11
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x32 --device=acm-g12
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x32 --device=mtl-m
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x32 --device=mtl-p
+// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x32 --device=xe2-hpg-x2-a0
+
 // REQUIRES: XE_ENABLED
 // REQUIRES: LINUX_HOST
 // REQUIRES: OCLOC_INSTALLED
