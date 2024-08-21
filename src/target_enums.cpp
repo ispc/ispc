@@ -183,6 +183,10 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::xe2hpg_x16;
     } else if (target == "xe2hpg-x32") {
         return ISPCTarget::xe2hpg_x32;
+    } else if (target == "xe2lpg-x16") {
+        return ISPCTarget::xe2lpg_x16;
+    } else if (target == "xe2lpg-x32") {
+        return ISPCTarget::xe2lpg_x32;
     }
 
     return ISPCTarget::error;
@@ -334,6 +338,10 @@ std::string ISPCTargetToString(ISPCTarget target) {
         return "xe2hpg-x16";
     case ISPCTarget::xe2hpg_x32:
         return "xe2hpg-x32";
+    case ISPCTarget::xe2lpg_x16:
+        return "xe2lpg-x16";
+    case ISPCTarget::xe2lpg_x32:
+        return "xe2lpg-x32";
     case ISPCTarget::none:
     case ISPCTarget::error:
         // Fall through
@@ -425,6 +433,8 @@ bool ISPCTargetIsGen(ISPCTarget target) {
     case ISPCTarget::xelpg_x16:
     case ISPCTarget::xe2hpg_x16:
     case ISPCTarget::xe2hpg_x32:
+    case ISPCTarget::xe2lpg_x16:
+    case ISPCTarget::xe2lpg_x32:
         return true;
     default:
         return false;

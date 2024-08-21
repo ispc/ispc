@@ -361,6 +361,9 @@ typedef enum {
     GPU_MTL_U,
     GPU_MTL_H,
     GPU_BMG_G21,
+    GPU_LNL_A0,
+    GPU_LNL_A1,
+    GPU_LNL_B0,
 #endif
     sizeofDeviceType
 } DeviceType;
@@ -422,6 +425,9 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {GPU_MTL_U, {}},
     {GPU_MTL_H, {}},
     {GPU_BMG_G21, {}},
+    {GPU_LNL_A0, {}},
+    {GPU_LNL_A1, {}},
+    {GPU_LNL_B0, {}},
 #endif
 };
 
@@ -535,6 +541,9 @@ class AllCPUs {
         names[GPU_MTL_U].push_back("mtl-u");
         names[GPU_MTL_H].push_back("mtl-h");
         names[GPU_BMG_G21].push_back("bmg-g21");
+        names[GPU_LNL_A0].push_back("lnl-a0");
+        names[GPU_LNL_A1].push_back("lnl-a1");
+        names[GPU_LNL_B0].push_back("lnl-b0");
 #endif
 
         Assert(names.size() == sizeofDeviceType);
@@ -622,8 +631,15 @@ class AllCPUs {
             Set(GPU_MTL_U, GPU_MTL_H, GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_ACM_G11, GPU_TGLLP, GPU_SKL, CPU_None);
         compat[GPU_MTL_H] =
             Set(GPU_MTL_U, GPU_MTL_H, GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_ACM_G11, GPU_TGLLP, GPU_SKL, CPU_None);
+
         compat[GPU_BMG_G21] = Set(GPU_BMG_G21, GPU_MTL_U, GPU_MTL_H, GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_ACM_G11,
                                   GPU_TGLLP, GPU_SKL, CPU_None);
+        compat[GPU_LNL_A0] = Set(GPU_LNL_A0, GPU_LNL_A1, GPU_LNL_B0, GPU_MTL_U, GPU_MTL_H, GPU_ACM_G10, GPU_ACM_G11,
+                                 GPU_ACM_G12, GPU_TGLLP, GPU_SKL, CPU_None);
+        compat[GPU_LNL_A1] = Set(GPU_LNL_A0, GPU_LNL_A1, GPU_LNL_B0, GPU_MTL_U, GPU_MTL_H, GPU_ACM_G10, GPU_ACM_G11,
+                                 GPU_ACM_G12, GPU_TGLLP, GPU_SKL, CPU_None);
+        compat[GPU_LNL_B0] = Set(GPU_LNL_A0, GPU_LNL_A1, GPU_LNL_B0, GPU_MTL_U, GPU_MTL_H, GPU_ACM_G10, GPU_ACM_G11,
+                                 GPU_ACM_G12, GPU_TGLLP, GPU_SKL, CPU_None);
 #endif
     }
 
@@ -743,6 +759,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             break;
         case GPU_BMG_G21:
             m_ispc_target = ISPCTarget::xe2hpg_x16;
+            break;
+        case GPU_LNL_A0:
+        case GPU_LNL_A1:
+        case GPU_LNL_B0:
+            m_ispc_target = ISPCTarget::xe2lpg_x16;
             break;
 #endif
 
@@ -1596,6 +1617,38 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasGather = this->m_hasScatter = true;
         CPUfromISA = GPU_BMG_G21;
         break;
+    case ISPCTarget::xe2lpg_x16:
+        this->m_isa = Target::XE2LPG;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 64;
+        this->m_vectorWidth = 16;
+        this->m_dataTypeWidth = 32;
+        this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasSaturatingArithmetic = true;
+        this->m_hasTranscendentals = true;
+        this->m_hasTrigonometry = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        CPUfromISA = GPU_LNL_A0;
+        break;
+    case ISPCTarget::xe2lpg_x32:
+        this->m_isa = Target::XE2LPG;
+        this->m_nativeVectorWidth = 32;
+        this->m_nativeVectorAlignment = 64;
+        this->m_vectorWidth = 32;
+        this->m_dataTypeWidth = 32;
+        this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasSaturatingArithmetic = true;
+        this->m_hasTranscendentals = true;
+        this->m_hasTrigonometry = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        CPUfromISA = GPU_LNL_A0;
+        break;
 #else
     case ISPCTarget::gen9_x8:
     case ISPCTarget::gen9_x16:
@@ -1609,6 +1662,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
     case ISPCTarget::xelpg_x16:
     case ISPCTarget::xe2hpg_x16:
     case ISPCTarget::xe2hpg_x32:
+    case ISPCTarget::xe2lpg_x16:
+    case ISPCTarget::xe2lpg_x32:
         unsupported_target = true;
         break;
 #endif
@@ -2095,6 +2150,8 @@ const char *Target::ISAToString(ISA isa) {
         return "xelpg";
     case Target::XE2HPG:
         return "xe2hpg";
+    case Target::XE2LPG:
+        return "xe2lpg";
 #endif
     default:
         FATAL("Unhandled target in ISAToString()");
@@ -2271,6 +2328,8 @@ Target::XePlatform Target::getXePlatform() const {
         return XePlatform::xe_lpg;
     case GPU_BMG_G21:
         return XePlatform::xe2_hpg;
+    case GPU_LNL_A0:
+        return XePlatform::xe2_lpg;
     default:
         return XePlatform::gen9;
     }
@@ -2287,6 +2346,7 @@ uint32_t Target::getXeGrfSize() const {
         return 32;
     case XePlatform::xe_hpc:
     case XePlatform::xe2_hpg:
+    case XePlatform::xe2_lpg:
         return 64;
     default:
         return 32;

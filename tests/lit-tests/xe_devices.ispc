@@ -89,6 +89,30 @@
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x32 --device=mtl-h
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2hpg-x32 --device=bmg-g21
 
+// Xe2LPG
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2lpg-x16 --device=skl
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2lpg-x16 --device=tgllp
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2lpg-x16 --device=dg1
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2lpg-x16 --device=acm-g10
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2lpg-x16 --device=acm-g11
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2lpg-x16 --device=acm-g12
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2lpg-x16 --device=mtl-u
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2lpg-x16 --device=mtl-h
+// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2lpg-x16 --device=lnl-a0
+// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2lpg-x16 --device=lnl-a1
+// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2lpg-x16 --device=lnl-b0
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2lpg-x32 --device=skl
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2lpg-x32 --device=tgllp
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2lpg-x32 --device=dg1
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2lpg-x32 --device=acm-g10
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2lpg-x32 --device=acm-g11
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2lpg-x32 --device=acm-g12
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2lpg-x32 --device=mtl-u
+// RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2lpg-x32 --device=mtl-h
+// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2lpg-x32 --device=lnl-a0
+// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2lpg-x32 --device=lnl-a1
+// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xe2lpg-x32 --device=lnl-b0
+
 // REQUIRES: XE_ENABLED
 // REQUIRES: LINUX_HOST
 // REQUIRES: OCLOC_INSTALLED
