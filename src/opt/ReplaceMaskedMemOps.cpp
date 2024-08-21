@@ -19,7 +19,7 @@ bool lIsPowerOf2(unsigned n) { return (n > 0) && !(n & (n - 1)); }
 // Check if the mask is a constant vector with the first part being all ones
 // and the second part being all zeros. The length of the first part is
 // returned in TrueSubmaskLength argument. We are looking for the mask with the
-// true prefix of length 2^k only. This is a limitation of the current
+// true prefix of length 2^k and 3 only. This is a limitation of the current
 // implementation of lMaskedMergeVectors.
 bool lCheckMask(llvm::Value *mask, unsigned &TrueSubmaskLength) {
     if (auto *CV = llvm::dyn_cast<llvm::ConstantVector>(mask)) {
@@ -52,12 +52,12 @@ bool lCheckMask(llvm::Value *mask, unsigned &TrueSubmaskLength) {
             }
         }
 
-        if (!lIsPowerOf2(TruePrefixLength)) {
-            return false;
+        // Special case when true prefix is of length 3, we need to support it
+        // because it is an important user's case.
+        if (lIsPowerOf2(TruePrefixLength) || TruePrefixLength == 3) {
+            TrueSubmaskLength = TruePrefixLength;
+            return true;
         }
-
-        TrueSubmaskLength = TruePrefixLength;
-        return true;
     }
     return false;
 }
@@ -99,6 +99,24 @@ llvm::Constant *lExtractSecondPartOfConstVec(llvm::LLVMContext &context, llvm::C
     return llvm::ConstantVector::get(newValuesRef);
 }
 
+// Extend the vector of length 3 to the vector of length 4. The extra element
+// is taken from the second vector (the first element).
+llvm::Value *lExtendVec3ToVec4(llvm::IRBuilder<> &B, llvm::Value *vec3, llvm::Value *sec, const llvm::Twine &name) {
+    auto *vec3Type = llvm::dyn_cast<llvm::VectorType>(vec3->getType());
+    Assert(vec3Type && vec3Type->getElementCount().getKnownMinValue() == 3);
+    Assert(llvm::dyn_cast<llvm::VectorType>(sec->getType()));
+
+    // Create a vector containing the first element of the second vector three
+    // times because shufflevector requires the same length of input vectors.
+    std::vector<unsigned> indices3 = {0, 0, 0};
+    llvm::Constant *mask3 = llvm::ConstantDataVector::get(B.getContext(), indices3);
+    llvm::Value *sec3 = B.CreateShuffleVector(sec, sec, mask3);
+
+    std::vector<unsigned> indices = {0, 1, 2, 3};
+    llvm::Constant *mask = llvm::ConstantDataVector::get(B.getContext(), indices);
+    return B.CreateShuffleVector(vec3, sec3, mask, llvm::Twine(name + "_v4"));
+}
+
 // Merge two vectors into a single vector with the sequence of shufflevector
 // instructions. The first vector length is the power of 2 (M). The overall
 // length is the power of 2 either (N). This means that we can do the merge in
@@ -116,6 +134,14 @@ llvm::Value *lMaskedMergeVectors(llvm::IRBuilder<> &B, llvm::Value *firstVector,
     Assert(firstVecType && secondVecType);
     unsigned M = firstVecType->getElementCount().getKnownMinValue();
     unsigned N = secondVecType->getElementCount().getKnownMinValue();
+
+    if (M == 3) {
+        // Special case when the first vector has the length of 3. It is
+        // extended to 4-wide vector by taking the first element from the
+        // second vector. The rest of the merge is done as usual below.
+        firstVector = lExtendVec3ToVec4(B, firstVector, secondVector, name);
+        M = 4;
+    }
 
     for (unsigned length = M; length < N; length *= 2) {
         // Create a vector of indices [0, 1, 2, ..., length*2).

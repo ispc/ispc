@@ -20,10 +20,11 @@ define void @foo(<4 x i32>* %a, <4 x i32>* %b) {
   ret void
 }
 
-; CHECK-LABEL: @bad_mask
-; CHECK-NEXT: call <4 x i32> @llvm.masked.load
-; CHECK-NEXT: ret void
-define void @bad_mask(<4 x i32>* %a) {
+; CHECK-LABEL: @mask3
+; CHECK-NEXT  [[HL:%.*]] = load <3 x i32>, ptr %a, align 1
+; CHECK-NEXT  [[VEC:%.*]] = shufflevector <3 x i32> [[HL]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT ret void
+define void @mask3(<4 x i32>* %a) {
   %vec1 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %a, i32 1,
                                                         <4 x i1> <i1 true, i1 true, i1 true, i1 false>,
                                                         <4 x i32> <i32 poison, i32 poison, i32 0, i32 0>)
