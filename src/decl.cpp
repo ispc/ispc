@@ -200,6 +200,7 @@ bool Attribute::IsKnownAttribute() const {
         {"noescape", 1},
         {"address_space", 1},
         {"unmangled", 1},
+        {"memory", 1},
     };
 
     if (lKnownParamAttrs.find(name) != lKnownParamAttrs.end()) {
