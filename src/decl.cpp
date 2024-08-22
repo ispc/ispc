@@ -199,6 +199,7 @@ bool Attribute::IsKnownAttribute() const {
     static std::unordered_map<std::string, int> lKnownParamAttrs = {
         {"noescape", 1},
         {"address_space", 1},
+        {"unmangled", 1},
     };
 
     if (lKnownParamAttrs.find(name) != lKnownParamAttrs.end()) {
@@ -768,6 +769,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         bool isUnmasked = ds && ((ds->typeQualifiers & TYPEQUAL_UNMASKED) != 0);
         bool isVectorCall = ds && ((ds->typeQualifiers & TYPEQUAL_VECTORCALL) != 0);
         bool isRegCall = ds && ((ds->typeQualifiers & TYPEQUAL_REGCALL) != 0);
+        bool isUnmangled = ds->attributeList && ds->attributeList->HasAttribute("unmangled");
 
         if (isExported && isTask) {
             Error(pos, "Function can't have both \"task\" and \"export\" "
@@ -798,6 +800,21 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             Warning(pos, "\"unmasked\" qualifier is redundant for exported "
                          "functions.");
 
+        if (isUnmangled) {
+            if (isExternC) {
+                Error(pos, "Function can't have both \"extern\" \"C\" and \"unmangled\" qualifiers");
+                return;
+            }
+            if (isExternSYCL) {
+                Error(pos, "Function can't have both \"extern\" \"SYCL\" and \"unmangled\" qualifiers");
+                return;
+            }
+            if (isExported) {
+                Error(pos, "Function can't have both \"export\" and \"unmangled\" qualifiers");
+                return;
+            }
+        }
+
         if (child == nullptr) {
             AssertPos(pos, m->errorCount > 0);
             return;
@@ -805,7 +822,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
 
         const FunctionType *functionType =
             new FunctionType(returnType, args, argNames, argDefaults, argPos, isTask, isExported, isExternC,
-                             isExternSYCL, isUnmasked, isVectorCall, isRegCall);
+                             isExternSYCL, isUnmasked, isUnmangled, isVectorCall, isRegCall);
 
         // handle any explicit __declspecs on the function
         if (ds != nullptr) {

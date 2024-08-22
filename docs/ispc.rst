@@ -137,6 +137,7 @@ Contents:
 
     * `noescape`_
     * `address_space`_
+    * `unmangled`_
 
   + `Expressions`_
 
@@ -2868,6 +2869,19 @@ not supported.
 
     // allocation of data in non-default address space is not supported
     __attribute__((address_space(1))) uniform int x;
+
+
+unmangled
+---------
+
+``__attribute__((unmangled))`` can be applied to a function declaration to
+prevent its name from being mangled. This is useful when name mangling is not
+desired, but other qualifiers like ``export`` or ``extern`` are unsuitable due
+to the additional features they introduce.
+
+::
+
+    __attribute__((unmangled)) void foo(int a, int b);
 
 
 Expressions

@@ -2630,7 +2630,7 @@ llvm::DIType *ReferenceType::GetDIType(llvm::DIScope *scope) const {
 
 FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 8> &a, SourcePos p)
     : Type(FUNCTION_TYPE), isTask(false), isExported(false), isExternC(false), isExternSYCL(false), isUnmasked(false),
-      isVectorCall(false), isRegCall(false), returnType(r), paramTypes(a),
+      isUnmangled(false), isVectorCall(false), isRegCall(false), returnType(r), paramTypes(a),
       paramNames(llvm::SmallVector<std::string, 8>(a.size(), "")),
       paramDefaults(llvm::SmallVector<Expr *, 8>(a.size(), nullptr)),
       paramPositions(llvm::SmallVector<SourcePos, 8>(a.size(), p)) {
@@ -2643,10 +2643,10 @@ FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 
 FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 8> &a,
                            const llvm::SmallVector<std::string, 8> &an, const llvm::SmallVector<Expr *, 8> &ad,
                            const llvm::SmallVector<SourcePos, 8> &ap, bool it, bool is, bool ec, bool esycl, bool ium,
-                           bool ivc, bool irc)
+                           bool imngl, bool ivc, bool irc)
     : Type(FUNCTION_TYPE), isTask(it), isExported(is), isExternC(ec), isExternSYCL(esycl), isUnmasked(ium),
-      isVectorCall(ivc), isRegCall(irc), returnType(r), paramTypes(a), paramNames(an), paramDefaults(ad),
-      paramPositions(ap) {
+      isUnmangled(imngl), isVectorCall(ivc), isRegCall(irc), returnType(r), paramTypes(a), paramNames(an),
+      paramDefaults(ad), paramPositions(ap) {
     Assert(paramTypes.size() == paramNames.size() && paramNames.size() == paramDefaults.size() &&
            paramDefaults.size() == paramPositions.size());
     Assert(returnType != nullptr);
@@ -2718,7 +2718,7 @@ const FunctionType *FunctionType::ResolveDependence(TemplateInstantiation &templ
     }
 
     FunctionType *ret = new FunctionType(rt, pt, paramNames, paramDefaults, paramPositions, isTask, isExported,
-                                         isExternC, isExternSYCL, isUnmasked, isVectorCall, isRegCall);
+                                         isExternC, isExternSYCL, isUnmasked, isUnmangled, isVectorCall, isRegCall);
     ret->isSafe = isSafe;
     ret->costOverride = costOverride;
     return ret;
@@ -2741,7 +2741,7 @@ const FunctionType *FunctionType::ResolveUnboundVariability(Variability v) const
     }
 
     FunctionType *ret = new FunctionType(rt, pt, paramNames, paramDefaults, paramPositions, isTask, isExported,
-                                         isExternC, isExternSYCL, isUnmasked, isVectorCall, isRegCall);
+                                         isExternC, isExternSYCL, isUnmasked, isUnmangled, isVectorCall, isRegCall);
     ret->isSafe = isSafe;
     ret->costOverride = costOverride;
 
@@ -2756,8 +2756,9 @@ const Type *FunctionType::GetAsUnmaskedType() const {
     if (isUnmasked)
         return this;
     if (asUnmaskedType == nullptr) {
-        FunctionType *ft = new FunctionType(returnType, paramTypes, paramNames, paramDefaults, paramPositions, isTask,
-                                            isExported, isExternC, isExternSYCL, true, isVectorCall, isRegCall);
+        FunctionType *ft =
+            new FunctionType(returnType, paramTypes, paramNames, paramDefaults, paramPositions, isTask, isExported,
+                             isExternC, isExternSYCL, true, isUnmangled, isVectorCall, isRegCall);
         ft->isSafe = isSafe;
         ft->costOverride = costOverride;
         asUnmaskedType = ft;
@@ -2771,8 +2772,9 @@ const Type *FunctionType::GetAsNonUnmaskedType() const {
     if (!isUnmasked)
         return this;
     if (asMaskedType == nullptr) {
-        FunctionType *ft = new FunctionType(returnType, paramTypes, paramNames, paramDefaults, paramPositions, isTask,
-                                            isExported, isExternC, isExternSYCL, false, isVectorCall, isRegCall);
+        FunctionType *ft =
+            new FunctionType(returnType, paramTypes, paramNames, paramDefaults, paramPositions, isTask, isExported,
+                             isExternC, isExternSYCL, false, isUnmangled, isVectorCall, isRegCall);
         ft->isSafe = isSafe;
         ft->costOverride = costOverride;
         asMaskedType = ft;
@@ -2786,8 +2788,9 @@ const Type *FunctionType::GetWithReturnType(const Type *newReturnType) const {
     if (returnType == newReturnType)
         return this;
 
-    FunctionType *ft = new FunctionType(newReturnType, paramTypes, paramNames, paramDefaults, paramPositions, isTask,
-                                        isExported, isExternC, isExternSYCL, isUnmasked, isVectorCall, isRegCall);
+    FunctionType *ft =
+        new FunctionType(newReturnType, paramTypes, paramNames, paramDefaults, paramPositions, isTask, isExported,
+                         isExternC, isExternSYCL, isUnmasked, isUnmangled, isVectorCall, isRegCall);
     ft->isSafe = isSafe;
     ft->costOverride = costOverride;
     return ft;
@@ -2961,6 +2964,11 @@ std::string FunctionType::mangleTemplateArgs(TemplateArgs *templateArgs) const {
 FunctionType::FunctionMangledName FunctionType::GetFunctionMangledName(bool appFunction,
                                                                        TemplateArgs *templateArgs) const {
     FunctionMangledName mangle = {};
+
+    if (isUnmangled) {
+        return mangle;
+    }
+
     // Mangle internal functions name.
     if (!(isExternC || isExternSYCL || appFunction)) {
         mangle.suffix += mangleTemplateArgs(templateArgs);

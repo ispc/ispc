@@ -929,7 +929,7 @@ class FunctionType : public Type {
     FunctionType(const Type *returnType, const llvm::SmallVector<const Type *, 8> &argTypes,
                  const llvm::SmallVector<std::string, 8> &argNames, const llvm::SmallVector<Expr *, 8> &argDefaults,
                  const llvm::SmallVector<SourcePos, 8> &argPos, bool isTask, bool isExported, bool isExternC,
-                 bool isExternSYCL, bool isUnmasked, bool isVectorCall, bool isRegCall);
+                 bool isExternSYCL, bool isUnmasked, bool isUnmangled, bool isVectorCall, bool isRegCall);
     // Structure holding the mangling suffix and prefix for function
     struct FunctionMangledName {
         std::string prefix;
@@ -1023,6 +1023,8 @@ class FunctionType : public Type {
         parameter (and thus should start execution with an "all on"
         mask). */
     const bool isUnmasked;
+
+    const bool isUnmangled;
 
     /** Indicates whether the function has __vectorcall attribute. */
     const bool isVectorCall;
