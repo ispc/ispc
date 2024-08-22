@@ -1,3 +1,4 @@
+// rule: skip on arch=xe64
 #include "../test_static.isph"
 uniform unsigned int32 s = 0;
 
