@@ -18,6 +18,8 @@ env:
 jobs:
   scan:
     runs-on: ubuntu-latest
+    # Disabling this workflow for non ispc/ispc repo to reduce the traffic to artifacts downloads.
+    if: github.repository == 'ispc/ispc'
 
     steps:
     - name: Checkout repository
