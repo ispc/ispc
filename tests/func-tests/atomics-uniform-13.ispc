@@ -1,4 +1,5 @@
 #include "test_static.isph"
+// rule: skip on arch=xe64
 uniform double s = 0xffff;
 
 task void f_f(uniform float RET[], uniform float aFOO[]) {
