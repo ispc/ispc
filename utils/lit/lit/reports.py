@@ -1,7 +1,8 @@
 import itertools
 import json
 
-from xml.sax.saxutils import quoteattr as quo
+# Seems like a bug in Bandit: https://github.com/PyCQA/bandit/issues/452
+from xml.sax.saxutils import quoteattr as quo #nosec
 
 import lit.Test
 

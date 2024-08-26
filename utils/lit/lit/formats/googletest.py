@@ -1,7 +1,9 @@
 from __future__ import absolute_import
 import os
 import shlex
-import subprocess
+# Subprocess is used with default shell which is False, it's safe and doesn't allow shell injection
+# so we can ignore the Bandit warning
+import subprocess #nosec
 import sys
 
 import lit.Test

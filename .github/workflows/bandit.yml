@@ -1,0 +1,37 @@
+# Copyright 2024, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: Scan Python code with Bandit
+
+on:
+    workflow_dispatch:
+    push:
+    pull_request:
+      paths:
+        - '**/*.py'
+        - '.github/workflows/bandit.*'
+
+permissions:
+  contents: read
+
+jobs:
+  bandit:
+    name: Bandit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clone the git repo
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Install Bandit
+        run: pip install bandit
+
+      - name: Run Bandit
+        run: |
+          bandit -c .github/workflows/bandit.config -r . -f txt -o bandit_output.txt
+
+      - name: Upload Bandit text report as artifact
+        uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
+        with:
+          name: bandit-report
+          path: bandit_output.txt

@@ -7,7 +7,11 @@ import numbers
 import os
 import platform
 import signal
-import subprocess
+# Subprocess is used with default shell which is False, it's safe and doesn't allow shell injection.
+# In one case it's used with Shell=True "subprocess.call('kill -kill $(ps -o pid= -L{})'.format(pid), shell=True)"
+# The command called from subprocess is constructed inside the script and
+# it's quoted appropriately to avoid shell injection vulnerabilities
+import subprocess #nosec
 import sys
 import threading
 

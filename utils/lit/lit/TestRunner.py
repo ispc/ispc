@@ -3,7 +3,9 @@ import errno
 import io
 import itertools
 import getopt
-import os, signal, subprocess, sys
+# Subprocess is used with default shell which is False, it's safe and doesn't allow shell injection
+# so we can ignore the Bandit warning
+import os, signal, subprocess, sys #nosec
 import re
 import stat
 import platform

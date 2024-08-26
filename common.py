@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-#  Copyright (c) 2013-2023, Intel Corporation
+#  Copyright (c) 2013-2024, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -15,7 +15,8 @@ class EmptyClass(object): pass
 
 # load/save almost every object to a file (good for bug reproducing)
 def dump(fname, obj):
-    import pickle
+    # Pickle is used to dump the file (not to load it), it's safe and doesn't allow shell injection
+    import pickle #nosec
     with open(fname, 'w') as fp:
         pickle.dump(obj, fp)
 
@@ -442,7 +443,8 @@ class ExecutionStateGatherer(object):
         print("ESG: loaded from 'TestTable()' with revisions", REVISIONS)
 
     def dump(self, fname, obj):
-        import pickle
+        # Pickle is used to dump the file (not to load it), it's safe and doesn't allow shell injection
+        import pickle #nosec
         with open(fname, 'wb') as fp:
             pickle.dump(obj, fp)
 
