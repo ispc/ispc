@@ -77,6 +77,8 @@ jobs:
           - arch: x86
             target: "avx2vnni-i32x16"
           - arch: x86
+            target: "avx512knl-x16"
+          - arch: x86
             target: "avx512skx-x4"
           - arch: x86
             target: "avx512skx-x8"
