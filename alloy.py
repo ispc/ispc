@@ -908,7 +908,11 @@ import smtplib
 import datetime
 import copy
 import multiprocessing
-import subprocess
+# Subprocess is intentionally used with shell=True, it's required for cross platform support.
+# The command called from subprocess is constructed inside the script and
+# it's quoted appropriately to avoid shell injection vulnerabilities
+# so it's safe to ignore Bandit warning.
+import subprocess #nosec
 import re
 from shutil import copyfile
 # our drivers

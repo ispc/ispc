@@ -965,7 +965,9 @@ import re
 import signal
 import random
 import threading
-import subprocess
+# Subprocess is used with default shell which is False, it's safe and doesn't allow shell injection
+# so we can ignore the Bandit warning
+import subprocess #nosec
 import shlex
 import platform
 import tempfile
