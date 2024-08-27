@@ -1111,9 +1111,9 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
 
     AddUWTableFuncAttr(function);
 
-    if (auto al = decl->attributeList) {
+    if (const auto &al = decl->attributeList) {
         if (al->HasAttribute("memory")) {
-            auto memory = al->GetAttribute("memory")->arg.stringVal;
+            const auto &memory = al->GetAttribute("memory")->arg.stringVal;
             if (memory == "none") {
                 function->setDoesNotAccessMemory();
             } else if (memory == "read") {
