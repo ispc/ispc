@@ -660,6 +660,13 @@ class AllCPUs {
     }
 };
 
+void lPrintTargetInfo(const std::string &proc_unit_type, const std::string &triple, const std::string &proc_unit,
+                      const std::string &feature) {
+    printf("Target Triple: %s\n", triple.c_str());
+    printf("Target %s: %s\n", proc_unit_type.c_str(), proc_unit.c_str());
+    printf("Target Feature String: %s\n", feature.c_str());
+}
+
 Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picLevel, MCModel code_model,
                bool printTarget)
     : m_target(nullptr), m_targetMachine(nullptr), m_dataLayout(nullptr), m_valid(false), m_ispc_target(ispc_target),
@@ -1774,13 +1781,14 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 
     if (printTarget) {
         if (!isXeTarget()) {
-            printf("Target Triple: %s\n", m_targetMachine->getTargetTriple().str().c_str());
-            printf("Target CPU: %s\n", m_targetMachine->getTargetCPU().str().c_str());
-            printf("Target Feature String: %s\n", m_targetMachine->getTargetFeatureString().str().c_str());
+            if (m_targetMachine) {
+                lPrintTargetInfo("CPU", m_targetMachine->getTargetTriple().str(), m_targetMachine->getTargetCPU().str(),
+                                 m_targetMachine->getTargetFeatureString().str());
+            } else {
+                lPrintTargetInfo("CPU", "null", "null", "null");
+            }
         } else {
-            printf("Target Triple: %s\n", this->GetTripleString().c_str());
-            printf("Target GPU: %s\n", this->getCPU().c_str());
-            printf("Target Feature String: %s\n", featuresString.c_str());
+            lPrintTargetInfo("GPU", this->GetTripleString(), this->getCPU(), featuresString);
         }
     }
 
