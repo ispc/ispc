@@ -3818,7 +3818,7 @@ FunctionCallExpr::FunctionCallExpr(Expr *f, ExprList *a, SourcePos p, bool il, E
     func = f;
     args = a;
     std::vector<const Expr *> warn;
-    if (a->HasAmbiguousVariability(warn) == true) {
+    if (a && a->HasAmbiguousVariability(warn)) {
         for (auto w : warn) {
             const TypeCastExpr *tExpr = llvm::dyn_cast<TypeCastExpr>(w);
             tExpr->PrintAmbiguousVariability();
