@@ -181,10 +181,12 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
                     // %offsets = add <16 x i32> %another_bop, %base
                     bop_var = llvm::dyn_cast<llvm::BinaryOperator>(bop_var->getOperand(0));
                     if (bop_var != nullptr) {
-                        llvm::Type *bop_var_type = bop_var->getType();
+                        llvm::FixedVectorType *bop_var_type = llvm::dyn_cast<llvm::FixedVectorType>(bop_var->getType());
+                        if (!bop_var_type) {
+                            return nullptr;
+                        }
                         llvm::Value *zeroMask = llvm::ConstantVector::getSplat(
-                            llvm::ElementCount::get(
-                                llvm::dyn_cast<llvm::FixedVectorType>(bop_var_type)->getNumElements(), false),
+                            llvm::ElementCount::get(bop_var_type->getNumElements(), false),
                             llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
                         shuffle_offset = new llvm::ShuffleVectorInst(bop_var, llvm::UndefValue::get(bop_var_type),
                                                                      zeroMask, "shuffle");
