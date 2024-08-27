@@ -1,6 +1,6 @@
 #!/bin/bash
 # ##################################################
-#  Copyright (c) 2019-2023, Intel Corporation
+#  Copyright (c) 2019-2024, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 EXIT_CODE=0
@@ -31,7 +31,8 @@ FILES=$(ls                                  \
     builtins/*{cpp,hpp,c}                   \
     benchmarks/{01,02}*/*{cpp,ispc}         \
     common/*.h                              \
-    stdlib.ispc                             \
+    stdlib/stdlib.ispc                      \
+    stdlib/include/*.isph                   \
     ispcrt/*.{h,hpp,cpp}                    \
     ispcrt/detail/*.h                       \
     ispcrt/detail/cpu/*.{h,cpp}             \
