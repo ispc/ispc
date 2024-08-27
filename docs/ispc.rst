@@ -86,6 +86,7 @@ Contents:
   + `Selecting 32 or 64 Bit Addressing`_
   + `The Preprocessor`_
   + `Debugging`_
+  + `Optimization Settings`_
   + `Other ways of passing arguments to ISPC`_
 
 * `The ISPC Parallel Execution Model`_
@@ -1145,6 +1146,66 @@ to use the ``print`` statement for ``printf()`` style debugging.  (See
 `Output Functions`_ for more information.)  You can also use the ability to
 call back to application code at particular points in the program, passing
 a set of variable values to be logged or otherwise analyzed from there.
+
+
+Optimization Settings
+---------------------
+
+The ``ispc`` compiler has a number of optimization settings that can be
+controlled via command-line flags. These options can be specified using the
+`--opt=<option>` flag. Below is a list of available optimization options:
+
+Available options:
+
+- ``disable-assertions``
+
+  Remove assertion statements from the final code. This can reduce the overhead
+  of runtime checks.
+
+- ``disable-fma``
+
+  Disable the generation of 'fused multiply-add' (FMA) instructions on targets
+  that support them.
+
+- ``disable-gathers``
+
+  Disable the generation of gather instructions on targets that support them.
+
+- ``disable-loop-unroll``
+
+  Disable loop unrolling.
+
+- ``disable-scatters``
+
+  Disable the generation of scatter instructions on targets that support them.
+
+- ``disable-zmm``
+
+  Disable the use of ZMM registers for AVX512 targets in favor of YMM registers.
+  This also affects the ABI. ZMM registers are 512-bit wide, while YMM registers
+  are 256-bit wide.
+
+- ``fast-masked-vload``
+
+  Enable faster masked vector loads on SSE targets. Note that this may result in
+  memory accesses beyond the end of an array, which could cause undefined
+  behavior if not handled carefully.
+
+- ``fast-math``
+
+  Perform non-IEEE-compliant optimizations of numeric expressions. These
+  optimizations may improve performance but can result in less precise results
+  or different behavior compared to IEEE-compliant math.
+
+- ``force-aligned-memory``
+
+  Always issue "aligned" vector load and store instructions.
+
+- ``reset-ftz-daz``
+
+  Reset FTZ (Flush-to-Zero) and DAZ (Denormals-Are-Zero) flags on ISPC extern
+  function entrance and restore them on return.
+
 
 Other ways of passing arguments to ISPC
 ---------------------------------------
