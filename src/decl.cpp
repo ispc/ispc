@@ -770,7 +770,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         bool isUnmasked = ds && ((ds->typeQualifiers & TYPEQUAL_UNMASKED) != 0);
         bool isVectorCall = ds && ((ds->typeQualifiers & TYPEQUAL_VECTORCALL) != 0);
         bool isRegCall = ds && ((ds->typeQualifiers & TYPEQUAL_REGCALL) != 0);
-        bool isUnmangled = ds->attributeList && ds->attributeList->HasAttribute("unmangled");
+        bool isUnmangled = ds && ds->attributeList && ds->attributeList->HasAttribute("unmangled");
 
         if (isExported && isTask) {
             Error(pos, "Function can't have both \"task\" and \"export\" "
