@@ -16,6 +16,7 @@
 #include "util.h"
 
 #include <cstdarg>
+#include <sstream>
 #include <stdio.h>
 #include <stdlib.h>
 #ifdef ISPC_HOST_IS_WINDOWS
@@ -539,20 +540,10 @@ static void lParseInclude(const char *path) {
 #else
     char delim = ':';
 #endif
-    size_t pos = 0, pos_end;
-    std::string str_path(path);
-    do {
-        pos_end = str_path.find(delim, pos);
-        size_t len = (pos_end == std::string::npos) ?
-                                                    // Not found, copy till end of the string.
-                         std::string::npos
-                                                    :
-                                                    // Copy [pos, pos_end).
-                         (pos_end - pos);
-        std::string s = str_path.substr(pos, len);
-        g->includePath.push_back(s);
-        pos = pos_end + 1;
-    } while (pos_end != std::string::npos);
+    std::stringstream ss(path);
+    for (std::string item; std::getline(ss, item, delim);) {
+        g->includePath.push_back(item);
+    }
 }
 
 void lFreeArgv(std::vector<char *> &argv) {
