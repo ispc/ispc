@@ -645,7 +645,7 @@ llvm::Value *LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth, bool com
 
             if (llvm::isa<llvm::ConstantVector>(insertBase) || llvm::isa<llvm::ConstantAggregateZero>(insertBase)) {
                 llvm::Constant *cv = llvm::dyn_cast<llvm::Constant>(insertBase);
-                Assert(vectorWidth == (int)(cv->getNumOperands()));
+                Assert(cv && vectorWidth == (int)(cv->getNumOperands()));
                 for (int i = 0; i < vectorWidth; i++) {
                     if (elements[i] == nullptr) {
                         elements[i] = cv->getOperand(i);
