@@ -17,9 +17,9 @@
 #include "type.h"
 #include "util.h"
 
-#include <set>
 #include <stdio.h>
 #include <string.h>
+#include <unordered_set>
 
 using namespace ispc;
 
@@ -196,12 +196,8 @@ Attribute::Attribute(const Attribute &a) : name(a.name), arg(a.arg) {}
 
 bool Attribute::IsKnownAttribute() const {
     // Known/supported attributes.
-    static std::unordered_map<std::string, int> lKnownParamAttrs = {
-        {"noescape", 1},
-        {"address_space", 1},
-        {"unmangled", 1},
-        {"memory", 1},
-        {"cdecl", 1},
+    static std::unordered_set<std::string> lKnownParamAttrs = {
+        "noescape", "address_space", "unmangled", "memory", "cdecl",
     };
 
     if (lKnownParamAttrs.find(name) != lKnownParamAttrs.end()) {
@@ -963,7 +959,7 @@ void ispc::GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &
                                         llvm::SmallVector<const Type *, 8> *elementTypes,
                                         llvm::SmallVector<std::string, 8> *elementNames,
                                         llvm::SmallVector<SourcePos, 8> *elementPositions) {
-    std::set<std::string> seenNames;
+    std::unordered_set<std::string> seenNames;
     for (unsigned int i = 0; i < sd.size(); ++i) {
         const Type *type = sd[i]->type;
         if (type == nullptr)
