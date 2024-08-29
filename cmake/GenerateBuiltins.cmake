@@ -143,9 +143,14 @@ function(generate_dispatcher os)
 
     write_dispatch_bitcode_lib(${name} ${os})
 
+    set(EXTRA_OPTS "")
+    if (NOT WIN32)
+        set(EXTRA_OPTS "-fPIC")
+    endif()
+
     add_custom_command(
         OUTPUT ${bc}
-        COMMAND ${CLANGPP_EXECUTABLE} -x c ${ISPC_OPAQUE_FLAGS} ${DISP_TYPE} -O2 -emit-llvm -c ${input} -o ${bc}
+        COMMAND ${CLANGPP_EXECUTABLE} -x c ${ISPC_OPAQUE_FLAGS} ${DISP_TYPE} ${EXTRA_OPTS} -O2 -emit-llvm -c ${input} -o ${bc}
         DEPENDS ${input}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
