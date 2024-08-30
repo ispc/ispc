@@ -714,6 +714,8 @@ EXT void __do_assert_uniform(uniform int8 *uniform, uniform bool, UIntMaskType);
 EXT void __do_assert_varying(uniform int8 *uniform, UIntMaskType, UIntMaskType);
 #endif // ISPC_TARGET_XE
 
+EXT uniform int32 __count_leading_zeros_i32(uniform int32);
+EXT uniform int64 __count_leading_zeros_i64(uniform int64);
 EXT uniform int32 __count_trailing_zeros_i32(uniform int32);
 EXT uniform int64 __count_trailing_zeros_i64(uniform int64);
 
@@ -731,6 +733,8 @@ EXT void ISPCInstrument(uniform int8 *uniform, uniform int8 *uniform, uniform in
 EXT void __do_print(uniform int8 *uniform, uniform int8 *uniform, uniform int32, uniform int64,
                     uniform int8 *uniform *uniform);
 EXT uniform int32 __num_cores();
+
+EXT void __set_system_isa();
 
 #ifdef ISPC_TARGET_XE
 EXT inline READNONE uniform int32 __task_index0();
