@@ -5436,9 +5436,7 @@ ok:
 ;; Note that this should be really two different libraries for 32 and 64
 ;; environment and it should happen sooner or later
 
-ifelse(WIDTH, 1, `define(`ALIGNMENT', `16')', `define(`ALIGNMENT', `eval(WIDTH*4)')')
-
-@memory_alignment = internal constant i32 ALIGNMENT
+@__memory_alignment = external global i32
 
 ifelse(BUILD_OS, `UNIX',
 `
@@ -5460,7 +5458,7 @@ declare void @free(i8 *)
 define noalias i8 * @__new_uniform_32rt(i64 %size) {
   %ptr = alloca i8*
   %conv = trunc i64 %size to i32
-  %alignment = load PTR_OP_ARGS(`i32')  @memory_alignment
+  %alignment = load PTR_OP_ARGS(`i32')  @__memory_alignment
   %call1 = call i32 @posix_memalign(i8** %ptr, i32 %alignment, i32 %conv)
   %ptr_val = load PTR_OP_ARGS(`i8*')  %ptr
   ret i8* %ptr_val
@@ -5470,7 +5468,7 @@ define <WIDTH x i64> @__new_varying32_32rt(<WIDTH x i32> %size, <WIDTH x MASK> %
   %ret = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
   %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
-  %alignment = load PTR_OP_ARGS(`i32')  @memory_alignment
+  %alignment = load PTR_OP_ARGS(`i32')  @__memory_alignment
 
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
     %sz_LANE_ID = extractelement <WIDTH x i32> %size, i32 LANE
@@ -5514,7 +5512,7 @@ declare void @free(i8 *)
 
 define noalias i8 * @__new_uniform_64rt(i64 %size) {
   %ptr = alloca i8*
-  %alignment = load PTR_OP_ARGS(`i32')  @memory_alignment
+  %alignment = load PTR_OP_ARGS(`i32')  @__memory_alignment
   %alignment64 = sext i32 %alignment to i64
   %call1 = call i32 @posix_memalign(i8** %ptr, i64 %alignment64, i64 %size)
   %ptr_val = load PTR_OP_ARGS(`i8*') %ptr
@@ -5525,7 +5523,7 @@ define <WIDTH x i64> @__new_varying32_64rt(<WIDTH x i32> %size, <WIDTH x MASK> %
   %ret = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
   %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
-  %alignment = load PTR_OP_ARGS(`i32')  @memory_alignment
+  %alignment = load PTR_OP_ARGS(`i32')  @__memory_alignment
   %alignment64 = sext i32 %alignment to i64
 
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
@@ -5543,7 +5541,7 @@ define <WIDTH x i64> @__new_varying64_64rt(<WIDTH x i64> %size, <WIDTH x MASK> %
   %ret = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
   %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
-  %alignment = load PTR_OP_ARGS(`i32')  @memory_alignment
+  %alignment = load PTR_OP_ARGS(`i32')  @__memory_alignment
   %alignment64 = sext i32 %alignment to i64
 
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
@@ -5596,7 +5594,7 @@ declare void @_aligned_free(i8 *)
 
 define noalias i8 * @__new_uniform_32rt(i64 %size) {
   %conv = trunc i64 %size to i32
-  %alignment = load PTR_OP_ARGS(`i32')  @memory_alignment
+  %alignment = load PTR_OP_ARGS(`i32')  @__memory_alignment
   %ptr = tail call i8* @_aligned_malloc(i32 %conv, i32 %alignment)
   ret i8* %ptr
 }
@@ -5605,7 +5603,7 @@ define <WIDTH x i64> @__new_varying32_32rt(<WIDTH x i32> %size, <WIDTH x MASK> %
   %ret = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
   %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
-  %alignment = load PTR_OP_ARGS(`i32')  @memory_alignment
+  %alignment = load PTR_OP_ARGS(`i32')  @__memory_alignment
 
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
     %sz_LANE_ID = extractelement <WIDTH x i32> %size, i32 LANE
@@ -5649,7 +5647,7 @@ declare i8* @_aligned_malloc(i64, i64)
 declare void @_aligned_free(i8 *)
 
 define noalias i8 * @__new_uniform_64rt(i64 %size) {
-  %alignment = load PTR_OP_ARGS(`i32')  @memory_alignment
+  %alignment = load PTR_OP_ARGS(`i32')  @__memory_alignment
   %alignment64 = sext i32 %alignment to i64
   %ptr = tail call i8* @_aligned_malloc(i64 %size, i64 %alignment64)
   ret i8* %ptr
@@ -5659,7 +5657,7 @@ define <WIDTH x i64> @__new_varying32_64rt(<WIDTH x i32> %size, <WIDTH x MASK> %
   %ret = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
   %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
-  %alignment = load PTR_OP_ARGS(`i32')  @memory_alignment
+  %alignment = load PTR_OP_ARGS(`i32')  @__memory_alignment
   %alignment64 = sext i32 %alignment to i64
 
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
@@ -5678,7 +5676,7 @@ define <WIDTH x i64> @__new_varying64_64rt(<WIDTH x i64> %size, <WIDTH x MASK> %
   %ret = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
   %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
-  %alignment = load PTR_OP_ARGS(`i32')  @memory_alignment
+  %alignment = load PTR_OP_ARGS(`i32')  @__memory_alignment
   %alignment64 = sext i32 %alignment to i64
 
   per_lane(WIDTH, <WIDTH x MASK> %mask, `

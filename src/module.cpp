@@ -384,11 +384,6 @@ int Module::CompileFile() {
         "CompileFile", llvm::StringRef(filename + ("_" + std::string(g->target->GetISAString()))));
     ParserInit();
 
-    if (g->forceAlignment != -1) {
-        llvm::GlobalVariable *alignment = module->getGlobalVariable("memory_alignment", true);
-        alignment->setInitializer(LLVMInt32(g->forceAlignment));
-    }
-
     int pre_stage = PRE_OPT_NUMBER;
     debugDumpModule(module, "Empty", pre_stage++);
 
@@ -3106,6 +3101,22 @@ static void lSetCmdlineDependentMacroDefinitions(const std::shared_ptr<clang::Pr
 
     std::string math_lib = "ISPC_MATH_LIB_VAL=" + std::to_string((int)g->mathLib);
     opts->addMacroDef(math_lib);
+
+    std::string memory_alignment = "ISPC_MEMORY_ALIGNMENT_VAL=";
+    if (g->forceAlignment != -1) {
+        memory_alignment += std::to_string(g->forceAlignment);
+    } else {
+        auto width = g->target->getVectorWidth();
+        if (width == 1) {
+            // Do we have a scalar target?
+            // It was in m4 like this:
+            // ;; ifelse(WIDTH, 1, `define(`ALIGNMENT', `16')', `define(`ALIGNMENT', `eval(WIDTH*4)')')
+            memory_alignment += std::to_string(16);
+        } else {
+            memory_alignment += std::to_string(width * 4);
+        }
+    }
+    opts->addMacroDef(memory_alignment);
 }
 
 static void lSetPreprocessorOptions(const std::shared_ptr<clang::PreprocessorOptions> opts) {
