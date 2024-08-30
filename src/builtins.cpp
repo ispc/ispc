@@ -246,15 +246,17 @@ static void lSetAsInternal(llvm::Module *module, llvm::StringSet<> &functions) {
     }
 }
 
+void lSetInternalLinkageGlobal(llvm::Module *module, const char *name) {
+    llvm::GlobalValue *GV = module->getNamedGlobal(name);
+    if (GV) {
+        GV->setLinkage(llvm::GlobalValue::InternalLinkage);
+    }
+}
+
 void lSetInternalLinkageGlobals(llvm::Module *module) {
-    llvm::GlobalValue *fastMaskedVload = module->getNamedGlobal("__fast_masked_vload");
-    llvm::GlobalValue *mathLib = module->getNamedGlobal("__math_lib");
-    if (fastMaskedVload) {
-        fastMaskedVload->setLinkage(llvm::GlobalValue::InternalLinkage);
-    }
-    if (mathLib) {
-        mathLib->setLinkage(llvm::GlobalValue::InternalLinkage);
-    }
+    lSetInternalLinkageGlobal(module, "__fast_masked_vload");
+    lSetInternalLinkageGlobal(module, "__math_lib");
+    lSetInternalLinkageGlobal(module, "__memory_alignment");
 }
 
 void lAddBitcodeToModule(llvm::Module *bcModule, llvm::Module *module) {

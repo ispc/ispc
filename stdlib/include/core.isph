@@ -84,12 +84,16 @@ static const int32 programIndex = {PROGRAM_INDEX_INITIALIZER};
 const uniform int32 __fast_masked_vload;
 
 const uniform int32 __math_lib;
+
+const uniform int32 __memory_alignment;
 #else
 // Compilation of user code with the actual values provided by user via command
 // line flags.
 const uniform int32 __fast_masked_vload = ISPC_FAST_MASKED_VLOAD_VAL;
 
 const uniform int32 __math_lib = ISPC_MATH_LIB_VAL;
+
+const uniform int32 __memory_alignment = ISPC_MEMORY_ALIGNMENT_VAL;
 #endif
 
 typedef uniform int8 *uniform opaque_ptr_t;
