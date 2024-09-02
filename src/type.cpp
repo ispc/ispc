@@ -1993,6 +1993,8 @@ bool StructType::IsDefined() const {
     return true;
 }
 
+bool StructType::IsAnonymousType() const { return isAnonymous; }
+
 const Type *StructType::GetBaseType() const { return this; }
 
 const StructType *StructType::GetAsVaryingType() const {
@@ -2069,6 +2071,10 @@ const StructType *StructType::GetAsNonConstType() const {
         oppositeConstStructType->oppositeConstStructType = this;
         return oppositeConstStructType;
     }
+}
+
+const StructType *StructType::GetAsNamed(const std::string &n) const {
+    return new StructType(n, elementTypes, elementNames, elementPositions, isConst, variability, isAnonymous, pos);
 }
 
 std::string StructType::GetString() const {

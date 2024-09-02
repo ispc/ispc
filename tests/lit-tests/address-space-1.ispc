@@ -8,7 +8,7 @@ void foo(A(4) uniform int *uniform ptr);
 // CHECK: declare {{.*}} @boo___un_3C_unt_3E_({{.*}} addrspace(2){{.*}}, {{.*}}
 uniform int8 *uniform boo(A(2) uniform int8 *uniform x);
 
-// CHECK: declare void @"struct____{{.*}}({{.*}} addrspace(3){{.*}}, {{.*}}
+// CHECK: declare void @struct____{{.*}}({{.*}} addrspace(3){{.*}}, {{.*}}
 typedef struct {
     int x;
 } my_struct;
