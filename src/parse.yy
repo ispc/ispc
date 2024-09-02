@@ -1041,8 +1041,11 @@ declaration_specifiers
                       "which is part of ISPC language since version 1.13. "
                       "Remove this typedef or use ISPC_UINT_IS_DEFINED to "
                       "detect that these types are defined.");
-                  }
-                  else
+                  } else if (CastType<StructType>(ds->baseType)) {
+                      // Skip the error if the base type is a struct type to
+                      // support typedef struct foo { } foo;
+                      ;
+                  } else
                       Error(@1, "Multiple types provided for declaration.");
               }
               ds->baseType = $1;
