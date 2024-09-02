@@ -9,7 +9,7 @@ uniform int8 *uniform boo(__attribute__((noescape)) uniform int32 *uniform x);
 // CHECK: declare void @arr___un_3C_uni_3E_({{.*}} nocapture, {{.*}}
 void arr(__attribute__((noescape)) uniform int x[]);
 
-// CHECK: declare void @"struct____{{.*}}"({{.*}} nocapture, {{.*}}
+// CHECK: declare void @struct____{{.*}}({{.*}} nocapture, {{.*}}
 typedef struct {
     int x;
 } my_struct;

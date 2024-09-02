@@ -746,6 +746,7 @@ class StructType : public CollectionType {
     bool IsSignedType() const;
     bool IsConstType() const;
     bool IsDefined() const;
+    bool IsAnonymousType() const;
 
     const Type *GetBaseType() const;
     const StructType *GetAsVaryingType() const;
@@ -757,6 +758,8 @@ class StructType : public CollectionType {
 
     const StructType *GetAsConstType() const;
     const StructType *GetAsNonConstType() const;
+
+    const StructType *GetAsNamed(const std::string &name) const;
 
     std::string GetString() const;
     std::string Mangle() const;

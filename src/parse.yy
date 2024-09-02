@@ -3008,9 +3008,15 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
         return;
 
     decl->InitFromDeclSpecs(ds);
-    if (ds->storageClass == SC_TYPEDEF)
-        m->AddTypeDef(decl->name, decl->type, decl->pos);
-    else {
+    if (ds->storageClass == SC_TYPEDEF) {
+        const StructType *st = CastType<StructType>(decl->type);
+        if (st && st->IsAnonymousType()) {
+            st = st->GetAsNamed(decl->name);
+            m->AddTypeDef(decl->name, st, decl->pos);
+        } else {
+            m->AddTypeDef(decl->name, decl->type, decl->pos);
+        }
+    } else {
         if (decl->type == nullptr) {
             Assert(m->errorCount > 0);
             return;
