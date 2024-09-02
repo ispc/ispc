@@ -1897,19 +1897,21 @@ StructType::StructType(const std::string &n, const llvm::SmallVector<const Type 
     finalElementTypes.resize(elts.size(), nullptr);
 
     static int count = 0;
+    // Create a unique anonymous struct name if we have an anonymous struct (name == "")
+    // Ensuring struct is created with a name, prevents each use of original
+    // struct from having different names causing type match errors.
+    if (name == "") {
+        char buf[16];
+        Assert(isAnonymous);
+        snprintf(buf, sizeof(buf), "$anon%d", count);
+        name = std::string(buf);
+        ++count;
+    }
+
     if (variability != Variability::Unbound) {
         // For structs with non-unbound variability, we'll create the
         // correspoing LLVM struct type now, if one hasn't been made
         // already.
-
-        // Create a unique anonymous struct name if we have an anonymous
-        // struct (name == "").
-        if (name == "") {
-            char buf[16];
-            snprintf(buf, sizeof(buf), "$anon%d", count);
-            name = std::string(buf);
-            ++count;
-        }
 
         // If a non-opaque LLVM struct for this type has already been
         // created, we're done.  For an opaque struct type, we'll override
@@ -1946,15 +1948,6 @@ StructType::StructType(const std::string &n, const llvm::SmallVector<const Type 
             // Definition for what was before just a declaration
             m->structTypeMap[mname]->setBody(elementTypes);
         }
-    }
-    // Create a unique anonymous struct name if we have an anonymous struct (name == "")
-    // Ensuring struct is created with a name, prevents each use of original
-    // struct from having different names causing type match errors.
-    if (name == "") {
-        char buf[16];
-        snprintf(buf, sizeof(buf), "$anon%d", count);
-        name = std::string(buf);
-        ++count;
     }
 }
 
