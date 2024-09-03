@@ -59,6 +59,23 @@ bool Function::IsStdlibSymbol() const {
     return false;
 }
 
+bool Function::IsInternal() const {
+    ispc::StorageClass sc = sym->storageClass;
+    bool isInline = false;
+    llvm::Function *function = sym->function;
+    if (function != nullptr) {
+        isInline = (function->getAttributes().getFnAttrs().hasAttribute(llvm::Attribute::AlwaysInline));
+    }
+    return sc == SC_STATIC || isInline;
+}
+
+void Function::UpdateLinkage(llvm::GlobalValue::LinkageTypes linkage) const {
+    llvm::Function *function = sym->function;
+    if (function != nullptr) {
+        function->setLinkage(linkage);
+    }
+}
+
 void Function::debugPrintHelper(DebugPrintPoint dumpPoint) {
     if (code == nullptr || sym == nullptr) {
         return;
@@ -738,13 +755,10 @@ void Function::GenerateIR() {
                 }
             }
         } else {
-            // Set linkage for the function
-            ispc::StorageClass sc = sym->storageClass;
-            bool isInline = (function->getAttributes().getFnAttrs().hasAttribute(llvm::Attribute::AlwaysInline));
             // We create regular functions with ExternalLinkage by default.
             // Fix it to InternalLinkage only if the function is static or inline
-            if (sc == SC_STATIC || isInline) {
-                function->setLinkage(llvm::GlobalValue::InternalLinkage);
+            if (IsInternal()) {
+                UpdateLinkage(llvm::GlobalValue::InternalLinkage);
             }
 
             if (g->target->isXeTarget()) {
@@ -1015,6 +1029,10 @@ void FunctionTemplate::GenerateIR() const {
         Function *func = const_cast<Function *>(inst.symbol->parentFunction);
         if (func != nullptr) {
             func->GenerateIR();
+            // Update linkage for not internal functions
+            if (!func->IsInternal()) {
+                func->UpdateLinkage(lGetTemplateInstantiationLinkage(inst.kind));
+            }
         } else {
             Error(inst.symbol->pos, "Template function specialization was declared but never defined.");
         }

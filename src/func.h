@@ -34,6 +34,12 @@ class Function {
     void Print(Indent &indent) const;
     bool IsStdlibSymbol() const;
 
+    /** Returns true of function is static or inline */
+    bool IsInternal() const;
+
+    /** Sets requested linkage */
+    void UpdateLinkage(llvm::GlobalValue::LinkageTypes linkage) const;
+
   private:
     enum class DebugPrintPoint { Initial, AfterTypeChecking, AfterOptimization };
     void debugPrintHelper(DebugPrintPoint dumpPoint);
