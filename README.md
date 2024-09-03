@@ -1,4 +1,13 @@
 [![Appveyor build status (Windows)](https://ci.appveyor.com/api/projects/status/xfllw9vkp3lj4l0v/branch/main?svg=true)](https://ci.appveyor.com/project/ispc/ispc/branch/main)
+[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/9395/badge)](https://www.bestpractices.dev/projects/9395)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/ispc/ispc/badge)](https://securityscorecards.dev/viewer/?uri=github.com/ispc/ispc)
+[![Bandit](https://github.com/ispc/ispc/actions/workflows/bandit.yml/badge.svg)](https://github.com/ispc/ispc/actions/workflows/bandit.yml)
+[![Coverity](https://scan.coverity.com/projects/30508/badge.svg)](https://scan.coverity.com/projects/intel-ispc)
+[![Trivy](https://github.com/ispc/ispc/actions/workflows/trivy.yml/badge.svg)](https://github.com/ispc/ispc/actions/workflows/trivy.yml)
+[![Cve-bin](https://github.com/ispc/ispc/actions/workflows/cve-bin.yml/badge.svg)](https://github.com/ispc/ispc/actions/workflows/cve-bin.yml)
+[![ClamAV](https://github.com/ispc/ispc/actions/workflows/clamav.yml/badge.svg)](https://github.com/ispc/ispc/actions/workflows/clamav.yml)
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=1931356)
 
