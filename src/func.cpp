@@ -689,12 +689,10 @@ void Function::GenerateIR() {
         // ISPC external functions.
         if (type->isExported || type->isExternC || type->isExternSYCL || type->IsISPCExternal() ||
             type->IsISPCKernel()) {
-            llvm::FunctionType *ftype = type->LLVMFunctionType(g->ctx, true);
-            llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
             auto [name_pref, name_suf] = type->GetFunctionMangledName(true);
             std::string functionName = name_pref + sym->name + name_suf;
 
-            llvm::Function *appFunction = llvm::Function::Create(ftype, linkage, functionName.c_str(), m->module);
+            llvm::Function *appFunction = type->CreateLLVMFunction(functionName, g->ctx, /*disableMask*/ true);
             appFunction->setDoesNotThrow();
             appFunction->setCallingConv(type->GetCallingConv());
 
@@ -993,6 +991,29 @@ void FunctionTemplate::Print() const {
     fflush(stdout);
 };
 
+llvm::GlobalValue::LinkageTypes lGetTemplateInstantiationLinkage(TemplateInstantiationKind kind) {
+    llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::LinkageTypes::InternalLinkage;
+    switch (kind) {
+    // Function can be defined multiple times across different translation units without causing conflicts.
+    // The linker will choose a definition for the function based on its default behavior.
+    case TemplateInstantiationKind::Explicit:
+        linkage = llvm::GlobalValue::WeakODRLinkage;
+        break;
+    // The function is only allowed to be defined once across all translation units, but it can be discarded if unused.
+    // If multiple definitions of the function are present across different translation units, the linker
+    // will keep only one of them, discarding the rest.
+    case TemplateInstantiationKind::Implicit:
+        linkage = llvm::GlobalValue::LinkOnceODRLinkage;
+        break;
+    case TemplateInstantiationKind::Specialization:
+        linkage = llvm::GlobalValue::ExternalLinkage;
+        break;
+    default:
+        break;
+    }
+    return linkage;
+}
+
 void FunctionTemplate::GenerateIR() const {
     for (const auto &inst : instantiations) {
         Function *func = const_cast<Function *>(inst.second->parentFunction);
@@ -1246,42 +1267,12 @@ llvm::Function *TemplateInstantiation::createLLVMFunction(Symbol *functionSym) {
     Assert(functionSym && functionSym->type && CastType<FunctionType>(functionSym->type));
     const FunctionType *functionType = CastType<FunctionType>(functionSym->type);
 
-    // Get the LLVM FunctionType
-    llvm::FunctionType *llvmFunctionType = functionType->LLVMFunctionType(g->ctx, false /*disableMask*/);
-    if (llvmFunctionType == nullptr) {
-        return nullptr;
-    }
-
     // Mangling
     auto [name_pref, name_suf] = functionType->GetFunctionMangledName(false, &templateArgs);
     std::string functionName = name_pref + functionSym->name + name_suf;
 
-    llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
-    if (functionSym->storageClass == SC_STATIC || isInline) {
-        linkage = llvm::GlobalValue::InternalLinkage;
-    } else {
-        // If the linkage is not internal, apply the Clang linkage rules for templates.
-        switch (kind) {
-        // Function can be defined multiple times across different translation units without causing conflicts.
-        // The linker will choose a definition for the function based on its default behavior.
-        case TemplateInstantiationKind::Explicit:
-            linkage = llvm::GlobalValue::WeakODRLinkage;
-            break;
-        // The function is only allowed to be defined once across all translation units, but it can be discarded if
-        // unused. If multiple definitions of the function are present across different translation units, the linker
-        // will keep only one of them, discarding the rest.
-        case TemplateInstantiationKind::Implicit:
-            linkage = llvm::GlobalValue::LinkOnceODRLinkage;
-            break;
-        case TemplateInstantiationKind::Specialization:
-            linkage = llvm::GlobalValue::ExternalLinkage;
-            break;
-        default:
-            break;
-        }
-    }
     // And create the llvm::Function
-    llvm::Function *function = llvm::Function::Create(llvmFunctionType, linkage, functionName.c_str(), m->module);
+    llvm::Function *function = functionType->CreateLLVMFunction(functionName, g->ctx, false);
 
     // Set function attributes: we never throw exceptions
     function->setDoesNotThrow();

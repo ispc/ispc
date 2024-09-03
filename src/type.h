@@ -994,6 +994,11 @@ class FunctionType : public Type {
         present, removed from the return function signature. */
     llvm::FunctionType *LLVMFunctionType(llvm::LLVMContext *ctx, bool disableMask = false) const;
 
+    /** This method creates LLVM Function that corresponds to this function type with provided name.
+        The \c disableMask parameter indicates whether the llvm::FunctionType should have the trailing mask parameter,
+       if present, removed from the return function signature. */
+    llvm::Function *CreateLLVMFunction(const std::string &name, llvm::LLVMContext *ctx, bool disableMask = false) const;
+
     /* This method returns appropriate llvm::CallingConv for the function*/
     unsigned int GetCallingConv() const;
 
