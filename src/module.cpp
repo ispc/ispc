@@ -1377,8 +1377,8 @@ FunctionTemplate *Module::MatchFunctionTemplate(const std::string &name, const F
             continue;
         }
         bool matched = true;
-        TemplateInstantiation inst(*(templateSymbol->templateParms), normTypes, TemplateInstantiationKind::Implicit,
-                                   templateSymbol->isInline, templateSymbol->isNoInline);
+        TemplateInstantiation inst(*(templateSymbol->templateParms), normTypes, templateSymbol->isInline,
+                                   templateSymbol->isNoInline);
         for (int i = 0; i < ftype->GetNumParameters(); i++) {
             const Type *instParam = ftype->GetParameterType(i);
             const Type *templateParam = templateSymbol->type->GetParameterType(i)->ResolveDependence(inst);

@@ -8621,8 +8621,7 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
         }
 
         // Create substitution map for specified template parameters
-        TemplateInstantiation inst(*templateParms, templateArgs, TemplateInstantiationKind::Implicit,
-                                   templSym->isInline, templSym->isNoInline);
+        TemplateInstantiation inst(*templateParms, templateArgs, templSym->isInline, templSym->isNoInline);
 
         std::vector<const Type *> substitutedParamTypes;
         // Instantiate function parameter types with explicitly specified template arguments
