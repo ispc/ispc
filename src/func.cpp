@@ -953,13 +953,9 @@ FunctionTemplate::FunctionTemplate(TemplateSymbol *s, Stmt *c) : sym(s), code(c)
 
 FunctionTemplate::~FunctionTemplate() {
     for (const auto &inst : instantiations) {
-        Function *func = const_cast<Function *>(inst.second->parentFunction);
+        Function *func = const_cast<Function *>(inst.symbol->parentFunction);
         if (func) {
             delete func;
-        }
-        TemplateArgs *templArgs = const_cast<TemplateArgs *>(inst.first);
-        if (templArgs) {
-            delete templArgs;
         }
     }
 }
@@ -1016,11 +1012,11 @@ llvm::GlobalValue::LinkageTypes lGetTemplateInstantiationLinkage(TemplateInstant
 
 void FunctionTemplate::GenerateIR() const {
     for (const auto &inst : instantiations) {
-        Function *func = const_cast<Function *>(inst.second->parentFunction);
+        Function *func = const_cast<Function *>(inst.symbol->parentFunction);
         if (func != nullptr) {
             func->GenerateIR();
         } else {
-            Error(inst.second->pos, "Template function specialization was declared but never defined.");
+            Error(inst.symbol->pos, "Template function specialization was declared but never defined.");
         }
     }
 }
@@ -1064,18 +1060,18 @@ void FunctionTemplate::Print(Indent &indent) const {
         code->Print(indent);
     }
 
-    for (const auto &inst : instantiations) {
-        std::string args;
-        for (size_t i = 0; i < inst.first->size(); i++) {
-            const TemplateArg &arg = (*inst.first)[i];
-            args += arg.GetString();
-            if (i + 1 < inst.first->size()) {
-                args += ", ";
+    for (const auto &[args, symbol, kind] : instantiations) {
+        std::string argsStr;
+        for (size_t i = 0; i < args.size(); i++) {
+            const TemplateArg &arg = args[i];
+            argsStr += arg.GetString();
+            if (i + 1 < args.size()) {
+                argsStr += ", ";
             }
         }
-        args = "instantiation <" + args + ">";
-        indent.setNextLabel(args);
-        inst.second->parentFunction->Print(indent);
+        argsStr = "instantiation <" + argsStr + ">";
+        indent.setNextLabel(argsStr);
+        symbol->parentFunction->Print(indent);
     }
 
     indent.Done();
@@ -1094,8 +1090,8 @@ bool FunctionTemplate::IsStdlibSymbol() const {
 Symbol *FunctionTemplate::LookupInstantiation(const TemplateArgs &tArgs) {
     TemplateArgs argsToMatch(tArgs);
     for (const auto &inst : instantiations) {
-        if (*(inst.first) == argsToMatch) {
-            return inst.second;
+        if (inst.args == argsToMatch) {
+            return inst.symbol;
         }
     }
     return nullptr;
@@ -1105,7 +1101,7 @@ Symbol *FunctionTemplate::AddInstantiation(const TemplateArgs &tArgs, TemplateIn
                                            bool isNoinline) {
     const TemplateParms *typenames = GetTemplateParms();
     Assert(typenames);
-    TemplateInstantiation templInst(*typenames, tArgs, kind, isInline, isNoinline);
+    TemplateInstantiation templInst(*typenames, tArgs, isInline, isNoinline);
 
     Symbol *instSym = templInst.InstantiateTemplateSymbol(sym);
     Symbol *instMaskSym = templInst.InstantiateSymbol(maskSymbol);
@@ -1118,9 +1114,7 @@ Symbol *FunctionTemplate::AddInstantiation(const TemplateArgs &tArgs, TemplateIn
     Function *inst = new Function(instSym, instCode, instMaskSym, instArgs);
 
     templInst.SetFunction(inst);
-
-    TemplateArgs *templArgs = new TemplateArgs(tArgs);
-    instantiations.push_back(std::make_pair(templArgs, instSym));
+    instantiations.emplace_back(tArgs, instSym, kind);
 
     return instSym;
 }
@@ -1129,7 +1123,7 @@ Symbol *FunctionTemplate::AddSpecialization(const FunctionType *ftype, const Tem
                                             bool isNoInline, SourcePos pos) {
     const TemplateParms *typenames = GetTemplateParms();
     Assert(typenames);
-    TemplateInstantiation templInst(*typenames, tArgs, TemplateInstantiationKind::Specialization, isInline, isNoInline);
+    TemplateInstantiation templInst(*typenames, tArgs, isInline, isNoInline);
 
     // Create a function symbol
     Symbol *instSym = templInst.InstantiateTemplateSymbol(sym);
@@ -1140,15 +1134,12 @@ Symbol *FunctionTemplate::AddSpecialization(const FunctionType *ftype, const Tem
     instSym->pos = pos;
     instSym->storageClass = sym->storageClass;
 
-    TemplateArgs *templArgs = new TemplateArgs(tArgs);
-
     // Check if we have previously declared specialization and we are about to define it.
     Symbol *funcSym = LookupInstantiation(tArgs);
     if (funcSym != nullptr) {
-        delete templArgs;
         return funcSym;
     } else {
-        instantiations.push_back(std::make_pair(templArgs, instSym));
+        instantiations.emplace_back(tArgs, instSym, TemplateInstantiationKind::Specialization);
     }
     return instSym;
 }
@@ -1156,9 +1147,9 @@ Symbol *FunctionTemplate::AddSpecialization(const FunctionType *ftype, const Tem
 ///////////////////////////////////////////////////////////////////////////
 // TemplateInstantiation
 
-TemplateInstantiation::TemplateInstantiation(const TemplateParms &typeParms, const TemplateArgs &tArgs,
-                                             TemplateInstantiationKind k, bool ii, bool ini)
-    : functionSym(nullptr), kind(k), isInline(ii), isNoInline(ini) {
+TemplateInstantiation::TemplateInstantiation(const TemplateParms &typeParms, const TemplateArgs &tArgs, bool ii,
+                                             bool ini)
+    : functionSym(nullptr), isInline(ii), isNoInline(ini) {
     Assert(tArgs.size() <= typeParms.GetCount());
     // Create a mapping from the template parameters to the arguments.
     // Note we do that for all specified templates arguments, which number may be less than a number of template

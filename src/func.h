@@ -166,13 +166,20 @@ class FunctionTemplate {
     void Print(Indent &indent) const;
     bool IsStdlibSymbol() const;
 
+    struct InstantiationMap {
+        TemplateArgs args;
+        Symbol *symbol;
+        TemplateInstantiationKind kind;
+        InstantiationMap(const TemplateArgs &a, Symbol *s, TemplateInstantiationKind k) : args(a), symbol(s), kind(k) {}
+    };
+
   private:
     TemplateSymbol *sym;
     std::vector<Symbol *> args;
     Stmt *code;
     Symbol *maskSymbol;
 
-    std::vector<std::pair<TemplateArgs *, Symbol *>> instantiations;
+    std::vector<InstantiationMap> instantiations;
 };
 
 // A helper class to drive function instantiation, it provides the following:
@@ -180,8 +187,7 @@ class FunctionTemplate {
 // - type instantiation
 class TemplateInstantiation {
   public:
-    TemplateInstantiation(const TemplateParms &typeParms, const TemplateArgs &tArgs, TemplateInstantiationKind kind,
-                          bool IsInline, bool IsNoInline);
+    TemplateInstantiation(const TemplateParms &typeParms, const TemplateArgs &tArgs, bool IsInline, bool IsNoInline);
     const Type *InstantiateType(const std::string &name);
     Symbol *InstantiateSymbol(Symbol *sym);
     Symbol *InstantiateTemplateSymbol(TemplateSymbol *sym);
@@ -198,8 +204,6 @@ class TemplateInstantiation {
     std::unordered_map<std::string, const TemplateArg *> argsMap;
     // Template arguments in the order of the template parameters.
     TemplateArgs templateArgs;
-    // Kind of instantiation (explicit, implicit, specialization).
-    TemplateInstantiationKind kind;
 
     bool isInline;
     bool isNoInline;
