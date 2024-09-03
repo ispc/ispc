@@ -549,11 +549,13 @@ list(APPEND COMPILE_DEFINITIONS
     BUILD_VERSION=\"${GIT_COMMIT_HASH}\"
 )
 if (UNIX)
-    # Compile-time protection against static sized buffer overflows.
-    list(APPEND COMPILE_DEFINITIONS _FORTIFY_SOURCE=2)
+    if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+        # Compile-time protection against static sized buffer overflows.
+        list(APPEND COMPILE_DEFINITIONS _FORTIFY_SOURCE=2)
+    endif()
 else()
     list(APPEND COMPILE_DEFINITIONS NOMINMAX)
-    if (NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
+    if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
         list(APPEND COMPILE_DEFINITIONS NDEBUG)
     endif()
 endif()
