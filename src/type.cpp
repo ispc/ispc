@@ -3091,6 +3091,21 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
     return llvm::FunctionType::get(llvmReturnType, callTypes, false);
 }
 
+llvm::Function *FunctionType::CreateLLVMFunction(const std::string &name, llvm::LLVMContext *ctx,
+                                                 bool disableMask) const {
+    llvm::FunctionType *llvmFunctionType = LLVMFunctionType(ctx, disableMask);
+    if (llvmFunctionType == nullptr) {
+        return nullptr;
+    }
+    // According to the LLVM philosophy, function declaration itself can't have internal linkage.
+    // Function may have internal linkage only if it is defined in the module.
+    // So here we set external linkage for all function declarations. It will be changed to internal
+    // if the function is defined in the module in Function::GenerateIR().
+    llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
+    llvm::Function *function = llvm::Function::Create(llvmFunctionType, linkage, name.c_str(), m->module);
+    return function;
+}
+
 unsigned int FunctionType::GetCallingConv() const {
     // Default calling convention on CPU targets is CallingConv::C.
     // If __vectorcall or __regcall is specified explicitly, corresponding

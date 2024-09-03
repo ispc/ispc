@@ -1054,20 +1054,11 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
 
     // Get the LLVM FunctionType
     bool disableMask = (storageClass == SC_EXTERN_C || storageClass == SC_EXTERN_SYCL);
-    llvm::FunctionType *llvmFunctionType = functionType->LLVMFunctionType(g->ctx, disableMask);
-    if (llvmFunctionType == nullptr)
-        return;
-
-    // According to the LLVM philosophy, function declaration itself can't have internal linkage.
-    // Function may have internal linkage only if it is defined in the module.
-    // So here we set external linkage for all function declarations. It will be changed to internal
-    // if the function is defined in the module in Function::GenerateIR().
-    llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
 
     auto [name_pref, name_suf] = functionType->GetFunctionMangledName(false);
     std::string functionName = name_pref + name + name_suf;
 
-    llvm::Function *function = llvm::Function::Create(llvmFunctionType, linkage, functionName.c_str(), module);
+    llvm::Function *function = functionType->CreateLLVMFunction(functionName, g->ctx, disableMask);
 
     if (g->target_os == TargetOS::windows) {
         // Make export functions callable from DLLs.
