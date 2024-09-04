@@ -1,0 +1,12 @@
+# Copyright 2024, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+version: 2
+updates:
+  # Maintain dependencies for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "github: workflows"
