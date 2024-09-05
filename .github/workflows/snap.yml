@@ -65,7 +65,7 @@ jobs:
       # Set up snapcraft and call it to build snap.
       # The output snap is ${{ steps.build.outputs.snap }}.
       - name: Install Snapcraft
-        uses: snapcore/action-build@2096990827aa966f773676c8a53793c723b6b40f # v1.2.0
+        uses: snapcore/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79 # v1.3.0
         id: build
 
       # To publish manually run:
@@ -80,7 +80,7 @@ jobs:
           release: ${{ inputs.channel }}
 
       - name: Upload snap package
-        uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
         with:
           name: ispc_snap
           path: ispc_*.snap
@@ -113,7 +113,7 @@ jobs:
       # Set up snapcraft and call it to build snap.
       # The output snap is ${{ steps.build.outputs.snap }}.
       - name: Install Snapcraft
-        uses: snapcore/action-build@2096990827aa966f773676c8a53793c723b6b40f # v1.2.0
+        uses: snapcore/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79 # v1.3.0
         id: build
 
       # To publish manually run:
@@ -128,7 +128,7 @@ jobs:
           release: ${{ inputs.channel }}
 
       - name: Upload snap package
-        uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
         with:
           name: ispc_snap
           path: ispc_*.snap
