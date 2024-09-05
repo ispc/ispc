@@ -11,7 +11,11 @@ updates:
     commit-message:
       prefix: "ci:"
     open-pull-requests-limit: 1
-    group:
-      group-name: "all-dependencies"
+    groups:
+      ga-dependencies:
+        applies-to: version-updates
+        patterns:
+        - "*"
     ignore:
-      - update-types: ["version-update:semver-patch"] # Ignore patch updates
+      - dependency-name: "*"
+        update-types: ["version-update:semver-patch"] # Ignore patch updates
