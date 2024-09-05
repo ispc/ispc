@@ -12,10 +12,10 @@ updates:
       prefix: "ci:"
     open-pull-requests-limit: 1
     groups:
-      ga-actions-dependencies:
+      ga-dependencies:
         applies-to: version-updates
         patterns:
-        - ".github/workflows/*"
+        - "*"
     ignore:
-      - dependency-name: ".github/workflows/*"
+      - dependency-name: "*"
         update-types: ["version-update:semver-patch"] # Ignore patch updates
