@@ -1,2 +1,0 @@
-bandit==1.7.9
-cve-bin-tool[PDF]==3.3
