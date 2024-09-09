@@ -5,9 +5,3 @@
 void foo(float<3> a, int<2> b) {
     a += b;
 }
-
-// CHECK: Error: syntax error, unexpected identifier, expecting int
-
-void foo(uniform int i) {
-    float<i> a;
-}

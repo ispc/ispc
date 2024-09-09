@@ -182,8 +182,13 @@ bool Type::IsDependentType() const {
         return elemType && elemType->IsDependentType();
     }
     case VECTOR_TYPE: {
-        const Type *elemType = CastType<VectorType>(this)->GetElementType();
-        return elemType && elemType->IsDependentType();
+        const VectorType *vecType = CastType<VectorType>(this);
+        const Type *elemType = vecType->GetElementType();
+        // Check if element type is dependent
+        bool isElementTypeDependent = elemType && elemType->IsDependentType();
+        // Check if element count is dependent (i.e., uses a non-type template parameter)
+        bool isCountDependent = vecType->IsCountDependent();
+        return isElementTypeDependent || isCountDependent;
     }
     case STRUCT_TYPE: {
         const StructType *st = CastType<StructType>(this);
@@ -1672,10 +1677,15 @@ int ArrayType::ResolveElementCount(TemplateInstantiation &templInst) const {
 ///////////////////////////////////////////////////////////////////////////
 // VectorType
 
-VectorType::VectorType(const AtomicType *b, int a) : SequentialType(VECTOR_TYPE), base(b), elementCount(a) {
+VectorType::VectorType(const Type *b, int a) : SequentialType(VECTOR_TYPE), base(b), elementCount(a) {
     Assert(elementCount.fixedCount > 0);
     Assert(base != nullptr);
 }
+
+VectorType::VectorType(const Type *b, Symbol *num) : SequentialType(VECTOR_TYPE), base(b), elementCount(num) {}
+
+VectorType::VectorType(const Type *b, ElementCount elCount)
+    : SequentialType(VECTOR_TYPE), base(b), elementCount(elCount) {}
 
 Variability VectorType::GetVariability() const { return base->GetVariability(); }
 
@@ -1694,25 +1704,44 @@ bool VectorType::IsConstType() const { return base->IsConstType(); }
 const Type *VectorType::GetBaseType() const { return base; }
 
 const VectorType *VectorType::GetAsVaryingType() const {
-    return new VectorType(base->GetAsVaryingType(), elementCount.fixedCount);
+    if (IsVaryingType()) {
+        return this;
+    }
+    if (base == nullptr) {
+        Assert(m->errorCount > 0);
+        return nullptr;
+    }
+    return new VectorType(base->GetAsVaryingType(), elementCount);
 }
 
 const VectorType *VectorType::GetAsUniformType() const {
-    return new VectorType(base->GetAsUniformType(), elementCount.fixedCount);
+    if (IsUniformType()) {
+        return this;
+    }
+    if (base == nullptr) {
+        Assert(m->errorCount > 0);
+        return nullptr;
+    }
+    return new VectorType(base->GetAsUniformType(), elementCount);
 }
 
 const VectorType *VectorType::GetAsUnboundVariabilityType() const {
-    return new VectorType(base->GetAsUnboundVariabilityType(), elementCount.fixedCount);
+    return new VectorType(base->GetAsUnboundVariabilityType(), elementCount);
 }
 
 const VectorType *VectorType::GetAsSOAType(int width) const {
-    return new VectorType(base->GetAsSOAType(width), elementCount.fixedCount);
+    return new VectorType(base->GetAsSOAType(width), elementCount);
 }
 
-const VectorType *VectorType::ResolveDependence(TemplateInstantiation &templInst) const { return this; }
+const VectorType *VectorType::ResolveDependence(TemplateInstantiation &templInst) const {
+    int resolvedCount = ResolveElementCount(templInst);
+    const Type *resolvedBase = base->ResolveDependence(templInst);
+    return (resolvedCount > 0) ? new VectorType(resolvedBase, resolvedCount)
+                               : new VectorType(resolvedBase, elementCount.symbolCount);
+}
 
 const VectorType *VectorType::ResolveUnboundVariability(Variability v) const {
-    return new VectorType(base->ResolveUnboundVariability(v), elementCount.fixedCount);
+    return new VectorType(base->ResolveUnboundVariability(v), elementCount);
 }
 
 const VectorType *VectorType::GetAsUnsignedType() const {
@@ -1720,7 +1749,7 @@ const VectorType *VectorType::GetAsUnsignedType() const {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return new VectorType(base->GetAsUnsignedType(), elementCount.fixedCount);
+    return new VectorType(base->GetAsUnsignedType(), elementCount);
 }
 
 const VectorType *VectorType::GetAsSignedType() const {
@@ -1728,41 +1757,51 @@ const VectorType *VectorType::GetAsSignedType() const {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return new VectorType(base->GetAsSignedType(), elementCount.fixedCount);
+    return new VectorType(base->GetAsSignedType(), elementCount);
 }
 
-const VectorType *VectorType::GetAsConstType() const {
-    return new VectorType(base->GetAsConstType(), elementCount.fixedCount);
-}
+const VectorType *VectorType::GetAsConstType() const { return new VectorType(base->GetAsConstType(), elementCount); }
 
 const VectorType *VectorType::GetAsNonConstType() const {
-    return new VectorType(base->GetAsNonConstType(), elementCount.fixedCount);
+    return new VectorType(base->GetAsNonConstType(), elementCount);
 }
 
 std::string VectorType::GetString() const {
     std::string s = base->GetString();
     char buf[16];
-    snprintf(buf, sizeof(buf), "<%d>", elementCount.fixedCount);
+    if (elementCount.fixedCount > 0 || elementCount.symbolCount == nullptr) {
+        snprintf(buf, sizeof(buf), "<%d>", elementCount.fixedCount);
+    } else {
+        snprintf(buf, sizeof(buf), "<%s>", elementCount.symbolCount->name.c_str());
+    }
     return s + std::string(buf);
 }
 
 std::string VectorType::Mangle() const {
     std::string s = base->Mangle();
     char buf[16];
-    snprintf(buf, sizeof(buf), "_3C_%d_3E_", elementCount.fixedCount); // "<%d>"
+    if (elementCount.fixedCount > 0 || elementCount.symbolCount == nullptr) {
+        snprintf(buf, sizeof(buf), "_3C_%d_3E_", elementCount.fixedCount); // "<%d>"
+    } else {
+        snprintf(buf, sizeof(buf), "_3C_%s_3E_", elementCount.symbolCount->name.c_str()); // "<%s>"
+    }
     return s + std::string(buf);
 }
 
 std::string VectorType::GetDeclaration(const std::string &name, DeclarationSyntax syntax) const {
     std::string s = base->GetDeclaration("", syntax);
     char buf[16];
-    snprintf(buf, sizeof(buf), "%d", elementCount.fixedCount);
+    if (elementCount.fixedCount > 0 || elementCount.symbolCount == nullptr) {
+        snprintf(buf, sizeof(buf), "%d", elementCount.fixedCount);
+    } else {
+        snprintf(buf, sizeof(buf), "%s", elementCount.symbolCount->name.c_str());
+    }
     return s + std::string(buf) + "  " + name;
 }
 
 int VectorType::GetElementCount() const { return elementCount.fixedCount; }
 
-const AtomicType *VectorType::GetElementType() const { return base; }
+const Type *VectorType::GetElementType() const { return base; }
 
 static llvm::Type *lGetVectorLLVMType(llvm::LLVMContext *ctx, const VectorType *vType, bool isStorage) {
 
@@ -1862,9 +1901,19 @@ int VectorType::getVectorMemoryCount() const {
 }
 
 int VectorType::ResolveElementCount(TemplateInstantiation &templInst) const {
-    if (elementCount.fixedCount > 0)
+    if (elementCount.fixedCount > 0) {
         return elementCount.fixedCount;
-
+    }
+    if (elementCount.symbolCount) {
+        Symbol *instSym = templInst.InstantiateSymbol(elementCount.symbolCount);
+        if (!instSym->constValue) {
+            // failed to resolve constant value, return elementCount.fixedCount
+            return elementCount.fixedCount;
+        }
+        unsigned int constValue[1];
+        int count = instSym->constValue->GetValues(constValue);
+        return (count > 0) ? constValue[0] : 0;
+    }
     return 0;
 }
 ///////////////////////////////////////////////////////////////////////////
