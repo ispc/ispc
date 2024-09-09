@@ -1658,174 +1658,224 @@ __declspec(safe) static inline uniform float16 rcp(uniform float16 v) {
 }
 
 __declspec(safe, cost2) static inline float16 fmod(float16 x, float16 y) {
-    // Handle special cases: NaN and division by zero
-    if (isnan(x) || isnan(y) || y == 0.0f) {
-        return (signbits(x) == 0) ? float16bits((uniform int16)0x7E00) : float16bits((uniform int16)0xFE00);
+    // Handle special cases: NaN inputs or y == 0.0f16
+    if (isnan(x) || isnan(y) || y == 0.0f16) {
+        // Return NaN with the sign of x
+        uniform int16 nan_bits = 0x7E00; // Quiet NaN for float16
+        if (signbits(x)) {
+            nan_bits |= 0x8000; // Set sign bit if x is negative
+        }
+        return float16bits(nan_bits);
     }
 
-    const int16 Neg_Inf_bits = 0xFC00;
-    const int16 Pos_Inf_bits = 0x7C00;
-
-    // Handle cases where y is infinity
-    if (intbits(y) == Neg_Inf_bits || intbits(y) == Pos_Inf_bits) {
+    // Handle cases where y is infinite
+    int16 y_abs_bits = intbits(y) & (int16)0x7FFF; // Absolute value of y bits
+    if (y_abs_bits == 0x7C00) {                    // y is infinite
         return x;
     }
 
-    // Handle cases where x is infinity
-    if (intbits(x) == Neg_Inf_bits || intbits(x) == Pos_Inf_bits) {
-        return (signbits(x) == 0) ? float16bits((uniform int16)0x7E00) : float16bits((uniform int16)0xFE00);
+    // Handle cases where x is infinite
+    int16 x_abs_bits = intbits(x) & (int16)0x7FFF; // Absolute value of x bits
+    if (x_abs_bits == 0x7C00) {                    // x is infinite
+        // Return NaN with the sign of x
+        uniform int16 nan_bits = 0x7E00; // Quiet NaN for float16
+        if (signbits(x)) {
+            nan_bits |= 0x8000; // Set sign bit if x is negative
+        }
+        return float16bits(nan_bits);
     }
 
     // Handle cases where x is zero
-    if (x == 0.0f16 || x == -0.0F16) {
+    if (x == 0.0f16) {
         return x;
     }
 
-    // Compute the floating-point remainder using truncation and reciprocal
+    // Compute the floating-point remainder
     return x - trunc(x * rcp(y)) * y;
 }
 
 __declspec(safe, cost2) static inline uniform float16 fmod(uniform float16 x, uniform float16 y) {
-    // Handle special cases: NaN and division by zero
-    if (isnan(x) || isnan(y) || y == 0.0f) {
-        return (signbits(x) == 0) ? float16bits((uniform int16)0x7E00) : float16bits((uniform int16)0xFE00);
+    // Handle special cases: NaN inputs or y == 0.0f16
+    if (isnan(x) || isnan(y) || y == 0.0f16) {
+        // Return NaN with the sign of x
+        uniform int16 nan_bits = 0x7E00; // Quiet NaN for float16
+        if (signbits(x)) {
+            nan_bits |= 0x8000; // Set sign bit if x is negative
+        }
+        return float16bits(nan_bits);
     }
 
-    const uniform int16 Neg_Inf_bits = 0xFC00;
-    const uniform int16 Pos_Inf_bits = 0x7C00;
-
-    // Handle cases where y is infinity
-    if (intbits(y) == Neg_Inf_bits || intbits(y) == Pos_Inf_bits) {
+    // Handle cases where y is infinite
+    uniform int16 y_abs_bits = intbits(y) & (uniform int16)0x7FFF; // Absolute value of y bits
+    if (y_abs_bits == 0x7C00) {                                    // y is infinite
         return x;
     }
 
-    // Handle cases where x is infinity
-    if (intbits(x) == Neg_Inf_bits || intbits(x) == Pos_Inf_bits) {
-        return (signbits(x) == 0) ? float16bits((uniform int16)0x7E00) : float16bits((uniform int16)0xFE00);
+    // Handle cases where x is infinite
+    uniform int16 x_abs_bits = intbits(x) & (uniform int16)0x7FFF; // Absolute value of x bits
+    if (x_abs_bits == 0x7C00) {                                    // x is infinite
+        // Return NaN with the sign of x
+        uniform int16 nan_bits = 0x7E00; // Quiet NaN for float16
+        if (signbits(x)) {
+            nan_bits |= 0x8000; // Set sign bit if x is negative
+        }
+        return float16bits(nan_bits);
     }
 
     // Handle cases where x is zero
-    if (x == 0.0f16 || x == -0.0F16) {
+    if (x == 0.0f16) {
         return x;
     }
 
-    // Compute the floating-point remainder using truncation and reciprocal
+    // Compute the floating-point remainder
     return x - trunc(x * rcp(y)) * y;
 }
 
 __declspec(safe, cost2) static inline float fmod(float x, float y) {
-    // Handle special cases: NaN and division by zero
+    // Handle special cases: NaN inputs or y == 0.0f
     if (isnan(x) || isnan(y) || y == 0.0f) {
-        return (signbits(x) == 0) ? floatbits(0x7FC00000) : floatbits(0xFFC00000);
+        // Return NaN with the sign of x
+        uniform int nan_bits = 0x7FC00000; // Quiet NaN
+        if (signbits(x)) {
+            nan_bits |= 0x80000000; // Set sign bit if x is negative
+        }
+        return floatbits(nan_bits);
     }
 
-    const int Neg_Inf_bits = 0xFF800000;
-    const int Pos_Inf_bits = 0x7F800000;
-
-    // Handle cases where y is infinity
-    if (intbits(y) == Neg_Inf_bits || intbits(y) == Pos_Inf_bits) {
+    // Handle cases where y is infinite
+    int y_abs_bits = intbits(y) & (int)0x7FFFFFFF; // Absolute value of y bits
+    if (y_abs_bits == 0x7F800000) {                // y is infinite
         return x;
     }
 
-    // Handle cases where x is infinity
-    if (intbits(x) == Neg_Inf_bits || intbits(x) == Pos_Inf_bits) {
-        return (signbits(x) == 0) ? floatbits(0x7FC00000) : floatbits(0xFFC00000);
+    // Handle cases where x is infinite
+    int x_abs_bits = intbits(x) & (int)0x7FFFFFFF; // Absolute value of x bits
+    if (x_abs_bits == 0x7F800000) {                // x is infinite
+        // Return NaN with the sign of x
+        uniform int nan_bits = 0x7FC00000; // Quiet NaN
+        if (signbits(x)) {
+            nan_bits |= 0x80000000; // Set sign bit if x is negative
+        }
+        return floatbits(nan_bits);
     }
 
     // Handle cases where x is zero
-    if (x == 0.0f || x == -0.0f) {
+    if (x == 0.0f) {
         return x;
     }
 
-    // Compute the floating-point remainder using truncation and reciprocal
+    // Compute the floating-point remainder
     return x - trunc(x * rcp(y)) * y;
 }
 
 __declspec(safe, cost2) static inline uniform float fmod(uniform float x, uniform float y) {
-    // Handle special cases: NaN and division by zero
+    // Handle special cases: NaN inputs or y == 0.0f
     if (isnan(x) || isnan(y) || y == 0.0f) {
-        return (signbits(x) == 0) ? floatbits(0x7FC00000) : floatbits(0xFFC00000);
+        // Return NaN with the sign of x
+        uniform int nan_bits = 0x7FC00000; // Quiet NaN
+        if (signbits(x)) {
+            nan_bits |= 0x80000000; // Set sign bit if x is negative
+        }
+        return floatbits(nan_bits);
     }
 
-    const uniform int Neg_Inf_bits = 0xFF800000;
-    const uniform int Pos_Inf_bits = 0x7F800000;
-
-    // Handle cases where y is infinity
-    if (intbits(y) == Neg_Inf_bits || intbits(y) == Pos_Inf_bits) {
+    // Handle cases where y is infinite
+    uniform int y_abs_bits = intbits(y) & (uniform int)0x7FFFFFFF; // Absolute value of y bits
+    if (y_abs_bits == 0x7F800000) {                                // y is infinite
         return x;
     }
 
-    // Handle cases where x is infinity
-    if (intbits(x) == Neg_Inf_bits || intbits(x) == Pos_Inf_bits) {
-        return (signbits(x) == 0) ? floatbits(0x7FC00000) : floatbits(0xFFC00000);
+    // Handle cases where x is infinite
+    uniform int x_abs_bits = intbits(x) & (uniform int)0x7FFFFFFF; // Absolute value of x bits
+    if (x_abs_bits == 0x7F800000) {                                // x is infinite
+        // Return NaN with the sign of x
+        uniform int nan_bits = 0x7FC00000; // Quiet NaN
+        if (signbits(x)) {
+            nan_bits |= 0x80000000; // Set sign bit if x is negative
+        }
+        return floatbits(nan_bits);
     }
 
     // Handle cases where x is zero
-    if (x == 0.0f || x == -0.0f) {
+    if (x == 0.0f) {
         return x;
     }
 
-    // Compute the floating-point remainder using truncation and reciprocal
+    // Compute the floating-point remainder
     return x - trunc(x * rcp(y)) * y;
 }
 
 __declspec(safe, cost2) static inline double fmod(double x, double y) {
-    // Handle special cases: NaN and division by zero
-    if (isnan(x) || isnan(y) || y == 0.0f) {
-        return (signbits(x) == 0) ? doublebits((uniform int64)0x7FF8000000000000)
-                                  : doublebits((uniform int64)0xFFF8000000000000);
+    // Handle special cases: NaN inputs or y == 0.0
+    if (isnan(x) || isnan(y) || y == 0.0d) {
+        // Return NaN with the sign of x
+        uniform int64 nan_bits = 0x7FF8000000000000; // Quiet NaN
+        if (signbits(x)) {
+            nan_bits |= 0x8000000000000000; // Set sign bit if x is negative
+        }
+        return doublebits(nan_bits);
     }
 
-    const int64 Neg_Inf_bits = 0xFFF0000000000000;
-    const int64 Pos_Inf_bits = 0x7FF0000000000000;
-
-    // Handle cases where y is infinity
-    if (intbits(y) == Neg_Inf_bits || intbits(y) == Pos_Inf_bits) {
+    // Handle cases where y is infinite
+    int64 y_abs_bits = intbits(y) & (int64)0x7FFFFFFFFFFFFFFF; // Absolute value of y bits
+    if (y_abs_bits == 0x7FF0000000000000) {                    // y is infinite
         return x;
     }
 
-    // Handle cases where x is infinity
-    if (intbits(x) == Neg_Inf_bits || intbits(x) == Pos_Inf_bits) {
-        return (signbits(x) == 0) ? doublebits((uniform int64)0x7FF8000000000000)
-                                  : doublebits((uniform int64)0xFFF8000000000000);
+    // Handle cases where x is infinite
+    int64 x_abs_bits = intbits(x) & (int64)0x7FFFFFFFFFFFFFFF; // Absolute value of x bits
+    if (x_abs_bits == 0x7FF0000000000000) {                    // x is infinite
+        // Return NaN with the sign of x
+        uniform int64 nan_bits = 0x7FF8000000000000; // Quiet NaN
+        if (signbits(x)) {
+            nan_bits |= 0x8000000000000000; // Set sign bit if x is negative
+        }
+        return doublebits(nan_bits);
     }
 
     // Handle cases where x is zero
-    if (x == 0.0d || x == -0.0D) {
+    if (x == 0.0d) {
         return x;
     }
 
-    // Compute the floating-point remainder using truncation and reciprocal
+    // Compute the floating-point remainder
     return x - trunc(x * rcp(y)) * y;
 }
 
 __declspec(safe, cost2) static inline uniform double fmod(uniform double x, uniform double y) {
-    // Handle special cases: NaN and division by zero
-    if (isnan(x) || isnan(y) || y == 0.0f) {
-        return (signbits(x) == 0) ? doublebits((uniform int64)0x7FF8000000000000)
-                                  : doublebits((uniform int64)0xFFF8000000000000);
+    // Handle special cases: NaN inputs or y == 0.0
+    if (isnan(x) || isnan(y) || y == 0.0d) {
+        // Return NaN with the sign of x
+        uniform int64 nan_bits = 0x7FF8000000000000; // Quiet NaN
+        if (signbits(x)) {
+            nan_bits |= 0x8000000000000000; // Set sign bit if x is negative
+        }
+        return doublebits(nan_bits);
     }
 
-    const int64 Neg_Inf_bits = 0xFFF0000000000000;
-    const int64 Pos_Inf_bits = 0x7FF0000000000000;
-
-    // Handle cases where y is infinity
-    if (intbits(y) == Neg_Inf_bits || intbits(y) == Pos_Inf_bits) {
+    // Handle cases where y is infinite
+    uniform int64 y_abs_bits = intbits(y) & (uniform int64)0x7FFFFFFFFFFFFFFF; // Absolute value of y bits
+    if (y_abs_bits == 0x7FF0000000000000) {                                    // y is infinite
         return x;
     }
 
-    // Handle cases where x is infinity
-    if (intbits(x) == Neg_Inf_bits || intbits(x) == Pos_Inf_bits) {
-        return (signbits(x) == 0) ? doublebits((uniform int64)0x7FF8000000000000)
-                                  : doublebits((uniform int64)0xFFF8000000000000);
+    // Handle cases where x is infinite
+    uniform int64 x_abs_bits = intbits(x) & (uniform int64)0x7FFFFFFFFFFFFFFF; // Absolute value of x bits
+    if (x_abs_bits == 0x7FF0000000000000) {                                    // x is infinite
+        // Return NaN with the sign of x
+        uniform int64 nan_bits = 0x7FF8000000000000; // Quiet NaN
+        if (signbits(x)) {
+            nan_bits |= 0x8000000000000000; // Set sign bit if x is negative
+        }
+        return doublebits(nan_bits);
     }
 
     // Handle cases where x is zero
-    if (x == 0.0d || x == -0.0D) {
+    if (x == 0.0d) {
         return x;
     }
 
-    // Compute the floating-point remainder using truncation and reciprocal
+    // Compute the floating-point remainder
     return x - trunc(x * rcp(y)) * y;
 }
 
