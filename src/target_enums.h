@@ -17,6 +17,7 @@ namespace ispc {
 
 enum class CallingConv { uninitialized, defaultcall, x86_vectorcall };
 
+// TODO: linux is conflit with macro linux under some condition
 enum class TargetOS { windows, linux, custom_linux, freebsd, macos, android, ios, ps4, ps5, web, error };
 TargetOS operator++(TargetOS &, int);
 

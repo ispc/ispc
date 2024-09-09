@@ -246,23 +246,20 @@ void TargetLibRegistry::printSupportMatrix() const {
     // OS names row
     std::vector<std::string> os_names;
     os_names.push_back("");
-    for (int j = (int)TargetOS::windows; j < (int)TargetOS::error; j++) {
-        os_names.push_back(OSToString((TargetOS)j));
+    for (TargetOS os = TargetOS::windows; os < TargetOS::error; os++) {
+        os_names.push_back(OSToString(os));
     }
     table.push_back(os_names);
 
     // Fill in the name, one target per the row.
-    for (int i = (int)ISPCTarget::sse2_i32x4; i < (int)ISPCTarget::error; i++) {
+    for (ISPCTarget target = ISPCTarget::sse2_i32x4; target < ISPCTarget::error; target++) {
         std::vector<std::string> row;
-        ISPCTarget target = (ISPCTarget)i;
         row.push_back(ISPCTargetToString(target));
         std::vector<std::string> arch_list_target;
         // Fill in cell: list of arches for the target/os.
-        for (int j = (int)TargetOS::windows; j < (int)TargetOS::error; j++) {
+        for (TargetOS os = TargetOS::windows; os < TargetOS::error; os++) {
             std::string arch_list_os;
-            TargetOS os = (TargetOS)j;
-            for (int k = (int)Arch::none; k < (int)Arch::error; k++) {
-                Arch arch = (Arch)k;
+            for (Arch arch = Arch::none; arch < Arch::error; arch++) {
                 if (isSupported(target, os, arch)) {
                     if (!arch_list_os.empty()) {
                         arch_list_os += ", ";
@@ -305,13 +302,9 @@ void TargetLibRegistry::printSupportMatrix() const {
 
 std::string TargetLibRegistry::getSupportedArchs() {
     std::string archs;
-    for (int k = (int)Arch::none; k < (int)Arch::error; k++) {
-        Arch arch = (Arch)k;
-        for (int i = (int)ISPCTarget::sse2_i32x4; i < (int)ISPCTarget::error; i++) {
-            ISPCTarget target = (ISPCTarget)i;
-            for (int j = (int)TargetOS::windows; j < (int)TargetOS::error; j++) {
-                TargetOS os = (TargetOS)j;
-
+    for (Arch arch = Arch::none; arch < Arch::error; arch++) {
+        for (ISPCTarget target = ISPCTarget::sse2_i32x4; target < ISPCTarget::error; target++) {
+            for (TargetOS os = TargetOS::windows; os < TargetOS::error; os++) {
                 if (isSupported(target, os, arch)) {
                     if (!archs.empty()) {
                         archs += ", ";
@@ -329,12 +322,9 @@ std::string TargetLibRegistry::getSupportedArchs() {
 
 std::string TargetLibRegistry::getSupportedTargets() {
     std::string targets;
-    for (int i = (int)ISPCTarget::sse2_i32x4; i < (int)ISPCTarget::error; i++) {
-        ISPCTarget target = (ISPCTarget)i;
-        for (int j = (int)TargetOS::windows; j < (int)TargetOS::error; j++) {
-            TargetOS os = (TargetOS)j;
-            for (int k = (int)Arch::none; k < (int)Arch::error; k++) {
-                Arch arch = (Arch)k;
+    for (Arch arch = Arch::none; arch < Arch::error; arch++) {
+        for (ISPCTarget target = ISPCTarget::sse2_i32x4; target < ISPCTarget::error; target++) {
+            for (TargetOS os = TargetOS::windows; os < TargetOS::error; os++) {
                 if (isSupported(target, os, arch)) {
                     if (!targets.empty()) {
                         targets += ", ";
@@ -354,9 +344,8 @@ std::string TargetLibRegistry::getSupportedOSes() {
     // We use pre-computed bitset, as this function is perfomance critical - it's used
     // during arguments parsing.
     std::string oses;
-    for (int j = (int)TargetOS::windows; j < (int)TargetOS::error; j++) {
-        TargetOS os = (TargetOS)j;
-        if (m_supported_oses[j]) {
+    for (TargetOS os = TargetOS::windows; os < TargetOS::error; os++) {
+        if (m_supported_oses[static_cast<int>(os)]) {
             if (!oses.empty()) {
                 oses += ", ";
             }
