@@ -210,8 +210,36 @@ const BitcodeLib *TargetLibRegistry::getISPCStdLib(ISPCTarget target, TargetOS o
     return lGetTargetLib(m_stdlibs, target, os, arch);
 }
 
+std::vector<std::string> TargetLibRegistry::checkBitcodeLibs() const {
+    std::vector<std::string> missedFiles = {};
+    if (!g->isSlimBinary) {
+        return missedFiles;
+    }
+    for (ISPCTarget target = ISPCTarget::sse2_i32x4; target < ISPCTarget::error; target++) {
+        for (TargetOS os = TargetOS::windows; os < TargetOS::error; os++) {
+            for (Arch arch = Arch::none; arch < Arch::error; arch++) {
+                if (isSupported(target, os, arch)) {
+                    const BitcodeLib *clib = getBuiltinsCLib(os, arch);
+                    const BitcodeLib *tlib = getISPCTargetLib(target, os, arch);
+                    const BitcodeLib *slib = getISPCStdLib(target, os, arch);
+                    if (!clib->fileExists()) {
+                        missedFiles.push_back(clib->getFilename());
+                    }
+                    if (!tlib->fileExists()) {
+                        missedFiles.push_back(tlib->getFilename());
+                    }
+                    if (!slib->fileExists()) {
+                        missedFiles.push_back(slib->getFilename());
+                    }
+                }
+            }
+        }
+    }
+    return missedFiles;
+}
+
 // Print user-friendly message about supported targets
-void TargetLibRegistry::printSupportMatrix(std::vector<std::string> &missedFiles) const {
+void TargetLibRegistry::printSupportMatrix() const {
     // Vector of rows, which are vectors of cells.
     std::vector<std::vector<std::string>> table;
 
@@ -236,18 +264,6 @@ void TargetLibRegistry::printSupportMatrix(std::vector<std::string> &missedFiles
             for (int k = (int)Arch::none; k < (int)Arch::error; k++) {
                 Arch arch = (Arch)k;
                 if (isSupported(target, os, arch)) {
-                    const BitcodeLib *clib = getBuiltinsCLib(os, arch);
-                    const BitcodeLib *tlib = getISPCTargetLib(target, os, arch);
-                    const BitcodeLib *slib = getISPCStdLib(target, os, arch);
-                    if (!clib->fileExists()) {
-                        missedFiles.push_back(clib->getFilename());
-                    }
-                    if (!tlib->fileExists()) {
-                        missedFiles.push_back(tlib->getFilename());
-                    }
-                    if (!slib->fileExists()) {
-                        missedFiles.push_back(slib->getFilename());
-                    }
                     if (!arch_list_os.empty()) {
                         arch_list_os += ", ";
                     }

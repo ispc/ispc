@@ -213,6 +213,7 @@ static void lPrintVersion() {
     printf("    [--dump-file[=<path>]]\t\tDump module IR to file(s) in "
            "current directory, or to <path> if specified\n");
     printf("    [--gen-stdlib]\t\tEnable special compilation mode to generate LLVM IR for stdlib.ispc.\n");
+    printf("    [--check-bitcode-libs]\t\tCheck the presence of bitcode libraries for ISPC slim binary.\n");
     printf("    [--off-phase=<value>]\t\tSwitch off optimization phases. "
            "--off-phase=pre:first,210:220,300,305,310:last\n");
     printf("    [--opt=<option>]\t\t\tSet optimization option\n");
@@ -701,12 +702,7 @@ int main(int Argc, char *Argv[]) {
             errorHandler.AddError(
                 "Option \"link\" can't be used in compilation mode. Use \"ispc link --help\" for details");
         } else if (!strcmp(argv[i], "--support-matrix")) {
-            std::vector<std::string> missedFiles;
-            g->target_registry->printSupportMatrix(missedFiles);
-            for (auto &name : missedFiles) {
-                errorHandler.AddError("Missed builtins/stdlib library: \"%s\"", name.c_str());
-            }
-            errorHandler.Emit();
+            g->target_registry->printSupportMatrix();
             exit(0);
         } else if (!strncmp(argv[i], "-D", 2)) {
             g->cppArgs.push_back(argv[i]);
@@ -1056,6 +1052,14 @@ int main(int Argc, char *Argv[]) {
             g->dumpFile = true;
         } else if (strncmp(argv[i], "--gen-stdlib", 12) == 0) {
             g->genStdlib = true;
+        } else if (strncmp(argv[i], "--check-bitcode-libs", 20) == 0) {
+            for (auto &name : g->target_registry->checkBitcodeLibs()) {
+                errorHandler.AddError("Missed builtins/stdlib library: \"%s\"", name.c_str());
+            }
+            errorHandler.Emit();
+            exit(0);
+        } else if (strncmp(argv[i], "--off-phase=", 12) == 0) {
+            g->off_stages = ParsingPhases(argv[i] + strlen("--off-phase="), errorHandler);
         } else if (strncmp(argv[i], "--off-phase=", 12) == 0) {
             g->off_stages = ParsingPhases(argv[i] + strlen("--off-phase="), errorHandler);
 #ifdef ISPC_XE_ENABLED

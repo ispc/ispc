@@ -17,6 +17,212 @@
 
 namespace ispc {
 
+TargetOS operator++(TargetOS &os, int dummy) {
+    using underlying = std::underlying_type_t<TargetOS>;
+    static_assert(static_cast<underlying>(TargetOS::linux) == static_cast<underlying>(TargetOS::windows) + 1,
+                  "Enum TargetOS is not sequential");
+    static_assert(static_cast<underlying>(TargetOS::custom_linux) == static_cast<underlying>(TargetOS::linux) + 1,
+                  "Enum TargetOS is not sequential");
+    static_assert(static_cast<underlying>(TargetOS::freebsd) == static_cast<underlying>(TargetOS::custom_linux) + 1,
+                  "Enum TargetOS is not sequential");
+    static_assert(static_cast<underlying>(TargetOS::macos) == static_cast<underlying>(TargetOS::freebsd) + 1,
+                  "Enum TargetOS is not sequential");
+    static_assert(static_cast<underlying>(TargetOS::android) == static_cast<underlying>(TargetOS::macos) + 1,
+                  "Enum TargetOS is not sequential");
+    static_assert(static_cast<underlying>(TargetOS::ios) == static_cast<underlying>(TargetOS::android) + 1,
+                  "Enum TargetOS is not sequential");
+    static_assert(static_cast<underlying>(TargetOS::ps4) == static_cast<underlying>(TargetOS::ios) + 1,
+                  "Enum TargetOS is not sequential");
+    static_assert(static_cast<underlying>(TargetOS::ps5) == static_cast<underlying>(TargetOS::ps4) + 1,
+                  "Enum TargetOS is not sequential");
+    static_assert(static_cast<underlying>(TargetOS::web) == static_cast<underlying>(TargetOS::ps5) + 1,
+                  "Enum TargetOS is not sequential");
+    static_assert(static_cast<underlying>(TargetOS::error) == static_cast<underlying>(TargetOS::web) + 1,
+                  "Enum TargetOS is not sequential");
+    return os = static_cast<TargetOS>(static_cast<underlying>(os) + 1);
+}
+
+Arch operator++(Arch &arch, int dummy) {
+    using underlying = std::underlying_type_t<Arch>;
+    static_assert(static_cast<underlying>(Arch::x86) == static_cast<underlying>(Arch::none) + 1,
+                  "Enum Arch is not sequential");
+    static_assert(static_cast<underlying>(Arch::x86_64) == static_cast<underlying>(Arch::x86) + 1,
+                  "Enum Arch is not sequential");
+    static_assert(static_cast<underlying>(Arch::arm) == static_cast<underlying>(Arch::x86_64) + 1,
+                  "Enum Arch is not sequential");
+    static_assert(static_cast<underlying>(Arch::aarch64) == static_cast<underlying>(Arch::arm) + 1,
+                  "Enum Arch is not sequential");
+    static_assert(static_cast<underlying>(Arch::wasm32) == static_cast<underlying>(Arch::aarch64) + 1,
+                  "Enum Arch is not sequential");
+    static_assert(static_cast<underlying>(Arch::wasm64) == static_cast<underlying>(Arch::wasm32) + 1,
+                  "Enum Arch is not sequential");
+    static_assert(static_cast<underlying>(Arch::xe64) == static_cast<underlying>(Arch::wasm64) + 1,
+                  "Enum Arch is not sequential");
+    static_assert(static_cast<underlying>(Arch::error) == static_cast<underlying>(Arch::xe64) + 1,
+                  "Enum Arch is not sequential");
+    return arch = static_cast<Arch>(static_cast<underlying>(arch) + 1);
+}
+
+ISPCTarget operator++(ISPCTarget &target, int dummy) {
+    using underlying = std::underlying_type_t<ISPCTarget>;
+    static_assert(static_cast<underlying>(ISPCTarget::host) == static_cast<underlying>(ISPCTarget::none) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::sse2_i32x4) == static_cast<underlying>(ISPCTarget::host) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::sse2_i32x8) ==
+                      static_cast<underlying>(ISPCTarget::sse2_i32x4) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::sse41_i8x16) ==
+                      static_cast<underlying>(ISPCTarget::sse2_i32x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::sse41_i16x8) ==
+                      static_cast<underlying>(ISPCTarget::sse41_i8x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::sse41_i32x4) ==
+                      static_cast<underlying>(ISPCTarget::sse41_i16x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::sse41_i32x8) ==
+                      static_cast<underlying>(ISPCTarget::sse41_i32x4) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::sse4_i8x16) ==
+                      static_cast<underlying>(ISPCTarget::sse41_i32x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::sse4_i16x8) ==
+                      static_cast<underlying>(ISPCTarget::sse4_i8x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::sse4_i32x4) ==
+                      static_cast<underlying>(ISPCTarget::sse4_i16x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::sse4_i32x8) ==
+                      static_cast<underlying>(ISPCTarget::sse4_i32x4) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx1_i32x4) ==
+                      static_cast<underlying>(ISPCTarget::sse4_i32x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx1_i32x8) ==
+                      static_cast<underlying>(ISPCTarget::avx1_i32x4) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx1_i32x16) ==
+                      static_cast<underlying>(ISPCTarget::avx1_i32x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx1_i64x4) ==
+                      static_cast<underlying>(ISPCTarget::avx1_i32x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx2_i8x32) ==
+                      static_cast<underlying>(ISPCTarget::avx1_i64x4) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx2_i16x16) ==
+                      static_cast<underlying>(ISPCTarget::avx2_i8x32) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx2_i32x4) ==
+                      static_cast<underlying>(ISPCTarget::avx2_i16x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx2_i32x8) ==
+                      static_cast<underlying>(ISPCTarget::avx2_i32x4) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx2_i32x16) ==
+                      static_cast<underlying>(ISPCTarget::avx2_i32x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx2_i64x4) ==
+                      static_cast<underlying>(ISPCTarget::avx2_i32x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx2vnni_i32x4) ==
+                      static_cast<underlying>(ISPCTarget::avx2_i64x4) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx2vnni_i32x8) ==
+                      static_cast<underlying>(ISPCTarget::avx2vnni_i32x4) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx2vnni_i32x16) ==
+                      static_cast<underlying>(ISPCTarget::avx2vnni_i32x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx512knl_x16) ==
+                      static_cast<underlying>(ISPCTarget::avx2vnni_i32x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx512skx_x4) ==
+                      static_cast<underlying>(ISPCTarget::avx512knl_x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx512skx_x8) ==
+                      static_cast<underlying>(ISPCTarget::avx512skx_x4) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx512skx_x16) ==
+                      static_cast<underlying>(ISPCTarget::avx512skx_x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx512skx_x32) ==
+                      static_cast<underlying>(ISPCTarget::avx512skx_x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx512skx_x64) ==
+                      static_cast<underlying>(ISPCTarget::avx512skx_x32) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx512icl_x4) ==
+                      static_cast<underlying>(ISPCTarget::avx512skx_x64) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx512icl_x8) ==
+                      static_cast<underlying>(ISPCTarget::avx512icl_x4) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx512icl_x16) ==
+                      static_cast<underlying>(ISPCTarget::avx512icl_x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx512icl_x32) ==
+                      static_cast<underlying>(ISPCTarget::avx512icl_x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx512icl_x64) ==
+                      static_cast<underlying>(ISPCTarget::avx512icl_x32) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx512spr_x4) ==
+                      static_cast<underlying>(ISPCTarget::avx512icl_x64) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx512spr_x8) ==
+                      static_cast<underlying>(ISPCTarget::avx512spr_x4) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx512spr_x16) ==
+                      static_cast<underlying>(ISPCTarget::avx512spr_x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx512spr_x32) ==
+                      static_cast<underlying>(ISPCTarget::avx512spr_x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx512spr_x64) ==
+                      static_cast<underlying>(ISPCTarget::avx512spr_x32) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::neon_i8x16) ==
+                      static_cast<underlying>(ISPCTarget::avx512spr_x64) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::neon_i16x8) ==
+                      static_cast<underlying>(ISPCTarget::neon_i8x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::neon_i32x4) ==
+                      static_cast<underlying>(ISPCTarget::neon_i16x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::neon_i32x8) ==
+                      static_cast<underlying>(ISPCTarget::neon_i32x4) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::wasm_i32x4) ==
+                      static_cast<underlying>(ISPCTarget::neon_i32x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::gen9_x8) == static_cast<underlying>(ISPCTarget::wasm_i32x4) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::gen9_x16) == static_cast<underlying>(ISPCTarget::gen9_x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::xelp_x8) == static_cast<underlying>(ISPCTarget::gen9_x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::xelp_x16) == static_cast<underlying>(ISPCTarget::xelp_x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::xehpg_x8) == static_cast<underlying>(ISPCTarget::xelp_x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::xehpg_x16) == static_cast<underlying>(ISPCTarget::xehpg_x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::xehpc_x16) == static_cast<underlying>(ISPCTarget::xehpg_x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::xehpc_x32) == static_cast<underlying>(ISPCTarget::xehpc_x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::xelpg_x8) == static_cast<underlying>(ISPCTarget::xehpc_x32) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::xelpg_x16) == static_cast<underlying>(ISPCTarget::xelpg_x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::error) == static_cast<underlying>(ISPCTarget::xelpg_x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    return target = static_cast<ISPCTarget>(static_cast<underlying>(target) + 1);
+}
+
 Arch ParseArch(std::string arch) {
     if (arch == "x86") {
         return Arch::x86;
