@@ -7,7 +7,7 @@
 //        that are implementated in ISPC.
 
 // This whole file is included for every user code compilation unless
-// --nostdlib provided.
+// --nostdlib is provided.
 
 #pragma once
 
