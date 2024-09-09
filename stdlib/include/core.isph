@@ -1,14 +1,9 @@
 // -*- mode: c++ -*-
-/*
-  Copyright (c) 2024, Intel Corporation
+// Copyright (c) 2024, Intel Corporation
+// SPDX-License-Identifier: BSD-3-Clause
 
-  SPDX-License-Identifier: BSD-3-Clause
-*/
-
-/** @file core.isph
-
-    @brief Core portion of the ISPC library of builtin functions.
-*/
+// @file core.isph
+// @brief Core portion of the ISPC library of builtin functions.
 
 // This whole file is included in the compilation of user code and stdlib.ispc
 // always and unconditionally.
@@ -20,8 +15,7 @@
 // All macros that used here without definitions are defined in module.cpp
 // in lSetPreprocessorOptions function.
 
-#ifndef ISPC_CORE_ISPH
-#define ISPC_CORE_ISPH
+#pragma once
 
 #define ISPC
 
@@ -760,5 +754,3 @@ EXT uniform bool __is_compile_time_constant_varying_int32(varying int32);
 #undef READONLY
 #undef READNONE
 #undef EXT
-
-#endif // ISPC_CORE_ISPH

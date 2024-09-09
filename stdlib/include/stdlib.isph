@@ -1,21 +1,15 @@
 // -*- mode: c++ -*-
-/*
-  Copyright (c) 2024, Intel Corporation
+// Copyright (c) 2024, Intel Corporation
+// SPDX-License-Identifier: BSD-3-Clause
 
-  SPDX-License-Identifier: BSD-3-Clause
-*/
+// @file stdlib.isph
+// @brief Portion of the ISPC standard library declarations
+//        that are implementated in ISPC.
 
-/** @file stdlib.isph
-
-    @brief Portion of the ISPC standard library declarations
-           that are implementated in ISPC.
-*/
-
-// This whole file in included for every user code compilation unless
+// This whole file is included for every user code compilation unless
 // --nostdlib provided.
 
-#ifndef ISPC_STDLIB_ISPH
-#define ISPC_STDLIB_ISPH
+#pragma once
 
 ///////////////////////////////////////////////////////////////////////////
 // Low level primitives
@@ -1127,5 +1121,3 @@ __declspec(safe) inline varying int32 dot2add_i16packed(varying uint32 a, varyin
 // with corresponding 16-bit integers in b, producing 2 intermediate signed 32-bit results.
 // Sum these 2 results with the corresponding 32-bit integer in src using signed saturation, and return the result.
 __declspec(safe) inline varying int32 dot2add_i16packed_sat(varying uint32 a, varying uint32 b, varying int32 acc);
-
-#endif // ISPC_STDLIB_ISPH

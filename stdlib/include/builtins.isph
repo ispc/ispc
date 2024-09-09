@@ -1,20 +1,14 @@
 // -*- mode: c++ -*-
-/*
-  Copyright (c) 2024, Intel Corporation
+// Copyright (c) 2024, Intel Corporation
+// SPDX-License-Identifier: BSD-3-Clause
+//
+// @file builtins.isph
+// @brief This file contains the declarations of the built-in functions that
+// are defined in builtins*.ll files but used in the ISPC code of standard
+// library. These functions should not be used outside of the standard library
+// code.
 
-  SPDX-License-Identifier: BSD-3-Clause
-*/
-
-/** @file builtins.isph
-
-    @brief This file contains the declarations of the built-in functions that
-    are defined in builtins*.ll files but used in the ISPC code of standard
-    library. These functions should not be used outside of the standard library
-    code.
-*/
-
-#ifndef ISPC_BUILTINS_ISPH
-#define ISPC_BUILTINS_ISPH
+#pragma once
 
 // Macros for attributes
 #define NOESCAPE __attribute__((noescape))
@@ -732,5 +726,3 @@ EXT inline READNONE varying int8 __shuffle_i8(varying int8, varying int32);
 #undef READNONE
 #undef NOALIAS
 #undef EXT
-
-#endif // ISPC_BUILTIN_H
