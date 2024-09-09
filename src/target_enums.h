@@ -18,6 +18,7 @@ namespace ispc {
 enum class CallingConv { uninitialized, defaultcall, x86_vectorcall };
 
 enum class TargetOS { windows, linux, custom_linux, freebsd, macos, android, ios, ps4, ps5, web, error };
+TargetOS operator++(TargetOS &, int);
 
 TargetOS ParseOS(std::string os);
 std::string OSToString(TargetOS os);
@@ -25,6 +26,7 @@ std::string OSToLowerString(TargetOS os);
 TargetOS GetHostOS();
 
 enum class Arch { none, x86, x86_64, arm, aarch64, wasm32, wasm64, xe64, error };
+Arch operator++(Arch &, int);
 
 Arch ParseArch(std::string arch);
 std::string ArchToString(Arch arch);
@@ -88,6 +90,7 @@ enum class ISPCTarget {
     xelpg_x16,
     error
 };
+ISPCTarget operator++(ISPCTarget &, int);
 
 ISPCTarget ParseISPCTarget(std::string target);
 std::pair<std::vector<ISPCTarget>, std::string> ParseISPCTargets(const char *target);
