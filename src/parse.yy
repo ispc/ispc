@@ -1031,6 +1031,19 @@ declaration_specifiers
           ds->vectorSize = (int32_t)$3;
           $$ = ds;
     }
+    | type_specifier '<' TOKEN_IDENTIFIER '>'
+    {
+          DeclSpecs *ds = new DeclSpecs($1);
+          const char *name = $3->c_str();
+          Symbol *s = m->symbolTable->LookupVariable(name);
+          if (s) {
+            ds->vectorSize = s;
+          } else {
+            Error(@3, "Unknown identifier \"%s\" is used to specify the size of a vector type.", name);
+          }
+          $$ = ds;
+          lCleanUpString($3);
+    }
     | type_specifier declaration_specifiers
       {
           DeclSpecs *ds = (DeclSpecs *)$2;
@@ -1238,6 +1251,14 @@ short_vec_specifier
     {
         $$ = $1 ? new VectorType($1, (int32_t)$3) : nullptr;
     }
+    // When templates are supported for structures, this rule can be uncommented.
+    /*| atomic_var_type_specifier '<' TOKEN_IDENTIFIER '>'
+    {
+         Symbol* s = new Symbol(*$<stringVal>3, Union(@1, @3), AtomicType::UniformInt32->GetAsConstType());
+         lCleanUpString($3);
+         $$ = $1 ? new VectorType($1, s) : nullptr;
+
+    }*/
     ;
 
 struct_or_union_name

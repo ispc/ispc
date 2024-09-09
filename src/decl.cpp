@@ -281,7 +281,7 @@ DeclSpecs::DeclSpecs(const Type *t, StorageClass sc, int tq) {
     storageClass = sc;
     typeQualifiers = tq;
     soaWidth = 0;
-    vectorSize = 0;
+    vectorSize = std::monostate{};
     attributeList = nullptr;
     if (t != nullptr) {
         if (m->symbolTable->ContainsType(t)) {
@@ -313,14 +313,35 @@ const Type *DeclSpecs::GetBaseType(SourcePos pos) const {
         retType = AtomicType::UniformInt32->GetAsUnboundVariabilityType();
     }
 
-    if (vectorSize > 0) {
+    if (std::holds_alternative<int>(vectorSize) || std::holds_alternative<Symbol *>(vectorSize)) {
         const AtomicType *atomicType = CastType<AtomicType>(retType);
-        if (atomicType == nullptr) {
-            Error(pos, "Only atomic types (int, float, ...) are legal for vector "
-                       "types.");
+        const TemplateTypeParmType *templTypeParam = CastType<TemplateTypeParmType>(retType);
+        // Check if the type is valid for vector types
+        if (atomicType == nullptr && templTypeParam == nullptr) {
+            Error(pos, "Only atomic types (int, float, ...) and template type parameters are legal for vector types.");
             return nullptr;
         }
-        retType = new VectorType(atomicType, vectorSize);
+
+        if (std::holds_alternative<int>(vectorSize)) {
+            // Handle integer vector size
+            int size = std::get<int>(vectorSize);
+            if (size <= 0) {
+                Error(pos, "Illegal to specify vector size of %d.", size);
+                return nullptr;
+            }
+            retType = new VectorType(retType, size);
+        } else if (std::holds_alternative<Symbol *>(vectorSize)) {
+            // Handle symbol vector size
+            Symbol *sym = std::get<Symbol *>(vectorSize);
+            if (sym->GetSymbolKind() != Symbol::SymbolKind::TemplateNonTypeParm) {
+                Error(pos,
+                      "Only atomic types (int, float, ...) and template type parameters are legal for vector types.");
+                return nullptr;
+            }
+            retType = new VectorType(retType, sym);
+        } else {
+            UNREACHABLE();
+        }
     }
 
     retType = lApplyTypeQualifiers(typeQualifiers, retType, pos);
@@ -400,8 +421,13 @@ void DeclSpecs::Print() const {
         attributeList->Print();
     }
 
-    if (vectorSize > 0)
-        printf("<%d>", vectorSize);
+    if (std::holds_alternative<int>(vectorSize)) {
+        printf("<%d>", std::get<int>(vectorSize));
+    } else if (std::holds_alternative<Symbol *>(vectorSize)) {
+        printf("<%s>", std::get<Symbol *>(vectorSize)->name.c_str());
+    } else {
+        UNREACHABLE();
+    }
     printf("]");
 }
 

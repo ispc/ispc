@@ -5320,6 +5320,8 @@ DependentMemberExpr::DependentMemberExpr(Expr *e, const char *id, SourcePos p, S
     Assert(id != nullptr);
 }
 
+const Type *DependentMemberExpr::GetType() const { return AtomicType::Dependent; }
+const Type *DependentMemberExpr::GetLValueType() const { return AtomicType::Dependent; }
 int DependentMemberExpr::getElementNumber() const { UNREACHABLE(); };
 const Type *DependentMemberExpr::getElementType() const { UNREACHABLE(); };
 
@@ -6294,8 +6296,11 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     if (toType->IsVectorType() && toType->IsUniformType() && fromType->IsVectorType() && fromType->IsUniformType()) {
         const VectorType *vToType = CastType<VectorType>(toType);
         const VectorType *vFromType = CastType<VectorType>(fromType);
-        basicToType = vToType->GetElementType()->basicType;
-        basicFromType = vFromType->GetElementType()->basicType;
+        const AtomicType *aToType = CastType<AtomicType>(vToType->GetElementType());
+        const AtomicType *aFromType = CastType<AtomicType>(vFromType->GetElementType());
+        AssertPos(pos, aToType != nullptr && aFromType != nullptr);
+        basicToType = aToType->basicType;
+        basicFromType = aFromType->basicType;
     } else if (toType->IsAtomicType() && fromType->IsAtomicType()) {
         const AtomicType *aToType = CastType<AtomicType>(toType);
         const AtomicType *aFromType = CastType<AtomicType>(fromType);

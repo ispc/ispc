@@ -421,6 +421,9 @@ class DependentMemberExpr : public MemberExpr {
     static inline bool classof(DependentMemberExpr const *) { return true; }
     static inline bool classof(ASTNode const *N) { return N->getValueID() == DependentMemberExprID; }
 
+    const Type *GetType() const;
+    const Type *GetLValueType() const;
+
     int getElementNumber() const;
     const Type *getElementType() const;
 };
