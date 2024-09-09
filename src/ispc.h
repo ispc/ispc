@@ -725,10 +725,9 @@ struct Globals {
 
     /** When \c true, dump AST.
         None - don't dump AST
-        User - dump AST only for user code, but not for stdlib functions
         All - dump AST for all the code
     */
-    enum class ASTDumpKind { None, User, All };
+    enum class ASTDumpKind { None, All };
     ASTDumpKind astDump;
 
     /** When \c true, target ISA will be printed during ispc's execution. */

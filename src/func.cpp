@@ -48,17 +48,6 @@ using namespace ispc;
 ///////////////////////////////////////////////////////////////////////////
 // Function
 
-bool Function::IsStdlibSymbol() const {
-    if (sym == nullptr) {
-        return false;
-    }
-
-    if (sym->pos.name != nullptr && !strcmp(sym->pos.name, "stdlib.ispc")) {
-        return true;
-    }
-    return false;
-}
-
 bool Function::IsInternal() const {
     ispc::StorageClass sc = sym->storageClass;
     bool isInline = false;
@@ -1096,16 +1085,6 @@ void FunctionTemplate::Print(Indent &indent) const {
     }
 
     indent.Done();
-};
-
-bool FunctionTemplate::IsStdlibSymbol() const {
-    if (sym == nullptr) {
-        return false;
-    }
-    if (sym->pos.name != nullptr && !strcmp(sym->pos.name, "stdlib.ispc")) {
-        return true;
-    }
-    return false;
 };
 
 Symbol *FunctionTemplate::LookupInstantiation(const TemplateArgs &tArgs) {

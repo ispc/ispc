@@ -116,7 +116,7 @@ static void lPrintVersion() {
     printf("    [-MT <filename>]\t\t\tWhen used with `-M', changes the target of the rule emitted by dependency "
            "generation\n");
     printf("    [--no-omit-frame-pointer]\t\tDisable frame pointer omission. It may be useful for profiling\n");
-    printf("    [--nostdlib]\t\t\t Don't make the ispc standard library available\n");
+    printf("    [--nostdlib]\t\t\tDon't make the ispc standard library available\n");
     printf("    [--no-pragma-once]\t\t\tDon't use #pragma once in created headers\n");
     printf("    [--nocpp]\t\t\t\tDon't run the C preprocessor\n");
     printf("    [-o <name>/--outfile=<name>]\tOutput filename (may be \"-\" for standard output)\n");
@@ -201,7 +201,7 @@ static void lPrintVersion() {
 [[noreturn]] static void devUsage(int ret) {
     lPrintVersion();
     printf("\nusage (developer options): ispc\n");
-    printf("    [--ast-dump]\t\tDump AST for user code or all the code including stdlib.\n");
+    printf("    [--ast-dump]\t\tDump AST.\n");
     printf("    [--binary-type]\t\t\tPrint binary type (slim or composite).\n");
     printf("    [--debug]\t\t\t\tPrint information useful for debugging ispc\n");
     printf("    [--debug-llvm]\t\t\tEnable LLVM debugging information (dumps to stderr)\n");
@@ -737,16 +737,9 @@ int main(int Argc, char *Argv[]) {
                                         arch_str.c_str());
             }
         } else if (!strcmp(argv[i], "--ast-dump")) {
-            g->astDump = Globals::ASTDumpKind::User;
+            g->astDump = Globals::ASTDumpKind::All;
         } else if (!strncmp(argv[i], "--ast-dump=", 11)) {
-            const char *ast = argv[i] + 11;
-            if (!strcmp(ast, "user"))
-                g->astDump = Globals::ASTDumpKind::User;
-            else if (!strcmp(ast, "all"))
-                g->astDump = Globals::ASTDumpKind::All;
-            else {
-                errorHandler.AddError("Unknown --ast-dump= value \"%s\".", ast);
-            }
+            g->astDump = Globals::ASTDumpKind::All;
         } else if (!strcmp(argv[i], "--binary-type")) {
             printBinaryType();
             exit(0);

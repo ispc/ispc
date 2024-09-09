@@ -32,7 +32,6 @@ class Function {
 
     void Print() const;
     void Print(Indent &indent) const;
-    bool IsStdlibSymbol() const;
 
     /** Returns true of function is static or inline */
     bool IsInternal() const;
@@ -170,7 +169,6 @@ class FunctionTemplate {
 
     void Print() const;
     void Print(Indent &indent) const;
-    bool IsStdlibSymbol() const;
 
     struct InstantiationMap {
         TemplateArgs args;
