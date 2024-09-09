@@ -1369,9 +1369,9 @@ const Type *SequentialType::GetElementType(int index) const { return GetElementT
 ///////////////////////////////////////////////////////////////////////////
 // ArrayType
 
-ArrayType::ArrayType(const Type *c, int a) : SequentialType(ARRAY_TYPE), child(c), numElements(a) {
+ArrayType::ArrayType(const Type *c, int a) : SequentialType(ARRAY_TYPE), child(c), elementCount(a) {
     // 0 -> unsized array.
-    Assert(numElements >= 0);
+    Assert(elementCount.fixedCount >= 0);
     Assert(c->IsVoidType() == false);
 }
 
@@ -1386,7 +1386,7 @@ llvm::ArrayType *ArrayType::LLVMType(llvm::LLVMContext *ctx) const {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return llvm::ArrayType::get(ct, numElements);
+    return llvm::ArrayType::get(ct, elementCount.fixedCount);
 }
 
 Variability ArrayType::GetVariability() const {
@@ -1421,7 +1421,7 @@ const ArrayType *ArrayType::GetAsVaryingType() const {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return new ArrayType(child->GetAsVaryingType(), numElements);
+    return new ArrayType(child->GetAsVaryingType(), elementCount.fixedCount);
 }
 
 const ArrayType *ArrayType::GetAsUniformType() const {
@@ -1429,7 +1429,7 @@ const ArrayType *ArrayType::GetAsUniformType() const {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return new ArrayType(child->GetAsUniformType(), numElements);
+    return new ArrayType(child->GetAsUniformType(), elementCount.fixedCount);
 }
 
 const ArrayType *ArrayType::GetAsUnboundVariabilityType() const {
@@ -1437,7 +1437,7 @@ const ArrayType *ArrayType::GetAsUnboundVariabilityType() const {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return new ArrayType(child->GetAsUnboundVariabilityType(), numElements);
+    return new ArrayType(child->GetAsUnboundVariabilityType(), elementCount.fixedCount);
 }
 
 const ArrayType *ArrayType::GetAsSOAType(int width) const {
@@ -1445,7 +1445,7 @@ const ArrayType *ArrayType::GetAsSOAType(int width) const {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return new ArrayType(child->GetAsSOAType(width), numElements);
+    return new ArrayType(child->GetAsSOAType(width), elementCount.fixedCount);
 }
 
 const ArrayType *ArrayType::ResolveDependence(TemplateInstantiation &templInst) const {
@@ -1458,7 +1458,7 @@ const ArrayType *ArrayType::ResolveDependence(TemplateInstantiation &templInst) 
     if (resType == child) {
         return this;
     }
-    return new ArrayType(resType, numElements);
+    return new ArrayType(resType, elementCount.fixedCount);
 }
 
 const ArrayType *ArrayType::ResolveUnboundVariability(Variability v) const {
@@ -1466,7 +1466,7 @@ const ArrayType *ArrayType::ResolveUnboundVariability(Variability v) const {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return new ArrayType(child->ResolveUnboundVariability(v), numElements);
+    return new ArrayType(child->ResolveUnboundVariability(v), elementCount.fixedCount);
 }
 
 const ArrayType *ArrayType::GetAsUnsignedType() const {
@@ -1474,7 +1474,7 @@ const ArrayType *ArrayType::GetAsUnsignedType() const {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return new ArrayType(child->GetAsUnsignedType(), numElements);
+    return new ArrayType(child->GetAsUnsignedType(), elementCount.fixedCount);
 }
 
 const ArrayType *ArrayType::GetAsSignedType() const {
@@ -1482,7 +1482,7 @@ const ArrayType *ArrayType::GetAsSignedType() const {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return new ArrayType(child->GetAsSignedType(), numElements);
+    return new ArrayType(child->GetAsSignedType(), elementCount.fixedCount);
 }
 
 const ArrayType *ArrayType::GetAsConstType() const {
@@ -1490,7 +1490,7 @@ const ArrayType *ArrayType::GetAsConstType() const {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return new ArrayType(child->GetAsConstType(), numElements);
+    return new ArrayType(child->GetAsConstType(), elementCount.fixedCount);
 }
 
 const ArrayType *ArrayType::GetAsNonConstType() const {
@@ -1498,10 +1498,10 @@ const ArrayType *ArrayType::GetAsNonConstType() const {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return new ArrayType(child->GetAsNonConstType(), numElements);
+    return new ArrayType(child->GetAsNonConstType(), elementCount.fixedCount);
 }
 
-int ArrayType::GetElementCount() const { return numElements; }
+int ArrayType::GetElementCount() const { return elementCount.fixedCount; }
 
 const Type *ArrayType::GetElementType() const { return child; }
 
@@ -1519,8 +1519,8 @@ std::string ArrayType::GetString() const {
     // dimensions
     while (at) {
         char buf[16];
-        if (at->numElements > 0)
-            snprintf(buf, sizeof(buf), "%d", at->numElements);
+        if (at->elementCount.fixedCount > 0)
+            snprintf(buf, sizeof(buf), "%d", at->elementCount.fixedCount);
         else
             buf[0] = '\0';
         s += std::string("[") + std::string(buf) + std::string("]");
@@ -1536,8 +1536,8 @@ std::string ArrayType::Mangle() const {
     }
     std::string s = child->Mangle();
     char buf[16];
-    if (numElements > 0)
-        snprintf(buf, sizeof(buf), "%d", numElements);
+    if (elementCount.fixedCount > 0)
+        snprintf(buf, sizeof(buf), "%d", elementCount.fixedCount);
     else
         buf[0] = '\0';
     //    return s + "[" + buf + "]";
@@ -1561,8 +1561,8 @@ std::string ArrayType::GetDeclaration(const std::string &name, DeclarationSyntax
     Assert(at);
     while (at) {
         char buf[16];
-        if (at->numElements > 0)
-            snprintf(buf, sizeof(buf), "%d", at->numElements);
+        if (at->elementCount.fixedCount > 0)
+            snprintf(buf, sizeof(buf), "%d", at->elementCount.fixedCount);
         else
             buf[0] = '\0';
         s += std::string("[") + std::string(buf) + std::string("]");
@@ -1587,9 +1587,9 @@ std::string ArrayType::GetDeclaration(const std::string &name, DeclarationSyntax
 int ArrayType::TotalElementCount() const {
     const ArrayType *ct = CastType<ArrayType>(child);
     if (ct != nullptr)
-        return numElements * ct->TotalElementCount();
+        return elementCount.fixedCount * ct->TotalElementCount();
     else
-        return numElements;
+        return elementCount.fixedCount;
 }
 
 llvm::DIType *ArrayType::GetDIType(llvm::DIScope *scope) const {
@@ -1598,11 +1598,11 @@ llvm::DIType *ArrayType::GetDIType(llvm::DIScope *scope) const {
         return nullptr;
     }
     llvm::DIType *eltType = child->GetDIType(scope);
-    return lCreateDIArray(eltType, numElements);
+    return lCreateDIArray(eltType, elementCount.fixedCount);
 }
 
 ArrayType *ArrayType::GetSizedArray(int sz) const {
-    Assert(numElements == 0);
+    Assert(elementCount.fixedCount == 0);
     return new ArrayType(child, sz);
 }
 
@@ -1662,11 +1662,18 @@ const Type *ArrayType::SizeUnsizedArrays(const Type *type, Expr *initExpr) {
     return new ArrayType(SizeUnsizedArrays(at->GetElementType(), nextList), at->GetElementCount());
 }
 
+int ArrayType::ResolveElementCount(TemplateInstantiation &templInst) const {
+    if (elementCount.fixedCount > 0)
+        return elementCount.fixedCount;
+
+    return 0;
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // VectorType
 
-VectorType::VectorType(const AtomicType *b, int a) : SequentialType(VECTOR_TYPE), base(b), numElements(a) {
-    Assert(numElements > 0);
+VectorType::VectorType(const AtomicType *b, int a) : SequentialType(VECTOR_TYPE), base(b), elementCount(a) {
+    Assert(elementCount.fixedCount > 0);
     Assert(base != nullptr);
 }
 
@@ -1686,22 +1693,26 @@ bool VectorType::IsConstType() const { return base->IsConstType(); }
 
 const Type *VectorType::GetBaseType() const { return base; }
 
-const VectorType *VectorType::GetAsVaryingType() const { return new VectorType(base->GetAsVaryingType(), numElements); }
+const VectorType *VectorType::GetAsVaryingType() const {
+    return new VectorType(base->GetAsVaryingType(), elementCount.fixedCount);
+}
 
-const VectorType *VectorType::GetAsUniformType() const { return new VectorType(base->GetAsUniformType(), numElements); }
+const VectorType *VectorType::GetAsUniformType() const {
+    return new VectorType(base->GetAsUniformType(), elementCount.fixedCount);
+}
 
 const VectorType *VectorType::GetAsUnboundVariabilityType() const {
-    return new VectorType(base->GetAsUnboundVariabilityType(), numElements);
+    return new VectorType(base->GetAsUnboundVariabilityType(), elementCount.fixedCount);
 }
 
 const VectorType *VectorType::GetAsSOAType(int width) const {
-    return new VectorType(base->GetAsSOAType(width), numElements);
+    return new VectorType(base->GetAsSOAType(width), elementCount.fixedCount);
 }
 
 const VectorType *VectorType::ResolveDependence(TemplateInstantiation &templInst) const { return this; }
 
 const VectorType *VectorType::ResolveUnboundVariability(Variability v) const {
-    return new VectorType(base->ResolveUnboundVariability(v), numElements);
+    return new VectorType(base->ResolveUnboundVariability(v), elementCount.fixedCount);
 }
 
 const VectorType *VectorType::GetAsUnsignedType() const {
@@ -1709,7 +1720,7 @@ const VectorType *VectorType::GetAsUnsignedType() const {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return new VectorType(base->GetAsUnsignedType(), numElements);
+    return new VectorType(base->GetAsUnsignedType(), elementCount.fixedCount);
 }
 
 const VectorType *VectorType::GetAsSignedType() const {
@@ -1717,37 +1728,39 @@ const VectorType *VectorType::GetAsSignedType() const {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return new VectorType(base->GetAsSignedType(), numElements);
+    return new VectorType(base->GetAsSignedType(), elementCount.fixedCount);
 }
 
-const VectorType *VectorType::GetAsConstType() const { return new VectorType(base->GetAsConstType(), numElements); }
+const VectorType *VectorType::GetAsConstType() const {
+    return new VectorType(base->GetAsConstType(), elementCount.fixedCount);
+}
 
 const VectorType *VectorType::GetAsNonConstType() const {
-    return new VectorType(base->GetAsNonConstType(), numElements);
+    return new VectorType(base->GetAsNonConstType(), elementCount.fixedCount);
 }
 
 std::string VectorType::GetString() const {
     std::string s = base->GetString();
     char buf[16];
-    snprintf(buf, sizeof(buf), "<%d>", numElements);
+    snprintf(buf, sizeof(buf), "<%d>", elementCount.fixedCount);
     return s + std::string(buf);
 }
 
 std::string VectorType::Mangle() const {
     std::string s = base->Mangle();
     char buf[16];
-    snprintf(buf, sizeof(buf), "_3C_%d_3E_", numElements); // "<%d>"
+    snprintf(buf, sizeof(buf), "_3C_%d_3E_", elementCount.fixedCount); // "<%d>"
     return s + std::string(buf);
 }
 
 std::string VectorType::GetDeclaration(const std::string &name, DeclarationSyntax syntax) const {
     std::string s = base->GetDeclaration("", syntax);
     char buf[16];
-    snprintf(buf, sizeof(buf), "%d", numElements);
+    snprintf(buf, sizeof(buf), "%d", elementCount.fixedCount);
     return s + std::string(buf) + "  " + name;
 }
 
-int VectorType::GetElementCount() const { return numElements; }
+int VectorType::GetElementCount() const { return elementCount.fixedCount; }
 
 const AtomicType *VectorType::GetElementType() const { return base; }
 
@@ -1798,14 +1811,14 @@ llvm::Type *VectorType::LLVMType(llvm::LLVMContext *ctx) const { return lGetVect
 llvm::DIType *VectorType::GetDIType(llvm::DIScope *scope) const {
     llvm::DIType *eltType = base->GetDIType(scope);
 
-    llvm::Metadata *sub = m->diBuilder->getOrCreateSubrange(0, numElements);
+    llvm::Metadata *sub = m->diBuilder->getOrCreateSubrange(0, elementCount.fixedCount);
 
     // vectors of varying types are already naturally aligned to the
     // machine's vector width, but arrays of uniform types need to be
     // explicitly aligned to the machines natural vector alignment.
 
     llvm::DINodeArray subArray = m->diBuilder->getOrCreateArray(sub);
-    uint64_t sizeBits = eltType->getSizeInBits() * numElements;
+    uint64_t sizeBits = eltType->getSizeInBits() * elementCount.fixedCount;
     uint64_t align = eltType->getAlignInBits();
 
     if (IsUniformType()) {
@@ -1816,7 +1829,7 @@ llvm::DIType *VectorType::GetDIType(llvm::DIScope *scope) const {
     if (IsUniformType() || IsVaryingType())
         return m->diBuilder->createVectorType(sizeBits, align, eltType, subArray);
     else if (IsSOAType()) {
-        ArrayType at(base, numElements);
+        ArrayType at(base, elementCount.fixedCount);
         return at.GetDIType(scope);
     } else {
         FATAL("Unexpected variability in VectorType::GetDIType()");
@@ -1826,7 +1839,7 @@ llvm::DIType *VectorType::GetDIType(llvm::DIScope *scope) const {
 
 int VectorType::getVectorMemoryCount() const {
     if (base->IsVaryingType())
-        return numElements;
+        return elementCount.fixedCount;
     else if (base->IsUniformType()) {
         // Round up the element count to power of 2 bits in size but not less then 128 bit in total vector size
         // where one element size is data type width in bits.
@@ -1837,7 +1850,7 @@ int VectorType::getVectorMemoryCount() const {
         // registers are used. It generally leads to better performance. This strategy also matches OpenCL short
         // vectors.
         // 3. Using data type width of the target to determine element size makes optimization trade off.
-        int nextPow2 = llvm::NextPowerOf2(numElements - 1);
+        int nextPow2 = llvm::NextPowerOf2(elementCount.fixedCount - 1);
         return (nextPow2 * g->target->getDataTypeWidth() < 128) ? (128 / g->target->getDataTypeWidth()) : nextPow2;
     } else if (base->IsSOAType()) {
         FATAL("VectorType SOA getVectorMemoryCount");
@@ -1848,6 +1861,12 @@ int VectorType::getVectorMemoryCount() const {
     }
 }
 
+int VectorType::ResolveElementCount(TemplateInstantiation &templInst) const {
+    if (elementCount.fixedCount > 0)
+        return elementCount.fixedCount;
+
+    return 0;
+}
 ///////////////////////////////////////////////////////////////////////////
 // StructType
 

@@ -575,6 +575,15 @@ class CollectionType : public Type {
  */
 class SequentialType : public CollectionType {
   public:
+    /** Number of elements in the vector/array or a symbol representing it */
+    struct ElementCount {
+        int fixedCount;
+        Symbol *symbolCount;
+        ElementCount(int count) : fixedCount(count), symbolCount(nullptr) {}
+        ElementCount(Symbol *sym) : fixedCount(0), symbolCount(sym) {}
+        ElementCount(int count, Symbol *sym) : fixedCount(count), symbolCount(sym) {}
+    };
+
     /** Returns the Type of the elements that the sequence stores; for
         SequentialTypes, all elements have the same type . */
     virtual const Type *GetElementType() const = 0;
@@ -586,8 +595,14 @@ class SequentialType : public CollectionType {
      */
     const Type *GetElementType(int index) const;
 
+    /* Returns true if the number of elements in the collection is dependent on a template parameter. */
+    virtual bool IsCountDependent() const = 0;
+
   protected:
     SequentialType(TypeId id) : CollectionType(id) {}
+
+    /** Resolves the total number of elements in the collection in template instantiation. */
+    virtual int ResolveElementCount(TemplateInstantiation &templInst) const = 0;
 };
 
 /** @brief One-dimensional array type.
@@ -620,6 +635,8 @@ class ArrayType : public SequentialType {
     bool IsUnsignedType() const;
     bool IsSignedType() const;
     bool IsConstType() const;
+    /* Returns true if the number of elements in the array is dependent on a template parameter. */
+    virtual bool IsCountDependent() const { return elementCount.symbolCount != nullptr; }
 
     const Type *GetBaseType() const;
     const ArrayType *GetAsVaryingType() const;
@@ -664,7 +681,9 @@ class ArrayType : public SequentialType {
     /** Type of the elements of the array. */
     const Type *const child;
     /** Number of elements in the array. */
-    const int numElements;
+    ElementCount elementCount;
+    /** Resolves the total number of elements in the array in template instantiation. */
+    virtual int ResolveElementCount(TemplateInstantiation &templInst) const;
 };
 
 /** @brief A (short) vector of atomic types.
@@ -690,6 +709,8 @@ class VectorType : public SequentialType {
     bool IsUnsignedType() const;
     bool IsSignedType() const;
     bool IsConstType() const;
+    /* Returns true if the number of elements in the vector is dependent on a template parameter. */
+    virtual bool IsCountDependent() const { return elementCount.symbolCount != nullptr; }
 
     const Type *GetBaseType() const;
     const VectorType *GetAsVaryingType() const;
@@ -714,13 +735,16 @@ class VectorType : public SequentialType {
     llvm::DIType *GetDIType(llvm::DIScope *scope) const;
 
     int GetElementCount() const;
+
     const AtomicType *GetElementType() const;
 
   private:
     /** Base type that the vector holds elements of */
     const AtomicType *const base;
     /** Number of elements in the vector */
-    const int numElements;
+    ElementCount elementCount;
+    /** Resolves the total number of elements in the vector in template instantiation. */
+    virtual int ResolveElementCount(TemplateInstantiation &templInst) const;
 
   public:
     /** Returns the number of elements stored in memory for the vector.
