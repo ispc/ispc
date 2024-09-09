@@ -161,32 +161,19 @@ void AST::Print(Globals::ASTDumpKind printKind) const {
     if (printKind == Globals::ASTDumpKind::All) {
         funcTemplsToPrint = functionTemplates.size();
         funcsToPrint = functions.size();
-    } else if (printKind == Globals::ASTDumpKind::User) {
-        for (unsigned int i = 0; i < functionTemplates.size(); ++i) {
-            if (!functionTemplates[i]->IsStdlibSymbol()) {
-                funcTemplsToPrint++;
-            }
-        }
-        for (unsigned int i = 0; i < functions.size(); ++i) {
-            if (!functions[i]->IsStdlibSymbol()) {
-                funcsToPrint++;
-            }
-        }
     }
 
     indent.pushList(funcTemplsToPrint + funcsToPrint);
     // Function templates
     for (unsigned int i = 0; i < functionTemplates.size(); ++i) {
-        if (printKind == Globals::ASTDumpKind::All ||
-            (printKind == Globals::ASTDumpKind::User && !functionTemplates[i]->IsStdlibSymbol())) {
+        if (printKind == Globals::ASTDumpKind::All) {
             functionTemplates[i]->Print(indent);
         }
     }
 
     // Functions
     for (unsigned int i = 0; i < functions.size(); ++i) {
-        if (printKind == Globals::ASTDumpKind::All ||
-            (printKind == Globals::ASTDumpKind::User && !functions[i]->IsStdlibSymbol())) {
+        if (printKind == Globals::ASTDumpKind::All) {
             functions[i]->Print(indent);
         }
     }
