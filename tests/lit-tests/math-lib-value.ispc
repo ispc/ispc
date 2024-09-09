@@ -1,7 +1,7 @@
 // This test checks that the math library is correctly set based on the user
 // provided command line option --math-lib.
 // __math_lib value is defined in the core.isph file without the initialization
-// when ISPC compiles stdlib bitcode giles during ISPC build. Later, this value
+// when ISPC compiles stdlib bitcode files during ISPC build. Later, this value
 // is initialized with the value provided by the user via macro definition in
 // ISPC_MATH_LIB_VAL defined in module.cpp file (where preprocessor is
 // initialized). This value is then used in the math functions to call the
