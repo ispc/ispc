@@ -1,18 +1,12 @@
 // -*- mode: c++ -*-
-/*
-  Copyright (c) 2024, Intel Corporation
+// Copyright (c) 2024, Intel Corporation
+// SPDX-License-Identifier: BSD-3-Clause
 
-  SPDX-License-Identifier: BSD-3-Clause
-*/
+// @file svml.isph
+// @brief Interface between ISPC standard library and ISPC builtin functions
+// that call Intel SVML library functions.
 
-/** @file svml.isph
-
-    @brief Interface between ISPC standard library and ISPC builtin functions
-    that call Intel SVML library functions.
-*/
-
-#ifndef ISPC_SVML_ISPH
-#define ISPC_SVML_ISPH
+#pragma once
 
 #define READNONE __attribute__((memory("none")))
 #define EXT __attribute__((unmangled)) __attribute__((cdecl)) unmasked
@@ -48,5 +42,3 @@ EXT READNONE inline varying double __svml_invsqrtd(varying double);
 
 #undef READNONE
 #undef EXT
-
-#endif // ISPC_SVML_ISPH
