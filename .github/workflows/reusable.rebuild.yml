@@ -101,6 +101,7 @@ jobs:
         rm -rf cache.local
         tar xvf result.tar usr/local/src/llvm
         mv usr/local/src/llvm/bin-${{ inputs.version }} .
+        export XZ_DEFAULTS="-T0" # run zx in all threads
         tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
 
     - name: Upload package
@@ -134,6 +135,7 @@ jobs:
         rm -rf cache.local
         tar xvf result.tar usr/local/src/llvm
         mv usr/local/src/llvm/bin-${{ inputs.version }} .
+        export XZ_DEFAULTS="-T0" # run zx in all threads
         tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
 
     - name: Upload package
@@ -169,6 +171,7 @@ jobs:
         rm -rf cache.local
         tar xvf result.tar usr/local/src/llvm
         mv usr/local/src/llvm/bin-${{ inputs.version }} .
+        export XZ_DEFAULTS="-T0" # run zx in all threads
         tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
         rm -rf result.tar usr bin-${{ inputs.version }}
 
@@ -204,6 +207,7 @@ jobs:
         cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
         tar xvf result.tar usr/local/src/llvm
         mv usr/local/src/llvm/bin-${{ inputs.version }} .
+        export XZ_DEFAULTS="-T0" # run zx in all threads
         tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release-x86${{ inputs.lto == 'ON' && '-lto' || '' }}.arm.wasm.tar.xz bin-${{ inputs.version }}
         rm -rf result.tar usr bin-${{ inputs.version }}
 
