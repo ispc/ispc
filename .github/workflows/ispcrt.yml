@@ -1,0 +1,69 @@
+# Copyright 2024, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: ISPCRT
+
+permissions: read-all
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  SDE_MIRROR_ID: 813591
+  SDE_TAR_NAME: sde-external-9.33.0-2024-01-07
+  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
+  LLVM_REPO: https://github.com/ispc/ispc.dependencies
+  LLVM_VERSION: "17.0"
+  LLVM_TAR: llvm-17.0.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+  ISPC_OPAQUE_PTR_MODE: "ON"
+
+jobs:
+  # Build ISPC Runtime separately from ISPC with support of different task systems
+  build-linux-ispcrt:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        task_system: ['OpenMP', 'TBB', 'Threads', 'notasking']
+
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Install dependencies
+        run: |
+          .github/workflows/scripts/install-build-deps.sh
+
+      - name: Build L0 loader
+        run: |
+          cmake superbuild \
+              -B build-l0 \
+              --preset os \
+              -DPREBUILT_STAGE2_PATH=${GITHUB_WORKSPACE}/bin-${LLVM_VERSION} \
+              -DBUILD_L0_LOADER_ONLY=ON \
+              -DCMAKE_INSTALL_PREFIX=install
+          cmake --build build-l0 -j`nproc`
+
+      - name: Build ISPCRT
+        run: |
+          TASKING_FLAG="-DISPCRT_BUILD_TASK_MODEL=${{ matrix.task_system }}"
+          if [ "${{ matrix.task_system }}" == "notasking" ]; then
+            TASKING_FLAG="-DISPCRT_BUILD_TASKING=OFF"
+          fi
+          cmake ispcrt \
+              -B build-ispcrt \
+              -DXE_ENABLED=ON \
+              -DLEVEL_ZERO_ROOT=install \
+              -DLEVEL_ZERO_INCLUDE_DIR=install/include/ \
+              ${TASKING_FLAG} \
+              -DCMAKE_INSTALL_PREFIX=install
+          cmake --build build-ispcrt -j`nproc`
+          cmake --install build-ispcrt
+          cmake --install build-ispcrt --component ispcrt-tests
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+        with:
+          name: linux-ispcrt-${{ matrix.task_system }}
+          path: |
+            install
