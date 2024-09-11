@@ -1517,6 +1517,10 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
 
     Assert(module);
 
+    if (g->functionSections) {
+        module->addModuleFlag(llvm::Module::Warning, "function-sections", 1);
+    }
+
     // In LLVM_3_4 after r195494 and r195504 revisions we should pass
     // "Debug Info Version" constant to the module. LLVM will ignore
     // our Debug Info metadata without it.

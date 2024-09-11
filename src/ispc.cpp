@@ -1716,6 +1716,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         if (g->opt.disableFMA == false)
             options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
 
+        if (g->functionSections)
+            options.FunctionSections = true;
+
         // For Xe target we do not need to create target/targetMachine
         if (!isXeTarget()) {
             m_targetMachine =
@@ -2320,6 +2323,7 @@ Globals::Globals() {
     includeStdlib = true;
     runCPP = true;
     onlyCPP = false;
+    functionSections = false;
     ignoreCPPErrors = false;
     debugPrint = false;
     debugPM = false;

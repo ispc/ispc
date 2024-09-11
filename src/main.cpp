@@ -105,6 +105,7 @@ static void lPrintVersion() {
     printf("        fast\t\t\t\tUse high-performance but lower-accuracy math functions\n");
     printf("        svml\t\t\t\tUse the Intel(r) SVML math libraries\n");
     printf("        system\t\t\t\tUse the system's math library (*may be quite slow*)\n");
+    printf("    [-f[no-]function-sections]\t\tPlace each function in its own section\n");
     printf("    [--mcmodel=<value>]\t\t\tDefine the code model to use for code generation\n");
     printf("        small\t\t\t\tThe program and its symbols must be linked in the lower 2GB of the address space "
            "(default)\n");
@@ -982,6 +983,10 @@ int main(int Argc, char *Argv[]) {
             g->includeStdlib = false;
         else if (!strcmp(argv[i], "--nocpp"))
             g->runCPP = false;
+        else if (!strcmp(argv[i], "-ffunction-sections"))
+            g->functionSections = true;
+        else if (!strcmp(argv[i], "-fno-function-sections"))
+            g->functionSections = false;
         else if (!strncmp(argv[i], "--mcmodel=", 10)) {
             const char *value = argv[i] + 10;
             if (!strcmp(value, "small")) {

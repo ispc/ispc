@@ -702,6 +702,10 @@ struct Globals {
         program source before compiling it.  (Default is true.) */
     bool runCPP;
 
+    /** Indicates whether the compiler places each function in its own
+        section. */
+    bool functionSections;
+
     /** When \c true, only runs the C pre-processor. (Default is false.) */
     bool onlyCPP;
 
