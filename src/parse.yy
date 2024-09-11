@@ -1579,7 +1579,7 @@ enumerator_list
 enumerator
     : enum_identifier
       {
-          $$ = new Symbol($1, @1);
+          $$ = new Symbol($1, @1, Symbol::SymbolKind::Enumerator);
           // allocated by strdup in enum_identifier
           free((char*)$1);
       }
@@ -1588,7 +1588,7 @@ enumerator
           int value;
           if ($1 != nullptr && $3 != nullptr &&
               lGetConstantInt($3, &value, @3, "Enumerator value")) {
-              Symbol *sym = new Symbol($1, @1);
+              Symbol *sym = new Symbol($1, @1, Symbol::SymbolKind::Enumerator);
               sym->constValue = new ConstExpr(AtomicType::UniformUInt32->GetAsConstType(),
                                               (uint32_t)value, @3);
               $$ = sym;
@@ -2152,7 +2152,7 @@ foreach_tiled_scope
 foreach_identifier
     : TOKEN_IDENTIFIER
     {
-        $$ = new Symbol(yytext, @1, AtomicType::VaryingInt32->GetAsConstType());
+        $$ = new Symbol(yytext, @1, Symbol::SymbolKind::Variable, AtomicType::VaryingInt32->GetAsConstType());
         lCleanUpString($1);
     }
     ;
@@ -2164,7 +2164,7 @@ foreach_active_scope
 foreach_active_identifier
     : TOKEN_IDENTIFIER
     {
-        $$ = new Symbol(yytext, @1, AtomicType::UniformInt64->GetAsConstType());
+        $$ = new Symbol(yytext, @1, Symbol::SymbolKind::Variable, AtomicType::UniformInt64->GetAsConstType());
         lCleanUpString($1);
     }
     ;
@@ -2345,7 +2345,7 @@ iteration_statement
              (expr = TypeCheck(expr)) != nullptr &&
              (type = expr->GetType()) != nullptr) {
              const Type *iterType = type->GetAsUniformType()->GetAsConstType();
-             Symbol *sym = new Symbol($3, @3, iterType);
+             Symbol *sym = new Symbol($3, @3, Symbol::SymbolKind::Variable, iterType);
              m->symbolTable->AddVariable(sym);
          }
      }
@@ -2526,12 +2526,12 @@ template_int_constant_type
 template_int_parameter
     : template_int_constant_type TOKEN_IDENTIFIER
       {
-          $$ = new Symbol(*$<stringVal>2, Union(@1, @2), $1);
+          $$ = new Symbol(*$<stringVal>2, Union(@1, @2), Symbol::SymbolKind::TemplateNonTypeParm, $1);
           lCleanUpString($2);
       }
       | template_int_constant_type TOKEN_IDENTIFIER '=' int_constant
       {
-          $$ = new Symbol(*$<stringVal>2, Union(@1, @2), $1);
+          $$ = new Symbol(*$<stringVal>2, Union(@1, @2), Symbol::SymbolKind::TemplateNonTypeParm, $1);
           lCleanUpString($2);
           // TODO: implement
           Error(@4, "Default values for template non-type parameters are not yet supported.");
@@ -2546,7 +2546,7 @@ template_enum_parameter
           if (enumType == nullptr) {
             Error(@1, "Only enum types and integral types are allowed as non-type template parameters.");
           }
-          $$ = new Symbol(*$<stringVal>2, Union(@1, @2), enumType->GetAsConstType()->GetAsUniformType());
+          $$ = new Symbol(*$<stringVal>2, Union(@1, @2), Symbol::SymbolKind::TemplateNonTypeParm, enumType->GetAsConstType()->GetAsUniformType());
           lCleanUpString($1);
           lCleanUpString($2);
       }
@@ -3176,7 +3176,7 @@ lAddFunctionParams(Declarator *decl) {
         if (declarator == nullptr)
             AssertPos(decl->pos, m->errorCount > 0);
         else {
-            Symbol *sym = new Symbol(declarator->name, declarator->pos,
+            Symbol *sym = new Symbol(declarator->name, declarator->pos, Symbol::SymbolKind::FunctionParm, 
                                      declarator->type, declarator->storageClass);
 
             AttributeList *AL = declarator->attributeList;
@@ -3223,7 +3223,7 @@ static void lAddMaskToSymbolTable(SourcePos pos) {
     }
 
     t = t->GetAsConstType();
-    Symbol *maskSymbol = new Symbol("__mask", pos, t);
+    Symbol *maskSymbol = new Symbol("__mask", pos, Symbol::SymbolKind::Default, t);
     m->symbolTable->AddVariable(maskSymbol);
 }
 
@@ -3233,31 +3233,31 @@ static void lAddMaskToSymbolTable(SourcePos pos) {
 static void lAddThreadIndexCountToSymbolTable(SourcePos pos) {
     const Type *type = AtomicType::UniformUInt32->GetAsConstType();
 
-    Symbol *threadIndexSym = new Symbol("threadIndex", pos, type);
+    Symbol *threadIndexSym = new Symbol("threadIndex", pos, Symbol::SymbolKind::Default, type);
     m->symbolTable->AddVariable(threadIndexSym);
 
-    Symbol *threadCountSym = new Symbol("threadCount", pos, type);
+    Symbol *threadCountSym = new Symbol("threadCount", pos, Symbol::SymbolKind::Default, type);
     m->symbolTable->AddVariable(threadCountSym);
 
-    Symbol *taskIndexSym = new Symbol("taskIndex", pos, type);
+    Symbol *taskIndexSym = new Symbol("taskIndex", pos, Symbol::SymbolKind::Default, type);
     m->symbolTable->AddVariable(taskIndexSym);
 
-    Symbol *taskCountSym = new Symbol("taskCount", pos, type);
+    Symbol *taskCountSym = new Symbol("taskCount", pos, Symbol::SymbolKind::Default, type);
     m->symbolTable->AddVariable(taskCountSym);
 
-    Symbol *taskIndexSym0 = new Symbol("taskIndex0", pos, type);
+    Symbol *taskIndexSym0 = new Symbol("taskIndex0", pos, Symbol::SymbolKind::Default, type);
     m->symbolTable->AddVariable(taskIndexSym0);
-    Symbol *taskIndexSym1 = new Symbol("taskIndex1", pos, type);
+    Symbol *taskIndexSym1 = new Symbol("taskIndex1", pos, Symbol::SymbolKind::Default, type);
     m->symbolTable->AddVariable(taskIndexSym1);
-    Symbol *taskIndexSym2 = new Symbol("taskIndex2", pos, type);
+    Symbol *taskIndexSym2 = new Symbol("taskIndex2", pos, Symbol::SymbolKind::Default, type);
     m->symbolTable->AddVariable(taskIndexSym2);
 
 
-    Symbol *taskCountSym0 = new Symbol("taskCount0", pos, type);
+    Symbol *taskCountSym0 = new Symbol("taskCount0", pos, Symbol::SymbolKind::Default, type);
     m->symbolTable->AddVariable(taskCountSym0);
-    Symbol *taskCountSym1 = new Symbol("taskCount1", pos, type);
+    Symbol *taskCountSym1 = new Symbol("taskCount1", pos, Symbol::SymbolKind::Default, type);
     m->symbolTable->AddVariable(taskCountSym1);
-    Symbol *taskCountSym2 = new Symbol("taskCount2", pos, type);
+    Symbol *taskCountSym2 = new Symbol("taskCount2", pos, Symbol::SymbolKind::Default, type);
     m->symbolTable->AddVariable(taskCountSym2);
 }
 

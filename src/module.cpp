@@ -799,7 +799,7 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
         // previous llvm::GlobalVariable
         oldGV = gv;
     } else {
-        sym = new Symbol(name, pos, type, storageClass);
+        sym = new Symbol(name, pos, Symbol::SymbolKind::Variable, type, storageClass);
         symbolTable->AddVariable(sym);
     }
     sym->constValue = constValue;
@@ -1250,7 +1250,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
 
     // Finally, we know all is good and we can add the function to the
     // symbol table
-    Symbol *funSym = new Symbol(name, pos, functionType, storageClass);
+    Symbol *funSym = new Symbol(name, pos, Symbol::SymbolKind::Function, functionType, storageClass);
     funSym->function = function;
     bool ok = symbolTable->AddFunction(funSym);
     Assert(ok);

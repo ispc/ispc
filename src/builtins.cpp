@@ -177,7 +177,7 @@ Symbol *ispc::CreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTable
     }
     FunctionType *funcType = new FunctionType(returnType, argTypes, noPos);
     Debug(noPos, "Created Intrinsic symbol \"%s\" [%s]\n", name.c_str(), funcType->GetString().c_str());
-    Symbol *sym = new Symbol(name, noPos, funcType);
+    Symbol *sym = new Symbol(name, noPos, Symbol::SymbolKind::Function, funcType);
     sym->function = func;
     symbolTable->AddIntrinsics(sym);
     return sym;

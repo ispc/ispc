@@ -887,7 +887,8 @@ std::vector<VariableDeclaration> Declaration::GetVariableDeclarations() const {
             if (!decl->type->IsDependentType()) {
                 decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
             }
-            Symbol *sym = new Symbol(decl->name, decl->pos, decl->type, decl->storageClass);
+            Symbol *sym =
+                new Symbol(decl->name, decl->pos, Symbol::SymbolKind::Variable, decl->type, decl->storageClass);
 
             AttributeList *AL = decl->attributeList;
             if (AL) {
