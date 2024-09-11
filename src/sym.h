@@ -38,9 +38,22 @@ class ConstExpr;
 
 class Symbol : public Traceable {
   public:
+    enum class SymbolKind {
+        Default,
+        Enumerator,
+        Function,
+        FunctionParm,
+        TemplateNonTypeParm,
+        TemplateTypeParm,
+        TemplateInstantiation,
+        TemplateSymbol,
+        Variable
+        // ... other symbol types ...
+    };
     /** The Symbol constructor takes the name of the symbol, its
         position in a source file, and its type (if known). */
-    Symbol(const std::string &name, SourcePos pos, const Type *t = nullptr, StorageClass sc = SC_NONE);
+    Symbol(const std::string &name, SourcePos pos, SymbolKind st = SymbolKind::Default, const Type *t = nullptr,
+           StorageClass sc = SC_NONE);
 
     SourcePos pos;            /*!< Source file position where the symbol was defined */
     std::string name;         /*!< Symbol's name */
@@ -80,6 +93,11 @@ class Symbol : public Traceable {
     /*!< For symbols that are parameters to functions or are
          variables declared inside functions, this gives the
          function they're in. */
+    /* */
+    SymbolKind GetSymbolKind() const { return kind; }
+
+  private:
+    SymbolKind kind;
 };
 
 /**

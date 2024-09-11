@@ -24,9 +24,9 @@ using namespace ispc;
 ///////////////////////////////////////////////////////////////////////////
 // Symbol
 
-Symbol::Symbol(const std::string &n, SourcePos p, const Type *t, StorageClass sc)
+Symbol::Symbol(const std::string &n, SourcePos p, SymbolKind st, const Type *t, StorageClass sc)
     : pos(p), name(n), storageInfo(nullptr), function(nullptr), exportedFunction(nullptr), type(t), constValue(nullptr),
-      storageClass(sc), varyingCFDepth(0), parentFunction(nullptr) {}
+      storageClass(sc), varyingCFDepth(0), parentFunction(nullptr), kind(st) {}
 
 ///////////////////////////////////////////////////////////////////////////
 // TemplateSymbol
