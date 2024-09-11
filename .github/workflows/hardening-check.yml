@@ -1,0 +1,76 @@
+## Copyright 2024 Intel Corporation
+## SPDX-License-Identifier: BSD-3-Clause
+
+name: Hardening Checks (trunk)
+
+permissions: read-all
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run every day at 22:00 UTC
+    - cron: '0 22 * * *'
+
+env:
+  ZIP_URL: https://ci.appveyor.com/api/projects/ispc/ispc/artifacts/build%2Fispc-trunk-windows.zip?job=Environment%3A%20APPVEYOR_BUILD_WORKER_IMAGE%3DVisual%20Studio%202019%2C%20LLVM_VERSION%3Dlatest
+  TAR_URL: https://ci.appveyor.com/api/projects/ispc/ispc/artifacts/build%2Fispc-trunk-linux.tar.gz?job=Environment%3A%20APPVEYOR_BUILD_WORKER_IMAGE%3DUbuntu2204%2C%20LLVM_VERSION%3Dlatest
+
+jobs:
+  hardening_check:
+    runs-on: ubuntu-latest
+    # Disabling this workflow for non ispc/ispc repo to reduce the traffic to artifacts downloads.
+    if: github.repository == 'ispc/ispc'
+
+    steps:
+    - name: Install hardening-check script
+      run: |
+        sudo apt -y update
+        sudo apt install -y devscripts
+
+    - name: Download and check Linux oneAPI artifacts
+      run: |
+        echo "Download artifact $tar_url" >> $GITHUB_STEP_SUMMARY
+        wget --quiet -O ispc.tar.gz ${{ env.TAR_URL }}
+        tar xf ispc.tar.gz
+        hardening-check ./ispc*/bin/ispc | tee -a ./hardening-check-${{ inputs.release_tag }}.txt
+        hardening-check ./ispc*/lib64/libispcrt.so | tee -a ./hardening-check-${{ inputs.release_tag }}.txt
+        hardening-check ./ispc*/lib64/libispcrt_device_gpu.so | tee -a ./hardening-check-${{ inputs.release_tag }}.txt
+        hardening-check ./ispc*/lib64/libispcrt_device_cpu.so | tee -a ./hardening-check-${{ inputs.release_tag }}.txt
+
+    - uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      with:
+        name: hardening_check
+        path: |
+          hardening-check-${{ inputs.release_tag }}.txt
+
+  winchecksec:
+    runs-on: windows-2019
+
+    env:
+      WINCHECKSEC_URL: https://github.com/trailofbits/winchecksec/releases/download/v3.1.0/windows.x64.Release.zip
+
+    steps:
+    - name: Install winchecksec
+      run: |
+        Install-ChocoPackage wget
+        wget -q $env:WINCHECKSEC_URL
+        unzip windows.x64.Release.zip
+        echo "$pwd\build\Release" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+    - name: Download and check Windows artifacts
+      run: |
+        echo "Download artifact %ZIP_URL%" >> %GITHUB_STEP_SUMMARY%
+        wget -q -O archive.zip $env:ZIP_URL
+        7z.exe x archive.zip
+        cd ispc-*
+        winchecksec.exe bin\ispc.exe >> ..\winchecksec-report-${{ inputs.release_tag }}.txt
+        winchecksec.exe bin\ispcrt.dll >> ..\winchecksec-report-${{ inputs.release_tag }}.txt
+        winchecksec.exe bin\ispcrt_device_cpu.dll >> ..\winchecksec-report-${{ inputs.release_tag }}.txt
+        # Not GPU device is built in trunk Windows build
+        # winchecksec.exe bin\ispcrt_device_gpu.dll >> ..\winchecksec-report-${{ inputs.release_tag }}.txt
+
+    - uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      with:
+        name: winchecksec_report
+        path: |
+          winchecksec-report-${{ inputs.release_tag }}.txt
