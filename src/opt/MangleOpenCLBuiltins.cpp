@@ -14,7 +14,7 @@
 namespace ispc {
 
 static std::string mangleMathOCLBuiltin(const llvm::Function &func) {
-    Assert(func.getName().startswith("__spirv_ocl") && "wrong argument: ocl builtin is expected");
+    Assert(func.getName().starts_with("__spirv_ocl") && "wrong argument: ocl builtin is expected");
     std::string mangledName;
     llvm::Type *retType = func.getReturnType();
     // spirv OpenCL builtins are used for half/float/double types only
@@ -85,14 +85,14 @@ static std::string manglePrintfOCLBuiltin(const llvm::Function &func) {
 }
 
 static std::string mangleOCLBuiltin(const llvm::Function &func) {
-    Assert(func.getName().startswith("__spirv_ocl") && "wrong argument: ocl builtin is expected");
+    Assert(func.getName().starts_with("__spirv_ocl") && "wrong argument: ocl builtin is expected");
     if (func.getName() == "__spirv_ocl_printf")
         return manglePrintfOCLBuiltin(func);
     return mangleMathOCLBuiltin(func);
 }
 
 std::string mangleSPIRVBuiltin(const llvm::Function &func) {
-    Assert(func.getName().startswith("__spirv_") && "wrong argument: spirv builtin is expected");
+    Assert(func.getName().starts_with("__spirv_") && "wrong argument: spirv builtin is expected");
     std::string mangledName;
     std::vector<llvm::Type *> tyArgs;
     for (const auto &arg : func.args()) {
@@ -116,9 +116,9 @@ bool MangleOpenCLBuiltins::mangleOpenCLBuiltins(llvm::BasicBlock &bb) {
             llvm::Function *func = ci->getCalledFunction();
             if (func == nullptr)
                 continue;
-            if (func->getName().startswith("__spirv_")) {
+            if (func->getName().starts_with("__spirv_")) {
                 std::string mangledName;
-                if (func->getName().startswith("__spirv_ocl")) {
+                if (func->getName().starts_with("__spirv_ocl")) {
                     mangledName = mangleOCLBuiltin(*func);
                 } else {
                     mangledName = mangleSPIRVBuiltin(*func);

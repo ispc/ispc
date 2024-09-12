@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2023, Intel Corporation
+  Copyright (c) 2022-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -592,7 +592,7 @@ void XeGatherCoalescing::optimizePtr(llvm::Value *Ptr, PtrData &PD, llvm::Instru
 llvm::CallInst *XeGatherCoalescing::getPseudoGatherConstOffset(llvm::Instruction *Inst) const {
     if (auto CI = llvm::dyn_cast<llvm::CallInst>(Inst)) {
         llvm::Function *Function = CI->getCalledFunction();
-        if (Function && Function->getName().startswith("__pseudo_gather_base_offsets"))
+        if (Function && Function->getName().starts_with("__pseudo_gather_base_offsets"))
             if (isConstOffsetPseudoGather(CI))
                 return CI;
     }
@@ -601,7 +601,7 @@ llvm::CallInst *XeGatherCoalescing::getPseudoGatherConstOffset(llvm::Instruction
 
 bool XeGatherCoalescing::isConstOffsetPseudoGather(llvm::CallInst *CI) const {
     Assert(CI != nullptr && CI->getCalledFunction() &&
-           CI->getCalledFunction()->getName().startswith("__pseudo_gather_base_offsets"));
+           CI->getCalledFunction()->getName().starts_with("__pseudo_gather_base_offsets"));
     llvm::Value *opOffset = CI->getOperand(2);
 
     return (llvm::isa<llvm::ConstantDataVector>(opOffset) || llvm::isa<llvm::ConstantAggregateZero>(opOffset) ||
