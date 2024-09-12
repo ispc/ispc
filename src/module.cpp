@@ -1727,7 +1727,7 @@ static void saveOutput(uint32_t numOutputs, uint8_t **dataOutputs, uint64_t *len
     using ZipTy = typename decltype(zip)::value_type;
     auto binIt = std::find_if(zip.begin(), zip.end(), [&requiredExtension](ZipTy File) {
         llvm::StringRef name{std::get<2>(File)};
-        return name.endswith(requiredExtension);
+        return name.ends_with(requiredExtension);
     });
     Assert(binIt != zip.end() && "Output binary is missing");
 

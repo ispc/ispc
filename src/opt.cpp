@@ -393,11 +393,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         // Note: this pass has been added since LLVM 18.1.
         // InstCombine contains similar functionality. It can be enabled back
         // (at the moment) with enable-infer-alignment-pass=false option.
-        // It looks like it is enough to call it once before the last call to
-        // InstCombine pass. But maybe more clear way to preserve previous
-        // functionality is to call it before InstCombine every time.
-        // Let us call it once before the first InstCombine invocation and
-        // before the last one.
+        // To preserve previous functionality let's call it before InstCombine every time.
         optPM.addFunctionPass(llvm::InferAlignmentPass());
 #endif
         if (g->opt.disableGatherScatterOptimizations == false && g->target->getVectorWidth() > 1) {
@@ -416,6 +412,9 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 #else
         optPM.addFunctionPass(llvm::SROAPass());
 #endif
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        optPM.addFunctionPass(llvm::InferAlignmentPass());
+#endif
         optPM.addFunctionPass(llvm::InstCombinePass());
         optPM.addFunctionPass(llvm::SimplifyCFGPass(simplifyCFGopt));
         optPM.addFunctionPass(llvm::PromotePass());
@@ -426,6 +425,9 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.commitLoopToFunctionPassManager();
         optPM.setBlocksFreq(false);
         optPM.addFunctionPass(ReplaceStdlibShiftPass(), 229);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        optPM.addFunctionPass(llvm::InferAlignmentPass());
+#endif
         optPM.addFunctionPass(llvm::InstCombinePass());
         optPM.addFunctionPass(llvm::SimplifyCFGPass(simplifyCFGopt));
         optPM.commitFunctionToModulePassManager();
@@ -448,6 +450,9 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addFunctionPass(llvm::DCEPass());
         optPM.addFunctionPass(llvm::SimplifyCFGPass(simplifyCFGopt));
         optPM.addFunctionPass(llvm::ADCEPass());
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        optPM.addFunctionPass(llvm::InferAlignmentPass());
+#endif
         optPM.addFunctionPass(llvm::InstCombinePass(), 241);
         optPM.addFunctionPass(llvm::JumpThreadingPass());
         optPM.addFunctionPass(llvm::SimplifyCFGPass(simplifyCFGopt));
@@ -455,6 +460,9 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addFunctionPass(llvm::SROAPass(llvm::SROAOptions::ModifyCFG));
 #else
         optPM.addFunctionPass(llvm::SROAPass());
+#endif
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        optPM.addFunctionPass(llvm::InferAlignmentPass());
 #endif
         optPM.addFunctionPass(llvm::InstCombinePass());
         optPM.commitFunctionToModulePassManager();
@@ -464,10 +472,16 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
             // Inline
             optPM.initFunctionPassManager();
             optPM.addFunctionPass(llvm::CorrelatedValuePropagationPass());
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+            optPM.addFunctionPass(llvm::InferAlignmentPass());
+#endif
             optPM.addFunctionPass(llvm::InstCombinePass());
             optPM.commitFunctionToModulePassManager();
             optPM.addModulePass(llvm::GlobalDCEPass());
             optPM.initFunctionPassManager();
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+            optPM.addFunctionPass(llvm::InferAlignmentPass());
+#endif
             optPM.addFunctionPass(llvm::InstCombinePass());
             optPM.addFunctionPass(llvm::EarlyCSEPass());
             optPM.commitFunctionToModulePassManager();
@@ -483,6 +497,9 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         }
 
         if (g->opt.disableGatherScatterOptimizations == false && g->target->getVectorWidth() > 1) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+            optPM.addFunctionPass(llvm::InferAlignmentPass());
+#endif
             optPM.addFunctionPass(llvm::InstCombinePass(), 255);
             optPM.addFunctionPass(ImproveMemoryOpsPass());
 
@@ -505,6 +522,9 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addFunctionPass(InstructionSimplifyPass());
 
         if (g->opt.disableGatherScatterOptimizations == false && g->target->getVectorWidth() > 1) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+            optPM.addFunctionPass(llvm::InferAlignmentPass());
+#endif
             optPM.addFunctionPass(llvm::InstCombinePass(), 270);
             optPM.addFunctionPass(ImproveMemoryOpsPass());
         }
@@ -514,6 +534,9 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 
         optPM.initFunctionPassManager();
         optPM.addFunctionPass(llvm::ADCEPass());
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        optPM.addFunctionPass(llvm::InferAlignmentPass());
+#endif
         optPM.addFunctionPass(llvm::InstCombinePass());
         optPM.addFunctionPass(llvm::SimplifyCFGPass(simplifyCFGopt));
 
@@ -535,7 +558,9 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 #else
         optPM.addFunctionPass(llvm::SROAPass());
 #endif
-
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        optPM.addFunctionPass(llvm::InferAlignmentPass());
+#endif
         optPM.addFunctionPass(llvm::InstCombinePass());
         optPM.addFunctionPass(InstructionSimplifyPass());
         optPM.addFunctionPass(llvm::SimplifyCFGPass(simplifyCFGopt));
@@ -564,7 +589,9 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.commitLoopToFunctionPassManager();
         optPM.setMemorySSA(false);
         optPM.setBlocksFreq(false);
-
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        optPM.addFunctionPass(llvm::InferAlignmentPass());
+#endif
         optPM.addFunctionPass(llvm::InstCombinePass());
         optPM.addFunctionPass(InstructionSimplifyPass());
 
@@ -587,6 +614,9 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         // but it is not be beneficial in all cases.
         optPM.addFunctionPass(llvm::NewGVNPass(), 301);
         optPM.addFunctionPass(ReplaceMaskedMemOpsPass());
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        optPM.addFunctionPass(llvm::InferAlignmentPass());
+#endif
         optPM.addFunctionPass(llvm::InstCombinePass());
         optPM.addFunctionPass(IsCompileTimeConstantPass(true));
         optPM.addFunctionPass(IntrinsicsOpt());
@@ -609,6 +639,9 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
             optPM.addFunctionPass(llvm::MemCpyOptPass());
         }
         optPM.addFunctionPass(llvm::SCCPPass());
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        optPM.addFunctionPass(llvm::InferAlignmentPass());
+#endif
         optPM.addFunctionPass(llvm::InstCombinePass());
         optPM.addFunctionPass(InstructionSimplifyPass());
         optPM.addFunctionPass(llvm::JumpThreadingPass());
