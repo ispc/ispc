@@ -2725,10 +2725,14 @@ __declspec(safe) static inline uniform float sin(uniform float x_full) {
 }
 
 __declspec(safe) static inline float asin(float x0) {
-    bool isneg = x0 < 0;
-    float x = abs(x0);
-    bool isnan = (x > 1);
-    float v;
+
+    // See the uniform implementation for more information
+
+    const bool isneg = x0 < 0;
+    const float x = abs(x0);
+    const float y = x0 * x0 + 1e-30;
+    const bool isnan = x > 1;
+    float v, w;
 
     if (__have_native_trigonometry && !__is_xe_target) {
         return __asin_varying_float(x0);
@@ -2742,94 +2746,65 @@ __declspec(safe) static inline float asin(float x0) {
         }
         return ret;
     } else if (__math_lib == __math_lib_ispc) {
-        // sollya
-        // fpminimax(((asin(x)-pi/2)/-sqrt(1-x)), [|0,1,2,3,4,5,6,7,8,9,10|],
-        //           [|single...|], [1e-20;.9999999999999999]);
-        // avg error: 8.5716801e-09, max error: 2.1373853e-07
-        v = 1.57079637050628662109375f +
-            x * (-0.21460501849651336669921875f +
-                 x * (8.9116774499416351318359375e-2f +
-                      x * (-5.146093666553497314453125e-2f +
-                           x * (3.7269376218318939208984375e-2f +
-                                x * (-3.5882405936717987060546875e-2f +
-                                     x * (4.14929799735546112060546875e-2f +
-                                          x * (-4.25077490508556365966796875e-2f +
-                                               x * (3.05023305118083953857421875e-2f +
-                                                    x * (-1.2897425331175327301025390625e-2f +
-                                                         x * 2.38926825113594532012939453125e-3f)))))))));
+        v = 1.57035851f + x * (-0.210944608f + x * (0.07633722f + x * (-0.02661739f + x * 0.0050822f)));
+        v = 1.570796371f - sqrt(1.f - x) * v;
+        v = select(isneg, -v, v);
+        v = select(isnan, floatbits(0x7fc00000), v);
+        w = 1.0f + y * (0.1666585f + y * (0.075334f + y * (0.040581f + y * 0.04868f)));
+        v = select(x < 0.492f, w * x0, v);
     } else if (__math_lib == __math_lib_ispc_fast) {
-        // sollya
-        // fpminimax(((asin(x)-pi/2)/-sqrt(1-x)), [|0,1,2,3,4,5|],[|single...|],
-        //           [1e-20;.9999999999999999]);
-        // avg error: 1.1105439e-06, max error 1.3187528e-06
-        v = 1.57079517841339111328125f +
-            x * (-0.21450997889041900634765625f +
-                 x * (8.78556668758392333984375e-2f +
-                      x * (-4.489909112453460693359375e-2f +
-                           x * (1.928029954433441162109375e-2f + x * (-4.3095736764371395111083984375e-3f)))));
+        v = +1.570578683e+00f +
+            x * (-2.123403407e-01f + x * (+7.958955448e-02f + x * (-2.992102928e-02f + x * +6.318030601e-03f)));
+        v = 1.570796371f - sqrt(1.f - x) * v;
+        v = select(isneg, -v, v);
+        v = select(isnan, floatbits(0x7fc00000), v);
+        v = select(x < 0.30f, (1.0f + (0.166493f + 0.08106f * y) * y) * x0, v);
     }
-
-    v *= -sqrt(1.f - x);
-    v = v + 1.57079637050628662109375;
-    if (v < 0)
-        v = 0;
-    // v = max(0, v);
-
-    if (isneg)
-        v = -v;
-    if (isnan)
-        v = floatbits(0x7fc00000);
 
     return v;
 }
 
 __declspec(safe) static inline uniform float asin(uniform float x0) {
-    uniform bool isneg = x0 < 0;
-    uniform float x = abs(x0);
-    uniform bool isnan = (x > 1);
-    uniform float v;
+
+    // Relative precision:
+    // - default math-lib: <5 ULP
+    // - fast math-lib:    <30 ULP
+    // Support special input values like NaN, -Inf, +Inf and subnormal numbers correctly.
+
+    // Note the polynomials approximate (asin(x)-pi/2)/-sqrt(1-x).
+    // There are 2 polynomials:
+    // - one for input values close to 0 based on Taylor expension so to get a good relative error;
+    // - one for bigger (positive) values.
+    // Coefficients can be found with `curve_fit` from `scipy.optimize` in Python.
+
+    // Note the 1e-30 can strongly impact performance
+    // (it certainly avoid the generation of subnormals numbers).
+
+    const uniform bool isneg = x0 < 0;
+    const uniform float x = abs(x0);
+    const uniform float y = x0 * x0 + 1e-30;
+    const uniform bool isnan = x > 1;
+    uniform float v, w;
+
     if (__have_native_trigonometry && !__is_xe_target) {
         return __asin_uniform_float(x0);
     } else if (__math_lib == __math_lib_svml || __math_lib == __math_lib_system) {
         return __stdlib_asinf(x0);
     } else if (__math_lib == __math_lib_ispc) {
-        // sollya
-        // fpminimax(((asin(x)-pi/2)/-sqrt(1-x)), [|0,1,2,3,4,5,6,7,8,9,10|],
-        //           [|single...|], [1e-20;.9999999999999999]);
-        // avg error: 8.5716801e-09, max error: 2.1373853e-07
-        v = 1.57079637050628662109375f +
-            x * (-0.21460501849651336669921875f +
-                 x * (8.9116774499416351318359375e-2f +
-                      x * (-5.146093666553497314453125e-2f +
-                           x * (3.7269376218318939208984375e-2f +
-                                x * (-3.5882405936717987060546875e-2f +
-                                     x * (4.14929799735546112060546875e-2f +
-                                          x * (-4.25077490508556365966796875e-2f +
-                                               x * (3.05023305118083953857421875e-2f +
-                                                    x * (-1.2897425331175327301025390625e-2f +
-                                                         x * 2.38926825113594532012939453125e-3f)))))))));
+        v = 1.57035851f + x * (-0.210944608f + x * (0.07633722f + x * (-0.02661739f + x * 0.0050822f)));
+        v = 1.570796371f - sqrt(1.f - x) * v;
+        v = select(isneg, -v, v);
+        v = select(isnan, floatbits(0x7fc00000), v);
+        w = 1.0f + y * (0.1666585f + y * (0.075334f + y * (0.040581f + y * 0.04868f)));
+        v = select(x < 0.492f, w * x0, v);
     } else if (__math_lib == __math_lib_ispc_fast) {
-        // sollya
-        // fpminimax(((asin(x)-pi/2)/-sqrt(1-x)), [|0,1,2,3,4,5|],[|single...|],
-        //           [1e-20;.9999999999999999]);
-        // avg error: 1.1105439e-06, max error 1.3187528e-06
-        v = 1.57079517841339111328125f +
-            x * (-0.21450997889041900634765625f +
-                 x * (8.78556668758392333984375e-2f +
-                      x * (-4.489909112453460693359375e-2f +
-                           x * (1.928029954433441162109375e-2f + x * (-4.3095736764371395111083984375e-3f)))));
+        v = +1.570578683e+00f +
+            x * (-2.123403407e-01f + x * (+7.958955448e-02f + x * (-2.992102928e-02f + x * +6.318030601e-03f)));
+        v = 1.570796371f - sqrt(1.f - x) * v;
+        v = select(isneg, -v, v);
+        v = select(isnan, floatbits(0x7fc00000), v);
+        v = select(x < 0.30f, (1.0f + (0.166493f + 0.08106f * y) * y) * x0, v);
     }
-
-    v *= -sqrt(1.f - x);
-    v = v + 1.57079637050628662109375;
-    if (v < 0)
-        v = 0;
-    // v = max(0, v);
-
-    if (isneg)
-        v = -v;
-    if (isnan)
-        v = floatbits(0x7fc00000);
 
     return v;
 }
