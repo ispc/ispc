@@ -26,7 +26,7 @@ find /usr -name cdefs.h || echo "Find errors were ignored"
 # Remark about user agent: it might or might now work with default user agent, but
 # from time to time the settings are changed and browser-like user agent is required to make it work.
 echo -U "$USER_AGENT" --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://downloadmirror.intel.com/"$SDE_MIRROR_ID"/"$SDE_TAR_NAME"-lin.tar.xz
-wget -U "$USER_AGENT" --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://downloadmirror.intel.com/"$SDE_MIRROR_ID"/"$SDE_TAR_NAME"-lin.tar.xz
+wget -q -U "$USER_AGENT" --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://downloadmirror.intel.com/"$SDE_MIRROR_ID"/"$SDE_TAR_NAME"-lin.tar.xz
 tar xf "$SDE_TAR_NAME"-lin.tar.xz
 tar xf ispc-trunk-linux.tar.gz
 

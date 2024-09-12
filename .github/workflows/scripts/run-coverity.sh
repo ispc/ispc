@@ -52,7 +52,7 @@ fi
 # Download and set up Coverity tool if not already done
 if [ ! -d "$TOOL_BASE" ]; then
   echo "Downloading Coverity Scan Analysis Tool..."
-  wget -nv -O "$TOOL_ARCHIVE" "$TOOL_URL" --post-data "project=$COVERITY_SCAN_PROJECT_NAME&token=$COVERITY_SCAN_TOKEN"
+  wget -q -nv -O "$TOOL_ARCHIVE" "$TOOL_URL" --post-data "project=$COVERITY_SCAN_PROJECT_NAME&token=$COVERITY_SCAN_TOKEN"
   
   echo "Extracting Coverity Scan Analysis Tool..."
   mkdir -p "$TOOL_BASE"

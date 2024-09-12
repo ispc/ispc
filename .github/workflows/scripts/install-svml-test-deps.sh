@@ -3,7 +3,7 @@ echo "APT::Acquire::Retries \"3\";" | sudo tee -a /etc/apt/apt.conf.d/80-retries
 
 # SVML requires installing Intel Compiler
 
-wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
+wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
 sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
 echo "deb https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
 sudo add-apt-repository "deb https://apt.repos.intel.com/oneapi all main"
@@ -31,7 +31,7 @@ do
 done
 
 find /usr -name cdefs.h || echo "Find errors were ignored"
-wget -U "$USER_AGENT" --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://downloadmirror.intel.com/"$SDE_MIRROR_ID"/"$SDE_TAR_NAME"-lin.tar.xz
+wget -q -U "$USER_AGENT" --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://downloadmirror.intel.com/"$SDE_MIRROR_ID"/"$SDE_TAR_NAME"-lin.tar.xz
 tar xf "$SDE_TAR_NAME"-lin.tar.bz2
 tar xf ispc-trunk-linux.tar.gz
 
