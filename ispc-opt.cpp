@@ -30,6 +30,8 @@
 
 using namespace llvm;
 
+static cl::opt<int> Addressing("addressing", cl::desc("Select 32- or 64-bit addressing."), cl::init(32),
+                               cl::value_desc("model"));
 static cl::opt<std::string> Passes("passes", cl::desc("Passes to run"));
 static cl::opt<bool> PrintPasses("print-passes", cl::desc("Print passes"));
 static cl::opt<std::string> InputFilename(cl::Positional, cl::desc("<input bitcode file>"), cl::init("-"),
@@ -124,6 +126,15 @@ int main(int argc, char **argv) {
 
     ispc::g = new ispc::Globals;
     LLVMContext *ctx = ispc::g->ctx;
+
+    if (Addressing == 64) {
+        ispc::g->opt.force32BitAddressing = false;
+    } else if (Addressing == 32) {
+        ispc::g->opt.force32BitAddressing = true;
+    } else {
+        ispc::Error(ispc::SourcePos(), "Invalid addressing model");
+        return 1;
+    }
 
     ispc::ISPCTarget target = ispc::ParseISPCTarget(TargetTarget);
 
