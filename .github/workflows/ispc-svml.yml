@@ -50,15 +50,28 @@ jobs:
       id: set-flow
       run: |
         # one and only one var should be set
-        [[ $RUN_SMOKE == false && $RUN_FULL == true ]] || [[ $RUN_SMOKE == true && $RUN_FULL == false ]] || ( echo "One and only one env var must be set: RUN_SMOKE or RUN_FULL"; exit 1)
-        $RUN_SMOKE && echo "type=smoke" >> $GITHUB_OUTPUT || true
-        $RUN_FULL &&  echo "type=full" >> $GITHUB_OUTPUT || true
+        if [[ "$RUN_SMOKE" == false && "$RUN_FULL" == true ]]; then
+          echo "type=full" >> "$GITHUB_OUTPUT"
+        elif [[ "$RUN_SMOKE" == true && "$RUN_FULL" == false ]]; then
+          echo "type=smoke" >> "$GITHUB_OUTPUT"
+        else
+          echo "One and only one env var must be set: RUN_SMOKE or RUN_FULL"
+          exit 1
+        fi
         # set tests matrix depends on flow
-        $RUN_SMOKE && echo "matrix=${TARGETS_SMOKE}" >> $GITHUB_OUTPUT || true
-        $RUN_FULL &&  echo "matrix=${TARGETS_FULL}" >> $GITHUB_OUTPUT || true
+        if [[ "$RUN_SMOKE" == true ]]; then
+          echo "matrix=${TARGETS_SMOKE}" >> "$GITHUB_OUTPUT"
+        fi
+        if [[ "$RUN_FULL" == true ]]; then
+          echo "matrix=${TARGETS_FULL}" >> "$GITHUB_OUTPUT"
+        fi
         # set tests optsets
-        $RUN_SMOKE && echo "optsets=${OPTSETS_SMOKE}" >> $GITHUB_OUTPUT || true
-        $RUN_FULL &&  echo "optsets=${OPTSETS_FULL}" >> $GITHUB_OUTPUT || true
+        if [[ "$RUN_SMOKE" == true ]]; then
+          echo "optsets=${OPTSETS_SMOKE}" >> "$GITHUB_OUTPUT"
+        fi
+        if [[ "$RUN_FULL" == true ]]; then
+          echo "optsets=${OPTSETS_FULL}" >> "$GITHUB_OUTPUT"
+        fi
 
   linux-build-ispc-llvm17:
     needs: [define-flow]
@@ -121,7 +134,7 @@ jobs:
 
     - name: Running tests
       run: |
-        echo PATH=$PATH
+        echo "PATH=$PATH"
         . /opt/intel/oneapi/setvars.sh
         ./alloy.py -r --only="stability current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP --ispc-flags="--math-lib=svml" --compiler=icx
 

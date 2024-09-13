@@ -67,7 +67,10 @@ jobs:
                  avx1-i32x4, avx1-i32x8, avx1-i32x16, avx1-i64x4,
                  avx2-i8x32, avx2-i16x16, avx2-i32x4, avx2-i32x8, avx2-i32x16, avx2-i64x4,
                  avx512knl-x16,
-                 avx512skx-x4, avx512skx-x8, avx512skx-x16, avx512skx-x64, avx512skx-x32]
+                 avx2vnni-i32x4, avx2vnni-i32x8, avx2vnni-i32x16,
+                 avx512skx-x4, avx512skx-x8, avx512skx-x16, avx512skx-x64, avx512skx-x32,
+                 avx512icl-x4, avx512icl-x8, avx512icl-x16, avx512icl-x64, avx512icl-x32,
+                 avx512spr-x4, avx512spr-x8, avx512spr-x16, avx512spr-x64, avx512spr-x32]
         # See issue #2818 for more deatils. It's SDE problem running on AMD runner.
         exclude:
           - arch: x86
@@ -125,7 +128,7 @@ jobs:
 
     - name: Running tests
       run: |
-        echo PATH=$PATH
+        echo PATH="$PATH"
         ./alloy.py -r --only="stability ${{ matrix.arch }} current -O0 -O1 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Upload fail_db.txt
@@ -140,7 +143,7 @@ jobs:
         # Print fails to the log.
         git diff
         # Exit with error code if there are fails.
-        [ -z "`git diff`" ]
+        [ -z "$(git diff)" ]
 
 
   win-build-ispc-llvm-17:

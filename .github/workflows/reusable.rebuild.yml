@@ -18,7 +18,7 @@ on:
         type: string
       lto:
         description: Build LTO-enabled LLVM toolchain ('ON' or 'OFF').
-        required: true
+        required: false # Not required since there is a default value
         type: string
         default: 'OFF'
       ubuntu:
@@ -93,7 +93,7 @@ jobs:
       run: |
         cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }} --target=llvm_build --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LTO=${{ inputs.lto }} --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg LLVM_DISABLE_ASSERTIONS=OFF --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }} --target=llvm_build --build-arg REPO="${GITHUB_REPOSITORY}" --build-arg SHA="${GITHUB_SHA}" --build-arg LTO="${{ inputs.lto }}" --build-arg LLVM_VERSION="${{ inputs.version }}" --build-arg LLVM_DISABLE_ASSERTIONS=OFF --output=type=tar,dest=result.tar .
 
     - name: Pack LLVM
       run: |
@@ -127,7 +127,7 @@ jobs:
         cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
         ls -al
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }} --target=llvm_build --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LTO=${{ inputs.lto }} --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg LLVM_DISABLE_ASSERTIONS=ON --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }} --target=llvm_build --build-arg REPO="${GITHUB_REPOSITORY}" --build-arg SHA="${GITHUB_SHA}" --build-arg LTO="${{ inputs.lto }}" --build-arg LLVM_VERSION="${{ inputs.version }}" --build-arg LLVM_DISABLE_ASSERTIONS=ON --output=type=tar,dest=result.tar .
 
     - name: Pack LLVM
       run: |
@@ -162,7 +162,7 @@ jobs:
       run: |
         cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }} --target=llvm_build --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LTO=${{ inputs.lto }} --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg LLVM_DISABLE_ASSERTIONS=OFF --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }} --target=llvm_build --build-arg REPO="${GITHUB_REPOSITORY}" --build-arg SHA="${GITHUB_SHA}" --build-arg LTO="${{ inputs.lto }}" --build-arg LLVM_VERSION="${{ inputs.version }}" --build-arg LLVM_DISABLE_ASSERTIONS=OFF --output=type=tar,dest=result.tar .
         docker buildx rm
 
     - name: Pack LLVM
@@ -199,7 +199,7 @@ jobs:
       run: |
         cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }} --target=llvm_build --build-arg REPO=$GITHUB_REPOSITORY --build-arg SHA=$GITHUB_SHA --build-arg LTO=${{ inputs.lto }} --build-arg LLVM_VERSION=${{ inputs.version }} --build-arg LLVM_DISABLE_ASSERTIONS=ON --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }} --target=llvm_build --build-arg REPO="${GITHUB_REPOSITORY}" --build-arg SHA="${GITHUB_SHA}" --build-arg LTO="${{ inputs.lto }}" --build-arg LLVM_VERSION="${{ inputs.version }}" --build-arg LLVM_DISABLE_ASSERTIONS=ON --output=type=tar,dest=result.tar .
         docker buildx rm
 
     - name: Pack LLVM
@@ -243,7 +243,7 @@ jobs:
       run: |
         set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
         call %VSVARS%
-        cmake %ISPC_HOME%\superbuild -B build-${{ inputs.version }} --preset os -DLTO=${{ inputs.lto }} -DLLVM_VERSION=${{ inputs.version }} -DCMAKE_SYSTEM_VERSION=${{ inputs.win_sdk }} -DCMAKE_INSTALL_PREFIX=%LLVM_HOME%\bin-${{ inputs.version }} -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DXE_DEPS=OFF -DLLVM_DISABLE_ASSERTIONS=OFF
+        cmake %ISPC_HOME%\superbuild -B build-${{ inputs.version }} --preset os -DLTO="${{ inputs.lto }}" -DLLVM_VERSION="${{ inputs.version }}" -DCMAKE_SYSTEM_VERSION="${{ inputs.win_sdk }}" -DCMAKE_INSTALL_PREFIX=%LLVM_HOME%\bin-${{ inputs.version }} -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DXE_DEPS=OFF -DLLVM_DISABLE_ASSERTIONS=OFF
         cmake --build build-${{ inputs.version }}
         rmdir /s /q build-${{ inputs.version }}
 
@@ -287,7 +287,7 @@ jobs:
       run: |
         set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
         call %VSVARS%
-        cmake %ISPC_HOME%\superbuild -B build-${{ inputs.version }} --preset os -DLTO=${{ inputs.lto }} -DLLVM_VERSION=${{ inputs.version }} -DCMAKE_SYSTEM_VERSION=${{ inputs.win_sdk }} -DCMAKE_INSTALL_PREFIX=%LLVM_HOME%\bin-${{ inputs.version }} -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DXE_DEPS=OFF -DLLVM_DISABLE_ASSERTIONS=ON
+        cmake %ISPC_HOME%\superbuild -B build-${{ inputs.version }} --preset os -DLTO="${{ inputs.lto }}" -DLLVM_VERSION="${{ inputs.version }}" -DCMAKE_SYSTEM_VERSION="${{ inputs.win_sdk }}" -DCMAKE_INSTALL_PREFIX=%LLVM_HOME%\bin-${{ inputs.version }} -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DXE_DEPS=OFF -DLLVM_DISABLE_ASSERTIONS=ON
         cmake --build build-${{ inputs.version }}
         rmdir /s /q build-${{ inputs.version }}
 
@@ -326,9 +326,9 @@ jobs:
 
     - name: Build LLVM
       run: |
-        cmake $ISPC_HOME/superbuild -B build-${{ inputs.version }} --preset os -DLTO=${{ inputs.lto }} -DLLVM_VERSION=${{ inputs.version }} -DCMAKE_INSTALL_PREFIX=$LLVM_HOME/bin-${{ inputs.version }} -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DXE_DEPS=OFF -DMACOS_UNIVERSAL_BIN=ON -DLLVM_DISABLE_ASSERTIONS=OFF -DISPC_ANDROID_NDK_PATH=/Users/Shared/android-ndk-r20b
-        cmake --build build-${{ inputs.version }}
-        rm -rf build-${{ inputs.version }}
+        cmake "$ISPC_HOME/superbuild" -B "build-${{ inputs.version }}" --preset os -DLTO="${{ inputs.lto }}" -DLLVM_VERSION="${{ inputs.version }}" -DCMAKE_INSTALL_PREFIX="$LLVM_HOME/bin-${{ inputs.version }}" -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DXE_DEPS=OFF -DMACOS_UNIVERSAL_BIN=ON -DLLVM_DISABLE_ASSERTIONS=OFF -DISPC_ANDROID_NDK_PATH="/Users/Shared/android-ndk-r20b"
+        cmake --build "build-${{ inputs.version }}"
+        rm -rf "build-${{ inputs.version }}"
 
     - name: Pack LLVM
       run: |
@@ -362,9 +362,9 @@ jobs:
 
     - name: Build LLVM
       run: |
-        cmake $ISPC_HOME/superbuild -B build-${{ inputs.version }} --preset os -DLTO=${{ inputs.lto }} -DLLVM_VERSION=${{ inputs.version }} -DCMAKE_INSTALL_PREFIX=$LLVM_HOME/bin-${{ inputs.version }} -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DXE_DEPS=OFF -DMACOS_UNIVERSAL_BIN=ON -DLLVM_DISABLE_ASSERTIONS=ON -DISPC_ANDROID_NDK_PATH=/Users/Shared/android-ndk-r20b
-        cmake --build build-${{ inputs.version }}
-        rm -rf build-${{ inputs.version }}
+        cmake "$ISPC_HOME/superbuild" -B "build-${{ inputs.version }}" --preset os -DLTO="${{ inputs.lto }}" -DLLVM_VERSION="${{ inputs.version }}" -DCMAKE_INSTALL_PREFIX="$LLVM_HOME/bin-${{ inputs.version }}" -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DXE_DEPS=OFF -DMACOS_UNIVERSAL_BIN=ON -DLLVM_DISABLE_ASSERTIONS=ON -DISPC_ANDROID_NDK_PATH="/Users/Shared/android-ndk-r20b"
+        cmake --build "build-${{ inputs.version }}"
+        rm -rf "build-${{ inputs.version }}"
 
     - name: Pack LLVM
       run: |

@@ -39,10 +39,10 @@ jobs:
           cmake superbuild \
               -B build-l0 \
               --preset os \
-              -DPREBUILT_STAGE2_PATH=${GITHUB_WORKSPACE}/bin-${LLVM_VERSION} \
+              -DPREBUILT_STAGE2_PATH="${GITHUB_WORKSPACE}/bin-${LLVM_VERSION}" \
               -DBUILD_L0_LOADER_ONLY=ON \
               -DCMAKE_INSTALL_PREFIX=install
-          cmake --build build-l0 -j`nproc`
+          cmake --build build-l0 -j "$(nproc)"
 
       - name: Build ISPCRT
         run: |
@@ -57,7 +57,7 @@ jobs:
               -DLEVEL_ZERO_INCLUDE_DIR=install/include/ \
               ${TASKING_FLAG} \
               -DCMAKE_INSTALL_PREFIX=install
-          cmake --build build-ispcrt -j`nproc`
+          cmake --build build-ispcrt -j "$(nproc)"
           cmake --install build-ispcrt
           cmake --install build-ispcrt --component ispcrt-tests
 

@@ -91,23 +91,25 @@ jobs:
 
         - name: Set up PATH
           run: |
-            echo "YARPGEN_HOME=$GITHUB_WORKSPACE/yarpgen" >> $GITHUB_ENV
-            echo "$GITHUB_WORKSPACE/yarpgen/build:$GITHUB_WORKSPACE/yarpgen/scripts" >> $GITHUB_PATH
-            echo "$GITHUB_WORKSPACE/ispc-trunk-linux/bin" >> $GITHUB_PATH
-            echo "$SDE_HOME" >> $GITHUB_PATH
+            {
+              echo "YARPGEN_HOME=$GITHUB_WORKSPACE/yarpgen"
+              echo "$GITHUB_WORKSPACE/yarpgen/build:$GITHUB_WORKSPACE/yarpgen/scripts"
+              echo "$GITHUB_WORKSPACE/ispc-trunk-linux/bin"
+              echo "$SDE_HOME"
+            } >> "$GITHUB_ENV"
 
         - name: Set timeout for dispatched run
           if: github.event_name == 'workflow_dispatch'
-          run: echo "TIMEOUT=${{ github.event.inputs.timeout }}" >> $GITHUB_ENV
+          run: echo "TIMEOUT=${{ github.event.inputs.timeout }}" >> "$GITHUB_ENV"
 
         - name: Set timeout for scheduled run
           if: github.event_name == 'schedule'
-          run: echo "TIMEOUT=240" >> $GITHUB_ENV
+          run: echo "TIMEOUT=240" >> "$GITHUB_ENV"
 
         - name: Run YARPGEN
           run: |
             ispc --version
-            $YARPGEN_HOME/scripts/run_gen.py --std ispc --target ispc --timeout $TIMEOUT
+            "$YARPGEN_HOME"/scripts/run_gen.py --std ispc --target ispc --timeout "$TIMEOUT"
             tar -czvf yarpgen.tar.gz testing
           working-directory: yarpgen
 

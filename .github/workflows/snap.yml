@@ -23,7 +23,7 @@ on:
       publish:
         description: 'Turn on publishing to Snap Store'
         required: true
-        defaule: false
+        default: false
         type: boolean
       channel:
         description: 'Choose the channel to publish to'
@@ -55,12 +55,14 @@ jobs:
           ISPC_ARCHIVE="https://github.com/ispc/ispc/releases/download/v$ISPC_VERSION/ispc-v$ISPC_VERSION-linux.aarch64.tar.gz"
           sed "s|@ISPC_VERSION@|$ISPC_VERSION|g" -i snap/snapcraft.yaml
           sed "s|@ISPC_ARCHIVE@|$ISPC_ARCHIVE|g" -i snap/snapcraft.yaml
-          echo "ISPC_VERSION=$ISPC_VERSION" >> $GITHUB_STEP_SUMMARY
-          echo "ISPC_ARCHIVE=$ISPC_ARCHIVE" >> $GITHUB_STEP_SUMMARY
-          echo "channel is ${{ inputs.channel }}" >> $GITHUB_STEP_SUMMARY
-          echo "Configured snapcraft.yaml:"
-          echo "--------------------------"
-          cat snap/snapcraft.yaml
+          {
+            echo "ISPC_VERSION=$ISPC_VERSION"
+            echo "ISPC_ARCHIVE=$ISPC_ARCHIVE"
+            echo "channel is ${{ inputs.channel }}"
+            echo "Configured snapcraft.yaml:"
+            echo "--------------------------"
+            cat snap/snapcraft.yaml
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # Set up snapcraft and call it to build snap.
       # The output snap is ${{ steps.build.outputs.snap }}.
@@ -103,12 +105,14 @@ jobs:
           ISPC_ARCHIVE="https://github.com/ispc/ispc/releases/download/v$ISPC_VERSION/ispc-v$ISPC_VERSION-linux.tar.gz"
           sed "s|@ISPC_VERSION@|$ISPC_VERSION|g" -i snap/snapcraft.yaml
           sed "s|@ISPC_ARCHIVE@|$ISPC_ARCHIVE|g" -i snap/snapcraft.yaml
-          echo "ISPC_VERSION=$ISPC_VERSION" >> $GITHUB_STEP_SUMMARY
-          echo "ISPC_ARCHIVE=$ISPC_ARCHIVE" >> $GITHUB_STEP_SUMMARY
-          echo "channel is ${{ inputs.channel }}" >> $GITHUB_STEP_SUMMARY
-          echo "Configured snapcraft.yaml:"
-          echo "--------------------------"
-          cat snap/snapcraft.yaml
+          {
+            echo "ISPC_VERSION=$ISPC_VERSION"
+            echo "ISPC_ARCHIVE=$ISPC_ARCHIVE"
+            echo "channel is ${{ inputs.channel }}"
+            echo "Configured snapcraft.yaml:"
+            echo "--------------------------"
+            cat snap/snapcraft.yaml
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # Set up snapcraft and call it to build snap.
       # The output snap is ${{ steps.build.outputs.snap }}.
