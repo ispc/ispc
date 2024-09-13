@@ -8,28 +8,28 @@ task void f_f(uniform float RET[], uniform float aFOO[]) {
     float16 x = aFOO[programIndex] - (programCount / 2);
     float16 y = 0.8;
     float16 testVal = fmod(x, y);
-    float16 baseRes = x - trunc(x * rcp(y)) * y;
+    float16 baseRes = x - trunc(x / y) * y;
     RET[programIndex] += (abs(baseRes - testVal) < 1e-6) ? 0 : 1;
 
     // Case 2: x is negative, y is positive
     x = -aFOO[programCount / 2];
     y = 0.8;
     testVal = fmod(x, y);
-    baseRes = x - trunc(x * rcp(y)) * y;
+    baseRes = x - trunc(x / y) * y;
     RET[programIndex] += (abs(baseRes - testVal) < 1e-6) ? 0 : 1;
 
     // Case 3: x is positive, y is negative
     x = aFOO[programCount / 2];
     y = -0.8;
     testVal = fmod(x, y);
-    baseRes = x - trunc(x * rcp(y)) * y;
+    baseRes = x - trunc(x / y) * y;
     RET[programIndex] += (abs(baseRes - testVal) < 1e-6) ? 0 : 1;
 
     // Case 4: x and y are negative
     x = -aFOO[programCount / 2];
     y = -0.8;
     testVal = fmod(x, y);
-    baseRes = x - trunc(x * rcp(y)) * y;
+    baseRes = x - trunc(x / y) * y;
     RET[programIndex] += (abs(baseRes - testVal) < 1e-6) ? 0 : 1;
 
     // Case 5.1: x is +inf, y is positive
