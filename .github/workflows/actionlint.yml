@@ -1,0 +1,20 @@
+# Copyright 2024, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: Lint GitHub Actions workflows
+on:
+    workflow_dispatch:
+    push:
+    pull_request:
+      paths:
+        - '.github/workflows/*'
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - name: Check workflow files
+        uses: docker://rhysd/actionlint:latest
+        with:
+          args: -color
