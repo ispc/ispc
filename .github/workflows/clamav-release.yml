@@ -41,38 +41,38 @@ jobs:
       env:
         V: ${{ inputs.version }}
       run: |
-        TAR="ispc-examples-v$V.tar.gz ispc-v$V-linux-oneapi.tar.gz \
-             ispc-v$V-linux.aarch64.tar.gz ispc-v$V-linux.tar.gz \
-             ispc-v$V-macOS.arm64.tar.gz ispc-v$V-macOS.universal.tar.gz \
-             ispc-v$V-macOS.x86_64.tar.gz"
-        ZIP="ispc-examples-v$V.zip ispc-v$V-windows.zip"
-        for f in $TAR $ZIP; do
+        TAR=("ispc-examples-v$V.tar.gz" "ispc-v$V-linux-oneapi.tar.gz" \
+             "ispc-v$V-linux.aarch64.tar.gz" "ispc-v$V-linux.tar.gz" \
+             "ispc-v$V-macOS.arm64.tar.gz" "ispc-v$V-macOS.universal.tar.gz" \
+             "ispc-v$V-macOS.x86_64.tar.gz")
+        ZIP=("ispc-examples-v$V.zip" "ispc-v$V-windows.zip")
+        for f in "${TAR[@]}" "${ZIP[@]}"; do
           echo "Download $f"
-          wget --quiet -O $f ${{ env.release_base_url }}/v$V/$f
+          wget --quiet -O "$f" "${{ env.release_base_url }}/v$V/$f"
         done
-        for f in $TAR; do
+        for f in "${TAR[@]}"; do
           echo "Unpack $f"
           # unpack linux examples to separate directory to avoid conflicts
           # with windows examples and source code examples directory
           if [[ $f == ispc-examples* ]]; then
-            mkdir linux-examples
-            tar -xzf $f -C linux-examples
+            mkdir -p linux-examples
+            tar -xzf "$f" -C linux-examples
           else
-            tar -xzf $f
+            tar -xzf "$f"
           fi
         done
-        for f in $ZIP; do
+        for f in "${ZIP[@]}"; do
           echo "Unpack $f"
           # unpack windows examples to separate directory to avoid conflicts
           # with linux/macOS examples and source code examples directory
           if [[ $f == ispc-examples* ]]; then
-            unzip -q $f -d windows-examples
+            unzip -q "$f" -d windows-examples
           else
-            unzip -q $f
+            unzip -q "$f"
           fi
         done
 
-    - name: Scan archvies and source code with ClamAV
+    - name: Scan archives and source code with ClamAV
       run: |
         clamscan --recursive --scan-archive --archive-verbose --verbose ./ 2>&1 | tee ispc-releases-clamscan.log
 

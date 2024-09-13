@@ -47,7 +47,7 @@ jobs:
 
     - name: Runtime tests
       run: |
-        PATH=`pwd`/build/bin:$PATH ./run_tests.py --target=avx2-i32x8 --arch=x86-64
+        PATH=$(pwd)/build/bin:$PATH ./run_tests.py --target=avx2-i32x8 --arch=x86-64
 
   macos:
     runs-on: ${{ matrix.runner }}
@@ -75,16 +75,16 @@ jobs:
       run: |
         ls -al /Library/Developer/CommandLineTools/SDKs/
         xcrun --show-sdk-path
-        [ -n "$LLVM_REPO" ] && wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 --no-verbose $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
-        tar xf $LLVM_TAR
-        echo "${GITHUB_WORKSPACE}/bin-$LLVM_VERSION/bin" >> $GITHUB_PATH
+        [ -n "$LLVM_REPO" ] && wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 --no-verbose "$LLVM_REPO/releases/download/llvm-${LLVM_VERSION}-ispc-dev/${LLVM_TAR}"
+        tar xf "$LLVM_TAR"
+        echo "${GITHUB_WORKSPACE}/bin-${LLVM_VERSION}/bin" >> "$GITHUB_PATH"
         brew install bison flex
         if [ "${{ matrix.runner }}" == "macos-14" ]; then
-          echo "/opt/homebrew/opt/bison/bin" >> $GITHUB_PATH
-          echo "opt/homebrew/opt/flex/bin" >> $GITHUB_PATH
+          echo "/opt/homebrew/opt/bison/bin" >> "$GITHUB_PATH"
+          echo "/opt/homebrew/opt/flex/bin" >> "$GITHUB_PATH"
         else
-          echo "/usr/local/opt/bison/bin" >> $GITHUB_PATH
-          echo "/usr/local/opt/flex/bin" >> $GITHUB_PATH
+          echo "/usr/local/opt/bison/bin" >> "$GITHUB_PATH"
+          echo "/usr/local/opt/flex/bin" >> "$GITHUB_PATH"
         fi
 
     - name: Check environment
@@ -103,7 +103,7 @@ jobs:
 
     - name: Runtime tests
       run: |
-        PATH=`pwd`/build/bin:$PATH ./run_tests.py --verbose --compiler=cc --target=${{ matrix.target }} --arch=${{ matrix.arch }}
+        PATH=$(pwd)/build/bin:$PATH ./run_tests.py --verbose --compiler=cc --target=${{ matrix.target }} --arch=${{ matrix.arch }}
 
   windows:
     runs-on: windows-2019

@@ -31,13 +31,13 @@ jobs:
 
     - name: Download and check Linux oneAPI artifacts
       run: |
-        echo "Download artifact $LINK" >> $GITHUB_STEP_SUMMARY
-        wget ${{ env.LINK }}
-        tar xf ispc*.tar.gz
-        hardening-check ./ispc*/bin/ispc | tee -a ./hardening-check-${{ inputs.release_tag }}.txt
-        hardening-check ./ispc*/lib64/libispcrt.so | tee -a ./hardening-check-${{ inputs.release_tag }}.txt
-        hardening-check ./ispc*/lib64/libispcrt_device_gpu.so | tee -a ./hardening-check-${{ inputs.release_tag }}.txt
-        hardening-check ./ispc*/lib64/libispcrt_device_cpu.so | tee -a ./hardening-check-${{ inputs.release_tag }}.txt
+        echo "Download artifact ${LINK}" >> "$GITHUB_STEP_SUMMARY"
+        wget "${{ env.LINK }}"
+        tar xf "ispc*.tar.gz"
+        hardening-check "./ispc*/bin/ispc" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
+        hardening-check "./ispc*/lib64/libispcrt.so" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
+        hardening-check "./ispc*/lib64/libispcrt_device_gpu.so" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
+        hardening-check "./ispc*/lib64/libispcrt_device_cpu.so" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
 
     - uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       with:

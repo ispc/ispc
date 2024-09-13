@@ -64,15 +64,28 @@ jobs:
       id: set-flow
       run: |
         # one and only one var should be set
-        [[ $RUN_SMOKE == false && $RUN_FULL == true ]] || [[ $RUN_SMOKE == true && $RUN_FULL == false ]] || ( echo "One and only one env var must be set: RUN_SMOKE or RUN_FULL"; exit 1)
-        $RUN_SMOKE && echo "type=smoke" >> $GITHUB_OUTPUT || true
-        $RUN_FULL &&  echo "type=full" >> $GITHUB_OUTPUT || true
+        if [[ "$RUN_SMOKE" == false && "$RUN_FULL" == true ]]; then
+          echo "type=full" >> "$GITHUB_OUTPUT"
+        elif [[ "$RUN_SMOKE" == true && "$RUN_FULL" == false ]]; then
+          echo "type=smoke" >> "$GITHUB_OUTPUT"
+        else
+          echo "One and only one env var must be set: RUN_SMOKE or RUN_FULL"
+          exit 1
+        fi
         # set tests matrix depends on flow
-        $RUN_SMOKE && echo "matrix=${TARGETS_SMOKE}" >> $GITHUB_OUTPUT || true
-        $RUN_FULL &&  echo "matrix=${TARGETS_FULL}" >> $GITHUB_OUTPUT || true
+        if [[ "$RUN_SMOKE" == "true" ]]; then
+          echo "matrix=${TARGETS_SMOKE}" >> "$GITHUB_OUTPUT"
+        fi
+        if [[ "$RUN_FULL" == "true" ]]; then
+          echo "matrix=${TARGETS_FULL}" >> "$GITHUB_OUTPUT"
+        fi
         # set tests optsets
-        $RUN_SMOKE && echo "optsets=${OPTSETS_SMOKE}" >> $GITHUB_OUTPUT || true
-        $RUN_FULL &&  echo "optsets=${OPTSETS_FULL}" >> $GITHUB_OUTPUT || true
+        if [[ "$RUN_SMOKE" == "true" ]]; then
+          echo "optsets=${OPTSETS_SMOKE}" >> "$GITHUB_OUTPUT"
+        fi
+        if [[ "$RUN_FULL" == "true" ]]; then
+          echo "optsets=${OPTSETS_FULL}" >> "$GITHUB_OUTPUT"
+        fi
 
   linux-aarch64-build-ispc:
     needs: [define-flow]
@@ -284,8 +297,8 @@ jobs:
             --preset os \
             -DINSTALL_WITH_XE_DEPS=ON \
             -DISPC_INCLUDE_BENCHMARKS=ON \
-            -DPREBUILT_STAGE2_PATH=${GITHUB_WORKSPACE}/bin-${LLVM_VERSION} \
-            -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/ispc-xe
+            -DPREBUILT_STAGE2_PATH="${GITHUB_WORKSPACE}/bin-${LLVM_VERSION}" \
+            -DCMAKE_INSTALL_PREFIX="${GITHUB_WORKSPACE}"/ispc-xe
         cmake --build build
 
     - name: Sanity testing (make check-all, make test)
@@ -372,7 +385,7 @@ jobs:
 
     - name: Running tests
       run: |
-        echo PATH=$PATH
+        echo PATH="$PATH"
         ./alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Check
@@ -458,7 +471,7 @@ jobs:
 
     - name: Running tests
       run: |
-        echo PATH=$PATH
+        echo PATH="$PATH"
         ./alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Check
@@ -507,7 +520,7 @@ jobs:
 
     - name: Running tests
       run: |
-        echo PATH=$PATH
+        echo PATH="$PATH"
         ./alloy.py -r --only="stability ${{ matrix.arch}} current -O0 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Check
@@ -559,7 +572,7 @@ jobs:
 
     - name: Running tests
       run: |
-        echo PATH=$PATH
+        echo PATH="$PATH"
         ./alloy.py -r --only="stability ${{ matrix.arch }} current debug -O0 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Check
@@ -611,7 +624,7 @@ jobs:
 
     - name: Running tests
       run: |
-        echo PATH=$PATH
+        echo PATH="$PATH"
         # github runners don't have GPU so run CPU tests at least
         ./alloy.py -r --only="stability ${{ matrix.arch }} current -O0 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
@@ -667,16 +680,16 @@ jobs:
       run: |
         ls -al /Library/Developer/CommandLineTools/SDKs/
         xcrun --show-sdk-path
-        [ -n "$LLVM_REPO" ] && wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 --no-verbose $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
-        tar xf $LLVM_TAR
-        echo "${GITHUB_WORKSPACE}/bin-$LLVM_VERSION/bin" >> $GITHUB_PATH
+        [ -n "$LLVM_REPO" ] && wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 --no-verbose "$LLVM_REPO/releases/download/llvm-${LLVM_VERSION}-ispc-dev/${LLVM_TAR}"
+        tar xf "$LLVM_TAR"
+        echo "${GITHUB_WORKSPACE}/bin-${LLVM_VERSION}/bin" >> "$GITHUB_PATH"
         brew install bison flex
         if [ "${{ matrix.runner }}" == "macos-14" ]; then
-          echo "/opt/homebrew/opt/bison/bin" >> $GITHUB_PATH
-          echo "opt/homebrew/opt/flex/bin" >> $GITHUB_PATH
+          echo "/opt/homebrew/opt/bison/bin" >> "$GITHUB_PATH"
+          echo "/opt/homebrew/opt/flex/bin" >> "$GITHUB_PATH"
         else
-          echo "/usr/local/opt/bison/bin" >> $GITHUB_PATH
-          echo "/usr/local/opt/flex/bin" >> $GITHUB_PATH
+          echo "/usr/local/opt/bison/bin" >> "$GITHUB_PATH"
+          echo "/usr/local/opt/flex/bin" >> "$GITHUB_PATH"
         fi
 
     - name: Check environment
@@ -715,12 +728,12 @@ jobs:
       run: |
         ls -al /Library/Developer/CommandLineTools/SDKs/
         xcrun --show-sdk-path
-        [ -n "$LLVM_REPO" ] && wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 --no-verbose $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
-        tar xf $LLVM_TAR
-        echo "${GITHUB_WORKSPACE}/bin-$LLVM_VERSION/bin" >> $GITHUB_PATH
+        [ -n "$LLVM_REPO" ] && wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 --no-verbose "$LLVM_REPO/releases/download/llvm-${LLVM_VERSION}-ispc-dev/${LLVM_TAR}"
+        tar xf "$LLVM_TAR"
+        echo "${GITHUB_WORKSPACE}/bin-${LLVM_VERSION}/bin" >> "$GITHUB_PATH"
         brew install bison flex ninja
-        echo "/usr/local/opt/bison/bin" >> $GITHUB_PATH
-        echo "/usr/local/opt/flex/bin" >> $GITHUB_PATH
+        echo "/usr/local/opt/bison/bin" >> "$GITHUB_PATH"
+        echo "/usr/local/opt/flex/bin" >> "$GITHUB_PATH"
 
     - name: Check environment
       run: |
@@ -730,7 +743,7 @@ jobs:
 
     - name: Build package
       run: |
-        cmake -B build superbuild --preset os -DLTO=ON -DXE_DEPS=OFF -DCMAKE_CXX_FLAGS=-Werror -DPREBUILT_STAGE2_PATH="${GITHUB_WORKSPACE}/bin-$LLVM_VERSION" -DMACOS_UNIVERSAL_BIN=ON -DISPC_ANDROID_NDK_PATH=${{ env.ISPC_ANDROID_NDK_PATH }}
+        cmake -B build superbuild --preset os -DLTO=ON -DXE_DEPS=OFF -DCMAKE_CXX_FLAGS=-Werror -DPREBUILT_STAGE2_PATH="${GITHUB_WORKSPACE}/bin-${LLVM_VERSION}" -DMACOS_UNIVERSAL_BIN=ON -DISPC_ANDROID_NDK_PATH=${{ env.ISPC_ANDROID_NDK_PATH }}
         cmake --build build
 
     - name: Sanity testing (make check-all)
@@ -762,9 +775,9 @@ jobs:
     - name: Install dependencies and unpack artifacts
       run: |
         tar xf ispc-trunk-macos.tar.gz
-        echo "$GITHUB_WORKSPACE/ispc-trunk-macos/bin" >> $GITHUB_PATH
-        echo "ISPC_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
-        echo "LLVM_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+        echo "$GITHUB_WORKSPACE/ispc-trunk-macos/bin" >> "$GITHUB_PATH"
+        echo "ISPC_HOME=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
+        echo "LLVM_HOME=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
 
     - name: Check environment
       run: |
@@ -772,7 +785,7 @@ jobs:
 
     - name: Running tests
       run: |
-        echo PATH=$PATH
+        echo PATH="$PATH"
         ./alloy.py -r --only="stability current x86-64 -O0 -O2" --only-targets="sse4-i32x4" --time --update-errors=FP
 
     - name: Check
@@ -810,9 +823,9 @@ jobs:
     - name: Install dependencies and unpack artifacts
       run: |
         tar xf ispc-trunk-macOS.universal.tar.gz
-        echo "$GITHUB_WORKSPACE/ispc-trunk-macOS.universal/bin" >> $GITHUB_PATH
-        echo "ISPC_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
-        echo "LLVM_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+        echo "$GITHUB_WORKSPACE/ispc-trunk-macOS.universal/bin" >> "$GITHUB_PATH"
+        echo "ISPC_HOME=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
+        echo "LLVM_HOME=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
 
     - name: Check environment
       run: |
@@ -820,7 +833,7 @@ jobs:
 
     - name: Running tests
       run: |
-        echo PATH=$PATH
+        echo PATH="$PATH"
         ./alloy.py -r --only="stability current x86-64 -O0 -O2" --only-targets="sse4-i32x4" --time --update-errors=FP
 
     - name: Check
