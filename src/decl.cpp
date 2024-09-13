@@ -213,9 +213,8 @@ Attribute::Attribute(const Attribute &a) : name(a.name), arg(a.arg) {}
 
 bool Attribute::IsKnownAttribute() const {
     // Known/supported attributes.
-    static std::unordered_set<std::string> lKnownParamAttrs = {
-        "noescape", "address_space", "unmangled", "memory", "cdecl",
-    };
+    static std::unordered_set<std::string> lKnownParamAttrs = {"noescape", "address_space", "unmangled",
+                                                               "memory",   "cdecl",         "external_only"};
 
     if (lKnownParamAttrs.find(name) != lKnownParamAttrs.end()) {
         return true;
@@ -820,12 +819,18 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         bool isExternC = ds && (ds->storageClass == SC_EXTERN_C);
         bool isExternSYCL = ds && (ds->storageClass == SC_EXTERN_SYCL);
         bool isExported = ds && ((ds->typeQualifiers & TYPEQUAL_EXPORT) != 0);
+        bool isExternalOnly = ds && ds->attributeList && ds->attributeList->HasAttribute("external_only");
         bool isTask = ds && ((ds->typeQualifiers & TYPEQUAL_TASK) != 0);
         bool isUnmasked = ds && ((ds->typeQualifiers & TYPEQUAL_UNMASKED) != 0);
         bool isVectorCall = ds && ((ds->typeQualifiers & TYPEQUAL_VECTORCALL) != 0);
         bool isRegCall = ds && ((ds->typeQualifiers & TYPEQUAL_REGCALL) != 0);
         bool isUnmangled = ds && ds->attributeList && ds->attributeList->HasAttribute("unmangled");
         bool isCdecl = ds && ds->attributeList && ds->attributeList->HasAttribute("cdecl");
+
+        if (!isExported && isExternalOnly) {
+            Error(pos, "\"external_only\" attribute is only valid for exported functions.");
+            return;
+        }
 
         if (isExported && isTask) {
             Error(pos, "Function can't have both \"task\" and \"export\" "
@@ -878,8 +883,8 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         }
 
         const FunctionType *functionType =
-            new FunctionType(returnType, args, argNames, argDefaults, argPos, isTask, isExported, isExternC,
-                             isExternSYCL, isUnmasked, isUnmangled, isVectorCall, isRegCall, isCdecl, pos);
+            new FunctionType(returnType, args, argNames, argDefaults, argPos, isTask, isExported, isExternalOnly,
+                             isExternC, isExternSYCL, isUnmasked, isUnmangled, isVectorCall, isRegCall, isCdecl, pos);
 
         // handle any explicit __declspecs on the function
         if (ds != nullptr) {

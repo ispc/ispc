@@ -691,7 +691,7 @@ void Function::GenerateIR() const {
         // function which will resolve to particular implementation. The condition below ensures that in case of
         // multi-target compilation we will emit only one-per-target definition of extern "C" function mangled with
         // <target> suffix.
-        if (!((type->isExternC || type->isExternSYCL) && g->mangleFunctionsWithTarget)) {
+        if (!type->isExternalOnly && !((type->isExternC || type->isExternSYCL) && g->mangleFunctionsWithTarget)) {
             llvm::TimeTraceScope TimeScope("emitCode", llvm::StringRef(sym->name));
             FunctionEmitContext ec(this, sym, function, firstStmtPos);
             emitCode(&ec, function, firstStmtPos);
