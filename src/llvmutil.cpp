@@ -1446,7 +1446,14 @@ static llvm::Value *lExtractFirstVectorElement(llvm::Value *v, std::map<llvm::PH
         Assert(v1 != nullptr);
         // Note that the new binary operator is inserted immediately before
         // the previous vector one
-        return llvm::BinaryOperator::Create(bop->getOpcode(), v0, v1, newName, bop);
+        // Overcaution measures: copy flags from the original instruction only
+        // if --wrap-signed-int is disabled (this is the source of the nsw
+        // flags we want to transfer to the new instruction)
+        if (!g->wrapSignedInt) {
+            return llvm::BinaryOperator::CreateWithCopiedFlags(bop->getOpcode(), v0, v1, bop, newName, bop);
+        } else {
+            return llvm::BinaryOperator::Create(bop->getOpcode(), v0, v1, newName, bop);
+        }
     }
 
     llvm::CastInst *cast = llvm::dyn_cast<llvm::CastInst>(v);
