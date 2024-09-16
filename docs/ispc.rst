@@ -642,8 +642,13 @@ Updating ISPC Programs For Changes In ISPC 1.25.0
 ISPC language was extended to support ``__attribute__(())`` syntax for variable
 and function declarations. Two attributes are supported now: ``noescape`` and
 ``address_space(N)``. The macro ``ISPC_ATTRIBUTE_SUPPORTED`` is defined if the
-ISPC compiler supports attribute syntax. Please, reger to `Attributes`_ for
-more details.
+ISPC compiler supports attribute syntax. Please, refer to `Attributes`_ for
+more details and the full list of supported attributes.
+
+This release supports ``-ffunction-sections`` command line flag to generate
+each function in a separate section. This flag is useful for reducing the size
+of the final executable by removing unused functions. Please, refer to
+`Basic Command-line Options`_ for more details.
 
 Getting Started with ISPC
 =========================
@@ -851,6 +856,14 @@ for use in a shared library. The ``--PIC`` flag can be used to generate
 position-independent code suitable for dynamic linking avoiding any limit on
 the size of the global offset table. When no ``--pic`` or ``--PIC`` flag is
 provided, the compiler enforces target-specific default behavior.
+
+The ``-ffunction-sections`` flag can be used to generate each function in a
+separate section. This flag is useful for reducing the size of the final
+executable by removing unused functions when it is combined with linker flag
+that removes unused sections: ``--gc-sections`` for ``GNU ld`` and ``/OPT:REF``
+for ``MSVC link.exe``. On macOS, this flag does not have any effect (as in
+clang) because dead stripping ``-dead_strip`` for ``ld64`` works differently.
+The ``-fno-function-sections`` disables this behavior.
 
 Selecting The Compilation Target
 --------------------------------
