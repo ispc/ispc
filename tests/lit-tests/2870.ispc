@@ -4,10 +4,10 @@
 
 // CHECK-LABEL: {{.*}}LBB0_3: {{.*}} %foreach_full_body
 // CHECK-NEXT: {{.*}}  =>This Inner Loop Header: Depth=1
-// CHECK-NEXT:         vaddps  ymm1, ymm0, ymmword ptr [r{{.*}} + 4*rax]
-// CHECK-NEXT:         vmovups ymmword ptr [r{{.*}} + 4*rax], ymm1
-// CHECK-NEXT:         add     rax, 8
-// CHECK-NEXT:         cmp     rax, r{{.*}}
+// CHECK-NEXT:         vaddps  [[NEW:ymm.*]], [[ONE:ymm.*]], ymmword ptr [[[BASE:r.*]] + 4*[[COUNTER:r.*]]]
+// CHECK-NEXT:         vmovups ymmword ptr [[[BASE]] + 4*[[COUNTER]]], [[NEW]]
+// CHECK-NEXT:         add     [[COUNTER]], 8
+// CHECK-NEXT:         cmp     [[COUNTER]], [[N:r.*]]
 // CHECK-NEXT:         jb      {{.*}}LBB0_3
 
 unmasked void foo(uniform float Data[], const uniform int N) {
