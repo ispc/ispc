@@ -1,6 +1,6 @@
-//; RUN: %{ispc} --emit-asm --target=avx2 %s -o - | FileCheck %s -check-prefix=CHECK_AVX2
-//; RUN: %{ispc} --emit-asm --target=sse2 %s -o - | FileCheck %s -check-prefix=CHECK_SSE2
-//; RUN: %{ispc} --emit-asm --target=avx512skx-x16 %s -o - | FileCheck %s -check-prefix=CHECK_AVX512
+//; RUN: %{ispc} --emit-asm --no-discard-value-names --target=avx2 %s -o - | FileCheck %s -check-prefix=CHECK_AVX2
+//; RUN: %{ispc} --emit-asm --no-discard-value-names --target=sse2 %s -o - | FileCheck %s -check-prefix=CHECK_SSE2
+//; RUN: %{ispc} --emit-asm --no-discard-value-names --target=avx512skx-x16 %s -o - | FileCheck %s -check-prefix=CHECK_AVX512
 // REQUIRES: X86_ENABLED
 
 //; CHECK_SSE2: foo1
@@ -45,16 +45,13 @@ void foo2(uniform int a[]) {
 
 
 //; CHECK_SSE2: foo3
-//; CHECK_SSE2: cmp
-//; CHECK_SSE2-NOT: cmp
+//; CHECK_SSE2-NOT: %partial_inner_only
 
 //; CHECK_AVX2: foo3
-//; CHECK_AVX2: cmp
-//; CHECK_AVX2-NOT: cmp
+//; CHECK_AVX2-NOT: %partial_inner_only
 
 //; CHECK_AVX512: foo3
-//; CHECK_AVX512: cmp
-//; CHECK_AVX512-NOT: cmp
+//; CHECK_AVX512-NOT: %partial_inner_only
 
 // Case 3 : loop : remove remainder loop.
 int foo3(uniform int a[], uniform int count) {
