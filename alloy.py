@@ -250,6 +250,10 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, openmp, from_valid
 
     targets_and_common_options = "  -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86 -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly"
 
+    # Build without terminfo support. Starting from 19.0 it's the default and the options is removed.
+    if version_LLVM < "19_0":
+        targets_and_common_options += " -DLLVM_ENABLE_TERMINFO=OFF"
+
     # configuring llvm and build for first phase of selfbuild
     cmakelists_path = LLVM_SRC + "/llvm"
     if selfbuild is SelfbuildType.SELF or selfbuild is SelfbuildType.SELF_PHASE1:
