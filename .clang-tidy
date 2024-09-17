@@ -1,0 +1,61 @@
+Checks: '-*,
+         clang-analyzer-*,
+         -clang-analyzer-core.UndefinedBinaryOperatorResult,
+         -clang-analyzer-core.NonNullParamChecker,
+         -clang-analyzer-core.CallAndMessage,
+         -clang-analyzer-core.uninitialized.Assign,
+         -clang-analyzer-optin.cplusplus.VirtualCall,
+         -clang-analyzer-optin.core.EnumCastOutOfRange,
+         -clang-analyzer-core.NullDereference,
+         -clang-analyzer-core.uninitialized.Branch,
+         -clang-analyzer-unix.Malloc,
+         bugprone-*,
+         -bugprone-easily-swappable-parameters,
+         -bugprone-assignment-in-if-condition,
+         -bugprone-reserved-identifier,
+         -bugprone-narrowing-conversions,
+         -bugprone-switch-missing-default-case,
+         -bugprone-suspicious-include,
+         -bugprone-branch-clone,
+         -bugprone-signed-char-misuse,
+         -bugprone-implicit-widening-of-multiplication-result,
+         cppcoreguidelines-*,
+         -cppcoreguidelines-pro-type-const-cast,
+         -cppcoreguidelines-avoid-do-while,
+         -cppcoreguidelines-special-member-functions,
+         -cppcoreguidelines-pro-type-vararg,
+         -cppcoreguidelines-pro-bounds-constant-array-index,
+         -cppcoreguidelines-owning-memory,
+         -cppcoreguidelines-avoid-magic-numbers,
+         -cppcoreguidelines-avoid-c-arrays,
+         -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+         -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+         -cppcoreguidelines-avoid-non-const-global-variables,
+         -cppcoreguidelines-pro-type-static-cast-downcast,
+         -cppcoreguidelines-pro-type-cstyle-cast,
+         -cppcoreguidelines-narrowing-conversions,
+         -cppcoreguidelines-macro-usage,
+         -cppcoreguidelines-no-malloc,
+         -cppcoreguidelines-pro-type-union-access,
+         -cppcoreguidelines-pro-type-member-init,
+         -cppcoreguidelines-prefer-member-initializer'
+
+# hicpp-braces-around-statements
+# misc-include-cleaner
+# misc-unused-parameters
+
+WarningsAsErrors: '*'
+
+CheckOptions:
+  - key:     readability-function-cognitive-complexity.Threshold
+    value:   15
+  - key:     readability-function-cognitive-complexity.DescribeBasicIncrements
+    value:   false
+  - key:     readability-function-size.LineThreshold
+    value:   100
+  - key:     readability-function-size.StatementThreshold
+    value:   50
+  - key:     cppcoreguidelines-avoid-do-while.IgnoreMacros
+    value:   'true'
+
+FormatStyle: file

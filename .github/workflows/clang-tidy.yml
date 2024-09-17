@@ -1,0 +1,49 @@
+## Copyright 2024 Intel Corporation
+## SPDX-License-Identifier: BSD-3-Clause
+
+name: clang-tidy
+
+permissions: read-all
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  SDE_MIRROR_ID: 813591
+  SDE_TAR_NAME: sde-external-9.33.0-2024-01-07
+  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
+  LLVM_REPO: https://github.com/ispc/ispc.dependencies
+
+jobs:
+  clang_tidy:
+    runs-on: ubuntu-24.04
+    # Disabling this workflow for non ispc/ispc repo as it needs to run on releases only.
+    # if: github.repository == 'ispc/ispc'
+    env:
+      LLVM_VERSION: "17.0"
+      LLVM_TAR: llvm-17.0.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      ISPC_OPAQUE_PTR_MODE: "ON"
+
+    steps:
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.sh
+
+    - name: Build package
+      run: |
+        .github/workflows/scripts/build-ispc.sh
+
+    - name: Run clang-tidy
+      run: |
+        ./scripts/clang_tidy.sh | tee clang-tidy.log
+
+    - uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      with:
+        name: clang-tidy-log
+        path: |
+          clang-tidy.log
