@@ -806,6 +806,10 @@ endif()
 # System libraries, our own and transitive dependencies from LLVM libs.
 if (WIN32)
     list(APPEND LINK_LIBRARIES version.lib shlwapi.lib odbc32.lib odbccp32.lib)
+    # Required after LLVM commit a5ffabc
+    if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "18.1.0")
+        list(APPEND LINK_LIBRARIES ws2_32.lib)
+    endif()
 else()
     # ISPC doesn't use pthreads directly, but LLVM does. Although, it looks
     # like we do not use LLVM code that depend on pthreads, don't we?
