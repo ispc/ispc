@@ -148,7 +148,7 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, openmp, from_valid
     make_sure_dir_exists(llvm_home)
 
     FOLDER_NAME=version_LLVM
-    version_LLVM = re.sub('\.', '_', version_LLVM)
+    version_LLVM = re.sub(r'\.', '_', version_LLVM)
 
     os.chdir(llvm_home)
     if folder == "":
@@ -248,7 +248,7 @@ def build_LLVM(version_LLVM, folder, debug, selfbuild, extra, openmp, from_valid
                 try_do_LLVM("patch LLVM with patch " + patch, "git apply " + patch, from_validation, verbose)
         os.chdir("../")
 
-    targets_and_common_options = "  -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86 -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly"
+    targets_and_common_options = r"  -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF -DLLVM_TARGETS_TO_BUILD=AArch64\;ARM\;X86 -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly"
 
     # Build without terminfo support. Starting from 19.0 it's the default and the options is removed.
     if version_LLVM < "19_0":
