@@ -472,9 +472,15 @@ list(APPEND LLVM_COMMON_CMAKE_ARGS
     -DLLVM_INSTALL_UTILS=ON
     -DLLVM_ENABLE_ZLIB=OFF
     -DLLVM_ENABLE_ZSTD=OFF
-    -DLLVM_ENABLE_TERMINFO=OFF
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
     )
+
+# Build without terminfo support. Starting from 19.0 it's the default and the options is removed.
+if (${LLVM_VERSION_MAJOR} VERSION_LESS 19)
+    list(APPEND LLVM_COMMON_CMAKE_ARGS
+        -DLLVM_ENABLE_TERMINFO=OFF
+        )
+endif()
 
 # Disable unneded parts of clang.
 list(APPEND LLVM_COMMON_CMAKE_ARGS
