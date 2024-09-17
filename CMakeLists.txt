@@ -739,6 +739,9 @@ if (WIN32)
         list(APPEND LINK_OPTIONS_PUBLIC /OPT:REF /OPT:ICF)
     endif()
 elseif (APPLE)
+    if(CMAKE_BUILD_TYPE MATCHES Release)
+        list(APPEND LINK_OPTIONS_PUBLIC "SHELL: -Wl,-dead_strip")
+    endif()
 else()
     # Common security hardening options for both Debug and Release
     list(APPEND LINK_OPTIONS_PUBLIC
