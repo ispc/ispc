@@ -271,6 +271,7 @@ if (ISPC_INCLUDE_UTILS)
     endif()
 endif()
 
+set(BITCODE2CPP "${CMAKE_CURRENT_SOURCE_DIR}/scripts/bitcode2cpp.py")
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/ispcrt/cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FixWindowsPath.cmake)
