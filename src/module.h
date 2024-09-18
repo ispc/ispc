@@ -114,7 +114,7 @@ class Module {
     /** After a source file has been compiled, output can be generated in a
         number of different formats. */
     enum OutputType {
-        Asm,         /** Generate text assembly language output */
+        Asm = 0,     /** Generate text assembly language output */
         Bitcode,     /** Generate LLVM IR bitcode output */
         BitcodeText, /** Generate LLVM IR Text output */
         Object,      /** Generate a native object file */
@@ -129,6 +129,21 @@ class Module {
         ZEBIN, /** generate L0 binary file */
         SPIRV, /** generate spir-v file */
 #endif
+    };
+
+    // Define a mapping from OutputType to expected suffixes and file type descriptions
+    struct OutputTypeInfo {
+        const char *fileType;
+        std::vector<std::string> validSuffixes;
+
+        // Check if the provided suffix is valid for this fileType by
+        // case-insensitive comparison with valid suffixes that are stored in
+        // validSuffixes vector
+        bool isSuffixValid(const std::string &suffix) const {
+            return std::find_if(validSuffixes.begin(), validSuffixes.end(), [&suffix](const std::string &valid) {
+                       return strcasecmp(suffix.c_str(), valid.c_str()) == 0;
+                   }) != validSuffixes.end();
+        }
     };
 
     class OutputFlags {
