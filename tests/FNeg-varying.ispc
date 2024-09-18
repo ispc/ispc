@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 
 float Neg(float inVal) {
     return -inVal;

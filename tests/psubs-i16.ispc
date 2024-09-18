@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     uniform int16 a_max = 32767, a_min = -32768; // max and min signed int16
     if (programIndex % 3 == 0) {

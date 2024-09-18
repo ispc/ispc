@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 typedef bool<3> bool3;
 
 

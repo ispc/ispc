@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 // rule: skip on arch=xe64
 
 typedef task void (*TaskFn)(uniform int i, float i);

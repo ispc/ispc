@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 struct S {
   float x, y;
   int i;

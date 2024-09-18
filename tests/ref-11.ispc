@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 int sum_varying() { // should return 6
     int ia[] = {1, 2, 3};
     varying int *ptr = &ia[0];

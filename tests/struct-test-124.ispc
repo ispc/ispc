@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 task void f_v(uniform float RET[]) {
     varying struct { float<2> v; } a;
     a.v.x = 1;

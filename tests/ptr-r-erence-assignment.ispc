@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 void foo(varying float * uniform x, float y) {
     *x = y;
 }

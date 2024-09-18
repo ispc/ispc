@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 task void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = 0;
     uniform float f = sqrt(-1.0f);

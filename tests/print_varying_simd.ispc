@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 #define TEST_SIMD
 
 task void print_f(uniform float aFOO[]) {

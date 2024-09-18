@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 void foo(uniform float * uniform * ret) {
     #pragma ignore warning(perf)
     uniform float *px = *ret;

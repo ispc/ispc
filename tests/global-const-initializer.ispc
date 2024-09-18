@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 /*COextern "C" float f;*/
 const uniform float f = 2.;
 

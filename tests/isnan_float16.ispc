@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 // rule: skip on arch=x86
 // rule: skip on arch=x86-64
 task void f_v(uniform float RET[]) {

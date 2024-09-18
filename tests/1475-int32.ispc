@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 // Testing int32 implementation of varying * varying
 void tests_int32(uniform float RET[]) {
     varying int32 p_foo[programCount];

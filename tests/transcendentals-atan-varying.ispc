@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 // rule: skip on cpu=tgllp
 // rule: skip on cpu=dg2
 bool ok(double x, double ref) { return (abs(x - ref) < 1d-7) || abs((x-ref)/ref) < 1d-6; }

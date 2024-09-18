@@ -402,11 +402,11 @@ def run_test(testname, host, target):
                     exe_name = "%s.exe" % os.path.basename(filename)
 
                 cc_cmd = "%s /I. /Zi /nologo /DTEST_SIG=%d /DTEST_WIDTH=%d %s %s /Fe%s" % \
-                         (options.compiler_exe, match, width, add_prefix("test_static.cpp", host, target), obj_name, exe_name)
+                         (options.compiler_exe, match, width, add_prefix("tests\\test_static.cpp", host, target), obj_name, exe_name)
                 if target.is_xe():
                     cc_cmd = "%s /I. /I%s\\include /nologo /DTEST_SIG=%d /DTEST_WIDTH=%d %s %s /Fe%s ze_loader.lib /link /LIBPATH:%s\\lib" % \
                          (options.compiler_exe, options.l0loader, match, width, " /DTEST_ZEBIN" if options.ispc_output == "ze" else " /DTEST_SPV", \
-                         add_prefix("test_static_l0.cpp", host, target), exe_name, options.l0loader)
+                         add_prefix("tests\\test_static_l0.cpp", host, target), exe_name, options.l0loader)
                 if should_fail:
                     cc_cmd += " /DEXPECT_FAILURE"
             else:
@@ -431,7 +431,7 @@ def run_test(testname, host, target):
                 else:
                     gcc_arch = '-m64'
 
-                cc_cmd = "%s -O2 -I. %s test_static.cpp -DTEST_SIG=%d -DTEST_WIDTH=%d %s -o %s" % \
+                cc_cmd = "%s -O2 -I. %s tests/test_static.cpp -DTEST_SIG=%d -DTEST_WIDTH=%d %s -o %s" % \
                     (options.compiler_exe, gcc_arch, match, width, obj_name, exe_name)
 
                 # Produce position independent code for both c++ and ispc compilations.
@@ -446,7 +446,7 @@ def run_test(testname, host, target):
                     exe_name = "%s.run" % os.path.basename(testname)
                     cc_cmd = "%s -O0 -I. -I %s/include -lze_loader -L %s/lib \
                             %s %s -DTEST_SIG=%d -DTEST_WIDTH=%d -o %s" % \
-                            (options.compiler_exe, options.l0loader, options.l0loader, gcc_arch, add_prefix("test_static_l0.cpp", host, target),
+                            (options.compiler_exe, options.l0loader, options.l0loader, gcc_arch, add_prefix("tests/test_static_l0.cpp", host, target),
                              match, width, exe_name)
                     exe_name = "./" + exe_name
                     cc_cmd += " -DTEST_ZEBIN" if options.ispc_output == "ze" else " -DTEST_SPV"

@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 float crashEven(uniform float a[]) {
     int offset = 0;
     return (programIndex & 1) ? a[offset] : a[offset+1000000];

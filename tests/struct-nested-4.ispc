@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 struct Vector { float x, y, z; };
 
 struct Ray { Vector o; float t; Vector d; };

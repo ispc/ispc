@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 /*COfloat f(float);*/
 
 float f(float x) {

@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     int v = aFOO[programIndex];
     // Shift only if v is greater than 2.

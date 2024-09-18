@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 // rule: skip on cpu=tgllp
 // rule: skip on cpu=dg2
 // Test is unstable on tgllp

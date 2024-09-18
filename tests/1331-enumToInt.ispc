@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 enum Enum111{
     One,
     Two

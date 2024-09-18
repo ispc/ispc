@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     uniform unsigned int64 a_max = 0xFFFFFFFFFFFFFFFF, a_min = 0; // max and min unsigned int64
     if (programIndex % 3 == 0) {

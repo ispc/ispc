@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 //add test for f(int x[2][10]) - f(int x[][10]) - f(int (*x)[10])x
 
 

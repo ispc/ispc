@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 
 void noinline check_val_all(uniform float *uniform alloca_ptr, uniform float RET[], uniform float aFOO[]) {
     if (alloca_ptr[programIndex] != aFOO[programIndex]) {

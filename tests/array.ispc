@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 void foo(float a[]) {
     a[5] = 0;
 }

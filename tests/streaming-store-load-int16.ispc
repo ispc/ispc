@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 void var_store(uniform int16 a[], varying int16 x) {
     streaming_store(a, x);
 }

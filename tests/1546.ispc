@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 noinline void swap(bool doSwap, float &a_foo, float &b_foo) { a_foo = doSwap ? b_foo : a_foo; }
 
 task void f_f(uniform float RET[], uniform float aFOO[]) {

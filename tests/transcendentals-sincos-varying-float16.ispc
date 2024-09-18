@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 // sincos() function is available only on Linux.
 // rule: skip on OS=*
 // rule: run on OS=linux

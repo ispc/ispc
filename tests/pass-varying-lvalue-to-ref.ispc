@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 #pragma ignore warning(perf)
 void inc(uniform float * varying v) { ++(*v); }
 

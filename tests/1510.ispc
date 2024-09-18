@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 task void f_v(uniform float RET[]) {
     RET[programIndex] = 0;
     uint8 a8 = -6;

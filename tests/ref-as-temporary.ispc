@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 int func(const int &a) { return a+1; }
 int bar() { return 0; }
 

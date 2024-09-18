@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 task void print_f(uniform float aFOO[]) {
     print("Hello World!\n");
 }

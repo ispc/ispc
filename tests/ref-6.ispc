@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 void foo(float<3> &a) {
     a.x = 0;
     a.y *= 2;

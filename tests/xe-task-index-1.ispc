@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 // rule: skip on arch=*
 // rule: run on arch=xe64
 

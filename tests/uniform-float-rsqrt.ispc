@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 task void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform float x = aFOO[programCount/2];
     uniform float d, invsqrt = rsqrt(x);

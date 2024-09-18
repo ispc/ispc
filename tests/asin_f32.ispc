@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 bool ok(float x, float ref) { return (abs(x - ref) < 1e-6) || abs((x-ref)/ref) < 1e-4; }
 
 task void f_v(uniform float RET[]) {

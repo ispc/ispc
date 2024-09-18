@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 // rule: skip on arch=x86
 // rule: skip on arch=x86-64
 bool ok(float16 x, float16 ref) { return (abs(x - ref) < 1e-7) || abs((x-ref)/ref) < 1e-6; }

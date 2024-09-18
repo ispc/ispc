@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 #define foo(x) ((int8)x / (programIndex-1))
 
 inline int fill(uniform float b[], int8 a) {

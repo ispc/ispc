@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     uniform float<5> x = {1,2,3,10,20}, y = {3,1,0,0,5};
     uniform bool<5> c = x < y;

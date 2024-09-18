@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 float bar(float x);
 task void f_v(uniform float RET[]) { RET[programIndex] = bar(3.); }
 float bar(float x) { return 2. * x; }

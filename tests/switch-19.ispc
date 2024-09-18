@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 int switchit(int a) {
     int res = 0;
     for (int i = 0; i < programIndex; ++i) {

@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 task void f_v(uniform float RET[]) {
     unsigned int x = 0xffff0f0f;
     #pragma ignore warning(perf)

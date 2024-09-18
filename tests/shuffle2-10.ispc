@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 /* failing due to llvm bug http://llvm.org/bugs/show_bug.cgi?id=10421 */
 
 

@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 #define N 256
 
 uniform int int_max = 0x7FFFFFFF; // use INT_MAX to check that result is saturated

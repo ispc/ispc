@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 const int32 bit_size = 32;
 const int32 a_bit_size = 3;
 const int32 max_a = 7; // must be 2^a_bit_size-1

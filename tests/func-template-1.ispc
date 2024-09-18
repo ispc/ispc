@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 
 template <typename T, typename C> noinline uniform float noinline goo(T argGooOne, C argGooTwo) { return 0; }
 

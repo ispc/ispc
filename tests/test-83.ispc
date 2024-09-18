@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 float f(int i) { return i + 1.; }
 float f(float v) { return 2 * v; }
 task void f_f(uniform float RET[], uniform float aFOO[]) {

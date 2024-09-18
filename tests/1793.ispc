@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 uniform bool b = true;
 
 task void f_v(uniform float RET[]) {
