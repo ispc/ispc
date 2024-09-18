@@ -28,7 +28,7 @@ static bool lIsSafeToBlend(llvm::Value *lvalue) {
         llvm::AllocaInst *ai = llvm::dyn_cast<llvm::AllocaInst>(lvalue);
         if (ai) {
             llvm::Type *type = ai->getAllocatedType();
-            llvm::ArrayType *at;
+            llvm::ArrayType *at = nullptr;
             while ((at = llvm::dyn_cast<llvm::ArrayType>(type))) {
                 type = at->getElementType();
             }

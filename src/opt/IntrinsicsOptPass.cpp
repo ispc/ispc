@@ -105,7 +105,7 @@ bool IntrinsicsOpt::optimizeIntrinsics(llvm::BasicBlock &bb) {
             }
         } else if (matchesMaskInstruction(callInst->getCalledFunction())) {
             llvm::Value *factor = callInst->getArgOperand(0);
-            uint64_t mask;
+            uint64_t mask = 0;
             if (GetMaskFromValue(factor, &mask) == true) {
                 // If the vector-valued mask has a known value, replace it
                 // with the corresponding integer mask from its elements
@@ -136,7 +136,7 @@ bool IntrinsicsOpt::optimizeIntrinsics(llvm::BasicBlock &bb) {
                     new llvm::BitCastInst(callInst->getArgOperand(0), llvm::PointerType::get(returnType, 0),
                                           llvm::Twine(callInst->getArgOperand(0)->getName()) + "_cast", callInst);
                 LLVMCopyMetadata(castPtr, callInst);
-                int align;
+                int align = 0;
                 if (g->opt.forceAlignedMemory)
                     align = g->target->getNativeVectorAlignment();
                 else
@@ -168,7 +168,7 @@ bool IntrinsicsOpt::optimizeIntrinsics(llvm::BasicBlock &bb) {
                                           llvm::Twine(callInst->getArgOperand(0)->getName()) + "_ptrcast", callInst);
                 LLVMCopyMetadata(castPtr, callInst);
 
-                int align;
+                int align = 0;
                 if (g->opt.forceAlignedMemory)
                     align = g->target->getNativeVectorAlignment();
                 else

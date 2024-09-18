@@ -158,7 +158,7 @@ CFInfo *CFInfo::GetForeach(bool isUniformEmulated, FunctionEmitContext::ForeachT
                            llvm::BasicBlock *continueTarget, AddressInfo *savedBreakLanesAddressInfo,
                            AddressInfo *savedContinueLanesAddressInfo, llvm::Value *savedMask,
                            llvm::Value *savedForeachMask) {
-    CFType cfType;
+    CFType cfType = ForeachRegular;
     switch (ft) {
     case FunctionEmitContext::FOREACH_REGULAR:
         cfType = ForeachRegular;
@@ -1521,16 +1521,16 @@ void FunctionEmitContext::AddDebugPos(llvm::Value *value, const SourcePos *pos, 
 
 void FunctionEmitContext::StartScope() {
     if (m->diBuilder != nullptr) {
-        llvm::DIScope *parentScope;
-        llvm::DILexicalBlock *lexicalBlock;
+        llvm::DIScope *parentScope = nullptr;
         if (debugScopes.size() > 0)
             parentScope = debugScopes.back();
         else
             parentScope = diSubprogram;
-        lexicalBlock = m->diBuilder->createLexicalBlock(parentScope, diFile, currentPos.first_line,
-                                                        // Revision 216239 in LLVM removes support of DWARF
-                                                        // discriminator as the last argument
-                                                        currentPos.first_column);
+        llvm::DILexicalBlock *lexicalBlock =
+            m->diBuilder->createLexicalBlock(parentScope, diFile, currentPos.first_line,
+                                             // Revision 216239 in LLVM removes support of DWARF
+                                             // discriminator as the last argument
+                                             currentPos.first_column);
         debugScopes.push_back(llvm::cast<llvm::DILexicalBlockBase>(lexicalBlock));
     }
 }
@@ -2077,13 +2077,11 @@ llvm::Value *FunctionEmitContext::MakeSlicePointer(llvm::Value *ptr, llvm::Value
 }
 
 const PointerType *FunctionEmitContext::RegularizePointer(const Type *ptrRefType) {
-    const PointerType *ptrType;
     if (CastType<ReferenceType>(ptrRefType) != nullptr)
-        ptrType = PointerType::GetUniform(ptrRefType->GetReferenceTarget());
+        return PointerType::GetUniform(ptrRefType->GetReferenceTarget());
     else {
-        ptrType = CastType<PointerType>(ptrRefType);
+        return CastType<PointerType>(ptrRefType);
     }
-    return ptrType;
 }
 
 llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index, const Type *ptrRefType,
@@ -2106,7 +2104,7 @@ llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::
             // pointer.  This gives us an updated integer slice index for
             // the resulting slice pointer and then an index to index into
             // the soa<> structs with.
-            llvm::Value *newSliceOffset;
+            llvm::Value *newSliceOffset = nullptr;
             int soaWidth = ptrType->GetBaseType()->GetSOAWidth();
             index = lComputeSliceIndex(this, soaWidth, index, ptrSliceOffset, &newSliceOffset);
             ptrSliceOffset = newSliceOffset;
@@ -2163,7 +2161,7 @@ llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::
         AssertPos(currentPos, llvm::isa<llvm::StructType>(basePtr->getType()));
         llvm::Value *ptrSliceOffset = ExtractInst(basePtr, 1);
         if (ptrType->IsFrozenSlice() == false) {
-            llvm::Value *newSliceOffset;
+            llvm::Value *newSliceOffset = nullptr;
             int soaWidth = ptrType->GetBaseType()->GetSOAWidth();
             index1 = lComputeSliceIndex(this, soaWidth, index1, ptrSliceOffset, &newSliceOffset);
             ptrSliceOffset = newSliceOffset;
@@ -2233,7 +2231,7 @@ llvm::Value *FunctionEmitContext::AddElementOffset(AddressInfo *fullBasePtrInfo,
     // unfortunate...
     llvm::Value *basePtr = fullBasePtr;
     bool baseIsSlicePtr = llvm::isa<llvm::StructType>(fullBasePtr->getType());
-    const PointerType *rpt;
+    const PointerType *rpt = nullptr;
     if (baseIsSlicePtr) {
         AssertPos(currentPos, ptrType != nullptr);
         // Update basePtr to just be the part that actually points to the
@@ -2484,7 +2482,7 @@ llvm::Value *FunctionEmitContext::loadUniformFromSOA(llvm::Value *ptr, llvm::Val
         llvm::Value *retValue = llvm::UndefValue::get(llvmReturnType);
 
         for (int i = 0; i < ct->GetElementCount(); ++i) {
-            const PointerType *eltPtrType;
+            const PointerType *eltPtrType = nullptr;
             llvm::Value *eltPtr = AddElementOffset(new AddressInfo(ptr, ptrType), i, "elt_offset", &eltPtrType);
             llvm::Value *eltValue = LoadInst(eltPtr, mask, eltPtrType, name);
             retValue = InsertInst(retValue, eltValue, i, "set_value");
@@ -2510,7 +2508,7 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
     AssertPos(currentPos, ptrRefType != nullptr && mask != nullptr);
 
     const PointerType *ptrType = RegularizePointer(ptrRefType);
-    const Type *elType;
+    const Type *elType = nullptr;
     if (CastType<ReferenceType>(ptrRefType) != nullptr) {
         elType = ptrRefType->GetReferenceTarget();
     } else {
@@ -2605,7 +2603,7 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
         const CollectionType *returnCollectionType = CastType<CollectionType>(returnType->GetBaseType());
 
         for (int i = 0; i < collectionType->GetElementCount(); ++i) {
-            const PointerType *eltPtrType;
+            const PointerType *eltPtrType = nullptr;
             llvm::Value *eltPtr = AddElementOffset(new AddressInfo(ptr, ptrType), i, "gather_elt_ptr", &eltPtrType);
 
             eltPtr = addVaryingOffsetsIfNeeded(eltPtr, eltPtrType);
@@ -2748,7 +2746,7 @@ llvm::Value *FunctionEmitContext::AddrSpaceCastInst(llvm::Value *val, AddressSpa
 #else
     llvm::PointerType *newType = llvm::PointerType::getWithSamePointeeType(pt, (unsigned)as);
 #endif
-    llvm::AddrSpaceCastInst *inst;
+    llvm::AddrSpaceCastInst *inst = nullptr;
     if (atEntryBlock) {
         inst = new llvm::AddrSpaceCastInst(val, newType, val->getName() + "__cast", allocaBlock->getTerminator());
     } else {
@@ -3166,7 +3164,7 @@ void FunctionEmitContext::storeUniformToSOA(llvm::Value *value, llvm::Value *ptr
         for (int i = 0; i < ct->GetElementCount(); ++i) {
             llvm::Value *eltValue = ExtractInst(value, i);
             const Type *eltType = ct->GetElementType(i);
-            const PointerType *dstEltPtrType;
+            const PointerType *dstEltPtrType = nullptr;
             llvm::Value *dstEltPtr = AddElementOffset(new AddressInfo(ptr, ptrType), i, "slice_offset", &dstEltPtrType);
             StoreInst(eltValue, dstEltPtr, mask, eltType, dstEltPtrType);
         }

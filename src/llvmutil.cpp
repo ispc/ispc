@@ -406,7 +406,7 @@ llvm::Constant *LLVMUInt64Vector(const uint64_t *ivec) {
 }
 
 llvm::Constant *LLVMBoolVector(bool b) {
-    llvm::Constant *v;
+    llvm::Constant *v = nullptr;
     if (LLVMTypes::BoolVectorType == LLVMTypes::Int64VectorType)
         v = llvm::ConstantInt::get(LLVMTypes::Int64Type, b ? 0xffffffffffffffffull : 0, false /*unsigned*/);
     else if (LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
@@ -429,7 +429,7 @@ llvm::Constant *LLVMBoolVector(bool b) {
 llvm::Constant *LLVMBoolVector(const bool *bvec) {
     std::vector<llvm::Constant *> vals;
     for (int i = 0; i < g->target->getVectorWidth(); ++i) {
-        llvm::Constant *v;
+        llvm::Constant *v = nullptr;
         if (LLVMTypes::BoolVectorType == LLVMTypes::Int64VectorType)
             v = llvm::ConstantInt::get(LLVMTypes::Int64Type, bvec[i] ? 0xffffffffffffffffull : 0, false /*unsigned*/);
         else if (LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
@@ -860,7 +860,7 @@ static bool lAllDivBaseEqual(llvm::Value *val, int64_t baseValue, int vectorLeng
         return true;
 
     int64_t vecVals[ISPC_MAX_NVEC];
-    int nElts;
+    int nElts = 0;
     if (llvm::isa<llvm::VectorType>(val->getType()) && LLVMExtractVectorInts(val, vecVals, &nElts)) {
         // If we have a vector of compile-time constant integer values,
         // then go ahead and check them directly..
@@ -973,7 +973,7 @@ static bool lVectorShiftRightAllEqual(llvm::Value *val, llvm::Value *shift, int 
     // Are we shifting all elements by a compile-time constant amount?  If
     // not, give up.
     int64_t shiftAmount[ISPC_MAX_NVEC];
-    int nElts;
+    int nElts = 0;
     if (LLVMExtractVectorInts(shift, shiftAmount, &nElts) == false)
         return false;
     Assert(nElts == vectorLength);
@@ -1239,7 +1239,7 @@ static bool lCheckAndForLinear(llvm::Value *op0, llvm::Value *op1, int vectorLen
                                std::vector<llvm::PHINode *> &seenPhis) {
     // Require op1 to be a compile-time constant
     int64_t maskValue[ISPC_MAX_NVEC];
-    int nElts;
+    int nElts = 0;
     if (LLVMExtractVectorInts(op1, maskValue, &nElts) == false)
         return false;
     Assert(nElts == vectorLength);
@@ -1761,7 +1761,7 @@ bool GetMaskFromValue(llvm::Value *factor, uint64_t *mask) {
     unknown at compile time.
 */
 MaskStatus GetMaskStatusFromValue(llvm::Value *mask, int vecWidth) {
-    uint64_t bits;
+    uint64_t bits = 0;
     if (GetMaskFromValue(mask, &bits) == false)
         return MaskStatus::unknown;
 

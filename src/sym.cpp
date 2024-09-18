@@ -60,7 +60,7 @@ SymbolTable::~SymbolTable() {
 }
 
 void SymbolTable::PushScope() {
-    SymbolMapType *sm;
+    SymbolMapType *sm = nullptr;
     if (freeSymbolMaps.size() > 0) {
         sm = freeSymbolMaps.back();
         freeSymbolMaps.pop_back();
