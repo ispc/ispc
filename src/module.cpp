@@ -1574,29 +1574,36 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
 
     lReportInvalidSuffixWarning(outFileName, outputType);
 
-    if (outputType == Header) {
+    switch (outputType) {
+    case Asm:
+    case Object:
+        return writeObjectFileOrAssembly(outputType, outFileName);
+    case Bitcode:
+    case BitcodeText:
+        return writeBitcode(module, outFileName, outputType);
+    case Header:
         if (DHI)
             return writeDispatchHeader(DHI);
         else
             return writeHeader(outFileName);
-    } else if (outputType == Deps)
+    case Deps:
         return writeDeps(outFileName, flags.isMakeRuleDeps(), depTargetFileName, sourceFileName);
-    else if (outputType == CPPStub)
-        return writeCPPStub(outFileName);
-    else if (outputType == HostStub)
-        return writeHostStub(outFileName);
-    else if (outputType == DevStub)
+    case DevStub:
         return writeDevStub(outFileName);
-    else if ((outputType == Bitcode) || (outputType == BitcodeText))
-        return writeBitcode(module, outFileName, outputType);
+    case HostStub:
+        return writeHostStub(outFileName);
+    case CPPStub:
+        return writeCPPStub(outFileName);
 #ifdef ISPC_XE_ENABLED
-    else if (outputType == SPIRV)
-        return writeSPIRV(module, outFileName);
-    else if (outputType == ZEBIN)
+    case ZEBIN:
         return writeZEBin(module, outFileName);
+    case SPIRV:
+        return writeSPIRV(module, outFileName);
 #endif
-    else
-        return writeObjectFileOrAssembly(outputType, outFileName);
+    default:
+        FATAL("Unhandled output type in Module::writeOutput()");
+        return false;
+    }
 }
 
 bool Module::writeBitcode(llvm::Module *module, const char *outFileName, OutputType outputType) {
