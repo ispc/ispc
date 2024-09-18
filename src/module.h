@@ -15,6 +15,9 @@
 #include "decl.h"
 #include "ispc.h"
 
+#include <algorithm>
+#include <string>
+
 #include <clang/Frontend/FrontendOptions.h>
 #include <llvm/IR/DebugInfo.h>
 
@@ -141,7 +144,8 @@ class Module {
         // validSuffixes vector
         bool isSuffixValid(const std::string &suffix) const {
             return std::find_if(validSuffixes.begin(), validSuffixes.end(), [&suffix](const std::string &valid) {
-                       return strcasecmp(suffix.c_str(), valid.c_str()) == 0;
+                       return std::equal(suffix.begin(), suffix.end(), valid.begin(), valid.end(),
+                                         [](char a, char b) { return std::tolower(a) == std::tolower(b); });
                    }) != validSuffixes.end();
         }
     };
