@@ -19,5 +19,5 @@ jobs:
 
     - name: Check copyright
       run: |
-        ./check_copyright.sh "origin/$GITHUB_BASE_REF"
+        ./scripts/check_copyright.sh "origin/$GITHUB_BASE_REF"
 
