@@ -1,0 +1,57 @@
+# Copyright 2024, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: Check against DLL injection (release)
+
+permissions: read-all
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'ISPC release version (just number without v, e.g., 1.24.0)'
+        required: true
+        type: string
+
+jobs:
+  check-dll-injection:
+    runs-on: windows-2022
+    # Disabling this workflow for non ispc/ispc repo as it needs to run on releases only.
+    if: github.repository == 'ispc/ispc'
+
+    steps:
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+    - name: Install required packages
+      run: |
+        Install-ChocoPackage wget
+        Install-ChocoPackage procmon
+        Install-ChocoPackage 7zip
+        pip install defusedxml
+      shell: powershell
+
+    - name: Download ISPC release archives
+      env:
+        release_base_url: https://github.com/ispc/ispc/releases/download/
+        release_version: ${{ inputs.version }}
+      run: |
+        ZIP="ispc-v${release_version}-windows.zip"
+        echo "Download artifact $ZIP" >> "$GITHUB_STEP_SUMMARY"
+        wget --quiet -O "$ZIP" "${release_base_url}/v${release_version}/$ZIP"
+        7z x "$ZIP"
+        ISPC_BIN_DIR="ispc-v${release_version}-windows/bin"
+        echo "$ISPC_BIN_DIR" >> "$GITHUB_PATH"
+      shell: bash
+
+    - name: Check ISPC binary for DLL injection
+      run: |
+        python .github\workflows\scripts\check-dll-injection.py dbghelp.dll
+      shell: cmd
+
+    - name: Upload results
+      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      if: always()
+      with:
+        name: reports
+        path: |
+          dll_load_filtered.xml
