@@ -650,6 +650,13 @@ each function in a separate section. This flag is useful for reducing the size
 of the final executable by removing unused functions. Please, refer to
 `Basic Command-line Options`_ for more details.
 
+In some cases like shared libraries, the mentioned ``-ffunction-sections`` flag
+is not enough to remove unused ISPC copies of exported functions. To address
+this, the ``external_only`` attribute was introduced. It can be applied only
+to exported functions and it instructs the compiler to remove the ISPC version
+of the function. Please, refer to `Attributes`_ and
+`Functions and Function Calls`_ for more details.
+
 Getting Started with ISPC
 =========================
 
@@ -2958,6 +2965,17 @@ to the additional features they introduce.
     __attribute__((unmangled)) void foo(int a, int b);
 
 
+external_only
+----------------
+
+``__attribute__((external_only))`` can be applied to a function with
+``export`` qualifier. It informs the compiler that it should not generate a
+ISPC version of the function. This is useful for functions that are only called
+from C/C++ in case when the user wants to reduce the size of the generated
+code. Same effect can be achieved by using ``-ffunction-sections`` compiler
+option but not in all cases (e.g., shared libraries with ISPC code), so this
+attribute is provided as a more fine-grained control.
+
 Expressions
 -----------
 
@@ -3587,7 +3605,12 @@ Functions that are intended to be called from C/C++ application code must
 have the ``export`` qualifier.  This causes them to have regular C linkage
 and to have their declarations included in header files, if the ``ispc``
 compiler is directed to generated a C/C++ header file for the file it
-compiled.
+compiled. By default, ISPC generates both C/C++ and ISPC versions of the
+function with ``export`` qualifier. In case when there is no calls from ISPC
+code to the ``export`` function, the ISPC version of the function is not needed
+and can be removed either by using ``-ffunction-sections`` compiler option
+together with the linker specific option that collects garbage sections or by
+using ``__attribute__((external_only))``.
 
 ::
 
