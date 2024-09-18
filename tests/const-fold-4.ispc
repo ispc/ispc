@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 #define N(x)  (3*x+1)
 // p a power of 2
 #define ROUND_UP(x, p) ((x + (p-1)) & ~(p-1))

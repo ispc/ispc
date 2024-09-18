@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 float foo(float &) { return 1; }
 float bar(uniform float []) { return 2; }
 

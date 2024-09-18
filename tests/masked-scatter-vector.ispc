@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 typedef int<3> int3;
 
 task void f_fu(uniform float ret[], uniform float aa[], uniform float b) {

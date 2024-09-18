@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 float f(float v) { return 2 * v; }
 float f() { return 2.; }
 float f(float a, int b) { return a + b; }

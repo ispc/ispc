@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 static float float4(uniform float a, uniform float b, uniform float c, 
                     uniform float d) {
     float ret = 0;

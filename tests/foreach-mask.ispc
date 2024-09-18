@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 // make sure we reset the func mask in the foreach loop...
 
 void update(uniform float val[], const uniform float a[]) {

@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 #define SIZE TARGET_WIDTH
 
 struct Foo {

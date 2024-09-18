@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 static uniform float foo[4] = { 1, 2, 3, 4 };
 
 

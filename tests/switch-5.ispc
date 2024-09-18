@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 int switchit(int a, uniform int b) {
     int r = 0;
     switch (a) {

@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 static const float g = 100;
 
 float foo(uniform float x, float f = g) { return f+x; }

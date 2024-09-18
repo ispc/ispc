@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 task void print_uf(uniform float a) {
     uniform int intA = (int)a;
     uniform          int8   uniCharVal    = -intA;

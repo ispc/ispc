@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 task void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform int64 a[100];
     for (uniform int64 i = 0; i < 100; ++i)

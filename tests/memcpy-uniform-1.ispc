@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 #define N 64
 task void f_f(uniform float RET[], uniform float aFOO[]) {
     int32 uniform src[N];

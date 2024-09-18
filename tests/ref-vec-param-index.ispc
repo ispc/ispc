@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 float foo(uniform float<4> &vec) {
     #pragma ignore warning(perf)
     return vec[programIndex & 3];

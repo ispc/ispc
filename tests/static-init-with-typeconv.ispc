@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 task void f_fu(uniform float RET[], uniform float x_fullFOO[], uniform float a) {
     float x_full = x_fullFOO[programIndex];
     static const float two_over_pi_vec = 2;

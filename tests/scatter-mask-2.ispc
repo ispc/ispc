@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 uniform float a[programCount];
 
 static void foo(int index) {

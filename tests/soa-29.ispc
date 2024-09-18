@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 // rule: skip on cpu=tgllp
 // rule: skip on cpu=dg2
 struct Point { float x, y; int8 zzz0; float z; double aa[3]; int8 zzz; };

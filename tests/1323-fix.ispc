@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 // This test is written to cover the scenario from issue 1323.
 // Structs with uniform vector elements directly or as nested elements fail
 // compilation when compiled for multiple targets. To test this use case, this

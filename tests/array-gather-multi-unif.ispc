@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 // We have all checks in place, so we are safe and don't read or write beyond the boundaries.
 #define SIZE 34
 

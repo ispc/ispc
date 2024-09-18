@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 float foo(uniform float * uniform a) {
     *a = 0;
 }

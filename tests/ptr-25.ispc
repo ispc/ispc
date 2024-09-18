@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 void update(varying float<2> * vp) {
     #pragma ignore warning(perf)
     vp->y = 0;

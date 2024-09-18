@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 void A01(varying float f){} void A01(varying float& f){} void A01(varying const float& f){} void A01(varying double f){} void A01(varying int f){}
                             void A02(varying float& f){} void A02(varying const float& f){} void A02(varying double f){} void A02(varying int f){}
 void A03(varying float f){}                              void A03(varying const float& f){} void A03(varying double f){} void A03(varying int f){}

@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 static uniform int sz = sizeof(uniform int);
 
 static uniform int a = 7;

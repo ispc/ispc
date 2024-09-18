@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 float add(float a, float b, uniform float * uniform result) {
     result[programIndex] = a+b;
     return a+b;

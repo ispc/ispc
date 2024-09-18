@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     uniform unsigned int8 x[2*programCount];
     for (uniform int i = 0; i < 2*programCount; ++i)

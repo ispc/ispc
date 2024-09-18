@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 task void f_fu(uniform float RET[4], uniform float aFOO[4], uniform float b) {
     #pragma ignore warning(perf)
     float a = aFOO[programIndex&0x3];

@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 task void f_v(uniform float RET[]) {
     float<3> a = {1,10,100};
     float<6> b = a.zxyyxz;

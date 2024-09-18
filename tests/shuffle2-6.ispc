@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     int8 aa = aFOO[programIndex]; 
     int8 bb = aa + programCount;

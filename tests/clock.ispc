@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 // issue #1783 for ARM support.
 // rule: skip on arch=arm
 // rule: skip on arch=aarch64

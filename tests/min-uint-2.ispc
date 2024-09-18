@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 task void f_f(uniform float r[], uniform float a[]) {
     #pragma ignore warning(perf)
     unsigned int i = (unsigned int)a[programIndex];

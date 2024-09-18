@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 #define TARGET_WIDTH_FOUR 4
 #define TARGET_WIDTH_EIGHT 8
 #define TARGET_WIDTH_SIXTEEN 16

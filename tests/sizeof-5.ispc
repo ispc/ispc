@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 struct Foo {
     uniform int16 a;
     uniform unsigned int16 c;

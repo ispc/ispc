@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 int func(int a) {
     int res = 0;
     switch (a) {

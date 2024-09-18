@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 // constant 5 here is random small positive number. It needs to be >=1.
 #define SIZE TARGET_WIDTH+5
 

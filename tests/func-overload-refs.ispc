@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 float foo(float &a) { return 1; }
 float foo(const float &a) { return 2; }
 

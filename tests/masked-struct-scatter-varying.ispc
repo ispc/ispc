@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 struct Foo { float x; float y; };
 
 task void f_fu(uniform float ret[], uniform float aa[], uniform float b) {

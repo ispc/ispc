@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 int A01(varying float f){return 0;} int A01(varying float& f){return 1;} int A01(varying const float& f){return 2;} int A01(varying double f){return 3;} int A01(varying int f){return 4;}
                                     int A02(varying float& f){return 1;} int A02(varying const float& f){return 2;} int A02(varying double f){return 3;} int A02(varying int f){return 4;}
 int A03(varying float f){return 0;}                                      int A03(varying const float& f){return 2;} int A03(varying double f){return 3;} int A03(varying int f){return 4;}

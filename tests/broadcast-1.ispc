@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     int a = aFOO[programIndex]; 
     int br = (programCount == 1) ? 4 : broadcast(a, (uniform int)b-2);

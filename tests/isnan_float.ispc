@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 task void f_v(uniform float RET[]) {
     int errors = 0;
     for (uniform int i = -2; i <= 2; ++i) {

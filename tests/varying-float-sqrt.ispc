@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 task void f_f(uniform float RET[], uniform float aFOO[]) {
     varying float f = programIndex;
     varying float calc = sqrt(f) * sqrt(f) - programIndex;

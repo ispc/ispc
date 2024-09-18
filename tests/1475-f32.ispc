@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 // Testing float implementation of varying * varying
 void tests_float(uniform float RET[]) {
     varying float p_foo[programCount];

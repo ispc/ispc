@@ -1,4 +1,4 @@
-#include "../test_static.isph"
+#include "test_static.isph"
 task void f_v(uniform float RET[]) {
     const uniform float x = 1.;
     RET[programIndex] = x+x;
