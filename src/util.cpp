@@ -37,6 +37,7 @@
 #endif // ISPC_HOST_IS_WINDOWS
 #include <algorithm>
 #include <set>
+#include <sstream>
 
 #include <llvm/IR/DataLayout.h>
 #include <llvm/Support/FileSystem.h>
@@ -145,7 +146,7 @@ static void lPrintFileLineContext(SourcePos p) {
     if (!f)
         return;
 
-    int c, curLine = 1;
+    int c = 0, curLine = 1;
     while ((c = fgetc(f)) != EOF) {
         // Don't print more than three lines of context.  (More than that,
         // and we're probably doing the wrong thing...)
@@ -296,7 +297,7 @@ int asprintf(char **sptr, const char *fmt, ...) {
     @param args   Arguments with values for format string % entries
 */
 static void lPrint(const char *type, bool isError, SourcePos p, const char *fmt, va_list args) {
-    char *errorBuf, *formattedBuf;
+    char *errorBuf = nullptr, *formattedBuf = nullptr;
     if (vasprintf(&errorBuf, fmt, args) == -1) {
         fprintf(stderr, "vasprintf() unable to allocate memory!\n");
         exit(1);
@@ -526,18 +527,12 @@ std::pair<std::string, std::string> ispc::GetDirectoryAndFileName(const std::str
 
 static std::set<std::string> lGetStringArray(const std::string &str) {
     std::set<std::string> result;
+    std::stringstream ss(str);
 
     Assert(str.find('-') != str.npos);
-
-    size_t pos_prev = 0, pos;
-    do {
-        pos = str.find('-', pos_prev);
-        std::string substr = str.substr(pos_prev, pos - pos_prev);
-        result.insert(substr);
-        pos_prev = pos;
-        pos_prev++;
-    } while (pos != str.npos);
-
+    for (std::string item; std::getline(ss, item, '-');) {
+        result.insert(item);
+    }
     return result;
 }
 
