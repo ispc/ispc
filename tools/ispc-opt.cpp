@@ -7,7 +7,7 @@
 #include "ispc.h"
 #include "llvmutil.h"
 #include "opt.h"
-#include "src/opt/ISPCPasses.h"
+#include "opt/ISPCPasses.h"
 #include "target_enums.h"
 #include "util.h"
 
