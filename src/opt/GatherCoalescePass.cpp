@@ -730,7 +730,7 @@ static void lExtractConstOffsets(const std::vector<llvm::CallInst *> &coalesceGr
     int64_t *endPtr = &((*constOffsets)[0]);
     for (int i = 0; i < (int)coalesceGroup.size(); ++i, endPtr += width) {
         llvm::Value *offsets = coalesceGroup[i]->getArgOperand(3);
-        int nElts;
+        int nElts = 0;
         bool ok = LLVMExtractVectorInts(offsets, endPtr, &nElts);
         Assert(ok && nElts == width);
     }
@@ -875,7 +875,7 @@ bool GatherCoalescePass::coalesceGathersFactored(llvm::BasicBlock &bb) {
         if (calledFunc == nullptr)
             continue;
 
-        int i;
+        int i = 0;
         for (i = 0; i < nGatherFuncs; ++i)
             if (gatherFuncs[i] != nullptr && calledFunc == gatherFuncs[i])
                 break;

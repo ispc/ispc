@@ -62,8 +62,8 @@ template <typename Op_t> struct UDiv2_match {
     UDiv2_match(const Op_t &OpMatch) : Op(OpMatch) {}
 
     template <typename OpTy> bool match(OpTy *V) {
-        llvm::BinaryOperator *bop;
-        llvm::ConstantDataVector *cdv;
+        llvm::BinaryOperator *bop = nullptr;
+        llvm::ConstantDataVector *cdv = nullptr;
         if ((bop = llvm::dyn_cast<llvm::BinaryOperator>(V)) &&
             (cdv = llvm::dyn_cast<llvm::ConstantDataVector>(bop->getOperand(1))) && cdv->getSplatValue() != nullptr) {
             const llvm::APInt &apInt = cdv->getUniqueInteger();
@@ -91,8 +91,8 @@ template <typename Op_t> struct SDiv2_match {
     SDiv2_match(const Op_t &OpMatch) : Op(OpMatch) {}
 
     template <typename OpTy> bool match(OpTy *V) {
-        llvm::BinaryOperator *bop;
-        llvm::ConstantDataVector *cdv;
+        llvm::BinaryOperator *bop = nullptr;
+        llvm::ConstantDataVector *cdv = nullptr;
         if ((bop = llvm::dyn_cast<llvm::BinaryOperator>(V)) &&
             (cdv = llvm::dyn_cast<llvm::ConstantDataVector>(bop->getOperand(1))) && cdv->getSplatValue() != nullptr) {
             const llvm::APInt &apInt = cdv->getUniqueInteger();
@@ -148,8 +148,8 @@ static llvm::Instruction *lGetBinaryIntrinsic(llvm::Module *M, const char *name,
 
 static llvm::Instruction *lMatchAvgUpUInt8(llvm::Instruction *inst) {
     // (unsigned int8)(((unsigned int16)a + (unsigned int16)b + 1)/2)
-    llvm::Value *opa, *opb;
-    const llvm::APInt *delta;
+    llvm::Value *opa = nullptr, *opb = nullptr;
+    const llvm::APInt *delta = nullptr;
     if (match(inst, m_Trunc16To8(m_UDiv2(m_CombineOr(
                         m_CombineOr(m_Add(m_ZExt8To16(m_Value(opa)), m_Add(m_ZExt8To16(m_Value(opb)), m_APInt(delta))),
                                     m_Add(m_Add(m_ZExt8To16(m_Value(opa)), m_APInt(delta)), m_ZExt8To16(m_Value(opb)))),
@@ -164,7 +164,7 @@ static llvm::Instruction *lMatchAvgUpUInt8(llvm::Instruction *inst) {
 
 static llvm::Instruction *lMatchAvgDownUInt8(llvm::Instruction *inst) {
     // (unsigned int8)(((unsigned int16)a + (unsigned int16)b)/2)
-    llvm::Value *opa, *opb;
+    llvm::Value *opa = nullptr, *opb = nullptr;
     if (match(inst, m_Trunc16To8(m_UDiv2(m_Add(m_ZExt8To16(m_Value(opa)), m_ZExt8To16(m_Value(opb))))))) {
         return lGetBinaryIntrinsic(inst->getModule(), builtin::__avg_down_uint8, opa, opb);
     }
@@ -173,8 +173,8 @@ static llvm::Instruction *lMatchAvgDownUInt8(llvm::Instruction *inst) {
 
 static llvm::Instruction *lMatchAvgUpUInt16(llvm::Instruction *inst) {
     // (unsigned int16)(((unsigned int32)a + (unsigned int32)b + 1)/2)
-    llvm::Value *opa, *opb;
-    const llvm::APInt *delta;
+    llvm::Value *opa = nullptr, *opb = nullptr;
+    const llvm::APInt *delta = nullptr;
     if (match(inst,
               m_Trunc32To16(m_UDiv2(m_CombineOr(
                   m_CombineOr(m_Add(m_ZExt16To32(m_Value(opa)), m_Add(m_ZExt16To32(m_Value(opb)), m_APInt(delta))),
@@ -190,7 +190,7 @@ static llvm::Instruction *lMatchAvgUpUInt16(llvm::Instruction *inst) {
 
 static llvm::Instruction *lMatchAvgDownUInt16(llvm::Instruction *inst) {
     // (unsigned int16)(((unsigned int32)a + (unsigned int32)b)/2)
-    llvm::Value *opa, *opb;
+    llvm::Value *opa = nullptr, *opb = nullptr;
     if (match(inst, m_Trunc32To16(m_UDiv2(m_Add(m_ZExt16To32(m_Value(opa)), m_ZExt16To32(m_Value(opb))))))) {
         return lGetBinaryIntrinsic(inst->getModule(), builtin::__avg_down_uint16, opa, opb);
     }
@@ -199,8 +199,8 @@ static llvm::Instruction *lMatchAvgDownUInt16(llvm::Instruction *inst) {
 
 static llvm::Instruction *lMatchAvgUpInt8(llvm::Instruction *inst) {
     // (int8)(((int16)a + (int16)b + 1)/2)
-    llvm::Value *opa, *opb;
-    const llvm::APInt *delta;
+    llvm::Value *opa = nullptr, *opb = nullptr;
+    const llvm::APInt *delta = nullptr;
     if (match(inst, m_Trunc16To8(m_SDiv2(m_CombineOr(
                         m_CombineOr(m_Add(m_SExt8To16(m_Value(opa)), m_Add(m_SExt8To16(m_Value(opb)), m_APInt(delta))),
                                     m_Add(m_Add(m_SExt8To16(m_Value(opa)), m_APInt(delta)), m_SExt8To16(m_Value(opb)))),
@@ -215,7 +215,7 @@ static llvm::Instruction *lMatchAvgUpInt8(llvm::Instruction *inst) {
 
 static llvm::Instruction *lMatchAvgDownInt8(llvm::Instruction *inst) {
     // (int8)(((int16)a + (int16)b)/2)
-    llvm::Value *opa, *opb;
+    llvm::Value *opa = nullptr, *opb = nullptr;
     if (match(inst, m_Trunc16To8(m_SDiv2(m_Add(m_SExt8To16(m_Value(opa)), m_SExt8To16(m_Value(opb))))))) {
         return lGetBinaryIntrinsic(inst->getModule(), builtin::__avg_down_int8, opa, opb);
     }
@@ -224,8 +224,8 @@ static llvm::Instruction *lMatchAvgDownInt8(llvm::Instruction *inst) {
 
 static llvm::Instruction *lMatchAvgUpInt16(llvm::Instruction *inst) {
     // (int16)(((int32)a + (int32)b + 1)/2)
-    llvm::Value *opa, *opb;
-    const llvm::APInt *delta;
+    llvm::Value *opa = nullptr, *opb = nullptr;
+    const llvm::APInt *delta = nullptr;
     if (match(inst,
               m_Trunc32To16(m_SDiv2(m_CombineOr(
                   m_CombineOr(m_Add(m_SExt16To32(m_Value(opa)), m_Add(m_SExt16To32(m_Value(opb)), m_APInt(delta))),
@@ -241,7 +241,7 @@ static llvm::Instruction *lMatchAvgUpInt16(llvm::Instruction *inst) {
 
 static llvm::Instruction *lMatchAvgDownInt16(llvm::Instruction *inst) {
     // (int16)(((int32)a + (int32)b)/2)
-    llvm::Value *opa, *opb;
+    llvm::Value *opa = nullptr, *opb = nullptr;
     if (match(inst, m_Trunc32To16(m_SDiv2(m_Add(m_SExt16To32(m_Value(opa)), m_SExt16To32(m_Value(opb))))))) {
         return lGetBinaryIntrinsic(inst->getModule(), builtin::__avg_down_int16, opa, opb);
     }

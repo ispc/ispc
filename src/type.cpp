@@ -1813,7 +1813,7 @@ static llvm::Type *lGetVectorLLVMType(llvm::LLVMContext *ctx, const VectorType *
         return nullptr;
     }
 
-    llvm::Type *bt;
+    llvm::Type *bt = nullptr;
     // Non-uniform vector types are represented in IR as an array.
     // So, creating them with base as storage type similar to arrays.
     if (isStorage || !base->IsUniformType())

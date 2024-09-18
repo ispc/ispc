@@ -414,7 +414,7 @@ class ArgErrors {
     enum class MsgType { warning, error };
     std::vector<std::pair<MsgType, std::string>> m_messages;
     void AddMessage(MsgType msg_type, const char *format, va_list args) {
-        char *messageBuf;
+        char *messageBuf = nullptr;
         if (vasprintf(&messageBuf, format, args) == -1) {
             fprintf(stderr, "vasprintf() unable to allocate memory!\n");
             exit(-1);

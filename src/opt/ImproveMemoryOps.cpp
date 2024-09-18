@@ -313,7 +313,7 @@ static void lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset, 
     llvm::CastInst *cast = llvm::dyn_cast<llvm::CastInst>(vec);
     if (cast != nullptr) {
         // Check the cast target.
-        llvm::Value *co, *vo;
+        llvm::Value *co = nullptr, *vo = nullptr;
         lExtractConstantOffset(cast->getOperand(0), &co, &vo, insertBefore);
 
         // make new cast instructions for the two parts
@@ -334,7 +334,7 @@ static void lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset, 
     if (bop != nullptr) {
         llvm::Value *op0 = bop->getOperand(0);
         llvm::Value *op1 = bop->getOperand(1);
-        llvm::Value *c0, *v0, *c1, *v1;
+        llvm::Value *c0 = nullptr, *v0 = nullptr, *c1 = nullptr, *v1 = nullptr;
 
         if ((bop->getOpcode() == llvm::Instruction::Add) || IsOrEquivalentToAdd(bop)) {
             lExtractConstantOffset(op0, &c0, &v0, insertBefore);
@@ -539,7 +539,7 @@ static llvm::Value *lExtractOffsetVector248Scale(llvm::Value **vec) {
         }
     } else if (bop->getOpcode() == llvm::Instruction::Mul) {
         // Check each operand for being one of the scale factors we care about.
-        int splat;
+        int splat = 0;
         if (lIsIntegerSplat(op0, &splat))
             return lExtract248Scale(op0, splat, op1, vec);
         else if (lIsIntegerSplat(op1, &splat))
@@ -551,7 +551,7 @@ static llvm::Value *lExtractOffsetVector248Scale(llvm::Value **vec) {
 }
 
 static bool lVectorIs32BitInts(llvm::Value *v) {
-    int nElts;
+    int nElts = 0;
     int64_t elts[ISPC_MAX_NVEC];
     if (!LLVMExtractVectorInts(v, elts, &nElts))
         return false;
@@ -1043,7 +1043,7 @@ static llvm::CallInst *lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
     llvm::ConstantInt *varScale = llvm::dyn_cast<llvm::ConstantInt>(callInst->getArgOperand(2));
     Assert(varScale != nullptr);
 
-    llvm::Value *scaleSmear;
+    llvm::Value *scaleSmear = nullptr;
     if (origVariableOffset->getType() == LLVMTypes::Int64VectorType)
         scaleSmear = LLVMInt64Vector((int64_t)varScale->getZExtValue());
     else
@@ -1312,8 +1312,7 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
             // A gather with everyone going to the same location is
             // handled as a scalar load and broadcast across the lanes.
             Debug(pos, "Transformed gather to scalar load and broadcast!");
-            llvm::Value *ptr;
-            ptr = lComputeCommonPointer(base, gatherInfo->baseType(), fullOffsets, callInst);
+            llvm::Value *ptr = lComputeCommonPointer(base, gatherInfo->baseType(), fullOffsets, callInst);
             ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(scalarType, 0), base->getName(), callInst);
 
             LLVMCopyMetadata(ptr, callInst);
@@ -1362,12 +1361,11 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
             // starting with the location given by the offset from
             // offsetElements[0], with stride of 4 or 8 bytes (for 32 bit
             // and 64 bit gather/scatters, respectively.
-            llvm::Value *ptr;
             llvm::Instruction *newCall = nullptr;
             llvm::Module *M = callInst->getModule();
 
             if (gatherInfo != nullptr) {
-                ptr = lComputeCommonPointer(base, gatherInfo->baseType(), fullOffsets, callInst);
+                llvm::Value *ptr = lComputeCommonPointer(base, gatherInfo->baseType(), fullOffsets, callInst);
                 LLVMCopyMetadata(ptr, callInst);
                 Debug(pos, "Transformed gather to unaligned vector load!");
                 bool doBlendLoad = false;
@@ -1378,7 +1376,7 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
                                        ptr, mask, llvm::Twine(ptr->getName()) + "_masked_load");
             } else {
                 Debug(pos, "Transformed scatter to unaligned vector store!");
-                ptr = lComputeCommonPointer(base, scatterInfo->baseType(), fullOffsets, callInst);
+                llvm::Value *ptr = lComputeCommonPointer(base, scatterInfo->baseType(), fullOffsets, callInst);
                 ptr = new llvm::BitCastInst(ptr, scatterInfo->vecPtrType(), "ptrcast", callInst);
                 newCall = LLVMCallInst(scatterInfo->maskedStoreFunc(M), ptr, storeValue, mask, "");
             }
