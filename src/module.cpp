@@ -2342,7 +2342,6 @@ std::string emitOffloadParamStruct(const std::string &paramStructName, const Sym
             paramType = orgParamType->GetAsNonConstType();
         }
         std::string paramName = fct->GetParameterName(i);
-        std::string paramTypeName = paramType->GetString();
 
         std::string tmpArgDecl = paramType->GetDeclaration(paramName, DeclarationSyntax::CPP);
         out << "   " << tmpArgDecl << ";" << std::endl;
@@ -2459,7 +2458,6 @@ bool Module::writeDevStub(const char *fn) {
             }
 
             std::string paramName = fct->GetParameterName(i);
-            std::string paramTypeName = paramType->GetString();
 
             if (i)
                 funcall << ", ";
