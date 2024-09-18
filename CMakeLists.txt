@@ -875,7 +875,7 @@ configure_ispc_obj(frontend)
 configure_ispc_obj(builtin)
 
 # Define executable targets
-add_executable(ispc-opt ispc-opt.cpp)
+add_executable(ispc-opt tools/ispc-opt.cpp)
 configure_ispc_exe(ispc-opt)
 # TODO! should we link against all the same LLVM/Clang libraries? Clang libs is definetely not needed
 target_link_libraries(ispc-opt ${LINK_LIBRARIES} builtin optimization common)
