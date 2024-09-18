@@ -39,7 +39,7 @@ static bool __os_has_avx_support() {
     // Check xgetbv; this uses a .byte sequence instead of the instruction
     // directly because older assemblers do not include support for xgetbv and
     // there is no easy way to conditionally compile based on the assembler used.
-    int rEAX, rEDX;
+    int rEAX = 0, rEDX = 0;
     __asm__ __volatile__(".byte 0x0f, 0x01, 0xd0" : "=a"(rEAX), "=d"(rEDX) : "c"(0));
     return (rEAX & 6) == 6;
 #endif // !defined(HOST_IS_WINDOWS)
@@ -65,7 +65,7 @@ static bool __os_has_avx512_support() {
     // Check xgetbv; this uses a .byte sequence instead of the instruction
     // directly because older assemblers do not include support for xgetbv and
     // there is no easy way to conditionally compile based on the assembler used.
-    int rEAX, rEDX;
+    int rEAX = 0, rEDX = 0;
     __asm__ __volatile__(".byte 0x0f, 0x01, 0xd0" : "=a"(rEAX), "=d"(rEDX) : "c"(0));
     return (rEAX & 0xE6) == 0xE6;
 #endif // !defined(HOST_IS_WINDOWS)
@@ -80,7 +80,7 @@ static bool __os_enabled_amx_support() {
     // Check xgetbv; this uses a .byte sequence instead of the instruction
     // directly because older assemblers do not include support for xgetbv and
     // there is no easy way to conditionally compile based on the assembler used.
-    int rEAX, rEDX;
+    int rEAX = 0, rEDX = 0;
     __asm__ __volatile__(".byte 0x0f, 0x01, 0xd0" : "=a"(rEAX), "=d"(rEDX) : "c"(0));
     return (rEAX & 0x60000) == 0x60000;
 #endif // !defined(HOST_IS_WINDOWS)
