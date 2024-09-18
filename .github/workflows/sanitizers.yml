@@ -56,4 +56,4 @@ jobs:
 
     - name: Build runtime tests with ASAN
       run: |
-          ASAN_OPTIONS=detect_leaks=1 PATH=$(pwd)/build/bin:$PATH ./run_tests.py --target=avx2-i32x8 --arch=x86-64
+          ASAN_OPTIONS=detect_leaks=1 PATH=$(pwd)/build/bin:$PATH ./scripts/run_tests.py --target=avx2-i32x8 --arch=x86-64

@@ -1,6 +1,6 @@
 #!/bin/bash
 # ##################################################
-#  Copyright (c) 2020-2023, Intel Corporation
+#  Copyright (c) 2020-2024, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 #
@@ -68,7 +68,7 @@ export ISPC_HOME=${ispc_home}
 export LLVM_VERSION=${llvm_version}
 
 # Run alloy.py to checkout, patch and build LLVM
-python3 ${ISPC_HOME}/alloy.py -b --version=${llvm_version} --selfbuild -j ${speed} && \
+python3 ${ISPC_HOME}/scripts/alloy.py -b --version=${llvm_version} --selfbuild -j ${speed} && \
     rm -rf ${LLVM_HOME}/build-${LLVM_VERSION} ${LLVM_HOME}/llvm-${LLVM_VERSION} ${LLVM_HOME}/bin-${LLVM_VERSION}_temp ${LLVM_HOME}/build-${LLVM_VERSION}_temp
 exitCode=$?; if [[ ${exitCode} != 0 ]]; then exit ${exitCode}; fi
 export PATH=${LLVM_HOME}/bin-${LLVM_VERSION}/bin:$PATH

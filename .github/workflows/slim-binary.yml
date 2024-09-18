@@ -47,7 +47,7 @@ jobs:
 
     - name: Runtime tests
       run: |
-        PATH=$(pwd)/build/bin:$PATH ./run_tests.py --target=avx2-i32x8 --arch=x86-64
+        PATH=$(pwd)/build/bin:$PATH ./scripts/run_tests.py --target=avx2-i32x8 --arch=x86-64
 
   macos:
     runs-on: ${{ matrix.runner }}
@@ -103,7 +103,7 @@ jobs:
 
     - name: Runtime tests
       run: |
-        PATH=$(pwd)/build/bin:$PATH ./run_tests.py --verbose --compiler=cc --target=${{ matrix.target }} --arch=${{ matrix.arch }}
+        PATH=$(pwd)/build/bin:$PATH ./scripts/run_tests.py --verbose --compiler=cc --target=${{ matrix.target }} --arch=${{ matrix.arch }}
 
   windows:
     runs-on: windows-2019
@@ -146,4 +146,4 @@ jobs:
         $newPath = "$currentDir\\build\\bin\\${{ env.BUILD_TYPE }}"
         $env:PATH = "$env:PATH;$newPath"
         .github/workflows/scripts/load-vs-env.ps1 x86-64
-        python run_tests.py --target=avx2-i32x8 --arch=x86-64
+        python scripts/run_tests.py --target=avx2-i32x8 --arch=x86-64

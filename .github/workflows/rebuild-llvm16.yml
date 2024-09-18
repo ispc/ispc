@@ -12,7 +12,7 @@ on:
       - '**rebuild_llvm**'
     paths:
       - "llvm_patches/*16_0*"
-      - "alloy.py"
+      - "scripts/alloy.py"
       - "superbuild/*"
       - ".github/workflows/rebuild-llvm16.yml"
       - ".github/workflows/reusable.rebuild.yml"
