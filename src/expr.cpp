@@ -79,7 +79,7 @@ bool Expr::HasAmbiguousVariability(std::vector<const Expr *> &warn) const { retu
 
 static llvm::APFloat lCreateAPFloat(llvm::APFloat f, llvm::Type *type) {
     const llvm::fltSemantics &FS = type->getFltSemantics();
-    bool ignored;
+    bool ignored = false;
     f.convert(FS, llvm::APFloat::rmNearestTiesToEven, &ignored);
     return f;
 }
@@ -87,7 +87,7 @@ static llvm::APFloat lCreateAPFloat(llvm::APFloat f, llvm::Type *type) {
 static llvm::APFloat lCreateAPFloat(double value, llvm::Type *type) {
     llvm::APFloat f(value);
     const llvm::fltSemantics &FS = type->getFltSemantics();
-    bool ignored;
+    bool ignored = false;
     f.convert(FS, llvm::APFloat::rmNearestTiesToEven, &ignored);
     return f;
 }
@@ -801,7 +801,7 @@ void ispc::InitSymbol(AddressInfo *ptrInfo, const Type *symType, Expr *initExpr,
                 // of the underlying type
                 const Type *elementType =
                     collectionType ? collectionType->GetElementType(i) : symType->GetAsUniformType();
-                llvm::Value *ep;
+                llvm::Value *ep = nullptr;
                 if (CastType<StructType>(symType) != nullptr)
                     ep = ctx->AddElementOffset(new AddressInfo(ptrInfo->getPointer(), CastType<StructType>(symType)), i,
                                                "element");
@@ -1284,7 +1284,7 @@ Expr *UnaryExpr::Optimize() {
 }
 
 Expr *UnaryExpr::TypeCheck() {
-    const Type *type;
+    const Type *type = nullptr;
     if (expr == nullptr || (type = expr->GetType()) == nullptr)
         // something went wrong in type checking...
         return nullptr;
@@ -1466,36 +1466,33 @@ static const char *lOpString(BinaryExpr::Op op) {
     }
 }
 
+static llvm::Instruction::BinaryOps lBinaryExprBitOpInst(BinaryExpr::Op op, bool isUnsigned) {
+    switch (op) {
+    case BinaryExpr::Shl:
+        return llvm::Instruction::Shl;
+    case BinaryExpr::Shr:
+        if (isUnsigned)
+            return llvm::Instruction::LShr;
+        else
+            return llvm::Instruction::AShr;
+    case BinaryExpr::BitAnd:
+        return llvm::Instruction::And;
+    case BinaryExpr::BitXor:
+        return llvm::Instruction::Xor;
+    case BinaryExpr::BitOr:
+        return llvm::Instruction::Or;
+    default:
+        FATAL("logic error in lBinaryExprBitOpInst()");
+        return llvm::Instruction::Add; // Dummy return to avoid compiler warning
+    }
+}
+
 /** Utility routine to emit the binary bitwise operator corresponding to
     the given BinaryExpr::Op.
 */
 static llvm::Value *lEmitBinaryBitOp(BinaryExpr::Op op, llvm::Value *arg0Val, llvm::Value *arg1Val, bool isUnsigned,
                                      FunctionEmitContext *ctx) {
-    llvm::Instruction::BinaryOps inst;
-    switch (op) {
-    case BinaryExpr::Shl:
-        inst = llvm::Instruction::Shl;
-        break;
-    case BinaryExpr::Shr:
-        if (isUnsigned)
-            inst = llvm::Instruction::LShr;
-        else
-            inst = llvm::Instruction::AShr;
-        break;
-    case BinaryExpr::BitAnd:
-        inst = llvm::Instruction::And;
-        break;
-    case BinaryExpr::BitXor:
-        inst = llvm::Instruction::Xor;
-        break;
-    case BinaryExpr::BitOr:
-        inst = llvm::Instruction::Or;
-        break;
-    default:
-        FATAL("logic error in lEmitBinaryBitOp()");
-        return nullptr;
-    }
-
+    llvm::Instruction::BinaryOps inst = lBinaryExprBitOpInst(op, isUnsigned);
     return ctx->BinaryOperator(inst, arg0Val, arg1Val, WrapSemantics::None, "bitop");
 }
 
@@ -1580,6 +1577,79 @@ static llvm::Value *lEmitBinaryPointerArith(BinaryExpr::Op op, llvm::Value *valu
     }
 }
 
+static const char *lBinaryExprOpName(BinaryExpr::Op op) {
+    switch (op) {
+    case BinaryExpr::Add:
+        return "add";
+    case BinaryExpr::Sub:
+        return "sub";
+    case BinaryExpr::Mul:
+        return "mul";
+    case BinaryExpr::Div:
+        return "div";
+    case BinaryExpr::Mod:
+        return "mod";
+    case BinaryExpr::Shl:
+        return "shl";
+    case BinaryExpr::Shr:
+        return "shr";
+    case BinaryExpr::Lt:
+        return "less";
+    case BinaryExpr::Gt:
+        return "greater";
+    case BinaryExpr::Le:
+        return "lessequal";
+    case BinaryExpr::Ge:
+        return "greaterequal";
+    case BinaryExpr::Equal:
+        return "equal";
+    case BinaryExpr::NotEqual:
+        return "notequal";
+    case BinaryExpr::BitAnd:
+        return "bitand";
+    case BinaryExpr::BitXor:
+        return "bitxor";
+    case BinaryExpr::BitOr:
+        return "bitor";
+    case BinaryExpr::LogicalAnd:
+        return "logicaland";
+    case BinaryExpr::LogicalOr:
+        return "logicalor";
+    case BinaryExpr::Comma:
+        return "comma";
+    default:
+        FATAL("unimplemented case in lBinaryExprOpName()");
+        return "";
+    }
+}
+
+static llvm::Instruction::BinaryOps lBinaryExprArithOpInst(BinaryExpr::Op op, const Type *type, SourcePos pos) {
+    bool isFloatOp = type->IsFloatType();
+    bool isUnsignedOp = type->IsUnsignedType();
+
+    switch (op) {
+    case BinaryExpr::Add:
+        return isFloatOp ? llvm::Instruction::FAdd : llvm::Instruction::Add;
+    case BinaryExpr::Sub:
+        return isFloatOp ? llvm::Instruction::FSub : llvm::Instruction::Sub;
+    case BinaryExpr::Mul:
+        return isFloatOp ? llvm::Instruction::FMul : llvm::Instruction::Mul;
+    case BinaryExpr::Div:
+        if (type->IsVaryingType() && !isFloatOp && g->target->shouldWarn(PerfWarningType::DIVModInt)) {
+            PerformanceWarning(pos, "Division with varying integer types is very inefficient.");
+        }
+        return isFloatOp ? llvm::Instruction::FDiv : (isUnsignedOp ? llvm::Instruction::UDiv : llvm::Instruction::SDiv);
+    case BinaryExpr::Mod:
+        if (type->IsVaryingType() && !isFloatOp && g->target->shouldWarn(PerfWarningType::DIVModInt)) {
+            PerformanceWarning(pos, "Modulus operator with varying types is very inefficient.");
+        }
+        return isFloatOp ? llvm::Instruction::FRem : (isUnsignedOp ? llvm::Instruction::URem : llvm::Instruction::SRem);
+    default:
+        FATAL("Invalid op type passed to lBinaryExprArithOpInst()");
+        return llvm::Instruction::Add; // Dummy return to avoid compiler warning
+    }
+}
+
 /** Utility routine to emit binary arithmetic operator based on the given
     BinaryExpr::Op.
 */
@@ -1593,47 +1663,31 @@ static llvm::Value *lEmitBinaryArith(BinaryExpr::Op op, llvm::Value *value0, llv
     else {
         AssertPos(pos, Type::EqualIgnoringConst(type0, type1));
 
-        llvm::Instruction::BinaryOps inst;
-        bool isFloatOp = type0->IsFloatType();
-        bool isUnsignedOp = type0->IsUnsignedType();
-
-        const char *opName = nullptr;
-        switch (op) {
-        case BinaryExpr::Add:
-            opName = "add";
-            inst = isFloatOp ? llvm::Instruction::FAdd : llvm::Instruction::Add;
-            break;
-        case BinaryExpr::Sub:
-            opName = "sub";
-            inst = isFloatOp ? llvm::Instruction::FSub : llvm::Instruction::Sub;
-            break;
-        case BinaryExpr::Mul:
-            opName = "mul";
-            inst = isFloatOp ? llvm::Instruction::FMul : llvm::Instruction::Mul;
-            break;
-        case BinaryExpr::Div:
-            opName = "div";
-            if (type0->IsVaryingType() && !isFloatOp && g->target->shouldWarn(PerfWarningType::DIVModInt)) {
-                PerformanceWarning(pos, "Division with varying integer types is very inefficient.");
-            }
-            inst = isFloatOp ? llvm::Instruction::FDiv
-                             : (isUnsignedOp ? llvm::Instruction::UDiv : llvm::Instruction::SDiv);
-            break;
-        case BinaryExpr::Mod:
-            opName = "mod";
-            if (type0->IsVaryingType() && !isFloatOp && g->target->shouldWarn(PerfWarningType::DIVModInt)) {
-                PerformanceWarning(pos, "Modulus operator with varying types is very inefficient.");
-            }
-            inst = isFloatOp ? llvm::Instruction::FRem
-                             : (isUnsignedOp ? llvm::Instruction::URem : llvm::Instruction::SRem);
-            break;
-        default:
-            FATAL("Invalid op type passed to lEmitBinaryArith()");
-            return nullptr;
-        }
+        llvm::Instruction::BinaryOps inst = lBinaryExprArithOpInst(op, type0, pos);
+        const char *opName = lBinaryExprOpName(op);
 
         return ctx->BinaryOperator(inst, value0, value1, wrapSemantics,
                                    (((llvm::Twine(opName) + "_") + value0->getName()) + "_") + value1->getName());
+    }
+}
+
+static llvm::CmpInst::Predicate lBinaryExprCmpOpPred(BinaryExpr::Op op, float isFloatOp, bool isUnsignedOp) {
+    switch (op) {
+    case BinaryExpr::Lt:
+        return isFloatOp ? llvm::CmpInst::FCMP_OLT : (isUnsignedOp ? llvm::CmpInst::ICMP_ULT : llvm::CmpInst::ICMP_SLT);
+    case BinaryExpr::Gt:
+        return isFloatOp ? llvm::CmpInst::FCMP_OGT : (isUnsignedOp ? llvm::CmpInst::ICMP_UGT : llvm::CmpInst::ICMP_SGT);
+    case BinaryExpr::Le:
+        return isFloatOp ? llvm::CmpInst::FCMP_OLE : (isUnsignedOp ? llvm::CmpInst::ICMP_ULE : llvm::CmpInst::ICMP_SLE);
+    case BinaryExpr::Ge:
+        return isFloatOp ? llvm::CmpInst::FCMP_OGE : (isUnsignedOp ? llvm::CmpInst::ICMP_UGE : llvm::CmpInst::ICMP_SGE);
+    case BinaryExpr::Equal:
+        return isFloatOp ? llvm::CmpInst::FCMP_OEQ : llvm::CmpInst::ICMP_EQ;
+    case BinaryExpr::NotEqual:
+        return isFloatOp ? llvm::CmpInst::FCMP_UNE : llvm::CmpInst::ICMP_NE;
+    default:
+        FATAL("error in lEmitBinaryCmp()");
+        return llvm::CmpInst::BAD_ICMP_PREDICATE;
     }
 }
 
@@ -1645,37 +1699,8 @@ static llvm::Value *lEmitBinaryCmp(BinaryExpr::Op op, llvm::Value *e0Val, llvm::
     bool isFloatOp = type->IsFloatType();
     bool isUnsignedOp = type->IsUnsignedType();
 
-    llvm::CmpInst::Predicate pred;
-    const char *opName = nullptr;
-    switch (op) {
-    case BinaryExpr::Lt:
-        opName = "less";
-        pred = isFloatOp ? llvm::CmpInst::FCMP_OLT : (isUnsignedOp ? llvm::CmpInst::ICMP_ULT : llvm::CmpInst::ICMP_SLT);
-        break;
-    case BinaryExpr::Gt:
-        opName = "greater";
-        pred = isFloatOp ? llvm::CmpInst::FCMP_OGT : (isUnsignedOp ? llvm::CmpInst::ICMP_UGT : llvm::CmpInst::ICMP_SGT);
-        break;
-    case BinaryExpr::Le:
-        opName = "lessequal";
-        pred = isFloatOp ? llvm::CmpInst::FCMP_OLE : (isUnsignedOp ? llvm::CmpInst::ICMP_ULE : llvm::CmpInst::ICMP_SLE);
-        break;
-    case BinaryExpr::Ge:
-        opName = "greaterequal";
-        pred = isFloatOp ? llvm::CmpInst::FCMP_OGE : (isUnsignedOp ? llvm::CmpInst::ICMP_UGE : llvm::CmpInst::ICMP_SGE);
-        break;
-    case BinaryExpr::Equal:
-        opName = "equal";
-        pred = isFloatOp ? llvm::CmpInst::FCMP_OEQ : llvm::CmpInst::ICMP_EQ;
-        break;
-    case BinaryExpr::NotEqual:
-        opName = "notequal";
-        pred = isFloatOp ? llvm::CmpInst::FCMP_UNE : llvm::CmpInst::ICMP_NE;
-        break;
-    default:
-        FATAL("error in lEmitBinaryCmp()");
-        return nullptr;
-    }
+    llvm::CmpInst::Predicate pred = lBinaryExprCmpOpPred(op, isFloatOp, isUnsignedOp);
+    const char *opName = lBinaryExprOpName(op);
 
     llvm::Value *cmp = ctx->CmpInst(isFloatOp ? llvm::Instruction::FCmp : llvm::Instruction::ICmp, pred, e0Val, e1Val,
                                     (((llvm::Twine(opName) + "_") + e0Val->getName()) + "_") + e1Val->getName());
@@ -2442,7 +2467,7 @@ static Expr *lConstFoldBinaryFPOp(ConstExpr *constArg0, ConstExpr *constArg1, Bi
     std::vector<llvm::APFloat> v0, v1;
     constArg0->GetValues(v0, llvmType);
     constArg1->GetValues(v1, llvmType);
-    ConstExpr *ret;
+    ConstExpr *ret = nullptr;
     if ((ret = lConstFoldBinaryArithFPOp(op, v0, v1, constArg0, pos)) != nullptr)
         return ret;
     else if ((ret = lConstFoldBinaryLogicalFPOp(op, v0, v1, constArg0)) != nullptr)
@@ -2457,7 +2482,7 @@ static Expr *lConstFoldBinaryIntOp(ConstExpr *constArg0, ConstExpr *constArg1, B
     T v0[ISPC_MAX_NVEC], v1[ISPC_MAX_NVEC];
     constArg0->GetValues(v0);
     constArg1->GetValues(v1);
-    ConstExpr *ret;
+    ConstExpr *ret = nullptr;
     if ((ret = lConstFoldBinaryArithOp<T, TRef>(op, v0, v1, constArg0, pos)) != nullptr)
         return ret;
     else if ((ret = lConstFoldBinaryIntOp<T, TRef>(op, v0, v1, constArg0, pos)) != nullptr)
@@ -2579,7 +2604,7 @@ Expr *BinaryExpr::Optimize() {
         bool v0[ISPC_MAX_NVEC], v1[ISPC_MAX_NVEC];
         constArg0->GetValues(v0);
         constArg1->GetValues(v1);
-        ConstExpr *ret;
+        ConstExpr *ret = nullptr;
         if ((ret = lConstFoldBoolBinaryOp(op, v0, v1, constArg0)) != nullptr)
             return ret;
         else if ((ret = lConstFoldBinaryLogicalOp(op, v0, v1, constArg0)) != nullptr)
@@ -3068,6 +3093,34 @@ static const char *lOpString(AssignExpr::Op op) {
     }
 }
 
+static BinaryExpr::Op lMapAssignExprOpToBinaryExprOp(AssignExpr::Op op) {
+    switch (op) {
+    case AssignExpr::MulAssign:
+        return BinaryExpr::Mul;
+    case AssignExpr::DivAssign:
+        return BinaryExpr::Div;
+    case AssignExpr::ModAssign:
+        return BinaryExpr::Mod;
+    case AssignExpr::AddAssign:
+        return BinaryExpr::Add;
+    case AssignExpr::SubAssign:
+        return BinaryExpr::Sub;
+    case AssignExpr::ShlAssign:
+        return BinaryExpr::Shl;
+    case AssignExpr::ShrAssign:
+        return BinaryExpr::Shr;
+    case AssignExpr::AndAssign:
+        return BinaryExpr::BitAnd;
+    case AssignExpr::XorAssign:
+        return BinaryExpr::BitXor;
+    case AssignExpr::OrAssign:
+        return BinaryExpr::BitOr;
+    default:
+        FATAL("logic error in lMapAssignExprOpToBinaryExprOp()");
+        return BinaryExpr::Comma; // unreachable
+    }
+}
+
 /** Emit code to do an "assignment + operation" operator, e.g. "+=".
  */
 static llvm::Value *lEmitOpAssign(AssignExpr::Op op, Expr *arg0, Expr *arg1, const Type *type, Symbol *baseSym,
@@ -3095,42 +3148,7 @@ static llvm::Value *lEmitOpAssign(AssignExpr::Op op, Expr *arg0, Expr *arg1, con
     ctx->SetDebugPos(pos);
 
     // Map the operator to the corresponding BinaryExpr::Op operator
-    BinaryExpr::Op basicop;
-    switch (op) {
-    case AssignExpr::MulAssign:
-        basicop = BinaryExpr::Mul;
-        break;
-    case AssignExpr::DivAssign:
-        basicop = BinaryExpr::Div;
-        break;
-    case AssignExpr::ModAssign:
-        basicop = BinaryExpr::Mod;
-        break;
-    case AssignExpr::AddAssign:
-        basicop = BinaryExpr::Add;
-        break;
-    case AssignExpr::SubAssign:
-        basicop = BinaryExpr::Sub;
-        break;
-    case AssignExpr::ShlAssign:
-        basicop = BinaryExpr::Shl;
-        break;
-    case AssignExpr::ShrAssign:
-        basicop = BinaryExpr::Shr;
-        break;
-    case AssignExpr::AndAssign:
-        basicop = BinaryExpr::BitAnd;
-        break;
-    case AssignExpr::XorAssign:
-        basicop = BinaryExpr::BitXor;
-        break;
-    case AssignExpr::OrAssign:
-        basicop = BinaryExpr::BitOr;
-        break;
-    default:
-        FATAL("logic error in lEmitOpAssign()");
-        return nullptr;
-    }
+    BinaryExpr::Op basicop = lMapAssignExprOpToBinaryExprOp(op);
 
     // Emit the code to compute the new value
     llvm::Value *newValue = nullptr;
@@ -4563,7 +4581,7 @@ static bool lVaryingStructHasUniformMember(const Type *type, SourcePos pos) {
 }
 
 llvm::Value *IndexExpr::GetValue(FunctionEmitContext *ctx) const {
-    const Type *indexType, *returnType;
+    const Type *indexType = nullptr, *returnType = nullptr;
     if (baseExpr == nullptr || index == nullptr || ((indexType = index->GetType()) == nullptr) ||
         ((returnType = GetType()) == nullptr)) {
         AssertPos(pos, m->errorCount > 0);
@@ -4627,7 +4645,7 @@ const Type *IndexExpr::GetType() const {
     if (type != nullptr)
         return type;
 
-    const Type *baseExprType, *indexType;
+    const Type *baseExprType = nullptr, *indexType = nullptr;
     if (!baseExpr || !index || ((baseExprType = baseExpr->GetType()) == nullptr) ||
         ((indexType = index->GetType()) == nullptr))
         return nullptr;
@@ -4739,7 +4757,7 @@ static llvm::Value *lConvertPtrToSliceIfNeeded(FunctionEmitContext *ctx, llvm::V
 }
 
 llvm::Value *IndexExpr::GetLValue(FunctionEmitContext *ctx) const {
-    const Type *baseExprType;
+    const Type *baseExprType = nullptr;
     if (baseExpr == nullptr || index == nullptr || ((baseExprType = baseExpr->GetType()) == nullptr)) {
         AssertPos(pos, m->errorCount > 0);
         return nullptr;
@@ -4806,7 +4824,7 @@ const Type *IndexExpr::GetLValueType() const {
     if (lvalueType != nullptr)
         return lvalueType;
 
-    const Type *baseExprType, *baseExprLValueType, *indexType;
+    const Type *baseExprType = nullptr, *baseExprLValueType = nullptr, *indexType = nullptr;
     if (baseExpr == nullptr || index == nullptr || ((baseExprType = baseExpr->GetType()) == nullptr) ||
         ((baseExprLValueType = baseExpr->GetLValueType()) == nullptr) || ((indexType = index->GetType()) == nullptr))
         return nullptr;
@@ -4819,7 +4837,7 @@ const Type *IndexExpr::GetLValueType() const {
     AssertPos(pos, CastType<PointerType>(baseExprLValueType) != nullptr);
 
     // Find the type of thing that we're indexing into
-    const Type *elementType;
+    const Type *elementType = nullptr;
     const SequentialType *st = CastType<SequentialType>(baseExprLValueType->GetBaseType());
     if (st != nullptr)
         elementType = st->GetElementType();
@@ -4838,7 +4856,7 @@ const Type *IndexExpr::GetLValueType() const {
 
     // Are we indexing into a varying type, or are we indexing with a
     // varying pointer?
-    bool baseVarying;
+    bool baseVarying = false;
     if (CastType<PointerType>(baseExprType) != nullptr)
         baseVarying = baseExprType->IsVaryingType();
     else
@@ -4867,7 +4885,7 @@ Expr *IndexExpr::Optimize() {
 }
 
 Expr *IndexExpr::TypeCheck() {
-    const Type *indexType;
+    const Type *indexType = nullptr;
     if (baseExpr == nullptr || index == nullptr || ((indexType = index->GetType()) == nullptr)) {
         AssertPos(pos, m->errorCount > 0);
         return nullptr;
@@ -5013,8 +5031,8 @@ const Type *StructMemberExpr::GetType() const {
 
     // It's a struct, and the result type is the element type, possibly
     // promoted to varying if the struct type / lvalue is varying.
-    const Type *exprType, *lvalueType;
-    const StructType *structType;
+    const Type *exprType = nullptr, *lvalueType = nullptr;
+    const StructType *structType = nullptr;
     if (expr == nullptr || ((exprType = expr->GetType()) == nullptr) || ((structType = getStructType()) == nullptr) ||
         ((lvalueType = GetLValueType()) == nullptr)) {
         AssertPos(pos, m->errorCount > 0);
@@ -5116,7 +5134,7 @@ const StructType *StructMemberExpr::getStructType() const {
     if (type == nullptr)
         return nullptr;
 
-    const Type *structType;
+    const Type *structType = nullptr;
     const ReferenceType *rt = CastType<ReferenceType>(type);
     if (rt != nullptr)
         structType = rt->GetReferenceTarget();
@@ -5335,7 +5353,7 @@ MemberExpr *MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos i
     // handles all cases so that this is unnecessary.
     e = ::TypeCheck(e);
 
-    const Type *exprType;
+    const Type *exprType = nullptr;
     if (e == nullptr || (exprType = e->GetType()) == nullptr)
         return nullptr;
 
@@ -5471,7 +5489,7 @@ Symbol *MemberExpr::GetBaseSymbol() const { return expr ? expr->GetBaseSymbol() 
 int MemberExpr::getElementNumber() const { return -1; }
 
 llvm::Value *MemberExpr::GetLValue(FunctionEmitContext *ctx) const {
-    const Type *exprType;
+    const Type *exprType = nullptr;
     if (!expr || ((exprType = expr->GetType()) == nullptr))
         return nullptr;
 
@@ -5916,7 +5934,7 @@ static inline void lConvertElement(bool from, bool *to) { *to = from; }
 /** When converting from floating types to numeric types, get value from APFloat. */
 template <typename To> static inline void lConvertElement(llvm::APFloat from, To *to) {
     const llvm::fltSemantics &FS = (LLVMTypes::DoubleType)->getFltSemantics();
-    bool ignored;
+    bool ignored = false;
     from.convert(FS, llvm::APFloat::rmNearestTiesToEven, &ignored);
     double val = from.convertToDouble();
     *to = (To)val;
@@ -5932,7 +5950,7 @@ static inline void lConvertElement(From from, std::vector<llvm::APFloat> &to, ll
 /** floating types -> floating types requires conversion. */
 static inline void lConvertElement(llvm::APFloat from, std::vector<llvm::APFloat> &to, llvm::Type *type) {
     const llvm::fltSemantics &FS = type->getFltSemantics();
-    bool ignored;
+    bool ignored = false;
     from.convert(FS, llvm::APFloat::rmNearestTiesToEven, &ignored);
     to.push_back(from);
 }
@@ -6291,24 +6309,20 @@ TypeCastExpr::TypeCastExpr(const Type *t, Expr *e, SourcePos p) : Expr(p, TypeCa
  */
 static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llvm::Value *exprVal, const Type *toType,
                                                    const Type *fromType, SourcePos pos) {
-    AtomicType::BasicType basicToType;
-    AtomicType::BasicType basicFromType;
+    const AtomicType *aToType = nullptr;
+    const AtomicType *aFromType = nullptr;
     if (toType->IsVectorType() && toType->IsUniformType() && fromType->IsVectorType() && fromType->IsUniformType()) {
-        const VectorType *vToType = CastType<VectorType>(toType);
-        const VectorType *vFromType = CastType<VectorType>(fromType);
-        const AtomicType *aToType = CastType<AtomicType>(vToType->GetElementType());
-        const AtomicType *aFromType = CastType<AtomicType>(vFromType->GetElementType());
-        AssertPos(pos, aToType != nullptr && aFromType != nullptr);
-        basicToType = aToType->basicType;
-        basicFromType = aFromType->basicType;
+        aToType = CastType<AtomicType>(CastType<VectorType>(toType)->GetElementType());
+        aFromType = CastType<AtomicType>(CastType<VectorType>(fromType)->GetElementType());
     } else if (toType->IsAtomicType() && fromType->IsAtomicType()) {
-        const AtomicType *aToType = CastType<AtomicType>(toType);
-        const AtomicType *aFromType = CastType<AtomicType>(fromType);
-        basicToType = aToType->basicType;
-        basicFromType = aFromType->basicType;
+        aToType = CastType<AtomicType>(toType);
+        aFromType = CastType<AtomicType>(fromType);
     } else {
         FATAL("Unexpected input type in lTypeConvAtomicOrUniformVector");
     }
+    AssertPos(pos, aToType != nullptr && aFromType != nullptr);
+    AtomicType::BasicType basicToType = aToType->basicType;
+    AtomicType::BasicType basicFromType = aFromType->basicType;
     llvm::Value *cast = nullptr;
 
     std::string opName = exprVal->getName().str();
@@ -7609,7 +7623,7 @@ llvm::Value *ReferenceExpr::GetValue(FunctionEmitContext *ctx) const {
 
     // value is nullptr if the expression is a temporary; in this case, we'll
     // allocate storage for it so that we can return the pointer to that...
-    const Type *type;
+    const Type *type = nullptr;
     if ((type = expr->GetType()) == nullptr || type->LLVMType(g->ctx) == nullptr) {
         AssertPos(pos, m->errorCount > 0);
         return nullptr;
@@ -7743,7 +7757,7 @@ Expr *DerefExpr::Optimize() {
 PtrDerefExpr::PtrDerefExpr(Expr *e, SourcePos p) : DerefExpr(e, p, PtrDerefExprID) {}
 
 const Type *PtrDerefExpr::GetType() const {
-    const Type *type;
+    const Type *type = nullptr;
     if (expr == nullptr || (type = expr->GetType()) == nullptr) {
         AssertPos(pos, m->errorCount > 0);
         return nullptr;
@@ -7761,7 +7775,7 @@ const Type *PtrDerefExpr::GetType() const {
 }
 
 Expr *PtrDerefExpr::TypeCheck() {
-    const Type *type;
+    const Type *type = nullptr;
     if (expr == nullptr || (type = expr->GetType()) == nullptr) {
         AssertPos(pos, m->errorCount > 0);
         return nullptr;
@@ -7785,7 +7799,7 @@ Expr *PtrDerefExpr::TypeCheck() {
 }
 
 int PtrDerefExpr::EstimateCost() const {
-    const Type *type;
+    const Type *type = nullptr;
     if (expr == nullptr || (type = expr->GetType()) == nullptr) {
         AssertPos(pos, m->errorCount > 0);
         return 0;
@@ -7826,7 +7840,7 @@ void PtrDerefExpr::Print(Indent &indent) const {
 RefDerefExpr::RefDerefExpr(Expr *e, SourcePos p) : DerefExpr(e, p, RefDerefExprID) {}
 
 const Type *RefDerefExpr::GetType() const {
-    const Type *type;
+    const Type *type = nullptr;
     if (expr == nullptr || (type = expr->GetType()) == nullptr) {
         AssertPos(pos, m->errorCount > 0);
         return nullptr;
@@ -7841,7 +7855,7 @@ const Type *RefDerefExpr::GetType() const {
 }
 
 Expr *RefDerefExpr::TypeCheck() {
-    const Type *type;
+    const Type *type = nullptr;
     if (expr == nullptr || (type = expr->GetType()) == nullptr) {
         AssertPos(pos, m->errorCount > 0);
         return nullptr;
@@ -7958,7 +7972,7 @@ void AddressOfExpr::Print(Indent &indent) const {
 }
 
 Expr *AddressOfExpr::TypeCheck() {
-    const Type *exprType;
+    const Type *exprType = nullptr;
     if (expr == nullptr || (exprType = expr->GetType()) == nullptr) {
         AssertPos(pos, m->errorCount > 0);
         return nullptr;
@@ -9086,7 +9100,7 @@ llvm::Value *NewExpr::GetValue(FunctionEmitContext *ctx) const {
 
     // Determine how many elements we need to allocate.  Note that this
     // will be a varying value if this is a varying new.
-    llvm::Value *countValue;
+    llvm::Value *countValue = nullptr;
     if (countExpr != nullptr) {
         countValue = countExpr->GetValue(ctx);
         if (countValue == nullptr) {
@@ -9120,7 +9134,7 @@ llvm::Value *NewExpr::GetValue(FunctionEmitContext *ctx) const {
 
     // Determine which allocation builtin function to call: uniform or
     // varying, and taking 32-bit or 64-bit allocation counts.
-    llvm::Function *func;
+    llvm::Function *func = nullptr;
     if (isVarying) {
         if (g->target->is32Bit()) {
             func = m->module->getFunction(builtin::__new_varying32_32rt);
@@ -9248,7 +9262,7 @@ Expr *NewExpr::TypeCheck() {
     if (countExpr == nullptr)
         return this;
 
-    const Type *countType;
+    const Type *countType = nullptr;
     if ((countType = countExpr->GetType()) == nullptr)
         return nullptr;
 
