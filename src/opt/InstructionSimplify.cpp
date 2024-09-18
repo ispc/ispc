@@ -92,7 +92,7 @@ static bool lSimplifyCall(llvm::CallInst *callInst, llvm::BasicBlock::iterator i
     if (calledFunc == nullptr || calledFunc != M->getFunction(builtin::__movmsk))
         return false;
 
-    uint64_t mask;
+    uint64_t mask = 0;
     if (GetMaskFromValue(callInst->getArgOperand(0), &mask) == true) {
         ReplaceInstWithValueWrapper(iter, LLVMInt64(mask));
         return true;
