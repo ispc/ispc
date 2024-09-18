@@ -488,7 +488,7 @@ Stmt *IfStmt::TypeCheck() {
 }
 
 int IfStmt::EstimateCost() const {
-    const Type *type;
+    const Type *type = nullptr;
     if (test == nullptr || (type = test->GetType()) == nullptr)
         return 0;
 
@@ -741,8 +741,8 @@ struct VaryingBCCheckInfo {
 /** Returns true if the given node is an 'if' statement where the test
     condition has varying type. */
 static bool lIsVaryingFor(ASTNode *node) {
-    IfStmt *ifStmt;
-    if ((ifStmt = llvm::dyn_cast<IfStmt>(node)) != nullptr && ifStmt->test != nullptr) {
+    IfStmt *ifStmt = llvm::dyn_cast<IfStmt>(node);
+    if (ifStmt != nullptr && ifStmt->test != nullptr) {
         const Type *type = ifStmt->test->GetType();
         return (type != nullptr && type->IsVaryingType());
     } else
@@ -925,7 +925,7 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
 }
 
 Stmt *DoStmt::TypeCheck() {
-    const Type *testType;
+    const Type *testType = nullptr;
     if (testExpr != nullptr && (testType = testExpr->GetType()) != nullptr) {
         if (testType->IsDependentType()) {
             return this;
@@ -1153,7 +1153,7 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
 }
 
 Stmt *ForStmt::TypeCheck() {
-    const Type *testType;
+    const Type *testType = nullptr;
     if (test && (testType = test->GetType()) != nullptr) {
         if (testType->IsDependentType()) {
             return this;
@@ -1646,7 +1646,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     // width.  Set the mask and jump to the masked loop body.
     ctx->SetCurrentBasicBlock(bbAllInnerPartialOuter);
     {
-        llvm::Value *mask;
+        llvm::Value *mask = nullptr;
         if (nDims == 1)
             // 1D loop; we shouldn't ever get here anyway
             mask = LLVMMaskAllOff;
@@ -2402,7 +2402,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     // And we'll store its value into locally-allocated storage, for ease
     // of indexing over it with non-compile-time-constant indices.
-    const Type *exprType;
+    const Type *exprType = nullptr;
     if (exprValue == nullptr || (exprType = expr->GetType()) == nullptr ||
         llvm::dyn_cast<llvm::VectorType>(exprValue->getType()) == nullptr) {
         Assert(m->errorCount > 0);
@@ -2427,13 +2427,12 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
 
         // And load the corresponding element value from the temporary
         // memory storing the value of the varying expr.
-        llvm::Value *uniqueValue;
         // Load plus EEI is more preferable way to get unique value than GEP + load.
         // It allows better register utilization for Xe targets and reduces allocas
         // number for both CPU and Xe.
         llvm::Value *uniqueValueVec = ctx->LoadInst(exprMem, exprType, "unique_value_vec");
         Assert(llvm::dyn_cast<llvm::VectorType>(uniqueValueVec->getType()) != nullptr);
-        uniqueValue =
+        llvm::Value *uniqueValue =
             llvm::ExtractElementInst::Create(uniqueValueVec, firstSet, "unique_value", ctx->GetCurrentBasicBlock());
         // If it's a varying pointer type, need to convert from the int
         // type we store in the vector to the actual pointer type
@@ -2553,7 +2552,7 @@ void ForeachUniqueStmt::Print(Indent &indent) const {
 }
 
 Stmt *ForeachUniqueStmt::TypeCheck() {
-    const Type *type;
+    const Type *type = nullptr;
     if (sym == nullptr || expr == nullptr || (type = expr->GetType()) == nullptr)
         return nullptr;
 
@@ -2769,7 +2768,7 @@ void SwitchStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (ctx->GetCurrentBasicBlock() == nullptr)
         return;
 
-    const Type *type;
+    const Type *type = nullptr;
     if (expr == nullptr || ((type = expr->GetType()) == nullptr)) {
         AssertPos(pos, m->errorCount > 0);
         return;
@@ -2844,7 +2843,7 @@ void SwitchStmt::Print(Indent &indent) const {
 }
 
 Stmt *SwitchStmt::TypeCheck() {
-    const Type *exprType;
+    const Type *exprType = nullptr;
     if (expr == nullptr || (exprType = expr->GetType()) == nullptr) {
         Assert(m->errorCount > 0);
         return nullptr;
@@ -3808,7 +3807,7 @@ void AssertStmt::EmitAssertCode(FunctionEmitContext *ctx, const Type *type) cons
                                            : m->module->getFunction(builtin::__do_assert_varying);
     AssertPos(pos, assertFunc != nullptr);
 
-    char *errorString;
+    char *errorString = nullptr;
     if (asprintf(&errorString, "%s:%d:%d: Assertion failed: %s \n", pos.name, pos.first_line, pos.first_column,
                  message.c_str()) == -1) {
         Error(pos, "Fatal error when generating assert string: asprintf() "
@@ -3869,7 +3868,7 @@ void AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock())
         return;
 
-    const Type *type;
+    const Type *type = nullptr;
     if (expr == nullptr || (type = expr->GetType()) == nullptr) {
         AssertPos(pos, m->errorCount > 0);
         return;
@@ -3894,7 +3893,7 @@ void AssertStmt::Print(Indent &indent) const {
 }
 
 Stmt *AssertStmt::TypeCheck() {
-    const Type *type;
+    const Type *type = nullptr;
     if (expr && (type = expr->GetType()) != nullptr) {
         if (type->IsDependentType()) {
             return this;
@@ -3929,7 +3928,7 @@ void DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock())
         return;
 
-    const Type *exprType;
+    const Type *exprType = nullptr;
     if (expr == nullptr || ((exprType = expr->GetType()) == nullptr)) {
         AssertPos(pos, m->errorCount > 0);
         return;
@@ -3949,7 +3948,7 @@ void DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
         // pointer type to a void pointer type, to match what
         // __delete_uniform() from the builtins expects.
         exprValue = ctx->BitCastInst(exprValue, LLVMTypes::VoidPointerType, "ptr_to_void");
-        llvm::Function *func;
+        llvm::Function *func = nullptr;
         if (g->target->is32Bit()) {
             func = m->module->getFunction(builtin::__delete_uniform_32rt);
         } else {
@@ -3963,7 +3962,7 @@ void DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
         // takes a vector of i64s (even for 32-bit targets).  Therefore, we
         // only need to extend to 64-bit values on 32-bit targets before
         // calling it.
-        llvm::Function *func;
+        llvm::Function *func = nullptr;
         if (g->target->is32Bit()) {
             func = m->module->getFunction(builtin::__delete_varying_32rt);
         } else {
@@ -3989,7 +3988,7 @@ void DeleteStmt::Print(Indent &indent) const {
 }
 
 Stmt *DeleteStmt::TypeCheck() {
-    const Type *exprType;
+    const Type *exprType = nullptr;
     if (expr == nullptr || ((exprType = expr->GetType()) == nullptr))
         return nullptr;
 
