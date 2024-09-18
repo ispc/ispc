@@ -29,7 +29,7 @@ bool IsCompileTimeConstantPass::lowerCompileTimeConstant(llvm::BasicBlock &bb) {
         if (callInst == nullptr)
             continue;
 
-        int j;
+        int j = 0;
         int nFuncs = sizeof(funcs) / sizeof(funcs[0]);
         for (j = 0; j < nFuncs; ++j) {
             if (funcs[j] != nullptr && callInst->getCalledFunction() == funcs[j])

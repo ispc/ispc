@@ -1009,7 +1009,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
             const FunctionType *ofType = CastType<FunctionType>(overloadFunc->type);
             Assert(ofType != nullptr);
             if (ofType->GetNumParameters() == functionType->GetNumParameters()) {
-                int i;
+                int i = 0;
                 for (i = 0; i < functionType->GetNumParameters(); ++i) {
                     if (Type::Equal(ofType->GetParameterType(i), functionType->GetParameterType(i)) == false)
                         break;
@@ -1627,7 +1627,7 @@ bool Module::writeBitcode(llvm::Module *module, const char *outFileName, OutputT
     // Get a file descriptor corresponding to where we want the output to
     // go.  If we open it, it'll be closed by the llvm::raw_fd_ostream
     // destructor.
-    int fd;
+    int fd = -1;
     Assert(outFileName);
     if (!strcmp(outFileName, "-"))
         fd = 1; // stdout
@@ -1942,7 +1942,7 @@ static void lEmitStructDecl(const StructType *st, std::vector<const StructType *
     fprintf(file, "#define __ISPC_STRUCT_%s__\n", st->GetCStructName().c_str());
 
     char sSOA[48];
-    bool pack, needsAlign = false;
+    bool pack = false, needsAlign = false;
     llvm::Type *stype = st->LLVMType(g->ctx);
     const llvm::DataLayout *DL = g->target->getDataLayout();
 
@@ -2330,7 +2330,7 @@ std::string emitOffloadParamStruct(const std::string &paramStructName, const Sym
         }
 
         // const reference parameters can be passed as copies.
-        const Type *paramType;
+        const Type *paramType = nullptr;
         if (orgParamType->IsReferenceType()) {
             if (!orgParamType->IsConstType()) {
                 Error(sym->pos, "When emitting offload-stubs, \"export\"ed functions cannot have non-const "
@@ -2445,8 +2445,7 @@ bool Module::writeDevStub(const char *fn) {
         funcall << "ispc::" << sym->name << "(";
         for (int i = 0; i < fct->GetNumParameters(); i++) {
             // get param type and make it non-const, so we can write while unpacking
-            // const Type *paramType = fct->GetParameterType(i)->GetAsNonConstType();
-            const Type *paramType; // = fct->GetParameterType(i)->GetAsNonConstType();
+            const Type *paramType = nullptr;
             const Type *orgParamType = fct->GetParameterType(i);
             if (orgParamType->IsReferenceType()) {
                 if (!orgParamType->IsConstType()) {
@@ -2493,7 +2492,7 @@ bool Module::writeCPPStub(Module *module, const char *outFileName) {
     // Get a file descriptor corresponding to where we want the output to
     // go.  If we open it, it'll be closed by the llvm::raw_fd_ostream
     // destructor.
-    int fd;
+    int fd = -1;
     int flags = O_CREAT | O_WRONLY | O_TRUNC;
 
     if (!outFileName) {
@@ -3802,8 +3801,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
                     DHI.EmitBackMatter = true;
                 }
 
-                const char *isaName;
-                isaName = g->target->GetISAString();
+                const char *isaName = g->target->GetISAString();
                 std::string targetHeaderFileName = lGetTargetFileName(headerFileName, isaName);
                 // write out a header w/o target name for the first target only
                 if (!m->writeOutput(Module::Header, outputFlags, headerFileName, nullptr, nullptr, &DHI)) {
