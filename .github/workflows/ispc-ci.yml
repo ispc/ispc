@@ -386,7 +386,7 @@ jobs:
     - name: Running tests
       run: |
         echo PATH="$PATH"
-        ./alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        ./scripts/alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Check
       run: |
@@ -472,7 +472,7 @@ jobs:
     - name: Running tests
       run: |
         echo PATH="$PATH"
-        ./alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        ./scripts/alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Check
       run: |
@@ -521,7 +521,7 @@ jobs:
     - name: Running tests
       run: |
         echo PATH="$PATH"
-        ./alloy.py -r --only="stability ${{ matrix.arch}} current -O0 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        ./scripts/alloy.py -r --only="stability ${{ matrix.arch}} current -O0 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Check
       run: |
@@ -573,7 +573,7 @@ jobs:
     - name: Running tests
       run: |
         echo PATH="$PATH"
-        ./alloy.py -r --only="stability ${{ matrix.arch }} current debug -O0 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        ./scripts/alloy.py -r --only="stability ${{ matrix.arch }} current debug -O0 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Check
       run: |
@@ -626,7 +626,7 @@ jobs:
       run: |
         echo PATH="$PATH"
         # github runners don't have GPU so run CPU tests at least
-        ./alloy.py -r --only="stability ${{ matrix.arch }} current -O0 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        ./scripts/alloy.py -r --only="stability ${{ matrix.arch }} current -O0 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Check
       run: |
@@ -786,7 +786,7 @@ jobs:
     - name: Running tests
       run: |
         echo PATH="$PATH"
-        ./alloy.py -r --only="stability current x86-64 -O0 -O2" --only-targets="sse4-i32x4" --time --update-errors=FP
+        ./scripts/alloy.py -r --only="stability current x86-64 -O0 -O2" --only-targets="sse4-i32x4" --time --update-errors=FP
 
     - name: Check
       run: |
@@ -834,7 +834,7 @@ jobs:
     - name: Running tests
       run: |
         echo PATH="$PATH"
-        ./alloy.py -r --only="stability current x86-64 -O0 -O2" --only-targets="sse4-i32x4" --time --update-errors=FP
+        ./scripts/alloy.py -r --only="stability current x86-64 -O0 -O2" --only-targets="sse4-i32x4" --time --update-errors=FP
 
     - name: Check
       run: |
@@ -1053,7 +1053,7 @@ jobs:
       run: |
         $env:ISPC_HOME = "$pwd"
         .github/workflows/scripts/load-vs-env.ps1 "${{ matrix.arch }}"
-        python .\alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        python .\scripts\alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Check
       run: |
@@ -1106,7 +1106,7 @@ jobs:
       run: |
         $env:ISPC_HOME = "$pwd"
         .github/workflows/scripts/load-vs-env.ps1 "${{ matrix.arch }}"
-        python .\alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        python .\scripts\alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Check
       run: |
@@ -1160,7 +1160,7 @@ jobs:
       run: |
         $env:ISPC_HOME = "$pwd"
         .github/workflows/scripts/load-vs-env.ps1 "${{ matrix.arch }}"
-        python .\alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        python .\scripts\alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Check
       run: |

@@ -74,7 +74,7 @@ for:
         cd %ISPC_HOME%
         check_isa.exe
         ispc --support-matrix
-        python perf.py -n 1 -g %generator% && msbuild %ISPC_HOME%\build\tests\check-all.vcxproj /t:Build /p:Platform=x64 /p:Configuration=%configuration% && msbuild %ISPC_HOME%\build\RUN_TESTS.vcxproj /t:Build /p:Platform=x64 /p:Configuration=%configuration%
+        python scripts\perf.py -n 1 -g %generator% && msbuild %ISPC_HOME%\build\tests\check-all.vcxproj /t:Build /p:Platform=x64 /p:Configuration=%configuration% && msbuild %ISPC_HOME%\build\RUN_TESTS.vcxproj /t:Build /p:Platform=x64 /p:Configuration=%configuration%
 
 -
   matrix:
