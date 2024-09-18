@@ -260,7 +260,7 @@ endif(CMAKE_BUILD_TYPE)
 # Build target for utility checking host ISA
 if (ISPC_INCLUDE_UTILS)
     add_executable(check_isa "")
-    target_sources(check_isa PRIVATE check_isa.cpp)
+    target_sources(check_isa PRIVATE tools/check_isa.cpp)
     set_target_properties(check_isa PROPERTIES FOLDER "Utils")
     if (NOT ISPC_PREPARE_PACKAGE)
         install (TARGETS check_isa DESTINATION bin)
