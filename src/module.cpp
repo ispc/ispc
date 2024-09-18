@@ -34,7 +34,6 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <unordered_map>
 
 #include <clang/Basic/CharInfo.h>
 #include <clang/Basic/FileManager.h>
@@ -1510,6 +1509,45 @@ void Module::AddExportedTypes(const std::vector<std::pair<const Type *, SourcePo
     }
 }
 
+static const std::vector<Module::OutputTypeInfo> outputTypeInfos = {
+    /* Asm         */ {"assembly", {"s"}},
+    /* Bitcode     */ {"LLVM bitcode", {"bc"}},
+    /* BitcodeText */ {"LLVM assembly", {"ll"}},
+    /* Object      */ {"object", {"o", "obj"}},
+    /* Header      */ {"header", {"h", "hh", "hpp"}},
+    /* Deps        */ {"dependencies", {}}, // No suffix
+    /* DevStub     */ {"dev-side offload stub", {"c", "cc", "c++", "cxx", "cpp"}},
+    /* HostStub    */ {"host-side offload stub", {"c", "cc", "c++", "cxx", "cpp"}},
+    /* CPPStub     */ {"preprocessed stub", {"ispi", "i"}},
+#ifdef ISPC_XE_ENABLED
+    /* ZEBIN       */ {"L0 binary", {"bin"}},
+    /* SPIRV       */ {"SPIR-V", {"spv"}},
+#endif
+    // Deps and other types that don't require warnings can be omitted
+};
+
+static void lReportInvalidSuffixWarning(const char *outFileName, Module::OutputType outputType) {
+    if (outFileName) {
+        // First, issue a warning if the output file suffix and the type of
+        // file being created seem to mismatch.  This can help catch missing
+        // command-line arguments specifying the output file type.
+        const char *suffix = strrchr(outFileName, '.');
+        if (suffix != nullptr) {
+            ++suffix;
+            std::string suffixStr(suffix);
+            if (!(outputType >= 0 && outputType < outputTypeInfos.size())) {
+                Assert(0 /* unhandled output type */);
+            }
+
+            const Module::OutputTypeInfo &info = outputTypeInfos[outputType];
+            if (!info.isSuffixValid(suffixStr)) {
+                Warning(SourcePos(), "Emitting %s file, but filename \"%s\" has suffix \"%s\"?", info.fileType,
+                        outFileName, suffix);
+            }
+        }
+    }
+}
+
 bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *outFileName,
                          const char *depTargetFileName, const char *sourceFileName, DispatchHeaderInfo *DHI) {
     if (diBuilder && (outputType != Header) && (outputType != Deps))
@@ -1534,70 +1572,8 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
         FATAL("Resulting module verification failed!");
     }
 
-    if (outFileName) {
-        // First, issue a warning if the output file suffix and the type of
-        // file being created seem to mismatch.  This can help catch missing
-        // command-line arguments specifying the output file type.
-        const char *suffix = strrchr(outFileName, '.');
-        if (suffix != nullptr) {
-            ++suffix;
-            const char *fileType = nullptr;
-            switch (outputType) {
-            case Asm:
-                if (strcasecmp(suffix, "s"))
-                    fileType = "assembly";
-                break;
-            case Bitcode:
-                if (strcasecmp(suffix, "bc"))
-                    fileType = "LLVM bitcode";
-                break;
-            case BitcodeText:
-                if (strcasecmp(suffix, "ll"))
-                    fileType = "LLVM assembly";
-                break;
-            case Object:
-                if (strcasecmp(suffix, "o") && strcasecmp(suffix, "obj"))
-                    fileType = "object";
-                break;
-#ifdef ISPC_XE_ENABLED
-            case ZEBIN:
-                if (strcasecmp(suffix, "bin"))
-                    fileType = "L0 binary";
-                break;
-            case SPIRV:
-                if (strcasecmp(suffix, "spv"))
-                    fileType = "spir-v";
-                break;
-#endif
-            case Header:
-                if (strcasecmp(suffix, "h") && strcasecmp(suffix, "hh") && strcasecmp(suffix, "hpp"))
-                    fileType = "header";
-                break;
-            case Deps:
-                break;
-            case DevStub:
-                if (strcasecmp(suffix, "c") && strcasecmp(suffix, "cc") && strcasecmp(suffix, "c++") &&
-                    strcasecmp(suffix, "cxx") && strcasecmp(suffix, "cpp"))
-                    fileType = "dev-side offload stub";
-                break;
-            case HostStub:
-                if (strcasecmp(suffix, "c") && strcasecmp(suffix, "cc") && strcasecmp(suffix, "c++") &&
-                    strcasecmp(suffix, "cxx") && strcasecmp(suffix, "cpp"))
-                    fileType = "host-side offload stub";
-                break;
-            case CPPStub:
-                if (strcasecmp(suffix, "ispi") && strcasecmp(suffix, "i"))
-                    fileType = "preprocessed stub";
-                break;
-            default:
-                Assert(0 /* swtich case not handled */);
-                return 1;
-            }
-            if (fileType != nullptr)
-                Warning(SourcePos(), "Emitting %s file, but filename \"%s\" has suffix \"%s\"?", fileType, outFileName,
-                        suffix);
-        }
-    }
+    lReportInvalidSuffixWarning(outFileName, outputType);
+
     if (outputType == Header) {
         if (DHI)
             return writeDispatchHeader(DHI);
