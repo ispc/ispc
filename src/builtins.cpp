@@ -454,13 +454,18 @@ void ispc::debugDumpModule(llvm::Module *module, std::string name, int stage) {
         return;
     }
 
+    SourcePos noPos;
     name = std::string("pre_") + std::to_string(stage) + "_" + name + ".ll";
     if (g->dumpFile && !g->dumpFilePath.empty()) {
         std::error_code EC;
         llvm::SmallString<128> path(g->dumpFilePath);
 
         if (!llvm::sys::fs::exists(path)) {
-            llvm::sys::fs::create_directories(g->dumpFilePath);
+            EC = llvm::sys::fs::create_directories(g->dumpFilePath);
+            if (EC) {
+                Error(noPos, "Error creating directory '%s': %s", g->dumpFilePath.c_str(), EC.message().c_str());
+                return;
+            }
         }
 
         if (g->isMultiTargetCompilation) {
@@ -470,7 +475,7 @@ void ispc::debugDumpModule(llvm::Module *module, std::string name, int stage) {
         llvm::raw_fd_ostream OS(path, EC);
 
         if (EC) {
-            llvm::errs() << "Error: " << EC.message();
+            Error(noPos, "Error opening file '%s': %s", path.c_str(), EC.message().c_str());
             return;
         }
 
