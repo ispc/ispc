@@ -145,7 +145,7 @@ llvm::Value *lMaskedMergeVectors(llvm::IRBuilder<> &B, llvm::Value *firstVector,
 
     for (unsigned length = M; length < N; length *= 2) {
         // Create a vector of indices [0, 1, 2, ..., length*2).
-        std::vector<unsigned> indices(length * 2);
+        std::vector<unsigned> indices((size_t)length * 2);
         std::iota(indices.begin(), indices.end(), 0);
         llvm::Constant *mask = llvm::ConstantDataVector::get(B.getContext(), indices);
 

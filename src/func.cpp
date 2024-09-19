@@ -959,7 +959,7 @@ FunctionTemplate::FunctionTemplate(TemplateSymbol *s, Stmt *c) : sym(s), code(c)
 
 FunctionTemplate::~FunctionTemplate() {
     for (const auto &inst : instantiations) {
-        Function *func = const_cast<Function *>(inst.symbol->parentFunction);
+        const Function *func = inst.symbol->parentFunction;
         if (func) {
             delete func;
         }
