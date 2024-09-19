@@ -3177,15 +3177,13 @@ void FunctionEmitContext::storeUniformToSOA(llvm::Value *value, llvm::Value *ptr
     }
 }
 
-void FunctionEmitContext::MemcpyInst(llvm::Value *dest, llvm::Value *src, llvm::Value *count, llvm::Value *align) {
+void FunctionEmitContext::MemcpyInst(llvm::Value *dest, llvm::Value *src, llvm::Value *count) {
     dest = BitCastInst(dest, LLVMTypes::VoidPointerType);
     src = BitCastInst(src, LLVMTypes::VoidPointerType);
     if (count->getType() != LLVMTypes::Int64Type) {
         AssertPos(currentPos, count->getType() == LLVMTypes::Int32Type);
         count = ZExtInst(count, LLVMTypes::Int64Type, "count_to_64");
     }
-    if (align == nullptr)
-        align = LLVMInt32(1);
     llvm::FunctionCallee mcFuncCallee =
 #ifdef ISPC_OPAQUE_PTR_MODE
         m->module->getOrInsertFunction("llvm.memcpy.p0.p0.i64", LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
