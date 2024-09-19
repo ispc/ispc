@@ -1116,7 +1116,7 @@ struct GatherImpInfo {
     const char *load;
     const char *blend;
     llvm::Type **sType;
-    const Alignment alignment;
+    Alignment alignment;
 };
 
 struct ScatterImpInfo {
@@ -1135,7 +1135,7 @@ struct ScatterImpInfo {
   private:
     const char *store;
     llvm::Type **vpType;
-    const Alignment alignment;
+    Alignment alignment;
 };
 
 /** After earlier optimization passes have run, we are sometimes able to
