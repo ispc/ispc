@@ -73,7 +73,7 @@ class FunctionEmitContext {
         @param firstStmtPos Source file position of the first statement in the
                             function
      */
-    FunctionEmitContext(Function *function, Symbol *funSym, llvm::Function *llvmFunction, SourcePos firstStmtPos);
+    FunctionEmitContext(const Function *function, Symbol *funSym, llvm::Function *llvmFunction, SourcePos firstStmtPos);
     ~FunctionEmitContext();
 
     /** Returns the Function * corresponding to the function that we're
@@ -659,7 +659,7 @@ class FunctionEmitContext {
 
   private:
     /** Pointer to the Function for which we're currently generating code. */
-    Function *function;
+    const Function *function;
 
     /** LLVM function representation for the current function. */
     llvm::Function *llvmFunction;

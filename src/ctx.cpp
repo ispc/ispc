@@ -222,7 +222,7 @@ llvm::Type *AddressInfo::GetPointeeLLVMType(const PointerType *pt) {
 }
 ///////////////////////////////////////////////////////////////////////////
 
-FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym, llvm::Function *lf, SourcePos firstStmtPos) {
+FunctionEmitContext::FunctionEmitContext(const Function *func, Symbol *funSym, llvm::Function *lf, SourcePos firstStmtPos) {
     function = func;
     llvmFunction = lf;
     switchConditionWasUniform = false;
