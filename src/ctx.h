@@ -543,7 +543,7 @@ class FunctionEmitContext {
     /** Copy count bytes of memory from the location pointed to by src to
         the location pointed to by dest.  (src and dest must not be
         overlapping.) */
-    void MemcpyInst(llvm::Value *dest, llvm::Value *src, llvm::Value *count, llvm::Value *align = nullptr);
+    void MemcpyInst(llvm::Value *dest, llvm::Value *src, llvm::Value *count);
 
     void setLoopUnrollMetadata(llvm::Instruction *inst, std::pair<Globals::pragmaUnrollType, int> loopAttribute,
                                SourcePos pos);

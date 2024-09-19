@@ -1933,7 +1933,6 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
         if (type1->IsUniformType()) {
             arg1 = TypeConvertExpr(arg1, AtomicType::VaryingBool, "logical op");
             AssertPos(pos, arg1 != nullptr);
-            type1 = arg1->GetType();
         }
 
         if (op == BinaryExpr::LogicalOr) {
