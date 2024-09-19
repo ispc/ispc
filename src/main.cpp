@@ -266,6 +266,7 @@ class ArgFactory {
 
   public:
     ArgFactory() {}
+    virtual ~ArgFactory() {}
 
     char *GetNextArg() {
         bool insideDQ = false;
@@ -306,7 +307,7 @@ class FileArgFactory : public ArgFactory {
   private:
     FILE *InputFile;
 
-    virtual char GetNextChar() {
+    char GetNextChar() override {
         int c = fgetc(InputFile);
         if (c == EOF) {
             return '\0';
@@ -324,7 +325,7 @@ class StringArgFactory : public ArgFactory {
   private:
     const char *InputString;
 
-    virtual char GetNextChar() {
+    char GetNextChar() override {
         char c = *InputString;
 
         if (c != '\0')
@@ -733,9 +734,7 @@ int main(int Argc, char *Argv[]) {
                 errorHandler.AddWarning("Overwriting --arch=%s with --arch=%s", prev_arch_str.c_str(),
                                         arch_str.c_str());
             }
-        } else if (!strcmp(argv[i], "--ast-dump")) {
-            g->astDump = Globals::ASTDumpKind::All;
-        } else if (!strncmp(argv[i], "--ast-dump=", 11)) {
+        } else if (!strcmp(argv[i], "--ast-dump") || !strncmp(argv[i], "--ast-dump=", 11)) {
             g->astDump = Globals::ASTDumpKind::All;
         } else if (!strcmp(argv[i], "--binary-type")) {
             printBinaryType();
@@ -763,7 +762,7 @@ int main(int Argc, char *Argv[]) {
             llvm::DebugFlag = true;
         else if (!strcmp(argv[i], "--debug-pm"))
             g->debugPM = true;
-        else if (!strcmp(argv[i], "--debug-pm-time-trace"))
+        else if (!strcmp(argv[i], "--debug-pm-time-trace") || !strcmp(argv[i], "--time-trace-pm"))
             g->debugPMTimeTrace = true;
         else if (!strcmp(argv[i], "--discard-value-names"))
             discardValueNames = BooleanOptValue::enabled;
@@ -929,8 +928,6 @@ int main(int Argc, char *Argv[]) {
             g->enableTimeTrace = true;
         } else if (!strncmp(argv[i], "--time-trace-granularity=", 25)) {
             g->timeTraceGranularity = atoi(argv[i] + 25);
-        } else if (!strcmp(argv[i], "--time-trace-pm")) {
-            g->debugPMTimeTrace = true;
         } else if (!strcmp(argv[i], "--woff") || !strcmp(argv[i], "-woff")) {
             g->disableWarnings = true;
             g->emitPerfWarnings = false;
@@ -1065,8 +1062,6 @@ int main(int Argc, char *Argv[]) {
             exit(0);
         } else if (strncmp(argv[i], "--off-phase=", 12) == 0) {
             g->off_stages = ParsingPhases(argv[i] + strlen("--off-phase="), errorHandler);
-        } else if (strncmp(argv[i], "--off-phase=", 12) == 0) {
-            g->off_stages = ParsingPhases(argv[i] + strlen("--off-phase="), errorHandler);
 #ifdef ISPC_XE_ENABLED
         } else if (!strncmp(argv[i], "--vc-options=", 13)) {
             g->vcOpts = argv[i] + strlen("--vc-options=");
@@ -1100,7 +1095,7 @@ int main(int Argc, char *Argv[]) {
         exit(1);
     }
 
-    if (strncmp(file, "-", 2)) {
+    if (strcmp(file, "-") != 0) {
         // If the input is not stdin then check that the file exists and it is
         // not a directory.
         if (!llvm::sys::fs::exists(file)) {
