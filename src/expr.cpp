@@ -127,6 +127,12 @@ static bool lIsAllIntZeros(Expr *expr) {
     return true;
 }
 
+static bool lTypeCastOk(Expr **expr, const Type *toType, SourcePos pos) {
+    if (expr != nullptr)
+        *expr = new TypeCastExpr(toType, *expr, pos);
+    return true;
+}
+
 static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, bool failureOk, const char *errorMsgBase,
                         SourcePos pos) {
     /* This function is way too long and complex.  Is type conversion stuff
@@ -212,7 +218,7 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
         // can convert any array to a void pointer (both uniform and
         // varying).
         if (PointerType::IsVoidPointer(toPointerType))
-            goto typecast_ok;
+            return lTypeCastOk(expr, toType, pos);
 
         // array to pointer to array element type
         const Type *eltType = fromArrayType->GetElementType();
@@ -221,7 +227,7 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
 
         PointerType pt(eltType, toPointerType->GetVariability(), toPointerType->IsConstType());
         if (Type::Equal(toPointerType, &pt))
-            goto typecast_ok;
+            return lTypeCastOk(expr, toType, pos);
         else {
             if (!failureOk)
                 Error(pos,
@@ -268,11 +274,11 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
     if (fromPointerType != nullptr) {
         if (CastType<AtomicType>(toType) != nullptr && toType->IsBoolType())
             // Allow implicit conversion of pointers to bools
-            goto typecast_ok;
+            return lTypeCastOk(expr, toType, pos);
 
         if (toArrayType != nullptr && Type::Equal(fromType->GetBaseType(), toArrayType->GetElementType())) {
             // Can convert pointers to arrays of the same type
-            goto typecast_ok;
+            return lTypeCastOk(expr, toType, pos);
         }
         if (toPointerType == nullptr) {
             if (!failureOk)
@@ -297,11 +303,11 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
             }
             // any pointer type can be converted to a void *
             // ...almost. #731
-            goto typecast_ok;
+            return lTypeCastOk(expr, toType, pos);
         } else if (PointerType::IsVoidPointer(fromPointerType) && expr != nullptr &&
                    llvm::dyn_cast<NullPointerExpr>(*expr) != nullptr) {
             // and a nullptr convert to any other pointer type
-            goto typecast_ok;
+            return lTypeCastOk(expr, toType, pos);
         } else if (!Type::Equal(fromPointerType->GetBaseType(), toPointerType->GetBaseType()) &&
                    !Type::Equal(fromPointerType->GetBaseType()->GetAsConstType(), toPointerType->GetBaseType())) {
             // for const * -> * conversion, print warning.
@@ -324,10 +330,10 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
         }
 
         if (toType->IsVaryingType() && fromType->IsUniformType())
-            goto typecast_ok;
+            return lTypeCastOk(expr, toType, pos);
 
         if (toPointerType->IsSlice() == true && fromPointerType->IsSlice() == false)
-            goto typecast_ok;
+            return lTypeCastOk(expr, toType, pos);
 
         // Otherwise there's nothing to do
         return true;
@@ -361,20 +367,20 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
     // Convert from type T -> const T; just return a TypeCast expr, which
     // can handle this
     if (Type::EqualIgnoringConst(toType, fromType) && toType->IsConstType() == true && fromType->IsConstType() == false)
-        goto typecast_ok;
+        return lTypeCastOk(expr, toType, pos);
 
     if (CastType<ReferenceType>(fromType)) {
         if (CastType<ReferenceType>(toType)) {
             // Convert from a reference to a type to a const reference to a type;
             // this is handled by TypeCastExpr
             if (Type::Equal(toType->GetReferenceTarget(), fromType->GetReferenceTarget()->GetAsConstType()))
-                goto typecast_ok;
+                return lTypeCastOk(expr, toType, pos);
 
             const ArrayType *atFrom = CastType<ArrayType>(fromType->GetReferenceTarget());
             const ArrayType *atTo = CastType<ArrayType>(toType->GetReferenceTarget());
 
             if (atFrom != nullptr && atTo != nullptr && Type::Equal(atFrom->GetElementType(), atTo->GetElementType())) {
-                goto typecast_ok;
+                return lTypeCastOk(expr, toType, pos);
             } else {
                 if (!failureOk)
                     Error(pos,
@@ -410,7 +416,7 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
         }
     } else if (Type::Equal(toType, fromType->GetAsNonConstType()))
         // convert: const T -> T (as long as T isn't a reference)
-        goto typecast_ok;
+        return lTypeCastOk(expr, toType, pos);
 
     fromType = fromType->GetReferenceTarget();
     toType = toType->GetReferenceTarget();
@@ -419,10 +425,10 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
             // the case of different element counts should have returned
             // successfully earlier, yes??
             AssertPos(pos, toArrayType->GetElementCount() != fromArrayType->GetElementCount());
-            goto typecast_ok;
+            return lTypeCastOk(expr, toType, pos);
         } else if (Type::Equal(toArrayType->GetElementType(), fromArrayType->GetElementType()->GetAsConstType())) {
             // T[x] -> const T[x]
-            goto typecast_ok;
+            return lTypeCastOk(expr, toType, pos);
         } else {
             if (!failureOk)
                 Error(pos, "Array type \"%s\" can't be converted to type \"%s\" for %s.", fromType->GetString().c_str(),
@@ -441,7 +447,7 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
                       fromType->GetString().c_str(), toType->GetString().c_str(), errorMsgBase);
             return false;
         }
-        goto typecast_ok;
+        return lTypeCastOk(expr, toType, pos);
     }
 
     if (toStructType && fromStructType) {
@@ -454,7 +460,7 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
                       fromStructType->GetString().c_str(), toStructType->GetString().c_str(), errorMsgBase);
             return false;
         }
-        goto typecast_ok;
+        return lTypeCastOk(expr, toType, pos);
     }
 
     if (toEnumType != nullptr && fromEnumType != nullptr) {
@@ -467,7 +473,7 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
                       fromEnumType->GetString().c_str(), toEnumType->GetString().c_str(), errorMsgBase);
             return false;
         }
-        goto typecast_ok;
+        return lTypeCastOk(expr, toType, pos);
     }
 
     // enum -> atomic (integer, generally...) is always ok
@@ -481,7 +487,7 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
                       fromType->GetString().c_str(), toType->GetString().c_str(), errorMsgBase);
             return false;
         }
-        goto typecast_ok;
+        return lTypeCastOk(expr, toType, pos);
     }
 
     // from here on out, the from type can only be atomic something or
@@ -497,7 +503,7 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
 
     // scalar -> short-vector conversions
     if (toVectorType != nullptr && (fromType->GetSOAWidth() == toType->GetSOAWidth()))
-        goto typecast_ok;
+        return lTypeCastOk(expr, toType, pos);
 
     // ok, it better be a scalar->scalar conversion of some sort by now
     if (toAtomicType == nullptr) {
@@ -518,10 +524,7 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
         return false;
     }
 
-typecast_ok:
-    if (expr != nullptr)
-        *expr = new TypeCastExpr(toType, *expr, pos);
-    return true;
+    return lTypeCastOk(expr, toType, pos);
 }
 
 bool ispc::CanConvertTypes(const Type *fromType, const Type *toType, const char *errorMsgBase, SourcePos pos) {
