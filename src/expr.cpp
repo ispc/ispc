@@ -5789,11 +5789,7 @@ ConstExpr::ConstExpr(const ConstExpr *old, SourcePos p) : Expr(p, ConstExprID) {
         std::copy(old->uint64Val, old->uint64Val + Count(), uint64Val);
         break;
     case AtomicType::TYPE_FLOAT16:
-        fpVal = old->fpVal;
-        break;
     case AtomicType::TYPE_FLOAT:
-        fpVal = old->fpVal;
-        break;
     case AtomicType::TYPE_DOUBLE:
         fpVal = old->fpVal;
         break;
@@ -6416,8 +6412,6 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
             cast = exprVal;
             break;
         case AtomicType::TYPE_FLOAT:
-            cast = ctx->FPCastInst(exprVal, targetType, cOpName);
-            break;
         case AtomicType::TYPE_DOUBLE:
             cast = ctx->FPCastInst(exprVal, targetType, cOpName);
             break;
@@ -6518,8 +6512,6 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
                                  exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT16:
-            cast = ctx->FPCastInst(exprVal, targetType, cOpName);
-            break;
         case AtomicType::TYPE_FLOAT:
             cast = ctx->FPCastInst(exprVal, targetType, cOpName);
             break;
@@ -6582,13 +6574,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
             cast = ctx->TruncInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT16:
-            cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
-                                 exprVal, targetType, cOpName);
-            break;
         case AtomicType::TYPE_FLOAT:
-            cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
-                                 exprVal, targetType, cOpName);
-            break;
         case AtomicType::TYPE_DOUBLE:
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
                                  exprVal, targetType, cOpName);
@@ -6656,13 +6642,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
             cast = ctx->TruncInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT16:
-            cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
-                                 exprVal, targetType, cOpName);
-            break;
         case AtomicType::TYPE_FLOAT:
-            cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
-                                 exprVal, targetType, cOpName);
-            break;
         case AtomicType::TYPE_DOUBLE:
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
                                  exprVal, targetType, cOpName);
