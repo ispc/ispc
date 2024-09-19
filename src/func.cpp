@@ -280,7 +280,7 @@ static llvm::Value *lXeGetTaskVariableValue(FunctionEmitContext *ctx, std::strin
     involves wiring up the function parameter values to be available in the
     function body code.
  */
-void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, SourcePos firstStmtPos) {
+void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, SourcePos firstStmtPos) const {
     // Connect the __mask builtin to the location in memory that stores its
     // value
     maskSymbol->storageInfo = ctx->GetFullMaskAddressInfo();
@@ -626,7 +626,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
 #endif
 }
 
-void Function::GenerateIR() {
+void Function::GenerateIR() const {
     if (sym == nullptr)
         // May be nullptr due to error earlier in compilation
         return;
@@ -1018,7 +1018,7 @@ llvm::GlobalValue::LinkageTypes lGetTemplateInstantiationLinkage(TemplateInstant
 
 void FunctionTemplate::GenerateIR() const {
     for (const auto &inst : instantiations) {
-        Function *func = const_cast<Function *>(inst.symbol->parentFunction);
+        const Function *func = inst.symbol->parentFunction;
         if (func != nullptr) {
             func->GenerateIR();
             // Update linkage for not internal functions

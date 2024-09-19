@@ -28,7 +28,7 @@ class Function {
     const FunctionType *GetType() const;
 
     /** Generate LLVM IR for the function into the current module. */
-    void GenerateIR();
+    void GenerateIR() const;
 
     void Print() const;
     void Print(Indent &indent) const;
@@ -44,7 +44,7 @@ class Function {
     void debugPrintHelper(DebugPrintPoint dumpPoint);
     void typeCheckAndOptimize();
 
-    void emitCode(FunctionEmitContext *ctx, llvm::Function *function, SourcePos firstStmtPos);
+    void emitCode(FunctionEmitContext *ctx, llvm::Function *function, SourcePos firstStmtPos) const;
 
     Symbol *sym;
     std::vector<Symbol *> args;
