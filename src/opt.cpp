@@ -119,7 +119,11 @@ static std::string getDumpFilePath(std::string className, int pnum) {
 
     std::string pathDirFile;
     if (!g->dumpFilePath.empty()) {
-        llvm::sys::fs::create_directories(g->dumpFilePath);
+        SourcePos noPos;
+        std::error_code EC = llvm::sys::fs::create_directories(g->dumpFilePath);
+        if (EC) {
+            Error(noPos, "Error creating directory '%s': %s", g->dumpFilePath.c_str(), EC.message().c_str());
+        }
         pathDirFile = g->dumpFilePath + pathSep + pathFile;
     } else {
         pathDirFile = pathFile;
