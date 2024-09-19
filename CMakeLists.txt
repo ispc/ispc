@@ -349,7 +349,8 @@ endif()
 
 list(APPEND ARM_TARGETS neon-i8x16 neon-i16x8 neon-i32x4 neon-i32x8)
 list(APPEND WASM_TARGETS wasm-i32x4)
-list(APPEND XE_TARGETS gen9-x16 gen9-x8 xelp-x16 xelp-x8 xehpg-x16 xehpg-x8 xehpc-x16 xehpc-x32 xelpg-x16 xelpg-x8)
+list(APPEND XE_TARGETS gen9-x16 gen9-x8 xelp-x16 xelp-x8 xehpg-x16 xehpg-x8 xehpc-x16 xehpc-x32 xelpg-x16 xelpg-x8
+                       xe2hpg-x16 xe2hpg-x32)
 
 if (X86_ENABLED)
     list(APPEND ISPC_TARGETS ${X86_TARGETS})

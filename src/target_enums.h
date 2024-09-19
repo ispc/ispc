@@ -89,6 +89,8 @@ enum class ISPCTarget {
     xehpc_x32,
     xelpg_x8,
     xelpg_x16,
+    xe2hpg_x16,
+    xe2hpg_x32,
     error
 };
 ISPCTarget operator++(ISPCTarget &, int);
