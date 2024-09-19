@@ -8900,6 +8900,15 @@ int FunctionSymbolExpr::computeOverloadCost(const FunctionType *ftype, const std
     return costSum;
 }
 
+static bool lReportErrorUnableToFindOverload(std::vector<Symbol *> &matches, const std::vector<const Type *> &argTypes,
+                                             const std::vector<bool> *argCouldBeNULL, std::string &name,
+                                             SourcePos pos) {
+    std::string candidateMessage = lGetOverloadCandidateMessage(matches, argTypes, argCouldBeNULL);
+    Error(pos, "Unable to find any matching overload for call to function \"%s\".\n%s", name.c_str(),
+          candidateMessage.c_str());
+    return false;
+}
+
 bool FunctionSymbolExpr::ResolveOverloads(SourcePos argPos, const std::vector<const Type *> &argTypes,
                                           const std::vector<bool> *argCouldBeNULL,
                                           const std::vector<bool> *argIsConstant) {
@@ -8935,7 +8944,7 @@ bool FunctionSymbolExpr::ResolveOverloads(SourcePos argPos, const std::vector<co
     std::vector<int *> candidateExpandCosts;
 
     if (actualCandidates.size() == 0)
-        goto failure;
+        return lReportErrorUnableToFindOverload(matches, argTypes, argCouldBeNULL, name, pos);
 
     // Compute the cost for calling each of the candidate functions
     for (int i = 0; i < (int)actualCandidates.size(); ++i) {
@@ -8954,7 +8963,8 @@ bool FunctionSymbolExpr::ResolveOverloads(SourcePos argPos, const std::vector<co
     }
     // None of the candidates matched
     if (bestMatchCost == (1 << 30))
-        goto failure;
+        return lReportErrorUnableToFindOverload(matches, argTypes, argCouldBeNULL, name, pos);
+
     for (int i = 0; i < (int)candidateCosts.size(); ++i) {
         if (candidateCosts[i] == bestMatchCost) {
             for (int j = 0; j < (int)candidateCosts.size(); ++j) {
@@ -8992,11 +9002,7 @@ bool FunctionSymbolExpr::ResolveOverloads(SourcePos argPos, const std::vector<co
         return false;
     } else {
         // No matches at all
-    failure:
-        std::string candidateMessage = lGetOverloadCandidateMessage(matches, argTypes, argCouldBeNULL);
-        Error(pos, "Unable to find any matching overload for call to function \"%s\".\n%s", name.c_str(),
-              candidateMessage.c_str());
-        return false;
+        return lReportErrorUnableToFindOverload(matches, argTypes, argCouldBeNULL, name, pos);
     }
 }
 
