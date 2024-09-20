@@ -102,19 +102,20 @@ def cpu_get():
     p = open("/proc/stat", 'r')
     cpu = p.readline()
     p.close()
-    cpu = cpu.split(" ")
-    cpu_usage = (int(cpu[2]) + int(cpu[3]) + int(cpu[4]))
-    cpu_all = cpu_usage + int(cpu[5])
-    return [cpu_usage, cpu_all]
+    cpu = cpu.split()
+    user, nice, system, idle = map(int, cpu[1:5])
+    cpu_usage = user + nice + system
+    cpu_all = cpu_usage + idle
+    return (cpu_usage, cpu_all)
 
 #returns cpu_usage
 def cpu_check():
     if is_windows == False:
         if is_mac == False:
-            cpu1 = cpu_get()
+            cpu_usage1, cpu_all1 = cpu_get()
             time.sleep(1)
-            cpu2 = cpu_get()
-            cpu_percent = (float(cpu1[0] - cpu2[0])/float(cpu1[1] - cpu2[1]))*100
+            cpu_usage2, cpu_all2 = cpu_get()
+            cpu_percent = (float(cpu_usage2 - cpu_usage1)/(cpu_all2 - cpu_all1))*100
         else:
             os.system("sysctl -n vm.loadavg > cpu_temp")
             c = open("cpu_temp", 'r')
