@@ -588,7 +588,7 @@ def validation_run(only, only_targets, reference_branch, number, update, speed_n
         stability.silent = True
         stability.in_file = "." + os.sep + f_date + os.sep + "run_tests_log.log"
         stability.verify = False
-        stability.fail_db = "fail_db.txt"
+        stability.fail_db = "tests/fail_db.txt"
         stability.device = None
         stability.ispc_output = None
         stability.debug_check = False
