@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2023, Intel Corporation
+#  Copyright (c) 2018-2024, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -60,6 +60,21 @@ function(add_ispc_example)
     if(MSVC)
         # Group ISPC files inside Visual Studio
         source_group("ISPC" FILES "${CMAKE_CURRENT_SOURCE_DIR}/${ISPC_SRC_NAME}.ispc")
+    endif()
+
+    # Install example
+    # We do not need to include examples binaries to the package
+    if (NOT ISPC_PREPARE_PACKAGE)
+        install(TARGETS ${example_NAME} RUNTIME DESTINATION examples/${example_NAME})
+        if (example_DATA_FILES)
+            install(FILES ${example_DATA_FILES}
+                    DESTINATION examples/${example_NAME})
+        endif()
+
+        if (example_DATA_DIR)
+            install(DIRECTORY ${example_DATA_DIR}
+                    DESTINATION examples/${example_NAME})
+        endif()
     endif()
 
 endfunction()
