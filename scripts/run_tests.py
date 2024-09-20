@@ -321,6 +321,9 @@ def run_test(testname, host, target):
     # ispc_exe_rel is a relative path to ispc
     filename = add_prefix(testname, host, target)
 
+    # Get global path to tests. Note, that test is in tests/func-tests/ directory.
+    test_dir = os.path.dirname(os.path.dirname(filename))
+
     # Debug check is now supported only for xe
     if options.debug_check and target.is_xe():
         ispc_exe_rel = add_prefix(host.ispc_cmd + " -g", host, target)
@@ -401,10 +404,10 @@ def run_test(testname, host, target):
                 else:
                     exe_name = "%s.exe" % os.path.basename(filename)
 
-                cc_cmd = "%s /I. /Zi /nologo /DTEST_SIG=%d /DTEST_WIDTH=%d %s %s /Fe%s" % \
+                cc_cmd = "%s /Itests /Zi /nologo /DTEST_SIG=%d /DTEST_WIDTH=%d %s %s /Fe%s" % \
                          (options.compiler_exe, match, width, add_prefix("tests\\test_static.cpp", host, target), obj_name, exe_name)
                 if target.is_xe():
-                    cc_cmd = "%s /I. /I%s\\include /nologo /DTEST_SIG=%d /DTEST_WIDTH=%d %s %s /Fe%s ze_loader.lib /link /LIBPATH:%s\\lib" % \
+                    cc_cmd = "%s /Itests /I%s\\include /nologo /DTEST_SIG=%d /DTEST_WIDTH=%d %s %s /Fe%s ze_loader.lib /link /LIBPATH:%s\\lib" % \
                          (options.compiler_exe, options.l0loader, match, width, " /DTEST_ZEBIN" if options.ispc_output == "ze" else " /DTEST_SPV", \
                          add_prefix("tests\\test_static_l0.cpp", host, target), exe_name, options.l0loader)
                 if should_fail:
@@ -431,7 +434,7 @@ def run_test(testname, host, target):
                 else:
                     gcc_arch = '-m64'
 
-                cc_cmd = "%s -O2 -I. %s tests/test_static.cpp -DTEST_SIG=%d -DTEST_WIDTH=%d %s -o %s" % \
+                cc_cmd = "%s -O2 -I tests/ %s tests/test_static.cpp -DTEST_SIG=%d -DTEST_WIDTH=%d %s -o %s" % \
                     (options.compiler_exe, gcc_arch, match, width, obj_name, exe_name)
 
                 # Produce position independent code for both c++ and ispc compilations.
@@ -444,14 +447,14 @@ def run_test(testname, host, target):
 
                 if target.is_xe():
                     exe_name = "%s.run" % os.path.basename(testname)
-                    cc_cmd = "%s -O0 -I. -I %s/include -lze_loader -L %s/lib \
+                    cc_cmd = "%s -O0 -I tests -I %s/include -lze_loader -L %s/lib \
                             %s %s -DTEST_SIG=%d -DTEST_WIDTH=%d -o %s" % \
                             (options.compiler_exe, options.l0loader, options.l0loader, gcc_arch, add_prefix("tests/test_static_l0.cpp", host, target),
                              match, width, exe_name)
                     exe_name = "./" + exe_name
                     cc_cmd += " -DTEST_ZEBIN" if options.ispc_output == "ze" else " -DTEST_SPV"
-            ispc_cmd = ispc_exe_rel + " --pic --woff %s -o %s --arch=%s --target=%s -DTEST_SIG=%d" % \
-                        (filename, obj_name, options.arch, xe_target if target.is_xe() else options.target, match)
+            ispc_cmd = ispc_exe_rel + " -I %s --pic --woff %s -o %s --arch=%s --target=%s -DTEST_SIG=%d" % \
+                        (test_dir, filename, obj_name, options.arch, xe_target if target.is_xe() else options.target, match)
 
             if target.is_xe():
                 ispc_cmd += " --emit-zebin" if options.ispc_output == "ze" else " --emit-spirv"
@@ -768,8 +771,8 @@ def set_ispc_output(target, options):
 def get_test_files(host, args):
     if len(args) == 0:
         ispc_root = "."
-        files = glob.glob(ispc_root + os.sep + "tests" + os.sep + "*ispc") + \
-            glob.glob(ispc_root + os.sep + "tests_errors" + os.sep + "*ispc")
+        test_files = f"{ispc_root}{os.sep}tests{os.sep}func-tests{os.sep}*ispc"
+        files = glob.glob(test_files)
     else:
         if host.is_windows():
             argfiles = [ ]
@@ -854,8 +857,7 @@ def run_tests(options1, args, print_version):
     if print_version > 0:
         common.print_version(host.ispc_exe, "", options.compiler_exe, False, run_tests_log, host.is_windows())
 
-    # if no specific test files are specified, run all of the tests in tests/
-    # and tests_errors/
+    # if no specific test files are specified, run all of the tests in tests/func-tests
     files = get_test_files(host, args)
 
     # max_test_length is used to issue exact number of whitespace characters when
@@ -1031,7 +1033,7 @@ if __name__ == "__main__":
     parser.add_option("--l0loader", dest='l0loader', help='Path to L0 loader', default="")
     parser.add_option("--device", dest='device', help='Specify target ISPC device. For example: core2, skx, cortex-a9, skl, tgllp, acm-g11, etc.', default=None)
     parser.add_option("--ispc_output", dest='ispc_output', choices=['obj', 'spv', 'ze'], help='Specify ISPC output', default=None)
-    parser.add_option("--fail_db", dest='fail_db', help='File to use as a fail database', default='fail_db.txt', type=str)
+    parser.add_option("--fail_db", dest='fail_db', help='File to use as a fail database', default='tests/fail_db.txt', type=str)
     parser.add_option("--debug_check", dest='debug_check', help='Run tests in debug mode with validating debug info', default=False, action="store_true")
     parser.add_option("--verify", dest='verify', help='verify the fail database file', default=False, action="store_true")
     parser.add_option("--save-bin", dest='save_bin', help='compile and create bin, but don\'t execute it',

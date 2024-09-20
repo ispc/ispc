@@ -174,7 +174,7 @@ jobs:
       if: failure()
       with:
         name: fail_db.${{matrix.target}}.txt
-        path: fail_db.txt
+        path: tests/fail_db.txt
 
     - name: Check
       run: |
