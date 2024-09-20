@@ -1,0 +1,82 @@
+
+# Copyright 2024 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: RK superbuild
+
+permissions: read-all
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+
+env:
+  SDE_MIRROR_ID: 813591
+  SDE_TAR_NAME: sde-external-9.33.0-2024-01-07
+  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
+  LLVM_REPO: https://github.com/ispc/ispc.dependencies
+
+jobs:
+  linux-build-ispc:
+    runs-on: ubuntu-22.04
+    env:
+      LLVM_VERSION: "18.1"
+      LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+
+    steps:
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.sh
+
+    - name: Check environment
+      run: |
+        which -a clang
+        cat /proc/cpuinfo
+
+    - name: Build package
+      run: |
+        .github/workflows/scripts/build-ispc.sh
+
+    - name: Upload package
+      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      with:
+        name: ispc_linux_package
+        path: build/ispc-trunk-linux.tar.gz
+
+  build-cpu-ubuntu-2204:
+    needs: linux-build-ispc
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:22.04
+
+    steps:
+    - name: Install packages
+      run: |
+        echo "Installing build dependencies..."
+        apt update
+        apt upgrade -y
+        apt install -y git wget tar build-essential cmake ninja-build libglfw3-dev libgl1-mesa-dev libxinerama-dev libxcursor-dev libxi-dev python3-dev
+
+    - name: Clone RK superbuild repo
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      with:
+        repository: RenderKit/superbuild
+
+    - name: Download package
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+      with:
+        name: ispc_linux_package
+
+    - name: Run RK superbuild
+      env:
+        ISPC_VERSION: 1.25.0dev # the exact version is not important but suffix "dev" is required
+      run: |
+        mkdir build
+        cd build
+        cmake -DISPC_URL="${GITHUB_WORKSPACE}/ispc-trunk-linux.tar.gz" -DISPC_VERSION=${{ env.ISPC_VERSION }} ../
+        cmake --build .
