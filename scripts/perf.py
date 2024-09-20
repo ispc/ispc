@@ -563,7 +563,7 @@ if __name__ == "__main__":
     parser.add_option('-n', '--number', dest='number',
         help='number of repeats', default="3")
     parser.add_option('-c', '--config', dest='config',
-        help='config file of tests', default="./perf.ini")
+        help='config file of tests', default="./scripts/perf.ini")
     parser.add_option('-p', '--path', dest='path',
         help='path to ispc root', default=".")
     parser.add_option('-s', '--silent', dest='silent',
