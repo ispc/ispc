@@ -59,7 +59,11 @@
 #include <llvm/Transforms/IPO/SCCP.h>
 #include <llvm/Transforms/IPO/StripDeadPrototypes.h>
 #include <llvm/Transforms/InstCombine/InstCombine.h>
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+#include <llvm/Transforms/Utils/Instrumentation.h>
+#else
 #include <llvm/Transforms/Instrumentation.h>
+#endif
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Scalar/ADCE.h>
 #include <llvm/Transforms/Scalar/CorrelatedValuePropagation.h>

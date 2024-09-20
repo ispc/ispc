@@ -34,7 +34,11 @@
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/FunctionAttrs.h>
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+#include <llvm/Transforms/Utils/Instrumentation.h>
+#else
 #include <llvm/Transforms/Instrumentation.h>
+#endif
 #include <llvm/Transforms/Utils.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #if ISPC_LLVM_VERSION > ISPC_LLVM_17_0
