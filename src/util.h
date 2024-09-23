@@ -29,6 +29,21 @@ int vasprintf(char **sptr, const char *fmt, va_list argv);
 int asprintf(char **sptr, const char *fmt, ...);
 #endif
 
+// LLVM 19.0+ uses a different API for insertion points, which is related to debug info representation. See more details
+// here: https://llvm.org/docs/RemoveDIsDebugInfo.html#how-to-update-existing-code
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_19_0
+#define ISPC_INSERTION_POINT_ITERATOR(iterator) iterator
+// Our utility functions that create llvm instructions are built with the assumption that insertBefore argument may be
+// null, which means that instruction needs not to be inserted into the IR. When this macro is removed, the interface of
+// these utility functions will need to be changed to accept either llvm::BasicBlock::iterator or llvm::InsertionPoint
+// instead of llvm::Instruction*, so null value may be passed without any trouble.
+#define ISPC_INSERTION_POINT_INSTRUCTION(instruction)                                                                  \
+    ((instruction) ? ((llvm::InsertPosition)instruction->getIterator()) : (llvm::InsertPosition) nullptr)
+#else
+#define ISPC_INSERTION_POINT_ITERATOR(iterator) &*iterator
+#define ISPC_INSERTION_POINT_INSTRUCTION(instruction) instruction
+#endif
+
 namespace ispc {
 
 struct SourcePos;

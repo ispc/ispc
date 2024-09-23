@@ -264,10 +264,11 @@ static void lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup
 static llvm::Value *lGEPAndLoad(llvm::Value *basePtr, llvm::Type *baseType, int64_t offset, int align,
                                 llvm::Instruction *insertBefore, llvm::Type *type) {
     llvm::Value *ptr = LLVMGEPInst(basePtr, baseType, LLVMInt64(offset), "new_base", insertBefore);
-    ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(type, 0), "ptr_cast", insertBefore);
+    ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(type, 0), "ptr_cast",
+                                ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
     Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
     return new llvm::LoadInst(type, ptr, "gather_load", false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(),
-                              insertBefore);
+                              ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
 }
 
 /* Having decided that we're doing to emit a series of loads, as encoded in
@@ -295,12 +296,14 @@ static void lEmitLoads(llvm::Value *basePtr, llvm::Type *baseType, std::vector<C
             // into two 32-bit parts.
             loadOps[i].load = lGEPAndLoad(basePtr, baseType, start, align, insertBefore, LLVMTypes::Int64Type);
             // element0 = (int32)value;
-            loadOps[i].element0 =
-                new llvm::TruncInst(loadOps[i].load, LLVMTypes::Int32Type, "load64_elt0", insertBefore);
+            loadOps[i].element0 = new llvm::TruncInst(loadOps[i].load, LLVMTypes::Int32Type, "load64_elt0",
+                                                      ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
             // element1 = (int32)(value >> 32)
-            llvm::Value *shift = llvm::BinaryOperator::Create(llvm::Instruction::LShr, loadOps[i].load, LLVMInt64(32),
-                                                              "load64_shift", insertBefore);
-            loadOps[i].element1 = new llvm::TruncInst(shift, LLVMTypes::Int32Type, "load64_elt1", insertBefore);
+            llvm::Value *shift =
+                llvm::BinaryOperator::Create(llvm::Instruction::LShr, loadOps[i].load, LLVMInt64(32), "load64_shift",
+                                             ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
+            loadOps[i].element1 = new llvm::TruncInst(shift, LLVMTypes::Int32Type, "load64_elt1",
+                                                      ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
             break;
         }
         case 4: {
@@ -369,7 +372,8 @@ static llvm::Value *lApplyLoad1(llvm::Value *result, const CoalescedLoadOp &load
             // If this load gives one of the values that we need, then we
             // can just insert it in directly
             Assert(set[elt] == false);
-            result = llvm::InsertElementInst::Create(result, load.load, LLVMInt32(elt), "insert_load", insertBefore);
+            result = llvm::InsertElementInst::Create(result, load.load, LLVMInt32(elt), "insert_load",
+                                                     ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
             set[elt] = true;
         }
     }
@@ -397,15 +401,18 @@ static llvm::Value *lApplyLoad2(llvm::Value *result, const CoalescedLoadOp &load
 
             // In this case, we bitcast from a 4xi32 to a 2xi64 vector
             llvm::Type *vec2x64Type = LLVMVECTOR::get(LLVMTypes::Int64Type, 2);
-            result = new llvm::BitCastInst(result, vec2x64Type, "to2x64", insertBefore);
+            result =
+                new llvm::BitCastInst(result, vec2x64Type, "to2x64", ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
 
             // And now we can insert the 64-bit wide value into the
             // appropriate elment
-            result = llvm::InsertElementInst::Create(result, load.load, LLVMInt32(elt / 2), "insert64", insertBefore);
+            result = llvm::InsertElementInst::Create(result, load.load, LLVMInt32(elt / 2), "insert64",
+                                                     ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
 
             // And back to 4xi32.
             llvm::Type *vec4x32Type = LLVMVECTOR::get(LLVMTypes::Int32Type, 4);
-            result = new llvm::BitCastInst(result, vec4x32Type, "to4x32", insertBefore);
+            result =
+                new llvm::BitCastInst(result, vec4x32Type, "to4x32", ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
 
             set[elt] = true;
             if (elt < 3) {
@@ -423,7 +430,8 @@ static llvm::Value *lApplyLoad2(llvm::Value *result, const CoalescedLoadOp &load
             // of the final vector
             Assert(set[elt] == false);
             llvm::Value *toInsert = (offsets[elt] == load.start) ? load.element0 : load.element1;
-            result = llvm::InsertElementInst::Create(result, toInsert, LLVMInt32(elt), "insert_load", insertBefore);
+            result = llvm::InsertElementInst::Create(result, toInsert, LLVMInt32(elt), "insert_load",
+                                                     ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
             set[elt] = true;
         }
         ++elt;
@@ -719,10 +727,11 @@ static llvm::Value *lComputeBasePtr(llvm::CallInst *gatherInst, llvm::Type *base
     llvm::Value *variable = LLVMExtractFirstVectorElement(variableOffsets);
     Assert(variable != nullptr);
     if (variable->getType() == LLVMTypes::Int64Type) {
-        offsetScale = new llvm::ZExtInst(offsetScale, LLVMTypes::Int64Type, "scale_to64", insertBefore);
+        offsetScale = new llvm::ZExtInst(offsetScale, LLVMTypes::Int64Type, "scale_to64",
+                                         ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
     }
-    llvm::Value *offset =
-        llvm::BinaryOperator::Create(llvm::Instruction::Mul, variable, offsetScale, "offset", insertBefore);
+    llvm::Value *offset = llvm::BinaryOperator::Create(llvm::Instruction::Mul, variable, offsetScale, "offset",
+                                                       ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
 
     return LLVMGEPInst(basePtr, baseType, offset, "new_base", insertBefore);
 }
@@ -816,7 +825,7 @@ static bool lCoalesceGathers(const std::vector<llvm::CallInst *> &coalesceGroup,
 
         llvm::Type *origType = coalesceGroup[i]->getType();
         if (origType != ir->getType()) {
-            ir = new llvm::BitCastInst(ir, origType, ir->getName(), coalesceGroup[i]);
+            ir = new llvm::BitCastInst(ir, origType, ir->getName(), ISPC_INSERTION_POINT_INSTRUCTION(coalesceGroup[i]));
         }
 
         // Previously, all of the instructions to compute the final result

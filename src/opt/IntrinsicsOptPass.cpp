@@ -135,7 +135,8 @@ bool IntrinsicsOpt::optimizeIntrinsics(llvm::BasicBlock &bb) {
                 // cast the i8 * to the appropriate type
                 llvm::Value *castPtr =
                     new llvm::BitCastInst(callInst->getArgOperand(0), llvm::PointerType::get(returnType, 0),
-                                          llvm::Twine(callInst->getArgOperand(0)->getName()) + "_cast", callInst);
+                                          llvm::Twine(callInst->getArgOperand(0)->getName()) + "_cast",
+                                          ISPC_INSERTION_POINT_INSTRUCTION(callInst));
                 LLVMCopyMetadata(castPtr, callInst);
                 int align = 0;
                 if (g->opt.forceAlignedMemory) {
@@ -145,7 +146,7 @@ bool IntrinsicsOpt::optimizeIntrinsics(llvm::BasicBlock &bb) {
                 }
                 llvm::Instruction *loadInst = new llvm::LoadInst(
                     returnType, castPtr, llvm::Twine(callInst->getArgOperand(0)->getName()) + "_load",
-                    false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(), (llvm::Instruction *)nullptr);
+                    false /* not volatile */, llvm::MaybeAlign(align).valueOrOne());
                 LLVMCopyMetadata(loadInst, callInst);
                 llvm::ReplaceInstWithInst(callInst, loadInst);
                 modifiedAny = true;
@@ -167,7 +168,8 @@ bool IntrinsicsOpt::optimizeIntrinsics(llvm::BasicBlock &bb) {
                 llvm::Type *storeType = rvalue->getType();
                 llvm::Value *castPtr =
                     new llvm::BitCastInst(callInst->getArgOperand(0), llvm::PointerType::get(storeType, 0),
-                                          llvm::Twine(callInst->getArgOperand(0)->getName()) + "_ptrcast", callInst);
+                                          llvm::Twine(callInst->getArgOperand(0)->getName()) + "_ptrcast",
+                                          ISPC_INSERTION_POINT_INSTRUCTION(callInst));
                 LLVMCopyMetadata(castPtr, callInst);
 
                 int align = 0;

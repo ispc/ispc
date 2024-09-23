@@ -61,8 +61,8 @@ bool ReplaceStdlibShiftPass::replaceStdlibShiftBuiltin(llvm::BasicBlock &bb) {
                         }
                         llvm::Value *shuffleIdxs = LLVMInt32Vector(shuffleVals);
                         llvm::Value *zeroVec = llvm::ConstantAggregateZero::get(shiftedVec->getType());
-                        llvm::Value *shuffle =
-                            new llvm::ShuffleVectorInst(shiftedVec, zeroVec, shuffleIdxs, "vecShift", ci);
+                        llvm::Value *shuffle = new llvm::ShuffleVectorInst(shiftedVec, zeroVec, shuffleIdxs, "vecShift",
+                                                                           ISPC_INSERTION_POINT_INSTRUCTION(ci));
                         ci->replaceAllUsesWith(shuffle);
                         modifiedAny = true;
                         delete[] shuffleVals;
