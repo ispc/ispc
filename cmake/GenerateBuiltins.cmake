@@ -151,7 +151,7 @@ function(builtin_wasm_to_cpp bit os arch)
     write_common_bitcode_lib(${name} ${os} ${arch})
 
     list(APPEND flags
-        -DWASM -s WASM_OBJECT_FILES=0 ${ISPC_OPAQUE_FLAGS} -I${CMAKE_SOURCE_DIR} --std=gnu++17 -S -emit-llvm -c)
+        -DWASM -s WASM_OBJECT_FILES=0 ${ISPC_OPAQUE_FLAGS} -I${CMAKE_SOURCE_DIR} --std=gnu++17 -S -emit-llvm)
     if("${bit}" STREQUAL "64")
         list(APPEND flags "-sMEMORY64")
     endif()
@@ -292,7 +292,7 @@ function(builtin_to_cpp bit os generic_arch)
 
     get_target_flags(${os} ${arch} target_flags)
     list(APPEND flags ${target_flags}
-        -I${CMAKE_SOURCE_DIR} -m${bit} -S -emit-llvm ${ISPC_OPAQUE_FLAGS} --std=gnu++17 -c
+        -I${CMAKE_SOURCE_DIR} -m${bit} -S -emit-llvm ${ISPC_OPAQUE_FLAGS} --std=gnu++17
     )
 
     set(name builtins-cpp-${bit}-${os}-${arch})
