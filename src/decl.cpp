@@ -459,7 +459,7 @@ Declarator::Declarator(DeclaratorKind dk, SourcePos p) : pos(p), kind(dk) {
     child = nullptr;
     typeQualifiers = 0;
     storageClass = SC_NONE;
-    arraySize = -1;
+    arraySize = std::monostate{};
     type = nullptr;
     initExpr = nullptr;
     attributeList = nullptr;
@@ -551,7 +551,14 @@ void Declarator::Print(Indent &indent) const {
         printf("(unnamed)");
     }
 
-    printf(", array size = %d", arraySize);
+    printf(", array size = ");
+    if (std::holds_alternative<int>(arraySize)) {
+        printf("%d", std::get<int>(arraySize));
+    } else if (std::holds_alternative<Symbol *>(arraySize)) {
+        printf("%s", std::get<Symbol *>(arraySize)->name.c_str());
+    } else {
+        UNREACHABLE();
+    }
 
     printf(", kind = ");
     switch (kind) {
@@ -680,7 +687,18 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             return;
         }
 
-        const Type *arrayType = new ArrayType(baseType, arraySize);
+        // Check if arraySize holds an int or a Symbol* and create the ArrayType accordingly
+        ArrayType *arrayType = nullptr;
+        if (std::holds_alternative<int>(arraySize)) {
+            int size = std::get<int>(arraySize);
+            arrayType = new ArrayType(baseType, size);
+        } else if (std::holds_alternative<Symbol *>(arraySize)) {
+            Symbol *symbolSize = std::get<Symbol *>(arraySize);
+            arrayType = new ArrayType(baseType, symbolSize);
+        } else {
+            UNREACHABLE();
+        }
+
         if (child != nullptr) {
             child->InitFromType(arrayType, ds);
             type = child->type;

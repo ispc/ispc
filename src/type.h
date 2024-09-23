@@ -626,6 +626,22 @@ class ArrayType : public SequentialType {
                             example).
      */
     ArrayType(const Type *elementType, int numElements);
+    /** An ArrayType can be created with a symbolic number of elements.
+        This constructor initializes an ArrayType with a specified element type
+        and a symbolic representation of the number of elements. It is used when
+        the size of the array is determined through template non-type parameters.
+
+        @param elementType The type of the elements stored in the array.
+        @param num A pointer to a Symbol representing the number of elements.
+     */
+    ArrayType(const Type *elementType, Symbol *num);
+    /** This constructor initializes an ArrayType using an ElementCount structure,
+        which can represent either a fixed count or a symbolic count of elements.
+
+        @param elementType The type of the elements stored in the array.
+        @param elCount An ElementCount structure representing the number of elements.
+    */
+    ArrayType(const Type *elementType, ElementCount elCount);
 
     Variability GetVariability() const;
 

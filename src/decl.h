@@ -223,7 +223,7 @@ class Declarator : public Traceable {
 
     /** For array declarators, this gives the declared size of the array.
         Unsized arrays have arraySize == 0. */
-    int arraySize;
+    std::variant<std::monostate, int, Symbol *> arraySize;
 
     /** Name associated with the declarator. */
     std::string name;
