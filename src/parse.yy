@@ -71,6 +71,7 @@ typedef std::pair<Declarator *, TemplateArgs *> SimpleTemplateIDType;
 #include "util.h"
 
 #include <stdio.h>
+#include <variant>
 #include <llvm/IR/Constants.h>
 
 using namespace ispc;
@@ -101,7 +102,7 @@ static void lAddMaskToSymbolTable(SourcePos pos);
 static void lAddThreadIndexCountToSymbolTable(SourcePos pos);
 static std::string lGetAlternates(std::vector<std::string> &alternates);
 static const char *lGetStorageClassString(StorageClass sc);
-static bool lGetConstantInt(Expr *expr, int *value, SourcePos pos, const char *usage);
+static bool lGetConstantIntOrSymbol(Expr *expr, std::variant<std::monostate, int, Symbol*> *value, SourcePos pos, const char *usage);
 
 enum class TemplateType { Template, Instantiation, Specialization };
 static void lCheckTemplateDeclSpecs(DeclSpecs *ds, SourcePos pos, TemplateType type, const char* name);
@@ -1606,16 +1607,25 @@ enumerator
       }
     | enum_identifier '=' constant_expression
       {
-          int value;
+          std::variant<std::monostate, int, Symbol*> value;
           if ($1 != nullptr && $3 != nullptr &&
-              lGetConstantInt($3, &value, @3, "Enumerator value")) {
+              lGetConstantIntOrSymbol($3, &value, @3, "Enumerator value")) {
               Symbol *sym = new Symbol($1, @1, Symbol::SymbolKind::Enumerator);
-              sym->constValue = new ConstExpr(AtomicType::UniformUInt32->GetAsConstType(),
-                                              (uint32_t)value, @3);
+              
+              // Check if value holds an int
+              if (std::holds_alternative<int>(value)) {
+                  int intValue = std::get<int>(value);
+                  sym->constValue = new ConstExpr(AtomicType::UniformUInt32->GetAsConstType(),
+                                                  (uint32_t)intValue, @3);
+              } else {
+                  Error(@3, "Enumerator value must be a compile-time constant.");
+                  $$ = nullptr;
+              }
               $$ = sym;
           }
-          else
+          else {
               $$ = nullptr;
+          }
 
           // allocated by strdup in enum_identifier
           free((char*)$1);
@@ -1706,21 +1716,34 @@ direct_declarator
     }
     | direct_declarator '[' constant_expression ']'
     {
-        int size;
-        if ($1 != nullptr && lGetConstantInt($3, &size, @3, "Array dimension")) {
-            if (size < 0) {
-                Error(@3, "Array dimension must be non-negative.");
-                $$ = nullptr;
-            }
-            else {
+        std::variant<std::monostate, int, Symbol*> size;
+        if ($1 != nullptr && lGetConstantIntOrSymbol($3, &size, @3, "Array dimension")) {
+            // Check if size holds an int
+            if (std::holds_alternative<int>(size)) {
+                int intValue = std::get<int>(size);
+                if (intValue < 0) {
+                    Error(@3, "Array dimension must be non-negative.");
+                    $$ = nullptr;
+                } else {
+                    Declarator *d = new Declarator(DK_ARRAY, Union(@1, @4));
+                    d->arraySize = intValue;
+                    d->child = $1;
+                    $$ = d;
+                }
+            } else if (std::holds_alternative<Symbol*>(size)) {
+                // Handle the case where size holds a Symbol*
+                Symbol* symbolValuePtr = std::get<Symbol*>(size);
                 Declarator *d = new Declarator(DK_ARRAY, Union(@1, @4));
-                d->arraySize = size;
+                d->arraySize = symbolValuePtr;
                 d->child = $1;
                 $$ = d;
+            } else {
+                $$ = nullptr;    
             }
         }
-        else
+        else {
             $$ = nullptr;
+        }
     }
     | direct_declarator '[' ']'
     {
@@ -1925,20 +1948,32 @@ direct_abstract_declarator
       }
     | '[' constant_expression ']'
       {
-        int size;
-        if ($2 != nullptr && lGetConstantInt($2, &size, @2, "Array dimension")) {
-            if (size < 0) {
-                Error(@2, "Array dimension must be non-negative.");
-                $$ = nullptr;
-            }
-            else {
+        std::variant<std::monostate, int, Symbol*> size;
+        if ($2 != nullptr && lGetConstantIntOrSymbol($2, &size, @2, "Array dimension")) {
+            // Check if size holds an int
+            if (std::holds_alternative<int>(size)) {
+                int intValue = std::get<int>(size);
+                if (intValue < 0) {
+                    Error(@2, "Array dimension must be non-negative.");
+                    $$ = nullptr;
+                } else {
+                    Declarator *d = new Declarator(DK_ARRAY, Union(@1, @3));
+                    d->arraySize = intValue;
+                    $$ = d;
+                }
+            } else if (std::holds_alternative<Symbol*>(size)) {
+                // Handle the case where size holds a Symbol*
+                Symbol* symbolValuePtr = std::get<Symbol*>(size);
                 Declarator *d = new Declarator(DK_ARRAY, Union(@1, @3));
-                d->arraySize = size;
+                d->arraySize = symbolValuePtr;
                 $$ = d;
+            } else {
+                $$ = nullptr;    
             }
         }
-        else
+        else {
             $$ = nullptr;
+        }
       }
     | direct_abstract_declarator '[' ']'
       {
@@ -1953,21 +1988,34 @@ direct_abstract_declarator
       }
     | direct_abstract_declarator '[' constant_expression ']'
       {
-          int size;
-          if ($1 != nullptr && $3 != nullptr && lGetConstantInt($3, &size, @3, "Array dimension")) {
-              if (size < 0) {
-                  Error(@3, "Array dimension must be non-negative.");
-                  $$ = nullptr;
-              }
-              else {
+          std::variant<std::monostate, int, Symbol*> size;
+          if ($1 != nullptr && $3 != nullptr && lGetConstantIntOrSymbol($3, &size, @3, "Array dimension")) {
+              // Check if size holds an int
+              if (std::holds_alternative<int>(size)) {
+                  int intValue = std::get<int>(size);
+                  if (intValue < 0) {
+                      Error(@3, "Array dimension must be non-negative.");
+                      $$ = nullptr;
+                  } else {
+                      Declarator *d = new Declarator(DK_ARRAY, Union(@1, @4));
+                      d->arraySize = intValue;
+                      d->child = $1;
+                      $$ = d;
+                  }
+              } else if (std::holds_alternative<Symbol*>(size)) {
+                  // Handle the case where size holds a Symbol*
+                  Symbol* symbolValuePtr = std::get<Symbol*>(size);
                   Declarator *d = new Declarator(DK_ARRAY, Union(@1, @4));
-                  d->arraySize = size;
+                  d->arraySize = symbolValuePtr;
                   d->child = $1;
                   $$ = d;
+              } else {
+                  $$ = nullptr;  
               }
           }
-          else
+          else {
               $$ = nullptr;
+          }
       }
     | '(' ')'
       { $$ = new Declarator(DK_FUNCTION, Union(@1, @2)); }
@@ -2080,13 +2128,21 @@ labeled_statement
     }
     | TOKEN_CASE constant_expression ':' attributed_statement
       {
-          int value;
+          std::variant<std::monostate, int, Symbol*> value;
           if ($2 != nullptr &&
-              lGetConstantInt($2, &value, @2, "Case statement value")) {
-              $$ = new CaseStmt(value, $4, Union(@1, @2));
+              lGetConstantIntOrSymbol($2, &value, @2, "Case statement value")) {
+              // Check if value holds an int
+              if (std::holds_alternative<int>(value)) {
+                  int intValue = std::get<int>(value);
+                  $$ = new CaseStmt(intValue, $4, Union(@1, @2));
+              } else {
+                  Error(@2, "Case statement value must be a compile-time constant or template non-type parameter.");
+                  $$ = nullptr;
+              }
           }
-          else
+          else {
               $$ = nullptr;
+          }
       }
     | TOKEN_DEFAULT ':' attributed_statement
       { $$ = new DefaultStmt($3, @1); }
@@ -3326,7 +3382,7 @@ lGetStorageClassString(StorageClass sc) {
     type, return false.
 */
 static bool
-lGetConstantInt(Expr *expr, int *value, SourcePos pos, const char *usage) {
+lGetConstantIntOrSymbol(Expr *expr, std::variant<std::monostate, int, Symbol*> *value, SourcePos pos, const char *usage) {
     if (expr == nullptr)
         return false;
     expr = TypeCheck(expr);
@@ -3335,11 +3391,18 @@ lGetConstantInt(Expr *expr, int *value, SourcePos pos, const char *usage) {
     expr = Optimize(expr);
     if (expr == nullptr)
         return false;
-
+    const SymbolExpr* se= llvm::dyn_cast<SymbolExpr>(expr);
+    if (se) {
+        Symbol* s = se->GetBaseSymbol();
+        if (s->GetSymbolKind() == Symbol::SymbolKind::TemplateNonTypeParm) {
+            value->emplace<Symbol*>(s);
+            return true;
+        }
+    }
     std::pair<llvm::Constant *, bool> cValPair = expr->GetConstant(expr->GetType());
     llvm::Constant *cval = cValPair.first;
     if (cval == nullptr) {
-        Error(pos, "%s must be a compile-time constant.", usage);
+        Error(pos, "%s must be a compile-time constant or template non-type parameter.", usage);
         return false;
     }
     else {
@@ -3353,10 +3416,8 @@ lGetConstantInt(Expr *expr, int *value, SourcePos pos, const char *usage) {
             return false;
         }
         const Type *type = expr->GetType();
-        if (type->IsUnsignedType())
-            *value = (int)ci->getZExtValue();
-        else
-            *value = (int)ci->getSExtValue();
+        int resultValue = type->IsUnsignedType() ? (int)ci->getZExtValue() : (int)ci->getSExtValue();
+        value->emplace<int>(resultValue);
         return true;
     }
 }

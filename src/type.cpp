@@ -179,8 +179,13 @@ bool Type::IsDependentType() const {
         return baseType && baseType->IsDependentType();
     }
     case ARRAY_TYPE: {
-        const Type *elemType = CastType<ArrayType>(this)->GetElementType();
-        return elemType && elemType->IsDependentType();
+        const ArrayType *arrayType = CastType<ArrayType>(this);
+        const Type *elemType = arrayType->GetElementType();
+        // Check if element type is dependent
+        bool isElementTypeDependent = elemType && elemType->IsDependentType();
+        // Check if element count is dependent (i.e., uses a non-type template parameter)
+        bool isCountDependent = arrayType->IsCountDependent();
+        return isElementTypeDependent || isCountDependent;
     }
     case VECTOR_TYPE: {
         const VectorType *vecType = CastType<VectorType>(this);
@@ -1435,6 +1440,11 @@ ArrayType::ArrayType(const Type *c, int a) : SequentialType(ARRAY_TYPE), child(c
     Assert(c->IsVoidType() == false);
 }
 
+ArrayType::ArrayType(const Type *c, Symbol *num) : SequentialType(ARRAY_TYPE), child(c), elementCount(num) {}
+
+ArrayType::ArrayType(const Type *c, ElementCount elCount)
+    : SequentialType(ARRAY_TYPE), child(c), elementCount(elCount) {}
+
 llvm::ArrayType *ArrayType::LLVMType(llvm::LLVMContext *ctx) const {
     if (child == nullptr) {
         Assert(m->errorCount > 0);
@@ -1477,19 +1487,25 @@ const Type *ArrayType::GetBaseType() const {
 }
 
 const ArrayType *ArrayType::GetAsVaryingType() const {
+    if (IsVaryingType()) {
+        return this;
+    }
     if (child == nullptr) {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return new ArrayType(child->GetAsVaryingType(), elementCount.fixedCount);
+    return new ArrayType(child->GetAsVaryingType(), elementCount);
 }
 
 const ArrayType *ArrayType::GetAsUniformType() const {
+    if (IsUniformType()) {
+        return this;
+    }
     if (child == nullptr) {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return new ArrayType(child->GetAsUniformType(), elementCount.fixedCount);
+    return new ArrayType(child->GetAsUniformType(), elementCount);
 }
 
 const ArrayType *ArrayType::GetAsUnboundVariabilityType() const {
@@ -1497,7 +1513,7 @@ const ArrayType *ArrayType::GetAsUnboundVariabilityType() const {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return new ArrayType(child->GetAsUnboundVariabilityType(), elementCount.fixedCount);
+    return new ArrayType(child->GetAsUnboundVariabilityType(), elementCount);
 }
 
 const ArrayType *ArrayType::GetAsSOAType(int width) const {
@@ -1505,7 +1521,7 @@ const ArrayType *ArrayType::GetAsSOAType(int width) const {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return new ArrayType(child->GetAsSOAType(width), elementCount.fixedCount);
+    return new ArrayType(child->GetAsSOAType(width), elementCount);
 }
 
 const ArrayType *ArrayType::ResolveDependence(TemplateInstantiation &templInst) const {
@@ -1513,12 +1529,13 @@ const ArrayType *ArrayType::ResolveDependence(TemplateInstantiation &templInst) 
         Assert(m->errorCount > 0);
         return nullptr;
     }
-
+    int resolvedCount = ResolveElementCount(templInst);
     const Type *resType = child->ResolveDependence(templInst);
-    if (resType == child) {
+    if (resType == child && resolvedCount == elementCount.fixedCount) {
         return this;
     }
-    return new ArrayType(resType, elementCount.fixedCount);
+    return (resolvedCount > 0) ? new ArrayType(resType, resolvedCount)
+                               : new ArrayType(resType, elementCount.symbolCount);
 }
 
 const ArrayType *ArrayType::ResolveUnboundVariability(Variability v) const {
@@ -1526,7 +1543,7 @@ const ArrayType *ArrayType::ResolveUnboundVariability(Variability v) const {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return new ArrayType(child->ResolveUnboundVariability(v), elementCount.fixedCount);
+    return new ArrayType(child->ResolveUnboundVariability(v), elementCount);
 }
 
 const ArrayType *ArrayType::GetAsUnsignedType() const {
@@ -1534,7 +1551,7 @@ const ArrayType *ArrayType::GetAsUnsignedType() const {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return new ArrayType(child->GetAsUnsignedType(), elementCount.fixedCount);
+    return new ArrayType(child->GetAsUnsignedType(), elementCount);
 }
 
 const ArrayType *ArrayType::GetAsSignedType() const {
@@ -1542,7 +1559,7 @@ const ArrayType *ArrayType::GetAsSignedType() const {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return new ArrayType(child->GetAsSignedType(), elementCount.fixedCount);
+    return new ArrayType(child->GetAsSignedType(), elementCount);
 }
 
 const ArrayType *ArrayType::GetAsConstType() const {
@@ -1550,7 +1567,7 @@ const ArrayType *ArrayType::GetAsConstType() const {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return new ArrayType(child->GetAsConstType(), elementCount.fixedCount);
+    return new ArrayType(child->GetAsConstType(), elementCount);
 }
 
 const ArrayType *ArrayType::GetAsNonConstType() const {
@@ -1558,7 +1575,7 @@ const ArrayType *ArrayType::GetAsNonConstType() const {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-    return new ArrayType(child->GetAsNonConstType(), elementCount.fixedCount);
+    return new ArrayType(child->GetAsNonConstType(), elementCount);
 }
 
 int ArrayType::GetElementCount() const { return elementCount.fixedCount; }
@@ -1581,6 +1598,9 @@ std::string ArrayType::GetString() const {
         char buf[16];
         if (at->elementCount.fixedCount > 0) {
             snprintf(buf, sizeof(buf), "%d", at->elementCount.fixedCount);
+        }
+        else if (at->elementCount.symbolCount != nullptr) {
+            snprintf(buf, sizeof(buf), "%s", at->elementCount.symbolCount->name.c_str());
         } else {
             buf[0] = '\0';
         }
@@ -1733,7 +1753,16 @@ int ArrayType::ResolveElementCount(TemplateInstantiation &templInst) const {
     if (elementCount.fixedCount > 0) {
         return elementCount.fixedCount;
     }
-
+    if (elementCount.symbolCount) {
+        Symbol *instSym = templInst.InstantiateSymbol(elementCount.symbolCount);
+        if (!instSym->constValue) {
+            // failed to resolve constant value, return elementCount.fixedCount
+            return elementCount.fixedCount;
+        }
+        unsigned int constValue[1];
+        int count = instSym->constValue->GetValues(constValue);
+        return (count > 0) ? constValue[0] : 0;
+    }
     return 0;
 }
 
