@@ -2807,7 +2807,8 @@ llvm::Value *FunctionEmitContext::AddrSpaceCastInst(llvm::Value *val, AddressSpa
 #endif
     llvm::AddrSpaceCastInst *inst = nullptr;
     if (atEntryBlock) {
-        inst = new llvm::AddrSpaceCastInst(val, newType, val->getName() + "__cast", allocaBlock->getTerminator());
+        inst = new llvm::AddrSpaceCastInst(val, newType, val->getName() + "__cast",
+                                           ISPC_INSERTION_POINT_INSTRUCTION(allocaBlock->getTerminator()));
     } else {
         inst = new llvm::AddrSpaceCastInst(val, newType, val->getName() + "__cast", bblock);
     }
@@ -2829,7 +2830,7 @@ AddressInfo *FunctionEmitContext::AllocaInst(llvm::Type *llvmType, llvm::Value *
         // end of allocaBlock
         llvm::Instruction *retInst = allocaBlock->getTerminator();
         AssertPos(currentPos, retInst);
-        inst = new llvm::AllocaInst(llvmType, AS, size, name, retInst);
+        inst = new llvm::AllocaInst(llvmType, AS, size, name, ISPC_INSERTION_POINT_INSTRUCTION(retInst));
     } else {
         // Unless the caller overrode the default and wants it in the
         // current basic block
@@ -2866,7 +2867,7 @@ AddressInfo *FunctionEmitContext::AllocaInst(llvm::Type *llvmType, const llvm::T
         // end of allocaBlock
         llvm::Instruction *retInst = allocaBlock->getTerminator();
         AssertPos(currentPos, retInst);
-        inst = new llvm::AllocaInst(llvmType, AS, name, retInst);
+        inst = new llvm::AllocaInst(llvmType, AS, name, ISPC_INSERTION_POINT_INSTRUCTION(retInst));
     } else {
         // Unless the caller overrode the default and wants it in the
         // current basic block

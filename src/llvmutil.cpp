@@ -1525,8 +1525,9 @@ static llvm::Value *lExtractFirstVectorElement(llvm::Value *v, std::map<llvm::PH
         llvm::Function *func = arg->getParent();
         Assert(func != nullptr);
         llvm::BasicBlock &bb = func->getEntryBlock();
-        llvm::Instruction *insertPoint = &*bb.getFirstInsertionPt();
-        return llvm::ExtractElementInst::Create(v, LLVMInt32(0), "first_elt", insertPoint);
+        llvm::BasicBlock::iterator insertPoint = bb.getFirstInsertionPt();
+        return llvm::ExtractElementInst::Create(v, LLVMInt32(0), "first_elt",
+                                                ISPC_INSERTION_POINT_ITERATOR(insertPoint));
     }
 
     // Otherwise, all that we should have at this point is an instruction
@@ -1550,9 +1551,11 @@ static llvm::Value *lExtractFirstVectorElement(llvm::Value *v, std::map<llvm::PH
         // if --wrap-signed-int is disabled (this is the source of the nsw
         // flags we want to transfer to the new instruction)
         if (!g->wrapSignedInt) {
-            return llvm::BinaryOperator::CreateWithCopiedFlags(bop->getOpcode(), v0, v1, bop, newName, bop);
+            return llvm::BinaryOperator::CreateWithCopiedFlags(bop->getOpcode(), v0, v1, bop, newName,
+                                                               ISPC_INSERTION_POINT_INSTRUCTION(bop));
         } else {
-            return llvm::BinaryOperator::Create(bop->getOpcode(), v0, v1, newName, bop);
+            return llvm::BinaryOperator::Create(bop->getOpcode(), v0, v1, newName,
+                                                ISPC_INSERTION_POINT_INSTRUCTION(bop));
         }
     }
 
@@ -1561,7 +1564,8 @@ static llvm::Value *lExtractFirstVectorElement(llvm::Value *v, std::map<llvm::PH
         llvm::Value *v = lExtractFirstVectorElement(cast->getOperand(0), phiMap);
         // Similarly, the equivalent scalar cast instruction goes right
         // before the vector cast
-        return llvm::CastInst::Create(cast->getOpcode(), v, vt->getElementType(), newName, cast);
+        return llvm::CastInst::Create(cast->getOpcode(), v, vt->getElementType(), newName,
+                                      ISPC_INSERTION_POINT_INSTRUCTION(cast));
     }
 
     llvm::PHINode *phi = llvm::dyn_cast<llvm::PHINode>(v);
@@ -1579,9 +1583,9 @@ static llvm::Value *lExtractFirstVectorElement(llvm::Value *v, std::map<llvm::PH
         // The insertion point for the new phi node also has to be the
         // start of the bblock of the original phi node.
 
-        llvm::Instruction *phiInsertPos = &*(phi->getParent()->begin());
-        llvm::PHINode *scalarPhi =
-            llvm::PHINode::Create(vt->getElementType(), phi->getNumIncomingValues(), newName, phiInsertPos);
+        llvm::BasicBlock::iterator phiInsertPos = phi->getParent()->begin();
+        llvm::PHINode *scalarPhi = llvm::PHINode::Create(vt->getElementType(), phi->getNumIncomingValues(), newName,
+                                                         ISPC_INSERTION_POINT_ITERATOR(phiInsertPos));
         phiMap[phi] = scalarPhi;
 
         for (unsigned i = 0; i < phi->getNumIncomingValues(); ++i) {
@@ -1617,8 +1621,7 @@ static llvm::Value *lExtractFirstVectorElement(llvm::Value *v, std::map<llvm::PH
     // have here.
     llvm::Instruction *insertAfter = llvm::dyn_cast<llvm::Instruction>(v);
     Assert(insertAfter != nullptr);
-    llvm::Instruction *ee =
-        llvm::ExtractElementInst::Create(v, LLVMInt32(0), "first_elt", (llvm::Instruction *)nullptr);
+    llvm::Instruction *ee = llvm::ExtractElementInst::Create(v, LLVMInt32(0), "first_elt");
     ee->insertAfter(insertAfter);
     return ee;
 }
@@ -1667,7 +1670,7 @@ llvm::Value *LLVMShuffleVectors(llvm::Value *v1, llvm::Value *v2, int32_t shuf[]
     llvm::ArrayRef<llvm::Constant *> aref(&shufVec[0], &shufVec[shufSize]);
     llvm::Value *vec = llvm::ConstantVector::get(aref);
 
-    return new llvm::ShuffleVectorInst(v1, v2, vec, "shuffle", insertBefore);
+    return new llvm::ShuffleVectorInst(v1, v2, vec, "shuffle", ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
 }
 
 /** Copy the metadata (if any) attached to the 'from' instruction in the IR
@@ -1745,21 +1748,21 @@ llvm::CallInst *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Valu
                              llvm::Instruction *insertBefore) {
     llvm::Value *args[2] = {arg0, arg1};
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[2]);
-    return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
+    return llvm::CallInst::Create(func, newArgArray, name, ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
 }
 
 llvm::CallInst *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
                              const llvm::Twine &name, llvm::Instruction *insertBefore) {
     llvm::Value *args[3] = {arg0, arg1, arg2};
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[3]);
-    return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
+    return llvm::CallInst::Create(func, newArgArray, name, ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
 }
 
 llvm::CallInst *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
                              llvm::Value *arg3, const llvm::Twine &name, llvm::Instruction *insertBefore) {
     llvm::Value *args[4] = {arg0, arg1, arg2, arg3};
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[4]);
-    return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
+    return llvm::CallInst::Create(func, newArgArray, name, ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
 }
 
 llvm::CallInst *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
@@ -1767,7 +1770,7 @@ llvm::CallInst *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Valu
                              llvm::Instruction *insertBefore) {
     llvm::Value *args[5] = {arg0, arg1, arg2, arg3, arg4};
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[5]);
-    return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
+    return llvm::CallInst::Create(func, newArgArray, name, ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
 }
 
 llvm::CallInst *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, llvm::Value *arg2,
@@ -1775,14 +1778,15 @@ llvm::CallInst *LLVMCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Valu
                              llvm::Instruction *insertBefore) {
     llvm::Value *args[6] = {arg0, arg1, arg2, arg3, arg4, arg5};
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[6]);
-    return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
+    return llvm::CallInst::Create(func, newArgArray, name, ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
 }
 
 llvm::GetElementPtrInst *LLVMGEPInst(llvm::Value *ptr, llvm::Type *ptrElType, llvm::Value *offset, const char *name,
                                      llvm::Instruction *insertBefore) {
     llvm::Value *index[1] = {offset};
     llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
-    return llvm::GetElementPtrInst::Create(ptrElType, ptr, arrayRef, name, insertBefore);
+    return llvm::GetElementPtrInst::Create(ptrElType, ptr, arrayRef, name,
+                                           ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
 }
 
 /** Given a vector of constant values (int, float, or bool) representing an
