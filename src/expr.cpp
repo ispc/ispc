@@ -392,7 +392,8 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
 
     // Convert from type T -> const T; just return a TypeCast expr, which
     // can handle this
-    if (Type::EqualIgnoringConst(toType, fromType) && toType->IsConstType() == true && fromType->IsConstType() == false) {
+    if (Type::EqualIgnoringConst(toType, fromType) && toType->IsConstType() == true &&
+        fromType->IsConstType() == false) {
         return lTypeCastOk(expr, toType, pos);
     }
 
@@ -7454,7 +7455,8 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
     if (toArrayType != nullptr && fromArrayType != nullptr) {
         // cast array pointer from [n x foo] to [0 x foo] if needed to be able
         // to pass to a function that takes an unsized array as a parameter
-        if (toArrayType->GetElementCount() != 0 && (toArrayType->GetElementCount() != fromArrayType->GetElementCount())) {
+        if (toArrayType->GetElementCount() != 0 &&
+            (toArrayType->GetElementCount() != fromArrayType->GetElementCount())) {
             Warning(pos, "Type-converting array of length %d to length %d", fromArrayType->GetElementCount(),
                     toArrayType->GetElementCount());
         }
