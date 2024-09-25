@@ -222,7 +222,8 @@ llvm::Type *AddressInfo::GetPointeeLLVMType(const PointerType *pt) {
 }
 ///////////////////////////////////////////////////////////////////////////
 
-FunctionEmitContext::FunctionEmitContext(const Function *func, Symbol *funSym, llvm::Function *lf, SourcePos firstStmtPos) {
+FunctionEmitContext::FunctionEmitContext(const Function *func, Symbol *funSym, llvm::Function *lf,
+                                         SourcePos firstStmtPos) {
     function = func;
     llvmFunction = lf;
     switchConditionWasUniform = false;
@@ -1994,7 +1995,8 @@ llvm::Value *FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Va
         // 64-bit type.
         if ((g->target->is32Bit() || g->opt.force32BitAddressing) && index->getType() == LLVMTypes::Int64Type) {
             index = TruncInst(index, LLVMTypes::Int32Type);
-        } else if ((!g->target->is32Bit() && !g->opt.force32BitAddressing) && index->getType() == LLVMTypes::Int32Type) {
+        } else if ((!g->target->is32Bit() && !g->opt.force32BitAddressing) &&
+                   index->getType() == LLVMTypes::Int32Type) {
             index = SExtInst(index, LLVMTypes::Int64Type);
         }
 
