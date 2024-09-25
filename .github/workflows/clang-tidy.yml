@@ -40,7 +40,8 @@ jobs:
 
     - name: Run clang-tidy
       run: |
-        ./scripts/clang_tidy.sh | tee clang-tidy.log
+        set -o pipefail
+        ./scripts/clang_tidy.sh 2>&1 | tee clang-tidy.log
 
     - uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       with:
