@@ -816,10 +816,19 @@ if (WIN32)
         list(APPEND LINK_LIBRARIES ws2_32.lib)
     endif()
 else()
-    # ISPC doesn't use pthreads directly, but LLVM does. Although, it looks
-    # like we do not use LLVM code that depend on pthreads, don't we?
-    find_library(PTHREAD_LIB REQUIRED NAMES pthread)
-    list(APPEND LINK_LIBRARIES ${PTHREAD_LIB})
+    run_llvm_config(LLVM_SYSTEM_LIBS "--system-libs")
+    if (LLVM_SYSTEM_LIBS MATCHES "pthread")
+        # ISPC doesn't use pthreads directly, but some LLVM does. Although, it
+        # looks like we do not use LLVM code that depend on pthreads, don't we?
+        find_library(PTHREAD_LIB REQUIRED NAMES pthread)
+        message(STATUS "Link with pthread library ${PTHREAD_LIB}")
+        list(APPEND LINK_LIBRARIES ${PTHREAD_LIB})
+    endif()
+    if (LLVM_SYSTEM_LIBS MATCHES "tinfo" OR LLVM_SYSTEM_LIBS MATCHES "curses")
+        find_library(TINFO_LIB REQUIRED NAMES terminfo tinfo curses ncurses ncursesw)
+        message(STATUS "Link with tinfo library ${TINFO_LIB}")
+        list(APPEND LINK_LIBRARIES ${TINFO_LIB})
+    endif()
 endif()
 
 # This function configures compile definitions, options and include dirs.
