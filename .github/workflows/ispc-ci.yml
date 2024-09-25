@@ -275,6 +275,7 @@ jobs:
       LLVM_TAR: llvm-17.0.6-ubuntu22.04-Release-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: "OFF"
       INSTALL_COMPUTE_RUNTIME: 1
+      COMPUTE_RUNTIME_GITHUB_RELEASE: 1
 
     steps:
     - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -606,7 +607,8 @@ jobs:
         arch: [x86, x86-64]
         target: [avx2-i32x8]
     env:
-      INSTALL_COMPUTE_RUNTIME: 0
+      INSTALL_COMPUTE_RUNTIME: 1
+      COMPUTE_RUNTIME_GITHUB_RELEASE: 1
     steps:
     - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
     - name: Download package
