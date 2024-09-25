@@ -625,10 +625,10 @@ class AllCPUs {
             Set(GPU_MTL_U, GPU_MTL_H, GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_ACM_G11, GPU_TGLLP, GPU_SKL, CPU_None);
         compat[GPU_MTL_H] =
             Set(GPU_MTL_U, GPU_MTL_H, GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_ACM_G11, GPU_TGLLP, GPU_SKL, CPU_None);
-        compat[GPU_BMG_G21] = Set(GPU_BMG_G21, GPU_MTL_U, GPU_MTL_H, GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_TGLLP,
-                                  GPU_SKL, CPU_None);
-        compat[GPU_LNL_M] = Set(GPU_LNL_M, GPU_MTL_U, GPU_MTL_H, GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_TGLLP,
-                                GPU_SKL, CPU_None);
+        compat[GPU_BMG_G21] =
+            Set(GPU_BMG_G21, GPU_MTL_U, GPU_MTL_H, GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_TGLLP, GPU_SKL, CPU_None);
+        compat[GPU_LNL_M] =
+            Set(GPU_LNL_M, GPU_MTL_U, GPU_MTL_H, GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_TGLLP, GPU_SKL, CPU_None);
 #endif
     }
 
