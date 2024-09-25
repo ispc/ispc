@@ -1208,7 +1208,7 @@ const Type *UnaryExpr::GetType() const {
         return nullptr;
     }
 
-    if (type->IsDependentType()) {
+    if (type->IsDependent()) {
         return AtomicType::Dependent;
     }
 
@@ -1365,7 +1365,7 @@ Expr *UnaryExpr::TypeCheck() {
         return nullptr;
     }
 
-    if (type->IsDependentType()) {
+    if (type->IsDependent()) {
         return this;
     }
 
@@ -2254,7 +2254,7 @@ const Type *BinaryExpr::GetType() const {
         return nullptr;
     }
 
-    if (type0->IsDependentType() || type1->IsDependentType()) {
+    if (type0->IsDependent() || type1->IsDependent()) {
         return AtomicType::Dependent;
     }
 
@@ -2725,7 +2725,7 @@ Expr *BinaryExpr::TypeCheck() {
         return nullptr;
     }
 
-    if (type0->IsDependentType() || type1->IsDependentType()) {
+    if (type0->IsDependent() || type1->IsDependent()) {
         return this;
     }
 
@@ -3392,7 +3392,7 @@ Expr *AssignExpr::Optimize() {
 const Type *AssignExpr::GetType() const {
     if (lvalue) {
         const Type *ltype = lvalue->GetType();
-        if (ltype && ltype->IsDependentType()) {
+        if (ltype && ltype->IsDependent()) {
             return AtomicType::Dependent;
         }
         return ltype;
@@ -3436,7 +3436,7 @@ Expr *AssignExpr::TypeCheck() {
 
     const Type *ltype = lvalue->GetType();
     const Type *rtype = rvalue->GetType();
-    if ((ltype && ltype->IsDependentType()) || (rtype && rtype->IsDependentType())) {
+    if ((ltype && ltype->IsDependent()) || (rtype && rtype->IsDependent())) {
         return this;
     }
 
@@ -3776,7 +3776,7 @@ const Type *SelectExpr::GetType() const {
         return nullptr;
     }
 
-    if (testType->IsDependentType() || expr1Type->IsDependentType() || expr2Type->IsDependentType()) {
+    if (testType->IsDependent() || expr1Type->IsDependent() || expr2Type->IsDependent()) {
         return AtomicType::Dependent;
     }
 
@@ -3911,7 +3911,7 @@ Expr *SelectExpr::TypeCheck() {
         return nullptr;
     }
 
-    if (testType->IsDependentType() || type1->IsDependentType() || type2->IsDependentType()) {
+    if (testType->IsDependent() || type1->IsDependent() || type2->IsDependent()) {
         return this;
     }
 
@@ -4019,7 +4019,7 @@ static const Type *lGetFunctionType(Expr *func) {
         return nullptr;
     }
 
-    if (type->IsDependentType()) {
+    if (type->IsDependent()) {
         return type;
     }
 
@@ -4048,7 +4048,7 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
     }
 
     const Type *type = lGetFunctionType(func);
-    if (type->IsDependentType()) {
+    if (type->IsDependent()) {
         Error(pos, "Can't call function with dependent type.");
     }
     const FunctionType *ft = CastType<FunctionType>(type);
@@ -4194,7 +4194,7 @@ const Type *FunctionCallExpr::GetType() const {
         }
     }
     const Type *type = lGetFunctionType(func);
-    if (type && type->IsDependentType()) {
+    if (type && type->IsDependent()) {
         return type;
     }
     const FunctionType *ftype = CastType<FunctionType>(type);
@@ -4203,7 +4203,7 @@ const Type *FunctionCallExpr::GetType() const {
 
 const Type *FunctionCallExpr::GetLValueType() const {
     const Type *type = lGetFunctionType(func);
-    if (type->IsDependentType()) {
+    if (type->IsDependent()) {
         return nullptr;
     }
     const FunctionType *ftype = CastType<FunctionType>(type);
@@ -4858,7 +4858,7 @@ const Type *IndexExpr::GetType() const {
         return nullptr;
     }
 
-    if (baseExprType->IsDependentType() || indexType->IsDependentType()) {
+    if (baseExprType->IsDependent() || indexType->IsDependent()) {
         return AtomicType::Dependent;
     }
 
@@ -5122,7 +5122,7 @@ Expr *IndexExpr::TypeCheck() {
         return nullptr;
     }
 
-    if (baseExprType->IsDependentType() || indexType->IsDependentType()) {
+    if (baseExprType->IsDependent() || indexType->IsDependent()) {
         return this;
     }
 
@@ -5269,7 +5269,7 @@ const Type *StructMemberExpr::GetType() const {
         return nullptr;
     }
 
-    if (exprType->IsDependentType() || structType->IsDependentType() || lvalueType->IsDependentType()) {
+    if (exprType->IsDependent() || structType->IsDependent() || lvalueType->IsDependent()) {
         return AtomicType::Dependent;
     }
 
@@ -5419,7 +5419,7 @@ const Type *VectorMemberExpr::GetType() const {
     const Type *t =
         (identifier.length() == 1) ? (const Type *)exprVectorType->GetElementType() : (const Type *)memberType;
 
-    if (t->IsDependentType()) {
+    if (t->IsDependent()) {
         return AtomicType::Dependent;
     }
 
@@ -5605,7 +5605,7 @@ MemberExpr *MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos i
         return nullptr;
     }
 
-    if (exprType->IsDependentType()) {
+    if (exprType->IsDependent()) {
         return new DependentMemberExpr(e, id, p, idpos, derefLValue);
     }
 
@@ -7640,7 +7640,7 @@ const Type *TypeCastExpr::GetType() const {
         return nullptr;
     }
 
-    if (toType->IsDependentType()) {
+    if (toType->IsDependent()) {
         return toType;
     }
 
@@ -7683,7 +7683,7 @@ Expr *TypeCastExpr::TypeCheck() {
         return nullptr;
     }
 
-    if (toType->IsDependentType() || fromType->IsDependentType()) {
+    if (toType->IsDependent() || fromType->IsDependent()) {
         return this;
     }
 
@@ -7994,7 +7994,7 @@ const Type *ReferenceExpr::GetType() const {
         return nullptr;
     }
 
-    if (type->IsDependentType()) {
+    if (type->IsDependent()) {
         return AtomicType::Dependent;
     }
 
@@ -8119,7 +8119,7 @@ const Type *PtrDerefExpr::GetType() const {
     }
     AssertPos(pos, CastType<PointerType>(type) != nullptr);
 
-    if (type->IsDependentType()) {
+    if (type->IsDependent()) {
         return AtomicType::Dependent;
     }
 
@@ -8137,7 +8137,7 @@ Expr *PtrDerefExpr::TypeCheck() {
         return nullptr;
     }
 
-    if (type->IsDependentType()) {
+    if (type->IsDependent()) {
         return this;
     }
 
@@ -8203,7 +8203,7 @@ const Type *RefDerefExpr::GetType() const {
         return nullptr;
     }
 
-    if (type->IsDependentType()) {
+    if (type->IsDependent()) {
         return AtomicType::Dependent;
     }
 
@@ -8218,7 +8218,7 @@ Expr *RefDerefExpr::TypeCheck() {
         return nullptr;
     }
 
-    if (type->IsDependentType()) {
+    if (type->IsDependent()) {
         return this;
     }
 
@@ -8283,7 +8283,7 @@ const Type *AddressOfExpr::GetType() const {
     }
 
     const Type *exprType = expr->GetType();
-    if (exprType && exprType->IsDependentType()) {
+    if (exprType && exprType->IsDependent()) {
         return AtomicType::Dependent;
     }
 
@@ -8342,7 +8342,7 @@ Expr *AddressOfExpr::TypeCheck() {
         return nullptr;
     }
 
-    if (exprType->IsDependentType()) {
+    if (exprType->IsDependent()) {
         return this;
     }
 
@@ -8472,7 +8472,7 @@ void SizeOfExpr::Print(Indent &indent) const {
 }
 
 Expr *SizeOfExpr::TypeCheck() {
-    if (type && type->IsDependentType()) {
+    if (type && type->IsDependent()) {
         return this;
     }
 
@@ -8564,7 +8564,7 @@ Expr *AllocaExpr::TypeCheck() {
     }
 
     const Type *argType = expr ? expr->GetType() : nullptr;
-    if (argType && argType->IsDependentType()) {
+    if (argType && argType->IsDependent()) {
         return this;
     }
 
@@ -8744,7 +8744,7 @@ void FunctionSymbolExpr::Print(Indent &indent) const {
 
     indent.Print("FunctionSymbolExpr", pos);
 
-    if (type && type->IsDependentType()) {
+    if (type && type->IsDependent()) {
         printf("[%s] %s\n", type->GetString().c_str(), name.c_str());
     } else if (!matchingFunc || !type) {
         indent.Print("FunctionSymbolExpr: <NULL EXPR>\n");
@@ -9041,7 +9041,7 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
         // algorithm.
         for (int i = 0; i < substitutedParamTypes.size(); ++i) {
             const Type *paramType = substitutedParamTypes[i];
-            if (paramType->IsDependentType()) {
+            if (paramType->IsDependent()) {
                 // Try to deduce
 
                 // For the sake of template argument deduction, argument cannot have a reference type, as
@@ -9122,7 +9122,7 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
                 deducedArgs.push_back(templateArgs[i]);
             } else {
                 const Type *deducedArg = inst.InstantiateType((*templateParms)[i]->GetName());
-                if (!deducedArg || deducedArg->IsDependentType()) {
+                if (!deducedArg || deducedArg->IsDependent()) {
                     // Undeduced template parameter. The deduction is incomplete and we need to skip to another
                     // candidate.
                     deductionFailed = true;
@@ -9312,7 +9312,7 @@ bool FunctionSymbolExpr::ResolveOverloads(SourcePos argPos, const std::vector<co
     triedToResolve = true;
 
     for (auto argType : argTypes) {
-        if (argType->IsDependentType()) {
+        if (argType->IsDependent()) {
             unresolvedButDependent = true;
             break;
         }
@@ -9628,7 +9628,7 @@ const Type *NewExpr::GetType() const {
         return nullptr;
     }
 
-    if (allocType->IsDependentType()) {
+    if (allocType->IsDependent()) {
         return AtomicType::Dependent;
     }
 
@@ -9642,7 +9642,7 @@ Expr *NewExpr::TypeCheck() {
         return nullptr;
     }
 
-    if (allocType->IsDependentType()) {
+    if (allocType->IsDependent()) {
         return this;
     }
 

@@ -168,7 +168,9 @@ bool Type::IsVectorType() const { return (CastType<VectorType>(this) != nullptr)
 
 bool Type::IsVoidType() const { return EqualIgnoringConst(this, AtomicType::Void); }
 
-bool Type::IsDependentType() const {
+bool Type::IsDependent() const { return IsTypeDependent() || IsCountDependent(); }
+
+bool Type::IsTypeDependent() const {
     switch (typeId) {
     case ATOMIC_TYPE:
         return CastType<AtomicType>(this)->basicType == AtomicType::TYPE_DEPENDENT;
@@ -176,30 +178,22 @@ bool Type::IsDependentType() const {
         return false;
     case POINTER_TYPE: {
         const Type *baseType = CastType<PointerType>(this)->GetBaseType();
-        return baseType && baseType->IsDependentType();
+        return baseType && baseType->IsTypeDependent();
     }
     case ARRAY_TYPE: {
         const ArrayType *arrayType = CastType<ArrayType>(this);
         const Type *elemType = arrayType->GetElementType();
-        // Check if element type is dependent
-        bool isElementTypeDependent = elemType && elemType->IsDependentType();
-        // Check if element count is dependent (i.e., uses a non-type template parameter)
-        bool isCountDependent = arrayType->IsCountDependent();
-        return isElementTypeDependent || isCountDependent;
+        return elemType && elemType->IsTypeDependent();
     }
     case VECTOR_TYPE: {
         const VectorType *vecType = CastType<VectorType>(this);
         const Type *elemType = vecType->GetElementType();
-        // Check if element type is dependent
-        bool isElementTypeDependent = elemType && elemType->IsDependentType();
-        // Check if element count is dependent (i.e., uses a non-type template parameter)
-        bool isCountDependent = vecType->IsCountDependent();
-        return isElementTypeDependent || isCountDependent;
+        return elemType && elemType->IsTypeDependent();
     }
     case STRUCT_TYPE: {
         const StructType *st = CastType<StructType>(this);
         for (int i = 0; i < st->GetElementCount(); ++i) {
-            if (st->GetRawElementType(i)->IsDependentType()) {
+            if (st->GetRawElementType(i)->IsTypeDependent()) {
                 return true;
             }
         }
@@ -208,21 +202,42 @@ bool Type::IsDependentType() const {
     case UNDEFINED_STRUCT_TYPE:
         return false;
     case REFERENCE_TYPE:
-        return CastType<ReferenceType>(this)->GetReferenceTarget()->IsDependentType();
+        return CastType<ReferenceType>(this)->GetReferenceTarget()->IsTypeDependent();
     case FUNCTION_TYPE: {
         const FunctionType *ft = CastType<FunctionType>(this);
         for (int i = 0; i < ft->GetNumParameters(); ++i) {
-            if (ft->GetParameterType(i)->IsDependentType()) {
+            if (ft->GetParameterType(i)->IsTypeDependent()) {
                 return true;
             }
         }
-        if (ft->GetReturnType()->IsDependentType()) {
+        if (ft->GetReturnType()->IsTypeDependent()) {
             return true;
         }
         return false;
     }
     case TEMPLATE_TYPE_PARM_TYPE:
         return true;
+    }
+    UNREACHABLE();
+}
+
+bool Type::IsCountDependent() const {
+    switch (typeId) {
+    case ATOMIC_TYPE:
+    case ENUM_TYPE:
+    case POINTER_TYPE:
+    case STRUCT_TYPE:
+    case UNDEFINED_STRUCT_TYPE:
+    case FUNCTION_TYPE:
+    case REFERENCE_TYPE:
+    case TEMPLATE_TYPE_PARM_TYPE: {
+        return false;
+    }
+    case VECTOR_TYPE:
+    case ARRAY_TYPE: {
+        const SequentialType *secType = CastType<SequentialType>(this);
+        return secType->IsCountDependent();
+    }
     }
     UNREACHABLE();
 }
@@ -1598,8 +1613,7 @@ std::string ArrayType::GetString() const {
         char buf[16];
         if (at->elementCount.fixedCount > 0) {
             snprintf(buf, sizeof(buf), "%d", at->elementCount.fixedCount);
-        }
-        else if (at->elementCount.symbolCount != nullptr) {
+        } else if (at->elementCount.symbolCount != nullptr) {
             snprintf(buf, sizeof(buf), "%s", at->elementCount.symbolCount->name.c_str());
         } else {
             buf[0] = '\0';
