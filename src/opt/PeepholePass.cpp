@@ -19,9 +19,10 @@ template <typename Op_t, unsigned Opcode> struct CastClassTypes_match {
         : Op(OpMatch), fromType(f), toType(t) {}
 
     template <typename OpTy> bool match(OpTy *V) {
-        if (llvm::Operator *O = llvm::dyn_cast<llvm::Operator>(V))
+        if (llvm::Operator *O = llvm::dyn_cast<llvm::Operator>(V)) {
             return (O->getOpcode() == Opcode && Op.match(O->getOperand(0)) && O->getType() == toType &&
                     O->getOperand(0)->getType() == fromType);
+        }
         return false;
     }
 };
@@ -120,8 +121,9 @@ static bool lHasIntrinsicInDefinition(llvm::Function *func) {
     llvm::Function::iterator bbiter = func->begin();
     for (; bbiter != func->end(); ++bbiter) {
         for (llvm::BasicBlock::iterator institer = bbiter->begin(); institer != bbiter->end(); ++institer) {
-            if (llvm::isa<llvm::IntrinsicInst>(institer))
+            if (llvm::isa<llvm::IntrinsicInst>(institer)) {
                 return true;
+            }
         }
     }
     return false;
@@ -138,10 +140,11 @@ static llvm::Instruction *lGetBinaryIntrinsic(llvm::Module *M, const char *name,
     // infinite loops where we "helpfully" turn the default implementations
     // of target builtins like __avg_up_uint8 that are implemented with plain
     // arithmetic ops into recursive calls to themselves.
-    if (lHasIntrinsicInDefinition(func))
+    if (lHasIntrinsicInDefinition(func)) {
         return LLVMCallInst(func, opa, opb, name);
-    else
+    } else {
         return nullptr;
+    }
 }
 
 //////////////////////////////////////////////////
@@ -154,8 +157,9 @@ static llvm::Instruction *lMatchAvgUpUInt8(llvm::Instruction *inst) {
                         m_CombineOr(m_Add(m_ZExt8To16(m_Value(opa)), m_Add(m_ZExt8To16(m_Value(opb)), m_APInt(delta))),
                                     m_Add(m_Add(m_ZExt8To16(m_Value(opa)), m_APInt(delta)), m_ZExt8To16(m_Value(opb)))),
                         m_Add(m_Add(m_ZExt8To16(m_Value(opa)), m_ZExt8To16(m_Value(opb))), m_APInt(delta))))))) {
-        if (delta->isIntN(1) == false)
+        if (delta->isIntN(1) == false) {
             return nullptr;
+        }
 
         return lGetBinaryIntrinsic(inst->getModule(), builtin::__avg_up_uint8, opa, opb);
     }
@@ -180,8 +184,9 @@ static llvm::Instruction *lMatchAvgUpUInt16(llvm::Instruction *inst) {
                   m_CombineOr(m_Add(m_ZExt16To32(m_Value(opa)), m_Add(m_ZExt16To32(m_Value(opb)), m_APInt(delta))),
                               m_Add(m_Add(m_ZExt16To32(m_Value(opa)), m_APInt(delta)), m_ZExt16To32(m_Value(opb)))),
                   m_Add(m_Add(m_ZExt16To32(m_Value(opa)), m_ZExt16To32(m_Value(opb))), m_APInt(delta))))))) {
-        if (delta->isIntN(1) == false)
+        if (delta->isIntN(1) == false) {
             return nullptr;
+        }
 
         return lGetBinaryIntrinsic(inst->getModule(), builtin::__avg_up_uint16, opa, opb);
     }
@@ -205,8 +210,9 @@ static llvm::Instruction *lMatchAvgUpInt8(llvm::Instruction *inst) {
                         m_CombineOr(m_Add(m_SExt8To16(m_Value(opa)), m_Add(m_SExt8To16(m_Value(opb)), m_APInt(delta))),
                                     m_Add(m_Add(m_SExt8To16(m_Value(opa)), m_APInt(delta)), m_SExt8To16(m_Value(opb)))),
                         m_Add(m_Add(m_SExt8To16(m_Value(opa)), m_SExt8To16(m_Value(opb))), m_APInt(delta))))))) {
-        if (delta->isIntN(1) == false)
+        if (delta->isIntN(1) == false) {
             return nullptr;
+        }
 
         return lGetBinaryIntrinsic(inst->getModule(), builtin::__avg_up_int8, opa, opb);
     }
@@ -231,8 +237,9 @@ static llvm::Instruction *lMatchAvgUpInt16(llvm::Instruction *inst) {
                   m_CombineOr(m_Add(m_SExt16To32(m_Value(opa)), m_Add(m_SExt16To32(m_Value(opb)), m_APInt(delta))),
                               m_Add(m_Add(m_SExt16To32(m_Value(opa)), m_APInt(delta)), m_SExt16To32(m_Value(opb)))),
                   m_Add(m_Add(m_SExt16To32(m_Value(opa)), m_SExt16To32(m_Value(opb))), m_APInt(delta))))))) {
-        if (delta->isIntN(1) == false)
+        if (delta->isIntN(1) == false) {
             return nullptr;
+        }
 
         return lGetBinaryIntrinsic(inst->getModule(), builtin::__avg_up_int16, opa, opb);
     }
@@ -259,20 +266,27 @@ bool PeepholePass::matchAndReplace(llvm::BasicBlock &bb) {
         llvm::Instruction *inst = &*(iter++);
 
         llvm::Instruction *builtinCall = lMatchAvgUpUInt8(inst);
-        if (!builtinCall)
+        if (!builtinCall) {
             builtinCall = lMatchAvgUpUInt16(inst);
-        if (!builtinCall)
+        }
+        if (!builtinCall) {
             builtinCall = lMatchAvgDownUInt8(inst);
-        if (!builtinCall)
+        }
+        if (!builtinCall) {
             builtinCall = lMatchAvgDownUInt16(inst);
-        if (!builtinCall)
+        }
+        if (!builtinCall) {
             builtinCall = lMatchAvgUpInt8(inst);
-        if (!builtinCall)
+        }
+        if (!builtinCall) {
             builtinCall = lMatchAvgUpInt16(inst);
-        if (!builtinCall)
+        }
+        if (!builtinCall) {
             builtinCall = lMatchAvgDownInt8(inst);
-        if (!builtinCall)
+        }
+        if (!builtinCall) {
             builtinCall = lMatchAvgDownInt16(inst);
+        }
         if (builtinCall != nullptr) {
             llvm::ReplaceInstWithInst(inst, builtinCall);
             modifiedAny = true;

@@ -69,8 +69,9 @@ using namespace ispc;
     default.
  */
 int ispc::TerminalWidth() {
-    if (g->disableLineWrap)
+    if (g->disableLineWrap) {
         return 1 << 30;
+    }
 
 #if defined(ISPC_HOST_IS_WINDOWS)
     HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -81,8 +82,9 @@ int ispc::TerminalWidth() {
     return bufferInfo.dwSize.X;
 #else
     struct winsize w;
-    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) < 0)
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) < 0) {
         return 80;
+    }
     return w.ws_col;
 #endif // ISPC_HOST_IS_WINDOWS
 }
@@ -97,39 +99,44 @@ static bool lHaveANSIColors() {
 }
 
 static const char *lStartBold() {
-    if (lHaveANSIColors())
+    if (lHaveANSIColors()) {
         return "\033[1m";
-    else
+    } else {
         return "";
+    }
 }
 
 static const char *lStartRed() {
-    if (lHaveANSIColors())
+    if (lHaveANSIColors()) {
         return "\033[31m";
-    else
+    } else {
         return "";
+    }
 }
 
 static const char *lStartBlue() {
-    if (lHaveANSIColors())
+    if (lHaveANSIColors()) {
         return "\033[34m";
-    else
+    } else {
         return "";
+    }
 }
 
 static const char *lResetColor() {
-    if (lHaveANSIColors())
+    if (lHaveANSIColors()) {
         return "\033[0m";
-    else
+    } else {
         return "";
+    }
 }
 
 /** Given a pointer into a string, find the end of the current word and
     return a pointer to its last character.
 */
 static const char *lFindWordEnd(const char *buf) {
-    while (*buf != '\0' && !isspace(*buf))
+    while (*buf != '\0' && !isspace(*buf)) {
         ++buf;
+    }
     return buf;
 }
 
@@ -139,36 +146,43 @@ static const char *lFindWordEnd(const char *buf) {
     SourcePos with '^' symbols.
 */
 static void lPrintFileLineContext(SourcePos p) {
-    if (p.first_line == 0)
+    if (p.first_line == 0) {
         return;
+    }
 
     FILE *f = fopen(p.name, "r");
-    if (!f)
+    if (!f) {
         return;
+    }
 
     int c = 0, curLine = 1;
     while ((c = fgetc(f)) != EOF) {
         // Don't print more than three lines of context.  (More than that,
         // and we're probably doing the wrong thing...)
         if (curLine >= std::max(p.first_line, p.last_line - 2) && curLine <= p.last_line) {
-            if (c == '\t')
+            if (c == '\t') {
                 c = ' ';
+            }
 
             fputc(c, stderr);
         }
-        if (c == '\n')
+        if (c == '\n') {
             ++curLine;
-        if (curLine > p.last_line)
+        }
+        if (curLine > p.last_line) {
             break;
+        }
     }
 
     int i = 1;
-    for (; i < p.first_column; ++i)
+    for (; i < p.first_column; ++i) {
         fputc(' ', stderr);
+    }
     fputc('^', stderr);
     ++i;
-    for (; i < p.last_column; ++i)
+    for (; i < p.last_column; ++i) {
         fputc('^', stderr);
+    }
     fputc('\n', stderr);
     fputc('\n', stderr);
 
@@ -183,14 +197,17 @@ static int lFindIndent(int numColons, const char *buf) {
     int indent = 0;
     while (*buf != '\0') {
         if (*buf == '\033') {
-            while (*buf != '\0' && *buf != 'm')
+            while (*buf != '\0' && *buf != 'm') {
                 ++buf;
-            if (*buf == 'm')
+            }
+            if (*buf == 'm') {
                 ++buf;
+            }
         } else {
             if (*buf == ':') {
-                if (--numColons == 0)
+                if (--numColons == 0) {
                     break;
+                }
             }
             ++indent;
             ++buf;
@@ -228,8 +245,9 @@ void ispc::PrintWithWordBreaks(const char *buf, int indent, int columnWidth, FIL
             // Handle newlines cleanly
             column = indent;
             outStr.push_back('\n');
-            for (int i = 0; i < indent; ++i)
+            for (int i = 0; i < indent; ++i) {
                 outStr.push_back(' ');
+            }
             // Respect spaces after newlines
             ++msgPos;
             while (*msgPos == ' ') {
@@ -239,10 +257,12 @@ void ispc::PrintWithWordBreaks(const char *buf, int indent, int columnWidth, FIL
             continue;
         }
 
-        while (*msgPos != '\0' && isspace(*msgPos))
+        while (*msgPos != '\0' && isspace(*msgPos)) {
             ++msgPos;
-        if (*msgPos == '\0')
+        }
+        if (*msgPos == '\0') {
             break;
+        }
 
         const char *wordEnd = lFindWordEnd(msgPos);
         if (column > indent && column + wordEnd - msgPos > width) {
@@ -251,8 +271,9 @@ void ispc::PrintWithWordBreaks(const char *buf, int indent, int columnWidth, FIL
             outStr.push_back('\n');
             // Indent to the same column as the ":" at the start of the
             // message.
-            for (int i = 0; i < indent; ++i)
+            for (int i = 0; i < indent; ++i) {
                 outStr.push_back(' ');
+            }
         }
 
         // Finally go and copy the word
@@ -346,11 +367,13 @@ static void lPrint(const char *type, bool isError, SourcePos p, const char *fmt,
 void ispc::Error(SourcePos p, const char *fmt, ...) {
     if (m != nullptr) {
         ++m->errorCount;
-        if ((g->errorLimit != -1) && (g->errorLimit <= m->errorCount - 1))
+        if ((g->errorLimit != -1) && (g->errorLimit <= m->errorCount - 1)) {
             return;
+        }
     }
-    if (g->quiet)
+    if (g->quiet) {
         return;
+    }
 
     va_list args;
     va_start(args, fmt);
@@ -359,8 +382,9 @@ void ispc::Error(SourcePos p, const char *fmt, ...) {
 }
 
 void ispc::Debug(SourcePos p, const char *fmt, ...) {
-    if (!g->debugPrint || g->quiet)
+    if (!g->debugPrint || g->quiet) {
         return;
+    }
 
     va_list args;
     va_start(args, fmt);
@@ -372,14 +396,17 @@ void ispc::Warning(SourcePos p, const char *fmt, ...) {
 
     std::map<std::pair<int, std::string>, bool>::iterator turnOffWarnings_it =
         g->turnOffWarnings.find(std::pair<int, std::string>(p.last_line, std::string(p.name)));
-    if ((turnOffWarnings_it != g->turnOffWarnings.end()) && (turnOffWarnings_it->second == false))
+    if ((turnOffWarnings_it != g->turnOffWarnings.end()) && (turnOffWarnings_it->second == false)) {
         return;
+    }
 
-    if (g->warningsAsErrors && m != nullptr)
+    if (g->warningsAsErrors && m != nullptr) {
         ++m->errorCount;
+    }
 
-    if (g->disableWarnings || g->quiet)
+    if (g->disableWarnings || g->quiet) {
         return;
+    }
 
     va_list args;
     va_start(args, fmt);
@@ -393,16 +420,19 @@ void ispc::PerformanceWarning(SourcePos p, const char *fmt, ...) {
     if (!g->emitPerfWarnings ||
         (sourcePosName.length() >= stdlibFile.length() &&
          sourcePosName.compare(sourcePosName.length() - stdlibFile.length(), stdlibFile.length(), stdlibFile) == 0) ||
-        g->quiet)
+        g->quiet) {
         return;
+    }
 
     std::map<std::pair<int, std::string>, bool>::iterator turnOffWarnings_it =
         g->turnOffWarnings.find(std::pair<int, std::string>(p.last_line, p.name));
-    if (turnOffWarnings_it != g->turnOffWarnings.end())
+    if (turnOffWarnings_it != g->turnOffWarnings.end()) {
         return;
+    }
 
-    if (g->warningsAsErrors && m != nullptr)
+    if (g->warningsAsErrors && m != nullptr) {
         ++m->errorCount;
+    }
 
     va_list args;
     va_start(args, fmt);
@@ -412,8 +442,9 @@ void ispc::PerformanceWarning(SourcePos p, const char *fmt, ...) {
 
 static void lPrintBugText() {
     static bool printed = false;
-    if (printed)
+    if (printed) {
         return;
+    }
 
     printed = true;
     fprintf(stderr, "***\n"
@@ -449,8 +480,9 @@ int ispc::StringEditDistance(const std::string &str1, const std::string &str2, i
     // Small hack: don't return 0 if the strings are the same; if we've
     // gotten here, there's been a parsing error, and suggesting the same
     // string isn't going to actually help things.
-    if (str1 == str2)
+    if (str1 == str2) {
         return maxDist;
+    }
 
     int n1 = (int)str1.size(), n2 = (int)str2.size();
     int nmax = std::max(n1, n2);
@@ -458,8 +490,9 @@ int ispc::StringEditDistance(const std::string &str1, const std::string &str2, i
     int *current = (int *)alloca((nmax + 1) * sizeof(int));
     int *previous = (int *)alloca((nmax + 1) * sizeof(int));
 
-    for (int i = 0; i <= n2; ++i)
+    for (int i = 0; i <= n2; ++i) {
         previous[i] = i;
+    }
 
     for (int y = 1; y <= n1; ++y) {
         current[0] = y;
@@ -471,8 +504,9 @@ int ispc::StringEditDistance(const std::string &str1, const std::string &str2, i
             rowBest = std::min(rowBest, current[x]);
         }
 
-        if (maxDist != 0 && rowBest > maxDist)
+        if (maxDist != 0 && rowBest > maxDist) {
             return maxDist + 1;
+        }
 
         std::swap(current, previous);
     }
@@ -481,9 +515,10 @@ int ispc::StringEditDistance(const std::string &str1, const std::string &str2, i
 }
 
 std::vector<std::string> ispc::MatchStrings(const std::string &str, const std::vector<std::string> &options) {
-    if (str.size() == 0 || (str.size() == 1 && !isalpha(str[0])))
+    if (str.size() == 0 || (str.size() == 1 && !isalpha(str[0]))) {
         // don't even try...
         return std::vector<std::string>();
+    }
 
     const int maxDelta = 2;
     std::vector<std::string> matches[maxDelta + 1];
@@ -493,15 +528,17 @@ std::vector<std::string> ispc::MatchStrings(const std::string &str, const std::v
     // distance.
     for (int i = 0; i < (int)options.size(); ++i) {
         int dist = StringEditDistance(str, options[i], maxDelta + 1);
-        if (dist <= maxDelta)
+        if (dist <= maxDelta) {
             matches[dist].push_back(options[i]);
+        }
     }
 
     // And return the first one of them, if any, that has at least one
     // match.
     for (int i = 0; i <= maxDelta; ++i) {
-        if (matches[i].size())
+        if (matches[i].size()) {
             return matches[i];
+        }
     }
     return std::vector<std::string>();
 }

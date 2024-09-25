@@ -22,9 +22,9 @@ using namespace builtin;
 */
 static bool lIsSafeToBlend(llvm::Value *lvalue) {
     llvm::BitCastInst *bc = llvm::dyn_cast<llvm::BitCastInst>(lvalue);
-    if (bc != nullptr)
+    if (bc != nullptr) {
         return lIsSafeToBlend(bc->getOperand(0));
-    else {
+    } else {
         llvm::AllocaInst *ai = llvm::dyn_cast<llvm::AllocaInst>(lvalue);
         if (ai) {
             llvm::Type *type = ai->getAllocatedType();
@@ -36,10 +36,11 @@ static bool lIsSafeToBlend(llvm::Value *lvalue) {
             return (vt != nullptr && (int)vt->getNumElements() == g->target->getVectorWidth());
         } else {
             llvm::GetElementPtrInst *gep = llvm::dyn_cast<llvm::GetElementPtrInst>(lvalue);
-            if (gep != nullptr)
+            if (gep != nullptr) {
                 return lIsSafeToBlend(gep->getOperand(0));
-            else
+            } else {
                 return false;
+            }
         }
     }
 }
@@ -271,10 +272,11 @@ static bool lReplacePseudoGS(llvm::CallInst *callInst) {
     callInst->setCalledFunction(info->actualFunc(M));
     // Check for alloca and if not alloca - generate __gather and change arguments
     if (gotPosition && (g->target->getVectorWidth() > 1) && (g->opt.level > 0)) {
-        if (info->isGather())
+        if (info->isGather()) {
             PerformanceWarning(pos, "Gather required to load value.");
-        else if (!info->isPrefetch())
+        } else if (!info->isPrefetch()) {
             PerformanceWarning(pos, "Scatter required to store value.");
+        }
     }
     return true;
 }
@@ -288,8 +290,9 @@ bool ReplacePseudoMemoryOpsPass::replacePseudoMemoryOps(llvm::BasicBlock &bb) {
     // is moved forward before the instruction is processed.
     for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e;) {
         llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*(iter++));
-        if (callInst == nullptr || callInst->getCalledFunction() == nullptr)
+        if (callInst == nullptr || callInst->getCalledFunction() == nullptr) {
             continue;
+        }
 
         if (lReplacePseudoGS(callInst)) {
             modifiedAny = true;

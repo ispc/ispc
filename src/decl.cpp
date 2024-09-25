@@ -81,45 +81,58 @@ void lCheckTypeQualifiers(int typeQualifiers, DeclaratorKind kind, SourcePos pos
 }
 
 bool lIsFunctionKind(Declarator *d) {
-    if (!d)
+    if (!d) {
         return false;
+    }
 
-    if (d->kind == DK_FUNCTION)
+    if (d->kind == DK_FUNCTION) {
         return true;
+    }
 
-    if (d->child)
+    if (d->child) {
         return lIsFunctionKind(d->child);
+    }
 
     return false;
 }
 
 static void lPrintTypeQualifiers(int typeQualifiers) {
-    if (typeQualifiers & TYPEQUAL_INLINE)
+    if (typeQualifiers & TYPEQUAL_INLINE) {
         printf("inline ");
-    if (typeQualifiers & TYPEQUAL_CONST)
+    }
+    if (typeQualifiers & TYPEQUAL_CONST) {
         printf("const ");
-    if (typeQualifiers & TYPEQUAL_UNIFORM)
+    }
+    if (typeQualifiers & TYPEQUAL_UNIFORM) {
         printf("uniform ");
-    if (typeQualifiers & TYPEQUAL_VARYING)
+    }
+    if (typeQualifiers & TYPEQUAL_VARYING) {
         printf("varying ");
-    if (typeQualifiers & TYPEQUAL_TASK)
+    }
+    if (typeQualifiers & TYPEQUAL_TASK) {
         printf("task ");
-    if (typeQualifiers & TYPEQUAL_SIGNED)
+    }
+    if (typeQualifiers & TYPEQUAL_SIGNED) {
         printf("signed ");
-    if (typeQualifiers & TYPEQUAL_UNSIGNED)
+    }
+    if (typeQualifiers & TYPEQUAL_UNSIGNED) {
         printf("unsigned ");
-    if (typeQualifiers & TYPEQUAL_EXPORT)
+    }
+    if (typeQualifiers & TYPEQUAL_EXPORT) {
         printf("export ");
-    if (typeQualifiers & TYPEQUAL_UNMASKED)
+    }
+    if (typeQualifiers & TYPEQUAL_UNMASKED) {
         printf("unmasked ");
+    }
 }
 
 /** Given a Type and a set of type qualifiers, apply the type qualifiers to
     the type, returning the type that is the result.
 */
 static const Type *lApplyTypeQualifiers(int typeQualifiers, const Type *type, SourcePos pos) {
-    if (type == nullptr)
+    if (type == nullptr) {
         return nullptr;
+    }
 
     if ((typeQualifiers & TYPEQUAL_CONST) != 0) {
         type = type->GetAsConstType();
@@ -130,29 +143,33 @@ static const Type *lApplyTypeQualifiers(int typeQualifiers, const Type *type, So
     }
 
     if ((typeQualifiers & TYPEQUAL_UNIFORM) != 0) {
-        if (type->IsVoidType())
+        if (type->IsVoidType()) {
             Error(pos, "\"uniform\" qualifier is illegal with \"void\" type.");
-        else
+        } else {
             type = type->GetAsUniformType();
+        }
     } else if ((typeQualifiers & TYPEQUAL_VARYING) != 0) {
-        if (type->IsVoidType())
+        if (type->IsVoidType()) {
             Error(pos, "\"varying\" qualifier is illegal with \"void\" type.");
-        else
+        } else {
             type = type->GetAsVaryingType();
+        }
     } else {
-        if (type->IsVoidType() == false)
+        if (type->IsVoidType() == false) {
             type = type->GetAsUnboundVariabilityType();
+        }
     }
 
     if ((typeQualifiers & TYPEQUAL_UNSIGNED) != 0) {
-        if ((typeQualifiers & TYPEQUAL_SIGNED) != 0)
+        if ((typeQualifiers & TYPEQUAL_SIGNED) != 0) {
             Error(pos, "Illegal to apply both \"signed\" and \"unsigned\" "
                        "qualifiers.");
+        }
 
         const Type *unsignedType = type->GetAsUnsignedType();
-        if (unsignedType != nullptr)
+        if (unsignedType != nullptr) {
             type = unsignedType;
-        else {
+        } else {
             const Type *resolvedType = type->ResolveUnboundVariability(Variability::Varying);
             Error(pos, "\"unsigned\" qualifier is illegal with \"%s\" type.", resolvedType->GetString().c_str());
         }
@@ -234,16 +251,18 @@ void AttributeList::AddAttribute(const Attribute &a) {
 
 bool AttributeList::HasAttribute(const std::string &name) const {
     for (const auto &attr : attributes) {
-        if (attr->name == name)
+        if (attr->name == name) {
             return true;
+        }
     }
     return false;
 }
 
 Attribute *AttributeList::GetAttribute(const std::string &name) const {
     for (const auto &attr : attributes) {
-        if (attr->name == name)
+        if (attr->name == name) {
             return attr;
+        }
     }
     return nullptr;
 }
@@ -375,15 +394,17 @@ const Type *DeclSpecs::GetBaseType(SourcePos pos) const {
                   "both be used in a type declaration.",
                   soaWidth);
             return nullptr;
-        } else
+        } else {
             retType = st->GetAsSOAType(soaWidth);
+        }
 
-        if (soaWidth < g->target->getVectorWidth())
+        if (soaWidth < g->target->getVectorWidth()) {
             PerformanceWarning(pos,
                                "soa<%d> width smaller than gang size %d "
                                "currently leads to inefficient code to access "
                                "soa types.",
                                soaWidth, g->target->getVectorWidth());
+        }
     }
 
     return retType;
@@ -412,8 +433,9 @@ static const char *lGetStorageClassName(StorageClass storageClass) {
 void DeclSpecs::Print() const {
     printf("Declspecs: [%s ", lGetStorageClassName(storageClass));
 
-    if (soaWidth > 0)
+    if (soaWidth > 0) {
         printf("soa<%d> ", soaWidth);
+    }
     lPrintTypeQualifiers(typeQualifiers);
     printf("base type: %s", baseType->GetString().c_str());
 
@@ -524,10 +546,11 @@ void Declarator::Print(Indent &indent) const {
     printf("[");
     lPrintTypeQualifiers(typeQualifiers);
     printf("%s ", lGetStorageClassName(storageClass));
-    if (name.size() > 0)
+    if (name.size() > 0) {
         printf("%s", name.c_str());
-    else
+    } else {
         printf("(unnamed)");
+    }
 
     printf(", array size = %d", arraySize);
 
@@ -597,10 +620,11 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
     lCheckTypeQualifiers(typeQualifiers, kind, pos);
 
     Variability variability(Variability::Unbound);
-    if (hasUniformQual)
+    if (hasUniformQual) {
         variability = Variability::Uniform;
-    else if (hasVaryingQual)
+    } else if (hasVaryingQual) {
         variability = Variability::Varying;
+    }
 
     if (kind == DK_BASE) {
         // All of the type qualifiers should be in the DeclSpecs for the
@@ -617,8 +641,9 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             child->InitFromType(ptrType, ds);
             type = child->type;
             name = child->name;
-        } else
+        } else {
             type = ptrType;
+        }
     } else if (kind == DK_REFERENCE) {
         if (hasUniformQual) {
             Error(pos, "\"uniform\" qualifier is illegal to apply to references.");
@@ -643,8 +668,9 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             child->InitFromType(refType, ds);
             type = child->type;
             name = child->name;
-        } else
+        } else {
             type = refType;
+        }
     } else if (kind == DK_ARRAY) {
         if (baseType->IsVoidType()) {
             Error(pos, "Arrays of \"void\" type are illegal.");
@@ -703,11 +729,12 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                 decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
             }
 
-            if (d->declSpecs->storageClass != SC_NONE)
+            if (d->declSpecs->storageClass != SC_NONE) {
                 Error(decl->pos,
                       "Storage class \"%s\" is illegal in "
                       "function parameter declaration for parameter \"%s\".",
                       lGetStorageClassName(d->declSpecs->storageClass), decl->name.c_str());
+            }
             if (decl->type->IsVoidType()) {
                 Error(decl->pos, "Parameter with type \"void\" illegal in function "
                                  "parameter list.");
@@ -736,10 +763,11 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                 // first dimension) in function parameter lists.
                 at = CastType<ArrayType>(targetType);
                 while (at != nullptr) {
-                    if (at->GetElementCount() == 0)
+                    if (at->GetElementCount() == 0) {
                         Error(decl->pos, "Arrays with unsized dimensions in "
                                          "dimensions after the first one are illegal in "
                                          "function parameter lists.");
+                    }
                     at = CastType<ArrayType>(at->GetElementType());
                 }
             }
@@ -756,17 +784,20 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                     decl->initExpr = Optimize(decl->initExpr);
                     if (decl->initExpr != nullptr) {
                         init = llvm::dyn_cast<ConstExpr>(decl->initExpr);
-                        if (init == nullptr)
+                        if (init == nullptr) {
                             init = llvm::dyn_cast<NullPointerExpr>(decl->initExpr);
-                        if (init == nullptr)
+                        }
+                        if (init == nullptr) {
                             Error(decl->initExpr->pos,
                                   "Default value for parameter "
                                   "\"%s\" must be a compile-time constant.",
                                   decl->name.c_str());
+                        }
                     }
                     break;
-                } else
+                } else {
                     decl = decl->child;
+                }
             }
             argDefaults.push_back(init);
         }
@@ -821,9 +852,10 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                        "qualifiers");
             return;
         }
-        if (isUnmasked && isExported)
+        if (isUnmasked && isExported) {
             Warning(pos, "\"unmasked\" qualifier is redundant for exported "
                          "functions.");
+        }
 
         if (isUnmangled) {
             if (isExternC) {
@@ -855,15 +887,17 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                 std::string str = ds->declSpecList[i].first;
                 SourcePos ds_spec_pos = ds->declSpecList[i].second;
 
-                if (str == "safe")
+                if (str == "safe") {
                     (const_cast<FunctionType *>(functionType))->isSafe = true;
-                else if (!strncmp(str.c_str(), "cost", 4)) {
+                } else if (!strncmp(str.c_str(), "cost", 4)) {
                     int cost = atoi(str.c_str() + 4);
-                    if (cost < 0)
+                    if (cost < 0) {
                         Error(ds_spec_pos, "Negative function cost %d is illegal.", cost);
+                    }
                     (const_cast<FunctionType *>(functionType))->costOverride = cost;
-                } else
+                } else {
                     Error(ds_spec_pos, "__declspec parameter \"%s\" unknown.", str.c_str());
+                }
             }
         }
 
@@ -880,11 +914,14 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
 
 Declaration::Declaration(DeclSpecs *ds, std::vector<Declarator *> *dlist) {
     declSpecs = ds;
-    if (dlist != nullptr)
+    if (dlist != nullptr) {
         declarators = *dlist;
-    for (unsigned int i = 0; i < declarators.size(); ++i)
-        if (declarators[i] != nullptr)
+    }
+    for (unsigned int i = 0; i < declarators.size(); ++i) {
+        if (declarators[i] != nullptr) {
             declarators[i]->InitFromDeclSpecs(declSpecs);
+        }
+    }
 }
 
 Declaration::Declaration(DeclSpecs *ds, Declarator *d) {
@@ -907,9 +944,9 @@ std::vector<VariableDeclaration> Declaration::GetVariableDeclarations() const {
             continue;
         }
 
-        if (decl->type->IsVoidType())
+        if (decl->type->IsVoidType()) {
             Error(decl->pos, "\"void\" type variable illegal in declaration.");
-        else if (CastType<FunctionType>(decl->type) == nullptr) {
+        } else if (CastType<FunctionType>(decl->type) == nullptr) {
             if (!decl->type->IsDependentType()) {
                 decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
             }
@@ -948,8 +985,9 @@ void Declaration::DeclareFunctions() {
         }
 
         const FunctionType *ftype = CastType<FunctionType>(decl->type);
-        if (ftype == nullptr)
+        if (ftype == nullptr) {
             continue;
+        }
 
         bool isInline = (declSpecs->typeQualifiers & TYPEQUAL_INLINE);
         bool isNoInline = (declSpecs->typeQualifiers & TYPEQUAL_NOINLINE);
@@ -989,19 +1027,21 @@ void ispc::GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &
     std::unordered_set<std::string> seenNames;
     for (unsigned int i = 0; i < sd.size(); ++i) {
         const Type *type = sd[i]->type;
-        if (type == nullptr)
+        if (type == nullptr) {
             continue;
+        }
 
         // FIXME: making this fake little DeclSpecs here is really
         // disgusting
         DeclSpecs ds(type);
         if (type->IsVoidType() == false) {
-            if (type->IsUniformType())
+            if (type->IsUniformType()) {
                 ds.typeQualifiers |= TYPEQUAL_UNIFORM;
-            else if (type->IsVaryingType())
+            } else if (type->IsVaryingType()) {
                 ds.typeQualifiers |= TYPEQUAL_VARYING;
-            else if (type->GetSOAWidth() != 0)
+            } else if (type->GetSOAWidth() != 0) {
                 ds.soaWidth = type->GetSOAWidth();
+            }
             // FIXME: ds.vectorSize?
         }
 
@@ -1009,18 +1049,20 @@ void ispc::GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &
             Declarator *d = (*sd[i]->declarators)[j];
             d->InitFromDeclSpecs(&ds);
 
-            if (d->type->IsVoidType())
+            if (d->type->IsVoidType()) {
                 Error(d->pos, "\"void\" type illegal for struct member.");
+            }
 
             elementTypes->push_back(d->type);
 
-            if (seenNames.find(d->name) != seenNames.end())
+            if (seenNames.find(d->name) != seenNames.end()) {
                 Error(d->pos,
                       "Struct member \"%s\" has same name as a "
                       "previously-declared member.",
                       d->name.c_str());
-            else
+            } else {
                 seenNames.insert(d->name);
+            }
 
             elementNames->push_back(d->name);
             elementPositions->push_back(d->pos);
@@ -1030,8 +1072,9 @@ void ispc::GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &
     for (int i = 0; i < (int)elementTypes->size() - 1; ++i) {
         const ArrayType *arrayType = CastType<ArrayType>((*elementTypes)[i]);
 
-        if (arrayType != nullptr && arrayType->GetElementCount() == 0)
+        if (arrayType != nullptr && arrayType->GetElementCount() == 0) {
             Error((*elementPositions)[i], "Unsized arrays aren't allowed except "
                                           "for the last member in a struct definition.");
+        }
     }
 }

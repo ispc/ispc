@@ -69,9 +69,10 @@ static bool lVectorLoadIsEfficient(std::set<int64_t>::iterator iter, std::set<in
         // What is the separation in offset values from the last element we
         // added to the set for this load?
         int64_t delta = *iter - lastAccepted;
-        if (delta > 3)
+        if (delta > 3) {
             // If there's too big a gap, then we won't issue the load
             return false;
+        }
 
         int64_t span = *iter - start + 1;
 
@@ -117,8 +118,9 @@ static bool lVectorLoadIsEfficient(std::set<int64_t>::iterator iter, std::set<in
             if (vectorWidth != 2 && (lastAccepted - start) > (vectorWidth / 2) && (*iter - lastAccepted) < pageSize) {
                 *newIter = iter;
                 return true;
-            } else
+            } else {
                 return false;
+            }
         }
 
         // Continue moving forward
@@ -138,8 +140,9 @@ static bool lVectorLoadIsEfficient(std::set<int64_t>::iterator iter, std::set<in
 static void lSelectLoads(const std::vector<int64_t> &loadOffsets, std::vector<CoalescedLoadOp> *loads) {
     // First, get a sorted set of unique offsets to load from.
     std::set<int64_t> allOffsets;
-    for (unsigned int i = 0; i < loadOffsets.size(); ++i)
+    for (unsigned int i = 0; i < loadOffsets.size(); ++i) {
         allOffsets.insert(loadOffsets[i]);
+    }
 
     std::set<int64_t>::iterator iter = allOffsets.begin();
     while (iter != allOffsets.end()) {
@@ -207,8 +210,9 @@ static void lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup
                 char buf[32];
                 snprintf(buf, sizeof(buf), "%d", p.first_line);
                 strncat(otherPositions, buf, sizeof(otherPositions) - strlen(otherPositions) - 1);
-                if (i < (int)coalesceGroup.size() - 1)
+                if (i < (int)coalesceGroup.size() - 1) {
                     strncat(otherPositions, ", ", sizeof(otherPositions) - strlen(otherPositions) - 1);
+                }
             }
         }
         strncat(otherPositions, ") ", sizeof(otherPositions) - strlen(otherPositions) - 1);
@@ -216,8 +220,9 @@ static void lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup
 
     // Count how many loads of each size there were.
     std::map<int, int> loadOpsCount;
-    for (int i = 0; i < (int)loadOps.size(); ++i)
+    for (int i = 0; i < (int)loadOps.size(); ++i) {
         ++loadOpsCount[loadOps[i].count];
+    }
 
     // Generate a string the describes the mix of load ops
     char loadOpsInfo[512];
@@ -231,20 +236,22 @@ static void lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup
         }
         strncat(loadOpsInfo, buf, sizeof(loadOpsInfo) - strlen(loadOpsInfo) - 1);
         ++iter;
-        if (iter != loadOpsCount.end())
+        if (iter != loadOpsCount.end()) {
             strncat(loadOpsInfo, ", ", sizeof(loadOpsInfo) - strlen(loadOpsInfo) - 1);
+        }
     }
 
     if (g->opt.level > 0) {
-        if (coalesceGroup.size() == 1)
+        if (coalesceGroup.size() == 1) {
             PerformanceWarning(pos, "Coalesced gather into %d load%s (%s).", (int)loadOps.size(),
                                (loadOps.size() > 1) ? "s" : "", loadOpsInfo);
-        else
+        } else {
             PerformanceWarning(pos,
                                "Coalesced %d gathers starting here %sinto %d "
                                "load%s (%s).",
                                (int)coalesceGroup.size(), otherPositions, (int)loadOps.size(),
                                (loadOps.size() > 1) ? "s" : "", loadOpsInfo);
+        }
     }
 }
 
@@ -340,8 +347,9 @@ static std::vector<CoalescedLoadOp> lSplit8WideLoads(const std::vector<Coalesced
 
             ret.push_back(CoalescedLoadOp(loadOps[i].start + 4, 4));
             ret.back().load = LLVMShuffleVectors(loadOps[i].load, loadOps[i].load, shuf[1], 4, insertBefore);
-        } else
+        } else {
             ret.push_back(loadOps[i]);
+        }
     }
 
     return ret;
@@ -457,8 +465,9 @@ static llvm::Value *lApplyLoad4(llvm::Value *result, const CoalescedLoadOp &load
 
     // Now, issue a shufflevector instruction if any of the values from the
     // load we just considered were applicable.
-    if (shuf[0] != 4 || shuf[1] != 5 || shuf[2] != 6 || shuf[3] != 7)
+    if (shuf[0] != 4 || shuf[1] != 5 || shuf[2] != 6 || shuf[3] != 7) {
         result = LLVMShuffleVectors(load.load, result, shuf, 4, insertBefore);
+    }
 
     return result;
 }
@@ -504,8 +513,9 @@ static llvm::Value *lAssemble4Vector(const std::vector<CoalescedLoadOp> &loadOps
     Debug(SourcePos(), "Done with search for loads [%" PRId64 " %" PRId64 " %" PRId64 " %" PRId64 "].", offsets[0],
           offsets[1], offsets[2], offsets[3]);
 
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < 4; ++i) {
         Assert(set[i] == true);
+    }
 
     return result;
 }
@@ -634,8 +644,9 @@ static void lAssembleResultVectors(const std::vector<CoalescedLoadOp> &loadOps,
     // LLVM's SSE/AVX code generators.
     Assert((constOffsets.size() % 4) == 0);
     std::vector<llvm::Value *> vec4s;
-    for (int i = 0; i < (int)constOffsets.size(); i += 4)
+    for (int i = 0; i < (int)constOffsets.size(); i += 4) {
         vec4s.push_back(lAssemble4Vector(loadOps, &constOffsets[i], insertBefore));
+    }
 
     // And now concatenate 1, 2, or 4 of the 4-wide vectors computed above
     // into 4, 8, or 16-wide final result vectors.
@@ -707,8 +718,9 @@ static llvm::Value *lComputeBasePtr(llvm::CallInst *gatherInst, llvm::Type *base
     // extract the first value and use that as a scalar.
     llvm::Value *variable = LLVMExtractFirstVectorElement(variableOffsets);
     Assert(variable != nullptr);
-    if (variable->getType() == LLVMTypes::Int64Type)
+    if (variable->getType() == LLVMTypes::Int64Type) {
         offsetScale = new llvm::ZExtInst(offsetScale, LLVMTypes::Int64Type, "scale_to64", insertBefore);
+    }
     llvm::Value *offset =
         llvm::BinaryOperator::Create(llvm::Instruction::Mul, variable, offsetScale, "offset", insertBefore);
 
@@ -735,8 +747,9 @@ static void lExtractConstOffsets(const std::vector<llvm::CallInst *> &coalesceGr
         Assert(ok && nElts == width);
     }
 
-    for (int i = 0; i < (int)constOffsets->size(); ++i)
+    for (int i = 0; i < (int)constOffsets->size(); ++i) {
         (*constOffsets)[i] /= elementSize;
+    }
 }
 
 /** Actually do the coalescing.  We have a set of gathers all accessing
@@ -757,13 +770,14 @@ static bool lCoalesceGathers(const std::vector<llvm::CallInst *> &coalesceGroup,
 
     int elementSize = 0;
     if (coalesceGroup[0]->getType() == LLVMTypes::Int32VectorType ||
-        coalesceGroup[0]->getType() == LLVMTypes::FloatVectorType)
+        coalesceGroup[0]->getType() == LLVMTypes::FloatVectorType) {
         elementSize = 4;
-    else if (coalesceGroup[0]->getType() == LLVMTypes::Int64VectorType ||
-             coalesceGroup[0]->getType() == LLVMTypes::DoubleVectorType)
+    } else if (coalesceGroup[0]->getType() == LLVMTypes::Int64VectorType ||
+               coalesceGroup[0]->getType() == LLVMTypes::DoubleVectorType) {
         elementSize = 8;
-    else
+    } else {
         FATAL("Unexpected gather type in lCoalesceGathers");
+    }
 
     // Extract the constant offsets from the gathers into the constOffsets
     // vector: the first vectorWidth elements will be those for the first
@@ -801,8 +815,9 @@ static bool lCoalesceGathers(const std::vector<llvm::CallInst *> &coalesceGroup,
         Assert(ir != nullptr);
 
         llvm::Type *origType = coalesceGroup[i]->getType();
-        if (origType != ir->getType())
+        if (origType != ir->getType()) {
             ir = new llvm::BitCastInst(ir, origType, ir->getName(), coalesceGroup[i]);
+        }
 
         // Previously, all of the instructions to compute the final result
         // were into the basic block here; here we remove the very last one
@@ -825,10 +840,11 @@ static bool lCoalesceGathers(const std::vector<llvm::CallInst *> &coalesceGroup,
     memory. */
 static bool lInstructionMayWriteToMemory(llvm::Instruction *inst) {
     if (llvm::isa<llvm::StoreInst>(inst) || llvm::isa<llvm::AtomicRMWInst>(inst) ||
-        llvm::isa<llvm::AtomicCmpXchgInst>(inst))
+        llvm::isa<llvm::AtomicCmpXchgInst>(inst)) {
         // FIXME: we could be less conservative and try to allow stores if
         // we are sure that the pointers don't overlap..
         return true;
+    }
 
     // Otherwise, any call instruction that doesn't have an attribute
     // indicating it won't write to memory has to be treated as a potential
@@ -836,11 +852,13 @@ static bool lInstructionMayWriteToMemory(llvm::Instruction *inst) {
     llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst);
     if (ci != nullptr) {
         llvm::Function *calledFunc = ci->getCalledFunction();
-        if (calledFunc == nullptr)
+        if (calledFunc == nullptr) {
             return true;
+        }
 
-        if (calledFunc->onlyReadsMemory() || calledFunc->doesNotAccessMemory())
+        if (calledFunc->onlyReadsMemory() || calledFunc->doesNotAccessMemory()) {
             return false;
+        }
         return true;
     }
 
@@ -868,20 +886,25 @@ bool GatherCoalescePass::coalesceGathersFactored(llvm::BasicBlock &bb) {
         // Iterate over all of the instructions and look for calls to
         // __pseudo_gather_factored_base_offsets{32,64}_{i32,float} calls.
         llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*curIter);
-        if (callInst == nullptr)
+        if (callInst == nullptr) {
             continue;
+        }
 
         llvm::Function *calledFunc = callInst->getCalledFunction();
-        if (calledFunc == nullptr)
+        if (calledFunc == nullptr) {
             continue;
+        }
 
         int i = 0;
-        for (i = 0; i < nGatherFuncs; ++i)
-            if (gatherFuncs[i] != nullptr && calledFunc == gatherFuncs[i])
+        for (i = 0; i < nGatherFuncs; ++i) {
+            if (gatherFuncs[i] != nullptr && calledFunc == gatherFuncs[i]) {
                 break;
-        if (i == nGatherFuncs)
+            }
+        }
+        if (i == nGatherFuncs) {
             // Doesn't match any of the types of gathers we care about
             continue;
+        }
 
         SourcePos pos;
         LLVMGetSourcePosFromMetadata(callInst, &pos);
@@ -904,11 +927,13 @@ bool GatherCoalescePass::coalesceGathersFactored(llvm::BasicBlock &bb) {
         // Then and only then do we have a common base pointer with all
         // offsets from that constants (in which case we can potentially
         // coalesce).
-        if (GetMaskStatusFromValue(mask) != MaskStatus::all_on)
+        if (GetMaskStatusFromValue(mask) != MaskStatus::all_on) {
             continue;
+        }
 
-        if (!LLVMVectorValuesAllEqual(variableOffsets))
+        if (!LLVMVectorValuesAllEqual(variableOffsets)) {
             continue;
+        }
 
         // coalesceGroup stores the set of gathers that we're going to try to
         // coalesce over
@@ -925,12 +950,14 @@ bool GatherCoalescePass::coalesceGathersFactored(llvm::BasicBlock &bb) {
             // Must stop once we come to an instruction that may write to
             // memory; otherwise we could end up moving a read before this
             // write.
-            if (lInstructionMayWriteToMemory(&*fwdIter))
+            if (lInstructionMayWriteToMemory(&*fwdIter)) {
                 break;
+            }
 
             llvm::CallInst *fwdCall = llvm::dyn_cast<llvm::CallInst>(&*fwdIter);
-            if (fwdCall == nullptr || fwdCall->getCalledFunction() != calledFunc)
+            if (fwdCall == nullptr || fwdCall->getCalledFunction() != calledFunc) {
                 continue;
+            }
 
             SourcePos fwdPos;
             // TODO: need to redesign metadata attached to pseudo calls,
@@ -972,14 +999,16 @@ bool GatherCoalescePass::coalesceGathersFactored(llvm::BasicBlock &bb) {
                     iter++;
                 }
 
-                if (coalesceGroup.size() == 4)
+                if (coalesceGroup.size() == 4) {
                     // FIXME: untested heuristic: don't try to coalesce
                     // over a window of more than 4 gathers, so that we
                     // don't cause too much register pressure and end up
                     // spilling to memory anyway.
                     break;
-            } else
+                }
+            } else {
                 Debug(fwdPos, "This gather doesn't match the initial one.");
+            }
         }
 
         Debug(pos, "Done with checking for matching gathers");

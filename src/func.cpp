@@ -153,13 +153,15 @@ Function::Function(Symbol *s, Stmt *c) : sym(s), code(c) {
     for (int i = 0; i < type->GetNumParameters(); ++i) {
         const char *paramName = type->GetParameterName(i).c_str();
         Symbol *paramSym = m->symbolTable->LookupVariable(paramName);
-        if (paramSym == nullptr)
+        if (paramSym == nullptr) {
             Assert(strncmp(paramName, "__anon_parameter_", 17) == 0);
+        }
         args.push_back(paramSym);
 
         const Type *t = type->GetParameterType(i);
-        if (paramSym != nullptr && CastType<ReferenceType>(t) == nullptr)
+        if (paramSym != nullptr && CastType<ReferenceType>(t) == nullptr) {
             paramSym->parentFunction = this;
+        }
     }
 
     if (type->isTask) {
@@ -249,9 +251,10 @@ static void lCopyInTaskParameter(int i, AddressInfo *structArgPtrInfo, const std
     // Get the type of the argument we're copying in and its Symbol pointer
     Symbol *sym = args[i];
 
-    if (sym == nullptr)
+    if (sym == nullptr) {
         // anonymous parameter, so don't worry about it
         return;
+    }
 
     // allocate space to copy the parameter in to
     sym->storageInfo = ctx->AllocaInst(sym->type, sym->name.c_str());
@@ -289,10 +292,12 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
     maskSymbol->pos = firstStmtPos;
     ctx->EmitVariableDebugInfo(maskSymbol);
 
-    if (g->NoOmitFramePointer)
+    if (g->NoOmitFramePointer) {
         function->addFnAttr("frame-pointer", "all");
-    if (g->target->getArch() == Arch::wasm32 || g->target->getArch() == Arch::wasm64)
+    }
+    if (g->target->getArch() == Arch::wasm32 || g->target->getArch() == Arch::wasm64) {
         function->addFnAttr("target-features", "+simd128");
+    }
 
     g->target->markFuncWithTargetAttr(function);
     const FunctionType *type = CastType<FunctionType>(sym->type);
@@ -323,8 +328,9 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         AddressInfo *stInfo = new AddressInfo(structParamPtr, st);
         // Copy the function parameter values from the structure into local
         // storage
-        for (unsigned int i = 0; i < args.size(); ++i)
+        for (unsigned int i = 0; i < args.size(); ++i) {
             lCopyInTaskParameter(i, stInfo, args, ctx);
+        }
 
         if (type->isUnmasked == false) {
             // Copy in the mask as well.
@@ -371,9 +377,10 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         Assert(fType->getFunctionNumParams() >= args.size());
         for (unsigned int i = 0; i < args.size(); ++i, ++argIter) {
             Symbol *argSym = args[i];
-            if (argSym == nullptr)
+            if (argSym == nullptr) {
                 // anonymous function parameter
                 continue;
+            }
 
             argIter->setName(argSym->name.c_str());
 
@@ -497,11 +504,13 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
             // codegen for this path can be improved with this knowledge in
             // hand...
             ctx->SetCurrentBasicBlock(bbAllOn);
-            if (!g->opt.disableMaskAllOnOptimizations)
+            if (!g->opt.disableMaskAllOnOptimizations) {
                 ctx->SetFunctionMask(LLVMMaskAllOn);
+            }
             code->EmitCode(ctx);
-            if (ctx->GetCurrentBasicBlock())
+            if (ctx->GetCurrentBasicBlock()) {
                 ctx->ReturnInst();
+            }
 
             // not all on: however, at least one lane must be running,
             // since we should never run with all off...  some on: reset
@@ -517,8 +526,9 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
             ctx->InitializeLabelMap(code);
 
             code->EmitCode(ctx);
-            if (ctx->GetCurrentBasicBlock())
+            if (ctx->GetCurrentBasicBlock()) {
                 ctx->ReturnInst();
+            }
         } else {
             // Set up basic blocks for goto targets
             ctx->InitializeLabelMap(code);
@@ -627,9 +637,10 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
 }
 
 void Function::GenerateIR() const {
-    if (sym == nullptr)
+    if (sym == nullptr) {
         // May be nullptr due to error earlier in compilation
         return;
+    }
 
     llvm::Function *function = sym->function;
     Assert(function != nullptr);
@@ -654,10 +665,11 @@ void Function::GenerateIR() const {
     SourcePos firstStmtPos = sym->pos;
     if (code) {
         StmtList *sl = llvm::dyn_cast<StmtList>(code);
-        if (sl && sl->stmts.size() > 0 && sl->stmts[0] != nullptr)
+        if (sl && sl->stmts.size() > 0 && sl->stmts[0] != nullptr) {
             firstStmtPos = sl->stmts[0]->pos;
-        else
+        } else {
             firstStmtPos = code->pos;
+        }
     }
     // And we can now go ahead and emit the code
     if (g->target->isXeTarget()) {
@@ -880,8 +892,9 @@ bool TemplateArg::IsNonType() const { return argType == ArgType::NonType; };
 bool TemplateArg::IsType() const { return argType == ArgType::Type; }
 
 bool TemplateArg::operator==(const TemplateArg &other) const {
-    if (argType != other.argType)
+    if (argType != other.argType) {
         return false;
+    }
     switch (argType) {
     case ArgType::Type:
         return Type::Equal(type, other.type);
