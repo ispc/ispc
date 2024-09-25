@@ -1611,7 +1611,7 @@ enumerator
           if ($1 != nullptr && $3 != nullptr &&
               lGetConstantIntOrSymbol($3, &value, @3, "Enumerator value")) {
               Symbol *sym = new Symbol($1, @1, Symbol::SymbolKind::Enumerator);
-              
+
               // Check if value holds an int
               if (std::holds_alternative<int>(value)) {
                   int intValue = std::get<int>(value);
@@ -2775,7 +2775,13 @@ template_argument
         const char *name = $1->c_str();
         Symbol *s = m->symbolTable->LookupVariable(name);
         if (s) {
-            $$ = new TemplateArg(new SymbolExpr(s, @1), @1);
+            if (s->GetSymbolKind() == Symbol::SymbolKind::Enumerator ||
+                s->GetSymbolKind() == Symbol::SymbolKind::TemplateNonTypeParm) {
+                $$ = new TemplateArg(new SymbolExpr(s, @1), @1);
+            } else {
+                Error(@1, "Only integral, enum types and non-type template parameters are allowed as template arguments.");
+                $$ = nullptr;
+            }
         } else {
             Error(@1, "Unknown identifier");
             $$ = nullptr;
@@ -3253,7 +3259,7 @@ lAddFunctionParams(Declarator *decl) {
         if (declarator == nullptr)
             AssertPos(decl->pos, m->errorCount > 0);
         else {
-            Symbol *sym = new Symbol(declarator->name, declarator->pos, Symbol::SymbolKind::FunctionParm, 
+            Symbol *sym = new Symbol(declarator->name, declarator->pos, Symbol::SymbolKind::FunctionParm,
                                      declarator->type, declarator->storageClass);
 
             AttributeList *AL = declarator->attributeList;
