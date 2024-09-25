@@ -271,7 +271,7 @@ Stmt *DeclStmt::Optimize() {
 // another brace initialization.
 static bool checkInit(const Type *type, Expr **init) {
     bool encounteredError = false;
-    if (type && type->IsDependentType()) {
+    if (type && type->IsDependent()) {
         return false;
     }
 
@@ -289,7 +289,7 @@ static bool checkInit(const Type *type, Expr **init) {
         // it is in fact caught later, though.
         if (llvm::dyn_cast<ExprList>(*init) == nullptr) {
             const Type *t = (*init) ? (*init)->GetType() : nullptr;
-            if (t && t->IsDependentType()) {
+            if (t && t->IsDependent()) {
                 return false;
             }
 
@@ -498,7 +498,7 @@ Stmt *IfStmt::TypeCheck() {
     if (test != nullptr) {
         const Type *testType = test->GetType();
         if (testType != nullptr) {
-            if (testType->IsDependentType()) {
+            if (testType->IsDependent()) {
                 return this;
             }
             bool isUniform = (testType->IsUniformType() && !g->opt.disableUniformControlFlow);
@@ -975,7 +975,7 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
 Stmt *DoStmt::TypeCheck() {
     const Type *testType = nullptr;
     if (testExpr != nullptr && (testType = testExpr->GetType()) != nullptr) {
-        if (testType->IsDependentType()) {
+        if (testType->IsDependent()) {
             return this;
         }
 
@@ -1219,7 +1219,7 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
 Stmt *ForStmt::TypeCheck() {
     const Type *testType = nullptr;
     if (test && (testType = test->GetType()) != nullptr) {
-        if (testType->IsDependentType()) {
+        if (testType->IsDependent()) {
             return this;
         }
 
@@ -2060,13 +2060,13 @@ void ForeachStmt::EmitCodeForXe(FunctionEmitContext *ctx) const {
 Stmt *ForeachStmt::TypeCheck() {
     for (auto expr : startExprs) {
         const Type *t = expr ? expr->GetType() : nullptr;
-        if (t && t->IsDependentType()) {
+        if (t && t->IsDependent()) {
             return this;
         }
     }
     for (auto expr : endExprs) {
         const Type *t = expr ? expr->GetType() : nullptr;
-        if (t && t->IsDependentType()) {
+        if (t && t->IsDependent()) {
             return this;
         }
     }
@@ -2644,7 +2644,7 @@ Stmt *ForeachUniqueStmt::TypeCheck() {
         return nullptr;
     }
 
-    if (type->IsDependentType()) {
+    if (type->IsDependent()) {
         return this;
     }
 
@@ -2944,7 +2944,7 @@ Stmt *SwitchStmt::TypeCheck() {
         return nullptr;
     }
 
-    if (exprType->IsDependentType()) {
+    if (exprType->IsDependent()) {
         return this;
     }
 
@@ -4027,7 +4027,7 @@ void AssertStmt::Print(Indent &indent) const {
 Stmt *AssertStmt::TypeCheck() {
     const Type *type = nullptr;
     if (expr && (type = expr->GetType()) != nullptr) {
-        if (type->IsDependentType()) {
+        if (type->IsDependent()) {
             return this;
         }
         bool isUniform = type->IsUniformType();
@@ -4128,7 +4128,7 @@ Stmt *DeleteStmt::TypeCheck() {
         return nullptr;
     }
 
-    if (exprType->IsDependentType()) {
+    if (exprType->IsDependent()) {
         return this;
     }
 

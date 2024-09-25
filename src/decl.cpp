@@ -742,7 +742,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                 snprintf(buf, sizeof(buf), "__anon_parameter_%d", i);
                 decl->name = buf;
             }
-            if (!decl->type->IsDependentType()) {
+            if (!decl->type->IsTypeDependent()) {
                 decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
             }
 
@@ -830,7 +830,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             return;
         }
 
-        if (!returnType->IsDependentType()) {
+        if (!returnType->IsTypeDependent()) {
             returnType = returnType->ResolveUnboundVariability(Variability::Varying);
         }
 
@@ -970,7 +970,7 @@ std::vector<VariableDeclaration> Declaration::GetVariableDeclarations() const {
         if (decl->type->IsVoidType()) {
             Error(decl->pos, "\"void\" type variable illegal in declaration.");
         } else if (CastType<FunctionType>(decl->type) == nullptr) {
-            if (!decl->type->IsDependentType()) {
+            if (!decl->type->IsTypeDependent()) {
                 decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
             }
             Symbol *sym =

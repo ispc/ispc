@@ -127,7 +127,23 @@ class Type : public Traceable {
     bool IsNumericType() const { return IsFloatType() || IsIntType(); }
 
     /** Returns true if the type is any kind of dependent type. */
-    bool IsDependentType() const;
+    bool IsDependent() const;
+
+    /** This function checks whether the size of the collection (e.g., an array or vector)
+        is influenced by a template parameter, indicating that the count may vary based
+        on the specific instantiation of the template. If the count is fixed and known
+        at compile time, this function will return false.
+        Returns true if the element count is dependent on a template parameter;
+   */
+    bool IsCountDependent() const;
+
+    /** This function determines whether the type's definition relies on a template
+        type parameter, indicating that the type may vary based on the specific
+        instantiation of the template. If the type does not depend on
+        template parameters, this function will return false.
+        Returns true if the type is type dependent (based on template type parameter).
+    */
+    bool IsTypeDependent() const;
 
     /** Returns the variability of the type. */
     virtual Variability GetVariability() const = 0;
