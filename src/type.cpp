@@ -1699,6 +1699,8 @@ llvm::DIType *ArrayType::GetDIType(llvm::DIScope *scope) const {
     return lCreateDIArray(eltType, elementCount.fixedCount);
 }
 
+bool ArrayType::IsUnsized() const { return (elementCount.fixedCount == 0 && elementCount.symbolCount == nullptr); }
+
 ArrayType *ArrayType::GetSizedArray(int sz) const {
     Assert(elementCount.fixedCount == 0);
     return new ArrayType(child, sz);

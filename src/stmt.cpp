@@ -97,7 +97,7 @@ static bool lHasUnsizedArrays(const Type *type) {
         return false;
     }
 
-    if (at->GetElementCount() == 0) {
+    if (at->IsUnsized()) {
         return true;
     } else {
         return lHasUnsizedArrays(at->GetElementType());

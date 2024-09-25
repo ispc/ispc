@@ -696,7 +696,12 @@ class ArrayType : public SequentialType {
 
     int GetElementCount() const;
     const Type *GetElementType() const;
-
+    /* Checks if the array is unsized.
+       An array is considered unsized if its size is not explicitly set
+       as compile-time constant i.e. `fixedCount` is 0 and `symbolCount`
+       is nullptr. Unsized arrays are typically used as functions parameters.
+    */
+    bool IsUnsized() const;
     /** Returns a new array of the same child type, but with the given
         length. */
     virtual ArrayType *GetSizedArray(int length) const;
