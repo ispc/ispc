@@ -99,8 +99,9 @@ using namespace ispc;
 // Strips all non-alphanumeric characters from given string.
 static std::string lSanitize(std::string in) {
     llvm::Regex r("[^[:alnum:]]");
-    while (r.match(in))
+    while (r.match(in)) {
         in = r.sub("", in);
+    }
     return in;
 }
 
@@ -333,8 +334,9 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.initFunctionPassManager();
         optPM.addFunctionPass(ImproveMemoryOpsPass(), 100);
 
-        if (g->opt.disableHandlePseudoMemoryOps == false)
+        if (g->opt.disableHandlePseudoMemoryOps == false) {
             optPM.addFunctionPass(ReplacePseudoMemoryOpsPass());
+        }
 
         optPM.addFunctionPass(IntrinsicsOpt(), 102);
         optPM.addFunctionPass(IsCompileTimeConstantPass(true));

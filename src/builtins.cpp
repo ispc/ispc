@@ -70,76 +70,81 @@ using namespace ispc::builtin;
 
  */
 static const Type *lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
-    if (t == LLVMTypes::VoidType)
+    if (t == LLVMTypes::VoidType) {
         return AtomicType::Void;
+    }
 
     // uniform
-    else if (t == LLVMTypes::BoolType)
+    else if (t == LLVMTypes::BoolType) {
         return AtomicType::UniformBool;
-    else if (t == LLVMTypes::Int8Type)
+    } else if (t == LLVMTypes::Int8Type) {
         return intAsUnsigned ? AtomicType::UniformUInt8 : AtomicType::UniformInt8;
-    else if (t == LLVMTypes::Int16Type)
+    } else if (t == LLVMTypes::Int16Type) {
         return intAsUnsigned ? AtomicType::UniformUInt16 : AtomicType::UniformInt16;
-    else if (t == LLVMTypes::Int32Type)
+    } else if (t == LLVMTypes::Int32Type) {
         return intAsUnsigned ? AtomicType::UniformUInt32 : AtomicType::UniformInt32;
-    else if (t == LLVMTypes::Float16Type)
+    } else if (t == LLVMTypes::Float16Type) {
         return AtomicType::UniformFloat16;
-    else if (t == LLVMTypes::FloatType)
+    } else if (t == LLVMTypes::FloatType) {
         return AtomicType::UniformFloat;
-    else if (t == LLVMTypes::DoubleType)
+    } else if (t == LLVMTypes::DoubleType) {
         return AtomicType::UniformDouble;
-    else if (t == LLVMTypes::Int64Type)
+    } else if (t == LLVMTypes::Int64Type) {
         return intAsUnsigned ? AtomicType::UniformUInt64 : AtomicType::UniformInt64;
+    }
 
     // varying
-    if (t == LLVMTypes::Int8VectorType)
+    if (t == LLVMTypes::Int8VectorType) {
         return intAsUnsigned ? AtomicType::VaryingUInt8 : AtomicType::VaryingInt8;
-    else if (t == LLVMTypes::Int16VectorType)
+    } else if (t == LLVMTypes::Int16VectorType) {
         return intAsUnsigned ? AtomicType::VaryingUInt16 : AtomicType::VaryingInt16;
-    else if (t == LLVMTypes::Int32VectorType)
+    } else if (t == LLVMTypes::Int32VectorType) {
         return intAsUnsigned ? AtomicType::VaryingUInt32 : AtomicType::VaryingInt32;
-    else if (t == LLVMTypes::Float16VectorType)
+    } else if (t == LLVMTypes::Float16VectorType) {
         return AtomicType::VaryingFloat16;
-    else if (t == LLVMTypes::FloatVectorType)
+    } else if (t == LLVMTypes::FloatVectorType) {
         return AtomicType::VaryingFloat;
-    else if (t == LLVMTypes::DoubleVectorType)
+    } else if (t == LLVMTypes::DoubleVectorType) {
         return AtomicType::VaryingDouble;
-    else if (t == LLVMTypes::Int64VectorType)
+    } else if (t == LLVMTypes::Int64VectorType) {
         return intAsUnsigned ? AtomicType::VaryingUInt64 : AtomicType::VaryingInt64;
-    else if (t == LLVMTypes::MaskType)
+    } else if (t == LLVMTypes::MaskType) {
         return AtomicType::VaryingBool;
+    }
 
     // pointers to uniform
-    else if (t == LLVMTypes::Int8PointerType)
+    else if (t == LLVMTypes::Int8PointerType) {
         return PointerType::GetUniform(intAsUnsigned ? AtomicType::UniformUInt8 : AtomicType::UniformInt8);
-    else if (t == LLVMTypes::Int16PointerType)
+    } else if (t == LLVMTypes::Int16PointerType) {
         return PointerType::GetUniform(intAsUnsigned ? AtomicType::UniformUInt16 : AtomicType::UniformInt16);
-    else if (t == LLVMTypes::Int32PointerType)
+    } else if (t == LLVMTypes::Int32PointerType) {
         return PointerType::GetUniform(intAsUnsigned ? AtomicType::UniformUInt32 : AtomicType::UniformInt32);
-    else if (t == LLVMTypes::Int64PointerType)
+    } else if (t == LLVMTypes::Int64PointerType) {
         return PointerType::GetUniform(intAsUnsigned ? AtomicType::UniformUInt64 : AtomicType::UniformInt64);
-    else if (t == LLVMTypes::Float16PointerType)
+    } else if (t == LLVMTypes::Float16PointerType) {
         return PointerType::GetUniform(AtomicType::UniformFloat16);
-    else if (t == LLVMTypes::FloatPointerType)
+    } else if (t == LLVMTypes::FloatPointerType) {
         return PointerType::GetUniform(AtomicType::UniformFloat);
-    else if (t == LLVMTypes::DoublePointerType)
+    } else if (t == LLVMTypes::DoublePointerType) {
         return PointerType::GetUniform(AtomicType::UniformDouble);
+    }
 
     // pointers to varying
-    else if (t == LLVMTypes::Int8VectorPointerType)
+    else if (t == LLVMTypes::Int8VectorPointerType) {
         return PointerType::GetUniform(intAsUnsigned ? AtomicType::VaryingUInt8 : AtomicType::VaryingInt8);
-    else if (t == LLVMTypes::Int16VectorPointerType)
+    } else if (t == LLVMTypes::Int16VectorPointerType) {
         return PointerType::GetUniform(intAsUnsigned ? AtomicType::VaryingUInt16 : AtomicType::VaryingInt16);
-    else if (t == LLVMTypes::Int32VectorPointerType)
+    } else if (t == LLVMTypes::Int32VectorPointerType) {
         return PointerType::GetUniform(intAsUnsigned ? AtomicType::VaryingUInt32 : AtomicType::VaryingInt32);
-    else if (t == LLVMTypes::Int64VectorPointerType)
+    } else if (t == LLVMTypes::Int64VectorPointerType) {
         return PointerType::GetUniform(intAsUnsigned ? AtomicType::VaryingUInt64 : AtomicType::VaryingInt64);
-    else if (t == LLVMTypes::Float16VectorPointerType)
+    } else if (t == LLVMTypes::Float16VectorPointerType) {
         return PointerType::GetUniform(AtomicType::VaryingFloat16);
-    else if (t == LLVMTypes::FloatVectorPointerType)
+    } else if (t == LLVMTypes::FloatVectorPointerType) {
         return PointerType::GetUniform(AtomicType::VaryingFloat);
-    else if (t == LLVMTypes::DoubleVectorPointerType)
+    } else if (t == LLVMTypes::DoubleVectorPointerType) {
         return PointerType::GetUniform(AtomicType::VaryingDouble);
+    }
 
     return nullptr;
 }
@@ -193,8 +198,9 @@ static void lCheckModuleIntrinsics(llvm::Module *module) {
     llvm::Module::iterator iter;
     for (iter = module->begin(); iter != module->end(); ++iter) {
         llvm::Function *func = &*iter;
-        if (!func->isIntrinsic())
+        if (!func->isIntrinsic()) {
             continue;
+        }
 
         const std::string funcName = func->getName().str();
         const std::string llvm_x86 = "llvm.x86.";
@@ -274,8 +280,9 @@ void lAddBitcodeToModule(llvm::Module *bcModule, llvm::Module *module) {
         for (llvm::Function &f : *bcModule) {
             if (f.isDeclaration()) {
                 // Declarations with uses will be moved by Linker.
-                if (f.getNumUses() > 0)
+                if (f.getNumUses() > 0) {
                     continue;
+                }
                 // Declarations with 0 uses are moved by hands.
                 module->getOrInsertFunction(f.getName(), f.getFunctionType(), f.getAttributes());
             }

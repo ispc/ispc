@@ -56,8 +56,9 @@ bool IntrinsicsOpt::optimizeIntrinsics(llvm::BasicBlock &bb) {
     for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e;) {
         llvm::BasicBlock::iterator curIter = iter++;
         llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*(curIter));
-        if (callInst == nullptr || callInst->getCalledFunction() == nullptr)
+        if (callInst == nullptr || callInst->getCalledFunction() == nullptr) {
             continue;
+        }
 
         BlendInstruction *blend = matchingBlendInstruction(callInst->getCalledFunction());
         if (blend != nullptr) {
@@ -137,10 +138,11 @@ bool IntrinsicsOpt::optimizeIntrinsics(llvm::BasicBlock &bb) {
                                           llvm::Twine(callInst->getArgOperand(0)->getName()) + "_cast", callInst);
                 LLVMCopyMetadata(castPtr, callInst);
                 int align = 0;
-                if (g->opt.forceAlignedMemory)
+                if (g->opt.forceAlignedMemory) {
                     align = g->target->getNativeVectorAlignment();
-                else
+                } else {
                     align = callInst->getCalledFunction() == avxMaskedLoad32 ? 4 : 8;
+                }
                 llvm::Instruction *loadInst = new llvm::LoadInst(
                     returnType, castPtr, llvm::Twine(callInst->getArgOperand(0)->getName()) + "_load",
                     false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(), (llvm::Instruction *)nullptr);
@@ -169,10 +171,11 @@ bool IntrinsicsOpt::optimizeIntrinsics(llvm::BasicBlock &bb) {
                 LLVMCopyMetadata(castPtr, callInst);
 
                 int align = 0;
-                if (g->opt.forceAlignedMemory)
+                if (g->opt.forceAlignedMemory) {
                     align = g->target->getNativeVectorAlignment();
-                else
+                } else {
                     align = callInst->getCalledFunction() == avxMaskedStore32 ? 4 : 8;
+                }
                 llvm::StoreInst *storeInst = new llvm::StoreInst(rvalue, castPtr, (llvm::Instruction *)nullptr,
                                                                  llvm::MaybeAlign(align).valueOrOne());
                 LLVMCopyMetadata(storeInst, callInst);

@@ -26,18 +26,21 @@ bool IsCompileTimeConstantPass::lowerCompileTimeConstant(llvm::BasicBlock &bb) {
         // Iterate through the instructions looking for calls to the
         // __is_compile_time_constant_*() functions
         llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*(curIter));
-        if (callInst == nullptr)
+        if (callInst == nullptr) {
             continue;
+        }
 
         int j = 0;
         int nFuncs = sizeof(funcs) / sizeof(funcs[0]);
         for (j = 0; j < nFuncs; ++j) {
-            if (funcs[j] != nullptr && callInst->getCalledFunction() == funcs[j])
+            if (funcs[j] != nullptr && callInst->getCalledFunction() == funcs[j]) {
                 break;
+            }
         }
-        if (j == nFuncs)
+        if (j == nFuncs) {
             // not a __is_compile_time_constant_* function
             continue;
+        }
 
         // This optimization pass can be disabled with both the (poorly
         // named) disableGatherScatterFlattening option and

@@ -47,8 +47,9 @@ static llvm::Value *lCheckForActualPointer(llvm::Value *v) {
         }
     } else {
         llvm::ConstantExpr *uce = llvm::dyn_cast<llvm::ConstantExpr>(v);
-        if (uce != nullptr && uce->getOpcode() == llvm::Instruction::PtrToInt)
+        if (uce != nullptr && uce->getOpcode() == llvm::Instruction::PtrToInt) {
             return v;
+        }
         return nullptr;
     }
 }
@@ -101,14 +102,16 @@ static llvm::Value *lGetBasePointer(llvm::Value *v, llvm::Instruction *insertBef
     the offset; if so return the base and the offset. */
 static llvm::Constant *lGetConstantAddExprBaseOffset(llvm::Constant *op0, llvm::Constant *op1, llvm::Constant **delta) {
     llvm::ConstantExpr *op = llvm::dyn_cast<llvm::ConstantExpr>(op0);
-    if (op == nullptr || op->getOpcode() != llvm::Instruction::PtrToInt)
+    if (op == nullptr || op->getOpcode() != llvm::Instruction::PtrToInt) {
         // the first operand isn't a pointer
         return nullptr;
+    }
 
     llvm::ConstantInt *opDelta = llvm::dyn_cast<llvm::ConstantInt>(op1);
-    if (opDelta == nullptr)
+    if (opDelta == nullptr) {
         // the second operand isn't an integer operand
         return nullptr;
+    }
 
     *delta = opDelta;
     return op0;
@@ -116,14 +119,16 @@ static llvm::Constant *lGetConstantAddExprBaseOffset(llvm::Constant *op0, llvm::
 
 static llvm::Value *lExtractFromInserts(llvm::Value *v, unsigned int index) {
     llvm::InsertValueInst *iv = llvm::dyn_cast<llvm::InsertValueInst>(v);
-    if (iv == nullptr)
+    if (iv == nullptr) {
         return nullptr;
+    }
 
     Assert(iv->hasIndices() && iv->getNumIndices() == 1);
-    if (iv->getIndices()[0] == index)
+    if (iv->getIndices()[0] == index) {
         return iv->getInsertedValueOperand();
-    else
+    } else {
         return lExtractFromInserts(iv->getAggregateOperand(), index);
+    }
 }
 
 /** Given a varying pointer in ptrs, this function checks to see if it can
@@ -152,10 +157,11 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
     if (base != nullptr) {
         // We have a straight up varying pointer with no indexing that's
         // actually all the same value.
-        if (g->target->is32Bit())
+        if (g->target->is32Bit()) {
             *offsets = LLVMInt32Vector(0);
-        else
+        } else {
             *offsets = LLVMInt64Vector((int64_t)0);
+        }
 
         if (broadcastDetected) {
             llvm::Value *op = shuffle->getOperand(0);
@@ -227,8 +233,9 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
         llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
         for (int i = 0; i < (int)cv->getNumOperands(); ++i) {
             llvm::Constant *c = llvm::dyn_cast<llvm::Constant>(cv->getOperand(i));
-            if (c == nullptr)
+            if (c == nullptr) {
                 return nullptr;
+            }
             elements.push_back(c);
         }
 
@@ -237,8 +244,9 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
             // For each element, try to decompose it into either a straight
             // up base pointer, or a base pointer plus an integer value.
             llvm::ConstantExpr *ce = llvm::dyn_cast<llvm::ConstantExpr>(elements[i]);
-            if (ce == nullptr)
+            if (ce == nullptr) {
                 return nullptr;
+            }
 
             delta[i] = nullptr;
             llvm::Value *elementBase = nullptr; // base pointer for this element
@@ -251,24 +259,27 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
                 // Try both orderings of the operands to see if we can get
                 // a pointer+offset out of them.
                 elementBase = lGetConstantAddExprBaseOffset(ce->getOperand(0), ce->getOperand(1), &delta[i]);
-                if (elementBase == nullptr)
+                if (elementBase == nullptr) {
                     elementBase = lGetConstantAddExprBaseOffset(ce->getOperand(1), ce->getOperand(0), &delta[i]);
+                }
             }
 
             // We weren't able to find a base pointer in the above.  (We
             // don't expect this to happen; if it does, it may be necessary
             // to handle more cases in the decomposition above.)
-            if (elementBase == nullptr)
+            if (elementBase == nullptr) {
                 return nullptr;
+            }
 
             Assert(delta[i] != nullptr);
-            if (base == nullptr)
+            if (base == nullptr) {
                 // The first time we've found a base pointer
                 base = elementBase;
-            else if (base != elementBase)
+            } else if (base != elementBase) {
                 // Different program instances have different base
                 // pointers, so no luck.
                 return nullptr;
+            }
         }
 
         Assert(base != nullptr);
@@ -282,8 +293,9 @@ static llvm::Value *lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offse
         Assert(ev->getNumIndices() == 1);
         int index = ev->getIndices()[0];
         ptrs = lExtractFromInserts(ev->getAggregateOperand(), index);
-        if (ptrs != nullptr)
+        if (ptrs != nullptr) {
             return lGetBasePtrAndOffsets(ptrs, offsets, insertBefore);
+        }
     }
 
     return nullptr;
@@ -317,16 +329,18 @@ static void lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset, 
         lExtractConstantOffset(cast->getOperand(0), &co, &vo, insertBefore);
 
         // make new cast instructions for the two parts
-        if (co == nullptr)
+        if (co == nullptr) {
             *constOffset = nullptr;
-        else
+        } else {
             *constOffset = llvm::CastInst::Create(cast->getOpcode(), co, cast->getType(),
                                                   llvm::Twine(co->getName()) + "_cast", insertBefore);
-        if (vo == nullptr)
+        }
+        if (vo == nullptr) {
             *variableOffset = nullptr;
-        else
+        } else {
             *variableOffset = llvm::CastInst::Create(cast->getOpcode(), vo, cast->getType(),
                                                      llvm::Twine(vo->getName()) + "_cast", insertBefore);
+        }
         return;
     }
 
@@ -340,23 +354,25 @@ static void lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset, 
             lExtractConstantOffset(op0, &c0, &v0, insertBefore);
             lExtractConstantOffset(op1, &c1, &v1, insertBefore);
 
-            if (c0 == nullptr || llvm::isa<llvm::ConstantAggregateZero>(c0))
+            if (c0 == nullptr || llvm::isa<llvm::ConstantAggregateZero>(c0)) {
                 *constOffset = c1;
-            else if (c1 == nullptr || llvm::isa<llvm::ConstantAggregateZero>(c1))
+            } else if (c1 == nullptr || llvm::isa<llvm::ConstantAggregateZero>(c1)) {
                 *constOffset = c0;
-            else
+            } else {
                 *constOffset = llvm::BinaryOperator::Create(
                     llvm::Instruction::Add, c0, c1, ((llvm::Twine("add_") + c0->getName()) + "_") + c1->getName(),
                     insertBefore);
+            }
 
-            if (v0 == nullptr || llvm::isa<llvm::ConstantAggregateZero>(v0))
+            if (v0 == nullptr || llvm::isa<llvm::ConstantAggregateZero>(v0)) {
                 *variableOffset = v1;
-            else if (v1 == nullptr || llvm::isa<llvm::ConstantAggregateZero>(v1))
+            } else if (v1 == nullptr || llvm::isa<llvm::ConstantAggregateZero>(v1)) {
                 *variableOffset = v0;
-            else
+            } else {
                 *variableOffset = llvm::BinaryOperator::Create(
                     llvm::Instruction::Add, v0, v1, ((llvm::Twine("add_") + v0->getName()) + "_") + v1->getName(),
                     insertBefore);
+            }
             return;
         } else if (bop->getOpcode() == llvm::Instruction::Shl) {
             lExtractConstantOffset(op0, &c0, &v0, insertBefore);
@@ -388,45 +404,51 @@ static void lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset, 
             // (c0 + v0) * (c1 + v1) == (c0 c1) + (v0 c1 + c0 v1 + v0 v1)
             // Note that the first term is a constant and the last three are
             // variable.
-            if (c0 != nullptr && c1 != nullptr)
+            if (c0 != nullptr && c1 != nullptr) {
                 *constOffset = llvm::BinaryOperator::Create(
                     llvm::Instruction::Mul, c0, c1, ((llvm::Twine("mul_") + c0->getName()) + "_") + c1->getName(),
                     insertBefore);
-            else
+            } else {
                 *constOffset = nullptr;
+            }
 
             llvm::Value *va = nullptr, *vb = nullptr, *vc = nullptr;
-            if (v0 != nullptr && c1 != nullptr)
+            if (v0 != nullptr && c1 != nullptr) {
                 va = llvm::BinaryOperator::Create(llvm::Instruction::Mul, v0, c1,
                                                   ((llvm::Twine("mul_") + v0->getName()) + "_") + c1->getName(),
                                                   insertBefore);
-            if (c0 != nullptr && v1 != nullptr)
+            }
+            if (c0 != nullptr && v1 != nullptr) {
                 vb = llvm::BinaryOperator::Create(llvm::Instruction::Mul, c0, v1,
                                                   ((llvm::Twine("mul_") + c0->getName()) + "_") + v1->getName(),
                                                   insertBefore);
-            if (v0 != nullptr && v1 != nullptr)
+            }
+            if (v0 != nullptr && v1 != nullptr) {
                 vc = llvm::BinaryOperator::Create(llvm::Instruction::Mul, v0, v1,
                                                   ((llvm::Twine("mul_") + v0->getName()) + "_") + v1->getName(),
                                                   insertBefore);
+            }
 
             llvm::Value *vab = nullptr;
-            if (va != nullptr && vb != nullptr)
+            if (va != nullptr && vb != nullptr) {
                 vab = llvm::BinaryOperator::Create(llvm::Instruction::Add, va, vb,
                                                    ((llvm::Twine("add_") + va->getName()) + "_") + vb->getName(),
                                                    insertBefore);
-            else if (va != nullptr)
+            } else if (va != nullptr) {
                 vab = va;
-            else
+            } else {
                 vab = vb;
+            }
 
-            if (vab != nullptr && vc != nullptr)
+            if (vab != nullptr && vc != nullptr) {
                 *variableOffset = llvm::BinaryOperator::Create(
                     llvm::Instruction::Add, vab, vc, ((llvm::Twine("add_") + vab->getName()) + "_") + vc->getName(),
                     insertBefore);
-            else if (vab != nullptr)
+            } else if (vab != nullptr) {
                 *variableOffset = vab;
-            else
+            } else {
                 *variableOffset = vc;
+            }
 
             return;
         }
@@ -442,16 +464,19 @@ static void lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset, 
    *splat, if so). */
 static bool lIsIntegerSplat(llvm::Value *v, int *splat) {
     llvm::ConstantDataVector *cvec = llvm::dyn_cast<llvm::ConstantDataVector>(v);
-    if (cvec == nullptr)
+    if (cvec == nullptr) {
         return false;
+    }
 
     llvm::Constant *splatConst = cvec->getSplatValue();
-    if (splatConst == nullptr)
+    if (splatConst == nullptr) {
         return false;
+    }
 
     llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(splatConst);
-    if (ci == nullptr)
+    if (ci == nullptr) {
         return false;
+    }
 
     int64_t splatVal = ci->getSExtValue();
     *splat = (int)splatVal;
@@ -506,8 +531,9 @@ static llvm::Value *lExtractOffsetVector248Scale(llvm::Value **vec) {
         llvm::Value *castOp = cast->getOperand(0);
         // Check the cast target.
         llvm::Value *scale = lExtractOffsetVector248Scale(&castOp);
-        if (scale == nullptr)
+        if (scale == nullptr) {
             return nullptr;
+        }
 
         // make a new cast instruction so that we end up with the right
         // type
@@ -517,8 +543,9 @@ static llvm::Value *lExtractOffsetVector248Scale(llvm::Value **vec) {
 
     // If we don't have a binary operator, then just give up
     llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(*vec);
-    if (bop == nullptr)
+    if (bop == nullptr) {
         return LLVMInt32(1);
+    }
 
     llvm::Value *op0 = bop->getOperand(0), *op1 = bop->getOperand(1);
     if ((bop->getOpcode() == llvm::Instruction::Add) || IsOrEquivalentToAdd(bop)) {
@@ -534,31 +561,37 @@ static llvm::Value *lExtractOffsetVector248Scale(llvm::Value **vec) {
             if (s0 == s1) {
                 *vec = llvm::BinaryOperator::Create(llvm::Instruction::Add, op0, op1, "new_add", bop);
                 return s0;
-            } else
+            } else {
                 return LLVMInt32(1);
+            }
         }
     } else if (bop->getOpcode() == llvm::Instruction::Mul) {
         // Check each operand for being one of the scale factors we care about.
         int splat = 0;
-        if (lIsIntegerSplat(op0, &splat))
+        if (lIsIntegerSplat(op0, &splat)) {
             return lExtract248Scale(op0, splat, op1, vec);
-        else if (lIsIntegerSplat(op1, &splat))
+        } else if (lIsIntegerSplat(op1, &splat)) {
             return lExtract248Scale(op1, splat, op0, vec);
-        else
+        } else {
             return LLVMInt32(1);
-    } else
+        }
+    } else {
         return LLVMInt32(1);
+    }
 }
 
 static bool lVectorIs32BitInts(llvm::Value *v) {
     int nElts = 0;
     int64_t elts[ISPC_MAX_NVEC];
-    if (!LLVMExtractVectorInts(v, elts, &nElts))
+    if (!LLVMExtractVectorInts(v, elts, &nElts)) {
         return false;
+    }
 
-    for (int i = 0; i < nElts; ++i)
-        if ((int32_t)elts[i] != elts[i])
+    for (int i = 0; i < nElts; ++i) {
+        if ((int32_t)elts[i] != elts[i]) {
             return false;
+        }
+    }
 
     return true;
 }
@@ -573,17 +606,18 @@ static bool lOffsets32BitSafe(llvm::Value **variableOffsetPtr, llvm::Value **con
 
     if (variableOffset->getType() != LLVMTypes::Int32VectorType) {
         llvm::SExtInst *sext = llvm::dyn_cast<llvm::SExtInst>(variableOffset);
-        if (sext != nullptr && sext->getOperand(0)->getType() == LLVMTypes::Int32VectorType)
+        if (sext != nullptr && sext->getOperand(0)->getType() == LLVMTypes::Int32VectorType) {
             // sext of a 32-bit vector -> the 32-bit vector is good
             variableOffset = sext->getOperand(0);
-        else if (lVectorIs32BitInts(variableOffset))
+        } else if (lVectorIs32BitInts(variableOffset)) {
             // The only constant vector we should have here is a vector of
             // all zeros (i.e. a ConstantAggregateZero, but just in case,
             // do the more general check with lVectorIs32BitInts().
             variableOffset = new llvm::TruncInst(variableOffset, LLVMTypes::Int32VectorType,
                                                  llvm::Twine(variableOffset->getName()) + "_trunc", insertBefore);
-        else
+        } else {
             return false;
+        }
     }
 
     if (constOffset->getType() != LLVMTypes::Int32VectorType) {
@@ -625,8 +659,9 @@ static bool lIs32BitSafeHelper(llvm::Value *v) {
         return false;
     } else if (llvm::SExtInst *sext = llvm::dyn_cast<llvm::SExtInst>(v)) {
         return sext->getOperand(0)->getType() == LLVMTypes::Int32VectorType;
-    } else
+    } else {
         return lVectorIs32BitInts(v);
+    }
 }
 
 /** Check to see if the single offset vector can safely be represented with
@@ -635,8 +670,9 @@ static bool lIs32BitSafeHelper(llvm::Value *v) {
 static bool lOffsets32BitSafe(llvm::Value **offsetPtr, llvm::Instruction *insertBefore) {
     llvm::Value *offset = *offsetPtr;
 
-    if (offset->getType() == LLVMTypes::Int32VectorType)
+    if (offset->getType() == LLVMTypes::Int32VectorType) {
         return true;
+    }
 
     llvm::SExtInst *sext = llvm::dyn_cast<llvm::SExtInst>(offset);
     if (sext != nullptr && sext->getOperand(0)->getType() == LLVMTypes::Int32VectorType) {
@@ -653,8 +689,9 @@ static bool lOffsets32BitSafe(llvm::Value **offsetPtr, llvm::Instruction *insert
         *offsetPtr = new llvm::TruncInst(offset, LLVMTypes::Int32VectorType, llvm::Twine(offset->getName()) + "_trunc",
                                          insertBefore);
         return true;
-    } else
+    } else {
         return false;
+    }
 }
 
 // Contains a function call substitution info for gather/scatter/prefetch calls.
@@ -879,10 +916,12 @@ static llvm::CallInst *lGSToGSBaseOffsets(llvm::CallInst *callInst) {
         llvm::Value *constOffset = nullptr;
         llvm::Value *variableOffset = nullptr;
         lExtractConstantOffset(offsetVector, &constOffset, &variableOffset, callInst);
-        if (constOffset == nullptr)
+        if (constOffset == nullptr) {
             constOffset = LLVMIntAsType(0, offsetVector->getType());
-        if (variableOffset == nullptr)
+        }
+        if (variableOffset == nullptr) {
             variableOffset = LLVMIntAsType(0, offsetVector->getType());
+        }
 
         // See if the varying component is scaled by 2, 4, or 8.  If so,
         // extract that scale factor and rewrite variableOffset to remove
@@ -1022,8 +1061,9 @@ static llvm::CallInst *lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
 
     // If it's zero, we're done.  Don't go and think that we're clever by
     // adding these zeros to the constant offsets.
-    if (llvm::isa<llvm::ConstantAggregateZero>(origVariableOffset))
+    if (llvm::isa<llvm::ConstantAggregateZero>(origVariableOffset)) {
         return nullptr;
+    }
 
     // Try to decompose the old variable offset
     llvm::Value *constOffset = nullptr;
@@ -1031,12 +1071,14 @@ static llvm::CallInst *lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
     lExtractConstantOffset(origVariableOffset, &constOffset, &variableOffset, callInst);
 
     // No luck
-    if (constOffset == nullptr)
+    if (constOffset == nullptr) {
         return nullptr;
+    }
 
     // Total luck: everything could be moved to the constant offset
-    if (variableOffset == nullptr)
+    if (variableOffset == nullptr) {
         variableOffset = LLVMIntAsType(0, origVariableOffset->getType());
+    }
 
     // We need to scale the value we add to the constant offset by the
     // 2/4/8 scale for the variable offset, if present.
@@ -1044,10 +1086,11 @@ static llvm::CallInst *lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
     Assert(varScale != nullptr);
 
     llvm::Value *scaleSmear = nullptr;
-    if (origVariableOffset->getType() == LLVMTypes::Int64VectorType)
+    if (origVariableOffset->getType() == LLVMTypes::Int64VectorType) {
         scaleSmear = LLVMInt64Vector((int64_t)varScale->getZExtValue());
-    else
+    } else {
         scaleSmear = LLVMInt32Vector((int32_t)varScale->getZExtValue());
+    }
 
     constOffset =
         llvm::BinaryOperator::Create(llvm::Instruction::Mul, constOffset, scaleSmear, constOffset->getName(), callInst);
@@ -1079,9 +1122,9 @@ static llvm::Constant *lGetOffsetScaleVec(llvm::Value *offsetScale, llvm::Type *
 
     std::vector<llvm::Constant *> scales;
     for (int i = 0; i < g->target->getVectorWidth(); ++i) {
-        if (vecType == LLVMTypes::Int64VectorType)
+        if (vecType == LLVMTypes::Int64VectorType) {
             scales.push_back(LLVMInt64(scaleValue));
-        else {
+        } else {
             Assert(vecType == LLVMTypes::Int32VectorType);
             scales.push_back(LLVMInt32((int32_t)scaleValue));
         }
@@ -1262,8 +1305,9 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
         scatterInfo = itS->second;
     }
 
-    if (gatherInfo == nullptr && scatterInfo == nullptr)
+    if (gatherInfo == nullptr && scatterInfo == nullptr) {
         return nullptr;
+    }
 
     SourcePos pos;
     LLVMGetSourcePosFromMetadata(callInst, &pos);
@@ -1276,8 +1320,9 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
         llvm::Value *varyingOffsets = callInst->getArgOperand(1);
         llvm::Value *offsetScale = callInst->getArgOperand(2);
         llvm::Value *constOffsets = callInst->getArgOperand(3);
-        if (scatterInfo)
+        if (scatterInfo) {
             storeValue = callInst->getArgOperand(4);
+        }
         mask = callInst->getArgOperand((gatherInfo != nullptr) ? 4 : 5);
 
         // Compute the full offset vector: offsetScale * varyingOffsets + constOffsets
@@ -1288,8 +1333,9 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
         fullOffsets = llvm::BinaryOperator::Create(llvm::Instruction::Add, scaledVarying, constOffsets,
                                                    "varying+const_offsets", callInst);
     } else {
-        if (scatterInfo)
+        if (scatterInfo) {
             storeValue = callInst->getArgOperand(3);
+        }
         mask = callInst->getArgOperand((gatherInfo != nullptr) ? 3 : 4);
 
         llvm::Value *offsetScale = callInst->getArgOperand(1);
@@ -1341,9 +1387,10 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
             // A scatter with everyone going to the same location is
             // undefined (if there's more than one program instance in
             // the gang).  Issue a warning.
-            if (g->target->getVectorWidth() > 1)
+            if (g->target->getVectorWidth() > 1) {
                 Warning(pos, "Undefined behavior: all program instances are "
                              "writing to the same location!");
+            }
 
             // We could do something similar to the gather case, where
             // we arbitrarily write one of the values, but we need to

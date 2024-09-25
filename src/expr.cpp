@@ -108,28 +108,33 @@ static Expr *lArrayToPointer(Expr *expr) {
 
 static bool lIsAllIntZeros(Expr *expr) {
     const Type *type = expr->GetType();
-    if (type == nullptr || type->IsIntType() == false)
+    if (type == nullptr || type->IsIntType() == false) {
         return false;
+    }
 
     ConstExpr *ce = llvm::dyn_cast<ConstExpr>(expr);
-    if (ce == nullptr)
+    if (ce == nullptr) {
         return false;
+    }
 
     uint64_t vals[ISPC_MAX_NVEC];
     int count = ce->GetValues(vals);
-    if (count == 1)
+    if (count == 1) {
         return (vals[0] == 0);
-    else {
-        for (int i = 0; i < count; ++i)
-            if (vals[i] != 0)
+    } else {
+        for (int i = 0; i < count; ++i) {
+            if (vals[i] != 0) {
                 return false;
+            }
+        }
     }
     return true;
 }
 
 static bool lTypeCastOk(Expr **expr, const Type *toType, SourcePos pos) {
-    if (expr != nullptr)
+    if (expr != nullptr) {
         *expr = new TypeCastExpr(toType, *expr, pos);
+    }
     return true;
 }
 
@@ -139,22 +144,26 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
        always this messy, or can this be cleaned up somehow? */
     AssertPos(pos, failureOk || errorMsgBase != nullptr);
 
-    if (toType == nullptr || fromType == nullptr)
+    if (toType == nullptr || fromType == nullptr) {
         return false;
+    }
 
     // The types are equal; there's nothing to do
-    if (Type::Equal(toType, fromType))
+    if (Type::Equal(toType, fromType)) {
         return true;
+    }
 
     if (fromType->IsVoidType()) {
-        if (!failureOk)
+        if (!failureOk) {
             Error(pos, "Can't convert from \"void\" to \"%s\" for %s.", toType->GetString().c_str(), errorMsgBase);
+        }
         return false;
     }
 
     if (toType->IsVoidType()) {
-        if (!failureOk)
+        if (!failureOk) {
             Error(pos, "Can't convert type \"%s\" to \"void\" for %s.", fromType->GetString().c_str(), errorMsgBase);
+        }
         return false;
     }
 
@@ -167,32 +176,36 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
                     *expr = aoe;
                     return true;
                 }
-            } else
+            } else {
                 return lDoTypeConv(PointerType::GetUniform(fromType), toType, nullptr, failureOk, errorMsgBase, pos);
+            }
         } else {
-            if (!failureOk)
+            if (!failureOk) {
                 Error(pos, "Can't convert function type \"%s\" to \"%s\" for %s.", fromType->GetString().c_str(),
                       toType->GetString().c_str(), errorMsgBase);
+            }
             return false;
         }
     }
     if (CastType<FunctionType>(toType)) {
-        if (!failureOk)
+        if (!failureOk) {
             Error(pos,
                   "Can't convert from type \"%s\" to function type \"%s\" "
                   "for %s.",
                   fromType->GetString().c_str(), toType->GetString().c_str(), errorMsgBase);
+        }
         return false;
     }
 
     if ((toType->GetSOAWidth() > 0 || fromType->GetSOAWidth() > 0) &&
         Type::Equal(toType->GetAsUniformType(), fromType->GetAsUniformType()) &&
         toType->GetSOAWidth() != fromType->GetSOAWidth()) {
-        if (!failureOk)
+        if (!failureOk) {
             Error(pos,
                   "Can't convert between types \"%s\" and \"%s\" with "
                   "different SOA widths for %s.",
                   fromType->GetString().c_str(), toType->GetString().c_str(), errorMsgBase);
+        }
         return false;
     }
 
@@ -217,31 +230,35 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
     if (fromArrayType != nullptr && toPointerType != nullptr) {
         // can convert any array to a void pointer (both uniform and
         // varying).
-        if (PointerType::IsVoidPointer(toPointerType))
+        if (PointerType::IsVoidPointer(toPointerType)) {
             return lTypeCastOk(expr, toType, pos);
+        }
 
         // array to pointer to array element type
         const Type *eltType = fromArrayType->GetElementType();
-        if (toPointerType->GetBaseType()->IsConstType())
+        if (toPointerType->GetBaseType()->IsConstType()) {
             eltType = eltType->GetAsConstType();
+        }
 
         PointerType pt(eltType, toPointerType->GetVariability(), toPointerType->IsConstType());
-        if (Type::Equal(toPointerType, &pt))
+        if (Type::Equal(toPointerType, &pt)) {
             return lTypeCastOk(expr, toType, pos);
-        else {
-            if (!failureOk)
+        } else {
+            if (!failureOk) {
                 Error(pos,
                       "Can't convert from incompatible array type \"%s\" "
                       "to pointer type \"%s\" for %s.",
                       fromType->GetString().c_str(), toType->GetString().c_str(), errorMsgBase);
+            }
             return false;
         }
     }
 
     if (toType->IsUniformType() && fromType->IsVaryingType()) {
-        if (!failureOk)
+        if (!failureOk) {
             Error(pos, "Can't convert from type \"%s\" to type \"%s\" for %s.", fromType->GetString().c_str(),
                   toType->GetString().c_str(), errorMsgBase);
+        }
         return false;
     }
 
@@ -249,11 +266,12 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
         if (Type::Equal(fromReferenceType->GetReferenceTarget(), toReferenceType->GetReferenceTarget()) &&
             fromReferenceType->GetAddressSpace() != toReferenceType->GetAddressSpace()) {
 
-            if (!failureOk)
+            if (!failureOk) {
                 Error(pos,
                       "Can't convert from reference type \"%s\" to "
                       "incompatible reference type \"%s\" for %s.",
                       fromReferenceType->GetString().c_str(), toReferenceType->GetString().c_str(), errorMsgBase);
+            }
             return false;
         }
     }
@@ -262,43 +280,48 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
         if (Type::Equal(fromPointerType->GetBaseType(), toPointerType->GetBaseType()) &&
             fromPointerType->GetAddressSpace() != toPointerType->GetAddressSpace()) {
 
-            if (!failureOk)
+            if (!failureOk) {
                 Error(pos,
                       "Can't convert between pointer types with different "
                       "address spaces \"%s\" and \"%s\" for %s.",
                       fromPointerType->GetString().c_str(), toPointerType->GetString().c_str(), errorMsgBase);
+            }
             return false;
         }
     }
 
     if (fromPointerType != nullptr) {
-        if (CastType<AtomicType>(toType) != nullptr && toType->IsBoolType())
+        if (CastType<AtomicType>(toType) != nullptr && toType->IsBoolType()) {
             // Allow implicit conversion of pointers to bools
             return lTypeCastOk(expr, toType, pos);
+        }
 
         if (toArrayType != nullptr && Type::Equal(fromType->GetBaseType(), toArrayType->GetElementType())) {
             // Can convert pointers to arrays of the same type
             return lTypeCastOk(expr, toType, pos);
         }
         if (toPointerType == nullptr) {
-            if (!failureOk)
+            if (!failureOk) {
                 Error(pos,
                       "Can't convert between from pointer type "
                       "\"%s\" to non-pointer type \"%s\" for %s.",
                       fromType->GetString().c_str(), toType->GetString().c_str(), errorMsgBase);
+            }
             return false;
         } else if (fromPointerType->IsSlice() == true && toPointerType->IsSlice() == false) {
-            if (!failureOk)
+            if (!failureOk) {
                 Error(pos,
                       "Can't convert from pointer to SOA type "
                       "\"%s\" to pointer to non-SOA type \"%s\" for %s.",
                       fromPointerType->GetAsNonSlice()->GetString().c_str(), toType->GetString().c_str(), errorMsgBase);
+            }
             return false;
         } else if (PointerType::IsVoidPointer(toPointerType)) {
             if (fromPointerType->GetBaseType()->IsConstType() && !(toPointerType->GetBaseType()->IsConstType())) {
-                if (!failureOk)
+                if (!failureOk) {
                     Error(pos, "Can't convert pointer to const \"%s\" to void pointer.",
                           fromPointerType->GetString().c_str());
+                }
                 return false;
             }
             // any pointer type can be converted to a void *
@@ -329,11 +352,13 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
             }
         }
 
-        if (toType->IsVaryingType() && fromType->IsUniformType())
+        if (toType->IsVaryingType() && fromType->IsUniformType()) {
             return lTypeCastOk(expr, toType, pos);
+        }
 
-        if (toPointerType->IsSlice() == true && fromPointerType->IsSlice() == false)
+        if (toPointerType->IsSlice() == true && fromPointerType->IsSlice() == false) {
             return lTypeCastOk(expr, toType, pos);
+        }
 
         // Otherwise there's nothing to do
         return true;
@@ -356,25 +381,28 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
     // variability of SOA struct types causes things to get messy if that
     // hasn't been detected...
     if (toStructType && fromStructType && (toStructType->GetSOAWidth() != fromStructType->GetSOAWidth())) {
-        if (!failureOk)
+        if (!failureOk) {
             Error(pos,
                   "Can't convert between incompatible struct types \"%s\" "
                   "and \"%s\" for %s.",
                   fromType->GetString().c_str(), toType->GetString().c_str(), errorMsgBase);
+        }
         return false;
     }
 
     // Convert from type T -> const T; just return a TypeCast expr, which
     // can handle this
-    if (Type::EqualIgnoringConst(toType, fromType) && toType->IsConstType() == true && fromType->IsConstType() == false)
+    if (Type::EqualIgnoringConst(toType, fromType) && toType->IsConstType() == true && fromType->IsConstType() == false) {
         return lTypeCastOk(expr, toType, pos);
+    }
 
     if (CastType<ReferenceType>(fromType)) {
         if (CastType<ReferenceType>(toType)) {
             // Convert from a reference to a type to a const reference to a type;
             // this is handled by TypeCastExpr
-            if (Type::Equal(toType->GetReferenceTarget(), fromType->GetReferenceTarget()->GetAsConstType()))
+            if (Type::Equal(toType->GetReferenceTarget(), fromType->GetReferenceTarget()->GetAsConstType())) {
                 return lTypeCastOk(expr, toType, pos);
+            }
 
             const ArrayType *atFrom = CastType<ArrayType>(fromType->GetReferenceTarget());
             const ArrayType *atTo = CastType<ArrayType>(toType->GetReferenceTarget());
@@ -382,11 +410,12 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
             if (atFrom != nullptr && atTo != nullptr && Type::Equal(atFrom->GetElementType(), atTo->GetElementType())) {
                 return lTypeCastOk(expr, toType, pos);
             } else {
-                if (!failureOk)
+                if (!failureOk) {
                     Error(pos,
                           "Can't convert between incompatible reference types \"%s\" "
                           "and \"%s\" for %s.",
                           fromType->GetString().c_str(), toType->GetString().c_str(), errorMsgBase);
+                }
                 return false;
             }
         } else {
@@ -398,8 +427,9 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
                     return true;
                 }
                 return false;
-            } else
+            } else {
                 return lDoTypeConv(fromType->GetReferenceTarget(), toType, nullptr, failureOk, errorMsgBase, pos);
+            }
         }
     } else if (CastType<ReferenceType>(toType)) {
         // T -> reference T
@@ -414,9 +444,10 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
             ReferenceType rt(fromType);
             return lDoTypeConv(&rt, toType, nullptr, failureOk, errorMsgBase, pos);
         }
-    } else if (Type::Equal(toType, fromType->GetAsNonConstType()))
+    } else if (Type::Equal(toType, fromType->GetAsNonConstType())) {
         // convert: const T -> T (as long as T isn't a reference)
         return lTypeCastOk(expr, toType, pos);
+    }
 
     fromType = fromType->GetReferenceTarget();
     toType = toType->GetReferenceTarget();
@@ -430,9 +461,10 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
             // T[x] -> const T[x]
             return lTypeCastOk(expr, toType, pos);
         } else {
-            if (!failureOk)
+            if (!failureOk) {
                 Error(pos, "Array type \"%s\" can't be converted to type \"%s\" for %s.", fromType->GetString().c_str(),
                       toType->GetString().c_str(), errorMsgBase);
+            }
             return false;
         }
     }
@@ -440,11 +472,12 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
     if (toVectorType && fromVectorType) {
         // converting e.g. int<n> -> float<n>
         if (fromVectorType->GetElementCount() != toVectorType->GetElementCount()) {
-            if (!failureOk)
+            if (!failureOk) {
                 Error(pos,
                       "Can't convert between differently sized vector types "
                       "\"%s\" -> \"%s\" for %s.",
                       fromType->GetString().c_str(), toType->GetString().c_str(), errorMsgBase);
+            }
             return false;
         }
         return lTypeCastOk(expr, toType, pos);
@@ -453,11 +486,12 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
     if (toStructType && fromStructType) {
         if (!Type::Equal(toStructType->GetAsUniformType()->GetAsConstType(),
                          fromStructType->GetAsUniformType()->GetAsConstType())) {
-            if (!failureOk)
+            if (!failureOk) {
                 Error(pos,
                       "Can't convert between different struct types "
                       "\"%s\" and \"%s\" for %s.",
                       fromStructType->GetString().c_str(), toStructType->GetString().c_str(), errorMsgBase);
+            }
             return false;
         }
         return lTypeCastOk(expr, toType, pos);
@@ -466,11 +500,12 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
     if (toEnumType != nullptr && fromEnumType != nullptr) {
         // No implicit conversions between different enum types
         if (!Type::EqualIgnoringConst(toEnumType->GetAsUniformType(), fromEnumType->GetAsUniformType())) {
-            if (!failureOk)
+            if (!failureOk) {
                 Error(pos,
                       "Can't convert between different enum types "
                       "\"%s\" and \"%s\" for %s",
                       fromEnumType->GetString().c_str(), toEnumType->GetString().c_str(), errorMsgBase);
+            }
             return false;
         }
         return lTypeCastOk(expr, toType, pos);
@@ -480,11 +515,12 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
     if (fromEnumType != nullptr) {
         // Cannot convert to anything other than atomic
         if (toAtomicType == nullptr && toVectorType == nullptr) {
-            if (!failureOk)
+            if (!failureOk) {
                 Error(pos,
                       "Type conversion from \"%s\" to \"%s\" for %s is not "
                       "possible.",
                       fromType->GetString().c_str(), toType->GetString().c_str(), errorMsgBase);
+            }
             return false;
         }
         return lTypeCastOk(expr, toType, pos);
@@ -493,34 +529,38 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
     // from here on out, the from type can only be atomic something or
     // other...
     if (fromAtomicType == nullptr) {
-        if (!failureOk)
+        if (!failureOk) {
             Error(pos,
                   "Type conversion from \"%s\" to \"%s\" for %s is not "
                   "possible.",
                   fromType->GetString().c_str(), toType->GetString().c_str(), errorMsgBase);
+        }
         return false;
     }
 
     // scalar -> short-vector conversions
-    if (toVectorType != nullptr && (fromType->GetSOAWidth() == toType->GetSOAWidth()))
+    if (toVectorType != nullptr && (fromType->GetSOAWidth() == toType->GetSOAWidth())) {
         return lTypeCastOk(expr, toType, pos);
+    }
 
     // ok, it better be a scalar->scalar conversion of some sort by now
     if (toAtomicType == nullptr) {
-        if (!failureOk)
+        if (!failureOk) {
             Error(pos,
                   "Type conversion from \"%s\" to \"%s\" for %s is "
                   "not possible",
                   fromType->GetString().c_str(), toType->GetString().c_str(), errorMsgBase);
+        }
         return false;
     }
 
     if (fromType->GetSOAWidth() != toType->GetSOAWidth()) {
-        if (!failureOk)
+        if (!failureOk) {
             Error(pos,
                   "Can't convert between types \"%s\" and \"%s\" with "
                   "different SOA widths for %s.",
                   fromType->GetString().c_str(), toType->GetString().c_str(), errorMsgBase);
+        }
         return false;
     }
 
@@ -532,15 +572,17 @@ bool ispc::CanConvertTypes(const Type *fromType, const Type *toType, const char 
 }
 
 Expr *ispc::TypeConvertExpr(Expr *expr, const Type *toType, const char *errorMsgBase) {
-    if (expr == nullptr)
+    if (expr == nullptr) {
         return nullptr;
+    }
 
     const Type *fromType = expr->GetType();
     Expr *e = expr;
-    if (lDoTypeConv(fromType, toType, &e, false, errorMsgBase, expr->pos))
+    if (lDoTypeConv(fromType, toType, &e, false, errorMsgBase, expr->pos)) {
         return e;
-    else
+    } else {
         return nullptr;
+    }
 }
 
 bool ispc::PossiblyResolveFunctionOverloads(Expr *expr, const Type *type) {
@@ -553,11 +595,13 @@ bool ispc::PossiblyResolveFunctionOverloads(Expr *expr, const Type *type) {
         // to try to resolve the overload based on the type of the symbol
         // we're initializing here.
         std::vector<const Type *> paramTypes;
-        for (int i = 0; i < funcType->GetNumParameters(); ++i)
+        for (int i = 0; i < funcType->GetNumParameters(); ++i) {
             paramTypes.push_back(funcType->GetParameterType(i));
+        }
 
-        if (fse->ResolveOverloads(expr->pos, paramTypes) == false)
+        if (fse->ResolveOverloads(expr->pos, paramTypes) == false) {
             return false;
+        }
     }
     return true;
 }
@@ -576,9 +620,10 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
 */
 void ispc::InitSymbol(AddressInfo *ptrInfo, const Type *symType, Expr *initExpr, FunctionEmitContext *ctx,
                       SourcePos pos) {
-    if (initExpr == nullptr)
+    if (initExpr == nullptr) {
         // leave it uninitialized
         return;
+    }
 
     // See if we have a constant initializer a this point
     std::pair<llvm::Constant *, bool> constValPair = initExpr->GetStorageConstant(symType);
@@ -596,9 +641,9 @@ void ispc::InitSymbol(AddressInfo *ptrInfo, const Type *symType, Expr *initExpr,
             return;
         }
 
-        if (Type::IsBasicType(symType))
+        if (Type::IsBasicType(symType)) {
             ctx->StoreInst(constValue, ptrInfo, symType);
-        else {
+        } else {
             llvm::Value *constPtr =
                 new llvm::GlobalVariable(*m->module, llvmType, true /* const */, llvm::GlobalValue::InternalLinkage,
                                          constValue, "const_initializer");
@@ -613,17 +658,20 @@ void ispc::InitSymbol(AddressInfo *ptrInfo, const Type *symType, Expr *initExpr,
     // ExprList, then we'll see if we can type convert it to the type of
     // the variable.
     if (llvm::dyn_cast<ExprList>(initExpr) == nullptr) {
-        if (PossiblyResolveFunctionOverloads(initExpr, symType) == false)
+        if (PossiblyResolveFunctionOverloads(initExpr, symType) == false) {
             return;
+        }
         initExpr = TypeConvertExpr(initExpr, symType, "initializer");
 
-        if (initExpr == nullptr)
+        if (initExpr == nullptr) {
             return;
+        }
 
         llvm::Value *initializerValue = initExpr->GetValue(ctx);
-        if (initializerValue != nullptr)
+        if (initializerValue != nullptr) {
             // Bingo; store the value in the variable's storage
             ctx->StoreInst(initializerValue, ptrInfo, symType);
+        }
         return;
     }
 
@@ -643,8 +691,9 @@ void ispc::InitSymbol(AddressInfo *ptrInfo, const Type *symType, Expr *initExpr,
                       symType->GetString().c_str());
                 return;
             }
-        } else
+        } else {
             return;
+        }
     }
 
     const ReferenceType *rt = CastType<ReferenceType>(symType);
@@ -660,8 +709,9 @@ void ispc::InitSymbol(AddressInfo *ptrInfo, const Type *symType, Expr *initExpr,
         }
 
         llvm::Value *initializerValue = initExpr->GetValue(ctx);
-        if (initializerValue)
+        if (initializerValue) {
             ctx->StoreInst(initializerValue, ptrInfo, initExprType);
+        }
         return;
     }
 
@@ -672,22 +722,24 @@ void ispc::InitSymbol(AddressInfo *ptrInfo, const Type *symType, Expr *initExpr,
         (Type::IsBasicType(symType) && symType->IsVaryingType() == true)) {
         // Make default value equivalent to number of elements for varying
         int nElements = g->target->getVectorWidth();
-        if (collectionType)
+        if (collectionType) {
             nElements = collectionType->GetElementCount();
-        else if (symType->IsSOAType())
+        } else if (symType->IsSOAType()) {
             nElements = symType->GetSOAWidth();
+        }
 
         std::string name;
-        if (CastType<StructType>(symType) != nullptr)
+        if (CastType<StructType>(symType) != nullptr) {
             name = "struct";
-        else if (CastType<ArrayType>(symType) != nullptr)
+        } else if (CastType<ArrayType>(symType) != nullptr) {
             name = "array";
-        else if (CastType<VectorType>(symType) != nullptr)
+        } else if (CastType<VectorType>(symType) != nullptr) {
             name = "vector";
-        else if (symType->IsSOAType() || (Type::IsBasicType(symType) && symType->IsVaryingType() == true))
+        } else if (symType->IsSOAType() || (Type::IsBasicType(symType) && symType->IsVaryingType() == true)) {
             name = symType->GetVariability().GetString();
-        else
+        } else {
             FATAL("Unexpected CollectionType in InitSymbol()");
+        }
 
         // There are two cases for initializing these types; either a
         // single initializer may be provided (float foo[3] = 0;), in which
@@ -805,18 +857,18 @@ void ispc::InitSymbol(AddressInfo *ptrInfo, const Type *symType, Expr *initExpr,
                 const Type *elementType =
                     collectionType ? collectionType->GetElementType(i) : symType->GetAsUniformType();
                 llvm::Value *ep = nullptr;
-                if (CastType<StructType>(symType) != nullptr)
+                if (CastType<StructType>(symType) != nullptr) {
                     ep = ctx->AddElementOffset(new AddressInfo(ptrInfo->getPointer(), CastType<StructType>(symType)), i,
                                                "element");
-                else {
+                } else {
                     ep = ctx->GetElementPtrInst(ptrInfo->getPointer(), LLVMInt32(0), LLVMInt32(i),
                                                 /* Type of aggregate structure */ PointerType::GetUniform(symType),
                                                 "gep");
                 }
                 AddressInfo *epInfo = new AddressInfo(ep, ptrInfo->getElementType());
-                if (i < nInits)
+                if (i < nInits) {
                     InitSymbol(epInfo, elementType, exprList->exprs[i], ctx, pos);
-                else {
+                } else {
                     // If we don't have enough initializer values, initialize the
                     // rest as zero.
                     llvm::Type *llvmType = elementType->LLVMStorageType(g->ctx);
@@ -851,9 +903,9 @@ static const Type *lMatchingBoolType(const Type *type) {
     bool uniformTest = type->IsUniformType();
     const AtomicType *boolBase = uniformTest ? AtomicType::UniformBool : AtomicType::VaryingBool;
     const VectorType *vt = CastType<VectorType>(type);
-    if (vt != nullptr)
+    if (vt != nullptr) {
         return new VectorType(boolBase, vt->GetElementCount());
-    else {
+    } else {
         Assert(Type::IsBasicType(type) || type->IsReferenceType());
         return boolBase;
     }
@@ -883,10 +935,11 @@ static llvm::Constant *lLLVMConstantValue(const Type *type, llvm::LLVMContext *c
             FATAL("can't get constant value for void type");
             return nullptr;
         case AtomicType::TYPE_BOOL:
-            if (isUniform)
+            if (isUniform) {
                 return (value != 0.) ? LLVMTrue : LLVMFalse;
-            else
+            } else {
                 return LLVMBoolVector(value != 0.);
+            }
         case AtomicType::TYPE_INT8: {
             int i = (int)value;
             Assert((double)i == value);
@@ -942,10 +995,11 @@ static llvm::Constant *lLLVMConstantValue(const Type *type, llvm::LLVMContext *c
         }
     } else if (pointerType != nullptr) {
         Assert(value == 0);
-        if (pointerType->IsUniformType())
+        if (pointerType->IsUniformType()) {
             return llvm::Constant::getNullValue(LLVMTypes::VoidPointerType);
-        else
+        } else {
             return llvm::Constant::getNullValue(LLVMTypes::VoidPointerVectorType);
+        }
     } else {
         // For vector types, first get the LLVM constant for the basetype with
         // a recursive call to lLLVMConstantValue().
@@ -963,30 +1017,34 @@ static llvm::Constant *lLLVMConstantValue(const Type *type, llvm::LLVMContext *c
             llvm::FixedVectorType *lvt = llvm::dyn_cast<llvm::FixedVectorType>(llvmVectorType);
             Assert(lvt != nullptr);
             std::vector<llvm::Constant *> vals;
-            for (unsigned int i = 0; i < lvt->getNumElements(); ++i)
+            for (unsigned int i = 0; i < lvt->getNumElements(); ++i) {
                 vals.push_back(constElement);
+            }
             return llvm::ConstantVector::get(vals);
         } else {
             llvm::ArrayType *lat = llvm::dyn_cast<llvm::ArrayType>(llvmVectorType);
             Assert(lat != nullptr);
             std::vector<llvm::Constant *> vals;
-            for (unsigned int i = 0; i < lat->getNumElements(); ++i)
+            for (unsigned int i = 0; i < lat->getNumElements(); ++i) {
                 vals.push_back(constElement);
+            }
             return llvm::ConstantArray::get(lat, vals);
         }
     }
 }
 
 static llvm::Value *lMaskForSymbol(Symbol *baseSym, FunctionEmitContext *ctx) {
-    if (baseSym == nullptr)
+    if (baseSym == nullptr) {
         return ctx->GetFullMask();
+    }
 
-    if (CastType<PointerType>(baseSym->type) != nullptr || CastType<ReferenceType>(baseSym->type) != nullptr)
+    if (CastType<PointerType>(baseSym->type) != nullptr || CastType<ReferenceType>(baseSym->type) != nullptr) {
         // FIXME: for pointers, we really only want to do this for
         // dereferencing the pointer, not for things like pointer
         // arithmetic, when we may be able to use the internal mask,
         // depending on context...
         return ctx->GetFullMask();
+    }
 
     llvm::Value *mask = (baseSym->parentFunction == ctx->GetFunction() && baseSym->storageClass != SC_STATIC)
                             ? ctx->GetInternalMask()
@@ -1022,8 +1080,9 @@ static void lStoreAssignResult(llvm::Value *value, llvm::Value *ptr, const Type 
 static llvm::Value *lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos pos, FunctionEmitContext *ctx,
                                        WrapSemantics wrapSemantics) {
     const Type *type = expr->GetType();
-    if (type == nullptr)
+    if (type == nullptr) {
         return nullptr;
+    }
 
     // Get both the lvalue and the rvalue of the given expression
     llvm::Value *lvalue = nullptr, *rvalue = nullptr;
@@ -1056,10 +1115,11 @@ static llvm::Value *lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos p
     int delta = (op == UnaryExpr::PreInc || op == UnaryExpr::PostInc) ? 1 : -1;
 
     std::string opName = rvalue->getName().str();
-    if (op == UnaryExpr::PreInc || op == UnaryExpr::PostInc)
+    if (op == UnaryExpr::PreInc || op == UnaryExpr::PostInc) {
         opName += "_plus1";
-    else
+    } else {
         opName += "_minus1";
+    }
 
     if (CastType<PointerType>(type) != nullptr) {
         const Type *incType = type->IsUniformType() ? AtomicType::UniformInt32 : AtomicType::VaryingInt32;
@@ -1067,10 +1127,11 @@ static llvm::Value *lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos p
         binop = ctx->GetElementPtrInst(rvalue, dval, type, opName.c_str());
     } else {
         llvm::Constant *dval = lLLVMConstantValue(type, g->ctx, delta);
-        if (type->IsFloatType())
+        if (type->IsFloatType()) {
             binop = ctx->BinaryOperator(llvm::Instruction::FAdd, rvalue, dval, WrapSemantics::None, opName.c_str());
-        else
+        } else {
             binop = ctx->BinaryOperator(llvm::Instruction::Add, rvalue, dval, wrapSemantics, opName.c_str());
+        }
     }
 
     // And store the result out to the lvalue
@@ -1088,8 +1149,9 @@ static llvm::Value *lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos p
 static llvm::Value *lEmitNegate(Expr *arg, SourcePos pos, FunctionEmitContext *ctx, WrapSemantics wrapSemantics) {
     const Type *type = arg->GetType();
     llvm::Value *argVal = arg->GetValue(ctx);
-    if (type == nullptr || argVal == nullptr)
+    if (type == nullptr || argVal == nullptr) {
         return nullptr;
+    }
 
     // Negate by subtracting from zero...
     ctx->SetDebugPos(pos);
@@ -1106,8 +1168,9 @@ static llvm::Value *lEmitNegate(Expr *arg, SourcePos pos, FunctionEmitContext *c
 UnaryExpr::UnaryExpr(Op o, Expr *e, SourcePos p) : Expr(p, UnaryExprID), op(o) { expr = e; }
 
 llvm::Value *UnaryExpr::GetValue(FunctionEmitContext *ctx) const {
-    if (expr == nullptr)
+    if (expr == nullptr) {
         return nullptr;
+    }
 
     const auto wrapSemantics = this->GetType()->IsSignedType() ? WrapSemantics::NSW : WrapSemantics::None;
     ctx->SetDebugPos(pos);
@@ -1135,12 +1198,14 @@ llvm::Value *UnaryExpr::GetValue(FunctionEmitContext *ctx) const {
 }
 
 const Type *UnaryExpr::GetType() const {
-    if (expr == nullptr)
+    if (expr == nullptr) {
         return nullptr;
+    }
 
     const Type *type = expr->GetType();
-    if (type == nullptr)
+    if (type == nullptr) {
         return nullptr;
+    }
 
     if (type->IsDependentType()) {
         return AtomicType::Dependent;
@@ -1173,16 +1238,18 @@ const Type *UnaryExpr::GetType() const {
 template <typename T> static Expr *lOptimizeBitNot(ConstExpr *constExpr, const Type *type, SourcePos pos) {
     T v[ISPC_MAX_NVEC];
     int count = constExpr->GetValues(v);
-    for (int i = 0; i < count; ++i)
+    for (int i = 0; i < count; ++i) {
         v[i] = ~v[i];
+    }
     return new ConstExpr(type, v, pos);
 }
 
 template <typename T> static Expr *lOptimizeNegate(ConstExpr *constExpr, const Type *type, SourcePos pos) {
     T v[ISPC_MAX_NVEC];
     int count = constExpr->GetValues(v);
-    for (int i = 0; i < count; ++i)
+    for (int i = 0; i < count; ++i) {
         v[i] = -v[i];
+    }
     return new ConstExpr(type, v, pos);
 }
 
@@ -1190,8 +1257,9 @@ Expr *UnaryExpr::Optimize() {
     ConstExpr *constExpr = llvm::dyn_cast<ConstExpr>(expr);
     // If the operand isn't a constant, then we can't do any optimization
     // here...
-    if (constExpr == nullptr)
+    if (constExpr == nullptr) {
         return this;
+    }
 
     const Type *type = constExpr->GetType();
     bool isEnumType = CastType<EnumType>(type) != nullptr;
@@ -1238,8 +1306,9 @@ Expr *UnaryExpr::Optimize() {
                                Type::EqualIgnoringConst(type, AtomicType::VaryingDouble));
             std::vector<llvm::APFloat> v;
             int count = constExpr->GetValues(v);
-            for (int i = 0; i < count; ++i)
+            for (int i = 0; i < count; ++i) {
                 v[i].changeSign();
+            }
             return new ConstExpr(type, v, pos);
         }
     }
@@ -1268,16 +1337,18 @@ Expr *UnaryExpr::Optimize() {
         } else if (Type::EqualIgnoringConst(type, AtomicType::UniformUInt64) ||
                    Type::EqualIgnoringConst(type, AtomicType::VaryingUInt64)) {
             return lOptimizeBitNot<uint64_t>(constExpr, type, pos);
-        } else
+        } else {
             FATAL("unexpected type in UnaryExpr::Optimize() / BitNot case");
+        }
     }
     case LogicalNot: {
         AssertPos(pos, Type::EqualIgnoringConst(type, AtomicType::UniformBool) ||
                            Type::EqualIgnoringConst(type, AtomicType::VaryingBool));
         bool v[ISPC_MAX_NVEC];
         int count = constExpr->GetValues(v);
-        for (int i = 0; i < count; ++i)
+        for (int i = 0; i < count; ++i) {
             v[i] = !v[i];
+        }
         return new ConstExpr(type, v, pos);
     }
     default:
@@ -1288,9 +1359,10 @@ Expr *UnaryExpr::Optimize() {
 
 Expr *UnaryExpr::TypeCheck() {
     const Type *type = nullptr;
-    if (expr == nullptr || (type = expr->GetType()) == nullptr)
+    if (expr == nullptr || (type = expr->GetType()) == nullptr) {
         // something went wrong in type checking...
         return nullptr;
+    }
 
     if (type->IsDependentType()) {
         return this;
@@ -1310,8 +1382,9 @@ Expr *UnaryExpr::TypeCheck() {
             return nullptr;
         }
 
-        if (type->IsNumericType())
+        if (type->IsNumericType()) {
             return this;
+        }
 
         const PointerType *pt = CastType<PointerType>(type);
         if (pt == nullptr) {
@@ -1351,8 +1424,9 @@ Expr *UnaryExpr::TypeCheck() {
     } else if (op == LogicalNot) {
         const Type *boolType = lMatchingBoolType(type);
         expr = TypeConvertExpr(expr, boolType, "logical not");
-        if (expr == nullptr)
+        if (expr == nullptr) {
             return nullptr;
+        }
     } else if (op == BitNot) {
         if (!type->IsIntType()) {
             Error(expr->pos,
@@ -1366,8 +1440,9 @@ Expr *UnaryExpr::TypeCheck() {
 }
 
 int UnaryExpr::EstimateCost() const {
-    if (llvm::dyn_cast<ConstExpr>(expr) != nullptr)
+    if (llvm::dyn_cast<ConstExpr>(expr) != nullptr) {
         return 0;
+    }
 
     return COST_SIMPLE_ARITH_LOGIC_OP;
 }
@@ -1474,10 +1549,11 @@ static llvm::Instruction::BinaryOps lBinaryExprBitOpInst(BinaryExpr::Op op, bool
     case BinaryExpr::Shl:
         return llvm::Instruction::Shl;
     case BinaryExpr::Shr:
-        if (isUnsigned)
+        if (isUnsigned) {
             return llvm::Instruction::LShr;
-        else
+        } else {
             return llvm::Instruction::AShr;
+        }
     case BinaryExpr::BitAnd:
         return llvm::Instruction::And;
     case BinaryExpr::BitXor:
@@ -1549,18 +1625,20 @@ static llvm::Value *lEmitBinaryPointerArith(BinaryExpr::Op op, llvm::Value *valu
             // points to in order to return the difference in elements.
             llvm::Type *llvmElementType = ptrType->GetBaseType()->LLVMType(g->ctx);
             llvm::Value *size = g->target->SizeOf(llvmElementType, ctx->GetCurrentBasicBlock());
-            if (ptrType->IsVaryingType())
+            if (ptrType->IsVaryingType()) {
                 size = ctx->SmearUniform(size);
+            }
 
             if (g->target->is32Bit() == false && g->opt.force32BitAddressing == true) {
                 // If we're doing 32-bit addressing math on a 64-bit
                 // target, then trunc the delta down to a 32-bit value.
                 // (Thus also matching what will be a 32-bit value
                 // returned from SizeOf above.)
-                if (ptrType->IsUniformType())
+                if (ptrType->IsUniformType()) {
                     delta = ctx->TruncInst(delta, LLVMTypes::Int32Type, "trunc_ptr_delta");
-                else
+                } else {
                     delta = ctx->TruncInst(delta, LLVMTypes::Int32VectorType, "trunc_ptr_delta");
+                }
             }
 
             // And now do the actual division
@@ -1661,9 +1739,9 @@ static llvm::Value *lEmitBinaryArith(BinaryExpr::Op op, llvm::Value *value0, llv
                                      WrapSemantics wrapSemantics) {
     const PointerType *ptrType = CastType<PointerType>(type0);
 
-    if (ptrType != nullptr)
+    if (ptrType != nullptr) {
         return lEmitBinaryPointerArith(op, value0, value1, type0, type1, ctx, pos);
-    else {
+    } else {
         AssertPos(pos, Type::EqualIgnoringConst(type0, type1));
 
         llvm::Instruction::BinaryOps inst = lBinaryExprArithOpInst(op, type0, pos);
@@ -1710,8 +1788,9 @@ static llvm::Value *lEmitBinaryCmp(BinaryExpr::Op op, llvm::Value *e0Val, llvm::
     // This is a little ugly: CmpInst returns i1 values, but we use vectors
     // of i32s for varying bool values; type convert the result here if
     // needed.
-    if (type->IsVaryingType())
+    if (type->IsVaryingType()) {
         cmp = ctx->I1VecToBoolVec(cmp);
+    }
 
     return cmp;
 }
@@ -1843,9 +1922,9 @@ llvm::Value *lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1, FunctionE
             return nullptr;
         }
 
-        if (op == BinaryExpr::LogicalAnd)
+        if (op == BinaryExpr::LogicalAnd) {
             return ctx->BinaryOperator(llvm::Instruction::And, value0, value1, WrapSemantics::None, "logical_and");
-        else {
+        } else {
             AssertPos(pos, op == BinaryExpr::LogicalOr);
             return ctx->BinaryOperator(llvm::Instruction::Or, value0, value1, WrapSemantics::None, "logical_or");
         }
@@ -2050,8 +2129,9 @@ static bool lIsDifficultShiftAmount(Expr *expr) {
     // Uniform shifts (of uniform values) are no problem.
     const Type *exprType = expr->GetType();
     Assert(exprType);
-    if (exprType->IsVaryingType() == false)
+    if (exprType->IsVaryingType() == false) {
         return false;
+    }
 
     ConstExpr *ce = llvm::dyn_cast<ConstExpr>(expr);
     if (ce) {
@@ -2059,9 +2139,11 @@ static bool lIsDifficultShiftAmount(Expr *expr) {
         // in all vector lanes, we're in good shape.
         uint32_t amount[ISPC_MAX_NVEC];
         int count = ce->GetValues(amount);
-        for (int i = 1; i < count; ++i)
-            if (amount[i] != amount[0])
+        for (int i = 1; i < count; ++i) {
+            if (amount[i] != amount[0]) {
                 return true;
+            }
+        }
         return false;
     }
 
@@ -2113,8 +2195,9 @@ llvm::Value *BinaryExpr::GetValue(FunctionEmitContext *ctx) const {
     }
 
     // Handle these specially, since we want to short-circuit their evaluation...
-    if (op == LogicalAnd || op == LogicalOr)
+    if (op == LogicalAnd || op == LogicalOr) {
         return lEmitLogicalOp(op, arg0, arg1, ctx, pos);
+    }
 
     llvm::Value *value0 = arg0->GetValue(ctx);
     llvm::Value *value1 = arg1->GetValue(ctx);
@@ -2161,12 +2244,14 @@ llvm::Value *BinaryExpr::GetValue(FunctionEmitContext *ctx) const {
 }
 
 const Type *BinaryExpr::GetType() const {
-    if (arg0 == nullptr || arg1 == nullptr)
+    if (arg0 == nullptr || arg1 == nullptr) {
         return nullptr;
+    }
 
     const Type *type0 = arg0->GetType(), *type1 = arg1->GetType();
-    if (type0 == nullptr || type1 == nullptr)
+    if (type0 == nullptr || type1 == nullptr) {
         return nullptr;
+    }
 
     if (type0->IsDependentType() || type1->IsDependentType()) {
         return AtomicType::Dependent;
@@ -2176,27 +2261,31 @@ const Type *BinaryExpr::GetType() const {
     // called before GetType() was called; adding two pointers is illegal
     // and will fail type checking and (int + ptr) should be canonicalized
     // into (ptr + int) by type checking.
-    if (op == Add)
+    if (op == Add) {
         AssertPos(pos, CastType<PointerType>(type1) == nullptr);
+    }
 
-    if (op == Comma)
+    if (op == Comma) {
         return arg1->GetType();
+    }
 
     if (CastType<PointerType>(type0) != nullptr) {
-        if (op == Add)
+        if (op == Add) {
             // ptr + int -> ptr
             return type0;
-        else if (op == Sub) {
+        } else if (op == Sub) {
             if (CastType<PointerType>(type1) != nullptr) {
                 // ptr - ptr -> ~ptrdiff_t
                 const Type *diffType = (g->target->is32Bit() || g->opt.force32BitAddressing) ? AtomicType::UniformInt32
                                                                                              : AtomicType::UniformInt64;
-                if (type0->IsVaryingType() || type1->IsVaryingType())
+                if (type0->IsVaryingType() || type1->IsVaryingType()) {
                     diffType = diffType->GetAsVaryingType();
+                }
                 return diffType;
-            } else
+            } else {
                 // ptr - int -> ptr
                 return type0;
+            }
         }
 
         // otherwise fall through for these...
@@ -2470,12 +2559,13 @@ static Expr *lConstFoldBinaryFPOp(ConstExpr *constArg0, ConstExpr *constArg1, Bi
     constArg0->GetValues(v0, llvmType);
     constArg1->GetValues(v1, llvmType);
     ConstExpr *ret = nullptr;
-    if ((ret = lConstFoldBinaryArithFPOp(op, v0, v1, constArg0, pos)) != nullptr)
+    if ((ret = lConstFoldBinaryArithFPOp(op, v0, v1, constArg0, pos)) != nullptr) {
         return ret;
-    else if ((ret = lConstFoldBinaryLogicalFPOp(op, v0, v1, constArg0)) != nullptr)
+    } else if ((ret = lConstFoldBinaryLogicalFPOp(op, v0, v1, constArg0)) != nullptr) {
         return ret;
-    else
+    } else {
         return origExpr;
+    }
 }
 
 template <typename T, typename TRef>
@@ -2485,19 +2575,21 @@ static Expr *lConstFoldBinaryIntOp(ConstExpr *constArg0, ConstExpr *constArg1, B
     constArg0->GetValues(v0);
     constArg1->GetValues(v1);
     ConstExpr *ret = nullptr;
-    if ((ret = lConstFoldBinaryArithOp<T, TRef>(op, v0, v1, constArg0, pos)) != nullptr)
+    if ((ret = lConstFoldBinaryArithOp<T, TRef>(op, v0, v1, constArg0, pos)) != nullptr) {
         return ret;
-    else if ((ret = lConstFoldBinaryIntOp<T, TRef>(op, v0, v1, constArg0, pos)) != nullptr)
+    } else if ((ret = lConstFoldBinaryIntOp<T, TRef>(op, v0, v1, constArg0, pos)) != nullptr) {
         return ret;
-    else if ((ret = lConstFoldBinaryLogicalOp(op, v0, v1, constArg0)) != nullptr)
+    } else if ((ret = lConstFoldBinaryLogicalOp(op, v0, v1, constArg0)) != nullptr) {
         return ret;
-    else
+    } else {
         return origExpr;
+    }
 }
 
 Expr *BinaryExpr::Optimize() {
-    if (arg0 == nullptr || arg1 == nullptr)
+    if (arg0 == nullptr || arg1 == nullptr) {
         return nullptr;
+    }
 
     ConstExpr *constArg0 = llvm::dyn_cast<ConstExpr>(arg0);
     ConstExpr *constArg1 = llvm::dyn_cast<ConstExpr>(arg1);
@@ -2528,8 +2620,9 @@ Expr *BinaryExpr::Optimize() {
                 Expr *einv = new ConstExpr(type1, inv, constArg1->pos);
                 Expr *e = new BinaryExpr(Mul, arg0, einv, pos);
                 e = ::TypeCheck(e);
-                if (e == nullptr)
+                if (e == nullptr) {
                     return nullptr;
+                }
                 return ::Optimize(e);
             }
         }
@@ -2556,8 +2649,9 @@ Expr *BinaryExpr::Optimize() {
                         if (rcpCall != nullptr) {
                             Expr *ret = new BinaryExpr(Mul, arg0, rcpCall, pos);
                             ret = ::TypeCheck(ret);
-                            if (ret == nullptr)
+                            if (ret == nullptr) {
                                 return nullptr;
+                            }
                             return ::Optimize(ret);
                         }
                     }
@@ -2573,8 +2667,9 @@ Expr *BinaryExpr::Optimize() {
 
     // From here on out, we're just doing constant folding, so if both args
     // aren't constants then we're done...
-    if (constArg0 == nullptr || constArg1 == nullptr)
+    if (constArg0 == nullptr || constArg1 == nullptr) {
         return this;
+    }
 
     AssertPos(pos, Type::EqualIgnoringConst(arg0->GetType(), arg1->GetType()));
     const Type *type = arg0->GetType()->GetAsNonConstType();
@@ -2607,23 +2702,27 @@ Expr *BinaryExpr::Optimize() {
         constArg0->GetValues(v0);
         constArg1->GetValues(v1);
         ConstExpr *ret = nullptr;
-        if ((ret = lConstFoldBoolBinaryOp(op, v0, v1, constArg0)) != nullptr)
+        if ((ret = lConstFoldBoolBinaryOp(op, v0, v1, constArg0)) != nullptr) {
             return ret;
-        else if ((ret = lConstFoldBinaryLogicalOp(op, v0, v1, constArg0)) != nullptr)
+        } else if ((ret = lConstFoldBinaryLogicalOp(op, v0, v1, constArg0)) != nullptr) {
             return ret;
-        else
+        } else {
             return this;
-    } else
+        }
+    } else {
         return this;
+    }
 }
 
 Expr *BinaryExpr::TypeCheck() {
-    if (arg0 == nullptr || arg1 == nullptr)
+    if (arg0 == nullptr || arg1 == nullptr) {
         return nullptr;
+    }
 
     const Type *type0 = arg0->GetType(), *type1 = arg1->GetType();
-    if (type0 == nullptr || type1 == nullptr)
+    if (type0 == nullptr || type1 == nullptr) {
         return nullptr;
+    }
 
     if (type0->IsDependentType() || type1->IsDependentType()) {
         return this;
@@ -2702,13 +2801,15 @@ Expr *BinaryExpr::TypeCheck() {
         }
 
         const Type *t = Type::MoreGeneralType(type0, type1, pos, "-");
-        if (t == nullptr)
+        if (t == nullptr) {
             return nullptr;
+        }
 
         arg0 = TypeConvertExpr(arg0, t, "pointer subtraction");
         arg1 = TypeConvertExpr(arg1, t, "pointer subtraction");
-        if (arg0 == nullptr || arg1 == nullptr)
+        if (arg0 == nullptr || arg1 == nullptr) {
             return nullptr;
+        }
 
         return this;
     } else if (((pt0 != nullptr || pt1 != nullptr) && op == Add) || (pt0 != nullptr && op == Sub)) {
@@ -2743,8 +2844,9 @@ Expr *BinaryExpr::TypeCheck() {
         }
 
         const Type *offsetType = g->target->is32Bit() ? AtomicType::UniformInt32 : AtomicType::UniformInt64;
-        if (pt0->IsVaryingType())
+        if (pt0->IsVaryingType()) {
             offsetType = offsetType->GetAsVaryingType();
+        }
         if (type1->IsVaryingType()) {
             arg0 = TypeConvertExpr(arg0, type0->GetAsVaryingType(), "pointer addition");
             offsetType = offsetType->GetAsVaryingType();
@@ -2752,8 +2854,9 @@ Expr *BinaryExpr::TypeCheck() {
         }
 
         arg1 = TypeConvertExpr(arg1, offsetType, lOpString(op));
-        if (arg1 == nullptr)
+        if (arg1 == nullptr) {
             return nullptr;
+        }
 
         return this;
     }
@@ -2785,22 +2888,26 @@ Expr *BinaryExpr::TypeCheck() {
             bool isVarying = (type0->IsVaryingType() || type1->IsVaryingType());
             if (isVarying) {
                 arg0 = TypeConvertExpr(arg0, type0->GetAsVaryingType(), "shift operator");
-                if (arg0 == nullptr)
+                if (arg0 == nullptr) {
                     return nullptr;
+                }
                 type0 = arg0->GetType();
             }
             arg1 = TypeConvertExpr(arg1, type0, "shift operator");
-            if (arg1 == nullptr)
+            if (arg1 == nullptr) {
                 return nullptr;
+            }
         } else {
             const Type *promotedType = Type::MoreGeneralType(type0, type1, arg0->pos, "binary bit op");
-            if (promotedType == nullptr)
+            if (promotedType == nullptr) {
                 return nullptr;
+            }
 
             arg0 = TypeConvertExpr(arg0, promotedType, "binary bit op");
             arg1 = TypeConvertExpr(arg1, promotedType, "binary bit op");
-            if (arg0 == nullptr || arg1 == nullptr)
+            if (arg0 == nullptr || arg1 == nullptr) {
                 return nullptr;
+            }
         }
         return this;
     }
@@ -2826,13 +2933,15 @@ Expr *BinaryExpr::TypeCheck() {
         }
 
         const Type *promotedType = Type::MoreGeneralType(type0, type1, Union(arg0->pos, arg1->pos), lOpString(op));
-        if (promotedType == nullptr)
+        if (promotedType == nullptr) {
             return nullptr;
+        }
 
         arg0 = TypeConvertExpr(arg0, promotedType, lOpString(op));
         arg1 = TypeConvertExpr(arg1, promotedType, lOpString(op));
-        if (arg0 == nullptr || arg1 == nullptr)
+        if (arg0 == nullptr || arg1 == nullptr) {
             return nullptr;
+        }
         return this;
     }
     case Lt:
@@ -2874,13 +2983,15 @@ Expr *BinaryExpr::TypeCheck() {
         }
 
         const Type *promotedType = Type::MoreGeneralType(type0, type1, arg0->pos, lOpString(op));
-        if (promotedType == nullptr)
+        if (promotedType == nullptr) {
             return nullptr;
+        }
 
         arg0 = TypeConvertExpr(arg0, promotedType, lOpString(op));
         arg1 = TypeConvertExpr(arg1, promotedType, lOpString(op));
-        if (arg0 == nullptr || arg1 == nullptr)
+        if (arg0 == nullptr || arg1 == nullptr) {
             return nullptr;
+        }
         return this;
     }
     case LogicalAnd:
@@ -2918,8 +3029,9 @@ Expr *BinaryExpr::TypeCheck() {
 
         arg0 = TypeConvertExpr(arg0, destType0, lOpString(op));
         arg1 = TypeConvertExpr(arg1, destType1, lOpString(op));
-        if (arg0 == nullptr || arg1 == nullptr)
+        if (arg0 == nullptr || arg1 == nullptr) {
             return nullptr;
+        }
         return this;
     }
     case Comma:
@@ -2941,8 +3053,9 @@ const Type *BinaryExpr::GetLValueType() const {
 }
 
 int BinaryExpr::EstimateCost() const {
-    if (llvm::dyn_cast<ConstExpr>(arg0) != nullptr && llvm::dyn_cast<ConstExpr>(arg1) != nullptr)
+    if (llvm::dyn_cast<ConstExpr>(arg0) != nullptr && llvm::dyn_cast<ConstExpr>(arg1) != nullptr) {
         return 0;
+    }
 
     return (op == Div || op == Mod) ? COST_COMPLEX_ARITH_OP : COST_SIMPLE_ARITH_LOGIC_OP;
 }
@@ -2979,8 +3092,9 @@ static std::pair<llvm::Constant *, bool> lGetBinaryExprStorageConstant(const Typ
 
     // Are we doing something like (basePtr + offset)[...] = ... for a Global
     // Variable
-    if (!bExpr->GetLValueType())
+    if (!bExpr->GetLValueType()) {
         return std::pair<llvm::Constant *, bool>(nullptr, false);
+    }
 
     // We are limiting cases to just addition and subtraction involving
     // pointer addresses
@@ -2989,13 +3103,15 @@ static std::pair<llvm::Constant *, bool> lGetBinaryExprStorageConstant(const Typ
     // Case 2 : second argument is a pointer address.
     // In this case, it has to be an addition with first argument as
     // a constant value.
-    if (!((op == BinaryExpr::Op::Add) || (op == BinaryExpr::Op::Sub)))
+    if (!((op == BinaryExpr::Op::Add) || (op == BinaryExpr::Op::Sub))) {
         return std::pair<llvm::Constant *, bool>(nullptr, false);
+    }
     if (op == BinaryExpr::Op::Sub) {
         // Ignore cases where subtrahend is a PointerType
         // Eg. b - 5 is valid but 5 - b is not.
-        if (CastType<PointerType>(arg1->GetType()))
+        if (CastType<PointerType>(arg1->GetType())) {
             return std::pair<llvm::Constant *, bool>(nullptr, false);
+        }
     }
 
     // 'isNotValidForMultiTargetGlobal' is required to let the caller know
@@ -3009,42 +3125,49 @@ static std::pair<llvm::Constant *, bool> lGetBinaryExprStorageConstant(const Typ
     bool isNotValidForMultiTargetGlobal = false;
     if (const PointerType *pt0 = CastType<PointerType>(arg0->GetType())) {
         std::pair<llvm::Constant *, bool> c1Pair;
-        if (isStorageType)
+        if (isStorageType) {
             c1Pair = arg0->GetStorageConstant(pt0);
-        else
+        } else {
             c1Pair = arg0->GetConstant(pt0);
+        }
         llvm::Constant *c1 = c1Pair.first;
         isNotValidForMultiTargetGlobal = isNotValidForMultiTargetGlobal || c1Pair.second;
         ConstExpr *cExpr = llvm::dyn_cast<ConstExpr>(arg1);
-        if ((cExpr == nullptr) || (c1 == nullptr))
+        if ((cExpr == nullptr) || (c1 == nullptr)) {
             return std::pair<llvm::Constant *, bool>(nullptr, false);
+        }
         std::pair<llvm::Constant *, bool> c2Pair;
-        if (isStorageType)
+        if (isStorageType) {
             c2Pair = cExpr->GetStorageConstant(cExpr->GetType());
-        else
+        } else {
             c2Pair = cExpr->GetConstant(cExpr->GetType());
+        }
         llvm::Constant *c2 = c2Pair.first;
         isNotValidForMultiTargetGlobal = isNotValidForMultiTargetGlobal || c2Pair.second;
-        if (op == BinaryExpr::Op::Sub)
+        if (op == BinaryExpr::Op::Sub) {
             c2 = llvm::ConstantExpr::getNeg(c2);
+        }
         llvm::Constant *c = llvm::ConstantExpr::getGetElementPtr(AddressInfo::GetPointeeLLVMType(pt0), c1, c2);
         return std::pair<llvm::Constant *, bool>(c, isNotValidForMultiTargetGlobal);
     } else if (const PointerType *pt1 = CastType<PointerType>(arg1->GetType())) {
         std::pair<llvm::Constant *, bool> c1Pair;
-        if (isStorageType)
+        if (isStorageType) {
             c1Pair = arg1->GetStorageConstant(pt1);
-        else
+        } else {
             c1Pair = arg1->GetConstant(pt1);
+        }
         llvm::Constant *c1 = c1Pair.first;
         isNotValidForMultiTargetGlobal = isNotValidForMultiTargetGlobal || c1Pair.second;
         ConstExpr *cExpr = llvm::dyn_cast<ConstExpr>(arg0);
-        if ((cExpr == nullptr) || (c1 == nullptr))
+        if ((cExpr == nullptr) || (c1 == nullptr)) {
             return std::pair<llvm::Constant *, bool>(nullptr, false);
+        }
         std::pair<llvm::Constant *, bool> c2Pair;
-        if (isStorageType)
+        if (isStorageType) {
             c2Pair = cExpr->GetStorageConstant(cExpr->GetType());
-        else
+        } else {
             c2Pair = cExpr->GetConstant(cExpr->GetType());
+        }
         llvm::Constant *c2 = c2Pair.first;
         isNotValidForMultiTargetGlobal = isNotValidForMultiTargetGlobal || c2Pair.second;
         llvm::Constant *c = llvm::ConstantExpr::getGetElementPtr(AddressInfo::GetPointeeLLVMType(pt1), c1, c2);
@@ -3136,14 +3259,16 @@ static llvm::Value *lEmitOpAssign(AssignExpr::Op op, Expr *arg0, Expr *arg1, con
     }
     const Type *lvalueType = arg0->GetLValueType();
     const Type *resultType = arg0->GetType();
-    if (lvalueType == nullptr || resultType == nullptr)
+    if (lvalueType == nullptr || resultType == nullptr) {
         return nullptr;
+    }
 
     // Get the value on the right-hand side of the assignment+operation
     // operator and load the current value on the left-hand side.
     llvm::Value *rvalue = arg1->GetValue(ctx);
-    if (rvalue == nullptr)
+    if (rvalue == nullptr) {
         return nullptr;
+    }
     llvm::Value *mask = lMaskForSymbol(baseSym, ctx);
     ctx->SetDebugPos(arg0->pos);
     llvm::Value *oldLHS = ctx->LoadInst(lv, mask, lvalueType);
@@ -3190,8 +3315,9 @@ AssignExpr::AssignExpr(AssignExpr::Op o, Expr *a, Expr *b, SourcePos p) : Expr(p
 
 llvm::Value *AssignExpr::GetValue(FunctionEmitContext *ctx) const {
     const Type *type = nullptr;
-    if (lvalue == nullptr || rvalue == nullptr || (type = GetType()) == nullptr)
+    if (lvalue == nullptr || rvalue == nullptr || (type = GetType()) == nullptr) {
         return nullptr;
+    }
     ctx->SetDebugPos(pos);
 
     Symbol *baseSym = lvalue->GetBaseSymbol();
@@ -3256,8 +3382,9 @@ llvm::Value *AssignExpr::GetValue(FunctionEmitContext *ctx) const {
 }
 
 Expr *AssignExpr::Optimize() {
-    if (lvalue == nullptr || rvalue == nullptr)
+    if (lvalue == nullptr || rvalue == nullptr) {
         return nullptr;
+    }
     return this;
 }
 
@@ -3278,30 +3405,33 @@ static bool lCheckForConstStructMember(SourcePos pos, const StructType *structTy
     for (int i = 0; i < structType->GetElementCount(); ++i) {
         const Type *t = structType->GetElementType(i);
         if (t->IsConstType()) {
-            if (structType == initialType)
+            if (structType == initialType) {
                 Error(pos,
                       "Illegal to assign to type \"%s\" due to element "
                       "\"%s\" with type \"%s\".",
                       structType->GetString().c_str(), structType->GetElementName(i).c_str(), t->GetString().c_str());
-            else
+            } else {
                 Error(pos,
                       "Illegal to assign to type \"%s\" in type \"%s\" "
                       "due to element \"%s\" with type \"%s\".",
                       structType->GetString().c_str(), initialType->GetString().c_str(),
                       structType->GetElementName(i).c_str(), t->GetString().c_str());
+            }
             return true;
         }
 
         const StructType *st = CastType<StructType>(t);
-        if (st != nullptr && lCheckForConstStructMember(pos, st, initialType))
+        if (st != nullptr && lCheckForConstStructMember(pos, st, initialType)) {
             return true;
+        }
     }
     return false;
 }
 
 Expr *AssignExpr::TypeCheck() {
-    if (lvalue == nullptr || rvalue == nullptr)
+    if (lvalue == nullptr || rvalue == nullptr) {
         return nullptr;
+    }
 
     const Type *ltype = lvalue->GetType();
     const Type *rtype = rvalue->GetType();
@@ -3310,8 +3440,9 @@ Expr *AssignExpr::TypeCheck() {
     }
 
     bool lvalueIsReference = CastType<ReferenceType>(lvalue->GetType()) != nullptr;
-    if (lvalueIsReference)
+    if (lvalueIsReference) {
         lvalue = new RefDerefExpr(lvalue, lvalue->pos);
+    }
 
     if (PossiblyResolveFunctionOverloads(rvalue, lvalue->GetType()) == false) {
         Error(pos, "Unable to find overloaded function for function "
@@ -3344,23 +3475,26 @@ Expr *AssignExpr::TypeCheck() {
             }
 
             const Type *deltaType = g->target->is32Bit() ? AtomicType::UniformInt32 : AtomicType::UniformInt64;
-            if (lhsType->IsVaryingType())
+            if (lhsType->IsVaryingType()) {
                 deltaType = deltaType->GetAsVaryingType();
+            }
             rvalue = TypeConvertExpr(rvalue, deltaType, lOpString(op));
-        } else if (op == Assign)
+        } else if (op == Assign) {
             rvalue = TypeConvertExpr(rvalue, lhsType, "assignment");
-        else {
+        } else {
             Error(lvalue->pos, "Assignment operator \"%s\" is illegal with pointer types.", lOpString(op));
             return nullptr;
         }
     } else if (CastType<ArrayType>(lhsType) != nullptr) {
         Error(lvalue->pos, "Illegal to assign to array type \"%s\".", lhsType->GetString().c_str());
         return nullptr;
-    } else
+    } else {
         rvalue = TypeConvertExpr(rvalue, lhsType, lOpString(op));
+    }
 
-    if (rvalue == nullptr)
+    if (rvalue == nullptr) {
         return nullptr;
+    }
 
     if (lhsType->IsFloatType() == true &&
         (op == ShlAssign || op == ShrAssign || op == AndAssign || op == XorAssign || op == OrAssign)) {
@@ -3374,8 +3508,9 @@ Expr *AssignExpr::TypeCheck() {
     const StructType *st = CastType<StructType>(lhsType);
     if (st != nullptr) {
         // Make sure we're not assigning to a struct that has a constant member
-        if (lCheckForConstStructMember(pos, st, st))
+        if (lCheckForConstStructMember(pos, st, st)) {
             return nullptr;
+        }
 
         if (op != Assign) {
             Error(lvalue->pos,
@@ -3389,12 +3524,14 @@ Expr *AssignExpr::TypeCheck() {
 }
 
 int AssignExpr::EstimateCost() const {
-    if (op == Assign)
+    if (op == Assign) {
         return COST_ASSIGN;
-    if (op == DivAssign || op == ModAssign)
+    }
+    if (op == DivAssign || op == ModAssign) {
         return COST_ASSIGN + COST_COMPLEX_ARITH_OP;
-    else
+    } else {
         return COST_ASSIGN + COST_SIMPLE_ARITH_LOGIC_OP;
+    }
 }
 
 AssignExpr *AssignExpr::Instantiate(TemplateInstantiation &templInst) const {
@@ -3497,8 +3634,9 @@ bool SelectExpr::HasAmbiguousVariability(std::vector<const Expr *> &warn) const 
 }
 
 llvm::Value *SelectExpr::GetValue(FunctionEmitContext *ctx) const {
-    if (!expr1 || !expr2 || !test)
+    if (!expr1 || !expr2 || !test) {
         return nullptr;
+    }
 
     ctx->SetDebugPos(pos);
 
@@ -3564,9 +3702,9 @@ llvm::Value *SelectExpr::GetValue(FunctionEmitContext *ctx) const {
         AddressInfo *expr1PtrInfo = ctx->AllocaInst(expr1->GetType());
         AddressInfo *expr2PtrInfo = ctx->AllocaInst(expr1->GetType());
 
-        if (shortCircuit1)
+        if (shortCircuit1) {
             lEmitSelectExprCode(ctx, testVal, oldMask, fullMask, expr1, expr1PtrInfo);
-        else {
+        } else {
             ctx->SetInternalMaskAnd(oldMask, testVal);
             llvm::Value *expr1Val = expr1->GetValue(ctx);
             ctx->StoreInst(expr1Val, expr1PtrInfo, expr1->GetType());
@@ -3625,15 +3763,17 @@ llvm::Value *SelectExpr::GetValue(FunctionEmitContext *ctx) const {
 }
 
 const Type *SelectExpr::GetType() const {
-    if (!test || !expr1 || !expr2)
+    if (!test || !expr1 || !expr2) {
         return nullptr;
+    }
 
     const Type *testType = test->GetType();
     const Type *expr1Type = expr1->GetType();
     const Type *expr2Type = expr2->GetType();
 
-    if (!testType || !expr1Type || !expr2Type)
+    if (!testType || !expr1Type || !expr2Type) {
         return nullptr;
+    }
 
     if (testType->IsDependentType() || expr1Type->IsDependentType() || expr2Type->IsDependentType()) {
         return AtomicType::Dependent;
@@ -3667,8 +3807,9 @@ Expr *lConstFoldSelect(const bool bv[], ConstExpr *constExpr1, ConstExpr *constE
     T result[ISPC_MAX_NVEC];
     int count = constExpr1->GetValues(v1);
     constExpr2->GetValues(v2);
-    for (int i = 0; i < count; ++i)
+    for (int i = 0; i < count; ++i) {
         result[i] = bv[i] ? v1[i] : v2[i];
+    }
     return new ConstExpr(exprType, result, pos);
 }
 
@@ -3678,46 +3819,52 @@ Expr *lConstFoldSelectFP(const bool bv[], ConstExpr *constExpr1, ConstExpr *cons
     std::vector<llvm::APFloat> result;
     int count = constExpr1->GetValues(v1, llvmType);
     constExpr2->GetValues(v2, llvmType);
-    for (int i = 0; i < count; ++i)
+    for (int i = 0; i < count; ++i) {
         result.push_back(bv[i] ? v1[i] : v2[i]);
+    }
     return new ConstExpr(exprType, result, pos);
 }
 
 Expr *SelectExpr::Optimize() {
-    if (test == nullptr || expr1 == nullptr || expr2 == nullptr)
+    if (test == nullptr || expr1 == nullptr || expr2 == nullptr) {
         return nullptr;
+    }
 
     ConstExpr *constTest = llvm::dyn_cast<ConstExpr>(test);
-    if (constTest == nullptr)
+    if (constTest == nullptr) {
         return this;
+    }
 
     // The test is a constant; see if we can resolve to one of the
     // expressions..
     bool bv[ISPC_MAX_NVEC];
     int count = constTest->GetValues(bv);
-    if (count == 1)
+    if (count == 1) {
         // Uniform test value; return the corresponding expression
         return (bv[0] == true) ? expr1 : expr2;
-    else {
+    } else {
         // Varying test: see if all of the values are the same; if so, then
         // return the corresponding expression
         bool first = bv[0];
         bool mismatch = false;
-        for (int i = 0; i < count; ++i)
+        for (int i = 0; i < count; ++i) {
             if (bv[i] != first) {
                 mismatch = true;
                 break;
             }
-        if (mismatch == false)
+        }
+        if (mismatch == false) {
             return (bv[0] == true) ? expr1 : expr2;
+        }
 
         // Last chance: see if the two expressions are constants; if so,
         // then we can do an element-wise selection based on the constant
         // condition..
         ConstExpr *constExpr1 = llvm::dyn_cast<ConstExpr>(expr1);
         ConstExpr *constExpr2 = llvm::dyn_cast<ConstExpr>(expr2);
-        if (constExpr1 == nullptr || constExpr2 == nullptr)
+        if (constExpr1 == nullptr || constExpr2 == nullptr) {
             return this;
+        }
 
         AssertPos(pos, Type::Equal(constExpr1->GetType(), constExpr2->GetType()));
         const Type *exprType = constExpr1->GetType()->GetAsNonConstType();
@@ -3754,12 +3901,14 @@ Expr *SelectExpr::Optimize() {
 }
 
 Expr *SelectExpr::TypeCheck() {
-    if (test == nullptr || expr1 == nullptr || expr2 == nullptr)
+    if (test == nullptr || expr1 == nullptr || expr2 == nullptr) {
         return nullptr;
+    }
 
     const Type *type1 = expr1->GetType(), *type2 = expr2->GetType(), *testType = test->GetType();
-    if (!type1 || !type2 || !testType)
+    if (!type1 || !type2 || !testType) {
         return nullptr;
+    }
 
     if (testType->IsDependentType() || type1->IsDependentType() || type2->IsDependentType()) {
         return this;
@@ -3767,20 +3916,23 @@ Expr *SelectExpr::TypeCheck() {
 
     if (const ArrayType *at1 = CastType<ArrayType>(type1)) {
         expr1 = TypeConvertExpr(expr1, PointerType::GetUniform(at1->GetBaseType()), "select");
-        if (expr1 == nullptr)
+        if (expr1 == nullptr) {
             return nullptr;
+        }
         type1 = expr1->GetType();
     }
     if (const ArrayType *at2 = CastType<ArrayType>(type2)) {
         expr2 = TypeConvertExpr(expr2, PointerType::GetUniform(at2->GetBaseType()), "select");
-        if (expr2 == nullptr)
+        if (expr2 == nullptr) {
             return nullptr;
+        }
         type2 = expr2->GetType();
     }
 
     test = TypeConvertExpr(test, lMatchingBoolType(testType), "select");
-    if (test == nullptr)
+    if (test == nullptr) {
         return nullptr;
+    }
     testType = test->GetType();
 
     int testVecSize = CastType<VectorType>(testType) ? CastType<VectorType>(testType)->GetElementCount() : 0;
@@ -3789,16 +3941,19 @@ Expr *SelectExpr::TypeCheck() {
 
     // If the promoted type is a ReferenceType, the expression type will be
     // the reference target type since SelectExpr is always a rvalue.
-    if (CastType<ReferenceType>(promotedType) != nullptr)
+    if (CastType<ReferenceType>(promotedType) != nullptr) {
         promotedType = promotedType->GetReferenceTarget();
+    }
 
-    if (promotedType == nullptr)
+    if (promotedType == nullptr) {
         return nullptr;
+    }
 
     expr1 = TypeConvertExpr(expr1, promotedType, "select");
     expr2 = TypeConvertExpr(expr2, promotedType, "select");
-    if (expr1 == nullptr || expr2 == nullptr)
+    if (expr1 == nullptr || expr2 == nullptr) {
         return nullptr;
+    }
 
     return this;
 }
@@ -3848,33 +4003,39 @@ FunctionCallExpr::FunctionCallExpr(Expr *f, ExprList *a, SourcePos p, bool il, E
         launchCountExpr[0] = lce[0];
         launchCountExpr[1] = lce[1];
         launchCountExpr[2] = lce[2];
-    } else
+    } else {
         launchCountExpr[0] = launchCountExpr[1] = launchCountExpr[2] = nullptr;
+    }
 }
 
 static const Type *lGetFunctionType(Expr *func) {
-    if (func == nullptr)
+    if (func == nullptr) {
         return nullptr;
+    }
 
     const Type *type = func->GetType();
-    if (type == nullptr)
+    if (type == nullptr) {
         return nullptr;
+    }
 
-    if (type->IsDependentType())
+    if (type->IsDependentType()) {
         return type;
+    }
 
     const FunctionType *ftype = CastType<FunctionType>(type);
     if (ftype == nullptr) {
         // Not a regular function symbol--is it a function pointer?
-        if (CastType<PointerType>(type) != nullptr)
+        if (CastType<PointerType>(type) != nullptr) {
             ftype = CastType<FunctionType>(type->GetBaseType());
+        }
     }
     return ftype;
 }
 
 llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
-    if (func == nullptr || args == nullptr)
+    if (func == nullptr || args == nullptr) {
         return nullptr;
+    }
 
     ctx->SetDebugPos(pos);
 
@@ -3908,8 +4069,9 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
 
     for (unsigned int i = 0; i < callargs.size(); ++i) {
         Expr *argExpr = callargs[i];
-        if (argExpr == nullptr)
+        if (argExpr == nullptr) {
             continue;
+        }
 
         const Type *paramType = ft->GetParameterType(i);
 
@@ -3925,8 +4087,9 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
 
         // Do whatever type conversion is needed
         argExpr = TypeConvertExpr(argExpr, paramType, "function call argument");
-        if (argExpr == nullptr)
+        if (argExpr == nullptr) {
             return nullptr;
+        }
         callargs[i] = argExpr;
     }
 
@@ -3938,8 +4101,9 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
         // FIXME: this type conv should happen when we create the function
         // type!
         Expr *d = TypeConvertExpr(paramDefault, paramType, "function call default argument");
-        if (d == nullptr)
+        if (d == nullptr) {
             return nullptr;
+        }
         callargs.push_back(d);
     }
 
@@ -3947,15 +4111,17 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
     std::vector<llvm::Value *> argVals;
     for (unsigned int i = 0; i < callargs.size(); ++i) {
         Expr *argExpr = callargs[i];
-        if (argExpr == nullptr)
+        if (argExpr == nullptr) {
             // give up; we hit an error earlier
             return nullptr;
+        }
 
         llvm::Value *argValue = argExpr->GetValue(ctx);
-        if (argValue == nullptr)
+        if (argValue == nullptr) {
             // something went wrong in evaluating the argument's
             // expression, so give up on this
             return nullptr;
+        }
 
         argVals.push_back(argValue);
     }
@@ -3967,8 +4133,9 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
         llvm::Value *launchCount[3] = {launchCountExpr[0]->GetValue(ctx), launchCountExpr[1]->GetValue(ctx),
                                        launchCountExpr[2]->GetValue(ctx)};
 
-        if (launchCount[0] != nullptr)
+        if (launchCount[0] != nullptr) {
             ctx->LaunchInst(callee, argVals, launchCount, ft);
+        }
     } else {
         if (isInvoke) {
             return ctx->InvokeSyclInst(callee, ft, argVals);
@@ -3977,10 +4144,11 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
         }
     }
 
-    if (isVoidFunc)
+    if (isVoidFunc) {
         return nullptr;
-    else
+    } else {
         return retVal;
+    }
 }
 
 llvm::Value *FunctionCallExpr::GetLValue(FunctionEmitContext *ctx) const {
@@ -3997,11 +4165,13 @@ static bool lFullResolveOverloads(Expr *func, ExprList *args, std::vector<const 
                                   std::vector<bool> *argCouldBeNULL, std::vector<bool> *argIsConstant) {
     for (unsigned int i = 0; i < args->exprs.size(); ++i) {
         Expr *expr = args->exprs[i];
-        if (expr == nullptr)
+        if (expr == nullptr) {
             return false;
+        }
         const Type *t = expr->GetType();
-        if (t == nullptr)
+        if (t == nullptr) {
             return false;
+        }
         argTypes->push_back(t);
         argCouldBeNULL->push_back(lIsAllIntZeros(expr) || llvm::dyn_cast<NullPointerExpr>(expr));
         argIsConstant->push_back(llvm::dyn_cast<ConstExpr>(expr) || llvm::dyn_cast<NullPointerExpr>(expr));
@@ -4012,8 +4182,9 @@ static bool lFullResolveOverloads(Expr *func, ExprList *args, std::vector<const 
 const Type *FunctionCallExpr::GetType() const {
     std::vector<const Type *> argTypes;
     std::vector<bool> argCouldBeNULL, argIsConstant;
-    if (func == nullptr || args == nullptr)
+    if (func == nullptr || args == nullptr) {
         return nullptr;
+    }
 
     if (lFullResolveOverloads(func, args, &argTypes, &argCouldBeNULL, &argIsConstant) == true) {
         FunctionSymbolExpr *fse = llvm::dyn_cast<FunctionSymbolExpr>(func);
@@ -4045,14 +4216,16 @@ const Type *FunctionCallExpr::GetLValueType() const {
 }
 
 Expr *FunctionCallExpr::Optimize() {
-    if (func == nullptr || args == nullptr)
+    if (func == nullptr || args == nullptr) {
         return nullptr;
+    }
     return this;
 }
 
 Expr *FunctionCallExpr::TypeCheck() {
-    if (func == nullptr || args == nullptr)
+    if (func == nullptr || args == nullptr) {
         return nullptr;
+    }
 
     std::vector<const Type *> argTypes;
     std::vector<bool> argCouldBeNULL, argIsConstant;
@@ -4065,12 +4238,14 @@ Expr *FunctionCallExpr::TypeCheck() {
     const FunctionType *funcType = nullptr;
     if (fse != nullptr) {
         // Regular function call
-        if (fse->ResolveOverloads(args->pos, argTypes, &argCouldBeNULL, &argIsConstant) == false)
+        if (fse->ResolveOverloads(args->pos, argTypes, &argCouldBeNULL, &argIsConstant) == false) {
             return nullptr;
+        }
 
         func = ::TypeCheck(fse);
-        if (func == nullptr)
+        if (func == nullptr) {
             return nullptr;
+        }
 
         funcType = CastType<FunctionType>(func->GetType());
         if (funcType == nullptr) {
@@ -4085,8 +4260,9 @@ Expr *FunctionCallExpr::TypeCheck() {
     } else {
         // Call through a function pointer
         const Type *fptrType = func->GetType();
-        if (fptrType == nullptr)
+        if (fptrType == nullptr) {
             return nullptr;
+        }
 
         // Make sure we do in fact have a function to call
         if (CastType<PointerType>(fptrType) == nullptr ||
@@ -4131,11 +4307,12 @@ Expr *FunctionCallExpr::TypeCheck() {
                           argTypes[i]->GetString().c_str(), paramType->GetString().c_str());
                     return nullptr;
                 }
-            } else
+            } else {
                 // Otherwise the parameter default saves us.  It should
                 // be there for sure, given the check right above the
                 // for loop.
                 AssertPos(pos, funcType->GetParameterDefault(i) != nullptr);
+            }
         }
 
         if (fptrType->IsVaryingType()) {
@@ -4151,16 +4328,19 @@ Expr *FunctionCallExpr::TypeCheck() {
     }
 
     if (funcType->isTask) {
-        if (!isLaunch)
+        if (!isLaunch) {
             Error(pos, "\"launch\" expression needed to call function "
                        "with \"task\" qualifier.");
+        }
         for (int k = 0; k < 3; k++) {
-            if (!launchCountExpr[k])
+            if (!launchCountExpr[k]) {
                 return nullptr;
+            }
 
             launchCountExpr[k] = TypeConvertExpr(launchCountExpr[k], AtomicType::UniformInt32, "task launch count");
-            if (launchCountExpr[k] == nullptr)
+            if (launchCountExpr[k] == nullptr) {
                 return nullptr;
+            }
         }
     } else {
         if (isLaunch) {
@@ -4187,33 +4367,40 @@ Expr *FunctionCallExpr::TypeCheck() {
         return nullptr;
     }
 
-    if (func == nullptr || args == nullptr)
+    if (func == nullptr || args == nullptr) {
         return nullptr;
+    }
     return this;
 }
 
 int FunctionCallExpr::EstimateCost() const {
-    if (isLaunch)
+    if (isLaunch) {
         return COST_TASK_LAUNCH;
-    if (isInvoke)
+    }
+    if (isInvoke) {
         return COST_INVOKE;
+    }
 
     const Type *type = func->GetType();
-    if (type == nullptr)
+    if (type == nullptr) {
         return 0;
+    }
 
     const PointerType *pt = CastType<PointerType>(type);
-    if (pt != nullptr)
+    if (pt != nullptr) {
         type = type->GetBaseType();
+    }
 
     const FunctionType *ftype = CastType<FunctionType>(type);
-    if (ftype != nullptr && ftype->costOverride > -1)
+    if (ftype != nullptr && ftype->costOverride > -1) {
         return ftype->costOverride;
+    }
 
-    if (pt != nullptr)
+    if (pt != nullptr) {
         return pt->IsUniformType() ? COST_FUNPTR_UNIFORM : COST_FUNPTR_VARYING;
-    else
+    } else {
         return COST_FUNCALL;
+    }
 }
 
 FunctionCallExpr *FunctionCallExpr::Instantiate(TemplateInstantiation &templInst) const {
@@ -4279,31 +4466,34 @@ static std::pair<llvm::Constant *, bool> lGetExprListConstant(const Type *type, 
     bool isNotValidForMultiTargetGlobal = false;
     if (exprs.size() == 1 && (CastType<AtomicType>(type) != nullptr || CastType<EnumType>(type) != nullptr ||
                               CastType<PointerType>(type) != nullptr)) {
-        if (isStorageType)
+        if (isStorageType) {
             return exprs[0]->GetStorageConstant(type);
-        else
+        } else {
             return exprs[0]->GetConstant(type);
+        }
     }
 
     const CollectionType *collectionType = CastType<CollectionType>(type);
     if (collectionType == nullptr) {
         if (type->IsVaryingType() == true) {
             isVaryingInit = true;
-        } else
+        } else {
             return std::pair<llvm::Constant *, bool>(nullptr, false);
+        }
     }
 
     std::string name;
-    if (CastType<StructType>(type) != nullptr)
+    if (CastType<StructType>(type) != nullptr) {
         name = "struct";
-    else if (CastType<ArrayType>(type) != nullptr)
+    } else if (CastType<ArrayType>(type) != nullptr) {
         name = "array";
-    else if (CastType<VectorType>(type) != nullptr)
+    } else if (CastType<VectorType>(type) != nullptr) {
         name = "vector";
-    else if (isVaryingInit == true)
+    } else if (isVaryingInit == true) {
         name = "varying";
-    else
+    } else {
         FATAL("Unexpected CollectionType in lGetExprListConstant");
+    }
 
     int elementCount = (isVaryingInit == true) ? g->target->getVectorWidth() : collectionType->GetElementCount();
     if ((int)exprs.size() > elementCount) {
@@ -4323,8 +4513,9 @@ static std::pair<llvm::Constant *, bool> lGetExprListConstant(const Type *type, 
 
     std::vector<llvm::Constant *> cv;
     for (unsigned int i = 0; i < exprs.size(); ++i) {
-        if (exprs[i] == nullptr)
+        if (exprs[i] == nullptr) {
             return std::pair<llvm::Constant *, bool>(nullptr, false);
+        }
         const Type *elementType =
             (isVaryingInit == true) ? type->GetAsUniformType() : collectionType->GetElementType(i);
 
@@ -4343,15 +4534,17 @@ static std::pair<llvm::Constant *, bool> lGetExprListConstant(const Type *type, 
             expr = ::Optimize(expr);
         }
         std::pair<llvm::Constant *, bool> cPair;
-        if (isStorageType)
+        if (isStorageType) {
             cPair = expr->GetStorageConstant(elementType);
-        else
+        } else {
             cPair = expr->GetConstant(elementType);
+        }
         llvm::Constant *c = cPair.first;
-        if (c == nullptr)
+        if (c == nullptr) {
             // If this list element couldn't convert to the right constant
             // type for the corresponding collection member, then give up.
             return std::pair<llvm::Constant *, bool>(nullptr, false);
+        }
         isNotValidForMultiTargetGlobal = isNotValidForMultiTargetGlobal || cPair.second;
         cv.push_back(c);
     }
@@ -4383,9 +4576,9 @@ static std::pair<llvm::Constant *, bool> lGetExprListConstant(const Type *type, 
     } else {
         llvm::Type *lt = type->LLVMType(g->ctx);
         llvm::ArrayType *lat = llvm::dyn_cast<llvm::ArrayType>(lt);
-        if (lat != nullptr)
+        if (lat != nullptr) {
             return std::pair<llvm::Constant *, bool>(llvm::ConstantArray::get(lat, cv), isNotValidForMultiTargetGlobal);
-        else if (type->IsVaryingType()) {
+        } else if (type->IsVaryingType()) {
             // uniform short vector type
             llvm::VectorType *lvt = llvm::dyn_cast<llvm::VectorType>(lt);
             AssertPos(pos, lvt != nullptr);
@@ -4498,22 +4691,26 @@ IndexExpr::IndexExpr(Expr *a, Expr *i, SourcePos p) : Expr(p, IndexExprID) {
     needed and then incorporates it in the varying pointer value.
  */
 static llvm::Value *lAddVaryingOffsetsIfNeeded(FunctionEmitContext *ctx, llvm::Value *ptr, const Type *ptrRefType) {
-    if (CastType<ReferenceType>(ptrRefType) != nullptr)
+    if (CastType<ReferenceType>(ptrRefType) != nullptr) {
         // References are uniform pointers, so no offsetting is needed
         return ptr;
+    }
 
     const PointerType *ptrType = CastType<PointerType>(ptrRefType);
     Assert(ptrType != nullptr);
-    if (ptrType->IsUniformType() || ptrType->IsSlice())
+    if (ptrType->IsUniformType() || ptrType->IsSlice()) {
         return ptr;
+    }
 
     const Type *baseType = ptrType->GetBaseType();
-    if (baseType->IsVaryingType() == false)
+    if (baseType->IsVaryingType() == false) {
         return ptr;
+    }
 
     // must be indexing into varying atomic, enum, or pointer types
-    if (Type::IsBasicType(baseType) == false)
+    if (Type::IsBasicType(baseType) == false) {
         return ptr;
+    }
 
     // Onward: compute the per lane offsets.
     llvm::Value *varyingOffsets = ctx->ProgramIndexVector();
@@ -4532,28 +4729,32 @@ static llvm::Value *lAddVaryingOffsetsIfNeeded(FunctionEmitContext *ctx, llvm::V
     Issue an error and return true if such a member is found.
  */
 static bool lVaryingStructHasUniformMember(const Type *type, SourcePos pos) {
-    if (CastType<VectorType>(type) != nullptr || CastType<ReferenceType>(type) != nullptr)
+    if (CastType<VectorType>(type) != nullptr || CastType<ReferenceType>(type) != nullptr) {
         return false;
+    }
 
     const StructType *st = CastType<StructType>(type);
     if (st == nullptr) {
         const ArrayType *at = CastType<ArrayType>(type);
-        if (at != nullptr)
+        if (at != nullptr) {
             st = CastType<StructType>(at->GetElementType());
-        else {
+        } else {
             const PointerType *pt = CastType<PointerType>(type);
-            if (pt == nullptr)
+            if (pt == nullptr) {
                 return false;
+            }
 
             st = CastType<StructType>(pt->GetBaseType());
         }
 
-        if (st == nullptr)
+        if (st == nullptr) {
             return false;
+        }
     }
 
-    if (st->IsVaryingType() == false)
+    if (st->IsVaryingType() == false) {
         return false;
+    }
 
     for (int i = 0; i < st->GetElementCount(); ++i) {
         const Type *eltType = st->GetElementType(i);
@@ -4567,8 +4768,9 @@ static bool lVaryingStructHasUniformMember(const Type *type, SourcePos pos) {
             // so push that down to the enclosed struct before makign the
             // recursive call.
             eltType = eltType->GetAsVaryingType();
-            if (lVaryingStructHasUniformMember(eltType, pos))
+            if (lVaryingStructHasUniformMember(eltType, pos)) {
                 return true;
+            }
         } else if (eltType->IsUniformType()) {
             Error(pos,
                   "Gather operation is impossible due to the presence of "
@@ -4593,8 +4795,9 @@ llvm::Value *IndexExpr::GetValue(FunctionEmitContext *ctx) const {
     // If this is going to be a gather, make sure that the varying return
     // type can represent the result (i.e. that we don't have a bound
     // 'uniform' member in a varying struct...)
-    if (indexType->IsVaryingType() && lVaryingStructHasUniformMember(returnType, pos))
+    if (indexType->IsVaryingType() && lVaryingStructHasUniformMember(returnType, pos)) {
         return nullptr;
+    }
 
     ctx->SetDebugPos(pos);
 
@@ -4644,13 +4847,15 @@ llvm::Value *IndexExpr::GetValue(FunctionEmitContext *ctx) const {
 }
 
 const Type *IndexExpr::GetType() const {
-    if (type != nullptr)
+    if (type != nullptr) {
         return type;
+    }
 
     const Type *baseExprType = nullptr, *indexType = nullptr;
     if (!baseExpr || !index || ((baseExprType = baseExpr->GetType()) == nullptr) ||
-        ((indexType = index->GetType()) == nullptr))
+        ((indexType = index->GetType()) == nullptr)) {
         return nullptr;
+    }
 
     if (baseExprType->IsDependentType() || indexType->IsDependentType()) {
         return AtomicType::Dependent;
@@ -4658,15 +4863,16 @@ const Type *IndexExpr::GetType() const {
 
     const Type *elementType = nullptr;
     const PointerType *pointerType = CastType<PointerType>(baseExprType);
-    if (pointerType != nullptr)
+    if (pointerType != nullptr) {
         // ptr[index] -> type that the pointer points to
         elementType = pointerType->GetBaseType();
-    else if (const SequentialType *sequentialType = CastType<SequentialType>(baseExprType->GetReferenceTarget()))
+    } else if (const SequentialType *sequentialType = CastType<SequentialType>(baseExprType->GetReferenceTarget())) {
         // sequential type[index] -> element type of the sequential type
         elementType = sequentialType->GetElementType();
-    else
+    } else {
         // Not an expression that can be indexed into. Will result in error.
         return nullptr;
+    }
 
     // If we're indexing into a sequence of SOA types, the result type is
     // actually the underlying type, as a uniform or varying.  Get the
@@ -4675,16 +4881,18 @@ const Type *IndexExpr::GetType() const {
     // (If we ever provide a way to index into SOA types and get an entire
     // SOA'd struct out of the array, then we won't want to do this in that
     // case..)
-    if (elementType->IsSOAType())
+    if (elementType->IsSOAType()) {
         elementType = elementType->GetAsUniformType();
+    }
 
     // If either the index is varying or we're indexing into a varying
     // pointer, then the result type is the varying variant of the indexed
     // type.
-    if (indexType->IsUniformType() && (pointerType == nullptr || pointerType->IsUniformType()))
+    if (indexType->IsUniformType() && (pointerType == nullptr || pointerType->IsUniformType())) {
         type = elementType;
-    else
+    } else {
         type = elementType->GetAsVaryingType();
+    }
 
     return type;
 }
@@ -4713,33 +4921,38 @@ static llvm::Value *lConvertToSlicePointer(FunctionEmitContext *ctx, llvm::Value
 */
 static void lCheckIndicesVersusBounds(const Type *baseExprType, Expr *index) {
     const SequentialType *seqType = CastType<SequentialType>(baseExprType);
-    if (seqType == nullptr)
+    if (seqType == nullptr) {
         return;
+    }
 
     int nElements = seqType->GetElementCount();
-    if (nElements == 0)
+    if (nElements == 0) {
         // Unsized array...
         return;
+    }
 
     // If it's an array of soa<> items, then the number of elements to
     // worry about w.r.t. index values is the product of the array size and
     // the soa width.
     int soaWidth = seqType->GetElementType()->GetSOAWidth();
-    if (soaWidth > 0)
+    if (soaWidth > 0) {
         nElements *= soaWidth;
+    }
 
     ConstExpr *ce = llvm::dyn_cast<ConstExpr>(index);
-    if (ce == nullptr)
+    if (ce == nullptr) {
         return;
+    }
 
     int32_t indices[ISPC_MAX_NVEC];
     int count = ce->GetValues(indices);
     for (int i = 0; i < count; ++i) {
-        if (indices[i] < 0 || indices[i] >= nElements)
+        if (indices[i] < 0 || indices[i] >= nElements) {
             Warning(index->pos,
                     "Array index \"%d\" may be out of bounds for %d "
                     "element array.",
                     indices[i], nElements);
+        }
     }
 }
 
@@ -4751,8 +4964,9 @@ static llvm::Value *lConvertPtrToSliceIfNeeded(FunctionEmitContext *ctx, llvm::V
     const PointerType *ptrType = CastType<PointerType>(*type);
     Assert(ptrType != nullptr);
     bool convertToSlice = (ptrType->GetBaseType()->IsSOAType() && ptrType->IsSlice() == false);
-    if (convertToSlice == false)
+    if (convertToSlice == false) {
         return ptr;
+    }
 
     *type = ptrType->GetAsSlice();
     return lConvertToSlicePointer(ctx, ptr, ptrType->GetAsSlice());
@@ -4797,16 +5011,18 @@ llvm::Value *IndexExpr::GetLValue(FunctionEmitContext *ctx) const {
     if (CastType<ArrayType>(baseExprType) || CastType<VectorType>(baseExprType)) {
         basePtr = baseExpr->GetLValue(ctx);
         basePtrType = CastType<PointerType>(baseExpr->GetLValueType());
-        if (baseExpr->GetLValueType())
+        if (baseExpr->GetLValueType()) {
             AssertPos(pos, basePtrType != nullptr);
+        }
     } else {
         baseExprType = baseExprType->GetReferenceTarget();
         AssertPos(pos, CastType<ArrayType>(baseExprType) || CastType<VectorType>(baseExprType));
         basePtr = baseExpr->GetValue(ctx);
         basePtrType = PointerType::GetUniform(baseExprType);
     }
-    if (!basePtr)
+    if (!basePtr) {
         return nullptr;
+    }
 
     // If possible, check the index value(s) against the size of the array
     lCheckIndicesVersusBounds(baseExprType, index);
@@ -4823,13 +5039,15 @@ llvm::Value *IndexExpr::GetLValue(FunctionEmitContext *ctx) const {
 }
 
 const Type *IndexExpr::GetLValueType() const {
-    if (lvalueType != nullptr)
+    if (lvalueType != nullptr) {
         return lvalueType;
+    }
 
     const Type *baseExprType = nullptr, *baseExprLValueType = nullptr, *indexType = nullptr;
     if (baseExpr == nullptr || index == nullptr || ((baseExprType = baseExpr->GetType()) == nullptr) ||
-        ((baseExprLValueType = baseExpr->GetLValueType()) == nullptr) || ((indexType = index->GetType()) == nullptr))
+        ((baseExprLValueType = baseExpr->GetLValueType()) == nullptr) || ((indexType = index->GetType()) == nullptr)) {
         return nullptr;
+    }
 
     // regularize to a PointerType
     if (CastType<ReferenceType>(baseExprLValueType) != nullptr) {
@@ -4841,9 +5059,9 @@ const Type *IndexExpr::GetLValueType() const {
     // Find the type of thing that we're indexing into
     const Type *elementType = nullptr;
     const SequentialType *st = CastType<SequentialType>(baseExprLValueType->GetBaseType());
-    if (st != nullptr)
+    if (st != nullptr) {
         elementType = st->GetElementType();
-    else {
+    } else {
         const PointerType *pt = CastType<PointerType>(baseExprLValueType->GetBaseType());
         // This assertion seems overly strict.
         // Why does it need to be a pointer to a pointer?
@@ -4859,30 +5077,34 @@ const Type *IndexExpr::GetLValueType() const {
     // Are we indexing into a varying type, or are we indexing with a
     // varying pointer?
     bool baseVarying = false;
-    if (CastType<PointerType>(baseExprType) != nullptr)
+    if (CastType<PointerType>(baseExprType) != nullptr) {
         baseVarying = baseExprType->IsVaryingType();
-    else
+    } else {
         baseVarying = baseExprLValueType->IsVaryingType();
+    }
 
     // The return type is uniform iff. the base is a uniform pointer / a
     // collection of uniform typed elements and the index is uniform.
-    if (baseVarying == false && indexType->IsUniformType())
+    if (baseVarying == false && indexType->IsUniformType()) {
         lvalueType = PointerType::GetUniform(elementType);
-    else
+    } else {
         lvalueType = PointerType::GetVarying(elementType);
+    }
 
     // Finally, if we're indexing into an SOA type, then the resulting
     // pointer must (currently) be a slice pointer; we don't allow indexing
     // the soa-width-wide structs directly.
-    if (elementType->IsSOAType())
+    if (elementType->IsSOAType()) {
         lvalueType = lvalueType->GetAsSlice();
+    }
 
     return lvalueType;
 }
 
 Expr *IndexExpr::Optimize() {
-    if (baseExpr == nullptr || index == nullptr)
+    if (baseExpr == nullptr || index == nullptr) {
         return nullptr;
+    }
     return this;
 }
 
@@ -4930,8 +5152,9 @@ Expr *IndexExpr::TypeCheck() {
             g->target->is32Bit() || g->opt.force32BitAddressing) {
             const Type *indexType = AtomicType::VaryingInt32;
             index = TypeConvertExpr(index, indexType, "array index");
-            if (index == nullptr)
+            if (index == nullptr) {
                 return nullptr;
+            }
         }
     } else { // isUniform
         // For 32-bit target:
@@ -4948,27 +5171,30 @@ Expr *IndexExpr::TypeCheck() {
                                      Type::EqualIgnoringConst(indexType->GetAsUniformType(), AtomicType::UniformInt64));
         const Type *indexType = force_32bit ? AtomicType::UniformInt32 : AtomicType::UniformInt64;
         index = TypeConvertExpr(index, indexType, "array index");
-        if (index == nullptr)
+        if (index == nullptr) {
             return nullptr;
+        }
     }
 
     return this;
 }
 
 int IndexExpr::EstimateCost() const {
-    if (index == nullptr || baseExpr == nullptr)
+    if (index == nullptr || baseExpr == nullptr) {
         return 0;
+    }
 
     const Type *indexType = index->GetType();
     const Type *baseExprType = baseExpr->GetType();
 
     if ((indexType != nullptr && indexType->IsVaryingType()) ||
-        (CastType<PointerType>(baseExprType) != nullptr && baseExprType->IsVaryingType()))
+        (CastType<PointerType>(baseExprType) != nullptr && baseExprType->IsVaryingType())) {
         // be pessimistic; some of these will later turn out to be vector
         // loads/stores, but it's too early for us to know that here.
         return COST_GATHER;
-    else
+    } else {
         return COST_LOAD;
+    }
 }
 
 IndexExpr *IndexExpr::Instantiate(TemplateInstantiation &templInst) const {
@@ -5028,8 +5254,9 @@ StructMemberExpr::StructMemberExpr(Expr *e, const char *id, SourcePos p, SourceP
     : MemberExpr(e, id, p, idpos, derefLValue, StructMemberExprID) {}
 
 const Type *StructMemberExpr::GetType() const {
-    if (type != nullptr)
+    if (type != nullptr) {
         return type;
+    }
 
     // It's a struct, and the result type is the element type, possibly
     // promoted to varying if the struct type / lvalue is varying.
@@ -5062,23 +5289,26 @@ const Type *StructMemberExpr::GetType() const {
         // If we're accessing a member of an soa structure via a uniform
         // slice pointer, then the result type is the uniform variant of
         // the element type.
-        if (lvalueType->IsUniformType())
+        if (lvalueType->IsUniformType()) {
             elementType = elementType->GetAsUniformType();
+        }
     }
 
-    if (lvalueType->IsVaryingType())
+    if (lvalueType->IsVaryingType()) {
         // If the expression we're getting the member of has an lvalue that
         // is a varying pointer type (be it slice or non-slice), then the
         // result type must be the varying version of the element type.
         elementType = elementType->GetAsVaryingType();
+    }
 
     type = elementType;
     return type;
 }
 
 const Type *StructMemberExpr::GetLValueType() const {
-    if (lvalueType != nullptr)
+    if (lvalueType != nullptr) {
         return lvalueType;
+    }
 
     if (expr == nullptr) {
         AssertPos(pos, m->errorCount > 0);
@@ -5101,8 +5331,9 @@ const Type *StructMemberExpr::GetLValueType() const {
     // needs to be a frozen slice pointer--i.e. any further indexing with
     // the result shouldn't modify the minor slice offset, but it should be
     // left unchanged until we get to a leaf SOA value.
-    if (CastType<PointerType>(exprLValueType) && CastType<PointerType>(exprLValueType)->IsSlice())
+    if (CastType<PointerType>(exprLValueType) && CastType<PointerType>(exprLValueType)->IsSlice()) {
         ptrType = ptrType->GetAsFrozenSlice();
+    }
 
     lvalueType = ptrType;
     return lvalueType;
@@ -5110,21 +5341,24 @@ const Type *StructMemberExpr::GetLValueType() const {
 
 int StructMemberExpr::getElementNumber() const {
     const StructType *structType = getStructType();
-    if (structType == nullptr)
+    if (structType == nullptr) {
         return -1;
+    }
 
     int elementNumber = structType->GetElementNumber(identifier);
-    if (elementNumber == -1)
+    if (elementNumber == -1) {
         Error(identifierPos, "Element name \"%s\" not present in struct type \"%s\".%s", identifier.c_str(),
               structType->GetString().c_str(), getCandidateNearMatches().c_str());
+    }
 
     return elementNumber;
 }
 
 const Type *StructMemberExpr::getElementType() const {
     const StructType *structType = getStructType();
-    if (structType == nullptr)
+    if (structType == nullptr) {
         return nullptr;
+    }
 
     return structType->GetElementType(identifier);
 }
@@ -5133,14 +5367,15 @@ const Type *StructMemberExpr::getElementType() const {
     of. */
 const StructType *StructMemberExpr::getStructType() const {
     const Type *type = dereferenceExpr ? expr->GetType() : expr->GetLValueType();
-    if (type == nullptr)
+    if (type == nullptr) {
         return nullptr;
+    }
 
     const Type *structType = nullptr;
     const ReferenceType *rt = CastType<ReferenceType>(type);
-    if (rt != nullptr)
+    if (rt != nullptr) {
         structType = rt->GetReferenceTarget();
-    else {
+    } else {
         const PointerType *pt = CastType<PointerType>(type);
         AssertPos(pos, pt != nullptr);
         structType = pt->GetBaseType();
@@ -5160,9 +5395,9 @@ VectorMemberExpr::VectorMemberExpr(Expr *e, const char *id, SourcePos p, SourceP
     exprVectorType = CastType<VectorType>(exprType);
     if (exprVectorType == nullptr) {
         const PointerType *pt = CastType<PointerType>(exprType);
-        if (pt != nullptr)
+        if (pt != nullptr) {
             exprVectorType = CastType<VectorType>(pt->GetBaseType());
-        else {
+        } else {
             AssertPos(pos, CastType<ReferenceType>(exprType) != nullptr);
             exprVectorType = CastType<VectorType>(exprType->GetReferenceTarget());
         }
@@ -5172,8 +5407,9 @@ VectorMemberExpr::VectorMemberExpr(Expr *e, const char *id, SourcePos p, SourceP
 }
 
 const Type *VectorMemberExpr::GetType() const {
-    if (type != nullptr)
+    if (type != nullptr) {
         return type;
+    }
 
     // For 1-element expressions, we have the base vector element
     // type.  For n-element expressions, we have a shortvec type
@@ -5193,12 +5429,14 @@ const Type *VectorMemberExpr::GetType() const {
         bool isSlice = (CastType<PointerType>(lvType) && CastType<PointerType>(lvType)->IsSlice());
         if (isSlice) {
             // CO            AssertPos(pos, type->IsSOAType());
-            if (lvType->IsUniformType())
+            if (lvType->IsUniformType()) {
                 type = type->GetAsUniformType();
+            }
         }
 
-        if (lvType->IsVaryingType())
+        if (lvType->IsVaryingType()) {
             type = type->GetAsVaryingType();
+        }
     }
 
     return type;
@@ -5213,8 +5451,9 @@ llvm::Value *VectorMemberExpr::GetLValue(FunctionEmitContext *ctx) const {
 }
 
 const Type *VectorMemberExpr::GetLValueType() const {
-    if (lvalueType != nullptr)
+    if (lvalueType != nullptr) {
         return lvalueType;
+    }
 
     if (identifier.length() == 1) {
         if (expr == nullptr) {
@@ -5223,27 +5462,30 @@ const Type *VectorMemberExpr::GetLValueType() const {
         }
 
         const Type *exprLValueType = dereferenceExpr ? expr->GetType() : expr->GetLValueType();
-        if (exprLValueType == nullptr)
+        if (exprLValueType == nullptr) {
             return nullptr;
+        }
 
         const VectorType *vt = nullptr;
-        if (CastType<ReferenceType>(exprLValueType) != nullptr)
+        if (CastType<ReferenceType>(exprLValueType) != nullptr) {
             vt = CastType<VectorType>(exprLValueType->GetReferenceTarget());
-        else
+        } else {
             vt = CastType<VectorType>(exprLValueType->GetBaseType());
+        }
         AssertPos(pos, vt != nullptr);
 
         // we don't want to report that it's e.g. a pointer to a float<1>,
         // but a pointer to a float, etc.
         const Type *elementType = vt->GetElementType();
-        if (CastType<ReferenceType>(exprLValueType) != nullptr)
+        if (CastType<ReferenceType>(exprLValueType) != nullptr) {
             lvalueType = new ReferenceType(elementType);
-        else {
+        } else {
             const PointerType *ptrType = exprLValueType->IsUniformType() ? PointerType::GetUniform(elementType)
                                                                          : PointerType::GetVarying(elementType);
             // FIXME: replicated logic with structmemberexpr....
-            if (CastType<PointerType>(exprLValueType) && CastType<PointerType>(exprLValueType)->IsSlice())
+            if (CastType<PointerType>(exprLValueType) && CastType<PointerType>(exprLValueType)->IsSlice()) {
                 ptrType = ptrType->GetAsFrozenSlice();
+            }
             lvalueType = ptrType;
         }
     }
@@ -5259,8 +5501,9 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
 
         for (size_t i = 0; i < identifier.size(); ++i) {
             int idx = lIdentifierToVectorElement(identifier[i]);
-            if (idx == -1)
+            if (idx == -1) {
                 Error(pos, "Invalid swizzle character '%c' in swizzle \"%s\".", identifier[i], identifier.c_str());
+            }
 
             indices.push_back(idx);
         }
@@ -5324,8 +5567,9 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
 
 int VectorMemberExpr::getElementNumber() const {
     int elementNumber = lIdentifierToVectorElement(identifier[0]);
-    if (elementNumber == -1)
+    if (elementNumber == -1) {
         Error(pos, "Vector element identifier \"%s\" unknown.", identifier.c_str());
+    }
     return elementNumber;
 }
 
@@ -5356,8 +5600,9 @@ MemberExpr *MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos i
     e = ::TypeCheck(e);
 
     const Type *exprType = nullptr;
-    if (e == nullptr || (exprType = e->GetType()) == nullptr)
+    if (e == nullptr || (exprType = e->GetType()) == nullptr) {
         return nullptr;
+    }
 
     if (exprType->IsDependentType()) {
         return new DependentMemberExpr(e, id, p, idpos, derefLValue);
@@ -5371,21 +5616,23 @@ MemberExpr *MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos i
     }
 
     const PointerType *pointerType = CastType<PointerType>(exprType);
-    if (pointerType != nullptr)
+    if (pointerType != nullptr) {
         exprType = pointerType->GetBaseType();
+    }
 
     if (derefLValue == true && pointerType == nullptr) {
         const Type *targetType = exprType->GetReferenceTarget();
-        if (CastType<StructType>(targetType) != nullptr)
+        if (CastType<StructType>(targetType) != nullptr) {
             Error(p,
                   "Member operator \"->\" can't be applied to non-pointer "
                   "type \"%s\".  Did you mean to use \".\"?",
                   exprType->GetString().c_str());
-        else
+        } else {
             Error(p,
                   "Member operator \"->\" can't be applied to non-struct "
                   "pointer type \"%s\".",
                   exprType->GetString().c_str());
+        }
         return nullptr;
     }
     // For struct and short-vector, emit error if elements are accessed
@@ -5416,9 +5663,9 @@ MemberExpr *MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos i
                   derefLValue ? "->" : ".", exprType->GetString().c_str());
             return nullptr;
         }
-    } else if (CastType<VectorType>(exprType) != nullptr)
+    } else if (CastType<VectorType>(exprType) != nullptr) {
         return new VectorMemberExpr(e, id, p, idpos, derefLValue);
-    else if (CastType<UndefinedStructType>(exprType)) {
+    } else if (CastType<UndefinedStructType>(exprType)) {
         Error(p,
               "Member operator \"%s\" can't be applied to declared "
               "but not defined struct type \"%s\".",
@@ -5442,16 +5689,18 @@ MemberExpr::MemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos, bo
 }
 
 llvm::Value *MemberExpr::GetValue(FunctionEmitContext *ctx) const {
-    if (!expr)
+    if (!expr) {
         return nullptr;
+    }
 
     llvm::Value *lvalue = GetLValue(ctx);
     const Type *lvalueType = GetLValueType();
 
     llvm::Value *mask = nullptr;
     if (lvalue == nullptr) {
-        if (m->errorCount > 0)
+        if (m->errorCount > 0) {
             return nullptr;
+        }
 
         // As in the array case, this may be a temporary that hasn't hit
         // memory; get the full value and stuff it into a temporary array
@@ -5467,8 +5716,9 @@ llvm::Value *MemberExpr::GetValue(FunctionEmitContext *ctx) const {
         ctx->StoreInst(val, ptrInfo, exprType);
 
         int elementNumber = getElementNumber();
-        if (elementNumber == -1)
+        if (elementNumber == -1) {
             return nullptr;
+        }
 
         lvalue = ctx->AddElementOffset(ptrInfo, elementNumber);
         lvalueType = PointerType::GetUniform(GetType());
@@ -5492,17 +5742,20 @@ int MemberExpr::getElementNumber() const { return -1; }
 
 llvm::Value *MemberExpr::GetLValue(FunctionEmitContext *ctx) const {
     const Type *exprType = nullptr;
-    if (!expr || ((exprType = expr->GetType()) == nullptr))
+    if (!expr || ((exprType = expr->GetType()) == nullptr)) {
         return nullptr;
+    }
 
     ctx->SetDebugPos(pos);
     llvm::Value *basePtr = dereferenceExpr ? expr->GetValue(ctx) : expr->GetLValue(ctx);
-    if (!basePtr)
+    if (!basePtr) {
         return nullptr;
+    }
 
     int elementNumber = getElementNumber();
-    if (elementNumber == -1)
+    if (elementNumber == -1) {
         return nullptr;
+    }
 
     const Type *exprLValueType = dereferenceExpr ? exprType : expr->GetLValueType();
     ctx->SetDebugPos(pos);
@@ -5524,10 +5777,11 @@ Expr *MemberExpr::Optimize() { return expr ? this : nullptr; }
 
 int MemberExpr::EstimateCost() const {
     const Type *lvalueType = GetLValueType();
-    if (lvalueType != nullptr && lvalueType->IsVaryingType())
+    if (lvalueType != nullptr && lvalueType->IsVaryingType()) {
         return COST_GATHER + COST_SIMPLE_ARITH_LOGIC_OP;
-    else
+    } else {
         return COST_SIMPLE_ARITH_LOGIC_OP;
+    }
 }
 
 MemberExpr *MemberExpr::Instantiate(TemplateInstantiation &templInst) const {
@@ -5565,21 +5819,25 @@ void MemberExpr::Print(Indent &indent) const {
  */
 std::string MemberExpr::getCandidateNearMatches() const {
     const StructType *structType = CastType<StructType>(expr->GetType());
-    if (!structType)
+    if (!structType) {
         return "";
+    }
 
     std::vector<std::string> elementNames;
-    for (int i = 0; i < structType->GetElementCount(); ++i)
+    for (int i = 0; i < structType->GetElementCount(); ++i) {
         elementNames.push_back(structType->GetElementName(i));
+    }
     std::vector<std::string> alternates = MatchStrings(identifier, elementNames);
-    if (!alternates.size())
+    if (!alternates.size()) {
         return "";
+    }
 
     std::string ret = " Did you mean ";
     for (unsigned int i = 0; i < alternates.size(); ++i) {
         ret += std::string("\"") + alternates[i] + std::string("\"");
-        if (i < alternates.size() - 1)
+        if (i < alternates.size() - 1) {
             ret += ", or ";
+        }
     }
     ret += "?";
     return ret;
@@ -5600,8 +5858,9 @@ ConstExpr::ConstExpr(const Type *t, int8_t *i, SourcePos p) : Expr(p, ConstExprI
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformInt8->GetAsConstType()) ||
                        Type::Equal(type, AtomicType::VaryingInt8->GetAsConstType()));
-    for (int j = 0; j < Count(); ++j)
+    for (int j = 0; j < Count(); ++j) {
         int8Val[j] = i[j];
+    }
 }
 
 ConstExpr::ConstExpr(const Type *t, uint8_t u, SourcePos p) : Expr(p, ConstExprID) {
@@ -5616,8 +5875,9 @@ ConstExpr::ConstExpr(const Type *t, uint8_t *u, SourcePos p) : Expr(p, ConstExpr
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt8->GetAsConstType()) ||
                        Type::Equal(type, AtomicType::VaryingUInt8->GetAsConstType()));
-    for (int j = 0; j < Count(); ++j)
+    for (int j = 0; j < Count(); ++j) {
         uint8Val[j] = u[j];
+    }
 }
 
 ConstExpr::ConstExpr(const Type *t, int16_t i, SourcePos p) : Expr(p, ConstExprID) {
@@ -5632,8 +5892,9 @@ ConstExpr::ConstExpr(const Type *t, int16_t *i, SourcePos p) : Expr(p, ConstExpr
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformInt16->GetAsConstType()) ||
                        Type::Equal(type, AtomicType::VaryingInt16->GetAsConstType()));
-    for (int j = 0; j < Count(); ++j)
+    for (int j = 0; j < Count(); ++j) {
         int16Val[j] = i[j];
+    }
 }
 
 ConstExpr::ConstExpr(const Type *t, uint16_t u, SourcePos p) : Expr(p, ConstExprID) {
@@ -5648,8 +5909,9 @@ ConstExpr::ConstExpr(const Type *t, uint16_t *u, SourcePos p) : Expr(p, ConstExp
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt16->GetAsConstType()) ||
                        Type::Equal(type, AtomicType::VaryingUInt16->GetAsConstType()));
-    for (int j = 0; j < Count(); ++j)
+    for (int j = 0; j < Count(); ++j) {
         uint16Val[j] = u[j];
+    }
 }
 
 ConstExpr::ConstExpr(const Type *t, int32_t i, SourcePos p) : Expr(p, ConstExprID) {
@@ -5664,8 +5926,9 @@ ConstExpr::ConstExpr(const Type *t, int32_t *i, SourcePos p) : Expr(p, ConstExpr
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformInt32->GetAsConstType()) ||
                        Type::Equal(type, AtomicType::VaryingInt32->GetAsConstType()));
-    for (int j = 0; j < Count(); ++j)
+    for (int j = 0; j < Count(); ++j) {
         int32Val[j] = i[j];
+    }
 }
 
 ConstExpr::ConstExpr(const Type *t, uint32_t u, SourcePos p) : Expr(p, ConstExprID) {
@@ -5682,8 +5945,9 @@ ConstExpr::ConstExpr(const Type *t, uint32_t *u, SourcePos p) : Expr(p, ConstExp
     AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt32->GetAsConstType()) ||
                        Type::Equal(type, AtomicType::VaryingUInt32->GetAsConstType()) ||
                        (CastType<EnumType>(type) != nullptr));
-    for (int j = 0; j < Count(); ++j)
+    for (int j = 0; j < Count(); ++j) {
         uint32Val[j] = u[j];
+    }
 }
 
 ConstExpr::ConstExpr(const Type *t, llvm::APFloat f, SourcePos p) : Expr(p, ConstExprID) {
@@ -5721,8 +5985,9 @@ ConstExpr::ConstExpr(const Type *t, int64_t *i, SourcePos p) : Expr(p, ConstExpr
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformInt64->GetAsConstType()) ||
                        Type::Equal(type, AtomicType::VaryingInt64->GetAsConstType()));
-    for (int j = 0; j < Count(); ++j)
+    for (int j = 0; j < Count(); ++j) {
         int64Val[j] = i[j];
+    }
 }
 
 ConstExpr::ConstExpr(const Type *t, uint64_t u, SourcePos p) : Expr(p, ConstExprID) {
@@ -5737,8 +6002,9 @@ ConstExpr::ConstExpr(const Type *t, uint64_t *u, SourcePos p) : Expr(p, ConstExp
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt64->GetAsConstType()) ||
                        Type::Equal(type, AtomicType::VaryingUInt64->GetAsConstType()));
-    for (int j = 0; j < Count(); ++j)
+    for (int j = 0; j < Count(); ++j) {
         uint64Val[j] = u[j];
+    }
 }
 
 ConstExpr::ConstExpr(const Type *t, bool b, SourcePos p) : Expr(p, ConstExprID) {
@@ -5753,8 +6019,9 @@ ConstExpr::ConstExpr(const Type *t, bool *b, SourcePos p) : Expr(p, ConstExprID)
     type = type->GetAsConstType();
     AssertPos(pos, Type::Equal(type, AtomicType::UniformBool->GetAsConstType()) ||
                        Type::Equal(type, AtomicType::VaryingBool->GetAsConstType()));
-    for (int j = 0; j < Count(); ++j)
+    for (int j = 0; j < Count(); ++j) {
         boolVal[j] = b[j];
+    }
 }
 
 ConstExpr::ConstExpr(const ConstExpr *old, SourcePos p) : Expr(p, ConstExprID) {
@@ -5802,9 +6069,9 @@ ConstExpr::ConstExpr(const ConstExpr *old, SourcePos p) : Expr(p, ConstExprID) {
 
 AtomicType::BasicType ConstExpr::getBasicType() const {
     const AtomicType *at = CastType<AtomicType>(type);
-    if (at != nullptr)
+    if (at != nullptr) {
         return at->basicType;
-    else {
+    } else {
         AssertPos(pos, CastType<EnumType>(type) != nullptr);
         return AtomicType::TYPE_UINT32;
     }
@@ -5820,10 +6087,11 @@ llvm::Value *ConstExpr::GetValue(FunctionEmitContext *ctx) const {
 
     switch (basicType) {
     case AtomicType::TYPE_BOOL:
-        if (isVarying)
+        if (isVarying) {
             return LLVMBoolVector(boolVal);
-        else
+        } else {
             return boolVal[0] ? LLVMTrue : LLVMFalse;
+        }
     case AtomicType::TYPE_INT8:
         return isVarying ? LLVMInt8Vector(int8Val) : LLVMInt8(int8Val[0]);
     case AtomicType::TYPE_UINT8:
@@ -5853,55 +6121,67 @@ llvm::Value *ConstExpr::GetValue(FunctionEmitContext *ctx) const {
 }
 
 bool ConstExpr::IsEqual(const ConstExpr *ce) const {
-    if (ce == nullptr)
+    if (ce == nullptr) {
         return false;
+    }
 
-    if (!Type::EqualIgnoringConst(type, ce->type))
+    if (!Type::EqualIgnoringConst(type, ce->type)) {
         return false;
+    }
 
     for (int i = 0; i < Count(); ++i) {
         switch (getBasicType()) {
         case AtomicType::TYPE_BOOL:
-            if (boolVal[i] != ce->boolVal[i])
+            if (boolVal[i] != ce->boolVal[i]) {
                 return false;
+            }
             break;
         case AtomicType::TYPE_INT8:
-            if (int8Val[i] != ce->int8Val[i])
+            if (int8Val[i] != ce->int8Val[i]) {
                 return false;
+            }
             break;
         case AtomicType::TYPE_UINT8:
-            if (uint8Val[i] != ce->uint8Val[i])
+            if (uint8Val[i] != ce->uint8Val[i]) {
                 return false;
+            }
             break;
         case AtomicType::TYPE_INT16:
-            if (int16Val[i] != ce->int16Val[i])
+            if (int16Val[i] != ce->int16Val[i]) {
                 return false;
+            }
             break;
         case AtomicType::TYPE_UINT16:
-            if (uint16Val[i] != ce->uint16Val[i])
+            if (uint16Val[i] != ce->uint16Val[i]) {
                 return false;
+            }
             break;
         case AtomicType::TYPE_INT32:
-            if (int32Val[i] != ce->int32Val[i])
+            if (int32Val[i] != ce->int32Val[i]) {
                 return false;
+            }
             break;
         case AtomicType::TYPE_UINT32:
-            if (uint32Val[i] != ce->uint32Val[i])
+            if (uint32Val[i] != ce->uint32Val[i]) {
                 return false;
+            }
             break;
         case AtomicType::TYPE_INT64:
-            if (int64Val[i] != ce->int64Val[i])
+            if (int64Val[i] != ce->int64Val[i]) {
                 return false;
+            }
             break;
         case AtomicType::TYPE_UINT64:
-            if (uint64Val[i] != ce->uint64Val[i])
+            if (uint64Val[i] != ce->uint64Val[i]) {
                 return false;
+            }
             break;
         case AtomicType::TYPE_FLOAT16:
         case AtomicType::TYPE_FLOAT:
         case AtomicType::TYPE_DOUBLE:
-            if (fpVal[i] != ce->fpVal[i])
+            if (fpVal[i] != ce->fpVal[i]) {
                 return false;
+            }
             break;
         default:
             FATAL("unimplemented const type");
@@ -5965,22 +6245,28 @@ static inline void lConvertElement(bool from, std::vector<llvm::APFloat> &to, ll
 /** Type conversion utility function
  */
 template <typename From, typename To> static void lConvert(const From *from, To *to, int count, bool forceVarying) {
-    for (int i = 0; i < count; ++i)
+    for (int i = 0; i < count; ++i) {
         lConvertElement(from[i], &to[i]);
+    }
 
-    if (forceVarying && count == 1)
-        for (int i = 1; i < g->target->getVectorWidth(); ++i)
+    if (forceVarying && count == 1) {
+        for (int i = 1; i < g->target->getVectorWidth(); ++i) {
             to[i] = to[0];
+        }
+    }
 }
 
 template <typename From>
 static void lConvert(const From *from, std::vector<llvm::APFloat> &to, llvm::Type *type, int count, bool forceVarying) {
-    for (int i = 0; i < count; ++i)
+    for (int i = 0; i < count; ++i) {
         lConvertElement(from[i], to, type);
+    }
 
-    if (forceVarying && count == 1)
-        for (int i = 1; i < g->target->getVectorWidth(); ++i)
+    if (forceVarying && count == 1) {
+        for (int i = 1; i < g->target->getVectorWidth(); ++i) {
             to.push_back(to[0]);
+        }
+    }
 }
 
 int ConstExpr::GetValues(std::vector<llvm::APFloat> &fpt) const {
@@ -6096,104 +6382,118 @@ static std::pair<llvm::Constant *, bool> lGetConstExprConstant(const Type *const
     // constant type.
     SourcePos pos = cExpr->pos;
     bool isNotValidForMultiTargetGlobal = false;
-    if (constType->IsUniformType())
+    if (constType->IsUniformType()) {
         AssertPos(pos, cExpr->Count() == 1);
+    }
 
     constType = constType->GetAsNonConstType();
     if (Type::Equal(constType, AtomicType::UniformBool) || Type::Equal(constType, AtomicType::VaryingBool)) {
         bool bv[ISPC_MAX_NVEC];
         cExpr->GetValues(bv, constType->IsVaryingType());
         if (constType->IsUniformType()) {
-            if (isStorageType)
+            if (isStorageType) {
                 return std::pair<llvm::Constant *, bool>(bv[0] ? LLVMTrueInStorage : LLVMFalseInStorage,
                                                          isNotValidForMultiTargetGlobal);
-            else
+            } else {
                 return std::pair<llvm::Constant *, bool>(bv[0] ? LLVMTrue : LLVMFalse, isNotValidForMultiTargetGlobal);
+            }
         } else {
-            if (isStorageType)
+            if (isStorageType) {
                 return std::pair<llvm::Constant *, bool>(LLVMBoolVectorInStorage(bv), isNotValidForMultiTargetGlobal);
-            else
+            } else {
                 return std::pair<llvm::Constant *, bool>(LLVMBoolVector(bv), isNotValidForMultiTargetGlobal);
+            }
         }
     } else if (Type::Equal(constType, AtomicType::UniformInt8) || Type::Equal(constType, AtomicType::VaryingInt8)) {
         int8_t iv[ISPC_MAX_NVEC];
         cExpr->GetValues(iv, constType->IsVaryingType());
-        if (constType->IsUniformType())
+        if (constType->IsUniformType()) {
             return std::pair<llvm::Constant *, bool>(LLVMInt8(iv[0]), isNotValidForMultiTargetGlobal);
-        else
+        } else {
             return std::pair<llvm::Constant *, bool>(LLVMInt8Vector(iv), isNotValidForMultiTargetGlobal);
+        }
     } else if (Type::Equal(constType, AtomicType::UniformUInt8) || Type::Equal(constType, AtomicType::VaryingUInt8)) {
         uint8_t uiv[ISPC_MAX_NVEC];
         cExpr->GetValues(uiv, constType->IsVaryingType());
-        if (constType->IsUniformType())
+        if (constType->IsUniformType()) {
             return std::pair<llvm::Constant *, bool>(LLVMUInt8(uiv[0]), isNotValidForMultiTargetGlobal);
-        else
+        } else {
             return std::pair<llvm::Constant *, bool>(LLVMUInt8Vector(uiv), isNotValidForMultiTargetGlobal);
+        }
     } else if (Type::Equal(constType, AtomicType::UniformInt16) || Type::Equal(constType, AtomicType::VaryingInt16)) {
         int16_t iv[ISPC_MAX_NVEC];
         cExpr->GetValues(iv, constType->IsVaryingType());
-        if (constType->IsUniformType())
+        if (constType->IsUniformType()) {
             return std::pair<llvm::Constant *, bool>(LLVMInt16(iv[0]), isNotValidForMultiTargetGlobal);
-        else
+        } else {
             return std::pair<llvm::Constant *, bool>(LLVMInt16Vector(iv), isNotValidForMultiTargetGlobal);
+        }
     } else if (Type::Equal(constType, AtomicType::UniformUInt16) || Type::Equal(constType, AtomicType::VaryingUInt16)) {
         uint16_t uiv[ISPC_MAX_NVEC];
         cExpr->GetValues(uiv, constType->IsVaryingType());
-        if (constType->IsUniformType())
+        if (constType->IsUniformType()) {
             return std::pair<llvm::Constant *, bool>(LLVMUInt16(uiv[0]), isNotValidForMultiTargetGlobal);
-        else
+        } else {
             return std::pair<llvm::Constant *, bool>(LLVMUInt16Vector(uiv), isNotValidForMultiTargetGlobal);
+        }
     } else if (Type::Equal(constType, AtomicType::UniformInt32) || Type::Equal(constType, AtomicType::VaryingInt32)) {
         int32_t iv[ISPC_MAX_NVEC];
         cExpr->GetValues(iv, constType->IsVaryingType());
-        if (constType->IsUniformType())
+        if (constType->IsUniformType()) {
             return std::pair<llvm::Constant *, bool>(LLVMInt32(iv[0]), isNotValidForMultiTargetGlobal);
-        else
+        } else {
             return std::pair<llvm::Constant *, bool>(LLVMInt32Vector(iv), isNotValidForMultiTargetGlobal);
+        }
     } else if (Type::Equal(constType, AtomicType::UniformUInt32) || Type::Equal(constType, AtomicType::VaryingUInt32) ||
                CastType<EnumType>(constType) != nullptr) {
         uint32_t uiv[ISPC_MAX_NVEC];
         cExpr->GetValues(uiv, constType->IsVaryingType());
-        if (constType->IsUniformType())
+        if (constType->IsUniformType()) {
             return std::pair<llvm::Constant *, bool>(LLVMUInt32(uiv[0]), isNotValidForMultiTargetGlobal);
-        else
+        } else {
             return std::pair<llvm::Constant *, bool>(LLVMUInt32Vector(uiv), isNotValidForMultiTargetGlobal);
+        }
     } else if (Type::Equal(constType, AtomicType::UniformInt64) || Type::Equal(constType, AtomicType::VaryingInt64)) {
         int64_t iv[ISPC_MAX_NVEC];
         cExpr->GetValues(iv, constType->IsVaryingType());
-        if (constType->IsUniformType())
+        if (constType->IsUniformType()) {
             return std::pair<llvm::Constant *, bool>(LLVMInt64(iv[0]), isNotValidForMultiTargetGlobal);
-        else
+        } else {
             return std::pair<llvm::Constant *, bool>(LLVMInt64Vector(iv), isNotValidForMultiTargetGlobal);
+        }
     } else if (Type::Equal(constType, AtomicType::UniformUInt64) || Type::Equal(constType, AtomicType::VaryingUInt64)) {
         uint64_t uiv[ISPC_MAX_NVEC];
         cExpr->GetValues(uiv, constType->IsVaryingType());
-        if (constType->IsUniformType())
+        if (constType->IsUniformType()) {
             return std::pair<llvm::Constant *, bool>(LLVMUInt64(uiv[0]), isNotValidForMultiTargetGlobal);
-        else
+        } else {
             return std::pair<llvm::Constant *, bool>(LLVMUInt64Vector(uiv), isNotValidForMultiTargetGlobal);
+        }
     } else if (Type::Equal(constType, AtomicType::UniformFloat16) ||
                Type::Equal(constType, AtomicType::VaryingFloat16)) {
         std::vector<llvm::APFloat> f16v;
         cExpr->GetValues(f16v, LLVMTypes::Float16Type, constType->IsVaryingType());
-        if (constType->IsUniformType())
+        if (constType->IsUniformType()) {
             return std::pair<llvm::Constant *, bool>(LLVMFloat16(f16v[0]), isNotValidForMultiTargetGlobal);
-        else
+        } else {
             return std::pair<llvm::Constant *, bool>(LLVMFloat16Vector(f16v), isNotValidForMultiTargetGlobal);
+        }
     } else if (Type::Equal(constType, AtomicType::UniformFloat) || Type::Equal(constType, AtomicType::VaryingFloat)) {
         std::vector<llvm::APFloat> fv;
         cExpr->GetValues(fv, LLVMTypes::FloatType, constType->IsVaryingType());
-        if (constType->IsUniformType())
+        if (constType->IsUniformType()) {
             return std::pair<llvm::Constant *, bool>(LLVMFloat(fv[0]), isNotValidForMultiTargetGlobal);
-        else
+        } else {
             return std::pair<llvm::Constant *, bool>(LLVMFloatVector(fv), isNotValidForMultiTargetGlobal);
+        }
     } else if (Type::Equal(constType, AtomicType::UniformDouble) || Type::Equal(constType, AtomicType::VaryingDouble)) {
         std::vector<llvm::APFloat> dv;
         cExpr->GetValues(dv, LLVMTypes::DoubleType, constType->IsVaryingType());
-        if (constType->IsUniformType())
+        if (constType->IsUniformType()) {
             return std::pair<llvm::Constant *, bool>(LLVMDouble(dv[0]), isNotValidForMultiTargetGlobal);
-        else
+        } else {
             return std::pair<llvm::Constant *, bool>(LLVMDoubleVector(dv), isNotValidForMultiTargetGlobal);
+        }
     } else if (CastType<PointerType>(constType) != nullptr) {
         // The only time we should get here is if we have an integer '0'
         // constant that should be turned into a nullptr pointer of the
@@ -6206,11 +6506,13 @@ static std::pair<llvm::Constant *, bool> lGetConstExprConstant(const Type *const
 
         int64_t iv[ISPC_MAX_NVEC];
         cExpr->GetValues(iv, constType->IsVaryingType());
-        for (int i = 0; i < cExpr->Count(); ++i)
-            if (iv[i] != 0)
+        for (int i = 0; i < cExpr->Count(); ++i) {
+            if (iv[i] != 0) {
                 // We'll issue an error about this later--trying to assign
                 // a constant int to a pointer, without a typecast.
                 return std::pair<llvm::Constant *, bool>(nullptr, false);
+            }
+        }
 
         return std::pair<llvm::Constant *, bool>(llvm::Constant::getNullValue(llvmType),
                                                  isNotValidForMultiTargetGlobal);
@@ -6373,10 +6675,11 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     case AtomicType::TYPE_FLOAT16: {
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingAtomic())
+            if (fromType->IsVaryingAtomic()) {
                 // If we have a bool vector of non-i1 elements, first
                 // truncate down to a single bit.
                 exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
+            }
             // And then do an unisgned int->float cast
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int
                                  exprVal, targetType, cOpName);
@@ -6425,10 +6728,11 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     case AtomicType::TYPE_FLOAT: {
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingAtomic())
+            if (fromType->IsVaryingAtomic()) {
                 // If we have a bool vector of non-i1 elements, first
                 // truncate down to a single bit.
                 exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
+            }
             // And then do an unisgned int->float cast
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int
                                  exprVal, targetType, cOpName);
@@ -6479,9 +6783,10 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     case AtomicType::TYPE_DOUBLE: {
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingAtomic())
+            if (fromType->IsVaryingAtomic()) {
                 // truncate bool vector values to i1s if necessary.
                 exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
+            }
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int to double
                                  exprVal, targetType, cOpName);
             break;
@@ -6528,8 +6833,9 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     case AtomicType::TYPE_INT8: {
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingAtomic())
+            if (fromType->IsVaryingAtomic()) {
                 exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
+            }
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
@@ -6589,8 +6895,9 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     case AtomicType::TYPE_INT16: {
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingAtomic())
+            if (fromType->IsVaryingAtomic()) {
                 exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
+            }
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
@@ -6623,8 +6930,9 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     case AtomicType::TYPE_UINT16: {
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingAtomic())
+            if (fromType->IsVaryingAtomic()) {
                 exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
+            }
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
@@ -6657,8 +6965,9 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     case AtomicType::TYPE_INT32: {
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingAtomic())
+            if (fromType->IsVaryingAtomic()) {
                 exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
+            }
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
@@ -6691,8 +7000,9 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     case AtomicType::TYPE_UINT32: {
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingAtomic())
+            if (fromType->IsVaryingAtomic()) {
                 exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
+            }
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
@@ -6743,8 +7053,9 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     case AtomicType::TYPE_INT64: {
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingAtomic())
+            if (fromType->IsVaryingAtomic()) {
                 exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
+            }
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
@@ -6775,8 +7086,9 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     case AtomicType::TYPE_UINT64: {
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
-            if (fromType->IsVaryingAtomic())
+            if (fromType->IsVaryingAtomic()) {
                 exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
+            }
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
@@ -6896,10 +7208,11 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
 
     // If we also want to go from uniform to varying, replicate out the
     // value across the vector elements..
-    if (toType->IsVaryingType() && toType->IsAtomicType() && fromType->IsUniformType())
+    if (toType->IsVaryingType() && toType->IsAtomicType() && fromType->IsUniformType()) {
         return ctx->SmearUniform(cast);
-    else
+    } else {
         return cast;
+    }
 }
 
 // FIXME: fold this into the FunctionEmitContext::SmearUniform() method?
@@ -6910,8 +7223,9 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
 static llvm::Value *lUniformValueToVarying(FunctionEmitContext *ctx, llvm::Value *value, const Type *type,
                                            SourcePos pos) {
     // nothing to do if it's already varying
-    if (type->IsVaryingType())
+    if (type->IsVaryingType()) {
         return value;
+    }
 
     // for structs/arrays/vectors, just recursively make their elements
     // varying (if needed) and populate the return value.
@@ -6958,12 +7272,14 @@ static llvm::Value *lUniformValueToVarying(FunctionEmitContext *ctx, llvm::Value
 
 bool TypeCastExpr::HasAmbiguousVariability(std::vector<const Expr *> &warn) const {
 
-    if (expr == nullptr)
+    if (expr == nullptr) {
         return false;
+    }
 
     const Type *toType = type, *fromType = expr->GetType();
-    if (toType == nullptr || fromType == nullptr)
+    if (toType == nullptr || fromType == nullptr) {
         return false;
+    }
 
     if (toType->HasUnboundVariability() && fromType->IsUniformType()) {
         warn.push_back(this);
@@ -6986,8 +7302,9 @@ void TypeCastExpr::PrintAmbiguousVariability() const {
 }
 
 llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
-    if (!expr)
+    if (!expr) {
         return nullptr;
+    }
 
     ctx->SetDebugPos(pos);
     const Type *toType = GetType(), *fromType = expr->GetType();
@@ -7012,29 +7329,32 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             return expr->GetValue(ctx);
         } else if (toPointerType != nullptr) {
             llvm::Value *value = expr->GetValue(ctx);
-            if (value == nullptr)
+            if (value == nullptr) {
                 return nullptr;
+            }
 
             if (fromPointerType->IsSlice() == false && toPointerType->IsSlice() == true) {
                 // Convert from a non-slice pointer to a slice pointer by
                 // creating a slice pointer structure with zero offsets.
-                if (fromPointerType->IsUniformType())
+                if (fromPointerType->IsUniformType()) {
                     value = ctx->MakeSlicePointer(value, LLVMInt32(0));
-                else
+                } else {
                     value = ctx->MakeSlicePointer(value, LLVMInt32Vector(0));
+                }
 
                 // FIXME: avoid error from unnecessary bitcast when all we
                 // need to do is the slice conversion and don't need to
                 // also do unif->varying conversions.  But this is really
                 // ugly logic.
-                if (value->getType() == toType->LLVMType(g->ctx))
+                if (value->getType() == toType->LLVMType(g->ctx)) {
                     return value;
+                }
             }
 
-            if (fromType->IsUniformType() && toType->IsUniformType())
+            if (fromType->IsUniformType() && toType->IsUniformType()) {
                 // bitcast to the actual pointer type
                 return ctx->BitCastInst(value, toType->LLVMType(g->ctx));
-            else if (fromType->IsVaryingType() && toType->IsVaryingType()) {
+            } else if (fromType->IsVaryingType() && toType->IsVaryingType()) {
                 // both are vectors of ints already, nothing to do at the IR
                 // level
                 return value;
@@ -7066,16 +7386,18 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
                 llvm::PointerType *llvmFromUnifType = llvm::dyn_cast<llvm::PointerType>(lfu);
 
                 llvm::Value *nullPtrValue = llvm::ConstantPointerNull::get(llvmFromUnifType);
-                if (fromType->IsVaryingType())
+                if (fromType->IsVaryingType()) {
                     nullPtrValue = ctx->SmearUniform(nullPtrValue);
+                }
 
                 llvm::Value *exprVal = expr->GetValue(ctx);
                 llvm::Value *cmp =
                     ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, exprVal, nullPtrValue, "ptr_ne_null");
 
                 if (toType->IsVaryingType()) {
-                    if (fromType->IsUniformType())
+                    if (fromType->IsUniformType()) {
                         cmp = ctx->SmearUniform(cmp);
+                    }
                     cmp = ctx->I1VecToBoolVec(cmp);
                 }
 
@@ -7083,24 +7405,28 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             } else {
                 // ptr -> int
                 llvm::Value *value = expr->GetValue(ctx);
-                if (value == nullptr)
+                if (value == nullptr) {
                     return nullptr;
+                }
 
-                if (toType->IsVaryingType() && fromType->IsUniformType())
+                if (toType->IsVaryingType() && fromType->IsUniformType()) {
                     value = ctx->SmearUniform(value);
+                }
 
                 llvm::Type *llvmToType = toType->LLVMType(g->ctx);
-                if (llvmToType == nullptr)
+                if (llvmToType == nullptr) {
                     return nullptr;
+                }
                 return ctx->PtrToIntInst(value, llvmToType, "ptr_typecast");
             }
         }
     }
 
-    if (Type::EqualIgnoringConst(toType, fromType))
+    if (Type::EqualIgnoringConst(toType, fromType)) {
         // There's nothing to do, just return the value.  (LLVM's type
         // system doesn't worry about constiness.)
         return expr->GetValue(ctx);
+    }
 
     if (fromArrayType != nullptr && toPointerType != nullptr) {
         // implicit array to pointer to first element
@@ -7128,9 +7454,10 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
     if (toArrayType != nullptr && fromArrayType != nullptr) {
         // cast array pointer from [n x foo] to [0 x foo] if needed to be able
         // to pass to a function that takes an unsized array as a parameter
-        if (toArrayType->GetElementCount() != 0 && (toArrayType->GetElementCount() != fromArrayType->GetElementCount()))
+        if (toArrayType->GetElementCount() != 0 && (toArrayType->GetElementCount() != fromArrayType->GetElementCount())) {
             Warning(pos, "Type-converting array of length %d to length %d", fromArrayType->GetElementCount(),
                     toArrayType->GetElementCount());
+        }
         AssertPos(pos, Type::EqualIgnoringConst(toArrayType->GetBaseType(), fromArrayType->GetBaseType()));
         llvm::Value *v = expr->GetValue(ctx);
         llvm::Type *ptype = toType->LLVMType(g->ctx);
@@ -7148,9 +7475,10 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         if (toArray && fromArray) {
             // cast array pointer from [n x foo] to [0 x foo] if needed to be able
             // to pass to a function that takes an unsized array as a parameter
-            if (toArray->GetElementCount() != 0 && (toArray->GetElementCount() != fromArray->GetElementCount()))
+            if (toArray->GetElementCount() != 0 && (toArray->GetElementCount() != fromArray->GetElementCount())) {
                 Warning(pos, "Type-converting array of length %d to length %d", fromArray->GetElementCount(),
                         toArray->GetElementCount());
+            }
             AssertPos(pos, Type::EqualIgnoringConst(toArray->GetBaseType(), fromArray->GetBaseType()));
             llvm::Value *v = expr->GetValue(ctx);
             llvm::Type *ptype = toType->LLVMType(g->ctx);
@@ -7171,8 +7499,9 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
                            Type::EqualIgnoringConst(toStruct, fromStruct->GetAsVaryingType()));
 
         llvm::Value *origValue = expr->GetValue(ctx);
-        if (!origValue)
+        if (!origValue) {
             return nullptr;
+        }
         return lUniformValueToVarying(ctx, origValue, fromType, pos);
     }
 
@@ -7183,14 +7512,16 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         AssertPos(pos, toVector->GetElementCount() == fromVector->GetElementCount());
 
         llvm::Value *exprVal = expr->GetValue(ctx);
-        if (!exprVal)
+        if (!exprVal) {
             return nullptr;
+        }
 
         // Check if we have two uniform vectors
         if (fromVector->IsUniformType() && toVector->IsUniformType()) {
             llvm::Value *conv = lTypeConvAtomicOrUniformVector(ctx, exprVal, toVector, fromVector, pos);
-            if (!conv)
+            if (!conv) {
                 return nullptr;
+            }
             if ((toVector->GetElementType()->IsBoolType())) {
                 conv = ctx->SwitchBoolToStorageType(conv, toVector->LLVMStorageType(g->ctx));
             }
@@ -7203,8 +7534,9 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
                 llvm::Value *ei = ctx->ExtractInst(exprVal, i);
                 llvm::Value *conv = lTypeConvAtomicOrUniformVector(ctx, ei, toVector->GetElementType(),
                                                                    fromVector->GetElementType(), pos);
-                if (!conv)
+                if (!conv) {
                     return nullptr;
+                }
                 if ((toVector->GetElementType()->IsBoolType()) &&
                     (CastType<AtomicType>(toVector->GetElementType()) != nullptr)) {
                     conv = ctx->SwitchBoolToStorageType(conv, toVector->GetElementType()->LLVMStorageType(g->ctx));
@@ -7217,17 +7549,20 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
     }
 
     llvm::Value *exprVal = expr->GetValue(ctx);
-    if (!exprVal)
+    if (!exprVal) {
         return nullptr;
+    }
 
     const EnumType *fromEnum = CastType<EnumType>(fromType);
     const EnumType *toEnum = CastType<EnumType>(toType);
-    if (fromEnum)
+    if (fromEnum) {
         // treat it as an uint32 type for the below and all will be good.
         fromType = fromEnum->IsUniformType() ? AtomicType::UniformUInt32 : AtomicType::VaryingUInt32;
-    if (toEnum)
+    }
+    if (toEnum) {
         // treat it as an uint32 type for the below and all will be good.
         toType = toEnum->IsUniformType() ? AtomicType::UniformUInt32 : AtomicType::VaryingUInt32;
+    }
 
     const AtomicType *fromAtomic = CastType<AtomicType>(fromType);
     // at this point, coming from an atomic type is all that's left...
@@ -7236,8 +7571,9 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
     if (toVector) {
         // scalar -> short vector conversion
         llvm::Value *conv = lTypeConvAtomicOrUniformVector(ctx, exprVal, toVector->GetElementType(), fromAtomic, pos);
-        if (!conv)
+        if (!conv) {
             return nullptr;
+        }
 
         llvm::Value *cast = nullptr;
         llvm::Type *toTypeLLVM = toType->LLVMStorageType(g->ctx);
@@ -7262,12 +7598,14 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         return cast;
     } else if (toPointerType != nullptr) {
         // int -> ptr
-        if (toType->IsVaryingType() && fromType->IsUniformType())
+        if (toType->IsVaryingType() && fromType->IsUniformType()) {
             exprVal = ctx->SmearUniform(exprVal);
+        }
 
         llvm::Type *llvmToType = toType->LLVMType(g->ctx);
-        if (llvmToType == nullptr)
+        if (llvmToType == nullptr) {
             return nullptr;
+        }
 
         return ctx->IntToPtrInst(exprVal, llvmToType, "int_to_ptr");
     } else {
@@ -7292,11 +7630,13 @@ const Type *TypeCastExpr::GetType() const {
     // (uniform base_type) of (varying base_type). This is a part of function
     // TypeCastExpr::TypeCheck. After implementation of operators we
     // have to have this functionality here.
-    if (expr == nullptr)
+    if (expr == nullptr) {
         return nullptr;
+    }
     const Type *toType = type, *fromType = expr->GetType();
-    if (toType == nullptr || fromType == nullptr)
+    if (toType == nullptr || fromType == nullptr) {
         return nullptr;
+    }
 
     if (toType->IsDependentType()) {
         return toType;
@@ -7324,19 +7664,22 @@ const Type *TypeCastExpr::GetLValueType() const {
 
 static const Type *lDeconstifyType(const Type *t) {
     const PointerType *pt = CastType<PointerType>(t);
-    if (pt != nullptr)
+    if (pt != nullptr) {
         return new PointerType(lDeconstifyType(pt->GetBaseType()), pt->GetVariability(), false);
-    else
+    } else {
         return t->GetAsNonConstType();
+    }
 }
 
 Expr *TypeCastExpr::TypeCheck() {
-    if (expr == nullptr)
+    if (expr == nullptr) {
         return nullptr;
+    }
 
     const Type *toType = type, *fromType = expr->GetType();
-    if (toType == nullptr || fromType == nullptr)
+    if (toType == nullptr || fromType == nullptr) {
         return nullptr;
+    }
 
     if (toType->IsDependentType() || fromType->IsDependentType()) {
         return this;
@@ -7352,8 +7695,9 @@ Expr *TypeCastExpr::TypeCheck() {
     toType = lDeconstifyType(toType);
 
     // Anything can be cast to void...
-    if (toType->IsVoidType())
+    if (toType->IsVoidType()) {
         return this;
+    }
 
     if (fromType->IsVoidType() || (fromType->IsVaryingType() && toType->IsUniformType())) {
         Error(pos, "Can't type cast from type \"%s\" to type \"%s\"", fromType->GetString().c_str(),
@@ -7364,9 +7708,10 @@ Expr *TypeCastExpr::TypeCheck() {
     // First some special cases that we allow only with an explicit type cast
     const PointerType *fromPtr = CastType<PointerType>(fromType);
     const PointerType *toPtr = CastType<PointerType>(toType);
-    if (fromPtr != nullptr && toPtr != nullptr)
+    if (fromPtr != nullptr && toPtr != nullptr) {
         // allow explicit typecasts between any two different pointer types
         return this;
+    }
 
     const ReferenceType *fromRef = CastType<ReferenceType>(fromType);
     const ReferenceType *toRef = CastType<ReferenceType>(toType);
@@ -7380,43 +7725,49 @@ Expr *TypeCastExpr::TypeCheck() {
     const AtomicType *toAtomic = CastType<AtomicType>(toType);
     const EnumType *fromEnum = CastType<EnumType>(fromType);
     const EnumType *toEnum = CastType<EnumType>(toType);
-    if ((fromAtomic || fromEnum) && (toAtomic || toEnum))
+    if ((fromAtomic || fromEnum) && (toAtomic || toEnum)) {
         // Allow explicit casts between all of these
         return this;
+    }
 
     // ptr -> int type casts
     if (fromPtr != nullptr && toAtomic != nullptr && toAtomic->IsIntType()) {
         bool safeCast =
             (toAtomic->basicType == AtomicType::TYPE_INT64 || toAtomic->basicType == AtomicType::TYPE_UINT64);
-        if (g->target->is32Bit())
+        if (g->target->is32Bit()) {
             safeCast |=
                 (toAtomic->basicType == AtomicType::TYPE_INT32 || toAtomic->basicType == AtomicType::TYPE_UINT32);
-        if (safeCast == false)
+        }
+        if (safeCast == false) {
             Warning(pos,
                     "Pointer type cast of type \"%s\" to integer type "
                     "\"%s\" may lose information.",
                     fromType->GetString().c_str(), toType->GetString().c_str());
+        }
         return this;
     }
 
     // int -> ptr
-    if (fromAtomic != nullptr && fromAtomic->IsIntType() && toPtr != nullptr)
+    if (fromAtomic != nullptr && fromAtomic->IsIntType() && toPtr != nullptr) {
         return this;
+    }
 
     // And otherwise see if it's one of the conversions allowed to happen
     // implicitly.
     Expr *e = TypeConvertExpr(expr, toType, "type cast expression");
-    if (e == nullptr)
+    if (e == nullptr) {
         return nullptr;
-    else
+    } else {
         return e;
+    }
 }
 
 Expr *TypeCastExpr::Optimize() {
     ConstExpr *constExpr = llvm::dyn_cast<ConstExpr>(expr);
-    if (constExpr == nullptr)
+    if (constExpr == nullptr) {
         // We can't do anything if this isn't a const expr
         return this;
+    }
 
     const Type *toType = GetType();
     const AtomicType *toAtomic = CastType<AtomicType>(toType);
@@ -7424,8 +7775,9 @@ Expr *TypeCastExpr::Optimize() {
     // If we're not casting to an atomic or enum type, we can't do anything
     // here, since ConstExprs can only represent those two types.  (So
     // e.g. we're casting from an int to an int<4>.)
-    if (toAtomic == nullptr && toEnum == nullptr)
+    if (toAtomic == nullptr && toEnum == nullptr) {
         return this;
+    }
 
     bool forceVarying = toType->IsVaryingType();
 
@@ -7501,8 +7853,9 @@ Expr *TypeCastExpr::Optimize() {
 }
 
 int TypeCastExpr::EstimateCost() const {
-    if (llvm::dyn_cast<ConstExpr>(expr) != nullptr)
+    if (llvm::dyn_cast<ConstExpr>(expr) != nullptr) {
         return 0;
+    }
 
     // FIXME: return COST_TYPECAST_COMPLEX when appropriate
     return COST_TYPECAST_SIMPLE;
@@ -7525,8 +7878,9 @@ void TypeCastExpr::Print(Indent &indent) const {
 Symbol *TypeCastExpr::GetBaseSymbol() const { return expr ? expr->GetBaseSymbol() : nullptr; }
 
 static llvm::Constant *lConvertPointerConstant(llvm::Constant *c, const Type *constType) {
-    if (c == nullptr || constType->IsUniformType())
+    if (c == nullptr || constType->IsUniformType()) {
         return c;
+    }
 
     // Handle conversion to int and then to vector of int or array of int
     // (for varying and soa types, respectively)
@@ -7535,12 +7889,13 @@ static llvm::Constant *lConvertPointerConstant(llvm::Constant *c, const Type *co
     int count = constType->IsVaryingType() ? g->target->getVectorWidth() : constType->GetSOAWidth();
 
     std::vector<llvm::Constant *> smear;
-    for (int i = 0; i < count; ++i)
+    for (int i = 0; i < count; ++i) {
         smear.push_back(intPtr);
+    }
 
-    if (constType->IsVaryingType())
+    if (constType->IsVaryingType()) {
         return llvm::ConstantVector::get(smear);
-    else {
+    } else {
         llvm::ArrayType *at = llvm::ArrayType::get(LLVMTypes::PointerIntType, count);
         return llvm::ConstantArray::get(at, smear);
     }
@@ -7560,12 +7915,14 @@ std::pair<llvm::Constant *, bool> TypeCastExpr::GetConstant(const Type *constTyp
     // 3. And converting these from uniform to the varying/soa equivalents.
     //
 
-    if ((CastType<PointerType>(constType) == nullptr) && (llvm::dyn_cast<SizeOfExpr>(expr) == nullptr))
+    if ((CastType<PointerType>(constType) == nullptr) && (llvm::dyn_cast<SizeOfExpr>(expr) == nullptr)) {
         return std::pair<llvm::Constant *, bool>(nullptr, false);
+    }
 
     llvm::Value *ptr = nullptr;
-    if (GetBaseSymbol())
+    if (GetBaseSymbol()) {
         ptr = GetBaseSymbol()->storageInfo ? GetBaseSymbol()->storageInfo->getPointer() : nullptr;
+    }
 
     if (ptr && llvm::dyn_cast<llvm::GlobalVariable>(ptr)) {
         if (CastType<ArrayType>(expr->GetType())) {
@@ -7600,8 +7957,9 @@ llvm::Value *ReferenceExpr::GetValue(FunctionEmitContext *ctx) const {
     }
 
     llvm::Value *value = expr->GetLValue(ctx);
-    if (value != nullptr)
+    if (value != nullptr) {
         return value;
+    }
 
     // value is nullptr if the expression is a temporary; in this case, we'll
     // allocate storage for it so that we can return the pointer to that...
@@ -7625,12 +7983,14 @@ llvm::Value *ReferenceExpr::GetValue(FunctionEmitContext *ctx) const {
 Symbol *ReferenceExpr::GetBaseSymbol() const { return expr ? expr->GetBaseSymbol() : nullptr; }
 
 const Type *ReferenceExpr::GetType() const {
-    if (!expr)
+    if (!expr) {
         return nullptr;
+    }
 
     const Type *type = expr->GetType();
-    if (!type)
+    if (!type) {
         return nullptr;
+    }
 
     if (type->IsDependentType()) {
         return AtomicType::Dependent;
@@ -7640,25 +8000,29 @@ const Type *ReferenceExpr::GetType() const {
 }
 
 const Type *ReferenceExpr::GetLValueType() const {
-    if (!expr)
+    if (!expr) {
         return nullptr;
+    }
 
     const Type *type = expr->GetType();
-    if (!type)
+    if (!type) {
         return nullptr;
+    }
 
     return PointerType::GetUniform(type);
 }
 
 Expr *ReferenceExpr::Optimize() {
-    if (expr == nullptr)
+    if (expr == nullptr) {
         return nullptr;
+    }
     return this;
 }
 
 Expr *ReferenceExpr::TypeCheck() {
-    if (expr == nullptr)
+    if (expr == nullptr) {
         return nullptr;
+    }
     return this;
 }
 
@@ -7691,17 +8055,21 @@ void ReferenceExpr::Print(Indent &indent) const {
 DerefExpr::DerefExpr(Expr *e, SourcePos p, unsigned scid) : Expr(p, scid) { expr = e; }
 
 llvm::Value *DerefExpr::GetValue(FunctionEmitContext *ctx) const {
-    if (expr == nullptr)
+    if (expr == nullptr) {
         return nullptr;
+    }
     llvm::Value *ptr = expr->GetValue(ctx);
-    if (ptr == nullptr)
+    if (ptr == nullptr) {
         return nullptr;
+    }
     const Type *type = expr->GetType();
-    if (type == nullptr)
+    if (type == nullptr) {
         return nullptr;
+    }
 
-    if (lVaryingStructHasUniformMember(type, pos))
+    if (lVaryingStructHasUniformMember(type, pos)) {
         return nullptr;
+    }
 
     // If dealing with 'varying * varying' add required offsets.
     ptr = lAddVaryingOffsetsIfNeeded(ctx, ptr, type);
@@ -7714,22 +8082,25 @@ llvm::Value *DerefExpr::GetValue(FunctionEmitContext *ctx) const {
 }
 
 llvm::Value *DerefExpr::GetLValue(FunctionEmitContext *ctx) const {
-    if (expr == nullptr)
+    if (expr == nullptr) {
         return nullptr;
+    }
     return expr->GetValue(ctx);
 }
 
 const Type *DerefExpr::GetLValueType() const {
-    if (expr == nullptr)
+    if (expr == nullptr) {
         return nullptr;
+    }
     return expr->GetType();
 }
 
 Symbol *DerefExpr::GetBaseSymbol() const { return expr ? expr->GetBaseSymbol() : nullptr; }
 
 Expr *DerefExpr::Optimize() {
-    if (expr == nullptr)
+    if (expr == nullptr) {
         return nullptr;
+    }
     return this;
 }
 
@@ -7750,10 +8121,11 @@ const Type *PtrDerefExpr::GetType() const {
         return AtomicType::Dependent;
     }
 
-    if (type->IsUniformType())
+    if (type->IsUniformType()) {
         return type->GetBaseType();
-    else
+    } else {
         return type->GetBaseType()->GetAsVaryingType();
+    }
 }
 
 Expr *PtrDerefExpr::TypeCheck() {
@@ -7787,12 +8159,13 @@ int PtrDerefExpr::EstimateCost() const {
         return 0;
     }
 
-    if (type->IsVaryingType())
+    if (type->IsVaryingType()) {
         // Be pessimistic; some of these will later be optimized into
         // vector loads/stores..
         return COST_GATHER + COST_DEREF;
-    else
+    } else {
         return COST_DEREF;
+    }
 }
 
 PtrDerefExpr *PtrDerefExpr::Instantiate(TemplateInstantiation &templInst) const {
@@ -7856,8 +8229,9 @@ Expr *RefDerefExpr::TypeCheck() {
 }
 
 int RefDerefExpr::EstimateCost() const {
-    if (expr == nullptr)
+    if (expr == nullptr) {
         return 0;
+    }
 
     return COST_DEREF;
 }
@@ -7889,32 +8263,36 @@ AddressOfExpr::AddressOfExpr(Expr *e, SourcePos p) : Expr(p, AddressOfExprID), e
 
 llvm::Value *AddressOfExpr::GetValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
-    if (expr == nullptr)
+    if (expr == nullptr) {
         return nullptr;
+    }
 
     const Type *exprType = expr->GetType();
-    if (CastType<ReferenceType>(exprType) != nullptr || CastType<FunctionType>(exprType) != nullptr)
+    if (CastType<ReferenceType>(exprType) != nullptr || CastType<FunctionType>(exprType) != nullptr) {
         return expr->GetValue(ctx);
-    else
+    } else {
         return expr->GetLValue(ctx);
+    }
 }
 
 const Type *AddressOfExpr::GetType() const {
-    if (expr == nullptr)
+    if (expr == nullptr) {
         return nullptr;
+    }
 
     const Type *exprType = expr->GetType();
     if (exprType && exprType->IsDependentType()) {
         return AtomicType::Dependent;
     }
 
-    if (CastType<ReferenceType>(exprType) != nullptr)
+    if (CastType<ReferenceType>(exprType) != nullptr) {
         return PointerType::GetUniform(exprType->GetReferenceTarget());
+    }
 
     const Type *t = expr->GetLValueType();
-    if (t != nullptr)
+    if (t != nullptr) {
         return t;
-    else {
+    } else {
         t = expr->GetType();
         if (t == nullptr) {
             AssertPos(pos, m->errorCount > 0);
@@ -7925,12 +8303,14 @@ const Type *AddressOfExpr::GetType() const {
 }
 
 const Type *AddressOfExpr::GetLValueType() const {
-    if (!expr)
+    if (!expr) {
         return nullptr;
+    }
 
     const Type *type = expr->GetType();
-    if (!type)
+    if (!type) {
         return nullptr;
+    }
 
     return PointerType::GetUniform(type);
 }
@@ -7968,8 +8348,9 @@ Expr *AddressOfExpr::TypeCheck() {
         return this;
     }
 
-    if (expr->GetLValueType() != nullptr)
+    if (expr->GetLValueType() != nullptr) {
         return this;
+    }
 
     Error(expr->pos, "Illegal to take address of non-lvalue or function.");
     return nullptr;
@@ -7991,8 +8372,9 @@ std::pair<llvm::Constant *, bool> AddressOfExpr::GetConstant(const Type *type) c
     }
 
     const PointerType *pt = CastType<PointerType>(type);
-    if (pt == nullptr)
+    if (pt == nullptr) {
         return std::pair<llvm::Constant *, bool>(nullptr, false);
+    }
 
     bool isNotValidForMultiTargetGlobal = false;
     const FunctionType *ft = CastType<FunctionType>(pt->GetBaseType());
@@ -8002,8 +8384,9 @@ std::pair<llvm::Constant *, bool> AddressOfExpr::GetConstant(const Type *type) c
         return std::pair<llvm::Constant *, bool>(lConvertPointerConstant(c, type), cPair.second);
     }
     llvm::Value *ptr = nullptr;
-    if (GetBaseSymbol())
+    if (GetBaseSymbol()) {
         ptr = GetBaseSymbol()->storageInfo ? GetBaseSymbol()->storageInfo->getPointer() : nullptr;
+    }
     if (ptr && llvm::dyn_cast<llvm::GlobalVariable>(ptr)) {
         const Type *eTYPE = GetType();
         if (type->LLVMType(g->ctx) == eTYPE->LLVMType(g->ctx)) {
@@ -8017,8 +8400,9 @@ std::pair<llvm::Constant *, bool> AddressOfExpr::GetConstant(const Type *type) c
                 while (IExpr) {
                     std::pair<llvm::Constant *, bool> cIndexPair = IExpr->index->GetConstant(IExpr->index->GetType());
                     llvm::Constant *cIndex = cIndexPair.first;
-                    if (cIndex == nullptr)
+                    if (cIndex == nullptr) {
                         return std::pair<llvm::Constant *, bool>(nullptr, false);
+                    }
                     gepIndex.insert(gepIndex.begin(), cIndex);
                     mBaseExpr = IExpr->baseExpr;
                     IExpr = llvm::dyn_cast<IndexExpr>(mBaseExpr);
@@ -8026,8 +8410,9 @@ std::pair<llvm::Constant *, bool> AddressOfExpr::GetConstant(const Type *type) c
                 }
                 // The base expression needs to be a global symbol so that the
                 // address is a constant.
-                if (llvm::dyn_cast<SymbolExpr>(mBaseExpr) == nullptr)
+                if (llvm::dyn_cast<SymbolExpr>(mBaseExpr) == nullptr) {
                     return std::pair<llvm::Constant *, bool>(nullptr, false);
+                }
                 gepIndex.insert(gepIndex.begin(), LLVMInt64(0));
                 llvm::Constant *c = llvm::cast<llvm::Constant>(ptr);
                 llvm::Constant *c1 = llvm::ConstantExpr::getGetElementPtr(
@@ -8051,12 +8436,14 @@ SizeOfExpr::SizeOfExpr(const Type *t, SourcePos p) : Expr(p, SizeOfExprID), expr
 llvm::Value *SizeOfExpr::GetValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
     const Type *t = expr ? expr->GetType() : type;
-    if (t == nullptr)
+    if (t == nullptr) {
         return nullptr;
+    }
 
     llvm::Type *llvmType = t->LLVMType(g->ctx);
-    if (llvmType == nullptr)
+    if (llvmType == nullptr) {
         return nullptr;
+    }
 
     return g->target->SizeOf(llvmType, ctx->GetCurrentBasicBlock());
 }
@@ -8113,16 +8500,19 @@ SizeOfExpr *SizeOfExpr::Instantiate(TemplateInstantiation &templInst) const {
 
 std::pair<llvm::Constant *, bool> SizeOfExpr::GetConstant(const Type *rtype) const {
     const Type *t = expr ? expr->GetType() : type;
-    if (t == nullptr)
+    if (t == nullptr) {
         return std::pair<llvm::Constant *, bool>(nullptr, false);
+    }
 
     bool isNotValidForMultiTargetGlobal = false;
-    if (t->IsVaryingType())
+    if (t->IsVaryingType()) {
         isNotValidForMultiTargetGlobal = true;
+    }
 
     llvm::Type *llvmType = t->LLVMType(g->ctx);
-    if (llvmType == nullptr)
+    if (llvmType == nullptr) {
         return std::pair<llvm::Constant *, bool>(nullptr, false);
+    }
 
     uint64_t byteSize = g->target->getDataLayout()->getTypeStoreSize(llvmType);
     return std::pair<llvm::Constant *, bool>(llvm::ConstantInt::get(rtype->LLVMType(g->ctx), byteSize),
@@ -8136,11 +8526,13 @@ AllocaExpr::AllocaExpr(Expr *e, SourcePos p) : Expr(p, AllocaExprID), expr(e) {}
 
 llvm::Value *AllocaExpr::GetValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
-    if (expr == nullptr)
+    if (expr == nullptr) {
         return nullptr;
+    }
     llvm::Value *llvmValue = expr->GetValue(ctx);
-    if (llvmValue == nullptr)
+    if (llvmValue == nullptr) {
         return nullptr;
+    }
     llvm::Value *resultPtr = ctx->AllocaInst(LLVMTypes::Int8Type, llvmValue, "allocaExpr", 16,
                                              false)
                                  ->getPointer(); // 16 byte stack alignment.
@@ -8204,8 +8596,9 @@ SymbolExpr::SymbolExpr(Symbol *s, SourcePos p) : Expr(p, SymbolExprID) { symbol 
 
 llvm::Value *SymbolExpr::GetValue(FunctionEmitContext *ctx) const {
     // storageInfo may be nullptr due to an earlier compilation error
-    if (!symbol || !symbol->storageInfo)
+    if (!symbol || !symbol->storageInfo) {
         return nullptr;
+    }
     ctx->SetDebugPos(pos);
 
     std::string loadName = symbol->name + std::string("_load");
@@ -8220,20 +8613,23 @@ llvm::Value *SymbolExpr::GetValue(FunctionEmitContext *ctx) const {
 }
 
 llvm::Value *SymbolExpr::GetLValue(FunctionEmitContext *ctx) const {
-    if (symbol == nullptr)
+    if (symbol == nullptr) {
         return nullptr;
+    }
     ctx->SetDebugPos(pos);
     return symbol->storageInfo->getPointer();
 }
 
 const Type *SymbolExpr::GetLValueType() const {
-    if (symbol == nullptr)
+    if (symbol == nullptr) {
         return nullptr;
+    }
 
-    if (CastType<ReferenceType>(symbol->type) != nullptr)
+    if (CastType<ReferenceType>(symbol->type) != nullptr) {
         return PointerType::GetUniform(symbol->type->GetReferenceTarget());
-    else
+    } else {
         return PointerType::GetUniform(symbol->type);
+    }
 }
 
 Symbol *SymbolExpr::GetBaseSymbol() const { return symbol; }
@@ -8243,13 +8639,14 @@ const Type *SymbolExpr::GetType() const { return symbol ? symbol->type : nullptr
 Expr *SymbolExpr::TypeCheck() { return this; }
 
 Expr *SymbolExpr::Optimize() {
-    if (symbol == nullptr)
+    if (symbol == nullptr) {
         return nullptr;
-    else if (symbol->constValue != nullptr) {
+    } else if (symbol->constValue != nullptr) {
         AssertPos(pos, GetType()->IsConstType());
         return new ConstExpr(symbol->constValue, pos);
-    } else
+    } else {
         return this;
+    }
 }
 
 int SymbolExpr::EstimateCost() const {
@@ -8357,12 +8754,14 @@ void FunctionSymbolExpr::Print(Indent &indent) const {
 }
 
 std::pair<llvm::Constant *, bool> FunctionSymbolExpr::GetConstant(const Type *type) const {
-    if (matchingFunc == nullptr || matchingFunc->function == nullptr)
+    if (matchingFunc == nullptr || matchingFunc->function == nullptr) {
         return std::pair<llvm::Constant *, bool>(nullptr, false);
+    }
 
     const FunctionType *ft = CastType<FunctionType>(type);
-    if (ft == nullptr)
+    if (ft == nullptr) {
         return std::pair<llvm::Constant *, bool>(nullptr, false);
+    }
 
     if (Type::Equal(type, matchingFunc->type) == false) {
         Error(pos,
@@ -8380,10 +8779,11 @@ static std::string lGetOverloadCandidateMessage(const std::vector<Symbol *> &fun
                                                 const std::vector<bool> *argCouldBeNULL) {
     std::string message = "Passed types: (";
     for (unsigned int i = 0; i < argTypes.size(); ++i) {
-        if (argTypes[i] != nullptr)
+        if (argTypes[i] != nullptr) {
             message += argTypes[i]->GetString();
-        else
+        } else {
             message += "(unknown type)";
+        }
         message += (i < argTypes.size() - 1) ? ", " : ")\n";
     }
 
@@ -8392,8 +8792,9 @@ static std::string lGetOverloadCandidateMessage(const std::vector<Symbol *> &fun
         Assert(ft != nullptr);
         message += "Candidate: ";
         message += ft->GetString();
-        if (i < funcs.size() - 1)
+        if (i < funcs.size() - 1) {
             message += "\n";
+        }
     }
     return message;
 }
@@ -8405,11 +8806,13 @@ static std::string lGetOverloadCandidateMessage(const std::vector<Symbol *> &fun
 static bool lIsMatchWithTypeWidening(const Type *callType, const Type *funcArgType) {
     const AtomicType *callAt = CastType<AtomicType>(callType);
     const AtomicType *funcAt = CastType<AtomicType>(funcArgType);
-    if (callAt == nullptr || funcAt == nullptr)
+    if (callAt == nullptr || funcAt == nullptr) {
         return false;
+    }
 
-    if (callAt->IsUniformType() != funcAt->IsUniformType())
+    if (callAt->IsUniformType() != funcAt->IsUniformType()) {
         return false;
+    }
 
     switch (callAt->basicType) {
     case AtomicType::TYPE_BOOL:
@@ -8744,12 +9147,14 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
 }
 
 static bool lArgIsPointerType(const Type *type) {
-    if (CastType<PointerType>(type) != nullptr)
+    if (CastType<PointerType>(type) != nullptr) {
         return true;
+    }
 
     const ReferenceType *rt = CastType<ReferenceType>(type);
-    if (rt == nullptr)
+    if (rt == nullptr) {
         return false;
+    }
 
     const Type *t = rt->GetReferenceTarget();
     return (CastType<PointerType>(t) != nullptr);
@@ -8780,21 +9185,22 @@ int FunctionSymbolExpr::computeOverloadCost(const FunctionType *ftype, const std
         const Type *fargType = ftype->GetParameterType(i);
         const Type *callType = argTypes[i];
 
-        if (Type::Equal(callType, fargType))
+        if (Type::Equal(callType, fargType)) {
             // Perfect match: no cost
             // Step "1" from documentation
             cost[i] += 0;
-        else if (argCouldBeNULL && (*argCouldBeNULL)[i] && lArgIsPointerType(fargType))
+        } else if (argCouldBeNULL && (*argCouldBeNULL)[i] && lArgIsPointerType(fargType)) {
             // Passing nullptr to a pointer-typed parameter is also a no-cost operation
             // Step "1" from documentation
             cost[i] += 0;
-        else {
+        } else {
             // If the argument is a compile-time constant, we'd like to
             // count the cost of various conversions as much lower than the
             // cost if it wasn't--so scale up the cost when this isn't the
             // case..
-            if (argIsConstant == nullptr || (*argIsConstant)[i] == false)
+            if (argIsConstant == nullptr || (*argIsConstant)[i] == false) {
                 costScale *= 512;
+            }
 
             if (CastType<ReferenceType>(fargType)) {
                 // Here we completely handle the case where fargType is reference.
@@ -8865,14 +9271,15 @@ int FunctionSymbolExpr::computeOverloadCost(const FunctionType *ftype, const std
                 // Step "10" from documentation
                 cost[i] += 128 * costScale;
             }
-            if (CanConvertTypes(callTypeNC, fargTypeNC))
+            if (CanConvertTypes(callTypeNC, fargTypeNC)) {
                 // two cases: the worst is 128 + 64: uf -> vi and
                 // the only 64: (64 < 128) uf -> ui worse than uf -> vd
                 // Step "8" from documentation
                 cost[i] += 64 * costScale;
-            else
+            } else {
                 // Failure--no type conversion possible...
                 return -1;
+            }
         }
     }
 
@@ -8925,8 +9332,9 @@ bool FunctionSymbolExpr::ResolveOverloads(SourcePos argPos, const std::vector<co
     std::vector<int> candidateCosts;
     std::vector<int *> candidateExpandCosts;
 
-    if (actualCandidates.size() == 0)
+    if (actualCandidates.size() == 0) {
         return lReportErrorUnableToFindOverload(matches, argTypes, argCouldBeNULL, name, pos);
+    }
 
     // Compute the cost for calling each of the candidate functions
     for (int i = 0; i < (int)actualCandidates.size(); ++i) {
@@ -8940,12 +9348,14 @@ bool FunctionSymbolExpr::ResolveOverloads(SourcePos argPos, const std::vector<co
     // Find the best cost, and then the candidate or candidates that have
     // that cost.
     for (int i = 0; i < (int)candidateCosts.size(); ++i) {
-        if (candidateCosts[i] != -1 && candidateCosts[i] < bestMatchCost)
+        if (candidateCosts[i] != -1 && candidateCosts[i] < bestMatchCost) {
             bestMatchCost = candidateCosts[i];
+        }
     }
     // None of the candidates matched
-    if (bestMatchCost == (1 << 30))
+    if (bestMatchCost == (1 << 30)) {
         return lReportErrorUnableToFindOverload(matches, argTypes, argCouldBeNULL, name, pos);
+    }
 
     for (int i = 0; i < (int)candidateCosts.size(); ++i) {
         if (candidateCosts[i] == bestMatchCost) {
@@ -9027,8 +9437,9 @@ Expr *NullPointerExpr::Optimize() { return this; }
 
 std::pair<llvm::Constant *, bool> NullPointerExpr::GetConstant(const Type *type) const {
     const PointerType *pt = CastType<PointerType>(type);
-    if (pt == nullptr)
+    if (pt == nullptr) {
         return std::pair<llvm::Constant *, bool>(nullptr, false);
+    }
 
     llvm::Type *llvmType = type->LLVMType(g->ctx);
     if (llvmType == nullptr) {
@@ -9070,13 +9481,15 @@ NewExpr::NewExpr(int typeQual, const Type *t, Expr *init, Expr *count, SourcePos
         Error(tqPos, "Illegal to provide both \"uniform\" and \"varying\" "
                      "qualifiers to \"new\" expression.");
         isVarying = false;
-    } else
+    } else {
         // If no type qualifier is given before the 'new', treat it as a
         // varying new.
         isVarying = (typeQual == 0) || (typeQual & TYPEQUAL_VARYING);
+    }
 
-    if (allocType != nullptr)
+    if (allocType != nullptr) {
         allocType = allocType->ResolveUnboundVariability(Variability::Uniform);
+    }
 }
 
 // Private constructor for cloning.
@@ -9097,15 +9510,17 @@ llvm::Value *NewExpr::GetValue(FunctionEmitContext *ctx) const {
         }
     } else {
         if (isVarying) {
-            if (do32Bit)
+            if (do32Bit) {
                 countValue = LLVMInt32Vector(1);
-            else
+            } else {
                 countValue = LLVMInt64Vector(1);
+            }
         } else {
-            if (do32Bit)
+            if (do32Bit) {
                 countValue = LLVMInt32(1);
-            else
+            } else {
                 countValue = LLVMInt64(1);
+            }
         }
     }
 
@@ -9115,8 +9530,9 @@ llvm::Value *NewExpr::GetValue(FunctionEmitContext *ctx) const {
     llvm::Type *llvmAllocType = allocType->LLVMType(g->ctx);
     Assert(llvmAllocType);
     llvm::Value *eltSize = g->target->SizeOf(llvmAllocType, ctx->GetCurrentBasicBlock());
-    if (isVarying)
+    if (isVarying) {
         eltSize = ctx->SmearUniform(eltSize, "smear_size");
+    }
     llvm::Value *allocSize =
         ctx->BinaryOperator(llvm::Instruction::Mul, countValue, eltSize, WrapSemantics::NSW, "alloc_size");
 
@@ -9133,8 +9549,9 @@ llvm::Value *NewExpr::GetValue(FunctionEmitContext *ctx) const {
         }
     } else {
         // FIXME: __new_uniform_32rt should take i32
-        if (allocSize->getType() != LLVMTypes::Int64Type)
+        if (allocSize->getType() != LLVMTypes::Int64Type) {
             allocSize = ctx->SExtInst(allocSize, LLVMTypes::Int64Type, "alloc_size64");
+        }
         if (g->target->is32Bit()) {
             func = m->module->getFunction(builtin::__new_uniform_32rt);
         } else {
@@ -9148,13 +9565,15 @@ llvm::Value *NewExpr::GetValue(FunctionEmitContext *ctx) const {
 
     // Now handle initializers and returning the right type for the result.
     const Type *retType = GetType();
-    if (retType == nullptr)
+    if (retType == nullptr) {
         return nullptr;
+    }
     if (isVarying) {
-        if (g->target->is32Bit())
+        if (g->target->is32Bit()) {
             // Convert i64 vector values to i32 if we are compiling to a
             // 32-bit target.
             ptrValue = ctx->TruncInst(ptrValue, LLVMTypes::VoidPointerVectorType, "ptr_to_32bit");
+        }
 
         if (initExpr != nullptr) {
             // If we have an initializer expression, emit code that checks
@@ -9194,16 +9613,18 @@ llvm::Value *NewExpr::GetValue(FunctionEmitContext *ctx) const {
         llvm::Type *ptrType = retType->LLVMType(g->ctx);
         ptrValue = ctx->BitCastInst(ptrValue, ptrType, llvm::Twine(ptrValue->getName()) + "_cast_ptr");
 
-        if (initExpr != nullptr)
+        if (initExpr != nullptr) {
             InitSymbol(new AddressInfo(ptrValue, ptrType), allocType, initExpr, ctx, pos);
+        }
 
         return ptrValue;
     }
 }
 
 const Type *NewExpr::GetType() const {
-    if (allocType == nullptr)
+    if (allocType == nullptr) {
         return nullptr;
+    }
 
     if (allocType->IsDependentType()) {
         return AtomicType::Dependent;
@@ -9247,12 +9668,14 @@ Expr *NewExpr::TypeCheck() {
     // Otherwise we only need to make sure that if we have an expression
     // giving a number of elements to allocate that it can be converted to
     // an integer of the appropriate variability.
-    if (countExpr == nullptr)
+    if (countExpr == nullptr) {
         return this;
+    }
 
     const Type *countType = nullptr;
-    if ((countType = countExpr->GetType()) == nullptr)
+    if ((countType = countExpr->GetType()) == nullptr) {
         return nullptr;
+    }
 
     if (isVarying == false && countType->IsVaryingType()) {
         Error(pos, "Illegal to provide \"varying\" allocation count with "
@@ -9263,12 +9686,14 @@ Expr *NewExpr::TypeCheck() {
     // Figure out the type that the allocation count should be
     const Type *t =
         (g->target->is32Bit() || g->opt.force32BitAddressing) ? AtomicType::UniformUInt32 : AtomicType::UniformUInt64;
-    if (isVarying)
+    if (isVarying) {
         t = t->GetAsVaryingType();
+    }
 
     countExpr = TypeConvertExpr(countExpr, t, "item count");
-    if (countExpr == nullptr)
+    if (countExpr == nullptr) {
         return nullptr;
+    }
 
     return this;
 }

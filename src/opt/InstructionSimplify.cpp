@@ -14,12 +14,14 @@ static llvm::Value *lSimplifyBoolVec(llvm::Value *value) {
     if (trunc != nullptr) {
         // Convert trunc({sext,zext}(i1 vector)) -> (i1 vector)
         llvm::SExtInst *sext = llvm::dyn_cast<llvm::SExtInst>(value);
-        if (sext && sext->getOperand(0)->getType() == LLVMTypes::Int1VectorType)
+        if (sext && sext->getOperand(0)->getType() == LLVMTypes::Int1VectorType) {
             return sext->getOperand(0);
+        }
 
         llvm::ZExtInst *zext = llvm::dyn_cast<llvm::ZExtInst>(value);
-        if (zext && zext->getOperand(0)->getType() == LLVMTypes::Int1VectorType)
+        if (zext && zext->getOperand(0)->getType() == LLVMTypes::Int1VectorType) {
             return zext->getOperand(0);
+        }
     }
     /*
       // This optimization has discernable benefit on the perf
@@ -48,8 +50,9 @@ static llvm::Value *lSimplifyBoolVec(llvm::Value *value) {
 }
 
 static bool lSimplifySelect(llvm::SelectInst *selectInst, llvm::BasicBlock::iterator iter) {
-    if (selectInst->getType()->isVectorTy() == false)
+    if (selectInst->getType()->isVectorTy() == false) {
         return false;
+    }
     Assert(selectInst->getOperand(1) != nullptr);
     Assert(selectInst->getOperand(2) != nullptr);
     llvm::Value *factor = selectInst->getOperand(0);
@@ -57,12 +60,13 @@ static bool lSimplifySelect(llvm::SelectInst *selectInst, llvm::BasicBlock::iter
     // Simplify all-on or all-off mask values
     MaskStatus maskStatus = GetMaskStatusFromValue(factor);
     llvm::Value *value = nullptr;
-    if (maskStatus == MaskStatus::all_on)
+    if (maskStatus == MaskStatus::all_on) {
         // Mask all on -> replace with the first select value
         value = selectInst->getOperand(1);
-    else if (maskStatus == MaskStatus::all_off)
+    } else if (maskStatus == MaskStatus::all_off) {
         // Mask all off -> replace with the second select value
         value = selectInst->getOperand(2);
+    }
     if (value != nullptr) {
         ReplaceInstWithValueWrapper(iter, value);
         return true;
@@ -89,8 +93,9 @@ static bool lSimplifyCall(llvm::CallInst *callInst, llvm::BasicBlock::iterator i
 
     // Turn a __movmsk call with a compile-time constant vector into the
     // equivalent scalar value.
-    if (calledFunc == nullptr || calledFunc != M->getFunction(builtin::__movmsk))
+    if (calledFunc == nullptr || calledFunc != M->getFunction(builtin::__movmsk)) {
         return false;
+    }
 
     uint64_t mask = 0;
     if (GetMaskFromValue(callInst->getArgOperand(0), &mask) == true) {

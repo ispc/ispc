@@ -275,12 +275,14 @@ class ArgFactory {
         char c = GetNextChar();
 
         // First consume any white-space before the argument
-        while (isspace(c))
+        while (isspace(c)) {
             c = GetNextChar();
+        }
 
-        if (c == '\0')
+        if (c == '\0') {
             // Reached the end so no more arguments
             return nullptr;
+        }
 
         // c now has the first character of the next argument, so collect the rest
         while (c != '\0' && !(isspace(c) && !insideDQ && !insideSQ)) {
@@ -328,8 +330,9 @@ class StringArgFactory : public ArgFactory {
     char GetNextChar() override {
         char c = *InputString;
 
-        if (c != '\0')
+        if (c != '\0') {
             ++InputString;
+        }
 
         return c;
     }
@@ -347,8 +350,9 @@ static void lAddSingleArg(char *arg, std::vector<char *> &argv, bool duplicate);
 static void lAddArgsFromFactory(ArgFactory &Args, std::vector<char *> &argv) {
     while (true) {
         char *NextArg = Args.GetNextArg();
-        if (NextArg == nullptr)
+        if (NextArg == nullptr) {
             break;
+        }
         lAddSingleArg(NextArg, argv, false);
     }
 }
@@ -396,13 +400,15 @@ static void lAddSingleArg(char *arg, std::vector<char *> &argv, bool duplicate) 
  */
 static void lGetAllArgs(int Argc, char *Argv[], std::vector<char *> &argv) {
     // Copy over the command line arguments (passed in)
-    for (int i = 0; i < Argc; ++i)
+    for (int i = 0; i < Argc; ++i) {
         lAddSingleArg(Argv[i], argv, true);
+    }
 
     // See if we have any set via the environment variable
     const char *env = getenv("ISPC_ARGS");
-    if (env)
+    if (env) {
         lAddArgsFromString(env, argv);
+    }
 }
 
 static void lSignal(void *) { FATAL("Unhandled signal sent to process; terminating."); }
@@ -709,12 +715,12 @@ int main(int Argc, char *Argv[]) {
         } else if (!strncmp(argv[i], "-D", 2)) {
             g->cppArgs.push_back(argv[i]);
         } else if (!strncmp(argv[i], "--addressing=", 13)) {
-            if (atoi(argv[i] + 13) == 64)
+            if (atoi(argv[i] + 13) == 64) {
                 // FIXME: this doesn't make sense on 32 bit platform.
                 g->opt.force32BitAddressing = false;
-            else if (atoi(argv[i] + 13) == 32)
+            } else if (atoi(argv[i] + 13) == 32) {
                 g->opt.force32BitAddressing = true;
-            else {
+            } else {
                 errorHandler.AddError("Addressing width \"%s\" invalid -- only 32 and "
                                       "64 are allowed.",
                                       argv[i] + 13);
@@ -756,21 +762,21 @@ int main(int Argc, char *Argv[]) {
         } else if (!strcmp(argv[i], "--fast-masked-vload")) {
             errorHandler.AddError("--fast-masked-vload option has been renamed to "
                                   "--opt=fast-masked-vload!");
-        } else if (!strcmp(argv[i], "--debug"))
+        } else if (!strcmp(argv[i], "--debug")) {
             g->debugPrint = true;
-        else if (!strcmp(argv[i], "--debug-llvm"))
+        } else if (!strcmp(argv[i], "--debug-llvm")) {
             llvm::DebugFlag = true;
-        else if (!strcmp(argv[i], "--debug-pm"))
+        } else if (!strcmp(argv[i], "--debug-pm")) {
             g->debugPM = true;
-        else if (!strcmp(argv[i], "--debug-pm-time-trace") || !strcmp(argv[i], "--time-trace-pm"))
+        } else if (!strcmp(argv[i], "--debug-pm-time-trace") || !strcmp(argv[i], "--time-trace-pm")) {
             g->debugPMTimeTrace = true;
-        else if (!strcmp(argv[i], "--discard-value-names"))
+        } else if (!strcmp(argv[i], "--discard-value-names")) {
             discardValueNames = BooleanOptValue::enabled;
-        else if (!strcmp(argv[i], "--no-discard-value-names"))
+        } else if (!strcmp(argv[i], "--no-discard-value-names")) {
             discardValueNames = BooleanOptValue::disabled;
-        else if (!strcmp(argv[i], "--dllexport"))
+        } else if (!strcmp(argv[i], "--dllexport")) {
             g->dllExport = true;
-        else if (!strncmp(argv[i], "--dwarf-version=", 16)) {
+        } else if (!strncmp(argv[i], "--dwarf-version=", 16)) {
             int val = atoi(argv[i] + 16);
             if (2 <= val && val <= 5) {
                 g->generateDebuggingSymbols = true;
@@ -781,32 +787,34 @@ int main(int Argc, char *Argv[]) {
                                       "only 2, 3, 4 and 5 are allowed.",
                                       argv[i] + 16);
             }
-        } else if (!strcmp(argv[i], "--print-target"))
+        } else if (!strcmp(argv[i], "--print-target")) {
             g->printTarget = true;
-        else if (!strcmp(argv[i], "--no-omit-frame-pointer"))
+        } else if (!strcmp(argv[i], "--no-omit-frame-pointer")) {
             g->NoOmitFramePointer = true;
-        else if (!strcmp(argv[i], "--instrument"))
+        } else if (!strcmp(argv[i], "--instrument")) {
             g->emitInstrumentation = true;
-        else if (!strcmp(argv[i], "--no-pragma-once"))
+        } else if (!strcmp(argv[i], "--no-pragma-once")) {
             g->noPragmaOnce = true;
-        else if (!strcmp(argv[i], "-g")) {
+        } else if (!strcmp(argv[i], "-g")) {
             g->generateDebuggingSymbols = true;
         } else if (!strcmp(argv[i], "-E")) {
             g->onlyCPP = true;
             ot = Module::CPPStub;
-        } else if (!strcmp(argv[i], "--emit-asm"))
+        } else if (!strcmp(argv[i], "--emit-asm")) {
             ot = Module::Asm;
-        else if (!strcmp(argv[i], "--emit-llvm"))
+        } else if (!strcmp(argv[i], "--emit-llvm")) {
             ot = Module::Bitcode;
-        else if (!strcmp(argv[i], "--emit-llvm-text"))
+        } else if (!strcmp(argv[i], "--emit-llvm-text")) {
             ot = Module::BitcodeText;
-        else if (!strcmp(argv[i], "--emit-obj"))
+        } else if (!strcmp(argv[i], "--emit-obj")) {
             ot = Module::Object;
+        }
 #ifdef ISPC_XE_ENABLED
-        else if (!strcmp(argv[i], "--emit-spirv"))
+        else if (!strcmp(argv[i], "--emit-spirv")) {
             ot = Module::SPIRV;
-        else if (!strcmp(argv[i], "--emit-zebin"))
+        } else if (!strcmp(argv[i], "--emit-zebin")) {
             ot = Module::ZEBIN;
+        }
 #endif
         else if (!strcmp(argv[i], "--enable-llvm-intrinsics")) {
             g->enableLLVMIntrinsics = true;
@@ -851,73 +859,76 @@ int main(int Argc, char *Argv[]) {
             vectorCall = BooleanOptValue::enabled;
         } else if (!strncmp(argv[i], "--math-lib=", 11)) {
             const char *lib = argv[i] + 11;
-            if (!strcmp(lib, "default"))
+            if (!strcmp(lib, "default")) {
                 g->mathLib = Globals::MathLib::Math_ISPC;
-            else if (!strcmp(lib, "fast"))
+            } else if (!strcmp(lib, "fast")) {
                 g->mathLib = Globals::MathLib::Math_ISPCFast;
-            else if (!strcmp(lib, "svml"))
+            } else if (!strcmp(lib, "svml")) {
                 g->mathLib = Globals::MathLib::Math_SVML;
-            else if (!strcmp(lib, "system"))
+            } else if (!strcmp(lib, "system")) {
                 g->mathLib = Globals::MathLib::Math_System;
-            else {
+            } else {
                 errorHandler.AddError("Unknown --math-lib= option \"%s\".", lib);
             }
         } else if (!strncmp(argv[i], "--opt=", 6)) {
             const char *opt = argv[i] + 6;
-            if (!strcmp(opt, "fast-math"))
+            if (!strcmp(opt, "fast-math")) {
                 g->opt.fastMath = true;
-            else if (!strcmp(opt, "fast-masked-vload"))
+            } else if (!strcmp(opt, "fast-masked-vload")) {
                 g->opt.fastMaskedVload = true;
-            else if (!strcmp(opt, "disable-assertions"))
+            } else if (!strcmp(opt, "disable-assertions")) {
                 g->opt.disableAsserts = true;
-            else if (!strcmp(opt, "disable-gathers"))
+            } else if (!strcmp(opt, "disable-gathers")) {
                 g->opt.disableGathers = true;
-            else if (!strcmp(opt, "disable-scatters"))
+            } else if (!strcmp(opt, "disable-scatters")) {
                 g->opt.disableScatters = true;
-            else if (!strcmp(opt, "disable-loop-unroll"))
+            } else if (!strcmp(opt, "disable-loop-unroll")) {
                 g->opt.unrollLoops = false;
-            else if (!strcmp(opt, "disable-fma"))
+            } else if (!strcmp(opt, "disable-fma")) {
                 g->opt.disableFMA = true;
-            else if (!strcmp(opt, "disable-zmm"))
+            } else if (!strcmp(opt, "disable-zmm")) {
                 g->opt.disableZMM = true;
-            else if (!strcmp(opt, "force-aligned-memory"))
+            } else if (!strcmp(opt, "force-aligned-memory")) {
                 g->opt.forceAlignedMemory = true;
-            else if (!strcmp(opt, "reset-ftz-daz"))
+            } else if (!strcmp(opt, "reset-ftz-daz")) {
                 g->opt.resetFTZ_DAZ = true;
+            }
 
             // These are only used for performance tests of specific
             // optimizations
-            else if (!strcmp(opt, "disable-all-on-optimizations"))
+            else if (!strcmp(opt, "disable-all-on-optimizations")) {
                 g->opt.disableMaskAllOnOptimizations = true;
-            else if (!strcmp(opt, "disable-coalescing"))
+            } else if (!strcmp(opt, "disable-coalescing")) {
                 g->opt.disableCoalescing = true;
-            else if (!strcmp(opt, "disable-handle-pseudo-memory-ops"))
+            } else if (!strcmp(opt, "disable-handle-pseudo-memory-ops")) {
                 g->opt.disableHandlePseudoMemoryOps = true;
-            else if (!strcmp(opt, "disable-blended-masked-stores"))
+            } else if (!strcmp(opt, "disable-blended-masked-stores")) {
                 g->opt.disableBlendedMaskedStores = true;
-            else if (!strcmp(opt, "disable-coherent-control-flow"))
+            } else if (!strcmp(opt, "disable-coherent-control-flow")) {
                 g->opt.disableCoherentControlFlow = true;
-            else if (!strcmp(opt, "disable-uniform-control-flow"))
+            } else if (!strcmp(opt, "disable-uniform-control-flow")) {
                 g->opt.disableUniformControlFlow = true;
-            else if (!strcmp(opt, "disable-gather-scatter-optimizations"))
+            } else if (!strcmp(opt, "disable-gather-scatter-optimizations")) {
                 g->opt.disableGatherScatterOptimizations = true;
-            else if (!strcmp(opt, "disable-blending-removal"))
+            } else if (!strcmp(opt, "disable-blending-removal")) {
                 g->opt.disableMaskedStoreToStore = true;
-            else if (!strcmp(opt, "disable-gather-scatter-flattening"))
+            } else if (!strcmp(opt, "disable-gather-scatter-flattening")) {
                 g->opt.disableGatherScatterFlattening = true;
-            else if (!strcmp(opt, "disable-uniform-memory-optimizations"))
+            } else if (!strcmp(opt, "disable-uniform-memory-optimizations")) {
                 g->opt.disableUniformMemoryOptimizations = true;
+            }
 #ifdef ISPC_XE_ENABLED
-            else if (!strcmp(opt, "disable-xe-gather-coalescing"))
+            else if (!strcmp(opt, "disable-xe-gather-coalescing")) {
                 g->opt.disableXeGatherCoalescing = true;
-            else if (!strncmp(opt, "threshold-for-xe-gather-coalescing=", 37))
+            } else if (!strncmp(opt, "threshold-for-xe-gather-coalescing=", 37)) {
                 g->opt.thresholdForXeGatherCoalescing = atoi(opt + 37);
-            else if (!strcmp(opt, "emit-xe-hardware-mask"))
+            } else if (!strcmp(opt, "emit-xe-hardware-mask")) {
                 g->opt.emitXeHardwareMask = true;
-            else if (!strcmp(opt, "enable-xe-foreach-varying"))
+            } else if (!strcmp(opt, "enable-xe-foreach-varying")) {
                 g->opt.enableForeachInsideVarying = true;
-            else if (!strcmp(opt, "enable-xe-unsafe-masked-load"))
+            } else if (!strcmp(opt, "enable-xe-unsafe-masked-load")) {
                 g->opt.enableXeUnsafeMaskedLoad = true;
+            }
 #endif
             else {
                 errorHandler.AddError("Unknown --opt= option \"%s\".", opt);
@@ -931,33 +942,34 @@ int main(int Argc, char *Argv[]) {
         } else if (!strcmp(argv[i], "--woff") || !strcmp(argv[i], "-woff")) {
             g->disableWarnings = true;
             g->emitPerfWarnings = false;
-        } else if (!strcmp(argv[i], "--werror"))
+        } else if (!strcmp(argv[i], "--werror")) {
             g->warningsAsErrors = true;
-        else if (!strcmp(argv[i], "--wrap-signed-int"))
+        } else if (!strcmp(argv[i], "--wrap-signed-int")) {
             wrapSignedInt = BooleanOptValue::enabled;
-        else if (!strcmp(argv[i], "--no-wrap-signed-int"))
+        } else if (!strcmp(argv[i], "--no-wrap-signed-int")) {
             wrapSignedInt = BooleanOptValue::disabled;
-        else if (!strncmp(argv[i], "--error-limit=", 14)) {
+        } else if (!strncmp(argv[i], "--error-limit=", 14)) {
             int errLimit = atoi(argv[i] + 14);
-            if (errLimit >= 0)
+            if (errLimit >= 0) {
                 g->errorLimit = errLimit;
-            else
+            } else {
                 errorHandler.AddError("Invalid value for --error-limit: \"%d\" -- "
                                       "value cannot be a negative number.",
                                       errLimit);
-        } else if (!strcmp(argv[i], "--nowrap"))
+            }
+        } else if (!strcmp(argv[i], "--nowrap")) {
             g->disableLineWrap = true;
-        else if (!strcmp(argv[i], "--wno-perf") || !strcmp(argv[i], "-wno-perf"))
+        } else if (!strcmp(argv[i], "--wno-perf") || !strcmp(argv[i], "-wno-perf")) {
             g->emitPerfWarnings = false;
-        else if (!strcmp(argv[i], "-o")) {
+        } else if (!strcmp(argv[i], "-o")) {
             if (++i != argc) {
                 outFileName = argv[i];
             } else {
                 errorHandler.AddError("No output file specified after -o option.");
             }
-        } else if (!strncmp(argv[i], "--outfile=", 10))
+        } else if (!strncmp(argv[i], "--outfile=", 10)) {
             outFileName = argv[i] + strlen("--outfile=");
-        else if (!strcmp(argv[i], "-h")) {
+        } else if (!strcmp(argv[i], "-h")) {
             if (++i != argc) {
                 headerFileName = argv[i];
             } else {
@@ -972,19 +984,20 @@ int main(int Argc, char *Argv[]) {
                    !strcmp(argv[i], "-O3")) {
             g->opt.level = 1;
             g->codegenOptLevel = Globals::CodegenOptLevel::Aggressive;
-            if (!strcmp(argv[i], "-O1"))
+            if (!strcmp(argv[i], "-O1")) {
                 g->opt.disableCoherentControlFlow = true;
+            }
         } else if (!strcmp(argv[i], "-")) {
             file = argv[i];
-        } else if (!strcmp(argv[i], "--nostdlib"))
+        } else if (!strcmp(argv[i], "--nostdlib")) {
             g->includeStdlib = false;
-        else if (!strcmp(argv[i], "--nocpp"))
+        } else if (!strcmp(argv[i], "--nocpp")) {
             g->runCPP = false;
-        else if (!strcmp(argv[i], "-ffunction-sections"))
+        } else if (!strcmp(argv[i], "-ffunction-sections")) {
             g->functionSections = true;
-        else if (!strcmp(argv[i], "-fno-function-sections"))
+        } else if (!strcmp(argv[i], "-fno-function-sections")) {
             g->functionSections = false;
-        else if (!strncmp(argv[i], "--mcmodel=", 10)) {
+        } else if (!strncmp(argv[i], "--mcmodel=", 10)) {
             const char *value = argv[i] + 10;
             if (!strcmp(value, "small")) {
                 flags.setMCModel(MCModel::Small);
@@ -994,17 +1007,19 @@ int main(int Argc, char *Argv[]) {
                 errorHandler.AddError("Unsupported code model \"%s\". Only small and large models are supported.",
                                       value);
             }
-        } else if (!strcmp(argv[i], "--pic"))
+        } else if (!strcmp(argv[i], "--pic")) {
             flags.setPICLevel(PICLevel::SmallPIC);
-        else if (!strcmp(argv[i], "--PIC"))
+        } else if (!strcmp(argv[i], "--PIC")) {
             flags.setPICLevel(PICLevel::BigPIC);
+        }
 #ifndef ISPC_IS_HOST_WINDOWS
-        else if (!strcmp(argv[i], "--colored-output"))
+        else if (!strcmp(argv[i], "--colored-output")) {
             g->forceColoredOutput = true;
+        }
 #endif // !ISPC_IS_HOST_WINDOWS
-        else if (!strcmp(argv[i], "--quiet"))
+        else if (!strcmp(argv[i], "--quiet")) {
             g->quiet = true;
-        else if (!strcmp(argv[i], "--yydebug")) {
+        } else if (!strcmp(argv[i], "--yydebug")) {
             yydebug = 1;
         } else if (!strcmp(argv[i], "-MMM")) {
             if (++i != argc) {
@@ -1234,17 +1249,19 @@ int main(int Argc, char *Argv[]) {
                              "options will be ignored.");
     }
 
-    if (targets.size() > 1)
+    if (targets.size() > 1) {
         g->isMultiTargetCompilation = true;
+    }
 
     if ((ot == Module::Asm) && (intelAsmSyntax != nullptr)) {
         std::vector<const char *> Args(3);
         Args[0] = "ispc (LLVM option parsing)";
         Args[2] = nullptr;
-        if (std::string(intelAsmSyntax) == "intel")
+        if (std::string(intelAsmSyntax) == "intel") {
             Args[1] = "--x86-asm-syntax=intel";
-        else
+        } else {
             Args[1] = "--x86-asm-syntax=att";
+        }
         llvm::cl::ParseCommandLineOptions(2, Args.data());
     }
 

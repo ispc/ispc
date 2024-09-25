@@ -136,8 +136,9 @@ static ISPCTarget lGetSystemISA() {
     int info3[4] = {0, 0, 0, 0};
     int max_subleaf = info2[0];
     // Call cpuid with eax=7, ecx=1
-    if (max_subleaf >= 1)
+    if (max_subleaf >= 1) {
         __cpuidex(info3, 7, 1);
+    }
 
     // clang-format off
     bool sse2 =                (info[3] & (1 << 26))  != 0;
@@ -240,17 +241,21 @@ static bool lIsTargetValidforArch(ISPCTarget target, Arch arch) {
     bool ret = true;
     // If target name starts with sse or avx, has to be x86 or x86-64.
     if (ISPCTargetIsX86(target)) {
-        if (arch != Arch::x86_64 && arch != Arch::x86)
+        if (arch != Arch::x86_64 && arch != Arch::x86) {
             ret = false;
+        }
     } else if (target == ISPCTarget::neon_i8x16 || target == ISPCTarget::neon_i16x8) {
-        if (arch != Arch::arm)
+        if (arch != Arch::arm) {
             ret = false;
+        }
     } else if (target == ISPCTarget::neon_i32x4 || target == ISPCTarget::neon_i32x8) {
-        if (arch != Arch::arm && arch != Arch::aarch64)
+        if (arch != Arch::arm && arch != Arch::aarch64) {
             ret = false;
+        }
     } else if (ISPCTargetIsGen(target)) {
-        if (arch != Arch::xe64)
+        if (arch != Arch::xe64) {
             ret = false;
+        }
     }
 
     return ret;
@@ -438,8 +443,9 @@ class AllCPUs {
 
         retn.insert((DeviceType)type);
         va_start(args, type);
-        while ((type = va_arg(args, int)) != CPU_None)
+        while ((type = va_arg(args, int)) != CPU_None) {
             retn.insert((DeviceType)type);
+        }
         va_end(args);
 
         return retn;
@@ -638,12 +644,14 @@ class AllCPUs {
             CPUs << names[i][0];
             if (names[i].size() > 1) {
                 CPUs << " (synonyms: " << names[i][1];
-                for (int j = 2, je = names[i].size(); j < je; j++)
+                for (int j = 2, je = names[i].size(); j < je; j++) {
                     CPUs << ", " << names[i][j];
+                }
                 CPUs << ")";
             }
-            if (i < sizeofDeviceType - 1)
+            if (i < sizeofDeviceType - 1) {
                 CPUs << ", ";
+            }
         }
         return CPUs.str();
     }
@@ -656,10 +664,13 @@ class AllCPUs {
     DeviceType GetTypeFromName(std::string name) {
         DeviceType retn = CPU_None;
 
-        for (int i = 1; (retn == CPU_None) && (i < sizeofDeviceType); i++)
-            for (int j = 0, je = names[i].size(); (retn == CPU_None) && (j < je); j++)
-                if (!name.compare(names[i][j]))
+        for (int i = 1; (retn == CPU_None) && (i < sizeofDeviceType); i++) {
+            for (int j = 0, je = names[i].size(); (retn == CPU_None) && (j < je); j++) {
+                if (!name.compare(names[i][j])) {
                     retn = (DeviceType)i;
+                }
+            }
+        }
         return retn;
     }
 
@@ -675,6 +686,26 @@ void lPrintTargetInfo(const std::string &proc_unit_type, const std::string &trip
     printf("Target Triple: %s\n", triple.c_str());
     printf("Target %s: %s\n", proc_unit_type.c_str(), proc_unit.c_str());
     printf("Target Feature String: %s\n", feature.c_str());
+}
+
+Arch lGetArchFromTarget(ISPCTarget target) {
+#ifdef ISPC_ARM_ENABLED
+    if (ISPCTargetIsNeon(target)) {
+#if defined(__arm__)
+        return Arch::arm;
+#else
+        return Arch::aarch64;
+#endif
+    }
+#endif
+#if ISPC_XE_ENABLED
+    if (ISPCTargetIsGen(target)) {
+        return Arch::xe64;
+    } else
+#endif
+    {
+        return Arch::x86_64;
+    }
 }
 
 Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picLevel, MCModel code_model,
@@ -821,21 +852,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
     }
 
     if (arch == Arch::none) {
-#ifdef ISPC_ARM_ENABLED
-        if (ISPCTargetIsNeon(m_ispc_target)) {
-#if defined(__arm__)
-            arch = Arch::arm;
-#else
-            arch = Arch::aarch64;
-#endif
-        } else
-#endif
-#if ISPC_XE_ENABLED
-            if (ISPCTargetIsGen(m_ispc_target)) {
-            arch = Arch::xe64;
-        } else
-#endif
-            arch = Arch::x86_64;
+        arch = lGetArchFromTarget(m_ispc_target);
     }
 
     bool error = false;
@@ -1794,14 +1811,17 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 #endif
 
         // Support 'i64' and 'double' types in cm
-        if (isXeTarget())
+        if (isXeTarget()) {
             featuresString += "+longlong";
+        }
 
-        if (g->opt.disableFMA == false)
+        if (g->opt.disableFMA == false) {
             options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
+        }
 
-        if (g->functionSections)
+        if (g->functionSections) {
             options.FunctionSections = true;
+        }
 
         // For Xe target we do not need to create target/targetMachine
         if (!isXeTarget()) {
@@ -1835,13 +1855,15 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         // Initialize TargetData/DataLayout in 3 steps.
         // 1. Get default data layout first
         std::string dl_string;
-        if (m_targetMachine != nullptr)
+        if (m_targetMachine != nullptr) {
             dl_string = m_targetMachine->createDataLayout().getStringRepresentation();
-        if (isXeTarget())
+        }
+        if (isXeTarget()) {
             dl_string = m_arch == Arch::xe64 ? "e-p:64:64-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:"
                                                "256-v512:512-v1024:1024-n8:16:32:64"
                                              : "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:"
                                                "256-v512:512-v1024:1024-n8:16:32:64";
+        }
 
         // 2. Finally set member data
         m_dataLayout = new llvm::DataLayout(dl_string);
@@ -1854,11 +1876,13 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         // TO-DO : Revisit addition of "target-features" and "target-cpu" for ARM support.
         llvm::AttrBuilder *fattrBuilder = new llvm::AttrBuilder(*g->ctx);
 #ifdef ISPC_ARM_ENABLED
-        if (m_isa == Target::NEON)
+        if (m_isa == Target::NEON) {
             fattrBuilder->addAttribute("target-cpu", this->m_cpu);
+        }
 #endif
-        for (auto const &f_attr : m_funcAttributes)
+        for (auto const &f_attr : m_funcAttributes) {
             fattrBuilder->addAttribute(f_attr.first, f_attr.second);
+        }
         this->m_tf_attributes = fattrBuilder;
 
         Assert(this->m_vectorWidth <= ISPC_MAX_NVEC);
@@ -1883,12 +1907,15 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 }
 
 Target::~Target() {
-    if (m_dataLayout)
+    if (m_dataLayout) {
         delete m_dataLayout;
-    if (m_tf_attributes)
+    }
+    if (m_tf_attributes) {
         delete m_tf_attributes;
-    if (m_targetMachine)
+    }
+    if (m_targetMachine) {
         delete m_targetMachine;
+    }
 }
 
 bool Target::checkIntrinsticSupport(llvm::StringRef name, SourcePos pos) {
@@ -2224,10 +2251,11 @@ std::string Target::GetTargetSuffix() {
 
 llvm::Value *Target::SizeOf(llvm::Type *type, llvm::BasicBlock *insertAtEnd) {
     uint64_t byteSize = getDataLayout()->getTypeStoreSize(type);
-    if (m_is32Bit || g->opt.force32BitAddressing)
+    if (m_is32Bit || g->opt.force32BitAddressing) {
         return LLVMInt32((int32_t)byteSize);
-    else
+    } else {
         return LLVMInt64(byteSize);
+    }
 }
 
 llvm::Value *Target::StructOffset(llvm::Type *type, int element, llvm::BasicBlock *insertAtEnd) {
@@ -2241,10 +2269,11 @@ llvm::Value *Target::StructOffset(llvm::Type *type, int element, llvm::BasicBloc
     Assert(sl != nullptr);
 
     uint64_t offset = sl->getElementOffset(element);
-    if (m_is32Bit || g->opt.force32BitAddressing)
+    if (m_is32Bit || g->opt.force32BitAddressing) {
         return LLVMInt32((int32_t)offset);
-    else
+    } else {
         return LLVMInt64(offset);
+    }
 }
 
 void Target::markFuncNameWithRegCallPrefix(std::string &funcName) const { funcName = "__regcall3__" + funcName; }
@@ -2468,8 +2497,9 @@ Globals::Globals() {
 #ifdef ISPC_HOST_IS_WINDOWS
     _getcwd(currentDirectory, sizeof(currentDirectory));
 #else
-    if (getcwd(currentDirectory, sizeof(currentDirectory)) == nullptr)
+    if (getcwd(currentDirectory, sizeof(currentDirectory)) == nullptr) {
         FATAL("Current directory path is too long!");
+    }
 #endif
     forceAlignment = -1;
     dllExport = false;
@@ -2494,10 +2524,11 @@ Globals::Globals() {
 SourcePos::SourcePos(const char *n, int fl, int fc, int ll, int lc) {
     name = n;
     if (name == nullptr) {
-        if (m != nullptr)
+        if (m != nullptr) {
             name = m->module->getModuleIdentifier().c_str();
-        else
+        } else {
             name = "(unknown)";
+        }
     }
     first_line = fl;
     first_column = fc;
@@ -2529,8 +2560,9 @@ bool SourcePos::operator==(const SourcePos &p2) const {
 }
 
 SourcePos ispc::Union(const SourcePos &p1, const SourcePos &p2) {
-    if (strcmp(p1.name, p2.name) != 0)
+    if (strcmp(p1.name, p2.name) != 0) {
         return p1;
+    }
 
     SourcePos ret;
     ret.name = p1.name;

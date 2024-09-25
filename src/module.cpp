@@ -321,14 +321,18 @@ Module::Module(const char *fn) : filename(fn) {
 }
 
 Module::~Module() {
-    if (symbolTable)
+    if (symbolTable) {
         delete symbolTable;
-    if (ast)
+    }
+    if (ast) {
         delete ast;
-    if (module)
+    }
+    if (module) {
         delete module;
-    if (diBuilder)
+    }
+    if (diBuilder) {
         delete diBuilder;
+    }
 }
 
 extern FILE *yyin;
@@ -402,11 +406,14 @@ int Module::CompileFile() {
 
     ast->Print(g->astDump);
 
-    if (g->NoOmitFramePointer)
-        for (llvm::Function &f : *module)
+    if (g->NoOmitFramePointer) {
+        for (llvm::Function &f : *module) {
             f.addFnAttr("frame-pointer", "all");
-    for (llvm::Function &f : *module)
+        }
+    }
+    for (llvm::Function &f : *module) {
         g->target->markFuncWithTargetAttr(&f);
+    }
     ast->GenerateIR();
 
     debugDumpModule(module, "GenerateIR", pre_stage++);
@@ -416,18 +423,21 @@ int Module::CompileFile() {
         LinkStandardLibraries(module, pre_stage);
     }
 
-    for (llvm::Function &f : *module)
+    for (llvm::Function &f : *module) {
         g->target->markFuncWithTargetAttr(&f);
+    }
 
-    if (diBuilder)
+    if (diBuilder) {
         diBuilder->finalize();
+    }
 
     // Skip optimization for stdlib. We need to consider shipping optimized
     // stdlibs library but at the moment it is not so.
     if (!g->genStdlib) {
         llvm::TimeTraceScope TimeScope("Optimize");
-        if (errorCount == 0)
+        if (errorCount == 0) {
             Optimize(module, g->opt.level);
+        }
     }
 
     return errorCount;
@@ -678,8 +688,9 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
     }
 
     type = ArrayType::SizeUnsizedArrays(type, initExpr);
-    if (type == nullptr)
+    if (type == nullptr) {
         return;
+    }
 
     const ArrayType *at = CastType<ArrayType>(type);
     if (at != nullptr && at->TotalElementCount() == 0) {
@@ -690,16 +701,18 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
     }
 
     llvm::Type *llvmType = type->LLVMStorageType(g->ctx);
-    if (llvmType == nullptr)
+    if (llvmType == nullptr) {
         return;
+    }
 
     // See if we have an initializer expression for the global.  If so,
     // make sure it's a compile-time constant!
     llvm::Constant *llvmInitializer = nullptr;
     ConstExpr *constValue = nullptr;
     if (storageClass == SC_EXTERN) {
-        if (initExpr != nullptr)
+        if (initExpr != nullptr) {
             Error(pos, "Initializer can't be provided with \"extern\" global variable \"%s\".", name.c_str());
+        }
     } else {
         if (initExpr != nullptr) {
             initExpr = TypeCheck(initExpr);
@@ -747,24 +760,27 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
                                     name.c_str());
                         }
 
-                        if (type->IsConstType())
+                        if (type->IsConstType()) {
                             // Try to get a ConstExpr associated with
                             // the symbol.  This llvm::dyn_cast can
                             // validly fail, for example for types like
                             // StructTypes where a ConstExpr can't
                             // represent their values.
                             constValue = llvm::dyn_cast<ConstExpr>(initExpr);
-                    } else
+                        }
+                    } else {
                         Error(initExpr->pos, "Initializer for global variable \"%s\" must be a constant.",
                               name.c_str());
+                    }
                 }
             }
         }
 
         // If no initializer was provided or if we couldn't get a value
         // above, initialize it with zeros..
-        if (llvmInitializer == nullptr)
+        if (llvmInitializer == nullptr) {
             llvmInitializer = llvm::Constant::getNullValue(llvmType);
+        }
     }
 
     Symbol *sym = symbolTable->LookupVariable(name.c_str());
@@ -852,30 +868,35 @@ static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soa
                                           SourcePos pos) {
     const StructType *st = CastType<StructType>(t);
     if (st != nullptr) {
-        for (int i = 0; i < st->GetElementCount(); ++i)
-            if (!lRecursiveCheckValidParamType(st->GetElementType(i), soaOk, vectorOk, name, pos))
+        for (int i = 0; i < st->GetElementCount(); ++i) {
+            if (!lRecursiveCheckValidParamType(st->GetElementType(i), soaOk, vectorOk, name, pos)) {
                 return false;
+            }
+        }
         return true;
     }
 
     // Vector types are also not supported, pending ispc properly
     // supporting the platform ABI.  (Pointers to vector types are ok,
     // though.)  (https://github.com/ispc/ispc/issues/363)...
-    if (vectorOk == false && CastType<VectorType>(t) != nullptr)
+    if (vectorOk == false && CastType<VectorType>(t) != nullptr) {
         return false;
+    }
 
     const SequentialType *seqt = CastType<SequentialType>(t);
-    if (seqt != nullptr)
+    if (seqt != nullptr) {
         return lRecursiveCheckValidParamType(seqt->GetElementType(), soaOk, vectorOk, name, pos);
+    }
 
     const PointerType *pt = CastType<PointerType>(t);
     if (pt != nullptr) {
         // Only allow exported uniform pointers
         // Uniform pointers to varying data, however, are ok.
-        if (pt->IsVaryingType())
+        if (pt->IsVaryingType()) {
             return false;
-        else
+        } else {
             return lRecursiveCheckValidParamType(pt->GetBaseType(), true, true, name, pos);
+        }
     }
 
     if (t->IsSOAType() && soaOk) {
@@ -883,9 +904,9 @@ static bool lRecursiveCheckValidParamType(const Type *t, bool vectorOk, bool soa
         return false;
     }
 
-    if (t->IsVaryingType() && !vectorOk)
+    if (t->IsVaryingType() && !vectorOk) {
         return false;
-    else {
+    } else {
         if (t->IsVaryingType()) {
             Warning(pos, "Exported function parameter \"%s\" points to varying type", name.c_str());
         }
@@ -913,13 +934,14 @@ static void lCheckExportedParameterTypes(const Type *type, const std::string &na
                 Error(pos, "Varying pointer type parameter \"%s\" is illegal in an exported function.", name.c_str());
             }
         }
-        if (CastType<StructType>(type->GetBaseType()))
+        if (CastType<StructType>(type->GetBaseType())) {
             Error(pos, "Struct parameter \"%s\" with vector typed member(s) is illegal in an exported function.",
                   name.c_str());
-        else if (CastType<VectorType>(type))
+        } else if (CastType<VectorType>(type)) {
             Error(pos, "Vector-typed parameter \"%s\" is illegal in an exported function.", name.c_str());
-        else
+        } else {
             Error(pos, "Varying parameter \"%s\" is illegal in an exported function.", name.c_str());
+        }
     }
 }
 
@@ -992,15 +1014,17 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
             // Check for a redeclaration of a function with the same name
             // and type.  This also hits when we have previously declared
             // the function and are about to define it.
-            if (Type::Equal(overloadFunc->type, functionType))
+            if (Type::Equal(overloadFunc->type, functionType)) {
                 return;
+            }
 
-            if (functionType->isExported || overloadType->isExported)
+            if (functionType->isExported || overloadType->isExported) {
                 Error(pos,
                       "Illegal to provide \"export\" qualifier for "
                       "functions with the same name but different types. "
                       "(Previous function declaration (%s:%d).)",
                       overloadFunc->pos.name, overloadFunc->pos.first_line);
+            }
 
             // If all of the parameter types match but the return type is
             // different, return an error--overloading by return type isn't
@@ -1010,8 +1034,9 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
             if (ofType->GetNumParameters() == functionType->GetNumParameters()) {
                 int i = 0;
                 for (i = 0; i < functionType->GetNumParameters(); ++i) {
-                    if (Type::Equal(ofType->GetParameterType(i), functionType->GetParameterType(i)) == false)
+                    if (Type::Equal(ofType->GetParameterType(i), functionType->GetParameterType(i)) == false) {
                         break;
+                    }
                 }
                 if (i == functionType->GetNumParameters()) {
                     std::string thisRetType = functionType->GetReturnTypeString();
@@ -1052,9 +1077,9 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
 
             // One function with the same name has been declared; see if it
             // has the same type as this one, in which case it's ok.
-            if (Type::Equal(funcs[0]->type, functionType))
+            if (Type::Equal(funcs[0]->type, functionType)) {
                 return;
-            else {
+            } else {
                 Error(pos, "Can't overload extern \"C\" function \"%s\".", name.c_str());
                 return;
             }
@@ -1136,14 +1161,16 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     // Make sure that the return type isn't 'varying' or vector typed if
     // the function is 'export'ed.
     if (functionType->isExported &&
-        lRecursiveCheckValidParamType(functionType->GetReturnType(), false, false, name, pos) == false)
+        lRecursiveCheckValidParamType(functionType->GetReturnType(), false, false, name, pos) == false) {
         Error(pos,
               "Illegal to return a \"varying\" or vector type from "
               "exported function \"%s\"",
               name.c_str());
+    }
 
-    if (functionType->isTask && functionType->GetReturnType()->IsVoidType() == false)
+    if (functionType->isTask && functionType->GetReturnType()->IsVoidType() == false) {
         Error(pos, "Task-qualified functions must have void return type.");
+    }
 
     if (functionType->isExported || functionType->isExternC || functionType->isExternSYCL ||
         functionType->IsISPCExternal() || functionType->IsISPCKernel()) {
@@ -1172,11 +1199,13 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         // If the function is exported or in case of Xe target is task, make sure that the parameter
         // doesn't have any funky stuff going on in it.
         // JCB nomosoa - Varying is now a-ok.
-        if (functionType->isExported)
+        if (functionType->isExported) {
             lCheckExportedParameterTypes(argType, argName, argPos);
+        }
 #ifdef ISPC_XE_ENABLED
-        if (functionType->IsISPCKernel())
+        if (functionType->IsISPCKernel()) {
             lCheckTaskParameterTypes(argType, argName, argPos);
+        }
 #endif
 
         // ISPC assumes that no pointers alias.  (It should be possible to
@@ -1225,9 +1254,9 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
                     argName.c_str());
         }
 
-        if (defaultValue != nullptr)
+        if (defaultValue != nullptr) {
             seenDefaultArg = true;
-        else if (seenDefaultArg) {
+        } else if (seenDefaultArg) {
             // Once one parameter has provided a default value, then all of
             // the following ones must have them as well.
             Error(argPos,
@@ -1501,11 +1530,12 @@ void Module::AddFunctionTemplateSpecializationDeclaration(const std::string &nam
 void Module::AddExportedTypes(const std::vector<std::pair<const Type *, SourcePos>> &types) {
     for (int i = 0; i < (int)types.size(); ++i) {
         if (CastType<StructType>(types[i].first) == nullptr && CastType<VectorType>(types[i].first) == nullptr &&
-            CastType<EnumType>(types[i].first) == nullptr)
+            CastType<EnumType>(types[i].first) == nullptr) {
             Error(types[i].second, "Only struct, vector, and enum types, not \"%s\", are allowed in type export lists.",
                   types[i].first->GetString().c_str());
-        else
+        } else {
             exportedTypes.push_back(types[i]);
+        }
     }
 }
 
@@ -1550,8 +1580,9 @@ static void lReportInvalidSuffixWarning(const char *outFileName, Module::OutputT
 
 bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *outFileName,
                          const char *depTargetFileName, const char *sourceFileName, DispatchHeaderInfo *DHI) {
-    if (diBuilder && (outputType != Header) && (outputType != Deps))
+    if (diBuilder && (outputType != Header) && (outputType != Deps)) {
         lStripUnusedDebugInfo(module);
+    }
 
     Assert(module);
 
@@ -1582,10 +1613,11 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
     case BitcodeText:
         return writeBitcode(module, outFileName, outputType);
     case Header:
-        if (DHI)
+        if (DHI) {
             return writeDispatchHeader(DHI);
-        else
+        } else {
             return writeHeader(outFileName);
+        }
     case Deps:
         return writeDeps(outFileName, flags.isMakeRuleDeps(), depTargetFileName, sourceFileName);
     case DevStub:
@@ -1612,9 +1644,9 @@ bool Module::writeBitcode(llvm::Module *module, const char *outFileName, OutputT
     // destructor.
     int fd = -1;
     Assert(outFileName);
-    if (!strcmp(outFileName, "-"))
+    if (!strcmp(outFileName, "-")) {
         fd = 1; // stdout
-    else {
+    } else {
         int flags = O_CREAT | O_WRONLY | O_TRUNC;
 #ifdef ISPC_HOST_IS_WINDOWS
         flags |= O_BINARY;
@@ -1629,10 +1661,11 @@ bool Module::writeBitcode(llvm::Module *module, const char *outFileName, OutputT
     }
 
     llvm::raw_fd_ostream fos(fd, (fd != 1), false);
-    if (outputType == Bitcode)
+    if (outputType == Bitcode) {
         llvm::WriteBitcodeToFile(*module, fos);
-    else if (outputType == BitcodeText)
+    } else if (outputType == BitcodeText) {
         module->print(fos, nullptr);
+    }
     return true;
 }
 
@@ -1868,12 +1901,14 @@ bool Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm:
     underlying struct type. */
 static const StructType *lGetElementStructType(const Type *t) {
     const StructType *st = CastType<StructType>(t);
-    if (st != nullptr)
+    if (st != nullptr) {
         return st;
+    }
 
     const ArrayType *at = CastType<ArrayType>(t);
-    if (at != nullptr)
+    if (at != nullptr) {
         return lGetElementStructType(at->GetElementType());
+    }
 
     return nullptr;
 }
@@ -1884,8 +1919,9 @@ static bool lContainsPtrToVarying(const StructType *st) {
     for (int j = 0; j < numElts; ++j) {
         const Type *t = st->GetElementType(j);
 
-        if (t->IsVaryingType())
+        if (t->IsVaryingType()) {
             return true;
+        }
     }
 
     return false;
@@ -1907,15 +1943,18 @@ static void lEmitStructDecl(const StructType *st, std::vector<const StructType *
     // Has this struct type already been declared?  (This happens if it's a
     // member of another struct for which we emitted a declaration
     // previously.)
-    for (int i = 0; i < (int)emittedStructs->size(); ++i)
-        if (Type::EqualIgnoringConst(st, (*emittedStructs)[i]))
+    for (int i = 0; i < (int)emittedStructs->size(); ++i) {
+        if (Type::EqualIgnoringConst(st, (*emittedStructs)[i])) {
             return;
+        }
+    }
 
     // Otherwise first make sure any contained structs have been declared.
     for (int i = 0; i < st->GetElementCount(); ++i) {
         const StructType *elementStructType = lGetElementStructType(st->GetElementType(i));
-        if (elementStructType != nullptr)
+        if (elementStructType != nullptr) {
             lEmitStructDecl(elementStructType, emittedStructs, file, emitUnifs);
+        }
     }
 
     // And now it's safe to declare this one
@@ -2021,15 +2060,17 @@ static void lEmitStructDecls(std::vector<const StructType *> &structTypes, FILE 
                   "#endif\n"
                   "#endif\n\n");
 
-    for (unsigned int i = 0; i < structTypes.size(); ++i)
+    for (unsigned int i = 0; i < structTypes.size(); ++i) {
         lEmitStructDecl(structTypes[i], &emittedStructs, file, emitUnifs);
+    }
 }
 
 /** Emit C declarations of enumerator types to the generated header file.
  */
 static void lEmitEnumDecls(const std::vector<const EnumType *> &enumTypes, FILE *file) {
-    if (enumTypes.size() == 0)
+    if (enumTypes.size() == 0) {
         return;
+    }
 
     fprintf(file, "///////////////////////////////////////////////////////////////////////////\n");
     fprintf(file, "// Enumerator types with external visibility from ispc code\n");
@@ -2066,8 +2107,9 @@ static void lEmitEnumDecls(const std::vector<const EnumType *> &enumTypes, FILE 
     program in the header file.
  */
 static void lEmitVectorTypedefs(const std::vector<const VectorType *> &types, FILE *file) {
-    if (types.size() == 0)
+    if (types.size() == 0) {
         return;
+    }
 
     fprintf(file, "///////////////////////////////////////////////////////////////////////////\n");
     fprintf(file, "// Vector types with external visibility from ispc code\n");
@@ -2076,11 +2118,12 @@ static void lEmitVectorTypedefs(const std::vector<const VectorType *> &types, FI
     for (unsigned int i = 0; i < types.size(); ++i) {
         std::string baseDecl;
         const VectorType *vt = types[i]->GetAsNonConstType();
-        if (!vt->IsUniformType())
+        if (!vt->IsUniformType()) {
             // Varying stuff shouldn't be visibile to / used by the
             // application, so at least make it not simple to access it by
             // not declaring the type here...
             continue;
+        }
 
         int size = vt->GetElementCount();
 
@@ -2107,9 +2150,11 @@ template <typename T> static void lAddTypeIfNew(const Type *type, std::vector<co
 
     // Linear search, so this ends up being n^2.  It's unlikely this will
     // matter in practice, though.
-    for (unsigned int i = 0; i < exportedTypes->size(); ++i)
-        if (Type::Equal((*exportedTypes)[i], type))
+    for (unsigned int i = 0; i < exportedTypes->size(); ++i) {
+        if (Type::Equal((*exportedTypes)[i], type)) {
             return;
+        }
+    }
 
     const T *castType = CastType<T>(type);
     Assert(castType != nullptr);
@@ -2127,33 +2172,36 @@ static void lGetExportedTypes(const Type *type, std::vector<const StructType *> 
     const StructType *structType = CastType<StructType>(type);
     const FunctionType *ftype = CastType<FunctionType>(type);
 
-    if (CastType<ReferenceType>(type) != nullptr)
+    if (CastType<ReferenceType>(type) != nullptr) {
         lGetExportedTypes(type->GetReferenceTarget(), exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
-    else if (CastType<PointerType>(type) != nullptr)
+    } else if (CastType<PointerType>(type) != nullptr) {
         lGetExportedTypes(type->GetBaseType(), exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
-    else if (arrayType != nullptr)
+    } else if (arrayType != nullptr) {
         lGetExportedTypes(arrayType->GetElementType(), exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
-    else if (structType != nullptr) {
+    } else if (structType != nullptr) {
         lAddTypeIfNew(type, exportedStructTypes);
-        for (int i = 0; i < structType->GetElementCount(); ++i)
+        for (int i = 0; i < structType->GetElementCount(); ++i) {
             lGetExportedTypes(structType->GetElementType(i), exportedStructTypes, exportedEnumTypes,
                               exportedVectorTypes);
-    } else if (CastType<UndefinedStructType>(type) != nullptr)
+        }
+    } else if (CastType<UndefinedStructType>(type) != nullptr) {
         // do nothing
         ;
-    else if (CastType<EnumType>(type) != nullptr)
+    } else if (CastType<EnumType>(type) != nullptr) {
         lAddTypeIfNew(type, exportedEnumTypes);
-    else if (CastType<VectorType>(type) != nullptr)
+    } else if (CastType<VectorType>(type) != nullptr) {
         lAddTypeIfNew(type, exportedVectorTypes);
-    else if (ftype != nullptr) {
+    } else if (ftype != nullptr) {
         // Handle Return Types
         lGetExportedTypes(ftype->GetReturnType(), exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
 
         // And now the parameter types...
-        for (int j = 0; j < ftype->GetNumParameters(); ++j)
+        for (int j = 0; j < ftype->GetNumParameters(); ++j) {
             lGetExportedTypes(ftype->GetParameterType(j), exportedStructTypes, exportedEnumTypes, exportedVectorTypes);
-    } else
+        }
+    } else {
         Assert(CastType<AtomicType>(type) != nullptr);
+    }
 }
 
 /** Given a set of functions, return the set of structure and vector types
@@ -2179,9 +2227,10 @@ static void lGetExportedParamTypes(const std::vector<Symbol *> &funcs,
 
 static void lPrintFunctionDeclarations(FILE *file, const std::vector<Symbol *> &funcs, bool useExternC = 1,
                                        bool rewriteForDispatch = false) {
-    if (useExternC)
+    if (useExternC) {
         fprintf(file, "#if defined(__cplusplus) && (! defined(__ISPC_NO_EXTERN_C) || !__ISPC_NO_EXTERN_C )\nextern "
                       "\"C\" {\n#endif // __cplusplus\n");
+    }
     // fprintf(file, "#ifdef __cplusplus\nextern \"C\" {\n#endif // __cplusplus\n");
     for (unsigned int i = 0; i < funcs.size(); ++i) {
         const FunctionType *ftype = CastType<FunctionType>(funcs[i]->type);
@@ -2212,11 +2261,10 @@ static void lPrintFunctionDeclarations(FILE *file, const std::vector<Symbol *> &
             fprintf(file, "#endif // %s function declaraion\n", fname.c_str());
         }
     }
-    if (useExternC)
-
+    if (useExternC) {
         fprintf(file, "#if defined(__cplusplus) && (! defined(__ISPC_NO_EXTERN_C) || !__ISPC_NO_EXTERN_C )\n} /* end "
                       "extern C */\n#endif // __cplusplus\n");
-    // fprintf(file, "#ifdef __cplusplus\n} /* end extern C */\n#endif // __cplusplus\n");
+    }
 }
 
 static bool lIsExported(const Symbol *sym) {
@@ -2285,17 +2333,19 @@ bool Module::writeDeps(const char *fn, bool generateMakeRule, const char *tn, co
              it != registeredDependencies.end(); ++it) {
             unescaped = *it; // As this is preprocessor output, paths come escaped.
             lUnescapeStringInPlace(unescaped);
-            if (sn && !IsStdin(sn) &&
-                0 == strcmp(sn, unescaped.c_str())) // If source has been passed, it's already emitted.
+            if (sn && !IsStdin(sn) && 0 == strcmp(sn, unescaped.c_str())) {
+                // If source has been passed, it's already emitted.
                 continue;
+            }
             fprintf(file, " \\\n");
             fprintf(file, " %s", unescaped.c_str());
         }
         fprintf(file, "\n");
     } else {
         for (std::set<std::string>::const_iterator it = registeredDependencies.begin();
-             it != registeredDependencies.end(); ++it)
+             it != registeredDependencies.end(); ++it) {
             fprintf(file, "%s\n", it->c_str());
+        }
     }
     fclose(file);
     return true;
@@ -2442,8 +2492,9 @@ bool Module::writeDevStub(const char *fn) {
 
             std::string paramName = fct->GetParameterName(i);
 
-            if (i)
+            if (i) {
                 funcall << ", ";
+            }
             std::string tmpArgName = std::string("_") + paramName;
             if (paramType->IsPointerType() || paramType->IsArrayType()) {
                 std::string tmpArgDecl = paramType->GetDeclaration(tmpArgName, DeclarationSyntax::CPP);
@@ -2576,8 +2627,9 @@ bool Module::writeHostStub(const char *fn) {
             std::string paramName = fct->GetParameterName(i);
             if (orgParamType->IsPointerType() || orgParamType->IsArrayType()) {
                 /* we're passing pointers separately -- no pointers in that struct... */
-                if (numPointers)
+                if (numPointers) {
                     pointerArgs << ",";
+                }
                 pointerArgs << "(void*)" << paramName;
                 numPointers++;
                 continue;
@@ -2588,8 +2640,9 @@ bool Module::writeHostStub(const char *fn) {
         // ------------------------------------------------------------------
         // writer pointer list
         // ------------------------------------------------------------------
-        if (numPointers == 0)
+        if (numPointers == 0) {
             pointerArgs << "NULL";
+        }
         fprintf(file, "  void *ptr_args[] = { %s };\n", pointerArgs.str().c_str());
 
         // ------------------------------------------------------------------
@@ -2633,19 +2686,21 @@ bool Module::writeHeader(const char *fn) {
     std::string guard = "ISPC_";
     const char *p = fn;
     while (*p) {
-        if (isdigit(*p))
+        if (isdigit(*p)) {
             guard += *p;
-        else if (isalpha(*p))
+        } else if (isalpha(*p)) {
             guard += toupper(*p);
-        else
+        } else {
             guard += "_";
+        }
         ++p;
     }
 
-    if (g->noPragmaOnce)
+    if (g->noPragmaOnce) {
         fprintf(f, "#ifndef %s\n#define %s\n\n", guard.c_str(), guard.c_str());
-    else
+    } else {
         fprintf(f, "#pragma once\n");
+    }
 
     fprintf(f, "#include <stdint.h>\n\n");
 
@@ -2686,14 +2741,15 @@ bool Module::writeHeader(const char *fn) {
 
     // Go through the explicitly exported types
     for (int i = 0; i < (int)exportedTypes.size(); ++i) {
-        if (const StructType *st = CastType<StructType>(exportedTypes[i].first))
+        if (const StructType *st = CastType<StructType>(exportedTypes[i].first)) {
             exportedStructTypes.push_back(st->GetAsUniformType());
-        else if (const EnumType *et = CastType<EnumType>(exportedTypes[i].first))
+        } else if (const EnumType *et = CastType<EnumType>(exportedTypes[i].first)) {
             exportedEnumTypes.push_back(et->GetAsUniformType());
-        else if (const VectorType *vt = CastType<VectorType>(exportedTypes[i].first))
+        } else if (const VectorType *vt = CastType<VectorType>(exportedTypes[i].first)) {
             exportedVectorTypes.push_back(vt->GetAsUniformType());
-        else
+        } else {
             FATAL("Unexpected type in export list");
+        }
     }
 
     // And print them
@@ -2715,8 +2771,9 @@ bool Module::writeHeader(const char *fn) {
     fprintf(f, "\n#ifdef __cplusplus\n} /* namespace */\n#endif // __cplusplus\n");
 
     // end guard
-    if (g->noPragmaOnce)
+    if (g->noPragmaOnce) {
         fprintf(f, "\n#endif // %s\n", guard.c_str());
+    }
 
     fclose(f);
     return true;
@@ -2746,19 +2803,21 @@ bool Module::writeDispatchHeader(DispatchHeaderInfo *DHI) {
     std::string guard = "ISPC_";
     const char *p = DHI->fn;
     while (*p) {
-        if (isdigit(*p))
+        if (isdigit(*p)) {
             guard += *p;
-        else if (isalpha(*p))
+        } else if (isalpha(*p)) {
             guard += toupper(*p);
-        else
+        } else {
             guard += "_";
+        }
         ++p;
     }
     if (DHI->EmitFrontMatter) {
-        if (g->noPragmaOnce)
+        if (g->noPragmaOnce) {
             fprintf(f, "#ifndef %s\n#define %s\n\n", guard.c_str(), guard.c_str());
-        else
+        } else {
             fprintf(f, "#pragma once\n");
+        }
 
         fprintf(f, "#include <stdint.h>\n\n");
 
@@ -2797,14 +2856,15 @@ bool Module::writeDispatchHeader(DispatchHeaderInfo *DHI) {
 
         // Go through the explicitly exported types
         for (int i = 0; i < (int)exportedTypes.size(); ++i) {
-            if (const StructType *st = CastType<StructType>(exportedTypes[i].first))
+            if (const StructType *st = CastType<StructType>(exportedTypes[i].first)) {
                 exportedStructTypes.push_back(st->GetAsUniformType());
-            else if (const EnumType *et = CastType<EnumType>(exportedTypes[i].first))
+            } else if (const EnumType *et = CastType<EnumType>(exportedTypes[i].first)) {
                 exportedEnumTypes.push_back(et->GetAsUniformType());
-            else if (const VectorType *vt = CastType<VectorType>(exportedTypes[i].first))
+            } else if (const VectorType *vt = CastType<VectorType>(exportedTypes[i].first)) {
                 exportedVectorTypes.push_back(vt->GetAsUniformType());
-            else
+            } else {
                 FATAL("Unexpected type in export list");
+            }
         }
 
         // And print them
@@ -2843,8 +2903,9 @@ bool Module::writeDispatchHeader(DispatchHeaderInfo *DHI) {
         fprintf(f, "\n#ifdef __cplusplus\n} /* namespace */\n#endif // __cplusplus\n");
 
         // end guard
-        if (g->noPragmaOnce)
+        if (g->noPragmaOnce) {
             fprintf(f, "\n#endif // %s\n", guard.c_str());
+        }
         DHI->EmitBackMatter = false;
     }
     return true;
@@ -2866,10 +2927,11 @@ static void lInitializeSourceManager(clang::FrontendInputFile &input, clang::Dia
     if (!fileOrError) {
         // FIXME: include the error in the diagnostic even when it's not stdin.
         auto errCode = llvm::errorToErrorCode(fileOrError.takeError());
-        if (inputFile != "-")
+        if (inputFile != "-") {
             diag.Report(clang::diag::err_fe_error_reading) << inputFile;
-        else
+        } else {
             diag.Report(clang::diag::err_fe_error_reading_stdin) << errCode.message();
+        }
         return;
     }
 
@@ -2880,8 +2942,9 @@ static void lInitializeSourceManager(clang::FrontendInputFile &input, clang::Dia
 
 // Copied from InitPreprocessor.cpp
 static bool lMacroBodyEndsInBackslash(llvm::StringRef MacroBody) {
-    while (!MacroBody.empty() && clang::isWhitespace(MacroBody.back()))
+    while (!MacroBody.empty() && clang::isWhitespace(MacroBody.back())) {
         MacroBody = MacroBody.drop_back();
+    }
     return !MacroBody.empty() && MacroBody.back() == '\\';
 }
 
@@ -2896,16 +2959,18 @@ static void lDefineBuiltinMacro(clang::MacroBuilder &Builder, llvm::StringRef Ma
     if (MacroName.size() != Macro.size()) {
         // Per GCC -D semantics, the macro ends at \n if it exists.
         llvm::StringRef::size_type End = MacroBody.find_first_of("\n\r");
-        if (End != llvm::StringRef::npos)
+        if (End != llvm::StringRef::npos) {
             Diags.Report(clang::diag::warn_fe_macro_contains_embedded_newline) << MacroName;
+        }
         MacroBody = MacroBody.substr(0, End);
         // We handle macro bodies which end in a backslash by appending an extra
         // backslash+newline.  This makes sure we don't accidentally treat the
         // backslash as a line continuation marker.
-        if (lMacroBodyEndsInBackslash(MacroBody))
+        if (lMacroBodyEndsInBackslash(MacroBody)) {
             Builder.defineMacro(MacroName, llvm::Twine(MacroBody) + "\\\n");
-        else
+        } else {
             Builder.defineMacro(MacroName, MacroBody);
+        }
     } else {
         // Push "macroname 1".
         Builder.defineMacro(Macro);
@@ -2954,10 +3019,11 @@ static void lInitializePreprocessor(clang::Preprocessor &PP, clang::Preprocessor
 
     // Process #define's and #undef's in the order they are given.
     for (unsigned i = 0, e = InitOpts.Macros.size(); i != e; ++i) {
-        if (InitOpts.Macros[i].second) // isUndef
+        if (InitOpts.Macros[i].second) {
             Builder.undefineMacro(InitOpts.Macros[i].first);
-        else
+        } else {
             lDefineBuiltinMacro(Builder, InitOpts.Macros[i].first, PP.getDiagnostics());
+        }
     }
 
     if (!g->genStdlib) {
@@ -2982,8 +3048,9 @@ static void lSetHeaderSeachOptions(const std::shared_ptr<clang::HeaderSearchOpti
     opts->UseBuiltinIncludes = 0;
     opts->UseStandardSystemIncludes = 0;
     opts->UseStandardCXXIncludes = 0;
-    if (g->debugPrint)
+    if (g->debugPrint) {
         opts->Verbose = 1;
+    }
     for (int i = 0; i < (int)g->includePath.size(); ++i) {
         opts->AddPath(g->includePath[i], clang::frontend::Angled, false /* not a framework */,
                       true /* ignore sys root */);
@@ -2997,8 +3064,9 @@ static void lSetTargetSpecificMacroDefinitions(const std::shared_ptr<clang::Prep
     char *p = targetMacro;
     while (*p) {
         *p = toupper(*p);
-        if (*p == '-')
+        if (*p == '-') {
             *p = '_';
+        }
         ++p;
     }
     opts->addMacroDef(targetMacro);
@@ -3349,8 +3417,9 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
             callingConv = funcs.FTs[i]->GetCallingConv();
             targetFuncs[i]->setCallingConv(callingConv);
             AddUWTableFuncAttr(targetFuncs[i]);
-        } else
+        } else {
             targetFuncs[i] = nullptr;
+        }
     }
 
     bool voidReturn = ftype->getReturnType()->isVoidTy();
@@ -3386,8 +3455,9 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
     // the expectation that they are ordered in the Target::ISA enumerant
     // from least to most capable.
     for (int i = Target::NUM_ISAS - 1; i >= 0; --i) {
-        if (targetFuncs[i] == nullptr)
+        if (targetFuncs[i] == nullptr) {
             continue;
+        }
 
         // Emit code to see if the system can run the current candidate
         // variant successfully--"is the system's ISA enumerant value >=
@@ -3443,9 +3513,9 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
     // Return an undef value from the function here; we won't get to this
     // point at runtime, but LLVM needs all of the basic blocks to be
     // terminated...
-    if (voidReturn)
+    if (voidReturn) {
         llvm::ReturnInst::Create(*g->ctx, bblock);
-    else {
+    } else {
         llvm::Value *undefRet = llvm::UndefValue::get(ftype->getReturnType());
         llvm::ReturnInst::Create(*g->ctx, undefRet, bblock);
     }
@@ -3491,8 +3561,9 @@ static void lEmitDispatchModule(llvm::Module *module, std::map<std::string, Func
 
     // For each exported function, create the dispatch function
     std::map<std::string, FunctionTargetVariants>::iterator iter;
-    for (iter = functions.begin(); iter != functions.end(); ++iter)
+    for (iter = functions.begin(); iter != functions.end(); ++iter) {
         lCreateDispatchFunction(module, setFunc, systemBestISAPtr, iter->first, iter->second);
+    }
 
     // Do some rudimentary cleanup of the final result and make sure that
     // the module is all ok.
@@ -3508,11 +3579,12 @@ static void lEmitDispatchModule(llvm::Module *module, std::map<std::string, Func
 // Determines if two types are compatible.
 // Here we check layout compatibility. We don't care about pointer types.
 static bool lCompatibleTypes(llvm::Type *Ty1, llvm::Type *Ty2) {
-    while (Ty1->getTypeID() == Ty2->getTypeID())
+    while (Ty1->getTypeID() == Ty2->getTypeID()) {
         switch (Ty1->getTypeID()) {
         case llvm::Type::ArrayTyID:
-            if (Ty1->getArrayNumElements() != Ty2->getArrayNumElements())
+            if (Ty1->getArrayNumElements() != Ty2->getArrayNumElements()) {
                 return false;
+            }
             Ty1 = Ty1->getArrayElementType();
             Ty2 = Ty2->getArrayElementType();
             break;
@@ -3530,6 +3602,7 @@ static bool lCompatibleTypes(llvm::Type *Ty1, llvm::Type *Ty2) {
             // Pointers for compatible simple types are assumed equal
             return Ty1 == Ty2;
         }
+    }
     return false;
 }
 
@@ -3597,8 +3670,9 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             target = targets[0];
         }
         g->target = new Target(arch, cpu, target, outputFlags.getPICLevel(), outputFlags.getMCModel(), g->printTarget);
-        if (!g->target->isValid())
+        if (!g->target->isValid()) {
             return 1;
+        }
 
         m = new Module(srcFile);
         const int compileResult = m->CompileFile();
@@ -3622,35 +3696,46 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
                 return 1;
             }
 #endif
-            if (outFileName != nullptr)
-                if (!m->writeOutput(outputType, outputFlags, outFileName))
+            if (outFileName != nullptr) {
+                if (!m->writeOutput(outputType, outputFlags, outFileName)) {
                     return 1;
-            if (headerFileName != nullptr)
-                if (!m->writeOutput(Module::Header, outputFlags, headerFileName))
+                }
+            }
+            if (headerFileName != nullptr) {
+                if (!m->writeOutput(Module::Header, outputFlags, headerFileName)) {
                     return 1;
+                }
+            }
             if (depsFileName != nullptr || outputFlags.isDepsToStdout()) {
                 std::string targetName;
-                if (depsTargetName)
+                if (depsTargetName) {
                     targetName = depsTargetName;
-                else if (outFileName)
+                } else if (outFileName) {
                     targetName = outFileName;
-                else if (!IsStdin(srcFile)) {
+                } else if (!IsStdin(srcFile)) {
                     targetName = srcFile;
                     size_t dot = targetName.find_last_of('.');
-                    if (dot != std::string::npos)
+                    if (dot != std::string::npos) {
                         targetName.erase(dot, std::string::npos);
+                    }
                     targetName.append(".o");
-                } else
+                } else {
                     targetName = "a.out";
-                if (!m->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile))
+                }
+                if (!m->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile)) {
                     return 1;
+                }
             }
-            if (hostStubFileName != nullptr)
-                if (!m->writeOutput(Module::HostStub, outputFlags, hostStubFileName))
+            if (hostStubFileName != nullptr) {
+                if (!m->writeOutput(Module::HostStub, outputFlags, hostStubFileName)) {
                     return 1;
-            if (devStubFileName != nullptr)
-                if (!m->writeOutput(Module::DevStub, outputFlags, devStubFileName))
+                }
+            }
+            if (devStubFileName != nullptr) {
+                if (!m->writeOutput(Module::DevStub, outputFlags, devStubFileName)) {
                     return 1;
+                }
+            }
         } else {
             ++m->errorCount;
         }
@@ -3724,8 +3809,9 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         for (unsigned int i = 0; i < targets.size(); ++i) {
             g->target =
                 new Target(arch, cpu, targets[i], outputFlags.getPICLevel(), outputFlags.getMCModel(), g->printTarget);
-            if (!g->target->isValid())
+            if (!g->target->isValid()) {
                 return 1;
+            }
 
             // Issue an error if we've already compiled to a variant of
             // this target ISA.  (It doesn't make sense to compile to both
@@ -3748,8 +3834,9 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
                 // Create the dispatch module, unless already created;
                 // in the latter case, just do the checking
                 bool check = (dispatchModule != nullptr);
-                if (!check)
+                if (!check) {
                     dispatchModule = lInitDispatchModule();
+                }
                 lExtractOrCheckGlobals(m->module, dispatchModule, check);
 
                 // Grab pointers to the exported functions from the module we
@@ -3839,14 +3926,16 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
 
             case Bitcode:
             case BitcodeText:
-                if (!writeBitcode(dispatchModule, outFileName, outputType))
+                if (!writeBitcode(dispatchModule, outFileName, outputType)) {
                     return 1;
+                }
                 break;
 
             case Asm:
             case Object:
-                if (!writeObjectFileOrAssembly(firstTargetMachine, dispatchModule, outputType, outFileName))
+                if (!writeObjectFileOrAssembly(firstTargetMachine, dispatchModule, outputType, outFileName)) {
                     return 1;
+                }
                 break;
 
             default:
@@ -3856,20 +3945,23 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
 
         if (depsFileName != nullptr || outputFlags.isDepsToStdout()) {
             std::string targetName;
-            if (depsTargetName)
+            if (depsTargetName) {
                 targetName = depsTargetName;
-            else if (outFileName)
+            } else if (outFileName) {
                 targetName = outFileName;
-            else if (!IsStdin(srcFile)) {
+            } else if (!IsStdin(srcFile)) {
                 targetName = srcFile;
                 size_t dot = targetName.find_last_of('.');
-                if (dot != std::string::npos)
+                if (dot != std::string::npos) {
                     targetName.erase(dot, std::string::npos);
+                }
                 targetName.append(".o");
-            } else
+            } else {
                 targetName = "a.out";
-            if (!m->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile))
+            }
+            if (!m->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile)) {
                 return 1;
+            }
         }
 
         for (auto module : modules) {
@@ -3894,11 +3986,13 @@ int Module::LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputT
             perror(file.c_str());
             return 1;
         }
-        if (lIsLlvmBitcode(inputStream))
+        if (lIsLlvmBitcode(inputStream)) {
             m = llvm::parseIRFile(file, err, *g->ctx);
+        }
 #ifdef ISPC_XE_ENABLED
-        else if (lIsSpirVBitcode(inputStream))
+        else if (lIsSpirVBitcode(inputStream)) {
             m = translateFromSPIRV(inputStream);
+        }
 #endif
         else {
             Error(SourcePos(), "Unrecognized format of input file %s", file.c_str());
@@ -3910,11 +4004,13 @@ int Module::LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputT
         inputStream.close();
     }
     if (outFileName != nullptr) {
-        if ((outputType == Bitcode) || (outputType == BitcodeText))
+        if ((outputType == Bitcode) || (outputType == BitcodeText)) {
             writeBitcode(llvmLink.get(), outFileName, outputType);
+        }
 #ifdef ISPC_XE_ENABLED
-        else if (outputType == SPIRV)
+        else if (outputType == SPIRV) {
             writeSPIRV(llvmLink.get(), outFileName);
+        }
 #endif
         return 0;
     }
@@ -3938,6 +4034,7 @@ void Module::parseCPPBuffer() {
 }
 
 void Module::clearCPPBuffer() {
-    if (bufferCPP)
+    if (bufferCPP) {
         bufferCPP.reset();
+    }
 }
