@@ -2,7 +2,7 @@
 // can be used to specify array dimension.
 // RUN: %{ispc} %s --target=host --nostdlib 2>&1 | FileCheck %s
 // CHECK-NOT: Error
-// XFAIL: *
+
 template<int Rows, int Cols>
 noinline void foo(int matrix[Rows][Cols]) {
     // Process matrix
