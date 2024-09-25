@@ -780,7 +780,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                 // first dimension) in function parameter lists.
                 at = CastType<ArrayType>(targetType);
                 while (at != nullptr) {
-                    if (at->GetElementCount() == 0) {
+                    if (at->IsUnsized()) {
                         Error(decl->pos, "Arrays with unsized dimensions in "
                                          "dimensions after the first one are illegal in "
                                          "function parameter lists.");
@@ -1095,7 +1095,7 @@ void ispc::GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &
     for (int i = 0; i < (int)elementTypes->size() - 1; ++i) {
         const ArrayType *arrayType = CastType<ArrayType>((*elementTypes)[i]);
 
-        if (arrayType != nullptr && arrayType->GetElementCount() == 0) {
+        if (arrayType != nullptr && arrayType->IsUnsized()) {
             Error((*elementPositions)[i], "Unsized arrays aren't allowed except "
                                           "for the last member in a struct definition.");
         }
