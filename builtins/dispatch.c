@@ -22,7 +22,8 @@
 #endif
 
 #include <stdint.h>
-#include <stdlib.h>
+
+void abort();
 
 // __system_best_isa __get_system_isa and __set_system_isa are weak symbols
 // because we want to have the only version of them across user application
