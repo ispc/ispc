@@ -19,8 +19,8 @@ jobs:
   linux:
     runs-on: ubuntu-22.04
     env:
-      LLVM_VERSION: "17.0"
-      LLVM_TAR: llvm-17.0.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_VERSION: "18.1"
+      LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
@@ -62,8 +62,8 @@ jobs:
             target: neon-i32x8
             arch: aarch64
     env:
-      LLVM_VERSION: "17.0"
-      LLVM_TAR: llvm-17.0.6-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
+      LLVM_VERSION: "18.1"
+      LLVM_TAR: llvm-18.1.8-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
@@ -108,8 +108,8 @@ jobs:
   windows:
     runs-on: windows-2019
     env:
-      LLVM_VERSION: "17.0"
-      LLVM_TAR: llvm-17.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      LLVM_VERSION: "18.1"
+      LLVM_TAR: llvm-18.1.8-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
       ISPC_OPAQUE_PTR_MODE: "ON"
       LLVM_HOME: "C:\\projects\\llvm"
       CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"

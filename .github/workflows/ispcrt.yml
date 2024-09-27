@@ -14,8 +14,8 @@ env:
   SDE_TAR_NAME: sde-external-9.33.0-2024-01-07
   USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
   LLVM_REPO: https://github.com/ispc/ispc.dependencies
-  LLVM_VERSION: "17.0"
-  LLVM_TAR: llvm-17.0.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+  LLVM_VERSION: "18.1"
+  LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
   ISPC_OPAQUE_PTR_MODE: "ON"
 
 jobs:

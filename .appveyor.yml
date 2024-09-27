@@ -5,7 +5,7 @@
 configuration: Release
 
 environment:
-  LLVM_LATEST: 17.0
+  LLVM_LATEST: 18.1
   DOCKER_PATH: "ispc/test_repo"
   matrix:
     - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu2204
@@ -13,7 +13,7 @@ environment:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       LLVM_VERSION: latest
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-      LLVM_VERSION: 16.0
+      LLVM_VERSION: 17.0
 
 for:
 -
@@ -31,7 +31,8 @@ for:
         if "%LLVM_VERSION%"=="latest" (set WASM=ON)
         if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2019" ( (set generator="Visual Studio 16") & (set vspath="C:\Program Files (x86)\Microsoft Visual Studio\2019"))
         if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2022" ( (set generator="Visual Studio 17") & (set vspath="C:\Program Files\Microsoft Visual Studio\2022"))
-        set LLVM_TAR=llvm-17.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+        set LLVM_TAR=llvm-18.1.8-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+        if "%LLVM_VERSION%"=="17.0" (set LLVM_TAR=llvm-17.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z)
         if "%LLVM_VERSION%"=="16.0" (set LLVM_TAR=llvm-16.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z)
   install:
     - ps: choco install --no-progress winflexbison3 wget 7zip
@@ -81,7 +82,7 @@ for:
         export LLVM_HOME=$APPVEYOR_BUILD_FOLDER/llvm
         export CROSS_TOOLS=/usr/local/src/cross
         export WASM=OFF
-        export LLVM_TAR=llvm-17.0.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+        export LLVM_TAR=llvm-18.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
   install:
     - sh: |-
         sudo apt-get update
