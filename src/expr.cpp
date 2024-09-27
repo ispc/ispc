@@ -8689,15 +8689,22 @@ FunctionSymbolExpr::FunctionSymbolExpr(const char *n, const std::vector<Template
                                        const TemplateArgs &templArgs, SourcePos p)
     : Expr(p, FunctionSymbolExprID), name(n), candidateTemplateFunctions(candidates), templateArgs(templArgs),
       matchingFunc(nullptr), triedToResolve(false), unresolvedButDependent(false) {
-    // Do template argument "normalization", i.e apply "varying type default":
-    //
-    // template <typename T> void foo(T t);
-    // foo<int>(1); // T is assumed to be "varying int" here.
-    for (auto &arg : templateArgs) {
-        arg.SetAsVaryingType();
-    }
+    normalizeTemplateArgs();
 }
 
+void FunctionSymbolExpr::normalizeTemplateArgs() {
+    // Do template argument "normalization" for explicit types, i.e apply "varying type default":
+    // template <typename T> void foo(T t);
+    // foo<int>(1); // T is assumed to be "varying int" here.
+    // If template argument is template type parameter (i.e. nested templates case), don't change its variability,
+    // it should be resolved during parent template instantiation and propagated to all nested templates.
+    for (auto &arg : templateArgs) {
+        const TemplateTypeParmType *t = CastType<TemplateTypeParmType>(arg.GetAsType());
+        if (t == nullptr) {
+            arg.SetAsVaryingType();
+        }
+    }
+}
 const Type *FunctionSymbolExpr::GetType() const {
     if (unresolvedButDependent) {
         return AtomicType::Dependent;
