@@ -785,6 +785,18 @@ class FunctionSymbolExpr : public Expr {
     static int computeOverloadCost(const FunctionType *ftype, const std::vector<const Type *> &argTypes,
                                    const std::vector<bool> *argCouldBeNULL, const std::vector<bool> *argIsConstant,
                                    int *cost);
+    /** This function applies "normalization" to the template arguments, specifically
+        adjusting their variability to ensure consistency with the expected types.
+
+        For explicit template instantiations, such as:
+        template <typename T> void foo(T t);
+        foo<int>(1); // T is assumed to be "varying int" here.
+
+        The function sets the variability of the template argument to "varying"
+        unless the argument is a template type parameter. In the case of nested
+        templates, the variability should not be changed, as it will be resolved
+        during the parent template instantiation and propagated to all nested templates.*/
+    void normalizeTemplateArgs();
 
     /** Name of the function that is being called. */
     std::string name;
