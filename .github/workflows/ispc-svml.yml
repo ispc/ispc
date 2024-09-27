@@ -73,12 +73,12 @@ jobs:
           echo "optsets=${OPTSETS_FULL}" >> "$GITHUB_OUTPUT"
         fi
 
-  linux-build-ispc-llvm17:
+  linux-build-ispc-llvm18:
     needs: [define-flow]
     runs-on: ubuntu-latest
     env:
-      LLVM_VERSION: "17.0"
-      LLVM_TAR: llvm-17.0.6-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_VERSION: "18.1"
+      LLVM_TAR: llvm-18.1.8-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -105,12 +105,12 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       with:
-        name: ispc_llvm17_linux
+        name: ispc_llvm18_linux
         path: build/ispc-trunk-linux.tar.gz
 
 
-  linux-test-llvm17:
-    needs: [define-flow, linux-build-ispc-llvm17]
+  linux-test-llvm18:
+    needs: [define-flow, linux-build-ispc-llvm18]
     runs-on: ubuntu-latest
     continue-on-error: false
     strategy:
@@ -122,7 +122,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
-        name: ispc_llvm17_linux
+        name: ispc_llvm18_linux
 
     - name: Install dependencies and unpack artifacts
       run: |
@@ -147,6 +147,6 @@ jobs:
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       if: failure()
       with:
-        name: fail_db.llvm17.${{matrix.target}}.txt
+        name: fail_db.llvm18.${{matrix.target}}.txt
         path: fail_db.txt
 

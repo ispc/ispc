@@ -29,8 +29,8 @@ jobs:
     linux-build-ispc:
       runs-on: ubuntu-22.04
       env:
-        LLVM_VERSION: "17.0"
-        LLVM_TAR: llvm-17.0.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+        LLVM_VERSION: "18.1"
+        LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
 
       steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7

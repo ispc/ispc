@@ -21,8 +21,8 @@ jobs:
     # Disabling this workflow for non ispc/ispc repo as it needs to run on releases only.
     # if: github.repository == 'ispc/ispc'
     env:
-      LLVM_VERSION: "17.0"
-      LLVM_TAR: llvm-17.0.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_VERSION: "18.1"
+      LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:

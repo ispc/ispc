@@ -97,9 +97,9 @@ jobs:
       fail-fast: false
       matrix:
         llvm:
-          - version: "17.0"
-            full_version: "17.0.6"
-            short_version: 17
+          - version: "18.1"
+            full_version: "18.1.8"
+            short_version: 18
             opaque_ptr_mode: "ON"
     env:
       LLVM_VERSION: ${{ matrix.llvm.version }}
@@ -157,6 +157,10 @@ jobs:
             full_version: "17.0.6"
             short_version: 17
             opaque_ptr_mode: "ON"
+          - version: "18.1"
+            full_version: "18.1.8"
+            short_version: 18
+            opaque_ptr_mode: "ON"
     env:
       LLVM_VERSION: ${{ matrix.llvm.version }}
       LLVM_TAR: llvm-${{ matrix.llvm.full_version }}-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
@@ -190,12 +194,12 @@ jobs:
         name: ispc_llvm${{ matrix.llvm.short_version }}_linux
         path: build/ispc-trunk-linux.tar.gz
 
-  linux-build-ispc-llvm17-lto:
+  linux-build-ispc-llvm18-lto:
     needs: [define-flow]
     runs-on: ubuntu-22.04
     env:
-      LLVM_VERSION: "17.0"
-      LLVM_TAR: llvm-17.0.6-ubuntu22.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
+      LLVM_VERSION: "18.1"
+      LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
@@ -224,15 +228,15 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       with:
-        name: ispc_llvm17_lto_linux
+        name: ispc_llvm18_lto_linux
         path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-linux.tar.gz
 
-  linux-build-ispc-llvm17-release:
+  linux-build-ispc-llvm18-release:
     needs: [define-flow]
     runs-on: ubuntu-22.04
     env:
-      LLVM_VERSION: "17.0"
-      LLVM_TAR: llvm-17.0.6-ubuntu22.04-Release-x86.arm.wasm.tar.xz
+      LLVM_VERSION: "18.1"
+      LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
@@ -260,15 +264,15 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       with:
-        name: ispc_llvm17rel_linux
+        name: ispc_llvm18rel_linux
         path: build/ispc-trunk-linux.tar.gz
 
-  linux-build-ispc-xe-llvm17-release:
+  linux-build-ispc-xe-llvm18-release:
     needs: [define-flow]
     runs-on: ubuntu-22.04
     env:
-      LLVM_VERSION: "17.0"
-      LLVM_TAR: llvm-17.0.6-ubuntu22.04-Release-x86.arm.wasm.tar.xz
+      LLVM_VERSION: "18.1"
+      LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: "OFF"
       INSTALL_COMPUTE_RUNTIME: 1
       COMPUTE_RUNTIME_GITHUB_RELEASE: 1
@@ -307,13 +311,13 @@ jobs:
     - name: Upload XE enabled package
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       with:
-        name: ispc_xe_llvm17rel_linux
+        name: ispc_xe_llvm18rel_linux
         path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-linux.tar.gz
 
     - name: Upload ISPC with XE dependencies
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       with:
-        name: ispc_xe_deps_llvm17rel_linux
+        name: ispc_xe_deps_llvm18rel_linux
         path: ispc-xe
 
   linux-test:
@@ -323,7 +327,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [16, 17]
+        version: [16, 17, 18]
         arch: [x86, x86-64]
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
         # See issue #2818 for more deatils. It's SDE problem running on AMD runner.
@@ -404,8 +408,8 @@ jobs:
         name: alloy_results.llvm${{matrix.version}}.${{matrix.arch}}.${{matrix.target}}
         path: alloy_results_*
 
-  linux-test-llvm17-lto:
-    needs: [define-flow, linux-build-ispc-llvm17-lto]
+  linux-test-llvm18-lto:
+    needs: [define-flow, linux-build-ispc-llvm18-lto]
     runs-on: ubuntu-22.04
     continue-on-error: false
     strategy:
@@ -456,7 +460,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
-        name: ispc_llvm17_lto_linux
+        name: ispc_llvm18_lto_linux
 
     - name: Install dependencies and unpack artifacts
       run: |
@@ -480,19 +484,19 @@ jobs:
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       if: failure()
       with:
-        name: fail_db.llvm17_lto.${{matrix.arch}}.${{matrix.target}}.txt
+        name: fail_db.llvm18_lto.${{matrix.arch}}.${{matrix.target}}.txt
         path: tests/fail_db.txt
 
     - name: Upload alloy logs
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       if: failure()
       with:
-        name: alloy_results.llvm17_lto.${{matrix.arch}}.${{matrix.target}}
+        name: alloy_results.llvm18_lto.${{matrix.arch}}.${{matrix.target}}
         path: alloy_results_*
 
   # Test release version
-  linux-test-llvm17-release:
-    needs: [define-flow, linux-build-ispc-llvm17-release]
+  linux-test-llvm18-release:
+    needs: [define-flow, linux-build-ispc-llvm18-release]
     runs-on: ubuntu-22.04
     continue-on-error: false
     strategy:
@@ -505,7 +509,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
-        name: ispc_llvm17rel_linux
+        name: ispc_llvm18rel_linux
 
     - name: Install dependencies and unpack artifacts
       run: |
@@ -529,20 +533,20 @@ jobs:
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       if: failure()
       with:
-        name: fail_db.llvm17rel.${{matrix.arch}}.${{matrix.target}}.txt
+        name: fail_db.llvm18rel.${{matrix.arch}}.${{matrix.target}}.txt
         path: tests/fail_db.txt
 
     - name: Upload alloy logs
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       if: failure()
       with:
-        name: alloy_results.llvm17rel.${{matrix.arch}}.${{matrix.target}}
+        name: alloy_results.llvm18rel.${{matrix.arch}}.${{matrix.target}}
         path: alloy_results_*
 
   # Debug run is experimental with the purpose to see if it's capable to catch anything.
   # So it's running in "full" mode only for now.
   # Single target, as it should be representative enough.
-  linux-test-debug-llvm17:
+  linux-test-debug-llvm18:
     needs: [define-flow, linux-build-ispc]
     if: ${{ needs.define-flow.outputs.flow_type == 'full' }}
     runs-on: ubuntu-22.04
@@ -557,7 +561,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
-        name: ispc_llvm17_linux
+        name: ispc_llvm18_linux
 
     - name: Install dependencies and unpack artifacts
       run: |
@@ -581,19 +585,19 @@ jobs:
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       if: failure()
       with:
-        name: fail_db.llvm17.debug.${{matrix.arch}}.${{matrix.target}}.txt
+        name: fail_db.llvm18.debug.${{matrix.arch}}.${{matrix.target}}.txt
         path: tests/fail_db.txt
 
     - name: Upload alloy logs
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       if: failure()
       with:
-        name: alloy_results.llvm17.debug.${{matrix.arch}}.${{matrix.target}}
+        name: alloy_results.llvm18.debug.${{matrix.arch}}.${{matrix.target}}
         path: alloy_results_*
 
   # Test xe release version
-  linux-test-xe-llvm17-release:
-    needs: [define-flow, linux-build-ispc-xe-llvm17-release]
+  linux-test-xe-llvm18-release:
+    needs: [define-flow, linux-build-ispc-xe-llvm18-release]
     if: ${{ needs.define-flow.outputs.flow_type == 'smoke' }}
     runs-on: ubuntu-22.04
     continue-on-error: false
@@ -610,7 +614,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
-        name: ispc_xe_llvm17rel_linux
+        name: ispc_xe_llvm18rel_linux
 
     - name: Install dependencies and unpack artifacts
       run: |
@@ -635,14 +639,14 @@ jobs:
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       if: failure()
       with:
-        name: fail_db.xe.llvm17rel.${{matrix.arch}}.${{matrix.target}}.txt
+        name: fail_db.xe.llvm18rel.${{matrix.arch}}.${{matrix.target}}.txt
         path: tests/fail_db.txt
 
     - name: Upload alloy logs
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       if: failure()
       with:
-        name: alloy_results.xe.llvm17rel.${{matrix.arch}}.${{matrix.target}}
+        name: alloy_results.xe.llvm18rel.${{matrix.arch}}.${{matrix.target}}
         path: alloy_results_*
 
   macos-build-ispc:
@@ -660,6 +664,10 @@ jobs:
           - version: "17.0"
             full_version: "17.0.6"
             short_version: 17
+            opaque_ptr_mode: "ON"
+          - version: "18.1"
+            full_version: "18.1.8"
+            short_version: 18
             opaque_ptr_mode: "ON"
     env:
       LLVM_VERSION: ${{ matrix.llvm.version }}
@@ -706,12 +714,12 @@ jobs:
         name: ispc_llvm${{ matrix.llvm.short_version }}_${{ matrix.runner }}
         path: build/ispc-trunk-macos.tar.gz
 
-  macos-build-ispc-llvm17-lto:
+  macos-build-ispc-llvm18-lto:
     needs: [define-flow]
     runs-on: macos-12
     env:
-      LLVM_VERSION: "17.0"
-      LLVM_TAR: llvm-17.0.6-macos-Release+Asserts-lto-universal-x86.arm.wasm.tar.xz
+      LLVM_VERSION: "18.1"
+      LLVM_TAR: llvm-18.1.8-macos-Release+Asserts-lto-universal-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -747,7 +755,7 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       with:
-        name: ispc_llvm17_lto_macos
+        name: ispc_llvm18_lto_macos
         path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-macOS.universal.tar.gz
 
   macos-test-ispc:
@@ -757,7 +765,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [16, 17]
+        version: [16, 17, 18]
 
     steps:
     - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -801,8 +809,8 @@ jobs:
         name: alloy_results.llvm${{matrix.version}}.macos.sse4
         path: alloy_results_*
 
-  macos-test-ispc-llvm17-lto:
-    needs: [define-flow, macos-build-ispc-llvm17-lto]
+  macos-test-ispc-llvm18-lto:
+    needs: [define-flow, macos-build-ispc-llvm18-lto]
     runs-on: macos-12
     continue-on-error: false
     strategy:
@@ -812,7 +820,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
-        name: ispc_llvm17_lto_macos
+        name: ispc_llvm18_lto_macos
 
     - name: Install dependencies and unpack artifacts
       run: |
@@ -839,14 +847,14 @@ jobs:
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       if: failure()
       with:
-        name: fail_db.llvm17_lto.macos.sse4.txt
+        name: fail_db.llvm18_lto.macos.sse4.txt
         path: tests/fail_db.txt
 
     - name: Upload alloy logs
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       if: failure()
       with:
-        name: alloy_results.llvm17_lto.macos.sse4
+        name: alloy_results.llvm18_lto.macos.sse4
         path: alloy_results_*
 
   win-build-ispc:
@@ -863,6 +871,10 @@ jobs:
           - version: "17.0"
             full_version: "17.0.6"
             short_version: 17
+            opaque_ptr_mode: "ON"
+          - version: "18.1"
+            full_version: "18.1.8"
+            short_version: 18
             opaque_ptr_mode: "ON"
     env:
       LLVM_VERSION: ${{ matrix.llvm.version }}
@@ -903,12 +915,12 @@ jobs:
         name: ispc_llvm${{ matrix.llvm.short_version }}_win
         path: build/ispc-trunk-windows.zip
 
-  win-build-ispc-llvm17-lto:
+  win-build-ispc-llvm18-lto:
     needs: [define-flow]
     runs-on: windows-2019
     env:
-      LLVM_VERSION: "17.0"
-      LLVM_TAR: llvm-17.0.6-win.vs2019-Release+Asserts-lto-x86.arm.wasm.tar.7z
+      LLVM_VERSION: "18.1"
+      LLVM_TAR: llvm-18.1.8-win.vs2019-Release+Asserts-lto-x86.arm.wasm.tar.7z
       LLVM_HOME: "C:\\projects\\llvm"
       CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       BUILD_TYPE: "Release"
@@ -949,15 +961,15 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       with:
-        name: ispc_llvm17_lto_win
+        name: ispc_llvm18_lto_win
         path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-windows.zip
 
-  win-build-ispc-xe-llvm17-release:
+  win-build-ispc-xe-llvm18-release:
     needs: [define-flow]
     runs-on: windows-2019
     env:
-      LLVM_VERSION: "17.0"
-      LLVM_TAR: llvm-17.0.6-win.vs2019-Release-x86.arm.wasm.tar.7z
+      LLVM_VERSION: "18.1"
+      LLVM_TAR: llvm-18.1.8-win.vs2019-Release-x86.arm.wasm.tar.7z
       LLVM_HOME: "C:\\projects\\llvm"
       CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       BUILD_TYPE: "Release"
@@ -1001,13 +1013,13 @@ jobs:
     - name: Upload XE enabled package
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       with:
-        name: ispc_xe_llvm17rel_win
+        name: ispc_xe_llvm18rel_win
         path: ${{ env.ISPC_DIR }}/ispc-trunk-windows.zip
 
     - name: Upload ISPC with XE dependencies
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       with:
-        name: ispc_xe_deps_llvm17rel_win
+        name: ispc_xe_deps_llvm18rel_win
         path: ispc-xe
 
   win-test:
@@ -1019,7 +1031,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [16, 17]
+        version: [16, 17, 18]
         arch: [x86, x86-64]
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
 
@@ -1064,8 +1076,8 @@ jobs:
         name: alloy_results.llvm${{matrix.version}}.${{matrix.arch}}.${{matrix.target}}
         path: alloy_results_*
 
-  win-test-llvm17-lto:
-    needs: [define-flow, win-build-ispc-llvm17-lto]
+  win-test-llvm18-lto:
+    needs: [define-flow, win-build-ispc-llvm18-lto]
     env:
       LLVM_HOME: "C:\\projects\\llvm"
     runs-on: windows-2022
@@ -1081,7 +1093,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
-        name: ispc_llvm17_lto_win
+        name: ispc_llvm18_lto_win
 
     - name: Install dependencies
       run: |
@@ -1107,18 +1119,18 @@ jobs:
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       if: failure()
       with:
-        name: fail_db.llvm17_lto.${{matrix.arch}}.${{matrix.target}}.txt
+        name: fail_db.llvm18_lto.${{matrix.arch}}.${{matrix.target}}.txt
         path: tests/fail_db.txt
 
     - name: Upload alloy logs
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       if: failure()
       with:
-        name: alloy_results.llvm17_lto.${{matrix.arch}}.${{matrix.target}}
+        name: alloy_results.llvm18_lto.${{matrix.arch}}.${{matrix.target}}
         path: alloy_results_*
 
-  win-test-xe-llvm17-release:
-    needs: [define-flow, win-build-ispc-xe-llvm17-release]
+  win-test-xe-llvm18-release:
+    needs: [define-flow, win-build-ispc-xe-llvm18-release]
     if: ${{ needs.define-flow.outputs.flow_type == 'smoke' }}
     env:
       LLVM_HOME: "C:\\projects\\llvm"
@@ -1135,7 +1147,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
-        name: ispc_xe_llvm17rel_win
+        name: ispc_xe_llvm18rel_win
 
     - name: Install dependencies
       run: |
@@ -1161,22 +1173,22 @@ jobs:
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       if: failure()
       with:
-        name: fail_db.xe.llvm17rel.${{matrix.arch}}.${{matrix.target}}.txt
+        name: fail_db.xe.llvm18rel.${{matrix.arch}}.${{matrix.target}}.txt
         path: tests/fail_db.txt
 
     - name: Upload alloy logs
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       if: failure()
       with:
-        name: alloy_results.llvm17rel.${{matrix.arch}}.${{matrix.target}}
+        name: alloy_results.llvm18rel.${{matrix.arch}}.${{matrix.target}}
         path: alloy_results_*
 
   win-package-examples:
     needs: [define-flow]
     runs-on: windows-2019
     env:
-      LLVM_VERSION: "16.0"
-      LLVM_TAR: llvm-16.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      LLVM_VERSION: "18.1"
+      LLVM_TAR: llvm-18.1.8-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
       LLVM_HOME: "C:\\projects\\llvm"
       CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       BUILD_TYPE: "Release"
@@ -1209,8 +1221,8 @@ jobs:
     needs: [define-flow]
     runs-on: ubuntu-22.04
     env:
-      LLVM_VERSION: "16.0"
-      LLVM_TAR: llvm-16.0.6-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_VERSION: "18.1"
+      LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
       ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
