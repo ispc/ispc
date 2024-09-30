@@ -569,7 +569,20 @@ intrinsic_name
     ;
 
 intrincall_expression
-    : intrinsic_name '(' argument_expression_list ')'
+    : intrinsic_name '(' ')'
+      {
+          std::string *name = $1;
+          name->erase(0, 1);
+          Symbol* sym = m->AddLLVMIntrinsicDecl(*name, nullptr, Union(@1,@3));
+          const char *fname = name->c_str();
+          const std::vector<Symbol *> funcs{sym};
+          FunctionSymbolExpr *fSym = nullptr;
+          if (sym != nullptr)
+              fSym = new FunctionSymbolExpr(fname, funcs, @1);
+          $$ = new FunctionCallExpr(fSym, new ExprList(Union(@1,@2)), Union(@1,@3));
+          delete name;
+      }
+    | intrinsic_name '(' argument_expression_list ')'
       {
           std::string *name = $1;
           name->erase(0, 1);
