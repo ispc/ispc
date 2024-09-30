@@ -3287,13 +3287,7 @@ void FunctionEmitContext::setLoopUnrollMetadata(llvm::Instruction *inst,
     }
 
     llvm::SmallVector<llvm::Metadata *, 4> Args;
-    llvm::TempMDTuple TempNode = llvm::MDNode::getTemporary(*g->ctx,
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
-                                                            std::nullopt
-#else
-                                                            llvm::None
-#endif
-    );
+    llvm::TempMDTuple TempNode = llvm::MDNode::getTemporary(*g->ctx, std::nullopt);
     Args.push_back(TempNode.get());
     if (loopAttribute.first == Globals::pragmaUnrollType::count) {
         llvm::Metadata *Vals[] = {llvm::MDString::get(*g->ctx, "llvm.loop.unroll.count"),
@@ -4062,11 +4056,7 @@ llvm::Constant *FunctionEmitContext::XeCreateConstantString(llvm::StringRef str,
                                         /* const */ true, llvm::GlobalValue::InternalLinkage, initializer, name,
                                         nullptr, llvm::GlobalVariable::NotThreadLocal,
                                         /* Constant Addrspace */ 2);
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
     GV->setAlignment(llvm::MaybeAlign(g->target->getDataLayout()->getABITypeAlign(initializer->getType())));
-#else
-    GV->setAlignment(llvm::MaybeAlign(g->target->getDataLayout()->getABITypeAlignment(initializer->getType())));
-#endif
     GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
     return llvm::ConstantExpr::getInBoundsGetElementPtr(GV->getValueType(), GV,

@@ -18,9 +18,7 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Type.h>
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
 #include <llvm/Support/ModRef.h>
-#endif
 
 namespace llvm {
 class PHINode;
@@ -411,11 +409,9 @@ extern void AddUWTableFuncAttr(llvm::Function *fn);
 */
 extern AddressSpace GetAddressSpace(llvm::Value *v);
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
 /** Fix function attribute by removing input function attr and adding memory effect instead.
     https://reviews.llvm.org/D135780
 */
 extern void FixFunctionAttribute(llvm::Function &Fn, llvm::Attribute::AttrKind attr, llvm::MemoryEffects memEf);
-#endif
 #endif
 } // namespace ispc

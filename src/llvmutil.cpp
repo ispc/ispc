@@ -1999,7 +1999,6 @@ AddressSpace GetAddressSpace(llvm::Value *v) {
     return AddressSpace::ispc_default;
 }
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
 /** Fix function attribute by removing input function attr and adding memory effect instead.
     https://reviews.llvm.org/D135780
 */
@@ -2027,7 +2026,6 @@ void FixFunctionAttribute(llvm::Function &Fn, llvm::Attribute::AttrKind attr, ll
         }
     }
 }
-#endif
 
 #endif
 } // namespace ispc

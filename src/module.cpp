@@ -470,12 +470,10 @@ Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, So
         llvm::ArrayRef<llvm::Type *> argArr(exprType);
         funcDecl = llvm::GenXIntrinsic::getGenXDeclaration(module, ID, argArr);
         if (funcDecl) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
             // ReadNone, ReadOnly and WriteOnly are not supported for intrinsics anymore:
             FixFunctionAttribute(*funcDecl, llvm::Attribute::ReadNone, llvm::MemoryEffects::none());
             FixFunctionAttribute(*funcDecl, llvm::Attribute::ReadOnly, llvm::MemoryEffects::readOnly());
             FixFunctionAttribute(*funcDecl, llvm::Attribute::WriteOnly, llvm::MemoryEffects::writeOnly());
-#endif
         }
     }
 #endif
