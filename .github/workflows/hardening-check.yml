@@ -45,6 +45,8 @@ jobs:
 
   winchecksec:
     runs-on: windows-2019
+    # Disabling this workflow for non ispc/ispc repo to reduce the traffic to artifacts downloads.
+    if: github.repository == 'ispc/ispc'
 
     env:
       WINCHECKSEC_URL: https://github.com/trailofbits/winchecksec/releases/download/v3.1.0/windows.x64.Release.zip
