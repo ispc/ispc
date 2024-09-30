@@ -8,6 +8,7 @@
 [![Trivy](https://github.com/ispc/ispc/actions/workflows/trivy.yml/badge.svg)](https://github.com/ispc/ispc/actions/workflows/trivy.yml)
 [![Cve-bin](https://github.com/ispc/ispc/actions/workflows/cve-bin.yml/badge.svg)](https://github.com/ispc/ispc/actions/workflows/cve-bin.yml)
 [![ClamAV](https://github.com/ispc/ispc/actions/workflows/clamav.yml/badge.svg)](https://github.com/ispc/ispc/actions/workflows/clamav.yml)
+[![Hardening Checks](https://github.com/ispc/ispc/actions/workflows/hardening-check.yml/badge.svg)](https://github.com/ispc/ispc/actions/workflows/hardening-check.yml)
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=1931356)
 
