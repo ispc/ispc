@@ -473,6 +473,7 @@ Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, So
             return nullptr;
         }
         std::vector<llvm::Type *> exprType;
+        Assert(args);
         int nInits = args->exprs.size();
         if (llvm::GenXIntrinsic::isOverloadedRet(ID) || llvm::GenXIntrinsic::isOverloadedArg(ID, nInits)) {
             for (int i = 0; i < nInits; ++i) {
@@ -508,6 +509,7 @@ Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, So
         }
         std::vector<llvm::Type *> exprType;
         if (llvm::Intrinsic::isOverloaded(ID)) {
+            Assert(args);
             int nInits = args->exprs.size();
             for (int i = 0; i < nInits; ++i) {
                 const Type *argType = (args->exprs[i])->GetType();
