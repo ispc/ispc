@@ -90,11 +90,7 @@ enum { BYTE = 1, WORD = 2, DWORD = 4, QWORD = 8, OWORD = 16, GRF = 32 };
 
 /** A helper that reduced LLVM versioning in the code. */
 inline void ReplaceInstWithValueWrapper(llvm::BasicBlock::iterator &BI, llvm::Value *V) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
     llvm::ReplaceInstWithValue(BI, V);
-#else
-    llvm::ReplaceInstWithValue(BI->getParent()->getInstList(), BI, V);
-#endif
 }
 
 } // namespace ispc

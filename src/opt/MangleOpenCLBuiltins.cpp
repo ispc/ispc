@@ -7,9 +7,7 @@
 #include "MangleOpenCLBuiltins.h"
 
 #ifdef ISPC_XE_ENABLED
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
 #include "llvm/IR/TypedPointerType.h"
-#endif
 
 namespace ispc {
 
@@ -25,9 +23,6 @@ static std::string mangleMathOCLBuiltin(const llvm::Function &func) {
 
     std::string funcName = func.getName().str();
     std::vector<llvm::Type *> ArgTy;
-#if ISPC_LLVM_VERSION == ISPC_LLVM_15_0
-    std::vector<SPIRV::PointerIndirectPair> PointerElementTys;
-#endif
     // _DvWIDTH suffix is used in target file to differentiate scalar (DvWIDTH1<type>)
     // and vector (DvWIDTH<type>) versions of intrinsics for different types. Here we remove this
     // suffix and mangle the name.
@@ -40,11 +35,6 @@ static std::string mangleMathOCLBuiltin(const llvm::Function &func) {
         funcName.erase(pos, funcName.length() - pos);
     }
     for (auto &arg : func.args()) {
-        // In LLVM15 SPIR-V translator requires to pass pointer type information to mangleBuiltin
-        // https://github.com/KhronosGroup/SPIRV-LLVM-Translator/commit/0eb9a7d2937542e1f95a4e1f9aa9850e669dc45f
-        // It changes again in LLVM16 SPIR-V translator where TypedPointerType is required
-        // https://github.com/KhronosGroup/SPIRV-LLVM-Translator/commit/42cf770344bb8d0a32db1ec892bee63f43d793b1
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
         if (arg.getType()->isPointerTy()) {
             // In SPIR-V OpenCL builtins it's safe to assume that pointer argument is either pointer to <type>
             // or pointer to <WIDTH x type> which is basically type of retType.
@@ -52,35 +42,16 @@ static std::string mangleMathOCLBuiltin(const llvm::Function &func) {
         } else {
             ArgTy.push_back(arg.getType());
         }
-#elif ISPC_LLVM_VERSION == ISPC_LLVM_15_0
-        ArgTy.push_back(arg.getType());
-        SPIRV::PointerIndirectPair PtrElemTy;
-        if (arg.getType()->isPointerTy()) {
-            PtrElemTy.setPointer(retType);
-        }
-        PointerElementTys.push_back(PtrElemTy);
-#else
-        ArgTy.push_back(arg.getType());
-#endif
     }
 
-    mangleOpenClBuiltin(funcName, ArgTy,
-#if ISPC_LLVM_VERSION == ISPC_LLVM_15_0
-                        PointerElementTys,
-#endif
-                        mangledName);
+    mangleOpenClBuiltin(funcName, ArgTy, mangledName);
     return mangledName;
 }
 
 static std::string manglePrintfOCLBuiltin(const llvm::Function &func) {
     Assert(func.getName() == "__spirv_ocl_printf" && "wrong argument: ocl builtin is expected");
     std::string mangledName;
-    mangleOpenClBuiltin(func.getName().str(), func.getArg(0)->getType(),
-#if ISPC_LLVM_VERSION == ISPC_LLVM_15_0
-                        // For spirv_ocl_printf builtin the argument is always i8*
-                        SPIRV::PointerIndirectPair(LLVMTypes::Int8Type),
-#endif
-                        mangledName);
+    mangleOpenClBuiltin(func.getName().str(), func.getArg(0)->getType(), mangledName);
     return mangledName;
 }
 
@@ -98,12 +69,7 @@ std::string mangleSPIRVBuiltin(const llvm::Function &func) {
     for (const auto &arg : func.args()) {
         tyArgs.push_back(arg.getType());
     }
-    mangleOpenClBuiltin(func.getName().str(), tyArgs,
-#if ISPC_LLVM_VERSION == ISPC_LLVM_15_0
-                        // spirv builtins doesn't have pointer arguments
-                        {},
-#endif
-                        mangledName);
+    mangleOpenClBuiltin(func.getName().str(), tyArgs, mangledName);
     return mangledName;
 }
 

@@ -69,11 +69,7 @@ class DebugModulePassManager {
     llvm::ModulePassManager mpm;
     llvm::PassInstrumentationCallbacks PIC;
     llvm::PrintPassOptions PrintPassOpts{/*Verbose*/ true, /*SkipAnalyses*/ true, /*Indent*/ true};
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
     llvm::StandardInstrumentations SI{*g->ctx, /*DebugLogging*/ g->debugPM, /*VerifyEach*/ false, PrintPassOpts};
-#else
-    llvm::StandardInstrumentations SI{/*DebugLogging*/ g->debugPM, /*VerifyEach*/ false, PrintPassOpts};
-#endif
     llvm::OptNoneInstrumentation OptNoneInst{/*DebugLogging*/ false};
     llvm::TimePassesHandler TimePasses{true};
 

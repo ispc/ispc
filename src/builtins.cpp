@@ -233,12 +233,10 @@ static void lUpdateIntrinsicsAttributes(llvm::Module *module) {
             Fn->setAttributes(
                 llvm::GenXIntrinsic::getAttributes(Fn->getContext(), llvm::GenXIntrinsic::getGenXIntrinsicID(Fn)));
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_16_0
             // ReadNone, ReadOnly and WriteOnly are not supported for intrinsics anymore:
             FixFunctionAttribute(*Fn, llvm::Attribute::ReadNone, llvm::MemoryEffects::none());
             FixFunctionAttribute(*Fn, llvm::Attribute::ReadOnly, llvm::MemoryEffects::readOnly());
             FixFunctionAttribute(*Fn, llvm::Attribute::WriteOnly, llvm::MemoryEffects::writeOnly());
-#endif
         }
     }
 #endif
