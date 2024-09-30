@@ -149,10 +149,6 @@ jobs:
       fail-fast: false
       matrix:
         llvm:
-          - version: "15.0"
-            full_version: "15.0.7"
-            short_version: 15
-            opaque_ptr_mode: "ON"
           - version: "16.0"
             full_version: "16.0.6"
             short_version: 16
@@ -327,7 +323,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [15, 16, 17]
+        version: [16, 17]
         arch: [x86, x86-64]
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
         # See issue #2818 for more deatils. It's SDE problem running on AMD runner.
@@ -657,10 +653,6 @@ jobs:
       matrix:
         runner: [macos-12, macos-14]
         llvm:
-          - version: "15.0"
-            full_version: "15.0.7"
-            short_version: 15
-            opaque_ptr_mode: "ON"
           - version: "16.0"
             full_version: "16.0.6"
             short_version: 16
@@ -765,7 +757,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [15, 16, 17]
+        version: [16, 17]
 
     steps:
     - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -864,10 +856,6 @@ jobs:
       fail-fast: false
       matrix:
         llvm:
-          - version: "15.0"
-            full_version: "15.0.7"
-            short_version: 15
-            opaque_ptr_mode: "ON"
           - version: "16.0"
             full_version: "16.0.6"
             short_version: 16
@@ -1031,7 +1019,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [15, 16, 17]
+        version: [16, 17]
         arch: [x86, x86-64]
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
 
