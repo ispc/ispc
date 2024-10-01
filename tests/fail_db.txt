@@ -6,10 +6,6 @@
 % folder). The recommended way to build LLVM on Unix is to use "alloy.py".
 %
  List of known fails.
-./tests/func-tests/short-vec-6.ispc runfail    xe64        gen9-x8 unspec   Linux LLVM 15.0 clang++15.0 O0 spv *
-./tests/func-tests/short-vec-6.ispc runfail    xe64       gen9-x16 unspec   Linux LLVM 15.0 clang++15.0 O0 spv *
-./tests/func-tests/int8-wrap.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 15.0 clang++15.0 O2 spv *
-./tests/func-tests/ind-var-bounds-and-types.ispc runfail    xe64        xehpg-x8 dg2   Linux LLVM 15.0 clang++15.0 O0 spv *
 ./tests/func-tests/soa-6.ispc runfail    xe64        gen9-x8 unspec   Linux LLVM 16.0 clang++16.0 O2 spv *
 ./tests/func-tests/soa-7.ispc runfail    xe64        gen9-x8 unspec   Linux LLVM 16.0 clang++16.0 O2 spv *
 ./tests/func-tests/print_uniform-f16.ispc runfail    xe64        gen9-x8 unspec   Linux LLVM 16.0 clang++16.0 O2 spv *
