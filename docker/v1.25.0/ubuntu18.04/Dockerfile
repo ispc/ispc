@@ -13,6 +13,7 @@ ARG SHA=v1.25.0
 ARG LTO=ON
 ARG PGO=OFF
 ARG TBB=default
+ARG XE_DEPS=ON
 
 # !!! Make sure that your docker config provides enough memory to the container,
 # otherwise LLVM build may fail, as it will use all the cores available to container.
@@ -20,12 +21,14 @@ ARG TBB=default
 RUN uname -a
 
 # Packages required to build ISPC and Clang.
-RUN apt-get -y update && apt-get --no-install-recommends install -y wget build-essential gcc g++ git ca-certificates libtbb-dev ninja-build gnupg && \
+RUN apt-get -y update && apt-get --no-install-recommends install -y \
+        wget=1.19.4-1ubuntu2.2 build-essential=12.4ubuntu1 gcc=4:7.4.0-1ubuntu2.3 g++=4:7.4.0-1ubuntu2.3 \
+        git=1:2.17.1-1ubuntu0.18 ca-certificates=20230311ubuntu0.18.04.1 ninja-build=1.8.2-1 gnupg=2.2.4-1ubuntu1.6 && \
     rm -rf /var/lib/apt/lists/*
 
 # Install multilib libc needed to build clang_rt
 RUN if [[ $(uname -m) =~ "x86" ]]; then \
-        export CROSS_LIBS="libc6-dev-i386=2.27-3ubuntu*"; \
+        export CROSS_LIBS="libc6-dev-i386=2.27-3ubuntu1.6"; \
     else \
         export CROSS_LIBS="libc6-dev-armhf-cross=2.27-3ubuntu*"; \
     fi && \
@@ -33,10 +36,10 @@ RUN if [[ $(uname -m) =~ "x86" ]]; then \
     rm -rf /var/lib/apt/lists/*
 
 # TBB is parameter to build both packge usual and oneapi-tbb.
-RUN if [ "$TBB" == "default" ]; then apt-get --no-install-recommends install -y libtbb-dev && rm -rf /var/lib/apt/lists/*; fi
+RUN if [ "$TBB" == "default" ]; then apt-get --no-install-recommends install -y libtbb-dev=2017~U7-8 && rm -rf /var/lib/apt/lists/*; fi
 RUN if [ "$TBB" == "oneapi" ]; then wget -qO - https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | apt-key add - && \
                                     sh -c 'echo "deb https://apt.repos.intel.com/oneapi all main" > /etc/apt/sources.list.d/intel-oneapi.list' && \
-                                    apt update && apt --no-install-recommends install -y intel-oneapi-tbb intel-oneapi-tbb-devel && rm -rf /var/lib/apt/lists/*; fi
+                                    apt update && apt --no-install-recommends install -y intel-oneapi-tbb=2021.13.1-12 intel-oneapi-tbb-devel=2021.13.1-12 && rm -rf /var/lib/apt/lists/*; fi
 
 # Download and install required version of cmake (3.23.5 for both x86 and aarch64) as required for superbuild preset jsons.
 RUN if [[ $(uname -m) =~ "x86" ]]; then \
@@ -49,7 +52,7 @@ RUN if [[ $(uname -m) =~ "x86" ]]; then \
 
 # Zlib is required to build Python3
 RUN apt-get -y update && \
-    apt-get -y --no-install-recommends install zlib1g-dev zlib1g && \
+    apt-get -y --no-install-recommends install zlib1g-dev=1:1.2.11.dfsg-0ubuntu2.2 zlib1g=1:1.2.11.dfsg-0ubuntu2.2 && \
     rm -rf /var/lib/apt/lists/*
 ENV PYTHON_VERSION=3.8.19
 RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz && \
@@ -61,7 +64,7 @@ RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 
 RUN if [ -v http_proxy ]; then git config --global --add http.proxy "$http_proxy"; fi
 
 # Install regular ISPC dependencies
-RUN apt-get -y update && apt-get --no-install-recommends install -y m4 bison flex && \
+RUN apt-get -y update && apt-get --no-install-recommends install -y m4=1.4.18-1 bison=2:3.0.4.dfsg-1build1 flex=2.6.4-6 && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/local/src
@@ -84,6 +87,7 @@ RUN git clone https://github.com/$REPO.git ispc && \
         -B build \
         --preset os \
         -DLTO=$LTO \
+        -DXE_DEPS=$XE_DEPS \
         -DINSTALL_ISPC=ON \
         -DINSTALL_TOOLCHAIN=ON \
         -DCMAKE_INSTALL_PREFIX=/usr/local && \

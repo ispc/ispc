@@ -13,6 +13,7 @@ ARG SHA=main
 ARG LTO=OFF
 ARG PGO=OFF
 ARG TBB=default
+ARG XE_DEPS=ON
 
 # !!! Make sure that your docker config provides enough memory to the container,
 # otherwise LLVM build may fail, as it will use all the cores available to container.
@@ -20,7 +21,7 @@ ARG TBB=default
 RUN uname -a
 
 # Packages required to build ISPC and Clang.
-RUN apt-get -y update && apt-get --no-install-recommends install -y wget build-essential gcc g++ git ca-certificates libtbb-dev ninja-build gnupg && \
+RUN apt-get -y update && apt-get --no-install-recommends install -y wget build-essential gcc g++ git ca-certificates ninja-build gnupg && \
     rm -rf /var/lib/apt/lists/*
 
 # Install multilib libc needed to build clang_rt
@@ -33,8 +34,8 @@ RUN if [[ $(uname -m) =~ "x86" ]]; then \
     rm -rf /var/lib/apt/lists/*
 
 # TBB is parameter to build both packge usual and oneapi-tbb.
-RUN if [ "$TBB" == "default" ]; then apt-get --no-install-recommends install -y libtbb-dev && rm -rf /var/lib/apt/lists/*; fi
-RUN if [ "$TBB" == "oneapi" ]; then wget -qO - https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | apt-key add - && \
+RUN if [ "$TBB" == "default" ] && [ "$XE_DEPS" == "ON" ]; then apt-get --no-install-recommends install -y libtbb-dev && rm -rf /var/lib/apt/lists/*; fi
+RUN if [ "$TBB" == "oneapi" ] && [ "$XE_DEPS" == "ON" ]; then wget -qO - https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | apt-key add - && \
                                     sh -c 'echo "deb https://apt.repos.intel.com/oneapi all main" > /etc/apt/sources.list.d/intel-oneapi.list' && \
                                     apt update && apt --no-install-recommends install -y intel-oneapi-tbb intel-oneapi-tbb-devel && rm -rf /var/lib/apt/lists/*; fi
 
@@ -84,6 +85,7 @@ RUN git clone https://github.com/$REPO.git ispc && \
         -B build \
         --preset os \
         -DLTO=$LTO \
+        -DXE_DEPS=$XE_DEPS \
         -DINSTALL_ISPC=ON \
         -DINSTALL_TOOLCHAIN=ON \
         -DCMAKE_INSTALL_PREFIX=/usr/local && \
