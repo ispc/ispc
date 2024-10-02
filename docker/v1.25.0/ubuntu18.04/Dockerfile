@@ -4,13 +4,13 @@
 #  SPDX-License-Identifier: BSD-3-Clause
 
 
-FROM ubuntu:18.04
+FROM ubuntu:18.04@sha256:152dc042452c496007f07ca9127571cb9c29697f42acbfad72324b2bb2e43c98
 LABEL maintainer="Arina Neshlyaeva <arina.neshlyaeva@intel.com>"
 SHELL ["/bin/bash", "-c"]
 
 ARG REPO=ispc/ispc
-ARG SHA=main
-ARG LTO=OFF
+ARG SHA=v1.25.0
+ARG LTO=ON
 ARG PGO=OFF
 ARG TBB=default
 
@@ -60,11 +60,6 @@ RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 
 # If you are behind a proxy, you need to configure git.
 RUN if [ -v http_proxy ]; then git config --global --add http.proxy "$http_proxy"; fi
 
-ENV LLVM_HOME=/usr/local/src/llvm
-WORKDIR /usr/local/src
-
-ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
-
 # Install regular ISPC dependencies
 RUN apt-get -y update && apt-get --no-install-recommends install -y m4 bison flex && \
     rm -rf /var/lib/apt/lists/*
@@ -96,6 +91,3 @@ RUN git clone https://github.com/$REPO.git ispc && \
     (cmake --build build --target ispc-stage2-check-all || true) && \
     mv build/build-ispc-stage2/src/ispc-stage2-build/*.tar.gz ./ && \
     rm -rf build
-
-# Export path for ispc
-ENV PATH=/usr/local/src/ispc/bin-$LLVM_VERSION/bin:$PATH
