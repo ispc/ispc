@@ -1,0 +1,16 @@
+# This patch is backport of the fix for https://github.com/llvm/llvm-project/issues/111170
+
+diff --git a/llvm/lib/Target/X86/X86ISelLowering.cpp b/llvm/lib/Target/X86/X86ISelLowering.cpp
+index 73f7f52846f625..4389b652104360 100644
+--- a/llvm/lib/Target/X86/X86ISelLowering.cpp
++++ b/llvm/lib/Target/X86/X86ISelLowering.cpp
+@@ -48499,7 +48499,8 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
+     if (VT.isVector())
+       if (auto *RawC = getTargetConstantFromNode(N->getOperand(1)))
+         if (auto *SplatC = RawC->getSplatValue())
+-          C = &(SplatC->getUniqueInteger());
++          if (auto *SplatCI = dyn_cast<ConstantInt>(SplatC))
++            C = &(SplatCI->getValue());
+ 
+     if (!C || C->getBitWidth() != VT.getScalarSizeInBits())
+       return SDValue();
