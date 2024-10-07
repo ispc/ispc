@@ -11,6 +11,10 @@ on:
     # Run every day at 22:00 UTC
     - cron: '0 22 * * *'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check-dll-injection:
     runs-on: windows-2022
