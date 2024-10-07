@@ -7,9 +7,18 @@ permissions: read-all
 
 on: [push, pull_request]
 
+env:
+  SDE_MIRROR_ID: 813591
+  SDE_TAR_NAME: sde-external-9.33.0-2024-01-07
+  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
+  LLVM_REPO: https://github.com/ispc/ispc.dependencies
+
 jobs:
   check-format:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    env:
+      LLVM_VERSION: "18.1"
+      LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -18,11 +27,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        echo "APT::Acquire::Retries \"3\";" | sudo tee -a /etc/apt/apt.conf.d/80-retries
-        sudo apt-get update
-        sudo apt-get install -y clang-format-12 clang-12
-        sudo ln -sf /usr/bin/clang-12 /usr/bin/clang
-        sudo ln -sf /usr/bin/clang-format-12 /usr/bin/clang-format
+        .github/workflows/scripts/install-build-deps.sh
 
     - name: Check format
       run: |
