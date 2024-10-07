@@ -48,7 +48,7 @@ class Triple {
         m_arch = (Arch)((encoding & arch_mask) >> (target_width + os_width));
     };
 
-    Triple(ISPCTarget target, TargetOS os, Arch arch) : m_target(target), m_os(os), m_arch(arch){};
+    Triple(ISPCTarget target, TargetOS os, Arch arch) : m_target(target), m_os(os), m_arch(arch) {};
 
     uint32_t encode() const {
         uint32_t result = (uint32_t)m_arch;

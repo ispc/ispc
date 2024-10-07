@@ -7,11 +7,15 @@
 #define PERMUTE_VAL 1
 
 template <typename T> inline void Shuffle1(uniform T a[], uniform T ret[], int perm, uniform int count) {
-    foreach (i = 0 ... count) { ret[i] = shuffle(a[i], programIndex + perm - PERMUTE_VAL); }
+    foreach (i = 0 ... count) {
+        ret[i] = shuffle(a[i], programIndex + perm - PERMUTE_VAL);
+    }
 }
 
 template <typename T> inline void Shuffle2(uniform T a[], uniform T b[], uniform T ret[], int perm, uniform int count) {
-    foreach (i = 0 ... count) { ret[i] = shuffle(a[i], b[i], programIndex + perm - PERMUTE_VAL); }
+    foreach (i = 0 ... count) {
+        ret[i] = shuffle(a[i], b[i], programIndex + perm - PERMUTE_VAL);
+    }
 }
 
 #define DEFINE_SHUFFLE1(TYPE, TYPE_NAME)                                                                               \

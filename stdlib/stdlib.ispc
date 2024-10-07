@@ -2037,8 +2037,8 @@ __declspec(safe, cost2) static inline float16 clamp(float16 v, float16 low, floa
     return min(max(v, low), high);
 }
 
-__declspec(safe, cost2) static inline uniform float16
-    clamp(uniform float16 v, uniform float16 low, uniform float16 high) {
+__declspec(safe, cost2) static inline uniform float16 clamp(uniform float16 v, uniform float16 low,
+                                                            uniform float16 high) {
     return min(max(v, low), high);
 }
 
@@ -2064,8 +2064,8 @@ __declspec(safe, cost2) static inline unsigned int8 clamp(unsigned int8 v, unsig
     return min(max(v, low), high);
 }
 
-__declspec(safe, cost2) static inline uniform unsigned int8
-    clamp(uniform unsigned int8 v, uniform unsigned int8 low, uniform unsigned int8 high) {
+__declspec(safe, cost2) static inline uniform unsigned int8 clamp(uniform unsigned int8 v, uniform unsigned int8 low,
+                                                                  uniform unsigned int8 high) {
     return min(max(v, low), high);
 }
 
@@ -2081,8 +2081,8 @@ __declspec(safe, cost2) static inline unsigned int16 clamp(unsigned int16 v, uns
     return min(max(v, low), high);
 }
 
-__declspec(safe, cost2) static inline uniform unsigned int16
-    clamp(uniform unsigned int16 v, uniform unsigned int16 low, uniform unsigned int16 high) {
+__declspec(safe, cost2) static inline uniform unsigned int16 clamp(uniform unsigned int16 v, uniform unsigned int16 low,
+                                                                   uniform unsigned int16 high) {
     return min(max(v, low), high);
 }
 
@@ -2098,8 +2098,8 @@ __declspec(safe, cost2) static inline unsigned int clamp(unsigned int v, unsigne
     return min(max(v, low), high);
 }
 
-__declspec(safe, cost2) static inline uniform
-    unsigned int clamp(uniform unsigned int v, uniform unsigned int low, uniform unsigned int high) {
+__declspec(safe, cost2) static inline uniform unsigned int clamp(uniform unsigned int v, uniform unsigned int low,
+                                                                 uniform unsigned int high) {
     return min(max(v, low), high);
 }
 
@@ -2115,8 +2115,8 @@ __declspec(safe, cost2) static inline unsigned int64 clamp(unsigned int64 v, uns
     return min(max(v, low), high);
 }
 
-__declspec(safe, cost2) static inline uniform unsigned int64
-    clamp(uniform unsigned int64 v, uniform unsigned int64 low, uniform unsigned int64 high) {
+__declspec(safe, cost2) static inline uniform unsigned int64 clamp(uniform unsigned int64 v, uniform unsigned int64 low,
+                                                                   uniform unsigned int64 high) {
     return min(max(v, low), high);
 }
 
@@ -5650,8 +5650,8 @@ __declspec(safe) static inline varying int32 dot4add_u8i8packed(varying uint32 a
 // Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in a with corresponding signed
 // 8-bit integers in b, producing 4 intermediate signed 16-bit results.
 // Sum these 4 results with the corresponding 32-bit integer in acc using signed saturation, and return the result.
-__declspec(safe) static inline varying int32
-    dot4add_u8i8packed_sat(varying uint32 a, varying uint32 b, varying int32 acc) {
+__declspec(safe) static inline varying int32 dot4add_u8i8packed_sat(varying uint32 a, varying uint32 b,
+                                                                    varying int32 acc) {
     if (__have_dot_product_vnni) {
         return __dot4add_u8i8packed_sat(a, b, acc);
     } else {
@@ -5682,8 +5682,8 @@ __declspec(safe) static inline varying int32 dot2add_i16packed(varying uint32 a,
 // Multiply groups of 2 adjacent pairs of signed 16-bit integers in a
 // with corresponding 16-bit integers in b, producing 2 intermediate signed 32-bit results.
 // Sum these 2 results with the corresponding 32-bit integer in src using signed saturation, and return the result.
-__declspec(safe) static inline varying int32
-    dot2add_i16packed_sat(varying uint32 a, varying uint32 b, varying int32 acc) {
+__declspec(safe) static inline varying int32 dot2add_i16packed_sat(varying uint32 a, varying uint32 b,
+                                                                   varying int32 acc) {
     if (__have_dot_product_vnni) {
         return __dot2add_i16packed_sat(a, b, acc);
     } else {

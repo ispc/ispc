@@ -18,7 +18,9 @@ export void popcnt_uniform_int32_even(uniform int32 *uniform src, uniform int32 
 }
 
 export void popcnt_varying_int32_all(uniform int32 *uniform src, uniform int32 *uniform dst, uniform count) {
-    foreach (i = 0...count) { dst[i] = popcnt8(src[i]); }
+    foreach (i = 0...count) {
+        dst[i] = popcnt8(src[i]);
+    }
 }
 
 export void popcnt_varying_int32_even(uniform int32 *uniform src, uniform int32 *uniform dst, uniform count) {
@@ -41,7 +43,9 @@ export void popcnt_uniform_int64_even(uniform int64 *uniform src, uniform int64 
 }
 
 export void popcnt_varying_int64_all(uniform int64 *uniform src, uniform int64 *uniform dst, uniform count) {
-    foreach (i = 0...count) { dst[i] = popcnt8(src[i]); }
+    foreach (i = 0...count) {
+        dst[i] = popcnt8(src[i]);
+    }
 }
 
 export void popcnt_varying_int64_even(uniform int64 *uniform src, uniform int64 *uniform dst, uniform count) {

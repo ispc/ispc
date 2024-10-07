@@ -433,7 +433,7 @@ class ArgErrors {
     }
 
   public:
-    ArgErrors(){};
+    ArgErrors() {};
     void AddError(const char *format, ...) PRINTF_FUNC {
         va_list args;
         va_start(args, format);
