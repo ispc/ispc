@@ -4,12 +4,12 @@
 name: Scan Python code with Bandit
 
 on:
-    workflow_dispatch:
-    push:
-    pull_request:
-      paths:
-        - '**/*.py'
-        - '.github/workflows/bandit.*'
+  workflow_dispatch:
+  push:
+  pull_request:
+    paths:
+      - '**/*.py'
+      - '.github/workflows/bandit.*'
 
 permissions:
   contents: read

@@ -38,7 +38,7 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
           trivyignores: '.trivyignore'
-          # Skip released versions
+          # Skip released versions before v1.25.0
           skip-dirs: 'docker/v1.24.0,docker/v1.23.0,docker/v1.22.0,docker/v1.21.0,docker/v1.20.0,docker/v1.19.0,docker/v1.18.0,docker/v1.17.0,docker/v1.16.0,docker/v1.15.0,docker/v1.14.1,docker/v1.14.0,docker/v1.13.0,docker/v1.12.0,docker/v1.11.0,docker/v1.10.0,docker/v1.9.2,docker/v1.9.1'
 
       - name: Print report

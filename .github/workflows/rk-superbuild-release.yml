@@ -21,6 +21,8 @@ concurrency:
 jobs:
   build-cpu-ubuntu-2204:
     runs-on: ubuntu-latest
+    # Disabling this workflow for non ispc/ispc repo as it needs to run on releases only.
+    if: github.repository == 'ispc/ispc'
     container:
       image: ubuntu:22.04
 
