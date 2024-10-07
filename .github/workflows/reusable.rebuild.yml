@@ -75,6 +75,9 @@ on:
         type: string
         default: '10.0.18362.0'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   linux-build:

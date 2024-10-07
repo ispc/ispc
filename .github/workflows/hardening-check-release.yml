@@ -14,6 +14,10 @@ on:
         type: string
         default: 'v1.21.1'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   hardening_check:
     runs-on: ubuntu-latest

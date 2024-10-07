@@ -13,6 +13,10 @@ on:
     - cron:  '0 7 * * *'
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   SDE_MIRROR_ID: 813591
   SDE_TAR_NAME: sde-external-9.33.0-2024-01-07

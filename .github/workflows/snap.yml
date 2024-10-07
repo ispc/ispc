@@ -36,6 +36,10 @@ on:
           - 'beta'
           - 'edge'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   snap-arm64:
     runs-on: [self-hosted, linux, ARM64]

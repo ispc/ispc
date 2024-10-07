@@ -7,6 +7,10 @@ permissions: read-all
 
 on: [pull_request]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check_copyright:
     runs-on: ubuntu-latest
