@@ -20,8 +20,8 @@ env:
   LLVM_REPO: https://github.com/ispc/ispc.dependencies
 
 jobs:
-  clang-16:
-    runs-on: ubuntu-22.04
+  clang-18:
+    runs-on: ubuntu-24.04
     env:
       LLVM_VERSION: "18.1"
       LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
@@ -47,8 +47,8 @@ jobs:
           cmake -B build -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_FLAGS="-Werror" -DCMAKE_CXX_FLAGS="-Werror"
           cmake --build build --target all -j4
 
-  gcc-11:
-    runs-on: ubuntu-22.04
+  gcc-13:
+    runs-on: ubuntu-24.04
     env:
       LLVM_VERSION: "18.1"
       LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
@@ -67,14 +67,14 @@ jobs:
       run: |
         cat /proc/cpuinfo
         which -a clang
-        gcc-11 -v
+        gcc-13 -v
 
     - name: Build ISPC with gcc in -Werror mode
       # Disable attribute-related warnings
       # LLVM 16.0-17.0 causes error here because of incorrect visibility in SROAPass:
       # error: 'llvm::SROAPass' declared with greater visibility than the type of its field 'llvm::SROAPass::SelectsToRewrite'
       run: |
-          cmake -B build -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11 -DCMAKE_C_FLAGS="-Werror -Wno-attributes" -DCMAKE_CXX_FLAGS="-Werror -Wno-attributes"
+          cmake -B build -DCMAKE_C_COMPILER=gcc-13 -DCMAKE_CXX_COMPILER=g++-13 -DCMAKE_C_FLAGS="-Werror -Wno-attributes" -DCMAKE_CXX_FLAGS="-Werror -Wno-attributes"
           cmake --build build --target all -j4
 
   msvc-2022:
