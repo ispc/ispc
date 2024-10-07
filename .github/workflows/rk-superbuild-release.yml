@@ -52,8 +52,3 @@ jobs:
         cd build
         cmake -DISPC_URL="${GITHUB_WORKSPACE}/ispc-v${{ inputs.version }}-linux-oneapi.tar.gz" -DISPC_VERSION=${{ inputs.version }} ../
         cmake --build .
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-cpu-ubuntu-2204
-        path: build/install
