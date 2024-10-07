@@ -480,7 +480,11 @@ Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, So
     if (!g->target->isXeTarget()) {
         llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
         const llvm::TargetIntrinsicInfo *TII = targetMachine->getIntrinsicInfo();
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+        llvm::Intrinsic::ID ID = llvm::Intrinsic::lookupIntrinsicID(llvm::StringRef(name));
+#else
         llvm::Intrinsic::ID ID = llvm::Function::lookupIntrinsicID(llvm::StringRef(name));
+#endif
         if (ID == llvm::Intrinsic::not_intrinsic && TII) {
             ID = static_cast<llvm::Intrinsic::ID>(TII->lookupName(llvm::StringRef(name)));
         }
