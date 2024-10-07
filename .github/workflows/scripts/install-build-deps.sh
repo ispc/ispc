@@ -22,9 +22,14 @@ do
   fi
 done
 
-echo -U "$USER_AGENT" --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://downloadmirror.intel.com/"$SDE_MIRROR_ID"/"$SDE_TAR_NAME"-lin.tar.xz
-wget -q -U "$USER_AGENT" --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://downloadmirror.intel.com/"$SDE_MIRROR_ID"/"$SDE_TAR_NAME"-lin.tar.xz
-tar xf "$SDE_TAR_NAME"-lin.tar.xz
+# Check if both SDE_MIRROR_ID and USER_AGENT are defined
+if [ -n "$SDE_MIRROR_ID" ] && [ -n "$USER_AGENT" ]; then
+    echo -U "$USER_AGENT" --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://downloadmirror.intel.com/"$SDE_MIRROR_ID"/"$SDE_TAR_NAME"-lin.tar.xz
+    wget -q -U "$USER_AGENT" --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://downloadmirror.intel.com/"$SDE_MIRROR_ID"/"$SDE_TAR_NAME"-lin.tar.xz
+    tar xf "$SDE_TAR_NAME"-lin.tar.xz
+else
+    echo "SDE_MIRROR_ID and/or USER_AGENT are not defined. Skipping download."
+fi
 
 if [ -v INSTALL_COMPUTE_RUNTIME ]; then
     if [ -v COMPUTE_RUNTIME_GITHUB_RELEASE ]; then
