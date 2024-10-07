@@ -1,4 +1,4 @@
-// Copyright 2020-2023 Intel Corporation
+// Copyright 2020-2024 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "ze_mock.h"
@@ -298,7 +298,7 @@ ze_result_t zeMemFree(ze_context_handle_t hContext, void *ptr) {
     MOCK_CNT_CALL;
     if (hContext != ContextHandle.get() || !ptr)
         return ZE_RESULT_ERROR_INVALID_NULL_HANDLE;
-    delete[](uint8_t *) ptr;
+    delete[] (uint8_t *)ptr;
     MOCK_RET;
 }
 

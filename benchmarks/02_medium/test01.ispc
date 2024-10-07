@@ -8,7 +8,9 @@ struct FVector {
 inline uniform FVector Mul1(const uniform FVector &A, const uniform FVector &B) {
     uniform FVector Result;
 
-    foreach (i = 0 ... 3) { Result.V[i] = A.V[i] * B.V[i]; }
+    foreach (i = 0 ... 3) {
+        Result.V[i] = A.V[i] * B.V[i];
+    }
 
     return Result;
 }

@@ -10,7 +10,9 @@
                                                                     uniform uint64 num_elems)
 
 #define UNROLL_VARYING_FOREACH_BODY                                                                                    \
-    foreach (i = 1 ... num_elems) { dst[i] = src[i] + src[i - 1]; }
+    foreach (i = 1 ... num_elems) {                                                                                    \
+        dst[i] = src[i] + src[i - 1];                                                                                  \
+    }
 
 #define UNROLL_VARYING_FOR_BODY                                                                                        \
     for (uint64 i = programIndex + 1ull; i < num_elems; i += programCount) {                                           \

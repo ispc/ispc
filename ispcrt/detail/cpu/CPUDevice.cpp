@@ -1,4 +1,4 @@
-// Copyright 2020-2023, Intel Corporation
+// Copyright 2020-2024, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "CPUDevice.h"
@@ -223,15 +223,13 @@ struct Kernel : public ispcrt::base::Kernel {
 };
 
 struct CommandListImpl : ispcrt::base::CommandList {
-    CommandListImpl() { /* no-op */
-    }
+    CommandListImpl() { /* no-op */ }
     ~CommandListImpl() {
         clearFences();
         clearFutures();
     }
 
-    void barrier() override { /* no-op */
-    }
+    void barrier() override { /* no-op */ }
 
     ispcrt::base::Future *copyToHost(ispcrt::base::MemoryView &) override {
         Future *f = new Future();
@@ -278,8 +276,7 @@ struct CommandListImpl : ispcrt::base::CommandList {
         return future;
     }
 
-    void close() override { /* no-op */
-    }
+    void close() override { /* no-op */ }
 
     ispcrt::base::Fence *submit() override {
         Fence *f = new Fence;
@@ -323,8 +320,7 @@ struct CommandListImpl : ispcrt::base::CommandList {
 };
 
 struct CommandQueueImpl : ispcrt::base::CommandQueue {
-    CommandQueueImpl() { /* no-op */
-    }
+    CommandQueueImpl() { /* no-op */ }
 
     ~CommandQueueImpl() { clearCommandList(); }
 
@@ -334,8 +330,7 @@ struct CommandQueueImpl : ispcrt::base::CommandQueue {
         return p;
     }
 
-    void sync() override { /* no-op */
-    }
+    void sync() override { /* no-op */ }
 
     void *nativeHandle() const override { return nullptr; }
 

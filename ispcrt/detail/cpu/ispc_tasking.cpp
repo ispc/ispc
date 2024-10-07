@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2023, Intel Corporation
+  Copyright (c) 2011-2024, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -109,7 +109,7 @@ using namespace Concurrency;
 #include <sys/types.h>
 #include <unistd.h>
 #include <vector>
-//#include <stdexcept>
+// #include <stdexcept>
 #include <stack>
 #endif // ISPC_USE_PTHREADS_FULLY_SUBSCRIBED
 #ifdef ISPC_USE_TBB_PARALLEL_FOR
@@ -238,7 +238,7 @@ inline TaskGroupBase::~TaskGroupBase() {
     // Note: don't delete memBuffers[0], since it points to the start of
     // the "mem" member!
     for (int i = 1; i < NUM_MEM_BUFFERS; ++i)
-        delete[](memBuffers[i]);
+        delete[] (memBuffers[i]);
 }
 
 inline void TaskGroupBase::Reset() {

@@ -30,7 +30,7 @@ WARM_UP_RUN();
 // Minimum size is maximum target width, i.e. 64.
 // Larger buffer is better, but preferably to stay within L1.
 #define ARGS Arg(8192)
-//#define ARGS RangeMultiplier(2)->Range(64, 64<<15)->Complexity(benchmark::oN)
+// #define ARGS RangeMultiplier(2)->Range(64, 64<<15)->Complexity(benchmark::oN)
 
 template <typename T> static void init(T *src, T *dst, int count) {
     for (int i = 0; i < count; i++) {

@@ -572,29 +572,29 @@ __declspec(safe, cost2) inline uniform double clamp(uniform double v, uniform do
 
 // int8
 __declspec(safe, cost2) inline unsigned int8 clamp(unsigned int8 v, unsigned int8 low, unsigned int8 high);
-__declspec(safe, cost2) inline uniform unsigned int8
-    clamp(uniform unsigned int8 v, uniform unsigned int8 low, uniform unsigned int8 high);
+__declspec(safe, cost2) inline uniform unsigned int8 clamp(uniform unsigned int8 v, uniform unsigned int8 low,
+                                                           uniform unsigned int8 high);
 __declspec(safe, cost2) inline int8 clamp(int8 v, int8 low, int8 high);
 __declspec(safe, cost2) inline uniform int8 clamp(uniform int8 v, uniform int8 low, uniform int8 high);
 
 // int16
 __declspec(safe, cost2) inline unsigned int16 clamp(unsigned int16 v, unsigned int16 low, unsigned int16 high);
-__declspec(safe, cost2) inline uniform unsigned int16
-    clamp(uniform unsigned int16 v, uniform unsigned int16 low, uniform unsigned int16 high);
+__declspec(safe, cost2) inline uniform unsigned int16 clamp(uniform unsigned int16 v, uniform unsigned int16 low,
+                                                            uniform unsigned int16 high);
 __declspec(safe, cost2) inline int16 clamp(int16 v, int16 low, int16 high);
 __declspec(safe, cost2) inline uniform int16 clamp(uniform int16 v, uniform int16 low, uniform int16 high);
 
 // int32
 __declspec(safe, cost2) inline unsigned int clamp(unsigned int v, unsigned int low, unsigned int high);
-__declspec(safe, cost2) inline uniform
-    unsigned int clamp(uniform unsigned int v, uniform unsigned int low, uniform unsigned int high);
+__declspec(safe, cost2) inline uniform unsigned int clamp(uniform unsigned int v, uniform unsigned int low,
+                                                          uniform unsigned int high);
 __declspec(safe, cost2) inline int clamp(int v, int low, int high);
 __declspec(safe, cost2) inline uniform int clamp(uniform int v, uniform int low, uniform int high);
 
 // int64
 __declspec(safe, cost2) inline unsigned int64 clamp(unsigned int64 v, unsigned int64 low, unsigned int64 high);
-__declspec(safe, cost2) inline uniform unsigned int64
-    clamp(uniform unsigned int64 v, uniform unsigned int64 low, uniform unsigned int64 high);
+__declspec(safe, cost2) inline uniform unsigned int64 clamp(uniform unsigned int64 v, uniform unsigned int64 low,
+                                                            uniform unsigned int64 high);
 __declspec(safe, cost2) inline int64 clamp(int64 v, int64 low, int64 high);
 __declspec(safe, cost2) inline uniform int64 clamp(uniform int64 v, uniform int64 low, uniform int64 high);
 
