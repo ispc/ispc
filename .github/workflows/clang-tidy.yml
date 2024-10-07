@@ -1,7 +1,7 @@
 ## Copyright 2024 Intel Corporation
 ## SPDX-License-Identifier: BSD-3-Clause
 
-name: clang-tidy
+name: Lint code with clang-tidy
 
 permissions: read-all
 
@@ -22,8 +22,6 @@ env:
 jobs:
   clang_tidy:
     runs-on: ubuntu-24.04
-    # Disabling this workflow for non ispc/ispc repo as it needs to run on releases only.
-    # if: github.repository == 'ispc/ispc'
     env:
       LLVM_VERSION: "18.1"
       LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 # Runs YARPGEN
-name: YARPGEN
+name: Yarpgen fuzzing
 
 permissions: read-all
 
@@ -30,101 +30,103 @@ env:
   LLVM_REPO: https://github.com/ispc/ispc.dependencies
 
 jobs:
-    linux-build-ispc:
-      runs-on: ubuntu-22.04
-      env:
-        LLVM_VERSION: "18.1"
-        LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+  linux-build-ispc:
+    runs-on: ubuntu-22.04
+    # Disabling this workflow for non ispc/ispc repo as it needs to run on releases only.
+    if: github.repository == 'ispc/ispc'
+    env:
+      LLVM_VERSION: "18.1"
+      LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
 
+    steps:
+    - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      with:
+        submodules: true
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.sh
+
+    - name: Check environment
+      run: |
+        which -a clang
+        cat /proc/cpuinfo
+
+    - name: Build package
+      run: |
+        .github/workflows/scripts/build-ispc.sh
+
+    - name: Sanity testing (make check-all, make test)
+      run: |
+        .github/workflows/scripts/check-ispc.sh
+
+    - name: Upload package
+      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      with:
+        name: ispc_linux_package
+        path: build/ispc-trunk-linux.tar.gz
+
+  yarpgen-build-and-run:
+      runs-on: ubuntu-22.04
+      needs: [linux-build-ispc]
       steps:
+
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           submodules: true
 
-      - name: Install dependencies
-        run: |
-          .github/workflows/scripts/install-build-deps.sh
-
-      - name: Check environment
-        run: |
-          which -a clang
-          cat /proc/cpuinfo
-
-      - name: Build package
-        run: |
-          .github/workflows/scripts/build-ispc.sh
-
-      - name: Sanity testing (make check-all, make test)
-        run: |
-          .github/workflows/scripts/check-ispc.sh
-
-      - name: Upload package
-        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      - name: Download package
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           name: ispc_linux_package
-          path: build/ispc-trunk-linux.tar.gz
 
-    yarpgen-build-and-run:
-        runs-on: ubuntu-22.04
-        needs: [linux-build-ispc]
-        steps:
+      - name: Install dependencies and unpack artifacts
+        run: |
+          .github/workflows/scripts/install-test-deps.sh
 
-        - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-          with:
-            submodules: true
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          repository: 'intel/yarpgen'
+          submodules: true
+          path: 'yarpgen'
 
-        - name: Download package
-          uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-          with:
-            name: ispc_linux_package
+      - name: Build YARPGEN
+        run: |
+          cmake -B build && cmake --build build
+        working-directory: yarpgen
 
-        - name: Install dependencies and unpack artifacts
-          run: |
-            .github/workflows/scripts/install-test-deps.sh
+      - name: Set up PATH
+        run: |
+          {
+            echo "YARPGEN_HOME=$GITHUB_WORKSPACE/yarpgen"
+            echo "$GITHUB_WORKSPACE/yarpgen/build:$GITHUB_WORKSPACE/yarpgen/scripts"
+            echo "$GITHUB_WORKSPACE/ispc-trunk-linux/bin"
+            echo "$SDE_HOME"
+          } >> "$GITHUB_ENV"
 
-        - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-          with:
-            repository: 'intel/yarpgen'
-            submodules: true
-            path: 'yarpgen'
+      - name: Set timeout for dispatched run
+        if: github.event_name == 'workflow_dispatch'
+        run: echo "TIMEOUT=${{ github.event.inputs.timeout }}" >> "$GITHUB_ENV"
 
-        - name: Build YARPGEN
-          run: |
-            cmake -B build && cmake --build build
-          working-directory: yarpgen
+      - name: Set timeout for scheduled run
+        if: github.event_name == 'schedule'
+        run: echo "TIMEOUT=240" >> "$GITHUB_ENV"
 
-        - name: Set up PATH
-          run: |
-            {
-              echo "YARPGEN_HOME=$GITHUB_WORKSPACE/yarpgen"
-              echo "$GITHUB_WORKSPACE/yarpgen/build:$GITHUB_WORKSPACE/yarpgen/scripts"
-              echo "$GITHUB_WORKSPACE/ispc-trunk-linux/bin"
-              echo "$SDE_HOME"
-            } >> "$GITHUB_ENV"
+      - name: Run YARPGEN
+        run: |
+          ispc --version
+          "$YARPGEN_HOME"/scripts/run_gen.py --std ispc --target ispc --timeout "$TIMEOUT"
+          tar -czvf yarpgen.tar.gz testing
+        working-directory: yarpgen
 
-        - name: Set timeout for dispatched run
-          if: github.event_name == 'workflow_dispatch'
-          run: echo "TIMEOUT=${{ github.event.inputs.timeout }}" >> "$GITHUB_ENV"
+      - name: Print seeds
+        run: |
+          ls -al testing/*/*/*
+        working-directory: yarpgen
 
-        - name: Set timeout for scheduled run
-          if: github.event_name == 'schedule'
-          run: echo "TIMEOUT=240" >> "$GITHUB_ENV"
-
-        - name: Run YARPGEN
-          run: |
-            ispc --version
-            "$YARPGEN_HOME"/scripts/run_gen.py --std ispc --target ispc --timeout "$TIMEOUT"
-            tar -czvf yarpgen.tar.gz testing
-          working-directory: yarpgen
-
-        - name: Print seeds
-          run: |
-            ls -al testing/*/*/*
-          working-directory: yarpgen
-
-        - name: Upload YARPGEN results
-          uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
-          with:
-            name: yarpgen
-            path: yarpgen/yarpgen.tar.gz
+      - name: Upload YARPGEN results
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+        with:
+          name: yarpgen
+          path: yarpgen/yarpgen.tar.gz
 

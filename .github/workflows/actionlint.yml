@@ -3,11 +3,11 @@
 
 name: Lint GitHub Actions workflows
 on:
-    workflow_dispatch:
-    push:
-    pull_request:
-      paths:
-        - '.github/workflows/*'
+  workflow_dispatch:
+  push:
+  pull_request:
+    paths:
+      - '.github/workflows/*'
 
 permissions:
   contents: read
