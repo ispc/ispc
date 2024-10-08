@@ -1284,6 +1284,12 @@ int main(int Argc, char *Argv[]) {
         if (target == ISPCTarget::avx512knl_x16) {
             Warning(SourcePos(), "The target avx512knl_x16 is deprecated and will be removed in the future.");
         }
+#ifdef ISPC_XE_ENABLED
+        if (target == ISPCTarget::gen9_x8 || target == ISPCTarget::gen9_x16) {
+            Warning(SourcePos(), "The target %s is deprecated and will be removed in the future.",
+                    ISPCTargetToString(target).c_str());
+        }
+#endif
     }
 
     // If [no]wrap-signed-int is explicitly specified, then use this value.

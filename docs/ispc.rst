@@ -637,7 +637,8 @@ older versions:
 Updating ISPC Programs For Changes In ISPC 1.25.0
 -------------------------------------------------
 
-``avx512knl-x16`` target is deprecated and will be removed in future releases.
+``avx512knl-x16``, ``gen9-x8`` and ``gen9-x16`` targets are deprecated and will
+be removed in future releases.
 
 ISPC language was extended to support ``__attribute__(())`` syntax for variable
 and function declarations. Two attributes are supported now: ``noescape`` and
