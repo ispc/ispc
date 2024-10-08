@@ -34,7 +34,7 @@ RUN if [[ $(uname -m) =~ "x86" ]]; then \
     rm -rf /var/lib/apt/lists/*
 
 # TBB is parameter to build both packge usual and oneapi-tbb.
-RUN if [ "$TBB" == "default" ] && [ "$XE_DEPS" == "ON" ]; then apt-get --no-install-recommends install -y libtbb-dev && rm -rf /var/lib/apt/lists/*; fi
+RUN if [ "$TBB" == "default" ] && [ "$XE_DEPS" == "ON" ]; then apt-get -y update && apt-get --no-install-recommends install -y libtbb-dev && rm -rf /var/lib/apt/lists/*; fi
 RUN if [ "$TBB" == "oneapi" ] && [ "$XE_DEPS" == "ON" ]; then wget -qO - https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | apt-key add - && \
                                     sh -c 'echo "deb https://apt.repos.intel.com/oneapi all main" > /etc/apt/sources.list.d/intel-oneapi.list' && \
                                     apt update && apt --no-install-recommends install -y intel-oneapi-tbb intel-oneapi-tbb-devel && rm -rf /var/lib/apt/lists/*; fi
