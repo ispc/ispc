@@ -1,5 +1,5 @@
-// RUN: %{ispc} --emit-spirv --target=gen9-x8 %s -o %t.spv
-// RUN: ocloc compile -file %t.spv -spirv_input -options "-vc-codegen -Xfinalizer -output" -device skl -output %t.bin -output_no_suffix
+// RUN: %{ispc} --emit-spirv --target=xehpg-x8 --device=acm-g10 %s -o %t.spv
+// RUN: ocloc compile -file %t.spv -spirv_input -options "-vc-codegen -Xfinalizer -output" -device acm-g10 -output %t.bin -output_no_suffix
 // RUN: FileCheck %s -check-prefix=CHECK_FOO1 -input-file=foo1_kernel.asm
 // RUN: FileCheck %s -check-prefix=CHECK_FOO2 -input-file=foo2_kernel.asm
 // RUN: FileCheck %s -check-prefix=CHECK_FOO3 -input-file=foo3_kernel.asm
@@ -39,9 +39,8 @@ task void foo2_kernel(uniform int a[]) {
     bar2(a);
 }
 
-// CHECK_FOO3: jmpi
-// CHECK_FOO3: cmp
-// CHECK_FOO3-NOT: cmp
+// CHECK_FOO3-COUNT-1: _foo3_kernel
+// CHECK_FOO3-NOT: _foo3_kernel
 
 // Case 3 : loop : remove remainder loop.
 task void foo3_kernel(uniform int a[], uniform int res[], uniform int count) {
