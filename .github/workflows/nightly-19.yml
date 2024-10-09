@@ -24,7 +24,7 @@ env:
   LLVM_REPO: https://github.com/ispc/ispc.dependencies
 
 jobs:
-  linux-build-ispc-llvm-18:
+  linux-build-ispc-llvm-19:
     runs-on: ubuntu-22.04
     env:
       LLVM_VERSION: "19.1"
@@ -55,11 +55,11 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       with:
-        name: ispc_llvm_18_linux
+        name: ispc_llvm_19_linux
         path: build/ispc-trunk-linux.tar.gz
 
-  linux-test-llvm-18:
-    needs: [linux-build-ispc-llvm-18]
+  linux-test-llvm-19:
+    needs: [linux-build-ispc-llvm-19]
     runs-on: ubuntu-22.04
     continue-on-error: false
     strategy:
@@ -70,7 +70,6 @@ jobs:
                  sse4-i8x16, sse4-i16x8, sse4-i32x4, sse4-i32x8,
                  avx1-i32x4, avx1-i32x8, avx1-i32x16, avx1-i64x4,
                  avx2-i8x32, avx2-i16x16, avx2-i32x4, avx2-i32x8, avx2-i32x16, avx2-i64x4,
-                 avx512knl-x16,
                  avx2vnni-i32x4, avx2vnni-i32x8, avx2vnni-i32x16,
                  avx512skx-x4, avx512skx-x8, avx512skx-x16, avx512skx-x64, avx512skx-x32,
                  avx512icl-x4, avx512icl-x8, avx512icl-x16, avx512icl-x64, avx512icl-x32,
@@ -83,8 +82,6 @@ jobs:
             target: "avx2vnni-i32x8"
           - arch: x86
             target: "avx2vnni-i32x16"
-          - arch: x86
-            target: "avx512knl-x16"
           - arch: x86
             target: "avx512skx-x4"
           - arch: x86
@@ -120,7 +117,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
-        name: ispc_llvm_18_linux
+        name: ispc_llvm_19_linux
 
     - name: Install dependencies and unpack artifacts
       run: |
@@ -150,7 +147,7 @@ jobs:
         [ -z "$(git diff)" ]
 
 
-  win-build-ispc-llvm-18:
+  win-build-ispc-llvm-19:
     runs-on: windows-2019
     env:
       LLVM_VERSION: "19.1"
@@ -187,12 +184,12 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       with:
-        name: ispc_llvm18_win
+        name: ispc_llvm19_win
         path: build/ispc-trunk-windows.zip
 
 
-  win-test-llvm18:
-    needs: [win-build-ispc-llvm-18]
+  win-test-llvm19:
+    needs: [win-build-ispc-llvm-19]
     env:
       LLVM_HOME: "C:\\projects\\llvm"
     runs-on: windows-2022
@@ -205,7 +202,6 @@ jobs:
                  sse4-i8x16, sse4-i16x8, sse4-i32x4, sse4-i32x8,
                  avx1-i32x4, avx1-i32x8, avx1-i32x16, avx1-i64x4,
                  avx2-i8x32, avx2-i16x16, avx2-i32x4, avx2-i32x8, avx2-i32x16, avx2-i64x4,
-                 avx512knl-x16,
                  avx512skx-x4, avx512skx-x8, avx512skx-x16, avx512skx-x64, avx512skx-x32]
 
     steps:
@@ -213,7 +209,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
-        name: ispc_llvm18_win
+        name: ispc_llvm19_win
 
     - name: Install dependencies
       run: |
@@ -239,6 +235,6 @@ jobs:
       uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
       if: failure()
       with:
-        name: fail_db.llvm18.${{matrix.arch}}.${{matrix.target}}.txt
+        name: fail_db.llvm19.${{matrix.arch}}.${{matrix.target}}.txt
         path: tests/fail_db.txt
 
