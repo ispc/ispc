@@ -1,4 +1,4 @@
-// RUN: %{ispc} %s --target=avx2-i64x4 --nowrap --opt=disable-handle-pseudo-memory-ops --emit-llvm-text -o - | FileCheck %s
+// RUN: %{ispc} %s --target=avx2-i64x4 --nowrap --opt=disable-handle-pseudo-memory-ops --addressing=64 --emit-llvm-text -o - | FileCheck %s
 // REQUIRES: X86_ENABLED
 // CHECK: declare void @__pseudo_scatter_factored_base_offsets64_i8({{.*}} nocapture, <4 x i64>, i32, <4 x i64>, <4 x i8>, <4 x i64>)
 extern uniform unsigned int64 var_1;
