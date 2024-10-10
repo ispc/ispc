@@ -1,9 +1,9 @@
 // This test checks that multidimensional array can be created using template parameters.
-// RUN: %{ispc} %s --emit-llvm-text --target=host --nostdlib -o - | FileCheck %s
+// RUN: %{ispc} %s --emit-llvm-text --target=avx2-i32x8 --nostdlib -o - | FileCheck %s
 
 // CHECK-LABEL: define linkonce_odr void @func___Cuni1Cuni2Cuni3Cuni4Cuni5Cuni6
-// CHECK: <{{.*}} x float> <float 4.000000e+00,
-// REQUIRES: X86_ENABLED
+// CHECK: <8 x float> <float 4.000000e+00,
+// REQUIRES: X86_ENABLED && !MACOS_HOST
 
 template<int N1, int N2, int N3, int N4, int N5, int N6>
 noinline void func(uniform float RET[]) {
