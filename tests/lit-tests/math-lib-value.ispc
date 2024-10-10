@@ -18,7 +18,7 @@
 // RUN: %{ispc} %s --target=host --math-lib=system --nowrap 2>&1 --emit-llvm-text -o - | FileCheck %s --check-prefix=CHECK-FINAL-SYSTEM
 
 // SVML is supported for x86 only
-// REQUIRES: X86_ENABLED
+// REQUIRES: X86_ENABLED && !MACOS_HOST
 
 // CHECK-ISPC: @__math_lib = constant i32 0
 // CHECK-FINAL-ISPC-LABEL: @foo___vyf
