@@ -395,9 +395,19 @@ static void lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset, 
                 *constOffset = llvm::BinaryOperator::Create(
                     llvm::Instruction::Shl, c0, c1, ((llvm::Twine("shl_") + c0->getName()) + "_") + c1->getName(),
                     ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
-                *variableOffset = llvm::BinaryOperator::Create(
-                    llvm::Instruction::Shl, v0, c1, ((llvm::Twine("shl_") + v0->getName()) + "_") + c1->getName(),
-                    ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
+                // Copy flags (nsw) from the original instruction only if
+                // --wrap-signed-int is disabled (this is the source of the nsw
+                // flags we want to transfer to the new instruction)
+                if (!g->wrapSignedInt) {
+                    *variableOffset = llvm::BinaryOperator::CreateWithCopiedFlags(
+                        llvm::Instruction::Shl, v0, c1, bop,
+                        ((llvm::Twine("shl_") + v0->getName()) + "_") + c1->getName(),
+                        ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
+                } else {
+                    *variableOffset = llvm::BinaryOperator::Create(
+                        llvm::Instruction::Shl, v0, c1, ((llvm::Twine("shl_") + v0->getName()) + "_") + c1->getName(),
+                        ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
+                }
             }
             return;
         } else if (bop->getOpcode() == llvm::Instruction::Mul) {
