@@ -1,3 +1,130 @@
+=== v1.25.0 === (15 October 2024)
+
+ISPC release featuring new attribute syntax support, extended template handling
+for short vectors and arrays, added support for new Intel GPUs and CPUs, and
+significant code generation enhancements. This release is based on patched LLVM
+18.1.8, with the minimum required glibc version for Linux binaries raised to
+2.27.
+
+Language changes:
+
+ - Added support for `__attribute__` syntax in variable and function
+   declarations.  The following attributes are now supported: `noescape`,
+   `address_space(N)`, `external_only`, and `unmangled`.
+ - Added template support for short vectors and extended it for array
+   declarations, allowing the use of type and non-type parameters to specify
+   their types and dimensions.
+ - Added error messages for variable declarations with incompatible type
+   specifiers.
+ - Supported typedef with same name as struct tag.
+
+Code generation:
+
+ - Improved generated code for cases when `foreach` loop iteration domain is
+   equal 3.
+ - Reduced the number of copies in dispatcher logic for cases where a user
+   application consists of several multi-target modules.
+ - Improved the generated code for `foreach` loop counters by propagating
+   LLVM IR flags (e.g., `nsw`, `nuw`) in ISPC optimization passes.
+ - Improved shuffles generation for some AVX2 and AVX512 targets, resulting in
+   up to 80% faster code.
+ - Produced IEEE 754 compliant instructions (`fminnm`/`vminnm`) on ARM for
+   min/max operations.
+
+Compile time:
+
+ - Updated standard library (stdlib) processing: ISPC no longer parses the
+   stdlib source code for each compiled source file. Instead, the stdlib is
+   precompiled into an LLVM IR module during the ISPC build process and is loaded
+   and linked on-demand when needed by user code. This change significantly reduces
+   compilation time, with improvements ranging from 5% to 60%, depending on the
+   size of the user's code (the smaller the code, the greater the improvement).
+   More details about this change is here:
+   https://github.com/ispc/ispc/blob/main/docs/design/TargetRedesign.md
+
+New targets:
+
+ - Added `xe2hpg-x16` and `xe2hpg-x32` targets for Xe2 Battlemage Intel(R) GPUs.
+ - Added `xe2lpg-x16` and `xe2lpg-x32` targets for Xe2 Lunar Lake Intel(R) GPUs.
+ - Added CPU definitions for `ArrowLake`, `LunarLake` and `GraniteRapids`:
+   `arrowlake`, `lunarlake` and `graniterapids` respectively.
+
+Deprecated targets:
+
+ - `avx512knl-x16`, `gen9-x8` and `gen9-x16` targets are deprecated and will be
+   removed in future releases.
+ - Adjusted device names for `xelpg-x8` and `xelpg-x16` to `mtl-u` and `mtl-h`.
+
+Standard library:
+
+ - Fixed the implementation of `exp` for `-Inf`, `NaN`, and large numbers, which
+   previously resulted in highly inaccurate results.
+ - Added a function for the floating-point remainder of division (`fmod`) for
+   floating-point types.
+ - Added support for float/double atomics (add, sub, min, max)
+
+Compiler switches behavior:
+
+ - Supported the `-ffunction-sections` command line flag to generate each
+   function in a separate section.
+
+Infrastructure/build changes:
+
+ - ISPC can now be built in two modes: slim and composite. The default mode is
+   composite, which corresponds to the current distribution practice of
+   packaging ISPC as a single binary. The slim mode can be enabled by setting
+   `ISPC_SLIM_BINARY=ON`. In this mode, the stdlib and binutils libraries are
+   excluded from the binary, resulting in a smaller binary footprint. Instead,
+   these libraries are placed alongside the ISPC binary. This mode simplifies the
+   ISPC build process, making it more suitable for development purposes.
+ - Removed build dependency from `ncurses/terminfo`.
+ - Added dead code stripping for macOS binaries during linking to reduce the
+   final binary size.
+ - Fixed build logic for determining the list of system libraries required by
+   LLVM.
+ - Fixed issue with installation of test files for ISPC Runtime.
+ - Added numerous new GitHub Actions workflows with security testing. ISPC now
+   follows OpenSSF best practices for development.
+
+Bug fixes:
+
+ - Fixed crashes found by fuzzing.
+ - Fixed C/C++ header generation for typedefs with anonymous structs.
+ - Fixed the loss of the uniform qualifier in nested templates.
+ - Added dump of module verifier's output when it reports an error.
+
+Recommended versions of Runtime Dependencies when targeting GPU:
+
+Linux:
+
+ - Intel(R) Graphics Compute Runtime
+   https://github.com/intel/compute-runtime/releases/tag/24.35.30872.22
+ - Level Zero Loader
+   https://github.com/oneapi-src/level-zero/releases/tag/v1.17.28
+ - Threading Building Blocks (TBB)
+
+Alternatively, you can use a validated gfx driver stack supporting Intel® Arc™
+available at https://dgpu-docs.intel.com/driver/installation.html
+
+Windows:
+
+ - Intel(R) Graphics Windows(R) DCH Drivers 32.0.101.6083
+   https://www.intel.com/content/www/us/en/download/785597/intel-arc-iris-xe-graphics-windows.html
+ - Level Zero Loader
+   https://github.com/oneapi-src/level-zero/releases/tag/v1.17.28
+ - OpenCL™ Offline Compiler (OCLOC)
+   https://www.intel.com/content/www/us/en/developer/articles/tool/oneapi-standalone-components.html
+   (this is needed for AoT compilation on Windows only)
+ - Supported GPU platforms: Intel(R) Arc Graphics, 11th-13th Gen Intel(R) Core
+   processor graphics
+
+Components revisions used in GPU-enabled build:
+ - https://github.com/KhronosGroup/SPIRV-LLVM-Translator/commit/43fb73fe
+ - https://github.com/intel/vc-intrinsics/commit/4f5bc1bb
+ - https://github.com/oneapi-src/level-zero/commit/c1f6e28 (v1.17.28)
+ - https://github.com/llvm/llvm-project/commit/3b5b5c1(llvmorg-18.1.8) +
+   patches from llvm_patches folder
+
 === v1.24.0 === (16 May 2024)
 
 ISPC release with dot product functions, non-type template parameters, and
