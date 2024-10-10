@@ -13,8 +13,8 @@ define(`NEON_PREFIX',
         RUNTIME, `32', `llvm.arm.neon')')
 
 define(`NEON_PREFIX_FMIN',
-`ifelse(RUNTIME, `64', `llvm.aarch64.neon.fmin',
-        RUNTIME, `32', `llvm.arm.neon.vmins')')
+`ifelse(RUNTIME, `64', `llvm.minnum.f32',
+        RUNTIME, `32', `llvm.minnum.f32')')
 
 define(`NEON_PREFIX_IMINS',
 `ifelse(RUNTIME, `64', `llvm.aarch64.neon.smin',
@@ -37,8 +37,8 @@ define(`NEON_PREFIX_PMINU',
         RUNTIME, `32', `llvm.arm.neon.vpminu')')
 
 define(`NEON_PREFIX_FMAX',
-`ifelse(RUNTIME, `64', `llvm.aarch64.neon.fmax',
-        RUNTIME, `32', `llvm.arm.neon.vmaxs')')
+`ifelse(RUNTIME, `64', `llvm.maxnum.f32',
+        RUNTIME, `32', `llvm.maxnum.f32')')
 
 define(`NEON_PREFIX_IMAXS',
 `ifelse(RUNTIME, `64', `llvm.aarch64.neon.smax',
