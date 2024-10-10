@@ -272,14 +272,14 @@ define float @__reduce_add_float(<8 x float>) nounwind readnone alwaysinline {
 
 define float @__reduce_min_float(<8 x float>) nounwind readnone alwaysinline {
   v8tov4(float, %0, %v0123, %v4567)
-  %x = call <4 x float> @llvm.aarch64.neon.fmin.v4f32(<4 x float> %v0123, <4 x float> %v4567)
+  %x = call <4 x float> @llvm.minnum.f32.v4f32(<4 x float> %v0123, <4 x float> %v4567)
   %r = call float @llvm.aarch64.neon.fminv.f32.v4f32(<4 x float> %x)
   ret float %r
 }
 
 define float @__reduce_max_float(<8 x float>) nounwind readnone alwaysinline {
   v8tov4(float, %0, %v0123, %v4567)
-  %x = call <4 x float> @llvm.aarch64.neon.fmax.v4f32(<4 x float> %v0123, <4 x float> %v4567)
+  %x = call <4 x float> @llvm.maxnum.f32.v4f32(<4 x float> %v0123, <4 x float> %v4567)
   %r = call float @llvm.aarch64.neon.fmaxv.f32.v4f32(<4 x float> %x)
   ret float %r
 }

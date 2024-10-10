@@ -1781,7 +1781,12 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             if (g->target_os == TargetOS::custom_linux) {
                 this->m_funcAttributes.push_back(std::make_pair("target-features", "+crypto,+fp-armv8,+neon,+sha2"));
             } else {
-                this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon,+fp16"));
+                if (CPUID != CPU_CortexA9 && CPUID != CPU_CortexA15) {
+                    // fp-armv8 is supported starting cortex-a35
+                    this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon,+fp16,+fp-armv8"));
+                } else {
+                    this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon,+fp16"));
+                }
             }
             featuresString = "+neon,+fp16";
         } else if (arch == Arch::aarch64) {
