@@ -1,19 +1,5 @@
 // The test checks that GPU device/target definitions (including all synonyms) are successfully consumed by compiler.
 
-// Gen9
-// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x8 --device=skl
-// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x8 --device=tgllp
-// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x8 --device=dg1
-// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x8 --device=acm-g10
-// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x8 --device=acm-g11
-// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x8 --device=acm-g12
-// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x16 --device=skl
-// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x16 --device=tgllp
-// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x16 --device=dg1
-// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x16 --device=acm-g10
-// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x16 --device=acm-g11
-// RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=gen9-x16 --device=acm-g12
-
 // XeLP
 // RUN: not %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelp-x8 --device=skl
 // RUN: %{ispc} %s -o %t.bin --emit-zebin --nostdlib --target=xelp-x8 --device=tgllp

@@ -1,6 +1,6 @@
 // This test checks number of mul operations for taskIndex/taskCount calculations for Xe targets.
-// RUN: %{ispc} --emit-spirv --target=gen9-x8 %s -o %t.spv
-// RUN: ocloc compile -file %t.spv -spirv_input -options "-vc-codegen -Xfinalizer -output" -device SKL -output %t.bin -output_no_suffix
+// RUN: %{ispc} --emit-spirv --target=xehpg-x8 --device=acm-g10 %s -o %t.spv
+// RUN: ocloc compile -file %t.spv -spirv_input -options "-vc-codegen -Xfinalizer -output" -device acm-g10 -output %t.bin -output_no_suffix
 // RUN: FileCheck %s -check-prefix=CHECK_TASKCOUNT -input-file=taskCount_kernel.asm
 // RUN: FileCheck %s -check-prefix=CHECK_TASKCOUNT0 -input-file=taskCount0_kernel.asm
 // RUN: FileCheck %s -check-prefix=CHECK_TASKCOUNT1 -input-file=taskCount1_kernel.asm
