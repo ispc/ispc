@@ -325,6 +325,7 @@ typedef enum {
     CPU_ADL,
     CPU_MTL,
     CPU_SPR,
+    CPU_GNR,
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
     CPU_ARL,
     CPU_LNL,
@@ -401,6 +402,7 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {CPU_ADL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
     {CPU_MTL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
     {CPU_SPR, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx_vnni", "avx512_vnni"}},
+    {CPU_GNR, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx_vnni", "avx512_vnni"}},
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
     {CPU_ARL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
     {CPU_LNL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
@@ -510,6 +512,8 @@ class AllCPUs {
         names[CPU_MTL].push_back("mtl");
         names[CPU_SPR].push_back("sapphirerapids");
         names[CPU_SPR].push_back("spr");
+        names[CPU_GNR].push_back("graniterapids");
+        names[CPU_GNR].push_back("gnr");
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
         names[CPU_ARL].push_back("arrowlake");
         names[CPU_ARL].push_back("arl");
@@ -566,6 +570,9 @@ class AllCPUs {
         compat[CPU_SPR] = Set(CPU_SPR, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                               CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX, CPU_ICL,
                               CPU_ICX, CPU_TGL, CPU_ADL, CPU_None);
+        compat[CPU_GNR] = Set(CPU_GNR, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
+                              CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX, CPU_ICL,
+                              CPU_ICX, CPU_TGL, CPU_ADL, CPU_SPR, CPU_None);
         compat[CPU_MTL] =
             Set(CPU_MTL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
                 CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_ADL, CPU_None);
@@ -810,6 +817,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             break;
 
         case CPU_SPR:
+        case CPU_GNR:
         case CPU_TGL:
         case CPU_ICX:
         case CPU_ICL:
