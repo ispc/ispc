@@ -325,6 +325,9 @@ typedef enum {
     CPU_ADL,
     CPU_MTL,
     CPU_SPR,
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+    CPU_ARL,
+#endif
 
     // Zen 1-2-3
     CPU_ZNVER1,
@@ -397,6 +400,9 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {CPU_ADL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
     {CPU_MTL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
     {CPU_SPR, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx_vnni", "avx512_vnni"}},
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+    {CPU_ARL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
+#endif
     {CPU_ZNVER1, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
     {CPU_ZNVER2, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
     {CPU_ZNVER3, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
@@ -502,7 +508,10 @@ class AllCPUs {
         names[CPU_MTL].push_back("mtl");
         names[CPU_SPR].push_back("sapphirerapids");
         names[CPU_SPR].push_back("spr");
-
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        names[CPU_ARL].push_back("arrowlake");
+        names[CPU_ARL].push_back("arl");
+#endif
         names[CPU_ZNVER1].push_back("znver1");
         names[CPU_ZNVER2].push_back("znver2");
         names[CPU_ZNVER2].push_back("ps5");
@@ -558,6 +567,11 @@ class AllCPUs {
                 CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_ADL, CPU_None);
         compat[CPU_ADL] = Set(CPU_ADL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                               CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_None);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        compat[CPU_ARL] =
+            Set(CPU_ARL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
+                CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_ADL, CPU_None);
+#endif
         compat[CPU_TGL] =
             Set(CPU_TGL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
                 CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX, CPU_ICL, CPU_ICX, CPU_None);
@@ -795,9 +809,13 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         case CPU_SKX:
             m_ispc_target = ISPCTarget::avx512skx_x16;
             break;
-
-        case CPU_MTL:
         case CPU_ADL:
+        case CPU_MTL:
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        case CPU_ARL:
+#endif
+            m_ispc_target = ISPCTarget::avx2vnni_i32x8;
+            break;
         case CPU_ZNVER3:
         case CPU_ZNVER1:
         case CPU_ZNVER2:
@@ -806,7 +824,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         case CPU_Haswell:
             m_ispc_target = ISPCTarget::avx2_i32x8;
             break;
-
         case CPU_IvyBridge:
         case CPU_SandyBridge:
             m_ispc_target = ISPCTarget::avx1_i32x8;
