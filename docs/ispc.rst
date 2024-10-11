@@ -637,26 +637,35 @@ older versions:
 Updating ISPC Programs For Changes In ISPC 1.25.0
 -------------------------------------------------
 
-``avx512knl-x16``, ``gen9-x8`` and ``gen9-x16`` targets are deprecated and will
-be removed in future releases.
+The ISPC language has been extended to support the ``__attribute__(())`` syntax
+for variable and function declarations. The following attributes are now
+supported: ``noescape``, ``address_space(N)``, ``external_only``, and
+``unmangled``. The macro ``ISPC_ATTRIBUTE_SUPPORTED`` is defined if the ISPC
+compiler supports attribute syntax. Please refer to the `Attributes`_ section
+for more details and the full list of supported attributes.
 
-ISPC language was extended to support ``__attribute__(())`` syntax for variable
-and function declarations. Two attributes are supported now: ``noescape`` and
-``address_space(N)``. The macro ``ISPC_ATTRIBUTE_SUPPORTED`` is defined if the
-ISPC compiler supports attribute syntax. Please, refer to `Attributes`_ for
-more details and the full list of supported attributes.
+This release introduces support for the ``-ffunction-sections`` command-line
+flag, which generates each function in a separate section. This flag is useful
+for reducing the size of the final executable by removing unused functions.
+Please refer to the `Basic Command-line Options`_ section for more details.
 
-This release supports ``-ffunction-sections`` command line flag to generate
-each function in a separate section. This flag is useful for reducing the size
-of the final executable by removing unused functions. Please, refer to
-`Basic Command-line Options`_ for more details.
+In some cases, such as shared libraries, the ``-ffunction-sections`` flag alone
+may not be sufficient to remove unused ISPC copies of exported functions.  To
+address this, you can use the ``external_only`` function attribute.  This
+attribute can only be applied to exported functions and instructs the compiler
+to remove the ISPC version of the function.  For more information, please refer
+to the `Attributes`_ and `Functions and Function Calls`_ sections.
 
-In some cases like shared libraries, the mentioned ``-ffunction-sections`` flag
-is not enough to remove unused ISPC copies of exported functions. To address
-this, the ``external_only`` attribute was introduced. It can be applied only
-to exported functions and it instructs the compiler to remove the ISPC version
-of the function. Please, refer to `Attributes`_ and
-`Functions and Function Calls`_ for more details.
+Template support for short vectors and array declarations has been extended.
+You can now use both type and non-type parameters to specify the type and
+dimensions of these types.
+
+For ARM targets, IEEE 754-compliant instructions (``fminnm`` and ``vminnm``) are
+now generated for min/max operations, replacing the previous use of ``fmin`` and
+``vmin``.
+
+The ``avx512knl-x16``, ``gen9-x8``, and ``gen9-x16`` targets are deprecated and
+will be removed in future releases.
 
 Getting Started with ISPC
 =========================
