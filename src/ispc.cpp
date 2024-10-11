@@ -818,6 +818,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 
         case CPU_SPR:
         case CPU_GNR:
+            m_ispc_target = ISPCTarget::avx512spr_x16;
+            break;
         case CPU_TGL:
         case CPU_ICX:
         case CPU_ICL:
