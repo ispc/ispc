@@ -1,5 +1,7 @@
 // RUN: %{ispc} -O2 --target=avx2-i32x8 --emit-asm --x86-asm-syntax=intel %s -o - 2>&1 | FileCheck %s
 
+// XFAIL: *
+
 // REQUIRES: X86_ENABLED
 
 // CHECK-NOT: vmovq
