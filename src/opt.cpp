@@ -594,7 +594,11 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         // For Xe targets NewGVN pass produces more efficient code due to better resolving of branches.
         // On CPU targets it is effective in optimizing certain types of code,
         // but it is not be beneficial in all cases.
-        optPM.addFunctionPass(llvm::NewGVNPass(), 301);
+        if (g->target->isXeTarget()) {
+            optPM.addFunctionPass(llvm::NewGVNPass(), 301);
+        } else {
+            optPM.addFunctionPass(llvm::GVNPass(), 301);
+        }
         optPM.addFunctionPass(ReplaceMaskedMemOpsPass());
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
         optPM.addFunctionPass(llvm::InferAlignmentPass());
