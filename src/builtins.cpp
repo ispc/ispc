@@ -505,6 +505,11 @@ void lLinkCommonBuiltins(llvm::Module *module) {
     Assert(builtins);
     llvm::Module *builtinsBCModule = builtins->getLLVMModule();
 
+    // Suppress LLVM warnings about incompatible target triples and data layout when linking.
+    // It is OK until we have different platform agnostic bc libraries.
+    builtinsBCModule->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
+    builtinsBCModule->setTargetTriple(module->getTargetTriple());
+
     // Unlike regular builtins and dispatch module, which don't care about mangling of external functions,
     // so they only differentiate Windows/Unix and 32/64 bit, builtins-c need to take care about mangling.
     // Hence, different version for all potentially supported OSes.
@@ -571,8 +576,8 @@ void lLinkTargetBuiltins(llvm::Module *module) {
         }
     }
 
-    // TODO! it is to suppress warning about mismatch datalayout
     targetBCModule->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
+    targetBCModule->setTargetTriple(module->getTargetTriple());
 
     // Next, add the target's custom implementations of the various needed
     // builtin functions (e.g. __masked_store_32(), etc).
@@ -599,6 +604,9 @@ void lLinkStdlib(llvm::Module *module) {
     for (llvm::Function &F : stdlibBCModule->functions()) {
         stdlibFunctions.insert(F.getName());
     }
+
+    stdlibBCModule->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
+    stdlibBCModule->setTargetTriple(module->getTargetTriple());
 
     lAddBitcodeToModule(stdlibBCModule, module);
     lSetAsInternal(module, stdlibFunctions);
