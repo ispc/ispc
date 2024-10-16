@@ -143,6 +143,10 @@ class Module {
         // case-insensitive comparison with valid suffixes that are stored in
         // validSuffixes vector
         bool isSuffixValid(const std::string &suffix) const {
+            // dependency suffixes are empty
+            if (validSuffixes.empty()) {
+                return true;
+            }
             return std::find_if(validSuffixes.begin(), validSuffixes.end(), [&suffix](const std::string &valid) {
                        return std::equal(suffix.begin(), suffix.end(), valid.begin(), valid.end(),
                                          [](char a, char b) { return std::tolower(a) == std::tolower(b); });
