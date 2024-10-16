@@ -796,7 +796,7 @@ may want to examine the source code of the various examples in the
 Using The ISPC Compiler
 =======================
 
-To go from a ``ispc`` source file to an object file that can be linked
+To go from an ``ispc`` source file to an object file that can be linked
 with application code, enter the following command
 
 ::
@@ -1277,7 +1277,7 @@ Language`_ section for details on language syntax.
 Basic Concepts: Program Instances and Gangs of Program Instances
 ----------------------------------------------------------------
 
-Upon entry to a ``ispc`` function called from C/C++ code, the execution
+Upon entry to an ``ispc`` function called from C/C++ code, the execution
 model switches from the application's serial model to ``ispc``'s execution
 model.  Conceptually, a number of ``ispc`` *program instances* start
 running concurrently.  The group of running program instances is a
@@ -2481,29 +2481,24 @@ the brackets around the vector length:
 
     typedef float<3> float3;
 
-``ispc`` doesn't support templates in general.  In particular,
-not only must the vector length be a compile-time constant, but it's
-also not possible to write functions that are parameterized by vector
-length.
+The vector length must be a compile-time constant.
 
 ::
 
     uniform int i = foo();
-    // ERROR: length must be compile-time constant
-    float<i> vec;
-    // ERROR: can't write functions parameterized by vector length
-    float<N> func(float<N> val);
+    float<i> vec; // ERROR: length must be compile-time constant
 
 Arithmetic on these short vector types works as one would expect; the
-operation is applied component-wise to the values in the vector.  Here is a
-short example:
+operation is applied component-wise to the values in the vector. The vector
+length can be a template parameter.  Here is a short example:
 
 ::
 
-    float<3> func(float<3> a, float<3> b) {
+    template <int N>
+    float<N> func(float<N> a, float<N> b) {
         a += b;    // add individual elements of a and b
         a *= 2.;   // multiply all elements of a by 2
-        bool<3> test = a < b;  // component-wise comparison
+        bool<N> test = a < b;  // component-wise comparison
         return test ? a : b;   // return each minimum component
     }
 
@@ -2936,7 +2931,7 @@ attribute to a varying pointer type is not supported.
 
     void escaping(__attribute__((noescape)) uniform int * uniform ptr) {
         // Not OK, because ptr escapes the function
-        uniform int *uniform global_ptr = ptr;
+        global_ptr = ptr;
     }
 
 
@@ -2979,7 +2974,7 @@ external_only
 ----------------
 
 ``__attribute__((external_only))`` can be applied to a function with
-``export`` qualifier. It informs the compiler that it should not generate a
+``export`` qualifier. It informs the compiler that it should not generate an
 ISPC version of the function. This is useful for functions that are only called
 from C/C++ in case when the user wants to reduce the size of the generated
 code. Same effect can be achieved by using ``-ffunction-sections`` compiler
@@ -4432,7 +4427,7 @@ different on different architectures.
     float rcp(float v)
     uniform float rcp(uniform float v)
 
-ispc also provides a version of ``rcp()`` for float with less precision which doesn't
+ISPC also provides a version of ``rcp()`` for float with less precision which doesn't
 use Newton-Raphson.
 
 ::
@@ -4537,7 +4532,7 @@ architectures.
     float rsqrt(float v)
     uniform float rsqrt(uniform float v)
 
-ispc also provides a version of ``rsqrt()`` for float with less precision which doesn't
+ISPC also provides a version of ``rsqrt()`` for float with less precision which doesn't
 use Newton-Raphson.
 
 ::
@@ -6172,7 +6167,7 @@ passing pointers from the application to ``ispc`` programs.
 The first is that it is required that it be valid to read memory at the
 first element of any array that is passed to ``ispc``.  In practice, this
 should just happen naturally, but it does mean that it is illegal to pass a
-``NULL`` pointer as a parameter to a ``ispc`` function called from the
+``NULL`` pointer as a parameter to an ``ispc`` function called from the
 application.
 
 The second constraint is that pointers and references in ``ispc`` programs
