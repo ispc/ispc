@@ -161,7 +161,7 @@ std::set<std::string> pseudoDependencies;
 /*! this is where the parser tells us that it has seen the given file
     name in the CPP hash */
 const char *RegisterDependency(const std::string &fileName) {
-    if (fileName[0] != '<' && fileName != "stdlib.ispc") {
+    if (fileName[0] != '<' && fileName != "stdlib.ispc" && fileName != "/core.isph" && fileName != "/stdlib.isph") {
         auto res = registeredDependencies.insert(fileName);
         return res.first->c_str();
     } else {
