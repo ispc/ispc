@@ -1,3 +1,12 @@
+=== v1.25.1 === (16 October 2024)
+
+A minor ISPC update with bug fixes:
+
+ - Removed warning for wrong suffix when the file with dependencies is
+   generated with `-M` `-MF` switches.
+ - Removed in-memory ISPC headers (`/core.isph`, `/stdlib.isph`) from
+   dependencies for `-M` switch.
+
 === v1.25.0 === (15 October 2024)
 
 ISPC release featuring new attribute syntax support, extended template handling
