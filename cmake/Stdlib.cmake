@@ -12,8 +12,15 @@ function(write_stdlib_bitcode_lib name target os bit out_arch out_os)
     string(REPLACE "-" "_" target ${target})
     file(APPEND ${CMAKE_BINARY_DIR}/bitcode_libs_generated.cpp
       "static BitcodeLib ${name}(BitcodeLib::BitcodeLibType::Stdlib, \"${name}.bc\", ISPCTarget::${target}, TargetOS::${fixed_os}, Arch::${fixed_arch});\n")
-    if ("${fixed_os}" STREQUAL "linux" AND APPLE AND NOT ISPC_LINUX_TARGET)
-        set(fixed_os "macos")
+    if ("${fixed_os}" STREQUAL "linux" AND NOT ISPC_LINUX_TARGET)
+        # If ISPC_LINUX_TARGET is disabled then we can't run ispc-slim with
+        # --target-os=linux to generate stdlib bitcode. So we need pass the
+        # target-os that is supported by ispc-slim.
+        if (APPLE)
+            set(fixed_os "macos")
+        elseif (CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+            set(fixed_os "freebsd")
+        endif()
     endif()
     set(${out_os} ${fixed_os} PARENT_SCOPE)
     set(${out_arch} ${fixed_arch} PARENT_SCOPE)
