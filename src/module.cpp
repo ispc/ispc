@@ -502,7 +502,11 @@ Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, So
             }
         }
         llvm::ArrayRef<llvm::Type *> argArr(exprType);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+        funcDecl = llvm::Intrinsic::getDeclarationIfExists(module, ID, argArr);
+#else
         funcDecl = llvm::Intrinsic::getDeclaration(module, ID, argArr);
+#endif
         llvm::StringRef funcName = funcDecl->getName();
 
         if (g->target->checkIntrinsticSupport(funcName, pos) == false) {
