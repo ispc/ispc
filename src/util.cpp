@@ -45,11 +45,14 @@
 
 #ifdef _LIBCPP_VERSION
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_17_0
-// Provide own definition of std::__libcpp_verbose_abort to avoid missing
-// symbols error in macOS builds.
-// See https://libcxx.llvm.org/UsingLibcxx.html#overriding-the-default-termination-handler
-// It is not quite clear why and where this symbol is used.
-void std::__libcpp_verbose_abort(char const *format, ...) {
+// Provide own definition of std::__libcpp_verbose_abort to avoid missing symbols error on macOS with old
+// system libc++.1.dylib. The symbol is there for macOS 13 Ventura and later, but not macOS 12 and earlier.
+// See #3071 for more details.
+void std::__libcpp_verbose_abort(char const *format, ...)
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+    noexcept
+#endif
+{
     va_list list;
     va_start(list, format);
     vfprintf(stderr, format, list);
