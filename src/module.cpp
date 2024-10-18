@@ -150,6 +150,20 @@ static bool lIsSpirVBitcode(std::ifstream &is) {
     return lHasSameMagic(spirvMagic, is) || lHasSameMagic(spirvMagicInv, is);
 }
 
+static bool lIsStdlibPseudoFile(const std::string &name) {
+    // This needs to correspond to lAddImplicitInclude
+#ifdef ISPC_HOST_IS_WINDOWS
+    if (name == "c:/core.isph" || name == "c:/stdlib.isph") {
+        return true;
+    }
+#else
+    if (name == "/core.isph" || name == "/stdlib.isph") {
+        return true;
+    }
+#endif // ISPC_HOST_IS_WINDOWS
+    return false;
+}
+
 /*! list of files encountered by the parser. this allows emitting of
     the module file's dependencies via the -MMM option */
 std::set<std::string> registeredDependencies;
@@ -161,7 +175,7 @@ std::set<std::string> pseudoDependencies;
 /*! this is where the parser tells us that it has seen the given file
     name in the CPP hash */
 const char *RegisterDependency(const std::string &fileName) {
-    if (fileName[0] != '<' && fileName != "stdlib.ispc" && fileName != "/core.isph" && fileName != "/stdlib.isph") {
+    if (fileName[0] != '<' && fileName != "stdlib.ispc" && !lIsStdlibPseudoFile(fileName)) {
         auto res = registeredDependencies.insert(fileName);
         return res.first->c_str();
     } else {
