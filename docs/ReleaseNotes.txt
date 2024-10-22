@@ -1,3 +1,12 @@
+=== v1.25.1 === (22 October 2024)
+
+A minor ISPC update with bug fixes:
+
+ - Fixed broken `--vectorcall` calling convention mode on Windows.
+ - Fix build error on FreeBSD.
+ - Removed in-memory ISPC headers (`/core.isph`, `/stdlib.isph`) from
+   dependencies for `-M` switch for Windows binaries as well.
+
 === v1.25.1 === (16 October 2024)
 
 A minor ISPC update with bug fixes:
