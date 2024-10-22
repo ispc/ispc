@@ -1,4 +1,4 @@
-// RUN: %{ispc} --target=host %s -M -MT target_name 2>&1 | FileCheck %s
+// RUN: %{ispc} --target=host --target-os=windows %s -M -MT target_name 2>&1 | FileCheck %s
 
 // REQUIRES: WINDOWS_ENABLED
 
