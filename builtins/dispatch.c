@@ -60,7 +60,7 @@ static int __os_has_avx512_support() {
 // __get_system_isa should return a value corresponding to one of the
 // Target::ISA enumerant values that gives the most capable ISA that the
 // current system can run.
-int32_t __get_system_isa() {
+static int32_t __get_system_isa() {
     int info[4];
     __cpuid(info, 1);
 
