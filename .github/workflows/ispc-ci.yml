@@ -1248,3 +1248,109 @@ jobs:
       with:
         name: examples_tgz
         path: build/ispc-examples-trunk.tar.gz
+
+  win-build-examples:
+    needs: [win-package-examples, win-build-ispc]
+    runs-on: windows-2019
+    steps:
+    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      with:
+        submodules: true
+    - name: Download ispc package
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+      with:
+        name: ispc_llvm18_win
+
+    - name: Download examples package
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+      with:
+        name: examples_zip
+        path: examples-package
+
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2.0.0
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-test-deps.ps1
+
+    - name: Unpack examples
+      run: |
+        unzip ispc-examples-trunk.zip
+      working-directory: examples-package
+      shell: cmd
+
+    - name: Build examples
+      run: |
+        mkdir examples-build
+        cmake examples-package\examples\cpu -B examples-build -Thost=x64 -G "Visual Studio 16"
+        cmake --build examples-build --target ALL_BUILD --config Release
+      shell: cmd
+
+  linux-build-examples:
+    needs: [linux-package-examples, linux-build-ispc]
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      with:
+        submodules: true
+    - name: Download ispc package
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+      with:
+        name: ispc_llvm18_linux
+
+    - name: Download examples package
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+      with:
+        name: examples_tgz
+        path: examples-package
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-test-deps.sh
+
+    - name: Unpack examples
+      run: |
+        tar xf ispc-examples-trunk.tar.gz
+      working-directory: examples-package
+
+    - name: Build examples
+      run: |
+        mkdir examples-build
+        cmake examples-package/examples/cpu -B examples-build
+        cmake --build examples-build
+
+  macos-build-examples:
+    needs: [linux-package-examples, macos-build-ispc]
+    runs-on: macos-14
+    steps:
+    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      with:
+        submodules: true
+    - name: Download ispc package
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+      with:
+        name: ispc_llvm18_macos-14
+
+    - name: Download examples package
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+      with:
+        name: examples_tgz
+        path: examples-package
+
+    - name: Install dependencies and unpack artifacts
+      run: |
+        tar xf ispc-trunk-macos.tar.gz
+        echo "$GITHUB_WORKSPACE/ispc-trunk-macos/bin" >> "$GITHUB_PATH"
+        echo "ISPC_HOME=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
+
+    - name: Unpack examples
+      run: |
+        tar xf ispc-examples-trunk.tar.gz
+      working-directory: examples-package
+
+    - name: Build examples
+      run: |
+        mkdir examples-build
+        cmake examples-package/examples/cpu -B examples-build
+        cmake --build examples-build
