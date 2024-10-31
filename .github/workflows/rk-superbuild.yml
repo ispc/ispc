@@ -49,7 +49,47 @@ jobs:
         name: ispc_linux_package
         path: build/ispc-trunk-linux.tar.gz
 
-  build-cpu-ubuntu-2204:
+  win-build-ispc:
+    runs-on: windows-2019
+    env:
+      LLVM_VERSION: "18.1"
+      LLVM_TAR: llvm-18.1.8-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      LLVM_HOME: "C:\\projects\\llvm"
+      CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
+      BUILD_TYPE: "Release"
+
+    steps:
+    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      with:
+        submodules: true
+
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2.0.0
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.ps1
+
+    - name: Check environment
+      shell: cmd
+      run: |
+        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+
+    - name: Build package
+      shell: cmd
+      run: |
+        set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        call %VSVARS%
+        cmake -B build superbuild --preset os -G "NMake Makefiles" -DXE_DEPS=OFF -DPREBUILT_STAGE2_PATH=%LLVM_HOME%\bin-%LLVM_VERSION% -DEXPLICIT_ENV_PATH=OFF -DGNUWIN32=%CROSS_TOOLS_GNUWIN32%
+        cmake --build build
+
+    - name: Upload package
+      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      with:
+        name: ispc_win_package
+        path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-windows.zip
+
+  build-rk-superbuild-ubuntu-2204:
     needs: linux-build-ispc
     runs-on: ubuntu-latest
     container:
@@ -81,3 +121,30 @@ jobs:
         cd build
         cmake -DISPC_URL="${GITHUB_WORKSPACE}/ispc-trunk-linux.tar.gz" -DISPC_VERSION=${{ env.ISPC_VERSION }} ../
         cmake --build .
+
+  build-ospray-superbuild-windows:
+    needs: win-build-ispc
+    runs-on: windows-2019
+
+    steps:
+    - name: Clone RK ospray repo
+      uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      with:
+        repository: ospray/ospray
+
+    - name: Download package
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+      with:
+        name: ispc_win_package
+
+    - name: Add ISPC to the PATH
+      run: |
+        Expand-Archive $pwd\ispc-trunk-windows.zip -DestinationPath $pwd
+        echo "$pwd\ispc-trunk-windows\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+    - name: Build ospray superbuild
+      run: |
+        mkdir build
+        cd build
+        cmake -G "Visual Studio 16 2019" -A x64 ../scripts/superbuild -DDOWNLOAD_ISPC=OFF -DCMAKE_BUILD_TYPE=Release -DDEPENDENCIES_BUILD_TYPE=Release
+        cmake --build . --config Release

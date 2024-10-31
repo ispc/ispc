@@ -54,3 +54,33 @@ jobs:
         cd build
         cmake -DISPC_URL="${GITHUB_WORKSPACE}/ispc-v${{ inputs.version }}-linux-oneapi.tar.gz" -DISPC_VERSION=${{ inputs.version }} ../
         cmake --build .
+
+  build-ospray-superbuild-windows:
+    runs-on: windows-2019
+    # Disabling this workflow for non ispc/ispc repo as it needs to run on releases only.
+    if: github.repository == 'ispc/ispc'
+    steps:
+    - name: Clone RK ospray repo
+      uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      with:
+        repository: ospray/ospray
+
+    - name: Download ISPC release archives
+      env:
+        LINK: https://github.com/ispc/ispc/releases/download/v${{ inputs.version }}/ispc-v${{ inputs.version }}-windows.zip
+      run: |
+        Install-ChocoPackage wget
+        echo "Download artifact $env:LINK >> $env:GITHUB_STEP_SUMMARY"
+        wget -q $env:LINK
+
+    - name: Add ISPC to the PATH
+      run: |
+        Expand-Archive $pwd\ispc-v${{ inputs.version }}-windows.zip -DestinationPath $pwd
+        echo "$pwd\ispc-v${{ inputs.version }}-windows\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+    - name: Build ospray superbuild
+      run: |
+        mkdir build
+        cd build
+        cmake -G "Visual Studio 16 2019" -A x64 ../scripts/superbuild -DDOWNLOAD_ISPC=OFF -DCMAKE_BUILD_TYPE=Release -DDEPENDENCIES_BUILD_TYPE=Release
+        cmake --build . --config Release
