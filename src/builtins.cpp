@@ -498,6 +498,8 @@ void ispc::LinkDispatcher(llvm::Module *module) {
     llvm::Module *dispatchBCModule = dispatch->getLLVMModule();
     lAddDeclarationsToModule(dispatchBCModule, module);
     lAddBitcodeToModule(dispatchBCModule, module);
+    llvm::StringSet<> dispatchFunctions = {builtin::__set_system_isa};
+    lSetAsInternal(module, dispatchFunctions);
 }
 
 void lLinkCommonBuiltins(llvm::Module *module) {
