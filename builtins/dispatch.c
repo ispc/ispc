@@ -25,10 +25,7 @@
 
 void abort();
 
-// __system_best_isa __get_system_isa and __set_system_isa are weak symbols
-// because we want to have the only version of them across user application
-// (even when there are multiple independently compiled ISPC modules).
-__attribute__((weak)) int __system_best_isa = -1;
+static int __system_best_isa = -1;
 
 static void __cpuid(int info[4], int infoType) {
     __asm__ __volatile__("cpuid" : "=a"(info[0]), "=b"(info[1]), "=c"(info[2]), "=d"(info[3]) : "0"(infoType));
@@ -63,7 +60,7 @@ static int __os_has_avx512_support() {
 // __get_system_isa should return a value corresponding to one of the
 // Target::ISA enumerant values that gives the most capable ISA that the
 // current system can run.
-__attribute__((weak)) int32_t __get_system_isa() {
+int32_t __get_system_isa() {
     int info[4];
     __cpuid(info, 1);
 
@@ -177,7 +174,7 @@ __attribute__((weak)) int32_t __get_system_isa() {
     }
 }
 
-__attribute__((weak)) void __set_system_isa() {
+void __set_system_isa() {
     if (__system_best_isa == -1) {
         __system_best_isa = __get_system_isa();
     }
