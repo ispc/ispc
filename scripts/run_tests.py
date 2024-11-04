@@ -410,6 +410,8 @@ def run_test(testname, host, target):
                     cc_cmd = "%s /Itests /I%s\\include /nologo /DTEST_SIG=%d /DTEST_WIDTH=%d %s %s /Fe%s ze_loader.lib /link /LIBPATH:%s\\lib" % \
                          (options.compiler_exe, options.l0loader, match, width, " /DTEST_ZEBIN" if options.ispc_output == "ze" else " /DTEST_SPV", \
                          add_prefix("tests\\test_static_l0.cpp", host, target), exe_name, options.l0loader)
+                if options.calling_conv == "vectorcall":
+                    cc_cmd += " /DVECTORCALL_CONV"
                 if should_fail:
                     cc_cmd += " /DEXPECT_FAILURE"
             else:
@@ -468,6 +470,9 @@ def run_test(testname, host, target):
                 ispc_cmd += " -O1"
             elif options.opt == 'O2':
                 ispc_cmd += " -O2"
+
+            if options.calling_conv == "vectorcall" and host.is_windows():
+                ispc_cmd += " --vectorcall"
 
         exe_wd = "."
         if target.arch == "wasm32" or target.arch == "wasm64":
@@ -1044,6 +1049,7 @@ if __name__ == "__main__":
                   default=False, action="store_true")
     parser.add_option('--csv', dest="csv", help="file to save testing results", default="")
     parser.add_option('--test_time', dest="test_time", help="time needed for each test", default=600, type="int", action="store")
+    parser.add_option('--calling_conv', dest="calling_conv", help="Specify the calling convention to use", default=None, type="str", action="store")
     (options, args) = parser.parse_args()
     L = run_tests(options, args, 1)
     exit(exit_code)

@@ -597,6 +597,7 @@ def validation_run(only, only_targets, reference_branch, number, update, speed_n
         stability.arch = ""
         stability.opt = ""
         stability.wrapexe = ""
+        stability.calling_conv = None
 # prepare parameters of run
         [targets_t, sde_targets_t] = check_targets()
         rebuild = True
