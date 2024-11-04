@@ -605,11 +605,19 @@ void lLinkStdlib(llvm::Module *module) {
     llvm::StringSet<> stdlibFunctions;
     for (llvm::Function &F : stdlibBCModule->functions()) {
         // If compiling with --vectorcall then set calling convention of all
-        // stdlib functions to vectorcall to avoid misoptimization due to
+        // functions defined in stdlib and their calls to vectorcall to avoid misoptimization due to
         // calling conventions for the call site and the function
         // declaration/definition.
         if (g->calling_conv == CallingConv::x86_vectorcall) {
-            F.setCallingConv(llvm::CallingConv::X86_VectorCall);
+            if (!F.isDeclaration()) {
+                F.setCallingConv(llvm::CallingConv::X86_VectorCall);
+                // Set calling convention for all calls to this function
+                for (auto &use : F.uses()) {
+                    if (auto *callInst = llvm::dyn_cast<llvm::CallInst>(use.getUser())) {
+                        callInst->setCallingConv(llvm::CallingConv::X86_VectorCall);
+                    }
+                }
+            }
         }
         stdlibFunctions.insert(F.getName());
     }
