@@ -47,12 +47,16 @@
 // For current tests we need max width multiplied by 4, i.e. 64*4
 #define ARRAY_SIZE 256
 
-#ifdef ISPC_IS_WINDOWS64
+#if defined(ISPC_IS_WINDOWS64)
+#ifdef VECTORCALL_CONV
+#define CALLINGCONV __vectorcall
+#else
 // __vectorcall calling convention is off by default.
 #define CALLINGCONV //__vectorcall
+#endif // VECTORCALL_CONV
 #else
 #define CALLINGCONV
-#endif
+#endif // ISPC_IS_WINDOWS64
 
 extern "C" {
 extern void CALLINGCONV f_v_cpu_entry_point(float *result);
