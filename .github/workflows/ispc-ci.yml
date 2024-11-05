@@ -659,7 +659,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [macos-12, macos-14]
+        runner: [macos-13, macos-14]
         llvm:
           - version: "16.0"
             full_version: "16.0.6"
@@ -720,7 +720,7 @@ jobs:
 
   macos-build-ispc-llvm18-lto:
     needs: [define-flow]
-    runs-on: macos-12
+    runs-on: macos-13
     env:
       LLVM_VERSION: "18.1"
       LLVM_TAR: llvm-18.1.8-macos-Release+Asserts-lto-universal-x86.arm.wasm.tar.xz
@@ -764,7 +764,7 @@ jobs:
 
   macos-test-ispc:
     needs: [define-flow, macos-build-ispc]
-    runs-on: macos-12
+    runs-on: macos-13
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -776,7 +776,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
-        name: ispc_llvm${{matrix.version}}_macos-12
+        name: ispc_llvm${{matrix.version}}_macos-13
 
     - name: Install dependencies and unpack artifacts
       run: |
@@ -815,7 +815,7 @@ jobs:
 
   macos-test-ispc-llvm18-lto:
     needs: [define-flow, macos-build-ispc-llvm18-lto]
-    runs-on: macos-12
+    runs-on: macos-13
     continue-on-error: false
     strategy:
       fail-fast: false
