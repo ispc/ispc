@@ -59,7 +59,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: macos-12
+          - runner: macos-13
             target: avx2-i32x8
             arch: x86-64
           - runner: macos-14
