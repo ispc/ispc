@@ -556,6 +556,10 @@ Expr *lCreateConstExpr(ExprList *exprList, const AtomicType::BasicType basicType
                        const std::string &name, SourcePos pos) {
     const int N = g->target->getVectorWidth();
     bool canConstructConstExpr = true;
+    // Exit early if the number of initializers is more than N
+    if (exprList->exprs.size() > N) {
+        return nullptr;
+    }
     using ManagedType =
         typename std::conditional<std::is_pointer<T>::value, std::unique_ptr<typename std::remove_pointer<T>::type[]>,
                                   int // unused placeholder
