@@ -2,7 +2,7 @@
 // RUN: %{ispc} %s --target=avx1 -O2 --opt=fast-math  -h %t.h --emit-asm -o - | FileCheck %s -check-prefix=CHECK_AVX
 // RUN: %{ispc} %s --target=sse4 -O2 --opt=fast-math  -h %t.h --emit-asm -o - | FileCheck %s -check-prefix=CHECK_SSE
 // RUN: %{ispc} %s --target=sse2 -O2 --opt=fast-math  -h %t.h --emit-asm -o - | FileCheck %s -check-prefix=CHECK_SSE
-// REQUIRES: X86_ENABLED && LLVM_14_0+
+// REQUIRES: X86_ENABLED
 export void test_interleaved(const uniform float xin[],
                              const uniform float yin[],
                              const uniform float zin[],

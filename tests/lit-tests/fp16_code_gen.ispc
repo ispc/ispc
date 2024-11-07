@@ -8,7 +8,7 @@
 // RUN: %{ispc} %s --target=avx512spr-x32 --emit-asm -o - | FileCheck %s -check-prefix=CHECK_SPR
 // RUN: %{ispc} %s --target=avx512spr-x64 --emit-asm -o - | FileCheck %s -check-prefix=CHECK_SPR
 
-// REQUIRES: X86_ENABLED && LLVM_14_0+ && !MACOS_HOST
+// REQUIRES: X86_ENABLED && !MACOS_HOST
 
 // CHECK_SPR-LABEL: fp16_add
 // CHECK_SPR: vaddph

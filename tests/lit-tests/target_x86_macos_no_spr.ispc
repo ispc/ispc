@@ -6,7 +6,7 @@
 //; RUN: not %{ispc} %s -o %t.o --nostdlib --target-os=macos --arch=x86-64 --nowrap --target=avx512spr-x32 2>&1 | FileCheck %s
 //; RUN: not %{ispc} %s -o %t.o --nostdlib --target-os=macos --arch=x86-64 --nowrap --target=avx512spr-x64 2>&1 | FileCheck %s
 
-// REQUIRES: X86_ENABLED && LLVM_14_0+ && MACOS_HOST
+// REQUIRES: X86_ENABLED && MACOS_HOST
 
 // CHECK: Error: avx512spr-x{{.*}} target for x86-64 on macOS is not supported in current build.
 
