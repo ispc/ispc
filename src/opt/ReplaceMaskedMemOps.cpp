@@ -209,7 +209,8 @@ void lReplaceMaskedLoad(llvm::IRBuilder<> &B, llvm::CallInst *CI, unsigned SubVe
     auto *vecType = llvm::dyn_cast<llvm::VectorType>(CI->getType());
     Assert(vecType);
     auto *subVecType = llvm::VectorType::get(vecType->getElementType(), SubVectorLength, false);
-    ptr = B.CreateBitCast(ptr, subVecType->getPointerTo());
+    llvm::PointerType *ptrType = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
+    ptr = B.CreateBitCast(ptr, llvm::PointerType::get(subVecType, ptrType->getAddressSpace()));
 
     llvm::LoadInst *subVec = B.CreateLoad(subVecType, ptr, llvm::Twine(origName) + ".part");
     // It is important to preserve the alignment of the original masked load.
