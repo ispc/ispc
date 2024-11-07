@@ -3,7 +3,7 @@
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=sse2-i32x4 --cpu=sapphirerapids
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=sse2-i32x4 --cpu=spr
 
-// REQUIRES: X86_ENABLED && LLVM_14_0+
+// REQUIRES: X86_ENABLED
 
 uniform int i;
 

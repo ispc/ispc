@@ -6,7 +6,7 @@
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=avx512spr-x32
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=avx512spr-x64
 
-// REQUIRES: X86_ENABLED && LLVM_14_0+ && !MACOS_HOST
+// REQUIRES: X86_ENABLED && !MACOS_HOST
 
 uniform int j;
 

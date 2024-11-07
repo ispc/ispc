@@ -56,7 +56,7 @@
 // RUN: %{ispc} %s -O2 --woff --target=avx512spr-x64 --addressing=32 --nostdlib --emit-llvm-text --opt=disable-gathers --opt=disable-scatters -o - | FileCheck %s
 // RUN: %{ispc} %s -O2 --woff --target=avx512spr-x64 --addressing=64 --nostdlib --emit-llvm-text --opt=disable-gathers --opt=disable-scatters -o - | FileCheck %s
 
-// REQUIRES: X86_ENABLED && LLVM_14_0+ && !MACOS_HOST
+// REQUIRES: X86_ENABLED && !MACOS_HOST
 
 // CHECK-LABEL: gather_scatter_base_offset_int32___
 // CHECK-NOT: @llvm.{{.*}}.gather{{.*}}

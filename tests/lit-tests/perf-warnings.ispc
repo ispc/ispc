@@ -36,7 +36,7 @@
 // A note about notrunning on macOS - it's because of SPR not being supported there.
 // It should be sufficient to run this test on other platforms and not to complicate
 // with splitting it to SPR and non-SPR versions.
-// REQUIRES: X86_ENABLED && LLVM_14_0+ && !MACOS_HOST
+// REQUIRES: X86_ENABLED && !MACOS_HOST
 
 // Float16 -> integers
 

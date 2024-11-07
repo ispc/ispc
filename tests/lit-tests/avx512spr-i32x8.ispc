@@ -14,7 +14,7 @@
 //; RUN: %{ispc} %s --target=avx512spr-x8 --emit-llvm -o %t_8.bc
 //; RUN: llvm-dis %t_8.bc -o - | FileCheck %s -check-prefix=CHECK_ATTR_8
 
-// REQUIRES: X86_ENABLED && LLVM_14_0+ && !MACOS_HOST
+// REQUIRES: X86_ENABLED && !MACOS_HOST
 
 double ret_round(double val)
 {
