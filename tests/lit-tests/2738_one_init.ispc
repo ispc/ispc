@@ -19,31 +19,31 @@
 
 // INT8-LABEL: @foo___
 // INT8-NEXT: allocas:
-// INT8-NEXT: ret <4 x i8> <i8 2, i8 2, i8 2, i8 2>
+// INT8-NEXT: ret <4 x i8> {{<i8 2, i8 2, i8 2, i8 2>|splat \(i8 2\)}}
 
 // INT16-LABEL: @foo___
 // INT16-NEXT: allocas:
-// INT16-NEXT: ret <4 x i16> <i16 2, i16 2, i16 2, i16 2>
+// INT16-NEXT: ret <4 x i16> {{<i16 2, i16 2, i16 2, i16 2>|splat \(i16 2\)}}
 
 // INT-LABEL: @foo___
 // INT-NEXT: allocas:
-// INT-NEXT: ret <4 x i32> <i32 2, i32 2, i32 2, i32 2>
+// INT-NEXT: ret <4 x i32> {{<i32 2, i32 2, i32 2, i32 2>|splat \(i32 2\)}}
 
 // INT64-LABEL: @foo___
 // INT64-NEXT: allocas:
-// INT64-NEXT: ret <4 x i64> <i64 2, i64 2, i64 2, i64 2>
+// INT64-NEXT: ret <4 x i64> {{<i64 2, i64 2, i64 2, i64 2>|splat \(i64 2\)}}
 
 // FLOAT16-LABEL: @foo___
 // FLOAT16-NEXT: allocas:
-// FLOAT16-NEXT: ret <4 x half> <half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000>
+// FLOAT16-NEXT: ret <4 x half> {{<half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000>|splat \(half 0xH4000\)}}
 
 // FLOAT-LABEL: @foo___
 // FLOAT-NEXT: allocas:
-// FLOAT-NEXT: ret <4 x float> <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+// FLOAT-NEXT: ret <4 x float> {{<float 2\.000000e\+00, float 2\.000000e\+00, float 2\.000000e\+00, float 2\.000000e\+00>|splat \(float 2\.000000e\+00\)}}
 
 // DOUBLE-LABEL: @foo___
 // DOUBLE-NEXT: allocas:
-// DOUBLE-NEXT: ret <4 x double> <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>
+// DOUBLE-NEXT: ret <4 x double> {{<double 2\.000000e\+00, double 2\.000000e\+00, double 2\.000000e\+00, double 2\.000000e\+00>|splat \(double 2\.000000e\+00\)}}
 
 // BOOL-NOT: Error: Initializer for global variable "y" must be a constant.
 // INT8-NOT: Error: Initializer for global variable "y" must be a constant.

@@ -91,7 +91,7 @@ uniform uint64<4> to_uint64(uniform uint64<4> a, uniform uint64<4> b) { return a
 // CHECK-LABEL: @to_bool___unb_3C_4_3E_unb_3C_4_3E_(
 // CHECK-NEXT: allocas:
 // CHECK-NEXT: [[XOR:%.*]] = xor <4 x i1> %a, %b
-// CHECK-NEXT: [[NE:%.*]] = xor <4 x i1> [[XOR]], <i1 true, i1 true, i1 true, i1 true>
+// CHECK-NEXT: [[NE:%.*]] = xor <4 x i1> [[XOR]], {{<i1 true, i1 true, i1 true, i1 true>|splat \(i1 true\)}}
 // CHECK-NEXT: ret <4 x i1> [[NE]]
 
 uniform bool<4> to_bool(uniform bool<4> a, uniform bool<4> b) { return a == b; }
