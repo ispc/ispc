@@ -1,6 +1,6 @@
 // RUN: %{ispc} -O2 --target=avx2-i32x8 --emit-asm --x86-asm-syntax=intel %s -o - 2>&1 | FileCheck %s
 
-// XFAIL: *
+// XFAIL: !LLVM_20_0+
 
 // REQUIRES: X86_ENABLED
 
