@@ -8,14 +8,14 @@
 // CHECK: call <{{[0-9]*}} x i32> @sum___Cuni3Cuni5___
 
 // CHECK-LABEL: define linkonce_odr <{{[0-9]*}} x i32> @sum___vyiCuni2Cuni4___
-// CHECK: ret {{.*}} i32 6
+// CHECK: ret {{.*}} {{i32 6|splat \(i32 6\)}}
 // CHECK-LABEL: define linkonce_odr <{{[0-9]*}} x i32> @sum___vyiCuni3Cuni5___
-// CHECK: ret {{.*}} i32 8
+// CHECK: ret {{.*}} {{i32 8|splat \(i32 8\)}}
 
 // CHECK-LABEL: define linkonce_odr <{{[0-9]*}} x i32> @sum___Cuni2Cuni4___
-// CHECK: ret {{.*}} i32 7
+// CHECK: ret {{.*}} {{i32 7|splat \(i32 7\)}}
 // CHECK-LABEL: define linkonce_odr <{{[0-9]*}} x i32> @sum___Cuni3Cuni5___
-// CHECK: ret {{.*}} i32 9
+// CHECK: ret {{.*}} {{i32 9|splat \(i32 9\)}}
 
 template<typename T, int x, int y>
 noinline T sum() {

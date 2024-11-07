@@ -14,7 +14,7 @@
 // CHECK: call <{{[0-9]*}} x i32> @enum_foo___vyiCunenum_5B_Foo_5D_2___uni
 
 // CHECK-LABEL: define linkonce_odr <{{[0-9]*}} x i32> @enum_foo___vyiCunenum_5B_Foo_5D_2___uni
-// CHECK: ret {{.*}} i32 2
+// CHECK: ret {{.*}} {{i32 2|splat \(i32 2\)}}
 
 enum Foo {
     ZERO,

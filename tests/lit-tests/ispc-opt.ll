@@ -29,7 +29,7 @@ define <4 x i16> @__avg_down_uint16(<4 x i16> %0, <4 x i16> %1) {
 ; CHECK-PEEPHOLE-NEXT:   %a_ext = zext <4 x i16> %a to <4 x i32>
 ; CHECK-PEEPHOLE-NEXT:   %b_ext = zext <4 x i16> %b to <4 x i32>
 ; CHECK-PEEPHOLE-NEXT:   %add = add <4 x i32> %a_ext, %b_ext
-; CHECK-PEEPHOLE-NEXT:   %div = udiv <4 x i32> %add, <i32 2, i32 2, i32 2, i32 2>
+; CHECK-PEEPHOLE-NEXT:   %div = udiv <4 x i32> %add, {{<i32 2, i32 2, i32 2, i32 2>|splat \(i32 2\)}}
 ; CHECK-PEEPHOLE-NEXT:   %__avg_down_uint16 = call <4 x i16> @__avg_down_uint16(<4 x i16> %a, <4 x i16> %b)
 ; CHECK-PEEPHOLE-NEXT:   ret <4 x i16> %__avg_down_uint16
 ; CHECK-PEEPHOLE-NEXT: }

@@ -2,7 +2,7 @@
 
 // Tests float16 constant parsing in *e*f16 form.
 //; CHECK: define <{{[0-9]*}} x half> @foo0___vyh(<{{[0-9]*}} x half>
-//; CHECK: fadd <{{[0-9]*}} x half> %{{[a-zA-Z_][a-zA-Z0-9_]*}}, <half 0xH011D, half 0xH011D
+//; CHECK: fadd <{{[0-9]*}} x half> %{{[a-zA-Z_][a-zA-Z0-9_]*}}, {{<half 0xH011D, half 0xH011D|splat \(half 0xH011D\)}}
 varying float16 foo0(varying float16 arg0) {
     arg0 = arg0 + 1.7e-5f16;
     return arg0;
@@ -36,9 +36,9 @@ varying double foo4(varying float16 arg0) { return arg0; }
 // Creates +0, -0, +inf and -inf.
 //; CHECK: define void @foo5
 //; CHECK: store <{{[0-9]*}} x half> zeroinitializer
-//; CHECK: store <{{[0-9]*}} x half> <half 0xH8000
-//; CHECK: store <{{[0-9]*}} x half> <half 0xH7C00
-//; CHECK: store <{{[0-9]*}} x half> <half 0xHFC00
+//; CHECK: store <{{[0-9]*}} x half> {{<half 0xH8000|splat \(half 0xH8000\)}}
+//; CHECK: store <{{[0-9]*}} x half> {{<half 0xH7C00|splat \(half 0xH7C00\)}}
+//; CHECK: store <{{[0-9]*}} x half> {{<half 0xHFC00|splat \(half 0xHFC00\)}}
 void foo5() {
     float16 pz = +0.f16;
     float16 nz = -0.f16;
