@@ -2585,14 +2585,15 @@ template_type_parameter
     ;
 
 int_constant_type
-    : TOKEN_INT8  { $$ = AtomicType::UniformInt8->GetAsConstType(); }
-    | TOKEN_INT16 { $$ = AtomicType::UniformInt16->GetAsConstType(); }
-    | TOKEN_INT   { $$ = AtomicType::UniformInt32->GetAsConstType(); }
-    | TOKEN_INT64 { $$ = AtomicType::UniformInt64->GetAsConstType(); }
-    | TOKEN_UINT8 { $$ = AtomicType::UniformUInt8->GetAsConstType(); }
-    | TOKEN_UINT16{ $$ = AtomicType::UniformUInt16->GetAsConstType(); }
-    | TOKEN_UINT  { $$ = AtomicType::UniformUInt32->GetAsConstType(); }
-    | TOKEN_UINT64{ $$ = AtomicType::UniformUInt64->GetAsConstType(); }
+    : TOKEN_INT8   { $$ = AtomicType::UniformInt8->GetAsConstType(); }
+    | TOKEN_INT16  { $$ = AtomicType::UniformInt16->GetAsConstType(); }
+    | TOKEN_INT    { $$ = AtomicType::UniformInt32->GetAsConstType(); }
+    | TOKEN_INT64  { $$ = AtomicType::UniformInt64->GetAsConstType(); }
+    | TOKEN_UINT8  { $$ = AtomicType::UniformUInt8->GetAsConstType(); }
+    | TOKEN_UINT16 { $$ = AtomicType::UniformUInt16->GetAsConstType(); }
+    | TOKEN_UINT   { $$ = AtomicType::UniformUInt32->GetAsConstType(); }
+    | TOKEN_UINT64 { $$ = AtomicType::UniformUInt64->GetAsConstType(); }
+    | TOKEN_BOOL   { $$ = AtomicType::UniformBool->GetAsConstType(); }
     ;
 
 template_int_constant_type
@@ -2768,6 +2769,12 @@ template_argument
     | TOKEN_UINT64_CONSTANT {
         $$ = new TemplateArg(new ConstExpr(AtomicType::UniformUInt64->GetAsConstType(),
                            (uint64_t)yylval.intVal, @1), @1);
+    }
+    | TOKEN_TRUE {
+        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformBool->GetAsConstType(), true, @1), @1);
+    }
+    | TOKEN_FALSE {
+        $$ = new TemplateArg(new ConstExpr(AtomicType::UniformBool->GetAsConstType(), false, @1), @1);
     }
     // Enums and nested templates case:
     | TOKEN_IDENTIFIER

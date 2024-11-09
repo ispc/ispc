@@ -4052,7 +4052,7 @@ What is currently supported:
   ``template int add<int>(int a, int b);``).
 * Explicit template function specializations (i.e.
   ``template<> int add<int>(int a, int b) { return a - b;}``).
-* Non-type template parameters (integral and enumeration types).
+* Non-type template parameters (integral, bool and enumeration types).
 
 What is currently not supported, but is planned to be supported:
 
@@ -4152,7 +4152,7 @@ template function specializations is not yet supported. Consider the following e
 
 For non-type template parameters, the following rules apply:
 
-* Uniform integral types and enum types can be used as non-type template parameters. Unbound types are treated as uniform.
+* Uniform integral (including bool) types and enum types can be used as non-type template parameters. Unbound types are treated as uniform.
   For example:
 
   ::
