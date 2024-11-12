@@ -31,8 +31,13 @@ do
 done
 
 find /usr -name cdefs.h || echo "Find errors were ignored"
-wget -q -U "$USER_AGENT" --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://downloadmirror.intel.com/"$SDE_MIRROR_ID"/"$SDE_TAR_NAME"-lin.tar.xz
-tar xf "$SDE_TAR_NAME"-lin.tar.bz2
+if [ -n "$SDE_MIRROR_ID" ] && [ -n "$USER_AGENT" ]; then
+    wget -q -U "$USER_AGENT" --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 https://downloadmirror.intel.com/"$SDE_MIRROR_ID"/"$SDE_TAR_NAME"-lin.tar.xz
+    tar xf "$SDE_TAR_NAME"-lin.tar.bz2
+else
+    echo "SDE_MIRROR_ID and/or USER_AGENT are not defined, exiting."
+    exit 1
+fi
 tar xf ispc-trunk-linux.tar.gz
 
 #GA requires to set env putting value to $GITHUB_ENV & $GITHUB_PATH
