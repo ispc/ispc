@@ -26,8 +26,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  SDE_MIRROR_ID: 813591
-  SDE_TAR_NAME: sde-external-9.33.0-2024-01-07
+  SDE_MIRROR_ID: 831748
+  SDE_TAR_NAME: sde-external-9.44.0-2024-08-22
   USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
   LLVM_REPO: https://github.com/ispc/ispc.dependencies
   TARGETS_SMOKE: '["avx2-i32x8"]'
