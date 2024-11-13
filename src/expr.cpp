@@ -6620,6 +6620,9 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     case AtomicType::TYPE_BOOL:
         opName += "_to_bool";
         break;
+    case AtomicType::TYPE_INT1:
+        opName += "_to_int1";
+        break;
     case AtomicType::TYPE_INT8:
         opName += "_to_int8";
         break;
@@ -6816,6 +6819,30 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
             cast = exprVal;
             break;
         default:
+            FATAL("unimplemented");
+        }
+        break;
+    }
+    case AtomicType::TYPE_INT1: {
+        switch (basicFromType) {
+        case AtomicType::TYPE_BOOL:
+            if (fromType->IsVaryingAtomic()) {
+                exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
+            }
+            cast = ctx->ZExtInst(exprVal, targetType, cOpName);
+            break;
+        case AtomicType::TYPE_INT8:
+        case AtomicType::TYPE_UINT8:
+        case AtomicType::TYPE_INT16:
+        case AtomicType::TYPE_UINT16:
+        case AtomicType::TYPE_INT32:
+        case AtomicType::TYPE_UINT32:
+        case AtomicType::TYPE_INT64:
+        case AtomicType::TYPE_UINT64:
+            cast = ctx->TruncInst(exprVal, targetType, cOpName);
+            break;
+        default:
+            printf("fromType %s\n", aFromType->GetString().c_str());
             FATAL("unimplemented");
         }
         break;
@@ -7133,6 +7160,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
             }
             cast = exprVal;
             break;
+        // TODO!: all int casts are literally same, refactor to remove copy-paste
         case AtomicType::TYPE_INT8:
         case AtomicType::TYPE_UINT8:
         case AtomicType::TYPE_INT16:

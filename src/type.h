@@ -339,6 +339,7 @@ class AtomicType : public Type {
     enum BasicType {
         TYPE_VOID,
         TYPE_BOOL,
+        TYPE_INT1,
         TYPE_INT8,
         TYPE_UINT8,
         TYPE_INT16,
@@ -357,6 +358,7 @@ class AtomicType : public Type {
     const BasicType basicType;
 
     static const AtomicType *UniformBool, *VaryingBool;
+    static const AtomicType *UniformInt1, *VaryingInt1;
     static const AtomicType *UniformInt8, *VaryingInt8;
     static const AtomicType *UniformInt16, *VaryingInt16;
     static const AtomicType *UniformInt32, *VaryingInt32;
