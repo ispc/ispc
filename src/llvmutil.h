@@ -42,6 +42,7 @@ struct LLVMTypes {
     static llvm::Type *BoolType;
     static llvm::Type *BoolStorageType;
 
+    static llvm::Type *Int1Type;
     static llvm::Type *Int8Type;
     static llvm::Type *Int16Type;
     static llvm::Type *Int32Type;

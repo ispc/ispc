@@ -114,6 +114,8 @@ const Type *Type::ResolveDependenceForTopType(TemplateInstantiation &templInst) 
 
 const AtomicType *AtomicType::UniformBool = new AtomicType(AtomicType::TYPE_BOOL, Variability::Uniform, false);
 const AtomicType *AtomicType::VaryingBool = new AtomicType(AtomicType::TYPE_BOOL, Variability::Varying, false);
+const AtomicType *AtomicType::UniformInt1 = new AtomicType(AtomicType::TYPE_INT1, Variability::Uniform, false);
+const AtomicType *AtomicType::VaryingInt1 = new AtomicType(AtomicType::TYPE_INT1, Variability::Varying, false);
 const AtomicType *AtomicType::UniformInt8 = new AtomicType(AtomicType::TYPE_INT8, Variability::Uniform, false);
 const AtomicType *AtomicType::VaryingInt8 = new AtomicType(AtomicType::TYPE_INT8, Variability::Varying, false);
 const AtomicType *AtomicType::UniformUInt8 = new AtomicType(AtomicType::TYPE_UINT8, Variability::Uniform, false);
@@ -418,6 +420,9 @@ std::string AtomicType::GetString() const {
     case TYPE_BOOL:
         ret += "bool";
         break;
+    case TYPE_INT1:
+        ret += "int1";
+        break;
     case TYPE_INT8:
         ret += "int8";
         break;
@@ -600,6 +605,8 @@ static llvm::Type *lGetAtomicLLVMType(llvm::LLVMContext *ctx, const AtomicType *
             } else {
                 return isUniform ? LLVMTypes::BoolType : LLVMTypes::BoolVectorType;
             }
+        case AtomicType::TYPE_INT1:
+            return isUniform ? LLVMTypes::Int1Type : LLVMTypes::Int1VectorType;
         case AtomicType::TYPE_INT8:
         case AtomicType::TYPE_UINT8:
             return isUniform ? LLVMTypes::Int8Type : LLVMTypes::Int8VectorType;

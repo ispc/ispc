@@ -32,6 +32,7 @@ llvm::Type *LLVMTypes::PointerIntType = nullptr;
 llvm::Type *LLVMTypes::BoolType = nullptr;
 llvm::Type *LLVMTypes::BoolStorageType = nullptr;
 
+llvm::Type *LLVMTypes::Int1Type = nullptr;
 llvm::Type *LLVMTypes::Int8Type = nullptr;
 llvm::Type *LLVMTypes::Int16Type = nullptr;
 llvm::Type *LLVMTypes::Int32Type = nullptr;
@@ -86,6 +87,7 @@ void InitLLVMUtil(llvm::LLVMContext *ctx, Target &target) {
     LLVMTypes::PointerIntType = target.is32Bit() ? llvm::Type::getInt32Ty(*ctx) : llvm::Type::getInt64Ty(*ctx);
 
     LLVMTypes::BoolType = llvm::Type::getInt1Ty(*ctx);
+    LLVMTypes::Int1Type = llvm::Type::getInt1Ty(*ctx);
     LLVMTypes::Int8Type = LLVMTypes::BoolStorageType = llvm::Type::getInt8Ty(*ctx);
     LLVMTypes::Int16Type = llvm::Type::getInt16Ty(*ctx);
     LLVMTypes::Int32Type = llvm::Type::getInt32Ty(*ctx);
