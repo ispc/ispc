@@ -226,6 +226,8 @@ static const Type *lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) 
         return intAsUnsigned ? AtomicType::VaryingUInt64 : AtomicType::VaryingInt64;
     } else if (t == LLVMTypes::MaskType) {
         return AtomicType::VaryingBool;
+    } else if (t == LLVMTypes::Int1VectorType) {
+        return AtomicType::VaryingInt1;
     }
 
     // pointers to uniform
