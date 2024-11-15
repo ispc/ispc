@@ -355,35 +355,6 @@ EXT varying float __undef_varying();
 
 // fast math function
 EXT inline void __fastmath();
-
-EXT varying double __gather_elt32_double(uniform int8 *uniform, varying int32, uniform int32, varying int32,
-                                         varying double, uniform int32);
-EXT varying float __gather_elt32_float(uniform int8 *uniform, varying int32, uniform int32, varying int32,
-                                       varying float, uniform int32);
-EXT varying float16 __gather_elt32_half(uniform int8 *uniform, varying int32, uniform int32, varying int32,
-                                        varying float16, uniform int32);
-EXT varying int16 __gather_elt32_i16(uniform int8 *uniform, varying int32, uniform int32, varying int32, varying int16,
-                                     uniform int32);
-EXT varying int32 __gather_elt32_i32(uniform int8 *uniform, varying int32, uniform int32, varying int32, varying int32,
-                                     uniform int32);
-EXT varying int64 __gather_elt32_i64(uniform int8 *uniform, varying int32, uniform int32, varying int32, varying int64,
-                                     uniform int32);
-EXT varying int8 __gather_elt32_i8(uniform int8 *uniform, varying int32, uniform int32, varying int32, varying int8,
-                                   uniform int32);
-EXT varying double __gather_elt64_double(uniform int8 *uniform, varying int64, uniform int32, varying int64,
-                                         varying double, uniform int32);
-EXT varying float __gather_elt64_float(uniform int8 *uniform, varying int64, uniform int32, varying int64,
-                                       varying float, uniform int32);
-EXT varying float16 __gather_elt64_half(uniform int8 *uniform, varying int64, uniform int32, varying int64,
-                                        varying float16, uniform int32);
-EXT varying int16 __gather_elt64_i16(uniform int8 *uniform, varying int64, uniform int32, varying int64, varying int16,
-                                     uniform int32);
-EXT varying int32 __gather_elt64_i32(uniform int8 *uniform, varying int64, uniform int32, varying int64, varying int32,
-                                     uniform int32);
-EXT varying int64 __gather_elt64_i64(uniform int8 *uniform, varying int64, uniform int32, varying int64, varying int64,
-                                     uniform int32);
-EXT varying int8 __gather_elt64_i8(uniform int8 *uniform, varying int64, uniform int32, varying int64, varying int8,
-                                   uniform int32);
 EXT void __scatter_elt32_double(uniform int8 *uniform, varying int32, uniform int32, varying int32, varying double,
                                 uniform int32);
 EXT void __scatter_elt32_float(uniform int8 *uniform, varying int32, uniform int32, varying int32, varying float,
