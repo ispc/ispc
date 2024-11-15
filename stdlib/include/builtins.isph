@@ -73,52 +73,24 @@ EXT READNONE varying float16 __tan_varying_half(varying float16);
 
 // TODO: do they need to be implemented in LLVM IR?
 // AOS/SOA conversion primitives
-EXT inline void __aos_to_soa2_double64(varying double, varying double, NOALIAS varying double *uniform,
-                                       NOALIAS varying double *uniform);
 EXT inline void __aos_to_soa2_double(NOALIAS uniform int8 *uniform, uniform int8 *uniform, uniform int8 *uniform);
-EXT inline void __aos_to_soa2_float64(varying float, varying float, NOALIAS varying float *uniform,
-                                      NOALIAS varying float *uniform);
 EXT inline void __aos_to_soa2_float(NOALIAS uniform int8 *uniform, uniform int8 *uniform, uniform int8 *uniform);
-EXT inline void __aos_to_soa3_double64(varying double, varying double, varying double, NOALIAS varying double *uniform,
-                                       NOALIAS varying double *uniform, NOALIAS varying double *uniform);
 EXT inline void __aos_to_soa3_double(NOALIAS uniform int8 *uniform, uniform int8 *uniform, uniform int8 *uniform,
                                      uniform int8 *uniform);
-EXT inline void __aos_to_soa3_float64(varying float, varying float, varying float, NOALIAS varying float *uniform,
-                                      NOALIAS varying float *uniform, NOALIAS varying float *uniform);
 EXT inline void __aos_to_soa3_float(NOALIAS uniform int8 *uniform, uniform int8 *uniform, uniform int8 *uniform,
                                     uniform int8 *uniform);
-EXT inline void __aos_to_soa4_double64(varying double, varying double, varying double, varying double,
-                                       NOALIAS varying double *uniform, NOALIAS varying double *uniform,
-                                       NOALIAS varying double *uniform, NOALIAS varying double *uniform);
 EXT inline void __aos_to_soa4_double(NOALIAS uniform int8 *uniform, NOALIAS uniform int8 *uniform,
                                      NOALIAS uniform int8 *uniform, NOALIAS uniform int8 *uniform,
                                      NOALIAS uniform int8 *uniform);
-EXT inline void __aos_to_soa4_float64(varying float, varying float, varying float, varying float,
-                                      NOALIAS varying float *uniform, NOALIAS varying float *uniform,
-                                      NOALIAS varying float *uniform, NOALIAS varying float *uniform);
 EXT inline void __aos_to_soa4_float(NOALIAS uniform int8 *uniform, NOALIAS uniform int8 *uniform,
                                     NOALIAS uniform int8 *uniform, NOALIAS uniform int8 *uniform,
                                     NOALIAS uniform int8 *uniform);
-EXT inline void __soa_to_aos2_double64(varying double, varying double, NOALIAS varying double *uniform,
-                                       NOALIAS varying double *uniform);
 EXT inline void __soa_to_aos2_double(varying double, varying double, NOALIAS uniform int8 *uniform);
-EXT inline void __soa_to_aos2_float64(varying float, varying float, NOALIAS varying float *uniform,
-                                      NOALIAS varying float *uniform);
 EXT inline void __soa_to_aos2_float(varying float, varying float, NOALIAS uniform int8 *uniform);
-EXT inline void __soa_to_aos3_double64(varying double, varying double, varying double, NOALIAS varying double *uniform,
-                                       NOALIAS varying double *uniform, NOALIAS varying double *uniform);
 EXT inline void __soa_to_aos3_double(varying double, varying double, varying double, NOALIAS uniform int8 *uniform);
-EXT inline void __soa_to_aos3_float64(varying float, varying float, varying float, NOALIAS varying float *uniform,
-                                      NOALIAS varying float *uniform, NOALIAS varying float *uniform);
 EXT inline void __soa_to_aos3_float(varying float, varying float, varying float, NOALIAS uniform int8 *uniform);
-EXT inline void __soa_to_aos4_double64(varying double, varying double, varying double, varying double,
-                                       NOALIAS varying double *uniform, NOALIAS varying double *uniform,
-                                       NOALIAS varying double *uniform, NOALIAS varying double *uniform);
 EXT inline void __soa_to_aos4_double(varying double, varying double, varying double, varying double,
                                      NOALIAS uniform int8 *uniform);
-EXT inline void __soa_to_aos4_float64(varying float, varying float, varying float, varying float,
-                                      NOALIAS varying float *uniform, NOALIAS varying float *uniform,
-                                      NOALIAS varying float *uniform, NOALIAS varying float *uniform);
 EXT inline void __soa_to_aos4_float(varying float, varying float, varying float, varying float,
                                     NOALIAS uniform int8 *uniform);
 
