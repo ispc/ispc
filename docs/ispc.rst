@@ -1018,6 +1018,21 @@ Neon targets:
 
 ``neon-i8x16``, ``neon-i16x8``, ``neon-i32x4``, ``neon-i32x8``.
 
+The following table lists the ISPC targets and their corresponding architecture details for ARM.
+
+============================= =================
+ISPC target/arch              ARM arch
+----------------------------- -----------------
+``neon-i8x16``/``arm``        ARMv7 (32-bit)
+``neon-i8x16``/``aarch64``    N/A
+``neon-i16x8``/``arm``        ARMv7 (32-bit)
+``neon-i16x8``/``aarch64``    N/A
+``neon-i32x4``/``arm``        ARMv8-A (32-bit)
+``neon-i32x4``/``aarch64``    ARMv8-A (64-bit)
+``neon-i32x8``/``arm``        ARMv8-A (32-bit)
+``neon-i32x8``/``aarch64``    ARMv8-A (64-bit)
+============================= =================
+
 Xe targets:
 
 ``gen9-x8``, ``gen9-x16``, ``xelp-x8``, ``xelp-x16``, ``xehpg-x8``, ``xehpg-x16``, ``xehpc-x16``, ``xehpc-x32``.
