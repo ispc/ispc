@@ -516,6 +516,8 @@ list(APPEND OPT_SOURCES
     src/opt/InstructionSimplify.h
     src/opt/IntrinsicsOptPass.cpp
     src/opt/IntrinsicsOptPass.h
+    src/opt/LowerISPCIntrinsics.cpp
+    src/opt/LowerISPCIntrinsics.h
     src/opt/MangleOpenCLBuiltins.cpp
     src/opt/MangleOpenCLBuiltins.h
     src/opt/PeepholePass.cpp
