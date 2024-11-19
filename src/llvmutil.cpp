@@ -39,6 +39,7 @@ llvm::Type *LLVMTypes::Int64Type = nullptr;
 llvm::Type *LLVMTypes::Float16Type = nullptr;
 llvm::Type *LLVMTypes::FloatType = nullptr;
 llvm::Type *LLVMTypes::DoubleType = nullptr;
+llvm::Type *LLVMTypes::PtrType = nullptr;
 
 llvm::Type *LLVMTypes::Int8PointerType = nullptr;
 llvm::Type *LLVMTypes::Int16PointerType = nullptr;
@@ -60,6 +61,7 @@ llvm::VectorType *LLVMTypes::Int64VectorType = nullptr;
 llvm::VectorType *LLVMTypes::Float16VectorType = nullptr;
 llvm::VectorType *LLVMTypes::FloatVectorType = nullptr;
 llvm::VectorType *LLVMTypes::DoubleVectorType = nullptr;
+llvm::VectorType *LLVMTypes::PtrVectorType = nullptr;
 
 llvm::Type *LLVMTypes::Int8VectorPointerType = nullptr;
 llvm::Type *LLVMTypes::Int16VectorPointerType = nullptr;
@@ -91,6 +93,11 @@ void InitLLVMUtil(llvm::LLVMContext *ctx, Target &target) {
     LLVMTypes::Float16Type = llvm::Type::getHalfTy(*ctx);
     LLVMTypes::FloatType = llvm::Type::getFloatTy(*ctx);
     LLVMTypes::DoubleType = llvm::Type::getDoubleTy(*ctx);
+#ifdef ISPC_OPAQUE_PTR_MODE
+    LLVMTypes::PtrType = llvm::PointerType::get(*ctx, 0);
+#else
+    LLVMTypes::PtrType = llvm::PointerType::get(LLVMTypes::Int8Type, 0);
+#endif // ISPC_OPAQUE_PTR_MODE
 
     LLVMTypes::Int8PointerType = llvm::PointerType::get(LLVMTypes::Int8Type, 0);
     LLVMTypes::Int16PointerType = llvm::PointerType::get(LLVMTypes::Int16Type, 0);
@@ -134,6 +141,7 @@ void InitLLVMUtil(llvm::LLVMContext *ctx, Target &target) {
     LLVMTypes::Float16VectorType = LLVMVECTOR::get(LLVMTypes::Float16Type, target.getVectorWidth());
     LLVMTypes::FloatVectorType = LLVMVECTOR::get(LLVMTypes::FloatType, target.getVectorWidth());
     LLVMTypes::DoubleVectorType = LLVMVECTOR::get(LLVMTypes::DoubleType, target.getVectorWidth());
+    LLVMTypes::PtrVectorType = LLVMVECTOR::get(LLVMTypes::PtrType, target.getVectorWidth());
 
     LLVMTypes::Int8VectorPointerType = llvm::PointerType::get(LLVMTypes::Int8VectorType, 0);
     LLVMTypes::Int16VectorPointerType = llvm::PointerType::get(LLVMTypes::Int16VectorType, 0);
