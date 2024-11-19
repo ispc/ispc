@@ -262,6 +262,11 @@ static const Type *lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) 
         return PointerType::GetUniform(AtomicType::VaryingDouble);
     }
 
+    // vector of pointers
+    else if (t == LLVMTypes::PtrVectorType) {
+        return AtomicType::VaryingUInt64;
+    }
+
     // vector with length different from TARGET_WIDTH can be repsented as uniform TYPE<N>
     else if (const llvm::VectorType *vt = llvm::dyn_cast<llvm::VectorType>(t)) {
         // check if vector length is equal to TARGET_WIDTH
