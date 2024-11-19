@@ -49,6 +49,7 @@ struct LLVMTypes {
     static llvm::Type *Float16Type;
     static llvm::Type *FloatType;
     static llvm::Type *DoubleType;
+    static llvm::Type *PtrType;
 
     static llvm::Type *Int8PointerType;
     static llvm::Type *Int16PointerType;
@@ -70,6 +71,7 @@ struct LLVMTypes {
     static llvm::VectorType *Float16VectorType;
     static llvm::VectorType *FloatVectorType;
     static llvm::VectorType *DoubleVectorType;
+    static llvm::VectorType *PtrVectorType;
 
     static llvm::Type *Int8VectorPointerType;
     static llvm::Type *Int16VectorPointerType;
