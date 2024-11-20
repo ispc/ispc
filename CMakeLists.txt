@@ -734,6 +734,9 @@ if (WIN32)
     list(APPEND LINK_OPTIONS_PRIVATE /DYNAMICBASE)
     # Control flow guard
     list(APPEND LINK_OPTIONS_PRIVATE /GUARD:CF)
+    # When resolving statically linked import dependencies of the module, limit
+    # the module search path to %windows%\system32 directory only.
+    list(APPEND LINK_OPTIONS_PRIVATE /DEPENDENTLOADFLAG:0x800)
     if (MSVC AND NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
         list(APPEND LINK_OPTIONS_PUBLIC /OPT:REF /OPT:ICF)
     endif()
