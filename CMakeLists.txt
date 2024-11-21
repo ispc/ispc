@@ -866,6 +866,9 @@ function(add_ispc_slim NAME)
     # Defines stdlib target
     generate_stdlibs(${NAME})
 
+    # Defines targets for generic builtin implementations
+    generate_generic_builtins(${NAME})
+
     # stdlib, stdlibs-bc, stdlibs-cpp targets are created in Stdlib.cmake
     configure_ispc_obj(stdlib)
 
@@ -873,7 +876,9 @@ function(add_ispc_slim NAME)
     configure_ispc_exe(${NAME})
     target_link_libraries(${NAME} ${LINK_LIBRARIES} optimization common frontend)
     add_dependencies(${NAME} builtins-bc)
+    add_dependencies(generic-target-bc ${NAME})
     if (${NAME} STREQUAL "ispc")
+        set_target_properties(generic-target-bc PROPERTIES EXCLUDE_FROM_ALL OFF)
         set_target_properties(stdlibs-bc PROPERTIES EXCLUDE_FROM_ALL OFF)
     endif()
 endfunction()
@@ -904,10 +909,11 @@ if (ISPC_SLIM_BINARY)
     message(STATUS "ISPC will be built as a slim binary")
 else()
     add_ispc_slim(ispc-slim)
+    configure_ispc_obj(generic-target)
 
     add_executable(ispc src/main.cpp src/binary_composite.cpp)
     configure_ispc_exe(ispc)
-    target_link_libraries(ispc ${LINK_LIBRARIES} builtin stdlib optimization common frontend)
+    target_link_libraries(ispc ${LINK_LIBRARIES} builtin stdlib optimization common frontend generic-target)
     add_dependencies(ispc ispc-slim)
     message(STATUS "ISPC will be built as a composite binary")
 endif()
