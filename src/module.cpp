@@ -3220,6 +3220,12 @@ static void lSetPreprocessorOptions(const std::shared_ptr<clang::PreprocessorOpt
     opts->addMacroDef(ispc_major);
     opts->addMacroDef(ispc_minor);
 
+    char llvm_major[buf_size], llvm_minor[buf_size];
+    snprintf(llvm_major, buf_size, "LLVM_VERSION_MAJOR=%d", LLVM_VERSION_MAJOR);
+    snprintf(llvm_minor, buf_size, "LLVM_VERSION_MINOR=%d", LLVM_VERSION_MINOR);
+    opts->addMacroDef(llvm_major);
+    opts->addMacroDef(llvm_minor);
+
     // Target specific macro definitions
     lSetTargetSpecificMacroDefinitions(opts);
 
