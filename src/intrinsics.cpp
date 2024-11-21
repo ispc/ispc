@@ -162,49 +162,78 @@ Symbol *lCreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTable *sym
     return sym;
 }
 
-Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, SourcePos pos) {
-    if (g->enableLLVMIntrinsics == false) {
-        Error(SourcePos(), "Calling LLVM intrinsics from ISPC source code is an experimental feature,"
-                           " which can be enabled by passing \"--enable-llvm-intrinsics\" switch to the compiler.\n");
-        return nullptr;
-    }
-
-    llvm::Function *funcDecl = nullptr;
-#ifdef ISPC_XE_ENABLED
-    if (g->target->isXeTarget()) {
-        llvm::GenXIntrinsic::ID ID = llvm::GenXIntrinsic::lookupGenXIntrinsicID(name);
-        if (ID == llvm::GenXIntrinsic::not_any_intrinsic) {
-            Error(pos, "LLVM intrinsic \"%s\" not supported.", name.c_str());
-            return nullptr;
-        }
-        std::vector<llvm::Type *> exprType;
+static std::vector<llvm::Type *> lDeductArgTypes(llvm::Intrinsic::ID ID, ExprList *args) {
+    std::vector<llvm::Type *> exprType;
+    if (llvm::Intrinsic::isOverloaded(ID)) {
         Assert(args);
         int nInits = args->exprs.size();
-        if (llvm::GenXIntrinsic::isOverloadedRet(ID) || llvm::GenXIntrinsic::isOverloadedArg(ID, nInits)) {
-            for (int i = 0; i < nInits; ++i) {
-                const Type *argType = (args->exprs[i])->GetType();
-                Assert(argType);
-                exprType.push_back(argType->LLVMType(g->ctx));
-            }
-        }
-        llvm::ArrayRef<llvm::Type *> argArr(exprType);
-        funcDecl = llvm::GenXIntrinsic::getGenXDeclaration(module, ID, argArr);
-        if (funcDecl) {
-            // ReadNone, ReadOnly and WriteOnly are not supported for intrinsics anymore:
-            FixFunctionAttribute(*funcDecl, llvm::Attribute::ReadNone, llvm::MemoryEffects::none());
-            FixFunctionAttribute(*funcDecl, llvm::Attribute::ReadOnly, llvm::MemoryEffects::readOnly());
-            FixFunctionAttribute(*funcDecl, llvm::Attribute::WriteOnly, llvm::MemoryEffects::writeOnly());
+        for (int i = 0; i < nInits; ++i) {
+            const Type *argType = (args->exprs[i])->GetType();
+            Assert(argType);
+            exprType.push_back(argType->LLVMType(g->ctx));
         }
     }
+    return exprType;
+}
+
+static llvm::Intrinsic::ID lLookupIntrinsicID(llvm::StringRef name) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+    return llvm::Intrinsic::lookupIntrinsicID(llvm::StringRef(name));
+#else
+    return llvm::Function::lookupIntrinsicID(llvm::StringRef(name));
 #endif
+}
+
+static llvm::Function *lGetFunctionDeclaration(llvm::Module *module, llvm::Intrinsic::ID ID,
+                                               std::vector<llvm::Type *> &exprType) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+    return llvm::Intrinsic::getOrInsertDeclaration(module, ID, exprType);
+#else
+    return llvm::Intrinsic::getDeclaration(module, ID, exprType);
+#endif
+}
+
+#ifdef ISPC_XE_ENABLED
+static llvm::Function *lGetGenXIntrinsicDeclaration(llvm::Module *module, const std::string &name, ExprList *args,
+                                                    SourcePos pos) {
+    llvm::GenXIntrinsic::ID ID = llvm::GenXIntrinsic::lookupGenXIntrinsicID(name);
+    if (ID == llvm::GenXIntrinsic::not_any_intrinsic) {
+        Error(pos, "LLVM intrinsic \"%s\" not supported.", name.c_str());
+        return nullptr;
+    }
+    std::vector<llvm::Type *> exprType;
+    Assert(args);
+    int nInits = args->exprs.size();
+    if (llvm::GenXIntrinsic::isOverloadedRet(ID) || llvm::GenXIntrinsic::isOverloadedArg(ID, nInits)) {
+        for (int i = 0; i < nInits; ++i) {
+            const Type *argType = (args->exprs[i])->GetType();
+            Assert(argType);
+            exprType.push_back(argType->LLVMType(g->ctx));
+        }
+    }
+    llvm::ArrayRef<llvm::Type *> argArr(exprType);
+    llvm::Function *funcDecl = llvm::GenXIntrinsic::getGenXDeclaration(module, ID, argArr);
+    if (funcDecl) {
+        // ReadNone, ReadOnly and WriteOnly are not supported for intrinsics anymore:
+        FixFunctionAttribute(*funcDecl, llvm::Attribute::ReadNone, llvm::MemoryEffects::none());
+        FixFunctionAttribute(*funcDecl, llvm::Attribute::ReadOnly, llvm::MemoryEffects::readOnly());
+        FixFunctionAttribute(*funcDecl, llvm::Attribute::WriteOnly, llvm::MemoryEffects::writeOnly());
+    }
+    return funcDecl;
+}
+#endif // ISPC_XE_ENABLED
+
+static llvm::Function *lGetIntrinsicDeclaration(llvm::Module *module, const std::string &name, ExprList *args,
+                                                SourcePos pos) {
+#ifdef ISPC_XE_ENABLED
+    if (g->target->isXeTarget()) {
+        return lGetGenXIntrinsicDeclaration(module, name, args, pos);
+    }
+#endif // ISPC_XE_ENABLED
     if (!g->target->isXeTarget()) {
         llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
         const llvm::TargetIntrinsicInfo *TII = targetMachine->getIntrinsicInfo();
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
-        llvm::Intrinsic::ID ID = llvm::Intrinsic::lookupIntrinsicID(llvm::StringRef(name));
-#else
-        llvm::Intrinsic::ID ID = llvm::Function::lookupIntrinsicID(llvm::StringRef(name));
-#endif
+        llvm::Intrinsic::ID ID = lLookupIntrinsicID(name);
         if (ID == llvm::Intrinsic::not_intrinsic && TII) {
             ID = static_cast<llvm::Intrinsic::ID>(TII->lookupName(llvm::StringRef(name)));
         }
@@ -212,32 +241,28 @@ Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, So
             Error(pos, "LLVM intrinsic \"%s\" not supported.", name.c_str());
             return nullptr;
         }
-        std::vector<llvm::Type *> exprType;
-        if (llvm::Intrinsic::isOverloaded(ID)) {
-            Assert(args);
-            int nInits = args->exprs.size();
-            for (int i = 0; i < nInits; ++i) {
-                const Type *argType = (args->exprs[i])->GetType();
-                Assert(argType);
-                exprType.push_back(argType->LLVMType(g->ctx));
-            }
-        }
-        llvm::ArrayRef<llvm::Type *> argArr(exprType);
-        // Add intrinsic declaration to the module if it's not added yet.
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
-        funcDecl = llvm::Intrinsic::getOrInsertDeclaration(module, ID, argArr);
-#else
-        funcDecl = llvm::Intrinsic::getDeclaration(module, ID, argArr);
-#endif
+        // For LLVM intrinsics, we need to deduce the argument LLVM types.
+        auto exprType = lDeductArgTypes(ID, args);
+        llvm::Function *funcDecl = lGetFunctionDeclaration(module, ID, exprType);
         llvm::StringRef funcName = funcDecl->getName();
-
         if (g->target->checkIntrinsticSupport(funcName, pos) == false) {
             return nullptr;
         }
+        return funcDecl;
+    }
+    return nullptr;
+}
+
+Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, SourcePos pos) {
+    if (g->enableLLVMIntrinsics == false) {
+        Error(SourcePos(), "Calling LLVM intrinsics from ISPC source code is an experimental feature,"
+                           " which can be enabled by passing \"--enable-llvm-intrinsics\" switch to the compiler.\n");
+        return nullptr;
     }
 
+    llvm::Function *funcDecl = lGetIntrinsicDeclaration(module, name, args, pos);
     Assert(funcDecl != nullptr);
+
     Symbol *funcSym = lCreateISPCSymbolForLLVMIntrinsic(funcDecl, symbolTable);
     return funcSym;
 }
-
