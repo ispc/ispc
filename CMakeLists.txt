@@ -487,6 +487,7 @@ list(APPEND FRONTEND_SOURCES
     src/expr.h
     src/func.cpp
     src/func.h
+    src/intrinsics.cpp
     src/module.cpp
     src/module.h
     src/stmt.cpp
