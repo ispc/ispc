@@ -93,6 +93,21 @@ enum class ISPCTarget {
     xe2hpg_x32,
     xe2lpg_x16,
     xe2lpg_x32,
+    generic_x86_64_i1x4,
+    generic_x86_64_i1x8,
+    generic_x86_64_i1x16,
+    generic_x86_64_i1x32,
+    generic_x86_64_i1x64,
+    generic_x86_64_i8x16,
+    generic_x86_64_i8x32,
+    generic_x86_64_i16x8,
+    generic_x86_64_i16x16,
+    generic_x86_64_i32x4,
+    generic_x86_64_i32x8,
+    generic_x86_64_i32x16,
+    generic_x86_64_i64x4,
+    generic_aarch64_i32x4,
+    generic_aarch64_i32x8,
     error
 };
 ISPCTarget operator++(ISPCTarget &, int);
@@ -104,4 +119,5 @@ bool ISPCTargetIsX86(ISPCTarget target);
 bool ISPCTargetIsNeon(ISPCTarget target);
 bool ISPCTargetIsWasm(ISPCTarget target);
 bool ISPCTargetIsGen(ISPCTarget target);
+bool ISPCTargetIsGeneric(ISPCTarget target);
 } // namespace ispc

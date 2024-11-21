@@ -229,7 +229,53 @@ ISPCTarget operator++(ISPCTarget &target, int dummy) {
     static_assert(static_cast<underlying>(ISPCTarget::xe2lpg_x32) ==
                       static_cast<underlying>(ISPCTarget::xe2lpg_x16) + 1,
                   "Enum ISPCTarget is not sequential");
-    static_assert(static_cast<underlying>(ISPCTarget::error) == static_cast<underlying>(ISPCTarget::xe2lpg_x32) + 1,
+    static_assert(static_cast<underlying>(ISPCTarget::generic_x86_64_i1x4) ==
+                      static_cast<underlying>(ISPCTarget::xe2lpg_x32) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::generic_x86_64_i1x8) ==
+                      static_cast<underlying>(ISPCTarget::generic_x86_64_i1x4) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::generic_x86_64_i1x16) ==
+                      static_cast<underlying>(ISPCTarget::generic_x86_64_i1x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::generic_x86_64_i1x32) ==
+                      static_cast<underlying>(ISPCTarget::generic_x86_64_i1x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::generic_x86_64_i1x64) ==
+                      static_cast<underlying>(ISPCTarget::generic_x86_64_i1x32) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::generic_x86_64_i8x16) ==
+                      static_cast<underlying>(ISPCTarget::generic_x86_64_i1x64) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::generic_x86_64_i8x32) ==
+                      static_cast<underlying>(ISPCTarget::generic_x86_64_i8x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::generic_x86_64_i16x8) ==
+                      static_cast<underlying>(ISPCTarget::generic_x86_64_i8x32) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::generic_x86_64_i16x16) ==
+                      static_cast<underlying>(ISPCTarget::generic_x86_64_i16x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::generic_x86_64_i32x4) ==
+                      static_cast<underlying>(ISPCTarget::generic_x86_64_i16x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::generic_x86_64_i32x8) ==
+                      static_cast<underlying>(ISPCTarget::generic_x86_64_i32x4) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::generic_x86_64_i32x16) ==
+                      static_cast<underlying>(ISPCTarget::generic_x86_64_i32x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::generic_x86_64_i64x4) ==
+                      static_cast<underlying>(ISPCTarget::generic_x86_64_i32x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::generic_aarch64_i32x4) ==
+                      static_cast<underlying>(ISPCTarget::generic_x86_64_i64x4) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::generic_aarch64_i32x8) ==
+                      static_cast<underlying>(ISPCTarget::generic_aarch64_i32x4) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::error) ==
+                      static_cast<underlying>(ISPCTarget::generic_aarch64_i32x8) + 1,
                   "Enum ISPCTarget is not sequential");
     return target = static_cast<ISPCTarget>(static_cast<underlying>(target) + 1);
 }
@@ -404,6 +450,36 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::xe2lpg_x16;
     } else if (target == "xe2lpg-x32") {
         return ISPCTarget::xe2lpg_x32;
+    } else if (target == "generic-x86_64-i1x4") {
+        return ISPCTarget::generic_x86_64_i1x4;
+    } else if (target == "generic-x86_64-i1x8") {
+        return ISPCTarget::generic_x86_64_i1x8;
+    } else if (target == "generic-x86_64-i1x16") {
+        return ISPCTarget::generic_x86_64_i1x16;
+    } else if (target == "generic-x86_64-i1x32") {
+        return ISPCTarget::generic_x86_64_i1x32;
+    } else if (target == "generic-x86_64-i1x64") {
+        return ISPCTarget::generic_x86_64_i1x64;
+    } else if (target == "generic-x86_64-i8x16") {
+        return ISPCTarget::generic_x86_64_i8x16;
+    } else if (target == "generic-x86_64-i8x32") {
+        return ISPCTarget::generic_x86_64_i8x32;
+    } else if (target == "generic-x86_64-i16x8") {
+        return ISPCTarget::generic_x86_64_i16x8;
+    } else if (target == "generic-x86_64-i16x16") {
+        return ISPCTarget::generic_x86_64_i16x16;
+    } else if (target == "generic-x86_64-i32x4") {
+        return ISPCTarget::generic_x86_64_i32x4;
+    } else if (target == "generic-x86_64-i32x8") {
+        return ISPCTarget::generic_x86_64_i32x8;
+    } else if (target == "generic-x86_64-i32x16") {
+        return ISPCTarget::generic_x86_64_i32x16;
+    } else if (target == "generic-x86_64-i64x4") {
+        return ISPCTarget::generic_x86_64_i64x4;
+    } else if (target == "generic-aarch64-i32x4") {
+        return ISPCTarget::generic_aarch64_i32x4;
+    } else if (target == "generic-aarch64-i32x8") {
+        return ISPCTarget::generic_aarch64_i32x8;
     }
 
     return ISPCTarget::error;
@@ -559,6 +635,36 @@ std::string ISPCTargetToString(ISPCTarget target) {
         return "xe2lpg-x16";
     case ISPCTarget::xe2lpg_x32:
         return "xe2lpg-x32";
+    case ISPCTarget::generic_x86_64_i1x4:
+        return "generic-x86_64-i1x4";
+    case ISPCTarget::generic_x86_64_i1x8:
+        return "generic-x86_64-i1x8";
+    case ISPCTarget::generic_x86_64_i1x16:
+        return "generic-x86_64-i1x16";
+    case ISPCTarget::generic_x86_64_i1x32:
+        return "generic-x86_64-i1x32";
+    case ISPCTarget::generic_x86_64_i1x64:
+        return "generic-x86_64-i1x64";
+    case ISPCTarget::generic_x86_64_i8x16:
+        return "generic-x86_64-i8x16";
+    case ISPCTarget::generic_x86_64_i8x32:
+        return "generic-x86_64-i8x32";
+    case ISPCTarget::generic_x86_64_i16x8:
+        return "generic-x86_64-i16x8";
+    case ISPCTarget::generic_x86_64_i16x16:
+        return "generic-x86_64-i16x16";
+    case ISPCTarget::generic_x86_64_i32x4:
+        return "generic-x86_64-i32x4";
+    case ISPCTarget::generic_x86_64_i32x8:
+        return "generic-x86_64-i32x8";
+    case ISPCTarget::generic_x86_64_i32x16:
+        return "generic-x86_64-i32x16";
+    case ISPCTarget::generic_x86_64_i64x4:
+        return "generic-x86_64-i64x4";
+    case ISPCTarget::generic_aarch64_i32x4:
+        return "generic-aarch64-i32x4";
+    case ISPCTarget::generic_aarch64_i32x8:
+        return "generic-aarch64-i32x8";
     case ISPCTarget::none:
         return "none";
     case ISPCTarget::error:
@@ -653,6 +759,29 @@ bool ISPCTargetIsGen(ISPCTarget target) {
     case ISPCTarget::xe2hpg_x32:
     case ISPCTarget::xe2lpg_x16:
     case ISPCTarget::xe2lpg_x32:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool ISPCTargetIsGeneric(ISPCTarget target) {
+    switch (target) {
+    case ISPCTarget::generic_x86_64_i1x4:
+    case ISPCTarget::generic_x86_64_i1x8:
+    case ISPCTarget::generic_x86_64_i1x16:
+    case ISPCTarget::generic_x86_64_i1x32:
+    case ISPCTarget::generic_x86_64_i1x64:
+    case ISPCTarget::generic_x86_64_i8x16:
+    case ISPCTarget::generic_x86_64_i8x32:
+    case ISPCTarget::generic_x86_64_i16x8:
+    case ISPCTarget::generic_x86_64_i16x16:
+    case ISPCTarget::generic_x86_64_i32x4:
+    case ISPCTarget::generic_x86_64_i32x8:
+    case ISPCTarget::generic_x86_64_i32x16:
+    case ISPCTarget::generic_x86_64_i64x4:
+    case ISPCTarget::generic_aarch64_i32x4:
+    case ISPCTarget::generic_aarch64_i32x8:
         return true;
     default:
         return false;
