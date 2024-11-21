@@ -464,9 +464,11 @@ static std::vector<llvm::Type *> lDeductArgTypes(llvm::Intrinsic::ID ID, ExprLis
             nInits = {0, 1, 2};
             break;
         case llvm::Intrinsic::masked_load:
+        case llvm::Intrinsic::masked_gather:
             nInits = {3, 0};
             break;
         case llvm::Intrinsic::masked_store:
+        case llvm::Intrinsic::masked_scatter:
             nInits = {0, 1};
             break;
         case llvm::Intrinsic::vector_reduce_fadd:
@@ -480,7 +482,15 @@ static std::vector<llvm::Type *> lDeductArgTypes(llvm::Intrinsic::ID ID, ExprLis
         for (const int i : nInits) {
             const Type *argType = (args->exprs[i])->GetType();
             Assert(argType);
-            exprType.push_back(argType->LLVMType(g->ctx));
+            if (ID == llvm::Intrinsic::masked_gather && i == 0) {
+                // type with <TARGET_WIDTH x ptr> is expected
+                exprType.push_back(LLVMTypes::PtrVectorType);
+            } else if (ID == llvm::Intrinsic::masked_scatter && i == 1) {
+                // type with <TARGET_WIDTH x ptr> is expected
+                exprType.push_back(LLVMTypes::PtrVectorType);
+            } else {
+                exprType.push_back(argType->LLVMType(g->ctx));
+            }
         }
     }
     return exprType;
