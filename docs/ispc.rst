@@ -73,6 +73,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.23.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.24.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.25.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.26.0`_
 
 * `Getting Started with ISPC`_
 
@@ -667,6 +668,12 @@ now generated for min/max operations, replacing the previous use of ``fmin`` and
 The ``avx512knl-x16``, ``gen9-x8``, and ``gen9-x16`` targets are deprecated and
 will be removed in future releases.
 
+Updating ISPC Programs For Changes In ISPC 1.26.0
+-------------------------------------------------
+
+Macro definitions for LLVM version that ISPC is based on were added. Please,
+refer to `The Preprocessor`_ for more details.
+
 Getting Started with ISPC
 =========================
 
@@ -1079,11 +1086,17 @@ preprocessor runs:
     - 32 or 64
     - Number of bits used to represent a pointer for the target architecture
   * - ISPC_MAJOR_VERSION
-    - 1
+    -
     - Major version of the ``ispc`` compiler/language
   * - ISPC_MINOR_VERSION
-    - 13
+    -
     - Minor version of the ``ispc`` compiler/language
+  * - LLVM_VERSION_MAJOR
+    -
+    - Major version of the LLVM compiler used by ``ispc``
+  * - LLVM_VERSION_MINOR
+    -
+    - Minor version of the LLVM compiler used by ``ispc``
   * - PI
     - 3.1415926535
     - Mathematics
