@@ -441,8 +441,43 @@ static std::vector<llvm::Type *> lDeductArgTypes(llvm::Intrinsic::ID ID, ExprLis
     std::vector<llvm::Type *> exprType;
     if (llvm::Intrinsic::isOverloaded(ID)) {
         Assert(args);
-        int nInits = args->exprs.size();
-        for (int i = 0; i < nInits; ++i) {
+        std::vector<int> nInits(args->exprs.size());
+        // This is because LLVM intrinsics are overloaded and we need to mangle
+        // the function name with suffixes corresponding to some argument types.
+        switch (ID) {
+        case llvm::Intrinsic::pow:
+        case llvm::Intrinsic::cttz:
+        case llvm::Intrinsic::ctlz:
+        case llvm::Intrinsic::prefetch:
+        case llvm::Intrinsic::uadd_sat:
+        case llvm::Intrinsic::sadd_sat:
+        case llvm::Intrinsic::usub_sat:
+        case llvm::Intrinsic::ssub_sat:
+        case llvm::Intrinsic::masked_compressstore:
+            nInits = {0};
+            break;
+        case llvm::Intrinsic::memset:
+            nInits = {0, 2};
+            break;
+        case llvm::Intrinsic::memcpy:
+        case llvm::Intrinsic::memmove:
+            nInits = {0, 1, 2};
+            break;
+        case llvm::Intrinsic::masked_load:
+            nInits = {3, 0};
+            break;
+        case llvm::Intrinsic::masked_store:
+            nInits = {0, 1};
+            break;
+        case llvm::Intrinsic::vector_reduce_fadd:
+            nInits = {1};
+            break;
+        case llvm::Intrinsic::masked_expandload:
+            nInits = {2};
+            break;
+        }
+
+        for (const int i : nInits) {
             const Type *argType = (args->exprs[i])->GetType();
             Assert(argType);
             exprType.push_back(argType->LLVMType(g->ctx));
