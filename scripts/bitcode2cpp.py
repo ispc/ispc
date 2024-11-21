@@ -152,6 +152,14 @@ with NamedTemporaryFile(mode='w', dir=dirname(output), delete=False) as outfile:
             arch = "wasm32" if args[0].runtime == "32" else "wasm64" if args[0].runtime == "64" else "error"
         elif ("gen9" in target) or ("xe" in target):
             arch = "xe64"
+        elif ("common" in target):
+            if "x86_64" in target:
+                arch = "x86_64"
+            elif "aarch64" in target:
+                arch = "aarch64"
+            else:
+                sys.stderr.write("Unknown common target detected: " + target + "\n")
+                sys.exit(1)
         else:
             sys.stderr.write("Unknown target detected: " + target + "\n")
             sys.exit(1)

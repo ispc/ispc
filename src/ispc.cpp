@@ -945,6 +945,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
     // Check default LLVM generated targets
     bool unsupported_target = false;
     switch (m_ispc_target) {
+    case ISPCTarget::common_x86_64_i32x4:
     case ISPCTarget::sse2_i32x4:
         this->m_isa = Target::SSE2;
         this->m_nativeVectorWidth = 4;
@@ -955,6 +956,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_x86_64;
         break;
+    case ISPCTarget::common_x86_64_i32x8:
     case ISPCTarget::sse2_i32x8:
         this->m_isa = Target::SSE2;
         this->m_nativeVectorWidth = 4;
@@ -965,6 +967,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_x86_64;
         break;
+    case ISPCTarget::common_x86_64_i8x16:
     case ISPCTarget::sse4_i8x16:
     case ISPCTarget::sse41_i8x16:
         this->m_isa = (m_ispc_target == ISPCTarget::sse4_i8x16) ? Target::SSE42 : Target::SSE41;
@@ -976,6 +979,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 8;
         break;
+    case ISPCTarget::common_x86_64_i16x8:
     case ISPCTarget::sse4_i16x8:
     case ISPCTarget::sse41_i16x8:
         this->m_isa = (m_ispc_target == ISPCTarget::sse4_i16x8) ? Target::SSE42 : Target::SSE41;
@@ -1029,6 +1033,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_SandyBridge;
         break;
+    case ISPCTarget::common_x86_64_i32x16:
     case ISPCTarget::avx1_i32x16:
         this->m_isa = Target::AVX;
         this->m_nativeVectorWidth = 8;
@@ -1039,6 +1044,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_maskBitCount = 32;
         CPUfromISA = CPU_SandyBridge;
         break;
+    case ISPCTarget::common_x86_64_i64x4:
     case ISPCTarget::avx1_i64x4:
         this->m_isa = Target::AVX;
         this->m_nativeVectorWidth = 8; /* native vector width in terms of floats */
@@ -1049,6 +1055,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_maskBitCount = 64;
         CPUfromISA = CPU_SandyBridge;
         break;
+    case ISPCTarget::common_x86_64_i8x32:
     case ISPCTarget::avx2_i8x32:
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 32;
@@ -1062,6 +1069,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasGather = true;
         CPUfromISA = CPU_Haswell;
         break;
+    case ISPCTarget::common_x86_64_i16x16:
     case ISPCTarget::avx2_i16x16:
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 16;
@@ -1151,6 +1159,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasVecPrefetch = false;
         CPUfromISA = CPU_KNL;
         break;
+    case ISPCTarget::common_x86_64_i1x4:
     case ISPCTarget::avx512skx_x4:
     case ISPCTarget::avx512icl_x4:
         this->m_isa = (m_ispc_target == ISPCTarget::avx512icl_x4) ? Target::ICL_AVX512 : Target::SKX_AVX512;
@@ -1172,6 +1181,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
         break;
+    case ISPCTarget::common_x86_64_i1x8:
     case ISPCTarget::avx512skx_x8:
     case ISPCTarget::avx512icl_x8:
         this->m_isa = (m_ispc_target == ISPCTarget::avx512icl_x8) ? Target::ICL_AVX512 : Target::SKX_AVX512;
@@ -1193,6 +1203,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
         break;
+    case ISPCTarget::common_x86_64_i1x16:
     case ISPCTarget::avx512skx_x16:
     case ISPCTarget::avx512icl_x16:
         this->m_isa = (m_ispc_target == ISPCTarget::avx512icl_x16) ? Target::ICL_AVX512 : Target::SKX_AVX512;
@@ -1219,6 +1230,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "512"));
         }
         break;
+    case ISPCTarget::common_x86_64_i1x64:
     case ISPCTarget::avx512skx_x64:
     case ISPCTarget::avx512icl_x64:
         // This target is enabled only for LLVM 10.0 and later
@@ -1242,6 +1254,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasDotProductVNNI = (m_ispc_target == ISPCTarget::avx512icl_x64) ? true : false;
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x64) ? CPU_ICL : CPU_SKX;
         break;
+    case ISPCTarget::common_x86_64_i1x32:
     case ISPCTarget::avx512skx_x32:
     case ISPCTarget::avx512icl_x32:
         // This target is enabled only for LLVM 10.0 and later
@@ -1406,6 +1419,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_maskingIsFree = (arch == Arch::aarch64);
         this->m_maskBitCount = 16;
         break;
+    case ISPCTarget::common_aarch64_i32x4:
     case ISPCTarget::neon_i32x4:
         this->m_isa = Target::NEON;
         this->m_nativeVectorWidth = 4;
@@ -1418,6 +1432,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_maskingIsFree = (arch == Arch::aarch64);
         this->m_maskBitCount = 32;
         break;
+    case ISPCTarget::common_aarch64_i32x8:
     case ISPCTarget::neon_i32x8:
         this->m_isa = Target::NEON;
         this->m_nativeVectorWidth = 4;
