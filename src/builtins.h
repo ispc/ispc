@@ -38,14 +38,6 @@ void LinkStandardLibraries(llvm::Module *module, int &debug_num);
  */
 void debugDumpModule(llvm::Module *module, std::string name, int stage);
 
-/** Create ISPC symbol for LLVM intrinsics and add it to the given module.
-
-    @param func            llvm::Function for the intrinsic to be added
-    @param symbolTable     SymbolTable in which to add symbol definitions
-    @return                Symbol created for the LLVM::Function
- */
-Symbol *CreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTable *symbolTable);
-
 /** Return the suffix to use for target-specific functions.
 
     @return                Suffix to use for target-specific functions
