@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2019-2024, Intel Corporation
+  Copyright (c) 2019-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -228,6 +228,10 @@ std::vector<std::string> TargetLibRegistry::checkBitcodeLibs() const {
                     }
                     if (!tlib->fileExists()) {
                         missedFiles.push_back(tlib->getFilename());
+                    }
+                    // Generic targets don't have standard libraries.
+                    if (ISPCTargetIsGeneric(target)) {
+                        continue;
                     }
                     if (!slib->fileExists()) {
                         missedFiles.push_back(slib->getFilename());
