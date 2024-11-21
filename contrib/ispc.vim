@@ -2,7 +2,7 @@
 " Language:		ISPC
 " Maintainer:		Dmitry Babokin <dmitry.y.babokin@intel.com>
 " Previous Maintainer:	Andreas Wendleder <andreas.wendleder@gmail.com>
-" Last Change:		February 27, 2023
+" Last Change:		November 21, 2024
 
 " Quit when a syntax file was already loaded
 if exists("b:current_syntax")
@@ -23,6 +23,7 @@ syn keyword	ispcOperator		operator in
 syn keyword	ispcStorageClass	noinline __vectorcall __regcall
 syn keyword	ispcTemplates		template typename
 syn keyword	ispcDefine		ISPC ISPC_POINTER_SIZE ISPC_MAJOR_VERSION ISPC_MINOR_VERSION TARGET_WIDTH PI
+                                        \ LLVM_VERSION_MAJOR LLVM_VERSION_MINOR
 					\ TARGET_ELEMENT_WIDTH ISPC_UINT_IS_DEFINED ISPC_FP16_SUPPORTED ISPC_FP64_SUPPORTED ISPC_LLVM_INTRINSICS_ENABLED
                                         \ ISPC_ATTRIBUTE_SUPPORTED
                                         \ INT8_MIN INT16_MIN INT32_MIN INT64_MIN INT8_MAX INT16_MAX INT32_MAX INT64_MAX
