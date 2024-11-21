@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-#  Copyright (c) 2024, Intel Corporation
+#  Copyright (c) 2025, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -44,6 +44,7 @@ def bundle_header(src, output):
             outfile.write("0x00 };\n\n")
             outfile.write(f"int {name}_length = {length};\n")
 
+ARCH_CHOICES = ['i686', 'x86', 'x86_64', 'arm', 'armv7', 'arm64', 'aarch64', 'wasm32', 'wasm64', 'xe64']
 
 parser = argparse.ArgumentParser()
 parser.add_argument("src", help="Source file to process")
@@ -51,7 +52,7 @@ parser.add_argument("output", help="Output file")
 parser.add_argument("--type", help="Type of processed file", choices=['dispatch', 'builtins-c', 'ispc-target', 'stdlib', 'header'], required=True)
 parser.add_argument("--runtime", help="Runtime", choices=['32', '64'], nargs='?', default='')
 parser.add_argument("--os", help="Target OS", choices=['windows', 'linux', 'macos', 'freebsd', 'android', 'ios', 'ps4', 'web', 'WINDOWS', 'UNIX', 'WEB'], default='')
-parser.add_argument("--arch", help="Target architecture", choices=['i686', 'x86_64', 'armv7', 'arm64', 'aarch64', 'wasm32', 'wasm64', 'xe64'], default='')
+parser.add_argument("--arch", help="Target architecture", choices=ARCH_CHOICES, default='')
 
 args = parser.parse_known_args()
 src = args[0].src
@@ -96,14 +97,14 @@ else:
 
 target_arch = ""
 ispc_arch = ""
-if args[0].arch in ["i686", "x86_64", "amd64", "armv7", "arm64", "aarch64", "wasm32", "wasm64", "xe64"]:
+if args[0].arch in ARCH_CHOICES:
     target_arch = args[0].arch + "_"
     # Canoncalization of arch value for Arch enum in ISPC.
-    if args[0].arch == "i686":
+    if args[0].arch == "i686" or args[0].arch == "x86":
         ispc_arch = "x86"
     elif args[0].arch == "x86_64" or args[0].arch == "amd64":
         ispc_arch = "x86_64"
-    elif args[0].arch == "armv7":
+    elif args[0].arch == "armv7" or args[0].arch == "arm":
         ispc_arch = "arm"
     elif args[0].arch == "arm64" or args[0].arch == "aarch64":
         ispc_arch = "aarch64"
@@ -152,6 +153,9 @@ with NamedTemporaryFile(mode='w', dir=dirname(output), delete=False) as outfile:
             arch = "wasm32" if args[0].runtime == "32" else "wasm64" if args[0].runtime == "64" else "error"
         elif ("gen9" in target) or ("xe" in target):
             arch = "xe64"
+        elif ("generic" in target):
+            arch = args[0].arch
+            target = "_".join(target.split("_")[0:2])
         else:
             sys.stderr.write("Unknown target detected: " + target + "\n")
             sys.exit(1)

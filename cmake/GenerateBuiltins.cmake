@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2024, Intel Corporation
+#  Copyright (c) 2018-2025, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -502,4 +502,134 @@ function (generate_builtins)
     add_library(builtin OBJECT EXCLUDE_FROM_ALL
         ${DISPATCH_BUILTIN_CPP_FILES} ${COMMON_BUILTIN_CPP_FILES} ${TARGET_BUILTIN_CPP_FILES})
     add_dependencies(builtin builtins-cpp)
+endfunction()
+
+# Define custom commands to generate bitcode for a specific generic target and
+# a corresponding cpp wrapper for bitcode. All they are generated from
+# builtins/generic.ispc file. For slim binary, an entry to the
+# bitcode_libs_generated.cpp file is added.
+function (generate_generic_target_builtin ispc_name target arch bit os)
+    set(include ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/include)
+
+    set(name "builtins_target_generic_${target}_${arch}_${os}")
+    set(input_ispc builtins/generic.ispc)
+
+    if ("${os}" STREQUAL "unix")
+        set(fixed_os "linux")
+        set(OS_UP UNIX)
+    elseif ("${os}" STREQUAL "windows")
+        set(fixed_os "windows")
+        set(OS_UP WINDOWS)
+    else()
+        message(FATAL_ERROR "Error: unknown OS for target ${os}")
+    endif()
+
+    file(APPEND ${CMAKE_BINARY_DIR}/bitcode_libs_generated.cpp
+      "static BitcodeLib ${name}(\"${name}.bc\", ISPCTarget::generic_${target}, TargetOS::${fixed_os}, Arch::${arch});\n")
+    set(target "generic-${target}")
+
+    set(cpp ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${name}.cpp)
+    set(bc ${BITCODE_FOLDER}/${name}.bc)
+
+    if ("${fixed_os}" STREQUAL "linux" AND NOT ISPC_LINUX_TARGET)
+        # If ISPC_LINUX_TARGET is disabled then we can't run ispc-slim with
+        # --target-os=linux to generate generic target bitcode. So we need pass
+        # the target-os that is supported by ispc-slim.
+        if (APPLE)
+            set(fixed_os "macos")
+        elseif (CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+            set(fixed_os "freebsd")
+        else ()
+            message(FATAL_ERROR "Error: unknown OS for target ${fixed_os}")
+        endif()
+    endif()
+
+    add_custom_command(
+        OUTPUT ${bc}
+        COMMAND ${ispc_name} -I ${include} --enable-llvm-intrinsics --nostdlib --gen-stdlib --target=${target} --arch=${arch} --target-os=${fixed_os}  --emit-llvm -o ${bc} ${input_ispc} -DBUILD_OS=${OS_UP} -DRUNTIME=${bit}
+        DEPENDS ${ispc_name} ${input_ispc}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+    add_custom_command(
+        OUTPUT ${cpp}
+        COMMAND ${Python3_EXECUTABLE} ${BITCODE2CPP} ${bc} --type=ispc-target --runtime=${bit} --os=${OS_UP} --arch=${arch} ${cpp}
+        DEPENDS ${bc} ${BITCODE2CPP}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+    list(APPEND GENERIC_TARGET_BC_FILE ${bc})
+    set(GENERIC_TARGET_BC_FILE ${GENERIC_TARGET_BC_FILE} PARENT_SCOPE)
+
+    list(APPEND GENERIC_TARGET_CPP_FILE ${cpp})
+    set(GENERIC_TARGET_CPP_FILE ${GENERIC_TARGET_CPP_FILE} PARENT_SCOPE)
+endfunction()
+
+# Generate custom commands to generate bitcode and corresponding cpp files for
+# all generic targets and define a library of cpp files. It just traverses all
+# targets/archs/os combinations and call generate_generic_target_builtin for
+# each of them.
+function (generate_generic_builtins ispc_name)
+    list(APPEND os_list)
+    if (ISPC_WINDOWS_TARGET)
+        list(APPEND os_list "windows")
+    endif()
+    if (ISPC_UNIX_TARGET)
+        list(APPEND os_list "unix")
+    endif()
+
+    list(APPEND TARGET_LIST
+        "i1x4"
+        "i1x8"
+        "i1x16"
+        "i1x32"
+        "i1x64"
+        "i8x16"
+        "i8x32"
+        "i16x8"
+        "i16x16"
+        "i32x4"
+        "i32x8"
+        "i32x16"
+        "i64x4"
+    )
+
+    list(APPEND ARCH_LIST)
+    if (X86_ENABLED)
+        list(APPEND ARCH_LIST
+            "x86_64,64"
+        )
+        if (NOT APPLE)
+            list(APPEND ARCH_LIST
+                "x86,32"
+            )
+        endif()
+    endif()
+
+    if (ARM_ENABLED)
+        list(APPEND ARCH_LIST
+            "aarch64,64"
+        )
+        if (NOT APPLE AND NOT WIN32)
+            list(APPEND ARCH_LIST
+                "arm,32"
+            )
+        endif()
+    endif()
+
+    foreach(os ${os_list})
+        foreach(target ${TARGET_LIST})
+            foreach(pair ${ARCH_LIST})
+                string(REGEX REPLACE "," ";" pair_split ${pair})
+                list(GET pair_split 0 arch)
+                list(GET pair_split 1 bit)
+                generate_generic_target_builtin(${ispc_name} ${target} ${arch} ${bit} ${os})
+            endforeach()
+        endforeach()
+    endforeach()
+
+    add_custom_target(generic-target-bc DEPENDS ${GENERIC_TARGET_BC_FILE})
+    add_custom_target(generic-target-cpp DEPENDS ${GENERIC_TARGET_CPP_FILE})
+
+    add_library(generic-target OBJECT EXCLUDE_FROM_ALL ${GENERIC_TARGET_CPP_FILE})
 endfunction()
