@@ -46,6 +46,11 @@
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
+#if defined(ISPC_ARM_ENABLED)
+#include <llvm/ADT/StringExtras.h>
+#include <llvm/TargetParser/AArch64TargetParser.h>
+#include <llvm/TargetParser/ARMTargetParser.h>
+#endif // ISPC_ARM_ENABLED
 
 #if ISPC_LLVM_VERSION > ISPC_LLVM_17_0
 using CodegenOptLevel = llvm::CodeGenOptLevel;
@@ -61,7 +66,9 @@ Module *ispc::m;
 ///////////////////////////////////////////////////////////////////////////
 // Target
 
-#if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64)
+#if defined(__aarch64__) || defined(_M_ARM64)
+#define ISPC_HOST_IS_AARCH64
+#elif defined(__arm__)
 #define ISPC_HOST_IS_ARM
 #elif defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
 #define ISPC_HOST_IS_X86
@@ -122,9 +129,137 @@ static bool __os_has_avx512_support() {
 }
 #endif // ISPC_HOST_IS_X86
 
+#if defined(ISPC_ARM_ENABLED)
+// Retrieve the target features for a given ARM/AARCH64 architecture and CPU
+// Detecting hardware-supported ARM features across different platforms (e.g., Linux, macOS, Windows) much more trickier
+// and fragmented than on x86, with each operating system offering distinct methods and limitations.
+// 1. Platform-Specific APIs:
+// Linux: Uses getauxval to query hardware capabilities via HWCAP and HWCAP2 bitmasks, which are well-documented and
+// relatively straightforward. However, it does not allow direct user-space access to system registers like
+// ID_AA64PFR0_EL1.
+// macOS: Relies on sysctl and sysctlbyname APIs, which expose only a subset of ARM features through
+// keys like hw.optional.arm.*. Privileged registers are inaccessible, and the exposed keys may not cover all hardware
+// features.
+// Windows: Provides limited detection through IsProcessorFeaturePresent, which covers only a handful of
+// high-level ARM features like NEON and SVE. Direct access to hardware registers is not supported in user space.
+// 2. Access Restrictions:
+// Privileged system registers such as ID_AA64PFR0_EL1 and ID_AA64ISAR0_EL1, which contain detailed feature information,
+// are typically accessible only in kernel space. This restriction is consistent across platforms, making runtime
+// hardware queries difficult for user-space applications.
+// 3. Inconsistent Feature Exposure:
+// Some platforms provide granular details about specific features (e.g., Linux's HWCAP2_SVE), while others offer only
+// high-level abstractions (e.g., macOS's hw.optional.AdvSIMD). Missing or undocumented keys on macOS and limited APIs
+// on Windows make comprehensive feature detection unreliable.
+// Example of attempt to detect features across platforms can be found in llvm::sys::getHostCPUFeatures()
+// in llvm/lib/TargetParser/Host.cpp but it doesn't solve issue #3 and it doesn't work on macOS completely.
+// Example of feature detection on Apple can be found in
+// __init_cpu_features_resolver in compiler-rt/lib/builtins/cpu_model/aarch64/fmv/apple.inc.
+
+// To avoid introducing complex and error-prone code into ISPC, let's rely on the LLVM target parser to provide the
+// default features for a particular CPU.
+static std::vector<llvm::StringRef> lGetARMTargetFeatures(Arch arch, const std::string &cpu) {
+    Assert(arch == Arch::arm || arch == Arch::aarch64);
+    std::vector<llvm::StringRef> targetFeatures;
+
+    // Keep the features for custom_linux unchanged
+    if (g->target_os == TargetOS::custom_linux) {
+        if (arch == Arch::arm) {
+            targetFeatures = {"+crypto", "+fp-armv8", "+neon", "+sha2"};
+        } else {
+            targetFeatures = {"+aes", "+crc", "+crypto", "+fp-armv8", "+neon", "+sha2"};
+        }
+    } else {
+        // Get features for the requested CPU
+        if (arch == Arch::arm) {
+            llvm::ARM::ArchKind archKind = llvm::ARM::parseCPUArch(cpu);
+            if (archKind == llvm::ARM::ArchKind::INVALID) {
+                Error(SourcePos(), "Invalid CPU name for ARM architecture: %s", cpu.c_str());
+                return {};
+            }
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_17_0
+            using FPUKindType = llvm::ARM::FPUKind;
+#else
+            using FPUKindType = unsigned;
+#endif
+            FPUKindType fpu = llvm::ARM::getDefaultFPU(cpu, archKind);
+            llvm::ARM::getFPUFeatures(fpu, targetFeatures);
+        } else if (arch == Arch::aarch64) {
+            std::optional<llvm::AArch64::CpuInfo> cpuInfo = llvm::AArch64::parseCpu(cpu);
+            if (!cpuInfo) {
+                Error(SourcePos(), "Invalid CPU name for AArch64 architecture: %s", cpu.c_str());
+                return {};
+            }
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+            using CpuExtensionsType = llvm::AArch64::ExtensionBitset;
+#else
+            using CpuExtensionsType = uint64_t;
+#endif
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_17_0
+            CpuExtensionsType cpuExtensions = cpuInfo->getImpliedExtensions();
+#else
+            llvm::AArch64::ArchInfo AI = llvm::AArch64::parseCpu(cpu).Arch;
+            CpuExtensionsType cpuExtensions = getDefaultExtensions(cpu, AI);
+#endif
+            llvm::AArch64::getExtensionFeatures(cpuExtensions, targetFeatures);
+        } else {
+            UNREACHABLE();
+        }
+        // Sort them for easier testing
+        std::sort(targetFeatures.begin(), targetFeatures.end());
+    }
+    return targetFeatures;
+}
+
+// Check if a specific feature is supported
+static bool lIsARMFeatureSupported(const std::string &feature, const std::vector<llvm::StringRef> &featureList) {
+    // Check if the feature exists in the feature list
+    for (const auto &f : featureList) {
+        if (f == feature) {
+            return true; // Feature found
+        }
+    }
+
+    return false; // Feature not found
+}
+
+#if defined(ISPC_HOST_IS_ARM) || defined(ISPC_HOST_IS_AARCH64)
+// Get target features for the host ARM CPU
+// Check what CPU we are and then extract features for this cpu from LLVM
+// llvm::sys::getHostCPUName() detects cpu perfectly across platforms
+static std::vector<llvm::StringRef> lGetTargetFeaturesForARMHost(Arch arch) {
+    // Get the name of the host CPU)
+    std::string hostCPU = llvm::sys::getHostCPUName().str();
+
+    // Call lGetARMTargetFeatures to obtain the features for the specified architecture and host CPU.
+    return lGetARMTargetFeatures(arch, hostCPU);
+}
+
+// Get the host ARM system ISA
+static ISPCTarget lGetARMSystemISA() {
+#if defined(ISPC_HOST_IS_AARCH64)
+    Arch arch = Arch::aarch64;
+#elif defined(ISPC_HOST_IS_ARM)
+    Arch arch = Arch::arm;
+#else
+#error
+#endif
+    std::vector<llvm::StringRef> features = lGetTargetFeaturesForARMHost(arch);
+
+    if (lIsARMFeatureSupported("+sve", features)) {
+        return ISPCTarget::neon_i32x4; // TODO: Return SVE target when supported
+    } else if (lIsARMFeatureSupported("+neon", features)) {
+        return ISPCTarget::neon_i32x4;
+    } else {
+        Warning(SourcePos(), "Cannot detect ARM ISA!");
+        return ISPCTarget::neon_i32x4; // Default return
+    }
+}
+#endif
+#endif // defined(ISPC_HOST_IS_ARM) || defined(ISPC_HOST_IS_AARCH64)
+
 static ISPCTarget lGetSystemISA() {
-#if defined(ISPC_HOST_IS_ARM)
-    return ISPCTarget::neon_i32x4;
+#if defined(ISPC_HOST_IS_ARM) || defined(ISPC_HOST_IS_AARCH64)
+    return lGetARMSystemISA();
 #elif defined(ISPC_HOST_IS_X86)
     int info[4];
     __cpuid(info, 1);
@@ -727,6 +862,77 @@ Arch lGetArchFromTarget(ISPCTarget target) {
         return Arch::x86_64;
     }
 }
+
+#if defined(ISPC_ARM_ENABLED)
+// Get the ARM device type for requested architecture
+DeviceType lGetARMDeviceType(Arch arch) {
+    if (arch == Arch::arm) {
+        return DeviceType::CPU_CortexA9;
+    }
+
+    if (arch == Arch::aarch64) {
+        // Cross-compilation?
+        if (g->target_os != GetHostOS()) {
+            switch (g->target_os) {
+            case TargetOS::ios:
+                return DeviceType::CPU_AppleA7;
+            case TargetOS::macos:
+                // Open source LLVM doesn't have definition for M1 CPU, so use iPhone CPU compatible with M1.
+                return DeviceType::CPU_AppleA14;
+            case TargetOS::linux:
+                return DeviceType::CPU_CortexA35;
+            default:
+                return DeviceType::CPU_CortexA35;
+            }
+        }
+#if defined(ISPC_HOST_IS_ARM) || defined(ISPC_HOST_IS_AARCH64)
+        // lGetTargetFeaturesForARMHost calls llvm::sys::getHostCPUName(), which
+        // returns the CPU name that we can directly pass to the backend. However,
+        // this CPU might not be explicitly supported by ISPC. Therefore, let's
+        // retrieve the features for the detected CPU and determine which CPU
+        // definition supported by ISPC matches it best.
+        std::vector<llvm::StringRef> featureString = lGetTargetFeaturesForARMHost(arch);
+#if defined(ISPC_HOST_IS_LINUX) || defined(ISPC_HOST_IS_WINDOWS)
+        // ARMv8-A (cortex-a35, cortex-a53, cortex-a57) - have the same features
+        [[maybe_unused]] bool a53 =
+            lIsARMFeatureSupported("+neon", featureString) && lIsARMFeatureSupported("+fp-armv8", featureString) &&
+            lIsARMFeatureSupported("+aes", featureString) && lIsARMFeatureSupported("+sha2", featureString) &&
+            lIsARMFeatureSupported("+crc", featureString);
+        // No real logic here for now, just return CPU_CortexA35, will be extended later as we add more cpu definitions.
+        return (a53) ? DeviceType::CPU_CortexA53 : CPU_CortexA35;
+#elif defined(ISPC_HOST_IS_APPLE)
+        bool apple_a7 =
+            lIsARMFeatureSupported("+neon", featureString) && lIsARMFeatureSupported("+aes", featureString) &&
+            lIsARMFeatureSupported("+sha2", featureString) && lIsARMFeatureSupported("+fp-armv8", featureString);
+        bool apple_a10 = apple_a7 && lIsARMFeatureSupported("+crc", featureString);
+        bool apple_a11 = apple_a10 && lIsARMFeatureSupported("+lse", featureString) &&
+                         lIsARMFeatureSupported("+fullfp16", featureString);
+        bool apple_a12 = apple_a11 && lIsARMFeatureSupported("+rcpc", featureString);
+        bool apple_a13 = apple_a12 && lIsARMFeatureSupported("+dotprod", featureString) &&
+                         lIsARMFeatureSupported("+sha3", featureString) &&
+                         lIsARMFeatureSupported("+fp16fml", featureString);
+        bool apple_a14 = apple_a13; // Apple A14 features are the same as A13
+
+        // Return the highest supported Apple device type
+        if (apple_a13 || apple_a14) {
+            return DeviceType::CPU_AppleA14;
+        } else if (apple_a12) {
+            return DeviceType::CPU_AppleA12;
+        } else if (apple_a11) {
+            return DeviceType::CPU_AppleA11;
+        } else if (apple_a10) {
+            return DeviceType::CPU_AppleA10;
+        } else {
+            return DeviceType::CPU_AppleA7;
+        }
+#endif // defined(ISPC_HOST_IS_LINUX) || defined(ISPC_HOST_IS_WINDOWS)
+#endif // (ISPC_HOST_IS_ARM) || defined(ISPC_HOST_IS_AARCH64)
+        return DeviceType::CPU_CortexA35;
+    } else {
+        UNREACHABLE();
+    }
+}
+#endif
 
 Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picLevel, MCModel code_model,
                bool printTarget)
@@ -1746,19 +1952,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 
 #if defined(ISPC_ARM_ENABLED)
     if ((CPUID == CPU_None) && ISPCTargetIsNeon(m_ispc_target)) {
-        if (arch == Arch::arm) {
-            CPUID = CPU_CortexA9;
-        } else if (arch == Arch::aarch64) {
-            if (g->target_os == TargetOS::ios) {
-                CPUID = CPU_AppleA7;
-            } else if (g->target_os == TargetOS::macos) {
-                // Open source LLVM doesn't has definition for M1 CPU, so use the latest iPhone CPU.
-                CPUID = CPU_AppleA14;
-            } else {
-                CPUID = CPU_CortexA35;
-            }
-        } else {
-            UNREACHABLE();
+        if (arch == Arch::arm || arch == Arch::aarch64) {
+            CPUID = lGetARMDeviceType(arch);
         }
     }
 #endif
@@ -1812,29 +2007,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         llvm::TargetOptions options;
 #ifdef ISPC_ARM_ENABLED
         options.FloatABIType = llvm::FloatABI::Hard;
-        if (arch == Arch::arm) {
-            if (g->target_os == TargetOS::custom_linux) {
-                this->m_funcAttributes.push_back(std::make_pair("target-features", "+crypto,+fp-armv8,+neon,+sha2"));
-            } else {
-                if (CPUID != CPU_CortexA9 && CPUID != CPU_CortexA15) {
-                    // fp-armv8 is supported starting cortex-a35
-                    this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon,+fp16,+fp-armv8"));
-                } else {
-                    this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon,+fp16"));
-                }
-            }
-            featuresString = "+neon,+fp16";
-        } else if (arch == Arch::aarch64) {
-            if (g->target_os == TargetOS::custom_linux) {
-                this->m_funcAttributes.push_back(
-                    std::make_pair("target-features", "+aes,+crc,+crypto,+fp-armv8,+neon,+sha2"));
-            } else {
-                this->m_funcAttributes.push_back(std::make_pair("target-features", "+neon"));
-            }
-            featuresString = "+neon";
+        if (arch == Arch::arm || arch == Arch::aarch64) {
+            featuresString = llvm::join(lGetARMTargetFeatures(arch, m_cpu), ",");
+            this->m_funcAttributes.push_back(std::make_pair("target-features", featuresString));
         }
 #endif
-
         // Support 'i64' and 'double' types in cm
         if (isXeTarget()) {
             featuresString += "+longlong";
@@ -1898,7 +2075,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 
         this->m_is32Bit = (getDataLayout()->getPointerSize() == 4);
 
-        // TO-DO : Revisit addition of "target-features" and "target-cpu" for ARM support.
+        // It's not necessary to set target-cpu and target-features but it's useful for debugging purposes and
+        // follows LLVM behavior on ARM
         llvm::AttrBuilder *fattrBuilder = new llvm::AttrBuilder(*g->ctx);
 #ifdef ISPC_ARM_ENABLED
         if (m_isa == Target::NEON) {
@@ -2323,16 +2501,16 @@ void Target::markFuncWithCallingConv(llvm::Function *func) {
         // Rules(Ref : https://docs.microsoft.com/en-us/cpp/cpp/vectorcall?view=vs-2019 )
         // Definitions:
         // Integer Type : it fits in the native register size of the processor for example,
-        // 4 bytes on an x86 machine.Integer types include pointer, reference, and struct or union types of 4 bytes or
-        less.
+        // 4 bytes on an x86 machine.Integer types include pointer, reference, and struct or union types of 4 bytes
+        or less.
         // Vector Type : either a floating - point type for example, a float or double or an SIMD vector type for
         // example, __m128 or __m256.
         // Rules for x86: Integer Type : The first two integer type arguments found in the
         // parameter list from left to right are placed in ECX and EDX, respectively.
         // Vector Type : The first six vector type arguments in order from left to right are passed by value in SSE
         vector registers 0 to 5.
-        //The seventh and subsequent vector type arguments are passed on the stack by reference to memory allocated by
-        the caller.
+        //The seventh and subsequent vector type arguments are passed on the stack by reference to memory allocated
+        by the caller.
         // Observations from Clang(Is there somewhere these rules are mentioned??)
         // Integer Type : After first Integer Type greater than 32 bit, other integer types NOT passed in reg.
         // Vector Type : After 6 Vector Type args, if 2 Integer Type registers are not yet used, VectorType args
