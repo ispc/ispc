@@ -19,6 +19,9 @@
 #error Unknown value of TARGET_WIDTH
 #endif
 
+// CHECK: @double_width_vec = local_unnamed_addr global <[[DOUBLE_WIDTH:.*]] x i32> zeroinitializer
+uniform int<DOUBLE_WIDTH> double_width_vec;
+
 // CHECK: define void @mask_type___(<[[WIDTH:.*]] x [[MASK:.*]]> %__mask)
 void mask_type() {}
 
@@ -34,8 +37,9 @@ ATTRS uniform float16 bitcast(uniform int16 x) {
     return @llvm.ispc.bitcast(x, (uniform float16)0);
 }
 
-// TODO!
-// ATTRS uniform int8<DOUBLE_WIDTH> concat(int8 v0, int8 v1) { return @llvm.ispc.concat(v0, v1); }
+// CHECK-LABEL: @concat
+// CHECK-DAG: %calltmp = tail call <[[DOUBLE_WIDTH]] x i8> @llvm.ispc.concat.v[[DOUBLE_WIDTH]]i8.v[[WIDTH]]i8(<[[WIDTH]] x i8> %v0, <[[WIDTH]] x i8> %v1)
+ATTRS uniform int8<DOUBLE_WIDTH> concat(int8 v0, int8 v1) { return @llvm.ispc.concat(v0, v1); }
 
 // CHECK-LABEL: @cmpxchg
 // CHECK-DAG:   %calltmp = tail call i32 @llvm.ispc.cmpxchg.seq_cst.seq_cst.i32([[PTR]] %ptr, i32 %cmp, i32 %val)
