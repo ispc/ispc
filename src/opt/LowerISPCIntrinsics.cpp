@@ -25,86 +25,9 @@ static unsigned lGetVecNumElements(llvm::Value *V) {
     return vecType->getElementCount().getKnownMinValue();
 }
 
-static llvm::Value *lLowerConcatIntrinsic(llvm::CallInst *CI) {
-    llvm::IRBuilder<> builder(CI);
-    llvm::Value *V0 = CI->getArgOperand(0);
-    llvm::Value *V1 = CI->getArgOperand(1);
-
-    auto N = lGetVecNumElements(V0);
-    return builder.CreateShuffleVector(V0, V1, lGetSequentialMask(builder, 2 * N));
-}
-
-static llvm::Value *lLowerExtractIntrinsic(llvm::CallInst *CI) {
-    llvm::IRBuilder<> builder(CI);
-    auto numArgs = CI->getNumOperands() - 1;
-
-    if (numArgs == 2) {
-        llvm::Value *V = CI->getArgOperand(0);
-        llvm::Value *I = CI->getArgOperand(1);
-
-        return builder.CreateExtractElement(V, I);
-    }
-    if (numArgs == 3) {
-        llvm::Value *V0 = CI->getArgOperand(0);
-        llvm::Value *V1 = CI->getArgOperand(1);
-        llvm::Value *I = CI->getArgOperand(2);
-
-        auto N = lGetVecNumElements(V0);
-        llvm::Value *V = builder.CreateShuffleVector(V0, V1, lGetSequentialMask(builder, 2 * N));
-
-        return builder.CreateExtractElement(V, I);
-    }
-    return nullptr;
-}
-
-static llvm::Value *lLowerInserIntrinsic(llvm::CallInst *CI) {
-    llvm::IRBuilder<> builder(CI);
-
-    llvm::Value *V = CI->getArgOperand(0);
-    llvm::Value *I = CI->getArgOperand(1);
-    llvm::Value *E = CI->getArgOperand(2);
-
-    return builder.CreateInsertElement(V, E, I);
-}
-
-static llvm::Value *lLowerBitcastIntrinsic(llvm::CallInst *CI) {
-    llvm::IRBuilder<> builder(CI);
-
-    llvm::Value *V = CI->getArgOperand(0);
-    llvm::Value *VT = CI->getArgOperand(1);
-
-    return builder.CreateBitCast(V, VT->getType());
-}
-
 static llvm::MDNode *lNonTemporalMetadata(llvm::LLVMContext &ctx) {
     return llvm::MDNode::get(ctx,
                              llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), 1)));
-}
-
-static llvm::Value *lLowerStreamStoreIntrinsic(llvm::CallInst *CI) {
-    // generate store with !nontemporal metadata attached
-    llvm::IRBuilder<> builder(CI);
-
-    llvm::Value *P = CI->getArgOperand(0);
-    llvm::Value *V = CI->getArgOperand(1);
-
-    llvm::StoreInst *SI = builder.CreateStore(V, P);
-    SI->setMetadata("nontemporal", lNonTemporalMetadata(CI->getContext()));
-
-    return SI;
-}
-
-static llvm::Value *lLowerStreamLoadIntrinsic(llvm::CallInst *CI) {
-    // generate load with !nontemporal metadata attached
-    llvm::IRBuilder<> builder(CI);
-
-    llvm::Value *P = CI->getArgOperand(0);
-    llvm::Type *T = CI->getArgOperand(1)->getType();
-
-    llvm::LoadInst *LI = builder.CreateLoad(T, P);
-    LI->setMetadata("nontemporal", lNonTemporalMetadata(CI->getContext()));
-
-    return LI;
 }
 
 static llvm::AtomicOrdering lSetMemoryOrdering(const std::string &str) {
@@ -124,10 +47,109 @@ static llvm::AtomicOrdering lSetMemoryOrdering(const std::string &str) {
     return llvm::AtomicOrdering::NotAtomic;
 }
 
+static llvm::Value *lTruncVectorToi1(llvm::IRBuilder<> &builder, llvm::Value *V) {
+    llvm::VectorType *VT = llvm::dyn_cast<llvm::VectorType>(V->getType());
+    Assert(VT);
+    // check if the vector element type is not i1
+    llvm::Type *ET = VT->getElementType();
+    if (!ET->isIntegerTy(1)) {
+        // truncate vector of i32/i16/i8 to vector of i1
+        llvm::Type *i1 = llvm::IntegerType::get(builder.getContext(), 1);
+        llvm::Type *newVT = llvm::VectorType::get(i1, lGetVecNumElements(V), false);
+        V = builder.CreateTrunc(V, newVT);
+    }
+    return V;
+}
+
+static llvm::Value *lLowerConcatIntrinsic(llvm::CallInst *CI) {
+    llvm::IRBuilder<> builder(CI);
+    Assert(CI->arg_size() == 2);
+
+    llvm::Value *V0 = CI->getArgOperand(0);
+    llvm::Value *V1 = CI->getArgOperand(1);
+
+    auto N = lGetVecNumElements(V0);
+    return builder.CreateShuffleVector(V0, V1, lGetSequentialMask(builder, 2 * N));
+}
+
+static llvm::Value *lLowerExtractIntrinsic(llvm::CallInst *CI) {
+    llvm::IRBuilder<> builder(CI);
+    auto numArgs = CI->arg_size();
+
+    if (numArgs == 2) {
+        llvm::Value *V = CI->getArgOperand(0);
+        llvm::Value *I = CI->getArgOperand(1);
+
+        return builder.CreateExtractElement(V, I);
+    }
+    if (numArgs == 3) {
+        llvm::Value *V0 = CI->getArgOperand(0);
+        llvm::Value *V1 = CI->getArgOperand(1);
+        llvm::Value *I = CI->getArgOperand(2);
+
+        auto N = lGetVecNumElements(V0);
+        llvm::Value *V = builder.CreateShuffleVector(V0, V1, lGetSequentialMask(builder, 2 * N));
+
+        return builder.CreateExtractElement(V, I);
+    }
+    Assert(false);
+    return nullptr;
+}
+
+static llvm::Value *lLowerInsertIntrinsic(llvm::CallInst *CI) {
+    llvm::IRBuilder<> builder(CI);
+    Assert(CI->arg_size() == 3);
+
+    llvm::Value *V = CI->getArgOperand(0);
+    llvm::Value *I = CI->getArgOperand(1);
+    llvm::Value *E = CI->getArgOperand(2);
+
+    return builder.CreateInsertElement(V, E, I);
+}
+
+static llvm::Value *lLowerBitcastIntrinsic(llvm::CallInst *CI) {
+    llvm::IRBuilder<> builder(CI);
+    Assert(CI->arg_size() == 2);
+
+    llvm::Value *V = CI->getArgOperand(0);
+    llvm::Value *VT = CI->getArgOperand(1);
+
+    return builder.CreateBitCast(V, VT->getType());
+}
+
+static llvm::Value *lLowerStreamStoreIntrinsic(llvm::CallInst *CI) {
+    // generate store with !nontemporal metadata attached
+    llvm::IRBuilder<> builder(CI);
+    Assert(CI->arg_size() == 2);
+
+    llvm::Value *P = CI->getArgOperand(0);
+    llvm::Value *V = CI->getArgOperand(1);
+
+    llvm::StoreInst *SI = builder.CreateStore(V, P);
+    SI->setMetadata("nontemporal", lNonTemporalMetadata(CI->getContext()));
+
+    return SI;
+}
+
+static llvm::Value *lLowerStreamLoadIntrinsic(llvm::CallInst *CI) {
+    // generate load with !nontemporal metadata attached
+    llvm::IRBuilder<> builder(CI);
+    Assert(CI->arg_size() == 2);
+
+    llvm::Value *P = CI->getArgOperand(0);
+    llvm::Type *T = CI->getArgOperand(1)->getType();
+
+    llvm::LoadInst *LI = builder.CreateLoad(T, P);
+    LI->setMetadata("nontemporal", lNonTemporalMetadata(CI->getContext()));
+
+    return LI;
+}
+
 static llvm::Value *lLowerAtomicRMWIntrinsic(llvm::CallInst *CI) {
     // generate atomicrmw instruction fetching op and ordering from intrinsic name
     // llvm.ispc.atomicrmw.<op>.<memoryOrdering>.<type>
     llvm::IRBuilder<> builder(CI);
+    Assert(CI->arg_size() == 2);
 
     llvm::Value *P = CI->getArgOperand(0);
     llvm::Value *V = CI->getArgOperand(1);
@@ -182,6 +204,7 @@ static llvm::Value *lLowerCmpXchgIntrinsic(llvm::CallInst *CI) {
     // ordering from intrinsic name
     // llvm.ispc.cmpxchg.<successOrdering>.<failureOrdering>.<type>
     llvm::IRBuilder<> builder(CI);
+    Assert(CI->arg_size() == 3);
 
     llvm::Value *P = CI->getArgOperand(0);
     llvm::Value *C = CI->getArgOperand(1);
@@ -205,6 +228,7 @@ static llvm::Value *lLowerCmpXchgIntrinsic(llvm::CallInst *CI) {
 static llvm::Value *lLowerSelectIntrinsic(llvm::CallInst *CI) {
     // generate select instruction
     llvm::IRBuilder<> builder(CI);
+    Assert(CI->arg_size() == 3);
 
     llvm::Value *C = CI->getArgOperand(0);
     llvm::Value *T = CI->getArgOperand(1);
@@ -215,14 +239,7 @@ static llvm::Value *lLowerSelectIntrinsic(llvm::CallInst *CI) {
     // vector of i32/i16/i8 for some targets
     llvm::VectorType *VT = llvm::dyn_cast<llvm::VectorType>(C->getType());
     if (VT) {
-        // check if the vector element type is not i1
-        llvm::Type *ET = VT->getElementType();
-        if (!ET->isIntegerTy(1)) {
-            // truncate vector of i32/i16/i8 to vector of i1
-            llvm::Type *i1 = llvm::IntegerType::get(builder.getContext(), 1);
-            llvm::Type *newVT = llvm::VectorType::get(i1, lGetVecNumElements(C), false);
-            C = builder.CreateTrunc(C, newVT);
-        }
+        C = lTruncVectorToi1(builder, C);
     }
 
     return builder.CreateSelect(C, T, F);
@@ -231,6 +248,7 @@ static llvm::Value *lLowerSelectIntrinsic(llvm::CallInst *CI) {
 static llvm::Value *lLowerFenceIntrinsic(llvm::CallInst *CI) {
     // generate fence instruction
     llvm::IRBuilder<> builder(CI);
+    Assert(CI->arg_size() == 0);
 
     std::string ordering = CI->getCalledFunction()->getName().str();
     ordering = ordering.substr(ordering.find_last_of('.') + 1);
@@ -245,19 +263,13 @@ static llvm::Value *lLowerPackMaskIntrinsic(llvm::CallInst *CI) {
     // generate bitcast from <WIDTH x i1> to i`WIDTH if mask type is i1
     // otherwise truncate the mask from <WIDTH x i32|i16|i8> to <WIDTH x i1> before
     llvm::IRBuilder<> builder(CI);
+    Assert(CI->arg_size() == 1);
 
     llvm::Value *V = CI->getArgOperand(0);
-    llvm::VectorType *VT = llvm::dyn_cast<llvm::VectorType>(CI->getArgOperand(0)->getType());
-    Assert(VT);
 
-    // check if the vector element type is not i1
-    llvm::Type *ET = VT->getElementType();
-    if (!ET->isIntegerTy(1)) {
-        // truncate vector of i32/i16/i8 to vector of i1
-        llvm::Type *i1 = llvm::IntegerType::get(builder.getContext(), 1);
-        llvm::Type *newVT = llvm::VectorType::get(i1, lGetVecNumElements(V), false);
-        V = builder.CreateTrunc(V, newVT);
-    }
+    llvm::VectorType *VT = llvm::dyn_cast<llvm::VectorType>(V->getType());
+    Assert(VT);
+    V = lTruncVectorToi1(builder, V);
 
     // get type with the same width as target width
     llvm::Type *newVT = llvm::IntegerType::get(builder.getContext(), lGetVecNumElements(V));
@@ -268,7 +280,6 @@ static llvm::Value *lLowerPackMaskIntrinsic(llvm::CallInst *CI) {
 }
 
 static bool lRunOnBasicBlock(llvm::BasicBlock &BB) {
-    // TODO: add lit tests
     for (llvm::BasicBlock::iterator iter = BB.begin(), e = BB.end(); iter != e;) {
         if (llvm::CallInst *CI = llvm::dyn_cast<llvm::CallInst>(&*(iter++))) {
             llvm::Function *Callee = CI->getCalledFunction();
@@ -279,7 +290,7 @@ static bool lRunOnBasicBlock(llvm::BasicBlock &BB) {
                 } else if (Callee->getName().starts_with("llvm.ispc.extract.")) {
                     D = lLowerExtractIntrinsic(CI);
                 } else if (Callee->getName().starts_with("llvm.ispc.insert.")) {
-                    D = lLowerInserIntrinsic(CI);
+                    D = lLowerInsertIntrinsic(CI);
                 } else if (Callee->getName().starts_with("llvm.ispc.bitcast.")) {
                     D = lLowerBitcastIntrinsic(CI);
                 } else if (Callee->getName().starts_with("llvm.ispc.stream_store.")) {
