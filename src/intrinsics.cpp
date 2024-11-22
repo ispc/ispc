@@ -24,6 +24,8 @@
 
 using namespace ispc;
 
+using IITDesc = llvm::Intrinsic::IITDescriptor;
+
 enum class ISPCIntrinsics : unsigned {
     not_intrinsic = 0,
     atomicrmw,
@@ -437,49 +439,116 @@ static llvm::Function *lGetISPCIntrinsicsFuncDecl(llvm::Module *M, std::string o
     return p;
 }
 
-static std::vector<llvm::Type *> lDeductArgTypes(llvm::Intrinsic::ID ID, ExprList *args) {
+bool lIsAnyArgumentKind(const IITDesc &D) {
+    if (D.Kind != IITDesc::Argument) {
+        return false;
+    }
+
+    unsigned Kind = D.getArgumentKind();
+    return Kind == IITDesc::AK_Any || Kind == IITDesc::AK_AnyInteger || Kind == IITDesc::AK_AnyFloat ||
+           Kind == IITDesc::AK_AnyVector || Kind == IITDesc::AK_AnyPointer;
+}
+
+bool lIsArgDesc(const IITDesc &D) {
+    bool IsArgDescriptor = D.Kind == IITDesc::Argument || D.Kind == IITDesc::ExtendArgument ||
+                           D.Kind == IITDesc::TruncArgument || D.Kind == IITDesc::HalfVecArgument ||
+                           D.Kind == IITDesc::SameVecWidthArgument || D.Kind == IITDesc::VecElementArgument ||
+                           D.Kind == IITDesc::Subdivide2Argument || D.Kind == IITDesc::Subdivide4Argument ||
+                           D.Kind == IITDesc::VecOfBitcastsToInt;
+    return IsArgDescriptor;
+}
+
+bool lIsAliased(const IITDesc &L, const IITDesc &R) {
+    // Check if R is argument with MatchType and has the same argument number as L
+    return lIsArgDesc(R) && R.getArgumentKind() == IITDesc::AK_MatchType && R.Kind == IITDesc::Argument &&
+           R.getArgumentNumber() == L.getArgumentNumber();
+}
+
+size_t lSkipNextIITDesc(const IITDesc &D) {
+    switch (D.Kind) {
+    case IITDesc::SameVecWidthArgument:
+        return 1;
+    default:
+        return 0;
+    }
+}
+
+// The function analyzes an LLVM intrinsic (identified by its ID) and finds
+// which argument positions can accept any type. It returns these
+// positions in the provided result vector.
+void lGetOverloadedArgumentIndices(llvm::Intrinsic::ID ID, std::vector<unsigned> &result, SourcePos pos) {
+    // The LLVM Intrinsic Information Table (IIT) is a data structure that
+    // describes the type system and constraints for LLVM's built-in functions
+    // (intrinsics). The table contains a series of descriptors, where the
+    // first entry typically describes the return type, followed by entries for
+    // each argument (some arguments are represented by multiple entries).
+    // These descriptors can express complex relationships like "this argument
+    // must match the return type" or "this argument needs to be a vector of
+    // the same width as another argument." The table can specify that it works
+    // with "any" type, or that multiple arguments need to match each other's
+    // types.
+    //
+    // We need to traverse this table to find the argument positions that can
+    // be any type. We need only the first entry and one entry for every unique
+    // "any" type.
+
+    llvm::SmallVector<IITDesc, 8> Table;
+    llvm::Intrinsic::getIntrinsicInfoTableEntries(ID, Table);
+
+    if (Table.empty()) {
+        return;
+    }
+
+    // The trick part is that return type often is any. However in ISPC, we
+    // have no return type information, so we need to find the argument with
+    // the same type as return value.
+    unsigned argIndex = 0;
+    if (lIsAnyArgumentKind(Table[0])) {
+        for (size_t i = 1; i < Table.size(); i++) {
+            if (lIsAliased(Table[0], Table[i])) {
+                result.push_back(argIndex);
+                break;
+            }
+            if (lSkipNextIITDesc(Table[i])) {
+                i++;
+            }
+            argIndex++;
+        }
+
+        if (result.empty()) {
+            // If we didn't find any matching argument, we can create a proper
+            // function declaration. I don't know if there are such intrinsics.
+            llvm::StringRef name = llvm::Intrinsic::getBaseName(ID);
+            Error(pos, "Can't deduct types for function declaration of the overloaded LLVM intrinsic \"%s\".",
+                  name.str().c_str());
+            return;
+        }
+    }
+
+    // Find remaining "any" types for arguments.
+    argIndex = 0;
+    for (size_t i = 1; i < Table.size(); i++) {
+        if (Table[i].Kind == IITDesc::VecOfAnyPtrsToElt || lIsAnyArgumentKind(Table[i])) {
+            result.push_back(argIndex);
+        }
+
+        if (lSkipNextIITDesc(Table[i])) {
+            i++;
+        }
+        argIndex++;
+    }
+}
+
+static std::vector<llvm::Type *> lDeductArgTypes(llvm::Module *module, llvm::Intrinsic::ID ID, ExprList *args,
+                                                 SourcePos pos) {
     std::vector<llvm::Type *> exprType;
     if (llvm::Intrinsic::isOverloaded(ID)) {
         Assert(args);
-        std::vector<int> nInits(args->exprs.size());
-        // This is because LLVM intrinsics are overloaded and we need to mangle
-        // the function name with suffixes corresponding to some argument types.
-        switch (ID) {
-        case llvm::Intrinsic::pow:
-        case llvm::Intrinsic::cttz:
-        case llvm::Intrinsic::ctlz:
-        case llvm::Intrinsic::prefetch:
-        case llvm::Intrinsic::uadd_sat:
-        case llvm::Intrinsic::sadd_sat:
-        case llvm::Intrinsic::usub_sat:
-        case llvm::Intrinsic::ssub_sat:
-        case llvm::Intrinsic::masked_compressstore:
-            nInits = {0};
-            break;
-        case llvm::Intrinsic::memset:
-            nInits = {0, 2};
-            break;
-        case llvm::Intrinsic::memcpy:
-        case llvm::Intrinsic::memmove:
-            nInits = {0, 1, 2};
-            break;
-        case llvm::Intrinsic::masked_load:
-        case llvm::Intrinsic::masked_gather:
-            nInits = {3, 0};
-            break;
-        case llvm::Intrinsic::masked_store:
-        case llvm::Intrinsic::masked_scatter:
-            nInits = {0, 1};
-            break;
-        case llvm::Intrinsic::vector_reduce_fadd:
-            nInits = {1};
-            break;
-        case llvm::Intrinsic::masked_expandload:
-            nInits = {2};
-            break;
-        }
 
-        for (const int i : nInits) {
+        std::vector<unsigned> nInits;
+        lGetOverloadedArgumentIndices(ID, nInits, pos);
+
+        for (int i : nInits) {
             const Type *argType = (args->exprs[i])->GetType();
             Assert(argType);
             if (ID == llvm::Intrinsic::masked_gather && i == 0) {
@@ -577,7 +646,7 @@ static llvm::Function *lGetIntrinsicDeclaration(llvm::Module *module, const std:
             }
         } else {
             // For LLVM intrinsics, we need to deduce the argument LLVM types.
-            auto exprType = lDeductArgTypes(ID, args);
+            auto exprType = lDeductArgTypes(module, ID, args, pos);
             llvm::Function *funcDecl = lGetFunctionDeclaration(module, ID, exprType);
             llvm::StringRef funcName = funcDecl->getName();
             if (g->target->checkIntrinsticSupport(funcName, pos) == false) {
