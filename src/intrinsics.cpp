@@ -259,6 +259,22 @@ static const Type *lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) 
         return PointerType::GetUniform(AtomicType::VaryingDouble);
     }
 
+    // vector with length different from TARGET_WIDTH can be repsented as uniform TYPE<N>
+    else if (const llvm::VectorType *vt = llvm::dyn_cast<llvm::VectorType>(t)) {
+        // check if vector length is equal to TARGET_WIDTH
+        unsigned int vectorWidth = vt->getElementCount().getKnownMinValue();
+        if (vectorWidth == g->target->getVectorWidth()) {
+            // we should never hit this case, because it should be handled by the cases above
+            return nullptr;
+        } else {
+            const Type *elementType = lLLVMTypeToISPCType(vt->getElementType(), intAsUnsigned);
+            if (elementType == nullptr) {
+                return nullptr;
+            }
+            return new VectorType(elementType, vectorWidth);
+        }
+    }
+
     return nullptr;
 }
 
