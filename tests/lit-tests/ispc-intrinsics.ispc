@@ -1,4 +1,17 @@
-// RUN: %{ispc} %s --nowrap --target=host --emit-llvm-text --enable-llvm-intrinsics -o - 2>&1 | FileCheck %s
+// RUN: %{ispc} %s --nowrap --target=avx512skx-x4 --emit-llvm-text --enable-llvm-intrinsics -o - 2>&1 | FileCheck %s
+// RUN: %{ispc} %s --nowrap --target=avx512skx-x8 --emit-llvm-text --enable-llvm-intrinsics -o - 2>&1 | FileCheck %s
+// RUN: %{ispc} %s --nowrap --target=avx512skx-x16 --emit-llvm-text --enable-llvm-intrinsics -o - 2>&1 | FileCheck %s
+// RUN: %{ispc} %s --nowrap --target=avx512skx-x32 --emit-llvm-text --enable-llvm-intrinsics -o - 2>&1 | FileCheck %s
+// RUN: %{ispc} %s --nowrap --target=avx2-i8x32 --emit-llvm-text --enable-llvm-intrinsics -o - 2>&1 | FileCheck %s
+// RUN: %{ispc} %s --nowrap --target=avx2-i16x16 --emit-llvm-text --enable-llvm-intrinsics -o - 2>&1 | FileCheck %s
+// RUN: %{ispc} %s --nowrap --target=avx2-i32x4 --emit-llvm-text --enable-llvm-intrinsics -o - 2>&1 | FileCheck %s
+// RUN: %{ispc} %s --nowrap --target=avx2-i32x8 --emit-llvm-text --enable-llvm-intrinsics -o - 2>&1 | FileCheck %s
+// RUN: %{ispc} %s --nowrap --target=avx2-i32x16 --emit-llvm-text --enable-llvm-intrinsics -o - 2>&1 | FileCheck %s
+// RUN: %{ispc} %s --nowrap --target=avx2-i64x4 --emit-llvm-text --enable-llvm-intrinsics -o - 2>&1 | FileCheck %s
+// RUN: %{ispc} %s --nowrap --target=sse4.2-i8x16 --emit-llvm-text --enable-llvm-intrinsics -o - 2>&1 | FileCheck %s
+// RUN: %{ispc} %s --nowrap --target=sse4.2-i16x8 --emit-llvm-text --enable-llvm-intrinsics -o - 2>&1 | FileCheck %s
+
+// REQUIRES: X86_ENABLED
 
 #define unmangled __attribute__((unmangled))
 #define ATTRS unmasked unmangled
