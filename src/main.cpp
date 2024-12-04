@@ -730,7 +730,8 @@ int main(int Argc, char *Argv[]) {
 
             arch = ParseArch(argv[i] + 7);
             if (arch == Arch::error) {
-                errorHandler.AddError("Unsupported value for --arch, supported values are: %s",
+                errorHandler.AddError("Unsupported value for --arch, supported values are: %s. Use --support-matrix "
+                                      "for complete information about supported targets, archs and target OSes.",
                                       g->target_registry->getSupportedArchs().c_str());
             }
 
@@ -834,8 +835,9 @@ int main(int Argc, char *Argv[]) {
                 auto result = ParseISPCTargets(argv[i]);
                 targets = result.first;
                 if (!result.second.empty()) {
-                    errorHandler.AddError("Incorrect targets: %s.  Choices are: %s.", result.second.c_str(),
-                                          g->target_registry->getSupportedTargets().c_str());
+                    errorHandler.AddError("Incorrect targets: %s.  Choices are: %s. Use --support-matrix for complete "
+                                          "information about supported targets, archs and target OSes.",
+                                          result.second.c_str(), g->target_registry->getSupportedTargets().c_str());
                 }
             } else {
                 errorHandler.AddError("No target specified after --target option.");
@@ -844,14 +846,17 @@ int main(int Argc, char *Argv[]) {
             auto result = ParseISPCTargets(argv[i] + 9);
             targets = result.first;
             if (!result.second.empty()) {
-                errorHandler.AddError("Incorrect targets: %s.  Choices are: %s.", result.second.c_str(),
-                                      g->target_registry->getSupportedTargets().c_str());
+                errorHandler.AddError("Incorrect targets: %s.  Choices are: %s. Use --support-matrix for complete "
+                                      "information about supported targets, archs and target OSes.",
+                                      result.second.c_str(), g->target_registry->getSupportedTargets().c_str());
             }
         } else if (!strncmp(argv[i], "--target-os=", 12)) {
             g->target_os = ParseOS(argv[i] + 12);
             if (g->target_os == TargetOS::error) {
-                errorHandler.AddError("Unsupported value for --target-os, supported values are: %s",
-                                      g->target_registry->getSupportedOSes().c_str());
+                errorHandler.AddError(
+                    "Unsupported value for --target-os, supported values are: %s. Use --support-matrix for complete "
+                    "information about supported targets, archs and target OSes.",
+                    g->target_registry->getSupportedOSes().c_str());
             }
         } else if (!strcmp(argv[i], "--no-vectorcall")) {
             vectorCall = BooleanOptValue::disabled;
