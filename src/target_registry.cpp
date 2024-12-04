@@ -12,6 +12,7 @@
 #include "util.h"
 
 #include <numeric>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -321,20 +322,24 @@ std::string TargetLibRegistry::getSupportedArchs() {
 }
 
 std::string TargetLibRegistry::getSupportedTargets() {
-    std::string targets;
+    std::set<std::string> targetSet;
     for (Arch arch = Arch::none; arch < Arch::error; arch++) {
         for (ISPCTarget target = ISPCTarget::sse2_i32x4; target < ISPCTarget::error; target++) {
             for (TargetOS os = TargetOS::windows; os < TargetOS::error; os++) {
                 if (isSupported(target, os, arch)) {
-                    if (!targets.empty()) {
-                        targets += ", ";
-                    }
-                    targets += ISPCTargetToString(target);
-                    goto next_target;
+                    targetSet.insert(ISPCTargetToString(target));
+                    break;
                 }
             }
         }
-    next_target:;
+    }
+
+    std::string targets;
+    for (const auto &target : targetSet) {
+        if (!targets.empty()) {
+            targets += ", ";
+        }
+        targets += target;
     }
 
     return targets;
