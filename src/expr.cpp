@@ -1826,23 +1826,13 @@ bool lCreateBinaryOperatorCall(const BinaryExpr::Op bop, Expr *a0, Expr *a1, Exp
     }
     if (CastType<StructType>(type0) != nullptr || CastType<StructType>(type1) != nullptr) {
         std::string opName = std::string("operator") + lOpString(bop);
-        std::vector<Symbol *> funs;
-        m->symbolTable->LookupFunction(opName.c_str(), &funs);
-        if (funs.size() > 0) {
-            Expr *func = new FunctionSymbolExpr(opName.c_str(), funs, sp);
-            ExprList *args = new ExprList(sp);
-            args->exprs.push_back(arg0);
-            args->exprs.push_back(arg1);
-            op = new FunctionCallExpr(func, args, sp);
-            return abort;
-        }
-
-        // templates
+        std::vector<Symbol *> funcs;
+        bool foundAnyFunction = m->symbolTable->LookupFunction(opName.c_str(), &funcs);
         std::vector<TemplateSymbol *> funcTempls;
-        bool foundAny = m->symbolTable->LookupFunctionTemplate(opName.c_str(), &funcTempls);
-        if (foundAny && funcTempls.size() > 0) {
-            TemplateArgs templArgs;
-            FunctionSymbolExpr *functionSymbolExpr = new FunctionSymbolExpr(opName.c_str(), funcTempls, templArgs, sp);
+        bool foundAnyTemplate = m->symbolTable->LookupFunctionTemplate(opName.c_str(), &funcTempls);
+        if (foundAnyFunction || foundAnyTemplate) {
+            FunctionSymbolExpr *functionSymbolExpr =
+                new FunctionSymbolExpr(opName.c_str(), funcs, funcTempls, TemplateArgs(), sp);
             Assert(functionSymbolExpr != nullptr);
             ExprList *args = new ExprList(sp);
             args->exprs.push_back(arg0);
@@ -1850,8 +1840,7 @@ bool lCreateBinaryOperatorCall(const BinaryExpr::Op bop, Expr *a0, Expr *a1, Exp
             op = new FunctionCallExpr(functionSymbolExpr, args, sp);
             return abort;
         }
-
-        if (funs.size() == 0 && funcTempls.size() == 0) {
+        if (funcs.size() == 0 && funcTempls.size() == 0) {
             Error(sp, "operator %s(%s, %s) is not defined.", opName.c_str(), (type0->GetString()).c_str(),
                   (type1->GetString()).c_str());
             abort = true;
@@ -2641,7 +2630,7 @@ Expr *BinaryExpr::Optimize() {
                 std::vector<Symbol *> rcpFuns;
                 m->symbolTable->LookupFunction("rcp", &rcpFuns);
                 if (rcpFuns.size() > 0) {
-                    Expr *rcpSymExpr = new FunctionSymbolExpr("rcp", rcpFuns, pos);
+                    Expr *rcpSymExpr = new FunctionSymbolExpr("rcp", rcpFuns, {}, TemplateArgs(), pos);
                     ExprList *args = new ExprList(arg1, arg1->pos);
                     Expr *rcpCall = new FunctionCallExpr(rcpSymExpr, args, arg1->pos);
                     rcpCall = ::TypeCheck(rcpCall);
@@ -8679,16 +8668,16 @@ void SymbolExpr::Print(Indent &indent) const {
 ///////////////////////////////////////////////////////////////////////////
 // FunctionSymbolExpr
 
-FunctionSymbolExpr::FunctionSymbolExpr(const char *n, const std::vector<Symbol *> &candidates, SourcePos p)
-    : Expr(p, FunctionSymbolExprID), name(n), candidateFunctions(candidates), triedToResolve(false),
-      unresolvedButDependent(false) {
-    matchingFunc = (candidates.size() == 1) ? candidates[0] : nullptr;
-}
-
-FunctionSymbolExpr::FunctionSymbolExpr(const char *n, const std::vector<TemplateSymbol *> &candidates,
+FunctionSymbolExpr::FunctionSymbolExpr(const char *n, const std::vector<Symbol *> &candFuncs,
+                                       const std::vector<TemplateSymbol *> &candTemplFuncs,
                                        const TemplateArgs &templArgs, SourcePos p)
-    : Expr(p, FunctionSymbolExprID), name(n), candidateTemplateFunctions(candidates), templateArgs(templArgs),
-      matchingFunc(nullptr), triedToResolve(false), unresolvedButDependent(false) {
+    : Expr(p, FunctionSymbolExprID), name(n), candidateFunctions(candFuncs), candidateTemplateFunctions(candTemplFuncs),
+      templateArgs(templArgs), matchingFunc(nullptr), triedToResolve(false), unresolvedButDependent(false) {
+    // We have only one function candidate
+    if (candFuncs.size() == 1 && candTemplFuncs.empty()) {
+        matchingFunc = candFuncs[0];
+        return;
+    }
     normalizeTemplateArgs();
 }
 
@@ -8731,19 +8720,13 @@ Expr *FunctionSymbolExpr::Optimize() { return this; }
 int FunctionSymbolExpr::EstimateCost() const { return 0; }
 
 FunctionSymbolExpr *FunctionSymbolExpr::Instantiate(TemplateInstantiation &templInst) const {
-    // TODO: interfaces for regular function call and template function call should be unified.
-    // Bonus: it is possbile that a call can possbily refer to both.
-    if (candidateFunctions.size() != 0) {
-        Assert(candidateTemplateFunctions.size() == 0);
-        return new FunctionSymbolExpr(name.c_str(), candidateFunctions, pos);
-    }
     TemplateArgs instTemplateArgs;
     for (auto &arg : templateArgs) {
         instTemplateArgs.push_back(
             arg.IsType() ? TemplateArg(arg.GetAsType()->ResolveDependenceForTopType(templInst), arg.GetPos())
                          : TemplateArg(arg.GetAsExpr()->Instantiate(templInst), arg.GetPos()));
     }
-    return new FunctionSymbolExpr(name.c_str(), candidateTemplateFunctions, instTemplateArgs, pos);
+    return new FunctionSymbolExpr(name.c_str(), candidateFunctions, candidateTemplateFunctions, instTemplateArgs, pos);
 }
 
 void FunctionSymbolExpr::Print(Indent &indent) const {
@@ -9307,6 +9290,73 @@ static bool lReportErrorUnableToFindOverload(std::vector<Symbol *> &matches, con
     return false;
 }
 
+int FunctionSymbolExpr::FindBestMatchCost(const std::vector<Symbol *> &actualCandidates,
+                                          const std::vector<const Type *> &argTypes,
+                                          const std::vector<bool> *argCouldBeNULL,
+                                          const std::vector<bool> *argIsConstant, SourcePos pos,
+                                          const std::string &name, std::vector<Symbol *> &matches) {
+    int bestMatchCost = 1 << 30;
+    std::vector<int> candidateCosts;
+    std::vector<int *> candidateExpandCosts;
+
+    if (actualCandidates.empty()) {
+        return bestMatchCost;
+    }
+
+    // Compute the cost for calling each of the candidate functions
+    for (int i = 0; i < (int)actualCandidates.size(); ++i) {
+        const FunctionType *ft = CastType<FunctionType>(actualCandidates[i]->type);
+        AssertPos(pos, ft != nullptr);
+        int *cost = new int[argTypes.size()];
+        candidateCosts.push_back(computeOverloadCost(ft, argTypes, argCouldBeNULL, argIsConstant, cost));
+        candidateExpandCosts.push_back(cost);
+    }
+
+    // Find the best cost, and then the candidate or candidates that have that cost.
+    for (int i = 0; i < (int)candidateCosts.size(); ++i) {
+        if (candidateCosts[i] != -1 && candidateCosts[i] < bestMatchCost) {
+            bestMatchCost = candidateCosts[i];
+        }
+    }
+
+    // None of the candidates matched
+    if (bestMatchCost == (1 << 30)) {
+        // Clean up memory
+        for (int i = 0; i < (int)candidateExpandCosts.size(); ++i) {
+            delete[] candidateExpandCosts[i];
+        }
+        return bestMatchCost;
+    }
+
+    for (int i = 0; i < (int)candidateCosts.size(); ++i) {
+        if (candidateCosts[i] == bestMatchCost) {
+            for (int j = 0; j < (int)candidateCosts.size(); ++j) {
+                for (int k = 0; k < argTypes.size(); k++) {
+                    if (candidateCosts[j] != -1 && candidateExpandCosts[j][k] < candidateExpandCosts[i][k]) {
+                        std::vector<Symbol *> temp;
+                        temp.push_back(actualCandidates[i]);
+                        temp.push_back(actualCandidates[j]);
+                        std::string candidateMessage = lGetOverloadCandidateMessage(temp, argTypes, argCouldBeNULL);
+                        Warning(pos,
+                                "call to \"%s\" is ambiguous. "
+                                "This warning will be turned into error in the next ispc release.\n"
+                                "Please add explicit cast to arguments to have unambiguous match."
+                                "\n%s",
+                                name.c_str(), candidateMessage.c_str());
+                    }
+                }
+            }
+            matches.push_back(actualCandidates[i]);
+        }
+    }
+
+    for (int i = 0; i < (int)candidateExpandCosts.size(); ++i) {
+        delete[] candidateExpandCosts[i];
+    }
+
+    return bestMatchCost; // Return the best match cost
+}
+
 bool FunctionSymbolExpr::ResolveOverloads(SourcePos argPos, const std::vector<const Type *> &argTypes,
                                           const std::vector<bool> *argCouldBeNULL,
                                           const std::vector<bool> *argIsConstant) {
@@ -9332,79 +9382,63 @@ bool FunctionSymbolExpr::ResolveOverloads(SourcePos argPos, const std::vector<co
     // number of arguments as have parameters (including functions that
     // take more arguments but have defaults starting no later than after
     // our last parameter).
-    std::vector<Symbol *> actualCandidates = getCandidateFunctions(argTypes.size());
+    std::vector<Symbol *> funcCandidates = getCandidateFunctions(argTypes.size());
     std::vector<Symbol *> templateCandidates = getCandidateTemplateFunctions(argTypes);
-    actualCandidates.insert(actualCandidates.end(), templateCandidates.begin(), templateCandidates.end());
+    std::vector<Symbol *> funcMatches, templateMatches;
 
-    int bestMatchCost = 1 << 30;
-    std::vector<Symbol *> matches;
-    std::vector<int> candidateCosts;
-    std::vector<int *> candidateExpandCosts;
-
-    if (actualCandidates.size() == 0) {
-        return lReportErrorUnableToFindOverload(matches, argTypes, argCouldBeNULL, name, pos);
+    if (funcCandidates.empty() && templateCandidates.empty()) {
+        return lReportErrorUnableToFindOverload(funcMatches, argTypes, argCouldBeNULL, name, pos);
     }
 
-    // Compute the cost for calling each of the candidate functions
-    for (int i = 0; i < (int)actualCandidates.size(); ++i) {
-        const FunctionType *ft = CastType<FunctionType>(actualCandidates[i]->type);
-        AssertPos(pos, ft != nullptr);
-        int *cost = new int[argTypes.size()];
-        candidateCosts.push_back(computeOverloadCost(ft, argTypes, argCouldBeNULL, argIsConstant, cost));
-        candidateExpandCosts.push_back(cost);
+    // Calculate best match costs for functions and function templates separately
+    int bestFuncMatchCost =
+        FindBestMatchCost(funcCandidates, argTypes, argCouldBeNULL, argIsConstant, pos, name, funcMatches);
+    int bestTemplateMatchCost =
+        FindBestMatchCost(templateCandidates, argTypes, argCouldBeNULL, argIsConstant, pos, name, templateMatches);
+
+    // Check if no candidates matched
+    if ((bestFuncMatchCost == (1 << 30)) && (bestTemplateMatchCost == (1 << 30))) {
+        return lReportErrorUnableToFindOverload(funcMatches, argTypes, argCouldBeNULL, name, pos);
     }
 
-    // Find the best cost, and then the candidate or candidates that have
-    // that cost.
-    for (int i = 0; i < (int)candidateCosts.size(); ++i) {
-        if (candidateCosts[i] != -1 && candidateCosts[i] < bestMatchCost) {
-            bestMatchCost = candidateCosts[i];
+    // We have a single match for both functions and templates
+    if (funcMatches.size() == 1 && templateMatches.size() == 1) {
+        // Compare costs and decide which match to use
+        if (bestFuncMatchCost == bestTemplateMatchCost) {
+            // If costs are equal, prefer template if we have explicit templateArgs
+            matchingFunc = (templateArgs.size() > 0) ? templateMatches[0] : funcMatches[0];
+        } else {
+            // Choose the one with the lower cost
+            matchingFunc = (bestTemplateMatchCost < bestFuncMatchCost) ? templateMatches[0] : funcMatches[0];
         }
-    }
-    // None of the candidates matched
-    if (bestMatchCost == (1 << 30)) {
-        return lReportErrorUnableToFindOverload(matches, argTypes, argCouldBeNULL, name, pos);
-    }
-
-    for (int i = 0; i < (int)candidateCosts.size(); ++i) {
-        if (candidateCosts[i] == bestMatchCost) {
-            for (int j = 0; j < (int)candidateCosts.size(); ++j) {
-                for (int k = 0; k < argTypes.size(); k++) {
-                    if (candidateCosts[j] != -1 && candidateExpandCosts[j][k] < candidateExpandCosts[i][k]) {
-                        std::vector<Symbol *> temp;
-                        temp.push_back(actualCandidates[i]);
-                        temp.push_back(actualCandidates[j]);
-                        std::string candidateMessage = lGetOverloadCandidateMessage(temp, argTypes, argCouldBeNULL);
-                        Warning(pos,
-                                "call to \"%s\" is ambiguous. "
-                                "This warning will be turned into error in the next ispc release.\n"
-                                "Please add explicit cast to arguments to have unambiguous match."
-                                "\n%s",
-                                name.c_str(), candidateMessage.c_str());
-                    }
-                }
-            }
-            matches.push_back(actualCandidates[i]);
-        }
-    }
-    for (int i = 0; i < (int)candidateExpandCosts.size(); ++i) {
-        delete[] candidateExpandCosts[i];
-    }
-
-    if (matches.size() == 1) {
-        // Only one match: success
-        matchingFunc = matches[0];
         return true;
-    } else if (matches.size() > 1) {
+    }
+
+    // Handle single matches: function
+    if (funcMatches.size() == 1 && templateMatches.empty()) {
+        matchingFunc = funcMatches[0];
+        return true;
+    }
+    // Handle single matches: template
+    if (templateMatches.size() == 1 && funcMatches.empty()) {
+        matchingFunc = templateMatches[0];
+        return true;
+    }
+
+    // Handle multiple matches
+    if (funcMatches.size() > 1 || templateMatches.size() > 1) {
+        std::vector<Symbol *> combinedMatches = funcMatches;
+        combinedMatches.insert(combinedMatches.end(), templateMatches.begin(), templateMatches.end());
+
         // Multiple matches: ambiguous
-        std::string candidateMessage = lGetOverloadCandidateMessage(matches, argTypes, argCouldBeNULL);
+        std::string candidateMessage = lGetOverloadCandidateMessage(combinedMatches, argTypes, argCouldBeNULL);
         Error(pos, "Multiple overloaded functions matched call to function \"%s\".\n%s", name.c_str(),
               candidateMessage.c_str());
         return false;
-    } else {
-        // No matches at all
-        return lReportErrorUnableToFindOverload(matches, argTypes, argCouldBeNULL, name, pos);
     }
+
+    // No matches at all
+    return lReportErrorUnableToFindOverload(funcMatches, argTypes, argCouldBeNULL, name, pos);
 }
 
 ///////////////////////////////////////////////////////////////////////////
