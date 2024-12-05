@@ -12,6 +12,7 @@
 // CHECK-LABEL: define <{{[0-9]*}} x float> @foo
 // CHECK: call <{{[0-9]*}} x i32> @goo___vyivyf___vyivyf(<{{[0-9]*}} x i32> %argFoo0, <{{[0-9]*}} x float> %argFoo1, <{{[0-9]*}} x {{.*}}> {{.*}})
 // CHECK: call <{{[0-9]*}} x i32> @goo___vyivyi___vyivyi(<{{[0-9]*}} x i32> %argFoo0, <{{[0-9]*}} x i32> %argFoo0, <{{[0-9]*}} x {{.*}}> {{.*}})
+// CHECK: call <{{[0-9]*}} x i32> @goo___vyivyf(<{{[0-9]*}} x i32> %argFoo0, <{{[0-9]*}} x float> %argFoo1, <{{[0-9]*}} x {{.*}}> {{.*}})
 
 // Instantiated function
 // CHECK-LABEL: define linkonce_odr <{{[0-9]*}} x i32> @goo___vyivyi___vyivyi(<{{[0-9]*}} x i32> %argGooOne, <{{[0-9]*}} x i32> %argGooTwo, <{{[0-9]*}} x {{.*}}> %__mask)
@@ -33,6 +34,7 @@ template <> noinline int goo<int, float>(int argGooOne, float argGooTwo) {
 float foo(int argFoo0, float argFoo1) {
     float a = goo<int, float>(argFoo0, argFoo1);
     int b = goo<int, int>(argFoo0, argFoo0);
-    return a + b;
+    int c = goo(argFoo0, argFoo1);
+    return a + b + c;
 }
 

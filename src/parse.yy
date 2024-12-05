@@ -325,7 +325,7 @@ primary_expression
             std::vector<Symbol *> funs;
             m->symbolTable->LookupFunction(name, &funs);
             if (funs.size() > 0)
-                $$ = new FunctionSymbolExpr(name, funs, @1);
+                $$ = new FunctionSymbolExpr(name, funs, {}, TemplateArgs(), @1);
         }
         if ($$ == nullptr) {
             std::vector<std::string> alternates =
@@ -578,7 +578,7 @@ intrincall_expression
           const std::vector<Symbol *> funcs{sym};
           FunctionSymbolExpr *fSym = nullptr;
           if (sym != nullptr)
-              fSym = new FunctionSymbolExpr(fname, funcs, @1);
+              fSym = new FunctionSymbolExpr(fname, funcs, {}, TemplateArgs(), @1);
           $$ = new FunctionCallExpr(fSym, new ExprList(Union(@1,@2)), Union(@1,@3));
           delete name;
       }
@@ -591,7 +591,7 @@ intrincall_expression
           const std::vector<Symbol *> funcs{sym};
           FunctionSymbolExpr *fSym = nullptr;
           if (sym != nullptr)
-              fSym = new FunctionSymbolExpr(fname, funcs, @1);
+              fSym = new FunctionSymbolExpr(fname, funcs, {}, TemplateArgs(), @1);
           $$ = new FunctionCallExpr(fSym, $3, Union(@1,@4));
           delete name;
       }
@@ -609,16 +609,18 @@ funcall_expression
       {
           // Create FunctionSymbolExpr with a candidate functions list
           Expr *functionSymbolExpr = nullptr;
-          std::vector<TemplateSymbol *> funcTempls;
           const std::string name = $1->first->name;
+          std::vector<Symbol *> funcs;
+          m->symbolTable->LookupFunction(name.c_str(), &funcs);
+          std::vector<TemplateSymbol *> funcTempls;
           m->symbolTable->LookupFunctionTemplate(name, &funcTempls);
-          if (funcTempls.size() > 0) {
+          if (funcs.size() > 0 || funcTempls.size() > 0) {
               TemplateArgs *templArgs = $1->second;
               Assert(templArgs);
-              functionSymbolExpr = new FunctionSymbolExpr(name.c_str(), funcTempls, *templArgs, @1);
+              functionSymbolExpr = new FunctionSymbolExpr(name.c_str(), funcs, funcTempls, *templArgs, @1);
               $$ = new FunctionCallExpr(functionSymbolExpr, new ExprList(Union(@1,@2)), Union(@1,@3));
           } else {
-              Error(@1, "No matching template functions were declared.");
+              Error(@1, "No matching functions were declared.");
               $$ = nullptr;
           }
 
@@ -629,16 +631,18 @@ funcall_expression
       {
           // Create FunctionSymbolExpr with a candidate functions list
           Expr *functionSymbolExpr = nullptr;
-          std::vector<TemplateSymbol *> funcTempls;
           const std::string name = $1->first->name;
+          std::vector<Symbol *> funcs;
+          m->symbolTable->LookupFunction(name.c_str(), &funcs);
+          std::vector<TemplateSymbol *> funcTempls;
           m->symbolTable->LookupFunctionTemplate(name, &funcTempls);
-          if (funcTempls.size() > 0) {
+          if (funcs.size() > 0 || funcTempls.size() > 0) {
               TemplateArgs *templArgs = $1->second;
               Assert(templArgs);
-              functionSymbolExpr = new FunctionSymbolExpr(name.c_str(), funcTempls, *templArgs, @1);
+              functionSymbolExpr = new FunctionSymbolExpr(name.c_str(), funcs, funcTempls, *templArgs, @1);
               $$ = new FunctionCallExpr(functionSymbolExpr, $3, Union(@1,@4));
           } else {
-              Error(@1, "No matching template functions were declared.");
+              Error(@1, "No matching functions were declared.");
               $$ = nullptr;
           }
 

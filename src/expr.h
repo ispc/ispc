@@ -746,8 +746,8 @@ class SymbolExpr : public Expr {
  */
 class FunctionSymbolExpr : public Expr {
   public:
-    FunctionSymbolExpr(const char *name, const std::vector<Symbol *> &candFuncs, SourcePos pos);
-    FunctionSymbolExpr(const char *name, const std::vector<TemplateSymbol *> &candFuncs, const TemplateArgs &templArgs,
+    FunctionSymbolExpr(const char *name, const std::vector<Symbol *> &candFuncs,
+                       const std::vector<TemplateSymbol *> &candTemplFuncs, const TemplateArgs &templArgs,
                        SourcePos pos);
 
     static inline bool classof(FunctionSymbolExpr const *) { return true; }
@@ -785,6 +785,16 @@ class FunctionSymbolExpr : public Expr {
     static int computeOverloadCost(const FunctionType *ftype, const std::vector<const Type *> &argTypes,
                                    const std::vector<bool> *argCouldBeNULL, const std::vector<bool> *argIsConstant,
                                    int *cost);
+    /**Determines the best match cost for function or template candidates.
+      Evaluates a list of candidate functions or template functions
+      against the provided argument types and computes the cost of calling each candidate.
+      It identifies the best match based on the computed costs and populates the
+      provided matches vector with the candidates that are considered valid matches.
+      Returns the best match cost.
+    */
+    static int FindBestMatchCost(const std::vector<Symbol *> &candidates, const std::vector<const Type *> &argTypes,
+                                 const std::vector<bool> *argCouldBeNULL, const std::vector<bool> *argIsConstant,
+                                 SourcePos pos, const std::string &name, std::vector<Symbol *> &matches);
     /** This function applies "normalization" to the template arguments, specifically
         adjusting their variability to ensure consistency with the expected types.
 
