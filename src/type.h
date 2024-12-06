@@ -358,7 +358,6 @@ class AtomicType : public Type {
     const BasicType basicType;
 
     static const AtomicType *UniformBool, *VaryingBool;
-    static const AtomicType *UniformInt1, *VaryingInt1;
     static const AtomicType *UniformInt8, *VaryingInt8;
     static const AtomicType *UniformInt16, *VaryingInt16;
     static const AtomicType *UniformInt32, *VaryingInt32;
@@ -372,6 +371,14 @@ class AtomicType : public Type {
     static const AtomicType *UniformDouble, *VaryingDouble;
     static const AtomicType *Dependent;
     static const AtomicType *Void;
+
+    /** The VaryingInt1 type is needed as a workaround for the absence of an
+     * ISPC type (for some mask widths, e.g., i32) representing i1, which is
+     * required for certain LLVM intrinsics like masked.load. In my opinion,
+     * this is another consequence of the unclear bool/mask types in
+     * ISPC. There is no intention of supporting in general, so only fixes
+     * to ensure functionality for two specific intrinsics are made. */
+    static const AtomicType *VaryingInt1;
 
   private:
     const Variability variability;
