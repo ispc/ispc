@@ -114,7 +114,6 @@ const Type *Type::ResolveDependenceForTopType(TemplateInstantiation &templInst) 
 
 const AtomicType *AtomicType::UniformBool = new AtomicType(AtomicType::TYPE_BOOL, Variability::Uniform, false);
 const AtomicType *AtomicType::VaryingBool = new AtomicType(AtomicType::TYPE_BOOL, Variability::Varying, false);
-const AtomicType *AtomicType::UniformInt1 = new AtomicType(AtomicType::TYPE_INT1, Variability::Uniform, false);
 const AtomicType *AtomicType::VaryingInt1 = new AtomicType(AtomicType::TYPE_INT1, Variability::Varying, false);
 const AtomicType *AtomicType::UniformInt8 = new AtomicType(AtomicType::TYPE_INT8, Variability::Uniform, false);
 const AtomicType *AtomicType::VaryingInt8 = new AtomicType(AtomicType::TYPE_INT8, Variability::Varying, false);
@@ -259,10 +258,11 @@ bool AtomicType::IsUnsignedType() const {
 }
 
 bool AtomicType::IsSignedType() const {
-    return (basicType == TYPE_INT8 || basicType == TYPE_INT16 || basicType == TYPE_INT32 || basicType == TYPE_INT64);
+    return (basicType == TYPE_INT1 || basicType == TYPE_INT8 || basicType == TYPE_INT16 || basicType == TYPE_INT32 ||
+            basicType == TYPE_INT64);
 }
 
-bool AtomicType::IsBoolType() const { return basicType == TYPE_BOOL; }
+bool AtomicType::IsBoolType() const { return basicType == TYPE_BOOL || basicType == TYPE_INT1; }
 
 bool AtomicType::IsConstType() const { return isConst; }
 
@@ -480,6 +480,9 @@ std::string AtomicType::Mangle() const {
     case TYPE_BOOL:
         ret += "b";
         break;
+    case TYPE_INT1:
+        ret += "B";
+        break;
     case TYPE_INT8:
         ret += "t";
         break;
@@ -656,6 +659,9 @@ llvm::DIType *AtomicType::GetDIType(llvm::DIScope *scope) const {
 
         case TYPE_BOOL:
             return m->diBuilder->createBasicType("bool", 32 /* size */, llvm::dwarf::DW_ATE_unsigned);
+            break;
+        case TYPE_INT1:
+            return m->diBuilder->createBasicType("int1", 1 /* size */, llvm::dwarf::DW_ATE_signed);
             break;
         case TYPE_INT8:
             return m->diBuilder->createBasicType("int8", 8 /* size */, llvm::dwarf::DW_ATE_signed);
