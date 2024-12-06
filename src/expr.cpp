@@ -7134,23 +7134,11 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
             cast = exprVal;
             break;
         case AtomicType::TYPE_INT8:
-        case AtomicType::TYPE_UINT8: {
-            llvm::Value *zero = LLVMIntAsType(0, fromType->LLVMType(g->ctx));
-            cast = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, exprVal, zero, cOpName);
-            break;
-        }
+        case AtomicType::TYPE_UINT8:
         case AtomicType::TYPE_INT16:
-        case AtomicType::TYPE_UINT16: {
-            llvm::Value *zero = LLVMIntAsType(0, fromType->LLVMType(g->ctx));
-            cast = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, exprVal, zero, cOpName);
-            break;
-        }
+        case AtomicType::TYPE_UINT16:
         case AtomicType::TYPE_INT32:
-        case AtomicType::TYPE_UINT32: {
-            llvm::Value *zero = LLVMIntAsType(0, fromType->LLVMType(g->ctx));
-            cast = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, exprVal, zero, cOpName);
-            break;
-        }
+        case AtomicType::TYPE_UINT32:
         case AtomicType::TYPE_INT64:
         case AtomicType::TYPE_UINT64: {
             llvm::Value *zero = LLVMIntAsType(0, fromType->LLVMType(g->ctx));
