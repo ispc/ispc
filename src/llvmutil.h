@@ -97,6 +97,8 @@ extern llvm::Constant *LLVMTrue, *LLVMFalse, *LLVMTrueInStorage, *LLVMFalseInSto
 class Target;
 extern void InitLLVMUtil(llvm::LLVMContext *ctx, Target &target);
 
+/** Returns an LLVM i1 constant of the given value */
+extern llvm::ConstantInt *LLVMInt1(bool i);
 /** Returns an LLVM i8 constant of the given value */
 extern llvm::ConstantInt *LLVMInt8(int8_t i);
 /** Returns an LLVM i8 constant of the given value */
@@ -127,6 +129,10 @@ extern llvm::Constant *LLVMBoolVector(bool v);
 /** Returns an LLVM boolean vector constant of the given value smeared
     across all elements with bool represented as storage type(i8)*/
 extern llvm::Constant *LLVMBoolVectorInStorage(bool v);
+
+/** Returns an LLVM i1 vector constant of the given value smeared
+    across all elements */
+extern llvm::Constant *LLVMInt1Vector(bool i);
 
 /** Returns an LLVM i8 vector constant of the given value smeared
     across all elements */
@@ -185,6 +191,10 @@ extern llvm::Constant *LLVMBoolVector(const bool *v);
     with bool represented as storage type(i8).
     The array should have g->target.vectorWidth elements. */
 extern llvm::Constant *LLVMBoolVectorInStorage(const bool *v);
+
+/** Returns an LLVM i1 vector based on the given array of values.
+    The array should have g->target.vectorWidth elements. */
+extern llvm::Constant *LLVMInt1Vector(const bool *i);
 
 /** Returns an LLVM i8 vector based on the given array of values.
     The array should have g->target.vectorWidth elements. */

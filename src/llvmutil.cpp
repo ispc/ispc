@@ -214,6 +214,11 @@ void InitLLVMUtil(llvm::LLVMContext *ctx, Target &target) {
     LLVMMaskAllOff = llvm::ConstantVector::get(maskZeros);
 }
 
+llvm::ConstantInt *LLVMInt1(bool val) {
+    int ival = val ? -1 : 0;
+    return llvm::ConstantInt::get(llvm::Type::getInt1Ty(*g->ctx), ival, true /*signed*/);
+}
+
 llvm::ConstantInt *LLVMInt8(int8_t ival) {
     return llvm::ConstantInt::get(llvm::Type::getInt8Ty(*g->ctx), ival, true /*signed*/);
 }
@@ -251,6 +256,23 @@ llvm::Constant *LLVMFloat16(llvm::APFloat fv) { return llvm::ConstantFP::get(llv
 llvm::Constant *LLVMFloat(llvm::APFloat fval) { return llvm::ConstantFP::get(llvm::Type::getFloatTy(*g->ctx), fval); }
 
 llvm::Constant *LLVMDouble(llvm::APFloat dval) { return llvm::ConstantFP::get(llvm::Type::getDoubleTy(*g->ctx), dval); }
+
+llvm::Constant *LLVMInt1Vector(bool ival) {
+    llvm::Constant *v = LLVMInt1(ival);
+    std::vector<llvm::Constant *> vals;
+    for (int i = 0; i < g->target->getVectorWidth(); ++i) {
+        vals.push_back(v);
+    }
+    return llvm::ConstantVector::get(vals);
+}
+
+llvm::Constant *LLVMInt1Vector(const bool *ivec) {
+    std::vector<llvm::Constant *> vals;
+    for (int i = 0; i < g->target->getVectorWidth(); ++i) {
+        vals.push_back(LLVMInt1(ivec[i]));
+    }
+    return llvm::ConstantVector::get(vals);
+}
 
 llvm::Constant *LLVMInt8Vector(int8_t ival) {
     llvm::Constant *v = LLVMInt8(ival);

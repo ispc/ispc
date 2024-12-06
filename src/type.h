@@ -358,7 +358,7 @@ class AtomicType : public Type {
     const BasicType basicType;
 
     static const AtomicType *UniformBool, *VaryingBool;
-    static const AtomicType *UniformInt1, *VaryingInt1;
+    static const AtomicType *VaryingInt1;
     static const AtomicType *UniformInt8, *VaryingInt8;
     static const AtomicType *UniformInt16, *VaryingInt16;
     static const AtomicType *UniformInt32, *VaryingInt32;
