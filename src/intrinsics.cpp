@@ -155,9 +155,12 @@ static std::string lGetMangledTypeStr(llvm::Type *Ty, bool &HasUnnamedType) {
         case llvm::Type::PPC_FP128TyID:
             Result += "ppcf128";
             break;
+
+#if ISPC_LLVM_VERSION < ISPC_LLVM_20_0
         case llvm::Type::X86_MMXTyID:
             Result += "x86mmx";
             break;
+#endif
         case llvm::Type::X86_AMXTyID:
             Result += "x86amx";
             break;
