@@ -941,6 +941,9 @@ static llvm::Constant *lLLVMConstantValue(const Type *type, llvm::LLVMContext *c
             } else {
                 return LLVMBoolVector(value != 0.);
             }
+        case AtomicType::TYPE_INT1: {
+            return isUniform ? LLVMInt1(value != 0.) : LLVMInt1Vector(value != 0.);
+        }
         case AtomicType::TYPE_INT8: {
             int i = (int)value;
             Assert((double)i == value);
@@ -4130,6 +4133,13 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
         if (isInvoke) {
             return ctx->InvokeSyclInst(callee, ft, argVals);
         } else {
+            // if callee is llvm.masked.gather then cast with inttoptr the first arg to PtrVectorType
+            if (callee->getName().starts_with("llvm.masked.gather")) {
+                argVals[0] = ctx->IntToPtrInst(argVals[0], LLVMTypes::PtrVectorType);
+            }
+            if (callee->getName().starts_with("llvm.masked.scatter")) {
+                argVals[1] = ctx->IntToPtrInst(argVals[1], LLVMTypes::PtrVectorType);
+            }
             retVal = ctx->CallInst(callee, ft, argVals, isVoidFunc ? "" : "calltmp");
         }
     }
@@ -6021,6 +6031,7 @@ ConstExpr::ConstExpr(const ConstExpr *old, SourcePos p) : Expr(p, ConstExprID) {
 
     switch (basicType) {
     case AtomicType::TYPE_BOOL:
+    case AtomicType::TYPE_INT1:
         std::copy(old->boolVal, old->boolVal + Count(), boolVal);
         break;
     case AtomicType::TYPE_INT8:
@@ -6082,6 +6093,8 @@ llvm::Value *ConstExpr::GetValue(FunctionEmitContext *ctx) const {
         } else {
             return boolVal[0] ? LLVMTrue : LLVMFalse;
         }
+    case AtomicType::TYPE_INT1:
+        return isVarying ? LLVMInt1Vector(boolVal[0]) : LLVMInt1(boolVal[0]);
     case AtomicType::TYPE_INT8:
         return isVarying ? LLVMInt8Vector(int8Val) : LLVMInt8(int8Val[0]);
     case AtomicType::TYPE_UINT8:
@@ -6121,6 +6134,7 @@ bool ConstExpr::IsEqual(const ConstExpr *ce) const {
 
     for (int i = 0; i < Count(); ++i) {
         switch (getBasicType()) {
+        case AtomicType::TYPE_INT1:
         case AtomicType::TYPE_BOOL:
             if (boolVal[i] != ce->boolVal[i]) {
                 return false;
@@ -6269,6 +6283,7 @@ int ConstExpr::GetValues(std::vector<llvm::APFloat> &fpt) const {
 
 int ConstExpr::GetValues(std::vector<llvm::APFloat> &fpt, llvm::Type *type, bool forceVarying) const {
     switch (getBasicType()) {
+    case AtomicType::TYPE_INT1:
     case AtomicType::TYPE_BOOL:
         lConvert(boolVal, fpt, type, Count(), forceVarying);
         break;
@@ -6309,6 +6324,7 @@ int ConstExpr::GetValues(std::vector<llvm::APFloat> &fpt, llvm::Type *type, bool
 
 #define CONVERT_SWITCH                                                                                                 \
     switch (getBasicType()) {                                                                                          \
+    case AtomicType::TYPE_INT1:                                                                                        \
     case AtomicType::TYPE_BOOL:                                                                                        \
         lConvert(boolVal, toPtr, Count(), forceVarying);                                                               \
         break;                                                                                                         \
@@ -6537,6 +6553,9 @@ std::string ConstExpr::GetValuesAsStr(const std::string &separator) const {
         case AtomicType::TYPE_BOOL:
             result << (boolVal[i] ? "true" : "false");
             break;
+        case AtomicType::TYPE_INT1:
+            result << (boolVal[i] ? "-1" : "0");
+            break;
         case AtomicType::TYPE_INT8:
             result << static_cast<int>(int8Val[i]);
             break;
@@ -6620,6 +6639,9 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
     case AtomicType::TYPE_BOOL:
         opName += "_to_bool";
         break;
+    case AtomicType::TYPE_INT1:
+        opName += "_to_int1";
+        break;
     case AtomicType::TYPE_INT8:
         opName += "_to_int8";
         break;
@@ -6674,6 +6696,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int
                                  exprVal, targetType, cOpName);
             break;
+        case AtomicType::TYPE_INT1:
         case AtomicType::TYPE_INT8:
         case AtomicType::TYPE_INT16:
         case AtomicType::TYPE_INT32:
@@ -6727,6 +6750,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int
                                  exprVal, targetType, cOpName);
             break;
+        case AtomicType::TYPE_INT1:
         case AtomicType::TYPE_INT8:
         case AtomicType::TYPE_INT16:
         case AtomicType::TYPE_INT32:
@@ -6780,6 +6804,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int to double
                                  exprVal, targetType, cOpName);
             break;
+        case AtomicType::TYPE_INT1:
         case AtomicType::TYPE_INT8:
         case AtomicType::TYPE_INT16:
         case AtomicType::TYPE_INT32:
@@ -6820,6 +6845,33 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
         }
         break;
     }
+    case AtomicType::TYPE_INT1: {
+        switch (basicFromType) {
+        case AtomicType::TYPE_BOOL:
+            if (fromType->IsVaryingAtomic()) {
+                exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
+            }
+            cast = ctx->ZExtInst(exprVal, targetType, cOpName);
+            break;
+        case AtomicType::TYPE_INT1:
+            cast = exprVal;
+            break;
+        case AtomicType::TYPE_INT8:
+        case AtomicType::TYPE_UINT8:
+        case AtomicType::TYPE_INT16:
+        case AtomicType::TYPE_UINT16:
+        case AtomicType::TYPE_INT32:
+        case AtomicType::TYPE_UINT32:
+        case AtomicType::TYPE_INT64:
+        case AtomicType::TYPE_UINT64:
+            cast = ctx->TruncInst(exprVal, targetType, cOpName);
+            break;
+        default:
+            printf("fromType %s\n", aFromType->GetString().c_str());
+            FATAL("unimplemented");
+        }
+        break;
+    }
     case AtomicType::TYPE_INT8: {
         switch (basicFromType) {
         case AtomicType::TYPE_BOOL:
@@ -6827,6 +6879,9 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
                 exprVal = ctx->SwitchBoolToMaskType(exprVal, LLVMTypes::Int1VectorType, cOpName);
             }
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
+            break;
+        case AtomicType::TYPE_INT1:
+            cast = ctx->SExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
         case AtomicType::TYPE_UINT8:
@@ -6859,6 +6914,9 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
             }
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
+        case AtomicType::TYPE_INT1:
+            cast = ctx->SExtInst(exprVal, targetType, cOpName);
+            break;
         case AtomicType::TYPE_INT8:
         case AtomicType::TYPE_UINT8:
             cast = exprVal;
@@ -6890,6 +6948,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
             }
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
+        case AtomicType::TYPE_INT1:
         case AtomicType::TYPE_INT8:
             cast = ctx->SExtInst(exprVal, targetType, cOpName);
             break;
@@ -6925,6 +6984,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
             }
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
+        case AtomicType::TYPE_INT1:
         case AtomicType::TYPE_INT8:
             cast = ctx->SExtInst(exprVal, targetType, cOpName);
             break;
@@ -6960,6 +7020,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
             }
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
+        case AtomicType::TYPE_INT1:
         case AtomicType::TYPE_INT8:
         case AtomicType::TYPE_INT16:
             cast = ctx->SExtInst(exprVal, targetType, cOpName);
@@ -6995,6 +7056,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
             }
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
+        case AtomicType::TYPE_INT1:
         case AtomicType::TYPE_INT8:
         case AtomicType::TYPE_INT16:
             cast = ctx->SExtInst(exprVal, targetType, cOpName);
@@ -7048,6 +7110,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
             }
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
+        case AtomicType::TYPE_INT1:
         case AtomicType::TYPE_INT8:
         case AtomicType::TYPE_INT16:
         case AtomicType::TYPE_INT32:
@@ -7081,6 +7144,7 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
             }
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
+        case AtomicType::TYPE_INT1:
         case AtomicType::TYPE_INT8:
         case AtomicType::TYPE_INT16:
         case AtomicType::TYPE_INT32:
@@ -7133,24 +7197,13 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
             }
             cast = exprVal;
             break;
+        case AtomicType::TYPE_INT1:
         case AtomicType::TYPE_INT8:
-        case AtomicType::TYPE_UINT8: {
-            llvm::Value *zero = LLVMIntAsType(0, fromType->LLVMType(g->ctx));
-            cast = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, exprVal, zero, cOpName);
-            break;
-        }
+        case AtomicType::TYPE_UINT8:
         case AtomicType::TYPE_INT16:
-        case AtomicType::TYPE_UINT16: {
-            llvm::Value *zero = LLVMIntAsType(0, fromType->LLVMType(g->ctx));
-            cast = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, exprVal, zero, cOpName);
-            break;
-        }
+        case AtomicType::TYPE_UINT16:
         case AtomicType::TYPE_INT32:
-        case AtomicType::TYPE_UINT32: {
-            llvm::Value *zero = LLVMIntAsType(0, fromType->LLVMType(g->ctx));
-            cast = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, exprVal, zero, cOpName);
-            break;
-        }
+        case AtomicType::TYPE_UINT32:
         case AtomicType::TYPE_INT64:
         case AtomicType::TYPE_UINT64: {
             llvm::Value *zero = LLVMIntAsType(0, fromType->LLVMType(g->ctx));
@@ -7777,6 +7830,7 @@ Expr *TypeCastExpr::Optimize() {
     // appropriate one for the type that this cast is converting to.
     AtomicType::BasicType basicType = toAtomic ? toAtomic->basicType : AtomicType::TYPE_UINT32;
     switch (basicType) {
+    case AtomicType::TYPE_INT1:
     case AtomicType::TYPE_BOOL: {
         bool bv[ISPC_MAX_NVEC];
         constExpr->GetValues(bv, forceVarying);
@@ -8807,15 +8861,16 @@ static bool lIsMatchWithTypeWidening(const Type *callType, const Type *funcArgTy
     }
 
     switch (callAt->basicType) {
+    case AtomicType::TYPE_INT1:
     case AtomicType::TYPE_BOOL:
         return true;
     case AtomicType::TYPE_INT8:
     case AtomicType::TYPE_UINT8:
-        return (funcAt->basicType != AtomicType::TYPE_BOOL);
+        return (funcAt->basicType != AtomicType::TYPE_BOOL && funcAt->basicType != AtomicType::TYPE_INT1);
     case AtomicType::TYPE_INT16:
     case AtomicType::TYPE_UINT16:
-        return (funcAt->basicType != AtomicType::TYPE_BOOL && funcAt->basicType != AtomicType::TYPE_INT8 &&
-                funcAt->basicType != AtomicType::TYPE_UINT8);
+        return (funcAt->basicType != AtomicType::TYPE_BOOL && funcAt->basicType != AtomicType::TYPE_INT1 &&
+                funcAt->basicType != AtomicType::TYPE_INT8 && funcAt->basicType != AtomicType::TYPE_UINT8);
     case AtomicType::TYPE_INT32:
     case AtomicType::TYPE_UINT32:
         return (funcAt->basicType == AtomicType::TYPE_INT32 || funcAt->basicType == AtomicType::TYPE_UINT32 ||

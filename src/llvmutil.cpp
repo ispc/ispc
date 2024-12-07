@@ -32,6 +32,7 @@ llvm::Type *LLVMTypes::PointerIntType = nullptr;
 llvm::Type *LLVMTypes::BoolType = nullptr;
 llvm::Type *LLVMTypes::BoolStorageType = nullptr;
 
+llvm::Type *LLVMTypes::Int1Type = nullptr;
 llvm::Type *LLVMTypes::Int8Type = nullptr;
 llvm::Type *LLVMTypes::Int16Type = nullptr;
 llvm::Type *LLVMTypes::Int32Type = nullptr;
@@ -39,6 +40,7 @@ llvm::Type *LLVMTypes::Int64Type = nullptr;
 llvm::Type *LLVMTypes::Float16Type = nullptr;
 llvm::Type *LLVMTypes::FloatType = nullptr;
 llvm::Type *LLVMTypes::DoubleType = nullptr;
+llvm::Type *LLVMTypes::PtrType = nullptr;
 
 llvm::Type *LLVMTypes::Int8PointerType = nullptr;
 llvm::Type *LLVMTypes::Int16PointerType = nullptr;
@@ -60,6 +62,7 @@ llvm::VectorType *LLVMTypes::Int64VectorType = nullptr;
 llvm::VectorType *LLVMTypes::Float16VectorType = nullptr;
 llvm::VectorType *LLVMTypes::FloatVectorType = nullptr;
 llvm::VectorType *LLVMTypes::DoubleVectorType = nullptr;
+llvm::VectorType *LLVMTypes::PtrVectorType = nullptr;
 
 llvm::Type *LLVMTypes::Int8VectorPointerType = nullptr;
 llvm::Type *LLVMTypes::Int16VectorPointerType = nullptr;
@@ -84,6 +87,7 @@ void InitLLVMUtil(llvm::LLVMContext *ctx, Target &target) {
     LLVMTypes::PointerIntType = target.is32Bit() ? llvm::Type::getInt32Ty(*ctx) : llvm::Type::getInt64Ty(*ctx);
 
     LLVMTypes::BoolType = llvm::Type::getInt1Ty(*ctx);
+    LLVMTypes::Int1Type = llvm::Type::getInt1Ty(*ctx);
     LLVMTypes::Int8Type = LLVMTypes::BoolStorageType = llvm::Type::getInt8Ty(*ctx);
     LLVMTypes::Int16Type = llvm::Type::getInt16Ty(*ctx);
     LLVMTypes::Int32Type = llvm::Type::getInt32Ty(*ctx);
@@ -91,6 +95,11 @@ void InitLLVMUtil(llvm::LLVMContext *ctx, Target &target) {
     LLVMTypes::Float16Type = llvm::Type::getHalfTy(*ctx);
     LLVMTypes::FloatType = llvm::Type::getFloatTy(*ctx);
     LLVMTypes::DoubleType = llvm::Type::getDoubleTy(*ctx);
+#ifdef ISPC_OPAQUE_PTR_MODE
+    LLVMTypes::PtrType = llvm::PointerType::get(*ctx, 0);
+#else
+    LLVMTypes::PtrType = llvm::PointerType::get(LLVMTypes::Int8Type, 0);
+#endif // ISPC_OPAQUE_PTR_MODE
 
     LLVMTypes::Int8PointerType = llvm::PointerType::get(LLVMTypes::Int8Type, 0);
     LLVMTypes::Int16PointerType = llvm::PointerType::get(LLVMTypes::Int16Type, 0);
@@ -134,6 +143,7 @@ void InitLLVMUtil(llvm::LLVMContext *ctx, Target &target) {
     LLVMTypes::Float16VectorType = LLVMVECTOR::get(LLVMTypes::Float16Type, target.getVectorWidth());
     LLVMTypes::FloatVectorType = LLVMVECTOR::get(LLVMTypes::FloatType, target.getVectorWidth());
     LLVMTypes::DoubleVectorType = LLVMVECTOR::get(LLVMTypes::DoubleType, target.getVectorWidth());
+    LLVMTypes::PtrVectorType = LLVMVECTOR::get(LLVMTypes::PtrType, target.getVectorWidth());
 
     LLVMTypes::Int8VectorPointerType = llvm::PointerType::get(LLVMTypes::Int8VectorType, 0);
     LLVMTypes::Int16VectorPointerType = llvm::PointerType::get(LLVMTypes::Int16VectorType, 0);
@@ -204,6 +214,11 @@ void InitLLVMUtil(llvm::LLVMContext *ctx, Target &target) {
     LLVMMaskAllOff = llvm::ConstantVector::get(maskZeros);
 }
 
+llvm::ConstantInt *LLVMInt1(bool val) {
+    int ival = val ? -1 : 0;
+    return llvm::ConstantInt::get(llvm::Type::getInt1Ty(*g->ctx), ival, true /*signed*/);
+}
+
 llvm::ConstantInt *LLVMInt8(int8_t ival) {
     return llvm::ConstantInt::get(llvm::Type::getInt8Ty(*g->ctx), ival, true /*signed*/);
 }
@@ -241,6 +256,23 @@ llvm::Constant *LLVMFloat16(llvm::APFloat fv) { return llvm::ConstantFP::get(llv
 llvm::Constant *LLVMFloat(llvm::APFloat fval) { return llvm::ConstantFP::get(llvm::Type::getFloatTy(*g->ctx), fval); }
 
 llvm::Constant *LLVMDouble(llvm::APFloat dval) { return llvm::ConstantFP::get(llvm::Type::getDoubleTy(*g->ctx), dval); }
+
+llvm::Constant *LLVMInt1Vector(bool ival) {
+    llvm::Constant *v = LLVMInt1(ival);
+    std::vector<llvm::Constant *> vals;
+    for (int i = 0; i < g->target->getVectorWidth(); ++i) {
+        vals.push_back(v);
+    }
+    return llvm::ConstantVector::get(vals);
+}
+
+llvm::Constant *LLVMInt1Vector(const bool *ivec) {
+    std::vector<llvm::Constant *> vals;
+    for (int i = 0; i < g->target->getVectorWidth(); ++i) {
+        vals.push_back(LLVMInt1(ivec[i]));
+    }
+    return llvm::ConstantVector::get(vals);
+}
 
 llvm::Constant *LLVMInt8Vector(int8_t ival) {
     llvm::Constant *v = LLVMInt8(ival);

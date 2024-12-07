@@ -114,6 +114,7 @@ const Type *Type::ResolveDependenceForTopType(TemplateInstantiation &templInst) 
 
 const AtomicType *AtomicType::UniformBool = new AtomicType(AtomicType::TYPE_BOOL, Variability::Uniform, false);
 const AtomicType *AtomicType::VaryingBool = new AtomicType(AtomicType::TYPE_BOOL, Variability::Varying, false);
+const AtomicType *AtomicType::VaryingInt1 = new AtomicType(AtomicType::TYPE_INT1, Variability::Varying, false);
 const AtomicType *AtomicType::UniformInt8 = new AtomicType(AtomicType::TYPE_INT8, Variability::Uniform, false);
 const AtomicType *AtomicType::VaryingInt8 = new AtomicType(AtomicType::TYPE_INT8, Variability::Varying, false);
 const AtomicType *AtomicType::UniformUInt8 = new AtomicType(AtomicType::TYPE_UINT8, Variability::Uniform, false);
@@ -257,10 +258,11 @@ bool AtomicType::IsUnsignedType() const {
 }
 
 bool AtomicType::IsSignedType() const {
-    return (basicType == TYPE_INT8 || basicType == TYPE_INT16 || basicType == TYPE_INT32 || basicType == TYPE_INT64);
+    return (basicType == TYPE_INT1 || basicType == TYPE_INT8 || basicType == TYPE_INT16 || basicType == TYPE_INT32 ||
+            basicType == TYPE_INT64);
 }
 
-bool AtomicType::IsBoolType() const { return basicType == TYPE_BOOL; }
+bool AtomicType::IsBoolType() const { return basicType == TYPE_BOOL || basicType == TYPE_BOOL; }
 
 bool AtomicType::IsConstType() const { return isConst; }
 
@@ -418,6 +420,9 @@ std::string AtomicType::GetString() const {
     case TYPE_BOOL:
         ret += "bool";
         break;
+    case TYPE_INT1:
+        ret += "int1";
+        break;
     case TYPE_INT8:
         ret += "int8";
         break;
@@ -474,6 +479,9 @@ std::string AtomicType::Mangle() const {
         break;
     case TYPE_BOOL:
         ret += "b";
+        break;
+    case TYPE_INT1:
+        ret += "B";
         break;
     case TYPE_INT8:
         ret += "t";
@@ -600,6 +608,8 @@ static llvm::Type *lGetAtomicLLVMType(llvm::LLVMContext *ctx, const AtomicType *
             } else {
                 return isUniform ? LLVMTypes::BoolType : LLVMTypes::BoolVectorType;
             }
+        case AtomicType::TYPE_INT1:
+            return isUniform ? LLVMTypes::Int1Type : LLVMTypes::Int1VectorType;
         case AtomicType::TYPE_INT8:
         case AtomicType::TYPE_UINT8:
             return isUniform ? LLVMTypes::Int8Type : LLVMTypes::Int8VectorType;
@@ -649,6 +659,9 @@ llvm::DIType *AtomicType::GetDIType(llvm::DIScope *scope) const {
 
         case TYPE_BOOL:
             return m->diBuilder->createBasicType("bool", 32 /* size */, llvm::dwarf::DW_ATE_unsigned);
+            break;
+        case TYPE_INT1:
+            return m->diBuilder->createBasicType("int1", 1 /* size */, llvm::dwarf::DW_ATE_signed);
             break;
         case TYPE_INT8:
             return m->diBuilder->createBasicType("int8", 8 /* size */, llvm::dwarf::DW_ATE_signed);

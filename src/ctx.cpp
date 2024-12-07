@@ -1883,7 +1883,9 @@ llvm::Value *FunctionEmitContext::IntToPtrInst(llvm::Value *value, llvm::Type *t
     }
 
     llvm::Type *fromType = value->getType();
-    if (llvm::isa<llvm::VectorType>(fromType)) {
+    bool toTypePtrVector = toType->isVectorTy() && toType->getScalarType()->isPointerTy();
+
+    if (llvm::isa<llvm::VectorType>(fromType) && !toTypePtrVector) {
         // varying pointer
         if (fromType == toType) {
             // done
