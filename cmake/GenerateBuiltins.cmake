@@ -503,3 +503,106 @@ function (generate_builtins)
         ${DISPATCH_BUILTIN_CPP_FILES} ${COMMON_BUILTIN_CPP_FILES} ${TARGET_BUILTIN_CPP_FILES})
     add_dependencies(builtin builtins-cpp)
 endfunction()
+
+function (generate_common_target_builtin_1 ispc_name target bit os)
+    set(include ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/include)
+
+    string(REPLACE "-" "_" target_ ${target})
+    set(name "builtins_target_${target_}_${bit}bit_${os}")
+    set(input_ispc builtins/common.ispc)
+
+    if (${target} MATCHES "x86_64")
+        set(arch "x86_64")
+    elseif (${target} MATCHES "aarch64")
+        set(arch "aarch64")
+    else()
+        message(FATAL_ERROR "Error: unknown ARCH for target ${target}")
+    endif()
+
+    if ("${os}" STREQUAL "unix")
+        set(fixed_os "linux")
+    elseif ("${os}" STREQUAL "windows")
+        set(fixed_os "windows")
+    else()
+        message(FATAL_ERROR "Error: unknown OS for target ${os}")
+    endif()
+
+    file(APPEND ${CMAKE_BINARY_DIR}/bitcode_libs_generated.cpp
+      "static BitcodeLib ${name}(\"${name}.bc\", ISPCTarget::${target_}, TargetOS::${fixed_os}, Arch::${arch});\n")
+
+    set(OS_UP UNIX)
+    set(cpp ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${name}.cpp)
+    set(bc ${BITCODE_FOLDER}/${name}.bc)
+
+    message(STATUS "Generating common target builtins for ${target} ${bit}bit ${os}")
+    add_custom_command(
+        OUTPUT ${bc}
+        COMMAND ${ispc_name} -I ${include} --enable-llvm-intrinsics --nostdlib --gen-stdlib --target=${target} --arch=${arch} --target-os=${fixed_os}  --emit-llvm -o ${bc} ${input_ispc} -DBUILD_OS=${OS_UP} -DRUNTIME=${bit}
+        DEPENDS ${ispc_name} ${input_ispc}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+    add_custom_command(
+        OUTPUT ${cpp}
+        COMMAND ${Python3_EXECUTABLE} ${BITCODE2CPP} ${bc} --type=ispc-target --runtime=${bit} --os=${OS_UP} --arch=${arch} ${cpp}
+        DEPENDS ${bc} ${BITCODE2CPP}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+    list(APPEND COMMON_TARGET_BC_FILE ${bc})
+    set(COMMON_TARGET_BC_FILE ${COMMON_TARGET_BC_FILE} PARENT_SCOPE)
+
+    list(APPEND COMMON_TARGET_CPP_FILE ${cpp})
+    set(COMMON_TARGET_CPP_FILE ${COMMON_TARGET_CPP_FILE} PARENT_SCOPE)
+endfunction()
+
+function (generate_common_target_builtins ispc_name)
+    list(APPEND os_list)
+    if (ISPC_WINDOWS_TARGET)
+        list(APPEND os_list "windows")
+    endif()
+    if (ISPC_UNIX_TARGET)
+        list(APPEND os_list "unix")
+    endif()
+
+    list(APPEND TARGET_LIST)
+    if (X86_ENABLED)
+        list(APPEND TARGET_LIST
+            "common-x86_64-i1x4"
+            "common-x86_64-i1x8"
+            "common-x86_64-i1x16"
+            "common-x86_64-i1x32"
+            "common-x86_64-i1x64"
+            "common-x86_64-i8x16"
+            "common-x86_64-i8x32"
+            "common-x86_64-i16x8"
+            "common-x86_64-i16x16"
+            "common-x86_64-i32x4"
+            "common-x86_64-i32x8"
+            "common-x86_64-i32x16"
+            "common-x86_64-i64x4"
+        )
+    endif()
+
+    if (ARM_ENABLED)
+      list(APPEND TARGET_LIST
+          "common-aarch64-i32x4"
+          "common-aarch64-i32x8"
+      )
+    endif()
+
+    foreach(os ${os_list})
+        foreach(target ${TARGET_LIST})
+            foreach(bit 32 64)
+                generate_common_target_builtin_1(${ispc_name} ${target} ${bit} ${os})
+            endforeach()
+        endforeach()
+    endforeach()
+
+    message(STATUS "Common target builtins: ${COMMON_TARGET_BC_FILE}")
+    message(STATUS "Common target builtins: ${COMMON_TARGET_CPP_FILE}")
+    add_custom_target(common-target-bc DEPENDS ${COMMON_TARGET_BC_FILE})
+    add_custom_target(common-target-cpp DEPENDS ${COMMON_TARGET_CPP_FILE})
+
+    add_library(common-target OBJECT EXCLUDE_FROM_ALL ${COMMON_TARGET_CPP_FILE})
+endfunction()

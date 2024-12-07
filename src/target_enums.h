@@ -93,6 +93,21 @@ enum class ISPCTarget {
     xe2hpg_x32,
     xe2lpg_x16,
     xe2lpg_x32,
+    common_x86_64_i1x4,
+    common_x86_64_i1x8,
+    common_x86_64_i1x16,
+    common_x86_64_i1x32,
+    common_x86_64_i1x64,
+    common_x86_64_i8x16,
+    common_x86_64_i8x32,
+    common_x86_64_i16x8,
+    common_x86_64_i16x16,
+    common_x86_64_i32x4,
+    common_x86_64_i32x8,
+    common_x86_64_i32x16,
+    common_x86_64_i64x4,
+    common_aarch64_i32x4,
+    common_aarch64_i32x8,
     error
 };
 ISPCTarget operator++(ISPCTarget &, int);
