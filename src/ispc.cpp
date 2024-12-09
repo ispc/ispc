@@ -490,6 +490,11 @@ typedef enum {
     CPU_CortexA55,
     CPU_CortexA78,
 
+    // ARM Cortex A510, A520. Supports Armv9-A + SVE/SVE2.
+    CPU_CortexA510,
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+    CPU_CortexA520,
+#endif
     // Apple CPUs.
     CPU_AppleA7,
     CPU_AppleA10,
@@ -563,6 +568,10 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {CPU_CortexA57, {}},
     {CPU_CortexA55, {}},
     {CPU_CortexA78, {}},
+    {CPU_CortexA510, {}},
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+    {CPU_CortexA520, {}},
+#endif
     {CPU_AppleA7, {}},
     {CPU_AppleA10, {}},
     {CPU_AppleA11, {}},
@@ -684,7 +693,10 @@ class AllCPUs {
         names[CPU_CortexA57].push_back("cortex-a57");
         names[CPU_CortexA55].push_back("cortex-a55");
         names[CPU_CortexA78].push_back("cortex-a78");
-
+        names[CPU_CortexA510].push_back("cortex-a510");
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        names[CPU_CortexA520].push_back("cortex-a520");
+#endif
         names[CPU_AppleA7].push_back("apple-a7");
         names[CPU_AppleA10].push_back("apple-a10");
         names[CPU_AppleA11].push_back("apple-a11");
@@ -792,6 +804,10 @@ class AllCPUs {
         compat[CPU_CortexA57] = Set(CPU_CortexA57, CPU_None);
         compat[CPU_CortexA55] = Set(CPU_CortexA55, CPU_None);
         compat[CPU_CortexA78] = Set(CPU_CortexA78, CPU_None);
+        compat[CPU_CortexA510] = Set(CPU_CortexA510, CPU_None);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        compat[CPU_CortexA520] = Set(CPU_CortexA520, CPU_None);
+#endif
         compat[CPU_AppleA7] = Set(CPU_AppleA7, CPU_None);
         compat[CPU_AppleA10] = Set(CPU_AppleA10, CPU_None);
         compat[CPU_AppleA11] = Set(CPU_AppleA11, CPU_None);
@@ -930,11 +946,22 @@ DeviceType lGetARMDeviceType(Arch arch) {
                    lIsARMFeatureSupported("+fp-armv8", featureString) &&
                    lIsARMFeatureSupported("+aes", featureString) && lIsARMFeatureSupported("+sha2", featureString) &&
                    lIsARMFeatureSupported("+crc", featureString);
+        // ARMv8.2-A (cortex-a55, cortex-a78) - have the same features
         bool a55 = a53 && lIsARMFeatureSupported("+dotprod", featureString) &&
                    lIsARMFeatureSupported("+fullfp16", featureString) &&
                    lIsARMFeatureSupported("+lse", featureString) && lIsARMFeatureSupported("+rcpc", featureString);
-        bool a78 = a55;
-        if (a55) {
+        // ARMv9-A (cortex-a510, cortex-a520) - have the same computational features.
+        // Doesn't have "+aes" and "+sha2", so construct feature list from scratch.
+        bool a510 = lIsARMFeatureSupported("+neon", featureString) && lIsARMFeatureSupported("+crc", featureString) &&
+                    lIsARMFeatureSupported("+dotprod", featureString) &&
+                    lIsARMFeatureSupported("+fp-armv8", featureString) &&
+                    lIsARMFeatureSupported("+fullfp16", featureString) &&
+                    lIsARMFeatureSupported("+lse", featureString) && lIsARMFeatureSupported("+rcpc", featureString) &&
+                    lIsARMFeatureSupported("+sve", featureString) && lIsARMFeatureSupported("+sve2", featureString) &&
+                    lIsARMFeatureSupported("+i8mm", featureString) && lIsARMFeatureSupported("+fp16fml", featureString);
+        if (a510) {
+            return DeviceType::CPU_CortexA510;
+        } else if (a55) {
             return DeviceType::CPU_CortexA55;
         } else if (a53) {
             return DeviceType::CPU_CortexA53;
@@ -1028,6 +1055,10 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         case CPU_CortexA57:
         case CPU_CortexA55:
         case CPU_CortexA78:
+        case CPU_CortexA510:
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        case CPU_CortexA520:
+#endif
         case CPU_AppleA7:
         case CPU_AppleA10:
         case CPU_AppleA11:
