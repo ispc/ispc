@@ -493,6 +493,11 @@ typedef enum {
     CPU_AppleA12,
     CPU_AppleA13,
     CPU_AppleA14,
+    CPU_AppleA15,
+    CPU_AppleA16,
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+    CPU_AppleA17,
+#endif
 #endif
 #ifdef ISPC_XE_ENABLED
     GPU_SKL,
@@ -558,6 +563,11 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {CPU_AppleA12, {}},
     {CPU_AppleA13, {}},
     {CPU_AppleA14, {}},
+    {CPU_AppleA15, {}},
+    {CPU_AppleA16, {}},
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+    {CPU_AppleA17, {}},
+#endif
 #endif
 #ifdef ISPC_XE_ENABLED
     {GPU_SKL, {}},
@@ -673,6 +683,11 @@ class AllCPUs {
         names[CPU_AppleA12].push_back("apple-a12");
         names[CPU_AppleA13].push_back("apple-a13");
         names[CPU_AppleA14].push_back("apple-a14");
+        names[CPU_AppleA15].push_back("apple-a15");
+        names[CPU_AppleA16].push_back("apple-a16");
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        names[CPU_AppleA17].push_back("apple-a17");
+#endif
 #endif
 
 #ifdef ISPC_XE_ENABLED
@@ -773,6 +788,11 @@ class AllCPUs {
         compat[CPU_AppleA12] = Set(CPU_AppleA12, CPU_None);
         compat[CPU_AppleA13] = Set(CPU_AppleA13, CPU_None);
         compat[CPU_AppleA14] = Set(CPU_AppleA14, CPU_None);
+        compat[CPU_AppleA15] = Set(CPU_AppleA15, CPU_None);
+        compat[CPU_AppleA16] = Set(CPU_AppleA16, CPU_None);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        compat[CPU_AppleA17] = Set(CPU_AppleA17, CPU_None);
+#endif
 #endif
 
 #ifdef ISPC_XE_ENABLED
@@ -891,6 +911,8 @@ DeviceType lGetARMDeviceType(Arch arch) {
         // this CPU might not be explicitly supported by ISPC. Therefore, let's
         // retrieve the features for the detected CPU and determine which CPU
         // definition supported by ISPC matches it best.
+        // To get the features for future ARM CPUs, either run clang++ -mcpu=<device> and look
+        // for the feature string or check llvm/lib/Target/AArch64/AArch64.td
         std::vector<llvm::StringRef> featureString = lGetTargetFeaturesForARMHost(arch);
 #if defined(ISPC_HOST_IS_LINUX) || defined(ISPC_HOST_IS_WINDOWS)
         // ARMv8-A (cortex-a35, cortex-a53, cortex-a57) - have the same features
@@ -912,9 +934,13 @@ DeviceType lGetARMDeviceType(Arch arch) {
                          lIsARMFeatureSupported("+sha3", featureString) &&
                          lIsARMFeatureSupported("+fp16fml", featureString);
         bool apple_a14 = apple_a13; // Apple A14 features are the same as A13
-
+        bool apple_a15 = apple_a14 && lIsARMFeatureSupported("+bf16", featureString) &&
+                         lIsARMFeatureSupported("+i8mm", featureString);
+        bool apple_a16 = apple_a15; // Apple A16 and A17 features are the same as A15
         // Return the highest supported Apple device type
-        if (apple_a13 || apple_a14) {
+        if (apple_a15 || apple_a16) {
+            return DeviceType::CPU_AppleA16;
+        } else if (apple_a13 || apple_a14) {
             return DeviceType::CPU_AppleA14;
         } else if (apple_a12) {
             return DeviceType::CPU_AppleA12;
@@ -987,6 +1013,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         case CPU_AppleA12:
         case CPU_AppleA13:
         case CPU_AppleA14:
+        case CPU_AppleA15:
+        case CPU_AppleA16:
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        case CPU_AppleA17:
+#endif
             m_ispc_target = ISPCTarget::neon_i32x4;
             break;
 #endif

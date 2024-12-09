@@ -6,6 +6,8 @@
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --cpu=apple-a12 --print-target | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_ARM64_APPLE_A12
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --cpu=apple-a13 --print-target | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_ARM64_APPLE_A13
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --cpu=apple-a14 --print-target | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_ARM64_APPLE_A14
+// RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --cpu=apple-a15 --print-target | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_ARM64_APPLE_A15
+// RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --cpu=apple-a16 --print-target | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_ARM64_APPLE_A16
 
 // There are slightly different features before LLVM 17.0
 // REQUIRES: ARM_ENABLED && MACOS_ARM_ENABLED && LLVM_17_0+
@@ -75,6 +77,39 @@
 // CHECK_ARM64_APPLE_A14-SAME: +rcpc
 // CHECK_ARM64_APPLE_A14-SAME: +sha2
 // CHECK_ARM64_APPLE_A14-SAME: +sha3
+
+// CHECK_ARM64_APPLE_A15: CPU: apple-a15
+// CHECK_ARM64_APPLE_A15-NEXT: Feature String
+// CHECK_ARM64_APPLE_A15-SAME: +aes
+// CHECK_ARM64_APPLE_A15-SAME: +bf16
+// CHECK_ARM64_APPLE_A15-SAME: +crc
+// CHECK_ARM64_APPLE_A15-SAME: +dotprod
+// CHECK_ARM64_APPLE_A15-SAME: +fp-armv8
+// CHECK_ARM64_APPLE_A15-SAME: +fp16fml
+// CHECK_ARM64_APPLE_A15-SAME: +fullfp16
+// CHECK_ARM64_APPLE_A15-SAME: +i8mm
+// CHECK_ARM64_APPLE_A15-SAME: +lse
+// CHECK_ARM64_APPLE_A15-SAME: +neon
+// CHECK_ARM64_APPLE_A15-SAME: +rcpc
+// CHECK_ARM64_APPLE_A15-SAME: +sha2
+// CHECK_ARM64_APPLE_A15-SAME: +sha3
+
+// CHECK_ARM64_APPLE_A16: CPU: apple-a16
+// CHECK_ARM64_APPLE_A16-NEXT: Feature String
+// CHECK_ARM64_APPLE_A16-SAME: +aes
+// CHECK_ARM64_APPLE_A16-SAME: +bf16
+// CHECK_ARM64_APPLE_A16-SAME: +crc
+// CHECK_ARM64_APPLE_A16-SAME: +dotprod
+// CHECK_ARM64_APPLE_A16-SAME: +fp-armv8
+// CHECK_ARM64_APPLE_A16-SAME: +fp16fml
+// CHECK_ARM64_APPLE_A16-SAME: +fullfp16
+// CHECK_ARM64_APPLE_A16-SAME: +i8mm
+// CHECK_ARM64_APPLE_A16-SAME: +lse
+// CHECK_ARM64_APPLE_A16-SAME: +neon
+// CHECK_ARM64_APPLE_A16-SAME: +rcpc
+// CHECK_ARM64_APPLE_A16-SAME: +sha2
+// CHECK_ARM64_APPLE_A16-SAME: +sha3
+
 
 uniform int i;
 
