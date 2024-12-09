@@ -1131,8 +1131,9 @@ int main(int Argc, char *Argv[]) {
 
     if (g->genStdlib) {
         std::string stdlib = "stdlib/stdlib.ispc";
-        if (stdlib != file) {
-            Error(SourcePos(), "The --gen-stdlib option can be used only with stdlib.ispc.");
+        std::string generic = "builtins/generic.ispc";
+        if (stdlib != file && generic != file) {
+            Error(SourcePos(), "The --gen-stdlib option can be used only with stdlib.ispc or builtins/generic.ispc.");
             exit(1);
         }
     }

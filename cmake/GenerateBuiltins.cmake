@@ -503,3 +503,117 @@ function (generate_builtins)
         ${DISPATCH_BUILTIN_CPP_FILES} ${COMMON_BUILTIN_CPP_FILES} ${TARGET_BUILTIN_CPP_FILES})
     add_dependencies(builtin builtins-cpp)
 endfunction()
+
+function (generate_generic_target_builtin_1 ispc_name target bit os)
+    set(include ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/include)
+
+    string(REPLACE "-" "_" target_ ${target})
+    set(name "builtins_target_${target_}_${bit}bit_${os}")
+    set(input_ispc builtins/generic.ispc)
+
+    if (${target} MATCHES "x86_64")
+        set(arch "x86_64")
+    elseif (${target} MATCHES "aarch64")
+        set(arch "aarch64")
+    else()
+        message(FATAL_ERROR "Error: unknown ARCH for target ${target}")
+    endif()
+
+    if ("${os}" STREQUAL "unix")
+        set(fixed_os "linux")
+        set(OS_UP UNIX)
+    elseif ("${os}" STREQUAL "windows")
+        set(fixed_os "windows")
+        set(OS_UP WINDOWS)
+    else()
+        message(FATAL_ERROR "Error: unknown OS for target ${os}")
+    endif()
+
+    file(APPEND ${CMAKE_BINARY_DIR}/bitcode_libs_generated.cpp
+      "static BitcodeLib ${name}(\"${name}.bc\", ISPCTarget::${target_}, TargetOS::${fixed_os}, Arch::${arch});\n")
+
+    set(cpp ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${name}.cpp)
+    set(bc ${BITCODE_FOLDER}/${name}.bc)
+
+    if ("${fixed_os}" STREQUAL "linux" AND NOT ISPC_LINUX_TARGET)
+        # If ISPC_LINUX_TARGET is disabled then we can't run ispc-slim with
+        # --target-os=linux to generate generic target bitcode. So we need pass
+        # the target-os that is supported by ispc-slim.
+        if (APPLE)
+            set(fixed_os "macos")
+        elseif (CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+            set(fixed_os "freebsd")
+        else ()
+            message(FATAL_ERROR "Error: unknown OS for target ${fixed_os}")
+        endif()
+    endif()
+
+    add_custom_command(
+        OUTPUT ${bc}
+        COMMAND ${ispc_name} -I ${include} --enable-llvm-intrinsics --nostdlib --gen-stdlib --target=${target} --arch=${arch} --target-os=${fixed_os}  --emit-llvm -o ${bc} ${input_ispc} -DBUILD_OS=${OS_UP} -DRUNTIME=${bit}
+        DEPENDS ${ispc_name} ${input_ispc}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+    add_custom_command(
+        OUTPUT ${cpp}
+        COMMAND ${Python3_EXECUTABLE} ${BITCODE2CPP} ${bc} --type=ispc-target --runtime=${bit} --os=${OS_UP} --arch=${arch} ${cpp}
+        DEPENDS ${bc} ${BITCODE2CPP}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+    list(APPEND GENERIC_TARGET_BC_FILE ${bc})
+    set(GENERIC_TARGET_BC_FILE ${GENERIC_TARGET_BC_FILE} PARENT_SCOPE)
+
+    list(APPEND GENERIC_TARGET_CPP_FILE ${cpp})
+    set(GENERIC_TARGET_CPP_FILE ${GENERIC_TARGET_CPP_FILE} PARENT_SCOPE)
+endfunction()
+
+function (generate_generic_builtins ispc_name)
+    list(APPEND os_list)
+    if (ISPC_WINDOWS_TARGET)
+        list(APPEND os_list "windows")
+    endif()
+    if (ISPC_UNIX_TARGET)
+        list(APPEND os_list "unix")
+    endif()
+
+    list(APPEND TARGET_LIST)
+    if (X86_ENABLED)
+        list(APPEND TARGET_LIST
+            "generic-x86_64-i1x4"
+            "generic-x86_64-i1x8"
+            "generic-x86_64-i1x16"
+            "generic-x86_64-i1x32"
+            "generic-x86_64-i1x64"
+            "generic-x86_64-i8x16"
+            "generic-x86_64-i8x32"
+            "generic-x86_64-i16x8"
+            "generic-x86_64-i16x16"
+            "generic-x86_64-i32x4"
+            "generic-x86_64-i32x8"
+            "generic-x86_64-i32x16"
+            "generic-x86_64-i64x4"
+        )
+    endif()
+
+    if (ARM_ENABLED)
+      list(APPEND TARGET_LIST
+          "generic-aarch64-i32x4"
+          "generic-aarch64-i32x8"
+      )
+    endif()
+
+    foreach(os ${os_list})
+        foreach(target ${TARGET_LIST})
+            foreach(bit 32 64)
+                generate_generic_target_builtin_1(${ispc_name} ${target} ${bit} ${os})
+            endforeach()
+        endforeach()
+    endforeach()
+
+    add_custom_target(generic-target-bc DEPENDS ${GENERIC_TARGET_BC_FILE})
+    add_custom_target(generic-target-cpp DEPENDS ${GENERIC_TARGET_CPP_FILE})
+
+    add_library(generic-target OBJECT EXCLUDE_FROM_ALL ${GENERIC_TARGET_CPP_FILE})
+endfunction()
