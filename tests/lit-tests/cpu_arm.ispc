@@ -5,6 +5,9 @@
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --cpu=cortex-a35
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --cpu=cortex-a53
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --cpu=cortex-a57
+//; RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --cpu=cortex-a55
+//; RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --cpu=cortex-a78
+//; RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --cpu=cortex-a510
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --cpu=apple-a7
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --cpu=apple-a10
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --cpu=apple-a11
