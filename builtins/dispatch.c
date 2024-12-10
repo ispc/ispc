@@ -21,8 +21,6 @@
 #error "Either REGULAR or MACOS macro need to defined"
 #endif
 
-#include <stdint.h>
-
 void abort();
 
 static int __system_best_isa = -1;
@@ -60,7 +58,7 @@ static int __os_has_avx512_support() {
 // __get_system_isa should return a value corresponding to one of the
 // Target::ISA enumerant values that gives the most capable ISA that the
 // current system can run.
-static int32_t __get_system_isa() {
+static int __get_system_isa() {
     int info[4];
     __cpuid(info, 1);
 
