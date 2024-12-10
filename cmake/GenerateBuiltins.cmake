@@ -578,12 +578,12 @@ function (generate_generic_builtins ispc_name)
         list(APPEND os_list "unix")
     endif()
 
+    # "generic-i1x64" is not supported due to #3123
     list(APPEND TARGET_LIST
         "i1x4"
         "i1x8"
         "i1x16"
         "i1x32"
-        "i1x64"
         "i8x16"
         "i8x32"
         "i16x8"
