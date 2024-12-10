@@ -481,11 +481,20 @@ typedef enum {
     // ARM Cortex A15. Supports NEON VFPv4.
     CPU_CortexA15,
 
-    // ARM Cortex A35, A53, A57.
+    // ARM Cortex A35, A53, A57. Supports Armv8-A.
     CPU_CortexA35,
     CPU_CortexA53,
     CPU_CortexA57,
 
+    // ARM Cortex A55, A78. Supports dotprod and fullfp16.
+    CPU_CortexA55,
+    CPU_CortexA78,
+
+    // ARM Cortex A510, A520. Supports Armv9-A + SVE/SVE2.
+    CPU_CortexA510,
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+    CPU_CortexA520,
+#endif
     // Apple CPUs.
     CPU_AppleA7,
     CPU_AppleA10,
@@ -493,6 +502,11 @@ typedef enum {
     CPU_AppleA12,
     CPU_AppleA13,
     CPU_AppleA14,
+    CPU_AppleA15,
+    CPU_AppleA16,
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+    CPU_AppleA17,
+#endif
 #endif
 #ifdef ISPC_XE_ENABLED
     GPU_SKL,
@@ -552,12 +566,23 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {CPU_CortexA35, {}},
     {CPU_CortexA53, {}},
     {CPU_CortexA57, {}},
+    {CPU_CortexA55, {}},
+    {CPU_CortexA78, {}},
+    {CPU_CortexA510, {}},
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+    {CPU_CortexA520, {}},
+#endif
     {CPU_AppleA7, {}},
     {CPU_AppleA10, {}},
     {CPU_AppleA11, {}},
     {CPU_AppleA12, {}},
     {CPU_AppleA13, {}},
     {CPU_AppleA14, {}},
+    {CPU_AppleA15, {}},
+    {CPU_AppleA16, {}},
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+    {CPU_AppleA17, {}},
+#endif
 #endif
 #ifdef ISPC_XE_ENABLED
     {GPU_SKL, {}},
@@ -666,13 +691,23 @@ class AllCPUs {
         names[CPU_CortexA35].push_back("cortex-a35");
         names[CPU_CortexA53].push_back("cortex-a53");
         names[CPU_CortexA57].push_back("cortex-a57");
-
+        names[CPU_CortexA55].push_back("cortex-a55");
+        names[CPU_CortexA78].push_back("cortex-a78");
+        names[CPU_CortexA510].push_back("cortex-a510");
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        names[CPU_CortexA520].push_back("cortex-a520");
+#endif
         names[CPU_AppleA7].push_back("apple-a7");
         names[CPU_AppleA10].push_back("apple-a10");
         names[CPU_AppleA11].push_back("apple-a11");
         names[CPU_AppleA12].push_back("apple-a12");
         names[CPU_AppleA13].push_back("apple-a13");
         names[CPU_AppleA14].push_back("apple-a14");
+        names[CPU_AppleA15].push_back("apple-a15");
+        names[CPU_AppleA16].push_back("apple-a16");
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        names[CPU_AppleA17].push_back("apple-a17");
+#endif
 #endif
 
 #ifdef ISPC_XE_ENABLED
@@ -767,12 +802,23 @@ class AllCPUs {
         compat[CPU_CortexA35] = Set(CPU_CortexA35, CPU_None);
         compat[CPU_CortexA53] = Set(CPU_CortexA53, CPU_None);
         compat[CPU_CortexA57] = Set(CPU_CortexA57, CPU_None);
+        compat[CPU_CortexA55] = Set(CPU_CortexA55, CPU_None);
+        compat[CPU_CortexA78] = Set(CPU_CortexA78, CPU_None);
+        compat[CPU_CortexA510] = Set(CPU_CortexA510, CPU_None);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        compat[CPU_CortexA520] = Set(CPU_CortexA520, CPU_None);
+#endif
         compat[CPU_AppleA7] = Set(CPU_AppleA7, CPU_None);
         compat[CPU_AppleA10] = Set(CPU_AppleA10, CPU_None);
         compat[CPU_AppleA11] = Set(CPU_AppleA11, CPU_None);
         compat[CPU_AppleA12] = Set(CPU_AppleA12, CPU_None);
         compat[CPU_AppleA13] = Set(CPU_AppleA13, CPU_None);
         compat[CPU_AppleA14] = Set(CPU_AppleA14, CPU_None);
+        compat[CPU_AppleA15] = Set(CPU_AppleA15, CPU_None);
+        compat[CPU_AppleA16] = Set(CPU_AppleA16, CPU_None);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        compat[CPU_AppleA17] = Set(CPU_AppleA17, CPU_None);
+#endif
 #endif
 
 #ifdef ISPC_XE_ENABLED
@@ -891,15 +937,37 @@ DeviceType lGetARMDeviceType(Arch arch) {
         // this CPU might not be explicitly supported by ISPC. Therefore, let's
         // retrieve the features for the detected CPU and determine which CPU
         // definition supported by ISPC matches it best.
+        // To get the features for future ARM CPUs, either run clang++ -mcpu=<device> and look
+        // for the feature string or check llvm/lib/Target/AArch64/AArch64.td
         std::vector<llvm::StringRef> featureString = lGetTargetFeaturesForARMHost(arch);
 #if defined(ISPC_HOST_IS_LINUX) || defined(ISPC_HOST_IS_WINDOWS)
         // ARMv8-A (cortex-a35, cortex-a53, cortex-a57) - have the same features
-        [[maybe_unused]] bool a53 =
-            lIsARMFeatureSupported("+neon", featureString) && lIsARMFeatureSupported("+fp-armv8", featureString) &&
-            lIsARMFeatureSupported("+aes", featureString) && lIsARMFeatureSupported("+sha2", featureString) &&
-            lIsARMFeatureSupported("+crc", featureString);
-        // No real logic here for now, just return CPU_CortexA35, will be extended later as we add more cpu definitions.
-        return (a53) ? DeviceType::CPU_CortexA53 : CPU_CortexA35;
+        bool a53 = lIsARMFeatureSupported("+neon", featureString) &&
+                   lIsARMFeatureSupported("+fp-armv8", featureString) &&
+                   lIsARMFeatureSupported("+aes", featureString) && lIsARMFeatureSupported("+sha2", featureString) &&
+                   lIsARMFeatureSupported("+crc", featureString);
+        // ARMv8.2-A (cortex-a55, cortex-a78) - have the same features
+        bool a55 = a53 && lIsARMFeatureSupported("+dotprod", featureString) &&
+                   lIsARMFeatureSupported("+fullfp16", featureString) &&
+                   lIsARMFeatureSupported("+lse", featureString) && lIsARMFeatureSupported("+rcpc", featureString);
+        // ARMv9-A (cortex-a510, cortex-a520) - have the same computational features.
+        // Doesn't have "+aes" and "+sha2", so construct feature list from scratch.
+        bool a510 = lIsARMFeatureSupported("+neon", featureString) && lIsARMFeatureSupported("+crc", featureString) &&
+                    lIsARMFeatureSupported("+dotprod", featureString) &&
+                    lIsARMFeatureSupported("+fp-armv8", featureString) &&
+                    lIsARMFeatureSupported("+fullfp16", featureString) &&
+                    lIsARMFeatureSupported("+lse", featureString) && lIsARMFeatureSupported("+rcpc", featureString) &&
+                    lIsARMFeatureSupported("+sve", featureString) && lIsARMFeatureSupported("+sve2", featureString) &&
+                    lIsARMFeatureSupported("+i8mm", featureString) && lIsARMFeatureSupported("+fp16fml", featureString);
+        if (a510) {
+            return DeviceType::CPU_CortexA510;
+        } else if (a55) {
+            return DeviceType::CPU_CortexA55;
+        } else if (a53) {
+            return DeviceType::CPU_CortexA53;
+        } else {
+            return DeviceType::CPU_CortexA35;
+        }
 #elif defined(ISPC_HOST_IS_APPLE)
         bool apple_a7 =
             lIsARMFeatureSupported("+neon", featureString) && lIsARMFeatureSupported("+aes", featureString) &&
@@ -912,9 +980,13 @@ DeviceType lGetARMDeviceType(Arch arch) {
                          lIsARMFeatureSupported("+sha3", featureString) &&
                          lIsARMFeatureSupported("+fp16fml", featureString);
         bool apple_a14 = apple_a13; // Apple A14 features are the same as A13
-
+        bool apple_a15 = apple_a14 && lIsARMFeatureSupported("+bf16", featureString) &&
+                         lIsARMFeatureSupported("+i8mm", featureString);
+        bool apple_a16 = apple_a15; // Apple A16 and A17 features are the same as A15
         // Return the highest supported Apple device type
-        if (apple_a13 || apple_a14) {
+        if (apple_a15 || apple_a16) {
+            return DeviceType::CPU_AppleA16;
+        } else if (apple_a13 || apple_a14) {
             return DeviceType::CPU_AppleA14;
         } else if (apple_a12) {
             return DeviceType::CPU_AppleA12;
@@ -981,12 +1053,23 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         case CPU_CortexA35:
         case CPU_CortexA53:
         case CPU_CortexA57:
+        case CPU_CortexA55:
+        case CPU_CortexA78:
+        case CPU_CortexA510:
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        case CPU_CortexA520:
+#endif
         case CPU_AppleA7:
         case CPU_AppleA10:
         case CPU_AppleA11:
         case CPU_AppleA12:
         case CPU_AppleA13:
         case CPU_AppleA14:
+        case CPU_AppleA15:
+        case CPU_AppleA16:
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        case CPU_AppleA17:
+#endif
             m_ispc_target = ISPCTarget::neon_i32x4;
             break;
 #endif
