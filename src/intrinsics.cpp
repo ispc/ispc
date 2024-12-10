@@ -464,12 +464,15 @@ bool lIsAliased(const IITDesc &L, const IITDesc &R) {
            R.getArgumentNumber() == L.getArgumentNumber();
 }
 
-size_t lSkipNextIITDesc(const IITDesc &D) {
+size_t lNextIITDescs(const IITDesc &D) {
     switch (D.Kind) {
+    case IITDesc::Struct:
+        return D.Struct_NumElements + 1;
+    case IITDesc::Vector:
     case IITDesc::SameVecWidthArgument:
-        return 1;
+        return 2;
     default:
-        return 0;
+        return 1;
     }
 }
 
@@ -503,15 +506,14 @@ void lGetOverloadedArgumentIndices(llvm::Intrinsic::ID ID, std::vector<unsigned>
     // have no return type information, so we need to find the argument with
     // the same type as return value.
     unsigned argIndex = 0;
+    size_t i = lNextIITDescs(Table[0]);
     if (lIsAnyArgumentKind(Table[0])) {
-        for (size_t i = 1; i < Table.size(); i++) {
+        while (i < Table.size()) {
             if (lIsAliased(Table[0], Table[i])) {
                 result.push_back(argIndex);
                 break;
             }
-            if (lSkipNextIITDesc(Table[i])) {
-                i++;
-            }
+            i += lNextIITDescs(Table[i]);
             argIndex++;
         }
 
@@ -527,14 +529,12 @@ void lGetOverloadedArgumentIndices(llvm::Intrinsic::ID ID, std::vector<unsigned>
 
     // Find remaining "any" types for arguments.
     argIndex = 0;
-    for (size_t i = 1; i < Table.size(); i++) {
+    i = lNextIITDescs(Table[0]);
+    while (i < Table.size()) {
         if (Table[i].Kind == IITDesc::VecOfAnyPtrsToElt || lIsAnyArgumentKind(Table[i])) {
             result.push_back(argIndex);
         }
-
-        if (lSkipNextIITDesc(Table[i])) {
-            i++;
-        }
+        i += lNextIITDescs(Table[i]);
         argIndex++;
     }
 }
@@ -548,7 +548,9 @@ static std::vector<llvm::Type *> lDeductArgTypes(llvm::Module *module, llvm::Int
         std::vector<unsigned> nInits;
         lGetOverloadedArgumentIndices(ID, nInits, pos);
 
+        Assert(nInits.size() > 0);
         for (int i : nInits) {
+            Assert(i < args->exprs.size());
             const Type *argType = (args->exprs[i])->GetType();
             Assert(argType);
             if (ID == llvm::Intrinsic::masked_gather && i == 0) {
