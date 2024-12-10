@@ -308,6 +308,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
     optPM.initLoopPassManager();
     optPM.addLoopPass(llvm::IndVarSimplifyPass());
     optPM.commitLoopToFunctionPassManager();
+    optPM.addFunctionPass(LowerISPCIntrinsicsPass(), 11);
     optPM.commitFunctionToModulePassManager();
 
     llvm::SimplifyCFGOptions simplifyCFGopt;
