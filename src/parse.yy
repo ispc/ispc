@@ -1265,18 +1265,16 @@ atomic_var_type_specifier
     ;
 
 short_vec_specifier
-    : atomic_var_type_specifier '<' int_constant '>'
+    : type_specifier '<' int_constant '>'
     {
         $$ = $1 ? new VectorType($1, (int32_t)$3) : nullptr;
     }
-    // When templates are supported for structures, this rule can be uncommented.
-    /*| atomic_var_type_specifier '<' TOKEN_IDENTIFIER '>'
+    | type_specifier '<' TOKEN_IDENTIFIER '>'
     {
-         Symbol* s = new Symbol(*$<stringVal>3, Union(@1, @3), AtomicType::UniformInt32->GetAsConstType());
-         lCleanUpString($3);
-         $$ = $1 ? new VectorType($1, s) : nullptr;
-
-    }*/
+        Symbol* s = new Symbol(*$<stringVal>3, Union(@1, @3), Symbol::SymbolKind::TemplateNonTypeParm, AtomicType::UniformInt32->GetAsConstType());
+        lCleanUpString($3);
+        $$ = $1 ? new VectorType($1, s) : nullptr;
+    }
     ;
 
 struct_or_union_name
