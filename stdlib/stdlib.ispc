@@ -2552,23 +2552,29 @@ __declspec(safe) static inline float rsqrt_fast(float v) { return __rsqrt_fast_v
 __declspec(safe) static inline uniform float rsqrt_fast(uniform float v) { return __rsqrt_fast_uniform_float(v); }
 
 __declspec(safe) static inline float ldexp(float x, int n) {
-    unsigned int ex = 0x7F800000u;
-    unsigned int ix = intbits(x);
-    ex &= ix;               // extract old exponent;
-    ix = ix & ~0x7F800000u; // clear exponent
-    n = (n << 23) + ex;
-    ix |= n; // insert new exponent
-    return floatbits(ix);
+    varying unsigned int ex = 0x7F800000u;
+    varying unsigned int ix = intbits(x);
+    ex &= ix; // extract old exponent;
+    float res = floatbits((ix & ~0x7F800000u) | ((n << 23) + ex));
+    if (__math_lib == __math_lib_ispc_fast) {
+        return res;
+    } else {
+        // Return x if it is 0.0f. Otherwise clear and insert new exponent.
+        return (x == 0.0f) ? x : res;
+    }
 }
 
 __declspec(safe) static inline uniform float ldexp(uniform float x, uniform int n) {
     uniform unsigned int ex = 0x7F800000u;
     uniform unsigned int ix = intbits(x);
-    ex &= ix;               // extract old exponent;
-    ix = ix & ~0x7F800000u; // clear exponent
-    n = (n << 23) + ex;
-    ix |= n; // insert new exponent
-    return floatbits(ix);
+    ex &= ix; // extract old exponent;
+    uniform float res = floatbits((ix & ~0x7F800000u) | ((n << 23) + ex));
+    if (__math_lib == __math_lib_ispc_fast) {
+        return res;
+    } else {
+        // Return x if it is 0.0f. Otherwise clear and insert new exponent.
+        return (x == 0.0f) ? x : res;
+    }
 }
 
 __declspec(safe) static inline float frexp(float x, varying int *uniform pw2) {
@@ -3816,21 +3822,27 @@ __declspec(safe) static inline uniform float16 rsqrt(uniform float16 v) {
 __declspec(safe) static inline float16 ldexp(float16 x, int n) {
     unsigned int16 ex = 0x7c00u;
     unsigned int16 ix = intbits(x);
-    ex &= ix;           // extract old exponent;
-    ix = ix & ~0x7c00u; // clear exponent
-    int16 n16 = ((int16)n << 10) + ex;
-    ix |= n16; // insert new exponent
-    return float16bits(ix);
+    ex &= ix; // extract old exponent;
+    float16 res = float16bits((unsigned int16)((ix & ~0x7c00u) | (((int16)n << 10) + ex)));
+    if (__math_lib == __math_lib_ispc_fast) {
+        return res;
+    } else {
+        // Return x if it is 0.0f. Otherwise clear and insert new exponent.
+        return (x == 0.0f16) ? x : res;
+    }
 }
 
 __declspec(safe) static inline uniform float16 ldexp(uniform float16 x, uniform int n) {
     uniform unsigned int16 ex = 0x7c00u;
     uniform unsigned int16 ix = intbits(x);
-    ex &= ix;           // extract old exponent;
-    ix = ix & ~0x7c00u; // clear exponent
-    uniform int16 n16 = ((uniform int16)n << 10) + ex;
-    ix |= n16; // insert new exponent
-    return float16bits(ix);
+    ex &= ix; // extract old exponent;
+    uniform float16 res = float16bits((uniform unsigned int16)((ix & ~0x7c00u) | (((int16)n << 10) + ex)));
+    if (__math_lib == __math_lib_ispc_fast) {
+        return res;
+    } else {
+        // Return x if it is 0.0f. Otherwise clear and insert new exponent.
+        return (x == 0.0f16) ? x : res;
+    }
 }
 
 __declspec(safe) static inline float16 frexp(float16 x, varying int *uniform pw2) {
@@ -4071,20 +4083,26 @@ __declspec(safe) static inline double ldexp(double x, int n) {
     unsigned int64 ex = 0x7ff0000000000000;
     unsigned int64 ix = intbits(x);
     ex &= ix;
-    ix = ix & ~0x7ff0000000000000; // clear exponent
-    int64 n64 = ((int64)n << 52) + ex;
-    ix |= n64; // insert new exponent
-    return doublebits(ix);
+    double res = doublebits((varying unsigned int64)((ix & ~0x7ff0000000000000) | (((int64)n << 52) + ex)));
+    if (__math_lib == __math_lib_ispc_fast) {
+        return res;
+    } else {
+        // Return x if it is 0.0f. Otherwise clear and insert new exponent.
+        return (x == 0.0d) ? x : res;
+    }
 }
 
 __declspec(safe) static inline uniform double ldexp(uniform double x, uniform int n) {
     uniform unsigned int64 ex = 0x7ff0000000000000;
     uniform unsigned int64 ix = intbits(x);
     ex &= ix;
-    ix = ix & ~0x7ff0000000000000; // clear exponent
-    uniform int64 n64 = ((int64)n << 52) + ex;
-    ix |= n64; // insert new exponent
-    return doublebits(ix);
+    uniform double res = doublebits((uniform unsigned int64)((ix & ~0x7ff0000000000000) | (((int64)n << 52) + ex)));
+    if (__math_lib == __math_lib_ispc_fast) {
+        return res;
+    } else {
+        // Return x if it is 0.0f. Otherwise clear and insert new exponent.
+        return (x == 0.0d) ? x : res;
+    }
 }
 
 __declspec(safe) static inline double frexp(double x, varying int *uniform pw2) {
