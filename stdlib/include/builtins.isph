@@ -309,11 +309,15 @@ EXT inline READNONE varying int32 __insert_int32(varying int32, uniform int32, u
 EXT inline READNONE varying int64 __insert_int64(varying int64, uniform int32, uniform int64);
 EXT inline READNONE varying int8 __insert_int8(varying int8, uniform int32, uniform int8);
 
-// dor product
+// dot product
 EXT READNONE varying int32 __dot2add_i16packed_sat(varying uint32, varying uint32, varying int32);
 EXT READNONE varying int32 __dot2add_i16packed(varying uint32, varying uint32, varying int32);
 EXT READNONE varying int32 __dot4add_u8i8packed_sat(varying uint32, varying uint32, varying int32);
 EXT READNONE varying int32 __dot4add_u8i8packed(varying uint32, varying uint32, varying int32);
+EXT READNONE varying uint32 __dot4add_u8u8packed_sat(varying uint32, varying uint32, varying uint32);
+EXT READNONE varying uint32 __dot4add_u8u8packed(varying uint32, varying uint32, varying uint32);
+EXT READNONE varying int32 __dot4add_i8i8packed_sat(varying uint32, varying uint32, varying int32);
+EXT READNONE varying int32 __dot4add_i8i8packed(varying uint32, varying uint32, varying int32);
 
 // various bitcasts from one type to another
 EXT inline READNONE uniform double __doublebits_uniform_int64(uniform int64);

@@ -5649,10 +5649,10 @@ __declspec(safe) static inline void assume(uniform bool test) {
 
 ///////////////////////////////////////////////////////////////////////////
 // Dot product and accumulate
+
 // Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in a with corresponding signed
 // 8-bit integers in b, producing 4 intermediate signed 16-bit results.
 // Sum these 4 results with the corresponding 32-bit integer in acc, and return the result.
-
 __declspec(safe) static inline varying int32 dot4add_u8i8packed(varying uint32 a, varying uint32 b, varying int32 acc) {
     if (__have_dot_product_vnni) {
         return __dot4add_u8i8packed(a, b, acc);
@@ -5682,6 +5682,59 @@ __declspec(safe) static inline varying int32 dot4add_u8i8packed_sat(varying uint
         int32 tmp1234 = saturating_add((int32)tmp123, (int32)tmp4);
         return saturating_add(tmp1234, acc);
     }
+}
+
+// Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in a with corresponding unsigned
+// 8-bit integers in b, producing 4 intermediate signed 16-bit results.
+// Sum these 4 results with the corresponding 32-bit integer in acc, and return the result.
+__declspec(safe) static inline varying uint32 dot4add_u8u8packed(varying uint32 a, varying uint32 b,
+                                                                 varying uint32 acc) {
+    int16 tmp1 = (int16)((a >> 24) & 0xFF) * (int16)((b >> 24) & 0xFF);
+    int16 tmp2 = (int16)((a >> 16) & 0xFF) * (int16)((b >> 16) & 0xFF);
+    int16 tmp3 = (int16)((a >> 8) & 0xFF) * (int16)((b >> 8) & 0xFF);
+    int16 tmp4 = (int16)(a & 0xFF) * (int16)(b & 0xFF);
+    return (uint32)tmp1 + (uint32)tmp2 + (uint32)tmp3 + (uint32)tmp4 + acc;
+}
+
+// Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in a with corresponding unsigned
+// 8-bit integers in b, producing 4 intermediate signed 16-bit results.
+// Sum these 4 results with the corresponding 32-bit integer in acc using unsigned saturation, and return the result.
+__declspec(safe) static inline varying uint32 dot4add_u8u8packed_sat(varying uint32 a, varying uint32 b,
+                                                                     varying uint32 acc) {
+    int16 tmp1 = (int16)((a >> 24) & 0xFF) * (int16)((b >> 24) & 0xFF);
+    int16 tmp2 = (int16)((a >> 16) & 0xFF) * (int16)((b >> 16) & 0xFF);
+    int16 tmp3 = (int16)((a >> 8) & 0xFF) * (int16)((b >> 8) & 0xFF);
+    int16 tmp4 = (int16)(a & 0xFF) * (int16)(b & 0xFF);
+    uint32 tmp12 = saturating_add((uint32)tmp1, (uint32)tmp2);
+    uint32 tmp123 = saturating_add((uint32)tmp12, (uint32)tmp3);
+    uint32 tmp1234 = saturating_add((uint32)tmp123, (uint32)tmp4);
+    return saturating_add(tmp1234, acc);
+}
+
+// Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in a with corresponding signed
+// 8-bit integers in b, producing 4 intermediate signed 16-bit results.
+// Sum these 4 results with the corresponding 32-bit integer in acc, and return the result.
+__declspec(safe) static inline varying int32 dot4add_i8i8packed(varying uint32 a, varying uint32 b, varying int32 acc) {
+    int16 tmp1 = (int16)((int8)((a >> 24) & 0xFF)) * (int16)((int8)((b >> 24) & 0xFF));
+    int16 tmp2 = (int16)((int8)((a >> 16) & 0xFF)) * (int16)((int8)((b >> 16) & 0xFF));
+    int16 tmp3 = (int16)((int8)((a >> 8) & 0xFF)) * (int16)((int8)((b >> 8) & 0xFF));
+    int16 tmp4 = (int16)((int8)(a & 0xFF)) * (int16)((int8)(b & 0xFF));
+    return (int32)tmp1 + (int32)tmp2 + (int32)tmp3 + (int32)tmp4 + acc;
+}
+
+// Multiply groups of 4 adjacent pairs of signed 8-bit integers in a with corresponding signed
+// 8-bit integers in b, producing 4 intermediate signed 16-bit results.
+// Sum these 4 results with the corresponding 32-bit integer in acc using signed saturation, and return the result.
+__declspec(safe) static inline varying int32 dot4add_i8i8packed_sat(varying uint32 a, varying uint32 b,
+                                                                    varying int32 acc) {
+    int16 tmp1 = (int16)((a >> 24) & 0xFF) * (int16)((b >> 24) & 0xFF);
+    int16 tmp2 = (int16)((a >> 16) & 0xFF) * (int16)((b >> 16) & 0xFF);
+    int16 tmp3 = (int16)((a >> 8) & 0xFF) * (int16)((b >> 8) & 0xFF);
+    int16 tmp4 = (int16)(a & 0xFF) * (int16)(b & 0xFF);
+    int32 tmp12 = saturating_add((int32)tmp1, (int32)tmp2);
+    int32 tmp123 = saturating_add((int32)tmp12, (int32)tmp3);
+    int32 tmp1234 = saturating_add((int32)tmp123, (int32)tmp4);
+    return saturating_add(tmp1234, acc);
 }
 
 // Multiply groups of 2 adjacent pairs of signed 16-bit integers in a
