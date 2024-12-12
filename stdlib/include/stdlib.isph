@@ -1112,6 +1112,26 @@ __declspec(safe) inline varying int32 dot4add_u8i8packed(varying uint32 a, varyi
 // Sum these 4 results with the corresponding 32-bit integer in acc using signed saturation, and return the result.
 __declspec(safe) inline varying int32 dot4add_u8i8packed_sat(varying uint32 a, varying uint32 b, varying int32 acc);
 
+// Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in a with corresponding unsigned
+// 8-bit integers in b, producing 4 intermediate signed 16-bit results.
+// Sum these 4 results with the corresponding 32-bit integer in acc, and return the result.
+__declspec(safe) inline varying uint32 dot4add_u8u8packed(varying uint32 a, varying uint32 b, varying uint32 acc);
+
+// Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in a with corresponding unsigned
+// 8-bit integers in b, producing 4 intermediate signed 16-bit results.
+// Sum these 4 results with the corresponding 32-bit integer in acc using unsigned saturation, and return the result.
+__declspec(safe) inline varying uint32 dot4add_u8u8packed_sat(varying uint32 a, varying uint32 b, varying uint32 acc);
+
+// Multiply groups of 4 adjacent pairs of signed 8-bit integers in a with corresponding signed
+// 8-bit integers in b, producing 4 intermediate signed 16-bit results.
+// Sum these 4 results with the corresponding 32-bit integer in acc, and return the result.
+__declspec(safe) inline varying int32 dot4add_i8i8packed(varying uint32 a, varying uint32 b, varying int32 acc);
+
+// Multiply groups of 4 adjacent pairs of signed 8-bit integers in a with corresponding signed
+// 8-bit integers in b, producing 4 intermediate signed 16-bit results.
+// Sum these 4 results with the corresponding 32-bit integer in acc using signed saturation, and return the result.
+__declspec(safe) inline varying int32 dot4add_i8i8packed_sat(varying uint32 a, varying uint32 b, varying int32 acc);
+
 // Multiply groups of 2 adjacent pairs of signed 16-bit integers in a
 // with corresponding 16-bit integers in b, producing 2 intermediate signed 32-bit results.
 // Sum these 2 results with the corresponding 32-bit integer in src, and return the result.
