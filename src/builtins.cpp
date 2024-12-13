@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -502,22 +502,21 @@ void lLinkStdlib(llvm::Module *module) {
 void ispc::LinkStandardLibraries(llvm::Module *module, int &debug_num) {
     if (g->includeStdlib) {
         lLinkStdlib(module);
-        // Remove from module here only function definitions that unused (or
-        // cannot be used) in module.
-        lAddPersistentToLLVMUsed(*module);
-        lRemoveUnused(module);
-        lRemoveUnusedPersistentFunctions(module);
         debugDumpModule(module, "LinkStdlib", debug_num++);
-    } else {
-        lAddPersistentToLLVMUsed(*module);
     }
 
     lLinkCommonBuiltins(module);
-    lRemoveUnused(module);
     debugDumpModule(module, "LinkCommonBuiltins", debug_num++);
 
     lLinkTargetBuiltins(module);
+    // generic target implementation itself uses some of the pseudo functions
+    // and their dependencies that we need to preserve.
+    // Here, more code stay in the module in comparison with when this was
+    // placed under LinkStdlib. Unfortunately, it is not clear how to reduce
+    // having builtin functions implementations in ISPC.
+    lAddPersistentToLLVMUsed(*module);
     lRemoveUnused(module);
+    lRemoveUnusedPersistentFunctions(module);
     debugDumpModule(module, "LinkTargetBuiltins", debug_num++);
 
     lSetInternalLinkageGlobals(module);
