@@ -4669,16 +4669,33 @@ values as well.
 Dot product
 -----------
 
-ISPC supports dot product operations for unsigned and signed ``int8`` and ``int16`` data types,
-leveraging the AVX-VNNI and AVX512-VNNI instruction sets. The ISPC targets that support
-native VNNI instruction sets are ``avx2vnni-i32x*``, ``avx512icl-i32x*``, and ``avx512spr-i32x*``.
-For other targets these operations are emulated.
+ISPC supports dot product operations for both unsigned and signed int8 and int16 data types, 
+utilizing the AVX-VNNI, AVX512-VNNI, and AARCH64 instruction sets. The ISPC targets that
+include native dot product instruction support are ``avx2vnni-i32x*``, ``avx512icl-i32x*``,
+and ``avx512spr-i32x*`` on x86, as well as ``neon-i32x*`` on ARM hardware with native dot
+product capabilities.
+
+Please note that not all combinations of signed and unsigned data types are supported on these
+targets. For instance, some versions of ARMv8 natively supports only signed/signed and
+unsigned/unsigned int8 dot product operations, while AVX2VNNI and AVX512 provide support solely for
+mixed-sign int8 operations.
+
+If the selected target or platform lacks native dot product support, these operations are emulated.
+
 These dot product operations are specifically designed to operate on *packed* input vectors,
-necessitating proper packing of input vectors by the programmer before use.
+necessitating proper packing or casting of input vectors by the programmer before use. For example:
+
+::
+
+    uniform uint8 a[4] = {1, 2, 3, 4};
+    uniform int8 b[4] = {4, 3, 2, 1};
+    int accumulator = 1;
+    int result = dot4add_u8i8packed(*((uniform uint*)&a[0]), *((uniform uint*)&b[0]), accumulator);
+
 
 For 8-bit Integer Vectors:
 
-The functions multiply groups of four unsigned 8-bit integers packed in ``a`` with corresponding
+The functions below multiply groups of four unsigned 8-bit integers packed in ``a`` with corresponding
 four signed 8-bit integers packed in ``b``, resulting in four intermediate signed 16-bit values.
 The sum of these values, in combination with the ``acc`` accumulator, is then returned as the final result.
 
@@ -4687,6 +4704,28 @@ The sum of these values, in combination with the ``acc`` accumulator, is then re
     varying int32 dot4add_u8i8packed(varying uint32 a, varying uint32 b,
                                      varying int32 acc)
     varying int32 dot4add_u8i8packed_sat(varying uint32 a, varying uint32 b,
+                                         varying int32 acc) // saturate the result
+
+The functions below multiply groups of four unsigned 8-bit integers packed in ``a`` with corresponding
+four unsigned 8-bit integers packed in ``b``, resulting in four intermediate signed 16-bit values.
+The sum of these values, in combination with the ``acc`` accumulator, is then returned as the final result.
+
+::
+
+    varying uint32 dot4add_u8u8packed(varying uint32 a, varying uint32 b,
+                                     varying uint32 acc)
+    varying uint32 dot4add_u8u8packed_sat(varying uint32 a, varying uint32 b,
+                                         varying uint32 acc) // saturate the result
+
+The functions below multiply groups of four signed 8-bit integers packed in ``a`` with corresponding
+four signed 8-bit integers packed in ``b``, resulting in four intermediate signed 16-bit values.
+The sum of these values, in combination with the ``acc`` accumulator, is then returned as the final result.
+
+::
+
+    varying int32 dot4add_i8i8packed(varying uint32 a, varying uint32 b,
+                                     varying int32 acc)
+    varying int32 dot4add_i8i8packed_sat(varying uint32 a, varying uint32 b,
                                          varying int32 acc) // saturate the result
 
 
