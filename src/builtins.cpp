@@ -129,6 +129,7 @@ void lSetInternalLinkageGlobals(llvm::Module *module) {
     lSetInternalLinkageGlobal(module, "__fast_masked_vload");
     lSetInternalLinkageGlobal(module, "__math_lib");
     lSetInternalLinkageGlobal(module, "__memory_alignment");
+    lSetInternalLinkageGlobal(module, "__have_dot_product_arm");
 }
 
 void lAddBitcodeToModule(llvm::Module *bcModule, llvm::Module *module) {

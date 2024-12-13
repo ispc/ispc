@@ -349,6 +349,8 @@ class Target {
 
     bool hasDotProductVNNI() const { return m_hasDotProductVNNI; }
 
+    bool hasDotProductARM() const { return m_hasDotProductARM; }
+
     bool hasHalfConverts() const { return m_hasHalfConverts; }
 
     bool hasHalfFullSupport() const { return m_hasHalfFullSupport; }
@@ -459,8 +461,15 @@ class Target {
         is 32 on SSE/AVX, since that matches the HW better. */
     int m_maskBitCount;
 
-    /** Indicates whether the target has native support for VNNI dot product. */
+    /** Indicates whether the target has native support for VNNI dot product.
+     *  Supported data types are: signed/unsigned i8 and i16 with and without saturation
+     */
     bool m_hasDotProductVNNI;
+
+    /** Indicates whether the target has native support for ARM dot product.
+     *  Supported data types are: signed/signed i8 and unsigned/unsigned i8
+     */
+    bool m_hasDotProductARM;
 
     /** Indicates whether the target has native support for float/half conversions. */
     bool m_hasHalfConverts;

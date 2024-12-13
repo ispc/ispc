@@ -1012,8 +1012,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
       m_isa(SSE2), m_arch(Arch::none), m_is32Bit(true), m_cpu(""), m_attributes(""), m_tf_attributes(nullptr),
       m_nativeVectorWidth(-1), m_nativeVectorAlignment(-1), m_dataTypeWidth(-1), m_vectorWidth(-1),
       m_picLevel(picLevel), m_codeModel(code_model), m_maskingIsFree(false), m_maskBitCount(-1),
-      m_hasDotProductVNNI(false), m_hasHalfConverts(false), m_hasHalfFullSupport(false), m_hasRand(false),
-      m_hasGather(false), m_hasScatter(false), m_hasTranscendentals(false), m_hasTrigonometry(false),
+      m_hasDotProductVNNI(false), m_hasDotProductARM(false), m_hasHalfConverts(false), m_hasHalfFullSupport(false),
+      m_hasRand(false), m_hasGather(false), m_hasScatter(false), m_hasTranscendentals(false), m_hasTrigonometry(false),
       m_hasRsqrtd(false), m_hasRcpd(false), m_hasVecPrefetch(false), m_hasSaturatingArithmetic(false),
       m_hasFp16Support(false), m_hasFp64Support(true), m_warnings(0) {
     DeviceType CPUID = CPU_None, CPUfromISA = CPU_None;
@@ -2091,7 +2091,10 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 #ifdef ISPC_ARM_ENABLED
         options.FloatABIType = llvm::FloatABI::Hard;
         if (arch == Arch::arm || arch == Arch::aarch64) {
-            featuresString = llvm::join(lGetARMTargetFeatures(arch, m_cpu), ",");
+            // Set the supported features for ARM target
+            std::vector<llvm::StringRef> armFeatures = lGetARMTargetFeatures(arch, m_cpu);
+            m_hasDotProductARM = lIsARMFeatureSupported("+dotprod", armFeatures);
+            featuresString = llvm::join(armFeatures, ",");
             this->m_funcAttributes.push_back(std::make_pair("target-features", featuresString));
         }
 #endif

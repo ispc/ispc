@@ -735,3 +735,21 @@ define <4 x i16> @__psubus_vi16(<4 x i16>, <4 x i16>) {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp/rsqrt declarations for half
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; dot product
+
+declare <4 x i32> @NEON_PREFIX_UDOT.v4i32.v16i8(<4 x i32>, <16 x i8>, <16 x i8>) nounwind readnone
+define <4 x i32> @__dot4add_u8u8packed(<4 x i32> %a, <4 x i32> %b, <4 x i32> %acc) nounwind readnone alwaysinline {
+  %a_cast = bitcast <4 x i32> %a to <16 x i8>
+  %b_cast = bitcast <4 x i32> %b to <16 x i8>
+  %ret = call <4 x i32> @NEON_PREFIX_UDOT.v4i32.v16i8(<4 x i32> %acc, <16 x i8> %a_cast, <16 x i8> %b_cast)
+  ret <4 x i32> %ret
+}
+
+declare <4 x i32> @NEON_PREFIX_SDOT.v4i32.v16i8(<4 x i32>, <16 x i8>, <16 x i8>) nounwind readnone
+define <4 x i32> @__dot4add_i8i8packed(<4 x i32> %a, <4 x i32> %b, <4 x i32> %acc) nounwind readnone alwaysinline {
+  %a_cast = bitcast <4 x i32> %a to <16 x i8>
+  %b_cast = bitcast <4 x i32> %b to <16 x i8>
+  %ret = call <4 x i32> @NEON_PREFIX_SDOT.v4i32.v16i8(<4 x i32> %acc, <16 x i8> %a_cast, <16 x i8> %b_cast)
+  ret <4 x i32> %ret
+}

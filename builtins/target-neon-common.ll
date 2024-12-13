@@ -120,6 +120,14 @@ define(`NEON_PREFIX_RSQRTSQ',
 `ifelse(RUNTIME, `64', `llvm.aarch64.neon.frsqrts',
         RUNTIME, `32', `llvm.arm.neon.vrsqrts')')
 
+define(`NEON_PREFIX_UDOT',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.udot',
+        RUNTIME, `32', `llvm.arm.neon.udot')')
+
+define(`NEON_PREFIX_SDOT',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.sdot',
+        RUNTIME, `32', `llvm.arm.neon.sdot')')
+
 stdlib_core()
 scans()
 reduce_equal(WIDTH)

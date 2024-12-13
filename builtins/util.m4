@@ -566,6 +566,13 @@ define(`v8tov2', `
   $6 = shufflevector <8 x $1> $2, <8 x $1> undef, <2 x i32> <i32 6, i32 7>
 ')
 
+;; $1: vector element type
+;; $2-$3: input 4-wide vector
+;; $4: output 8-wide vector
+define(`v4tov8', `
+    $4 = shufflevector <4 x $1> $2, <4 x $1> $3, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+')
+
 define(`v16tov4', `
   $3 = shufflevector <16 x $1> $2, <16 x $1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   $4 = shufflevector <16 x $1> $2, <16 x $1> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
