@@ -406,7 +406,8 @@ int Module::CompileFile() {
 
     if (g->runCPP) {
         llvm::TimeTraceScope TimeScope("Frontend parser");
-        if (int err = preprocessAndParse()) {
+        int err = preprocessAndParse();
+        if (g->onlyCPP || err) {
             return err;
         }
     } else {
