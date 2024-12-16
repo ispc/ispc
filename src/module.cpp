@@ -3122,6 +3122,9 @@ static void lSetCmdlineDependentMacroDefinitions(const std::shared_ptr<clang::Pr
     if (g->target->hasDotProductARM()) {
         opts->addMacroDef("ISPC_TARGET_HAS_DOT_PRODUCT_ARM");
     }
+    if (g->target->hasI8MatrixMulARM()) {
+        opts->addMacroDef("ISPC_TARGET_HAS_I8_MATRIX_MUL_ARM");
+    }
 }
 
 static void lSetPreprocessorOptions(const std::shared_ptr<clang::PreprocessorOptions> opts) {

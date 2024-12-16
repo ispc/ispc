@@ -128,6 +128,10 @@ define(`NEON_PREFIX_SDOT',
 `ifelse(RUNTIME, `64', `llvm.aarch64.neon.sdot',
         RUNTIME, `32', `llvm.arm.neon.sdot')')
 
+define(`NEON_PREFIX_USDOT',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.usdot',
+        RUNTIME, `32', `llvm.arm.neon.usdot')')
+
 stdlib_core()
 scans()
 reduce_equal(WIDTH)
