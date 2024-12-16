@@ -215,14 +215,22 @@ static std::vector<llvm::StringRef> lGetARMTargetFeatures(Arch arch, const std::
 
 // Check if a specific feature is supported
 static bool lIsARMFeatureSupported(const std::string &feature, const std::vector<llvm::StringRef> &featureList) {
-    // Check if the feature exists in the feature list
+    std::string featureEnabled = "+" + feature;
+    std::string featureDisabled = "-" + feature;
+
+    bool isSupported = false;
+
+    // Check if the explicitly enabled feature exists and the explicitly disabled feature does not
     for (const auto &f : featureList) {
-        if (f == feature) {
-            return true; // Feature found
+        if (f == featureEnabled) {
+            isSupported = true; // Feature is supported
+        }
+        if (f == featureDisabled) {
+            return false; // Feature is explicitly not supported
         }
     }
 
-    return false; // Feature not found
+    return isSupported;
 }
 
 #if defined(ISPC_HOST_IS_ARM) || defined(ISPC_HOST_IS_AARCH64)
@@ -248,9 +256,9 @@ static ISPCTarget lGetARMSystemISA() {
 #endif
     std::vector<llvm::StringRef> features = lGetTargetFeaturesForARMHost(arch);
 
-    if (lIsARMFeatureSupported("+sve", features)) {
+    if (lIsARMFeatureSupported("sve", features)) {
         return ISPCTarget::neon_i32x4; // TODO: Return SVE target when supported
-    } else if (lIsARMFeatureSupported("+neon", features)) {
+    } else if (lIsARMFeatureSupported("neon", features)) {
         return ISPCTarget::neon_i32x4;
     } else {
         Warning(SourcePos(), "Cannot detect ARM ISA!");
@@ -945,23 +953,22 @@ DeviceType lGetARMDeviceType(Arch arch) {
         std::vector<llvm::StringRef> featureString = lGetTargetFeaturesForARMHost(arch);
 #if defined(ISPC_HOST_IS_LINUX) || defined(ISPC_HOST_IS_WINDOWS)
         // ARMv8-A (cortex-a35, cortex-a53, cortex-a57) - have the same features
-        bool a53 = lIsARMFeatureSupported("+neon", featureString) &&
-                   lIsARMFeatureSupported("+fp-armv8", featureString) &&
-                   lIsARMFeatureSupported("+aes", featureString) && lIsARMFeatureSupported("+sha2", featureString) &&
-                   lIsARMFeatureSupported("+crc", featureString);
+        bool a53 = lIsARMFeatureSupported("neon", featureString) && lIsARMFeatureSupported("fp-armv8", featureString) &&
+                   lIsARMFeatureSupported("aes", featureString) && lIsARMFeatureSupported("sha2", featureString) &&
+                   lIsARMFeatureSupported("crc", featureString);
         // ARMv8.2-A (cortex-a55, cortex-a78) - have the same features
-        bool a55 = a53 && lIsARMFeatureSupported("+dotprod", featureString) &&
-                   lIsARMFeatureSupported("+fullfp16", featureString) &&
-                   lIsARMFeatureSupported("+lse", featureString) && lIsARMFeatureSupported("+rcpc", featureString);
+        bool a55 = a53 && lIsARMFeatureSupported("dotprod", featureString) &&
+                   lIsARMFeatureSupported("fullfp16", featureString) && lIsARMFeatureSupported("lse", featureString) &&
+                   lIsARMFeatureSupported("rcpc", featureString);
         // ARMv9-A (cortex-a510, cortex-a520) - have the same computational features.
         // Doesn't have "+aes" and "+sha2", so construct feature list from scratch.
-        bool a510 = lIsARMFeatureSupported("+neon", featureString) && lIsARMFeatureSupported("+crc", featureString) &&
-                    lIsARMFeatureSupported("+dotprod", featureString) &&
-                    lIsARMFeatureSupported("+fp-armv8", featureString) &&
-                    lIsARMFeatureSupported("+fullfp16", featureString) &&
-                    lIsARMFeatureSupported("+lse", featureString) && lIsARMFeatureSupported("+rcpc", featureString) &&
-                    lIsARMFeatureSupported("+sve", featureString) && lIsARMFeatureSupported("+sve2", featureString) &&
-                    lIsARMFeatureSupported("+i8mm", featureString) && lIsARMFeatureSupported("+fp16fml", featureString);
+        bool a510 = lIsARMFeatureSupported("neon", featureString) && lIsARMFeatureSupported("crc", featureString) &&
+                    lIsARMFeatureSupported("dotprod", featureString) &&
+                    lIsARMFeatureSupported("fp-armv8", featureString) &&
+                    lIsARMFeatureSupported("fullfp16", featureString) && lIsARMFeatureSupported("lse", featureString) &&
+                    lIsARMFeatureSupported("rcpc", featureString) && lIsARMFeatureSupported("sve", featureString) &&
+                    lIsARMFeatureSupported("sve2", featureString) && lIsARMFeatureSupported("i8mm", featureString) &&
+                    lIsARMFeatureSupported("fp16fml", featureString);
         if (a510) {
             return DeviceType::CPU_CortexA510;
         } else if (a55) {
@@ -972,19 +979,19 @@ DeviceType lGetARMDeviceType(Arch arch) {
             return DeviceType::CPU_CortexA35;
         }
 #elif defined(ISPC_HOST_IS_APPLE)
-        bool apple_a7 =
-            lIsARMFeatureSupported("+neon", featureString) && lIsARMFeatureSupported("+aes", featureString) &&
-            lIsARMFeatureSupported("+sha2", featureString) && lIsARMFeatureSupported("+fp-armv8", featureString);
-        bool apple_a10 = apple_a7 && lIsARMFeatureSupported("+crc", featureString);
-        bool apple_a11 = apple_a10 && lIsARMFeatureSupported("+lse", featureString) &&
-                         lIsARMFeatureSupported("+fullfp16", featureString);
-        bool apple_a12 = apple_a11 && lIsARMFeatureSupported("+rcpc", featureString);
-        bool apple_a13 = apple_a12 && lIsARMFeatureSupported("+dotprod", featureString) &&
-                         lIsARMFeatureSupported("+sha3", featureString) &&
-                         lIsARMFeatureSupported("+fp16fml", featureString);
+        bool apple_a7 = lIsARMFeatureSupported("neon", featureString) && lIsARMFeatureSupported("aes", featureString) &&
+                        lIsARMFeatureSupported("sha2", featureString) &&
+                        lIsARMFeatureSupported("fp-armv8", featureString);
+        bool apple_a10 = apple_a7 && lIsARMFeatureSupported("crc", featureString);
+        bool apple_a11 = apple_a10 && lIsARMFeatureSupported("lse", featureString) &&
+                         lIsARMFeatureSupported("fullfp16", featureString);
+        bool apple_a12 = apple_a11 && lIsARMFeatureSupported("rcpc", featureString);
+        bool apple_a13 = apple_a12 && lIsARMFeatureSupported("dotprod", featureString) &&
+                         lIsARMFeatureSupported("sha3", featureString) &&
+                         lIsARMFeatureSupported("fp16fml", featureString);
         bool apple_a14 = apple_a13; // Apple A14 features are the same as A13
-        bool apple_a15 = apple_a14 && lIsARMFeatureSupported("+bf16", featureString) &&
-                         lIsARMFeatureSupported("+i8mm", featureString);
+        bool apple_a15 =
+            apple_a14 && lIsARMFeatureSupported("bf16", featureString) && lIsARMFeatureSupported("i8mm", featureString);
         bool apple_a16 = apple_a15; // Apple A16 and A17 features are the same as A15
         // Return the highest supported Apple device type
         if (apple_a15 || apple_a16) {
@@ -2096,7 +2103,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         if (arch == Arch::arm || arch == Arch::aarch64) {
             // Set the supported features for ARM target
             std::vector<llvm::StringRef> armFeatures = lGetARMTargetFeatures(arch, m_cpu);
-            m_hasDotProductARM = lIsARMFeatureSupported("+dotprod", armFeatures);
+            m_hasDotProductARM = lIsARMFeatureSupported("dotprod", armFeatures);
             featuresString = llvm::join(armFeatures, ",");
             this->m_funcAttributes.push_back(std::make_pair("target-features", featuresString));
         }
