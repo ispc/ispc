@@ -351,6 +351,8 @@ class Target {
 
     bool hasDotProductARM() const { return m_hasDotProductARM; }
 
+    bool hasI8MatrixMulARM() const { return m_hasI8MatrixMulARM; }
+
     bool hasHalfConverts() const { return m_hasHalfConverts; }
 
     bool hasHalfFullSupport() const { return m_hasHalfFullSupport; }
@@ -470,6 +472,11 @@ class Target {
      *  Supported data types are: signed/signed i8 and unsigned/unsigned i8
      */
     bool m_hasDotProductARM;
+
+    /** Indicates whether the target has support for i8 matrix multiplication
+     *  that required for dot product of i8 mixed-sign types.
+     */
+    bool m_hasI8MatrixMulARM;
 
     /** Indicates whether the target has native support for float/half conversions. */
     bool m_hasHalfConverts;

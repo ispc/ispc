@@ -5654,7 +5654,7 @@ __declspec(safe) static inline void assume(uniform bool test) {
 // 8-bit integers in b, producing 4 intermediate signed 16-bit results.
 // Sum these 4 results with the corresponding 32-bit integer in acc, and return the result.
 __declspec(safe) static inline varying int32 dot4add_u8i8packed(varying uint32 a, varying uint32 b, varying int32 acc) {
-    if (__have_dot_product_vnni) {
+    if (__have_dot_product_vnni || __have_i8_matmul_arm) {
         return __dot4add_u8i8packed(a, b, acc);
     } else {
         int16 tmp1 = (int16)((a >> 24) & 0xFF) * (int16)((int8)((b >> 24) & 0xFF));
