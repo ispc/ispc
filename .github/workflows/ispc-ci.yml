@@ -676,6 +676,7 @@ jobs:
     env:
       LLVM_VERSION: ${{ matrix.llvm.version }}
       LLVM_TAR: llvm-${{ matrix.llvm.full_version }}-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
+      ISPC_OPAQUE_PTR_MODE: ${{ matrix.llvm.opaque_ptr_mode }}
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
