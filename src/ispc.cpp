@@ -183,6 +183,9 @@ static std::vector<llvm::StringRef> lGetARMTargetFeatures(Arch arch, const std::
 #endif
             FPUKindType fpu = llvm::ARM::getDefaultFPU(cpu, archKind);
             llvm::ARM::getFPUFeatures(fpu, targetFeatures);
+            // get default Extension features
+            uint64_t Extensions = llvm::ARM::getDefaultExtensions(cpu, archKind);
+            llvm::ARM::getExtensionFeatures(Extensions, targetFeatures);
         } else if (arch == Arch::aarch64) {
             std::optional<llvm::AArch64::CpuInfo> cpuInfo = llvm::AArch64::parseCpu(cpu);
             if (!cpuInfo) {
