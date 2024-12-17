@@ -5677,9 +5677,7 @@ __declspec(safe) static inline varying int32 dot4add_u8i8packed_sat(varying uint
         int16 tmp2 = (int16)((a >> 16) & 0xFF) * (int16)((int8)((b >> 16) & 0xFF));
         int16 tmp3 = (int16)((a >> 8) & 0xFF) * (int16)((int8)((b >> 8) & 0xFF));
         int16 tmp4 = (int16)(a & 0xFF) * (int16)((int8)(b & 0xFF));
-        int32 tmp12 = saturating_add((int32)tmp1, (int32)tmp2);
-        int32 tmp123 = saturating_add((int32)tmp12, (int32)tmp3);
-        int32 tmp1234 = saturating_add((int32)tmp123, (int32)tmp4);
+        int32 tmp1234 = ((int32)tmp1) + ((int32)tmp2) + ((int32)tmp3) + ((int32)tmp4);
         return saturating_add(tmp1234, acc);
     }
 }
@@ -5709,9 +5707,7 @@ __declspec(safe) static inline varying uint32 dot4add_u8u8packed_sat(varying uin
     int16 tmp2 = (int16)((a >> 16) & 0xFF) * (int16)((b >> 16) & 0xFF);
     int16 tmp3 = (int16)((a >> 8) & 0xFF) * (int16)((b >> 8) & 0xFF);
     int16 tmp4 = (int16)(a & 0xFF) * (int16)(b & 0xFF);
-    uint32 tmp12 = saturating_add((uint32)tmp1, (uint32)tmp2);
-    uint32 tmp123 = saturating_add((uint32)tmp12, (uint32)tmp3);
-    uint32 tmp1234 = saturating_add((uint32)tmp123, (uint32)tmp4);
+    uint32 tmp1234 = ((uint32)tmp1) + ((uint32)tmp2) + ((uint32)tmp3) + ((uint32)tmp4);
     return saturating_add(tmp1234, acc);
 }
 
@@ -5739,9 +5735,7 @@ __declspec(safe) static inline varying int32 dot4add_i8i8packed_sat(varying uint
     int16 tmp2 = (int16)((a >> 16) & 0xFF) * (int16)((b >> 16) & 0xFF);
     int16 tmp3 = (int16)((a >> 8) & 0xFF) * (int16)((b >> 8) & 0xFF);
     int16 tmp4 = (int16)(a & 0xFF) * (int16)(b & 0xFF);
-    int32 tmp12 = saturating_add((int32)tmp1, (int32)tmp2);
-    int32 tmp123 = saturating_add((int32)tmp12, (int32)tmp3);
-    int32 tmp1234 = saturating_add((int32)tmp123, (int32)tmp4);
+    int32 tmp1234 = ((int32)tmp1) + ((int32)tmp2) + ((int32)tmp3) + ((int32)tmp4);
     return saturating_add(tmp1234, acc);
 }
 
