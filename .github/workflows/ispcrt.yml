@@ -17,7 +17,6 @@ env:
   LLVM_REPO: https://github.com/ispc/ispc.dependencies
   LLVM_VERSION: "18.1"
   LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
-  ISPC_OPAQUE_PTR_MODE: "ON"
 
 jobs:
   # Build ISPC Runtime separately from ISPC with support of different task systems
