@@ -30,19 +30,19 @@ ATTRS uniform float16 foo(uniform float16 x, uniform float16 y) { return @llvm.p
 ATTRS varying float bar(varying float x, varying float y) { return @llvm.pow(x, y); }
 
 // CHECK-LABEL: @cttz_u32
-// CHECK-DAG:   %calltmp = tail call i32 @llvm.cttz.i32(i32 %x, i1 false)
+// CHECK-DAG:   %calltmp = tail call {{.*}}i32 @llvm.cttz.i32(i32 %x, i1 false)
 ATTRS uniform int32 cttz_u32(uniform int32 x) { return @llvm.cttz.i32(x, false); }
 
 // CHECK-LABEL: @cttz_v32
-// CHECK-DAG:  %calltmp = tail call <[[WIDTH]] x i32> @llvm.cttz.v[[WIDTH]]i32(<[[WIDTH]] x i32> %x, i1 false)
+// CHECK-DAG:  %calltmp = tail call {{.*}}<[[WIDTH]] x i32> @llvm.cttz.v[[WIDTH]]i32(<[[WIDTH]] x i32> %x, i1 false)
 ATTRS int32 cttz_v32(int32 x) { return @llvm.cttz.i32(x, false); }
 
 // CHECK-LABEL: @ctlz_u32
-// CHECK-DAG:   %calltmp = tail call i32 @llvm.ctlz.i32(i32 %x, i1 false)
+// CHECK-DAG:   %calltmp = tail call {{.*}}i32 @llvm.ctlz.i32(i32 %x, i1 false)
 ATTRS uniform int32 ctlz_u32(uniform int32 x) { return @llvm.ctlz.i32(x, false); }
 
 // CHECK-LABEL: @ctlz_v32
-// CHECK-DAG:  %calltmp = tail call <[[WIDTH]] x i32> @llvm.ctlz.v[[WIDTH]]i32(<[[WIDTH]] x i32> %x, i1 false)
+// CHECK-DAG:  %calltmp = tail call {{.*}}<[[WIDTH]] x i32> @llvm.ctlz.v[[WIDTH]]i32(<[[WIDTH]] x i32> %x, i1 false)
 ATTRS int32 ctlz_v32(int32 x) { return @llvm.ctlz.i32(x, false); }
 
 // CHECK-LABEL: @prefetch
