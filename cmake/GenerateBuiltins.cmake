@@ -74,7 +74,7 @@ function(target_ll_to_cpp target bit os CPP_LIST BC_LIST)
     add_custom_command(
         OUTPUT ${bc}
         COMMAND ${M4_EXECUTABLE} -I${include} -DBUILD_OS=${OS_UP} -DRUNTIME=${bit} ${input}
-            | \"${LLVM_AS_EXECUTABLE}\" ${LLVM_TOOLS_OPAQUE_FLAGS} -o ${bc}
+            | \"${LLVM_AS_EXECUTABLE}\" -o ${bc}
         DEPENDS ${input} ${M4_IMPLICIT_DEPENDENCIES}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
@@ -116,7 +116,7 @@ function(generate_dispatcher os)
 
     add_custom_command(
         OUTPUT ${bc}
-        COMMAND ${CLANGPP_EXECUTABLE} -x c ${ISPC_OPAQUE_FLAGS} ${DISP_TYPE} ${EXTRA_OPTS} --target=x86_64-unknown-unknown -march=core2 -mtune=generic -O2 -emit-llvm ${input} -c -o ${bc}
+        COMMAND ${CLANGPP_EXECUTABLE} -x c ${DISP_TYPE} ${EXTRA_OPTS} --target=x86_64-unknown-unknown -march=core2 -mtune=generic -O2 -emit-llvm ${input} -c -o ${bc}
         DEPENDS ${input}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
@@ -151,7 +151,7 @@ function(builtin_wasm_to_cpp bit os arch)
     write_common_bitcode_lib(${name} ${os} ${arch})
 
     list(APPEND flags
-        -DWASM -s WASM_OBJECT_FILES=0 ${ISPC_OPAQUE_FLAGS} -I${CMAKE_SOURCE_DIR} --std=gnu++17 -S -emit-llvm)
+        -DWASM -s WASM_OBJECT_FILES=0 -I${CMAKE_SOURCE_DIR} --std=gnu++17 -S -emit-llvm)
     if("${bit}" STREQUAL "64")
         list(APPEND flags "-sMEMORY64")
     endif()
@@ -159,7 +159,7 @@ function(builtin_wasm_to_cpp bit os arch)
     add_custom_command(
         OUTPUT ${bc}
         COMMAND ${EMCC_EXECUTABLE} ${flags} ${input} -o -
-            | \"${LLVM_AS_EXECUTABLE}\" ${LLVM_TOOLS_OPAQUE_FLAGS} -o ${bc}
+            | \"${LLVM_AS_EXECUTABLE}\" -o ${bc}
         DEPENDS ${input}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
@@ -292,7 +292,7 @@ function(builtin_to_cpp bit os generic_arch)
 
     get_target_flags(${os} ${arch} target_flags)
     list(APPEND flags ${target_flags}
-        -I${CMAKE_SOURCE_DIR} -m${bit} -S -emit-llvm ${ISPC_OPAQUE_FLAGS} --std=gnu++17
+        -I${CMAKE_SOURCE_DIR} -m${bit} -S -emit-llvm --std=gnu++17
     )
 
     set(name builtins-cpp-${bit}-${os}-${arch})
@@ -305,7 +305,7 @@ function(builtin_to_cpp bit os generic_arch)
     add_custom_command(
         OUTPUT ${bc}
         COMMAND ${CLANGPP_EXECUTABLE} ${flags} ${input} -o -
-            | \"${LLVM_AS_EXECUTABLE}\" ${LLVM_TOOLS_OPAQUE_FLAGS} -o ${bc}
+            | \"${LLVM_AS_EXECUTABLE}\" -o ${bc}
         DEPENDS ${input}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
@@ -340,7 +340,7 @@ function(builtin_xe_to_cpp os)
 
     add_custom_command(
         OUTPUT ${bc}
-        COMMAND cat ${input} | \"${LLVM_AS_EXECUTABLE}\" ${LLVM_TOOLS_OPAQUE_FLAGS} -o ${bc}
+        COMMAND cat ${input} | \"${LLVM_AS_EXECUTABLE}\" -o ${bc}
         DEPENDS ${input}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         )

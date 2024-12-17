@@ -92,8 +92,6 @@ option(ISPC_PREPARE_PACKAGE "Generate build targets for ispc package" OFF)
 option(ISPC_PACKAGE_EXAMPLES "Pack examples into the ISPC package" ON)
 option(ISPC_SLIM_BINARY "Build ISPC as slim binary" OFF)
 
-option(ISPC_OPAQUE_PTR_MODE "Build ISPC with usage of opaque pointers" OFF)
-
 option(ISPC_CROSS "Build ISPC with cross compilation support" OFF)
 # Default settings for cross compilation
 if (ISPC_CROSS)
@@ -408,29 +406,6 @@ if (XE_ENABLED)
     list(APPEND XE_LIBRARY_LIST LLVMGenXIntrinsics LLVMSPIRVLib)
 endif()
 
-# Set the flags responsible for generation of opaque pointers in builtins
-set(ISPC_OPAQUE_FLAGS)
-set(LLVM_TOOLS_OPAQUE_FLAGS)
-# Starting LLVM version 17.0 enable opaque pointers by default for CPU build
-if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "17.0.0")
-    set(ISPC_OPAQUE_PTR_MODE ON)
-else()
-    # On Xe-enabled build, turn off opaque pointers before 17.0.
-    # IGC software stack is not ready yet.
-    if (XE_ENABLED)
-        set(ISPC_OPAQUE_PTR_MODE OFF)
-    endif()
-endif()
-
-if (NOT ISPC_OPAQUE_PTR_MODE)
-    # Explicitly disable opaque pointers starting LLVM 15.0 till LLVM 17.0
-    if (${LLVM_VERSION_NUMBER} VERSION_LESS "17.0.0")
-        set(ISPC_OPAQUE_FLAGS "-Xclang" "-no-opaque-pointers")
-        set(LLVM_TOOLS_OPAQUE_FLAGS "-opaque-pointers=0")
-    endif()
-endif()
-message(STATUS "ISPC opaque pointers mode is " ${ISPC_OPAQUE_PTR_MODE})
-
 get_llvm_libfiles(LLVM_LIBRARY_LIST ${LLVM_COMPONENTS})
 get_llvm_cppflags(LLVM_CPP_FLAGS)
 
@@ -635,11 +610,6 @@ if (ISPC_UNIX_TARGET)
     list(APPEND COMPILE_DEFINITIONS ISPC_UNIX_TARGET_ON)
 else()
     list(APPEND COMPILE_DEFINITIONS ISPC_UNIX_TARGET_OFF)
-endif()
-
-# Compile definition for opaque pointers mode
-if (ISPC_OPAQUE_PTR_MODE)
-    list(APPEND COMPILE_DEFINITIONS ISPC_OPAQUE_PTR_MODE)
 endif()
 
 
