@@ -13,7 +13,7 @@
 // RUN: %{ispc} %s --nowrap --target=neon-i32x4 --arch=aarch64 --emit-llvm-text --enable-llvm-intrinsics -o - 2>&1 | FileCheck %s
 // RUN: %{ispc} %s --nowrap --target=neon-i32x8 --arch=aarch64 --emit-llvm-text --enable-llvm-intrinsics -o - 2>&1 | FileCheck %s
 
-// REQUIRES: OPAQUE_PTRS_ENABLED && X86_ENABLED && ARM_ENABLED
+// REQUIRES: X86_ENABLED && ARM_ENABLED
 
 #define unmangled __attribute__((unmangled))
 #define ATTRS unmasked unmangled

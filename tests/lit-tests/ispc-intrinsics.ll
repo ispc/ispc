@@ -1,7 +1,5 @@
 ; RUN: %{ispc-opt} --target=host --passes=lower-ispc-intrinsics %s -o - | FileCheck %s
 
-; REQUIRES: OPAQUE_PTRS_ENABLED
-
 ; CHECK-LABEL: @atomicrmw
 ; CHECK-DAG: [[RES:%.*]] = atomicrmw xchg ptr %ptr, float %val seq_cst
 ; CHECK-DAG: ret float [[RES]]
