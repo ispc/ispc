@@ -119,7 +119,6 @@ static void lPrintVersion() {
     printf("    [--no-omit-frame-pointer]\t\tDisable frame pointer omission. It may be useful for profiling\n");
     printf("    [--nostdlib]\t\t\tDon't make the ispc standard library available\n");
     printf("    [--no-pragma-once]\t\t\tDon't use #pragma once in created headers\n");
-    printf("    [--nocpp]\t\t\t\tDon't run the C preprocessor\n");
     printf("    [-o <name>/--outfile=<name>]\tOutput filename (may be \"-\" for standard output)\n");
     printf("    [-O0/-O(1/2/3)]\t\t\tSet optimization level. Default behavior is to optimize for speed\n");
     printf("        -O0\t\t\t\tOptimizations disabled\n");
@@ -215,6 +214,7 @@ static void lPrintVersion() {
            "current directory, or to <path> if specified\n");
     printf("    [--gen-stdlib]\t\tEnable special compilation mode to generate LLVM IR for stdlib.ispc.\n");
     printf("    [--check-bitcode-libs]\t\tCheck the presence of bitcode libraries for ISPC slim binary.\n");
+    printf("    [--nocpp]\t\t\t\tDon't run the C preprocessor\n");
     printf("    [--off-phase=<value>]\t\tSwitch off optimization phases. "
            "--off-phase=pre:first,210:220,300,305,310:last\n");
     printf("    [--opt=<option>]\t\t\tSet optimization option\n");
@@ -998,6 +998,7 @@ int main(int Argc, char *Argv[]) {
             g->includeStdlib = false;
         } else if (!strcmp(argv[i], "--nocpp")) {
             g->runCPP = false;
+            Warning(SourcePos(), "--nocpp is deprecated and will be removed in the future. ");
         } else if (!strcmp(argv[i], "-ffunction-sections")) {
             g->functionSections = true;
         } else if (!strcmp(argv[i], "-fno-function-sections")) {
