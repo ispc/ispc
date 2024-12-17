@@ -41,7 +41,6 @@ env:
                    "avx512icl-x4", "avx512icl-x8", "avx512icl-x16", "avx512icl-x64", "avx512icl-x32",
                    "avx512spr-x4", "avx512spr-x8", "avx512spr-x16", "avx512spr-x64", "avx512spr-x32"]'
   OPTSETS_FULL: "-O0 -O1 -O2"
-  ISPC_OPAQUE_PTR_MODE: "OFF"
   ISPC_ANDROID_NDK_PATH: "/usr/local/share/android-ndk"
 
 jobs:
@@ -104,11 +103,9 @@ jobs:
           - version: "18.1"
             full_version: "18.1.8"
             short_version: 18
-            opaque_ptr_mode: "ON"
     env:
       LLVM_VERSION: ${{ matrix.llvm.version }}
       LLVM_TAR: llvm-${{ matrix.llvm.full_version }}-ubuntu22.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
-      ISPC_OPAQUE_PTR_MODE: ${{ matrix.llvm.opaque_ptr_mode }}
 
     steps:
     - name: Install git
@@ -156,19 +153,15 @@ jobs:
           - version: "16.0"
             full_version: "16.0.6"
             short_version: 16
-            opaque_ptr_mode: "ON"
           - version: "17.0"
             full_version: "17.0.6"
             short_version: 17
-            opaque_ptr_mode: "ON"
           - version: "18.1"
             full_version: "18.1.8"
             short_version: 18
-            opaque_ptr_mode: "ON"
     env:
       LLVM_VERSION: ${{ matrix.llvm.version }}
       LLVM_TAR: llvm-${{ matrix.llvm.full_version }}-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
-      ISPC_OPAQUE_PTR_MODE: ${{ matrix.llvm.opaque_ptr_mode }}
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -204,7 +197,6 @@ jobs:
     env:
       LLVM_VERSION: "18.1"
       LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
-      ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -241,7 +233,6 @@ jobs:
     env:
       LLVM_VERSION: "18.1"
       LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release-x86.arm.wasm.tar.xz
-      ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -277,7 +268,6 @@ jobs:
     env:
       LLVM_VERSION: "18.1"
       LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release-x86.arm.wasm.tar.xz
-      ISPC_OPAQUE_PTR_MODE: "OFF"
       INSTALL_COMPUTE_RUNTIME: 1
       COMPUTE_RUNTIME_GITHUB_RELEASE: 1
 
@@ -664,19 +654,15 @@ jobs:
           - version: "16.0"
             full_version: "16.0.6"
             short_version: 16
-            opaque_ptr_mode: "ON"
           - version: "17.0"
             full_version: "17.0.6"
             short_version: 17
-            opaque_ptr_mode: "ON"
           - version: "18.1"
             full_version: "18.1.8"
             short_version: 18
-            opaque_ptr_mode: "ON"
     env:
       LLVM_VERSION: ${{ matrix.llvm.version }}
       LLVM_TAR: llvm-${{ matrix.llvm.full_version }}-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
-      ISPC_OPAQUE_PTR_MODE: ${{ matrix.llvm.opaque_ptr_mode }}
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -872,19 +858,15 @@ jobs:
           - version: "16.0"
             full_version: "16.0.6"
             short_version: 16
-            opaque_ptr_mode: "ON"
           - version: "17.0"
             full_version: "17.0.6"
             short_version: 17
-            opaque_ptr_mode: "ON"
           - version: "18.1"
             full_version: "18.1.8"
             short_version: 18
-            opaque_ptr_mode: "ON"
     env:
       LLVM_VERSION: ${{ matrix.llvm.version }}
       LLVM_TAR: llvm-${{ matrix.llvm.full_version }}-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
-      ISPC_OPAQUE_PTR_MODE: ${{ matrix.llvm.opaque_ptr_mode }}
       LLVM_HOME: "C:\\projects\\llvm"
       CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       BUILD_TYPE: "Release"
@@ -929,7 +911,6 @@ jobs:
       LLVM_HOME: "C:\\projects\\llvm"
       CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       BUILD_TYPE: "Release"
-      ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -978,7 +959,6 @@ jobs:
       LLVM_HOME: "C:\\projects\\llvm"
       CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       BUILD_TYPE: "Release"
-      ISPC_OPAQUE_PTR_MODE: "OFF"
       ISPC_DIR: "build\\build-ispc-stage2\\src\\ispc-stage2-build"
 
     steps:
@@ -1244,7 +1224,6 @@ jobs:
       LLVM_HOME: "C:\\projects\\llvm"
       CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       BUILD_TYPE: "Release"
-      ISPC_OPAQUE_PTR_MODE: "ON"
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -1275,8 +1254,6 @@ jobs:
     env:
       LLVM_VERSION: "18.1"
       LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
-      ISPC_OPAQUE_PTR_MODE: "ON"
-
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
       with:
