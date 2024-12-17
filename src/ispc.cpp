@@ -2769,13 +2769,6 @@ Globals::Globals() {
     target = nullptr;
     ctx = new llvm::LLVMContext;
 
-// Opaque pointers mode is supported starting from LLVM 14,
-// became default in LLVM 15
-#ifndef ISPC_OPAQUE_PTR_MODE
-    // Explicitly disable opaque pointers starting LLVM 15.0
-    ctx->setOpaquePointers(false);
-#endif
-
 #ifdef ISPC_XE_ENABLED
     stackMemSize = 0;
 #endif

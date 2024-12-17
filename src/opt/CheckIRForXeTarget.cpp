@@ -70,13 +70,8 @@ bool CheckIRForXeTarget::checkAndFixIRForXe(llvm::BasicBlock &bb) {
         if (!g->target->hasFp64Support()) {
             for (int i = 0; i < (int)inst->getNumOperands(); ++i) {
                 llvm::Type *t = inst->getOperand(i)->getType();
-#ifdef ISPC_OPAQUE_PTR_MODE
                 // No need to check for double pointer types in opaque pointers mode.
                 if (t->isDoubleTy()) {
-#else
-                if (t == LLVMTypes::DoubleType || t == LLVMTypes::DoublePointerType ||
-                    t == LLVMTypes::DoubleVectorType || t == LLVMTypes::DoubleVectorPointerType) {
-#endif
                     Error(pos, "\'double\' type is not supported by the target\n");
                 }
             }

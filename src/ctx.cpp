@@ -2802,11 +2802,7 @@ llvm::Value *FunctionEmitContext::AddrSpaceCastInst(llvm::Value *val, AddressSpa
     if (pt->getAddressSpace() == (unsigned)as) {
         return val;
     }
-#ifdef ISPC_OPAQUE_PTR_MODE
     llvm::PointerType *newType = llvm::PointerType::get(*g->ctx, (unsigned)as);
-#else
-    llvm::PointerType *newType = llvm::PointerType::getWithSamePointeeType(pt, (unsigned)as);
-#endif
     llvm::AddrSpaceCastInst *inst = nullptr;
     if (atEntryBlock) {
         inst = new llvm::AddrSpaceCastInst(val, newType, val->getName() + "__cast",
@@ -3251,13 +3247,8 @@ void FunctionEmitContext::MemcpyInst(llvm::Value *dest, llvm::Value *src, llvm::
         count = ZExtInst(count, LLVMTypes::Int64Type, "count_to_64");
     }
     llvm::FunctionCallee mcFuncCallee =
-#ifdef ISPC_OPAQUE_PTR_MODE
         m->module->getOrInsertFunction("llvm.memcpy.p0.p0.i64", LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
                                        LLVMTypes::VoidPointerType, LLVMTypes::Int64Type, LLVMTypes::BoolType);
-#else
-        m->module->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64", LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
-                                       LLVMTypes::VoidPointerType, LLVMTypes::Int64Type, LLVMTypes::BoolType);
-#endif
     llvm::Constant *mcFunc = llvm::cast<llvm::Constant>(mcFuncCallee.getCallee());
     AssertPos(currentPos, mcFunc != nullptr);
     AssertPos(currentPos, llvm::isa<llvm::Function>(mcFunc));
