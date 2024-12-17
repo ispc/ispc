@@ -95,11 +95,7 @@ void InitLLVMUtil(llvm::LLVMContext *ctx, Target &target) {
     LLVMTypes::Float16Type = llvm::Type::getHalfTy(*ctx);
     LLVMTypes::FloatType = llvm::Type::getFloatTy(*ctx);
     LLVMTypes::DoubleType = llvm::Type::getDoubleTy(*ctx);
-#ifdef ISPC_OPAQUE_PTR_MODE
     LLVMTypes::PtrType = llvm::PointerType::get(*ctx, 0);
-#else
-    LLVMTypes::PtrType = llvm::PointerType::get(LLVMTypes::Int8Type, 0);
-#endif // ISPC_OPAQUE_PTR_MODE
 
     LLVMTypes::Int8PointerType = llvm::PointerType::get(LLVMTypes::Int8Type, 0);
     LLVMTypes::Int16PointerType = llvm::PointerType::get(LLVMTypes::Int16Type, 0);
