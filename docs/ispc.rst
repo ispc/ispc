@@ -674,6 +674,8 @@ Updating ISPC Programs For Changes In ISPC 1.26.0
 Macro definitions for LLVM version that ISPC is based on were added. Please,
 refer to `The Preprocessor`_ for more details.
 
+``--nocpp`` command line flag is deprecated and will be removed in future.
+
 Getting Started with ISPC
 =========================
 
@@ -1080,8 +1082,7 @@ The Preprocessor
 
 ``ispc`` automatically runs the C preprocessor on your input program before
 compiling it.  Thus, you can use ``#ifdef``, ``#define``, and so forth in
-your ispc programs.  (This functionality can be disabled with the ``--nocpp``
-command-line argument.)
+your ispc programs.
 
 A number of preprocessor symbols are automatically defined before the
 preprocessor runs:
