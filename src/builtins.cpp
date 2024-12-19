@@ -502,22 +502,20 @@ void lLinkStdlib(llvm::Module *module) {
 void ispc::LinkStandardLibraries(llvm::Module *module, int &debug_num) {
     if (g->includeStdlib) {
         lLinkStdlib(module);
-        // Remove from module here only function definitions that unused (or
-        // cannot be used) in module.
-        lAddPersistentToLLVMUsed(*module);
-        lRemoveUnused(module);
-        lRemoveUnusedPersistentFunctions(module);
         debugDumpModule(module, "LinkStdlib", debug_num++);
-    } else {
-        lAddPersistentToLLVMUsed(*module);
     }
 
     lLinkCommonBuiltins(module);
-    lRemoveUnused(module);
     debugDumpModule(module, "LinkCommonBuiltins", debug_num++);
 
     lLinkTargetBuiltins(module);
+    // generic target implementation itself uses some of the pseudo functions
+    // and their dependencies that we need to preserve.
+    // TODO!: here a lot more code left in the module when this was placed
+    // under LinkStdlib.
+    lAddPersistentToLLVMUsed(*module);
     lRemoveUnused(module);
+    lRemoveUnusedPersistentFunctions(module);
     debugDumpModule(module, "LinkTargetBuiltins", debug_num++);
 
     lSetInternalLinkageGlobals(module);
