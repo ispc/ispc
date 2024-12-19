@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-#  Copyright (c) 2013-2024, Intel Corporation
+#  Copyright (c) 2013-2025, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -350,7 +350,12 @@ def unsupported_llvm_targets(LLVM_VERSION):
 def check_targets():
     from os.path import join
 
-    result = []
+    # Generic targets are supported natively
+    result = ["generic-i1x4", "generic-i1x8", "generic-i1x16", "generic-i1x32", "generic-i1x64",
+              "generic-i8x16", "generic-i8x32",
+              "generic-i16x8", "generic-i16x16",
+              "generic-i32x4", "generic-i32x8", "generic-i32x16",
+              "generic-i64x4",]
     result_sde = []
 
     cmd_conf = "cmake . -B check_isa_build -DISPC_INCLUDE_UTILS_ONLY=ON"
