@@ -1304,6 +1304,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 32;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 8;
+        // TODO: this is a workaround for the bug in GatherCoalescePass for x32 targets.
+        // see issue #3153
+        this->m_hasGather = true;
         break;
     case ISPCTarget::generic_i16x16:
         this->m_nativeVectorWidth = 16;
@@ -1344,6 +1347,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 32;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
+        // TODO: this is a workaround for the bug in GatherCoalescePass for x32 targets.
+        // see issue #3153
+        this->m_hasGather = true;
         break;
     case ISPCTarget::generic_i1x64:
         this->m_nativeVectorWidth = 64;
