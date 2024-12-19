@@ -229,6 +229,10 @@ std::vector<std::string> TargetLibRegistry::checkBitcodeLibs() const {
                     if (!tlib->fileExists()) {
                         missedFiles.push_back(tlib->getFilename());
                     }
+                    // Generic targets don't have standard libraries.
+                    if (ISPCTargetIsGeneric(target)) {
+                        continue;
+                    }
                     if (!slib->fileExists()) {
                         missedFiles.push_back(slib->getFilename());
                     }
