@@ -581,6 +581,12 @@ struct Opt {
         locations. */
     bool forceAlignedMemory;
 
+    /** If enabled, enables LoadStoreVectorizerPass in ISPC optimization pipeline. */
+    bool enableLoadStoreVectorizer;
+
+    /** If enabled, enables SLPVectorizerPass in ISPC optimization pipeline. */
+    bool enableSLPVectorizer;
+
     /** If enabled, disables the various optimizations that kick in when
         the execution mask can be determined to be "all on" at compile
         time. */
