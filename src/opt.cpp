@@ -90,6 +90,7 @@
 #include <llvm/Transforms/Scalar/TailRecursionElimination.h>
 #include <llvm/Transforms/Utils/Mem2Reg.h>
 #include <llvm/Transforms/Vectorize/LoadStoreVectorizer.h>
+#include <llvm/Transforms/Vectorize/SLPVectorizer.h>
 
 #ifdef ISPC_XE_ENABLED
 #include <llvm/GenXIntrinsics/GenXSPIRVWriterAdaptor.h>
@@ -620,6 +621,16 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
             }
         }
 #endif
+        // On ARM NEON targets LoadStoreVectorizer works great to combine
+        // multiple loads/stores into a single vector load/store as in #2052.
+        // However because of LoadStoreVectorizer after vector loads,
+        // elements are often extracted and processed individually using scalar operations.
+        // To vectorize these scalar operations, SLP vectorizer is used.
+        // Enabling it on other targets may be beneficial but require extensive testing.
+        if (ISPCTargetIsNeon(g->target->getISPCTarget())) {
+            optPM.addFunctionPass(llvm::LoadStoreVectorizerPass(), 325);
+            optPM.addFunctionPass(llvm::SLPVectorizerPass(), 326);
+        }
         // Currently VC BE does not support memset/memcpy
         // so this pass is temporary disabled for Xe.
         if (!g->target->isXeTarget()) {
