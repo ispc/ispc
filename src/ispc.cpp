@@ -2716,6 +2716,8 @@ Opt::Opt() {
     disableScatters = false;
     disableFMA = false;
     forceAlignedMemory = false;
+    enableLoadStoreVectorizer = false;
+    enableSLPVectorizer = false;
     disableMaskAllOnOptimizations = false;
     disableHandlePseudoMemoryOps = false;
     disableBlendedMaskedStores = false;

@@ -218,6 +218,8 @@ static void lPrintVersion() {
     printf("    [--off-phase=<value>]\t\tSwitch off optimization phases. "
            "--off-phase=pre:first,210:220,300,305,310:last\n");
     printf("    [--opt=<option>]\t\t\tSet optimization option\n");
+    printf("        enable-ldst-vectorizer\t\t\tEnable load/store vectorizer\n");
+    printf("        enable-slp-vectorizer\t\t\tEnable SLP vectorizer\n");
     printf("        disable-all-on-optimizations\t\tDisable optimizations that take advantage of \"all on\" mask\n");
     printf("        disable-blended-masked-stores\t\tScalarize masked stores on SSE (vs. using vblendps)\n");
     printf("        disable-blending-removal\t\tDisable eliminating blend at same scope\n");
@@ -901,7 +903,11 @@ int main(int Argc, char *Argv[]) {
 
             // These are only used for performance tests of specific
             // optimizations
-            else if (!strcmp(opt, "disable-all-on-optimizations")) {
+            else if (!strcmp(opt, "enable-ldst-vectorizer")) {
+                g->opt.enableLoadStoreVectorizer = true;
+            } else if (!strcmp(opt, "enable-slp-vectorizer")) {
+                g->opt.enableSLPVectorizer = true;
+            } else if (!strcmp(opt, "disable-all-on-optimizations")) {
                 g->opt.disableMaskAllOnOptimizations = true;
             } else if (!strcmp(opt, "disable-coalescing")) {
                 g->opt.disableCoalescing = true;
