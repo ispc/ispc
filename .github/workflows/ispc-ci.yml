@@ -138,7 +138,7 @@ jobs:
         .github/workflows/scripts/check-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: ispc_llvm${{ matrix.llvm.short_version }}_linux.aarch64
         path: build/ispc-trunk-linux.tar.gz
@@ -186,7 +186,7 @@ jobs:
         .github/workflows/scripts/check-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: ispc_llvm${{ matrix.llvm.short_version }}_linux
         path: build/ispc-trunk-linux.tar.gz
@@ -222,7 +222,7 @@ jobs:
         cmake --build build --target ispc-stage2-check-all
 
     - name: Upload package
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: ispc_llvm18_lto_linux
         path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-linux.tar.gz
@@ -257,7 +257,7 @@ jobs:
         .github/workflows/scripts/check-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: ispc_llvm18rel_linux
         path: build/ispc-trunk-linux.tar.gz
@@ -303,13 +303,13 @@ jobs:
         cmake --build build --target ispc-stage2-check
 
     - name: Upload XE enabled package
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: ispc_xe_llvm18rel_linux
         path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-linux.tar.gz
 
     - name: Upload ISPC with XE dependencies
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: ispc_xe_deps_llvm18rel_linux
         path: ispc-xe
@@ -389,14 +389,14 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       if: failure()
       with:
         name: fail_db.llvm${{matrix.version}}.${{matrix.arch}}.${{matrix.target}}.txt
         path: tests/fail_db.txt
 
     - name: Upload alloy logs
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       if: failure()
       with:
         name: alloy_results.llvm${{matrix.version}}.${{matrix.arch}}.${{matrix.target}}
@@ -475,14 +475,14 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       if: failure()
       with:
         name: fail_db.llvm18_lto.${{matrix.arch}}.${{matrix.target}}.txt
         path: tests/fail_db.txt
 
     - name: Upload alloy logs
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       if: failure()
       with:
         name: alloy_results.llvm18_lto.${{matrix.arch}}.${{matrix.target}}
@@ -524,14 +524,14 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       if: failure()
       with:
         name: fail_db.llvm18rel.${{matrix.arch}}.${{matrix.target}}.txt
         path: tests/fail_db.txt
 
     - name: Upload alloy logs
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       if: failure()
       with:
         name: alloy_results.llvm18rel.${{matrix.arch}}.${{matrix.target}}
@@ -576,14 +576,14 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       if: failure()
       with:
         name: fail_db.llvm18.debug.${{matrix.arch}}.${{matrix.target}}.txt
         path: tests/fail_db.txt
 
     - name: Upload alloy logs
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       if: failure()
       with:
         name: alloy_results.llvm18.debug.${{matrix.arch}}.${{matrix.target}}
@@ -630,14 +630,14 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       if: failure()
       with:
         name: fail_db.xe.llvm18rel.${{matrix.arch}}.${{matrix.target}}.txt
         path: tests/fail_db.txt
 
     - name: Upload alloy logs
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       if: failure()
       with:
         name: alloy_results.xe.llvm18rel.${{matrix.arch}}.${{matrix.target}}
@@ -700,7 +700,7 @@ jobs:
         .github/workflows/scripts/check-ispc.sh
 
     - name: Upload package
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: ispc_llvm${{ matrix.llvm.short_version }}_${{ matrix.runner }}
         path: build/ispc-trunk-macos.tar.gz
@@ -744,7 +744,7 @@ jobs:
         cmake --build build --target ispc-stage2-check-all
 
     - name: Upload package
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: ispc_llvm18_lto_macos
         path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-macOS.universal.tar.gz
@@ -787,14 +787,14 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       if: failure()
       with:
         name: fail_db.llvm${{matrix.version}}.macos.sse4.txt
         path: tests/fail_db.txt
 
     - name: Upload alloy logs
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       if: failure()
       with:
         name: alloy_results.llvm${{matrix.version}}.macos.sse4
@@ -835,14 +835,14 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       if: failure()
       with:
         name: fail_db.llvm18_lto.macos.sse4.txt
         path: tests/fail_db.txt
 
     - name: Upload alloy logs
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       if: failure()
       with:
         name: alloy_results.llvm18_lto.macos.sse4
@@ -897,7 +897,7 @@ jobs:
         .github/workflows/scripts/check-ispc.ps1
 
     - name: Upload package
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: ispc_llvm${{ matrix.llvm.short_version }}_win
         path: build/ispc-trunk-windows.zip
@@ -945,7 +945,7 @@ jobs:
         cmake --build build --target ispc-stage2-check-all
 
     - name: Upload package
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: ispc_llvm18_lto_win
         path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-windows.zip
@@ -996,13 +996,13 @@ jobs:
         cmake --build build --target ispc-stage2-check
 
     - name: Upload XE enabled package
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: ispc_xe_llvm18rel_win
         path: ${{ env.ISPC_DIR }}/ispc-trunk-windows.zip
 
     - name: Upload ISPC with XE dependencies
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: ispc_xe_deps_llvm18rel_win
         path: ispc-xe
@@ -1048,14 +1048,14 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       if: failure()
       with:
         name: fail_db.llvm${{matrix.version}}.${{matrix.arch}}.${{matrix.target}}.txt
         path: tests/fail_db.txt
 
     - name: Upload alloy logs
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       if: failure()
       with:
         name: alloy_results.llvm${{matrix.version}}.${{matrix.arch}}.${{matrix.target}}
@@ -1101,14 +1101,14 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       if: failure()
       with:
         name: fail_db.llvm18_lto.${{matrix.arch}}.${{matrix.target}}.txt
         path: tests/fail_db.txt
 
     - name: Upload alloy logs
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       if: failure()
       with:
         name: alloy_results.llvm18_lto.${{matrix.arch}}.${{matrix.target}}
@@ -1155,14 +1155,14 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       if: failure()
       with:
         name: fail_db.xe.llvm18rel.${{matrix.arch}}.${{matrix.target}}.txt
         path: tests/fail_db.txt
 
     - name: Upload alloy logs
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       if: failure()
       with:
         name: alloy_results.llvm18rel.${{matrix.arch}}.${{matrix.target}}
@@ -1208,7 +1208,7 @@ jobs:
         git diff --exit-code
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       if: failure()
       with:
         name: fail_db.llvm18_veccall.${{matrix.arch}}.${{matrix.target}}.txt
@@ -1243,7 +1243,7 @@ jobs:
         cmake --build build --target package-examples
 
     - name: Upload examples package
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: examples_zip
         path: build/ispc-examples-trunk.zip
@@ -1269,7 +1269,7 @@ jobs:
         cmake --build build --target package-examples
 
     - name: Upload package
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: examples_tgz
         path: build/ispc-examples-trunk.tar.gz
