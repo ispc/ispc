@@ -108,7 +108,7 @@ jobs:
         tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
 
     - name: Upload package
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: llvm_linux_x86_lto_${{ inputs.lto }}
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
@@ -142,7 +142,7 @@ jobs:
         tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
 
     - name: Upload package
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: llvmrel_linux_x86_lto_${{ inputs.lto }}
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
@@ -179,7 +179,7 @@ jobs:
         rm -rf result.tar usr bin-${{ inputs.version }}
 
     - name: Upload package
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: llvm_linux_aarch64_lto_${{ inputs.lto }}
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
@@ -215,7 +215,7 @@ jobs:
         rm -rf result.tar usr bin-${{ inputs.version }}
 
     - name: Upload package
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: llvmrel_linux_aarch64_lto_${{ inputs.lto }}
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
@@ -259,7 +259,7 @@ jobs:
         7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
 
     - name: Upload package
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: llvm_win_x86_lto_${{ inputs.lto }}
         path: llvm/llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.7z
@@ -303,7 +303,7 @@ jobs:
         7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
 
     - name: Upload package
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: llvmrel_win_x86_lto_${{ inputs.lto }}
         path: llvm/llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.7z
@@ -339,7 +339,7 @@ jobs:
         tar cJvf llvm-${{ inputs.full_version }}-macos-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
 
     - name: Upload package
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: llvm_macos_universal_lto_${{ inputs.lto }}
         path: llvm/llvm-${{ inputs.full_version }}-macos-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz
@@ -375,7 +375,7 @@ jobs:
         tar cJvf llvm-${{ inputs.full_version }}-macos-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
 
     - name: Upload package
-      uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
       with:
         name: llvmrel_macos_universal_lto_${{ inputs.lto }}
         path: llvm/llvm-${{ inputs.full_version }}-macos-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz

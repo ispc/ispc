@@ -35,7 +35,7 @@ jobs:
           bandit -c .github/workflows/bandit.config -r . -f txt -o bandit_output.txt
 
       - name: Upload Bandit text report as artifact
-        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         if: always()
         with:
           name: bandit-report
