@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2024, Intel Corporation
+  Copyright (c) 2022-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -117,8 +117,8 @@ MemoryCoalescing::BasePtrInfo MemoryCoalescing::analyseVarOffsetGEP(llvm::GetEle
             PartialIdxs.push_back(GEP->getOperand(i));
         llvm::Value *tPtr = GEP->getPointerOperand();
         llvm::Type *tType = GEP->getSourceElementType();
-        auto ret = ComplexGEPsInfoCache.insert(
-            {GEPVarOffsetData, llvm::GetElementPtrInst::Create(tType, tPtr, PartialIdxs, "partial_gep")});
+        auto ret =
+            ComplexGEPsInfoCache.insert({GEPVarOffsetData, llvm::GetElementPtrInst::Create(tType, tPtr, PartialIdxs)});
         DanglingGEP_it = ret.first;
     }
     llvm::Value *DanglingGEP = DanglingGEP_it->second;
