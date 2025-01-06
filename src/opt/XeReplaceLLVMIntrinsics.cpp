@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2024, Intel Corporation
+  Copyright (c) 2022-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -25,7 +25,7 @@ restart:
             if (func == nullptr || !func->isIntrinsic())
                 continue;
 
-            if (func->getName().equals("llvm.trap")) {
+            if (func->getName() == "llvm.trap") {
                 llvm::Type *argTypes[] = {LLVMTypes::Int1VectorType, LLVMTypes::Int16VectorType};
                 // Description of parameters for genx_raw_send_noresult can be found in target-genx.ll
                 auto Fn =
@@ -49,7 +49,7 @@ restart:
                     modifiedAny = true;
                     goto restart;
                 }
-            } else if (func->getName().equals("llvm.experimental.noalias.scope.decl")) {
+            } else if (func->getName() == "llvm.experimental.noalias.scope.decl") {
                 // These intrinsics are not supported by backend so remove them.
                 ci->eraseFromParent();
                 modifiedAny = true;
