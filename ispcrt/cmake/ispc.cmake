@@ -1,4 +1,4 @@
-## Copyright 2020-2023 Intel Corporation
+## Copyright 2020-2025 Intel Corporation
 ## SPDX-License-Identifier: BSD-3-Clause
 
 ###############################################################################
@@ -92,7 +92,6 @@ if (ISPC_X86_ENABLED)
   define_ispc_isa_options(SSE4 sse4-i32x4 sse4-i32x8 sse4-i16x8 sse4-i8x16)
   define_ispc_isa_options(AVX avx1-i32x8 avx1-i32x4 avx1-i32x16 avx1-i64x4)
   define_ispc_isa_options(AVX2 avx2-i32x8 avx2-i32x4 avx2-i32x16 avx2-i64x4)
-  define_ispc_isa_options(AVX512KNL avx512knl-x16)
   define_ispc_isa_options(AVX512SKX avx512skx-x16 avx512skx-x8)
   define_ispc_isa_options(AVX512SPR avx512spr-x16 avx512spr-x8)
 endif()
@@ -110,7 +109,6 @@ if (ISPC_X86_ENABLED)
   append_ispc_target_list(SSE4)
   append_ispc_target_list(AVX)
   append_ispc_target_list(AVX2)
-  append_ispc_target_list(AVX512KNL)
   append_ispc_target_list(AVX512SKX)
   if (NOT APPLE)
     append_ispc_target_list(AVX512SPR)
