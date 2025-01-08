@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2024, Intel Corporation
+#  Copyright (c) 2024-2025, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -139,4 +139,80 @@ function (generate_stdlib_or_target_builtins func ispc_name CPP_LIST BC_LIST)
 
     set(${CPP_LIST} ${${CPP_LIST}} PARENT_SCOPE)
     set(${BC_LIST} ${${BC_LIST}} PARENT_SCOPE)
+endfunction()
+
+# Generate bitcode and corresponding C++ wrapper files for generic targets.
+function(generate_generic ispc_name target arch bit os component)
+    set(include ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/include)
+
+    # Handle OS-specific settings
+    if("${os}" STREQUAL "unix")
+        set(fixed_os "linux")
+        set(OS_UP UNIX)
+    elseif("${os}" STREQUAL "windows")
+        set(fixed_os "windows")
+        set(OS_UP WINDOWS)
+    else()
+        message(FATAL_ERROR "Error: unknown OS for target ${os}")
+    endif()
+
+    # Set component-specific variables
+    if("${component}" STREQUAL "builtins")
+        set(name "builtins_target_generic_${target}_${arch}_${os}")
+        set(input_ispc "builtins/generic.ispc")
+        set(bitcode_type "ispc-target")
+        set(bitcode_lib_entry "static BitcodeLib ${name}(\"${name}.bc\", ISPCTarget::generic_${target}, TargetOS::${fixed_os}, Arch::${arch});\n")
+        set(bc_list_var "GENERIC_TARGET_BC_FILE")
+        set(cpp_list_var "GENERIC_TARGET_CPP_FILE")
+    else() # stdlib
+        set(name "stdlib_generic_${target}_${arch}_${os}")
+        set(input_ispc "stdlib/stdlib.ispc")
+        set(bitcode_type "stdlib")
+        set(bitcode_lib_entry "static BitcodeLib ${name}(BitcodeLib::BitcodeLibType::Stdlib, \"${name}.bc\", ISPCTarget::generic_${target}, TargetOS::${fixed_os}, Arch::${arch});\n")
+        set(bc_list_var "GENERIC_STDLIB_BC_FILE")
+        set(cpp_list_var "GENERIC_STDLIB_CPP_FILE")
+    endif()
+
+    # Handle Linux target special case
+    if("${fixed_os}" STREQUAL "linux" AND NOT ISPC_LINUX_TARGET)
+        if(APPLE)
+            set(fixed_os "macos")
+        elseif(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+            set(fixed_os "freebsd")
+        else()
+            message(FATAL_ERROR "Error: unknown OS for target ${fixed_os}")
+        endif()
+    endif()
+
+    file(APPEND ${CMAKE_BINARY_DIR}/bitcode_libs_generated.cpp "${bitcode_lib_entry}")
+
+    set(target "generic-${target}")
+    set(cpp ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${name}.cpp)
+    set(bc ${BITCODE_FOLDER}/${name}.bc)
+
+    # Generate bitcode
+    add_custom_command(
+        OUTPUT ${bc}
+        COMMAND ${ispc_name} -I ${include} --enable-llvm-intrinsics --nostdlib --gen-stdlib
+                --target=${target} --arch=${arch} --target-os=${fixed_os} --emit-llvm
+                -o ${bc} ${input_ispc} -DBUILD_OS=${OS_UP} -DRUNTIME=${bit}
+        DEPENDS ${ispc_name} ${input_ispc}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+    # Generate CPP wrapper
+    add_custom_command(
+        OUTPUT ${cpp}
+        COMMAND ${Python3_EXECUTABLE} ${BITCODE2CPP} ${bc} --type=${bitcode_type}
+                --runtime=${bit} --os=${OS_UP} --arch=${arch} ${cpp}
+        DEPENDS ${bc} ${BITCODE2CPP}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+    # Update parent scope variables
+    list(APPEND ${bc_list_var} ${bc})
+    set(${bc_list_var} ${${bc_list_var}} PARENT_SCOPE)
+
+    list(APPEND ${cpp_list_var} ${cpp})
+    set(${cpp_list_var} ${${cpp_list_var}} PARENT_SCOPE)
 endfunction()
