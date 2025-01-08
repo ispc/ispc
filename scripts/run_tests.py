@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-#  Copyright (c) 2013-2024, Intel Corporation
+#  Copyright (c) 2013-2025, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -252,9 +252,10 @@ def add_prefix(path, host, target):
 # //rule: skip on <key>=<value>
 #
 # Currently supported keys are:
-# [arch, OS, cpu].
+# [arch, OS, cpu, target].
 #
 # * (asterisk) represent any value.
+# Proper regexps can also be used.
 #
 # Rules order is important,
 # rule may override all previous rules.
@@ -267,7 +268,11 @@ def add_prefix(path, host, target):
 #
 # 2. Run only on Linux OS:
 # // rule: skip on OS=*
-# // rule: run on OS=Linux
+# // rule: run on OS=linux
+#
+# 3. Skip only generic target for windows:
+# // rule: skip on target=generic.*
+# // rule: run on OS=!windows
 #
 def check_if_skip_test(filename, host, target):
     # by default we're not skipping test
@@ -286,7 +291,7 @@ def check_if_skip_test(filename, host, target):
 
     target_cpu = target.cpu
 
-    rule_values = {"arch": target.arch, "OS": oss, "cpu": target_cpu}
+    rule_values = {"arch": target.arch, "OS": oss, "cpu": target_cpu, "target": target.target}
 
     test_file_path = add_prefix(filename, host, target)
     with open(test_file_path) as test_file:
@@ -296,22 +301,38 @@ def check_if_skip_test(filename, host, target):
             # EOF
             if not test_line:
                 break;
-            rule = re.search('// *rule: (run|skip) on (arch|OS|cpu)=(.*)', test_line)
+            rule = re.search('// *rule: (run|skip) on (arch|OS|cpu|target)=(.*)', test_line)
             # no match for this line -> look at next line
             if rule == None:
+                if "rule:" in test_line:
+                    print_debug("%s: Warning: Unrecognized rule: %s\n" % (filename, test_line), s, run_tests_log)
                 continue
 
             rule_action = rule.group(1)
             rule_key = rule.group(2)
             rule_value = rule.group(3)
 
-            for key in rule_values.keys():
-                if rule_key == key:
-                    if rule_value == rule_values[key] or rule_value == "*":
-                        if rule_action == "run":
-                            skip = False
-                        elif rule_action == "skip":
-                            skip = True
+            # support negation of rules
+            negate = False
+            if rule_value.startswith("!"):
+                rule_value = rule_value[1:]
+                negate = True
+
+            # extend rule_value to a proper regexp
+            if rule_value == "*":
+                rule_value = ".*"
+
+            # rule_value can be a regexp that can match the actual value
+            # check here if it matches
+            val = rule_values[rule_key]
+            if re.match(rule_value, val):
+                if rule_action == "run":
+                    skip = False
+                elif rule_action == "skip":
+                    skip = True
+
+            if negate:
+                skip = not skip
     return skip
 
 
