@@ -277,6 +277,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindLLVM.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Git.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/CommonStdlibBuiltins.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateBuiltins.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenericTargets.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Stdlib.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Version.cmake)
 
