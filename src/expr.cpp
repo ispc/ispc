@@ -7929,7 +7929,8 @@ static llvm::Constant *lConvertPointerConstant(llvm::Constant *c, const Type *co
 
     // Handle conversion to int and then to vector of int or array of int
     // (for varying and soa types, respectively)
-    llvm::Constant *intPtr = llvm::ConstantExpr::getPtrToInt(c, LLVMTypes::PointerIntType);
+    llvm::Constant *intPtr =
+        c->getType()->isPointerTy() ? llvm::ConstantExpr::getPtrToInt(c, LLVMTypes::PointerIntType) : c;
     Assert(constType->IsVaryingType() || constType->IsSOAType());
     int count = constType->IsVaryingType() ? g->target->getVectorWidth() : constType->GetSOAWidth();
 
