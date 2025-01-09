@@ -1,7 +1,9 @@
 // Test to check '#pragma unroll' functionality for different loop statements
 //   with varying type induction variables.
+// Pragma has higher priority that -O1.
 
 // RUN: %{ispc} %s --target=host --nowrap -O0 --emit-llvm-text --no-discard-value-names --nostdlib -o - | FileCheck %s -check-prefixes=CHECK_ALL,CHECKO0
+// RUN: %{ispc} %s --target=host --nowrap -O1 --emit-llvm-text --no-discard-value-names --nostdlib -o - | FileCheck %s -check-prefixes=CHECK_ALL,CHECKO2
 // RUN: %{ispc} %s --target=host --nowrap -O2 --emit-llvm-text --no-discard-value-names --nostdlib -o - | FileCheck %s -check-prefixes=CHECK_ALL,CHECKO2
 
 

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -535,8 +535,8 @@ struct Opt {
     Opt();
 
     /** Optimization level.  Currently, the only valid values are 0,
-        indicating essentially no optimization, and 1, indicating as much
-        optimization as possible. */
+        indicating essentially no optimization, 1, indicating optimization for size,
+        and 2, indicating as much optimization as possible. */
     int level;
 
     /** Indicates whether "fast and loose" numerically unsafe optimizations
@@ -717,7 +717,7 @@ struct Globals {
     MathLib mathLib;
 
     /** Optimization level to be specified while creating TargetMachine. */
-    enum class CodegenOptLevel { None, Aggressive };
+    enum class CodegenOptLevel { None, Default, Aggressive };
     CodegenOptLevel codegenOptLevel;
 
     /** Records whether the ispc standard library should be made available

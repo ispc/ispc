@@ -2240,11 +2240,16 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             // Set Optimization level for llvm codegen based on Optimization level
             // requested by user via ISPC Optimization Flag. Mapping is :
             // ISPC O0 -> Codegen O0
-            // ISPC O1,O2,O3,default -> Codegen O3
+            // ISPC O1 -> Codegen Default (-Os)
+            // ISPC O2,O3,default -> Codegen O3
             CodegenOptLevel cOptLevel = CodegenOptLevel::Aggressive;
             switch (g->codegenOptLevel) {
             case Globals::CodegenOptLevel::None:
                 cOptLevel = CodegenOptLevel::None;
+                break;
+
+            case Globals::CodegenOptLevel::Default:
+                cOptLevel = CodegenOptLevel::Default;
                 break;
 
             case Globals::CodegenOptLevel::Aggressive:
@@ -2291,6 +2296,10 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 #endif
         for (auto const &f_attr : m_funcAttributes) {
             fattrBuilder->addAttribute(f_attr.first, f_attr.second);
+        }
+        // This attribute is required for LoopUnroll passes
+        if (g->opt.level == 1) {
+            fattrBuilder->addAttribute(llvm::Attribute::OptimizeForSize);
         }
         this->m_tf_attributes = fattrBuilder;
 
@@ -2814,7 +2823,7 @@ bool Target::hasXePrefetch() const {
 // Opt
 
 Opt::Opt() {
-    level = 1;
+    level = 2;
     fastMath = false;
     fastMaskedVload = false;
     force32BitAddressing = true;

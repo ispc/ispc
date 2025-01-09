@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -314,6 +314,10 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 
     llvm::SimplifyCFGOptions simplifyCFGopt;
     simplifyCFGopt.HoistCommonInsts = true;
+
+    // SizeOptLevel of 1 corresponds to the -Os flag and 2 corresponds to the -Oz flag.
+    const unsigned SizeOptLevel = (optLevel == 1) ? 1 : 0;
+    llvm::InlineParams IP = llvm::getInlineParams(optLevel, SizeOptLevel);
     if (optLevel == 0) {
         //  This is more or less the minimum set of optimizations that we
         //  need to do to generate code that will actually run.  (We can't
@@ -340,7 +344,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addFunctionPass(IsCompileTimeConstantPass(true));
         optPM.commitFunctionToModulePassManager();
 
-        optPM.addModulePass(llvm::ModuleInlinerWrapperPass());
+        optPM.addModulePass(llvm::ModuleInlinerWrapperPass(IP));
         optPM.addModulePass(RemovePersistentFuncsPass());
 
         optPM.initFunctionPassManager();
@@ -413,7 +417,10 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addFunctionPass(llvm::ReassociatePass());
         optPM.setBlocksFreq(true);
         optPM.initLoopPassManager();
-        optPM.addLoopPass(llvm::LoopFullUnrollPass());
+        if (g->opt.unrollLoops) {
+            // Default optLevel for LoopFullUnrollPass is 2
+            optPM.addLoopPass(llvm::LoopFullUnrollPass(optLevel));
+        }
         optPM.commitLoopToFunctionPassManager();
         optPM.setBlocksFreq(false);
         optPM.addFunctionPass(ReplaceStdlibShiftPass(), 229);
@@ -435,7 +442,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addModulePass(llvm::ReversePostOrderFunctionAttrsPass());
 
         // Next inline pass will remove functions, saved by __keep_funcs_live
-        optPM.addModulePass(llvm::ModuleInlinerWrapperPass());
+        optPM.addModulePass(llvm::ModuleInlinerWrapperPass(IP));
 
         optPM.initFunctionPassManager();
         optPM.addFunctionPass(llvm::InstSimplifyPass());
@@ -499,7 +506,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
             }
         }
         optPM.commitFunctionToModulePassManager();
-        optPM.addModulePass(llvm::ModuleInlinerWrapperPass(), 265);
+        optPM.addModulePass(llvm::ModuleInlinerWrapperPass(IP), 265);
         // If we didn't decide to inline a function, check to see if we can
         // transform it to pass arguments by value instead of by reference.
         optPM.addPostOrderCGSCCPass(llvm::ArgumentPromotionPass());
@@ -535,7 +542,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addFunctionPass(InstructionSimplifyPass());
         optPM.commitFunctionToModulePassManager();
 
-        optPM.addModulePass(llvm::ModuleInlinerWrapperPass());
+        optPM.addModulePass(llvm::ModuleInlinerWrapperPass(IP));
         // If we didn't decide to inline a function, check to see if we can
         // transform it to pass arguments by value instead of by reference.
         optPM.addPostOrderCGSCCPass(llvm::ArgumentPromotionPass());
@@ -568,7 +575,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
             // some integer division tests are failing on TGLLP Windows.
             // Disable this pass on Xe until the problem is fixed on BE side.
             // Note: enable both trivial and non-trivial loop unswitching.
-            optPM.addLoopPass(llvm::SimpleLoopUnswitchPass(true /* NonTrivial */, true /* Trivial */), 293);
+            optPM.addLoopPass(llvm::SimpleLoopUnswitchPass(optLevel > 1 /* NonTrivial */, true /* Trivial */), 293);
         }
         optPM.commitLoopToFunctionPassManager();
         optPM.setMemorySSA(false);
@@ -591,7 +598,8 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.commitLoopToFunctionPassManager();
 
         if (g->opt.unrollLoops) {
-            optPM.addFunctionPass(llvm::LoopUnrollPass(), 300);
+            // Default optLevel for LoopUnrollPass is 2
+            optPM.addFunctionPass(llvm::LoopUnrollPass(optLevel), 300);
         }
         // For Xe targets NewGVN pass produces more efficient code due to better resolving of branches.
         // On CPU targets it is effective in optimizing certain types of code,
@@ -664,7 +672,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addFunctionPass(ScalarizePass());
         optPM.addFunctionPass(llvm::ADCEPass());
         optPM.commitFunctionToModulePassManager();
-        optPM.addModulePass(llvm::ModuleInlinerWrapperPass());
+        optPM.addModulePass(llvm::ModuleInlinerWrapperPass(IP));
         optPM.addModulePass(llvm::StripDeadPrototypesPass());
         optPM.addModulePass(RemovePersistentFuncsPass());
         optPM.addModulePass(llvm::GlobalDCEPass());
