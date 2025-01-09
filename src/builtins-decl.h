@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2024, Intel Corporation
+  Copyright (c) 2024-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -397,6 +397,7 @@ extern const char *const __task_index;
 extern const char *const __task_index0;
 extern const char *const __task_index1;
 extern const char *const __task_index2;
+extern const char *const __terminate_now;
 extern const char *const __wasm_cmp_msk_eq;
 
 } // namespace builtin

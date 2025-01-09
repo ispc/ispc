@@ -21,9 +21,13 @@
 #error "Either REGULAR or MACOS macro need to defined"
 #endif
 
-void abort();
-
 static int __system_best_isa = -1;
+
+void __terminate_now() {
+    // Terminate execution using x86 UD2 instruction. UD2 raises an invalid
+    // opcode exception, ensuring program termination.
+    __asm__ __volatile__("ud2");
+}
 
 static void __cpuid(int info[4], int infoType) {
     __asm__ __volatile__("cpuid" : "=a"(info[0]), "=b"(info[1]), "=c"(info[2]), "=d"(info[3]) : "0"(infoType));
@@ -146,7 +150,7 @@ static int __get_system_isa() {
         if (skx) {
             return 7; // SKX
         } else if (knl) {
-            abort(); // KNL
+            __terminate_now(); // KNL
         }
         // If it's unknown AVX512 target, fall through and use AVX2
         // or whatever is available in the machine.
@@ -167,9 +171,12 @@ static int __get_system_isa() {
         return 1; // SSE4.1
     } else if (sse2) {
         return 0; // SSE2
-    } else {
-        abort();
     }
+
+    __terminate_now();
+
+    // This is actually unreachable, but needed to suppress the warning.
+    return -1;
 }
 
 void __set_system_isa() {
