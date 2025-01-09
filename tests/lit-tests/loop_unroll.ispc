@@ -1,6 +1,8 @@
 // Test to check '#pragma unroll' functionality for different loop statemnts.
+// Pragma has higher priority that -O1.
 
 // RUN: %{ispc} %s --target=host --nowrap -O0 --emit-llvm-text --no-discard-value-names --nostdlib -o - | FileCheck %s -check-prefix=CHECKO0
+// RUN: %{ispc} %s --target=host --nowrap -O1 --emit-llvm-text --no-discard-value-names --nostdlib -o - | FileCheck %s -check-prefix=CHECKO2
 // RUN: %{ispc} %s --target=host --nowrap -O2 --emit-llvm-text --no-discard-value-names --nostdlib -o - | FileCheck %s -check-prefix=CHECKO2
 
 // CHECKO0: define void @foo_for___

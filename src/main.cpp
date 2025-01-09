@@ -991,13 +991,13 @@ int main(int Argc, char *Argv[]) {
         } else if (!strcmp(argv[i], "-O0")) {
             g->opt.level = 0;
             g->codegenOptLevel = Globals::CodegenOptLevel::None;
-        } else if (!strcmp(argv[i], "-O") || !strcmp(argv[i], "-O1") || !strcmp(argv[i], "-O2") ||
-                   !strcmp(argv[i], "-O3")) {
+        } else if (!strcmp(argv[i], "-O1")) {
             g->opt.level = 1;
+            g->codegenOptLevel = Globals::CodegenOptLevel::Default;
+            g->opt.disableCoherentControlFlow = true;
+        } else if (!strcmp(argv[i], "-O") || !strcmp(argv[i], "-O2") || !strcmp(argv[i], "-O3")) {
+            g->opt.level = 2;
             g->codegenOptLevel = Globals::CodegenOptLevel::Aggressive;
-            if (!strcmp(argv[i], "-O1")) {
-                g->opt.disableCoherentControlFlow = true;
-            }
         } else if (!strcmp(argv[i], "-")) {
             file = argv[i];
         } else if (!strcmp(argv[i], "--nostdlib")) {
