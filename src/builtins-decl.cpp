@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2024, Intel Corporation
+  Copyright (c) 2024-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -349,6 +349,7 @@ DECL_BUILTIN_NAME(__task_index);
 DECL_BUILTIN_NAME(__task_index0);
 DECL_BUILTIN_NAME(__task_index1);
 DECL_BUILTIN_NAME(__task_index2);
+DECL_BUILTIN_NAME(__terminate_now);
 DECL_BUILTIN_NAME(__wasm_cmp_msk_eq);
 
 std::unordered_map<PersistentGroup, std::vector<const char *>> persistentGroups = {

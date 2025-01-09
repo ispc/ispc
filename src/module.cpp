@@ -3469,12 +3469,13 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
         bblock = nextBBlock;
     }
 
-    // We couldn't find a match that the current system was capable of
-    // running.  We'll call abort(); this is a bit of a blunt hammer--it
-    // might be preferable to call a user-supplied callback--ISPCError(...)
+    // We couldn't find a match that the current system was capable of running.
+    // We used to call abort() here but replaced it with call to our own
+    // implementation __terminate_now from builtins/dispatch.c
+    // It might be preferable to call a user-supplied callback--ISPCError(...)
     // or some such, but we don't want to start imposing too much of a
     // runtime library requirement either...
-    llvm::Function *abortFunc = module->getFunction("abort");
+    llvm::Function *abortFunc = module->getFunction(builtin::__terminate_now);
     Assert(abortFunc);
     llvm::CallInst::Create(abortFunc, "", bblock);
 

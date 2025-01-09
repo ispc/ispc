@@ -693,6 +693,13 @@ deprecated. It leads to a warning when the function is called.
 
 The target ``avx512knl-x16`` was removed.
 
+The release introduces a breaking change by altering the behavior of user
+programs when no supported ISA is detected in the auto-dispatch code. It
+replaces the previous ``SIGABRT`` signal with ``SIGILL``. This affects users
+who rely on ``SIGABRT`` in their signal handlers for error handling or
+recovery. Such users must update their code to handle ``SIGILL`` instead. The
+change improves predictability and eliminates reliance of the dispatcher on the
+C standard library.
 
 Getting Started with ISPC
 =========================
