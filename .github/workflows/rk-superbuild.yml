@@ -1,5 +1,4 @@
-
-# Copyright 2024 Intel Corporation
+# Copyright 2024-2025 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
 name: RK superbuild
@@ -50,7 +49,7 @@ jobs:
         path: build/ispc-trunk-linux.tar.gz
 
   win-build-ispc:
-    runs-on: windows-2019
+    runs-on: windows-2022
     env:
       LLVM_VERSION: "18.1"
       LLVM_TAR: llvm-18.1.8-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
@@ -78,7 +77,7 @@ jobs:
     - name: Build package
       shell: cmd
       run: |
-        set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        set VSVARS="C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
         call %VSVARS%
         cmake -B build superbuild --preset os -G "NMake Makefiles" -DXE_DEPS=OFF -DPREBUILT_STAGE2_PATH=%LLVM_HOME%\bin-%LLVM_VERSION% -DEXPLICIT_ENV_PATH=OFF -DGNUWIN32=%CROSS_TOOLS_GNUWIN32%
         cmake --build build
@@ -124,7 +123,7 @@ jobs:
 
   build-ospray-superbuild-windows:
     needs: win-build-ispc
-    runs-on: windows-2019
+    runs-on: windows-2022
 
     steps:
     - name: Clone RK ospray repo
