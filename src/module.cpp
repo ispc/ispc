@@ -2737,8 +2737,15 @@ struct ispc::DispatchHeaderInfo {
     bool Emit4;
     bool Emit8;
     bool Emit16;
-    FILE *file;
-    const char *fn;
+    FILE *file = nullptr;
+    const char *fn = nullptr;
+
+    ~DispatchHeaderInfo() {
+        if (file != nullptr) {
+            fclose(file);
+            file = nullptr;
+        }
+    }
 };
 
 bool Module::writeDispatchHeader(DispatchHeaderInfo *DHI) {
@@ -3840,9 +3847,6 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
                 }
                 if (!m->writeOutput(Module::Header, outputFlags, targetHeaderFileName.c_str())) {
                     return 1;
-                }
-                if (i == targets.size() - 1) {
-                    fclose(DHI.file);
                 }
             }
 
