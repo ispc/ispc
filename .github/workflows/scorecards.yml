@@ -1,3 +1,6 @@
+# Copyright 2023-2025, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
 name: Scorecard supply-chain security
 on:
   # For Branch-Protection check. Only the default branch is supported. See
