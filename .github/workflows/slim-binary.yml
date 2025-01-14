@@ -1,4 +1,4 @@
-# Copyright 2024, Intel Corporation
+# Copyright 2024-2025, Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
 name: Slim Binary
@@ -108,7 +108,7 @@ jobs:
         PATH=$(pwd)/build/bin:$PATH ./scripts/run_tests.py --verbose --compiler=cc --target=${{ matrix.target }} --arch=${{ matrix.arch }}
 
   windows:
-    runs-on: windows-2019
+    runs-on: windows-2022
     env:
       LLVM_VERSION: "18.1"
       LLVM_TAR: llvm-18.1.8-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z

@@ -1,4 +1,4 @@
-# Copyright 2022-2024, Intel Corporation
+# Copyright 2022-2025 Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
 # Nightly Linux run.
@@ -148,7 +148,7 @@ jobs:
 
 
   win-build-ispc-llvm-19:
-    runs-on: windows-2019
+    runs-on: windows-2022
     env:
       LLVM_VERSION: "19.1"
       LLVM_TAR: llvm-19.1.0-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z

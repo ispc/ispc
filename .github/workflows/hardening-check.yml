@@ -1,4 +1,4 @@
-## Copyright 2024 Intel Corporation
+## Copyright 2024-2025 Intel Corporation
 ## SPDX-License-Identifier: BSD-3-Clause
 
 name: Hardening Checks (trunk)
@@ -48,7 +48,7 @@ jobs:
           hardening-check-trunk.txt
 
   winchecksec:
-    runs-on: windows-2019
+    runs-on: windows-2022
     # Disabling this workflow for non ispc/ispc repo to reduce the traffic to artifacts downloads.
     if: github.repository == 'ispc/ispc'
 
