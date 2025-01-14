@@ -41,7 +41,7 @@ jobs:
         hardening-check "./ispc*/lib64/libispcrt_device_gpu.so" | tee -a "./hardening-check-trunk.txt"
         hardening-check "./ispc*/lib64/libispcrt_device_cpu.so" | tee -a "./hardening-check-trunk.txt"
 
-    - uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+    - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
         name: hardening_check
         path: |
@@ -75,7 +75,7 @@ jobs:
         # Not GPU device is built in trunk Windows build
         # winchecksec.exe bin\ispcrt_device_gpu.dll >> ..\winchecksec-report-trunk.txt
 
-    - uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+    - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
         name: winchecksec_report
         path: |
