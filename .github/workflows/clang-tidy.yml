@@ -1,4 +1,4 @@
-## Copyright 2024 Intel Corporation
+## Copyright 2024-2025 Intel Corporation
 ## SPDX-License-Identifier: BSD-3-Clause
 
 name: Lint code with clang-tidy
