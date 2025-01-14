@@ -434,26 +434,163 @@ bool lStartsWithLLVM(llvm::StringRef name) {
 #endif
 }
 
-void lLinkTargetBuiltins(llvm::Module *module) {
-    const BitcodeLib *target =
-        g->target_registry->getISPCTargetLib(g->target->getISPCTarget(), g->target_os, g->target->getArch());
-    Assert(target);
-    llvm::Module *targetBCModule = target->getLLVMModule();
+// Mapping from each target to its parent target
+// clang-format off
+std::unordered_map<ISPCTarget, ISPCTarget> targetParentMap = {
+    // TODO! enable more targets
+    // {ISPCTarget::neon_i8x16, ISPCTarget::generic_i8x16},
 
-    llvm::StringSet<> targetBuiltins;
-    for (llvm::Function &F : targetBCModule->functions()) {
+    // {ISPCTarget::neon_i16x8, ISPCTarget::generic_i16x8},
+
+    // {ISPCTarget::neon_i32x4, ISPCTarget::generic_i32x4},
+
+    // {ISPCTarget::neon_i32x8, ISPCTarget::generic_i32x8},
+
+    {ISPCTarget::avx512spr_x4, ISPCTarget::avx512icl_x4},
+    {ISPCTarget::avx512icl_x4, ISPCTarget::avx512skx_x4},
+    {ISPCTarget::avx512skx_x4, ISPCTarget::generic_i1x4},
+
+    // {ISPCTarget::avx512spr_x8, ISPCTarget::avx512icl_x8},
+    // {ISPCTarget::avx512icl_x8, ISPCTarget::avx512skx_x8},
+    // {ISPCTarget::avx512skx_x8, ISPCTarget::generic_i1x8},
+
+    // {ISPCTarget::avx512spr_x16, ISPCTarget::avx512icl_x16},
+    // {ISPCTarget::avx512icl_x16, ISPCTarget::avx512skx_x16},
+    // {ISPCTarget::avx512skx_x16, ISPCTarget::generic_i1x16},
+
+    // {ISPCTarget::avx512spr_x32, ISPCTarget::avx512icl_x32},
+    // {ISPCTarget::avx512icl_x32, ISPCTarget::avx512skx_x32},
+    // {ISPCTarget::avx512skx_x32, ISPCTarget::generic_i1x32},
+
+    // TODO: needs generic_i1x64 be repaired first
+    // {ISPCTarget::avx512spr_x64, ISPCTarget::avx512icl_x64},
+    // {ISPCTarget::avx512icl_x64, ISPCTarget::avx512skx_x64},
+    // {ISPCTarget::avx512skx_x64, ISPCTarget::generic_i1x64},
+
+    // {ISPCTarget::avx2vnni_i32x4, ISPCTarget::avx2_i32x4},
+    // {ISPCTarget::avx2_i32x4, ISPCTarget::avx1_i32x4},
+    // {ISPCTarget::avx1_i32x4, ISPCTarget::sse4_i32x4},
+    // {ISPCTarget::sse4_i32x4, ISPCTarget::sse2_i32x4},
+    // {ISPCTarget::sse2_i32x4, ISPCTarget::generic_i32x4},
+
+    // {ISPCTarget::avx2vnni_i32x8, ISPCTarget::avx2_i32x8},
+    // {ISPCTarget::avx2_i32x8, ISPCTarget::avx1_i32x8},
+    // {ISPCTarget::avx1_i32x8, ISPCTarget::sse4_i32x8},
+    // {ISPCTarget::sse4_i32x8, ISPCTarget::sse2_i32x8},
+    // {ISPCTarget::sse2_i32x8, ISPCTarget::generic_i32x8},
+
+    // {ISPCTarget::avx2vnni_i32x16, ISPCTarget::avx2_i32x16},
+    // {ISPCTarget::avx2_i32x16, ISPCTarget::avx1_i32x16},
+    // {ISPCTarget::avx1_i32x16, ISPCTarget::generic_i32x16},
+
+    // {ISPCTarget::avx2_i16x16, ISPCTarget::sse4_i16x16},
+    // {ISPCTarget::sse4_i16x16, ISPCTarget::generic_i16x16},
+
+    // {ISPCTarget::sse4_i8x16, ISPCTarget::generic_i8x16},
+
+    // {ISPCTarget::avx2_i8x32, ISPCTarget::generic_i8x32},
+};
+// clang-format on
+
+// Traverse the target hierarchy to find the parent target.
+ISPCTarget GetParentTarget(ISPCTarget target) {
+    auto it = targetParentMap.find(target);
+    if (it != targetParentMap.end()) {
+        return it->second;
+    }
+    return ISPCTarget::none;
+}
+
+// Check if the module has used but unresolved symbols from the given set of symbols.
+bool lHasUnresolvedSymbols(llvm::Module *module, const llvm::StringSet<> &symbols, std::string &unresolvedSymbol) {
+    for (llvm::Function &F : module->functions()) {
+        auto name = F.getName().str();
+        if (F.isDeclaration() && !F.use_empty() && symbols.count(name)) {
+            unresolvedSymbol = name;
+            return true;
+        }
+    }
+    return false;
+}
+
+void lFillTargetBuiltins(llvm::Module *bcModule, llvm::StringSet<> &targetBuiltins) {
+    for (llvm::Function &F : bcModule->functions()) {
         auto name = F.getName();
         if (!lStartsWithLLVM(name)) {
             targetBuiltins.insert(name);
         }
     }
+}
 
-    targetBCModule->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
-    targetBCModule->setTargetTriple(module->getTargetTriple());
+llvm::Module *lGetTargetBCModule(ISPCTarget target) {
+    const BitcodeLib *lib = g->target_registry->getISPCTargetLib(target, g->target_os, g->target->getArch());
+    if (!lib) {
+        Error(SourcePos(), "Failed to get target bitcode library for target %s.", ISPCTargetToString(target).c_str());
+        return nullptr;
+    }
+    return lib->getLLVMModule();
+}
 
-    // Next, add the target's custom implementations of the various needed
-    // builtin functions (e.g. __masked_store_32(), etc).
-    lAddBitcodeToModule(targetBCModule, module);
+void lCollectAllDefinedFunctions(ISPCTarget target, llvm::StringSet<> &definedFunctions) {
+    ISPCTarget rootTarget = target;
+    // Traverse the target hierarchy to find the root target.
+    // If the target is not found in the map then rootTarget is the target itself.
+    for (ISPCTarget t = target; t != ISPCTarget::none; t = GetParentTarget(t)) {
+        rootTarget = t;
+    }
+    llvm::Module *m = lGetTargetBCModule(rootTarget);
+    for (llvm::Function &F : m->functions()) {
+        auto name = F.getName();
+        if (!lStartsWithLLVM(name) && !F.isDeclaration()) {
+            definedFunctions.insert(name);
+        }
+    }
+}
+
+void lLinkBuitinsForTarget(llvm::Module *m, ISPCTarget target, llvm::StringSet<> &functions) {
+    llvm::Module *bc = lGetTargetBCModule(target);
+    lFillTargetBuiltins(bc, functions);
+
+    bc->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
+    bc->setTargetTriple(m->getTargetTriple());
+
+    lAddBitcodeToModule(bc, m);
+}
+
+void lLinkTargetBuiltins(llvm::Module *module, int &debug_num) {
+    llvm::StringSet<> targetBuiltins;
+    ISPCTarget target = g->target->getISPCTarget();
+
+    // Collect all defined functions in the root target module. We need this
+    // list to check for unresolved symbols. To distuinguish between unresolved
+    // user symbols and unresolved builtin symbols, we traverse the current
+    // target to the most generic one, then we save all defined there functions
+    // as symbols that should be resolved.
+    // If the target is not found in the targetParentMap then symbolsToResolve
+    // is just the list of defined builtins functions, i.e., all of them
+    // resolved in the target module, so lHasUnresolvedSymbols() will return
+    // false later.
+    llvm::StringSet<> symbolsToResolve;
+    lCollectAllDefinedFunctions(target, symbolsToResolve);
+
+    // Add the target's custom implementations of the various needed builtin
+    // functions (e.g. __masked_store_32(), etc) from builtins module for the
+    // current target we are compiling for.
+    lLinkBuitinsForTarget(module, target, targetBuiltins);
+
+    // Check for unresolved symbols and hierarchically link with the parent
+    // (more generic) target's bitcode if needed.
+    std::string unresolvedSymbol;
+    while (lHasUnresolvedSymbols(module, symbolsToResolve, unresolvedSymbol)) {
+        target = GetParentTarget(target);
+        if (target == ISPCTarget::none) {
+            Error(SourcePos(), "Unresolved symbol %s in target bitcode.", unresolvedSymbol.c_str());
+            break;
+        }
+
+        lLinkBuitinsForTarget(module, target, targetBuiltins);
+        debugDumpModule(module, "Parent", debug_num++);
+    }
 
     lSetAsInternal(module, targetBuiltins);
 }
@@ -508,7 +645,7 @@ void ispc::LinkStandardLibraries(llvm::Module *module, int &debug_num) {
     lLinkCommonBuiltins(module);
     debugDumpModule(module, "LinkCommonBuiltins", debug_num++);
 
-    lLinkTargetBuiltins(module);
+    lLinkTargetBuiltins(module, debug_num);
     // generic target implementation itself uses some of the pseudo functions
     // and their dependencies that we need to preserve.
     // Here, more code stay in the module in comparison with when this was
