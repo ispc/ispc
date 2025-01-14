@@ -2740,12 +2740,14 @@ struct ispc::DispatchHeaderInfo {
     FILE *file = nullptr;
     const char *fn = nullptr;
 
-    ~DispatchHeaderInfo() {
+    void closeFile() {
         if (file != nullptr) {
             fclose(file);
             file = nullptr;
         }
     }
+
+    ~DispatchHeaderInfo() { closeFile(); }
 };
 
 bool Module::writeDispatchHeader(DispatchHeaderInfo *DHI) {
@@ -3847,6 +3849,9 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
                 }
                 if (!m->writeOutput(Module::Header, outputFlags, targetHeaderFileName.c_str())) {
                     return 1;
+                }
+                if (i == targets.size() - 1) {
+                    DHI.closeFile();
                 }
             }
 
