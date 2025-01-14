@@ -6,10 +6,10 @@
 // CHECK_IR: @test12 = local_unnamed_addr global i32 32
 // CHECK_IR: @test21 = local_unnamed_addr global i32 4
 // CHECK_IR: @test22 = local_unnamed_addr global i32 32
-// CHECK_IR: @test31 = local_unnamed_addr global <8 x i32> <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>
-// CHECK_IR: @test32 = local_unnamed_addr global <8 x i32> <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
-// CHECK_IR: @test41 = local_unnamed_addr global <8 x i32> <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>
-// CHECK_IR: @test42 = local_unnamed_addr global <8 x i32> <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
+// CHECK_IR: @test31 = local_unnamed_addr global <8 x i32> {{<i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>|splat \(i32 32\)}}
+// CHECK_IR: @test32 = local_unnamed_addr global <8 x i32> {{<i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>|splat \(i32 4\)}}
+// CHECK_IR: @test41 = local_unnamed_addr global <8 x i32> {{<i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>|splat \(i32 32\)}}
+// CHECK_IR: @test42 = local_unnamed_addr global <8 x i32> {{<i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>|splat \(i32 4\)}}
 
 uniform int test11 = sizeof(uniform int);
 uniform int test12 = sizeof(varying int);
