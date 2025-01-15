@@ -3,7 +3,7 @@
 ;;
 ;;  Copyright(c) 2012-2013 Matt Pharr
 ;;  Copyright(c) 2013, 2015 Google, Inc.
-;;  Copyright(c) 2019-2024 Intel
+;;  Copyright(c) 2019-2025 Intel
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -32,12 +32,9 @@ define <4 x i16> @__float_to_half_varying(<4 x float> %v) nounwind readnone alwa
 
 ;; round/floor/ceil
 
-;; FIXME: Modify for 32 bit arm.
-;; instructions for these.  Is there a better approach for NEON?
-
-declare <4 x float> @llvm.aarch64.neon.frintn.v4f32(<4 x float> %a) nounwind readnone
+declare <4 x float> @llvm.roundeven.v4f32(<4 x float> %a) nounwind readnone
 define <4 x float> @__round_varying_float(<4 x float>) nounwind readonly alwaysinline {
-  %ret = call <4 x float> @llvm.aarch64.neon.frintn.v4f32(<4 x float> %0)
+  %ret = call <4 x float> @llvm.roundeven.v4f32(<4 x float> %0)
   ret <4 x float> %ret
 }
 
@@ -53,15 +50,14 @@ define <4 x float> @__ceil_varying_float(<4 x float>) nounwind readonly alwaysin
     ret <4 x float> %ret
 }
 
-;; FIXME: Modify for 32 bit arm.
-declare <2 x double> @llvm.aarch64.neon.frintn.v2f64(<2 x double> %a) nounwind readnone
+declare <2 x double> @llvm.roundeven.v2f64(<2 x double> %a) nounwind readnone
 define <4 x double> @__round_varying_double(<4 x double>) nounwind readonly alwaysinline {
     %v0 = shufflevector <4 x double> %0, <4 x double> undef,
                       <2 x i32> <i32 0, i32 1>
     %v1 = shufflevector <4 x double> %0, <4 x double> undef,
                       <2 x i32> <i32 2, i32 3>
-    %v0_round = call <2 x double> @llvm.aarch64.neon.frintn.v2f64(<2 x double> %v0)
-    %v1_round = call <2 x double> @llvm.aarch64.neon.frintn.v2f64(<2 x double> %v1)
+    %v0_round = call <2 x double> @llvm.roundeven.v2f64(<2 x double> %v0)
+    %v1_round = call <2 x double> @llvm.roundeven.v2f64(<2 x double> %v1)
     %ret = shufflevector <2 x double> %v0_round, <2 x double> %v1_round,
                       <4 x i32> <i32 0, i32 1, i32 2, i32 3>
     ret <4 x double> %ret
