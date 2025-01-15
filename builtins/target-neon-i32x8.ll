@@ -1,7 +1,7 @@
 ;;
 ;; target-neon-32-x2.ll
 ;;
-;;  Copyright(c) 2019-2024 Intel
+;;  Copyright(c) 2019-2025 Intel
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -30,12 +30,9 @@ define <8 x i16> @__float_to_half_varying(<8 x float> %v) nounwind readnone alwa
 
 ;; round/floor/ceil
 
-;; FIXME: Modify for 32 bit arm.
-;; instructions for these.  Is there a better approach for NEON?
-
-declare <4 x float> @llvm.aarch64.neon.frintn.v4f32(<4 x float> %a) nounwind readnone
+declare <4 x float> @llvm.roundeven.v4f32(<4 x float> %a) nounwind readnone
 define <8 x float> @__round_varying_float(<8 x float>) nounwind readonly alwaysinline {
-    unary4to8(ret, float, @llvm.aarch64.neon.frintn.v4f32, %0)
+    unary4to8(ret, float, @llvm.roundeven.v4f32, %0)
     ret <8 x float> %ret
 }
 
@@ -51,10 +48,9 @@ define <8 x float> @__ceil_varying_float(<8 x float>) nounwind readonly alwaysin
     ret <8 x float> %ret
 }
 
-;; FIXME: Modify for 32 bit arm.
-declare <2 x double> @llvm.aarch64.neon.frintn.v2f64(<2 x double> %a) nounwind readnone
+declare <2 x double> @llvm.roundeven.v2f64(<2 x double> %a) nounwind readnone
 define <8 x double> @__round_varying_double(<8 x double>) nounwind readonly alwaysinline {
-    unary2to8(ret, double, @llvm.aarch64.neon.frintn.v2f64, %0)
+    unary2to8(ret, double, @llvm.roundeven.v2f64, %0)
     ret <8 x double> %ret
 }
 
@@ -64,7 +60,7 @@ define <8 x double> @__floor_varying_double(<8 x double>) nounwind readonly alwa
     ret <8 x double> %ret
 }
 
-declare  <2 x double> @llvm.ceil.v2f64(<2 x double> %a) nounwind readnone
+declare <2 x double> @llvm.ceil.v2f64(<2 x double> %a) nounwind readnone
 define <8 x double> @__ceil_varying_double(<8 x double>) nounwind readonly alwaysinline {
     unary2to8(ret, double, @llvm.ceil.v2f64, %0)
     ret <8 x double> %ret
