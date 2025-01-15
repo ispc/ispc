@@ -483,15 +483,9 @@ typedef enum {
     CPU_ZNVER3,
 
 // FIXME: LLVM supports a ton of different ARM CPU variants--not just
-// cortex-a9 and a15.  We should be able to handle any of them that also
+// listed below.  We should be able to handle any of them that also
 // have NEON support.
 #ifdef ISPC_ARM_ENABLED
-    // ARM Cortex A9. Supports NEON VFPv3.
-    CPU_CortexA9,
-
-    // ARM Cortex A15. Supports NEON VFPv4.
-    CPU_CortexA15,
-
     // ARM Cortex A35, A53, A57. Supports Armv8-A.
     CPU_CortexA35,
     CPU_CortexA53,
@@ -572,8 +566,6 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {CPU_ZNVER3, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
 // TODO: Add features for remaining CPUs if valid.
 #ifdef ISPC_ARM_ENABLED
-    {CPU_CortexA9, {}},
-    {CPU_CortexA15, {}},
     {CPU_CortexA35, {}},
     {CPU_CortexA53, {}},
     {CPU_CortexA57, {}},
@@ -697,8 +689,6 @@ class AllCPUs {
         names[CPU_ZNVER3].push_back("znver3");
 
 #ifdef ISPC_ARM_ENABLED
-        names[CPU_CortexA9].push_back("cortex-a9");
-        names[CPU_CortexA15].push_back("cortex-a15");
         names[CPU_CortexA35].push_back("cortex-a35");
         names[CPU_CortexA53].push_back("cortex-a53");
         names[CPU_CortexA57].push_back("cortex-a57");
@@ -808,8 +798,6 @@ class AllCPUs {
         compat[CPU_x86_64] = Set(CPU_x86_64, CPU_None);
 
 #ifdef ISPC_ARM_ENABLED
-        compat[CPU_CortexA15] = Set(CPU_CortexA9, CPU_CortexA15, CPU_None);
-        compat[CPU_CortexA9] = Set(CPU_CortexA9, CPU_None);
         compat[CPU_CortexA35] = Set(CPU_CortexA35, CPU_None);
         compat[CPU_CortexA53] = Set(CPU_CortexA53, CPU_None);
         compat[CPU_CortexA57] = Set(CPU_CortexA57, CPU_None);
@@ -923,96 +911,86 @@ Arch lGetArchFromTarget(ISPCTarget target) {
 #if defined(ISPC_ARM_ENABLED)
 // Get the ARM device type for requested architecture
 DeviceType lGetARMDeviceType(Arch arch) {
-    if (arch == Arch::arm) {
-        return DeviceType::CPU_CortexA9;
-    }
-
-    if (arch == Arch::aarch64) {
-        // Cross-compilation?
-        if (g->target_os != GetHostOS()) {
-            switch (g->target_os) {
-            case TargetOS::ios:
-                return DeviceType::CPU_AppleA7;
-            case TargetOS::macos:
-                // Open source LLVM doesn't have definition for M1 CPU, so use iPhone CPU compatible with M1.
-                return DeviceType::CPU_AppleA14;
-            case TargetOS::linux:
-                return DeviceType::CPU_CortexA35;
-            default:
-                return DeviceType::CPU_CortexA35;
-            }
-        }
-#if defined(ISPC_HOST_IS_ARM) || defined(ISPC_HOST_IS_AARCH64)
-        // lGetTargetFeaturesForARMHost calls llvm::sys::getHostCPUName(), which
-        // returns the CPU name that we can directly pass to the backend. However,
-        // this CPU might not be explicitly supported by ISPC. Therefore, let's
-        // retrieve the features for the detected CPU and determine which CPU
-        // definition supported by ISPC matches it best.
-        // To get the features for future ARM CPUs, either run clang++ -mcpu=<device> and look
-        // for the feature string or check llvm/lib/Target/AArch64/AArch64.td
-        std::vector<llvm::StringRef> featureString = lGetTargetFeaturesForARMHost(arch);
-#if defined(ISPC_HOST_IS_LINUX) || defined(ISPC_HOST_IS_WINDOWS)
-        // ARMv8-A (cortex-a35, cortex-a53, cortex-a57) - have the same features
-        bool a53 = lIsARMFeatureSupported("neon", featureString) && lIsARMFeatureSupported("fp-armv8", featureString) &&
-                   lIsARMFeatureSupported("aes", featureString) && lIsARMFeatureSupported("sha2", featureString) &&
-                   lIsARMFeatureSupported("crc", featureString);
-        // ARMv8.2-A (cortex-a55, cortex-a78) - have the same features
-        bool a55 = a53 && lIsARMFeatureSupported("dotprod", featureString) &&
-                   lIsARMFeatureSupported("fullfp16", featureString) && lIsARMFeatureSupported("lse", featureString) &&
-                   lIsARMFeatureSupported("rcpc", featureString);
-        // ARMv9-A (cortex-a510, cortex-a520) - have the same computational features.
-        // Doesn't have "+aes" and "+sha2", so construct feature list from scratch.
-        bool a510 = lIsARMFeatureSupported("neon", featureString) && lIsARMFeatureSupported("crc", featureString) &&
-                    lIsARMFeatureSupported("dotprod", featureString) &&
-                    lIsARMFeatureSupported("fp-armv8", featureString) &&
-                    lIsARMFeatureSupported("fullfp16", featureString) && lIsARMFeatureSupported("lse", featureString) &&
-                    lIsARMFeatureSupported("rcpc", featureString) && lIsARMFeatureSupported("sve", featureString) &&
-                    lIsARMFeatureSupported("sve2", featureString) && lIsARMFeatureSupported("i8mm", featureString) &&
-                    lIsARMFeatureSupported("fp16fml", featureString);
-        if (a510) {
-            return DeviceType::CPU_CortexA510;
-        } else if (a55) {
-            return DeviceType::CPU_CortexA55;
-        } else if (a53) {
-            return DeviceType::CPU_CortexA53;
-        } else {
+    // Cross-compilation?
+    if (g->target_os != GetHostOS()) {
+        switch (g->target_os) {
+        case TargetOS::ios:
+            return DeviceType::CPU_AppleA7;
+        case TargetOS::macos:
+            // Open source LLVM doesn't have definition for M1 CPU, so use iPhone CPU compatible with M1.
+            return DeviceType::CPU_AppleA14;
+        case TargetOS::linux:
+            return DeviceType::CPU_CortexA35;
+        default:
             return DeviceType::CPU_CortexA35;
         }
+    }
+
+#if defined(ISPC_HOST_IS_ARM) || defined(ISPC_HOST_IS_AARCH64)
+    // lGetTargetFeaturesForARMHost calls llvm::sys::getHostCPUName(), which
+    // returns the CPU name that we can directly pass to the backend. However,
+    // this CPU might not be explicitly supported by ISPC. Therefore, let's
+    // retrieve the features for the detected CPU and determine which CPU
+    // definition supported by ISPC matches it best.
+    // To get the features for future ARM CPUs, either run clang++ -mcpu=<device> and look
+    // for the feature string or check llvm/lib/Target/AArch64/AArch64.td
+    std::vector<llvm::StringRef> featureString = lGetTargetFeaturesForARMHost(arch);
+#if defined(ISPC_HOST_IS_LINUX) || defined(ISPC_HOST_IS_WINDOWS)
+    // ARMv8-A (cortex-a35, cortex-a53, cortex-a57) - have the same features
+    bool a53 = lIsARMFeatureSupported("neon", featureString) && lIsARMFeatureSupported("fp-armv8", featureString) &&
+               lIsARMFeatureSupported("aes", featureString) && lIsARMFeatureSupported("sha2", featureString) &&
+               lIsARMFeatureSupported("crc", featureString);
+    // ARMv8.2-A (cortex-a55, cortex-a78) - have the same features
+    bool a55 = a53 && lIsARMFeatureSupported("dotprod", featureString) &&
+               lIsARMFeatureSupported("fullfp16", featureString) && lIsARMFeatureSupported("lse", featureString) &&
+               lIsARMFeatureSupported("rcpc", featureString);
+    // ARMv9-A (cortex-a510, cortex-a520) - have the same computational features.
+    // Doesn't have "+aes" and "+sha2", so construct feature list from scratch.
+    bool a510 = lIsARMFeatureSupported("neon", featureString) && lIsARMFeatureSupported("crc", featureString) &&
+                lIsARMFeatureSupported("dotprod", featureString) && lIsARMFeatureSupported("fp-armv8", featureString) &&
+                lIsARMFeatureSupported("fullfp16", featureString) && lIsARMFeatureSupported("lse", featureString) &&
+                lIsARMFeatureSupported("rcpc", featureString) && lIsARMFeatureSupported("sve", featureString) &&
+                lIsARMFeatureSupported("sve2", featureString) && lIsARMFeatureSupported("i8mm", featureString) &&
+                lIsARMFeatureSupported("fp16fml", featureString);
+    if (a510) {
+        return DeviceType::CPU_CortexA510;
+    } else if (a55) {
+        return DeviceType::CPU_CortexA55;
+    } else if (a53) {
+        return DeviceType::CPU_CortexA53;
+    } else {
+        return DeviceType::CPU_CortexA35;
+    }
 #elif defined(ISPC_HOST_IS_APPLE)
-        bool apple_a7 = lIsARMFeatureSupported("neon", featureString) && lIsARMFeatureSupported("aes", featureString) &&
-                        lIsARMFeatureSupported("sha2", featureString) &&
-                        lIsARMFeatureSupported("fp-armv8", featureString);
-        bool apple_a10 = apple_a7 && lIsARMFeatureSupported("crc", featureString);
-        bool apple_a11 = apple_a10 && lIsARMFeatureSupported("lse", featureString) &&
-                         lIsARMFeatureSupported("fullfp16", featureString);
-        bool apple_a12 = apple_a11 && lIsARMFeatureSupported("rcpc", featureString);
-        bool apple_a13 = apple_a12 && lIsARMFeatureSupported("dotprod", featureString) &&
-                         lIsARMFeatureSupported("sha3", featureString) &&
-                         lIsARMFeatureSupported("fp16fml", featureString);
-        bool apple_a14 = apple_a13; // Apple A14 features are the same as A13
-        bool apple_a15 =
-            apple_a14 && lIsARMFeatureSupported("bf16", featureString) && lIsARMFeatureSupported("i8mm", featureString);
-        bool apple_a16 = apple_a15; // Apple A16 and A17 features are the same as A15
-        // Return the highest supported Apple device type
-        if (apple_a15 || apple_a16) {
-            return DeviceType::CPU_AppleA16;
-        } else if (apple_a13 || apple_a14) {
-            return DeviceType::CPU_AppleA14;
-        } else if (apple_a12) {
-            return DeviceType::CPU_AppleA12;
-        } else if (apple_a11) {
-            return DeviceType::CPU_AppleA11;
-        } else if (apple_a10) {
-            return DeviceType::CPU_AppleA10;
-        } else {
-            return DeviceType::CPU_AppleA7;
-        }
+    bool apple_a7 = lIsARMFeatureSupported("neon", featureString) && lIsARMFeatureSupported("aes", featureString) &&
+                    lIsARMFeatureSupported("sha2", featureString) && lIsARMFeatureSupported("fp-armv8", featureString);
+    bool apple_a10 = apple_a7 && lIsARMFeatureSupported("crc", featureString);
+    bool apple_a11 =
+        apple_a10 && lIsARMFeatureSupported("lse", featureString) && lIsARMFeatureSupported("fullfp16", featureString);
+    bool apple_a12 = apple_a11 && lIsARMFeatureSupported("rcpc", featureString);
+    bool apple_a13 = apple_a12 && lIsARMFeatureSupported("dotprod", featureString) &&
+                     lIsARMFeatureSupported("sha3", featureString) && lIsARMFeatureSupported("fp16fml", featureString);
+    bool apple_a14 = apple_a13; // Apple A14 features are the same as A13
+    bool apple_a15 =
+        apple_a14 && lIsARMFeatureSupported("bf16", featureString) && lIsARMFeatureSupported("i8mm", featureString);
+    bool apple_a16 = apple_a15; // Apple A16 and A17 features are the same as A15
+    // Return the highest supported Apple device type
+    if (apple_a15 || apple_a16) {
+        return DeviceType::CPU_AppleA16;
+    } else if (apple_a13 || apple_a14) {
+        return DeviceType::CPU_AppleA14;
+    } else if (apple_a12) {
+        return DeviceType::CPU_AppleA12;
+    } else if (apple_a11) {
+        return DeviceType::CPU_AppleA11;
+    } else if (apple_a10) {
+        return DeviceType::CPU_AppleA10;
+    } else {
+        return DeviceType::CPU_AppleA7;
+    }
 #endif // defined(ISPC_HOST_IS_LINUX) || defined(ISPC_HOST_IS_WINDOWS)
 #endif // (ISPC_HOST_IS_ARM) || defined(ISPC_HOST_IS_AARCH64)
-        return DeviceType::CPU_CortexA35;
-    } else {
-        UNREACHABLE();
-    }
+    return DeviceType::CPU_CortexA35;
 }
 #endif
 
@@ -1059,8 +1037,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         }
 
 #ifdef ISPC_ARM_ENABLED
-        case CPU_CortexA9:
-        case CPU_CortexA15:
         case CPU_CortexA35:
         case CPU_CortexA53:
         case CPU_CortexA57:
