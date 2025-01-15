@@ -1,4 +1,4 @@
-#  Copyright (c) 2018-2024, Intel Corporation
+#  Copyright (c) 2018-2025, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -33,7 +33,6 @@ for:
         if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2022" ( (set generator="Visual Studio 17") & (set vspath="C:\Program Files\Microsoft Visual Studio\2022"))
         set LLVM_TAR=llvm-18.1.8-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
         if "%LLVM_VERSION%"=="17.0" (set LLVM_TAR=llvm-17.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z)
-        if "%LLVM_VERSION%"=="16.0" (set LLVM_TAR=llvm-16.0.6-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z)
   install:
     - ps: choco install --no-progress winflexbison3 wget 7zip
     - cmd: |-
