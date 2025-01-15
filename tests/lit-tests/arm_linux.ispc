@@ -94,25 +94,25 @@
 // CHECK_AARCH64_A510-SAME: +sve
 // CHECK_AARCH64_A510-SAME: +sve2
 
-// CHECK_ARM: Triple: armv7-unknown-linux-gnueabihf
+// CHECK_ARM: Triple: armv8a-unknown-linux-gnueabihf
 // CHECK_ARM: CPU: {{cortex-a*}}
 // CHECK_ARM-NEXT: Feature String:
 // CHECK_ARM-SAME: +fp16
 // CHECK_ARM-SAME: +neon
 
-// CHECK_ARM_A9: Triple: armv7-unknown-linux-gnueabihf
+// CHECK_ARM_A9: Triple: armv8a-unknown-linux-gnueabihf
 // CHECK_ARM_A9: CPU: cortex-a9
 // CHECK_ARM_A9-NEXT: Feature String:
 // CHECK_ARM_A9-SAME: +fp16
 // CHECK_ARM_A9-SAME: +neon
 
-// CHECK_ARM_A15: Triple: armv7-unknown-linux-gnueabihf
+// CHECK_ARM_A15: Triple: armv8a-unknown-linux-gnueabihf
 // CHECK_ARM_A15: CPU: cortex-a15
 // CHECK_ARM_A15-NEXT: Feature String:
 // CHECK_ARM_A15-SAME: +fp16
 // CHECK_ARM_A15-SAME: +neon
 
-// CHECK_ARM_A57: Triple: armv7-unknown-linux-gnueabihf
+// CHECK_ARM_A57: Triple: armv8a-unknown-linux-gnueabihf
 // CHECK_ARM_A57: CPU: cortex-a57
 // CHECK_ARM_A57-NEXT: Feature String:
 // CHECK_ARM_A57-SAME: +fp16

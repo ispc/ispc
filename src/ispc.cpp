@@ -2408,7 +2408,7 @@ std::string Target::GetTripleString() const {
         } else if (m_arch == Arch::x86_64) {
             triple.setArchName("x86_64");
         } else if (m_arch == Arch::arm) {
-            triple.setArchName("armv7");
+            triple.setArchName("armv8a");
         } else if (m_arch == Arch::aarch64) {
             triple.setArchName("aarch64");
         } else if (m_arch == Arch::xe64) {
@@ -2442,7 +2442,7 @@ std::string Target::GetTripleString() const {
         } else if (m_arch == Arch::x86_64) {
             triple.setArchName("amd64");
         } else if (m_arch == Arch::arm) {
-            triple.setArchName("armv7");
+            triple.setArchName("armv8a");
         } else if (m_arch == Arch::aarch64) {
             triple.setArchName("aarch64");
         } else {
@@ -2471,7 +2471,7 @@ std::string Target::GetTripleString() const {
         } else if (m_arch == Arch::x86_64) {
             triple.setArchName("x86_64");
         } else if (m_arch == Arch::arm) {
-            triple.setArchName("armv7");
+            triple.setArchName("armv8a");
         } else if (m_arch == Arch::aarch64) {
             triple.setArchName("aarch64");
         } else {

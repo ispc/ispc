@@ -44,7 +44,7 @@ def bundle_header(src, output):
             outfile.write("0x00 };\n\n")
             outfile.write(f"int {name}_length = {length};\n")
 
-ARCH_CHOICES = ['i686', 'x86', 'x86_64', 'arm', 'armv7', 'arm64', 'aarch64', 'wasm32', 'wasm64', 'xe64']
+ARCH_CHOICES = ['i686', 'x86', 'x86_64', 'arm', 'armv8a', 'arm64', 'aarch64', 'wasm32', 'wasm64', 'xe64']
 
 parser = argparse.ArgumentParser()
 parser.add_argument("src", help="Source file to process")
@@ -104,7 +104,7 @@ if args[0].arch in ARCH_CHOICES:
         ispc_arch = "x86"
     elif args[0].arch == "x86_64" or args[0].arch == "amd64":
         ispc_arch = "x86_64"
-    elif args[0].arch == "armv7" or args[0].arch == "arm":
+    elif args[0].arch == "armv8a" or args[0].arch == "arm":
         ispc_arch = "arm"
     elif args[0].arch == "arm64" or args[0].arch == "aarch64":
         ispc_arch = "aarch64"
