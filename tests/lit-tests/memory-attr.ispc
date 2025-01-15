@@ -3,7 +3,6 @@
 
 // Before LLVM 16.0, the memory attribute was displayed as readonly, readnone
 // not as memory(read), memory(none).
-// REQUIRES: LLVM_16_0+
 
 // CHECK: ; Function Attrs: {{.*}} memory(none)
 // CHECK-LABEL: define {{.*}} @foo___univyi{{.*}}

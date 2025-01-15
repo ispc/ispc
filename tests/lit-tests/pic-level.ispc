@@ -7,7 +7,7 @@
 // user module, the builtin-cpp module and the target module. So, the PIC level
 // of the resulted code depends not only on the user flags, but also on the
 // flags that we build builtin and target modules.
-// REQUIRES: LLVM_16_0+ && LINUX_ENABLED
+// REQUIRES: LINUX_ENABLED
 
 
 // TODO: see tests/lit-tests/pic-level-1.ispc for more details.
