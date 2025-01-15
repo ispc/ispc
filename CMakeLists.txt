@@ -371,8 +371,8 @@ if (WASM_ENABLED)
     message(STATUS "EMCC_EXECUTABLE: ${EMCC_EXECUTABLE}")
 endif()
 
-if (${LLVM_VERSION_NUMBER} VERSION_LESS "16.0.0")
-    message(FATAL_ERROR "ISPC requires LLVM 16.0.0 or later")
+if (${LLVM_VERSION_NUMBER} VERSION_LESS "17.0.0")
+    message(FATAL_ERROR "ISPC requires LLVM 17.0.0 or later")
 endif()
 
 set(CLANG_LIBRARY_LIST clangFrontend clangBasic clangEdit clangLex clangSupport clangASTMatchers)
