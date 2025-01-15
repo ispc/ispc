@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -41,13 +41,9 @@
 #include <llvm/Support/Path.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Target/TargetMachine.h>
+#include <llvm/TargetParser/Triple.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/GlobalDCE.h>
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_17_0
-#include <llvm/TargetParser/Triple.h>
-#else
-#include <llvm/ADT/Triple.h>
-#endif
 
 #ifdef ISPC_XE_ENABLED
 #include <llvm/GenXIntrinsics/GenXIntrinsics.h>
@@ -208,11 +204,7 @@ void lAddDeclarationsToModule(llvm::Module *bcModule, llvm::Module *module) {
 llvm::Constant *lFuncAsConstInt8Ptr(llvm::Module &M, const char *name) {
     llvm::LLVMContext &Context = M.getContext();
     llvm::Function *F = M.getFunction(name);
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_17_0
     llvm::Type *type = llvm::PointerType::getUnqual(Context);
-#else
-    llvm::Type *type = llvm::Type::getInt8PtrTy(Context);
-#endif
     if (F) {
         return llvm::ConstantExpr::getBitCast(F, type);
     }
@@ -283,11 +275,7 @@ void lCreateLLVMUsed(llvm::Module &M, std::vector<llvm::Constant *> &ConstPtrs) 
     llvm::LLVMContext &Context = M.getContext();
 
     // Create the array of i8* that llvm.used will hold
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_17_0
     llvm::Type *type = llvm::PointerType::getUnqual(Context);
-#else
-    llvm::Type *type = llvm::Type::getInt8PtrTy(Context);
-#endif
     llvm::ArrayType *ATy = llvm::ArrayType::get(type, ConstPtrs.size());
     llvm::Constant *ArrayInit = llvm::ConstantArray::get(ATy, ConstPtrs);
 
@@ -426,13 +414,7 @@ void lAddPersistentToLLVMUsed(llvm::Module &M) {
     lCreateLLVMUsed(M, ConstPtrs);
 }
 
-bool lStartsWithLLVM(llvm::StringRef name) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_17_0
-    return name.starts_with("llvm.");
-#else
-    return name.startswith("llvm.");
-#endif
-}
+bool lStartsWithLLVM(llvm::StringRef name) { return name.starts_with("llvm."); }
 
 void lLinkTargetBuiltins(llvm::Module *module) {
     const BitcodeLib *target =
