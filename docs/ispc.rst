@@ -671,6 +671,17 @@ will be removed in future releases.
 Updating ISPC Programs For Changes In ISPC 1.26.0
 -------------------------------------------------
 
+There are breaking changes to ARM support:
+
+The ``--arch=arm``, which previously mapped to ARMv7 (32-bit), now maps to ARMv8
+(32-bit).
+There are no changes to ``--arch=aarch64``, which continues to map to ARMv8
+(64-bit).
+The CPU definitions for the ARMv7 architecture have been removed: ``cortex-a9``
+and ``cortex-a15``.
+New CPU definitions were introduced, such as ``cortex-a55``, ``cortex-a78``,
+``cortex-a510``, ```cortex-a520``, and support for new Apple devices.
+
 Macro definitions for LLVM version that ISPC is based on were added. Please,
 refer to `The Preprocessor`_ for more details.
 
@@ -1024,20 +1035,8 @@ Neon targets:
 
 ``neon-i8x16``, ``neon-i16x8``, ``neon-i32x4``, ``neon-i32x8``.
 
-The following table lists the ISPC targets and their corresponding architecture details for ARM.
-
-============================= =================
-ISPC target/arch              ARM arch
------------------------------ -----------------
-``neon-i8x16``/``arm``        ARMv7 (32-bit)
-``neon-i8x16``/``aarch64``    N/A
-``neon-i16x8``/``arm``        ARMv7 (32-bit)
-``neon-i16x8``/``aarch64``    N/A
-``neon-i32x4``/``arm``        ARMv8-A (32-bit)
-``neon-i32x4``/``aarch64``    ARMv8-A (64-bit)
-``neon-i32x8``/``arm``        ARMv8-A (32-bit)
-``neon-i32x8``/``aarch64``    ARMv8-A (64-bit)
-============================= =================
+These targets correspond to ARMv8 (64-bit) when ``--arch=aarch64`` is used (default) and
+to ARMv8 (32-bit) when ``--arch=arm`` is used.
 
 Xe targets:
 
