@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015-2024, Intel Corporation
+  Copyright (c) 2015-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -15,13 +15,12 @@
 
 #define ISPC_LLVM_VERSION (LLVM_VERSION_MAJOR * 10000 + LLVM_VERSION_MINOR * 100)
 
-#define ISPC_LLVM_16_0 160000
 #define ISPC_LLVM_17_0 170000
 #define ISPC_LLVM_18_1 180100
 #define ISPC_LLVM_19_0 190000
 #define ISPC_LLVM_20_0 200000
 
-#define OLDEST_SUPPORTED_LLVM ISPC_LLVM_16_0
+#define OLDEST_SUPPORTED_LLVM ISPC_LLVM_17_0
 #define LATEST_SUPPORTED_LLVM ISPC_LLVM_20_0
 
 #ifdef __ispc__xstr
@@ -34,7 +33,7 @@
     __ispc__xstr(LLVM_VERSION_MAJOR) "." __ispc__xstr(LLVM_VERSION_MINOR) "." __ispc__xstr(LLVM_VERSION_PATCH)
 
 #if ISPC_LLVM_VERSION < OLDEST_SUPPORTED_LLVM || ISPC_LLVM_VERSION > LATEST_SUPPORTED_LLVM
-#error "Only LLVM 16.0 - 19.1 and 20.0 development branch are supported"
+#error "Only LLVM 17.0 - 19.1 and 20.0 development branch are supported"
 #endif
 
 #define ISPC_VERSION_STRING                                                                                            \

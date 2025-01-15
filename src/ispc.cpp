@@ -36,16 +36,12 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
-#include <llvm/Support/CodeGen.h>
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_17_0
-#include <llvm/TargetParser/Host.h>
-#else
-#include <llvm/Support/Host.h>
-#endif
 #include <llvm/MC/TargetRegistry.h>
+#include <llvm/Support/CodeGen.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
+#include <llvm/TargetParser/Host.h>
 #if defined(ISPC_ARM_ENABLED)
 #include <llvm/ADT/StringExtras.h>
 #include <llvm/TargetParser/AArch64TargetParser.h>
@@ -176,11 +172,7 @@ static std::vector<llvm::StringRef> lGetARMTargetFeatures(Arch arch, const std::
                 Error(SourcePos(), "Invalid CPU name for ARM architecture: %s", cpu.c_str());
                 return {};
             }
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_17_0
             using FPUKindType = llvm::ARM::FPUKind;
-#else
-            using FPUKindType = unsigned;
-#endif
             FPUKindType fpu = llvm::ARM::getDefaultFPU(cpu, archKind);
             llvm::ARM::getFPUFeatures(fpu, targetFeatures);
             // get default Extension features
@@ -197,12 +189,7 @@ static std::vector<llvm::StringRef> lGetARMTargetFeatures(Arch arch, const std::
 #else
             using CpuExtensionsType = uint64_t;
 #endif
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_17_0
             CpuExtensionsType cpuExtensions = cpuInfo->getImpliedExtensions();
-#else
-            llvm::AArch64::ArchInfo AI = llvm::AArch64::parseCpu(cpu).Arch;
-            CpuExtensionsType cpuExtensions = getDefaultExtensions(cpu, AI);
-#endif
             llvm::AArch64::getExtensionFeatures(cpuExtensions, targetFeatures);
         } else {
             UNREACHABLE();
