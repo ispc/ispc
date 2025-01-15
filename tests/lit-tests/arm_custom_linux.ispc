@@ -24,15 +24,15 @@
 // CHECK_AARCH64_A35-NEXT: CPU: cortex-a35
 // CHECK_AARCH64_A35-NEXT: Feature String: +aes,+crc,+crypto,+fp-armv8,+neon,+sha2
 
-// CHECK_ARM: Triple: armv7-unknown-linux-gnueabihf
+// CHECK_ARM: Triple: armv8a-unknown-linux-gnueabihf
 // CHECK_ARM-NEXT: CPU: cortex-a57
 // CHECK_ARM-NEXT: Feature String: +crypto,+fp-armv8,+neon,+sha2
 
-// CHECK_ARM_A15: Triple: armv7-unknown-linux-gnueabihf
+// CHECK_ARM_A15: Triple: armv8a-unknown-linux-gnueabihf
 // CHECK_ARM_A15-NEXT: CPU: cortex-a15
 // CHECK_ARM_A15-NEXT: Feature String: +crypto,+fp-armv8,+neon,+sha2
 
-// CHECK_ARM_A35: Triple: armv7-unknown-linux-gnueabihf
+// CHECK_ARM_A35: Triple: armv8a-unknown-linux-gnueabihf
 // CHECK_ARM_A35-NEXT: CPU: cortex-a35
 // CHECK_ARM_A35-NEXT: Feature String: +crypto,+fp-armv8,+neon,+sha2
 

@@ -27,13 +27,13 @@
 // CHECK_AARCH64_CUSTOM_LINUX-SAME: +neon
 // CHECK_AARCH64_CUSTOM_LINUX-SAME: +sha2
 
-// CHECK_ARM_LINUX: Triple: armv7-unknown-linux-gnueabihf
+// CHECK_ARM_LINUX: Triple: armv8a-unknown-linux-gnueabihf
 // CHECK_ARM_LINUX: CPU: cortex-a9
 // CHECK_ARM_LINUX-NEXT: Feature String:
 // CHECK_ARM_LINUX-SAME: +fp16
 // CHECK_ARM_LINUX-SAME: +neon
 
-// CHECK_ARM_CUSTOM_LINUX: Triple: armv7-unknown-linux-gnueabihf
+// CHECK_ARM_CUSTOM_LINUX: Triple: armv8a-unknown-linux-gnueabihf
 // CHECK_ARM_CUSTOM_LINUX: CPU: cortex-a57
 // CHECK_ARM_CUSTOM_LINUX-NEXT: Feature String:
 // CHECK_ARM_CUSTOM_LINUX-SAME: +crypto
