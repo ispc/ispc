@@ -252,7 +252,7 @@ jobs:
 
     - name: Build package
       run: |
-        .github/workflows/scripts/build-ispc.sh
+        .github/workflows/scripts/build-ispc.sh -DISPC_CROSS=ON
 
     - name: Sanity testing (make check-all, make test)
       run: |
@@ -292,6 +292,7 @@ jobs:
         cmake superbuild \
             -B build \
             --preset os \
+            -DISPC_CROSS=ON \
             -DINSTALL_WITH_XE_DEPS=ON \
             -DISPC_INCLUDE_BENCHMARKS=ON \
             -DPREBUILT_STAGE2_PATH="${GITHUB_WORKSPACE}/bin-${LLVM_VERSION}" \
@@ -979,7 +980,7 @@ jobs:
       run: |
         set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
         call %VSVARS%
-        cmake superbuild -B build --preset os -G "NMake Makefiles" -DINSTALL_WITH_XE_DEPS=ON -DPREBUILT_STAGE2_PATH=%LLVM_HOME%/bin-%LLVM_VERSION% -DCMAKE_INSTALL_PREFIX=%GITHUB_WORKSPACE%\ispc-xe -DISPC_INCLUDE_BENCHMARKS=ON -DEXPLICIT_ENV_PATH=OFF -DGNUWIN32=%CROSS_TOOLS_GNUWIN32%
+        cmake superbuild -B build --preset os -G "NMake Makefiles" -DINSTALL_WITH_XE_DEPS=ON -DPREBUILT_STAGE2_PATH=%LLVM_HOME%/bin-%LLVM_VERSION% -DCMAKE_INSTALL_PREFIX=%GITHUB_WORKSPACE%\ispc-xe -DISPC_INCLUDE_BENCHMARKS=ON -DEXPLICIT_ENV_PATH=OFF -DGNUWIN32=%CROSS_TOOLS_GNUWIN32% -DISPC_CROSS=ON
         cmake --build build
 
     - name: Sanity testing (make check-all, make test)
@@ -1301,6 +1302,14 @@ jobs:
       working-directory: examples-package
       shell: cmd
 
+    - name: Run performance tests
+      shell: cmd
+      run: |
+        set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        call %VSVARS%
+        set PATH=%GITHUB_WORKSPACE%\ispc-trunk-windows\bin;%PATH%
+        python scripts\perf.py -n 1 -g "Visual Studio 16"
+
     - name: Build examples
       run: |
         mkdir examples-build
@@ -1334,6 +1343,9 @@ jobs:
       run: |
         tar xf ispc-examples-trunk.tar.gz
       working-directory: examples-package
+
+    - name: Run performance tests
+      run: python scripts/perf.py
 
     - name: Build examples
       run: |
@@ -1375,3 +1387,86 @@ jobs:
         mkdir examples-build
         cmake examples-package/examples/cpu -B examples-build
         cmake --build examples-build
+
+  linux-wasm:
+    runs-on: ubuntu-22.04
+    env:
+      LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      ISPC_HOME: ${{ github.workspace }}
+      LLVM_HOME: ${{ github.workspace }}
+      LLVM_VERSION: "18.1"
+
+    steps:
+    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      with:
+        submodules: false
+
+    - name: Install Dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.sh
+
+    - name: Configure
+      run: |
+        # Setup emcc for WASM target
+        source scripts/install_emscripten.sh && emcc --version
+        cmake ./ \
+            -B build \
+            -DISPC_PREPARE_PACKAGE=ON \
+            -DISPC_CROSS=ON \
+            -DWASM_ENABLED=ON \
+            -DISPC_INCLUDE_BENCHMARKS=ON
+
+    - name: Build
+      run: cd build && make package -j"$(nproc)"
+
+    - name: Test
+      run: |
+        cd build
+        bin/ispc --support-matrix
+        make check-all
+        make test
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+      with:
+        name: ispc-wasm-linux
+        path: build/ispc-*
+
+  windows-wasm:
+    runs-on: windows-2019
+    env:
+      CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
+      LLVM_TAR: llvm-18.1.8-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      ISPC_HOME: ${{ github.workspace }}
+      LLVM_HOME: "C:\\projects\\llvm"
+      LLVM_VERSION: "18.1"
+
+    steps:
+    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      with:
+        submodules: false
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-build-deps.ps1
+
+    - name: Build and Test
+      shell: cmd
+      run: |
+        call scripts\install_emscripten.bat
+        set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        call %VSVARS%
+        cmake . -B build -Thost=x64 -G "Visual Studio 16" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%\install -DISPC_PREPARE_PACKAGE=ON -DISPC_CROSS=ON -DISPC_GNUWIN32_PATH=%CROSS_TOOLS_GNUWIN32% -DWASM_ENABLED=ON -DISPC_INCLUDE_BENCHMARKS=ON
+        cmake --build build --config Release --target package --verbose
+        set PATH=%ISPC_HOME%\build\bin\Release;%PATH%
+        cd %ISPC_HOME%
+        check_isa.exe
+        ispc --support-matrix
+        cmake --build build --config Release --target check-all
+        cmake --build build --config Release --target RUN_TESTS
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+      with:
+        name: ispc-wasm-windows
+        path: build/ispc-*-windows.zip
