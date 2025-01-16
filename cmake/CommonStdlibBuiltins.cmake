@@ -117,14 +117,13 @@ function (generate_stdlib_or_target_builtins func ispc_name CPP_LIST BC_LIST)
     if (ARM_ENABLED)
         foreach (os ${os_list})
             foreach (target ${ARM_TARGETS})
+                disp_target_stdlib(${func} ${ispc_name} ${target} 64 ${os} ${CPP_LIST} ${BC_LIST})
+                # On windows only 64-bit neon targets is supported
                 if (${os} STREQUAL "windows")
                     continue()
                 endif()
                 disp_target_stdlib(${func} ${ispc_name} ${target} 32 ${os} ${CPP_LIST} ${BC_LIST})
             endforeach()
-            # Not all targets have 64bit
-            disp_target_stdlib(${func} ${ispc_name} neon-i32x4 64 ${os} ${CPP_LIST} ${BC_LIST})
-            disp_target_stdlib(${func} ${ispc_name} neon-i32x8 64 ${os} ${CPP_LIST} ${BC_LIST})
         endforeach()
     endif()
 
