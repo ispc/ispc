@@ -346,7 +346,7 @@ if (${LLVM_VERSION_NUMBER} VERSION_LESS "19.0.0")
     list(APPEND X86_TARGETS avx512knl-x16)
 endif()
 
-list(APPEND ARM_TARGETS neon-i8x16 neon-i16x8 neon-i32x4 neon-i32x8)
+list(APPEND ARM_TARGETS neon-i8x16 neon-i16x8 neon-i32x4 neon-i32x8 neon-i8x32 neon-i16x16)
 list(APPEND WASM_TARGETS wasm-i32x4)
 list(APPEND XE_TARGETS gen9-x16 gen9-x8 xelp-x16 xelp-x8 xehpg-x16 xehpg-x8 xehpc-x16 xehpc-x32 xelpg-x16 xelpg-x8
                        xe2hpg-x16 xe2hpg-x32 xe2lpg-x16 xe2lpg-x32)

@@ -438,6 +438,8 @@ bool lStartsWithLLVM(llvm::StringRef name) {
 // clang-format off
 std::unordered_map<ISPCTarget, ISPCTarget> targetParentMap = {
     // TODO! enable more targets
+    {ISPCTarget::neon_i8x32, ISPCTarget::generic_i8x32},
+    {ISPCTarget::neon_i16x16, ISPCTarget::generic_i16x16},
     // {ISPCTarget::neon_i8x16, ISPCTarget::generic_i8x16},
 
     // {ISPCTarget::neon_i16x8, ISPCTarget::generic_i16x8},
