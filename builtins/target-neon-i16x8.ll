@@ -2,7 +2,7 @@
 ;; target-neon-16.ll
 ;;
 ;;  Copyright(c) 2013-2015 Google, Inc.
-;;  Copyright(c) 2019-2024 Intel
+;;  Copyright(c) 2019-2025 Intel
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -77,7 +77,23 @@ define <8 x float> @__ceil_varying_float(<8 x float>) nounwind readonly alwaysin
   ret <8 x float> %binop.i
 }
 
-;; TODO: rounding doubles and double vectors needs to be implemented
+declare <2 x double> @llvm.roundeven.v2f64(<2 x double> %a) nounwind readnone
+define <8 x double> @__round_varying_double(<8 x double>) nounwind readonly alwaysinline {
+    unary2to8(ret, double, @llvm.roundeven.v2f64, %0)
+    ret <8 x double> %ret
+}
+
+declare <2 x double> @llvm.floor.v2f64(<2 x double> %a) nounwind readnone
+define <8 x double> @__floor_varying_double(<8 x double>) nounwind readonly alwaysinline {
+    unary2to8(ret, double, @llvm.floor.v2f64, %0)
+    ret <8 x double> %ret
+}
+
+declare  <2 x double> @llvm.ceil.v2f64(<2 x double> %a) nounwind readnone
+define <8 x double> @__ceil_varying_double(<8 x double>) nounwind readonly alwaysinline {
+    unary2to8(ret, double, @llvm.ceil.v2f64, %0)
+    ret <8 x double> %ret
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; trunc float and double
@@ -87,81 +103,81 @@ truncate()
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; min/max
 
-declare <4 x float> @llvm.arm.neon.vmins.v4f32(<4 x float>, <4 x float>) nounwind readnone
-declare <4 x float> @llvm.arm.neon.vmaxs.v4f32(<4 x float>, <4 x float>) nounwind readnone
+declare <4 x float> @NEON_PREFIX_FMIN.v4f32(<4 x float>, <4 x float>) nounwind readnone
+declare <4 x float> @NEON_PREFIX_FMAX.v4f32(<4 x float>, <4 x float>) nounwind readnone
 
 define <WIDTH x float> @__max_varying_float(<WIDTH x float>,
                                             <WIDTH x float>) nounwind readnone alwaysinline {
-  binary4to8(r, float, @llvm.arm.neon.vmaxs.v4f32, %0, %1)
+  binary4to8(r, float, @NEON_PREFIX_FMAX.v4f32, %0, %1)
   ret <WIDTH x float> %r
 }
 
 define <WIDTH x float> @__min_varying_float(<WIDTH x float>,
                                             <WIDTH x float>) nounwind readnone alwaysinline {
-  binary4to8(r, float, @llvm.arm.neon.vmins.v4f32, %0, %1)
+  binary4to8(r, float, @NEON_PREFIX_FMIN.v4f32, %0, %1)
   ret <WIDTH x float> %r
 }
 
-declare <4 x i32> @llvm.arm.neon.vmins.v4i32(<4 x i32>, <4 x i32>) nounwind readnone
-declare <4 x i32> @llvm.arm.neon.vminu.v4i32(<4 x i32>, <4 x i32>) nounwind readnone
-declare <4 x i32> @llvm.arm.neon.vmaxs.v4i32(<4 x i32>, <4 x i32>) nounwind readnone
-declare <4 x i32> @llvm.arm.neon.vmaxu.v4i32(<4 x i32>, <4 x i32>) nounwind readnone
+declare <4 x i32> @NEON_PREFIX_IMINS.v4i32(<4 x i32>, <4 x i32>) nounwind readnone
+declare <4 x i32> @NEON_PREFIX_IMINU.v4i32(<4 x i32>, <4 x i32>) nounwind readnone
+declare <4 x i32> @NEON_PREFIX_IMAXS.v4i32(<4 x i32>, <4 x i32>) nounwind readnone
+declare <4 x i32> @NEON_PREFIX_IMAXU.v4i32(<4 x i32>, <4 x i32>) nounwind readnone
 
 define <WIDTH x i32> @__min_varying_int32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone alwaysinline {
-  binary4to8(r, i32, @llvm.arm.neon.vmins.v4i32, %0, %1)
+  binary4to8(r, i32, @NEON_PREFIX_IMINS.v4i32, %0, %1)
   ret <WIDTH x i32> %r
 }
 
 define <WIDTH x i32> @__max_varying_int32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone alwaysinline {
-  binary4to8(r, i32, @llvm.arm.neon.vmaxs.v4i32, %0, %1)
+  binary4to8(r, i32, @NEON_PREFIX_IMAXS.v4i32, %0, %1)
   ret <WIDTH x i32> %r
 }
 
 define <WIDTH x i32> @__min_varying_uint32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone alwaysinline {
-  binary4to8(r, i32, @llvm.arm.neon.vminu.v4i32, %0, %1)
+  binary4to8(r, i32, @NEON_PREFIX_IMINU.v4i32, %0, %1)
   ret <WIDTH x i32> %r
 }
 
 define <WIDTH x i32> @__max_varying_uint32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone alwaysinline {
-  binary4to8(r, i32, @llvm.arm.neon.vmaxu.v4i32, %0, %1)
+  binary4to8(r, i32, @NEON_PREFIX_IMAXU.v4i32, %0, %1)
   ret <WIDTH x i32> %r
 }
 
 ;; sqrt/rsqrt/rcp
 
-declare <4 x float> @llvm.arm.neon.vrecpe.v4f32(<4 x float>) nounwind readnone
-declare <4 x float> @llvm.arm.neon.vrecps.v4f32(<4 x float>, <4 x float>) nounwind readnone
+declare <4 x float> @NEON_PREFIX_RECPEQ.v4f32(<4 x float>) nounwind readnone
+declare <4 x float> @NEON_PREFIX_RECPSQ.v4f32(<4 x float>, <4 x float>) nounwind readnone
 
 define <WIDTH x float> @__rcp_varying_float(<WIDTH x float> %d) nounwind readnone alwaysinline {
-  unary4to8(x0, float, @llvm.arm.neon.vrecpe.v4f32, %d)
-  binary4to8(x0_nr, float, @llvm.arm.neon.vrecps.v4f32, %d, %x0)
+  unary4to8(x0, float, @NEON_PREFIX_RECPEQ.v4f32, %d)
+  binary4to8(x0_nr, float, @NEON_PREFIX_RECPSQ.v4f32, %d, %x0)
   %x1 = fmul <WIDTH x float> %x0, %x0_nr
-  binary4to8(x1_nr, float, @llvm.arm.neon.vrecps.v4f32, %d, %x1)
+  binary4to8(x1_nr, float, @NEON_PREFIX_RECPSQ.v4f32, %d, %x1)
   %x2 = fmul <WIDTH x float> %x1, %x1_nr
   ret <WIDTH x float> %x2
 }
 
 define <WIDTH x float> @__rcp_fast_varying_float(<WIDTH x float> %d) nounwind readnone alwaysinline {
-  unary4to8(x0, float, @llvm.arm.neon.vrecpe.v4f32, %d)
+  unary4to8(x0, float, @NEON_PREFIX_RECPEQ.v4f32, %d)
   ret <WIDTH x float> %x0
 }
 
-declare <4 x float> @llvm.arm.neon.vrsqrte.v4f32(<4 x float>) nounwind readnone
-declare <4 x float> @llvm.arm.neon.vrsqrts.v4f32(<4 x float>, <4 x float>) nounwind readnone
+declare <4 x float> @NEON_PREFIX_RSQRTEQ.v4f32(<4 x float>) nounwind readnone
+declare <4 x float> @NEON_PREFIX_RSQRTSQ.v4f32(<4 x float>, <4 x float>) nounwind readnone
 
 define <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float> %d) nounwind readnone alwaysinline {
-  unary4to8(x0, float, @llvm.arm.neon.vrsqrte.v4f32, %d)
+  unary4to8(x0, float, @NEON_PREFIX_RSQRTEQ.v4f32, %d)
   %x0_2 = fmul <WIDTH x float> %x0, %x0
-  binary4to8(x0_nr, float, @llvm.arm.neon.vrsqrts.v4f32, %d, %x0_2)
+  binary4to8(x0_nr, float, @NEON_PREFIX_RSQRTSQ.v4f32, %d, %x0_2)
   %x1 = fmul <WIDTH x float> %x0, %x0_nr
   %x1_2 = fmul <WIDTH x float> %x1, %x1
-  binary4to8(x1_nr, float, @llvm.arm.neon.vrsqrts.v4f32, %d, %x1_2)
+  binary4to8(x1_nr, float, @NEON_PREFIX_RSQRTSQ.v4f32, %d, %x1_2)
   %x2 = fmul <WIDTH x float> %x1, %x1_nr
   ret <WIDTH x float> %x2
 }
 
 define <WIDTH x float> @__rsqrt_fast_varying_float(<WIDTH x float> %d) nounwind readnone alwaysinline {
-  unary4to8(x0, float, @llvm.arm.neon.vrsqrte.v4f32, %d)
+  unary4to8(x0, float, @NEON_PREFIX_RSQRTEQ.v4f32, %d)
   ret <WIDTH x float> %x0
 }
 
@@ -222,8 +238,8 @@ define <WIDTH x double> @__sqrt_varying_double(<WIDTH x double>) nounwind readno
 define i64 @__movmsk(<WIDTH x MASK>) nounwind readnone alwaysinline {
   %and_mask = and <WIDTH x i16> %0,
     <i16 1, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128>
-  %v4 = call <4 x i32> @llvm.arm.neon.vpaddlu.v4i32.v8i16(<8 x i16> %and_mask)
-  %v2 = call <2 x i64> @llvm.arm.neon.vpaddlu.v2i64.v4i32(<4 x i32> %v4)
+  %v4 = call <4 x i32> @NEON_PREFIX_PADDLU.v4i32.v8i16(<8 x i16> %and_mask)
+  %v2 = call <2 x i64> @NEON_PREFIX_PADDLU.v2i64.v4i32(<4 x i32> %v4)
   %va = extractelement <2 x i64> %v2, i32 0
   %vb = extractelement <2 x i64> %v2, i32 1
   %v = or i64 %va, %vb
@@ -286,7 +302,7 @@ define(`neon_reduce', `
   ret $1 %r
 ')
 
-declare <2 x float> @llvm.arm.neon.vpadd.v2f32(<2 x float>, <2 x float>) nounwind readnone
+declare <2 x float> @NEON_PREFIX_FPADD.v2f32(<2 x float>, <2 x float>) nounwind readnone
 
 define internal float @add_f32(float, float) nounwind readnone alwaysinline {
   %r = fadd float %0, %1
@@ -299,10 +315,10 @@ define internal <WIDTH x float> @__add_varying_float(<WIDTH x float>, <WIDTH x f
 }
 
 define float @__reduce_add_float(<WIDTH x float>) nounwind readnone alwaysinline {
-  neon_reduce(float, @__add_varying_float, @llvm.arm.neon.vpadd.v2f32, @add_f32)
+  neon_reduce(float, @__add_varying_float, @NEON_PREFIX_FPADD.v2f32, @add_f32)
 }
 
-declare <2 x float> @llvm.arm.neon.vpmins.v2f32(<2 x float>, <2 x float>) nounwind readnone
+declare <2 x float> @NEON_PREFIX_PMINF.v2f32(<2 x float>, <2 x float>) nounwind readnone
 
 define internal float @min_f32(float, float) nounwind readnone alwaysinline {
   %cmp = fcmp olt float %0, %1
@@ -311,10 +327,10 @@ define internal float @min_f32(float, float) nounwind readnone alwaysinline {
 }
 
 define float @__reduce_min_float(<WIDTH x float>) nounwind readnone alwaysinline {
-  neon_reduce(float, @__min_varying_float, @llvm.arm.neon.vpmins.v2f32, @min_f32)
+  neon_reduce(float, @__min_varying_float, @NEON_PREFIX_PMINF.v2f32, @min_f32)
 }
 
-declare <2 x float> @llvm.arm.neon.vpmaxs.v2f32(<2 x float>, <2 x float>) nounwind readnone
+declare <2 x float> @NEON_PREFIX_PMAXF.v2f32(<2 x float>, <2 x float>) nounwind readnone
 
 define internal float @max_f32(float, float) nounwind readnone alwaysinline {
   %cmp = fcmp ugt float %0, %1
@@ -323,15 +339,15 @@ define internal float @max_f32(float, float) nounwind readnone alwaysinline {
 }
 
 define float @__reduce_max_float(<WIDTH x float>) nounwind readnone alwaysinline {
-  neon_reduce(float, @__max_varying_float, @llvm.arm.neon.vpmaxs.v2f32, @max_f32)
+  neon_reduce(float, @__max_varying_float, @NEON_PREFIX_PMAXF.v2f32, @max_f32)
 }
 
-declare <4 x i16> @llvm.arm.neon.vpaddls.v4i16.v8i8(<8 x i8>) nounwind readnone
-declare <2 x i32> @llvm.arm.neon.vpaddlu.v2i32.v4i16(<4 x i16>) nounwind readnone
+declare <4 x i16> @NEON_PREFIX_PADDLS.v4i16.v8i8(<8 x i8>) nounwind readnone
+declare <2 x i32> @NEON_PREFIX_PADDLU.v2i32.v4i16(<4 x i16>) nounwind readnone
 
 define i16 @__reduce_add_int8(<WIDTH x i8>) nounwind readnone alwaysinline {
-  %a16 = call <4 x i16> @llvm.arm.neon.vpaddls.v4i16.v8i8(<8 x i8> %0)
-  %a32 = call <2 x i32> @llvm.arm.neon.vpaddlu.v2i32.v4i16(<4 x i16> %a16)
+  %a16 = call <4 x i16> @NEON_PREFIX_PADDLS.v4i16.v8i8(<8 x i8> %0)
+  %a32 = call <2 x i32> @NEON_PREFIX_PADDLU.v2i32.v4i16(<4 x i16> %a16)
   %a0 = extractelement <2 x i32> %a32, i32 0
   %a1 = extractelement <2 x i32> %a32, i32 1
   %r = add i32 %a0, %a1
@@ -339,23 +355,23 @@ define i16 @__reduce_add_int8(<WIDTH x i8>) nounwind readnone alwaysinline {
   ret i16 %r16
 }
 
-declare <4 x i32> @llvm.arm.neon.vpaddlu.v4i32.v8i16(<WIDTH x i16>)
+declare <4 x i32> @NEON_PREFIX_PADDLU.v4i32.v8i16(<WIDTH x i16>)
 
 define i64 @__reduce_add_int16(<WIDTH x i16>) nounwind readnone alwaysinline {
-  %a1 = call <4 x i32> @llvm.arm.neon.vpaddlu.v4i32.v8i16(<WIDTH x i16> %0)
-  %a2 = call <2 x i64> @llvm.arm.neon.vpaddlu.v2i64.v4i32(<4 x i32> %a1)
+  %a1 = call <4 x i32> @NEON_PREFIX_PADDLU.v4i32.v8i16(<WIDTH x i16> %0)
+  %a2 = call <2 x i64> @NEON_PREFIX_PADDLU.v2i64.v4i32(<4 x i32> %a1)
   %aa = extractelement <2 x i64> %a2, i32 0
   %ab = extractelement <2 x i64> %a2, i32 1
   %r = add i64 %aa, %ab
   ret i64 %r
 }
 
-declare <2 x i64> @llvm.arm.neon.vpaddlu.v2i64.v4i32(<4 x i32>) nounwind readnone
+declare <2 x i64> @NEON_PREFIX_PADDLU.v2i64.v4i32(<4 x i32>) nounwind readnone
 
 define i64 @__reduce_add_int32(<WIDTH x i32>) nounwind readnone alwaysinline {
   v8tov4(i32, %0, %va, %vb)
-  %pa = call <2 x i64> @llvm.arm.neon.vpaddlu.v2i64.v4i32(<4 x i32> %va)
-  %pb = call <2 x i64> @llvm.arm.neon.vpaddlu.v2i64.v4i32(<4 x i32> %vb)
+  %pa = call <2 x i64> @NEON_PREFIX_PADDLU.v2i64.v4i32(<4 x i32> %va)
+  %pb = call <2 x i64> @NEON_PREFIX_PADDLU.v2i64.v4i32(<4 x i32> %vb)
   %psum = add <2 x i64> %pa, %pb
   %a0 = extractelement <2 x i64> %psum, i32 0
   %a1 = extractelement <2 x i64> %psum, i32 1
@@ -363,7 +379,7 @@ define i64 @__reduce_add_int32(<WIDTH x i32>) nounwind readnone alwaysinline {
   ret i64 %r
 }
 
-declare <2 x i32> @llvm.arm.neon.vpmins.v2i32(<2 x i32>, <2 x i32>) nounwind readnone
+declare <2 x i32> @NEON_PREFIX_PMINS.v2i32(<2 x i32>, <2 x i32>) nounwind readnone
 
 define internal i32 @min_si32(i32, i32) nounwind readnone alwaysinline {
   %cmp = icmp slt i32 %0, %1
@@ -372,10 +388,10 @@ define internal i32 @min_si32(i32, i32) nounwind readnone alwaysinline {
 }
 
 define i32 @__reduce_min_int32(<WIDTH x i32>) nounwind readnone alwaysinline {
-  neon_reduce(i32, @__min_varying_int32, @llvm.arm.neon.vpmins.v2i32, @min_si32)
+  neon_reduce(i32, @__min_varying_int32, @NEON_PREFIX_PMINS.v2i32, @min_si32)
 }
 
-declare <2 x i32> @llvm.arm.neon.vpmaxs.v2i32(<2 x i32>, <2 x i32>) nounwind readnone
+declare <2 x i32> @NEON_PREFIX_PMAXS.v2i32(<2 x i32>, <2 x i32>) nounwind readnone
 
 define internal i32 @max_si32(i32, i32) nounwind readnone alwaysinline {
   %cmp = icmp sgt i32 %0, %1
@@ -384,10 +400,10 @@ define internal i32 @max_si32(i32, i32) nounwind readnone alwaysinline {
 }
 
 define i32 @__reduce_max_int32(<WIDTH x i32>) nounwind readnone alwaysinline {
-  neon_reduce(i32, @__max_varying_int32, @llvm.arm.neon.vpmaxs.v2i32, @max_si32)
+  neon_reduce(i32, @__max_varying_int32, @NEON_PREFIX_PMAXS.v2i32, @max_si32)
 }
 
-declare <2 x i32> @llvm.arm.neon.vpminu.v2i32(<2 x i32>, <2 x i32>) nounwind readnone
+declare <2 x i32> @NEON_PREFIX_PMINU.v2i32(<2 x i32>, <2 x i32>) nounwind readnone
 
 define internal i32 @min_ui32(i32, i32) nounwind readnone alwaysinline {
   %cmp = icmp ult i32 %0, %1
@@ -396,10 +412,10 @@ define internal i32 @min_ui32(i32, i32) nounwind readnone alwaysinline {
 }
 
 define i32 @__reduce_min_uint32(<WIDTH x i32>) nounwind readnone alwaysinline {
-  neon_reduce(i32, @__min_varying_uint32, @llvm.arm.neon.vpmins.v2i32, @min_ui32)
+  neon_reduce(i32, @__min_varying_uint32, @NEON_PREFIX_PMINU.v2i32, @min_ui32)
 }
 
-declare <2 x i32> @llvm.arm.neon.vpmaxu.v2i32(<2 x i32>, <2 x i32>) nounwind readnone
+declare <2 x i32> @NEON_PREFIX_PMAXU.v2i32(<2 x i32>, <2 x i32>) nounwind readnone
 
 define internal i32 @max_ui32(i32, i32) nounwind readnone alwaysinline {
   %cmp = icmp ugt i32 %0, %1
@@ -408,7 +424,7 @@ define internal i32 @max_ui32(i32, i32) nounwind readnone alwaysinline {
 }
 
 define i32 @__reduce_max_uint32(<WIDTH x i32>) nounwind readnone alwaysinline {
-  neon_reduce(i32, @__max_varying_uint32, @llvm.arm.neon.vpmaxs.v2i32, @max_ui32)
+  neon_reduce(i32, @__max_varying_uint32, @NEON_PREFIX_PMAXU.v2i32, @max_ui32)
 }
 
 define double @__reduce_add_double(<WIDTH x double>) nounwind readnone alwaysinline {
@@ -460,59 +476,110 @@ define i64 @__reduce_max_uint64(<WIDTH x i64>) nounwind readnone alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int8/int16
 
-declare <8 x i8> @llvm.arm.neon.vrhaddu.v8i8(<8 x i8>, <8 x i8>) nounwind readnone
+declare <8 x i8> @NEON_PREFIX_RHADDLU.v8i8(<8 x i8>, <8 x i8>) nounwind readnone
 
 define <8 x i8> @__avg_up_uint8(<8 x i8>, <8 x i8>) nounwind readnone alwaysinline {
-  %r = call <8 x i8> @llvm.arm.neon.vrhaddu.v8i8(<8 x i8> %0, <8 x i8> %1)
+  %r = call <8 x i8> @NEON_PREFIX_RHADDLU.v8i8(<8 x i8> %0, <8 x i8> %1)
   ret <8 x i8> %r
 }
 
-declare <8 x i8> @llvm.arm.neon.vrhadds.v8i8(<8 x i8>, <8 x i8>) nounwind readnone
+declare <8 x i8> @NEON_PREFIX_RHADDLS.v8i8(<8 x i8>, <8 x i8>) nounwind readnone
 
 define <8 x i8> @__avg_up_int8(<8 x i8>, <8 x i8>) nounwind readnone alwaysinline {
-  %r = call <8 x i8> @llvm.arm.neon.vrhadds.v8i8(<8 x i8> %0, <8 x i8> %1)
+  %r = call <8 x i8> @NEON_PREFIX_RHADDLS.v8i8(<8 x i8> %0, <8 x i8> %1)
   ret <8 x i8> %r
 }
 
-declare <8 x i8> @llvm.arm.neon.vhaddu.v8i8(<8 x i8>, <8 x i8>) nounwind readnone
+declare <8 x i8> @NEON_PREFIX_HADDLU.v8i8(<8 x i8>, <8 x i8>) nounwind readnone
 
 define <8 x i8> @__avg_down_uint8(<8 x i8>, <8 x i8>) nounwind readnone alwaysinline {
-  %r = call <8 x i8> @llvm.arm.neon.vhaddu.v8i8(<8 x i8> %0, <8 x i8> %1)
+  %r = call <8 x i8> @NEON_PREFIX_HADDLU.v8i8(<8 x i8> %0, <8 x i8> %1)
   ret <8 x i8> %r
 }
 
-declare <8 x i8> @llvm.arm.neon.vhadds.v8i8(<8 x i8>, <8 x i8>) nounwind readnone
+declare <8 x i8> @NEON_PREFIX_HADDLS.v8i8(<8 x i8>, <8 x i8>) nounwind readnone
 
 define <8 x i8> @__avg_down_int8(<8 x i8>, <8 x i8>) nounwind readnone alwaysinline {
-  %r = call <8 x i8> @llvm.arm.neon.vhadds.v8i8(<8 x i8> %0, <8 x i8> %1)
+  %r = call <8 x i8> @NEON_PREFIX_HADDLS.v8i8(<8 x i8> %0, <8 x i8> %1)
   ret <8 x i8> %r
 }
 
-declare <8 x i16> @llvm.arm.neon.vrhaddu.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
+declare <8 x i16> @NEON_PREFIX_RHADDLU.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <8 x i16> @__avg_up_uint16(<8 x i16>, <8 x i16>) nounwind readnone alwaysinline {
-  %r = call <8 x i16> @llvm.arm.neon.vrhaddu.v8i16(<8 x i16> %0, <8 x i16> %1)
+  %r = call <8 x i16> @NEON_PREFIX_RHADDLU.v8i16(<8 x i16> %0, <8 x i16> %1)
   ret <8 x i16> %r
 }
 
-declare <8 x i16> @llvm.arm.neon.vrhadds.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
+declare <8 x i16> @NEON_PREFIX_RHADDLS.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <8 x i16> @__avg_up_int16(<8 x i16>, <8 x i16>) nounwind readnone alwaysinline {
-  %r = call <8 x i16> @llvm.arm.neon.vrhadds.v8i16(<8 x i16> %0, <8 x i16> %1)
+  %r = call <8 x i16> @NEON_PREFIX_RHADDLS.v8i16(<8 x i16> %0, <8 x i16> %1)
   ret <8 x i16> %r
 }
 
-declare <8 x i16> @llvm.arm.neon.vhaddu.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
+declare <8 x i16> @NEON_PREFIX_HADDLU.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <8 x i16> @__avg_down_uint16(<8 x i16>, <8 x i16>) nounwind readnone alwaysinline {
-  %r = call <8 x i16> @llvm.arm.neon.vhaddu.v8i16(<8 x i16> %0, <8 x i16> %1)
+  %r = call <8 x i16> @NEON_PREFIX_HADDLU.v8i16(<8 x i16> %0, <8 x i16> %1)
   ret <8 x i16> %r
 }
 
-declare <8 x i16> @llvm.arm.neon.vhadds.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
+declare <8 x i16> @NEON_PREFIX_HADDLS.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <8 x i16> @__avg_down_int16(<8 x i16>, <8 x i16>) nounwind readnone alwaysinline {
-  %r = call <8 x i16> @llvm.arm.neon.vhadds.v8i16(<8 x i16> %0, <8 x i16> %1)
+  %r = call <8 x i16> @NEON_PREFIX_HADDLS.v8i16(<8 x i16> %0, <8 x i16> %1)
+  ret <8 x i16> %r
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; saturation arithmetic
+
+declare <8 x i8> @NEON_PREFIX_QADDS.v8i8(<8 x i8>, <8 x i8>) nounwind readnone
+define <8 x i8> @__padds_vi8(<8 x i8>, <8 x i8>) {
+  %r = call <8 x i8> @NEON_PREFIX_QADDS.v8i8(<8 x i8> %0, <8 x i8> %1)
+  ret <8 x i8> %r
+}
+
+declare <8 x i16> @NEON_PREFIX_QADDS.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
+define <8 x i16> @__padds_vi16(<8 x i16>, <8 x i16>) {
+  %r = call <8 x i16> @NEON_PREFIX_QADDS.v8i16(<8 x i16> %0, <8 x i16> %1)
+  ret <8 x i16> %r
+}
+
+declare <8 x i8> @NEON_PREFIX_QADDU.v8i8(<8 x i8>, <8 x i8>) nounwind readnone
+define <8 x i8> @__paddus_vi8(<8 x i8>, <8 x i8>) {
+  %r = call <8 x i8> @NEON_PREFIX_QADDU.v8i8(<8 x i8> %0, <8 x i8> %1)
+  ret <8 x i8> %r
+}
+
+declare <8 x i16> @NEON_PREFIX_QADDU.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
+define <8 x i16> @__paddus_vi16(<8 x i16>, <8 x i16>) {
+  %r = call <8 x i16> @NEON_PREFIX_QADDU.v8i16(<8 x i16> %0, <8 x i16> %1)
+  ret <8 x i16> %r
+}
+
+declare <8 x i8> @NEON_PREFIX_QSUBS.v8i8(<8 x i8>, <8 x i8>) nounwind readnone
+define <8 x i8> @__psubs_vi8(<8 x i8>, <8 x i8>) {
+  %r = call <8 x i8> @NEON_PREFIX_QSUBS.v8i8(<8 x i8> %0, <8 x i8> %1)
+  ret <8 x i8> %r
+}
+
+declare <8 x i16> @NEON_PREFIX_QSUBS.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
+define <8 x i16> @__psubs_vi16(<8 x i16>, <8 x i16>) {
+  %r = call <8 x i16> @NEON_PREFIX_QSUBS.v8i16(<8 x i16> %0, <8 x i16> %1)
+  ret <8 x i16> %r
+}
+
+declare <8 x i8> @NEON_PREFIX_QSUBU.v8i8(<8 x i8>, <8 x i8>) nounwind readnone
+define <8 x i8> @__psubus_vi8(<8 x i8>, <8 x i8>) {
+  %r = call <8 x i8> @NEON_PREFIX_QSUBU.v8i8(<8 x i8> %0, <8 x i8> %1)
+  ret <8 x i8> %r
+}
+
+declare <8 x i16> @NEON_PREFIX_QSUBU.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
+define <8 x i16> @__psubus_vi16(<8 x i16>, <8 x i16>) {
+  %r = call <8 x i16> @NEON_PREFIX_QSUBU.v8i16(<8 x i16> %0, <8 x i16> %1)
   ret <8 x i16> %r
 }
 
@@ -523,4 +590,50 @@ define <8 x i16> @__avg_down_int16(<8 x i16>, <8 x i16>) nounwind readnone alway
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp/rsqrt declarations for half
 
-saturation_arithmetic()
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; dot product
+
+declare <4 x i32> @NEON_PREFIX_UDOT.v4i32.v16i8(<4 x i32>, <16 x i8>, <16 x i8>) nounwind readnone
+define <8 x i32> @__dot4add_u8u8packed(<8 x i32> %a, <8 x i32> %b, <8 x i32> %acc) nounwind readnone alwaysinline {
+  v8tov4(i32, %a, %a0, %a1)
+  v8tov4(i32, %b, %b0, %b1)
+  v8tov4(i32, %acc, %acc0, %acc1)
+  %a0_cast = bitcast <4 x i32> %a0 to <16 x i8>
+  %b0_cast = bitcast <4 x i32> %b0 to <16 x i8>
+  %a1_cast = bitcast <4 x i32> %a1 to <16 x i8>
+  %b1_cast = bitcast <4 x i32> %b1 to <16 x i8>
+  %ret0 = call <4 x i32> @NEON_PREFIX_UDOT.v4i32.v16i8(<4 x i32> %acc0, <16 x i8> %a0_cast, <16 x i8> %b0_cast)
+  %ret1 = call <4 x i32> @NEON_PREFIX_UDOT.v4i32.v16i8(<4 x i32> %acc1, <16 x i8> %a1_cast, <16 x i8> %b1_cast)
+  v4tov8(i32, %ret0, %ret1, %ret)
+  ret <8 x i32> %ret
+}
+
+declare <4 x i32> @NEON_PREFIX_SDOT.v4i32.v16i8(<4 x i32>, <16 x i8>, <16 x i8>) nounwind readnone
+define <8 x i32> @__dot4add_i8i8packed(<8 x i32> %a, <8 x i32> %b, <8 x i32> %acc) nounwind readnone alwaysinline {
+  v8tov4(i32, %a, %a0, %a1)
+  v8tov4(i32, %b, %b0, %b1)
+  v8tov4(i32, %acc, %acc0, %acc1)
+  %a0_cast = bitcast <4 x i32> %a0 to <16 x i8>
+  %b0_cast = bitcast <4 x i32> %b0 to <16 x i8>
+  %a1_cast = bitcast <4 x i32> %a1 to <16 x i8>
+  %b1_cast = bitcast <4 x i32> %b1 to <16 x i8>
+  %ret0 = call <4 x i32> @NEON_PREFIX_SDOT.v4i32.v16i8(<4 x i32> %acc0, <16 x i8> %a0_cast, <16 x i8> %b0_cast)
+  %ret1 = call <4 x i32> @NEON_PREFIX_SDOT.v4i32.v16i8(<4 x i32> %acc1, <16 x i8> %a1_cast, <16 x i8> %b1_cast)
+  v4tov8(i32, %ret0, %ret1, %ret)
+  ret <8 x i32> %ret
+}
+
+declare <4 x i32> @NEON_PREFIX_USDOT.v4i32.v16i8(<4 x i32>, <16 x i8>, <16 x i8>) nounwind readnone
+define <8 x i32> @__dot4add_u8i8packed(<8 x i32> %a, <8 x i32> %b, <8 x i32> %acc) nounwind readnone alwaysinline {
+  v8tov4(i32, %a, %a0, %a1)
+  v8tov4(i32, %b, %b0, %b1)
+  v8tov4(i32, %acc, %acc0, %acc1)
+  %a0_cast = bitcast <4 x i32> %a0 to <16 x i8>
+  %b0_cast = bitcast <4 x i32> %b0 to <16 x i8>
+  %a1_cast = bitcast <4 x i32> %a1 to <16 x i8>
+  %b1_cast = bitcast <4 x i32> %b1 to <16 x i8>
+  %ret0 = call <4 x i32> @NEON_PREFIX_USDOT.v4i32.v16i8(<4 x i32> %acc0, <16 x i8> %a0_cast, <16 x i8> %b0_cast)
+  %ret1 = call <4 x i32> @NEON_PREFIX_USDOT.v4i32.v16i8(<4 x i32> %acc1, <16 x i8> %a1_cast, <16 x i8> %b1_cast)
+  v4tov8(i32, %ret0, %ret1, %ret)
+  ret <8 x i32> %ret
+}
