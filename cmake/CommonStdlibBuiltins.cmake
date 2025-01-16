@@ -125,6 +125,8 @@ function (generate_stdlib_or_target_builtins func ispc_name CPP_LIST BC_LIST)
             # Not all targets have 64bit
             disp_target_stdlib(${func} ${ispc_name} neon-i32x4 64 ${os} ${CPP_LIST} ${BC_LIST})
             disp_target_stdlib(${func} ${ispc_name} neon-i32x8 64 ${os} ${CPP_LIST} ${BC_LIST})
+            disp_target_stdlib(${func} ${ispc_name} neon-i8x16 64 ${os} ${CPP_LIST} ${BC_LIST})
+            disp_target_stdlib(${func} ${ispc_name} neon-i16x8 64 ${os} ${CPP_LIST} ${BC_LIST})
         endforeach()
     endif()
 

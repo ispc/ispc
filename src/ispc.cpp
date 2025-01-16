@@ -390,11 +390,7 @@ static bool lIsTargetValidforArch(ISPCTarget target, Arch arch) {
         if (arch != Arch::x86_64 && arch != Arch::x86) {
             ret = false;
         }
-    } else if (target == ISPCTarget::neon_i8x16 || target == ISPCTarget::neon_i16x8) {
-        if (arch != Arch::arm) {
-            ret = false;
-        }
-    } else if (target == ISPCTarget::neon_i32x4 || target == ISPCTarget::neon_i32x8) {
+    } else if (ISPCTargetIsNeon(target)) {
         if (arch != Arch::arm && arch != Arch::aarch64) {
             ret = false;
         }
