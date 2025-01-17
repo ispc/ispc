@@ -697,10 +697,10 @@ EXT READNONE varying uint64 __min_varying_uint64(varying uint64 x, varying uint6
 EXT READNONE varying uint64 __max_varying_uint64(varying uint64 x, varying uint64 y) { return x > y ? x : y; }
 
 // float min/max
-EXT READNONE uniform float __min_uniform_float(uniform float x, uniform float y) { return x < y ? x : y; }
-EXT READNONE uniform float __max_uniform_float(uniform float x, uniform float y) { return x > y ? x : y; }
-EXT READNONE varying float __min_varying_float(varying float x, varying float y) { return x < y ? x : y; }
-EXT READNONE varying float __max_varying_float(varying float x, varying float y) { return x > y ? x : y; }
+EXT READNONE uniform float __min_uniform_float(uniform float x, uniform float y) { return @llvm.minnum(x, y); }
+EXT READNONE uniform float __max_uniform_float(uniform float x, uniform float y) { return @llvm.maxnum(x, y); }
+EXT READNONE varying float __min_varying_float(varying float x, varying float y) { return @llvm.minnum(x, y); }
+EXT READNONE varying float __max_varying_float(varying float x, varying float y) { return @llvm.maxnum(x, y); }
 
 // unsigned int min/max
 EXT READNONE uniform int32 __min_uniform_int32(uniform int32 x, uniform int32 y) { return x < y ? x : y; }
@@ -713,10 +713,10 @@ EXT READNONE varying uint32 __min_varying_uint32(varying uint32 x, varying uint3
 EXT READNONE varying uint32 __max_varying_uint32(varying uint32 x, varying uint32 y) { return x > y ? x : y; }
 
 // double precision min/max
-EXT READNONE uniform double __min_uniform_double(uniform double x, uniform double y) { return x < y ? x : y; }
-EXT READNONE uniform double __max_uniform_double(uniform double x, uniform double y) { return x > y ? x : y; }
-EXT READNONE varying double __min_varying_double(varying double x, varying double y) { return x < y ? x : y; }
-EXT READNONE varying double __max_varying_double(varying double x, varying double y) { return x > y ? x : y; }
+EXT READNONE uniform double __min_uniform_double(uniform double x, uniform double y) { return @llvm.minnum(x, y); }
+EXT READNONE uniform double __max_uniform_double(uniform double x, uniform double y) { return @llvm.maxnum(x, y); }
+EXT READNONE varying double __min_varying_double(varying double x, varying double y) { return @llvm.minnum(x, y); }
+EXT READNONE varying double __max_varying_double(varying double x, varying double y) { return @llvm.maxnum(x, y); }
 
 // int8/int16 avg builtins
 EXT varying uint8 __avg_up_uint8(varying uint8 a, varying uint8 b) { return ((uint16)a + (uint16)b + 1) >> 1; }
