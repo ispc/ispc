@@ -325,14 +325,18 @@ def check_if_skip_test(filename, host, target):
             # rule_value can be a regexp that can match the actual value
             # check here if it matches
             val = rule_values[rule_key]
-            if re.match(rule_value, val):
+            match = re.match(rule_value, val)
+
+            # Apply negation logic correctly
+            if negate:
+                match = not match
+
+            if match:
                 if rule_action == "run":
                     skip = False
                 elif rule_action == "skip":
                     skip = True
 
-            if negate:
-                skip = not skip
     return skip
 
 
