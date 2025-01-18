@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2024, Intel Corporation
+  Copyright (c) 2011-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -299,6 +299,18 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         function->addFnAttr("target-features", "+simd128");
     }
 
+    // This attribute is required for LoopUnroll passes when -O1
+    if (g->opt.level == 1) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        if ((!function->hasFnAttribute(llvm::Attribute::OptimizeNone)) &&
+            (!function->hasFnAttribute(llvm::Attribute::OptimizeForDebugging)))
+#else
+        if (!function->hasFnAttribute(llvm::Attribute::OptimizeNone))
+#endif
+        {
+            function->addFnAttr(llvm::Attribute::OptimizeForSize);
+        }
+    }
     g->target->markFuncWithTargetAttr(function);
     const FunctionType *type = CastType<FunctionType>(sym->type);
     Assert(type != nullptr);
