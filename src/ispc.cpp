@@ -2290,10 +2290,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         for (auto const &f_attr : m_funcAttributes) {
             fattrBuilder->addAttribute(f_attr.first, f_attr.second);
         }
-        // This attribute is required for LoopUnroll passes
-        if (g->opt.level == 1) {
-            fattrBuilder->addAttribute(llvm::Attribute::OptimizeForSize);
-        }
+
         this->m_tf_attributes = fattrBuilder;
 
         Assert(this->m_vectorWidth <= ISPC_MAX_NVEC);
