@@ -1215,33 +1215,81 @@ EXT varying double __streaming_load_varying_double(NOESCAPE uniform int8 *unifor
     return @llvm.ispc.stream_load(ptr, dummy);
 }
 
-EXT varying int8 __masked_load_i8(varying int8 *uniform ptr, UIntMaskType mask) {
+template <typename T> unmasked varying T __masked_load(varying T *uniform ptr, UIntMaskType mask) {
+    // This function should never be called, instead specialized versions should be used.
+    __not_supported();
+}
+template <> unmasked varying int8 __masked_load<int8>(varying int8 *uniform ptr, UIntMaskType mask) {
     varying int8 passthru;
     return @llvm.masked.load((uniform int8 * uniform) ptr, 1l, mask, passthru);
 }
-EXT varying int16 __masked_load_i16(varying int16 *uniform ptr, UIntMaskType mask) {
+template <> unmasked varying int16 __masked_load<int16>(varying int16 *uniform ptr, UIntMaskType mask) {
     varying int16 passthru;
     return @llvm.masked.load((uniform int8 * uniform) ptr, 1l, mask, passthru);
 }
-EXT varying int32 __masked_load_i32(varying int32 *uniform ptr, UIntMaskType mask) {
+template <> unmasked varying int32 __masked_load<int32>(varying int32 *uniform ptr, UIntMaskType mask) {
     varying int32 passthru;
     return @llvm.masked.load((uniform int8 * uniform) ptr, 1l, mask, passthru);
 }
-EXT varying int64 __masked_load_i64(varying int64 *uniform ptr, UIntMaskType mask) {
+template <> unmasked varying int64 __masked_load<int64>(varying int64 *uniform ptr, UIntMaskType mask) {
     varying int64 passthru;
     return @llvm.masked.load((uniform int8 * uniform) ptr, 1l, mask, passthru);
 }
-EXT varying float16 __masked_load_half(varying float16 *uniform ptr, UIntMaskType mask) {
+template <> unmasked varying float16 __masked_load<float16>(varying float16 *uniform ptr, UIntMaskType mask) {
     varying float16 passthru;
     return @llvm.masked.load((uniform int8 * uniform) ptr, 1l, mask, passthru);
 }
-EXT varying float __masked_load_float(varying float *uniform ptr, UIntMaskType mask) {
+template <> unmasked varying float __masked_load<float>(varying float *uniform ptr, UIntMaskType mask) {
     varying float passthru;
     return @llvm.masked.load((uniform int8 * uniform) ptr, 1l, mask, passthru);
 }
-EXT varying double __masked_load_double(varying double *uniform ptr, UIntMaskType mask) {
+template <> unmasked varying double __masked_load<double>(varying double *uniform ptr, UIntMaskType mask) {
     varying double passthru;
     return @llvm.masked.load((uniform int8 * uniform) ptr, 1l, mask, passthru);
+}
+
+#if TARGET_WIDTH == 64
+#define MASK_HIGH_BIT_ON -9223372036854775808
+#elif TARGET_WIDTH == 32
+#define MASK_HIGH_BIT_ON 2147483648
+#else
+#define MASK_HIGH_BIT_ON (1ull << (TARGET_WIDTH - 1))
+#endif
+
+template <typename T> unmasked varying T __masked_load_fast(varying T *uniform ptr, UIntMaskType mask) {
+    uniform uint64 mm = __movmsk(mask);
+    uniform uint64 mm_and_low = mm & 1;
+    uniform uint64 mm_and_high = mm & MASK_HIGH_BIT_ON;
+    uniform uint64 mm_and_high_shift = mm_and_high >> (TARGET_WIDTH - 1);
+    uniform bool can_vload = mm_and_low & mm_and_high_shift;
+    uniform bool can_vload_maybe_fast = can_vload || (__fast_masked_vload != 0);
+    if (can_vload_maybe_fast) {
+        return *ptr;
+    } else {
+        return __masked_load<T>(ptr, mask);
+    }
+}
+
+EXT varying int8 __masked_load_i8(varying int8 *uniform ptr, UIntMaskType mask) {
+    return __masked_load_fast<int8>(ptr, mask);
+}
+EXT varying int16 __masked_load_i16(varying int16 *uniform ptr, UIntMaskType mask) {
+    return __masked_load_fast<int16>(ptr, mask);
+}
+EXT varying int32 __masked_load_i32(varying int32 *uniform ptr, UIntMaskType mask) {
+    return __masked_load_fast<int32>(ptr, mask);
+}
+EXT varying int64 __masked_load_i64(varying int64 *uniform ptr, UIntMaskType mask) {
+    return __masked_load_fast<int64>(ptr, mask);
+}
+EXT varying float16 __masked_load_half(varying float16 *uniform ptr, UIntMaskType mask) {
+    return __masked_load_fast<float16>(ptr, mask);
+}
+EXT varying float __masked_load_float(varying float *uniform ptr, UIntMaskType mask) {
+    return __masked_load_fast<float>(ptr, mask);
+}
+EXT varying double __masked_load_double(varying double *uniform ptr, UIntMaskType mask) {
+    return __masked_load_fast<double>(ptr, mask);
 }
 
 EXT void __masked_store_i8(NOESCAPE varying int8 *uniform ptr, varying int8 val, UIntMaskType mask) {
