@@ -81,6 +81,19 @@ unmasked uniform float16 __extract(float16 v, uniform int32 i) { return @llvm.is
 unmasked uniform float __extract(float v, uniform int32 i) { return @llvm.ispc.extract(v, i); }
 unmasked uniform double __extract(double v, uniform int32 i) { return @llvm.ispc.extract(v, i); }
 
+// overloaded select functions
+unmasked int8 __select(bool mask, int8 v0, int8 v1) { return @llvm.ispc.select(mask, v0, v1); }
+unmasked int16 __select(bool mask, int16 v0, int16 v1) { return @llvm.ispc.select(mask, v0, v1); }
+unmasked int32 __select(bool mask, int32 v0, int32 v1) { return @llvm.ispc.select(mask, v0, v1); }
+unmasked int64 __select(bool mask, int64 v0, int64 v1) { return @llvm.ispc.select(mask, v0, v1); }
+unmasked uint8 __select(bool mask, uint8 v0, uint8 v1) { return @llvm.ispc.select(mask, v0, v1); }
+unmasked uint16 __select(bool mask, uint16 v0, uint16 v1) { return @llvm.ispc.select(mask, v0, v1); }
+unmasked uint32 __select(bool mask, uint32 v0, uint32 v1) { return @llvm.ispc.select(mask, v0, v1); }
+unmasked uint64 __select(bool mask, uint64 v0, uint64 v1) { return @llvm.ispc.select(mask, v0, v1); }
+unmasked float16 __select(bool mask, float16 v0, float16 v1) { return @llvm.ispc.select(mask, v0, v1); }
+unmasked float __select(bool mask, float v0, float v1) { return @llvm.ispc.select(mask, v0, v1); }
+unmasked double __select(bool mask, double v0, double v1) { return @llvm.ispc.select(mask, v0, v1); }
+
 // concat: concatenate varying vectors to short vector of DOUBLE_WIDTH
 unmasked uniform int8<DOUBLE_WIDTH> __concat(int8 v0, int8 v1) { return @llvm.ispc.concat(v0, v1); }
 unmasked uniform int16<DOUBLE_WIDTH> __concat(int16 v0, int16 v1) { return @llvm.ispc.concat(v0, v1); }
@@ -1253,26 +1266,32 @@ EXT void __masked_store_double(NOESCAPE varying double *uniform ptr, varying dou
     @llvm.masked.store(val, (uniform int8 * uniform) ptr, 1l, mask);
 }
 
+template <typename T>
+unmasked void __masked_store_blend(NOESCAPE varying T *uniform ptr, varying T new_val, UIntMaskType mask) {
+    varying T old_val = *ptr;
+    varying T blend = __select((bool)mask, new_val, old_val);
+    *ptr = blend;
+}
 EXT void __masked_store_blend_i8(NOESCAPE varying int8 *uniform ptr, varying int8 val, UIntMaskType mask) {
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, 1l, mask);
+    __masked_store_blend<int8>(ptr, val, mask);
 }
 EXT void __masked_store_blend_i16(NOESCAPE varying int16 *uniform ptr, varying int16 val, UIntMaskType mask) {
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, 1l, mask);
+    __masked_store_blend<int16>(ptr, val, mask);
 }
 EXT void __masked_store_blend_i32(NOESCAPE varying int32 *uniform ptr, varying int32 val, UIntMaskType mask) {
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, 1l, mask);
+    __masked_store_blend<int32>(ptr, val, mask);
 }
 EXT void __masked_store_blend_i64(NOESCAPE varying int64 *uniform ptr, varying int64 val, UIntMaskType mask) {
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, 1l, mask);
+    __masked_store_blend<int64>(ptr, val, mask);
 }
 EXT void __masked_store_blend_half(NOESCAPE varying float16 *uniform ptr, varying float16 val, UIntMaskType mask) {
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, 1l, mask);
+    __masked_store_blend<float16>(ptr, val, mask);
 }
 EXT void __masked_store_blend_float(NOESCAPE varying float *uniform ptr, varying float val, UIntMaskType mask) {
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, 1l, mask);
+    __masked_store_blend<float>(ptr, val, mask);
 }
 EXT void __masked_store_blend_double(NOESCAPE varying double *uniform ptr, varying double val, UIntMaskType mask) {
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, 1l, mask);
+    __masked_store_blend<double>(ptr, val, mask);
 }
 
 EXT uniform uint64 __cast_mask_to_i64(UIntMaskType mask) { return @llvm.ispc.packmask(mask); }
