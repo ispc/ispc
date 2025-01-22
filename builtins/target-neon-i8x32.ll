@@ -7,46 +7,12 @@ define(`MASK',`i8')
 define(`ISA',`NEON')
 
 include(`util.m4')
-
-define(`NEON_PREFIX',
-`ifelse(RUNTIME, `64', `llvm.aarch64.neon',
-        RUNTIME, `32', `llvm.arm.neon')')
-
-define(`NEON_PREFIX_UDOT',
-`ifelse(RUNTIME, `64', `llvm.aarch64.neon.udot',
-        RUNTIME, `32', `llvm.arm.neon.udot')')
-
-define(`NEON_PREFIX_SDOT',
-`ifelse(RUNTIME, `64', `llvm.aarch64.neon.sdot',
-        RUNTIME, `32', `llvm.arm.neon.sdot')')
-
-define(`NEON_PREFIX_USDOT',
-`ifelse(RUNTIME, `64', `llvm.aarch64.neon.usdot',
-        RUNTIME, `32', `llvm.arm.neon.usdot')')
+include(`target-neon-common.ll')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; half conversion routines
 
-declare <4 x i16> @NEON_PREFIX.vcvtfp2hf(<4 x float>) nounwind readnone
-declare <4 x float> @NEON_PREFIX.vcvthf2fp(<4 x i16>) nounwind readnone
-
-define float @__half_to_float_uniform(i16 %v) nounwind readnone alwaysinline {
-  %v1 = bitcast i16 %v to <1 x i16>
-  %vec = shufflevector <1 x i16> %v1, <1 x i16> undef,
-           <4 x i32> <i32 0, i32 0, i32 0, i32 0>
-  %h = call <4 x float> @NEON_PREFIX.vcvthf2fp(<4 x i16> %vec)
-  %r = extractelement <4 x float> %h, i32 0
-  ret float %r
-}
-
-define i16 @__float_to_half_uniform(float %v) nounwind readnone alwaysinline {
-  %v1 = bitcast float %v to <1 x float>
-  %vec = shufflevector <1 x float> %v1, <1 x float> undef,
-           <4 x i32> <i32 0, i32 0, i32 0, i32 0>
-  %h = call <4 x i16> @NEON_PREFIX.vcvtfp2hf(<4 x float> %vec)
-  %r = extractelement <4 x i16> %h, i32 0
-  ret i16 %r
-}
+half_uniform_conversions()
 
 define <32 x float> @__half_to_float_varying(<32 x i16> %v) nounwind readnone alwaysinline {
   unary4to32conv(r, i16, float, @NEON_PREFIX.vcvthf2fp, %v)
