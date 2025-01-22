@@ -1,4 +1,4 @@
-[![Appveyor build status (Windows)](https://ci.appveyor.com/api/projects/status/xfllw9vkp3lj4l0v/branch/main?svg=true)](https://ci.appveyor.com/project/ispc/ispc/branch/main)
+[![main](https://github.com/ispc/ispc/actions/workflows/pre-release-artifacts.yml/badge.svg)](https://github.com/ispc/ispc/actions/workflows/pre-release-artifacts.yml)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/9395/badge)](https://www.bestpractices.dev/projects/9395)
@@ -156,10 +156,10 @@ Instruction to install them can be found
 ## Additional Resources
 
 Latest `ispc` binaries corresponding to `main` branch can be downloaded from
-Appveyor for
-[Linux](https://ci.appveyor.com/api/projects/ispc/ispc/artifacts/build%2Fispc-trunk-linux.tar.gz?job=Environment%3A%20APPVEYOR_BUILD_WORKER_IMAGE%3DUbuntu1804%2C%20LLVM_VERSION%3Dlatest)
+the Github release page for
+[Linux](https://github.com/ispc/ispc/releases/download/trunk-artifacts/ispc-trunk-linux.tar.gz)
 and
-[Windows](https://ci.appveyor.com/api/projects/ispc/ispc/artifacts/build%2Fispc-trunk-windows.zip?job=Environment%3A%20APPVEYOR_BUILD_WORKER_IMAGE%3DVisual%20Studio%202019%2C%20LLVM_VERSION%3Dlatest)
+[Windows](https://github.com/ispc/ispc/releases/download/trunk-artifacts/ispc-trunk-windows.zip)
 See also additional [documentation](https://ispc.github.io/documentation.html)
 and additional [performance information](https://ispc.github.io/perf.html).  If
 you have a bug report and have a question, you are welcome to open an
