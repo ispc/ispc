@@ -33,19 +33,19 @@ env:
   TARGETS_SMOKE: '["avx2-i32x8", "generic-i32x4"]'
   TARGETS_SMOKE_ARM: '["neon-i32x4"]'
   OPTSETS_SMOKE: "-O2"
-  TARGETS_FULL:  '["generic-i1x4", "generic-i1x8", "generic-i1x16", "generic-i1x32",
-                   "generic-i8x16", "generic-i8x32",
-                   "generic-i16x8", "generic-i16x16",
-                   "generic-i32x4", "generic-i32x8", "generic-i32x16",
-                   "generic-i64x4",
-                   "sse2-i32x4", "sse2-i32x8",
-                   "sse4-i8x16", "sse4-i16x8", "sse4-i32x4", "sse4-i32x8",
-                   "avx1-i32x4", "avx1-i32x8", "avx1-i32x16", "avx1-i64x4",
-                   "avx2-i8x32", "avx2-i16x16", "avx2-i32x4", "avx2-i32x8", "avx2-i32x16", "avx2-i64x4",
-                   "avx2vnni-i32x4", "avx2vnni-i32x8", "avx2vnni-i32x16",
-                   "avx512skx-x4", "avx512skx-x8", "avx512skx-x16", "avx512skx-x64", "avx512skx-x32",
-                   "avx512icl-x4", "avx512icl-x8", "avx512icl-x16", "avx512icl-x64", "avx512icl-x32",
-                   "avx512spr-x4", "avx512spr-x8", "avx512spr-x16", "avx512spr-x64", "avx512spr-x32"]'
+  TARGETS_FULL_X86:  '["generic-i1x4", "generic-i1x8", "generic-i1x16", "generic-i1x32",
+                      "generic-i8x16", "generic-i8x32",
+                      "generic-i16x8", "generic-i16x16",
+                      "generic-i32x4", "generic-i32x8", "generic-i32x16",
+                      "generic-i64x4",
+                      "sse2-i32x4", "sse2-i32x8",
+                      "sse4-i8x16", "sse4-i16x8", "sse4-i32x4", "sse4-i32x8",
+                      "avx1-i32x4", "avx1-i32x8", "avx1-i32x16", "avx1-i64x4",
+                      "avx2-i8x32", "avx2-i16x16", "avx2-i32x4", "avx2-i32x8", "avx2-i32x16", "avx2-i64x4",
+                      "avx2vnni-i32x4", "avx2vnni-i32x8", "avx2vnni-i32x16",
+                      "avx512skx-x4", "avx512skx-x8", "avx512skx-x16", "avx512skx-x64", "avx512skx-x32",
+                      "avx512icl-x4", "avx512icl-x8", "avx512icl-x16", "avx512icl-x64", "avx512icl-x32",
+                      "avx512spr-x4", "avx512spr-x8", "avx512spr-x16", "avx512spr-x64", "avx512spr-x32"]'
   TARGETS_FULL_ARM: '["neon-i32x4", "neon-i32x8"]'
   OPTSETS_FULL: "-O0 -O1 -O2"
   ISPC_ANDROID_NDK_PATH: "/usr/local/share/android-ndk"
@@ -54,7 +54,7 @@ jobs:
   define-flow:
     runs-on: ubuntu-22.04
     outputs:
-      tests_matrix_targets: ${{ steps.set-flow.outputs.matrix }}
+      tests_matrix_targets_x86: ${{ steps.set-flow.outputs.matrix_x86 }}
       tests_matrix_targets_arm: ${{ steps.set-flow.outputs.matrix_arm }}
       tests_optsets: ${{ steps.set-flow.outputs.optsets }}
       tests_optsets_array: ${{ steps.set-flow.outputs.optsets_array }}
@@ -86,12 +86,12 @@ jobs:
         fi
         # set tests matrix depends on flow
         if [[ "$RUN_SMOKE" == "true" ]]; then
-          echo "matrix=${TARGETS_SMOKE}" >> "$GITHUB_OUTPUT"
+          echo "matrix_x86=${TARGETS_SMOKE}" >> "$GITHUB_OUTPUT"
           echo "matrix_arm=${TARGETS_SMOKE_ARM}" >> "$GITHUB_OUTPUT"
         fi
         if [[ "$RUN_FULL" == "true" ]]; then
-          echo "matrix=${TARGETS_FULL}" >> "$GITHUB_OUTPUT"
-          echo "matrix_arm=${TARGETS_FULL_ARM}" >> "$GITHUB_OUTPUT"
+          echo "matrix_x86=${TARGETS_FULL_X86}" >> "$GITHUB_OUTPUT"
+          echo "matrix_arm=${TARGETS_FULL_X86}" >> "$GITHUB_OUTPUT"
         fi
         # set tests optsets
         if [[ "$RUN_SMOKE" == "true" ]]; then
@@ -329,7 +329,7 @@ jobs:
       matrix:
         version: [17, 18]
         arch: [x86, x86-64]
-        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
+        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets_x86)}}
         # See issue #2818 for more deatils. It's SDE problem running on AMD runner.
         exclude:
           - arch: x86
@@ -416,7 +416,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [x86, x86-64]
-        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
+        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets_x86)}}
         # See issue #2818 for more deatils. It's SDE problem running on AMD runner.
         exclude:
           - arch: x86
@@ -1106,7 +1106,7 @@ jobs:
       matrix:
         version: [17, 18]
         arch: [x86, x86-64]
-        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
+        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets_x86)}}
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -1159,7 +1159,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [x86, x86-64]
-        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
+        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets_x86)}}
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -1213,7 +1213,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [x86, x86-64]
-        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets)}}
+        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets_x86)}}
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
