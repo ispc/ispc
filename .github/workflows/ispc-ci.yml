@@ -130,7 +130,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        .github/workflows/scripts/install-build-deps-aarch64.sh
+        .github/workflows/scripts/install-build-deps.sh
 
     - name: Check environment
       run: |

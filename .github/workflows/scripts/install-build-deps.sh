@@ -1,11 +1,18 @@
 #!/bin/bash -e
 echo "APT::Acquire::Retries \"3\";" | sudo tee -a /etc/apt/apt.conf.d/80-retries
 
+# Detect system architecture
+if [[ $(uname -m) =~ "x86" ]]; then
+    CROSS_LIBS=("libc6-dev-i386" "g++-multilib" "lib32stdc++6")
+else
+    CROSS_LIBS=("libc6-dev-armhf-cross")
+fi
+
 # if apt-get fails, retry several time.
 for i in {1..5}
 do
-  sudo apt-get update | tee log${i}.txt
-  sudo apt-get install ninja-build bison flex libc6-dev-i386 g++-multilib lib32stdc++6 libtbb-dev libstdc++6 | tee -a log${i}.txt
+  sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y && sudo apt-get -y update | tee log${i}.txt
+  sudo apt-get install ninja-build bison flex libtbb-dev libstdc++6 "${CROSS_LIBS[@]}" | tee -a log${i}.txt
   if [[ ! `grep "^Err: " log${i}.txt` && ! `grep "^E: " log${i}.txt` ]]; then
     echo "APT packages installation was successful"
     break
@@ -52,5 +59,7 @@ fi
 
 [ -n "$LLVM_REPO" ] && wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
 tar xf $LLVM_TAR
-echo "${GITHUB_WORKSPACE}/$SDE_TAR_NAME-lin" >> $GITHUB_PATH
+if [ -n "$SDE_MIRROR_ID" ] && [ -n "$USER_AGENT" ]; then
+  echo "${GITHUB_WORKSPACE}/$SDE_TAR_NAME-lin" >> $GITHUB_PATH
+fi
 echo "${GITHUB_WORKSPACE}/bin-$LLVM_VERSION/bin" >> $GITHUB_PATH
