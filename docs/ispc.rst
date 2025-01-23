@@ -681,6 +681,7 @@ The CPU definitions for the ARMv7 architecture have been removed: ``cortex-a9``
 and ``cortex-a15``.
 New CPU definitions were introduced, such as ``cortex-a55``, ``cortex-a78``,
 ``cortex-a510``, ```cortex-a520``, and support for new Apple devices.
+New double-pumped targets were introduced: ``neon-i16x16`` and ``neon-i8x32``.
 
 Macro definitions for LLVM version that ISPC is based on were added. Please,
 refer to `The Preprocessor`_ for more details.
@@ -1034,7 +1035,7 @@ x86 targets:
 
 Neon targets:
 
-``neon-i8x16``, ``neon-i16x8``, ``neon-i32x4``, ``neon-i32x8``.
+``neon-i8x16``, ``neon-i16x8``, ``neon-i32x4``, ``neon-i32x8``, ``neon-i8x32`` and ``neon-i16x16``.
 
 These targets correspond to ARMv8 (64-bit) when ``--arch=aarch64`` is used (default) and
 to ARMv8 (32-bit) when ``--arch=arm`` is used.
