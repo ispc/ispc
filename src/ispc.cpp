@@ -338,7 +338,8 @@ static ISPCTarget lGetSystemISA() {
         } else if (skx) {
             return ISPCTarget::avx512skx_x16;
         } else if (knl) {
-            return ISPCTarget::avx512knl_x16;
+            Error(SourcePos(), "Detected unsupported KNL ISA.  Exiting.");
+            exit(1);
         }
         // If it's unknown AVX512 target, fall through and use AVX2
         // or whatever is available in the machine.
@@ -429,12 +430,6 @@ typedef enum {
     // Skylake. AVX2.
     CPU_Skylake,
 
-    // Knights Landing - Xeon Phi.
-    // Supports AVX-512F: All the key AVX-512 features: masking, broadcast... ;
-    //          AVX-512CDI: Conflict Detection;
-    //          AVX-512ERI & PRI: 28-bit precision RCP, RSQRT and EXP transcendentals,
-    //                            new prefetch instructions.
-    CPU_KNL,
     // Skylake Xeon.
     // Supports AVX-512F: All the key AVX-512 features: masking, broadcast... ;
     //          AVX-512CDI: Conflict Detection;
@@ -530,7 +525,6 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {CPU_Haswell, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
     {CPU_Broadwell, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
     {CPU_Skylake, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
-    {CPU_KNL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
     {CPU_SKX, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512"}},
     {CPU_ICL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx512_vnni"}},
     {CPU_Silvermont, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42"}},
@@ -641,8 +635,6 @@ class AllCPUs {
 
         names[CPU_Skylake].push_back("skylake");
 
-        names[CPU_KNL].push_back("knl");
-
         names[CPU_SKX].push_back("skx");
 
         names[CPU_ICL].push_back("icelake-client");
@@ -715,9 +707,6 @@ class AllCPUs {
 
         compat[CPU_Silvermont] =
             Set(CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_None);
-
-        compat[CPU_KNL] = Set(CPU_KNL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
-                              CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_None);
 
         compat[CPU_SKX] = Set(CPU_SKX, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                               CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_None);
@@ -1070,10 +1059,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             m_ispc_target = ISPCTarget::xe2lpg_x16;
             break;
 #endif
-
-        case CPU_KNL:
-            m_ispc_target = ISPCTarget::avx512knl_x16;
-            break;
 
         case CPU_SPR:
         case CPU_GNR:
@@ -1505,24 +1490,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasRand = true;
         this->m_hasGather = true;
         CPUfromISA = CPU_Haswell;
-        break;
-    case ISPCTarget::avx512knl_x16:
-        this->m_isa = Target::KNL_AVX512;
-        this->m_nativeVectorWidth = 16;
-        this->m_nativeVectorAlignment = 64;
-        this->m_dataTypeWidth = 32;
-        this->m_vectorWidth = 16;
-        this->m_maskingIsFree = true;
-        this->m_maskBitCount = 1;
-        this->m_hasHalfConverts = true;
-        this->m_hasRand = true;
-        this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasTranscendentals = false;
-        // For MIC it is set to true due to performance reasons. The option should be tested.
-        this->m_hasTrigonometry = false;
-        this->m_hasRsqrtd = this->m_hasRcpd = true;
-        this->m_hasVecPrefetch = false;
-        CPUfromISA = CPU_KNL;
         break;
     case ISPCTarget::avx512skx_x4:
     case ISPCTarget::avx512icl_x4:
@@ -2106,7 +2073,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->setWarning(PerfWarningType::CVTUIntFloat16);
         this->setWarning(PerfWarningType::DIVModInt);
         break;
-    case Target::KNL_AVX512:
     case Target::SKX_AVX512:
     case Target::ICL_AVX512:
     case Target::SPR_AVX512:
@@ -2534,8 +2500,6 @@ const char *Target::ISAToString(ISA isa) {
         return "avx2";
     case Target::AVX2VNNI:
         return "avx2vnni";
-    case Target::KNL_AVX512:
-        return "avx512knl";
     case Target::SKX_AVX512:
         return "avx512skx";
     case Target::ICL_AVX512:
@@ -2605,8 +2569,6 @@ const char *Target::ISAToTargetString(ISA isa) {
         return "avx2-i32x8";
     case Target::AVX2VNNI:
         return "avx2vnni-i32x8";
-    case Target::KNL_AVX512:
-        return "avx512knl-x16";
     case Target::SKX_AVX512:
         return "avx512skx-x16";
     case Target::ICL_AVX512:

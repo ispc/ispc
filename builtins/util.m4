@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2024, Intel Corporation
+;;  Copyright (c) 2010-2025, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -4897,7 +4897,6 @@ define(`aossoa', `
 ;; wide version of soa_to_aos4_double 8 and 16 appears to be less efficient for AVX512 targets,
 ;; so define a macro to conditioanlly generate a "pumped" version.
 ifelse(ISA, `AVX512SKX', `define(`SOA_TO_AOS4_DOUBLE_PUMPED', `true')',
-       ISA, `AVX512KNL', `define(`SOA_TO_AOS4_DOUBLE_PUMPED', `true')',
        `')
 
 ifelse(WIDTH,  `1', `',

@@ -740,7 +740,7 @@ def verify():
               "sse4.1-i32x4", "sse4.1-i32x8", "sse4.1-i16x8", "sse4.1-i8x16",
               "avx1-i32x4", "avx1-i32x8", "avx1-i32x16", "avx1-i64x4",
               "avx2-i32x4", "avx2-i32x8", "avx2-i32x16", "avx2-i64x4",
-              "avx512knl-x16", "avx512skx-x16", "avx512skx-x8", "avx512skx-x4", "avx512skx-x64", "avx512skx-x32"]]
+              "avx512skx-x16", "avx512skx-x8", "avx512skx-x4", "avx512skx-x64", "avx512skx-x32"]]
     for i in range (0,len(f_lines)):
         if f_lines[i][0] == "%":
             continue
@@ -1054,7 +1054,7 @@ if __name__ == "__main__":
     parser.add_option('-v', '--verbose', dest='verbose', help='Enable verbose output',
                   default=False, action="store_true")
     parser.add_option('--wrap-exe', dest='wrapexe',
-                  help='Executable to wrap test runs with (e.g. "valgrind" or "sde -knl -- ")',
+                  help='Executable to wrap test runs with (e.g. "valgrind" or "sde -spr -- ")',
                   default="")
     parser.add_option('--time', dest='time', help='Enable time output',
                   default=False, action="store_true")

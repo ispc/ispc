@@ -135,11 +135,8 @@ ISPCTarget operator++(ISPCTarget &target, int dummy) {
     static_assert(static_cast<underlying>(ISPCTarget::avx2vnni_i32x16) ==
                       static_cast<underlying>(ISPCTarget::avx2vnni_i32x8) + 1,
                   "Enum ISPCTarget is not sequential");
-    static_assert(static_cast<underlying>(ISPCTarget::avx512knl_x16) ==
-                      static_cast<underlying>(ISPCTarget::avx2vnni_i32x16) + 1,
-                  "Enum ISPCTarget is not sequential");
     static_assert(static_cast<underlying>(ISPCTarget::avx512skx_x4) ==
-                      static_cast<underlying>(ISPCTarget::avx512knl_x16) + 1,
+                      static_cast<underlying>(ISPCTarget::avx2vnni_i32x16) + 1,
                   "Enum ISPCTarget is not sequential");
     static_assert(static_cast<underlying>(ISPCTarget::avx512skx_x8) ==
                       static_cast<underlying>(ISPCTarget::avx512skx_x4) + 1,
@@ -373,8 +370,6 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::avx2vnni_i32x8;
     } else if (target == "avx2vnni-i32x16") {
         return ISPCTarget::avx2vnni_i32x16;
-    } else if (target == "avx512knl-x16" || target == "avx512knl-i32x16") {
-        return ISPCTarget::avx512knl_x16;
     } else if (target == "avx512skx-x4" || target == "avx512skx-i32x4") {
         return ISPCTarget::avx512skx_x4;
     } else if (target == "avx512skx-x8" || target == "avx512skx-i32x8") {
@@ -554,8 +549,6 @@ std::string ISPCTargetToString(ISPCTarget target) {
         return "avx2vnni-i32x8";
     case ISPCTarget::avx2vnni_i32x16:
         return "avx2vnni-i32x16";
-    case ISPCTarget::avx512knl_x16:
-        return "avx512knl-x16";
     case ISPCTarget::avx512skx_x4:
         return "avx512skx-x4";
     case ISPCTarget::avx512skx_x8:
@@ -685,7 +678,6 @@ bool ISPCTargetIsX86(ISPCTarget target) {
     case ISPCTarget::avx2vnni_i32x4:
     case ISPCTarget::avx2vnni_i32x8:
     case ISPCTarget::avx2vnni_i32x16:
-    case ISPCTarget::avx512knl_x16:
     case ISPCTarget::avx512skx_x4:
     case ISPCTarget::avx512skx_x8:
     case ISPCTarget::avx512skx_x16:
