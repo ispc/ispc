@@ -2116,6 +2116,15 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 
     if (CPUID == CPU_None) {
         cpu = a.GetDefaultNameFromType(CPUfromISA).c_str();
+        std::string cpu_string = cpu;
+        if ((arch == Arch::x86_64 || arch == Arch::x86) && ISPCTargetIsGeneric(m_ispc_target) && cpu_string.empty()) {
+            // If CPU is not specified and target is generic, use x86_64 as
+            // default CPU for generic targets.
+            // Note: It is actually possible to use older target CPUs for
+            // generic targets that we don't have at the moment in CPU_ enum.
+            CPUID = CPU_x86_64;
+            cpu = a.GetDefaultNameFromType(CPUID).c_str();
+        }
     } else {
         if ((CPUfromISA != CPU_None) && !a.BackwardCompatible(CPUID, CPUfromISA)) {
             std::string target_string = ISPCTargetToString(m_ispc_target);
