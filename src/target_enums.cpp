@@ -716,7 +716,9 @@ bool ISPCTargetIsX86(ISPCTarget target) {
 bool ISPCTargetIsNeon(ISPCTarget target) {
     switch (target) {
     case ISPCTarget::neon_i8x16:
+    case ISPCTarget::neon_i8x32:
     case ISPCTarget::neon_i16x8:
+    case ISPCTarget::neon_i16x16:
     case ISPCTarget::neon_i32x4:
     case ISPCTarget::neon_i32x8:
         return true;
