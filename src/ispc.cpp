@@ -1743,7 +1743,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_dataTypeWidth = 8;
         this->m_vectorWidth = 32;
         this->m_maskingIsFree = (arch == Arch::aarch64);
+        this->m_hasHalfConverts = true;
         this->m_maskBitCount = 8;
+        // TODO: this is a workaround for the bug in GatherCoalescePass for x32 targets.
+        // see issue #3153
+        this->m_hasGather = true;
         break;
     case ISPCTarget::neon_i16x8:
         this->m_isa = Target::NEON;
@@ -1762,6 +1766,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_dataTypeWidth = 16;
         this->m_vectorWidth = 16;
         this->m_maskingIsFree = (arch == Arch::aarch64);
+        this->m_hasHalfConverts = true;
         this->m_maskBitCount = 16;
         break;
     case ISPCTarget::neon_i32x4:
