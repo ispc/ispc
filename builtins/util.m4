@@ -1170,6 +1170,47 @@ define(`unary4to16conv', `
 '
 )
 
+define(`unary4to32conv', `
+  %$1_0 = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v$1_0 = call <4 x $3> $4(<4 x $2> %$1_0)
+  %$1_1 = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v$1_1 = call <4 x $3> $4(<4 x $2> %$1_1)
+  %$1_2 = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+  %v$1_2 = call <4 x $3> $4(<4 x $2> %$1_2)
+  %$1_3 = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+  %v$1_3 = call <4 x $3> $4(<4 x $2> %$1_3)
+  %$1_4 = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 16, i32 17, i32 18, i32 19>
+  %v$1_4 = call <4 x $3> $4(<4 x $2> %$1_4)
+  %$1_5 = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 20, i32 21, i32 22, i32 23>
+  %v$1_5 = call <4 x $3> $4(<4 x $2> %$1_5)
+  %$1_6 = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 24, i32 25, i32 26, i32 27>
+  %v$1_6 = call <4 x $3> $4(<4 x $2> %$1_6)
+  %$1_7 = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 28, i32 29, i32 30, i32 31>
+  %v$1_7 = call <4 x $3> $4(<4 x $2> %$1_7)
+
+  %$1a = shufflevector <4 x $3> %v$1_0, <4 x $3> %v$1_1,
+           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %$1b = shufflevector <4 x $3> %v$1_2, <4 x $3> %v$1_3,
+           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %$1c = shufflevector <4 x $3> %v$1_4, <4 x $3> %v$1_5,
+           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %$1d = shufflevector <4 x $3> %v$1_6, <4 x $3> %v$1_7,
+           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+
+  %$1e = shufflevector <8 x $3> %$1a, <8 x $3> %$1b,
+           <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                       i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %$1f = shufflevector <8 x $3> %$1c, <8 x $3> %$1d,
+           <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                       i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %$1 = shufflevector <16 x $3> %$1e, <16 x $3> %$1f,
+           <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                       i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                       i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23,
+                       i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+'
+)
+
 ;; $1: name of variable into which the final result should go
 ;; $2: scalar type of the vector elements
 ;; $3: 4-wide unary vector function to apply
