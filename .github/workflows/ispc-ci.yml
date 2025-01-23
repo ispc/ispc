@@ -30,7 +30,7 @@ env:
   SDE_TAR_NAME: sde-external-9.44.0-2024-08-22
   USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
   LLVM_REPO: https://github.com/ispc/ispc.dependencies
-  TARGETS_SMOKE: '["avx2-i32x8", "generic-i32x4"]'
+  TARGETS_SMOKE_X86: '["avx2-i32x8", "generic-i32x4"]'
   TARGETS_SMOKE_ARM: '["neon-i32x4"]'
   OPTSETS_SMOKE: "-O2"
   TARGETS_FULL_X86:  '["generic-i1x4", "generic-i1x8", "generic-i1x16", "generic-i1x32",
@@ -46,7 +46,7 @@ env:
                       "avx512skx-x4", "avx512skx-x8", "avx512skx-x16", "avx512skx-x64", "avx512skx-x32",
                       "avx512icl-x4", "avx512icl-x8", "avx512icl-x16", "avx512icl-x64", "avx512icl-x32",
                       "avx512spr-x4", "avx512spr-x8", "avx512spr-x16", "avx512spr-x64", "avx512spr-x32"]'
-  TARGETS_FULL_ARM: '["neon-i32x4", "neon-i32x8"]'
+  TARGETS_FULL_ARM: '["neon-i32x4", "neon-i32x8", "neon-i8x16", "neon-i16x8"]'
   OPTSETS_FULL: "-O0 -O1 -O2"
   ISPC_ANDROID_NDK_PATH: "/usr/local/share/android-ndk"
 
@@ -86,12 +86,12 @@ jobs:
         fi
         # set tests matrix depends on flow
         if [[ "$RUN_SMOKE" == "true" ]]; then
-          echo "matrix_x86=${TARGETS_SMOKE}" >> "$GITHUB_OUTPUT"
+          echo "matrix_x86=${TARGETS_SMOKE_X86}" >> "$GITHUB_OUTPUT"
           echo "matrix_arm=${TARGETS_SMOKE_ARM}" >> "$GITHUB_OUTPUT"
         fi
         if [[ "$RUN_FULL" == "true" ]]; then
           echo "matrix_x86=${TARGETS_FULL_X86}" >> "$GITHUB_OUTPUT"
-          echo "matrix_arm=${TARGETS_FULL_X86}" >> "$GITHUB_OUTPUT"
+          echo "matrix_arm=${TARGETS_FULL_ARM}" >> "$GITHUB_OUTPUT"
         fi
         # set tests optsets
         if [[ "$RUN_SMOKE" == "true" ]]; then
