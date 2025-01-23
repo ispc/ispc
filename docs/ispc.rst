@@ -690,6 +690,8 @@ refer to `The Preprocessor`_ for more details.
 ``__attribute__((deprecated))`` can be applied to a function to mark it as
 deprecated. It leads to a warning when the function is called.
 
+The target ``avx512knl-x16`` was removed.
+
 
 Getting Started with ISPC
 =========================
@@ -968,7 +970,6 @@ Target       Description
 ------------ ---------------------------------------------------------
 avx, avx1    AVX (2010-2011 era Intel CPUs)
 avx2         AVX 2 target (2013- Intel codename Haswell CPUs)
-avx512knl    AVX 512 target (Xeon Phi chips codename Knights Landing)
 avx512skx    AVX 512 target (Skylake Xeon CPUs)
 avx512spr    AVX 512 target (Sapphire Rapids Xeon CPUs, 4th generation Xeon Scalable)
 neon         ARM NEON
@@ -1026,7 +1027,7 @@ x86 targets:
 ``avx1-i32x4``, ``avx1-i32x8``, ``avx1-i32x16``, ``avx1-i64x4``, ``avx2-i8x32``,
 ``avx2-i16x16``, ``avx2-i32x4``, ``avx2-i32x8``, ``avx2-i32x16``, ``avx2-i64x4``,
 ``avx2vnni-i32x4``, ``avx2vnni-i32x8``, ``avx2vnni-i32x16``,
-``avx512knl-x16``, ``avx512skx-x4``, ``avx512skx-x8``, ``avx512skx-x16``, ``avx512skx-x32``,
+``avx512skx-x4``, ``avx512skx-x8``, ``avx512skx-x16``, ``avx512skx-x32``,
 ``avx512skx-x64``, ``avx512icl-x4``, ``avx512icl-x8``, ``avx512icl-x16``, ``avx512icl-x32``,
 ``avx512icl-x64``, ``avx512spr-x4``, ``avx512spr-x8``, ``avx512spr-x16``, ``avx512spr-x32``,
 ``avx512spr-x64``.

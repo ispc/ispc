@@ -22,9 +22,6 @@ int main() {
     case 5:
       printf("AVX2VNNI\n");
       break;
-    case 6:
-      printf("AVX512KNL\n");
-      break;
     case 7:
       printf("AVX512SKX\n");
       break;
