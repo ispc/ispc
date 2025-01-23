@@ -341,7 +341,7 @@ list(APPEND X86_TARGETS
     avx512icl-x32 avx512icl-x64
     avx512spr-x4 avx512spr-x8 avx512spr-x16 avx512spr-x32 avx512spr-x64)
 
-list(APPEND ARM_TARGETS neon-i8x16 neon-i16x8 neon-i32x4 neon-i32x8)
+list(APPEND ARM_TARGETS neon-i8x16 neon-i16x8 neon-i32x4 neon-i32x8 neon-i8x32 neon-i16x16)
 list(APPEND WASM_TARGETS wasm-i32x4)
 list(APPEND XE_TARGETS gen9-x16 gen9-x8 xelp-x16 xelp-x8 xehpg-x16 xehpg-x8 xehpc-x16 xehpc-x32 xelpg-x16 xelpg-x8
                        xe2hpg-x16 xe2hpg-x32 xe2lpg-x16 xe2lpg-x32)
