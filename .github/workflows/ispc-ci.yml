@@ -46,7 +46,7 @@ env:
                       "avx512skx-x4", "avx512skx-x8", "avx512skx-x16", "avx512skx-x64", "avx512skx-x32",
                       "avx512icl-x4", "avx512icl-x8", "avx512icl-x16", "avx512icl-x64", "avx512icl-x32",
                       "avx512spr-x4", "avx512spr-x8", "avx512spr-x16", "avx512spr-x64", "avx512spr-x32"]'
-  TARGETS_FULL_ARM: '["neon-i32x4", "neon-i32x8", "neon-i8x16", "neon-i16x8"]'
+  TARGETS_FULL_ARM: '["neon-i32x4", "neon-i32x8", "neon-i8x16", "neon-i16x8", "neon-i8x32", "neon-i16x16"]'
   OPTSETS_FULL: "-O0 -O1 -O2"
   ISPC_ANDROID_NDK_PATH: "/usr/local/share/android-ndk"
 
