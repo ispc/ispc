@@ -92,6 +92,10 @@ option(ISPC_PREPARE_PACKAGE "Generate build targets for ispc package" OFF)
 option(ISPC_PACKAGE_EXAMPLES "Pack examples into the ISPC package" ON)
 option(ISPC_SLIM_BINARY "Build ISPC as slim binary" OFF)
 
+if (APPLE)
+    option(ISPC_FRAMEWORK "Build as Apple Frameworks" OFF)
+endif()
+
 option(ISPC_CROSS "Build ISPC with cross compilation support" OFF)
 # Default settings for cross compilation
 if (ISPC_CROSS)
@@ -156,7 +160,7 @@ else()
     set(ISPC_UNIX_TARGET OFF)
 endif()
 
-if (APPLE)
+if (APPLE AND NOT ISPC_FRAMEWORK)
     # Use standard macOS SDK location if this is not specified.
     if (NOT ISPC_MACOS_SDK_PATH)
         set(command "xcrun" "--show-sdk-path")
@@ -854,6 +858,28 @@ function(add_ispc_slim NAME)
         set_target_properties(generic-stdlib-bc PROPERTIES EXCLUDE_FROM_ALL OFF)
         set_target_properties(stdlibs-bc PROPERTIES EXCLUDE_FROM_ALL OFF)
     endif()
+endfunction()
+
+# This function sets the framework properties for iOS-derived compilations
+function(configure_ispc_framework TARGET)
+    if (ISPC_FRAMEWORK)
+        set_target_properties(libzstd_shared PROPERTIES
+            FRAMEWORK TRUE
+            FRAMEWORK_VERSION "${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}.${ISPC_VERSION_PATCH}"
+            PRODUCT_BUNDLE_IDENTIFIER "github.com/ispc/ispc/${TARGET}"
+            XCODE_ATTRIBUTE_INSTALL_PATH "@rpath"
+            # PUBLIC_HEADER "${PublicHeaders}"
+            # OUTPUT_NAME "${TARGET}"
+            # XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY ""
+            # XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO"
+            # XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO"
+            MACOSX_FRAMEWORK_IDENTIFIER "github.com/ispc/ispc/${TARGET}"
+            MACOSX_FRAMEWORK_BUNDLE_VERSION "${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}"
+            MACOSX_FRAMEWORK_SHORT_VERSION_STRING "${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}.${ISPC_VERSION_PATCH}"
+            MACOSX_RPATH TRUE
+            # RESOURCE ${PublicHeaders}
+        )
+    endif ()
 endfunction()
 
 # Define libraries that are built in the project. Some of them are shared across multiple executable targets.
