@@ -67,6 +67,10 @@ static void lPrintVersion() {
 #endif
     printf("    [--cpu=<type>]\t\t\tAn alias for [--device=<type>] switch\n");
     printf("    [-D<foo>]\t\t\t\t#define given value when running preprocessor\n");
+#if defined(ISPC_MACOS_TARGET_ON) || defined(ISPC_IOS_TARGET_ON)
+    printf("    [--darwin-version-min=<major.minor>]Set the minimum macOS/iOS version required for the "
+           "deployment.\n");
+#endif
     printf("    [--dev-stub <filename>]\t\tEmit device-side offload stub functions to file\n");
     printf("    ");
     char cpuHelp[2048];
@@ -790,6 +794,21 @@ int main(int Argc, char *Argv[]) {
                                       "only 2, 3, 4 and 5 are allowed.",
                                       argv[i] + 16);
             }
+#if defined(ISPC_MACOS_TARGET_ON) || defined(ISPC_IOS_TARGET_ON)
+        } else if (!strncmp(argv[i], "--darwin-version-min=", 21)) {
+            const char *version = argv[i] + 21;
+            // Validate the version format
+            std::string versionStr(version);
+            llvm::VersionTuple versionTuple;
+            if (!versionStr.empty()) {
+                if (versionTuple.tryParse(versionStr)) {
+                    errorHandler.AddError("Invalid version format: \"%s\". Use <major_ver.minor_ver>.", version);
+                }
+            } else {
+                versionTuple = darwinUnspecifiedVersion;
+            }
+            g->darwinVersionMin = versionTuple;
+#endif
         } else if (!strcmp(argv[i], "--print-target")) {
             g->printTarget = true;
         } else if (!strcmp(argv[i], "--no-omit-frame-pointer")) {

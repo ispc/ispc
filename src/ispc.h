@@ -34,6 +34,7 @@
 
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/StringRef.h>
+#include <llvm/Support/VersionTuple.h>
 
 /** @def ISPC_MAX_NVEC maximum vector size of any of the compliation
     targets.
@@ -901,7 +902,15 @@ struct Globals {
 
     /* When compile time tracing is enabled, set time granularity. */
     int timeTraceGranularity;
+
+    /* Set macOS/iOS deployment target. The version will be propagated to the triple.
+       This address the new linker introduced in Xcode 15 that issues a warning if version when no version is provided.
+       https://github.com/ispc/ispc/issues/3143  */
+    llvm::VersionTuple darwinVersionMin;
 };
+
+// This is used when empty string is used for "--darwin-version-min"
+constexpr llvm::VersionTuple darwinUnspecifiedVersion(INT_MAX);
 
 enum {
     COST_ASSIGN = 1,

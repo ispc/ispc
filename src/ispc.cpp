@@ -2351,6 +2351,7 @@ std::string Target::SupportedCPUs() {
 
 std::string Target::GetTripleString() const {
     llvm::Triple triple;
+    llvm::VersionTuple darwinVersionMin = g->darwinVersionMin;
     switch (g->target_os) {
     case TargetOS::windows:
         if (m_arch == Arch::x86) {
@@ -2443,7 +2444,17 @@ std::string Target::GetTripleString() const {
             exit(1);
         }
         triple.setVendor(llvm::Triple::VendorType::Apple);
-        triple.setOS(llvm::Triple::OSType::MacOSX);
+        // If nothing is specified in command line - set default
+        if (darwinVersionMin.empty()) {
+            darwinVersionMin = (m_arch == Arch::x86_64) ? llvm::VersionTuple(10, 12) : llvm::VersionTuple(11, 0);
+        }
+        if (darwinVersionMin != darwinUnspecifiedVersion) {
+            triple.setOSName(llvm::Triple::getOSTypeName(llvm::Triple::OSType::MacOSX).str() +
+                             darwinVersionMin.getAsString());
+        } else {
+            // If empty string was specified for --darwin-version-min, do not set any version in the triple
+            triple.setOS(llvm::Triple::OSType::MacOSX);
+        }
         break;
     case TargetOS::android:
         if (m_arch == Arch::x86) {
@@ -2472,7 +2483,18 @@ std::string Target::GetTripleString() const {
         // "arm64-apple-ios"
         triple.setArchName("arm64");
         triple.setVendor(llvm::Triple::VendorType::Apple);
-        triple.setOS(llvm::Triple::OSType::IOS);
+        // If nothing is specified in command line - set default
+        if (darwinVersionMin.empty()) {
+            darwinVersionMin = llvm::VersionTuple(11, 0);
+        }
+
+        if (darwinVersionMin != darwinUnspecifiedVersion) {
+            triple.setOSName(llvm::Triple::getOSTypeName(llvm::Triple::OSType::IOS).str() +
+                             darwinVersionMin.getAsString());
+        } else {
+            // If empty string was specified for --darwin-version-min, do not set any version in the triple
+            triple.setOS(llvm::Triple::OSType::IOS);
+        }
         break;
     case TargetOS::ps4:
         if (m_arch != Arch::x86_64) {
@@ -2861,6 +2883,7 @@ Globals::Globals() {
     enableLLVMIntrinsics = false;
     mangleFunctionsWithTarget = false;
     isMultiTargetCompilation = false;
+    darwinVersionMin = llvm::VersionTuple();
     errorLimit = -1;
 
     enableTimeTrace = false;

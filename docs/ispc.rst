@@ -701,6 +701,10 @@ recovery. Such users must update their code to handle ``SIGILL`` instead. The
 change improves predictability and eliminates reliance of the dispatcher on the
 C standard library.
 
+The ``--darwin-version-min`` option was added to specify the minimum deployment
+target version for macOS and iOS applications addressing the new linker
+introduced in Xcode 15.0 that issues a warning when no version is provided.
+
 Getting Started with ISPC
 =========================
 
@@ -915,6 +919,12 @@ that removes unused sections: ``--gc-sections`` for ``GNU ld`` and ``/OPT:REF``
 for ``MSVC link.exe``. On macOS, this flag does not have any effect (as in
 clang) because dead stripping ``-dead_strip`` for ``ld64`` works differently.
 The ``-fno-function-sections`` disables this behavior.
+
+The ``--darwin-version-min`` option was added to specify the minimum deployment
+target version for macOS and iOS applications addressing the new linker
+introduced in Xcode 15.0 that issues a warning when no version is provided.
+The version should be specified in the format ``[major.minor]``. When an empty
+string ("") is passed, no minimum version will be specified in the output binary.
 
 Selecting The Compilation Target
 --------------------------------
