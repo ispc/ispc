@@ -393,8 +393,6 @@ def check_targets():
                      ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2"], "-hsw", False]),
       ("AVX2VNNI",   [["avx2vnni-i32x4", "avx2vnni-i32x8",  "avx2vnni-i32x16"],
                      ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI"], "-adl", False]),
-      ("KNL",        [["avx512knl-x16"],
-                     ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI", "KNL"], "-knl", False]),
       ("SKX",        [["avx512skx-x16", "avx512skx-x8", "avx512skx-x4", "avx512skx-x64", "avx512skx-x32"],
                      ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI", "SKX"], "-skx", False]),
       ("ICL",        [["avx512icl-x16", "avx512icl-x8", "avx512icl-x4", "avx512icl-x64", "avx512icl-x32"],
@@ -947,8 +945,7 @@ if __name__ == '__main__':
     "Stability validation run with LLVM 7.0, 8.0; -O0; x86,\nupdate fail_db.txt with passes and fails\n\talloy.py -r --only='7.0 -O0 stability 8.0 x86' --update-errors=FP\n" +
     "Try to build compiler with all LLVM\n\talloy.py -r --only=build\n" +
     "Performance validation run with 10 runs of each test and comparing to branch 'old'\n\talloy.py -r --only=performance --compare-with=old --number=10\n" +
-    "Validation run. Update fail_db.txt with new fails\n\talloy.py -r --update-errors=F\n" +
-    "Test KNL target (requires sde)\n\talloy.py -r --only='stability' --only-targets='avx512knl-x16'\n")
+    "Validation run. Update fail_db.txt with new fails\n\talloy.py -r --update-errors=F\n")
 
     num_threads="%s" % multiprocessing.cpu_count()
     parser = MyParser(usage="Usage: alloy.py -r/-b [options]", epilog=examples)

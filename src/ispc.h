@@ -199,7 +199,7 @@ class Target {
         // AVX11 = 4,
         AVX2 = 4,
         AVX2VNNI = 5,
-        KNL_AVX512 = 6,
+        // 6 was previously used for KNL_AVX512
         SKX_AVX512 = 7,
         ICL_AVX512 = 8,
         SPR_AVX512 = 9,

@@ -45,8 +45,6 @@ export uniform int detect_isa() {
     return 8;
 #elif defined(ISPC_TARGET_AVX512SKX)
     return 7;
-#elif defined(ISPC_TARGET_AVX512KNL)
-    return 6;
 #elif defined(ISPC_TARGET_AVX2VNNI)
     return 5;
 #elif defined(ISPC_TARGET_AVX2)
