@@ -325,7 +325,7 @@ def check_if_skip_test(filename, host, target):
             # rule_value can be a regexp that can match the actual value
             # check here if it matches
             val = rule_values[rule_key]
-            match = re.match(rule_value, val)
+            match = re.fullmatch(rule_value, val)
 
             # Apply negation logic correctly
             if negate:
