@@ -14,6 +14,9 @@ concurrency:
   group: pre-release
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 env:
   LLVM_REPO: https://github.com/ispc/ispc.dependencies
   ISPC_HOME: ${{ github.workspace }}
