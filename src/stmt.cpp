@@ -2273,7 +2273,7 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtrInfo, nullptr, "remaining_bits");
 
         // Find the index of the first set bit in the mask
-        llvm::Function *ctlzFunc = m->module->getFunction(builtin::__count_trailing_zeros_i64);
+        llvm::Function *ctlzFunc = m->module->getFunction(builtin::__count_trailing_zeros_uniform_i64);
         Assert(ctlzFunc != nullptr);
         llvm::Value *firstSet = ctx->CallInst(ctlzFunc, nullptr, remainingBits, "first_set");
 
@@ -2503,7 +2503,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtrInfo, nullptr, "remaining_bits");
 
         // Find the index of the first set bit in the mask
-        llvm::Function *ctlzFunc = m->module->getFunction(builtin::__count_trailing_zeros_i64);
+        llvm::Function *ctlzFunc = m->module->getFunction(builtin::__count_trailing_zeros_uniform_i64);
         Assert(ctlzFunc != nullptr);
         llvm::Value *firstSet = ctx->CallInst(ctlzFunc, nullptr, remainingBits, "first_set");
 

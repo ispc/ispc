@@ -1622,18 +1622,18 @@ define $2 @__atomic_compare_exchange_uniform_$3_global(i8* %ptr, $2 %cmp,
 define(`ctlztz', `
 declare_count_zeros()
 
-define i32 @__count_trailing_zeros_i32(i32) nounwind readnone alwaysinline {
+define i32 @__count_trailing_zeros_uniform_i32(i32) nounwind readnone alwaysinline {
   %rev = call i32 @llvm.genx.bfrev.i32 (i32 %0)
   %tz = call i32 @llvm.genx.lzd.i32 (i32 %rev)
   ret i32 %tz
 }
 
-define i64 @__count_trailing_zeros_i64(i64) nounwind readnone alwaysinline {
+define i64 @__count_trailing_zeros_uniform_i64(i64) nounwind readnone alwaysinline {
   %hi.init = lshr i64 %0, 32
   %hi = trunc i64 %hi.init to i32
   %lo = trunc i64 %0 to i32
-  %tz.hi = call i32 @__count_trailing_zeros_i32(i32 %hi)
-  %tz.lo = call i32 @__count_trailing_zeros_i32(i32 %lo)
+  %tz.hi = call i32 @__count_trailing_zeros_uniform_i32(i32 %hi)
+  %tz.lo = call i32 @__count_trailing_zeros_uniform_i32(i32 %lo)
   %use.hi = icmp eq i32 %tz.lo, 32
   %tz.hi.sel = select i1 %use.hi, i32 %tz.hi, i32 0
   %tz.32 = add i32 %tz.lo, %tz.hi.sel
@@ -1641,12 +1641,12 @@ define i64 @__count_trailing_zeros_i64(i64) nounwind readnone alwaysinline {
   ret i64 %tz
 }
 
-define i32 @__count_leading_zeros_i32(i32) nounwind readnone alwaysinline {
+define i32 @__count_leading_zeros_uniform_i32(i32) nounwind readnone alwaysinline {
   %c = call i32 @llvm.genx.lzd.i32(i32 %0)
   ret i32 %c
 }
 
-define i64 @__count_leading_zeros_i64(i64) nounwind readnone alwaysinline {
+define i64 @__count_leading_zeros_uniform_i64(i64) nounwind readnone alwaysinline {
   %hi.init = lshr i64 %0, 32
   %hi = trunc i64 %hi.init to i32
   %lo = trunc i64 %0 to i32
@@ -5096,7 +5096,7 @@ entry:
 
 domixed:
   ; First, figure out which lane is the first active one
-  %first = call i64 @__count_trailing_zeros_i64(i64 %mm)
+  %first = call i64 @__count_trailing_zeros_uniform_i64(i64 %mm)
   %first32 = trunc i64 %first to i32
   %baseval = extractelement <$1 x $2> %v, i32 %first32
   %basev1 = insertelement <$1 x $2> undef, $2 %baseval, i32 0
