@@ -803,10 +803,10 @@ ISPC_BUILTINS_ATTRS void __do_assert_uniform(uniform int8 *uniform, uniform bool
 ISPC_BUILTINS_ATTRS void __do_assert_varying(uniform int8 *uniform, UIntMaskType, UIntMaskType);
 #endif // ISPC_TARGET_XE
 
-ISPC_BUILTINS_ATTRS uniform int32 __count_leading_zeros_i32(uniform int32);
-ISPC_BUILTINS_ATTRS uniform int64 __count_leading_zeros_i64(uniform int64);
-ISPC_BUILTINS_ATTRS uniform int32 __count_trailing_zeros_i32(uniform int32);
-ISPC_BUILTINS_ATTRS uniform int64 __count_trailing_zeros_i64(uniform int64);
+ISPC_BUILTINS_ATTRS uniform int32 __count_leading_zeros_uniform_i32(uniform int32);
+ISPC_BUILTINS_ATTRS uniform int64 __count_leading_zeros_uniform_i64(uniform int64);
+ISPC_BUILTINS_ATTRS uniform int32 __count_trailing_zeros_uniform_i32(uniform int32);
+ISPC_BUILTINS_ATTRS uniform int64 __count_trailing_zeros_uniform_i64(uniform int64);
 
 ISPC_BUILTINS_ATTRS uniform int64 __movmsk(UIntMaskType);
 ISPC_BUILTINS_ATTRS uniform bool __any(UIntMaskType);

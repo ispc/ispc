@@ -2639,7 +2639,7 @@ llvm::Value *FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask, 
         llvm::Function *fmm = mm[0]->function;
         llvm::Value *int_mask = CallInst(fmm, nullptr, mask, llvm::Twine(mask->getName()) + "_movmsk");
         std::vector<Symbol *> lz;
-        m->symbolTable->LookupFunction(builtin::__count_trailing_zeros_i64, &lz);
+        m->symbolTable->LookupFunction(builtin::__count_trailing_zeros_uniform_i64, &lz);
         llvm::Function *flz = lz[0]->function;
         llvm::Value *elem_idx = CallInst(flz, nullptr, int_mask, llvm::Twine(mask->getName()) + "_clz");
         llvm::Value *elem = llvm::ExtractElementInst::Create(
@@ -3628,7 +3628,7 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
             // Figure out the first lane that still needs its function
             // pointer to be called.
             llvm::Value *currentMask = LoadInst(maskPtrInfo);
-            llvm::Function *cttz = m->module->getFunction(builtin::__count_trailing_zeros_i64);
+            llvm::Function *cttz = m->module->getFunction(builtin::__count_trailing_zeros_uniform_i64);
             AssertPos(currentPos, cttz != nullptr);
             llvm::Value *firstLane64 = CallInst(cttz, nullptr, LaneMask(currentMask), "first_lane64");
             llvm::Value *firstLane = TruncInst(firstLane64, LLVMTypes::Int32Type, "first_lane32");

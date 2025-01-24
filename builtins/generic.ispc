@@ -746,10 +746,10 @@ EXT varying int8 __avg_down_int8(varying int8 a, varying int8 b) { return ((int1
 EXT varying int16 __avg_down_int16(varying int16 a, varying int16 b) { return ((int32)a + (int32)b) >> 1; }
 
 // count trailing zeros
-EXT READNONE uniform int32 __count_trailing_zeros_i32(uniform int32 x) { return @llvm.cttz(x, false); }
-EXT READNONE uniform int64 __count_trailing_zeros_i64(uniform int64 x) { return @llvm.cttz(x, false); }
-EXT READNONE uniform int32 __count_leading_zeros_i32(uniform int32 x) { return @llvm.ctlz(x, false); }
-EXT READNONE uniform int64 __count_leading_zeros_i64(uniform int64 x) { return @llvm.ctlz(x, false); }
+EXT READNONE uniform int32 __count_trailing_zeros_uniform_i32(uniform int32 x) { return @llvm.cttz(x, false); }
+EXT READNONE uniform int64 __count_trailing_zeros_uniform_i64(uniform int64 x) { return @llvm.cttz(x, false); }
+EXT READNONE uniform int32 __count_leading_zeros_uniform_i32(uniform int32 x) { return @llvm.ctlz(x, false); }
+EXT READNONE uniform int64 __count_leading_zeros_uniform_i64(uniform int64 x) { return @llvm.ctlz(x, false); }
 
 // population count
 EXT uniform int32 __popcnt_int32(uniform int32 x) { return @llvm.ctpop(x); }
