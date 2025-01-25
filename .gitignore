@@ -19,4 +19,4 @@ examples/*/test
 *.swp
 check_isa.exe
 build*
-
+CMakeFiles/*
