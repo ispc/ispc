@@ -1,4 +1,4 @@
-;;  Copyright (c) 2013-2023, Intel Corporation
+;;  Copyright (c) 2013-2025, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -248,7 +248,7 @@ define(`svml_set_suffix', `
 
 ;; svml() - define SVML implementation for float and double types.
 ;; The function requires WIDTH macro to be defined in the calling context.
-;; $1 - ISA, either SSE2, SSE4, AVX1, AVX2, AVX512KNL, or AVX512SKX.
+;; $1 - ISA, either SSE2, SSE4, AVX1, AVX2, or AVX512SKX.
 ;;
 ;; A handy command to verify SVML implementation across all targets that support it:
 ;; alloy.py -r --only="current stability -O2 -O1 -O0" --only-targets="sse avx" --ispc-flags="--math-lib=svml" --compiler=icpx --time
@@ -353,16 +353,6 @@ define(`svml', `
     WIDTH, `64', `
       svml_define_x(float,f16`'SVML_SUFFIX,16,f,64)
       svml_define_x(double,8`'SVML_SUFFIX,8,d,64)
-    ', `
-      errprint(`ERROR: svml() call cannot handle width: 'WIDTH` for ISA: '$1)
-      m4exit(`1')
-    ')
-  ',
-  $1, `AVX512KNL', `
-    svml_set_suffix(`a3',`b3')
-    ifelse(WIDTH, `16', `
-      svml_define(float,f16`'SVML_SUFFIX,16,f)
-      svml_define_x(double,8`'SVML_SUFFIX,8,d,16)
     ', `
       errprint(`ERROR: svml() call cannot handle width: 'WIDTH` for ISA: '$1)
       m4exit(`1')

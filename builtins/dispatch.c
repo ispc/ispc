@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2013-2024, Intel Corporation
+  Copyright (c) 2013-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -146,7 +146,7 @@ static int __get_system_isa() {
         if (skx) {
             return 7; // SKX
         } else if (knl) {
-            return 6; // KNL
+            abort(); // KNL
         }
         // If it's unknown AVX512 target, fall through and use AVX2
         // or whatever is available in the machine.

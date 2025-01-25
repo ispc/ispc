@@ -71,12 +71,8 @@ function (generate_generic_builtins ispc_name)
     if (ARM_ENABLED)
         list(APPEND ARCH_LIST
             "aarch64,64"
+            "arm,32"
         )
-        if (NOT APPLE AND NOT WIN32)
-            list(APPEND ARCH_LIST
-                "arm,32"
-            )
-        endif()
     endif()
 
     foreach(os ${os_list})
@@ -85,6 +81,10 @@ function (generate_generic_builtins ispc_name)
                 string(REGEX REPLACE "," ";" pair_split ${pair})
                 list(GET pair_split 0 arch)
                 list(GET pair_split 1 bit)
+                # Skip unsupported cases, see Target::GetTripleString for more details.
+                if (${os} STREQUAL "windows" AND ${arch} STREQUAL "arm")
+                    continue()
+                endif()
                 generate_generic_target_builtin(${ispc_name} ${target} ${arch} ${bit} ${os})
                 generate_generic_target_stdlib(${ispc_name} ${target} ${arch} ${bit} ${os})
             endforeach()

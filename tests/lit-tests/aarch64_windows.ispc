@@ -2,7 +2,6 @@
 
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --print-target | FileCheck %s -check-prefix=CHECK_DEFAULT
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --arch=aarch64 --print-target | FileCheck %s -check-prefix=CHECK_AARCH64
-// RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --arch=aarch64 --cpu=cortex-a15 --print-target 2>&1 | FileCheck %s -check-prefix=CHECK_AARCH64_A15
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --arch=aarch64 --cpu=cortex-a35 --print-target | FileCheck %s -check-prefix=CHECK_AARCH64_A35
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --arch=aarch64 --cpu=cortex-a57 --print-target | FileCheck %s -check-prefix=CHECK_AARCH64_A57
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --arch=aarch64 --cpu=cortex-a55 --print-target | FileCheck %s -check-prefix=CHECK_AARCH64_A55
@@ -29,8 +28,6 @@
 // CHECK_AARCH64-SAME: +fp-armv8
 // CHECK_AARCH64-SAME: +neon
 // CHECK_AARCH64-SAME: +sha2
-
-// CHECK_AARCH64_A15: Error: Invalid CPU name for AArch64 architecture: cortex-a15
 
 // CHECK_AARCH64_A35: Triple: aarch64-pc-windows-msvc
 // CHECK_AARCH64_A35-NEXT: CPU: cortex-a35

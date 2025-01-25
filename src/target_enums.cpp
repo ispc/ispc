@@ -135,11 +135,8 @@ ISPCTarget operator++(ISPCTarget &target, int dummy) {
     static_assert(static_cast<underlying>(ISPCTarget::avx2vnni_i32x16) ==
                       static_cast<underlying>(ISPCTarget::avx2vnni_i32x8) + 1,
                   "Enum ISPCTarget is not sequential");
-    static_assert(static_cast<underlying>(ISPCTarget::avx512knl_x16) ==
-                      static_cast<underlying>(ISPCTarget::avx2vnni_i32x16) + 1,
-                  "Enum ISPCTarget is not sequential");
     static_assert(static_cast<underlying>(ISPCTarget::avx512skx_x4) ==
-                      static_cast<underlying>(ISPCTarget::avx512knl_x16) + 1,
+                      static_cast<underlying>(ISPCTarget::avx2vnni_i32x16) + 1,
                   "Enum ISPCTarget is not sequential");
     static_assert(static_cast<underlying>(ISPCTarget::avx512skx_x8) ==
                       static_cast<underlying>(ISPCTarget::avx512skx_x4) + 1,
@@ -186,11 +183,17 @@ ISPCTarget operator++(ISPCTarget &target, int dummy) {
     static_assert(static_cast<underlying>(ISPCTarget::neon_i8x16) ==
                       static_cast<underlying>(ISPCTarget::avx512spr_x64) + 1,
                   "Enum ISPCTarget is not sequential");
-    static_assert(static_cast<underlying>(ISPCTarget::neon_i16x8) ==
+    static_assert(static_cast<underlying>(ISPCTarget::neon_i8x32) ==
                       static_cast<underlying>(ISPCTarget::neon_i8x16) + 1,
                   "Enum ISPCTarget is not sequential");
-    static_assert(static_cast<underlying>(ISPCTarget::neon_i32x4) ==
+    static_assert(static_cast<underlying>(ISPCTarget::neon_i16x8) ==
+                      static_cast<underlying>(ISPCTarget::neon_i8x32) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::neon_i16x16) ==
                       static_cast<underlying>(ISPCTarget::neon_i16x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::neon_i32x4) ==
+                      static_cast<underlying>(ISPCTarget::neon_i16x16) + 1,
                   "Enum ISPCTarget is not sequential");
     static_assert(static_cast<underlying>(ISPCTarget::neon_i32x8) ==
                       static_cast<underlying>(ISPCTarget::neon_i32x4) + 1,
@@ -373,8 +376,6 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::avx2vnni_i32x8;
     } else if (target == "avx2vnni-i32x16") {
         return ISPCTarget::avx2vnni_i32x16;
-    } else if (target == "avx512knl-x16" || target == "avx512knl-i32x16") {
-        return ISPCTarget::avx512knl_x16;
     } else if (target == "avx512skx-x4" || target == "avx512skx-i32x4") {
         return ISPCTarget::avx512skx_x4;
     } else if (target == "avx512skx-x8" || target == "avx512skx-i32x8") {
@@ -407,8 +408,12 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::avx512spr_x64;
     } else if (target == "neon-i8x16") {
         return ISPCTarget::neon_i8x16;
+    } else if (target == "neon-i8x32") {
+        return ISPCTarget::neon_i8x32;
     } else if (target == "neon-i16x8") {
         return ISPCTarget::neon_i16x8;
+    } else if (target == "neon-i16x16") {
+        return ISPCTarget::neon_i16x16;
     } else if (target == "neon-i32x4" || target == "neon") {
         return ISPCTarget::neon_i32x4;
     } else if (target == "neon-i32x8") {
@@ -554,8 +559,6 @@ std::string ISPCTargetToString(ISPCTarget target) {
         return "avx2vnni-i32x8";
     case ISPCTarget::avx2vnni_i32x16:
         return "avx2vnni-i32x16";
-    case ISPCTarget::avx512knl_x16:
-        return "avx512knl-x16";
     case ISPCTarget::avx512skx_x4:
         return "avx512skx-x4";
     case ISPCTarget::avx512skx_x8:
@@ -588,8 +591,12 @@ std::string ISPCTargetToString(ISPCTarget target) {
         return "avx512spr-x64";
     case ISPCTarget::neon_i8x16:
         return "neon-i8x16";
+    case ISPCTarget::neon_i8x32:
+        return "neon-i8x32";
     case ISPCTarget::neon_i16x8:
         return "neon-i16x8";
+    case ISPCTarget::neon_i16x16:
+        return "neon-i16x16";
     case ISPCTarget::neon_i32x4:
         return "neon-i32x4";
     case ISPCTarget::neon_i32x8:
@@ -685,7 +692,6 @@ bool ISPCTargetIsX86(ISPCTarget target) {
     case ISPCTarget::avx2vnni_i32x4:
     case ISPCTarget::avx2vnni_i32x8:
     case ISPCTarget::avx2vnni_i32x16:
-    case ISPCTarget::avx512knl_x16:
     case ISPCTarget::avx512skx_x4:
     case ISPCTarget::avx512skx_x8:
     case ISPCTarget::avx512skx_x16:
@@ -710,7 +716,9 @@ bool ISPCTargetIsX86(ISPCTarget target) {
 bool ISPCTargetIsNeon(ISPCTarget target) {
     switch (target) {
     case ISPCTarget::neon_i8x16:
+    case ISPCTarget::neon_i8x32:
     case ISPCTarget::neon_i16x8:
+    case ISPCTarget::neon_i16x16:
     case ISPCTarget::neon_i32x4:
     case ISPCTarget::neon_i32x8:
         return true;

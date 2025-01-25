@@ -671,6 +671,18 @@ will be removed in future releases.
 Updating ISPC Programs For Changes In ISPC 1.26.0
 -------------------------------------------------
 
+There are breaking changes to ARM support:
+
+The ``--arch=arm``, which previously mapped to ARMv7 (32-bit), now maps to ARMv8
+(32-bit).
+There are no changes to ``--arch=aarch64``, which continues to map to ARMv8
+(64-bit).
+The CPU definitions for the ARMv7 architecture have been removed: ``cortex-a9``
+and ``cortex-a15``.
+New CPU definitions were introduced, such as ``cortex-a55``, ``cortex-a78``,
+``cortex-a510``, ```cortex-a520``, and support for new Apple devices.
+New double-pumped targets were introduced: ``neon-i16x16`` and ``neon-i8x32``.
+
 Macro definitions for LLVM version that ISPC is based on were added. Please,
 refer to `The Preprocessor`_ for more details.
 
@@ -678,6 +690,8 @@ refer to `The Preprocessor`_ for more details.
 
 ``__attribute__((deprecated))`` can be applied to a function to mark it as
 deprecated. It leads to a warning when the function is called.
+
+The target ``avx512knl-x16`` was removed.
 
 
 Getting Started with ISPC
@@ -957,7 +971,6 @@ Target       Description
 ------------ ---------------------------------------------------------
 avx, avx1    AVX (2010-2011 era Intel CPUs)
 avx2         AVX 2 target (2013- Intel codename Haswell CPUs)
-avx512knl    AVX 512 target (Xeon Phi chips codename Knights Landing)
 avx512skx    AVX 512 target (Skylake Xeon CPUs)
 avx512spr    AVX 512 target (Sapphire Rapids Xeon CPUs, 4th generation Xeon Scalable)
 neon         ARM NEON
@@ -1015,29 +1028,17 @@ x86 targets:
 ``avx1-i32x4``, ``avx1-i32x8``, ``avx1-i32x16``, ``avx1-i64x4``, ``avx2-i8x32``,
 ``avx2-i16x16``, ``avx2-i32x4``, ``avx2-i32x8``, ``avx2-i32x16``, ``avx2-i64x4``,
 ``avx2vnni-i32x4``, ``avx2vnni-i32x8``, ``avx2vnni-i32x16``,
-``avx512knl-x16``, ``avx512skx-x4``, ``avx512skx-x8``, ``avx512skx-x16``, ``avx512skx-x32``,
+``avx512skx-x4``, ``avx512skx-x8``, ``avx512skx-x16``, ``avx512skx-x32``,
 ``avx512skx-x64``, ``avx512icl-x4``, ``avx512icl-x8``, ``avx512icl-x16``, ``avx512icl-x32``,
 ``avx512icl-x64``, ``avx512spr-x4``, ``avx512spr-x8``, ``avx512spr-x16``, ``avx512spr-x32``,
 ``avx512spr-x64``.
 
 Neon targets:
 
-``neon-i8x16``, ``neon-i16x8``, ``neon-i32x4``, ``neon-i32x8``.
+``neon-i8x16``, ``neon-i16x8``, ``neon-i32x4``, ``neon-i32x8``, ``neon-i8x32`` and ``neon-i16x16``.
 
-The following table lists the ISPC targets and their corresponding architecture details for ARM.
-
-============================= =================
-ISPC target/arch              ARM arch
------------------------------ -----------------
-``neon-i8x16``/``arm``        ARMv7 (32-bit)
-``neon-i8x16``/``aarch64``    N/A
-``neon-i16x8``/``arm``        ARMv7 (32-bit)
-``neon-i16x8``/``aarch64``    N/A
-``neon-i32x4``/``arm``        ARMv8-A (32-bit)
-``neon-i32x4``/``aarch64``    ARMv8-A (64-bit)
-``neon-i32x8``/``arm``        ARMv8-A (32-bit)
-``neon-i32x8``/``aarch64``    ARMv8-A (64-bit)
-============================= =================
+These targets correspond to ARMv8 (64-bit) when ``--arch=aarch64`` is used (default) and
+to ARMv8 (32-bit) when ``--arch=arm`` is used.
 
 Xe targets:
 

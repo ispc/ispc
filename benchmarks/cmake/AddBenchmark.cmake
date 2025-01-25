@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2020-2024, Intel Corporation
+#  Copyright (c) 2020-2025, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -45,7 +45,7 @@ else()
 endif()
 
 # Suffixes for multi-target compilation (x86 only)
-set(ISPC_KNOWN_TARGETS "sse2" "sse4" "avx1" "avx2" "avx512knl" "avx512skx")
+set(ISPC_KNOWN_TARGETS "sse2" "sse4" "avx1" "avx2" "avx512skx")
 
 #######################
 #  add_ispc_to_target
