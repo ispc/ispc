@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2024, Intel Corporation
+;;  Copyright (c) 2010-2025, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -32,6 +32,14 @@ define(`ALL_TRUE_VECTOR',
 `ifelse(WIDTH, `32', `<WIDTH x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>',
         WIDTH, `16', `<WIDTH x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>',
                      `<WIDTH x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>')')
+
+;; Get constant vector for particular width
+;; $1 - element type
+;; $2 - element value
+define(`CONSTANT_VECTOR',
+`ifelse(WIDTH, `32', `<$1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2>',
+        WIDTH, `16', `<$1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2>',
+                     `<$1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2>')')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -1628,6 +1636,12 @@ define i32 @__count_trailing_zeros_uniform_i32(i32) nounwind readnone alwaysinli
   ret i32 %tz
 }
 
+define <WIDTH x i32> @__count_trailing_zeros_varying_i32(<WIDTH x i32>) nounwind readnone alwaysinline {
+  %rev = call <WIDTH x i32> @llvm.genx.bfrev.XE_SUFFIX(i32)(<WIDTH x i32> %0)
+  %tz = call <WIDTH x i32> @llvm.genx.lzd.XE_SUFFIX(i32)(<WIDTH x i32> %rev)
+  ret <WIDTH x i32> %tz
+}
+
 define i64 @__count_trailing_zeros_uniform_i64(i64) nounwind readnone alwaysinline {
   %hi.init = lshr i64 %0, 32
   %hi = trunc i64 %hi.init to i32
@@ -1641,9 +1655,27 @@ define i64 @__count_trailing_zeros_uniform_i64(i64) nounwind readnone alwaysinli
   ret i64 %tz
 }
 
+define <WIDTH x i64> @__count_trailing_zeros_varying_i64(<WIDTH x i64> %x) nounwind readnone alwaysinline {
+  %hi.init = lshr <WIDTH x i64> %x, CONSTANT_VECTOR(i64, 32)
+  %hi = trunc <WIDTH x i64> %hi.init to <WIDTH x i32>
+  %lo = trunc <WIDTH x i64> %x to <WIDTH x i32>
+  %tz.hi = call <WIDTH x i32> @__count_trailing_zeros_varying_i32(<WIDTH x i32> %hi)
+  %tz.lo = call <WIDTH x i32> @__count_trailing_zeros_varying_i32(<WIDTH x i32> %lo)
+  %use.hi = icmp eq <WIDTH x i32> %tz.lo, CONSTANT_VECTOR(i32, 32)
+  %tz.hi.sel = select <WIDTH x i1> %use.hi, <WIDTH x i32> %tz.hi, <WIDTH x i32> zeroinitializer
+  %tz.32 = add <WIDTH x i32> %tz.lo, %tz.hi.sel
+  %tz = zext <WIDTH x i32> %tz.32 to <WIDTH x i64>
+  ret <WIDTH x i64> %tz
+}
+
 define i32 @__count_leading_zeros_uniform_i32(i32) nounwind readnone alwaysinline {
   %c = call i32 @llvm.genx.lzd.i32(i32 %0)
   ret i32 %c
+}
+
+define <WIDTH x i32> @__count_leading_zeros_varying_i32(<WIDTH x i32>) nounwind readnone alwaysinline {
+  %c = call <WIDTH x i32> @llvm.genx.lzd.XE_SUFFIX(i32)(<WIDTH x i32> %0)
+  ret <WIDTH x i32> %c
 }
 
 define i64 @__count_leading_zeros_uniform_i64(i64) nounwind readnone alwaysinline {
@@ -1658,6 +1690,20 @@ define i64 @__count_leading_zeros_uniform_i64(i64) nounwind readnone alwaysinlin
   %lz = zext i32 %lz.32 to i64
   ret i64 %lz
 }
+
+define <WIDTH x i64> @__count_leading_zeros_varying_i64(<WIDTH x i64> %x) nounwind readnone alwaysinline {
+  %hi.init = lshr <WIDTH x i64> %x, CONSTANT_VECTOR(i64, 32)
+  %hi = trunc <WIDTH x i64> %hi.init to <WIDTH x i32>
+  %lo = trunc <WIDTH x i64> %x to <WIDTH x i32>
+  %lz.hi = call <WIDTH x i32> @llvm.genx.lzd.XE_SUFFIX(i32)(<WIDTH x i32> %hi)
+  %lz.lo = call <WIDTH x i32> @llvm.genx.lzd.XE_SUFFIX(i32)(<WIDTH x i32> %lo)
+  %use.lo = icmp eq <WIDTH x i32> %lz.hi, CONSTANT_VECTOR(i32, 32)
+  %lz.lo.sel = select <WIDTH x i1> %use.lo, <WIDTH x i32> %lz.lo, <WIDTH x i32> zeroinitializer
+  %lz.32 = add <WIDTH x i32> %lz.hi, %lz.lo.sel
+  %lz = zext <WIDTH x i32> %lz.32 to <WIDTH x i64>
+  ret <WIDTH x i64> %lz
+}
+
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5077,6 +5123,8 @@ declare i32 @llvm.genx.lzd.i32(i32)
 declare i32 @llvm.genx.bfrev.i32(i32)
 declare i32 @llvm.cttz.i32(i32)
 declare i64 @llvm.cttz.i64(i64)
+declare <WIDTH x i32> @llvm.genx.lzd.XE_SUFFIX(i32)(<WIDTH x i32>)
+declare <WIDTH x i32> @llvm.genx.bfrev.XE_SUFFIX(i32)(<WIDTH x i32>)
 
 define(`count_zeros_are_defined', true)
 ')

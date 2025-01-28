@@ -808,6 +808,11 @@ ISPC_BUILTINS_ATTRS uniform int64 __count_leading_zeros_uniform_i64(uniform int6
 ISPC_BUILTINS_ATTRS uniform int32 __count_trailing_zeros_uniform_i32(uniform int32);
 ISPC_BUILTINS_ATTRS uniform int64 __count_trailing_zeros_uniform_i64(uniform int64);
 
+ISPC_BUILTINS_ATTRS varying int32 __count_leading_zeros_varying_i32(varying int32);
+ISPC_BUILTINS_ATTRS varying int64 __count_leading_zeros_varying_i64(varying int64);
+ISPC_BUILTINS_ATTRS varying int32 __count_trailing_zeros_varying_i32(varying int32);
+ISPC_BUILTINS_ATTRS varying int64 __count_trailing_zeros_varying_i64(varying int64);
+
 ISPC_BUILTINS_ATTRS uniform int64 __movmsk(UIntMaskType);
 ISPC_BUILTINS_ATTRS uniform bool __any(UIntMaskType);
 ISPC_BUILTINS_ATTRS uniform bool __all(UIntMaskType);

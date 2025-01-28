@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -564,59 +564,79 @@ __declspec(safe, cost1) static inline uniform int64 count_trailing_zeros(uniform
 }
 
 __declspec(safe) static inline unsigned int32 count_leading_zeros(unsigned int32 v) {
-    unsigned int32 r;
-    for (uniform int i = 0; i < programCount; ++i)
-        r = insert(r, i, (uniform unsigned int32)__count_leading_zeros_uniform_i32(extract(v, i)));
-    return r;
+    if (__have_conflict_detection) {
+        return __count_leading_zeros_varying_i32(v);
+    } else {
+        unsigned int32 r;
+        for (uniform int i = 0; i < programCount; ++i)
+            r = insert(r, i, (uniform unsigned int32)__count_leading_zeros_uniform_i32(extract(v, i)));
+        return r;
+    }
 }
 
 __declspec(safe) static inline unsigned int64 count_leading_zeros(unsigned int64 v) {
-    unsigned int64 r;
-    for (uniform int i = 0; i < programCount; ++i)
-        r = insert(r, i, (uniform unsigned int64)__count_leading_zeros_uniform_i64(extract(v, i)));
-    return r;
+    if (__have_conflict_detection) {
+        return __count_leading_zeros_varying_i64(v);
+    } else {
+        unsigned int64 r;
+        for (uniform int i = 0; i < programCount; ++i)
+            r = insert(r, i, (uniform unsigned int64)__count_leading_zeros_uniform_i64(extract(v, i)));
+        return r;
+    }
 }
 
 __declspec(safe) static inline unsigned int32 count_trailing_zeros(unsigned int32 v) {
-    unsigned int32 r;
-    for (uniform int i = 0; i < programCount; ++i)
-        r = insert(r, i, (uniform unsigned int32)__count_trailing_zeros_uniform_i32(extract(v, i)));
-    return r;
+    // Using the vector LLVM's cttz intrinsic is more efficient than
+    // counting trailing zeros in a loop. However, it is not true for ctlz -
+    // a loop of uniform calculations performs better than vector LLVM's ctlz intrinsic.
+    // https://github.com/llvm/llvm-project/issues/124993
+    return __count_trailing_zeros_varying_i32(v);
 }
 
 __declspec(safe) static inline unsigned int64 count_trailing_zeros(unsigned int64 v) {
-    unsigned int64 r;
-    for (uniform int i = 0; i < programCount; ++i)
-        r = insert(r, i, (uniform unsigned int64)__count_trailing_zeros_uniform_i64(extract(v, i)));
-    return r;
+    // Using the vector LLVM's cttz intrinsic is more efficient than
+    // counting trailing zeros in a loop. However, it is not true for ctlz -
+    // a loop of uniform calculations performs better than vector LLVM's ctlz intrinsic.
+    // https://github.com/llvm/llvm-project/issues/124993
+    return __count_trailing_zeros_varying_i64(v);
 }
 
 __declspec(safe) static inline int32 count_leading_zeros(int32 v) {
-    int32 r;
-    for (uniform int i = 0; i < programCount; ++i)
-        r = insert(r, i, __count_leading_zeros_uniform_i32(extract(v, i)));
-    return r;
+    if (__have_conflict_detection) {
+        return __count_leading_zeros_varying_i32(v);
+    } else {
+        int32 r;
+        for (uniform int i = 0; i < programCount; ++i)
+            r = insert(r, i, __count_leading_zeros_uniform_i32(extract(v, i)));
+        return r;
+    }
 }
 
 __declspec(safe) static inline int64 count_leading_zeros(int64 v) {
-    int64 r;
-    for (uniform int i = 0; i < programCount; ++i)
-        r = insert(r, i, __count_leading_zeros_uniform_i64(extract(v, i)));
-    return r;
+    if (__have_conflict_detection) {
+        return __count_leading_zeros_varying_i64(v);
+    } else {
+        int64 r;
+        for (uniform int i = 0; i < programCount; ++i)
+            r = insert(r, i, __count_leading_zeros_uniform_i64(extract(v, i)));
+        return r;
+    }
 }
 
 __declspec(safe) static inline int32 count_trailing_zeros(int32 v) {
-    int32 r;
-    for (uniform int i = 0; i < programCount; ++i)
-        r = insert(r, i, __count_trailing_zeros_uniform_i32(extract(v, i)));
-    return r;
+    // Using the vector LLVM's cttz intrinsic is more efficient than
+    // counting trailing zeros in a loop. However, it is not true for ctlz -
+    // a loop of uniform calculations performs better than vector LLVM's ctlz intrinsic.
+    // https://github.com/llvm/llvm-project/issues/124993
+    return __count_trailing_zeros_varying_i32(v);
 }
 
 __declspec(safe) static inline int64 count_trailing_zeros(int64 v) {
-    int64 r;
-    for (uniform int i = 0; i < programCount; ++i)
-        r = insert(r, i, __count_trailing_zeros_uniform_i64(extract(v, i)));
-    return r;
+    // Using the vector LLVM's cttz intrinsic is more efficient than
+    // counting trailing zeros in a loop. However, it is not true for ctlz -
+    // a loop of uniform calculations performs better than vector LLVM's ctlz intrinsic.
+    // https://github.com/llvm/llvm-project/issues/124993
+    return __count_trailing_zeros_varying_i64(v);
 }
 
 ///////////////////////////////////////////////////////////////////////////

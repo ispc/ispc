@@ -976,7 +976,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
       m_hasHalfFullSupport(false), m_hasRand(false), m_hasGather(false), m_hasScatter(false),
       m_hasTranscendentals(false), m_hasTrigonometry(false), m_hasRsqrtd(false), m_hasRcpd(false),
       m_hasVecPrefetch(false), m_hasSaturatingArithmetic(false), m_hasFp16Support(false), m_hasFp64Support(true),
-      m_warnings(0) {
+      m_hasConflictDetection(false), m_warnings(0) {
     DeviceType CPUID = CPU_None, CPUfromISA = CPU_None;
     AllCPUs a;
     std::string featuresString;
@@ -1508,6 +1508,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
         this->m_hasDotProductVNNI = (m_ispc_target == ISPCTarget::avx512icl_x4) ? true : false;
+        this->m_hasConflictDetection = true;
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x4) ? CPU_ICL : CPU_SKX;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1529,6 +1530,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
         this->m_hasDotProductVNNI = (m_ispc_target == ISPCTarget::avx512icl_x8) ? true : false;
+        this->m_hasConflictDetection = true;
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x8) ? CPU_ICL : CPU_SKX;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1550,6 +1552,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
         this->m_hasDotProductVNNI = (m_ispc_target == ISPCTarget::avx512icl_x16) ? true : false;
+        this->m_hasConflictDetection = true;
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x16) ? CPU_ICL : CPU_SKX;
         if (g->opt.disableZMM) {
             this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
@@ -1580,6 +1583,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
         this->m_hasDotProductVNNI = (m_ispc_target == ISPCTarget::avx512icl_x64) ? true : false;
+        this->m_hasConflictDetection = true;
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x64) ? CPU_ICL : CPU_SKX;
         break;
     case ISPCTarget::avx512skx_x32:
@@ -1603,6 +1607,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
         this->m_hasDotProductVNNI = (m_ispc_target == ISPCTarget::avx512icl_x32) ? true : false;
+        this->m_hasConflictDetection = true;
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x32) ? CPU_ICL : CPU_SKX;
         break;
     case ISPCTarget::avx512spr_x4:
@@ -1623,6 +1628,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasVecPrefetch = false;
         this->m_hasFp16Support = true;
         this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;
         CPUfromISA = CPU_SPR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1645,6 +1651,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasVecPrefetch = false;
         this->m_hasFp16Support = true;
         this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;
         CPUfromISA = CPU_SPR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1667,6 +1674,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasVecPrefetch = false;
         this->m_hasFp16Support = true;
         this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;
         CPUfromISA = CPU_SPR;
         if (g->opt.disableZMM) {
             this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
@@ -1694,6 +1702,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasVecPrefetch = false;
         this->m_hasFp16Support = true;
         this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;
         CPUfromISA = CPU_SPR;
         break;
     case ISPCTarget::avx512spr_x32:
@@ -1714,6 +1723,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasVecPrefetch = false;
         this->m_hasFp16Support = true;
         this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;
         CPUfromISA = CPU_SPR;
         break;
 #ifdef ISPC_ARM_ENABLED

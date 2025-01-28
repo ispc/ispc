@@ -383,6 +383,8 @@ class Target {
 
     bool hasFp64Support() const { return m_hasFp64Support; }
 
+    bool hasConflictDetection() const { return m_hasConflictDetection; }
+
     void setWarning(PerfWarningType warningType) { m_warnings |= static_cast<unsigned int>(warningType); }
 
     bool shouldWarn(PerfWarningType warningType) { return (m_warnings & static_cast<unsigned int>(warningType)) != 0; }
@@ -521,6 +523,9 @@ class Target {
 
     /** Indicates whether the target has FP64 support. */
     bool m_hasFp64Support;
+
+    /** Indicates whether the target has conflict detection-based run-Length encoding (avx512cd). */
+    bool m_hasConflictDetection;
 
     /** A bitset of PerfWarningType values indicating the warnings that are relevant for the target. */
     PerfWarningTypeUnderlyingType m_warnings;
