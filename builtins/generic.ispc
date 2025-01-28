@@ -751,6 +751,23 @@ EXT READNONE uniform int64 __count_trailing_zeros_uniform_i64(uniform int64 x) {
 EXT READNONE uniform int32 __count_leading_zeros_uniform_i32(uniform int32 x) { return @llvm.ctlz(x, false); }
 EXT READNONE uniform int64 __count_leading_zeros_uniform_i64(uniform int64 x) { return @llvm.ctlz(x, false); }
 
+EXT READNONE varying int32 __count_trailing_zeros_varying_i32(varying int32 x) {
+    varying int32 res = @llvm.cttz(x, false);
+    return res;
+}
+EXT READNONE varying int64 __count_trailing_zeros_varying_i64(varying int64 x) {
+    varying int64 res = @llvm.cttz(x, false);
+    return res;
+}
+EXT READNONE varying int32 __count_leading_zeros_varying_i32(varying int32 x) {
+    varying int32 res = @llvm.ctlz(x, false);
+    return res;
+}
+EXT READNONE varying int64 __count_leading_zeros_varying_i64(varying int64 x) {
+    varying int32 res = @llvm.ctlz(x, false);
+    return res;
+}
+
 // population count
 EXT uniform int32 __popcnt_int32(uniform int32 x) { return @llvm.ctpop(x); }
 EXT uniform int64 __popcnt_int64(uniform int64 x) { return @llvm.ctpop(x); }

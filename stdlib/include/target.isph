@@ -1,5 +1,5 @@
 // -*- mode: c++ -*-
-// Copyright (c) 2024, Intel Corporation
+// Copyright (c) 2024-2025, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 // @file stdlib.isph
@@ -103,6 +103,14 @@ static const uniform int32 __have_saturating_arithmetic = ISPC_TARGET_HAS_SATURA
 #endif
 
 static const uniform int32 __have_dot_product_vnni = ISPC_TARGET_HAS_DOT_PRODUCT_VNNI_VAL;
+
+#ifdef ISPC_TARGET_HAS_CONFLICT_DETECTION
+#define ISPC_TARGET_HAS_CONFLICT_DETECTION 1
+#else
+#define ISPC_TARGET_HAS_CONFLICT_DETECTION 0
+#endif
+
+static const uniform int32 __have_conflict_detection = ISPC_TARGET_HAS_CONFLICT_DETECTION;
 
 #ifdef ISPC_TARGET_HAS_XE_PREFETCH
 #define ISPC_TARGET_HAS_XE_PREFETCH_VAL 1
