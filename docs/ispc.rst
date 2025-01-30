@@ -3556,6 +3556,32 @@ loop would be preferable, as ``foreach`` naturally handles the case where
 processed, while the loop above assumes that case implicitly.
 
 
+Remember that ``foreach`` begins each loop iteration with an "all on"
+execution mask, meaning all program instances are active at the start.
+In contrast, a ``for`` loop using ``programIndex`` and ``programCount``
+respects the current execution mask, which may disable some instances.
+To match the behavior of ``foreach`` in regards of masking, you should
+use an ``unmasked`` region. For example:
+
+::
+
+    foreach (index = 0 ... 16) {
+        values[index] = select(upd, newVal, values[index]);
+    }
+
+
+will be equivalent to the following code:
+
+::
+
+  unmasked {
+      for (uniform int i = 0; i < 16; i+=programCount) {
+          int index = i + programIndex;
+          values[index] = select(upd, newVal, values[index]);
+      }
+  }
+
+
 Unstructured Control Flow: "goto"
 ---------------------------------
 
