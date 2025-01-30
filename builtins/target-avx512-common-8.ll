@@ -1,4 +1,4 @@
-;;  Copyright (c) 2020-2024, Intel Corporation
+;;  Copyright (c) 2020-2025, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -546,8 +546,14 @@ define i64 @__reduce_max_uint64(<8 x i64>) nounwind readnone alwaysinline {
 ;; unaligned loads/loads+broadcasts
 
 masked_load(i8,  1)
-masked_load(i16, 2)
 masked_load(half, 2)
+
+declare <8 x i16> @llvm.x86.avx512.mask.loadu.w.128(ptr, <8 x i16>, i8)
+define <8 x i16> @__masked_load_i16(i8 * %ptr, <WIDTH x MASK> %mask) nounwind alwaysinline {
+  %mask_i8 = call i8 @__cast_mask_to_i8 (<WIDTH x MASK> %mask)
+  %res = call <8 x i16> @llvm.x86.avx512.mask.loadu.w.128(i8* %ptr, <8 x i16> zeroinitializer, i8 %mask_i8)
+  ret <8 x i16> %res
+}
 
 declare <8 x i32> @llvm.x86.avx512.mask.loadu.d.256(i8*, <8 x i32>, i8)
 define <8 x i32> @__masked_load_i32(i8 * %ptr, <WIDTH x MASK> %mask) nounwind alwaysinline {
@@ -599,8 +605,15 @@ define <8 x double> @__masked_load_double(i8 * %ptr, <WIDTH x MASK> %mask) reado
 
 
 gen_masked_store(i8) ; llvm.x86.sse2.storeu.dq
-gen_masked_store(i16)
 gen_masked_store(half)
+
+declare void @llvm.x86.avx512.mask.storeu.w.128(ptr, <8 x i16>, i8)
+define void @__masked_store_i16(<8 x i16>* nocapture, <8 x i16> %v, <WIDTH x MASK> %mask) nounwind alwaysinline {
+  %mask_i8 = call i8 @__cast_mask_to_i8 (<WIDTH x MASK> %mask)
+  %ptr_i8 = bitcast <8 x i16>* %0 to i8*
+  call void @llvm.x86.avx512.mask.storeu.w.128(i8* %ptr_i8, <8 x i16> %v, i8 %mask_i8)
+  ret void
+}
 
 declare void @llvm.x86.avx512.mask.storeu.d.256(i8*, <8 x i32>, i8)
 define void @__masked_store_i32(<8 x i32>* nocapture, <8 x i32> %v, <WIDTH x MASK> %mask) nounwind alwaysinline {
