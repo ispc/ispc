@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2024, Intel Corporation
+// Copyright (c) 2023-2025, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "../../ispcrt/ispcrt.isph"
@@ -15,8 +15,10 @@
     }
 
 #define UNROLL_VARYING_FOR_BODY                                                                                        \
-    for (uint64 i = programIndex + 1ull; i < num_elems; i += programCount) {                                           \
-        dst[i] = src[i] + src[i - 1ull];                                                                               \
+    for (uniform int i = 1; i < num_elems; i += programCount) {                                                        \
+        int cur = i + programIndex;                                                                                    \
+        int prv = i - 1 + programIndex;                                                                                \
+        dst[cur] = src[cur] + src[prv];                                                                                \
     }
 
 // uint64
