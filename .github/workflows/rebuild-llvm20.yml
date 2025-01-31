@@ -1,0 +1,35 @@
+# Copyright 2025 Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: Rebuild LLVM 20.1
+
+permissions: read-all
+
+on:
+  push:
+    branches:
+      - main
+      - '**rebuild_llvm**'
+    paths:
+      - "llvm_patches/*20_1*"
+      - "scripts/alloy.py"
+      - "superbuild/*"
+      - ".github/workflows/rebuild-llvm20.yml"
+      - ".github/workflows/reusable.rebuild.yml"
+  workflow_dispatch:
+
+jobs:
+  llvm20:
+    strategy:
+      fail-fast: false
+      matrix:
+        lto: ['ON', 'OFF']
+    uses: ./.github/workflows/reusable.rebuild.yml
+    with:
+      version: '20.1'
+      full_version: '20.1.1'
+      lto: ${{ matrix.lto }}
+      ubuntu: '22.04'
+      vs_generator: 'Visual Studio 16 2019'
+      vs_version_str: 'vs2019'
+      win_sdk: '10.0.18362.0'
