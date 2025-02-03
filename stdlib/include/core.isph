@@ -17,15 +17,15 @@
 
 #pragma once
 
-#define ISPC
+#define ISPC 1
 
 #define PI 3.1415926535
 
 // This lets the user know uint* is part of language.
-#define ISPC_UINT_IS_DEFINED
+#define ISPC_UINT_IS_DEFINED 1
 
 // This lets the user know __attribute__ is part of language.
-#define ISPC_ATTRIBUTE_SUPPORTED
+#define ISPC_ATTRIBUTE_SUPPORTED 1
 
 #if defined(ISPC_TARGET_GEN9) || defined(ISPC_TARGET_XELP) || defined(ISPC_TARGET_XEHPG) ||                            \
     defined(ISPC_TARGET_XEHPC) || defined(ISPC_TARGET_XELPG) || defined(ISPC_TARGET_XE2HPG) ||                         \
