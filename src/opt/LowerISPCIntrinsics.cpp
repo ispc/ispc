@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2024, Intel Corporation
+  Copyright (c) 2024-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -61,6 +61,18 @@ static llvm::Value *lTruncVectorToi1(llvm::IRBuilder<> &builder, llvm::Value *V)
     return V;
 }
 
+static llvm::Value *lCreateSelect(llvm::IRBuilder<> &builder, llvm::Value *C, llvm::Value *T, llvm::Value *F) {
+    // when C is not a vector of i1, we need to truncate it to i1
+    // This is ugly hack due to the fact that varying bool is represented as
+    // vector of i32/i16/i8 for some targets
+    llvm::VectorType *VT = llvm::dyn_cast<llvm::VectorType>(C->getType());
+    if (VT) {
+        C = lTruncVectorToi1(builder, C);
+    }
+
+    return builder.CreateSelect(C, T, F);
+}
+
 static llvm::Value *lLowerConcatIntrinsic(llvm::CallInst *CI) {
     llvm::IRBuilder<> builder(CI);
     Assert(CI->arg_size() == 2);
@@ -115,6 +127,22 @@ static llvm::Value *lLowerBitcastIntrinsic(llvm::CallInst *CI) {
     llvm::Value *VT = CI->getArgOperand(1);
 
     return builder.CreateBitCast(V, VT->getType());
+}
+
+static llvm::Value *lLowerBlendStore(llvm::CallInst *CI) {
+    llvm::IRBuilder<> builder(CI);
+    Assert(CI->arg_size() == 3);
+
+    llvm::Value *V = CI->getArgOperand(0);
+    llvm::Value *P = CI->getArgOperand(1);
+    llvm::Value *M = CI->getArgOperand(2);
+
+    llvm::Type *T = V->getType();
+    llvm::LoadInst *LI = builder.CreateLoad(T, P);
+    llvm::Value *selected = lCreateSelect(builder, M, V, LI);
+    llvm::StoreInst *SI = builder.CreateStore(selected, P);
+
+    return SI;
 }
 
 static llvm::Value *lLowerStreamStoreIntrinsic(llvm::CallInst *CI) {
@@ -234,15 +262,7 @@ static llvm::Value *lLowerSelectIntrinsic(llvm::CallInst *CI) {
     llvm::Value *T = CI->getArgOperand(1);
     llvm::Value *F = CI->getArgOperand(2);
 
-    // when C is not a vector of i1, we need to truncate it to i1
-    // This is ugly hack due to the fact that varying bool is represented as
-    // vector of i32/i16/i8 for some targets
-    llvm::VectorType *VT = llvm::dyn_cast<llvm::VectorType>(C->getType());
-    if (VT) {
-        C = lTruncVectorToi1(builder, C);
-    }
-
-    return builder.CreateSelect(C, T, F);
+    return lCreateSelect(builder, C, T, F);
 }
 
 static llvm::Value *lLowerFenceIntrinsic(llvm::CallInst *CI) {
@@ -293,6 +313,8 @@ static bool lRunOnBasicBlock(llvm::BasicBlock &BB) {
                     D = lLowerInsertIntrinsic(CI);
                 } else if (Callee->getName().starts_with("llvm.ispc.bitcast.")) {
                     D = lLowerBitcastIntrinsic(CI);
+                } else if (Callee->getName().starts_with("llvm.ispc.blend_store.")) {
+                    D = lLowerBlendStore(CI);
                 } else if (Callee->getName().starts_with("llvm.ispc.stream_store.")) {
                     D = lLowerStreamStoreIntrinsic(CI);
                 } else if (Callee->getName().starts_with("llvm.ispc.stream_load.")) {
