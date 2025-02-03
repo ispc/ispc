@@ -1331,32 +1331,26 @@ EXT void __masked_store_double(NOESCAPE varying double *uniform ptr, varying dou
     @llvm.masked.store(val, (uniform int8 * uniform) ptr, 1l, mask);
 }
 
-template <typename T>
-unmasked void __masked_store_blend(NOESCAPE varying T *uniform ptr, varying T new_val, UIntMaskType mask) {
-    varying T old_val = *ptr;
-    varying T blend = __select((bool)mask, new_val, old_val);
-    *ptr = blend;
-}
 EXT void __masked_store_blend_i8(NOESCAPE varying int8 *uniform ptr, varying int8 val, UIntMaskType mask) {
-    __masked_store_blend<int8>(ptr, val, mask);
+    @llvm.ispc.blend_store(val, (uniform int8 * uniform) ptr, mask);
 }
 EXT void __masked_store_blend_i16(NOESCAPE varying int16 *uniform ptr, varying int16 val, UIntMaskType mask) {
-    __masked_store_blend<int16>(ptr, val, mask);
+    @llvm.ispc.blend_store(val, (uniform int8 * uniform) ptr, mask);
 }
 EXT void __masked_store_blend_i32(NOESCAPE varying int32 *uniform ptr, varying int32 val, UIntMaskType mask) {
-    __masked_store_blend<int32>(ptr, val, mask);
+    @llvm.ispc.blend_store(val, (uniform int8 * uniform) ptr, mask);
 }
 EXT void __masked_store_blend_i64(NOESCAPE varying int64 *uniform ptr, varying int64 val, UIntMaskType mask) {
-    __masked_store_blend<int64>(ptr, val, mask);
+    @llvm.ispc.blend_store(val, (uniform int8 * uniform) ptr, mask);
 }
 EXT void __masked_store_blend_half(NOESCAPE varying float16 *uniform ptr, varying float16 val, UIntMaskType mask) {
-    __masked_store_blend<float16>(ptr, val, mask);
+    @llvm.ispc.blend_store(val, (uniform int8 * uniform) ptr, mask);
 }
 EXT void __masked_store_blend_float(NOESCAPE varying float *uniform ptr, varying float val, UIntMaskType mask) {
-    __masked_store_blend<float>(ptr, val, mask);
+    @llvm.ispc.blend_store(val, (uniform int8 * uniform) ptr, mask);
 }
 EXT void __masked_store_blend_double(NOESCAPE varying double *uniform ptr, varying double val, UIntMaskType mask) {
-    __masked_store_blend<double>(ptr, val, mask);
+    @llvm.ispc.blend_store(val, (uniform int8 * uniform) ptr, mask);
 }
 
 EXT uniform uint64 __cast_mask_to_i64(UIntMaskType mask) { return @llvm.ispc.packmask(mask); }
