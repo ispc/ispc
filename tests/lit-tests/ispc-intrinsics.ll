@@ -18,6 +18,17 @@ define half @bitcast(i16 %x) {
   ret half %calltmp
 }
 
+; CHECK-LABEL: @blend_store
+; CHECK-DAG: [[OLD_VAL:%.*]] = load <4 x double>, ptr %ptr
+; CHECK-DAG-NEXT: [[BLENDED:%.*]] = select <4 x i1> %mask, <4 x double> %val, <4 x double> [[OLD_VAL]]
+; CHECK-DAG-NEXT: store <4 x double> [[BLENDED]], ptr %ptr
+declare void @llvm.ispc.blend_store.v4f64(<4 x double>, ptr, <4 x i1>)
+define void @blend_store(<4 x double> %val, ptr %ptr, <4 x i1> %mask) {
+  call void @llvm.ispc.blend_store.v4f64(<4 x double> %val, ptr %ptr, <4 x i1> %mask)
+  ret void
+}
+
+
 ; CHECK-LABEL: @concat
 ; CHECK-DAG: [[RES:%.*]] = shufflevector <2 x i32> %x, <2 x i32> %y, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-DAG: ret <4 x i32> [[RES]]

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2024, Intel Corporation
+  Copyright (c) 2024-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -30,6 +30,7 @@ enum class ISPCIntrinsics : unsigned {
     not_intrinsic = 0,
     atomicrmw,
     bitcast,
+    blend_store,
     concat,
     cmpxchg,
     extract,
@@ -56,6 +57,8 @@ static ISPCIntrinsics lLookupISPCInstrinsic(const std::string &name) {
     // These intrinsics are not overloaded.
     else if (name == "llvm.ispc.bitcast") {
         return ISPCIntrinsics::bitcast;
+    } else if (name == "llvm.ispc.blend_store") {
+        return ISPCIntrinsics::blend_store;
     } else if (name == "llvm.ispc.concat") {
         return ISPCIntrinsics::concat;
     } else if (name == "llvm.ispc.extract") {
@@ -368,6 +371,12 @@ static llvm::Function *lGetISPCIntrinsicsFuncDecl(llvm::Module *M, std::string o
         Assert(TYs.size() == 2 && TYs[0]->getPrimitiveSizeInBits() == TYs[1]->getPrimitiveSizeInBits());
         retType = TYs[1];
         name += "." + lGetMangledTypeStr(TYs[0], hasUnnamedType) + "." + lGetMangledTypeStr(TYs[1], hasUnnamedType);
+        break;
+    }
+    case ISPCIntrinsics::blend_store: {
+        Assert(TYs.size() == 3);
+        retType = llvm::Type::getVoidTy(*g->ctx);
+        name += "." + lGetMangledTypeStr(TYs[0], hasUnnamedType);
         break;
     }
     case ISPCIntrinsics::concat: {

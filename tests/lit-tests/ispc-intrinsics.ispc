@@ -76,6 +76,12 @@ ATTRS uniform float16 bitcast(uniform int16 x) {
     return @llvm.ispc.bitcast(x, (uniform float16)0);
 }
 
+// CHECK-LABEL: @blend_store
+// CHECK-DAG:   call void @llvm.ispc.blend_store.v[[WIDTH]]f64(<[[WIDTH]] x double> {{.*}}, [[PTR]] {{%ptr.*}}, <[[WIDTH]] x [[MASK]]> {{%__mask.*}})
+ATTRS void blend_store(uniform int8 *uniform ptr, varying double val) {
+    @llvm.ispc.blend_store(val, ptr, __mask);
+}
+
 // CHECK-LABEL: @concat
 // CHECK-DAG: %calltmp = call <[[DOUBLE_WIDTH]] x i8> @llvm.ispc.concat.v[[DOUBLE_WIDTH]]i8.v[[WIDTH]]i8(<[[WIDTH]] x i8> {{%v0.*}}, <[[WIDTH]] x i8> {{%v1.*}})
 ATTRS uniform int8<DOUBLE_WIDTH> concat(int8 v0, int8 v1) { return @llvm.ispc.concat(v0, v1); }
