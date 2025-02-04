@@ -1,4 +1,6 @@
 #include "test_static.isph"
+// rule: skip on cpu=tgllp
+// rule: skip on cpu=dg2
 task void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = 0.0f;
     double testVal = ldexp(aFOO[0]-1, -2);
