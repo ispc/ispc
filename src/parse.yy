@@ -3136,10 +3136,25 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
             bool isVectorCall = (ds->typeQualifiers & TYPEQUAL_VECTORCALL);
             bool isRegCall = (ds->typeQualifiers & TYPEQUAL_REGCALL);
             Declarator *funcDecl = decl;
+
+            // In a case when function return type is a pointer we have decl
+            // with DK_POINTER kind. We need to traverse childs to get
+            // DK_FUNCTION declarator.
             while (funcDecl && funcDecl->kind != DK_FUNCTION) {
                 funcDecl = funcDecl->child;
             }
-            m->AddFunctionDeclaration(decl->name, ft, ds->storageClass, funcDecl,
+            Assert(funcDecl);
+
+            // For pointer return type we have attributeList attached to decl
+            // (DK_POINTER) whereas we need to pass DK_FUNCTION declarator to
+            // AddFunctionDeclaration. Create a copy of DK_FUNCTION and attach
+            // attributeList from DK_POINTER.
+            Declarator funcDeclCopy = *funcDecl;
+            if (decl->attributeList) {
+                funcDeclCopy.attributeList = new AttributeList(*decl->attributeList);
+            }
+
+            m->AddFunctionDeclaration(decl->name, ft, ds->storageClass, &funcDeclCopy,
                                       isInline, isNoInline, isVectorCall, isRegCall, decl->pos);
         }
         else {
