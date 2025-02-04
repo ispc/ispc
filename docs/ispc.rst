@@ -86,6 +86,7 @@ Contents:
   + `Selecting The Compilation Target`_
   + `Selecting 32 or 64 Bit Addressing`_
   + `The Preprocessor`_
+  + `Pragma Directives`_
   + `Debugging`_
   + `Optimization Settings`_
   + `Other ways of passing arguments to ISPC`_
@@ -1175,6 +1176,51 @@ preprocessor runs:
   * - FLT16_MAX, FLT_MAX, DBL_MAX
     -
     - Largest normal number of the corresponding floating-point type
+
+Others Standard Predefined Macros:
+
+``__FILE__`` expands to the name of the current input file, in the form of a C
+string constant.
+
+``__LINE__`` expands to the current line number in the input file, in the form
+of a decimal integer constant.
+
+``__DATE__`` expands to a string constant containing the date the preprocessor
+was run, e.g., ``"Feb  3 2025"``.
+
+``__TIME__`` expands to a string constant containing the time the preprocessor
+was run, e.g., ``"13:14:33"``.
+
+Variadic Macros:
+
+Variadic macros are supported in ``ispc``. The ``__VA_ARGS__`` and
+``__VA_OPT__`` macros are defined inside a variadic macro definition.
+
+``__VA_ARGS__`` is a variable argument list macro that represents the arguments
+after the last named argument.
+
+``__VA_OPT__(...)`` is a function macro that expands to its argument if the
+variable argument has any tokens, but if the variable argument does not have
+any tokens, the ``__VA_OPT__`` expands to nothing.
+
+To illustrate, consider the following example:
+
+::
+
+    #define PRINT(fmt, ...) print(fmt, __VA_ARGS__)
+    #define EPRINT(fmt, ...) print(fmt __VA_OPT__(,) __VA_ARGS__)
+
+    void test_va_args() {
+        PRINT("% % %\n", 0, 1, 2);
+        // PRINT("Hello, World!\n"); is compilation error
+        // you can't call PRINT with just string because of trailing comma in
+        // macro expansion, call EPRINT with __VA_OPT__(,) instead
+        EPRINT("Hello, World!\n");
+    }
+
+
+Pragma Directives
+-----------------
 
 ``ispc`` supports the following ``#pragma`` directives.
 
