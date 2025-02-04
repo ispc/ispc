@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2024, Intel Corporation
+#  Copyright (c) 2024-2025, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -12,7 +12,6 @@ ARG REPO=ispc/ispc
 ARG SHA=main
 ARG LTO=OFF
 ARG PGO=OFF
-ARG TBB=default
 ARG XE_DEPS=ON
 
 # !!! Make sure that your docker config provides enough memory to the container,
@@ -33,11 +32,8 @@ RUN if [[ $(uname -m) =~ "x86" ]]; then \
     apt-get -y update && apt-get --no-install-recommends install -y "$CROSS_LIBS" && \
     rm -rf /var/lib/apt/lists/*
 
-# TBB is parameter to build both packge usual and oneapi-tbb.
-RUN if [ "$TBB" == "default" ] && [ "$XE_DEPS" == "ON" ]; then apt-get -y update && apt-get --no-install-recommends install -y libtbb-dev && rm -rf /var/lib/apt/lists/*; fi
-RUN if [ "$TBB" == "oneapi" ] && [ "$XE_DEPS" == "ON" ]; then wget -qO - https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | apt-key add - && \
-                                    sh -c 'echo "deb https://apt.repos.intel.com/oneapi all main" > /etc/apt/sources.list.d/intel-oneapi.list' && \
-                                    apt update && apt --no-install-recommends install -y intel-oneapi-tbb intel-oneapi-tbb-devel && rm -rf /var/lib/apt/lists/*; fi
+# Install TBB (required for ISPCRT).
+RUN if [ "$XE_DEPS" == "ON" ]; then apt-get -y update && apt-get --no-install-recommends install -y libtbb-dev && rm -rf /var/lib/apt/lists/*; fi
 
 # Download and install required version of cmake (3.23.5 for both x86 and aarch64) as required for superbuild preset jsons.
 RUN if [[ $(uname -m) =~ "x86" ]]; then \
@@ -72,10 +68,6 @@ RUN useradd -m -d /home/ispc_user -s /bin/bash -U ispc_user && \
     chown -R ispc_user:ispc_user /usr
 
 USER ispc_user
-
-# When oneapi-tbb version changed we need to update it here.
-ENV LD_LIBRARY_PATH=/opt/intel/oneapi/tbb/2021.13/lib/intel64/gcc4.8:$LD_LIBRARY_PATH
-ENV CMAKE_PREFIX_PATH=/opt/intel/oneapi/tbb/2021.13
 
 # Configure and build ISPC
 # Build Clang/LLVM, XE dependencies and then ISPC.

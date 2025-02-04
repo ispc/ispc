@@ -25,7 +25,7 @@ jobs:
     if: github.repository == 'ispc/ispc'
 
     env:
-      LINK: https://github.com/ispc/ispc/releases/download/${{ inputs.release_tag }}/ispc-${{ inputs.release_tag }}-linux-oneapi.tar.gz
+      LINK: https://github.com/ispc/ispc/releases/download/${{ inputs.release_tag }}/ispc-${{ inputs.release_tag }}-linux.tar.gz
 
     steps:
     - name: Install hardening-check script
