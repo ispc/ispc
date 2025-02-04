@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -3136,8 +3136,8 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
             bool isVectorCall = (ds->typeQualifiers & TYPEQUAL_VECTORCALL);
             bool isRegCall = (ds->typeQualifiers & TYPEQUAL_REGCALL);
             Declarator *funcDecl = decl;
-            if (decl->kind == DK_POINTER || decl->kind == DK_REFERENCE) {
-                funcDecl = decl->child;
+            while (funcDecl && funcDecl->kind != DK_FUNCTION) {
+                funcDecl = funcDecl->child;
             }
             m->AddFunctionDeclaration(decl->name, ft, ds->storageClass, funcDecl,
                                       isInline, isNoInline, isVectorCall, isRegCall, decl->pos);
