@@ -45,7 +45,7 @@ jobs:
       env:
         V: ${{ inputs.version }}
       run: |
-        TAR=("ispc-examples-v$V.tar.gz" "ispc-v$V-linux-oneapi.tar.gz" \
+        TAR=("ispc-examples-v$V.tar.gz" \
              "ispc-v$V-linux.aarch64.tar.gz" "ispc-v$V-linux.tar.gz" \
              "ispc-v$V-macOS.arm64.tar.gz" "ispc-v$V-macOS.universal.tar.gz" \
              "ispc-v$V-macOS.x86_64.tar.gz")
