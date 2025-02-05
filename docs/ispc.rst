@@ -674,37 +674,40 @@ Updating ISPC Programs For Changes In ISPC 1.26.0
 
 There are breaking changes to ARM support:
 
-The ``--arch=arm``, which previously mapped to ARMv7 (32-bit), now maps to ARMv8
-(32-bit).
-There are no changes to ``--arch=aarch64``, which continues to map to ARMv8
-(64-bit).
-The CPU definitions for the ARMv7 architecture have been removed: ``cortex-a9``
-and ``cortex-a15``.
-New CPU definitions were introduced, such as ``cortex-a55``, ``cortex-a78``,
-``cortex-a510``, ```cortex-a520``, and support for new Apple devices.
-New double-pumped targets were introduced: ``neon-i16x16`` and ``neon-i8x32``.
+* The ``--arch=arm`` flag, which previously mapped to ARMv7 (32-bit), now maps
+  to ARMv8 (32-bit). There are no changes to ``--arch=aarch64``, which continues
+  to map to ARMv8 (64-bit).
+* The CPU definitions for the ARMv7 architecture have been removed:
+  ``cortex-a9`` and ``cortex-a15``.
+* New CPU definitions have been introduced, including ``cortex-a55``,
+  ``cortex-a78``, ``cortex-a510``, and ``cortex-a520``, along with support for
+  new Apple devices.
+* New double-pumped targets have been introduced: ``neon-i16x16`` and
+  ``neon-i8x32``.
 
-Macro definitions for LLVM version that ISPC is based on were added. Please,
-refer to `The Preprocessor`_ for more details.
+Language Updates:
 
-``--nocpp`` command line flag is deprecated and will be removed in future.
+* Macro definitions for the LLVM version that ISPC is based on have been added.
+  Please refer to `The Preprocessor`_ for more details.
+* The ``__attribute__((deprecated))`` attribute can now be applied to a function
+  to mark it as deprecated, generating a warning when the function is called.
 
-``__attribute__((deprecated))`` can be applied to a function to mark it as
-deprecated. It leads to a warning when the function is called.
+Compiler flags changes:
 
-The target ``avx512knl-x16`` was removed.
+* The ``--nocpp`` command-line flag is deprecated and will be removed in a
+  future release.
+* The target ``avx512knl-x16`` has been removed.
+* The ``--darwin-version-min`` option has been added to specify the minimum
+  deployment target version for macOS and iOS applications. This addresses a new
+  linker behavior introduced in Xcode 15.0, which issues a warning when no
+  version is provided.
 
-The release introduces a breaking change by altering the behavior of user
-programs when no supported ISA is detected in the auto-dispatch code. It
-replaces the previous ``SIGABRT`` signal with ``SIGILL``. This affects users
-who rely on ``SIGABRT`` in their signal handlers for error handling or
-recovery. Such users must update their code to handle ``SIGILL`` instead. The
-change improves predictability and eliminates reliance of the dispatcher on the
-C standard library.
-
-The ``--darwin-version-min`` option was added to specify the minimum deployment
-target version for macOS and iOS applications addressing the new linker
-introduced in Xcode 15.0 that issues a warning when no version is provided.
+The behavior of user programs when no supported ISA is detected in the
+auto-dispatch code has changed. Instead of raising the ``SIGABRT`` signal, the
+system will now raise ``SIGILL``.  This affects users who rely on ``SIGABRT`` in
+their signal handlers for error handling or recovery.  Such users must update
+their code to handle ``SIGILL`` instead. This change improves predictability and
+removes the dispatcher's reliance on the C standard library.
 
 Getting Started with ISPC
 =========================
