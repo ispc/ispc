@@ -1,0 +1,88 @@
+# Copyright 2025, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: Quick Start Build
+
+permissions: read-all
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ubuntu:
+    strategy:
+      matrix:
+        ubuntu: ['ubuntu-22.04', 'ubuntu-24.04']
+    runs-on: ${{ matrix.ubuntu }}
+    env:
+      ARCHIVE_URL: https://github.com/ispc/ispc.dependencies/releases/download/llvm-18.1-ispc-dev/llvm-18.1.8-ubuntu22.04-Release-x86.arm.wasm.tar.xz
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install prerequisites
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y git curl cmake xz-utils m4 flex bison python3 libtbb-dev g++-multilib
+
+    - name: Build ISPC
+      run: ./scripts/quick-start-build.py
+
+  archlinux:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged
+
+    env:
+      ARCHIVE_URL: https://github.com/ispc/ispc.dependencies/releases/download/llvm-18.1-ispc-dev/llvm-18.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install prerequisites
+      run: |
+        pacman -Syu --noconfirm
+        pacman -S --noconfirm git cmake make gcc-libs glibc lib32-glibc gcc m4 flex bison python onetbb
+
+    - name: Build ISPC
+      run: ./scripts/quick-start-build.py
+
+  macos:
+    runs-on: macos-latest
+    env:
+      ARCHIVE_URL: https://github.com/ispc/ispc.dependencies/releases/download/llvm-18.1-ispc-dev/llvm-18.1.8-macos-Release-universal-x86.arm.wasm.tar.xz
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install prerequisites
+      run: |
+        brew install bison flex
+        echo "/opt/homebrew/opt/bison/bin" >> "$GITHUB_PATH"
+        echo "/opt/homebrew/opt/flex/bin" >> "$GITHUB_PATH"
+
+    - name: Build ISPC
+      run: ./scripts/quick-start-build.py
+
+  windows:
+    runs-on: windows-latest
+    env:
+      ARCHIVE_URL: https://github.com/ispc/ispc.dependencies/releases/download/llvm-18.1-ispc-dev/llvm-18.1.8-win.vs2019-Release-x86.arm.wasm.tar.7z
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install prerequisites
+      run: |
+        Install-ChocoPackage winflexbison3
+        Install-ChocoPackage gnuwin32-m4
+        pip install py7zr
+
+    - name: Build ISPC
+      run: python ./scripts/quick-start-build.py
