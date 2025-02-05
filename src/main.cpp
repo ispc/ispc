@@ -84,7 +84,7 @@ static void lPrintVersion() {
     printf("    [--emit-asm]\t\t\tGenerate assembly language file as output\n");
     printf("    [--emit-llvm]\t\t\tEmit LLVM bitcode file as output\n");
     printf("    [--emit-llvm-text]\t\t\tEmit LLVM bitcode file as output in textual form\n");
-    printf("    [--emit-obj]\t\t\tGenerate object file file as output (default)\n");
+    printf("    [--emit-obj]\t\t\tGenerate object file as output (default)\n");
 #ifdef ISPC_XE_ENABLED
     printf("    [--emit-spirv]\t\t\tGenerate SPIR-V file as output\n");
     // AOT compilation is temporary disabled on Windows
@@ -113,7 +113,7 @@ static void lPrintVersion() {
     printf("    [--mcmodel=<value>]\t\t\tDefine the code model to use for code generation\n");
     printf("        small\t\t\t\tThe program and its symbols must be linked in the lower 2GB of the address space "
            "(default)\n");
-    printf("        large\t\t\t\tThe program has no assumprion about addresses and sizes of sections\n");
+    printf("        large\t\t\t\tThe program has no assumption about addresses and sizes of sections\n");
     printf("    [-MMM <filename>]\t\t\tWrite #include dependencies to given file\n");
     printf("    [-M]\t\t\t\tOutput a rule suitable for `make' describing the dependencies of the main source file to "
            "stdout\n");
@@ -134,9 +134,8 @@ static void lPrintVersion() {
     printf("        disable-gathers\t\t\tDisable gathers generation on targets that support them\n");
     printf("        disable-scatters\t\tDisable scatters generation on targets that support them\n");
     printf("        disable-loop-unroll\t\tDisable loop unrolling\n");
-    printf(
-        "        disable-zmm\t\t\tDisable using zmm registers for avx512 targets in favour of ymm. This also affects "
-        "ABI\n");
+    printf("        disable-zmm\t\t\tDisable using zmm registers for avx512 targets in favor of ymm. This also affects "
+           "ABI\n");
 #ifdef ISPC_XE_ENABLED
     printf("        emit-xe-hardware-mask\t\tEnable emitting of Xe implicit hardware mask\n");
     printf("        enable-xe-foreach-varying\t\tEnable experimental foreach support inside varying control flow\n");
