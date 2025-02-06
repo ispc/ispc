@@ -305,8 +305,7 @@ jobs:
         path: llvm/llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.7z
 
   mac-build:
-    # This job is not capable to build on a shared runner, so need to use self-hosted.
-    runs-on: [self-hosted, macOS]
+    runs-on: ${{ inputs.lto == 'ON' && '[self-hosted, macOS]' || 'macos-14' }}
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -315,7 +314,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        .github/workflows/scripts/install-llvm-deps-mac-hosted.sh
+        ${{ inputs.lto == 'ON' && '.github/workflows/scripts/install-llvm-deps-mac-hosted.sh' || '.github/workflows/scripts/install-llvm-deps-mac.sh' }}
 
     - name: Check environment
       run: |
@@ -341,8 +340,7 @@ jobs:
         path: llvm/llvm-${{ inputs.full_version }}-macos-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz
 
   mac-build-release:
-    # This job is not capable to build on a shared runner, so need to use self-hosted.
-    runs-on: [self-hosted, macOS]
+    runs-on: ${{ inputs.lto == 'ON' && '[self-hosted, macOS]' || 'macos-14' }}
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -351,7 +349,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        .github/workflows/scripts/install-llvm-deps-mac-hosted.sh
+        ${{ inputs.lto == 'ON' && '.github/workflows/scripts/install-llvm-deps-mac-hosted.sh' || '.github/workflows/scripts/install-llvm-deps-mac.sh' }}
 
     - name: Check environment
       run: |
