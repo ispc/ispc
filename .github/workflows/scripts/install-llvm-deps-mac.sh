@@ -11,3 +11,4 @@ mkdir llvm
 echo "LLVM_HOME=${GITHUB_WORKSPACE}/llvm" >> $GITHUB_ENV
 echo "ISPC_HOME=${GITHUB_WORKSPACE}" >> $GITHUB_ENV
 
+brew install ninja
