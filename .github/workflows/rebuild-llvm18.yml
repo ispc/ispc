@@ -18,8 +18,12 @@ on:
       - ".github/workflows/reusable.rebuild.yml"
   workflow_dispatch:
 
+
 jobs:
   llvm18:
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.lto }}
+      cancel-in-progress: true
     strategy:
       fail-fast: false
       matrix:
