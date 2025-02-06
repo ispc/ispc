@@ -148,9 +148,7 @@ jobs:
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
 
   linux-arm-build:
-    runs-on: [self-hosted, linux, ARM64]
-    # Disabling this rebuild for non ispc/ispc repo, as it requires self-hosted runner
-    if: github.repository == 'ispc/ispc'
+    runs-on: ubuntu-22.04-arm
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -185,9 +183,7 @@ jobs:
         path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
 
   linux-arm-build-release:
-    runs-on: [self-hosted, linux, ARM64]
-    # Disabling this rebuild for non ispc/ispc repo, as it requires self-hosted runner
-    if: github.repository == 'ispc/ispc'
+    runs-on: ubuntu-22.04-arm
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
