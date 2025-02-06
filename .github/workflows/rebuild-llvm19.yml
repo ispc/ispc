@@ -20,6 +20,9 @@ on:
 
 jobs:
   llvm19:
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.lto }}
+      cancel-in-progress: true
     strategy:
       fail-fast: false
       matrix:
