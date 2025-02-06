@@ -1,6 +1,11 @@
 // RUN: %{ispc} -O2 --target=avx2-i32x8 --emit-asm --x86-asm-syntax=intel %s -o - 2>&1 | FileCheck %s
 
-// XFAIL: !LLVM_20_0+
+// This test passes when built with LLVM 20.0 or with LLVM 18/19 built with the
+// backport patch llvm_patches/18_1_19_1_InstCombine-foldVecExtTruncToExtElt-extend.patch
+// It is better to skip it as UNSUPPORTED for the release because many package
+// maintainers will not have older LLVMs patched.
+
+// UNSUPPORTED: !LLVM_20_0+
 
 // REQUIRES: X86_ENABLED
 
