@@ -22,18 +22,20 @@ on:
 jobs:
   llvm18:
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.lto }}
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.lto }}-${{ matrix.asserts }}-${{ matrix.arch }}
       cancel-in-progress: true
     strategy:
       fail-fast: false
       matrix:
         lto: ['ON', 'OFF']
+        asserts: ['ON', 'OFF']
+        arch: ['x86', 'aarch64']
     uses: ./.github/workflows/reusable.rebuild.yml
     with:
       version: '18.1'
       full_version: '18.1.8'
       lto: ${{ matrix.lto }}
+      asserts: ${{ matrix.asserts }}
+      arch: ${{ matrix.arch }}
       ubuntu: '22.04'
-      vs_generator: 'Visual Studio 16 2019'
-      vs_version_str: 'vs2019'
       win_sdk: '10.0.18362.0'
