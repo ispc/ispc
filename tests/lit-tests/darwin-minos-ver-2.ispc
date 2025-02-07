@@ -13,3 +13,7 @@
 // CHECK-MACOS-VER-UNSET: target triple = "arm64-apple-macosx"
 
 // CHECK-ERROR-VER: Error: Invalid version format: "a.b". Use <major_ver.minor_ver>.
+
+uniform int j;
+
+int foo(int i) { return i + 1; }
