@@ -42,7 +42,7 @@ concurrency:
 
 jobs:
   snap-arm64:
-    runs-on: [self-hosted, linux, ARM64]
+    runs-on: ubuntu-22.04-arm
     if: inputs.arch == 'arm64'
 
     steps:
