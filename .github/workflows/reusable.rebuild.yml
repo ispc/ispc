@@ -21,22 +21,30 @@ on:
         required: false # Not required since there is a default value
         type: string
         default: 'OFF'
+      asserts:
+        description: Build LLVM with assertions ('ON' or 'OFF').
+        required: false # Not required since there is a default value
+        type: string
+        default: 'ON'
+      # arch inputs is used only for linux-build jobs, macos and win just ignore it and skip aarch64 builds
+      arch:
+        description: Target architecture ('x86' or 'aarch64').
+        required: false # Not required since there is a default value
+        type: string
+        default: 'x86'
       ubuntu:
         description: Version of Ubuntu Dockerfile to use. For example '22.04'.
-        required: true
-        type: string
-      vs_generator:
-        description: VS generator to use. For example 'Visual Studio 16 2019'.
-        required: true
-        type: string
-      vs_version_str:
-        description: VS version string to use in artifact naming. For example, 'vs2019'.
         required: true
         type: string
       win_sdk:
         description: Win SDK version string. For example, '10.0.18362.0'.
         required: true
         type: string
+      vs_version:
+        description: Visual Studio version ('vs2019' or 'vs2022').
+        required: false
+        type: string
+        default: 'vs2019'
   workflow_dispatch:
     inputs:
       version:
@@ -54,32 +62,53 @@ on:
         required: true
         type: string
         default: 'OFF'
+      asserts:
+        description: Build LLVM with assertions.
+        required: true
+        type: string
+        default: 'ON'
+      arch:
+        description: Target architecture.
+        required: true
+        type: string
+        default: 'x86'
       ubuntu:
         description: Version of Ubuntu Dockerfile to use. For example '22.04'.
         required: true
         type: string
         default: '22.04'
-      vs_generator:
-        description: VS generator to use. For example 'Visual Studio 16 2019'.
-        required: true
-        type: string
-        default: 'Visual Studio 16 2019'
-      vs_version_str:
-        description: VS version string to use in artifact naming. For example, 'vs2019'.
-        required: true
-        type: string
-        default: 'vs2019'
       win_sdk:
         description: Win SDK version string. For example, '10.0.18362.0'.
         required: true
         type: string
         default: '10.0.18362.0'
+      vs_version:
+        description: Visual Studio version ('vs2019' or 'vs2022').
+        required: false
+        type: string
+        default: 'vs2019'
 
 jobs:
   linux-build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.arch == 'aarch64' && 'ubuntu-22.04-arm' || 'ubuntu-latest' }}
+    env:
+      TAR_NAME: llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}${{ inputs.arch == 'aarch64' && 'aarch64' || '' }}-Release${{ inputs.asserts == 'ON' && '+Asserts' || '' }}${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
+      DOCKER_DIR: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
+      ARTIFACT_NAME: llvm${{ inputs.asserts == 'OFF' && 'rel' || '' }}_linux_${{ inputs.arch }}_lto_${{ inputs.lto }}
 
     steps:
+    - name: Print inputs and environment
+      run: |
+        echo "version: ${{ inputs.version }}"
+        echo "full_version: ${{ inputs.full_version }}"
+        echo "lto: ${{ inputs.lto }}"
+        echo "asserts: ${{ inputs.asserts }}"
+        echo "arch: ${{ inputs.arch }}"
+        echo "ubuntu: ${{ inputs.ubuntu }}"
+        echo "TAR_NAME: ${{ env.TAR_NAME }}"
+        echo "DOCKER_DIR: ${{ env.DOCKER_DIR }}"
+        echo "ARTIFACT_NAME: ${{ env.ARTIFACT_NAME }}"
+
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
       with:
         submodules: true
@@ -90,136 +119,54 @@ jobs:
 
     - name: Build LLVM
       run: |
-        cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
+        cd ${{ env.DOCKER_DIR }}
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }} --target=llvm_build --build-arg REPO="${GITHUB_REPOSITORY}" --build-arg SHA="${GITHUB_SHA}" --build-arg LTO="${{ inputs.lto }}" --build-arg LLVM_VERSION="${{ inputs.version }}" --build-arg LLVM_DISABLE_ASSERTIONS=OFF --output=type=tar,dest=result.tar .
+        docker buildx build \
+          --tag ispc/ubuntu${{ inputs.ubuntu }} \
+          --target=llvm_build \
+          --build-arg REPO="${GITHUB_REPOSITORY}" \
+          --build-arg SHA="${GITHUB_SHA}" \
+          --build-arg LTO="${{ inputs.lto }}" \
+          --build-arg LLVM_VERSION="${{ inputs.version }}" \
+          --build-arg LLVM_DISABLE_ASSERTIONS=${{ inputs.asserts == 'ON' && 'OFF' || 'ON' }} \
+          --output=type=tar,dest=result.tar .
 
     - name: Pack LLVM
       run: |
-        cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
+        cd ${{ env.DOCKER_DIR }}
         rm -rf cache.local
         tar xvf result.tar usr/local/src/llvm
         mv usr/local/src/llvm/bin-${{ inputs.version }} .
         export XZ_DEFAULTS="-T0" # run zx in all threads
-        tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
+        tar cJvf ${{ env.TAR_NAME }} bin-${{ inputs.version }}
 
     - name: Upload package
       uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: llvm_linux_x86_lto_${{ inputs.lto }}
-        path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
-
-  linux-build-release:
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-      with:
-        submodules: true
-
-    - name: Check environment
-      run: |
-        cat /proc/cpuinfo
-
-    - name: Build LLVM
-      run: |
-        cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
-        ls -al
-        docker buildx create --use
-        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }} --target=llvm_build --build-arg REPO="${GITHUB_REPOSITORY}" --build-arg SHA="${GITHUB_SHA}" --build-arg LTO="${{ inputs.lto }}" --build-arg LLVM_VERSION="${{ inputs.version }}" --build-arg LLVM_DISABLE_ASSERTIONS=ON --output=type=tar,dest=result.tar .
-
-    - name: Pack LLVM
-      run: |
-        cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
-        rm -rf cache.local
-        tar xvf result.tar usr/local/src/llvm
-        mv usr/local/src/llvm/bin-${{ inputs.version }} .
-        export XZ_DEFAULTS="-T0" # run zx in all threads
-        tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
-
-    - name: Upload package
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      with:
-        name: llvmrel_linux_x86_lto_${{ inputs.lto }}
-        path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
-
-  linux-arm-build:
-    runs-on: [self-hosted, linux, ARM64]
-    # Disabling this rebuild for non ispc/ispc repo, as it requires self-hosted runner
-    if: github.repository == 'ispc/ispc'
-
-    steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-      with:
-        submodules: true
-
-    - name: Check environment
-      run: |
-        cat /proc/cpuinfo
-
-    - name: Build LLVM
-      run: |
-        cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
-        docker buildx create --use
-        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }} --target=llvm_build --build-arg REPO="${GITHUB_REPOSITORY}" --build-arg SHA="${GITHUB_SHA}" --build-arg LTO="${{ inputs.lto }}" --build-arg LLVM_VERSION="${{ inputs.version }}" --build-arg LLVM_DISABLE_ASSERTIONS=OFF --output=type=tar,dest=result.tar .
-        docker buildx rm
-
-    - name: Pack LLVM
-      run: |
-        cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
-        rm -rf cache.local
-        tar xvf result.tar usr/local/src/llvm
-        mv usr/local/src/llvm/bin-${{ inputs.version }} .
-        export XZ_DEFAULTS="-T0" # run zx in all threads
-        tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
-        rm -rf result.tar usr bin-${{ inputs.version }}
-
-    - name: Upload package
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      with:
-        name: llvm_linux_aarch64_lto_${{ inputs.lto }}
-        path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
-
-  linux-arm-build-release:
-    runs-on: [self-hosted, linux, ARM64]
-    # Disabling this rebuild for non ispc/ispc repo, as it requires self-hosted runner
-    if: github.repository == 'ispc/ispc'
-
-    steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-      with:
-        submodules: true
-
-    - name: Check environment
-      run: |
-        cat /proc/cpuinfo
-
-    - name: Build LLVM
-      run: |
-        cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
-        docker buildx create --use
-        docker buildx build --tag ispc/ubuntu${{ inputs.ubuntu }} --target=llvm_build --build-arg REPO="${GITHUB_REPOSITORY}" --build-arg SHA="${GITHUB_SHA}" --build-arg LTO="${{ inputs.lto }}" --build-arg LLVM_VERSION="${{ inputs.version }}" --build-arg LLVM_DISABLE_ASSERTIONS=ON --output=type=tar,dest=result.tar .
-        docker buildx rm
-
-    - name: Pack LLVM
-      run: |
-        cd docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build
-        tar xvf result.tar usr/local/src/llvm
-        mv usr/local/src/llvm/bin-${{ inputs.version }} .
-        export XZ_DEFAULTS="-T0" # run zx in all threads
-        tar cJvf llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
-        rm -rf result.tar usr bin-${{ inputs.version }}
-
-    - name: Upload package
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      with:
-        name: llvmrel_linux_aarch64_lto_${{ inputs.lto }}
-        path: docker/ubuntu/${{ inputs.ubuntu }}/cpu_ispc_build/llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}aarch64-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
+        name: ${{ env.ARTIFACT_NAME }}
+        path: ${{ env.DOCKER_DIR }}/${{ env.TAR_NAME }}
 
   win-build:
     runs-on: windows-2019
+    if: inputs.arch != 'aarch64'
+    env:
+      TAR_BASE_NAME: llvm-${{ inputs.full_version }}-win.vs2019-Release${{ inputs.asserts == 'ON' && '+Asserts' || '' }}${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm
+      ARTIFACT_NAME: llvm${{ inputs.asserts == 'OFF' && 'rel' || '' }}_win_x86_lto_${{ inputs.lto }}
 
     steps:
+    - name: Print inputs and environment
+      run: |
+        echo "version: ${{ inputs.version }}"
+        echo "full_version: ${{ inputs.full_version }}"
+        echo "lto: ${{ inputs.lto }}"
+        echo "asserts: ${{ inputs.asserts }}"
+        echo "arch: ${{ inputs.arch }}"
+        echo "win_sdk: ${{ inputs.win_sdk }}"
+        echo "vs_version: ${{ inputs.vs_version }}"
+        echo "TAR_BASE_NAME: ${{ env.TAR_BASE_NAME }}"
+        echo "DOCKER_DIR: ${{ env.DOCKER_DIR }}"
+        echo "ARTIFACT_NAME: ${{ env.ARTIFACT_NAME }}"
+
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
       with:
         submodules: true
@@ -240,9 +187,25 @@ jobs:
     - name: Build LLVM
       shell: cmd
       run: |
-        set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        if "${{ inputs.vs_version }}" == "vs2019" (
+          set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        ) else if "${{ inputs.vs_version }}" == "vs2022" (
+          set VSVARS="C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        ) else (
+          echo "Unknown VS version"
+          exit /b 1
+        )
         call %VSVARS%
-        cmake %ISPC_HOME%\superbuild -B build-${{ inputs.version }} --preset os -DLTO="${{ inputs.lto }}" -DLLVM_VERSION="${{ inputs.version }}" -DCMAKE_SYSTEM_VERSION="${{ inputs.win_sdk }}" -DCMAKE_INSTALL_PREFIX=%LLVM_HOME%\bin-${{ inputs.version }} -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DXE_DEPS=OFF -DLLVM_DISABLE_ASSERTIONS=OFF
+        cmake %ISPC_HOME%\superbuild ^
+          -B build-${{ inputs.version }} ^
+          --preset os ^
+          -DLTO="${{ inputs.lto }}" ^
+          -DLLVM_VERSION="${{ inputs.version }}" ^
+          -DCMAKE_SYSTEM_VERSION="${{ inputs.win_sdk }}" ^
+          -DCMAKE_INSTALL_PREFIX=%LLVM_HOME%\bin-${{ inputs.version }} ^
+          -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON ^
+          -DXE_DEPS=OFF ^
+          -DLLVM_DISABLE_ASSERTIONS=${{ inputs.asserts == 'ON' && 'OFF' || 'ON' }}
         cmake --build build-${{ inputs.version }}
         rmdir /s /q build-${{ inputs.version }}
 
@@ -250,72 +213,43 @@ jobs:
       shell: cmd
       run: |
         cd llvm
-        set TAR_BASE_NAME=llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm
-        7z.exe a -ttar -snl %TAR_BASE_NAME%.tar bin-${{ inputs.version }}
-        7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
+        7z.exe a -ttar -snl ${{ env.TAR_BASE_NAME }}.tar bin-${{ inputs.version }}
+        7z.exe a -t7z ${{ env.TAR_BASE_NAME }}.tar.7z ${{ env.TAR_BASE_NAME }}.tar
 
     - name: Upload package
       uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: llvm_win_x86_lto_${{ inputs.lto }}
-        path: llvm/llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.7z
-
-  win-build-release:
-    runs-on: windows-2019
-
-    steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-      with:
-        submodules: true
-
-    - name: Check environment
-      shell: cmd
-      run: |
-        cmake --version
-        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
-
-    - name: Install dependencies
-      shell: cmd
-      run: |
-        mkdir llvm
-        echo LLVM_HOME=%GITHUB_WORKSPACE%\llvm>> %GITHUB_ENV%
-        echo ISPC_HOME=%GITHUB_WORKSPACE%>> %GITHUB_ENV%
-
-    - name: Build LLVM
-      shell: cmd
-      run: |
-        set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-        call %VSVARS%
-        cmake %ISPC_HOME%\superbuild -B build-${{ inputs.version }} --preset os -DLTO="${{ inputs.lto }}" -DLLVM_VERSION="${{ inputs.version }}" -DCMAKE_SYSTEM_VERSION="${{ inputs.win_sdk }}" -DCMAKE_INSTALL_PREFIX=%LLVM_HOME%\bin-${{ inputs.version }} -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DXE_DEPS=OFF -DLLVM_DISABLE_ASSERTIONS=ON
-        cmake --build build-${{ inputs.version }}
-        rmdir /s /q build-${{ inputs.version }}
-
-    - name: Pack LLVM
-      shell: cmd
-      run: |
-        cd llvm
-        set TAR_BASE_NAME=llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm
-        7z.exe a -ttar -snl %TAR_BASE_NAME%.tar bin-${{ inputs.version }}
-        7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
-
-    - name: Upload package
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      with:
-        name: llvmrel_win_x86_lto_${{ inputs.lto }}
-        path: llvm/llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version_str }}-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.7z
+        name: ${{ env.ARTIFACT_NAME }}
+        path: llvm/${{ env.TAR_BASE_NAME }}.tar.7z
 
   mac-build:
-    # This job is not capable to build on a shared runner, so need to use self-hosted.
-    runs-on: [self-hosted, macOS]
+    # This job is not capable to build on a shared runner with LTO=on, so need to use self-hosted macOS runner.
+    runs-on: ${{ inputs.lto == 'ON' && 'macOS' || 'macos-14' }}
+    if: inputs.arch != 'aarch64'
+
+    env:
+      TAR_NAME: llvm-${{ inputs.full_version }}-macos-Release${{ inputs.asserts == 'ON' && '+Asserts' || '' }}${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz
+      ARTIFACT_NAME: llvm${{ inputs.asserts == 'OFF' && 'rel' || '' }}_macos_universal_lto_${{ inputs.lto }}
 
     steps:
+    - name: Print inputs and environment
+      run: |
+        echo "version: ${{ inputs.version }}"
+        echo "full_version: ${{ inputs.full_version }}"
+        echo "lto: ${{ inputs.lto }}"
+        echo "asserts: ${{ inputs.asserts }}"
+        echo "arch: ${{ inputs.arch }}"
+        echo "TAR_NAME: ${{ env.TAR_NAME }}"
+        echo "DOCKER_DIR: ${{ env.DOCKER_DIR }}"
+        echo "ARTIFACT_NAME: ${{ env.ARTIFACT_NAME }}"
+
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
       with:
         submodules: true
 
     - name: Install dependencies
       run: |
-        .github/workflows/scripts/install-llvm-deps-mac-hosted.sh
+        ${{ inputs.lto == 'ON' && '.github/workflows/scripts/install-llvm-deps-mac-hosted.sh' || '.github/workflows/scripts/install-llvm-deps-mac.sh' }}
 
     - name: Check environment
       run: |
@@ -325,53 +259,27 @@ jobs:
 
     - name: Build LLVM
       run: |
-        cmake "$ISPC_HOME/superbuild" -B "build-${{ inputs.version }}" --preset os -DLTO="${{ inputs.lto }}" -DLLVM_VERSION="${{ inputs.version }}" -DCMAKE_INSTALL_PREFIX="$LLVM_HOME/bin-${{ inputs.version }}" -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DXE_DEPS=OFF -DMACOS_UNIVERSAL_BIN=ON -DLLVM_DISABLE_ASSERTIONS=OFF -DISPC_ANDROID_NDK_PATH="/Users/Shared/android-ndk-r20b"
+        cmake "$ISPC_HOME/superbuild" \
+          -B "build-${{ inputs.version }}" \
+          --preset os \
+          -DLTO="${{ inputs.lto }}" \
+          -DLLVM_VERSION="${{ inputs.version }}" \
+          -DCMAKE_INSTALL_PREFIX="$LLVM_HOME/bin-${{ inputs.version }}" \
+          -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON \
+          -DXE_DEPS=OFF \
+          -DMACOS_UNIVERSAL_BIN=ON \
+          -DLLVM_DISABLE_ASSERTIONS=${{ inputs.asserts == 'ON' && 'OFF' || 'ON' }} \
+          -DISPC_ANDROID_NDK_PATH="/Users/Shared/android-ndk-r20b"
         cmake --build "build-${{ inputs.version }}"
         rm -rf "build-${{ inputs.version }}"
 
     - name: Pack LLVM
       run: |
         cd llvm
-        tar cJvf llvm-${{ inputs.full_version }}-macos-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
+        tar cJvf ${{ env.TAR_NAME }} bin-${{ inputs.version }}
 
     - name: Upload package
       uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: llvm_macos_universal_lto_${{ inputs.lto }}
-        path: llvm/llvm-${{ inputs.full_version }}-macos-Release+Asserts${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz
-
-  mac-build-release:
-    # This job is not capable to build on a shared runner, so need to use self-hosted.
-    runs-on: [self-hosted, macOS]
-
-    steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-      with:
-        submodules: true
-
-    - name: Install dependencies
-      run: |
-        .github/workflows/scripts/install-llvm-deps-mac-hosted.sh
-
-    - name: Check environment
-      run: |
-        which -a clang
-        sysctl -n machdep.cpu.brand_string
-        sysctl -n hw.ncpu
-
-    - name: Build LLVM
-      run: |
-        cmake "$ISPC_HOME/superbuild" -B "build-${{ inputs.version }}" --preset os -DLTO="${{ inputs.lto }}" -DLLVM_VERSION="${{ inputs.version }}" -DCMAKE_INSTALL_PREFIX="$LLVM_HOME/bin-${{ inputs.version }}" -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON -DXE_DEPS=OFF -DMACOS_UNIVERSAL_BIN=ON -DLLVM_DISABLE_ASSERTIONS=ON -DISPC_ANDROID_NDK_PATH="/Users/Shared/android-ndk-r20b"
-        cmake --build "build-${{ inputs.version }}"
-        rm -rf "build-${{ inputs.version }}"
-
-    - name: Pack LLVM
-      run: |
-        cd llvm
-        tar cJvf llvm-${{ inputs.full_version }}-macos-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz bin-${{ inputs.version }}
-
-    - name: Upload package
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      with:
-        name: llvmrel_macos_universal_lto_${{ inputs.lto }}
-        path: llvm/llvm-${{ inputs.full_version }}-macos-Release${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz
+        name: ${{ env.ARTIFACT_NAME }}
+        path: llvm/${{ env.TAR_NAME }}
