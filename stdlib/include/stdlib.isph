@@ -1255,3 +1255,20 @@ __declspec(safe) inline varying int32 dot2add_i16packed(varying uint32 a, varyin
 // with corresponding 16-bit integers in b, producing 2 intermediate signed 32-bit results.
 // Sum these 2 results with the corresponding 32-bit integer in src using signed saturation, and return the result.
 __declspec(safe) inline varying int32 dot2add_i16packed_sat(varying uint32 a, varying uint32 b, varying int32 acc);
+
+// Below the place for the real implementations of the functions using templates
+
+template <typename T, uint N> uniform T<N> max(uniform T<N> a, uniform T<N> b) {
+    uniform T<N> result;
+    foreach (i = 0 ... N) {
+        result[i] = max(a[i], b[i]);
+    }
+    return result;
+}
+template <typename T, uint N> varying T<N> max(varying T<N> a, varying T<N> b) {
+    varying T<N> result;
+    for (uniform int i = 0; i < N; i++) {
+        result[i] = max(a[i], b[i]);
+    }
+    return result;
+}
