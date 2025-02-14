@@ -73,29 +73,51 @@ __declspec(safe) static inline float broadcast(float v, uniform int i) { return 
 
 __declspec(safe) static inline int8 broadcast(int8 v, uniform int i) { return __broadcast_i8(v, i); }
 
+__declspec(safe) static inline unsigned int8 broadcast(unsigned int8 v, uniform int i) { return __broadcast_i8(v, i); }
+
 __declspec(safe) static inline int16 broadcast(int16 v, uniform int i) { return __broadcast_i16(v, i); }
+
+__declspec(safe) static inline unsigned int16 broadcast(unsigned int16 v, uniform int i) {
+    return __broadcast_i16(v, i);
+}
 
 __declspec(safe) static inline float16 broadcast(float16 v, uniform int i) { return __broadcast_half(v, i); }
 
 __declspec(safe) static inline int32 broadcast(int32 v, uniform int i) { return __broadcast_i32(v, i); }
 
+__declspec(safe) static inline unsigned int32 broadcast(unsigned int32 v, uniform int i) {
+    return __broadcast_i32(v, i);
+}
+
 __declspec(safe) static inline double broadcast(double v, uniform int i) { return __broadcast_double(v, i); }
 
 __declspec(safe) static inline int64 broadcast(int64 v, uniform int i) { return __broadcast_i64(v, i); }
+
+__declspec(safe) static inline unsigned int64 broadcast(unsigned int64 v, uniform int i) {
+    return __broadcast_i64(v, i);
+}
 
 __declspec(safe) static inline float rotate(float v, uniform int i) { return __rotate_float(v, i); }
 
 __declspec(safe) static inline int8 rotate(int8 v, uniform int i) { return __rotate_i8(v, i); }
 
+__declspec(safe) static inline unsigned int8 rotate(unsigned int8 v, uniform int i) { return __rotate_i8(v, i); }
+
 __declspec(safe) static inline int16 rotate(int16 v, uniform int i) { return __rotate_i16(v, i); }
+
+__declspec(safe) static inline unsigned int16 rotate(unsigned int16 v, uniform int i) { return __rotate_i16(v, i); }
 
 __declspec(safe) static inline float16 rotate(float16 v, uniform int i) { return __rotate_half(v, i); }
 
 __declspec(safe) static inline int32 rotate(int32 v, uniform int i) { return __rotate_i32(v, i); }
 
+__declspec(safe) static inline unsigned int32 rotate(unsigned int32 v, uniform int i) { return __rotate_i32(v, i); }
+
 __declspec(safe) static inline double rotate(double v, uniform int i) { return __rotate_double(v, i); }
 
 __declspec(safe) static inline int64 rotate(int64 v, uniform int i) { return __rotate_i64(v, i); }
+
+__declspec(safe) static inline unsigned int64 rotate(unsigned int64 v, uniform int i) { return __rotate_i64(v, i); }
 
 __declspec(safe) static inline float shift(float v, uniform int i) {
     varying float result;
