@@ -131,8 +131,20 @@ __declspec(safe) static inline int8 shift(int8 v, uniform int i) {
     return result;
 }
 
+__declspec(safe) static inline unsigned int8 shift(unsigned int8 v, uniform int i) {
+    varying unsigned int8 result;
+    unmasked { result = __shift_i8(v, i); }
+    return result;
+}
+
 __declspec(safe) static inline int16 shift(int16 v, uniform int i) {
     varying int16 result;
+    unmasked { result = __shift_i16(v, i); }
+    return result;
+}
+
+__declspec(safe) static inline unsigned int16 shift(unsigned int16 v, uniform int i) {
+    varying unsigned int16 result;
     unmasked { result = __shift_i16(v, i); }
     return result;
 }
@@ -149,6 +161,12 @@ __declspec(safe) static inline int32 shift(int32 v, uniform int i) {
     return result;
 }
 
+__declspec(safe) static inline unsigned int32 shift(unsigned int32 v, uniform int i) {
+    varying unsigned int32 result;
+    unmasked { result = __shift_i32(v, i); }
+    return result;
+}
+
 __declspec(safe) static inline double shift(double v, uniform int i) {
     varying double result;
     unmasked { result = __shift_double(v, i); }
@@ -161,33 +179,63 @@ __declspec(safe) static inline int64 shift(int64 v, uniform int i) {
     return result;
 }
 
+__declspec(safe) static inline unsigned int64 shift(unsigned int64 v, uniform int i) {
+    varying unsigned int64 result;
+    unmasked { result = __shift_i64(v, i); }
+    return result;
+}
+
 __declspec(safe) static inline float shuffle(float v, int i) { return __shuffle_float(v, i); }
 
 __declspec(safe) static inline int8 shuffle(int8 v, int i) { return __shuffle_i8(v, i); }
 
+__declspec(safe) static inline unsigned int8 shuffle(unsigned int8 v, int i) { return __shuffle_i8(v, i); }
+
 __declspec(safe) static inline int16 shuffle(int16 v, int i) { return __shuffle_i16(v, i); }
+
+__declspec(safe) static inline unsigned int16 shuffle(unsigned int16 v, int i) { return __shuffle_i16(v, i); }
 
 __declspec(safe) static inline float16 shuffle(float16 v, int i) { return __shuffle_half(v, i); }
 
 __declspec(safe) static inline int32 shuffle(int32 v, int i) { return __shuffle_i32(v, i); }
 
+__declspec(safe) static inline unsigned int32 shuffle(unsigned int32 v, int i) { return __shuffle_i32(v, i); }
+
 __declspec(safe) static inline double shuffle(double v, int i) { return __shuffle_double(v, i); }
 
 __declspec(safe) static inline int64 shuffle(int64 v, int i) { return __shuffle_i64(v, i); }
+
+__declspec(safe) static inline unsigned int64 shuffle(unsigned int64 v, int i) { return __shuffle_i64(v, i); }
 
 __declspec(safe) static inline float shuffle(float v0, float v1, int i) { return __shuffle2_float(v0, v1, i); }
 
 __declspec(safe) static inline int8 shuffle(int8 v0, int8 v1, int i) { return __shuffle2_i8(v0, v1, i); }
 
+__declspec(safe) static inline unsigned int8 shuffle(unsigned int8 v0, unsigned int8 v1, int i) {
+    return __shuffle2_i8(v0, v1, i);
+}
+
 __declspec(safe) static inline int16 shuffle(int16 v0, int16 v1, int i) { return __shuffle2_i16(v0, v1, i); }
+
+__declspec(safe) static inline unsigned int16 shuffle(unsigned int16 v0, unsigned int16 v1, int i) {
+    return __shuffle2_i16(v0, v1, i);
+}
 
 __declspec(safe) static inline float16 shuffle(float16 v0, float16 v1, int i) { return __shuffle2_half(v0, v1, i); }
 
 __declspec(safe) static inline int32 shuffle(int32 v0, int32 v1, int i) { return __shuffle2_i32(v0, v1, i); }
 
+__declspec(safe) static inline unsigned int32 shuffle(unsigned int32 v0, unsigned int32 v1, int i) {
+    return __shuffle2_i32(v0, v1, i);
+}
+
 __declspec(safe) static inline double shuffle(double v0, double v1, int i) { return __shuffle2_double(v0, v1, i); }
 
 __declspec(safe) static inline int64 shuffle(int64 v0, int64 v1, int i) { return __shuffle2_i64(v0, v1, i); }
+
+__declspec(safe) static inline unsigned int64 shuffle(unsigned int64 v0, unsigned int64 v1, int i) {
+    return __shuffle2_i64(v0, v1, i);
+}
 
 // x[i]
 __declspec(safe, cost1) static inline uniform float extract(float x, uniform int i) {

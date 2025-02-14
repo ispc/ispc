@@ -57,26 +57,38 @@ __declspec(safe) inline unsigned int64 rotate(unsigned int64 v, uniform int i);
 
 __declspec(safe) inline float shift(float v, uniform int i);
 __declspec(safe) inline int8 shift(int8 v, uniform int i);
+__declspec(safe) inline unsigned int8 shift(unsigned int8 v, uniform int i);
 __declspec(safe) inline int16 shift(int16 v, uniform int i);
+__declspec(safe) inline unsigned int16 shift(unsigned int16 v, uniform int i);
 __declspec(safe) inline float16 shift(float16 v, uniform int i);
 __declspec(safe) inline int32 shift(int32 v, uniform int i);
+__declspec(safe) inline unsigned int32 shift(unsigned int32 v, uniform int i);
 __declspec(safe) inline double shift(double v, uniform int i);
 __declspec(safe) inline int64 shift(int64 v, uniform int i);
+__declspec(safe) inline unsigned int64 shift(unsigned int64 v, uniform int i);
 
 __declspec(safe) inline float shuffle(float v, int i);
 __declspec(safe) inline int8 shuffle(int8 v, int i);
+__declspec(safe) inline unsigned int8 shuffle(unsigned int8 v, int i);
 __declspec(safe) inline int16 shuffle(int16 v, int i);
+__declspec(safe) inline unsigned int16 shuffle(unsigned int16 v, int i);
 __declspec(safe) inline float16 shuffle(float16 v, int i);
 __declspec(safe) inline int32 shuffle(int32 v, int i);
+__declspec(safe) inline unsigned int32 shuffle(unsigned int32 v, int i);
 __declspec(safe) inline double shuffle(double v, int i);
 __declspec(safe) inline int64 shuffle(int64 v, int i);
+__declspec(safe) inline unsigned int64 shuffle(unsigned int64 v, int i);
 __declspec(safe) inline float shuffle(float v0, float v1, int i);
 __declspec(safe) inline int8 shuffle(int8 v0, int8 v1, int i);
+__declspec(safe) inline unsigned int8 shuffle(unsigned int8 v0, unsigned int8 v1, int i);
 __declspec(safe) inline int16 shuffle(int16 v0, int16 v1, int i);
+__declspec(safe) inline unsigned int16 shuffle(unsigned int16 v0, unsigned int16 v1, int i);
 __declspec(safe) inline float16 shuffle(float16 v0, float16 v1, int i);
 __declspec(safe) inline int32 shuffle(int32 v0, int32 v1, int i);
+__declspec(safe) inline unsigned int32 shuffle(unsigned int32 v0, unsigned int32 v1, int i);
 __declspec(safe) inline double shuffle(double v0, double v1, int i);
 __declspec(safe) inline int64 shuffle(int64 v0, int64 v1, int i);
+__declspec(safe) inline unsigned int64 shuffle(unsigned int64 v0, unsigned int64 v1, int i);
 
 // x[i]
 __declspec(safe, cost1) inline uniform float extract(float x, uniform int i);
