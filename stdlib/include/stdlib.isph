@@ -1,5 +1,5 @@
 // -*- mode: c++ -*-
-// Copyright (c) 2024, Intel Corporation
+// Copyright (c) 2024-2025, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 // @file stdlib.isph
@@ -33,19 +33,27 @@ __declspec(safe, cost0) inline uniform unsigned int64 intbits(uniform double d);
 
 __declspec(safe) inline float broadcast(float v, uniform int i);
 __declspec(safe) inline int8 broadcast(int8 v, uniform int i);
+__declspec(safe) inline unsigned int8 broadcast(unsigned int8 v, uniform int i);
 __declspec(safe) inline int16 broadcast(int16 v, uniform int i);
+__declspec(safe) inline unsigned int16 broadcast(unsigned int16 v, uniform int i);
 __declspec(safe) inline float16 broadcast(float16 v, uniform int i);
 __declspec(safe) inline int32 broadcast(int32 v, uniform int i);
+__declspec(safe) inline unsigned int32 broadcast(unsigned int32 v, uniform int i);
 __declspec(safe) inline double broadcast(double v, uniform int i);
 __declspec(safe) inline int64 broadcast(int64 v, uniform int i);
+__declspec(safe) inline unsigned int64 broadcast(unsigned int64 v, uniform int i);
 
 __declspec(safe) inline float rotate(float v, uniform int i);
 __declspec(safe) inline int8 rotate(int8 v, uniform int i);
+__declspec(safe) inline unsigned int8 rotate(unsigned int8 v, uniform int i);
 __declspec(safe) inline int16 rotate(int16 v, uniform int i);
+__declspec(safe) inline unsigned int16 rotate(unsigned int16 v, uniform int i);
 __declspec(safe) inline float16 rotate(float16 v, uniform int i);
 __declspec(safe) inline int32 rotate(int32 v, uniform int i);
+__declspec(safe) inline unsigned int32 rotate(unsigned int32 v, uniform int i);
 __declspec(safe) inline double rotate(double v, uniform int i);
 __declspec(safe) inline int64 rotate(int64 v, uniform int i);
+__declspec(safe) inline unsigned int64 rotate(unsigned int64 v, uniform int i);
 
 __declspec(safe) inline float shift(float v, uniform int i);
 __declspec(safe) inline int8 shift(int8 v, uniform int i);
