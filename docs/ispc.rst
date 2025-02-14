@@ -709,6 +709,12 @@ their signal handlers for error handling or recovery.  Such users must update
 their code to handle ``SIGILL`` instead. This change improves predictability and
 removes the dispatcher's reliance on the C standard library.
 
+Updating ISPC Programs For Changes In ISPC 1.27.0
+-------------------------------------------------
+
+Added cross lane operations for unsigned types: ``broadcast``, ``rotate``, ``shift``,
+and ``shuffle``.
+
 Getting Started with ISPC
 =========================
 
@@ -5113,9 +5119,13 @@ the running program instances.
 ::
 
     int8 broadcast(int8 value, uniform int index)
+    unsigned int8 broadcast(unsigned int8 value, uniform int index)
     int16 broadcast(int16 value, uniform int index)
+    unsigned int16 broadcast(unsigned int16 value, uniform int index)
     int32 broadcast(int32 value, uniform int index)
+    unsigned int32 broadcast(unsigned int32 value, uniform int index)
     int64 broadcast(int64 value, uniform int index)
+    unsigned int64 broadcast(unsigned int64 value, uniform int index)
     float16 broadcast(float16 value, uniform int index)
     float broadcast(float value, uniform int index)
     double broadcast(double value, uniform int index)
@@ -5131,9 +5141,13 @@ the size of the gang (it is masked to ensure valid offsets).
 
 ::
 
+    unsigned int8 rotate(unsigned int8 value, uniform int offset)
     int8 rotate(int8 value, uniform int offset)
+    unsigned int16 rotate(unsigned int16 value, uniform int offset)
     int16 rotate(int16 value, uniform int offset)
+    unsigned int32 rotate(unsigned int32 value, uniform int offset)
     int32 rotate(int32 value, uniform int offset)
+    unsigned int64 rotate(unsigned int64 value, uniform int offset)
     int64 rotate(int64 value, uniform int offset)
     float16 rotate(float16 value, uniform int offset)
     float rotate(float value, uniform int offset)
@@ -5149,9 +5163,13 @@ Instead, zeroes are shifted in where appropriate.
 ::
 
     int8 shift(int8 value, uniform int offset)
+    unsigned int8 shift(unsigned int8 value, uniform int offset)
     int16 shift(int16 value, uniform int offset)
+    unsigned int16 shift(unsigned int16 value, uniform int offset)
     int32 shift(int32 value, uniform int offset)
+    unsigned int32 shift(unsigned int32 value, uniform int offset)
     int64 shift(int64 value, uniform int offset)
+    unsigned int64 shift(unsigned int64 value, uniform int offset)
     float16 shift(float16 value, uniform int offset)
     float shift(float value, uniform int offset)
     double shift(double value, uniform int offset)
@@ -5166,9 +5184,13 @@ from which to get the value of ``value``.  The provided values for
 ::
 
     int8 shuffle(int8 value, int permutation)
+    unsigned int8 shuffle(unsigned int8 value, int permutation)
     int16 shuffle(int16 value, int permutation)
+    unsigned int16 shuffle(unsigned int16 value, int permutation)
     int32 shuffle(int32 value, int permutation)
+    unsigned int32 shuffle(unsigned int32 value, int permutation)
     int64 shuffle(int64 value, int permutation)
+    unsigned int64 shuffle(unsigned int64 value, int permutation)
     float16 shuffle(float16 value, int permutation)
     float shuffle(float value, int permutation)
     double shuffle(double value, int permutation)
@@ -5183,9 +5205,13 @@ the last element of ``value1``, etc.)
 ::
 
     int8 shuffle(int8 value0, int8 value1, int permutation)
+    unsigned int8 shuffle(unsigned int8 value0, unsigned int8 value1, int permutation)
     int16 shuffle(int16 value0, int16 value1, int permutation)
+    unsigned int16 shuffle(unsigned int16 value0, unsigned int16 value1, int permutation)
     int32 shuffle(int32 value0, int32 value1, int permutation)
+    unsigned int32 shuffle(unsigned int32 value0, unsigned int32 value1, int permutation)
     int64 shuffle(int64 value0, int64 value1, int permutation)
+    unsigned int64 shuffle(unsigned int64 value0, unsigned int64 value1, int permutation)
     float16 shuffle(float16 value0, float16 value1, int permutation)
     float shuffle(float value0, float value1, int permutation)
     double shuffle(double value0, double value1, int permutation)
@@ -5202,9 +5228,13 @@ element of it as a single ``uniform`` value.  .
 
     uniform bool extract(bool x, uniform int i)
     uniform int8 extract(int8 x, uniform int i)
+    uniform unsigned int8 extract(unsigned int8 x, uniform int i)
     uniform int16 extract(int16 x, uniform int i)
+    uniform unsigned int16 extract(unsigned int16 x, uniform int i)
     uniform int32 extract(int32 x, uniform int i)
+    uniform unsigned int32 extract(unsigned int32 x, uniform int i)
     uniform int64 extract(int64 x, uniform int i)
+    uniform unsigned int64 extract(unsigned int64 x, uniform int i)
     uniform float16 extract(float16 x, uniform int i)
     uniform float extract(float x, uniform int i)
     uniform double extract(double x, uniform int i)
@@ -5216,9 +5246,13 @@ where the ``i`` th element of ``x`` has been replaced with the value ``v``
 
     bool insert(bool x, uniform int i, uniform bool v)
     int8 insert(int8 x, uniform int i, uniform int8 v)
+    unsigned int8 insert(unsigned int8 x, uniform int i, uniform unsigned int8 v)
     int16 insert(int16 x, uniform int i, uniform int16 v)
+    unsigned int16 insert(unsigned int16 x, uniform int i, uniform unsigned int16 v)
     int32 insert(int32 x, uniform int i, uniform int32 v)
+    unsigned int32 insert(unsigned int32 x, uniform int i, uniform unsigned int32 v)
     int64 insert(int64 x, uniform int i, uniform int64 v)
+    unsigned int64 insert(unsigned int64 x, uniform int i, uniform unsigned int64 v)
     float16 insert(float16 x, uniform int i, uniform float16 v)
     float insert(float x, uniform int i, uniform float v)
     double insert(double x, uniform int i, uniform double v)
