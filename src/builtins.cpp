@@ -419,62 +419,84 @@ bool lStartsWithLLVM(llvm::StringRef name) { return name.starts_with("llvm."); }
 // Mapping from each target to its parent target
 // clang-format off
 std::unordered_map<ISPCTarget, ISPCTarget> targetParentMap = {
-    // TODO! enable more targets
     {ISPCTarget::neon_i8x16, ISPCTarget::generic_i8x16},
-
     {ISPCTarget::neon_i8x32, ISPCTarget::generic_i8x32},
-
     {ISPCTarget::neon_i16x8, ISPCTarget::generic_i16x8},
-
     {ISPCTarget::neon_i16x16, ISPCTarget::generic_i16x16},
-
     {ISPCTarget::neon_i32x4, ISPCTarget::generic_i32x4},
-
     {ISPCTarget::neon_i32x8, ISPCTarget::generic_i32x8},
 
-    // {ISPCTarget::avx512spr_x4, ISPCTarget::avx512icl_x4},
-    // {ISPCTarget::avx512icl_x4, ISPCTarget::avx512skx_x4},
-    // {ISPCTarget::avx512skx_x4, ISPCTarget::generic_i1x4},
+    {ISPCTarget::avx512spr_x4, ISPCTarget::avx512icl_x4},
+    {ISPCTarget::avx512icl_x4, ISPCTarget::avx512skx_x4},
+    {ISPCTarget::avx512skx_x4, ISPCTarget::generic_i1x4},
 
-    // {ISPCTarget::avx512spr_x8, ISPCTarget::avx512icl_x8},
-    // {ISPCTarget::avx512icl_x8, ISPCTarget::avx512skx_x8},
-    // {ISPCTarget::avx512skx_x8, ISPCTarget::generic_i1x8},
+    {ISPCTarget::avx512spr_x8, ISPCTarget::avx512icl_x8},
+    {ISPCTarget::avx512icl_x8, ISPCTarget::avx512skx_x8},
+    {ISPCTarget::avx512skx_x8, ISPCTarget::generic_i1x8},
 
-    // {ISPCTarget::avx512spr_x16, ISPCTarget::avx512icl_x16},
-    // {ISPCTarget::avx512icl_x16, ISPCTarget::avx512skx_x16},
-    // {ISPCTarget::avx512skx_x16, ISPCTarget::generic_i1x16},
+    {ISPCTarget::avx512spr_x16, ISPCTarget::avx512icl_x16},
+    {ISPCTarget::avx512icl_x16, ISPCTarget::avx512skx_x16},
+    {ISPCTarget::avx512skx_x16, ISPCTarget::generic_i1x16},
 
-    // {ISPCTarget::avx512spr_x32, ISPCTarget::avx512icl_x32},
-    // {ISPCTarget::avx512icl_x32, ISPCTarget::avx512skx_x32},
-    // {ISPCTarget::avx512skx_x32, ISPCTarget::generic_i1x32},
+    {ISPCTarget::avx512spr_x32, ISPCTarget::avx512icl_x32},
+    {ISPCTarget::avx512icl_x32, ISPCTarget::avx512skx_x32},
+    {ISPCTarget::avx512skx_x32, ISPCTarget::generic_i1x32},
 
-    // TODO: needs generic_i1x64 be repaired first
-    // {ISPCTarget::avx512spr_x64, ISPCTarget::avx512icl_x64},
-    // {ISPCTarget::avx512icl_x64, ISPCTarget::avx512skx_x64},
-    // {ISPCTarget::avx512skx_x64, ISPCTarget::generic_i1x64},
+    {ISPCTarget::avx512spr_x64, ISPCTarget::avx512icl_x64},
+    {ISPCTarget::avx512icl_x64, ISPCTarget::avx512skx_x64},
+    {ISPCTarget::avx512skx_x64, ISPCTarget::generic_i1x64},
 
-    // {ISPCTarget::avx2vnni_i32x4, ISPCTarget::avx2_i32x4},
-    // {ISPCTarget::avx2_i32x4, ISPCTarget::avx1_i32x4},
-    // {ISPCTarget::avx1_i32x4, ISPCTarget::sse4_i32x4},
-    // {ISPCTarget::sse4_i32x4, ISPCTarget::sse2_i32x4},
-    // {ISPCTarget::sse2_i32x4, ISPCTarget::generic_i32x4},
+    // Several notes here.
+    // Even though sse41* targets are aliases for sse4 and avx1_i32x4 is alias for sse4_i32x4,
+    // they should be present in this map.
+    // Also a reminder that "sse4" in ISPC targets means "sse42".
+    {ISPCTarget::avx2vnni_i32x4, ISPCTarget::avx2_i32x4},
+    {ISPCTarget::avx2_i32x4, ISPCTarget::avx1_i32x4},
+    {ISPCTarget::avx1_i32x4, ISPCTarget::sse4_i32x4},
+    {ISPCTarget::sse4_i32x4, ISPCTarget::sse41_i32x4},
+    {ISPCTarget::sse41_i32x4, ISPCTarget::sse2_i32x4},
+    {ISPCTarget::sse2_i32x4, ISPCTarget::generic_i32x4},
 
-    // {ISPCTarget::avx2vnni_i32x8, ISPCTarget::avx2_i32x8},
-    // {ISPCTarget::avx2_i32x8, ISPCTarget::avx1_i32x8},
-    // {ISPCTarget::avx1_i32x8, ISPCTarget::sse4_i32x8},
-    // {ISPCTarget::sse4_i32x8, ISPCTarget::sse2_i32x8},
-    // {ISPCTarget::sse2_i32x8, ISPCTarget::generic_i32x8},
+    {ISPCTarget::avx2vnni_i32x8, ISPCTarget::avx2_i32x8},
+    {ISPCTarget::avx2_i32x8, ISPCTarget::avx1_i32x8},
+    {ISPCTarget::avx1_i32x8, ISPCTarget::sse4_i32x8},
+    {ISPCTarget::sse4_i32x8, ISPCTarget::sse41_i32x8},
+    {ISPCTarget::sse41_i32x8, ISPCTarget::sse2_i32x8},
+    {ISPCTarget::sse2_i32x8, ISPCTarget::generic_i32x8},
 
-    // {ISPCTarget::avx2vnni_i32x16, ISPCTarget::avx2_i32x16},
-    // {ISPCTarget::avx2_i32x16, ISPCTarget::avx1_i32x16},
-    // {ISPCTarget::avx1_i32x16, ISPCTarget::generic_i32x16},
+    {ISPCTarget::avx2vnni_i32x16, ISPCTarget::avx2_i32x16},
+    {ISPCTarget::avx2_i32x16, ISPCTarget::avx1_i32x16},
+    {ISPCTarget::avx1_i32x16, ISPCTarget::generic_i32x16},
 
-    // {ISPCTarget::avx2_i16x16, ISPCTarget::sse4_i16x16},
-    // {ISPCTarget::sse4_i16x16, ISPCTarget::generic_i16x16},
+    {ISPCTarget::avx2_i64x4, ISPCTarget::avx1_i64x4},
+    {ISPCTarget::avx1_i64x4, ISPCTarget::generic_i64x4},
 
-    // {ISPCTarget::sse4_i8x16, ISPCTarget::generic_i8x16},
+    {ISPCTarget::avx2_i16x16, ISPCTarget::generic_i16x16},
 
-    // {ISPCTarget::avx2_i8x32, ISPCTarget::generic_i8x32},
+    {ISPCTarget::avx2_i8x32, ISPCTarget::generic_i8x32},
+
+    {ISPCTarget::sse4_i8x16, ISPCTarget::sse41_i8x16},
+    {ISPCTarget::sse41_i8x16, ISPCTarget::generic_i8x16},
+
+    {ISPCTarget::sse4_i16x8, ISPCTarget::sse41_i16x8},
+    {ISPCTarget::sse41_i16x8, ISPCTarget::generic_i16x8},
+
+    //{ISPCTarget::wasm_i32x4, ISPCTarget::generic_i32x4}
+
+    /*{ISPCTarget::gen9_x8, ISPCTarget::generic_i1x8},
+    {ISPCTarget::gen9_x16, ISPCTarget::generic_i1x16},
+    {ISPCTarget::xelp_x8, ISPCTarget::generic_i1x8},
+    {ISPCTarget::xelp_x16, ISPCTarget::generic_i1x16},
+    {ISPCTarget::xehpg_x8, ISPCTarget::generic_i1x8},
+    {ISPCTarget::xehpg_x16, ISPCTarget::generic_i1x16},
+    {ISPCTarget::xehpc_x16, ISPCTarget::generic_i1x16},
+    {ISPCTarget::xehpc_x32, ISPCTarget::generic_i1x32},
+    {ISPCTarget::xelpg_x8, ISPCTarget::generic_i1x8},
+    {ISPCTarget::xelpg_x16, ISPCTarget::generic_i1x16},
+    {ISPCTarget::xe2hpg_x16, ISPCTarget::generic_i1x16},
+    {ISPCTarget::xe2hpg_x32, ISPCTarget::generic_i1x32},
+    {ISPCTarget::xe2lpg_x16, ISPCTarget::generic_i1x16},
+    {ISPCTarget::xe2lpg_x32, ISPCTarget::generic_i1x32}*/
 };
 // clang-format on
 
