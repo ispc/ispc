@@ -88,7 +88,6 @@
 #ifdef ISPC_XE_ENABLED
 #include <llvm/GenXIntrinsics/GenXIntrinsics.h>
 #endif
-#include <llvm/Target/TargetIntrinsicInfo.h>
 
 #ifdef ISPC_XE_ENABLED
 #include <LLVMSPIRVLib/LLVMSPIRVLib.h>
