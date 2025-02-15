@@ -20,7 +20,6 @@
 #ifdef ISPC_XE_ENABLED
 #include <llvm/GenXIntrinsics/GenXIntrinsics.h>
 #endif
-#include <llvm/Target/TargetIntrinsicInfo.h>
 
 using namespace ispc;
 
@@ -631,12 +630,8 @@ static llvm::Function *lGetIntrinsicDeclaration(llvm::Module *module, const std:
     }
 #endif // ISPC_XE_ENABLED
     if (!g->target->isXeTarget()) {
-        llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
-        const llvm::TargetIntrinsicInfo *TII = targetMachine->getIntrinsicInfo();
         llvm::Intrinsic::ID ID = lLookupIntrinsicID(name);
-        if (ID == llvm::Intrinsic::not_intrinsic && TII) {
-            ID = static_cast<llvm::Intrinsic::ID>(TII->lookupName(llvm::StringRef(name)));
-        }
+
         if (ID == llvm::Intrinsic::not_intrinsic) {
             // Check if it is an ISPC intrinsic
             ISPCIntrinsics IID = lLookupISPCInstrinsic(name);
