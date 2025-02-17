@@ -7309,7 +7309,7 @@ static llvm::Value *lUniformValueToVarying(FunctionEmitContext *ctx, llvm::Value
                                               CastType<AtomicType>(type), pos);
     }
 
-    Assert(CastType<PointerType>(type) != nullptr);
+    Assert(CastType<PointerType>(type) != nullptr || CastType<EnumType>(type) != nullptr);
     return ctx->SmearUniform(value);
 }
 
