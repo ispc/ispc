@@ -16,8 +16,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  ZIP_URL: https://ci.appveyor.com/api/projects/ispc/ispc/artifacts/build%2Fispc-trunk-windows.zip?job=Environment%3A%20APPVEYOR_BUILD_WORKER_IMAGE%3DVisual%20Studio%202019%2C%20LLVM_VERSION%3Dlatest
-  TAR_URL: https://ci.appveyor.com/api/projects/ispc/ispc/artifacts/build%2Fispc-trunk-linux.tar.gz?job=Environment%3A%20APPVEYOR_BUILD_WORKER_IMAGE%3DUbuntu2204%2C%20LLVM_VERSION%3Dlatest
+  ZIP_URL: https://github.com/ispc/ispc/releases/download/trunk-artifacts/ispc-trunk-windows.zip
+  TAR_URL: https://github.com/ispc/ispc/releases/download/trunk-artifacts/ispc-trunk-linux.tar.gz
 
 jobs:
   hardening_check:
