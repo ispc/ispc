@@ -1,7 +1,7 @@
 # Copyright 2024-2025, Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
-name: Check against DLL injection (trunc)
+name: Check against DLL injection (trunk)
 
 permissions: read-all
 
@@ -32,9 +32,9 @@ jobs:
         pip install defusedxml
       shell: powershell
 
-    - name: Download ISPC trunc archives
+    - name: Download ISPC trunk archives
       env:
-        ZIP_URL: https://ci.appveyor.com/api/projects/ispc/ispc/artifacts/build%2Fispc-trunk-windows.zip?job=Environment%3A%20APPVEYOR_BUILD_WORKER_IMAGE%3DVisual%20Studio%202019%2C%20LLVM_VERSION%3Dlatest
+        ZIP_URL: https://github.com/ispc/ispc/releases/download/trunk-artifacts/ispc-trunk-windows.zip
       run: |
         ZIP="ispc-trunk-windows.zip"
         echo "Download artifact $ZIP_URL" >> "$GITHUB_STEP_SUMMARY"
