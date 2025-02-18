@@ -4347,7 +4347,12 @@ The ISPC Standard Library
 
 ``ispc`` has a standard library that is automatically available when
 compiling ``ispc`` programs.  (To disable the standard library, pass the
-``--nostdlib`` command-line flag to the compiler.)
+``--nostdlib`` command-line flag to the compiler.).
+For a complete list of functions available in the standard library, consult the
+`stdlib.isph`_ header file. This file serves as the definitive reference for all
+the function declarations provided by the standard library.
+
+.. _stdlib.isph: https://github.com/ispc/ispc/tree/main/stdlib/include/stdlib.isph
 
 Basic Operations On Data
 ------------------------
