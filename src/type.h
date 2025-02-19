@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -773,6 +773,7 @@ class VectorType : public SequentialType {
     const VectorType *GetAsConstType() const;
     const VectorType *GetAsNonConstType() const;
 
+    std::string GetCountString() const;
     std::string GetString() const;
     std::string Mangle() const;
     std::string GetDeclaration(const std::string &name, DeclarationSyntax syntax) const;

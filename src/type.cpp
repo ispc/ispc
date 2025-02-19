@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -1887,37 +1887,26 @@ const VectorType *VectorType::GetAsNonConstType() const {
     return new VectorType(base->GetAsNonConstType(), elementCount);
 }
 
-std::string VectorType::GetString() const {
-    std::string s = base->GetString();
-    char buf[16];
-    if (elementCount.fixedCount > 0 || elementCount.symbolCount == nullptr) {
-        snprintf(buf, sizeof(buf), "<%d>", elementCount.fixedCount);
-    } else {
-        snprintf(buf, sizeof(buf), "<%s>", elementCount.symbolCount->name.c_str());
-    }
-    return s + std::string(buf);
-}
-
-std::string VectorType::Mangle() const {
-    std::string s = base->Mangle();
-    char buf[16];
-    if (elementCount.fixedCount > 0 || elementCount.symbolCount == nullptr) {
-        snprintf(buf, sizeof(buf), "_3C_%d_3E_", elementCount.fixedCount); // "<%d>"
-    } else {
-        snprintf(buf, sizeof(buf), "_3C_%s_3E_", elementCount.symbolCount->name.c_str()); // "<%s>"
-    }
-    return s + std::string(buf);
-}
-
-std::string VectorType::GetDeclaration(const std::string &name, DeclarationSyntax syntax) const {
-    std::string s = base->GetDeclaration("", syntax);
+std::string VectorType::GetCountString() const {
     char buf[16];
     if (elementCount.fixedCount > 0 || elementCount.symbolCount == nullptr) {
         snprintf(buf, sizeof(buf), "%d", elementCount.fixedCount);
     } else {
         snprintf(buf, sizeof(buf), "%s", elementCount.symbolCount->name.c_str());
     }
-    return s + std::string(buf) + "  " + name;
+    return std::string(buf);
+}
+
+std::string VectorType::GetString() const {
+    return base->GetString() + std::string("<") + GetCountString() + std::string(">");
+}
+
+std::string VectorType::Mangle() const {
+    return base->Mangle() + std::string("_3C_") + GetCountString() + std::string("_3E_");
+}
+
+std::string VectorType::GetDeclaration(const std::string &name, DeclarationSyntax syntax) const {
+    return base->GetDeclaration("", syntax) + GetCountString() + "  " + name;
 }
 
 int VectorType::GetElementCount() const { return elementCount.fixedCount; }
