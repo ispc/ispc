@@ -9011,6 +9011,43 @@ static std::pair<std::string, const Type *> lDeduceParam(const Type *paramType, 
     return std::pair<std::string, const Type *>("", nullptr);
 }
 
+bool lCheckDeductionCompatibility(TemplateInstantiation &inst, const std::pair<std::string, const Type *> &deduction,
+                                  SourcePos pos) {
+    if (deduction.second == nullptr) {
+        // Deduction failed
+        return false;
+    }
+
+    // Check if this deduction is compatible with previously deduced arguments
+    const Type *previousDeductionResult = inst.InstantiateType(deduction.first);
+
+    if (previousDeductionResult == nullptr) {
+        // This template parameter was deducted for the first time. Add it to the map.
+        inst.AddArgument(deduction.first, TemplateArg(deduction.second, pos));
+        return true;
+    }
+
+    if (!Type::Equal(previousDeductionResult, deduction.second)) {
+        if (previousDeductionResult->IsUniformType() && deduction.second->IsVaryingType() &&
+            Type::Equal(previousDeductionResult->GetAsVaryingType(), deduction.second)) {
+            // Override previous deduction with varying type
+            inst.AddArgument(deduction.first, TemplateArg(deduction.second, pos));
+            return true;
+        }
+
+        if (previousDeductionResult->IsVaryingType() && deduction.second->IsUniformType()) {
+            // That's fine, uniform will be broadcasted
+            return true;
+        }
+
+        // Deduction failed due to conflicting deduction types
+        return false;
+    }
+
+    // Deducted type is the same as previously deduced one
+    return true;
+}
+
 std::vector<Symbol *>
 FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *> &argTypes) const {
     // Two different cases are possible here:
@@ -9018,7 +9055,7 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
     //      foo<int>(arg1, arg2);
     //    In this case no type deduction is needed - the types were explicitly specified.
     //    The arguments still need to be verified for viability - i.e. that Implicit Convertion Sequence (ICS)
-    //    exists (and is better that others).
+    //    exists (and is better than others).
     // 2. The template function was specified by name, without tempalte paramters, i.e.
     //      foo(arg1, arg2);
     //    In this case template type parameters deduction need to happen.
@@ -9161,29 +9198,7 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
 
                 // Deduce. The result is a pair of template parameter name and type.
                 auto deduction = lDeduceParam(paramType, argType);
-                if (deduction.second != nullptr) {
-                    // check if this deduction is compatible with previously deduced arguments.
-                    const Type *previousDeductionResult = inst.InstantiateType(deduction.first);
-
-                    if (previousDeductionResult == nullptr) {
-                        // This tempalte parameter was deducted for the first time. Add it to the map.
-                        inst.AddArgument(deduction.first, TemplateArg(deduction.second, pos));
-                    } else if (!Type::Equal(previousDeductionResult, deduction.second)) {
-                        if (previousDeductionResult->IsUniformType() && deduction.second->IsVaryingType() &&
-                            Type::Equal(previousDeductionResult->GetAsVaryingType(), deduction.second)) {
-                            // override previous deduction with varying type
-                            inst.AddArgument(deduction.first, TemplateArg(deduction.second, pos));
-                        } else if (previousDeductionResult->IsVaryingType() && deduction.second->IsUniformType()) {
-                            // That's fine, uniform will be broadcasted.
-                        } else {
-                            // Deduction failed due to conflicting deduction types.
-                            deductionFailed = true;
-                            break;
-                        }
-                    } else {
-                        // Deducted type is the same as previously deduced one. Do nothing, we are good.
-                    }
-                } else {
+                if (!lCheckDeductionCompatibility(inst, deduction, pos)) {
                     // Deduction failed, skip to the next candidate.
                     deductionFailed = true;
                     break;
