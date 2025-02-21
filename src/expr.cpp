@@ -5229,13 +5229,16 @@ Expr *IndexExpr::TypeCheck() {
     if (!isUniform) {
         // Unless we have an explicit 64-bit index and are compiling to a
         // 64-bit target with 64-bit addressing, convert the index to an int32
-        // type.
+        // or uint32 type depending on whether it's signed or unsigned.
         //    The range of varying index is limited to [0,2^31) as a result.
         if (!(Type::EqualIgnoringConst(indexType->GetAsUniformType(), AtomicType::UniformUInt64) ||
               Type::EqualIgnoringConst(indexType->GetAsUniformType(), AtomicType::UniformInt64)) ||
             g->target->is32Bit() || g->opt.force32BitAddressing) {
-            const Type *indexType = AtomicType::VaryingInt32;
-            index = TypeConvertExpr(index, indexType, "array index");
+            const Type *indexType32 = AtomicType::VaryingInt32;
+            if (indexType->IsUnsignedType()) {
+                indexType32 = indexType32->GetAsUnsignedType();
+            }
+            index = TypeConvertExpr(index, indexType32, "array index");
             if (index == nullptr) {
                 return nullptr;
             }
@@ -5253,8 +5256,11 @@ Expr *IndexExpr::TypeCheck() {
         bool force_32bit =
             g->target->is32Bit() || (g->opt.force32BitAddressing &&
                                      Type::EqualIgnoringConst(indexType->GetAsUniformType(), AtomicType::UniformInt64));
-        const Type *indexType = force_32bit ? AtomicType::UniformInt32 : AtomicType::UniformInt64;
-        index = TypeConvertExpr(index, indexType, "array index");
+        const Type *indexTypeForced = force_32bit ? AtomicType::UniformInt32 : AtomicType::UniformInt64;
+        if (indexType->IsUnsignedType()) {
+            indexTypeForced = indexTypeForced->GetAsUnsignedType();
+        }
+        index = TypeConvertExpr(index, indexTypeForced, "array index");
         if (index == nullptr) {
             return nullptr;
         }
