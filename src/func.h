@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2024, Intel Corporation
+  Copyright (c) 2011-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -193,6 +193,7 @@ class TemplateInstantiation {
   public:
     TemplateInstantiation(const TemplateParms &typeParms, const TemplateArgs &tArgs, bool IsInline, bool IsNoInline);
     const Type *InstantiateType(const std::string &name);
+    const Expr *InstantiateExpr(const std::string &name);
     Symbol *InstantiateSymbol(Symbol *sym);
     Symbol *InstantiateTemplateSymbol(TemplateSymbol *sym);
     void SetFunction(Function *func);

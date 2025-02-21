@@ -1202,6 +1202,15 @@ const Type *TemplateInstantiation::InstantiateType(const std::string &name) {
     return t->second->GetAsType();
 }
 
+const Expr *TemplateInstantiation::InstantiateExpr(const std::string &name) {
+    auto t = argsMap.find(name);
+    if (t == argsMap.end()) {
+        return nullptr;
+    }
+
+    return t->second->GetAsExpr();
+}
+
 Symbol *TemplateInstantiation::InstantiateSymbol(Symbol *sym) {
     if (sym == nullptr) {
         return nullptr;

@@ -9011,6 +9011,90 @@ static std::pair<std::string, const Type *> lDeduceParam(const Type *paramType, 
     return std::pair<std::string, const Type *>("", nullptr);
 }
 
+bool lCheckDeductionCompatibility(TemplateInstantiation &inst, const std::pair<std::string, const Type *> &deduction,
+                                  SourcePos pos) {
+    if (deduction.second == nullptr) {
+        // Deduction failed
+        return false;
+    }
+
+    // Check if this deduction is compatible with previously deduced arguments
+    const Type *previousDeductionResult = inst.InstantiateType(deduction.first);
+
+    if (previousDeductionResult == nullptr) {
+        // This template parameter was deducted for the first time. Add it to the map.
+        inst.AddArgument(deduction.first, TemplateArg(deduction.second, pos));
+        return true;
+    }
+
+    if (!Type::Equal(previousDeductionResult, deduction.second)) {
+        if (previousDeductionResult->IsUniformType() && deduction.second->IsVaryingType() &&
+            Type::Equal(previousDeductionResult->GetAsVaryingType(), deduction.second)) {
+            // Override previous deduction with varying type
+            inst.AddArgument(deduction.first, TemplateArg(deduction.second, pos));
+            return true;
+        }
+
+        if (previousDeductionResult->IsVaryingType() && deduction.second->IsUniformType()) {
+            // That's fine, uniform will be broadcasted
+            return true;
+        }
+
+        // Deduction failed due to conflicting deduction types
+        return false;
+    }
+
+    // Deducted type is the same as previously deduced one
+    return true;
+}
+
+bool lCheckDeductionCompatibility(TemplateInstantiation &inst, const std::pair<std::string, const Expr *> &deduction,
+                                  SourcePos pos) {
+    if (deduction.second == nullptr) {
+        // Deduction failed
+        return false;
+    }
+
+    // Check if this deduction is compatible with previously deduced arguments
+    if (const Expr *previousDeductionResult = inst.InstantiateExpr(deduction.first)) {
+        const ConstExpr *prev = llvm::dyn_cast<ConstExpr>(previousDeductionResult);
+        const ConstExpr *cur = llvm::dyn_cast<ConstExpr>(deduction.second);
+        if (prev && cur && cur->IsEqual(prev)) {
+            // Deducted value is the same as previously deduced one
+            return true;
+        }
+        // Deduction failed due to conflicting deduction values
+        return false;
+    } else {
+        // This template parameter was deducted for the first time. Add it to the map.
+        inst.AddArgument(deduction.first, TemplateArg(deduction.second, pos));
+        return true;
+    }
+}
+
+bool lDeduceVectorParams(TemplateInstantiation &inst, const VectorType *paramType, const VectorType *argType,
+                         SourcePos pos) {
+    const Type *elemType = paramType->GetElementType();
+    const TemplateTypeParmType *templTypeParam = CastType<TemplateTypeParmType>(elemType);
+    bool countDependent = paramType->IsCountDependent();
+    if (templTypeParam && countDependent) {
+        // Here we have param type like T<N>, and argument type like int<4>
+        // First, deduce the element type T from the argument type.
+        const Type *argElemType = argType->GetElementType();
+        auto deduction = lDeduceParam(elemType, argElemType);
+        if (!lCheckDeductionCompatibility(inst, deduction, pos)) {
+            // Deduction failed, skip to the next candidate.
+            return false;
+        }
+
+        // Then deduce the count N from the argument type.
+        int elemCount = argType->GetElementCount();
+        ConstExpr *expr = new ConstExpr(AtomicType::UniformInt32, elemCount, pos);
+        return lCheckDeductionCompatibility(inst, std::make_pair(paramType->GetCountString(), expr), pos);
+    }
+    return false;
+}
+
 std::vector<Symbol *>
 FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *> &argTypes) const {
     // Two different cases are possible here:
@@ -9018,7 +9102,7 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
     //      foo<int>(arg1, arg2);
     //    In this case no type deduction is needed - the types were explicitly specified.
     //    The arguments still need to be verified for viability - i.e. that Implicit Convertion Sequence (ICS)
-    //    exists (and is better that others).
+    //    exists (and is better than others).
     // 2. The template function was specified by name, without tempalte paramters, i.e.
     //      foo(arg1, arg2);
     //    In this case template type parameters deduction need to happen.
@@ -9159,34 +9243,28 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
                     paramType = CastType<ReferenceType>(paramType)->GetReferenceTarget();
                 }
 
-                // Deduce. The result is a pair of template parameter name and type.
-                auto deduction = lDeduceParam(paramType, argType);
-                if (deduction.second != nullptr) {
-                    // check if this deduction is compatible with previously deduced arguments.
-                    const Type *previousDeductionResult = inst.InstantiateType(deduction.first);
+                if (const VectorType *vParamType = CastType<VectorType>(paramType)) {
+                    const VectorType *vArgType = CastType<VectorType>(argType);
+                    if (!vArgType) {
+                        // argument is not a vector type - deduction failed
+                        deductionFailed = true;
+                        break;
+                    }
 
-                    if (previousDeductionResult == nullptr) {
-                        // This tempalte parameter was deducted for the first time. Add it to the map.
-                        inst.AddArgument(deduction.first, TemplateArg(deduction.second, pos));
-                    } else if (!Type::Equal(previousDeductionResult, deduction.second)) {
-                        if (previousDeductionResult->IsUniformType() && deduction.second->IsVaryingType() &&
-                            Type::Equal(previousDeductionResult->GetAsVaryingType(), deduction.second)) {
-                            // override previous deduction with varying type
-                            inst.AddArgument(deduction.first, TemplateArg(deduction.second, pos));
-                        } else if (previousDeductionResult->IsVaryingType() && deduction.second->IsUniformType()) {
-                            // That's fine, uniform will be broadcasted.
-                        } else {
-                            // Deduction failed due to conflicting deduction types.
-                            deductionFailed = true;
-                            break;
-                        }
-                    } else {
-                        // Deducted type is the same as previously deduced one. Do nothing, we are good.
+                    // Here we try to deduce vector type arguments T<N> for something like this:
+                    // template <typename T, uint N> void foo(T<N> t);
+                    if (!lDeduceVectorParams(inst, vParamType, vArgType, pos)) {
+                        deductionFailed = true;
+                        break;
                     }
                 } else {
-                    // Deduction failed, skip to the next candidate.
-                    deductionFailed = true;
-                    break;
+                    // Deduce. The result is a pair of template parameter name and type.
+                    auto deduction = lDeduceParam(paramType, argType);
+                    if (!lCheckDeductionCompatibility(inst, deduction, pos)) {
+                        // Deduction failed, skip to the next candidate.
+                        deductionFailed = true;
+                        break;
+                    }
                 }
             }
         }
@@ -9201,14 +9279,27 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
             if (i < templateArgs.size()) {
                 deducedArgs.push_back(templateArgs[i]);
             } else {
-                const Type *deducedArg = inst.InstantiateType((*templateParms)[i]->GetName());
-                if (!deducedArg || deducedArg->IsDependent()) {
-                    // Undeduced template parameter. The deduction is incomplete and we need to skip to another
-                    // candidate.
-                    deductionFailed = true;
-                    break;
+                const TemplateParam *tParam = (*templateParms)[i];
+                if (tParam->IsTypeParam()) {
+                    const Type *deducedArg = inst.InstantiateType(tParam->GetName());
+                    if (!deducedArg || deducedArg->IsDependent()) {
+                        // Undeduced template parameter. The deduction is incomplete and we need to skip to another
+                        // candidate.
+                        deductionFailed = true;
+                        break;
+                    }
+                    deducedArgs.push_back(TemplateArg(deducedArg, pos));
                 }
-                deducedArgs.push_back(TemplateArg(deducedArg, pos));
+                if (tParam->IsNonTypeParam()) {
+                    const Expr *deducedArg = inst.InstantiateExpr(tParam->GetName());
+                    if (!deducedArg) {
+                        // Undeduced template parameter. The deduction is incomplete and we need to skip to another
+                        // candidate.
+                        deductionFailed = true;
+                        break;
+                    }
+                    deducedArgs.push_back(TemplateArg(deducedArg, pos));
+                }
             }
         }
         if (deductionFailed) {
