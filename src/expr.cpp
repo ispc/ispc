@@ -2878,6 +2878,9 @@ Expr *BinaryExpr::TypeCheck() {
         }
 
         const Type *offsetType = g->target->is32Bit() ? AtomicType::UniformInt32 : AtomicType::UniformInt64;
+        if (arg1->GetType()->IsUnsignedType()) {
+            offsetType = offsetType->GetAsUnsignedType();
+        }
         if (pt0->IsVaryingType()) {
             offsetType = offsetType->GetAsVaryingType();
         }

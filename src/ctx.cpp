@@ -1979,6 +1979,18 @@ llvm::Instruction *FunctionEmitContext::ZExtInst(llvm::Value *value, llvm::Type 
     return inst;
 }
 
+/** Extend both uniform and varying integer values to 64 bits. */
+llvm::Value *lExtendIntTo64(FunctionEmitContext *ctx, llvm::Value *value, const Type *indexType,
+                            const llvm::Twine &name = "") {
+    bool valueIsVarying = llvm::isa<llvm::VectorType>(value->getType());
+    llvm::Type *type = valueIsVarying ? LLVMTypes::Int64VectorType : LLVMTypes::Int64Type;
+    if (indexType && indexType->IsUnsignedType()) {
+        return ctx->ZExtInst(value, type, name);
+    } else {
+        return ctx->SExtInst(value, type, name);
+    }
+}
+
 /** Utility routine used by the GetElementPtrInst() methods; given a
     pointer to some type (either uniform or varying) and an index (also
     either uniform or varying), this returns the new pointer (varying if
@@ -2003,7 +2015,7 @@ llvm::Value *FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Va
             index = TruncInst(index, LLVMTypes::Int32Type);
         } else if ((!g->target->is32Bit() && !g->opt.force32BitAddressing) &&
                    index->getType() == LLVMTypes::Int32Type) {
-            index = SExtInst(index, LLVMTypes::Int64Type);
+            index = lExtendIntTo64(this, index, indexType);
         }
 
         // do a scalar multiply to get the offset as index * scale and then
@@ -2019,7 +2031,7 @@ llvm::Value *FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Va
             index = TruncInst(index, LLVMTypes::Int32VectorType);
         } else if ((!g->target->is32Bit() && !g->opt.force32BitAddressing) &&
                    index->getType() == LLVMTypes::Int32VectorType) {
-            index = SExtInst(index, LLVMTypes::Int64VectorType);
+            index = lExtendIntTo64(this, index, indexType);
         }
 
         scale = SmearUniform(scale);
@@ -2033,7 +2045,7 @@ llvm::Value *FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Va
     // 32 bits, we still have to convert to a 64-bit value before we
     // actually add the offset to the pointer.
     if (g->target->is32Bit() == false && g->opt.force32BitAddressing == true) {
-        offset = SExtInst(offset, LLVMTypes::Int64VectorType, llvm::Twine(offset->getName()) + "_to_64");
+        offset = lExtendIntTo64(this, offset, indexType, llvm::Twine(offset->getName()) + "_to_64");
     }
 
     // Smear out the pointer to be varying; either the base pointer or the
