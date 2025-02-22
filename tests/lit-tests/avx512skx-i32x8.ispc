@@ -1,18 +1,15 @@
 // Case 1: Checks avx512skx-x16 assembly output for zmm registers.
-//; RUN: %{ispc} %s --target=avx512skx-x16 --emit-asm -o - | FileCheck %s -check-prefix=CHECK_ZMM_32x16
+//; RUN: %{ispc} %s --target=avx512skx-x16 --emit-asm -o - 2>&1 | FileCheck %s -check-prefix=CHECK_ZMM_32x16
 // Case 2a: Checks avx512skx-x4 assembly output to ensure there are no zmm registers.
-//; RUN: %{ispc} %s --target=avx512skx-x4 --emit-asm -o - | FileCheck %s --implicit-check-not "zmm"
+//; RUN: %{ispc} %s --target=avx512skx-x4 --emit-asm -o - 2>&1 | FileCheck %s --implicit-check-not "zmm"
 // Case 2b: Checks avx512skx-x8 assembly output to ensure there are no zmm registers.
-//; RUN: %{ispc} %s --target=avx512skx-x8 --emit-asm -o - | FileCheck %s --implicit-check-not "zmm"
+//; RUN: %{ispc} %s --target=avx512skx-x8 --emit-asm -o - 2>&1 | FileCheck %s --implicit-check-not "zmm"
 // Case 3: Checks avx512skx-x16 LLVM IR to ensure avx512skx-x8 func attributes are not present.
-//; RUN: %{ispc} %s --target=avx512skx-x16 --emit-llvm -o %t_8.bc
-//; RUN: llvm-dis %t_8.bc -o - | FileCheck %s --implicit-check-not ""min-legal-vector-width"="256"" --implicit-check-not ""prefer-vector-width"="256""
+//; RUN: %{ispc} %s --target=avx512skx-x16 --emit-llvm-text -o - 2>&1 | FileCheck %s --implicit-check-not ""min-legal-vector-width"="256"" --implicit-check-not ""prefer-vector-width"="256""
 // Case 4a: Checks avx512skx-x4 LLVM IR to ensure avx512skx-x4 func attributes are present (same as for x8).
-//; RUN: %{ispc} %s --target=avx512skx-x4 --emit-llvm -o %t_4.bc
-//; RUN: llvm-dis %t_4.bc -o - | FileCheck %s -check-prefix=CHECK_ATTR_8
+//; RUN: %{ispc} %s --target=avx512skx-x4 --emit-llvm-text -o - 2>&1 | FileCheck %s -check-prefix=CHECK_ATTR_8
 // Case 4b: Checks avx512skx-x8 LLVM IR to ensure avx512skx-x8 func attributes are present.
-//; RUN: %{ispc} %s --target=avx512skx-x8 --emit-llvm -o %t_8.bc
-//; RUN: llvm-dis %t_8.bc -o - | FileCheck %s -check-prefix=CHECK_ATTR_8
+//; RUN: %{ispc} %s --target=avx512skx-x8 --emit-llvm-text -o - 2>&1 | FileCheck %s -check-prefix=CHECK_ATTR_8
 
 // REQUIRES: X86_ENABLED
 
