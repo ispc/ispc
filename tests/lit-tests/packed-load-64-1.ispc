@@ -7,15 +7,18 @@
 // required for avx512skx-x8 support) :
 // python3 run_tests.py --target=avx512skx-x8 --wrap-exe="sde -skx -- " ./tests/packed-load-64-1.ispc
 
+// The code generation has been changed in LLVM 21.0 slightly. 
+// It makes stack usage less and use of general-purpose registers better.
+
 // RUN: %{ispc} %s --emit-asm --nowrap --target=avx512skx-x8 -o - | FileCheck %s
 
 // REQUIRES: X86_ENABLED
-// UNSUPPORTED: LLVM_21_0+
+// UNSUPPORTED: !LLVM_21_0+
 
-// CHECK: kshiftlb
-// CHECK-NEXT: kshiftrb
-// CHECk-NEXT: kmovb
-// CHECk-NEXT: kshiftrb
+// CHECK: kmovd
+// CHECK: shrb
+// CHECk: kmovd
+// CHECk: kshiftrb
 void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform unsigned int64 a[programCount];
     #pragma ignore warning(perf)
