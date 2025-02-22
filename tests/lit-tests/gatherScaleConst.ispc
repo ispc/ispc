@@ -1,14 +1,10 @@
 // This test ensures that the macro to convert scale to constant for gather has been inlined and
 // optimised as expected and no extra gather calls or switch statement is remaining after the optimisation.
 
-// RUN: %{ispc} %s --target=avx2-i64x4 -h %t.h --emit-llvm -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s -check-prefix=CHECK_AVX2_I64X4 --implicit-check-not "switch"
-// RUN: %{ispc} %s --target=avx2-i32x8 -h %t.h --emit-llvm -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s -check-prefix=CHECK_AVX2_I32X8 --implicit-check-not "switch"
-// RUN: %{ispc} %s --target=avx2-i32x16 -h %t.h --emit-llvm -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s -check-prefix=CHECK_AVX2_I32X16 --implicit-check-not "switch"
-// RUN: %{ispc} %s --target=avx512skx-x16 -h %t.h --emit-llvm -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s -check-prefix=CHECK_AVX512SKX_X16 --implicit-check-not "switch"
+// RUN: %{ispc} %s --target=avx2-i64x4 --emit-llvm-text -o - 2>&1 | FileCheck %s -check-prefix=CHECK_AVX2_I64X4 --implicit-check-not "switch"
+// RUN: %{ispc} %s --target=avx2-i32x8 --emit-llvm-text -o - 2>&1 | FileCheck %s -check-prefix=CHECK_AVX2_I32X8 --implicit-check-not "switch"
+// RUN: %{ispc} %s --target=avx2-i32x16 --emit-llvm-text -o - 2>&1 | FileCheck %s -check-prefix=CHECK_AVX2_I32X16 --implicit-check-not "switch"
+// RUN: %{ispc} %s --target=avx512skx-x16 --emit-llvm-text -o - 2>&1 | FileCheck %s -check-prefix=CHECK_AVX512SKX_X16 --implicit-check-not "switch"
 
 // REQUIRES: X86_ENABLED
 
