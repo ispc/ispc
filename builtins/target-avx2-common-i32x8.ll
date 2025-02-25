@@ -440,3 +440,138 @@ define <8 x double> @__gather64_double(<8 x i64> %ptrs,
 
   ret <8 x double> %v
 }
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; pack / unpack
+
+declare i8 @llvm.ctpop.i8(i8)
+declare void @llvm.masked.compressstore.v8i32(<8 x i32>, ptr, <8 x i1>)
+declare void @llvm.masked.compressstore.v8i64(<8 x i64>, ptr, <8 x i1>)
+declare <8 x i32> @llvm.masked.expandload.v8i32(ptr, <8 x i1>, <8 x i32>)
+declare <8 x i64> @llvm.masked.expandload.v8i64(ptr, <8 x i1>, <8 x i64>)
+declare i64 @llvm.x86.bmi.pdep.64(i64, i64)
+declare i64 @llvm.x86.bmi.pext.64(i64, i64)
+declare void @llvm.x86.avx2.maskstore.d.256(ptr, <8 x i32>, <8 x i32>)
+
+; Function Attrs: alwaysinline nounwind
+define i32 @__packed_load_activei32(ptr %startptr, ptr %val_ptr, <8 x i32> %full_mask) #0 {
+  %startptr_typed = bitcast ptr %startptr to ptr
+  %val_ptr_typed = bitcast ptr %val_ptr to ptr
+  %i1mask = icmp ne <8 x i32> %full_mask, zeroinitializer
+  %data = load <8 x i32>, ptr %val_ptr_typed, align 32
+  %vec_load = call <8 x i32> @llvm.masked.expandload.v8i32(ptr %startptr_typed, <8 x i1> %i1mask, <8 x i32> %data)
+  store <8 x i32> %vec_load, ptr %val_ptr_typed, align 4
+  %i8mask = bitcast <8 x i1> %i1mask to i8
+  %i32mask = zext i8 %i8mask to i32
+  %ret = call i32 @llvm.ctpop.i32(i32 %i32mask)
+  ret i32 %ret
+}
+
+; Function Attrs: alwaysinline nounwind
+define i32 @__packed_store_activei32(ptr %startptr, <8 x i32> %vals, <8 x i32> %full_mask) #0 {
+  %startptr_typed = bitcast ptr %startptr to ptr
+  %i1mask = icmp ne <8 x i32> %full_mask, zeroinitializer
+  call void @llvm.masked.compressstore.v8i32(<8 x i32> %vals, ptr %startptr_typed, <8 x i1> %i1mask)
+  %i8mask = bitcast <8 x i1> %i1mask to i8
+  %i32mask = zext i8 %i8mask to i32
+  %ret = call i32 @llvm.ctpop.i32(i32 %i32mask)
+  ret i32 %ret
+}
+
+; Function Attrs: alwaysinline nounwind
+define i32 @__packed_store_active2i32(ptr %startptr, <8 x i32> %vals, <8 x i32> %full_mask) #0 {
+entry:
+  %cmp.i = icmp ne <8 x i32> %full_mask, zeroinitializer
+
+; old
+  ;%0 = bitcast <8 x i1> %cmp.i to i8
+  ;%1 = tail call i8 @llvm.ctpop.i8(i8 %0)
+  ;%2 = zext i8 %1 to i32
+; new
+  %0 = bitcast <8 x i1> %cmp.i to i8
+  %1 = zext i8 %0 to i32
+  %2 = call i32 @llvm.ctpop.i32(i32 %1)
+;
+
+  %conv = zext i8 %0 to i64
+  %3 = tail call i64 @llvm.x86.bmi.pdep.64(i64 %conv, i64 72340172838076673)
+  %mul = mul i64 %3, 255
+  %notmask = shl nsw i32 -1, %2
+  %sub = xor i32 %notmask, -1
+  %conv6 = zext i32 %sub to i64
+  %4 = tail call i64 @llvm.x86.bmi.pdep.64(i64 %conv6, i64 72340172838076673)
+  ; %mul8 = mul i64 %4, 255
+  %shuffle.i = bitcast i64 %4 to <8 x i8>
+  %conv.i = zext <8 x i8> %shuffle.i to <8 x i32>
+  %5 = bitcast <8 x i32> %conv.i to <4 x i64>
+  %mul10 = mul <4 x i64> %5, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
+  %6 = tail call i64 @llvm.x86.bmi.pext.64(i64 506097522914230528, i64 %mul)
+  %shuffle.i20 = bitcast i64 %6 to <8 x i8>
+  %conv.i21 = zext <8 x i8> %shuffle.i20 to <8 x i32>
+  %7 = tail call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %vals, <8 x i32> %conv.i21)
+  %8 = bitcast <4 x i64> %mul10 to <8 x i32>
+  tail call void @llvm.x86.avx2.maskstore.d.256(ptr %startptr, <8 x i32> %8, <8 x i32> %7)
+  ret i32 %2
+}
+
+; Function Attrs: alwaysinline nounwind
+define i32 @__packed_load_activei64(ptr %startptr, ptr %val_ptr, <8 x i32> %full_mask) #0 {
+  %startptr_typed = bitcast ptr %startptr to ptr
+  %val_ptr_typed = bitcast ptr %val_ptr to ptr
+  %i1mask = icmp ne <8 x i32> %full_mask, zeroinitializer
+  %data = load <8 x i64>, ptr %val_ptr_typed, align 64
+  %vec_load = call <8 x i64> @llvm.masked.expandload.v8i64(ptr %startptr_typed, <8 x i1> %i1mask, <8 x i64> %data)
+  store <8 x i64> %vec_load, ptr %val_ptr_typed, align 8
+  %i8mask = bitcast <8 x i1> %i1mask to i8
+  %i32mask = zext i8 %i8mask to i32
+  %ret = call i32 @llvm.ctpop.i32(i32 %i32mask)
+  ret i32 %ret
+}
+
+; Function Attrs: alwaysinline nounwind
+define i32 @__packed_store_activei64(ptr %startptr, <8 x i64> %vals, <8 x i32> %full_mask) #0 {
+  %startptr_typed = bitcast ptr %startptr to ptr
+  %i1mask = icmp ne <8 x i32> %full_mask, zeroinitializer
+  call void @llvm.masked.compressstore.v8i64(<8 x i64> %vals, ptr %startptr_typed, <8 x i1> %i1mask)
+  %i8mask = bitcast <8 x i1> %i1mask to i8
+  %i32mask = zext i8 %i8mask to i32
+  %ret = call i32 @llvm.ctpop.i32(i32 %i32mask)
+  ret i32 %ret
+}
+
+; Function Attrs: alwaysinline nounwind
+define i32 @__packed_store_active2i64(ptr %startptr, <8 x i64> %vals, <8 x i32> %full_mask) #0 {
+entry:
+  %startptr_typed = bitcast ptr %startptr to ptr
+  %mask = call i64 @__movmsk(<8 x i32> %full_mask)
+  %mask_known = call i1 @__is_compile_time_constant_mask(<8 x i32> %full_mask)
+  br i1 %mask_known, label %known_mask, label %unknown_mask
+
+known_mask:                                       ; preds = %entry
+  %allon = icmp eq i64 %mask, 255
+  br i1 %allon, label %all_on, label %unknown_mask
+
+all_on:                                           ; preds = %known_mask
+  %vecptr = bitcast ptr %startptr_typed to ptr
+  store <8 x i64> %vals, ptr %vecptr, align 4
+  ret i32 8
+
+unknown_mask:                                     ; preds = %known_mask, %entry
+  br label %loop
+
+loop:                                             ; preds = %loop, %unknown_mask
+  %offset = phi i32 [ 0, %unknown_mask ], [ %ch_offset, %loop ]
+  %i = phi i32 [ 0, %unknown_mask ], [ %ch_i, %loop ]
+  %storeval = extractelement <8 x i64> %vals, i32 %i
+  %offset1 = zext i32 %offset to i64
+  %storeptr = getelementptr i64, ptr %startptr_typed, i64 %offset1
+  store i64 %storeval, ptr %storeptr, align 4
+  %mull_mask = extractelement <8 x i32> %full_mask, i32 %i
+  %ch_offset = sub i32 %offset, %mull_mask
+  %ch_i = add i32 %i, 1
+  %test = icmp ne i32 %ch_i, 8
+  br i1 %test, label %loop, label %done
+
+done:                                             ; preds = %loop
+  ret i32 %ch_offset
+}
