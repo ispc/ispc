@@ -164,6 +164,9 @@ jobs:
           - version: "18.1"
             full_version: "18.1.8"
             short_version: 18
+          - version: "19.1"
+            full_version: "19.1.7"
+            short_version: 19
     env:
       LLVM_VERSION: ${{ matrix.llvm.version }}
       LLVM_TAR: llvm-${{ matrix.llvm.full_version }}-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
@@ -327,7 +330,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [17, 18]
+        version: [17, 18, 19]
         arch: [x86, x86-64]
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets_x86)}}
         # See issue #2818 for more deatils. It's SDE problem running on AMD runner.
@@ -705,6 +708,9 @@ jobs:
           - version: "18.1"
             full_version: "18.1.8"
             short_version: 18
+          - version: "19.1"
+            full_version: "19.1.7"
+            short_version: 19
     env:
       LLVM_VERSION: ${{ matrix.llvm.version }}
       LLVM_TAR: llvm-${{ matrix.llvm.full_version }}-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
@@ -801,7 +807,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [17, 18]
+        version: [17, 18, 19]
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -952,6 +958,9 @@ jobs:
           - version: "18.1"
             full_version: "18.1.8"
             short_version: 18
+          - version: "19.1"
+            full_version: "19.1.7"
+            short_version: 19
     env:
       LLVM_VERSION: ${{ matrix.llvm.version }}
       LLVM_TAR: llvm-${{ matrix.llvm.full_version }}-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
@@ -1104,7 +1113,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [17, 18]
+        version: [17, 18, 19]
         arch: [x86, x86-64]
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets_x86)}}
 
