@@ -13,6 +13,7 @@ import shutil
 from pathlib import Path
 import re
 import tarfile
+import argparse
 from urllib.request import urlopen, Request
 from urllib.error import HTTPError
 from multiprocessing import cpu_count
@@ -370,10 +371,10 @@ def main():
         $ LLVM_HOME=/path/to/llvm python quick-start-build.py
 
         # Build with custom LLVM location Windows cmd
-        > set LLVM_HOME=C:\path\to\llvm && python quick-start-build.py
+        > set LLVM_HOME=C:\\path\\to\\llvm && python quick-start-build.py
 
         # Build with custom LLVM location PowerShell
-        > $env:LLVM_HOME = "C:\path\to\llvm"; python quick-start-build.py
+        > $env:LLVM_HOME = "C:\\path\\to\\llvm"; python quick-start-build.py
 
 
     Build Configurations:
@@ -400,8 +401,42 @@ def main():
         - flex, bison: Required for ISPC build
         - onetbb: Required for ISPC build
     """
+
+    # Set up argument parser
+    parser = argparse.ArgumentParser(
+        description="ISPC build script for downloading and setting up LLVM dependencies, "
+                    "configuring the build environment, and running the ISPC build and test suite.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Environment Variables:
+  LLVM_HOME      Directory for LLVM installation (default: current working directory)
+  ISPC_HOME      Root directory of ISPC source (default: parent directory of this script)
+  ARCHIVE_URL    Direct download URL for LLVM package (only if automatic detection fails)
+
+Examples:
+  # Build with default LLVM 18
+  $ python quick-start-build.py
+
+  # Build with specific LLVM version
+  $ python quick-start-build.py 17
+
+  # Build with custom LLVM location
+  $ LLVM_HOME=/path/to/llvm python quick-start-build.py
+
+  # Build with custom LLVM location Windows cmd
+  > set LLVM_HOME=C:\\path\\to\\llvm && python quick-start-build.py
+
+  # Build with custom LLVM location PowerShell
+  > $env:LLVM_HOME = "C:\\path\\to\\llvm"; python quick-start-build.py
+        """
+    )
+
+    parser.add_argument("llvm_version", type=str, nargs="?", default="18",
+                        help="LLVM version to use (default: 18)")
+    args = parser.parse_args()
+
     # Set up default values and paths
-    llvm_version = sys.argv[1] if len(sys.argv) > 1 else "18"
+    llvm_version = args.llvm_version
     llvm_home = os.getenv("LLVM_HOME", os.getcwd())
     # Determine number of processors (defaulting to 8 if unknown)
     try:
