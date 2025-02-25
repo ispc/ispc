@@ -119,6 +119,8 @@ def get_llvm_asset(llvm_version, os_name, arch):
 
     # Find matching asset
     asset_pattern = f"llvm-{llvm_version}.*-{os_name}{arch}-Release.*Asserts-.*\\.tar\\.xz"
+    if os_name == "win":
+        asset_pattern = f"llvm-{llvm_version}.*-{os_name}.*-Release.*Asserts-.*\\.tar\\.7z"
     for asset in assets_json['assets']:
         if re.match(asset_pattern, asset['name']) and 'lto' not in asset['name']:
             return asset['name'], asset['browser_download_url'], version
