@@ -33,11 +33,11 @@ jobs:
         sudo apt -y update
         sudo apt install -y devscripts
 
-    - name: Download and check Linux oneAPI artifacts
+    - name: Download and check Linux artifacts
       run: |
         echo "Download artifact ${LINK}" >> "$GITHUB_STEP_SUMMARY"
-        wget "${{ env.LINK }}"
-        tar xf "ispc*.tar.gz"
+        wget --quiet -O "ispc.tar.gz" "${{ env.LINK }}"
+        tar xf "ispc.tar.gz"
         hardening-check "./ispc*/bin/ispc" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
         hardening-check "./ispc*/lib64/libispcrt.so" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
         hardening-check "./ispc*/lib64/libispcrt_device_gpu.so" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
