@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2020-2023, Intel Corporation
+#  Copyright (c) 2020-2025, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -64,3 +64,4 @@ include(cmake/AddBenchmark.cmake)
 add_subdirectory(01_trivial)
 add_subdirectory(02_medium)
 add_subdirectory(03_complex)
+add_subdirectory(04_tensor)

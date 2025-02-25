@@ -1,0 +1,147 @@
+// Copyright (c) 2025, Intel Corporation
+// SPDX-License-Identifier: BSD-3-Clause
+
+#pragma once
+
+#include "dlpack.h"
+
+extern "C" void __not_supported();
+
+// Vectorized linear index computation with direct stride access
+static inline int tensor_compute_index(uniform int64 *uniform shape, uniform int64 *uniform strides, uniform int ndim,
+                                       int64 index) {
+    int linear_idx = 0;
+    int64 offset = index;
+
+    // Unroll common case for 1D, 2D, 3D, 4D tensors for better performance
+    if (ndim == 1) {
+        return offset * strides[0];
+    } else if (ndim == 2) {
+        uniform int shape1 = shape[1];
+#pragma ignore warning(perf)
+        int d1 = offset % shape1;
+#pragma ignore warning(perf)
+        int d0 = offset / shape1;
+        return d0 * strides[0] + d1 * strides[1];
+    } else if (ndim == 3) {
+        uniform int shape2 = shape[2];
+        uniform int shape1 = shape[1];
+#pragma ignore warning(perf)
+        int d2 = offset % shape2;
+#pragma ignore warning(perf)
+        offset /= shape2;
+#pragma ignore warning(perf)
+        int d1 = offset % shape1;
+#pragma ignore warning(perf)
+        int d0 = offset / shape1;
+        return d0 * strides[0] + d1 * strides[1] + d2 * strides[2];
+    } else if (ndim == 4) {
+        uniform int shape3 = shape[3];
+        uniform int shape2 = shape[2];
+        uniform int shape1 = shape[1];
+#pragma ignore warning(perf)
+        int d3 = offset % shape3;
+#pragma ignore warning(perf)
+        offset /= shape3;
+#pragma ignore warning(perf)
+        int d2 = offset % shape2;
+#pragma ignore warning(perf)
+        offset /= shape2;
+#pragma ignore warning(perf)
+        int d1 = offset % shape1;
+#pragma ignore warning(perf)
+        int d0 = offset / shape1;
+        return d0 * strides[0] + d1 * strides[1] + d2 * strides[2] + d3 * strides[3];
+    } else {
+        // General case for arbitrary dimensions
+        for (uniform int d = ndim - 1; d >= 0; --d) {
+            uniform int current_shape = shape[d];
+#pragma ignore warning(perf)
+            int coord = offset % current_shape;
+#pragma ignore warning(perf)
+            offset /= current_shape;
+            linear_idx += coord * strides[d];
+        }
+        return linear_idx;
+    }
+}
+
+// Helper function to calculate total size of a tensor
+static inline uniform int64 calculate_total_size(uniform DLTensor *uniform tensor) {
+    uniform int64 total_size = 1;
+    uniform int ndim = tensor->ndim;
+    for (uniform int i = 0; i < ndim; i++) {
+        total_size *= tensor->shape[i];
+    }
+    return total_size;
+}
+
+// Helper function to check if a tensor is contiguous in memory
+static inline bool is_tensor_contiguous(uniform DLTensor *uniform tensor) {
+    uniform int ndim = tensor->ndim;
+    if (ndim == 0)
+        return true;
+
+    uniform int expected_stride = 1;
+    for (uniform int d = ndim - 1; d >= 0; --d) {
+        if (tensor->strides[d] != expected_stride) {
+            return false;
+        }
+        expected_stride *= tensor->shape[d];
+    }
+    return true;
+}
+
+// Complete implementation of tensor addition for any data type
+template <typename T>
+static inline void tensor_add_impl(void *uniform _A, void *uniform _B, void *uniform _C) {
+    uniform DLTensor *uniform A = (uniform DLTensor * uniform) _A;
+    uniform DLTensor *uniform B = (uniform DLTensor * uniform) _B;
+    uniform DLTensor *uniform C = (uniform DLTensor * uniform) _C;
+
+    // Direct pointers to data
+    uniform T *uniform A_data = (uniform T * uniform)(A->data);
+    uniform T *uniform B_data = (uniform T * uniform)(B->data);
+    uniform T *uniform C_data = (uniform T * uniform)(C->data);
+
+    uniform int64 total_size = calculate_total_size(A);
+    bool is_contiguous = is_tensor_contiguous(A);
+
+    if (is_contiguous) {
+        foreach (i = 0 ... total_size) {
+            C_data[i] = A_data[i] + B_data[i];
+        }
+    } else {
+        // Non-contiguous case: calculate indices
+        uniform int ndim = A->ndim;
+        foreach (i = 0 ... total_size) {
+            int idx = tensor_compute_index(A->shape, A->strides, ndim, i);
+            C_data[idx] = A_data[idx] + B_data[idx];
+        }
+    }
+}
+
+// Generic template for tensor operations
+template <typename T> void tensor_add(void *uniform _A, void *uniform _B, void *uniform _C) {
+    __not_supported();
+}
+
+// Specialized implementations for common types
+template <> void tensor_add<int8>(void *uniform _A, void *uniform _B, void *uniform _C) {
+    tensor_add_impl<int8>(_A, _B, _C);
+}
+template <> void tensor_add<int16>(void *uniform _A, void *uniform _B, void *uniform _C) {
+    tensor_add_impl<int16>(_A, _B, _C);
+}
+
+template <> void tensor_add<int>(void *uniform _A, void *uniform _B, void *uniform _C) {
+    tensor_add_impl<int>(_A, _B, _C);
+}
+
+template <> void tensor_add<float>(void *uniform _A, void *uniform _B, void *uniform _C) {
+    tensor_add_impl<float>(_A, _B, _C);
+}
+
+template <> void tensor_add<double>(void *uniform _A, void *uniform _B, void *uniform _C) {
+    tensor_add_impl<double>(_A, _B, _C);
+}
