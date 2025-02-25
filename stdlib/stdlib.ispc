@@ -18,6 +18,7 @@
 #include "stdlib.isph"
 #include "svml.isph"
 #include "target.isph"
+#include "tensor.isph"
 #undef ISPC_INTERNAL_STDLIB_COMPILATION
 
 ///////////////////////////////////////////////////////////////////////////
@@ -5854,4 +5855,60 @@ __declspec(safe) static inline varying int32 dot2add_i16packed_sat(varying uint3
         int32 tmp2 = (int32)((int16)(a & 0xFFFF)) * (int32)((int16)(b & 0xFFFF));
         return saturating_add(saturating_add(tmp1, tmp2), acc);
     }
+}
+
+// Add two tensors A and B and store the result in C.
+__declspec(safe) static inline void tensor_add(void *uniform _A, void *uniform _B, void *uniform _C) {
+    uniform DLTensor *uniform A = (uniform DLTensor * uniform) _A;
+    uniform DLTensor *uniform B = (uniform DLTensor * uniform) _B;
+    uniform DLTensor *uniform C = (uniform DLTensor * uniform) _C;
+    // Check tensor shapes compatibility
+    if (!tensor_check_shape(A, B, C)) {
+        return; // Incompatible tensor shapes
+    }
+
+    uniform int bits = A->dtype.bits;
+    uniform int lanes = A->dtype.lanes;
+    uniform DLDataTypeCode code = (uniform DLDataTypeCode)A->dtype.code;
+
+    // Validate dtype compatibility
+    if (B->dtype.code != code || C->dtype.code != code || B->dtype.bits != bits || C->dtype.bits != bits ||
+        B->dtype.lanes != lanes || C->dtype.lanes != lanes) {
+        return; // Mismatched tensor types
+    }
+
+    // Handle different data types
+    if (code == kDLFloat) {
+        if (bits == 32 && lanes == 1) {
+            tensor_add_typed<float>(A, B, C);
+        } else if (bits == 64 && lanes == 1) {
+            tensor_add_typed<double>(A, B, C);
+        } else if (bits == 16 && lanes == 1) {
+            tensor_add_typed<float16>(A, B, C);
+        }
+    } else if (code == kDLInt) {
+        if (bits == 32 && lanes == 1) {
+            tensor_add_typed<int32>(A, B, C);
+        } else if (bits == 64 && lanes == 1) {
+            tensor_add_typed<int64>(A, B, C);
+        } else if (bits == 16 && lanes == 1) {
+            tensor_add_typed<int16>(A, B, C);
+        } else if (bits == 8 && lanes == 1) {
+            tensor_add_typed<int8>(A, B, C);
+        }
+    } else if (code == kDLUInt) {
+        if (bits == 32 && lanes == 1) {
+            tensor_add_typed<uint32>(A, B, C);
+        } else if (bits == 64 && lanes == 1) {
+            tensor_add_typed<uint64>(A, B, C);
+        } else if (bits == 16 && lanes == 1) {
+            tensor_add_typed<uint16>(A, B, C);
+        } else if (bits == 8 && lanes == 1) {
+            tensor_add_typed<uint8>(A, B, C);
+        }
+    } else if (code == kDLBfloat && bits == 16 && lanes == 1) {
+        // Add bfloat16 support if needed
+        // tensor_add_typed<bfloat16>(A, B, C);
+    }
+    // Add more data types as needed
 }
