@@ -715,6 +715,11 @@ Updating ISPC Programs For Changes In ISPC 1.27.0
 Added cross lane operations for unsigned types: ``broadcast``, ``rotate``, ``shift``,
 and ``shuffle``.
 
+``max`` function for short vectors of basic types was added to the standard
+library. It supports both uniform and varying short vector types for all basic
+types that are supported by ``max`` function, i.e., sign and unsigned integer
+types and float types.
+
 Getting Started with ISPC
 =========================
 
@@ -4602,16 +4607,74 @@ standard types.  These functions also map to corresponding intrinsic functions.
 
 ::
 
+    float16 min(float16 a, float16 b);
     float min(float a, float b)
+    double min(double a, double b);
+    unsigned int8 min(unsigned int8 a, unsigned int8 b);
+    int8 min(int8 a, int8 b);
+    unsigned int16 min(unsigned int16 a, unsigned int16 b);
+    int16 min(int16 a, int16 b);
+    unsigned int min(unsigned int a, unsigned int b);
+    int min(int a, int b);
+    unsigned int64 min(unsigned int64 a, unsigned int64 b);
+    int64 min(int64 a, int64 b);
+
+    uniform float16 min(uniform float16 a, uniform float16 b);
     uniform float min(uniform float a, uniform float b)
+    uniform double min(uniform double a, uniform double b);
+    uniform unsigned int8 min(uniform unsigned int8 a, uniform unsigned int8 b);
+    uniform int8 min(uniform int8 a, uniform int8 b);
+    uniform unsigned int16 min(uniform unsigned int16 a, uniform unsigned int16 b);
+    uniform int16 min(uniform int16 a, uniform int16 b);
+    uniform unsigned int min(uniform unsigned int a, uniform unsigned int b);
+    uniform int min(uniform int a, uniform int b);
+    uniform unsigned int64 min(uniform unsigned int64 a, uniform unsigned int64 b);
+    uniform int64 min(uniform int64 a, uniform int64 b);
+
+::
+
+    float16 max(float16 a, float16 b);
     float max(float a, float b)
+    double max(double a, double b);
+    unsigned int8 max(unsigned int8 a, unsigned int8 b);
+    int8 max(int8 a, int8 b);
+    unsigned int16 max(unsigned int16 a, unsigned int16 b);
+    int16 max(int16 a, int16 b);
+    unsigned int max(unsigned int a, unsigned int b);
+    int max(int a, int b);
+    unsigned int64 max(unsigned int64 a, unsigned int64 b);
+    int64 max(int64 a, int64 b);
+
+    uniform float16 max(uniform float16 a, uniform float16 b);
     uniform float max(uniform float a, uniform float b)
-    unsigned int min(unsigned int a, unsigned int b)
-    uniform unsigned int min(uniform unsigned int a,
-                             uniform unsigned int b)
-    unsigned int max(unsigned int a, unsigned int b)
-    uniform unsigned int max(uniform unsigned int a,
-                             uniform unsigned int b)
+    uniform double max(uniform double a, uniform double b);
+    uniform unsigned int8 max(uniform unsigned int8 a, uniform unsigned int8 b);
+    uniform int8 max(uniform int8 a, uniform int8 b);
+    uniform unsigned int16 max(uniform unsigned int16 a, uniform unsigned int16 b);
+    uniform int16 max(uniform int16 a, uniform int16 b);
+    uniform unsigned int max(uniform unsigned int a, uniform unsigned int b);
+    uniform int max(uniform int a, uniform int b);
+    uniform unsigned int64 max(uniform unsigned int64 a, uniform unsigned int64 b);
+    uniform int64 max(uniform int64 a, uniform int64 b);
+
+A maximum function also supports short vector types with basic types that are
+listed above.
+
+::
+
+    template <typename T, uint N> T<N> max(T<N> a, T<N> b)
+
+It makes possible to find the maximum value of two short vector types with the
+usual calls to the ``max()`` function. For example:
+
+::
+
+    uniform int<3> a = {1, 2, 3};
+    uniform int<3> b = {3, -2, 1};
+    uniform int<3> c = max(a, b); // c = {3, 2, 3}
+
+    varying float<4> x, y;
+    varying float<4> z = max(x, y);
 
 The ``clamp()`` functions clamp the provided value to the given range.
 (Their implementations are based on ``min()`` and ``max()`` and are thus
