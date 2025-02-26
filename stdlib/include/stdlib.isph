@@ -329,6 +329,36 @@ inline uniform int packed_store_active(uniform unsigned int a[], unsigned int va
 // unsigned int32 store2.
 inline uniform int packed_store_active2(uniform unsigned int a[], unsigned int vals);
 
+/* unsigned int16 implementations. */
+// unsigned int16 load.
+inline uniform int packed_load_active(uniform unsigned int16 a[], varying unsigned int16 *uniform vals);
+
+// unsigned int16 store.
+inline uniform int packed_store_active(uniform unsigned int16 a[], unsigned int16 vals);
+
+// unsigned int16 store2.
+inline uniform int packed_store_active2(uniform unsigned int16 a[], unsigned int16 vals);
+
+/* unsigned int8 implementations. */
+// unsigned int8 load.
+inline uniform int packed_load_active(uniform unsigned int8 a[], varying unsigned int8 *uniform vals);
+
+// unsigned int8 store.
+inline uniform int packed_store_active(uniform unsigned int8 a[], unsigned int8 vals);
+
+// unsigned int8 store2.
+inline uniform int packed_store_active2(uniform unsigned int8 a[], unsigned int8 vals);
+
+/* unsigned int64 implementations. */
+// unsigned int64 load.
+inline uniform int packed_load_active(uniform unsigned int64 a[], varying unsigned int64 *uniform vals);
+
+// unsigned int64 store.
+inline uniform int packed_store_active(uniform unsigned int64 a[], unsigned int64 vals);
+
+// unsigned int64 store2.
+inline uniform int packed_store_active2(uniform unsigned int64 a[], unsigned int64 vals);
+
 /* int32 implementations. */
 // int32 load.
 inline uniform int packed_load_active(uniform int a[], varying int *uniform vals);
@@ -342,15 +372,25 @@ inline uniform int packed_store_active2(uniform int a[], int vals);
 // int32 store with lanes.
 inline uniform int packed_store_active(bool active, uniform int a[], int vals);
 
-/* unsigned int64 implementations. */
-// unsigned int64 load.
-inline uniform int packed_load_active(uniform unsigned int64 a[], varying unsigned int64 *uniform vals);
+/* int16 implementations. */
+// int16 load.
+inline uniform int packed_load_active(uniform int16 a[], varying int16 *uniform vals);
 
-// unsigned int64 store.
-inline uniform int packed_store_active(uniform unsigned int64 a[], unsigned int64 vals);
+// int16 store.
+inline uniform int packed_store_active(uniform int16 a[], int16 vals);
 
-// unsigned int64 store2.
-inline uniform int packed_store_active2(uniform unsigned int64 a[], unsigned int64 vals);
+// int16 store2.
+inline uniform int packed_store_active2(uniform int16 a[], int16 vals);
+
+/* int8 implementations. */
+// int8 load.
+inline uniform int packed_load_active(uniform int8 a[], varying int8 *uniform vals);
+
+// int8 store.
+inline uniform int packed_store_active(uniform int8 a[], int8 vals);
+
+// int8 store2.
+inline uniform int packed_store_active2(uniform int8 a[], int8 vals);
 
 /* int64 implementations. */
 // int64 load.
@@ -364,6 +404,36 @@ inline uniform int packed_store_active2(uniform int64 a[], int64 vals);
 
 // int64 store with lanes.
 inline uniform int packed_store_active(bool active, uniform int64 a[], int64 vals);
+
+/* float16 implementations. */
+// float16 load.
+inline uniform int packed_load_active(uniform float16 a[], varying float16 *uniform vals);
+
+// float16 store.
+inline uniform int packed_store_active(uniform float16 a[], float16 vals);
+
+// float16 store2.
+inline uniform int packed_store_active2(uniform float16 a[], float16 vals);
+
+/* float implementations. */
+// float load.
+inline uniform int packed_load_active(uniform float a[], varying float *uniform vals);
+
+// float store.
+inline uniform int packed_store_active(uniform float a[], float vals);
+
+// float store2.
+inline uniform int packed_store_active2(uniform float a[], float vals);
+
+/* double implementations. */
+// double load.
+inline uniform int packed_load_active(uniform double a[], varying double *uniform vals);
+
+// double store.
+inline uniform int packed_store_active(uniform double a[], double vals);
+
+// double store2.
+inline uniform int packed_store_active2(uniform double a[], double vals);
 
 ///////////////////////////////////////////////////////////////////////////
 // streaming store

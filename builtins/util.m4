@@ -6595,36 +6595,37 @@ ifelse(WIDTH,  `4', `
 ;; Decides definition to be used for calculating active lanes based on WIDTH.
 ;; Implement valid version of 'packed_store_active2' based on requirement.
 ;;
-;; $1: Integer type for which function is to be created.
+;; $1: LLVM overloaded type for which function is to be created (i32, float ...).
 ;; $2: 'TRUE' if LLVM compressstore/expandload intrinsics should be used for implementation of '__packed_store_active2'.
 ;;     This is the case for the targets with native support of these intrinsics (AVX512).
 ;;     For other targets branchless emulation sequence should be used (triggered by 'FALSE').
 ;; $3: Alignment for store.
+;; $4: LLVM overloaded type for which function is to be created (i32, f32).
 ;;
 ;; FIXME: use the per_lane macro, defined below, to implement these!
 
 define(`packed_load_and_store_type', `
 
-declare <WIDTH x $1> @llvm.masked.expandload.vWIDTH$1 ($1*, <WIDTH x i1>, <WIDTH x $1>)
-declare void @llvm.masked.store.vWIDTH$1.p0vWIDTH$1(<WIDTH x $1>, <WIDTH x $1>*, i32, <WIDTH x i1>)
-define i32 @__packed_load_active$1(i8 * %startptr, i8 * %val_ptr,
+declare <WIDTH x $1> @llvm.masked.expandload.vWIDTH$4 ($1*, <WIDTH x i1>, <WIDTH x $1>)
+declare void @llvm.masked.store.vWIDTH$4.p0vWIDTH$4(<WIDTH x $1>, <WIDTH x $1>*, i32, <WIDTH x i1>)
+define i32 @__packed_load_active$4(i8 * %startptr, i8 * %val_ptr,
                                  <WIDTH x MASK> %full_mask) nounwind alwaysinline {
   %startptr_typed = bitcast i8* %startptr to $1*
   %val_ptr_typed = bitcast i8* %val_ptr to <WIDTH x $1>*
   %i1mask = icmp ne <WIDTH x MASK> %full_mask, zeroinitializer
   %data = load PTR_OP_ARGS(`<WIDTH x $1> ') %val_ptr_typed
-  %vec_load = call <WIDTH x $1> @llvm.masked.expandload.vWIDTH$1($1* %startptr_typed, <WIDTH x i1> %i1mask, <WIDTH x $1> %data)
+  %vec_load = call <WIDTH x $1> @llvm.masked.expandload.vWIDTH$4($1* %startptr_typed, <WIDTH x i1> %i1mask, <WIDTH x $1> %data)
   store <WIDTH x $1> %vec_load, <WIDTH x $1>* %val_ptr_typed, align $3
 packed_load_store_popcnt()
    ret i32 %ret
 }
 
-declare void @llvm.masked.compressstore.vWIDTH$1(<WIDTH  x $1>, $1* , <WIDTH  x i1> )
-define i32 @__packed_store_active$1(i8* %startptr, <WIDTH x $1> %vals,
+declare void @llvm.masked.compressstore.vWIDTH$4(<WIDTH  x $1>, $1* , <WIDTH  x i1> )
+define i32 @__packed_store_active$4(i8* %startptr, <WIDTH x $1> %vals,
                                    <WIDTH x MASK> %full_mask) nounwind alwaysinline {
   %startptr_typed = bitcast i8* %startptr to $1*
   %i1mask = icmp ne <WIDTH x MASK> %full_mask, zeroinitializer
-  call void @llvm.masked.compressstore.vWIDTH$1(<WIDTH x $1> %vals, $1* %startptr_typed, <WIDTH x i1> %i1mask)
+  call void @llvm.masked.compressstore.vWIDTH$4(<WIDTH x $1> %vals, $1* %startptr_typed, <WIDTH x i1> %i1mask)
 packed_load_store_popcnt()
   ret i32 %ret
 }
@@ -6633,9 +6634,9 @@ packed_load_store_popcnt()
 ifelse($2, `TRUE',
 `
 ;; i1 mask variant requires different implementation and is here just for functional completeness.
-define i32 @__packed_store_active2$1(i8 * %startptr, <WIDTH x $1> %vals,
+define i32 @__packed_store_active2$4(i8 * %startptr, <WIDTH x $1> %vals,
                                    <WIDTH x MASK> %full_mask) nounwind alwaysinline {
-  %ret = call i32 @__packed_store_active$1(i8 * %startptr, <WIDTH x $1> %vals,
+  %ret = call i32 @__packed_store_active$4(i8 * %startptr, <WIDTH x $1> %vals,
                                          <WIDTH x MASK> %full_mask)
   ret i32 %ret
 }
@@ -6644,16 +6645,16 @@ define i32 @__packed_store_active2$1(i8 * %startptr, <WIDTH x $1> %vals,
 ifelse(MASK, `i1',
 `
 ;; i1 mask variant requires different implementation and is here just for functional completeness.
-define i32 @__packed_store_active2$1(i8 * %startptr, <WIDTH x $1> %vals,
+define i32 @__packed_store_active2$4(i8 * %startptr, <WIDTH x $1> %vals,
                                    <WIDTH x MASK> %full_mask) nounwind alwaysinline {
-  %ret = call i32 @__packed_store_active$1(i8 * %startptr, <WIDTH x $1> %vals,
+  %ret = call i32 @__packed_store_active$4(i8 * %startptr, <WIDTH x $1> %vals,
                                          <WIDTH x MASK> %full_mask)
   ret i32 %ret
 }
 ',
 `
 ;; TODO: function needs to return i32, but not MASK type.
-define MASK @__packed_store_active2$1(i8 * %startptr, <WIDTH x $1> %vals,
+define MASK @__packed_store_active2$4(i8 * %startptr, <WIDTH x $1> %vals,
                                    <WIDTH x MASK> %full_mask) nounwind alwaysinline {
 entry:
   %startptr_typed = bitcast i8* %startptr to $1*
@@ -6718,8 +6719,13 @@ done:
 ;;     For other targets branchless emulation sequence should be used (triggered by 'FALSE').
 
 define(`packed_load_and_store', `
-  packed_load_and_store_type(i32, $1, 4)
-  packed_load_and_store_type(i64, $1, 8)
+  packed_load_and_store_type(i8, $1, 1, i8)
+  packed_load_and_store_type(i16, $1, 2, i16)
+  packed_load_and_store_type(i32, $1, 4, i32)
+  packed_load_and_store_type(half, $1, 2, f16)
+  packed_load_and_store_type(float, $1, 4, f32)
+  packed_load_and_store_type(i64, $1, 8, i64)
+  packed_load_and_store_type(double, $1, 8, f64)
 ')
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reduce_equal

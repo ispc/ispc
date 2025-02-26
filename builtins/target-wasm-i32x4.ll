@@ -1,4 +1,4 @@
-;;  Copyright (c) 2020-2024, Intel Corporation
+;;  Copyright (c) 2020-2025, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -491,7 +491,7 @@ gen_scatter(float)
 gen_scatter(i64)
 gen_scatter(double)
 
-packed_load_and_store(4)
+packed_load_and_store(FALSE)
 define_prefetches()
 popcnt()
 

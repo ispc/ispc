@@ -1,5 +1,5 @@
 // -*- mode: c++ -*-
-// Copyright (c) 2024, Intel Corporation
+// Copyright (c) 2024-2025, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 //
 // @file builtins.isph
@@ -472,12 +472,29 @@ EXT uniform bool __rdrand_i64(uniform int8 *uniform);
 #else
 #define PackedStoreResultType UniformMaskType
 #endif
+EXT inline uniform int32 __packed_load_activei8(uniform int8 *uniform, uniform int8 *uniform, UIntMaskType);
+EXT inline uniform int32 __packed_load_activei16(uniform int8 *uniform, uniform int8 *uniform, UIntMaskType);
 EXT inline uniform int32 __packed_load_activei32(uniform int8 *uniform, uniform int8 *uniform, UIntMaskType);
 EXT inline uniform int32 __packed_load_activei64(uniform int8 *uniform, uniform int8 *uniform, UIntMaskType);
+EXT inline uniform int32 __packed_load_activef16(uniform int8 *uniform, uniform int8 *uniform, UIntMaskType);
+EXT inline uniform int32 __packed_load_activef32(uniform int8 *uniform, uniform int8 *uniform, UIntMaskType);
+EXT inline uniform int32 __packed_load_activef64(uniform int8 *uniform, uniform int8 *uniform, UIntMaskType);
+
+EXT inline PackedStoreResultType __packed_store_active2i8(uniform int8 *uniform, varying int8, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_active2i16(uniform int8 *uniform, varying int16, UIntMaskType);
 EXT inline PackedStoreResultType __packed_store_active2i32(uniform int8 *uniform, varying int32, UIntMaskType);
 EXT inline PackedStoreResultType __packed_store_active2i64(uniform int8 *uniform, varying int64, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_active2f16(uniform int8 *uniform, varying float16, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_active2f32(uniform int8 *uniform, varying float, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_active2f64(uniform int8 *uniform, varying double, UIntMaskType);
+
+EXT inline PackedStoreResultType __packed_store_activei8(uniform int8 *uniform, varying int8, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_activei16(uniform int8 *uniform, varying int16, UIntMaskType);
 EXT inline PackedStoreResultType __packed_store_activei32(uniform int8 *uniform, varying int32, UIntMaskType);
 EXT inline PackedStoreResultType __packed_store_activei64(uniform int8 *uniform, varying int64, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_activef16(uniform int8 *uniform, varying float16, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_activef32(uniform int8 *uniform, varying float, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_activef64(uniform int8 *uniform, varying double, UIntMaskType);
 
 // TODO: rewrite in stdlib.ispc
 EXT void __prefetch_read_sized_uniform_1(uniform int8 *uniform, uniform int8);

@@ -5487,10 +5487,28 @@ variable.  They return the total number of values loaded.
 
 ::
 
+    uniform int packed_load_active(uniform int8 * uniform base,
+                                   varying int8 * uniform val)
+    uniform int packed_load_active(uniform unsigned int8 * uniform base,
+                                   varying unsigned int8 * uniform val)
+    uniform int packed_load_active(uniform int16 * uniform base,
+                                   varying int16 * uniform val)
+    uniform int packed_load_active(uniform unsigned int16 * uniform base,
+                                   varying unsigned int16 * uniform val)
     uniform int packed_load_active(uniform int * uniform base,
                                    varying int * uniform val)
     uniform int packed_load_active(uniform unsigned int * uniform base,
                                    varying unsigned int * uniform val)
+    uniform int packed_load_active(uniform int64 * uniform base,
+                                   varying int64 * uniform val)
+    uniform int packed_load_active(uniform unsigned int64 * uniform base,
+                                   varying unsigned int64 * uniform val)
+    uniform int packed_load_active(uniform float16 * uniform base,
+                                   varying float16 * uniform val)
+    uniform int packed_load_active(uniform float * uniform base,
+                                   varying float * uniform val)
+    uniform int packed_load_active(uniform double * uniform base,
+                                   varying double * uniform val)
 
 Similarly, the ``packed_store_active()`` functions store the ``val`` values
 for each program instances that executed the ``packed_store_active()``
@@ -5499,11 +5517,28 @@ They return the total number of values stored.
 
 ::
 
+    uniform int packed_store_active(uniform int8 * uniform base,
+                                    int8 val)
+    uniform int packed_store_active(uniform unsigned int8* uniform base,
+                                    unsigned int8 val)
+    uniform int packed_store_active(uniform int16 * uniform base,
+                                    int16 val)
+    uniform int packed_store_active(uniform unsigned int16 * uniform base,
+                                    unsigned int16 val)
     uniform int packed_store_active(uniform int * uniform base,
                                     int val)
     uniform int packed_store_active(uniform unsigned int * uniform base,
                                     unsigned int val)
-
+    uniform int packed_store_active(uniform int64 * uniform base,
+                                    int64 val)
+    uniform int packed_store_active(uniform unsigned int64 * uniform base,
+                                    unsigned int64 val)
+    uniform int packed_store_active(uniform float16 * uniform base,
+                                    float16 val)
+    uniform int packed_store_active(uniform float * uniform base,
+                                    float val)
+    uniform int packed_store_active(uniform double * uniform base,
+                                    double val)
 
 There are also ``packed_store_active2()`` functions with exactly the same
 signatures and the same semantic except that they may write one extra
