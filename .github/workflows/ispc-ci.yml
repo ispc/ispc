@@ -57,7 +57,6 @@ jobs:
       tests_matrix_targets_x86: ${{ steps.set-flow.outputs.matrix_x86 }}
       tests_matrix_targets_arm: ${{ steps.set-flow.outputs.matrix_arm }}
       tests_optsets: ${{ steps.set-flow.outputs.optsets }}
-      tests_optsets_array: ${{ steps.set-flow.outputs.optsets_array }}
       flow_type: ${{ steps.set-flow.outputs.type }}
     env:
       # for debug purposes
@@ -96,17 +95,9 @@ jobs:
         # set tests optsets
         if [[ "$RUN_SMOKE" == "true" ]]; then
           echo "optsets=${OPTSETS_SMOKE}" >> "$GITHUB_OUTPUT"
-          # remove "-", e.g. "-O1" is becoming "O1"
-          OPTSETS_NO_DASH="${OPTSETS_SMOKE//-/}"
-          # convert to array
-          OPTSETS_ARRAY='["'"${OPTSETS_NO_DASH// /\",\"}"'"]'
-          echo "optsets_array=${OPTSETS_ARRAY}" >> "$GITHUB_OUTPUT"
         fi
         if [[ "$RUN_FULL" == "true" ]]; then
           echo "optsets=${OPTSETS_FULL}" >> "$GITHUB_OUTPUT"
-          OPTSETS_NO_DASH="${OPTSETS_FULL//-/}"
-          OPTSETS_ARRAY='["'"${OPTSETS_NO_DASH// /\",\"}"'"]'
-          echo "optsets_array=${OPTSETS_ARRAY}" >> "$GITHUB_OUTPUT"
         fi
 
   linux-aarch64-build-ispc:
@@ -325,268 +316,64 @@ jobs:
 
   linux-test:
     needs: [define-flow, linux-build-ispc]
-    runs-on: ubuntu-22.04
-    continue-on-error: false
     strategy:
       fail-fast: false
       matrix:
-        version: [17, 18, 19]
+        llvm: [17, 18, 19]
         arch: [x86, x86-64]
-        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets_x86)}}
-        # See issue #2818 for more deatils. It's SDE problem running on AMD runner.
-        exclude:
-          - arch: x86
-            target: "avx2vnni-i32x4"
-          - arch: x86
-            target: "avx2vnni-i32x8"
-          - arch: x86
-            target: "avx2vnni-i32x16"
-          - arch: x86
-            target: "avx512skx-x4"
-          - arch: x86
-            target: "avx512skx-x8"
-          - arch: x86
-            target: "avx512skx-x16"
-          - arch: x86
-            target: "avx512skx-x32"
-          - arch: x86
-            target: "avx512skx-x64"
-          - arch: x86
-            target: "avx512icl-x4"
-          - arch: x86
-            target: "avx512icl-x8"
-          - arch: x86
-            target: "avx512icl-x16"
-          - arch: x86
-            target: "avx512icl-x32"
-          - arch: x86
-            target: "avx512icl-x64"
-          - arch: x86
-            target: "avx512spr-x4"
-          - arch: x86
-            target: "avx512spr-x8"
-          - arch: x86
-            target: "avx512spr-x16"
-          - arch: x86
-            target: "avx512spr-x32"
-          - arch: x86
-            target: "avx512spr-x64"
-
-    steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-    - name: Download package
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-      with:
-        name: ispc_llvm${{matrix.version}}_linux
-
-    - name: Install dependencies and unpack artifacts
-      run: |
-        .github/workflows/scripts/install-test-deps.sh
-
-    - name: Check environment
-      run: |
-        cat /proc/cpuinfo
-
-    - name: Running tests
-      run: |
-        echo PATH="$PATH"
-        ./scripts/alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: fail_db.llvm${{matrix.version}}.${{matrix.arch}}.${{matrix.target}}.txt
-        path: tests/fail_db.txt
-
-    - name: Upload alloy logs
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: alloy_results.llvm${{matrix.version}}.${{matrix.arch}}.${{matrix.target}}
-        path: alloy_results_*
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: linux
+      architecture: ${{ matrix.arch }}
+      llvm_version: ${{ matrix.llvm }}
+      artifact_name: ispc_llvm${{ matrix.llvm }}_linux
+      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86 }}
+      optsets: ${{ needs.define-flow.outputs.tests_optsets }}
 
   linux-test-llvm18-lto:
     needs: [define-flow, linux-build-ispc-llvm18-lto]
-    runs-on: ubuntu-22.04
-    continue-on-error: false
     strategy:
       fail-fast: false
       matrix:
         arch: [x86, x86-64]
-        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets_x86)}}
-        # See issue #2818 for more deatils. It's SDE problem running on AMD runner.
-        exclude:
-          - arch: x86
-            target: "avx2vnni-i32x4"
-          - arch: x86
-            target: "avx2vnni-i32x8"
-          - arch: x86
-            target: "avx2vnni-i32x16"
-          - arch: x86
-            target: "avx512skx-x4"
-          - arch: x86
-            target: "avx512skx-x8"
-          - arch: x86
-            target: "avx512skx-x16"
-          - arch: x86
-            target: "avx512skx-x32"
-          - arch: x86
-            target: "avx512skx-x64"
-          - arch: x86
-            target: "avx512icl-x4"
-          - arch: x86
-            target: "avx512icl-x8"
-          - arch: x86
-            target: "avx512icl-x16"
-          - arch: x86
-            target: "avx512icl-x32"
-          - arch: x86
-            target: "avx512icl-x64"
-          - arch: x86
-            target: "avx512spr-x4"
-          - arch: x86
-            target: "avx512spr-x8"
-          - arch: x86
-            target: "avx512spr-x16"
-          - arch: x86
-            target: "avx512spr-x32"
-          - arch: x86
-            target: "avx512spr-x64"
-    steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-    - name: Download package
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-      with:
-        name: ispc_llvm18_lto_linux
-
-    - name: Install dependencies and unpack artifacts
-      run: |
-        .github/workflows/scripts/install-test-deps.sh
-
-    - name: Check environment
-      run: |
-        cat /proc/cpuinfo
-
-    - name: Running tests
-      run: |
-        echo PATH="$PATH"
-        ./scripts/alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: fail_db.llvm18_lto.${{matrix.arch}}.${{matrix.target}}.txt
-        path: tests/fail_db.txt
-
-    - name: Upload alloy logs
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: alloy_results.llvm18_lto.${{matrix.arch}}.${{matrix.target}}
-        path: alloy_results_*
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: linux
+      architecture: ${{ matrix.arch }}
+      llvm_version: 18
+      artifact_name: ispc_llvm18_lto_linux
+      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86 }}
+      optsets: ${{ needs.define-flow.outputs.tests_optsets }}
+      enable_lto: true
 
   linux-test-llvm18-aarch64:
     needs: [define-flow, linux-aarch64-build-ispc]
-    runs-on: ubuntu-22.04-arm
-    continue-on-error: false
     strategy:
       fail-fast: false
-      matrix:
-        arch: [aarch64]
-        optset: ${{fromJson(needs.define-flow.outputs.tests_optsets_array)}}
-        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets_arm)}}
-    steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-    - name: Download package
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-      with:
-        name: ispc_llvm18_linux.aarch64
-
-    - name: Install dependencies and unpack artifacts
-      run: |
-        .github/workflows/scripts/install-test-deps.sh
-
-    - name: Check environment
-      run: |
-        cat /proc/cpuinfo
-
-    - name: Running tests
-      run: |
-        echo PATH="$PATH"
-        ./scripts/run_tests.py -t ${{matrix.target}} -a ${{matrix.arch}} -o ${{matrix.optset}} --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: fail_db.llvm18.linux.${{matrix.optset}}.${{matrix.arch}}.${{matrix.target}}.txt
-        path: tests/fail_db.txt
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: linux
+      architecture: aarch64
+      llvm_version: 18
+      artifact_name: ispc_llvm18_linux.aarch64
+      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_arm }}
+      optsets: ${{ needs.define-flow.outputs.tests_optsets }}
 
   # Test release version
   linux-test-llvm18-release:
     needs: [define-flow, linux-build-ispc-llvm18-release]
-    runs-on: ubuntu-22.04
-    continue-on-error: false
     strategy:
       fail-fast: false
       matrix:
         arch: [x86, x86-64]
-        target: [avx2-i32x8]
-    steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-    - name: Download package
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-      with:
-        name: ispc_llvm18rel_linux
-
-    - name: Install dependencies and unpack artifacts
-      run: |
-        .github/workflows/scripts/install-test-deps.sh
-
-    - name: Check environment
-      run: |
-        cat /proc/cpuinfo
-
-    - name: Running tests
-      run: |
-        echo PATH="$PATH"
-        ./scripts/alloy.py -r --only="stability ${{ matrix.arch}} current -O0 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: fail_db.llvm18rel.${{matrix.arch}}.${{matrix.target}}.txt
-        path: tests/fail_db.txt
-
-    - name: Upload alloy logs
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: alloy_results.llvm18rel.${{matrix.arch}}.${{matrix.target}}
-        path: alloy_results_*
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: linux
+      architecture: ${{ matrix.arch }}
+      llvm_version: 18
+      artifact_name: ispc_llvm18rel_linux
+      targets: '["avx2-i32x8"]'
+      optsets: -O0 -O2
 
   # Debug run is experimental with the purpose to see if it's capable to catch anything.
   # So it's running in "full" mode only for now.
@@ -594,105 +381,37 @@ jobs:
   linux-test-debug-llvm18:
     needs: [define-flow, linux-build-ispc]
     if: ${{ needs.define-flow.outputs.flow_type == 'full' }}
-    runs-on: ubuntu-22.04
-    continue-on-error: false
     strategy:
       fail-fast: false
       matrix:
         arch: [x86, x86-64]
-        target: [avx2-i32x8]
-    steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-    - name: Download package
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-      with:
-        name: ispc_llvm18_linux
-
-    - name: Install dependencies and unpack artifacts
-      run: |
-        .github/workflows/scripts/install-test-deps.sh
-
-    - name: Check environment
-      run: |
-        cat /proc/cpuinfo
-
-    - name: Running tests
-      run: |
-        echo PATH="$PATH"
-        ./scripts/alloy.py -r --only="stability ${{ matrix.arch }} current debug -O0 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: fail_db.llvm18.debug.${{matrix.arch}}.${{matrix.target}}.txt
-        path: tests/fail_db.txt
-
-    - name: Upload alloy logs
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: alloy_results.llvm18.debug.${{matrix.arch}}.${{matrix.target}}
-        path: alloy_results_*
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: linux
+      architecture: ${{ matrix.arch }}
+      llvm_version: 18
+      artifact_name: ispc_llvm18_linux
+      targets: '["avx2-i32x8"]'
+      optsets: -O0 -O2
+      enable_debug: true
 
   # Test xe release version
   linux-test-xe-llvm18-release:
     needs: [define-flow, linux-build-ispc-xe-llvm18-release]
     if: ${{ needs.define-flow.outputs.flow_type == 'smoke' }}
-    runs-on: ubuntu-22.04
-    continue-on-error: false
     strategy:
       fail-fast: false
       matrix:
         arch: [x86, x86-64]
-        target: [avx2-i32x8]
-    env:
-      INSTALL_COMPUTE_RUNTIME: 1
-      COMPUTE_RUNTIME_GITHUB_RELEASE: 1
-    steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-    - name: Download package
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-      with:
-        name: ispc_xe_llvm18rel_linux
-
-    - name: Install dependencies and unpack artifacts
-      run: |
-        .github/workflows/scripts/install-test-deps.sh
-
-    - name: Check environment
-      run: |
-        cat /proc/cpuinfo
-
-    - name: Running tests
-      run: |
-        echo PATH="$PATH"
-        # github runners don't have GPU so run CPU tests at least
-        ./scripts/alloy.py -r --only="stability ${{ matrix.arch }} current -O0 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: fail_db.xe.llvm18rel.${{matrix.arch}}.${{matrix.target}}.txt
-        path: tests/fail_db.txt
-
-    - name: Upload alloy logs
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: alloy_results.xe.llvm18rel.${{matrix.arch}}.${{matrix.target}}
-        path: alloy_results_*
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: linux
+      architecture: ${{ matrix.arch }}
+      llvm_version: 18
+      artifact_name: ispc_xe_llvm18rel_linux
+      targets: '["avx2-i32x8"]'
+      optsets: -O0 -O2
+      enable_xe: true
 
   macos-build-ispc:
     needs: [define-flow]
@@ -800,150 +519,47 @@ jobs:
         name: ispc_llvm18_lto_macos
         path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-macOS.universal.tar.gz
 
+  # For macos we test only one target so there is no problem with exceeding strategy limit.
+  # If it happens then we can split it into two jobs.
   macos-test-ispc:
     needs: [define-flow, macos-build-ispc]
-    runs-on: macos-13
-    continue-on-error: false
     strategy:
       fail-fast: false
       matrix:
-        version: [17, 18, 19]
-
-    steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-    - name: Download package
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-      with:
-        name: ispc_llvm${{matrix.version}}_macos-13
-
-    - name: Install dependencies and unpack artifacts
-      run: |
-        tar xf ispc-trunk-macos.tar.gz
-        echo "$GITHUB_WORKSPACE/ispc-trunk-macos/bin" >> "$GITHUB_PATH"
-        echo "ISPC_HOME=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
-        echo "LLVM_HOME=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
-
-    - name: Check environment
-      run: |
-        sysctl -n machdep.cpu.brand_string
-
-    - name: Running tests
-      run: |
-        echo PATH="$PATH"
-        ./scripts/alloy.py -r --only="stability current x86-64 -O0 -O2" --only-targets="sse4-i32x4" --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: fail_db.llvm${{matrix.version}}.macos.sse4.txt
-        path: tests/fail_db.txt
-
-    - name: Upload alloy logs
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: alloy_results.llvm${{matrix.version}}.macos.sse4
-        path: alloy_results_*
-
+        llvm: [17, 18, 19]
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: macos
+      architecture: x86-64
+      llvm_version: ${{ matrix.llvm }}
+      artifact_name: ispc_llvm${{matrix.llvm}}_macos-13
+      targets: '["sse4-i32x4"]'
+      optsets: -O0 -O2
+  
   macos-test-ispc-llvm18-lto:
     needs: [define-flow, macos-build-ispc-llvm18-lto]
-    runs-on: macos-13
-    continue-on-error: false
-    strategy:
-      fail-fast: false
-    steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-    - name: Download package
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-      with:
-        name: ispc_llvm18_lto_macos
-
-    - name: Install dependencies and unpack artifacts
-      run: |
-        tar xf ispc-trunk-macOS.universal.tar.gz
-        echo "$GITHUB_WORKSPACE/ispc-trunk-macOS.universal/bin" >> "$GITHUB_PATH"
-        echo "ISPC_HOME=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
-        echo "LLVM_HOME=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
-
-    - name: Check environment
-      run: |
-        sysctl -n machdep.cpu.brand_string
-
-    - name: Running tests
-      run: |
-        echo PATH="$PATH"
-        ./scripts/alloy.py -r --only="stability current x86-64 -O0 -O2" --only-targets="sse4-i32x4" --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: fail_db.llvm18_lto.macos.sse4.txt
-        path: tests/fail_db.txt
-
-    - name: Upload alloy logs
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: alloy_results.llvm18_lto.macos.sse4
-        path: alloy_results_*
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: macos
+      architecture: x86-64
+      llvm_version: 18
+      artifact_name: ispc_llvm18_lto_macos
+      targets: '["sse4-i32x4"]'
+      optsets: -O0 -O2
+      enable_lto: true
 
   macos-test-ispc-llvm18-arm64:
     needs: [define-flow, macos-build-ispc]
-    runs-on: macos-14
-    continue-on-error: false
     strategy:
       fail-fast: false
-      matrix:
-        arch: [aarch64]
-        optset: ${{fromJson(needs.define-flow.outputs.tests_optsets_array)}}
-        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets_arm)}}
-
-    steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-    - name: Download package
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-      with:
-        name: ispc_llvm18_macos-14
-
-    - name: Install dependencies and unpack artifacts
-      run: |
-        tar xf ispc-trunk-macOS.tar.gz
-        echo "$GITHUB_WORKSPACE/ispc-trunk-macOS/bin" >> "$GITHUB_PATH"
-        echo "ISPC_HOME=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
-        echo "LLVM_HOME=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
-
-    - name: Check environment
-      run: |
-        sysctl -n machdep.cpu.brand_string
-
-    - name: Running tests
-      run: |
-        echo PATH="$PATH"
-        ./scripts/run_tests.py -t ${{matrix.target}} -a ${{matrix.arch}} -o ${{matrix.optset}} --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: fail_db.llvm18.macos.${{matrix.optset}}.${{matrix.arch}}.${{matrix.target}}.txt
-        path: tests/fail_db.txt
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: macos
+      architecture: aarch64
+      llvm_version: 18
+      artifact_name: ispc_llvm18_macos-14
+      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_arm }}
+      optsets: ${{ needs.define-flow.outputs.tests_optsets }}
 
   win-build-ispc:
     needs: [define-flow]
@@ -1104,213 +720,70 @@ jobs:
         name: ispc_xe_deps_llvm18rel_win
         path: ispc-xe
 
+  # To avoid strategy expansion exceeding 256 results, there are two jobs:
+  # - win-test for the LLVM version used for release builds and newer versions
+  # - win-test-prior for older LLVM versions
   win-test:
     needs: [define-flow, win-build-ispc]
-    env:
-      LLVM_HOME: "C:\\projects\\llvm"
-    runs-on: windows-2022
-    continue-on-error: false
     strategy:
       fail-fast: false
       matrix:
-        version: [17, 18, 19]
+        llvm: [17, 18, 19]
         arch: [x86, x86-64]
-        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets_x86)}}
-
-    steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-    - name: Download package
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-      with:
-        name: ispc_llvm${{matrix.version}}_win
-
-    - name: Install dependencies
-      run: |
-        .github/workflows/scripts/install-test-deps.ps1
-
-    - name: Check environment
-      shell: cmd
-      run: |
-        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
-
-    - name: Running tests
-      run: |
-        $env:ISPC_HOME = "$pwd"
-        .github/workflows/scripts/load-vs-env.ps1 "${{ matrix.arch }}"
-        python .\scripts\alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: fail_db.llvm${{matrix.version}}.${{matrix.arch}}.${{matrix.target}}.txt
-        path: tests/fail_db.txt
-
-    - name: Upload alloy logs
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: alloy_results.llvm${{matrix.version}}.${{matrix.arch}}.${{matrix.target}}
-        path: alloy_results_*
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: windows
+      architecture: ${{ matrix.arch }}
+      llvm_version: ${{ matrix.llvm }}
+      artifact_name: ispc_llvm${{matrix.llvm}}_win
+      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86 }}
+      optsets: ${{ needs.define-flow.outputs.tests_optsets }}
 
   win-test-llvm18-lto:
     needs: [define-flow, win-build-ispc-llvm18-lto]
-    env:
-      LLVM_HOME: "C:\\projects\\llvm"
-    runs-on: windows-2022
-    continue-on-error: false
     strategy:
       fail-fast: false
       matrix:
         arch: [x86, x86-64]
-        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets_x86)}}
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: windows
+      architecture: ${{ matrix.arch }}
+      llvm_version: 18
+      artifact_name: ispc_llvm18_lto_win
+      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86 }}
+      optsets: ${{ needs.define-flow.outputs.tests_optsets }}
+      enable_lto: true
 
-    steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-    - name: Download package
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-      with:
-        name: ispc_llvm18_lto_win
-
-    - name: Install dependencies
-      run: |
-        .github/workflows/scripts/install-test-deps.ps1
-
-    - name: Check environment
-      shell: cmd
-      run: |
-        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
-
-    - name: Running tests
-      run: |
-        $env:ISPC_HOME = "$pwd"
-        .github/workflows/scripts/load-vs-env.ps1 "${{ matrix.arch }}"
-        python .\scripts\alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: fail_db.llvm18_lto.${{matrix.arch}}.${{matrix.target}}.txt
-        path: tests/fail_db.txt
-
-    - name: Upload alloy logs
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: alloy_results.llvm18_lto.${{matrix.arch}}.${{matrix.target}}
-        path: alloy_results_*
-
+  # Test xe release version
   win-test-xe-llvm18-release:
     needs: [define-flow, win-build-ispc-xe-llvm18-release]
     if: ${{ needs.define-flow.outputs.flow_type == 'smoke' }}
-    env:
-      LLVM_HOME: "C:\\projects\\llvm"
-    runs-on: windows-2022
-    continue-on-error: false
     strategy:
       fail-fast: false
       matrix:
         arch: [x86, x86-64]
-        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets_x86)}}
-
-    steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-    - name: Download package
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-      with:
-        name: ispc_xe_llvm18rel_win
-
-    - name: Install dependencies
-      run: |
-        .github/workflows/scripts/install-test-deps.ps1
-
-    - name: Check environment
-      shell: cmd
-      run: |
-        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
-
-    - name: Running tests
-      run: |
-        $env:ISPC_HOME = "$pwd"
-        .github/workflows/scripts/load-vs-env.ps1 "${{ matrix.arch }}"
-        python .\scripts\alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: fail_db.xe.llvm18rel.${{matrix.arch}}.${{matrix.target}}.txt
-        path: tests/fail_db.txt
-
-    - name: Upload alloy logs
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: alloy_results.llvm18rel.${{matrix.arch}}.${{matrix.target}}
-        path: alloy_results_*
-
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: windows
+      architecture: ${{ matrix.arch }}
+      llvm_version: 18
+      artifact_name: ispc_xe_llvm18rel_win
+      targets: '["avx2-i32x8"]'
+      optsets: ${{ needs.define-flow.outputs.tests_optsets }}
+      enable_xe: true
+ 
   win-test-llvm18-vectorcall:
     needs: [define-flow, win-build-ispc-xe-llvm18-release]
-    env:
-      LLVM_HOME: "C:\\projects\\llvm"
-    runs-on: windows-2022
-    continue-on-error: false
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [x86-64]
-        target: [avx2-i32x8]
-
-    steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-    - name: Download package
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-      with:
-        name: ispc_xe_llvm18rel_win
-
-    - name: Install dependencies
-      run: |
-        .github/workflows/scripts/install-test-deps.ps1
-
-    - name: Check environment
-      shell: cmd
-      run: |
-        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
-
-    - name: Running tests
-      run: |
-        $env:ISPC_HOME = "$pwd"
-        .github/workflows/scripts/load-vs-env.ps1 "${{ matrix.arch }}"
-        python .\scripts\run_tests.py --calling_conv=vectorcall --target=${{matrix.target}} --arch=${{matrix.arch}}
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: fail_db.llvm18_veccall.${{matrix.arch}}.${{matrix.target}}.txt
-        path: tests/fail_db.txt
-
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: windows
+      architecture: x86-64
+      llvm_version: 18
+      artifact_name: ispc_xe_llvm18rel_win
+      targets: '["avx2-i32x8"]'
+      optsets: O2
+      calling_conv: vectorcall
 
   win-package-examples:
     needs: [define-flow]

@@ -1,0 +1,202 @@
+# Copyright 2025, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: Reusable ISPC test workflow
+
+on:
+  workflow_call:
+    inputs:
+      platform:
+        description: 'Platform to test on (linux, macos, windows)'
+        required: true
+        type: string
+      architecture:
+        description: 'Architecture to test (x86, x86-64, aarch64)'
+        required: true
+        type: string
+      llvm_version:
+        description: 'LLVM version to use'
+        required: true
+        type: string
+      artifact_name:
+        description: 'Name of the artifact to test'
+        required: true
+        type: string
+      targets:
+        description: 'JSON array of targets to test'
+        required: false
+        type: string
+        default: '["avx2-i32x8"]'
+      optsets:
+        description: 'Optimization sets to test'
+        required: false
+        type: string
+        default: '-O2'
+      enable_lto:
+        description: 'Was the build using LTO'
+        required: false
+        type: boolean
+        default: false
+      enable_xe:
+        description: 'Was the build with XE support'
+        required: false
+        type: boolean
+        default: false
+      enable_debug:
+        description: 'Enable debug mode for tests'
+        required: false
+        type: boolean
+        default: false
+      calling_conv:
+        description: 'Optional calling convention to test'
+        required: false
+        type: string
+        default: ''
+
+env:
+  SDE_MIRROR_ID: 831748
+  SDE_TAR_NAME: sde-external-9.44.0-2024-08-22
+  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
+  LLVM_HOME: ${{ inputs.platform == 'windows' && 'C:\\projects\\llvm' || github.workspace }}
+  ISPC_HOME: ${{ github.workspace }}
+  INSTALL_COMPUTE_RUNTIME: ${{ inputs.enable_xe && '1' || '0' }}
+  COMPUTE_RUNTIME_GITHUB_RELEASE: ${{ inputs.enable_xe && '1' || '0' }}
+
+jobs:
+  test:
+    name: ${{ inputs.platform }} (${{ inputs.architecture }}, ${{ matrix.target }}, ${{ inputs.optsets }})
+    runs-on: ${{ inputs.platform == 'macos' && (inputs.architecture == 'aarch64' && 'macos-14' || 'macos-13') || (inputs.platform == 'windows' && 'windows-2022') || (inputs.architecture == 'aarch64' && 'ubuntu-22.04-arm') || 'ubuntu-22.04' }}
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJson(inputs.targets) }}
+
+    steps:
+    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+
+    - name: Download package
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+      with:
+        name: ${{ inputs.artifact_name }}
+
+    - name: Install dependencies and unpack artifacts for Linux
+      if: inputs.platform == 'linux'
+      shell: bash
+      run: |
+        bash .github/workflows/scripts/install-test-deps.sh
+
+    - name: Install dependencies and unpack artifacts for macOS
+      if: inputs.platform == 'macos'
+      shell: bash
+      run: |
+        if [[ "${{ inputs.enable_lto }}" == "true" ]]; then
+          tar xf ispc-trunk-macOS.universal.tar.gz
+          echo "$GITHUB_WORKSPACE/ispc-trunk-macOS.universal/bin" >> "$GITHUB_PATH"
+        else
+          tar xf ispc-trunk-macos.tar.gz
+          echo "$GITHUB_WORKSPACE/ispc-trunk-macos/bin" >> "$GITHUB_PATH"
+        fi
+        echo "ISPC_HOME=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
+        echo "LLVM_HOME=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
+
+    - name: Install dependencies and unpack artifacts for Windows
+      if: inputs.platform == 'windows'
+      shell: pwsh
+      run: |
+        .github/workflows/scripts/install-test-deps.ps1
+
+    - name: Check environment
+      run: |
+        if [ "${{ inputs.platform }}" == "linux" ]; then
+          cat /proc/cpuinfo
+        elif [ "${{ inputs.platform }}" == "macos" ]; then
+          sysctl -n machdep.cpu.brand_string
+        else
+          wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+        fi
+      shell: bash
+
+    - name: Running tests on Linux/macOS (alloy mode)
+      # See issue #2818 for more details about skipping avx512 and avx2vnni targets. It's SDE problem running on AMD runner.
+      # Unfortunately it's not possible to do this on job level, so we need to do it on step level.
+      if: (inputs.platform == 'linux' || inputs.platform == 'macos') && inputs.architecture != 'aarch64' && !inputs.enable_debug && !(inputs.architecture == 'x86' && (contains(matrix.target, 'avx2vnni') || contains(matrix.target, 'avx512')))
+      shell: bash
+      run: |
+        echo "PATH=${PATH}"
+        ./scripts/alloy.py -r --only="stability ${{ inputs.architecture }} current ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+
+    - name: Running tests on Linux/macOS (aarch64 mode)
+      if: (inputs.platform == 'linux' || inputs.platform == 'macos') && inputs.architecture == 'aarch64'
+      shell: bash
+      run: |
+        echo "PATH=${PATH}"
+        IFS=' ' read -ra OPT_LEVELS <<< "${{ inputs.optsets }}"
+
+        for opt in "${OPT_LEVELS[@]}"; do
+          # Remove dashes from each option
+          opt_no_dash="${opt//-/}"
+          echo "About to execute run_tests.py with opt: $opt_no_dash"
+          ./scripts/run_tests.py -t "${{ matrix.target }}" -a "${{ inputs.architecture }}" -o "$opt_no_dash" --time --update-errors=FP
+          echo "Finished executing run_tests.py with opt: $opt_no_dash"
+        done
+
+    - name: Running tests on Linux/macOS (debug mode)
+      # See issue #2818 for more details about skipping avx512 and avx2vnni targets. It's SDE problem running on AMD runner.
+      # Unfortunately it's not possible to do this on job level, so we need to do it on step level.
+      if: (inputs.platform == 'linux' || inputs.platform == 'macos') && inputs.architecture != 'aarch64' && inputs.enable_debug && !(inputs.architecture == 'x86' && (contains(matrix.target, 'avx2vnni') || contains(matrix.target, 'avx512')))
+
+      shell: bash
+      run: |
+        echo "PATH=${PATH}"
+        ./scripts/alloy.py -r --only="stability ${{ inputs.architecture }} current debug ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+
+    - name: Running tests on Windows (alloy mode)
+      if: inputs.platform == 'windows' && inputs.calling_conv == ''
+      run: |
+        $env:ISPC_HOME = "$pwd"
+        .github/workflows/scripts/load-vs-env.ps1 "${{ inputs.architecture }}"
+        python .\scripts\alloy.py -r --only="stability ${{ inputs.architecture }} current ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+      shell: pwsh
+
+    - name: Running tests on Windows (vectorcall)
+      if: inputs.platform == 'windows' && inputs.calling_conv != ''
+      run: |
+        $env:ISPC_HOME = "$pwd"
+        .github/workflows/scripts/load-vs-env.ps1 "${{ inputs.architecture }}"
+
+        # Split optsets and run tests for each optimization level
+        $optLevels = "${{ inputs.optsets }}".Split(" ", [System.StringSplitOptions]::RemoveEmptyEntries)
+        Write-Host "optLevels array created: $($optLevels -join ', ')"
+
+        foreach ($opt in $optLevels) {
+          $optNoDash = $opt -replace "-", ""
+          Write-Host "About to execute run_tests.py with opt: $optNoDash"
+          python .\scripts\run_tests.py --calling_conv=${{ inputs.calling_conv }} --target=${{ matrix.target }} --arch=${{ inputs.architecture }} --opt=$optNoDash
+          Write-Host "Finished executing run_tests.py with opt: $optNoDash"
+        }
+      shell: pwsh
+
+    - name: Set artifact name prefix
+      id: set-artifact-name
+      shell: bash
+      run: |
+        if [ "${{ inputs.enable_debug }}" == "true" ]; then
+          echo "name_prefix=${{ inputs.artifact_name }}.debug.${{ inputs.architecture }}.${{ matrix.target }}" >> "$GITHUB_ENV"
+        else
+          echo "name_prefix=${{ inputs.artifact_name }}.${{ inputs.architecture }}.${{ matrix.target }}" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Upload fail_db.txt
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+      if: failure()
+      with:
+        name: fail_db.${{ steps.set-artifact-name.outputs.name_prefix }}.txt
+        path: tests/fail_db.txt
+
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+      if: failure() && inputs.architecture != 'aarch64'
+      with:
+        name: alloy_results.${{ steps.set-artifact-name.outputs.name_prefix }}
+        path: alloy_results_*
