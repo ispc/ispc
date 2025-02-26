@@ -11,6 +11,9 @@ cd build
 make -j4
 # run LIT tests
 make check-all
+# run functional tests
+cd /workspaces/ispc
+PATH=`pwd`/build/bin:$PATH ./scripts/run_tests.py --target=avx2-i32x4
 ```
 
 Note that `build` folder already contains `compile_commands.json`, which is needed for VSCode to be able correctly parse and browse C++ files.
