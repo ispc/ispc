@@ -118,6 +118,28 @@ libraries can be installed with Microsoft Visual C++ Redistributable package.
 Instruction to install them can be found
 [here](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist).
 
+## Development Guide
+
+If you're interested in contributing to `ispc` or building it from source,
+this section will help you get started.
+
+### GitHub Codespaces
+
+The fastest way to get a development environment set up is through GitHub
+Codespaces. This provides a fully configured environment in the cloud, with all
+dependencies pre-installed. Codespaces gives you a browser-based development
+environment with everything you need to build, test, and debug ISPC. Click the
+following button to open Codespaces with configured `ispc`:
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=1931356)
+
+### Building From Source
+
+For detailed instructions on how to build ISPC from source on different
+platforms, please refer to our
+[ISPC Development Guide](https://github.com/ispc/ispc/wiki/ISPC-Development-Guide)
+for build and test instructions.
+
 ## Additional Resources
 
 Latest `ispc` binaries corresponding to `main` branch can be downloaded from
