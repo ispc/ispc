@@ -206,6 +206,21 @@ Function::Function(Symbol *s, Stmt *c, Symbol *ms, std::vector<Symbol *> &a)
 }
 
 void Function::typeCheckAndOptimize() {
+    const FunctionType *funcType = GetType();
+    const Type *retType = GetType()->GetReturnType();
+    if (!retType->IsCompleteType()) {
+        Error(funcType->GetSourcePos(), "return type is an incomplete type: %s", retType->GetString().c_str());
+    }
+
+    for (int i = 0; i < funcType->GetNumParameters(); i++) {
+        const Type *paramType = funcType->GetParameterType(i);
+        if (!paramType->IsCompleteType()) {
+            const SourcePos &pos = funcType->GetParameterSourcePos(i);
+            const std::string &paramName = funcType->GetParameterName(i);
+            Error(pos, "parameter '%s' is an incomplete type: %s", paramName.c_str(), paramType->GetString().c_str());
+        }
+    }
+
     if (code != nullptr) {
         debugPrintHelper(DebugPrintPoint::Initial);
 
