@@ -1281,6 +1281,54 @@ static inline uniform int packed_store_active2(uniform unsigned int a[], unsigne
     return __packed_store_active2i32((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
 }
 
+/* unsigned int16 implementations. */
+// unsigned int16 load.
+static inline uniform int packed_load_active(uniform unsigned int16 a[], varying unsigned int16 *uniform vals) {
+    return __packed_load_activei16((opaque_ptr_t)a, (opaque_ptr_t)vals, (UIntMaskType)__mask);
+}
+
+// unsigned int16 store.
+static inline uniform int packed_store_active(uniform unsigned int16 a[], unsigned int16 vals) {
+    return __packed_store_activei16((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
+}
+
+// unsigned int16 store2.
+static inline uniform int packed_store_active2(uniform unsigned int16 a[], unsigned int16 vals) {
+    return __packed_store_active2i16((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
+}
+
+/* unsigned int8 implementations. */
+// unsigned int8 load.
+static inline uniform int packed_load_active(uniform unsigned int8 a[], varying unsigned int8 *uniform vals) {
+    return __packed_load_activei8((opaque_ptr_t)a, (opaque_ptr_t)vals, (UIntMaskType)__mask);
+}
+
+// unsigned int8 store.
+static inline uniform int packed_store_active(uniform unsigned int8 a[], unsigned int8 vals) {
+    return __packed_store_activei8((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
+}
+
+// unsigned int8 store2.
+static inline uniform int packed_store_active2(uniform unsigned int8 a[], unsigned int8 vals) {
+    return __packed_store_active2i8((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
+}
+
+/* unsigned int64 implementations. */
+// unsigned int64 load.
+static inline uniform int packed_load_active(uniform unsigned int64 a[], varying unsigned int64 *uniform vals) {
+    return __packed_load_activei64((opaque_ptr_t)a, (opaque_ptr_t)vals, (UIntMaskType)__mask);
+}
+
+// unsigned int64 store.
+static inline uniform int packed_store_active(uniform unsigned int64 a[], unsigned int64 vals) {
+    return __packed_store_activei64((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
+}
+
+// unsigned int64 store2.
+static inline uniform int packed_store_active2(uniform unsigned int64 a[], unsigned int64 vals) {
+    return __packed_store_active2i64((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
+}
+
 /* int32 implementations. */
 // int32 load.
 static inline uniform int packed_load_active(uniform int a[], varying int *uniform vals) {
@@ -1302,20 +1350,36 @@ static inline uniform int packed_store_active(bool active, uniform int a[], int 
     return __packed_store_activei32((opaque_ptr_t)a, vals, (IntMaskType)(-(int)active));
 }
 
-/* unsigned int64 implementations. */
-// unsigned int64 load.
-static inline uniform int packed_load_active(uniform unsigned int64 a[], varying unsigned int64 *uniform vals) {
-    return __packed_load_activei64((opaque_ptr_t)a, (opaque_ptr_t)vals, (UIntMaskType)__mask);
+/* int16 implementations. */
+// int16 load.
+static inline uniform int packed_load_active(uniform int16 a[], varying int16 *uniform vals) {
+    return __packed_load_activei16((opaque_ptr_t)a, (opaque_ptr_t)vals, (IntMaskType)__mask);
 }
 
-// unsigned int64 store.
-static inline uniform int packed_store_active(uniform unsigned int64 a[], unsigned int64 vals) {
-    return __packed_store_activei64((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
+// int16 store.
+static inline uniform int packed_store_active(uniform int16 a[], int16 vals) {
+    return __packed_store_activei16((opaque_ptr_t)a, vals, (IntMaskType)__mask);
 }
 
-// unsigned int64 store2.
-static inline uniform int packed_store_active2(uniform unsigned int64 a[], unsigned int64 vals) {
-    return __packed_store_active2i64((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
+// int16 store2.
+static inline uniform int packed_store_active2(uniform int16 a[], int16 vals) {
+    return __packed_store_active2i16((opaque_ptr_t)a, vals, (IntMaskType)__mask);
+}
+
+/* int8 implementations. */
+// int8 load.
+static inline uniform int packed_load_active(uniform int8 a[], varying int8 *uniform vals) {
+    return __packed_load_activei8((opaque_ptr_t)a, (opaque_ptr_t)vals, (IntMaskType)__mask);
+}
+
+// int8 store.
+static inline uniform int packed_store_active(uniform int8 a[], int8 vals) {
+    return __packed_store_activei8((opaque_ptr_t)a, vals, (IntMaskType)__mask);
+}
+
+// int8 store2.
+static inline uniform int packed_store_active2(uniform int8 a[], int8 vals) {
+    return __packed_store_active2i8((opaque_ptr_t)a, vals, (IntMaskType)__mask);
 }
 
 /* int64 implementations. */
@@ -1339,6 +1403,53 @@ static inline uniform int packed_store_active(bool active, uniform int64 a[], in
     return __packed_store_activei64((opaque_ptr_t)a, vals, (IntMaskType)(-(int)active));
 }
 
+/* float16 implementations. */
+// float16 load.
+static inline uniform int packed_load_active(uniform float16 a[], varying float16 *uniform vals) {
+    return __packed_load_activef16((opaque_ptr_t)a, (opaque_ptr_t)vals, (IntMaskType)__mask);
+}
+
+// float16 store.
+static inline uniform int packed_store_active(uniform float16 a[], float16 vals) {
+    return __packed_store_activef16((opaque_ptr_t)a, vals, (IntMaskType)__mask);
+}
+
+// float16 store2.
+static inline uniform int packed_store_active2(uniform float16 a[], float16 vals) {
+    return __packed_store_active2f16((opaque_ptr_t)a, vals, (IntMaskType)__mask);
+}
+
+/* float implementations. */
+// float load.
+static inline uniform int packed_load_active(uniform float a[], varying float *uniform vals) {
+    return __packed_load_activef32((opaque_ptr_t)a, (opaque_ptr_t)vals, (IntMaskType)__mask);
+}
+
+// float store.
+static inline uniform int packed_store_active(uniform float a[], float vals) {
+    return __packed_store_activef32((opaque_ptr_t)a, vals, (IntMaskType)__mask);
+}
+
+// float store2.
+static inline uniform int packed_store_active2(uniform float a[], float vals) {
+    return __packed_store_active2f32((opaque_ptr_t)a, vals, (IntMaskType)__mask);
+}
+
+/* double implementations. */
+// double load.
+static inline uniform int packed_load_active(uniform double a[], varying double *uniform vals) {
+    return __packed_load_activef64((opaque_ptr_t)a, (opaque_ptr_t)vals, (IntMaskType)__mask);
+}
+
+// double store.
+static inline uniform int packed_store_active(uniform double a[], double vals) {
+    return __packed_store_activef64((opaque_ptr_t)a, vals, (IntMaskType)__mask);
+}
+
+// double store2.
+static inline uniform int packed_store_active2(uniform double a[], double vals) {
+    return __packed_store_active2f64((opaque_ptr_t)a, vals, (IntMaskType)__mask);
+}
 ///////////////////////////////////////////////////////////////////////////
 // streaming store
 

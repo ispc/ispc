@@ -1847,11 +1847,39 @@ EXT void __scatter_factored_base_offsets64_double(uniform int8 *uniform base, va
 }
 
 // packed active stores
+EXT PackedStoreResultType __packed_store_activei8(uniform int8 *uniform ptr, varying int8 val, UIntMaskType mask) {
+    @llvm.masked.compressstore(val, ptr, mask);
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
+EXT PackedStoreResultType __packed_store_activei16(uniform int8 *uniform ptr, varying int16 val, UIntMaskType mask) {
+    @llvm.masked.compressstore(val, ptr, mask);
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
 EXT PackedStoreResultType __packed_store_activei32(uniform int8 *uniform ptr, varying int32 val, UIntMaskType mask) {
     @llvm.masked.compressstore(val, ptr, mask);
     return __popcnt_int64(__cast_mask_to_i64(mask));
 }
 EXT PackedStoreResultType __packed_store_activei64(uniform int8 *uniform ptr, varying int64 val, UIntMaskType mask) {
+    @llvm.masked.compressstore(val, ptr, mask);
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
+EXT PackedStoreResultType __packed_store_activef16(uniform int8 *uniform ptr, varying float16 val, UIntMaskType mask) {
+    @llvm.masked.compressstore(val, ptr, mask);
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
+EXT PackedStoreResultType __packed_store_activef32(uniform int8 *uniform ptr, varying float val, UIntMaskType mask) {
+    @llvm.masked.compressstore(val, ptr, mask);
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
+EXT PackedStoreResultType __packed_store_activef64(uniform int8 *uniform ptr, varying double val, UIntMaskType mask) {
+    @llvm.masked.compressstore(val, ptr, mask);
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
+EXT PackedStoreResultType __packed_store_active2i8(uniform int8 *uniform ptr, varying int8 val, UIntMaskType mask) {
+    @llvm.masked.compressstore(val, ptr, mask);
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
+EXT PackedStoreResultType __packed_store_active2i16(uniform int8 *uniform ptr, varying int16 val, UIntMaskType mask) {
     @llvm.masked.compressstore(val, ptr, mask);
     return __popcnt_int64(__cast_mask_to_i64(mask));
 }
@@ -1863,8 +1891,33 @@ EXT PackedStoreResultType __packed_store_active2i64(uniform int8 *uniform ptr, v
     @llvm.masked.compressstore(val, ptr, mask);
     return __popcnt_int64(__cast_mask_to_i64(mask));
 }
-
+EXT PackedStoreResultType __packed_store_active2f16(uniform int8 *uniform ptr, varying float16 val, UIntMaskType mask) {
+    @llvm.masked.compressstore(val, ptr, mask);
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
+EXT PackedStoreResultType __packed_store_active2f32(uniform int8 *uniform ptr, varying float val, UIntMaskType mask) {
+    @llvm.masked.compressstore(val, ptr, mask);
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
+EXT PackedStoreResultType __packed_store_active2f64(uniform int8 *uniform ptr, varying double val, UIntMaskType mask) {
+    @llvm.masked.compressstore(val, ptr, mask);
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
 // packed active loads
+EXT uniform int32 __packed_load_activei8(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
+    varying int8 *uniform ptr = (varying int8 * uniform) to;
+    varying int8 passthru = *ptr;
+    varying int8 vec = @llvm.masked.expandload(from, mask, passthru);
+    *ptr = vec;
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
+EXT uniform int32 __packed_load_activei16(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
+    varying int16 *uniform ptr = (varying int16 * uniform) to;
+    varying int16 passthru = *ptr;
+    varying int16 vec = @llvm.masked.expandload(from, mask, passthru);
+    *ptr = vec;
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
 EXT uniform int32 __packed_load_activei32(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
     varying int32 *uniform ptr = (varying int32 * uniform) to;
     varying int32 passthru = *ptr;
@@ -1876,6 +1929,27 @@ EXT uniform int32 __packed_load_activei64(uniform int8 *uniform from, uniform in
     varying int64 *uniform ptr = (varying int64 * uniform) to;
     varying int64 passthru = *ptr;
     varying int64 vec = @llvm.masked.expandload(from, mask, passthru);
+    *ptr = vec;
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
+EXT uniform int32 __packed_load_activef16(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
+    varying float16 *uniform ptr = (varying float16 * uniform) to;
+    varying float16 passthru = *ptr;
+    varying float16 vec = @llvm.masked.expandload(from, mask, passthru);
+    *ptr = vec;
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
+EXT uniform int32 __packed_load_activef32(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
+    varying float *uniform ptr = (varying float *uniform)to;
+    varying float passthru = *ptr;
+    varying float vec = @llvm.masked.expandload(from, mask, passthru);
+    *ptr = vec;
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
+EXT uniform int32 __packed_load_activef64(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
+    varying double *uniform ptr = (varying double *uniform)to;
+    varying double passthru = *ptr;
+    varying double vec = @llvm.masked.expandload(from, mask, passthru);
     *ptr = vec;
     return __popcnt_int64(__cast_mask_to_i64(mask));
 }

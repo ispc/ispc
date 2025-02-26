@@ -4974,13 +4974,14 @@ define void @__masked_store_blend_i16(<16 x i16>* nocapture, <16 x i16>,
 ;;
 ;; Implement valid version of 'packed_store_active2' based on 'type' specified.
 ;;
-;; $1: Integer type for which function is to be created.
+;; $1: LLVM type for which function is to be created (i32, float...).
 ;; $2: Alignment for store.
+;; $3: LLVM overloaded type for which function is to be created (i32, f32...).
 ;;
 ;; FIXME: use the per_lane macro, defined below, to implement these!
 define(`packed_load_and_store_type', `
 
-define i32 @__packed_load_active$1(i8 * %startptr, i8 * %val_ptr,
+define i32 @__packed_load_active$3(i8 * %startptr, i8 * %val_ptr,
                                  <WIDTH x MASK> %full_mask) nounwind alwaysinline {
 entry:
   %startptr_typed = bitcast i8* %startptr to $1*
@@ -5036,7 +5037,7 @@ done:
   ret i32 %nextoffset
 }
 
-define i32 @__packed_store_active$1(i8 * %startptr, <WIDTH x $1> %vals,
+define i32 @__packed_store_active$3(i8 * %startptr, <WIDTH x $1> %vals,
                                    <WIDTH x MASK> %full_mask) nounwind alwaysinline {
 entry:
   %startptr_typed = bitcast i8* %startptr to $1*
@@ -5086,9 +5087,9 @@ done:
   ret i32 %nextoffset
 }
 
-define i32 @__packed_store_active2$1(i8 * %startptr, <WIDTH x $1> %vals,
+define i32 @__packed_store_active2$3(i8 * %startptr, <WIDTH x $1> %vals,
                                    <WIDTH x MASK> %full_mask) nounwind alwaysinline {
-  %res = call i32 @__packed_store_active$1(i8 * %startptr, <WIDTH x $1> %vals,
+  %res = call i32 @__packed_store_active$3(i8 * %startptr, <WIDTH x $1> %vals,
                                    <WIDTH x MASK> %full_mask)
   ret i32 %res
 }
@@ -5105,8 +5106,13 @@ define i32 @__packed_store_active2$1(i8 * %startptr, <WIDTH x $1> %vals,
 ;; loads a sequential value from the array.
 
 define(`packed_load_and_store', `
-  packed_load_and_store_type(i32, 4)
-  packed_load_and_store_type(i64, 8)
+  packed_load_and_store_type(i8, 1, i8)
+  packed_load_and_store_type(i16, 2, i16)
+  packed_load_and_store_type(i32, 4, i32)
+  packed_load_and_store_type(i64, 8, i64)
+  packed_load_and_store_type(half, 2, f16)
+  packed_load_and_store_type(float, 4, f32)
+  packed_load_and_store_type(double, 8, f64)
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2024, Intel Corporation
+// Copyright (c) 2021-2025, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <benchmark/benchmark.h>
@@ -162,6 +162,42 @@ static void check_packed_store_active2_neq(T *src, T *dst, const unsigned int in
 // 3 is 1/4, 3/4
 // 7 is 1/8, 7/8
 // 15 is 1/16, 15/16
+
+PACKED_LOAD_STORE_COND(int8_t, int8, packed_load_active, 0)
+PACKED_LOAD_STORE_COND(int8_t, int8, packed_load_active, 1)
+PACKED_LOAD_STORE_COND(int8_t, int8, packed_load_active, 3)
+PACKED_LOAD_STORE_COND(int8_t, int8, packed_load_active, 7)
+PACKED_LOAD_STORE_COND(int8_t, int8, packed_load_active, 15)
+
+PACKED_LOAD_STORE_COND(int8_t, int8, packed_store_active, 0)
+PACKED_LOAD_STORE_COND(int8_t, int8, packed_store_active, 1)
+PACKED_LOAD_STORE_COND(int8_t, int8, packed_store_active, 3)
+PACKED_LOAD_STORE_COND(int8_t, int8, packed_store_active, 7)
+PACKED_LOAD_STORE_COND(int8_t, int8, packed_store_active, 15)
+
+PACKED_LOAD_STORE_COND(int8_t, int8, packed_store_active2, 0)
+PACKED_LOAD_STORE_COND(int8_t, int8, packed_store_active2, 1)
+PACKED_LOAD_STORE_COND(int8_t, int8, packed_store_active2, 3)
+PACKED_LOAD_STORE_COND(int8_t, int8, packed_store_active2, 7)
+PACKED_LOAD_STORE_COND(int8_t, int8, packed_store_active2, 15)
+
+PACKED_LOAD_STORE_COND(int16_t, int16, packed_load_active, 0)
+PACKED_LOAD_STORE_COND(int16_t, int16, packed_load_active, 1)
+PACKED_LOAD_STORE_COND(int16_t, int16, packed_load_active, 3)
+PACKED_LOAD_STORE_COND(int16_t, int16, packed_load_active, 7)
+PACKED_LOAD_STORE_COND(int16_t, int16, packed_load_active, 15)
+
+PACKED_LOAD_STORE_COND(int16_t, int16, packed_store_active, 0)
+PACKED_LOAD_STORE_COND(int16_t, int16, packed_store_active, 1)
+PACKED_LOAD_STORE_COND(int16_t, int16, packed_store_active, 3)
+PACKED_LOAD_STORE_COND(int16_t, int16, packed_store_active, 7)
+PACKED_LOAD_STORE_COND(int16_t, int16, packed_store_active, 15)
+
+PACKED_LOAD_STORE_COND(int16_t, int16, packed_store_active2, 0)
+PACKED_LOAD_STORE_COND(int16_t, int16, packed_store_active2, 1)
+PACKED_LOAD_STORE_COND(int16_t, int16, packed_store_active2, 3)
+PACKED_LOAD_STORE_COND(int16_t, int16, packed_store_active2, 7)
+PACKED_LOAD_STORE_COND(int16_t, int16, packed_store_active2, 15)
 
 PACKED_LOAD_STORE_COND(int32_t, int32, packed_load_active, 0)
 PACKED_LOAD_STORE_COND(int32_t, int32, packed_load_active, 1)
