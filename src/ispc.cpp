@@ -123,6 +123,7 @@ static bool __os_has_avx512_support() {
     return (rEAX & 0xE6) == 0xE6;
 #endif // !defined(ISPC_HOST_IS_WINDOWS)
 }
+
 #endif // ISPC_HOST_IS_X86
 
 #if defined(ISPC_ARM_ENABLED)
@@ -261,6 +262,7 @@ static ISPCTarget lGetSystemISA() {
 #elif defined(ISPC_HOST_IS_X86)
     int info[4];
     __cpuid(info, 1);
+    [[maybe_unused]] int max_level = info[0];
 
     int info2[4];
     // Call cpuid with eax=7, ecx=0
@@ -283,8 +285,23 @@ static ISPCTarget lGetSystemISA() {
     bool avx =                 (info[2] & (1 << 28))  != 0;
     bool avx2 =                (info2[1] & (1 << 5))  != 0;
     bool avx_vnni =            (info3[0] & (1 << 4))  != 0;
-
     bool avx512_f =            (info2[1] & (1 << 16)) != 0;
+
+    [[maybe_unused]] bool sha512 =              (info3[0] & (1 << 0))  != 0;
+    [[maybe_unused]] bool sm3 =                 (info3[0] & (1 << 1))  != 0;
+    [[maybe_unused]] bool sm4 =                 (info3[0] & (1 << 2))  != 0;
+    [[maybe_unused]] bool cmpccxadd =           (info3[0] & (1 << 7))  != 0;
+    [[maybe_unused]] bool amxfp16 =             (info3[0] & (1 << 21)) != 0;
+    [[maybe_unused]] bool avxifma =             (info3[0] & (1 << 23)) != 0;
+    [[maybe_unused]] bool avxvnniint8 =         (info3[3] & (1 << 4))  != 0;
+    [[maybe_unused]] bool avxneconvert =        (info3[3] & (1 << 5))  != 0;
+    [[maybe_unused]] bool amxcomplex =          (info3[3] & (1 << 8))  != 0;
+    [[maybe_unused]] bool avxvnniint16 =        (info3[3] & (1 << 10)) != 0;
+    [[maybe_unused]] bool prefetchi =           (info3[3] & (1 << 14)) != 0;
+
+    // APX feature includes egpr, push2pop2, ppx, ndd, ccmp, nf, cf, zu
+    [[maybe_unused]] bool apx =                 (info3[3] & (1 << 21))  != 0;
+
     // clang-format on
 
     if (osxsave && avx2 && avx512_f && __os_has_avx512_support()) {
@@ -321,6 +338,7 @@ static ISPCTarget lGetSystemISA() {
         // Ice Lake client & server: ICL = CLX + VBMI2 + GFNI + VAES + VPCLMULQDQ + BITALG + VPOPCNTDQ
         // Tiger Lake:               TGL = ICL + VP2INTERSECT
         // Sapphire Rapids:          SPR = ICL + BF16 + AMX_BF16 + AMX_TILE + AMX_INT8 + AVX_VNNI + FP16
+        // Granite Rapids:           GNR = SPR + AMX_FP16 + PREFETCHI
         bool knl = avx512_pf && avx512_er && avx512_cd;
         bool skx = avx512_dq && avx512_cd && avx512_bw && avx512_vl;
         bool clx = skx && avx512_vnni;
@@ -330,6 +348,36 @@ static ISPCTarget lGetSystemISA() {
         [[maybe_unused]] bool tgl = icl && avx512_vp2intersect;
         bool spr =
             icl && avx512_bf16 && avx512_amx_bf16 && avx512_amx_tile && avx512_amx_int8 && avx_vnni && avx512_fp16;
+
+        // According to spec Gramnite Rapids is AVX 10.1 but in LLVM it's SPR with two additional features.
+        [[maybe_unused]] bool gnr = spr && amxfp16 && prefetchi;
+
+        bool avx10 = (info3[3] & (1 << 19)) != 0;
+        if (avx10) {
+            // clang-format off
+            int info_avx10[4] = {0, 0, 0, 0};
+            if (max_level >= 24) {
+                __cpuidex(info_avx10, 0x24, 0);
+            }
+            int avx10_ver = info_avx10[1] & 0xFF;
+
+            bool avx10_256 =           (info_avx10[1] & (1 << 17))  != 0;
+            bool avx10_512 =           (info_avx10[1] & (1 << 18))  != 0;
+            [[maybe_unused]] bool avx10_1_256 =         avx10_256 && (avx10_ver >= 1);
+            [[maybe_unused]] bool avx10_1_512 =         avx10_512 && (avx10_ver >= 1);
+            [[maybe_unused]] bool avx10_2_256 =         avx10_256 && (avx10_ver >= 2);
+            [[maybe_unused]] bool avx10_2_512 =         avx10_512 && (avx10_ver >= 2);
+            // clang-format on
+
+            // Diamond Rapids:         DMR = GNR + AVX10_2_512 + APX + ... (For the whole list see x86TargetParser.cpp)
+            bool dmr = gnr && avx10_2_512 && apx && cmpccxadd && avxneconvert && avxifma && avxvnniint8 &&
+                       avxvnniint16 && amxcomplex && sha512 && sm3 && sm4;
+            if (dmr) {
+                return ISPCTarget::avx10_2_512_x16;
+            }
+        }
+
+        // clang-format on
         if (spr) {
             // We don't care if AMX is enabled or not here, as AMX support is not implemented yet.
             return ISPCTarget::avx512spr_x16;
@@ -454,7 +502,9 @@ typedef enum {
     CPU_ARL,
     CPU_LNL,
 #endif
-
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+    CPU_DMR,
+#endif
     // Zen 1-2-3
     CPU_ZNVER1,
     CPU_ZNVER2,
@@ -658,6 +708,10 @@ class AllCPUs {
         names[CPU_LNL].push_back("lunarlake");
         names[CPU_LNL].push_back("lnl");
 #endif
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+        names[CPU_DMR].push_back("diamondrapids");
+        names[CPU_DMR].push_back("dmr");
+#endif
         names[CPU_ZNVER1].push_back("znver1");
         names[CPU_ZNVER2].push_back("znver2");
         names[CPU_ZNVER2].push_back("ps5");
@@ -716,6 +770,11 @@ class AllCPUs {
         compat[CPU_GNR] = Set(CPU_GNR, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                               CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX, CPU_ICL,
                               CPU_ICX, CPU_TGL, CPU_ADL, CPU_SPR, CPU_None);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+        compat[CPU_DMR] = Set(CPU_DMR, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
+                              CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX, CPU_ICL,
+                              CPU_ICX, CPU_TGL, CPU_ADL, CPU_SPR, CPU_GNR, CPU_None);
+#endif
         compat[CPU_MTL] =
             Set(CPU_MTL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
                 CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_ADL, CPU_None);
@@ -1078,6 +1137,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 #endif
             m_ispc_target = ISPCTarget::avx2vnni_i32x8;
             break;
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+        case CPU_DMR:
+            m_ispc_target = ISPCTarget::avx10_2_512_x16;
+            break;
+#endif
         case CPU_ZNVER3:
         case CPU_ZNVER1:
         case CPU_ZNVER2:
@@ -1729,6 +1793,148 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasConflictDetection = true;
         CPUfromISA = CPU_SPR;
         break;
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+    // Below is example of how avx10 256 would look like
+    /*case ISPCTarget::avx10_2_256_x8:
+        this->m_isa = Target::AVX10_2_256;
+        this->m_nativeVectorWidth = 8;      // 256-bit / 32-bit = 8
+        this->m_nativeVectorAlignment = 32;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 8;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
+        this->m_hasRand = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasTranscendentals = false; // TODO: AVX10 adds transcendental support
+        this->m_hasTrigonometry = false;    // TODO: AVX10 adds trigonometry support
+        this->m_hasRsqrtd = this->m_hasRcpd = true;
+        this->m_hasVecPrefetch = false; // TODO: AVX10 supports vector prefetch
+        this->m_hasFp16Support = true;
+        this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;
+        CPUfromISA = CPU_AVX10_2_256;
+        break;*/
+    case ISPCTarget::avx10_2_512_x4:
+        this->m_isa = Target::AVX10_2_512;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 64;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 4;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        // TODO: target specific implementations for the features below are required
+        /*this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
+        this->m_hasRand = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
+        this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
+        this->m_hasRsqrtd = this->m_hasRcpd = true;
+        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch
+        this->m_hasFp16Support = true;
+        this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;*/
+        CPUfromISA = CPU_DMR;
+        break;
+    case ISPCTarget::avx10_2_512_x8:
+        this->m_isa = Target::AVX10_2_512;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 64;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 8;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        // TODO: target specific implementations for the features below are required
+        /*this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
+        this->m_hasRand = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
+        this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
+        this->m_hasRsqrtd = this->m_hasRcpd = true;
+        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch
+        this->m_hasFp16Support = true;
+        this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;*/
+        CPUfromISA = CPU_DMR;
+        break;
+    case ISPCTarget::avx10_2_512_x16:
+        this->m_isa = Target::AVX10_2_512;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 64;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 16;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        // TODO: target specific implementations for the features below are required
+        /*this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
+        this->m_hasRand = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
+        this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
+        this->m_hasRsqrtd = this->m_hasRcpd = true;
+        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch
+        this->m_hasFp16Support = true;
+        this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;*/
+        CPUfromISA = CPU_DMR;
+        break;
+    case ISPCTarget::avx10_2_512_x32:
+        this->m_isa = Target::AVX10_2_512;
+        this->m_nativeVectorWidth = 64;
+        this->m_nativeVectorAlignment = 64;
+        this->m_dataTypeWidth = 16;
+        this->m_vectorWidth = 32;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        // TODO: target specific implementations for the features below are required
+        /*this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
+        this->m_hasRand = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
+        this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
+        this->m_hasRsqrtd = this->m_hasRcpd = true;
+        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch
+        this->m_hasFp16Support = true;
+        this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;*/
+        CPUfromISA = CPU_DMR;
+        break;
+    case ISPCTarget::avx10_2_512_x64:
+        this->m_isa = Target::AVX10_2_512;
+        this->m_nativeVectorWidth = 64;
+        this->m_nativeVectorAlignment = 64;
+        this->m_dataTypeWidth = 8;
+        this->m_vectorWidth = 64;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        // TODO: target specific implementations for the features below are required
+        /*this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
+        this->m_hasRand = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
+        this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
+        this->m_hasRsqrtd = this->m_hasRcpd = true;
+        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch
+        this->m_hasFp16Support = true;
+        this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;*/
+        CPUfromISA = CPU_DMR;
+        break;
+#else
+    case ISPCTarget::avx10_2_512_x4:
+    case ISPCTarget::avx10_2_512_x8:
+    case ISPCTarget::avx10_2_512_x16:
+    case ISPCTarget::avx10_2_512_x32:
+    case ISPCTarget::avx10_2_512_x64:
+        unsupported_target = true;
+        break;
+#endif
 #ifdef ISPC_ARM_ENABLED
     case ISPCTarget::neon_i8x16:
         this->m_isa = Target::NEON;
@@ -2114,6 +2320,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
     case Target::SPR_AVX512:
         this->setWarning(PerfWarningType::DIVModInt);
         break;
+    // TODO: Add warnings for AVX10
     default:
         // Fall through
         ;
@@ -2573,6 +2780,10 @@ const char *Target::ISAToString(ISA isa) {
         return "avx512icl";
     case Target::SPR_AVX512:
         return "avx512spr";
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+    case Target::AVX10_2_512:
+        return "avx10.2_512";
+#endif
 #ifdef ISPC_XE_ENABLED
     case Target::GEN9:
         return "gen9";
@@ -2642,6 +2853,10 @@ const char *Target::ISAToTargetString(ISA isa) {
         return "avx512icl-x16";
     case Target::SPR_AVX512:
         return "avx512spr-x16";
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+    case Target::AVX10_2_512:
+        return "avx10.2_512-x16";
+#endif
     default:
         FATAL("Unhandled target in ISAToTargetString()");
     }

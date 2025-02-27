@@ -3045,7 +3045,7 @@ static void lSetTargetSpecificMacroDefinitions(const std::shared_ptr<clang::Prep
     char *p = targetMacro;
     while (*p) {
         *p = toupper(*p);
-        if (*p == '-') {
+        if ((*p == '-') || (*p == '.')) {
             *p = '_';
         }
         ++p;

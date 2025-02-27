@@ -65,6 +65,7 @@ static int __os_has_avx512_support() {
 static int __get_system_isa() {
     int info[4];
     __cpuid(info, 1);
+    int max_level = info[0];
 
     // Call cpuid with eax=7, ecx=0
     int info2[4];
@@ -87,6 +88,21 @@ static int __get_system_isa() {
     _Bool avx_rdrand =          (info[2] & (1 << 30))  != 0;
     _Bool osxsave =             (info[2] & (1 << 27))  != 0;
     _Bool avx512_f =            (info2[1] & (1 << 16)) != 0;
+
+    _Bool sha512 =              (info3[0] & (1 << 0)) != 0;
+    _Bool sm3 =                 (info3[0] & (1 << 1)) != 0;
+    _Bool sm4 =                 (info3[0] & (1 << 2)) != 0;
+    _Bool cmpccxadd =           (info3[0] & (1 << 7)) != 0;
+    _Bool amxfp16 =             (info3[0] & (1 << 21)) != 0;
+    _Bool avxifma =             (info3[0] & (1 << 23)) != 0;
+    _Bool avxvnniint8 =         (info3[3] & (1 << 4)) != 0;
+    _Bool avxneconvert =        (info3[3] & (1 << 5)) != 0;
+    _Bool amxcomplex =          (info3[3] & (1 << 8)) != 0;
+    _Bool avxvnniint16 =        (info3[3] & (1 << 10)) != 0;
+    _Bool prefetchi =           (info3[3] & (1 << 14)) != 0;
+    // APX feature includes egpr, push2pop2, ppx, ndd, ccmp, nf, cf, zu
+    _Bool apx =                 (info3[3] & (1 << 21)) != 0;
+
     // clang-format on
 
     // NOTE: the values returned below must be the same as the
@@ -131,6 +147,7 @@ static int __get_system_isa() {
         // Ice Lake client & server: ICL = CLX + VBMI2 + GFNI + VAES + VPCLMULQDQ + BITALG + VPOPCNTDQ
         // Tiger Lake:               TGL = ICL + VP2INTERSECT
         // Sapphire Rapids:          SPR = ICL + BF16 + AMX_BF16 + AMX_TILE + AMX_INT8 + AVX_VNNI + FP16
+        // Granite Rapids:           GNR = SPR + AMX_FP16 + PREFETCHI
         _Bool knl = avx512_pf && avx512_er && avx512_cd;
         _Bool skx = avx512_dq && avx512_cd && avx512_bw && avx512_vl;
 #if !defined(MACOS)
@@ -141,6 +158,34 @@ static int __get_system_isa() {
         _Bool tgl = icl && avx512_vp2intersect;
         _Bool spr =
             icl && avx512_bf16 && avx512_amx_bf16 && avx512_amx_tile && avx512_amx_int8 && avx_vnni && avx512_fp16;
+        _Bool gnr = spr && amxfp16 && prefetchi;
+
+        _Bool avx10 = (info3[3] & (1 << 19)) != 0;
+
+        if (avx10) {
+            // clang-format off
+
+            int info_avx10[4] = {0, 0, 0, 0};
+            if (max_level >= 24) {
+                __cpuidex(info_avx10, 0x24, 0);
+            }
+            int avx10_ver = info_avx10[1] & 0xFF;
+            _Bool avx10_256 = (info_avx10[1] & (1 << 17)) != 0;
+            _Bool avx10_512 = (info_avx10[1] & (1 << 18)) != 0;
+            _Bool avx10_1_256 = avx10_256 && (avx10_ver >= 1);
+            _Bool avx10_1_512 = avx10_512 && (avx10_ver >= 1);
+            _Bool avx10_2_256 = avx10_256 && (avx10_ver >= 2);
+            _Bool avx10_2_512 = avx10_512 && (avx10_ver >= 2);
+            // clang-format on
+
+            // Diamond Rapids:         DMR = GNR + AVX10_2_512 + APX + ... (For the whole list see x86TargetParser.cpp)
+            _Bool dmr = gnr && avx10_2_512 && apx && cmpccxadd && avxneconvert && avxifma && avxvnniint8 &&
+                        avxvnniint16 && amxcomplex && sha512 && sm3 && sm4;
+
+            if (dmr) {
+                return 10; // DMR
+            }
+        }
         if (spr) {
             return 9; // SPR
         } else if (icl) {
