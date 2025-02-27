@@ -1264,7 +1264,25 @@ __declspec(safe) inline varying int32 dot2add_i16packed_sat(varying uint32 a, va
 // versions of the macro: one for uniform and one for varying short vectors.
 // The number of function arguments in the macros depends on their suffix,
 // e.g., ARG2 indicates that the function takes two arguments.
-#define SHORT_VEC_UNIFORM_ARG2(FUNC)                                                                                  \
+#define SHORT_VEC_UNIFORM_ARG1(FUNC)                                                                                   \
+    template <typename T, uint N> uniform T<N> FUNC(uniform T<N> a) {                                                  \
+        uniform T<N> result;                                                                                           \
+        foreach (i = 0 ... N) {                                                                                        \
+            result[i] = FUNC(a[i]);                                                                                    \
+        }                                                                                                              \
+        return result;                                                                                                 \
+    }
+
+#define SHORT_VEC_VARYING_ARG1(FUNC)                                                                                   \
+    template <typename T, uint N> varying T<N> FUNC(varying T<N> a) {                                                  \
+        varying T<N> result;                                                                                           \
+        for (uniform int i = 0; i < N; i++) {                                                                          \
+            result[i] = FUNC(a[i]);                                                                                    \
+        }                                                                                                              \
+        return result;                                                                                                 \
+    }
+
+#define SHORT_VEC_UNIFORM_ARG2(FUNC)                                                                                   \
     template <typename T, uint N> uniform T<N> FUNC(uniform T<N> a, uniform T<N> b) {                                  \
         uniform T<N> result;                                                                                           \
         foreach (i = 0 ... N) {                                                                                        \
@@ -1282,9 +1300,15 @@ __declspec(safe) inline varying int32 dot2add_i16packed_sat(varying uint32 a, va
         return result;                                                                                                 \
     }
 
+#define SHORT_VEC_ARG1(FUNC)                                                                                           \
+    SHORT_VEC_UNIFORM_ARG1(FUNC)                                                                                       \
+    SHORT_VEC_VARYING_ARG1(FUNC)
+
 #define SHORT_VEC_ARG2(FUNC)                                                                                           \
     SHORT_VEC_UNIFORM_ARG2(FUNC)                                                                                       \
     SHORT_VEC_VARYING_ARG2(FUNC)
 
+// Generate the template functions for short vectors
+SHORT_VEC_ARG1(abs)
 SHORT_VEC_ARG2(max)
 SHORT_VEC_ARG2(min)
