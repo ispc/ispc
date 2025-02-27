@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2013-2024, Intel Corporation
+  Copyright (c) 2013-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -93,6 +93,7 @@ static const char *lGetSystemISA() {
 #elif defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
     int info[4];
     __cpuid(info, 1);
+    [[maybe_unused]] int max_level = info[0];
 
     int info2[4];
     // Call cpuid with eax=7, ecx=0
@@ -105,16 +106,32 @@ static const char *lGetSystemISA() {
         __cpuidex(info3, 7, 1);
 
     // clang-format off
-    bool sse2 =                (info[3] & (1 << 26))  != 0;
-    bool sse41 =               (info[2] & (1 << 19))  != 0;
-    bool sse42 =               (info[2] & (1 << 20))  != 0;
-    bool avx_f16c =            (info[2] & (1 << 29))  != 0;
-    bool avx_rdrand =          (info[2] & (1 << 30))  != 0;
-    bool osxsave =             (info[2] & (1 << 27))  != 0;
-    bool avx =                 (info[2] & (1 << 28))  != 0;
-    bool avx2 =                (info2[1] & (1 << 5))  != 0;
-    bool avx_vnni =            (info3[0] & (1 << 4))  != 0;
-    bool avx512_f =            (info2[1] & (1 << 16)) != 0;
+    bool sse2 = (info[3] & (1 << 26)) != 0;
+    bool sse41 = (info[2] & (1 << 19)) != 0;
+    bool sse42 = (info[2] & (1 << 20)) != 0;
+    bool avx_f16c = (info[2] & (1 << 29)) != 0;
+    bool avx_rdrand = (info[2] & (1 << 30)) != 0;
+    bool osxsave = (info[2] & (1 << 27)) != 0;
+    bool avx = (info[2] & (1 << 28)) != 0;
+    bool avx2 = (info2[1] & (1 << 5)) != 0;
+    bool avx_vnni = (info3[0] & (1 << 4)) != 0;
+    bool avx512_f = (info2[1] & (1 << 16)) != 0;
+
+    [[maybe_unused]] bool sha512 = (info3[0] & (1 << 0)) != 0;
+    [[maybe_unused]] bool sm3 = (info3[0] & (1 << 1)) != 0;
+    [[maybe_unused]] bool sm4 = (info3[0] & (1 << 2)) != 0;
+    [[maybe_unused]] bool cmpccxadd = (info3[0] & (1 << 7)) != 0;
+    [[maybe_unused]] bool amxfp16 = (info3[0] & (1 << 21)) != 0;
+    [[maybe_unused]] bool avxifma = (info3[0] & (1 << 23)) != 0;
+    [[maybe_unused]] bool avxvnniint8 = (info3[3] & (1 << 4)) != 0;
+    [[maybe_unused]] bool avxneconvert = (info3[3] & (1 << 5)) != 0;
+    [[maybe_unused]] bool amxcomplex = (info3[3] & (1 << 8)) != 0;
+    [[maybe_unused]] bool avxvnniint16 = (info3[3] & (1 << 10)) != 0;
+    [[maybe_unused]] bool prefetchi = (info3[3] & (1 << 14)) != 0;
+
+    // APX feature includes egpr, push2pop2, ppx, ndd, ccmp, nf, cf, zu
+    [[maybe_unused]] bool apx = (info3[3] & (1 << 21)) != 0;
+
     // clang-format on
 
     if (osxsave && avx2 && avx512_f && __os_has_avx512_support()) {
@@ -150,6 +167,7 @@ static const char *lGetSystemISA() {
         // Ice Lake client & server: ICL = CLX + VBMI2 + GFNI + VAES + VPCLMULQDQ + BITALG + VPOPCNTDQ
         // Tiger Lake:               TGL = ICL + VP2INTERSECT
         // Sapphire Rapids:          SPR = ICL + BF16 + AMX_BF16 + AMX_TILE + AMX_INT8 + AVX_VNNI + FP16
+        // Granite Rapids:           GNR = SPR + AMX_FP16 + PREFETCHI
         bool knl = avx512_pf && avx512_er && avx512_cd;
         bool skx = avx512_dq && avx512_cd && avx512_bw && avx512_vl;
         bool clx = skx && avx512_vnni;
@@ -159,6 +177,35 @@ static const char *lGetSystemISA() {
         [[maybe_unused]] bool tgl = icl && avx512_vp2intersect;
         bool spr =
             icl && avx512_bf16 && avx512_amx_bf16 && avx512_amx_tile && avx512_amx_int8 && avx_vnni && avx512_fp16;
+        // According to spec Gramnite Rapids is AVX 10.1 but in LLVM it's SPR with two additional features.
+        [[maybe_unused]] bool gnr = spr && amxfp16 && prefetchi;
+
+        bool avx10 = (info3[3] & (1 << 19)) != 0;
+
+        if (avx10) {
+            // clang-format off
+
+            int info_avx10[4] = {0, 0, 0, 0};
+            if (max_level >= 24) {
+                __cpuidex(info_avx10, 0x24, 0);
+            }
+            int avx10_ver = info_avx10[1] & 0xFF;
+            bool avx10_256 = (info_avx10[1] & (1 << 17)) != 0;
+            bool avx10_512 = (info_avx10[1] & (1 << 18)) != 0;
+            [[maybe_unused]] bool avx10_1_256 = avx10_256 && (avx10_ver >= 1);
+            [[maybe_unused]] bool avx10_1_512 = avx10_512 && (avx10_ver >= 1);
+            [[maybe_unused]] bool avx10_2_256 = avx10_256 && (avx10_ver >= 2);
+            [[maybe_unused]] bool avx10_2_512 = avx10_512 && (avx10_ver >= 2);
+            // clang-format on
+
+            // Diamond Rapids:         DMR = GNR + AVX10_2_512 + APX + ... (For the whole list see x86TargetParser.cpp)
+            bool dmr = gnr && avx10_2_512 && apx && cmpccxadd && avxneconvert && avxifma && avxvnniint8 &&
+                       avxvnniint16 && amxcomplex && sha512 && sm3 && sm4;
+
+            if (dmr) {
+                return "DMR (512 width)";
+            }
+        }
         if (spr) {
             if (__os_enabled_amx_support()) {
                 return "SPR (AMX on)";
