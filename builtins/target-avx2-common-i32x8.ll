@@ -481,17 +481,12 @@ define i32 @__packed_store_activei32(ptr %startptr, <8 x i32> %vals, <8 x i32> %
 ; Function Attrs: alwaysinline nounwind
 define i32 @__packed_store_active2i32(ptr %startptr, <8 x i32> %vals, <8 x i32> %full_mask) #0 {
 entry:
+
   %cmp.i = icmp ne <8 x i32> %full_mask, zeroinitializer
 
-; old
-  ;%0 = bitcast <8 x i1> %cmp.i to i8
-  ;%1 = tail call i8 @llvm.ctpop.i8(i8 %0)
-  ;%2 = zext i8 %1 to i32
-; new
   %0 = bitcast <8 x i1> %cmp.i to i8
   %1 = zext i8 %0 to i32
   %2 = call i32 @llvm.ctpop.i32(i32 %1)
-;
 
   %conv = zext i8 %0 to i64
   %3 = tail call i64 @llvm.x86.bmi.pdep.64(i64 %conv, i64 72340172838076673)
@@ -499,18 +494,15 @@ entry:
   %notmask = shl nsw i32 -1, %2
   %sub = xor i32 %notmask, -1
   %conv6 = zext i32 %sub to i64
-  %4 = tail call i64 @llvm.x86.bmi.pdep.64(i64 %conv6, i64 72340172838076673)
+  %4 = tail call i64 @llvm.x86.bmi.pdep.64(i64 %conv6, i64 -9187201950435737472)
   ; %mul8 = mul i64 %4, 255
   %shuffle.i = bitcast i64 %4 to <8 x i8>
-  %conv.i = zext <8 x i8> %shuffle.i to <8 x i32>
-  %5 = bitcast <8 x i32> %conv.i to <4 x i64>
-  %mul10 = mul <4 x i64> %5, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
-  %6 = tail call i64 @llvm.x86.bmi.pext.64(i64 506097522914230528, i64 %mul)
-  %shuffle.i20 = bitcast i64 %6 to <8 x i8>
+  %conv.i = sext <8 x i8> %shuffle.i to <8 x i32>
+  %5 = tail call i64 @llvm.x86.bmi.pext.64(i64 506097522914230528, i64 %mul)
+  %shuffle.i20 = bitcast i64 %5 to <8 x i8>
   %conv.i21 = zext <8 x i8> %shuffle.i20 to <8 x i32>
-  %7 = tail call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %vals, <8 x i32> %conv.i21)
-  %8 = bitcast <4 x i64> %mul10 to <8 x i32>
-  tail call void @llvm.x86.avx2.maskstore.d.256(ptr %startptr, <8 x i32> %8, <8 x i32> %7)
+  %6 = tail call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %vals, <8 x i32> %conv.i21)
+  tail call void @llvm.x86.avx2.maskstore.d.256(ptr %startptr, <8 x i32> %conv.i, <8 x i32> %6)
   ret i32 %2
 }
 
