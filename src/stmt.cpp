@@ -267,9 +267,10 @@ Stmt *DeclStmt::Optimize() {
 
 // Do type conversion if needed and check for not initializing array with
 // another array (array assignment is not allowed).
+// Also, perform type checking for initializers of incomplete struct types.
 // Do that recursively to handle brace initialization, which may contain
 // another brace initialization.
-static bool checkInit(const Type *type, Expr **init) {
+static bool lCheckInit(const Type *type, Expr **init, const std::string &name) {
     bool encounteredError = false;
     if (type && type->IsDependent()) {
         return false;
@@ -306,11 +307,33 @@ static bool checkInit(const Type *type, Expr **init) {
         ExprList *el = llvm::dyn_cast<ExprList>(*init);
         int elt_count = st->GetElementCount() < el->exprs.size() ? st->GetElementCount() : el->exprs.size();
         for (int i = 0; i < elt_count; i++) {
-            encounteredError |= checkInit(st->GetElementType(i), &(el->exprs[i]));
+            encounteredError |= lCheckInit(st->GetElementType(i), &(el->exprs[i]), name);
         }
+    } else if (CastType<UndefinedStructType>(type)) {
+        Error((*init)->pos, "variable '%s' has initializer but incomplete struct type", name.c_str());
+        return true;
     }
 
     return encounteredError;
+}
+
+static bool lCheckDecl(const Type *type, const std::string &name, SourcePos &pos) {
+    if (type && type->IsDependent()) {
+        return false;
+    }
+
+    if (CastType<UndefinedStructType>(type)) {
+        return true;
+    } else if (CastType<StructType>(type)) {
+        const StructType *st = CastType<StructType>(type);
+        for (int i = 0; i < st->GetElementCount(); i++) {
+            if (lCheckDecl(st->GetElementType(i), name, pos)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 Stmt *DeclStmt::TypeCheck() {
@@ -321,12 +344,19 @@ Stmt *DeclStmt::TypeCheck() {
             continue;
         }
 
+        const Type *type = vars[i].sym->type;
+        const std::string &name = vars[i].sym->name;
         if (vars[i].init == nullptr) {
+            encounteredError |= lCheckDecl(type, name, vars[i].sym->pos);
+            if (encounteredError) {
+                Error(pos, "variable '%s' has incomplete struct type '%s' and cannot be defined", name.c_str(),
+                      type->GetString().c_str());
+            }
             continue;
         }
 
         // Check an init.
-        encounteredError |= checkInit(vars[i].sym->type, &(vars[i].init));
+        encounteredError |= lCheckInit(type, &(vars[i].init), name);
     }
     return encounteredError ? nullptr : this;
 }

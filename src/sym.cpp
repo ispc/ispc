@@ -252,6 +252,27 @@ bool SymbolTable::AddType(const char *name, const Type *type, SourcePos pos) {
         return false;
     }
 
+    if (const StructType *ST = CastType<StructType>(type)) {
+        if (!ST->IsCompleteType()) {
+            int n = ST->GetElementCount();
+            bool allComplete = true;
+            for (int i = 0; i < n; i++) {
+                const Type *ET = ST->GetRawElementType(i);
+                if (ET && !ET->IsCompleteType()) {
+                    Error(ST->GetElementPosition(i), "incomplete type '%s'.\n  - field '%s' has incomplete type '%s'.",
+                          name, ST->GetElementName(i).c_str(), ET->GetString().c_str());
+                    allComplete = false;
+                    break;
+                }
+            }
+            // Corner case: if all fields are complete, but the struct itself
+            // is incomplete, e.g., struct where the only field is unsized array
+            if (allComplete) {
+                Error(pos, "incomplete type '%s'", name);
+            }
+        }
+    }
+
     Assert(types.size() > 0);
 
     types.back()[name] = type;

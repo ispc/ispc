@@ -2899,6 +2899,11 @@ AddressInfo *FunctionEmitContext::AllocaInst(const Type *ptrType, const llvm::Tw
         return nullptr;
     }
 
+    if (!ptrType->IsCompleteType()) {
+        Error(currentPos, "Attempt to allocate memory for incomplete type \"%s\".", ptrType->GetString().c_str());
+        return nullptr;
+    }
+
     llvm::Type *llvmStorageType = ptrType->LLVMType(g->ctx);
     if ((((CastType<AtomicType>(ptrType) != nullptr) || (CastType<VectorType>(ptrType) != nullptr)) &&
          (ptrType->IsBoolType())) ||
@@ -3766,7 +3771,10 @@ llvm::Instruction *FunctionEmitContext::ReturnInst() {
         llvm::Value *retVal = LoadInst(returnValueAddressInfo, function->GetReturnType(), "return_value");
         rinst = llvm::ReturnInst::Create(*g->ctx, retVal, bblock);
     } else {
-        AssertPos(currentPos, function->GetReturnType()->IsVoidType());
+        if (!function->GetReturnType()->IsVoidType()) {
+            Error(currentPos, "Malformed return value in function with non-void return type.");
+            return nullptr;
+        }
         rinst = llvm::ReturnInst::Create(*g->ctx, bblock);
     }
 
