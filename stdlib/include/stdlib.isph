@@ -1258,17 +1258,33 @@ __declspec(safe) inline varying int32 dot2add_i16packed_sat(varying uint32 a, va
 
 // Below the place for the real implementations of the functions using templates
 
-template <typename T, uint N> uniform T<N> max(uniform T<N> a, uniform T<N> b) {
-    uniform T<N> result;
-    foreach (i = 0 ... N) {
-        result[i] = max(a[i], b[i]);
+// These are macro generators for template functions that extend element-wise
+// standard library functions by adding support for short vectors. They take a
+// function name as an argument and help reduce copy-paste. There are two
+// versions of the macro: one for uniform and one for varying short vectors.
+// The number of function arguments in the macros depends on their suffix,
+// e.g., ARG2 indicates that the function takes two arguments.
+#define SHORT_VEC_UNIFORM_ARG2(FUNC)                                                                                  \
+    template <typename T, uint N> uniform T<N> FUNC(uniform T<N> a, uniform T<N> b) {                                  \
+        uniform T<N> result;                                                                                           \
+        foreach (i = 0 ... N) {                                                                                        \
+            result[i] = FUNC(a[i], b[i]);                                                                              \
+        }                                                                                                              \
+        return result;                                                                                                 \
     }
-    return result;
-}
-template <typename T, uint N> varying T<N> max(varying T<N> a, varying T<N> b) {
-    varying T<N> result;
-    for (uniform int i = 0; i < N; i++) {
-        result[i] = max(a[i], b[i]);
+
+#define SHORT_VEC_VARYING_ARG2(FUNC)                                                                                   \
+    template <typename T, uint N> varying T<N> FUNC(varying T<N> a, varying T<N> b) {                                  \
+        varying T<N> result;                                                                                           \
+        for (uniform int i = 0; i < N; i++) {                                                                          \
+            result[i] = FUNC(a[i], b[i]);                                                                              \
+        }                                                                                                              \
+        return result;                                                                                                 \
     }
-    return result;
-}
+
+#define SHORT_VEC_ARG2(FUNC)                                                                                           \
+    SHORT_VEC_UNIFORM_ARG2(FUNC)                                                                                       \
+    SHORT_VEC_VARYING_ARG2(FUNC)
+
+SHORT_VEC_ARG2(max)
+SHORT_VEC_ARG2(min)
