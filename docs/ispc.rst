@@ -715,10 +715,10 @@ Updating ISPC Programs For Changes In ISPC 1.27.0
 Added cross lane operations for unsigned types: ``broadcast``, ``rotate``, ``shift``,
 and ``shuffle``.
 
-``max`` function for short vectors of basic types was added to the standard
-library. It supports both uniform and varying short vector types for all basic
-types that are supported by ``max`` function, i.e., sign and unsigned integer
-types and float types.
+The ``max`` and ``min`` functions for short vectors of basic types have been
+added to the standard library. They support both uniform and varying short
+vector types for all basic types supported by the ``max`` and ``min``
+functions, i.e., signed and unsigned integer types and floating-point types.
 
 Getting Started with ISPC
 =========================
@@ -4657,11 +4657,12 @@ standard types.  These functions also map to corresponding intrinsic functions.
     uniform unsigned int64 max(uniform unsigned int64 a, uniform unsigned int64 b);
     uniform int64 max(uniform int64 a, uniform int64 b);
 
-A maximum function also supports short vector types with basic types that are
-listed above.
+The maximum and minimum functions also support short vector types with the
+basic types listed above.
 
 ::
 
+    template <typename T, uint N> T<N> min(T<N> a, T<N> b)
     template <typename T, uint N> T<N> max(T<N> a, T<N> b)
 
 It makes possible to find the maximum value of two short vector types with the
