@@ -107,6 +107,29 @@ unmasked uniform float16<DOUBLE_WIDTH> __concat(float16 v0, float16 v1) { return
 unmasked uniform float<DOUBLE_WIDTH> __concat(float v0, float v1) { return @llvm.ispc.concat(v0, v1); }
 unmasked uniform double<DOUBLE_WIDTH> __concat(double v0, double v1) { return @llvm.ispc.concat(v0, v1); }
 
+// overloaded __masked_expandload functions
+unmasked varying int8 __masked_expandload(uniform int8 *uniform from, UIntMaskType mask, varying int8 passthru) {
+    return @llvm.masked.expandload(from, mask, passthru);
+}
+unmasked varying int16 __masked_expandload(uniform int8 *uniform from, UIntMaskType mask, varying int16 passthru) {
+    return @llvm.masked.expandload(from, mask, passthru);
+}
+unmasked varying int32 __masked_expandload(uniform int8 *uniform from, UIntMaskType mask, varying int32 passthru) {
+    return @llvm.masked.expandload(from, mask, passthru);
+}
+unmasked varying int64 __masked_expandload(uniform int8 *uniform from, UIntMaskType mask, varying int64 passthru) {
+    return @llvm.masked.expandload(from, mask, passthru);
+}
+unmasked varying float16 __masked_expandload(uniform int8 *uniform from, UIntMaskType mask, varying float16 passthru) {
+    return @llvm.masked.expandload(from, mask, passthru);
+}
+unmasked varying float __masked_expandload(uniform int8 *uniform from, UIntMaskType mask, varying float passthru) {
+    return @llvm.masked.expandload(from, mask, passthru);
+}
+unmasked varying double __masked_expandload(uniform int8 *uniform from, UIntMaskType mask, varying double passthru) {
+    return @llvm.masked.expandload(from, mask, passthru);
+}
+
 // bitcast
 template <typename L, typename R> unmasked L __bitcast(R x) {
     // This function should never be called, instead specialized versions should be used.
@@ -1904,54 +1927,34 @@ EXT PackedStoreResultType __packed_store_active2f64(uniform int8 *uniform ptr, v
     return __popcnt_int64(__cast_mask_to_i64(mask));
 }
 // packed active loads
-EXT uniform int32 __packed_load_activei8(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
-    varying int8 *uniform ptr = (varying int8 * uniform) to;
-    varying int8 passthru = *ptr;
-    varying int8 vec = @llvm.masked.expandload(from, mask, passthru);
+template <typename T>
+uniform int32 __packed_load_active(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
+    varying T *uniform ptr = (varying T * uniform) to;
+    varying T passthru = *ptr;
+    varying T vec = __masked_expandload(from, mask, passthru);
     *ptr = vec;
     return __popcnt_int64(__cast_mask_to_i64(mask));
+}
+EXT uniform int32 __packed_load_activei8(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
+    return __packed_load_active<int8>(from, to, mask);
 }
 EXT uniform int32 __packed_load_activei16(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
-    varying int16 *uniform ptr = (varying int16 * uniform) to;
-    varying int16 passthru = *ptr;
-    varying int16 vec = @llvm.masked.expandload(from, mask, passthru);
-    *ptr = vec;
-    return __popcnt_int64(__cast_mask_to_i64(mask));
+    return __packed_load_active<int16>(from, to, mask);
 }
 EXT uniform int32 __packed_load_activei32(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
-    varying int32 *uniform ptr = (varying int32 * uniform) to;
-    varying int32 passthru = *ptr;
-    varying int32 vec = @llvm.masked.expandload(from, mask, passthru);
-    *ptr = vec;
-    return __popcnt_int64(__cast_mask_to_i64(mask));
+    return __packed_load_active<int32>(from, to, mask);
 }
 EXT uniform int32 __packed_load_activei64(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
-    varying int64 *uniform ptr = (varying int64 * uniform) to;
-    varying int64 passthru = *ptr;
-    varying int64 vec = @llvm.masked.expandload(from, mask, passthru);
-    *ptr = vec;
-    return __popcnt_int64(__cast_mask_to_i64(mask));
+    return __packed_load_active<int64>(from, to, mask);
 }
 EXT uniform int32 __packed_load_activef16(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
-    varying float16 *uniform ptr = (varying float16 * uniform) to;
-    varying float16 passthru = *ptr;
-    varying float16 vec = @llvm.masked.expandload(from, mask, passthru);
-    *ptr = vec;
-    return __popcnt_int64(__cast_mask_to_i64(mask));
+    return __packed_load_active<float16>(from, to, mask);
 }
 EXT uniform int32 __packed_load_activef32(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
-    varying float *uniform ptr = (varying float *uniform)to;
-    varying float passthru = *ptr;
-    varying float vec = @llvm.masked.expandload(from, mask, passthru);
-    *ptr = vec;
-    return __popcnt_int64(__cast_mask_to_i64(mask));
+    return __packed_load_active<float>(from, to, mask);
 }
 EXT uniform int32 __packed_load_activef64(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
-    varying double *uniform ptr = (varying double *uniform)to;
-    varying double passthru = *ptr;
-    varying double vec = @llvm.masked.expandload(from, mask, passthru);
-    *ptr = vec;
-    return __popcnt_int64(__cast_mask_to_i64(mask));
+    return __packed_load_active<double>(from, to, mask);
 }
 
 template <typename T>
