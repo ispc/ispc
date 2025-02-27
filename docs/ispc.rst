@@ -74,6 +74,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.24.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.25.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.26.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.27.0`_
 
 * `Getting Started with ISPC`_
 
@@ -715,10 +716,23 @@ Updating ISPC Programs For Changes In ISPC 1.27.0
 Added cross lane operations for unsigned types: ``broadcast``, ``rotate``, ``shift``,
 and ``shuffle``.
 
-The ``max`` and ``min`` functions for short vectors of basic types have been
-added to the standard library. They support both uniform and varying short
-vector types for all basic types supported by the ``max`` and ``min``
+The ``max``, ``min`` and ``abs`` functions for short vectors of basic types
+have been added to the standard library. They support both uniform and varying
+short vector types for all basic types supported by the corresponding standard
 functions, i.e., signed and unsigned integer types and floating-point types.
+
+It makes it possible, for example, to find the maximum value between two short
+vectors:
+
+::
+
+    uniform int<3> a = {1, 2, 3};
+    uniform int<3> b = {3, -2, 1};
+    uniform int<3> c = max(a, b); // c = {3, 2, 3}
+
+    varying float<4> x, y;
+    varying float<4> z = max(x, y);
+
 
 Getting Started with ISPC
 =========================
@@ -4551,6 +4565,13 @@ is on (i.e. the value is negative) and zero if it is off.
     unsigned int64 signbits(double x)
     uniform unsigned int64 signbits(uniform double x)
 
+The ``abs`` functions also supports short vector types with the basic types
+listed above.
+
+::
+
+    template <typename T, uint N> T<N> abs(T<N> a)
+
 The standard library provides four rounding functions: ``round``, ``floor``,
 ``ceil`` and ``trunc`` for ``float16``, ``float`` and ``double`` data types. On
 machines that support Intel®SSE or Intel® AVX, these functions all map to a
@@ -4664,18 +4685,6 @@ basic types listed above.
 
     template <typename T, uint N> T<N> min(T<N> a, T<N> b)
     template <typename T, uint N> T<N> max(T<N> a, T<N> b)
-
-It makes possible to find the maximum value of two short vector types with the
-usual calls to the ``max()`` function. For example:
-
-::
-
-    uniform int<3> a = {1, 2, 3};
-    uniform int<3> b = {3, -2, 1};
-    uniform int<3> c = max(a, b); // c = {3, 2, 3}
-
-    varying float<4> x, y;
-    varying float<4> z = max(x, y);
 
 The ``clamp()`` functions clamp the provided value to the given range.
 (Their implementations are based on ``min()`` and ``max()`` and are thus
