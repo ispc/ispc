@@ -951,6 +951,7 @@ class UndefinedStructType : public Type {
 
     /** Returns the name of the structure type.  (e.g. struct Foo -> "Foo".) */
     const std::string &GetStructName() const { return name; }
+    const SourcePos &GetSourcePos() const { return pos; };
 
   private:
     const std::string name;
