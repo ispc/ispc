@@ -123,6 +123,12 @@ class Type : public Traceable {
     /** Returns true if this type is 'const'-qualified. */
     virtual bool IsConstType() const = 0;
 
+    /** Returns true if this type is complete. This is used to check for
+        incomplete types (e.g. forward-declared structs) that are not
+        allowed in certain contexts, e.g., when we need to allocate memory for
+        them. */
+    virtual bool IsCompleteType() const = 0;
+
     /** Returns true if the underlying type is a float or integer type. */
     bool IsNumericType() const { return IsFloatType() || IsIntType(); }
 
@@ -309,6 +315,7 @@ class AtomicType : public Type {
     bool IsUnsignedType() const;
     bool IsSignedType() const;
     bool IsConstType() const;
+    bool IsCompleteType() const;
 
     /** For AtomicTypes, the base type is just the same as the AtomicType
         itself. */
@@ -404,6 +411,7 @@ class TemplateTypeParmType : public Type {
     bool IsUnsignedType() const;
     bool IsSignedType() const;
     bool IsConstType() const;
+    bool IsCompleteType() const;
 
     const Type *GetBaseType() const;
     const Type *GetAsVaryingType() const;
@@ -453,6 +461,7 @@ class EnumType : public Type {
     bool IsUnsignedType() const;
     bool IsSignedType() const;
     bool IsConstType() const;
+    bool IsCompleteType() const;
 
     const EnumType *GetBaseType() const;
     const EnumType *GetAsVaryingType() const;
@@ -534,6 +543,7 @@ class PointerType : public Type {
     bool IsUnsignedType() const;
     bool IsSignedType() const;
     bool IsConstType() const;
+    bool IsCompleteType() const;
 
     bool IsSlice() const { return isSlice; }
     bool IsFrozenSlice() const { return isFrozen; }
@@ -676,6 +686,7 @@ class ArrayType : public SequentialType {
     bool IsUnsignedType() const;
     bool IsSignedType() const;
     bool IsConstType() const;
+    bool IsCompleteType() const;
     /* Returns true if the number of elements in the array is dependent on a template parameter. */
     virtual bool IsCountDependent() const { return elementCount.symbolCount != nullptr; }
 
@@ -757,6 +768,7 @@ class VectorType : public SequentialType {
     bool IsUnsignedType() const;
     bool IsSignedType() const;
     bool IsConstType() const;
+    bool IsCompleteType() const;
     /* Returns true if the number of elements in the vector is dependent on a template parameter. */
     virtual bool IsCountDependent() const { return elementCount.symbolCount != nullptr; }
 
@@ -818,6 +830,7 @@ class StructType : public CollectionType {
     bool IsUnsignedType() const;
     bool IsSignedType() const;
     bool IsConstType() const;
+    bool IsCompleteType() const;
     bool IsDefined() const;
     bool IsAnonymousType() const;
 
@@ -915,6 +928,7 @@ class UndefinedStructType : public Type {
     bool IsUnsignedType() const;
     bool IsSignedType() const;
     bool IsConstType() const;
+    bool IsCompleteType() const;
 
     const Type *GetBaseType() const;
     const UndefinedStructType *GetAsVaryingType() const;
@@ -959,6 +973,7 @@ class ReferenceType : public Type {
     bool IsUnsignedType() const;
     bool IsSignedType() const;
     bool IsConstType() const;
+    bool IsCompleteType() const;
     AddressSpace GetAddressSpace() const { return addrSpace; }
 
     const Type *GetBaseType() const;
@@ -1020,6 +1035,7 @@ class FunctionType : public Type {
     bool IsUnsignedType() const;
     bool IsSignedType() const;
     bool IsConstType() const;
+    bool IsCompleteType() const;
 
     bool IsISPCKernel() const;
     bool IsISPCExternal() const;

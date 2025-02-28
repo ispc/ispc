@@ -266,6 +266,8 @@ bool AtomicType::IsBoolType() const { return basicType == TYPE_BOOL || basicType
 
 bool AtomicType::IsConstType() const { return isConst; }
 
+bool AtomicType::IsCompleteType() const { return true; }
+
 const AtomicType *AtomicType::GetAsUnsignedType() const {
     if (IsUnsignedType() == true) {
         return this;
@@ -742,6 +744,8 @@ bool TemplateTypeParmType::IsSignedType() const { return false; }
 
 bool TemplateTypeParmType::IsConstType() const { return isConst; }
 
+bool TemplateTypeParmType::IsCompleteType() const { return false; }
+
 const Type *TemplateTypeParmType::GetBaseType() const { return this; }
 
 const Type *TemplateTypeParmType::GetAsVaryingType() const {
@@ -916,6 +920,8 @@ bool EnumType::IsUnsignedType() const { return true; }
 bool EnumType::IsSignedType() const { return false; }
 
 bool EnumType::IsConstType() const { return isConst; }
+
+bool EnumType::IsCompleteType() const { return true; }
 
 const EnumType *EnumType::GetBaseType() const { return this; }
 
@@ -1153,6 +1159,8 @@ bool PointerType::IsUnsignedType() const { return false; }
 bool PointerType::IsSignedType() const { return false; }
 
 bool PointerType::IsConstType() const { return isConst; }
+
+bool PointerType::IsCompleteType() const { return true; }
 
 const Type *PointerType::GetBaseType() const { return baseType; }
 
@@ -1503,6 +1511,8 @@ bool ArrayType::IsBoolType() const { return false; }
 
 bool ArrayType::IsConstType() const { return child ? child->IsConstType() : false; }
 
+bool ArrayType::IsCompleteType() const { return GetBaseType()->IsCompleteType(); }
+
 const Type *ArrayType::GetBaseType() const {
     const Type *type = child;
     const ArrayType *at = CastType<ArrayType>(type);
@@ -1821,6 +1831,8 @@ bool VectorType::IsSignedType() const { return base->IsSignedType(); }
 bool VectorType::IsBoolType() const { return base->IsBoolType(); }
 
 bool VectorType::IsConstType() const { return base->IsConstType(); }
+
+bool VectorType::IsCompleteType() const { return base->IsCompleteType(); }
 
 const Type *VectorType::GetBaseType() const { return base; }
 
@@ -2158,6 +2170,26 @@ bool StructType::IsSignedType() const { return false; }
 
 bool StructType::IsConstType() const { return isConst; }
 
+bool StructType::IsCompleteType() const {
+    int n = GetElementCount();
+    // Corner case when struct consists of a single unsized array
+    if (n == 1) {
+        if (const ArrayType *arrayType = CastType<ArrayType>(GetRawElementType(0))) {
+            return !arrayType->IsUnsized() && arrayType->IsCompleteType();
+        }
+    }
+
+    // Then check that all elements are complete types
+    for (int i = 0; i < n; i++) {
+        if (const Type *ET = GetRawElementType(i)) {
+            if (!ET->IsCompleteType()) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 bool StructType::IsDefined() const {
     for (int i = 0; i < GetElementCount(); i++) {
         const Type *t = GetElementType(i);
@@ -2481,6 +2513,8 @@ bool UndefinedStructType::IsSignedType() const { return false; }
 
 bool UndefinedStructType::IsConstType() const { return isConst; }
 
+bool UndefinedStructType::IsCompleteType() const { return false; }
+
 const Type *UndefinedStructType::GetBaseType() const { return this; }
 
 const UndefinedStructType *UndefinedStructType::GetAsVaryingType() const {
@@ -2643,6 +2677,8 @@ bool ReferenceType::IsConstType() const {
     }
     return targetType->IsConstType();
 }
+
+bool ReferenceType::IsCompleteType() const { return true; }
 
 const Type *ReferenceType::GetReferenceTarget() const { return targetType; }
 
@@ -2882,6 +2918,8 @@ bool FunctionType::IsUnsignedType() const { return false; }
 bool FunctionType::IsSignedType() const { return false; }
 
 bool FunctionType::IsConstType() const { return false; }
+
+bool FunctionType::IsCompleteType() const { return true; }
 
 bool FunctionType::IsISPCKernel() const { return g->target->isXeTarget() && isTask; }
 
