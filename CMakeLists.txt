@@ -509,13 +509,15 @@ list(APPEND OPT_SOURCES
     src/opt/XeReplaceLLVMIntrinsics.h
 )
 
-set(STDLIB_HEADERS core.isph stdlib.isph)
+set(STDLIB_HEADERS core.isph stdlib.isph tensor.isph)
 set(ALL_STDLIB_HEADERS
   builtins.isph
   core.isph
+  dlpack.isph
   stdlib.isph
   svml.isph
   target.isph
+  tensor.isph
 )
 set(STDLIB_ISPC_FILES stdlib/stdlib.ispc)
 foreach (header ${ALL_STDLIB_HEADERS})
