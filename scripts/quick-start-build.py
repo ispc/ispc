@@ -487,11 +487,11 @@ Examples:
     else:
         print(f"{llvm_dir} already exists")
 
+    build_type = "RelWithDebInfo" if is_windows else "Debug"
     if not build_dir.exists():
         env = os.environ.copy()
         env["PATH"] = f"{llvm_dir / 'bin'}{os.pathsep}{env['PATH']}"
 
-        build_type = "RelWithDebInfo" if is_windows else "Debug"
         configure_cmd = [
             "cmake",
             "-B", str(build_dir),
