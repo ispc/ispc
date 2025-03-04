@@ -164,6 +164,9 @@ jobs:
           - version: "18.1"
             full_version: "18.1.8"
             short_version: 18
+          - version: "19.1"
+            full_version: "19.1.7"
+            short_version: 19
     env:
       LLVM_VERSION: ${{ matrix.llvm.version }}
       LLVM_TAR: llvm-${{ matrix.llvm.full_version }}-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
@@ -320,6 +323,9 @@ jobs:
         name: ispc_xe_deps_llvm18rel_linux
         path: ispc-xe
 
+  # To avoid strategy expansion exceeding 256 results, there are two jobs:
+  # - lin-test for the LLVM version used for release builds and newer versions
+  # - lin-test-prior for older LLVM versions
   linux-test:
     needs: [define-flow, linux-build-ispc]
     runs-on: ubuntu-22.04
@@ -327,7 +333,95 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [17, 18]
+        version: [18, 19]
+        arch: [x86, x86-64]
+        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets_x86)}}
+        # See issue #2818 for more deatils. It's SDE problem running on AMD runner.
+        exclude:
+          - arch: x86
+            target: "avx2vnni-i32x4"
+          - arch: x86
+            target: "avx2vnni-i32x8"
+          - arch: x86
+            target: "avx2vnni-i32x16"
+          - arch: x86
+            target: "avx512skx-x4"
+          - arch: x86
+            target: "avx512skx-x8"
+          - arch: x86
+            target: "avx512skx-x16"
+          - arch: x86
+            target: "avx512skx-x32"
+          - arch: x86
+            target: "avx512skx-x64"
+          - arch: x86
+            target: "avx512icl-x4"
+          - arch: x86
+            target: "avx512icl-x8"
+          - arch: x86
+            target: "avx512icl-x16"
+          - arch: x86
+            target: "avx512icl-x32"
+          - arch: x86
+            target: "avx512icl-x64"
+          - arch: x86
+            target: "avx512spr-x4"
+          - arch: x86
+            target: "avx512spr-x8"
+          - arch: x86
+            target: "avx512spr-x16"
+          - arch: x86
+            target: "avx512spr-x32"
+          - arch: x86
+            target: "avx512spr-x64"
+
+    steps:
+    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+    - name: Download package
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+      with:
+        name: ispc_llvm${{matrix.version}}_linux
+
+    - name: Install dependencies and unpack artifacts
+      run: |
+        .github/workflows/scripts/install-test-deps.sh
+
+    - name: Check environment
+      run: |
+        cat /proc/cpuinfo
+
+    - name: Running tests
+      run: |
+        echo PATH="$PATH"
+        ./scripts/alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+
+    - name: Check
+      run: |
+        # Print fails to the log.
+        git diff --exit-code
+
+    - name: Upload fail_db.txt
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+      if: failure()
+      with:
+        name: fail_db.llvm${{matrix.version}}.${{matrix.arch}}.${{matrix.target}}.txt
+        path: tests/fail_db.txt
+
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+      if: failure()
+      with:
+        name: alloy_results.llvm${{matrix.version}}.${{matrix.arch}}.${{matrix.target}}
+        path: alloy_results_*
+
+  linux-test-prior:
+    needs: [define-flow, linux-build-ispc]
+    runs-on: ubuntu-22.04
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [17]
         arch: [x86, x86-64]
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets_x86)}}
         # See issue #2818 for more deatils. It's SDE problem running on AMD runner.
@@ -705,6 +799,9 @@ jobs:
           - version: "18.1"
             full_version: "18.1.8"
             short_version: 18
+          - version: "19.1"
+            full_version: "19.1.7"
+            short_version: 19
     env:
       LLVM_VERSION: ${{ matrix.llvm.version }}
       LLVM_TAR: llvm-${{ matrix.llvm.full_version }}-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
@@ -794,6 +891,8 @@ jobs:
         name: ispc_llvm18_lto_macos
         path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-macOS.universal.tar.gz
 
+  # For macos we test only one target so there is no problem with exceeding strategy limit.
+  # If it happens then we can split it into two jobs.
   macos-test-ispc:
     needs: [define-flow, macos-build-ispc]
     runs-on: macos-13
@@ -801,7 +900,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [17, 18]
+        version: [17, 18, 19]
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -952,6 +1051,9 @@ jobs:
           - version: "18.1"
             full_version: "18.1.8"
             short_version: 18
+          - version: "19.1"
+            full_version: "19.1.7"
+            short_version: 19
     env:
       LLVM_VERSION: ${{ matrix.llvm.version }}
       LLVM_TAR: llvm-${{ matrix.llvm.full_version }}-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
@@ -1095,6 +1197,9 @@ jobs:
         name: ispc_xe_deps_llvm18rel_win
         path: ispc-xe
 
+  # To avoid strategy expansion exceeding 256 results, there are two jobs:
+  # - win-test for the LLVM version used for release builds and newer versions
+  # - win-test-prior for older LLVM versions
   win-test:
     needs: [define-flow, win-build-ispc]
     env:
@@ -1104,7 +1209,61 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [17, 18]
+        version: [18, 19]
+        arch: [x86, x86-64]
+        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets_x86)}}
+
+    steps:
+    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+    - name: Download package
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+      with:
+        name: ispc_llvm${{matrix.version}}_win
+
+    - name: Install dependencies
+      run: |
+        .github/workflows/scripts/install-test-deps.ps1
+
+    - name: Check environment
+      shell: cmd
+      run: |
+        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+
+    - name: Running tests
+      run: |
+        $env:ISPC_HOME = "$pwd"
+        .github/workflows/scripts/load-vs-env.ps1 "${{ matrix.arch }}"
+        python .\scripts\alloy.py -r --only="stability ${{ matrix.arch }} current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+
+    - name: Check
+      run: |
+        # Print fails to the log.
+        git diff --exit-code
+
+    - name: Upload fail_db.txt
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+      if: failure()
+      with:
+        name: fail_db.llvm${{matrix.version}}.${{matrix.arch}}.${{matrix.target}}.txt
+        path: tests/fail_db.txt
+
+    - name: Upload alloy logs
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+      if: failure()
+      with:
+        name: alloy_results.llvm${{matrix.version}}.${{matrix.arch}}.${{matrix.target}}
+        path: alloy_results_*
+
+  win-test-llvm-prior:
+    needs: [define-flow, win-build-ispc]
+    env:
+      LLVM_HOME: "C:\\projects\\llvm"
+    runs-on: windows-2022
+    continue-on-error: false
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [17]
         arch: [x86, x86-64]
         target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets_x86)}}
 
@@ -1202,6 +1361,7 @@ jobs:
         name: alloy_results.llvm18_lto.${{matrix.arch}}.${{matrix.target}}
         path: alloy_results_*
 
+  # Test xe release version
   win-test-xe-llvm18-release:
     needs: [define-flow, win-build-ispc-xe-llvm18-release]
     if: ${{ needs.define-flow.outputs.flow_type == 'smoke' }}
@@ -1213,7 +1373,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [x86, x86-64]
-        target: ${{fromJson(needs.define-flow.outputs.tests_matrix_targets_x86)}}
+        target: [avx2-i32x8]
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
