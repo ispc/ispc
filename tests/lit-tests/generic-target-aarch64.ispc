@@ -2,7 +2,7 @@
 // RUN: %{ispc} --target=generic-i1x8 --arch=aarch64 --nostdlib %s --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=CHECK-I1X8
 // RUN: %{ispc} --target=generic-i1x16 --arch=aarch64 --nostdlib %s --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=CHECK-I1X16
 // RUN: %{ispc} --target=generic-i1x32 --arch=aarch64 --nostdlib %s --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=CHECK-I1X32
-// TODO!: %{ispc} --target=generic-i1x64 --arch=aarch64 --nostdlib %s --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=CHECK-I1X64
+// RUN: %{ispc} --target=generic-i1x64 --arch=aarch64 --nostdlib %s --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=CHECK-I1X64
 // RUN: %{ispc} --target=generic-i8x16 --arch=aarch64 --nostdlib %s --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=CHECK-I8X16
 // RUN: %{ispc} --target=generic-i8x32 --arch=aarch64 --nostdlib %s --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=CHECK-I8X32
 // RUN: %{ispc} --target=generic-i16x8 --arch=aarch64 --nostdlib %s --emit-llvm-text -o - 2>&1 | FileCheck %s --check-prefix=CHECK-I16X8
