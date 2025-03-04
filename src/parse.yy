@@ -1703,9 +1703,13 @@ declarator
 
 int_constant
     : TOKEN_INT8_CONSTANT { $$ = yylval.intVal; }
+    | TOKEN_UINT8_CONSTANT { $$ = yylval.intVal; }
     | TOKEN_INT16_CONSTANT { $$ = yylval.intVal; }
+    | TOKEN_UINT16_CONSTANT { $$ = yylval.intVal; }
     | TOKEN_INT32_CONSTANT { $$ = yylval.intVal; }
+    | TOKEN_UINT32_CONSTANT { $$ = yylval.intVal; }
     | TOKEN_INT64_CONSTANT { $$ = yylval.intVal; }
+    | TOKEN_UINT64_CONSTANT { $$ = yylval.intVal; }
     ;
 
 direct_declarator

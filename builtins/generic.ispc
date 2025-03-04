@@ -1381,7 +1381,7 @@ EXT uniform uint64 __cast_mask_to_i64(UIntMaskType mask) { return @llvm.ispc.pac
 // mask operations
 EXT uniform int64 __movmsk(UIntMaskType mask) { return __cast_mask_to_i64(mask); }
 EXT uniform bool __any(UIntMaskType mask) { return __cast_mask_to_i64(mask) != 0; }
-EXT uniform bool __all(UIntMaskType mask) { return __cast_mask_to_i64(mask) == (1ULL << TARGET_WIDTH) - 1; }
+EXT uniform bool __all(UIntMaskType mask) { return __cast_mask_to_i64(mask) == ~0ULL >> (64 - TARGET_WIDTH); }
 EXT uniform bool __none(UIntMaskType mask) { return __cast_mask_to_i64(mask) == 0; }
 
 // general gather functions
