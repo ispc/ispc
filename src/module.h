@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -127,7 +127,7 @@ class Module {
         Deps,        /** generate dependencies */
         DevStub,     /** generate device-side offload stubs */
         HostStub,    /** generate host-side offload stubs */
-        CPPStub,     /** generate preprocessed stubs (-E mode) */
+        CPPStub,     /** generate preprocessed stubs (-E/-dD/-dM mode) */
 #ifdef ISPC_XE_ENABLED
         ZEBIN, /** generate L0 binary file */
         SPIRV, /** generate spir-v file */
@@ -299,7 +299,8 @@ class Module {
 
     /** Run the preprocessor on the given file, writing to the output stream.
         Returns the number of diagnostic errors encountered. */
-    int execPreprocessor(const char *filename, llvm::raw_string_ostream *ostream) const;
+    int execPreprocessor(const char *filename, llvm::raw_string_ostream *ostream,
+                         Globals::PreprocessorOutputType type = Globals::PreprocessorOutputType::Cpp) const;
 
     /** Helper function to initialize the internal CPP buffer. **/
     void initCPPBuffer();
