@@ -1,11 +1,7 @@
-// RUN: %{ispc} %s --target=avx1-i32x8 -h %t.h --emit-llvm -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
-// RUN: %{ispc} %s --target=avx1-i32x8 -h %t.h --emit-llvm -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
-// RUN: %{ispc} %s --target=avx1-i32x16 -h %t.h --emit-llvm -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
-// RUN: %{ispc} %s --target=avx1-i64x4 -h %t.h --emit-llvm -o %t.bc
-// RUN: llvm-dis %t.bc -o - | FileCheck %s
+// RUN: %{ispc} %s --target=avx1-i32x8 -h %t.h --emit-llvm-text -o - 2>&1 | FileCheck %s
+// RUN: %{ispc} %s --target=avx1-i32x8 -h %t.h --emit-llvm-text -o - 2>&1 | FileCheck %s
+// RUN: %{ispc} %s --target=avx1-i32x16 -h %t.h --emit-llvm-text -o - 2>&1 | FileCheck %s
+// RUN: %{ispc} %s --target=avx1-i64x4 -h %t.h --emit-llvm-text -o - 2>&1 | FileCheck %s
 
 // REQUIRES: X86_ENABLED
 
