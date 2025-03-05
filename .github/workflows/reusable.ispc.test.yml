@@ -54,6 +54,9 @@ on:
         default: ''
 
 env:
+  SDE_MIRROR_ID: 831748
+  SDE_TAR_NAME: sde-external-9.44.0-2024-08-22
+  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
   LLVM_HOME: ${{ inputs.platform == 'windows' && 'C:\\projects\\llvm' || github.workspace }}
   ISPC_HOME: ${{ github.workspace }}
   INSTALL_COMPUTE_RUNTIME: ${{ inputs.enable_xe && '1' || '0' }}
@@ -141,6 +144,7 @@ jobs:
         $env:ISPC_HOME = "$pwd"
         .github/workflows/scripts/load-vs-env.ps1 "${{ inputs.architecture }}"
         python .\scripts\alloy.py -r --only="stability ${{ inputs.architecture }} current ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+      shell: pwsh
     
     - name: Running tests on Windows (vectorcall)
       if: inputs.platform == 'windows' && inputs.calling_conv != ''
@@ -149,7 +153,6 @@ jobs:
         .github/workflows/scripts/load-vs-env.ps1 "${{ inputs.architecture }}"
         python .\scripts\run_tests.py --calling_conv=${{ inputs.calling_conv }} --target=${{ matrix.target }} --arch=${{ inputs.architecture }}
       shell: pwsh
-      working-directory: ${{ github.workspace }}
 
     - name: Set artifact name prefix
       id: set-artifact-name
