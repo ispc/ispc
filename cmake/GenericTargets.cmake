@@ -75,6 +75,22 @@ function (generate_generic_builtins ispc_name)
         )
     endif()
 
+    # TODO: enable generic targets for Xe
+    # if (XE_ENABLED)
+    #    if (NOT APPLE)
+    #        list(APPEND ARCH_LIST
+    #            "xe64,64"
+    #        )
+    #    endif()
+    # endif()
+
+    if (WASM_ENABLED)
+        list(APPEND ARCH_LIST
+            "wasm64,64"
+            "wasm32,32"
+        )
+    endif()
+
     foreach(os ${os_list})
         foreach(target ${TARGET_LIST})
             foreach(pair ${ARCH_LIST})
