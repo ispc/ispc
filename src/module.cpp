@@ -358,7 +358,7 @@ int Module::preprocessAndParse() {
 
     initCPPBuffer();
 
-    const int numErrors = execPreprocessor(filename, bufferCPP->os.get());
+    const int numErrors = execPreprocessor(filename, bufferCPP->os.get(), g->preprocessorOutputType);
     errorCount += (g->ignoreCPPErrors) ? 0 : numErrors;
 
     if (g->onlyCPP) {
@@ -2996,11 +2996,29 @@ static void lInitializePreprocessor(clang::Preprocessor &PP, clang::Preprocessor
     PP.setPredefines(std::move(PredefineBuffer));
 }
 
-static void lSetPreprocessorOutputOptions(clang::PreprocessorOutputOptions *opts) {
-    // Don't remove comments in the preprocessor, so that we can accurately
-    // track the source file position by handling them ourselves.
-    opts->ShowComments = 1;
-    opts->ShowCPP = 1;
+// Initilialize PreprocessorOutputOptions with ISPC PreprocessorOutputType
+// Return if the output can be treated as preprocessor output
+static bool lSetPreprocessorOutputOptions(clang::PreprocessorOutputOptions *opts,
+                                          Globals::PreprocessorOutputType preprocessorOutputType) {
+    switch (preprocessorOutputType) {
+    case Globals::PreprocessorOutputType::Cpp:
+        // Don't remove comments in the preprocessor, so that we can accurately
+        // track the source file position by handling them ourselves.
+        opts->ShowComments = 1;
+        opts->ShowCPP = 1;
+        return true;
+    case Globals::PreprocessorOutputType::WithMacros:
+        opts->ShowCPP = 1;
+        opts->ShowMacros = 1;
+        opts->ShowComments = 1;
+        return true;
+    case Globals::PreprocessorOutputType::MacrosOnly:
+        opts->ShowMacros = 1;
+        return false;
+    }
+
+    // Undefined PreprocessorOutputType
+    return false;
 }
 
 static void lSetHeaderSeachOptions(const std::shared_ptr<clang::HeaderSearchOptions> opts) {
@@ -3184,7 +3202,8 @@ static void lSetPreprocessorOptions(const std::shared_ptr<clang::PreprocessorOpt
 
 static void lSetLangOptions(clang::LangOptions *opts) { opts->LineComment = 1; }
 
-int Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostream) const {
+int Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostream,
+                             Globals::PreprocessorOutputType preprocessorOutputType) const {
     clang::FrontendInputFile inputFile(infilename, clang::InputKind());
     llvm::raw_fd_ostream stderrRaw(2, false);
 
@@ -3207,17 +3226,17 @@ int Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *o
 
     // Create and initialize PreprocessorOutputOptions
     clang::PreprocessorOutputOptions preProcOutOpts;
-    lSetPreprocessorOutputOptions(&preProcOutOpts);
+    bool isPreprocessedOutput = lSetPreprocessorOutputOptions(&preProcOutOpts, preprocessorOutputType);
 
     // Create and initialize HeaderSearchOptions
     const std::shared_ptr<clang::HeaderSearchOptions> hdrSearchOpts = std::make_shared<clang::HeaderSearchOptions>();
     lSetHeaderSeachOptions(hdrSearchOpts);
 
-    // Create and initializer PreprocessorOptions
+    // Create and initialize PreprocessorOptions
     const std::shared_ptr<clang::PreprocessorOptions> preProcOpts = std::make_shared<clang::PreprocessorOptions>();
     lSetPreprocessorOptions(preProcOpts);
 
-    // Create and initializer LangOptions
+    // Create and initialize LangOptions
     clang::LangOptions langOpts;
     lSetLangOptions(&langOpts);
 
@@ -3235,9 +3254,9 @@ int Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *o
     clang::TrivialModuleLoader modLoader;
     clang::Preprocessor prep(preProcOpts, diagEng, langOpts, srcMgr, hdrSearch, modLoader);
 
-    // intialize preprocessor
+    // Initialize preprocessor
     prep.Initialize(*tgtInfo);
-    prep.setPreprocessedOutput(preProcOutOpts.ShowCPP);
+    prep.setPreprocessedOutput(isPreprocessedOutput);
     lInitializePreprocessor(prep, *preProcOpts, fileMgr, srcMgr);
 
     // do actual preprocessing
