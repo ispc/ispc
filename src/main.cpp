@@ -71,6 +71,7 @@ static void lPrintVersion() {
     printf("    [--darwin-version-min=<major.minor>]Set the minimum macOS/iOS version required for the "
            "deployment.\n");
 #endif
+    printf("    [-dD]\t\t\t\tPrint macro definitions in addition to the preprocessor result\n");
     printf("    [--dev-stub <filename>]\t\tEmit device-side offload stub functions to file\n");
     printf("    ");
     char cpuHelp[2048];
@@ -78,6 +79,7 @@ static void lPrintVersion() {
              Target::SupportedCPUs().c_str());
     PrintWithWordBreaks(cpuHelp, 16, TerminalWidth(), stdout);
     printf("    [--dllexport]\t\t\tMake non-static functions DLL exported.  Windows target only\n");
+    printf("    [-dM]\t\t\t\tPrint macro definitions for the preprocessor result\n");
     printf("    [--dwarf-version={2,3,4,5}]\t\tGenerate source-level debug information with given DWARF version "
            "(triggers -g).  It forces the usage of DWARF debug info on Windows target\n");
     printf("    [-E]\t\t\t\tRun only the preprocessor\n");
@@ -821,6 +823,15 @@ int main(int Argc, char *Argv[]) {
         } else if (!strcmp(argv[i], "-E")) {
             g->onlyCPP = true;
             ot = Module::CPPStub;
+            // g->preprocessorOutputType is initialized as "Cpp" automatically
+        } else if (!strcmp(argv[i], "-dM")) {
+            g->onlyCPP = true;
+            ot = Module::CPPStub;
+            g->preprocessorOutputType = Globals::PreprocessorOutputType::MacrosOnly;
+        } else if (!strcmp(argv[i], "-dD")) {
+            g->onlyCPP = true;
+            ot = Module::CPPStub;
+            g->preprocessorOutputType = Globals::PreprocessorOutputType::WithMacros;
         } else if (!strcmp(argv[i], "--emit-asm")) {
             ot = Module::Asm;
         } else if (!strcmp(argv[i], "--emit-llvm")) {
