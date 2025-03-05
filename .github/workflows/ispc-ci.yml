@@ -1404,7 +1404,7 @@ jobs:
     - name: Build examples
       run: |
         mkdir examples-build
-        cmake examples-package\examples\cpu -B examples-build -Thost=x64 -G "Visual Studio 16"
+        cmake -DCMAKE_C_FLAGS="/WX" -DCMAKE_CXX_FLAGS="/WX" examples-package\examples\cpu -B examples-build -Thost=x64 -G "Visual Studio 16"
         cmake --build examples-build --target ALL_BUILD --config Release
       shell: cmd
 
@@ -1441,7 +1441,7 @@ jobs:
     - name: Build examples
       run: |
         mkdir examples-build
-        cmake examples-package/examples/cpu -B examples-build
+        cmake -DCMAKE_C_FLAGS="-Wall -Werror" -DCMAKE_CXX_FLAGS="-Wall -Werror" examples-package/examples/cpu -B examples-build
         cmake --build examples-build
 
   macos-build-examples:
@@ -1476,7 +1476,7 @@ jobs:
     - name: Build examples
       run: |
         mkdir examples-build
-        cmake examples-package/examples/cpu -B examples-build
+        cmake -DCMAKE_C_FLAGS="-Wall -Werror" -DCMAKE_CXX_FLAGS="-Wall -Werror" examples-package/examples/cpu -B examples-build
         cmake --build examples-build
 
   linux-wasm:
