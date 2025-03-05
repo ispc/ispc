@@ -1,0 +1,25 @@
+Issue 3227 (https://github.com/ispc/ispc/issues/3227) asked to explore Python bindings in ispc.
+
+This implementation uses the built-in ctypes module to show an example how to call ispc code
+from Python. Consider this a Proof Of Concept (PoC) with room for improvement.
+
+Design decisions:
+* Uniqify test function names in .ispc code to avoid name collision when generating the shared object.
+  This, along with removing the inlcude for test_static.cpp, necessitated creating a copy of the test
+  files. I don't like the redundnacy but I did not want to break functionality of existing tests. Future
+  efforts can clean this if needed.
+* One shared object is generated that contains all enabled tests. This reduces the number of dlls/
+  shared objects loaded during the Python run code. Per-test shared objects could be enabled if desired,
+  it just means a bit more Python code to generate the objects and load them.
+* Only tested on Linux on a single target. Will need more extensive testing and support for
+  other platforms. Mostly affects ispc/clang compile when generating the shared object.
+* Implement the TEST_SIG define from test_static.cpp through a toml configuration file.
+* Mirrored test_static.cpp as closely as possible in TestRunner.py.
+* top_bind.cpp implements functions that ispc needs for launch and should be linked into all generated
+  shared object files.
+
+Limitations:
+* It only works on Linux and one target.
+* You have to run TestRunner.py from tests/python or it will fail.
+* Adding new tests requires copying the test code, removing the test_static.cpp include, and uniqifying
+  function names
