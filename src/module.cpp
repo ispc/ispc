@@ -3661,291 +3661,47 @@ static void lExtractOrCheckGlobals(llvm::Module *msrc, llvm::Module *mdst, bool 
     }
 }
 
-int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
-                             OutputFlags outputFlags, OutputType outputType, const char *outFileName,
-                             const char *headerFileName, const char *depsFileName, const char *depsTargetName,
-                             const char *hostStubFileName, const char *devStubFileName) {
-    if (targets.size() == 0 || targets.size() == 1) {
-        // We're only compiling to a single target
-        // TODO something wrong here
-        ISPCTarget target = ISPCTarget::none;
-        if (targets.size() == 1) {
-            target = targets[0];
-        }
-        g->target = new Target(arch, cpu, target, outputFlags.getPICLevel(), outputFlags.getMCModel(), g->printTarget);
-        if (!g->target->isValid()) {
-            return 1;
-        }
+int Module::CompileSingleTarget(const char *srcFile, Arch arch, const char *cpu, ISPCTarget target,
+                                OutputFlags outputFlags, OutputType outputType, const char *outFileName,
+                                const char *headerFileName, const char *depsFileName, const char *depsTargetName,
+                                const char *hostStubFileName, const char *devStubFileName) {
+    g->target = new Target(arch, cpu, target, outputFlags.getPICLevel(), outputFlags.getMCModel(), g->printTarget);
+    if (!g->target->isValid()) {
+        return 1;
+    }
 
-        m = new Module(srcFile);
-        const int compileResult = m->CompileFile();
+    m = new Module(srcFile);
+    const int compileResult = m->CompileFile();
 
-        llvm::TimeTraceScope TimeScope("Backend");
+    llvm::TimeTraceScope TimeScope("Backend");
 
-        if (compileResult == 0) {
+    if (compileResult == 0) {
 #ifdef ISPC_XE_ENABLED
-            if (outputType == Asm || outputType == Object) {
-                if (g->target->isXeTarget()) {
-                    Error(SourcePos(), "%s output is not supported yet for Xe targets. ",
-                          (outputType == Asm) ? "assembly" : "binary");
-                    return 1;
-                }
-            }
-            if (g->target->isXeTarget() && outputType == OutputType::Object) {
-                outputType = OutputType::ZEBIN;
-            }
-            if (!g->target->isXeTarget() && (outputType == OutputType::ZEBIN || outputType == OutputType::SPIRV)) {
-                Error(SourcePos(), "SPIR-V and L0 binary formats are supported for Xe target only");
+        if (outputType == Asm || outputType == Object) {
+            if (g->target->isXeTarget()) {
+                Error(SourcePos(), "%s output is not supported yet for Xe targets. ",
+                      (outputType == Asm) ? "assembly" : "binary");
                 return 1;
             }
+        }
+        if (g->target->isXeTarget() && outputType == OutputType::Object) {
+            outputType = OutputType::ZEBIN;
+        }
+        if (!g->target->isXeTarget() && (outputType == OutputType::ZEBIN || outputType == OutputType::SPIRV)) {
+            Error(SourcePos(), "SPIR-V and L0 binary formats are supported for Xe target only");
+            return 1;
+        }
 #endif
-            if (outFileName != nullptr) {
-                if (!m->writeOutput(outputType, outputFlags, outFileName)) {
-                    return 1;
-                }
-            }
-            if (headerFileName != nullptr) {
-                if (!m->writeOutput(Module::Header, outputFlags, headerFileName)) {
-                    return 1;
-                }
-            }
-            if (depsFileName != nullptr || outputFlags.isDepsToStdout()) {
-                std::string targetName;
-                if (depsTargetName) {
-                    targetName = depsTargetName;
-                } else if (outFileName) {
-                    targetName = outFileName;
-                } else if (!IsStdin(srcFile)) {
-                    targetName = srcFile;
-                    size_t dot = targetName.find_last_of('.');
-                    if (dot != std::string::npos) {
-                        targetName.erase(dot, std::string::npos);
-                    }
-                    targetName.append(".o");
-                } else {
-                    targetName = "a.out";
-                }
-                if (!m->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile)) {
-                    return 1;
-                }
-            }
-            if (hostStubFileName != nullptr) {
-                if (!m->writeOutput(Module::HostStub, outputFlags, hostStubFileName)) {
-                    return 1;
-                }
-            }
-            if (devStubFileName != nullptr) {
-                if (!m->writeOutput(Module::DevStub, outputFlags, devStubFileName)) {
-                    return 1;
-                }
-            }
-        } else {
-            ++m->errorCount;
-        }
-
-        int errorCount = m->errorCount;
-        // In case of error, clean up symbolTable
-        if (errorCount > 0) {
-            m->symbolTable->PopInnerScopes();
-        }
-        delete m;
-        m = nullptr;
-
-        delete g->target;
-        g->target = nullptr;
-
-        return errorCount > 0;
-    } else {
-        if (IsStdin(srcFile)) {
-            Error(SourcePos(), "Compiling programs from standard input isn't "
-                               "supported when compiling for multiple targets.  Please use "
-                               "an intermediate temporary file.");
-            return 1;
-        }
-        if (cpu != nullptr) {
-            Error(SourcePos(), "Illegal to specify cpu type when compiling for multiple targets.");
-            return 1;
-        }
-
-        // The user supplied multiple targets
-        Assert(targets.size() > 1);
-
-        if (outFileName != nullptr && strcmp(outFileName, "-") == 0) {
-            Error(SourcePos(), "Multi-target compilation can't generate output "
-                               "to stdout.  Please provide an output filename.\n");
-            return 1;
-        }
-
-        // Make sure that the function names for 'export'ed functions have
-        // the target ISA appended to them.
-        g->mangleFunctionsWithTarget = true;
-
-        // Array initialized with all false
-        bool compiledTargets[Target::NUM_ISAS] = {};
-
-        llvm::Module *dispatchModule = nullptr;
-
-        std::map<std::string, FunctionTargetVariants> exportedFunctions;
-        int errorCount = 0;
-
-        // Handle creating a "generic" header file for multiple targets
-        // that use exported varyings
-        DispatchHeaderInfo DHI;
-        if (headerFileName != nullptr) {
-            DHI.file = fopen(headerFileName, "w");
-            if (!DHI.file) {
-                perror("fopen");
-                return false;
-            }
-            DHI.fn = headerFileName;
-            DHI.EmitUnifs = true;
-            DHI.EmitFuncs = true;
-            DHI.EmitFrontMatter = true;
-            DHI.Emit4 = true;
-            DHI.Emit8 = true;
-            DHI.Emit16 = true;
-            // This is toggled later.
-            DHI.EmitBackMatter = false;
-        }
-
-        std::vector<Module *> modules(targets.size());
-        for (unsigned int i = 0; i < targets.size(); ++i) {
-            g->target =
-                new Target(arch, cpu, targets[i], outputFlags.getPICLevel(), outputFlags.getMCModel(), g->printTarget);
-            if (!g->target->isValid()) {
-                return 1;
-            }
-
-            // Issue an error if we've already compiled to a variant of
-            // this target ISA.  (It doesn't make sense to compile to both
-            // avx and avx-x2, for example.)
-            auto targetISA = g->target->getISA();
-            if (compiledTargets[targetISA] || (compiledTargets[Target::SSE41] && targetISA == Target::SSE42) ||
-                (compiledTargets[Target::SSE42] && targetISA == Target::SSE41)) {
-                Error(SourcePos(), "Can't compile to multiple variants of %s target!\n", g->target->GetISAString());
-                return 1;
-            }
-            compiledTargets[targetISA] = true;
-
-            m = new Module(srcFile);
-            modules.push_back(m);
-            const int compileResult = m->CompileFile();
-
-            llvm::TimeTraceScope TimeScope("Backend");
-
-            if (compileResult == 0) {
-                // Create the dispatch module, unless already created;
-                // in the latter case, just do the checking
-                bool check = (dispatchModule != nullptr);
-                if (!check) {
-                    dispatchModule = lInitDispatchModule();
-                }
-                lExtractOrCheckGlobals(m->module, dispatchModule, check);
-
-                // Grab pointers to the exported functions from the module we
-                // just compiled, for use in generating the dispatch function
-                // later.
-                lGetExportedFunctions(m->symbolTable, exportedFunctions);
-
-                if (outFileName != nullptr) {
-                    std::string targetOutFileName;
-                    std::string isaName{g->target->GetISAString()};
-                    targetOutFileName = lGetTargetFileName(outFileName, isaName);
-                    if (!m->writeOutput(outputType, outputFlags, targetOutFileName.c_str())) {
-                        return 1;
-                    }
-                }
-            } else {
-                ++m->errorCount;
-            }
-
-            errorCount += m->errorCount;
-            if (errorCount != 0) {
-                return 1;
-            }
-
-            // Only write the generate header file, if desired, the first
-            // time through the loop here.
-            if (headerFileName != nullptr) {
-                if (i == targets.size() - 1) {
-                    // only print backmatter on the last target.
-                    DHI.EmitBackMatter = true;
-                }
-
-                const char *isaName = g->target->GetISAString();
-                std::string targetHeaderFileName = lGetTargetFileName(headerFileName, isaName);
-                // write out a header w/o target name for the first target only
-                if (!m->writeOutput(Module::Header, outputFlags, headerFileName, nullptr, nullptr, &DHI)) {
-                    return 1;
-                }
-                if (!m->writeOutput(Module::Header, outputFlags, targetHeaderFileName.c_str())) {
-                    return 1;
-                }
-                if (i == targets.size() - 1) {
-                    DHI.closeFile();
-                }
-            }
-
-            delete g->target;
-            g->target = nullptr;
-
-            // Important: Don't delete the llvm::Module *m here; we need to
-            // keep it around so the llvm::Functions *s stay valid for when
-            // we generate the dispatch module's functions...
-        }
-
-        // Find the first initialized target machine from the targets we
-        // compiled to above.  We'll use this as the target machine for
-        // compiling the dispatch module--this is safe in that it is the
-        // least-common-denominator of all of the targets we compiled to.
-        int firstTargetISA = 0;
-        while (!compiledTargets[firstTargetISA]) {
-            firstTargetISA++;
-        }
-        const char *firstISA = Target::ISAToTargetString((Target::ISA)firstTargetISA);
-        ISPCTarget firstTarget = ParseISPCTarget(firstISA);
-        Assert(strcmp(firstISA, "") != 0);
-        Assert(firstTarget != ISPCTarget::none);
-
-        g->target = new Target(arch, cpu, firstTarget, outputFlags.getPICLevel(), outputFlags.getMCModel(), false);
-        llvm::TargetMachine *firstTargetMachine = g->target->GetTargetMachine();
-        Assert(firstTargetMachine);
-        if (!g->target->isValid()) {
-            return 1;
-        }
-
-        if (dispatchModule == nullptr) {
-            Error(SourcePos(), "Failed to create dispatch module.\n");
-            return 1;
-        }
-
-        lEmitDispatchModule(dispatchModule, exportedFunctions);
-
         if (outFileName != nullptr) {
-            switch (outputType) {
-            case CPPStub:
-                // No preprocessor output for dispatch module.
-                break;
-
-            case Bitcode:
-            case BitcodeText:
-                if (!writeBitcode(dispatchModule, outFileName, outputType)) {
-                    return 1;
-                }
-                break;
-
-            case Asm:
-            case Object:
-                if (!writeObjectFileOrAssembly(firstTargetMachine, dispatchModule, outputType, outFileName)) {
-                    return 1;
-                }
-                break;
-
-            default:
-                FATAL("Unexpected `outputType`");
+            if (!m->writeOutput(outputType, outputFlags, outFileName)) {
+                return 1;
             }
         }
-
+        if (headerFileName != nullptr) {
+            if (!m->writeOutput(Module::Header, outputFlags, headerFileName)) {
+                return 1;
+            }
+        }
         if (depsFileName != nullptr || outputFlags.isDepsToStdout()) {
             std::string targetName;
             if (depsTargetName) {
@@ -3966,15 +3722,274 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
                 return 1;
             }
         }
+        if (hostStubFileName != nullptr) {
+            if (!m->writeOutput(Module::HostStub, outputFlags, hostStubFileName)) {
+                return 1;
+            }
+        }
+        if (devStubFileName != nullptr) {
+            if (!m->writeOutput(Module::DevStub, outputFlags, devStubFileName)) {
+                return 1;
+            }
+        }
+    } else {
+        ++m->errorCount;
+    }
 
-        for (auto module : modules) {
-            delete module;
+    int errorCount = m->errorCount;
+    // In case of error, clean up symbolTable
+    if (errorCount > 0) {
+        m->symbolTable->PopInnerScopes();
+    }
+    delete m;
+    m = nullptr;
+
+    delete g->target;
+    g->target = nullptr;
+
+    return errorCount > 0;
+}
+
+int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
+                                   OutputFlags outputFlags, OutputType outputType, const char *outFileName,
+                                   const char *headerFileName, const char *depsFileName, const char *depsTargetName,
+                                   const char *hostStubFileName, const char *devStubFileName) {
+    if (IsStdin(srcFile)) {
+        Error(SourcePos(), "Compiling programs from standard input isn't "
+                           "supported when compiling for multiple targets.  Please use "
+                           "an intermediate temporary file.");
+        return 1;
+    }
+    if (cpu != nullptr) {
+        Error(SourcePos(), "Illegal to specify cpu type when compiling for multiple targets.");
+        return 1;
+    }
+
+    // The user supplied multiple targets
+    Assert(targets.size() > 1);
+
+    if (outFileName != nullptr && strcmp(outFileName, "-") == 0) {
+        Error(SourcePos(), "Multi-target compilation can't generate output "
+                           "to stdout.  Please provide an output filename.\n");
+        return 1;
+    }
+
+    // Make sure that the function names for 'export'ed functions have
+    // the target ISA appended to them.
+    g->mangleFunctionsWithTarget = true;
+
+    // Array initialized with all false
+    bool compiledTargets[Target::NUM_ISAS] = {};
+
+    llvm::Module *dispatchModule = nullptr;
+
+    std::map<std::string, FunctionTargetVariants> exportedFunctions;
+    int errorCount = 0;
+
+    // Handle creating a "generic" header file for multiple targets
+    // that use exported varyings
+    DispatchHeaderInfo DHI;
+    if (headerFileName != nullptr) {
+        DHI.file = fopen(headerFileName, "w");
+        if (!DHI.file) {
+            perror("fopen");
+            return false;
+        }
+        DHI.fn = headerFileName;
+        DHI.EmitUnifs = true;
+        DHI.EmitFuncs = true;
+        DHI.EmitFrontMatter = true;
+        DHI.Emit4 = true;
+        DHI.Emit8 = true;
+        DHI.Emit16 = true;
+        // This is toggled later.
+        DHI.EmitBackMatter = false;
+    }
+
+    std::vector<Module *> modules(targets.size());
+    for (unsigned int i = 0; i < targets.size(); ++i) {
+        g->target =
+            new Target(arch, cpu, targets[i], outputFlags.getPICLevel(), outputFlags.getMCModel(), g->printTarget);
+        if (!g->target->isValid()) {
+            return 1;
+        }
+
+        // Issue an error if we've already compiled to a variant of
+        // this target ISA.  (It doesn't make sense to compile to both
+        // avx and avx-x2, for example.)
+        auto targetISA = g->target->getISA();
+        if (compiledTargets[targetISA] || (compiledTargets[Target::SSE41] && targetISA == Target::SSE42) ||
+            (compiledTargets[Target::SSE42] && targetISA == Target::SSE41)) {
+            Error(SourcePos(), "Can't compile to multiple variants of %s target!\n", g->target->GetISAString());
+            return 1;
+        }
+        compiledTargets[targetISA] = true;
+
+        m = new Module(srcFile);
+        modules.push_back(m);
+        const int compileResult = m->CompileFile();
+
+        llvm::TimeTraceScope TimeScope("Backend");
+
+        if (compileResult == 0) {
+            // Create the dispatch module, unless already created;
+            // in the latter case, just do the checking
+            bool check = (dispatchModule != nullptr);
+            if (!check) {
+                dispatchModule = lInitDispatchModule();
+            }
+            lExtractOrCheckGlobals(m->module, dispatchModule, check);
+
+            // Grab pointers to the exported functions from the module we
+            // just compiled, for use in generating the dispatch function
+            // later.
+            lGetExportedFunctions(m->symbolTable, exportedFunctions);
+
+            if (outFileName != nullptr) {
+                std::string targetOutFileName;
+                std::string isaName{g->target->GetISAString()};
+                targetOutFileName = lGetTargetFileName(outFileName, isaName);
+                if (!m->writeOutput(outputType, outputFlags, targetOutFileName.c_str())) {
+                    return 1;
+                }
+            }
+        } else {
+            ++m->errorCount;
+        }
+
+        errorCount += m->errorCount;
+        if (errorCount != 0) {
+            return 1;
+        }
+
+        // Only write the generate header file, if desired, the first
+        // time through the loop here.
+        if (headerFileName != nullptr) {
+            if (i == targets.size() - 1) {
+                // only print backmatter on the last target.
+                DHI.EmitBackMatter = true;
+            }
+
+            const char *isaName = g->target->GetISAString();
+            std::string targetHeaderFileName = lGetTargetFileName(headerFileName, isaName);
+            // write out a header w/o target name for the first target only
+            if (!m->writeOutput(Module::Header, outputFlags, headerFileName, nullptr, nullptr, &DHI)) {
+                return 1;
+            }
+            if (!m->writeOutput(Module::Header, outputFlags, targetHeaderFileName.c_str())) {
+                return 1;
+            }
+            if (i == targets.size() - 1) {
+                DHI.closeFile();
+            }
         }
 
         delete g->target;
         g->target = nullptr;
 
-        return errorCount > 0;
+        // Important: Don't delete the llvm::Module *m here; we need to
+        // keep it around so the llvm::Functions *s stay valid for when
+        // we generate the dispatch module's functions...
+    }
+
+    // Find the first initialized target machine from the targets we
+    // compiled to above.  We'll use this as the target machine for
+    // compiling the dispatch module--this is safe in that it is the
+    // least-common-denominator of all of the targets we compiled to.
+    int firstTargetISA = 0;
+    while (!compiledTargets[firstTargetISA]) {
+        firstTargetISA++;
+    }
+    const char *firstISA = Target::ISAToTargetString((Target::ISA)firstTargetISA);
+    ISPCTarget firstTarget = ParseISPCTarget(firstISA);
+    Assert(strcmp(firstISA, "") != 0);
+    Assert(firstTarget != ISPCTarget::none);
+
+    g->target = new Target(arch, cpu, firstTarget, outputFlags.getPICLevel(), outputFlags.getMCModel(), false);
+    llvm::TargetMachine *firstTargetMachine = g->target->GetTargetMachine();
+    Assert(firstTargetMachine);
+    if (!g->target->isValid()) {
+        return 1;
+    }
+
+    if (dispatchModule == nullptr) {
+        Error(SourcePos(), "Failed to create dispatch module.\n");
+        return 1;
+    }
+
+    lEmitDispatchModule(dispatchModule, exportedFunctions);
+
+    if (outFileName != nullptr) {
+        switch (outputType) {
+        case CPPStub:
+            // No preprocessor output for dispatch module.
+            break;
+
+        case Bitcode:
+        case BitcodeText:
+            if (!writeBitcode(dispatchModule, outFileName, outputType)) {
+                return 1;
+            }
+            break;
+
+        case Asm:
+        case Object:
+            if (!writeObjectFileOrAssembly(firstTargetMachine, dispatchModule, outputType, outFileName)) {
+                return 1;
+            }
+            break;
+
+        default:
+            FATAL("Unexpected `outputType`");
+        }
+    }
+
+    if (depsFileName != nullptr || outputFlags.isDepsToStdout()) {
+        std::string targetName;
+        if (depsTargetName) {
+            targetName = depsTargetName;
+        } else if (outFileName) {
+            targetName = outFileName;
+        } else if (!IsStdin(srcFile)) {
+            targetName = srcFile;
+            size_t dot = targetName.find_last_of('.');
+            if (dot != std::string::npos) {
+                targetName.erase(dot, std::string::npos);
+            }
+            targetName.append(".o");
+        } else {
+            targetName = "a.out";
+        }
+        if (!m->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile)) {
+            return 1;
+        }
+    }
+
+    for (auto module : modules) {
+        delete module;
+    }
+
+    delete g->target;
+    g->target = nullptr;
+
+    return errorCount > 0;
+}
+
+int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
+                             OutputFlags outputFlags, OutputType outputType, const char *outFileName,
+                             const char *headerFileName, const char *depsFileName, const char *depsTargetName,
+                             const char *hostStubFileName, const char *devStubFileName) {
+    if (targets.size() == 0 || targets.size() == 1) {
+        // We're only compiling to a single target
+        ISPCTarget target = ISPCTarget::none;
+        if (targets.size() == 1) {
+            target = targets[0];
+        }
+        return CompileSingleTarget(srcFile, arch, cpu, target, outputFlags, outputType, outFileName, headerFileName,
+                                   depsFileName, depsTargetName, hostStubFileName, devStubFileName);
+    } else {
+        return CompileMultipleTargets(srcFile, arch, cpu, targets, outputFlags, outputType, outFileName, headerFileName,
+                                      depsFileName, depsTargetName, hostStubFileName, devStubFileName);
     }
 }
 
