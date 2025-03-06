@@ -3683,6 +3683,24 @@ int lValidateXeTargetOutputs(Target *target, Module::OutputType &outputType) {
     return 0;
 }
 
+std::string lDetermineDepsTargetName(const char *srcFile, const char *depsTargetName, const char *outFileName) {
+    if (depsTargetName) {
+        return depsTargetName;
+    }
+    if (outFileName) {
+        return outFileName;
+    }
+    if (!IsStdin(srcFile)) {
+        std::string targetName = srcFile;
+        size_t dot = targetName.find_last_of('.');
+        if (dot != std::string::npos) {
+            targetName.erase(dot, std::string::npos);
+        }
+        return targetName + ".o";
+    }
+    return "a.out";
+}
+
 int lWriteOutputFiles(Module *m, const char *srcFile, Module::OutputFlags outputFlags, Module::OutputType outputType,
                       const char *outFileName, const char *headerFileName, const char *depsFileName,
                       const char *depsTargetName, const char *hostStubFileName, const char *devStubFileName) {
@@ -3694,21 +3712,7 @@ int lWriteOutputFiles(Module *m, const char *srcFile, Module::OutputFlags output
         return 1;
     }
     if (depsFileName || outputFlags.isDepsToStdout()) {
-        std::string targetName;
-        if (depsTargetName) {
-            targetName = depsTargetName;
-        } else if (outFileName) {
-            targetName = outFileName;
-        } else if (!IsStdin(srcFile)) {
-            targetName = srcFile;
-            size_t dot = targetName.find_last_of('.');
-            if (dot != std::string::npos) {
-                targetName.erase(dot, std::string::npos);
-            }
-            targetName.append(".o");
-        } else {
-            targetName = "a.out";
-        }
+        std::string targetName = lDetermineDepsTargetName(srcFile, depsTargetName, outFileName);
 
         if (!m->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile)) {
             return 1;
