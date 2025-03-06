@@ -64,7 +64,7 @@ env:
 
 jobs:
   test:
-    name: Test ISPC on ${{ inputs.platform }} (${{ inputs.architecture }})
+    name: Test ISPC on ${{ inputs.platform }} (${{ inputs.architecture }}, ${{ matrix.target }})
     runs-on: ${{ inputs.platform == 'macos' && (inputs.architecture == 'aarch64' && 'macos-14' || 'macos-13') || (inputs.platform == 'windows' && 'windows-2022') || (inputs.architecture == 'aarch64' && 'ubuntu-22.04-arm') || 'ubuntu-22.04' }}
     continue-on-error: false
     strategy:
@@ -73,10 +73,10 @@ jobs:
         target: ${{ fromJson(inputs.targets) }}
 
     steps:
-    - uses: actions/checkout@v4.2.1
+    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
 
     - name: Download package
-      uses: actions/download-artifact@v4.1.8
+      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
         name: ${{ inputs.artifact_name }}
 
@@ -129,7 +129,13 @@ jobs:
       shell: bash
       run: |
         echo "PATH=${PATH}"
-        ./scripts/run_tests.py -t "${{ matrix.target }}" -a "${{ inputs.architecture }}" -o "${{ inputs.optsets }}" --time --update-errors=FP
+        # Split optsets by spaces and run tests for each optimization level
+        IFS=' ' read -ra OPT_LEVELS <<< "${{ inputs.optsets }}"
+        OPTSETS_NO_DASH="${OPT_LEVELS//-/}"
+        for opt in "${OPTSETS_NO_DASH[@]}"; do
+          echo "Running tests with optimization level: $opt"
+          ./scripts/run_tests.py -t "${{ matrix.target }}" -a "${{ inputs.architecture }}" -o "$opt" --time --update-errors=FP
+        done
 
     - name: Running tests on Linux/macOS (debug mode)
       if: (inputs.platform == 'linux' || inputs.platform == 'macos') && inputs.architecture != 'aarch64' && inputs.enable_debug && !(inputs.architecture == 'x86' && (contains(matrix.target, 'avx2vnni') || contains(matrix.target, 'avx512')))
@@ -145,42 +151,40 @@ jobs:
         .github/workflows/scripts/load-vs-env.ps1 "${{ inputs.architecture }}"
         python .\scripts\alloy.py -r --only="stability ${{ inputs.architecture }} current ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
       shell: pwsh
-    
+
     - name: Running tests on Windows (vectorcall)
       if: inputs.platform == 'windows' && inputs.calling_conv != ''
       run: |
         $env:ISPC_HOME = "$pwd"
         .github/workflows/scripts/load-vs-env.ps1 "${{ inputs.architecture }}"
-        python .\scripts\run_tests.py --calling_conv=${{ inputs.calling_conv }} --target=${{ matrix.target }} --arch=${{ inputs.architecture }}
+
+        # Split optsets and run tests for each optimization level
+        $optLevels = "${{ inputs.optsets }}".Split(" ", [System.StringSplitOptions]::RemoveEmptyEntries)
+        foreach ($opt in $optLevels) {
+          Write-Host "Running tests with optimization level: $opt"
+          python .\scripts\run_tests.py --calling_conv=${{ inputs.calling_conv }} --target=${{ matrix.target }} --arch=${{ inputs.architecture }} --opt=$opt
+        }
       shell: pwsh
 
     - name: Set artifact name prefix
       id: set-artifact-name
       shell: bash
       run: |
-        if [[ "${{ inputs.calling_conv }}" != "" ]]; then
-          echo "name_prefix=llvm${{ inputs.llvm_version }}_veccall.${{ inputs.architecture }}.${{ matrix.target }}" >> "$GITHUB_OUTPUT"
-        elif [[ "${{ inputs.enable_debug }}" == "true" ]]; then
-          echo "name_prefix=llvm${{ inputs.llvm_version }}.debug.${{ inputs.architecture }}.${{ matrix.target }}" >> "$GITHUB_OUTPUT"
-        elif [[ "${{ inputs.enable_lto }}" == "true" ]]; then
-          echo "name_prefix=llvm${{ inputs.llvm_version }}_lto.${{ inputs.architecture }}.${{ matrix.target }}" >> "$GITHUB_OUTPUT"
-        elif [[ "${{ inputs.enable_xe }}" == "true" ]]; then
-          echo "name_prefix=xe.llvm${{ inputs.llvm_version }}.${{ inputs.architecture }}.${{ matrix.target }}" >> "$GITHUB_OUTPUT"
-        elif [[ "${{ inputs.architecture }}" == "aarch64" ]]; then
-          echo "name_prefix=llvm${{ inputs.llvm_version }}.${{ inputs.platform }}.${{ inputs.optsets }}.${{ inputs.architecture }}.${{ matrix.target }}" >> "$GITHUB_OUTPUT"
+        if [ "${{ inputs.enable_debug }}" == "true" ]; then
+          echo "name_prefix=${{ inputs.artifact_name }}.debug.${{ inputs.architecture }}.${{ matrix.target }}" >> "$GITHUB_ENV"
         else
-          echo "name_prefix=llvm${{ inputs.llvm_version }}.${{ inputs.architecture }}.${{ matrix.target }}" >> "$GITHUB_OUTPUT"
+          echo "name_prefix=${{ inputs.artifact_name }}.${{ inputs.architecture }}.${{ matrix.target }}" >> "$GITHUB_OUTPUT"
         fi
 
     - name: Upload fail_db.txt
-      uses: actions/upload-artifact@v4.6.0
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       if: failure()
       with:
         name: fail_db.${{ steps.set-artifact-name.outputs.name_prefix }}.txt
         path: tests/fail_db.txt
 
     - name: Upload alloy logs
-      uses: actions/upload-artifact@v4.6.0
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       if: failure() && inputs.architecture != 'aarch64'
       with:
         name: alloy_results.${{ steps.set-artifact-name.outputs.name_prefix }}
