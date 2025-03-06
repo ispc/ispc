@@ -737,7 +737,12 @@ void Function::GenerateIR() const {
             auto [name_pref, name_suf] = type->GetFunctionMangledName(true);
             std::string functionName = name_pref + sym->name + name_suf;
 
-            llvm::Function *appFunction = type->CreateLLVMFunction(functionName, g->ctx, /*disableMask*/ true);
+            // In case of exported function with external_only attribute we
+            // have already emitted the function with same name, so fetch it
+            llvm::Function *appFunction = m->module->getFunction(functionName);
+            if (!appFunction) {
+                appFunction = type->CreateLLVMFunction(functionName, g->ctx, /*disableMask*/ true);
+            }
             appFunction->setDoesNotThrow();
             appFunction->setCallingConv(type->GetCallingConv());
 

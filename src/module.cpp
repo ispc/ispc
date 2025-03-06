@@ -1034,7 +1034,11 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     bool disableMask = (storageClass == SC_EXTERN_C || storageClass == SC_EXTERN_SYCL);
 
     auto [name_pref, name_suf] = functionType->GetFunctionMangledName(false);
-    std::string functionName = name_pref + name + name_suf;
+    std::string functionName = name_pref + name;
+    // If the function contains external_only attribute then we should create the unmangled function name
+    if (!functionType->isExternalOnly) {
+        functionName += name_suf;
+    }
 
     llvm::Function *function = functionType->CreateLLVMFunction(functionName, g->ctx, disableMask);
 
