@@ -3683,6 +3683,52 @@ int lValidateXeTargetOutputs(Target *target, Module::OutputType &outputType) {
     return 0;
 }
 
+int lWriteOutputFiles(Module *m, const char *srcFile, Module::OutputFlags outputFlags, Module::OutputType outputType,
+                      const char *outFileName, const char *headerFileName, const char *depsFileName,
+                      const char *depsTargetName, const char *hostStubFileName, const char *devStubFileName) {
+    if (outFileName != nullptr) {
+        if (!m->writeOutput(outputType, outputFlags, outFileName)) {
+            return 1;
+        }
+    }
+    if (headerFileName != nullptr) {
+        if (!m->writeOutput(Module::Header, outputFlags, headerFileName)) {
+            return 1;
+        }
+    }
+    if (depsFileName != nullptr || outputFlags.isDepsToStdout()) {
+        std::string targetName;
+        if (depsTargetName) {
+            targetName = depsTargetName;
+        } else if (outFileName) {
+            targetName = outFileName;
+        } else if (!IsStdin(srcFile)) {
+            targetName = srcFile;
+            size_t dot = targetName.find_last_of('.');
+            if (dot != std::string::npos) {
+                targetName.erase(dot, std::string::npos);
+            }
+            targetName.append(".o");
+        } else {
+            targetName = "a.out";
+        }
+        if (!m->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile)) {
+            return 1;
+        }
+    }
+    if (hostStubFileName != nullptr) {
+        if (!m->writeOutput(Module::HostStub, outputFlags, hostStubFileName)) {
+            return 1;
+        }
+    }
+    if (devStubFileName != nullptr) {
+        if (!m->writeOutput(Module::DevStub, outputFlags, devStubFileName)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 int Module::CompileSingleTarget(const char *srcFile, Arch arch, const char *cpu, ISPCTarget target,
                                 OutputFlags outputFlags, OutputType outputType, const char *outFileName,
                                 const char *headerFileName, const char *depsFileName, const char *depsTargetName,
@@ -3708,45 +3754,9 @@ int Module::CompileSingleTarget(const char *srcFile, Arch arch, const char *cpu,
             return 1;
         }
 
-        if (outFileName != nullptr) {
-            if (!m->writeOutput(outputType, outputFlags, outFileName)) {
-                return 1;
-            }
-        }
-        if (headerFileName != nullptr) {
-            if (!m->writeOutput(Module::Header, outputFlags, headerFileName)) {
-                return 1;
-            }
-        }
-        if (depsFileName != nullptr || outputFlags.isDepsToStdout()) {
-            std::string targetName;
-            if (depsTargetName) {
-                targetName = depsTargetName;
-            } else if (outFileName) {
-                targetName = outFileName;
-            } else if (!IsStdin(srcFile)) {
-                targetName = srcFile;
-                size_t dot = targetName.find_last_of('.');
-                if (dot != std::string::npos) {
-                    targetName.erase(dot, std::string::npos);
-                }
-                targetName.append(".o");
-            } else {
-                targetName = "a.out";
-            }
-            if (!m->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile)) {
-                return 1;
-            }
-        }
-        if (hostStubFileName != nullptr) {
-            if (!m->writeOutput(Module::HostStub, outputFlags, hostStubFileName)) {
-                return 1;
-            }
-        }
-        if (devStubFileName != nullptr) {
-            if (!m->writeOutput(Module::DevStub, outputFlags, devStubFileName)) {
-                return 1;
-            }
+        if (lWriteOutputFiles(m, srcFile, outputFlags, outputType, outFileName, headerFileName, depsFileName,
+                              depsTargetName, hostStubFileName, devStubFileName)) {
+            return 1;
         }
     } else {
         ++m->errorCount;
