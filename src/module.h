@@ -226,6 +226,14 @@ class Module {
                                 OutputFlags outputFlags, OutputType outputType, const char *outFileName,
                                 const char *headerFileName, const char *depsFileName, const char *depsTargetName,
                                 const char *hostStubFileName, const char *devStubFileName);
+    static int CompileSingleTarget(const char *srcFile, Arch arch, const char *cpu, ISPCTarget target,
+                                   OutputFlags outputFlags, OutputType outputType, const char *outFileName,
+                                   const char *headerFileName, const char *depsFileName, const char *depsTargetName,
+                                   const char *hostStubFileName, const char *devStubFileName);
+    static int CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
+                                      OutputFlags outputFlags, OutputType outputType, const char *outFileName,
+                                      const char *headerFileName, const char *depsFileName, const char *depsTargetName,
+                                      const char *hostStubFileName, const char *devStubFileName);
     static int LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputType, const char *outFileName);
 
     /** Total number of errors encountered during compilation. */
