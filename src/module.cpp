@@ -3662,6 +3662,27 @@ static void lExtractOrCheckGlobals(llvm::Module *msrc, llvm::Module *mdst, bool 
     }
 }
 
+int lValidateXeTargetOutputs(Target *target, Module::OutputType &outputType) {
+#ifdef ISPC_XE_ENABLED
+    if (outputType == Module::OutputType::Asm || outputType == Module::OutputType::Object) {
+        if (g->target->isXeTarget()) {
+            Error(SourcePos(), "%s output is not supported yet for Xe targets. ",
+                  (outputType == Module::OutputType::Asm) ? "assembly" : "binary");
+            return 1;
+        }
+    }
+    if (g->target->isXeTarget() && outputType == Module::OutputType::Object) {
+        outputType = Module::OutputType::ZEBIN;
+    }
+    if (!g->target->isXeTarget() &&
+        (outputType == Module::OutputType::ZEBIN || outputType == Module::OutputType::SPIRV)) {
+        Error(SourcePos(), "SPIR-V and L0 binary formats are supported for Xe target only");
+        return 1;
+    }
+#endif
+    return 0;
+}
+
 int Module::CompileSingleTarget(const char *srcFile, Arch arch, const char *cpu, ISPCTarget target,
                                 OutputFlags outputFlags, OutputType outputType, const char *outFileName,
                                 const char *headerFileName, const char *depsFileName, const char *depsTargetName,
@@ -3683,22 +3704,10 @@ int Module::CompileSingleTarget(const char *srcFile, Arch arch, const char *cpu,
     llvm::TimeTraceScope TimeScope("Backend");
 
     if (compileResult == 0) {
-#ifdef ISPC_XE_ENABLED
-        if (outputType == Asm || outputType == Object) {
-            if (g->target->isXeTarget()) {
-                Error(SourcePos(), "%s output is not supported yet for Xe targets. ",
-                      (outputType == Asm) ? "assembly" : "binary");
-                return 1;
-            }
-        }
-        if (g->target->isXeTarget() && outputType == OutputType::Object) {
-            outputType = OutputType::ZEBIN;
-        }
-        if (!g->target->isXeTarget() && (outputType == OutputType::ZEBIN || outputType == OutputType::SPIRV)) {
-            Error(SourcePos(), "SPIR-V and L0 binary formats are supported for Xe target only");
+        if (lValidateXeTargetOutputs(g->target, outputType)) {
             return 1;
         }
-#endif
+
         if (outFileName != nullptr) {
             if (!m->writeOutput(outputType, outputFlags, outFileName)) {
                 return 1;
