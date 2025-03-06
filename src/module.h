@@ -236,6 +236,13 @@ class Module {
                                       const char *hostStubFileName, const char *devStubFileName);
     static int LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputType, const char *outFileName);
 
+    /** Write the corresponding output type to the given file.  Returns
+        true on success, false if there has been an error.  The given
+        filename may be nullptr, indicating that output should go to standard
+        output. */
+    bool writeOutput(OutputType ot, OutputFlags flags, const char *filename, const char *depTargetFileName = nullptr,
+                     const char *sourceFileName = nullptr, DispatchHeaderInfo *DHI = 0);
+
     /** Total number of errors encountered during compilation. */
     int errorCount{0};
 
@@ -277,12 +284,6 @@ class Module {
 
     std::vector<std::pair<const Type *, SourcePos>> exportedTypes;
 
-    /** Write the corresponding output type to the given file.  Returns
-        true on success, false if there has been an error.  The given
-        filename may be nullptr, indicating that output should go to standard
-        output. */
-    bool writeOutput(OutputType ot, OutputFlags flags, const char *filename, const char *depTargetFileName = nullptr,
-                     const char *sourceFileName = nullptr, DispatchHeaderInfo *DHI = 0);
     bool writeHeader(const char *filename);
     bool writeDispatchHeader(DispatchHeaderInfo *DHI);
     bool writeDeps(const char *filename, bool generateMakeRule, const char *targetName = nullptr,
