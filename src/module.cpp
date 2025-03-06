@@ -28,6 +28,7 @@
 #include <fcntl.h>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <set>
 #include <sstream>
 #include <stdarg.h>
@@ -3665,12 +3666,18 @@ int Module::CompileSingleTarget(const char *srcFile, Arch arch, const char *cpu,
                                 OutputFlags outputFlags, OutputType outputType, const char *outFileName,
                                 const char *headerFileName, const char *depsFileName, const char *depsTargetName,
                                 const char *hostStubFileName, const char *devStubFileName) {
-    g->target = new Target(arch, cpu, target, outputFlags.getPICLevel(), outputFlags.getMCModel(), g->printTarget);
-    if (!g->target->isValid()) {
+    // Both the target and the module objects lifetime is tied to the scope of
+    // this function. Raw pointers g->target and m are used as observers and
+    // are set to nullptr at the end of the function.
+    auto targetPtr = std::make_unique<Target>(arch, cpu, target, outputFlags.getPICLevel(), outputFlags.getMCModel(),
+                                              g->printTarget);
+    if (!targetPtr->isValid()) {
         return 1;
     }
+    g->target = targetPtr.get();
 
-    m = new Module(srcFile);
+    auto modulePtr = std::make_unique<Module>(srcFile);
+    m = modulePtr.get();
     const int compileResult = m->CompileFile();
 
     llvm::TimeTraceScope TimeScope("Backend");
@@ -3741,10 +3748,8 @@ int Module::CompileSingleTarget(const char *srcFile, Arch arch, const char *cpu,
     if (errorCount > 0) {
         m->symbolTable->PopInnerScopes();
     }
-    delete m;
-    m = nullptr;
 
-    delete g->target;
+    m = nullptr;
     g->target = nullptr;
 
     return errorCount > 0;
