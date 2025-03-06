@@ -891,6 +891,11 @@ struct Globals {
 
     enum pragmaUnrollType { none, nounroll, unroll, count };
 
+    /** Preprocessor Output Types, process with -E/-dD/-dM options */
+    enum class PreprocessorOutputType { Cpp, WithMacros, MacrosOnly };
+
+    PreprocessorOutputType preprocessorOutputType = PreprocessorOutputType::Cpp;
+
     /* If true, we are compiling for more than one target. */
     bool isMultiTargetCompilation;
 
