@@ -3686,17 +3686,14 @@ int lValidateXeTargetOutputs(Target *target, Module::OutputType &outputType) {
 int lWriteOutputFiles(Module *m, const char *srcFile, Module::OutputFlags outputFlags, Module::OutputType outputType,
                       const char *outFileName, const char *headerFileName, const char *depsFileName,
                       const char *depsTargetName, const char *hostStubFileName, const char *devStubFileName) {
-    if (outFileName != nullptr) {
-        if (!m->writeOutput(outputType, outputFlags, outFileName)) {
-            return 1;
-        }
+    // Write the main output file
+    if (outFileName && !m->writeOutput(outputType, outputFlags, outFileName)) {
+        return 1;
     }
-    if (headerFileName != nullptr) {
-        if (!m->writeOutput(Module::Header, outputFlags, headerFileName)) {
-            return 1;
-        }
+    if (headerFileName && !m->writeOutput(Module::Header, outputFlags, headerFileName)) {
+        return 1;
     }
-    if (depsFileName != nullptr || outputFlags.isDepsToStdout()) {
+    if (depsFileName || outputFlags.isDepsToStdout()) {
         std::string targetName;
         if (depsTargetName) {
             targetName = depsTargetName;
@@ -3712,19 +3709,16 @@ int lWriteOutputFiles(Module *m, const char *srcFile, Module::OutputFlags output
         } else {
             targetName = "a.out";
         }
+
         if (!m->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile)) {
             return 1;
         }
     }
-    if (hostStubFileName != nullptr) {
-        if (!m->writeOutput(Module::HostStub, outputFlags, hostStubFileName)) {
-            return 1;
-        }
+    if (hostStubFileName && !m->writeOutput(Module::HostStub, outputFlags, hostStubFileName)) {
+        return 1;
     }
-    if (devStubFileName != nullptr) {
-        if (!m->writeOutput(Module::DevStub, outputFlags, devStubFileName)) {
-            return 1;
-        }
+    if (devStubFileName && !m->writeOutput(Module::DevStub, outputFlags, devStubFileName)) {
+        return 1;
     }
     return 0;
 }
