@@ -3907,6 +3907,14 @@ int lFinilizeDispatchModule(Module *module, llvm::Module *dispatchModule, Arch a
     return 0;
 }
 
+Target::ISA lFindCommonISA(bool *compiledISAs) {
+    int firstTargetISA = 0;
+    while (!compiledISAs[firstTargetISA]) {
+        firstTargetISA++;
+    }
+    return (Target::ISA)firstTargetISA;
+}
+
 int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
                                    OutputFlags outputFlags, OutputType outputType, const char *outFileName,
                                    const char *headerFileName, const char *depsFileName, const char *depsTargetName,
@@ -3922,14 +3930,6 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
     // the target ISA appended to them.
     g->mangleFunctionsWithTarget = true;
 
-    // Array initialized with all false
-    bool compiledTargets[Target::NUM_ISAS] = {};
-
-    llvm::Module *dispatchModule = nullptr;
-
-    std::map<std::string, FunctionTargetVariants> exportedFunctions;
-    int errorCount = 0;
-
     // Handle creating a "generic" header file for multiple targets
     // that use exported varyings
     DispatchHeaderInfo DHI;
@@ -3937,7 +3937,13 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         return false;
     }
 
+    int errorCount = 0;
+    llvm::Module *dispatchModule = nullptr;
+    std::map<std::string, FunctionTargetVariants> exportedFunctions;
     std::vector<std::unique_ptr<Module>> modules;
+    // Array initialized with all false
+    bool compiledISAs[Target::NUM_ISAS] = {};
+
     for (unsigned int i = 0; i < targets.size(); ++i) {
         // Lifetime of the target object is tied to the scope of the loop.
         auto targetPtr = std::make_unique<Target>(arch, cpu, targets[i], outputFlags.getPICLevel(),
@@ -3953,12 +3959,12 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         // this target ISA.  (It doesn't make sense to compile to both
         // avx and avx-x2, for example.)
         auto targetISA = g->target->getISA();
-        if (compiledTargets[targetISA] || (compiledTargets[Target::SSE41] && targetISA == Target::SSE42) ||
-            (compiledTargets[Target::SSE42] && targetISA == Target::SSE41)) {
+        if (compiledISAs[targetISA] || (compiledISAs[Target::SSE41] && targetISA == Target::SSE42) ||
+            (compiledISAs[Target::SSE42] && targetISA == Target::SSE41)) {
             Error(SourcePos(), "Can't compile to multiple variants of %s target!\n", g->target->GetISAString());
             return 1;
         }
-        compiledTargets[targetISA] = true;
+        compiledISAs[targetISA] = true;
 
         auto modulePtr = std::make_unique<Module>(srcFile);
         m = modulePtr.get();
@@ -4017,14 +4023,11 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
     // compiled to above.  We'll use this as the target machine for
     // compiling the dispatch module--this is safe in that it is the
     // least-common-denominator of all of the targets we compiled to.
-    int firstTargetISA = 0;
-    while (!compiledTargets[firstTargetISA]) {
-        firstTargetISA++;
-    }
-    const char *firstISA = Target::ISAToTargetString((Target::ISA)firstTargetISA);
-    ISPCTarget firstTarget = ParseISPCTarget(firstISA);
+    Target::ISA firstISA = lFindCommonISA(compiledISAs);
+    const char *firstTargetISA = Target::ISAToTargetString(firstISA);
+    Assert(strcmp(firstTargetISA, "") != 0);
+    ISPCTarget firstTarget = ParseISPCTarget(firstTargetISA);
 
-    Assert(strcmp(firstISA, "") != 0);
     if (lFinilizeDispatchModule(m, dispatchModule, arch, cpu, firstTarget, exportedFunctions, srcFile, outputFlags,
                                 outputType, outFileName, depsFileName, depsTargetName)) {
         return 1;
