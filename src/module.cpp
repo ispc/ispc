@@ -2735,15 +2735,36 @@ bool Module::writeHeader(const char *fn) {
 }
 
 struct ispc::DispatchHeaderInfo {
-    bool EmitUnifs;
-    bool EmitFuncs;
-    bool EmitFrontMatter;
-    bool EmitBackMatter;
-    bool Emit4;
-    bool Emit8;
-    bool Emit16;
+    bool EmitUnifs = false;
+    bool EmitFuncs = false;
+    bool EmitFrontMatter = false;
+    bool EmitBackMatter = false;
+    bool Emit4 = false;
+    bool Emit8 = false;
+    bool Emit16 = false;
     FILE *file = nullptr;
     const char *fn = nullptr;
+
+    bool initialize(const char *headerFileName) {
+        EmitUnifs = true;
+        EmitFuncs = true;
+        EmitFrontMatter = true;
+        // This is toggled later.
+        EmitBackMatter = false;
+        Emit4 = true;
+        Emit8 = true;
+        Emit16 = true;
+        fn = headerFileName;
+
+        if (headerFileName) {
+            file = fopen(headerFileName, "w");
+            if (!file) {
+                perror("fopen");
+                return false;
+            }
+        }
+        return true;
+    }
 
     void closeFile() {
         if (file != nullptr) {
@@ -3811,21 +3832,8 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
     // Handle creating a "generic" header file for multiple targets
     // that use exported varyings
     DispatchHeaderInfo DHI;
-    if (headerFileName != nullptr) {
-        DHI.file = fopen(headerFileName, "w");
-        if (!DHI.file) {
-            perror("fopen");
-            return false;
-        }
-        DHI.fn = headerFileName;
-        DHI.EmitUnifs = true;
-        DHI.EmitFuncs = true;
-        DHI.EmitFrontMatter = true;
-        DHI.Emit4 = true;
-        DHI.Emit8 = true;
-        DHI.Emit16 = true;
-        // This is toggled later.
-        DHI.EmitBackMatter = false;
+    if (!DHI.initialize(headerFileName)) {
+        return false;
     }
 
     std::vector<Module *> modules(targets.size());
