@@ -91,6 +91,10 @@ option(ISPC_INCLUDE_UTILS_ONLY "Generate build targets only for the utils." OFF)
 option(ISPC_PREPARE_PACKAGE "Generate build targets for ispc package" OFF)
 option(ISPC_PACKAGE_EXAMPLES "Pack examples into the ISPC package" ON)
 option(ISPC_SLIM_BINARY "Build ISPC as slim binary" OFF)
+option(ENABLE_VERBOSE "Enables verbose output" OFF)
+
+# Pass options to child CMake files via cache
+set(ENABLE_VERBOSE ${ENABLE_VERBOSE} CACHE BOOL "Enable verbose output" FORCE)
 
 option(ISPC_CROSS "Build ISPC with cross compilation support" OFF)
 # Default settings for cross compilation

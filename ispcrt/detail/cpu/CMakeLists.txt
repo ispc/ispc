@@ -3,6 +3,15 @@
 
 set(ISPCRT_BUILD_TASK_MODELS "OpenMP;TBB;Threads")
 
+# Add an option to control verbosity for package finding
+option(ENABLE_VERBOSE "Enables verbose output" OFF)
+
+set(FIND_QUIET "QUIET")
+if(ENABLE_VERBOSE)
+    set(FIND_QUIET "")
+endif()
+
+
 if (ISPCRT_BUILD_TASKING)
     # Set default value for ISPCRT_BUILD_TASK_MODEL if it is not set externally
     if (NOT ISPCRT_BUILD_TASK_MODEL)
@@ -49,7 +58,7 @@ if (ISPCRT_BUILD_TASKING)
             endif()
         else()
             # Otherwise find TBB on the system
-            find_package(TBB QUIET COMPONENTS tbb)
+            find_package(TBB ${FIND_QUIET} COMPONENTS tbb)
             if (TBB_FOUND)
                 # TBB package does not produce any info when found, so print it here.
                 message(STATUS "Found TBB: ${TBB_VERSION} at ${TBB_DIR}")
