@@ -3318,6 +3318,11 @@ static std::string lGetTargetFileName(const char *outFileName, const std::string
     return targetOutFileName;
 }
 
+// Same as above, but takes a Target pointer instead of an ISA string.
+static std::string lGetTargetFileName(const char *outFileName, Target *target) {
+    return lGetTargetFileName(outFileName, target->GetISAString());
+}
+
 static bool lSymbolIsExported(const Symbol *s) { return s->exportedFunction != nullptr; }
 
 // Small structure to hold pointers to the various different versions of a
@@ -3928,9 +3933,7 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
             lGetExportedFunctions(m->symbolTable, exportedFunctions);
 
             if (outFileName != nullptr) {
-                std::string targetOutFileName;
-                std::string isaName{g->target->GetISAString()};
-                targetOutFileName = lGetTargetFileName(outFileName, isaName);
+                std::string targetOutFileName = lGetTargetFileName(outFileName, g->target);
                 if (!m->writeOutput(outputType, outputFlags, targetOutFileName.c_str())) {
                     return 1;
                 }
@@ -3952,8 +3955,7 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
                 DHI.EmitBackMatter = true;
             }
 
-            const char *isaName = g->target->GetISAString();
-            std::string targetHeaderFileName = lGetTargetFileName(headerFileName, isaName);
+            std::string targetHeaderFileName = lGetTargetFileName(headerFileName, g->target);
             // write out a header w/o target name for the first target only
             if (!m->writeOutput(Module::Header, outputFlags, headerFileName, nullptr, nullptr, &DHI)) {
                 return 1;
