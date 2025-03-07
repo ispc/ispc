@@ -3915,7 +3915,7 @@ Target::ISA lFindCommonISA(bool *ISAs) {
     return (Target::ISA)firstTargetISA;
 }
 
-int lInitializeISAsAndIDs(std::vector<ISPCTarget> targets, bool *ISAs) {
+int lInitializeISAsAndIDs(std::vector<ISPCTarget> targets, bool *ISAs, int *IDs) {
     for (unsigned int i = 0; i < targets.size(); ++i) {
         // Issue an error if we've already compiled to a variant of
         // this target ISA.  (It doesn't make sense to compile to both
@@ -3927,6 +3927,7 @@ int lInitializeISAsAndIDs(std::vector<ISPCTarget> targets, bool *ISAs) {
             return 1;
         }
         ISAs[ISA] = true;
+        IDs[ISA] = i;
     }
     return 0;
 }
@@ -3944,9 +3945,11 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
 
     // Array initialized with all false
     bool ISAs[Target::NUM_ISAS] = {};
+    // We can compile only to one target for each ISA in multi-target mode.
+    int IDs[Target::NUM_ISAS] = {};
 
     // Also check if we have same ISA with different vector widths
-    if (lInitializeISAsAndIDs(targets, ISAs)) {
+    if (lInitializeISAsAndIDs(targets, ISAs, IDs)) {
         return 1;
     }
 
@@ -4027,6 +4030,7 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         // Important: Don't delete the llvm::Module *m here; we need to
         // keep it around so the llvm::Functions *s stay valid for when
         // we generate the dispatch module's functions...
+        m = nullptr;
         g->target = nullptr;
     }
 
@@ -4035,14 +4039,18 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
     // compiling the dispatch module--this is safe in that it is the
     // least-common-denominator of all of the targets we compiled to.
     Target::ISA firstISA = lFindCommonISA(ISAs);
-    const char *firstTargetISA = Target::ISAToTargetString(firstISA);
-    Assert(strcmp(firstTargetISA, "") != 0);
-    ISPCTarget firstTarget = ParseISPCTarget(firstTargetISA);
+    int firstTargetIndex = IDs[firstISA];
+    ISPCTarget firstTarget = targets[firstTargetIndex];
+    // Set the module that corresponds to the first target ISA, not the last
+    // one hanging in m after we finished the loop.
+    m = modules[firstTargetIndex].get();
 
     if (lFinilizeDispatchModule(m, dispatchModule, arch, cpu, firstTarget, exportedFunctions, srcFile, outputFlags,
                                 outputType, outFileName, depsFileName, depsTargetName)) {
         return 1;
     }
+
+    m = nullptr;
 
     return errorCount > 0;
 }
