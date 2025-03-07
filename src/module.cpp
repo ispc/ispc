@@ -3988,22 +3988,8 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         }
     }
 
-    if (depsFileName != nullptr || outputFlags.isDepsToStdout()) {
-        std::string targetName;
-        if (depsTargetName) {
-            targetName = depsTargetName;
-        } else if (outFileName) {
-            targetName = outFileName;
-        } else if (!IsStdin(srcFile)) {
-            targetName = srcFile;
-            size_t dot = targetName.find_last_of('.');
-            if (dot != std::string::npos) {
-                targetName.erase(dot, std::string::npos);
-            }
-            targetName.append(".o");
-        } else {
-            targetName = "a.out";
-        }
+    if (depsFileName || outputFlags.isDepsToStdout()) {
+        std::string targetName = lDetermineDepsTargetName(srcFile, depsTargetName, outFileName);
         if (!m->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile)) {
             return 1;
         }
