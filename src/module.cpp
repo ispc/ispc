@@ -3838,11 +3838,15 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
 
     std::vector<std::unique_ptr<Module>> modules;
     for (unsigned int i = 0; i < targets.size(); ++i) {
-        g->target =
-            new Target(arch, cpu, targets[i], outputFlags.getPICLevel(), outputFlags.getMCModel(), g->printTarget);
-        if (!g->target->isValid()) {
+        // Lifetime of the target object is tied to the scope of the loop.
+        auto targetPtr = std::make_unique<Target>(arch, cpu, targets[i], outputFlags.getPICLevel(),
+                                                  outputFlags.getMCModel(), g->printTarget);
+        if (!targetPtr->isValid()) {
             return 1;
         }
+        // Here, we do not transfer the ownership of the target to the global
+        // variable. This is just an observer pointer.
+        g->target = targetPtr.get();
 
         // Issue an error if we've already compiled to a variant of
         // this target ISA.  (It doesn't make sense to compile to both
@@ -3918,13 +3922,10 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
             }
         }
 
-        delete g->target;
-        g->target = nullptr;
-
         // Important: Don't delete the llvm::Module *m here; we need to
         // keep it around so the llvm::Functions *s stay valid for when
         // we generate the dispatch module's functions...
-        m = nullptr;
+        g->target = nullptr;
     }
 
     // Find the first initialized target machine from the targets we
@@ -3940,7 +3941,9 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
     Assert(strcmp(firstISA, "") != 0);
     Assert(firstTarget != ISPCTarget::none);
 
-    g->target = new Target(arch, cpu, firstTarget, outputFlags.getPICLevel(), outputFlags.getMCModel(), false);
+    auto dispatchTargetPtr = std::make_unique<Target>(arch, cpu, firstTarget, outputFlags.getPICLevel(),
+                                                      outputFlags.getMCModel(), false);
+    g->target = dispatchTargetPtr.get();
     llvm::TargetMachine *firstTargetMachine = g->target->GetTargetMachine();
     Assert(firstTargetMachine);
     if (!g->target->isValid()) {
@@ -3999,9 +4002,6 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
             return 1;
         }
     }
-
-    delete g->target;
-    g->target = nullptr;
 
     return errorCount > 0;
 }
