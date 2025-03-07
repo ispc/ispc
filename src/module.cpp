@@ -3793,10 +3793,7 @@ int Module::CompileSingleTarget(const char *srcFile, Arch arch, const char *cpu,
     return errorCount > 0;
 }
 
-int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
-                                   OutputFlags outputFlags, OutputType outputType, const char *outFileName,
-                                   const char *headerFileName, const char *depsFileName, const char *depsTargetName,
-                                   const char *hostStubFileName, const char *devStubFileName) {
+int lValidateMultiTargetInputs(const char *srcFile, const char *outFileName, const char *cpu) {
     if (IsStdin(srcFile)) {
         Error(SourcePos(), "Compiling programs from standard input isn't "
                            "supported when compiling for multiple targets.  Please use "
@@ -3807,13 +3804,22 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         Error(SourcePos(), "Illegal to specify cpu type when compiling for multiple targets.");
         return 1;
     }
-
-    // The user supplied multiple targets
-    Assert(targets.size() > 1);
-
     if (outFileName != nullptr && strcmp(outFileName, "-") == 0) {
         Error(SourcePos(), "Multi-target compilation can't generate output "
                            "to stdout.  Please provide an output filename.\n");
+        return 1;
+    }
+    return 0;
+}
+
+int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
+                                   OutputFlags outputFlags, OutputType outputType, const char *outFileName,
+                                   const char *headerFileName, const char *depsFileName, const char *depsTargetName,
+                                   const char *hostStubFileName, const char *devStubFileName) {
+    // The user supplied multiple targets
+    Assert(targets.size() > 1);
+
+    if (lValidateMultiTargetInputs(srcFile, outFileName, cpu)) {
         return 1;
     }
 
