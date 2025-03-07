@@ -3812,6 +3812,44 @@ int lValidateMultiTargetInputs(const char *srcFile, const char *outFileName, con
     return 0;
 }
 
+int lWriteDispatchOutputFiles(llvm::Module *dispatchModule, Module *module, llvm::TargetMachine *firstTargetMachine,
+                              const char *srcFile, Module::OutputFlags outputFlags, Module::OutputType outputType,
+                              const char *outFileName, const char *depsFileName, const char *depsTargetName) {
+    if (outFileName != nullptr) {
+        switch (outputType) {
+        case Module::OutputType::CPPStub:
+            // No preprocessor output for dispatch module.
+            break;
+
+        case Module::OutputType::Bitcode:
+        case Module::OutputType::BitcodeText:
+            if (!Module::writeBitcode(dispatchModule, outFileName, outputType)) {
+                return 1;
+            }
+            break;
+
+        case Module::OutputType::Asm:
+        case Module::OutputType::Object:
+            if (!Module::writeObjectFileOrAssembly(firstTargetMachine, dispatchModule, outputType, outFileName)) {
+                return 1;
+            }
+            break;
+
+        default:
+            FATAL("Unexpected `outputType`");
+        }
+    }
+
+    if (depsFileName || outputFlags.isDepsToStdout()) {
+        std::string targetName = lDetermineDepsTargetName(srcFile, depsTargetName, outFileName);
+        if (!module->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile)) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
                                    OutputFlags outputFlags, OutputType outputType, const char *outFileName,
                                    const char *headerFileName, const char *depsFileName, const char *depsTargetName,
@@ -3963,36 +4001,9 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
 
     lEmitDispatchModule(dispatchModule, exportedFunctions);
 
-    if (outFileName != nullptr) {
-        switch (outputType) {
-        case CPPStub:
-            // No preprocessor output for dispatch module.
-            break;
-
-        case Bitcode:
-        case BitcodeText:
-            if (!writeBitcode(dispatchModule, outFileName, outputType)) {
-                return 1;
-            }
-            break;
-
-        case Asm:
-        case Object:
-            if (!writeObjectFileOrAssembly(firstTargetMachine, dispatchModule, outputType, outFileName)) {
-                return 1;
-            }
-            break;
-
-        default:
-            FATAL("Unexpected `outputType`");
-        }
-    }
-
-    if (depsFileName || outputFlags.isDepsToStdout()) {
-        std::string targetName = lDetermineDepsTargetName(srcFile, depsTargetName, outFileName);
-        if (!m->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile)) {
-            return 1;
-        }
+    if (lWriteDispatchOutputFiles(dispatchModule, m, firstTargetMachine, srcFile, outputFlags, outputType, outFileName,
+                                  depsFileName, depsTargetName)) {
+        return 1;
     }
 
     return errorCount > 0;
