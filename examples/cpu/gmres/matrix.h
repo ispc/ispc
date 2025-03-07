@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2012-2023, Intel Corporation
+  Copyright (c) 2012-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -159,11 +159,11 @@ class DenseMatrix : public Matrix {
     friend class Vector;
 
   public:
-    DenseMatrix(size_t size_r, size_t size_c) : Matrix(size_r, size_c), shared_ptr(false) {
+    DenseMatrix(size_t size_r, size_t size_c) : Matrix(size_r, size_c) {
         entries = (double *)malloc(size_r * size_c * sizeof(double));
     }
 
-    DenseMatrix(size_t size_r, size_t size_c, const double *content) : Matrix(size_r, size_c), shared_ptr(false) {
+    DenseMatrix(size_t size_r, size_t size_c, const double *content) : Matrix(size_r, size_c) {
         entries = (double *)malloc(size_r * size_c * sizeof(double));
         memcpy(entries, content, size_r * size_c * sizeof(double));
     }
@@ -192,7 +192,6 @@ class DenseMatrix : public Matrix {
 
   private:
     double *entries;
-    bool shared_ptr;
 };
 
 /**************************************************************\

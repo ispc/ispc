@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2012-2023, Intel Corporation
+  Copyright (c) 2012-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
     Matrix *A = CRSMatrix::matrix_from_mtf(argv[1]);
     if (A == nullptr)
         return -1;
-    DEBUG_PRINT("... size: %lu\n", A->cols());
+    DEBUG_PRINT("... size: " SIZE_T_FORMAT "\n", A->cols());
 
     DEBUG_PRINT("Loading b...\n");
     Vector *b = Vector::vector_from_mtf(argv[2]);

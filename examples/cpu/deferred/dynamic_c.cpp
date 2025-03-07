@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2023, Intel Corporation
+  Copyright (c) 2011-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -331,8 +331,14 @@ static inline float half_to_float_fast(uint16_t h) {
     uint32_t xm = ((uint32_t)hm) << 13;
 
     uint32_t bits = (xs | xe | xm);
-    float *fp = reinterpret_cast<float *>(&bits);
-    return *fp;
+
+    // Use a union for safe type punning.
+    union {
+        uint32_t u;
+        float f;
+    } conv;
+    conv.u = bits;
+    return conv.f;
 }
 
 static void ShadeTileC(int32_t tileStartX, int32_t tileEndX, int32_t tileStartY, int32_t tileEndY, int32_t gBufferWidth,
