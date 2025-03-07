@@ -3916,6 +3916,8 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
     std::vector<std::unique_ptr<Module>> modules;
     // Array initialized with all false
     bool compiledISAs[Target::NUM_ISAS] = {};
+    // We can compile only to one target for each ISA in multi-target mode.
+    int compiledTargetIndex[Target::NUM_ISAS] = {};
 
     for (unsigned int i = 0; i < targets.size(); ++i) {
         // Lifetime of the target object is tied to the scope of the loop.
@@ -3938,6 +3940,7 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
             return 1;
         }
         compiledISAs[targetISA] = true;
+        compiledTargetIndex[targetISA] = i;
 
         auto modulePtr = std::make_unique<Module>(srcFile);
         m = modulePtr.get();
@@ -3996,9 +3999,11 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
     // compiling the dispatch module--this is safe in that it is the
     // least-common-denominator of all of the targets we compiled to.
     Target::ISA firstISA = lFindCommonISA(compiledISAs);
-    const char *firstTargetISA = Target::ISAToTargetString(firstISA);
-    Assert(strcmp(firstTargetISA, "") != 0);
-    ISPCTarget firstTarget = ParseISPCTarget(firstTargetISA);
+    int firstTargetIndex = compiledTargetIndex[firstISA];
+    ISPCTarget firstTarget = targets[firstTargetIndex];
+    // Set the module that corresponds to the first target ISA, not the last
+    // one hangling in m after we finished the loop.
+    m = modules[firstTargetIndex].get();
 
     if (lFinilizeDispatchModule(m, dispatchModule, arch, cpu, firstTarget, exportedFunctions, srcFile, outputFlags,
                                 outputType, outFileName, depsFileName, depsTargetName)) {
