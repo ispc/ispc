@@ -3855,6 +3855,27 @@ int lWriteDispatchOutputFiles(llvm::Module *dispatchModule, Module *module, llvm
     return 0;
 }
 
+int lWriteMultiTargetHeaders(Module *module, Target *gTarget, DispatchHeaderInfo *DHI, bool isLastTarget,
+                             Module::OutputFlags outputFlags, const char *headerFileName) {
+    if (headerFileName != nullptr) {
+        if (isLastTarget) {
+            // only print backmatter on the last target.
+            DHI->EmitBackMatter = true;
+        }
+
+        std::string targetHeaderFileName = lGetTargetFileName(headerFileName, g->target);
+        // write out a header w/o target name appending it with different
+        // declarations depending on the target width for every new target
+        if (!module->writeOutput(Module::Header, outputFlags, headerFileName, nullptr, nullptr, DHI)) {
+            return 1;
+        }
+        if (!module->writeOutput(Module::Header, outputFlags, targetHeaderFileName.c_str())) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
                                    OutputFlags outputFlags, OutputType outputType, const char *outFileName,
                                    const char *headerFileName, const char *depsFileName, const char *depsTargetName,
@@ -3947,25 +3968,12 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
             return 1;
         }
 
-        // Only write the generate header file, if desired, the first
-        // time through the loop here.
-        if (headerFileName != nullptr) {
-            if (i == targets.size() - 1) {
-                // only print backmatter on the last target.
-                DHI.EmitBackMatter = true;
-            }
-
-            std::string targetHeaderFileName = lGetTargetFileName(headerFileName, g->target);
-            // write out a header w/o target name for the first target only
-            if (!m->writeOutput(Module::Header, outputFlags, headerFileName, nullptr, nullptr, &DHI)) {
-                return 1;
-            }
-            if (!m->writeOutput(Module::Header, outputFlags, targetHeaderFileName.c_str())) {
-                return 1;
-            }
-            if (i == targets.size() - 1) {
-                DHI.closeFile();
-            }
+        bool isLastTarget = (i == (targets.size() - 1));
+        if (lWriteMultiTargetHeaders(m, g->target, &DHI, isLastTarget, outputFlags, headerFileName)) {
+            return 1;
+        }
+        if (isLastTarget) {
+            DHI.closeFile();
         }
 
         // Important: Don't delete the llvm::Module *m here; we need to
