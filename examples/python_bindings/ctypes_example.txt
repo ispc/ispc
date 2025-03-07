@@ -1,0 +1,43 @@
+This example demonstrates how to use ctypes to call a single ISPC function in Python.
+
+First, save this code to sample.ispc. This function takes in a pointer to an array of floats and modifies the array.
+
+task void f_v(uniform float RET[]) {
+    float<3> a = {1, 10, 100};
+    float<6> b = a.zxyyxz;
+
+    RET[0] = b.x + 2 * b.y + 3 * b.z - 3 * b[3] - 2 * b[4] - b[5];
+    RET[1] = b.x + 2 * b.y + 3 * b.z - 3 * b[3] - 2 * b[3] - b[4];
+}
+
+
+Next, we need to compile this function into a shared object named sample.so that ctypes can call into.
+To compile this function using ISPC, run this command, modifying the flags for your target architecture.
+
+ispc --pic --woff sample.ispc -o sample.ispc.o --arch=x86-64 --target=sse4-i32x4 -O2 -h sample.ispc.h
+clang++ -O2 -m64 sample.ispc.o -o ./sample.so -fPIC -shared
+
+
+Finally, use ctypes in Python to call the f_v function defined in sample.so:
+
+from ctypes import c_float, POINTER, CDLL
+
+def f_v_test():
+    # Load the shared object that contains the ispc function we want to call (f_v)
+    lib = CDLL("sample.so")
+
+    # Define the input argument types and the return type (None = void)
+    lib.f_v.argtypes = [POINTER(c_float)]
+    lib.f_v.restype = None
+
+    # Initialize an array 256 floats. Set the default value of each to -1e20
+    array_size = 256
+    returned_result = (c_float * array_size)(-1e20)
+    lib.f_v(returned_result)
+
+    for i in range(array_size):
+        print(returned_result[i])
+
+
+This pattern can be adapted for other scenarios where you need to pass complex data structures between Python and ISPC for high-performance computing tasks.
+See the ctypes documentation for more information: https://docs.python.org/3/library/ctypes.html
