@@ -782,71 +782,42 @@ define i32 @__packed_store_activei64(ptr %startptr, <8 x i64> %vals, <8 x i32> %
 ; Function Attrs: alwaysinline nounwind
 define i32 @__packed_store_active2i64(ptr %startptr, <8 x i64> %vals, <8 x i32> %full_mask) #0 {
 entry:
-
-  ; Create the first <4 x i64> vector using shufflevector
   %vals_low = shufflevector <8 x i64> %vals, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-
-  ; Create the second <4 x i64> vector using shufflevector
   %vals_high = shufflevector <8 x i64> %vals, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-
-  
-  ; Create i32 Bitmask
   %cmp.i = icmp ne <8 x i32> %full_mask, zeroinitializer
   %0 = bitcast <8 x i1> %cmp.i to i8
-
-  ; unpack each bit to a word in i64
   %conv = zext i8 %0 to i64
   %1 = tail call i64 @llvm.x86.bmi.pdep.64(i64 %conv, i64 281479271743489)
-  ; Count bits in bitmask
   %2 = call i64 @llvm.ctpop.i64(i64 %1)
   %conv5 = trunc i64 %2 to i32
-  
-  %mul = mul i64 %1, 65535 ; Expand bits to 0xFFFF words in i64 (expanded_mask)
-
-  ; Create "compressed mask" all the way to the right ( )
+  %mul = mul i64 %1, 65535
   %notmask = shl nsw i32 -1, %conv5
   %sub = xor i32 %notmask, -1
-  
-  ; Extend compressed mask to high bit in each word
   %conv6 = zext i32 %sub to i64
   %3 = tail call i64 @llvm.x86.bmi.pdep.64(i64 %conv6, i64 -9223231297218904064)
-
-  ; Extend above WIP mask to 256 bit register
   %shuffle.i = bitcast i64 %3 to <4 x i16>
   %conv.i = sext <4 x i16> %shuffle.i to <4 x i64>
-  
-  ; Select indicies using large 246 bit mask
   %4 = tail call i64 @llvm.x86.bmi.pext.64(i64 506097522914230528, i64 %mul)
-
-  ; Store low 4 numbers
   %shuffle.i33 = bitcast i64 %4 to <8 x i8>
   %conv.i34 = zext <8 x i8> %shuffle.i33 to <8 x i32>
   %5 = bitcast <4 x i64> %vals_low to <8 x i32>
   %6 = tail call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %5, <8 x i32> %conv.i34)
   %7 = bitcast <4 x i64> %conv.i to <8 x i32>
   tail call void @llvm.x86.avx2.maskstore.d.256(ptr %startptr, <8 x i32> %7, <8 x i32> %6)
-
-  ; Adjust our ptr
   %mul15 = shl nuw nsw i32 %conv5, 1
   %add.ptr = getelementptr inbounds i32, ptr %startptr, i32 %mul15
-
-  ; Create store Mask
   %8 = lshr i8 %0, 4
   %conv16 = zext i8 %8 to i64
   %9 = tail call i64 @llvm.x86.bmi.pdep.64(i64 %conv16, i64 281479271743489)
-
   %10 = tail call i64 @llvm.ctpop.i64(i64 %9)
   %conv19 = trunc i64 %10 to i32
   %mul20 = mul i64 %9, 65535
-  
   %notmask52 = shl nsw i32 -1, %conv19
   %sub22 = xor i32 %notmask52, -1
   %conv23 = zext i32 %sub22 to i64
   %11 = tail call i64 @llvm.x86.bmi.pdep.64(i64 %conv23, i64 -9223231297218904064)
-
   %shuffle.i54 = bitcast i64 %11 to <4 x i16>
   %conv.i50 = sext <4 x i16> %shuffle.i54 to <4 x i64>
-
   %12 = tail call i64 @llvm.x86.bmi.pext.64(i64 506097522914230528, i64 %mul20)
   %shuffle.i41 = bitcast i64 %12 to <8 x i8>
   %conv.i42 = zext <8 x i8> %shuffle.i41 to <8 x i32>
