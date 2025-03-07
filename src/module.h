@@ -242,6 +242,10 @@ class Module {
         output. */
     bool writeOutput(OutputType ot, OutputFlags flags, const char *filename, const char *depTargetFileName = nullptr,
                      const char *sourceFileName = nullptr, DispatchHeaderInfo *DHI = 0);
+    static bool writeCPPStub(Module *module, const char *outFileName);
+    static bool writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm::Module *module,
+                                          OutputType outputType, const char *outFileName);
+    static bool writeBitcode(llvm::Module *module, const char *outFileName, OutputType outputType);
 
     /** Total number of errors encountered during compilation. */
     int errorCount{0};
@@ -292,10 +296,6 @@ class Module {
     bool writeHostStub(const char *filename);
     bool writeCPPStub(const char *outFileName);
     bool writeObjectFileOrAssembly(OutputType outputType, const char *filename);
-    static bool writeCPPStub(Module *module, const char *outFileName);
-    static bool writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm::Module *module,
-                                          OutputType outputType, const char *outFileName);
-    static bool writeBitcode(llvm::Module *module, const char *outFileName, OutputType outputType);
 #ifdef ISPC_XE_ENABLED
     static std::unique_ptr<llvm::Module> translateFromSPIRV(std::ifstream &outString);
     static bool translateToSPIRV(llvm::Module *module, std::stringstream &outString);
