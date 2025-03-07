@@ -3876,6 +3876,37 @@ int lWriteMultiTargetHeaders(Module *module, Target *gTarget, DispatchHeaderInfo
     return 0;
 }
 
+int lFinilizeDispatchModule(Module *module, llvm::Module *dispatchModule, Arch arch, const char *cpu,
+                            ISPCTarget firstTarget, std::map<std::string, FunctionTargetVariants> &exportedFunctions,
+                            const char *srcFile, Module::OutputFlags outputFlags, Module::OutputType outputType,
+                            const char *outFileName, const char *depsFileName, const char *depsTargetName) {
+    Assert(firstTarget != ISPCTarget::none);
+
+    auto dispatchTargetPtr =
+        std::make_unique<Target>(arch, cpu, firstTarget, outputFlags.getPICLevel(), outputFlags.getMCModel(), false);
+    g->target = dispatchTargetPtr.get();
+    llvm::TargetMachine *firstTargetMachine = g->target->GetTargetMachine();
+    Assert(firstTargetMachine);
+    if (!g->target->isValid()) {
+        return 1;
+    }
+
+    if (dispatchModule == nullptr) {
+        Error(SourcePos(), "Failed to create dispatch module.\n");
+        return 1;
+    }
+
+    lEmitDispatchModule(dispatchModule, exportedFunctions);
+
+    if (lWriteDispatchOutputFiles(dispatchModule, module, firstTargetMachine, srcFile, outputFlags, outputType,
+                                  outFileName, depsFileName, depsTargetName)) {
+        return 1;
+    }
+
+    g->target = nullptr;
+    return 0;
+}
+
 int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
                                    OutputFlags outputFlags, OutputType outputType, const char *outFileName,
                                    const char *headerFileName, const char *depsFileName, const char *depsTargetName,
@@ -3992,27 +4023,10 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
     }
     const char *firstISA = Target::ISAToTargetString((Target::ISA)firstTargetISA);
     ISPCTarget firstTarget = ParseISPCTarget(firstISA);
+
     Assert(strcmp(firstISA, "") != 0);
-    Assert(firstTarget != ISPCTarget::none);
-
-    auto dispatchTargetPtr = std::make_unique<Target>(arch, cpu, firstTarget, outputFlags.getPICLevel(),
-                                                      outputFlags.getMCModel(), false);
-    g->target = dispatchTargetPtr.get();
-    llvm::TargetMachine *firstTargetMachine = g->target->GetTargetMachine();
-    Assert(firstTargetMachine);
-    if (!g->target->isValid()) {
-        return 1;
-    }
-
-    if (dispatchModule == nullptr) {
-        Error(SourcePos(), "Failed to create dispatch module.\n");
-        return 1;
-    }
-
-    lEmitDispatchModule(dispatchModule, exportedFunctions);
-
-    if (lWriteDispatchOutputFiles(dispatchModule, m, firstTargetMachine, srcFile, outputFlags, outputType, outFileName,
-                                  depsFileName, depsTargetName)) {
+    if (lFinilizeDispatchModule(m, dispatchModule, arch, cpu, firstTarget, exportedFunctions, srcFile, outputFlags,
+                                outputType, outFileName, depsFileName, depsTargetName)) {
         return 1;
     }
 
