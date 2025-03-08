@@ -5,6 +5,7 @@
 define(`ISA',`AVX1')
 
 include(`target-avx-common-8.ll')
+packed_load_and_store(FALSE)
 saturation_arithmetic()
 define_shuffles()
 
