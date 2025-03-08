@@ -226,7 +226,26 @@ class Module {
                                 OutputFlags outputFlags, OutputType outputType, const char *outFileName,
                                 const char *headerFileName, const char *depsFileName, const char *depsTargetName,
                                 const char *hostStubFileName, const char *devStubFileName);
+    static int CompileSingleTarget(const char *srcFile, Arch arch, const char *cpu, ISPCTarget target,
+                                   OutputFlags outputFlags, OutputType outputType, const char *outFileName,
+                                   const char *headerFileName, const char *depsFileName, const char *depsTargetName,
+                                   const char *hostStubFileName, const char *devStubFileName);
+    static int CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
+                                      OutputFlags outputFlags, OutputType outputType, const char *outFileName,
+                                      const char *headerFileName, const char *depsFileName, const char *depsTargetName,
+                                      const char *hostStubFileName, const char *devStubFileName);
     static int LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputType, const char *outFileName);
+
+    /** Write the corresponding output type to the given file.  Returns
+        true on success, false if there has been an error.  The given
+        filename may be nullptr, indicating that output should go to standard
+        output. */
+    bool writeOutput(OutputType ot, OutputFlags flags, const char *filename, const char *depTargetFileName = nullptr,
+                     const char *sourceFileName = nullptr, DispatchHeaderInfo *DHI = 0);
+    static bool writeCPPStub(Module *module, const char *outFileName);
+    static bool writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm::Module *module,
+                                          OutputType outputType, const char *outFileName);
+    static bool writeBitcode(llvm::Module *module, const char *outFileName, OutputType outputType);
 
     /** Total number of errors encountered during compilation. */
     int errorCount{0};
@@ -269,12 +288,6 @@ class Module {
 
     std::vector<std::pair<const Type *, SourcePos>> exportedTypes;
 
-    /** Write the corresponding output type to the given file.  Returns
-        true on success, false if there has been an error.  The given
-        filename may be nullptr, indicating that output should go to standard
-        output. */
-    bool writeOutput(OutputType ot, OutputFlags flags, const char *filename, const char *depTargetFileName = nullptr,
-                     const char *sourceFileName = nullptr, DispatchHeaderInfo *DHI = 0);
     bool writeHeader(const char *filename);
     bool writeDispatchHeader(DispatchHeaderInfo *DHI);
     bool writeDeps(const char *filename, bool generateMakeRule, const char *targetName = nullptr,
@@ -283,10 +296,6 @@ class Module {
     bool writeHostStub(const char *filename);
     bool writeCPPStub(const char *outFileName);
     bool writeObjectFileOrAssembly(OutputType outputType, const char *filename);
-    static bool writeCPPStub(Module *module, const char *outFileName);
-    static bool writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm::Module *module,
-                                          OutputType outputType, const char *outFileName);
-    static bool writeBitcode(llvm::Module *module, const char *outFileName, OutputType outputType);
 #ifdef ISPC_XE_ENABLED
     static std::unique_ptr<llvm::Module> translateFromSPIRV(std::ifstream &outString);
     static bool translateToSPIRV(llvm::Module *module, std::stringstream &outString);
