@@ -68,6 +68,13 @@ option(INSTALL_ISPC "Enable installation of ISPC to CMAKE_INSTALL_PREFIX" OFF)
 option(INSTALL_WITH_XE_DEPS "Enable installation ISPC or stage2 toolchain with XE_DEPS to CMAKE_INSTALL_PREFIX" OFF)
 option(XE_DEPS "Enable build of all XE dependencies (L0 loader, vc-intrinsics, SPIRV-LLVM-Translator" ON)
 option(MACOS_UNIVERSAL_BIN "Enable build of universal binaries for macOS" ON)
+option(FETCH_CONTENT_QUIET "Enable quiet mode for FetchContent" ON)
+
+if(FETCH_CONTENT_QUIET)
+    set(FETCH_CONTENT_QUIET_OPTION "QUIET")
+else()
+    set(FETCH_CONTENT_QUIET_OPTION "")
+endif()
 
 # Force LTO when PGO enabled to the sake of simplicity and less number of
 # possible build variants.
@@ -333,6 +340,7 @@ message(STATUS "CMAKE_CXX_FLAGS is ${CMAKE_CXX_FLAGS}")
 message(STATUS "MACOS_VERSION_MIN is ${MACOS_VERSION_MIN}")
 message(STATUS "MACOS_UNIVERSAL_BIN is ${MACOS_UNIVERSAL_BIN}")
 message(STATUS "CMAKE_OSX_ARCHITECTURES is ${CMAKE_OSX_ARCHITECTURES}")
+message(STATUS "FETCH_CONTENT_QUIET is ${FETCH_CONTENT_QUIET}")
 
 
 if (NOT XE_DEPS)
@@ -428,7 +436,7 @@ hash_dir = false
     if (NOT CCACHE_EXE)
         # Download and unpack ccache executable when no ccache in system.
         FetchContent_Populate(ccache
-            QUIET
+            ${FETCH_CONTENT_QUIET_OPTION}
             URL ${CCACHE_URL}
             SOURCE_DIR ccache
             )
@@ -1116,7 +1124,7 @@ endif()
 if (PGO OR NOT SKIP_STAGE2)
     if (LLVM_PATCHES_VER)
         FetchContent_Populate(llvm-source
-            QUIET
+            ${FETCH_CONTENT_QUIET_OPTION}
             GIT_REPOSITORY ${LLVM_URL}
             GIT_TAG ${LLVM_TAG}
             GIT_SHALLOW ON
@@ -1127,7 +1135,7 @@ if (PGO OR NOT SKIP_STAGE2)
             )
     else()
         FetchContent_Populate(llvm-source
-            QUIET
+            ${FETCH_CONTENT_QUIET_OPTION}
             GIT_REPOSITORY ${LLVM_URL}
             GIT_TAG ${LLVM_TAG}
             GIT_SHALLOW ON
@@ -1140,7 +1148,7 @@ if (PGO OR NOT SKIP_STAGE2)
     if (NOT BUILD_STAGE2_TOOLCHAIN_ONLY AND PGO AND NOT ${ISPC_CORPUS_URL} STREQUAL "null")
         # May be profiles from examples or less set of programs just enough?
         FetchContent_Populate(ispc-corpus
-            QUIET
+            ${FETCH_CONTENT_QUIET_OPTION}
             GIT_REPOSITORY ${ISPC_CORPUS_URL}
             GIT_TAG main
             GIT_SHALLOW ON
@@ -1155,7 +1163,7 @@ if (NOT SKIP_FETCHING_XE_DEPS)
     if (XE_DEPS OR (SKIP_STAGE2 AND BUILD_SPIRV_TRANSLATOR_ONLY))
         # Checkout LLVM-SPIRV-Translator needed for XE
         FetchContent_Populate(spirv-translator
-            QUIET
+            ${FETCH_CONTENT_QUIET_OPTION}
             GIT_REPOSITORY ${SPIRV_TRANSLATOR_URL}
             GIT_TAG ${SPIRV_TRANSLATOR_SHA}
             GIT_SHALLOW OFF
@@ -1167,7 +1175,7 @@ if (NOT SKIP_FETCHING_XE_DEPS)
     if (XE_DEPS OR (SKIP_STAGE2 AND BUILD_VC_INTRINSICS_ONLY))
         # Checkout vc-intrinsics needed for XE
         FetchContent_Populate(vc-intrinsics
-            QUIET
+            ${FETCH_CONTENT_QUIET_OPTION}
             GIT_REPOSITORY ${VC_INTRINSICS_URL}
             GIT_TAG ${VC_INTRINSICS_SHA}
             GIT_SHALLOW OFF
@@ -1181,7 +1189,7 @@ if (NOT SKIP_FETCHING_XE_DEPS)
     if (XE_DEPS OR (SKIP_STAGE2 AND BUILD_L0_LOADER_ONLY))
         # Checkout level-zero needed for XE
         FetchContent_Populate(l0-source
-            QUIET
+            ${FETCH_CONTENT_QUIET_OPTION}
             GIT_REPOSITORY ${L0_URL}
             GIT_TAG ${L0_TAG}
             GIT_SHALLOW ON
