@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2023, Intel Corporation
+#  Copyright (c) 2018-2025, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -10,6 +10,11 @@ cmake_minimum_required(VERSION 3.12)
 
 set (PROJECT_NAME ispc_examples)
 project(${PROJECT_NAME} C CXX)
+
+# Set the C++ standard to C++17
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(CMAKE_BUILD_TYPE)
     # Validate build type

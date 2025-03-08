@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2023, Intel Corporation
+  Copyright (c) 2011-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -326,7 +326,7 @@ static int32_t lAtomicCompareAndSwap32(volatile int32_t *v, int32_t newValue, in
 #endif // ISPC_IS_WINDOWS
 }
 
-static inline int32_t lAtomicAdd(volatile int32_t *v, int32_t delta) {
+[[maybe_unused]] static inline int32_t lAtomicAdd(volatile int32_t *v, int32_t delta) {
 #ifdef ISPC_IS_WINDOWS
     return InterlockedExchangeAdd((volatile LONG *)v, delta) + delta;
 #else
