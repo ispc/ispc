@@ -41,18 +41,18 @@ jobs:
 
     - name: Download ISPC release archives
       env:
-        LINK: https://github.com/ispc/ispc/releases/download/v${{ inputs.version }}/ispc-v${{ inputs.version }}-linux-oneapi.tar.gz
+        LINK: https://github.com/ispc/ispc/releases/download/v${{ inputs.version }}/ispc-v${{ inputs.version }}-linux.tar.gz
       run: |
         echo "Download artifact ${LINK}" >> "$GITHUB_STEP_SUMMARY"
         wget "${{ env.LINK }}"
-        tar xf "ispc-v${{ inputs.version }}-linux-oneapi.tar.gz"
+        tar xf "ispc-v${{ inputs.version }}-linux.tar.gz"
       shell: bash
 
     - name: Build
       run: |
         mkdir build
         cd build
-        cmake -DISPC_URL="${GITHUB_WORKSPACE}/ispc-v${{ inputs.version }}-linux-oneapi.tar.gz" -DISPC_VERSION=${{ inputs.version }} ../
+        cmake -DISPC_URL="${GITHUB_WORKSPACE}/ispc-v${{ inputs.version }}-linux.tar.gz" -DISPC_VERSION=${{ inputs.version }} ../
         cmake --build .
 
   build-ospray-superbuild-windows:
