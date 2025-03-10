@@ -125,6 +125,12 @@ class StorageClass {
     static constexpr Kind EXTERN_SYCL{Kind::EXTERN_SYCL};
 
     std::string GetString() const;
+    bool IsNone() const;
+    bool IsExtern() const;
+    bool IsStatic() const;
+    bool IsTypedef() const;
+    bool IsExternC() const;
+    bool IsExternSYCL() const;
 
   private:
     Kind m_kind = Kind::NONE;

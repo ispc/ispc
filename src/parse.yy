@@ -905,7 +905,7 @@ declaration_statement
             AssertPos(@1, m->errorCount > 0);
             $$ = nullptr;
         }
-        else if ($1->declSpecs->storageClass == StorageClass::TYPEDEF) {
+        else if ($1->declSpecs->storageClass.IsTypedef()) {
             for (unsigned int i = 0; i < $1->declarators.size(); ++i) {
                 if ($1->declarators[i] == nullptr)
                     AssertPos(@1, m->errorCount > 0);
@@ -991,7 +991,7 @@ declaration_specifiers
       {
           DeclSpecs *ds = (DeclSpecs *)$2;
           if (ds != nullptr) {
-              if (ds->storageClass != StorageClass::NONE)
+              if (!ds->storageClass.IsNone())
                   Error(@1, "Multiple storage class specifiers in a declaration are illegal. "
                         "(Have provided both \"%s\" and \"%s\".)",
                         ds->storageClass.GetString().c_str(),
@@ -2570,7 +2570,7 @@ function_definition
             const FunctionType *funcType = CastType<FunctionType>($2->type);
             if (funcType == nullptr)
                 AssertPos(@1, m->errorCount > 0);
-            else if ($1->storageClass == StorageClass::TYPEDEF)
+            else if ($1->storageClass.IsTypedef())
                 Error(@1, "Illegal \"typedef\" provided with function definition.");
             else {
                 Stmt *code = $4;
@@ -3119,7 +3119,7 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
         return;
 
     decl->InitFromDeclSpecs(ds);
-    if (ds->storageClass == StorageClass::TYPEDEF) {
+    if (ds->storageClass.IsTypedef()) {
         const StructType *st = CastType<StructType>(decl->type);
         if (st && st->IsAnonymousType()) {
             st = st->GetAsNamed(decl->name);

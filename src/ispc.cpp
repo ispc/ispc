@@ -3324,6 +3324,13 @@ std::string StorageClass::GetString() const {
     }
 }
 
+bool StorageClass::IsNone() const { return m_kind == Kind::NONE; }
+bool StorageClass::IsExtern() const { return m_kind == Kind::EXTERN; }
+bool StorageClass::IsStatic() const { return m_kind == Kind::STATIC; }
+bool StorageClass::IsTypedef() const { return m_kind == Kind::TYPEDEF; }
+bool StorageClass::IsExternC() const { return m_kind == Kind::EXTERN_C; }
+bool StorageClass::IsExternSYCL() const { return m_kind == Kind::EXTERN_SYCL; }
+
 ///////////////////////////////////////////////////////////////////////////
 // SourcePos
 
