@@ -96,34 +96,42 @@ bool lIsFunctionKind(Declarator *d) {
     return false;
 }
 
-static void lPrintTypeQualifiers(int typeQualifiers) {
+std::string DeclSpecs::GetTypeQualifiersString(int typeQualifiers) {
+    std::string result;
+
     if (typeQualifiers & TYPEQUAL_INLINE) {
-        printf("inline ");
+        result += "inline ";
     }
     if (typeQualifiers & TYPEQUAL_CONST) {
-        printf("const ");
+        result += "const ";
     }
     if (typeQualifiers & TYPEQUAL_UNIFORM) {
-        printf("uniform ");
+        result += "uniform ";
     }
     if (typeQualifiers & TYPEQUAL_VARYING) {
-        printf("varying ");
+        result += "varying ";
     }
     if (typeQualifiers & TYPEQUAL_TASK) {
-        printf("task ");
+        result += "task ";
     }
     if (typeQualifiers & TYPEQUAL_SIGNED) {
-        printf("signed ");
+        result += "signed ";
     }
     if (typeQualifiers & TYPEQUAL_UNSIGNED) {
-        printf("unsigned ");
+        result += "unsigned ";
     }
     if (typeQualifiers & TYPEQUAL_EXPORT) {
-        printf("export ");
+        result += "export ";
     }
     if (typeQualifiers & TYPEQUAL_UNMASKED) {
-        printf("unmasked ");
+        result += "unmasked ";
     }
+
+    return result;
+}
+
+static void lPrintTypeQualifiers(int typeQualifiers) {
+    printf("%s", DeclSpecs::GetTypeQualifiersString(typeQualifiers).c_str());
 }
 
 /** Given a Type and a set of type qualifiers, apply the type qualifiers to
@@ -193,6 +201,17 @@ AttrArgument::AttrArgument() : kind(ATTR_ARG_UNKNOWN), intVal(0), stringVal() {}
 AttrArgument::AttrArgument(int64_t i) : kind(ATTR_ARG_UINT32), intVal(i), stringVal() {}
 AttrArgument::AttrArgument(const std::string &s) : kind(ATTR_ARG_STRING), intVal(0), stringVal(s) {}
 
+std::string AttrArgument::GetString() const {
+    switch (kind) {
+    case ATTR_ARG_UINT32:
+        return std::to_string(intVal);
+    case ATTR_ARG_STRING:
+        return stringVal;
+    case ATTR_ARG_UNKNOWN:
+        return "";
+    }
+}
+
 void AttrArgument::Print() const {
     switch (kind) {
     case ATTR_ARG_UINT32:
@@ -222,6 +241,8 @@ bool Attribute::IsKnownAttribute() const {
 
     return false;
 }
+
+std::string Attribute::GetString() const { return name + "(" + arg.GetString() + ")"; }
 
 void Attribute::Print() const {
     printf("%s", name.c_str());
@@ -284,6 +305,14 @@ void AttributeList::CheckForUnknownAttributes(SourcePos pos) const {
     }
 }
 
+std::string AttributeList::GetString() const {
+    std::string ret;
+    for (const auto &attr : attributes) {
+        ret += attr->GetString() + " ";
+    }
+    return ret;
+}
+
 void AttributeList::Print() const {
     for (const auto &attr : attributes) {
         attr->Print();
@@ -294,9 +323,8 @@ void AttributeList::Print() const {
 ///////////////////////////////////////////////////////////////////////////
 // DeclSpecs
 
-DeclSpecs::DeclSpecs(const Type *t, StorageClass sc, int tq) {
+DeclSpecs::DeclSpecs(const Type *t, StorageClass sc, int tq) : storageClass(sc) {
     baseType = t;
-    storageClass = sc;
     typeQualifiers = tq;
     soaWidth = 0;
     vectorSize = std::monostate{};
@@ -409,28 +437,8 @@ const Type *DeclSpecs::GetBaseType(SourcePos pos) const {
     return retType;
 }
 
-static const char *lGetStorageClassName(StorageClass storageClass) {
-    switch (storageClass) {
-    case SC_NONE:
-        return "";
-    case SC_EXTERN:
-        return "extern";
-    case SC_EXTERN_C:
-        return "extern \"C\"";
-    case SC_EXTERN_SYCL:
-        return "extern \"SYCL\"";
-    case SC_STATIC:
-        return "static";
-    case SC_TYPEDEF:
-        return "typedef";
-    default:
-        FATAL("Unhandled storage class in lGetStorageClassName");
-        return "";
-    }
-}
-
 void DeclSpecs::Print() const {
-    printf("Declspecs: [%s ", lGetStorageClassName(storageClass));
+    printf("Declspecs: [%s ", storageClass.GetString().c_str());
 
     if (soaWidth > 0) {
         printf("soa<%d> ", soaWidth);
@@ -452,13 +460,37 @@ void DeclSpecs::Print() const {
     printf("]");
 }
 
+std::string DeclSpecs::GetString() const {
+    std::string ret;
+    std::string storageClassString = storageClass.GetString();
+    if (!storageClassString.empty()) {
+        ret += storageClassString + " ";
+    }
+    if (soaWidth > 0) {
+        ret += "soa<" + std::to_string(soaWidth) + "> ";
+    }
+    ret += GetTypeQualifiersString(typeQualifiers) + " ";
+    ret += baseType->GetString();
+
+    if (attributeList) {
+        ret += attributeList->GetString();
+    }
+
+    if (std::holds_alternative<int>(vectorSize)) {
+        ret += "<" + std::to_string(std::get<int>(vectorSize)) + ">";
+    } else if (std::holds_alternative<Symbol *>(vectorSize)) {
+        ret += "<" + std::get<Symbol *>(vectorSize)->name + ">";
+    }
+
+    return ret;
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // Declarator
 
-Declarator::Declarator(DeclaratorKind dk, SourcePos p) : pos(p), kind(dk) {
+Declarator::Declarator(DeclaratorKind dk, SourcePos p) : pos(p), kind(dk), storageClass(StorageClass::NONE) {
     child = nullptr;
     typeQualifiers = 0;
-    storageClass = SC_NONE;
     arraySize = std::monostate{};
     type = nullptr;
     initExpr = nullptr;
@@ -532,6 +564,32 @@ void Declarator::InitFromDeclSpecs(DeclSpecs *ds) {
     }
 }
 
+std::string Declarator::GetString() const {
+    std::string ret;
+    if (name.size() > 0) {
+        ret += name;
+    } else {
+        ret += "(unnamed)";
+    }
+
+    std::string typeQualifier = DeclSpecs::GetTypeQualifiersString(typeQualifiers);
+    if (!typeQualifier.empty()) {
+        ret += typeQualifier + " ";
+    }
+    std::string storageClassString = storageClass.GetString();
+    if (!storageClassString.empty()) {
+        ret += storageClassString + " ";
+    }
+
+    if (std::holds_alternative<int>(arraySize)) {
+        ret += "[" + std::to_string(std::get<int>(arraySize)) + "]";
+    } else if (std::holds_alternative<Symbol *>(arraySize)) {
+        ret += "[" + std::get<Symbol *>(arraySize)->name + "]";
+    }
+
+    return ret;
+}
+
 void Declarator::Print() const {
     Indent indent;
     indent.pushSingle();
@@ -544,7 +602,7 @@ void Declarator::Print(Indent &indent) const {
 
     printf("[");
     lPrintTypeQualifiers(typeQualifiers);
-    printf("%s ", lGetStorageClassName(storageClass));
+    printf("%s ", storageClass.GetString().c_str());
     if (name.size() > 0) {
         printf("%s", name.c_str());
     } else {
@@ -746,11 +804,11 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                 decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
             }
 
-            if (d->declSpecs->storageClass != SC_NONE) {
+            if (!d->declSpecs->storageClass.IsNone()) {
                 Error(decl->pos,
                       "Storage class \"%s\" is illegal in "
                       "function parameter declaration for parameter \"%s\".",
-                      lGetStorageClassName(d->declSpecs->storageClass), decl->name.c_str());
+                      d->declSpecs->storageClass.GetString().c_str(), decl->name.c_str());
             }
             if (decl->type->IsVoidType()) {
                 Error(decl->pos, "Parameter with type \"void\" illegal in function "
@@ -834,8 +892,8 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             returnType = returnType->ResolveUnboundVariability(Variability::Varying);
         }
 
-        bool isExternC = ds && (ds->storageClass == SC_EXTERN_C);
-        bool isExternSYCL = ds && (ds->storageClass == SC_EXTERN_SYCL);
+        bool isExternC = ds && ds->storageClass.IsExternC();
+        bool isExternSYCL = ds && ds->storageClass.IsExternSYCL();
         bool isExported = ds && ((ds->typeQualifiers & TYPEQUAL_EXPORT) != 0);
         bool isExternalOnly = ds && ds->attributeList && ds->attributeList->HasAttribute("external_only");
         bool isTask = ds && ((ds->typeQualifiers & TYPEQUAL_TASK) != 0);
@@ -956,7 +1014,7 @@ Declaration::Declaration(DeclSpecs *ds, Declarator *d) {
 }
 
 std::vector<VariableDeclaration> Declaration::GetVariableDeclarations() const {
-    Assert(declSpecs->storageClass != SC_TYPEDEF);
+    Assert(!declSpecs->storageClass.IsTypedef());
     std::vector<VariableDeclaration> vars;
 
     for (unsigned int i = 0; i < declarators.size(); ++i) {
@@ -997,7 +1055,7 @@ std::vector<VariableDeclaration> Declaration::GetVariableDeclarations() const {
 }
 
 void Declaration::DeclareFunctions() {
-    Assert(declSpecs->storageClass != SC_TYPEDEF);
+    Assert(!declSpecs->storageClass.IsTypedef());
 
     for (unsigned int i = 0; i < declarators.size(); ++i) {
         Declarator *decl = declarators[i];
@@ -1021,6 +1079,21 @@ void Declaration::DeclareFunctions() {
     }
 }
 
+std::string Declaration::GetString() const {
+    std::string ret;
+    if (declSpecs) {
+        ret += declSpecs->GetString();
+    }
+    ret += " <";
+    for (unsigned int i = 0; i < declarators.size(); ++i) {
+        if (i > 0) {
+            ret += ",";
+        }
+        ret += declarators[i]->GetString();
+    }
+    return ret + ">";
+}
+
 void Declaration::Print() const {
     Indent indent;
     indent.pushSingle();
@@ -1039,6 +1112,24 @@ void Declaration::Print(Indent &indent) const {
     }
 
     indent.Done();
+}
+
+std::string StructDeclaration::GetString() const {
+    std::string ret;
+    if (type) {
+        ret += type->GetString();
+    }
+    if (declarators) {
+        ret += " <";
+        for (unsigned int i = 0; i < declarators->size(); ++i) {
+            if (i > 0) {
+                ret += ",";
+            }
+            ret += (*declarators)[i]->GetString();
+        }
+        ret += ">";
+    }
+    return ret;
 }
 
 ///////////////////////////////////////////////////////////////////////////

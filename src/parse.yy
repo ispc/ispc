@@ -51,6 +51,26 @@ struct PragmaAttributes {
     AttributeType aType;
     Globals::pragmaUnrollType unrollType;
     int count;
+
+    std::string GetString() {
+        std::string s;
+        if (aType == PragmaAttributes::AttributeType::pragmaloop) {
+            s += "loop";
+        }
+        if (aType == PragmaAttributes::AttributeType::pragmawarning) {
+            s += "warning";
+        }
+        if (unrollType == Globals::pragmaUnrollType::nounroll) {
+            s += " nounroll";
+        }
+        if (unrollType == Globals::pragmaUnrollType::unroll) {
+            s += " unroll";
+        }
+        if (unrollType == Globals::pragmaUnrollType::count) {
+            s += " count(" + std::to_string(count) + ")";
+        }
+        return s;
+    }
 };
 
 typedef std::pair<Declarator *, TemplateArgs *> SimpleTemplateIDType;
@@ -101,7 +121,6 @@ static void lAddFunctionParams(Declarator *decl);
 static void lAddMaskToSymbolTable(SourcePos pos);
 static void lAddThreadIndexCountToSymbolTable(SourcePos pos);
 static std::string lGetAlternates(std::vector<std::string> &alternates);
-static const char *lGetStorageClassString(StorageClass sc);
 static bool lGetConstantIntOrSymbol(Expr *expr, std::variant<std::monostate, int, Symbol*> *value, SourcePos pos, const char *usage);
 
 enum class TemplateType { Template, Instantiation, Specialization };
@@ -155,7 +174,7 @@ struct ForeachDimension {
     std::vector<std::pair<const Type *, SourcePos> > *typeList;
     const AtomicType *atomicType;
     int typeQualifier;
-    StorageClass storageClass;
+    StorageClass *storageClass;
     Stmt *stmt;
     DeclSpecs *declSpecs;
     AttributeList *attributeList;
@@ -290,8 +309,115 @@ struct ForeachDimension {
 %type <functionTemplateSym> template_declaration
 
 %destructor { lCleanUpString($$); } <stringVal>
+%destructor { delete $$; } <storageClass>
 // TODO! destructos for all semantic types that return pointer to heap-allocated memory
 // e.g., tests/lit-tests/2599.ispc
+
+// Print semantic values for debugging (under --yydebug)
+%printer { fprintf(yyo, "%s", $$->c_str()); } <stringVal>
+%printer { fprintf(yyo, "%s", $$); } <constCharPtr>
+%printer { fprintf(yyo, "%ld", $$); } <intVal>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <expr>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <exprList>
+%printer { fprintf(yyo, "%s", $$ ? $$->GetString().c_str() : "nullptr"); } <stmt>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <declaration>
+%printer {
+  fprintf(yyo, "<");
+  for(auto &i : *$$) {
+    fprintf(yyo, "%s:", i->GetString().c_str());
+  }
+  fprintf(yyo, ">");
+} <declarationList>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <declarator>
+%printer {
+  fprintf(yyo, "<");
+  for(auto &i : *$$) {
+    fprintf(yyo, "%s,", i->GetString().c_str());
+  }
+  fprintf(yyo, ">");
+} <declarators>
+%printer {
+  fprintf(yyo, "<");
+  for(auto &i : *$$) {
+    fprintf(yyo, "%s,", i->GetString().c_str());
+  }
+  fprintf(yyo, ">");
+} <structDeclaratorList>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <structDeclaration>
+%printer {
+  fprintf(yyo, "<");
+  for(auto &i : *$$) {
+    fprintf(yyo, "%s,", i->GetString().c_str());
+  }
+  fprintf(yyo, ">");
+} <structDeclarationList>
+%printer {
+  fprintf(yyo, "<");
+  for(auto &i : *$$) {
+    fprintf(yyo, "%s,", i->name.c_str());
+  }
+  fprintf(yyo, ">");
+} <symbolList>
+%printer { fprintf(yyo, "%s", $$->name.c_str()); } <symbol>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <enumType>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <type>
+%printer {
+  fprintf(yyo, "<");
+  for(auto &i : *$$) {
+    fprintf(yyo, "%s,", i.first->GetString().c_str());
+  }
+  fprintf(yyo, ">");
+} <typeList>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <atomicType>
+%printer { fprintf(yyo, "%s", DeclSpecs::GetTypeQualifiersString($$).c_str()); } <typeQualifier>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <storageClass>
+%printer { fprintf(yyo, "%s:", $$->GetString().c_str()); } <declSpecs>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <attributeList>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <attr>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <attrArg>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <pragmaAttributes>
+%printer { fprintf(yyo, "%s", $$->sym->name.c_str()); } <foreachDimension>
+%printer {
+  fprintf(yyo, "<");
+  for (auto &i : *$$) {
+    fprintf(yyo, "%s,", i->sym->name.c_str());
+  }
+  fprintf(yyo, ">");
+} <foreachDimensionList>
+%printer { fprintf(yyo, "%s", $$->first.c_str()); } <declspecPair>
+%printer {
+  fprintf(yyo, "<");
+  for (auto &i : *$$) {
+    fprintf(yyo, "%s,", i.first.c_str());
+  }
+  fprintf(yyo, ">");
+} <declspecList>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <templateArg>
+%printer {
+  fprintf(yyo, "<");
+  for (auto &i : *$$) {
+    fprintf(yyo, "%s,", i.GetString().c_str());
+  }
+  fprintf(yyo, ">");
+} <templateArgs>
+%printer {
+  fprintf(yyo, "%s: ", $$->first->name.c_str());
+  fprintf(yyo, "<");
+  for (auto &i : *$$->second) {
+    fprintf(yyo, "%s,", i.GetString().c_str());
+  }
+  fprintf(yyo, ">");
+} <simpleTemplateID>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <templateTypeParm>
+%printer { fprintf(yyo, "%s", $$->GetName().c_str()); } <templateParm>
+%printer {
+  fprintf(yyo, "<");
+  for (size_t i = 0; i < $$->GetCount(); ++i) {
+    fprintf(yyo, "%s,", (*$$)[i]->GetName().c_str());
+  }
+  fprintf(yyo, ">");
+} <templateParmList>
+%printer { fprintf(yyo, "%s", $$->name.c_str()); } <functionTemplateSym>
 
 %start translation_unit
 %%
@@ -905,7 +1031,7 @@ declaration_statement
             AssertPos(@1, m->errorCount > 0);
             $$ = nullptr;
         }
-        else if ($1->declSpecs->storageClass == SC_TYPEDEF) {
+        else if ($1->declSpecs->storageClass.IsTypedef()) {
             for (unsigned int i = 0; i < $1->declarators.size(); ++i) {
                 if ($1->declarators[i] == nullptr)
                     AssertPos(@1, m->errorCount > 0);
@@ -984,21 +1110,23 @@ declspec_specifier
 declaration_specifiers
     : storage_class_specifier
       {
-          $$ = new DeclSpecs(nullptr, $1);
+          $$ = new DeclSpecs(nullptr, *$1);
+          delete $1;
       }
     | storage_class_specifier declaration_specifiers
       {
           DeclSpecs *ds = (DeclSpecs *)$2;
           if (ds != nullptr) {
-              if (ds->storageClass != SC_NONE)
+              if (!ds->storageClass.IsNone())
                   Error(@1, "Multiple storage class specifiers in a declaration are illegal. "
                         "(Have provided both \"%s\" and \"%s\".)",
-                        lGetStorageClassString(ds->storageClass),
-                        lGetStorageClassString($1));
+                        ds->storageClass.GetString().c_str(),
+                        $1->GetString().c_str());
               else
-                  ds->storageClass = $1;
+                  ds->storageClass = *$1;
           }
           $$ = ds;
+          delete $1;
       }
     | declspec_specifier
       {
@@ -1085,7 +1213,7 @@ declaration_specifiers
       }
     | type_qualifier
       {
-          $$ = new DeclSpecs(nullptr, SC_NONE, $1);
+          $$ = new DeclSpecs(nullptr, StorageClass::NONE, $1);
       }
     | type_qualifier declaration_specifiers
       {
@@ -1207,11 +1335,11 @@ init_declarator
     ;
 
 storage_class_specifier
-    : TOKEN_TYPEDEF { $$ = SC_TYPEDEF; }
-    | TOKEN_EXTERN { $$ = SC_EXTERN; }
-    | TOKEN_EXTERN TOKEN_STRING_C_LITERAL  { $$ = SC_EXTERN_C; }
-    | TOKEN_EXTERN TOKEN_STRING_SYCL_LITERAL  { $$ = SC_EXTERN_SYCL; }
-    | TOKEN_STATIC { $$ = SC_STATIC; }
+    : TOKEN_TYPEDEF { $$ = new StorageClass(StorageClass::TYPEDEF); }
+    | TOKEN_EXTERN { $$ = new StorageClass(StorageClass::EXTERN); }
+    | TOKEN_EXTERN TOKEN_STRING_C_LITERAL  { $$ = new StorageClass(StorageClass::EXTERN_C); }
+    | TOKEN_EXTERN TOKEN_STRING_SYCL_LITERAL  { $$ = new StorageClass(StorageClass::EXTERN_SYCL); }
+    | TOKEN_STATIC { $$ = new StorageClass(StorageClass::STATIC); }
     ;
 
 type_specifier
@@ -2568,7 +2696,7 @@ function_definition
             const FunctionType *funcType = CastType<FunctionType>($2->type);
             if (funcType == nullptr)
                 AssertPos(@1, m->errorCount > 0);
-            else if ($1->storageClass == SC_TYPEDEF)
+            else if ($1->storageClass.IsTypedef())
                 Error(@1, "Illegal \"typedef\" provided with function definition.");
             else {
                 Stmt *code = $4;
@@ -3117,7 +3245,7 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
         return;
 
     decl->InitFromDeclSpecs(ds);
-    if (ds->storageClass == SC_TYPEDEF) {
+    if (ds->storageClass.IsTypedef()) {
         const StructType *st = CastType<StructType>(decl->type);
         if (st && st->IsAnonymousType()) {
             st = st->GetAsNamed(decl->name);
@@ -3192,17 +3320,17 @@ lCheckTemplateDeclSpecs(DeclSpecs *ds, SourcePos pos, TemplateType type, const c
         Error(pos, "'export' not supported for %s.", templateTypeStr.c_str());
         return;
     }
-    if (ds->storageClass == SC_TYPEDEF) {
+    if (ds->storageClass == StorageClass::TYPEDEF) {
         Error(pos, "Illegal \"typedef\" provided with %s.", templateTypeStr.c_str());
         return;
     }
     // We can't support extern "C"/extern "SYCL" for templates because
     // we need mangling information.
-    if (ds->storageClass == SC_EXTERN_C || ds->storageClass == SC_EXTERN_SYCL) {
+    if (ds->storageClass == StorageClass::EXTERN_C || ds->storageClass == StorageClass::EXTERN_SYCL) {
         Error(pos, "Illegal linkage provided with %s.", templateTypeStr.c_str());
         return;
     }
-    Assert(ds->storageClass == SC_NONE || ds->storageClass == SC_STATIC || ds->storageClass == SC_EXTERN);
+    Assert(ds->storageClass == StorageClass::NONE || ds->storageClass == StorageClass::STATIC || ds->storageClass == StorageClass::EXTERN);
     bool isVectorCall = (ds->typeQualifiers & TYPEQUAL_VECTORCALL);
     if (isVectorCall) {
         Error(pos, "Illegal to use \"__vectorcall\" qualifier on non-extern function \"%s\".", name);
@@ -3399,27 +3527,6 @@ static std::string lGetAlternates(std::vector<std::string> &alternates) {
         alts += "?";
     }
     return alts;
-}
-
-static const char *
-lGetStorageClassString(StorageClass sc) {
-    switch (sc) {
-    case SC_NONE:
-        return "";
-    case SC_EXTERN:
-        return "extern";
-    case SC_STATIC:
-        return "static";
-    case SC_TYPEDEF:
-        return "typedef";
-    case SC_EXTERN_C:
-        return "extern \"C\"";
-    case SC_EXTERN_SYCL:
-        return "extern \"SYCL\"";
-    default:
-        Assert(!"logic error in lGetStorageClassString()");
-        return "";
-    }
 }
 
 

@@ -2924,6 +2924,40 @@ Globals::Globals() {
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// StorageClass
+
+StorageClass::StorageClass(Kind kind) : m_kind(kind) {}
+StorageClass::operator StorageClass::Kind() const { return m_kind; }
+
+std::string StorageClass::GetString() const {
+    switch (m_kind) {
+    case Kind::NONE:
+        return "";
+    case Kind::EXTERN:
+        return "extern";
+    case Kind::STATIC:
+        return "static";
+    case Kind::TYPEDEF:
+        return "typedef";
+    case Kind::EXTERN_C:
+        return "extern \"C\"";
+    case Kind::EXTERN_SYCL:
+        return "extern \"SYCL\"";
+    default:
+        FATAL("Unhandled storage class in lGetStorageClassName");
+        return "";
+    }
+}
+
+bool StorageClass::IsNone() const { return m_kind == Kind::NONE; }
+bool StorageClass::IsExtern() const { return m_kind == Kind::EXTERN; }
+bool StorageClass::IsStatic() const { return m_kind == Kind::STATIC; }
+bool StorageClass::IsTypedef() const { return m_kind == Kind::TYPEDEF; }
+bool StorageClass::IsExternC() const { return m_kind == Kind::EXTERN_C; }
+bool StorageClass::IsExternSYCL() const { return m_kind == Kind::EXTERN_SYCL; }
+bool StorageClass::IsAnyExtern() const { return IsExtern() || IsExternC() || IsExternSYCL(); }
+
+///////////////////////////////////////////////////////////////////////////
 // SourcePos
 
 SourcePos::SourcePos(const char *n, int fl, int fc, int ll, int lc) {
