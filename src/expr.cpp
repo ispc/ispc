@@ -1050,7 +1050,7 @@ static llvm::Value *lMaskForSymbol(Symbol *baseSym, FunctionEmitContext *ctx) {
         return ctx->GetFullMask();
     }
 
-    llvm::Value *mask = (baseSym->parentFunction == ctx->GetFunction() && baseSym->storageClass != SC_STATIC)
+    llvm::Value *mask = (baseSym->parentFunction == ctx->GetFunction() && baseSym->storageClass != StorageClass::STATIC)
                             ? ctx->GetInternalMask()
                             : ctx->GetFullMask();
     return mask;
@@ -1062,7 +1062,7 @@ static void lStoreAssignResult(llvm::Value *value, llvm::Value *ptr, const Type 
                                FunctionEmitContext *ctx, Symbol *baseSym) {
     Assert(baseSym == nullptr || baseSym->varyingCFDepth <= ctx->VaryingCFDepth());
     if (!g->opt.disableMaskedStoreToStore && !g->opt.disableMaskAllOnOptimizations && baseSym != nullptr &&
-        baseSym->varyingCFDepth == ctx->VaryingCFDepth() && baseSym->storageClass != SC_STATIC &&
+        baseSym->varyingCFDepth == ctx->VaryingCFDepth() && baseSym->storageClass != StorageClass::STATIC &&
         CastType<ReferenceType>(baseSym->type) == nullptr && CastType<PointerType>(baseSym->type) == nullptr) {
         // If the variable is declared at the same varying control flow
         // depth as where it's being assigned, then we don't need to do any

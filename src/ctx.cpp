@@ -389,7 +389,7 @@ FunctionEmitContext::FunctionEmitContext(const Function *func, Symbol *funSym, l
             mangledName = "";
         }
 
-        bool isStatic = (funSym->storageClass == SC_STATIC);
+        bool isStatic = (funSym->storageClass == StorageClass::STATIC);
         bool isOptimized = (g->opt.level > 0);
         int firstLine = funcStartPos.first_line;
 

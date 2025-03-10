@@ -55,7 +55,7 @@ bool Function::IsInternal() const {
     if (function != nullptr) {
         isInline = (function->getAttributes().getFnAttrs().hasAttribute(llvm::Attribute::AlwaysInline));
     }
-    return sc == SC_STATIC || isInline;
+    return sc == StorageClass::STATIC || isInline;
 }
 
 void Function::UpdateLinkage(llvm::GlobalValue::LinkageTypes linkage) const {
