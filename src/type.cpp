@@ -2932,14 +2932,12 @@ const Type *FunctionType::GetBaseType() const {
     return nullptr;
 }
 
-const Type *FunctionType::GetAsVaryingType() const {
-    FATAL("FunctionType::GetAsVaryingType shouldn't be called");
-    return nullptr;
-}
+const Type *FunctionType::GetAsVaryingType() const { return nullptr; }
 
 const Type *FunctionType::GetAsUniformType() const {
-    FATAL("FunctionType::GetAsUniformType shouldn't be called");
-    return nullptr;
+    // According to FunctionType::GetVariability(), FunctionType is always
+    // uniform, so it is safe to return this here.
+    return this;
 }
 
 const Type *FunctionType::GetAsUnboundVariabilityType() const {
