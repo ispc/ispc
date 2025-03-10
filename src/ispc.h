@@ -130,6 +130,7 @@ class StorageClass {
     bool IsTypedef() const;
     bool IsExternC() const;
     bool IsExternSYCL() const;
+    bool IsAnyExtern() const;
 
   private:
     Kind m_kind = Kind::NONE;
