@@ -51,6 +51,26 @@ struct PragmaAttributes {
     AttributeType aType;
     Globals::pragmaUnrollType unrollType;
     int count;
+
+    std::string GetString() {
+        std::string s;
+        if (aType == PragmaAttributes::AttributeType::pragmaloop) {
+            s += "loop";
+        }
+        if (aType == PragmaAttributes::AttributeType::pragmawarning) {
+            s += "warning";
+        }
+        if (unrollType == Globals::pragmaUnrollType::nounroll) {
+            s += " nounroll";
+        }
+        if (unrollType == Globals::pragmaUnrollType::unroll) {
+            s += " unroll";
+        }
+        if (unrollType == Globals::pragmaUnrollType::count) {
+            s += " count(" + std::to_string(count) + ")";
+        }
+        return s;
+    }
 };
 
 typedef std::pair<Declarator *, TemplateArgs *> SimpleTemplateIDType;
@@ -70,9 +90,10 @@ typedef std::pair<Declarator *, TemplateArgs *> SimpleTemplateIDType;
 #include "type.h"
 #include "util.h"
 
+#include <inttypes.h>
+#include <llvm/IR/Constants.h>
 #include <stdio.h>
 #include <variant>
-#include <llvm/IR/Constants.h>
 
 using namespace ispc;
 
@@ -292,6 +313,112 @@ struct ForeachDimension {
 %destructor { delete $$; } <storageClass>
 // TODO! destructos for all semantic types that return pointer to heap-allocated memory
 // e.g., tests/lit-tests/2599.ispc
+
+// Print semantic values for debugging (under --yydebug)
+%printer { fprintf(yyo, "%s", $$->c_str()); } <stringVal>
+%printer { fprintf(yyo, "%s", $$); } <constCharPtr>
+%printer { fprintf(yyo, "%" PRIu64, $$); } <intVal>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <expr>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <exprList>
+%printer { fprintf(yyo, "%s", $$ ? $$->GetString().c_str() : "nullptr"); } <stmt>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <declaration>
+%printer {
+  fprintf(yyo, "<");
+  for(auto &i : *$$) {
+    fprintf(yyo, "%s:", i->GetString().c_str());
+  }
+  fprintf(yyo, ">");
+} <declarationList>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <declarator>
+%printer {
+  fprintf(yyo, "<");
+  for(auto &i : *$$) {
+    fprintf(yyo, "%s,", i->GetString().c_str());
+  }
+  fprintf(yyo, ">");
+} <declarators>
+%printer {
+  fprintf(yyo, "<");
+  for(auto &i : *$$) {
+    fprintf(yyo, "%s,", i->GetString().c_str());
+  }
+  fprintf(yyo, ">");
+} <structDeclaratorList>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <structDeclaration>
+%printer {
+  fprintf(yyo, "<");
+  for(auto &i : *$$) {
+    fprintf(yyo, "%s,", i->GetString().c_str());
+  }
+  fprintf(yyo, ">");
+} <structDeclarationList>
+%printer {
+  fprintf(yyo, "<");
+  for(auto &i : *$$) {
+    fprintf(yyo, "%s,", i->name.c_str());
+  }
+  fprintf(yyo, ">");
+} <symbolList>
+%printer { fprintf(yyo, "%s", $$->name.c_str()); } <symbol>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <enumType>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <type>
+%printer {
+  fprintf(yyo, "<");
+  for(auto &i : *$$) {
+    fprintf(yyo, "%s,", i.first->GetString().c_str());
+  }
+  fprintf(yyo, ">");
+} <typeList>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <atomicType>
+%printer { fprintf(yyo, "%s", DeclSpecs::GetTypeQualifiersString($$).c_str()); } <typeQualifier>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <storageClass>
+%printer { fprintf(yyo, "%s:", $$->GetString().c_str()); } <declSpecs>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <attributeList>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <attr>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <attrArg>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <pragmaAttributes>
+%printer { fprintf(yyo, "%s", $$->sym->name.c_str()); } <foreachDimension>
+%printer {
+  fprintf(yyo, "<");
+  for (auto &i : *$$) {
+    fprintf(yyo, "%s,", i->sym->name.c_str());
+  }
+  fprintf(yyo, ">");
+} <foreachDimensionList>
+%printer { fprintf(yyo, "%s", $$->first.c_str()); } <declspecPair>
+%printer {
+  fprintf(yyo, "<");
+  for (auto &i : *$$) {
+    fprintf(yyo, "%s,", i.first.c_str());
+  }
+  fprintf(yyo, ">");
+} <declspecList>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <templateArg>
+%printer {
+  fprintf(yyo, "<");
+  for (auto &i : *$$) {
+    fprintf(yyo, "%s,", i.GetString().c_str());
+  }
+  fprintf(yyo, ">");
+} <templateArgs>
+%printer {
+  fprintf(yyo, "%s: ", $$->first->name.c_str());
+  fprintf(yyo, "<");
+  for (auto &i : *$$->second) {
+    fprintf(yyo, "%s,", i.GetString().c_str());
+  }
+  fprintf(yyo, ">");
+} <simpleTemplateID>
+%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <templateTypeParm>
+%printer { fprintf(yyo, "%s", $$->GetName().c_str()); } <templateParm>
+%printer {
+  fprintf(yyo, "<");
+  for (size_t i = 0; i < $$->GetCount(); ++i) {
+    fprintf(yyo, "%s,", (*$$)[i]->GetName().c_str());
+  }
+  fprintf(yyo, ">");
+} <templateParmList>
+%printer { fprintf(yyo, "%s", $$->name.c_str()); } <functionTemplateSym>
 
 %start translation_unit
 %%
