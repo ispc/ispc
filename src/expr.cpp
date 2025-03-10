@@ -1456,6 +1456,35 @@ UnaryExpr *UnaryExpr::Instantiate(TemplateInstantiation &templInst) const {
     return new UnaryExpr(op, instExpr, pos);
 }
 
+std::string UnaryExpr::GetString() const {
+    std::string ret;
+    if (expr) {
+        ret += expr->GetString();
+    } else {
+        ret += "<NULL>";
+    }
+    switch (op) {
+    case PreInc:
+        return "++" + ret;
+    case PreDec:
+        return "--" + ret;
+    case PostInc:
+        return ret + "++";
+    case PostDec:
+        return ret + "--";
+    case Negate:
+        return "-" + ret;
+    case LogicalNot:
+        return "!" + ret;
+    case BitNot:
+        return "~" + ret;
+    default:
+        FATAL("unexpected op in UnaryExpr::GetString()");
+        break;
+    }
+    return ret;
+}
+
 void UnaryExpr::Print(Indent &indent) const {
     if (!expr || !GetType()) {
         indent.Print("UnaryExpr: <NULL EXPR>\n");
@@ -3059,6 +3088,13 @@ Expr *BinaryExpr::Instantiate(TemplateInstantiation &templInst) const {
     return MakeBinaryExpr(op, instArg0, instArg1, pos);
 }
 
+std::string BinaryExpr::GetString() const {
+    if (!arg0 || !arg1) {
+        return "<NULL>";
+    }
+    return arg0->GetString() + lOpString(op) + arg1->GetString();
+}
+
 void BinaryExpr::Print(Indent &indent) const {
     if (!arg0 || !arg1 || !GetType()) {
         indent.Print("BinaryExpr: <NULL EXPR>\n");
@@ -3533,6 +3569,13 @@ AssignExpr *AssignExpr::Instantiate(TemplateInstantiation &templInst) const {
     return new AssignExpr(op, instLValue, instRValue, pos);
 }
 
+std::string AssignExpr::GetString() const {
+    if (!lvalue || !rvalue) {
+        return "<NULL>";
+    }
+    return lvalue->GetString() + lOpString(op) + rvalue->GetString();
+}
+
 void AssignExpr::Print(Indent &indent) const {
     if (!lvalue || !rvalue || !GetType()) {
         indent.Print("AssignExpr: <NULL EXPR>\n");
@@ -3958,6 +4001,13 @@ SelectExpr *SelectExpr::Instantiate(TemplateInstantiation &templInst) const {
     Expr *instExpr1 = expr1 ? expr1->Instantiate(templInst) : nullptr;
     Expr *instExpr2 = expr2 ? expr2->Instantiate(templInst) : nullptr;
     return new SelectExpr(instTest, instExpr1, instExpr2, pos);
+}
+
+std::string SelectExpr::GetString() const {
+    if (!test || !expr1 || !expr2) {
+        return "<NULL>";
+    }
+    return test->GetString() + "?" + expr1->GetString() + ":" + expr2->GetString();
 }
 
 void SelectExpr::Print(Indent &indent) const {
@@ -4413,6 +4463,13 @@ FunctionCallExpr *FunctionCallExpr::Instantiate(TemplateInstantiation &templInst
     return inst;
 }
 
+std::string FunctionCallExpr::GetString() const {
+    if (!func || !args) {
+        return "<NULL>";
+    }
+    return func->GetString() + "(" + args->GetString() + ")";
+}
+
 void FunctionCallExpr::Print(Indent &indent) const {
     if (!func || !args || !GetType()) {
         indent.Print("FunctionCallExpr: <NULL EXPR>\n");
@@ -4626,6 +4683,17 @@ ExprList *ExprList::Instantiate(TemplateInstantiation &templInst) const {
         inst->exprs.push_back(e->Instantiate(templInst));
     }
     return inst;
+}
+
+std::string ExprList::GetString() const {
+    std::string ret;
+    for (unsigned int i = 0; i < exprs.size(); ++i) {
+        if (i > 0) {
+            ret += ", ";
+        }
+        ret += exprs[i]->GetString();
+    }
+    return ret;
 }
 
 void ExprList::Print(Indent &indent) const {
@@ -5201,6 +5269,13 @@ IndexExpr *IndexExpr::Instantiate(TemplateInstantiation &templInst) const {
     Expr *instBaseExpr = baseExpr ? baseExpr->Instantiate(templInst) : nullptr;
     Expr *instIndex = index ? index->Instantiate(templInst) : nullptr;
     return new IndexExpr(instBaseExpr, instIndex, pos);
+}
+
+std::string IndexExpr::GetString() const {
+    if (!baseExpr || !index) {
+        return "IndexExpr: <NULL>";
+    }
+    return baseExpr->GetString() + "[" + index->GetString() + "]";
 }
 
 void IndexExpr::Print(Indent &indent) const {
@@ -5787,6 +5862,13 @@ int MemberExpr::EstimateCost() const {
 MemberExpr *MemberExpr::Instantiate(TemplateInstantiation &templInst) const {
     Expr *instExpr = expr ? expr->Instantiate(templInst) : nullptr;
     return MemberExpr::create(instExpr, identifier.c_str(), pos, identifierPos, dereferenceExpr);
+}
+
+std::string MemberExpr::GetString() const {
+    if (!expr) {
+        return "MemberExpr: <NULL>";
+    }
+    return expr->GetString() + (dereferenceExpr ? "->" : ".") + identifier;
 }
 
 void MemberExpr::Print(Indent &indent) const {
@@ -6593,6 +6675,8 @@ std::string ConstExpr::GetValuesAsStr(const std::string &separator) const {
     }
     return result.str();
 }
+
+std::string ConstExpr::GetString() const { return GetValuesAsStr(", "); }
 
 void ConstExpr::Print(Indent &indent) const {
     indent.Print("ConstExpr", pos);
@@ -7912,6 +7996,13 @@ TypeCastExpr *TypeCastExpr::Instantiate(TemplateInstantiation &templInst) const 
     return new TypeCastExpr(instType, instExpr, pos);
 }
 
+std::string TypeCastExpr::GetString() const {
+    if (!type || !expr) {
+        return "<NULL>";
+    }
+    return "(" + type->GetString() + ")" + expr->GetString();
+}
+
 void TypeCastExpr::Print(Indent &indent) const {
     indent.Print("TypeCastExpr", pos);
     printf("[%s]\n", GetType()->GetString().c_str());
@@ -8079,6 +8170,13 @@ ReferenceExpr *ReferenceExpr::Instantiate(TemplateInstantiation &templInst) cons
     return new ReferenceExpr(instExpr, pos);
 }
 
+std::string ReferenceExpr::GetString() const {
+    if (!expr) {
+        return "<NULL>";
+    }
+    return "&" + expr->GetString();
+}
+
 void ReferenceExpr::Print(Indent &indent) const {
     if (expr == nullptr || GetType() == nullptr) {
         indent.Print("ReferenceExpr: <NULL EXPR>\n");
@@ -8219,6 +8317,13 @@ PtrDerefExpr *PtrDerefExpr::Instantiate(TemplateInstantiation &templInst) const 
     return new PtrDerefExpr(instExpr, pos);
 }
 
+std::string PtrDerefExpr::GetString() const {
+    if (!expr) {
+        return "<NULL>";
+    }
+    return "*" + expr->GetString();
+}
+
 void PtrDerefExpr::Print(Indent &indent) const {
     if (expr == nullptr || GetType() == nullptr) {
         indent.Print("PtrDerefExpr: <NULL EXPR>\n");
@@ -8285,6 +8390,13 @@ int RefDerefExpr::EstimateCost() const {
 RefDerefExpr *RefDerefExpr::Instantiate(TemplateInstantiation &templInst) const {
     Expr *instExpr = expr ? expr->Instantiate(templInst) : nullptr;
     return new RefDerefExpr(instExpr, pos);
+}
+
+std::string RefDerefExpr::GetString() const {
+    if (!expr) {
+        return "<NULL>";
+    }
+    return expr->GetString();
 }
 
 void RefDerefExpr::Print(Indent &indent) const {
@@ -8362,6 +8474,13 @@ const Type *AddressOfExpr::GetLValueType() const {
 }
 
 Symbol *AddressOfExpr::GetBaseSymbol() const { return expr ? expr->GetBaseSymbol() : nullptr; }
+
+std::string AddressOfExpr::GetString() const {
+    if (!expr) {
+        return "<NULL>";
+    }
+    return "&" + expr->GetString();
+}
 
 void AddressOfExpr::Print(Indent &indent) const {
     if (expr == nullptr || GetType() == nullptr) {
@@ -8499,6 +8618,16 @@ const Type *SizeOfExpr::GetType() const {
                                                                  : AtomicType::UniformUInt64;
 }
 
+std::string SizeOfExpr::GetString() const {
+    if (expr) {
+        return "sizeof(" + expr->GetString() + ")";
+    } else if (type) {
+        return "sizeof(" + type->GetString() + ")";
+    } else {
+        return "sizeof(<NULL>)";
+    }
+}
+
 void SizeOfExpr::Print(Indent &indent) const {
     indent.Print("SizeOfExpr", pos);
 
@@ -8586,6 +8715,14 @@ llvm::Value *AllocaExpr::GetValue(FunctionEmitContext *ctx) const {
 }
 
 const Type *AllocaExpr::GetType() const { return PointerType::Void; }
+
+std::string AllocaExpr::GetString() const {
+    if (!expr) {
+        return "<NULL>";
+    } else {
+        return "alloca(" + expr->GetString() + ")";
+    }
+}
 
 void AllocaExpr::Print(Indent &indent) const {
     if (expr == nullptr) {
@@ -8706,6 +8843,13 @@ SymbolExpr *SymbolExpr::Instantiate(TemplateInstantiation &templInst) const {
     return new SymbolExpr(resolvedSymbol, pos);
 }
 
+std::string SymbolExpr::GetString() const {
+    if (!symbol) {
+        return "<NULL>";
+    }
+    return symbol->name;
+}
+
 void SymbolExpr::Print(Indent &indent) const {
     if (symbol == nullptr || GetType() == nullptr) {
         indent.Print("SymbolExpr: <NULL EXPR>\n");
@@ -8782,6 +8926,14 @@ FunctionSymbolExpr *FunctionSymbolExpr::Instantiate(TemplateInstantiation &templ
                          : TemplateArg(arg.GetAsExpr()->Instantiate(templInst), arg.GetPos()));
     }
     return new FunctionSymbolExpr(name.c_str(), candidateFunctions, candidateTemplateFunctions, instTemplateArgs, pos);
+}
+
+std::string FunctionSymbolExpr::GetString() const {
+    if (!matchingFunc) {
+        return name;
+    } else {
+        return matchingFunc->name;
+    }
 }
 
 void FunctionSymbolExpr::Print(Indent &indent) const {
@@ -9640,6 +9792,8 @@ int SyncExpr::EstimateCost() const { return COST_SYNC; }
 
 SyncExpr *SyncExpr::Instantiate(TemplateInstantiation &templInst) const { return new SyncExpr(pos); }
 
+std::string SyncExpr::GetString() const { return "sync"; }
+
 void SyncExpr::Print(Indent &indent) const {
     indent.PrintLn("SyncExpr", pos);
     indent.Done();
@@ -9676,6 +9830,8 @@ std::pair<llvm::Constant *, bool> NullPointerExpr::GetConstant(const Type *type)
 
     return std::pair<llvm::Constant *, bool>(llvm::Constant::getNullValue(llvmType), false);
 }
+
+std::string NullPointerExpr::GetString() const { return "nullptr"; }
 
 void NullPointerExpr::Print(Indent &indent) const {
     indent.PrintLn("NullPointerExpr", pos);
@@ -9926,6 +10082,17 @@ Expr *NewExpr::TypeCheck() {
 }
 
 Expr *NewExpr::Optimize() { return this; }
+
+std::string NewExpr::GetString() const {
+    std::string ret = "new ";
+    if (countExpr) {
+        ret += "[" + countExpr->GetString() + "]";
+    }
+    if (initExpr) {
+        ret += " { " + initExpr->GetString() + " }";
+    }
+    return ret;
+}
 
 void NewExpr::Print(Indent &indent) const {
     indent.Print("NewExpr", pos);

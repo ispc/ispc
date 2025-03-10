@@ -66,6 +66,13 @@ void ExprStmt::EmitCode(FunctionEmitContext *ctx) const {
 
 Stmt *ExprStmt::TypeCheck() { return this; }
 
+std::string ExprStmt::GetString() const {
+    if (!expr) {
+        return "<NULL>";
+    }
+    return expr->GetString();
+}
+
 void ExprStmt::Print(Indent &indent) const {
     indent.PrintLn("ExprStmt", pos);
     indent.pushSingle();
@@ -361,6 +368,21 @@ Stmt *DeclStmt::TypeCheck() {
     return encounteredError ? nullptr : this;
 }
 
+std::string DeclStmt::GetString() const {
+    std::string ret;
+    for (unsigned int i = 0; i < vars.size(); ++i) {
+        if (i > 0) {
+            ret += ", ";
+        }
+        ret += vars[i].sym->name;
+        if (vars[i].init != nullptr) {
+            ret += " = ";
+            ret += vars[i].init->GetString();
+        }
+    }
+    return ret;
+}
+
 void DeclStmt::Print(Indent &indent) const {
     indent.PrintLn("DeclStmt", pos);
     indent.pushList(vars.size());
@@ -557,6 +579,15 @@ IfStmt *IfStmt::Instantiate(TemplateInstantiation &templInst) const {
     Stmt *instTrueStmts = trueStmts ? trueStmts->Instantiate(templInst) : nullptr;
     Stmt *instFalseStmts = falseStmts ? falseStmts->Instantiate(templInst) : nullptr;
     return new IfStmt(instTestExpr, instTrueStmts, instFalseStmts, doAllCheck, pos);
+}
+
+std::string IfStmt::GetString() const {
+    std::string ret = "if (";
+    if (test) {
+        ret += test->GetString();
+    }
+    ret += ") {...}";
+    return ret;
 }
 
 void IfStmt::Print(Indent &indent) const {
@@ -1065,6 +1096,15 @@ DoStmt *DoStmt::Instantiate(TemplateInstantiation &templInst) const {
     return new DoStmt(instTestExpr, instBodyStmts, doCoherentCheck, pos);
 }
 
+std::string DoStmt::GetString() const {
+    std::string ret = "do {...} while (";
+    if (testExpr) {
+        ret += testExpr->GetString();
+    }
+    ret += ")";
+    return ret;
+}
+
 void DoStmt::Print(Indent &indent) const {
     indent.PrintLn("DoStmt", pos);
     int totalChildren = (testExpr ? 1 : 0) + (bodyStmts ? 1 : 0);
@@ -1291,6 +1331,23 @@ ForStmt *ForStmt::Instantiate(TemplateInstantiation &templInst) const {
     return new ForStmt(instInitStmts, instTestExpr, instStepStmts, instBodyStmts, doCoherentCheck, pos);
 }
 
+std::string ForStmt::GetString() const {
+    std::string ret = "for (";
+    if (init) {
+        ret += init->GetString();
+    }
+    ret += "; ";
+    if (test) {
+        ret += test->GetString();
+    }
+    ret += "; ";
+    if (step) {
+        ret += step->GetString();
+    }
+    ret += ") {...}";
+    return ret;
+}
+
 void ForStmt::Print(Indent &indent) const {
     indent.PrintLn("ForStmt", pos);
 
@@ -1337,6 +1394,8 @@ int BreakStmt::EstimateCost() const { return COST_BREAK_CONTINUE; }
 
 BreakStmt *BreakStmt::Instantiate(TemplateInstantiation &templInst) const { return new BreakStmt(pos); }
 
+std::string BreakStmt::GetString() const { return "break"; }
+
 void BreakStmt::Print(Indent &indent) const {
     indent.PrintLn("BreakStmt", pos);
     indent.Done();
@@ -1361,6 +1420,8 @@ Stmt *ContinueStmt::TypeCheck() { return this; }
 int ContinueStmt::EstimateCost() const { return COST_BREAK_CONTINUE; }
 
 ContinueStmt *ContinueStmt::Instantiate(TemplateInstantiation &templInst) const { return new ContinueStmt(pos); }
+
+std::string ContinueStmt::GetString() const { return "continue"; }
 
 void ContinueStmt::Print(Indent &indent) const {
     indent.PrintLn("ContinueStmt", pos);
@@ -2184,6 +2245,30 @@ ForeachStmt *ForeachStmt::Instantiate(TemplateInstantiation &templInst) const {
     return inst;
 }
 
+std::string ForeachStmt::GetString() const {
+    std::string str = "foreach ";
+    for (unsigned int i = 0; i < dimVariables.size(); ++i) {
+        if (i > 0) {
+            str += ", ";
+        }
+        str += dimVariables[i]->name;
+        str += " = ";
+        if (startExprs[i]) {
+            str += startExprs[i]->GetString();
+        } else {
+            str += "<NULL>";
+        }
+        str += " ... ";
+        if (endExprs[i]) {
+            str += endExprs[i]->GetString();
+        } else {
+            str += "<NULL>";
+        }
+    }
+    str += "{...}";
+    return str;
+}
+
 void ForeachStmt::Print(Indent &indent) const {
     indent.PrintLn("ForeachStmt", pos);
 
@@ -2384,6 +2469,17 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetInternalMask(oldInternalMask);
     ctx->EndForeach();
     ctx->EndScope();
+}
+
+std::string ForeachActiveStmt::GetString() const {
+    std::string str = "foreach_active ";
+    if (!sym) {
+        str += sym->name;
+    } else {
+        str += "<NULL>";
+    }
+    str += " {...}";
+    return str;
 }
 
 void ForeachActiveStmt::Print(Indent &indent) const {
@@ -2631,6 +2727,23 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->EndScope();
 }
 
+std::string ForeachUniqueStmt::GetString() const {
+    std::string str = "foreach_unique ";
+    if (sym) {
+        str += sym->name;
+    } else {
+        str += "<NULL>";
+    }
+    str += " = ";
+    if (expr) {
+        str += expr->GetString();
+    } else {
+        str += "<NULL>";
+    }
+    str += " {...}";
+    return str;
+}
+
 void ForeachUniqueStmt::Print(Indent &indent) const {
     indent.PrintLn("ForeachUniqueStmt", pos);
 
@@ -2745,6 +2858,8 @@ void CaseStmt::EmitCode(FunctionEmitContext *ctx) const {
     }
 }
 
+std::string CaseStmt::GetString() const { return "case " + std::to_string(value) + " {...}"; }
+
 void CaseStmt::Print(Indent &indent) const {
     indent.Print("CaseStmt", pos);
     printf("Value: %d\n", value);
@@ -2773,6 +2888,8 @@ void DefaultStmt::EmitCode(FunctionEmitContext *ctx) const {
         stmts->EmitCode(ctx);
     }
 }
+
+std::string DefaultStmt::GetString() const { return "default {...}"; }
 
 void DefaultStmt::Print(Indent &indent) const {
     indent.PrintLn("DefaultStmt", pos);
@@ -2954,6 +3071,17 @@ void SwitchStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->EndSwitch();
 }
 
+std::string SwitchStmt::GetString() const {
+    std::string str = "switch (";
+    if (expr) {
+        str += expr->GetString();
+    } else {
+        str += "<NULL>";
+    }
+    str += ") {...}";
+    return str;
+}
+
 void SwitchStmt::Print(Indent &indent) const {
     indent.PrintLn("SwitchStmt", pos);
 
@@ -3055,6 +3183,8 @@ void UnmaskedStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetFunctionMask(oldFunctionMask);
 }
 
+std::string UnmaskedStmt::GetString() const { return "unmasked {...}"; }
+
 void UnmaskedStmt::Print(Indent &indent) const {
     indent.PrintLn("UnmaskedStmt", pos);
 
@@ -3127,6 +3257,14 @@ ReturnStmt *ReturnStmt::Instantiate(TemplateInstantiation &templInst) const {
     return new ReturnStmt(instExpr, pos);
 }
 
+std::string ReturnStmt::GetString() const {
+    std::string str = "return";
+    if (expr) {
+        str += " " + expr->GetString();
+    }
+    return str;
+}
+
 void ReturnStmt::Print(Indent &indent) const {
     indent.Print("ReturnStmt", pos);
     if (expr) {
@@ -3192,6 +3330,8 @@ void GotoStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetCurrentBasicBlock(nullptr);
 }
 
+std::string GotoStmt::GetString() const { return "goto " + label; }
+
 void GotoStmt::Print(Indent &indent) const {
     indent.Print("GotoStmt", pos);
     printf("Label: %s\n", label.c_str());
@@ -3234,6 +3374,14 @@ void LabeledStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (stmt != nullptr) {
         stmt->EmitCode(ctx);
     }
+}
+
+std::string LabeledStmt::GetString() const {
+    std::string str = name;
+    if (stmt) {
+        str += " {...}";
+    }
+    return str;
 }
 
 void LabeledStmt::Print(Indent &indent) const {
@@ -3298,6 +3446,18 @@ StmtList *StmtList::Instantiate(TemplateInstantiation &templInst) const {
         inst->Add(stmt ? stmt->Instantiate(templInst) : nullptr);
     }
     return inst;
+}
+
+std::string StmtList::GetString() const {
+    std::string str = "{";
+    for (unsigned int i = 0; i < 1; ++i) {
+        if (stmts[i]) {
+            str += stmts[i]->GetString();
+        } else {
+            str += "<NULL STMT>";
+        }
+    }
+    return str + "; ...}";
 }
 
 void StmtList::Print(Indent &indent) const {
@@ -3929,6 +4089,16 @@ void PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->CallInst(printImplFunc, nullptr, printImplArgs, "");
 }
 
+std::string PrintStmt::GetString() const {
+    std::string ret = "print(\"" + format + "\"";
+    if (values) {
+        ret += ", ";
+        ret += values->GetString();
+    }
+    ret += ")";
+    return ret;
+}
+
 void PrintStmt::Print(Indent &indent) const {
     indent.Print("PrintStmt", pos);
     printf("Format string: \"%s\"\n", format.c_str());
@@ -4042,6 +4212,17 @@ void AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
     }
 }
 
+std::string AssertStmt::GetString() const {
+    std::string ret = "assert(";
+    if (expr) {
+        ret += expr->GetString();
+    } else {
+        ret += "<NULL>";
+    }
+    ret += ")";
+    return ret;
+}
+
 void AssertStmt::Print(Indent &indent) const {
     indent.Print("AssertStmt", pos);
     printf("Message: %s\n", message.c_str());
@@ -4138,6 +4319,16 @@ void DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
         }
         ctx->CallInst(func, nullptr, exprValue, "");
     }
+}
+
+std::string DeleteStmt::GetString() const {
+    std::string ret = "delete ";
+    if (expr) {
+        ret += expr->GetString();
+    } else {
+        ret += "<NULL>";
+    }
+    return ret;
 }
 
 void DeleteStmt::Print(Indent &indent) const {
