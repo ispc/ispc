@@ -96,34 +96,42 @@ bool lIsFunctionKind(Declarator *d) {
     return false;
 }
 
-static void lPrintTypeQualifiers(int typeQualifiers) {
+std::string DeclSpecs::GetTypeQualifiersString(int typeQualifiers) {
+    std::string result;
+
     if (typeQualifiers & TYPEQUAL_INLINE) {
-        printf("inline ");
+        result += "inline ";
     }
     if (typeQualifiers & TYPEQUAL_CONST) {
-        printf("const ");
+        result += "const ";
     }
     if (typeQualifiers & TYPEQUAL_UNIFORM) {
-        printf("uniform ");
+        result += "uniform ";
     }
     if (typeQualifiers & TYPEQUAL_VARYING) {
-        printf("varying ");
+        result += "varying ";
     }
     if (typeQualifiers & TYPEQUAL_TASK) {
-        printf("task ");
+        result += "task ";
     }
     if (typeQualifiers & TYPEQUAL_SIGNED) {
-        printf("signed ");
+        result += "signed ";
     }
     if (typeQualifiers & TYPEQUAL_UNSIGNED) {
-        printf("unsigned ");
+        result += "unsigned ";
     }
     if (typeQualifiers & TYPEQUAL_EXPORT) {
-        printf("export ");
+        result += "export ";
     }
     if (typeQualifiers & TYPEQUAL_UNMASKED) {
-        printf("unmasked ");
+        result += "unmasked ";
     }
+
+    return result;
+}
+
+static void lPrintTypeQualifiers(int typeQualifiers) {
+    printf("%s", DeclSpecs::GetTypeQualifiersString(typeQualifiers).c_str());
 }
 
 /** Given a Type and a set of type qualifiers, apply the type qualifiers to
@@ -193,6 +201,18 @@ AttrArgument::AttrArgument() : kind(ATTR_ARG_UNKNOWN), intVal(0), stringVal() {}
 AttrArgument::AttrArgument(int64_t i) : kind(ATTR_ARG_UINT32), intVal(i), stringVal() {}
 AttrArgument::AttrArgument(const std::string &s) : kind(ATTR_ARG_STRING), intVal(0), stringVal(s) {}
 
+std::string AttrArgument::GetString() const {
+    switch (kind) {
+    case ATTR_ARG_UINT32:
+        return std::to_string(intVal);
+    case ATTR_ARG_STRING:
+        return stringVal;
+    case ATTR_ARG_UNKNOWN:
+        break;
+    }
+    return "";
+}
+
 void AttrArgument::Print() const {
     switch (kind) {
     case ATTR_ARG_UINT32:
@@ -222,6 +242,8 @@ bool Attribute::IsKnownAttribute() const {
 
     return false;
 }
+
+std::string Attribute::GetString() const { return name + "(" + arg.GetString() + ")"; }
 
 void Attribute::Print() const {
     printf("%s", name.c_str());
@@ -282,6 +304,14 @@ void AttributeList::CheckForUnknownAttributes(SourcePos pos) const {
             Warning(pos, "Ignoring unknown attribute \"%s\".", attr->name.c_str());
         }
     }
+}
+
+std::string AttributeList::GetString() const {
+    std::string ret;
+    for (const auto &attr : attributes) {
+        ret += attr->GetString() + " ";
+    }
+    return ret;
 }
 
 void AttributeList::Print() const {
@@ -452,6 +482,31 @@ void DeclSpecs::Print() const {
     printf("]");
 }
 
+std::string DeclSpecs::GetString() const {
+    std::string ret;
+    std::string storageClassString = lGetStorageClassName(storageClass);
+    if (!storageClassString.empty()) {
+        ret += storageClassString + " ";
+    }
+    if (soaWidth > 0) {
+        ret += "soa<" + std::to_string(soaWidth) + "> ";
+    }
+    ret += GetTypeQualifiersString(typeQualifiers) + " ";
+    ret += baseType->GetString();
+
+    if (attributeList) {
+        ret += attributeList->GetString();
+    }
+
+    if (std::holds_alternative<int>(vectorSize)) {
+        ret += "<" + std::to_string(std::get<int>(vectorSize)) + ">";
+    } else if (std::holds_alternative<Symbol *>(vectorSize)) {
+        ret += "<" + std::get<Symbol *>(vectorSize)->name + ">";
+    }
+
+    return ret;
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // Declarator
 
@@ -530,6 +585,32 @@ void Declarator::InitFromDeclSpecs(DeclSpecs *ds) {
               "not used.",
               type->GetString().c_str());
     }
+}
+
+std::string Declarator::GetString() const {
+    std::string ret;
+    if (name.size() > 0) {
+        ret += name;
+    } else {
+        ret += "(unnamed)";
+    }
+
+    std::string typeQualifier = DeclSpecs::GetTypeQualifiersString(typeQualifiers);
+    if (!typeQualifier.empty()) {
+        ret += typeQualifier + " ";
+    }
+    std::string storageClassString = lGetStorageClassName(storageClass);
+    if (!storageClassString.empty()) {
+        ret += storageClassString + " ";
+    }
+
+    if (std::holds_alternative<int>(arraySize)) {
+        ret += "[" + std::to_string(std::get<int>(arraySize)) + "]";
+    } else if (std::holds_alternative<Symbol *>(arraySize)) {
+        ret += "[" + std::get<Symbol *>(arraySize)->name + "]";
+    }
+
+    return ret;
 }
 
 void Declarator::Print() const {
@@ -1021,6 +1102,21 @@ void Declaration::DeclareFunctions() {
     }
 }
 
+std::string Declaration::GetString() const {
+    std::string ret;
+    if (declSpecs) {
+        ret += declSpecs->GetString();
+    }
+    ret += " <";
+    for (unsigned int i = 0; i < declarators.size(); ++i) {
+        if (i > 0) {
+            ret += ",";
+        }
+        ret += declarators[i]->GetString();
+    }
+    return ret + ">";
+}
+
 void Declaration::Print() const {
     Indent indent;
     indent.pushSingle();
@@ -1039,6 +1135,24 @@ void Declaration::Print(Indent &indent) const {
     }
 
     indent.Done();
+}
+
+std::string StructDeclaration::GetString() const {
+    std::string ret;
+    if (type) {
+        ret += type->GetString();
+    }
+    if (declarators) {
+        ret += " <";
+        for (unsigned int i = 0; i < declarators->size(); ++i) {
+            if (i > 0) {
+                ret += ",";
+            }
+            ret += (*declarators)[i]->GetString();
+        }
+        ret += ">";
+    }
+    return ret;
 }
 
 ///////////////////////////////////////////////////////////////////////////
