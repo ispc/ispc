@@ -3175,6 +3175,7 @@ bool StorageClass::IsStatic() const { return m_kind == Kind::STATIC; }
 bool StorageClass::IsTypedef() const { return m_kind == Kind::TYPEDEF; }
 bool StorageClass::IsExternC() const { return m_kind == Kind::EXTERN_C; }
 bool StorageClass::IsExternSYCL() const { return m_kind == Kind::EXTERN_SYCL; }
+bool StorageClass::IsAnyExtern() const { return IsExtern() || IsExternC() || IsExternSYCL(); }
 
 ///////////////////////////////////////////////////////////////////////////
 // SourcePos
