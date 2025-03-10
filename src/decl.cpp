@@ -804,7 +804,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                 decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
             }
 
-            if (d->declSpecs->storageClass != StorageClass::NONE) {
+            if (!d->declSpecs->storageClass.IsNone()) {
                 Error(decl->pos,
                       "Storage class \"%s\" is illegal in "
                       "function parameter declaration for parameter \"%s\".",
@@ -892,8 +892,8 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             returnType = returnType->ResolveUnboundVariability(Variability::Varying);
         }
 
-        bool isExternC = ds && (ds->storageClass == StorageClass::EXTERN_C);
-        bool isExternSYCL = ds && (ds->storageClass == StorageClass::EXTERN_SYCL);
+        bool isExternC = ds && ds->storageClass.IsExternC();
+        bool isExternSYCL = ds && ds->storageClass.IsExternSYCL();
         bool isExported = ds && ((ds->typeQualifiers & TYPEQUAL_EXPORT) != 0);
         bool isExternalOnly = ds && ds->attributeList && ds->attributeList->HasAttribute("external_only");
         bool isTask = ds && ((ds->typeQualifiers & TYPEQUAL_TASK) != 0);
@@ -1014,7 +1014,7 @@ Declaration::Declaration(DeclSpecs *ds, Declarator *d) {
 }
 
 std::vector<VariableDeclaration> Declaration::GetVariableDeclarations() const {
-    Assert(declSpecs->storageClass != StorageClass::TYPEDEF);
+    Assert(!declSpecs->storageClass.IsTypedef());
     std::vector<VariableDeclaration> vars;
 
     for (unsigned int i = 0; i < declarators.size(); ++i) {
@@ -1055,7 +1055,7 @@ std::vector<VariableDeclaration> Declaration::GetVariableDeclarations() const {
 }
 
 void Declaration::DeclareFunctions() {
-    Assert(declSpecs->storageClass != StorageClass::TYPEDEF);
+    Assert(!declSpecs->storageClass.IsTypedef());
 
     for (unsigned int i = 0; i < declarators.size(); ++i) {
         Declarator *decl = declarators[i];
