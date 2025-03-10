@@ -636,12 +636,12 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
         return;
     }
 
-    if (storageClass == SC_EXTERN_C) {
+    if (storageClass == StorageClass::EXTERN_C) {
         Error(pos, "extern \"C\" qualifier can only be used for functions.");
         return;
     }
 
-    if (storageClass == SC_EXTERN_SYCL) {
+    if (storageClass == StorageClass::EXTERN_SYCL) {
         Error(pos, "extern \"SYCL\" qualifier can only be used for functions.");
         return;
     }
@@ -673,7 +673,7 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
     // make sure it's a compile-time constant!
     llvm::Constant *llvmInitializer = nullptr;
     ConstExpr *constValue = nullptr;
-    if (storageClass == SC_EXTERN) {
+    if (storageClass == StorageClass::EXTERN) {
         if (initExpr != nullptr) {
             Error(pos, "Initializer can't be provided with \"extern\" global variable \"%s\".", name.c_str());
         }
@@ -709,7 +709,7 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
                     // If compiling for multitarget, skip initialization for
                     // indentified scenarios unless it's static
                     if (llvmInitializer != nullptr) {
-                        if ((storageClass != SC_STATIC) && (initPair.second == true)) {
+                        if ((storageClass != StorageClass::STATIC) && (initPair.second == true)) {
                             if (g->isMultiTargetCompilation == true) {
                                 Error(initExpr->pos,
                                       "Initializer for global variable \"%s\" is not a constant for multi-target "
@@ -755,8 +755,8 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
 
         // If the type doesn't match with the previous one, issue an error.
         if (!Type::Equal(sym->type, type) ||
-            (sym->storageClass != SC_EXTERN && sym->storageClass != SC_EXTERN_C &&
-             sym->storageClass != SC_EXTERN_SYCL && sym->storageClass != storageClass)) {
+            (sym->storageClass != StorageClass::EXTERN && sym->storageClass != StorageClass::EXTERN_C &&
+             sym->storageClass != StorageClass::EXTERN_SYCL && sym->storageClass != storageClass)) {
             Error(pos, "Definition of variable \"%s\" conflicts with definition at %s:%d.", name.c_str(), sym->pos.name,
                   sym->pos.first_line);
             return;
@@ -766,8 +766,8 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
         Assert(gv != nullptr);
 
         // And issue an error if this is a redefinition of a variable
-        if (gv->hasInitializer() && sym->storageClass != SC_EXTERN && sym->storageClass != SC_EXTERN_C &&
-            sym->storageClass != SC_EXTERN_SYCL) {
+        if (gv->hasInitializer() && sym->storageClass != StorageClass::EXTERN && sym->storageClass != StorageClass::EXTERN_C &&
+            sym->storageClass != StorageClass::EXTERN_SYCL) {
             Error(pos, "Redefinition of variable \"%s\" is illegal. (Previous definition at %s:%d.)", sym->name.c_str(),
                   sym->pos.name, sym->pos.first_line);
             return;
@@ -784,7 +784,7 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
     sym->constValue = constValue;
 
     llvm::GlobalValue::LinkageTypes linkage =
-        (sym->storageClass == SC_STATIC) ? llvm::GlobalValue::InternalLinkage : llvm::GlobalValue::ExternalLinkage;
+        (sym->storageClass == StorageClass::STATIC) ? llvm::GlobalValue::InternalLinkage : llvm::GlobalValue::ExternalLinkage;
 
     // Note that the nullptr llvmInitializer is what leads to "extern"
     // declarations coming up extern and not defining storage (a bit
@@ -807,7 +807,7 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
         llvm::GlobalVariable *sym_GV_storagePtr = llvm::dyn_cast<llvm::GlobalVariable>(sym->storageInfo->getPointer());
         Assert(sym_GV_storagePtr);
         llvm::DIGlobalVariableExpression *var = diBuilder->createGlobalVariableExpression(
-            diSpace, name, name, file, pos.first_line, sym->type->GetDIType(diSpace), (sym->storageClass == SC_STATIC));
+            diSpace, name, name, file, pos.first_line, sym->type->GetDIType(diSpace), (sym->storageClass == StorageClass::STATIC));
         sym_GV_storagePtr->addDebugInfo(var);
         /*#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
                 Assert(var.Verify());
@@ -1017,7 +1017,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         }
     }
 
-    if (storageClass == SC_EXTERN_C || storageClass == SC_EXTERN_SYCL) {
+    if (storageClass == StorageClass::EXTERN_C || storageClass == StorageClass::EXTERN_SYCL) {
         // Make sure the user hasn't supplied both an 'extern "C"' and a
         // 'task' qualifier with the function
         if (functionType->isTask) {
@@ -1051,7 +1051,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     }
 
     // Get the LLVM FunctionType
-    bool disableMask = (storageClass == SC_EXTERN_C || storageClass == SC_EXTERN_SYCL);
+    bool disableMask = (storageClass == StorageClass::EXTERN_C || storageClass == StorageClass::EXTERN_SYCL);
 
     auto [name_pref, name_suf] = functionType->GetFunctionMangledName(false);
     std::string functionName = name_pref + name + name_suf;
@@ -1060,7 +1060,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
 
     if (g->target_os == TargetOS::windows) {
         // Make export functions callable from DLLs.
-        if ((g->dllExport) && (storageClass != SC_STATIC)) {
+        if ((g->dllExport) && (storageClass != StorageClass::STATIC)) {
             function->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
         }
     }
@@ -1071,12 +1071,12 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     }
     // Set function attributes: we never throw exceptions
     function->setDoesNotThrow();
-    if ((storageClass != SC_EXTERN_C) && (storageClass != SC_EXTERN_SYCL) && isInline) {
+    if ((storageClass != StorageClass::EXTERN_C) && (storageClass != StorageClass::EXTERN_SYCL) && isInline) {
         function->addFnAttr(llvm::Attribute::AlwaysInline);
     }
 
     if (isVectorCall) {
-        if ((storageClass != SC_EXTERN_C)) {
+        if ((storageClass != StorageClass::EXTERN_C)) {
             Error(pos, "Illegal to use \"__vectorcall\" qualifier on non-extern function \"%s\".", name.c_str());
             return;
         }
@@ -1088,7 +1088,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     }
 
     if (isRegCall) {
-        if ((storageClass != SC_EXTERN_C) && (storageClass != SC_EXTERN_SYCL)) {
+        if ((storageClass != StorageClass::EXTERN_C) && (storageClass != StorageClass::EXTERN_SYCL)) {
             Error(pos, "Illegal to use \"__regcall\" qualifier on non-extern function \"%s\".", name.c_str());
             return;
         }
@@ -1411,14 +1411,14 @@ void Module::AddFunctionTemplateInstantiation(const std::string &name, const Tem
     if (templ) {
         // If primary template has default storage class, but explicit instantiation has non-default storage class,
         // report an error
-        if (templ->GetStorageClass() == SC_NONE && sc != SC_NONE) {
+        if (templ->GetStorageClass() == StorageClass::NONE && sc != StorageClass::NONE) {
             Error(pos, "Template instantiation has inconsistent storage class. Consider assigning it to the primary "
                        "template to inherit it's signature.");
             return;
         }
         // If primary template has non-default storage class, but explicit instantiation has different non-default
         // storage class, report an error
-        if (templ->GetStorageClass() != SC_NONE && sc != SC_NONE && sc != templ->GetStorageClass()) {
+        if (templ->GetStorageClass() != StorageClass::NONE && sc != StorageClass::NONE && sc != templ->GetStorageClass()) {
             Error(pos, "Template instantiation has inconsistent storage class.");
             return;
         }
@@ -1469,14 +1469,14 @@ void Module::AddFunctionTemplateSpecializationDeclaration(const std::string &nam
     }
     // If primary template has default storage class, but specialization has non-default storage class,
     // report an error
-    if (templ->GetStorageClass() == SC_NONE && sc != SC_NONE) {
+    if (templ->GetStorageClass() == StorageClass::NONE && sc != StorageClass::NONE) {
         Error(pos, "Template specialization has inconsistent storage class. Consider assigning it to the primary "
                    "template to inherit it's signature.");
         return;
     }
     // If primary template has non-default storage class, but specialization has different non-default storage class,
     // report an error
-    if (templ->GetStorageClass() != SC_NONE && sc != SC_NONE && sc != templ->GetStorageClass()) {
+    if (templ->GetStorageClass() != StorageClass::NONE && sc != StorageClass::NONE && sc != templ->GetStorageClass()) {
         Error(pos, "Template specialization has inconsistent storage class.");
         return;
     }
