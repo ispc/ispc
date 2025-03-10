@@ -101,7 +101,6 @@ static void lAddFunctionParams(Declarator *decl);
 static void lAddMaskToSymbolTable(SourcePos pos);
 static void lAddThreadIndexCountToSymbolTable(SourcePos pos);
 static std::string lGetAlternates(std::vector<std::string> &alternates);
-static const char *lGetStorageClassString(StorageClass sc);
 static bool lGetConstantIntOrSymbol(Expr *expr, std::variant<std::monostate, int, Symbol*> *value, SourcePos pos, const char *usage);
 
 enum class TemplateType { Template, Instantiation, Specialization };
@@ -155,7 +154,7 @@ struct ForeachDimension {
     std::vector<std::pair<const Type *, SourcePos> > *typeList;
     const AtomicType *atomicType;
     int typeQualifier;
-    StorageClass storageClass;
+    StorageClass *storageClass;
     Stmt *stmt;
     DeclSpecs *declSpecs;
     AttributeList *attributeList;
@@ -290,6 +289,7 @@ struct ForeachDimension {
 %type <functionTemplateSym> template_declaration
 
 %destructor { lCleanUpString($$); } <stringVal>
+%destructor { delete $$; } <storageClass>
 // TODO! destructos for all semantic types that return pointer to heap-allocated memory
 // e.g., tests/lit-tests/2599.ispc
 
@@ -905,7 +905,7 @@ declaration_statement
             AssertPos(@1, m->errorCount > 0);
             $$ = nullptr;
         }
-        else if ($1->declSpecs->storageClass == SC_TYPEDEF) {
+        else if ($1->declSpecs->storageClass == StorageClass::TYPEDEF) {
             for (unsigned int i = 0; i < $1->declarators.size(); ++i) {
                 if ($1->declarators[i] == nullptr)
                     AssertPos(@1, m->errorCount > 0);
@@ -984,21 +984,23 @@ declspec_specifier
 declaration_specifiers
     : storage_class_specifier
       {
-          $$ = new DeclSpecs(nullptr, $1);
+          $$ = new DeclSpecs(nullptr, *$1);
+          delete $1;
       }
     | storage_class_specifier declaration_specifiers
       {
           DeclSpecs *ds = (DeclSpecs *)$2;
           if (ds != nullptr) {
-              if (ds->storageClass != SC_NONE)
+              if (ds->storageClass != StorageClass::NONE)
                   Error(@1, "Multiple storage class specifiers in a declaration are illegal. "
                         "(Have provided both \"%s\" and \"%s\".)",
-                        lGetStorageClassString(ds->storageClass),
-                        lGetStorageClassString($1));
+                        ds->storageClass.GetString().c_str(),
+                        $1->GetString().c_str());
               else
-                  ds->storageClass = $1;
+                  ds->storageClass = *$1;
           }
           $$ = ds;
+          delete $1;
       }
     | declspec_specifier
       {
@@ -1085,7 +1087,7 @@ declaration_specifiers
       }
     | type_qualifier
       {
-          $$ = new DeclSpecs(nullptr, SC_NONE, $1);
+          $$ = new DeclSpecs(nullptr, StorageClass::NONE, $1);
       }
     | type_qualifier declaration_specifiers
       {
@@ -1207,11 +1209,11 @@ init_declarator
     ;
 
 storage_class_specifier
-    : TOKEN_TYPEDEF { $$ = SC_TYPEDEF; }
-    | TOKEN_EXTERN { $$ = SC_EXTERN; }
-    | TOKEN_EXTERN TOKEN_STRING_C_LITERAL  { $$ = SC_EXTERN_C; }
-    | TOKEN_EXTERN TOKEN_STRING_SYCL_LITERAL  { $$ = SC_EXTERN_SYCL; }
-    | TOKEN_STATIC { $$ = SC_STATIC; }
+    : TOKEN_TYPEDEF { $$ = new StorageClass(StorageClass::TYPEDEF); }
+    | TOKEN_EXTERN { $$ = new StorageClass(StorageClass::EXTERN); }
+    | TOKEN_EXTERN TOKEN_STRING_C_LITERAL  { $$ = new StorageClass(StorageClass::EXTERN_C); }
+    | TOKEN_EXTERN TOKEN_STRING_SYCL_LITERAL  { $$ = new StorageClass(StorageClass::EXTERN_SYCL); }
+    | TOKEN_STATIC { $$ = new StorageClass(StorageClass::STATIC); }
     ;
 
 type_specifier
@@ -2568,7 +2570,7 @@ function_definition
             const FunctionType *funcType = CastType<FunctionType>($2->type);
             if (funcType == nullptr)
                 AssertPos(@1, m->errorCount > 0);
-            else if ($1->storageClass == SC_TYPEDEF)
+            else if ($1->storageClass == StorageClass::TYPEDEF)
                 Error(@1, "Illegal \"typedef\" provided with function definition.");
             else {
                 Stmt *code = $4;
@@ -3117,7 +3119,7 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
         return;
 
     decl->InitFromDeclSpecs(ds);
-    if (ds->storageClass == SC_TYPEDEF) {
+    if (ds->storageClass == StorageClass::TYPEDEF) {
         const StructType *st = CastType<StructType>(decl->type);
         if (st && st->IsAnonymousType()) {
             st = st->GetAsNamed(decl->name);
@@ -3192,17 +3194,17 @@ lCheckTemplateDeclSpecs(DeclSpecs *ds, SourcePos pos, TemplateType type, const c
         Error(pos, "'export' not supported for %s.", templateTypeStr.c_str());
         return;
     }
-    if (ds->storageClass == SC_TYPEDEF) {
+    if (ds->storageClass == StorageClass::TYPEDEF) {
         Error(pos, "Illegal \"typedef\" provided with %s.", templateTypeStr.c_str());
         return;
     }
     // We can't support extern "C"/extern "SYCL" for templates because
     // we need mangling information.
-    if (ds->storageClass == SC_EXTERN_C || ds->storageClass == SC_EXTERN_SYCL) {
+    if (ds->storageClass == StorageClass::EXTERN_C || ds->storageClass == StorageClass::EXTERN_SYCL) {
         Error(pos, "Illegal linkage provided with %s.", templateTypeStr.c_str());
         return;
     }
-    Assert(ds->storageClass == SC_NONE || ds->storageClass == SC_STATIC || ds->storageClass == SC_EXTERN);
+    Assert(ds->storageClass == StorageClass::NONE || ds->storageClass == StorageClass::STATIC || ds->storageClass == StorageClass::EXTERN);
     bool isVectorCall = (ds->typeQualifiers & TYPEQUAL_VECTORCALL);
     if (isVectorCall) {
         Error(pos, "Illegal to use \"__vectorcall\" qualifier on non-extern function \"%s\".", name);
@@ -3399,27 +3401,6 @@ static std::string lGetAlternates(std::vector<std::string> &alternates) {
         alts += "?";
     }
     return alts;
-}
-
-static const char *
-lGetStorageClassString(StorageClass sc) {
-    switch (sc) {
-    case SC_NONE:
-        return "";
-    case SC_EXTERN:
-        return "extern";
-    case SC_STATIC:
-        return "static";
-    case SC_TYPEDEF:
-        return "typedef";
-    case SC_EXTERN_C:
-        return "extern \"C\"";
-    case SC_EXTERN_SYCL:
-        return "extern \"SYCL\"";
-    default:
-        Assert(!"logic error in lGetStorageClassString()");
-        return "";
-    }
 }
 
 

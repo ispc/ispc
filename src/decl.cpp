@@ -324,9 +324,8 @@ void AttributeList::Print() const {
 ///////////////////////////////////////////////////////////////////////////
 // DeclSpecs
 
-DeclSpecs::DeclSpecs(const Type *t, StorageClass sc, int tq) {
+DeclSpecs::DeclSpecs(const Type *t, StorageClass sc, int tq) : storageClass(sc) {
     baseType = t;
-    storageClass = sc;
     typeQualifiers = tq;
     soaWidth = 0;
     vectorSize = std::monostate{};
@@ -439,28 +438,8 @@ const Type *DeclSpecs::GetBaseType(SourcePos pos) const {
     return retType;
 }
 
-static const char *lGetStorageClassName(StorageClass storageClass) {
-    switch (storageClass) {
-    case SC_NONE:
-        return "";
-    case SC_EXTERN:
-        return "extern";
-    case SC_EXTERN_C:
-        return "extern \"C\"";
-    case SC_EXTERN_SYCL:
-        return "extern \"SYCL\"";
-    case SC_STATIC:
-        return "static";
-    case SC_TYPEDEF:
-        return "typedef";
-    default:
-        FATAL("Unhandled storage class in lGetStorageClassName");
-        return "";
-    }
-}
-
 void DeclSpecs::Print() const {
-    printf("Declspecs: [%s ", lGetStorageClassName(storageClass));
+    printf("Declspecs: [%s ", storageClass.GetString().c_str());
 
     if (soaWidth > 0) {
         printf("soa<%d> ", soaWidth);
@@ -484,7 +463,7 @@ void DeclSpecs::Print() const {
 
 std::string DeclSpecs::GetString() const {
     std::string ret;
-    std::string storageClassString = lGetStorageClassName(storageClass);
+    std::string storageClassString = storageClass.GetString();
     if (!storageClassString.empty()) {
         ret += storageClassString + " ";
     }
@@ -510,10 +489,9 @@ std::string DeclSpecs::GetString() const {
 ///////////////////////////////////////////////////////////////////////////
 // Declarator
 
-Declarator::Declarator(DeclaratorKind dk, SourcePos p) : pos(p), kind(dk) {
+Declarator::Declarator(DeclaratorKind dk, SourcePos p) : pos(p), kind(dk), storageClass(StorageClass::NONE) {
     child = nullptr;
     typeQualifiers = 0;
-    storageClass = SC_NONE;
     arraySize = std::monostate{};
     type = nullptr;
     initExpr = nullptr;
@@ -599,7 +577,7 @@ std::string Declarator::GetString() const {
     if (!typeQualifier.empty()) {
         ret += typeQualifier + " ";
     }
-    std::string storageClassString = lGetStorageClassName(storageClass);
+    std::string storageClassString = storageClass.GetString();
     if (!storageClassString.empty()) {
         ret += storageClassString + " ";
     }
@@ -625,7 +603,7 @@ void Declarator::Print(Indent &indent) const {
 
     printf("[");
     lPrintTypeQualifiers(typeQualifiers);
-    printf("%s ", lGetStorageClassName(storageClass));
+    printf("%s ", storageClass.GetString().c_str());
     if (name.size() > 0) {
         printf("%s", name.c_str());
     } else {
@@ -827,11 +805,11 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                 decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
             }
 
-            if (d->declSpecs->storageClass != SC_NONE) {
+            if (d->declSpecs->storageClass != StorageClass::NONE) {
                 Error(decl->pos,
                       "Storage class \"%s\" is illegal in "
                       "function parameter declaration for parameter \"%s\".",
-                      lGetStorageClassName(d->declSpecs->storageClass), decl->name.c_str());
+                      d->declSpecs->storageClass.GetString().c_str(), decl->name.c_str());
             }
             if (decl->type->IsVoidType()) {
                 Error(decl->pos, "Parameter with type \"void\" illegal in function "
@@ -915,8 +893,8 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             returnType = returnType->ResolveUnboundVariability(Variability::Varying);
         }
 
-        bool isExternC = ds && (ds->storageClass == SC_EXTERN_C);
-        bool isExternSYCL = ds && (ds->storageClass == SC_EXTERN_SYCL);
+        bool isExternC = ds && (ds->storageClass == StorageClass::EXTERN_C);
+        bool isExternSYCL = ds && (ds->storageClass == StorageClass::EXTERN_SYCL);
         bool isExported = ds && ((ds->typeQualifiers & TYPEQUAL_EXPORT) != 0);
         bool isExternalOnly = ds && ds->attributeList && ds->attributeList->HasAttribute("external_only");
         bool isTask = ds && ((ds->typeQualifiers & TYPEQUAL_TASK) != 0);
@@ -1037,7 +1015,7 @@ Declaration::Declaration(DeclSpecs *ds, Declarator *d) {
 }
 
 std::vector<VariableDeclaration> Declaration::GetVariableDeclarations() const {
-    Assert(declSpecs->storageClass != SC_TYPEDEF);
+    Assert(declSpecs->storageClass != StorageClass::TYPEDEF);
     std::vector<VariableDeclaration> vars;
 
     for (unsigned int i = 0; i < declarators.size(); ++i) {
@@ -1078,7 +1056,7 @@ std::vector<VariableDeclaration> Declaration::GetVariableDeclarations() const {
 }
 
 void Declaration::DeclareFunctions() {
-    Assert(declSpecs->storageClass != SC_TYPEDEF);
+    Assert(declSpecs->storageClass != StorageClass::TYPEDEF);
 
     for (unsigned int i = 0; i < declarators.size(); ++i) {
         Declarator *decl = declarators[i];
