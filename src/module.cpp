@@ -994,7 +994,8 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         }
     }
 
-    if (storageClass.IsExternC() || storageClass.IsExternSYCL()) {
+    bool isExternCorSYCL = storageClass.IsExternC() || storageClass.IsExternSYCL();
+    if (isExternCorSYCL) {
         // Make sure the user hasn't supplied both an 'extern "C"' and a
         // 'task' qualifier with the function
         if (functionType->isTask) {
@@ -1028,12 +1029,10 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     }
 
     // Get the LLVM FunctionType
-    bool disableMask = (storageClass.IsExternC() || storageClass.IsExternSYCL());
-
     auto [name_pref, name_suf] = functionType->GetFunctionMangledName(false);
     std::string functionName = name_pref + name + name_suf;
 
-    llvm::Function *function = functionType->CreateLLVMFunction(functionName, g->ctx, disableMask);
+    llvm::Function *function = functionType->CreateLLVMFunction(functionName, g->ctx, /*disableMask*/ isExternCorSYCL);
 
     if (g->target_os == TargetOS::windows) {
         // Make export functions callable from DLLs.
@@ -1048,7 +1047,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     }
     // Set function attributes: we never throw exceptions
     function->setDoesNotThrow();
-    if (!storageClass.IsExternC() && !storageClass.IsExternSYCL() && isInline) {
+    if (!isExternCorSYCL && isInline) {
         function->addFnAttr(llvm::Attribute::AlwaysInline);
     }
 
@@ -1065,7 +1064,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     }
 
     if (isRegCall) {
-        if (!storageClass.IsExternC() && !storageClass.IsExternSYCL()) {
+        if (!isExternCorSYCL) {
             Error(pos, "Illegal to use \"__regcall\" qualifier on non-extern function \"%s\".", name.c_str());
             return;
         }
