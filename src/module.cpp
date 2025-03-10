@@ -754,8 +754,7 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
         // global.
 
         // If the type doesn't match with the previous one, issue an error.
-        if (!Type::Equal(sym->type, type) || (!sym->storageClass.IsExtern() && !sym->storageClass.IsExternC() &&
-                                              !sym->storageClass.IsExternSYCL() && sym->storageClass != storageClass)) {
+        if (!Type::Equal(sym->type, type) || (!sym->storageClass.IsAnyExtern() && sym->storageClass != storageClass)) {
             Error(pos, "Definition of variable \"%s\" conflicts with definition at %s:%d.", name.c_str(), sym->pos.name,
                   sym->pos.first_line);
             return;
@@ -765,8 +764,7 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
         Assert(gv != nullptr);
 
         // And issue an error if this is a redefinition of a variable
-        if (gv->hasInitializer() && !sym->storageClass.IsExtern() && !sym->storageClass.IsExternC() &&
-            !sym->storageClass.IsExternSYCL()) {
+        if (gv->hasInitializer() && !sym->storageClass.IsAnyExtern()) {
             Error(pos, "Redefinition of variable \"%s\" is illegal. (Previous definition at %s:%d.)", sym->name.c_str(),
                   sym->pos.name, sym->pos.first_line);
             return;
