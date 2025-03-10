@@ -145,7 +145,7 @@ class AttributeList {
  */
 class DeclSpecs : public Traceable {
   public:
-    DeclSpecs(const Type *t = nullptr, StorageClass sc = SC_NONE, int tq = TYPEQUAL_NONE);
+    DeclSpecs(const Type *t = nullptr, StorageClass sc = StorageClass::NONE, int tq = TYPEQUAL_NONE);
     ~DeclSpecs();
 
     std::string GetString() const;

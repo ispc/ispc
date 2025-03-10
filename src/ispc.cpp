@@ -3299,6 +3299,32 @@ Globals::Globals() {
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// StorageClass
+
+StorageClass::StorageClass(Kind kind) : m_kind(kind) {}
+StorageClass::operator StorageClass::Kind() const { return m_kind; }
+
+std::string StorageClass::GetString() const {
+    switch (m_kind) {
+    case Kind::NONE:
+        return "";
+    case Kind::EXTERN:
+        return "extern";
+    case Kind::STATIC:
+        return "static";
+    case Kind::TYPEDEF:
+        return "typedef";
+    case Kind::EXTERN_C:
+        return "extern \"C\"";
+    case Kind::EXTERN_SYCL:
+        return "extern \"SYCL\"";
+    default:
+        FATAL("Unhandled storage class in lGetStorageClassName");
+        return "";
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////
 // SourcePos
 
 SourcePos::SourcePos(const char *n, int fl, int fc, int ll, int lc) {
