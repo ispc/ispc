@@ -1,0 +1,11 @@
+[[tests]]
+name = "swizzle3"
+test_file = "swizzle-3.ispc"
+enabled = true
+width = 4
+
+[[tests]]
+name = "gb_double_improve_progindex"
+test_file = "gs-double-improve-progindex.ispc"
+enabled = true
+width = 4
