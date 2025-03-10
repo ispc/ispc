@@ -181,7 +181,7 @@ void DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             return;
         }
 
-        if (sym->storageClass == StorageClass::STATIC) {
+        if (sym->storageClass.IsStatic()) {
             // For static variables, we need a compile-time constant value
             // for its initializer; if there's no initializer, we use a
             // zero value.
