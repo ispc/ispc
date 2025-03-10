@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -105,6 +105,7 @@ class UnaryExpr : public Expr {
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
     Expr *Optimize();
     Expr *TypeCheck();
@@ -151,6 +152,7 @@ class BinaryExpr : public Expr {
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
     const Type *GetLValueType() const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Expr *Optimize();
@@ -189,6 +191,7 @@ class AssignExpr : public Expr {
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Expr *Optimize();
@@ -214,6 +217,7 @@ class SelectExpr : public Expr {
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
     const Type *GetLValueType() const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Expr *Optimize();
@@ -241,6 +245,7 @@ class ExprList : public Expr {
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
     std::pair<llvm::Constant *, bool> GetStorageConstant(const Type *type) const;
     std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
@@ -288,6 +293,7 @@ class FunctionCallExpr : public Expr {
     llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
     const Type *GetLValueType() const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Expr *Optimize();
@@ -319,6 +325,7 @@ class IndexExpr : public Expr {
     const Type *GetType() const;
     const Type *GetLValueType() const;
     Symbol *GetBaseSymbol() const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Expr *Optimize();
@@ -352,6 +359,7 @@ class MemberExpr : public Expr {
     llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
     Symbol *GetBaseSymbol() const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
     Expr *Optimize();
     Expr *TypeCheck();
@@ -492,6 +500,7 @@ class ConstExpr : public Expr {
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
     std::pair<llvm::Constant *, bool> GetStorageConstant(const Type *type) const;
     std::pair<llvm::Constant *, bool> GetConstant(const Type *constType) const;
@@ -560,6 +569,7 @@ class TypeCastExpr : public Expr {
     llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
     const Type *GetLValueType() const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
     Expr *TypeCheck();
     Expr *Optimize();
@@ -587,6 +597,7 @@ class ReferenceExpr : public Expr {
     const Type *GetType() const;
     const Type *GetLValueType() const;
     Symbol *GetBaseSymbol() const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
     Expr *TypeCheck();
     Expr *Optimize();
@@ -627,6 +638,7 @@ class PtrDerefExpr : public DerefExpr {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == PtrDerefExprID; }
 
     const Type *GetType() const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
     Expr *TypeCheck();
     int EstimateCost() const;
@@ -643,6 +655,7 @@ class RefDerefExpr : public DerefExpr {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == RefDerefExprID; }
 
     const Type *GetType() const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
     Expr *TypeCheck();
     int EstimateCost() const;
@@ -661,6 +674,7 @@ class AddressOfExpr : public Expr {
     const Type *GetType() const;
     const Type *GetLValueType() const;
     Symbol *GetBaseSymbol() const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
     Expr *TypeCheck();
     Expr *Optimize();
@@ -683,6 +697,7 @@ class SizeOfExpr : public Expr {
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
     Expr *TypeCheck();
     Expr *Optimize();
@@ -707,6 +722,7 @@ class AllocaExpr : public Expr {
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
     Expr *TypeCheck();
     Expr *Optimize();
@@ -733,6 +749,7 @@ class SymbolExpr : public Expr {
     Symbol *GetBaseSymbol() const;
     Expr *TypeCheck();
     Expr *Optimize();
+    std::string GetString() const;
     void Print(Indent &indent) const;
     int EstimateCost() const;
     SymbolExpr *Instantiate(TemplateInstantiation &templInst) const;
@@ -758,6 +775,7 @@ class FunctionSymbolExpr : public Expr {
     Symbol *GetBaseSymbol() const;
     Expr *TypeCheck();
     Expr *Optimize();
+    std::string GetString() const;
     void Print(Indent &indent) const;
     int EstimateCost() const;
     FunctionSymbolExpr *Instantiate(TemplateInstantiation &templInst) const;
@@ -838,6 +856,7 @@ class SyncExpr : public Expr {
     const Type *GetType() const;
     Expr *TypeCheck();
     Expr *Optimize();
+    std::string GetString() const;
     void Print(Indent &indent) const;
     int EstimateCost() const;
     SyncExpr *Instantiate(TemplateInstantiation &templInst) const;
@@ -856,6 +875,7 @@ class NullPointerExpr : public Expr {
     Expr *TypeCheck();
     Expr *Optimize();
     std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
     int EstimateCost() const;
     NullPointerExpr *Instantiate(TemplateInstantiation &templInst) const;
@@ -875,6 +895,7 @@ class NewExpr : public Expr {
     const Type *GetType() const;
     Expr *TypeCheck();
     Expr *Optimize();
+    std::string GetString() const;
     void Print(Indent &indent) const;
     int EstimateCost() const;
     NewExpr *Instantiate(TemplateInstantiation &templInst) const;
