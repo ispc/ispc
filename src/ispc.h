@@ -254,9 +254,9 @@ class Target {
         supported CPUs. */
     static std::string SupportedCPUs();
 
-    /** Returns a triple string specifying the target architecture, vendor,
+    /** Returns a triple specifying the target architecture, vendor,
         and environment. */
-    std::string GetTripleString() const;
+    llvm::Triple GetTriple() const;
 
     /** Returns the LLVM TargetMachine object corresponding to this
         target. */

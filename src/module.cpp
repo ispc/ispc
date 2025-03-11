@@ -261,8 +261,12 @@ Module::Module(const char *fn) : filename(fn) {
     lDeclareSizeAndPtrIntTypes(symbolTable);
 
     module = new llvm::Module(!IsStdin(filename) ? filename : "<stdin>", *g->ctx);
-    module->setTargetTriple(g->target->GetTripleString());
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
+    module->setTargetTriple(g->target->GetTriple());
+#else
+    module->setTargetTriple(g->target->GetTriple().str());
+#endif
     // DataLayout information supposed to be managed in single place in Target class.
     module->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
     lSetCodeModel(module);
@@ -3520,7 +3524,11 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
 static llvm::Module *lInitDispatchModule() {
     llvm::Module *module = new llvm::Module("dispatch_module", *g->ctx);
 
-    module->setTargetTriple(g->target->GetTripleString());
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
+    module->setTargetTriple(g->target->GetTriple());
+#else
+    module->setTargetTriple(g->target->GetTriple().str());
+#endif
 
     // DataLayout information supposed to be managed in single place in Target class.
     module->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
