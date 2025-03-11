@@ -3741,34 +3741,32 @@ std::string lDetermineDepsTargetName(const char *srcFile, const char *depsTarget
     return "a.out";
 }
 
-int lWriteOutputFiles(Module *m, const char *srcFile, Module::OutputFlags outputFlags, Module::OutputType outputType,
-                      const char *outFileName, const char *headerFileName, const char *depsFileName,
-                      const char *depsTargetName, const char *hostStubFileName, const char *devStubFileName) {
+int Module::WriteOutputFiles(const char *depsTargetName) {
     // Write the main output file
-    if (outFileName && !m->writeOutput(outputType, outputFlags, outFileName)) {
+    if (outFileName && !writeOutput(outputType, outputFlags, outFileName)) {
         return 1;
     }
-    if (headerFileName && !m->writeOutput(Module::Header, outputFlags, headerFileName)) {
+    if (headerFileName && !writeOutput(Module::Header, outputFlags, headerFileName)) {
         return 1;
     }
     if (depsFileName || outputFlags.isDepsToStdout()) {
         std::string targetName = lDetermineDepsTargetName(srcFile, depsTargetName, outFileName);
 
-        if (!m->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile)) {
+        if (!writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile)) {
             return 1;
         }
     }
-    if (hostStubFileName && !m->writeOutput(Module::HostStub, outputFlags, hostStubFileName)) {
+    if (hostStubFileName && !writeOutput(Module::HostStub, outputFlags, hostStubFileName)) {
         return 1;
     }
-    if (devStubFileName && !m->writeOutput(Module::DevStub, outputFlags, devStubFileName)) {
+    if (devStubFileName && !writeOutput(Module::DevStub, outputFlags, devStubFileName)) {
         return 1;
     }
     return 0;
 }
 
 int Module::CompileSingleTarget(Arch arch, const char *cpu, ISPCTarget target, const char *depsTargetName) {
-    const int compileResult = m->CompileFile();
+    const int compileResult = CompileFile();
 
     llvm::TimeTraceScope TimeScope("Backend");
 
@@ -3777,21 +3775,19 @@ int Module::CompileSingleTarget(Arch arch, const char *cpu, ISPCTarget target, c
             return 1;
         }
 
-        if (lWriteOutputFiles(m, srcFile, outputFlags, outputType, outFileName, headerFileName, depsFileName,
-                              depsTargetName, hostStubFileName, devStubFileName)) {
+        if (WriteOutputFiles(depsTargetName)) {
             return 1;
         }
     } else {
-        ++m->errorCount;
+        ++errorCount;
     }
 
-    int errorCount = m->errorCount;
     // In case of error, clean up symbolTable
-    if (errorCount > 0) {
-        m->symbolTable->PopInnerScopes();
+    if (errorCount) {
+        symbolTable->PopInnerScopes();
     }
 
-    return errorCount > 0;
+    return errorCount;
 }
 
 int lValidateMultiTargetInputs(const char *srcFile, const char *outFileName, const char *cpu) {
