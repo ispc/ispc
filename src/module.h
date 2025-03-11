@@ -134,6 +134,20 @@ class Module {
 #endif
     };
 
+    struct OutputName {
+        OutputName() {}
+        OutputName(const char *outFileName, const char *headerFileName, const char *depsFileName,
+                   const char *hostStubFileName, const char *devStubFileName)
+            : out(outFileName ? outFileName : ""), header(headerFileName ? headerFileName : ""),
+              deps(depsFileName ? depsFileName : ""), hostStub(hostStubFileName ? hostStubFileName : ""),
+              devStub(devStubFileName ? devStubFileName : "") {}
+        std::string out;
+        std::string header;
+        std::string deps;
+        std::string hostStub;
+        std::string devStub;
+    };
+
     // Define a mapping from OutputType to expected suffixes and file type descriptions
     struct OutputTypeInfo {
         const char *fileType;
@@ -197,6 +211,9 @@ class Module {
         MCModel mcModel;
     };
 
+    // TODO: comment
+    Module(const char *filename, OutputFlags flags, OutputType outputType, OutputName &outputNames);
+
     /** Compile the given source file, generating assembly, object file, or
         LLVM bitcode output, as well as (optionally) a header file with
         declarations of functions and types used in the ispc/application
@@ -223,9 +240,8 @@ class Module {
                             srcFile.
      */
     static int CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
-                                OutputFlags outputFlags, OutputType outputType, const char *outFileName,
-                                const char *headerFileName, const char *depsFileName, const char *depsTargetName,
-                                const char *hostStubFileName, const char *devStubFileName);
+                                OutputFlags outputFlags, OutputType outputType, OutputName &outputNames,
+                                const char *depsTargetName);
     static int CompileSingleTarget(const char *srcFile, Arch arch, const char *cpu, ISPCTarget target,
                                    OutputFlags outputFlags, OutputType outputType, const char *outFileName,
                                    const char *headerFileName, const char *depsFileName, const char *depsTargetName,
@@ -275,6 +291,10 @@ class Module {
   private:
     const char *filename{nullptr};
     AST *ast{nullptr};
+
+    OutputFlags outputFlags;
+    OutputType outputType;
+    OutputName outputNames;
 
     // Definition and member object capturing preprocessing stream during Module lifetime.
     struct CPPBuffer {
