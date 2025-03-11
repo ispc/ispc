@@ -4010,6 +4010,14 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
                     return 1;
                 }
             }
+
+            bool isLastTarget = (i == (targets.size() - 1));
+            if (lWriteMultiTargetHeaders(m, g->target, &DHI, isLastTarget, outputFlags, headerFileName)) {
+                return 1;
+            }
+            if (isLastTarget) {
+                DHI.closeFile();
+            }
         } else {
             ++m->errorCount;
         }
@@ -4017,14 +4025,6 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         errorCount += m->errorCount;
         if (errorCount != 0) {
             return 1;
-        }
-
-        bool isLastTarget = (i == (targets.size() - 1));
-        if (lWriteMultiTargetHeaders(m, g->target, &DHI, isLastTarget, outputFlags, headerFileName)) {
-            return 1;
-        }
-        if (isLastTarget) {
-            DHI.closeFile();
         }
 
         // Important: Don't delete the llvm::Module *m here; we need to
