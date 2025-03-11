@@ -249,6 +249,7 @@ class Module {
                                       const char *hostStubFileName, const char *devStubFileName);
     static int LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputType, const char *outFileName);
 
+    int WriteOutputFiles(const char *depsTargetName);
     /** Write the corresponding output type to the given file.  Returns
         true on success, false if there has been an error.  The given
         filename may be nullptr, indicating that output should go to standard
