@@ -3907,12 +3907,28 @@ int lFinilizeDispatchModule(Module *module, llvm::Module *dispatchModule, Arch a
     return 0;
 }
 
-Target::ISA lFindCommonISA(bool *compiledISAs) {
+Target::ISA lFindCommonISA(bool *ISAs) {
     int firstTargetISA = 0;
-    while (!compiledISAs[firstTargetISA]) {
+    while (!ISAs[firstTargetISA]) {
         firstTargetISA++;
     }
     return (Target::ISA)firstTargetISA;
+}
+
+int lInitializeISAsAndIDs(std::vector<ISPCTarget> targets, bool *ISAs) {
+    for (unsigned int i = 0; i < targets.size(); ++i) {
+        // Issue an error if we've already compiled to a variant of
+        // this target ISA.  (It doesn't make sense to compile to both
+        // avx and avx-x2, for example.)
+        auto ISA = Target::TargetToISA(targets[i]);
+        if (ISAs[ISA] || (ISAs[Target::SSE41] && ISA == Target::SSE42) ||
+            (ISAs[Target::SSE42] && ISA == Target::SSE41)) {
+            Error(SourcePos(), "Can't compile to multiple variants of %s target!\n", Target::ISAToString(ISA));
+            return 1;
+        }
+        ISAs[ISA] = true;
+    }
+    return 0;
 }
 
 int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
@@ -3923,6 +3939,14 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
     Assert(targets.size() > 1);
 
     if (lValidateMultiTargetInputs(srcFile, outFileName, cpu)) {
+        return 1;
+    }
+
+    // Array initialized with all false
+    bool ISAs[Target::NUM_ISAS] = {};
+
+    // Also check if we have same ISA with different vector widths
+    if (lInitializeISAsAndIDs(targets, ISAs)) {
         return 1;
     }
 
@@ -3941,8 +3965,6 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
     llvm::Module *dispatchModule = nullptr;
     std::map<std::string, FunctionTargetVariants> exportedFunctions;
     std::vector<std::unique_ptr<Module>> modules;
-    // Array initialized with all false
-    bool compiledISAs[Target::NUM_ISAS] = {};
 
     for (unsigned int i = 0; i < targets.size(); ++i) {
         // Lifetime of the target object is tied to the scope of the loop.
@@ -3954,17 +3976,6 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         // Here, we do not transfer the ownership of the target to the global
         // variable. This is just an observer pointer.
         g->target = targetPtr.get();
-
-        // Issue an error if we've already compiled to a variant of
-        // this target ISA.  (It doesn't make sense to compile to both
-        // avx and avx-x2, for example.)
-        auto targetISA = g->target->getISA();
-        if (compiledISAs[targetISA] || (compiledISAs[Target::SSE41] && targetISA == Target::SSE42) ||
-            (compiledISAs[Target::SSE42] && targetISA == Target::SSE41)) {
-            Error(SourcePos(), "Can't compile to multiple variants of %s target!\n", g->target->GetISAString());
-            return 1;
-        }
-        compiledISAs[targetISA] = true;
 
         auto modulePtr = std::make_unique<Module>(srcFile);
         m = modulePtr.get();
@@ -4023,7 +4034,7 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
     // compiled to above.  We'll use this as the target machine for
     // compiling the dispatch module--this is safe in that it is the
     // least-common-denominator of all of the targets we compiled to.
-    Target::ISA firstISA = lFindCommonISA(compiledISAs);
+    Target::ISA firstISA = lFindCommonISA(ISAs);
     const char *firstTargetISA = Target::ISAToTargetString(firstISA);
     Assert(strcmp(firstTargetISA, "") != 0);
     ISPCTarget firstTarget = ParseISPCTarget(firstTargetISA);

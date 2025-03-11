@@ -2012,7 +2012,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         break;
 #else
     case ISPCTarget::neon_i8x16:
+    case ISPCTarget::neon_i8x32:
     case ISPCTarget::neon_i16x8:
+    case ISPCTarget::neon_i16x16:
     case ISPCTarget::neon_i32x4:
     case ISPCTarget::neon_i32x8:
         unsupported_target = true;
@@ -2869,6 +2871,145 @@ const char *Target::ISAToTargetString(ISA isa) {
 }
 
 const char *Target::GetISATargetString() const { return ISAToTargetString(m_isa); }
+
+Target::ISA Target::TargetToISA(ISPCTarget target) {
+    switch (target) {
+    case ISPCTarget::sse2_i32x4:
+    case ISPCTarget::sse2_i32x8:
+        return Target::ISA::SSE2;
+    case ISPCTarget::sse4_i8x16:
+    case ISPCTarget::sse4_i16x8:
+    case ISPCTarget::sse4_i32x4:
+    case ISPCTarget::sse4_i32x8:
+        return Target::ISA::SSE42;
+    case ISPCTarget::sse41_i8x16:
+    case ISPCTarget::sse41_i16x8:
+    case ISPCTarget::sse41_i32x4:
+    case ISPCTarget::sse41_i32x8:
+        return Target::ISA::SSE41;
+    case ISPCTarget::avx1_i32x4:
+    case ISPCTarget::avx1_i32x8:
+    case ISPCTarget::avx1_i32x16:
+    case ISPCTarget::avx1_i64x4:
+        return Target::ISA::AVX;
+    case ISPCTarget::avx2_i8x32:
+    case ISPCTarget::avx2_i16x16:
+    case ISPCTarget::avx2_i32x4:
+    case ISPCTarget::avx2_i32x8:
+    case ISPCTarget::avx2_i32x16:
+    case ISPCTarget::avx2_i64x4:
+        return Target::ISA::AVX2;
+    case ISPCTarget::avx2vnni_i32x4:
+    case ISPCTarget::avx2vnni_i32x8:
+    case ISPCTarget::avx2vnni_i32x16:
+        return Target::ISA::AVX2VNNI;
+    case ISPCTarget::avx512skx_x4:
+    case ISPCTarget::avx512skx_x8:
+    case ISPCTarget::avx512skx_x16:
+    case ISPCTarget::avx512skx_x32:
+    case ISPCTarget::avx512skx_x64:
+        return Target::ISA::SKX_AVX512;
+    case ISPCTarget::avx512icl_x4:
+    case ISPCTarget::avx512icl_x8:
+    case ISPCTarget::avx512icl_x16:
+    case ISPCTarget::avx512icl_x32:
+    case ISPCTarget::avx512icl_x64:
+        return Target::ISA::ICL_AVX512;
+    case ISPCTarget::avx512spr_x4:
+    case ISPCTarget::avx512spr_x8:
+    case ISPCTarget::avx512spr_x16:
+    case ISPCTarget::avx512spr_x32:
+    case ISPCTarget::avx512spr_x64:
+        return Target::ISA::SPR_AVX512;
+    case ISPCTarget::avx10_2_512_x4:
+    case ISPCTarget::avx10_2_512_x8:
+    case ISPCTarget::avx10_2_512_x16:
+    case ISPCTarget::avx10_2_512_x32:
+    case ISPCTarget::avx10_2_512_x64:
+        return Target::ISA::AVX10_2_512;
+#ifdef ISPC_ARM_ENABLED
+    case ISPCTarget::neon_i8x16:
+    case ISPCTarget::neon_i8x32:
+    case ISPCTarget::neon_i16x8:
+    case ISPCTarget::neon_i16x16:
+    case ISPCTarget::neon_i32x4:
+    case ISPCTarget::neon_i32x8:
+        return Target::ISA::NEON;
+#else // ISPC_ARM_ENABLED
+    case ISPCTarget::neon_i8x16:
+    case ISPCTarget::neon_i8x32:
+    case ISPCTarget::neon_i16x8:
+    case ISPCTarget::neon_i16x16:
+    case ISPCTarget::neon_i32x4:
+    case ISPCTarget::neon_i32x8:
+        return Target::ISA::NUM_ISAS;
+#endif // ISPC_ARM_ENABLED
+#ifdef ISPC_WASM_ENABLED
+    case ISPCTarget::wasm_i32x4:
+        return Target::ISA::WASM;
+#else // ISPC_WASM_ENABLED
+    case ISPCTarget::wasm_i32x4:
+        return Target::ISA::NUM_ISAS;
+#endif // ISPC_WASM_ENABLED
+#ifdef ISPC_XE_ENABLED
+    case ISPCTarget::gen9_x8:
+    case ISPCTarget::gen9_x16:
+        return Target::ISA::GEN9;
+    case ISPCTarget::xelp_x8:
+    case ISPCTarget::xelp_x16:
+        return Target::ISA::XELP;
+    case ISPCTarget::xehpg_x8:
+    case ISPCTarget::xehpg_x16:
+        return Target::ISA::XEHPG;
+    case ISPCTarget::xehpc_x16:
+    case ISPCTarget::xehpc_x32:
+        return Target::ISA::XEHPC;
+    case ISPCTarget::xelpg_x8:
+    case ISPCTarget::xelpg_x16:
+        return Target::ISA::XELPG;
+    case ISPCTarget::xe2hpg_x16:
+    case ISPCTarget::xe2hpg_x32:
+        return Target::ISA::XE2HPG;
+    case ISPCTarget::xe2lpg_x16:
+    case ISPCTarget::xe2lpg_x32:
+        return Target::ISA::XE2LPG;
+#else // ISPC_XE_ENABLED
+    case ISPCTarget::gen9_x8:
+    case ISPCTarget::gen9_x16:
+    case ISPCTarget::xelp_x8:
+    case ISPCTarget::xelp_x16:
+    case ISPCTarget::xehpg_x8:
+    case ISPCTarget::xehpg_x16:
+    case ISPCTarget::xehpc_x16:
+    case ISPCTarget::xehpc_x32:
+    case ISPCTarget::xelpg_x8:
+    case ISPCTarget::xelpg_x16:
+    case ISPCTarget::xe2hpg_x16:
+    case ISPCTarget::xe2hpg_x32:
+    case ISPCTarget::xe2lpg_x16:
+    case ISPCTarget::xe2lpg_x32:
+        return Target::ISA::NUM_ISAS;
+#endif // ISPC_XE_ENABLED
+    case ISPCTarget::host:
+    case ISPCTarget::none:
+    case ISPCTarget::error:
+    case ISPCTarget::generic_i32x4:
+    case ISPCTarget::generic_i32x8:
+    case ISPCTarget::generic_i8x16:
+    case ISPCTarget::generic_i16x8:
+    case ISPCTarget::generic_i32x16:
+    case ISPCTarget::generic_i64x4:
+    case ISPCTarget::generic_i8x32:
+    case ISPCTarget::generic_i16x16:
+    case ISPCTarget::generic_i1x4:
+    case ISPCTarget::generic_i1x8:
+    case ISPCTarget::generic_i1x16:
+    case ISPCTarget::generic_i1x32:
+    case ISPCTarget::generic_i1x64:
+        FATAL("Ubiqutous target in TargetToISA()");
+        return Target::ISA::NUM_ISAS;
+    }
+}
 
 std::string Target::GetTargetSuffix() {
     if (g->isMultiTargetCompilation) {
