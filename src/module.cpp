@@ -3809,7 +3809,7 @@ int lValidateMultiTargetInputs(const char *srcFile, const char *outFileName, con
     return 0;
 }
 
-int lWriteDispatchOutputFiles(llvm::Module *dispatchModule, Module *module, llvm::TargetMachine *firstTargetMachine,
+int lWriteDispatchOutputFiles(llvm::Module *dispatchModule, llvm::TargetMachine *firstTargetMachine,
                               const char *srcFile, Module::OutputFlags outputFlags, Module::OutputType outputType,
                               const char *outFileName, const char *depsFileName, const char *depsTargetName) {
     if (outFileName != nullptr) {
@@ -3847,37 +3847,6 @@ int lWriteDispatchOutputFiles(llvm::Module *dispatchModule, Module *module, llvm
     return 0;
 }
 
-int lFinilizeDispatchModule(Module *module, llvm::Module *dispatchModule, Arch arch, const char *cpu,
-                            ISPCTarget firstTarget, std::map<std::string, FunctionTargetVariants> &exportedFunctions,
-                            const char *srcFile, Module::OutputFlags outputFlags, Module::OutputType outputType,
-                            const char *outFileName, const char *depsFileName, const char *depsTargetName) {
-    Assert(firstTarget != ISPCTarget::none);
-
-    auto dispatchTargetPtr =
-        std::make_unique<Target>(arch, cpu, firstTarget, outputFlags.getPICLevel(), outputFlags.getMCModel(), false);
-    g->target = dispatchTargetPtr.get();
-    llvm::TargetMachine *firstTargetMachine = g->target->GetTargetMachine();
-    Assert(firstTargetMachine);
-    if (!g->target->isValid()) {
-        return 1;
-    }
-
-    if (dispatchModule == nullptr) {
-        Error(SourcePos(), "Failed to create dispatch module.\n");
-        return 1;
-    }
-
-    lEmitDispatchModule(dispatchModule, exportedFunctions);
-
-    if (lWriteDispatchOutputFiles(dispatchModule, module, firstTargetMachine, srcFile, outputFlags, outputType,
-                                  outFileName, depsFileName, depsTargetName)) {
-        return 1;
-    }
-
-    g->target = nullptr;
-    return 0;
-}
-
 Target::ISA lFindCommonISA(bool *ISAs) {
     int firstTargetISA = 0;
     while (!ISAs[firstTargetISA]) {
@@ -3903,6 +3872,111 @@ int lInitializeISAsAndIDs(std::vector<ISPCTarget> targets, bool *ISAs, int *IDs)
     return 0;
 }
 
+int Module::GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> targets,
+                             std::vector<std::unique_ptr<Module>> &modules,
+                             std::vector<std::unique_ptr<Target>> &targetsPtrs, OutputFlags outputFlags,
+                             OutputType outputType, OutputName outputNames, const char *depsTargetName) {
+
+    const char *outFileName = lGetStrPtr(outputNames.out);
+    const char *headerFileName = lGetStrPtr(outputNames.header);
+    const char *depsFileName = lGetStrPtr(outputNames.deps);
+    const char *hostStubFileName = lGetStrPtr(outputNames.hostStub);
+    const char *devStubFileName = lGetStrPtr(outputNames.devStub);
+
+    std::map<std::string, FunctionTargetVariants> exportedFunctions;
+    // Array initialized with all false
+    bool ISAs[Target::NUM_ISAS] = {};
+    // We can compile only to one target for each ISA in multi-target mode.
+    int IDs[Target::NUM_ISAS] = {};
+
+    // Also check if we have same ISA with different vector widths
+    if (lInitializeISAsAndIDs(targets, ISAs, IDs)) {
+        return 1;
+    }
+
+    // Handle creating a "generic" header file for multiple targets
+    // that use exported varyings
+    DispatchHeaderInfo DHI;
+    if (!DHI.initialize(headerFileName)) {
+        return false;
+    }
+
+    // Find the first initialized target machine from the targets we
+    // compiled to above.  We'll use this as the target machine for
+    // compiling the dispatch module--this is safe in that it is the
+    // least-common-denominator of all of the targets we compiled to.
+    Target::ISA commonISA = lFindCommonISA(ISAs);
+    int commonTargetIndex = IDs[commonISA];
+    ISPCTarget commonTarget = targets[commonTargetIndex];
+    Assert(commonTarget != ISPCTarget::none);
+    // Set the module that corresponds to the common target ISA, not the last
+    // one hanging in m after we finished the loop.
+    m = modules[commonTargetIndex].get();
+    g->target = targetsPtrs[commonTargetIndex].get();
+    InitLLVMUtil(g->ctx, *g->target);
+
+    // Create the dispatch module,
+    llvm::Module *dispatchModule = lInitDispatchModule();
+    if (!dispatchModule) {
+        Error(SourcePos(), "Failed to create dispatch module.\n");
+        return 1;
+    }
+
+    // Fill in the dispatch module and write the header file for the dispatch.
+    for (unsigned int i = 0; i < targets.size(); ++i) {
+        m = modules[i].get();
+        g->target = targetsPtrs[i].get();
+        // It is important reinitialize the LLVM utils for each change of
+        // target when Target constructor is not called.
+        InitLLVMUtil(g->ctx, *g->target);
+
+        if (outputFlags.isDepsToStdout()) {
+            // We need to fix that because earlier we set it to false to avoid
+            // writing deps file with targets' suffixes.
+            m->outputFlags.setDepsToStdout(true);
+        }
+
+        // Extract globals unless already created; in the latter case, just
+        // do the checking
+        lExtractOrCheckGlobals(m->module, dispatchModule, i != 0);
+
+        // Grab pointers to the exported functions from the module we
+        // just compiled, for use in generating the dispatch function
+        // later.
+        lGetExportedFunctions(m->symbolTable, exportedFunctions);
+
+        if (i == (targets.size() - 1)) {
+            // only print backmatter on the last target.
+            DHI.EmitBackMatter = true;
+        }
+        if (headerFileName && !m->writeOutput(Module::Header, outputFlags, headerFileName, nullptr, nullptr, &DHI)) {
+            return 1;
+        }
+
+        m = nullptr;
+        g->target = nullptr;
+    }
+
+    m = modules[commonTargetIndex].get();
+    g->target = targetsPtrs[commonTargetIndex].get();
+    InitLLVMUtil(g->ctx, *g->target);
+
+    llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
+    Assert(targetMachine);
+
+    lEmitDispatchModule(dispatchModule, exportedFunctions);
+
+    if (lWriteDispatchOutputFiles(dispatchModule, targetMachine, srcFile, outputFlags, outputType, outFileName,
+                                  depsFileName, depsTargetName)) {
+        return 1;
+    }
+
+    m = nullptr;
+    g->target = nullptr;
+
+    return 0;
+}
+
 int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
                                    OutputFlags outputFlags, OutputType outputType, OutputName &outputNames,
                                    const char *depsTargetName) {
@@ -3920,28 +3994,10 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         return 1;
     }
 
-    // Array initialized with all false
-    bool ISAs[Target::NUM_ISAS] = {};
-    // We can compile only to one target for each ISA in multi-target mode.
-    int IDs[Target::NUM_ISAS] = {};
-
-    // Also check if we have same ISA with different vector widths
-    if (lInitializeISAsAndIDs(targets, ISAs, IDs)) {
-        return 1;
-    }
-
     // Make sure that the function names for 'export'ed functions have
     // the target ISA appended to them.
     g->mangleFunctionsWithTarget = true;
 
-    // Handle creating a "generic" header file for multiple targets
-    // that use exported varyings
-    DispatchHeaderInfo DHI;
-    if (!DHI.initialize(headerFileName)) {
-        return false;
-    }
-
-    std::map<std::string, FunctionTargetVariants> exportedFunctions;
     std::vector<std::unique_ptr<Module>> modules;
     std::vector<std::unique_ptr<Target>> targetsPtrs;
 
@@ -3995,65 +4051,11 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         g->target = nullptr;
     }
 
-    // Find the first initialized target machine from the targets we
-    // compiled to above.  We'll use this as the target machine for
-    // compiling the dispatch module--this is safe in that it is the
-    // least-common-denominator of all of the targets we compiled to.
-    Target::ISA commonISA = lFindCommonISA(ISAs);
-    int commonTargetIndex = IDs[commonISA];
-    ISPCTarget commonTarget = targets[commonTargetIndex];
-    // Set the module that corresponds to the common target ISA, not the last
-    // one hanging in m after we finished the loop.
-    m = modules[commonTargetIndex].get();
-    g->target = targetsPtrs[commonTargetIndex].get();
-
-    // Create the dispatch module,
-    llvm::Module *dispatchModule = lInitDispatchModule();
-
-    // Fill in the dispatch module and write the header file for the dispatch.
-    for (unsigned int i = 0; i < targets.size(); ++i) {
-        m = modules[i].get();
-        g->target = targetsPtrs[i].get();
-        // It is important reinitialize the LLVM utils for each change of
-        // target when Target constructor is not called.
-        InitLLVMUtil(g->ctx, *g->target);
-
-        if (outputFlags.isDepsToStdout()) {
-            // We need to fix that because earlier we set it to false to avoid
-            // writing deps file with targets' suffixes.
-            m->outputFlags.setDepsToStdout(true);
-        }
-
-        // Extract globals unless already created; in the latter case, just
-        // do the checking
-        lExtractOrCheckGlobals(m->module, dispatchModule, i != 0);
-
-        // Grab pointers to the exported functions from the module we
-        // just compiled, for use in generating the dispatch function
-        // later.
-        lGetExportedFunctions(m->symbolTable, exportedFunctions);
-
-        if (i == (targets.size() - 1)) {
-            // only print backmatter on the last target.
-            DHI.EmitBackMatter = true;
-        }
-        if (headerFileName && !m->writeOutput(Module::Header, outputFlags, headerFileName, nullptr, nullptr, &DHI)) {
-            return 1;
-        }
-
-        m = nullptr;
-        g->target = nullptr;
-    }
-
-    // This was the original behavior, but it is incorrect. Preserving it for now.
-    m = modules[commonTargetIndex].get();
-
-    if (lFinilizeDispatchModule(m, dispatchModule, arch, cpu, commonTarget, exportedFunctions, srcFile, outputFlags,
-                                outputType, outFileName, depsFileName, depsTargetName)) {
+    // Generate the dispatch module
+    if (GenerateDispatch(srcFile, targets, modules, targetsPtrs, outputFlags, outputType, outputNames,
+                         depsTargetName)) {
         return 1;
     }
-
-    m = nullptr;
 
     return 0;
 }
