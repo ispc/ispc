@@ -17,6 +17,8 @@
 
 #include <algorithm>
 #include <string>
+#include <memory>
+#include <vector>
 
 #include <clang/Frontend/FrontendOptions.h>
 #include <llvm/IR/DebugInfo.h>
@@ -243,6 +245,10 @@ class Module {
                                 OutputFlags outputFlags, OutputType outputType, OutputName &outputNames,
                                 const char *depsTargetName);
     int CompileSingleTarget(Arch arch, const char *cpu, ISPCTarget target, const char *depsTargetName);
+    static int GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> targets,
+                                std::vector<std::unique_ptr<Module>> &modules,
+                                std::vector<std::unique_ptr<Target>> &targetsPtrs, OutputFlags outputFlags,
+                                OutputType outputType, OutputName outputNames, const char *depsTargetName);
     static int CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
                                       OutputFlags outputFlags, OutputType outputType, OutputName &outputNames,
                                       const char *depsTargetName);
