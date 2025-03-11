@@ -3839,32 +3839,11 @@ int lWriteDispatchOutputFiles(llvm::Module *dispatchModule, Module *module, llvm
 
     if (depsFileName || outputFlags.isDepsToStdout()) {
         std::string targetName = lDetermineDepsTargetName(srcFile, depsTargetName, outFileName);
-        if (!module->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile)) {
+        if (!m->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile)) {
             return 1;
         }
     }
 
-    return 0;
-}
-
-int lWriteMultiTargetHeaders(Module *module, Target *gTarget, DispatchHeaderInfo *DHI, bool isLastTarget,
-                             Module::OutputFlags outputFlags, const char *headerFileName) {
-    if (headerFileName != nullptr) {
-        if (isLastTarget) {
-            // only print backmatter on the last target.
-            DHI->EmitBackMatter = true;
-        }
-
-        std::string targetHeaderFileName = lGetTargetFileName(headerFileName, g->target);
-        // write out a header w/o target name appending it with different
-        // declarations depending on the target width for every new target
-        if (!module->writeOutput(Module::Header, outputFlags, headerFileName, nullptr, nullptr, DHI)) {
-            return 1;
-        }
-        if (!module->writeOutput(Module::Header, outputFlags, targetHeaderFileName.c_str())) {
-            return 1;
-        }
-    }
     return 0;
 }
 
@@ -3925,9 +3904,15 @@ int lInitializeISAsAndIDs(std::vector<ISPCTarget> targets, bool *ISAs, int *IDs)
 }
 
 int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
-                                   OutputFlags outputFlags, OutputType outputType, const char *outFileName,
-                                   const char *headerFileName, const char *depsFileName, const char *depsTargetName,
-                                   const char *hostStubFileName, const char *devStubFileName) {
+                                   OutputFlags outputFlags, OutputType outputType, OutputName &outputNames,
+                                   const char *depsTargetName) {
+
+    const char *outFileName = lGetStrPtr(outputNames.out);
+    const char *headerFileName = lGetStrPtr(outputNames.header);
+    const char *depsFileName = lGetStrPtr(outputNames.deps);
+    const char *hostStubFileName = lGetStrPtr(outputNames.hostStub);
+    const char *devStubFileName = lGetStrPtr(outputNames.devStub);
+
     // The user supplied multiple targets
     Assert(targets.size() > 1);
 
@@ -3956,7 +3941,6 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         return false;
     }
 
-    int errorCount = 0;
     std::map<std::string, FunctionTargetVariants> exportedFunctions;
     std::vector<std::unique_ptr<Module>> modules;
     std::vector<std::unique_ptr<Target>> targetsPtrs;
@@ -3973,38 +3957,35 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         g->target = targetPtr.get();
         targetsPtrs.push_back(std::move(targetPtr));
 
-        auto modulePtr = std::make_unique<Module>(srcFile);
+        // Output and header names are set for each target with the target's suffix.
+        OutputName targetOutputNames = outputNames;
+        if (outFileName != nullptr) {
+            std::string targetOutFileName = lGetTargetFileName(outFileName, g->target);
+            targetOutputNames.out = targetOutFileName;
+        }
+        if (headerFileName != nullptr) {
+            std::string targetHeaderFileName = lGetTargetFileName(headerFileName, g->target);
+            targetOutputNames.header = targetHeaderFileName;
+        }
+        // TODO: --host-stub and --dev-stub are ignored in multi-target mode?
+        targetOutputNames.hostStub = "";
+        targetOutputNames.devStub = "";
+
+        // deps file is written only once for all targets, so we will generate
+        // it during the dispatch module generation.
+        targetOutputNames.deps = "";
+        OutputFlags targetOutputFlags = outputFlags;
+        targetOutputFlags.setDepsToStdout(false);
+
+        auto modulePtr = std::make_unique<Module>(srcFile, targetOutputFlags, outputType, targetOutputNames);
         m = modulePtr.get();
         // Transfer the ownership of the module to the vector, i.e., the
         // lifetime of the module objects is tied to the function scope.
         modules.push_back(std::move(modulePtr));
 
-        const int compileResult = m->CompileFile();
-
-        llvm::TimeTraceScope TimeScope("Backend");
-
-        if (compileResult == 0) {
-            if (outFileName != nullptr) {
-                std::string targetOutFileName = lGetTargetFileName(outFileName, g->target);
-                if (!m->writeOutput(outputType, outputFlags, targetOutFileName.c_str())) {
-                    return 1;
-                }
-            }
-
-            bool isLastTarget = (i == (targets.size() - 1));
-            if (lWriteMultiTargetHeaders(m, g->target, &DHI, isLastTarget, outputFlags, headerFileName)) {
-                return 1;
-            }
-            if (isLastTarget) {
-                DHI.closeFile();
-            }
-        } else {
-            ++m->errorCount;
-        }
-
-        errorCount += m->errorCount;
-        if (errorCount != 0) {
-            return 1;
+        int compilerResult = m->CompileSingleTarget(arch, cpu, targets[i], depsTargetName);
+        if (compilerResult) {
+            return compilerResult;
         }
 
         // Important: Don't delete the llvm::Module *m here; we need to
@@ -4021,6 +4002,14 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
     for (unsigned int i = 0; i < targets.size(); ++i) {
         m = modules[i].get();
         g->target = targetsPtrs[i].get();
+        // It is important reinitialize the LLVM utils for each target.
+        InitLLVMUtil(g->ctx, *g->target);
+
+        if (outputFlags.isDepsToStdout()) {
+            // We need to fix that because earlier we set it to false to avoid
+            // writing deps file with targets' suffixes.
+            m->outputFlags.setDepsToStdout(true);
+        }
 
         // Extract globals unless already created; in the latter case, just
         // do the checking
@@ -4030,6 +4019,14 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         // just compiled, for use in generating the dispatch function
         // later.
         lGetExportedFunctions(m->symbolTable, exportedFunctions);
+
+        if (i == (targets.size() - 1)) {
+            // only print backmatter on the last target.
+            DHI.EmitBackMatter = true;
+        }
+        if (headerFileName && !m->writeOutput(Module::Header, outputFlags, headerFileName, nullptr, nullptr, &DHI)) {
+            return 1;
+        }
 
         m = nullptr;
         g->target = nullptr;
@@ -4055,19 +4052,12 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
 
     m = nullptr;
 
-    return errorCount > 0;
+    return 0;
 }
 
 int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
                              Module::OutputFlags outputFlags, Module::OutputType outputType,
                              Module::OutputName &outputNames, const char *depsTargetName) {
-
-    const char *outFileName = lGetStrPtr(outputNames.out);
-    const char *headerFileName = lGetStrPtr(outputNames.header);
-    const char *depsFileName = lGetStrPtr(outputNames.deps);
-    const char *hostStubFileName = lGetStrPtr(outputNames.hostStub);
-    const char *devStubFileName = lGetStrPtr(outputNames.devStub);
-
     if (targets.size() == 0 || targets.size() == 1) {
         // We're only compiling to a single target
         ISPCTarget target = ISPCTarget::none;
@@ -4091,8 +4081,8 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         // m = nullptr;
         // g->target = nullptr;
     } else {
-        return CompileMultipleTargets(srcFile, arch, cpu, targets, outputFlags, outputType, outFileName, headerFileName,
-                                      depsFileName, depsTargetName, hostStubFileName, devStubFileName);
+        return CompileMultipleTargets(srcFile, arch, cpu, targets, outputFlags, outputType, outputNames,
+                                      depsTargetName);
     }
 }
 
