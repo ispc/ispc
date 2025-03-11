@@ -3995,14 +3995,27 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         g->target = nullptr;
     }
 
+    // Find the first initialized target machine from the targets we
+    // compiled to above.  We'll use this as the target machine for
+    // compiling the dispatch module--this is safe in that it is the
+    // least-common-denominator of all of the targets we compiled to.
+    Target::ISA commonISA = lFindCommonISA(ISAs);
+    int commonTargetIndex = IDs[commonISA];
+    ISPCTarget commonTarget = targets[commonTargetIndex];
+    // Set the module that corresponds to the common target ISA, not the last
+    // one hanging in m after we finished the loop.
+    m = modules[commonTargetIndex].get();
+    g->target = targetsPtrs[commonTargetIndex].get();
+
     // Create the dispatch module,
-    m = modules[0].get();
-    g->target = targetsPtrs[0].get();
     llvm::Module *dispatchModule = lInitDispatchModule();
+
+    // Fill in the dispatch module and write the header file for the dispatch.
     for (unsigned int i = 0; i < targets.size(); ++i) {
         m = modules[i].get();
         g->target = targetsPtrs[i].get();
-        // It is important reinitialize the LLVM utils for each target.
+        // It is important reinitialize the LLVM utils for each change of
+        // target when Target constructor is not called.
         InitLLVMUtil(g->ctx, *g->target);
 
         if (outputFlags.isDepsToStdout()) {
@@ -4032,20 +4045,10 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         g->target = nullptr;
     }
 
-    // Find the first initialized target machine from the targets we
-    // compiled to above.  We'll use this as the target machine for
-    // compiling the dispatch module--this is safe in that it is the
-    // least-common-denominator of all of the targets we compiled to.
-    Target::ISA firstISA = lFindCommonISA(ISAs);
-    int firstTargetIndex = IDs[firstISA];
-    ISPCTarget firstTarget = targets[firstTargetIndex];
-    // Set the module that corresponds to the first target ISA, not the last
-    // one hanging in m after we finished the loop.
-    // m = modules[firstTargetIndex].get();
     // This was the original behavior, but it is incorrect. Preserving it for now.
-    m = modules[0].get();
+    m = modules[commonTargetIndex].get();
 
-    if (lFinilizeDispatchModule(m, dispatchModule, arch, cpu, firstTarget, exportedFunctions, srcFile, outputFlags,
+    if (lFinilizeDispatchModule(m, dispatchModule, arch, cpu, commonTarget, exportedFunctions, srcFile, outputFlags,
                                 outputType, outFileName, depsFileName, depsTargetName)) {
         return 1;
     }
