@@ -3965,9 +3965,9 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
     }
 
     int errorCount = 0;
-    llvm::Module *dispatchModule = nullptr;
     std::map<std::string, FunctionTargetVariants> exportedFunctions;
     std::vector<std::unique_ptr<Module>> modules;
+    std::vector<std::unique_ptr<Target>> targetsPtrs;
 
     for (unsigned int i = 0; i < targets.size(); ++i) {
         // Lifetime of the target object is tied to the scope of the loop.
@@ -3979,6 +3979,7 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         // Here, we do not transfer the ownership of the target to the global
         // variable. This is just an observer pointer.
         g->target = targetPtr.get();
+        targetsPtrs.push_back(std::move(targetPtr));
 
         auto modulePtr = std::make_unique<Module>(srcFile);
         m = modulePtr.get();
@@ -3991,19 +3992,6 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         llvm::TimeTraceScope TimeScope("Backend");
 
         if (compileResult == 0) {
-            // Create the dispatch module, unless already created;
-            // in the latter case, just do the checking
-            bool check = (dispatchModule != nullptr);
-            if (!check) {
-                dispatchModule = lInitDispatchModule();
-            }
-            lExtractOrCheckGlobals(m->module, dispatchModule, check);
-
-            // Grab pointers to the exported functions from the module we
-            // just compiled, for use in generating the dispatch function
-            // later.
-            lGetExportedFunctions(m->symbolTable, exportedFunctions);
-
             if (outFileName != nullptr) {
                 std::string targetOutFileName = lGetTargetFileName(outFileName, g->target);
                 if (!m->writeOutput(outputType, outputFlags, targetOutFileName.c_str())) {
@@ -4034,6 +4022,27 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         g->target = nullptr;
     }
 
+    // Create the dispatch module,
+    m = modules[0].get();
+    g->target = targetsPtrs[0].get();
+    llvm::Module *dispatchModule = lInitDispatchModule();
+    for (unsigned int i = 0; i < targets.size(); ++i) {
+        m = modules[i].get();
+        g->target = targetsPtrs[i].get();
+
+        // Extract globals unless already created; in the latter case, just
+        // do the checking
+        lExtractOrCheckGlobals(m->module, dispatchModule, i != 0);
+
+        // Grab pointers to the exported functions from the module we
+        // just compiled, for use in generating the dispatch function
+        // later.
+        lGetExportedFunctions(m->symbolTable, exportedFunctions);
+
+        m = nullptr;
+        g->target = nullptr;
+    }
+
     // Find the first initialized target machine from the targets we
     // compiled to above.  We'll use this as the target machine for
     // compiling the dispatch module--this is safe in that it is the
@@ -4043,7 +4052,9 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
     ISPCTarget firstTarget = targets[firstTargetIndex];
     // Set the module that corresponds to the first target ISA, not the last
     // one hanging in m after we finished the loop.
-    m = modules[firstTargetIndex].get();
+    // m = modules[firstTargetIndex].get();
+    // This was the original behavior, but it is incorrect. Preserving it for now.
+    m = modules[0].get();
 
     if (lFinilizeDispatchModule(m, dispatchModule, arch, cpu, firstTarget, exportedFunctions, srcFile, outputFlags,
                                 outputType, outFileName, depsFileName, depsTargetName)) {
