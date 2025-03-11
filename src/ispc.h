@@ -312,6 +312,8 @@ class Target {
 
     ISA getISA() const { return m_isa; }
 
+    static ISA TargetToISA(ISPCTarget target);
+
     bool isXeTarget() {
 #ifdef ISPC_XE_ENABLED
         return m_isa == Target::GEN9 || m_isa == Target::XELP || m_isa == Target::XEHPG || m_isa == Target::XEHPC ||
