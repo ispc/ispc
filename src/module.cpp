@@ -3790,7 +3790,7 @@ int Module::CompileSingleTarget(Arch arch, const char *cpu, ISPCTarget target, c
     return errorCount;
 }
 
-int lValidateMultiTargetInputs(const char *srcFile, const char *outFileName, const char *cpu) {
+int lValidateMultiTargetInputs(const char *srcFile, std::string &outFileName, const char *cpu) {
     if (IsStdin(srcFile)) {
         Error(SourcePos(), "Compiling programs from standard input isn't "
                            "supported when compiling for multiple targets.  Please use "
@@ -3801,7 +3801,7 @@ int lValidateMultiTargetInputs(const char *srcFile, const char *outFileName, con
         Error(SourcePos(), "Illegal to specify cpu type when compiling for multiple targets.");
         return 1;
     }
-    if (outFileName != nullptr && strcmp(outFileName, "-") == 0) {
+    if (outFileName == "-") {
         Error(SourcePos(), "Multi-target compilation can't generate output "
                            "to stdout.  Please provide an output filename.\n");
         return 1;
@@ -3977,20 +3977,36 @@ int Module::GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> target
     return 0;
 }
 
+static Module::OutputName lCreateTargetOutputNames(const Module::OutputName &outputNames, ISPCTarget target) {
+    Module::OutputName targetOutputNames = outputNames;
+    if (!targetOutputNames.out.empty()) {
+        std::string targetOutFileName = lGetTargetFileName(outputNames.out.c_str(), g->target);
+        targetOutputNames.out = targetOutFileName;
+    }
+
+    if (!targetOutputNames.header.empty()) {
+        std::string targetHeaderFileName = lGetTargetFileName(outputNames.header.c_str(), g->target);
+        targetOutputNames.header = targetHeaderFileName;
+    }
+
+    // TODO: --host-stub and --dev-stub are ignored in multi-target mode?
+    targetOutputNames.hostStub = "";
+    targetOutputNames.devStub = "";
+
+    // deps file is written only once for all targets, so we will generate
+    // it during the dispatch module generation.
+    targetOutputNames.deps = "";
+
+    return targetOutputNames;
+}
+
 int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
                                    OutputFlags outputFlags, OutputType outputType, OutputName &outputNames,
                                    const char *depsTargetName) {
-
-    const char *outFileName = lGetStrPtr(outputNames.out);
-    const char *headerFileName = lGetStrPtr(outputNames.header);
-    const char *depsFileName = lGetStrPtr(outputNames.deps);
-    const char *hostStubFileName = lGetStrPtr(outputNames.hostStub);
-    const char *devStubFileName = lGetStrPtr(outputNames.devStub);
-
     // The user supplied multiple targets
     Assert(targets.size() > 1);
 
-    if (lValidateMultiTargetInputs(srcFile, outFileName, cpu)) {
+    if (lValidateMultiTargetInputs(srcFile, outputNames.out, cpu)) {
         return 1;
     }
 
@@ -4014,22 +4030,9 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         targetsPtrs.push_back(std::move(targetPtr));
 
         // Output and header names are set for each target with the target's suffix.
-        OutputName targetOutputNames = outputNames;
-        if (outFileName != nullptr) {
-            std::string targetOutFileName = lGetTargetFileName(outFileName, g->target);
-            targetOutputNames.out = targetOutFileName;
-        }
-        if (headerFileName != nullptr) {
-            std::string targetHeaderFileName = lGetTargetFileName(headerFileName, g->target);
-            targetOutputNames.header = targetHeaderFileName;
-        }
-        // TODO: --host-stub and --dev-stub are ignored in multi-target mode?
-        targetOutputNames.hostStub = "";
-        targetOutputNames.devStub = "";
-
+        OutputName targetOutputNames = lCreateTargetOutputNames(outputNames, targets[i]);
         // deps file is written only once for all targets, so we will generate
         // it during the dispatch module generation.
-        targetOutputNames.deps = "";
         OutputFlags targetOutputFlags = outputFlags;
         targetOutputFlags.setDepsToStdout(false);
 
