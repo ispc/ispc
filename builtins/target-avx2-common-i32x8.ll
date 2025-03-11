@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2024, Intel Corporation
+;;  Copyright (c) 2010-2025, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -452,6 +452,16 @@ declare <8 x i64> @llvm.masked.expandload.v8i64(ptr, <8 x i1>, <8 x i64>)
 declare i64 @llvm.x86.bmi.pdep.64(i64, i64)
 declare i64 @llvm.x86.bmi.pext.64(i64, i64)
 declare void @llvm.x86.avx2.maskstore.d.256(ptr, <8 x i32>, <8 x i32>)
+declare void @llvm.masked.compressstore.v8f16(<8 x half> %vals, ptr %startptr_typed, <8 x i1> %i1mask)
+declare void @llvm.masked.compressstore.v8f32(<8 x float> %vals, ptr %startptr_typed, <8 x i1> %i1mask)
+declare void @llvm.masked.compressstore.v8f64(<8 x double> %vals, ptr %startptr_typed, <8 x i1> %i1mask)
+declare void @llvm.masked.compressstore.v8i16(<8 x i16> %vals, ptr %startptr_typed, <8 x i1> %i1mask)
+declare void @llvm.masked.compressstore.v8i8(<8 x i8> %vals, ptr %startptr_typed, <8 x i1> %i1mask)
+declare <8 x half> @llvm.masked.expandload.v8f16(ptr %startptr_typed, <8 x i1> %i1mask, <8 x half> %data)
+declare <8 x float> @llvm.masked.expandload.v8f32(ptr %startptr_typed, <8 x i1> %i1mask, <8 x float> %data)
+declare <8 x double> @llvm.masked.expandload.v8f64(ptr %startptr_typed, <8 x i1> %i1mask, <8 x double> %data)
+declare <8 x i16> @llvm.masked.expandload.v8i16(ptr %startptr_typed, <8 x i1> %i1mask, <8 x i16> %data)
+declare <8 x i8> @llvm.masked.expandload.v8i8(ptr %startptr_typed, <8 x i1> %i1mask, <8 x i8> %data)
 
 ; Function Attrs: alwaysinline nounwind
 define i32 @__packed_load_activei8(ptr %startptr, ptr %val_ptr, <8 x i32> %full_mask) #0 {
