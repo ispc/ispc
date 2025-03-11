@@ -1180,7 +1180,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
 
             if (attrList->HasAttribute("noescape")) {
                 if (argType->IsPointerType() && argType->IsUniformType()) {
-#if ISPC_LLVM_VERSION > ISPC_LLVM_20_0
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
                     function->addParamAttr(
                         i, llvm::Attribute::getWithCaptureInfo(function->getContext(), llvm::CaptureInfo::none()));
 #else
