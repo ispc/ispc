@@ -3963,6 +3963,7 @@ int Module::GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> target
             return 1;
         }
 
+        // Just precausiously reset observers to nullptr to avoid dangling pointers.
         m = nullptr;
         g->target = nullptr;
     }
@@ -3976,15 +3977,8 @@ int Module::GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> target
 
     lEmitDispatchModule(dispatchModule, exportedFunctions);
 
-    if (lWriteDispatchOutputFiles(dispatchModule, targetMachine, srcFile, outputFlags, outputType, outFileName,
-                                  depsFileName, depsTargetName)) {
-        return 1;
-    }
-
-    m = nullptr;
-    g->target = nullptr;
-
-    return 0;
+    return lWriteDispatchOutputFiles(dispatchModule, targetMachine, srcFile, outputFlags, outputType, outFileName,
+                                     depsFileName, depsTargetName);
 }
 
 static Module::OutputName lCreateTargetOutputNames(const Module::OutputName &outputNames, ISPCTarget target) {
@@ -4067,12 +4061,8 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
     }
 
     // Generate the dispatch module
-    if (GenerateDispatch(srcFile, targets, modules, targetsPtrs, outputFlags, outputType, outputNames,
-                         depsTargetName)) {
-        return 1;
-    }
-
-    return 0;
+    return GenerateDispatch(srcFile, targets, modules, targetsPtrs, outputFlags, outputType, outputNames,
+                            depsTargetName);
 }
 
 int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
@@ -4084,11 +4074,14 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         if (targets.size() == 1) {
             target = targets[0];
         }
+
         // Both the target and the module objects lifetime is tied to the scope of
         // this function. Raw pointers g->target and m are used as observers.
         // They are initialized inside Create functions.
         // Ideally, we should set m and g->target to nullptr after we are done,
-        // i.e., after CompileSingleTarget returns.
+        // i.e., after CompileSingleTarget returns, but we return from the
+        // function immediately after that, so it is not necessary. Although,
+        // one should be careful if something changes here in the future.
         auto targetPtr =
             Target::Create(arch, cpu, target, outputFlags.getPICLevel(), outputFlags.getMCModel(), g->printTarget);
         if (!targetPtr) {
