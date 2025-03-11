@@ -2154,7 +2154,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 
     if (!error) {
         // Create TargetMachine
-        std::string triple = GetTripleString();
+        std::string triple = GetTriple().str();
 
         // The last validity check to ensure that supported for this target was enabled in the build.
         if (!g->target_registry->isSupported(m_ispc_target, g->target_os, arch)) {
@@ -2290,7 +2290,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
                 lPrintTargetInfo("CPU", "null", "null", "null");
             }
         } else {
-            lPrintTargetInfo("GPU", this->GetTripleString(), this->getCPU(), featuresString);
+            lPrintTargetInfo("GPU", this->GetTriple().str(), this->getCPU(), featuresString);
         }
     }
 
@@ -2352,7 +2352,7 @@ std::string Target::SupportedCPUs() {
     return a.HumanReadableListOfNames();
 }
 
-std::string Target::GetTripleString() const {
+llvm::Triple Target::GetTriple() const {
     llvm::Triple triple;
     llvm::VersionTuple darwinVersionMin = g->darwinVersionMin;
     switch (g->target_os) {
@@ -2377,7 +2377,7 @@ std::string Target::GetTripleString() const {
             //"spir64-unknown-unknown"
             triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
             triple.setOS(llvm::Triple::OSType::UnknownOS);
-            return triple.str();
+            return triple;
         }
 #endif
         //"x86_64-pc-windows-msvc"
@@ -2406,7 +2406,7 @@ std::string Target::GetTripleString() const {
             //"spir64-unknown-unknown"
             triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
             triple.setOS(llvm::Triple::OSType::UnknownOS);
-            return triple.str();
+            return triple;
         }
 #endif
         triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
@@ -2537,7 +2537,7 @@ std::string Target::GetTripleString() const {
         exit(1);
     }
 
-    return triple.str();
+    return triple;
 }
 
 bool Target::useGather() const { return m_hasGather && !g->opt.disableGathers; }

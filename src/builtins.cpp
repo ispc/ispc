@@ -180,8 +180,11 @@ void lAddDeclarationsToModule(llvm::Module *bcModule, llvm::Module *module) {
         llvm::Triple mTriple(m->module->getTargetTriple());
         llvm::Triple bcTriple(bcModule->getTargetTriple());
         Debug(SourcePos(), "module triple: %s\nbitcode triple: %s\n", mTriple.str().c_str(), bcTriple.str().c_str());
-
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
+        bcModule->setTargetTriple(mTriple);
+#else
         bcModule->setTargetTriple(mTriple.str());
+#endif
         bcModule->setDataLayout(module->getDataLayout());
 
         if (g->target->isXeTarget()) {
