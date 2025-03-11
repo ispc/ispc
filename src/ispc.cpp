@@ -2523,6 +2523,19 @@ Target::~Target() {
     }
 }
 
+std::unique_ptr<Target> Target::Create(Arch arch, const char *cpu, ISPCTarget target, PICLevel picLevel,
+                                       MCModel codeModel, bool printTarget) {
+    auto ptr = std::make_unique<Target>(arch, cpu, target, picLevel, codeModel, printTarget);
+    if (!ptr->isValid()) {
+        return nullptr;
+    }
+
+    // Here, we do not transfer the ownership of the target to the global
+    // variable. We just set the observer pointer here.
+    g->target = ptr.get();
+    return ptr;
+}
+
 bool Target::checkIntrinsticSupport(llvm::StringRef name, SourcePos pos) {
     if (name.consume_front("llvm.") == false) {
         return false;

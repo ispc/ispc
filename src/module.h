@@ -216,6 +216,9 @@ class Module {
     // TODO: comment
     Module(const char *filename, OutputFlags flags, OutputType outputType, OutputName &outputNames);
 
+    static std::unique_ptr<Module> Create(const char *srcFile, OutputFlags flags, OutputType outputType,
+                                          OutputName &outputNames);
+
     /** Compile the given source file, generating assembly, object file, or
         LLVM bitcode output, as well as (optionally) a header file with
         declarations of functions and types used in the ispc/application
