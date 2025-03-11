@@ -25,6 +25,7 @@
 #endif
 
 #include <map>
+#include <memory>
 #include <set>
 #include <stdint.h>
 #include <stdio.h>
@@ -241,6 +242,9 @@ class Target {
     Target(Arch arch, const char *cpu, ISPCTarget isa, PICLevel picLevel, MCModel code_model, bool printTarget);
 
     ~Target();
+
+    static std::unique_ptr<Target> Create(Arch arch, const char *cpu, ISPCTarget target, PICLevel picLevel,
+                                          MCModel codeModel, bool printTarget);
 
     // We don't copy Target objects at the moment. If we will then proper
     // implementations are needed considering the ownership of heap-allocated
