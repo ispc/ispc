@@ -348,6 +348,16 @@ Module::Module(const char *filename, OutputFlags flags, OutputType outputType, O
     this->devStubFileName = lGetStrPtr(outputNames.devStub);
 }
 
+std::unique_ptr<Module> Module::Create(const char *srcFile, OutputFlags flags, OutputType outputType,
+                                       OutputName &outputNames) {
+    auto ptr = std::make_unique<Module>(srcFile, flags, outputType, outputNames);
+
+    // Here, we do not transfer the ownership of the target to the global
+    // variable. We just set the observer pointer here.
+    m = ptr.get();
+    return ptr;
+}
+
 Module::~Module() {
     if (symbolTable) {
         delete symbolTable;
@@ -4018,26 +4028,27 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
     std::vector<std::unique_ptr<Target>> targetsPtrs;
 
     for (unsigned int i = 0; i < targets.size(); ++i) {
-        // Lifetime of the target object is tied to the scope of the loop.
-        auto targetPtr = std::make_unique<Target>(arch, cpu, targets[i], outputFlags.getPICLevel(),
+        auto targetPtr = Target::Create(arch, cpu, targets[i], outputFlags.getPICLevel(),
                                                   outputFlags.getMCModel(), g->printTarget);
-        if (!targetPtr->isValid()) {
+        if (!targetPtr) {
             return 1;
         }
-        // Here, we do not transfer the ownership of the target to the global
-        // variable. This is just an observer pointer.
-        g->target = targetPtr.get();
+
+        // Here, we transfer the ownership of the target to the vector, i.e.,
+        // the lifetime of the target objects is tied to the function scope.
+        // Same happens for the module objects.
         targetsPtrs.push_back(std::move(targetPtr));
 
         // Output and header names are set for each target with the target's suffix.
         OutputName targetOutputNames = lCreateTargetOutputNames(outputNames, targets[i]);
+
         // deps file is written only once for all targets, so we will generate
         // it during the dispatch module generation.
         OutputFlags targetOutputFlags = outputFlags;
         targetOutputFlags.setDepsToStdout(false);
 
-        auto modulePtr = std::make_unique<Module>(srcFile, targetOutputFlags, outputType, targetOutputNames);
-        m = modulePtr.get();
+        auto modulePtr = Module::Create(srcFile, targetOutputFlags, outputType, targetOutputNames);
+
         // Transfer the ownership of the module to the vector, i.e., the
         // lifetime of the module objects is tied to the function scope.
         modules.push_back(std::move(modulePtr));
@@ -4050,6 +4061,7 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         // Important: Don't delete the llvm::Module *m here; we need to
         // keep it around so the llvm::Functions *s stay valid for when
         // we generate the dispatch module's functions...
+        // Just precausiously reset observers to nullptr to avoid dangling pointers.
         m = nullptr;
         g->target = nullptr;
     }
@@ -4073,21 +4085,18 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
             target = targets[0];
         }
         // Both the target and the module objects lifetime is tied to the scope of
-        // this function. Raw pointers g->target and m are used as observers and
-        // are set to nullptr at the end of the function.
-        auto targetPtr = std::make_unique<Target>(arch, cpu, target, outputFlags.getPICLevel(),
-                                                  outputFlags.getMCModel(), g->printTarget);
-        if (!targetPtr->isValid()) {
+        // this function. Raw pointers g->target and m are used as observers.
+        // They are initialized inside Create functions.
+        // Ideally, we should set m and g->target to nullptr after we are done,
+        // i.e., after CompileSingleTarget returns.
+        auto targetPtr =
+            Target::Create(arch, cpu, target, outputFlags.getPICLevel(), outputFlags.getMCModel(), g->printTarget);
+        if (!targetPtr) {
             return 1;
         }
-        g->target = targetPtr.get();
-
-        auto modulePtr = std::make_unique<Module>(srcFile, outputFlags, outputType, outputNames);
-        m = modulePtr.get();
+        auto modulePtr = Module::Create(srcFile, outputFlags, outputType, outputNames);
 
         return m->CompileSingleTarget(arch, cpu, target, depsTargetName);
-        // m = nullptr;
-        // g->target = nullptr;
     } else {
         return CompileMultipleTargets(srcFile, arch, cpu, targets, outputFlags, outputType, outputNames,
                                       depsTargetName);
