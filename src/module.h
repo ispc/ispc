@@ -242,10 +242,7 @@ class Module {
     static int CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
                                 OutputFlags outputFlags, OutputType outputType, OutputName &outputNames,
                                 const char *depsTargetName);
-    static int CompileSingleTarget(const char *srcFile, Arch arch, const char *cpu, ISPCTarget target,
-                                   OutputFlags outputFlags, OutputType outputType, const char *outFileName,
-                                   const char *headerFileName, const char *depsFileName, const char *depsTargetName,
-                                   const char *hostStubFileName, const char *devStubFileName);
+    int CompileSingleTarget(Arch arch, const char *cpu, ISPCTarget target, const char *depsTargetName);
     static int CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
                                       OutputFlags outputFlags, OutputType outputType, const char *outFileName,
                                       const char *headerFileName, const char *depsFileName, const char *depsTargetName,
@@ -289,12 +286,19 @@ class Module {
     std::map<std::string, llvm::StructType *> structTypeMap;
 
   private:
-    const char *filename{nullptr};
+    const char *srcFile{nullptr};
     AST *ast{nullptr};
 
     OutputFlags outputFlags;
     OutputType outputType;
     OutputName outputNames;
+
+    // TODO: delete them after full migration to OutputName
+    const char *outFileName{nullptr};
+    const char *headerFileName{nullptr};
+    const char *depsFileName{nullptr};
+    const char *hostStubFileName{nullptr};
+    const char *devStubFileName{nullptr};
 
     // Definition and member object capturing preprocessing stream during Module lifetime.
     struct CPPBuffer {

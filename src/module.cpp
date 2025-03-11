@@ -249,7 +249,7 @@ static void lSetPICLevel(llvm::Module *module) {
 ///////////////////////////////////////////////////////////////////////////
 // Module
 
-Module::Module(const char *fn) : filename(fn) {
+Module::Module(const char *fn) : srcFile(fn) {
     // It's a hack to do this here, but it must be done after the target
     // information has been set (so e.g. the vector width is known...)  In
     // particular, if we're compiling to multiple targets with different
@@ -261,7 +261,7 @@ Module::Module(const char *fn) : filename(fn) {
 
     lDeclareSizeAndPtrIntTypes(symbolTable);
 
-    module = new llvm::Module(!IsStdin(filename) ? filename : "<stdin>", *g->ctx);
+    module = new llvm::Module(!IsStdin(srcFile) ? srcFile : "<stdin>", *g->ctx);
 
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
     module->setTargetTriple(g->target->GetTriple());
@@ -309,7 +309,7 @@ Module::Module(const char *fn) : filename(fn) {
 
         // Let the DIBuilder know that we're starting a new compilation
         // unit.
-        if (IsStdin(filename)) {
+        if (IsStdin(srcFile)) {
             // Unfortunately we can't yet call Error() since the global 'm'
             // variable hasn't been initialized yet.
             Error(SourcePos(), "Can't emit debugging information with no source file on disk.\n");
@@ -317,7 +317,7 @@ Module::Module(const char *fn) : filename(fn) {
             delete diBuilder;
             diBuilder = nullptr;
         } else {
-            auto [directory, name] = GetDirectoryAndFileName(g->currentDirectory, filename);
+            auto [directory, name] = GetDirectoryAndFileName(g->currentDirectory, srcFile);
             auto srcFile = diBuilder->createFile(name, directory);
             // Use DW_LANG_C_plus_plus to avoid problems with debigging on Xe.
             // The debugger reads symbols partially when a solib file is loaded.
@@ -334,11 +334,18 @@ Module::Module(const char *fn) : filename(fn) {
     }
 }
 
+const char *lGetStrPtr(const std::string &str) { return str.empty() ? nullptr : str.c_str(); }
+
 Module::Module(const char *filename, OutputFlags flags, OutputType outputType, OutputName &outputNames)
     : Module(filename) {
     this->outputFlags = flags;
     this->outputType = outputType;
     this->outputNames = outputNames;
+    this->outFileName = lGetStrPtr(outputNames.out);
+    this->headerFileName = lGetStrPtr(outputNames.header);
+    this->depsFileName = lGetStrPtr(outputNames.deps);
+    this->hostStubFileName = lGetStrPtr(outputNames.hostStub);
+    this->devStubFileName = lGetStrPtr(outputNames.devStub);
 }
 
 Module::~Module() {
@@ -370,7 +377,7 @@ int Module::preprocessAndParse() {
 
     initCPPBuffer();
 
-    const int numErrors = execPreprocessor(filename, bufferCPP->os.get(), g->preprocessorOutputType);
+    const int numErrors = execPreprocessor(srcFile, bufferCPP->os.get(), g->preprocessorOutputType);
     errorCount += (g->ignoreCPPErrors) ? 0 : numErrors;
 
     if (g->onlyCPP) {
@@ -386,12 +393,12 @@ int Module::preprocessAndParse() {
 int Module::parse() {
     // No preprocessor, just open up the file if it's not stdin..
     FILE *f = nullptr;
-    if (IsStdin(filename)) {
+    if (IsStdin(srcFile)) {
         f = stdin;
     } else {
-        f = fopen(filename, "r");
+        f = fopen(srcFile, "r");
         if (f == nullptr) {
-            perror(filename);
+            perror(srcFile);
             return 1;
         }
     }
@@ -405,7 +412,7 @@ int Module::parse() {
 
 int Module::CompileFile() {
     llvm::TimeTraceScope CompileFileTimeScope(
-        "CompileFile", llvm::StringRef(filename + ("_" + std::string(g->target->GetISAString()))));
+        "CompileFile", llvm::StringRef(srcFile + ("_" + std::string(g->target->GetISAString()))));
     ParserInit();
 
     int pre_stage = PRE_OPT_NUMBER;
@@ -3760,22 +3767,7 @@ int lWriteOutputFiles(Module *m, const char *srcFile, Module::OutputFlags output
     return 0;
 }
 
-int Module::CompileSingleTarget(const char *srcFile, Arch arch, const char *cpu, ISPCTarget target,
-                                Module::OutputFlags outputFlags, Module::OutputType outputType, const char *outFileName,
-                                const char *headerFileName, const char *depsFileName, const char *depsTargetName,
-                                const char *hostStubFileName, const char *devStubFileName) {
-    // Both the target and the module objects lifetime is tied to the scope of
-    // this function. Raw pointers g->target and m are used as observers and
-    // are set to nullptr at the end of the function.
-    auto targetPtr = std::make_unique<Target>(arch, cpu, target, outputFlags.getPICLevel(), outputFlags.getMCModel(),
-                                              g->printTarget);
-    if (!targetPtr->isValid()) {
-        return 1;
-    }
-    g->target = targetPtr.get();
-
-    auto modulePtr = std::make_unique<Module>(srcFile);
-    m = modulePtr.get();
+int Module::CompileSingleTarget(Arch arch, const char *cpu, ISPCTarget target, const char *depsTargetName) {
     const int compileResult = m->CompileFile();
 
     llvm::TimeTraceScope TimeScope("Backend");
@@ -3798,9 +3790,6 @@ int Module::CompileSingleTarget(const char *srcFile, Arch arch, const char *cpu,
     if (errorCount > 0) {
         m->symbolTable->PopInnerScopes();
     }
-
-    m = nullptr;
-    g->target = nullptr;
 
     return errorCount > 0;
 }
@@ -4073,8 +4062,6 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
     return errorCount > 0;
 }
 
-const char *lGetStrPtr(const std::string &str) { return str.empty() ? nullptr : str.c_str(); }
-
 int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
                              Module::OutputFlags outputFlags, Module::OutputType outputType,
                              Module::OutputName &outputNames, const char *depsTargetName) {
@@ -4091,8 +4078,22 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         if (targets.size() == 1) {
             target = targets[0];
         }
-        return CompileSingleTarget(srcFile, arch, cpu, target, outputFlags, outputType, outFileName, headerFileName,
-                                   depsFileName, depsTargetName, hostStubFileName, devStubFileName);
+        // Both the target and the module objects lifetime is tied to the scope of
+        // this function. Raw pointers g->target and m are used as observers and
+        // are set to nullptr at the end of the function.
+        auto targetPtr = std::make_unique<Target>(arch, cpu, target, outputFlags.getPICLevel(),
+                                                  outputFlags.getMCModel(), g->printTarget);
+        if (!targetPtr->isValid()) {
+            return 1;
+        }
+        g->target = targetPtr.get();
+
+        auto modulePtr = std::make_unique<Module>(srcFile, outputFlags, outputType, outputNames);
+        m = modulePtr.get();
+
+        return m->CompileSingleTarget(arch, cpu, target, depsTargetName);
+        // m = nullptr;
+        // g->target = nullptr;
     } else {
         return CompileMultipleTargets(srcFile, arch, cpu, targets, outputFlags, outputType, outFileName, headerFileName,
                                       depsFileName, depsTargetName, hostStubFileName, devStubFileName);
