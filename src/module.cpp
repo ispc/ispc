@@ -334,6 +334,13 @@ Module::Module(const char *fn) : filename(fn) {
     }
 }
 
+Module::Module(const char *filename, OutputFlags flags, OutputType outputType, OutputName &outputNames)
+    : Module(filename) {
+    this->outputFlags = flags;
+    this->outputType = outputType;
+    this->outputNames = outputNames;
+}
+
 Module::~Module() {
     if (symbolTable) {
         delete symbolTable;
@@ -3754,7 +3761,7 @@ int lWriteOutputFiles(Module *m, const char *srcFile, Module::OutputFlags output
 }
 
 int Module::CompileSingleTarget(const char *srcFile, Arch arch, const char *cpu, ISPCTarget target,
-                                OutputFlags outputFlags, OutputType outputType, const char *outFileName,
+                                Module::OutputFlags outputFlags, Module::OutputType outputType, const char *outFileName,
                                 const char *headerFileName, const char *depsFileName, const char *depsTargetName,
                                 const char *hostStubFileName, const char *devStubFileName) {
     // Both the target and the module objects lifetime is tied to the scope of
@@ -4066,10 +4073,18 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
     return errorCount > 0;
 }
 
+const char *lGetStrPtr(const std::string &str) { return str.empty() ? nullptr : str.c_str(); }
+
 int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
-                             OutputFlags outputFlags, OutputType outputType, const char *outFileName,
-                             const char *headerFileName, const char *depsFileName, const char *depsTargetName,
-                             const char *hostStubFileName, const char *devStubFileName) {
+                             Module::OutputFlags outputFlags, Module::OutputType outputType,
+                             Module::OutputName &outputNames, const char *depsTargetName) {
+
+    const char *outFileName = lGetStrPtr(outputNames.out);
+    const char *headerFileName = lGetStrPtr(outputNames.header);
+    const char *depsFileName = lGetStrPtr(outputNames.deps);
+    const char *hostStubFileName = lGetStrPtr(outputNames.hostStub);
+    const char *devStubFileName = lGetStrPtr(outputNames.devStub);
+
     if (targets.size() == 0 || targets.size() == 1) {
         // We're only compiling to a single target
         ISPCTarget target = ISPCTarget::none;
