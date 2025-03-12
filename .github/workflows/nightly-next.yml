@@ -3,7 +3,7 @@
 
 # Nightly Linux run.
 
-name: Nightly tests / LLVM 19.1
+name: Nightly tests / LLVM 20.1
 
 permissions: read-all
 
@@ -17,18 +17,36 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  SDE_MIRROR_ID: 843185
-  SDE_TAR_NAME: sde-external-9.48.0-2024-11-25
-  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
-  LLVM_REPO: https://github.com/ispc/ispc.dependencies
-
 jobs:
-  linux-build-ispc-llvm-19:
+  define-targets:
+    runs-on: ubuntu-latest
+    outputs:
+      targets: >-
+        ["generic-i1x4", "generic-i1x8", "generic-i1x16", "generic-i1x32",
+         "generic-i8x16", "generic-i8x32",
+         "generic-i16x8", "generic-i16x16",
+         "generic-i32x4", "generic-i32x8", "generic-i32x16",
+         "generic-i64x4",
+         "sse2-i32x4", "sse2-i32x8",
+         "sse4-i8x16", "sse4-i16x8", "sse4-i32x4", "sse4-i32x8",
+         "avx1-i32x4", "avx1-i32x8", "avx1-i32x16", "avx1-i64x4",
+         "avx2-i8x32", "avx2-i16x16", "avx2-i32x4", "avx2-i32x8", "avx2-i32x16", "avx2-i64x4",
+         "avx2vnni-i32x4", "avx2vnni-i32x8", "avx2vnni-i32x16",
+         "avx512skx-x4", "avx512skx-x8", "avx512skx-x16", "avx512skx-x64", "avx512skx-x32",
+         "avx512icl-x4", "avx512icl-x8", "avx512icl-x16", "avx512icl-x64", "avx512icl-x32",
+         "avx512spr-x4", "avx512spr-x8", "avx512spr-x16", "avx512spr-x64", "avx512spr-x32"]
+    steps:
+      - run: echo "Defining targets"
+
+  linux-build-ispc-llvm:
     runs-on: ubuntu-22.04
     env:
-      LLVM_VERSION: "19.1"
-      LLVM_TAR: llvm-19.1.7-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_VERSION: "20.1"
+      LLVM_TAR: llvm-20.1.0-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      SDE_MIRROR_ID: 843185
+      SDE_TAR_NAME: sde-external-9.48.0-2024-11-25
+      USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
+      LLVM_REPO: https://github.com/ispc/ispc.dependencies
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -55,40 +73,36 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: ispc_llvm_19_linux
+        name: ispc_llvm_linux
         path: build/ispc-trunk-linux.tar.gz
 
   linux-test:
-    needs: [linux-build-ispc-llvm-19]
+    needs: [define-targets, linux-build-ispc-llvm]
     strategy:
       fail-fast: false
       matrix:
         arch: [x86, x86-64]
-        target: [sse2-i32x4, sse2-i32x8,
-                 sse4-i8x16, sse4-i16x8, sse4-i32x4, sse4-i32x8,
-                 avx1-i32x4, avx1-i32x8, avx1-i32x16, avx1-i64x4,
-                 avx2-i8x32, avx2-i16x16, avx2-i32x4, avx2-i32x8, avx2-i32x16, avx2-i64x4,
-                 avx2vnni-i32x4, avx2vnni-i32x8, avx2vnni-i32x16,
-                 avx512skx-x4, avx512skx-x8, avx512skx-x16, avx512skx-x64, avx512skx-x32,
-                 avx512icl-x4, avx512icl-x8, avx512icl-x16, avx512icl-x64, avx512icl-x32,
-                 avx512spr-x4, avx512spr-x8, avx512spr-x16, avx512spr-x64, avx512spr-x32]
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
       platform: linux
       architecture: ${{ matrix.arch }}
-      llvm_version: 19
-      artifact_name: ispc_llvm_19_linux
-      targets: ${{ matrix.target }}
+      llvm_version: 20
+      artifact_name: ispc_llvm_linux
+      targets: ${{ needs.define-targets.outputs.targets }}
       optsets: -O0 -O1 -O2
 
-  win-build-ispc-llvm-19:
+  win-build-ispc-llvm:
     runs-on: windows-2019
     env:
-      LLVM_VERSION: "19.1"
-      LLVM_TAR: llvm-19.1.7-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      LLVM_VERSION: "20.1"
+      LLVM_TAR: llvm-20.1.0-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
       LLVM_HOME: "C:\\projects\\llvm"
       CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       BUILD_TYPE: "Release"
+      SDE_MIRROR_ID: 843185
+      SDE_TAR_NAME: sde-external-9.48.0-2024-11-25
+      USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
+      LLVM_REPO: https://github.com/ispc/ispc.dependencies
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -118,25 +132,20 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: ispc_llvm19_win
+        name: ispc_llvm_win
         path: build/ispc-trunk-windows.zip
 
   win-test:
-    needs: [win-build-ispc-llvm-19]
+    needs: [define-targets, win-build-ispc-llvm]
     strategy:
       fail-fast: false
       matrix:
         arch: [x86, x86-64]
-        target: [sse2-i32x4, sse2-i32x8,
-                  sse4-i8x16, sse4-i16x8, sse4-i32x4, sse4-i32x8,
-                  avx1-i32x4, avx1-i32x8, avx1-i32x16, avx1-i64x4,
-                  avx2-i8x32, avx2-i16x16, avx2-i32x4, avx2-i32x8, avx2-i32x16, avx2-i64x4,
-                  avx512skx-x4, avx512skx-x8, avx512skx-x16, avx512skx-x64, avx512skx-x32]
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
       platform: windows
       architecture: ${{ matrix.arch }}
-      llvm_version: 19
-      artifact_name: ispc_llvm19_win
-      targets: ${{ matrix.target }}
+      llvm_version: 20
+      artifact_name: ispc_llvm_win
+      targets: ${{ needs.define-targets.outputs.targets }}
       optsets: -O0 -O1 -O2
