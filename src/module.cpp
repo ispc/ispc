@@ -340,12 +340,6 @@ const char *lGetStrPtr(const std::string &str) { return str.empty() ? nullptr : 
 Module::Module(const char *filename, Output &output)
     : Module(filename) {
     this->output = output;
-    this->outFileName = lGetStrPtr(output.out);
-    this->headerFileName = lGetStrPtr(output.header);
-    this->depsFileName = lGetStrPtr(output.deps);
-    this->hostStubFileName = lGetStrPtr(output.hostStub);
-    this->devStubFileName = lGetStrPtr(output.devStub);
-    this->depsTargetName = lGetStrPtr(output.depsTarget);
 }
 
 std::unique_ptr<Module> Module::Create(const char *srcFile, Output &output) {
@@ -1556,13 +1550,19 @@ static void lReportInvalidSuffixWarning(const char *outFileName, Module::OutputT
     }
 }
 
-bool Module::writeOutput(OutputType outputType, const char *outFileName, const char *depTargetFileName,
-                         const char *sourceFileName) {
-    if (diBuilder && (outputType != Header) && (outputType != Deps)) {
+bool Module::writeOutput() {
+    OutputType outputType = output.type;
+    const char *outFileName = lGetStrPtr(output.out);
+
+    // This function should not be called for generating outputs not related to
+    // LLVM/Clang processing, i.e., header/deps/hostStub/devStub
+    Assert(outputType != Header && outputType != Deps && outputType != HostStub && outputType != DevStub);
+    Assert(module);
+
+    // TODO: probably this is not good place to actually modify something inside the module
+    if (diBuilder) {
         lStripUnusedDebugInfo(module);
     }
-
-    Assert(module);
 
     if (g->functionSections) {
         module->addModuleFlag(llvm::Module::Warning, "function-sections", 1);
@@ -1576,9 +1576,9 @@ bool Module::writeOutput(OutputType outputType, const char *outFileName, const c
     }
 
     // SIC! (verifyModule() == TRUE) means "failed", see llvm-link code.
-    if ((outputType != Header) && (outputType != Deps) && (outputType != HostStub) && (outputType != DevStub) &&
-        (outputType != CPPStub) && llvm::verifyModule(*module, &llvm::errs())) {
+    if ((outputType != CPPStub) && llvm::verifyModule(*module, &llvm::errs())) {
         FATAL("Resulting module verification failed!");
+        return false;
     }
 
     lReportInvalidSuffixWarning(outFileName, outputType);
@@ -1590,17 +1590,6 @@ bool Module::writeOutput(OutputType outputType, const char *outFileName, const c
     case Bitcode:
     case BitcodeText:
         return writeBitcode(module, outFileName, outputType);
-    // TODO!: it looks like we don't need to process extra output types here,
-    // better to call their methods directly
-    case Header:
-        return writeHeader(outFileName);
-    case Deps:
-        FATAL("Unhandled output type in Module::writeOutput()");
-        return false;
-    case DevStub:
-        return writeDevStub(outFileName);
-    case HostStub:
-        return writeHostStub(outFileName);
     case CPPStub:
         return writeCPPStub(outFileName);
 #ifdef ISPC_XE_ENABLED
@@ -1609,6 +1598,12 @@ bool Module::writeOutput(OutputType outputType, const char *outFileName, const c
     case SPIRV:
         return writeSPIRV(module, outFileName);
 #endif
+    // TODO!: it looks like we don't need to process extra output types here,
+    // better to call their methods directly
+    case Header:
+    case Deps:
+    case DevStub:
+    case HostStub:
     default:
         FATAL("Unhandled output type in Module::writeOutput()");
         return false;
@@ -2388,8 +2383,12 @@ std::string emitOffloadParamStruct(const std::string &paramStructName, const Sym
     return out.str();
 }
 
-bool Module::writeDevStub(const char *fn) {
+bool Module::writeDevStub() {
+    const char *fn = lGetStrPtr(output.devStub);
     FILE *file = fopen(fn, "w");
+
+    lReportInvalidSuffixWarning(fn, OutputType::DevStub);
+
     if (!file) {
         perror("fopen");
         return false;
@@ -2556,8 +2555,12 @@ bool Module::writeCPPStub(Module *module, const char *outFileName) {
     return true;
 }
 
-bool Module::writeHostStub(const char *fn) {
+bool Module::writeHostStub() {
+    const char *fn = lGetStrPtr(output.hostStub);
     FILE *file = fopen(fn, "w");
+
+    lReportInvalidSuffixWarning(fn, OutputType::HostStub);
+
     if (!file) {
         perror("fopen");
         return false;
@@ -2676,8 +2679,12 @@ bool Module::writeHostStub(const char *fn) {
     return true;
 }
 
-bool Module::writeHeader(const char *fn) {
+bool Module::writeHeader() {
+    const char *fn = lGetStrPtr(output.header);
     FILE *f = fopen(fn, "w");
+
+    lReportInvalidSuffixWarning(fn, OutputType::Header);
+
     if (!f) {
         perror("fopen");
         return false;
@@ -3764,10 +3771,10 @@ int lValidateXeTargetOutputs(Target *target, Module::OutputType &outputType) {
 
 int Module::WriteOutputFiles() {
     // Write the main output file
-    if (!output.out.empty() && !writeOutput(output.type, outFileName)) {
+    if (!output.out.empty() && !writeOutput()) {
         return 1;
     }
-    if (!output.header.empty() && !writeOutput(Module::Header, headerFileName)) {
+    if (!output.header.empty() && !writeHeader()) {
         return 1;
     }
     if (!output.deps.empty() || output.flags.isDepsToStdout()) {
@@ -3775,10 +3782,10 @@ int Module::WriteOutputFiles() {
             return 1;
         }
     }
-    if (!output.hostStub.empty() && !writeOutput(Module::HostStub, hostStubFileName)) {
+    if (!output.hostStub.empty() && !writeHostStub()) {
         return 1;
     }
-    if (!output.devStub.empty() && !writeOutput(Module::DevStub, devStubFileName)) {
+    if (!output.devStub.empty() && !writeDevStub()) {
         return 1;
     }
     return 0;
