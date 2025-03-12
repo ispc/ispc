@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       LLVM_VERSION: "19.1"
-      LLVM_TAR: llvm-19.1.0-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-19.1.7-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -58,10 +58,8 @@ jobs:
         name: ispc_llvm_19_linux
         path: build/ispc-trunk-linux.tar.gz
 
-  linux-test-llvm-19:
+  linux-test:
     needs: [linux-build-ispc-llvm-19]
-    runs-on: ubuntu-22.04
-    continue-on-error: false
     strategy:
       fail-fast: false
       matrix:
@@ -74,84 +72,20 @@ jobs:
                  avx512skx-x4, avx512skx-x8, avx512skx-x16, avx512skx-x64, avx512skx-x32,
                  avx512icl-x4, avx512icl-x8, avx512icl-x16, avx512icl-x64, avx512icl-x32,
                  avx512spr-x4, avx512spr-x8, avx512spr-x16, avx512spr-x64, avx512spr-x32]
-        # See issue #2818 for more deatils. It's SDE problem running on AMD runner.
-        exclude:
-          - arch: x86
-            target: "avx2vnni-i32x4"
-          - arch: x86
-            target: "avx2vnni-i32x8"
-          - arch: x86
-            target: "avx2vnni-i32x16"
-          - arch: x86
-            target: "avx512skx-x4"
-          - arch: x86
-            target: "avx512skx-x8"
-          - arch: x86
-            target: "avx512skx-x16"
-          - arch: x86
-            target: "avx512skx-x32"
-          - arch: x86
-            target: "avx512skx-x64"
-          - arch: x86
-            target: "avx512icl-x4"
-          - arch: x86
-            target: "avx512icl-x8"
-          - arch: x86
-            target: "avx512icl-x16"
-          - arch: x86
-            target: "avx512icl-x32"
-          - arch: x86
-            target: "avx512icl-x64"
-          - arch: x86
-            target: "avx512spr-x4"
-          - arch: x86
-            target: "avx512spr-x8"
-          - arch: x86
-            target: "avx512spr-x16"
-          - arch: x86
-            target: "avx512spr-x32"
-          - arch: x86
-            target: "avx512spr-x64"
-    steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-    - name: Download package
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-      with:
-        name: ispc_llvm_19_linux
-
-    - name: Install dependencies and unpack artifacts
-      run: |
-        .github/workflows/scripts/install-test-deps.sh
-
-    - name: Check environment
-      run: |
-        cat /proc/cpuinfo
-
-    - name: Running tests
-      run: |
-        echo PATH="$PATH"
-        ./scripts/alloy.py -r --only="stability ${{ matrix.arch }} current -O0 -O1 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: fail_db.${{matrix.target}}.txt
-        path: tests/fail_db.txt
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff
-        # Exit with error code if there are fails.
-        [ -z "$(git diff)" ]
-
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: linux
+      architecture: ${{ matrix.arch }}
+      llvm_version: 19
+      artifact_name: ispc_llvm_19_linux
+      targets: ${{ matrix.target }}
+      optsets: -O0 -O1 -O2
 
   win-build-ispc-llvm-19:
     runs-on: windows-2019
     env:
       LLVM_VERSION: "19.1"
-      LLVM_TAR: llvm-19.1.0-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      LLVM_TAR: llvm-19.1.7-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
       LLVM_HOME: "C:\\projects\\llvm"
       CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       BUILD_TYPE: "Release"
@@ -187,54 +121,22 @@ jobs:
         name: ispc_llvm19_win
         path: build/ispc-trunk-windows.zip
 
-
-  win-test-llvm19:
+  win-test:
     needs: [win-build-ispc-llvm-19]
-    env:
-      LLVM_HOME: "C:\\projects\\llvm"
-    runs-on: windows-2022
-    continue-on-error: false
     strategy:
       fail-fast: false
       matrix:
         arch: [x86, x86-64]
         target: [sse2-i32x4, sse2-i32x8,
-                 sse4-i8x16, sse4-i16x8, sse4-i32x4, sse4-i32x8,
-                 avx1-i32x4, avx1-i32x8, avx1-i32x16, avx1-i64x4,
-                 avx2-i8x32, avx2-i16x16, avx2-i32x4, avx2-i32x8, avx2-i32x16, avx2-i64x4,
-                 avx512skx-x4, avx512skx-x8, avx512skx-x16, avx512skx-x64, avx512skx-x32]
-
-    steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-    - name: Download package
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-      with:
-        name: ispc_llvm19_win
-
-    - name: Install dependencies
-      run: |
-        .github/workflows/scripts/install-test-deps.ps1
-
-    - name: Check environment
-      shell: cmd
-      run: |
-        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
-
-    - name: Running tests
-      run: |
-        $env:ISPC_HOME = "$pwd"
-        .github/workflows/scripts/load-vs-env.ps1 "${{ matrix.arch }}"
-        python .\scripts\alloy.py -r --only="stability ${{ matrix.arch }} current -O0 -O1 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff --exit-code
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: fail_db.llvm19.${{matrix.arch}}.${{matrix.target}}.txt
-        path: tests/fail_db.txt
-
+                  sse4-i8x16, sse4-i16x8, sse4-i32x4, sse4-i32x8,
+                  avx1-i32x4, avx1-i32x8, avx1-i32x16, avx1-i64x4,
+                  avx2-i8x32, avx2-i16x16, avx2-i32x4, avx2-i32x8, avx2-i32x16, avx2-i64x4,
+                  avx512skx-x4, avx512skx-x8, avx512skx-x16, avx512skx-x64, avx512skx-x32]
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: windows
+      architecture: ${{ matrix.arch }}
+      llvm_version: 19
+      artifact_name: ispc_llvm19_win
+      targets: ${{ matrix.target }}
+      optsets: -O0 -O1 -O2
