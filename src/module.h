@@ -16,8 +16,8 @@
 #include "ispc.h"
 
 #include <algorithm>
-#include <string>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include <clang/Frontend/FrontendOptions.h>
@@ -136,20 +136,6 @@ class Module {
 #endif
     };
 
-    struct OutputName {
-        OutputName() {}
-        OutputName(const char *outFileName, const char *headerFileName, const char *depsFileName,
-                   const char *hostStubFileName, const char *devStubFileName)
-            : out(outFileName ? outFileName : ""), header(headerFileName ? headerFileName : ""),
-              deps(depsFileName ? depsFileName : ""), hostStub(hostStubFileName ? hostStubFileName : ""),
-              devStub(devStubFileName ? devStubFileName : "") {}
-        std::string out{};
-        std::string header{};
-        std::string deps{};
-        std::string hostStub{};
-        std::string devStub{};
-    };
-
     // Define a mapping from OutputType to expected suffixes and file type descriptions
     struct OutputTypeInfo {
         const char *fileType;
@@ -213,11 +199,33 @@ class Module {
         MCModel mcModel;
     };
 
-    // TODO: comment
-    Module(const char *filename, OutputFlags flags, OutputType outputType, OutputName &outputNames);
+    struct Output {
+        Output() {}
+        Output(OutputType outputType, OutputFlags outputFlags, const char *outFileName, const char *headerFileName,
+               const char *depsFileName, const char *hostStubFileName, const char *devStubFileName,
+               const char *depsTargetName)
+            : type(outputType), flags(outputFlags), depsTarget(depsTargetName ? depsTargetName : ""),
+              out(outFileName ? outFileName : ""), header(headerFileName ? headerFileName : ""),
+              deps(depsFileName ? depsFileName : ""), hostStub(hostStubFileName ? hostStubFileName : ""),
+              devStub(devStubFileName ? devStubFileName : "") {}
 
-    static std::unique_ptr<Module> Create(const char *srcFile, OutputFlags flags, OutputType outputType,
-                                          OutputName &outputNames);
+        OutputType type{};
+        OutputFlags flags{};
+
+        std::string depsTarget{};
+
+        // Output file names
+        std::string out{};
+        std::string header{};
+        std::string deps{};
+        std::string hostStub{};
+        std::string devStub{};
+    };
+
+    // TODO: comment
+    Module(const char *filename, Output &output);
+
+    static std::unique_ptr<Module> Create(const char *srcFile, Output &output);
 
     /** Compile the given source file, generating assembly, object file, or
         LLVM bitcode output, as well as (optionally) a header file with
@@ -245,20 +253,19 @@ class Module {
                             srcFile.
      */
     static int CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
-                                OutputFlags outputFlags, OutputType outputType, OutputName &outputNames,
-                                const char *depsTargetName);
+                                Output &output);
     int CompileSingleTarget(Arch arch, const char *cpu, ISPCTarget target, const char *depsTargetName);
     static int GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> targets,
                                 std::vector<std::unique_ptr<Module>> &modules,
                                 std::vector<std::unique_ptr<Target>> &targetsPtrs, OutputFlags outputFlags,
-                                OutputType outputType, OutputName outputNames, const char *depsTargetName);
+                                OutputType outputType, Output output, const char *depsTargetName);
     static int CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
-                                      OutputFlags outputFlags, OutputType outputType, OutputName &outputNames,
+                                      OutputFlags outputFlags, OutputType outputType, Output &output,
                                       const char *depsTargetName);
     static int LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputType, const char *outFileName);
 
     static int WriteDispatchOutputFiles(llvm::Module *dispatchModule, const char *srcFile, OutputFlags outputFlags,
-                                        OutputType outputType, OutputName &outputNames, const char *depsTargetName);
+                                        OutputType outputType, Output &output, const char *depsTargetName);
     int WriteOutputFiles(const char *depsTargetName);
     /** Write the corresponding output type to the given file.  Returns
         true on success, false if there has been an error.  The given
@@ -300,11 +307,12 @@ class Module {
     const char *srcFile{nullptr};
     AST *ast{nullptr};
 
+    // TODO: delete them after full migration to Output
     OutputFlags outputFlags;
     OutputType outputType;
-    OutputName outputNames;
+    Output output;
 
-    // TODO: delete them after full migration to OutputName
+    // TODO: delete them after full migration to Output
     const char *outFileName{nullptr};
     const char *headerFileName{nullptr};
     const char *depsFileName{nullptr};

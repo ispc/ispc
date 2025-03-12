@@ -1348,9 +1348,9 @@ int main(int Argc, char *Argv[]) {
     int ret = 0;
     {
         llvm::TimeTraceScope TimeScope("ExecuteCompiler");
-        Module::OutputName outputNames =
-            Module::OutputName(outFileName, headerFileName, depsFileName, hostStubFileName, devStubFileName);
-        ret = Module::CompileAndOutput(file, arch, cpu, targets, flags, ot, outputNames, depsTargetName);
+        Module::Output output = Module::Output(ot, flags, outFileName, headerFileName, depsFileName, hostStubFileName,
+                                               devStubFileName, depsTargetName);
+        ret = Module::CompileAndOutput(file, arch, cpu, targets, output);
     }
 
     if (g->enableTimeTrace) {
