@@ -3022,6 +3022,7 @@ Target::ISA Target::TargetToISA(ISPCTarget target) {
         FATAL("Ubiqutous target in TargetToISA()");
         return Target::ISA::NUM_ISAS;
     }
+    return Target::ISA::NUM_ISAS;
 }
 
 std::string Target::GetTargetSuffix() {
