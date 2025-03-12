@@ -257,11 +257,6 @@ class Module {
 
     static int LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputType, const char *outFileName);
 
-    static bool writeCPPStub(Module *module, const char *outFileName);
-    static bool writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm::Module *module,
-                                          OutputType outputType, const char *outFileName);
-    static bool writeBitcode(llvm::Module *module, const char *outFileName, OutputType outputType);
-
     /** Total number of errors encountered during compilation. */
     int errorCount{0};
 
@@ -313,6 +308,8 @@ class Module {
                                       Output &output);
     static int WriteDispatchOutputFiles(llvm::Module *dispatchModule, const char *srcFile, Output &output);
 
+    static bool writeBitcode(llvm::Module *module, const char *outFileName, OutputType outputType);
+
     int WriteOutputFiles();
     /** Write the corresponding output type to the given file.  Returns
         true on success, false if there has been an error.  The given
@@ -327,13 +324,13 @@ class Module {
     bool writeDeps(Output &customOutput);
     bool writeDevStub();
     bool writeHostStub();
-    bool writeCPPStub(const char *outFileName);
-    bool writeObjectFileOrAssembly(OutputType outputType, const char *filename);
+    bool writeCPPStub();
+    bool writeObjectFileOrAssembly(llvm::Module *module, Output &customOutput);
 #ifdef ISPC_XE_ENABLED
     static std::unique_ptr<llvm::Module> translateFromSPIRV(std::ifstream &outString);
     static bool translateToSPIRV(llvm::Module *module, std::stringstream &outString);
     static bool writeSPIRV(llvm::Module *module, const char *outFileName);
-    static bool writeZEBin(llvm::Module *module, const char *outFileName);
+    static bool writeZEBin();
 #endif
 
     int preprocessAndParse();
