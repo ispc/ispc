@@ -1586,15 +1586,15 @@ bool Module::writeOutput() {
     switch (outputType) {
     case Asm:
     case Object:
-        return writeObjectFileOrAssembly(outputType, outFileName);
+        return writeObjectFileOrAssembly(module, output);
     case Bitcode:
     case BitcodeText:
         return writeBitcode(module, outFileName, outputType);
     case CPPStub:
-        return writeCPPStub(outFileName);
+        return writeCPPStub();
 #ifdef ISPC_XE_ENABLED
     case ZEBIN:
-        return writeZEBin(module, outFileName);
+        return writeZEBin();
     case SPIRV:
         return writeSPIRV(module, outFileName);
 #endif
@@ -1723,7 +1723,8 @@ static void saveOutput(uint32_t numOutputs, uint8_t **dataOutputs, uint64_t *len
     oclocRes.assign(binRef.begin(), binRef.end());
 }
 
-bool Module::writeZEBin(llvm::Module *module, const char *outFileName) {
+bool Module::writeZEBin() {
+    const char *outFileName = lGetStrPtr(output.out);
     std::stringstream translatedStream;
     bool success = translateToSPIRV(module, translatedStream);
     if (!success) {
@@ -1820,13 +1821,13 @@ bool Module::writeZEBin(llvm::Module *module, const char *outFileName) {
 }
 #endif // ISPC_XE_ENABLED
 
-bool Module::writeObjectFileOrAssembly(OutputType outputType, const char *outFileName) {
+bool Module::writeObjectFileOrAssembly(llvm::Module *M, Output &customOutput) {
     llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
-    return writeObjectFileOrAssembly(targetMachine, module, outputType, outFileName);
-}
+    Assert(targetMachine);
 
-bool Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm::Module *module, OutputType outputType,
-                                       const char *outFileName) {
+    const char *outFileName = lGetStrPtr(customOutput.out);
+    OutputType outputType = customOutput.type;
+
     // Figure out if we're generating object file or assembly output, and
     // set binary output for object files
 #if ISPC_LLVM_VERSION > ISPC_LLVM_17_0
@@ -1860,7 +1861,7 @@ bool Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm:
         }
 
         // Finally, run the passes to emit the object file/assembly
-        pm.run(*module);
+        pm.run(*M);
 
         // Success; tell tool_output_file to keep the final output file.
         of->keep();
@@ -2302,7 +2303,7 @@ std::string lDetermineDepsTargetName(const char *srcFile, const char *depsTarget
 
 bool Module::writeDeps(Module::Output &customOutput) {
     const char *fn = lGetStrPtr(customOutput.deps);
-    bool generateMakeRule = output.flags.isMakeRuleDeps();
+    bool generateMakeRule = customOutput.flags.isMakeRuleDeps();
     std::string targetName =
         lDetermineDepsTargetName(srcFile, lGetStrPtr(customOutput.depsTarget), lGetStrPtr(customOutput.out));
     const char *tn = targetName.c_str();
@@ -2521,9 +2522,9 @@ bool Module::writeDevStub() {
     return true;
 }
 
-bool Module::writeCPPStub(const char *outFileName) { return writeCPPStub(this, outFileName); }
+bool Module::writeCPPStub() {
+    const char *outFileName = lGetStrPtr(output.out);
 
-bool Module::writeCPPStub(Module *module, const char *outFileName) {
     // Get a file descriptor corresponding to where we want the output to
     // go.  If we open it, it'll be closed by the llvm::raw_fd_ostream
     // destructor.
@@ -2547,10 +2548,10 @@ bool Module::writeCPPStub(Module *module, const char *outFileName) {
     }
 
     // The CPP stream should have been initialized: print and clean it up.
-    Assert(module->bufferCPP && "`bufferCPP` should not be null");
+    Assert(bufferCPP && "`bufferCPP` should not be null");
     llvm::raw_fd_ostream fos(fd, (fd != 1), false);
-    fos << module->bufferCPP->str;
-    module->bufferCPP.reset();
+    fos << bufferCPP->str;
+    bufferCPP.reset();
 
     return true;
 }
@@ -3836,9 +3837,6 @@ int lValidateMultiTargetInputs(const char *srcFile, std::string &outFileName, co
 }
 
 int Module::WriteDispatchOutputFiles(llvm::Module *dispatchModule, const char *srcFile, Module::Output &output) {
-    llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
-    Assert(targetMachine);
-
     const char *outFileName = lGetStrPtr(output.out);
 
     if (!output.out.empty()) {
@@ -3849,14 +3847,14 @@ int Module::WriteDispatchOutputFiles(llvm::Module *dispatchModule, const char *s
 
         case Module::OutputType::Bitcode:
         case Module::OutputType::BitcodeText:
-            if (!Module::writeBitcode(dispatchModule, outFileName, output.type)) {
+            if (!m->writeBitcode(dispatchModule, outFileName, output.type)) {
                 return 1;
             }
             break;
 
         case Module::OutputType::Asm:
         case Module::OutputType::Object:
-            if (!Module::writeObjectFileOrAssembly(targetMachine, dispatchModule, output.type, outFileName)) {
+            if (!m->writeObjectFileOrAssembly(dispatchModule, output)) {
                 return 1;
             }
             break;
