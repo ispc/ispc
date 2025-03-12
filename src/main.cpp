@@ -703,7 +703,8 @@ int main(int Argc, char *Argv[]) {
                                  "be issued, but no output will be generated.");
         }
 
-        int ret = Module::LinkAndOutput(linkFileNames, ot, outFileName);
+        std::string filename = outFileName ? outFileName : "";
+        int ret = Module::LinkAndOutput(linkFileNames, ot, filename);
         lFreeArgv(argv);
         return ret;
     }
