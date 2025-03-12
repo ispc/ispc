@@ -2948,7 +2948,7 @@ Target::ISA Target::TargetToISA(ISPCTarget target) {
     case ISPCTarget::neon_i32x4:
     case ISPCTarget::neon_i32x8:
         return Target::ISA::NEON;
-#else // ISPC_ARM_ENABLED
+#else  // ISPC_ARM_ENABLED
     case ISPCTarget::neon_i8x16:
     case ISPCTarget::neon_i8x32:
     case ISPCTarget::neon_i16x8:
@@ -2960,7 +2960,7 @@ Target::ISA Target::TargetToISA(ISPCTarget target) {
 #ifdef ISPC_WASM_ENABLED
     case ISPCTarget::wasm_i32x4:
         return Target::ISA::WASM;
-#else // ISPC_WASM_ENABLED
+#else  // ISPC_WASM_ENABLED
     case ISPCTarget::wasm_i32x4:
         return Target::ISA::NUM_ISAS;
 #endif // ISPC_WASM_ENABLED
@@ -2986,7 +2986,7 @@ Target::ISA Target::TargetToISA(ISPCTarget target) {
     case ISPCTarget::xe2lpg_x16:
     case ISPCTarget::xe2lpg_x32:
         return Target::ISA::XE2LPG;
-#else // ISPC_XE_ENABLED
+#else  // ISPC_XE_ENABLED
     case ISPCTarget::gen9_x8:
     case ISPCTarget::gen9_x16:
     case ISPCTarget::xelp_x8:
