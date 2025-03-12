@@ -335,8 +335,6 @@ Module::Module(const char *fn) : srcFile(fn) {
     }
 }
 
-const char *lGetStrPtr(const std::string &str) { return str.empty() ? nullptr : str.c_str(); }
-
 Module::Module(const char *filename, Output &output)
     : Module(filename) {
     this->output = output;
@@ -1528,15 +1526,14 @@ static const std::vector<Module::OutputTypeInfo> outputTypeInfos = {
     // Deps and other types that don't require warnings can be omitted
 };
 
-static void lReportInvalidSuffixWarning(const char *outFileName, Module::OutputType outputType) {
-    if (outFileName) {
+static void lReportInvalidSuffixWarning(std::string filename, Module::OutputType outputType) {
+    if (!filename.empty()) {
         // First, issue a warning if the output file suffix and the type of
         // file being created seem to mismatch.  This can help catch missing
         // command-line arguments specifying the output file type.
-        const char *suffix = strrchr(outFileName, '.');
-        if (suffix != nullptr) {
-            ++suffix;
-            std::string suffixStr(suffix);
+        std::size_t dotPos = filename.rfind('.');
+        if (dotPos != std::string::npos) {
+            std::string suffixStr = filename.substr(dotPos + 1);
             if (!(outputType >= 0 && outputType < outputTypeInfos.size())) {
                 Assert(0 /* unhandled output type */);
             }
@@ -1544,7 +1541,7 @@ static void lReportInvalidSuffixWarning(const char *outFileName, Module::OutputT
             const Module::OutputTypeInfo &info = outputTypeInfos[outputType];
             if (!info.isSuffixValid(suffixStr)) {
                 Warning(SourcePos(), "Emitting %s file, but filename \"%s\" has suffix \"%s\"?", info.fileType,
-                        outFileName, suffix);
+                        filename.c_str(), suffixStr.c_str());
             }
         }
     }
@@ -1552,7 +1549,6 @@ static void lReportInvalidSuffixWarning(const char *outFileName, Module::OutputT
 
 bool Module::writeOutput() {
     OutputType outputType = output.type;
-    const char *outFileName = lGetStrPtr(output.out);
 
     // This function should not be called for generating outputs not related to
     // LLVM/Clang processing, i.e., header/deps/hostStub/devStub
@@ -1581,7 +1577,7 @@ bool Module::writeOutput() {
         return false;
     }
 
-    lReportInvalidSuffixWarning(outFileName, outputType);
+    lReportInvalidSuffixWarning(output.out, outputType);
 
     switch (outputType) {
     case Asm:
@@ -1589,14 +1585,14 @@ bool Module::writeOutput() {
         return writeObjectFileOrAssembly(module, output);
     case Bitcode:
     case BitcodeText:
-        return writeBitcode(module, outFileName, outputType);
+        return writeBitcode(module, output.out, outputType);
     case CPPStub:
         return writeCPPStub();
 #ifdef ISPC_XE_ENABLED
     case ZEBIN:
         return writeZEBin();
     case SPIRV:
-        return writeSPIRV(module, outFileName);
+        return writeSPIRV(module, output.out);
 #endif
     // TODO!: it looks like we don't need to process extra output types here,
     // better to call their methods directly
@@ -1610,24 +1606,24 @@ bool Module::writeOutput() {
     }
 }
 
-bool Module::writeBitcode(llvm::Module *module, const char *outFileName, OutputType outputType) {
+bool Module::writeBitcode(llvm::Module *module, std::string outFileName, OutputType outputType) {
     // Get a file descriptor corresponding to where we want the output to
     // go.  If we open it, it'll be closed by the llvm::raw_fd_ostream
     // destructor.
     int fd = -1;
-    Assert(outFileName);
-    if (!strcmp(outFileName, "-")) {
+    Assert(!outFileName.empty());
+    if (outFileName == "-") {
         fd = 1; // stdout
     } else {
         int flags = O_CREAT | O_WRONLY | O_TRUNC;
 #ifdef ISPC_HOST_IS_WINDOWS
         flags |= O_BINARY;
-        fd = _open(outFileName, flags, 0644);
+        fd = _open(outFileName.c_str(), flags, 0644);
 #else
-        fd = open(outFileName, flags, 0644);
+        fd = open(outFileName.c_str(), flags, 0644);
 #endif // ISPC_HOST_IS_WINDOWS
         if (fd == -1) {
-            perror(outFileName);
+            perror(outFileName.c_str());
             return false;
         }
     }
@@ -1681,13 +1677,13 @@ bool Module::translateToSPIRV(llvm::Module *module, std::stringstream &ss) {
     return true;
 }
 
-bool Module::writeSPIRV(llvm::Module *module, const char *outFileName) {
+bool Module::writeSPIRV(llvm::Module *module, std::string outFileName) {
     std::stringstream translatedStream;
     bool success = translateToSPIRV(module, translatedStream);
     if (!success) {
         return false;
     }
-    if (!strcmp(outFileName, "-")) {
+    if (outFileName == "-") {
         std::cout << translatedStream.rdbuf();
     } else {
         std::ofstream fos(outFileName, std::ios::binary);
@@ -1724,7 +1720,6 @@ static void saveOutput(uint32_t numOutputs, uint8_t **dataOutputs, uint64_t *len
 }
 
 bool Module::writeZEBin() {
-    const char *outFileName = lGetStrPtr(output.out);
     std::stringstream translatedStream;
     bool success = translateToSPIRV(module, translatedStream);
     if (!success) {
@@ -1811,31 +1806,28 @@ bool Module::writeZEBin() {
         return false;
     }
 
-    if (!strcmp(outFileName, "-")) {
+    if (output.out == "-") {
         std::cout.write(oclocRes.data(), oclocRes.size());
     } else {
-        std::ofstream fos(outFileName, std::ios::binary);
+        std::ofstream fos(output.out, std::ios::binary);
         fos.write(oclocRes.data(), oclocRes.size());
     }
     return true;
 }
 #endif // ISPC_XE_ENABLED
 
-bool Module::writeObjectFileOrAssembly(llvm::Module *M, Output &customOutput) {
+bool Module::writeObjectFileOrAssembly(llvm::Module *M, Output &CO) {
     llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
     Assert(targetMachine);
-
-    const char *outFileName = lGetStrPtr(customOutput.out);
-    OutputType outputType = customOutput.type;
 
     // Figure out if we're generating object file or assembly output, and
     // set binary output for object files
 #if ISPC_LLVM_VERSION > ISPC_LLVM_17_0
     llvm::CodeGenFileType fileType =
-        (outputType == Object) ? llvm::CodeGenFileType::ObjectFile : llvm::CodeGenFileType::AssemblyFile;
+        (CO.type == Object) ? llvm::CodeGenFileType::ObjectFile : llvm::CodeGenFileType::AssemblyFile;
     bool binary = (fileType == llvm::CodeGenFileType::ObjectFile);
 #else
-    llvm::CodeGenFileType fileType = (outputType == Object) ? llvm::CGFT_ObjectFile : llvm::CGFT_AssemblyFile;
+    llvm::CodeGenFileType fileType = (CO.type == Object) ? llvm::CGFT_ObjectFile : llvm::CGFT_AssemblyFile;
     bool binary = (fileType == llvm::CGFT_ObjectFile);
 
 #endif
@@ -1843,10 +1835,10 @@ bool Module::writeObjectFileOrAssembly(llvm::Module *M, Output &customOutput) {
 
     std::error_code error;
 
-    std::unique_ptr<llvm::ToolOutputFile> of(new llvm::ToolOutputFile(outFileName, error, flags));
+    std::unique_ptr<llvm::ToolOutputFile> of(new llvm::ToolOutputFile(CO.out, error, flags));
 
     if (error) {
-        Error(SourcePos(), "Cannot open output file \"%s\".\n", outFileName);
+        Error(SourcePos(), "Cannot open output file \"%s\".\n", CO.out.c_str());
         return false;
     }
 
@@ -2283,12 +2275,12 @@ static void lUnescapeStringInPlace(std::string &str) {
     }
 }
 
-std::string lDetermineDepsTargetName(const char *srcFile, const char *depsTargetName, const char *outFileName) {
-    if (depsTargetName) {
-        return depsTargetName;
+std::string Module::Output::DepsTargetName(const char *srcFile) const {
+    if (!depsTarget.empty()) {
+        return depsTarget;
     }
-    if (outFileName) {
-        return outFileName;
+    if (!out.empty()) {
+        return out;
     }
     if (!IsStdin(srcFile)) {
         std::string targetName = srcFile;
@@ -2301,31 +2293,26 @@ std::string lDetermineDepsTargetName(const char *srcFile, const char *depsTarget
     return "a.out";
 }
 
-bool Module::writeDeps(Module::Output &customOutput) {
-    const char *fn = lGetStrPtr(customOutput.deps);
-    bool generateMakeRule = customOutput.flags.isMakeRuleDeps();
-    std::string targetName =
-        lDetermineDepsTargetName(srcFile, lGetStrPtr(customOutput.depsTarget), lGetStrPtr(customOutput.out));
-    const char *tn = targetName.c_str();
-    const char *sn = srcFile;
+bool Module::writeDeps(Output &CO) {
+    bool generateMakeRule = CO.flags.isMakeRuleDeps();
+    std::string targetName = CO.DepsTargetName(srcFile);
 
-    lReportInvalidSuffixWarning(fn, OutputType::Deps);
+    lReportInvalidSuffixWarning(CO.deps, OutputType::Deps);
 
-    if (fn && g->debugPrint) { // We may be passed nullptr for stdout output.
-        printf("\nWriting dependencies to file %s\n", fn);
+    if (g->debugPrint) { // We may be passed nullptr for stdout output.
+        printf("\nWriting dependencies to file %s\n", CO.deps.c_str());
     }
-    FILE *file = fn ? fopen(fn, "w") : stdout;
+    FILE *file = !CO.deps.empty() ? fopen(CO.deps.c_str(), "w") : stdout;
     if (!file) {
         perror("fopen");
         return false;
     }
 
     if (generateMakeRule) {
-        Assert(tn);
-        fprintf(file, "%s:", tn);
+        fprintf(file, "%s:", targetName.c_str());
         // Rules always emit source first.
-        if (sn && !IsStdin(sn)) {
-            fprintf(file, " %s", sn);
+        if (srcFile && !IsStdin(srcFile)) {
+            fprintf(file, " %s", srcFile);
         }
         std::string unescaped;
 
@@ -2333,7 +2320,7 @@ bool Module::writeDeps(Module::Output &customOutput) {
              it != registeredDependencies.end(); ++it) {
             unescaped = *it; // As this is preprocessor output, paths come escaped.
             lUnescapeStringInPlace(unescaped);
-            if (sn && !IsStdin(sn) && 0 == strcmp(sn, unescaped.c_str())) {
+            if (srcFile && !IsStdin(srcFile) && 0 == strcmp(srcFile, unescaped.c_str())) {
                 // If source has been passed, it's already emitted.
                 continue;
             }
@@ -2385,16 +2372,16 @@ std::string emitOffloadParamStruct(const std::string &paramStructName, const Sym
 }
 
 bool Module::writeDevStub() {
-    const char *fn = lGetStrPtr(output.devStub);
-    FILE *file = fopen(fn, "w");
+    FILE *file = fopen(output.devStub.c_str(), "w");
 
-    lReportInvalidSuffixWarning(fn, OutputType::DevStub);
+    lReportInvalidSuffixWarning(output.devStub, OutputType::DevStub);
 
     if (!file) {
         perror("fopen");
         return false;
     }
-    fprintf(file, "//\n// %s\n// (device stubs automatically generated by the ispc compiler.)\n", fn);
+    fprintf(file, "//\n// %s\n// (device stubs automatically generated by the ispc compiler.)\n",
+            output.devStub.c_str());
     fprintf(file, "// DO NOT EDIT THIS FILE.\n//\n\n");
     fprintf(file, "#include \"ispc/dev/offload.h\"\n\n");
 
@@ -2523,26 +2510,25 @@ bool Module::writeDevStub() {
 }
 
 bool Module::writeCPPStub() {
-    const char *outFileName = lGetStrPtr(output.out);
-
     // Get a file descriptor corresponding to where we want the output to
     // go.  If we open it, it'll be closed by the llvm::raw_fd_ostream
     // destructor.
     int fd = -1;
     int flags = O_CREAT | O_WRONLY | O_TRUNC;
 
-    if (!outFileName) {
+    // TODO: open file using some LLVM API?
+    if (output.out.empty()) {
         return false;
-    } else if (!strcmp("-", outFileName)) {
+    } else if (output.out == "-") {
         fd = 1;
     } else {
 #ifdef ISPC_HOST_IS_WINDOWS
-        fd = _open(outFileName, flags, 0644);
+        fd = _open(output.out.c_str(), flags, 0644);
 #else
-        fd = open(outFileName, flags, 0644);
+        fd = open(output.out.c_str(), flags, 0644);
 #endif // ISPC_HOST_IS_WINDOWS
         if (fd == -1) {
-            perror(outFileName);
+            perror(output.out.c_str());
             return false;
         }
     }
@@ -2557,16 +2543,16 @@ bool Module::writeCPPStub() {
 }
 
 bool Module::writeHostStub() {
-    const char *fn = lGetStrPtr(output.hostStub);
-    FILE *file = fopen(fn, "w");
+    FILE *file = fopen(output.hostStub.c_str(), "w");
 
-    lReportInvalidSuffixWarning(fn, OutputType::HostStub);
+    lReportInvalidSuffixWarning(output.hostStub, OutputType::HostStub);
 
     if (!file) {
         perror("fopen");
         return false;
     }
-    fprintf(file, "//\n// %s\n// (device stubs automatically generated by the ispc compiler.)\n", fn);
+    fprintf(file, "//\n// %s\n// (device stubs automatically generated by the ispc compiler.)\n",
+            output.hostStub.c_str());
     fprintf(file, "// DO NOT EDIT THIS FILE.\n//\n\n");
     fprintf(file, "#include \"ispc/host/offload.h\"\n\n");
     fprintf(
@@ -2681,22 +2667,21 @@ bool Module::writeHostStub() {
 }
 
 bool Module::writeHeader() {
-    const char *fn = lGetStrPtr(output.header);
-    FILE *f = fopen(fn, "w");
+    FILE *f = fopen(output.header.c_str(), "w");
 
-    lReportInvalidSuffixWarning(fn, OutputType::Header);
+    lReportInvalidSuffixWarning(output.header, OutputType::Header);
 
     if (!f) {
         perror("fopen");
         return false;
     }
-    fprintf(f, "//\n// %s\n// (Header automatically generated by the ispc compiler.)\n", fn);
+    fprintf(f, "//\n// %s\n// (Header automatically generated by the ispc compiler.)\n", output.header.c_str());
     fprintf(f, "// DO NOT EDIT THIS FILE.\n//\n\n");
 
     // Create a nice guard string from the filename, turning any
     // non-number/letter characters into underbars
     std::string guard = "ISPC_";
-    const char *p = fn;
+    const char *p = output.header.c_str();
     while (*p) {
         if (isdigit(*p)) {
             guard += *p;
@@ -3363,25 +3348,31 @@ int Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *o
 // Given an output filename of the form "foo.obj", and an ISA name like
 // "avx", return a string with the ISA name inserted before the original
 // filename's suffix, like "foo_avx.obj".
-static std::string lGetTargetFileName(const char *outFileName, const std::string &isaString) {
-    assert(outFileName != nullptr && "`outFileName` should not be null");
+// Same as above, but takes a Target pointer instead of an ISA string.
+// TODO: fix comment
+std::string lGetMangledFileName(std::string filename, Target *target) {
+    std::string isaString = target->GetISAString();
 
-    std::string targetOutFileName{outFileName};
-    const auto pos_dot = targetOutFileName.find_last_of('.');
+    assert(!filename.empty() && "`filename` should not be empty");
+    std::string targetFileName{filename};
+    const auto pos_dot = targetFileName.find_last_of('.');
 
     if (pos_dot != std::string::npos) {
-        targetOutFileName = targetOutFileName.substr(0, pos_dot) + "_" + isaString + targetOutFileName.substr(pos_dot);
+        targetFileName = targetFileName.substr(0, pos_dot) + "_" + isaString + targetFileName.substr(pos_dot);
     } else {
         // Can't find a '.' in the filename, so just append the ISA suffix
         // to what we weregiven
-        targetOutFileName.append("_" + isaString);
+        targetFileName.append("_" + isaString);
     }
-    return targetOutFileName;
+    return targetFileName;
 }
 
-// Same as above, but takes a Target pointer instead of an ISA string.
-static std::string lGetTargetFileName(const char *outFileName, Target *target) {
-    return lGetTargetFileName(outFileName, target->GetISAString());
+std::string Module::Output::OutFileNameTarget(Target *target) const {
+    return lGetMangledFileName(out, target);
+}
+
+std::string Module::Output::HeaderFileNameTarget(Target *target) const {
+    return lGetMangledFileName(header, target);
 }
 
 static bool lSymbolIsExported(const Symbol *s) { return s->exportedFunction != nullptr; }
@@ -3836,9 +3827,7 @@ int lValidateMultiTargetInputs(const char *srcFile, std::string &outFileName, co
     return 0;
 }
 
-int Module::WriteDispatchOutputFiles(llvm::Module *dispatchModule, const char *srcFile, Module::Output &output) {
-    const char *outFileName = lGetStrPtr(output.out);
-
+int Module::WriteDispatchOutputFiles(llvm::Module *dispatchModule, Module::Output &output) {
     if (!output.out.empty()) {
         switch (output.type) {
         case Module::OutputType::CPPStub:
@@ -3847,7 +3836,7 @@ int Module::WriteDispatchOutputFiles(llvm::Module *dispatchModule, const char *s
 
         case Module::OutputType::Bitcode:
         case Module::OutputType::BitcodeText:
-            if (!m->writeBitcode(dispatchModule, outFileName, output.type)) {
+            if (!m->writeBitcode(dispatchModule, output.out.c_str(), output.type)) {
                 return 1;
             }
             break;
@@ -3991,19 +3980,18 @@ int Module::GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> target
 
     lEmitDispatchModule(dispatchModule, exportedFunctions);
 
-    return WriteDispatchOutputFiles(dispatchModule, srcFile, output);
+    return WriteDispatchOutputFiles(dispatchModule, output);
 }
 
+// TODO: comment
 static Module::Output lCreateTargetOutputs(Module::Output &output, ISPCTarget target) {
     Module::Output targetOutputs = output;
     if (!targetOutputs.out.empty()) {
-        std::string targetOutFileName = lGetTargetFileName(output.out.c_str(), g->target);
-        targetOutputs.out = targetOutFileName;
+        targetOutputs.out = targetOutputs.OutFileNameTarget(g->target);
     }
 
     if (!targetOutputs.header.empty()) {
-        std::string targetHeaderFileName = lGetTargetFileName(output.header.c_str(), g->target);
-        targetOutputs.header = targetHeaderFileName;
+        targetOutputs.header = targetOutputs.HeaderFileNameTarget(g->target);
     }
 
     // TODO: --host-stub and --dev-stub are ignored in multi-target mode?
@@ -4104,7 +4092,7 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
     }
 }
 
-int Module::LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputType, const char *outFileName) {
+int Module::LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputType, std::string outFileName) {
     auto llvmLink = std::make_unique<llvm::Module>("llvm-link", *g->ctx);
     llvm::Linker linker(*llvmLink);
     for (const auto &file : linkFiles) {
@@ -4132,7 +4120,7 @@ int Module::LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputT
         }
         inputStream.close();
     }
-    if (outFileName != nullptr) {
+    if (!outFileName.empty()) {
         if ((outputType == Bitcode) || (outputType == BitcodeText)) {
             writeBitcode(llvmLink.get(), outFileName, outputType);
         }
