@@ -337,21 +337,20 @@ Module::Module(const char *fn) : srcFile(fn) {
 
 const char *lGetStrPtr(const std::string &str) { return str.empty() ? nullptr : str.c_str(); }
 
-Module::Module(const char *filename, OutputFlags flags, OutputType outputType, OutputName &outputNames)
+Module::Module(const char *filename, Output &output)
     : Module(filename) {
-    this->outputFlags = flags;
-    this->outputType = outputType;
-    this->outputNames = outputNames;
-    this->outFileName = lGetStrPtr(outputNames.out);
-    this->headerFileName = lGetStrPtr(outputNames.header);
-    this->depsFileName = lGetStrPtr(outputNames.deps);
-    this->hostStubFileName = lGetStrPtr(outputNames.hostStub);
-    this->devStubFileName = lGetStrPtr(outputNames.devStub);
+    this->outputFlags = output.flags;
+    this->outputType = output.type;
+    this->output = output;
+    this->outFileName = lGetStrPtr(output.out);
+    this->headerFileName = lGetStrPtr(output.header);
+    this->depsFileName = lGetStrPtr(output.deps);
+    this->hostStubFileName = lGetStrPtr(output.hostStub);
+    this->devStubFileName = lGetStrPtr(output.devStub);
 }
 
-std::unique_ptr<Module> Module::Create(const char *srcFile, OutputFlags flags, OutputType outputType,
-                                       OutputName &outputNames) {
-    auto ptr = std::make_unique<Module>(srcFile, flags, outputType, outputNames);
+std::unique_ptr<Module> Module::Create(const char *srcFile, Output &output) {
+    auto ptr = std::make_unique<Module>(srcFile, output);
 
     // Here, we do not transfer the ownership of the target to the global
     // variable. We just set the observer pointer here.
@@ -3821,15 +3820,15 @@ int lValidateMultiTargetInputs(const char *srcFile, std::string &outFileName, co
 }
 
 int Module::WriteDispatchOutputFiles(llvm::Module *dispatchModule, const char *srcFile, Module::OutputFlags outputFlags,
-                                     Module::OutputType outputType, Module::OutputName &outputNames,
+                                     Module::OutputType outputType, Module::Output &output,
                                      const char *depsTargetName) {
     llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
     Assert(targetMachine);
 
-    const char *outFileName = lGetStrPtr(outputNames.out);
-    const char *depsFileName = lGetStrPtr(outputNames.deps);
+    const char *outFileName = lGetStrPtr(output.out);
+    const char *depsFileName = lGetStrPtr(output.deps);
 
-    if (!outputNames.out.empty()) {
+    if (!output.out.empty()) {
         switch (outputType) {
         case Module::OutputType::CPPStub:
             // No preprocessor output for dispatch module.
@@ -3854,7 +3853,7 @@ int Module::WriteDispatchOutputFiles(llvm::Module *dispatchModule, const char *s
         }
     }
 
-    if (!outputNames.deps.empty() || outputFlags.isDepsToStdout()) {
+    if (!output.deps.empty() || outputFlags.isDepsToStdout()) {
         std::string targetName = lDetermineDepsTargetName(srcFile, depsTargetName, outFileName);
         if (!m->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile)) {
             return 1;
@@ -3917,7 +3916,7 @@ void lResetTargetAndModule(std::vector<std::unique_ptr<Module>> &modules,
 int Module::GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> targets,
                              std::vector<std::unique_ptr<Module>> &modules,
                              std::vector<std::unique_ptr<Target>> &targetsPtrs, OutputFlags outputFlags,
-                             OutputType outputType, OutputName output, const char *depsTargetName) {
+                             OutputType outputType, Output output, const char *depsTargetName) {
     std::map<std::string, FunctionTargetVariants> exportedFunctions;
 
     // Also check if we have same ISA with different vector widths
@@ -3986,36 +3985,40 @@ int Module::GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> target
     return Module::WriteDispatchOutputFiles(dispatchModule, srcFile, outputFlags, outputType, output, depsTargetName);
 }
 
-static Module::OutputName lCreateTargetOutputNames(const Module::OutputName &outputNames, ISPCTarget target) {
-    Module::OutputName targetOutputNames = outputNames;
-    if (!targetOutputNames.out.empty()) {
-        std::string targetOutFileName = lGetTargetFileName(outputNames.out.c_str(), g->target);
-        targetOutputNames.out = targetOutFileName;
+static Module::Output lCreateTargetOutputs(Module::Output &output, ISPCTarget target) {
+    Module::Output targetOutputs = output;
+    if (!targetOutputs.out.empty()) {
+        std::string targetOutFileName = lGetTargetFileName(output.out.c_str(), g->target);
+        targetOutputs.out = targetOutFileName;
     }
 
-    if (!targetOutputNames.header.empty()) {
-        std::string targetHeaderFileName = lGetTargetFileName(outputNames.header.c_str(), g->target);
-        targetOutputNames.header = targetHeaderFileName;
+    if (!targetOutputs.header.empty()) {
+        std::string targetHeaderFileName = lGetTargetFileName(output.header.c_str(), g->target);
+        targetOutputs.header = targetHeaderFileName;
     }
 
     // TODO: --host-stub and --dev-stub are ignored in multi-target mode?
-    targetOutputNames.hostStub = "";
-    targetOutputNames.devStub = "";
+    targetOutputs.hostStub = "";
+    targetOutputs.devStub = "";
 
     // deps file is written only once for all targets, so we will generate
     // it during the dispatch module generation.
-    targetOutputNames.deps = "";
+    targetOutputs.deps = "";
 
-    return targetOutputNames;
+    // deps file is written only once for all targets, so we will generate
+    // it during the dispatch module generation.
+    targetOutputs.flags.setDepsToStdout(false);
+
+    return targetOutputs;
 }
 
 int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
-                                   OutputFlags outputFlags, OutputType outputType, OutputName &outputNames,
+                                   OutputFlags outputFlags, OutputType outputType, Output &output,
                                    const char *depsTargetName) {
     // The user supplied multiple targets
     Assert(targets.size() > 1);
 
-    if (lValidateMultiTargetInputs(srcFile, outputNames.out, cpu)) {
+    if (lValidateMultiTargetInputs(srcFile, output.out, cpu)) {
         return 1;
     }
 
@@ -4039,14 +4042,9 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         targetsPtrs.push_back(std::move(targetPtr));
 
         // Output and header names are set for each target with the target's suffix.
-        OutputName targetOutputNames = lCreateTargetOutputNames(outputNames, targets[i]);
+        Output targetOutputs = lCreateTargetOutputs(output, targets[i]);
 
-        // deps file is written only once for all targets, so we will generate
-        // it during the dispatch module generation.
-        OutputFlags targetOutputFlags = outputFlags;
-        targetOutputFlags.setDepsToStdout(false);
-
-        auto modulePtr = Module::Create(srcFile, targetOutputFlags, outputType, targetOutputNames);
+        auto modulePtr = Module::Create(srcFile, targetOutputs);
 
         // Transfer the ownership of the module to the vector, i.e., the
         // lifetime of the module objects is tied to the function scope.
@@ -4066,13 +4064,12 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
     }
 
     // Generate the dispatch module
-    return GenerateDispatch(srcFile, targets, modules, targetsPtrs, outputFlags, outputType, outputNames,
+    return GenerateDispatch(srcFile, targets, modules, targetsPtrs, outputFlags, outputType, output,
                             depsTargetName);
 }
 
 int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
-                             Module::OutputFlags outputFlags, Module::OutputType outputType,
-                             Module::OutputName &outputNames, const char *depsTargetName) {
+                             Module::Output &output) {
     if (targets.size() == 0 || targets.size() == 1) {
         // We're only compiling to a single target
         ISPCTarget target = ISPCTarget::none;
@@ -4088,16 +4085,15 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         // function immediately after that, so it is not necessary. Although,
         // one should be careful if something changes here in the future.
         auto targetPtr =
-            Target::Create(arch, cpu, target, outputFlags.getPICLevel(), outputFlags.getMCModel(), g->printTarget);
+            Target::Create(arch, cpu, target, output.flags.getPICLevel(), output.flags.getMCModel(), g->printTarget);
         if (!targetPtr) {
             return 1;
         }
-        auto modulePtr = Module::Create(srcFile, outputFlags, outputType, outputNames);
+        auto modulePtr = Module::Create(srcFile, output);
 
-        return m->CompileSingleTarget(arch, cpu, target, depsTargetName);
+        return m->CompileSingleTarget(arch, cpu, target, lGetStrPtr(output.depsTarget));
     } else {
-        return CompileMultipleTargets(srcFile, arch, cpu, targets, outputFlags, outputType, outputNames,
-                                      depsTargetName);
+        return CompileMultipleTargets(srcFile, arch, cpu, targets, output.flags, output.type, output, lGetStrPtr(output.depsTarget));
     }
 }
 
