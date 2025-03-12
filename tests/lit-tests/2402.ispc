@@ -19,7 +19,7 @@
 // REQUIRES: X86_ENABLED
 
 // CHECK_SSE4: pcmpgtq
-// CHECK_ERROR: Error: Can't compile to multiple variants of sse4 target!
+// CHECK_ERROR: Error: Can't compile to both SSE4.1 and SSE4.2 targets!
 bool foo(int64 a, int64 b) {
     return a>b;
 }

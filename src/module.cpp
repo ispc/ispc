@@ -31,6 +31,7 @@
 #include <memory>
 #include <set>
 #include <sstream>
+#include <utility>
 #include <stdarg.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -3857,29 +3858,54 @@ int lWriteDispatchOutputFiles(llvm::Module *dispatchModule, llvm::TargetMachine 
     return 0;
 }
 
-Target::ISA lFindCommonISA(bool *ISAs) {
-    int firstTargetISA = 0;
-    while (!ISAs[firstTargetISA]) {
-        firstTargetISA++;
-    }
-    return (Target::ISA)firstTargetISA;
-}
+std::pair<Target::ISA, int> lCheckAndFillISAIndices(std::vector<ISPCTarget> targets) {
+    std::map<Target::ISA, int> ISAIndices;
 
-int lInitializeISAsAndIDs(std::vector<ISPCTarget> targets, bool *ISAs, int *IDs) {
     for (unsigned int i = 0; i < targets.size(); ++i) {
+        auto ISA = Target::TargetToISA(targets[i]);
+
         // Issue an error if we've already compiled to a variant of
         // this target ISA.  (It doesn't make sense to compile to both
         // avx and avx-x2, for example.)
-        auto ISA = Target::TargetToISA(targets[i]);
-        if (ISAs[ISA] || (ISAs[Target::SSE41] && ISA == Target::SSE42) ||
-            (ISAs[Target::SSE42] && ISA == Target::SSE41)) {
+        if (ISAIndices.find(ISA) != ISAIndices.end()) {
             Error(SourcePos(), "Can't compile to multiple variants of %s target!\n", Target::ISAToString(ISA));
-            return 1;
+            return {Target::ISA::NUM_ISAS, -1};
         }
-        ISAs[ISA] = true;
-        IDs[ISA] = i;
+
+        // Check for incompatible SSE variants
+        if ((ISA == Target::SSE42 && ISAIndices.find(Target::SSE41) != ISAIndices.end()) ||
+            (ISA == Target::SSE41 && ISAIndices.find(Target::SSE42) != ISAIndices.end())) {
+            Error(SourcePos(), "Can't compile to both SSE4.1 and SSE4.2 targets!\n");
+            return {Target::ISA::NUM_ISAS, -1};
+        }
+
+        ISAIndices[ISA] = i;
     }
-    return 0;
+
+    // Find the first initialized target machine from the targets we
+    // compiled to above.  We'll use this as the target machine for
+    // compiling the dispatch module--this is safe in that it is the
+    // least-common-denominator of all of the targets we compiled to.
+    for (int i = 0; i < Target::NUM_ISAS; i++) {
+        auto commonISA = static_cast<Target::ISA>(i);
+        auto it = ISAIndices.find(commonISA);
+        if (it != ISAIndices.end()) {
+            return {commonISA, it->second};
+        }
+    }
+
+    return {Target::ISA::NUM_ISAS, -1};
+}
+
+// Reset the target and module to the given by index values in the given vectors.
+void lResetTargetAndModule(std::vector<std::unique_ptr<Module>> &modules,
+                          std::vector<std::unique_ptr<Target>> &targets, int i) {
+    m = modules[i].get();
+    g->target = targets[i].get();
+
+    // It is important reinitialize the LLVM utils for each change of
+    // target when Target constructor is not called.
+    InitLLVMUtil(g->ctx, *g->target);
 }
 
 int Module::GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> targets,
@@ -3894,36 +3920,25 @@ int Module::GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> target
     const char *devStubFileName = lGetStrPtr(outputNames.devStub);
 
     std::map<std::string, FunctionTargetVariants> exportedFunctions;
-    // Array initialized with all false
-    bool ISAs[Target::NUM_ISAS] = {};
-    // We can compile only to one target for each ISA in multi-target mode.
-    int IDs[Target::NUM_ISAS] = {};
 
     // Also check if we have same ISA with different vector widths
-    if (lInitializeISAsAndIDs(targets, ISAs, IDs)) {
+    auto [commonISA, commonTargetIndex] = lCheckAndFillISAIndices(targets);
+    if (commonTargetIndex == -1) {
         return 1;
     }
+
+    ISPCTarget commonTarget = targets[commonTargetIndex];
+    Assert(commonTarget != ISPCTarget::none);
+
+    // Set the module that corresponds to the common target ISA
+    lResetTargetAndModule(modules, targetsPtrs, commonTargetIndex);
 
     // Handle creating a "generic" header file for multiple targets
     // that use exported varyings
     DispatchHeaderInfo DHI;
     if (!DHI.initialize(headerFileName)) {
-        return false;
+        return 1;
     }
-
-    // Find the first initialized target machine from the targets we
-    // compiled to above.  We'll use this as the target machine for
-    // compiling the dispatch module--this is safe in that it is the
-    // least-common-denominator of all of the targets we compiled to.
-    Target::ISA commonISA = lFindCommonISA(ISAs);
-    int commonTargetIndex = IDs[commonISA];
-    ISPCTarget commonTarget = targets[commonTargetIndex];
-    Assert(commonTarget != ISPCTarget::none);
-    // Set the module that corresponds to the common target ISA, not the last
-    // one hanging in m after we finished the loop.
-    m = modules[commonTargetIndex].get();
-    g->target = targetsPtrs[commonTargetIndex].get();
-    InitLLVMUtil(g->ctx, *g->target);
 
     // Create the dispatch module,
     llvm::Module *dispatchModule = lInitDispatchModule();
@@ -3934,11 +3949,7 @@ int Module::GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> target
 
     // Fill in the dispatch module and write the header file for the dispatch.
     for (unsigned int i = 0; i < targets.size(); ++i) {
-        m = modules[i].get();
-        g->target = targetsPtrs[i].get();
-        // It is important reinitialize the LLVM utils for each change of
-        // target when Target constructor is not called.
-        InitLLVMUtil(g->ctx, *g->target);
+        lResetTargetAndModule(modules, targetsPtrs, i);
 
         if (outputFlags.isDepsToStdout()) {
             // We need to fix that because earlier we set it to false to avoid
@@ -3968,14 +3979,13 @@ int Module::GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> target
         g->target = nullptr;
     }
 
-    m = modules[commonTargetIndex].get();
-    g->target = targetsPtrs[commonTargetIndex].get();
-    InitLLVMUtil(g->ctx, *g->target);
+    // Set the module that corresponds to the common target ISA
+    lResetTargetAndModule(modules, targetsPtrs, commonTargetIndex);
+
+    lEmitDispatchModule(dispatchModule, exportedFunctions);
 
     llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
     Assert(targetMachine);
-
-    lEmitDispatchModule(dispatchModule, exportedFunctions);
 
     return lWriteDispatchOutputFiles(dispatchModule, targetMachine, srcFile, outputFlags, outputType, outFileName,
                                      depsFileName, depsTargetName);
