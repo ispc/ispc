@@ -519,8 +519,6 @@ jobs:
         name: ispc_llvm18_lto_macos
         path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-macOS.universal.tar.gz
 
-  # For macos we test only one target so there is no problem with exceeding strategy limit.
-  # If it happens then we can split it into two jobs.
   macos-test-ispc:
     needs: [define-flow, macos-build-ispc]
     strategy:
@@ -720,9 +718,6 @@ jobs:
         name: ispc_xe_deps_llvm18rel_win
         path: ispc-xe
 
-  # To avoid strategy expansion exceeding 256 results, there are two jobs:
-  # - win-test for the LLVM version used for release builds and newer versions
-  # - win-test-prior for older LLVM versions
   win-test:
     needs: [define-flow, win-build-ispc]
     strategy:
