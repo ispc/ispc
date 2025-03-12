@@ -220,6 +220,11 @@ class Module {
         std::string deps{};
         std::string hostStub{};
         std::string devStub{};
+
+        // TODO: comment
+        std::string DepsTargetName(const char *srcFile) const;
+        std::string OutFileNameTarget(Target *target) const;
+        std::string HeaderFileNameTarget(Target *target) const;
     };
 
     // TODO: comment
@@ -255,7 +260,7 @@ class Module {
     static int CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
                                 Output &output);
 
-    static int LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputType, const char *outFileName);
+    static int LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputType, std::string outFileName);
 
     /** Total number of errors encountered during compilation. */
     int errorCount{0};
@@ -300,15 +305,16 @@ class Module {
 
     std::vector<std::pair<const Type *, SourcePos>> exportedTypes;
 
+    // TODO: comments?
     int CompileSingleTarget(Arch arch, const char *cpu, ISPCTarget target);
     static int GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> targets,
                                 std::vector<std::unique_ptr<Module>> &modules,
                                 std::vector<std::unique_ptr<Target>> &targetsPtrs, Output &output);
     static int CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
                                       Output &output);
-    static int WriteDispatchOutputFiles(llvm::Module *dispatchModule, const char *srcFile, Output &output);
+    static int WriteDispatchOutputFiles(llvm::Module *dispatchModule, Output &output);
 
-    static bool writeBitcode(llvm::Module *module, const char *outFileName, OutputType outputType);
+    static bool writeBitcode(llvm::Module *module, std::string outFileName, OutputType outputType);
 
     int WriteOutputFiles();
     /** Write the corresponding output type to the given file.  Returns
@@ -329,8 +335,8 @@ class Module {
 #ifdef ISPC_XE_ENABLED
     static std::unique_ptr<llvm::Module> translateFromSPIRV(std::ifstream &outString);
     static bool translateToSPIRV(llvm::Module *module, std::stringstream &outString);
-    static bool writeSPIRV(llvm::Module *module, const char *outFileName);
-    static bool writeZEBin();
+    static bool writeSPIRV(llvm::Module *module, std::string outFileName);
+    bool writeZEBin();
 #endif
 
     int preprocessAndParse();
