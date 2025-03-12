@@ -143,11 +143,11 @@ class Module {
             : out(outFileName ? outFileName : ""), header(headerFileName ? headerFileName : ""),
               deps(depsFileName ? depsFileName : ""), hostStub(hostStubFileName ? hostStubFileName : ""),
               devStub(devStubFileName ? devStubFileName : "") {}
-        std::string out;
-        std::string header;
-        std::string deps;
-        std::string hostStub;
-        std::string devStub;
+        std::string out{};
+        std::string header{};
+        std::string deps{};
+        std::string hostStub{};
+        std::string devStub{};
     };
 
     // Define a mapping from OutputType to expected suffixes and file type descriptions
@@ -257,13 +257,15 @@ class Module {
                                       const char *depsTargetName);
     static int LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputType, const char *outFileName);
 
+    static int WriteDispatchOutputFiles(llvm::Module *dispatchModule, const char *srcFile, OutputFlags outputFlags,
+                                        OutputType outputType, OutputName &outputNames, const char *depsTargetName);
     int WriteOutputFiles(const char *depsTargetName);
     /** Write the corresponding output type to the given file.  Returns
         true on success, false if there has been an error.  The given
         filename may be nullptr, indicating that output should go to standard
         output. */
     bool writeOutput(OutputType ot, OutputFlags flags, const char *filename, const char *depTargetFileName = nullptr,
-                     const char *sourceFileName = nullptr, DispatchHeaderInfo *DHI = 0);
+                     const char *sourceFileName = nullptr);
     static bool writeCPPStub(Module *module, const char *outFileName);
     static bool writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm::Module *module,
                                           OutputType outputType, const char *outFileName);
