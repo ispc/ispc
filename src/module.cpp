@@ -31,11 +31,11 @@
 #include <memory>
 #include <set>
 #include <sstream>
-#include <utility>
 #include <stdarg.h>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <utility>
 
 #include <clang/Basic/CharInfo.h>
 #include <clang/Basic/FileManager.h>
@@ -335,10 +335,7 @@ Module::Module(const char *fn) : srcFile(fn) {
     }
 }
 
-Module::Module(const char *filename, Output &output)
-    : Module(filename) {
-    this->output = output;
-}
+Module::Module(const char *filename, Output &output) : Module(filename) { this->output = output; }
 
 std::unique_ptr<Module> Module::Create(const char *srcFile, Output &output) {
     auto ptr = std::make_unique<Module>(srcFile, output);
@@ -3367,13 +3364,9 @@ std::string lGetMangledFileName(std::string filename, Target *target) {
     return targetFileName;
 }
 
-std::string Module::Output::OutFileNameTarget(Target *target) const {
-    return lGetMangledFileName(out, target);
-}
+std::string Module::Output::OutFileNameTarget(Target *target) const { return lGetMangledFileName(out, target); }
 
-std::string Module::Output::HeaderFileNameTarget(Target *target) const {
-    return lGetMangledFileName(header, target);
-}
+std::string Module::Output::HeaderFileNameTarget(Target *target) const { return lGetMangledFileName(header, target); }
 
 static bool lSymbolIsExported(const Symbol *s) { return s->exportedFunction != nullptr; }
 
@@ -3902,8 +3895,8 @@ std::pair<Target::ISA, int> lCheckAndFillISAIndices(std::vector<ISPCTarget> targ
 }
 
 // Reset the target and module to the given by index values in the given vectors.
-void lResetTargetAndModule(std::vector<std::unique_ptr<Module>> &modules,
-                          std::vector<std::unique_ptr<Target>> &targets, int i) {
+void lResetTargetAndModule(std::vector<std::unique_ptr<Module>> &modules, std::vector<std::unique_ptr<Target>> &targets,
+                           int i) {
     m = modules[i].get();
     g->target = targets[i].get();
 
