@@ -339,14 +339,13 @@ const char *lGetStrPtr(const std::string &str) { return str.empty() ? nullptr : 
 
 Module::Module(const char *filename, Output &output)
     : Module(filename) {
-    this->outputFlags = output.flags;
-    this->outputType = output.type;
     this->output = output;
     this->outFileName = lGetStrPtr(output.out);
     this->headerFileName = lGetStrPtr(output.header);
     this->depsFileName = lGetStrPtr(output.deps);
     this->hostStubFileName = lGetStrPtr(output.hostStub);
     this->devStubFileName = lGetStrPtr(output.devStub);
+    this->depsTargetName = lGetStrPtr(output.depsTarget);
 }
 
 std::unique_ptr<Module> Module::Create(const char *srcFile, Output &output) {
@@ -1557,8 +1556,8 @@ static void lReportInvalidSuffixWarning(const char *outFileName, Module::OutputT
     }
 }
 
-bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *outFileName,
-                         const char *depTargetFileName, const char *sourceFileName) {
+bool Module::writeOutput(OutputType outputType, const char *outFileName, const char *depTargetFileName,
+                         const char *sourceFileName) {
     if (diBuilder && (outputType != Header) && (outputType != Deps)) {
         lStripUnusedDebugInfo(module);
     }
@@ -1591,10 +1590,13 @@ bool Module::writeOutput(OutputType outputType, OutputFlags flags, const char *o
     case Bitcode:
     case BitcodeText:
         return writeBitcode(module, outFileName, outputType);
+    // TODO!: it looks like we don't need to process extra output types here,
+    // better to call their methods directly
     case Header:
         return writeHeader(outFileName);
     case Deps:
-        return writeDeps(outFileName, flags.isMakeRuleDeps(), depTargetFileName, sourceFileName);
+        FATAL("Unhandled output type in Module::writeOutput()");
+        return false;
     case DevStub:
         return writeDevStub(outFileName);
     case HostStub:
@@ -2285,7 +2287,34 @@ static void lUnescapeStringInPlace(std::string &str) {
     }
 }
 
-bool Module::writeDeps(const char *fn, bool generateMakeRule, const char *tn, const char *sn) {
+std::string lDetermineDepsTargetName(const char *srcFile, const char *depsTargetName, const char *outFileName) {
+    if (depsTargetName) {
+        return depsTargetName;
+    }
+    if (outFileName) {
+        return outFileName;
+    }
+    if (!IsStdin(srcFile)) {
+        std::string targetName = srcFile;
+        size_t dot = targetName.find_last_of('.');
+        if (dot != std::string::npos) {
+            targetName.erase(dot, std::string::npos);
+        }
+        return targetName + ".o";
+    }
+    return "a.out";
+}
+
+bool Module::writeDeps(Module::Output &customOutput) {
+    const char *fn = lGetStrPtr(customOutput.deps);
+    bool generateMakeRule = output.flags.isMakeRuleDeps();
+    std::string targetName =
+        lDetermineDepsTargetName(srcFile, lGetStrPtr(customOutput.depsTarget), lGetStrPtr(customOutput.out));
+    const char *tn = targetName.c_str();
+    const char *sn = srcFile;
+
+    lReportInvalidSuffixWarning(fn, OutputType::Deps);
+
     if (fn && g->debugPrint) { // We may be passed nullptr for stdout output.
         printf("\nWriting dependencies to file %s\n", fn);
     }
@@ -3733,59 +3762,39 @@ int lValidateXeTargetOutputs(Target *target, Module::OutputType &outputType) {
     return 0;
 }
 
-std::string lDetermineDepsTargetName(const char *srcFile, const char *depsTargetName, const char *outFileName) {
-    if (depsTargetName) {
-        return depsTargetName;
-    }
-    if (outFileName) {
-        return outFileName;
-    }
-    if (!IsStdin(srcFile)) {
-        std::string targetName = srcFile;
-        size_t dot = targetName.find_last_of('.');
-        if (dot != std::string::npos) {
-            targetName.erase(dot, std::string::npos);
-        }
-        return targetName + ".o";
-    }
-    return "a.out";
-}
-
-int Module::WriteOutputFiles(const char *depsTargetName) {
+int Module::WriteOutputFiles() {
     // Write the main output file
-    if (outFileName && !writeOutput(outputType, outputFlags, outFileName)) {
+    if (!output.out.empty() && !writeOutput(output.type, outFileName)) {
         return 1;
     }
-    if (headerFileName && !writeOutput(Module::Header, outputFlags, headerFileName)) {
+    if (!output.header.empty() && !writeOutput(Module::Header, headerFileName)) {
         return 1;
     }
-    if (depsFileName || outputFlags.isDepsToStdout()) {
-        std::string targetName = lDetermineDepsTargetName(srcFile, depsTargetName, outFileName);
-
-        if (!writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile)) {
+    if (!output.deps.empty() || output.flags.isDepsToStdout()) {
+        if (!writeDeps(output)) {
             return 1;
         }
     }
-    if (hostStubFileName && !writeOutput(Module::HostStub, outputFlags, hostStubFileName)) {
+    if (!output.hostStub.empty() && !writeOutput(Module::HostStub, hostStubFileName)) {
         return 1;
     }
-    if (devStubFileName && !writeOutput(Module::DevStub, outputFlags, devStubFileName)) {
+    if (!output.devStub.empty() && !writeOutput(Module::DevStub, devStubFileName)) {
         return 1;
     }
     return 0;
 }
 
-int Module::CompileSingleTarget(Arch arch, const char *cpu, ISPCTarget target, const char *depsTargetName) {
+int Module::CompileSingleTarget(Arch arch, const char *cpu, ISPCTarget target) {
     const int compileResult = CompileFile();
 
     llvm::TimeTraceScope TimeScope("Backend");
 
     if (compileResult == 0) {
-        if (lValidateXeTargetOutputs(g->target, outputType)) {
+        if (lValidateXeTargetOutputs(g->target, output.type)) {
             return 1;
         }
 
-        if (WriteOutputFiles(depsTargetName)) {
+        if (WriteOutputFiles()) {
             return 1;
         }
     } else {
@@ -3819,31 +3828,28 @@ int lValidateMultiTargetInputs(const char *srcFile, std::string &outFileName, co
     return 0;
 }
 
-int Module::WriteDispatchOutputFiles(llvm::Module *dispatchModule, const char *srcFile, Module::OutputFlags outputFlags,
-                                     Module::OutputType outputType, Module::Output &output,
-                                     const char *depsTargetName) {
+int Module::WriteDispatchOutputFiles(llvm::Module *dispatchModule, const char *srcFile, Module::Output &output) {
     llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
     Assert(targetMachine);
 
     const char *outFileName = lGetStrPtr(output.out);
-    const char *depsFileName = lGetStrPtr(output.deps);
 
     if (!output.out.empty()) {
-        switch (outputType) {
+        switch (output.type) {
         case Module::OutputType::CPPStub:
             // No preprocessor output for dispatch module.
             break;
 
         case Module::OutputType::Bitcode:
         case Module::OutputType::BitcodeText:
-            if (!Module::writeBitcode(dispatchModule, outFileName, outputType)) {
+            if (!Module::writeBitcode(dispatchModule, outFileName, output.type)) {
                 return 1;
             }
             break;
 
         case Module::OutputType::Asm:
         case Module::OutputType::Object:
-            if (!Module::writeObjectFileOrAssembly(targetMachine, dispatchModule, outputType, outFileName)) {
+            if (!Module::writeObjectFileOrAssembly(targetMachine, dispatchModule, output.type, outFileName)) {
                 return 1;
             }
             break;
@@ -3853,9 +3859,8 @@ int Module::WriteDispatchOutputFiles(llvm::Module *dispatchModule, const char *s
         }
     }
 
-    if (!output.deps.empty() || outputFlags.isDepsToStdout()) {
-        std::string targetName = lDetermineDepsTargetName(srcFile, depsTargetName, outFileName);
-        if (!m->writeOutput(Module::Deps, outputFlags, depsFileName, targetName.c_str(), srcFile)) {
+    if (!output.deps.empty() || output.flags.isDepsToStdout()) {
+        if (!m->writeDeps(output)) {
             return 1;
         }
     }
@@ -3915,8 +3920,7 @@ void lResetTargetAndModule(std::vector<std::unique_ptr<Module>> &modules,
 
 int Module::GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> targets,
                              std::vector<std::unique_ptr<Module>> &modules,
-                             std::vector<std::unique_ptr<Target>> &targetsPtrs, OutputFlags outputFlags,
-                             OutputType outputType, Output output, const char *depsTargetName) {
+                             std::vector<std::unique_ptr<Target>> &targetsPtrs, Output &output) {
     std::map<std::string, FunctionTargetVariants> exportedFunctions;
 
     // Also check if we have same ISA with different vector widths
@@ -3949,10 +3953,10 @@ int Module::GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> target
     for (unsigned int i = 0; i < targets.size(); ++i) {
         lResetTargetAndModule(modules, targetsPtrs, i);
 
-        if (outputFlags.isDepsToStdout()) {
+        if (output.flags.isDepsToStdout()) {
             // We need to fix that because earlier we set it to false to avoid
             // writing deps file with targets' suffixes.
-            m->outputFlags.setDepsToStdout(true);
+            m->output.flags.setDepsToStdout(true);
         }
 
         // Extract globals unless already created; in the latter case, just
@@ -3982,7 +3986,7 @@ int Module::GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> target
 
     lEmitDispatchModule(dispatchModule, exportedFunctions);
 
-    return Module::WriteDispatchOutputFiles(dispatchModule, srcFile, outputFlags, outputType, output, depsTargetName);
+    return WriteDispatchOutputFiles(dispatchModule, srcFile, output);
 }
 
 static Module::Output lCreateTargetOutputs(Module::Output &output, ISPCTarget target) {
@@ -4013,8 +4017,7 @@ static Module::Output lCreateTargetOutputs(Module::Output &output, ISPCTarget ta
 }
 
 int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
-                                   OutputFlags outputFlags, OutputType outputType, Output &output,
-                                   const char *depsTargetName) {
+                                   Output &output) {
     // The user supplied multiple targets
     Assert(targets.size() > 1);
 
@@ -4030,8 +4033,8 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
     std::vector<std::unique_ptr<Target>> targetsPtrs;
 
     for (unsigned int i = 0; i < targets.size(); ++i) {
-        auto targetPtr = Target::Create(arch, cpu, targets[i], outputFlags.getPICLevel(),
-                                                  outputFlags.getMCModel(), g->printTarget);
+        auto targetPtr = Target::Create(arch, cpu, targets[i], output.flags.getPICLevel(), output.flags.getMCModel(),
+                                        g->printTarget);
         if (!targetPtr) {
             return 1;
         }
@@ -4050,7 +4053,7 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         // lifetime of the module objects is tied to the function scope.
         modules.push_back(std::move(modulePtr));
 
-        int compilerResult = m->CompileSingleTarget(arch, cpu, targets[i], depsTargetName);
+        int compilerResult = m->CompileSingleTarget(arch, cpu, targets[i]);
         if (compilerResult) {
             return compilerResult;
         }
@@ -4064,8 +4067,7 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
     }
 
     // Generate the dispatch module
-    return GenerateDispatch(srcFile, targets, modules, targetsPtrs, outputFlags, outputType, output,
-                            depsTargetName);
+    return GenerateDispatch(srcFile, targets, modules, targetsPtrs, output);
 }
 
 int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
@@ -4091,9 +4093,9 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
         }
         auto modulePtr = Module::Create(srcFile, output);
 
-        return m->CompileSingleTarget(arch, cpu, target, lGetStrPtr(output.depsTarget));
+        return m->CompileSingleTarget(arch, cpu, target);
     } else {
-        return CompileMultipleTargets(srcFile, arch, cpu, targets, output.flags, output.type, output, lGetStrPtr(output.depsTarget));
+        return CompileMultipleTargets(srcFile, arch, cpu, targets, output);
     }
 }
 

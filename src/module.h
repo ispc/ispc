@@ -254,24 +254,21 @@ class Module {
      */
     static int CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
                                 Output &output);
-    int CompileSingleTarget(Arch arch, const char *cpu, ISPCTarget target, const char *depsTargetName);
+    int CompileSingleTarget(Arch arch, const char *cpu, ISPCTarget target);
     static int GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> targets,
                                 std::vector<std::unique_ptr<Module>> &modules,
-                                std::vector<std::unique_ptr<Target>> &targetsPtrs, OutputFlags outputFlags,
-                                OutputType outputType, Output output, const char *depsTargetName);
+                                std::vector<std::unique_ptr<Target>> &targetsPtrs, Output &output);
     static int CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
-                                      OutputFlags outputFlags, OutputType outputType, Output &output,
-                                      const char *depsTargetName);
+                                      Output &output);
     static int LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputType, const char *outFileName);
 
-    static int WriteDispatchOutputFiles(llvm::Module *dispatchModule, const char *srcFile, OutputFlags outputFlags,
-                                        OutputType outputType, Output &output, const char *depsTargetName);
-    int WriteOutputFiles(const char *depsTargetName);
+    static int WriteDispatchOutputFiles(llvm::Module *dispatchModule, const char *srcFile, Output &output);
+    int WriteOutputFiles();
     /** Write the corresponding output type to the given file.  Returns
         true on success, false if there has been an error.  The given
         filename may be nullptr, indicating that output should go to standard
         output. */
-    bool writeOutput(OutputType ot, OutputFlags flags, const char *filename, const char *depTargetFileName = nullptr,
+    bool writeOutput(OutputType ot, const char *filename, const char *depTargetFileName = nullptr,
                      const char *sourceFileName = nullptr);
     static bool writeCPPStub(Module *module, const char *outFileName);
     static bool writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine, llvm::Module *module,
@@ -307,9 +304,6 @@ class Module {
     const char *srcFile{nullptr};
     AST *ast{nullptr};
 
-    // TODO: delete them after full migration to Output
-    OutputFlags outputFlags;
-    OutputType outputType;
     Output output;
 
     // TODO: delete them after full migration to Output
@@ -318,6 +312,7 @@ class Module {
     const char *depsFileName{nullptr};
     const char *hostStubFileName{nullptr};
     const char *devStubFileName{nullptr};
+    const char *depsTargetName{nullptr};
 
     // Definition and member object capturing preprocessing stream during Module lifetime.
     struct CPPBuffer {
@@ -333,8 +328,9 @@ class Module {
 
     bool writeHeader(const char *filename);
     bool writeDispatchHeader(DispatchHeaderInfo *DHI);
-    bool writeDeps(const char *filename, bool generateMakeRule, const char *targetName = nullptr,
-                   const char *srcFilename = nullptr);
+    // TODO: comment that in the case of dispatcher the output member is not
+    // what we want to use
+    bool writeDeps(Output &customOutput);
     bool writeDevStub(const char *filename);
     bool writeHostStub(const char *filename);
     bool writeCPPStub(const char *outFileName);
