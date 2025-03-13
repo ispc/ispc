@@ -1044,8 +1044,35 @@ __declspec(safe, cost1) static inline uniform double select(uniform bool cond, u
 
 __declspec(safe) static inline uniform int16 reduce_add(int8 x) { return __reduce_add_int8(__mask ? x : (int8)0); }
 
+__declspec(safe) static inline uniform int8 reduce_min(int8 v) {
+    // Set values for non-running lanes to the maximum int8 value so
+    // they don't affect the result.
+    int8 int8_max = 0x7F;
+    return __reduce_min_int8(__mask ? v : int8_max);
+}
+
+__declspec(safe) static inline uniform int8 reduce_max(int8 v) {
+    // Set values for non-running lanes to the minimum int8 value so
+    // they don't affect the result.
+    int8 int8_min = 0x80;
+    return __reduce_max_int8(__mask ? v : int8_min);
+}
+
 __declspec(safe) static inline uniform unsigned int16 reduce_add(unsigned int8 x) {
     return __reduce_add_int8(__mask ? x : (int8)0);
+}
+
+__declspec(safe) static inline uniform unsigned int8 reduce_min(unsigned int8 v) {
+    // Set values for non-running lanes to the maximum uint8 value so
+    // they don't affect the result.
+    unsigned int8 uint8_max = 0xFF;
+    return __reduce_min_uint8(__mask ? v : uint8_max);
+}
+
+__declspec(safe) static inline uniform unsigned int8 reduce_max(unsigned int8 v) {
+    // Set values for non-running lanes to zero so they don't affect the
+    // result.
+    return __reduce_max_uint8(__mask ? v : 0);
 }
 
 __declspec(safe) static inline uniform int32 reduce_add(int16 x) { return __reduce_add_int16(__mask ? x : (int16)0); }
@@ -2128,24 +2155,32 @@ __declspec(safe) static inline uniform double max(uniform double a, uniform doub
 // int8
 
 __declspec(safe, cost1) static inline uniform unsigned int8 min(uniform unsigned int8 a, uniform unsigned int8 b) {
-    return (a < b) ? a : b;
+    return __min_uniform_uint8(a, b);
 }
 
 __declspec(safe, cost1) static inline uniform unsigned int8 max(uniform unsigned int8 a, uniform unsigned int8 b) {
-    return (a > b) ? a : b;
+    return __max_uniform_uint8(a, b);
 }
 
-__declspec(safe, cost1) static inline uniform int8 min(uniform int8 a, uniform int8 b) { return (a < b) ? a : b; }
+__declspec(safe, cost1) static inline uniform int8 min(uniform int8 a, uniform int8 b) {
+    return __min_uniform_int8(a, b);
+}
 
-__declspec(safe, cost1) static inline uniform int8 max(uniform int8 a, uniform int8 b) { return (a > b) ? a : b; }
+__declspec(safe, cost1) static inline uniform int8 max(uniform int8 a, uniform int8 b) {
+    return __max_uniform_int8(a, b);
+}
 
-__declspec(safe, cost1) static inline unsigned int8 min(unsigned int8 a, unsigned int8 b) { return (a < b) ? a : b; }
+__declspec(safe, cost1) static inline unsigned int8 min(unsigned int8 a, unsigned int8 b) {
+    return __min_varying_uint8(a, b);
+}
 
-__declspec(safe, cost1) static inline unsigned int8 max(unsigned int8 a, unsigned int8 b) { return (a > b) ? a : b; }
+__declspec(safe, cost1) static inline unsigned int8 max(unsigned int8 a, unsigned int8 b) {
+    return __max_varying_uint8(a, b);
+}
 
-__declspec(safe, cost1) static inline int8 min(int8 a, int8 b) { return (a < b) ? a : b; }
+__declspec(safe, cost1) static inline int8 min(int8 a, int8 b) { return __min_varying_int8(a, b); }
 
-__declspec(safe, cost1) static inline int8 max(int8 a, int8 b) { return (a > b) ? a : b; }
+__declspec(safe, cost1) static inline int8 max(int8 a, int8 b) { return __max_varying_int8(a, b); }
 
 // int16
 

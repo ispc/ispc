@@ -261,7 +261,11 @@ __declspec(safe, cost1) inline uniform double select(uniform bool cond, uniform 
 // Horizontal ops / reductions
 
 __declspec(safe) inline uniform int16 reduce_add(int8 x);
+__declspec(safe) inline uniform int8 reduce_min(int8 x);
+__declspec(safe) inline uniform int8 reduce_max(int8 x);
 __declspec(safe) inline uniform unsigned int16 reduce_add(unsigned int8 x);
+__declspec(safe) inline uniform unsigned int8 reduce_min(unsigned int8 x);
+__declspec(safe) inline uniform unsigned int8 reduce_max(unsigned int8 x);
 __declspec(safe) inline uniform int32 reduce_add(int16 x);
 __declspec(safe) inline uniform unsigned int32 reduce_add(unsigned int16 x);
 __declspec(safe) inline uniform float16 reduce_add(float16 x);
