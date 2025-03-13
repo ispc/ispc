@@ -351,6 +351,18 @@ define float @__min_uniform_float(float, float) nounwind readnone alwaysinline {
   ret float %r
 }
 
+define i8 @__min_uniform_int8(i8, i8) nounwind readnone alwaysinline {
+  %cmp = icmp slt i8 %0, %1
+  %r = select i1 %cmp, i8 %0, i8 %1
+  ret i8 %r
+}
+
+define i8 @__max_uniform_int8(i8, i8) nounwind readnone alwaysinline {
+  %cmp = icmp sgt i8 %0, %1
+  %r = select i1 %cmp, i8 %0, i8 %1
+  ret i8 %r
+}
+
 define i32 @__min_uniform_int32(i32, i32) nounwind readnone alwaysinline {
   %cmp = icmp slt i32 %0, %1
   %r = select i1 %cmp, i32 %0, i32 %1
@@ -361,6 +373,18 @@ define i32 @__max_uniform_int32(i32, i32) nounwind readnone alwaysinline {
   %cmp = icmp sgt i32 %0, %1
   %r = select i1 %cmp, i32 %0, i32 %1
   ret i32 %r
+}
+
+define i8 @__min_uniform_uint8(i8, i8) nounwind readnone alwaysinline {
+  %cmp = icmp ult i8 %0, %1
+  %r = select i1 %cmp, i8 %0, i8 %1
+  ret i8 %r
+}
+
+define i8 @__max_uniform_uint8(i8, i8) nounwind readnone alwaysinline {
+  %cmp = icmp ugt i8 %0, %1
+  %r = select i1 %cmp, i8 %0, i8 %1
+  ret i8 %r
 }
 
 define i32 @__min_uniform_uint32(i32, i32) nounwind readnone alwaysinline {
@@ -409,6 +433,30 @@ define double @__max_uniform_double(double, double) nounwind readnone alwaysinli
   %cmp = fcmp ogt double %0, %1
   %r = select i1 %cmp, double %0, double %1
   ret double %r
+}
+
+define <WIDTH x i8> @__min_varying_int8(<WIDTH x i8>, <WIDTH x i8>) nounwind readnone alwaysinline {
+  %m = icmp slt <WIDTH x i8> %0, %1
+  %r = select <WIDTH x i1> %m, <WIDTH x i8> %0, <WIDTH x i8> %1
+  ret <WIDTH x i8> %r
+}
+
+define <WIDTH x i8> @__max_varying_int8(<WIDTH x i8>, <WIDTH x i8>) nounwind readnone alwaysinline {
+  %m = icmp sgt <WIDTH x i8> %0, %1
+  %r = select <WIDTH x i1> %m, <WIDTH x i8> %0, <WIDTH x i8> %1
+  ret <WIDTH x i8> %r
+}
+
+define <WIDTH x i8> @__min_varying_uint8(<WIDTH x i8>, <WIDTH x i8>) nounwind readnone alwaysinline {
+  %m = icmp ult <WIDTH x i8> %0, %1
+  %r = select <WIDTH x i1> %m, <WIDTH x i8> %0, <WIDTH x i8> %1
+  ret <WIDTH x i8> %r
+}
+
+define <WIDTH x i8> @__max_varying_uint8(<WIDTH x i8>, <WIDTH x i8>) nounwind readnone alwaysinline {
+  %m = icmp ugt <WIDTH x i8> %0, %1
+  %r = select <WIDTH x i1> %m, <WIDTH x i8> %0, <WIDTH x i8> %1
+  ret <WIDTH x i8> %r
 }
 
 define <4 x i32> @__vselect_i32(<4 x i32>, <4 x i32> ,
@@ -643,6 +691,22 @@ define double @__reduce_min_double(<4 x double>) nounwind readnone {
 
 define double @__reduce_max_double(<4 x double>) nounwind readnone {
   reduce4(double, @__max_varying_double, @__max_uniform_double)
+}
+
+define i8 @__reduce_min_int8(<4 x i8>) nounwind readnone alwaysinline {
+  reduce4(i8, @__min_varying_int8, @__min_uniform_int8)
+}
+
+define i8 @__reduce_max_int8(<4 x i8>) nounwind readnone alwaysinline {
+  reduce4(i8, @__max_varying_int8, @__max_uniform_int8)
+}
+
+define i8 @__reduce_min_uint8(<4 x i8>) nounwind readnone alwaysinline {
+  reduce4(i8, @__min_varying_uint8, @__min_uniform_uint8)
+}
+
+define i8 @__reduce_max_uint8(<4 x i8>) nounwind readnone alwaysinline {
+  reduce4(i8, @__max_varying_uint8, @__max_uniform_uint8)
 }
 
 define i32 @__reduce_min_int32(<4 x i32>) nounwind readnone alwaysinline {
