@@ -646,8 +646,12 @@ EXT READNONE varying float16 __min_varying_half(varying float16 x, varying float
 EXT READNONE uniform float16 __max_uniform_half(uniform float16 x, uniform float16 y) { return x > y ? x : y; }
 EXT READNONE varying float16 __max_varying_half(varying float16 x, varying float16 y) { return x > y ? x : y; }
 
-// horizontal int8/16 ops
+// horizontal int8 ops
 EXT READNONE uniform int16 __reduce_add_int8(varying int8 x) { return @llvm.vector.reduce.add((int16)x); }
+EXT READNONE uniform int8 __reduce_min_int8(varying int8 x) { return @llvm.vector.reduce.smin(x); }
+EXT READNONE uniform int8 __reduce_max_int8(varying int8 x) { return @llvm.vector.reduce.smax(x); }
+
+// horizontal int16 ops
 EXT READNONE uniform int16 __reduce_add_int16(varying int16 x) { return @llvm.vector.reduce.add((int32)x); }
 
 // horizontal float ops
@@ -660,6 +664,10 @@ EXT READNONE uniform float __reduce_min_float(varying float x) { return @llvm.ve
 EXT READNONE uniform int32 __reduce_add_int32(varying int32 x) { return @llvm.vector.reduce.add((int64)x); }
 EXT READNONE uniform int32 __reduce_min_int32(varying int32 x) { return @llvm.vector.reduce.smin(x); }
 EXT READNONE uniform int32 __reduce_max_int32(varying int32 x) { return @llvm.vector.reduce.smax(x); }
+
+// horizontal uint8 ops
+EXT READNONE uniform uint8 __reduce_min_uint8(varying uint8 x) { return @llvm.vector.reduce.umin(x); }
+EXT READNONE uniform uint8 __reduce_max_uint8(varying uint8 x) { return @llvm.vector.reduce.umax(x); }
 
 // horizontal uint32 ops
 EXT READNONE uniform uint32 __reduce_min_uint32(varying uint32 x) { return @llvm.vector.reduce.umin(x); }
@@ -737,6 +745,16 @@ EXT READNONE uniform float __min_uniform_float(uniform float x, uniform float y)
 EXT READNONE uniform float __max_uniform_float(uniform float x, uniform float y) { return @llvm.maxnum(x, y); }
 EXT READNONE varying float __min_varying_float(varying float x, varying float y) { return @llvm.minnum(x, y); }
 EXT READNONE varying float __max_varying_float(varying float x, varying float y) { return @llvm.maxnum(x, y); }
+
+// int8 min/max
+EXT READNONE uniform int8 __min_uniform_int8(uniform int8 x, uniform int8 y) { return x < y ? x : y; }
+EXT READNONE uniform int8 __max_uniform_int8(uniform int8 x, uniform int8 y) { return x > y ? x : y; }
+EXT READNONE uniform uint8 __min_uniform_uint8(uniform uint8 x, uniform uint8 y) { return x < y ? x : y; }
+EXT READNONE uniform uint8 __max_uniform_uint8(uniform uint8 x, uniform uint8 y) { return x > y ? x : y; }
+EXT READNONE varying int8 __min_varying_int8(varying int8 x, varying int8 y) { return x < y ? x : y; }
+EXT READNONE varying int8 __max_varying_int8(varying int8 x, varying int8 y) { return x > y ? x : y; }
+EXT READNONE varying uint8 __min_varying_uint8(varying uint8 x, varying uint8 y) { return x < y ? x : y; }
+EXT READNONE varying uint8 __max_varying_uint8(varying uint8 x, varying uint8 y) { return x > y ? x : y; }
 
 // unsigned int min/max
 EXT READNONE uniform int32 __min_uniform_int32(uniform int32 x, uniform int32 y) { return x < y ? x : y; }
