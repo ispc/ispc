@@ -2361,7 +2361,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 
     if (!error) {
         // Create TargetMachine
-        std::string triple = GetTriple().str();
+        llvm::Triple triple = GetTriple();
 
         // The last validity check to ensure that supported for this target was enabled in the build.
         if (!g->target_registry->isSupported(m_ispc_target, g->target_os, arch)) {
@@ -2416,8 +2416,13 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 
         // For Xe target we do not need to create target/targetMachine
         if (!isXeTarget()) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
             m_targetMachine =
                 m_target->createTargetMachine(triple, m_cpu, featuresString, options, relocModel, mcModel);
+#else
+            m_targetMachine =
+                m_target->createTargetMachine(triple.str(), m_cpu, featuresString, options, relocModel, mcModel);
+#endif
             Assert(m_targetMachine != nullptr);
 
             // Set Optimization level for llvm codegen based on Optimization level
