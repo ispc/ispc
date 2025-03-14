@@ -703,7 +703,8 @@ int main(int Argc, char *Argv[]) {
                                  "be issued, but no output will be generated.");
         }
 
-        int ret = Module::LinkAndOutput(linkFileNames, ot, outFileName);
+        std::string filename = outFileName ? outFileName : "";
+        int ret = Module::LinkAndOutput(linkFileNames, ot, filename);
         lFreeArgv(argv);
         return ret;
     }
@@ -1348,8 +1349,9 @@ int main(int Argc, char *Argv[]) {
     int ret = 0;
     {
         llvm::TimeTraceScope TimeScope("ExecuteCompiler");
-        ret = Module::CompileAndOutput(file, arch, cpu, targets, flags, ot, outFileName, headerFileName, depsFileName,
-                                       depsTargetName, hostStubFileName, devStubFileName);
+        Module::Output output = Module::Output(ot, flags, outFileName, headerFileName, depsFileName, hostStubFileName,
+                                               devStubFileName, depsTargetName);
+        ret = Module::CompileAndOutput(file, arch, cpu, targets, output);
     }
 
     if (g->enableTimeTrace) {

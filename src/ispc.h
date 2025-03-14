@@ -25,6 +25,7 @@
 #endif
 
 #include <map>
+#include <memory>
 #include <set>
 #include <stdint.h>
 #include <stdio.h>
@@ -242,6 +243,9 @@ class Target {
 
     ~Target();
 
+    static std::unique_ptr<Target> Create(Arch arch, const char *cpu, ISPCTarget target, PICLevel picLevel,
+                                          MCModel codeModel, bool printTarget);
+
     // We don't copy Target objects at the moment. If we will then proper
     // implementations are needed considering the ownership of heap-allocated
     // fields like m_dataLayout.
@@ -311,6 +315,9 @@ class Target {
     ISPCTarget getISPCTarget() const { return m_ispc_target; }
 
     ISA getISA() const { return m_isa; }
+
+    /** Converts an ISPC target to the corresponding Target ISA. */
+    static ISA TargetToISA(ISPCTarget target);
 
     bool isXeTarget() {
 #ifdef ISPC_XE_ENABLED
