@@ -363,6 +363,18 @@ define i8 @__max_uniform_int8(i8, i8) nounwind readnone alwaysinline {
   ret i8 %r
 }
 
+define i16 @__min_uniform_int16(i16, i16) nounwind readnone alwaysinline {
+  %cmp = icmp slt i16 %0, %1
+  %r = select i1 %cmp, i16 %0, i16 %1
+  ret i16 %r
+}
+
+define i16 @__max_uniform_int16(i16, i16) nounwind readnone alwaysinline {
+  %cmp = icmp sgt i16 %0, %1
+  %r = select i1 %cmp, i16 %0, i16 %1
+  ret i16 %r
+}
+
 define i32 @__min_uniform_int32(i32, i32) nounwind readnone alwaysinline {
   %cmp = icmp slt i32 %0, %1
   %r = select i1 %cmp, i32 %0, i32 %1
@@ -385,6 +397,18 @@ define i8 @__max_uniform_uint8(i8, i8) nounwind readnone alwaysinline {
   %cmp = icmp ugt i8 %0, %1
   %r = select i1 %cmp, i8 %0, i8 %1
   ret i8 %r
+}
+
+define i16 @__min_uniform_uint16(i16, i16) nounwind readnone alwaysinline {
+  %cmp = icmp ult i16 %0, %1
+  %r = select i1 %cmp, i16 %0, i16 %1
+  ret i16 %r
+}
+
+define i16 @__max_uniform_uint16(i16, i16) nounwind readnone alwaysinline {
+  %cmp = icmp ugt i16 %0, %1
+  %r = select i1 %cmp, i16 %0, i16 %1
+  ret i16 %r
 }
 
 define i32 @__min_uniform_uint32(i32, i32) nounwind readnone alwaysinline {
@@ -457,6 +481,30 @@ define <WIDTH x i8> @__max_varying_uint8(<WIDTH x i8>, <WIDTH x i8>) nounwind re
   %m = icmp ugt <WIDTH x i8> %0, %1
   %r = select <WIDTH x i1> %m, <WIDTH x i8> %0, <WIDTH x i8> %1
   ret <WIDTH x i8> %r
+}
+
+define <WIDTH x i16> @__min_varying_int16(<WIDTH x i16>, <WIDTH x i16>) nounwind readnone alwaysinline {
+  %m = icmp slt <WIDTH x i16> %0, %1
+  %r = select <WIDTH x i1> %m, <WIDTH x i16> %0, <WIDTH x i16> %1
+  ret <WIDTH x i16> %r
+}
+
+define <WIDTH x i16> @__max_varying_int16(<WIDTH x i16>, <WIDTH x i16>) nounwind readnone alwaysinline {
+  %m = icmp sgt <WIDTH x i16> %0, %1
+  %r = select <WIDTH x i1> %m, <WIDTH x i16> %0, <WIDTH x i16> %1
+  ret <WIDTH x i16> %r
+}
+
+define <WIDTH x i16> @__min_varying_uint16(<WIDTH x i16>, <WIDTH x i16>) nounwind readnone alwaysinline {
+  %m = icmp ult <WIDTH x i16> %0, %1
+  %r = select <WIDTH x i1> %m, <WIDTH x i16> %0, <WIDTH x i16> %1
+  ret <WIDTH x i16> %r
+}
+
+define <WIDTH x i16> @__max_varying_uint16(<WIDTH x i16>, <WIDTH x i16>) nounwind readnone alwaysinline {
+  %m = icmp ugt <WIDTH x i16> %0, %1
+  %r = select <WIDTH x i1> %m, <WIDTH x i16> %0, <WIDTH x i16> %1
+  ret <WIDTH x i16> %r
 }
 
 define <4 x i32> @__vselect_i32(<4 x i32>, <4 x i32> ,
@@ -707,6 +755,22 @@ define i8 @__reduce_min_uint8(<4 x i8>) nounwind readnone alwaysinline {
 
 define i8 @__reduce_max_uint8(<4 x i8>) nounwind readnone alwaysinline {
   reduce4(i8, @__max_varying_uint8, @__max_uniform_uint8)
+}
+
+define i16 @__reduce_min_int16(<4 x i16>) nounwind readnone alwaysinline {
+  reduce4(i16, @__min_varying_int16, @__min_uniform_int16)
+}
+
+define i16 @__reduce_max_int16(<4 x i16>) nounwind readnone alwaysinline {
+  reduce4(i16, @__max_varying_int16, @__max_uniform_int16)
+}
+
+define i16 @__reduce_min_uint16(<4 x i16>) nounwind readnone alwaysinline {
+  reduce4(i16, @__min_varying_uint16, @__min_uniform_uint16)
+}
+
+define i16 @__reduce_max_uint16(<4 x i16>) nounwind readnone alwaysinline {
+  reduce4(i16, @__max_varying_uint16, @__max_uniform_uint16)
 }
 
 define i32 @__reduce_min_int32(<4 x i32>) nounwind readnone alwaysinline {
