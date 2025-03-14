@@ -100,7 +100,41 @@ class Type;
 struct VariableDeclaration;
 typedef std::vector<TemplateArg> TemplateArgs;
 
-enum StorageClass { SC_NONE, SC_EXTERN, SC_STATIC, SC_TYPEDEF, SC_EXTERN_C, SC_EXTERN_SYCL };
+class StorageClass {
+  public:
+    enum class Kind {
+        NONE,
+        EXT,      // extern
+        STATIC,   // static
+        TYPEDEF,  // typedef
+        EXT_C,    // extern "C"
+        EXT_SYCL, // extern "SYCL"
+    };
+
+    // The constructor, operators, and constants are required to use
+    // StorageClass in the same way as an enum class (which StorageClass was
+    // previously) in switch statements, comparisons, and so on.
+    StorageClass(Kind kind);
+    operator Kind() const;
+    static constexpr Kind NONE{Kind::NONE};
+    static constexpr Kind EXT{Kind::EXT};
+    static constexpr Kind STATIC{Kind::STATIC};
+    static constexpr Kind TYPEDEF{Kind::TYPEDEF};
+    static constexpr Kind EXT_C{Kind::EXT_C};
+    static constexpr Kind EXT_SYCL{Kind::EXT_SYCL};
+
+    std::string GetString() const;
+    bool IsNone() const;
+    bool IsExtern() const;
+    bool IsStatic() const;
+    bool IsTypedef() const;
+    bool IsExternC() const;
+    bool IsExternSYCL() const;
+    bool IsAnyExtern() const;
+
+  private:
+    Kind m_kind = Kind::NONE;
+};
 
 // Enumerant for address spaces.
 enum class AddressSpace {

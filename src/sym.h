@@ -53,7 +53,7 @@ class Symbol : public Traceable {
     /** The Symbol constructor takes the name of the symbol, its
         position in a source file, and its type (if known). */
     Symbol(const std::string &name, SourcePos pos, SymbolKind st = SymbolKind::Default, const Type *t = nullptr,
-           StorageClass sc = SC_NONE, AttributeList *a = nullptr);
+           StorageClass sc = StorageClass::NONE, AttributeList *a = nullptr);
     ~Symbol();
 
     SourcePos pos;            /*!< Source file position where the symbol was defined */

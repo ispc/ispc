@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2024, Intel Corporation
+  Copyright (c) 2011-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -174,6 +174,9 @@ class ASTNode : public Traceable {
 
     /** A function for interactive debugging */
     void Dump() const;
+
+    /** Return a short string that represents the node. */
+    virtual std::string GetString() const = 0;
 
     /** A function that should be used for hierarchical AST dump. */
     virtual void Print(Indent &indent) const = 0;
