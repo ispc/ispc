@@ -1,4 +1,4 @@
-;;  Copyright (c) 2019-2024, Intel Corporation
+;;  Copyright (c) 2019-2025, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -321,9 +321,11 @@ define <WIDTH x $1> @__min_varying_$4(<WIDTH x $1>, <WIDTH x $1>) nounwind reado
 xe_maxmin(half, fmin, fmax, half)
 xe_maxmin(float, fmin, fmax, float)
 xe_maxmin(i8, smin, smax, int8)
+xe_maxmin(i16, smin, smax, int16)
 xe_maxmin(i32, smin, smax, int32)
 xe_maxmin(i64, smin, smax, int64)
 xe_maxmin(i8, umin, umax, uint8)
+xe_maxmin(i16, umin, umax, uint16)
 xe_maxmin(i32, umin, umax, uint32)
 xe_maxmin(i64, umin, umax, uint64)
 
@@ -848,6 +850,22 @@ define i8 @__reduce_min_uint8(<WIDTH x i8>) nounwind readnone {
 
 define i8 @__reduce_max_uint8(<WIDTH x i8>) nounwind readnone {
   reduce_func(i8, @__max_varying_uint8, @__max_uniform_uint8, %0)
+}
+
+define i16 @__reduce_min_int16(<WIDTH x i16>) nounwind readnone {
+  reduce_func(i16, @__min_varying_int16, @__min_uniform_int16, %0)
+}
+
+define i16 @__reduce_max_int16(<WIDTH x i16>) nounwind readnone {
+  reduce_func(i16, @__max_varying_int16, @__max_uniform_int16, %0)
+}
+
+define i16 @__reduce_min_uint16(<WIDTH x i16>) nounwind readnone {
+  reduce_func(i16, @__min_varying_uint16, @__min_uniform_uint16, %0)
+}
+
+define i16 @__reduce_max_uint16(<WIDTH x i16>) nounwind readnone {
+  reduce_func(i16, @__max_varying_uint16, @__max_uniform_uint16, %0)
 }
 
 define i32 @__reduce_min_int32(<WIDTH x i32>) nounwind readnone {
