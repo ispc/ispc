@@ -45,6 +45,15 @@ using invokePtr = int (*)(unsigned, const char **, const uint32_t, const uint8_t
 using freeOutputPtr = int (*)(uint32_t *, uint8_t ***, uint64_t **, char ***);
 #endif
 
+/**
+ * @class Module
+ * Main container for all data related to a compiled ISPC translation unit.
+ *
+ * The Module class manages the compilation process for a single ISPC source file.
+ * It contains the AST, symbol table, and LLVM module produced during compilation,
+ * and provides methods for all stages of the compilation process including preprocessing,
+ * parsing, optimization, and output generation.
+ */
 class Module {
   public:
     /** The name of the source file being compiled should be passed as the
@@ -156,6 +165,10 @@ class Module {
         }
     };
 
+    /**
+     * @class OutputFlags
+     * Flags that control output file generation
+     */
     class OutputFlags {
       public:
         OutputFlags()
@@ -199,8 +212,35 @@ class Module {
         MCModel mcModel;
     };
 
+    /**
+     * @struct Output
+     * Encapsulates all output-related information for the compiler
+     *
+     * This struct contains the output type (object file, assembly, bitcode, etc.),
+     * output flags, and various file paths for different output artifacts that can
+     * be generated during compilation.
+     *
+     * The compiler can generate multiple types of output files in a single compilation:
+     * - Main output (object file, assembly, bitcode, etc.)
+     * - Header file with declarations for C/C++ interoperability
+     * - Dependency information files (makefile)
+     * - Host and device stub files for offload models
+     */
     struct Output {
         Output() {}
+
+        /**
+         * Constructor that sets all output parameters
+         *
+         * @param outputType        Type of output to generate
+         * @param outputFlags       Flags controlling output generation
+         * @param outFileName       Main output file name
+         * @param headerFileName    Header file name
+         * @param depsFileName      Dependencies file name
+         * @param hostStubFileName  Host stub file name
+         * @param devStubFileName   Device stub file name
+         * @param depsTargetName     Dependencies target name
+         */
         Output(OutputType outputType, OutputFlags outputFlags, const char *outFileName, const char *headerFileName,
                const char *depsFileName, const char *hostStubFileName, const char *devStubFileName,
                const char *depsTargetName)
@@ -215,23 +255,64 @@ class Module {
         std::string depsTarget{};
 
         // Output file names
-        std::string out{};
-        std::string header{};
-        std::string deps{};
-        std::string hostStub{};
-        std::string devStub{};
+        std::string out{};      /**< Main output file name */
+        std::string header{};   /**< Header file name */
+        std::string deps{};     /**< Dependencies file name */
+        std::string hostStub{}; /**< Host stub file name */
+        std::string devStub{};  /**< Device stub file name */
 
-        // TODO: comment
+        /**
+         * Get the target name for dependencies
+         *
+         * @param srcFile Source file name
+         * @return The target name for dependencies
+         */
         std::string DepsTargetName(const char *srcFile) const;
+
+        /**
+         * Get the output file name for a specific target
+         *
+         * Base name of output filename for object files, etc. If it operates
+         * in multi-target mode, it will append the target name to the base
+         * name, e.g. "foo.o" -> "foo_sse2.o".
+         *
+         * @param target Target to generate filename for
+         * @return The output file name for the target
+         */
         std::string OutFileNameTarget(Target *target) const;
+
+        /**
+         * Get the header file name for a specific target
+         *
+         * @param target Target to generate filename for
+         * @return The header file name for the target
+         */
         std::string HeaderFileNameTarget(Target *target) const;
     };
 
+    /**
+     * @enum CompilationMode
+     * Defines whether the module is being compiled alone or as part of a multi-target compilation
+     */
     enum class CompilationMode { Single, Multiple };
 
-    // TODO: comment
+    /**
+     * Constructor with output and compilation mode parameters
+     *
+     * @param filename Source file name
+     * @param output Output settings
+     * @param mode Compilation mode
+     */
     Module(const char *filename, Output &output, CompilationMode mode);
 
+    /**
+     * Factory method to create a Module instance
+     *
+     * @param srcFile Source file name
+     * @param output Output settings
+     * @param mode Compilation mode (default: Single)
+     * @return A unique_ptr to a new Module instance
+     */
     static std::unique_ptr<Module> Create(const char *srcFile, Output &output,
                                           CompilationMode mode = CompilationMode::Single);
 
@@ -245,18 +326,7 @@ class Module {
         @param targets      %Target ISAs; this parameter may give a single target
                             ISA, or may give a comma-separated list of them in
                             case we are compiling to multiple ISAs.
-        @param OutputFlags  A set of flags for output generation.
-        @param outputType   %Type of output to generate (object files, assembly,
-                            LLVM bitcode.)
-        @param outFileName  Base name of output filename for object files, etc.
-                            If for example the multiple targets "sse2" and "avx"
-                            are specified in the "targets" parameter and if this
-                            parameter is "foo.o", then we'll generate multiple
-                            output files, like "foo.o", "foo_sse2.o", "foo_avx.o".
-        @param headerFileName If non-nullptr, emit a header file suitable for
-                              inclusion from C/C++ code with declarations of
-                              types and functions exported from the given ispc
-                              source file.
+        @param output       Output settings
         @return             Number of errors encountered when compiling
                             srcFile.
      */
@@ -309,18 +379,65 @@ class Module {
 
     std::vector<std::pair<const Type *, SourcePos>> exportedTypes;
 
-    // TODO: comments?
+    /**
+     * Compiles the module for a single target architecture.
+     *
+     * @param arch       The target architecture
+     * @param cpu        The target CPU
+     * @param target     The specific ISA target
+     *
+     * @return The number of errors encountered during compilation
+     */
     int CompileSingleTarget(Arch arch, const char *cpu, ISPCTarget target);
+
+    /**
+     * Compiles the given source file for multiple target ISAs and creates a dispatch module.
+     *
+     * @param srcFile  Path to the source file to compile
+     * @param arch     Target architecture
+     * @param cpu      CPU specification
+     * @param targets  Vector of ISA targets to compile for
+     * @param output   Output configuration including output type and filenames
+     *
+     * @return The number of errors encountered during compilation
+     */
+    static int CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
+                                      Output &output);
+
+    /**
+     * Creates and outputs a dispatch module for multi-target compilation.
+     *
+     * @param srcFile     Source file path (for error reporting)
+     * @param targets     Vector of ISA targets that were compiled
+     * @param modules     Vector of Module instances for each target
+     * @param targetsPtrs Vector of Target instances for each target
+     * @param output      Output configuration for the dispatch module
+     *
+     * @return The number of errors encountered during dispatch generation
+     */
     static int GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> targets,
                                 std::vector<std::unique_ptr<Module>> &modules,
                                 std::vector<std::unique_ptr<Target>> &targetsPtrs, Output &output);
-    static int CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
-                                      Output &output);
+
+    /**
+     * Writes the dispatch module to the appropriate output files.
+     *
+     * @param dispatchModule The LLVM module containing the dispatch code
+     * @param output         Output configuration specifying file types and paths
+     *
+     * @return Zero on success, non-zero on error
+     */
     static int WriteDispatchOutputFiles(llvm::Module *dispatchModule, Output &output);
 
     static bool writeBitcode(llvm::Module *module, std::string outFileName, OutputType outputType);
 
+    /**
+     * Writes all output files for the current module.
+     *
+     * @return Zero on success, non-zero if any file writing operation failed
+     */
     int WriteOutputFiles();
+
     /** Write the corresponding output type to the given file.  Returns
         true on success, false if there has been an error.  The given
         filename may be nullptr, indicating that output should go to standard
@@ -329,8 +446,15 @@ class Module {
 
     bool writeHeader();
     bool writeDispatchHeader(DispatchHeaderInfo *DHI);
-    // TODO: comment that in the case of dispatcher the output class member is
-    // not what we want to use
+
+    /**
+     * Generates a dependency file in make-compatible format.
+     *
+     * @param customOutput Output configuration specifying dependency file path
+     * and format
+     *
+     * @return True on success, false if file creation or writing failed
+     */
     bool writeDeps(Output &customOutput);
     bool writeDevStub();
     bool writeHostStub();

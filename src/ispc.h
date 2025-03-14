@@ -316,6 +316,7 @@ class Target {
 
     ISA getISA() const { return m_isa; }
 
+    /** Converts an ISPC target to the corresponding Target ISA. */
     static ISA TargetToISA(ISPCTarget target);
 
     bool isXeTarget() {

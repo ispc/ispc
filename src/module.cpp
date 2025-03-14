@@ -1594,8 +1594,7 @@ bool Module::writeOutput() {
     case SPIRV:
         return writeSPIRV(module, output.out);
 #endif
-    // TODO!: it looks like we don't need to process extra output types here,
-    // better to call their methods directly
+    // Do not process extra output types here better to call their methods directly
     case Header:
     case Deps:
     case DevStub:
@@ -2293,6 +2292,18 @@ std::string Module::Output::DepsTargetName(const char *srcFile) const {
     return "a.out";
 }
 
+/**
+ * This function creates a dependency file listing all headers and source files that
+ * the current module depends on. The output can be in one of two formats:
+ * 1. A Makefile rule (when makeRuleDeps is true) with the target depending on all files
+ * 2. A flat list of all dependencies (when makeRuleDeps is false)
+ *
+ * The output can be written to a specified file or to stdout.
+ *
+ * @note In the case of dispatcher module generation, the customOutput
+ * parameter should be used instead of the class member output, as the
+ * dispatcher requires different output settings.
+ */
 bool Module::writeDeps(Output &CO) {
     bool generateMakeRule = CO.flags.isMakeRuleDeps();
     std::string targetName = CO.DepsTargetName(srcFile);
@@ -3345,11 +3356,9 @@ int Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *o
     return static_cast<int>(diagEng.hasErrorOccurred());
 }
 
-// Given an output filename of the form "foo.obj", and an ISA name like
-// "avx", return a string with the ISA name inserted before the original
+// Given an output filename of the form "foo.obj", and a Target
+// return a string with the ISA name inserted before the original
 // filename's suffix, like "foo_avx.obj".
-// Same as above, but takes a Target pointer instead of an ISA string.
-// TODO: fix comment
 std::string lGetMangledFileName(std::string filename, Target *target) {
     std::string isaString = target->GetISAString();
 
@@ -3358,10 +3367,10 @@ std::string lGetMangledFileName(std::string filename, Target *target) {
     const auto pos_dot = targetFileName.find_last_of('.');
 
     if (pos_dot != std::string::npos) {
+        // If filename has an extension, insert ISA name before the dot
         targetFileName = targetFileName.substr(0, pos_dot) + "_" + isaString + targetFileName.substr(pos_dot);
     } else {
-        // Can't find a '.' in the filename, so just append the ISA suffix
-        // to what we weregiven
+        // If no extension, simply append ISA name
         targetFileName.append("_" + isaString);
     }
     return targetFileName;
@@ -3684,12 +3693,25 @@ static bool lCompatibleTypes(llvm::Type *Ty1, llvm::Type *Ty2) {
     return false;
 }
 
-// TODO: comment
-// Grab all of the global value definitions from the module and change them
-// to be declarations; we'll emit a single definition of each global in the
-// final module used with the dispatch functions, so that we don't have
-// multiple definitions of them, one in each of the target-specific output
-// files.
+/**
+ * Extract or validate global variables across multiple target modules during
+ * multi-target compilation.
+ *
+ * This function handles two critical scenarios in multi-target compilation:
+ * 1. Extraction mode (check = false):
+ *    - Creates new global variable declarations in the destination module
+ *    - Copies initializers from the source module
+ *    - Preserves global variable attributes
+ *
+ * 2. Validation mode (check = true):
+ *    - Verifies that global variables exist in the destination module
+ *    - Checks type and layout compatibility across different target modules
+ *    - Warns about potential mismatches in global variable definitions
+ *
+ * @param msrc Source module containing global variables to extract/check
+ * @param mdst Destination module to either create or validate global variables
+ * @param check Flag to determine whether to extract (false) or validate (true)
+ */
 static void lExtractOrCheckGlobals(llvm::Module *msrc, llvm::Module *mdst, bool check) {
     llvm::Module::global_iterator iter;
     llvm::ValueToValueMapTy VMap;
@@ -3736,6 +3758,18 @@ static void lExtractOrCheckGlobals(llvm::Module *msrc, llvm::Module *mdst, bool 
 
 using InitializerStorage = std::map<llvm::GlobalVariable *, llvm::Constant *>;
 
+/**
+ * Temporarily removes initializers from global variables in the module.
+ *
+ * When compiling for multiple targets, we need to avoid duplicate definitions
+ * of global variables with initializers. This function saves the current
+ * initializers in the provided storage and then sets all global variables
+ * to have no initializer, effectively turning them into external declarations.
+ * The initializers can later be restored using restoreGlobalInitializers().
+ *
+ * @param module The LLVM module containing globals to process
+ * @param initializers Storage map to save the current initializers
+ */
 void resetGlobalInitializers(llvm::Module *module, InitializerStorage &initializers) {
     for (llvm::GlobalVariable &gv : module->globals()) {
         if (gv.getLinkage() == llvm::GlobalVariable::ExternalLinkage && gv.hasInitializer()) {
@@ -3745,6 +3779,16 @@ void resetGlobalInitializers(llvm::Module *module, InitializerStorage &initializ
     }
 }
 
+/**
+ * Restores previously saved initializers to global variables.
+ *
+ * This function reverses the effect of resetGlobalInitializers() by
+ * restoring the saved initializers back to their global variables.
+ * It's typically used after writing output files in multi-target mode.
+ *
+ * @param module The LLVM module containing globals to restore
+ * @param initializers Storage map containing the saved initializers
+ */
 void restoreGlobalInitializers(llvm::Module *module, InitializerStorage &initializers) {
     for (llvm::GlobalVariable &gv : module->globals()) {
         if (gv.getLinkage() == llvm::GlobalVariable::ExternalLinkage && initializers.count(&gv)) {
@@ -3755,7 +3799,8 @@ void restoreGlobalInitializers(llvm::Module *module, InitializerStorage &initial
     }
 }
 
-int lValidateXeTargetOutputs(Target *target, Module::OutputType &outputType) {
+// For Xe targets, validate that the requested output format is supported
+int lValidateXeTargetOutputType(Target *target, Module::OutputType &outputType) {
 #ifdef ISPC_XE_ENABLED
     if (outputType == Module::OutputType::Asm || outputType == Module::OutputType::Object) {
         if (g->target->isXeTarget()) {
@@ -3776,6 +3821,11 @@ int lValidateXeTargetOutputs(Target *target, Module::OutputType &outputType) {
     return 0;
 }
 
+/**
+ * This function handles writing all requested output files for the current module,
+ * including the main output file (object, assembly, bitcode), header file,
+ * dependency information, and stub files for offload compilation.
+ */
 int Module::WriteOutputFiles() {
     // Write the main output file
     if (!output.out.empty() && !writeOutput()) {
@@ -3798,25 +3848,57 @@ int Module::WriteOutputFiles() {
     return 0;
 }
 
+/**
+ * Compiles the module for a single target architecture.
+ *
+ * This function orchestrates the complete compilation process for a specific target,
+ * beginning with parsing the source file, followed by code generation,
+ * optimization, and output file creation.
+ *
+ * The compilation mode (Single vs Multiple) affects how global initializers
+ * are handled. In multi-target mode, each target gets its own Module instance.
+ *
+ * In multi-target mode, globals and functions have different handling mechanisms:
+ * - Global variables: Only declarations (externals) appear in target-specific modules.
+ *   The actual definitions with initializers will appear only in the dispatch module.
+ *   This function temporarily removes initializers before writing output files, making
+ *   them external declarations, then restores them afterward so they can be extracted
+ *   by lExtractOrCheckGlobals() for use in the dispatch module.
+ *
+ * - Functions: Target modules contain full definitions with target-specific mangled names
+ *   (e.g., foo_sse4, foo_avx2). The dispatch module creates wrapper functions with the
+ *   original names (e.g., foo) that dispatch to the appropriate target-specific implementation
+ *   based on runtime CPU detection.
+ *
+ * @note For multi-target compilation, separate Module instances are created
+ *       for each target, and this function is called once per Module.
+ */
 int Module::CompileSingleTarget(Arch arch, const char *cpu, ISPCTarget target) {
+    // Compile the file by parsing source, generating IR, and applying optimizations
     const int compileResult = CompileFile();
 
-    llvm::TimeTraceScope TimeScope("Backend");
-
     if (compileResult == 0) {
-        if (lValidateXeTargetOutputs(g->target, output.type)) {
+        llvm::TimeTraceScope TimeScope("Backend");
+
+        if (lValidateXeTargetOutputType(g->target, output.type)) {
             return 1;
         }
 
-        // TODO: comment
         InitializerStorage initializers;
         if (m_compilationMode == CompilationMode::Multiple) {
+            // For multi-target compilation, temporarily remove initializers
             resetGlobalInitializers(module, initializers);
         }
+
+        // Generate the requested output files (object, assembly, bitcode, etc.)
         if (WriteOutputFiles()) {
             return 1;
         }
+
         if (m_compilationMode == CompilationMode::Multiple) {
+            // Restore the initializers after writing output files.
+            // This ensures they're available at the moment we generate the
+            // dispatch module
             restoreGlobalInitializers(module, initializers);
         }
     } else {
@@ -3848,6 +3930,9 @@ int lValidateMultiTargetInputs(const char *srcFile, std::string &outFileName, co
     return 0;
 }
 
+// After generating the dispatch module, this function handles writing it to
+// disk in the requested format (object file, assembly, bitcode, etc.) and
+// generates any requested supplementary files like dependencies.
 int Module::WriteDispatchOutputFiles(llvm::Module *dispatchModule, Module::Output &output) {
     if (!output.out.empty()) {
         switch (output.type) {
@@ -3933,6 +4018,15 @@ void lResetTargetAndModule(std::vector<std::unique_ptr<Module>> &modules, std::v
     InitLLVMUtil(g->ctx, *g->target);
 }
 
+/**
+ * Creates and outputs a dispatch module for multi-target compilation.
+ *
+ * When compiling for multiple target ISAs, this function generates a dispatch module
+ * that contains dispatch functions for all exported functions. Each dispatch function
+ * checks the CPU capabilities at runtime and calls the appropriate target-specific
+ * implementation. The dispatch module also contains single definitions of all global
+ * variables to avoid duplicate symbols across target-specific object files.
+ */
 int Module::GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> targets,
                              std::vector<std::unique_ptr<Module>> &modules,
                              std::vector<std::unique_ptr<Target>> &targetsPtrs, Output &output) {
@@ -3999,14 +4093,26 @@ int Module::GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> target
     // Set the module that corresponds to the common target ISA
     lResetTargetAndModule(modules, targetsPtrs, commonTargetIndex);
 
+    // Create the dispatch functions and emit the dispatch module
     lEmitDispatchModule(dispatchModule, exportedFunctions);
 
     return WriteDispatchOutputFiles(dispatchModule, output);
 }
 
-// TODO: comment
+/**
+ * Prepares output configuration for a specific target in multi-target compilation.
+ *
+ * This function modifies the output configuration for each target, ensuring unique
+ * filenames by appending the target's ISA name to output and header files. It also
+ * handles special considerations for multi-target compilation:
+ * - Mangles output and header filenames with target-specific suffixes
+ * - Clears stub file names (not used in multi-target mode)
+ * - Disables writing dependencies for individual targets
+ */
 static Module::Output lCreateTargetOutputs(Module::Output &output, ISPCTarget target) {
     Module::Output targetOutputs = output;
+
+    // If a header or out filename was specified, mangle it with the target ISA name
     if (!targetOutputs.out.empty()) {
         targetOutputs.out = targetOutputs.OutFileNameTarget(g->target);
     }
@@ -4016,20 +4122,20 @@ static Module::Output lCreateTargetOutputs(Module::Output &output, ISPCTarget ta
     }
 
     // TODO: --host-stub and --dev-stub are ignored in multi-target mode?
+    // Clear host and device stub filenames, as they are not used in multi-target mode
     targetOutputs.hostStub = "";
     targetOutputs.devStub = "";
 
+    // Disable writing dependencies file for individual targets.
     // deps file is written only once for all targets, so we will generate
     // it during the dispatch module generation.
     targetOutputs.deps = "";
-
-    // deps file is written only once for all targets, so we will generate
-    // it during the dispatch module generation.
     targetOutputs.flags.setDepsToStdout(false);
 
     return targetOutputs;
 }
 
+// Compiles the given source file for multiple target ISAs and creates a dispatch module.
 int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
                                    Output &output) {
     // The user supplied multiple targets
@@ -4043,6 +4149,9 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
     // the target ISA appended to them.
     g->mangleFunctionsWithTarget = true;
 
+    // This function manages multiple Module and Target instances, transferring
+    // ownership to local vectors. These instances are automatically destroyed
+    // when the function returns.
     std::vector<std::unique_ptr<Module>> modules;
     std::vector<std::unique_ptr<Target>> targetsPtrs;
 
