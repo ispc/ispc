@@ -1,4 +1,4 @@
-;;  Copyright (c) 2024, Intel Corporation
+;;  Copyright (c) 2024-2025, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -204,16 +204,16 @@ define double @__ceil_uniform_double(double) nounwind readonly alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; round/floor/ceil varying float/doubles
 
-declare <16 x float> @llvm.nearbyint.v16f32(<16 x float> %p)
+declare <16 x float> @llvm.roundeven.v16f32(<16 x float> %p)
 declare <16 x float> @llvm.floor.v16f32(<16 x float> %p)
 declare <16 x float> @llvm.ceil.v16f32(<16 x float> %p)
 
 define <64 x float> @__round_varying_float(<64 x float> %v) nounwind readonly alwaysinline {
   v64tov16(float, %v, %v0, %v1, %v2, %v3)
-  %r0 = call <16 x float> @llvm.nearbyint.v16f32(<16 x float> %v0)
-  %r1 = call <16 x float> @llvm.nearbyint.v16f32(<16 x float> %v1)
-  %r2 = call <16 x float> @llvm.nearbyint.v16f32(<16 x float> %v2)
-  %r3 = call <16 x float> @llvm.nearbyint.v16f32(<16 x float> %v3)
+  %r0 = call <16 x float> @llvm.roundeven.v16f32(<16 x float> %v0)
+  %r1 = call <16 x float> @llvm.roundeven.v16f32(<16 x float> %v1)
+  %r2 = call <16 x float> @llvm.roundeven.v16f32(<16 x float> %v2)
+  %r3 = call <16 x float> @llvm.roundeven.v16f32(<16 x float> %v3)
   v16tov64(float, %r0, %r1, %r2, %r3, %r)
   ret <64 x float> %r
 }
@@ -238,20 +238,20 @@ define <64 x float> @__ceil_varying_float(<64 x float> %v) nounwind readonly alw
   ret <64 x float> %r
 }
 
-declare <8 x double> @llvm.nearbyint.v8f64(<8 x double> %p)
+declare <8 x double> @llvm.roundeven.v8f64(<8 x double> %p)
 declare <8 x double> @llvm.floor.v8f64(<8 x double> %p)
 declare <8 x double> @llvm.ceil.v8f64(<8 x double> %p)
 
 define <64 x double> @__round_varying_double(<64 x double> %v) nounwind readonly alwaysinline {
   v64tov8(double, %v, %v0, %v1, %v2, %v3, %v4, %v5, %v6, %v7)
-  %r0 = call <8 x double> @llvm.nearbyint.v8f64(<8 x double> %v0)
-  %r1 = call <8 x double> @llvm.nearbyint.v8f64(<8 x double> %v1)
-  %r2 = call <8 x double> @llvm.nearbyint.v8f64(<8 x double> %v2)
-  %r3 = call <8 x double> @llvm.nearbyint.v8f64(<8 x double> %v3)
-  %r4 = call <8 x double> @llvm.nearbyint.v8f64(<8 x double> %v4)
-  %r5 = call <8 x double> @llvm.nearbyint.v8f64(<8 x double> %v5)
-  %r6 = call <8 x double> @llvm.nearbyint.v8f64(<8 x double> %v6)
-  %r7 = call <8 x double> @llvm.nearbyint.v8f64(<8 x double> %v7)
+  %r0 = call <8 x double> @llvm.roundeven.v8f64(<8 x double> %v0)
+  %r1 = call <8 x double> @llvm.roundeven.v8f64(<8 x double> %v1)
+  %r2 = call <8 x double> @llvm.roundeven.v8f64(<8 x double> %v2)
+  %r3 = call <8 x double> @llvm.roundeven.v8f64(<8 x double> %v3)
+  %r4 = call <8 x double> @llvm.roundeven.v8f64(<8 x double> %v4)
+  %r5 = call <8 x double> @llvm.roundeven.v8f64(<8 x double> %v5)
+  %r6 = call <8 x double> @llvm.roundeven.v8f64(<8 x double> %v6)
+  %r7 = call <8 x double> @llvm.roundeven.v8f64(<8 x double> %v7)
   v8tov64(double, %r0, %r1, %r2, %r3, %r4, %r5, %r6, %r7, %r)
   ret <64 x double> %r
 }
