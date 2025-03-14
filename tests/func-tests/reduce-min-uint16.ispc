@@ -1,7 +1,7 @@
 #include "test_static.isph"
 task void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float v = aFOO[programIndex];
-    uniform uint8 m = 42;
+    uniform uint16 m = 42;
     if (v >= 3) {
         #pragma ignore warning(perf)
         m = reduce_min((unsigned int16)v);
