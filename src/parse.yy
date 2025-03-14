@@ -1337,9 +1337,9 @@ init_declarator
 
 storage_class_specifier
     : TOKEN_TYPEDEF { $$ = new StorageClass(StorageClass::TYPEDEF); }
-    | TOKEN_EXTERN { $$ = new StorageClass(StorageClass::EXTERN); }
-    | TOKEN_EXTERN TOKEN_STRING_C_LITERAL  { $$ = new StorageClass(StorageClass::EXTERN_C); }
-    | TOKEN_EXTERN TOKEN_STRING_SYCL_LITERAL  { $$ = new StorageClass(StorageClass::EXTERN_SYCL); }
+    | TOKEN_EXTERN { $$ = new StorageClass(StorageClass::EXT); }
+    | TOKEN_EXTERN TOKEN_STRING_C_LITERAL  { $$ = new StorageClass(StorageClass::EXT_C); }
+    | TOKEN_EXTERN TOKEN_STRING_SYCL_LITERAL  { $$ = new StorageClass(StorageClass::EXT_SYCL); }
     | TOKEN_STATIC { $$ = new StorageClass(StorageClass::STATIC); }
     ;
 
@@ -3327,11 +3327,11 @@ lCheckTemplateDeclSpecs(DeclSpecs *ds, SourcePos pos, TemplateType type, const c
     }
     // We can't support extern "C"/extern "SYCL" for templates because
     // we need mangling information.
-    if (ds->storageClass == StorageClass::EXTERN_C || ds->storageClass == StorageClass::EXTERN_SYCL) {
+    if (ds->storageClass.IsExternC() || ds->storageClass.IsExternSYCL()) {
         Error(pos, "Illegal linkage provided with %s.", templateTypeStr.c_str());
         return;
     }
-    Assert(ds->storageClass == StorageClass::NONE || ds->storageClass == StorageClass::STATIC || ds->storageClass == StorageClass::EXTERN);
+    Assert(ds->storageClass.IsNone() || ds->storageClass.IsStatic() || ds->storageClass.IsExtern());
     bool isVectorCall = (ds->typeQualifiers & TYPEQUAL_VECTORCALL);
     if (isVectorCall) {
         Error(pos, "Illegal to use \"__vectorcall\" qualifier on non-extern function \"%s\".", name);
