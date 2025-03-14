@@ -3308,15 +3308,15 @@ std::string StorageClass::GetString() const {
     switch (m_kind) {
     case Kind::NONE:
         return "";
-    case Kind::EXTERN:
+    case Kind::EXT:
         return "extern";
     case Kind::STATIC:
         return "static";
     case Kind::TYPEDEF:
         return "typedef";
-    case Kind::EXTERN_C:
+    case Kind::EXT_C:
         return "extern \"C\"";
-    case Kind::EXTERN_SYCL:
+    case Kind::EXT_SYCL:
         return "extern \"SYCL\"";
     default:
         FATAL("Unhandled storage class in lGetStorageClassName");
@@ -3325,11 +3325,11 @@ std::string StorageClass::GetString() const {
 }
 
 bool StorageClass::IsNone() const { return m_kind == Kind::NONE; }
-bool StorageClass::IsExtern() const { return m_kind == Kind::EXTERN; }
+bool StorageClass::IsExtern() const { return m_kind == Kind::EXT; }
 bool StorageClass::IsStatic() const { return m_kind == Kind::STATIC; }
 bool StorageClass::IsTypedef() const { return m_kind == Kind::TYPEDEF; }
-bool StorageClass::IsExternC() const { return m_kind == Kind::EXTERN_C; }
-bool StorageClass::IsExternSYCL() const { return m_kind == Kind::EXTERN_SYCL; }
+bool StorageClass::IsExternC() const { return m_kind == Kind::EXT_C; }
+bool StorageClass::IsExternSYCL() const { return m_kind == Kind::EXT_SYCL; }
 bool StorageClass::IsAnyExtern() const { return IsExtern() || IsExternC() || IsExternSYCL(); }
 
 ///////////////////////////////////////////////////////////////////////////

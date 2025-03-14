@@ -105,11 +105,11 @@ class StorageClass {
   public:
     enum class Kind {
         NONE,
-        EXTERN,
-        STATIC,
-        TYPEDEF,
-        EXTERN_C,
-        EXTERN_SYCL,
+        EXT,      // extern
+        STATIC,   // static
+        TYPEDEF,  // typedef
+        EXT_C,    // extern "C"
+        EXT_SYCL, // extern "SYCL"
     };
 
     // The constructor, operators, and constants are required to use
@@ -118,11 +118,11 @@ class StorageClass {
     StorageClass(Kind kind);
     operator Kind() const;
     static constexpr Kind NONE{Kind::NONE};
-    static constexpr Kind EXTERN{Kind::EXTERN};
+    static constexpr Kind EXT{Kind::EXT};
     static constexpr Kind STATIC{Kind::STATIC};
     static constexpr Kind TYPEDEF{Kind::TYPEDEF};
-    static constexpr Kind EXTERN_C{Kind::EXTERN_C};
-    static constexpr Kind EXTERN_SYCL{Kind::EXTERN_SYCL};
+    static constexpr Kind EXT_C{Kind::EXT_C};
+    static constexpr Kind EXT_SYCL{Kind::EXT_SYCL};
 
     std::string GetString() const;
     bool IsNone() const;
