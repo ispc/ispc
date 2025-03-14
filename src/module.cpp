@@ -335,10 +335,13 @@ Module::Module(const char *fn) : srcFile(fn) {
     }
 }
 
-Module::Module(const char *filename, Output &output) : Module(filename) { this->output = output; }
+Module::Module(const char *filename, Output &output, Module::CompilationMode mode) : Module(filename) {
+    this->output = output;
+    this->m_compilationMode = mode;
+}
 
-std::unique_ptr<Module> Module::Create(const char *srcFile, Output &output) {
-    auto ptr = std::make_unique<Module>(srcFile, output);
+std::unique_ptr<Module> Module::Create(const char *srcFile, Output &output, Module::CompilationMode mode) {
+    auto ptr = std::make_unique<Module>(srcFile, output, mode);
 
     // Here, we do not transfer the ownership of the target to the global
     // variable. We just set the observer pointer here.
@@ -3681,6 +3684,7 @@ static bool lCompatibleTypes(llvm::Type *Ty1, llvm::Type *Ty2) {
     return false;
 }
 
+// TODO: comment
 // Grab all of the global value definitions from the module and change them
 // to be declarations; we'll emit a single definition of each global in the
 // final module used with the dispatch functions, so that we don't have
@@ -3726,9 +3730,27 @@ static void lExtractOrCheckGlobals(llvm::Module *msrc, llvm::Module *mdst, bool 
                 newGlobal->setInitializer(llvm::MapValue(iter->getInitializer(), VMap));
                 newGlobal->copyAttributesFrom(gv);
             }
+        }
+    }
+}
+
+using InitializerStorage = std::map<llvm::GlobalVariable *, llvm::Constant *>;
+
+void resetGlobalInitializers(llvm::Module *module, InitializerStorage &initializers) {
+    for (llvm::GlobalVariable &gv : module->globals()) {
+        if (gv.getLinkage() == llvm::GlobalVariable::ExternalLinkage && gv.hasInitializer()) {
+            initializers[&gv] = gv.getInitializer();
+            gv.setInitializer(nullptr);
+        }
+    }
+}
+
+void restoreGlobalInitializers(llvm::Module *module, InitializerStorage &initializers) {
+    for (llvm::GlobalVariable &gv : module->globals()) {
+        if (gv.getLinkage() == llvm::GlobalVariable::ExternalLinkage && initializers.count(&gv)) {
             // Turn this into an 'extern' declaration by clearing its
             // initializer.
-            gv->setInitializer(nullptr);
+            gv.setInitializer(initializers[&gv]);
         }
     }
 }
@@ -3786,15 +3808,21 @@ int Module::CompileSingleTarget(Arch arch, const char *cpu, ISPCTarget target) {
             return 1;
         }
 
+        // TODO: comment
+        InitializerStorage initializers;
+        if (m_compilationMode == CompilationMode::Multiple) {
+            resetGlobalInitializers(module, initializers);
+        }
         if (WriteOutputFiles()) {
             return 1;
         }
+        if (m_compilationMode == CompilationMode::Multiple) {
+            restoreGlobalInitializers(module, initializers);
+        }
     } else {
         ++errorCount;
-    }
 
-    // In case of error, clean up symbolTable
-    if (errorCount) {
+        // In case of error, clean up symbolTable
         symbolTable->PopInnerScopes();
     }
 
@@ -4033,7 +4061,7 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         // Output and header names are set for each target with the target's suffix.
         Output targetOutputs = lCreateTargetOutputs(output, targets[i]);
 
-        auto modulePtr = Module::Create(srcFile, targetOutputs);
+        auto modulePtr = Module::Create(srcFile, targetOutputs, CompilationMode::Multiple);
 
         // Transfer the ownership of the module to the vector, i.e., the
         // lifetime of the module objects is tied to the function scope.

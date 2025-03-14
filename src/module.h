@@ -227,10 +227,13 @@ class Module {
         std::string HeaderFileNameTarget(Target *target) const;
     };
 
-    // TODO: comment
-    Module(const char *filename, Output &output);
+    enum class CompilationMode { Single, Multiple };
 
-    static std::unique_ptr<Module> Create(const char *srcFile, Output &output);
+    // TODO: comment
+    Module(const char *filename, Output &output, CompilationMode mode);
+
+    static std::unique_ptr<Module> Create(const char *srcFile, Output &output,
+                                          CompilationMode mode = CompilationMode::Single);
 
     /** Compile the given source file, generating assembly, object file, or
         LLVM bitcode output, as well as (optionally) a header file with
@@ -291,7 +294,8 @@ class Module {
     const char *srcFile{nullptr};
     AST *ast{nullptr};
 
-    Output output;
+    Output output{};
+    CompilationMode m_compilationMode{};
 
     // Definition and member object capturing preprocessing stream during Module lifetime.
     struct CPPBuffer {
