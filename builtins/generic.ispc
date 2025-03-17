@@ -714,6 +714,18 @@ template <typename T> uniform bool __reduce_equal(varying T x, uniform T *unifor
     }
     return res;
 }
+UNMANGLED CDECL uniform bool __reduce_equal_int8(varying int8 val, uniform int8 *uniform ret) {
+    return __reduce_equal<int8>(val, ret);
+}
+UNMANGLED CDECL uniform bool __reduce_equal_uint8(varying uint8 val, uniform uint8 *uniform ret) {
+    return __reduce_equal<uint8>(val, ret);
+}
+UNMANGLED CDECL uniform bool __reduce_equal_int16(varying int16 val, uniform int16 *uniform ret) {
+    return __reduce_equal<int16>(val, ret);
+}
+UNMANGLED CDECL uniform bool __reduce_equal_uint16(varying uint16 val, uniform uint16 *uniform ret) {
+    return __reduce_equal<uint16>(val, ret);
+}
 UNMANGLED CDECL uniform bool __reduce_equal_int32(varying int32 val, uniform int32 *uniform ret) {
     return __reduce_equal<int32>(val, ret);
 }
