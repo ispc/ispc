@@ -1290,6 +1290,18 @@ REDUCE_EQUAL(double, double, IntMaskType)
 
 static float16 exclusive_scan_add(float16 v) { return __exclusive_scan_add_half(v, __mask); }
 
+static int8 exclusive_scan_add(int8 v) { return __exclusive_scan_add_i8(v, (IntMaskType)__mask); }
+
+static unsigned int8 exclusive_scan_add(unsigned int8 v) {
+    return __exclusive_scan_add_i8((int8)v, (IntMaskType)__mask);
+}
+
+static int16 exclusive_scan_add(int16 v) { return __exclusive_scan_add_i16(v, (IntMaskType)__mask); }
+
+static unsigned int16 exclusive_scan_add(unsigned int16 v) {
+    return __exclusive_scan_add_i16((int16)v, (IntMaskType)__mask);
+}
+
 static int32 exclusive_scan_add(int32 v) { return __exclusive_scan_add_i32(v, (IntMaskType)__mask); }
 
 static unsigned int32 exclusive_scan_add(unsigned int32 v) {
@@ -1304,6 +1316,14 @@ static unsigned int64 exclusive_scan_add(unsigned int64 v) { return __exclusive_
 
 static double exclusive_scan_add(double v) { return __exclusive_scan_add_double(v, __mask); }
 
+static int8 exclusive_scan_and(int8 v) { return __exclusive_scan_and_i8(v, (IntMaskType)__mask); }
+
+static unsigned int8 exclusive_scan_and(unsigned int8 v) { return __exclusive_scan_and_i8(v, (UIntMaskType)__mask); }
+
+static int16 exclusive_scan_and(int16 v) { return __exclusive_scan_and_i16(v, (IntMaskType)__mask); }
+
+static unsigned int16 exclusive_scan_and(unsigned int16 v) { return __exclusive_scan_and_i16(v, (UIntMaskType)__mask); }
+
 static int32 exclusive_scan_and(int32 v) { return __exclusive_scan_and_i32(v, (IntMaskType)__mask); }
 
 static unsigned int32 exclusive_scan_and(unsigned int32 v) { return __exclusive_scan_and_i32(v, (UIntMaskType)__mask); }
@@ -1311,6 +1331,14 @@ static unsigned int32 exclusive_scan_and(unsigned int32 v) { return __exclusive_
 static int64 exclusive_scan_and(int64 v) { return __exclusive_scan_and_i64(v, (IntMaskType)__mask); }
 
 static unsigned int64 exclusive_scan_and(unsigned int64 v) { return __exclusive_scan_and_i64(v, (UIntMaskType)__mask); }
+
+static int8 exclusive_scan_or(int8 v) { return __exclusive_scan_or_i8(v, (IntMaskType)__mask); }
+
+static unsigned int8 exclusive_scan_or(unsigned int8 v) { return __exclusive_scan_or_i8(v, (UIntMaskType)__mask); }
+
+static int16 exclusive_scan_or(int16 v) { return __exclusive_scan_or_i16(v, (IntMaskType)__mask); }
+
+static unsigned int16 exclusive_scan_or(unsigned int16 v) { return __exclusive_scan_or_i16(v, (UIntMaskType)__mask); }
 
 static int32 exclusive_scan_or(int32 v) { return __exclusive_scan_or_i32(v, (IntMaskType)__mask); }
 

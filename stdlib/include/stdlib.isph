@@ -313,16 +313,28 @@ REDUCE_EQUAL_DECL(double, double, UIntMaskType)
 #undef REDUCE_EQUAL_DECL
 
 inline float16 exclusive_scan_add(float16 v);
+inline int8 exclusive_scan_add(int8 v);
+inline unsigned int8 exclusive_scan_add(unsigned int8 v);
+inline int16 exclusive_scan_add(int16 v);
+inline unsigned int16 exclusive_scan_add(unsigned int16 v);
 inline int32 exclusive_scan_add(int32 v);
 inline unsigned int32 exclusive_scan_add(unsigned int32 v);
 inline float exclusive_scan_add(float v);
 inline int64 exclusive_scan_add(int64 v);
 inline unsigned int64 exclusive_scan_add(unsigned int64 v);
 inline double exclusive_scan_add(double v);
+inline int8 exclusive_scan_and(int8 v);
+inline unsigned int8 exclusive_scan_and(unsigned int8 v);
+inline int16 exclusive_scan_and(int16 v);
+inline unsigned int16 exclusive_scan_and(unsigned int16 v);
 inline int32 exclusive_scan_and(int32 v);
 inline unsigned int32 exclusive_scan_and(unsigned int32 v);
 inline int64 exclusive_scan_and(int64 v);
 inline unsigned int64 exclusive_scan_and(unsigned int64 v);
+inline int8 exclusive_scan_or(int8 v);
+inline unsigned int8 exclusive_scan_or(unsigned int8 v);
+inline int16 exclusive_scan_or(int16 v);
+inline unsigned int16 exclusive_scan_or(unsigned int16 v);
 inline int32 exclusive_scan_or(int32 v);
 inline unsigned int32 exclusive_scan_or(unsigned int32 v);
 inline int64 exclusive_scan_or(int64 v);
