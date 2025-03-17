@@ -290,10 +290,16 @@ EXT uniform int64 __clock();
 EXT inline varying double __exclusive_scan_add_double(varying double, UIntMaskType);
 EXT inline varying float __exclusive_scan_add_float(varying float, UIntMaskType);
 EXT inline varying float16 __exclusive_scan_add_half(varying float16, UIntMaskType);
+EXT inline varying int8 __exclusive_scan_add_i8(varying int8, UIntMaskType);
+EXT inline varying int16 __exclusive_scan_add_i16(varying int16, UIntMaskType);
 EXT inline varying int32 __exclusive_scan_add_i32(varying int32, UIntMaskType);
 EXT inline varying int64 __exclusive_scan_add_i64(varying int64, UIntMaskType);
+EXT inline varying int8 __exclusive_scan_and_i8(varying int8, UIntMaskType);
+EXT inline varying int16 __exclusive_scan_and_i16(varying int16, UIntMaskType);
 EXT inline varying int32 __exclusive_scan_and_i32(varying int32, UIntMaskType);
 EXT inline varying int64 __exclusive_scan_and_i64(varying int64, UIntMaskType);
+EXT inline varying int8 __exclusive_scan_or_i8(varying int8, UIntMaskType);
+EXT inline varying int16 __exclusive_scan_or_i16(varying int16, UIntMaskType);
 EXT inline varying int32 __exclusive_scan_or_i32(varying int32, UIntMaskType);
 EXT inline varying int64 __exclusive_scan_or_i64(varying int64, UIntMaskType);
 
