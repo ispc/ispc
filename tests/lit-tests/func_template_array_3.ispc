@@ -8,10 +8,10 @@
 // CHECK: ReturnStmt
 // CHECK: IndexExpr
 // CHECK: SymbolExpr {{.*}} [varying int32[64]] symbol name: arr
-// CHECK: ConstExpr {{.*}} [const uniform int64] (0)
+// CHECK: ConstExpr {{.*}} [const uniform unsigned int64] (0)
 // CHECK: IndexExpr
 // CHECK: SymbolExpr {{.*}} [varying int32[64]] symbol name: arr
-// CHECK: ConstExpr {{.*}} [const uniform int64] (3)
+// CHECK: ConstExpr {{.*}} [const uniform unsigned int64] (3)
 
 enum Foo {
     ZERO,
