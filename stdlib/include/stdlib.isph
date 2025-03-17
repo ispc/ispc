@@ -299,6 +299,10 @@ __declspec(safe) inline uniform unsigned int64 reduce_max(unsigned int64 v);
     __declspec(safe) inline uniform bool reduce_equal(TYPE v, uniform TYPE *uniform value);
 
 REDUCE_EQUAL_DECL(float16, half, UIntMaskType)
+REDUCE_EQUAL_DECL(int8, int8, UIntMaskType)
+REDUCE_EQUAL_DECL(unsigned int8, int8, UUIntMaskType)
+REDUCE_EQUAL_DECL(int16, int16, UIntMaskType)
+REDUCE_EQUAL_DECL(unsigned int16, int16, UUIntMaskType)
 REDUCE_EQUAL_DECL(int32, int32, UIntMaskType)
 REDUCE_EQUAL_DECL(unsigned int32, int32, UUIntMaskType)
 REDUCE_EQUAL_DECL(float, float, UIntMaskType)
