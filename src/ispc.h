@@ -146,6 +146,13 @@ enum class AddressSpace {
     ispc_generic,  // 4
 };
 
+namespace dispatch {
+// This would create an unnecessary unused copies of functions defined in isa.h
+// in each translation unit that includes the current header (ispc.h). However,
+// all unused ones will be removed by the compiler, because they are static.
+#include "isa.h"
+} // namespace dispatch
+
 /** @brief Representation of a range of positions in a source file.
 
     This class represents a range of characters in a source file
@@ -227,19 +234,21 @@ class Target {
         also that __best_available_isa() needs to be updated if ISAs are
         added or the enumerant values are reordered.  */
     enum ISA {
-        SSE2 = 0,
-        SSE41 = 1,
-        SSE42 = 2,
-        AVX = 3,
-        // Not supported anymore. Use either AVX or AVX2.
-        // AVX11 = 4,
-        AVX2 = 4,
-        AVX2VNNI = 5,
-        // 6 was previously used for KNL_AVX512
-        SKX_AVX512 = 7,
-        ICL_AVX512 = 8,
-        SPR_AVX512 = 9,
-        AVX10_2_512 = 10,
+        INVALID = dispatch::ISA::INVALID,
+        SSE2 = dispatch::ISA::SSE2,
+        SSE41 = dispatch::ISA::SSE41,
+        SSE42 = dispatch::ISA::SSE42,
+        AVX = dispatch::ISA::AVX,
+        // AVX11 is not supported anymore. Use either AVX or AVX2.
+        AVX11 = dispatch::ISA::AVX11,
+        AVX2 = dispatch::ISA::AVX2,
+        AVX2VNNI = dispatch::ISA::AVX2VNNI,
+        // KNL is not supported anymore.
+        KNL_AVX512 = dispatch::ISA::KNL_AVX512,
+        SKX_AVX512 = dispatch::ISA::SKX_AVX512,
+        ICL_AVX512 = dispatch::ISA::ICL_AVX512,
+        SPR_AVX512 = dispatch::ISA::SPR_AVX512,
+        AVX10_2_512 = dispatch::ISA::AVX10_2_512,
 #ifdef ISPC_ARM_ENABLED
         NEON,
 #endif
