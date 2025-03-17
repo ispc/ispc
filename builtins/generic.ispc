@@ -893,6 +893,8 @@ template <typename T> unmasked varying T __exclusive_scan_add(varying T v, UIntM
 EXT double __exclusive_scan_add_double(double v, UIntMaskType mask) { return __exclusive_scan_add<double>(v, mask); }
 EXT float __exclusive_scan_add_float(float v, UIntMaskType mask) { return __exclusive_scan_add<float>(v, mask); }
 EXT float16 __exclusive_scan_add_half(float16 v, UIntMaskType mask) { return __exclusive_scan_add<float16>(v, mask); }
+EXT int8 __exclusive_scan_add_i8(int8 v, UIntMaskType mask) { return __exclusive_scan_add<int8>(v, mask); }
+EXT int16 __exclusive_scan_add_i16(int16 v, UIntMaskType mask) { return __exclusive_scan_add<int16>(v, mask); }
 EXT int32 __exclusive_scan_add_i32(int32 v, UIntMaskType mask) { return __exclusive_scan_add<int32>(v, mask); }
 EXT int64 __exclusive_scan_add_i64(int64 v, UIntMaskType mask) { return __exclusive_scan_add<int64>(v, mask); }
 template <typename T> unmasked varying T __exclusive_scan_and(varying T v, UIntMaskType mask) {
@@ -903,6 +905,8 @@ template <typename T> unmasked varying T __exclusive_scan_and(varying T v, UIntM
     }
     return res;
 }
+EXT int8 __exclusive_scan_and_i8(int8 v, UIntMaskType mask) { return __exclusive_scan_and<int8>(v, mask); }
+EXT int16 __exclusive_scan_and_i16(int16 v, UIntMaskType mask) { return __exclusive_scan_and<int16>(v, mask); }
 EXT int32 __exclusive_scan_and_i32(int32 v, UIntMaskType mask) { return __exclusive_scan_and<int32>(v, mask); }
 EXT int64 __exclusive_scan_and_i64(int64 v, UIntMaskType mask) { return __exclusive_scan_and<int64>(v, mask); }
 template <typename T> unmasked varying T __exclusive_scan_or(varying T v, UIntMaskType mask) {
@@ -913,6 +917,8 @@ template <typename T> unmasked varying T __exclusive_scan_or(varying T v, UIntMa
     }
     return res;
 }
+EXT int8 __exclusive_scan_or_i8(int8 v, UIntMaskType mask) { return __exclusive_scan_or<int8>(v, mask); }
+EXT int16 __exclusive_scan_or_i16(int16 v, UIntMaskType mask) { return __exclusive_scan_or<int16>(v, mask); }
 EXT int32 __exclusive_scan_or_i32(int32 v, UIntMaskType mask) { return __exclusive_scan_or<int32>(v, mask); }
 EXT int64 __exclusive_scan_or_i64(int64 v, UIntMaskType mask) { return __exclusive_scan_or<int64>(v, mask); }
 

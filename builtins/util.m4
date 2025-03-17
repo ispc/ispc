@@ -6816,13 +6816,19 @@ define <$1 x $2> @__exclusive_scan_$6(<$1 x $2> %v,
 define(`scans', `
 exclusive_scan(WIDTH, half, 16, fadd, zeroinitializer, add_half)
 exclusive_scan(WIDTH, i32, 32, add, 0, add_i32)
+exclusive_scan(WIDTH, i8, 8, add, 0, add_i8)
+exclusive_scan(WIDTH, i16, 16, add, 0, add_i16)
 exclusive_scan(WIDTH, float, 32, fadd, zeroinitializer, add_float)
 exclusive_scan(WIDTH, i64, 64, add, 0, add_i64)
 exclusive_scan(WIDTH, double, 64, fadd, zeroinitializer, add_double)
 
+exclusive_scan(WIDTH, i8, 8, and, -1, and_i8)
+exclusive_scan(WIDTH, i16, 16, and, -1, and_i16)
 exclusive_scan(WIDTH, i32, 32, and, -1, and_i32)
 exclusive_scan(WIDTH, i64, 64, and, -1, and_i64)
 
+exclusive_scan(WIDTH, i8, 8, or, 0, or_i8)
+exclusive_scan(WIDTH, i16, 16, or, 0, or_i16)
 exclusive_scan(WIDTH, i32, 32, or, 0, or_i32)
 exclusive_scan(WIDTH, i64, 64, or, 0, or_i64)
 ')
