@@ -5303,6 +5303,10 @@ across all of the currently-executing program instances.
 
 ::
 
+    uniform int8 reduce_min(int8 a)
+    uniform unsigned int8 reduce_min(unsigned int8 a)
+    uniform int16 reduce_min(int16 a)
+    uniform unsigned int16 reduce_min(unsigned int16 a)
     uniform int32 reduce_min(int32 a)
     uniform unsigned int32 reduce_min(unsigned int32 a)
     uniform int64 reduce_min(int64 a)
@@ -5317,6 +5321,10 @@ varying variable over the active program instances.
 
 ::
 
+    uniform int8 reduce_max(int8 a)
+    uniform unsigned int8 reduce_max(unsigned int8 a)
+    uniform int16 reduce_max(int16 a)
+    uniform unsigned int16 reduce_max(unsigned int16 a)
     uniform int32 reduce_max(int32 a)
     uniform unsigned int32 reduce_max(unsigned int32 a)
     uniform int64 reduce_max(int64 a)
@@ -5331,6 +5339,10 @@ all of the currently-running program instances:
 
 ::
 
+    uniform bool reduce_equal(int8 v)
+    uniform bool reduce_equal(unsigned int8 v)
+    uniform bool reduce_equal(int16 v)
+    uniform bool reduce_equal(unsigned int16 v)
     uniform bool reduce_equal(int32 v)
     uniform bool reduce_equal(unsigned int32 v)
     uniform bool reduce_equal(int64 v)
@@ -5349,6 +5361,12 @@ performance in the `Performance Guide`_.
 
 ::
 
+    uniform bool reduce_equal(int8 v, uniform int8 * uniform sameval)
+    uniform bool reduce_equal(unsigned int8 v,
+                              uniform unsigned int8 * uniform sameval)
+    uniform bool reduce_equal(int16 v, uniform int16 * uniform sameval)
+    uniform bool reduce_equal(unsigned int16 v,
+                              uniform unsigned int16 * uniform sameval)
     uniform bool reduce_equal(int32 v, uniform int32 * uniform sameval)
     uniform bool reduce_equal(unsigned int32 v,
                               uniform unsigned int32 * uniform sameval)
