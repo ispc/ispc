@@ -6758,6 +6758,8 @@ not_all_equal:
 
 define(`reduce_equal', `
 reduce_equal_aux($1, half, half, i16, fcmp, 16, oeq)
+reduce_equal_aux($1, i8, int8, i8, icmp, 8, eq)
+reduce_equal_aux($1, i16, int16, i16, icmp, 16, eq)
 reduce_equal_aux($1, i32, int32, i32, icmp, 32, eq)
 reduce_equal_aux($1, float, float, i32, fcmp, 32, oeq)
 reduce_equal_aux($1, i64, int64, i64, icmp, 64, eq)

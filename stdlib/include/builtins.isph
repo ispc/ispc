@@ -459,6 +459,8 @@ EXT inline READNONE uniform int16 __reduce_add_int8(varying int8);
 EXT inline uniform bool __reduce_equal_double(varying double, uniform int8 *uniform, UIntMaskType);
 EXT inline uniform bool __reduce_equal_float(varying float, uniform int8 *uniform, UIntMaskType);
 EXT inline uniform bool __reduce_equal_half(varying float16, uniform int8 *uniform, UIntMaskType);
+EXT inline uniform bool __reduce_equal_int8(varying int8, uniform int8 *uniform, UIntMaskType);
+EXT inline uniform bool __reduce_equal_int16(varying int16, uniform int8 *uniform, UIntMaskType);
 EXT inline uniform bool __reduce_equal_int32(varying int32, uniform int8 *uniform, UIntMaskType);
 EXT inline uniform bool __reduce_equal_int64(varying int64, uniform int8 *uniform, UIntMaskType);
 EXT inline READNONE uniform double __reduce_max_double(varying double);
