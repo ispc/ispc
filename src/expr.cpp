@@ -457,6 +457,11 @@ static bool lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr, b
             // the case of different element counts should have returned
             // successfully earlier, yes??
             AssertPos(pos, toArrayType->GetElementCount() != fromArrayType->GetElementCount());
+            if (toArrayType->IsUnsized() && !failureOk) {
+                Error(pos, "Array type \"%s\" can't be converted to unsized array \"%s\" for %s.",
+                      fromType->GetString().c_str(), toType->GetString().c_str(), errorMsgBase);
+                return false;
+            }
             return lTypeCastOk(expr, toType, pos);
         } else if (Type::Equal(toArrayType->GetElementType(), fromArrayType->GetElementType()->GetAsConstType())) {
             // T[x] -> const T[x]
@@ -8796,7 +8801,7 @@ llvm::Value *SymbolExpr::GetValue(FunctionEmitContext *ctx) const {
 }
 
 llvm::Value *SymbolExpr::GetLValue(FunctionEmitContext *ctx) const {
-    if (symbol == nullptr) {
+    if (symbol == nullptr || symbol->storageInfo == nullptr) {
         return nullptr;
     }
     ctx->SetDebugPos(pos);
