@@ -1047,15 +1047,13 @@ __declspec(safe) static inline uniform int16 reduce_add(int8 x) { return __reduc
 __declspec(safe) static inline uniform int8 reduce_min(int8 v) {
     // Set values for non-running lanes to the maximum int8 value so
     // they don't affect the result.
-    int8 int8_max = 0x7F;
-    return __reduce_min_int8(__mask ? v : int8_max);
+    return __reduce_min_int8(__mask ? v : INT8_MAX);
 }
 
 __declspec(safe) static inline uniform int8 reduce_max(int8 v) {
     // Set values for non-running lanes to the minimum int8 value so
     // they don't affect the result.
-    int8 int8_min = 0x80;
-    return __reduce_max_int8(__mask ? v : int8_min);
+    return __reduce_max_int8(__mask ? v : INT8_MIN);
 }
 
 __declspec(safe) static inline uniform unsigned int16 reduce_add(unsigned int8 x) {
@@ -1065,8 +1063,7 @@ __declspec(safe) static inline uniform unsigned int16 reduce_add(unsigned int8 x
 __declspec(safe) static inline uniform unsigned int8 reduce_min(unsigned int8 v) {
     // Set values for non-running lanes to the maximum uint8 value so
     // they don't affect the result.
-    unsigned int8 uint8_max = 0xFF;
-    return __reduce_min_uint8(__mask ? v : uint8_max);
+    return __reduce_min_uint8(__mask ? v : UINT8_MAX);
 }
 
 __declspec(safe) static inline uniform unsigned int8 reduce_max(unsigned int8 v) {
@@ -1080,15 +1077,13 @@ __declspec(safe) static inline uniform int32 reduce_add(int16 x) { return __redu
 __declspec(safe) static inline uniform int16 reduce_min(int16 v) {
     // Set values for non-running lanes to the maximum int8 value so
     // they don't affect the result.
-    int16 int16_max = 0x7FFF;
-    return __reduce_min_int16(__mask ? v : int16_max);
+    return __reduce_min_int16(__mask ? v : INT16_MAX);
 }
 
 __declspec(safe) static inline uniform int16 reduce_max(int16 v) {
     // Set values for non-running lanes to the minimum int8 value so
     // they don't affect the result.
-    int16 int16_min = 0x8000;
-    return __reduce_max_int16(__mask ? v : int16_min);
+    return __reduce_max_int16(__mask ? v : INT16_MIN);
 }
 
 __declspec(safe) static inline uniform unsigned int32 reduce_add(unsigned int16 x) {
@@ -1098,8 +1093,7 @@ __declspec(safe) static inline uniform unsigned int32 reduce_add(unsigned int16 
 __declspec(safe) static inline uniform unsigned int16 reduce_min(unsigned int16 v) {
     // Set values for non-running lanes to the maximum uint8 value so
     // they don't affect the result.
-    unsigned int16 uint16_max = 0xFFFF;
-    return __reduce_min_uint16(__mask ? v : uint16_max);
+    return __reduce_min_uint16(__mask ? v : UINT16_MAX);
 }
 
 __declspec(safe) static inline uniform unsigned int16 reduce_max(unsigned int16 v) {
@@ -1174,15 +1168,13 @@ __declspec(safe) static inline uniform int64 reduce_add(int32 x) {
 __declspec(safe) static inline uniform int reduce_min(int v) {
     // Set values for non-running lanes to the maximum integer value so
     // they don't affect the result.
-    int int_max = 0x7fffffff;
-    return __reduce_min_int32(__mask ? v : int_max);
+    return __reduce_min_int32(__mask ? v : INT32_MAX);
 }
 
 __declspec(safe) static inline uniform int reduce_max(int v) {
     // Set values for non-running lanes to the minimum integer value so
     // they don't affect the result.
-    int int_min = 0x80000000;
-    return __reduce_max_int32(__mask ? v : int_min);
+    return __reduce_max_int32(__mask ? v : INT32_MIN);
 }
 
 __declspec(safe) static inline uniform unsigned int64 reduce_add(unsigned int32 x) {
@@ -1194,8 +1186,7 @@ __declspec(safe) static inline uniform unsigned int64 reduce_add(unsigned int32 
 __declspec(safe) static inline uniform unsigned int reduce_min(unsigned int v) {
     // Set values for non-running lanes to the maximum unsigned integer
     // value so they don't affect the result.
-    unsigned int uint_max = 0xffffffff;
-    return __reduce_min_uint32(__mask ? v : uint_max);
+    return __reduce_min_uint32(__mask ? v : UINT32_MAX);
 }
 
 __declspec(safe) static inline uniform unsigned int reduce_max(unsigned int v) {
@@ -1237,15 +1228,13 @@ __declspec(safe) static inline uniform int64 reduce_add(int64 x) {
 __declspec(safe) static inline uniform int64 reduce_min(int64 v) {
     // Set values for non-running lanes to the maximum integer value so
     // they don't affect the result.
-    int64 int_max = 0x7fffffffffffffff;
-    return __reduce_min_int64(__mask ? v : int_max);
+    return __reduce_min_int64(__mask ? v : INT64_MAX);
 }
 
 __declspec(safe) static inline uniform int64 reduce_max(int64 v) {
     // Set values for non-running lanes to the minimum integer value so
     // they don't affect the result.
-    int64 int_min = 0x8000000000000000;
-    return __reduce_max_int64(__mask ? v : int_min);
+    return __reduce_max_int64(__mask ? v : INT64_MIN);
 }
 
 __declspec(safe) static inline uniform unsigned int64 reduce_add(unsigned int64 x) {
@@ -1257,8 +1246,7 @@ __declspec(safe) static inline uniform unsigned int64 reduce_add(unsigned int64 
 __declspec(safe) static inline uniform unsigned int64 reduce_min(unsigned int64 v) {
     // Set values for non-running lanes to the maximum unsigned integer
     // value so they don't affect the result.
-    unsigned int64 uint_max = 0xffffffffffffffff;
-    return __reduce_min_uint64(__mask ? v : uint_max);
+    return __reduce_min_uint64(__mask ? v : UINT64_MAX);
 }
 
 __declspec(safe) static inline uniform unsigned int64 reduce_max(unsigned int64 v) {
