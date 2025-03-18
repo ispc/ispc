@@ -1026,6 +1026,24 @@ assignment_expression
       { $$ = new AssignExpr(AssignExpr::XorAssign, $1, $3, Union(@1, @3)); }
     | unary_expression TOKEN_OR_ASSIGN assignment_expression
       { $$ = new AssignExpr(AssignExpr::OrAssign, $1, $3, Union(@1, @3)); }
+    | template_identifier {
+        // It looks like the proper place is under primary_expression, but
+        // there are shift/reduce conflicts there. So, we handle it here.
+        const std::string name = $1;
+        std::vector<Symbol *> funcs;
+        m->symbolTable->LookupFunction(name.c_str(), &funcs);
+        std::vector<TemplateSymbol *> funcTempls;
+        m->symbolTable->LookupFunctionTemplate(name, &funcTempls);
+        if (funcs.size() > 0 || funcTempls.size() > 0) {
+            $$ = new FunctionSymbolExpr(name.c_str(), funcs, funcTempls, TemplateArgs(), @1);
+        } else {
+            Error(@1, "No matching functions were declared.");
+            $$ = nullptr;
+        }
+
+        // deallocate template identifier str
+        free((void*)$1);
+      }
     ;
 
 expression
