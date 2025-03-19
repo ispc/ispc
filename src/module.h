@@ -330,7 +330,7 @@ class Module {
         @return             Number of errors encountered when compiling
                             srcFile.
      */
-    static int CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
+    static int CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> &targets,
                                 Output &output);
 
     static int LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputType, std::string outFileName);
@@ -401,7 +401,7 @@ class Module {
      *
      * @return The number of errors encountered during compilation
      */
-    static int CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
+    static int CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> &targets,
                                       Output &output);
 
     /**
@@ -415,7 +415,7 @@ class Module {
      *
      * @return The number of errors encountered during dispatch generation
      */
-    static int GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> targets,
+    static int GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> &targets,
                                 std::vector<std::unique_ptr<Module>> &modules,
                                 std::vector<std::unique_ptr<Target>> &targetsPtrs, Output &output);
 
