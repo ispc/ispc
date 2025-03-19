@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2024, Intel Corporation
+;;  Copyright (c) 2010-2025, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -10,7 +10,6 @@ define(`MASK',`i32')
 include(`util.m4')
 
 stdlib_core()
-packed_load_and_store(FALSE)
 scans()
 int64minmax()
 

@@ -1,10 +1,11 @@
-;;  Copyright (c) 2010-2024, Intel Corporation
+;;  Copyright (c) 2010-2025, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
 define(`ISA',`AVX1')
 
 include(`target-avx-common-8.ll')
+packed_load_and_store(FALSE)
 saturation_arithmetic()
 define_shuffles()
 
