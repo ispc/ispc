@@ -97,6 +97,9 @@ typedef std::pair<Declarator *, TemplateArgs *> SimpleTemplateIDType;
 
 using namespace ispc;
 
+// This macro is defined to be used in printer directives later.
+#define SAFE_ACCESS(ptr, expr) ((ptr) ? (ptr)->expr : "nullptr")
+
 #define UNIMPLEMENTED \
         Error(yylloc, "Unimplemented parser functionality %s:%d", \
         __FILE__, __LINE__);
@@ -315,77 +318,81 @@ struct ForeachDimension {
 // e.g., tests/lit-tests/2599.ispc
 
 // Print semantic values for debugging (under --yydebug)
-%printer { fprintf(yyo, "%s", $$->c_str()); } <stringVal>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, c_str())); } <stringVal>
 %printer { fprintf(yyo, "%s", $$); } <constCharPtr>
 %printer { fprintf(yyo, "%" PRIu64, $$); } <intVal>
-%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <expr>
-%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <exprList>
-%printer { fprintf(yyo, "%s", $$ ? $$->GetString().c_str() : "nullptr"); } <stmt>
-%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <declaration>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <expr>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <exprList>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <stmt>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <declaration>
 %printer {
   fprintf(yyo, "<");
   for(auto &i : *$$) {
-    fprintf(yyo, "%s:", i->GetString().c_str());
+    fprintf(yyo, "%s:", SAFE_ACCESS(i, GetString().c_str()));
   }
   fprintf(yyo, ">");
 } <declarationList>
-%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <declarator>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <declarator>
 %printer {
   fprintf(yyo, "<");
   for(auto &i : *$$) {
-    fprintf(yyo, "%s,", i->GetString().c_str());
+    fprintf(yyo, "%s,", SAFE_ACCESS(i, GetString().c_str()));
   }
   fprintf(yyo, ">");
 } <declarators>
 %printer {
   fprintf(yyo, "<");
   for(auto &i : *$$) {
-    fprintf(yyo, "%s,", i->GetString().c_str());
+    fprintf(yyo, "%s,", SAFE_ACCESS(i, GetString().c_str()));
   }
   fprintf(yyo, ">");
 } <structDeclaratorList>
-%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <structDeclaration>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <structDeclaration>
 %printer {
   fprintf(yyo, "<");
   for(auto &i : *$$) {
-    fprintf(yyo, "%s,", i->GetString().c_str());
+    fprintf(yyo, "%s,", SAFE_ACCESS(i, GetString().c_str()));
   }
   fprintf(yyo, ">");
 } <structDeclarationList>
 %printer {
   fprintf(yyo, "<");
   for(auto &i : *$$) {
-    fprintf(yyo, "%s,", i->name.c_str());
+    fprintf(yyo, "%s,", SAFE_ACCESS(i, name.c_str()));
   }
   fprintf(yyo, ">");
 } <symbolList>
-%printer { fprintf(yyo, "%s", $$->name.c_str()); } <symbol>
-%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <enumType>
-%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <type>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, name.c_str())); } <symbol>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <enumType>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <type>
 %printer {
   fprintf(yyo, "<");
   for(auto &i : *$$) {
-    fprintf(yyo, "%s,", i.first->GetString().c_str());
+    fprintf(yyo, "%s,", SAFE_ACCESS(i.first, GetString().c_str()));
   }
   fprintf(yyo, ">");
 } <typeList>
-%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <atomicType>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <atomicType>
 %printer { fprintf(yyo, "%s", DeclSpecs::GetTypeQualifiersString($$).c_str()); } <typeQualifier>
-%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <storageClass>
-%printer { fprintf(yyo, "%s:", $$->GetString().c_str()); } <declSpecs>
-%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <attributeList>
-%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <attr>
-%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <attrArg>
-%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <pragmaAttributes>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <storageClass>
+%printer { fprintf(yyo, "%s:", SAFE_ACCESS($$, GetString().c_str())); } <declSpecs>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <attributeList>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <attr>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <attrArg>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <pragmaAttributes>
 %printer { fprintf(yyo, "%s", $$->sym->name.c_str()); } <foreachDimension>
 %printer {
   fprintf(yyo, "<");
   for (auto &i : *$$) {
-    fprintf(yyo, "%s,", i->sym->name.c_str());
+    if (i && i->sym) {
+      fprintf(yyo, "%s,", i->sym->name.c_str());
+    } else {
+      fprintf(yyo, "nullptr");
+    }
   }
   fprintf(yyo, ">");
 } <foreachDimensionList>
-%printer { fprintf(yyo, "%s", $$->first.c_str()); } <declspecPair>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, first.c_str())); } <declspecPair>
 %printer {
   fprintf(yyo, "<");
   for (auto &i : *$$) {
@@ -393,7 +400,7 @@ struct ForeachDimension {
   }
   fprintf(yyo, ">");
 } <declspecList>
-%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <templateArg>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <templateArg>
 %printer {
   fprintf(yyo, "<");
   for (auto &i : *$$) {
@@ -402,23 +409,29 @@ struct ForeachDimension {
   fprintf(yyo, ">");
 } <templateArgs>
 %printer {
-  fprintf(yyo, "%s: ", $$->first->name.c_str());
+  if ($$ && $$->first) {
+    fprintf(yyo, "%s: ", $$->first->name.c_str());
+  }
   fprintf(yyo, "<");
-  for (auto &i : *$$->second) {
-    fprintf(yyo, "%s,", i.GetString().c_str());
+  if ($$ && $$->second) {
+    for (auto &i : *$$->second) {
+      fprintf(yyo, "%s,", i.GetString().c_str());
+    }
   }
   fprintf(yyo, ">");
 } <simpleTemplateID>
-%printer { fprintf(yyo, "%s", $$->GetString().c_str()); } <templateTypeParm>
-%printer { fprintf(yyo, "%s", $$->GetName().c_str()); } <templateParm>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <templateTypeParm>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetName().c_str())); } <templateParm>
 %printer {
   fprintf(yyo, "<");
-  for (size_t i = 0; i < $$->GetCount(); ++i) {
-    fprintf(yyo, "%s,", (*$$)[i]->GetName().c_str());
+  if ($$) {
+    for (size_t i = 0; i < $$->GetCount(); ++i) {
+      fprintf(yyo, "%s,", SAFE_ACCESS((*$$)[i], GetName().c_str()));
+    }
   }
   fprintf(yyo, ">");
 } <templateParmList>
-%printer { fprintf(yyo, "%s", $$->name.c_str()); } <functionTemplateSym>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, name.c_str())); } <functionTemplateSym>
 
 %start translation_unit
 %%
