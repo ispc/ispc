@@ -4030,7 +4030,7 @@ void lResetTargetAndModule(std::vector<std::unique_ptr<Module>> &modules, std::v
  * implementation. The dispatch module also contains single definitions of all global
  * variables to avoid duplicate symbols across target-specific object files.
  */
-int Module::GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> targets,
+int Module::GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> &targets,
                              std::vector<std::unique_ptr<Module>> &modules,
                              std::vector<std::unique_ptr<Target>> &targetsPtrs, Output &output) {
     std::map<std::string, FunctionTargetVariants> exportedFunctions;
@@ -4138,7 +4138,7 @@ static Module::Output lCreateTargetOutputs(Module::Output &output, ISPCTarget ta
 }
 
 // Compiles the given source file for multiple target ISAs and creates a dispatch module.
-int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
+int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> &targets,
                                    Output &output) {
     // The user supplied multiple targets
     Assert(targets.size() > 1);
@@ -4194,7 +4194,7 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
     return GenerateDispatch(srcFile, targets, modules, targetsPtrs, output);
 }
 
-int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> targets,
+int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> &targets,
                              Module::Output &output) {
     if (targets.size() == 0 || targets.size() == 1) {
         // We're only compiling to a single target
