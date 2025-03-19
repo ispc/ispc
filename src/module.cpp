@@ -4003,6 +4003,13 @@ std::pair<Target::ISA, int> lCheckAndFillISAIndices(std::vector<ISPCTarget> targ
     return {Target::ISA::NUM_ISAS, -1};
 }
 
+// Reset the target and module to nullptr.
+// TODO!: ideally, we need to get rid of this global states.
+void lResetTargetAndModule() {
+    m = nullptr;
+    g->target = nullptr;
+}
+
 // Reset the target and module to the given by index values in the given vectors.
 void lResetTargetAndModule(std::vector<std::unique_ptr<Module>> &modules, std::vector<std::unique_ptr<Target>> &targets,
                            int i) {
@@ -4082,8 +4089,7 @@ int Module::GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> target
         }
 
         // Just precausiously reset observers to nullptr to avoid dangling pointers.
-        m = nullptr;
-        g->target = nullptr;
+        lResetTargetAndModule();
     }
 
     // Set the module that corresponds to the common target ISA
@@ -4181,8 +4187,7 @@ int Module::CompileMultipleTargets(const char *srcFile, Arch arch, const char *c
         // keep it around so the llvm::Functions *s stay valid for when
         // we generate the dispatch module's functions...
         // Just precausiously reset observers to nullptr to avoid dangling pointers.
-        m = nullptr;
-        g->target = nullptr;
+        lResetTargetAndModule();
     }
 
     // Generate the dispatch module
