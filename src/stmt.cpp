@@ -2473,7 +2473,7 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
 
 std::string ForeachActiveStmt::GetString() const {
     std::string str = "foreach_active ";
-    if (!sym) {
+    if (sym) {
         str += sym->name;
     } else {
         str += "<NULL>";
