@@ -458,6 +458,10 @@ declare <8 x i8> @llvm.masked.expandload.v8i8(ptr %startptr_typed, <8 x i1> %i1m
 declare <8 x i16> @llvm.masked.expandload.v8i16(ptr %startptr_typed, <8 x i1> %i1mask, <8 x i16> %data)
 declare <8 x i32> @llvm.masked.expandload.v8i32(ptr, <8 x i1>, <8 x i32>)
 declare <8 x i64> @llvm.masked.expandload.v8i64(ptr, <8 x i1>, <8 x i64>)
+declare i8 @llvm.ctpop.i8(i8)
+declare i32 @llvm.x86.bmi.pdep.32(i32, i32)
+declare i32 @llvm.x86.bmi.pext.32(i32, i32)
+declare void @llvm.x86.avx2.maskstore.d.256(ptr, <8 x i32>, <8 x i32>)
 
 ; Function Attrs: alwaysinline nounwind
 define i32 @__packed_load_activei8(ptr %startptr, ptr %val_ptr, <8 x i32> %full_mask) #0 {
@@ -608,41 +612,73 @@ define i32 @__packed_store_activei32(ptr %startptr, <8 x i32> %vals, <8 x i32> %
   ret i32 %ret
 }
 
+; Based on this stack overflow article: https://stackoverflow.com/questions/36932240/avx2-what-is-the-most-efficient-way-to-pack-left-based-on-a-mask
+; unsigned int compress256(__m256i src, __m256i full_mask, int* a) {
+;   __m256i zero_vector = _mm256_setzero_si256();
+;   __m256i cmp_result = _mm256_cmpgt_epi32(full_mask, zero_vector);
+;   unsigned int i1mask = _mm256_movemask_ps(_mm256_castsi256_ps(cmp_result));
+;   uint32_t i32mask = (uint32_t)i1mask;
+;   unsigned int mask_cnt = _mm_popcnt_u32(i32mask);
+;   uint32_t expanded_mask = _pdep_u32(i32mask, 0x011111111);
+;   expanded_mask *= 0xF;
+;   unsigned int compressed_mask = (1u << mask_cnt) - 1;
+;   uint32_t wip_output_mask = _pdep_u32(compressed_mask, 0x11111111);
+;   __m128i temp = _mm_cvtsi32_si128(wip_output_mask);
+;   __m128i mask = _mm_set1_epi8(0x0F);  // Mask to isolate nibbles
+;   __m128i low_nibbles = _mm_and_si128(temp, mask);
+;   __m128i high_nibbles = _mm_and_si128(_mm_srli_epi32(temp, 4), mask);
+;   __m128i result = _mm_unpacklo_epi8(low_nibbles, high_nibbles);
+;   result *= 0x80;
+;   __m256i store_mask = _mm256_cvtepi8_epi32(result);
+;   const uint32_t identity_indices = 0x076543210;
+;   uint32_t wanted_indices = _pext_u32(identity_indices, expanded_mask);
+;   __m128i bytevec  = _mm_cvtsi32_si128(wanted_indices);
+;   low_nibbles      = _mm_and_si128(bytevec, mask);
+;   high_nibbles     = _mm_and_si128(_mm_srli_epi32(bytevec, 4), mask);
+;   bytevec          = _mm_unpacklo_epi8(low_nibbles, high_nibbles);
+;   __m256i shufmask = _mm256_cvtepu8_epi32(bytevec);
+;   src = _mm256_permutevar8x32_epi32(src, shufmask);
+;   _mm256_maskstore_epi32(a, store_mask, src);
+;   return mask_cnt;
+; }
+;
 ; Function Attrs: alwaysinline nounwind
 define i32 @__packed_store_active2i32(ptr %startptr, <8 x i32> %vals, <8 x i32> %full_mask) #0 {
 entry:
-  %startptr_typed = bitcast ptr %startptr to ptr
-  %mask = call i64 @__movmsk(<8 x i32> %full_mask)
-  %mask_known = call i1 @__is_compile_time_constant_mask(<8 x i32> %full_mask)
-  br i1 %mask_known, label %known_mask, label %unknown_mask
-
-known_mask:                                       ; preds = %entry
-  %allon = icmp eq i64 %mask, 255
-  br i1 %allon, label %all_on, label %unknown_mask
-
-all_on:                                           ; preds = %known_mask
-  %vecptr = bitcast ptr %startptr_typed to ptr
-  store <8 x i32> %vals, ptr %vecptr, align 4
-  ret i32 8
-
-unknown_mask:                                     ; preds = %known_mask, %entry
-  br label %loop
-
-loop:                                             ; preds = %loop, %unknown_mask
-  %offset = phi i32 [ 0, %unknown_mask ], [ %ch_offset, %loop ]
-  %i = phi i32 [ 0, %unknown_mask ], [ %ch_i, %loop ]
-  %storeval = extractelement <8 x i32> %vals, i32 %i
-  %offset1 = zext i32 %offset to i64
-  %storeptr = getelementptr i32, ptr %startptr_typed, i64 %offset1
-  store i32 %storeval, ptr %storeptr, align 4
-  %mull_mask = extractelement <8 x i32> %full_mask, i32 %i
-  %ch_offset = sub i32 %offset, %mull_mask
-  %ch_i = add i32 %i, 1
-  %test = icmp ne i32 %ch_i, 8
-  br i1 %test, label %loop, label %done
-
-done:                                             ; preds = %loop
-  ret i32 %ch_offset
+  %cmp.i = icmp ne <8 x i32> %full_mask, zeroinitializer
+  %0 = bitcast <8 x i1> %cmp.i to i8
+  %1 = zext i8 %0 to i32
+  %2 = call i32 @llvm.ctpop.i32(i32 %1)
+  %3 = tail call i32 @llvm.x86.bmi.pdep.32(i32 %1, i32 286331153)
+  %mul = mul i32 %3, 15
+  %notmask = shl nsw i32 -1, %2
+  %sub = xor i32 %notmask, -1
+  %4 = tail call i32 @llvm.x86.bmi.pdep.32(i32 %sub, i32 286331153)
+  %vecinit3.i = insertelement <4 x i32> <i32 poison, i32 0, i32 poison, i32 poison>, i32 %4, i64 0
+  %.scalar = lshr i32 %4, 4
+  %5 = insertelement <4 x i32> <i32 poison, i32 0, i32 poison, i32 poison>, i32 %.scalar, i64 0
+  %6 = bitcast <4 x i32> %vecinit3.i to <16 x i8>
+  %7 = bitcast <4 x i32> %5 to <16 x i8>
+  %8 = shufflevector <16 x i8> %6, <16 x i8> %7, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
+  %9 = bitcast <16 x i8> %8 to <2 x i64>
+  %10 = shl <2 x i64> %9, <i64 7, i64 7>
+  %11 = bitcast <2 x i64> %10 to <16 x i8>
+  %12 = and <16 x i8> %11, <i8 -128, i8 -121, i8 -121, i8 -121, i8 -121, i8 -121, i8 -121, i8 -121, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>
+  %shuffle.i37 = shufflevector <16 x i8> %12, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %conv.i = sext <8 x i8> %shuffle.i37 to <8 x i32>
+  %13 = tail call i32 @llvm.x86.bmi.pext.32(i32 1985229328, i32 %mul)
+  %vecinit3.i36 = insertelement <4 x i32> poison, i32 %13, i64 0
+  %.scalar42 = lshr i32 %13, 4
+  %14 = insertelement <4 x i32> poison, i32 %.scalar42, i64 0
+  %15 = bitcast <4 x i32> %vecinit3.i36 to <16 x i8>
+  %16 = and <16 x i8> %15, <i8 15, i8 15, i8 15, i8 15, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>
+  %17 = bitcast <4 x i32> %14 to <16 x i8>
+  %18 = and <16 x i8> %17, <i8 15, i8 15, i8 15, i8 15, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>
+  %shuffle.i40 = shufflevector <16 x i8> %16, <16 x i8> %18, <8 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19>
+  %conv.i41 = zext <8 x i8> %shuffle.i40 to <8 x i32>
+  %19 = tail call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %vals, <8 x i32> %conv.i41)
+  tail call void @llvm.x86.avx2.maskstore.d.256(ptr %startptr, <8 x i32> %conv.i, <8 x i32> %19)
+  ret i32 %2
 }
 
 ; Function Attrs: alwaysinline nounwind
@@ -794,41 +830,110 @@ define i32 @__packed_store_activei64(ptr %startptr, <8 x i64> %vals, <8 x i32> %
   ret i32 %ret
 }
 
+
+; Based on this stack overflow article: https://stackoverflow.com/questions/36932240/avx2-what-is-the-most-efficient-way-to-pack-left-based-on-a-mask
+; unsigned int compress256x2(__m256i vals_low, __m256i vals_high, __m256i full_mask, int* a){
+;   __m256i zero_vector = _mm256_setzero_si256();
+;   __m256i cmp_result = _mm256_cmpgt_epi32(full_mask, zero_vector);
+;   unsigned int i1mask = _mm256_movemask_ps(_mm256_castsi256_ps(cmp_result));
+;   uint32_t i32mask = (uint32_t)i1mask;
+;   uint32_t expanded_mask = _pdep_u32(i32mask, 0x01010101);
+;   unsigned int mask_cnt = _mm_popcnt_u32(expanded_mask);
+;   expanded_mask *= 0xFF;
+;   unsigned int compressed_mask = (1u << mask_cnt) - 1;
+;   uint32_t wip_output_mask = _pdep_u32(compressed_mask, 0x80808080);
+;   __m128i temp = _mm_cvtsi32_si128(wip_output_mask);
+;   __m128i temp_se = _mm_cvtepi8_epi32(temp);
+;   __m256i store_mask = _mm256_cvtepi32_epi64(temp_se);
+;   const uint32_t identity_indices = 0x076543210;
+;   uint32_t wanted_indices = _pext_u32(identity_indices, expanded_mask);
+;   __m128i mask = _mm_set1_epi8(0x0F);
+;   __m128i bytevec  = _mm_cvtsi32_si128(wanted_indices);
+;   __m128i low_nibbles      = _mm_and_si128(bytevec, mask);
+;   __m128i high_nibbles     = _mm_and_si128(_mm_srli_epi32(bytevec, 4), mask);
+;   bytevec          = _mm_unpacklo_epi8(low_nibbles, high_nibbles);
+;   __m256i shufmask = _mm256_cvtepu8_epi32(bytevec);
+;   vals_low = _mm256_permutevar8x32_epi32(vals_low, shufmask);
+;   _mm256_maskstore_epi32(a, store_mask, vals_low);
+;   a += mask_cnt * 2;
+;   i32mask >>= 4;
+;   expanded_mask = _pdep_u32(i32mask, 0x01010101);
+;   unsigned int mask_cnt2 = _mm_popcnt_u64(expanded_mask);
+;   expanded_mask *= 0xFF;
+;   compressed_mask = (1u << mask_cnt2) - 1;
+;   wip_output_mask = _pdep_u32(compressed_mask, 0x80808080);
+;   temp = _mm_cvtsi32_si128(wip_output_mask);
+;   temp_se = _mm_cvtepi8_epi32(temp);
+;   store_mask = _mm256_cvtepi32_epi64(temp_se);
+;   wanted_indices = _pext_u32(identity_indices, expanded_mask);
+;   bytevec  = _mm_cvtsi32_si128(wanted_indices);
+;   low_nibbles      = _mm_and_si128(bytevec, mask);
+;   high_nibbles     = _mm_and_si128(_mm_srli_epi32(bytevec, 4), mask);
+;   bytevec          = _mm_unpacklo_epi8(low_nibbles, high_nibbles);
+;   shufmask = _mm256_cvtepu8_epi32(bytevec);
+;   vals_high = _mm256_permutevar8x32_epi32(vals_high, shufmask);
+;   _mm256_maskstore_epi32(a, store_mask, vals_high);
+;   return mask_cnt + mask_cnt2;
+; }
+;
 ; Function Attrs: alwaysinline nounwind
 define i32 @__packed_store_active2i64(ptr %startptr, <8 x i64> %vals, <8 x i32> %full_mask) #0 {
 entry:
-  %startptr_typed = bitcast ptr %startptr to ptr
-  %mask = call i64 @__movmsk(<8 x i32> %full_mask)
-  %mask_known = call i1 @__is_compile_time_constant_mask(<8 x i32> %full_mask)
-  br i1 %mask_known, label %known_mask, label %unknown_mask
-
-known_mask:                                       ; preds = %entry
-  %allon = icmp eq i64 %mask, 255
-  br i1 %allon, label %all_on, label %unknown_mask
-
-all_on:                                           ; preds = %known_mask
-  %vecptr = bitcast ptr %startptr_typed to ptr
-  store <8 x i64> %vals, ptr %vecptr, align 4
-  ret i32 8
-
-unknown_mask:                                     ; preds = %known_mask, %entry
-  br label %loop
-
-loop:                                             ; preds = %loop, %unknown_mask
-  %offset = phi i32 [ 0, %unknown_mask ], [ %ch_offset, %loop ]
-  %i = phi i32 [ 0, %unknown_mask ], [ %ch_i, %loop ]
-  %storeval = extractelement <8 x i64> %vals, i32 %i
-  %offset1 = zext i32 %offset to i64
-  %storeptr = getelementptr i64, ptr %startptr_typed, i64 %offset1
-  store i64 %storeval, ptr %storeptr, align 4
-  %mull_mask = extractelement <8 x i32> %full_mask, i32 %i
-  %ch_offset = sub i32 %offset, %mull_mask
-  %ch_i = add i32 %i, 1
-  %test = icmp ne i32 %ch_i, 8
-  br i1 %test, label %loop, label %done
-
-done:                                             ; preds = %loop
-  ret i32 %ch_offset
+  %vals_low = shufflevector <8 x i64> %vals, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %vals_high = shufflevector <8 x i64> %vals, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %cmp.i = icmp ne <8 x i32> %full_mask, zeroinitializer
+  %0 = bitcast <8 x i1> %cmp.i to i8
+  %conv = zext i8 %0 to i32
+  %1 = tail call i32 @llvm.x86.bmi.pdep.32(i32 %conv, i32 16843009)
+  %2 = call i32 @llvm.ctpop.i32(i32 %1)
+  %mul = mul i32 %1, 255
+  %notmask = shl nsw i32 -1, %2
+  %sub = xor i32 %notmask, -1
+  %3 = tail call i32 @llvm.x86.bmi.pdep.32(i32 %sub , i32 -2139062144)
+  %shuffle.i = bitcast i32 %3 to <4 x i8>
+  %conv.i = sext <4 x i8> %shuffle.i to <4 x i64>
+  %4 = tail call i32 @llvm.x86.bmi.pext.32(i32 1985229328, i32 %mul)
+  %vecinit3.i71 = insertelement <4 x i32> poison, i32 %4, i64 0
+  %.scalar = lshr i32 %4, 4
+  %5 = insertelement <4 x i32> poison, i32 %.scalar, i64 0
+  %6 = bitcast <4 x i32> %vecinit3.i71 to <16 x i8>
+  %7 = and <16 x i8> %6, <i8 15, i8 15, i8 15, i8 15, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>
+  %8 = bitcast <4 x i32> %5 to <16 x i8>
+  %9 = and <16 x i8> %8, <i8 15, i8 15, i8 15, i8 15, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>
+  %shuffle.i74 = shufflevector <16 x i8> %7, <16 x i8> %9, <8 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19>
+  %conv.i75 = zext <8 x i8> %shuffle.i74 to <8 x i32>
+  %10 = bitcast <4 x i64> %vals_low to <8 x i32>
+  %11 = tail call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %10, <8 x i32> %conv.i75)
+  %12 = bitcast <4 x i64> %conv.i to <8 x i32>
+  tail call void @llvm.x86.avx2.maskstore.d.256(ptr %startptr, <8 x i32> %12, <8 x i32> %11)
+  %mul15 = shl nuw nsw i32 %2, 1
+  %idx.ext = zext i32 %mul15 to i64
+  %add.ptr = getelementptr inbounds i32, ptr %startptr, i64 %idx.ext
+  %shr = lshr i32 %conv, 4
+  %13 = tail call i32 @llvm.x86.bmi.pdep.32(i32 %shr, i32 16843009)
+  %14 = tail call i32 @llvm.ctpop.i32(i32 %13)
+  %mul20 = mul i32 %13, 255
+  %notmask52 = shl nsw i32 -1, %14
+  %sub22 = xor i32 %notmask52, -1
+  %15 = tail call i32 @llvm.x86.bmi.pdep.32(i32 %sub22, i32 -2139062144)
+  %shuffle.i54 = bitcast i32 %15 to <4 x i8>
+  %conv.i50 = sext <4 x i8> %shuffle.i54 to <4 x i64>
+  %16 = tail call i32 @llvm.x86.bmi.pext.32(i32 1985229328, i32 %mul20)
+  %vecinit3.i80 = insertelement <4 x i32> poison, i32 %16, i64 0
+  %.scalar86 = lshr i32 %16, 4
+  %17 = insertelement <4 x i32> poison, i32 %.scalar86, i64 0
+  %18 = bitcast <4 x i32> %vecinit3.i80 to <16 x i8>
+  %19 = and <16 x i8> %18, <i8 15, i8 15, i8 15, i8 15, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>
+  %20 = bitcast <4 x i32> %17 to <16 x i8>
+  %21 = and <16 x i8> %20, <i8 15, i8 15, i8 15, i8 15, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>
+  %shuffle.i84 = shufflevector <16 x i8> %19, <16 x i8> %21, <8 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19>
+  %conv.i85 = zext <8 x i8> %shuffle.i84 to <8 x i32>
+  %22 = bitcast <4 x i64> %vals_high to <8 x i32>
+  %23 = tail call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %22, <8 x i32> %conv.i85)
+  %24 = bitcast <4 x i64> %conv.i50 to <8 x i32>
+  tail call void @llvm.x86.avx2.maskstore.d.256(ptr %add.ptr, <8 x i32> %24, <8 x i32> %23)
+  %add = add nuw nsw i32 %14, %2
+  ret i32 %add
 }
 
 ; Function Attrs: alwaysinline nounwind
