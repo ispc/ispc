@@ -241,9 +241,9 @@ FunctionEmitContext::FunctionEmitContext(const Function *func, Symbol *funSym, l
 
     // If the function doesn't have __mask in parameters, there is no need to
     // have function mask
-    if (((func->GetType()->isExported || func->GetType()->IsISPCExternal()) &&
+    if (((func->GetType()->IsExported() || func->GetType()->IsISPCExternal()) &&
          (lf->getFunctionType()->getNumParams() == func->GetType()->GetNumParameters())) ||
-        (func->GetType()->isUnmasked) || func->GetType()->isTask) {
+        (func->GetType()->IsUnmasked()) || func->GetType()->IsTask()) {
         functionMaskValue = nullptr;
         fullMaskAddressInfo = nullptr;
     } else {
@@ -343,7 +343,7 @@ FunctionEmitContext::FunctionEmitContext(const Function *func, Symbol *funSym, l
     // If reset of FTZ/DAZ flags is requested and we're inside external function,
     // allocate memory for keeping the old FTZ/DAZ value
     if ((g->opt.resetFTZ_DAZ) &&
-        (func->GetType()->isExported || func->GetType()->isExternC || func->GetType()->isExternSYCL ||
+        (func->GetType()->IsExported() || func->GetType()->IsExternC() || func->GetType()->IsExternSYCL() ||
          func->GetType()->IsISPCKernel()) &&
         // The condition below checks that the function doesn't have additional `__mask` parameter.
         // If it has `__mask`, it's an internal version of export function and we don't need to set
@@ -2306,8 +2306,9 @@ llvm::Value *FunctionEmitContext::AddElementOffset(AddressInfo *fullBasePtrInfo,
         AssertPos(currentPos, ptrType != nullptr);
         const CollectionType *ct = CastType<CollectionType>(ptrType->GetBaseType());
         AssertPos(currentPos, ct != nullptr);
-        *resultPtrType = new PointerType(ct->GetElementType(elementNum), ptrType->GetVariability(),
-                                         ptrType->IsConstType(), ptrType->IsSlice());
+        PointerType::Property prop = ptrType->IsSlice() ? PointerType::SLICE : PointerType::NONE;
+        *resultPtrType =
+            new PointerType(ct->GetElementType(elementNum), ptrType->GetVariability(), ptrType->IsConstType(), prop);
     }
 
     llvm::Value *resultPtr = nullptr;
@@ -3444,13 +3445,13 @@ static unsigned int lCalleeArgCount(llvm::Value *callee, const FunctionType *fun
         // Uniform or varying function pointer must have funcType != nullptr
         Assert(funcType != nullptr);
         // These calls are always unmasked, others have mask
-        if (funcType->isExternC || funcType->isExternSYCL || funcType->isUnmasked) {
+        if (funcType->IsExternC() || funcType->IsExternSYCL() || funcType->IsUnmasked()) {
             return funcType->GetNumParameters();
         }
         // It cannot be task on Xe target
         else {
             if (g->target->isXeTarget()) {
-                Assert(funcType->isTask == false);
+                Assert(funcType->IsTask() == false);
             }
 
             return funcType->GetNumParameters() + 1;
@@ -4142,7 +4143,7 @@ llvm::Value *FunctionEmitContext::InvokeSyclInst(llvm::Value *func, const Functi
     std::vector<llvm::Value *> argsFinal;
     for (int i = 0; i < args.size(); i++) {
         llvm::Value *argCast = args[i];
-        if (g->target->isXeTarget() && funcType->isExternSYCL && funcType->GetParameterType(i)->IsUniformType()) {
+        if (g->target->isXeTarget() && funcType->IsExternSYCL() && funcType->GetParameterType(i)->IsUniformType()) {
             if (!llvm::isa<llvm::VectorType>(argCast->getType())) {
                 if (argCast->getType()->isPointerTy()) {
                     argCast = PtrToIntInst(argCast, LLVMTypes::Int64Type, argCast->getName() + "_ptrtoint");

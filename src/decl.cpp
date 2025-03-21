@@ -672,6 +672,114 @@ void Declarator::Print(Indent &indent) const {
     indent.Done();
 }
 
+unsigned int lCreateFunctionFlags(int typeQualifiers, StorageClass storageClass, const AttributeList *attributeList,
+                                  SourcePos pos) {
+    unsigned int flags = 0;
+
+    bool isExternC = storageClass.IsExternC();
+    bool isExternSYCL = storageClass.IsExternSYCL();
+    bool isExported = typeQualifiers & TYPEQUAL_EXPORT;
+    bool isExternalOnly = attributeList && attributeList->HasAttribute("external_only");
+    bool isTask = typeQualifiers & TYPEQUAL_TASK;
+    bool isUnmasked = typeQualifiers & TYPEQUAL_UNMASKED;
+    bool isVectorCall = typeQualifiers & TYPEQUAL_VECTORCALL;
+    bool isRegCall = typeQualifiers & TYPEQUAL_REGCALL;
+    bool isUnmangled = attributeList && attributeList->HasAttribute("unmangled");
+    bool isCdecl = attributeList && attributeList->HasAttribute("cdecl");
+
+    if (isExternC) {
+        flags |= FunctionType::FUNC_EXTERN_C;
+    }
+
+    if (isExternSYCL) {
+        flags |= FunctionType::FUNC_EXTERN_SYCL;
+    }
+
+    if (isExported) {
+        flags |= FunctionType::FUNC_EXPORTED;
+    }
+
+    if (isExternalOnly) {
+        flags |= FunctionType::FUNC_EXTERNAL_ONLY;
+    }
+
+    if (isTask) {
+        flags |= FunctionType::FUNC_TASK;
+    }
+
+    if (isUnmasked) {
+        flags |= FunctionType::FUNC_UNMASKED;
+    }
+
+    if (isVectorCall) {
+        flags |= FunctionType::FUNC_VECTOR_CALL;
+    }
+
+    if (isRegCall) {
+        flags |= FunctionType::FUNC_REG_CALL;
+    }
+
+    if (isUnmangled) {
+        flags |= FunctionType::FUNC_UNMANGLED;
+    }
+
+    if (isCdecl) {
+        flags |= FunctionType::FUNC_CDECL;
+    }
+
+    if (!isExported && isExternalOnly) {
+        Error(pos, "\"external_only\" attribute is only valid for exported functions.");
+        return 0;
+    }
+
+    if (isExported && isTask) {
+        Error(pos, "Function can't have both \"task\" and \"export\" "
+                   "qualifiers");
+        return 0;
+    }
+    if (isExternC && isTask) {
+        Error(pos, "Function can't have both \"extern \"C\"\" and \"task\" "
+                   "qualifiers");
+        return 0;
+    }
+    if (isExternC && isExported) {
+        Error(pos, "Function can't have both \"extern \"C\"\" and \"export\" "
+                   "qualifiers");
+        return 0;
+    }
+    if (isExternSYCL && isTask) {
+        Error(pos, "Function can't have both \"extern \"SYCL\"\" and \"task\" "
+                   "qualifiers");
+        return 0;
+    }
+    if (isExternSYCL && isExported) {
+        Error(pos, "Function can't have both \"extern \"SYCL\"\" and \"export\" "
+                   "qualifiers");
+        return 0;
+    }
+    if (isUnmasked && isExported) {
+        Warning(pos, "\"unmasked\" qualifier is redundant for exported "
+                     "functions.");
+    }
+
+    if (isUnmangled) {
+        if (isExternC) {
+            Error(pos, "Function can't have both \"extern\" \"C\" and \"unmangled\" qualifiers");
+            return 0;
+        }
+        if (isExternSYCL) {
+            Error(pos, "Function can't have both \"extern\" \"SYCL\" and \"unmangled\" qualifiers");
+            return 0;
+        }
+        if (isExported) {
+            Error(pos, "Function can't have both \"export\" and \"unmangled\" qualifiers");
+            return 0;
+        }
+    }
+
+    return flags;
+}
+
 void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
     bool hasUniformQual = ((typeQualifiers & TYPEQUAL_UNIFORM) != 0);
     bool hasVaryingQual = ((typeQualifiers & TYPEQUAL_VARYING) != 0);
@@ -701,7 +809,8 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         /* For now, any pointer to an SOA type gets the slice property; if
            we add the capability to declare pointers as slices or not,
            we'll want to set this based on a type qualifier here. */
-        const Type *ptrType = new PointerType(baseType, variability, isConst, baseType->IsSOAType());
+        PointerType::Property prop = baseType->IsSOAType() ? PointerType::SLICE : PointerType::NONE;
+        const Type *ptrType = new PointerType(baseType, variability, isConst, prop);
         if (child != nullptr) {
             child->InitFromType(ptrType, ds);
             type = child->type;
@@ -893,65 +1002,9 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             returnType = returnType->ResolveUnboundVariability(Variability::Varying);
         }
 
-        bool isExternC = ds && ds->storageClass.IsExternC();
-        bool isExternSYCL = ds && ds->storageClass.IsExternSYCL();
-        bool isExported = ds && ((ds->typeQualifiers & TYPEQUAL_EXPORT) != 0);
-        bool isExternalOnly = ds && ds->attributeList && ds->attributeList->HasAttribute("external_only");
-        bool isTask = ds && ((ds->typeQualifiers & TYPEQUAL_TASK) != 0);
-        bool isUnmasked = ds && ((ds->typeQualifiers & TYPEQUAL_UNMASKED) != 0);
-        bool isVectorCall = ds && ((ds->typeQualifiers & TYPEQUAL_VECTORCALL) != 0);
-        bool isRegCall = ds && ((ds->typeQualifiers & TYPEQUAL_REGCALL) != 0);
-        bool isUnmangled = ds && ds->attributeList && ds->attributeList->HasAttribute("unmangled");
-        bool isCdecl = ds && ds->attributeList && ds->attributeList->HasAttribute("cdecl");
-
-        if (!isExported && isExternalOnly) {
-            Error(pos, "\"external_only\" attribute is only valid for exported functions.");
-            return;
-        }
-
-        if (isExported && isTask) {
-            Error(pos, "Function can't have both \"task\" and \"export\" "
-                       "qualifiers");
-            return;
-        }
-        if (isExternC && isTask) {
-            Error(pos, "Function can't have both \"extern \"C\"\" and \"task\" "
-                       "qualifiers");
-            return;
-        }
-        if (isExternC && isExported) {
-            Error(pos, "Function can't have both \"extern \"C\"\" and \"export\" "
-                       "qualifiers");
-            return;
-        }
-        if (isExternSYCL && isTask) {
-            Error(pos, "Function can't have both \"extern \"SYCL\"\" and \"task\" "
-                       "qualifiers");
-            return;
-        }
-        if (isExternSYCL && isExported) {
-            Error(pos, "Function can't have both \"extern \"SYCL\"\" and \"export\" "
-                       "qualifiers");
-            return;
-        }
-        if (isUnmasked && isExported) {
-            Warning(pos, "\"unmasked\" qualifier is redundant for exported "
-                         "functions.");
-        }
-
-        if (isUnmangled) {
-            if (isExternC) {
-                Error(pos, "Function can't have both \"extern\" \"C\" and \"unmangled\" qualifiers");
-                return;
-            }
-            if (isExternSYCL) {
-                Error(pos, "Function can't have both \"extern\" \"SYCL\" and \"unmangled\" qualifiers");
-                return;
-            }
-            if (isExported) {
-                Error(pos, "Function can't have both \"export\" and \"unmangled\" qualifiers");
-                return;
-            }
+        unsigned int functionFlags = 0;
+        if (ds) {
+            functionFlags = lCreateFunctionFlags(ds->typeQualifiers, ds->storageClass, ds->attributeList, pos);
         }
 
         if (child == nullptr) {
@@ -960,8 +1013,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         }
 
         const FunctionType *functionType =
-            new FunctionType(returnType, args, argNames, argDefaults, argPos, isTask, isExported, isExternalOnly,
-                             isExternC, isExternSYCL, isUnmasked, isUnmangled, isVectorCall, isRegCall, isCdecl, pos);
+            new FunctionType(returnType, args, argNames, argDefaults, argPos, functionFlags, pos);
 
         // handle any explicit __declspecs on the function
         if (ds != nullptr) {
@@ -970,7 +1022,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                 SourcePos ds_spec_pos = ds->declSpecList[i].second;
 
                 if (str == "safe") {
-                    (const_cast<FunctionType *>(functionType))->isSafe = true;
+                    (const_cast<FunctionType *>(functionType))->SetSafe(true);
                 } else if (!strncmp(str.c_str(), "cost", 4)) {
                     int cost = atoi(str.c_str() + 4);
                     if (cost < 0) {

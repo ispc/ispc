@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2024, Intel Corporation
+  Copyright (c) 2011-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -394,7 +394,7 @@ static bool lCheckAllOffSafety(ASTNode *node, void *data) {
         const FunctionType *ftype = CastType<FunctionType>(type);
         Assert(ftype != nullptr);
 
-        if (ftype->isSafe == false) {
+        if (ftype->IsSafe() == false) {
             *okPtr = false;
             return false;
         }
