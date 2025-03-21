@@ -77,7 +77,7 @@ static inline uniform int64 calculate_total_size(uniform DLTensor *uniform tenso
 }
 
 // Helper function to check if a tensor is contiguous in memory
-static inline bool is_tensor_contiguous(uniform DLTensor *uniform tensor) {
+static inline uniform bool is_tensor_contiguous(uniform DLTensor *uniform tensor) {
     uniform int ndim = tensor->ndim;
     if (ndim == 0)
         return true;
@@ -93,8 +93,7 @@ static inline bool is_tensor_contiguous(uniform DLTensor *uniform tensor) {
 }
 
 // Complete implementation of tensor addition for any data type
-template <typename T>
-static inline void tensor_add_impl(void *uniform _A, void *uniform _B, void *uniform _C) {
+template <typename T> static inline void tensor_add_impl(void *uniform _A, void *uniform _B, void *uniform _C) {
     uniform DLTensor *uniform A = (uniform DLTensor * uniform) _A;
     uniform DLTensor *uniform B = (uniform DLTensor * uniform) _B;
     uniform DLTensor *uniform C = (uniform DLTensor * uniform) _C;
@@ -105,7 +104,7 @@ static inline void tensor_add_impl(void *uniform _A, void *uniform _B, void *uni
     uniform T *uniform C_data = (uniform T * uniform)(C->data);
 
     uniform int64 total_size = calculate_total_size(A);
-    bool is_contiguous = is_tensor_contiguous(A);
+    uniform bool is_contiguous = is_tensor_contiguous(A);
 
     if (is_contiguous) {
         foreach (i = 0 ... total_size) {
@@ -122,9 +121,7 @@ static inline void tensor_add_impl(void *uniform _A, void *uniform _B, void *uni
 }
 
 // Generic template for tensor operations
-template <typename T> void tensor_add(void *uniform _A, void *uniform _B, void *uniform _C) {
-    __not_supported();
-}
+template <typename T> void tensor_add(void *uniform _A, void *uniform _B, void *uniform _C) { __not_supported(); }
 
 // Specialized implementations for common types
 template <> void tensor_add<int8>(void *uniform _A, void *uniform _B, void *uniform _C) {
@@ -144,4 +141,122 @@ template <> void tensor_add<float>(void *uniform _A, void *uniform _B, void *uni
 
 template <> void tensor_add<double>(void *uniform _A, void *uniform _B, void *uniform _C) {
     tensor_add_impl<double>(_A, _B, _C);
+}
+
+#define TILE_HEIGHT 2
+#define TILE_WIDTH 32
+
+// Implementation for matrix multiplication with tiling
+template <typename T>
+static inline void tensor_mul_2d_impl(uniform T *uniform A_data, uniform T *uniform B_data, uniform T *uniform C_data,
+                                      uniform int M, uniform int N, uniform int K) {
+    // Tile for accumulating sums
+    uniform T sumTile[TILE_HEIGHT][TILE_WIDTH];
+    // Array to store one value from A for each row in the tile
+    uniform T oneAVal[TILE_HEIGHT];
+
+    for (uniform unsigned int m = 0; m < M; m += TILE_HEIGHT) {
+        for (uniform unsigned int k0 = 0; k0 < K; k0 += TILE_WIDTH) {
+            // Initialize the sum tile to zeros
+            foreach (ki = 0 ... TILE_WIDTH) {
+                for (uniform unsigned int i = 0; i < TILE_HEIGHT; i++) {
+                    sumTile[i][ki] = 0;
+                }
+            }
+
+            // Loop through N dimension
+            for (uniform unsigned int n = 0; n < N; n++) {
+                // Load values from A for current tile rows
+                for (uniform unsigned int i = 0; i < TILE_HEIGHT; i++) {
+                    oneAVal[i] = A_data[(m + i) * N + n];
+                }
+
+                // SPMD iterate over tile width
+                foreach (kt = 0 ... TILE_WIDTH) {
+                    // Load B value once and reuse for all rows in the tile
+                    varying T matB1 = B_data[n * K + k0 + kt];
+                    for (uniform unsigned int i = 0; i < TILE_HEIGHT; i++) {
+                        // Accumulate product
+                        sumTile[i][kt] += oneAVal[i] * matB1;
+                    }
+                }
+            }
+
+            // Write results back to C
+            foreach (ki = 0 ... TILE_WIDTH) {
+                for (uniform unsigned int i = 0; i < TILE_HEIGHT; i++) {
+                    C_data[(m + i) * K + k0 + ki] = sumTile[i][ki];
+                }
+            }
+        }
+    }
+}
+
+// Generic tensor multiplication for different dimension handling
+template <typename T> static inline void tensor_mul_impl(void *uniform _A, void *uniform _B, void *uniform _C) {
+    uniform DLTensor *uniform A = (uniform DLTensor * uniform) _A;
+    uniform DLTensor *uniform B = (uniform DLTensor * uniform) _B;
+    uniform DLTensor *uniform C = (uniform DLTensor * uniform) _C;
+
+    // Direct pointers to data
+    uniform T *uniform A_data = (uniform T * uniform)(A->data);
+    uniform T *uniform B_data = (uniform T * uniform)(B->data);
+    uniform T *uniform C_data = (uniform T * uniform)(C->data);
+
+    uniform int ndim = A->ndim;
+    uniform int64 total_size = calculate_total_size(A);
+    uniform bool is_contiguous = is_tensor_contiguous(A);
+
+    // Handle different tensor dimensions
+    if (is_contiguous) {
+        if (ndim == 2) {
+            // 2D case: Standard matrix multiplication
+            uniform int M = A->shape[0];
+            uniform int N = A->shape[1];
+            uniform int K = B->shape[1];
+
+            // Use tiled matrix multiplication algorithm from sgemm.ispc
+            tensor_mul_2d_impl<T>(A_data, B_data, C_data, M, N, K);
+        } else if (ndim == 3) {
+            // 3D case: TODO: implement optimized version
+            foreach (i = 0 ... total_size) {
+                C_data[i] = A_data[i] * B_data[i];
+            }
+        } else {
+            // Element-wise multiplication for other dimensions when contiguous
+            foreach (i = 0 ... total_size) {
+                C_data[i] = A_data[i] * B_data[i];
+            }
+        }
+    } else {
+        // Non-contiguous case: calculate indices for each element
+        foreach (i = 0 ... total_size) {
+            int idx = tensor_compute_index(A->shape, A->strides, ndim, i);
+            C_data[idx] = A_data[idx] * B_data[idx];
+        }
+    }
+}
+
+// Generic template for tensor multiplication operations
+template <typename T> void tensor_mul(void *uniform _A, void *uniform _B, void *uniform _C) { __not_supported(); }
+
+// Specialized implementations for common types
+template <> void tensor_mul<int8>(void *uniform _A, void *uniform _B, void *uniform _C) {
+    tensor_mul_impl<int8>(_A, _B, _C);
+}
+
+template <> void tensor_mul<int16>(void *uniform _A, void *uniform _B, void *uniform _C) {
+    tensor_mul_impl<int16>(_A, _B, _C);
+}
+
+template <> void tensor_mul<int>(void *uniform _A, void *uniform _B, void *uniform _C) {
+    tensor_mul_impl<int>(_A, _B, _C);
+}
+
+template <> void tensor_mul<float>(void *uniform _A, void *uniform _B, void *uniform _C) {
+    tensor_mul_impl<float>(_A, _B, _C);
+}
+
+template <> void tensor_mul<double>(void *uniform _A, void *uniform _B, void *uniform _C) {
+    tensor_mul_impl<double>(_A, _B, _C);
 }
