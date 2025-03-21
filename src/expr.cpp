@@ -4181,7 +4181,7 @@ llvm::Value *FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
 
     llvm::Value *retVal = nullptr;
     ctx->SetDebugPos(pos);
-    if (ft->isTask) {
+    if (ft->IsTask()) {
         AssertPos(pos, launchCountExpr[0] != nullptr);
         llvm::Value *launchCount[3] = {launchCountExpr[0]->GetValue(ctx), launchCountExpr[1]->GetValue(ctx),
                                        launchCountExpr[2]->GetValue(ctx)};
@@ -4387,7 +4387,7 @@ Expr *FunctionCallExpr::TypeCheck() {
         }
     }
 
-    if (funcType->isTask) {
+    if (funcType->IsTask()) {
         if (!isLaunch) {
             Error(pos, "\"launch\" expression needed to call function "
                        "with \"task\" qualifier.");
@@ -4410,19 +4410,19 @@ Expr *FunctionCallExpr::TypeCheck() {
         }
         AssertPos(pos, launchCountExpr[0] == nullptr);
     }
-    if (isInvoke && !funcType->isExternSYCL) {
+    if (isInvoke && !funcType->IsExternSYCL()) {
         Error(pos, "\"invoke_sycl\" expression illegal with non-\'extern \"SYCL\"\'-"
                    "qualified function.");
         return nullptr;
     }
 
-    if (isInvoke && !funcType->isRegCall) {
+    if (isInvoke && !funcType->IsRegCall()) {
         Error(pos, "\"invoke_sycl\" expression can be only used with \'__regcall\'-"
                    "qualified function.");
         return nullptr;
     }
 
-    if (!isInvoke && funcType->isExternSYCL) {
+    if (!isInvoke && funcType->IsExternSYCL()) {
         Error(pos, "Illegal to call \'extern \"SYCL\"\'-qualified function without \"invoke_sycl\" expression.");
         return nullptr;
     }

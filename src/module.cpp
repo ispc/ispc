@@ -979,7 +979,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
                 return;
             }
 
-            if (functionType->isExported || overloadType->isExported) {
+            if (functionType->IsExported() || overloadType->IsExported()) {
                 Error(pos,
                       "Illegal to provide \"export\" qualifier for "
                       "functions with the same name but different types. "
@@ -1018,7 +1018,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     if (isExternCorSYCL) {
         // Make sure the user hasn't supplied both an 'extern "C"' and a
         // 'task' qualifier with the function
-        if (functionType->isTask) {
+        if (functionType->IsTask()) {
             Error(pos, "\"task\" qualifier is illegal with C-linkage extern function \"%s\".  Ignoring this function.",
                   name.c_str());
             return;
@@ -1109,7 +1109,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         }
     }
 
-    if (functionType->isTask) {
+    if (functionType->IsTask()) {
         if (!g->target->isXeTarget()) {
             // This also applies transitively to members I think?
             function->addParamAttr(0, llvm::Attribute::NoAlias);
@@ -1120,7 +1120,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
 
     // Make sure that the return type isn't 'varying' or vector typed if
     // the function is 'export'ed.
-    if (functionType->isExported &&
+    if (functionType->IsExported() &&
         lRecursiveCheckValidParamType(functionType->GetReturnType(), false, false, name, pos) == false) {
         Error(pos,
               "Illegal to return a \"varying\" or vector type from "
@@ -1128,11 +1128,11 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
               name.c_str());
     }
 
-    if (functionType->isTask && functionType->GetReturnType()->IsVoidType() == false) {
+    if (functionType->IsTask() && functionType->GetReturnType()->IsVoidType() == false) {
         Error(pos, "Task-qualified functions must have void return type.");
     }
 
-    if (functionType->isExported || functionType->isExternC || functionType->isExternSYCL ||
+    if (functionType->IsExported() || functionType->IsExternC() || functionType->IsExternSYCL() ||
         functionType->IsISPCExternal() || functionType->IsISPCKernel()) {
         lCheckForStructParameters(functionType, pos);
     }
@@ -1159,7 +1159,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         // If the function is exported or in case of Xe target is task, make sure that the parameter
         // doesn't have any funky stuff going on in it.
         // JCB nomosoa - Varying is now a-ok.
-        if (functionType->isExported) {
+        if (functionType->IsExported()) {
             lCheckExportedParameterTypes(argType, argName, argPos);
         }
 #ifdef ISPC_XE_ENABLED
@@ -1172,7 +1172,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
         // specify when this is not the case, but this should be the
         // default.)  Set parameter attributes accordingly.  (Only for
         // uniform pointers, since varying pointers are int vectors...)
-        if (!functionType->isTask && !functionType->isExternSYCL &&
+        if (!functionType->IsTask() && !functionType->IsExternSYCL() &&
             ((CastType<PointerType>(argType) != nullptr && argType->IsUniformType() &&
               // Exclude SOA argument because it is a pair {struct *, int}
               // instead of pointer
@@ -1420,7 +1420,7 @@ void Module::AddFunctionTemplateInstantiation(const std::string &name, const Tem
         }
         // If primary template doesn't have unmasked specifier, but explicit instantiation has it,
         // report an error
-        if (!templ->GetFunctionType()->isUnmasked && ftype->isUnmasked) {
+        if (!templ->GetFunctionType()->IsUnmasked() && ftype->IsUnmasked()) {
             Error(pos, "Template instantiation has inconsistent \"unmasked\" specifier. Consider moving the specifier "
                        "inside the function or assigning it to the primary template to inherit it's signature.");
             return;
@@ -1448,7 +1448,7 @@ void Module::AddFunctionTemplateSpecializationDefinition(const std::string &name
     // Update already created symbol with real function type and function implementation.
     // Inherit unmasked specifier from the basic template.
     const FunctionType *instType = CastType<FunctionType>(sym->type);
-    bool instUnmasked = instType ? instType->isUnmasked : false;
+    bool instUnmasked = instType ? instType->IsUnmasked() : false;
     sym->type = instUnmasked ? ftype->GetAsUnmaskedType() : ftype->GetAsNonUnmaskedType();
     Function *inst = new Function(sym, code);
     sym->parentFunction = inst;
@@ -1478,7 +1478,7 @@ void Module::AddFunctionTemplateSpecializationDeclaration(const std::string &nam
     }
     // If primary template doesn't have unmasked specifier, but specialization has it,
     // report an error
-    if (!templ->GetFunctionType()->isUnmasked && ftype->isUnmasked) {
+    if (!templ->GetFunctionType()->IsUnmasked() && ftype->IsUnmasked()) {
         Error(pos, "Template specialization has inconsistent \"unmasked\" specifier. Consider moving the specifier "
                    "inside the function or assigning it to the primary template to inherit it's signature.");
         return;
@@ -2077,7 +2077,7 @@ static void lEmitVectorTypedefs(const std::vector<const VectorType *> &types, FI
 
     for (unsigned int i = 0; i < types.size(); ++i) {
         std::string baseDecl;
-        const VectorType *vt = types[i]->GetAsNonConstType();
+        const SequentialType *vt = types[i]->GetAsNonConstType();
         if (!vt->IsUniformType()) {
             // Varying stuff shouldn't be visibile to / used by the
             // application, so at least make it not simple to access it by
@@ -2230,13 +2230,13 @@ static void lPrintFunctionDeclarations(FILE *file, const std::vector<Symbol *> &
 static bool lIsExported(const Symbol *sym) {
     const FunctionType *ft = CastType<FunctionType>(sym->type);
     Assert(ft);
-    return ft->isExported;
+    return ft->IsExported();
 }
 
 static bool lIsExternC(const Symbol *sym) {
     const FunctionType *ft = CastType<FunctionType>(sym->type);
     Assert(ft);
-    return ft->isExternC;
+    return ft->IsExternC();
 }
 
 static void lUnescapeStringInPlace(std::string &str) {
@@ -2746,11 +2746,11 @@ bool Module::writeHeader() {
     // Go through the explicitly exported types
     for (int i = 0; i < (int)exportedTypes.size(); ++i) {
         if (const StructType *st = CastType<StructType>(exportedTypes[i].first)) {
-            exportedStructTypes.push_back(st->GetAsUniformType());
+            exportedStructTypes.push_back(CastType<StructType>(st->GetAsUniformType()));
         } else if (const EnumType *et = CastType<EnumType>(exportedTypes[i].first)) {
-            exportedEnumTypes.push_back(et->GetAsUniformType());
+            exportedEnumTypes.push_back(CastType<EnumType>(et->GetAsUniformType()));
         } else if (const VectorType *vt = CastType<VectorType>(exportedTypes[i].first)) {
-            exportedVectorTypes.push_back(vt->GetAsUniformType());
+            exportedVectorTypes.push_back(CastType<VectorType>(vt->GetAsUniformType()));
         } else {
             FATAL("Unexpected type in export list");
         }
@@ -2892,14 +2892,15 @@ bool Module::writeDispatchHeader(DispatchHeaderInfo *DHI) {
         lGetExportedParamTypes(exportedFuncs, &exportedStructTypes, &exportedEnumTypes, &exportedVectorTypes);
         lGetExportedParamTypes(externCFuncs, &exportedStructTypes, &exportedEnumTypes, &exportedVectorTypes);
 
+        // TODO!: Why there are two almost identical piece of code like this?
         // Go through the explicitly exported types
         for (int i = 0; i < (int)exportedTypes.size(); ++i) {
             if (const StructType *st = CastType<StructType>(exportedTypes[i].first)) {
-                exportedStructTypes.push_back(st->GetAsUniformType());
+                exportedStructTypes.push_back(CastType<StructType>(st->GetAsUniformType()));
             } else if (const EnumType *et = CastType<EnumType>(exportedTypes[i].first)) {
-                exportedEnumTypes.push_back(et->GetAsUniformType());
+                exportedEnumTypes.push_back(CastType<EnumType>(et->GetAsUniformType()));
             } else if (const VectorType *vt = CastType<VectorType>(exportedTypes[i].first)) {
-                exportedVectorTypes.push_back(vt->GetAsUniformType());
+                exportedVectorTypes.push_back(CastType<VectorType>(vt->GetAsUniformType()));
             } else {
                 FATAL("Unexpected type in export list");
             }

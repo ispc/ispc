@@ -1410,18 +1410,18 @@ type_specifier_list
 
 atomic_var_type_specifier
     : TOKEN_VOID { $$ = AtomicType::Void; }
-    | TOKEN_BOOL { $$ = AtomicType::UniformBool->GetAsUnboundVariabilityType(); }
-    | TOKEN_INT8 { $$ = AtomicType::UniformInt8->GetAsUnboundVariabilityType(); }
-    | TOKEN_UINT8 { $$ = AtomicType::UniformUInt8->GetAsUnboundVariabilityType(); }
-    | TOKEN_INT16 { $$ = AtomicType::UniformInt16->GetAsUnboundVariabilityType(); }
-    | TOKEN_UINT16 { $$ = AtomicType::UniformUInt16->GetAsUnboundVariabilityType(); }
-    | TOKEN_INT { $$ = AtomicType::UniformInt32->GetAsUnboundVariabilityType(); }
-    | TOKEN_UINT { $$ = AtomicType::UniformUInt32->GetAsUnboundVariabilityType(); }
-    | TOKEN_FLOAT16 { $$ = AtomicType::UniformFloat16->GetAsUnboundVariabilityType(); }
-    | TOKEN_FLOAT { $$ = AtomicType::UniformFloat->GetAsUnboundVariabilityType(); }
-    | TOKEN_DOUBLE { $$ = AtomicType::UniformDouble->GetAsUnboundVariabilityType(); }
-    | TOKEN_INT64 { $$ = AtomicType::UniformInt64->GetAsUnboundVariabilityType(); }
-    | TOKEN_UINT64 { $$ = AtomicType::UniformUInt64->GetAsUnboundVariabilityType(); }
+    | TOKEN_BOOL    { $$ = CastType<AtomicType>(AtomicType::UniformBool->GetAsUnboundVariabilityType()); }
+    | TOKEN_INT8    { $$ = CastType<AtomicType>(AtomicType::UniformInt8->GetAsUnboundVariabilityType()); }
+    | TOKEN_UINT8   { $$ = CastType<AtomicType>(AtomicType::UniformUInt8->GetAsUnboundVariabilityType()); }
+    | TOKEN_INT16   { $$ = CastType<AtomicType>(AtomicType::UniformInt16->GetAsUnboundVariabilityType()); }
+    | TOKEN_UINT16  { $$ = CastType<AtomicType>(AtomicType::UniformUInt16->GetAsUnboundVariabilityType()); }
+    | TOKEN_INT     { $$ = CastType<AtomicType>(AtomicType::UniformInt32->GetAsUnboundVariabilityType()); }
+    | TOKEN_UINT    { $$ = CastType<AtomicType>(AtomicType::UniformUInt32->GetAsUnboundVariabilityType()); }
+    | TOKEN_FLOAT16 { $$ = CastType<AtomicType>(AtomicType::UniformFloat16->GetAsUnboundVariabilityType()); }
+    | TOKEN_FLOAT   { $$ = CastType<AtomicType>(AtomicType::UniformFloat->GetAsUnboundVariabilityType()); }
+    | TOKEN_DOUBLE  { $$ = CastType<AtomicType>(AtomicType::UniformDouble->GetAsUnboundVariabilityType()); }
+    | TOKEN_INT64   { $$ = CastType<AtomicType>(AtomicType::UniformInt64->GetAsUnboundVariabilityType()); }
+    | TOKEN_UINT64  { $$ = CastType<AtomicType>(AtomicType::UniformUInt64->GetAsUnboundVariabilityType()); }
     ;
 
 short_vec_specifier
@@ -2764,15 +2764,15 @@ template_type_parameter
     ;
 
 int_constant_type
-    : TOKEN_INT8   { $$ = AtomicType::UniformInt8->GetAsConstType(); }
-    | TOKEN_INT16  { $$ = AtomicType::UniformInt16->GetAsConstType(); }
-    | TOKEN_INT    { $$ = AtomicType::UniformInt32->GetAsConstType(); }
-    | TOKEN_INT64  { $$ = AtomicType::UniformInt64->GetAsConstType(); }
-    | TOKEN_UINT8  { $$ = AtomicType::UniformUInt8->GetAsConstType(); }
-    | TOKEN_UINT16 { $$ = AtomicType::UniformUInt16->GetAsConstType(); }
-    | TOKEN_UINT   { $$ = AtomicType::UniformUInt32->GetAsConstType(); }
-    | TOKEN_UINT64 { $$ = AtomicType::UniformUInt64->GetAsConstType(); }
-    | TOKEN_BOOL   { $$ = AtomicType::UniformBool->GetAsConstType(); }
+    : TOKEN_INT8   { $$ = CastType<AtomicType>(AtomicType::UniformInt8->GetAsConstType()); }
+    | TOKEN_INT16  { $$ = CastType<AtomicType>(AtomicType::UniformInt16->GetAsConstType()); }
+    | TOKEN_INT    { $$ = CastType<AtomicType>(AtomicType::UniformInt32->GetAsConstType()); }
+    | TOKEN_INT64  { $$ = CastType<AtomicType>(AtomicType::UniformInt64->GetAsConstType()); }
+    | TOKEN_UINT8  { $$ = CastType<AtomicType>(AtomicType::UniformUInt8->GetAsConstType()); }
+    | TOKEN_UINT16 { $$ = CastType<AtomicType>(AtomicType::UniformUInt16->GetAsConstType()); }
+    | TOKEN_UINT   { $$ = CastType<AtomicType>(AtomicType::UniformUInt32->GetAsConstType()); }
+    | TOKEN_UINT64 { $$ = CastType<AtomicType>(AtomicType::UniformUInt64->GetAsConstType()); }
+    | TOKEN_BOOL   { $$ = CastType<AtomicType>(AtomicType::UniformBool->GetAsConstType()); }
     ;
 
 template_int_constant_type
@@ -3635,8 +3635,7 @@ lCreateEnumType(const char *name, std::vector<Symbol *> *enums, SourcePos pos) {
 static void
 lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
                            const EnumType *enumType) {
-    enumType = enumType->GetAsConstType();
-    enumType = enumType->GetAsUniformType();
+    const Type *constUniformType = enumType->GetAsConstType()->GetAsUniformType();
 
     /* nextVal tracks the value for the next enumerant.  It starts from
        zero and goes up with each successive enumerant.  If any of them
@@ -3646,7 +3645,7 @@ lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
     uint32_t nextVal = 0;
 
     for (unsigned int i = 0; i < enums.size(); ++i) {
-        enums[i]->type = enumType;
+        enums[i]->type = constUniformType;
         if (enums[i]->constValue != nullptr) {
             /* Already has a value, so first update nextVal with it. */
             int count = enums[i]->constValue->GetValues(&nextVal);
@@ -3659,14 +3658,14 @@ lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
                by then.  Therefore, add a little type cast from uint32 to
                the actual enum type here and optimize it, which will have
                us end up with a ConstExpr with the desired EnumType... */
-            Expr *castExpr = new TypeCastExpr(enumType, enums[i]->constValue,
+            Expr *castExpr = new TypeCastExpr(constUniformType, enums[i]->constValue,
                                               enums[i]->pos);
             castExpr = Optimize(castExpr);
             enums[i]->constValue = llvm::dyn_cast<ConstExpr>(castExpr);
             AssertPos(enums[i]->pos, enums[i]->constValue != nullptr);
         }
         else {
-            enums[i]->constValue = new ConstExpr(enumType, nextVal++,
+            enums[i]->constValue = new ConstExpr(constUniformType, nextVal++,
                                                  enums[i]->pos);
         }
     }

@@ -164,7 +164,7 @@ Function::Function(Symbol *s, Stmt *c) : sym(s), code(c) {
         }
     }
 
-    if (type->isTask) {
+    if (type->IsTask()) {
         threadIndexSym = m->symbolTable->LookupVariable("threadIndex");
         Assert(threadIndexSym);
         threadCountSym = m->symbolTable->LookupVariable("threadCount");
@@ -331,7 +331,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
     Assert(type != nullptr);
 
     // CPU tasks
-    if (type->isTask == true && !g->target->isXeTarget()) {
+    if (type->IsTask() == true && !g->target->isXeTarget()) {
         Assert(type->IsISPCExternal() == false);
         // For tasks, there should always be three parameters: the
         // pointer to the structure that holds all of the arguments, the
@@ -359,7 +359,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
             lCopyInTaskParameter(i, stInfo, args, ctx);
         }
 
-        if (type->isUnmasked == false) {
+        if (type->IsUnmasked() == false) {
             // Copy in the mask as well.
             int nArgs = (int)args.size();
             // The mask is the last parameter in the argument structure
@@ -437,11 +437,11 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         // happens for example with 'export'ed functions that the app
         // calls, with tasks on GPU and with unmasked functions.
         if (argIter == function->arg_end()) {
-            Assert(type->isUnmasked || type->isExported || type->isExternC || type->isExternSYCL ||
+            Assert(type->IsUnmasked() || type->IsExported() || type->IsExternC() || type->IsExternSYCL() ||
                    type->IsISPCExternal() || type->IsISPCKernel());
             ctx->SetFunctionMask(LLVMMaskAllOn);
         } else {
-            Assert(type->isUnmasked == false);
+            Assert(type->IsUnmasked() == false);
 
             // Otherwise use the mask to set the entry mask value
             argIter->setName("__mask");
@@ -461,7 +461,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
             ++argIter;
             Assert(argIter == function->arg_end());
         }
-        if (g->target->isXeTarget() && type->isTask) {
+        if (g->target->isXeTarget() && type->IsTask()) {
             // Assign threadIndex and threadCount to the result of calling of corresponding builtins.
             // On Xe threadIndex equals to taskIndex and threadCount to taskCount.
             threadIndexSym->storageInfo = ctx->AllocaInst(LLVMTypes::Int32Type, "threadIndex");
@@ -509,10 +509,10 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         // on, all off, or mixed.  If this is a simple function, then this
         // isn't worth the code bloat / overhead.
         bool checkMask =
-            (!g->target->isXeTarget() && type->isTask == true) ||
+            (!g->target->isXeTarget() && type->IsTask() == true) ||
             ((function->getAttributes().getFnAttrs().hasAttribute(llvm::Attribute::AlwaysInline) == false) &&
              costEstimate > CHECK_MASK_AT_FUNCTION_START_COST);
-        checkMask &= (type->isUnmasked == false);
+        checkMask &= (type->IsUnmasked() == false);
         checkMask &= (g->target->getMaskingIsFree() == false);
         checkMask &= (g->opt.disableCoherentControlFlow == false);
 
@@ -681,7 +681,7 @@ void Function::GenerateIR() const {
     const FunctionType *type = CastType<FunctionType>(sym->type);
     Assert(type != nullptr);
 
-    if (type->isExternSYCL) {
+    if (type->IsExternSYCL()) {
         Error(sym->pos, "\n\'extern \"SYCL\"\' function \"%s\" cannot be defined in ISPC.", sym->name.c_str());
         return;
     }
@@ -718,7 +718,7 @@ void Function::GenerateIR() const {
         // function which will resolve to particular implementation. The condition below ensures that in case of
         // multi-target compilation we will emit only one-per-target definition of extern "C" function mangled with
         // <target> suffix.
-        if (!type->isExternalOnly && !((type->isExternC || type->isExternSYCL) && g->mangleFunctionsWithTarget)) {
+        if (!type->IsExternalOnly() && !((type->IsExternC() || type->IsExternSYCL()) && g->mangleFunctionsWithTarget)) {
             llvm::TimeTraceScope TimeScope("emitCode", llvm::StringRef(sym->name));
             FunctionEmitContext ec(this, sym, function, firstStmtPos);
             emitCode(&ec, function, firstStmtPos);
@@ -732,7 +732,7 @@ void Function::GenerateIR() const {
         // For 'extern "C"' we emit the version without mask parameter only.
         // For Xe we emit a version without mask parameter only for ISPC kernels and
         // ISPC external functions.
-        if (type->isExported || type->isExternC || type->isExternSYCL || type->IsISPCExternal() ||
+        if (type->IsExported() || type->IsExternC() || type->IsExternSYCL() || type->IsISPCExternal() ||
             type->IsISPCKernel()) {
             auto [name_pref, name_suf] = type->GetFunctionMangledName(true);
             std::string functionName = name_pref + sym->name + name_suf;
@@ -1169,7 +1169,7 @@ Symbol *FunctionTemplate::AddSpecialization(const FunctionType *ftype, const Tem
     Symbol *instSym = templInst.InstantiateTemplateSymbol(sym);
     // Inherit unmasked specifier and storageClass from the basic template.
     const FunctionType *instType = CastType<FunctionType>(sym->type);
-    bool instUnmasked = instType ? instType->isUnmasked : false;
+    bool instUnmasked = instType ? instType->IsUnmasked() : false;
     instSym->type = instUnmasked ? ftype->GetAsUnmaskedType() : ftype->GetAsNonUnmaskedType();
     instSym->pos = pos;
     instSym->storageClass = sym->storageClass;
@@ -1339,7 +1339,7 @@ llvm::Function *TemplateInstantiation::createLLVMFunction(Symbol *functionSym) {
         // specify when this is not the case, but this should be the
         // default.)  Set parameter attributes accordingly.  (Only for
         // uniform pointers, since varying pointers are int vectors...)
-        if (!functionType->isTask && !functionType->isExternSYCL &&
+        if (!functionType->IsTask() && !functionType->IsExternSYCL() &&
             ((CastType<PointerType>(argType) != nullptr && argType->IsUniformType() &&
               // Exclude SOA argument because it is a pair {struct *, int}
               // instead of pointer
