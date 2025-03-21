@@ -61,8 +61,8 @@ env:
   USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
   LLVM_HOME: ${{ inputs.platform == 'windows' && 'C:\\projects\\llvm' || github.workspace }}
   ISPC_HOME: ${{ github.workspace }}
-  INSTALL_COMPUTE_RUNTIME: ${{ inputs.enable_xe && '1' || '0' }}
-  COMPUTE_RUNTIME_GITHUB_RELEASE: ${{ inputs.enable_xe && '1' || '0' }}
+  INSTALL_COMPUTE_RUNTIME: ${{ inputs.enable_xe && '1' || '' }}
+  COMPUTE_RUNTIME_GITHUB_RELEASE: ${{ inputs.enable_xe && '1' || '' }}
 
 jobs:
   test:

@@ -100,9 +100,8 @@ jobs:
           echo "optsets=${OPTSETS_FULL}" >> "$GITHUB_OUTPUT"
         fi
 
-  linux-aarch64-build-ispc:
+  linux-build-ispc-aarch64:
     needs: [define-flow]
-    runs-on: ubuntu-22.04-arm
     strategy:
       fail-fast: false
       matrix:
@@ -110,41 +109,20 @@ jobs:
           - version: "18.1"
             full_version: "18.1.8"
             short_version: 18
-    env:
-      LLVM_VERSION: ${{ matrix.llvm.version }}
-      LLVM_TAR: llvm-${{ matrix.llvm.full_version }}-ubuntu22.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
-
-    steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-      with:
-        submodules: false
-
-    - name: Install dependencies
-      run: |
-        .github/workflows/scripts/install-build-deps.sh
-
-    - name: Check environment
-      run: |
-        which -a clang
-        cat /proc/cpuinfo
-
-    - name: Build package
-      run: |
-        .github/workflows/scripts/build-ispc.sh
-
-    - name: Sanity testing (make check-all, make test)
-      run: |
-        .github/workflows/scripts/check-ispc.sh
-
-    - name: Upload package
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      with:
-        name: ispc_llvm${{ matrix.llvm.short_version }}_linux.aarch64
-        path: build/ispc-trunk-linux.tar.gz
+    uses: ./.github/workflows/reusable.ispc.build.yml
+    with:
+      platform: linux
+      architecture: aaarch64
+      artifact_name: ispc_llvm${{ matrix.llvm.short_version }}_linux.aarch64
+      runner: ubuntu-22.04-arm
+      llvm_version: ${{ matrix.llvm.version }}
+      llvm_tar: llvm-${{ matrix.llvm.full_version }}-ubuntu22.04aarch64-Release+Asserts-x86.arm.wasm.tar.xz
+      enable_cross: false
+      enable_lto: false
+      enable_xe: false
 
   linux-build-ispc:
     needs: [define-flow]
-    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -158,73 +136,32 @@ jobs:
           - version: "19.1"
             full_version: "19.1.7"
             short_version: 19
-    env:
-      LLVM_VERSION: ${{ matrix.llvm.version }}
-      LLVM_TAR: llvm-${{ matrix.llvm.full_version }}-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
-
-    steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-      with:
-        submodules: true
-
-    - name: Install dependencies
-      run: |
-        .github/workflows/scripts/install-build-deps.sh
-
-    - name: Check environment
-      run: |
-        which -a clang
-        cat /proc/cpuinfo
-
-    - name: Build package
-      run: |
-        .github/workflows/scripts/build-ispc.sh
-
-    - name: Sanity testing (make check-all, make test)
-      run: |
-        .github/workflows/scripts/check-ispc.sh
-
-    - name: Upload package
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      with:
-        name: ispc_llvm${{ matrix.llvm.short_version }}_linux
-        path: build/ispc-trunk-linux.tar.gz
+    uses: ./.github/workflows/reusable.ispc.build.yml
+    with:
+      platform: linux
+      architecture: x86
+      artifact_name: ispc_llvm${{ matrix.llvm.short_version }}_linux
+      runner: ubuntu-22.04
+      llvm_version: ${{ matrix.llvm.version }}
+      llvm_tar: llvm-${{ matrix.llvm.full_version }}-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      enable_cross: false
+      enable_lto: false
+      enable_xe: false
 
   linux-build-ispc-llvm18-lto:
     needs: [define-flow]
-    runs-on: ubuntu-22.04
-    env:
-      LLVM_VERSION: "18.1"
-      LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
+    uses: ./.github/workflows/reusable.ispc.build.yml
+    with:
+      platform: linux
+      architecture: x86
+      artifact_name: ispc_llvm18_lto_linux
+      runner: ubuntu-22.04
+      llvm_version: "18.1"
+      llvm_tar: llvm-18.1.8-ubuntu22.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
+      enable_cross: false
+      enable_lto: true
+      enable_xe: false
 
-    steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-      with:
-        submodules: true
-
-    - name: Install dependencies
-      run: |
-        .github/workflows/scripts/install-build-deps.sh
-
-    - name: Check environment
-      run: |
-        which -a clang
-        cat /proc/cpuinfo
-
-    - name: Build package
-      run: |
-        cmake -B build superbuild --preset os -DLTO=ON -DXE_DEPS=OFF -DCMAKE_CXX_FLAGS=-Werror -DPREBUILT_STAGE2_PATH="${GITHUB_WORKSPACE}/bin-$LLVM_VERSION"
-        cmake --build build
-
-    - name: Sanity testing (make check-all)
-      run: |
-        cmake --build build --target ispc-stage2-check-all
-
-    - name: Upload package
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      with:
-        name: ispc_llvm18_lto_linux
-        path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-linux.tar.gz
 
   linux-build-ispc-llvm18-release:
     needs: [define-flow]
@@ -347,7 +284,7 @@ jobs:
       enable_lto: true
 
   linux-test-llvm18-aarch64:
-    needs: [define-flow, linux-aarch64-build-ispc]
+    needs: [define-flow, linux-build-ispc-aarch64]
     strategy:
       fail-fast: false
     uses: ./.github/workflows/reusable.ispc.test.yml
@@ -533,7 +470,7 @@ jobs:
       artifact_name: ispc_llvm${{matrix.llvm}}_macos-13
       targets: '["sse4-i32x4"]'
       optsets: -O0 -O2
-  
+
   macos-test-ispc-llvm18-lto:
     needs: [define-flow, macos-build-ispc-llvm18-lto]
     uses: ./.github/workflows/reusable.ispc.test.yml
@@ -767,7 +704,7 @@ jobs:
       targets: '["avx2-i32x8"]'
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
       enable_xe: true
- 
+
   win-test-llvm18-vectorcall:
     needs: [define-flow, win-build-ispc-xe-llvm18-release]
     uses: ./.github/workflows/reusable.ispc.test.yml
