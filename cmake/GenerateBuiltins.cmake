@@ -116,8 +116,8 @@ function(generate_dispatcher os)
 
     add_custom_command(
         OUTPUT ${bc}
-        COMMAND ${CLANGPP_EXECUTABLE} -x c ${DISP_TYPE} ${EXTRA_OPTS} --target=x86_64-unknown-unknown -march=core2 -mtune=generic -O2 -emit-llvm ${input} -c -o ${bc}
-        DEPENDS ${input}
+        COMMAND ${CLANGPP_EXECUTABLE} -x c ${DISP_TYPE} -I${CMAKE_SOURCE_DIR}/src ${EXTRA_OPTS} --target=x86_64-unknown-unknown -march=core2 -mtune=generic -O2 -emit-llvm ${input} -c -o ${bc}
+        DEPENDS ${input} ${CMAKE_SOURCE_DIR}/src/isa.h
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
 

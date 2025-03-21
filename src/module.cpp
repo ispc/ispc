@@ -3382,6 +3382,9 @@ static bool lSymbolIsExported(const Symbol *s) { return s->exportedFunction != n
 // llvm::Function that were compiled for different compilation target ISAs.
 struct FunctionTargetVariants {
     FunctionTargetVariants() {
+        // TODO!: NUM_ISAS counts all ISAa, not only x86 ones.
+        // Whereas, all these are x86 specific, because dispatch code is
+        // generated only for x86.
         for (int i = 0; i < Target::NUM_ISAS; ++i) {
             func[i] = nullptr;
             FTs[i] = nullptr;
