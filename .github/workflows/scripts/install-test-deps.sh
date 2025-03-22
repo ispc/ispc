@@ -40,7 +40,7 @@ fi
 
 tar xf ispc-trunk-linux.tar.gz
 
-if [ -v INSTALL_COMPUTE_RUNTIME ]; then
+if [ -n INSTALL_COMPUTE_RUNTIME ]; then
     echo "install Compute Runtime"
     wget -qO - https://repositories.intel.com/graphics/intel-graphics.key | sudo gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg
     echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/graphics/ubuntu jammy unified' > /tmp/intel.gpu.focal.list

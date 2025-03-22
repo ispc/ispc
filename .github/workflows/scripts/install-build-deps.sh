@@ -38,8 +38,8 @@ else
     echo "SDE_MIRROR_ID and/or USER_AGENT are not defined. Skipping download."
 fi
 
-if [ -v INSTALL_COMPUTE_RUNTIME ]; then
-    if [ -v COMPUTE_RUNTIME_GITHUB_RELEASE ]; then
+if [ -n "$INSTALL_COMPUTE_RUNTIME" ]; then
+    if [ -n "$COMPUTE_RUNTIME_GITHUB_RELEASE" ]; then
         echo "install Compute Runtime from GitHub release page"
         SCRIPTS_DIR=$(cd "$(dirname "$0")" && pwd)
         "$SCRIPTS_DIR/install-compute-runtime.sh"
