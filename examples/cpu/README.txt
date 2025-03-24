@@ -169,3 +169,30 @@ AVX2 compilation target, yet retain elegantly simple code to understand and
 maintain. The command line arguments are:
 
 sgemm (optional)[num iterations] (optional)[[Matrix A Rows] [Matrix A Columns/Matrix B Rows] [Matrix B Columns]]
+
+Point Transform using ctypes
+============================
+This example demonstrates how to use ctypes to call a single ISPC function that takes three different types of inputs:
+
+* Float arrays (the x and y coordinates of points)
+* A custom structure (the Transform struct with scaling, translation, and rotation parameters)
+* A constant value (the strength parameter that controls transformation intensity)
+
+The example includes:
+
+An ISPC implementation that applies geometric transformations to points:
+
+* Scaling on both x and y axes
+* Rotation around the origin
+* Translation with a configurable strength factor
+
+A Python wrapper that:
+
+* Defines a matching ctypes structure for the ISPC struct
+* Sets up the proper function signature
+* Handles conversion between NumPy arrays and C pointers
+* Passes the structure by reference using ctypes.byref()
+
+A NumPy reference implementation to verify correctness and compare performance.
+
+After building the example, run the Python script to transform points and see the performance comparison.
