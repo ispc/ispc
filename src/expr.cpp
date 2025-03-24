@@ -2316,7 +2316,12 @@ const Type *BinaryExpr::GetType() const {
         }
 
         // otherwise fall through for these...
-        AssertPos(pos, op == Lt || op == Gt || op == Le || op == Ge || op == Equal || op == NotEqual);
+        bool supportedOps = op == Lt || op == Gt || op == Le || op == Ge || op == Equal || op == NotEqual;
+        if (!supportedOps) {
+            Error(pos, "Unsupported binary operator \"%s\" for pointer type: \"%s\"", lOpString(op),
+                  type0->GetString().c_str());
+            return nullptr;
+        }
     }
 
     const Type *exprType = Type::MoreGeneralType(type0, type1, pos, lOpString(op));
