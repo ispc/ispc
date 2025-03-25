@@ -944,6 +944,7 @@ jobs:
         tar xf ispc-trunk-macos.tar.gz
         echo "$GITHUB_WORKSPACE/ispc-trunk-macos/bin" >> "$GITHUB_PATH"
         echo "ISPC_HOME=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
+        pip install nanobind
 
     - name: Unpack examples
       run: |
