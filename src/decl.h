@@ -122,6 +122,11 @@ class AttributeList {
         otherwise. */
     Attribute *GetAttribute(const std::string &name) const;
 
+    /** Returns the aligned attribute value if it exists, 0 otherwise.
+        It can also issue a warning if attribute value is not supported or
+        doesn't make sense. SourcePos is needed to report Error. */
+    unsigned int GetAlignedAttrValue(SourcePos pos) const;
+
     /** Merges the attributes from the given list into the current list.
         It copies the attributes from the given list and adds them to the
         current list. */

@@ -608,6 +608,9 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
     StorageClass storageClass = decl->storageClass;
     SourcePos pos = decl->pos;
 
+    // TODO!: what default 0 means here?
+    unsigned int alignment = 0;
+
     // These may be nullptr due to errors in parsing; just gracefully return
     // here if so.
     if (name == "" || type == nullptr) {
@@ -624,6 +627,15 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
         if (attrList->HasAttribute("noescape")) {
             Warning(pos, "Ignoring \"noescape\" attribute for global variable \"%s\".", name.c_str());
         }
+
+        // This attribute is provided for the particular variable declaration.
+        alignment = attrList->GetAlignedAttrValue(pos);
+    }
+
+    // If no alignment was specified for the particular variable declaration,
+    // then use the alignment specified for the type.
+    if (!alignment) {
+        alignment = type->GetAlignment();
     }
 
     if (symbolTable->LookupFunction(name.c_str())) {
@@ -788,6 +800,12 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
     // subtle)...
     sym->storageInfo = new AddressInfo(
         new llvm::GlobalVariable(*module, llvmType, isConst, linkage, llvmInitializer, sym->name.c_str()), llvmType);
+
+    // Apply alignment if specified
+    if (alignment > 0) {
+        llvm::GlobalVariable *gv = llvm::cast<llvm::GlobalVariable>(sym->storageInfo->getPointer());
+        gv->setAlignment(llvm::Align(alignment));
+    }
 
     // Patch up any references to the previous GlobalVariable (e.g. from a
     // declaration of a global that was later defined.)
