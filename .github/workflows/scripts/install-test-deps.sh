@@ -22,6 +22,9 @@ do
   fi
 done
 
+# Install nanobind for examples build
+pip install nanobind
+
 find /usr -name cdefs.h || echo "Find errors were ignored"
 # Remark about user agent: it might or might now work with default user agent, but
 # from time to time the settings are changed and browser-like user agent is required to make it work.
