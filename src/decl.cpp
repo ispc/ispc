@@ -17,6 +17,7 @@
 #include "type.h"
 #include "util.h"
 
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <unordered_set>
@@ -233,8 +234,8 @@ Attribute::Attribute(const Attribute &a) : name(a.name), arg(a.arg) {}
 
 bool Attribute::IsKnownAttribute() const {
     // Known/supported attributes.
-    static std::unordered_set<std::string> lKnownParamAttrs = {"noescape", "address_space", "unmangled", "memory",
-                                                               "cdecl",    "external_only", "deprecated"};
+    static std::unordered_set<std::string> lKnownParamAttrs = {"noescape", "address_space", "unmangled",  "memory",
+                                                               "cdecl",    "external_only", "deprecated", "aligned"};
 
     if (lKnownParamAttrs.find(name) != lKnownParamAttrs.end()) {
         return true;
@@ -286,6 +287,34 @@ Attribute *AttributeList::GetAttribute(const std::string &name) const {
         }
     }
     return nullptr;
+}
+
+unsigned int AttributeList::GetAlignedAttrValue(SourcePos pos) const {
+    int64_t alignment = 0;
+    if (HasAttribute("aligned")) {
+        alignment = GetAttribute("aligned")->arg.intVal;
+        if (alignment < 0) {
+            Error(pos, "Alignment must be greater than 0.");
+            return 0;
+        }
+        if (alignment == 0) {
+            // This corresponds to the __attribute__((aligned)) syntax,
+            // which in GCC/Clang means "align to the maximum useful
+            // alignment for the target machine." We don't support at the
+            // moment.
+            Error(pos, "Please provide an alignment value");
+            return 0;
+        }
+        if (alignment > (int64_t)UINT_MAX) {
+            Error(pos, "requested alignment is too large.");
+            return 0;
+        }
+        if ((alignment & (alignment - 1)) != 0) {
+            Error(pos, "requested alignment is not a power of 2.");
+            return 0;
+        }
+    }
+    return (unsigned int)alignment;
 }
 
 void AttributeList::MergeAttrList(const AttributeList &attrList) {
@@ -1085,8 +1114,6 @@ std::vector<VariableDeclaration> Declaration::GetVariableDeclarations() const {
             if (!decl->type->IsTypeDependent()) {
                 decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
             }
-            Symbol *sym =
-                new Symbol(decl->name, decl->pos, Symbol::SymbolKind::Variable, decl->type, decl->storageClass);
 
             AttributeList *AL = decl->attributeList;
             if (AL) {
@@ -1098,6 +1125,8 @@ std::vector<VariableDeclaration> Declaration::GetVariableDeclarations() const {
                 }
             }
 
+            Symbol *sym =
+                new Symbol(decl->name, decl->pos, Symbol::SymbolKind::Variable, decl->type, decl->storageClass, AL);
             m->symbolTable->AddVariable(sym);
             vars.push_back(VariableDeclaration(sym, decl->initExpr));
         } else {

@@ -8,6 +8,9 @@
 
 /* supress shift-reduces conflict message for dangling else */
 /* one for 'if', one for 'cif' */
+/* We expect these conflicts and accept the default resolution (shift). It means
+that for the example 'if (a) if (b) c; else d;' the else will be associated
+with the nearest if. Same happens for 'if (a) cif (b) c; else d;'.  */
 %expect 2
 
 %define parse.error verbose
@@ -126,6 +129,8 @@ static void lAddMaskToSymbolTable(SourcePos pos);
 static void lAddThreadIndexCountToSymbolTable(SourcePos pos);
 static std::string lGetAlternates(std::vector<std::string> &alternates);
 static bool lGetConstantIntOrSymbol(Expr *expr, std::variant<std::monostate, int, Symbol*> *value, SourcePos pos, const char *usage);
+static StructType *lCreateStructType(const std::string &name, const std::vector<StructDeclaration *> *decl,
+                                     AttributeList *attrs, SourcePos pos);
 
 enum class TemplateType { Template, Instantiation, Specialization };
 static void lCheckTemplateDeclSpecs(DeclSpecs *ds, SourcePos pos, TemplateType type, const char* name);
@@ -311,8 +316,14 @@ struct ForeachDimension {
 %type <templateParmList> template_parameter_list template_head
 %type <functionTemplateSym> template_declaration
 
+%precedence STRUCT_WITHOUT_ATTRIBUTE
+%precedence TOKEN_ATTRIBUTE
+
 %destructor { lCleanUpString($$); } <stringVal>
 %destructor { delete $$; } <storageClass>
+%destructor { delete $$; } <attributeList>
+%destructor { delete $$; } <attr>
+%destructor { delete $$; } <attrArg>
 // TODO! destructos for all semantic types that return pointer to heap-allocated memory
 // e.g., tests/lit-tests/2599.ispc
 
@@ -1083,6 +1094,22 @@ declaration_statement
 declaration
     : declaration_specifiers ';'
       {
+          DeclSpecs *ds = $1;
+          if (ds && ds->attributeList && ds->attributeList->HasAttribute("aligned")) {
+
+              std::string name;
+              const Type *t = ds->baseType;
+              if (CastType<StructType>(t)) {
+                  name = CastType<StructType>(t)->GetStructName();
+              } else if (CastType<UndefinedStructType>(t)) {
+                  name = CastType<UndefinedStructType>(t)->GetStructName();
+              }
+
+              if (!name.empty()) {
+                  Warning(@1, "attribute ignored in declaration of 'struct %s'. It must follow the 'struct' keyword.",
+                          name.c_str());
+              }
+          }
           $$ = new Declaration($1);
       }
     | declaration_specifiers init_declarator_list ';'
@@ -1474,65 +1501,82 @@ struct_or_union_and_name
 
 struct_or_union_specifier
     : struct_or_union_and_name
-    | struct_or_union_and_name '{' struct_declaration_list '}'
+    // We explicitly use here precedence to lower this rule priority in comparison
+    // with the next one that has attribute_specifier (starting with TOKEN_ATTRIBUTE).
+    // This is needed to avoid shift/reduce conflict, although the default
+    // behavior (shifting) does same in our situation, but it is better to be
+    // explicit here.
+    | struct_or_union_and_name '{' struct_declaration_list '}' %prec STRUCT_WITHOUT_ATTRIBUTE
       {
           if ($3 != nullptr) {
-              llvm::SmallVector<const Type *, 8> elementTypes;
-              llvm::SmallVector<std::string, 8> elementNames;
-              llvm::SmallVector<SourcePos, 8> elementPositions;
-              GetStructTypesNamesPositions(*$3, &elementTypes, &elementNames,
-                                           &elementPositions);
-              const std::string &name = CastType<StructType>($1) ?
-                  CastType<StructType>($1)->GetStructName() :
-                  CastType<UndefinedStructType>($1)->GetStructName();
-              StructType *st = new StructType(name, elementTypes, elementNames,
-                                              elementPositions, false,
-                                              Variability::Unbound, false, @1);
-              m->symbolTable->AddType(name.c_str(), st, @1);
-              $$ = st;
+              const std::string &name = CastType<StructType>($1) ? CastType<StructType>($1)->GetStructName()
+                                                                 : CastType<UndefinedStructType>($1)->GetStructName();
+              $$ = lCreateStructType(name, $3, nullptr, @1);
               // struct_declaration_list returns a vector that is not needed anymore.
               delete $3;
-          }
-          else
+          } else {
               $$ = nullptr;
+          }
       }
-    | struct_or_union '{' struct_declaration_list '}'
+    | struct_or_union_and_name '{' struct_declaration_list '}' attribute_specifier
       {
           if ($3 != nullptr) {
-              llvm::SmallVector<const Type *, 8> elementTypes;
-              llvm::SmallVector<std::string, 8> elementNames;
-              llvm::SmallVector<SourcePos, 8> elementPositions;
-              GetStructTypesNamesPositions(*$3, &elementTypes, &elementNames,
-                                           &elementPositions);
-              $$ = new StructType("", elementTypes, elementNames, elementPositions,
-                                  false, Variability::Unbound, true, @1);
+              const std::string &name = CastType<StructType>($1) ? CastType<StructType>($1)->GetStructName()
+                                                                 : CastType<UndefinedStructType>($1)->GetStructName();
+              $$ = lCreateStructType(name, $3, $5, @1);
+              // attribute_specifier returns an object that is not needed anymore.
+              delete $5;
+          } else {
+              $$ = nullptr;
+          }
+          // struct_declaration_list returns a vector that is not needed anymore.
+          delete $3;
+      }
+    | struct_or_union '{' struct_declaration_list '}' %prec STRUCT_WITHOUT_ATTRIBUTE
+      {
+          if ($3 != nullptr) {
+              $$ = lCreateStructType("", $3, nullptr, @1);
               // struct_declaration_list returns a vector that is not needed anymore.
               delete $3;
-          }
-          else
+          } else {
               $$ = nullptr;
+          }
       }
-    | struct_or_union '{' '}'
+    | struct_or_union '{' struct_declaration_list '}' attribute_specifier
       {
-          llvm::SmallVector<const Type *, 8> elementTypes;
-          llvm::SmallVector<std::string, 8> elementNames;
-          llvm::SmallVector<SourcePos, 8> elementPositions;
-          $$ = new StructType("", elementTypes, elementNames, elementPositions,
-                              false, Variability::Unbound, true, @1);
+          if ($3 != nullptr) {
+              $$ = lCreateStructType("", $3, $5, @1);
+              // struct_declaration_list returns a vector that is not needed anymore.
+              delete $3;
+          } else {
+              $$ = nullptr;
+          }
+          // attribute_specifier returns an object that is not needed anymore.
+          delete $5;
       }
-    | struct_or_union_and_name '{' '}'
+    | struct_or_union '{' '}' %prec STRUCT_WITHOUT_ATTRIBUTE
       {
-          llvm::SmallVector<const Type *, 8> elementTypes;
-          llvm::SmallVector<std::string, 8> elementNames;
-          llvm::SmallVector<SourcePos, 8> elementPositions;
-          const std::string &name = CastType<StructType>($1) ?
-              CastType<StructType>($1)->GetStructName() :
-              CastType<UndefinedStructType>($1)->GetStructName();
-          StructType *st = new StructType(name, elementTypes,
-                                          elementNames, elementPositions,
-                                          false, Variability::Unbound, false, @1);
-          m->symbolTable->AddType(name.c_str(), st, @2);
-          $$ = st;
+          $$ = lCreateStructType("", nullptr, nullptr, @1);
+      }
+    | struct_or_union '{' '}' attribute_specifier
+      {
+          $$ = lCreateStructType("", nullptr, $4, @1);
+          // attribute_specifier returns an object that is not needed anymore.
+          delete $4;
+      }
+    | struct_or_union_and_name '{' '}' %prec STRUCT_WITHOUT_ATTRIBUTE
+      {
+          const std::string &name = CastType<StructType>($1) ? CastType<StructType>($1)->GetStructName()
+                                                             : CastType<UndefinedStructType>($1)->GetStructName();
+          $$ = lCreateStructType(name, nullptr, nullptr, @1);
+      }
+    | struct_or_union_and_name '{' '}' attribute_specifier
+      {
+          const std::string &name = CastType<StructType>($1) ? CastType<StructType>($1)->GetStructName()
+                                                             : CastType<UndefinedStructType>($1)->GetStructName();
+          $$ = lCreateStructType(name, nullptr, $4, @1);
+          // attribute_specifier returns an object that is not needed anymore.
+          delete $4;
       }
     ;
 
@@ -3623,6 +3667,32 @@ lCreateEnumType(const char *name, std::vector<Symbol *> *enums, SourcePos pos) {
     return enumType;
 }
 
+/* Create StructType and add it to the symbol table if it's not anonymous */
+static StructType *lCreateStructType(const std::string &name, const std::vector<StructDeclaration *> *decl,
+                                     AttributeList *attrs, SourcePos pos) {
+    llvm::SmallVector<const Type *, 8> elementTypes;
+    llvm::SmallVector<std::string, 8> elementNames;
+    llvm::SmallVector<SourcePos, 8> elementPositions;
+    unsigned int alignment = 0;
+    bool isAnonymous = name.empty();
+
+    if (attrs) {
+        alignment = attrs->GetAlignedAttrValue(pos);
+    }
+
+    if (decl) {
+        GetStructTypesNamesPositions(*decl, &elementTypes, &elementNames, &elementPositions);
+    }
+
+    StructType *st = new StructType(name, elementTypes, elementNames, elementPositions, false, Variability::Unbound,
+                                    isAnonymous, pos, alignment);
+
+    if (!isAnonymous) {
+        m->symbolTable->AddType(name.c_str(), st, pos);
+    }
+
+    return st;
+}
 
 /** Given an array of enumerator symbols, make sure each of them has a
     ConstExpr * in their Symbol::constValue member that stores their
