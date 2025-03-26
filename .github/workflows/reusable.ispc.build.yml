@@ -46,6 +46,11 @@ on:
         required: false
         type: boolean
         default: false
+      enable_wasm:
+        description: 'Enable WebAssembly support'
+        required: false
+        type: boolean
+        default: false
 
 
 env:
@@ -176,7 +181,7 @@ jobs:
         .github/workflows/scripts/build-ispc.ps1
 
     - name: Build on Windows (with LTO, no Xe)
-      if: inputs.platform == 'windows' && inputs.enable_lto
+      if: inputs.platform == 'windows' && inputs.enable_lto && !inputs.enable_xe
       shell: cmd
       run: |
         set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
@@ -186,30 +191,34 @@ jobs:
 
     - name: Build package on Windows (no LTO, with XE)
       if: inputs.platform == 'windows' && inputs.enable_xe && !inputs.enable_lto
+      env:
+        ISPC_DIR: "build\\build-ispc-stage2\\src\\ispc-stage2-build"
       shell: cmd
       run: |
+        set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        call %VSVARS%
         cmake superbuild -B build --preset os -G "NMake Makefiles" -DINSTALL_WITH_XE_DEPS=ON -DPREBUILT_STAGE2_PATH=%LLVM_HOME%/bin-%LLVM_VERSION% -DCMAKE_INSTALL_PREFIX=%GITHUB_WORKSPACE%\ispc-xe -DISPC_INCLUDE_BENCHMARKS=ON -DEXPLICIT_ENV_PATH=OFF -DGNUWIN32=%CROSS_TOOLS_GNUWIN32% -DISPC_CROSS=ON
         cmake --build build
 
 
     # Sanity checks
     - name: Sanity testing (make check-all, make test) - Linux/macOS
-      if: (inputs.platform == 'linux' || inputs.platform == 'macos') && !inputs.enable_lto
+      if: (inputs.platform == 'linux' || inputs.platform == 'macos') && !inputs.enable_lto && !inputs.enable_xe
       run: |
         .github/workflows/scripts/check-ispc.sh
 
     - name: Sanity testing (make check-all) - Linux/macOS with LTO
-      if: (inputs.platform == 'linux' || inputs.platform == 'macos') && inputs.enable_lto
+      if: (inputs.platform == 'linux' || inputs.platform == 'macos') && inputs.enable_lto && !inputs.enable_xe
       run: |
         cmake --build build --target ispc-stage2-check-all
 
     - name: Sanity testing (make check-all, make test) - Windows
-      if: inputs.platform == 'windows' && !inputs.enable_lto
+      if: inputs.platform == 'windows' && !inputs.enable_lto && !inputs.enable_xe
       run: |
         .github/workflows/scripts/check-ispc.ps1
 
     - name: Sanity testing (make check-all) - Windows with LTO
-      if: inputs.platform == 'windows' && inputs.enable_lto
+      if: inputs.platform == 'windows' && inputs.enable_lto && !inputs.enable_xe
       shell: cmd
       run: |
         set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
@@ -226,6 +235,8 @@ jobs:
     - name: Sanity testing with XE - Windows
       if: inputs.platform == 'windows' && inputs.enable_xe
       shell: cmd
+      env:
+        ISPC_DIR: "build\\build-ispc-stage2\\src\\ispc-stage2-build"
       run: |
         set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
         call %VSVARS%
@@ -271,6 +282,8 @@ jobs:
 
     - name: Upload XE enabled package (Windows)
       if: inputs.platform == 'windows' && inputs.enable_xe
+      env:
+        ISPC_DIR: "build\\build-ispc-stage2\\src\\ispc-stage2-build"
       uses: actions/upload-artifact@v4.6.0
       with:
         name: ${{ inputs.artifact_name }}
