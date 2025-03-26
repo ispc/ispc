@@ -103,7 +103,8 @@ std::string Variability::MangleString() const {
 ///////////////////////////////////////////////////////////////////////////
 // Type
 
-Type::Type(TypeId id, Variability v, bool c, SourcePos s) : typeId(id), variability(v), isConst(c), pos(s) {}
+Type::Type(TypeId id, Variability v, bool c, SourcePos s, unsigned int al)
+    : typeId(id), variability(v), isConst(c), pos(s), alignment(al) {}
 
 const Type *Type::createWithConst(bool newIsConst) const {
     Type *ins = create();
@@ -114,6 +115,12 @@ const Type *Type::createWithConst(bool newIsConst) const {
 const Type *Type::createWithVariability(Variability newVariability) const {
     Type *ins = create();
     ins->variability = newVariability;
+    return ins;
+}
+
+const Type *Type::createWithAlignment(unsigned int newAlignment) const {
+    const Type *ins = create();
+    ins->alignment = newAlignment;
     return ins;
 }
 
@@ -306,6 +313,14 @@ const Type *Type::GetAsNonConstType() const {
     return asOtherConstType;
 }
 
+const Type *Type::GetAsAlignedType(unsigned int newAlignment) const {
+    if (alignment == newAlignment) {
+        return this;
+    }
+
+    return createWithAlignment(newAlignment);
+}
+
 const Type *Type::GetAsUnsignedType() const {
     // For many types, this doesn't make any sense
     return nullptr;
@@ -353,7 +368,7 @@ AtomicType::AtomicType(BasicType bt, Variability v, bool ic) : Type(ATOMIC_TYPE,
 }
 
 AtomicType::AtomicType(const AtomicType &other)
-    : Type(ATOMIC_TYPE, other.variability, other.isConst, other.pos), basicType(other.basicType) {}
+    : Type(ATOMIC_TYPE, other.variability, other.isConst, other.pos, other.alignment), basicType(other.basicType) {}
 
 AtomicType *AtomicType::create() const { return new AtomicType(*this); }
 
@@ -758,7 +773,7 @@ TemplateTypeParmType::TemplateTypeParmType(std::string n, Variability v, bool ic
 }
 
 TemplateTypeParmType::TemplateTypeParmType(const TemplateTypeParmType &other)
-    : Type(TEMPLATE_TYPE_PARM_TYPE, other.variability, other.isConst, other.pos), name(other.name) {}
+    : Type(TEMPLATE_TYPE_PARM_TYPE, other.variability, other.isConst, other.pos, other.alignment), name(other.name) {}
 
 TemplateTypeParmType *TemplateTypeParmType::create() const { return new TemplateTypeParmType(*this); }
 
@@ -855,7 +870,8 @@ EnumType::EnumType(std::string n, Variability v, bool ic, SourcePos p, const std
     : Type(ENUM_TYPE, v, ic, p), name(n), enumerators(enums) {}
 
 EnumType::EnumType(const EnumType &other)
-    : Type(ENUM_TYPE, other.variability, other.isConst, other.pos), name(other.name), enumerators(other.enumerators) {}
+    : Type(ENUM_TYPE, other.variability, other.isConst, other.pos, other.alignment), name(other.name),
+      enumerators(other.enumerators) {}
 
 EnumType *EnumType::create() const { return new EnumType(*this); }
 
@@ -999,7 +1015,7 @@ PointerType::PointerType(const Type *t, Variability v, bool ic, unsigned int pro
     : Type(POINTER_TYPE, v, ic), property(prop), baseType(t), addrSpace(as) {}
 
 PointerType::PointerType(const PointerType &other)
-    : Type(POINTER_TYPE, other.variability, other.isConst, other.pos), property(other.property),
+    : Type(POINTER_TYPE, other.variability, other.isConst, other.pos, other.alignment), property(other.property),
       baseType(other.baseType), addrSpace(other.addrSpace) {}
 
 PointerType *PointerType::create() const { return new PointerType(*this); }
@@ -1316,8 +1332,9 @@ llvm::DIType *PointerType::GetDIType(llvm::DIScope *scope) const {
 ///////////////////////////////////////////////////////////////////////////
 // SequentialType
 
-SequentialType::SequentialType(TypeId id, const Type *b, ElementCount ec, Variability v, bool c, SourcePos pos)
-    : CollectionType(id, v, c, pos), base(b), elementCount(ec) {}
+SequentialType::SequentialType(TypeId id, const Type *b, ElementCount ec, Variability v, bool c, SourcePos pos,
+                               unsigned int al)
+    : CollectionType(id, v, c, pos, al), base(b), elementCount(ec) {}
 
 const SequentialType *SequentialType::createWithBaseType(const Type *newBaseType) const {
     SequentialType *ins = static_cast<SequentialType *>(create());
@@ -1457,7 +1474,8 @@ ArrayType::ArrayType(const Type *b, ElementCount elCount)
 }
 
 ArrayType::ArrayType(const ArrayType &other)
-    : SequentialType(ARRAY_TYPE, other.base, other.elementCount, other.variability, other.isConst, other.pos) {}
+    : SequentialType(ARRAY_TYPE, other.base, other.elementCount, other.variability, other.isConst, other.pos,
+                     other.alignment) {}
 
 ArrayType *ArrayType::create() const { return new ArrayType(*this); }
 
@@ -1704,7 +1722,8 @@ VectorType::VectorType(const Type *b, ElementCount elCount)
     : SequentialType(VECTOR_TYPE, b, elCount, b->GetVariability(), b->IsConstType()) {}
 
 VectorType::VectorType(const VectorType &other)
-    : SequentialType(VECTOR_TYPE, other.base, other.elementCount, other.variability, other.isConst, other.pos) {}
+    : SequentialType(VECTOR_TYPE, other.base, other.elementCount, other.variability, other.isConst, other.pos,
+                     other.alignment) {}
 
 VectorType *VectorType::create() const { return new VectorType(*this); }
 
@@ -1904,8 +1923,8 @@ static std::string lMangleStructName(const std::string &name, Variability variab
 
 StructType::StructType(const std::string &n, const llvm::SmallVector<const Type *, 8> &elts,
                        const llvm::SmallVector<std::string, 8> &en, const llvm::SmallVector<SourcePos, 8> &ep, bool ic,
-                       Variability v, bool ia, SourcePos p)
-    : CollectionType(STRUCT_TYPE, v, ic, p), name(n), elementTypes(elts), elementNames(en), elementPositions(ep),
+                       Variability v, bool ia, SourcePos p, unsigned int align)
+    : CollectionType(STRUCT_TYPE, v, ic, p, align), name(n), elementTypes(elts), elementNames(en), elementPositions(ep),
       isAnonymous(ia) {
     oppositeConstStructType = nullptr;
     finalElementTypes.resize(elts.size(), nullptr);
@@ -1977,13 +1996,24 @@ const StructType *StructType::createWithVariability(Variability newVariability) 
     // m->structTypeMap entry. It is created inside constructor depending
     // on the new variability value.
     // TODO!: I don't think constructor needs to create m->structTypeMap entry
-    return new StructType(name, elementTypes, elementNames, elementPositions, isConst, newVariability, isAnonymous,
-                          pos);
+    return new StructType(name, elementTypes, elementNames, elementPositions, isConst, newVariability, isAnonymous, pos,
+                          alignment);
 }
 
 const StructType *StructType::createWithConst(bool newIsConst) const {
-    return new StructType(name, elementTypes, elementNames, elementPositions, newIsConst, variability, isAnonymous,
-                          pos);
+    return new StructType(name, elementTypes, elementNames, elementPositions, newIsConst, variability, isAnonymous, pos,
+                          alignment);
+}
+
+const StructType *StructType::createWithAlignment(unsigned int newAlignment) const {
+    // It is different from the Type::createWithAlignment because there there are two steps:
+    // auto *s = new StructType(..., alignment); // create with the old alignment
+    // s->alignment = newAlignment; // set the new alignment
+    // Since, StructType constructor performs non-trivial operations, e.g.
+    // creates m->structTypeMap entry, that depend on the arguments of the
+    // constructor, we need to call the constructor with the new alignment.
+    return new StructType(name, elementTypes, elementNames, elementPositions, isConst, variability, isAnonymous, pos,
+                          newAlignment);
 }
 
 const std::string StructType::GetCStructName() const {
@@ -2243,8 +2273,9 @@ bool StructType::checkIfCanBeSOA(const StructType *st) {
 ///////////////////////////////////////////////////////////////////////////
 // UndefinedStructType
 
-UndefinedStructType::UndefinedStructType(const std::string &n, const Variability var, bool ic, SourcePos p)
-    : Type(UNDEFINED_STRUCT_TYPE, var, ic, p), name(n) {
+UndefinedStructType::UndefinedStructType(const std::string &n, const Variability var, bool ic, SourcePos p,
+                                         unsigned int align)
+    : Type(UNDEFINED_STRUCT_TYPE, var, ic, p, align), name(n) {
     Assert(name != "");
     if (variability != Variability::Unbound) {
         // Create a new opaque LLVM struct type for this struct name
@@ -2265,11 +2296,15 @@ const UndefinedStructType *UndefinedStructType::createWithVariability(Variabilit
     // m->structTypeMap entry. It is created inside constructor depending
     // on the new variability value.
     // TODO!: I don't think constructor needs to create m->structTypeMap entry
-    return new UndefinedStructType(name, newVariability, isConst, pos);
+    return new UndefinedStructType(name, newVariability, isConst, pos, alignment);
 }
 
 const UndefinedStructType *UndefinedStructType::createWithConst(bool newIsConst) const {
-    return new UndefinedStructType(name, variability, newIsConst, pos);
+    return new UndefinedStructType(name, variability, newIsConst, pos, alignment);
+}
+
+const UndefinedStructType *UndefinedStructType::createWithAlignment(unsigned int newAlignment) const {
+    return new UndefinedStructType(name, variability, isConst, pos, newAlignment);
 }
 
 bool UndefinedStructType::IsCompleteType() const { return false; }
