@@ -154,6 +154,9 @@ class Type : public Traceable {
     /** Returns the variability of the type. */
     Variability GetVariability() const { return variability; }
 
+    /** Returns the alignment of the type in bytes. */
+    unsigned int GetAlignment() const { return alignment; }
+
     /** Returns true if the underlying type is uniform */
     bool IsUniformType() const { return GetVariability() == Variability::Uniform; }
 
@@ -224,6 +227,10 @@ class Type : public Traceable {
     /** Get a non-const version of this type.  If it's already not const,
         then the old Type pointer is returned. */
     virtual const Type *GetAsNonConstType() const;
+
+    /** Returns a new type that is the same as this type, but with the given
+        alignment. */
+    virtual const Type *GetAsAlignedType(unsigned int alignment) const;
 
     /** Returns a text representation of the type (for example, for use in
         warning and error messages). */
@@ -313,8 +320,11 @@ class Type : public Traceable {
     /** Source file position where the type is declared. */
     SourcePos pos = {};
 
-    Type(TypeId id, Variability v = Variability(Variability::Unbound), bool is_const = false,
-         SourcePos s = SourcePos());
+    /** Alignment of the type in bytes. */
+    mutable unsigned int alignment = 0;
+
+    Type(TypeId id, Variability v = Variability(Variability::Unbound), bool is_const = false, SourcePos s = SourcePos(),
+         unsigned int alignment = 0);
 
     /* These methods are useful to avoid calling the constructor directly.
      createWith methods are used to create a new type that is a shallow copy of
@@ -328,6 +338,9 @@ class Type : public Traceable {
 
     /** Create a copy then set new value of variability member. */
     virtual const Type *createWithVariability(Variability newVariability) const;
+
+    /** Clone method to allow cloning with new alignment */
+    virtual const Type *createWithAlignment(unsigned int newAlignment) const;
 };
 
 /** @brief AtomicType represents basic types like floats, ints, etc.
@@ -586,8 +599,8 @@ class CollectionType : public Type {
 
   protected:
     CollectionType(TypeId id, Variability v = Variability(Variability::Unbound), bool is_const = false,
-                   SourcePos p = SourcePos())
-        : Type(id, v, is_const, p) {}
+                   SourcePos p = SourcePos(), unsigned int align = 0)
+        : Type(id, v, is_const, p, align) {}
 };
 
 /** @brief Abstract base class for types that represent sequences
@@ -645,7 +658,7 @@ class SequentialType : public CollectionType {
     ElementCount elementCount;
 
     SequentialType(TypeId id, const Type *b, ElementCount ec, Variability v = Variability(Variability::Unbound),
-                   bool is_const = false, SourcePos pos = SourcePos());
+                   bool is_const = false, SourcePos pos = SourcePos(), unsigned int align = 0);
 
     const SequentialType *createWithBaseType(const Type *newBaseType) const;
     const SequentialType *createWithElementCount(ElementCount newElementCount) const;
@@ -793,7 +806,7 @@ class StructType : public CollectionType {
   public:
     StructType(const std::string &name, const llvm::SmallVector<const Type *, 8> &elts,
                const llvm::SmallVector<std::string, 8> &eltNames, const llvm::SmallVector<SourcePos, 8> &eltPositions,
-               bool isConst, Variability variability, bool isAnonymous, SourcePos pos);
+               bool isConst, Variability variability, bool isAnonymous, SourcePos pos, unsigned int alignment = 0);
 
     bool IsCompleteType() const override;
 
@@ -868,6 +881,7 @@ class StructType : public CollectionType {
     StructType *create() const override;
     const StructType *createWithVariability(Variability newVariability) const override;
     const StructType *createWithConst(bool newIsConst) const override;
+    const StructType *createWithAlignment(unsigned int newAlignment) const override;
 };
 
 /** Type implementation representing a struct name that has been declared
@@ -877,7 +891,8 @@ class StructType : public CollectionType {
  */
 class UndefinedStructType : public Type {
   public:
-    UndefinedStructType(const std::string &name, const Variability variability, bool isConst, SourcePos pos);
+    UndefinedStructType(const std::string &name, const Variability variability, bool isConst, SourcePos pos,
+                        unsigned int alignment = 0);
 
     bool IsCompleteType() const override;
 
@@ -901,6 +916,7 @@ class UndefinedStructType : public Type {
     UndefinedStructType *create() const override;
     const UndefinedStructType *createWithVariability(Variability newVariability) const override;
     const UndefinedStructType *createWithConst(bool newIsConst) const override;
+    const UndefinedStructType *createWithAlignment(unsigned int newAlignment) const override;
 };
 
 /** @brief Type representing a reference to another (non-reference) type.
