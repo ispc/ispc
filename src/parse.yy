@@ -176,7 +176,6 @@ struct ForeachDimension {
     ExprList *exprList;
     const Type *type;
     std::vector<std::pair<const Type *, SourcePos> > *typeList;
-    const AtomicType *atomicType;
     int typeQualifier;
     StorageClass *storageClass;
     Stmt *stmt;
@@ -280,7 +279,7 @@ struct ForeachDimension {
 %type <type> type_specifier type_name rate_qualified_type_specifier
 %type <type> short_vec_specifier
 %type <typeList> type_specifier_list
-%type <atomicType> atomic_var_type_specifier int_constant_type template_int_constant_type
+%type <type> atomic_var_type_specifier int_constant_type template_int_constant_type
 
 %type <typeQualifier> type_qualifier type_qualifier_list
 %type <storageClass> storage_class_specifier
@@ -372,7 +371,6 @@ struct ForeachDimension {
   }
   fprintf(yyo, ">");
 } <typeList>
-%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <atomicType>
 %printer { fprintf(yyo, "%s", DeclSpecs::GetTypeQualifiersString($$).c_str()); } <typeQualifier>
 %printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <storageClass>
 %printer { fprintf(yyo, "%s:", SAFE_ACCESS($$, GetString().c_str())); } <declSpecs>
@@ -1410,18 +1408,18 @@ type_specifier_list
 
 atomic_var_type_specifier
     : TOKEN_VOID { $$ = AtomicType::Void; }
-    | TOKEN_BOOL    { $$ = CastType<AtomicType>(AtomicType::UniformBool->GetAsUnboundVariabilityType()); }
-    | TOKEN_INT8    { $$ = CastType<AtomicType>(AtomicType::UniformInt8->GetAsUnboundVariabilityType()); }
-    | TOKEN_UINT8   { $$ = CastType<AtomicType>(AtomicType::UniformUInt8->GetAsUnboundVariabilityType()); }
-    | TOKEN_INT16   { $$ = CastType<AtomicType>(AtomicType::UniformInt16->GetAsUnboundVariabilityType()); }
-    | TOKEN_UINT16  { $$ = CastType<AtomicType>(AtomicType::UniformUInt16->GetAsUnboundVariabilityType()); }
-    | TOKEN_INT     { $$ = CastType<AtomicType>(AtomicType::UniformInt32->GetAsUnboundVariabilityType()); }
-    | TOKEN_UINT    { $$ = CastType<AtomicType>(AtomicType::UniformUInt32->GetAsUnboundVariabilityType()); }
-    | TOKEN_FLOAT16 { $$ = CastType<AtomicType>(AtomicType::UniformFloat16->GetAsUnboundVariabilityType()); }
-    | TOKEN_FLOAT   { $$ = CastType<AtomicType>(AtomicType::UniformFloat->GetAsUnboundVariabilityType()); }
-    | TOKEN_DOUBLE  { $$ = CastType<AtomicType>(AtomicType::UniformDouble->GetAsUnboundVariabilityType()); }
-    | TOKEN_INT64   { $$ = CastType<AtomicType>(AtomicType::UniformInt64->GetAsUnboundVariabilityType()); }
-    | TOKEN_UINT64  { $$ = CastType<AtomicType>(AtomicType::UniformUInt64->GetAsUnboundVariabilityType()); }
+    | TOKEN_BOOL    { $$ = AtomicType::UniformBool->GetAsUnboundVariabilityType(); }
+    | TOKEN_INT8    { $$ = AtomicType::UniformInt8->GetAsUnboundVariabilityType(); }
+    | TOKEN_UINT8   { $$ = AtomicType::UniformUInt8->GetAsUnboundVariabilityType(); }
+    | TOKEN_INT16   { $$ = AtomicType::UniformInt16->GetAsUnboundVariabilityType(); }
+    | TOKEN_UINT16  { $$ = AtomicType::UniformUInt16->GetAsUnboundVariabilityType(); }
+    | TOKEN_INT     { $$ = AtomicType::UniformInt32->GetAsUnboundVariabilityType(); }
+    | TOKEN_UINT    { $$ = AtomicType::UniformUInt32->GetAsUnboundVariabilityType(); }
+    | TOKEN_FLOAT16 { $$ = AtomicType::UniformFloat16->GetAsUnboundVariabilityType(); }
+    | TOKEN_FLOAT   { $$ = AtomicType::UniformFloat->GetAsUnboundVariabilityType(); }
+    | TOKEN_DOUBLE  { $$ = AtomicType::UniformDouble->GetAsUnboundVariabilityType(); }
+    | TOKEN_INT64   { $$ = AtomicType::UniformInt64->GetAsUnboundVariabilityType(); }
+    | TOKEN_UINT64  { $$ = AtomicType::UniformUInt64->GetAsUnboundVariabilityType(); }
     ;
 
 short_vec_specifier
@@ -2764,15 +2762,15 @@ template_type_parameter
     ;
 
 int_constant_type
-    : TOKEN_INT8   { $$ = CastType<AtomicType>(AtomicType::UniformInt8->GetAsConstType()); }
-    | TOKEN_INT16  { $$ = CastType<AtomicType>(AtomicType::UniformInt16->GetAsConstType()); }
-    | TOKEN_INT    { $$ = CastType<AtomicType>(AtomicType::UniformInt32->GetAsConstType()); }
-    | TOKEN_INT64  { $$ = CastType<AtomicType>(AtomicType::UniformInt64->GetAsConstType()); }
-    | TOKEN_UINT8  { $$ = CastType<AtomicType>(AtomicType::UniformUInt8->GetAsConstType()); }
-    | TOKEN_UINT16 { $$ = CastType<AtomicType>(AtomicType::UniformUInt16->GetAsConstType()); }
-    | TOKEN_UINT   { $$ = CastType<AtomicType>(AtomicType::UniformUInt32->GetAsConstType()); }
-    | TOKEN_UINT64 { $$ = CastType<AtomicType>(AtomicType::UniformUInt64->GetAsConstType()); }
-    | TOKEN_BOOL   { $$ = CastType<AtomicType>(AtomicType::UniformBool->GetAsConstType()); }
+    : TOKEN_INT8   { $$ = AtomicType::UniformInt8->GetAsConstType(); }
+    | TOKEN_INT16  { $$ = AtomicType::UniformInt16->GetAsConstType(); }
+    | TOKEN_INT    { $$ = AtomicType::UniformInt32->GetAsConstType(); }
+    | TOKEN_INT64  { $$ = AtomicType::UniformInt64->GetAsConstType(); }
+    | TOKEN_UINT8  { $$ = AtomicType::UniformUInt8->GetAsConstType(); }
+    | TOKEN_UINT16 { $$ = AtomicType::UniformUInt16->GetAsConstType(); }
+    | TOKEN_UINT   { $$ = AtomicType::UniformUInt32->GetAsConstType(); }
+    | TOKEN_UINT64 { $$ = AtomicType::UniformUInt64->GetAsConstType(); }
+    | TOKEN_BOOL   { $$ = AtomicType::UniformBool->GetAsConstType(); }
     ;
 
 template_int_constant_type
