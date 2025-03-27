@@ -4452,8 +4452,8 @@ int FunctionCallExpr::EstimateCost() const {
     }
 
     const FunctionType *ftype = CastType<FunctionType>(type);
-    if (ftype != nullptr && ftype->costOverride > -1) {
-        return ftype->costOverride;
+    if (ftype != nullptr && ftype->GetCostOverride() > -1) {
+        return ftype->GetCostOverride();
     }
 
     if (pt != nullptr) {

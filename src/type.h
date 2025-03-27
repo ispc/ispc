@@ -980,7 +980,7 @@ class FunctionType : public Type {
     FunctionType(const Type *returnType, const llvm::SmallVector<const Type *, 8> &argTypes, SourcePos pos);
     FunctionType(const Type *returnType, const llvm::SmallVector<const Type *, 8> &argTypes,
                  const llvm::SmallVector<std::string, 8> &argNames, const llvm::SmallVector<Expr *, 8> &argDefaults,
-                 const llvm::SmallVector<SourcePos, 8> &argPos, unsigned int flags, SourcePos p);
+                 const llvm::SmallVector<SourcePos, 8> &argPos, int costOverride, unsigned int flags, SourcePos p);
     // Structure holding the mangling suffix and prefix for function
     struct FunctionMangledName {
         std::string prefix;
@@ -1051,6 +1051,8 @@ class FunctionType : public Type {
     const SourcePos &GetParameterSourcePos(int i) const;
     const std::string &GetParameterName(int i) const;
 
+    int GetCostOverride() const { return costOverride; }
+
     /** Return true if the function had a 'task' qualifier in the
         source program. */
     bool IsTask() const { return flags & FUNC_TASK; }
@@ -1095,18 +1097,6 @@ class FunctionType : public Type {
         with an all-off mask. */
     bool IsSafe() const { return flags & FUNC_SAFE; }
 
-    /** Set the 'safe' flag for the function. */
-    void SetSafe(bool safe) {
-        if (safe)
-            flags |= FUNC_SAFE;
-        else
-            flags &= ~FUNC_SAFE;
-    }
-
-    /** If non-negative, this provides a user-supplied override to the cost
-        function estimate for the function. */
-    int costOverride;
-
   private:
     std::string mangleTemplateArgs(TemplateArgs *templateArgs) const;
 
@@ -1124,6 +1114,10 @@ class FunctionType : public Type {
         and the like and so not affect testing function types for equality,
         etc. */
     const llvm::SmallVector<SourcePos, 8> paramPositions;
+
+    /** If non-negative, this provides a user-supplied override to the cost
+        function estimate for the function. */
+    int costOverride;
 
     unsigned int flags;
 
