@@ -10,11 +10,6 @@ on:
         description: 'Platform to build on (linux, macos, windows)'
         required: true
         type: string
-      architecture:
-        description: 'Architecture to build for (x86, aarch64)'
-        required: true
-        type: string
-        default: 'x86'
       artifact_name:
          description: 'Name for build artifact'
          required: true
@@ -247,6 +242,12 @@ jobs:
           find build -name check_isa -exec {} \;
           find build -name ispc -exec {} --support-matrix \;
           cmake --build build --target ispc-stage2-check
+        elif [[ "${{ inputs.enable_wasm }}" == "true" ]]; then
+          # Wasm tests
+          cd build
+          bin/ispc --support-matrix
+          make check-all
+          make test
         elif [[ "${{ inputs.enable_lto }}" == "true" ]]; then
           # LTO tests
           cmake --build build --target ispc-stage2-check-all
@@ -275,61 +276,19 @@ jobs:
           powershell -File .github/workflows/scripts/check-ispc.ps1
         )
 
-    # Upload artifacts
-    - name: Upload package (standard build)
-      if: inputs.platform == 'linux' && inputs.architecture == 'aarch64'
+    - name: Upload artifacts
       uses: actions/upload-artifact@v4.6.0
       with:
         name: ${{ inputs.artifact_name }}
-        path: build/ispc-trunk-linux.tar.gz
+        path: |
+          # Linux artifacts
+          ${{ inputs.platform == 'linux' && !inputs.enable_lto && !inputs.enable_xe && 'build/ispc-trunk-linux.tar.gz' || '' }}
+          ${{ inputs.platform == 'linux' && (inputs.enable_lto || inputs.enable_xe) && 'build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-linux.tar.gz' || '' }}
 
-    - name: Upload package (Linux)
-      if: inputs.platform == 'linux' && inputs.architecture != 'aarch64' && !inputs.enable_xe
-      uses: actions/upload-artifact@v4.6.0
-      with:
-        name: ${{ inputs.artifact_name }}
-        path: ${{ inputs.enable_lto && 'build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-linux.tar.gz' || 'build/ispc-trunk-linux.tar.gz' }}
+          # macOS artifacts
+          ${{ inputs.platform == 'macos' && inputs.enable_lto && 'build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-macOS.universal.tar.gz' || '' }}
+          ${{ inputs.platform == 'macos' && !inputs.enable_lto && 'build/ispc-trunk-macos.tar.gz' || '' }}
 
-    - name: Upload package (macOS)
-      if: inputs.platform == 'macos'
-      uses: actions/upload-artifact@v4.6.0
-      with:
-        name: ${{ inputs.artifact_name }}
-        path: ${{ inputs.enable_lto && 'build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-macOS.universal.tar.gz' || 'build/ispc-trunk-macos.tar.gz' }}
-
-    - name: Upload package (Windows)
-      if: inputs.platform == 'windows' && !inputs.enable_xe
-      uses: actions/upload-artifact@v4.6.0
-      with:
-        name: ${{ inputs.artifact_name }}
-        path: ${{ inputs.enable_lto && 'build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-windows.zip' || 'build/ispc-trunk-windows.zip' }}
-
-    - name: Upload XE enabled package (Linux)
-      if: inputs.platform == 'linux' && inputs.enable_xe
-      uses: actions/upload-artifact@v4.6.0
-      with:
-        name: ${{ inputs.artifact_name }}
-        path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-linux.tar.gz
-
-    - name: Upload XE enabled package (Windows)
-      if: inputs.platform == 'windows' && inputs.enable_xe
-      env:
-        ISPC_DIR: "build\\build-ispc-stage2\\src\\ispc-stage2-build"
-      uses: actions/upload-artifact@v4.6.0
-      with:
-        name: ${{ inputs.artifact_name }}
-        path: ${{ env.ISPC_DIR }}/ispc-trunk-windows.zip
-
-    - name: Upload ISPC with XE dependencies (Linux)
-      if: inputs.platform == 'linux' && inputs.enable_xe
-      uses: actions/upload-artifact@v4.6.0
-      with:
-        name: ${{ inputs.artifact_name }}
-        path: ispc-xe
-
-    - name: Upload ISPC with XE dependencies (Windows)
-      if: inputs.platform == 'windows' && inputs.enable_xe
-      uses: actions/upload-artifact@v4.6.0
-      with:
-        name: ${{ inputs.artifact_name }}
-        path: ispc-xe
+          # Windows artifacts
+          ${{ inputs.platform == 'windows' && !inputs.enable_lto && !inputs.enable_xe && 'build/ispc-trunk-windows.zip' || '' }}
+          ${{ inputs.platform == 'windows' && (inputs.enable_lto || inputs.enable_xe) && 'build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-windows.zip' || '' }}

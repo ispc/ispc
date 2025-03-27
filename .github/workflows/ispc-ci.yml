@@ -112,7 +112,6 @@ jobs:
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: linux
-      architecture: aaarch64
       artifact_name: ispc_llvm${{ matrix.llvm.short_version }}_linux.aarch64
       runner: ubuntu-22.04-arm
       llvm_version: ${{ matrix.llvm.version }}
@@ -139,7 +138,6 @@ jobs:
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: linux
-      architecture: x86
       artifact_name: ispc_llvm${{ matrix.llvm.short_version }}_linux
       runner: ubuntu-22.04
       llvm_version: ${{ matrix.llvm.version }}
@@ -153,7 +151,6 @@ jobs:
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: linux
-      architecture: x86
       artifact_name: ispc_llvm18_lto_linux
       runner: ubuntu-22.04
       llvm_version: "18.1"
@@ -167,7 +164,6 @@ jobs:
       uses: ./.github/workflows/reusable.ispc.build.yml
       with:
         platform: linux
-        architecture: x86
         artifact_name: ispc_llvm18rel_linux
         runner: ubuntu-22.04
         llvm_version: "18.1"
@@ -181,7 +177,6 @@ jobs:
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: linux
-      architecture: x86
       artifact_name: ispc_xe_llvm18rel_linux
       runner: ubuntu-22.04
       llvm_version: "18.1"
@@ -195,7 +190,6 @@ jobs:
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: linux
-      architecture: x86
       artifact_name: ispc-wasm-linux
       runner: ubuntu-22.04
       llvm_version: "18.1"
@@ -290,6 +284,10 @@ jobs:
   linux-test-xe-llvm18-release:
     needs: [define-flow, linux-build-ispc-xe-llvm18-release]
     if: ${{ needs.define-flow.outputs.flow_type == 'smoke' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86, x86-64]
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
       platform: linux
@@ -319,7 +317,6 @@ jobs:
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: macos
-      architecture: x86
       artifact_name: ispc_llvm${{ matrix.llvm.short_version }}_${{ matrix.runner }}
       runner: ${{ matrix.runner }}
       llvm_version: ${{ matrix.llvm.version }}
@@ -333,7 +330,6 @@ jobs:
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: macos
-      architecture: x86
       artifact_name: ispc_llvm18_lto_macos
       runner: macos-13
       llvm_version: 18.1
@@ -400,7 +396,6 @@ jobs:
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: windows
-      architecture: x86
       artifact_name: ispc_llvm${{ matrix.llvm.short_version }}_win
       runner: windows-2019
       llvm_version: ${{ matrix.llvm.version }}
@@ -414,7 +409,6 @@ jobs:
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: windows
-      architecture: x86
       artifact_name: ispc_llvm18_lto_win
       runner: windows-2019
       llvm_version: 18.1
@@ -428,7 +422,6 @@ jobs:
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: windows
-      architecture: x86
       artifact_name: ispc_xe_llvm18rel_win
       runner: windows-2019
       llvm_version: 18.1
@@ -442,7 +435,6 @@ jobs:
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: windows
-      architecture: x86
       artifact_name: ispc-wasm-windows
       runner: windows-2019
       llvm_version: 18.1
@@ -487,6 +479,10 @@ jobs:
   win-test-xe-llvm18-release:
     needs: [define-flow, win-build-ispc-xe-llvm18-release]
     if: ${{ needs.define-flow.outputs.flow_type == 'smoke' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86, x86-64]
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
       platform: windows
