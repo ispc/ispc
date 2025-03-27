@@ -3674,7 +3674,6 @@ static StructType *lCreateStructType(const std::string &name, const std::vector<
     llvm::SmallVector<std::string, 8> elementNames;
     llvm::SmallVector<SourcePos, 8> elementPositions;
     unsigned int alignment = 0;
-    bool isAnonymous = name.empty();
 
     if (attrs) {
         alignment = attrs->GetAlignedAttrValue(pos);
@@ -3684,10 +3683,10 @@ static StructType *lCreateStructType(const std::string &name, const std::vector<
         GetStructTypesNamesPositions(*decl, &elementTypes, &elementNames, &elementPositions);
     }
 
-    StructType *st = new StructType(name, elementTypes, elementNames, elementPositions, false, Variability::Unbound,
-                                    isAnonymous, pos, alignment);
+    StructType *st =
+        new StructType(name, elementTypes, elementNames, elementPositions, false, Variability::Unbound, pos, alignment);
 
-    if (!isAnonymous) {
+    if (!name.empty()) {
         m->symbolTable->AddType(name.c_str(), st, pos);
     }
 

@@ -1923,9 +1923,9 @@ static std::string lMangleStructName(const std::string &name, Variability variab
 
 StructType::StructType(const std::string &n, const llvm::SmallVector<const Type *, 8> &elts,
                        const llvm::SmallVector<std::string, 8> &en, const llvm::SmallVector<SourcePos, 8> &ep, bool ic,
-                       Variability v, bool ia, SourcePos p, unsigned int align)
+                       Variability v, SourcePos p, unsigned int align)
     : CollectionType(STRUCT_TYPE, v, ic, p, align), name(n), elementTypes(elts), elementNames(en), elementPositions(ep),
-      isAnonymous(ia) {
+      isAnonymous(name.empty()) {
     oppositeConstStructType = nullptr;
     finalElementTypes.resize(elts.size(), nullptr);
 
@@ -1935,7 +1935,6 @@ StructType::StructType(const std::string &n, const llvm::SmallVector<const Type 
     // struct from having different names causing type match errors.
     if (name == "") {
         char buf[16];
-        Assert(isAnonymous);
         snprintf(buf, sizeof(buf), "$anon%d", count);
         name = std::string(buf);
         ++count;
@@ -1996,13 +1995,11 @@ const StructType *StructType::createWithVariability(Variability newVariability) 
     // m->structTypeMap entry. It is created inside constructor depending
     // on the new variability value.
     // TODO!: I don't think constructor needs to create m->structTypeMap entry
-    return new StructType(name, elementTypes, elementNames, elementPositions, isConst, newVariability, isAnonymous, pos,
-                          alignment);
+    return new StructType(name, elementTypes, elementNames, elementPositions, isConst, newVariability, pos, alignment);
 }
 
 const StructType *StructType::createWithConst(bool newIsConst) const {
-    return new StructType(name, elementTypes, elementNames, elementPositions, newIsConst, variability, isAnonymous, pos,
-                          alignment);
+    return new StructType(name, elementTypes, elementNames, elementPositions, newIsConst, variability, pos, alignment);
 }
 
 const StructType *StructType::createWithAlignment(unsigned int newAlignment) const {
@@ -2012,8 +2009,7 @@ const StructType *StructType::createWithAlignment(unsigned int newAlignment) con
     // Since, StructType constructor performs non-trivial operations, e.g.
     // creates m->structTypeMap entry, that depend on the arguments of the
     // constructor, we need to call the constructor with the new alignment.
-    return new StructType(name, elementTypes, elementNames, elementPositions, isConst, variability, isAnonymous, pos,
-                          newAlignment);
+    return new StructType(name, elementTypes, elementNames, elementPositions, isConst, variability, pos, newAlignment);
 }
 
 const std::string StructType::GetCStructName() const {
@@ -2079,8 +2075,7 @@ const StructType *StructType::GetAsSOAType(int width) const {
 }
 
 const StructType *StructType::GetAsNamed(const std::string &n) const {
-    // TODO!: isNamed enum flag type?
-    return new StructType(n, elementTypes, elementNames, elementPositions, isConst, variability, false, pos);
+    return new StructType(n, elementTypes, elementNames, elementPositions, isConst, variability, pos);
 }
 
 std::string StructType::GetString() const {
@@ -2091,7 +2086,7 @@ std::string StructType::GetString() const {
     ret += variability.GetString();
     ret += " struct ";
 
-    if (isAnonymous) {
+    if (IsAnonymousType()) {
         // Print the whole anonymous struct declaration
         ret += name + std::string(" { ");
         for (unsigned int i = 0; i < elementTypes.size(); ++i) {
