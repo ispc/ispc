@@ -672,9 +672,29 @@ void Declarator::Print(Indent &indent) const {
     indent.Done();
 }
 
-unsigned int lCreateFunctionFlags(int typeQualifiers, StorageClass storageClass, const AttributeList *attributeList,
-                                  SourcePos pos) {
+unsigned int lCreateFunctionFlagsAndCostOverride(int &costOverride, DeclSpecs *ds, SourcePos pos) {
+    int typeQualifiers = ds->typeQualifiers;
+    StorageClass storageClass = ds->storageClass;
+    const AttributeList *attributeList = ds->attributeList;
     unsigned int flags = 0;
+
+    // handle any explicit __declspecs on the function
+    for (int i = 0; i < (int)ds->declSpecList.size(); ++i) {
+        std::string str = ds->declSpecList[i].first;
+        SourcePos ds_spec_pos = ds->declSpecList[i].second;
+
+        if (str == "safe") {
+            flags |= FunctionType::FUNC_SAFE;
+        } else if (!strncmp(str.c_str(), "cost", 4)) {
+            int cost = atoi(str.c_str() + 4);
+            if (cost < 0) {
+                Error(ds_spec_pos, "Negative function cost %d is illegal.", cost);
+            }
+            costOverride = cost;
+        } else {
+            Error(ds_spec_pos, "__declspec parameter \"%s\" unknown.", str.c_str());
+        }
+    }
 
     bool isExternC = storageClass.IsExternC();
     bool isExternSYCL = storageClass.IsExternSYCL();
@@ -1002,9 +1022,10 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             returnType = returnType->ResolveUnboundVariability(Variability::Varying);
         }
 
+        int costOverride = 0;
         unsigned int functionFlags = 0;
         if (ds) {
-            functionFlags = lCreateFunctionFlags(ds->typeQualifiers, ds->storageClass, ds->attributeList, pos);
+            functionFlags = lCreateFunctionFlagsAndCostOverride(costOverride, ds, pos);
         }
 
         if (child == nullptr) {
@@ -1013,27 +1034,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         }
 
         const FunctionType *functionType =
-            new FunctionType(returnType, args, argNames, argDefaults, argPos, functionFlags, pos);
-
-        // handle any explicit __declspecs on the function
-        if (ds != nullptr) {
-            for (int i = 0; i < (int)ds->declSpecList.size(); ++i) {
-                std::string str = ds->declSpecList[i].first;
-                SourcePos ds_spec_pos = ds->declSpecList[i].second;
-
-                if (str == "safe") {
-                    (const_cast<FunctionType *>(functionType))->SetSafe(true);
-                } else if (!strncmp(str.c_str(), "cost", 4)) {
-                    int cost = atoi(str.c_str() + 4);
-                    if (cost < 0) {
-                        Error(ds_spec_pos, "Negative function cost %d is illegal.", cost);
-                    }
-                    (const_cast<FunctionType *>(functionType))->costOverride = cost;
-                } else {
-                    Error(ds_spec_pos, "__declspec parameter \"%s\" unknown.", str.c_str());
-                }
-            }
-        }
+            new FunctionType(returnType, args, argNames, argDefaults, argPos, costOverride, functionFlags, pos);
 
         child->InitFromType(functionType, ds);
         type = child->type;

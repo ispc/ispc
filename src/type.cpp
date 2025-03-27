@@ -2604,22 +2604,18 @@ FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 
 
 FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 8> &a,
                            const llvm::SmallVector<std::string, 8> &an, const llvm::SmallVector<Expr *, 8> &ad,
-                           const llvm::SmallVector<SourcePos, 8> &ap, unsigned int functionFlags, SourcePos p)
+                           const llvm::SmallVector<SourcePos, 8> &ap, int cost, unsigned int functionFlags, SourcePos p)
     : Type(FUNCTION_TYPE, Variability::Uniform, false, p), returnType(r), paramTypes(a), paramNames(an),
-      paramDefaults(ad), paramPositions(ap), flags(functionFlags) {
+      paramDefaults(ad), paramPositions(ap), costOverride(cost), flags(functionFlags) {
     Assert(paramTypes.size() == paramNames.size() && paramNames.size() == paramDefaults.size() &&
            paramDefaults.size() == paramPositions.size());
     Assert(returnType != nullptr);
-    costOverride = -1;
     asUnmaskedType = asMaskedType = nullptr;
 }
 
 FunctionType::FunctionType(const FunctionType &other)
     : FunctionType(other.returnType, other.paramTypes, other.paramNames, other.paramDefaults, other.paramPositions,
-                   other.flags, other.pos) {
-    // Copy any additional state that isn't passed to the constructor
-    this->costOverride = other.costOverride;
-
+                   other.costOverride, other.flags, other.pos) {
     // Reset any cached values
     this->asMaskedType = nullptr;
     this->asUnmaskedType = nullptr;
