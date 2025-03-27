@@ -806,7 +806,7 @@ class StructType : public CollectionType {
   public:
     StructType(const std::string &name, const llvm::SmallVector<const Type *, 8> &elts,
                const llvm::SmallVector<std::string, 8> &eltNames, const llvm::SmallVector<SourcePos, 8> &eltPositions,
-               bool isConst, Variability variability, bool isAnonymous, SourcePos pos, unsigned int alignment = 0);
+               bool isConst, Variability variability, SourcePos pos, unsigned int alignment = 0);
 
     bool IsCompleteType() const override;
 
