@@ -1,8 +1,12 @@
 //  Copyright (c) 2025, Intel Corporation
 //  SPDX-License-Identifier: BSD-3-Clause
 
+#if TARGET_WIDTH == 8
+#define TILE_WIDTH 16
+#elif TARGET_WIDTH == 16
 #define TILE_WIDTH 32
-#define TILE_HEIGHT 2
+#endif
+#define TILE_HEIGHT 8
 #define NEG_INF -1e30f
 
 void matmul(uniform float matrixA[], uniform float matrixB[], uniform float matrixC[], uniform int M, uniform int N,
