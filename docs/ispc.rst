@@ -733,6 +733,8 @@ vectors:
     varying float<4> x, y;
     varying float<4> z = max(x, y);
 
+Attribute ``aligned(N)`` was added to specify alignment of variables and struct
+types.
 
 Getting Started with ISPC
 =========================
@@ -3118,6 +3120,39 @@ There are two ways to use this attribute in ISPC with or without a message:
     __attribute__((deprecated)) void foo();
     __attribute__((deprecated("Use bar() instead."))) void foo();
 
+aligned
+-------
+
+``__attribute__((aligned(N)))`` can be applied to variables to specify their
+alignment:
+
+::
+
+    __attribute__((aligned(16))) uniform int x;
+
+To specify the alignment of a type (such as a struct), place the attribute
+after the struct definition. This means that any variable of this type will be
+aligned unless overridden.
+
+::
+
+    struct S { int x; } __attribute__((aligned(16)));
+    // v is aligned to 16 bytes
+    struct S v;
+
+Consider the following example that combines both the type alignment and the
+variable alignment.
+
+::
+
+    // v16 is aligned to 16 bytes
+    __attribute__((aligned(16))) struct S { int x; } __attribute__((aligned(32))) v16;
+    // v32 is aligned to 32 bytes
+    struct S v32;
+
+Note, that ISPC doesn't support ``__attribute__((aligned))`` without an
+argument. It also doesn't support placing the aligned attribute for specific
+members of struct types.
 
 Expressions
 -----------
