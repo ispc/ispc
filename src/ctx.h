@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -460,11 +460,14 @@ class FunctionEmitContext {
         pointers are expected to come in as vectors of i32/i64 (depending
         on the target), since LLVM doesn't currently support vectors of
         pointers.  The underlying type of the base pointer must be provided
-        via the ptrType parameter */
-    llvm::Value *GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index, const Type *ptrType,
+        via the ptrType parameter.  The underlying type of index variables must
+        be provided via the indexType parameter. */
+    // TODO!: LLVM actually supports vectors of pointers, so we need reconsider
+    // this functions and other places.
+    llvm::Value *GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index, const Type *ptrType, const Type *indexType,
                                    const llvm::Twine &name = "");
     llvm::Value *GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0, llvm::Value *index1, const Type *ptrType,
-                                   const llvm::Twine &name = "");
+                                   const Type *index0Type, const Type *index1Type, const llvm::Twine &name = "");
 
     /** This method returns a new pointer that represents offsetting the
         given base pointer to point at the given element number of the
@@ -818,7 +821,7 @@ class FunctionEmitContext {
     void jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target);
     llvm::Value *emitGatherCallback(llvm::Value *lvalue, llvm::Value *retPtr);
 
-    llvm::Value *applyVaryingGEP(llvm::Value *basePtr, llvm::Value *index, const Type *ptrType);
+    llvm::Value *applyVaryingGEP(llvm::Value *basePtr, llvm::Value *index, const Type *ptrType, const Type *indexType);
 
     void restoreMaskGivenReturns(llvm::Value *oldMask);
     void addSwitchMaskCheck(llvm::Value *mask);
