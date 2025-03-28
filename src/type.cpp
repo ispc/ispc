@@ -2380,10 +2380,11 @@ ReferenceType::ReferenceType(const Type *t, AddressSpace as)
     : Type(REFERENCE_TYPE, Variability::Unbound, false), targetType(t), addrSpace(as) {
     if (targetType == nullptr) {
         Assert(m->errorCount > 0);
+    } else {
+        variability = targetType->GetVariability();
+        isConst = targetType->IsConstType();
+        asOtherConstType = nullptr;
     }
-    variability = targetType->GetVariability();
-    isConst = targetType->IsConstType();
-    asOtherConstType = nullptr;
 }
 
 ReferenceType::ReferenceType(const ReferenceType &other) : ReferenceType(other.targetType, other.addrSpace) {}
