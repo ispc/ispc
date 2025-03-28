@@ -2075,7 +2075,7 @@ const StructType *StructType::GetAsSOAType(int width) const {
 }
 
 const StructType *StructType::GetAsNamed(const std::string &n) const {
-    return new StructType(n, elementTypes, elementNames, elementPositions, isConst, variability, pos);
+    return new StructType(n, elementTypes, elementNames, elementPositions, isConst, variability, pos, alignment);
 }
 
 std::string StructType::GetString() const {
