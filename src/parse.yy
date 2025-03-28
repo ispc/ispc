@@ -1480,11 +1480,11 @@ struct_or_union_and_name
       {
           const Type *st = m->symbolTable->LookupType($2);
           if (st == nullptr) {
-              st = new UndefinedStructType($2, Variability::Unbound, false, @2);
-              m->symbolTable->AddType($2, st, @2);
-              $$ = st;
-          }
-          else {
+              UndefinedStructType* ust = new UndefinedStructType($2, Variability::Unbound, false, @2);
+              ust->RegisterInStructTypeMap();
+              m->symbolTable->AddType($2, ust, @2);
+              $$ = ust;
+          } else {
               if (CastType<StructType>(st) == nullptr &&
                   CastType<UndefinedStructType>(st) == nullptr) {
                   Error(@2, "Type \"%s\" is not a struct type! (%s)", $2,
@@ -3692,6 +3692,7 @@ static StructType *lCreateStructType(const std::string &name, const std::vector<
 
     StructType *st =
         new StructType(name, elementTypes, elementNames, elementPositions, false, Variability::Unbound, pos, alignment);
+    st->RegisterInStructTypeMap();
 
     if (!name.empty()) {
         m->symbolTable->AddType(name.c_str(), st, pos);
