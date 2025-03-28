@@ -492,7 +492,7 @@ class EnumType : public Type {
     const std::string name;
     std::vector<Symbol *> enumerators;
 
-    EnumType(std::string name, Variability v, bool ic, SourcePos pos, const std::vector<Symbol *> &enumerators);
+    EnumType(const std::string &name, Variability v, bool ic, SourcePos pos, const std::vector<Symbol *> &enumerators);
     EnumType(const EnumType &other);
 
     EnumType *create() const override;
@@ -1147,7 +1147,7 @@ class FunctionType : public Type {
 
     FunctionType *create() const override;
     const FunctionType *createWithSignature(const Type *newReturnType,
-                                            llvm::SmallVector<const Type *, 8> newParamTypes) const;
+                                            const llvm::SmallVector<const Type *, 8> &newParamTypes) const;
     const FunctionType *createWithFlags(unsigned int newFlags) const;
 };
 
