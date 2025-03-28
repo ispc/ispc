@@ -851,6 +851,8 @@ class StructType : public CollectionType {
     const std::string &GetStructName() const { return name; }
     const std::string GetCStructName() const;
 
+    void RegisterInStructTypeMap();
+
   private:
     static bool checkIfCanBeSOA(const StructType *st);
 
@@ -870,13 +872,13 @@ class StructType : public CollectionType {
     /** Source file position at which each structure element declaration
         appeared. */
     const llvm::SmallVector<SourcePos, 8> elementPositions;
-    const bool isAnonymous;
+    bool isAnonymous;
 
     mutable llvm::SmallVector<const Type *, 8> finalElementTypes;
 
     mutable const StructType *oppositeConstStructType;
 
-    StructType(const StructType &other) = delete;
+    StructType(const StructType &other);
 
     StructType *create() const override;
     const StructType *createWithVariability(Variability newVariability) const override;
@@ -908,10 +910,12 @@ class UndefinedStructType : public Type {
     /** Returns the name of the structure type.  (e.g. struct Foo -> "Foo".) */
     const std::string &GetStructName() const { return name; }
 
+    void RegisterInStructTypeMap();
+
   private:
     const std::string name;
 
-    UndefinedStructType(const UndefinedStructType &other) = delete;
+    UndefinedStructType(const UndefinedStructType &other);
 
     UndefinedStructType *create() const override;
     const UndefinedStructType *createWithVariability(Variability newVariability) const override;
