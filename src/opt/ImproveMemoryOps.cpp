@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2024, Intel Corporation
+  Copyright (c) 2022-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -1378,6 +1378,7 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
     llvm::Type *scalarType =
         (gatherInfo != nullptr) ? gatherInfo->scalarType() : scatterInfo->vecPtrType()->getScalarType();
 
+    auto callName = callInst->getName();
     if (LLVMVectorValuesAllEqual(fullOffsets)) {
         // If all the offsets are equal, then compute the single
         // pointer they all represent based on the first one of them
@@ -1401,15 +1402,17 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
             //                                              <4 x i32> zeroinitializer
             llvm::Value *undef1Value = llvm::UndefValue::get(callInst->getType());
             llvm::Value *undef2Value = llvm::UndefValue::get(callInst->getType());
-            llvm::Value *insertVec =
-                llvm::InsertElementInst::Create(undef1Value, scalarValue, LLVMInt32(0), callInst->getName(),
-                                                ISPC_INSERTION_POINT_INSTRUCTION(callInst));
-            llvm::Value *zeroMask = llvm::ConstantVector::getSplat(
-                llvm::ElementCount::get(llvm::dyn_cast<llvm::FixedVectorType>(callInst->getType())->getNumElements(),
-                                        false),
-                llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
-            llvm::Instruction *shufInst =
-                new llvm::ShuffleVectorInst(insertVec, undef2Value, zeroMask, callInst->getName());
+            llvm::Value *insertVec = llvm::InsertElementInst::Create(undef1Value, scalarValue, LLVMInt32(0), callName,
+                                                                     ISPC_INSERTION_POINT_INSTRUCTION(callInst));
+            llvm::FixedVectorType *FVT = llvm::dyn_cast<llvm::FixedVectorType>(callInst->getType());
+            if (!FVT) {
+                Error(pos, "Unable to cast return type of \"%s\" to FixedVectorType", callName.str().c_str());
+                return nullptr;
+            }
+            llvm::Value *zeroMask =
+                llvm::ConstantVector::getSplat(llvm::ElementCount::get(FVT->getNumElements(), false),
+                                               llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
+            llvm::Instruction *shufInst = new llvm::ShuffleVectorInst(insertVec, undef2Value, zeroMask, callName);
 
             LLVMCopyMetadata(shufInst, callInst);
             llvm::ReplaceInstWithInst(callInst, shufInst);
