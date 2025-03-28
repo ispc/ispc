@@ -1928,15 +1928,15 @@ StructType::StructType(const std::string &n, const llvm::SmallVector<const Type 
       isAnonymous(name.empty()) {
     oppositeConstStructType = nullptr;
     finalElementTypes.resize(elts.size(), nullptr);
+}
 
+void StructType::RegisterInStructTypeMap() {
     static int count = 0;
     // Create a unique anonymous struct name if we have an anonymous struct (name == "")
     // Ensuring struct is created with a name, prevents each use of original
     // struct from having different names causing type match errors.
     if (name == "") {
-        char buf[16];
-        snprintf(buf, sizeof(buf), "$anon%d", count);
-        name = std::string(buf);
+        name = "$anon" + std::to_string(count);
         ++count;
     }
 
@@ -1985,31 +1985,35 @@ StructType::StructType(const std::string &n, const llvm::SmallVector<const Type 
     }
 }
 
-StructType *StructType::create() const {
-    Assert(0 && "StructType::create() should never be called.");
-    return nullptr;
+StructType::StructType(const StructType &other)
+    : CollectionType(STRUCT_TYPE, other.variability, other.isConst, other.pos, other.alignment), name(other.name),
+      elementTypes(other.elementTypes), elementNames(other.elementNames), elementPositions(other.elementPositions),
+      isAnonymous(other.isAnonymous) {
+    oppositeConstStructType = nullptr;
+    finalElementTypes.resize(other.elementTypes.size(), nullptr);
 }
 
+StructType *StructType::create() const { return new StructType(*this); }
+
 const StructType *StructType::createWithVariability(Variability newVariability) const {
-    // This is a bit of a hack, but it's the easiest way to get the correct
-    // m->structTypeMap entry. It is created inside constructor depending
-    // on the new variability value.
-    // TODO!: I don't think constructor needs to create m->structTypeMap entry
-    return new StructType(name, elementTypes, elementNames, elementPositions, isConst, newVariability, pos, alignment);
+    StructType *t = create();
+    t->variability = newVariability;
+    t->RegisterInStructTypeMap();
+    return t;
 }
 
 const StructType *StructType::createWithConst(bool newIsConst) const {
-    return new StructType(name, elementTypes, elementNames, elementPositions, newIsConst, variability, pos, alignment);
+    StructType *t = create();
+    t->isConst = newIsConst;
+    t->RegisterInStructTypeMap();
+    return t;
 }
 
 const StructType *StructType::createWithAlignment(unsigned int newAlignment) const {
-    // It is different from the Type::createWithAlignment because there there are two steps:
-    // auto *s = new StructType(..., alignment); // create with the old alignment
-    // s->alignment = newAlignment; // set the new alignment
-    // Since, StructType constructor performs non-trivial operations, e.g.
-    // creates m->structTypeMap entry, that depend on the arguments of the
-    // constructor, we need to call the constructor with the new alignment.
-    return new StructType(name, elementTypes, elementNames, elementPositions, isConst, variability, pos, newAlignment);
+    StructType *t = create();
+    t->alignment = newAlignment;
+    t->RegisterInStructTypeMap();
+    return t;
 }
 
 const std::string StructType::GetCStructName() const {
@@ -2075,7 +2079,12 @@ const StructType *StructType::GetAsSOAType(int width) const {
 }
 
 const StructType *StructType::GetAsNamed(const std::string &n) const {
-    return new StructType(n, elementTypes, elementNames, elementPositions, isConst, variability, pos, alignment);
+    Assert(n != "" && "We should not create anonymous structs here.");
+    StructType *t = create();
+    t->name = n;
+    t->isAnonymous = false;
+    t->RegisterInStructTypeMap();
+    return t;
 }
 
 std::string StructType::GetString() const {
@@ -2272,6 +2281,12 @@ UndefinedStructType::UndefinedStructType(const std::string &n, const Variability
                                          unsigned int align)
     : Type(UNDEFINED_STRUCT_TYPE, var, ic, p, align), name(n) {
     Assert(name != "");
+}
+
+UndefinedStructType::UndefinedStructType(const UndefinedStructType &other)
+    : Type(UNDEFINED_STRUCT_TYPE, other.variability, other.isConst, other.pos, other.alignment), name(other.name) {}
+
+void UndefinedStructType::RegisterInStructTypeMap() {
     if (variability != Variability::Unbound) {
         // Create a new opaque LLVM struct type for this struct name
         std::string mname = lMangleStructName(name, variability);
@@ -2281,25 +2296,27 @@ UndefinedStructType::UndefinedStructType(const std::string &n, const Variability
     }
 }
 
-UndefinedStructType *UndefinedStructType::create() const {
-    Assert(0);
-    return nullptr;
-}
+UndefinedStructType *UndefinedStructType::create() const { return new UndefinedStructType(*this); }
 
 const UndefinedStructType *UndefinedStructType::createWithVariability(Variability newVariability) const {
-    // This is a bit of a hack, but it's the easiest way to get the correct
-    // m->structTypeMap entry. It is created inside constructor depending
-    // on the new variability value.
-    // TODO!: I don't think constructor needs to create m->structTypeMap entry
-    return new UndefinedStructType(name, newVariability, isConst, pos, alignment);
+    UndefinedStructType *t = create();
+    t->variability = newVariability;
+    t->RegisterInStructTypeMap();
+    return t;
 }
 
 const UndefinedStructType *UndefinedStructType::createWithConst(bool newIsConst) const {
-    return new UndefinedStructType(name, variability, newIsConst, pos, alignment);
+    UndefinedStructType *t = create();
+    t->isConst = newIsConst;
+    t->RegisterInStructTypeMap();
+    return t;
 }
 
 const UndefinedStructType *UndefinedStructType::createWithAlignment(unsigned int newAlignment) const {
-    return new UndefinedStructType(name, variability, isConst, pos, newAlignment);
+    UndefinedStructType *t = create();
+    t->alignment = newAlignment;
+    t->RegisterInStructTypeMap();
+    return t;
 }
 
 bool UndefinedStructType::IsCompleteType() const { return false; }
