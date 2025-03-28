@@ -2516,8 +2516,9 @@ const ReferenceType *ReferenceType::GetAsConstType() const {
     }
 
     if (asOtherConstType == nullptr) {
-        asOtherConstType = createWithBaseType(targetType->GetAsConstType());
-        CastType<ReferenceType>(asOtherConstType)->asOtherConstType = this;
+        const ReferenceType *t = createWithBaseType(targetType->GetAsConstType());
+        t->asOtherConstType = this;
+        asOtherConstType = t;
     }
     return CastType<ReferenceType>(asOtherConstType);
 }
@@ -2532,8 +2533,9 @@ const ReferenceType *ReferenceType::GetAsNonConstType() const {
     }
 
     if (asOtherConstType == nullptr) {
-        asOtherConstType = createWithBaseType(targetType->GetAsNonConstType());
-        CastType<ReferenceType>(asOtherConstType)->asOtherConstType = this;
+        const ReferenceType *t = createWithBaseType(targetType->GetAsNonConstType());
+        t->asOtherConstType = this;
+        asOtherConstType = t;
     }
     return CastType<ReferenceType>(asOtherConstType);
 }
