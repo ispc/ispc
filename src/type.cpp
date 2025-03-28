@@ -866,7 +866,7 @@ EnumType::EnumType(SourcePos p) : Type(ENUM_TYPE, Variability::Unbound, false, p
 
 EnumType::EnumType(const char *n, SourcePos p) : Type(ENUM_TYPE, Variability::Unbound, false, p), name(n) {}
 
-EnumType::EnumType(std::string n, Variability v, bool ic, SourcePos p, const std::vector<Symbol *> &enums)
+EnumType::EnumType(const std::string &n, Variability v, bool ic, SourcePos p, const std::vector<Symbol *> &enums)
     : Type(ENUM_TYPE, v, ic, p), name(n), enumerators(enums) {}
 
 EnumType::EnumType(const EnumType &other)
@@ -2671,7 +2671,7 @@ FunctionType::FunctionType(const FunctionType &other)
 FunctionType *FunctionType::create() const { return new FunctionType(*this); }
 
 const FunctionType *FunctionType::createWithSignature(const Type *newReturnType,
-                                                      llvm::SmallVector<const Type *, 8> newParamTypes) const {
+                                                      const llvm::SmallVector<const Type *, 8> &newParamTypes) const {
     FunctionType *ins = static_cast<FunctionType *>(create());
     ins->returnType = newReturnType;
     ins->paramTypes = newParamTypes;
