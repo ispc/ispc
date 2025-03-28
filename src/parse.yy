@@ -3325,7 +3325,14 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
             st = st->GetAsNamed(decl->name);
             m->AddTypeDef(decl->name, st, decl->pos);
         } else {
-            m->AddTypeDef(decl->name, decl->type, decl->pos);
+            AttributeList *attrs = decl->attributeList;
+            if (attrs && attrs->HasAttribute("aligned")) {
+                unsigned int alignment = attrs->GetAlignedAttrValue(decl->pos);
+                const Type *aligned_type = decl->type->GetAsAlignedType(alignment);
+                m->AddTypeDef(decl->name, aligned_type, decl->pos);
+            } else {
+                m->AddTypeDef(decl->name, decl->type, decl->pos);
+            }
         }
     } else {
         if (decl->type == nullptr) {
