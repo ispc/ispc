@@ -500,10 +500,12 @@ std::string DeclSpecs::GetString() const {
         ret += "soa<" + std::to_string(soaWidth) + "> ";
     }
     ret += GetTypeQualifiersString(typeQualifiers) + " ";
-    ret += baseType->GetString();
+    if (baseType) {
+        ret += baseType->GetString();
+    }
 
     if (attributeList) {
-        ret += attributeList->GetString();
+        ret += " " + attributeList->GetString();
     }
 
     if (std::holds_alternative<int>(vectorSize)) {
