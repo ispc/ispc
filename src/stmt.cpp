@@ -181,6 +181,23 @@ void DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             return;
         }
 
+        // Check attrbutes for static variables.
+        AttributeList *attrList = sym->attrs;
+        unsigned int alignment = 0;
+        if (attrList) {
+            // Check for unknown attributes for global variable declarations.
+            attrList->CheckForUnknownAttributes(pos);
+
+            // This attribute is provided for the particular variable declaration.
+            alignment = attrList->GetAlignedAttrValue(pos);
+        }
+
+        // If no alignment was specified for the particular variable declaration,
+        // then use the alignment specified for the type.
+        if (!alignment) {
+            alignment = sym->type->GetAlignment();
+        }
+
         if (sym->storageClass.IsStatic()) {
             // For static variables, we need a compile-time constant value
             // for its initializer; if there's no initializer, we use a
@@ -221,11 +238,24 @@ void DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
                     *m->module, llvmType, sym->type->IsConstType(), llvm::GlobalValue::InternalLinkage, cinit,
                     llvm::Twine("static.") + llvm::Twine(sym->pos.first_line) + llvm::Twine(".") + sym->name.c_str()),
                 llvmType);
+
+            // Apply alignment if specified
+            if (alignment > 0) {
+                llvm::GlobalVariable *gv = llvm::cast<llvm::GlobalVariable>(sym->storageInfo->getPointer());
+                gv->setAlignment(llvm::Align(alignment));
+            }
+
             // Tell the FunctionEmitContext about the variable
             ctx->EmitVariableDebugInfo(sym);
         } else {
             // For non-static variables, allocate storage on the stack
             sym->storageInfo = ctx->AllocaInst(sym->type, sym->name.c_str());
+
+            // Apply alignment if specified
+            if (alignment > 0) {
+                llvm::AllocaInst *ai = llvm::cast<llvm::AllocaInst>(sym->storageInfo->getPointer());
+                ai->setAlignment(llvm::Align(alignment));
+            }
 
             // Tell the FunctionEmitContext about the variable; must do
             // this before the initializer stuff.
