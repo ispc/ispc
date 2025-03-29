@@ -1945,14 +1945,21 @@ static void lEmitStructDecl(const StructType *st, std::vector<const StructType *
     bool pack = false, needsAlign = false;
     llvm::Type *stype = st->LLVMType(g->ctx);
     const llvm::DataLayout *DL = g->target->getDataLayout();
-
+    unsigned int alignment = st->GetAlignment();
     llvm::StructType *stypeStructType = llvm::dyn_cast<llvm::StructType>(stype);
+
     Assert(stypeStructType);
     if (!(pack = stypeStructType->isPacked())) {
         for (int i = 0; !needsAlign && (i < st->GetElementCount()); ++i) {
             const Type *ftype = st->GetElementType(i)->GetAsNonConstType();
             needsAlign |= ftype->IsVaryingType() && (CastType<StructType>(ftype) == nullptr);
         }
+    }
+    if (alignment) {
+        needsAlign = true;
+    }
+    if (needsAlign && alignment == 0) {
+        alignment = DL->getABITypeAlign(stype).value();
     }
     if (st->GetSOAWidth() > 0) {
         // This has to match the naming scheme in
@@ -1964,8 +1971,7 @@ static void lEmitStructDecl(const StructType *st, std::vector<const StructType *
     if (!needsAlign) {
         fprintf(file, "%sstruct %s%s {\n", (pack) ? "packed " : "", st->GetCStructName().c_str(), sSOA);
     } else {
-        unsigned uABI = DL->getABITypeAlign(stype).value();
-        fprintf(file, "__ISPC_ALIGNED_STRUCT__(%u) %s%s {\n", uABI, st->GetCStructName().c_str(), sSOA);
+        fprintf(file, "__ISPC_ALIGNED_STRUCT__(%u) %s%s {\n", alignment, st->GetCStructName().c_str(), sSOA);
     }
     for (int i = 0; i < st->GetElementCount(); ++i) {
         std::string name = st->GetElementName(i);
@@ -2026,15 +2032,28 @@ static void lEmitStructDecl(const StructType *st, std::vector<const StructType *
 static void lEmitStructDecls(std::vector<const StructType *> &structTypes, FILE *file, bool emitUnifs = true) {
     std::vector<const StructType *> emittedStructs;
 
-    fprintf(file, "\n#ifndef __ISPC_ALIGN__\n"
-                  "#if defined(__clang__) || !defined(_MSC_VER)\n"
-                  "// Clang, GCC, ICC\n"
-                  "#define __ISPC_ALIGN__(s) __attribute__((aligned(s)))\n"
-                  "#define __ISPC_ALIGNED_STRUCT__(s) struct __ISPC_ALIGN__(s)\n"
+    fprintf(file, "\n/* Portable alignment macro that works across different compilers and standards */\n"
+                  "#if defined(__cplusplus) && __cplusplus >= 201103L\n"
+                  "/* C++11 or newer - use alignas keyword */\n"
+                  "#define __ISPC_ALIGN__(x) alignas(x)\n"
+                  "#elif defined(__GNUC__) || defined(__clang__)\n"
+                  "/* GCC or Clang - use __attribute__ */\n"
+                  "#define __ISPC_ALIGN__(x) __attribute__((aligned(x)))\n"
+                  "#elif defined(_MSC_VER)\n"
+                  "/* Microsoft Visual C++ - use __declspec */\n"
+                  "#define __ISPC_ALIGN__(x) __declspec(align(x))\n"
                   "#else\n"
+                  "/* Unknown compiler/standard - alignment not supported */\n"
+                  "#define __ISPC_ALIGN__(x)\n"
+                  "#warning \"Alignment not supported on this compiler\"\n"
+                  "#endif\n"
+                  "#ifndef __ISPC_ALIGNED_STRUCT__\n"
+                  "#if defined(_MSC_VER)\n"
                   "// Visual Studio\n"
-                  "#define __ISPC_ALIGN__(s) __declspec(align(s))\n"
                   "#define __ISPC_ALIGNED_STRUCT__(s) __ISPC_ALIGN__(s) struct\n"
+                  "#else\n"
+                  "// Clang, GCC, ICC\n"
+                  "#define __ISPC_ALIGNED_STRUCT__(s) struct __ISPC_ALIGN__(s)\n"
                   "#endif\n"
                   "#endif\n\n");
 
