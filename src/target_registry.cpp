@@ -14,6 +14,7 @@
 #include <numeric>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 using namespace ispc;
@@ -255,7 +256,7 @@ void TargetLibRegistry::printSupportMatrix() const {
     for (TargetOS os = TargetOS::windows; os < TargetOS::error; os++) {
         os_names.push_back(OSToString(os));
     }
-    table.push_back(os_names);
+    table.push_back(std::move(os_names));
 
     // Fill in the name, one target per the row.
     for (ISPCTarget target = ISPCTarget::sse2_i32x4; target < ISPCTarget::error; target++) {
@@ -274,9 +275,9 @@ void TargetLibRegistry::printSupportMatrix() const {
                 }
             }
             arch_list_target.push_back(arch_list_os);
-            row.push_back(arch_list_os);
+            row.push_back(std::move(arch_list_os));
         }
-        table.push_back(row);
+        table.push_back(std::move(row));
     }
 
     // Collect maximum sizes for all columns
