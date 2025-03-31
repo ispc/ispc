@@ -82,42 +82,24 @@ jobs:
       with:
         name: ${{ inputs.artifact_name }}
 
-    - name: Install dependencies and unpack artifacts for Linux
-      if: inputs.platform == 'linux'
+    - name: Install dependencies and unpack artifacts
       shell: bash
-      run: |
-        bash .github/workflows/scripts/install-test-deps.sh
-
-    - name: Install dependencies and unpack artifacts for macOS
-      if: inputs.platform == 'macos'
-      shell: bash
-      run: |
-        if [[ "${{ inputs.enable_lto }}" == "true" ]]; then
-          tar xf ispc-trunk-macOS.universal.tar.gz
-          echo "$GITHUB_WORKSPACE/ispc-trunk-macOS.universal/bin" >> "$GITHUB_PATH"
-        else
-          tar xf ispc-trunk-macos.tar.gz
-          echo "$GITHUB_WORKSPACE/ispc-trunk-macos/bin" >> "$GITHUB_PATH"
-        fi
-        echo "ISPC_HOME=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
-        echo "LLVM_HOME=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
-
-    - name: Install dependencies and unpack artifacts for Windows
-      if: inputs.platform == 'windows'
-      shell: pwsh
-      run: |
-        .github/workflows/scripts/install-test-deps.ps1
-
-    - name: Check environment
       run: |
         if [ "${{ inputs.platform }}" == "linux" ]; then
-          cat /proc/cpuinfo
+          bash .github/workflows/scripts/install-test-deps.sh
         elif [ "${{ inputs.platform }}" == "macos" ]; then
-          sysctl -n machdep.cpu.brand_string
+          if [[ "${{ inputs.enable_lto }}" == "true" ]]; then
+            tar xf ispc-trunk-macOS.universal.tar.gz
+            echo "$GITHUB_WORKSPACE/ispc-trunk-macOS.universal/bin" >> "$GITHUB_PATH"
+          else
+            tar xf ispc-trunk-macos.tar.gz
+            echo "$GITHUB_WORKSPACE/ispc-trunk-macos/bin" >> "$GITHUB_PATH"
+          fi
+          echo "ISPC_HOME=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
+          echo "LLVM_HOME=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
         else
-          wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+          pwsh .github/workflows/scripts/install-test-deps.ps1
         fi
-      shell: bash
 
     - name: Running tests on Linux/macOS (alloy mode)
       # See issue #2818 for more details about skipping avx512 and avx2vnni targets. It's SDE problem running on AMD runner.
