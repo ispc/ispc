@@ -34,6 +34,7 @@
 #include <set>
 #include <sstream>
 #include <stdio.h>
+#include <utility>
 
 #include <llvm/ExecutionEngine/GenericValue.h>
 #include <llvm/IR/CallingConv.h>
@@ -9773,7 +9774,7 @@ bool FunctionSymbolExpr::ResolveOverloads(SourcePos argPos, const std::vector<co
 
     // Handle multiple matches
     if (funcMatches.size() > 1 || templateMatches.size() > 1) {
-        std::vector<Symbol *> combinedMatches = funcMatches;
+        std::vector<Symbol *> combinedMatches = std::move(funcMatches);
         combinedMatches.insert(combinedMatches.end(), templateMatches.begin(), templateMatches.end());
 
         // Multiple matches: ambiguous
