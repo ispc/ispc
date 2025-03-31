@@ -347,9 +347,8 @@ static llvm::VectorType *lGetDoubleWidthVectorType(llvm::Type *type) {
     return llvm::VectorType::get(vt->getElementType(), vectorWidth * 2, false);
 }
 
-static llvm::Function *lGetISPCIntrinsicsFuncDecl(llvm::Module *M, std::string origName, ISPCIntrinsics ID,
+static llvm::Function *lGetISPCIntrinsicsFuncDecl(llvm::Module *M, std::string name, ISPCIntrinsics ID,
                                                   std::vector<const Type *> &argTypes) {
-    std::string name = {origName};
     llvm::Type *retType = nullptr;
     std::vector<llvm::Type *> TYs;
     for (const Type *type : argTypes) {
