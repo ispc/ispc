@@ -3363,8 +3363,12 @@ int Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *o
     clang::SourceManager srcMgr(diagEng, fileMgr);
     lInitializeSourceManager(inputFile, diagEng, fileMgr, srcMgr);
 
-    // Create HeaderSearch and apply HeaderSearchOptions
+// Create HeaderSearch and apply HeaderSearchOptions
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
+    clang::HeaderSearch hdrSearch(*hdrSearchOpts, srcMgr, diagEng, langOpts, tgtInfo);
+#else
     clang::HeaderSearch hdrSearch(hdrSearchOpts, srcMgr, diagEng, langOpts, tgtInfo);
+#endif
     clang::ApplyHeaderSearchOptions(hdrSearch, *hdrSearchOpts, langOpts, triple);
 
     // Finally, create an preprocessor object
