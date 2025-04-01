@@ -50,15 +50,18 @@ void matmul(uniform float matrixA[], uniform float matrixB[], uniform float matr
     }
 }
 
-// Optimized single head attention using the provided matmul function
 export void single_head_attention(uniform float Q[], uniform float K[], uniform float V[], uniform float output[],
                                   uniform int seq_len, uniform int d_model) {
     uniform float scale = 1.0f / sqrt((uniform float)d_model);
 
-    // Allocate memory for attention scores, scaled dot products, and transposed K
-    uniform float *uniform attention_scores = uniform new uniform float[seq_len * seq_len];
-    uniform float *uniform scaled_scores = uniform new uniform float[seq_len * seq_len];
-    uniform float *uniform K_transposed = uniform new uniform float[d_model * seq_len];
+    //  Use a single memory pool instead of three separate allocations
+    // Calculate total memory needed
+    uniform int total_memory_size = seq_len * seq_len * 2 + d_model * seq_len;
+    uniform float *uniform memory_pool = uniform new uniform float[total_memory_size];
+
+    // Partition memory pool for different uses
+    uniform float *uniform attention_scores = memory_pool;
+    uniform float *uniform K_transposed = memory_pool + seq_len * seq_len;
 
     // Transpose K for QK^T calculation
     foreach (i = 0 ... seq_len) {
@@ -70,23 +73,24 @@ export void single_head_attention(uniform float Q[], uniform float K[], uniform 
     // Compute QK^T using matmul: (seq_len x d_model) * (d_model x seq_len) = (seq_len x seq_len)
     matmul(Q, K_transposed, attention_scores, seq_len, d_model, seq_len);
 
-    // Scale the dot products
-    foreach (i = 0 ... seq_len * seq_len) {
-        scaled_scores[i] = attention_scores[i] * scale;
-    }
-
-    // Apply softmax row-wise with numerical stability
+    // Scale the dot products in-place
     for (int row = 0; row < seq_len; row++) {
-        // Find maximum value in the row
+        // Find maximum value in the row (applying scaling inside this step)
         uniform float row_max = NEG_INF;
         foreach (j = 0 ... seq_len) {
-            row_max = max((uniform float)reduce_max(scaled_scores[row * seq_len + j]), row_max);
+            // Scale during max calculation
+            varying float scaled_val = attention_scores[row * seq_len + j] * scale;
+            attention_scores[row * seq_len + j] = scaled_val; // Store scaled value for later use
+            row_max = max((uniform float)reduce_max(scaled_val), row_max);
         }
+
         // Compute exp(x - max) and sum
         uniform float row_sum = 0.0f;
         foreach (j = 0 ... seq_len) {
-            attention_scores[row * seq_len + j] = exp(scaled_scores[row * seq_len + j] - row_max);
-            row_sum += reduce_add(attention_scores[row * seq_len + j]);
+            // No need to scale again, already done in previous step
+            varying float exp_val = exp(attention_scores[row * seq_len + j] - row_max);
+            attention_scores[row * seq_len + j] = exp_val; // Store exp value
+            row_sum += reduce_add(exp_val);
         }
 
         // Normalize
@@ -99,7 +103,5 @@ export void single_head_attention(uniform float Q[], uniform float K[], uniform 
     matmul(attention_scores, V, output, seq_len, seq_len, d_model);
 
     // Free allocated memory
-    delete[] attention_scores;
-    delete[] scaled_scores;
-    delete[] K_transposed;
+    delete[] memory_pool;
 }
