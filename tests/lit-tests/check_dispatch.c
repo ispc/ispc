@@ -31,6 +31,9 @@ int main() {
     case 9:
       printf("AVX512SPR\n");
       break;
+    case 10:
+      printf("AVX10_2\n");
+      break;
     default:
       printf("Unknown ISA\n");
       break;
