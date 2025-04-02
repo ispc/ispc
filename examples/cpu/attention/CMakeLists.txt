@@ -55,7 +55,7 @@ add_custom_command(
 )
 
 # Make sure the ISPC header file is created before it's needed
-add_custom_target(generate_ispc_files
+add_custom_target(generate_ispc_attention
     DEPENDS ${ISPC_OBJ} ${ISPC_HEADER}
 )
 
@@ -66,7 +66,7 @@ nanobind_add_module(
 )
 
 # Make sure the ISPC files are generated before building the module
-add_dependencies(ispc_attention generate_ispc_files)
+add_dependencies(ispc_attention generate_ispc_attention)
 
 # Link with the ISPC object file
 target_link_libraries(ispc_attention PRIVATE ${ISPC_OBJ})
