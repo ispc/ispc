@@ -1,4 +1,4 @@
-;;  Copyright (c) 2020-2024, Intel Corporation
+;;  Copyright (c) 2020-2025, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -719,55 +719,10 @@ define i64 @__reduce_max_uint64(<64 x i64>) nounwind readnone alwaysinline {
   reduce64(i64, @__max_varying_uint64, @__max_uniform_uint64)
 }
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; unaligned loads/loads+broadcasts
-
-masked_load(i8,  1)
-masked_load(i16, 2)
-masked_load(half, 2)
-masked_load(i32, 4)
-masked_load(float, 4)
-masked_load(i64, 8)
-masked_load(double, 8)
-
-gen_masked_store(i8)
-gen_masked_store(i16)
-gen_masked_store(i32)
-gen_masked_store(i64)
-
-masked_store_float_double()
-
-define void @__masked_store_blend_i8(<WIDTH x i8>* nocapture, <WIDTH x i8>,
-                                     <WIDTH x i1>) nounwind alwaysinline {
-  %v = load PTR_OP_ARGS(`<WIDTH x i8> ')  %0
-  %v1 = select <WIDTH x i1> %2, <WIDTH x i8> %1, <WIDTH x i8> %v
-  store <WIDTH x i8> %v1, <WIDTH x i8> * %0
-  ret void
-}
-
-define void @__masked_store_blend_i16(<WIDTH x i16>* nocapture, <WIDTH x i16>,
-                                      <WIDTH x i1>) nounwind alwaysinline {
-  %v = load PTR_OP_ARGS(`<WIDTH x i16> ')  %0
-  %v1 = select <WIDTH x i1> %2, <WIDTH x i16> %1, <WIDTH x i16> %v
-  store <WIDTH x i16> %v1, <WIDTH x i16> * %0
-  ret void
-}
-
-define void @__masked_store_blend_i32(<WIDTH x i32>* nocapture, <WIDTH x i32>,
-                                      <WIDTH x i1>) nounwind alwaysinline {
-  %v = load PTR_OP_ARGS(`<WIDTH x i32> ')  %0
-  %v1 = select <WIDTH x i1> %2, <WIDTH x i32> %1, <WIDTH x i32> %v
-  store <WIDTH x i32> %v1, <WIDTH x i32> * %0
-  ret void
-}
-
-define void @__masked_store_blend_i64(<WIDTH x i64>* nocapture,
-                            <WIDTH x i64>, <WIDTH x i1>) nounwind alwaysinline {
-  %v = load PTR_OP_ARGS(`<WIDTH x i64> ')  %0
-  %v1 = select <WIDTH x i1> %2, <WIDTH x i64> %1, <WIDTH x i64> %v
-  store <WIDTH x i64> %v1, <WIDTH x i64> * %0
-  ret void
-}
+declare void @__masked_store_blend_i8(<WIDTH x i8>* nocapture, <WIDTH x i8>, <WIDTH x i1>) nounwind alwaysinline
+declare void @__masked_store_blend_i16(<WIDTH x i16>* nocapture, <WIDTH x i16>, <WIDTH x i1>) nounwind alwaysinline
+declare void @__masked_store_blend_i32(<WIDTH x i32>* nocapture, <WIDTH x i32>, <WIDTH x i1>) nounwind alwaysinline
+declare void @__masked_store_blend_i64(<WIDTH x i64>* nocapture, <WIDTH x i64>, <WIDTH x i1>) nounwind alwaysinline
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter

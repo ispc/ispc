@@ -2,7 +2,6 @@
 // RUN: %{ispc} --target=avx512skx-x64 --nowrap --x86-asm-syntax=intel --emit-asm -o - %s 2>&1 | FileCheck %s
 
 // REQUIRES: X86_ENABLED
-// XFAIL: *
 
 struct vec4 {
     float V[4];
