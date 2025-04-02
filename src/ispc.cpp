@@ -1625,19 +1625,21 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 4;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        // TODO: target specific implementations for the features below are required
-        /*this->m_hasHalfConverts = true;
+        this->m_hasHalfConverts = true;
         this->m_hasHalfFullSupport = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasFp16Support = true;
+        this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;
+        /* TODO: target specific implementations for the features below are required
         this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
         this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
         this->m_hasRsqrtd = this->m_hasRcpd = true;
-        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch
-        this->m_hasFp16Support = true;
-        this->m_hasDotProductVNNI = true;
-        this->m_hasConflictDetection = true;*/
+        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch*/
         CPUfromISA = CPU_DMR;
+        this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
+        this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
         break;
     case ISPCTarget::avx10_2_x8:
         this->m_isa = Target::AVX10_2;
@@ -1647,19 +1649,21 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 8;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        // TODO: target specific implementations for the features below are required
-        /*this->m_hasHalfConverts = true;
+        this->m_hasHalfConverts = true;
         this->m_hasHalfFullSupport = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasFp16Support = true;
+        this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;
+        /* TODO: target specific implementations for the features below are required
         this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
         this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
         this->m_hasRsqrtd = this->m_hasRcpd = true;
-        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch
-        this->m_hasFp16Support = true;
-        this->m_hasDotProductVNNI = true;
-        this->m_hasConflictDetection = true;*/
+        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch*/
         CPUfromISA = CPU_DMR;
+        this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
+        this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
         break;
     case ISPCTarget::avx10_2_x16:
         this->m_isa = Target::AVX10_2;
@@ -1669,19 +1673,26 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 16;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        // TODO: target specific implementations for the features below are required
-        /*this->m_hasHalfConverts = true;
+        this->m_hasHalfConverts = true;
         this->m_hasHalfFullSupport = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasFp16Support = true;
+        this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;
+        /* TODO: target specific implementations for the features below are required
         this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
         this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
         this->m_hasRsqrtd = this->m_hasRcpd = true;
-        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch
-        this->m_hasFp16Support = true;
-        this->m_hasDotProductVNNI = true;
-        this->m_hasConflictDetection = true;*/
+        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch*/
         CPUfromISA = CPU_DMR;
+        if (g->opt.disableZMM) {
+            this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
+            this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
+        } else {
+            this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "512"));
+            this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "512"));
+        }
         break;
     case ISPCTarget::avx10_2_x32:
         this->m_isa = Target::AVX10_2;
@@ -1691,18 +1702,18 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 32;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        // TODO: target specific implementations for the features below are required
-        /*this->m_hasHalfConverts = true;
+        this->m_hasHalfConverts = true;
         this->m_hasHalfFullSupport = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasFp16Support = true;
+        this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;
+        /* TODO: target specific implementations for the features below are required
         this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
         this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
         this->m_hasRsqrtd = this->m_hasRcpd = true;
-        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch
-        this->m_hasFp16Support = true;
-        this->m_hasDotProductVNNI = true;
-        this->m_hasConflictDetection = true;*/
+        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch*/
         CPUfromISA = CPU_DMR;
         break;
     case ISPCTarget::avx10_2_x64:
@@ -1713,18 +1724,18 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 64;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        // TODO: target specific implementations for the features below are required
-        /*this->m_hasHalfConverts = true;
+        this->m_hasHalfConverts = true;
         this->m_hasHalfFullSupport = true;
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasFp16Support = true;
+        this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;
+        /* TODO: target specific implementations for the features below are required
         this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
         this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
         this->m_hasRsqrtd = this->m_hasRcpd = true;
-        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch
-        this->m_hasFp16Support = true;
-        this->m_hasDotProductVNNI = true;
-        this->m_hasConflictDetection = true;*/
+        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch*/
         CPUfromISA = CPU_DMR;
         break;
 #else
