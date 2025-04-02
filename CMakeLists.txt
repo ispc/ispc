@@ -343,7 +343,7 @@ list(APPEND X86_TARGETS
     avx512spr-x4 avx512spr-x8 avx512spr-x16 avx512spr-x32 avx512spr-x64)
 
 if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "20.1.0")
-    list(APPEND X86_TARGETS avx10_2_512-x4 avx10_2_512-x8 avx10_2_512-x16 avx10_2_512-x32 avx10_2_512-x64)
+    list(APPEND X86_TARGETS avx10_2-x4 avx10_2-x8 avx10_2-x16 avx10_2-x32 avx10_2-x64)
 endif()
 
 list(APPEND ARM_TARGETS neon-i8x16 neon-i16x8 neon-i32x4 neon-i32x8 neon-i8x32 neon-i16x16)

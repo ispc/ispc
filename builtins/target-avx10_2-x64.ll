@@ -2,5 +2,5 @@
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
-define(`WIDTH',`32')
-define(`ISA',`AVX10_2_512')
+define(`WIDTH',`64')
+define(`ISA',`AVX10_2')

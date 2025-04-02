@@ -430,11 +430,11 @@ std::unordered_map<ISPCTarget, ISPCTarget> targetParentMap = {
     {ISPCTarget::neon_i32x8, ISPCTarget::generic_i32x8},
 
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
-    {ISPCTarget::avx10_2_512_x4, ISPCTarget::generic_i1x4},
-    {ISPCTarget::avx10_2_512_x8, ISPCTarget::generic_i1x8},
-    {ISPCTarget::avx10_2_512_x16, ISPCTarget::generic_i1x16},
-    {ISPCTarget::avx10_2_512_x32, ISPCTarget::generic_i1x32},
-    {ISPCTarget::avx10_2_512_x64, ISPCTarget::generic_i1x64},
+    {ISPCTarget::avx10_2_x4, ISPCTarget::generic_i1x4},
+    {ISPCTarget::avx10_2_x8, ISPCTarget::generic_i1x8},
+    {ISPCTarget::avx10_2_x16, ISPCTarget::generic_i1x16},
+    {ISPCTarget::avx10_2_x32, ISPCTarget::generic_i1x32},
+    {ISPCTarget::avx10_2_x64, ISPCTarget::generic_i1x64},
 #endif
 
     {ISPCTarget::avx512spr_x4, ISPCTarget::avx512icl_x4},

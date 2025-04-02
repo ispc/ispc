@@ -21,7 +21,7 @@ enum ISA {
     SKX_AVX512 = 8,
     ICL_AVX512 = 9,
     SPR_AVX512 = 10,
-    AVX10_2_512 = 11,
+    AVX10_2 = 11,
 
     COUNT
 };
@@ -210,12 +210,14 @@ static enum ISA get_x86_isa() {
             int avx10_2 = avx10_ver >= 2;
             // clang-format on
 
-            // Diamond Rapids:         DMR = GNR + AVX10_2_512 + APX + ... (For the whole list see x86TargetParser.cpp)
-            int dmr = gnr && avx10_2 && apx && cmpccxadd && avxneconvert && avxifma && avxvnniint8 &&
-                      avxvnniint16 && amxcomplex && sha512 && sm3 && sm4;
+            // Diamond Rapids:         DMR = GNR + AVX10_2 + APX + ... (For the whole list see x86TargetParser.cpp)
+            // TODO: according to spec the presence of avx10.2 should cover the whole set of features, but let's keep it
+            // now aligned with LLVM logic
+            int dmr = gnr && avx10_2 && apx && cmpccxadd && avxneconvert && avxifma && avxvnniint8 && avxvnniint16 &&
+                      amxcomplex && sha512 && sm3 && sm4;
 
             if (dmr) {
-                return AVX10_2_512;
+                return AVX10_2;
             }
         }
         if (spr) {
