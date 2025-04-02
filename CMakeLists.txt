@@ -653,6 +653,10 @@ else()
         -Wno-unused-function
         ${LLVM_CPP_FLAGS}
     )
+    # Disable warnings coming from LLVM headers
+    if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "21.0.0")
+        list(APPEND COMPILE_OPTIONS -Wno-unnecessary-virtual-specifier)
+    endif()
     # Security options for both Debug and Release builds
     list(APPEND COMPILE_OPTIONS
         -fstack-protector-strong
