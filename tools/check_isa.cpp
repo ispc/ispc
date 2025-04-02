@@ -47,7 +47,7 @@ const char *const isa_strings[] = {
     "SKX",
     "ICL",
     "SPR",
-    "DMR (512 width)",
+    "DMR",
 };
 
 static const char *spr_amx_on = "SPR (AMX on)";
