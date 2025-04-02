@@ -207,16 +207,11 @@ static enum ISA get_x86_isa() {
                 __cpuidex(info_avx10, 0x24, 0);
             }
             int avx10_ver = info_avx10[1] & 0xFF;
-            int avx10_256 = (info_avx10[1] & (1 << 17)) != 0;
-            int avx10_512 = (info_avx10[1] & (1 << 18)) != 0;
-            UNUSED_ATTR int avx10_1_256 = avx10_256 && (avx10_ver >= 1);
-            UNUSED_ATTR int avx10_1_512 = avx10_512 && (avx10_ver >= 1);
-            UNUSED_ATTR int avx10_2_256 = avx10_256 && (avx10_ver >= 2);
-            UNUSED_ATTR int avx10_2_512 = avx10_512 && (avx10_ver >= 2);
+            int avx10_2 = avx10_ver >= 2;
             // clang-format on
 
             // Diamond Rapids:         DMR = GNR + AVX10_2_512 + APX + ... (For the whole list see x86TargetParser.cpp)
-            int dmr = gnr && avx10_2_512 && apx && cmpccxadd && avxneconvert && avxifma && avxvnniint8 &&
+            int dmr = gnr && avx10_2 && apx && cmpccxadd && avxneconvert && avxifma && avxvnniint8 &&
                       avxvnniint16 && amxcomplex && sha512 && sm3 && sm4;
 
             if (dmr) {

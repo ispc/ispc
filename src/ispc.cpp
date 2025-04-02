@@ -1617,28 +1617,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         CPUfromISA = CPU_SPR;
         break;
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
-    // Below is example of how avx10 256 would look like
-    /*case ISPCTarget::avx10_2_256_x8:
-        this->m_isa = Target::AVX10_2_256;
-        this->m_nativeVectorWidth = 8;      // 256-bit / 32-bit = 8
-        this->m_nativeVectorAlignment = 32;
-        this->m_dataTypeWidth = 32;
-        this->m_vectorWidth = 8;
-        this->m_maskingIsFree = true;
-        this->m_maskBitCount = 1;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
-        this->m_hasRand = true;
-        this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasTranscendentals = false; // TODO: AVX10 adds transcendental support
-        this->m_hasTrigonometry = false;    // TODO: AVX10 adds trigonometry support
-        this->m_hasRsqrtd = this->m_hasRcpd = true;
-        this->m_hasVecPrefetch = false; // TODO: AVX10 supports vector prefetch
-        this->m_hasFp16Support = true;
-        this->m_hasDotProductVNNI = true;
-        this->m_hasConflictDetection = true;
-        CPUfromISA = CPU_AVX10_2_256;
-        break;*/
     case ISPCTarget::avx10_2_512_x4:
         this->m_isa = Target::AVX10_2_512;
         this->m_nativeVectorWidth = 16;
