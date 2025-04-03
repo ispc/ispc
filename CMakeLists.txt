@@ -342,7 +342,7 @@ list(APPEND X86_TARGETS
     avx512icl-x32 avx512icl-x64
     avx512spr-x4 avx512spr-x8 avx512spr-x16 avx512spr-x32 avx512spr-x64)
 
-if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "20.1.0")
+if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "20.1.2")
     list(APPEND X86_TARGETS avx10_2-x4 avx10_2-x8 avx10_2-x16 avx10_2-x32 avx10_2-x64)
 endif()
 
