@@ -38,7 +38,7 @@ function (stdlib_to_cpp ispc_name target bit os CPP_LIST BC_LIST)
             return()
         endif()
         # ISPC doesn't support avx512spr targets on macOS
-        if ("${target}" MATCHES "avx512spr")
+        if ("${target}" MATCHES "avx512spr" OR "${target}" MATCHES "avx10")
             return()
         endif()
     endif()

@@ -231,7 +231,12 @@ static ISPCTarget lGetSystemISA() {
     case Target::ISA::SPR_AVX512:
         return ISPCTarget::avx512spr_x16;
     case Target::ISA::AVX10_2:
+        // Return SPR target for LLVM versions < 20.0
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
         return ISPCTarget::avx10_2_x16;
+#else
+        return ISPCTarget::avx512spr_x16;
+#endif
     default:
         Error(SourcePos(), "Detected unsupported x86 ISA. Exiting.");
         exit(1);

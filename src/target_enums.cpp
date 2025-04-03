@@ -421,6 +421,7 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::avx512spr_x32;
     } else if (target == "avx512spr-x64") {
         return ISPCTarget::avx512spr_x64;
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
     } else if (target == "avx10.2-x4") {
         return ISPCTarget::avx10_2_x4;
     } else if (target == "avx10.2-x8") {
@@ -431,6 +432,7 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::avx10_2_x32;
     } else if (target == "avx10.2-x64") {
         return ISPCTarget::avx10_2_x64;
+#endif
     } else if (target == "neon-i8x16") {
         return ISPCTarget::neon_i8x16;
     } else if (target == "neon-i8x32") {
