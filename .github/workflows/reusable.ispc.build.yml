@@ -3,6 +3,8 @@
 
 name: Reusable ISPC build workflow
 
+permissions: read-all
+
 on:
   workflow_call:
     inputs:
