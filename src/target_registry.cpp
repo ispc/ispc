@@ -171,10 +171,11 @@ static const BitcodeLib *lGetTargetLib(const std::map<uint32_t, const BitcodeLib
 
     // There's no Mac that supports SPR, so the decision is not support these targets when targeting macOS.
     // If these targets are linked in, then we still can use them for cross compilation, for example for Linux.
-    // TODO: add avx10 targets here.
-    if (os == TargetOS::macos && (target == ISPCTarget::avx512spr_x4 || target == ISPCTarget::avx512spr_x8 ||
-                                  target == ISPCTarget::avx512spr_x16 || target == ISPCTarget::avx512spr_x32 ||
-                                  target == ISPCTarget::avx512spr_x64)) {
+    if (os == TargetOS::macos &&
+        (target == ISPCTarget::avx512spr_x4 || target == ISPCTarget::avx512spr_x8 ||
+         target == ISPCTarget::avx512spr_x16 || target == ISPCTarget::avx512spr_x32 ||
+         target == ISPCTarget::avx512spr_x64 || target == ISPCTarget::avx10_2_x4 || target == ISPCTarget::avx10_2_x8 ||
+         target == ISPCTarget::avx10_2_x16 || target == ISPCTarget::avx10_2_x32 || target == ISPCTarget::avx10_2_x64)) {
         return nullptr;
     }
 
@@ -331,7 +332,6 @@ std::string TargetLibRegistry::getSupportedTargets() {
     std::set<std::string> targetSet;
     for (Arch arch = Arch::none; arch < Arch::error; arch++) {
         for (ISPCTarget target = ISPCTarget::sse2_i32x4; target < ISPCTarget::error; target++) {
-            // TODO: exclude avx10 targets here before LLVM 20
             for (TargetOS os = TargetOS::windows; os < TargetOS::error; os++) {
                 if (isSupported(target, os, arch)) {
                     targetSet.insert(ISPCTargetToString(target));
