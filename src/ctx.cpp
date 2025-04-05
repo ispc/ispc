@@ -1979,13 +1979,26 @@ llvm::Instruction *FunctionEmitContext::ZExtInst(llvm::Value *value, llvm::Type 
     return inst;
 }
 
+/** Extend both uniform and varying integer values to 64 bits. */
+llvm::Value *lExtendIntTo64(FunctionEmitContext *ctx, llvm::Value *value, const Type *indexType,
+                            const llvm::Twine &name = "") {
+    bool valueIsVarying = llvm::isa<llvm::VectorType>(value->getType());
+    llvm::Type *type = valueIsVarying ? LLVMTypes::Int64VectorType : LLVMTypes::Int64Type;
+    if (indexType && indexType->IsUnsignedType()) {
+        return ctx->ZExtInst(value, type, name);
+    } else {
+        return ctx->SExtInst(value, type, name);
+    }
+}
+
 /** Utility routine used by the GetElementPtrInst() methods; given a
     pointer to some type (either uniform or varying) and an index (also
     either uniform or varying), this returns the new pointer (varying if
     appropriate) given by offsetting the base pointer by the index times
     the size of the object that the pointer points to.
  */
-llvm::Value *FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Value *index, const Type *ptrType) {
+llvm::Value *FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Value *index, const Type *ptrType,
+                                                  const Type *indexType) {
     // Find the scale factor for the index (i.e. the size of the object
     // that the pointer(s) point(s) to.
     const Type *scaleType = ptrType->GetBaseType();
@@ -2002,7 +2015,7 @@ llvm::Value *FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Va
             index = TruncInst(index, LLVMTypes::Int32Type);
         } else if ((!g->target->is32Bit() && !g->opt.force32BitAddressing) &&
                    index->getType() == LLVMTypes::Int32Type) {
-            index = SExtInst(index, LLVMTypes::Int64Type);
+            index = lExtendIntTo64(this, index, indexType);
         }
 
         // do a scalar multiply to get the offset as index * scale and then
@@ -2018,7 +2031,7 @@ llvm::Value *FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Va
             index = TruncInst(index, LLVMTypes::Int32VectorType);
         } else if ((!g->target->is32Bit() && !g->opt.force32BitAddressing) &&
                    index->getType() == LLVMTypes::Int32VectorType) {
-            index = SExtInst(index, LLVMTypes::Int64VectorType);
+            index = lExtendIntTo64(this, index, indexType);
         }
 
         scale = SmearUniform(scale);
@@ -2032,7 +2045,7 @@ llvm::Value *FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Va
     // 32 bits, we still have to convert to a 64-bit value before we
     // actually add the offset to the pointer.
     if (g->target->is32Bit() == false && g->opt.force32BitAddressing == true) {
-        offset = SExtInst(offset, LLVMTypes::Int64VectorType, llvm::Twine(offset->getName()) + "_to_64");
+        offset = lExtendIntTo64(this, offset, indexType, llvm::Twine(offset->getName()) + "_to_64");
     }
 
     // Smear out the pointer to be varying; either the base pointer or the
@@ -2138,7 +2151,7 @@ const PointerType *FunctionEmitContext::RegularizePointer(const Type *ptrRefType
 }
 
 llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index, const Type *ptrRefType,
-                                                    const llvm::Twine &name) {
+                                                    const Type *indexType, const llvm::Twine &name) {
     if (basePtr == nullptr || index == nullptr) {
         AssertPos(currentPos, m->errorCount > 0);
         return nullptr;
@@ -2165,7 +2178,7 @@ llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::
 
         // Handle the indexing into the soa<> structs with the major
         // component of the index through a recursive call
-        llvm::Value *p = GetElementPtrInst(ExtractInst(basePtr, 0), index, ptrType->GetAsNonSlice(), name);
+        llvm::Value *p = GetElementPtrInst(ExtractInst(basePtr, 0), index, ptrType->GetAsNonSlice(), indexType, name);
         if (p == nullptr) {
             AssertPos(currentPos, m->errorCount > 0);
             return nullptr;
@@ -2195,12 +2208,13 @@ llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::
         AddDebugPos(inst);
         return inst;
     } else {
-        return applyVaryingGEP(basePtr, index, ptrType);
+        return applyVaryingGEP(basePtr, index, ptrType, indexType);
     }
 }
 
 llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0, llvm::Value *index1,
-                                                    const Type *ptrRefType, const llvm::Twine &name) {
+                                                    const Type *ptrRefType, const Type *index0Type,
+                                                    const Type *index1Type, const llvm::Twine &name) {
     if (basePtr == nullptr || index0 == nullptr || index1 == nullptr) {
         AssertPos(currentPos, m->errorCount > 0);
         return nullptr;
@@ -2222,7 +2236,8 @@ llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::
             ptrSliceOffset = newSliceOffset;
         }
 
-        llvm::Value *p = GetElementPtrInst(ExtractInst(basePtr, 0), index0, index1, ptrType->GetAsNonSlice(), name);
+        llvm::Value *p = GetElementPtrInst(ExtractInst(basePtr, 0), index0, index1, ptrType->GetAsNonSlice(),
+                                           index0Type, index1Type, name);
         if (p == nullptr) {
             AssertPos(currentPos, m->errorCount > 0);
             return nullptr;
@@ -2245,7 +2260,7 @@ llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::
         return inst;
     } else {
         // Handle the first dimension with index0
-        llvm::Value *ptr0 = GetElementPtrInst(basePtr, index0, ptrType);
+        llvm::Value *ptr0 = GetElementPtrInst(basePtr, index0, ptrType, index0Type);
 
         // Now index into the second dimension with index1.  First figure
         // out the type of ptr0.
@@ -2258,7 +2273,7 @@ llvm::Value *FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::
         const Type *ptr0Type =
             ptr0IsUniform ? PointerType::GetUniform(ptr0BaseType) : PointerType::GetVarying(ptr0BaseType);
 
-        return applyVaryingGEP(ptr0, index1, ptr0Type);
+        return applyVaryingGEP(ptr0, index1, ptr0Type, index1Type);
     }
 }
 
@@ -2524,7 +2539,10 @@ static llvm::Value *lFinalSliceOffset(FunctionEmitContext *ctx, llvm::Value *ptr
     }
 
     // And finally index based on the slice offset
-    return ctx->GetElementPtrInst(slicePtr, sliceOffset, *ptrType, llvm::Twine(slicePtr->getName()) + "_final_gep");
+    const Type *sliceOffsetType =
+        (*ptrType)->GetVariability().type == Variability::Uniform ? AtomicType::UniformInt32 : AtomicType::VaryingInt32;
+    return ctx->GetElementPtrInst(slicePtr, sliceOffset, *ptrType, sliceOffsetType,
+                                  llvm::Twine(slicePtr->getName()) + "_final_gep");
 }
 
 /** Utility routine that loads from a uniform pointer to soa<> data,

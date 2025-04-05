@@ -736,6 +736,11 @@ vectors:
 Attribute ``aligned(N)`` was added to specify alignment of variables and struct
 types.
 
+Accessing an array using an unsigned index and pointer arithmetic with unsigned
+offsets was flawed due to overflow caused by sign extension when promoting the
+index to pointer size. This issue has been resolved, and the compiler now
+generates correct code for such cases involving unsigned integer types.
+
 Getting Started with ISPC
 =========================
 

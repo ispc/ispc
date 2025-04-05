@@ -868,9 +868,10 @@ void ispc::InitSymbol(AddressInfo *ptrInfo, const Type *symType, Expr *initExpr,
                     ep = ctx->AddElementOffset(new AddressInfo(ptrInfo->getPointer(), CastType<StructType>(symType)), i,
                                                "element");
                 } else {
+                    const Type *iType = AtomicType::UniformInt32;
                     ep = ctx->GetElementPtrInst(ptrInfo->getPointer(), LLVMInt32(0), LLVMInt32(i),
                                                 /* Type of aggregate structure */ PointerType::GetUniform(symType),
-                                                "gep");
+                                                iType, iType, "gep");
                 }
                 AddressInfo *epInfo = new AddressInfo(ep, ptrInfo->getElementType());
                 if (i < nInits) {
@@ -1134,7 +1135,7 @@ static llvm::Value *lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos p
     if (CastType<PointerType>(type) != nullptr) {
         const Type *incType = type->IsUniformType() ? AtomicType::UniformInt32 : AtomicType::VaryingInt32;
         llvm::Constant *dval = lLLVMConstantValue(incType, g->ctx, delta);
-        binop = ctx->GetElementPtrInst(rvalue, dval, type, opName.c_str());
+        binop = ctx->GetElementPtrInst(rvalue, dval, type, incType, opName.c_str());
     } else {
         llvm::Constant *dval = lLLVMConstantValue(type, g->ctx, delta);
         if (type->IsFloatType()) {
@@ -1622,7 +1623,7 @@ static llvm::Value *lEmitBinaryPointerArith(BinaryExpr::Op op, llvm::Value *valu
     switch (op) {
     case BinaryExpr::Add:
         // ptr + integer
-        return ctx->GetElementPtrInst(value0, value1, ptrType, "ptrmath");
+        return ctx->GetElementPtrInst(value0, value1, ptrType, type1, "ptrmath");
     case BinaryExpr::Sub: {
         if (CastType<PointerType>(type1) != nullptr) {
             AssertPos(pos, Type::EqualIgnoringConst(type0, type1));
@@ -1688,7 +1689,7 @@ static llvm::Value *lEmitBinaryPointerArith(BinaryExpr::Op op, llvm::Value *valu
             llvm::Value *negOffset =
                 ctx->BinaryOperator(llvm::Instruction::Sub, zero, value1, WrapSemantics::None, "negate");
             // Do a GEP as ptr + -integer
-            return ctx->GetElementPtrInst(value0, negOffset, ptrType, "ptrmath");
+            return ctx->GetElementPtrInst(value0, negOffset, ptrType, type1->GetAsSignedType(), "ptrmath");
         }
     }
     default:
@@ -2877,6 +2878,9 @@ Expr *BinaryExpr::TypeCheck() {
         }
 
         const Type *offsetType = g->target->is32Bit() ? AtomicType::UniformInt32 : AtomicType::UniformInt64;
+        if (arg1->GetType()->IsUnsignedType()) {
+            offsetType = offsetType->GetAsUnsignedType();
+        }
         if (pt0->IsVaryingType()) {
             offsetType = offsetType->GetAsVaryingType();
         }
@@ -4800,7 +4804,8 @@ static llvm::Value *lAddVaryingOffsetsIfNeeded(FunctionEmitContext *ctx, llvm::V
     // end up turning into the correct step in bytes...
     const Type *uniformElementType = baseType->GetAsUniformType();
     const Type *ptrUnifType = PointerType::GetVarying(uniformElementType);
-    return ctx->GetElementPtrInst(ptr, varyingOffsets, ptrUnifType);
+    // programIndex is signed type
+    return ctx->GetElementPtrInst(ptr, varyingOffsets, ptrUnifType, AtomicType::VaryingInt32);
 }
 
 /** Check to see if the given type is an array of or pointer to a varying
@@ -4907,7 +4912,7 @@ llvm::Value *IndexExpr::GetValue(FunctionEmitContext *ctx) const {
 
         // And do the indexing calculation into the temporary array in memory
         ptr = ctx->GetElementPtrInst(tmpPtrInfo->getPointer(), LLVMInt32(0), index->GetValue(ctx),
-                                     PointerType::GetUniform(baseExprType));
+                                     PointerType::GetUniform(baseExprType), AtomicType::UniformInt32, indexType);
         ptr = lAddVaryingOffsetsIfNeeded(ctx, ptr, lvType);
 
         mask = LLVMMaskAllOn;
@@ -5078,7 +5083,7 @@ llvm::Value *IndexExpr::GetLValue(FunctionEmitContext *ctx) const {
         // Convert to a slice pointer if we're indexing into SOA data
         basePtrValue = lConvertPtrToSliceIfNeeded(ctx, basePtrValue, &baseExprType);
 
-        llvm::Value *ptr = ctx->GetElementPtrInst(basePtrValue, indexValue, baseExprType,
+        llvm::Value *ptr = ctx->GetElementPtrInst(basePtrValue, indexValue, baseExprType, index->GetType(),
                                                   llvm::Twine(basePtrValue->getName()) + "_offset");
         return lAddVaryingOffsetsIfNeeded(ctx, ptr, GetLValueType());
     }
@@ -5112,8 +5117,8 @@ llvm::Value *IndexExpr::GetLValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
 
     // And do the actual indexing calculation..
-    llvm::Value *ptr = ctx->GetElementPtrInst(basePtr, LLVMInt32(0), indexValue, basePtrType,
-                                              llvm::Twine(basePtr->getName()) + "_offset");
+    llvm::Value *ptr = ctx->GetElementPtrInst(basePtr, LLVMInt32(0), indexValue, basePtrType, AtomicType::UniformInt32,
+                                              index->GetType(), llvm::Twine(basePtr->getName()) + "_offset");
     return lAddVaryingOffsetsIfNeeded(ctx, ptr, GetLValueType());
 }
 
@@ -5224,13 +5229,16 @@ Expr *IndexExpr::TypeCheck() {
     if (!isUniform) {
         // Unless we have an explicit 64-bit index and are compiling to a
         // 64-bit target with 64-bit addressing, convert the index to an int32
-        // type.
+        // or uint32 type depending on whether it's signed or unsigned.
         //    The range of varying index is limited to [0,2^31) as a result.
         if (!(Type::EqualIgnoringConst(indexType->GetAsUniformType(), AtomicType::UniformUInt64) ||
               Type::EqualIgnoringConst(indexType->GetAsUniformType(), AtomicType::UniformInt64)) ||
             g->target->is32Bit() || g->opt.force32BitAddressing) {
-            const Type *indexType = AtomicType::VaryingInt32;
-            index = TypeConvertExpr(index, indexType, "array index");
+            const Type *indexType32 = AtomicType::VaryingInt32;
+            if (indexType->IsUnsignedType()) {
+                indexType32 = indexType32->GetAsUnsignedType();
+            }
+            index = TypeConvertExpr(index, indexType32, "array index");
             if (index == nullptr) {
                 return nullptr;
             }
@@ -5248,8 +5256,11 @@ Expr *IndexExpr::TypeCheck() {
         bool force_32bit =
             g->target->is32Bit() || (g->opt.force32BitAddressing &&
                                      Type::EqualIgnoringConst(indexType->GetAsUniformType(), AtomicType::UniformInt64));
-        const Type *indexType = force_32bit ? AtomicType::UniformInt32 : AtomicType::UniformInt64;
-        index = TypeConvertExpr(index, indexType, "array index");
+        const Type *indexTypeForced = force_32bit ? AtomicType::UniformInt32 : AtomicType::UniformInt64;
+        if (indexType->IsUnsignedType()) {
+            indexTypeForced = indexTypeForced->GetAsUnsignedType();
+        }
+        index = TypeConvertExpr(index, indexTypeForced, "array index");
         if (index == nullptr) {
             return nullptr;
         }
