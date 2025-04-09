@@ -1509,7 +1509,7 @@ static llvm::Value *lUpdateVaryingCounter(int dim, int nDims, FunctionEmitContex
     // Add the deltas to compute the varying counter values; store the
     // result to memory and then return it directly as well.
     llvm::Value *varyingCounter =
-        ctx->BinaryOperator(llvm::Instruction::Add, smearCounter, delta, WrapSemantics::NSW, "iter_val");
+        ctx->BinaryOperator(llvm::Instruction::Add, smearCounter, delta, nullptr, WrapSemantics::NSW, "iter_val");
     ctx->StoreInst(varyingCounter, varyingCounterPtrInfo);
     return varyingCounter;
 }
@@ -1626,18 +1626,19 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         endVals.push_back(ev);
 
         // nItems = endVal - startVal
-        llvm::Value *nItems = ctx->BinaryOperator(llvm::Instruction::Sub, ev, sv, WrapSemantics::NSW, "nitems");
+        llvm::Value *nItems =
+            ctx->BinaryOperator(llvm::Instruction::Sub, ev, sv, nullptr, WrapSemantics::NSW, "nitems");
 
         // nExtras = nItems % (span for this dimension)
         // This gives us the number of extra elements we need to deal with
         // at the end of the loop for this dimension that don't fit cleanly
         // into a vector width.
-        nExtras.push_back(
-            ctx->BinaryOperator(llvm::Instruction::SRem, nItems, LLVMInt32(span[i]), WrapSemantics::None, "nextras"));
+        nExtras.push_back(ctx->BinaryOperator(llvm::Instruction::SRem, nItems, LLVMInt32(span[i]),
+                                              AtomicType::UniformInt32, WrapSemantics::None, "nextras"));
 
         // alignedEnd = endVal - nExtras
         alignedEnd.push_back(
-            ctx->BinaryOperator(llvm::Instruction::Sub, ev, nExtras[i], WrapSemantics::NSW, "aligned_end"));
+            ctx->BinaryOperator(llvm::Instruction::Sub, ev, nExtras[i], nullptr, WrapSemantics::NSW, "aligned_end"));
 
         ///////////////////////////////////////////////////////////////////////
         // Each dimension has a loop counter that is a uniform value that
@@ -1692,8 +1693,8 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     for (int i = 0; i < nDims - 1; ++i) {
         ctx->SetCurrentBasicBlock(bbStep[i]);
         llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[i]);
-        llvm::Value *newCounter =
-            ctx->BinaryOperator(llvm::Instruction::Add, counter, LLVMInt32(span[i]), WrapSemantics::NSW, "new_counter");
+        llvm::Value *newCounter = ctx->BinaryOperator(llvm::Instruction::Add, counter, LLVMInt32(span[i]), nullptr,
+                                                      WrapSemantics::NSW, "new_counter");
         ctx->StoreInst(newCounter, uniformCounterPtrs[i]);
         ctx->BranchInst(bbTest[i]);
     }
@@ -1710,14 +1711,13 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[i], nullptr, "counter");
         llvm::Value *atAlignedEnd =
             ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, counter, alignedEnd[i], "at_aligned_end");
-        llvm::Value *inEx =
-            ctx->BinaryOperator(llvm::Instruction::And, haveExtras, atAlignedEnd, WrapSemantics::None, "in_extras");
+        llvm::Value *inEx = ctx->BinaryOperator(llvm::Instruction::And, haveExtras, atAlignedEnd, nullptr,
+                                                WrapSemantics::None, "in_extras");
 
         if (i == 0) {
             inExtras.push_back(inEx);
         } else {
-            inExtras.push_back(ctx->BinaryOperator(llvm::Instruction::Or, inEx, inExtras[i - 1], WrapSemantics::None,
-                                                   "in_extras_all"));
+            inExtras.push_back(ctx->BinaryOrOperator(inEx, inExtras[i - 1], "in_extras_all"));
         }
 
         llvm::Value *varyingCounter =
@@ -1734,8 +1734,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
             ctx->StoreInst(emask, extrasMaskPtrs[i]);
         } else {
             llvm::Value *oldMask = ctx->LoadInst(extrasMaskPtrs[i - 1]);
-            llvm::Value *newMask =
-                ctx->BinaryOperator(llvm::Instruction::And, oldMask, emask, WrapSemantics::None, "extras_mask");
+            llvm::Value *newMask = ctx->BinaryAndOperator(oldMask, emask, "extras_mask");
             ctx->StoreInst(newMask, extrasMaskPtrs[i]);
         }
 
@@ -1870,8 +1869,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
             ctx->SetInternalMask(emask);
         } else {
             llvm::Value *oldMask = ctx->LoadInst(extrasMaskPtrs[nDims - 2]);
-            llvm::Value *newMask =
-                ctx->BinaryOperator(llvm::Instruction::And, oldMask, emask, WrapSemantics::None, "extras_mask");
+            llvm::Value *newMask = ctx->BinaryAndOperator(oldMask, emask, "extras_mask");
             ctx->SetInternalMask(newMask);
         }
 
@@ -1930,7 +1928,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         ctx->RestoreContinuedLanes();
         llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims - 1]);
         llvm::Value *newCounter = ctx->BinaryOperator(llvm::Instruction::Add, counter, LLVMInt32(span[nDims - 1]),
-                                                      WrapSemantics::NSW, "new_counter");
+                                                      nullptr, WrapSemantics::NSW, "new_counter");
         ctx->StoreInst(newCounter, uniformCounterPtrs[nDims - 1]);
         ctx->BranchInst(bbOuterNotInExtras);
     }
@@ -1997,7 +1995,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     {
         llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims - 1]);
         llvm::Value *newCounter = ctx->BinaryOperator(llvm::Instruction::Add, counter, LLVMInt32(span[nDims - 1]),
-                                                      WrapSemantics::NSW, "new_counter");
+                                                      nullptr, WrapSemantics::NSW, "new_counter");
         ctx->StoreInst(newCounter, uniformCounterPtrs[nDims - 1]);
         ctx->BranchInst(bbOuterInExtras);
     }
@@ -2076,7 +2074,7 @@ void ForeachStmt::EmitCodeForXe(FunctionEmitContext *ctx) const {
         // Store varying start
         sv = ctx->BroadcastValue(sv, LLVMTypes::Int32VectorType, "start_broadcast");
         llvm::Constant *delta = lCalculateDeltaForVaryingCounter(i, nDims, span);
-        sv = ctx->BinaryOperator(llvm::Instruction::Add, sv, delta, WrapSemantics::NSW, "varying_start");
+        sv = ctx->BinaryOperator(llvm::Instruction::Add, sv, delta, nullptr, WrapSemantics::NSW, "varying_start");
         startVals.push_back(sv);
 
         // Store broadcasted end values
@@ -2123,7 +2121,7 @@ void ForeachStmt::EmitCodeForXe(FunctionEmitContext *ctx) const {
         ctx->SetCurrentBasicBlock(bbStep[i]);
         llvm::Value *counter = ctx->LoadInst(dimVariables[i]->storageInfo);
         llvm::Value *newCounter =
-            ctx->BinaryOperator(llvm::Instruction::Add, counter, steps[i], WrapSemantics::NSW, "new_counter");
+            ctx->BinaryOperator(llvm::Instruction::Add, counter, steps[i], nullptr, WrapSemantics::NSW, "new_counter");
         ctx->StoreInst(newCounter, dimVariables[i]->storageInfo);
         ctx->BranchInst(bbTest[i]);
     }
@@ -2452,11 +2450,10 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
 
         // Also update the bitvector of lanes left to turn off the bit for
         // the lane we're about to run.
-        llvm::Value *setMask =
-            ctx->BinaryOperator(llvm::Instruction::Shl, LLVMInt64(1), firstSet, WrapSemantics::None, "set_mask");
+        llvm::Value *setMask = ctx->BinaryOperator(llvm::Instruction::Shl, LLVMInt64(1), firstSet, nullptr,
+                                                   WrapSemantics::None, "set_mask");
         llvm::Value *notSetMask = ctx->NotOperator(setMask);
-        llvm::Value *newRemaining = ctx->BinaryOperator(llvm::Instruction::And, remainingBits, notSetMask,
-                                                        WrapSemantics::None, "new_remaining");
+        llvm::Value *newRemaining = ctx->BinaryAndOperator(remainingBits, notSetMask, "new_remaining");
         ctx->StoreInst(newRemaining, maskBitsPtrInfo);
 
         // and onward to run the loop body...
@@ -2698,8 +2695,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         }
         matchingLanes = ctx->I1VecToBoolVec(matchingLanes);
 
-        llvm::Value *loopMask = ctx->BinaryOperator(llvm::Instruction::And, oldMask, matchingLanes, WrapSemantics::None,
-                                                    "foreach_unique_loop_mask");
+        llvm::Value *loopMask = ctx->BinaryAndOperator(oldMask, matchingLanes, "foreach_unique_loop_mask");
 
         // Don't need to change this mask in XE: execution
         // is performed according to Xe EM
@@ -2712,8 +2708,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         // remainingBits &= ~movmsk(current mask)
         llvm::Value *loopMaskMM = ctx->LaneMask(loopMask);
         llvm::Value *notLoopMaskMM = ctx->NotOperator(loopMaskMM);
-        llvm::Value *newRemaining = ctx->BinaryOperator(llvm::Instruction::And, remainingBits, notLoopMaskMM,
-                                                        WrapSemantics::None, "new_remaining");
+        llvm::Value *newRemaining = ctx->BinaryAndOperator(remainingBits, notLoopMaskMM, "new_remaining");
         ctx->StoreInst(newRemaining, maskBitsPtrInfo);
 
         // and onward...
