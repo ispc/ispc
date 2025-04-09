@@ -38,10 +38,12 @@ jobs:
         echo "Download artifact ${LINK}" >> "$GITHUB_STEP_SUMMARY"
         wget --quiet -O "ispc.tar.gz" "${{ env.LINK }}"
         tar xf "ispc.tar.gz"
-        hardening-check "./ispc*/bin/ispc" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
-        hardening-check "./ispc*/lib64/libispcrt.so" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
-        hardening-check "./ispc*/lib64/libispcrt_device_gpu.so" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
-        hardening-check "./ispc*/lib64/libispcrt_device_cpu.so" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
+        # Find the actual directory name that was created
+        ISPC_DIR=$(find . -type d -name "ispc*" -maxdepth 1)
+        hardening-check "${ISPC_DIR}/bin/ispc" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
+        hardening-check "${ISPC_DIR}/lib/libispcrt.so" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
+        hardening-check "${ISPC_DIR}/lib/libispcrt_device_gpu.so" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
+        hardening-check "${ISPC_DIR}/lib/libispcrt_device_cpu.so" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
 
     - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
