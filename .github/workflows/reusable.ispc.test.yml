@@ -54,6 +54,11 @@ on:
         required: false
         type: string
         default: ''
+      ispc_extra_flags:
+        description: 'Additional ISPC flags to pass'
+        required: false
+        type: string
+        default: ''
 
 env:
   SDE_MIRROR_ID: 843185
@@ -108,7 +113,7 @@ jobs:
       shell: bash
       run: |
         echo "PATH=${PATH}"
-        ./scripts/alloy.py -r --only="stability ${{ inputs.architecture }} current ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        ./scripts/alloy.py -r --only="stability ${{ inputs.architecture }} current ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP --ispc-flags="${{ inputs.ispc_extra_flags }}"
 
     - name: Running tests on Linux/macOS (aarch64 mode)
       if: (inputs.platform == 'linux' || inputs.platform == 'macos') && inputs.architecture == 'aarch64'
@@ -121,7 +126,7 @@ jobs:
           # Remove dashes from each option
           opt_no_dash="${opt//-/}"
           echo "About to execute run_tests.py with opt: $opt_no_dash"
-          ./scripts/run_tests.py -t "${{ matrix.target }}" -a "${{ inputs.architecture }}" -o "$opt_no_dash" --time --update-errors=FP
+          ./scripts/run_tests.py -t "${{ matrix.target }}" -a "${{ inputs.architecture }}" -o "$opt_no_dash" --time --update-errors=FP --ispc-flags="${{ inputs.ispc_extra_flags }}"
           echo "Finished executing run_tests.py with opt: $opt_no_dash"
         done
 
@@ -133,14 +138,14 @@ jobs:
       shell: bash
       run: |
         echo "PATH=${PATH}"
-        ./scripts/alloy.py -r --only="stability ${{ inputs.architecture }} current debug ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        ./scripts/alloy.py -r --only="stability ${{ inputs.architecture }} current debug ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP --ispc-flags="${{ inputs.ispc_extra_flags }}"
 
     - name: Running tests on Windows (alloy mode)
       if: inputs.platform == 'windows' && inputs.calling_conv == ''
       run: |
         $env:ISPC_HOME = "$pwd"
         .github/workflows/scripts/load-vs-env.ps1 "${{ inputs.architecture }}"
-        python .\scripts\alloy.py -r --only="stability ${{ inputs.architecture }} current ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        python .\scripts\alloy.py -r --only="stability ${{ inputs.architecture }} current ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP --ispc-flags="${{ inputs.ispc_extra_flags }}"
       shell: pwsh
 
     - name: Running tests on Windows (vectorcall)
@@ -156,7 +161,7 @@ jobs:
         foreach ($opt in $optLevels) {
           $optNoDash = $opt -replace "-", ""
           Write-Host "About to execute run_tests.py with opt: $optNoDash"
-          python .\scripts\run_tests.py --calling_conv=${{ inputs.calling_conv }} --target=${{ matrix.target }} --arch=${{ inputs.architecture }} --opt=$optNoDash
+          python .\scripts\run_tests.py --calling_conv=${{ inputs.calling_conv }} --target=${{ matrix.target }} --arch=${{ inputs.architecture }} --opt=$optNoDash --ispc-flags="${{ inputs.ispc_extra_flags }}"
           Write-Host "Finished executing run_tests.py with opt: $optNoDash"
         }
       shell: pwsh
