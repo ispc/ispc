@@ -74,6 +74,33 @@ target_link_libraries(ispc_attention PRIVATE ${ISPC_OBJ})
 # Add include directories to find the ISPC header
 target_include_directories(ispc_attention PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
+target_sources(ispc_attention PRIVATE ${EXAMPLES_ROOT}/common/tasksys.cpp)
+find_package(TBB QUIET COMPONENTS tbb)
+if (TBB_FOUND)
+    # TBB package does not produce any info when found, so print it here.
+    message(STATUS "Found TBB: ${TBB_VERSION} at ${TBB_DIR}")
+    target_link_libraries(ispc_attention PRIVATE TBB::tbb)
+else()
+    # On some OS (Ubuntu 18.04, CentOS) TBB is installed without CMake support
+    # Try to find TBB library and header files
+    find_library(TBB_LIB NAMES libtbb.so.2 tbb)
+    get_filename_component(TBB_LIB_DIR "${TBB_LIB}" DIRECTORY)
+    find_path(TBB_INCLUDE_DIR NAMES ${TBB_HEADER} PATHS ${TBB_LIB_DIR}/../include)
+    # If TBB library and header files are found, use them.
+    if (TBB_LIB AND TBB_INCLUDE_DIR)
+        message(STATUS "Found TBB: ${TBB_LIB}")
+        message(STATUS "TBB_INCLUDE_DIR is ${TBB_INCLUDE_DIR}")
+        target_link_libraries(ispc_attention PRIVATE ${TBB_LIB})
+        target_include_directories(ispc_attention PRIVATE ${TBB_INCLUDE_DIR})
+        set (TBB_FOUND TRUE)
+    endif()
+endif()
+if (NOT TBB_FOUND)
+message(FATAL_ERROR "TBB is not found! Please install TBB or set the TBB_ROOT pointing to TBB location")
+endif()
+target_compile_definitions(ispc_attention PRIVATE ISPC_USE_TBB_PARALLEL_FOR)
+
+
 # Add a target to copy Python file
 add_custom_target(attention_py
     COMMAND ${CMAKE_COMMAND} -E copy
