@@ -1190,10 +1190,10 @@ struct GatherImpInfo {
 };
 
 struct ScatterImpInfo {
-    ScatterImpInfo(const char *msName, llvm::Type **vpt, Alignment a) : store(msName), vpType(vpt), alignment(a) {}
+    ScatterImpInfo(const char *msName, llvm::Type **st, Alignment a) : store(msName), sType(st), alignment(a) {}
     bool isFactored() const { return !g->target->useScatter(); }
     llvm::Function *maskedStoreFunc(llvm::Module *M) const { return M->getFunction(store); }
-    llvm::Type *vecPtrType() const { return *vpType; }
+    llvm::Type *scalarType() const { return *sType; }
     llvm::Type *baseType() const {
         // Pseudo scatter base pointer element type (the 1st argument of the intrinsic) is int8
         // e.g. @__pseudo_scatter_base_offsets32_i8(i8 * nocapture, i32, <WIDTH x i32>, <WIDTH x i8>, <WIDTH x
@@ -1204,7 +1204,7 @@ struct ScatterImpInfo {
 
   private:
     const char *store;
-    llvm::Type **vpType;
+    llvm::Type **sType;
     Alignment alignment;
 };
 
@@ -1271,20 +1271,14 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
         {__pseudo_gather_factored_base_offsets64_double, &GII_double},
     };
 
-    static ScatterImpInfo SII_i8 =
-        ScatterImpInfo(__pseudo_masked_store_i8, &LLVMTypes::Int8VectorPointerType, Alignment::A1);
-    static ScatterImpInfo SII_i16 =
-        ScatterImpInfo(__pseudo_masked_store_i16, &LLVMTypes::Int16VectorPointerType, Alignment::A2);
-    static ScatterImpInfo SII_half =
-        ScatterImpInfo(__pseudo_masked_store_half, &LLVMTypes::Float16VectorPointerType, Alignment::A2);
-    static ScatterImpInfo SII_i32 =
-        ScatterImpInfo(__pseudo_masked_store_i32, &LLVMTypes::Int32VectorPointerType, Alignment::A4);
-    static ScatterImpInfo SII_float =
-        ScatterImpInfo(__pseudo_masked_store_float, &LLVMTypes::FloatVectorPointerType, Alignment::A4);
-    static ScatterImpInfo SII_i64 =
-        ScatterImpInfo(__pseudo_masked_store_i64, &LLVMTypes::Int64VectorPointerType, Alignment::A8);
+    static ScatterImpInfo SII_i8 = ScatterImpInfo(__pseudo_masked_store_i8, &LLVMTypes::Int8Type, Alignment::A1);
+    static ScatterImpInfo SII_i16 = ScatterImpInfo(__pseudo_masked_store_i16, &LLVMTypes::Int16Type, Alignment::A2);
+    static ScatterImpInfo SII_half = ScatterImpInfo(__pseudo_masked_store_half, &LLVMTypes::Float16Type, Alignment::A2);
+    static ScatterImpInfo SII_i32 = ScatterImpInfo(__pseudo_masked_store_i32, &LLVMTypes::Int32Type, Alignment::A4);
+    static ScatterImpInfo SII_float = ScatterImpInfo(__pseudo_masked_store_float, &LLVMTypes::FloatType, Alignment::A4);
+    static ScatterImpInfo SII_i64 = ScatterImpInfo(__pseudo_masked_store_i64, &LLVMTypes::Int64Type, Alignment::A8);
     static ScatterImpInfo SII_double =
-        ScatterImpInfo(__pseudo_masked_store_double, &LLVMTypes::DoubleVectorPointerType, Alignment::A8);
+        ScatterImpInfo(__pseudo_masked_store_double, &LLVMTypes::DoubleType, Alignment::A8);
 
     static std::unordered_map<std::string, ScatterImpInfo *> replScatterToStore = {
         {__pseudo_scatter_base_offsets32_i8, &SII_i8},
@@ -1375,8 +1369,7 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
     }
 
     Debug(SourcePos(), "GSToLoadStore: %s.", fullOffsets->getName().str().c_str());
-    llvm::Type *scalarType =
-        (gatherInfo != nullptr) ? gatherInfo->scalarType() : scatterInfo->vecPtrType()->getScalarType();
+    llvm::Type *scalarType = (gatherInfo != nullptr) ? gatherInfo->scalarType() : scatterInfo->scalarType();
 
     auto callName = callInst->getName();
     if (LLVMVectorValuesAllEqual(fullOffsets)) {
@@ -1388,8 +1381,6 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
             // handled as a scalar load and broadcast across the lanes.
             Debug(pos, "Transformed gather to scalar load and broadcast!");
             llvm::Value *ptr = lComputeCommonPointer(base, gatherInfo->baseType(), fullOffsets, callInst);
-            ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(scalarType, 0), base->getName(),
-                                        ISPC_INSERTION_POINT_INSTRUCTION(callInst));
 
             LLVMCopyMetadata(ptr, callInst);
             Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
@@ -1458,8 +1449,6 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
             } else {
                 Debug(pos, "Transformed scatter to unaligned vector store!");
                 llvm::Value *ptr = lComputeCommonPointer(base, scatterInfo->baseType(), fullOffsets, callInst);
-                ptr = new llvm::BitCastInst(ptr, scatterInfo->vecPtrType(), "ptrcast",
-                                            ISPC_INSERTION_POINT_INSTRUCTION(callInst));
                 newCall = LLVMCallInst(scatterInfo->maskedStoreFunc(M), ptr, storeValue, mask, "");
             }
             LLVMCopyMetadata(newCall, callInst);
@@ -1528,12 +1517,10 @@ static llvm::Value *lImproveMaskedStore(llvm::CallInst *callInst) {
         return llvm::UndefValue::get(LLVMTypes::Int32Type);
     } else if (maskStatus == MaskStatus::all_on) {
         // The mask is all on, so turn this into a regular store
-        llvm::Type *rvalueType = rvalue->getType();
         llvm::Instruction *store = nullptr;
-        llvm::Type *ptrType = llvm::PointerType::get(rvalueType, 0);
 
-        lvalue =
-            new llvm::BitCastInst(lvalue, ptrType, "lvalue_to_ptr_type", ISPC_INSERTION_POINT_INSTRUCTION(callInst));
+        lvalue = new llvm::BitCastInst(lvalue, LLVMTypes::PtrType, "lvalue_to_ptr_type",
+                                       ISPC_INSERTION_POINT_INSTRUCTION(callInst));
         LLVMCopyMetadata(lvalue, callInst);
         store = new llvm::StoreInst(
             rvalue, lvalue, false /* not volatile */,
@@ -1595,8 +1582,6 @@ static llvm::Value *lImproveMaskedLoad(llvm::CallInst *callInst, llvm::BasicBloc
     } else if (maskStatus == MaskStatus::all_on) {
         // The mask is all on, so turn this into a regular load
         llvm::Instruction *load = nullptr;
-        llvm::Type *ptrType = llvm::PointerType::get(callInst->getType(), 0);
-        ptr = new llvm::BitCastInst(ptr, ptrType, "ptr_cast_for_load", ISPC_INSERTION_POINT_INSTRUCTION(callInst));
         Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
         load = new llvm::LoadInst(
             callInst->getType(), ptr, callInst->getName(), false /* not volatile */,

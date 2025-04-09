@@ -3976,9 +3976,9 @@ static PrintArgsBuilder getPrintArgsBuilder(Expr *values, FunctionEmitContext *c
 
 // This name should be also properly mangled. It happens later.
 static llvm::FunctionCallee getSPIRVOCLPrintfDecl() {
-    auto *PrintfTy = llvm::FunctionType::get(LLVMTypes::Int32Type,
-                                             llvm::PointerType::get(LLVMTypes::Int8Type, /* const addrspace */ 2),
-                                             /* isVarArg */ true);
+    auto *PrintfTy =
+        llvm::FunctionType::get(LLVMTypes::Int32Type, llvm::PointerType::get(*g->ctx, /* const addrspace */ 2),
+                                /* isVarArg */ true);
     return m->module->getOrInsertFunction("__spirv_ocl_printf", PrintfTy);
 }
 
@@ -4016,8 +4016,7 @@ static AddressInfo *lEmitPrintArgCode(Expr *expr, FunctionEmitContext *ctx) {
     }
     ctx->StoreInst(val, ptrInfo);
 
-    llvm::Value *ptr = ctx->BitCastInst(ptrInfo->getPointer(), LLVMTypes::VoidPointerType);
-    return new AddressInfo(ptr, LLVMTypes::VoidPointerType);
+    return new AddressInfo(ptrInfo->getPointer(), LLVMTypes::VoidPointerType);
 }
 
 static bool lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, AddressInfo *argPtrArray, int offset,
@@ -4049,8 +4048,7 @@ std::vector<llvm::Value *> PrintStmt::getDoPrintArgs(FunctionEmitContext *ctx) c
     if (values == nullptr) {
         // Check requested format
         checkFormatString(format, 0, pos);
-        llvm::Type *ptrPtrType = llvm::PointerType::get(LLVMTypes::VoidPointerType, 0);
-        doPrintArgs[ARGS_IDX] = llvm::Constant::getNullValue(ptrPtrType);
+        doPrintArgs[ARGS_IDX] = llvm::Constant::getNullValue(LLVMTypes::VoidPointerType);
     } else {
         // Get the values passed to the print() statement evaluated and
         // stored in memory so that we set up the array of pointers to them
@@ -4064,8 +4062,7 @@ std::vector<llvm::Value *> PrintStmt::getDoPrintArgs(FunctionEmitContext *ctx) c
         AddressInfo *argPtrArrayInfo = ctx->AllocaInst(argPtrArrayType, "print_arg_ptrs");
         // Store the array pointer as a void **, which is what __do_print()
         // expects
-        doPrintArgs[ARGS_IDX] =
-            ctx->BitCastInst(argPtrArrayInfo->getPointer(), llvm::PointerType::get(LLVMTypes::VoidPointerType, 0));
+        doPrintArgs[ARGS_IDX] = argPtrArrayInfo->getPointer();
 
         // Now, for each of the arguments, emit code to evaluate its value
         // and store the value into alloca's storage.  Then store the
