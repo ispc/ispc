@@ -3481,7 +3481,7 @@ static llvm::FunctionType *lGetVaryingDispatchType(FunctionTargetVariants &funcs
                     // For each varying type pointed to, swap the LLVM pointer type
                     // with i8 * (as close as we can get to void *)
                     if (baseType->IsVaryingType()) {
-                        ftype[j] = LLVMTypes::Int8PointerType;
+                        ftype[j] = LLVMTypes::VoidPointerType;
                         foundVarying = true;
                     }
                 }

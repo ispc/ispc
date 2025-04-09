@@ -1265,17 +1265,7 @@ llvm::Type *PointerType::LLVMType(llvm::LLVMContext *ctx) const {
 
     switch (variability.type) {
     case Variability::Uniform: {
-        llvm::Type *ptype = nullptr;
-        const FunctionType *ftype = CastType<FunctionType>(baseType);
-        if (ftype != nullptr) {
-            ptype = llvm::PointerType::get(ftype->LLVMFunctionType(ctx), (unsigned)addrSpace);
-        } else {
-            if (baseType->IsVoidType()) {
-                ptype = llvm::PointerType::get(llvm::Type::getInt8Ty(*ctx), (unsigned)addrSpace);
-            } else {
-                ptype = llvm::PointerType::get(baseType->LLVMStorageType(ctx), (unsigned)addrSpace);
-            }
-        }
+        llvm::Type *ptype = llvm::PointerType::get(*ctx, (unsigned)addrSpace);
         return ptype;
     }
     case Variability::Varying:
@@ -2615,14 +2605,7 @@ llvm::Type *ReferenceType::LLVMType(llvm::LLVMContext *ctx) const {
         Assert(m->errorCount > 0);
         return nullptr;
     }
-
-    llvm::Type *t = targetType->LLVMStorageType(ctx);
-    if (t == nullptr) {
-        Assert(m->errorCount > 0);
-        return nullptr;
-    }
-
-    return llvm::PointerType::get(t, (unsigned)addrSpace);
+    return llvm::PointerType::get(*ctx, (unsigned)addrSpace);
 }
 
 llvm::DIType *ReferenceType::GetDIType(llvm::DIScope *scope) const {
@@ -3067,8 +3050,7 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
         // threads the tasks system has running.  (Task arguments are
         // marshalled in a struct so that it's easy to allocate space to
         // hold them until the task actually runs.)
-        llvm::Type *st = llvm::StructType::get(*ctx, llvmArgTypes);
-        callTypes.push_back(llvm::PointerType::getUnqual(st));
+        callTypes.push_back(llvm::PointerType::getUnqual(*ctx));
         callTypes.push_back(LLVMTypes::Int32Type); // threadIndex
         callTypes.push_back(LLVMTypes::Int32Type); // threadCount
         callTypes.push_back(LLVMTypes::Int32Type); // taskIndex
