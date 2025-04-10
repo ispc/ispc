@@ -30,8 +30,8 @@ endif()
 
 # Check if nanobind was found, exit early if not
 if(NOT NANOBIND_FOUND)
-    message(STATUS "nanobind not found. Skipping the attention example.")
-    message(STATUS "To build this example, please install nanobind with: pip install nanobind")
+    message(WARNING "nanobind not found. Skipping the attention example.")
+    message(WARNING "To build this example, please install nanobind with: pip install -r requirements.txt")
     return()  # Exit early, stopping processing of this CMakeLists.txt file
 endif()
 
