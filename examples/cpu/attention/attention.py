@@ -1,7 +1,7 @@
 #  Copyright (c) 2025, Intel Corporation
 #  SPDX-License-Identifier: BSD-3-Clause
 
-# Run with OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 taskset --cpu-list 0 python attention.py
+# Run with OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 taskset --cpu-list 0 python attention.py to check performance on 1 thread
 import numpy as np
 import torch
 import time
@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
     # Test different sequence lengths
     print("\nPerformance and validation for different sequence lengths:")
-    seq_lengths = [32, 64, 128, 256, 512, 1024, 2048, 4096]
+    seq_lengths = [32, 64, 128, 256, 512, 1024, 2048, 4096, 8192]
 
     for sl in seq_lengths:
         print(f"\nTesting sequence length {sl}:")
