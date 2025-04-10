@@ -118,7 +118,7 @@ task void transpose_matrix_task(uniform float input[], uniform float output[], u
     // Determine workset for this task instance
     uniform int rows_per_task = height / taskCount;
     uniform int row_start = rows_per_task * taskIndex;
-    uniform int row_end = (taskIndex == taskCount - 1) ? height : row_start + rows_per_task;
+    uniform int row_end = row_start + rows_per_task;
 
     // Process the assigned rows in tiles
     for (uniform int tile_y = row_start; tile_y < row_end; tile_y += TILE_HEIGHT) {
@@ -135,11 +135,39 @@ task void transpose_matrix_task(uniform float input[], uniform float output[], u
     }
 }
 
+void softmax(uniform float matrix[], uniform float scale, uniform int seq_len) {
+    // Process each row assigned to this task
+    for (uniform int row = 0; row < seq_len; row++) {
+        // Find maximum value in the row (applying scaling inside this step)
+        uniform float row_max = NEG_INF;
+        foreach (j = 0 ... seq_len) {
+            // Scale during max calculation
+            varying float scaled_val = matrix[row * seq_len + j] * scale;
+            matrix[row * seq_len + j] = scaled_val; // Store scaled value for later use
+            row_max = max((uniform float)reduce_max(scaled_val), row_max);
+        }
+
+        // Compute exp(x - max) and sum
+        uniform float row_sum = 0.0f;
+        foreach (j = 0 ... seq_len) {
+            // No need to scale again, already done in previous step
+            varying float exp_val = exp(matrix[row * seq_len + j] - row_max);
+            matrix[row * seq_len + j] = exp_val; // Store exp value
+            row_sum += reduce_add(exp_val);
+        }
+
+        // Normalize
+        foreach (j = 0 ... seq_len) {
+            matrix[row * seq_len + j] /= row_sum;
+        }
+    }
+}
+
 task void softmax_task(uniform float matrix[], uniform float scale, uniform int seq_len) {
     // Determine workset for this task instance
     uniform int rows_per_task = seq_len / taskCount;
     uniform int row_start = rows_per_task * taskIndex;
-    uniform int row_end = (taskIndex == taskCount - 1) ? seq_len : row_start + rows_per_task;
+    uniform int row_end = row_start + rows_per_task;
 
     // Process each row assigned to this task
     for (uniform int row = row_start; row < row_end; row++) {
@@ -172,8 +200,7 @@ export void single_head_attention(uniform float Q[], uniform float K[], uniform 
                                   uniform int seq_len, uniform int d_model) {
     uniform float scale = rsqrt((uniform float)d_model);
 
-    //  Use a single memory pool instead of three separate allocations
-    // Calculate total memory needed
+    // Calculate total memory needed, use a single memory pool
     uniform int total_memory_size = seq_len * seq_len * 2 + d_model * seq_len;
     uniform float *uniform memory_pool = uniform new uniform float[total_memory_size];
 
