@@ -1,0 +1,4 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+numpy == 2.1.0
+nanobind == 2.5.0
+torch==2.6.0+cpu
