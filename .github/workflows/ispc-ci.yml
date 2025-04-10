@@ -654,8 +654,9 @@ jobs:
         tar xf ispc-examples-trunk.tar.gz
       working-directory: examples-package
 
-    - name: Install pip dependencies
+    - name: Install dependencies
       run: |
+        brew install tbb
         pip install -r examples-package/examples/cpu/requirements.txt
 
     - name: Build examples
