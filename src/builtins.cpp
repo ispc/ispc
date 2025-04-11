@@ -77,9 +77,7 @@ static void lCheckModuleIntrinsics(llvm::Module *module) {
                 error_message += funcName;
                 FATAL(error_message.c_str());
             }
-            llvm::Type *intrinsicType = llvm::Intrinsic::getType(*g->ctx, id);
-            intrinsicType = llvm::PointerType::get(intrinsicType, 0);
-            Assert(func->getType() == intrinsicType);
+            Assert(func->getType() == LLVMTypes::VoidPointerType);
         }
     }
 }

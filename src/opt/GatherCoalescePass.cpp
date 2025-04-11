@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2024, Intel Corporation
+  Copyright (c) 2022-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -264,8 +264,6 @@ static void lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup
 static llvm::Value *lGEPAndLoad(llvm::Value *basePtr, llvm::Type *baseType, int64_t offset, int align,
                                 llvm::Instruction *insertBefore, llvm::Type *type) {
     llvm::Value *ptr = LLVMGEPInst(basePtr, baseType, LLVMInt64(offset), "new_base", insertBefore);
-    ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(type, 0), "ptr_cast",
-                                ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
     Assert(llvm::isa<llvm::PointerType>(ptr->getType()));
     return new llvm::LoadInst(type, ptr, "gather_load", false /* not volatile */, llvm::MaybeAlign(align).valueOrOne(),
                               ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));

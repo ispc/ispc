@@ -3373,7 +3373,11 @@ int Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *o
 
     // Finally, create an preprocessor object
     clang::TrivialModuleLoader modLoader;
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
+    clang::Preprocessor prep(*preProcOpts, diagEng, langOpts, srcMgr, hdrSearch, modLoader);
+#else
     clang::Preprocessor prep(preProcOpts, diagEng, langOpts, srcMgr, hdrSearch, modLoader);
+#endif
 
     // Initialize preprocessor
     prep.Initialize(*tgtInfo);
@@ -3477,7 +3481,7 @@ static llvm::FunctionType *lGetVaryingDispatchType(FunctionTargetVariants &funcs
                     // For each varying type pointed to, swap the LLVM pointer type
                     // with i8 * (as close as we can get to void *)
                     if (baseType->IsVaryingType()) {
-                        ftype[j] = LLVMTypes::Int8PointerType;
+                        ftype[j] = LLVMTypes::VoidPointerType;
                         foundVarying = true;
                     }
                 }

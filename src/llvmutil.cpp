@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -42,14 +42,6 @@ llvm::Type *LLVMTypes::FloatType = nullptr;
 llvm::Type *LLVMTypes::DoubleType = nullptr;
 llvm::Type *LLVMTypes::PtrType = nullptr;
 
-llvm::Type *LLVMTypes::Int8PointerType = nullptr;
-llvm::Type *LLVMTypes::Int16PointerType = nullptr;
-llvm::Type *LLVMTypes::Int32PointerType = nullptr;
-llvm::Type *LLVMTypes::Int64PointerType = nullptr;
-llvm::Type *LLVMTypes::Float16PointerType = nullptr;
-llvm::Type *LLVMTypes::FloatPointerType = nullptr;
-llvm::Type *LLVMTypes::DoublePointerType = nullptr;
-
 llvm::VectorType *LLVMTypes::MaskType = nullptr;
 llvm::VectorType *LLVMTypes::BoolVectorType = nullptr;
 llvm::VectorType *LLVMTypes::BoolVectorStorageType = nullptr;
@@ -64,14 +56,6 @@ llvm::VectorType *LLVMTypes::FloatVectorType = nullptr;
 llvm::VectorType *LLVMTypes::DoubleVectorType = nullptr;
 llvm::VectorType *LLVMTypes::PtrVectorType = nullptr;
 
-llvm::Type *LLVMTypes::Int8VectorPointerType = nullptr;
-llvm::Type *LLVMTypes::Int16VectorPointerType = nullptr;
-llvm::Type *LLVMTypes::Int32VectorPointerType = nullptr;
-llvm::Type *LLVMTypes::Int64VectorPointerType = nullptr;
-llvm::Type *LLVMTypes::Float16VectorPointerType = nullptr;
-llvm::Type *LLVMTypes::FloatVectorPointerType = nullptr;
-llvm::Type *LLVMTypes::DoubleVectorPointerType = nullptr;
-
 llvm::VectorType *LLVMTypes::VoidPointerVectorType = nullptr;
 
 llvm::Constant *LLVMTrue = nullptr;
@@ -83,7 +67,7 @@ llvm::Constant *LLVMMaskAllOff = nullptr;
 
 void InitLLVMUtil(llvm::LLVMContext *ctx, Target &target) {
     LLVMTypes::VoidType = llvm::Type::getVoidTy(*ctx);
-    LLVMTypes::VoidPointerType = llvm::PointerType::get(llvm::Type::getInt8Ty(*ctx), 0);
+    LLVMTypes::VoidPointerType = llvm::PointerType::get(*ctx, 0);
     LLVMTypes::PointerIntType = target.is32Bit() ? llvm::Type::getInt32Ty(*ctx) : llvm::Type::getInt64Ty(*ctx);
 
     LLVMTypes::BoolType = llvm::Type::getInt1Ty(*ctx);
@@ -96,14 +80,6 @@ void InitLLVMUtil(llvm::LLVMContext *ctx, Target &target) {
     LLVMTypes::FloatType = llvm::Type::getFloatTy(*ctx);
     LLVMTypes::DoubleType = llvm::Type::getDoubleTy(*ctx);
     LLVMTypes::PtrType = llvm::PointerType::get(*ctx, 0);
-
-    LLVMTypes::Int8PointerType = llvm::PointerType::get(LLVMTypes::Int8Type, 0);
-    LLVMTypes::Int16PointerType = llvm::PointerType::get(LLVMTypes::Int16Type, 0);
-    LLVMTypes::Int32PointerType = llvm::PointerType::get(LLVMTypes::Int32Type, 0);
-    LLVMTypes::Int64PointerType = llvm::PointerType::get(LLVMTypes::Int64Type, 0);
-    LLVMTypes::Float16PointerType = llvm::PointerType::get(LLVMTypes::Float16Type, 0);
-    LLVMTypes::FloatPointerType = llvm::PointerType::get(LLVMTypes::FloatType, 0);
-    LLVMTypes::DoublePointerType = llvm::PointerType::get(LLVMTypes::DoubleType, 0);
 
     switch (target.getMaskBitCount()) {
     case 1:
@@ -140,15 +116,6 @@ void InitLLVMUtil(llvm::LLVMContext *ctx, Target &target) {
     LLVMTypes::FloatVectorType = LLVMVECTOR::get(LLVMTypes::FloatType, target.getVectorWidth());
     LLVMTypes::DoubleVectorType = LLVMVECTOR::get(LLVMTypes::DoubleType, target.getVectorWidth());
     LLVMTypes::PtrVectorType = LLVMVECTOR::get(LLVMTypes::PtrType, target.getVectorWidth());
-
-    LLVMTypes::Int8VectorPointerType = llvm::PointerType::get(LLVMTypes::Int8VectorType, 0);
-    LLVMTypes::Int16VectorPointerType = llvm::PointerType::get(LLVMTypes::Int16VectorType, 0);
-    LLVMTypes::Int32VectorPointerType = llvm::PointerType::get(LLVMTypes::Int32VectorType, 0);
-    LLVMTypes::Int64VectorPointerType = llvm::PointerType::get(LLVMTypes::Int64VectorType, 0);
-    LLVMTypes::Float16VectorPointerType = llvm::PointerType::get(LLVMTypes::Float16VectorType, 0);
-    LLVMTypes::FloatVectorPointerType = llvm::PointerType::get(LLVMTypes::FloatVectorType, 0);
-    LLVMTypes::DoubleVectorPointerType = llvm::PointerType::get(LLVMTypes::DoubleVectorType, 0);
-
     LLVMTypes::VoidPointerVectorType = g->target->is32Bit() ? LLVMTypes::Int32VectorType : LLVMTypes::Int64VectorType;
 
     LLVMTrue = llvm::ConstantInt::getTrue(*ctx);

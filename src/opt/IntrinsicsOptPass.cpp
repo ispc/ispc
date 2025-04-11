@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2024, Intel Corporation
+  Copyright (c) 2022-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -134,7 +134,7 @@ bool IntrinsicsOpt::optimizeIntrinsics(llvm::BasicBlock &bb) {
                 Assert(llvm::isa<llvm::VectorType>(returnType));
                 // cast the i8 * to the appropriate type
                 llvm::Value *castPtr =
-                    new llvm::BitCastInst(callInst->getArgOperand(0), llvm::PointerType::get(returnType, 0),
+                    new llvm::BitCastInst(callInst->getArgOperand(0), LLVMTypes::PtrType,
                                           llvm::Twine(callInst->getArgOperand(0)->getName()) + "_cast",
                                           ISPC_INSERTION_POINT_INSTRUCTION(callInst));
                 LLVMCopyMetadata(castPtr, callInst);
@@ -165,9 +165,8 @@ bool IntrinsicsOpt::optimizeIntrinsics(llvm::BasicBlock &bb) {
             } else if (maskStatus == MaskStatus::all_on) {
                 // all lanes storing, so replace with a regular store
                 llvm::Value *rvalue = callInst->getArgOperand(2);
-                llvm::Type *storeType = rvalue->getType();
                 llvm::Value *castPtr =
-                    new llvm::BitCastInst(callInst->getArgOperand(0), llvm::PointerType::get(storeType, 0),
+                    new llvm::BitCastInst(callInst->getArgOperand(0), LLVMTypes::PtrType,
                                           llvm::Twine(callInst->getArgOperand(0)->getName()) + "_ptrcast",
                                           ISPC_INSERTION_POINT_INSTRUCTION(callInst));
                 LLVMCopyMetadata(castPtr, callInst);

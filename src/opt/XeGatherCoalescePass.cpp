@@ -540,7 +540,7 @@ void XeGatherCoalescing::optimizePtr(llvm::Value *Ptr, PtrData &PD, llvm::Instru
         llvm::Instruction *Addr = llvm::BinaryOperator::CreateAdd(PtrToInt, Offset, "vectorized_address", InsertPoint);
         llvm::Type *RetType = llvm::FixedVectorType::get(LargestType, ReqSize / LargestTypeSize);
         llvm::IntToPtrInst *PtrForLd =
-            new llvm::IntToPtrInst(Addr, llvm::PointerType::get(RetType, 0), "vectorized_address_ptr", InsertPoint);
+            new llvm::IntToPtrInst(Addr, LLVMTypes::PtrType, "vectorized_address_ptr", InsertPoint);
         llvm::LoadInst *LD = new llvm::LoadInst(RetType, PtrForLd, "vectorized_ld_exp", InsertPoint);
 
         //  If the Offset is zero, we generate a LD with default alignment for the target.

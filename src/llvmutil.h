@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -52,14 +52,6 @@ struct LLVMTypes {
     static llvm::Type *DoubleType;
     static llvm::Type *PtrType;
 
-    static llvm::Type *Int8PointerType;
-    static llvm::Type *Int16PointerType;
-    static llvm::Type *Int32PointerType;
-    static llvm::Type *Int64PointerType;
-    static llvm::Type *Float16PointerType;
-    static llvm::Type *FloatPointerType;
-    static llvm::Type *DoublePointerType;
-
     static llvm::VectorType *MaskType;
 
     static llvm::VectorType *BoolVectorType;
@@ -73,14 +65,6 @@ struct LLVMTypes {
     static llvm::VectorType *FloatVectorType;
     static llvm::VectorType *DoubleVectorType;
     static llvm::VectorType *PtrVectorType;
-
-    static llvm::Type *Int8VectorPointerType;
-    static llvm::Type *Int16VectorPointerType;
-    static llvm::Type *Int32VectorPointerType;
-    static llvm::Type *Int64VectorPointerType;
-    static llvm::Type *Float16VectorPointerType;
-    static llvm::Type *FloatVectorPointerType;
-    static llvm::Type *DoubleVectorPointerType;
 
     static llvm::VectorType *VoidPointerVectorType;
 };

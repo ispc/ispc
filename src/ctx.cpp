@@ -3693,11 +3693,9 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
                 SetInternalMask(callMask);
             }
 
-            // bitcast the i32/64 function pointer to the actual function
+            // bitcast the i32/64 function pointer to the function
             // pointer type.
-            llvm::Type *llvmFuncType = funcType->LLVMFunctionType(g->ctx);
-            llvm::Type *llvmFPtrType = llvm::PointerType::get(llvmFuncType, 0);
-            llvm::Value *fptrCast = IntToPtrInst(fptr, llvmFPtrType);
+            llvm::Value *fptrCast = IntToPtrInst(fptr, LLVMTypes::VoidPointerType);
 
             // Call the function: callResult = call ftpr(args, args, call mask)
             llvm::Value *callResult = CallInst(fptrCast, funcType, args, name);
