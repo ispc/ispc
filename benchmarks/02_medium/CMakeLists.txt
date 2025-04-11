@@ -6,3 +6,4 @@
 # List the benchmarks
 compile_benchmark_test(test01)
 compile_benchmark_test(test02_array)
+compile_benchmark_test(test03_int_div)
