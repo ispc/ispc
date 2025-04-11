@@ -830,6 +830,24 @@ ISPC_BUILTINS_ATTRS uniform int32 __num_cores();
 
 ISPC_BUILTINS_ATTRS void __set_system_isa();
 
+int8 __idiv(int8 a, int8 b);
+int16 __idiv(int16 a, int16 b);
+int32 __idiv(int32 a, int32 b);
+int64 __idiv(int64 a, int64 b);
+uint8 __udiv(uint8 a, uint8 b);
+uint16 __udiv(uint16 a, uint16 b);
+uint32 __udiv(uint32 a, uint32 b);
+uint64 __udiv(uint64 a, uint64 b);
+
+int8 __irem(int8 a, int8 b);
+int16 __irem(int16 a, int16 b);
+int32 __irem(int32 a, int32 b);
+int64 __irem(int64 a, int64 b);
+uint8 __urem(uint8 a, uint8 b);
+uint16 __urem(uint16 a, uint16 b);
+uint32 __urem(uint32 a, uint32 b);
+uint64 __urem(uint64 a, uint64 b);
+
 #ifdef ISPC_TARGET_XE
 ISPC_BUILTINS_ATTRS inline ISPC_READNONE uniform int32 __task_index0();
 ISPC_BUILTINS_ATTRS inline ISPC_READNONE uniform int32 __task_index1();

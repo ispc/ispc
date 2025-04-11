@@ -143,6 +143,8 @@ extern const char *const __gather_factored_base_offsets64_i16;
 extern const char *const __gather_factored_base_offsets64_i32;
 extern const char *const __gather_factored_base_offsets64_i64;
 extern const char *const __gather_factored_base_offsets64_i8;
+extern const char *const __idiv;
+extern const char *const __irem;
 extern const char *const __is_compile_time_constant_mask;
 extern const char *const __is_compile_time_constant_uniform_int32;
 extern const char *const __is_compile_time_constant_varying_int32;
@@ -402,6 +404,8 @@ extern const char *const __task_index0;
 extern const char *const __task_index1;
 extern const char *const __task_index2;
 extern const char *const __terminate_now;
+extern const char *const __udiv;
+extern const char *const __urem;
 extern const char *const __wasm_cmp_msk_eq;
 
 } // namespace builtin

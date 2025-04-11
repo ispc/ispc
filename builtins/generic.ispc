@@ -280,6 +280,42 @@ template <> unmasked varying double __bitcast<varying double, varying int64>(var
     return @llvm.ispc.bitcast(x, (varying double)0);
 }
 
+template <typename T> varying T __idiv_t(varying T a, varying T b) {
+    varying T res = 0;
+    foreach_active(i) {
+        uniform T x = __extract(a, i) / __extract(b, i);
+        res = __insert(res, i, x);
+    }
+    return res;
+}
+
+template <typename T> varying T __irem_t(varying T a, varying T b) {
+    varying T res = 0;
+    foreach_active(i) {
+        uniform T x = __extract(a, i) % __extract(b, i);
+        res = __insert(res, i, x);
+    }
+    return res;
+}
+
+int8 __idiv(int8 a, int8 b) { return __idiv_t(a, b); }
+int16 __idiv(int16 a, int16 b) { return __idiv_t(a, b); }
+int32 __idiv(int32 a, int32 b) { return __idiv_t(a, b); }
+int64 __idiv(int64 a, int64 b) { return __idiv_t(a, b); }
+uint8 __udiv(uint8 a, uint8 b) { return __idiv_t(a, b); }
+uint16 __udiv(uint16 a, uint16 b) { return __idiv_t(a, b); }
+uint32 __udiv(uint32 a, uint32 b) { return __idiv_t(a, b); }
+uint64 __udiv(uint64 a, uint64 b) { return __idiv_t(a, b); }
+
+int8 __irem(int8 a, int8 b) { return __irem_t(a, b); }
+int16 __irem(int16 a, int16 b) { return __irem_t(a, b); }
+int32 __irem(int32 a, int32 b) { return __irem_t(a, b); }
+int64 __irem(int64 a, int64 b) { return __irem_t(a, b); }
+uint8 __urem(uint8 a, uint8 b) { return __irem_t(a, b); }
+uint16 __urem(uint16 a, uint16 b) { return __irem_t(a, b); }
+uint32 __urem(uint32 a, uint32 b) { return __irem_t(a, b); }
+uint64 __urem(uint64 a, uint64 b) { return __irem_t(a, b); }
+
 // vector ops
 EXT uniform bool __extract_bool(IntMaskType vec, uniform int32 lane) { return __extract(vec, lane); }
 EXT uniform int16 __extract_int16(int16 vec, uniform int32 lane) { return __extract(vec, lane); }

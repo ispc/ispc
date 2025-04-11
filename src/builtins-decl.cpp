@@ -95,6 +95,8 @@ DECL_BUILTIN_NAME(__gather_factored_base_offsets64_i16);
 DECL_BUILTIN_NAME(__gather_factored_base_offsets64_i32);
 DECL_BUILTIN_NAME(__gather_factored_base_offsets64_i64);
 DECL_BUILTIN_NAME(__gather_factored_base_offsets64_i8);
+DECL_BUILTIN_NAME(__idiv);
+DECL_BUILTIN_NAME(__irem);
 DECL_BUILTIN_NAME(__is_compile_time_constant_mask);
 DECL_BUILTIN_NAME(__is_compile_time_constant_uniform_int32);
 DECL_BUILTIN_NAME(__is_compile_time_constant_varying_int32);
@@ -354,6 +356,8 @@ DECL_BUILTIN_NAME(__task_index0);
 DECL_BUILTIN_NAME(__task_index1);
 DECL_BUILTIN_NAME(__task_index2);
 DECL_BUILTIN_NAME(__terminate_now);
+DECL_BUILTIN_NAME(__udiv);
+DECL_BUILTIN_NAME(__urem);
 DECL_BUILTIN_NAME(__wasm_cmp_msk_eq);
 
 std::unordered_map<PersistentGroup, std::vector<const char *>> persistentGroups = {
