@@ -72,15 +72,27 @@ if(NOT CMAKE_CXX_LINK_PIE_SUPPORTED)
                     "PIE link options will not be passed to linker.")
 endif()
 
-set(X86_HOST FALSE)
-if (${CMAKE_HOST_SYSTEM_PROCESSOR} MATCHES "amd64|AMD64|86")
-    set(X86_HOST TRUE)
-endif()
+# Use solution folders.
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-option(X86_ENABLED "Enable x86 support" ${X86_HOST})
-option(ARM_ENABLED "Enable ARM support" ON)
-option(WASM_ENABLED "Enable experimental Web Assembly support" OFF)
-option(XE_ENABLED "Enable Intel Xe support" OFF)
+set(OUTPUT_DEBUG Debug/bin)
+set(OUTPUT_RELEASE Release/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin )
+
+if(CMAKE_BUILD_TYPE)
+    # Validate build type
+    set(CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo")
+
+    string(FIND "${CONFIGURATION_TYPES}" "${CMAKE_BUILD_TYPE}" MATCHED_CONFIG)
+    if (${MATCHED_CONFIG} EQUAL -1)
+         message(FATAL_ERROR "CMAKE_BUILD_TYPE (${CMAKE_BUILD_TYPE}) allows only the following values: ${CONFIGURATION_TYPES}")
+    endif()
+else(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release")
+    message(STATUS "Build type not specified: Use Release by default.")
+endif(CMAKE_BUILD_TYPE)
+
+
 option(ISPC_INCLUDE_EXAMPLES "Generate build targets for the ISPC examples" ON)
 option(ISPC_INCLUDE_DPCPP_EXAMPLES "Generate build targets for the ISPC/DPCPP interoperability examples" OFF)
 option(ISPC_INCLUDE_TESTS "Generate build targets for the ISPC tests." ON)
@@ -91,6 +103,42 @@ option(ISPC_INCLUDE_UTILS_ONLY "Generate build targets only for the utils." OFF)
 option(ISPC_PREPARE_PACKAGE "Generate build targets for ispc package" OFF)
 option(ISPC_PACKAGE_EXAMPLES "Pack examples into the ISPC package" ON)
 option(ISPC_SLIM_BINARY "Build ISPC as slim binary" OFF)
+
+# Build target for utility checking host ISA
+# This target should be defined before the inclusion of FindLLVM.cmake because
+# we want to build check_isa without LLVM installed.
+if (ISPC_INCLUDE_UTILS)
+    add_executable(check_isa "")
+    target_sources(check_isa PRIVATE tools/check_isa.cpp src/isa.h)
+    target_include_directories(check_isa PRIVATE src)
+    set_target_properties(check_isa PROPERTIES FOLDER "Utils")
+    if (NOT ISPC_PREPARE_PACKAGE)
+        install (TARGETS check_isa DESTINATION bin)
+    endif()
+    if (ISPC_INCLUDE_UTILS_ONLY)
+        # Skip the below part of CMake. It is useful when only check_isa compiling is needed.
+        return()
+    endif()
+endif()
+
+set(X86_HOST FALSE)
+if (${CMAKE_HOST_SYSTEM_PROCESSOR} MATCHES "amd64|AMD64|86")
+    set(X86_HOST TRUE)
+endif()
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindLLVM.cmake)
+run_llvm_config(LLVM_TARGETS_BUILT "--targets-built")
+
+set(LLVM_SUPPORTS_ARM ON)
+if (NOT LLVM_TARGETS_BUILT MATCHES "AArch64" OR NOT LLVM_TARGETS_BUILT MATCHES "ARM")
+    set(LLVM_SUPPORTS_ARM OFF)
+    message(WARNING "LLVM does not support Aarch64 and ARM targets. Disabling these targets.")
+endif()
+
+option(X86_ENABLED "Enable x86 support" ${X86_HOST})
+option(ARM_ENABLED "Enable ARM support" ${LLVM_SUPPORTS_ARM})
+option(WASM_ENABLED "Enable experimental Web Assembly support" OFF)
+option(XE_ENABLED "Enable Intel Xe support" OFF)
 
 option(ISPC_CROSS "Build ISPC with cross compilation support" OFF)
 # Default settings for cross compilation
@@ -234,47 +282,10 @@ if (UNIX)
     option(ISPC_USE_ASAN "Build ispc with address sanitizer instrumentation using clang compiler" OFF)
 endif()
 
-# Use solution folders.
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-
-set(OUTPUT_DEBUG Debug/bin)
-set(OUTPUT_RELEASE Release/bin)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin )
-
-if(CMAKE_BUILD_TYPE)
-    # Validate build type
-    set(CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo")
-
-    string(FIND "${CONFIGURATION_TYPES}" "${CMAKE_BUILD_TYPE}" MATCHED_CONFIG)
-    if (${MATCHED_CONFIG} EQUAL -1)
-         message(FATAL_ERROR "CMAKE_BUILD_TYPE (${CMAKE_BUILD_TYPE}) allows only the following values: ${CONFIGURATION_TYPES}")
-    endif()
-else(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Release")
-    message(STATUS "Build type not specified: Use Release by default.")
-endif(CMAKE_BUILD_TYPE)
-
-
-# Build target for utility checking host ISA
-if (ISPC_INCLUDE_UTILS)
-    add_executable(check_isa "")
-    target_sources(check_isa PRIVATE tools/check_isa.cpp src/isa.h)
-    target_include_directories(check_isa PRIVATE src)
-    set_target_properties(check_isa PROPERTIES FOLDER "Utils")
-    if (NOT ISPC_PREPARE_PACKAGE)
-        install (TARGETS check_isa DESTINATION bin)
-    endif()
-    if (ISPC_INCLUDE_UTILS_ONLY)
-        # Skip the below part of CMake. It is useful when only check_isa compiling is needed.
-        return()
-    endif()
-endif()
-
 set(BITCODE2CPP "${CMAKE_CURRENT_SOURCE_DIR}/scripts/bitcode2cpp.py")
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/ispcrt/cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FixWindowsPath.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindLLVM.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Git.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/CommonStdlibBuiltins.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/GenerateBuiltins.cmake)
