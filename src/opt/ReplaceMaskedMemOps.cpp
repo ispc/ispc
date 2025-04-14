@@ -209,6 +209,7 @@ void lReplaceMaskedLoad(llvm::IRBuilder<> &B, llvm::CallInst *CI, unsigned SubVe
     Assert(vecType);
     auto *subVecType = llvm::VectorType::get(vecType->getElementType(), SubVectorLength, false);
     llvm::PointerType *ptrType = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
+    Assert(ptrType);
     ptr = B.CreateBitCast(ptr, llvm::PointerType::get(*g->ctx, ptrType->getAddressSpace()));
 
     llvm::LoadInst *subVec = B.CreateLoad(subVecType, ptr, llvm::Twine(origName) + ".part");
