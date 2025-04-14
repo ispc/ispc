@@ -30,7 +30,7 @@ list(APPEND LIT_ARGS "-Dps_enabled=$<IF:$<BOOL:${ISPC_PS_TARGET}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Dmacos_arm_enabled=$<IF:$<BOOL:${ISPC_MACOS_ARM_TARGET}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Dmacos_ios_enabled=$<IF:$<BOOL:${ISPC_IOS_ARM_TARGET}>,ON,OFF>")
 # TODO! generic target bc?
-add_custom_target(check-all DEPENDS ispc ispc-opt stdlibs-bc stdlib-headers
+add_custom_target(check-all DEPENDS ispc ispc-opt ${ISPC_DEPS}
     COMMAND ${LIT_COMMAND} ${LIT_ARGS} "--verbose"
     COMMENT "Running lit tests"
     USES_TERMINAL

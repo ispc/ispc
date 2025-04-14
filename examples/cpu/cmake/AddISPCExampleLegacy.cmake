@@ -59,7 +59,7 @@ function(add_ispc_example)
         COMMAND ${ISPC_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/${ISPC_SRC_NAME}.ispc ${ISPC_FLAGS} --target=${ISPC_TARGETS} --arch=${ISPC_ARCH}
                                    -h ${ISPC_HEADER_NAME} -o ${ISPC_OBJ_NAME}
         VERBATIM
-        DEPENDS ${ISPC_EXECUTABLE}
+        DEPENDS ${ISPC_EXECUTABLE} ${ISPC_DEPS}
         DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${ISPC_SRC_NAME}.ispc")
 
     # To show ispc source in VS solution:
