@@ -8,6 +8,7 @@
 #endif
 #define TILE_HEIGHT 8
 #define NEG_INF -1e30f
+#define BLOCK_SIZE 256
 
 void matmul(uniform float matrixA[], uniform float matrixB[], uniform float matrixC[], uniform int M, uniform int N,
             uniform int K) {
@@ -88,6 +89,70 @@ task void matmul_task(uniform float matrixA[], uniform float matrixB[], uniform 
             }
 
             // SPMD "horizontally" again over TILE dimension:
+            foreach (ki = 0 ... TILE_WIDTH) {
+                for (uniform unsigned int i = 0; i < TILE_HEIGHT; i++) {
+                    matrixC[(m + i) * K + k0 + ki] = sumTile[i][ki];
+                }
+            }
+        }
+    }
+}
+
+// Added blocks:
+task void matmul_blocks_task(uniform float matrixA[], uniform float matrixB[], uniform float matrixC[],
+                             uniform unsigned int M, uniform unsigned int N, uniform unsigned int K) {
+    // Determine workset for this task instance:
+    uniform unsigned int uNumRowsPerTask = M / taskCount;
+    uniform unsigned int uRowStart = uNumRowsPerTask * taskIndex;
+    uniform unsigned int uRowEnd = uRowStart + uNumRowsPerTask;
+
+    // Pre-allocate tiles in stack memory for better cache utilization
+    // Use local arrays for tiles to avoid cache thrashing
+    uniform float sumTile[TILE_HEIGHT][TILE_WIDTH];
+    uniform float ATile[TILE_HEIGHT][BLOCK_SIZE];
+    uniform float BTile[BLOCK_SIZE][TILE_WIDTH];
+
+    // Process matrix in blocks for all dimensions to maximize cache reuse
+    for (uniform unsigned int m = uRowStart; m < uRowEnd; m += TILE_HEIGHT) {
+        for (uniform unsigned int k0 = 0; k0 < K; k0 += TILE_WIDTH) {
+            // Initialize result tile to zero
+            foreach (ki = 0 ... TILE_WIDTH) {
+                for (uniform unsigned int i = 0; i < TILE_HEIGHT; i++) {
+                    sumTile[i][ki] = 0.0f;
+                }
+            }
+
+            // Process blocks of N
+            for (uniform unsigned int n0 = 0; n0 < N; n0 += BLOCK_SIZE) {
+                uniform int nLimit = min(N, n0 + BLOCK_SIZE);
+
+                // Prefetch A block into local memory
+                for (uniform unsigned int i = 0; i < TILE_HEIGHT; i++) {
+                    for (uniform unsigned int n = n0; n < nLimit; n++) {
+                        ATile[i][n - n0] = matrixA[(m + i) * N + n];
+                    }
+                }
+
+                // Prefetch B block into local memory
+                for (uniform unsigned int n = n0; n < nLimit; n++) {
+                    foreach (kt = 0 ... TILE_WIDTH) {
+                        BTile[n - n0][kt] = matrixB[n * K + k0 + kt];
+                    }
+                }
+
+                // Compute using local tiles
+                for (uniform unsigned int n = 0; n < nLimit - n0; n++) {
+                    foreach (kt = 0 ... TILE_WIDTH) {
+                        // Use pre-loaded tile values
+                        varying float bVal = BTile[n][kt];
+                        for (uniform unsigned int i = 0; i < TILE_HEIGHT; i++) {
+                            sumTile[i][kt] += ATile[i][n] * bVal;
+                        }
+                    }
+                }
+            }
+
+            // Write results back to C
             foreach (ki = 0 ... TILE_WIDTH) {
                 for (uniform unsigned int i = 0; i < TILE_HEIGHT; i++) {
                     matrixC[(m + i) * K + k0 + ki] = sumTile[i][ki];
