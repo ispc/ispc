@@ -60,9 +60,6 @@ if __name__ == "__main__":
     np.random.seed(42)
     torch.manual_seed(42)
 
-    # Define dimensions
-    d_model = 512
-
     # Test different sequence lengths
     print("\nPerformance and validation for different sequence lengths:")
     seq_lengths = [32, 64, 128, 256, 512, 1024, 2048, 4096]
@@ -73,6 +70,8 @@ if __name__ == "__main__":
     print("-" * 75)
 
     for sl in seq_lengths:
+        d_model = sl
+
         # Generate random input matrices
         Q_test = np.random.rand(sl, d_model).astype(np.float32)
         K_test = np.random.rand(sl, d_model).astype(np.float32)
