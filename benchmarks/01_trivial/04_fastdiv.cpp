@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2024, Intel Corporation
+// Copyright (c) 2021-2025, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <benchmark/benchmark.h>
@@ -37,10 +37,26 @@ template <typename T> static void init_dst(T *dst, int count) {
     }
 }
 
+static void init_mask(int *mask, int count) {
+    for (int i = 0; i < count; i++) {
+        mask[i] = i & 1;
+    }
+}
+
 template <typename T> static void check(T *src, T *dst, int divisor, int count) {
     for (int i = 0; i < count; i++) {
         T val = src[i] / divisor;
         if (val != dst[i]) {
+            printf("Error i=%d\n", i);
+            return;
+        }
+    }
+}
+
+template <typename T> static void check_mask(T *src, T *dst, int *mask, int divisor, int count) {
+    for (int i = 0; i < count; i++) {
+        T val = src[i] / divisor;
+        if (mask[i] && val != dst[i]) {
             printf("Error i=%d\n", i);
             return;
         }
@@ -89,5 +105,51 @@ FASTDIV(int16_t, int16, 16)
 
 FASTDIV(uint8_t, uint8, 16)
 FASTDIV(int8_t, int8, 16)
+
+#define FASTDIV_MASK(T_C, T_ISPC, DIV_VAL)                                                                             \
+    static void fastdiv_mask_##T_ISPC##_##DIV_VAL(benchmark::State &state) {                                           \
+        int count = static_cast<int>(state.range(0));                                                                  \
+        T_C *dst = static_cast<T_C *>(aligned_alloc_helper(sizeof(T_C) * count));                                      \
+        T_C *src = static_cast<T_C *>(aligned_alloc_helper(sizeof(T_C) * count));                                      \
+        int *mask = static_cast<int *>(aligned_alloc_helper(sizeof(int) * count));                                     \
+        init_src(src, count);                                                                                          \
+        init_dst(dst, count);                                                                                          \
+        init_mask(mask, count);                                                                                        \
+                                                                                                                       \
+        for (auto _ : state) {                                                                                         \
+            ispc::fastdiv_mask_##T_ISPC##_##DIV_VAL(src, dst, mask, count);                                            \
+        }                                                                                                              \
+                                                                                                                       \
+        check_mask(src, dst, mask, DIV_VAL, count);                                                                    \
+        aligned_free_helper(src);                                                                                      \
+        aligned_free_helper(dst);                                                                                      \
+        aligned_free_helper(mask);                                                                                     \
+        state.SetComplexityN(state.range(0));                                                                          \
+    }                                                                                                                  \
+    BENCHMARK(fastdiv_mask_##T_ISPC##_##DIV_VAL)->ARGS;
+
+FASTDIV_MASK(uint64_t, uint64, 13)
+FASTDIV_MASK(int64_t, int64, 13)
+
+FASTDIV_MASK(uint32_t, uint32, 13)
+FASTDIV_MASK(int32_t, int32, 13)
+
+FASTDIV_MASK(uint16_t, uint16, 13)
+FASTDIV_MASK(int16_t, int16, 13)
+
+FASTDIV_MASK(uint8_t, uint8, 13)
+FASTDIV_MASK(int8_t, int8, 13)
+
+FASTDIV_MASK(uint64_t, uint64, 16)
+FASTDIV_MASK(int64_t, int64, 16)
+
+FASTDIV_MASK(uint32_t, uint32, 16)
+FASTDIV_MASK(int32_t, int32, 16)
+
+FASTDIV_MASK(uint16_t, uint16, 16)
+FASTDIV_MASK(int16_t, int16, 16)
+
+FASTDIV_MASK(uint8_t, uint8, 16)
+FASTDIV_MASK(int8_t, int8, 16)
 
 BENCHMARK_MAIN();
