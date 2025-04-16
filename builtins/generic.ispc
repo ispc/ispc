@@ -280,6 +280,42 @@ template <> unmasked varying double __bitcast<varying double, varying int64>(var
     return @llvm.ispc.bitcast(x, (varying double)0);
 }
 
+template <typename T> varying T __idiv_t(varying T a, varying T b) {
+    varying T res = 0;
+    foreach_active(i) {
+        uniform T x = __extract(a, i) / __extract(b, i);
+        res = __insert(res, i, x);
+    }
+    return res;
+}
+
+template <typename T> varying T __irem_t(varying T a, varying T b) {
+    varying T res = 0;
+    foreach_active(i) {
+        uniform T x = __extract(a, i) % __extract(b, i);
+        res = __insert(res, i, x);
+    }
+    return res;
+}
+
+UNMANGLED CDECL int8 __sdiv_i8(int8 a, int8 b) { return __idiv_t(a, b); }
+UNMANGLED CDECL int16 __sdiv_i16(int16 a, int16 b) { return __idiv_t(a, b); }
+UNMANGLED CDECL int32 __sdiv_i32(int32 a, int32 b) { return __idiv_t(a, b); }
+UNMANGLED CDECL int64 __sdiv_i64(int64 a, int64 b) { return __idiv_t(a, b); }
+UNMANGLED CDECL uint8 __udiv_i8(uint8 a, uint8 b) { return __idiv_t(a, b); }
+UNMANGLED CDECL uint16 __udiv_i16(uint16 a, uint16 b) { return __idiv_t(a, b); }
+UNMANGLED CDECL uint32 __udiv_i32(uint32 a, uint32 b) { return __idiv_t(a, b); }
+UNMANGLED CDECL uint64 __udiv_i64(uint64 a, uint64 b) { return __idiv_t(a, b); }
+
+UNMANGLED CDECL int8 __srem_i8(int8 a, int8 b) { return __irem_t(a, b); }
+UNMANGLED CDECL int16 __srem_i16(int16 a, int16 b) { return __irem_t(a, b); }
+UNMANGLED CDECL int32 __srem_i32(int32 a, int32 b) { return __irem_t(a, b); }
+UNMANGLED CDECL int64 __srem_i64(int64 a, int64 b) { return __irem_t(a, b); }
+UNMANGLED CDECL uint8 __urem_i8(uint8 a, uint8 b) { return __irem_t(a, b); }
+UNMANGLED CDECL uint16 __urem_i16(uint16 a, uint16 b) { return __irem_t(a, b); }
+UNMANGLED CDECL uint32 __urem_i32(uint32 a, uint32 b) { return __irem_t(a, b); }
+UNMANGLED CDECL uint64 __urem_i64(uint64 a, uint64 b) { return __irem_t(a, b); }
+
 // vector ops
 EXT uniform bool __extract_bool(IntMaskType vec, uniform int32 lane) { return __extract(vec, lane); }
 EXT uniform int16 __extract_int16(int16 vec, uniform int32 lane) { return __extract(vec, lane); }

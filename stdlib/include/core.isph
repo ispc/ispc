@@ -224,6 +224,7 @@ typedef uniform int8 *uniform opaque_ptr_t;
 #define ISPC_READONLY __attribute__((memory("read")))
 #define ISPC_READNONE __attribute__((memory("none")))
 #define ISPC_BUILTINS_ATTRS __attribute__((unmangled)) __attribute__((cdecl)) unmasked
+#define ISPC_BUILTINS_ATTRS_MASKED __attribute__((unmangled)) __attribute__((cdecl))
 
 struct RNGState {
     unsigned int z1, z2, z3, z4;
@@ -829,6 +830,24 @@ ISPC_BUILTINS_ATTRS void __do_print(uniform int8 *uniform, uniform int8 *uniform
 ISPC_BUILTINS_ATTRS uniform int32 __num_cores();
 
 ISPC_BUILTINS_ATTRS void __set_system_isa();
+
+ISPC_BUILTINS_ATTRS_MASKED int8 __sdiv_i8(int8 a, int8 b);
+ISPC_BUILTINS_ATTRS_MASKED int16 __sdiv_i16(int16 a, int16 b);
+ISPC_BUILTINS_ATTRS_MASKED int32 __sdiv_i32(int32 a, int32 b);
+ISPC_BUILTINS_ATTRS_MASKED int64 __sdiv_i64(int64 a, int64 b);
+ISPC_BUILTINS_ATTRS_MASKED uint8 __udiv_i8(uint8 a, uint8 b);
+ISPC_BUILTINS_ATTRS_MASKED uint16 __udiv_i16(uint16 a, uint16 b);
+ISPC_BUILTINS_ATTRS_MASKED uint32 __udiv_i32(uint32 a, uint32 b);
+ISPC_BUILTINS_ATTRS_MASKED uint64 __udiv_i64(uint64 a, uint64 b);
+
+ISPC_BUILTINS_ATTRS_MASKED int8 __srem_i8(int8 a, int8 b);
+ISPC_BUILTINS_ATTRS_MASKED int16 __srem_i16(int16 a, int16 b);
+ISPC_BUILTINS_ATTRS_MASKED int32 __srem_i32(int32 a, int32 b);
+ISPC_BUILTINS_ATTRS_MASKED int64 __srem_i64(int64 a, int64 b);
+ISPC_BUILTINS_ATTRS_MASKED uint8 __urem_i8(uint8 a, uint8 b);
+ISPC_BUILTINS_ATTRS_MASKED uint16 __urem_i16(uint16 a, uint16 b);
+ISPC_BUILTINS_ATTRS_MASKED uint32 __urem_i32(uint32 a, uint32 b);
+ISPC_BUILTINS_ATTRS_MASKED uint64 __urem_i64(uint64 a, uint64 b);
 
 #ifdef ISPC_TARGET_XE
 ISPC_BUILTINS_ATTRS inline ISPC_READNONE uniform int32 __task_index0();
