@@ -98,6 +98,54 @@ task void matmul_task(uniform float matrixA[], uniform float matrixB[], uniform 
     }
 }
 
+// Multiple 2d task version of the above:
+task void matmul_task_2d(uniform float matrixA[], uniform float matrixB[], uniform float matrixC[], uniform int M,
+                         uniform int N, uniform int K) {
+    uniform float sumTile[TILE_HEIGHT][TILE_WIDTH];
+    uniform float oneAVal[TILE_HEIGHT];
+
+    uniform unsigned int uNumRowsPerTask = M / taskCount0;
+    uniform unsigned int uRowStart = uNumRowsPerTask * taskIndex0;
+    uniform unsigned int uRowEnd = uRowStart + uNumRowsPerTask;
+
+    uniform unsigned int uNumColsPerTask = K / taskCount1;
+    uniform unsigned int uColStart = uNumColsPerTask * taskIndex1;
+    uniform unsigned int uColEnd = uColStart + uNumColsPerTask;
+
+    // Process assigned subset of the matrix
+    for (uniform unsigned int m = uRowStart; m < uRowEnd; m += TILE_HEIGHT) {
+        for (uniform unsigned int k0 = uColStart; k0 < uColEnd; k0 += TILE_WIDTH) {
+            // Initialize tile
+            foreach (ki = 0 ... TILE_WIDTH) {
+                for (uniform unsigned int i = 0; i < TILE_HEIGHT; i++) {
+                    sumTile[i][ki] = 0.0f;
+                }
+            }
+
+            // Loop over the matrix N dimension
+            for (uniform unsigned int n = 0; n < N; n++) {
+                for (uniform unsigned int i = 0; i < TILE_HEIGHT; i++) {
+                    oneAVal[i] = matrixA[(m + i) * N + n];
+                }
+
+                foreach (kt = 0 ... TILE_WIDTH) {
+                    varying float matB1 = matrixB[n * K + k0 + kt];
+                    for (uniform unsigned int i = 0; i < TILE_HEIGHT; i++) {
+                        sumTile[i][kt] += oneAVal[i] * matB1;
+                    }
+                }
+            }
+
+            // Write results back to output matrix
+            foreach (ki = 0 ... TILE_WIDTH) {
+                for (uniform unsigned int i = 0; i < TILE_HEIGHT; i++) {
+                    matrixC[(m + i) * K + k0 + ki] = sumTile[i][ki];
+                }
+            }
+        }
+    }
+}
+
 // Added blocks:
 task void matmul_blocks_task(uniform float matrixA[], uniform float matrixB[], uniform float matrixC[],
                              uniform unsigned int M, uniform unsigned int N, uniform unsigned int K) {
