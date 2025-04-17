@@ -5130,18 +5130,16 @@ const Type *IndexExpr::GetLValueType() const {
 
     // Find the type of thing that we're indexing into
     const Type *elementType = nullptr;
-    const SequentialType *st = CastType<SequentialType>(baseExprLValueType->GetBaseType());
-    if (st != nullptr) {
-        elementType = st->GetElementType();
+    if (CastType<PointerType>(baseExprType) != nullptr) {
+        // For pointer indexing, element type is directly the base type of the pointer
+        elementType = CastType<PointerType>(baseExprType)->GetBaseType();
     } else {
-        const PointerType *pt = CastType<PointerType>(baseExprLValueType->GetBaseType());
-        // This assertion seems overly strict.
-        // Why does it need to be a pointer to a pointer?
-        // AssertPos(pos, pt != nullptr);
-
-        if (pt != nullptr) {
-            elementType = pt->GetBaseType();
+        // For arrays and vectors, get the element type from the sequential type
+        const SequentialType *st = CastType<SequentialType>(baseExprLValueType->GetBaseType());
+        if (st != nullptr) {
+            elementType = st->GetElementType();
         } else {
+            // Fallback case
             elementType = baseExprLValueType->GetBaseType();
         }
     }
