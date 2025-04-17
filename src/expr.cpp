@@ -4911,11 +4911,6 @@ llvm::Value *IndexExpr::GetValue(FunctionEmitContext *ctx) const {
         mask = LLVMMaskAllOn;
     } else {
         Symbol *baseSym = GetBaseSymbol();
-        if (llvm::dyn_cast<FunctionCallExpr>(baseExpr) == nullptr && llvm::dyn_cast<BinaryExpr>(baseExpr) == nullptr &&
-            llvm::dyn_cast<SelectExpr>(baseExpr) == nullptr) {
-            // Don't check if we're doing a function call or pointer arith or select
-            AssertPos(pos, baseSym != nullptr);
-        }
         mask = lMaskForSymbol(baseSym, ctx);
     }
 
@@ -5815,11 +5810,6 @@ llvm::Value *MemberExpr::GetValue(FunctionEmitContext *ctx) const {
         mask = LLVMMaskAllOn;
     } else {
         Symbol *baseSym = GetBaseSymbol();
-        if (llvm::dyn_cast<FunctionCallExpr>(expr) == nullptr && llvm::dyn_cast<BinaryExpr>(expr) == nullptr &&
-            llvm::dyn_cast<SelectExpr>(expr) == nullptr && llvm::dyn_cast<PtrDerefExpr>(expr) == nullptr) {
-            // Don't check if we're doing a function call or pointer arith or select
-            AssertPos(pos, baseSym != nullptr);
-        }
         mask = lMaskForSymbol(baseSym, ctx);
     }
 
