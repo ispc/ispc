@@ -117,12 +117,36 @@ static std::vector<llvm::StringRef> lGetARMTargetFeatures(Arch arch, const std::
                 Error(SourcePos(), "Invalid CPU name for ARM architecture: %s", cpu.c_str());
                 return {};
             }
-            using FPUKindType = llvm::ARM::FPUKind;
-            FPUKindType fpu = llvm::ARM::getDefaultFPU(cpu, archKind);
-            llvm::ARM::getFPUFeatures(fpu, targetFeatures);
-            // get default Extension features
-            uint64_t Extensions = llvm::ARM::getDefaultExtensions(cpu, archKind);
-            llvm::ARM::getExtensionFeatures(Extensions, targetFeatures);
+
+            // Get extension and FPU features
+            std::vector<llvm::StringRef> allFeatures;
+            // Process extension features
+            llvm::ARM::getExtensionFeatures(llvm::ARM::getDefaultExtensions(cpu, archKind), allFeatures);
+            // Process FPU features
+            llvm::ARM::getFPUFeatures(llvm::ARM::getDefaultFPU(cpu, archKind), allFeatures);
+
+            // Map to track features and their StringRefs
+            std::map<std::string, llvm::StringRef> featureMap;
+
+            // Process all features, prioritizing enabled (+) features
+            for (const auto &feature : allFeatures) {
+                if (!feature.empty() && (feature[0] == '+' || feature[0] == '-')) {
+                    std::string name = feature.substr(1).str();
+                    bool enabled = (feature[0] == '+');
+
+                    // If feature is enabled or not in map yet, update the map
+                    if (enabled || featureMap.find(name) == featureMap.end()) {
+                        featureMap[name] = feature;
+                    }
+                }
+            }
+
+            targetFeatures.reserve(featureMap.size());
+
+            for (const auto &[name, feature] : featureMap) {
+                targetFeatures.push_back(feature);
+            }
+
         } else if (arch == Arch::aarch64) {
             std::optional<llvm::AArch64::CpuInfo> cpuInfo = llvm::AArch64::parseCpu(cpu);
             if (!cpuInfo) {
@@ -139,9 +163,9 @@ static std::vector<llvm::StringRef> lGetARMTargetFeatures(Arch arch, const std::
         } else {
             UNREACHABLE();
         }
-        // Sort them for easier testing
-        std::sort(targetFeatures.begin(), targetFeatures.end());
     }
+    // Sort them for easier testing
+    std::sort(targetFeatures.begin(), targetFeatures.end());
     return targetFeatures;
 }
 
