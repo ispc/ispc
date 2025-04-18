@@ -67,7 +67,7 @@ env:
 jobs:
   test:
     name: ${{ inputs.platform }} (${{ inputs.architecture }}, ${{ matrix.target }}, ${{ inputs.optsets }})
-    runs-on: ${{ inputs.platform == 'macos' && (inputs.architecture == 'aarch64' && 'macos-14' || 'macos-13') || (inputs.platform == 'windows' && 'windows-2022') || (inputs.architecture == 'aarch64' && 'ubuntu-22.04-arm') || 'ubuntu-22.04' }}
+    runs-on: ${{ inputs.platform == 'macos' && (inputs.architecture == 'aarch64' && 'macos-14' || 'macos-13') || (inputs.platform == 'windows' && (inputs.architecture == 'aarch64' && 'windows-11-arm' || 'windows-2022')) || (inputs.architecture == 'aarch64' && 'ubuntu-22.04-arm') || 'ubuntu-22.04' }}
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -136,7 +136,7 @@ jobs:
         ./scripts/alloy.py -r --only="stability ${{ inputs.architecture }} current debug ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
 
     - name: Running tests on Windows (alloy mode)
-      if: inputs.platform == 'windows' && inputs.calling_conv == ''
+      if: inputs.platform == 'windows' && inputs.calling_conv == '' && inputs.architecture != 'aarch64'
       run: |
         $env:ISPC_HOME = "$pwd"
         .github/workflows/scripts/load-vs-env.ps1 "${{ inputs.architecture }}"
@@ -144,7 +144,7 @@ jobs:
       shell: pwsh
 
     - name: Running tests on Windows (vectorcall)
-      if: inputs.platform == 'windows' && inputs.calling_conv != ''
+      if: inputs.platform == 'windows' && inputs.calling_conv != '' && inputs.architecture != 'aarch64'
       run: |
         $env:ISPC_HOME = "$pwd"
         .github/workflows/scripts/load-vs-env.ps1 "${{ inputs.architecture }}"
@@ -157,6 +157,24 @@ jobs:
           $optNoDash = $opt -replace "-", ""
           Write-Host "About to execute run_tests.py with opt: $optNoDash"
           python .\scripts\run_tests.py --calling_conv=${{ inputs.calling_conv }} --target=${{ matrix.target }} --arch=${{ inputs.architecture }} --opt=$optNoDash
+          Write-Host "Finished executing run_tests.py with opt: $optNoDash"
+        }
+      shell: pwsh
+
+    - name: Running tests on Windows (aarch64)
+      if: inputs.platform == 'windows' && inputs.calling_conv == '' && inputs.architecture == 'aarch64'
+      run: |
+        $env:ISPC_HOME = "$pwd"
+        .github/workflows/scripts/load-vs-env.ps1 "${{ inputs.architecture }}"
+
+        # Split optsets and run tests for each optimization level
+        $optLevels = "${{ inputs.optsets }}".Split(" ", [System.StringSplitOptions]::RemoveEmptyEntries)
+        Write-Host "optLevels array created: $($optLevels -join ', ')"
+
+        foreach ($opt in $optLevels) {
+          $optNoDash = $opt -replace "-", ""
+          Write-Host "About to execute run_tests.py with opt: $optNoDash"
+          python .\scripts\run_tests.py --target=${{ matrix.target }} --arch=${{ inputs.architecture }} --opt=$optNoDash
           Write-Host "Finished executing run_tests.py with opt: $optNoDash"
         }
       shell: pwsh
