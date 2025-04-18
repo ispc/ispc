@@ -464,6 +464,17 @@ jobs:
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
       enable_xe: true
 
+  win-test-llvm18-aarch64:
+    needs: [define-flow, win-build-ispc]
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: windows
+      architecture: aarch64
+      llvm_version: 18
+      artifact_name: ispc_llvm18_win
+      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_arm }}
+      optsets: ${{ needs.define-flow.outputs.tests_optsets }}
+
   win-test-llvm18-vectorcall:
     needs: [define-flow, win-build-ispc-xe-llvm18-release]
     uses: ./.github/workflows/reusable.ispc.test.yml
