@@ -883,11 +883,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
       m_isa(SSE2), m_arch(Arch::none), m_is32Bit(true), m_cpu(""), m_attributes(""), m_tf_attributes(nullptr),
       m_nativeVectorWidth(-1), m_nativeVectorAlignment(-1), m_dataTypeWidth(-1), m_vectorWidth(-1),
       m_picLevel(picLevel), m_codeModel(code_model), m_maskingIsFree(false), m_maskBitCount(-1),
-      m_hasDotProductVNNI(false), m_hasIntelVNNI_Int8(false), m_hasDotProductARM(false), m_hasI8MatrixMulARM(false), m_hasHalfConverts(false),
-      m_hasHalfFullSupport(false), m_hasRand(false), m_hasGather(false), m_hasScatter(false),
-      m_hasTranscendentals(false), m_hasTrigonometry(false), m_hasRsqrtd(false), m_hasRcpd(false),
-      m_hasVecPrefetch(false), m_hasSaturatingArithmetic(false), m_hasFp16Support(false), m_hasFp64Support(true),
-      m_hasConflictDetection(false), m_warnings(0) {
+      m_hasDotProductVNNI(false), m_hasIntelVNNI_Int8(false), m_hasIntelVNNI_Int16(false), m_hasDotProductARM(false),
+      m_hasI8MatrixMulARM(false), m_hasHalfConverts(false), m_hasHalfFullSupport(false), m_hasRand(false),
+      m_hasGather(false), m_hasScatter(false), m_hasTranscendentals(false), m_hasTrigonometry(false),
+      m_hasRsqrtd(false), m_hasRcpd(false), m_hasVecPrefetch(false), m_hasSaturatingArithmetic(false),
+      m_hasFp16Support(false), m_hasFp64Support(true), m_hasConflictDetection(false), m_warnings(0) {
     DeviceType CPUID = CPU_None, CPUfromISA = CPU_None;
     AllCPUs a;
     std::string featuresString;
@@ -1661,6 +1661,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasFp16Support = true;
         this->m_hasDotProductVNNI = true;
         this->m_hasIntelVNNI_Int8 = true;
+        this->m_hasIntelVNNI_Int16 = true;
         this->m_hasConflictDetection = true;
         /* TODO: target specific implementations for the features below are required
         this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
@@ -1686,6 +1687,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasFp16Support = true;
         this->m_hasDotProductVNNI = true;
         this->m_hasIntelVNNI_Int8 = true;
+        this->m_hasIntelVNNI_Int16 = true;
         this->m_hasConflictDetection = true;
         /* TODO: target specific implementations for the features below are required
         this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
@@ -1711,6 +1713,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasFp16Support = true;
         this->m_hasDotProductVNNI = true;
         this->m_hasIntelVNNI_Int8 = true;
+        this->m_hasIntelVNNI_Int16 = true;
         this->m_hasConflictDetection = true;
         /* TODO: target specific implementations for the features below are required
         this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
@@ -1741,6 +1744,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasFp16Support = true;
         this->m_hasDotProductVNNI = true;
         this->m_hasIntelVNNI_Int8 = true;
+        this->m_hasIntelVNNI_Int16 = true;
         this->m_hasConflictDetection = true;
         /* TODO: target specific implementations for the features below are required
         this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
@@ -1764,6 +1768,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasFp16Support = true;
         this->m_hasDotProductVNNI = true;
         this->m_hasIntelVNNI_Int8 = true;
+        this->m_hasIntelVNNI_Int16 = true;
         this->m_hasConflictDetection = true;
         /* TODO: target specific implementations for the features below are required
         this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support

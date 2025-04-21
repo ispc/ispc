@@ -3203,6 +3203,9 @@ static void lSetTargetSpecificMacroDefinitions(const std::shared_ptr<clang::Prep
     if (g->target->hasIntelVNNI_Int8()) {
         opts->addMacroDef("ISPC_TARGET_HAS_INTEL_VNNI_INT8");
     }
+    if (g->target->hasIntelVNNI_Int16()) {
+        opts->addMacroDef("ISPC_TARGET_HAS_INTEL_VNNI_INT16");
+    }
     if (g->target->hasConflictDetection()) {
         opts->addMacroDef("ISPC_TARGET_HAS_CONFLICT_DETECTION");
     }
