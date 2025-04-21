@@ -8,7 +8,7 @@
 task void assert_kernel(uniform float aFOO[]) {
 //CHECK: fail{{.*}}:
 //CHECK-NEXT: call i32 ({{(i8 addrspace\(2\)\*|ptr addrspace\(2\))}}, ...) @_Z18__spirv_ocl_printfPU3AS2c({{.*}} @lz_format_str
-//CHECK-NEXT: call void @llvm.genx.raw.send.noresult.v32i16.v16i1.v32i16(i32 0, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 39, i32 33554448, <32 x i16> zeroinitializer)
+//CHECK-NEXT: call void @llvm.genx.raw.send.noresult.v32i16.v16i1.v32i16(i32 0, <16 x i1> {{<i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>|splat \(i1 true\)}}, i32 39, i32 33554448, <32 x i16> zeroinitializer)
   float a = aFOO[programIndex];
   assert(a > 0);
 }

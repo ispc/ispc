@@ -43,18 +43,18 @@ inline FVector HalfToFloat(FHalfVector v)
 task void GenerateHalfData(void *uniform _p)
 {
     GenerateHalfFloatParameters *uniform p = (GenerateHalfFloatParameters * uniform) _p;
-  // CHECK_XE_8: <16 x i16> @llvm.genx.svm.gather.v16i16.v8i1.v8i64(<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 1
+  // CHECK_XE_8: <16 x i16> @llvm.genx.svm.gather.v16i16.v8i1.v8i64(<8 x i1> {{<i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>|splat \(i1 true\)}}, i32 1
   // CHECK_XE_8: <8 x i16> @llvm.genx.rdregioni.v8i16.v16i16.i16
-  // CHECK_XE_8: <16 x i16> @llvm.genx.svm.gather.v16i16.v8i1.v8i64(<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 1
+  // CHECK_XE_8: <16 x i16> @llvm.genx.svm.gather.v16i16.v8i1.v8i64(<8 x i1> {{<i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>|splat \(i1 true\)}}, i32 1
   // CHECK_XE_8: <8 x i16> @llvm.genx.rdregioni.v8i16.v16i16.i16
-  // CHECK_XE_8: <16 x i16> @llvm.genx.svm.gather.v16i16.v8i1.v8i64(<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 1
+  // CHECK_XE_8: <16 x i16> @llvm.genx.svm.gather.v16i16.v8i1.v8i64(<8 x i1> {{<i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>|splat \(i1 true\)}}, i32 1
   // CHECK_XE_8: <8 x i16> @llvm.genx.rdregioni.v8i16.v16i16.i16
 
-  // CHECK_XE_16: <32 x i16> @llvm.genx.svm.gather.v32i16.v16i1.v16i64(<16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 1
+  // CHECK_XE_16: <32 x i16> @llvm.genx.svm.gather.v32i16.v16i1.v16i64(<16 x i1> {{<i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>|splat \(i1 true\)}}, i32 1
   // CHECK_XE_16: <16 x i16> @llvm.genx.rdregioni.v16i16.v32i16.i16
-  // CHECK_XE_16: <32 x i16> @llvm.genx.svm.gather.v32i16.v16i1.v16i64(<16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 1
+  // CHECK_XE_16: <32 x i16> @llvm.genx.svm.gather.v32i16.v16i1.v16i64(<16 x i1> {{<i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>|splat \(i1 true\)}}, i32 1
   // CHECK_XE_16: @llvm.genx.rdregioni.v16i16.v32i16.i16
-  // CHECK_XE_16: <32 x i16> @llvm.genx.svm.gather.v32i16.v16i1.v16i64(<16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 1
+  // CHECK_XE_16: <32 x i16> @llvm.genx.svm.gather.v32i16.v16i1.v16i64(<16 x i1> {{<i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>|splat \(i1 true\)}}, i32 1
   // CHECK_XE_16: <16 x i16> @llvm.genx.rdregioni.v16i16.v32i16.i16
       p->Data[programIndex] = HalfToFloat(p->DataHalf[programIndex]);
 }
@@ -63,18 +63,18 @@ task void GenerateFloatData(void *uniform _p)
 {
     GenerateHalfFloatParameters *uniform p = (GenerateHalfFloatParameters * uniform) _p;
 // CHECK_XE_8: <16 x i16> @llvm.genx.wrregioni.v16i16.v8i16.i16.v8i1
-// CHECK_XE_8: void @llvm.genx.svm.scatter.v8i1.v8i64.v16i16(<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 1
+// CHECK_XE_8: void @llvm.genx.svm.scatter.v8i1.v8i64.v16i16(<8 x i1> {{<i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>|splat \(i1 true\)}}, i32 1
 // CHECK_XE_8: @llvm.genx.wrregioni.v16i16.v8i16.i16.v8i1
-// CHECK_XE_8: void @llvm.genx.svm.scatter.v8i1.v8i64.v16i16(<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 1
+// CHECK_XE_8: void @llvm.genx.svm.scatter.v8i1.v8i64.v16i16(<8 x i1> {{<i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>|splat \(i1 true\)}}, i32 1
 // CHECK_XE_8: <16 x i16> @llvm.genx.wrregioni.v16i16.v8i16.i16.v8i1
-// CHECK_XE_8: void @llvm.genx.svm.scatter.v8i1.v8i64.v16i16(<8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 1
+// CHECK_XE_8: void @llvm.genx.svm.scatter.v8i1.v8i64.v16i16(<8 x i1> {{<i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>|splat \(i1 true\)}}, i32 1
 
 // CHECK_XE_16: <32 x i16> @llvm.genx.wrregioni.v32i16.v16i16.i16.v16i1
-// CHECK_XE_16: void @llvm.genx.svm.scatter.v16i1.v16i64.v32i16(<16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 1
+// CHECK_XE_16: void @llvm.genx.svm.scatter.v16i1.v16i64.v32i16(<16 x i1> {{<i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>|splat \(i1 true\)}}, i32 1
 // CHECK_XE_16: <32 x i16> @llvm.genx.wrregioni.v32i16.v16i16.i16.v16i1
-// CHECK_XE_16: void @llvm.genx.svm.scatter.v16i1.v16i64.v32i16(<16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 1
+// CHECK_XE_16: void @llvm.genx.svm.scatter.v16i1.v16i64.v32i16(<16 x i1> {{<i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>|splat \(i1 true\)}}, i32 1
 // CHECK_XE_16:  <32 x i16> @llvm.genx.wrregioni.v32i16.v16i16.i16.v16i1
-// CHECK_XE_16: void @llvm.genx.svm.scatter.v16i1.v16i64.v32i16(<16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 1
+// CHECK_XE_16: void @llvm.genx.svm.scatter.v16i1.v16i64.v32i16(<16 x i1> {{<i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>|splat \(i1 true\)}}, i32 1
 
     p->DataHalf[programIndex] = FloatToHalf(p->Data[programIndex]);
 }
