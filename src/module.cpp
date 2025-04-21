@@ -1678,6 +1678,12 @@ bool Module::translateToSPIRV(llvm::Module *module, std::stringstream &ss) {
     SPIRV::TranslatorOpts Opts;
     Opts.enableAllExtensions();
 
+    // At the moment, ocloc doesn't support SPV_KHR_untyped_pointers extension,
+    // so turn it off. We may enable it later.
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+    Opts.setAllowedToUseExtension(SPIRV::ExtensionID::SPV_KHR_untyped_pointers, false);
+#endif
+
     Opts.setSPIRVAllowUnknownIntrinsics({"llvm.genx"});
     Opts.setAllowExtraDIExpressionsEnabled(SPIRVAllowExtraDIExpressions);
     Opts.setDesiredBIsRepresentation(SPIRV::BIsRepresentation::SPIRVFriendlyIR);
