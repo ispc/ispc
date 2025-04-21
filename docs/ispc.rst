@@ -744,6 +744,8 @@ generates correct code for such cases involving unsigned integer types.
 Enhanced dot product functionality with mixed signedness support for 16-bit integers.
 Now supporting three input combinations: unsignedxunsigned (u16xu16),
 signedxsigned (i16xi16), and mixed signedness (u16xi16) operations.
+Note that ``dot2add_i16_packed`` was renamed to ``dot2add_i16i16_packed`` for consistency
+with the ``dot4add_*`` functions naming.
 
 Getting Started with ISPC
 =========================

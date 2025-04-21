@@ -20,7 +20,7 @@ task void f_v(uniform float dst[]) {
     pack2toint<uniform int16>(b, b_packed, N);
     int acc = 0X80000000 + 1;
     foreach (i = 0 ... N / 2) {
-        dst[i] = dot2add_i16packed_sat(a_packed[i], b_packed[i], acc);
+        dst[i] = dot2add_i16i16packed_sat(a_packed[i], b_packed[i], acc);
     }
 }
 

@@ -1,4 +1,4 @@
-;;  Copyright (c) 2024, Intel Corporation
+;;  Copyright (c) 2024-2025, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -31,7 +31,7 @@ define <16 x i32> @__dot4add_u8i8packed_sat(<16 x i32> %a, <16 x i32> %b, <16 x 
 }
 
 declare <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32>, <8 x i32>, <8 x i32>) nounwind readnone
-define <16 x i32> @__dot2add_i16packed(<16 x i32> %a, <16 x i32> %b, <16 x i32> %acc) nounwind readnone alwaysinline {
+define <16 x i32> @__dot2add_i16i16packed(<16 x i32> %a, <16 x i32> %b, <16 x i32> %acc) nounwind readnone alwaysinline {
   v16tov8(i32, %a, %a0, %a1)
   v16tov8(i32, %b, %b0, %b1)
   v16tov8(i32, %acc, %acc0, %acc1)
@@ -42,7 +42,7 @@ define <16 x i32> @__dot2add_i16packed(<16 x i32> %a, <16 x i32> %b, <16 x i32> 
 }
 
 declare <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32>, <8 x i32>, <8 x i32>) nounwind readnone
-define <16 x i32> @__dot2add_i16packed_sat(<16 x i32> %a, <16 x i32> %b, <16 x i32> %acc) nounwind readnone alwaysinline {
+define <16 x i32> @__dot2add_i16i16packed_sat(<16 x i32> %a, <16 x i32> %b, <16 x i32> %acc) nounwind readnone alwaysinline {
   v16tov8(i32, %a, %a0, %a1)
   v16tov8(i32, %b, %b0, %b1)
   v16tov8(i32, %acc, %acc0, %acc1)

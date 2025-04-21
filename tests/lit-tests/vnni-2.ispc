@@ -31,12 +31,12 @@ void dot4add_u8i8_sat(uniform int a[], uniform int b[], uniform int dst[]) {
 // CHECK_ZMMX2-COUNT-2: vpdpwssd {{.*}} %zmm
 // CHECK_ZMMX4-COUNT-4: vpdpwssd {{.*}} %zmm
 unmasked void dot2add_i16(uniform int a[], uniform int b[], uniform int dst[]) {
-    dst[programIndex] = dot2add_i16packed(a[programIndex], b[programIndex], programIndex);
+    dst[programIndex] = dot2add_i16i16packed(a[programIndex], b[programIndex], programIndex);
 }
 
 // CHECK_ALL-LABEL: dot2add_i16_sat
 // CHECK_ZMMX2-COUNT-2: vpdpwssds {{.*}} %zmm
 // CHECK_ZMMX4-COUNT-4: vpdpwssds {{.*}} %zmm
 void dot2add_i16_sat(uniform int a[], uniform int b[], uniform int dst[]) {
-    dst[programIndex] = dot2add_i16packed_sat(a[programIndex], b[programIndex], programIndex);
+    dst[programIndex] = dot2add_i16i16packed_sat(a[programIndex], b[programIndex], programIndex);
 }

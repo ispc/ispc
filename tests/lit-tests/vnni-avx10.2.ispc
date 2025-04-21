@@ -47,3 +47,43 @@ unmasked void dot4add_u8u8(uniform uint a[], uniform uint b[], uniform int dst[]
 unmasked void dot4add_u8u8_sat(uniform uint a[], uniform uint b[], uniform int dst[]) {
     dst[programIndex] = dot4add_u8u8packed_sat(a[programIndex], b[programIndex], programIndex);
 }
+
+// CHECK_ALL-LABEL: dot2add_u16u16
+// CHECK_XMM: vpdpwuud	{{.*}} %xmm
+// CHECK_YMM: vpdpwuud	{{.*}} %ymm
+// CHECK_ZMM: vpdpwuud	{{.*}} %zmm
+// CHECK_ZMMX2-COUNT-2: vpdpwuud {{.*}} %zmm
+// CHECK_ZMMX4-COUNT-4: vpdpwuud {{.*}} %zmm
+unmasked void dot2add_u16u16(uniform uint a[], uniform uint b[], uniform uint dst[]) {
+    dst[programIndex] = dot2add_u16u16packed(a[programIndex], b[programIndex], programIndex);
+}
+
+// CHECK_ALL-LABEL: dot2add_u16u16_sat
+// CHECK_XMM: vpdpwuuds	{{.*}} %xmm
+// CHECK_YMM: vpdpwuuds	{{.*}} %ymm
+// CHECK_ZMM: vpdpwuuds	{{.*}} %zmm
+// CHECK_ZMMX2-COUNT-2: vpdpwuuds {{.*}} %zmm
+// CHECK_ZMMX4-COUNT-4: vpdpwuuds {{.*}} %zmm
+unmasked void dot2add_u16u16_sat(uniform uint a[], uniform uint b[], uniform uint dst[]) {
+    dst[programIndex] = dot2add_u16u16packed_sat(a[programIndex], b[programIndex], programIndex);
+}
+
+// CHECK_ALL-LABEL: dot2add_u16i16
+// CHECK_XMM: vpdpwusd	{{.*}} %xmm
+// CHECK_YMM: vpdpwusd	{{.*}} %ymm
+// CHECK_ZMM: vpdpwusd	{{.*}} %zmm
+// CHECK_ZMMX2-COUNT-2: vpdpwusd {{.*}} %zmm
+// CHECK_ZMMX4-COUNT-4: vpdpwusd {{.*}} %zmm
+unmasked void dot2add_u16i16(uniform uint a[], uniform uint b[], uniform int dst[]) {
+    dst[programIndex] = dot2add_u16i16packed(a[programIndex], b[programIndex], programIndex);
+}
+
+// CHECK_ALL-LABEL: dot2add_u16i16_sat
+// CHECK_XMM: vpdpwusds	{{.*}} %xmm
+// CHECK_YMM: vpdpwusds	{{.*}} %ymm
+// CHECK_ZMM: vpdpwusds	{{.*}} %zmm
+// CHECK_ZMMX2-COUNT-2: vpdpwusds {{.*}} %zmm
+// CHECK_ZMMX4-COUNT-4: vpdpwusds {{.*}} %zmm
+unmasked void dot2add_u16i16_sat(uniform uint a[], uniform uint b[], uniform int dst[]) {
+    dst[programIndex] = dot2add_u16i16packed_sat(a[programIndex], b[programIndex], programIndex);
+}

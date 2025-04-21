@@ -511,8 +511,8 @@ EXT READNONE varying double __rsqrt_varying_double(varying double) { __not_suppo
 
 // dot product
 // __have_dot_product_vnni
-EXT READNONE varying int32 __dot2add_i16packed_sat(varying uint32, varying uint32, varying int32) { __not_supported(); }
-EXT READNONE varying int32 __dot2add_i16packed(varying uint32, varying uint32, varying int32) { __not_supported(); }
+EXT READNONE varying int32 __dot2add_i16i16packed_sat(varying uint32, varying uint32, varying int32) { __not_supported(); }
+EXT READNONE varying int32 __dot2add_i16i16packed(varying uint32, varying uint32, varying int32) { __not_supported(); }
 EXT READNONE varying int32 __dot4add_u8i8packed_sat(varying uint32, varying uint32, varying int32) {
     __not_supported();
 }
@@ -525,6 +525,13 @@ EXT READNONE varying int32 __dot4add_i8i8packed(varying uint32, varying uint32, 
 // __have_intel_vnni_int8
 EXT READNONE varying uint32 __dot4add_u8u8packed_sat(varying uint32, varying uint32, varying uint32) { __not_supported(); }
 EXT READNONE varying int32 __dot4add_i8i8packed_sat(varying uint32, varying uint32, varying int32) { __not_supported(); }
+
+// __have_intel_vnni_int16
+EXT READNONE varying uint32 __dot2add_u16u16packed_sat(varying uint32, varying uint32, varying uint32) { __not_supported(); }
+EXT READNONE varying uint32 __dot2add_u16u16packed(varying uint32, varying uint32, varying uint32) { __not_supported(); }
+
+EXT READNONE varying int32 __dot2add_u16i16packed_sat(varying uint32, varying uint32, varying int32) { __not_supported(); }
+EXT READNONE varying int32 __dot2add_u16i16packed(varying uint32, varying uint32, varying int32) { __not_supported(); }
 
 // __have_native_half_converts
 EXT uniform int16 __float_to_half_uniform(uniform float x) { __not_supported(); }
