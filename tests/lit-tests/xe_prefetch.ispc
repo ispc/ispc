@@ -39,10 +39,10 @@ export void f_varying(uniform float aFOO[]) {
       a[i] = aFOO[i];
 
     int64 *ptr = &(a[programIndex+zero]);
-  // CHECK: call void @llvm.genx.lsc.prefetch.stateless.v16i1.v16i64(<16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i8 0, i8 2, i8 1, i16 1, i32 0, i8 3, i8 1, i8 1, i8 0, <16 x i64> %gep_offset, i32 0)
-  // CHECK-NEXT: call void @llvm.genx.lsc.prefetch.stateless.v16i1.v16i64(<16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i8 0, i8 1, i8 2, i16 1, i32 0, i8 3, i8 1, i8 1, i8 0, <16 x i64> %gep_offset, i32 0)
-  // CHECK-NEXT: call void @llvm.genx.lsc.prefetch.stateless.v16i1.v16i64(<16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i8 0, i8 1, i8 2, i16 1, i32 0, i8 3, i8 1, i8 1, i8 0, <16 x i64> %gep_offset, i32 0)
-  // CHECK-NEXT: call void @llvm.genx.lsc.prefetch.stateless.v16i1.v16i64(<16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i8 0, i8 6, i8 2, i16 1, i32 0, i8 3, i8 1, i8 1, i8 0, <16 x i64> %gep_offset, i32 0)
+  // CHECK: call void @llvm.genx.lsc.prefetch.stateless.v16i1.v16i64(<16 x i1> {{<i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>|splat \(i1 true\)}}, i8 0, i8 2, i8 1, i16 1, i32 0, i8 3, i8 1, i8 1, i8 0, <16 x i64> %gep_offset, i32 0)
+  // CHECK-NEXT: call void @llvm.genx.lsc.prefetch.stateless.v16i1.v16i64(<16 x i1> {{<i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>|splat \(i1 true\)}}, i8 0, i8 1, i8 2, i16 1, i32 0, i8 3, i8 1, i8 1, i8 0, <16 x i64> %gep_offset, i32 0)
+  // CHECK-NEXT: call void @llvm.genx.lsc.prefetch.stateless.v16i1.v16i64(<16 x i1> {{<i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>|splat \(i1 true\)}}, i8 0, i8 1, i8 2, i16 1, i32 0, i8 3, i8 1, i8 1, i8 0, <16 x i64> %gep_offset, i32 0)
+  // CHECK-NEXT: call void @llvm.genx.lsc.prefetch.stateless.v16i1.v16i64(<16 x i1> {{<i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>|splat \(i1 true\)}}, i8 0, i8 6, i8 2, i16 1, i32 0, i8 3, i8 1, i8 1, i8 0, <16 x i64> %gep_offset, i32 0)
     prefetch_l1(ptr);
     prefetch_l2(ptr);
     prefetch_l3(ptr);
