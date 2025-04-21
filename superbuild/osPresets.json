@@ -14,7 +14,7 @@
     {
       "name": "dependency-versions-os",
       "cacheVariables": {
-        "LLVM_VERSION": "18.1",
+        "LLVM_VERSION": "20.1",
         "LLVM_URL": "https://github.com/llvm/llvm-project.git",
         "VC_INTRINSICS_URL": "https://github.com/intel/vc-intrinsics.git",
         "VC_INTRINSICS_SHA": "4f5bc1bbc2195683468ee9485094df2a9d14b46f",
