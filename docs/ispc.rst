@@ -741,6 +741,10 @@ offsets was flawed due to overflow caused by sign extension when promoting the
 index to pointer size. This issue has been resolved, and the compiler now
 generates correct code for such cases involving unsigned integer types.
 
+Enhanced dot product functionality with mixed signedness support for 16-bit integers.
+Now supporting three input combinations: unsignedxunsigned (u16xu16),
+signedxsigned (i16xi16), and mixed signedness (u16xi16) operations.
+
 Getting Started with ISPC
 =========================
 
@@ -4906,8 +4910,8 @@ Dot product
 ISPC supports dot product operations for both unsigned and signed int8 and int16 data types, 
 utilizing the AVX-VNNI, AVX512-VNNI, and AARCH64 instruction sets. The ISPC targets that
 include native dot product instruction support are ``avx2vnni-i32x*``, ``avx512icl-i32x*``,
-and ``avx512spr-i32x*`` on x86, as well as ``neon-i32x*`` on ARM hardware with native dot
-product capabilities.
+``avx512spr-i32x*`` and newer targets on x86, as well as ``neon-i32x*`` on ARM hardware with
+native dot product capabilities.
 
 Please note that not all combinations of signed and unsigned data types are supported on these
 targets. For instance, some versions of ARMv8 natively supports only signed/signed and
@@ -4965,15 +4969,37 @@ The sum of these values, in combination with the ``acc`` accumulator, is then re
 
 For 16-bit Integer Vectors:
 
-The functions multiply groups of two signed 16-bit integers packed in ``a`` with corresponding
+The functions below multiply groups of two unsigned 16-bit integers packed in ``a`` with corresponding
+two signed 16-bit integers packed in ``b``, resulting in two intermediate signed 32-bit values.
+The sum of these values, in combination with the ``acc`` accumulator, is then returned as the final result.
+
+::
+
+    varying int32 dot2add_u16i16packed(varying uint32 a, varying uint32 b,
+                                      varying int32 acc)
+    varying int32 dot2add_u16i16packed_sat(varying uint32 a, varying uint32 b,
+                                          varying int32 acc) // saturate the result
+
+The functions below multiply groups of two unsigned 16-bit integers packed in ``a`` with corresponding
+two unsigned 16-bit integers packed in ``b``, resulting in two intermediate unsigned 32-bit values.
+The sum of these values, in combination with the ``acc`` accumulator, is then returned as the final result.
+
+::
+
+    varying uint32 dot2add_u16u16packed(varying uint32 a, varying uint32 b,
+                                       varying uint32 acc)
+    varying uint32 dot2add_u16u16packed_sat(varying uint32 a, varying uint32 b,
+                                           varying uint32 acc) // saturate the result
+
+The functions below multiply groups of two signed 16-bit integers packed in ``a`` with corresponding
 two signed 16-bit integers packed in ``b``, yielding two intermediate signed 32-bit results.
 The sum of these results, combined with the ``acc`` accumulator, is then returned as the final result.
 
 ::
 
-    varying int32 dot2add_i16packed(varying uint32 a, varying uint32 b,
+    varying int32 dot2add_i16i16packed(varying uint32 a, varying uint32 b,
                                     varying int32 acc)
-    varying int32 dot2add_i16packed_sat(varying uint32 a, varying uint32 b,
+    varying int32 dot2add_i16i16packed_sat(varying uint32 a, varying uint32 b,
                                         varying int32 acc) // saturate the result
 
 
