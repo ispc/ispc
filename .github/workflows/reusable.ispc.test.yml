@@ -50,7 +50,7 @@ on:
         type: boolean
         default: false
       calling_conv:
-        description: 'Optional calling convention to test'
+        description: 'Optional calling convention to test (Windows only)'
         required: false
         type: string
         default: ''
@@ -104,13 +104,17 @@ jobs:
     - name: Running tests on Linux/macOS (alloy mode)
       # See issue #2818 for more details about skipping avx512 and avx2vnni targets. It's SDE problem running on AMD runner.
       # Unfortunately it's not possible to do this on job level, so we need to do it on step level.
-      if: (inputs.platform == 'linux' || inputs.platform == 'macos') && inputs.architecture != 'aarch64' && !inputs.enable_debug && !(inputs.architecture == 'x86' && (contains(matrix.target, 'avx2vnni') || contains(matrix.target, 'avx512')))
+      if: (inputs.platform == 'linux' || inputs.platform == 'macos') && inputs.architecture != 'aarch64' && !(inputs.architecture == 'x86' && (contains(matrix.target, 'avx2vnni') || contains(matrix.target, 'avx512')))
       shell: bash
       run: |
         echo "PATH=${PATH}"
-        ./scripts/alloy.py -r --only="stability ${{ inputs.architecture }} current ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        if [ "${{ inputs.enable_debug }}" = "true" ]; then
+          ./scripts/alloy.py -r --only="stability ${{ inputs.architecture }} current debug ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        else
+          ./scripts/alloy.py -r --only="stability ${{ inputs.architecture }} current ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        fi
 
-    - name: Running tests on Linux/macOS (aarch64 mode)
+    - name: Running tests on Linux/macOS (run_tests mode)
       if: (inputs.platform == 'linux' || inputs.platform == 'macos') && inputs.architecture == 'aarch64'
       shell: bash
       run: |
@@ -125,44 +129,21 @@ jobs:
           echo "Finished executing run_tests.py with opt: $opt_no_dash"
         done
 
-    - name: Running tests on Linux/macOS (debug mode)
-      # See issue #2818 for more details about skipping avx512 and avx2vnni targets. It's SDE problem running on AMD runner.
-      # Unfortunately it's not possible to do this on job level, so we need to do it on step level.
-      if: (inputs.platform == 'linux' || inputs.platform == 'macos') && inputs.architecture != 'aarch64' && inputs.enable_debug && !(inputs.architecture == 'x86' && (contains(matrix.target, 'avx2vnni') || contains(matrix.target, 'avx512')))
-
-      shell: bash
-      run: |
-        echo "PATH=${PATH}"
-        ./scripts/alloy.py -r --only="stability ${{ inputs.architecture }} current debug ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
-
     - name: Running tests on Windows (alloy mode)
       if: inputs.platform == 'windows' && inputs.calling_conv == '' && inputs.architecture != 'aarch64'
       run: |
         $env:ISPC_HOME = "$pwd"
         .github/workflows/scripts/load-vs-env.ps1 "${{ inputs.architecture }}"
-        python .\scripts\alloy.py -r --only="stability ${{ inputs.architecture }} current ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
-      shell: pwsh
-
-    - name: Running tests on Windows (vectorcall)
-      if: inputs.platform == 'windows' && inputs.calling_conv != '' && inputs.architecture != 'aarch64'
-      run: |
-        $env:ISPC_HOME = "$pwd"
-        .github/workflows/scripts/load-vs-env.ps1 "${{ inputs.architecture }}"
-
-        # Split optsets and run tests for each optimization level
-        $optLevels = "${{ inputs.optsets }}".Split(" ", [System.StringSplitOptions]::RemoveEmptyEntries)
-        Write-Host "optLevels array created: $($optLevels -join ', ')"
-
-        foreach ($opt in $optLevels) {
-          $optNoDash = $opt -replace "-", ""
-          Write-Host "About to execute run_tests.py with opt: $optNoDash"
-          python .\scripts\run_tests.py --calling_conv=${{ inputs.calling_conv }} --target=${{ matrix.target }} --arch=${{ inputs.architecture }} --opt=$optNoDash
-          Write-Host "Finished executing run_tests.py with opt: $optNoDash"
+        if ("${{ inputs.enable_debug }}" -eq "true") {
+          python .\scripts\alloy.py -r --only="stability ${{ inputs.architecture }} current debug ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+        } else {
+          python .\scripts\alloy.py -r --only="stability ${{ inputs.architecture }} current ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
         }
+        Write-Host "Finished executing alloy.py"
       shell: pwsh
 
-    - name: Running tests on Windows (aarch64)
-      if: inputs.platform == 'windows' && inputs.calling_conv == '' && inputs.architecture == 'aarch64'
+    - name: Running tests on Windows (run_tests mode)
+      if: inputs.platform == 'windows' && (inputs.calling_conv != '' || inputs.architecture == 'aarch64')
       run: |
         $env:ISPC_HOME = "$pwd"
         .github/workflows/scripts/load-vs-env.ps1 "${{ inputs.architecture }}"
@@ -174,7 +155,11 @@ jobs:
         foreach ($opt in $optLevels) {
           $optNoDash = $opt -replace "-", ""
           Write-Host "About to execute run_tests.py with opt: $optNoDash"
-          python .\scripts\run_tests.py --target=${{ matrix.target }} --arch=${{ inputs.architecture }} --opt=$optNoDash
+          if ("${{ inputs.calling_conv }}" -ne "" -and "${{ inputs.architecture }}" -ne "aarch64") {
+            python .\scripts\run_tests.py --calling_conv=${{ inputs.calling_conv }} --target=${{ matrix.target }} --arch=${{ inputs.architecture }} --opt=$optNoDash
+          } else {
+            python .\scripts\run_tests.py --target=${{ matrix.target }} --arch=${{ inputs.architecture }} --opt=$optNoDash
+          }
           Write-Host "Finished executing run_tests.py with opt: $optNoDash"
         }
       shell: pwsh
