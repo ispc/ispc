@@ -1,0 +1,75 @@
+From 80a213a536dc8513117dca33c4856c353d48b30d Mon Sep 17 00:00:00 2001
+From: Aleksei Nurmukhametov <aleksei.nurmukhametov@intel.com>
+Date: Tue, 22 Apr 2025 06:52:51 -0700
+Subject: [PATCH] disable-A-B-A-B-and-BSWAP-in-InstCombine
+
+# This patch is needed for ISPC for Xe only
+
+# 1. Transformation of add to or is not safe for VC backend.
+# 2. bswap intrinsics is not supported in VC backend yet.
+
+---
+ llvm/lib/Transforms/InstCombine/InstCombineAddSub.cpp  | 10 +++++++---
+ .../lib/Transforms/InstCombine/InstCombineAndOrXor.cpp | 10 +++++++---
+ 2 files changed, 14 insertions(+), 6 deletions(-)
+
+diff --git a/llvm/lib/Transforms/InstCombine/InstCombineAddSub.cpp b/llvm/lib/Transforms/InstCombine/InstCombineAddSub.cpp
+index 658bbbc56976..53f3f7f100eb 100644
+--- a/llvm/lib/Transforms/InstCombine/InstCombineAddSub.cpp
++++ b/llvm/lib/Transforms/InstCombine/InstCombineAddSub.cpp
+@@ -29,6 +29,7 @@
+ #include "llvm/Support/AlignOf.h"
+ #include "llvm/Support/Casting.h"
+ #include "llvm/Support/KnownBits.h"
++#include "llvm/TargetParser/Triple.h"
+ #include "llvm/Transforms/InstCombine/InstCombiner.h"
+ #include <cassert>
+ #include <utility>
+@@ -1675,10 +1676,13 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
+                  {A, B}));
+   }
+ 
+-  // A+B --> A|B iff A and B have no bits set in common.
+   WithCache<const Value *> LHSCache(LHS), RHSCache(RHS);
+-  if (haveNoCommonBitsSet(LHSCache, RHSCache, SQ.getWithInstruction(&I)))
+-    return BinaryOperator::CreateDisjointOr(LHS, RHS);
++  // Disable this transformation for ISPC SPIR-V
++  if (!Triple(I.getModule()->getTargetTriple()).isSPIR()) {
++    // A+B --> A|B iff A and B have no bits set in common.
++    if (haveNoCommonBitsSet(LHSCache, RHSCache, SQ.getWithInstruction(&I)))
++      return BinaryOperator::CreateDisjointOr(LHS, RHS);
++  }
+ 
+   if (Instruction *Ext = narrowMathIfNoOverflow(I))
+     return Ext;
+diff --git a/llvm/lib/Transforms/InstCombine/InstCombineAndOrXor.cpp b/llvm/lib/Transforms/InstCombine/InstCombineAndOrXor.cpp
+index ca8a20b4b731..c8a1060a2610 100644
+--- a/llvm/lib/Transforms/InstCombine/InstCombineAndOrXor.cpp
++++ b/llvm/lib/Transforms/InstCombine/InstCombineAndOrXor.cpp
+@@ -16,6 +16,7 @@
+ #include "llvm/IR/ConstantRange.h"
+ #include "llvm/IR/Intrinsics.h"
+ #include "llvm/IR/PatternMatch.h"
++#include "llvm/TargetParser/Triple.h"
+ #include "llvm/Transforms/InstCombine/InstCombiner.h"
+ #include "llvm/Transforms/Utils/Local.h"
+ 
+@@ -3602,9 +3603,12 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
+   if (Instruction *FoldedLogic = foldBinOpIntoSelectOrPhi(I))
+     return FoldedLogic;
+ 
+-  if (Instruction *BitOp = matchBSwapOrBitReverse(I, /*MatchBSwaps*/ true,
+-                                                  /*MatchBitReversals*/ true))
+-    return BitOp;
++  // Disable this transformation for ISPC SPIR-V
++  if (!Triple(I.getModule()->getTargetTriple()).isSPIR()) {
++    if (Instruction *BitOp = matchBSwapOrBitReverse(I, /*MatchBSwaps*/ true,
++                                                   /*MatchBitReversals*/ true))
++      return BitOp;
++  }
+ 
+   if (Instruction *Funnel = matchFunnelShift(I, *this))
+     return Funnel;
+-- 
+2.34.1
+
