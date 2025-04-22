@@ -414,6 +414,16 @@ jobs:
       llvm_tar: llvm-18.1.8-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
       enable_wasm: true
 
+  win-build-ispc-aarch64:
+    needs: [define-flow]
+    uses: ./.github/workflows/reusable.ispc.build.yml
+    with:
+      platform: windows
+      artifact_name: ispc_18_win.aarch64
+      runner: windows-11-arm
+      llvm_version: 18.1
+      llvm_tar: llvm-18.1.8-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+
   win-test:
     needs: [define-flow, win-build-ispc]
     strategy:
