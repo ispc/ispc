@@ -518,9 +518,13 @@ EXT READNONE varying int32 __dot4add_u8i8packed_sat(varying uint32, varying uint
 }
 EXT READNONE varying int32 __dot4add_u8i8packed(varying uint32, varying uint32, varying int32) { __not_supported(); }
 
-// __have_dot_product_arm
+// __have_dot_product_arm || __have_intel_vnni_int8
 EXT READNONE varying uint32 __dot4add_u8u8packed(varying uint32, varying uint32, varying uint32) { __not_supported(); }
 EXT READNONE varying int32 __dot4add_i8i8packed(varying uint32, varying uint32, varying int32) { __not_supported(); }
+
+// __have_intel_vnni_int8
+EXT READNONE varying uint32 __dot4add_u8u8packed_sat(varying uint32, varying uint32, varying uint32) { __not_supported(); }
+EXT READNONE varying int32 __dot4add_i8i8packed_sat(varying uint32, varying uint32, varying int32) { __not_supported(); }
 
 // __have_native_half_converts
 EXT uniform int16 __float_to_half_uniform(uniform float x) { __not_supported(); }

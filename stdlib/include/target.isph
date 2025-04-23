@@ -104,6 +104,14 @@ static const uniform int32 __have_saturating_arithmetic = ISPC_TARGET_HAS_SATURA
 
 static const uniform int32 __have_dot_product_vnni = ISPC_TARGET_HAS_DOT_PRODUCT_VNNI_VAL;
 
+#ifdef ISPC_TARGET_HAS_INTEL_VNNI_INT8
+#define ISPC_TARGET_HAS_INTEL_VNNI_INT8_VAL 1
+#else
+#define ISPC_TARGET_HAS_INTEL_VNNI_INT8_VAL 0
+#endif
+
+static const uniform int32 __have_intel_vnni_int8 = ISPC_TARGET_HAS_INTEL_VNNI_INT8_VAL;
+
 #ifdef ISPC_TARGET_HAS_CONFLICT_DETECTION
 #define ISPC_TARGET_HAS_CONFLICT_DETECTION 1
 #else
