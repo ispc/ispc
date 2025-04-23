@@ -1663,11 +1663,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasIntelVNNI_Int8 = true;
         this->m_hasIntelVNNI_Int16 = true;
         this->m_hasConflictDetection = true;
-        /* TODO: target specific implementations for the features below are required
-        this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
-        this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
         this->m_hasRsqrtd = this->m_hasRcpd = true;
-        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch*/
         CPUfromISA = CPU_DMR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1689,11 +1685,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasIntelVNNI_Int8 = true;
         this->m_hasIntelVNNI_Int16 = true;
         this->m_hasConflictDetection = true;
-        /* TODO: target specific implementations for the features below are required
-        this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
-        this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
         this->m_hasRsqrtd = this->m_hasRcpd = true;
-        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch*/
         CPUfromISA = CPU_DMR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1715,11 +1707,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasIntelVNNI_Int8 = true;
         this->m_hasIntelVNNI_Int16 = true;
         this->m_hasConflictDetection = true;
-        /* TODO: target specific implementations for the features below are required
-        this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
-        this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
         this->m_hasRsqrtd = this->m_hasRcpd = true;
-        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch*/
         CPUfromISA = CPU_DMR;
         if (g->opt.disableZMM) {
             this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
@@ -1746,11 +1734,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasIntelVNNI_Int8 = true;
         this->m_hasIntelVNNI_Int16 = true;
         this->m_hasConflictDetection = true;
-        /* TODO: target specific implementations for the features below are required
-        this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
-        this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
-        this->m_hasRsqrtd = this->m_hasRcpd = true;
-        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch*/
+        this->m_hasRsqrtd = this->m_hasRcpd = false;
         CPUfromISA = CPU_DMR;
         break;
     case ISPCTarget::avx10_2_x64:
@@ -1770,11 +1754,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasIntelVNNI_Int8 = true;
         this->m_hasIntelVNNI_Int16 = true;
         this->m_hasConflictDetection = true;
-        /* TODO: target specific implementations for the features below are required
-        this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
-        this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
-        this->m_hasRsqrtd = this->m_hasRcpd = true;
-        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch*/
+        this->m_hasRsqrtd = this->m_hasRcpd = false;
         CPUfromISA = CPU_DMR;
         break;
 #else
