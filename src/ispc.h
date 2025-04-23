@@ -401,6 +401,8 @@ class Target {
 
     bool hasDotProductVNNI() const { return m_hasDotProductVNNI; }
 
+    bool hasIntelVNNI_Int8() const { return m_hasIntelVNNI_Int8; }
+
     bool hasDotProductARM() const { return m_hasDotProductARM; }
 
     bool hasI8MatrixMulARM() const { return m_hasI8MatrixMulARM; }
@@ -521,6 +523,11 @@ class Target {
      *  Supported data types are: signed/unsigned i8 and i16 with and without saturation
      */
     bool m_hasDotProductVNNI;
+
+    /** Indicates whether the CPU supports 8-bit integer VNNI operations specifically.
+     *  Enables all combinations of signed/unsigned int8 dot products with optional saturation.
+    */
+    bool m_hasIntelVNNI_Int8;
 
     /** Indicates whether the target has native support for ARM dot product.
      *  Supported data types are: signed/signed i8 and unsigned/unsigned i8
