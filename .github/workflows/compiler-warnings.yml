@@ -17,11 +17,11 @@ env:
   LLVM_REPO: https://github.com/ispc/ispc.dependencies
 
 jobs:
-  clang-18:
+  clang-20:
     runs-on: ubuntu-24.04
     env:
-      LLVM_VERSION: "18.1"
-      LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_VERSION: "20.1"
+      LLVM_TAR: llvm-20.1.2-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -46,8 +46,8 @@ jobs:
   gcc-13:
     runs-on: ubuntu-24.04
     env:
-      LLVM_VERSION: "18.1"
-      LLVM_TAR: llvm-18.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_VERSION: "20.1"
+      LLVM_TAR: llvm-20.1.2-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -75,8 +75,8 @@ jobs:
   msvc-2022:
     runs-on: windows-2022
     env:
-      LLVM_VERSION: "18.1"
-      LLVM_TAR: llvm-18.1.8-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      LLVM_VERSION: "20.1"
+      LLVM_TAR: llvm-20.1.2-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
       LLVM_HOME: "C:\\projects\\llvm"
       CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       BUILD_TYPE: "Release"
