@@ -5945,7 +5945,7 @@ __declspec(safe) static inline void assume(uniform bool test) {
 // 8-bit integers in b, producing 4 intermediate signed 16-bit results.
 // Sum these 4 results with the corresponding 32-bit integer in acc, and return the result.
 __declspec(safe) static inline varying int32 dot4add_u8i8packed(varying uint32 a, varying uint32 b, varying int32 acc) {
-    if (__have_dot_product_vnni || __have_i8_matmul_arm) {
+    if (__have_intel_vnni || __have_arm_i8mm) {
         return __dot4add_u8i8packed(a, b, acc);
     } else {
         int16 tmp1 = (int16)((a >> 24) & 0xFF) * (int16)((int8)((b >> 24) & 0xFF));
@@ -5961,7 +5961,7 @@ __declspec(safe) static inline varying int32 dot4add_u8i8packed(varying uint32 a
 // Sum these 4 results with the corresponding 32-bit integer in acc using signed saturation, and return the result.
 __declspec(safe) static inline varying int32 dot4add_u8i8packed_sat(varying uint32 a, varying uint32 b,
                                                                     varying int32 acc) {
-    if (__have_dot_product_vnni) {
+    if (__have_intel_vnni) {
         return __dot4add_u8i8packed_sat(a, b, acc);
     } else {
         int16 tmp1 = (int16)((a >> 24) & 0xFF) * (int16)((int8)((b >> 24) & 0xFF));
@@ -5978,7 +5978,7 @@ __declspec(safe) static inline varying int32 dot4add_u8i8packed_sat(varying uint
 // Sum these 4 results with the corresponding 32-bit integer in acc, and return the result.
 __declspec(safe) static inline varying uint32 dot4add_u8u8packed(varying uint32 a, varying uint32 b,
                                                                  varying uint32 acc) {
-    if (__have_dot_product_arm || __have_intel_vnni_int8) {
+    if (__have_arm_dot_product || __have_intel_vnni_int8) {
         return __dot4add_u8u8packed(a, b, acc);
     } else {
         int16 tmp1 = (int16)((a >> 24) & 0xFF) * (int16)((b >> 24) & 0xFF);
@@ -6010,7 +6010,7 @@ __declspec(safe) static inline varying uint32 dot4add_u8u8packed_sat(varying uin
 // 8-bit integers in b, producing 4 intermediate signed 16-bit results.
 // Sum these 4 results with the corresponding 32-bit integer in acc, and return the result.
 __declspec(safe) static inline varying int32 dot4add_i8i8packed(varying uint32 a, varying uint32 b, varying int32 acc) {
-    if (__have_dot_product_arm || __have_intel_vnni_int8) {
+    if (__have_arm_dot_product || __have_intel_vnni_int8) {
         return __dot4add_i8i8packed(a, b, acc);
     } else {
         int16 tmp1 = (int16)((int8)((a >> 24) & 0xFF)) * (int16)((int8)((b >> 24) & 0xFF));
@@ -6043,7 +6043,7 @@ __declspec(safe) static inline varying int32 dot4add_i8i8packed_sat(varying uint
 // Sum these 2 results with the corresponding 32-bit integer in src, and return the result.
 __declspec(safe) static inline varying int32 dot2add_i16i16packed(varying uint32 a, varying uint32 b,
                                                                   varying int32 acc) {
-    if (__have_dot_product_vnni) {
+    if (__have_intel_vnni) {
         return __dot2add_i16i16packed(a, b, acc);
     } else {
         int32 tmp1 = (int32)((int16)((a >> 16) & 0xFFFF)) * (int32)((int16)((b >> 16) & 0xFFFF));
@@ -6057,7 +6057,7 @@ __declspec(safe) static inline varying int32 dot2add_i16i16packed(varying uint32
 // Sum these 2 results with the corresponding 32-bit integer in src using signed saturation, and return the result.
 __declspec(safe) static inline varying int32 dot2add_i16i16packed_sat(varying uint32 a, varying uint32 b,
                                                                       varying int32 acc) {
-    if (__have_dot_product_vnni) {
+    if (__have_intel_vnni) {
         return __dot2add_i16i16packed_sat(a, b, acc);
     } else {
         int32 tmp1 = (int32)((int16)((a >> 16) & 0xFFFF)) * (int32)((int16)((b >> 16) & 0xFFFF));

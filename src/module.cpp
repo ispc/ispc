@@ -3197,8 +3197,8 @@ static void lSetTargetSpecificMacroDefinitions(const std::shared_ptr<clang::Prep
     if (g->target->hasSatArith()) {
         opts->addMacroDef("ISPC_TARGET_HAS_SATURATING_ARITHMETIC");
     }
-    if (g->target->hasDotProductVNNI()) {
-        opts->addMacroDef("ISPC_TARGET_HAS_DOT_PRODUCT_VNNI");
+    if (g->target->hasIntelVNNI()) {
+        opts->addMacroDef("ISPC_TARGET_HAS_INTEL_VNNI");
     }
     if (g->target->hasIntelVNNI_Int8()) {
         opts->addMacroDef("ISPC_TARGET_HAS_INTEL_VNNI_INT8");
@@ -3273,11 +3273,11 @@ static void lSetCmdlineDependentMacroDefinitions(const std::shared_ptr<clang::Pr
     }
     opts->addMacroDef(memory_alignment);
 
-    if (g->target->hasDotProductARM()) {
-        opts->addMacroDef("ISPC_TARGET_HAS_DOT_PRODUCT_ARM");
+    if (g->target->hasArmDotProduct()) {
+        opts->addMacroDef("ISPC_TARGET_HAS_ARM_DOT_PRODUCT");
     }
-    if (g->target->hasI8MatrixMulARM()) {
-        opts->addMacroDef("ISPC_TARGET_HAS_I8_MATRIX_MUL_ARM");
+    if (g->target->hasArmI8MM()) {
+        opts->addMacroDef("ISPC_TARGET_HAS_ARM_I8MM");
     }
 }
 
