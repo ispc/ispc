@@ -4936,7 +4936,7 @@ necessitating proper packing or casting of input vectors by the programmer befor
 For 8-bit Integer Vectors:
 
 The functions below multiply groups of four unsigned 8-bit integers packed in ``a`` with corresponding
-four signed 8-bit integers packed in ``b``, resulting in four intermediate signed 16-bit values.
+four signed 8-bit integers packed in ``b``, resulting in four intermediate unsigned 16-bit values.
 The sum of these values, in combination with the ``acc`` accumulator, is then returned as the final result.
 
 ::
@@ -4947,7 +4947,7 @@ The sum of these values, in combination with the ``acc`` accumulator, is then re
                                          varying int32 acc) // saturate the result
 
 The functions below multiply groups of four unsigned 8-bit integers packed in ``a`` with corresponding
-four unsigned 8-bit integers packed in ``b``, resulting in four intermediate signed 16-bit values.
+four unsigned 8-bit integers packed in ``b``, resulting in four intermediate unsigned 16-bit values.
 The sum of these values, in combination with the ``acc`` accumulator, is then returned as the final result.
 
 ::
