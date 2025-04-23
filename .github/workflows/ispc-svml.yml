@@ -78,7 +78,7 @@ jobs:
           echo "optsets=${OPTSETS_FULL}" >> "$GITHUB_OUTPUT"
         fi
 
-  linux-build-ispc-llvm18:
+  linux-build-ispc-llvm20:
     needs: [define-flow]
     runs-on: ubuntu-latest
     env:
@@ -110,12 +110,12 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: ispc_llvm18_linux
+        name: ispc_llvm20_linux
         path: build/ispc-trunk-linux.tar.gz
 
 
-  linux-test-llvm18:
-    needs: [define-flow, linux-build-ispc-llvm18]
+  linux-test-llvm20:
+    needs: [define-flow, linux-build-ispc-llvm20]
     runs-on: ubuntu-latest
     continue-on-error: false
     strategy:
@@ -127,7 +127,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
       with:
-        name: ispc_llvm18_linux
+        name: ispc_llvm20_linux
 
     - name: Install dependencies and unpack artifacts
       run: |
@@ -152,6 +152,6 @@ jobs:
       uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       if: failure()
       with:
-        name: fail_db.llvm18.${{matrix.target}}.txt
+        name: fail_db.llvm20.${{matrix.target}}.txt
         path: fail_db.txt
 

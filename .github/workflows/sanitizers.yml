@@ -20,7 +20,7 @@ env:
   LLVM_REPO: https://github.com/ispc/ispc.dependencies
 
 jobs:
-  linux-ispc-llvm18-asan:
+  linux-ispc-llvm20-asan:
     runs-on: ubuntu-22.04
     env:
       LLVM_VERSION: "20.1"
