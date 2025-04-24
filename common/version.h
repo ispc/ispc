@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2024, Intel Corporation
+  Copyright (c) 2022-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -11,6 +11,6 @@
 #pragma once
 
 #define ISPC_VERSION_MAJOR 1
-#define ISPC_VERSION_MINOR 26
+#define ISPC_VERSION_MINOR 27
 #define ISPC_VERSION_PATCH 0
-#define ISPC_VERSION "1.26.0dev"
+#define ISPC_VERSION "1.27.0dev"

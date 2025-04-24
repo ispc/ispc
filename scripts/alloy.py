@@ -93,8 +93,10 @@ def checkout_LLVM(component, version_LLVM, target_dir, from_validation, verbose)
     # git: "release/16.x"
     if  version_LLVM == "trunk":
         GIT_TAG="main"
+    elif  version_LLVM == "20_1":
+        GIT_TAG="llvmorg-20.1.2"
     elif  version_LLVM == "19_1":
-        GIT_TAG="llvmorg-19.1.1"
+        GIT_TAG="llvmorg-19.1.7"
     elif  version_LLVM == "18_1":
         GIT_TAG="llvmorg-18.1.8"
     elif  version_LLVM == "17_0":
@@ -398,7 +400,9 @@ def check_targets():
       ("ICL",        [["avx512icl-x16", "avx512icl-x8", "avx512icl-x4", "avx512icl-x64", "avx512icl-x32"],
                      ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI", "SKX", "ICL"], "-icl", False]),
       ("SPR",        [["avx512spr-x16", "avx512spr-x8", "avx512spr-x4", "avx512spr-x64", "avx512spr-x32"],
-                     ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI", "SKX", "ICL", "SPR"], "-spr", False])
+                     ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI", "SKX", "ICL", "SPR"], "-spr", False]),
+      ("DMR",        [["avx10.2-x16", "avx10.2-x8", "avx10.2-x4", "avx10.2-x64", "avx10.2-x32"],
+                     ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI", "SKX", "ICL", "SPR", "DMR"], "-dmr", False])
     ])
 
     hw_arch = take_lines(check_isa, "first").split()[1]
@@ -629,7 +633,7 @@ def validation_run(only, only_targets, reference_branch, number, update, speed_n
             archs.append("x86-64")
         if "native" in only:
             sde_targets_t = []
-        for i in ["6.0", "7.0", "8.0", "9.0", "10.0", "11.0", "12.0", "13.0", "14.0", "15.0", "16.0", "17.0", "18.1", "19.1", "trunk"]:
+        for i in ["6.0", "7.0", "8.0", "9.0", "10.0", "11.0", "12.0", "13.0", "14.0", "15.0", "16.0", "17.0", "18.1", "19.1", "20.1", "trunk"]:
             if i in only:
                 LLVM.append(i)
         if "current" in only:
@@ -835,7 +839,7 @@ def Main():
     if os.environ.get("ISPC_HOME") == None:
         alloy_error("you have no ISPC_HOME", 1)
     if options.only != "":
-        test_only_r = " 6.0 7.0 8.0 9.0 10.0 11.0 12.0 13.0 14.0 15.0 16.0 17.0 18.1 19.1 trunk current build stability performance x86 x86-64 x86_64 -O0 -O1 -O2 native debug nodebug "
+        test_only_r = " 6.0 7.0 8.0 9.0 10.0 11.0 12.0 13.0 14.0 15.0 16.0 17.0 18.1 19.1 20.1 trunk current build stability performance x86 x86-64 x86_64 -O0 -O1 -O2 native debug nodebug "
         test_only = options.only.split(" ")
         for iterator in test_only:
             if not (" " + iterator + " " in test_only_r):
@@ -961,7 +965,7 @@ if __name__ == '__main__':
     llvm_group = OptionGroup(parser, "Options for building LLVM",
                     "These options must be used with -b option.")
     llvm_group.add_option('--version', dest='version',
-        help='version of llvm to build: 6.0-19.1 trunk. Default: trunk', default="trunk")
+        help='version of llvm to build: 6.0-20.1 trunk. Default: trunk', default="trunk")
     llvm_group.add_option('--full-checkout', dest='full_checkout', action='store_true', default=False,
         help=('Disable a shallow clone and checkout a whole LLVM repository.\n'
               'By default it clones LLVM with --depth=1 to save space and time'))
@@ -1014,7 +1018,7 @@ if __name__ == '__main__':
     run_group.add_option('--only', dest='only',
         help='set types of tests. Possible values:\n' +
             '-O0, -O1, -O2, x86, x86-64, stability (test only stability), performance (test only performance),\n' +
-            'build (only build with different LLVM), 6.0-19.1, trunk, native (do not use SDE),\n' +
+            'build (only build with different LLVM), 6.0-20.1, trunk, native (do not use SDE),\n' +
             'current (do not rebuild ISPC), debug (only with debug info), nodebug (only without debug info, default).',
             default="")
     run_group.add_option('--perf_LLVM', dest='perf_llvm',

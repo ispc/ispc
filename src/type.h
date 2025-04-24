@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -71,27 +71,27 @@ class Type : public Traceable {
     /** Returns true if the underlying type is boolean.  In other words,
         this is true for individual bools and for short-vectors with
         underlying bool type, but not for arrays of bools. */
-    virtual bool IsBoolType() const = 0;
+    virtual bool IsBoolType() const { return false; }
 
     /** Returns true if the underlying type is float or double.  In other
         words, this is true for individual floats/doubles and for
         short-vectors of them, but not for arrays of them. */
-    virtual bool IsFloatType() const = 0;
+    virtual bool IsFloatType() const { return false; }
 
     /** Returns true if the underlying type is an integer type.  In other
         words, this is true for individual integers and for short-vectors
         of integer types, but not for arrays of integer types. */
-    virtual bool IsIntType() const = 0;
+    virtual bool IsIntType() const { return false; }
 
     /** Returns true if the underlying type is unsigned.  In other words,
         this is true for unsigned integers and short vectors of unsigned
         integer types. */
-    virtual bool IsUnsignedType() const = 0;
+    virtual bool IsUnsignedType() const { return false; }
 
     /** Returns true if the underlying type is signed.  In other words,
         this is true for signed integers and short vectors of signed
         integer types. */
-    virtual bool IsSignedType() const = 0;
+    virtual bool IsSignedType() const { return false; }
 
     /** Returns true if the underlying type is either a pointer type */
     bool IsPointerType() const;
@@ -121,7 +121,13 @@ class Type : public Traceable {
     bool IsVoidType() const;
 
     /** Returns true if this type is 'const'-qualified. */
-    virtual bool IsConstType() const = 0;
+    bool IsConstType() const { return isConst; }
+
+    /** Returns true if this type is complete. This is used to check for
+        incomplete types (e.g. forward-declared structs) that are not
+        allowed in certain contexts, e.g., when we need to allocate memory for
+        them. */
+    virtual bool IsCompleteType() const { return true; }
 
     /** Returns true if the underlying type is a float or integer type. */
     bool IsNumericType() const { return IsFloatType() || IsIntType(); }
@@ -146,7 +152,10 @@ class Type : public Traceable {
     bool IsTypeDependent() const;
 
     /** Returns the variability of the type. */
-    virtual Variability GetVariability() const = 0;
+    Variability GetVariability() const { return variability; }
+
+    /** Returns the alignment of the type in bytes. */
+    unsigned int GetAlignment() const { return alignment; }
 
     /** Returns true if the underlying type is uniform */
     bool IsUniformType() const { return GetVariability() == Variability::Uniform; }
@@ -169,7 +178,7 @@ class Type : public Traceable {
     /** Resolves dependent type with mapping of template types to concrete type passed as argeument.
         Do not handle variability resolution, which need to be done as a separate step.
      */
-    virtual const Type *ResolveDependence(TemplateInstantiation &templInst) const = 0;
+    virtual const Type *ResolveDependence(TemplateInstantiation &templInst) const { return this; }
 
     /** Resolves dependent type with mapping of template types to concrete type passed as argeument.
         Resolve variability of the type as well.
@@ -179,20 +188,20 @@ class Type : public Traceable {
     /* Returns a type wherein any elements of the original type and
        contained types that have unbound variability have their variability
        set to the given variability. */
-    virtual const Type *ResolveUnboundVariability(Variability v) const = 0;
+    virtual const Type *ResolveUnboundVariability(Variability v) const;
 
     /** Return a "uniform" instance of this type.  If the type is already
         uniform, its "this" pointer will be returned. */
-    virtual const Type *GetAsUniformType() const = 0;
+    virtual const Type *GetAsUniformType() const;
 
     /** Return a "varying" instance of this type.  If the type is already
         varying, its "this" pointer will be returned. */
-    virtual const Type *GetAsVaryingType() const = 0;
+    virtual const Type *GetAsVaryingType() const;
 
     /** Get an instance of the type with unbound variability. */
-    virtual const Type *GetAsUnboundVariabilityType() const = 0;
+    virtual const Type *GetAsUnboundVariabilityType() const;
 
-    virtual const Type *GetAsSOAType(int width) const = 0;
+    virtual const Type *GetAsSOAType(int width) const;
 
     /** If this is a signed integer type, return the unsigned version of
         the type.  Otherwise, return the original type. */
@@ -205,7 +214,7 @@ class Type : public Traceable {
     /** Returns the basic root type of the given type.  For example, for an
         array or short-vector, this returns the element type.  For a struct
         or atomic type, it returns itself. */
-    virtual const Type *GetBaseType() const = 0;
+    virtual const Type *GetBaseType() const { return this; };
 
     /** If this is a reference type, returns the type it is referring to.
         For all other types, just returns its own type. */
@@ -213,15 +222,21 @@ class Type : public Traceable {
 
     /** Get a const version of this type.  If it's already const, then the old
         Type pointer is returned. */
-    virtual const Type *GetAsConstType() const = 0;
+    virtual const Type *GetAsConstType() const;
 
     /** Get a non-const version of this type.  If it's already not const,
         then the old Type pointer is returned. */
-    virtual const Type *GetAsNonConstType() const = 0;
+    virtual const Type *GetAsNonConstType() const;
+
+    /** Returns a new type that is the same as this type, but with the given
+        alignment. */
+    virtual const Type *GetAsAlignedType(unsigned int alignment) const;
 
     /** Returns a text representation of the type (for example, for use in
         warning and error messages). */
     virtual std::string GetString() const = 0;
+
+    const SourcePos &GetSourcePos() const { return pos; }
 
     /** Returns a string that represents the mangled type (for use in
         mangling function symbol names for function overloading).  The
@@ -280,6 +295,7 @@ class Type : public Traceable {
     /** Returns true if the given type is an atomic, enum, or pointer type
         (i.e. not an aggregation of multiple instances of a type or
         types.) */
+    // TODO!: consider renaming to IsPrimitiveType
     static bool IsBasicType(const Type *type);
 
     /** Indicates which Type implementation this type is.  This value can
@@ -288,7 +304,43 @@ class Type : public Traceable {
     const TypeId typeId;
 
   protected:
-    Type(TypeId id) : typeId(id) {}
+    // The mutable pointers (asOtherConstType, asUniformType, asVaryingType) are
+    // initialized to nullptr instead of copying the pointers from 'other'
+    // since these are cached values that will be recomputed when needed
+    mutable const Type *asOtherConstType = {};
+    mutable const Type *asUniformType = {};
+    mutable const Type *asVaryingType = {};
+
+    /** The variability of the type. */
+    Variability variability = {};
+
+    /** Indicates whether the type is const-qualified. */
+    bool isConst = {};
+
+    /** Source file position where the type is declared. */
+    SourcePos pos = {};
+
+    /** Alignment of the type in bytes. */
+    mutable unsigned int alignment = 0;
+
+    Type(TypeId id, Variability v = Variability(Variability::Unbound), bool is_const = false, SourcePos s = SourcePos(),
+         unsigned int alignment = 0);
+
+    /* These methods are useful to avoid calling the constructor directly.
+     createWith methods are used to create a new type that is a shallow copy of
+     the current object, but with some field changed. The value of these fields
+     are changed after the object is created. */
+    /** Create a copy of the current object without enumerating all fields. */
+    virtual Type *create() const = 0;
+
+    /** Create a copy then set new value of isConst member. */
+    virtual const Type *createWithConst(bool newIsConst) const;
+
+    /** Create a copy then set new value of variability member. */
+    virtual const Type *createWithVariability(Variability newVariability) const;
+
+    /** Clone method to allow cloning with new alignment */
+    virtual const Type *createWithAlignment(unsigned int newAlignment) const;
 };
 
 /** @brief AtomicType represents basic types like floats, ints, etc.
@@ -301,41 +353,26 @@ class Type : public Traceable {
  */
 class AtomicType : public Type {
   public:
-    Variability GetVariability() const;
+    bool IsBoolType() const override;
+    bool IsFloatType() const override;
+    bool IsIntType() const override;
+    bool IsUnsignedType() const override;
+    bool IsSignedType() const override;
 
-    bool IsBoolType() const;
-    bool IsFloatType() const;
-    bool IsIntType() const;
-    bool IsUnsignedType() const;
-    bool IsSignedType() const;
-    bool IsConstType() const;
+    const AtomicType *GetAsUnsignedType() const override;
+    const AtomicType *GetAsSignedType() const override;
 
-    /** For AtomicTypes, the base type is just the same as the AtomicType
-        itself. */
-    const AtomicType *GetBaseType() const;
-    const AtomicType *GetAsUniformType() const;
-    const AtomicType *GetAsVaryingType() const;
-    const AtomicType *GetAsUnboundVariabilityType() const;
-    const AtomicType *GetAsSOAType(int width) const;
+    std::string GetString() const override;
+    std::string Mangle() const override;
+    std::string GetDeclaration(const std::string &name, DeclarationSyntax syntax) const override;
 
-    const AtomicType *ResolveDependence(TemplateInstantiation &templInst) const;
-    const AtomicType *ResolveUnboundVariability(Variability v) const;
-    const AtomicType *GetAsUnsignedType() const;
-    const AtomicType *GetAsSignedType() const;
-    const AtomicType *GetAsConstType() const;
-    const AtomicType *GetAsNonConstType() const;
-
-    std::string GetString() const;
-    std::string Mangle() const;
-    std::string GetDeclaration(const std::string &name, DeclarationSyntax syntax) const;
-
-    llvm::Type *LLVMStorageType(llvm::LLVMContext *ctx) const;
-    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
-
-    llvm::DIType *GetDIType(llvm::DIScope *scope) const;
+    llvm::Type *LLVMStorageType(llvm::LLVMContext *ctx) const override;
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const override;
+    llvm::DIType *GetDIType(llvm::DIScope *scope) const override;
 
     /** This enumerator records the basic types that AtomicTypes can be
         built from.  */
+    // TODO!: consider renaming to something like TypeKind with prefix avoidin Base or Basic
     enum BasicType {
         TYPE_VOID,
         TYPE_BOOL,
@@ -355,7 +392,7 @@ class AtomicType : public Type {
         NUM_BASIC_TYPES
     };
 
-    const BasicType basicType;
+    BasicType basicType;
 
     static const AtomicType *UniformBool, *VaryingBool;
     static const AtomicType *UniformInt8, *VaryingInt8;
@@ -381,11 +418,13 @@ class AtomicType : public Type {
     static const AtomicType *VaryingInt1;
 
   private:
-    const Variability variability;
-    const bool isConst;
     AtomicType(BasicType basicType, Variability v, bool isConst);
 
-    mutable const AtomicType *asOtherConstType, *asUniformType, *asVaryingType;
+    // Copy constructor to allow cloning without enumerating all fields
+    AtomicType(const AtomicType &other);
+
+    AtomicType *create() const override;
+    const AtomicType *createWithBasicType(BasicType newBasicType) const;
 };
 
 /** @brief Type representing a template typename type.
@@ -396,42 +435,26 @@ class TemplateTypeParmType : public Type {
   public:
     TemplateTypeParmType(std::string, Variability v, bool ic, SourcePos pos);
 
-    Variability GetVariability() const;
+    bool IsCompleteType() const override;
 
-    bool IsBoolType() const;
-    bool IsFloatType() const;
-    bool IsIntType() const;
-    bool IsUnsignedType() const;
-    bool IsSignedType() const;
-    bool IsConstType() const;
+    const Type *GetAsSOAType(int width) const override;
+    const Type *ResolveDependence(TemplateInstantiation &templInst) const override;
 
-    const Type *GetBaseType() const;
-    const Type *GetAsVaryingType() const;
-    const Type *GetAsUniformType() const;
-    const Type *GetAsUnboundVariabilityType() const;
-    const Type *GetAsSOAType(int width) const;
-    const Type *ResolveDependence(TemplateInstantiation &templInst) const;
-    const Type *ResolveUnboundVariability(Variability v) const;
+    std::string GetString() const override;
+    std::string Mangle() const override;
+    std::string GetDeclaration(const std::string &name, DeclarationSyntax syntax) const override;
 
-    const Type *GetAsConstType() const;
-    const Type *GetAsNonConstType() const;
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const override;
+    llvm::DIType *GetDIType(llvm::DIScope *scope) const override;
 
     std::string GetName() const;
-    const SourcePos &GetSourcePos() const;
-    std::string GetString() const;
-    std::string Mangle() const;
-    std::string GetDeclaration(const std::string &name, DeclarationSyntax syntax) const;
-
-    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
-
-    llvm::DIType *GetDIType(llvm::DIScope *scope) const;
 
   private:
     const std::string name;
-    const Variability variability;
-    const bool isConst;
-    const SourcePos pos;
-    mutable const TemplateTypeParmType *asOtherConstType, *asUniformType, *asVaryingType;
+
+    TemplateTypeParmType(const TemplateTypeParmType &other);
+
+    TemplateTypeParmType *create() const override;
 };
 
 /** @brief Type implementation for enumerated types
@@ -445,36 +468,18 @@ class EnumType : public Type {
     /** Constructor for named enumerated types */
     EnumType(const char *name, SourcePos pos);
 
-    Variability GetVariability() const;
+    bool IsIntType() const override;
+    bool IsUnsignedType() const override;
 
-    bool IsBoolType() const;
-    bool IsFloatType() const;
-    bool IsIntType() const;
-    bool IsUnsignedType() const;
-    bool IsSignedType() const;
-    bool IsConstType() const;
+    std::string GetString() const override;
+    std::string Mangle() const override;
+    std::string GetDeclaration(const std::string &name, DeclarationSyntax syntax) const override;
 
-    const EnumType *GetBaseType() const;
-    const EnumType *GetAsVaryingType() const;
-    const EnumType *GetAsUniformType() const;
-    const EnumType *GetAsUnboundVariabilityType() const;
-    const EnumType *GetAsSOAType(int width) const;
-
-    const EnumType *ResolveDependence(TemplateInstantiation &templInst) const;
-    const EnumType *ResolveUnboundVariability(Variability v) const;
-    const EnumType *GetAsConstType() const;
-    const EnumType *GetAsNonConstType() const;
-
-    std::string GetString() const;
-    std::string Mangle() const;
-    std::string GetDeclaration(const std::string &name, DeclarationSyntax syntax) const;
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const override;
+    llvm::DIType *GetDIType(llvm::DIScope *scope) const override;
 
     /** Returns the name of the enum type.  (e.g. struct Foo -> "Foo".) */
     const std::string &GetEnumName() const { return name; }
-
-    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
-
-    llvm::DIType *GetDIType(llvm::DIScope *scope) const;
 
     /** Provides the enumerators defined in the enum definition. */
     void SetEnumerators(const std::vector<Symbol *> &enumerators);
@@ -483,13 +488,14 @@ class EnumType : public Type {
     /** Returns the symbol for the given enumerator number. */
     const Symbol *GetEnumerator(int i) const;
 
-    const SourcePos pos;
-
   private:
     const std::string name;
-    Variability variability;
-    bool isConst;
     std::vector<Symbol *> enumerators;
+
+    EnumType(const std::string &name, Variability v, bool ic, SourcePos pos, const std::vector<Symbol *> &enumerators);
+    EnumType(const EnumType &other);
+
+    EnumType *create() const override;
 };
 
 /** @brief Type implementation for pointers to other types
@@ -515,8 +521,27 @@ class EnumType : public Type {
 
 class PointerType : public Type {
   public:
-    PointerType(const Type *t, Variability v, bool isConst, bool isSlice = false, bool frozen = false,
+    enum Property : unsigned int {
+        NONE = 0,
+        SLICE = 1,
+        FROZEN = 2,
+    };
+
+    PointerType(const Type *t, Variability v, bool isConst, unsigned int prop = 0,
                 AddressSpace as = AddressSpace::ispc_default);
+
+    const Type *GetBaseType() const override;
+    const PointerType *ResolveDependence(TemplateInstantiation &templInst) const override;
+    const PointerType *ResolveUnboundVariability(Variability v) const override;
+    const PointerType *GetAsConstType() const override;
+    const PointerType *GetAsNonConstType() const override;
+
+    std::string GetString() const override;
+    std::string Mangle() const override;
+    std::string GetDeclaration(const std::string &name, DeclarationSyntax syntax) const override;
+
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const override;
+    llvm::DIType *GetDIType(llvm::DIScope *scope) const override;
 
     /** Helper method to return a uniform pointer to the given type. */
     static PointerType *GetUniform(const Type *t, bool isSlice = false);
@@ -526,50 +551,34 @@ class PointerType : public Type {
     /** Returns true if the given type is a void * type. */
     static bool IsVoidPointer(const Type *t);
 
-    Variability GetVariability() const;
-
-    bool IsBoolType() const;
-    bool IsFloatType() const;
-    bool IsIntType() const;
-    bool IsUnsignedType() const;
-    bool IsSignedType() const;
-    bool IsConstType() const;
-
-    bool IsSlice() const { return isSlice; }
-    bool IsFrozenSlice() const { return isFrozen; }
+    bool IsSlice() const { return property; }
+    bool IsFrozenSlice() const { return property & FROZEN; }
     AddressSpace GetAddressSpace() const { return addrSpace; }
     const PointerType *GetAsSlice() const;
     const PointerType *GetAsNonSlice() const;
     const PointerType *GetAsFrozenSlice() const;
 
-    const Type *GetBaseType() const;
-    const PointerType *GetAsVaryingType() const;
-    const PointerType *GetAsUniformType() const;
-    const PointerType *GetAsUnboundVariabilityType() const;
-    const PointerType *GetAsSOAType(int width) const;
-
-    const PointerType *ResolveDependence(TemplateInstantiation &templInst) const;
-    const PointerType *ResolveUnboundVariability(Variability v) const;
-    const PointerType *GetAsConstType() const;
-    const PointerType *GetAsNonConstType() const;
     const PointerType *GetWithAddrSpace(AddressSpace as) const;
-
-    std::string GetString() const;
-    std::string Mangle() const;
-    std::string GetDeclaration(const std::string &name, DeclarationSyntax syntax) const;
-
-    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
-
-    llvm::DIType *GetDIType(llvm::DIScope *scope) const;
 
     static PointerType *Void;
 
   private:
-    const Variability variability;
-    const bool isConst;
-    const bool isSlice, isFrozen;
+    unsigned int property;
+    // TODO!: outline baseType and related methods from PointerType,
+    // RefereceType, ArrayType and VectorType to TypeWithBaseType class
     const Type *baseType;
-    const AddressSpace addrSpace;
+    // TODO!: storing address space in Type doesn't seem to be a correct
+    AddressSpace addrSpace;
+
+    PointerType(const PointerType &other);
+
+    PointerType *create() const override;
+
+    const PointerType *createWithBaseType(const Type *newBaseType) const;
+    const PointerType *createWithAddressSpace(AddressSpace newAddrSpace) const;
+    const PointerType *createWithBaseTypeAndVariability(const Type *newBaseType, Variability newVariability) const;
+    const PointerType *createWithProperty(unsigned int newProperty) const;
+    const PointerType *createWithConstAndProperty(bool newIsConst, unsigned int newProperty) const;
 };
 
 /** @brief Abstract base class for types that represent collections of
@@ -589,7 +598,9 @@ class CollectionType : public Type {
     virtual const Type *GetElementType(int index) const = 0;
 
   protected:
-    CollectionType(TypeId id) : Type(id) {}
+    CollectionType(TypeId id, Variability v = Variability(Variability::Unbound), bool is_const = false,
+                   SourcePos p = SourcePos(), unsigned int align = 0)
+        : Type(id, v, is_const, p, align) {}
 };
 
 /** @brief Abstract base class for types that represent sequences
@@ -611,20 +622,48 @@ class SequentialType : public CollectionType {
 
     /** Returns the Type of the elements that the sequence stores; for
         SequentialTypes, all elements have the same type . */
-    virtual const Type *GetElementType() const = 0;
+    virtual const Type *GetElementType() const { return base; }
 
     /** SequentialType provides an implementation of this CollectionType
         method, just passing the query on to the GetElementType(void)
         implementation, since all of the elements of a SequentialType have
         the same type.
      */
-    const Type *GetElementType(int index) const;
+    const Type *GetElementType(int index) const override { return GetElementType(); }
 
     /* Returns true if the number of elements in the collection is dependent on a template parameter. */
-    virtual bool IsCountDependent() const = 0;
+    virtual bool IsCountDependent() const { return elementCount.symbolCount != nullptr; }
+
+    int GetElementCount() const override { return elementCount.fixedCount; }
+
+    const Type *GetBaseType() const override { return base; }
+
+    bool IsCompleteType() const override;
+    const SequentialType *GetAsVaryingType() const override;
+    const SequentialType *GetAsUniformType() const override;
+    const SequentialType *GetAsUnboundVariabilityType() const override;
+    const SequentialType *GetAsSOAType(int width) const override;
+    const SequentialType *ResolveUnboundVariability(Variability v) const override;
+
+    const SequentialType *GetAsUnsignedType() const override;
+    const SequentialType *GetAsSignedType() const override;
+    const SequentialType *GetAsConstType() const override;
+    const SequentialType *GetAsNonConstType() const override;
 
   protected:
-    SequentialType(TypeId id) : CollectionType(id) {}
+    /** Base type that the SequentialType holds elements of */
+    const Type *base;
+
+    /** Number of elements in the SequentialType */
+    ElementCount elementCount;
+
+    SequentialType(TypeId id, const Type *b, ElementCount ec, Variability v = Variability(Variability::Unbound),
+                   bool is_const = false, SourcePos pos = SourcePos(), unsigned int align = 0);
+
+    const SequentialType *createWithBaseType(const Type *newBaseType) const;
+    const SequentialType *createWithElementCount(ElementCount newElementCount) const;
+    const SequentialType *createWithBaseTypeAndElementCount(const Type *newBaseType,
+                                                            ElementCount newElementCount) const;
 
     /** Resolves the total number of elements in the collection in template instantiation. */
     virtual int ResolveElementCount(TemplateInstantiation &templInst) const = 0;
@@ -668,43 +707,22 @@ class ArrayType : public SequentialType {
     */
     ArrayType(const Type *elementType, ElementCount elCount);
 
-    Variability GetVariability() const;
+    bool IsCompleteType() const override;
+    const Type *GetBaseType() const override;
 
-    bool IsBoolType() const;
-    bool IsFloatType() const;
-    bool IsIntType() const;
-    bool IsUnsignedType() const;
-    bool IsSignedType() const;
-    bool IsConstType() const;
-    /* Returns true if the number of elements in the array is dependent on a template parameter. */
-    virtual bool IsCountDependent() const { return elementCount.symbolCount != nullptr; }
+    const ArrayType *ResolveDependence(TemplateInstantiation &templInst) const override;
 
-    const Type *GetBaseType() const;
-    const ArrayType *GetAsVaryingType() const;
-    const ArrayType *GetAsUniformType() const;
-    const ArrayType *GetAsUnboundVariabilityType() const;
-    const ArrayType *GetAsSOAType(int width) const;
-    const ArrayType *ResolveDependence(TemplateInstantiation &templInst) const;
-    const ArrayType *ResolveUnboundVariability(Variability v) const;
+    std::string GetString() const override;
+    std::string Mangle() const override;
+    std::string GetDeclaration(const std::string &name, DeclarationSyntax syntax) const override;
 
-    const ArrayType *GetAsUnsignedType() const;
-    const ArrayType *GetAsSignedType() const;
-    const ArrayType *GetAsConstType() const;
-    const ArrayType *GetAsNonConstType() const;
-
-    std::string GetString() const;
-    std::string Mangle() const;
-    std::string GetDeclaration(const std::string &name, DeclarationSyntax syntax) const;
-
-    llvm::DIType *GetDIType(llvm::DIScope *scope) const;
-    llvm::ArrayType *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::DIType *GetDIType(llvm::DIScope *scope) const override;
+    llvm::ArrayType *LLVMType(llvm::LLVMContext *ctx) const override;
 
     /** This method returns the total number of elements in the array,
         including all dimensions if this is a multidimensional array. */
     int TotalElementCount() const;
 
-    int GetElementCount() const;
-    const Type *GetElementType() const;
     /* Checks if the array is unsized.
        An array is considered unsized if its size is not explicitly set
        as compile-time constant i.e. `fixedCount` is 0 and `symbolCount`
@@ -713,7 +731,7 @@ class ArrayType : public SequentialType {
     bool IsUnsized() const;
     /** Returns a new array of the same child type, but with the given
         length. */
-    virtual ArrayType *GetSizedArray(int length) const;
+    const ArrayType *GetSizedArray(int length) const;
 
     /** If the given type is a (possibly multi-dimensional) array type and
         the initializer expression is an expression list, set the size of
@@ -724,12 +742,12 @@ class ArrayType : public SequentialType {
     static const Type *SizeUnsizedArrays(const Type *type, Expr *initExpr);
 
   private:
-    /** Type of the elements of the array. */
-    const Type *const child;
-    /** Number of elements in the array. */
-    ElementCount elementCount;
     /** Resolves the total number of elements in the array in template instantiation. */
-    virtual int ResolveElementCount(TemplateInstantiation &templInst) const;
+    virtual int ResolveElementCount(TemplateInstantiation &templInst) const override;
+
+    ArrayType(const ArrayType &other);
+
+    ArrayType *create() const override;
 };
 
 /** @brief A (short) vector of atomic types.
@@ -749,50 +767,31 @@ class VectorType : public SequentialType {
     VectorType(const Type *base, Symbol *num);
     VectorType(const Type *base, ElementCount elCount);
 
-    Variability GetVariability() const;
+    bool IsBoolType() const override;
+    bool IsFloatType() const override;
+    bool IsIntType() const override;
+    bool IsUnsignedType() const override;
+    bool IsSignedType() const override;
 
-    bool IsBoolType() const;
-    bool IsFloatType() const;
-    bool IsIntType() const;
-    bool IsUnsignedType() const;
-    bool IsSignedType() const;
-    bool IsConstType() const;
-    /* Returns true if the number of elements in the vector is dependent on a template parameter. */
-    virtual bool IsCountDependent() const { return elementCount.symbolCount != nullptr; }
+    const VectorType *ResolveDependence(TemplateInstantiation &templInst) const override;
 
-    const Type *GetBaseType() const;
-    const VectorType *GetAsVaryingType() const;
-    const VectorType *GetAsUniformType() const;
-    const VectorType *GetAsUnboundVariabilityType() const;
-    const VectorType *GetAsSOAType(int width) const;
-    const VectorType *ResolveDependence(TemplateInstantiation &templInst) const;
-    const VectorType *ResolveUnboundVariability(Variability v) const;
+    std::string GetString() const override;
+    std::string Mangle() const override;
+    std::string GetDeclaration(const std::string &name, DeclarationSyntax syntax) const override;
 
-    const VectorType *GetAsUnsignedType() const;
-    const VectorType *GetAsSignedType() const;
-    const VectorType *GetAsConstType() const;
-    const VectorType *GetAsNonConstType() const;
+    llvm::Type *LLVMStorageType(llvm::LLVMContext *ctx) const override;
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const override;
+    llvm::DIType *GetDIType(llvm::DIScope *scope) const override;
 
-    std::string GetString() const;
-    std::string Mangle() const;
-    std::string GetDeclaration(const std::string &name, DeclarationSyntax syntax) const;
-
-    llvm::Type *LLVMStorageType(llvm::LLVMContext *ctx) const;
-    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
-
-    llvm::DIType *GetDIType(llvm::DIScope *scope) const;
-
-    int GetElementCount() const;
-
-    const Type *GetElementType() const;
+    std::string GetCountString() const;
 
   private:
-    /** Base type that the vector holds elements of */
-    const Type *const base;
-    /** Number of elements in the vector */
-    ElementCount elementCount;
     /** Resolves the total number of elements in the vector in template instantiation. */
-    virtual int ResolveElementCount(TemplateInstantiation &templInst) const;
+    virtual int ResolveElementCount(TemplateInstantiation &templInst) const override;
+
+    VectorType(const VectorType &other);
+
+    VectorType *create() const override;
 
   public:
     /** Returns the number of elements stored in memory for the vector.
@@ -807,47 +806,34 @@ class StructType : public CollectionType {
   public:
     StructType(const std::string &name, const llvm::SmallVector<const Type *, 8> &elts,
                const llvm::SmallVector<std::string, 8> &eltNames, const llvm::SmallVector<SourcePos, 8> &eltPositions,
-               bool isConst, Variability variability, bool isAnonymous, SourcePos pos);
+               bool isConst, Variability variability, SourcePos pos, unsigned int alignment = 0);
 
-    Variability GetVariability() const;
+    bool IsCompleteType() const override;
 
-    bool IsBoolType() const;
-    bool IsFloatType() const;
-    bool IsIntType() const;
-    bool IsUnsignedType() const;
-    bool IsSignedType() const;
-    bool IsConstType() const;
+    const StructType *GetAsSOAType(int width) const override;
+
+    std::string GetString() const override;
+    std::string Mangle() const override;
+    std::string GetDeclaration(const std::string &name, DeclarationSyntax syntax) const override;
+
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const override;
+    llvm::DIType *GetDIType(llvm::DIScope *scope) const override;
+
+    /** Returns the type of the i'th structure element.  The value of \c i must
+        be between 0 and NumElements()-1. */
+    const Type *GetElementType(int i) const override;
+
+    /** Returns the total number of elements in the structure. */
+    int GetElementCount() const override { return int(elementTypes.size()); }
+
     bool IsDefined() const;
     bool IsAnonymousType() const;
 
-    const Type *GetBaseType() const;
-    const StructType *GetAsVaryingType() const;
-    const StructType *GetAsUniformType() const;
-    const StructType *GetAsUnboundVariabilityType() const;
-    const StructType *GetAsSOAType(int width) const;
-    const StructType *ResolveDependence(TemplateInstantiation &templInst) const;
-    const StructType *ResolveUnboundVariability(Variability v) const;
-
-    const StructType *GetAsConstType() const;
-    const StructType *GetAsNonConstType() const;
-
     const StructType *GetAsNamed(const std::string &name) const;
-
-    std::string GetString() const;
-    std::string Mangle() const;
-    std::string GetDeclaration(const std::string &name, DeclarationSyntax syntax) const;
-
-    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
-
-    llvm::DIType *GetDIType(llvm::DIScope *scope) const;
 
     /** Returns the type of the structure element with the given name (if any).
         Returns nullptr if there is no such named element. */
     const Type *GetElementType(const std::string &name) const;
-
-    /** Returns the type of the i'th structure element.  The value of \c i must
-        be between 0 and NumElements()-1. */
-    const Type *GetElementType(int i) const;
 
     /** Return the raw element type without "finilizing" varibility and constness of the element. */
     const Type *GetRawElementType(int i) const;
@@ -859,14 +845,13 @@ class StructType : public CollectionType {
     /** Returns the name of the i'th element of the structure. */
     const std::string &GetElementName(int i) const { return elementNames[i]; }
 
-    /** Returns the total number of elements in the structure. */
-    int GetElementCount() const { return int(elementTypes.size()); }
-
     const SourcePos &GetElementPosition(int i) const { return elementPositions[i]; }
 
     /** Returns the name of the structure type.  (e.g. struct Foo -> "Foo".) */
     const std::string &GetStructName() const { return name; }
     const std::string GetCStructName() const;
+
+    void RegisterInStructTypeMap();
 
   private:
     static bool checkIfCanBeSOA(const StructType *st);
@@ -887,14 +872,18 @@ class StructType : public CollectionType {
     /** Source file position at which each structure element declaration
         appeared. */
     const llvm::SmallVector<SourcePos, 8> elementPositions;
-    const Variability variability;
-    const bool isConst;
-    const bool isAnonymous;
-    const SourcePos pos;
+    bool isAnonymous;
 
     mutable llvm::SmallVector<const Type *, 8> finalElementTypes;
 
     mutable const StructType *oppositeConstStructType;
+
+    StructType(const StructType &other);
+
+    StructType *create() const override;
+    const StructType *createWithVariability(Variability newVariability) const override;
+    const StructType *createWithConst(bool newIsConst) const override;
+    const StructType *createWithAlignment(unsigned int newAlignment) const override;
 };
 
 /** Type implementation representing a struct name that has been declared
@@ -904,44 +893,34 @@ class StructType : public CollectionType {
  */
 class UndefinedStructType : public Type {
   public:
-    UndefinedStructType(const std::string &name, const Variability variability, bool isConst, SourcePos pos);
+    UndefinedStructType(const std::string &name, const Variability variability, bool isConst, SourcePos pos,
+                        unsigned int alignment = 0);
 
-    Variability GetVariability() const;
+    bool IsCompleteType() const override;
 
-    bool IsBoolType() const;
-    bool IsFloatType() const;
-    bool IsIntType() const;
-    bool IsUnsignedType() const;
-    bool IsSignedType() const;
-    bool IsConstType() const;
+    const UndefinedStructType *GetAsSOAType(int width) const override;
 
-    const Type *GetBaseType() const;
-    const UndefinedStructType *GetAsVaryingType() const;
-    const UndefinedStructType *GetAsUniformType() const;
-    const UndefinedStructType *GetAsUnboundVariabilityType() const;
-    const UndefinedStructType *GetAsSOAType(int width) const;
-    const UndefinedStructType *ResolveDependence(TemplateInstantiation &templInst) const;
-    const UndefinedStructType *ResolveUnboundVariability(Variability v) const;
+    std::string GetString() const override;
+    std::string Mangle() const override;
+    std::string GetDeclaration(const std::string &name, DeclarationSyntax syntax) const override;
 
-    const UndefinedStructType *GetAsConstType() const;
-    const UndefinedStructType *GetAsNonConstType() const;
-
-    std::string GetString() const;
-    std::string Mangle() const;
-    std::string GetDeclaration(const std::string &name, DeclarationSyntax syntax) const;
-
-    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
-
-    llvm::DIType *GetDIType(llvm::DIScope *scope) const;
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const override;
+    llvm::DIType *GetDIType(llvm::DIScope *scope) const override;
 
     /** Returns the name of the structure type.  (e.g. struct Foo -> "Foo".) */
     const std::string &GetStructName() const { return name; }
 
+    void RegisterInStructTypeMap();
+
   private:
     const std::string name;
-    const Variability variability;
-    const bool isConst;
-    const SourcePos pos;
+
+    UndefinedStructType(const UndefinedStructType &other);
+
+    UndefinedStructType *create() const override;
+    const UndefinedStructType *createWithVariability(Variability newVariability) const override;
+    const UndefinedStructType *createWithConst(bool newIsConst) const override;
+    const UndefinedStructType *createWithAlignment(unsigned int newAlignment) const override;
 };
 
 /** @brief Type representing a reference to another (non-reference) type.
@@ -950,41 +929,44 @@ class ReferenceType : public Type {
   public:
     ReferenceType(const Type *targetType, AddressSpace as = AddressSpace::ispc_default);
 
-    Variability GetVariability() const;
+    bool IsBoolType() const override;
+    bool IsFloatType() const override;
+    bool IsIntType() const override;
+    bool IsUnsignedType() const override;
+    bool IsSignedType() const override;
 
-    bool IsBoolType() const;
-    bool IsFloatType() const;
-    bool IsIntType() const;
-    bool IsUnsignedType() const;
-    bool IsSignedType() const;
-    bool IsConstType() const;
+    const Type *GetBaseType() const override;
+    const Type *GetReferenceTarget() const override;
+    const ReferenceType *GetAsVaryingType() const override;
+    const ReferenceType *GetAsUniformType() const override;
+    const ReferenceType *GetAsUnboundVariabilityType() const override;
+    const Type *GetAsSOAType(int width) const override;
+    const ReferenceType *ResolveDependence(TemplateInstantiation &templInst) const override;
+    const ReferenceType *ResolveUnboundVariability(Variability v) const override;
+
+    const ReferenceType *GetAsConstType() const override;
+    const ReferenceType *GetAsNonConstType() const override;
+
+    std::string GetString() const override;
+    std::string Mangle() const override;
+    std::string GetDeclaration(const std::string &name, DeclarationSyntax syntax) const override;
+
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const override;
+    llvm::DIType *GetDIType(llvm::DIScope *scope) const override;
+
     AddressSpace GetAddressSpace() const { return addrSpace; }
 
-    const Type *GetBaseType() const;
-    const Type *GetReferenceTarget() const;
-    const ReferenceType *GetAsVaryingType() const;
-    const ReferenceType *GetAsUniformType() const;
-    const ReferenceType *GetAsUnboundVariabilityType() const;
-    const Type *GetAsSOAType(int width) const;
-    const ReferenceType *ResolveDependence(TemplateInstantiation &templInst) const;
-    const ReferenceType *ResolveUnboundVariability(Variability v) const;
-
-    const ReferenceType *GetAsConstType() const;
-    const ReferenceType *GetAsNonConstType() const;
     const ReferenceType *GetWithAddrSpace(AddressSpace as) const;
 
-    std::string GetString() const;
-    std::string Mangle() const;
-    std::string GetDeclaration(const std::string &name, DeclarationSyntax syntax) const;
-
-    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
-
-    llvm::DIType *GetDIType(llvm::DIScope *scope) const;
-
   private:
-    const Type *const targetType;
-    mutable const ReferenceType *asOtherConstType;
-    const AddressSpace addrSpace;
+    const Type *targetType;
+    AddressSpace addrSpace;
+
+    ReferenceType(const ReferenceType &other);
+
+    ReferenceType *create() const override;
+    const ReferenceType *createWithBaseType(const Type *newBaseType) const;
+    const ReferenceType *createWithAddressSpace(AddressSpace newAddrSpace) const;
 };
 
 /** @brief Type representing a function (return type + argument types)
@@ -1000,52 +982,57 @@ class ReferenceType : public Type {
  */
 class FunctionType : public Type {
   public:
+    enum FunctionFlag : unsigned int {
+        FUNC_NONE = 0,
+        FUNC_TASK = 1 << 0,          // 0x0001
+        FUNC_EXPORTED = 1 << 1,      // 0x0002
+        FUNC_EXTERNAL_ONLY = 1 << 2, // 0x0004
+        FUNC_EXTERN_C = 1 << 3,      // 0x0008
+        FUNC_EXTERN_SYCL = 1 << 4,   // 0x0010
+        FUNC_UNMASKED = 1 << 5,      // 0x0020
+        FUNC_UNMANGLED = 1 << 6,     // 0x0040
+        FUNC_VECTOR_CALL = 1 << 7,   // 0x0080
+        FUNC_REG_CALL = 1 << 8,      // 0x0100
+        FUNC_CDECL = 1 << 9,         // 0x0200
+        FUNC_SAFE = 1 << 10          // 0x0400
+    };
+
     FunctionType(const Type *returnType, const llvm::SmallVector<const Type *, 8> &argTypes, SourcePos pos);
     FunctionType(const Type *returnType, const llvm::SmallVector<const Type *, 8> &argTypes,
                  const llvm::SmallVector<std::string, 8> &argNames, const llvm::SmallVector<Expr *, 8> &argDefaults,
-                 const llvm::SmallVector<SourcePos, 8> &argPos, bool isTask, bool isExported, bool isExternalOnly,
-                 bool isExternC, bool isExternSYCL, bool isUnmasked, bool isUnmangled, bool isVectorCall,
-                 bool isRegCall, bool isCdecl, SourcePos p);
+                 const llvm::SmallVector<SourcePos, 8> &argPos, int costOverride, unsigned int flags, SourcePos p);
     // Structure holding the mangling suffix and prefix for function
     struct FunctionMangledName {
         std::string prefix;
         std::string suffix;
     };
 
-    Variability GetVariability() const;
-    bool IsBoolType() const;
-    bool IsFloatType() const;
-    bool IsIntType() const;
-    bool IsUnsignedType() const;
-    bool IsSignedType() const;
-    bool IsConstType() const;
+    const Type *GetBaseType() const override;
+    const Type *GetAsVaryingType() const override;
+    const Type *GetAsUniformType() const override;
+    const Type *GetAsUnboundVariabilityType() const override;
+    const Type *GetAsSOAType(int width) const override;
+    const FunctionType *ResolveDependence(TemplateInstantiation &templInst) const override;
+    const FunctionType *ResolveUnboundVariability(Variability v) const override;
+
+    const Type *GetAsConstType() const override;
+    const Type *GetAsNonConstType() const override;
+
+    std::string GetString() const override;
+    std::string Mangle() const override;
+    std::string GetDeclaration(const std::string &name, DeclarationSyntax syntax) const override;
+
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const override;
+    llvm::DIType *GetDIType(llvm::DIScope *scope) const override;
+
+    std::string GetDeclarationForDispatch(const std::string &fname, DeclarationSyntax syntax) const;
 
     bool IsISPCKernel() const;
     bool IsISPCExternal() const;
 
-    const Type *GetBaseType() const;
-    const Type *GetAsVaryingType() const;
-    const Type *GetAsUniformType() const;
-    const Type *GetAsUnboundVariabilityType() const;
-    const Type *GetAsSOAType(int width) const;
-    const FunctionType *ResolveDependence(TemplateInstantiation &templInst) const;
-    const FunctionType *ResolveUnboundVariability(Variability v) const;
-
-    const Type *GetAsConstType() const;
-    const Type *GetAsNonConstType() const;
-
     const Type *GetAsUnmaskedType() const;
     const Type *GetAsNonUnmaskedType() const;
     const Type *GetWithReturnType(const Type *t) const;
-
-    std::string GetString() const;
-    std::string Mangle() const;
-    std::string GetDeclaration(const std::string &name, DeclarationSyntax syntax) const;
-    std::string GetDeclarationForDispatch(const std::string &fname, DeclarationSyntax syntax) const;
-
-    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
-
-    llvm::DIType *GetDIType(llvm::DIScope *scope) const;
 
     const Type *GetReturnType() const { return returnType; }
 
@@ -1078,82 +1065,90 @@ class FunctionType : public Type {
     /* Get string representation of calling convention */
     const std::string GetNameForCallConv() const;
 
-    const SourcePos &GetSourcePos() const { return pos; };
-
     int GetNumParameters() const { return (int)paramTypes.size(); }
     const Type *GetParameterType(int i) const;
     Expr *GetParameterDefault(int i) const;
     const SourcePos &GetParameterSourcePos(int i) const;
     const std::string &GetParameterName(int i) const;
 
-    /** This value is true if the function had a 'task' qualifier in the
-        source program. */
-    const bool isTask;
+    int GetCostOverride() const { return costOverride; }
 
-    /** This value is true if the function had a 'export' qualifier in the
+    /** Return true if the function had a 'task' qualifier in the
         source program. */
-    const bool isExported;
+    bool IsTask() const { return flags & FUNC_TASK; }
 
-    /** This value signals compiler to omit generation of ISPC function copy
+    /** Return true if the function had a 'export' qualifier in the
+        source program. */
+    bool IsExported() const { return flags & FUNC_EXPORTED; }
+
+    /** This signals compiler to omit generation of ISPC function copy
         for function with export qualifier, i.e., ISPC generates only the
         external function for calling from C/C++ */
-    const bool isExternalOnly;
+    bool IsExternalOnly() const { return flags & FUNC_EXTERNAL_ONLY; }
 
-    /** This value is true if the function was declared as an 'extern "C"'
+    /** Return true if the function was declared as an 'extern "C"'
         function in the source program. */
-    const bool isExternC;
+    bool IsExternC() const { return flags & FUNC_EXTERN_C; }
 
-    /** This value is true if the function was declared as an 'extern "SYCL"'
+    /** Return true if the function was declared as an 'extern "SYCL"'
     function in the source program. */
-    const bool isExternSYCL;
+    bool IsExternSYCL() const { return flags & FUNC_EXTERN_SYCL; }
 
     /** Indicates whether the function doesn't take an implicit mask
         parameter (and thus should start execution with an "all on"
         mask). */
-    const bool isUnmasked;
+    bool IsUnmasked() const { return flags & FUNC_UNMASKED; }
 
-    const bool isUnmangled;
+    /** Indicates whether the function name should be mangled. */
+    bool IsUnmangled() const { return flags & FUNC_UNMANGLED; }
 
     /** Indicates whether the function has __vectorcall attribute. */
-    const bool isVectorCall;
+    bool IsVectorCall() const { return flags & FUNC_VECTOR_CALL; }
 
     /** Indicates whether the function has __regcall attribute. */
-    const bool isRegCall;
+    bool IsRegCall() const { return flags & FUNC_REG_CALL; }
 
     /** Indicates whether the function has __cdecl attribute (default C calling
         convention). It is useful when --vectorcall is provided globally to not
         call some function with vectorcall. */
-    const bool isCdecl;
+    bool IsCdecl() const { return flags & FUNC_CDECL; }
 
     /** Indicates whether this function has been declared to be safe to run
         with an all-off mask. */
-    bool isSafe;
-
-    /** If non-negative, this provides a user-supplied override to the cost
-        function estimate for the function. */
-    int costOverride;
+    bool IsSafe() const { return flags & FUNC_SAFE; }
 
   private:
     std::string mangleTemplateArgs(TemplateArgs *templateArgs) const;
 
-    const Type *const returnType;
+    const Type *returnType;
 
     // The following four vectors should all have the same length (which is
     // in turn the length returned by GetNumParameters()).
-    const llvm::SmallVector<const Type *, 8> paramTypes;
+    llvm::SmallVector<const Type *, 8> paramTypes;
     const llvm::SmallVector<std::string, 8> paramNames;
     /** Default values of the function's arguments.  For arguments without
         default values provided, nullptr is stored. */
-    mutable llvm::SmallVector<Expr *, 8> paramDefaults;
+    llvm::SmallVector<Expr *, 8> paramDefaults;
     /** The names provided (if any) with the function arguments in the
         function's signature.  These should only be used for error messages
         and the like and so not affect testing function types for equality,
         etc. */
     const llvm::SmallVector<SourcePos, 8> paramPositions;
 
+    /** If non-negative, this provides a user-supplied override to the cost
+        function estimate for the function. */
+    int costOverride;
+
+    unsigned int flags;
+
     mutable const FunctionType *asMaskedType, *asUnmaskedType;
 
-    const SourcePos pos;
+    FunctionType(const FunctionType &other);
+
+    FunctionType *create() const override;
+    const FunctionType *createWithSignature(const Type *newReturnType,
+                                            const llvm::SmallVector<const Type *, 8> &newParamTypes) const;
+    const FunctionType *createWithFlags(unsigned int newFlags) const;
 };
 
 /* Efficient dynamic casting of Types.  First, we specify a default

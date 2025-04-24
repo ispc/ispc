@@ -169,3 +169,64 @@ AVX2 compilation target, yet retain elegantly simple code to understand and
 maintain. The command line arguments are:
 
 sgemm (optional)[num iterations] (optional)[[Matrix A Rows] [Matrix A Columns/Matrix B Rows] [Matrix B Columns]]
+
+Point Transform using ctypes
+============================
+This example demonstrates how to use ctypes to call a single ISPC function that takes three different types of inputs:
+
+* Float arrays (the x and y coordinates of points)
+* A custom structure (the Transform struct with scaling, translation, and rotation parameters)
+* A constant value (the strength parameter that controls transformation intensity)
+
+The example includes:
+
+An ISPC implementation that applies geometric transformations to points:
+
+* Scaling on both x and y axes
+* Rotation around the origin
+* Translation with a configurable strength factor
+
+A Python wrapper that:
+
+* Defines a matching ctypes structure for the ISPC struct
+* Sets up the proper function signature
+* Handles conversion between NumPy arrays and C pointers
+* Passes the structure by reference using ctypes.byref()
+
+A NumPy reference implementation to verify correctness and compare performance.
+
+After building the example, run the Python script to transform points and see the performance comparison.
+
+Point Transform using nanobind
+==============================
+
+This example demonstrates how to use nanobind to efficiently wrap an ISPC function that applies geometric transformations to 2D points. The example shows how to integrate high-performance ISPC vectorized code with Python's NumPy using nanobind bindings.
+The example includes:
+An ISPC implementation that applies geometric transformations to points:
+
+* Scaling on both x and y axes
+* Rotation around the origin
+* Translation with a configurable strength factor
+
+A C++ nanobind wrapper that:
+
+* Exposes the ISPC Transform struct as a native Python class
+* Creates proper bindings for the transformation function
+* Handles conversion between NumPy arrays and C arrays automatically
+* Provides efficient direct buffer access for pre-allocated arrays
+
+A Python test script that:
+
+* Creates and uses the Transform object
+* Allocates NumPy arrays for input and output data
+* Runs benchmarks comparing ISPC and NumPy implementations
+* Verifies the correctness of results
+
+Advantages over ctypes:
+
+* Type Safety: Nanobind provides compile-time type checking, unlike ctypes which is completely dynamic.
+* Better Performance: Nanobind has optimized data conversion paths, especially for NumPy arrays.
+* Memory Management: Nanobind handles memory management automatically and safely, preventing memory leaks.
+* Native Python Integration: The Transform struct is exposed as a proper Python class with attributes, making it more intuitive and Pythonic to use.
+* Better Error Handling: C++ exceptions are properly translated to Python exceptions, with meaningful error messages.
+* Simplified Array Handling: No need to manually extract pointers from NumPy arrays or manage strides - nanobind handles this transparently.

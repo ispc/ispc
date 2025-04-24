@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2024, Intel Corporation
+  Copyright (c) 2024-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -70,10 +70,14 @@ extern const char *const __avg_up_int16;
 extern const char *const __avg_up_int8;
 extern const char *const __avg_up_uint16;
 extern const char *const __avg_up_uint8;
-extern const char *const __count_leading_zeros_i32;
-extern const char *const __count_leading_zeros_i64;
-extern const char *const __count_trailing_zeros_i32;
-extern const char *const __count_trailing_zeros_i64;
+extern const char *const __count_leading_zeros_uniform_i32;
+extern const char *const __count_leading_zeros_uniform_i64;
+extern const char *const __count_trailing_zeros_uniform_i32;
+extern const char *const __count_trailing_zeros_uniform_i64;
+extern const char *const __count_leading_zeros_varying_i32;
+extern const char *const __count_leading_zeros_varying_i64;
+extern const char *const __count_trailing_zeros_varying_i32;
+extern const char *const __count_trailing_zeros_varying_i64;
 extern const char *const __delete_uniform_32rt;
 extern const char *const __delete_uniform_64rt;
 extern const char *const __delete_varying_32rt;
@@ -387,8 +391,16 @@ extern const char *const __scatter_factored_base_offsets64_i16;
 extern const char *const __scatter_factored_base_offsets64_i32;
 extern const char *const __scatter_factored_base_offsets64_i64;
 extern const char *const __scatter_factored_base_offsets64_i8;
+extern const char *const __sdiv_i8;
+extern const char *const __sdiv_i16;
+extern const char *const __sdiv_i32;
+extern const char *const __sdiv_i64;
 extern const char *const __set_ftz_daz_flags;
 extern const char *const __set_system_isa;
+extern const char *const __srem_i8;
+extern const char *const __srem_i16;
+extern const char *const __srem_i32;
+extern const char *const __srem_i64;
 extern const char *const __task_count;
 extern const char *const __task_count0;
 extern const char *const __task_count1;
@@ -397,6 +409,15 @@ extern const char *const __task_index;
 extern const char *const __task_index0;
 extern const char *const __task_index1;
 extern const char *const __task_index2;
+extern const char *const __terminate_now;
+extern const char *const __udiv_i8;
+extern const char *const __udiv_i16;
+extern const char *const __udiv_i32;
+extern const char *const __udiv_i64;
+extern const char *const __urem_i8;
+extern const char *const __urem_i16;
+extern const char *const __urem_i32;
+extern const char *const __urem_i64;
 extern const char *const __wasm_cmp_msk_eq;
 
 } // namespace builtin

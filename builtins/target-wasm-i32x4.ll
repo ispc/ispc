@@ -1,4 +1,4 @@
-;;  Copyright (c) 2020-2024, Intel Corporation
+;;  Copyright (c) 2020-2025, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -31,6 +31,77 @@ svml_stubs(double,d,WIDTH)
 define_avgs()
 saturation_arithmetic()
 halfTypeGenericImplementation()
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; various bitcasts from one type to another
+
+define <WIDTH x i16> @__intbits_varying_half(<WIDTH x half>) nounwind readnone alwaysinline {
+  %half_to_int16_bitcast = bitcast <WIDTH x half> %0 to <WIDTH x i16>
+  ret <WIDTH x i16> %half_to_int16_bitcast
+}
+
+define i16 @__intbits_uniform_half(half) nounwind readnone alwaysinline {
+  %half_to_int16_bitcast = bitcast half %0 to i16
+  ret i16 %half_to_int16_bitcast
+}
+
+define <WIDTH x i32> @__intbits_varying_float(<WIDTH x float>) nounwind readnone alwaysinline {
+  %float_to_int_bitcast = bitcast <WIDTH x float> %0 to <WIDTH x i32>
+  ret <WIDTH x i32> %float_to_int_bitcast
+}
+
+define i32 @__intbits_uniform_float(float) nounwind readnone alwaysinline {
+  %float_to_int_bitcast = bitcast float %0 to i32
+  ret i32 %float_to_int_bitcast
+}
+
+define <WIDTH x i64> @__intbits_varying_double(<WIDTH x double>) nounwind readnone alwaysinline {
+  %double_to_int_bitcast = bitcast <WIDTH x double> %0 to <WIDTH x i64>
+  ret <WIDTH x i64> %double_to_int_bitcast
+}
+
+define i64 @__intbits_uniform_double(double) nounwind readnone alwaysinline {
+  %double_to_int_bitcast = bitcast double %0 to i64
+  ret i64 %double_to_int_bitcast
+}
+
+define <WIDTH x half> @__halfbits_varying_int16(<WIDTH x i16>) nounwind readnone alwaysinline {
+  %int16_to_float16_bitcast = bitcast <WIDTH x i16> %0 to <WIDTH x half>
+  ret <WIDTH x half> %int16_to_float16_bitcast
+}
+
+define half @__halfbits_uniform_int16(i16) nounwind readnone alwaysinline {
+  %int16_to_float16_bitcast = bitcast i16 %0 to half
+  ret half %int16_to_float16_bitcast
+}
+
+define <WIDTH x float> @__floatbits_varying_int32(<WIDTH x i32>) nounwind readnone alwaysinline {
+  %int_to_float_bitcast = bitcast <WIDTH x i32> %0 to <WIDTH x float>
+  ret <WIDTH x float> %int_to_float_bitcast
+}
+
+define float @__floatbits_uniform_int32(i32) nounwind readnone alwaysinline {
+  %int_to_float_bitcast = bitcast i32 %0 to float
+  ret float %int_to_float_bitcast
+}
+
+define <WIDTH x double> @__doublebits_varying_int64(<WIDTH x i64>) nounwind readnone alwaysinline {
+  %int_to_double_bitcast = bitcast <WIDTH x i64> %0 to <WIDTH x double>
+  ret <WIDTH x double> %int_to_double_bitcast
+}
+
+define double @__doublebits_uniform_int64(i64) nounwind readnone alwaysinline {
+  %int_to_double_bitcast = bitcast i64 %0 to double
+  ret double %int_to_double_bitcast
+}
+
+define <WIDTH x float> @__undef_varying() nounwind readnone alwaysinline {
+  ret <WIDTH x float> undef
+}
+
+define float @__undef_uniform() nounwind readnone alwaysinline {
+  ret float undef
+}
 
 ;; rcp/rsqrt for double
 
@@ -280,6 +351,30 @@ define float @__min_uniform_float(float, float) nounwind readnone alwaysinline {
   ret float %r
 }
 
+define i8 @__min_uniform_int8(i8, i8) nounwind readnone alwaysinline {
+  %cmp = icmp slt i8 %0, %1
+  %r = select i1 %cmp, i8 %0, i8 %1
+  ret i8 %r
+}
+
+define i8 @__max_uniform_int8(i8, i8) nounwind readnone alwaysinline {
+  %cmp = icmp sgt i8 %0, %1
+  %r = select i1 %cmp, i8 %0, i8 %1
+  ret i8 %r
+}
+
+define i16 @__min_uniform_int16(i16, i16) nounwind readnone alwaysinline {
+  %cmp = icmp slt i16 %0, %1
+  %r = select i1 %cmp, i16 %0, i16 %1
+  ret i16 %r
+}
+
+define i16 @__max_uniform_int16(i16, i16) nounwind readnone alwaysinline {
+  %cmp = icmp sgt i16 %0, %1
+  %r = select i1 %cmp, i16 %0, i16 %1
+  ret i16 %r
+}
+
 define i32 @__min_uniform_int32(i32, i32) nounwind readnone alwaysinline {
   %cmp = icmp slt i32 %0, %1
   %r = select i1 %cmp, i32 %0, i32 %1
@@ -290,6 +385,30 @@ define i32 @__max_uniform_int32(i32, i32) nounwind readnone alwaysinline {
   %cmp = icmp sgt i32 %0, %1
   %r = select i1 %cmp, i32 %0, i32 %1
   ret i32 %r
+}
+
+define i8 @__min_uniform_uint8(i8, i8) nounwind readnone alwaysinline {
+  %cmp = icmp ult i8 %0, %1
+  %r = select i1 %cmp, i8 %0, i8 %1
+  ret i8 %r
+}
+
+define i8 @__max_uniform_uint8(i8, i8) nounwind readnone alwaysinline {
+  %cmp = icmp ugt i8 %0, %1
+  %r = select i1 %cmp, i8 %0, i8 %1
+  ret i8 %r
+}
+
+define i16 @__min_uniform_uint16(i16, i16) nounwind readnone alwaysinline {
+  %cmp = icmp ult i16 %0, %1
+  %r = select i1 %cmp, i16 %0, i16 %1
+  ret i16 %r
+}
+
+define i16 @__max_uniform_uint16(i16, i16) nounwind readnone alwaysinline {
+  %cmp = icmp ugt i16 %0, %1
+  %r = select i1 %cmp, i16 %0, i16 %1
+  ret i16 %r
 }
 
 define i32 @__min_uniform_uint32(i32, i32) nounwind readnone alwaysinline {
@@ -338,6 +457,54 @@ define double @__max_uniform_double(double, double) nounwind readnone alwaysinli
   %cmp = fcmp ogt double %0, %1
   %r = select i1 %cmp, double %0, double %1
   ret double %r
+}
+
+define <WIDTH x i8> @__min_varying_int8(<WIDTH x i8>, <WIDTH x i8>) nounwind readnone alwaysinline {
+  %m = icmp slt <WIDTH x i8> %0, %1
+  %r = select <WIDTH x i1> %m, <WIDTH x i8> %0, <WIDTH x i8> %1
+  ret <WIDTH x i8> %r
+}
+
+define <WIDTH x i8> @__max_varying_int8(<WIDTH x i8>, <WIDTH x i8>) nounwind readnone alwaysinline {
+  %m = icmp sgt <WIDTH x i8> %0, %1
+  %r = select <WIDTH x i1> %m, <WIDTH x i8> %0, <WIDTH x i8> %1
+  ret <WIDTH x i8> %r
+}
+
+define <WIDTH x i8> @__min_varying_uint8(<WIDTH x i8>, <WIDTH x i8>) nounwind readnone alwaysinline {
+  %m = icmp ult <WIDTH x i8> %0, %1
+  %r = select <WIDTH x i1> %m, <WIDTH x i8> %0, <WIDTH x i8> %1
+  ret <WIDTH x i8> %r
+}
+
+define <WIDTH x i8> @__max_varying_uint8(<WIDTH x i8>, <WIDTH x i8>) nounwind readnone alwaysinline {
+  %m = icmp ugt <WIDTH x i8> %0, %1
+  %r = select <WIDTH x i1> %m, <WIDTH x i8> %0, <WIDTH x i8> %1
+  ret <WIDTH x i8> %r
+}
+
+define <WIDTH x i16> @__min_varying_int16(<WIDTH x i16>, <WIDTH x i16>) nounwind readnone alwaysinline {
+  %m = icmp slt <WIDTH x i16> %0, %1
+  %r = select <WIDTH x i1> %m, <WIDTH x i16> %0, <WIDTH x i16> %1
+  ret <WIDTH x i16> %r
+}
+
+define <WIDTH x i16> @__max_varying_int16(<WIDTH x i16>, <WIDTH x i16>) nounwind readnone alwaysinline {
+  %m = icmp sgt <WIDTH x i16> %0, %1
+  %r = select <WIDTH x i1> %m, <WIDTH x i16> %0, <WIDTH x i16> %1
+  ret <WIDTH x i16> %r
+}
+
+define <WIDTH x i16> @__min_varying_uint16(<WIDTH x i16>, <WIDTH x i16>) nounwind readnone alwaysinline {
+  %m = icmp ult <WIDTH x i16> %0, %1
+  %r = select <WIDTH x i1> %m, <WIDTH x i16> %0, <WIDTH x i16> %1
+  ret <WIDTH x i16> %r
+}
+
+define <WIDTH x i16> @__max_varying_uint16(<WIDTH x i16>, <WIDTH x i16>) nounwind readnone alwaysinline {
+  %m = icmp ugt <WIDTH x i16> %0, %1
+  %r = select <WIDTH x i1> %m, <WIDTH x i16> %0, <WIDTH x i16> %1
+  ret <WIDTH x i16> %r
 }
 
 define <4 x i32> @__vselect_i32(<4 x i32>, <4 x i32> ,
@@ -491,7 +658,7 @@ gen_scatter(float)
 gen_scatter(i64)
 gen_scatter(double)
 
-packed_load_and_store(4)
+packed_load_and_store(FALSE)
 define_prefetches()
 popcnt()
 
@@ -572,6 +739,38 @@ define double @__reduce_min_double(<4 x double>) nounwind readnone {
 
 define double @__reduce_max_double(<4 x double>) nounwind readnone {
   reduce4(double, @__max_varying_double, @__max_uniform_double)
+}
+
+define i8 @__reduce_min_int8(<4 x i8>) nounwind readnone alwaysinline {
+  reduce4(i8, @__min_varying_int8, @__min_uniform_int8)
+}
+
+define i8 @__reduce_max_int8(<4 x i8>) nounwind readnone alwaysinline {
+  reduce4(i8, @__max_varying_int8, @__max_uniform_int8)
+}
+
+define i8 @__reduce_min_uint8(<4 x i8>) nounwind readnone alwaysinline {
+  reduce4(i8, @__min_varying_uint8, @__min_uniform_uint8)
+}
+
+define i8 @__reduce_max_uint8(<4 x i8>) nounwind readnone alwaysinline {
+  reduce4(i8, @__max_varying_uint8, @__max_uniform_uint8)
+}
+
+define i16 @__reduce_min_int16(<4 x i16>) nounwind readnone alwaysinline {
+  reduce4(i16, @__min_varying_int16, @__min_uniform_int16)
+}
+
+define i16 @__reduce_max_int16(<4 x i16>) nounwind readnone alwaysinline {
+  reduce4(i16, @__max_varying_int16, @__max_uniform_int16)
+}
+
+define i16 @__reduce_min_uint16(<4 x i16>) nounwind readnone alwaysinline {
+  reduce4(i16, @__min_varying_uint16, @__min_uniform_uint16)
+}
+
+define i16 @__reduce_max_uint16(<4 x i16>) nounwind readnone alwaysinline {
+  reduce4(i16, @__max_varying_uint16, @__max_uniform_uint16)
 }
 
 define i32 @__reduce_min_int32(<4 x i32>) nounwind readnone alwaysinline {

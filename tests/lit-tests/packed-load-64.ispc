@@ -10,6 +10,7 @@
 // RUN: %{ispc} %s --emit-asm --nowrap --target=avx512skx-x8 -o - | FileCheck %s
 
 // REQUIRES: X86_ENABLED
+// UNSUPPORTED: LLVM_21_0+
 
 // CHECK: kshiftlb
 // CHECK-NEXT: kshiftrb

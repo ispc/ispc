@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2024, Intel Corporation
+  Copyright (c) 2024-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -20,7 +20,6 @@
 #ifdef ISPC_XE_ENABLED
 #include <llvm/GenXIntrinsics/GenXIntrinsics.h>
 #endif
-#include <llvm/Target/TargetIntrinsicInfo.h>
 
 using namespace ispc;
 
@@ -30,6 +29,7 @@ enum class ISPCIntrinsics : unsigned {
     not_intrinsic = 0,
     atomicrmw,
     bitcast,
+    blend_store,
     concat,
     cmpxchg,
     extract,
@@ -56,6 +56,8 @@ static ISPCIntrinsics lLookupISPCInstrinsic(const std::string &name) {
     // These intrinsics are not overloaded.
     else if (name == "llvm.ispc.bitcast") {
         return ISPCIntrinsics::bitcast;
+    } else if (name == "llvm.ispc.blend_store") {
+        return ISPCIntrinsics::blend_store;
     } else if (name == "llvm.ispc.concat") {
         return ISPCIntrinsics::concat;
     } else if (name == "llvm.ispc.extract") {
@@ -232,40 +234,10 @@ static const Type *lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) 
         return AtomicType::VaryingInt1;
     }
 
-    // pointers to uniform
-    else if (t == LLVMTypes::Int8PointerType) {
-        return PointerType::GetUniform(intAsUnsigned ? AtomicType::UniformUInt8 : AtomicType::UniformInt8);
-    } else if (t == LLVMTypes::Int16PointerType) {
-        return PointerType::GetUniform(intAsUnsigned ? AtomicType::UniformUInt16 : AtomicType::UniformInt16);
-    } else if (t == LLVMTypes::Int32PointerType) {
-        return PointerType::GetUniform(intAsUnsigned ? AtomicType::UniformUInt32 : AtomicType::UniformInt32);
-    } else if (t == LLVMTypes::Int64PointerType) {
-        return PointerType::GetUniform(intAsUnsigned ? AtomicType::UniformUInt64 : AtomicType::UniformInt64);
-    } else if (t == LLVMTypes::Float16PointerType) {
-        return PointerType::GetUniform(AtomicType::UniformFloat16);
-    } else if (t == LLVMTypes::FloatPointerType) {
-        return PointerType::GetUniform(AtomicType::UniformFloat);
-    } else if (t == LLVMTypes::DoublePointerType) {
-        return PointerType::GetUniform(AtomicType::UniformDouble);
+    // pointer
+    else if (t == LLVMTypes::PtrType) {
+        return PointerType::GetUniform(AtomicType::UniformInt8);
     }
-
-    // pointers to varying
-    else if (t == LLVMTypes::Int8VectorPointerType) {
-        return PointerType::GetUniform(intAsUnsigned ? AtomicType::VaryingUInt8 : AtomicType::VaryingInt8);
-    } else if (t == LLVMTypes::Int16VectorPointerType) {
-        return PointerType::GetUniform(intAsUnsigned ? AtomicType::VaryingUInt16 : AtomicType::VaryingInt16);
-    } else if (t == LLVMTypes::Int32VectorPointerType) {
-        return PointerType::GetUniform(intAsUnsigned ? AtomicType::VaryingUInt32 : AtomicType::VaryingInt32);
-    } else if (t == LLVMTypes::Int64VectorPointerType) {
-        return PointerType::GetUniform(intAsUnsigned ? AtomicType::VaryingUInt64 : AtomicType::VaryingInt64);
-    } else if (t == LLVMTypes::Float16VectorPointerType) {
-        return PointerType::GetUniform(AtomicType::VaryingFloat16);
-    } else if (t == LLVMTypes::FloatVectorPointerType) {
-        return PointerType::GetUniform(AtomicType::VaryingFloat);
-    } else if (t == LLVMTypes::DoubleVectorPointerType) {
-        return PointerType::GetUniform(AtomicType::VaryingDouble);
-    }
-
     // vector of pointers
     else if (t == LLVMTypes::PtrVectorType) {
         return AtomicType::VaryingUInt64;
@@ -345,9 +317,8 @@ static llvm::VectorType *lGetDoubleWidthVectorType(llvm::Type *type) {
     return llvm::VectorType::get(vt->getElementType(), vectorWidth * 2, false);
 }
 
-static llvm::Function *lGetISPCIntrinsicsFuncDecl(llvm::Module *M, std::string origName, ISPCIntrinsics ID,
+static llvm::Function *lGetISPCIntrinsicsFuncDecl(llvm::Module *M, std::string name, ISPCIntrinsics ID,
                                                   std::vector<const Type *> &argTypes) {
-    std::string name = {origName};
     llvm::Type *retType = nullptr;
     std::vector<llvm::Type *> TYs;
     for (const Type *type : argTypes) {
@@ -368,6 +339,12 @@ static llvm::Function *lGetISPCIntrinsicsFuncDecl(llvm::Module *M, std::string o
         Assert(TYs.size() == 2 && TYs[0]->getPrimitiveSizeInBits() == TYs[1]->getPrimitiveSizeInBits());
         retType = TYs[1];
         name += "." + lGetMangledTypeStr(TYs[0], hasUnnamedType) + "." + lGetMangledTypeStr(TYs[1], hasUnnamedType);
+        break;
+    }
+    case ISPCIntrinsics::blend_store: {
+        Assert(TYs.size() == 3);
+        retType = llvm::Type::getVoidTy(*g->ctx);
+        name += "." + lGetMangledTypeStr(TYs[0], hasUnnamedType);
         break;
     }
     case ISPCIntrinsics::concat: {
@@ -622,12 +599,8 @@ static llvm::Function *lGetIntrinsicDeclaration(llvm::Module *module, const std:
     }
 #endif // ISPC_XE_ENABLED
     if (!g->target->isXeTarget()) {
-        llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
-        const llvm::TargetIntrinsicInfo *TII = targetMachine->getIntrinsicInfo();
         llvm::Intrinsic::ID ID = lLookupIntrinsicID(name);
-        if (ID == llvm::Intrinsic::not_intrinsic && TII) {
-            ID = static_cast<llvm::Intrinsic::ID>(TII->lookupName(llvm::StringRef(name)));
-        }
+
         if (ID == llvm::Intrinsic::not_intrinsic) {
             // Check if it is an ISPC intrinsic
             ISPCIntrinsics IID = lLookupISPCInstrinsic(name);

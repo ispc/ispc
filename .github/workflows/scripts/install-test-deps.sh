@@ -22,6 +22,9 @@ do
   fi
 done
 
+# Install nanobind for examples build
+pip install nanobind
+
 find /usr -name cdefs.h || echo "Find errors were ignored"
 # Remark about user agent: it might or might now work with default user agent, but
 # from time to time the settings are changed and browser-like user agent is required to make it work.
@@ -37,7 +40,7 @@ fi
 
 tar xf ispc-trunk-linux.tar.gz
 
-if [ -v INSTALL_COMPUTE_RUNTIME ]; then
+if [ -n INSTALL_COMPUTE_RUNTIME ]; then
     echo "install Compute Runtime"
     wget -qO - https://repositories.intel.com/graphics/intel-graphics.key | sudo gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg
     echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/graphics/ubuntu jammy unified' > /tmp/intel.gpu.focal.list

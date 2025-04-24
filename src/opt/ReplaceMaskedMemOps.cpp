@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2024, Intel Corporation
+  Copyright (c) 2024-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -163,10 +163,9 @@ llvm::Value *lMaskedMergeVectors(llvm::IRBuilder<> &B, llvm::Value *firstVector,
 }
 
 llvm::Value *lBitcastPointerType(llvm::IRBuilder<> &B, llvm::Value *ptr, llvm::Value *value) {
-    auto *vecType = llvm::dyn_cast<llvm::VectorType>(value->getType());
     llvm::PointerType *ptrType = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
-    Assert(vecType && ptrType);
-    auto *newPtrType = llvm::PointerType::get(vecType, ptrType->getAddressSpace());
+    Assert(ptrType);
+    auto *newPtrType = llvm::PointerType::get(*g->ctx, ptrType->getAddressSpace());
     // If ptr is opaque pointer then no-op is generated here.
     return B.CreateBitCast(ptr, newPtrType);
 }
@@ -210,7 +209,8 @@ void lReplaceMaskedLoad(llvm::IRBuilder<> &B, llvm::CallInst *CI, unsigned SubVe
     Assert(vecType);
     auto *subVecType = llvm::VectorType::get(vecType->getElementType(), SubVectorLength, false);
     llvm::PointerType *ptrType = llvm::dyn_cast<llvm::PointerType>(ptr->getType());
-    ptr = B.CreateBitCast(ptr, llvm::PointerType::get(subVecType, ptrType->getAddressSpace()));
+    Assert(ptrType);
+    ptr = B.CreateBitCast(ptr, llvm::PointerType::get(*g->ctx, ptrType->getAddressSpace()));
 
     llvm::LoadInst *subVec = B.CreateLoad(subVecType, ptr, llvm::Twine(origName) + ".part");
     // It is important to preserve the alignment of the original masked load.

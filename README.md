@@ -99,41 +99,6 @@ Linux users can install `ispc` using the Snap Store:
 snap install ispc
 ```
 
-### Intel® oneAPI Distribution
-
-`ispc` is distributed as part of the Intel® oneAPI. You can install it from the
-corresponding repositories for DEB-based and RPM-based Linux distributions.
-Follow the instructions below:
-
-DEB-based Linux (Ubuntu, Debian, etc.)
-First, download the key to the system keyring:
-
-```bash
-wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
-```
-
-Next, add the signed entry to apt sources and configure the APT client to use
-the Intel repository:
-
-```bash
-echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
-```
-
-Update the package list and install `ispc`:
-
-```bash
-sudo apt-get update
-sudo apt-get install intel-oneapi-ispc
-```
-
-The installation location is inside the `/opt/intel/` directory. To use `ispc`,
-either use the full path `/opt/intel/oneapi/ispc/latest/bin/ispc` or add the
-`bin`  directory to your `PATH`:
-
-```bash
-source /opt/intel/oneapi/ispc/latest/env/vars.sh
-```
-
 ### Other Package Managers
 
 Thanks to community support, `ispc` is also available through a variety of
@@ -152,6 +117,28 @@ Moreover, `ispc` depends on run-time components of Visual C++ (DLLs). These
 libraries can be installed with Microsoft Visual C++ Redistributable package.
 Instruction to install them can be found
 [here](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist).
+
+## Development Guide
+
+If you're interested in contributing to `ispc` or building it from source,
+this section will help you get started.
+
+### GitHub Codespaces
+
+The fastest way to get a development environment set up is through GitHub
+Codespaces. This provides a fully configured environment in the cloud, with all
+dependencies pre-installed. Codespaces gives you a browser-based development
+environment with everything you need to build, test, and debug ISPC. Click the
+following button to open Codespaces with configured `ispc`:
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=1931356)
+
+### Building From Source
+
+For detailed instructions on how to build ISPC from source on different
+platforms, please refer to our
+[ISPC Development Guide](https://github.com/ispc/ispc/wiki/ISPC-Development-Guide)
+for build and test instructions.
 
 ## Additional Resources
 

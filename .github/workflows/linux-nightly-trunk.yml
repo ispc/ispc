@@ -21,11 +21,32 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  SDE_MIRROR_ID: 831748
-  SDE_TAR_NAME: sde-external-9.44.0-2024-08-22
+  SDE_MIRROR_ID: 843185
+  SDE_TAR_NAME: sde-external-9.48.0-2024-11-25
   USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
 
 jobs:
+  define-targets:
+    runs-on: ubuntu-latest
+    outputs:
+      targets: >-
+        ["generic-i1x4", "generic-i1x8", "generic-i1x16", "generic-i1x32",
+         "generic-i8x16", "generic-i8x32",
+         "generic-i16x8", "generic-i16x16",
+         "generic-i32x4", "generic-i32x8", "generic-i32x16",
+         "generic-i64x4",
+         "sse2-i32x4", "sse2-i32x8",
+         "sse4-i8x16", "sse4-i16x8", "sse4-i32x4", "sse4-i32x8",
+         "avx1-i32x4", "avx1-i32x8", "avx1-i32x16", "avx1-i64x4",
+         "avx2-i8x32", "avx2-i16x16", "avx2-i32x4", "avx2-i32x8", "avx2-i32x16", "avx2-i64x4",
+         "avx2vnni-i32x4", "avx2vnni-i32x8", "avx2vnni-i32x16",
+         "avx512skx-x4", "avx512skx-x8", "avx512skx-x16", "avx512skx-x64", "avx512skx-x32",
+         "avx512icl-x4", "avx512icl-x8", "avx512icl-x16", "avx512icl-x64", "avx512icl-x32",
+         "avx512spr-x4", "avx512spr-x8", "avx512spr-x16", "avx512spr-x64", "avx512spr-x32",
+         "avx10.2-x4", "avx10.2-x8", "avx10.2-x16", "avx10.2-x64", "avx10.2-x32"]
+    steps:
+      - run: echo "Defining targets"
+
   linux-build-llvm-trunk:
     runs-on: ubuntu-22.04
 
@@ -72,7 +93,7 @@ jobs:
         submodules: true
 
     - name: Download package
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+      uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
       with:
         name: llvm_trunk_linux
 
@@ -100,91 +121,16 @@ jobs:
         path: build/ispc-trunk-linux.tar.gz
 
   linux-test-llvm-trunk:
-    needs: [linux-build-ispc-llvm-trunk]
-    runs-on: ubuntu-22.04
-    continue-on-error: false
+    needs: [define-targets, linux-build-ispc-llvm-trunk]
     strategy:
       fail-fast: false
       matrix:
         arch: [x86, x86-64]
-        target: [sse2-i32x4, sse2-i32x8,
-                 sse4-i8x16, sse4-i16x8, sse4-i32x4, sse4-i32x8,
-                 avx1-i32x4, avx1-i32x8, avx1-i32x16, avx1-i64x4,
-                 avx2-i8x32, avx2-i16x16, avx2-i32x4, avx2-i32x8, avx2-i32x16, avx2-i64x4,
-                 avx2vnni-i32x4, avx2vnni-i32x8, avx2vnni-i32x16,
-                 avx512skx-x4, avx512skx-x8, avx512skx-x16, avx512skx-x64, avx512skx-x32,
-                 avx512icl-x4, avx512icl-x8, avx512icl-x16, avx512icl-x64, avx512icl-x32,
-                 avx512spr-x4, avx512spr-x8, avx512spr-x16, avx512spr-x64, avx512spr-x32]
-        # See issue #2818 for more deatils. It's SDE problem running on AMD runner.
-        exclude:
-          - arch: x86
-            target: "avx2vnni-i32x4"
-          - arch: x86
-            target: "avx2vnni-i32x8"
-          - arch: x86
-            target: "avx2vnni-i32x16"
-          - arch: x86
-            target: "avx512skx-x4"
-          - arch: x86
-            target: "avx512skx-x8"
-          - arch: x86
-            target: "avx512skx-x16"
-          - arch: x86
-            target: "avx512skx-x32"
-          - arch: x86
-            target: "avx512skx-x64"
-          - arch: x86
-            target: "avx512icl-x4"
-          - arch: x86
-            target: "avx512icl-x8"
-          - arch: x86
-            target: "avx512icl-x16"
-          - arch: x86
-            target: "avx512icl-x32"
-          - arch: x86
-            target: "avx512icl-x64"
-          - arch: x86
-            target: "avx512spr-x4"
-          - arch: x86
-            target: "avx512spr-x8"
-          - arch: x86
-            target: "avx512spr-x16"
-          - arch: x86
-            target: "avx512spr-x32"
-          - arch: x86
-            target: "avx512spr-x64"
-
-    steps:
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-    - name: Download package
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-      with:
-        name: ispc_llvm_trunk_linux
-
-    - name: Install dependencies and unpack artifacts
-      run: |
-        .github/workflows/scripts/install-test-deps.sh
-
-    - name: Check environment
-      run: |
-        cat /proc/cpuinfo
-
-    - name: Running tests
-      run: |
-        echo PATH="$PATH"
-        ./scripts/alloy.py -r --only="stability ${{ matrix.arch }} current -O0 -O1 -O2" --only-targets="${{ matrix.target }}" --time --update-errors=FP
-
-    - name: Upload fail_db.txt
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-      if: failure()
-      with:
-        name: fail_db.${{matrix.target}}.txt
-        path: tests/fail_db.txt
-
-    - name: Check
-      run: |
-        # Print fails to the log.
-        git diff
-        # Exit with error code if there are fails.
-        [ -z "$(git diff)" ]
-
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: linux
+      architecture: ${{ matrix.arch }}
+      llvm_version: trunk
+      artifact_name: ispc_llvm_trunk_linux
+      targets: ${{ needs.define-targets.outputs.targets }}
+      optsets: -O0 -O1 -O2

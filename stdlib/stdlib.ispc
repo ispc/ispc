@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -73,29 +73,51 @@ __declspec(safe) static inline float broadcast(float v, uniform int i) { return 
 
 __declspec(safe) static inline int8 broadcast(int8 v, uniform int i) { return __broadcast_i8(v, i); }
 
+__declspec(safe) static inline unsigned int8 broadcast(unsigned int8 v, uniform int i) { return __broadcast_i8(v, i); }
+
 __declspec(safe) static inline int16 broadcast(int16 v, uniform int i) { return __broadcast_i16(v, i); }
+
+__declspec(safe) static inline unsigned int16 broadcast(unsigned int16 v, uniform int i) {
+    return __broadcast_i16(v, i);
+}
 
 __declspec(safe) static inline float16 broadcast(float16 v, uniform int i) { return __broadcast_half(v, i); }
 
 __declspec(safe) static inline int32 broadcast(int32 v, uniform int i) { return __broadcast_i32(v, i); }
 
+__declspec(safe) static inline unsigned int32 broadcast(unsigned int32 v, uniform int i) {
+    return __broadcast_i32(v, i);
+}
+
 __declspec(safe) static inline double broadcast(double v, uniform int i) { return __broadcast_double(v, i); }
 
 __declspec(safe) static inline int64 broadcast(int64 v, uniform int i) { return __broadcast_i64(v, i); }
+
+__declspec(safe) static inline unsigned int64 broadcast(unsigned int64 v, uniform int i) {
+    return __broadcast_i64(v, i);
+}
 
 __declspec(safe) static inline float rotate(float v, uniform int i) { return __rotate_float(v, i); }
 
 __declspec(safe) static inline int8 rotate(int8 v, uniform int i) { return __rotate_i8(v, i); }
 
+__declspec(safe) static inline unsigned int8 rotate(unsigned int8 v, uniform int i) { return __rotate_i8(v, i); }
+
 __declspec(safe) static inline int16 rotate(int16 v, uniform int i) { return __rotate_i16(v, i); }
+
+__declspec(safe) static inline unsigned int16 rotate(unsigned int16 v, uniform int i) { return __rotate_i16(v, i); }
 
 __declspec(safe) static inline float16 rotate(float16 v, uniform int i) { return __rotate_half(v, i); }
 
 __declspec(safe) static inline int32 rotate(int32 v, uniform int i) { return __rotate_i32(v, i); }
 
+__declspec(safe) static inline unsigned int32 rotate(unsigned int32 v, uniform int i) { return __rotate_i32(v, i); }
+
 __declspec(safe) static inline double rotate(double v, uniform int i) { return __rotate_double(v, i); }
 
 __declspec(safe) static inline int64 rotate(int64 v, uniform int i) { return __rotate_i64(v, i); }
+
+__declspec(safe) static inline unsigned int64 rotate(unsigned int64 v, uniform int i) { return __rotate_i64(v, i); }
 
 __declspec(safe) static inline float shift(float v, uniform int i) {
     varying float result;
@@ -109,8 +131,20 @@ __declspec(safe) static inline int8 shift(int8 v, uniform int i) {
     return result;
 }
 
+__declspec(safe) static inline unsigned int8 shift(unsigned int8 v, uniform int i) {
+    varying unsigned int8 result;
+    unmasked { result = __shift_i8(v, i); }
+    return result;
+}
+
 __declspec(safe) static inline int16 shift(int16 v, uniform int i) {
     varying int16 result;
+    unmasked { result = __shift_i16(v, i); }
+    return result;
+}
+
+__declspec(safe) static inline unsigned int16 shift(unsigned int16 v, uniform int i) {
+    varying unsigned int16 result;
     unmasked { result = __shift_i16(v, i); }
     return result;
 }
@@ -127,6 +161,12 @@ __declspec(safe) static inline int32 shift(int32 v, uniform int i) {
     return result;
 }
 
+__declspec(safe) static inline unsigned int32 shift(unsigned int32 v, uniform int i) {
+    varying unsigned int32 result;
+    unmasked { result = __shift_i32(v, i); }
+    return result;
+}
+
 __declspec(safe) static inline double shift(double v, uniform int i) {
     varying double result;
     unmasked { result = __shift_double(v, i); }
@@ -139,33 +179,63 @@ __declspec(safe) static inline int64 shift(int64 v, uniform int i) {
     return result;
 }
 
+__declspec(safe) static inline unsigned int64 shift(unsigned int64 v, uniform int i) {
+    varying unsigned int64 result;
+    unmasked { result = __shift_i64(v, i); }
+    return result;
+}
+
 __declspec(safe) static inline float shuffle(float v, int i) { return __shuffle_float(v, i); }
 
 __declspec(safe) static inline int8 shuffle(int8 v, int i) { return __shuffle_i8(v, i); }
 
+__declspec(safe) static inline unsigned int8 shuffle(unsigned int8 v, int i) { return __shuffle_i8(v, i); }
+
 __declspec(safe) static inline int16 shuffle(int16 v, int i) { return __shuffle_i16(v, i); }
+
+__declspec(safe) static inline unsigned int16 shuffle(unsigned int16 v, int i) { return __shuffle_i16(v, i); }
 
 __declspec(safe) static inline float16 shuffle(float16 v, int i) { return __shuffle_half(v, i); }
 
 __declspec(safe) static inline int32 shuffle(int32 v, int i) { return __shuffle_i32(v, i); }
 
+__declspec(safe) static inline unsigned int32 shuffle(unsigned int32 v, int i) { return __shuffle_i32(v, i); }
+
 __declspec(safe) static inline double shuffle(double v, int i) { return __shuffle_double(v, i); }
 
 __declspec(safe) static inline int64 shuffle(int64 v, int i) { return __shuffle_i64(v, i); }
+
+__declspec(safe) static inline unsigned int64 shuffle(unsigned int64 v, int i) { return __shuffle_i64(v, i); }
 
 __declspec(safe) static inline float shuffle(float v0, float v1, int i) { return __shuffle2_float(v0, v1, i); }
 
 __declspec(safe) static inline int8 shuffle(int8 v0, int8 v1, int i) { return __shuffle2_i8(v0, v1, i); }
 
+__declspec(safe) static inline unsigned int8 shuffle(unsigned int8 v0, unsigned int8 v1, int i) {
+    return __shuffle2_i8(v0, v1, i);
+}
+
 __declspec(safe) static inline int16 shuffle(int16 v0, int16 v1, int i) { return __shuffle2_i16(v0, v1, i); }
+
+__declspec(safe) static inline unsigned int16 shuffle(unsigned int16 v0, unsigned int16 v1, int i) {
+    return __shuffle2_i16(v0, v1, i);
+}
 
 __declspec(safe) static inline float16 shuffle(float16 v0, float16 v1, int i) { return __shuffle2_half(v0, v1, i); }
 
 __declspec(safe) static inline int32 shuffle(int32 v0, int32 v1, int i) { return __shuffle2_i32(v0, v1, i); }
 
+__declspec(safe) static inline unsigned int32 shuffle(unsigned int32 v0, unsigned int32 v1, int i) {
+    return __shuffle2_i32(v0, v1, i);
+}
+
 __declspec(safe) static inline double shuffle(double v0, double v1, int i) { return __shuffle2_double(v0, v1, i); }
 
 __declspec(safe) static inline int64 shuffle(int64 v0, int64 v1, int i) { return __shuffle2_i64(v0, v1, i); }
+
+__declspec(safe) static inline unsigned int64 shuffle(unsigned int64 v0, unsigned int64 v1, int i) {
+    return __shuffle2_i64(v0, v1, i);
+}
 
 // x[i]
 __declspec(safe, cost1) static inline uniform float extract(float x, uniform int i) {
@@ -532,91 +602,111 @@ static inline void memset64(void *varying ptr, int8 val, int64 count) {
 // count leading/trailing zeros
 
 __declspec(safe, cost1) static inline uniform unsigned int32 count_leading_zeros(uniform unsigned int32 v) {
-    return __count_leading_zeros_i32(v);
+    return __count_leading_zeros_uniform_i32(v);
 }
 
 __declspec(safe, cost1) static inline uniform unsigned int64 count_leading_zeros(uniform unsigned int64 v) {
-    return __count_leading_zeros_i64(v);
+    return __count_leading_zeros_uniform_i64(v);
 }
 
 __declspec(safe, cost1) static inline uniform unsigned int32 count_trailing_zeros(uniform unsigned int32 v) {
-    return __count_trailing_zeros_i32(v);
+    return __count_trailing_zeros_uniform_i32(v);
 }
 
 __declspec(safe, cost1) static inline uniform unsigned int64 count_trailing_zeros(uniform unsigned int64 v) {
-    return __count_trailing_zeros_i64(v);
+    return __count_trailing_zeros_uniform_i64(v);
 }
 
 __declspec(safe, cost1) static inline uniform int32 count_leading_zeros(uniform int32 v) {
-    return __count_leading_zeros_i32(v);
+    return __count_leading_zeros_uniform_i32(v);
 }
 
 __declspec(safe, cost1) static inline uniform int64 count_leading_zeros(uniform int64 v) {
-    return __count_leading_zeros_i64(v);
+    return __count_leading_zeros_uniform_i64(v);
 }
 
 __declspec(safe, cost1) static inline uniform int32 count_trailing_zeros(uniform int32 v) {
-    return __count_trailing_zeros_i32(v);
+    return __count_trailing_zeros_uniform_i32(v);
 }
 
 __declspec(safe, cost1) static inline uniform int64 count_trailing_zeros(uniform int64 v) {
-    return __count_trailing_zeros_i64(v);
+    return __count_trailing_zeros_uniform_i64(v);
 }
 
 __declspec(safe) static inline unsigned int32 count_leading_zeros(unsigned int32 v) {
-    unsigned int32 r;
-    for (uniform int i = 0; i < programCount; ++i)
-        r = insert(r, i, (uniform unsigned int32)__count_leading_zeros_i32(extract(v, i)));
-    return r;
+    if (__have_conflict_detection) {
+        return __count_leading_zeros_varying_i32(v);
+    } else {
+        unsigned int32 r;
+        for (uniform int i = 0; i < programCount; ++i)
+            r = insert(r, i, (uniform unsigned int32)__count_leading_zeros_uniform_i32(extract(v, i)));
+        return r;
+    }
 }
 
 __declspec(safe) static inline unsigned int64 count_leading_zeros(unsigned int64 v) {
-    unsigned int64 r;
-    for (uniform int i = 0; i < programCount; ++i)
-        r = insert(r, i, (uniform unsigned int64)__count_leading_zeros_i64(extract(v, i)));
-    return r;
+    if (__have_conflict_detection) {
+        return __count_leading_zeros_varying_i64(v);
+    } else {
+        unsigned int64 r;
+        for (uniform int i = 0; i < programCount; ++i)
+            r = insert(r, i, (uniform unsigned int64)__count_leading_zeros_uniform_i64(extract(v, i)));
+        return r;
+    }
 }
 
 __declspec(safe) static inline unsigned int32 count_trailing_zeros(unsigned int32 v) {
-    unsigned int32 r;
-    for (uniform int i = 0; i < programCount; ++i)
-        r = insert(r, i, (uniform unsigned int32)__count_trailing_zeros_i32(extract(v, i)));
-    return r;
+    // Using the vector LLVM's cttz intrinsic is more efficient than
+    // counting trailing zeros in a loop. However, it is not true for ctlz -
+    // a loop of uniform calculations performs better than vector LLVM's ctlz intrinsic.
+    // https://github.com/llvm/llvm-project/issues/124993
+    return __count_trailing_zeros_varying_i32(v);
 }
 
 __declspec(safe) static inline unsigned int64 count_trailing_zeros(unsigned int64 v) {
-    unsigned int64 r;
-    for (uniform int i = 0; i < programCount; ++i)
-        r = insert(r, i, (uniform unsigned int64)__count_trailing_zeros_i64(extract(v, i)));
-    return r;
+    // Using the vector LLVM's cttz intrinsic is more efficient than
+    // counting trailing zeros in a loop. However, it is not true for ctlz -
+    // a loop of uniform calculations performs better than vector LLVM's ctlz intrinsic.
+    // https://github.com/llvm/llvm-project/issues/124993
+    return __count_trailing_zeros_varying_i64(v);
 }
 
 __declspec(safe) static inline int32 count_leading_zeros(int32 v) {
-    int32 r;
-    for (uniform int i = 0; i < programCount; ++i)
-        r = insert(r, i, __count_leading_zeros_i32(extract(v, i)));
-    return r;
+    if (__have_conflict_detection) {
+        return __count_leading_zeros_varying_i32(v);
+    } else {
+        int32 r;
+        for (uniform int i = 0; i < programCount; ++i)
+            r = insert(r, i, __count_leading_zeros_uniform_i32(extract(v, i)));
+        return r;
+    }
 }
 
 __declspec(safe) static inline int64 count_leading_zeros(int64 v) {
-    int64 r;
-    for (uniform int i = 0; i < programCount; ++i)
-        r = insert(r, i, __count_leading_zeros_i64(extract(v, i)));
-    return r;
+    if (__have_conflict_detection) {
+        return __count_leading_zeros_varying_i64(v);
+    } else {
+        int64 r;
+        for (uniform int i = 0; i < programCount; ++i)
+            r = insert(r, i, __count_leading_zeros_uniform_i64(extract(v, i)));
+        return r;
+    }
 }
 
 __declspec(safe) static inline int32 count_trailing_zeros(int32 v) {
-    int32 r;
-    for (uniform int i = 0; i < programCount; ++i)
-        r = insert(r, i, __count_trailing_zeros_i32(extract(v, i)));
-    return r;
+    // Using the vector LLVM's cttz intrinsic is more efficient than
+    // counting trailing zeros in a loop. However, it is not true for ctlz -
+    // a loop of uniform calculations performs better than vector LLVM's ctlz intrinsic.
+    // https://github.com/llvm/llvm-project/issues/124993
+    return __count_trailing_zeros_varying_i32(v);
 }
 
 __declspec(safe) static inline int64 count_trailing_zeros(int64 v) {
-    int64 r;
-    for (uniform int i = 0; i < programCount; ++i)
-        r = insert(r, i, __count_trailing_zeros_i64(extract(v, i)));
-    return r;
+    // Using the vector LLVM's cttz intrinsic is more efficient than
+    // counting trailing zeros in a loop. However, it is not true for ctlz -
+    // a loop of uniform calculations performs better than vector LLVM's ctlz intrinsic.
+    // https://github.com/llvm/llvm-project/issues/124993
+    return __count_trailing_zeros_varying_i64(v);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -954,14 +1044,62 @@ __declspec(safe, cost1) static inline uniform double select(uniform bool cond, u
 
 __declspec(safe) static inline uniform int16 reduce_add(int8 x) { return __reduce_add_int8(__mask ? x : (int8)0); }
 
+__declspec(safe) static inline uniform int8 reduce_min(int8 v) {
+    // Set values for non-running lanes to the maximum int8 value so
+    // they don't affect the result.
+    return __reduce_min_int8(__mask ? v : INT8_MAX);
+}
+
+__declspec(safe) static inline uniform int8 reduce_max(int8 v) {
+    // Set values for non-running lanes to the minimum int8 value so
+    // they don't affect the result.
+    return __reduce_max_int8(__mask ? v : INT8_MIN);
+}
+
 __declspec(safe) static inline uniform unsigned int16 reduce_add(unsigned int8 x) {
     return __reduce_add_int8(__mask ? x : (int8)0);
 }
 
+__declspec(safe) static inline uniform unsigned int8 reduce_min(unsigned int8 v) {
+    // Set values for non-running lanes to the maximum uint8 value so
+    // they don't affect the result.
+    return __reduce_min_uint8(__mask ? v : UINT8_MAX);
+}
+
+__declspec(safe) static inline uniform unsigned int8 reduce_max(unsigned int8 v) {
+    // Set values for non-running lanes to zero so they don't affect the
+    // result.
+    return __reduce_max_uint8(__mask ? v : 0);
+}
+
 __declspec(safe) static inline uniform int32 reduce_add(int16 x) { return __reduce_add_int16(__mask ? x : (int16)0); }
+
+__declspec(safe) static inline uniform int16 reduce_min(int16 v) {
+    // Set values for non-running lanes to the maximum int8 value so
+    // they don't affect the result.
+    return __reduce_min_int16(__mask ? v : INT16_MAX);
+}
+
+__declspec(safe) static inline uniform int16 reduce_max(int16 v) {
+    // Set values for non-running lanes to the minimum int8 value so
+    // they don't affect the result.
+    return __reduce_max_int16(__mask ? v : INT16_MIN);
+}
 
 __declspec(safe) static inline uniform unsigned int32 reduce_add(unsigned int16 x) {
     return __reduce_add_int16(__mask ? x : (int16)0);
+}
+
+__declspec(safe) static inline uniform unsigned int16 reduce_min(unsigned int16 v) {
+    // Set values for non-running lanes to the maximum uint8 value so
+    // they don't affect the result.
+    return __reduce_min_uint16(__mask ? v : UINT16_MAX);
+}
+
+__declspec(safe) static inline uniform unsigned int16 reduce_max(unsigned int16 v) {
+    // Set values for non-running lanes to zero so they don't affect the
+    // result.
+    return __reduce_max_uint16(__mask ? v : 0);
 }
 
 __declspec(safe) static inline uniform float16 reduce_add(float16 x) {
@@ -1030,15 +1168,13 @@ __declspec(safe) static inline uniform int64 reduce_add(int32 x) {
 __declspec(safe) static inline uniform int reduce_min(int v) {
     // Set values for non-running lanes to the maximum integer value so
     // they don't affect the result.
-    int int_max = 0x7fffffff;
-    return __reduce_min_int32(__mask ? v : int_max);
+    return __reduce_min_int32(__mask ? v : INT32_MAX);
 }
 
 __declspec(safe) static inline uniform int reduce_max(int v) {
     // Set values for non-running lanes to the minimum integer value so
     // they don't affect the result.
-    int int_min = 0x80000000;
-    return __reduce_max_int32(__mask ? v : int_min);
+    return __reduce_max_int32(__mask ? v : INT32_MIN);
 }
 
 __declspec(safe) static inline uniform unsigned int64 reduce_add(unsigned int32 x) {
@@ -1050,8 +1186,7 @@ __declspec(safe) static inline uniform unsigned int64 reduce_add(unsigned int32 
 __declspec(safe) static inline uniform unsigned int reduce_min(unsigned int v) {
     // Set values for non-running lanes to the maximum unsigned integer
     // value so they don't affect the result.
-    unsigned int uint_max = 0xffffffff;
-    return __reduce_min_uint32(__mask ? v : uint_max);
+    return __reduce_min_uint32(__mask ? v : UINT32_MAX);
 }
 
 __declspec(safe) static inline uniform unsigned int reduce_max(unsigned int v) {
@@ -1093,15 +1228,13 @@ __declspec(safe) static inline uniform int64 reduce_add(int64 x) {
 __declspec(safe) static inline uniform int64 reduce_min(int64 v) {
     // Set values for non-running lanes to the maximum integer value so
     // they don't affect the result.
-    int64 int_max = 0x7fffffffffffffff;
-    return __reduce_min_int64(__mask ? v : int_max);
+    return __reduce_min_int64(__mask ? v : INT64_MAX);
 }
 
 __declspec(safe) static inline uniform int64 reduce_max(int64 v) {
     // Set values for non-running lanes to the minimum integer value so
     // they don't affect the result.
-    int64 int_min = 0x8000000000000000;
-    return __reduce_max_int64(__mask ? v : int_min);
+    return __reduce_max_int64(__mask ? v : INT64_MIN);
 }
 
 __declspec(safe) static inline uniform unsigned int64 reduce_add(unsigned int64 x) {
@@ -1113,8 +1246,7 @@ __declspec(safe) static inline uniform unsigned int64 reduce_add(unsigned int64 
 __declspec(safe) static inline uniform unsigned int64 reduce_min(unsigned int64 v) {
     // Set values for non-running lanes to the maximum unsigned integer
     // value so they don't affect the result.
-    unsigned int64 uint_max = 0xffffffffffffffff;
-    return __reduce_min_uint64(__mask ? v : uint_max);
+    return __reduce_min_uint64(__mask ? v : UINT64_MAX);
 }
 
 __declspec(safe) static inline uniform unsigned int64 reduce_max(unsigned int64 v) {
@@ -1133,6 +1265,10 @@ __declspec(safe) static inline uniform unsigned int64 reduce_max(unsigned int64 
     }
 
 REDUCE_EQUAL(float16, half, IntMaskType)
+REDUCE_EQUAL(int8, int8, IntMaskType)
+REDUCE_EQUAL(unsigned int8, int8, UIntMaskType)
+REDUCE_EQUAL(int16, int16, IntMaskType)
+REDUCE_EQUAL(unsigned int16, int16, UIntMaskType)
 REDUCE_EQUAL(int32, int32, IntMaskType)
 REDUCE_EQUAL(unsigned int32, int32, UIntMaskType)
 REDUCE_EQUAL(float, float, IntMaskType)
@@ -1141,6 +1277,18 @@ REDUCE_EQUAL(unsigned int64, int64, UIntMaskType)
 REDUCE_EQUAL(double, double, IntMaskType)
 
 static float16 exclusive_scan_add(float16 v) { return __exclusive_scan_add_half(v, __mask); }
+
+static int8 exclusive_scan_add(int8 v) { return __exclusive_scan_add_i8(v, (IntMaskType)__mask); }
+
+static unsigned int8 exclusive_scan_add(unsigned int8 v) {
+    return __exclusive_scan_add_i8((int8)v, (IntMaskType)__mask);
+}
+
+static int16 exclusive_scan_add(int16 v) { return __exclusive_scan_add_i16(v, (IntMaskType)__mask); }
+
+static unsigned int16 exclusive_scan_add(unsigned int16 v) {
+    return __exclusive_scan_add_i16((int16)v, (IntMaskType)__mask);
+}
 
 static int32 exclusive_scan_add(int32 v) { return __exclusive_scan_add_i32(v, (IntMaskType)__mask); }
 
@@ -1156,6 +1304,14 @@ static unsigned int64 exclusive_scan_add(unsigned int64 v) { return __exclusive_
 
 static double exclusive_scan_add(double v) { return __exclusive_scan_add_double(v, __mask); }
 
+static int8 exclusive_scan_and(int8 v) { return __exclusive_scan_and_i8(v, (IntMaskType)__mask); }
+
+static unsigned int8 exclusive_scan_and(unsigned int8 v) { return __exclusive_scan_and_i8(v, (UIntMaskType)__mask); }
+
+static int16 exclusive_scan_and(int16 v) { return __exclusive_scan_and_i16(v, (IntMaskType)__mask); }
+
+static unsigned int16 exclusive_scan_and(unsigned int16 v) { return __exclusive_scan_and_i16(v, (UIntMaskType)__mask); }
+
 static int32 exclusive_scan_and(int32 v) { return __exclusive_scan_and_i32(v, (IntMaskType)__mask); }
 
 static unsigned int32 exclusive_scan_and(unsigned int32 v) { return __exclusive_scan_and_i32(v, (UIntMaskType)__mask); }
@@ -1163,6 +1319,14 @@ static unsigned int32 exclusive_scan_and(unsigned int32 v) { return __exclusive_
 static int64 exclusive_scan_and(int64 v) { return __exclusive_scan_and_i64(v, (IntMaskType)__mask); }
 
 static unsigned int64 exclusive_scan_and(unsigned int64 v) { return __exclusive_scan_and_i64(v, (UIntMaskType)__mask); }
+
+static int8 exclusive_scan_or(int8 v) { return __exclusive_scan_or_i8(v, (IntMaskType)__mask); }
+
+static unsigned int8 exclusive_scan_or(unsigned int8 v) { return __exclusive_scan_or_i8(v, (UIntMaskType)__mask); }
+
+static int16 exclusive_scan_or(int16 v) { return __exclusive_scan_or_i16(v, (IntMaskType)__mask); }
+
+static unsigned int16 exclusive_scan_or(unsigned int16 v) { return __exclusive_scan_or_i16(v, (UIntMaskType)__mask); }
 
 static int32 exclusive_scan_or(int32 v) { return __exclusive_scan_or_i32(v, (IntMaskType)__mask); }
 
@@ -1191,6 +1355,54 @@ static inline uniform int packed_store_active2(uniform unsigned int a[], unsigne
     return __packed_store_active2i32((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
 }
 
+/* unsigned int16 implementations. */
+// unsigned int16 load.
+static inline uniform int packed_load_active(uniform unsigned int16 a[], varying unsigned int16 *uniform vals) {
+    return __packed_load_activei16((opaque_ptr_t)a, (opaque_ptr_t)vals, (UIntMaskType)__mask);
+}
+
+// unsigned int16 store.
+static inline uniform int packed_store_active(uniform unsigned int16 a[], unsigned int16 vals) {
+    return __packed_store_activei16((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
+}
+
+// unsigned int16 store2.
+static inline uniform int packed_store_active2(uniform unsigned int16 a[], unsigned int16 vals) {
+    return __packed_store_active2i16((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
+}
+
+/* unsigned int8 implementations. */
+// unsigned int8 load.
+static inline uniform int packed_load_active(uniform unsigned int8 a[], varying unsigned int8 *uniform vals) {
+    return __packed_load_activei8((opaque_ptr_t)a, (opaque_ptr_t)vals, (UIntMaskType)__mask);
+}
+
+// unsigned int8 store.
+static inline uniform int packed_store_active(uniform unsigned int8 a[], unsigned int8 vals) {
+    return __packed_store_activei8((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
+}
+
+// unsigned int8 store2.
+static inline uniform int packed_store_active2(uniform unsigned int8 a[], unsigned int8 vals) {
+    return __packed_store_active2i8((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
+}
+
+/* unsigned int64 implementations. */
+// unsigned int64 load.
+static inline uniform int packed_load_active(uniform unsigned int64 a[], varying unsigned int64 *uniform vals) {
+    return __packed_load_activei64((opaque_ptr_t)a, (opaque_ptr_t)vals, (UIntMaskType)__mask);
+}
+
+// unsigned int64 store.
+static inline uniform int packed_store_active(uniform unsigned int64 a[], unsigned int64 vals) {
+    return __packed_store_activei64((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
+}
+
+// unsigned int64 store2.
+static inline uniform int packed_store_active2(uniform unsigned int64 a[], unsigned int64 vals) {
+    return __packed_store_active2i64((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
+}
+
 /* int32 implementations. */
 // int32 load.
 static inline uniform int packed_load_active(uniform int a[], varying int *uniform vals) {
@@ -1212,20 +1424,36 @@ static inline uniform int packed_store_active(bool active, uniform int a[], int 
     return __packed_store_activei32((opaque_ptr_t)a, vals, (IntMaskType)(-(int)active));
 }
 
-/* unsigned int64 implementations. */
-// unsigned int64 load.
-static inline uniform int packed_load_active(uniform unsigned int64 a[], varying unsigned int64 *uniform vals) {
-    return __packed_load_activei64((opaque_ptr_t)a, (opaque_ptr_t)vals, (UIntMaskType)__mask);
+/* int16 implementations. */
+// int16 load.
+static inline uniform int packed_load_active(uniform int16 a[], varying int16 *uniform vals) {
+    return __packed_load_activei16((opaque_ptr_t)a, (opaque_ptr_t)vals, (IntMaskType)__mask);
 }
 
-// unsigned int64 store.
-static inline uniform int packed_store_active(uniform unsigned int64 a[], unsigned int64 vals) {
-    return __packed_store_activei64((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
+// int16 store.
+static inline uniform int packed_store_active(uniform int16 a[], int16 vals) {
+    return __packed_store_activei16((opaque_ptr_t)a, vals, (IntMaskType)__mask);
 }
 
-// unsigned int64 store2.
-static inline uniform int packed_store_active2(uniform unsigned int64 a[], unsigned int64 vals) {
-    return __packed_store_active2i64((opaque_ptr_t)a, vals, (UIntMaskType)__mask);
+// int16 store2.
+static inline uniform int packed_store_active2(uniform int16 a[], int16 vals) {
+    return __packed_store_active2i16((opaque_ptr_t)a, vals, (IntMaskType)__mask);
+}
+
+/* int8 implementations. */
+// int8 load.
+static inline uniform int packed_load_active(uniform int8 a[], varying int8 *uniform vals) {
+    return __packed_load_activei8((opaque_ptr_t)a, (opaque_ptr_t)vals, (IntMaskType)__mask);
+}
+
+// int8 store.
+static inline uniform int packed_store_active(uniform int8 a[], int8 vals) {
+    return __packed_store_activei8((opaque_ptr_t)a, vals, (IntMaskType)__mask);
+}
+
+// int8 store2.
+static inline uniform int packed_store_active2(uniform int8 a[], int8 vals) {
+    return __packed_store_active2i8((opaque_ptr_t)a, vals, (IntMaskType)__mask);
 }
 
 /* int64 implementations. */
@@ -1249,6 +1477,53 @@ static inline uniform int packed_store_active(bool active, uniform int64 a[], in
     return __packed_store_activei64((opaque_ptr_t)a, vals, (IntMaskType)(-(int)active));
 }
 
+/* float16 implementations. */
+// float16 load.
+static inline uniform int packed_load_active(uniform float16 a[], varying float16 *uniform vals) {
+    return __packed_load_activef16((opaque_ptr_t)a, (opaque_ptr_t)vals, (IntMaskType)__mask);
+}
+
+// float16 store.
+static inline uniform int packed_store_active(uniform float16 a[], float16 vals) {
+    return __packed_store_activef16((opaque_ptr_t)a, vals, (IntMaskType)__mask);
+}
+
+// float16 store2.
+static inline uniform int packed_store_active2(uniform float16 a[], float16 vals) {
+    return __packed_store_active2f16((opaque_ptr_t)a, vals, (IntMaskType)__mask);
+}
+
+/* float implementations. */
+// float load.
+static inline uniform int packed_load_active(uniform float a[], varying float *uniform vals) {
+    return __packed_load_activef32((opaque_ptr_t)a, (opaque_ptr_t)vals, (IntMaskType)__mask);
+}
+
+// float store.
+static inline uniform int packed_store_active(uniform float a[], float vals) {
+    return __packed_store_activef32((opaque_ptr_t)a, vals, (IntMaskType)__mask);
+}
+
+// float store2.
+static inline uniform int packed_store_active2(uniform float a[], float vals) {
+    return __packed_store_active2f32((opaque_ptr_t)a, vals, (IntMaskType)__mask);
+}
+
+/* double implementations. */
+// double load.
+static inline uniform int packed_load_active(uniform double a[], varying double *uniform vals) {
+    return __packed_load_activef64((opaque_ptr_t)a, (opaque_ptr_t)vals, (IntMaskType)__mask);
+}
+
+// double store.
+static inline uniform int packed_store_active(uniform double a[], double vals) {
+    return __packed_store_activef64((opaque_ptr_t)a, vals, (IntMaskType)__mask);
+}
+
+// double store2.
+static inline uniform int packed_store_active2(uniform double a[], double vals) {
+    return __packed_store_active2f64((opaque_ptr_t)a, vals, (IntMaskType)__mask);
+}
 ///////////////////////////////////////////////////////////////////////////
 // streaming store
 
@@ -1927,46 +2202,62 @@ __declspec(safe) static inline uniform double max(uniform double a, uniform doub
 // int8
 
 __declspec(safe, cost1) static inline uniform unsigned int8 min(uniform unsigned int8 a, uniform unsigned int8 b) {
-    return (a < b) ? a : b;
+    return __min_uniform_uint8(a, b);
 }
 
 __declspec(safe, cost1) static inline uniform unsigned int8 max(uniform unsigned int8 a, uniform unsigned int8 b) {
-    return (a > b) ? a : b;
+    return __max_uniform_uint8(a, b);
 }
 
-__declspec(safe, cost1) static inline uniform int8 min(uniform int8 a, uniform int8 b) { return (a < b) ? a : b; }
+__declspec(safe, cost1) static inline uniform int8 min(uniform int8 a, uniform int8 b) {
+    return __min_uniform_int8(a, b);
+}
 
-__declspec(safe, cost1) static inline uniform int8 max(uniform int8 a, uniform int8 b) { return (a > b) ? a : b; }
+__declspec(safe, cost1) static inline uniform int8 max(uniform int8 a, uniform int8 b) {
+    return __max_uniform_int8(a, b);
+}
 
-__declspec(safe, cost1) static inline unsigned int8 min(unsigned int8 a, unsigned int8 b) { return (a < b) ? a : b; }
+__declspec(safe, cost1) static inline unsigned int8 min(unsigned int8 a, unsigned int8 b) {
+    return __min_varying_uint8(a, b);
+}
 
-__declspec(safe, cost1) static inline unsigned int8 max(unsigned int8 a, unsigned int8 b) { return (a > b) ? a : b; }
+__declspec(safe, cost1) static inline unsigned int8 max(unsigned int8 a, unsigned int8 b) {
+    return __max_varying_uint8(a, b);
+}
 
-__declspec(safe, cost1) static inline int8 min(int8 a, int8 b) { return (a < b) ? a : b; }
+__declspec(safe, cost1) static inline int8 min(int8 a, int8 b) { return __min_varying_int8(a, b); }
 
-__declspec(safe, cost1) static inline int8 max(int8 a, int8 b) { return (a > b) ? a : b; }
+__declspec(safe, cost1) static inline int8 max(int8 a, int8 b) { return __max_varying_int8(a, b); }
 
 // int16
 
 __declspec(safe, cost1) static inline uniform unsigned int16 min(uniform unsigned int16 a, uniform unsigned int16 b) {
-    return (a < b) ? a : b;
+    return __min_uniform_uint16(a, b);
 }
 
 __declspec(safe, cost1) static inline uniform unsigned int16 max(uniform unsigned int16 a, uniform unsigned int16 b) {
-    return (a > b) ? a : b;
+    return __max_uniform_uint16(a, b);
 }
 
-__declspec(safe, cost1) static inline uniform int16 min(uniform int16 a, uniform int16 b) { return (a < b) ? a : b; }
+__declspec(safe, cost1) static inline uniform int16 min(uniform int16 a, uniform int16 b) {
+    return __min_uniform_int16(a, b);
+}
 
-__declspec(safe, cost1) static inline uniform int16 max(uniform int16 a, uniform int16 b) { return (a > b) ? a : b; }
+__declspec(safe, cost1) static inline uniform int16 max(uniform int16 a, uniform int16 b) {
+    return __max_uniform_int16(a, b);
+}
 
-__declspec(safe, cost1) static inline unsigned int16 min(unsigned int16 a, unsigned int16 b) { return (a < b) ? a : b; }
+__declspec(safe, cost1) static inline unsigned int16 min(unsigned int16 a, unsigned int16 b) {
+    return __min_varying_uint16(a, b);
+}
 
-__declspec(safe, cost1) static inline unsigned int16 max(unsigned int16 a, unsigned int16 b) { return (a > b) ? a : b; }
+__declspec(safe, cost1) static inline unsigned int16 max(unsigned int16 a, unsigned int16 b) {
+    return __max_varying_uint16(a, b);
+}
 
-__declspec(safe, cost1) static inline int16 min(int16 a, int16 b) { return (a < b) ? a : b; }
+__declspec(safe, cost1) static inline int16 min(int16 a, int16 b) { return __min_varying_int16(a, b); }
 
-__declspec(safe, cost1) static inline int16 max(int16 a, int16 b) { return (a > b) ? a : b; }
+__declspec(safe, cost1) static inline int16 max(int16 a, int16 b) { return __max_varying_int16(a, b); }
 
 // int32
 

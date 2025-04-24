@@ -74,6 +74,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.24.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.25.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.26.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.27.0`_
 
 * `Getting Started with ISPC`_
 
@@ -86,6 +87,7 @@ Contents:
   + `Selecting The Compilation Target`_
   + `Selecting 32 or 64 Bit Addressing`_
   + `The Preprocessor`_
+  + `Pragma Directives`_
   + `Debugging`_
   + `Optimization Settings`_
   + `Other ways of passing arguments to ISPC`_
@@ -673,25 +675,71 @@ Updating ISPC Programs For Changes In ISPC 1.26.0
 
 There are breaking changes to ARM support:
 
-The ``--arch=arm``, which previously mapped to ARMv7 (32-bit), now maps to ARMv8
-(32-bit).
-There are no changes to ``--arch=aarch64``, which continues to map to ARMv8
-(64-bit).
-The CPU definitions for the ARMv7 architecture have been removed: ``cortex-a9``
-and ``cortex-a15``.
-New CPU definitions were introduced, such as ``cortex-a55``, ``cortex-a78``,
-``cortex-a510``, ```cortex-a520``, and support for new Apple devices.
+* The ``--arch=arm`` flag, which previously mapped to ARMv7 (32-bit), now maps
+  to ARMv8 (32-bit). There are no changes to ``--arch=aarch64``, which continues
+  to map to ARMv8 (64-bit).
+* The CPU definitions for the ARMv7 architecture have been removed:
+  ``cortex-a9`` and ``cortex-a15``.
+* New CPU definitions have been introduced, including ``cortex-a55``,
+  ``cortex-a78``, ``cortex-a510``, and ``cortex-a520``, along with support for
+  new Apple devices.
+* New double-pumped targets have been introduced: ``neon-i16x16`` and
+  ``neon-i8x32``.
 
-Macro definitions for LLVM version that ISPC is based on were added. Please,
-refer to `The Preprocessor`_ for more details.
+Language Updates:
 
-``--nocpp`` command line flag is deprecated and will be removed in future.
+* Macro definitions for the LLVM version that ISPC is based on have been added.
+  Please refer to `The Preprocessor`_ for more details.
+* The ``__attribute__((deprecated))`` attribute can now be applied to a function
+  to mark it as deprecated, generating a warning when the function is called.
 
-``__attribute__((deprecated))`` can be applied to a function to mark it as
-deprecated. It leads to a warning when the function is called.
+Compiler flags changes:
 
-The target ``avx512knl-x16`` was removed.
+* The ``--nocpp`` command-line flag is deprecated and will be removed in a
+  future release.
+* The target ``avx512knl-x16`` has been removed.
+* The ``--darwin-version-min`` option has been added to specify the minimum
+  deployment target version for macOS and iOS applications. This addresses a new
+  linker behavior introduced in Xcode 15.0, which issues a warning when no
+  version is provided.
 
+The behavior of user programs when no supported ISA is detected in the
+auto-dispatch code has changed. Instead of raising the ``SIGABRT`` signal, the
+system will now raise ``SIGILL``.  This affects users who rely on ``SIGABRT`` in
+their signal handlers for error handling or recovery.  Such users must update
+their code to handle ``SIGILL`` instead. This change improves predictability and
+removes the dispatcher's reliance on the C standard library.
+
+Updating ISPC Programs For Changes In ISPC 1.27.0
+-------------------------------------------------
+
+Added cross lane operations for unsigned types: ``broadcast``, ``rotate``, ``shift``,
+and ``shuffle``.
+
+The ``max``, ``min`` and ``abs`` functions for short vectors of basic types
+have been added to the standard library. They support both uniform and varying
+short vector types for all basic types supported by the corresponding standard
+functions, i.e., signed and unsigned integer types and floating-point types.
+
+It makes it possible, for example, to find the maximum value between two short
+vectors:
+
+::
+
+    uniform int<3> a = {1, 2, 3};
+    uniform int<3> b = {3, -2, 1};
+    uniform int<3> c = max(a, b); // c = {3, 2, 3}
+
+    varying float<4> x, y;
+    varying float<4> z = max(x, y);
+
+Attribute ``aligned(N)`` was added to specify alignment of variables and struct
+types.
+
+Accessing an array using an unsigned index and pointer arithmetic with unsigned
+offsets was flawed due to overflow caused by sign extension when promoting the
+index to pointer size. This issue has been resolved, and the compiler now
+generates correct code for such cases involving unsigned integer types.
 
 Getting Started with ISPC
 =========================
@@ -908,6 +956,12 @@ for ``MSVC link.exe``. On macOS, this flag does not have any effect (as in
 clang) because dead stripping ``-dead_strip`` for ``ld64`` works differently.
 The ``-fno-function-sections`` disables this behavior.
 
+The ``--darwin-version-min`` option was added to specify the minimum deployment
+target version for macOS and iOS applications addressing the new linker
+introduced in Xcode 15.0 that issues a warning when no version is provided.
+The version should be specified in the format ``[major.minor]``. When an empty
+string ("") is passed, no minimum version will be specified in the output binary.
+
 Selecting The Compilation Target
 --------------------------------
 
@@ -1034,7 +1088,7 @@ x86 targets:
 
 Neon targets:
 
-``neon-i8x16``, ``neon-i16x8``, ``neon-i32x4``, ``neon-i32x8``.
+``neon-i8x16``, ``neon-i16x8``, ``neon-i32x4``, ``neon-i32x8``, ``neon-i8x32`` and ``neon-i16x16``.
 
 These targets correspond to ARMv8 (64-bit) when ``--arch=aarch64`` is used (default) and
 to ARMv8 (32-bit) when ``--arch=arm`` is used.
@@ -1099,7 +1153,7 @@ preprocessor runs:
   * - ISPC
     - 1
     - Enables detecting that the ``ispc`` compiler is processing the file
-  * - ISPC_TARGET_{NEON, SSE2, SSE4, AVX, AVX2, AVX512KNL, AVX512SKX, AVX512SPR}
+  * - ISPC_TARGET_{NEON, SSE2, SSE4, AVX, AVX2, AVX512SKX, AVX512ICL, AVX512SPR}
     - 1
     - One of these will be set, depending on the compilation target
   * - ISPC_POINTER_SIZE
@@ -1157,6 +1211,51 @@ preprocessor runs:
   * - FLT16_MAX, FLT_MAX, DBL_MAX
     -
     - Largest normal number of the corresponding floating-point type
+
+Others Standard Predefined Macros:
+
+``__FILE__`` expands to the name of the current input file, in the form of a C
+string constant.
+
+``__LINE__`` expands to the current line number in the input file, in the form
+of a decimal integer constant.
+
+``__DATE__`` expands to a string constant containing the date the preprocessor
+was run, e.g., ``"Feb  3 2025"``.
+
+``__TIME__`` expands to a string constant containing the time the preprocessor
+was run, e.g., ``"13:14:33"``.
+
+Variadic Macros:
+
+Variadic macros are supported in ``ispc``. The ``__VA_ARGS__`` and
+``__VA_OPT__`` macros are defined inside a variadic macro definition.
+
+``__VA_ARGS__`` is a variable argument list macro that represents the arguments
+after the last named argument.
+
+``__VA_OPT__(...)`` is a function macro that expands to its argument if the
+variable argument has any tokens, but if the variable argument does not have
+any tokens, the ``__VA_OPT__`` expands to nothing.
+
+To illustrate, consider the following example:
+
+::
+
+    #define PRINT(fmt, ...) print(fmt, __VA_ARGS__)
+    #define EPRINT(fmt, ...) print(fmt __VA_OPT__(,) __VA_ARGS__)
+
+    void test_va_args() {
+        PRINT("% % %\n", 0, 1, 2);
+        // PRINT("Hello, World!\n"); is compilation error
+        // you can't call PRINT with just string because of trailing comma in
+        // macro expansion, call EPRINT with __VA_OPT__(,) instead
+        EPRINT("Hello, World!\n");
+    }
+
+
+Pragma Directives
+-----------------
 
 ``ispc`` supports the following ``#pragma`` directives.
 
@@ -3026,6 +3125,39 @@ There are two ways to use this attribute in ISPC with or without a message:
     __attribute__((deprecated)) void foo();
     __attribute__((deprecated("Use bar() instead."))) void foo();
 
+aligned
+-------
+
+``__attribute__((aligned(N)))`` can be applied to variables to specify their
+alignment:
+
+::
+
+    __attribute__((aligned(16))) uniform int x;
+
+To specify the alignment of a type (such as a struct), place the attribute
+after the struct definition. This means that any variable of this type will be
+aligned unless overridden.
+
+::
+
+    struct S { int x; } __attribute__((aligned(16)));
+    // v is aligned to 16 bytes
+    struct S v;
+
+Consider the following example that combines both the type alignment and the
+variable alignment.
+
+::
+
+    // v16 is aligned to 16 bytes
+    __attribute__((aligned(16))) struct S { int x; } __attribute__((aligned(32))) v16;
+    // v32 is aligned to 32 bytes
+    struct S v32;
+
+Note, that ISPC doesn't support ``__attribute__((aligned))`` without an
+argument. It also doesn't support placing the aligned attribute for specific
+members of struct types.
 
 Expressions
 -----------
@@ -3546,6 +3678,32 @@ data elements will be processed.  In this particular case, a ``foreach``
 loop would be preferable, as ``foreach`` naturally handles the case where
 ``programCount`` doesn't evenly divide the number of elements to be
 processed, while the loop above assumes that case implicitly.
+
+
+Remember that ``foreach`` begins each loop iteration with an "all on"
+execution mask, meaning all program instances are active at the start.
+In contrast, a ``for`` loop using ``programIndex`` and ``programCount``
+respects the current execution mask, which may disable some instances.
+To match the behavior of ``foreach`` in regards of masking, you should
+use an ``unmasked`` region. For example:
+
+::
+
+    foreach (index = 0 ... 16) {
+        values[index] = select(upd, newVal, values[index]);
+    }
+
+
+will be equivalent to the following code:
+
+::
+
+  unmasked {
+      for (uniform int i = 0; i < 16; i+=programCount) {
+          int index = i + programIndex;
+          values[index] = select(upd, newVal, values[index]);
+      }
+  }
 
 
 Unstructured Control Flow: "goto"
@@ -4248,7 +4406,12 @@ The ISPC Standard Library
 
 ``ispc`` has a standard library that is automatically available when
 compiling ``ispc`` programs.  (To disable the standard library, pass the
-``--nostdlib`` command-line flag to the compiler.)
+``--nostdlib`` command-line flag to the compiler.).
+For a complete list of functions available in the standard library, consult the
+`stdlib.isph`_ header file. This file serves as the definitive reference for all
+the function declarations provided by the standard library.
+
+.. _stdlib.isph: https://github.com/ispc/ispc/tree/main/stdlib/include/stdlib.isph
 
 Basic Operations On Data
 ------------------------
@@ -4442,6 +4605,13 @@ is on (i.e. the value is negative) and zero if it is off.
     unsigned int64 signbits(double x)
     uniform unsigned int64 signbits(uniform double x)
 
+The ``abs`` functions also supports short vector types with the basic types
+listed above.
+
+::
+
+    template <typename T, uint N> T<N> abs(T<N> a)
+
 The standard library provides four rounding functions: ``round``, ``floor``,
 ``ceil`` and ``trunc`` for ``float16``, ``float`` and ``double`` data types. On
 machines that support Intel®SSE or Intel® AVX, these functions all map to a
@@ -4498,16 +4668,63 @@ standard types.  These functions also map to corresponding intrinsic functions.
 
 ::
 
+    float16 min(float16 a, float16 b);
     float min(float a, float b)
+    double min(double a, double b);
+    unsigned int8 min(unsigned int8 a, unsigned int8 b);
+    int8 min(int8 a, int8 b);
+    unsigned int16 min(unsigned int16 a, unsigned int16 b);
+    int16 min(int16 a, int16 b);
+    unsigned int min(unsigned int a, unsigned int b);
+    int min(int a, int b);
+    unsigned int64 min(unsigned int64 a, unsigned int64 b);
+    int64 min(int64 a, int64 b);
+
+    uniform float16 min(uniform float16 a, uniform float16 b);
     uniform float min(uniform float a, uniform float b)
+    uniform double min(uniform double a, uniform double b);
+    uniform unsigned int8 min(uniform unsigned int8 a, uniform unsigned int8 b);
+    uniform int8 min(uniform int8 a, uniform int8 b);
+    uniform unsigned int16 min(uniform unsigned int16 a, uniform unsigned int16 b);
+    uniform int16 min(uniform int16 a, uniform int16 b);
+    uniform unsigned int min(uniform unsigned int a, uniform unsigned int b);
+    uniform int min(uniform int a, uniform int b);
+    uniform unsigned int64 min(uniform unsigned int64 a, uniform unsigned int64 b);
+    uniform int64 min(uniform int64 a, uniform int64 b);
+
+::
+
+    float16 max(float16 a, float16 b);
     float max(float a, float b)
+    double max(double a, double b);
+    unsigned int8 max(unsigned int8 a, unsigned int8 b);
+    int8 max(int8 a, int8 b);
+    unsigned int16 max(unsigned int16 a, unsigned int16 b);
+    int16 max(int16 a, int16 b);
+    unsigned int max(unsigned int a, unsigned int b);
+    int max(int a, int b);
+    unsigned int64 max(unsigned int64 a, unsigned int64 b);
+    int64 max(int64 a, int64 b);
+
+    uniform float16 max(uniform float16 a, uniform float16 b);
     uniform float max(uniform float a, uniform float b)
-    unsigned int min(unsigned int a, unsigned int b)
-    uniform unsigned int min(uniform unsigned int a,
-                             uniform unsigned int b)
-    unsigned int max(unsigned int a, unsigned int b)
-    uniform unsigned int max(uniform unsigned int a,
-                             uniform unsigned int b)
+    uniform double max(uniform double a, uniform double b);
+    uniform unsigned int8 max(uniform unsigned int8 a, uniform unsigned int8 b);
+    uniform int8 max(uniform int8 a, uniform int8 b);
+    uniform unsigned int16 max(uniform unsigned int16 a, uniform unsigned int16 b);
+    uniform int16 max(uniform int16 a, uniform int16 b);
+    uniform unsigned int max(uniform unsigned int a, uniform unsigned int b);
+    uniform int max(uniform int a, uniform int b);
+    uniform unsigned int64 max(uniform unsigned int64 a, uniform unsigned int64 b);
+    uniform int64 max(uniform int64 a, uniform int64 b);
+
+The maximum and minimum functions also support short vector types with the
+basic types listed above.
+
+::
+
+    template <typename T, uint N> T<N> min(T<N> a, T<N> b)
+    template <typename T, uint N> T<N> max(T<N> a, T<N> b)
 
 The ``clamp()`` functions clamp the provided value to the given range.
 (Their implementations are based on ``min()`` and ``max()`` and are thus
@@ -5020,9 +5237,13 @@ the running program instances.
 ::
 
     int8 broadcast(int8 value, uniform int index)
+    unsigned int8 broadcast(unsigned int8 value, uniform int index)
     int16 broadcast(int16 value, uniform int index)
+    unsigned int16 broadcast(unsigned int16 value, uniform int index)
     int32 broadcast(int32 value, uniform int index)
+    unsigned int32 broadcast(unsigned int32 value, uniform int index)
     int64 broadcast(int64 value, uniform int index)
+    unsigned int64 broadcast(unsigned int64 value, uniform int index)
     float16 broadcast(float16 value, uniform int index)
     float broadcast(float value, uniform int index)
     double broadcast(double value, uniform int index)
@@ -5038,9 +5259,13 @@ the size of the gang (it is masked to ensure valid offsets).
 
 ::
 
+    unsigned int8 rotate(unsigned int8 value, uniform int offset)
     int8 rotate(int8 value, uniform int offset)
+    unsigned int16 rotate(unsigned int16 value, uniform int offset)
     int16 rotate(int16 value, uniform int offset)
+    unsigned int32 rotate(unsigned int32 value, uniform int offset)
     int32 rotate(int32 value, uniform int offset)
+    unsigned int64 rotate(unsigned int64 value, uniform int offset)
     int64 rotate(int64 value, uniform int offset)
     float16 rotate(float16 value, uniform int offset)
     float rotate(float value, uniform int offset)
@@ -5056,9 +5281,13 @@ Instead, zeroes are shifted in where appropriate.
 ::
 
     int8 shift(int8 value, uniform int offset)
+    unsigned int8 shift(unsigned int8 value, uniform int offset)
     int16 shift(int16 value, uniform int offset)
+    unsigned int16 shift(unsigned int16 value, uniform int offset)
     int32 shift(int32 value, uniform int offset)
+    unsigned int32 shift(unsigned int32 value, uniform int offset)
     int64 shift(int64 value, uniform int offset)
+    unsigned int64 shift(unsigned int64 value, uniform int offset)
     float16 shift(float16 value, uniform int offset)
     float shift(float value, uniform int offset)
     double shift(double value, uniform int offset)
@@ -5073,9 +5302,13 @@ from which to get the value of ``value``.  The provided values for
 ::
 
     int8 shuffle(int8 value, int permutation)
+    unsigned int8 shuffle(unsigned int8 value, int permutation)
     int16 shuffle(int16 value, int permutation)
+    unsigned int16 shuffle(unsigned int16 value, int permutation)
     int32 shuffle(int32 value, int permutation)
+    unsigned int32 shuffle(unsigned int32 value, int permutation)
     int64 shuffle(int64 value, int permutation)
+    unsigned int64 shuffle(unsigned int64 value, int permutation)
     float16 shuffle(float16 value, int permutation)
     float shuffle(float value, int permutation)
     double shuffle(double value, int permutation)
@@ -5090,9 +5323,13 @@ the last element of ``value1``, etc.)
 ::
 
     int8 shuffle(int8 value0, int8 value1, int permutation)
+    unsigned int8 shuffle(unsigned int8 value0, unsigned int8 value1, int permutation)
     int16 shuffle(int16 value0, int16 value1, int permutation)
+    unsigned int16 shuffle(unsigned int16 value0, unsigned int16 value1, int permutation)
     int32 shuffle(int32 value0, int32 value1, int permutation)
+    unsigned int32 shuffle(unsigned int32 value0, unsigned int32 value1, int permutation)
     int64 shuffle(int64 value0, int64 value1, int permutation)
+    unsigned int64 shuffle(unsigned int64 value0, unsigned int64 value1, int permutation)
     float16 shuffle(float16 value0, float16 value1, int permutation)
     float shuffle(float value0, float value1, int permutation)
     double shuffle(double value0, double value1, int permutation)
@@ -5109,9 +5346,13 @@ element of it as a single ``uniform`` value.  .
 
     uniform bool extract(bool x, uniform int i)
     uniform int8 extract(int8 x, uniform int i)
+    uniform unsigned int8 extract(unsigned int8 x, uniform int i)
     uniform int16 extract(int16 x, uniform int i)
+    uniform unsigned int16 extract(unsigned int16 x, uniform int i)
     uniform int32 extract(int32 x, uniform int i)
+    uniform unsigned int32 extract(unsigned int32 x, uniform int i)
     uniform int64 extract(int64 x, uniform int i)
+    uniform unsigned int64 extract(unsigned int64 x, uniform int i)
     uniform float16 extract(float16 x, uniform int i)
     uniform float extract(float x, uniform int i)
     uniform double extract(double x, uniform int i)
@@ -5123,9 +5364,13 @@ where the ``i`` th element of ``x`` has been replaced with the value ``v``
 
     bool insert(bool x, uniform int i, uniform bool v)
     int8 insert(int8 x, uniform int i, uniform int8 v)
+    unsigned int8 insert(unsigned int8 x, uniform int i, uniform unsigned int8 v)
     int16 insert(int16 x, uniform int i, uniform int16 v)
+    unsigned int16 insert(unsigned int16 x, uniform int i, uniform unsigned int16 v)
     int32 insert(int32 x, uniform int i, uniform int32 v)
+    unsigned int32 insert(unsigned int32 x, uniform int i, uniform unsigned int32 v)
     int64 insert(int64 x, uniform int i, uniform int64 v)
+    unsigned int64 insert(unsigned int64 x, uniform int i, uniform unsigned int64 v)
     float16 insert(float16 x, uniform int i, uniform float16 v)
     float insert(float x, uniform int i, uniform float v)
     double insert(double x, uniform int i, uniform double v)
@@ -5171,6 +5416,10 @@ across all of the currently-executing program instances.
 
 ::
 
+    uniform int8 reduce_min(int8 a)
+    uniform unsigned int8 reduce_min(unsigned int8 a)
+    uniform int16 reduce_min(int16 a)
+    uniform unsigned int16 reduce_min(unsigned int16 a)
     uniform int32 reduce_min(int32 a)
     uniform unsigned int32 reduce_min(unsigned int32 a)
     uniform int64 reduce_min(int64 a)
@@ -5185,6 +5434,10 @@ varying variable over the active program instances.
 
 ::
 
+    uniform int8 reduce_max(int8 a)
+    uniform unsigned int8 reduce_max(unsigned int8 a)
+    uniform int16 reduce_max(int16 a)
+    uniform unsigned int16 reduce_max(unsigned int16 a)
     uniform int32 reduce_max(int32 a)
     uniform unsigned int32 reduce_max(unsigned int32 a)
     uniform int64 reduce_max(int64 a)
@@ -5199,6 +5452,10 @@ all of the currently-running program instances:
 
 ::
 
+    uniform bool reduce_equal(int8 v)
+    uniform bool reduce_equal(unsigned int8 v)
+    uniform bool reduce_equal(int16 v)
+    uniform bool reduce_equal(unsigned int16 v)
     uniform bool reduce_equal(int32 v)
     uniform bool reduce_equal(unsigned int32 v)
     uniform bool reduce_equal(int64 v)
@@ -5217,6 +5474,12 @@ performance in the `Performance Guide`_.
 
 ::
 
+    uniform bool reduce_equal(int8 v, uniform int8 * uniform sameval)
+    uniform bool reduce_equal(unsigned int8 v,
+                              uniform unsigned int8 * uniform sameval)
+    uniform bool reduce_equal(int16 v, uniform int16 * uniform sameval)
+    uniform bool reduce_equal(unsigned int16 v,
+                              uniform unsigned int16 * uniform sameval)
     uniform bool reduce_equal(int32 v, uniform int32 * uniform sameval)
     uniform bool reduce_equal(unsigned int32 v,
                               uniform unsigned int32 * uniform sameval)
@@ -5253,6 +5516,10 @@ bitwise-or are available:
 
 ::
 
+    int8 exclusive_scan_add(int8 v)
+    unsigned int8 exclusive_scan_add(unsigned int8 v)
+    int16 exclusive_scan_add(int16 v)
+    unsigned int16 exclusive_scan_add(unsigned int16 v)
     int32 exclusive_scan_add(int32 v)
     unsigned int32 exclusive_scan_add(unsigned int32 v)
     float16 exclusive_scan_add(float16 v)
@@ -5260,10 +5527,18 @@ bitwise-or are available:
     int64 exclusive_scan_add(int64 v)
     unsigned int64 exclusive_scan_add(unsigned int64 v)
     double exclusive_scan_add(double v)
+    int8 exclusive_scan_and(int8 v)
+    unsigned int8 exclusive_scan_and(unsigned int8 v)
+    int16 exclusive_scan_and(int16 v)
+    unsigned int16 exclusive_scan_and(unsigned int16 v)
     int32 exclusive_scan_and(int32 v)
     unsigned int32 exclusive_scan_and(unsigned int32 v)
     int64 exclusive_scan_and(int64 v)
     unsigned int64 exclusive_scan_and(unsigned int64 v)
+    int8 exclusive_scan_or(int8 v)
+    unsigned int8 exclusive_scan_or(unsigned int8 v)
+    int16 exclusive_scan_or(int16 v)
+    unsigned int16 exclusive_scan_or(unsigned int16 v)
     int32 exclusive_scan_or(int32 v)
     unsigned int32 exclusive_scan_or(unsigned int32 v)
     int64 exclusive_scan_or(int64 v)
@@ -5355,10 +5630,28 @@ variable.  They return the total number of values loaded.
 
 ::
 
+    uniform int packed_load_active(uniform int8 * uniform base,
+                                   varying int8 * uniform val)
+    uniform int packed_load_active(uniform unsigned int8 * uniform base,
+                                   varying unsigned int8 * uniform val)
+    uniform int packed_load_active(uniform int16 * uniform base,
+                                   varying int16 * uniform val)
+    uniform int packed_load_active(uniform unsigned int16 * uniform base,
+                                   varying unsigned int16 * uniform val)
     uniform int packed_load_active(uniform int * uniform base,
                                    varying int * uniform val)
     uniform int packed_load_active(uniform unsigned int * uniform base,
                                    varying unsigned int * uniform val)
+    uniform int packed_load_active(uniform int64 * uniform base,
+                                   varying int64 * uniform val)
+    uniform int packed_load_active(uniform unsigned int64 * uniform base,
+                                   varying unsigned int64 * uniform val)
+    uniform int packed_load_active(uniform float16 * uniform base,
+                                   varying float16 * uniform val)
+    uniform int packed_load_active(uniform float * uniform base,
+                                   varying float * uniform val)
+    uniform int packed_load_active(uniform double * uniform base,
+                                   varying double * uniform val)
 
 Similarly, the ``packed_store_active()`` functions store the ``val`` values
 for each program instances that executed the ``packed_store_active()``
@@ -5367,11 +5660,28 @@ They return the total number of values stored.
 
 ::
 
+    uniform int packed_store_active(uniform int8 * uniform base,
+                                    int8 val)
+    uniform int packed_store_active(uniform unsigned int8* uniform base,
+                                    unsigned int8 val)
+    uniform int packed_store_active(uniform int16 * uniform base,
+                                    int16 val)
+    uniform int packed_store_active(uniform unsigned int16 * uniform base,
+                                    unsigned int16 val)
     uniform int packed_store_active(uniform int * uniform base,
                                     int val)
     uniform int packed_store_active(uniform unsigned int * uniform base,
                                     unsigned int val)
-
+    uniform int packed_store_active(uniform int64 * uniform base,
+                                    int64 val)
+    uniform int packed_store_active(uniform unsigned int64 * uniform base,
+                                    unsigned int64 val)
+    uniform int packed_store_active(uniform float16 * uniform base,
+                                    float16 val)
+    uniform int packed_store_active(uniform float * uniform base,
+                                    float val)
+    uniform int packed_store_active(uniform double * uniform base,
+                                    double val)
 
 There are also ``packed_store_active2()`` functions with exactly the same
 signatures and the same semantic except that they may write one extra

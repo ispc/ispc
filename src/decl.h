@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -69,6 +69,7 @@ class AttrArgument {
     AttrArgument(int64_t i);
     AttrArgument(const std::string &s);
 
+    std::string GetString() const;
     void Print() const;
 
     AttrArgKind kind;
@@ -91,6 +92,7 @@ class Attribute {
     /** Returns true if the attribute is known/supported false otherwise. */
     bool IsKnownAttribute() const;
 
+    std::string GetString() const;
     void Print() const;
 
     std::string name;
@@ -120,6 +122,11 @@ class AttributeList {
         otherwise. */
     Attribute *GetAttribute(const std::string &name) const;
 
+    /** Returns the aligned attribute value if it exists, 0 otherwise.
+        It can also issue a warning if attribute value is not supported or
+        doesn't make sense. SourcePos is needed to report Error. */
+    unsigned int GetAlignedAttrValue(SourcePos pos) const;
+
     /** Merges the attributes from the given list into the current list.
         It copies the attributes from the given list and adds them to the
         current list. */
@@ -129,6 +136,7 @@ class AttributeList {
         issue a warning. */
     void CheckForUnknownAttributes(SourcePos pos) const;
 
+    std::string GetString() const;
     void Print() const;
 
   private:
@@ -142,10 +150,13 @@ class AttributeList {
  */
 class DeclSpecs : public Traceable {
   public:
-    DeclSpecs(const Type *t = nullptr, StorageClass sc = SC_NONE, int tq = TYPEQUAL_NONE);
+    DeclSpecs(const Type *t = nullptr, StorageClass sc = StorageClass::NONE, int tq = TYPEQUAL_NONE);
     ~DeclSpecs();
 
+    std::string GetString() const;
     void Print() const;
+
+    static std::string GetTypeQualifiersString(int typeQualifiers);
 
     StorageClass storageClass;
 
@@ -199,6 +210,7 @@ class Declarator : public Traceable {
 
     void InitFromType(const Type *base, DeclSpecs *ds);
 
+    std::string GetString() const;
     void Print() const;
     void Print(Indent &indent) const;
 
@@ -251,6 +263,7 @@ class Declaration : public Traceable {
     Declaration(DeclSpecs *ds, std::vector<Declarator *> *dlist = nullptr);
     Declaration(DeclSpecs *ds, Declarator *d);
 
+    std::string GetString() const;
     void Print() const;
     void Print(Indent &indent) const;
 
@@ -274,6 +287,8 @@ class Declaration : public Traceable {
 struct StructDeclaration : public Traceable {
     StructDeclaration(const Type *t, std::vector<Declarator *> *d) : type(t), declarators(d) {}
     ~StructDeclaration() { delete declarators; }
+
+    std::string GetString() const;
 
     // We don't copy these objects at the moment. If we will then proper
     // implementations are needed considering the ownership of declarators.

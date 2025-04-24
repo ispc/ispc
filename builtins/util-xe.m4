@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2024, Intel Corporation
+;;  Copyright (c) 2010-2025, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -32,6 +32,14 @@ define(`ALL_TRUE_VECTOR',
 `ifelse(WIDTH, `32', `<WIDTH x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>',
         WIDTH, `16', `<WIDTH x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>',
                      `<WIDTH x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>')')
+
+;; Get constant vector for particular width
+;; $1 - element type
+;; $2 - element value
+define(`CONSTANT_VECTOR',
+`ifelse(WIDTH, `32', `<$1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2>',
+        WIDTH, `16', `<$1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2>',
+                     `<$1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2>')')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -1622,18 +1630,24 @@ define $2 @__atomic_compare_exchange_uniform_$3_global(i8* %ptr, $2 %cmp,
 define(`ctlztz', `
 declare_count_zeros()
 
-define i32 @__count_trailing_zeros_i32(i32) nounwind readnone alwaysinline {
+define i32 @__count_trailing_zeros_uniform_i32(i32) nounwind readnone alwaysinline {
   %rev = call i32 @llvm.genx.bfrev.i32 (i32 %0)
   %tz = call i32 @llvm.genx.lzd.i32 (i32 %rev)
   ret i32 %tz
 }
 
-define i64 @__count_trailing_zeros_i64(i64) nounwind readnone alwaysinline {
+define <WIDTH x i32> @__count_trailing_zeros_varying_i32(<WIDTH x i32>) nounwind readnone alwaysinline {
+  %rev = call <WIDTH x i32> @llvm.genx.bfrev.XE_SUFFIX(i32)(<WIDTH x i32> %0)
+  %tz = call <WIDTH x i32> @llvm.genx.lzd.XE_SUFFIX(i32)(<WIDTH x i32> %rev)
+  ret <WIDTH x i32> %tz
+}
+
+define i64 @__count_trailing_zeros_uniform_i64(i64) nounwind readnone alwaysinline {
   %hi.init = lshr i64 %0, 32
   %hi = trunc i64 %hi.init to i32
   %lo = trunc i64 %0 to i32
-  %tz.hi = call i32 @__count_trailing_zeros_i32(i32 %hi)
-  %tz.lo = call i32 @__count_trailing_zeros_i32(i32 %lo)
+  %tz.hi = call i32 @__count_trailing_zeros_uniform_i32(i32 %hi)
+  %tz.lo = call i32 @__count_trailing_zeros_uniform_i32(i32 %lo)
   %use.hi = icmp eq i32 %tz.lo, 32
   %tz.hi.sel = select i1 %use.hi, i32 %tz.hi, i32 0
   %tz.32 = add i32 %tz.lo, %tz.hi.sel
@@ -1641,12 +1655,30 @@ define i64 @__count_trailing_zeros_i64(i64) nounwind readnone alwaysinline {
   ret i64 %tz
 }
 
-define i32 @__count_leading_zeros_i32(i32) nounwind readnone alwaysinline {
+define <WIDTH x i64> @__count_trailing_zeros_varying_i64(<WIDTH x i64> %x) nounwind readnone alwaysinline {
+  %hi.init = lshr <WIDTH x i64> %x, CONSTANT_VECTOR(i64, 32)
+  %hi = trunc <WIDTH x i64> %hi.init to <WIDTH x i32>
+  %lo = trunc <WIDTH x i64> %x to <WIDTH x i32>
+  %tz.hi = call <WIDTH x i32> @__count_trailing_zeros_varying_i32(<WIDTH x i32> %hi)
+  %tz.lo = call <WIDTH x i32> @__count_trailing_zeros_varying_i32(<WIDTH x i32> %lo)
+  %use.hi = icmp eq <WIDTH x i32> %tz.lo, CONSTANT_VECTOR(i32, 32)
+  %tz.hi.sel = select <WIDTH x i1> %use.hi, <WIDTH x i32> %tz.hi, <WIDTH x i32> zeroinitializer
+  %tz.32 = add <WIDTH x i32> %tz.lo, %tz.hi.sel
+  %tz = zext <WIDTH x i32> %tz.32 to <WIDTH x i64>
+  ret <WIDTH x i64> %tz
+}
+
+define i32 @__count_leading_zeros_uniform_i32(i32) nounwind readnone alwaysinline {
   %c = call i32 @llvm.genx.lzd.i32(i32 %0)
   ret i32 %c
 }
 
-define i64 @__count_leading_zeros_i64(i64) nounwind readnone alwaysinline {
+define <WIDTH x i32> @__count_leading_zeros_varying_i32(<WIDTH x i32>) nounwind readnone alwaysinline {
+  %c = call <WIDTH x i32> @llvm.genx.lzd.XE_SUFFIX(i32)(<WIDTH x i32> %0)
+  ret <WIDTH x i32> %c
+}
+
+define i64 @__count_leading_zeros_uniform_i64(i64) nounwind readnone alwaysinline {
   %hi.init = lshr i64 %0, 32
   %hi = trunc i64 %hi.init to i32
   %lo = trunc i64 %0 to i32
@@ -1658,6 +1690,20 @@ define i64 @__count_leading_zeros_i64(i64) nounwind readnone alwaysinline {
   %lz = zext i32 %lz.32 to i64
   ret i64 %lz
 }
+
+define <WIDTH x i64> @__count_leading_zeros_varying_i64(<WIDTH x i64> %x) nounwind readnone alwaysinline {
+  %hi.init = lshr <WIDTH x i64> %x, CONSTANT_VECTOR(i64, 32)
+  %hi = trunc <WIDTH x i64> %hi.init to <WIDTH x i32>
+  %lo = trunc <WIDTH x i64> %x to <WIDTH x i32>
+  %lz.hi = call <WIDTH x i32> @llvm.genx.lzd.XE_SUFFIX(i32)(<WIDTH x i32> %hi)
+  %lz.lo = call <WIDTH x i32> @llvm.genx.lzd.XE_SUFFIX(i32)(<WIDTH x i32> %lo)
+  %use.lo = icmp eq <WIDTH x i32> %lz.hi, CONSTANT_VECTOR(i32, 32)
+  %lz.lo.sel = select <WIDTH x i1> %use.lo, <WIDTH x i32> %lz.lo, <WIDTH x i32> zeroinitializer
+  %lz.32 = add <WIDTH x i32> %lz.hi, %lz.lo.sel
+  %lz = zext <WIDTH x i32> %lz.32 to <WIDTH x i64>
+  ret <WIDTH x i64> %lz
+}
+
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4928,13 +4974,14 @@ define void @__masked_store_blend_i16(<16 x i16>* nocapture, <16 x i16>,
 ;;
 ;; Implement valid version of 'packed_store_active2' based on 'type' specified.
 ;;
-;; $1: Integer type for which function is to be created.
+;; $1: LLVM type for which function is to be created (i32, float...).
 ;; $2: Alignment for store.
+;; $3: LLVM overloaded type for which function is to be created (i32, f32...).
 ;;
 ;; FIXME: use the per_lane macro, defined below, to implement these!
 define(`packed_load_and_store_type', `
 
-define i32 @__packed_load_active$1(i8 * %startptr, i8 * %val_ptr,
+define i32 @__packed_load_active$3(i8 * %startptr, i8 * %val_ptr,
                                  <WIDTH x MASK> %full_mask) nounwind alwaysinline {
 entry:
   %startptr_typed = bitcast i8* %startptr to $1*
@@ -4990,7 +5037,7 @@ done:
   ret i32 %nextoffset
 }
 
-define i32 @__packed_store_active$1(i8 * %startptr, <WIDTH x $1> %vals,
+define i32 @__packed_store_active$3(i8 * %startptr, <WIDTH x $1> %vals,
                                    <WIDTH x MASK> %full_mask) nounwind alwaysinline {
 entry:
   %startptr_typed = bitcast i8* %startptr to $1*
@@ -5040,9 +5087,9 @@ done:
   ret i32 %nextoffset
 }
 
-define i32 @__packed_store_active2$1(i8 * %startptr, <WIDTH x $1> %vals,
+define i32 @__packed_store_active2$3(i8 * %startptr, <WIDTH x $1> %vals,
                                    <WIDTH x MASK> %full_mask) nounwind alwaysinline {
-  %res = call i32 @__packed_store_active$1(i8 * %startptr, <WIDTH x $1> %vals,
+  %res = call i32 @__packed_store_active$3(i8 * %startptr, <WIDTH x $1> %vals,
                                    <WIDTH x MASK> %full_mask)
   ret i32 %res
 }
@@ -5059,8 +5106,13 @@ define i32 @__packed_store_active2$1(i8 * %startptr, <WIDTH x $1> %vals,
 ;; loads a sequential value from the array.
 
 define(`packed_load_and_store', `
-  packed_load_and_store_type(i32, 4)
-  packed_load_and_store_type(i64, 8)
+  packed_load_and_store_type(i8, 1, i8)
+  packed_load_and_store_type(i16, 2, i16)
+  packed_load_and_store_type(i32, 4, i32)
+  packed_load_and_store_type(i64, 8, i64)
+  packed_load_and_store_type(half, 2, f16)
+  packed_load_and_store_type(float, 4, f32)
+  packed_load_and_store_type(double, 8, f64)
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -5077,6 +5129,8 @@ declare i32 @llvm.genx.lzd.i32(i32)
 declare i32 @llvm.genx.bfrev.i32(i32)
 declare i32 @llvm.cttz.i32(i32)
 declare i64 @llvm.cttz.i64(i64)
+declare <WIDTH x i32> @llvm.genx.lzd.XE_SUFFIX(i32)(<WIDTH x i32>)
+declare <WIDTH x i32> @llvm.genx.bfrev.XE_SUFFIX(i32)(<WIDTH x i32>)
 
 define(`count_zeros_are_defined', true)
 ')
@@ -5096,7 +5150,7 @@ entry:
 
 domixed:
   ; First, figure out which lane is the first active one
-  %first = call i64 @__count_trailing_zeros_i64(i64 %mm)
+  %first = call i64 @__count_trailing_zeros_uniform_i64(i64 %mm)
   %first32 = trunc i64 %first to i32
   %baseval = extractelement <$1 x $2> %v, i32 %first32
   %basev1 = insertelement <$1 x $2> undef, $2 %baseval, i32 0
@@ -5162,6 +5216,8 @@ not_all_equal:
 
 define(`reduce_equal', `
 reduce_equal_aux($1, half, half, i16, fcmp, 16, oeq)
+reduce_equal_aux($1, i8, int8, i8, icmp, 8, eq)
+reduce_equal_aux($1, i16, int16, i16, icmp, 16, eq)
 reduce_equal_aux($1, i32, int32, i32, icmp, 32, eq)
 reduce_equal_aux($1, float, float, i32, fcmp, 32, oeq)
 reduce_equal_aux($1, i64, int64, i64, icmp, 64, eq)
@@ -5218,13 +5274,19 @@ define <$1 x $2> @__exclusive_scan_$6(<$1 x $2> %v,
 define(`scans', `
 exclusive_scan(WIDTH, half, 16, fadd, zeroinitializer, add_half)
 exclusive_scan(WIDTH, i32, 32, add, 0, add_i32)
+exclusive_scan(WIDTH, i8, 8, add, 0, add_i8)
+exclusive_scan(WIDTH, i16, 16, add, 0, add_i16)
 exclusive_scan(WIDTH, float, 32, fadd, zeroinitializer, add_float)
 exclusive_scan(WIDTH, i64, 64, add, 0, add_i64)
 exclusive_scan(WIDTH, double, 64, fadd, zeroinitializer, add_double)
 
+exclusive_scan(WIDTH, i8, 8, and, -1, and_i8)
+exclusive_scan(WIDTH, i16, 16, and, -1, and_i16)
 exclusive_scan(WIDTH, i32, 32, and, -1, and_i32)
 exclusive_scan(WIDTH, i64, 64, and, -1, and_i64)
 
+exclusive_scan(WIDTH, i8, 8, or, 0, or_i8)
+exclusive_scan(WIDTH, i16, 16, or, 0, or_i16)
 exclusive_scan(WIDTH, i32, 32, or, 0, or_i32)
 exclusive_scan(WIDTH, i64, 64, or, 0, or_i64)
 ')

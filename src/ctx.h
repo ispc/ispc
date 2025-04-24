@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -393,6 +393,7 @@ class FunctionEmitContext {
         this also handles applying the given operation to the vector
         elements.
 
+        // TODO!: there is no isSigned parameter!
         The isSigned parameter toggles whether the nsw attribute is applied
         to signed integer arithmetic operations.
         The value of isSigned is determined either by
@@ -407,9 +408,26 @@ class FunctionEmitContext {
         for signed integer overflow.
         See the Expressions section of docs/ispc.rst for more information on this
         optimization.
+
+        The type parameter corresponds to the ISPC type of arguments. At the
+        moment, it is used only for checking if the passed type is varying for
+        integer division operators (SDiv/UDiv/SRem/URem). It is fine to pass
+        nullptr for any other operators or if we know for sure that the passed
+        type is not varying.
     */
-    llvm::Value *BinaryOperator(llvm::Instruction::BinaryOps inst, llvm::Value *v0, llvm::Value *v1,
+    llvm::Value *BinaryOperator(llvm::Instruction::BinaryOps inst, llvm::Value *v0, llvm::Value *v1, const Type *type,
                                 WrapSemantics wrapSemantics, const llvm::Twine &name = "");
+
+    // This is a convenience method for Xor, And and Or operators without the
+    // arguments that have no meaning for these operators or unused.
+    llvm::Value *BinaryAndOperator(llvm::Value *v0, llvm::Value *v1, const llvm::Twine &name = "");
+    llvm::Value *BinaryOrOperator(llvm::Value *v0, llvm::Value *v1, const llvm::Twine &name = "");
+    llvm::Value *BinaryXorOperator(llvm::Value *v0, llvm::Value *v1, const llvm::Twine &name = "");
+
+    // This method generates the division operator for varying integer types.
+    // It respects mask values avoiding division in disabled lanes.
+    llvm::Value *VectorIntDivision(llvm::Instruction::BinaryOps inst, llvm::Value *v0, llvm::Value *v1,
+                                   const llvm::Twine &name = "");
 
     /** Emit the "not" operator.  Like BinaryOperator(), this also handles
         a VectorType-based operand. */
@@ -460,11 +478,14 @@ class FunctionEmitContext {
         pointers are expected to come in as vectors of i32/i64 (depending
         on the target), since LLVM doesn't currently support vectors of
         pointers.  The underlying type of the base pointer must be provided
-        via the ptrType parameter */
-    llvm::Value *GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index, const Type *ptrType,
+        via the ptrType parameter.  The underlying type of index variables must
+        be provided via the indexType parameter. */
+    // TODO!: LLVM actually supports vectors of pointers, so we need reconsider
+    // this functions and other places.
+    llvm::Value *GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index, const Type *ptrType, const Type *indexType,
                                    const llvm::Twine &name = "");
     llvm::Value *GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0, llvm::Value *index1, const Type *ptrType,
-                                   const llvm::Twine &name = "");
+                                   const Type *index0Type, const Type *index1Type, const llvm::Twine &name = "");
 
     /** This method returns a new pointer that represents offsetting the
         given base pointer to point at the given element number of the
@@ -818,7 +839,7 @@ class FunctionEmitContext {
     void jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target);
     llvm::Value *emitGatherCallback(llvm::Value *lvalue, llvm::Value *retPtr);
 
-    llvm::Value *applyVaryingGEP(llvm::Value *basePtr, llvm::Value *index, const Type *ptrType);
+    llvm::Value *applyVaryingGEP(llvm::Value *basePtr, llvm::Value *index, const Type *ptrType, const Type *indexType);
 
     void restoreMaskGivenReturns(llvm::Value *oldMask);
     void addSwitchMaskCheck(llvm::Value *mask);

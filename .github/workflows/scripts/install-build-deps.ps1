@@ -2,13 +2,8 @@
 Install-ChocoPackage winflexbison3
 Install-ChocoPackage wget
 Install-ChocoPackage 7zip
-Install-ChocoPackage cygwin
-Install-ChocoPackage cyg-get
+Install-ChocoPackage gnuwin32-m4
 Install-ChocoPackage ninja
-
-# Install M4 exec and put it into PATH
-cyg-get m4
-echo "C:\tools\cygwin\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
 # Download and unpack llvm
 if ( !(Test-Path ${env:LLVM_HOME}) ) { mkdir ${env:LLVM_HOME} }

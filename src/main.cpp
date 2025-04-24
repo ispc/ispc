@@ -67,6 +67,11 @@ static void lPrintVersion() {
 #endif
     printf("    [--cpu=<type>]\t\t\tAn alias for [--device=<type>] switch\n");
     printf("    [-D<foo>]\t\t\t\t#define given value when running preprocessor\n");
+#if defined(ISPC_MACOS_TARGET_ON) || defined(ISPC_IOS_TARGET_ON)
+    printf("    [--darwin-version-min=<major.minor>]Set the minimum macOS/iOS version required for the "
+           "deployment.\n");
+#endif
+    printf("    [-dD]\t\t\t\tPrint macro definitions in addition to the preprocessor result\n");
     printf("    [--dev-stub <filename>]\t\tEmit device-side offload stub functions to file\n");
     printf("    ");
     char cpuHelp[2048];
@@ -74,13 +79,14 @@ static void lPrintVersion() {
              Target::SupportedCPUs().c_str());
     PrintWithWordBreaks(cpuHelp, 16, TerminalWidth(), stdout);
     printf("    [--dllexport]\t\t\tMake non-static functions DLL exported.  Windows target only\n");
+    printf("    [-dM]\t\t\t\tPrint macro definitions for the preprocessor result\n");
     printf("    [--dwarf-version={2,3,4,5}]\t\tGenerate source-level debug information with given DWARF version "
            "(triggers -g).  It forces the usage of DWARF debug info on Windows target\n");
     printf("    [-E]\t\t\t\tRun only the preprocessor\n");
     printf("    [--emit-asm]\t\t\tGenerate assembly language file as output\n");
     printf("    [--emit-llvm]\t\t\tEmit LLVM bitcode file as output\n");
     printf("    [--emit-llvm-text]\t\t\tEmit LLVM bitcode file as output in textual form\n");
-    printf("    [--emit-obj]\t\t\tGenerate object file file as output (default)\n");
+    printf("    [--emit-obj]\t\t\tGenerate object file as output (default)\n");
 #ifdef ISPC_XE_ENABLED
     printf("    [--emit-spirv]\t\t\tGenerate SPIR-V file as output\n");
     // AOT compilation is temporary disabled on Windows
@@ -109,7 +115,7 @@ static void lPrintVersion() {
     printf("    [--mcmodel=<value>]\t\t\tDefine the code model to use for code generation\n");
     printf("        small\t\t\t\tThe program and its symbols must be linked in the lower 2GB of the address space "
            "(default)\n");
-    printf("        large\t\t\t\tThe program has no assumprion about addresses and sizes of sections\n");
+    printf("        large\t\t\t\tThe program has no assumption about addresses and sizes of sections\n");
     printf("    [-MMM <filename>]\t\t\tWrite #include dependencies to given file\n");
     printf("    [-M]\t\t\t\tOutput a rule suitable for `make' describing the dependencies of the main source file to "
            "stdout\n");
@@ -130,9 +136,8 @@ static void lPrintVersion() {
     printf("        disable-gathers\t\t\tDisable gathers generation on targets that support them\n");
     printf("        disable-scatters\t\tDisable scatters generation on targets that support them\n");
     printf("        disable-loop-unroll\t\tDisable loop unrolling\n");
-    printf(
-        "        disable-zmm\t\t\tDisable using zmm registers for avx512 targets in favour of ymm. This also affects "
-        "ABI\n");
+    printf("        disable-zmm\t\t\tDisable using zmm registers for avx512 targets in favor of ymm. This also affects "
+           "ABI\n");
 #ifdef ISPC_XE_ENABLED
     printf("        emit-xe-hardware-mask\t\tEnable emitting of Xe implicit hardware mask\n");
     printf("        enable-xe-foreach-varying\t\tEnable experimental foreach support inside varying control flow\n");
@@ -698,7 +703,8 @@ int main(int Argc, char *Argv[]) {
                                  "be issued, but no output will be generated.");
         }
 
-        int ret = Module::LinkAndOutput(linkFileNames, ot, outFileName);
+        std::string filename = outFileName ? outFileName : "";
+        int ret = Module::LinkAndOutput(linkFileNames, ot, filename);
         lFreeArgv(argv);
         return ret;
     }
@@ -790,6 +796,21 @@ int main(int Argc, char *Argv[]) {
                                       "only 2, 3, 4 and 5 are allowed.",
                                       argv[i] + 16);
             }
+#if defined(ISPC_MACOS_TARGET_ON) || defined(ISPC_IOS_TARGET_ON)
+        } else if (!strncmp(argv[i], "--darwin-version-min=", 21)) {
+            const char *version = argv[i] + 21;
+            // Validate the version format
+            std::string versionStr(version);
+            llvm::VersionTuple versionTuple;
+            if (!versionStr.empty()) {
+                if (versionTuple.tryParse(versionStr)) {
+                    errorHandler.AddError("Invalid version format: \"%s\". Use <major_ver.minor_ver>.", version);
+                }
+            } else {
+                versionTuple = darwinUnspecifiedVersion;
+            }
+            g->darwinVersionMin = versionTuple;
+#endif
         } else if (!strcmp(argv[i], "--print-target")) {
             g->printTarget = true;
         } else if (!strcmp(argv[i], "--no-omit-frame-pointer")) {
@@ -803,6 +824,15 @@ int main(int Argc, char *Argv[]) {
         } else if (!strcmp(argv[i], "-E")) {
             g->onlyCPP = true;
             ot = Module::CPPStub;
+            // g->preprocessorOutputType is initialized as "Cpp" automatically
+        } else if (!strcmp(argv[i], "-dM")) {
+            g->onlyCPP = true;
+            ot = Module::CPPStub;
+            g->preprocessorOutputType = Globals::PreprocessorOutputType::MacrosOnly;
+        } else if (!strcmp(argv[i], "-dD")) {
+            g->onlyCPP = true;
+            ot = Module::CPPStub;
+            g->preprocessorOutputType = Globals::PreprocessorOutputType::WithMacros;
         } else if (!strcmp(argv[i], "--emit-asm")) {
             ot = Module::Asm;
         } else if (!strcmp(argv[i], "--emit-llvm")) {
@@ -1319,8 +1349,9 @@ int main(int Argc, char *Argv[]) {
     int ret = 0;
     {
         llvm::TimeTraceScope TimeScope("ExecuteCompiler");
-        ret = Module::CompileAndOutput(file, arch, cpu, targets, flags, ot, outFileName, headerFileName, depsFileName,
-                                       depsTargetName, hostStubFileName, devStubFileName);
+        Module::Output output = Module::Output(ot, flags, outFileName, headerFileName, depsFileName, hostStubFileName,
+                                               devStubFileName, depsTargetName);
+        ret = Module::CompileAndOutput(file, arch, cpu, targets, output);
     }
 
     if (g->enableTimeTrace) {

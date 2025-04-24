@@ -14,6 +14,7 @@
 #include <numeric>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 using namespace ispc;
@@ -170,9 +171,11 @@ static const BitcodeLib *lGetTargetLib(const std::map<uint32_t, const BitcodeLib
 
     // There's no Mac that supports SPR, so the decision is not support these targets when targeting macOS.
     // If these targets are linked in, then we still can use them for cross compilation, for example for Linux.
-    if (os == TargetOS::macos && (target == ISPCTarget::avx512spr_x4 || target == ISPCTarget::avx512spr_x8 ||
-                                  target == ISPCTarget::avx512spr_x16 || target == ISPCTarget::avx512spr_x32 ||
-                                  target == ISPCTarget::avx512spr_x64)) {
+    if (os == TargetOS::macos &&
+        (target == ISPCTarget::avx512spr_x4 || target == ISPCTarget::avx512spr_x8 ||
+         target == ISPCTarget::avx512spr_x16 || target == ISPCTarget::avx512spr_x32 ||
+         target == ISPCTarget::avx512spr_x64 || target == ISPCTarget::avx10_2_x4 || target == ISPCTarget::avx10_2_x8 ||
+         target == ISPCTarget::avx10_2_x16 || target == ISPCTarget::avx10_2_x32 || target == ISPCTarget::avx10_2_x64)) {
         return nullptr;
     }
 
@@ -254,7 +257,7 @@ void TargetLibRegistry::printSupportMatrix() const {
     for (TargetOS os = TargetOS::windows; os < TargetOS::error; os++) {
         os_names.push_back(OSToString(os));
     }
-    table.push_back(os_names);
+    table.push_back(std::move(os_names));
 
     // Fill in the name, one target per the row.
     for (ISPCTarget target = ISPCTarget::sse2_i32x4; target < ISPCTarget::error; target++) {
@@ -273,9 +276,9 @@ void TargetLibRegistry::printSupportMatrix() const {
                 }
             }
             arch_list_target.push_back(arch_list_os);
-            row.push_back(arch_list_os);
+            row.push_back(std::move(arch_list_os));
         }
-        table.push_back(row);
+        table.push_back(std::move(row));
     }
 
     // Collect maximum sizes for all columns

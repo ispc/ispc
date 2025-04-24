@@ -1,0 +1,296 @@
+# Copyright 2025, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: Reusable ISPC build workflow
+
+permissions: read-all
+
+on:
+  workflow_call:
+    inputs:
+      platform:
+        description: 'Platform to build on (linux, macos, windows)'
+        required: true
+        type: string
+      artifact_name:
+         description: 'Name for build artifact'
+         required: true
+         type: string
+      runner:
+         description: 'Github runner (ubuntu-22.04, ubuntu-22.04-arm, macos-13, windows-2019)'
+         required: true
+         type: string
+      llvm_version:
+        description: 'LLVM version to use'
+        required: true
+        type: string
+      llvm_tar:
+        description: 'LLVM tarball filename'
+        required: true
+        type: string
+      enable_cross:
+        description: 'Build with cross compilation support'
+        required: false
+        type: boolean
+        default: false
+      enable_lto:
+        description: 'Build with LTO'
+        required: false
+        type: boolean
+        default: false
+      enable_xe:
+        description: 'Build with Xe support (enables cross compilation)'
+        required: false
+        type: boolean
+        default: false
+      enable_wasm:
+        description: 'Build with WASM support (enables cross compilation)'
+        required: false
+        type: boolean
+        default: false
+
+
+env:
+  SDE_MIRROR_ID: 843185
+  SDE_TAR_NAME: sde-external-9.48.0-2024-11-25
+  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
+  LLVM_VERSION: ${{ inputs.llvm_version }}
+  LLVM_TAR: ${{ inputs.llvm_tar }}
+  LLVM_REPO: https://github.com/ispc/ispc.dependencies
+  BUILD_TYPE: "Release"
+  INSTALL_COMPUTE_RUNTIME: ${{ inputs.enable_xe == true && '1' || '' }}
+  COMPUTE_RUNTIME_GITHUB_RELEASE: ${{ inputs.enable_xe == true && '1' || '' }}
+  ISPC_ANDROID_NDK_PATH: "/usr/local/share/android-ndk"
+
+jobs:
+  build-ispc:
+    name: Build ISPC on ${{ inputs.platform }}
+    runs-on: ${{ inputs.runner }}
+
+    env:
+      LLVM_HOME: ${{ inputs.platform == 'windows' && 'C:\\projects\\llvm' || github.workspace }}
+      CROSS_TOOLS_GNUWIN32: ${{ inputs.platform == 'windows' && 'C:\\projects\\cross\\gnuwin32' || '' }}
+
+    steps:
+    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      with:
+        submodules: true
+
+    # Platform-specific setup
+    - name: Add msbuild to PATH
+      if: inputs.platform == 'windows'
+      uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2.0.0
+
+    - name: Install dependencies
+      run: |
+        if [ "${{ inputs.platform }}" == "windows" ]; then
+          pwsh .github/workflows/scripts/install-build-deps.ps1
+        elif [ "${{ inputs.platform }}" == "linux" ]; then
+          bash .github/workflows/scripts/install-build-deps.sh
+        elif [ "${{ inputs.platform }}" == "macos" ]; then
+          ls -al /Library/Developer/CommandLineTools/SDKs/
+          xcrun --show-sdk-path
+          [ -n "$LLVM_REPO" ] && wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 --no-verbose "$LLVM_REPO/releases/download/llvm-${LLVM_VERSION}-ispc-dev/${LLVM_TAR}"
+          tar xf "$LLVM_TAR"
+          echo "${GITHUB_WORKSPACE}/bin-${LLVM_VERSION}/bin" >> "$GITHUB_PATH"
+          brew install bison flex ninja
+          if [ "${{ inputs.runner }}" == "macos-14" ]; then
+            echo "/opt/homebrew/opt/bison/bin" >> "$GITHUB_PATH"
+            echo "/opt/homebrew/opt/flex/bin" >> "$GITHUB_PATH"
+          else
+            echo "/usr/local/opt/bison/bin" >> "$GITHUB_PATH"
+            echo "/usr/local/opt/flex/bin" >> "$GITHUB_PATH"
+          fi
+        fi
+      shell: bash
+
+    - name: Check environment
+      run: |
+        if [ "${{ inputs.platform }}" == "windows" ]; then
+          wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+        elif [ "${{ inputs.platform }}" == "linux" ]; then
+          which -a clang
+          cat /proc/cpuinfo
+        elif [ "${{ inputs.platform }}" == "macos" ]; then
+          which -a clang
+          llvm-config --system-libs
+          sysctl -n machdep.cpu.brand_string
+        fi
+      shell: bash
+
+    # Build commands based on platform and options
+    - name: Build ISPC on Linux
+      if: inputs.platform == 'linux'
+      run: |
+        # Note: enable_wasm and enable_xe automatically include cross compilation
+        if [[ "${{ inputs.enable_wasm }}" == "true" ]]; then
+          # WASM build with cross compilation
+          source scripts/install_emscripten.sh && emcc --version
+          cmake ./ \
+              -B build \
+              -DISPC_PREPARE_PACKAGE=ON \
+              -DISPC_CROSS=ON \
+              -DWASM_ENABLED=ON \
+              -DISPC_INCLUDE_BENCHMARKS=ON
+          cd build && make package -j"$(nproc)"
+        elif [[ "${{ inputs.enable_xe }}" == "true" ]]; then
+          # XE build with cross compilation
+          cmake superbuild \
+              -B build \
+              --preset os \
+              -DISPC_CROSS=ON \
+              -DINSTALL_WITH_XE_DEPS=ON \
+              -DISPC_INCLUDE_BENCHMARKS=ON \
+              -DPREBUILT_STAGE2_PATH="${GITHUB_WORKSPACE}/bin-${LLVM_VERSION}" \
+              -DCMAKE_INSTALL_PREFIX="${GITHUB_WORKSPACE}"/ispc-xe
+          cmake --build build
+        elif [[ "${{ inputs.enable_lto }}" == "true" ]]; then
+          # LTO build
+          cmake superbuild \
+              -B build \
+              --preset os \
+              -DLTO=ON \
+              -DXE_DEPS=OFF \
+              -DCMAKE_CXX_FLAGS=-Werror \
+              -DPREBUILT_STAGE2_PATH="${GITHUB_WORKSPACE}/bin-${LLVM_VERSION}"
+          cmake --build build
+        else
+          # Standard build
+          if [[ "${{ inputs.enable_cross }}" == "true" ]]; then
+            .github/workflows/scripts/build-ispc.sh -DISPC_CROSS=ON
+          else
+            .github/workflows/scripts/build-ispc.sh
+          fi
+        fi
+
+    - name: Build ISPC on macOS
+      if: inputs.platform == 'macos'
+      run: |
+        if [[ "${{ inputs.enable_lto }}" == "true" ]]; then
+          # LTO build with universal binary support
+          cmake superbuild \
+              -B build \
+              --preset os \
+              -DLTO=ON \
+              -DXE_DEPS=OFF \
+              -DCMAKE_CXX_FLAGS=-Werror \
+              -DPREBUILT_STAGE2_PATH="${GITHUB_WORKSPACE}/bin-${LLVM_VERSION}" \
+              -DMACOS_UNIVERSAL_BIN=ON \
+              -DISPC_ANDROID_NDK_PATH=${{ env.ISPC_ANDROID_NDK_PATH }}
+          cmake --build build
+        else
+          # Standard build
+          if [[ "${{ inputs.enable_cross }}" == "true" ]]; then
+            .github/workflows/scripts/build-ispc.sh -DISPC_CROSS=ON
+          else
+            .github/workflows/scripts/build-ispc.sh
+          fi
+        fi
+
+    - name: Build ISPC on Windows
+      if: inputs.platform == 'windows'
+      shell: cmd
+      run: |
+        set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        call %VSVARS%
+
+        REM Note: enable_wasm and enable_xe automatically include cross compilation
+        if "${{ inputs.enable_wasm }}" == "true" (
+          REM WASM build
+          call scripts\install_emscripten.bat
+          cmake . -B build -Thost=x64 -G "Visual Studio 16" ^
+            -DCMAKE_BUILD_TYPE=Release ^
+            -DCMAKE_INSTALL_PREFIX=%ISPC_HOME%\install ^
+            -DISPC_PREPARE_PACKAGE=ON ^
+            -DISPC_CROSS=ON ^
+            -DISPC_GNUWIN32_PATH=%CROSS_TOOLS_GNUWIN32% ^
+            -DWASM_ENABLED=ON ^
+            -DISPC_INCLUDE_BENCHMARKS=ON
+          cmake --build build --config Release --target package --verbose
+        ) else if "${{ inputs.enable_xe }}" == "true" (
+          REM XE build
+          cmake superbuild -B build --preset os -G "NMake Makefiles" ^
+            -DINSTALL_WITH_XE_DEPS=ON ^
+            -DPREBUILT_STAGE2_PATH=%LLVM_HOME%/bin-%LLVM_VERSION% ^
+            -DCMAKE_INSTALL_PREFIX=%GITHUB_WORKSPACE%\ispc-xe ^
+            -DISPC_INCLUDE_BENCHMARKS=ON ^
+            -DEXPLICIT_ENV_PATH=OFF ^
+            -DGNUWIN32=%CROSS_TOOLS_GNUWIN32% ^
+            -DISPC_CROSS=ON
+          cmake --build build
+        ) else if "${{ inputs.enable_lto }}" == "true" (
+          REM LTO build
+          cmake -B build superbuild --preset os -G "NMake Makefiles" ^
+            -DLTO=ON ^
+            -DXE_DEPS=OFF ^
+            -DPREBUILT_STAGE2_PATH=%LLVM_HOME%\bin-%LLVM_VERSION% ^
+            -DEXPLICIT_ENV_PATH=OFF ^
+            -DGNUWIN32=%CROSS_TOOLS_GNUWIN32%
+          cmake --build build
+        ) else (
+          if "${{ inputs.enable_cross }}" == "true" (
+              powershell -File .github/workflows/scripts/build-ispc.ps1 -DISPC_CROSS=ON
+            ) else (
+              powershell -File .github/workflows/scripts/build-ispc.ps1
+            )
+        )
+
+    # Sanity checks
+    - name: Run tests for Linux/macOS
+      if: inputs.platform == 'linux' || inputs.platform == 'macos'
+      run: |
+        if [[ "${{ inputs.enable_xe }}" == "true" ]]; then
+          # XE tests
+          find build -name check_isa -exec {} \;
+          find build -name ispc -exec {} --support-matrix \;
+          cmake --build build --target ispc-stage2-check
+        elif [[ "${{ inputs.enable_wasm }}" == "true" ]]; then
+          # Wasm tests
+          cd build
+          bin/ispc --support-matrix
+          make check-all
+          make test
+        elif [[ "${{ inputs.enable_lto }}" == "true" ]]; then
+          # LTO tests
+          cmake --build build --target ispc-stage2-check-all
+        else
+          # Standard tests
+          .github/workflows/scripts/check-ispc.sh
+        fi
+
+    - name: Run tests for Windows
+      if: inputs.platform == 'windows'
+      shell: cmd
+      run: |
+        set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        call %VSVARS%
+
+        if "${{ inputs.enable_xe }}" == "true" (
+          REM XE tests
+          %ISPC_DIR%\bin\check_isa
+          %ISPC_DIR%\bin\ispc --support-matrix
+          cmake --build build --target ispc-stage2-check
+        ) else if "${{ inputs.enable_lto }}" == "true" (
+          REM LTO tests
+          cmake --build build --target ispc-stage2-check-all
+        ) else (
+          REM Standard tests
+          powershell -File .github/workflows/scripts/check-ispc.ps1
+        )
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+      with:
+        name: ${{ inputs.artifact_name }}
+        path: |
+          # Linux artifacts
+          ${{ inputs.platform == 'linux' && !inputs.enable_lto && !inputs.enable_xe && 'build/ispc-trunk-linux.tar.gz' || '' }}
+          ${{ inputs.platform == 'linux' && (inputs.enable_lto || inputs.enable_xe) && 'build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-linux.tar.gz' || '' }}
+
+          # macOS artifacts
+          ${{ inputs.platform == 'macos' && !inputs.enable_lto && 'build/ispc-trunk-macos.tar.gz' || '' }}
+          ${{ inputs.platform == 'macos' && inputs.enable_lto && 'build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-macOS.universal.tar.gz' || '' }}
+
+          # Windows artifacts
+          ${{ inputs.platform == 'windows' && !inputs.enable_lto && !inputs.enable_xe && 'build/ispc-trunk-windows.zip' || '' }}
+          ${{ inputs.platform == 'windows' && (inputs.enable_lto || inputs.enable_xe) && 'build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-windows.zip' || '' }}

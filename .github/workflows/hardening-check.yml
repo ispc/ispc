@@ -16,8 +16,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  ZIP_URL: https://ci.appveyor.com/api/projects/ispc/ispc/artifacts/build%2Fispc-trunk-windows.zip?job=Environment%3A%20APPVEYOR_BUILD_WORKER_IMAGE%3DVisual%20Studio%202019%2C%20LLVM_VERSION%3Dlatest
-  TAR_URL: https://ci.appveyor.com/api/projects/ispc/ispc/artifacts/build%2Fispc-trunk-linux.tar.gz?job=Environment%3A%20APPVEYOR_BUILD_WORKER_IMAGE%3DUbuntu2204%2C%20LLVM_VERSION%3Dlatest
+  ZIP_URL: https://github.com/ispc/ispc/releases/download/trunk-artifacts/ispc-trunk-windows.zip
+  TAR_URL: https://github.com/ispc/ispc/releases/download/trunk-artifacts/ispc-trunk-linux.tar.gz
 
 jobs:
   hardening_check:
@@ -31,15 +31,18 @@ jobs:
         sudo apt -y update
         sudo apt install -y devscripts
 
-    - name: Download and check Linux oneAPI artifacts
+    - name: Download and check Linux artifacts
       run: |
         echo "Download artifact ${tar_url}" >> "$GITHUB_STEP_SUMMARY"
         wget --quiet -O "ispc.tar.gz" "${{ env.TAR_URL }}"
         tar xf "ispc.tar.gz"
-        hardening-check "./ispc*/bin/ispc" | tee -a "./hardening-check-trunk.txt"
-        hardening-check "./ispc*/lib64/libispcrt.so" | tee -a "./hardening-check-trunk.txt"
-        hardening-check "./ispc*/lib64/libispcrt_device_gpu.so" | tee -a "./hardening-check-trunk.txt"
-        hardening-check "./ispc*/lib64/libispcrt_device_cpu.so" | tee -a "./hardening-check-trunk.txt"
+        # Find the actual directory name that was created
+        ISPC_DIR=$(find . -type d -name "ispc*" -maxdepth 1)
+
+        hardening-check "${ISPC_DIR}/bin/ispc" | tee -a "./hardening-check-trunk.txt"
+        hardening-check "${ISPC_DIR}/lib/libispcrt.so" | tee -a "./hardening-check-trunk.txt"
+        hardening-check "${ISPC_DIR}/lib/libispcrt_device_gpu.so" | tee -a "./hardening-check-trunk.txt"
+        hardening-check "${ISPC_DIR}/lib/libispcrt_device_cpu.so" | tee -a "./hardening-check-trunk.txt"
 
     - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:

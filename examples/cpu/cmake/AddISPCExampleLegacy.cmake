@@ -59,7 +59,7 @@ function(add_ispc_example)
         COMMAND ${ISPC_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/${ISPC_SRC_NAME}.ispc ${ISPC_FLAGS} --target=${ISPC_TARGETS} --arch=${ISPC_ARCH}
                                    -h ${ISPC_HEADER_NAME} -o ${ISPC_OBJ_NAME}
         VERBATIM
-        DEPENDS ${ISPC_EXECUTABLE}
+        DEPENDS ${ISPC_EXECUTABLE} ${ISPC_DEPS}
         DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${ISPC_SRC_NAME}.ispc")
 
     # To show ispc source in VS solution:
@@ -71,10 +71,6 @@ function(add_ispc_example)
     target_sources(${example_NAME} PRIVATE ${example_TARGET_SOURCES})
     target_include_directories(${example_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
-     # Set C++ standard to C++11.
-     set_target_properties(${example_NAME} PROPERTIES
-         CXX_STANDARD 11
-         CXX_STANDARD_REQUIRED YES)
 
     # Compile options
     set_property(TARGET ${example_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)

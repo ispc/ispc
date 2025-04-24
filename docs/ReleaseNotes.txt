@@ -1,3 +1,134 @@
+=== v1.26.0 === (6 February 2025)
+
+ISPC release featuring improved ARM support, new "generic" targets that simplify
+ISPC's internal design and streamline the addition of new targets, improved code
+generation across x86 and ARM, and multiple stability fixes. This release is
+based on a patched LLVM 18.1.8.
+
+ARM Support Changes:
+
+ - The `--arch=arm` flag, which previously mapped to ARMv7 (32-bit), now maps to
+   ARMv8 (32-bit). There are no changes to `--arch=aarch64`, which continues to
+   map to ARMv8 (64-bit).
+ - The CPU definitions for the ARMv7 architecture have been removed: `cortex-a9`
+   and `cortex-a15`.
+ - New CPU definitions have been introduced, including `cortex-a55`,
+   `cortex-a78`, `cortex-a510`, and `cortex-a520`, along with support for new
+   Apple devices.
+ - New double-pumped targets have been introduced: `neon-i16x16` and
+   `neon-i8x32`.
+ - Dot product operations are now supported using native ARM instructions
+   (`sdot`/`udot`).
+ - Performance on ARMv8 has been improved by an average on 13%.
+
+Generic Targets:
+
+In this release, generic targets were introduced in ISPC. Their main goal is to
+simplify ISPC target management and serve as the foundation for
+hardware-specific targets, requiring only selective tuning when performance
+expectations are not met.
+
+ARM targets have been refactored to use generic targets as a baseline, resulting
+in cleaner code and improved performance. This change also makes it easier to
+add support for new architectures, such as RISC-V or any other LLVM-supported
+target.
+
+Generic targets can also be used as standalone targets in cases where no native
+target exists with the required width for a particular CPU (e.g., a 32-wide
+target for SSE4). This can be done by specifying the following options in ISPC:
+
+`--target=generic-i1x32 --cpu=penryn`
+
+A complete list of all generic targets and the architectures they support can
+be found in the output of:
+
+`ispc --support-matrix`
+
+Code Generation:
+
+ - The `-O1` optimization pipeline has been further optimized for size: loop
+   unrolling and function inlining have been adjusted accordingly.
+ - Improved generated code for the `count_leading_zeros` and
+   `count_trailing_zeros` functions by producing native instructions ( e.g.
+   `vplzcntq`).
+ - Improved generated code for masked load/stores for int8/int16 types on AVX512
+   by generating native instructions (`vmovdqu8`, `vmovdqu16`).
+ - Improved code generation when returning structs from functions by eliminating
+   unnecessary `mov` instructions.
+
+Language Changes:
+
+ - Enhanced support for LLVM intrinsics when the `--enable-llvm-intrinsics` flag
+   is used, including support for intrinsics with no arguments (#3112) and
+   overloaded intrinsics.
+ - Added user-visible macro definitions for the LLVM version that ISPC is based
+   on.
+ - The `__attribute__((deprecated))` attribute can now be applied to functions,
+   generating a warning when the function is called.
+
+Deprecated Targets:
+
+ - The KNL (`avx512knl-x16`) target has been removed.
+
+Compiler Switches Behavior:
+
+ - The `--darwin-version-min` option has been added to specify the minimum
+   deployment target version for macOS and iOS applications. This addresses a
+   new linker behavior introduced in Xcode 15.0, which issues a warning when no
+   version is provided.
+ - The `--nocpp` command-line flag is now deprecated and will be removed in a
+   future release.
+
+Dispatch Behavior:
+
+ - The behavior of user programs when no supported ISA is detected in the
+   auto-dispatch code has changed. Instead of raising the `SIGABRT` signal, the
+   system will now raise `SIGILL`.  This affects users who rely on `SIGABRT` in
+   their signal handlers for error handling or recovery.  Such users must update
+   their code to handle `SIGILL` instead. This change improves predictability and
+   removes the dispatcher's reliance on the C standard library.
+
+Bug Fixes:
+
+ - Fixed a crash for functions returning pointers.
+ - Fixed incorrect values for some predefined macros.
+ - Fixed a crash when using sizeof as a global variable initializer.
+ - Fixed function template overload resolution issues.
+ - Fixed incorrect behavior in short vector casts inside templates.
+ - Fixed incorrect zero handling in the `ldexp` standard library function.
+
+Recommended versions of Runtime Dependencies when targeting GPU:
+
+Linux:
+
+ - Intel(R) Graphics Compute Runtime
+   https://github.com/intel/compute-runtime/releases/tag/24.35.30872.22
+ - Level Zero Loader
+   https://github.com/oneapi-src/level-zero/releases/tag/v1.17.28
+ - Threading Building Blocks (TBB)
+
+Alternatively, you can use a validated gfx driver stack supporting Intel® Arc™
+available at https://dgpu-docs.intel.com/driver/installation.html
+
+Windows:
+
+ - Intel(R) Graphics Windows(R) DCH Drivers 32.0.101.6083
+   https://www.intel.com/content/www/us/en/download/785597/intel-arc-iris-xe-graphics-windows.html
+ - Level Zero Loader
+   https://github.com/oneapi-src/level-zero/releases/tag/v1.17.28
+ - OpenCL™ Offline Compiler (OCLOC)
+   https://www.intel.com/content/www/us/en/developer/articles/tool/oneapi-standalone-components.html
+   (this is needed for AoT compilation on Windows only)
+ - Supported GPU platforms: Intel(R) Arc Graphics, 11th-13th Gen Intel(R) Core
+   processor graphics
+
+Components revisions used in GPU-enabled build:
+ - https://github.com/KhronosGroup/SPIRV-LLVM-Translator/commit/43fb73fe
+ - https://github.com/intel/vc-intrinsics/commit/4f5bc1bb
+ - https://github.com/oneapi-src/level-zero/commit/c1f6e28 (v1.17.28)
+ - https://github.com/llvm/llvm-project/commit/3b5b5c1(llvmorg-18.1.8) +
+   patches from llvm_patches folder
+
 === v1.25.0 === (15 October 2024)
 
 ISPC release featuring new attribute syntax support, extended template handling

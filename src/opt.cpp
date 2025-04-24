@@ -21,8 +21,10 @@
 #include <set>
 #include <sstream>
 #include <stdio.h>
+#include <utility>
 
 #include <llvm/ADT/SmallSet.h>
+#include <llvm/ADT/SmallString.h>
 #include <llvm/Analysis/BasicAliasAnalysis.h>
 #include <llvm/Analysis/ConstantFolding.h>
 #include <llvm/Analysis/GlobalsModRef.h>
@@ -39,6 +41,7 @@
 #include <llvm/PassRegistry.h>
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/Passes/StandardInstrumentations.h>
+#include <llvm/Support/Path.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/TargetParser/Triple.h>
@@ -94,39 +97,34 @@
 
 using namespace ispc;
 // Strips all non-alphanumeric characters from given string.
-static std::string lSanitize(std::string in) {
+static std::string lSanitize(const std::string &in) {
+    std::string res = in;
     llvm::Regex r("[^[:alnum:]]");
-    while (r.match(in)) {
-        in = r.sub("", in);
+    while (r.match(res)) {
+        res = r.sub("", res);
     }
-    return in;
+    return res;
 }
 
 // Get path to dump file
-static std::string getDumpFilePath(std::string className, int pnum) {
-    std::ostringstream oss;
-    oss << "ir_" << pnum << "_" << lSanitize(std::string{className}) << ".ll";
+static std::string getDumpFilePath(const std::string &className, int pnum) {
+    std::ostringstream filename;
+    filename << "ir_" << pnum << "_" << lSanitize(className) << ".ll";
 
-    const std::string pathFile{oss.str()};
-
-#ifdef ISPC_HOST_IS_WINDOWS
-    const std::string pathSep{"\\"};
-#else
-    const std::string pathSep{"/"};
-#endif // ISPC_HOST_IS_WINDOWS
-
-    std::string pathDirFile;
-    if (!g->dumpFilePath.empty()) {
-        SourcePos noPos;
-        std::error_code EC = llvm::sys::fs::create_directories(g->dumpFilePath);
-        if (EC) {
-            Error(noPos, "Error creating directory '%s': %s", g->dumpFilePath.c_str(), EC.message().c_str());
-        }
-        pathDirFile = g->dumpFilePath + pathSep + pathFile;
-    } else {
-        pathDirFile = pathFile;
+    if (g->dumpFilePath.empty()) {
+        return filename.str();
     }
-    return pathDirFile;
+
+    SourcePos noPos;
+    std::error_code EC = llvm::sys::fs::create_directories(g->dumpFilePath);
+    if (EC) {
+        Error(noPos, "Error creating directory '%s': %s", g->dumpFilePath.c_str(), EC.message().c_str());
+    }
+
+    llvm::SmallString<128> pathBuf(g->dumpFilePath);
+    llvm::sys::path::append(pathBuf, filename.str());
+
+    return pathBuf.str().str();
 }
 
 DebugModulePassManager::DebugModulePassManager(llvm::Module &M, int optLevel) : m_passNumber(0), m_optLevel(optLevel) {
@@ -205,8 +203,9 @@ void DebugModulePassManager::addPassAndDebugPrint(std::string name, DebugModuleP
             llvm::raw_ostream *outputStream = nullptr;
             if (g->dumpFile) {
                 std::error_code EC;
-                std::unique_ptr<llvm::raw_fd_ostream> outFile = std::make_unique<llvm::raw_fd_ostream>(
-                    getDumpFilePath(name, m_passNumber), EC, llvm::sys::fs::OF_None);
+                std::string filePath = getDumpFilePath(name, m_passNumber);
+                std::unique_ptr<llvm::raw_fd_ostream> outFile =
+                    std::make_unique<llvm::raw_fd_ostream>(filePath, EC, llvm::sys::fs::OF_None);
                 if (!EC) {
                     outputDebugDumps.push_back(std::move(outFile));
                     outputStream = outputDebugDumps.back().get();

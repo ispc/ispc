@@ -8,7 +8,7 @@ struct F { float a, b, c; };
 // CHECK: Error: soa<3> width illegal. Value must be positive power of two
 soa<3> F farray1[10];
 
-// CHECK: Error: syntax error, unexpected '-', expecting int
+// CHECK: Error: syntax error, unexpected '-'.
 soa<-4> F farray2[10];
 
 // CHECK: Error: "uniform" qualifier and "soa<4>" qualifier can't both be used

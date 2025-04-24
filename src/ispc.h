@@ -25,6 +25,7 @@
 #endif
 
 #include <map>
+#include <memory>
 #include <set>
 #include <stdint.h>
 #include <stdio.h>
@@ -34,6 +35,7 @@
 
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/StringRef.h>
+#include <llvm/Support/VersionTuple.h>
 
 /** @def ISPC_MAX_NVEC maximum vector size of any of the compliation
     targets.
@@ -99,7 +101,41 @@ class Type;
 struct VariableDeclaration;
 typedef std::vector<TemplateArg> TemplateArgs;
 
-enum StorageClass { SC_NONE, SC_EXTERN, SC_STATIC, SC_TYPEDEF, SC_EXTERN_C, SC_EXTERN_SYCL };
+class StorageClass {
+  public:
+    enum class Kind {
+        NONE,
+        EXT,      // extern
+        STATIC,   // static
+        TYPEDEF,  // typedef
+        EXT_C,    // extern "C"
+        EXT_SYCL, // extern "SYCL"
+    };
+
+    // The constructor, operators, and constants are required to use
+    // StorageClass in the same way as an enum class (which StorageClass was
+    // previously) in switch statements, comparisons, and so on.
+    StorageClass(Kind kind);
+    operator Kind() const;
+    static constexpr Kind NONE{Kind::NONE};
+    static constexpr Kind EXT{Kind::EXT};
+    static constexpr Kind STATIC{Kind::STATIC};
+    static constexpr Kind TYPEDEF{Kind::TYPEDEF};
+    static constexpr Kind EXT_C{Kind::EXT_C};
+    static constexpr Kind EXT_SYCL{Kind::EXT_SYCL};
+
+    std::string GetString() const;
+    bool IsNone() const;
+    bool IsExtern() const;
+    bool IsStatic() const;
+    bool IsTypedef() const;
+    bool IsExternC() const;
+    bool IsExternSYCL() const;
+    bool IsAnyExtern() const;
+
+  private:
+    Kind m_kind = Kind::NONE;
+};
 
 // Enumerant for address spaces.
 enum class AddressSpace {
@@ -109,6 +145,13 @@ enum class AddressSpace {
     ispc_local,    // 3
     ispc_generic,  // 4
 };
+
+namespace dispatch {
+// This would create an unnecessary unused copies of functions defined in isa.h
+// in each translation unit that includes the current header (ispc.h). However,
+// all unused ones will be removed by the compiler, because they are static.
+#include "isa.h"
+} // namespace dispatch
 
 /** @brief Representation of a range of positions in a source file.
 
@@ -191,18 +234,21 @@ class Target {
         also that __best_available_isa() needs to be updated if ISAs are
         added or the enumerant values are reordered.  */
     enum ISA {
-        SSE2 = 0,
-        SSE41 = 1,
-        SSE42 = 2,
-        AVX = 3,
-        // Not supported anymore. Use either AVX or AVX2.
-        // AVX11 = 4,
-        AVX2 = 4,
-        AVX2VNNI = 5,
-        // 6 was previously used for KNL_AVX512
-        SKX_AVX512 = 7,
-        ICL_AVX512 = 8,
-        SPR_AVX512 = 9,
+        INVALID = dispatch::ISA::INVALID,
+        SSE2 = dispatch::ISA::SSE2,
+        SSE41 = dispatch::ISA::SSE41,
+        SSE42 = dispatch::ISA::SSE42,
+        AVX = dispatch::ISA::AVX,
+        // AVX11 is not supported anymore. Use either AVX or AVX2.
+        AVX11 = dispatch::ISA::AVX11,
+        AVX2 = dispatch::ISA::AVX2,
+        AVX2VNNI = dispatch::ISA::AVX2VNNI,
+        // KNL is not supported anymore.
+        KNL_AVX512 = dispatch::ISA::KNL_AVX512,
+        SKX_AVX512 = dispatch::ISA::SKX_AVX512,
+        ICL_AVX512 = dispatch::ISA::ICL_AVX512,
+        SPR_AVX512 = dispatch::ISA::SPR_AVX512,
+        AVX10_2 = dispatch::ISA::AVX10_2,
 #ifdef ISPC_ARM_ENABLED
         NEON,
 #endif
@@ -240,6 +286,9 @@ class Target {
 
     ~Target();
 
+    static std::unique_ptr<Target> Create(Arch arch, const char *cpu, ISPCTarget target, PICLevel picLevel,
+                                          MCModel codeModel, bool printTarget);
+
     // We don't copy Target objects at the moment. If we will then proper
     // implementations are needed considering the ownership of heap-allocated
     // fields like m_dataLayout.
@@ -253,9 +302,9 @@ class Target {
         supported CPUs. */
     static std::string SupportedCPUs();
 
-    /** Returns a triple string specifying the target architecture, vendor,
+    /** Returns a triple specifying the target architecture, vendor,
         and environment. */
-    std::string GetTripleString() const;
+    llvm::Triple GetTriple() const;
 
     /** Returns the LLVM TargetMachine object corresponding to this
         target. */
@@ -309,6 +358,9 @@ class Target {
     ISPCTarget getISPCTarget() const { return m_ispc_target; }
 
     ISA getISA() const { return m_isa; }
+
+    /** Converts an ISPC target to the corresponding Target ISA. */
+    static ISA TargetToISA(ISPCTarget target);
 
     bool isXeTarget() {
 #ifdef ISPC_XE_ENABLED
@@ -382,6 +434,8 @@ class Target {
     bool hasFp16Support() const { return m_hasFp16Support; }
 
     bool hasFp64Support() const { return m_hasFp64Support; }
+
+    bool hasConflictDetection() const { return m_hasConflictDetection; }
 
     void setWarning(PerfWarningType warningType) { m_warnings |= static_cast<unsigned int>(warningType); }
 
@@ -521,6 +575,9 @@ class Target {
 
     /** Indicates whether the target has FP64 support. */
     bool m_hasFp64Support;
+
+    /** Indicates whether the target has conflict detection-based run-Length encoding (avx512cd). */
+    bool m_hasConflictDetection;
 
     /** A bitset of PerfWarningType values indicating the warnings that are relevant for the target. */
     PerfWarningTypeUnderlyingType m_warnings;
@@ -885,6 +942,11 @@ struct Globals {
 
     enum pragmaUnrollType { none, nounroll, unroll, count };
 
+    /** Preprocessor Output Types, process with -E/-dD/-dM options */
+    enum class PreprocessorOutputType { Cpp, WithMacros, MacrosOnly };
+
+    PreprocessorOutputType preprocessorOutputType = PreprocessorOutputType::Cpp;
+
     /* If true, we are compiling for more than one target. */
     bool isMultiTargetCompilation;
 
@@ -896,7 +958,15 @@ struct Globals {
 
     /* When compile time tracing is enabled, set time granularity. */
     int timeTraceGranularity;
+
+    /* Set macOS/iOS deployment target. The version will be propagated to the triple.
+       This address the new linker introduced in Xcode 15 that issues a warning if version when no version is provided.
+       https://github.com/ispc/ispc/issues/3143  */
+    llvm::VersionTuple darwinVersionMin;
 };
+
+// This is used when empty string is used for "--darwin-version-min"
+constexpr llvm::VersionTuple darwinUnspecifiedVersion(INT_MAX);
 
 enum {
     COST_ASSIGN = 1,

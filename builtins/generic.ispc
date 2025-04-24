@@ -81,6 +81,19 @@ unmasked uniform float16 __extract(float16 v, uniform int32 i) { return @llvm.is
 unmasked uniform float __extract(float v, uniform int32 i) { return @llvm.ispc.extract(v, i); }
 unmasked uniform double __extract(double v, uniform int32 i) { return @llvm.ispc.extract(v, i); }
 
+// overloaded select functions
+unmasked int8 __select(bool mask, int8 v0, int8 v1) { return @llvm.ispc.select(mask, v0, v1); }
+unmasked int16 __select(bool mask, int16 v0, int16 v1) { return @llvm.ispc.select(mask, v0, v1); }
+unmasked int32 __select(bool mask, int32 v0, int32 v1) { return @llvm.ispc.select(mask, v0, v1); }
+unmasked int64 __select(bool mask, int64 v0, int64 v1) { return @llvm.ispc.select(mask, v0, v1); }
+unmasked uint8 __select(bool mask, uint8 v0, uint8 v1) { return @llvm.ispc.select(mask, v0, v1); }
+unmasked uint16 __select(bool mask, uint16 v0, uint16 v1) { return @llvm.ispc.select(mask, v0, v1); }
+unmasked uint32 __select(bool mask, uint32 v0, uint32 v1) { return @llvm.ispc.select(mask, v0, v1); }
+unmasked uint64 __select(bool mask, uint64 v0, uint64 v1) { return @llvm.ispc.select(mask, v0, v1); }
+unmasked float16 __select(bool mask, float16 v0, float16 v1) { return @llvm.ispc.select(mask, v0, v1); }
+unmasked float __select(bool mask, float v0, float v1) { return @llvm.ispc.select(mask, v0, v1); }
+unmasked double __select(bool mask, double v0, double v1) { return @llvm.ispc.select(mask, v0, v1); }
+
 // concat: concatenate varying vectors to short vector of DOUBLE_WIDTH
 unmasked uniform int8<DOUBLE_WIDTH> __concat(int8 v0, int8 v1) { return @llvm.ispc.concat(v0, v1); }
 unmasked uniform int16<DOUBLE_WIDTH> __concat(int16 v0, int16 v1) { return @llvm.ispc.concat(v0, v1); }
@@ -93,6 +106,29 @@ unmasked uniform uint64<DOUBLE_WIDTH> __concat(uint64 v0, uint64 v1) { return @l
 unmasked uniform float16<DOUBLE_WIDTH> __concat(float16 v0, float16 v1) { return @llvm.ispc.concat(v0, v1); }
 unmasked uniform float<DOUBLE_WIDTH> __concat(float v0, float v1) { return @llvm.ispc.concat(v0, v1); }
 unmasked uniform double<DOUBLE_WIDTH> __concat(double v0, double v1) { return @llvm.ispc.concat(v0, v1); }
+
+// overloaded __masked_expandload functions
+unmasked varying int8 __masked_expandload(uniform int8 *uniform from, UIntMaskType mask, varying int8 passthru) {
+    return @llvm.masked.expandload(from, mask, passthru);
+}
+unmasked varying int16 __masked_expandload(uniform int8 *uniform from, UIntMaskType mask, varying int16 passthru) {
+    return @llvm.masked.expandload(from, mask, passthru);
+}
+unmasked varying int32 __masked_expandload(uniform int8 *uniform from, UIntMaskType mask, varying int32 passthru) {
+    return @llvm.masked.expandload(from, mask, passthru);
+}
+unmasked varying int64 __masked_expandload(uniform int8 *uniform from, UIntMaskType mask, varying int64 passthru) {
+    return @llvm.masked.expandload(from, mask, passthru);
+}
+unmasked varying float16 __masked_expandload(uniform int8 *uniform from, UIntMaskType mask, varying float16 passthru) {
+    return @llvm.masked.expandload(from, mask, passthru);
+}
+unmasked varying float __masked_expandload(uniform int8 *uniform from, UIntMaskType mask, varying float passthru) {
+    return @llvm.masked.expandload(from, mask, passthru);
+}
+unmasked varying double __masked_expandload(uniform int8 *uniform from, UIntMaskType mask, varying double passthru) {
+    return @llvm.masked.expandload(from, mask, passthru);
+}
 
 // bitcast
 template <typename L, typename R> unmasked L __bitcast(R x) {
@@ -243,6 +279,42 @@ template <> unmasked varying double __bitcast<varying double, varying uint64>(va
 template <> unmasked varying double __bitcast<varying double, varying int64>(varying int64 x) {
     return @llvm.ispc.bitcast(x, (varying double)0);
 }
+
+template <typename T> varying T __idiv_t(varying T a, varying T b) {
+    varying T res = 0;
+    foreach_active(i) {
+        uniform T x = __extract(a, i) / __extract(b, i);
+        res = __insert(res, i, x);
+    }
+    return res;
+}
+
+template <typename T> varying T __irem_t(varying T a, varying T b) {
+    varying T res = 0;
+    foreach_active(i) {
+        uniform T x = __extract(a, i) % __extract(b, i);
+        res = __insert(res, i, x);
+    }
+    return res;
+}
+
+UNMANGLED CDECL int8 __sdiv_i8(int8 a, int8 b) { return __idiv_t(a, b); }
+UNMANGLED CDECL int16 __sdiv_i16(int16 a, int16 b) { return __idiv_t(a, b); }
+UNMANGLED CDECL int32 __sdiv_i32(int32 a, int32 b) { return __idiv_t(a, b); }
+UNMANGLED CDECL int64 __sdiv_i64(int64 a, int64 b) { return __idiv_t(a, b); }
+UNMANGLED CDECL uint8 __udiv_i8(uint8 a, uint8 b) { return __idiv_t(a, b); }
+UNMANGLED CDECL uint16 __udiv_i16(uint16 a, uint16 b) { return __idiv_t(a, b); }
+UNMANGLED CDECL uint32 __udiv_i32(uint32 a, uint32 b) { return __idiv_t(a, b); }
+UNMANGLED CDECL uint64 __udiv_i64(uint64 a, uint64 b) { return __idiv_t(a, b); }
+
+UNMANGLED CDECL int8 __srem_i8(int8 a, int8 b) { return __irem_t(a, b); }
+UNMANGLED CDECL int16 __srem_i16(int16 a, int16 b) { return __irem_t(a, b); }
+UNMANGLED CDECL int32 __srem_i32(int32 a, int32 b) { return __irem_t(a, b); }
+UNMANGLED CDECL int64 __srem_i64(int64 a, int64 b) { return __irem_t(a, b); }
+UNMANGLED CDECL uint8 __urem_i8(uint8 a, uint8 b) { return __irem_t(a, b); }
+UNMANGLED CDECL uint16 __urem_i16(uint16 a, uint16 b) { return __irem_t(a, b); }
+UNMANGLED CDECL uint32 __urem_i32(uint32 a, uint32 b) { return __irem_t(a, b); }
+UNMANGLED CDECL uint64 __urem_i64(uint64 a, uint64 b) { return __irem_t(a, b); }
 
 // vector ops
 EXT uniform bool __extract_bool(IntMaskType vec, uniform int32 lane) { return __extract(vec, lane); }
@@ -610,9 +682,15 @@ EXT READNONE varying float16 __min_varying_half(varying float16 x, varying float
 EXT READNONE uniform float16 __max_uniform_half(uniform float16 x, uniform float16 y) { return x > y ? x : y; }
 EXT READNONE varying float16 __max_varying_half(varying float16 x, varying float16 y) { return x > y ? x : y; }
 
-// horizontal int8/16 ops
+// horizontal int8 ops
 EXT READNONE uniform int16 __reduce_add_int8(varying int8 x) { return @llvm.vector.reduce.add((int16)x); }
+EXT READNONE uniform int8 __reduce_min_int8(varying int8 x) { return @llvm.vector.reduce.smin(x); }
+EXT READNONE uniform int8 __reduce_max_int8(varying int8 x) { return @llvm.vector.reduce.smax(x); }
+
+// horizontal int16 ops
 EXT READNONE uniform int16 __reduce_add_int16(varying int16 x) { return @llvm.vector.reduce.add((int32)x); }
+EXT READNONE uniform int16 __reduce_min_int16(varying int16 x) { return @llvm.vector.reduce.smin(x); }
+EXT READNONE uniform int16 __reduce_max_int16(varying int16 x) { return @llvm.vector.reduce.smax(x); }
 
 // horizontal float ops
 EXT READNONE uniform float __reduce_add_float(varying float x) { return @llvm.vector.reduce.fadd(-0.0f, x); }
@@ -624,6 +702,14 @@ EXT READNONE uniform float __reduce_min_float(varying float x) { return @llvm.ve
 EXT READNONE uniform int32 __reduce_add_int32(varying int32 x) { return @llvm.vector.reduce.add((int64)x); }
 EXT READNONE uniform int32 __reduce_min_int32(varying int32 x) { return @llvm.vector.reduce.smin(x); }
 EXT READNONE uniform int32 __reduce_max_int32(varying int32 x) { return @llvm.vector.reduce.smax(x); }
+
+// horizontal uint8 ops
+EXT READNONE uniform uint8 __reduce_min_uint8(varying uint8 x) { return @llvm.vector.reduce.umin(x); }
+EXT READNONE uniform uint8 __reduce_max_uint8(varying uint8 x) { return @llvm.vector.reduce.umax(x); }
+
+// horizontal uint16 ops
+EXT READNONE uniform uint16 __reduce_min_uint16(varying uint16 x) { return @llvm.vector.reduce.umin(x); }
+EXT READNONE uniform uint16 __reduce_max_uint16(varying uint16 x) { return @llvm.vector.reduce.umax(x); }
 
 // horizontal uint32 ops
 EXT READNONE uniform uint32 __reduce_min_uint32(varying uint32 x) { return @llvm.vector.reduce.umin(x); }
@@ -664,6 +750,18 @@ template <typename T> uniform bool __reduce_equal(varying T x, uniform T *unifor
     }
     return res;
 }
+UNMANGLED CDECL uniform bool __reduce_equal_int8(varying int8 val, uniform int8 *uniform ret) {
+    return __reduce_equal<int8>(val, ret);
+}
+UNMANGLED CDECL uniform bool __reduce_equal_uint8(varying uint8 val, uniform uint8 *uniform ret) {
+    return __reduce_equal<uint8>(val, ret);
+}
+UNMANGLED CDECL uniform bool __reduce_equal_int16(varying int16 val, uniform int16 *uniform ret) {
+    return __reduce_equal<int16>(val, ret);
+}
+UNMANGLED CDECL uniform bool __reduce_equal_uint16(varying uint16 val, uniform uint16 *uniform ret) {
+    return __reduce_equal<uint16>(val, ret);
+}
 UNMANGLED CDECL uniform bool __reduce_equal_int32(varying int32 val, uniform int32 *uniform ret) {
     return __reduce_equal<int32>(val, ret);
 }
@@ -697,10 +795,30 @@ EXT READNONE varying uint64 __min_varying_uint64(varying uint64 x, varying uint6
 EXT READNONE varying uint64 __max_varying_uint64(varying uint64 x, varying uint64 y) { return x > y ? x : y; }
 
 // float min/max
-EXT READNONE uniform float __min_uniform_float(uniform float x, uniform float y) { return x < y ? x : y; }
-EXT READNONE uniform float __max_uniform_float(uniform float x, uniform float y) { return x > y ? x : y; }
-EXT READNONE varying float __min_varying_float(varying float x, varying float y) { return x < y ? x : y; }
-EXT READNONE varying float __max_varying_float(varying float x, varying float y) { return x > y ? x : y; }
+EXT READNONE uniform float __min_uniform_float(uniform float x, uniform float y) { return @llvm.minnum(x, y); }
+EXT READNONE uniform float __max_uniform_float(uniform float x, uniform float y) { return @llvm.maxnum(x, y); }
+EXT READNONE varying float __min_varying_float(varying float x, varying float y) { return @llvm.minnum(x, y); }
+EXT READNONE varying float __max_varying_float(varying float x, varying float y) { return @llvm.maxnum(x, y); }
+
+// int8 min/max
+EXT READNONE uniform int8 __min_uniform_int8(uniform int8 x, uniform int8 y) { return x < y ? x : y; }
+EXT READNONE uniform int8 __max_uniform_int8(uniform int8 x, uniform int8 y) { return x > y ? x : y; }
+EXT READNONE uniform uint8 __min_uniform_uint8(uniform uint8 x, uniform uint8 y) { return x < y ? x : y; }
+EXT READNONE uniform uint8 __max_uniform_uint8(uniform uint8 x, uniform uint8 y) { return x > y ? x : y; }
+EXT READNONE varying int8 __min_varying_int8(varying int8 x, varying int8 y) { return x < y ? x : y; }
+EXT READNONE varying int8 __max_varying_int8(varying int8 x, varying int8 y) { return x > y ? x : y; }
+EXT READNONE varying uint8 __min_varying_uint8(varying uint8 x, varying uint8 y) { return x < y ? x : y; }
+EXT READNONE varying uint8 __max_varying_uint8(varying uint8 x, varying uint8 y) { return x > y ? x : y; }
+
+// int16 min/max
+EXT READNONE uniform int16 __min_uniform_int16(uniform int16 x, uniform int16 y) { return x < y ? x : y; }
+EXT READNONE uniform int16 __max_uniform_int16(uniform int16 x, uniform int16 y) { return x > y ? x : y; }
+EXT READNONE uniform uint16 __min_uniform_uint16(uniform uint16 x, uniform uint16 y) { return x < y ? x : y; }
+EXT READNONE uniform uint16 __max_uniform_uint16(uniform uint16 x, uniform uint16 y) { return x > y ? x : y; }
+EXT READNONE varying int16 __min_varying_int16(varying int16 x, varying int16 y) { return x < y ? x : y; }
+EXT READNONE varying int16 __max_varying_int16(varying int16 x, varying int16 y) { return x > y ? x : y; }
+EXT READNONE varying uint16 __min_varying_uint16(varying uint16 x, varying uint16 y) { return x < y ? x : y; }
+EXT READNONE varying uint16 __max_varying_uint16(varying uint16 x, varying uint16 y) { return x > y ? x : y; }
 
 // unsigned int min/max
 EXT READNONE uniform int32 __min_uniform_int32(uniform int32 x, uniform int32 y) { return x < y ? x : y; }
@@ -713,10 +831,10 @@ EXT READNONE varying uint32 __min_varying_uint32(varying uint32 x, varying uint3
 EXT READNONE varying uint32 __max_varying_uint32(varying uint32 x, varying uint32 y) { return x > y ? x : y; }
 
 // double precision min/max
-EXT READNONE uniform double __min_uniform_double(uniform double x, uniform double y) { return x < y ? x : y; }
-EXT READNONE uniform double __max_uniform_double(uniform double x, uniform double y) { return x > y ? x : y; }
-EXT READNONE varying double __min_varying_double(varying double x, varying double y) { return x < y ? x : y; }
-EXT READNONE varying double __max_varying_double(varying double x, varying double y) { return x > y ? x : y; }
+EXT READNONE uniform double __min_uniform_double(uniform double x, uniform double y) { return @llvm.minnum(x, y); }
+EXT READNONE uniform double __max_uniform_double(uniform double x, uniform double y) { return @llvm.maxnum(x, y); }
+EXT READNONE varying double __min_varying_double(varying double x, varying double y) { return @llvm.minnum(x, y); }
+EXT READNONE varying double __max_varying_double(varying double x, varying double y) { return @llvm.maxnum(x, y); }
 
 // int8/int16 avg builtins
 EXT varying uint8 __avg_up_uint8(varying uint8 a, varying uint8 b) { return ((uint16)a + (uint16)b + 1) >> 1; }
@@ -733,10 +851,27 @@ EXT varying int8 __avg_down_int8(varying int8 a, varying int8 b) { return ((int1
 EXT varying int16 __avg_down_int16(varying int16 a, varying int16 b) { return ((int32)a + (int32)b) >> 1; }
 
 // count trailing zeros
-EXT READNONE uniform int32 __count_trailing_zeros_i32(uniform int32 x) { return @llvm.cttz(x, false); }
-EXT READNONE uniform int64 __count_trailing_zeros_i64(uniform int64 x) { return @llvm.cttz(x, false); }
-EXT READNONE uniform int32 __count_leading_zeros_i32(uniform int32 x) { return @llvm.ctlz(x, false); }
-EXT READNONE uniform int64 __count_leading_zeros_i64(uniform int64 x) { return @llvm.ctlz(x, false); }
+EXT READNONE uniform int32 __count_trailing_zeros_uniform_i32(uniform int32 x) { return @llvm.cttz(x, false); }
+EXT READNONE uniform int64 __count_trailing_zeros_uniform_i64(uniform int64 x) { return @llvm.cttz(x, false); }
+EXT READNONE uniform int32 __count_leading_zeros_uniform_i32(uniform int32 x) { return @llvm.ctlz(x, false); }
+EXT READNONE uniform int64 __count_leading_zeros_uniform_i64(uniform int64 x) { return @llvm.ctlz(x, false); }
+
+EXT READNONE varying int32 __count_trailing_zeros_varying_i32(varying int32 x) {
+    varying int32 res = @llvm.cttz(x, false);
+    return res;
+}
+EXT READNONE varying int64 __count_trailing_zeros_varying_i64(varying int64 x) {
+    varying int64 res = @llvm.cttz(x, false);
+    return res;
+}
+EXT READNONE varying int32 __count_leading_zeros_varying_i32(varying int32 x) {
+    varying int32 res = @llvm.ctlz(x, false);
+    return res;
+}
+EXT READNONE varying int64 __count_leading_zeros_varying_i64(varying int64 x) {
+    varying int32 res = @llvm.ctlz(x, false);
+    return res;
+}
 
 // population count
 EXT uniform int32 __popcnt_int32(uniform int32 x) { return @llvm.ctpop(x); }
@@ -794,6 +929,8 @@ template <typename T> unmasked varying T __exclusive_scan_add(varying T v, UIntM
 EXT double __exclusive_scan_add_double(double v, UIntMaskType mask) { return __exclusive_scan_add<double>(v, mask); }
 EXT float __exclusive_scan_add_float(float v, UIntMaskType mask) { return __exclusive_scan_add<float>(v, mask); }
 EXT float16 __exclusive_scan_add_half(float16 v, UIntMaskType mask) { return __exclusive_scan_add<float16>(v, mask); }
+EXT int8 __exclusive_scan_add_i8(int8 v, UIntMaskType mask) { return __exclusive_scan_add<int8>(v, mask); }
+EXT int16 __exclusive_scan_add_i16(int16 v, UIntMaskType mask) { return __exclusive_scan_add<int16>(v, mask); }
 EXT int32 __exclusive_scan_add_i32(int32 v, UIntMaskType mask) { return __exclusive_scan_add<int32>(v, mask); }
 EXT int64 __exclusive_scan_add_i64(int64 v, UIntMaskType mask) { return __exclusive_scan_add<int64>(v, mask); }
 template <typename T> unmasked varying T __exclusive_scan_and(varying T v, UIntMaskType mask) {
@@ -804,6 +941,8 @@ template <typename T> unmasked varying T __exclusive_scan_and(varying T v, UIntM
     }
     return res;
 }
+EXT int8 __exclusive_scan_and_i8(int8 v, UIntMaskType mask) { return __exclusive_scan_and<int8>(v, mask); }
+EXT int16 __exclusive_scan_and_i16(int16 v, UIntMaskType mask) { return __exclusive_scan_and<int16>(v, mask); }
 EXT int32 __exclusive_scan_and_i32(int32 v, UIntMaskType mask) { return __exclusive_scan_and<int32>(v, mask); }
 EXT int64 __exclusive_scan_and_i64(int64 v, UIntMaskType mask) { return __exclusive_scan_and<int64>(v, mask); }
 template <typename T> unmasked varying T __exclusive_scan_or(varying T v, UIntMaskType mask) {
@@ -814,6 +953,8 @@ template <typename T> unmasked varying T __exclusive_scan_or(varying T v, UIntMa
     }
     return res;
 }
+EXT int8 __exclusive_scan_or_i8(int8 v, UIntMaskType mask) { return __exclusive_scan_or<int8>(v, mask); }
+EXT int16 __exclusive_scan_or_i16(int16 v, UIntMaskType mask) { return __exclusive_scan_or<int16>(v, mask); }
 EXT int32 __exclusive_scan_or_i32(int32 v, UIntMaskType mask) { return __exclusive_scan_or<int32>(v, mask); }
 EXT int64 __exclusive_scan_or_i64(int64 v, UIntMaskType mask) { return __exclusive_scan_or<int64>(v, mask); }
 
@@ -1202,33 +1343,81 @@ EXT varying double __streaming_load_varying_double(NOESCAPE uniform int8 *unifor
     return @llvm.ispc.stream_load(ptr, dummy);
 }
 
-EXT varying int8 __masked_load_i8(varying int8 *uniform ptr, UIntMaskType mask) {
+template <typename T> unmasked varying T __masked_load(varying T *uniform ptr, UIntMaskType mask) {
+    // This function should never be called, instead specialized versions should be used.
+    __not_supported();
+}
+template <> unmasked varying int8 __masked_load<int8>(varying int8 *uniform ptr, UIntMaskType mask) {
     varying int8 passthru;
     return @llvm.masked.load((uniform int8 * uniform) ptr, 1l, mask, passthru);
 }
-EXT varying int16 __masked_load_i16(varying int16 *uniform ptr, UIntMaskType mask) {
+template <> unmasked varying int16 __masked_load<int16>(varying int16 *uniform ptr, UIntMaskType mask) {
     varying int16 passthru;
     return @llvm.masked.load((uniform int8 * uniform) ptr, 1l, mask, passthru);
 }
-EXT varying int32 __masked_load_i32(varying int32 *uniform ptr, UIntMaskType mask) {
+template <> unmasked varying int32 __masked_load<int32>(varying int32 *uniform ptr, UIntMaskType mask) {
     varying int32 passthru;
     return @llvm.masked.load((uniform int8 * uniform) ptr, 1l, mask, passthru);
 }
-EXT varying int64 __masked_load_i64(varying int64 *uniform ptr, UIntMaskType mask) {
+template <> unmasked varying int64 __masked_load<int64>(varying int64 *uniform ptr, UIntMaskType mask) {
     varying int64 passthru;
     return @llvm.masked.load((uniform int8 * uniform) ptr, 1l, mask, passthru);
 }
-EXT varying float16 __masked_load_half(varying float16 *uniform ptr, UIntMaskType mask) {
+template <> unmasked varying float16 __masked_load<float16>(varying float16 *uniform ptr, UIntMaskType mask) {
     varying float16 passthru;
     return @llvm.masked.load((uniform int8 * uniform) ptr, 1l, mask, passthru);
 }
-EXT varying float __masked_load_float(varying float *uniform ptr, UIntMaskType mask) {
+template <> unmasked varying float __masked_load<float>(varying float *uniform ptr, UIntMaskType mask) {
     varying float passthru;
     return @llvm.masked.load((uniform int8 * uniform) ptr, 1l, mask, passthru);
 }
-EXT varying double __masked_load_double(varying double *uniform ptr, UIntMaskType mask) {
+template <> unmasked varying double __masked_load<double>(varying double *uniform ptr, UIntMaskType mask) {
     varying double passthru;
     return @llvm.masked.load((uniform int8 * uniform) ptr, 1l, mask, passthru);
+}
+
+#if TARGET_WIDTH == 64
+#define MASK_HIGH_BIT_ON -9223372036854775808
+#elif TARGET_WIDTH == 32
+#define MASK_HIGH_BIT_ON 2147483648
+#else
+#define MASK_HIGH_BIT_ON (1ull << (TARGET_WIDTH - 1))
+#endif
+
+template <typename T> unmasked varying T __masked_load_fast(varying T *uniform ptr, UIntMaskType mask) {
+    uniform uint64 mm = __movmsk(mask);
+    uniform uint64 mm_and_low = mm & 1;
+    uniform uint64 mm_and_high = mm & MASK_HIGH_BIT_ON;
+    uniform uint64 mm_and_high_shift = mm_and_high >> (TARGET_WIDTH - 1);
+    uniform bool can_vload = mm_and_low & mm_and_high_shift;
+    uniform bool can_vload_maybe_fast = can_vload || (__fast_masked_vload != 0);
+    if (can_vload_maybe_fast) {
+        return *ptr;
+    } else {
+        return __masked_load<T>(ptr, mask);
+    }
+}
+
+EXT varying int8 __masked_load_i8(varying int8 *uniform ptr, UIntMaskType mask) {
+    return __masked_load_fast<int8>(ptr, mask);
+}
+EXT varying int16 __masked_load_i16(varying int16 *uniform ptr, UIntMaskType mask) {
+    return __masked_load_fast<int16>(ptr, mask);
+}
+EXT varying int32 __masked_load_i32(varying int32 *uniform ptr, UIntMaskType mask) {
+    return __masked_load_fast<int32>(ptr, mask);
+}
+EXT varying int64 __masked_load_i64(varying int64 *uniform ptr, UIntMaskType mask) {
+    return __masked_load_fast<int64>(ptr, mask);
+}
+EXT varying float16 __masked_load_half(varying float16 *uniform ptr, UIntMaskType mask) {
+    return __masked_load_fast<float16>(ptr, mask);
+}
+EXT varying float __masked_load_float(varying float *uniform ptr, UIntMaskType mask) {
+    return __masked_load_fast<float>(ptr, mask);
+}
+EXT varying double __masked_load_double(varying double *uniform ptr, UIntMaskType mask) {
+    return __masked_load_fast<double>(ptr, mask);
 }
 
 EXT void __masked_store_i8(NOESCAPE varying int8 *uniform ptr, varying int8 val, UIntMaskType mask) {
@@ -1254,25 +1443,25 @@ EXT void __masked_store_double(NOESCAPE varying double *uniform ptr, varying dou
 }
 
 EXT void __masked_store_blend_i8(NOESCAPE varying int8 *uniform ptr, varying int8 val, UIntMaskType mask) {
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, 1l, mask);
+    @llvm.ispc.blend_store(val, (uniform int8 * uniform) ptr, mask);
 }
 EXT void __masked_store_blend_i16(NOESCAPE varying int16 *uniform ptr, varying int16 val, UIntMaskType mask) {
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, 1l, mask);
+    @llvm.ispc.blend_store(val, (uniform int8 * uniform) ptr, mask);
 }
 EXT void __masked_store_blend_i32(NOESCAPE varying int32 *uniform ptr, varying int32 val, UIntMaskType mask) {
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, 1l, mask);
+    @llvm.ispc.blend_store(val, (uniform int8 * uniform) ptr, mask);
 }
 EXT void __masked_store_blend_i64(NOESCAPE varying int64 *uniform ptr, varying int64 val, UIntMaskType mask) {
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, 1l, mask);
+    @llvm.ispc.blend_store(val, (uniform int8 * uniform) ptr, mask);
 }
 EXT void __masked_store_blend_half(NOESCAPE varying float16 *uniform ptr, varying float16 val, UIntMaskType mask) {
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, 1l, mask);
+    @llvm.ispc.blend_store(val, (uniform int8 * uniform) ptr, mask);
 }
 EXT void __masked_store_blend_float(NOESCAPE varying float *uniform ptr, varying float val, UIntMaskType mask) {
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, 1l, mask);
+    @llvm.ispc.blend_store(val, (uniform int8 * uniform) ptr, mask);
 }
 EXT void __masked_store_blend_double(NOESCAPE varying double *uniform ptr, varying double val, UIntMaskType mask) {
-    @llvm.masked.store(val, (uniform int8 * uniform) ptr, 1l, mask);
+    @llvm.ispc.blend_store(val, (uniform int8 * uniform) ptr, mask);
 }
 
 EXT uniform uint64 __cast_mask_to_i64(UIntMaskType mask) { return @llvm.ispc.packmask(mask); }
@@ -1280,7 +1469,7 @@ EXT uniform uint64 __cast_mask_to_i64(UIntMaskType mask) { return @llvm.ispc.pac
 // mask operations
 EXT uniform int64 __movmsk(UIntMaskType mask) { return __cast_mask_to_i64(mask); }
 EXT uniform bool __any(UIntMaskType mask) { return __cast_mask_to_i64(mask) != 0; }
-EXT uniform bool __all(UIntMaskType mask) { return __cast_mask_to_i64(mask) == (1ULL << TARGET_WIDTH) - 1; }
+EXT uniform bool __all(UIntMaskType mask) { return __cast_mask_to_i64(mask) == ~0ULL >> (64 - TARGET_WIDTH); }
 EXT uniform bool __none(UIntMaskType mask) { return __cast_mask_to_i64(mask) == 0; }
 
 // general gather functions
@@ -1769,11 +1958,39 @@ EXT void __scatter_factored_base_offsets64_double(uniform int8 *uniform base, va
 }
 
 // packed active stores
+EXT PackedStoreResultType __packed_store_activei8(uniform int8 *uniform ptr, varying int8 val, UIntMaskType mask) {
+    @llvm.masked.compressstore(val, ptr, mask);
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
+EXT PackedStoreResultType __packed_store_activei16(uniform int8 *uniform ptr, varying int16 val, UIntMaskType mask) {
+    @llvm.masked.compressstore(val, ptr, mask);
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
 EXT PackedStoreResultType __packed_store_activei32(uniform int8 *uniform ptr, varying int32 val, UIntMaskType mask) {
     @llvm.masked.compressstore(val, ptr, mask);
     return __popcnt_int64(__cast_mask_to_i64(mask));
 }
 EXT PackedStoreResultType __packed_store_activei64(uniform int8 *uniform ptr, varying int64 val, UIntMaskType mask) {
+    @llvm.masked.compressstore(val, ptr, mask);
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
+EXT PackedStoreResultType __packed_store_activef16(uniform int8 *uniform ptr, varying float16 val, UIntMaskType mask) {
+    @llvm.masked.compressstore(val, ptr, mask);
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
+EXT PackedStoreResultType __packed_store_activef32(uniform int8 *uniform ptr, varying float val, UIntMaskType mask) {
+    @llvm.masked.compressstore(val, ptr, mask);
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
+EXT PackedStoreResultType __packed_store_activef64(uniform int8 *uniform ptr, varying double val, UIntMaskType mask) {
+    @llvm.masked.compressstore(val, ptr, mask);
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
+EXT PackedStoreResultType __packed_store_active2i8(uniform int8 *uniform ptr, varying int8 val, UIntMaskType mask) {
+    @llvm.masked.compressstore(val, ptr, mask);
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
+EXT PackedStoreResultType __packed_store_active2i16(uniform int8 *uniform ptr, varying int16 val, UIntMaskType mask) {
     @llvm.masked.compressstore(val, ptr, mask);
     return __popcnt_int64(__cast_mask_to_i64(mask));
 }
@@ -1785,21 +2002,47 @@ EXT PackedStoreResultType __packed_store_active2i64(uniform int8 *uniform ptr, v
     @llvm.masked.compressstore(val, ptr, mask);
     return __popcnt_int64(__cast_mask_to_i64(mask));
 }
-
+EXT PackedStoreResultType __packed_store_active2f16(uniform int8 *uniform ptr, varying float16 val, UIntMaskType mask) {
+    @llvm.masked.compressstore(val, ptr, mask);
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
+EXT PackedStoreResultType __packed_store_active2f32(uniform int8 *uniform ptr, varying float val, UIntMaskType mask) {
+    @llvm.masked.compressstore(val, ptr, mask);
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
+EXT PackedStoreResultType __packed_store_active2f64(uniform int8 *uniform ptr, varying double val, UIntMaskType mask) {
+    @llvm.masked.compressstore(val, ptr, mask);
+    return __popcnt_int64(__cast_mask_to_i64(mask));
+}
 // packed active loads
-EXT uniform int32 __packed_load_activei32(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
-    varying int32 *uniform ptr = (varying int32 * uniform) to;
-    varying int32 passthru = *ptr;
-    varying int32 vec = @llvm.masked.expandload(from, mask, passthru);
+template <typename T>
+uniform int32 __packed_load_active(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
+    varying T *uniform ptr = (varying T * uniform) to;
+    varying T passthru = *ptr;
+    varying T vec = __masked_expandload(from, mask, passthru);
     *ptr = vec;
     return __popcnt_int64(__cast_mask_to_i64(mask));
 }
+EXT uniform int32 __packed_load_activei8(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
+    return __packed_load_active<int8>(from, to, mask);
+}
+EXT uniform int32 __packed_load_activei16(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
+    return __packed_load_active<int16>(from, to, mask);
+}
+EXT uniform int32 __packed_load_activei32(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
+    return __packed_load_active<int32>(from, to, mask);
+}
 EXT uniform int32 __packed_load_activei64(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
-    varying int64 *uniform ptr = (varying int64 * uniform) to;
-    varying int64 passthru = *ptr;
-    varying int64 vec = @llvm.masked.expandload(from, mask, passthru);
-    *ptr = vec;
-    return __popcnt_int64(__cast_mask_to_i64(mask));
+    return __packed_load_active<int64>(from, to, mask);
+}
+EXT uniform int32 __packed_load_activef16(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
+    return __packed_load_active<float16>(from, to, mask);
+}
+EXT uniform int32 __packed_load_activef32(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
+    return __packed_load_active<float>(from, to, mask);
+}
+EXT uniform int32 __packed_load_activef64(uniform int8 *uniform from, uniform int8 *uniform to, UIntMaskType mask) {
+    return __packed_load_active<double>(from, to, mask);
 }
 
 template <typename T>

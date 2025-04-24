@@ -8,23 +8,20 @@ permissions: read-all
 on:
   workflow_dispatch:
     inputs:
-      arch:
-        description: 'Architecture of ISPC release to be packed into snap package'
-        required: true
-        default: 'amd64'
-        type: choice
-        options:
-          - 'amd64'
-          - 'arm64'
       version:
         description: 'ISPC release version (just number without v, e.g., 1.20.0'
         required: true
         type: string
       publish:
-        description: 'Turn on publishing to Snap Store'
+        description: 'Turn on publishing to Snap Store for specified archs'
         required: true
-        default: false
-        type: boolean
+        default: 'none'
+        type: choice
+        options:
+          - 'none'
+          - 'both'
+          - 'amd64'
+          - 'aarch64'
       channel:
         description: 'Choose the channel to publish to'
         required: true
@@ -36,14 +33,21 @@ on:
           - 'beta'
           - 'edge'
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  snap-arm64:
-    runs-on: [self-hosted, linux, ARM64]
-    if: inputs.arch == 'arm64'
+  snap:
+    runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-22.04-arm' || 'ubuntu-latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ['amd64', 'aarch64']
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.arch }}
+      cancel-in-progress: true
+
+    env:
+      ISPC_VERSION: ${{ inputs.version }}
+      ISPC_ARCHIVE: "https://github.com/ispc/ispc/releases/download/v${{ inputs.version }}/ispc-v${{ inputs.version }}-linux${{ matrix.arch == 'aarch64' && '.aarch64' || '' }}.tar.gz"
+      ARTIFACT_NAME: ispc_snap_${{ matrix.arch }}
 
     steps:
       - name: Check out Git repository
@@ -53,10 +57,7 @@ jobs:
           submodules: false
 
       - name: Prepare snap.yml
-        env:
-          ISPC_VERSION: ${{ inputs.version }}
         run: |
-          ISPC_ARCHIVE="https://github.com/ispc/ispc/releases/download/v$ISPC_VERSION/ispc-v$ISPC_VERSION-linux.aarch64.tar.gz"
           sed "s|@ISPC_VERSION@|$ISPC_VERSION|g" -i snap/snapcraft.yaml
           sed "s|@ISPC_ARCHIVE@|$ISPC_ARCHIVE|g" -i snap/snapcraft.yaml
           {
@@ -77,7 +78,7 @@ jobs:
       # To publish manually run:
       # snapcraft push --channel=latest/stable ispc*.snap
       - name: Publish snap
-        if: inputs.publish
+        if: ${{ inputs.publish != 'none' && matrix.arch == inputs.publish || inputs.publish == 'both' }}
         uses: snapcore/action-publish@214b86e5ca036ead1668c79afb81e550e6c54d40 # v1.2.0
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
@@ -88,55 +89,5 @@ jobs:
       - name: Upload snap package
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
-          name: ispc_snap
-          path: ispc_*.snap
-
-  snap-amd64:
-    runs-on: ubuntu-latest
-    if: inputs.arch == 'amd64'
-
-    steps:
-      - name: Check out Git repository
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
-        with:
-          fetch-depth: 0
-          submodules: false
-
-      - name: Prepare snap.yml
-        env:
-          ISPC_VERSION: ${{ inputs.version }}
-        run: |
-          ISPC_ARCHIVE="https://github.com/ispc/ispc/releases/download/v$ISPC_VERSION/ispc-v$ISPC_VERSION-linux.tar.gz"
-          sed "s|@ISPC_VERSION@|$ISPC_VERSION|g" -i snap/snapcraft.yaml
-          sed "s|@ISPC_ARCHIVE@|$ISPC_ARCHIVE|g" -i snap/snapcraft.yaml
-          {
-            echo "ISPC_VERSION=$ISPC_VERSION"
-            echo "ISPC_ARCHIVE=$ISPC_ARCHIVE"
-            echo "channel is ${{ inputs.channel }}"
-            echo "Configured snapcraft.yaml:"
-            echo "--------------------------"
-            cat snap/snapcraft.yaml
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      # Set up snapcraft and call it to build snap.
-      # The output snap is ${{ steps.build.outputs.snap }}.
-      - name: Install Snapcraft
-        uses: snapcore/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79 # v1.3.0
-        id: build
-
-      # To publish manually run:
-      # snapcraft push --channel=latest/stable ispc*.snap
-      - name: Publish snap
-        if: inputs.publish
-        uses: snapcore/action-publish@214b86e5ca036ead1668c79afb81e550e6c54d40 # v1.2.0
-        env:
-          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
-        with:
-          snap: ${{ steps.build.outputs.snap }}
-          release: ${{ inputs.channel }}
-
-      - name: Upload snap package
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
-        with:
-          name: ispc_snap
-          path: ispc_*.snap
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ steps.build.outputs.snap }}

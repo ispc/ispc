@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2024, Intel Corporation
+  Copyright (c) 2024-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -22,10 +22,14 @@ DECL_BUILTIN_NAME(__avg_up_int16);
 DECL_BUILTIN_NAME(__avg_up_int8);
 DECL_BUILTIN_NAME(__avg_up_uint16);
 DECL_BUILTIN_NAME(__avg_up_uint8);
-DECL_BUILTIN_NAME(__count_leading_zeros_i32);
-DECL_BUILTIN_NAME(__count_leading_zeros_i64);
-DECL_BUILTIN_NAME(__count_trailing_zeros_i32);
-DECL_BUILTIN_NAME(__count_trailing_zeros_i64);
+DECL_BUILTIN_NAME(__count_leading_zeros_uniform_i32);
+DECL_BUILTIN_NAME(__count_leading_zeros_uniform_i64);
+DECL_BUILTIN_NAME(__count_trailing_zeros_uniform_i32);
+DECL_BUILTIN_NAME(__count_trailing_zeros_uniform_i64);
+DECL_BUILTIN_NAME(__count_leading_zeros_varying_i32);
+DECL_BUILTIN_NAME(__count_leading_zeros_varying_i64);
+DECL_BUILTIN_NAME(__count_trailing_zeros_varying_i32);
+DECL_BUILTIN_NAME(__count_trailing_zeros_varying_i64);
 DECL_BUILTIN_NAME(__delete_uniform_32rt);
 DECL_BUILTIN_NAME(__delete_uniform_64rt);
 DECL_BUILTIN_NAME(__delete_varying_32rt);
@@ -339,8 +343,16 @@ DECL_BUILTIN_NAME(__scatter_factored_base_offsets64_i16);
 DECL_BUILTIN_NAME(__scatter_factored_base_offsets64_i32);
 DECL_BUILTIN_NAME(__scatter_factored_base_offsets64_i64);
 DECL_BUILTIN_NAME(__scatter_factored_base_offsets64_i8);
+DECL_BUILTIN_NAME(__sdiv_i8);
+DECL_BUILTIN_NAME(__sdiv_i16);
+DECL_BUILTIN_NAME(__sdiv_i32);
+DECL_BUILTIN_NAME(__sdiv_i64);
 DECL_BUILTIN_NAME(__set_ftz_daz_flags);
 DECL_BUILTIN_NAME(__set_system_isa);
+DECL_BUILTIN_NAME(__srem_i8);
+DECL_BUILTIN_NAME(__srem_i16);
+DECL_BUILTIN_NAME(__srem_i32);
+DECL_BUILTIN_NAME(__srem_i64);
 DECL_BUILTIN_NAME(__task_count);
 DECL_BUILTIN_NAME(__task_count0);
 DECL_BUILTIN_NAME(__task_count1);
@@ -349,6 +361,15 @@ DECL_BUILTIN_NAME(__task_index);
 DECL_BUILTIN_NAME(__task_index0);
 DECL_BUILTIN_NAME(__task_index1);
 DECL_BUILTIN_NAME(__task_index2);
+DECL_BUILTIN_NAME(__terminate_now);
+DECL_BUILTIN_NAME(__udiv_i8);
+DECL_BUILTIN_NAME(__udiv_i16);
+DECL_BUILTIN_NAME(__udiv_i32);
+DECL_BUILTIN_NAME(__udiv_i64);
+DECL_BUILTIN_NAME(__urem_i8);
+DECL_BUILTIN_NAME(__urem_i16);
+DECL_BUILTIN_NAME(__urem_i32);
+DECL_BUILTIN_NAME(__urem_i64);
 DECL_BUILTIN_NAME(__wasm_cmp_msk_eq);
 
 std::unordered_map<PersistentGroup, std::vector<const char *>> persistentGroups = {

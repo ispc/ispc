@@ -24,8 +24,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  SDE_MIRROR_ID: 831748
-  SDE_TAR_NAME: sde-external-9.44.0-2024-08-22
+  SDE_MIRROR_ID: 843185
+  SDE_TAR_NAME: sde-external-9.48.0-2024-11-25
   USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
   LLVM_REPO: https://github.com/ispc/ispc.dependencies
 
@@ -76,7 +76,7 @@ jobs:
           submodules: true
 
       - name: Download package
-        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
         with:
           name: ispc_linux_package
 
@@ -97,12 +97,9 @@ jobs:
 
       - name: Set up PATH
         run: |
-          {
-            echo "YARPGEN_HOME=$GITHUB_WORKSPACE/yarpgen"
-            echo "$GITHUB_WORKSPACE/yarpgen/build:$GITHUB_WORKSPACE/yarpgen/scripts"
-            echo "$GITHUB_WORKSPACE/ispc-trunk-linux/bin"
-            echo "$SDE_HOME"
-          } >> "$GITHUB_ENV"
+          echo "YARPGEN_HOME=$GITHUB_WORKSPACE/yarpgen" >> "$GITHUB_ENV"
+          echo "$GITHUB_WORKSPACE/scripts" >> "$GITHUB_PATH"
+          echo "$GITHUB_WORKSPACE/build" >> "$GITHUB_PATH"
 
       - name: Set timeout for dispatched run
         if: github.event_name == 'workflow_dispatch'

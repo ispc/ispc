@@ -1,5 +1,5 @@
 // -*- mode: c++ -*-
-// Copyright (c) 2024, Intel Corporation
+// Copyright (c) 2024-2025, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 // @file stdlib.isph
@@ -33,42 +33,62 @@ __declspec(safe, cost0) inline uniform unsigned int64 intbits(uniform double d);
 
 __declspec(safe) inline float broadcast(float v, uniform int i);
 __declspec(safe) inline int8 broadcast(int8 v, uniform int i);
+__declspec(safe) inline unsigned int8 broadcast(unsigned int8 v, uniform int i);
 __declspec(safe) inline int16 broadcast(int16 v, uniform int i);
+__declspec(safe) inline unsigned int16 broadcast(unsigned int16 v, uniform int i);
 __declspec(safe) inline float16 broadcast(float16 v, uniform int i);
 __declspec(safe) inline int32 broadcast(int32 v, uniform int i);
+__declspec(safe) inline unsigned int32 broadcast(unsigned int32 v, uniform int i);
 __declspec(safe) inline double broadcast(double v, uniform int i);
 __declspec(safe) inline int64 broadcast(int64 v, uniform int i);
+__declspec(safe) inline unsigned int64 broadcast(unsigned int64 v, uniform int i);
 
 __declspec(safe) inline float rotate(float v, uniform int i);
 __declspec(safe) inline int8 rotate(int8 v, uniform int i);
+__declspec(safe) inline unsigned int8 rotate(unsigned int8 v, uniform int i);
 __declspec(safe) inline int16 rotate(int16 v, uniform int i);
+__declspec(safe) inline unsigned int16 rotate(unsigned int16 v, uniform int i);
 __declspec(safe) inline float16 rotate(float16 v, uniform int i);
 __declspec(safe) inline int32 rotate(int32 v, uniform int i);
+__declspec(safe) inline unsigned int32 rotate(unsigned int32 v, uniform int i);
 __declspec(safe) inline double rotate(double v, uniform int i);
 __declspec(safe) inline int64 rotate(int64 v, uniform int i);
+__declspec(safe) inline unsigned int64 rotate(unsigned int64 v, uniform int i);
 
 __declspec(safe) inline float shift(float v, uniform int i);
 __declspec(safe) inline int8 shift(int8 v, uniform int i);
+__declspec(safe) inline unsigned int8 shift(unsigned int8 v, uniform int i);
 __declspec(safe) inline int16 shift(int16 v, uniform int i);
+__declspec(safe) inline unsigned int16 shift(unsigned int16 v, uniform int i);
 __declspec(safe) inline float16 shift(float16 v, uniform int i);
 __declspec(safe) inline int32 shift(int32 v, uniform int i);
+__declspec(safe) inline unsigned int32 shift(unsigned int32 v, uniform int i);
 __declspec(safe) inline double shift(double v, uniform int i);
 __declspec(safe) inline int64 shift(int64 v, uniform int i);
+__declspec(safe) inline unsigned int64 shift(unsigned int64 v, uniform int i);
 
 __declspec(safe) inline float shuffle(float v, int i);
 __declspec(safe) inline int8 shuffle(int8 v, int i);
+__declspec(safe) inline unsigned int8 shuffle(unsigned int8 v, int i);
 __declspec(safe) inline int16 shuffle(int16 v, int i);
+__declspec(safe) inline unsigned int16 shuffle(unsigned int16 v, int i);
 __declspec(safe) inline float16 shuffle(float16 v, int i);
 __declspec(safe) inline int32 shuffle(int32 v, int i);
+__declspec(safe) inline unsigned int32 shuffle(unsigned int32 v, int i);
 __declspec(safe) inline double shuffle(double v, int i);
 __declspec(safe) inline int64 shuffle(int64 v, int i);
+__declspec(safe) inline unsigned int64 shuffle(unsigned int64 v, int i);
 __declspec(safe) inline float shuffle(float v0, float v1, int i);
 __declspec(safe) inline int8 shuffle(int8 v0, int8 v1, int i);
+__declspec(safe) inline unsigned int8 shuffle(unsigned int8 v0, unsigned int8 v1, int i);
 __declspec(safe) inline int16 shuffle(int16 v0, int16 v1, int i);
+__declspec(safe) inline unsigned int16 shuffle(unsigned int16 v0, unsigned int16 v1, int i);
 __declspec(safe) inline float16 shuffle(float16 v0, float16 v1, int i);
 __declspec(safe) inline int32 shuffle(int32 v0, int32 v1, int i);
+__declspec(safe) inline unsigned int32 shuffle(unsigned int32 v0, unsigned int32 v1, int i);
 __declspec(safe) inline double shuffle(double v0, double v1, int i);
 __declspec(safe) inline int64 shuffle(int64 v0, int64 v1, int i);
+__declspec(safe) inline unsigned int64 shuffle(unsigned int64 v0, unsigned int64 v1, int i);
 
 // x[i]
 __declspec(safe, cost1) inline uniform float extract(float x, uniform int i);
@@ -241,9 +261,17 @@ __declspec(safe, cost1) inline uniform double select(uniform bool cond, uniform 
 // Horizontal ops / reductions
 
 __declspec(safe) inline uniform int16 reduce_add(int8 x);
+__declspec(safe) inline uniform int8 reduce_min(int8 x);
+__declspec(safe) inline uniform int8 reduce_max(int8 x);
 __declspec(safe) inline uniform unsigned int16 reduce_add(unsigned int8 x);
+__declspec(safe) inline uniform unsigned int8 reduce_min(unsigned int8 x);
+__declspec(safe) inline uniform unsigned int8 reduce_max(unsigned int8 x);
 __declspec(safe) inline uniform int32 reduce_add(int16 x);
+__declspec(safe) inline uniform int16 reduce_min(int16 x);
+__declspec(safe) inline uniform int16 reduce_max(int16 x);
 __declspec(safe) inline uniform unsigned int32 reduce_add(unsigned int16 x);
+__declspec(safe) inline uniform unsigned int16 reduce_min(unsigned int16 x);
+__declspec(safe) inline uniform unsigned int16 reduce_max(unsigned int16 x);
 __declspec(safe) inline uniform float16 reduce_add(float16 x);
 __declspec(safe) inline uniform float16 reduce_min(float16 v);
 __declspec(safe) inline uniform float16 reduce_max(float16 v);
@@ -271,6 +299,10 @@ __declspec(safe) inline uniform unsigned int64 reduce_max(unsigned int64 v);
     __declspec(safe) inline uniform bool reduce_equal(TYPE v, uniform TYPE *uniform value);
 
 REDUCE_EQUAL_DECL(float16, half, UIntMaskType)
+REDUCE_EQUAL_DECL(int8, int8, UIntMaskType)
+REDUCE_EQUAL_DECL(unsigned int8, int8, UUIntMaskType)
+REDUCE_EQUAL_DECL(int16, int16, UIntMaskType)
+REDUCE_EQUAL_DECL(unsigned int16, int16, UUIntMaskType)
 REDUCE_EQUAL_DECL(int32, int32, UIntMaskType)
 REDUCE_EQUAL_DECL(unsigned int32, int32, UUIntMaskType)
 REDUCE_EQUAL_DECL(float, float, UIntMaskType)
@@ -281,16 +313,28 @@ REDUCE_EQUAL_DECL(double, double, UIntMaskType)
 #undef REDUCE_EQUAL_DECL
 
 inline float16 exclusive_scan_add(float16 v);
+inline int8 exclusive_scan_add(int8 v);
+inline unsigned int8 exclusive_scan_add(unsigned int8 v);
+inline int16 exclusive_scan_add(int16 v);
+inline unsigned int16 exclusive_scan_add(unsigned int16 v);
 inline int32 exclusive_scan_add(int32 v);
 inline unsigned int32 exclusive_scan_add(unsigned int32 v);
 inline float exclusive_scan_add(float v);
 inline int64 exclusive_scan_add(int64 v);
 inline unsigned int64 exclusive_scan_add(unsigned int64 v);
 inline double exclusive_scan_add(double v);
+inline int8 exclusive_scan_and(int8 v);
+inline unsigned int8 exclusive_scan_and(unsigned int8 v);
+inline int16 exclusive_scan_and(int16 v);
+inline unsigned int16 exclusive_scan_and(unsigned int16 v);
 inline int32 exclusive_scan_and(int32 v);
 inline unsigned int32 exclusive_scan_and(unsigned int32 v);
 inline int64 exclusive_scan_and(int64 v);
 inline unsigned int64 exclusive_scan_and(unsigned int64 v);
+inline int8 exclusive_scan_or(int8 v);
+inline unsigned int8 exclusive_scan_or(unsigned int8 v);
+inline int16 exclusive_scan_or(int16 v);
+inline unsigned int16 exclusive_scan_or(unsigned int16 v);
 inline int32 exclusive_scan_or(int32 v);
 inline unsigned int32 exclusive_scan_or(unsigned int32 v);
 inline int64 exclusive_scan_or(int64 v);
@@ -309,6 +353,36 @@ inline uniform int packed_store_active(uniform unsigned int a[], unsigned int va
 // unsigned int32 store2.
 inline uniform int packed_store_active2(uniform unsigned int a[], unsigned int vals);
 
+/* unsigned int16 implementations. */
+// unsigned int16 load.
+inline uniform int packed_load_active(uniform unsigned int16 a[], varying unsigned int16 *uniform vals);
+
+// unsigned int16 store.
+inline uniform int packed_store_active(uniform unsigned int16 a[], unsigned int16 vals);
+
+// unsigned int16 store2.
+inline uniform int packed_store_active2(uniform unsigned int16 a[], unsigned int16 vals);
+
+/* unsigned int8 implementations. */
+// unsigned int8 load.
+inline uniform int packed_load_active(uniform unsigned int8 a[], varying unsigned int8 *uniform vals);
+
+// unsigned int8 store.
+inline uniform int packed_store_active(uniform unsigned int8 a[], unsigned int8 vals);
+
+// unsigned int8 store2.
+inline uniform int packed_store_active2(uniform unsigned int8 a[], unsigned int8 vals);
+
+/* unsigned int64 implementations. */
+// unsigned int64 load.
+inline uniform int packed_load_active(uniform unsigned int64 a[], varying unsigned int64 *uniform vals);
+
+// unsigned int64 store.
+inline uniform int packed_store_active(uniform unsigned int64 a[], unsigned int64 vals);
+
+// unsigned int64 store2.
+inline uniform int packed_store_active2(uniform unsigned int64 a[], unsigned int64 vals);
+
 /* int32 implementations. */
 // int32 load.
 inline uniform int packed_load_active(uniform int a[], varying int *uniform vals);
@@ -322,15 +396,25 @@ inline uniform int packed_store_active2(uniform int a[], int vals);
 // int32 store with lanes.
 inline uniform int packed_store_active(bool active, uniform int a[], int vals);
 
-/* unsigned int64 implementations. */
-// unsigned int64 load.
-inline uniform int packed_load_active(uniform unsigned int64 a[], varying unsigned int64 *uniform vals);
+/* int16 implementations. */
+// int16 load.
+inline uniform int packed_load_active(uniform int16 a[], varying int16 *uniform vals);
 
-// unsigned int64 store.
-inline uniform int packed_store_active(uniform unsigned int64 a[], unsigned int64 vals);
+// int16 store.
+inline uniform int packed_store_active(uniform int16 a[], int16 vals);
 
-// unsigned int64 store2.
-inline uniform int packed_store_active2(uniform unsigned int64 a[], unsigned int64 vals);
+// int16 store2.
+inline uniform int packed_store_active2(uniform int16 a[], int16 vals);
+
+/* int8 implementations. */
+// int8 load.
+inline uniform int packed_load_active(uniform int8 a[], varying int8 *uniform vals);
+
+// int8 store.
+inline uniform int packed_store_active(uniform int8 a[], int8 vals);
+
+// int8 store2.
+inline uniform int packed_store_active2(uniform int8 a[], int8 vals);
 
 /* int64 implementations. */
 // int64 load.
@@ -344,6 +428,36 @@ inline uniform int packed_store_active2(uniform int64 a[], int64 vals);
 
 // int64 store with lanes.
 inline uniform int packed_store_active(bool active, uniform int64 a[], int64 vals);
+
+/* float16 implementations. */
+// float16 load.
+inline uniform int packed_load_active(uniform float16 a[], varying float16 *uniform vals);
+
+// float16 store.
+inline uniform int packed_store_active(uniform float16 a[], float16 vals);
+
+// float16 store2.
+inline uniform int packed_store_active2(uniform float16 a[], float16 vals);
+
+/* float implementations. */
+// float load.
+inline uniform int packed_load_active(uniform float a[], varying float *uniform vals);
+
+// float store.
+inline uniform int packed_store_active(uniform float a[], float vals);
+
+// float store2.
+inline uniform int packed_store_active2(uniform float a[], float vals);
+
+/* double implementations. */
+// double load.
+inline uniform int packed_load_active(uniform double a[], varying double *uniform vals);
+
+// double store.
+inline uniform int packed_store_active(uniform double a[], double vals);
+
+// double store2.
+inline uniform int packed_store_active2(uniform double a[], double vals);
 
 ///////////////////////////////////////////////////////////////////////////
 // streaming store
@@ -1141,3 +1255,60 @@ __declspec(safe) inline varying int32 dot2add_i16packed(varying uint32 a, varyin
 // with corresponding 16-bit integers in b, producing 2 intermediate signed 32-bit results.
 // Sum these 2 results with the corresponding 32-bit integer in src using signed saturation, and return the result.
 __declspec(safe) inline varying int32 dot2add_i16packed_sat(varying uint32 a, varying uint32 b, varying int32 acc);
+
+// Below the place for the real implementations of the functions using templates
+
+// These are macro generators for template functions that extend element-wise
+// standard library functions by adding support for short vectors. They take a
+// function name as an argument and help reduce copy-paste. There are two
+// versions of the macro: one for uniform and one for varying short vectors.
+// The number of function arguments in the macros depends on their suffix,
+// e.g., ARG2 indicates that the function takes two arguments.
+#define SHORT_VEC_UNIFORM_ARG1(FUNC)                                                                                   \
+    template <typename T, uint N> uniform T<N> FUNC(uniform T<N> a) {                                                  \
+        uniform T<N> result;                                                                                           \
+        foreach (i = 0 ... N) {                                                                                        \
+            result[i] = FUNC(a[i]);                                                                                    \
+        }                                                                                                              \
+        return result;                                                                                                 \
+    }
+
+#define SHORT_VEC_VARYING_ARG1(FUNC)                                                                                   \
+    template <typename T, uint N> varying T<N> FUNC(varying T<N> a) {                                                  \
+        varying T<N> result;                                                                                           \
+        for (uniform int i = 0; i < N; i++) {                                                                          \
+            result[i] = FUNC(a[i]);                                                                                    \
+        }                                                                                                              \
+        return result;                                                                                                 \
+    }
+
+#define SHORT_VEC_UNIFORM_ARG2(FUNC)                                                                                   \
+    template <typename T, uint N> uniform T<N> FUNC(uniform T<N> a, uniform T<N> b) {                                  \
+        uniform T<N> result;                                                                                           \
+        foreach (i = 0 ... N) {                                                                                        \
+            result[i] = FUNC(a[i], b[i]);                                                                              \
+        }                                                                                                              \
+        return result;                                                                                                 \
+    }
+
+#define SHORT_VEC_VARYING_ARG2(FUNC)                                                                                   \
+    template <typename T, uint N> varying T<N> FUNC(varying T<N> a, varying T<N> b) {                                  \
+        varying T<N> result;                                                                                           \
+        for (uniform int i = 0; i < N; i++) {                                                                          \
+            result[i] = FUNC(a[i], b[i]);                                                                              \
+        }                                                                                                              \
+        return result;                                                                                                 \
+    }
+
+#define SHORT_VEC_ARG1(FUNC)                                                                                           \
+    SHORT_VEC_UNIFORM_ARG1(FUNC)                                                                                       \
+    SHORT_VEC_VARYING_ARG1(FUNC)
+
+#define SHORT_VEC_ARG2(FUNC)                                                                                           \
+    SHORT_VEC_UNIFORM_ARG2(FUNC)                                                                                       \
+    SHORT_VEC_VARYING_ARG2(FUNC)
+
+// Generate the template functions for short vectors
+SHORT_VEC_ARG1(abs)
+SHORT_VEC_ARG2(max)
+SHORT_VEC_ARG2(min)

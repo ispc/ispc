@@ -70,61 +70,6 @@ Module *ispc::m;
 #define ISPC_HOST_IS_X86
 #endif
 
-#if !defined(ISPC_HOST_IS_WINDOWS) && defined(ISPC_HOST_IS_X86)
-// __cpuid() and __cpuidex() are defined on Windows in <intrin.h> for x86/x64.
-// On *nix they need to be defined manually through inline assembler.
-static void __cpuid(int info[4], int infoType) {
-    __asm__ __volatile__("cpuid" : "=a"(info[0]), "=b"(info[1]), "=c"(info[2]), "=d"(info[3]) : "0"(infoType));
-}
-
-static void __cpuidex(int info[4], int level, int count) {
-    __asm__ __volatile__("cpuid" : "=a"(info[0]), "=b"(info[1]), "=c"(info[2]), "=d"(info[3]) : "0"(level), "2"(count));
-}
-#endif // !ISPC_HOST_IS_WINDOWS && __x86_64__
-
-#ifdef ISPC_HOST_IS_X86
-static bool __os_has_avx_support() {
-#if defined(ISPC_HOST_IS_WINDOWS)
-    // Check if the OS will save the YMM registers
-    unsigned long long xcrFeatureMask = _xgetbv(_XCR_XFEATURE_ENABLED_MASK);
-    return (xcrFeatureMask & 6) == 6;
-#else  // !defined(ISPC_HOST_IS_WINDOWS)
-    // Check xgetbv; this uses a .byte sequence instead of the instruction
-    // directly because older assemblers do not include support for xgetbv and
-    // there is no easy way to conditionally compile based on the assembler used.
-    int rEAX = 0, rEDX = 0;
-    __asm__ __volatile__(".byte 0x0f, 0x01, 0xd0" : "=a"(rEAX), "=d"(rEDX) : "c"(0));
-    return (rEAX & 6) == 6;
-#endif // !defined(ISPC_HOST_IS_WINDOWS)
-}
-
-static bool __os_has_avx512_support() {
-#if defined(ISPC_HOST_IS_WINDOWS)
-    // Check if the OS saves the XMM, YMM and ZMM registers, i.e. it supports AVX2 and AVX512.
-    // See section 2.1 of software.intel.com/sites/default/files/managed/0d/53/319433-022.pdf
-    unsigned long long xcrFeatureMask = _xgetbv(_XCR_XFEATURE_ENABLED_MASK);
-    return (xcrFeatureMask & 0xE6) == 0xE6;
-#elif defined(ISPC_HOST_IS_APPLE)
-    // macOS has different way of dealing with AVX512 than Windows and Linux:
-    // - by default AVX512 is off in the newly created thread, which means CPUID flags will
-    //   indicate AVX512 availability, but OS support check (XCR0) will not succeed.
-    // - AVX512 can be enabled either by calling thread_set_state() or by executing any
-    //   AVX512 instruction, which would cause #UD exception handled by the OS.
-    // The purpose of this check is to identify if AVX512 is potentially available, so we
-    // need to bypass OS check and look at CPUID flags only.
-    // See ispc issue #1854 for more details.
-    return true;
-#else  // !defined(ISPC_HOST_IS_WINDOWS)
-    // Check xgetbv; this uses a .byte sequence instead of the instruction
-    // directly because older assemblers do not include support for xgetbv and
-    // there is no easy way to conditionally compile based on the assembler used.
-    int rEAX = 0, rEDX = 0;
-    __asm__ __volatile__(".byte 0x0f, 0x01, 0xd0" : "=a"(rEAX), "=d"(rEDX) : "c"(0));
-    return (rEAX & 0xE6) == 0xE6;
-#endif // !defined(ISPC_HOST_IS_WINDOWS)
-}
-#endif // ISPC_HOST_IS_X86
-
 #if defined(ISPC_ARM_ENABLED)
 // Retrieve the target features for a given ARM/AARCH64 architecture and CPU
 // Detecting hardware-supported ARM features across different platforms (e.g., Linux, macOS, Windows) much more trickier
@@ -172,12 +117,36 @@ static std::vector<llvm::StringRef> lGetARMTargetFeatures(Arch arch, const std::
                 Error(SourcePos(), "Invalid CPU name for ARM architecture: %s", cpu.c_str());
                 return {};
             }
-            using FPUKindType = llvm::ARM::FPUKind;
-            FPUKindType fpu = llvm::ARM::getDefaultFPU(cpu, archKind);
-            llvm::ARM::getFPUFeatures(fpu, targetFeatures);
-            // get default Extension features
-            uint64_t Extensions = llvm::ARM::getDefaultExtensions(cpu, archKind);
-            llvm::ARM::getExtensionFeatures(Extensions, targetFeatures);
+
+            // Get extension and FPU features
+            std::vector<llvm::StringRef> allFeatures;
+            // Process extension features
+            llvm::ARM::getExtensionFeatures(llvm::ARM::getDefaultExtensions(cpu, archKind), allFeatures);
+            // Process FPU features
+            llvm::ARM::getFPUFeatures(llvm::ARM::getDefaultFPU(cpu, archKind), allFeatures);
+
+            // Map to track features and their StringRefs
+            std::map<std::string, llvm::StringRef> featureMap;
+
+            // Process all features, prioritizing enabled (+) features
+            for (const auto &feature : allFeatures) {
+                if (!feature.empty() && (feature[0] == '+' || feature[0] == '-')) {
+                    std::string name = feature.substr(1).str();
+                    bool enabled = (feature[0] == '+');
+
+                    // If feature is enabled or not in map yet, update the map
+                    if (enabled || featureMap.find(name) == featureMap.end()) {
+                        featureMap[name] = feature;
+                    }
+                }
+            }
+
+            targetFeatures.reserve(featureMap.size());
+
+            for (const auto &[name, feature] : featureMap) {
+                targetFeatures.push_back(feature);
+            }
+
         } else if (arch == Arch::aarch64) {
             std::optional<llvm::AArch64::CpuInfo> cpuInfo = llvm::AArch64::parseCpu(cpu);
             if (!cpuInfo) {
@@ -194,9 +163,9 @@ static std::vector<llvm::StringRef> lGetARMTargetFeatures(Arch arch, const std::
         } else {
             UNREACHABLE();
         }
-        // Sort them for easier testing
-        std::sort(targetFeatures.begin(), targetFeatures.end());
     }
+    // Sort them for easier testing
+    std::sort(targetFeatures.begin(), targetFeatures.end());
     return targetFeatures;
 }
 
@@ -259,113 +228,44 @@ static ISPCTarget lGetSystemISA() {
 #if defined(ISPC_HOST_IS_ARM) || defined(ISPC_HOST_IS_AARCH64)
     return lGetARMSystemISA();
 #elif defined(ISPC_HOST_IS_X86)
-    int info[4];
-    __cpuid(info, 1);
-
-    int info2[4];
-    // Call cpuid with eax=7, ecx=0
-    __cpuidex(info2, 7, 0);
-
-    int info3[4] = {0, 0, 0, 0};
-    int max_subleaf = info2[0];
-    // Call cpuid with eax=7, ecx=1
-    if (max_subleaf >= 1) {
-        __cpuidex(info3, 7, 1);
-    }
-
-    // clang-format off
-    bool sse2 =                (info[3] & (1 << 26))  != 0;
-    bool sse41 =               (info[2] & (1 << 19))  != 0;
-    bool sse42 =               (info[2] & (1 << 20))  != 0;
-    bool avx_f16c =            (info[2] & (1 << 29))  != 0;
-    bool avx_rdrand =          (info[2] & (1 << 30))  != 0;
-    bool osxsave =             (info[2] & (1 << 27))  != 0;
-    bool avx =                 (info[2] & (1 << 28))  != 0;
-    bool avx2 =                (info2[1] & (1 << 5))  != 0;
-    bool avx_vnni =            (info3[0] & (1 << 4))  != 0;
-
-    bool avx512_f =            (info2[1] & (1 << 16)) != 0;
-    // clang-format on
-
-    if (osxsave && avx2 && avx512_f && __os_has_avx512_support()) {
-        // We need to verify that AVX2 is also available,
-        // as well as AVX512, because our targets are supposed
-        // to use both.
-
-        // clang-format off
-        bool avx512_dq =           (info2[1] & (1 << 17)) != 0;
-        bool avx512_pf =           (info2[1] & (1 << 26)) != 0;
-        bool avx512_er =           (info2[1] & (1 << 27)) != 0;
-        bool avx512_cd =           (info2[1] & (1 << 28)) != 0;
-        bool avx512_bw =           (info2[1] & (1 << 30)) != 0;
-        bool avx512_vl =           (info2[1] & (1 << 31)) != 0;
-        bool avx512_vbmi2 =        (info2[2] & (1 << 6))  != 0;
-        bool avx512_gfni =         (info2[2] & (1 << 8))  != 0;
-        bool avx512_vaes =         (info2[2] & (1 << 9))  != 0;
-        bool avx512_vpclmulqdq =   (info2[2] & (1 << 10)) != 0;
-        bool avx512_vnni =         (info2[2] & (1 << 11)) != 0;
-        bool avx512_bitalg =       (info2[2] & (1 << 12)) != 0;
-        bool avx512_vpopcntdq =    (info2[2] & (1 << 14)) != 0;
-        bool avx512_bf16 =         (info3[0] & (1 << 5))  != 0;
-        bool avx512_vp2intersect = (info2[3] & (1 << 8))  != 0;
-        bool avx512_amx_bf16 =     (info2[3] & (1 << 22)) != 0;
-        bool avx512_amx_tile =     (info2[3] & (1 << 24)) != 0;
-        bool avx512_amx_int8 =     (info2[3] & (1 << 25)) != 0;
-        bool avx512_fp16 =         (info2[3] & (1 << 23)) != 0;
-        // clang-format on
-
-        // Knights Landing:          KNL = F + PF + ER + CD
-        // Skylake server:           SKX = F + DQ + CD + BW + VL
-        // Cascade Lake server:      CLX = SKX + VNNI
-        // Cooper Lake server:       CPX = CLX + BF16
-        // Ice Lake client & server: ICL = CLX + VBMI2 + GFNI + VAES + VPCLMULQDQ + BITALG + VPOPCNTDQ
-        // Tiger Lake:               TGL = ICL + VP2INTERSECT
-        // Sapphire Rapids:          SPR = ICL + BF16 + AMX_BF16 + AMX_TILE + AMX_INT8 + AVX_VNNI + FP16
-        bool knl = avx512_pf && avx512_er && avx512_cd;
-        bool skx = avx512_dq && avx512_cd && avx512_bw && avx512_vl;
-        bool clx = skx && avx512_vnni;
-        [[maybe_unused]] bool cpx = clx && avx512_bf16;
-        bool icl =
-            clx && avx512_vbmi2 && avx512_gfni && avx512_vaes && avx512_vpclmulqdq && avx512_bitalg && avx512_vpopcntdq;
-        [[maybe_unused]] bool tgl = icl && avx512_vp2intersect;
-        bool spr =
-            icl && avx512_bf16 && avx512_amx_bf16 && avx512_amx_tile && avx512_amx_int8 && avx_vnni && avx512_fp16;
-        if (spr) {
-            // We don't care if AMX is enabled or not here, as AMX support is not implemented yet.
-            return ISPCTarget::avx512spr_x16;
-        } else if (icl) {
-            return ISPCTarget::avx512icl_x16;
-        } else if (skx) {
-            return ISPCTarget::avx512skx_x16;
-        } else if (knl) {
-            Error(SourcePos(), "Detected unsupported KNL ISA.  Exiting.");
-            exit(1);
-        }
-        // If it's unknown AVX512 target, fall through and use AVX2
-        // or whatever is available in the machine.
-    }
-
-    if (osxsave && avx && __os_has_avx_support()) {
-        if (avx_vnni) {
-            return ISPCTarget::avx2vnni_i32x8;
-        }
-        // AVX1 for sure....
-        // Ivy Bridge?
-        if (avx_f16c && avx_rdrand && avx2) {
-            return ISPCTarget::avx2_i32x8;
-        }
-        // Regular AVX
-        return ISPCTarget::avx1_i32x8;
-    } else if (sse42) {
-        return ISPCTarget::sse4_i32x4;
-    } else if (sse41) {
-        return ISPCTarget::sse41_i32x4;
-    } else if (sse2) {
+    enum Target::ISA isa = (enum Target::ISA)dispatch::get_x86_isa();
+    switch (isa) {
+    case Target::ISA::SSE2:
         return ISPCTarget::sse2_i32x4;
-    } else {
-        Error(SourcePos(), "Unable to detect supported SSE/AVX ISA.  Exiting.");
+    case Target::ISA::SSE41:
+        return ISPCTarget::sse41_i32x4;
+    case Target::ISA::SSE42:
+        return ISPCTarget::sse4_i32x4;
+    case Target::ISA::AVX:
+    case Target::ISA::AVX11:
+        // Ivy Bridge specific target was deprecated in ISPC, so we match it to
+        // AVX target (codename Sandy Bridge).
+        return ISPCTarget::avx1_i32x8;
+    case Target::ISA::AVX2:
+        return ISPCTarget::avx2_i32x8;
+    case Target::ISA::AVX2VNNI:
+        return ISPCTarget::avx2vnni_i32x8;
+    case Target::ISA::KNL_AVX512:
+        Error(SourcePos(), "Detected unsupported KNL ISA. Exiting.");
+        exit(1);
+    case Target::ISA::SKX_AVX512:
+        return ISPCTarget::avx512skx_x16;
+    case Target::ISA::ICL_AVX512:
+        return ISPCTarget::avx512icl_x16;
+    case Target::ISA::SPR_AVX512:
+        return ISPCTarget::avx512spr_x16;
+    case Target::ISA::AVX10_2:
+        // Return SPR target for LLVM versions < 20.0
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+        return ISPCTarget::avx10_2_x16;
+#else
+        return ISPCTarget::avx512spr_x16;
+#endif
+    default:
+        Error(SourcePos(), "Detected unsupported x86 ISA. Exiting.");
         exit(1);
     }
+    return ISPCTarget::none;
 #else
 #error "Unsupported host CPU architecture."
 #endif
@@ -454,7 +354,9 @@ typedef enum {
     CPU_ARL,
     CPU_LNL,
 #endif
-
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+    CPU_DMR,
+#endif
     // Zen 1-2-3
     CPU_ZNVER1,
     CPU_ZNVER2,
@@ -658,6 +560,10 @@ class AllCPUs {
         names[CPU_LNL].push_back("lunarlake");
         names[CPU_LNL].push_back("lnl");
 #endif
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+        names[CPU_DMR].push_back("diamondrapids");
+        names[CPU_DMR].push_back("dmr");
+#endif
         names[CPU_ZNVER1].push_back("znver1");
         names[CPU_ZNVER2].push_back("znver2");
         names[CPU_ZNVER2].push_back("ps5");
@@ -716,6 +622,11 @@ class AllCPUs {
         compat[CPU_GNR] = Set(CPU_GNR, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                               CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX, CPU_ICL,
                               CPU_ICX, CPU_TGL, CPU_ADL, CPU_SPR, CPU_None);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+        compat[CPU_DMR] = Set(CPU_DMR, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
+                              CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX, CPU_ICL,
+                              CPU_ICX, CPU_TGL, CPU_ADL, CPU_SPR, CPU_GNR, CPU_None);
+#endif
         compat[CPU_MTL] =
             Set(CPU_MTL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
                 CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_ADL, CPU_None);
@@ -976,7 +887,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
       m_hasHalfFullSupport(false), m_hasRand(false), m_hasGather(false), m_hasScatter(false),
       m_hasTranscendentals(false), m_hasTrigonometry(false), m_hasRsqrtd(false), m_hasRcpd(false),
       m_hasVecPrefetch(false), m_hasSaturatingArithmetic(false), m_hasFp16Support(false), m_hasFp64Support(true),
-      m_warnings(0) {
+      m_hasConflictDetection(false), m_warnings(0) {
     DeviceType CPUID = CPU_None, CPUfromISA = CPU_None;
     AllCPUs a;
     std::string featuresString;
@@ -1078,6 +989,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 #endif
             m_ispc_target = ISPCTarget::avx2vnni_i32x8;
             break;
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+        case CPU_DMR:
+            m_ispc_target = ISPCTarget::avx10_2_x16;
+            break;
+#endif
         case CPU_ZNVER3:
         case CPU_ZNVER1:
         case CPU_ZNVER2:
@@ -1302,6 +1218,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 64;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
+        // TODO: this is a workaround for the bug in GatherCoalescePass for x32 targets.
+        // see issue #3153
+        this->m_hasGather = true;
         break;
     case ISPCTarget::sse2_i32x4:
         this->m_isa = Target::SSE2;
@@ -1508,6 +1427,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
         this->m_hasDotProductVNNI = (m_ispc_target == ISPCTarget::avx512icl_x4) ? true : false;
+        this->m_hasConflictDetection = true;
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x4) ? CPU_ICL : CPU_SKX;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1529,6 +1449,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
         this->m_hasDotProductVNNI = (m_ispc_target == ISPCTarget::avx512icl_x8) ? true : false;
+        this->m_hasConflictDetection = true;
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x8) ? CPU_ICL : CPU_SKX;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1550,6 +1471,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
         this->m_hasDotProductVNNI = (m_ispc_target == ISPCTarget::avx512icl_x16) ? true : false;
+        this->m_hasConflictDetection = true;
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x16) ? CPU_ICL : CPU_SKX;
         if (g->opt.disableZMM) {
             this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
@@ -1580,6 +1502,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
         this->m_hasDotProductVNNI = (m_ispc_target == ISPCTarget::avx512icl_x64) ? true : false;
+        this->m_hasConflictDetection = true;
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x64) ? CPU_ICL : CPU_SKX;
         break;
     case ISPCTarget::avx512skx_x32:
@@ -1603,6 +1526,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
         this->m_hasDotProductVNNI = (m_ispc_target == ISPCTarget::avx512icl_x32) ? true : false;
+        this->m_hasConflictDetection = true;
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x32) ? CPU_ICL : CPU_SKX;
         break;
     case ISPCTarget::avx512spr_x4:
@@ -1623,6 +1547,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasVecPrefetch = false;
         this->m_hasFp16Support = true;
         this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;
         CPUfromISA = CPU_SPR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1645,6 +1570,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasVecPrefetch = false;
         this->m_hasFp16Support = true;
         this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;
         CPUfromISA = CPU_SPR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1667,6 +1593,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasVecPrefetch = false;
         this->m_hasFp16Support = true;
         this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;
         CPUfromISA = CPU_SPR;
         if (g->opt.disableZMM) {
             this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
@@ -1694,6 +1621,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasVecPrefetch = false;
         this->m_hasFp16Support = true;
         this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;
         CPUfromISA = CPU_SPR;
         break;
     case ISPCTarget::avx512spr_x32:
@@ -1714,8 +1642,140 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasVecPrefetch = false;
         this->m_hasFp16Support = true;
         this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;
         CPUfromISA = CPU_SPR;
         break;
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+    case ISPCTarget::avx10_2_x4:
+        this->m_isa = Target::AVX10_2;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 64;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 4;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
+        this->m_hasRand = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasFp16Support = true;
+        this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;
+        /* TODO: target specific implementations for the features below are required
+        this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
+        this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
+        this->m_hasRsqrtd = this->m_hasRcpd = true;
+        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch*/
+        CPUfromISA = CPU_DMR;
+        this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
+        this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
+        break;
+    case ISPCTarget::avx10_2_x8:
+        this->m_isa = Target::AVX10_2;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 64;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 8;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
+        this->m_hasRand = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasFp16Support = true;
+        this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;
+        /* TODO: target specific implementations for the features below are required
+        this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
+        this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
+        this->m_hasRsqrtd = this->m_hasRcpd = true;
+        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch*/
+        CPUfromISA = CPU_DMR;
+        this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
+        this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
+        break;
+    case ISPCTarget::avx10_2_x16:
+        this->m_isa = Target::AVX10_2;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 64;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 16;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
+        this->m_hasRand = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasFp16Support = true;
+        this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;
+        /* TODO: target specific implementations for the features below are required
+        this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
+        this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
+        this->m_hasRsqrtd = this->m_hasRcpd = true;
+        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch*/
+        CPUfromISA = CPU_DMR;
+        if (g->opt.disableZMM) {
+            this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
+            this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
+        } else {
+            this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "512"));
+            this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "512"));
+        }
+        break;
+    case ISPCTarget::avx10_2_x32:
+        this->m_isa = Target::AVX10_2;
+        this->m_nativeVectorWidth = 64;
+        this->m_nativeVectorAlignment = 64;
+        this->m_dataTypeWidth = 16;
+        this->m_vectorWidth = 32;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
+        this->m_hasRand = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasFp16Support = true;
+        this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;
+        /* TODO: target specific implementations for the features below are required
+        this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
+        this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
+        this->m_hasRsqrtd = this->m_hasRcpd = true;
+        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch*/
+        CPUfromISA = CPU_DMR;
+        break;
+    case ISPCTarget::avx10_2_x64:
+        this->m_isa = Target::AVX10_2;
+        this->m_nativeVectorWidth = 64;
+        this->m_nativeVectorAlignment = 64;
+        this->m_dataTypeWidth = 8;
+        this->m_vectorWidth = 64;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasHalfConverts = true;
+        this->m_hasHalfFullSupport = true;
+        this->m_hasRand = true;
+        this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasFp16Support = true;
+        this->m_hasDotProductVNNI = true;
+        this->m_hasConflictDetection = true;
+        /* TODO: target specific implementations for the features below are required
+        this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
+        this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
+        this->m_hasRsqrtd = this->m_hasRcpd = true;
+        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch*/
+        CPUfromISA = CPU_DMR;
+        break;
+#else
+    case ISPCTarget::avx10_2_x4:
+    case ISPCTarget::avx10_2_x8:
+    case ISPCTarget::avx10_2_x16:
+    case ISPCTarget::avx10_2_x32:
+    case ISPCTarget::avx10_2_x64:
+        unsupported_target = true;
+        break;
+#endif
 #ifdef ISPC_ARM_ENABLED
     case ISPCTarget::neon_i8x16:
         this->m_isa = Target::NEON;
@@ -1736,6 +1796,19 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_maskingIsFree = (arch == Arch::aarch64);
         this->m_maskBitCount = 8;
         break;
+    case ISPCTarget::neon_i8x32:
+        this->m_isa = Target::NEON;
+        this->m_nativeVectorWidth = 32;
+        this->m_nativeVectorAlignment = 32;
+        this->m_dataTypeWidth = 8;
+        this->m_vectorWidth = 32;
+        this->m_maskingIsFree = (arch == Arch::aarch64);
+        this->m_hasHalfConverts = true;
+        this->m_maskBitCount = 8;
+        // TODO: this is a workaround for the bug in GatherCoalescePass for x32 targets.
+        // see issue #3153
+        this->m_hasGather = true;
+        break;
     case ISPCTarget::neon_i16x8:
         this->m_isa = Target::NEON;
         this->m_nativeVectorWidth = 8;
@@ -1744,6 +1817,16 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 8;
         this->m_hasHalfConverts = true; // ??
         this->m_maskingIsFree = (arch == Arch::aarch64);
+        this->m_maskBitCount = 16;
+        break;
+    case ISPCTarget::neon_i16x16:
+        this->m_isa = Target::NEON;
+        this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 32;
+        this->m_dataTypeWidth = 16;
+        this->m_vectorWidth = 16;
+        this->m_maskingIsFree = (arch == Arch::aarch64);
+        this->m_hasHalfConverts = true;
         this->m_maskBitCount = 16;
         break;
     case ISPCTarget::neon_i32x4:
@@ -1770,7 +1853,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         break;
 #else
     case ISPCTarget::neon_i8x16:
+    case ISPCTarget::neon_i8x32:
     case ISPCTarget::neon_i16x8:
+    case ISPCTarget::neon_i16x16:
     case ISPCTarget::neon_i32x4:
     case ISPCTarget::neon_i32x8:
         unsupported_target = true;
@@ -2078,6 +2163,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
     case Target::SPR_AVX512:
         this->setWarning(PerfWarningType::DIVModInt);
         break;
+    // TODO: Add warnings for AVX10
     default:
         // Fall through
         ;
@@ -2093,6 +2179,15 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 
     if (CPUID == CPU_None) {
         cpu = a.GetDefaultNameFromType(CPUfromISA).c_str();
+        std::string cpu_string = cpu;
+        if ((arch == Arch::x86_64 || arch == Arch::x86) && ISPCTargetIsGeneric(m_ispc_target) && cpu_string.empty()) {
+            // If CPU is not specified and target is generic, use x86_64 as
+            // default CPU for generic targets.
+            // Note: It is actually possible to use older target CPUs for
+            // generic targets that we don't have at the moment in CPU_ enum.
+            CPUID = CPU_x86_64;
+            cpu = a.GetDefaultNameFromType(CPUID).c_str();
+        }
     } else {
         if ((CPUfromISA != CPU_None) && !a.BackwardCompatible(CPUID, CPUfromISA)) {
             std::string target_string = ISPCTargetToString(m_ispc_target);
@@ -2109,7 +2204,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 
     if (!error) {
         // Create TargetMachine
-        std::string triple = GetTripleString();
+        llvm::Triple triple = GetTriple();
 
         // The last validity check to ensure that supported for this target was enabled in the build.
         if (!g->target_registry->isSupported(m_ispc_target, g->target_os, arch)) {
@@ -2164,8 +2259,13 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 
         // For Xe target we do not need to create target/targetMachine
         if (!isXeTarget()) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
             m_targetMachine =
                 m_target->createTargetMachine(triple, m_cpu, featuresString, options, relocModel, mcModel);
+#else
+            m_targetMachine =
+                m_target->createTargetMachine(triple.str(), m_cpu, featuresString, options, relocModel, mcModel);
+#endif
             Assert(m_targetMachine != nullptr);
 
             // Set Optimization level for llvm codegen based on Optimization level
@@ -2245,7 +2345,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
                 lPrintTargetInfo("CPU", "null", "null", "null");
             }
         } else {
-            lPrintTargetInfo("GPU", this->GetTripleString(), this->getCPU(), featuresString);
+            lPrintTargetInfo("GPU", this->GetTriple().str(), this->getCPU(), featuresString);
         }
     }
 
@@ -2262,6 +2362,19 @@ Target::~Target() {
     if (m_targetMachine) {
         delete m_targetMachine;
     }
+}
+
+std::unique_ptr<Target> Target::Create(Arch arch, const char *cpu, ISPCTarget target, PICLevel picLevel,
+                                       MCModel codeModel, bool printTarget) {
+    auto ptr = std::make_unique<Target>(arch, cpu, target, picLevel, codeModel, printTarget);
+    if (!ptr->isValid()) {
+        return nullptr;
+    }
+
+    // Here, we do not transfer the ownership of the target to the global
+    // variable. We just set the observer pointer here.
+    g->target = ptr.get();
+    return ptr;
 }
 
 bool Target::checkIntrinsticSupport(llvm::StringRef name, SourcePos pos) {
@@ -2307,8 +2420,9 @@ std::string Target::SupportedCPUs() {
     return a.HumanReadableListOfNames();
 }
 
-std::string Target::GetTripleString() const {
+llvm::Triple Target::GetTriple() const {
     llvm::Triple triple;
+    llvm::VersionTuple darwinVersionMin = g->darwinVersionMin;
     switch (g->target_os) {
     case TargetOS::windows:
         if (m_arch == Arch::x86) {
@@ -2331,7 +2445,7 @@ std::string Target::GetTripleString() const {
             //"spir64-unknown-unknown"
             triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
             triple.setOS(llvm::Triple::OSType::UnknownOS);
-            return triple.str();
+            return triple;
         }
 #endif
         //"x86_64-pc-windows-msvc"
@@ -2360,7 +2474,7 @@ std::string Target::GetTripleString() const {
             //"spir64-unknown-unknown"
             triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
             triple.setOS(llvm::Triple::OSType::UnknownOS);
-            return triple.str();
+            return triple;
         }
 #endif
         triple.setVendor(llvm::Triple::VendorType::UnknownVendor);
@@ -2401,7 +2515,17 @@ std::string Target::GetTripleString() const {
             exit(1);
         }
         triple.setVendor(llvm::Triple::VendorType::Apple);
-        triple.setOS(llvm::Triple::OSType::MacOSX);
+        // If nothing is specified in command line - set default
+        if (darwinVersionMin.empty()) {
+            darwinVersionMin = (m_arch == Arch::x86_64) ? llvm::VersionTuple(10, 12) : llvm::VersionTuple(11, 0);
+        }
+        if (darwinVersionMin != darwinUnspecifiedVersion) {
+            triple.setOSName(llvm::Triple::getOSTypeName(llvm::Triple::OSType::MacOSX).str() +
+                             darwinVersionMin.getAsString());
+        } else {
+            // If empty string was specified for --darwin-version-min, do not set any version in the triple
+            triple.setOS(llvm::Triple::OSType::MacOSX);
+        }
         break;
     case TargetOS::android:
         if (m_arch == Arch::x86) {
@@ -2430,7 +2554,18 @@ std::string Target::GetTripleString() const {
         // "arm64-apple-ios"
         triple.setArchName("arm64");
         triple.setVendor(llvm::Triple::VendorType::Apple);
-        triple.setOS(llvm::Triple::OSType::IOS);
+        // If nothing is specified in command line - set default
+        if (darwinVersionMin.empty()) {
+            darwinVersionMin = llvm::VersionTuple(11, 0);
+        }
+
+        if (darwinVersionMin != darwinUnspecifiedVersion) {
+            triple.setOSName(llvm::Triple::getOSTypeName(llvm::Triple::OSType::IOS).str() +
+                             darwinVersionMin.getAsString());
+        } else {
+            // If empty string was specified for --darwin-version-min, do not set any version in the triple
+            triple.setOS(llvm::Triple::OSType::IOS);
+        }
         break;
     case TargetOS::ps4:
         if (m_arch != Arch::x86_64) {
@@ -2470,7 +2605,7 @@ std::string Target::GetTripleString() const {
         exit(1);
     }
 
-    return triple.str();
+    return triple;
 }
 
 bool Target::useGather() const { return m_hasGather && !g->opt.disableGathers; }
@@ -2506,6 +2641,10 @@ const char *Target::ISAToString(ISA isa) {
         return "avx512icl";
     case Target::SPR_AVX512:
         return "avx512spr";
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+    case Target::AVX10_2:
+        return "avx10.2";
+#endif
 #ifdef ISPC_XE_ENABLED
     case Target::GEN9:
         return "gen9";
@@ -2575,6 +2714,10 @@ const char *Target::ISAToTargetString(ISA isa) {
         return "avx512icl-x16";
     case Target::SPR_AVX512:
         return "avx512spr-x16";
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+    case Target::AVX10_2:
+        return "avx10.2-x16";
+#endif
     default:
         FATAL("Unhandled target in ISAToTargetString()");
     }
@@ -2582,6 +2725,146 @@ const char *Target::ISAToTargetString(ISA isa) {
 }
 
 const char *Target::GetISATargetString() const { return ISAToTargetString(m_isa); }
+
+Target::ISA Target::TargetToISA(ISPCTarget target) {
+    switch (target) {
+    case ISPCTarget::sse2_i32x4:
+    case ISPCTarget::sse2_i32x8:
+        return Target::ISA::SSE2;
+    case ISPCTarget::sse4_i8x16:
+    case ISPCTarget::sse4_i16x8:
+    case ISPCTarget::sse4_i32x4:
+    case ISPCTarget::sse4_i32x8:
+        return Target::ISA::SSE42;
+    case ISPCTarget::sse41_i8x16:
+    case ISPCTarget::sse41_i16x8:
+    case ISPCTarget::sse41_i32x4:
+    case ISPCTarget::sse41_i32x8:
+        return Target::ISA::SSE41;
+    case ISPCTarget::avx1_i32x4:
+    case ISPCTarget::avx1_i32x8:
+    case ISPCTarget::avx1_i32x16:
+    case ISPCTarget::avx1_i64x4:
+        return Target::ISA::AVX;
+    case ISPCTarget::avx2_i8x32:
+    case ISPCTarget::avx2_i16x16:
+    case ISPCTarget::avx2_i32x4:
+    case ISPCTarget::avx2_i32x8:
+    case ISPCTarget::avx2_i32x16:
+    case ISPCTarget::avx2_i64x4:
+        return Target::ISA::AVX2;
+    case ISPCTarget::avx2vnni_i32x4:
+    case ISPCTarget::avx2vnni_i32x8:
+    case ISPCTarget::avx2vnni_i32x16:
+        return Target::ISA::AVX2VNNI;
+    case ISPCTarget::avx512skx_x4:
+    case ISPCTarget::avx512skx_x8:
+    case ISPCTarget::avx512skx_x16:
+    case ISPCTarget::avx512skx_x32:
+    case ISPCTarget::avx512skx_x64:
+        return Target::ISA::SKX_AVX512;
+    case ISPCTarget::avx512icl_x4:
+    case ISPCTarget::avx512icl_x8:
+    case ISPCTarget::avx512icl_x16:
+    case ISPCTarget::avx512icl_x32:
+    case ISPCTarget::avx512icl_x64:
+        return Target::ISA::ICL_AVX512;
+    case ISPCTarget::avx512spr_x4:
+    case ISPCTarget::avx512spr_x8:
+    case ISPCTarget::avx512spr_x16:
+    case ISPCTarget::avx512spr_x32:
+    case ISPCTarget::avx512spr_x64:
+        return Target::ISA::SPR_AVX512;
+    case ISPCTarget::avx10_2_x4:
+    case ISPCTarget::avx10_2_x8:
+    case ISPCTarget::avx10_2_x16:
+    case ISPCTarget::avx10_2_x32:
+    case ISPCTarget::avx10_2_x64:
+        return Target::ISA::AVX10_2;
+#ifdef ISPC_ARM_ENABLED
+    case ISPCTarget::neon_i8x16:
+    case ISPCTarget::neon_i8x32:
+    case ISPCTarget::neon_i16x8:
+    case ISPCTarget::neon_i16x16:
+    case ISPCTarget::neon_i32x4:
+    case ISPCTarget::neon_i32x8:
+        return Target::ISA::NEON;
+#else  // ISPC_ARM_ENABLED
+    case ISPCTarget::neon_i8x16:
+    case ISPCTarget::neon_i8x32:
+    case ISPCTarget::neon_i16x8:
+    case ISPCTarget::neon_i16x16:
+    case ISPCTarget::neon_i32x4:
+    case ISPCTarget::neon_i32x8:
+        return Target::ISA::NUM_ISAS;
+#endif // ISPC_ARM_ENABLED
+#ifdef ISPC_WASM_ENABLED
+    case ISPCTarget::wasm_i32x4:
+        return Target::ISA::WASM;
+#else  // ISPC_WASM_ENABLED
+    case ISPCTarget::wasm_i32x4:
+        return Target::ISA::NUM_ISAS;
+#endif // ISPC_WASM_ENABLED
+#ifdef ISPC_XE_ENABLED
+    case ISPCTarget::gen9_x8:
+    case ISPCTarget::gen9_x16:
+        return Target::ISA::GEN9;
+    case ISPCTarget::xelp_x8:
+    case ISPCTarget::xelp_x16:
+        return Target::ISA::XELP;
+    case ISPCTarget::xehpg_x8:
+    case ISPCTarget::xehpg_x16:
+        return Target::ISA::XEHPG;
+    case ISPCTarget::xehpc_x16:
+    case ISPCTarget::xehpc_x32:
+        return Target::ISA::XEHPC;
+    case ISPCTarget::xelpg_x8:
+    case ISPCTarget::xelpg_x16:
+        return Target::ISA::XELPG;
+    case ISPCTarget::xe2hpg_x16:
+    case ISPCTarget::xe2hpg_x32:
+        return Target::ISA::XE2HPG;
+    case ISPCTarget::xe2lpg_x16:
+    case ISPCTarget::xe2lpg_x32:
+        return Target::ISA::XE2LPG;
+#else  // ISPC_XE_ENABLED
+    case ISPCTarget::gen9_x8:
+    case ISPCTarget::gen9_x16:
+    case ISPCTarget::xelp_x8:
+    case ISPCTarget::xelp_x16:
+    case ISPCTarget::xehpg_x8:
+    case ISPCTarget::xehpg_x16:
+    case ISPCTarget::xehpc_x16:
+    case ISPCTarget::xehpc_x32:
+    case ISPCTarget::xelpg_x8:
+    case ISPCTarget::xelpg_x16:
+    case ISPCTarget::xe2hpg_x16:
+    case ISPCTarget::xe2hpg_x32:
+    case ISPCTarget::xe2lpg_x16:
+    case ISPCTarget::xe2lpg_x32:
+        return Target::ISA::NUM_ISAS;
+#endif // ISPC_XE_ENABLED
+    case ISPCTarget::host:
+    case ISPCTarget::none:
+    case ISPCTarget::error:
+    case ISPCTarget::generic_i32x4:
+    case ISPCTarget::generic_i32x8:
+    case ISPCTarget::generic_i8x16:
+    case ISPCTarget::generic_i16x8:
+    case ISPCTarget::generic_i32x16:
+    case ISPCTarget::generic_i64x4:
+    case ISPCTarget::generic_i8x32:
+    case ISPCTarget::generic_i16x16:
+    case ISPCTarget::generic_i1x4:
+    case ISPCTarget::generic_i1x8:
+    case ISPCTarget::generic_i1x16:
+    case ISPCTarget::generic_i1x32:
+    case ISPCTarget::generic_i1x64:
+        FATAL("Ubiqutous target in TargetToISA()");
+        return Target::ISA::NUM_ISAS;
+    }
+    return Target::ISA::NUM_ISAS;
+}
 
 std::string Target::GetTargetSuffix() {
     if (g->isMultiTargetCompilation) {
@@ -2819,6 +3102,7 @@ Globals::Globals() {
     enableLLVMIntrinsics = false;
     mangleFunctionsWithTarget = false;
     isMultiTargetCompilation = false;
+    darwinVersionMin = llvm::VersionTuple();
     errorLimit = -1;
 
     enableTimeTrace = false;
@@ -2854,6 +3138,40 @@ Globals::Globals() {
     // This needs to be set once target OS is decided.
     calling_conv = CallingConv::uninitialized;
 }
+
+///////////////////////////////////////////////////////////////////////////
+// StorageClass
+
+StorageClass::StorageClass(Kind kind) : m_kind(kind) {}
+StorageClass::operator StorageClass::Kind() const { return m_kind; }
+
+std::string StorageClass::GetString() const {
+    switch (m_kind) {
+    case Kind::NONE:
+        return "";
+    case Kind::EXT:
+        return "extern";
+    case Kind::STATIC:
+        return "static";
+    case Kind::TYPEDEF:
+        return "typedef";
+    case Kind::EXT_C:
+        return "extern \"C\"";
+    case Kind::EXT_SYCL:
+        return "extern \"SYCL\"";
+    default:
+        FATAL("Unhandled storage class in lGetStorageClassName");
+        return "";
+    }
+}
+
+bool StorageClass::IsNone() const { return m_kind == Kind::NONE; }
+bool StorageClass::IsExtern() const { return m_kind == Kind::EXT; }
+bool StorageClass::IsStatic() const { return m_kind == Kind::STATIC; }
+bool StorageClass::IsTypedef() const { return m_kind == Kind::TYPEDEF; }
+bool StorageClass::IsExternC() const { return m_kind == Kind::EXT_C; }
+bool StorageClass::IsExternSYCL() const { return m_kind == Kind::EXT_SYCL; }
+bool StorageClass::IsAnyExtern() const { return IsExtern() || IsExternC() || IsExternSYCL(); }
 
 ///////////////////////////////////////////////////////////////////////////
 // SourcePos

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -65,6 +65,13 @@ void ExprStmt::EmitCode(FunctionEmitContext *ctx) const {
 }
 
 Stmt *ExprStmt::TypeCheck() { return this; }
+
+std::string ExprStmt::GetString() const {
+    if (!expr) {
+        return "<NULL>";
+    }
+    return expr->GetString();
+}
 
 void ExprStmt::Print(Indent &indent) const {
     indent.PrintLn("ExprStmt", pos);
@@ -174,7 +181,24 @@ void DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             return;
         }
 
-        if (sym->storageClass == SC_STATIC) {
+        // Check attrbutes for static variables.
+        AttributeList *attrList = sym->attrs;
+        unsigned int alignment = 0;
+        if (attrList) {
+            // Check for unknown attributes for global variable declarations.
+            attrList->CheckForUnknownAttributes(pos);
+
+            // This attribute is provided for the particular variable declaration.
+            alignment = attrList->GetAlignedAttrValue(pos);
+        }
+
+        // If no alignment was specified for the particular variable declaration,
+        // then use the alignment specified for the type.
+        if (!alignment) {
+            alignment = sym->type->GetAlignment();
+        }
+
+        if (sym->storageClass.IsStatic()) {
             // For static variables, we need a compile-time constant value
             // for its initializer; if there's no initializer, we use a
             // zero value.
@@ -214,11 +238,24 @@ void DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
                     *m->module, llvmType, sym->type->IsConstType(), llvm::GlobalValue::InternalLinkage, cinit,
                     llvm::Twine("static.") + llvm::Twine(sym->pos.first_line) + llvm::Twine(".") + sym->name.c_str()),
                 llvmType);
+
+            // Apply alignment if specified
+            if (alignment > 0) {
+                llvm::GlobalVariable *gv = llvm::cast<llvm::GlobalVariable>(sym->storageInfo->getPointer());
+                gv->setAlignment(llvm::Align(alignment));
+            }
+
             // Tell the FunctionEmitContext about the variable
             ctx->EmitVariableDebugInfo(sym);
         } else {
             // For non-static variables, allocate storage on the stack
             sym->storageInfo = ctx->AllocaInst(sym->type, sym->name.c_str());
+
+            // Apply alignment if specified
+            if (alignment > 0) {
+                llvm::AllocaInst *ai = llvm::cast<llvm::AllocaInst>(sym->storageInfo->getPointer());
+                ai->setAlignment(llvm::Align(alignment));
+            }
 
             // Tell the FunctionEmitContext about the variable; must do
             // this before the initializer stuff.
@@ -267,9 +304,10 @@ Stmt *DeclStmt::Optimize() {
 
 // Do type conversion if needed and check for not initializing array with
 // another array (array assignment is not allowed).
+// Also, perform type checking for initializers of incomplete struct types.
 // Do that recursively to handle brace initialization, which may contain
 // another brace initialization.
-static bool checkInit(const Type *type, Expr **init) {
+static bool lCheckInit(const Type *type, Expr **init, const std::string &name) {
     bool encounteredError = false;
     if (type && type->IsDependent()) {
         return false;
@@ -306,11 +344,33 @@ static bool checkInit(const Type *type, Expr **init) {
         ExprList *el = llvm::dyn_cast<ExprList>(*init);
         int elt_count = st->GetElementCount() < el->exprs.size() ? st->GetElementCount() : el->exprs.size();
         for (int i = 0; i < elt_count; i++) {
-            encounteredError |= checkInit(st->GetElementType(i), &(el->exprs[i]));
+            encounteredError |= lCheckInit(st->GetElementType(i), &(el->exprs[i]), name);
         }
+    } else if (CastType<UndefinedStructType>(type)) {
+        Error((*init)->pos, "variable '%s' has initializer but incomplete struct type", name.c_str());
+        return true;
     }
 
     return encounteredError;
+}
+
+static bool lCheckDecl(const Type *type, const std::string &name, SourcePos &pos) {
+    if (type && type->IsDependent()) {
+        return false;
+    }
+
+    if (CastType<UndefinedStructType>(type)) {
+        return true;
+    } else if (CastType<StructType>(type)) {
+        const StructType *st = CastType<StructType>(type);
+        for (int i = 0; i < st->GetElementCount(); i++) {
+            if (lCheckDecl(st->GetElementType(i), name, pos)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 Stmt *DeclStmt::TypeCheck() {
@@ -321,14 +381,36 @@ Stmt *DeclStmt::TypeCheck() {
             continue;
         }
 
+        const Type *type = vars[i].sym->type;
+        const std::string &name = vars[i].sym->name;
         if (vars[i].init == nullptr) {
+            encounteredError |= lCheckDecl(type, name, vars[i].sym->pos);
+            if (encounteredError) {
+                Error(pos, "variable '%s' has incomplete struct type '%s' and cannot be defined", name.c_str(),
+                      type->GetString().c_str());
+            }
             continue;
         }
 
         // Check an init.
-        encounteredError |= checkInit(vars[i].sym->type, &(vars[i].init));
+        encounteredError |= lCheckInit(type, &(vars[i].init), name);
     }
     return encounteredError ? nullptr : this;
+}
+
+std::string DeclStmt::GetString() const {
+    std::string ret;
+    for (unsigned int i = 0; i < vars.size(); ++i) {
+        if (i > 0) {
+            ret += ", ";
+        }
+        ret += vars[i].sym->name;
+        if (vars[i].init != nullptr) {
+            ret += " = ";
+            ret += vars[i].init->GetString();
+        }
+    }
+    return ret;
 }
 
 void DeclStmt::Print(Indent &indent) const {
@@ -527,6 +609,15 @@ IfStmt *IfStmt::Instantiate(TemplateInstantiation &templInst) const {
     Stmt *instTrueStmts = trueStmts ? trueStmts->Instantiate(templInst) : nullptr;
     Stmt *instFalseStmts = falseStmts ? falseStmts->Instantiate(templInst) : nullptr;
     return new IfStmt(instTestExpr, instTrueStmts, instFalseStmts, doAllCheck, pos);
+}
+
+std::string IfStmt::GetString() const {
+    std::string ret = "if (";
+    if (test) {
+        ret += test->GetString();
+    }
+    ret += ") {...}";
+    return ret;
 }
 
 void IfStmt::Print(Indent &indent) const {
@@ -1035,6 +1126,15 @@ DoStmt *DoStmt::Instantiate(TemplateInstantiation &templInst) const {
     return new DoStmt(instTestExpr, instBodyStmts, doCoherentCheck, pos);
 }
 
+std::string DoStmt::GetString() const {
+    std::string ret = "do {...} while (";
+    if (testExpr) {
+        ret += testExpr->GetString();
+    }
+    ret += ")";
+    return ret;
+}
+
 void DoStmt::Print(Indent &indent) const {
     indent.PrintLn("DoStmt", pos);
     int totalChildren = (testExpr ? 1 : 0) + (bodyStmts ? 1 : 0);
@@ -1261,6 +1361,23 @@ ForStmt *ForStmt::Instantiate(TemplateInstantiation &templInst) const {
     return new ForStmt(instInitStmts, instTestExpr, instStepStmts, instBodyStmts, doCoherentCheck, pos);
 }
 
+std::string ForStmt::GetString() const {
+    std::string ret = "for (";
+    if (init) {
+        ret += init->GetString();
+    }
+    ret += "; ";
+    if (test) {
+        ret += test->GetString();
+    }
+    ret += "; ";
+    if (step) {
+        ret += step->GetString();
+    }
+    ret += ") {...}";
+    return ret;
+}
+
 void ForStmt::Print(Indent &indent) const {
     indent.PrintLn("ForStmt", pos);
 
@@ -1307,6 +1424,8 @@ int BreakStmt::EstimateCost() const { return COST_BREAK_CONTINUE; }
 
 BreakStmt *BreakStmt::Instantiate(TemplateInstantiation &templInst) const { return new BreakStmt(pos); }
 
+std::string BreakStmt::GetString() const { return "break"; }
+
 void BreakStmt::Print(Indent &indent) const {
     indent.PrintLn("BreakStmt", pos);
     indent.Done();
@@ -1331,6 +1450,8 @@ Stmt *ContinueStmt::TypeCheck() { return this; }
 int ContinueStmt::EstimateCost() const { return COST_BREAK_CONTINUE; }
 
 ContinueStmt *ContinueStmt::Instantiate(TemplateInstantiation &templInst) const { return new ContinueStmt(pos); }
+
+std::string ContinueStmt::GetString() const { return "continue"; }
 
 void ContinueStmt::Print(Indent &indent) const {
     indent.PrintLn("ContinueStmt", pos);
@@ -1388,7 +1509,7 @@ static llvm::Value *lUpdateVaryingCounter(int dim, int nDims, FunctionEmitContex
     // Add the deltas to compute the varying counter values; store the
     // result to memory and then return it directly as well.
     llvm::Value *varyingCounter =
-        ctx->BinaryOperator(llvm::Instruction::Add, smearCounter, delta, WrapSemantics::NSW, "iter_val");
+        ctx->BinaryOperator(llvm::Instruction::Add, smearCounter, delta, nullptr, WrapSemantics::NSW, "iter_val");
     ctx->StoreInst(varyingCounter, varyingCounterPtrInfo);
     return varyingCounter;
 }
@@ -1505,18 +1626,19 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         endVals.push_back(ev);
 
         // nItems = endVal - startVal
-        llvm::Value *nItems = ctx->BinaryOperator(llvm::Instruction::Sub, ev, sv, WrapSemantics::NSW, "nitems");
+        llvm::Value *nItems =
+            ctx->BinaryOperator(llvm::Instruction::Sub, ev, sv, nullptr, WrapSemantics::NSW, "nitems");
 
         // nExtras = nItems % (span for this dimension)
         // This gives us the number of extra elements we need to deal with
         // at the end of the loop for this dimension that don't fit cleanly
         // into a vector width.
-        nExtras.push_back(
-            ctx->BinaryOperator(llvm::Instruction::SRem, nItems, LLVMInt32(span[i]), WrapSemantics::None, "nextras"));
+        nExtras.push_back(ctx->BinaryOperator(llvm::Instruction::SRem, nItems, LLVMInt32(span[i]),
+                                              AtomicType::UniformInt32, WrapSemantics::None, "nextras"));
 
         // alignedEnd = endVal - nExtras
         alignedEnd.push_back(
-            ctx->BinaryOperator(llvm::Instruction::Sub, ev, nExtras[i], WrapSemantics::NSW, "aligned_end"));
+            ctx->BinaryOperator(llvm::Instruction::Sub, ev, nExtras[i], nullptr, WrapSemantics::NSW, "aligned_end"));
 
         ///////////////////////////////////////////////////////////////////////
         // Each dimension has a loop counter that is a uniform value that
@@ -1571,8 +1693,8 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     for (int i = 0; i < nDims - 1; ++i) {
         ctx->SetCurrentBasicBlock(bbStep[i]);
         llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[i]);
-        llvm::Value *newCounter =
-            ctx->BinaryOperator(llvm::Instruction::Add, counter, LLVMInt32(span[i]), WrapSemantics::NSW, "new_counter");
+        llvm::Value *newCounter = ctx->BinaryOperator(llvm::Instruction::Add, counter, LLVMInt32(span[i]), nullptr,
+                                                      WrapSemantics::NSW, "new_counter");
         ctx->StoreInst(newCounter, uniformCounterPtrs[i]);
         ctx->BranchInst(bbTest[i]);
     }
@@ -1589,14 +1711,13 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[i], nullptr, "counter");
         llvm::Value *atAlignedEnd =
             ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, counter, alignedEnd[i], "at_aligned_end");
-        llvm::Value *inEx =
-            ctx->BinaryOperator(llvm::Instruction::And, haveExtras, atAlignedEnd, WrapSemantics::None, "in_extras");
+        llvm::Value *inEx = ctx->BinaryOperator(llvm::Instruction::And, haveExtras, atAlignedEnd, nullptr,
+                                                WrapSemantics::None, "in_extras");
 
         if (i == 0) {
             inExtras.push_back(inEx);
         } else {
-            inExtras.push_back(ctx->BinaryOperator(llvm::Instruction::Or, inEx, inExtras[i - 1], WrapSemantics::None,
-                                                   "in_extras_all"));
+            inExtras.push_back(ctx->BinaryOrOperator(inEx, inExtras[i - 1], "in_extras_all"));
         }
 
         llvm::Value *varyingCounter =
@@ -1613,8 +1734,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
             ctx->StoreInst(emask, extrasMaskPtrs[i]);
         } else {
             llvm::Value *oldMask = ctx->LoadInst(extrasMaskPtrs[i - 1]);
-            llvm::Value *newMask =
-                ctx->BinaryOperator(llvm::Instruction::And, oldMask, emask, WrapSemantics::None, "extras_mask");
+            llvm::Value *newMask = ctx->BinaryAndOperator(oldMask, emask, "extras_mask");
             ctx->StoreInst(newMask, extrasMaskPtrs[i]);
         }
 
@@ -1749,8 +1869,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
             ctx->SetInternalMask(emask);
         } else {
             llvm::Value *oldMask = ctx->LoadInst(extrasMaskPtrs[nDims - 2]);
-            llvm::Value *newMask =
-                ctx->BinaryOperator(llvm::Instruction::And, oldMask, emask, WrapSemantics::None, "extras_mask");
+            llvm::Value *newMask = ctx->BinaryAndOperator(oldMask, emask, "extras_mask");
             ctx->SetInternalMask(newMask);
         }
 
@@ -1809,7 +1928,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         ctx->RestoreContinuedLanes();
         llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims - 1]);
         llvm::Value *newCounter = ctx->BinaryOperator(llvm::Instruction::Add, counter, LLVMInt32(span[nDims - 1]),
-                                                      WrapSemantics::NSW, "new_counter");
+                                                      nullptr, WrapSemantics::NSW, "new_counter");
         ctx->StoreInst(newCounter, uniformCounterPtrs[nDims - 1]);
         ctx->BranchInst(bbOuterNotInExtras);
     }
@@ -1876,7 +1995,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     {
         llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims - 1]);
         llvm::Value *newCounter = ctx->BinaryOperator(llvm::Instruction::Add, counter, LLVMInt32(span[nDims - 1]),
-                                                      WrapSemantics::NSW, "new_counter");
+                                                      nullptr, WrapSemantics::NSW, "new_counter");
         ctx->StoreInst(newCounter, uniformCounterPtrs[nDims - 1]);
         ctx->BranchInst(bbOuterInExtras);
     }
@@ -1955,7 +2074,7 @@ void ForeachStmt::EmitCodeForXe(FunctionEmitContext *ctx) const {
         // Store varying start
         sv = ctx->BroadcastValue(sv, LLVMTypes::Int32VectorType, "start_broadcast");
         llvm::Constant *delta = lCalculateDeltaForVaryingCounter(i, nDims, span);
-        sv = ctx->BinaryOperator(llvm::Instruction::Add, sv, delta, WrapSemantics::NSW, "varying_start");
+        sv = ctx->BinaryOperator(llvm::Instruction::Add, sv, delta, nullptr, WrapSemantics::NSW, "varying_start");
         startVals.push_back(sv);
 
         // Store broadcasted end values
@@ -2002,7 +2121,7 @@ void ForeachStmt::EmitCodeForXe(FunctionEmitContext *ctx) const {
         ctx->SetCurrentBasicBlock(bbStep[i]);
         llvm::Value *counter = ctx->LoadInst(dimVariables[i]->storageInfo);
         llvm::Value *newCounter =
-            ctx->BinaryOperator(llvm::Instruction::Add, counter, steps[i], WrapSemantics::NSW, "new_counter");
+            ctx->BinaryOperator(llvm::Instruction::Add, counter, steps[i], nullptr, WrapSemantics::NSW, "new_counter");
         ctx->StoreInst(newCounter, dimVariables[i]->storageInfo);
         ctx->BranchInst(bbTest[i]);
     }
@@ -2154,6 +2273,30 @@ ForeachStmt *ForeachStmt::Instantiate(TemplateInstantiation &templInst) const {
     return inst;
 }
 
+std::string ForeachStmt::GetString() const {
+    std::string str = "foreach ";
+    for (unsigned int i = 0; i < dimVariables.size(); ++i) {
+        if (i > 0) {
+            str += ", ";
+        }
+        str += dimVariables[i]->name;
+        str += " = ";
+        if (startExprs[i]) {
+            str += startExprs[i]->GetString();
+        } else {
+            str += "<NULL>";
+        }
+        str += " ... ";
+        if (endExprs[i]) {
+            str += endExprs[i]->GetString();
+        } else {
+            str += "<NULL>";
+        }
+    }
+    str += "{...}";
+    return str;
+}
+
 void ForeachStmt::Print(Indent &indent) const {
     indent.PrintLn("ForeachStmt", pos);
 
@@ -2273,7 +2416,7 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtrInfo, nullptr, "remaining_bits");
 
         // Find the index of the first set bit in the mask
-        llvm::Function *ctlzFunc = m->module->getFunction(builtin::__count_trailing_zeros_i64);
+        llvm::Function *ctlzFunc = m->module->getFunction(builtin::__count_trailing_zeros_uniform_i64);
         Assert(ctlzFunc != nullptr);
         llvm::Value *firstSet = ctx->CallInst(ctlzFunc, nullptr, remainingBits, "first_set");
 
@@ -2307,11 +2450,10 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
 
         // Also update the bitvector of lanes left to turn off the bit for
         // the lane we're about to run.
-        llvm::Value *setMask =
-            ctx->BinaryOperator(llvm::Instruction::Shl, LLVMInt64(1), firstSet, WrapSemantics::None, "set_mask");
+        llvm::Value *setMask = ctx->BinaryOperator(llvm::Instruction::Shl, LLVMInt64(1), firstSet, nullptr,
+                                                   WrapSemantics::None, "set_mask");
         llvm::Value *notSetMask = ctx->NotOperator(setMask);
-        llvm::Value *newRemaining = ctx->BinaryOperator(llvm::Instruction::And, remainingBits, notSetMask,
-                                                        WrapSemantics::None, "new_remaining");
+        llvm::Value *newRemaining = ctx->BinaryAndOperator(remainingBits, notSetMask, "new_remaining");
         ctx->StoreInst(newRemaining, maskBitsPtrInfo);
 
         // and onward to run the loop body...
@@ -2354,6 +2496,17 @@ void ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetInternalMask(oldInternalMask);
     ctx->EndForeach();
     ctx->EndScope();
+}
+
+std::string ForeachActiveStmt::GetString() const {
+    std::string str = "foreach_active ";
+    if (sym) {
+        str += sym->name;
+    } else {
+        str += "<NULL>";
+    }
+    str += " {...}";
+    return str;
 }
 
 void ForeachActiveStmt::Print(Indent &indent) const {
@@ -2503,7 +2656,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtrInfo, nullptr, "remaining_bits");
 
         // Find the index of the first set bit in the mask
-        llvm::Function *ctlzFunc = m->module->getFunction(builtin::__count_trailing_zeros_i64);
+        llvm::Function *ctlzFunc = m->module->getFunction(builtin::__count_trailing_zeros_uniform_i64);
         Assert(ctlzFunc != nullptr);
         llvm::Value *firstSet = ctx->CallInst(ctlzFunc, nullptr, remainingBits, "first_set");
 
@@ -2542,8 +2695,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         }
         matchingLanes = ctx->I1VecToBoolVec(matchingLanes);
 
-        llvm::Value *loopMask = ctx->BinaryOperator(llvm::Instruction::And, oldMask, matchingLanes, WrapSemantics::None,
-                                                    "foreach_unique_loop_mask");
+        llvm::Value *loopMask = ctx->BinaryAndOperator(oldMask, matchingLanes, "foreach_unique_loop_mask");
 
         // Don't need to change this mask in XE: execution
         // is performed according to Xe EM
@@ -2556,8 +2708,7 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         // remainingBits &= ~movmsk(current mask)
         llvm::Value *loopMaskMM = ctx->LaneMask(loopMask);
         llvm::Value *notLoopMaskMM = ctx->NotOperator(loopMaskMM);
-        llvm::Value *newRemaining = ctx->BinaryOperator(llvm::Instruction::And, remainingBits, notLoopMaskMM,
-                                                        WrapSemantics::None, "new_remaining");
+        llvm::Value *newRemaining = ctx->BinaryAndOperator(remainingBits, notLoopMaskMM, "new_remaining");
         ctx->StoreInst(newRemaining, maskBitsPtrInfo);
 
         // and onward...
@@ -2599,6 +2750,23 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetInternalMask(oldMask);
     ctx->EndForeach();
     ctx->EndScope();
+}
+
+std::string ForeachUniqueStmt::GetString() const {
+    std::string str = "foreach_unique ";
+    if (sym) {
+        str += sym->name;
+    } else {
+        str += "<NULL>";
+    }
+    str += " = ";
+    if (expr) {
+        str += expr->GetString();
+    } else {
+        str += "<NULL>";
+    }
+    str += " {...}";
+    return str;
 }
 
 void ForeachUniqueStmt::Print(Indent &indent) const {
@@ -2715,6 +2883,8 @@ void CaseStmt::EmitCode(FunctionEmitContext *ctx) const {
     }
 }
 
+std::string CaseStmt::GetString() const { return "case " + std::to_string(value) + " {...}"; }
+
 void CaseStmt::Print(Indent &indent) const {
     indent.Print("CaseStmt", pos);
     printf("Value: %d\n", value);
@@ -2743,6 +2913,8 @@ void DefaultStmt::EmitCode(FunctionEmitContext *ctx) const {
         stmts->EmitCode(ctx);
     }
 }
+
+std::string DefaultStmt::GetString() const { return "default {...}"; }
 
 void DefaultStmt::Print(Indent &indent) const {
     indent.PrintLn("DefaultStmt", pos);
@@ -2924,6 +3096,17 @@ void SwitchStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->EndSwitch();
 }
 
+std::string SwitchStmt::GetString() const {
+    std::string str = "switch (";
+    if (expr) {
+        str += expr->GetString();
+    } else {
+        str += "<NULL>";
+    }
+    str += ") {...}";
+    return str;
+}
+
 void SwitchStmt::Print(Indent &indent) const {
     indent.PrintLn("SwitchStmt", pos);
 
@@ -3025,6 +3208,8 @@ void UnmaskedStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetFunctionMask(oldFunctionMask);
 }
 
+std::string UnmaskedStmt::GetString() const { return "unmasked {...}"; }
+
 void UnmaskedStmt::Print(Indent &indent) const {
     indent.PrintLn("UnmaskedStmt", pos);
 
@@ -3097,6 +3282,14 @@ ReturnStmt *ReturnStmt::Instantiate(TemplateInstantiation &templInst) const {
     return new ReturnStmt(instExpr, pos);
 }
 
+std::string ReturnStmt::GetString() const {
+    std::string str = "return";
+    if (expr) {
+        str += " " + expr->GetString();
+    }
+    return str;
+}
+
 void ReturnStmt::Print(Indent &indent) const {
     indent.Print("ReturnStmt", pos);
     if (expr) {
@@ -3162,6 +3355,8 @@ void GotoStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetCurrentBasicBlock(nullptr);
 }
 
+std::string GotoStmt::GetString() const { return "goto " + label; }
+
 void GotoStmt::Print(Indent &indent) const {
     indent.Print("GotoStmt", pos);
     printf("Label: %s\n", label.c_str());
@@ -3204,6 +3399,14 @@ void LabeledStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (stmt != nullptr) {
         stmt->EmitCode(ctx);
     }
+}
+
+std::string LabeledStmt::GetString() const {
+    std::string str = name;
+    if (stmt) {
+        str += " {...}";
+    }
+    return str;
 }
 
 void LabeledStmt::Print(Indent &indent) const {
@@ -3268,6 +3471,18 @@ StmtList *StmtList::Instantiate(TemplateInstantiation &templInst) const {
         inst->Add(stmt ? stmt->Instantiate(templInst) : nullptr);
     }
     return inst;
+}
+
+std::string StmtList::GetString() const {
+    std::string str = "{";
+    for (unsigned int i = 0; i < 1; ++i) {
+        if (stmts[i]) {
+            str += stmts[i]->GetString();
+        } else {
+            str += "<NULL STMT>";
+        }
+    }
+    return str + "; ...}";
 }
 
 void StmtList::Print(Indent &indent) const {
@@ -3756,9 +3971,9 @@ static PrintArgsBuilder getPrintArgsBuilder(Expr *values, FunctionEmitContext *c
 
 // This name should be also properly mangled. It happens later.
 static llvm::FunctionCallee getSPIRVOCLPrintfDecl() {
-    auto *PrintfTy = llvm::FunctionType::get(LLVMTypes::Int32Type,
-                                             llvm::PointerType::get(LLVMTypes::Int8Type, /* const addrspace */ 2),
-                                             /* isVarArg */ true);
+    auto *PrintfTy =
+        llvm::FunctionType::get(LLVMTypes::Int32Type, llvm::PointerType::get(*g->ctx, /* const addrspace */ 2),
+                                /* isVarArg */ true);
     return m->module->getOrInsertFunction("__spirv_ocl_printf", PrintfTy);
 }
 
@@ -3796,8 +4011,7 @@ static AddressInfo *lEmitPrintArgCode(Expr *expr, FunctionEmitContext *ctx) {
     }
     ctx->StoreInst(val, ptrInfo);
 
-    llvm::Value *ptr = ctx->BitCastInst(ptrInfo->getPointer(), LLVMTypes::VoidPointerType);
-    return new AddressInfo(ptr, LLVMTypes::VoidPointerType);
+    return new AddressInfo(ptrInfo->getPointer(), LLVMTypes::VoidPointerType);
 }
 
 static bool lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, AddressInfo *argPtrArray, int offset,
@@ -3829,8 +4043,7 @@ std::vector<llvm::Value *> PrintStmt::getDoPrintArgs(FunctionEmitContext *ctx) c
     if (values == nullptr) {
         // Check requested format
         checkFormatString(format, 0, pos);
-        llvm::Type *ptrPtrType = llvm::PointerType::get(LLVMTypes::VoidPointerType, 0);
-        doPrintArgs[ARGS_IDX] = llvm::Constant::getNullValue(ptrPtrType);
+        doPrintArgs[ARGS_IDX] = llvm::Constant::getNullValue(LLVMTypes::VoidPointerType);
     } else {
         // Get the values passed to the print() statement evaluated and
         // stored in memory so that we set up the array of pointers to them
@@ -3844,8 +4057,7 @@ std::vector<llvm::Value *> PrintStmt::getDoPrintArgs(FunctionEmitContext *ctx) c
         AddressInfo *argPtrArrayInfo = ctx->AllocaInst(argPtrArrayType, "print_arg_ptrs");
         // Store the array pointer as a void **, which is what __do_print()
         // expects
-        doPrintArgs[ARGS_IDX] =
-            ctx->BitCastInst(argPtrArrayInfo->getPointer(), llvm::PointerType::get(LLVMTypes::VoidPointerType, 0));
+        doPrintArgs[ARGS_IDX] = argPtrArrayInfo->getPointer();
 
         // Now, for each of the arguments, emit code to evaluate its value
         // and store the value into alloca's storage.  Then store the
@@ -3897,6 +4109,16 @@ void PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
     auto printImplFunc = getPrintImplFunc();
     AssertPos(pos, printImplFunc);
     ctx->CallInst(printImplFunc, nullptr, printImplArgs, "");
+}
+
+std::string PrintStmt::GetString() const {
+    std::string ret = "print(\"" + format + "\"";
+    if (values) {
+        ret += ", ";
+        ret += values->GetString();
+    }
+    ret += ")";
+    return ret;
 }
 
 void PrintStmt::Print(Indent &indent) const {
@@ -4012,6 +4234,17 @@ void AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
     }
 }
 
+std::string AssertStmt::GetString() const {
+    std::string ret = "assert(";
+    if (expr) {
+        ret += expr->GetString();
+    } else {
+        ret += "<NULL>";
+    }
+    ret += ")";
+    return ret;
+}
+
 void AssertStmt::Print(Indent &indent) const {
     indent.Print("AssertStmt", pos);
     printf("Message: %s\n", message.c_str());
@@ -4108,6 +4341,16 @@ void DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
         }
         ctx->CallInst(func, nullptr, exprValue, "");
     }
+}
+
+std::string DeleteStmt::GetString() const {
+    std::string ret = "delete ";
+    if (expr) {
+        ret += expr->GetString();
+    } else {
+        ret += "<NULL>";
+    }
+    return ret;
 }
 
 void DeleteStmt::Print(Indent &indent) const {

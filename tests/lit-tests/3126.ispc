@@ -10,7 +10,7 @@
 // RUN: not %{ispc} --arch=unknown --nowrap %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-ARCH
 // REQUIRES: X86_ENABLED
 
-// CHECK-TARGET: Incorrect targets: unknown. Choices are: {{avx1-i32x16, avx1-i32x4, avx1-i32x8, avx1-i64x4, avx2-i16x16, avx2-i32x16, avx2-i32x4, avx2-i32x8, .*}}. Use --support-matrix for complete information about supported targets, archs and target OSes
+// CHECK-TARGET: Incorrect targets: unknown. Choices are: {{avx1-i32x16, avx1-i32x4, avx1-i32x8, avx1-i64x4, .*}}. Use --support-matrix for complete information about supported targets, archs and target OSes
 // CHECK-OS: Error: Unsupported value for --target-os, supported values are: {{.*}}. Use --support-matrix for complete information about supported targets, archs and target OSes.
 // CHECK-ARCH: Error: Unsupported value for --arch, supported values are: {{.*}}. Use --support-matrix for complete information about supported targets, archs and target OSes.
 

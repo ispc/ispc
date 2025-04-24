@@ -1170,6 +1170,47 @@ define(`unary4to16conv', `
 '
 )
 
+define(`unary4to32conv', `
+  %$1_0 = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v$1_0 = call <4 x $3> $4(<4 x $2> %$1_0)
+  %$1_1 = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v$1_1 = call <4 x $3> $4(<4 x $2> %$1_1)
+  %$1_2 = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+  %v$1_2 = call <4 x $3> $4(<4 x $2> %$1_2)
+  %$1_3 = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+  %v$1_3 = call <4 x $3> $4(<4 x $2> %$1_3)
+  %$1_4 = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 16, i32 17, i32 18, i32 19>
+  %v$1_4 = call <4 x $3> $4(<4 x $2> %$1_4)
+  %$1_5 = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 20, i32 21, i32 22, i32 23>
+  %v$1_5 = call <4 x $3> $4(<4 x $2> %$1_5)
+  %$1_6 = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 24, i32 25, i32 26, i32 27>
+  %v$1_6 = call <4 x $3> $4(<4 x $2> %$1_6)
+  %$1_7 = shufflevector <32 x $2> $5, <32 x $2> undef, <4 x i32> <i32 28, i32 29, i32 30, i32 31>
+  %v$1_7 = call <4 x $3> $4(<4 x $2> %$1_7)
+
+  %$1a = shufflevector <4 x $3> %v$1_0, <4 x $3> %v$1_1,
+           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %$1b = shufflevector <4 x $3> %v$1_2, <4 x $3> %v$1_3,
+           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %$1c = shufflevector <4 x $3> %v$1_4, <4 x $3> %v$1_5,
+           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %$1d = shufflevector <4 x $3> %v$1_6, <4 x $3> %v$1_7,
+           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+
+  %$1e = shufflevector <8 x $3> %$1a, <8 x $3> %$1b,
+           <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                       i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %$1f = shufflevector <8 x $3> %$1c, <8 x $3> %$1d,
+           <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                       i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %$1 = shufflevector <16 x $3> %$1e, <16 x $3> %$1f,
+           <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                       i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                       i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23,
+                       i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+'
+)
+
 ;; $1: name of variable into which the final result should go
 ;; $2: scalar type of the vector elements
 ;; $3: 4-wide unary vector function to apply
@@ -2474,24 +2515,41 @@ define $2 @__atomic_compare_exchange_uniform_$3_global(i8* %ptr, $2 %cmp,
 define(`ctlztz', `
 declare_count_zeros()
 
-define i32 @__count_trailing_zeros_i32(i32) nounwind readnone alwaysinline {
-  %c = call i32 @llvm.cttz.i32(i32 %0)
+define i32 @__count_trailing_zeros_uniform_i32(i32) nounwind readnone alwaysinline {
+  %c = call i32 @llvm.cttz.i32(i32 %0, i1 false)
   ret i32 %c
 }
 
-define i64 @__count_trailing_zeros_i64(i64) nounwind readnone alwaysinline {
-  %c = call i64 @llvm.cttz.i64(i64 %0)
+define i64 @__count_trailing_zeros_uniform_i64(i64) nounwind readnone alwaysinline {
+  %c = call i64 @llvm.cttz.i64(i64 %0, i1 false)
   ret i64 %c
 }
 
-define i32 @__count_leading_zeros_i32(i32) nounwind readnone alwaysinline {
-  %c = call i32 @llvm.ctlz.i32(i32 %0)
+define i32 @__count_leading_zeros_uniform_i32(i32) nounwind readnone alwaysinline {
+  %c = call i32 @llvm.ctlz.i32(i32 %0, i1 false)
   ret i32 %c
 }
 
-define i64 @__count_leading_zeros_i64(i64) nounwind readnone alwaysinline {
-  %c = call i64 @llvm.ctlz.i64(i64 %0)
+define i64 @__count_leading_zeros_uniform_i64(i64) nounwind readnone alwaysinline {
+  %c = call i64 @llvm.ctlz.i64(i64 %0, i1 false)
   ret i64 %c
+}
+
+define <WIDTH x i32> @__count_trailing_zeros_varying_i32(<WIDTH x i32>) nounwind readnone alwaysinline {
+  %c = call <WIDTH x i32> @llvm.cttz.TYPE_SUFFIX(i32)(<WIDTH x i32> %0, i1 false)
+  ret <WIDTH x i32> %c
+}
+define <WIDTH x i64> @__count_trailing_zeros_varying_i64(<WIDTH x i64>) nounwind readnone alwaysinline {
+  %c = call <WIDTH x i64> @llvm.cttz.TYPE_SUFFIX(i64)(<WIDTH x i64> %0, i1 false)
+  ret <WIDTH x i64> %c
+}
+define <WIDTH x i32> @__count_leading_zeros_varying_i32(<WIDTH x i32>) nounwind readnone alwaysinline {
+  %c = call <WIDTH x i32> @llvm.ctlz.TYPE_SUFFIX(i32)(<WIDTH x i32> %0, i1 false)
+  ret <WIDTH x i32> %c
+}
+define <WIDTH x i64> @__count_leading_zeros_varying_i64(<WIDTH x i64>) nounwind readnone alwaysinline {
+  %c = call <WIDTH x i64> @llvm.ctlz.TYPE_SUFFIX(i64)(<WIDTH x i64> %0, i1 false)
+  ret <WIDTH x i64> %c
 }
 ')
 
@@ -5247,77 +5305,6 @@ define <WIDTH x i64> @__insert_int64(<WIDTH x i64>, i32,
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; various bitcasts from one type to another
-
-define <WIDTH x i16> @__intbits_varying_half(<WIDTH x half>) nounwind readnone alwaysinline {
-  %half_to_int16_bitcast = bitcast <WIDTH x half> %0 to <WIDTH x i16>
-  ret <WIDTH x i16> %half_to_int16_bitcast
-}
-
-define i16 @__intbits_uniform_half(half) nounwind readnone alwaysinline {
-  %half_to_int16_bitcast = bitcast half %0 to i16
-  ret i16 %half_to_int16_bitcast
-}
-
-define <WIDTH x i32> @__intbits_varying_float(<WIDTH x float>) nounwind readnone alwaysinline {
-  %float_to_int_bitcast = bitcast <WIDTH x float> %0 to <WIDTH x i32>
-  ret <WIDTH x i32> %float_to_int_bitcast
-}
-
-define i32 @__intbits_uniform_float(float) nounwind readnone alwaysinline {
-  %float_to_int_bitcast = bitcast float %0 to i32
-  ret i32 %float_to_int_bitcast
-}
-
-define <WIDTH x i64> @__intbits_varying_double(<WIDTH x double>) nounwind readnone alwaysinline {
-  %double_to_int_bitcast = bitcast <WIDTH x double> %0 to <WIDTH x i64>
-  ret <WIDTH x i64> %double_to_int_bitcast
-}
-
-define i64 @__intbits_uniform_double(double) nounwind readnone alwaysinline {
-  %double_to_int_bitcast = bitcast double %0 to i64
-  ret i64 %double_to_int_bitcast
-}
-
-define <WIDTH x half> @__halfbits_varying_int16(<WIDTH x i16>) nounwind readnone alwaysinline {
-  %int16_to_float16_bitcast = bitcast <WIDTH x i16> %0 to <WIDTH x half>
-  ret <WIDTH x half> %int16_to_float16_bitcast
-}
-
-define half @__halfbits_uniform_int16(i16) nounwind readnone alwaysinline {
-  %int16_to_float16_bitcast = bitcast i16 %0 to half
-  ret half %int16_to_float16_bitcast
-}
-
-define <WIDTH x float> @__floatbits_varying_int32(<WIDTH x i32>) nounwind readnone alwaysinline {
-  %int_to_float_bitcast = bitcast <WIDTH x i32> %0 to <WIDTH x float>
-  ret <WIDTH x float> %int_to_float_bitcast
-}
-
-define float @__floatbits_uniform_int32(i32) nounwind readnone alwaysinline {
-  %int_to_float_bitcast = bitcast i32 %0 to float
-  ret float %int_to_float_bitcast
-}
-
-define <WIDTH x double> @__doublebits_varying_int64(<WIDTH x i64>) nounwind readnone alwaysinline {
-  %int_to_double_bitcast = bitcast <WIDTH x i64> %0 to <WIDTH x double>
-  ret <WIDTH x double> %int_to_double_bitcast
-}
-
-define double @__doublebits_uniform_int64(i64) nounwind readnone alwaysinline {
-  %int_to_double_bitcast = bitcast i64 %0 to double
-  ret double %int_to_double_bitcast
-}
-
-define <WIDTH x float> @__undef_varying() nounwind readnone alwaysinline {
-  ret <WIDTH x float> undef
-}
-
-define float @__undef_uniform() nounwind readnone alwaysinline {
-  ret float undef
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; sign extension
 
 define i32 @__sext_uniform_bool(i1) nounwind readnone alwaysinline {
@@ -6537,36 +6524,37 @@ ifelse(WIDTH,  `4', `
 ;; Decides definition to be used for calculating active lanes based on WIDTH.
 ;; Implement valid version of 'packed_store_active2' based on requirement.
 ;;
-;; $1: Integer type for which function is to be created.
+;; $1: LLVM overloaded type for which function is to be created (i32, float ...).
 ;; $2: 'TRUE' if LLVM compressstore/expandload intrinsics should be used for implementation of '__packed_store_active2'.
 ;;     This is the case for the targets with native support of these intrinsics (AVX512).
 ;;     For other targets branchless emulation sequence should be used (triggered by 'FALSE').
 ;; $3: Alignment for store.
+;; $4: LLVM overloaded type for which function is to be created (i32, f32).
 ;;
 ;; FIXME: use the per_lane macro, defined below, to implement these!
 
 define(`packed_load_and_store_type', `
 
-declare <WIDTH x $1> @llvm.masked.expandload.vWIDTH$1 ($1*, <WIDTH x i1>, <WIDTH x $1>)
-declare void @llvm.masked.store.vWIDTH$1.p0vWIDTH$1(<WIDTH x $1>, <WIDTH x $1>*, i32, <WIDTH x i1>)
-define i32 @__packed_load_active$1(i8 * %startptr, i8 * %val_ptr,
+declare <WIDTH x $1> @llvm.masked.expandload.vWIDTH$4 ($1*, <WIDTH x i1>, <WIDTH x $1>)
+declare void @llvm.masked.store.vWIDTH$4.p0vWIDTH$4(<WIDTH x $1>, <WIDTH x $1>*, i32, <WIDTH x i1>)
+define i32 @__packed_load_active$4(i8 * %startptr, i8 * %val_ptr,
                                  <WIDTH x MASK> %full_mask) nounwind alwaysinline {
   %startptr_typed = bitcast i8* %startptr to $1*
   %val_ptr_typed = bitcast i8* %val_ptr to <WIDTH x $1>*
   %i1mask = icmp ne <WIDTH x MASK> %full_mask, zeroinitializer
   %data = load PTR_OP_ARGS(`<WIDTH x $1> ') %val_ptr_typed
-  %vec_load = call <WIDTH x $1> @llvm.masked.expandload.vWIDTH$1($1* %startptr_typed, <WIDTH x i1> %i1mask, <WIDTH x $1> %data)
+  %vec_load = call <WIDTH x $1> @llvm.masked.expandload.vWIDTH$4($1* %startptr_typed, <WIDTH x i1> %i1mask, <WIDTH x $1> %data)
   store <WIDTH x $1> %vec_load, <WIDTH x $1>* %val_ptr_typed, align $3
 packed_load_store_popcnt()
    ret i32 %ret
 }
 
-declare void @llvm.masked.compressstore.vWIDTH$1(<WIDTH  x $1>, $1* , <WIDTH  x i1> )
-define i32 @__packed_store_active$1(i8* %startptr, <WIDTH x $1> %vals,
+declare void @llvm.masked.compressstore.vWIDTH$4(<WIDTH  x $1>, $1* , <WIDTH  x i1> )
+define i32 @__packed_store_active$4(i8* %startptr, <WIDTH x $1> %vals,
                                    <WIDTH x MASK> %full_mask) nounwind alwaysinline {
   %startptr_typed = bitcast i8* %startptr to $1*
   %i1mask = icmp ne <WIDTH x MASK> %full_mask, zeroinitializer
-  call void @llvm.masked.compressstore.vWIDTH$1(<WIDTH x $1> %vals, $1* %startptr_typed, <WIDTH x i1> %i1mask)
+  call void @llvm.masked.compressstore.vWIDTH$4(<WIDTH x $1> %vals, $1* %startptr_typed, <WIDTH x i1> %i1mask)
 packed_load_store_popcnt()
   ret i32 %ret
 }
@@ -6575,9 +6563,9 @@ packed_load_store_popcnt()
 ifelse($2, `TRUE',
 `
 ;; i1 mask variant requires different implementation and is here just for functional completeness.
-define i32 @__packed_store_active2$1(i8 * %startptr, <WIDTH x $1> %vals,
+define i32 @__packed_store_active2$4(i8 * %startptr, <WIDTH x $1> %vals,
                                    <WIDTH x MASK> %full_mask) nounwind alwaysinline {
-  %ret = call i32 @__packed_store_active$1(i8 * %startptr, <WIDTH x $1> %vals,
+  %ret = call i32 @__packed_store_active$4(i8 * %startptr, <WIDTH x $1> %vals,
                                          <WIDTH x MASK> %full_mask)
   ret i32 %ret
 }
@@ -6586,16 +6574,16 @@ define i32 @__packed_store_active2$1(i8 * %startptr, <WIDTH x $1> %vals,
 ifelse(MASK, `i1',
 `
 ;; i1 mask variant requires different implementation and is here just for functional completeness.
-define i32 @__packed_store_active2$1(i8 * %startptr, <WIDTH x $1> %vals,
+define i32 @__packed_store_active2$4(i8 * %startptr, <WIDTH x $1> %vals,
                                    <WIDTH x MASK> %full_mask) nounwind alwaysinline {
-  %ret = call i32 @__packed_store_active$1(i8 * %startptr, <WIDTH x $1> %vals,
+  %ret = call i32 @__packed_store_active$4(i8 * %startptr, <WIDTH x $1> %vals,
                                          <WIDTH x MASK> %full_mask)
   ret i32 %ret
 }
 ',
 `
 ;; TODO: function needs to return i32, but not MASK type.
-define MASK @__packed_store_active2$1(i8 * %startptr, <WIDTH x $1> %vals,
+define MASK @__packed_store_active2$4(i8 * %startptr, <WIDTH x $1> %vals,
                                    <WIDTH x MASK> %full_mask) nounwind alwaysinline {
 entry:
   %startptr_typed = bitcast i8* %startptr to $1*
@@ -6660,8 +6648,13 @@ done:
 ;;     For other targets branchless emulation sequence should be used (triggered by 'FALSE').
 
 define(`packed_load_and_store', `
-  packed_load_and_store_type(i32, $1, 4)
-  packed_load_and_store_type(i64, $1, 8)
+  packed_load_and_store_type(i8, $1, 1, i8)
+  packed_load_and_store_type(i16, $1, 2, i16)
+  packed_load_and_store_type(i32, $1, 4, i32)
+  packed_load_and_store_type(half, $1, 2, f16)
+  packed_load_and_store_type(float, $1, 4, f32)
+  packed_load_and_store_type(i64, $1, 8, i64)
+  packed_load_and_store_type(double, $1, 8, f64)
 ')
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reduce_equal
@@ -6673,11 +6666,14 @@ define(`packed_load_and_store', `
 define(`declare_count_zeros', `
 ifelse(count_zeros_are_defined, true, `',
 `
-declare i32 @llvm.ctlz.i32(i32)
-declare i64 @llvm.ctlz.i64(i64)
-declare i32 @llvm.cttz.i32(i32)
-declare i64 @llvm.cttz.i64(i64)
-
+declare i32 @llvm.ctlz.i32(i32, i1)
+declare i64 @llvm.ctlz.i64(i64, i1)
+declare i32 @llvm.cttz.i32(i32, i1)
+declare i64 @llvm.cttz.i64(i64, i1)
+declare <WIDTH x i32> @llvm.ctlz.TYPE_SUFFIX(i32)(<WIDTH x i32>, i1)
+declare <WIDTH x i64> @llvm.ctlz.TYPE_SUFFIX(i64)(<WIDTH x i64>, i1)
+declare <WIDTH x i32> @llvm.cttz.TYPE_SUFFIX(i32)(<WIDTH x i32>, i1)
+declare <WIDTH x i64> @llvm.cttz.TYPE_SUFFIX(i64)(<WIDTH x i64>, i1)
 define(`count_zeros_are_defined', true)
 ')
 
@@ -6695,7 +6691,7 @@ entry:
 
 domixed:
   ; First, figure out which lane is the first active one
-  %first = call i64 @llvm.cttz.i64(i64 %mm)
+  %first = call i64 @llvm.cttz.i64(i64 %mm, i1 false)
   %first32 = trunc i64 %first to i32
   %baseval = extractelement <$1 x $2> %v, i32 %first32
   %basev1 = insertelement <$1 x $2> undef, $2 %baseval, i32 0
@@ -6762,6 +6758,8 @@ not_all_equal:
 
 define(`reduce_equal', `
 reduce_equal_aux($1, half, half, i16, fcmp, 16, oeq)
+reduce_equal_aux($1, i8, int8, i8, icmp, 8, eq)
+reduce_equal_aux($1, i16, int16, i16, icmp, 16, eq)
 reduce_equal_aux($1, i32, int32, i32, icmp, 32, eq)
 reduce_equal_aux($1, float, float, i32, fcmp, 32, oeq)
 reduce_equal_aux($1, i64, int64, i64, icmp, 64, eq)
@@ -6818,13 +6816,19 @@ define <$1 x $2> @__exclusive_scan_$6(<$1 x $2> %v,
 define(`scans', `
 exclusive_scan(WIDTH, half, 16, fadd, zeroinitializer, add_half)
 exclusive_scan(WIDTH, i32, 32, add, 0, add_i32)
+exclusive_scan(WIDTH, i8, 8, add, 0, add_i8)
+exclusive_scan(WIDTH, i16, 16, add, 0, add_i16)
 exclusive_scan(WIDTH, float, 32, fadd, zeroinitializer, add_float)
 exclusive_scan(WIDTH, i64, 64, add, 0, add_i64)
 exclusive_scan(WIDTH, double, 64, fadd, zeroinitializer, add_double)
 
+exclusive_scan(WIDTH, i8, 8, and, -1, and_i8)
+exclusive_scan(WIDTH, i16, 16, and, -1, and_i16)
 exclusive_scan(WIDTH, i32, 32, and, -1, and_i32)
 exclusive_scan(WIDTH, i64, 64, and, -1, and_i64)
 
+exclusive_scan(WIDTH, i8, 8, or, 0, or_i8)
+exclusive_scan(WIDTH, i16, 16, or, 0, or_i16)
 exclusive_scan(WIDTH, i32, 32, or, 0, or_i32)
 exclusive_scan(WIDTH, i64, 64, or, 0, or_i64)
 ')

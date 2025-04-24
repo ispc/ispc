@@ -1,5 +1,5 @@
 // -*- mode: c++ -*-
-// Copyright (c) 2024, Intel Corporation
+// Copyright (c) 2024-2025, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 //
 // @file builtins.isph
@@ -290,10 +290,16 @@ EXT uniform int64 __clock();
 EXT inline varying double __exclusive_scan_add_double(varying double, UIntMaskType);
 EXT inline varying float __exclusive_scan_add_float(varying float, UIntMaskType);
 EXT inline varying float16 __exclusive_scan_add_half(varying float16, UIntMaskType);
+EXT inline varying int8 __exclusive_scan_add_i8(varying int8, UIntMaskType);
+EXT inline varying int16 __exclusive_scan_add_i16(varying int16, UIntMaskType);
 EXT inline varying int32 __exclusive_scan_add_i32(varying int32, UIntMaskType);
 EXT inline varying int64 __exclusive_scan_add_i64(varying int64, UIntMaskType);
+EXT inline varying int8 __exclusive_scan_and_i8(varying int8, UIntMaskType);
+EXT inline varying int16 __exclusive_scan_and_i16(varying int16, UIntMaskType);
 EXT inline varying int32 __exclusive_scan_and_i32(varying int32, UIntMaskType);
 EXT inline varying int64 __exclusive_scan_and_i64(varying int64, UIntMaskType);
+EXT inline varying int8 __exclusive_scan_or_i8(varying int8, UIntMaskType);
+EXT inline varying int16 __exclusive_scan_or_i16(varying int16, UIntMaskType);
 EXT inline varying int32 __exclusive_scan_or_i32(varying int32, UIntMaskType);
 EXT inline varying int64 __exclusive_scan_or_i64(varying int64, UIntMaskType);
 
@@ -396,29 +402,45 @@ EXT varying int8 __masked_load_private_i8(uniform int8 *uniform, UIntMaskType);
 EXT inline READNONE uniform double __max_uniform_double(uniform double, uniform double);
 EXT inline READNONE uniform float __max_uniform_float(uniform float, uniform float);
 EXT inline READNONE uniform float16 __max_uniform_half(uniform float16, uniform float16);
+EXT inline READNONE uniform int8 __max_uniform_int8(uniform int8, uniform int8);
+EXT inline READNONE uniform int16 __max_uniform_int16(uniform int16, uniform int16);
 EXT inline READNONE uniform int32 __max_uniform_int32(uniform int32, uniform int32);
 EXT inline READNONE uniform int64 __max_uniform_int64(uniform int64, uniform int64);
+EXT inline READNONE uniform uint8 __max_uniform_uint8(uniform uint8, uniform uint8);
+EXT inline READNONE uniform uint16 __max_uniform_uint16(uniform uint16, uniform uint16);
 EXT inline READNONE uniform uint32 __max_uniform_uint32(uniform uint32, uniform uint32);
 EXT inline READNONE uniform uint64 __max_uniform_uint64(uniform uint64, uniform uint64);
 EXT inline READNONE varying double __max_varying_double(varying double, varying double);
 EXT inline READNONE varying float __max_varying_float(varying float, varying float);
 EXT inline READNONE varying float16 __max_varying_half(varying float16, varying float16);
+EXT inline READNONE varying int8 __max_varying_int8(varying int8, varying int8);
+EXT inline READNONE varying int16 __max_varying_int16(varying int16, varying int16);
 EXT inline READNONE varying int32 __max_varying_int32(varying int32, varying int32);
 EXT inline READNONE varying int64 __max_varying_int64(varying int64, varying int64);
+EXT inline READNONE varying uint8 __max_varying_uint8(varying uint8, varying uint8);
+EXT inline READNONE varying uint16 __max_varying_uint16(varying uint16, varying uint16);
 EXT inline READNONE varying uint32 __max_varying_uint32(varying uint32, varying uint32);
 EXT inline READNONE varying uint64 __max_varying_uint64(varying uint64, varying uint64);
 EXT inline READNONE uniform double __min_uniform_double(uniform double, uniform double);
 EXT inline READNONE uniform float __min_uniform_float(uniform float, uniform float);
 EXT inline READNONE uniform float16 __min_uniform_half(uniform float16, uniform float16);
+EXT inline READNONE uniform int8 __min_uniform_int8(uniform int8, uniform int8);
+EXT inline READNONE uniform int16 __min_uniform_int16(uniform int16, uniform int16);
 EXT inline READNONE uniform int32 __min_uniform_int32(uniform int32, uniform int32);
 EXT inline READNONE uniform int64 __min_uniform_int64(uniform int64, uniform int64);
+EXT inline READNONE uniform uint8 __min_uniform_uint8(uniform uint8, uniform uint8);
+EXT inline READNONE uniform uint16 __min_uniform_uint16(uniform uint16, uniform uint16);
 EXT inline READNONE uniform uint32 __min_uniform_uint32(uniform uint32, uniform uint32);
 EXT inline READNONE uniform uint64 __min_uniform_uint64(uniform uint64, uniform uint64);
 EXT inline READNONE varying double __min_varying_double(varying double, varying double);
 EXT inline READNONE varying float __min_varying_float(varying float, varying float);
 EXT inline READNONE varying float16 __min_varying_half(varying float16, varying float16);
+EXT inline READNONE varying int8 __min_varying_int8(varying int8, varying int8);
+EXT inline READNONE varying int16 __min_varying_int16(varying int16, varying int16);
 EXT inline READNONE varying int32 __min_varying_int32(varying int32, varying int32);
 EXT inline READNONE varying int64 __min_varying_int64(varying int64, varying int64);
+EXT inline READNONE varying uint8 __min_varying_uint8(varying uint8, varying uint8);
+EXT inline READNONE varying uint16 __min_varying_uint16(varying uint16, varying uint16);
 EXT inline READNONE varying uint32 __min_varying_uint32(varying uint32, varying uint32);
 EXT inline READNONE varying uint64 __min_varying_uint64(varying uint64, varying uint64);
 
@@ -443,20 +465,30 @@ EXT inline READNONE uniform int16 __reduce_add_int8(varying int8);
 EXT inline uniform bool __reduce_equal_double(varying double, uniform int8 *uniform, UIntMaskType);
 EXT inline uniform bool __reduce_equal_float(varying float, uniform int8 *uniform, UIntMaskType);
 EXT inline uniform bool __reduce_equal_half(varying float16, uniform int8 *uniform, UIntMaskType);
+EXT inline uniform bool __reduce_equal_int8(varying int8, uniform int8 *uniform, UIntMaskType);
+EXT inline uniform bool __reduce_equal_int16(varying int16, uniform int8 *uniform, UIntMaskType);
 EXT inline uniform bool __reduce_equal_int32(varying int32, uniform int8 *uniform, UIntMaskType);
 EXT inline uniform bool __reduce_equal_int64(varying int64, uniform int8 *uniform, UIntMaskType);
 EXT inline READNONE uniform double __reduce_max_double(varying double);
 EXT inline READNONE uniform float __reduce_max_float(varying float);
 EXT inline READNONE uniform float16 __reduce_max_half(varying float16);
+EXT inline READNONE uniform int8 __reduce_max_int8(varying int8);
+EXT inline READNONE uniform int16 __reduce_max_int16(varying int16);
 EXT inline READNONE uniform int32 __reduce_max_int32(varying int32);
 EXT inline READNONE uniform int64 __reduce_max_int64(varying int64);
+EXT inline READNONE uniform uint8 __reduce_max_uint8(varying uint8);
+EXT inline READNONE uniform uint16 __reduce_max_uint16(varying uint16);
 EXT inline READNONE uniform uint32 __reduce_max_uint32(varying uint32);
 EXT inline READNONE uniform uint64 __reduce_max_uint64(varying uint64);
 EXT inline READNONE uniform double __reduce_min_double(varying double);
 EXT inline READNONE uniform float __reduce_min_float(varying float);
 EXT inline READNONE uniform float16 __reduce_min_half(varying float16);
+EXT inline READNONE uniform int8 __reduce_min_int8(varying int8);
+EXT inline READNONE uniform int16 __reduce_min_int16(varying int16);
 EXT inline READNONE uniform int32 __reduce_min_int32(varying int32);
 EXT inline READNONE uniform int64 __reduce_min_int64(varying int64);
+EXT inline READNONE uniform uint8 __reduce_min_uint8(varying uint8);
+EXT inline READNONE uniform uint16 __reduce_min_uint16(varying uint16);
 EXT inline READNONE uniform uint32 __reduce_min_uint32(varying uint32);
 EXT inline READNONE uniform uint64 __reduce_min_uint64(varying uint64);
 
@@ -472,12 +504,29 @@ EXT uniform bool __rdrand_i64(uniform int8 *uniform);
 #else
 #define PackedStoreResultType UniformMaskType
 #endif
+EXT inline uniform int32 __packed_load_activei8(uniform int8 *uniform, uniform int8 *uniform, UIntMaskType);
+EXT inline uniform int32 __packed_load_activei16(uniform int8 *uniform, uniform int8 *uniform, UIntMaskType);
 EXT inline uniform int32 __packed_load_activei32(uniform int8 *uniform, uniform int8 *uniform, UIntMaskType);
 EXT inline uniform int32 __packed_load_activei64(uniform int8 *uniform, uniform int8 *uniform, UIntMaskType);
+EXT inline uniform int32 __packed_load_activef16(uniform int8 *uniform, uniform int8 *uniform, UIntMaskType);
+EXT inline uniform int32 __packed_load_activef32(uniform int8 *uniform, uniform int8 *uniform, UIntMaskType);
+EXT inline uniform int32 __packed_load_activef64(uniform int8 *uniform, uniform int8 *uniform, UIntMaskType);
+
+EXT inline PackedStoreResultType __packed_store_active2i8(uniform int8 *uniform, varying int8, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_active2i16(uniform int8 *uniform, varying int16, UIntMaskType);
 EXT inline PackedStoreResultType __packed_store_active2i32(uniform int8 *uniform, varying int32, UIntMaskType);
 EXT inline PackedStoreResultType __packed_store_active2i64(uniform int8 *uniform, varying int64, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_active2f16(uniform int8 *uniform, varying float16, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_active2f32(uniform int8 *uniform, varying float, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_active2f64(uniform int8 *uniform, varying double, UIntMaskType);
+
+EXT inline PackedStoreResultType __packed_store_activei8(uniform int8 *uniform, varying int8, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_activei16(uniform int8 *uniform, varying int16, UIntMaskType);
 EXT inline PackedStoreResultType __packed_store_activei32(uniform int8 *uniform, varying int32, UIntMaskType);
 EXT inline PackedStoreResultType __packed_store_activei64(uniform int8 *uniform, varying int64, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_activef16(uniform int8 *uniform, varying float16, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_activef32(uniform int8 *uniform, varying float, UIntMaskType);
+EXT inline PackedStoreResultType __packed_store_activef64(uniform int8 *uniform, varying double, UIntMaskType);
 
 // TODO: rewrite in stdlib.ispc
 EXT void __prefetch_read_sized_uniform_1(uniform int8 *uniform, uniform int8);

@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2018-2024, Intel Corporation
+#  Copyright (c) 2018-2025, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -38,11 +38,16 @@ function (stdlib_to_cpp ispc_name target bit os CPP_LIST BC_LIST)
             return()
         endif()
         # ISPC doesn't support avx512spr targets on macOS
-        if ("${target}" MATCHES "avx512spr")
+        if ("${target}" MATCHES "avx512spr" OR "${target}" MATCHES "avx10")
             return()
         endif()
     endif()
-
+    if(target MATCHES "^avx10_[0-9]+")
+        # Replace the first underscore after "avx10" with a dot for file lookup
+        string(REGEX REPLACE "^(avx10)_([0-9]+)" "\\1.\\2" target_for_file "${target}")
+    else()
+        set(target_for_file "${target}")
+    endif()
     # define canon_os and arch
     write_stdlib_bitcode_lib(${name} ${target} ${os} ${bit} canon_arch canon_os)
 
@@ -50,7 +55,7 @@ function (stdlib_to_cpp ispc_name target bit os CPP_LIST BC_LIST)
 
     add_custom_command(
         OUTPUT ${bc}
-        COMMAND ${ispc_name} -I ${INCLUDE_FOLDER} --nostdlib --gen-stdlib --target=${target} --arch=${canon_arch} --target-os=${canon_os} stdlib/stdlib.ispc --emit-llvm -o ${bc}
+        COMMAND ${ispc_name} -I ${INCLUDE_FOLDER} --nostdlib --gen-stdlib --target=${target_for_file} --arch=${canon_arch} --target-os=${canon_os} stdlib/stdlib.ispc --emit-llvm -o ${bc}
         DEPENDS ${ispc_name} ${STDLIB_ISPC_FILES}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )

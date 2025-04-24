@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -8,6 +8,9 @@
 
 /* supress shift-reduces conflict message for dangling else */
 /* one for 'if', one for 'cif' */
+/* We expect these conflicts and accept the default resolution (shift). It means
+that for the example 'if (a) if (b) c; else d;' the else will be associated
+with the nearest if. Same happens for 'if (a) cif (b) c; else d;'.  */
 %expect 2
 
 %define parse.error verbose
@@ -51,6 +54,26 @@ struct PragmaAttributes {
     AttributeType aType;
     Globals::pragmaUnrollType unrollType;
     int count;
+
+    std::string GetString() {
+        std::string s;
+        if (aType == PragmaAttributes::AttributeType::pragmaloop) {
+            s += "loop";
+        }
+        if (aType == PragmaAttributes::AttributeType::pragmawarning) {
+            s += "warning";
+        }
+        if (unrollType == Globals::pragmaUnrollType::nounroll) {
+            s += " nounroll";
+        }
+        if (unrollType == Globals::pragmaUnrollType::unroll) {
+            s += " unroll";
+        }
+        if (unrollType == Globals::pragmaUnrollType::count) {
+            s += " count(" + std::to_string(count) + ")";
+        }
+        return s;
+    }
 };
 
 typedef std::pair<Declarator *, TemplateArgs *> SimpleTemplateIDType;
@@ -70,11 +93,15 @@ typedef std::pair<Declarator *, TemplateArgs *> SimpleTemplateIDType;
 #include "type.h"
 #include "util.h"
 
+#include <inttypes.h>
+#include <llvm/IR/Constants.h>
 #include <stdio.h>
 #include <variant>
-#include <llvm/IR/Constants.h>
 
 using namespace ispc;
+
+// This macro is defined to be used in printer directives later.
+#define SAFE_ACCESS(ptr, expr) ((ptr) ? (ptr)->expr : "nullptr")
 
 #define UNIMPLEMENTED \
         Error(yylloc, "Unimplemented parser functionality %s:%d", \
@@ -101,8 +128,9 @@ static void lAddFunctionParams(Declarator *decl);
 static void lAddMaskToSymbolTable(SourcePos pos);
 static void lAddThreadIndexCountToSymbolTable(SourcePos pos);
 static std::string lGetAlternates(std::vector<std::string> &alternates);
-static const char *lGetStorageClassString(StorageClass sc);
 static bool lGetConstantIntOrSymbol(Expr *expr, std::variant<std::monostate, int, Symbol*> *value, SourcePos pos, const char *usage);
+static StructType *lCreateStructType(const std::string &name, const std::vector<StructDeclaration *> *decl,
+                                     AttributeList *attrs, SourcePos pos);
 
 enum class TemplateType { Template, Instantiation, Specialization };
 static void lCheckTemplateDeclSpecs(DeclSpecs *ds, SourcePos pos, TemplateType type, const char* name);
@@ -153,9 +181,8 @@ struct ForeachDimension {
     ExprList *exprList;
     const Type *type;
     std::vector<std::pair<const Type *, SourcePos> > *typeList;
-    const AtomicType *atomicType;
     int typeQualifier;
-    StorageClass storageClass;
+    StorageClass *storageClass;
     Stmt *stmt;
     DeclSpecs *declSpecs;
     AttributeList *attributeList;
@@ -257,7 +284,7 @@ struct ForeachDimension {
 %type <type> type_specifier type_name rate_qualified_type_specifier
 %type <type> short_vec_specifier
 %type <typeList> type_specifier_list
-%type <atomicType> atomic_var_type_specifier int_constant_type template_int_constant_type
+%type <type> atomic_var_type_specifier int_constant_type template_int_constant_type
 
 %type <typeQualifier> type_qualifier type_qualifier_list
 %type <storageClass> storage_class_specifier
@@ -289,9 +316,131 @@ struct ForeachDimension {
 %type <templateParmList> template_parameter_list template_head
 %type <functionTemplateSym> template_declaration
 
+%precedence STRUCT_WITHOUT_ATTRIBUTE
+%precedence TOKEN_ATTRIBUTE
+
 %destructor { lCleanUpString($$); } <stringVal>
+%destructor { delete $$; } <storageClass>
+%destructor { delete $$; } <attributeList>
+%destructor { delete $$; } <attr>
+%destructor { delete $$; } <attrArg>
 // TODO! destructos for all semantic types that return pointer to heap-allocated memory
 // e.g., tests/lit-tests/2599.ispc
+
+// Print semantic values for debugging (under --yydebug)
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, c_str())); } <stringVal>
+%printer { fprintf(yyo, "%s", $$); } <constCharPtr>
+%printer { fprintf(yyo, "%" PRIu64, $$); } <intVal>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <expr>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <exprList>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <stmt>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <declaration>
+%printer {
+  fprintf(yyo, "<");
+  for(auto &i : *$$) {
+    fprintf(yyo, "%s:", SAFE_ACCESS(i, GetString().c_str()));
+  }
+  fprintf(yyo, ">");
+} <declarationList>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <declarator>
+%printer {
+  fprintf(yyo, "<");
+  for(auto &i : *$$) {
+    fprintf(yyo, "%s,", SAFE_ACCESS(i, GetString().c_str()));
+  }
+  fprintf(yyo, ">");
+} <declarators>
+%printer {
+  fprintf(yyo, "<");
+  for(auto &i : *$$) {
+    fprintf(yyo, "%s,", SAFE_ACCESS(i, GetString().c_str()));
+  }
+  fprintf(yyo, ">");
+} <structDeclaratorList>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <structDeclaration>
+%printer {
+  fprintf(yyo, "<");
+  for(auto &i : *$$) {
+    fprintf(yyo, "%s,", SAFE_ACCESS(i, GetString().c_str()));
+  }
+  fprintf(yyo, ">");
+} <structDeclarationList>
+%printer {
+  fprintf(yyo, "<");
+  for(auto &i : *$$) {
+    fprintf(yyo, "%s,", SAFE_ACCESS(i, name.c_str()));
+  }
+  fprintf(yyo, ">");
+} <symbolList>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, name.c_str())); } <symbol>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <enumType>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <type>
+%printer {
+  fprintf(yyo, "<");
+  for(auto &i : *$$) {
+    fprintf(yyo, "%s,", SAFE_ACCESS(i.first, GetString().c_str()));
+  }
+  fprintf(yyo, ">");
+} <typeList>
+%printer { fprintf(yyo, "%s", DeclSpecs::GetTypeQualifiersString($$).c_str()); } <typeQualifier>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <storageClass>
+%printer { fprintf(yyo, "%s:", SAFE_ACCESS($$, GetString().c_str())); } <declSpecs>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <attributeList>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <attr>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <attrArg>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <pragmaAttributes>
+%printer { fprintf(yyo, "%s", $$->sym->name.c_str()); } <foreachDimension>
+%printer {
+  fprintf(yyo, "<");
+  for (auto &i : *$$) {
+    if (i && i->sym) {
+      fprintf(yyo, "%s,", i->sym->name.c_str());
+    } else {
+      fprintf(yyo, "nullptr");
+    }
+  }
+  fprintf(yyo, ">");
+} <foreachDimensionList>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, first.c_str())); } <declspecPair>
+%printer {
+  fprintf(yyo, "<");
+  for (auto &i : *$$) {
+    fprintf(yyo, "%s,", i.first.c_str());
+  }
+  fprintf(yyo, ">");
+} <declspecList>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <templateArg>
+%printer {
+  fprintf(yyo, "<");
+  for (auto &i : *$$) {
+    fprintf(yyo, "%s,", i.GetString().c_str());
+  }
+  fprintf(yyo, ">");
+} <templateArgs>
+%printer {
+  if ($$ && $$->first) {
+    fprintf(yyo, "%s: ", $$->first->name.c_str());
+  }
+  fprintf(yyo, "<");
+  if ($$ && $$->second) {
+    for (auto &i : *$$->second) {
+      fprintf(yyo, "%s,", i.GetString().c_str());
+    }
+  }
+  fprintf(yyo, ">");
+} <simpleTemplateID>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetString().c_str())); } <templateTypeParm>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, GetName().c_str())); } <templateParm>
+%printer {
+  fprintf(yyo, "<");
+  if ($$) {
+    for (size_t i = 0; i < $$->GetCount(); ++i) {
+      fprintf(yyo, "%s,", SAFE_ACCESS((*$$)[i], GetName().c_str()));
+    }
+  }
+  fprintf(yyo, ">");
+} <templateParmList>
+%printer { fprintf(yyo, "%s", SAFE_ACCESS($$, name.c_str())); } <functionTemplateSym>
 
 %start translation_unit
 %%
@@ -886,6 +1035,24 @@ assignment_expression
       { $$ = new AssignExpr(AssignExpr::XorAssign, $1, $3, Union(@1, @3)); }
     | unary_expression TOKEN_OR_ASSIGN assignment_expression
       { $$ = new AssignExpr(AssignExpr::OrAssign, $1, $3, Union(@1, @3)); }
+    | template_identifier {
+        // It looks like the proper place is under primary_expression, but
+        // there are shift/reduce conflicts there. So, we handle it here.
+        const std::string name = $1;
+        std::vector<Symbol *> funcs;
+        m->symbolTable->LookupFunction(name.c_str(), &funcs);
+        std::vector<TemplateSymbol *> funcTempls;
+        m->symbolTable->LookupFunctionTemplate(name, &funcTempls);
+        if (funcs.size() > 0 || funcTempls.size() > 0) {
+            $$ = new FunctionSymbolExpr(name.c_str(), funcs, funcTempls, TemplateArgs(), @1);
+        } else {
+            Error(@1, "No matching functions were declared.");
+            $$ = nullptr;
+        }
+
+        // deallocate template identifier str
+        free((void*)$1);
+      }
     ;
 
 expression
@@ -905,7 +1072,7 @@ declaration_statement
             AssertPos(@1, m->errorCount > 0);
             $$ = nullptr;
         }
-        else if ($1->declSpecs->storageClass == SC_TYPEDEF) {
+        else if ($1->declSpecs->storageClass.IsTypedef()) {
             for (unsigned int i = 0; i < $1->declarators.size(); ++i) {
                 if ($1->declarators[i] == nullptr)
                     AssertPos(@1, m->errorCount > 0);
@@ -927,6 +1094,22 @@ declaration_statement
 declaration
     : declaration_specifiers ';'
       {
+          DeclSpecs *ds = $1;
+          if (ds && ds->attributeList && ds->attributeList->HasAttribute("aligned")) {
+
+              std::string name;
+              const Type *t = ds->baseType;
+              if (CastType<StructType>(t)) {
+                  name = CastType<StructType>(t)->GetStructName();
+              } else if (CastType<UndefinedStructType>(t)) {
+                  name = CastType<UndefinedStructType>(t)->GetStructName();
+              }
+
+              if (!name.empty()) {
+                  Warning(@1, "attribute ignored in declaration of 'struct %s'. It must follow the 'struct' keyword.",
+                          name.c_str());
+              }
+          }
           $$ = new Declaration($1);
       }
     | declaration_specifiers init_declarator_list ';'
@@ -984,21 +1167,23 @@ declspec_specifier
 declaration_specifiers
     : storage_class_specifier
       {
-          $$ = new DeclSpecs(nullptr, $1);
+          $$ = new DeclSpecs(nullptr, *$1);
+          delete $1;
       }
     | storage_class_specifier declaration_specifiers
       {
           DeclSpecs *ds = (DeclSpecs *)$2;
           if (ds != nullptr) {
-              if (ds->storageClass != SC_NONE)
+              if (!ds->storageClass.IsNone())
                   Error(@1, "Multiple storage class specifiers in a declaration are illegal. "
                         "(Have provided both \"%s\" and \"%s\".)",
-                        lGetStorageClassString(ds->storageClass),
-                        lGetStorageClassString($1));
+                        ds->storageClass.GetString().c_str(),
+                        $1->GetString().c_str());
               else
-                  ds->storageClass = $1;
+                  ds->storageClass = *$1;
           }
           $$ = ds;
+          delete $1;
       }
     | declspec_specifier
       {
@@ -1085,7 +1270,7 @@ declaration_specifiers
       }
     | type_qualifier
       {
-          $$ = new DeclSpecs(nullptr, SC_NONE, $1);
+          $$ = new DeclSpecs(nullptr, StorageClass::NONE, $1);
       }
     | type_qualifier declaration_specifiers
       {
@@ -1207,11 +1392,11 @@ init_declarator
     ;
 
 storage_class_specifier
-    : TOKEN_TYPEDEF { $$ = SC_TYPEDEF; }
-    | TOKEN_EXTERN { $$ = SC_EXTERN; }
-    | TOKEN_EXTERN TOKEN_STRING_C_LITERAL  { $$ = SC_EXTERN_C; }
-    | TOKEN_EXTERN TOKEN_STRING_SYCL_LITERAL  { $$ = SC_EXTERN_SYCL; }
-    | TOKEN_STATIC { $$ = SC_STATIC; }
+    : TOKEN_TYPEDEF { $$ = new StorageClass(StorageClass::TYPEDEF); }
+    | TOKEN_EXTERN { $$ = new StorageClass(StorageClass::EXT); }
+    | TOKEN_EXTERN TOKEN_STRING_C_LITERAL  { $$ = new StorageClass(StorageClass::EXT_C); }
+    | TOKEN_EXTERN TOKEN_STRING_SYCL_LITERAL  { $$ = new StorageClass(StorageClass::EXT_SYCL); }
+    | TOKEN_STATIC { $$ = new StorageClass(StorageClass::STATIC); }
     ;
 
 type_specifier
@@ -1250,18 +1435,18 @@ type_specifier_list
 
 atomic_var_type_specifier
     : TOKEN_VOID { $$ = AtomicType::Void; }
-    | TOKEN_BOOL { $$ = AtomicType::UniformBool->GetAsUnboundVariabilityType(); }
-    | TOKEN_INT8 { $$ = AtomicType::UniformInt8->GetAsUnboundVariabilityType(); }
-    | TOKEN_UINT8 { $$ = AtomicType::UniformUInt8->GetAsUnboundVariabilityType(); }
-    | TOKEN_INT16 { $$ = AtomicType::UniformInt16->GetAsUnboundVariabilityType(); }
-    | TOKEN_UINT16 { $$ = AtomicType::UniformUInt16->GetAsUnboundVariabilityType(); }
-    | TOKEN_INT { $$ = AtomicType::UniformInt32->GetAsUnboundVariabilityType(); }
-    | TOKEN_UINT { $$ = AtomicType::UniformUInt32->GetAsUnboundVariabilityType(); }
+    | TOKEN_BOOL    { $$ = AtomicType::UniformBool->GetAsUnboundVariabilityType(); }
+    | TOKEN_INT8    { $$ = AtomicType::UniformInt8->GetAsUnboundVariabilityType(); }
+    | TOKEN_UINT8   { $$ = AtomicType::UniformUInt8->GetAsUnboundVariabilityType(); }
+    | TOKEN_INT16   { $$ = AtomicType::UniformInt16->GetAsUnboundVariabilityType(); }
+    | TOKEN_UINT16  { $$ = AtomicType::UniformUInt16->GetAsUnboundVariabilityType(); }
+    | TOKEN_INT     { $$ = AtomicType::UniformInt32->GetAsUnboundVariabilityType(); }
+    | TOKEN_UINT    { $$ = AtomicType::UniformUInt32->GetAsUnboundVariabilityType(); }
     | TOKEN_FLOAT16 { $$ = AtomicType::UniformFloat16->GetAsUnboundVariabilityType(); }
-    | TOKEN_FLOAT { $$ = AtomicType::UniformFloat->GetAsUnboundVariabilityType(); }
-    | TOKEN_DOUBLE { $$ = AtomicType::UniformDouble->GetAsUnboundVariabilityType(); }
-    | TOKEN_INT64 { $$ = AtomicType::UniformInt64->GetAsUnboundVariabilityType(); }
-    | TOKEN_UINT64 { $$ = AtomicType::UniformUInt64->GetAsUnboundVariabilityType(); }
+    | TOKEN_FLOAT   { $$ = AtomicType::UniformFloat->GetAsUnboundVariabilityType(); }
+    | TOKEN_DOUBLE  { $$ = AtomicType::UniformDouble->GetAsUnboundVariabilityType(); }
+    | TOKEN_INT64   { $$ = AtomicType::UniformInt64->GetAsUnboundVariabilityType(); }
+    | TOKEN_UINT64  { $$ = AtomicType::UniformUInt64->GetAsUnboundVariabilityType(); }
     ;
 
 short_vec_specifier
@@ -1295,11 +1480,11 @@ struct_or_union_and_name
       {
           const Type *st = m->symbolTable->LookupType($2);
           if (st == nullptr) {
-              st = new UndefinedStructType($2, Variability::Unbound, false, @2);
-              m->symbolTable->AddType($2, st, @2);
-              $$ = st;
-          }
-          else {
+              UndefinedStructType* ust = new UndefinedStructType($2, Variability::Unbound, false, @2);
+              ust->RegisterInStructTypeMap();
+              m->symbolTable->AddType($2, ust, @2);
+              $$ = ust;
+          } else {
               if (CastType<StructType>(st) == nullptr &&
                   CastType<UndefinedStructType>(st) == nullptr) {
                   Error(@2, "Type \"%s\" is not a struct type! (%s)", $2,
@@ -1316,65 +1501,82 @@ struct_or_union_and_name
 
 struct_or_union_specifier
     : struct_or_union_and_name
-    | struct_or_union_and_name '{' struct_declaration_list '}'
+    // We explicitly use here precedence to lower this rule priority in comparison
+    // with the next one that has attribute_specifier (starting with TOKEN_ATTRIBUTE).
+    // This is needed to avoid shift/reduce conflict, although the default
+    // behavior (shifting) does same in our situation, but it is better to be
+    // explicit here.
+    | struct_or_union_and_name '{' struct_declaration_list '}' %prec STRUCT_WITHOUT_ATTRIBUTE
       {
           if ($3 != nullptr) {
-              llvm::SmallVector<const Type *, 8> elementTypes;
-              llvm::SmallVector<std::string, 8> elementNames;
-              llvm::SmallVector<SourcePos, 8> elementPositions;
-              GetStructTypesNamesPositions(*$3, &elementTypes, &elementNames,
-                                           &elementPositions);
-              const std::string &name = CastType<StructType>($1) ?
-                  CastType<StructType>($1)->GetStructName() :
-                  CastType<UndefinedStructType>($1)->GetStructName();
-              StructType *st = new StructType(name, elementTypes, elementNames,
-                                              elementPositions, false,
-                                              Variability::Unbound, false, @1);
-              m->symbolTable->AddType(name.c_str(), st, @1);
-              $$ = st;
+              const std::string &name = CastType<StructType>($1) ? CastType<StructType>($1)->GetStructName()
+                                                                 : CastType<UndefinedStructType>($1)->GetStructName();
+              $$ = lCreateStructType(name, $3, nullptr, @1);
               // struct_declaration_list returns a vector that is not needed anymore.
               delete $3;
-          }
-          else
+          } else {
               $$ = nullptr;
+          }
       }
-    | struct_or_union '{' struct_declaration_list '}'
+    | struct_or_union_and_name '{' struct_declaration_list '}' attribute_specifier
       {
           if ($3 != nullptr) {
-              llvm::SmallVector<const Type *, 8> elementTypes;
-              llvm::SmallVector<std::string, 8> elementNames;
-              llvm::SmallVector<SourcePos, 8> elementPositions;
-              GetStructTypesNamesPositions(*$3, &elementTypes, &elementNames,
-                                           &elementPositions);
-              $$ = new StructType("", elementTypes, elementNames, elementPositions,
-                                  false, Variability::Unbound, true, @1);
+              const std::string &name = CastType<StructType>($1) ? CastType<StructType>($1)->GetStructName()
+                                                                 : CastType<UndefinedStructType>($1)->GetStructName();
+              $$ = lCreateStructType(name, $3, $5, @1);
+              // attribute_specifier returns an object that is not needed anymore.
+              delete $5;
+          } else {
+              $$ = nullptr;
+          }
+          // struct_declaration_list returns a vector that is not needed anymore.
+          delete $3;
+      }
+    | struct_or_union '{' struct_declaration_list '}' %prec STRUCT_WITHOUT_ATTRIBUTE
+      {
+          if ($3 != nullptr) {
+              $$ = lCreateStructType("", $3, nullptr, @1);
               // struct_declaration_list returns a vector that is not needed anymore.
               delete $3;
-          }
-          else
+          } else {
               $$ = nullptr;
+          }
       }
-    | struct_or_union '{' '}'
+    | struct_or_union '{' struct_declaration_list '}' attribute_specifier
       {
-          llvm::SmallVector<const Type *, 8> elementTypes;
-          llvm::SmallVector<std::string, 8> elementNames;
-          llvm::SmallVector<SourcePos, 8> elementPositions;
-          $$ = new StructType("", elementTypes, elementNames, elementPositions,
-                              false, Variability::Unbound, true, @1);
+          if ($3 != nullptr) {
+              $$ = lCreateStructType("", $3, $5, @1);
+              // struct_declaration_list returns a vector that is not needed anymore.
+              delete $3;
+          } else {
+              $$ = nullptr;
+          }
+          // attribute_specifier returns an object that is not needed anymore.
+          delete $5;
       }
-    | struct_or_union_and_name '{' '}'
+    | struct_or_union '{' '}' %prec STRUCT_WITHOUT_ATTRIBUTE
       {
-          llvm::SmallVector<const Type *, 8> elementTypes;
-          llvm::SmallVector<std::string, 8> elementNames;
-          llvm::SmallVector<SourcePos, 8> elementPositions;
-          const std::string &name = CastType<StructType>($1) ?
-              CastType<StructType>($1)->GetStructName() :
-              CastType<UndefinedStructType>($1)->GetStructName();
-          StructType *st = new StructType(name, elementTypes,
-                                          elementNames, elementPositions,
-                                          false, Variability::Unbound, false, @1);
-          m->symbolTable->AddType(name.c_str(), st, @2);
-          $$ = st;
+          $$ = lCreateStructType("", nullptr, nullptr, @1);
+      }
+    | struct_or_union '{' '}' attribute_specifier
+      {
+          $$ = lCreateStructType("", nullptr, $4, @1);
+          // attribute_specifier returns an object that is not needed anymore.
+          delete $4;
+      }
+    | struct_or_union_and_name '{' '}' %prec STRUCT_WITHOUT_ATTRIBUTE
+      {
+          const std::string &name = CastType<StructType>($1) ? CastType<StructType>($1)->GetStructName()
+                                                             : CastType<UndefinedStructType>($1)->GetStructName();
+          $$ = lCreateStructType(name, nullptr, nullptr, @1);
+      }
+    | struct_or_union_and_name '{' '}' attribute_specifier
+      {
+          const std::string &name = CastType<StructType>($1) ? CastType<StructType>($1)->GetStructName()
+                                                             : CastType<UndefinedStructType>($1)->GetStructName();
+          $$ = lCreateStructType(name, nullptr, $4, @1);
+          // attribute_specifier returns an object that is not needed anymore.
+          delete $4;
       }
     ;
 
@@ -1703,9 +1905,13 @@ declarator
 
 int_constant
     : TOKEN_INT8_CONSTANT { $$ = yylval.intVal; }
+    | TOKEN_UINT8_CONSTANT { $$ = yylval.intVal; }
     | TOKEN_INT16_CONSTANT { $$ = yylval.intVal; }
+    | TOKEN_UINT16_CONSTANT { $$ = yylval.intVal; }
     | TOKEN_INT32_CONSTANT { $$ = yylval.intVal; }
+    | TOKEN_UINT32_CONSTANT { $$ = yylval.intVal; }
     | TOKEN_INT64_CONSTANT { $$ = yylval.intVal; }
+    | TOKEN_UINT64_CONSTANT { $$ = yylval.intVal; }
     ;
 
 direct_declarator
@@ -2564,7 +2770,7 @@ function_definition
             const FunctionType *funcType = CastType<FunctionType>($2->type);
             if (funcType == nullptr)
                 AssertPos(@1, m->errorCount > 0);
-            else if ($1->storageClass == SC_TYPEDEF)
+            else if ($1->storageClass.IsTypedef())
                 Error(@1, "Illegal \"typedef\" provided with function definition.");
             else {
                 Stmt *code = $4;
@@ -3113,13 +3319,20 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
         return;
 
     decl->InitFromDeclSpecs(ds);
-    if (ds->storageClass == SC_TYPEDEF) {
+    if (ds->storageClass.IsTypedef()) {
         const StructType *st = CastType<StructType>(decl->type);
         if (st && st->IsAnonymousType()) {
             st = st->GetAsNamed(decl->name);
             m->AddTypeDef(decl->name, st, decl->pos);
         } else {
-            m->AddTypeDef(decl->name, decl->type, decl->pos);
+            AttributeList *attrs = decl->attributeList;
+            if (attrs && attrs->HasAttribute("aligned")) {
+                unsigned int alignment = attrs->GetAlignedAttrValue(decl->pos);
+                const Type *aligned_type = decl->type->GetAsAlignedType(alignment);
+                m->AddTypeDef(decl->name, aligned_type, decl->pos);
+            } else {
+                m->AddTypeDef(decl->name, decl->type, decl->pos);
+            }
         }
     } else {
         if (decl->type == nullptr) {
@@ -3136,10 +3349,25 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
             bool isVectorCall = (ds->typeQualifiers & TYPEQUAL_VECTORCALL);
             bool isRegCall = (ds->typeQualifiers & TYPEQUAL_REGCALL);
             Declarator *funcDecl = decl;
-            if (decl->kind == DK_POINTER || decl->kind == DK_REFERENCE) {
-                funcDecl = decl->child;
+
+            // In a case when function return type is a pointer we have decl
+            // with DK_POINTER kind. We need to traverse childs to get
+            // DK_FUNCTION declarator.
+            while (funcDecl && funcDecl->kind != DK_FUNCTION) {
+                funcDecl = funcDecl->child;
             }
-            m->AddFunctionDeclaration(decl->name, ft, ds->storageClass, funcDecl,
+            Assert(funcDecl);
+
+            // For pointer return type we have attributeList attached to decl
+            // (DK_POINTER) whereas we need to pass DK_FUNCTION declarator to
+            // AddFunctionDeclaration. Create a copy of DK_FUNCTION and attach
+            // attributeList from DK_POINTER.
+            Declarator funcDeclCopy = *funcDecl;
+            if (decl->attributeList) {
+                funcDeclCopy.attributeList = new AttributeList(*decl->attributeList);
+            }
+
+            m->AddFunctionDeclaration(decl->name, ft, ds->storageClass, &funcDeclCopy,
                                       isInline, isNoInline, isVectorCall, isRegCall, decl->pos);
         }
         else {
@@ -3173,17 +3401,17 @@ lCheckTemplateDeclSpecs(DeclSpecs *ds, SourcePos pos, TemplateType type, const c
         Error(pos, "'export' not supported for %s.", templateTypeStr.c_str());
         return;
     }
-    if (ds->storageClass == SC_TYPEDEF) {
+    if (ds->storageClass == StorageClass::TYPEDEF) {
         Error(pos, "Illegal \"typedef\" provided with %s.", templateTypeStr.c_str());
         return;
     }
     // We can't support extern "C"/extern "SYCL" for templates because
     // we need mangling information.
-    if (ds->storageClass == SC_EXTERN_C || ds->storageClass == SC_EXTERN_SYCL) {
+    if (ds->storageClass.IsExternC() || ds->storageClass.IsExternSYCL()) {
         Error(pos, "Illegal linkage provided with %s.", templateTypeStr.c_str());
         return;
     }
-    Assert(ds->storageClass == SC_NONE || ds->storageClass == SC_STATIC || ds->storageClass == SC_EXTERN);
+    Assert(ds->storageClass.IsNone() || ds->storageClass.IsStatic() || ds->storageClass.IsExtern());
     bool isVectorCall = (ds->typeQualifiers & TYPEQUAL_VECTORCALL);
     if (isVectorCall) {
         Error(pos, "Illegal to use \"__vectorcall\" qualifier on non-extern function \"%s\".", name);
@@ -3382,27 +3610,6 @@ static std::string lGetAlternates(std::vector<std::string> &alternates) {
     return alts;
 }
 
-static const char *
-lGetStorageClassString(StorageClass sc) {
-    switch (sc) {
-    case SC_NONE:
-        return "";
-    case SC_EXTERN:
-        return "extern";
-    case SC_STATIC:
-        return "static";
-    case SC_TYPEDEF:
-        return "typedef";
-    case SC_EXTERN_C:
-        return "extern \"C\"";
-    case SC_EXTERN_SYCL:
-        return "extern \"SYCL\"";
-    default:
-        Assert(!"logic error in lGetStorageClassString()");
-        return "";
-    }
-}
-
 
 /** Given an expression, see if it is equal to a compile-time constant
     integer value.  If so, return true and return the value in *value.
@@ -3467,6 +3674,32 @@ lCreateEnumType(const char *name, std::vector<Symbol *> *enums, SourcePos pos) {
     return enumType;
 }
 
+/* Create StructType and add it to the symbol table if it's not anonymous */
+static StructType *lCreateStructType(const std::string &name, const std::vector<StructDeclaration *> *decl,
+                                     AttributeList *attrs, SourcePos pos) {
+    llvm::SmallVector<const Type *, 8> elementTypes;
+    llvm::SmallVector<std::string, 8> elementNames;
+    llvm::SmallVector<SourcePos, 8> elementPositions;
+    unsigned int alignment = 0;
+
+    if (attrs) {
+        alignment = attrs->GetAlignedAttrValue(pos);
+    }
+
+    if (decl) {
+        GetStructTypesNamesPositions(*decl, &elementTypes, &elementNames, &elementPositions);
+    }
+
+    StructType *st =
+        new StructType(name, elementTypes, elementNames, elementPositions, false, Variability::Unbound, pos, alignment);
+    st->RegisterInStructTypeMap();
+
+    if (!name.empty()) {
+        m->symbolTable->AddType(name.c_str(), st, pos);
+    }
+
+    return st;
+}
 
 /** Given an array of enumerator symbols, make sure each of them has a
     ConstExpr * in their Symbol::constValue member that stores their
@@ -3477,8 +3710,7 @@ lCreateEnumType(const char *name, std::vector<Symbol *> *enums, SourcePos pos) {
 static void
 lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
                            const EnumType *enumType) {
-    enumType = enumType->GetAsConstType();
-    enumType = enumType->GetAsUniformType();
+    const Type *constUniformType = enumType->GetAsConstType()->GetAsUniformType();
 
     /* nextVal tracks the value for the next enumerant.  It starts from
        zero and goes up with each successive enumerant.  If any of them
@@ -3488,7 +3720,7 @@ lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
     uint32_t nextVal = 0;
 
     for (unsigned int i = 0; i < enums.size(); ++i) {
-        enums[i]->type = enumType;
+        enums[i]->type = constUniformType;
         if (enums[i]->constValue != nullptr) {
             /* Already has a value, so first update nextVal with it. */
             int count = enums[i]->constValue->GetValues(&nextVal);
@@ -3501,14 +3733,14 @@ lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
                by then.  Therefore, add a little type cast from uint32 to
                the actual enum type here and optimize it, which will have
                us end up with a ConstExpr with the desired EnumType... */
-            Expr *castExpr = new TypeCastExpr(enumType, enums[i]->constValue,
+            Expr *castExpr = new TypeCastExpr(constUniformType, enums[i]->constValue,
                                               enums[i]->pos);
             castExpr = Optimize(castExpr);
             enums[i]->constValue = llvm::dyn_cast<ConstExpr>(castExpr);
             AssertPos(enums[i]->pos, enums[i]->constValue != nullptr);
         }
         else {
-            enums[i]->constValue = new ConstExpr(enumType, nextVal++,
+            enums[i]->constValue = new ConstExpr(constUniformType, nextVal++,
                                                  enums[i]->pos);
         }
     }

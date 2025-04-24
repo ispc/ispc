@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -52,6 +52,7 @@ class ExprStmt : public Stmt {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == ExprStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Stmt *TypeCheck();
@@ -80,6 +81,7 @@ class DeclStmt : public Stmt {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == DeclStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Stmt *Optimize();
@@ -100,6 +102,7 @@ class IfStmt : public Stmt {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == IfStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Stmt *TypeCheck();
@@ -140,6 +143,7 @@ class DoStmt : public Stmt {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == DoStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Stmt *TypeCheck();
@@ -167,6 +171,7 @@ class ForStmt : public Stmt {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == ForStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Stmt *TypeCheck();
@@ -200,6 +205,7 @@ class BreakStmt : public Stmt {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == BreakStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Stmt *TypeCheck();
@@ -217,6 +223,7 @@ class ContinueStmt : public Stmt {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == ContinueStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Stmt *TypeCheck();
@@ -238,6 +245,7 @@ class ForeachStmt : public Stmt {
     void EmitCodeForXe(FunctionEmitContext *ctx) const;
 #endif
     void EmitCode(FunctionEmitContext *ctx) const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Stmt *TypeCheck();
@@ -264,6 +272,7 @@ class ForeachActiveStmt : public Stmt {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == ForeachActiveStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Stmt *TypeCheck();
@@ -289,6 +298,7 @@ class ForeachUniqueStmt : public Stmt {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == ForeachUniqueStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Stmt *TypeCheck();
@@ -313,6 +323,7 @@ class UnmaskedStmt : public Stmt {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == UnmaskedStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Stmt *TypeCheck();
@@ -332,6 +343,7 @@ class ReturnStmt : public Stmt {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == ReturnStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Stmt *TypeCheck();
@@ -352,6 +364,7 @@ class CaseStmt : public Stmt {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == CaseStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Stmt *TypeCheck();
@@ -373,6 +386,7 @@ class DefaultStmt : public Stmt {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == DefaultStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Stmt *TypeCheck();
@@ -391,6 +405,7 @@ class SwitchStmt : public Stmt {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == SwitchStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Stmt *TypeCheck();
@@ -412,6 +427,7 @@ class GotoStmt : public Stmt {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == GotoStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Stmt *Optimize();
@@ -434,6 +450,7 @@ class LabeledStmt : public Stmt {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == LabeledStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Stmt *Optimize();
@@ -457,6 +474,7 @@ class StmtList : public Stmt {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == StmtListID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Stmt *TypeCheck();
@@ -488,6 +506,7 @@ class PrintStmt : public Stmt {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == PrintStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Stmt *TypeCheck();
@@ -537,6 +556,7 @@ class AssertStmt : public Stmt {
     void EmitAssertCode(FunctionEmitContext *ctx, const Type *type) const;
     void EmitAssumeCode(FunctionEmitContext *ctx, const Type *type) const;
     void EmitCode(FunctionEmitContext *ctx) const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Stmt *TypeCheck();
@@ -559,6 +579,7 @@ class DeleteStmt : public Stmt {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == DeleteStmtID; }
 
     void EmitCode(FunctionEmitContext *ctx) const;
+    std::string GetString() const;
     void Print(Indent &indent) const;
 
     Stmt *TypeCheck();
