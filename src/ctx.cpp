@@ -1779,7 +1779,7 @@ llvm::Value *FunctionEmitContext::BinaryOperator(llvm::Instruction::BinaryOps in
     int arraySize = lArrayVectorWidth(type);
 
     if (arraySize == 0) {
-        if (ispcType && ispcType->IsVaryingType() && !lIsConstantVectorOfSameValue(v1) &&
+        if (!g->target->isXeTarget() && ispcType && ispcType->IsVaryingType() && !lIsConstantVectorOfSameValue(v1) &&
             (inst == llvm::Instruction::SDiv || inst == llvm::Instruction::UDiv || inst == llvm::Instruction::SRem ||
              inst == llvm::Instruction::URem)) {
             return VectorIntDivision(inst, v0, v1, name);
