@@ -58,6 +58,7 @@ if (APPLE)
     endif()
     message(STATUS "Targeting minimum macOS version: ${CMAKE_OSX_DEPLOYMENT_TARGET}")
 
+    option(ISPC_FRAMEWORK "Build as Apple Frameworks" OFF)
 endif()
 
 set(PROJECT_NAME ispc)
@@ -78,6 +79,8 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(OUTPUT_DEBUG Debug/bin)
 set(OUTPUT_RELEASE Release/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin )
+
+set(ISPC_VERSION_FULL "${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}.${ISPC_VERSION_PATCH}")
 
 if(CMAKE_BUILD_TYPE)
     # Validate build type
@@ -103,10 +106,6 @@ option(ISPC_INCLUDE_UTILS_ONLY "Generate build targets only for the utils." OFF)
 option(ISPC_PREPARE_PACKAGE "Generate build targets for ispc package" OFF)
 option(ISPC_PACKAGE_EXAMPLES "Pack examples into the ISPC package" ON)
 option(ISPC_SLIM_BINARY "Build ISPC as slim binary" OFF)
-
-if (APPLE)
-    option(ISPC_FRAMEWORK "Build as Apple Frameworks" OFF)
-endif()
 
 # Build target for utility checking host ISA
 # This target should be defined before the inclusion of FindLLVM.cmake because
@@ -876,22 +875,22 @@ function(add_ispc_slim NAME)
     endif()
 endfunction()
 
-# This function sets the framework properties for iOS-derived compilations
+# This function sets the framework properties for Apple platforms compilations
 function(configure_ispc_framework TARGET)
     if (ISPC_FRAMEWORK)
-        set_target_properties(libzstd_shared PROPERTIES
+        set_target_properties(TARGET PROPERTIES
             FRAMEWORK TRUE
-            FRAMEWORK_VERSION "${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}.${ISPC_VERSION_PATCH}"
+            FRAMEWORK_VERSION "${ISPC_VERSION_FULL}"
             PRODUCT_BUNDLE_IDENTIFIER "github.com/ispc/ispc/${TARGET}"
             XCODE_ATTRIBUTE_INSTALL_PATH "@rpath"
             # PUBLIC_HEADER "${PublicHeaders}"
-            # OUTPUT_NAME "${TARGET}"
-            # XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY ""
-            # XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO"
-            # XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO"
+            OUTPUT_NAME "${TARGET}"
+            XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY ""
+            XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO"
+            XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO"
             MACOSX_FRAMEWORK_IDENTIFIER "github.com/ispc/ispc/${TARGET}"
-            MACOSX_FRAMEWORK_BUNDLE_VERSION "${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}"
-            MACOSX_FRAMEWORK_SHORT_VERSION_STRING "${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}.${ISPC_VERSION_PATCH}"
+            MACOSX_FRAMEWORK_BUNDLE_VERSION "${ISPC_VERSION_FULL}"
+            MACOSX_FRAMEWORK_SHORT_VERSION_STRING "${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}"
             MACOSX_RPATH TRUE
             # RESOURCE ${PublicHeaders}
         )
@@ -1073,7 +1072,7 @@ if (ISPC_PREPARE_PACKAGE)
         # set(CPACK_WIX_UPGRADE_GUID "EDD858F2-19B0-4E5B-B9B9-2A09B85D451C")
         # set(CPACK_WIX_CMAKE_PACKAGE_REGISTRY "ISPC")
         # WIX generator expects version in format x.y.z where x, y, z are numbers
-        set(CPACK_PACKAGE_VERSION "${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}.${ISPC_VERSION_PATCH}")
+        set(CPACK_PACKAGE_VERSION "${ISPC_VERSION_FULL}")
     else()
         set(CPACK_GENERATOR "TGZ")
         if (APPLE)
