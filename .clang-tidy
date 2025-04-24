@@ -1,3 +1,7 @@
+# clang-analyzer-cplusplus.NewDelete is disabled to avoid false positives with
+# clang-tidy 18 and 19 versions, it looks like it is fixed in clang-tidy 20 or
+# 21, so we may enable it again in the future.
+
 Checks: '-*,
          hicpp-braces-around-statements,
          clang-analyzer-*,
@@ -10,6 +14,7 @@ Checks: '-*,
          -clang-analyzer-core.NullDereference,
          -clang-analyzer-core.uninitialized.Branch,
          -clang-analyzer-unix.Malloc,
+         -clang-analyzer-cplusplus.NewDelete,
          bugprone-*,
          -bugprone-unchecked-optional-access,
          -bugprone-easily-swappable-parameters,
