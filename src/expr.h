@@ -936,7 +936,19 @@ bool CanConvertTypes(const Type *fromType, const Type *toType, const char *error
  */
 Expr *TypeConvertExpr(Expr *expr, const Type *toType, const char *errorMsgBase);
 
+/** This function creates a binary expression, checking for operator overloading
+    possibilities before falling back to the default binary expression creation.
+    If an operator is overloaded for the given types, a function call to the
+    overloaded operator will be returned instead of a BinaryExpr.
+ */
 Expr *MakeBinaryExpr(BinaryExpr::Op o, Expr *a, Expr *b, SourcePos p);
+
+/** This function creates an unary expression, checking for operator overloading
+    possibilities before falling back to the default unary expression creation.
+    If an operator is overloaded for the given types, a function call to the
+    overloaded operator will be returned instead of a UnaryExpr.
+ */
+Expr *MakeUnaryExpr(UnaryExpr::Op o, Expr *a, SourcePos p);
 
 /** Utility routine that emits code to initialize a symbol given an
     initializer expression.

@@ -1177,7 +1177,110 @@ static llvm::Value *lEmitNegate(Expr *arg, SourcePos pos, FunctionEmitContext *c
     }
 }
 
+static const char *lOpString(UnaryExpr::Op op) {
+    switch (op) {
+    case UnaryExpr::PreInc:
+        return "++";
+    case UnaryExpr::PreDec:
+        return "--";
+    case UnaryExpr::PostInc:
+        return "++";
+    case UnaryExpr::PostDec:
+        return "--";
+    case UnaryExpr::Negate:
+        return "-";
+    case UnaryExpr::LogicalNot:
+        return "!";
+    case UnaryExpr::BitNot:
+        return "~";
+    default:
+        FATAL("unimplemented case in lOpString()");
+        return "";
+    }
+}
+
 UnaryExpr::UnaryExpr(Op o, Expr *e, SourcePos p) : Expr(p, UnaryExprID), op(o) { expr = e; }
+
+bool lCreateUnaryOperatorCall(const UnaryExpr::Op uop, Expr *a, Expr *&op, const SourcePos &sp) {
+    if (a == nullptr) {
+        return false;
+    }
+
+    Expr *arg = TypeCheck(a);
+
+    if (arg == nullptr) {
+        return false;
+    }
+
+    const Type *type = arg->GetType();
+
+    if (type == nullptr) {
+        return false;
+    }
+
+    // Check if this is an increment/decrement operator
+    bool isIncDecOp = (uop == UnaryExpr::PreInc || uop == UnaryExpr::PreDec || uop == UnaryExpr::PostInc ||
+                       uop == UnaryExpr::PostDec);
+
+    // Handle reference dereferencing, skipping for inc/dec operators
+    if (!isIncDecOp && CastType<ReferenceType>(type) != nullptr) {
+        arg = new RefDerefExpr(arg, arg->pos);
+        type = arg->GetType();
+    }
+    const StructType *st = CastType<StructType>(type);
+    if (st != nullptr) {
+        if (st->IsSOAType()) {
+            return false;
+        }
+        // Look up operator overloads
+        std::string opName = std::string("operator") + lOpString(uop);
+        std::vector<Symbol *> funcs;
+        std::vector<TemplateSymbol *> funcTempls;
+
+        bool foundAnyFunction = m->symbolTable->LookupFunction(opName.c_str(), &funcs);
+        bool foundAnyTemplate = m->symbolTable->LookupFunctionTemplate(opName.c_str(), &funcTempls);
+
+        if (foundAnyFunction || foundAnyTemplate) {
+            FunctionSymbolExpr *functionSymbolExpr =
+                new FunctionSymbolExpr(opName.c_str(), funcs, funcTempls, TemplateArgs(), sp);
+            Assert(functionSymbolExpr != nullptr);
+            ExprList *args = new ExprList(sp);
+            args->exprs.push_back(arg);
+            // For postfix operators, add dummy int argument
+            if (uop == UnaryExpr::PostInc || uop == UnaryExpr::PostDec) {
+                ConstExpr *dummyInt = new ConstExpr(AtomicType::UniformInt32, 1, sp);
+                args->exprs.push_back(dummyInt);
+            }
+            op = new FunctionCallExpr(functionSymbolExpr, args, sp);
+            return false;
+        }
+        // Error handling
+        if (funcs.size() == 0 && funcTempls.size() == 0) {
+            Error(sp, "operator %s(%s) is not defined.", opName.c_str(), (type->GetString()).c_str());
+            return true;
+        }
+    }
+    return false;
+}
+
+Expr *ispc::MakeUnaryExpr(UnaryExpr::Op o, Expr *a, SourcePos p) {
+    Expr *op = nullptr;
+    bool abort = lCreateUnaryOperatorCall(o, a, op, p);
+    if (op != nullptr) {
+        return op;
+    }
+
+    // lCreateUnaryOperatorCall can return nullptr for 2 cases:
+    // 1. When there is an error.
+    // 2. We have to create a new UnaryExpr.
+    if (abort) {
+        AssertPos(p, m->errorCount > 0);
+        return nullptr;
+    }
+
+    op = new UnaryExpr(o, a, p);
+    return op;
+}
 
 llvm::Value *UnaryExpr::GetValue(FunctionEmitContext *ctx) const {
     if (expr == nullptr) {
@@ -3260,7 +3363,7 @@ static const char *lOpString(AssignExpr::Op op) {
     case AssignExpr::OrAssign:
         return "|=";
     default:
-        FATAL("Missing op in lOpstring");
+        FATAL("Missing op in lOpString");
         return "";
     }
 }

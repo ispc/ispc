@@ -705,9 +705,9 @@ postfix_expression
           lCleanUpString($3);
       }
     | postfix_expression TOKEN_INC_OP
-      { $$ = new UnaryExpr(UnaryExpr::PostInc, $1, Union(@1,@2)); }
+      { $$ = MakeUnaryExpr(UnaryExpr::PostInc, $1, Union(@1,@2)); }
     | postfix_expression TOKEN_DEC_OP
-      { $$ = new UnaryExpr(UnaryExpr::PostDec, $1, Union(@1,@2)); }
+      { $$ = MakeUnaryExpr(UnaryExpr::PostDec, $1, Union(@1,@2)); }
     ;
 
 intrinsic_name
@@ -827,9 +827,9 @@ unary_expression
     | intrincall_expression
     | invoke_sycl_expression
     | TOKEN_INC_OP unary_expression
-      { $$ = new UnaryExpr(UnaryExpr::PreInc, $2, Union(@1, @2)); }
+      { $$ = MakeUnaryExpr(UnaryExpr::PreInc, $2, Union(@1, @2)); }
     | TOKEN_DEC_OP unary_expression
-      { $$ = new UnaryExpr(UnaryExpr::PreDec, $2, Union(@1, @2)); }
+      { $$ = MakeUnaryExpr(UnaryExpr::PreDec, $2, Union(@1, @2)); }
     | '&' unary_expression
       { $$ = new AddressOfExpr($2, Union(@1, @2)); }
     | '*' unary_expression
@@ -837,11 +837,11 @@ unary_expression
     | '+' cast_expression
       { $$ = $2; }
     | '-' cast_expression
-      { $$ = new UnaryExpr(UnaryExpr::Negate, $2, Union(@1, @2)); }
+      { $$ = MakeUnaryExpr(UnaryExpr::Negate, $2, Union(@1, @2)); }
     | '~' cast_expression
-      { $$ = new UnaryExpr(UnaryExpr::BitNot, $2, Union(@1, @2)); }
+      { $$ = MakeUnaryExpr(UnaryExpr::BitNot, $2, Union(@1, @2)); }
     | '!' cast_expression
-      { $$ = new UnaryExpr(UnaryExpr::LogicalNot, $2, Union(@1, @2)); }
+      { $$ = MakeUnaryExpr(UnaryExpr::LogicalNot, $2, Union(@1, @2)); }
     | TOKEN_SIZEOF unary_expression
       { $$ = new SizeOfExpr($2, Union(@1, @2)); }
     | TOKEN_SIZEOF '(' type_name ')'
