@@ -41,7 +41,7 @@ void dot4add_u8i8_sat(uniform uint a[], uniform uint b[], uniform int dst[]) {
 // CHECK_YMMX4-COUNT-4: vpdpwssd {{.*}} %ymm
 // CHECK_ZMM: vpdpwssd	{{.*}} %zmm
 void dot2add_i16(uniform uint a[], uniform uint b[], uniform int dst[]) {
-    dst[programIndex] = dot2add_i16packed(a[programIndex], b[programIndex], programIndex);
+    dst[programIndex] = dot2add_i16i16packed(a[programIndex], b[programIndex], programIndex);
 }
 
 // CHECK_ALL-LABEL: dot2add_i16_sat
@@ -51,5 +51,5 @@ void dot2add_i16(uniform uint a[], uniform uint b[], uniform int dst[]) {
 // CHECK_YMMX4-COUNT-4: vpdpwssds {{.*}} %ymm
 // CHECK_ZMM: vpdpwssds	{{.*}} %zmm
 void dot2add_i16_sat(uniform uint a[], uniform uint b[], uniform int dst[]) {
-    dst[programIndex] = dot2add_i16packed_sat(a[programIndex], b[programIndex], programIndex);
+    dst[programIndex] = dot2add_i16i16packed_sat(a[programIndex], b[programIndex], programIndex);
 }

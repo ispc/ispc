@@ -399,11 +399,15 @@ class Target {
 
     int getMaskBitCount() const { return m_maskBitCount; }
 
-    bool hasDotProductVNNI() const { return m_hasDotProductVNNI; }
+    bool hasIntelVNNI() const { return m_hasIntelVNNI; }
 
-    bool hasDotProductARM() const { return m_hasDotProductARM; }
+    bool hasIntelVNNI_Int8() const { return m_hasIntelVNNI_Int8; }
 
-    bool hasI8MatrixMulARM() const { return m_hasI8MatrixMulARM; }
+    bool hasIntelVNNI_Int16() const { return m_hasIntelVNNI_Int16; }
+
+    bool hasArmDotProduct() const { return m_hasArmDotProduct; }
+
+    bool hasArmI8MM() const { return m_hasArmI8MM; }
 
     bool hasHalfConverts() const { return m_hasHalfConverts; }
 
@@ -517,20 +521,36 @@ class Target {
         is 32 on SSE/AVX, since that matches the HW better. */
     int m_maskBitCount;
 
-    /** Indicates whether the target has native support for VNNI dot product.
-     *  Supported data types are: signed/unsigned i8 and i16 with and without saturation
+    /** Indicates whether the CPU has Intel VNNI (Vector Neural Network Instructions) support.
+     *  Enables accelerated dot product operations on:
+     *  - 8-bit integers (mixed sign only)
+     *  - 16-bit integers (mixed sign only)
+     *  - With optional saturation arithmetic
      */
-    bool m_hasDotProductVNNI;
+    bool m_hasIntelVNNI;
 
-    /** Indicates whether the target has native support for ARM dot product.
-     *  Supported data types are: signed/signed i8 and unsigned/unsigned i8
+    /** Indicates whether the CPU supports 8-bit integer VNNI operations specifically.
+     *  Enables all combinations of signed/unsigned int8 dot products with optional saturation.
      */
-    bool m_hasDotProductARM;
+    bool m_hasIntelVNNI_Int8;
 
-    /** Indicates whether the target has support for i8 matrix multiplication
-     *  that required for dot product of i8 mixed-sign types.
+    /** Indicates whether the CPU supports 16-bit integer VNNI operations specifically.
+     *  Enables all combinations of signed/unsigned int16 dot products with optional saturation.
      */
-    bool m_hasI8MatrixMulARM;
+    bool m_hasIntelVNNI_Int16;
+
+    /** Indicates whether the CPU has ARM dot product instructions (SDOT/UDOT).
+     *  Enables accelerated dot product operations on:
+     *  - signedxsigned 8-bit integers operations only (SDOT)
+     *  - unsignedxunsigned 8-bit integers operations only (UDOT)
+     *  - No support for mixed sign operations
+     */
+    bool m_hasArmDotProduct;
+
+    /** Indicates whether the CPU supports ARM I8MM instructions for 8-bit integers matrix multiplication.
+     *  Provides capability for mixed-sign int8 operations not covered by basic ARM dot product.
+     */
+    bool m_hasArmI8MM;
 
     /** Indicates whether the target has native support for float/half conversions. */
     bool m_hasHalfConverts;

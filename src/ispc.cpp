@@ -882,9 +882,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
     : m_target(nullptr), m_targetMachine(nullptr), m_dataLayout(nullptr), m_valid(false), m_ispc_target(ispc_target),
       m_isa(SSE2), m_arch(Arch::none), m_is32Bit(true), m_cpu(""), m_attributes(""), m_tf_attributes(nullptr),
       m_nativeVectorWidth(-1), m_nativeVectorAlignment(-1), m_dataTypeWidth(-1), m_vectorWidth(-1),
-      m_picLevel(picLevel), m_codeModel(code_model), m_maskingIsFree(false), m_maskBitCount(-1),
-      m_hasDotProductVNNI(false), m_hasDotProductARM(false), m_hasI8MatrixMulARM(false), m_hasHalfConverts(false),
-      m_hasHalfFullSupport(false), m_hasRand(false), m_hasGather(false), m_hasScatter(false),
+      m_picLevel(picLevel), m_codeModel(code_model), m_maskingIsFree(false), m_maskBitCount(-1), m_hasIntelVNNI(false),
+      m_hasIntelVNNI_Int8(false), m_hasIntelVNNI_Int16(false), m_hasArmDotProduct(false), m_hasArmI8MM(false),
+      m_hasHalfConverts(false), m_hasHalfFullSupport(false), m_hasRand(false), m_hasGather(false), m_hasScatter(false),
       m_hasTranscendentals(false), m_hasTrigonometry(false), m_hasRsqrtd(false), m_hasRcpd(false),
       m_hasVecPrefetch(false), m_hasSaturatingArithmetic(false), m_hasFp16Support(false), m_hasFp64Support(true),
       m_hasConflictDetection(false), m_warnings(0) {
@@ -1364,7 +1364,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
-        this->m_hasDotProductVNNI = (m_ispc_target == ISPCTarget::avx2vnni_i32x4) ? true : false;
+        this->m_hasIntelVNNI = (m_ispc_target == ISPCTarget::avx2vnni_i32x4) ? true : false;
         CPUfromISA = (m_ispc_target == ISPCTarget::avx2vnni_i32x4) ? CPU_ADL : CPU_Haswell;
         break;
     case ISPCTarget::avx2_i32x8:
@@ -1379,7 +1379,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
-        this->m_hasDotProductVNNI = (m_ispc_target == ISPCTarget::avx2vnni_i32x8) ? true : false;
+        this->m_hasIntelVNNI = (m_ispc_target == ISPCTarget::avx2vnni_i32x8) ? true : false;
         CPUfromISA = (m_ispc_target == ISPCTarget::avx2vnni_i32x8) ? CPU_ADL : CPU_Haswell;
         break;
     case ISPCTarget::avx2_i32x16:
@@ -1394,7 +1394,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasHalfConverts = true;
         this->m_hasRand = true;
         this->m_hasGather = true;
-        this->m_hasDotProductVNNI = (m_ispc_target == ISPCTarget::avx2vnni_i32x16) ? true : false;
+        this->m_hasIntelVNNI = (m_ispc_target == ISPCTarget::avx2vnni_i32x16) ? true : false;
         CPUfromISA = (m_ispc_target == ISPCTarget::avx2vnni_i32x16) ? CPU_ADL : CPU_Haswell;
         break;
     case ISPCTarget::avx2_i64x4:
@@ -1426,7 +1426,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasTrigonometry = false;
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
-        this->m_hasDotProductVNNI = (m_ispc_target == ISPCTarget::avx512icl_x4) ? true : false;
+        this->m_hasIntelVNNI = (m_ispc_target == ISPCTarget::avx512icl_x4) ? true : false;
         this->m_hasConflictDetection = true;
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x4) ? CPU_ICL : CPU_SKX;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
@@ -1448,7 +1448,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasTrigonometry = false;
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
-        this->m_hasDotProductVNNI = (m_ispc_target == ISPCTarget::avx512icl_x8) ? true : false;
+        this->m_hasIntelVNNI = (m_ispc_target == ISPCTarget::avx512icl_x8) ? true : false;
         this->m_hasConflictDetection = true;
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x8) ? CPU_ICL : CPU_SKX;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
@@ -1470,7 +1470,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasTrigonometry = false;
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
-        this->m_hasDotProductVNNI = (m_ispc_target == ISPCTarget::avx512icl_x16) ? true : false;
+        this->m_hasIntelVNNI = (m_ispc_target == ISPCTarget::avx512icl_x16) ? true : false;
         this->m_hasConflictDetection = true;
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x16) ? CPU_ICL : CPU_SKX;
         if (g->opt.disableZMM) {
@@ -1501,7 +1501,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasTrigonometry = false;
         this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
-        this->m_hasDotProductVNNI = (m_ispc_target == ISPCTarget::avx512icl_x64) ? true : false;
+        this->m_hasIntelVNNI = (m_ispc_target == ISPCTarget::avx512icl_x64) ? true : false;
         this->m_hasConflictDetection = true;
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x64) ? CPU_ICL : CPU_SKX;
         break;
@@ -1525,7 +1525,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasTrigonometry = false;
         this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
-        this->m_hasDotProductVNNI = (m_ispc_target == ISPCTarget::avx512icl_x32) ? true : false;
+        this->m_hasIntelVNNI = (m_ispc_target == ISPCTarget::avx512icl_x32) ? true : false;
         this->m_hasConflictDetection = true;
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x32) ? CPU_ICL : CPU_SKX;
         break;
@@ -1546,7 +1546,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
         this->m_hasFp16Support = true;
-        this->m_hasDotProductVNNI = true;
+        this->m_hasIntelVNNI = true;
         this->m_hasConflictDetection = true;
         CPUfromISA = CPU_SPR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
@@ -1569,7 +1569,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
         this->m_hasFp16Support = true;
-        this->m_hasDotProductVNNI = true;
+        this->m_hasIntelVNNI = true;
         this->m_hasConflictDetection = true;
         CPUfromISA = CPU_SPR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
@@ -1592,7 +1592,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
         this->m_hasFp16Support = true;
-        this->m_hasDotProductVNNI = true;
+        this->m_hasIntelVNNI = true;
         this->m_hasConflictDetection = true;
         CPUfromISA = CPU_SPR;
         if (g->opt.disableZMM) {
@@ -1620,7 +1620,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
         this->m_hasFp16Support = true;
-        this->m_hasDotProductVNNI = true;
+        this->m_hasIntelVNNI = true;
         this->m_hasConflictDetection = true;
         CPUfromISA = CPU_SPR;
         break;
@@ -1641,7 +1641,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
         this->m_hasFp16Support = true;
-        this->m_hasDotProductVNNI = true;
+        this->m_hasIntelVNNI = true;
         this->m_hasConflictDetection = true;
         CPUfromISA = CPU_SPR;
         break;
@@ -1659,13 +1659,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasFp16Support = true;
-        this->m_hasDotProductVNNI = true;
+        this->m_hasIntelVNNI = true;
+        this->m_hasIntelVNNI_Int8 = true;
+        this->m_hasIntelVNNI_Int16 = true;
         this->m_hasConflictDetection = true;
-        /* TODO: target specific implementations for the features below are required
-        this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
-        this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
         this->m_hasRsqrtd = this->m_hasRcpd = true;
-        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch*/
         CPUfromISA = CPU_DMR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1683,13 +1681,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasFp16Support = true;
-        this->m_hasDotProductVNNI = true;
+        this->m_hasIntelVNNI = true;
+        this->m_hasIntelVNNI_Int8 = true;
+        this->m_hasIntelVNNI_Int16 = true;
         this->m_hasConflictDetection = true;
-        /* TODO: target specific implementations for the features below are required
-        this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
-        this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
         this->m_hasRsqrtd = this->m_hasRcpd = true;
-        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch*/
         CPUfromISA = CPU_DMR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1707,13 +1703,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasFp16Support = true;
-        this->m_hasDotProductVNNI = true;
+        this->m_hasIntelVNNI = true;
+        this->m_hasIntelVNNI_Int8 = true;
+        this->m_hasIntelVNNI_Int16 = true;
         this->m_hasConflictDetection = true;
-        /* TODO: target specific implementations for the features below are required
-        this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
-        this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
         this->m_hasRsqrtd = this->m_hasRcpd = true;
-        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch*/
         CPUfromISA = CPU_DMR;
         if (g->opt.disableZMM) {
             this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
@@ -1736,13 +1730,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasFp16Support = true;
-        this->m_hasDotProductVNNI = true;
+        this->m_hasIntelVNNI = true;
+        this->m_hasIntelVNNI_Int8 = true;
+        this->m_hasIntelVNNI_Int16 = true;
         this->m_hasConflictDetection = true;
-        /* TODO: target specific implementations for the features below are required
-        this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
-        this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
-        this->m_hasRsqrtd = this->m_hasRcpd = true;
-        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch*/
+        this->m_hasRsqrtd = this->m_hasRcpd = false;
         CPUfromISA = CPU_DMR;
         break;
     case ISPCTarget::avx10_2_x64:
@@ -1758,13 +1750,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasFp16Support = true;
-        this->m_hasDotProductVNNI = true;
+        this->m_hasIntelVNNI = true;
+        this->m_hasIntelVNNI_Int8 = true;
+        this->m_hasIntelVNNI_Int16 = true;
         this->m_hasConflictDetection = true;
-        /* TODO: target specific implementations for the features below are required
-        this->m_hasTranscendentals = true; // TODO: AVX10 adds transcendental support
-        this->m_hasTrigonometry = true;    // TODO: AVX10 adds trigonometry support
-        this->m_hasRsqrtd = this->m_hasRcpd = true;
-        this->m_hasVecPrefetch = true; // TODO: AVX10 supports vector prefetch*/
+        this->m_hasRsqrtd = this->m_hasRcpd = false;
         CPUfromISA = CPU_DMR;
         break;
 #else
@@ -2238,8 +2228,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         if (arch == Arch::arm || arch == Arch::aarch64) {
             // Set the supported features for ARM target
             std::vector<llvm::StringRef> armFeatures = lGetARMTargetFeatures(arch, m_cpu);
-            m_hasDotProductARM = lIsARMFeatureSupported("dotprod", armFeatures);
-            m_hasI8MatrixMulARM = lIsARMFeatureSupported("i8mm", armFeatures);
+            m_hasArmDotProduct = lIsARMFeatureSupported("dotprod", armFeatures);
+            m_hasArmI8MM = lIsARMFeatureSupported("i8mm", armFeatures);
             featuresString = llvm::join(armFeatures, ",");
             this->m_funcAttributes.push_back(std::make_pair("target-features", featuresString));
         }

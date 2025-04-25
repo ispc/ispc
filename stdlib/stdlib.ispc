@@ -5945,7 +5945,7 @@ __declspec(safe) static inline void assume(uniform bool test) {
 // 8-bit integers in b, producing 4 intermediate signed 16-bit results.
 // Sum these 4 results with the corresponding 32-bit integer in acc, and return the result.
 __declspec(safe) static inline varying int32 dot4add_u8i8packed(varying uint32 a, varying uint32 b, varying int32 acc) {
-    if (__have_dot_product_vnni || __have_i8_matmul_arm) {
+    if (__have_intel_vnni || __have_arm_i8mm) {
         return __dot4add_u8i8packed(a, b, acc);
     } else {
         int16 tmp1 = (int16)((a >> 24) & 0xFF) * (int16)((int8)((b >> 24) & 0xFF));
@@ -5961,7 +5961,7 @@ __declspec(safe) static inline varying int32 dot4add_u8i8packed(varying uint32 a
 // Sum these 4 results with the corresponding 32-bit integer in acc using signed saturation, and return the result.
 __declspec(safe) static inline varying int32 dot4add_u8i8packed_sat(varying uint32 a, varying uint32 b,
                                                                     varying int32 acc) {
-    if (__have_dot_product_vnni) {
+    if (__have_intel_vnni) {
         return __dot4add_u8i8packed_sat(a, b, acc);
     } else {
         int16 tmp1 = (int16)((a >> 24) & 0xFF) * (int16)((int8)((b >> 24) & 0xFF));
@@ -5974,11 +5974,11 @@ __declspec(safe) static inline varying int32 dot4add_u8i8packed_sat(varying uint
 }
 
 // Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in a with corresponding unsigned
-// 8-bit integers in b, producing 4 intermediate signed 16-bit results.
+// 8-bit integers in b, producing 4 intermediate unsigned 16-bit results.
 // Sum these 4 results with the corresponding 32-bit integer in acc, and return the result.
 __declspec(safe) static inline varying uint32 dot4add_u8u8packed(varying uint32 a, varying uint32 b,
                                                                  varying uint32 acc) {
-    if (__have_dot_product_arm) {
+    if (__have_arm_dot_product || __have_intel_vnni_int8) {
         return __dot4add_u8u8packed(a, b, acc);
     } else {
         int16 tmp1 = (int16)((a >> 24) & 0xFF) * (int16)((b >> 24) & 0xFF);
@@ -5990,23 +5990,27 @@ __declspec(safe) static inline varying uint32 dot4add_u8u8packed(varying uint32 
 }
 
 // Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in a with corresponding unsigned
-// 8-bit integers in b, producing 4 intermediate signed 16-bit results.
+// 8-bit integers in b, producing 4 intermediate unsigned 16-bit results.
 // Sum these 4 results with the corresponding 32-bit integer in acc using unsigned saturation, and return the result.
 __declspec(safe) static inline varying uint32 dot4add_u8u8packed_sat(varying uint32 a, varying uint32 b,
                                                                      varying uint32 acc) {
-    int16 tmp1 = (int16)((a >> 24) & 0xFF) * (int16)((b >> 24) & 0xFF);
-    int16 tmp2 = (int16)((a >> 16) & 0xFF) * (int16)((b >> 16) & 0xFF);
-    int16 tmp3 = (int16)((a >> 8) & 0xFF) * (int16)((b >> 8) & 0xFF);
-    int16 tmp4 = (int16)(a & 0xFF) * (int16)(b & 0xFF);
-    uint32 tmp1234 = ((uint32)tmp1) + ((uint32)tmp2) + ((uint32)tmp3) + ((uint32)tmp4);
-    return saturating_add(tmp1234, acc);
+    if (__have_intel_vnni_int8) {
+        return __dot4add_u8u8packed_sat(a, b, acc);
+    } else {
+        uint16 tmp1 = (uint16)((a >> 24) & 0xFF) * (uint16)((b >> 24) & 0xFF);
+        uint16 tmp2 = (uint16)((a >> 16) & 0xFF) * (uint16)((b >> 16) & 0xFF);
+        uint16 tmp3 = (uint16)((a >> 8) & 0xFF) * (uint16)((b >> 8) & 0xFF);
+        uint16 tmp4 = (uint16)(a & 0xFF) * (uint16)(b & 0xFF);
+        uint32 tmp1234 = ((uint32)tmp1) + ((uint32)tmp2) + ((uint32)tmp3) + ((uint32)tmp4);
+        return saturating_add(tmp1234, acc);
+    }
 }
 
 // Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in a with corresponding signed
 // 8-bit integers in b, producing 4 intermediate signed 16-bit results.
 // Sum these 4 results with the corresponding 32-bit integer in acc, and return the result.
 __declspec(safe) static inline varying int32 dot4add_i8i8packed(varying uint32 a, varying uint32 b, varying int32 acc) {
-    if (__have_dot_product_arm) {
+    if (__have_arm_dot_product || __have_intel_vnni_int8) {
         return __dot4add_i8i8packed(a, b, acc);
     } else {
         int16 tmp1 = (int16)((int8)((a >> 24) & 0xFF)) * (int16)((int8)((b >> 24) & 0xFF));
@@ -6022,20 +6026,25 @@ __declspec(safe) static inline varying int32 dot4add_i8i8packed(varying uint32 a
 // Sum these 4 results with the corresponding 32-bit integer in acc using signed saturation, and return the result.
 __declspec(safe) static inline varying int32 dot4add_i8i8packed_sat(varying uint32 a, varying uint32 b,
                                                                     varying int32 acc) {
-    int16 tmp1 = (int16)((a >> 24) & 0xFF) * (int16)((b >> 24) & 0xFF);
-    int16 tmp2 = (int16)((a >> 16) & 0xFF) * (int16)((b >> 16) & 0xFF);
-    int16 tmp3 = (int16)((a >> 8) & 0xFF) * (int16)((b >> 8) & 0xFF);
-    int16 tmp4 = (int16)(a & 0xFF) * (int16)(b & 0xFF);
-    int32 tmp1234 = ((int32)tmp1) + ((int32)tmp2) + ((int32)tmp3) + ((int32)tmp4);
-    return saturating_add(tmp1234, acc);
+    if (__have_intel_vnni_int8) {
+        return __dot4add_i8i8packed_sat(a, b, acc);
+    } else {
+        int16 tmp1 = (int16)((a >> 24) & 0xFF) * (int16)((b >> 24) & 0xFF);
+        int16 tmp2 = (int16)((a >> 16) & 0xFF) * (int16)((b >> 16) & 0xFF);
+        int16 tmp3 = (int16)((a >> 8) & 0xFF) * (int16)((b >> 8) & 0xFF);
+        int16 tmp4 = (int16)(a & 0xFF) * (int16)(b & 0xFF);
+        int32 tmp1234 = ((int32)tmp1) + ((int32)tmp2) + ((int32)tmp3) + ((int32)tmp4);
+        return saturating_add(tmp1234, acc);
+    }
 }
 
 // Multiply groups of 2 adjacent pairs of signed 16-bit integers in a
 // with corresponding 16-bit integers in b, producing 2 intermediate signed 32-bit results.
 // Sum these 2 results with the corresponding 32-bit integer in src, and return the result.
-__declspec(safe) static inline varying int32 dot2add_i16packed(varying uint32 a, varying uint32 b, varying int32 acc) {
-    if (__have_dot_product_vnni) {
-        return __dot2add_i16packed(a, b, acc);
+__declspec(safe) static inline varying int32 dot2add_i16i16packed(varying uint32 a, varying uint32 b,
+                                                                  varying int32 acc) {
+    if (__have_intel_vnni) {
+        return __dot2add_i16i16packed(a, b, acc);
     } else {
         int32 tmp1 = (int32)((int16)((a >> 16) & 0xFFFF)) * (int32)((int16)((b >> 16) & 0xFFFF));
         int32 tmp2 = (int32)((int16)(a & 0xFFFF)) * (int32)((int16)(b & 0xFFFF));
@@ -6046,13 +6055,75 @@ __declspec(safe) static inline varying int32 dot2add_i16packed(varying uint32 a,
 // Multiply groups of 2 adjacent pairs of signed 16-bit integers in a
 // with corresponding 16-bit integers in b, producing 2 intermediate signed 32-bit results.
 // Sum these 2 results with the corresponding 32-bit integer in src using signed saturation, and return the result.
-__declspec(safe) static inline varying int32 dot2add_i16packed_sat(varying uint32 a, varying uint32 b,
-                                                                   varying int32 acc) {
-    if (__have_dot_product_vnni) {
-        return __dot2add_i16packed_sat(a, b, acc);
+__declspec(safe) static inline varying int32 dot2add_i16i16packed_sat(varying uint32 a, varying uint32 b,
+                                                                      varying int32 acc) {
+    if (__have_intel_vnni) {
+        return __dot2add_i16i16packed_sat(a, b, acc);
     } else {
         int32 tmp1 = (int32)((int16)((a >> 16) & 0xFFFF)) * (int32)((int16)((b >> 16) & 0xFFFF));
         int32 tmp2 = (int32)((int16)(a & 0xFFFF)) * (int32)((int16)(b & 0xFFFF));
         return saturating_add(saturating_add(tmp1, tmp2), acc);
+    }
+}
+
+// Multiply groups of 2 adjacent pairs of unsigned 16-bit integers in a
+// with corresponding unsigned 16-bit integers in b, producing 2 intermediate unsigned 32-bit results.
+// Sum these 2 results with the corresponding 32-bit integer in acc, and return the result.
+__declspec(safe) static inline varying uint32 dot2add_u16u16packed(varying uint32 a, varying uint32 b,
+                                                                   varying uint32 acc) {
+    if (__have_intel_vnni_int8) {
+        return __dot2add_u16u16packed(a, b, acc);
+    } else {
+        // Zero-extend both operands as per the pseudocode (UU version)
+        uint32 tmp1 = (uint32)((a >> 16) & 0xFFFF) * (uint32)((b >> 16) & 0xFFFF);
+        uint32 tmp2 = (uint32)(a & 0xFFFF) * (uint32)(b & 0xFFFF);
+        return acc + tmp1 + tmp2;
+    }
+}
+
+// Multiply groups of 2 adjacent pairs of unsigned 16-bit integers in a
+// with corresponding unsigned 16-bit integers in b, producing 2 intermediate unsigned 32-bit results.
+// Sum these 2 results with the corresponding 32-bit integer in acc using unsigned saturation, and return the result.
+__declspec(safe) static inline varying uint32 dot2add_u16u16packed_sat(varying uint32 a, varying uint32 b,
+                                                                       varying uint32 acc) {
+    if (__have_intel_vnni_int8) {
+        return __dot2add_u16u16packed_sat(a, b, acc);
+    } else {
+        // Zero-extend both operands as per the pseudocode (UU version)
+        uint32 tmp1 = (uint32)((a >> 16) & 0xFFFF) * (uint32)((b >> 16) & 0xFFFF);
+        uint32 tmp2 = (uint32)(a & 0xFFFF) * (uint32)(b & 0xFFFF);
+        // Use unsigned saturation for UU version
+        return saturating_add(saturating_add(acc, tmp1), tmp2);
+    }
+}
+
+// Multiply groups of 2 adjacent pairs of unsigned 16-bit integers in a
+// with corresponding signed 16-bit integers in b, producing 2 intermediate signed 32-bit results.
+// Sum these 2 results with the corresponding 32-bit integer in acc, and return the result.
+__declspec(safe) static inline varying int32 dot2add_u16i16packed(varying uint32 a, varying uint32 b,
+                                                                  varying int32 acc) {
+    if (__have_intel_vnni_int8) {
+        return __dot2add_u16i16packed(a, b, acc);
+    } else {
+        // Zero-extend operand a, sign-extend operand b as per pseudocode (US version)
+        int32 tmp1 = (int32)((uint16)((a >> 16) & 0xFFFF)) * (int32)((int16)((b >> 16) & 0xFFFF));
+        int32 tmp2 = (int32)((uint16)(a & 0xFFFF)) * (int32)((int16)(b & 0xFFFF));
+        return acc + tmp1 + tmp2;
+    }
+}
+
+// Multiply groups of 2 adjacent pairs of unsigned 16-bit integers in a
+// with corresponding signed 16-bit integers in b, producing 2 intermediate signed 32-bit results.
+// Sum these 2 results with the corresponding 32-bit integer in acc using signed saturation, and return the result.
+__declspec(safe) static inline varying int32 dot2add_u16i16packed_sat(varying uint32 a, varying uint32 b,
+                                                                      varying int32 acc) {
+    if (__have_intel_vnni_int8) {
+        return __dot2add_u16i16packed_sat(a, b, acc);
+    } else {
+        // Zero-extend operand a, sign-extend operand b as per pseudocode (US version)
+        int32 tmp1 = (int32)((uint16)((a >> 16) & 0xFFFF)) * (int32)((int16)((b >> 16) & 0xFFFF));
+        int32 tmp2 = (int32)((uint16)(a & 0xFFFF)) * (int32)((int16)(b & 0xFFFF));
+        // Use signed saturation for US version
+        return saturating_add(saturating_add(acc, tmp1), tmp2);
     }
 }

@@ -18,7 +18,7 @@ task void f_v(uniform float dst[]) {
     pack2toint<uniform int16>(b, b_packed, N);
 
     foreach (i = 0 ... N / 2) {
-        dst[i] = dot2add_i16packed(a_packed[i], b_packed[i], i);
+        dst[i] = dot2add_i16i16packed(a_packed[i], b_packed[i], i);
     }
 }
 

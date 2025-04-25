@@ -1678,6 +1678,12 @@ bool Module::translateToSPIRV(llvm::Module *module, std::stringstream &ss) {
     SPIRV::TranslatorOpts Opts;
     Opts.enableAllExtensions();
 
+    // At the moment, ocloc doesn't support SPV_KHR_untyped_pointers extension,
+    // so turn it off. We may enable it later.
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+    Opts.setAllowedToUseExtension(SPIRV::ExtensionID::SPV_KHR_untyped_pointers, false);
+#endif
+
     Opts.setSPIRVAllowUnknownIntrinsics({"llvm.genx"});
     Opts.setAllowExtraDIExpressionsEnabled(SPIRVAllowExtraDIExpressions);
     Opts.setDesiredBIsRepresentation(SPIRV::BIsRepresentation::SPIRVFriendlyIR);
@@ -3197,8 +3203,14 @@ static void lSetTargetSpecificMacroDefinitions(const std::shared_ptr<clang::Prep
     if (g->target->hasSatArith()) {
         opts->addMacroDef("ISPC_TARGET_HAS_SATURATING_ARITHMETIC");
     }
-    if (g->target->hasDotProductVNNI()) {
-        opts->addMacroDef("ISPC_TARGET_HAS_DOT_PRODUCT_VNNI");
+    if (g->target->hasIntelVNNI()) {
+        opts->addMacroDef("ISPC_TARGET_HAS_INTEL_VNNI");
+    }
+    if (g->target->hasIntelVNNI_Int8()) {
+        opts->addMacroDef("ISPC_TARGET_HAS_INTEL_VNNI_INT8");
+    }
+    if (g->target->hasIntelVNNI_Int16()) {
+        opts->addMacroDef("ISPC_TARGET_HAS_INTEL_VNNI_INT16");
     }
     if (g->target->hasConflictDetection()) {
         opts->addMacroDef("ISPC_TARGET_HAS_CONFLICT_DETECTION");
@@ -3267,11 +3279,11 @@ static void lSetCmdlineDependentMacroDefinitions(const std::shared_ptr<clang::Pr
     }
     opts->addMacroDef(memory_alignment);
 
-    if (g->target->hasDotProductARM()) {
-        opts->addMacroDef("ISPC_TARGET_HAS_DOT_PRODUCT_ARM");
+    if (g->target->hasArmDotProduct()) {
+        opts->addMacroDef("ISPC_TARGET_HAS_ARM_DOT_PRODUCT");
     }
-    if (g->target->hasI8MatrixMulARM()) {
-        opts->addMacroDef("ISPC_TARGET_HAS_I8_MATRIX_MUL_ARM");
+    if (g->target->hasArmI8MM()) {
+        opts->addMacroDef("ISPC_TARGET_HAS_ARM_I8MM");
     }
 }
 
