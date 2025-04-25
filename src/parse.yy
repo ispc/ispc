@@ -889,21 +889,21 @@ shift_expression
 relational_expression
     : shift_expression
     | relational_expression '<' shift_expression
-      { $$ = new BinaryExpr(BinaryExpr::Lt, $1, $3, Union(@1, @3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Lt, $1, $3, Union(@1, @3)); }
     | relational_expression '>' shift_expression
-      { $$ = new BinaryExpr(BinaryExpr::Gt, $1, $3, Union(@1, @3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Gt, $1, $3, Union(@1, @3)); }
     | relational_expression TOKEN_LE_OP shift_expression
-      { $$ = new BinaryExpr(BinaryExpr::Le, $1, $3, Union(@1, @3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Le, $1, $3, Union(@1, @3)); }
     | relational_expression TOKEN_GE_OP shift_expression
-      { $$ = new BinaryExpr(BinaryExpr::Ge, $1, $3, Union(@1, @3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Ge, $1, $3, Union(@1, @3)); }
     ;
 
 equality_expression
     : relational_expression
     | equality_expression TOKEN_EQ_OP relational_expression
-      { $$ = new BinaryExpr(BinaryExpr::Equal, $1, $3, Union(@1,@3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Equal, $1, $3, Union(@1,@3)); }
     | equality_expression TOKEN_NE_OP relational_expression
-      { $$ = new BinaryExpr(BinaryExpr::NotEqual, $1, $3, Union(@1,@3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::NotEqual, $1, $3, Union(@1,@3)); }
     ;
 
 and_expression
