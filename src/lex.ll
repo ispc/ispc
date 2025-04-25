@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -406,6 +406,11 @@ while { return TOKEN_WHILE; }
 "operator<" { return lParseOperator(yytext); }
 "operator>=" { return lParseOperator(yytext); }
 "operator<=" { return lParseOperator(yytext); }
+"operator&" { return lParseOperator(yytext); }
+"operator^" { return lParseOperator(yytext); }
+"operator|" { return lParseOperator(yytext); }
+"operator&&" { return lParseOperator(yytext); }
+"operator||" { return lParseOperator(yytext); }
 
 L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERAL; }
 

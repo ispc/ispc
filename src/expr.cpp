@@ -1843,14 +1843,23 @@ BinaryExpr::BinaryExpr(Op o, Expr *a, Expr *b, SourcePos p) : Expr(p, BinaryExpr
 }
 
 bool lCreateBinaryOperatorCall(const BinaryExpr::Op bop, Expr *a0, Expr *a1, Expr *&op, const SourcePos &sp) {
-    bool abort = false;
     if ((a0 == nullptr) || (a1 == nullptr)) {
-        return abort;
+        return false;
     }
-    Expr *arg0 = a0;
-    Expr *arg1 = a1;
+
+    Expr *arg0 = TypeCheck(a0);
+    Expr *arg1 = TypeCheck(a1);
+
+    if ((arg0 == nullptr) || (arg1 == nullptr)) {
+        return false;
+    }
+
     const Type *type0 = arg0->GetType();
     const Type *type1 = arg1->GetType();
+
+    if ((type0 == nullptr) || (type1 == nullptr)) {
+        return false;
+    }
 
     // If either operand is a reference, dereference it before we move
     // forward
@@ -1862,15 +1871,16 @@ bool lCreateBinaryOperatorCall(const BinaryExpr::Op bop, Expr *a0, Expr *a1, Exp
         arg1 = new RefDerefExpr(arg1, arg1->pos);
         type1 = arg1->GetType();
     }
-    if ((type0 == nullptr) || (type1 == nullptr)) {
-        return abort;
-    }
+
     if (CastType<StructType>(type0) != nullptr || CastType<StructType>(type1) != nullptr) {
+        // Look up operator overloads
         std::string opName = std::string("operator") + lOpString(bop);
         std::vector<Symbol *> funcs;
-        bool foundAnyFunction = m->symbolTable->LookupFunction(opName.c_str(), &funcs);
         std::vector<TemplateSymbol *> funcTempls;
+
+        bool foundAnyFunction = m->symbolTable->LookupFunction(opName.c_str(), &funcs);
         bool foundAnyTemplate = m->symbolTable->LookupFunctionTemplate(opName.c_str(), &funcTempls);
+
         if (foundAnyFunction || foundAnyTemplate) {
             FunctionSymbolExpr *functionSymbolExpr =
                 new FunctionSymbolExpr(opName.c_str(), funcs, funcTempls, TemplateArgs(), sp);
@@ -1879,18 +1889,16 @@ bool lCreateBinaryOperatorCall(const BinaryExpr::Op bop, Expr *a0, Expr *a1, Exp
             args->exprs.push_back(arg0);
             args->exprs.push_back(arg1);
             op = new FunctionCallExpr(functionSymbolExpr, args, sp);
-            return abort;
+            return false;
         }
+        // Error handling
         if (funcs.size() == 0 && funcTempls.size() == 0) {
             Error(sp, "operator %s(%s, %s) is not defined.", opName.c_str(), (type0->GetString()).c_str(),
                   (type1->GetString()).c_str());
-            abort = true;
-            return abort;
+            return true;
         }
-
-        return abort;
     }
-    return abort;
+    return false;
 }
 
 Expr *ispc::MakeBinaryExpr(BinaryExpr::Op o, Expr *a, Expr *b, SourcePos p) {
@@ -4303,6 +4311,10 @@ Expr *FunctionCallExpr::TypeCheck() {
         func = ::TypeCheck(fse);
         if (func == nullptr) {
             return nullptr;
+        }
+
+        if (func->GetType() != nullptr && func->GetType()->IsDependent()) {
+            return this;
         }
 
         funcType = CastType<FunctionType>(func->GetType());

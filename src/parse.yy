@@ -909,31 +909,31 @@ equality_expression
 and_expression
     : equality_expression
     | and_expression '&' equality_expression
-      { $$ = new BinaryExpr(BinaryExpr::BitAnd, $1, $3, Union(@1, @3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::BitAnd, $1, $3, Union(@1, @3)); }
     ;
 
 exclusive_or_expression
     : and_expression
     | exclusive_or_expression '^' and_expression
-      { $$ = new BinaryExpr(BinaryExpr::BitXor, $1, $3, Union(@1, @3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::BitXor, $1, $3, Union(@1, @3)); }
     ;
 
 inclusive_or_expression
     : exclusive_or_expression
     | inclusive_or_expression '|' exclusive_or_expression
-      { $$ = new BinaryExpr(BinaryExpr::BitOr, $1, $3, Union(@1, @3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::BitOr, $1, $3, Union(@1, @3)); }
     ;
 
 logical_and_expression
     : inclusive_or_expression
     | logical_and_expression TOKEN_AND_OP inclusive_or_expression
-      { $$ = new BinaryExpr(BinaryExpr::LogicalAnd, $1, $3, Union(@1, @3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::LogicalAnd, $1, $3, Union(@1, @3)); }
     ;
 
 logical_or_expression
     : logical_and_expression
     | logical_or_expression TOKEN_OR_OP logical_and_expression
-      { $$ = new BinaryExpr(BinaryExpr::LogicalOr, $1, $3, Union(@1, @3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::LogicalOr, $1, $3, Union(@1, @3)); }
     ;
 
 conditional_expression
