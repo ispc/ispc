@@ -1490,6 +1490,10 @@ EXT void __masked_store_blend_double(NOESCAPE varying double *uniform ptr, varyi
 
 EXT uniform uint64 __cast_mask_to_i64(UIntMaskType mask) { return @llvm.ispc.packmask(mask); }
 
+EXT uniform bool __wasm_cmp_msk_eq(UIntMaskType v1, UIntMaskType v2) {
+    return __cast_mask_to_i64(v1) == __cast_mask_to_i64(v2);
+}
+
 // mask operations
 EXT uniform int64 __movmsk(UIntMaskType mask) { return __cast_mask_to_i64(mask); }
 EXT uniform bool __any(UIntMaskType mask) { return __cast_mask_to_i64(mask) != 0; }
