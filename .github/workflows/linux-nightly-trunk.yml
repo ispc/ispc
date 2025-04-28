@@ -130,7 +130,6 @@ jobs:
     with:
       platform: linux
       architecture: ${{ matrix.arch }}
-      llvm_version: trunk
       artifact_name: ispc_llvm_trunk_linux
       targets: ${{ needs.define-targets.outputs.targets }}
       optsets: -O0 -O1 -O2

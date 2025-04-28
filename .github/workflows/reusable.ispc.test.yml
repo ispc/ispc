@@ -16,10 +16,6 @@ on:
         description: 'Architecture to test (x86, x86-64, aarch64)'
         required: true
         type: string
-      llvm_version:
-        description: 'LLVM version to use'
-        required: true
-        type: string
       artifact_name:
         description: 'Name of the artifact to test'
         required: true

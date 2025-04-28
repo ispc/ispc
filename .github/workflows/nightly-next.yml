@@ -87,7 +87,6 @@ jobs:
     with:
       platform: linux
       architecture: ${{ matrix.arch }}
-      llvm_version: 20
       artifact_name: ispc_llvm_linux
       targets: ${{ needs.define-targets.outputs.targets }}
       optsets: -O0 -O1 -O2
@@ -146,7 +145,6 @@ jobs:
     with:
       platform: windows
       architecture: ${{ matrix.arch }}
-      llvm_version: 20
       artifact_name: ispc_llvm_win
       targets: ${{ needs.define-targets.outputs.targets }}
       optsets: -O0 -O1 -O2

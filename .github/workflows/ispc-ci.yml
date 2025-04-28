@@ -198,7 +198,6 @@ jobs:
     with:
       platform: linux
       architecture: ${{ matrix.arch }}
-      llvm_version: ${{ matrix.llvm }}
       artifact_name: ispc_llvm${{ matrix.llvm }}_linux
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86 }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
@@ -213,7 +212,6 @@ jobs:
     with:
       platform: linux
       architecture: ${{ matrix.arch }}
-      llvm_version: 20
       artifact_name: ispc_llvm20_lto_linux
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86 }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
@@ -227,7 +225,6 @@ jobs:
     with:
       platform: linux
       architecture: aarch64
-      llvm_version: 20
       artifact_name: ispc_llvm20_linux.aarch64
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_arm }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
@@ -243,7 +240,6 @@ jobs:
     with:
       platform: linux
       architecture: ${{ matrix.arch }}
-      llvm_version: 20
       artifact_name: ispc_llvm20rel_linux
       targets: '["avx2-i32x8"]'
       optsets: -O0 -O2
@@ -262,7 +258,6 @@ jobs:
     with:
       platform: linux
       architecture: ${{ matrix.arch }}
-      llvm_version: 20
       artifact_name: ispc_llvm20_linux
       targets: '["avx2-i32x8"]'
       optsets: -O0 -O2
@@ -280,7 +275,6 @@ jobs:
     with:
       platform: linux
       architecture: ${{ matrix.arch }}
-      llvm_version: 20
       artifact_name: ispc_xe_llvm20rel_linux
       targets: '["avx2-i32x8"]'
       optsets: -O0 -O2
@@ -300,7 +294,6 @@ jobs:
     with:
       platform: linux
       architecture: ${{ matrix.arch }}
-      llvm_version: 20
       artifact_name: ispc-wasm-linux
       targets: '["wasm-i32x4"]'
       optsets: -O0 -O2
@@ -355,7 +348,6 @@ jobs:
     with:
       platform: macos
       architecture: x86-64
-      llvm_version: ${{ matrix.llvm }}
       artifact_name: ispc_llvm${{matrix.llvm}}_macos-13
       targets: '["sse4-i32x4"]'
       optsets: -O0 -O2
@@ -366,7 +358,6 @@ jobs:
     with:
       platform: macos
       architecture: x86-64
-      llvm_version: 18
       artifact_name: ispc_llvm18_lto_macos
       targets: '["sse4-i32x4"]'
       optsets: -O0 -O2
@@ -380,7 +371,6 @@ jobs:
     with:
       platform: macos
       architecture: aarch64
-      llvm_version: 20
       artifact_name: ispc_llvm20_macos-14
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_arm }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
@@ -455,7 +445,6 @@ jobs:
     with:
       platform: windows
       architecture: ${{ matrix.arch }}
-      llvm_version: ${{ matrix.llvm }}
       artifact_name: ispc_llvm${{matrix.llvm}}_win
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86 }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
@@ -470,7 +459,6 @@ jobs:
     with:
       platform: windows
       architecture: ${{ matrix.arch }}
-      llvm_version: 20
       artifact_name: ispc_llvm20_lto_win
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86 }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
@@ -488,7 +476,6 @@ jobs:
     with:
       platform: windows
       architecture: ${{ matrix.arch }}
-      llvm_version: 20
       artifact_name: ispc_xe_llvm20rel_win
       targets: '["avx2-i32x8"]'
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
@@ -500,7 +487,6 @@ jobs:
     with:
       platform: windows
       architecture: aarch64
-      llvm_version: 20
       artifact_name: ispc_llvm20_win
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_arm }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
@@ -511,7 +497,6 @@ jobs:
     with:
       platform: windows
       architecture: x86-64
-      llvm_version: 20
       artifact_name: ispc_xe_llvm20rel_win
       targets: '["avx2-i32x8"]'
       optsets: O2
