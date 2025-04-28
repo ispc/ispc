@@ -615,6 +615,7 @@ EXT inline READNONE varying int32 __broadcast_i32(varying int32, uniform int32);
 EXT inline READNONE varying int64 __broadcast_i64(varying int64, uniform int32);
 EXT inline READNONE varying int8 __broadcast_i8(varying int8, uniform int32);
 EXT inline READNONE uniform uint64 __cast_mask_to_i64(UIntMaskType);
+EXT inline READNONE uniform bool __wasm_cmp_msk_eq(UIntMaskType v1, UIntMaskType v2);
 EXT inline READNONE varying double __rotate_double(varying double, uniform int32);
 EXT inline READNONE varying float __rotate_float(varying float, uniform int32);
 EXT inline READNONE varying float16 __rotate_half(varying float16, uniform int32);
