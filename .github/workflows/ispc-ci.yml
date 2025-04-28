@@ -286,6 +286,25 @@ jobs:
       optsets: -O0 -O2
       enable_xe: true
 
+  linux-test-ispc-wasm:
+    needs: [define-flow, linux-build-ispc-wasm]
+    strategy:
+      fail-fast: false
+      matrix:
+        # wasm64 is failing with nodejs 20.18.0 that is installed by default
+        # with emsdk in script/install_emscripten.[sh|bat]
+        # Disable it for now, nodejs 23.9.0 works but it requires us to install
+        # it manually alongside emsdk.
+        arch: [wasm32]
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: linux
+      architecture: ${{ matrix.arch }}
+      llvm_version: 20
+      artifact_name: ispc-wasm-linux
+      targets: '["wasm-i32x4"]'
+      optsets: -O0 -O2
+
   macos-build-ispc:
     needs: [define-flow]
     strategy:

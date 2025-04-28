@@ -104,7 +104,7 @@ jobs:
     - name: Running tests on Linux/macOS (alloy mode)
       # See issue #2818 for more details about skipping avx512 and avx2vnni targets. It's SDE problem running on AMD runner.
       # Unfortunately it's not possible to do this on job level, so we need to do it on step level.
-      if: (inputs.platform == 'linux' || inputs.platform == 'macos') && inputs.architecture != 'aarch64' && !(inputs.architecture == 'x86' && (contains(matrix.target, 'avx2vnni') || contains(matrix.target, 'avx512')))
+      if: (inputs.platform == 'linux' || inputs.platform == 'macos') && inputs.architecture != 'aarch64' && inputs.architecture != 'wasm32' && inputs.architecture != 'wasm64' && !(inputs.architecture == 'x86' && (contains(matrix.target, 'avx2vnni') || contains(matrix.target, 'avx512')))
       shell: bash
       run: |
         echo "PATH=${PATH}"
@@ -115,9 +115,13 @@ jobs:
         fi
 
     - name: Running tests on Linux/macOS (run_tests mode)
-      if: (inputs.platform == 'linux' || inputs.platform == 'macos') && inputs.architecture == 'aarch64'
+      if: (inputs.platform == 'linux' || inputs.platform == 'macos') && (inputs.architecture == 'aarch64' || inputs.architecture == 'wasm32' || inputs.architecture == 'wasm64')
       shell: bash
       run: |
+        if [ "${{ inputs.architecture }}" == "wasm32" ] || [ "${{ inputs.architecture }}" == "wasm64" ]; then
+          source scripts/install_emscripten.sh && emcc --version
+        fi
+
         echo "PATH=${PATH}"
         IFS=' ' read -ra OPT_LEVELS <<< "${{ inputs.optsets }}"
 
