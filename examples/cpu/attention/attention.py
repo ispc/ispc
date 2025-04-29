@@ -62,7 +62,8 @@ if __name__ == "__main__":
 
     # Test different sequence lengths
     print("\nPerformance and validation for different sequence lengths:")
-    seq_lengths = [32, 64, 128, 256, 512, 1024, 2048, 4096]
+    # seq_lengths = [32, 64, 128, 256, 512, 1024, 2048, 4096]
+    seq_lengths = [1024, 2048, 4096]
 
     # Print header for results table
     print("\n{:<8} {:<15} {:<15} {:<12} {:<12} {:<12}".format(
@@ -149,6 +150,7 @@ if __name__ == "__main__":
             diff_matrix = np.abs(output_ispc_test - output_pytorch_test)
             print(f"  - Number of elements with diff > 1e-4: {np.sum(diff_matrix > 1e-4)} out of {diff_matrix.size}")
             print(f"  - Number of elements with diff > 1e-3: {np.sum(diff_matrix > 1e-3)} out of {diff_matrix.size}")
+
 
     # Print detailed statistics for the largest size
     largest_sl = seq_lengths[-1]
