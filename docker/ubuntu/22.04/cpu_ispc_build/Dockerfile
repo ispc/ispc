@@ -98,6 +98,6 @@ RUN cmake ispc/superbuild \
         -DPREBUILT_STAGE2_PATH="$LLVM_HOME"/bin-"$LLVM_VERSION" \
         -DCMAKE_INSTALL_PREFIX=/usr/local/src/ispc/bin-"$LLVM_VERSION" && \
     cmake --build build -j"$(nproc)" && \
-    cmake --build build --target check-all && \
+    cmake --build build --target ispc-stage2-check-all && \
     cmake --install build && \
     rm -rf build
