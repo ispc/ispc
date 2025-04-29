@@ -1,9 +1,9 @@
 #
-#  Copyright (c) 2017-2024, Intel Corporation
+#  Copyright (c) 2017-2025, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
-ARG LLVM_VERSION=17.0
+ARG LLVM_VERSION=20.1
 
 FROM ubuntu:18.04 AS llvm_build
 LABEL maintainer="Dmitry Babokin <dmitry.y.babokin@intel.com>"
