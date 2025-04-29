@@ -41,7 +41,7 @@ set(ISPC_OBJ ${CMAKE_CURRENT_BINARY_DIR}/attention.o)
 set(ISPC_HEADER ${CMAKE_CURRENT_BINARY_DIR}/attention_ispc.h)
 
 # Set ISPC flags
-set(ISPC_FLAGS -O2 --target=host)
+set(ISPC_FLAGS -O2 --target=host -DISPC_TASKED_LOOP2 -DGOTO_IMPL)
 if (NOT WIN32)
     set(ISPC_FLAGS ${ISPC_FLAGS} --pic)
 endif()
