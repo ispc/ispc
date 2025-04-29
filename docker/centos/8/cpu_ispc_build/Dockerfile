@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2017-2024, Intel Corporation
+#  Copyright (c) 2017-2025, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -14,7 +14,7 @@ ARG SHA=main
 # otherwise LLVM build may fail, as it will use all the cores available to container.
 
 # Packages required to build ISPC and Clang.
-RUN dnf -y update && dnf install -y wget yum-utils gcc gcc-c++ git python3 make xz tbb-devel && \
+RUN dnf -y update && dnf install -y wget yum-utils gcc gcc-c++ git make xz tbb-devel python38 python38-devel && \
     dnf clean -y all
 
 # These packages are required if you need to link ISPC with -static.
