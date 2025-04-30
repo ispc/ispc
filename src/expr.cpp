@@ -1265,7 +1265,7 @@ bool lCreateUnaryOperatorCall(const UnaryExpr::Op uop, Expr *a, Expr *&op, const
 
 Expr *ispc::MakeUnaryExpr(UnaryExpr::Op o, Expr *a, SourcePos p) {
     Expr *op = nullptr;
-    bool abort = lCreateUnaryOperatorCall(o, a, op, p);
+    bool error = lCreateUnaryOperatorCall(o, a, op, p);
     if (op != nullptr) {
         return op;
     }
@@ -1273,7 +1273,7 @@ Expr *ispc::MakeUnaryExpr(UnaryExpr::Op o, Expr *a, SourcePos p) {
     // lCreateUnaryOperatorCall can return nullptr for 2 cases:
     // 1. When there is an error.
     // 2. We have to create a new UnaryExpr.
-    if (abort) {
+    if (error) {
         AssertPos(p, m->errorCount > 0);
         return nullptr;
     }

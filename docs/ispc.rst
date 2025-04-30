@@ -2830,12 +2830,20 @@ indexing operation in the last line results in an error.
 Operators Overloading
 ---------------------
 
-ISPC has limited support for overloaded operators for ``struct`` types. Only
-binary operators are supported currently, namely they are: ``*, /, %, +, -, >>
-and <<``. Operators overloading support is similar to the one in C++ language.
-To overload an operator for ``struct S``, you need to declare and implement a
-function using keyword ``operator``, which accepts two parameters of type
-``struct S`` or ``struct S&`` and returns either of these types. For example:
+ISPC has support for overloaded operators for ``struct`` types. This allows you
+to define custom behavior when operators are used with your ``struct`` types.
+
+Binary Operators
+----------------
+
+Binary operators that can be overloaded include: ``*, /, %, +, -, >>, <<, ==,
+!=, <, >, <=, >=, &, |, ^, &&, and ||``. Operators overloading support is
+similar to the one in C++ language.
+
+To overload a binary operator for ``struct S``, you need to declare and
+implement a function using keyword ``operator``, which accepts two parameters of
+type ``struct S`` or ``struct S&`` and returns either of these types or another
+appropriate type. For example:
 
 ::
 
@@ -2852,6 +2860,50 @@ function using keyword ``operator``, which accepts two parameters of type
         print("a.re:   %\na.im:   %\n", a.re, a.im);
         print("b.re:   %\nb.im:   %\n", b.re, b.im);
         print("mul.re: %\nmul.im: %\n", mul.re, mul.im);
+    }
+
+Unary Operators
+----------------
+
+ISPC also supports overloading unary operators: ``++, --, -, !, and ~``. For
+unary operators, the implementation depends on the operator type:
+
+1. **Prefix Increment/Decrement (``++x``, ``--x``)**: Define a function that
+   takes a reference to your struct and returns the modified struct.
+
+::
+
+    struct S operator++(struct S &s) {
+        // Increment logic here
+        s.value++;
+        return s;
+    }
+
+2. **Postfix Increment/Decrement (``x++``, ``x--``)**: Define a function that
+   takes a reference to your struct and an additional dummy int parameter,
+   returning the original value before modification.
+
+::
+
+    struct S operator++(struct S &s, int) {
+        struct S temp = s;  // Save original value
+        s.value++;          // Modify the original
+        return temp;        // Return saved original
+    }
+
+3. **Unary Minus, Logical NOT, Bitwise NOT (``-x``, ``!x``, ``~x``)**: Define a
+   function that takes your struct by value and returns an appropriate result.
+
+::
+
+    struct S operator-(struct S s) {
+        struct S result;
+        result.value = -s.value;
+        return result;
+    }
+
+    bool operator!(struct S s) {
+        return s.value == 0;  // Return true if "empty" or "zero"
     }
 
 
