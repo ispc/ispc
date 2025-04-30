@@ -3351,7 +3351,11 @@ int Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *o
         triple.setTriple(llvm::sys::getDefaultTargetTriple());
     }
     tgtOpts->Triple = triple.getTriple();
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
+    clang::TargetInfo *tgtInfo = clang::TargetInfo::CreateTargetInfo(diagEng, *tgtOpts);
+#else
     clang::TargetInfo *tgtInfo = clang::TargetInfo::CreateTargetInfo(diagEng, tgtOpts);
+#endif
 
     // Create and initialize PreprocessorOutputOptions
     clang::PreprocessorOutputOptions preProcOutOpts;
