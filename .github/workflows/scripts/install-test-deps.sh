@@ -5,7 +5,7 @@ echo "APT::Acquire::Retries \"3\";" | sudo tee -a /etc/apt/apt.conf.d/80-retries
 for i in {1..5}
 do
   sudo apt-get update | tee log${i}.txt
-  sudo apt-get install libc6-dev-i386 g++-multilib lib32stdc++6 | tee -a log${i}.txt
+  sudo apt-get install libc6-dev-i386 g++-multilib lib32stdc++6 libtbb2-dev | tee -a log${i}.txt
   if [[ ! `grep "^Err: " log${i}.txt` && ! `grep "^E: " log${i}.txt` ]]; then
     echo "APT packages installation was successful"
     break
@@ -21,9 +21,6 @@ do
     fi
   fi
 done
-
-# Install nanobind for examples build
-pip install nanobind
 
 find /usr -name cdefs.h || echo "Find errors were ignored"
 # Remark about user agent: it might or might now work with default user agent, but
