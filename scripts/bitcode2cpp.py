@@ -149,7 +149,7 @@ with NamedTemporaryFile(mode='w', dir=dirname(output), delete=False) as outfile:
             arch = "x86" if args[0].runtime == "32" else "x86_64" if args[0].runtime == "64" else "error"
         elif "neon" in target:
             arch = "arm" if args[0].runtime == "32" else "aarch64" if args[0].runtime == "64" else "error"
-        elif "wasm" in target:
+        elif "wasm" in target and not "generic" in target:
             arch = "wasm32" if args[0].runtime == "32" else "wasm64" if args[0].runtime == "64" else "error"
         elif ("gen9" in target) or ("xe" in target):
             arch = "xe64"

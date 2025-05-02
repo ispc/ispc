@@ -16,10 +16,6 @@ on:
         description: 'Architecture to test (x86, x86-64, aarch64)'
         required: true
         type: string
-      llvm_version:
-        description: 'LLVM version to use'
-        required: true
-        type: string
       artifact_name:
         description: 'Name of the artifact to test'
         required: true
@@ -78,7 +74,7 @@ jobs:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
 
     - name: Download package
-      uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       with:
         name: ${{ inputs.artifact_name }}
 
@@ -104,7 +100,7 @@ jobs:
     - name: Running tests on Linux/macOS (alloy mode)
       # See issue #2818 for more details about skipping avx512 and avx2vnni targets. It's SDE problem running on AMD runner.
       # Unfortunately it's not possible to do this on job level, so we need to do it on step level.
-      if: (inputs.platform == 'linux' || inputs.platform == 'macos') && inputs.architecture != 'aarch64' && !(inputs.architecture == 'x86' && (contains(matrix.target, 'avx2vnni') || contains(matrix.target, 'avx512')))
+      if: (inputs.platform == 'linux' || inputs.platform == 'macos') && inputs.architecture != 'aarch64' && inputs.architecture != 'wasm32' && inputs.architecture != 'wasm64' && !(inputs.architecture == 'x86' && (contains(matrix.target, 'avx2vnni') || contains(matrix.target, 'avx512')))
       shell: bash
       run: |
         echo "PATH=${PATH}"
@@ -115,9 +111,13 @@ jobs:
         fi
 
     - name: Running tests on Linux/macOS (run_tests mode)
-      if: (inputs.platform == 'linux' || inputs.platform == 'macos') && inputs.architecture == 'aarch64'
+      if: (inputs.platform == 'linux' || inputs.platform == 'macos') && (inputs.architecture == 'aarch64' || inputs.architecture == 'wasm32' || inputs.architecture == 'wasm64')
       shell: bash
       run: |
+        if [ "${{ inputs.architecture }}" == "wasm32" ] || [ "${{ inputs.architecture }}" == "wasm64" ]; then
+          source scripts/install_emscripten.sh && emcc --version
+        fi
+
         echo "PATH=${PATH}"
         IFS=' ' read -ra OPT_LEVELS <<< "${{ inputs.optsets }}"
 

@@ -198,7 +198,6 @@ jobs:
     with:
       platform: linux
       architecture: ${{ matrix.arch }}
-      llvm_version: ${{ matrix.llvm }}
       artifact_name: ispc_llvm${{ matrix.llvm }}_linux
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86 }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
@@ -213,7 +212,6 @@ jobs:
     with:
       platform: linux
       architecture: ${{ matrix.arch }}
-      llvm_version: 20
       artifact_name: ispc_llvm20_lto_linux
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86 }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
@@ -227,7 +225,6 @@ jobs:
     with:
       platform: linux
       architecture: aarch64
-      llvm_version: 20
       artifact_name: ispc_llvm20_linux.aarch64
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_arm }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
@@ -243,7 +240,6 @@ jobs:
     with:
       platform: linux
       architecture: ${{ matrix.arch }}
-      llvm_version: 20
       artifact_name: ispc_llvm20rel_linux
       targets: '["avx2-i32x8"]'
       optsets: -O0 -O2
@@ -262,7 +258,6 @@ jobs:
     with:
       platform: linux
       architecture: ${{ matrix.arch }}
-      llvm_version: 20
       artifact_name: ispc_llvm20_linux
       targets: '["avx2-i32x8"]'
       optsets: -O0 -O2
@@ -280,11 +275,28 @@ jobs:
     with:
       platform: linux
       architecture: ${{ matrix.arch }}
-      llvm_version: 20
       artifact_name: ispc_xe_llvm20rel_linux
       targets: '["avx2-i32x8"]'
       optsets: -O0 -O2
       enable_xe: true
+
+  linux-test-ispc-wasm:
+    needs: [define-flow, linux-build-ispc-wasm]
+    strategy:
+      fail-fast: false
+      matrix:
+        # wasm64 is failing with nodejs 20.18.0 that is installed by default
+        # with emsdk in script/install_emscripten.[sh|bat]
+        # Disable it for now, nodejs 23.9.0 works but it requires us to install
+        # it manually alongside emsdk.
+        arch: [wasm32]
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: linux
+      architecture: ${{ matrix.arch }}
+      artifact_name: ispc-wasm-linux
+      targets: '["wasm-i32x4"]'
+      optsets: -O0 -O2
 
   macos-build-ispc:
     needs: [define-flow]
@@ -336,7 +348,6 @@ jobs:
     with:
       platform: macos
       architecture: x86-64
-      llvm_version: ${{ matrix.llvm }}
       artifact_name: ispc_llvm${{matrix.llvm}}_macos-13
       targets: '["sse4-i32x4"]'
       optsets: -O0 -O2
@@ -347,7 +358,6 @@ jobs:
     with:
       platform: macos
       architecture: x86-64
-      llvm_version: 18
       artifact_name: ispc_llvm18_lto_macos
       targets: '["sse4-i32x4"]'
       optsets: -O0 -O2
@@ -361,7 +371,6 @@ jobs:
     with:
       platform: macos
       architecture: aarch64
-      llvm_version: 20
       artifact_name: ispc_llvm20_macos-14
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_arm }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
@@ -436,7 +445,6 @@ jobs:
     with:
       platform: windows
       architecture: ${{ matrix.arch }}
-      llvm_version: ${{ matrix.llvm }}
       artifact_name: ispc_llvm${{matrix.llvm}}_win
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86 }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
@@ -451,7 +459,6 @@ jobs:
     with:
       platform: windows
       architecture: ${{ matrix.arch }}
-      llvm_version: 20
       artifact_name: ispc_llvm20_lto_win
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86 }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
@@ -469,7 +476,6 @@ jobs:
     with:
       platform: windows
       architecture: ${{ matrix.arch }}
-      llvm_version: 20
       artifact_name: ispc_xe_llvm20rel_win
       targets: '["avx2-i32x8"]'
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
@@ -481,7 +487,6 @@ jobs:
     with:
       platform: windows
       architecture: aarch64
-      llvm_version: 20
       artifact_name: ispc_llvm20_win
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_arm }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
@@ -492,7 +497,6 @@ jobs:
     with:
       platform: windows
       architecture: x86-64
-      llvm_version: 20
       artifact_name: ispc_xe_llvm20rel_win
       targets: '["avx2-i32x8"]'
       optsets: O2
@@ -565,12 +569,12 @@ jobs:
       with:
         submodules: true
     - name: Download ispc package
-      uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       with:
         name: ispc_llvm20_win
 
     - name: Download examples package
-      uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       with:
         name: examples_zip
         path: examples-package
@@ -611,12 +615,12 @@ jobs:
       with:
         submodules: true
     - name: Download ispc package
-      uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       with:
         name: ispc_llvm20_linux
 
     - name: Download examples package
-      uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       with:
         name: examples_tgz
         path: examples-package
@@ -647,12 +651,12 @@ jobs:
       with:
         submodules: true
     - name: Download ispc package
-      uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       with:
         name: ispc_llvm20_macos-14
 
     - name: Download examples package
-      uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       with:
         name: examples_tgz
         path: examples-package
