@@ -2358,6 +2358,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             fattrBuilder->addAttribute("target-cpu", this->m_cpu);
         }
 #endif
+
         for (auto const &f_attr : m_funcAttributes) {
             fattrBuilder->addAttribute(f_attr.first, f_attr.second);
         }
@@ -3162,6 +3163,7 @@ Globals::Globals() {
     timeTraceGranularity = 500;
     target = nullptr;
     ctx = new llvm::LLVMContext;
+    SSPLevel = SSPKind::SSPNone;
 
 #ifdef ISPC_XE_ENABLED
     stackMemSize = 0;

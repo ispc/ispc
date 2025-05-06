@@ -381,6 +381,18 @@ int Module::CompileFile() {
     for (llvm::Function &f : *module) {
         g->target->markFuncWithTargetAttr(&f);
     }
+
+    if (g->SSPLevel != SSPKind::SSPNone) {
+        llvm::Attribute::AttrKind SSPAttrKind = llvm::Attribute::StackProtect;
+        if (g->SSPLevel == SSPKind::SSPStrong) {
+            SSPAttrKind = llvm::Attribute::StackProtectStrong;
+        } else if (g->SSPLevel == SSPKind::SSPReq) {
+            SSPAttrKind = llvm::Attribute::StackProtectReq;
+        }
+        for (llvm::Function &f : *module) {
+            f.addFnAttr(SSPAttrKind);
+        }
+    }
     ast->GenerateIR();
 
     debugDumpModule(module, "GenerateIR", pre_stage++);
