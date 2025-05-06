@@ -2327,6 +2327,15 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             fattrBuilder->addAttribute("target-cpu", this->m_cpu);
         }
 #endif
+
+        // Add SSP attributes if requested.
+        if (g->SSPLevel == SSPOn)
+            fattrBuilder->addAttribute(llvm::Attribute::StackProtect);
+        else if (g->SSPLevel == SSPStrong)
+            fattrBuilder->addAttribute(llvm::Attribute::StackProtectStrong);
+        else if (g->SSPLevel == SSPReq)
+            fattrBuilder->addAttribute(llvm::Attribute::StackProtectReq);
+
         for (auto const &f_attr : m_funcAttributes) {
             fattrBuilder->addAttribute(f_attr.first, f_attr.second);
         }
@@ -3113,6 +3122,7 @@ Globals::Globals() {
     timeTraceGranularity = 500;
     target = nullptr;
     ctx = new llvm::LLVMContext;
+    SSPLevel = SSPNone;
 
 #ifdef ISPC_XE_ENABLED
     stackMemSize = 0;
