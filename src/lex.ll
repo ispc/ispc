@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -409,6 +409,8 @@ L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERA
     yylval.stringVal = new std::string(yytext);
     if (m->symbolTable->LookupType(yytext) != nullptr)
         return TOKEN_TYPE_NAME;
+    else if (m->symbolTable->LookupVariable(yytext))
+        return TOKEN_IDENTIFIER;
     else if (m->symbolTable->LookupFunctionTemplate(yytext))
         return TOKEN_TEMPLATE_NAME;
     else
