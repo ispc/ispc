@@ -137,6 +137,9 @@ class StorageClass {
     Kind m_kind = Kind::NONE;
 };
 
+// Stack smash protection
+enum class SSPKind { SSPNone, SSPOn, SSPStrong, SSPReq };
+
 // Enumerant for address spaces.
 enum class AddressSpace {
     ispc_default,  // 0 = ispc_private
@@ -989,6 +992,9 @@ struct Globals {
 
     /** When true, include float16 conversion functions permanently to the compiled module */
     bool includeFloat16Conversions;
+
+    /* Stores the stack smash protection setting. */
+    SSPKind SSPLevel;
 };
 
 // This is used when empty string is used for "--darwin-version-min"
