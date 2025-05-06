@@ -1037,7 +1037,7 @@ assignment_expression
       { $$ = new AssignExpr(AssignExpr::OrAssign, $1, $3, Union(@1, @3)); }
     | template_identifier {
         // It looks like the proper place is under primary_expression, but
-        // there are shift/reduce conflicts there. So, we handle it here.
+        // there are reduce/reduce conflicts there. So, we handle it here.
         const std::string name = $1;
         std::vector<Symbol *> funcs;
         m->symbolTable->LookupFunction(name.c_str(), &funcs);
