@@ -641,7 +641,9 @@ Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, So
     }
 
     llvm::Function *funcDecl = lGetIntrinsicDeclaration(module, name, args, pos);
-    Assert(funcDecl != nullptr);
+    if (funcDecl == nullptr) {
+        return nullptr;
+    }
 
     Symbol *funcSym = lCreateISPCSymbolForLLVMIntrinsic(funcDecl, symbolTable);
     return funcSym;
