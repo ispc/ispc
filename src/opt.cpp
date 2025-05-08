@@ -601,6 +601,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
             optPM.addFunctionPass(llvm::GVNPass(), 301);
         }
         optPM.addFunctionPass(ReplaceMaskedMemOpsPass());
+        optPM.addFunctionPass(llvm::SROAPass(llvm::SROAOptions::ModifyCFG));
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
         optPM.addFunctionPass(llvm::InferAlignmentPass());
 #endif
