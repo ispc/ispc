@@ -57,8 +57,6 @@ if (APPLE)
         set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version to support")
     endif()
     message(STATUS "Targeting minimum macOS version: ${CMAKE_OSX_DEPLOYMENT_TARGET}")
-
-    option(ISPC_FRAMEWORK "Build as Apple Frameworks" OFF)
 endif()
 
 set(PROJECT_NAME ispc)
@@ -875,27 +873,6 @@ function(add_ispc_slim NAME)
     endif()
 endfunction()
 
-# This function sets the framework properties for Apple platforms compilations
-function(configure_ispc_framework TARGET)
-    if (ISPC_FRAMEWORK)
-        set_target_properties(TARGET PROPERTIES
-            FRAMEWORK TRUE
-            FRAMEWORK_VERSION "${ISPC_VERSION_FULL}"
-            PRODUCT_BUNDLE_IDENTIFIER "github.com/ispc/ispc/${TARGET}"
-            XCODE_ATTRIBUTE_INSTALL_PATH "@rpath"
-            # PUBLIC_HEADER "${PublicHeaders}"
-            OUTPUT_NAME "${TARGET}"
-            XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY ""
-            XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO"
-            XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO"
-            MACOSX_FRAMEWORK_IDENTIFIER "github.com/ispc/ispc/${TARGET}"
-            MACOSX_FRAMEWORK_BUNDLE_VERSION "${ISPC_VERSION_FULL}"
-            MACOSX_FRAMEWORK_SHORT_VERSION_STRING "${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}"
-            MACOSX_RPATH TRUE
-            # RESOURCE ${PublicHeaders}
-        )
-    endif ()
-endfunction()
 
 # Define libraries that are built in the project. Some of them are shared across multiple executable targets.
 add_library(optimization OBJECT EXCLUDE_FROM_ALL ${OPT_SOURCES})
