@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2024, Intel Corporation
+  Copyright (c) 2022-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -7,6 +7,11 @@
 #include "PeepholePass.h"
 #include "builtins-decl.h"
 
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
+#define CONST_METHOD const
+#else
+#define CONST_METHOD
+#endif
 namespace ispc {
 
 using namespace llvm::PatternMatch;
@@ -18,7 +23,7 @@ template <typename Op_t, unsigned Opcode> struct CastClassTypes_match {
     CastClassTypes_match(const Op_t &OpMatch, const llvm::Type *f, const llvm::Type *t)
         : Op(OpMatch), fromType(f), toType(t) {}
 
-    template <typename OpTy> bool match(OpTy *V) {
+    template <typename OpTy> bool match(OpTy *V) CONST_METHOD {
         if (llvm::Operator *O = llvm::dyn_cast<llvm::Operator>(V)) {
             return (O->getOpcode() == Opcode && Op.match(O->getOperand(0)) && O->getType() == toType &&
                     O->getOperand(0)->getType() == fromType);
@@ -62,7 +67,7 @@ template <typename Op_t> struct UDiv2_match {
 
     UDiv2_match(const Op_t &OpMatch) : Op(OpMatch) {}
 
-    template <typename OpTy> bool match(OpTy *V) {
+    template <typename OpTy> bool match(OpTy *V) CONST_METHOD {
         llvm::BinaryOperator *bop = nullptr;
         llvm::ConstantDataVector *cdv = nullptr;
         if ((bop = llvm::dyn_cast<llvm::BinaryOperator>(V)) &&
@@ -91,7 +96,7 @@ template <typename Op_t> struct SDiv2_match {
 
     SDiv2_match(const Op_t &OpMatch) : Op(OpMatch) {}
 
-    template <typename OpTy> bool match(OpTy *V) {
+    template <typename OpTy> bool match(OpTy *V) CONST_METHOD {
         llvm::BinaryOperator *bop = nullptr;
         llvm::ConstantDataVector *cdv = nullptr;
         if ((bop = llvm::dyn_cast<llvm::BinaryOperator>(V)) &&
