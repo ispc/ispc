@@ -733,6 +733,11 @@ vectors:
     varying float<4> x, y;
     varying float<4> z = max(x, y);
 
+The support for short vector types has been added also for the following
+floating-point element wise functions: ``round``, ``floor``, ``ceil``,
+``trunc``, ``rcp``, ``rcp_fast``, ``sqrt``, ``rsqrt``, ``sin``, ``asin``,
+``cos``, ``acos``, ``tan``, ``atan``, ``exp``, ``log``, ``atan2`` and ``pow``.
+
 Attribute ``aligned(N)`` was added to specify alignment of variables and struct
 types.
 
@@ -4640,6 +4645,15 @@ rounding mode and do not signal precision exceptions.
     float trunc(float x)
     uniform float trunc(uniform float x)
 
+These functions also support short vector types with the basic types listed
+above.
+
+::
+
+    template <typename T, uint N> T<N> round(T<N> a)
+    template <typename T, uint N> T<N> floor(T<N> a)
+    template <typename T, uint N> T<N> ceil(T<N> a)
+    template <typename T, uint N> T<N> trunc(T<N> a)
 
 ``rcp()`` computes an approximation to ``1/v``.  The amount of error is
 different on different architectures.
@@ -4656,6 +4670,14 @@ use Newton-Raphson.
 
     float rcp_fast(float v)
     uniform float rcp_fast(uniform float v)
+
+``rcp`` and ``rcp_fast`` functions also support short vector types with the
+basic types listed above.
+
+::
+
+    template <typename T, uint N> T<N> rcp(T<N> a)
+    template <typename T, uint N> T<N> rcp_fast(T<N> a)
 
 The ``fmod()`` functions compute the floating-point remainder of the division
 operation x/y. It's semantics is equivalent to C/C++ lib functions.
@@ -4801,6 +4823,14 @@ architectures.
     float rsqrt(float v)
     uniform float rsqrt(uniform float v)
 
+``rsqrt`` and ``sqrt`` also supports short vector types with the basic types
+listed above:
+
+::
+
+    template <typename T, uint N> T<N> rsqrt(T<N> a)
+    template <typename T, uint N> T<N> sqrt(T<N> a)
+
 ISPC also provides a version of ``rsqrt()`` for float with less precision which doesn't
 use Newton-Raphson.
 
@@ -4820,6 +4850,15 @@ use Newton-Raphson.
     float tan(float x)
     uniform float tan(uniform float x)
 
+These functions also supports short vector types with the basic types listed
+above:
+
+::
+
+    template <typename T, uint N> T<N> sin(T<N> a)
+    template <typename T, uint N> T<N> cos(T<N> a)
+    template <typename T, uint N> T<N> tan(T<N> a)
+
 The corresponding inverse functions are also available:
 
 ::
@@ -4832,6 +4871,16 @@ The corresponding inverse functions are also available:
    uniform float atan(uniform float x)
    float atan2(float y, float x)
    uniform float atan2(uniform float y, uniform float x)
+
+The inverse functions also support short vector types with the basic types
+listed above:
+
+::
+
+  template <typename T, uint N> T<N> asin(T<N> a)
+  template <typename T, uint N> T<N> acos(T<N> a)
+  template <typename T, uint N> T<N> atan(T<N> a)
+  template <typename T, uint N> T<N> atan2(T<N> a, T<N> b)
 
 If both sine and cosine are needed, then the ``sincos()`` call computes
 both more efficiently than two calls to the respective individual
@@ -4854,6 +4903,15 @@ The usual exponential and logarithmic functions are provided.
     uniform float log(uniform float x)
     float pow(float a, float b)
     uniform float pow(uniform float a, uniform float b)
+
+These functions also support short vector types with the basic types listed
+above:
+
+::
+
+    template <typename T, uint N> T<N> exp(T<N> a)
+    template <typename T, uint N> T<N> log(T<N> a)
+    template <typename T, uint N> T<N> pow(T<N> a, T<N> b)
 
 A few functions that end up doing low-level manipulation of the
 floating-point representation in memory are available.  As in the standard

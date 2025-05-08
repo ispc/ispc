@@ -1,9 +1,7 @@
 #
-#  Copyright (c) 2017-2024, Intel Corporation
+#  Copyright (c) 2017-2025, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
-
-ARG LLVM_VERSION=17.0
 
 FROM ubuntu:18.04 AS llvm_build
 LABEL maintainer="Dmitry Babokin <dmitry.y.babokin@intel.com>"
@@ -13,7 +11,6 @@ ARG REPO=ispc/ispc
 ARG SHA=main
 ARG LTO=OFF
 ARG PGO=OFF
-ARG LLVM_VERSION
 ARG LLVM_DISABLE_ASSERTIONS
 
 # !!! Make sure that your docker config provides enough memory to the container,
@@ -56,7 +53,6 @@ RUN wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 
 # If you are behind a proxy, you need to configure git.
 RUN if [ -v http_proxy ]; then git config --global --add http.proxy "$http_proxy"; fi
 
-ENV LLVM_HOME=/usr/local/src/llvm
 WORKDIR /usr/local/src
 
 # Fork ispc on github and clone *your* fork.
@@ -64,8 +60,8 @@ WORKDIR /usr/local/src
 # http://www.intel.com/software/sde and download the latest version,
 # extract it, add to path and set SDE_HOME.
 
-# Build Clang with all required patches.
-# Pass required LLVM_VERSION with --build-arg LLVM_VERSION=<version>.
+# Build Clang with all required patches with version specific in superbuild
+# CMAKE preset file under superbuid directory.
 RUN git clone https://github.com/$REPO.git ispc && \
     git -C ispc checkout $SHA && \
     cmake ispc/superbuild \
@@ -73,21 +69,17 @@ RUN git clone https://github.com/$REPO.git ispc && \
         --preset os \
         -DLTO=$LTO \
         -DXE_DEPS=OFF \
-        -DLLVM_VERSION="$LLVM_VERSION" \
         -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON \
-        -DCMAKE_INSTALL_PREFIX="$LLVM_HOME"/bin-"$LLVM_VERSION" \
+        -DCMAKE_INSTALL_PREFIX=/usr/local/ \
         -DLLVM_DISABLE_ASSERTIONS="$LLVM_DISABLE_ASSERTIONS" && \
     cmake --build build && \
     rm -rf build
-
-ENV PATH=$LLVM_HOME/bin-$LLVM_VERSION/bin:$PATH
 
 FROM llvm_build AS ispc_build
 SHELL ["/bin/bash", "-c"]
 
 ARG LTO=OFF
 ARG PGO=OFF
-ARG LLVM_VERSION
 
 # Install regular ISPC dependencies
 RUN apt-get -y update && apt-get --no-install-recommends install -y m4 bison flex && \
@@ -108,12 +100,9 @@ RUN cmake ispc/superbuild \
         -DLTO=$LTO \
         -DXE_DEPS=OFF \
         -DCMAKE_CXX_FLAGS=-Werror \
-        -DPREBUILT_STAGE2_PATH="$LLVM_HOME"/bin-"$LLVM_VERSION" \
-        -DCMAKE_INSTALL_PREFIX=/usr/local/src/ispc/bin-"$LLVM_VERSION" && \
+        -DPREBUILT_STAGE2_PATH=/usr/local/ \
+        -DCMAKE_INSTALL_PREFIX=/usr/local/ && \
     cmake --build build && \
     cmake --build build --target ispc-stage2-check-all && \
     mv build/build-ispc-stage2/src/ispc-stage2-build/*.tar.gz ./ && \
     rm -rf build
-
-# Export path for ispc
-ENV PATH=/usr/local/src/ispc/bin-$LLVM_VERSION/bin:$PATH

@@ -1,9 +1,9 @@
 #
-#  Copyright (c) 2017-2024, Intel Corporation
+#  Copyright (c) 2017-2025, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
-ARG LLVM_VERSION=17.0
+ARG LLVM_VERSION=20.1
 
 FROM ubuntu:22.04 AS llvm_build
 LABEL maintainer="Dmitry Babokin <dmitry.y.babokin@intel.com>"
@@ -98,6 +98,6 @@ RUN cmake ispc/superbuild \
         -DPREBUILT_STAGE2_PATH="$LLVM_HOME"/bin-"$LLVM_VERSION" \
         -DCMAKE_INSTALL_PREFIX=/usr/local/src/ispc/bin-"$LLVM_VERSION" && \
     cmake --build build -j"$(nproc)" && \
-    cmake --build build --target check-all && \
+    cmake --build build --target ispc-stage2-check-all && \
     cmake --install build && \
     rm -rf build
