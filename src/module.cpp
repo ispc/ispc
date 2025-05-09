@@ -663,6 +663,11 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
         return;
     }
 
+    if (!type->IsCompleteType()) {
+        Error(pos, "variable \"%s\" has incomplete type \"%s\"", name.c_str(), type->GetString().c_str());
+        return;
+    }
+
     type = ArrayType::SizeUnsizedArrays(type, initExpr);
     if (type == nullptr) {
         return;
