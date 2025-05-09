@@ -19,6 +19,8 @@
 
 ; RUN: %{ispc-opt} --target=neon-i32x4 --passes=peephole %s -o - | FileCheck --check-prefix=CHECK-PEEPHOLE %s
 
+; REQUIRES: ARM_ENABLED
+
 declare <4 x i16> @llvm.aarch64.neon.uhadd.v4i16(<4 x i16>, <4 x i16>)
 define <4 x i16> @__avg_down_uint16(<4 x i16> %0, <4 x i16> %1) {
   %r = call <4 x i16> @llvm.aarch64.neon.uhadd.v4i16(<4 x i16> %0, <4 x i16> %1)
