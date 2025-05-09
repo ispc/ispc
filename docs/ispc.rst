@@ -738,6 +738,10 @@ floating-point element wise functions: ``round``, ``floor``, ``ceil``,
 ``trunc``, ``rcp``, ``rcp_fast``, ``sqrt``, ``rsqrt``, ``sin``, ``asin``,
 ``cos``, ``acos``, ``tan``, ``atan``, ``exp``, ``log``, ``atan2`` and ``pow``.
 
+The cube root function ``cbrt`` has been added to the standard library for
+``float`` and ``double`` types, as well as for short vector types of these
+types.
+
 Attribute ``aligned(N)`` was added to specify alignment of variables and struct
 types.
 
@@ -4912,6 +4916,17 @@ above:
     template <typename T, uint N> T<N> exp(T<N> a)
     template <typename T, uint N> T<N> log(T<N> a)
     template <typename T, uint N> T<N> pow(T<N> a, T<N> b)
+
+The cube root function ``cbrt`` is provided for ``float``, ``double`` types and
+for short vector of these types:
+
+::
+
+    float cbrt(float x)
+    uniform float cbrt(uniform float x)
+    double cbrt(double x)
+    uniform double cbrt(uniform double x)
+    template <typename T, uint N> T<N> cbrt(T<N> a)
 
 A few functions that end up doing low-level manipulation of the
 floating-point representation in memory are available.  As in the standard
