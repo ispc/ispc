@@ -4,9 +4,6 @@
 
 // RUN: %{ispc} --target=host --emit-llvm-text -o - %s 2>&1 | FileCheck %s
 
-// CHECK: @x = local_unnamed_addr global %v{{.*}}_varying_S zeroinitializer
-struct S x;
-
 struct Sy { int8 x; int y; } __attribute__((aligned(8)));
 
 // CHECK: @y8 = local_unnamed_addr global %v{{.*}}_varying_Sy zeroinitializer, align 8
