@@ -9709,13 +9709,36 @@ bool FunctionSymbolExpr::ResolveOverloads(SourcePos argPos, const std::vector<co
     }
     triedToResolve = true;
 
+    // Check for dependent arguments
+    bool hasDependentArgs = false;
     for (auto argType : argTypes) {
-        if (argType->IsDependent()) {
-            unresolvedButDependent = true;
+        if (argType && argType->IsDependent()) {
+            hasDependentArgs = true;
             break;
         }
     }
-    if (unresolvedButDependent) {
+
+    // Check for dependent template arguments
+    bool hasDependentTemplateArgs = false;
+    for (const auto &arg : templateArgs) {
+        if (arg.IsType()) {
+            if (arg.GetAsType() && arg.GetAsType()->IsDependent()) {
+                hasDependentTemplateArgs = true;
+                break;
+            }
+        } else if (arg.IsNonType()) {
+            const ConstExpr *ce = arg.GetAsConstExpr();
+            // template argument is not resolved yet
+            if (ce == nullptr) {
+                hasDependentTemplateArgs = true;
+                break;
+            }
+        }
+    }
+
+    // If either arguments or template arguments are dependent, delay resolution
+    if (hasDependentArgs || hasDependentTemplateArgs) {
+        unresolvedButDependent = true;
         return true;
     }
 
