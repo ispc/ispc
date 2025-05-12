@@ -44,7 +44,7 @@ on:
         description: Visual Studio version ('vs2019' or 'vs2022').
         required: false
         type: string
-        default: 'vs2019'
+        default: 'vs2022'
   workflow_dispatch:
     inputs:
       version:
@@ -86,7 +86,7 @@ on:
         description: Visual Studio version ('vs2019' or 'vs2022').
         required: false
         type: string
-        default: 'vs2019'
+        default: 'vs2022'
 
 jobs:
   linux-build:
