@@ -1139,6 +1139,20 @@ Symbol *FunctionTemplate::LookupInstantiation(const TemplateArgs &tArgs) {
 
 Symbol *FunctionTemplate::AddInstantiation(const TemplateArgs &tArgs, TemplateInstantiationKind kind, bool isInline,
                                            bool isNoinline) {
+    for (size_t i = 0; i < tArgs.size(); i++) {
+        TemplateArg tArg = tArgs[i];
+        if (tArg.IsType()) {
+            const Type *argType = tArg.GetAsType();
+            if (argType && !argType->IsCompleteType()) {
+                Symbol *arg = args[i];
+                Error(arg->pos,
+                      "Template parameter '%s' with type '%s' can't be instantiated with incomplete type '%s'\n",
+                      arg->name.c_str(), arg->type->GetString().c_str(), argType->GetString().c_str());
+                return nullptr;
+            }
+        }
+    }
+
     const TemplateParms *typenames = GetTemplateParms();
     Assert(typenames);
     TemplateInstantiation templInst(*typenames, tArgs, isInline, isNoinline);

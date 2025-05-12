@@ -9471,7 +9471,10 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
             funcSym = templSym->functionTemplate->AddInstantiation(deducedArgs, TemplateInstantiationKind::Implicit,
                                                                    templSym->isInline, templSym->isNoInline);
         }
-        AssertPos(pos, funcSym);
+        if (funcSym == nullptr) {
+            Error(pos, "Failed to get a candidate for template instantiation");
+            return std::vector<Symbol *>();
+        }
         // Success
         ret.push_back(funcSym);
     }

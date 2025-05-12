@@ -2,10 +2,10 @@
 
 // RUN: not %{ispc} --target=host --nowrap --nostdlib %s -o %t.o 2>&1 | FileCheck %s
 
-// CHECK: Error: parameter 'a' is an incomplete type: varying struct Sy
+// CHECK: Error: parameter 'a' has incomplete type 'varying struct Sy'
 int bar(struct Sy a) {}
 
-// CHECK-NOT: Error: parameter 'b' is an incomplete type: varying struct Sx
+// CHECK: Error: parameter 'b' has incomplete type 'varying struct Sx'
 int foo(struct Sx b);
 
 // CHECK-NOT: Error: parameter 'n' is an incomplete
