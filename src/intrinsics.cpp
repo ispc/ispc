@@ -16,6 +16,7 @@
 #include <llvm/Bitcode/BitcodeWriter.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Module.h>
+#include <llvm/Support/raw_ostream.h>
 #include <llvm/Target/TargetMachine.h>
 #ifdef ISPC_XE_ENABLED
 #include <llvm/GenXIntrinsics/GenXIntrinsics.h>
@@ -262,6 +263,13 @@ static const Type *lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) 
     return nullptr;
 }
 
+std::string lGetTypeString(const llvm::Type *Ty) {
+    std::string TypeStr;
+    llvm::raw_string_ostream RSO(TypeStr);
+    Ty->print(RSO);
+    return RSO.str();
+}
+
 /** Create ISPC symbol for LLVM intrinsics and add it to the given module.
 
     @param func            llvm::Function for the intrinsic to be added
@@ -279,10 +287,8 @@ Symbol *lCreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTable *sym
     std::string name = std::string(func->getName());
     const Type *returnType = lLLVMTypeToISPCType(ftype->getReturnType(), false);
     if (returnType == nullptr) {
-        Error(SourcePos(),
-              "Return type not representable for "
-              "Intrinsic %s.",
-              name.c_str());
+        Error(SourcePos(), "Return type \"%s\" not representable as ISPC type for Intrinsic %s.",
+              lGetTypeString(ftype->getReturnType()).c_str(), name.c_str());
         // return type not representable in ispc -> not callable from ispc
         return nullptr;
     }
@@ -291,10 +297,8 @@ Symbol *lCreateISPCSymbolForLLVMIntrinsic(llvm::Function *func, SymbolTable *sym
         const llvm::Type *llvmArgType = ftype->getParamType(j);
         const Type *type = lLLVMTypeToISPCType(llvmArgType, false);
         if (type == nullptr) {
-            Error(SourcePos(),
-                  "Type of parameter %d not "
-                  "representable for Intrinsic %s",
-                  j, name.c_str());
+            Error(SourcePos(), "Type \"%s\" of parameter %d not representable as ISPC type for Intrinsic %s",
+                  lGetTypeString(llvmArgType).c_str(), j, name.c_str());
             return nullptr;
         }
         argTypes.push_back(type);
@@ -641,7 +645,9 @@ Symbol *Module::AddLLVMIntrinsicDecl(const std::string &name, ExprList *args, So
     }
 
     llvm::Function *funcDecl = lGetIntrinsicDeclaration(module, name, args, pos);
-    Assert(funcDecl != nullptr);
+    if (funcDecl == nullptr) {
+        return nullptr;
+    }
 
     Symbol *funcSym = lCreateISPCSymbolForLLVMIntrinsic(funcDecl, symbolTable);
     return funcSym;

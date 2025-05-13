@@ -9471,7 +9471,10 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
             funcSym = templSym->functionTemplate->AddInstantiation(deducedArgs, TemplateInstantiationKind::Implicit,
                                                                    templSym->isInline, templSym->isNoInline);
         }
-        AssertPos(pos, funcSym);
+        if (funcSym == nullptr) {
+            Error(pos, "Failed to get a candidate for template instantiation");
+            return std::vector<Symbol *>();
+        }
         // Success
         ret.push_back(funcSym);
     }
@@ -9621,10 +9624,11 @@ int FunctionSymbolExpr::computeOverloadCost(const FunctionType *ftype, const std
     return costSum;
 }
 
-static bool lReportErrorUnableToFindOverload(std::vector<Symbol *> &matches, const std::vector<const Type *> &argTypes,
+static bool lReportErrorUnableToFindOverload(std::vector<Symbol *> &candidates,
+                                             const std::vector<const Type *> &argTypes,
                                              const std::vector<bool> *argCouldBeNULL, std::string &name,
                                              SourcePos pos) {
-    std::string candidateMessage = lGetOverloadCandidateMessage(matches, argTypes, argCouldBeNULL);
+    std::string candidateMessage = lGetOverloadCandidateMessage(candidates, argTypes, argCouldBeNULL);
     Error(pos, "Unable to find any matching overload for call to function \"%s\".\n%s", name.c_str(),
           candidateMessage.c_str());
     return false;
@@ -9708,13 +9712,36 @@ bool FunctionSymbolExpr::ResolveOverloads(SourcePos argPos, const std::vector<co
     }
     triedToResolve = true;
 
+    // Check for dependent arguments
+    bool hasDependentArgs = false;
     for (auto argType : argTypes) {
-        if (argType->IsDependent()) {
-            unresolvedButDependent = true;
+        if (argType && argType->IsDependent()) {
+            hasDependentArgs = true;
             break;
         }
     }
-    if (unresolvedButDependent) {
+
+    // Check for dependent template arguments
+    bool hasDependentTemplateArgs = false;
+    for (const auto &arg : templateArgs) {
+        if (arg.IsType()) {
+            if (arg.GetAsType() && arg.GetAsType()->IsDependent()) {
+                hasDependentTemplateArgs = true;
+                break;
+            }
+        } else if (arg.IsNonType()) {
+            const ConstExpr *ce = arg.GetAsConstExpr();
+            // template argument is not resolved yet
+            if (ce == nullptr) {
+                hasDependentTemplateArgs = true;
+                break;
+            }
+        }
+    }
+
+    // If either arguments or template arguments are dependent, delay resolution
+    if (hasDependentArgs || hasDependentTemplateArgs) {
+        unresolvedButDependent = true;
         return true;
     }
 
@@ -9736,9 +9763,12 @@ bool FunctionSymbolExpr::ResolveOverloads(SourcePos argPos, const std::vector<co
     int bestTemplateMatchCost =
         FindBestMatchCost(templateCandidates, argTypes, argCouldBeNULL, argIsConstant, pos, name, templateMatches);
 
+    std::vector<Symbol *> combinedCandidates = std::move(funcCandidates);
+    combinedCandidates.insert(combinedCandidates.end(), templateCandidates.begin(), templateCandidates.end());
+
     // Check if no candidates matched
     if ((bestFuncMatchCost == (1 << 30)) && (bestTemplateMatchCost == (1 << 30))) {
-        return lReportErrorUnableToFindOverload(funcMatches, argTypes, argCouldBeNULL, name, pos);
+        return lReportErrorUnableToFindOverload(combinedCandidates, argTypes, argCouldBeNULL, name, pos);
     }
 
     // We have a single match for both functions and templates
@@ -9781,7 +9811,7 @@ bool FunctionSymbolExpr::ResolveOverloads(SourcePos argPos, const std::vector<co
     }
 
     // No matches at all
-    return lReportErrorUnableToFindOverload(funcMatches, argTypes, argCouldBeNULL, name, pos);
+    return lReportErrorUnableToFindOverload(combinedCandidates, argTypes, argCouldBeNULL, name, pos);
 }
 
 ///////////////////////////////////////////////////////////////////////////

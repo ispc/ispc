@@ -663,6 +663,11 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
         return;
     }
 
+    if (!type->IsCompleteType()) {
+        Error(pos, "variable \"%s\" has incomplete type \"%s\"", name.c_str(), type->GetString().c_str());
+        return;
+    }
+
     type = ArrayType::SizeUnsizedArrays(type, initExpr);
     if (type == nullptr) {
         return;
@@ -1070,6 +1075,15 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
     auto [name_pref, name_suf] = functionType->GetFunctionMangledName(false);
     std::string functionName = name_pref + name + name_suf;
 
+    for (int i = 0; i < functionType->GetNumParameters(); i++) {
+        const Type *t = functionType->GetParameterType(i);
+        if (!t->IsCompleteType()) {
+            const SourcePos paramPos = functionType->GetParameterSourcePos(i);
+            const std::string paramName = functionType->GetParameterName(i);
+            Error(paramPos, "parameter '%s' has incomplete type '%s'", paramName.c_str(), t->GetString().c_str());
+            return;
+        }
+    }
     llvm::Function *function = functionType->CreateLLVMFunction(functionName, g->ctx, /*disableMask*/ isExternCorSYCL);
 
     if (g->target_os == TargetOS::windows) {
