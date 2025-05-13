@@ -713,8 +713,31 @@ removes the dispatcher's reliance on the C standard library.
 Updating ISPC Programs For Changes In ISPC 1.27.0
 -------------------------------------------------
 
-Added cross lane operations for unsigned types: ``broadcast``, ``rotate``, ``shift``,
-and ``shuffle``.
+New targets:
+
+New targets have been added for platforms supporting Intel® Advanced Vector
+Extensions 10.2: ``avx10.2-x4``, ``avx10.2-x8``, ``avx10.2-x16``,
+``avx10.2-x32``, and ``avx10.2-x64``.  Additionally, a new macro
+``ISPC_TARGET_AVX10_2`` has been introduced.
+
+Standard library:
+
+* Cross-lane operations - ``broadcast``, ``rotate``, ``shift``, and
+  ``shuffle`` - are now supported for unsigned types.
+* ISPC's data handling capabilities have been extended to include signed and
+  unsigned int8 and int16 types in the reduction functions.
+* Support for ``packed_load`` and ``packed_store`` operations has also been
+  expanded to include: ``int8``, ``int16`` (signed/unsigned), ``float16``,
+  ``float``, and ``double``.
+* The cube root function ``cbrt`` has been added to the standard library for
+  ``float`` and ``double`` types.
+* Dot product functionality has been enhanced with mixed signedness support for
+  16-bit integers. The following input combinations are now supported: u16 x u16
+  (unsigned x unsigned), i16 x i16 (signed x signed), u16 x i16 (mixed
+  signedness). For consistency with other naming conventions, the function
+  ``dot2add_i16_packed`` has been renamed to ``dot2add_i16i16_packed``.
+
+New standard library functions for short vectors:
 
 The ``max``, ``min`` and ``abs`` functions for short vectors of basic types
 have been added to the standard library. They support both uniform and varying
@@ -736,25 +759,18 @@ vectors:
 The support for short vector types has been added also for the following
 floating-point element wise functions: ``round``, ``floor``, ``ceil``,
 ``trunc``, ``rcp``, ``rcp_fast``, ``sqrt``, ``rsqrt``, ``sin``, ``asin``,
-``cos``, ``acos``, ``tan``, ``atan``, ``exp``, ``log``, ``atan2`` and ``pow``.
+``cos``, ``acos``, ``tan``, ``atan``, ``exp``, ``log``, ``atan2``, ``pow`` and
+``cbrt``.
 
-The cube root function ``cbrt`` has been added to the standard library for
-``float`` and ``double`` types, as well as for short vector types of these
-types.
+Language changes:
 
-Attribute ``aligned(N)`` was added to specify alignment of variables and struct
-types.
+* The ``aligned(N)`` attribute is now available to specify the alignment of
+  variables and struct types.
+* A bug was fixed where unsigned array indices or pointer arithmetic with
+  unsigned offsets could result in overflow due to sign extension when promoting
+  to pointer size. This issue is now resolved, and the compiler correctly
+  handles unsigned integer indexing and pointer arithmetic.
 
-Accessing an array using an unsigned index and pointer arithmetic with unsigned
-offsets was flawed due to overflow caused by sign extension when promoting the
-index to pointer size. This issue has been resolved, and the compiler now
-generates correct code for such cases involving unsigned integer types.
-
-Enhanced dot product functionality with mixed signedness support for 16-bit integers.
-Now supporting three input combinations: unsignedxunsigned (u16xu16),
-signedxsigned (i16xi16), and mixed signedness (u16xi16) operations.
-Note that ``dot2add_i16_packed`` was renamed to ``dot2add_i16i16_packed`` for consistency
-with the ``dot4add_*`` functions naming.
 
 Getting Started with ISPC
 =========================
