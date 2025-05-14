@@ -725,7 +725,7 @@ Standard library:
 * Cross-lane operations - ``broadcast``, ``rotate``, ``shift``, and
   ``shuffle`` - are now supported for unsigned types.
 * ISPC's data handling capabilities have been extended to include signed and
-  unsigned int8 and int16 types in the reduction functions.
+  unsigned ``int8`` and ``int16`` types in the reduction functions.
 * Support for ``packed_load`` and ``packed_store`` operations has also been
   expanded to include: ``int8``, ``int16`` (signed/unsigned), ``float16``,
   ``float``, and ``double``.
@@ -771,6 +771,10 @@ Language changes:
   to pointer size. This issue is now resolved, and the compiler correctly
   handles unsigned integer indexing and pointer arithmetic.
 
+Compiler flags changes:
+
+* The ``-dD`` and ``-dM`` flag have been supported. They are useful to debug the
+  preprocessor and to check the macros defined by the compiler.
 
 Getting Started with ISPC
 =========================
@@ -947,6 +951,12 @@ specified.  The standard suffixes ``.i`` or ``.ispi`` are assumed for preprocess
 By default the compilation will fail if preprocessor encountered an error.
 To ignore the preprocessor errors and proceed with normal compilation flow,
 ``--ignore-preprocessor-errors`` switch may be used.
+
+To debug preprocessor, use ``-dD`` or ``-dM`` flags. The ``-dM`` flag lists
+``#define`` directives for all the macros during the execution of the
+preprocessor, including predefined macros, instead of the normal output. The
+``-dD`` flag lists both the ``#define`` directives and the result of
+preprocessing.
 
 Optimizations are on by default; they can be turned off with ``-O0``:
 
