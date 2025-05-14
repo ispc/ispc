@@ -325,17 +325,15 @@ jobs:
       llvm_version: ${{ matrix.llvm.version }}
       llvm_tar: llvm-${{ matrix.llvm.full_version }}-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
 
-  # Build of LLVM 20 with LTO takes more than 6 hours so we don't have
-  # llvm-20-lto-macos at the moment.
-  macos-build-ispc-llvm18-lto:
+  macos-build-ispc-llvm20-lto:
     needs: [define-flow]
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: macos
-      artifact_name: ispc_llvm18_lto_macos
+      artifact_name: ispc_llvm20_lto_macos
       runner: macos-13
-      llvm_version: 18.1
-      llvm_tar: llvm-18.1.8-macos-Release+Asserts-lto-universal-x86.arm.wasm.tar.xz
+      llvm_version: 20.1
+      llvm_tar: llvm-20.1.4-macos-Release-lto-universal-x86.arm.wasm.tar.xz
       enable_lto: true
 
   macos-test-ispc:
@@ -352,13 +350,13 @@ jobs:
       targets: '["sse4-i32x4"]'
       optsets: -O0 -O2
 
-  macos-test-ispc-llvm18-lto:
-    needs: [define-flow, macos-build-ispc-llvm18-lto]
+  macos-test-ispc-llvm20-lto:
+    needs: [define-flow, macos-build-ispc-llvm20-lto]
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
       platform: macos
       architecture: x86-64
-      artifact_name: ispc_llvm18_lto_macos
+      artifact_name: ispc_llvm20_lto_macos
       targets: '["sse4-i32x4"]'
       optsets: -O0 -O2
       enable_lto: true
