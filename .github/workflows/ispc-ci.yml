@@ -107,7 +107,7 @@ jobs:
       matrix:
         llvm:
           - version: "20.1"
-            full_version: "20.1.2"
+            full_version: "20.1.4"
             short_version: 20
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
@@ -133,7 +133,7 @@ jobs:
             full_version: "19.1.7"
             short_version: 19
           - version: "20.1"
-            full_version: "20.1.2"
+            full_version: "20.1.4"
             short_version: 20
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
@@ -151,7 +151,7 @@ jobs:
       artifact_name: ispc_llvm20_lto_linux
       runner: ubuntu-22.04
       llvm_version: "20.1"
-      llvm_tar: llvm-20.1.2-ubuntu22.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
+      llvm_tar: llvm-20.1.4-ubuntu22.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
       enable_lto: true
 
   linux-build-ispc-llvm20-release:
@@ -162,7 +162,7 @@ jobs:
         artifact_name: ispc_llvm20rel_linux
         runner: ubuntu-22.04
         llvm_version: "20.1"
-        llvm_tar: llvm-20.1.2-ubuntu22.04-Release-x86.arm.wasm.tar.xz
+        llvm_tar: llvm-20.1.4-ubuntu22.04-Release-x86.arm.wasm.tar.xz
         enable_cross: true
 
   linux-build-ispc-xe-llvm20-release:
@@ -173,7 +173,7 @@ jobs:
       artifact_name: ispc_xe_llvm20rel_linux
       runner: ubuntu-22.04
       llvm_version: "20.1"
-      llvm_tar: llvm-20.1.2-ubuntu22.04-Release-x86.arm.wasm.tar.xz
+      llvm_tar: llvm-20.1.4-ubuntu22.04-Release-x86.arm.wasm.tar.xz
       enable_xe: true
 
   linux-build-ispc-wasm:
@@ -184,7 +184,7 @@ jobs:
       artifact_name: ispc-wasm-linux
       runner: ubuntu-22.04
       llvm_version: "20.1"
-      llvm_tar: llvm-20.1.2-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      llvm_tar: llvm-20.1.4-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
       enable_wasm: true
 
   linux-test:
@@ -315,7 +315,7 @@ jobs:
             full_version: "19.1.7"
             short_version: 19
           - version: "20.1"
-            full_version: "20.1.2"
+            full_version: "20.1.4"
             short_version: 20
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
@@ -391,7 +391,7 @@ jobs:
             full_version: "19.1.7"
             short_version: 19
           - version: "20.1"
-            full_version: "20.1.2"
+            full_version: "20.1.4"
             short_version: 20
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
@@ -409,7 +409,7 @@ jobs:
       artifact_name: ispc_llvm20_lto_win
       runner: windows-2019
       llvm_version: 20.1
-      llvm_tar: llvm-20.1.2-win.vs2019-Release+Asserts-lto-x86.arm.wasm.tar.7z
+      llvm_tar: llvm-20.1.4-win.vs2019-Release+Asserts-lto-x86.arm.wasm.tar.7z
       enable_lto: true
 
   win-build-ispc-xe-llvm20-release:
@@ -420,7 +420,7 @@ jobs:
       artifact_name: ispc_xe_llvm20rel_win
       runner: windows-2019
       llvm_version: 20.1
-      llvm_tar: llvm-20.1.2-win.vs2019-Release-x86.arm.wasm.tar.7z
+      llvm_tar: llvm-20.1.4-win.vs2019-Release-x86.arm.wasm.tar.7z
       enable_xe: true
 
   win-build-ispc-wasm:
@@ -431,7 +431,7 @@ jobs:
       artifact_name: ispc-wasm-windows
       runner: windows-2019
       llvm_version: 20.1
-      llvm_tar: llvm-20.1.2-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      llvm_tar: llvm-20.1.4-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
       enable_wasm: true
 
   win-test:
@@ -507,7 +507,7 @@ jobs:
     runs-on: windows-2019
     env:
       LLVM_VERSION: "20.1"
-      LLVM_TAR: llvm-20.1.2-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      LLVM_TAR: llvm-20.1.4-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
       LLVM_HOME: "C:\\projects\\llvm"
       CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       BUILD_TYPE: "Release"
@@ -540,7 +540,7 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       LLVM_VERSION: "20.1"
-      LLVM_TAR: llvm-20.1.2-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-20.1.4-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
       with:
