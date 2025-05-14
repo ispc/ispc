@@ -1,3 +1,124 @@
+=== v1.27.0 === (15 May 2025)
+
+This release introduces AVX10.2 support, extended standard library coverage for
+small integer types, full support for element-wise functions on short vectors in
+the standard library, and numerous bug fixes. It is based on a patched LLVM
+20.1.4.
+
+New targets:
+
+New targets have been added for platforms supporting Intel® Advanced Vector
+Extensions 10.2: `avx10.2-x4`, `avx10.2-x8`, `avx10.2-x16`, `avx10.2-x32`, and
+`avx10.2-x64`.
+
+Standard library:
+
+- Cross-lane operations - `broadcast`, `rotate`, `shift`, and `shuffle` - are
+  now supported for unsigned types.
+- Reduction functions now support signed and unsigned `int8` and `int16` types.
+- Support for packed_load and packed_store has been extended to include: `int8`,
+  `int16` (signed and unsigned), `float16`, `float`, and `double`.
+- The cube root function `cbrt` has been added to the standard library for
+  `float` and `double` types.
+- Dot product functionality has been enhanced with mixed signedness support for
+  16-bit integers. The following input combinations are now supported: u16 x u16
+  (unsigned x unsigned), i16 x i16 (signed x signed), u16 x i16 (mixed
+  signedness). For consistency with other naming conventions, the function
+  `dot2add_i16_packed` has been renamed to `dot2add_i16i16_packed`.
+- The support for short vector types has been added for the following element
+  wise functions: `min`, `max`, `abs`, `round`, `floor`, `ceil`, `trunc`,
+  `rcp`, `rcp_fast`, `sqrt`, `rsqrt`, `sin`, `asin`, `cos`, `acos`, `tan`,
+  `atan`, `exp`, `log`, `atan2`, `pow`, and `cbrt`.
+
+Language changes:
+
+- The `aligned(N)` attribute is now available to specify the alignment of
+  variables and struct types.
+- A bug was fixed where unsigned array indices or pointer arithmetic with
+  unsigned offsets could result in overflow due to sign extension when promoting
+  to pointer size. This issue is now resolved, and the compiler correctly
+  handles unsigned integer indexing and pointer arithmetic.
+
+Compiler Switches Behavior:
+
+- The `-dD` and `-dM` flags are now supported, aiding in debugging the
+  preprocessor and inspecting defined macros.
+
+Template support bug fixes:
+
+- Fixed instantiation of template functions when assigned to function pointers.
+- Improved implicit template argument deduction.
+- Fixed a crash occurring when a nested template function did not use a
+  templated argument.
+
+Performance improvements:
+
+- Improved the performance of masked loads and stores for AVX-512 x32 and x64
+  targets by an order of magnitude (approximately ~10x on microbenchmarks).
+- `packed_store_active2` on AVX2 has been improved: ~65% speedup for `int32`, ~45% speedup for `int64`
+
+Other bug fixes:
+
+- Fixed a crash during integer division by ensuring it occurs only on active
+  lanes, improving stability and performance.
+- Resolved crashes related to:
+  - Incomplete struct types
+  - Use of enum fields in structs
+  - Pointer declarations to function types
+  - Unsupported binary operations on pointer types
+  - Casting to unsized arrays in malformed code
+  - Accessing array elements through pointers
+  - Structure member access within pointer arithmetic
+- Improved compiler warnings for incomplete types.
+- Corrected address calculations involving unsigned indices in array accesses
+  and pointer arithmetic.
+
+Ecosystem improvements:
+
+- ISPC is now supported by GitHub's Linguist, enabling proper syntax
+  highlighting for `.ispc` files on GitHub.
+
+- ISPC syntax support has been added to the following editors, thanks to
+  community contributions:
+  - CudaText - https://github.com/Alexey-T/CudaText/issues/5944
+  - ECoder - https://github.com/SpartanJ/ecode/issues/436
+
+- If you are integrating ISPC with Python, we recommend using nanobind. Examples
+  are available, and we plan to generate nanobind-compatible headers in a future
+release.
+
+Recommended versions of Runtime Dependencies when targeting GPU:
+
+Linux:
+
+ - Intel(R) Graphics Compute Runtime
+   https://github.com/intel/compute-runtime/releases/tag/25.13.33276.16
+ - Level Zero Loader
+   https://github.com/oneapi-src/level-zero/releases/tag/v1.20.2
+ - Threading Building Blocks (TBB)
+
+Alternatively, you can use a validated gfx driver stack supporting Intel® Arc™
+available at https://dgpu-docs.intel.com/driver/installation.html
+
+Windows:
+
+ - Intel(R) Graphics Windows(R) DCH Drivers 32.0.101.6083
+   https://www.intel.com/content/www/us/en/download/785597/intel-arc-iris-xe-graphics-windows.html
+ - Level Zero Loader
+   https://github.com/oneapi-src/level-zero/releases/tag/v1.20.2
+ - OpenCL™ Offline Compiler (OCLOC)
+   https://www.intel.com/content/www/us/en/developer/articles/tool/oneapi-standalone-components.html
+   (this is needed for AoT compilation on Windows only)
+ - Supported GPU platforms: Intel(R) Arc Graphics, 11th-13th Gen Intel(R) Core
+   processor graphics
+
+Components revisions used in GPU-enabled build:
+ - https://github.com/KhronosGroup/SPIRV-LLVM-Translator/commit/6dd8f2a1
+ - https://github.com/intel/vc-intrinsics/commit/b980474c
+ - https://github.com/oneapi-src/level-zero/commit/d7a44e0 (v1.20.2)
+ - https://github.com/llvm/llvm-project/commit/ec28b8f (llvmorg-20.1.4) +
+   patches from llvm_patches folder
+
 === v1.26.0 === (6 February 2025)
 
 ISPC release featuring improved ARM support, new "generic" targets that simplify
