@@ -316,7 +316,7 @@ static void *lAtomicCompareAndSwapPointer(void **v, void *newValue, void *oldVal
 #endif // ISPC_IS_WINDOWS
 }
 
-static int32_t lAtomicCompareAndSwap32(volatile int32_t *v, int32_t newValue, int32_t oldValue) {
+[[maybe_unused]] static int32_t lAtomicCompareAndSwap32(volatile int32_t *v, int32_t newValue, int32_t oldValue) {
 #ifdef ISPC_IS_WINDOWS
     return InterlockedCompareExchange((volatile LONG *)v, newValue, oldValue);
 #else
