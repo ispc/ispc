@@ -558,9 +558,11 @@ if (UNIX)
     endif()
 else()
     list(APPEND COMPILE_DEFINITIONS NOMINMAX)
-    if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-        list(APPEND COMPILE_DEFINITIONS NDEBUG)
-    endif()
+endif()
+
+# Pass NDEBUG for non-debug builds on all platforms
+if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+    list(APPEND COMPILE_DEFINITIONS NDEBUG)
 endif()
 
 # TODO: It may be confusing that some CMake variables start with ISPC but some
