@@ -1,5 +1,6 @@
 #include "test_static.isph"
-
+// rule: skip on cpu=tgllp
+// rule: skip on cpu=dg2
 task void f_di(uniform float RET[], uniform double aFOO[], uniform int b[]) {
     varying double f = aFOO[programIndex];
     varying double calc = cbrt(f) * cbrt(f) * cbrt(f);
