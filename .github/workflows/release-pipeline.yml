@@ -8,30 +8,70 @@ permissions: read-all
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: 'ISPC Version'
+      ref:
+        description: 'ISPC reference to checkout (SHA/tag/branch)'
         required: true
         type: string
-        default: 'v1.26.0'
+        default: 'main'
 
 jobs:
-  aarch64:
-    runs-on: ubuntu-22.04-arm
+  define-params:
+    runs-on: ubuntu-22.04
+    outputs:
+      ispc_version: ${{ steps.define.outputs.ispc_version }}
+      docker_dir: ${{ steps.define.outputs.docker_dir }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
         with:
-          ref: ${{ github.event.inputs.version }}
+          fetch-depth: 0
+          path: ispc
+          ref: ${{ inputs.ref }}
+
+      - name: Define ISPC version
+        id: define
+        run: |
+          file_path="ispc/common/version.h"
+          version_line=$(grep '#define ISPC_VERSION ' "$file_path")
+          if [[ -n "$version_line" ]]; then
+            # Extract the version number
+            VERSION=$(echo "$version_line" | awk -F'"' '{print $2}')
+            if [[ "$VERSION" == *"dev"* ]]; then
+              echo "Version has a dev suffix, so it is a trunk archive"
+              DOCKER_DIR="docker/ubuntu/18.04/cpu_ispc_build"
+            else
+              echo "Version does not have a dev suffix, so it is a release archive"
+              DOCKER_DIR="docker/v${VERSION}/ubuntu18.04/"
+            fi
+          else
+            echo "Version line not found in the file."
+          fi
+          echo "ispc_version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "ispc_version=${VERSION}" >> "$GITHUB_STEP_SUMMARY"
+          echo "docker_dir=${DOCKER_DIR}" >> "$GITHUB_OUTPUT"
+          echo "docker_dir=${DOCKER_DIR}" >> "$GITHUB_STEP_SUMMARY"
+
+
+  aarch64:
+    runs-on: ubuntu-22.04-arm
+    needs: [define-params]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.ref }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
 
       - name: Build Docker image
-        working-directory: docker/${{ github.event.inputs.version }}/ubuntu18.04
+        working-directory: ${{ needs.define-params.outputs.docker_dir }}
         run: |
           docker build --no-cache \
             --build-arg XE_DEPS=OFF \
             --build-arg LTO=ON \
+            --build-arg SHA=${{ inputs.ref }} \
             -t ispc-release .
 
       - name: Extract tarball from container
@@ -47,20 +87,23 @@ jobs:
 
   x86_64:
     runs-on: ubuntu-22.04
+    needs: [define-params]
     steps:
       - name: Checkout repository
         uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
         with:
-          ref: ${{ github.event.inputs.version }}
+          fetch-depth: 0
+          ref: ${{ inputs.ref }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
 
       - name: Build Docker image
-        working-directory: docker/${{ github.event.inputs.version }}/ubuntu18.04
+        working-directory: ${{ needs.define-params.outputs.docker_dir }}
         run: |
           docker build --no-cache \
             --build-arg LTO=ON \
+            --build-arg SHA=${{ inputs.ref }} \
             -t ispc-release .
 
       - name: Extract tarball from container
