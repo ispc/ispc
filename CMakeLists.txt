@@ -57,7 +57,6 @@ if (APPLE)
         set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version to support")
     endif()
     message(STATUS "Targeting minimum macOS version: ${CMAKE_OSX_DEPLOYMENT_TARGET}")
-
 endif()
 
 set(PROJECT_NAME ispc)
@@ -78,6 +77,8 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(OUTPUT_DEBUG Debug/bin)
 set(OUTPUT_RELEASE Release/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin )
+
+set(ISPC_VERSION_FULL "${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}.${ISPC_VERSION_PATCH}")
 
 if(CMAKE_BUILD_TYPE)
     # Validate build type
@@ -204,7 +205,7 @@ else()
     set(ISPC_UNIX_TARGET OFF)
 endif()
 
-if (APPLE)
+if (APPLE AND NOT ISPC_FRAMEWORK)
     # Use standard macOS SDK location if this is not specified.
     if (NOT ISPC_MACOS_SDK_PATH)
         set(command "xcrun" "--show-sdk-path")
@@ -874,6 +875,7 @@ function(add_ispc_slim NAME)
     endif()
 endfunction()
 
+
 # Define libraries that are built in the project. Some of them are shared across multiple executable targets.
 add_library(optimization OBJECT EXCLUDE_FROM_ALL ${OPT_SOURCES})
 configure_ispc_obj(optimization)
@@ -1049,7 +1051,7 @@ if (ISPC_PREPARE_PACKAGE)
         # set(CPACK_WIX_UPGRADE_GUID "EDD858F2-19B0-4E5B-B9B9-2A09B85D451C")
         # set(CPACK_WIX_CMAKE_PACKAGE_REGISTRY "ISPC")
         # WIX generator expects version in format x.y.z where x, y, z are numbers
-        set(CPACK_PACKAGE_VERSION "${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}.${ISPC_VERSION_PATCH}")
+        set(CPACK_PACKAGE_VERSION "${ISPC_VERSION_FULL}")
     else()
         set(CPACK_GENERATOR "TGZ")
         if (APPLE)
