@@ -94,8 +94,6 @@
 // clang/Analysis/CFG.h contains typename with name CALLBACK, which is got screwed up.
 // So we include it after clang includes.
 #include <windows.h>
-// Note that this define must be after clang includes, as they undefining this symbol.
-#define strcasecmp stricmp
 #endif
 
 using namespace ispc;
