@@ -35,8 +35,6 @@ class raw_string_ostream;
 
 namespace ispc {
 
-struct DispatchHeaderInfo;
-
 #ifdef ISPC_XE_ENABLED
 // Derived from ocloc_api.h
 using invokePtr = int (*)(unsigned, const char **, const uint32_t, const uint8_t **, const uint64_t *, const char **,
@@ -299,6 +297,29 @@ class Module {
     };
 
     /**
+     * @struct DispatchHeaderInfo
+     * Information for generating dispatch headers
+     */
+    struct DispatchHeaderInfo {
+        bool EmitUnifs = false;
+        bool EmitFuncs = false;
+        bool EmitFrontMatter = false;
+        bool EmitBackMatter = false;
+        bool Emit4 = false;
+        bool Emit8 = false;
+        bool Emit16 = false;
+        FILE *file = nullptr;
+        const char *fn = nullptr;
+        std::string header{};
+
+        bool initialize(std::string headerFileName);
+
+        void closeFile();
+
+        ~DispatchHeaderInfo() { closeFile(); }
+    };
+
+    /**
      * @enum CompilationMode
      * Defines whether the module is being compiled alone or as part of a multi-target compilation
      */
@@ -343,6 +364,8 @@ class Module {
 
     static int LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputType, std::string outFileName);
 
+    const char *RegisterDependency(const std::string &fileName);
+
     /** Total number of errors encountered during compilation. */
     int errorCount{0};
 
@@ -378,6 +401,31 @@ class Module {
     std::unique_ptr<CPPBuffer> bufferCPP{nullptr};
 
     std::vector<std::pair<const Type *, SourcePos>> exportedTypes;
+
+    const std::vector<OutputTypeInfo> outputTypeInfos = {
+        /* Asm         */ {"assembly", {"s"}},
+        /* Bitcode     */ {"LLVM bitcode", {"bc"}},
+        /* BitcodeText */ {"LLVM assembly", {"ll"}},
+        /* Object      */ {"object", {"o", "obj"}},
+        /* Header      */ {"header", {"h", "hh", "hpp"}},
+        /* Deps        */ {"dependencies", {}}, // No suffix
+        /* DevStub     */ {"dev-side offload stub", {"c", "cc", "c++", "cxx", "cpp"}},
+        /* HostStub    */ {"host-side offload stub", {"c", "cc", "c++", "cxx", "cpp"}},
+        /* CPPStub     */ {"preprocessed stub", {"ispi", "i"}},
+#ifdef ISPC_XE_ENABLED
+        /* ZEBIN       */ {"L0 binary", {"bin"}},
+        /* SPIRV       */ {"SPIR-V", {"spv"}},
+#endif
+        // Deps and other types that don't require warnings can be omitted
+    };
+
+    /*! list of files encountered by the parser. this allows emitting of
+        the module file's dependencies via the -MMM option */
+    std::set<std::string> registeredDependencies;
+
+    /* This set is used to store strings that is referenced in yylloc (SourcePos)
+       in lexer once and not to lost memory via just strduping them. */
+    std::set<std::string> pseudoDependencies;
 
     /**
      * Compiles the module for a single target architecture.
@@ -437,6 +485,11 @@ class Module {
      * @return Zero on success, non-zero if any file writing operation failed
      */
     int WriteOutputFiles();
+
+    /** Check if the given output type is valid for the specified file name
+      suffix. If not, print a warning message. Correct suffixes are defined in
+      outputTypeInfos. */
+    void reportInvalidSuffixWarning(std::string filename, OutputType outputType);
 
     /** Write the corresponding output type to the given file.  Returns
         true on success, false if there has been an error.  The given
