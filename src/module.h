@@ -242,18 +242,19 @@ class Module {
          * @param outputFlags       Flags controlling output generation
          * @param outFileName       Main output file name
          * @param headerFileName    Header file name
+         * @param nbWrapFileName    Nanobind wrapper file name
          * @param depsFileName      Dependencies file name
          * @param hostStubFileName  Host stub file name
          * @param devStubFileName   Device stub file name
          * @param depsTargetName     Dependencies target name
          */
         Output(OutputType outputType, OutputFlags outputFlags, const char *outFileName, const char *headerFileName,
-               const char *depsFileName, const char *hostStubFileName, const char *devStubFileName,
-               const char *depsTargetName)
+               const char *nbWrapFileName, const char *depsFileName, const char *hostStubFileName,
+               const char *devStubFileName, const char *depsTargetName)
             : type(outputType), flags(outputFlags), depsTarget(depsTargetName ? depsTargetName : ""),
               out(outFileName ? outFileName : ""), header(headerFileName ? headerFileName : ""),
-              deps(depsFileName ? depsFileName : ""), hostStub(hostStubFileName ? hostStubFileName : ""),
-              devStub(devStubFileName ? devStubFileName : "") {}
+              nbWrap(nbWrapFileName ? nbWrapFileName : ""), deps(depsFileName ? depsFileName : ""),
+              hostStub(hostStubFileName ? hostStubFileName : ""), devStub(devStubFileName ? devStubFileName : "") {}
 
         OutputType type{};
         OutputFlags flags{};
@@ -263,6 +264,7 @@ class Module {
         // Output file names
         std::string out{};      /**< Main output file name */
         std::string header{};   /**< Header file name */
+        std::string nbWrap{};   /**< Nanobind wrapper file name */
         std::string deps{};     /**< Dependencies file name */
         std::string hostStub{}; /**< Host stub file name */
         std::string devStub{};  /**< Device stub file name */
