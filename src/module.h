@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <stdio.h>
 #include <string>
 #include <vector>
 
@@ -134,17 +135,18 @@ class Module {
     /** After a source file has been compiled, output can be generated in a
         number of different formats. */
     enum OutputType {
-        Asm = 0,     /** Generate text assembly language output */
-        Bitcode,     /** Generate LLVM IR bitcode output */
-        BitcodeText, /** Generate LLVM IR Text output */
-        Object,      /** Generate a native object file */
-        Header,      /** Generate a C/C++ header file with
-                         declarations of 'export'ed functions, global
-                         variables, and the types used by them. */
-        Deps,        /** generate dependencies */
-        DevStub,     /** generate device-side offload stubs */
-        HostStub,    /** generate host-side offload stubs */
-        CPPStub,     /** generate preprocessed stubs (-E/-dD/-dM mode) */
+        Asm = 0,         /** Generate text assembly language output */
+        Bitcode,         /** Generate LLVM IR bitcode output */
+        BitcodeText,     /** Generate LLVM IR Text output */
+        Object,          /** Generate a native object file */
+        Header,          /** Generate a C/C++ header file with
+                             declarations of 'export'ed functions, global
+                             variables, and the types used by them. */
+        NanobindWrapper, /** Generate a C++ wrapper file for nanobind */
+        Deps,            /** generate dependencies */
+        DevStub,         /** generate device-side offload stubs */
+        HostStub,        /** generate host-side offload stubs */
+        CPPStub,         /** generate preprocessed stubs (-E/-dD/-dM mode) */
 #ifdef ISPC_XE_ENABLED
         ZEBIN, /** generate L0 binary file */
         SPIRV, /** generate spir-v file */
@@ -410,6 +412,7 @@ class Module {
         /* BitcodeText */ {"LLVM assembly", {"ll"}},
         /* Object      */ {"object", {"o", "obj"}},
         /* Header      */ {"header", {"h", "hh", "hpp"}},
+        /* Nanobind    */ {"nanobind wrapper", {"cpp", "cxx", "cc"}},
         /* Deps        */ {"dependencies", {}}, // No suffix
         /* DevStub     */ {"dev-side offload stub", {"c", "cc", "c++", "cxx", "cpp"}},
         /* HostStub    */ {"host-side offload stub", {"c", "cc", "c++", "cxx", "cpp"}},
@@ -500,6 +503,8 @@ class Module {
     bool writeOutput();
 
     bool writeHeader();
+    void writeHeader(FILE *f);
+    bool writeNanobindWrapper();
     bool writeDispatchHeader(DispatchHeaderInfo *DHI);
 
     /**
