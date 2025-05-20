@@ -478,6 +478,7 @@ list(APPEND FRONTEND_SOURCES
     src/intrinsics.cpp
     src/module.cpp
     src/module.h
+    src/preprocessor.cpp
     src/stmt.cpp
     src/stmt.h
     src/sym.cpp
