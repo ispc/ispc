@@ -45,6 +45,14 @@ using invokePtr = int (*)(unsigned, const char **, const uint32_t, const uint8_t
 using freeOutputPtr = int (*)(uint32_t *, uint8_t ***, uint64_t **, char ***);
 #endif
 
+// Definition and member object capturing preprocessing stream during Module lifetime.
+struct CPPBuffer {
+    CPPBuffer() : str{}, os{std::make_unique<llvm::raw_string_ostream>(str)} {}
+    ~CPPBuffer() = default;
+    std::string str;
+    std::unique_ptr<llvm::raw_string_ostream> os;
+};
+
 /**
  * @class Module
  * Main container for all data related to a compiled ISPC translation unit.
@@ -367,14 +375,6 @@ class Module {
     Output output{};
     CompilationMode m_compilationMode{};
 
-    // Definition and member object capturing preprocessing stream during Module lifetime.
-    struct CPPBuffer {
-        CPPBuffer() : str{}, os{std::make_unique<llvm::raw_string_ostream>(str)} {}
-        ~CPPBuffer() = default;
-        std::string str;
-        std::unique_ptr<llvm::raw_string_ostream> os;
-    };
-
     std::unique_ptr<CPPBuffer> bufferCPP{nullptr};
 
     std::vector<std::pair<const Type *, SourcePos>> exportedTypes;
@@ -469,20 +469,6 @@ class Module {
 
     int preprocessAndParse();
     int parse();
-
-    /** Run the preprocessor on the given file, writing to the output stream.
-        Returns the number of diagnostic errors encountered. */
-    int execPreprocessor(const char *filename, llvm::raw_string_ostream *ostream,
-                         Globals::PreprocessorOutputType type = Globals::PreprocessorOutputType::Cpp) const;
-
-    /** Helper function to initialize the internal CPP buffer. **/
-    void initCPPBuffer();
-
-    /** Helper function to parse internal CPP buffer. **/
-    void parseCPPBuffer();
-
-    /** Helper function to clean internal CPP buffer. **/
-    void clearCPPBuffer();
 };
 
 } // namespace ispc
