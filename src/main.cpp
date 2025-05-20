@@ -122,6 +122,7 @@ static void lPrintVersion() {
     printf("    [-MF <filename>]\t\t\tWhen used with `-M', specifies a file to write the dependencies to\n");
     printf("    [-MT <filename>]\t\t\tWhen used with `-M', changes the target of the rule emitted by dependency "
            "generation\n");
+    printf("    [--nanobind-wrapper=<filename>]\tWrite a nanobind wrapper to given file\n");
     printf("    [--no-omit-frame-pointer]\t\tDisable frame pointer omission. It may be useful for profiling\n");
     printf("    [--nostdlib]\t\t\tDon't make the ispc standard library available\n");
     printf("    [--no-pragma-once]\t\t\tDon't use #pragma once in created headers\n");
@@ -628,6 +629,7 @@ int main(int Argc, char *Argv[]) {
 #endif
     char *file = nullptr;
     const char *headerFileName = nullptr;
+    const char *nanobindWrapperFileName = nullptr;
     const char *outFileName = nullptr;
     const char *depsFileName = nullptr;
     const char *depsTargetName = nullptr;
@@ -1018,6 +1020,8 @@ int main(int Argc, char *Argv[]) {
             }
         } else if (!strncmp(argv[i], "--header-outfile=", 17)) {
             headerFileName = argv[i] + strlen("--header-outfile=");
+        } else if (!strncmp(argv[i], "--nanobind-wrapper=", 19)) {
+            nanobindWrapperFileName = argv[i] + strlen("--nanobind-wrapper=");
         } else if (!strcmp(argv[i], "-O0")) {
             g->opt.level = 0;
             g->codegenOptLevel = Globals::CodegenOptLevel::None;
@@ -1270,7 +1274,7 @@ int main(int Argc, char *Argv[]) {
     }
 
     if (outFileName == nullptr && headerFileName == nullptr && (depsFileName == nullptr && !flags.isDepsToStdout()) &&
-        hostStubFileName == nullptr && devStubFileName == nullptr) {
+        hostStubFileName == nullptr && devStubFileName == nullptr && nanobindWrapperFileName == nullptr) {
         Warning(SourcePos(), "No output file or header file name specified. "
                              "Program will be compiled and warnings/errors will "
                              "be issued, but no output will be generated.");
@@ -1349,8 +1353,8 @@ int main(int Argc, char *Argv[]) {
     int ret = 0;
     {
         llvm::TimeTraceScope TimeScope("ExecuteCompiler");
-        Module::Output output = Module::Output(ot, flags, outFileName, headerFileName, depsFileName, hostStubFileName,
-                                               devStubFileName, depsTargetName);
+        Module::Output output = Module::Output(ot, flags, outFileName, headerFileName, nanobindWrapperFileName,
+                                               depsFileName, hostStubFileName, devStubFileName, depsTargetName);
         ret = Module::CompileAndOutput(file, arch, cpu, targets, output);
     }
 
