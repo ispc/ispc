@@ -54,7 +54,7 @@ if __name__ == "__main__":
     ispc_transform.transform_points(
         points_x, points_y,
         ispc_result_x, ispc_result_y,
-        transform, strength
+        transform, strength, points_x.shape[0]
     )
     ispc_time = time.perf_counter() - start
     print(f"ISPC/nanobind time: {ispc_time:.9f} seconds")
