@@ -1725,13 +1725,6 @@ bool Module::writeSPIRV(llvm::Module *module, std::string outFileName) {
     return true;
 }
 
-// Translate ISPC CPU name to Neo representation
-static std::string translateCPU(const std::string &CPU) {
-    // For the platforms that we support it's 1:1 mapping at the moment,
-    // in case of exceptions, they need to be handled here.
-    return CPU;
-}
-
 // Copy outputs. Required file should have provided extension (it is
 // different for different binary kinds).
 static void saveOutput(uint32_t numOutputs, uint8_t **dataOutputs, uint64_t *lenOutputs, char **nameOutputs,
@@ -1762,7 +1755,6 @@ bool Module::writeZEBin() {
     std::vector<char> spirStr(translatedStr.begin(), translatedStr.end());
 
     const std::string CPUName = g->target->getCPU();
-    const std::string neoCPU = translateCPU(CPUName);
 
     invokePtr invoke;
     freeOutputPtr freeOutput;
@@ -1809,7 +1801,7 @@ bool Module::writeZEBin() {
     oclocArgs.push_back("ocloc");
     oclocArgs.push_back("compile");
     oclocArgs.push_back("-device");
-    oclocArgs.push_back(neoCPU.c_str());
+    oclocArgs.push_back(CPUName.c_str());
     oclocArgs.push_back("-spirv_input");
     oclocArgs.push_back("-file");
     oclocArgs.push_back(spvFileName);
