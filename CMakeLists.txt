@@ -471,6 +471,7 @@ list(APPEND FRONTEND_SOURCES
     src/ctx.h
     src/decl.cpp
     src/decl.h
+    src/emit_headers.cpp
     src/expr.cpp
     src/expr.h
     src/func.cpp
@@ -478,6 +479,7 @@ list(APPEND FRONTEND_SOURCES
     src/intrinsics.cpp
     src/module.cpp
     src/module.h
+    src/preprocessor.cpp
     src/stmt.cpp
     src/stmt.h
     src/sym.cpp

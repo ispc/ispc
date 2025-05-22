@@ -937,7 +937,7 @@ static void lHandleCppHash(SourcePos *pos) {
         filename.push_back(*src);
         ++src;
     }
-    pos->name = RegisterDependency(filename);
+    pos->name = m->RegisterDependency(filename);
 }
 
 

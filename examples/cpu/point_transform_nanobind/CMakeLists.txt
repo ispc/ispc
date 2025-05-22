@@ -41,7 +41,7 @@ set(ISPC_SRC ${CMAKE_CURRENT_SOURCE_DIR}/point_transform.ispc)
 
 # Set ISPC output files
 set(ISPC_OBJ ${CMAKE_CURRENT_BINARY_DIR}/point_transform.o)
-set(ISPC_HEADER ${CMAKE_CURRENT_BINARY_DIR}/point_transform_ispc.h)
+set(ISPC_NANOBIND_WRAPPER ${CMAKE_CURRENT_BINARY_DIR}/ispc_transform.cpp)
 
 # Set ISPC flags
 set(ISPC_FLAGS -O2 --target=host)
@@ -53,21 +53,21 @@ endif()
 
 # Add custom command to compile ISPC file
 add_custom_command(
-    OUTPUT ${ISPC_OBJ} ${ISPC_HEADER}
-    COMMAND ${ISPC_EXECUTABLE} ${ISPC_FLAGS} ${ISPC_SRC} -o ${ISPC_OBJ} -h ${ISPC_HEADER}
+    OUTPUT ${ISPC_OBJ} ${ISPC_NANOBIND_WRAPPER}
+    COMMAND ${ISPC_EXECUTABLE} ${ISPC_FLAGS} ${ISPC_SRC} -o ${ISPC_OBJ} --nanobind-wrapper=${ISPC_NANOBIND_WRAPPER}
     DEPENDS ${ISPC_SRC}
     COMMENT "Compiling ISPC file: ${ISPC_SRC}"
 )
 
-# Make sure the transform_ispc.h file is created before it's needed
+# Make sure the ispc_transform.cpp file is created before it's needed
 add_custom_target(generate_ispc_files
-    DEPENDS ${ISPC_OBJ} ${ISPC_HEADER}
+    DEPENDS ${ISPC_OBJ} ${ISPC_NANOBIND_WRAPPER}
 )
 
 # Add nanobind extension module
 nanobind_add_module(
     ispc_transform
-    nanobind_wrapper.cpp
+    ${ISPC_NANOBIND_WRAPPER}
 )
 
 # Make sure the ISPC files are generated before building the module
