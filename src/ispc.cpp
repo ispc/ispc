@@ -2190,6 +2190,54 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         cpu = a.GetDefaultNameFromType(CPUID).c_str();
     }
 
+    if (g->opt.disableZMM) {
+        std::string target_string = ISPCTargetToString(m_ispc_target);
+        const char *x32_64_msg = "--opt=disable-zmm is not supported for %s target, consider using the generic target "
+                                 "instead: `--target=generic-i1x%s --cpu=%s --opt=disable-zmm`";
+        switch (m_ispc_target) {
+        case ISPCTarget::avx512skx_x16:
+        case ISPCTarget::avx512icl_x16:
+        case ISPCTarget::avx512spr_x16:
+        case ISPCTarget::avx10_2_x16:
+            Warning(SourcePos(),
+                    "Using --opt=disable-zmm for %s target can lead to compiler crashes, consider using the generic "
+                    "target instead: `--target=generic-i1x16 --cpu=%s --opt=disable-zmm`",
+                    target_string.c_str(), cpu);
+            break;
+        case ISPCTarget::avx512skx_x32:
+        case ISPCTarget::avx512icl_x32:
+        case ISPCTarget::avx512spr_x32:
+        case ISPCTarget::avx10_2_x32:
+            Warning(SourcePos(), x32_64_msg, target_string.c_str(), "32", cpu);
+            break;
+        case ISPCTarget::avx512skx_x64:
+        case ISPCTarget::avx512icl_x64:
+        case ISPCTarget::avx512spr_x64:
+        case ISPCTarget::avx10_2_x64:
+            Warning(SourcePos(), x32_64_msg, target_string.c_str(), "64", cpu);
+            break;
+        default:
+            break;
+        }
+    }
+
+    if ((m_ispc_target == ISPCTarget::generic_i32x16 || m_ispc_target == ISPCTarget::generic_i1x16 ||
+         m_ispc_target == ISPCTarget::generic_i1x32 || m_ispc_target == ISPCTarget::generic_i1x64) &&
+        (CPUID == CPU_SKX || CPUID == CPU_ICL || CPUID == CPU_SPR
+#if LLVM_VERSION >= ISPC_LLVM_20_0
+         || CPUID == CPU_DMR
+#endif
+         )) {
+        // Support --opt=disable-zmm for generic targets when CPU with avx512 support is specified.
+        if (g->opt.disableZMM) {
+            this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
+            this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
+        } else {
+            this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "512"));
+            this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "512"));
+        }
+    }
+
     this->m_cpu = cpu;
 
     if (!error) {
