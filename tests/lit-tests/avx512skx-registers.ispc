@@ -5,13 +5,15 @@
 // This code is especially problematic, as shuffle generates a sequence of gep
 // instructions, which are later combined to shuffle by code gen.
 
-// RUN: %{ispc} %s --emit-asm --target=avx512skx-x16 -o - 2>&1 | FileCheck %s -check-prefix=ZMM
-// RUN: %{ispc} %s --emit-asm --target=avx512skx-x16 --opt=disable-zmm -o - 2>&1 | FileCheck %s -check-prefix=YMM
+// RUN: %{ispc} %s --nowrap --emit-asm --target=avx512skx-x16 -o - 2>&1 | FileCheck %s -check-prefix=ZMM
+// RUN: %{ispc} %s --nowrap --emit-asm --target=avx512skx-x16 --opt=disable-zmm -o - 2>&1 | FileCheck %s -check-prefix=YMM
 
 // REQUIRES: X86_ENABLED
 
 // ZMM-NOT: ymm
 // YMM-NOT: zmm
+
+// YMM: Warning: Using --opt=disable-zmm for avx512skx-x16 target can lead to compiler crashes, consider using the generic target instead: `--target=generic-i1x16 --cpu=skx --opt=disable-zmm`
 
 struct FM {
     float M[16];
