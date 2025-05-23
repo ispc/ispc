@@ -3351,9 +3351,14 @@ int Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *o
     llvm::raw_fd_ostream stderrRaw(2, false);
 
     // Create Diagnostic engine
-    llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagIDs(new clang::DiagnosticIDs);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
+    clang::DiagnosticOptions diagOptions;
+    clang::TextDiagnosticPrinter diagPrinter(stderrRaw, diagOptions, false);
+#else
     llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> diagOptions(new clang::DiagnosticOptions);
     clang::TextDiagnosticPrinter diagPrinter(stderrRaw, diagOptions.get(), false);
+#endif
+    llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagIDs(new clang::DiagnosticIDs);
     clang::DiagnosticsEngine diagEng(diagIDs, diagOptions, &diagPrinter, false);
 
     diagEng.setSuppressAllDiagnostics(g->ignoreCPPErrors);
@@ -3421,7 +3426,9 @@ int Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *o
 
     // deallocate some objects
     diagIDs.reset();
+#if ISPC_LLVM_VERSION < ISPC_LLVM_21_0
     diagOptions.reset();
+#endif
     delete tgtInfo;
 
     // Return preprocessor diagnostic errors after processing
