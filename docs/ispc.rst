@@ -142,6 +142,9 @@ Contents:
     * `noescape`_
     * `address_space`_
     * `unmangled`_
+    * `external_only`_
+    * `deprecated`_
+    * `aligned`_
 
   + `Expressions`_
 
