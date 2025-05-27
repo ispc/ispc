@@ -432,7 +432,10 @@ bool lIsAnyArgumentKind(const IITDesc &D) {
 
 bool lIsArgDesc(const IITDesc &D) {
     bool IsArgDescriptor = D.Kind == IITDesc::Argument || D.Kind == IITDesc::ExtendArgument ||
-                           D.Kind == IITDesc::TruncArgument || D.Kind == IITDesc::HalfVecArgument ||
+                           D.Kind == IITDesc::TruncArgument ||
+#if ISPC_LLVM_VERSION < ISPC_LLVM_21_0
+                           D.Kind == IITDesc::HalfVecArgument ||
+#endif
                            D.Kind == IITDesc::SameVecWidthArgument || D.Kind == IITDesc::VecElementArgument ||
                            D.Kind == IITDesc::Subdivide2Argument || D.Kind == IITDesc::Subdivide4Argument ||
                            D.Kind == IITDesc::VecOfBitcastsToInt;
@@ -440,6 +443,11 @@ bool lIsArgDesc(const IITDesc &D) {
 }
 
 bool lIsAliased(const IITDesc &L, const IITDesc &R) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
+    if (R.Kind == IITDesc::OneNthEltsVecArgument) {
+        return R.getArgumentNumber() == L.getArgumentNumber();
+    }
+#endif
     // Check if R is argument with MatchType and has the same argument number as L
     return lIsArgDesc(R) && R.getArgumentKind() == IITDesc::AK_MatchType && R.Kind == IITDesc::Argument &&
            R.getArgumentNumber() == L.getArgumentNumber();
@@ -502,7 +510,7 @@ void lGetOverloadedArgumentIndices(llvm::Intrinsic::ID ID, std::vector<unsigned>
             // If we didn't find any matching argument, we can create a proper
             // function declaration. I don't know if there are such intrinsics.
             llvm::StringRef name = llvm::Intrinsic::getBaseName(ID);
-            Error(pos, "Can't deduct types for function declaration of the overloaded LLVM intrinsic \"%s\".",
+            Error(pos, "Can't deduce types for function declaration of the overloaded LLVM intrinsic \"%s\".",
                   name.str().c_str());
             return;
         }
