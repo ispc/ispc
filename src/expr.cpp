@@ -4532,7 +4532,10 @@ static std::pair<llvm::Constant *, bool> lGetExprListConstant(const Type *type, 
     bool isVaryingInit = false;
     bool isNotValidForMultiTargetGlobal = false;
     if (exprs.size() == 1 && (CastType<AtomicType>(type) != nullptr || CastType<EnumType>(type) != nullptr ||
-                              CastType<PointerType>(type) != nullptr) && exprs[0] != nullptr) {
+                              CastType<PointerType>(type) != nullptr)) {
+        if (exprs[0] == nullptr) {
+            return std::pair<llvm::Constant *, bool>(nullptr, false);
+        }
         if (isStorageType) {
             return exprs[0]->GetStorageConstant(type);
         } else {
