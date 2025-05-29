@@ -4043,13 +4043,7 @@ FunctionCallExpr::FunctionCallExpr(Expr *f, ExprList *a, SourcePos p, bool il, E
     : Expr(p, FunctionCallExprID), isLaunch(il), isInvoke(iis) {
     func = f;
     args = a;
-    std::vector<const Expr *> warn;
-    if (a && a->HasAmbiguousVariability(warn)) {
-        for (auto w : warn) {
-            const TypeCastExpr *tExpr = llvm::dyn_cast<TypeCastExpr>(w);
-            tExpr->PrintAmbiguousVariability();
-        }
-    }
+
     if (lce != nullptr) {
         launchCountExpr[0] = lce[0];
         launchCountExpr[1] = lce[1];
@@ -4283,6 +4277,14 @@ Expr *FunctionCallExpr::Optimize() {
 Expr *FunctionCallExpr::TypeCheck() {
     if (func == nullptr || args == nullptr) {
         return nullptr;
+    }
+
+    std::vector<const Expr *> warn;
+    if (args && args->HasAmbiguousVariability(warn)) {
+        for (auto w : warn) {
+            const TypeCastExpr *tExpr = llvm::dyn_cast<TypeCastExpr>(w);
+            tExpr->PrintAmbiguousVariability();
+        }
     }
 
     std::vector<const Type *> argTypes;
@@ -6701,8 +6703,13 @@ void ConstExpr::Print(Indent &indent) const {
 TypeCastExpr::TypeCastExpr(const Type *t, Expr *e, SourcePos p) : Expr(p, TypeCastExprID) {
     type = t;
     expr = e;
+    preCheckType = t;
 }
-
+TypeCastExpr::TypeCastExpr(const Type *t, const Type *prechecked, Expr *e, SourcePos p) : Expr(p, TypeCastExprID) {
+    type = t;
+    expr = e;
+    preCheckType = prechecked;
+}
 /** Handle all the grungy details of type conversion between atomic types and uniform vector types.
     Given an input value in exprVal of type fromType, convert it to the
     llvm::Value with type toType.
@@ -7409,8 +7416,8 @@ bool TypeCastExpr::HasAmbiguousVariability(std::vector<const Expr *> &warn) cons
     if (expr == nullptr) {
         return false;
     }
-
-    const Type *toType = type, *fromType = expr->GetType();
+    // Check the type that was specified before the TypeCheck call.
+    const Type *toType = preCheckType, *fromType = expr->GetType();
     if (toType == nullptr || fromType == nullptr) {
         return false;
     }
@@ -7431,8 +7438,8 @@ void TypeCastExpr::PrintAmbiguousVariability() const {
             "from \"uniform\" type \"%s\" results in \"uniform\" variability.\n"
             "In the context of function argument it may lead to unexpected behavior. "
             "Casting to \"%s\" is recommended.",
-            (type->GetString()).c_str(), (exprType->GetString()).c_str(),
-            (type->GetAsUniformType()->GetString()).c_str());
+            (preCheckType->GetString()).c_str(), (exprType->GetString()).c_str(),
+            (preCheckType->GetAsUniformType()->GetString()).c_str());
 }
 
 llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
@@ -7821,7 +7828,7 @@ Expr *TypeCastExpr::TypeCheck() {
     }
 
     if (toType->HasUnboundVariability() && fromType->IsUniformType()) {
-        TypeCastExpr *tce = new TypeCastExpr(toType->GetAsUniformType(), expr, pos);
+        TypeCastExpr *tce = new TypeCastExpr(toType->GetAsUniformType(), toType, expr, pos);
         return ::TypeCheck(tce);
     }
     type = toType = type->ResolveUnboundVariability(Variability::Varying);
