@@ -141,6 +141,210 @@ def update_progress(fn, total_tests_arg, counter, max_test_length_arg):
         sys.stdout.write(progress_str)
         sys.stdout.flush()
 
+def canonicalize_filename(filename):
+    basename = os.path.splitext(os.path.basename(filename))[0]
+
+    # Replace invalid Python identifier characters with underscores
+    # Valid Python identifiers can only contain letters, digits, and underscores
+    # and cannot start with a digit
+    canonicalized = re.sub(r'[^a-zA-Z0-9_]', '_', basename)
+
+    if canonicalized and canonicalized[0].isdigit():
+        canonicalized = '_' + canonicalized
+
+    if not canonicalized:
+        canonicalized = '_'
+
+    return canonicalized
+
+def call_test_function(module_name, test_sig, func_sig, width):
+    import numpy
+    import importlib.util
+    import importlib.machinery
+
+    # func_sig is 'f_v(', so substitite ( to _cpu_entry_point
+    # because f_v_cpu_entry_point is the entry point
+    function = func_sig.replace('(', '_cpu_entry_point')
+
+    # Create a FileFinder for the current directory as we suppose that the
+    # script is run from the root project directory.
+    finder = importlib.machinery.FileFinder(
+        './',
+        (importlib.machinery.ExtensionFileLoader, importlib.machinery.EXTENSION_SUFFIXES),
+    )
+
+    spec = finder.find_spec(module_name)
+    module = importlib.util.module_from_spec(spec)
+    entry_func = getattr(module, function, None)
+
+    # Check if the functions are found in the loaded module
+    if test_sig != 7:
+        if entry_func is None:
+            raise ImportError(f"Function '{function}' not found in module '{module_name}'")
+
+    # Prepare input data
+    ARRAY_SIZE = 256
+    res = numpy.zeros(ARRAY_SIZE, dtype=numpy.float32)
+
+    dst = numpy.zeros(ARRAY_SIZE, dtype=numpy.float32)
+    vfloat = numpy.arange(1, ARRAY_SIZE + 1, dtype=numpy.float32)
+    vdouble = numpy.arange(1, ARRAY_SIZE + 1, dtype=numpy.float64)
+    vint = numpy.array([2 * (i + 1) for i in range(ARRAY_SIZE)], dtype=numpy.int32)
+    vint2 = numpy.array([i + 5 for i in range(ARRAY_SIZE)], dtype=numpy.int32)
+    b = 5.0
+
+    # Call corresponding TEST_SIG functions, it should correspond to test_static.cpp
+    if test_sig == 0:
+        entry_func(dst)
+    elif test_sig == 1:
+        entry_func(dst, vfloat)
+    elif test_sig == 2:
+        entry_func(dst, vfloat, b)
+    elif test_sig == 3:
+        entry_func(dst, vfloat, vint)
+    elif test_sig == 4:
+        entry_func(dst, vdouble, b)
+    elif test_sig == 5:
+        entry_func(dst, vdouble, b)
+    elif test_sig == 6:
+        entry_func(dst, vdouble, vint2)
+    elif test_sig == 7:
+        struct = getattr(module, f"v{width}_varying_f_sz")
+        # TODO: python object has different size than ISPC struct, so just
+        # check that we have expected class
+        instance = struct()
+        return Status.Success
+    elif test_sig == 32:
+        entry_func(b)
+    elif test_sig == 33:
+        entry_func(vfloat)
+    elif test_sig == 34:
+        entry_func(vfloat, b)
+
+    if test_sig < 32:
+        result_func = getattr(module, 'result_cpu_entry_point', None)
+        if result_func is None:
+            raise ImportError(f"Function 'result_cpu_entry_point' not found in module '{module_name}'")
+
+        result_func(res)
+        if numpy.array_equal(dst[:width], res[:width]):
+            return Status.Success
+        else:
+            print_debug(f"Test {module_name} failed: expected {res}, got {dst}", s, run_tests_log)
+            return Status.Runfail
+    else:
+        print_func = getattr(module, 'print_result_cpu_entry_point', None)
+
+        if print_func is None:
+            raise ImportError(f"Function 'print_result_cpu_entry_point' not found in module '{module_name}'")
+        print_func()
+        return Status.Success
+
+def build_ispc_extension(module_name, ispc_object, nb_wrapper, header, test_sig, width):
+    """
+    Build the ISPC extension module using setuptools and nanobind.
+
+    Usually, nanobind is built via CMake-based rules provided by the nanobind
+    project. To avoid the extra hassle of doing that, we use a different
+    approach. There is an nb_combined.cpp file in nanobind that contains
+    basically everything needed in one place. It also contains the general
+    rules to build it."
+    """
+    import os
+    import sys
+    import sysconfig
+    import tempfile
+    import shutil
+    import nanobind
+    from setuptools import setup, Extension
+    from setuptools.dist import Distribution
+    from setuptools.command.build_ext import build_ext
+
+    # Get nanobind specific paths
+    nanobind_dir = os.path.dirname(nanobind.__file__)
+    nanobind_src_dir = os.path.join(nanobind_dir, "src")
+    robin_map_include = os.path.join(nanobind_dir, "ext/robin_map/include")
+    nanobind_sources = [
+        os.path.join(nanobind_src_dir, "nb_combined.cpp"),
+    ]
+
+    # Create temporary directory for build files
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Define an extension module
+        ext_modules = [
+            Extension(
+                module_name,
+                [nb_wrapper, 'tests/test_static.cpp'] + nanobind_sources,
+                include_dirs=[
+                    nanobind.include_dir(),
+                    robin_map_include,
+                    'tests',
+                ],
+                # Link against the ISPC object file that is built by ISPC
+                extra_objects=[ispc_object],
+                language='c++',
+                extra_compile_args=[
+                    # Compiler flags required for nb_combined.cpp
+                    "-std=c++17",
+                    "-fvisibility=hidden",
+                    "-O3",
+                    "-fno-strict-aliasing",
+                    "-ffunction-sections",
+                    "-fdata-sections",
+                    "-fPIC",
+                    # Flags are required to build test_static.cpp
+                    f"-DTEST_SIG={test_sig}",
+                    f"-DTEST_WIDTH={width}",
+                    f"-DTEST_HEADER=\"{header}\"",
+                    "-w",
+                ],
+                # Macros required for nanobind
+                define_macros=[
+                    ("NDEBUG", None),
+                    ("NB_COMPACT_ASSERTIONS", None),
+                ],
+            ),
+        ]
+
+        # Create distribution and build command directly
+        dist = Distribution({
+            'name': module_name,
+            'ext_modules': ext_modules,
+            'zip_safe': False,
+        })
+
+        # Create and configure build_ext command
+        build_ext_cmd = build_ext(dist)
+        build_ext_cmd.inplace = True
+        build_ext_cmd.build_temp = temp_dir
+        build_ext_cmd.finalize_options()
+
+        if not options.verbose:
+            # Suppress output
+            import contextlib
+            with open(os.devnull, 'w') as devnull:
+                with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
+                    build_ext_cmd.run()
+        else:
+            # Actually run the build commands
+            build_ext_cmd.run()
+
+        # Get the platform-specific extension suffix to figure out the soname
+        # of the built extension
+        ext_suffix = sysconfig.get_config_var('EXT_SUFFIX')
+        if ext_suffix is None:
+            ext_suffix = sysconfig.get_config_var('SO')
+            if ext_suffix is None:
+                ext_suffix = '.so'
+
+        so_filename = f"{module_name}{ext_suffix}"
+
+        # Verify the built extension exists
+        if not os.path.exists(so_filename):
+            raise RuntimeError(f"Extension {so_filename} was not created successfully")
+
+        return so_filename
+
 def run_command(cmd, timeout=600, cwd="."):
     if options.verbose:
         print_debug("Running: %s\n" % cmd, s, run_tests_log)
@@ -390,6 +594,7 @@ def run_test(testname, host, target):
                     "f_du(" : 4, "f_duf(" : 5, "f_di(" : 6, "f_sz" : 7,
                     "f_t(" : 8, "print_uf(" : 32, "print_f(" : 33,
                     "print_fuf(" : 34, "print_no(" : 35 }
+        def2sig = { k: v for v, k in sig2def.items() }
         file = open(filename, 'r')
         match = -1
         for line in file:
@@ -507,14 +712,39 @@ def run_test(testname, host, target):
                 options.wrapexe += " --experimental-wasm-memory64"
             exe_wd = os.path.realpath("./tests")
         # compile the ispc code, make the executable, and run it...
-        ispc_cmd += " -h " + filename + ".h"
-        cc_cmd += " -DTEST_HEADER=\"<" + filename + ".h>\""
-        status = run_cmds([ispc_cmd, cc_cmd], options.wrapexe + " " + exe_name,
-                          testname, should_fail, match, exe_wd=exe_wd)
+        header = f"{filename}.h"
+        ispc_cmd += " -h " + header
+        cc_cmd += f" -DTEST_HEADER=\"<{header}>\""
+
+        if options.nanobind:
+            module_name = canonicalize_filename(filename)
+            nb_wrapper = module_name + ".cpp"
+            ispc_cmd += f" --nanobind-wrapper={nb_wrapper}"
+
+            # Run ISPC to generate obj_name and nb_wrapper
+            return_code, output, timeout = run_command(ispc_cmd, options.test_time)
+            if return_code != 0:
+                print_debug("Compilation of test %s failed %s           \n" % (filename, "due to TIMEOUT" if timeout else ""), s, run_tests_log)
+                if output != "":
+                    print_debug("%s" % output, s, run_tests_log)
+                return Status.Compfail
+
+            # Compile shared library extension to be used as Python module
+            ext_soname = build_ispc_extension(module_name, obj_name, nb_wrapper, header, match, width)
+
+            # Import the freshly built module and call the test function from it
+            status = call_test_function(module_name, match, def2sig[match], width)
+        else:
+            status = run_cmds([ispc_cmd, cc_cmd], options.wrapexe + " " + exe_name,
+                              testname, should_fail, match, exe_wd=exe_wd)
 
         # clean up after running the test
         try:
-            os.unlink(filename + ".h")
+            os.unlink(header)
+            if options.nanobind:
+                os.unlink(nb_wrapper)
+                if not options.save_bin:
+                    os.unlink(ext_soname)
             if not options.save_bin:
                 if status != Status.Runfail:
                     os.unlink(exe_name)
@@ -1075,6 +1305,8 @@ if __name__ == "__main__":
     parser.add_option('--csv', dest="csv", help="file to save testing results", default="")
     parser.add_option('--test_time', dest="test_time", help="time needed for each test", default=600, type="int", action="store")
     parser.add_option('--calling_conv', dest="calling_conv", help="Specify the calling convention to use", default=None, type="str", action="store")
+    parser.add_option("--nanobind", dest='nanobind', help='Enable nanobind compilation mode', default=False, action="store_true")
+
     (options, args) = parser.parse_args()
     L = run_tests(options, args, 1)
     exit(exit_code)
