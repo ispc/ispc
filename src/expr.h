@@ -561,6 +561,7 @@ class ConstExpr : public Expr {
 class TypeCastExpr : public Expr {
   public:
     TypeCastExpr(const Type *t, Expr *e, SourcePos p);
+    TypeCastExpr(const Type *t, const Type *prechecked, Expr *e, SourcePos p);
 
     static inline bool classof(TypeCastExpr const *) { return true; }
     static inline bool classof(ASTNode const *N) { return N->getValueID() == TypeCastExprID; }
@@ -580,7 +581,8 @@ class TypeCastExpr : public Expr {
     bool HasAmbiguousVariability(std::vector<const Expr *> &warn) const;
     void PrintAmbiguousVariability() const;
 
-    const Type *type;
+    const Type *type;         // Current/resolved target type
+    const Type *preCheckType; // Target type before type checking
     Expr *expr;
 };
 
