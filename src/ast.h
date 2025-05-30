@@ -84,6 +84,8 @@ class Indent {
 */
 class ASTNode : public Traceable {
     const unsigned char SubclassID; // Subclass identifier (for isa/dyn_cast)
+    mutable uint32_t StateFlags{0};
+
   public:
     ASTNode(SourcePos p, unsigned scid) : SubclassID(scid), pos(p) {}
     virtual ~ASTNode();
@@ -167,6 +169,10 @@ class ASTNode : public Traceable {
         UnmaskedStmtID
     };
 
+    enum StateFlag : uint32_t {
+        OPTIMIZED_FLAG = 1 << 0,  // 0x01
+        TYPECHECKED_FLAG = 1 << 1 // 0x02
+    };
     /** Return an ID for the concrete type of this object. This is used to
         implement the classof checks.  This should not be used for any
         other purpose, as the values may change as ISPC evolves */
@@ -182,6 +188,15 @@ class ASTNode : public Traceable {
     virtual void Print(Indent &indent) const = 0;
 
     static inline bool classof(ASTNode const *) { return true; }
+
+    // State methods
+    bool IsOptimized() const { return StateFlags & OPTIMIZED_FLAG; }
+    bool IsTypeChecked() const { return StateFlags & TYPECHECKED_FLAG; }
+    void SetOptimized() const { StateFlags |= OPTIMIZED_FLAG; }
+    void SetTypeChecked() const { StateFlags |= TYPECHECKED_FLAG; }
+
+    // State transfer helper for when nodes are replaced
+    void CopyStateTo(ASTNode *other) const { other->StateFlags = this->StateFlags; }
 };
 
 class AST {

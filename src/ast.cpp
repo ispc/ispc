@@ -326,15 +326,50 @@ ASTNode *ispc::WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBac
     }
 }
 
-static ASTNode *lOptimizeNode(ASTNode *node, void *) { return node->Optimize(); }
+static ASTNode *lTypeCheckNode(ASTNode *node, void *) {
+    // Skip if already type-checked
+    if (node->IsTypeChecked()) {
+        return node;
+    }
+
+    ASTNode *result = node->TypeCheck();
+    if (result) {
+        // Mark result as type-checked too
+        result->SetTypeChecked();
+    }
+    return result;
+}
+
+static ASTNode *lOptimizeNode(ASTNode *node, void *) {
+    // Skip if already optimized
+    if (node->IsOptimized()) {
+        return node;
+    }
+
+    // TODO: Uncomment this if you want to enforce type checking before optimization
+    // Note: This is commented out because causes some lit tests failing
+    // Eventually we should ensure that all nodes are type-checked before optimization.
+    /*if (!node->IsTypeChecked()) {
+        node = lTypeCheckNode(node, nullptr);
+        if (!node) {
+            return nullptr;
+        }
+    }
+    Assert(node->IsTypeChecked() && "Node must be type-checked before optimization");*/
+
+    // Now proceed with optimization
+    ASTNode *result = node->Optimize();
+    if (result) {
+        result->SetOptimized();
+    }
+    return result;
+}
 
 ASTNode *ispc::Optimize(ASTNode *root) { return WalkAST(root, nullptr, lOptimizeNode, nullptr); }
 
 Expr *ispc::Optimize(Expr *expr) { return (Expr *)Optimize((ASTNode *)expr); }
 
 Stmt *ispc::Optimize(Stmt *stmt) { return (Stmt *)Optimize((ASTNode *)stmt); }
-
-static ASTNode *lTypeCheckNode(ASTNode *node, void *) { return node->TypeCheck(); }
 
 ASTNode *ispc::TypeCheck(ASTNode *root) { return WalkAST(root, nullptr, lTypeCheckNode, nullptr); }
 
