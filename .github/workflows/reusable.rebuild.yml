@@ -147,7 +147,7 @@ jobs:
         path: ${{ env.DOCKER_DIR }}/${{ env.TAR_NAME }}
 
   win-build:
-    runs-on: windows-2019
+    runs-on: windows-2022
     if: inputs.arch != 'aarch64'
     env:
       TAR_BASE_NAME: llvm-${{ inputs.full_version }}-win.vs2019-Release${{ inputs.asserts == 'ON' && '+Asserts' || '' }}${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm
