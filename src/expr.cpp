@@ -1857,8 +1857,12 @@ bool lCreateBinaryOperatorCall(const BinaryExpr::Op bop, Expr *a0, Expr *a1, Exp
     if ((a0 == nullptr) || (a1 == nullptr)) {
         return abort;
     }
-    Expr *arg0 = a0;
-    Expr *arg1 = a1;
+    Expr *arg0 = TypeCheck(a0);
+    Expr *arg1 = TypeCheck(a1);
+
+    if ((arg0 == nullptr) || (arg1 == nullptr)) {
+        return false;
+    }
 
     const Type *type0 = arg0->GetType();
     const Type *type1 = arg1->GetType();
