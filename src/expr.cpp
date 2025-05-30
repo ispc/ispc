@@ -1504,7 +1504,7 @@ std::string UnaryExpr::GetString() const {
 }
 
 void UnaryExpr::Print(Indent &indent) const {
-    if (!expr || !GetType()) {
+    if (!expr || !GetTypeUnsafe()) {
         indent.Print("UnaryExpr: <NULL EXPR>\n");
         indent.Done();
         return;
@@ -1512,7 +1512,7 @@ void UnaryExpr::Print(Indent &indent) const {
 
     indent.Print("UnaryExpr", pos);
 
-    printf("[ %s ] ", GetType()->GetString().c_str());
+    printf("[ %s ] ", GetTypeUnsafe()->GetString().c_str());
     switch (op) {
     case PreInc: ///< Pre-increment
         printf("prefix '++'");
@@ -3117,7 +3117,7 @@ std::string BinaryExpr::GetString() const {
 }
 
 void BinaryExpr::Print(Indent &indent) const {
-    if (!arg0 || !arg1 || !GetType()) {
+    if (!arg0 || !arg1 || !GetTypeUnsafe()) {
         indent.Print("BinaryExpr: <NULL EXPR>\n");
         indent.Done();
         return;
@@ -3125,7 +3125,7 @@ void BinaryExpr::Print(Indent &indent) const {
 
     indent.Print("BinaryExpr", pos);
 
-    printf("[ %s ], '%s'\n", GetType()->GetString().c_str(), lOpString(op));
+    printf("[ %s ], '%s'\n", GetTypeUnsafe()->GetString().c_str(), lOpString(op));
     indent.pushList(2);
     arg0->Print(indent);
     arg1->Print(indent);
@@ -3598,7 +3598,7 @@ std::string AssignExpr::GetString() const {
 }
 
 void AssignExpr::Print(Indent &indent) const {
-    if (!lvalue || !rvalue || !GetType()) {
+    if (!lvalue || !rvalue || !GetTypeUnsafe()) {
         indent.Print("AssignExpr: <NULL EXPR>\n");
         indent.Done();
         return;
@@ -3606,7 +3606,7 @@ void AssignExpr::Print(Indent &indent) const {
 
     indent.Print("AssignExpr", pos);
 
-    printf("[%s], '%s'\n", GetType()->GetString().c_str(), lOpString(op));
+    printf("[%s], '%s'\n", GetTypeUnsafe()->GetString().c_str(), lOpString(op));
     indent.pushList(2);
     lvalue->Print(indent);
     rvalue->Print(indent);
@@ -4030,7 +4030,7 @@ std::string SelectExpr::GetString() const {
 }
 
 void SelectExpr::Print(Indent &indent) const {
-    if (!test || !expr1 || !expr2 || !GetType()) {
+    if (!test || !expr1 || !expr2 || !GetTypeUnsafe()) {
         indent.Print("SelectExpr: <NULL EXPR>\n");
         indent.Done();
         return;
@@ -4038,7 +4038,7 @@ void SelectExpr::Print(Indent &indent) const {
 
     indent.Print("SelectExpr", pos);
 
-    printf("[%s]\n", GetType()->GetString().c_str());
+    printf("[%s]\n", GetTypeUnsafe()->GetString().c_str());
     indent.pushList(3);
     test->Print(indent);
     expr1->Print(indent);
@@ -4492,14 +4492,15 @@ std::string FunctionCallExpr::GetString() const {
 }
 
 void FunctionCallExpr::Print(Indent &indent) const {
-    if (!func || !args || !GetType()) {
+    if (!func || !args || !GetTypeUnsafe()) {
         indent.Print("FunctionCallExpr: <NULL EXPR>\n");
         indent.Done();
         return;
     }
     indent.Print("FunctionCallExpr", pos);
 
-    printf("[%s] %s %s\n", GetType()->GetString().c_str(), isLaunch ? "launch" : "", isInvoke ? "invoke_sycl" : "");
+    printf("[%s] %s %s\n", GetTypeUnsafe()->GetString().c_str(), isLaunch ? "launch" : "",
+           isInvoke ? "invoke_sycl" : "");
     indent.pushList(2);
     indent.setNextLabel("func");
     func->Print(indent);
@@ -5303,7 +5304,7 @@ std::string IndexExpr::GetString() const {
 }
 
 void IndexExpr::Print(Indent &indent) const {
-    if (!baseExpr || !index || !GetType()) {
+    if (!baseExpr || !index || !GetTypeUnsafe()) {
         indent.Print("IndexExpr: <NULL EXPR>\n");
         indent.Done();
         return;
@@ -5311,7 +5312,7 @@ void IndexExpr::Print(Indent &indent) const {
 
     indent.Print("IndexExpr", pos);
 
-    printf("[%s]\n", GetType()->GetString().c_str());
+    printf("[%s]\n", GetTypeUnsafe()->GetString().c_str());
     indent.pushList(2);
     baseExpr->Print(indent);
     index->Print(indent);
@@ -5905,13 +5906,13 @@ void MemberExpr::Print(Indent &indent) const {
         indent.Print("MemberExpr", pos);
     }
 
-    if (!expr || !GetType()) {
+    if (!expr || !GetTypeUnsafe()) {
         indent.Print(" <NULL EXPR>\n");
         indent.Done();
         return;
     }
 
-    printf("[%s] %s %s\n", GetType()->GetString().c_str(), dereferenceExpr ? "->" : ".", identifier.c_str());
+    printf("[%s] %s %s\n", GetTypeUnsafe()->GetString().c_str(), dereferenceExpr ? "->" : ".", identifier.c_str());
     indent.pushSingle();
     expr->Print(indent);
 
@@ -6704,7 +6705,7 @@ std::string ConstExpr::GetString() const { return GetValuesAsStr(", "); }
 void ConstExpr::Print(Indent &indent) const {
     indent.Print("ConstExpr", pos);
 
-    printf("[%s] (", GetType()->GetString().c_str());
+    printf("[%s] (", GetTypeUnsafe()->GetString().c_str());
     printf("%s", GetValuesAsStr((char *)", ").c_str());
     printf(")\n");
 
@@ -8033,7 +8034,7 @@ std::string TypeCastExpr::GetString() const {
 
 void TypeCastExpr::Print(Indent &indent) const {
     indent.Print("TypeCastExpr", pos);
-    printf("[%s]\n", GetType()->GetString().c_str());
+    printf("[%s]\n", GetTypeUnsafe()->GetString().c_str());
     indent.pushSingle();
     expr->Print(indent);
     indent.Done();
@@ -8206,7 +8207,7 @@ std::string ReferenceExpr::GetString() const {
 }
 
 void ReferenceExpr::Print(Indent &indent) const {
-    if (expr == nullptr || GetType() == nullptr) {
+    if (expr == nullptr || GetTypeUnsafe() == nullptr) {
         indent.Print("ReferenceExpr: <NULL EXPR>\n");
         indent.Done();
         return;
@@ -8214,7 +8215,7 @@ void ReferenceExpr::Print(Indent &indent) const {
 
     indent.Print("ReferenceExpr", pos);
 
-    printf("[%s]\n", GetType()->GetString().c_str());
+    printf("[%s]\n", GetTypeUnsafe()->GetString().c_str());
     indent.pushSingle();
     expr->Print(indent);
 
@@ -8353,7 +8354,7 @@ std::string PtrDerefExpr::GetString() const {
 }
 
 void PtrDerefExpr::Print(Indent &indent) const {
-    if (expr == nullptr || GetType() == nullptr) {
+    if (expr == nullptr || GetTypeUnsafe() == nullptr) {
         indent.Print("PtrDerefExpr: <NULL EXPR>\n");
         indent.Done();
         return;
@@ -8361,7 +8362,7 @@ void PtrDerefExpr::Print(Indent &indent) const {
 
     indent.Print("PtrDerefExpr", pos);
 
-    printf("[%s]\n", GetType()->GetString().c_str());
+    printf("[%s]\n", GetTypeUnsafe()->GetString().c_str());
     indent.pushSingle();
     expr->Print(indent);
 
@@ -8428,14 +8429,14 @@ std::string RefDerefExpr::GetString() const {
 }
 
 void RefDerefExpr::Print(Indent &indent) const {
-    if (expr == nullptr || GetType() == nullptr) {
+    if (expr == nullptr || GetTypeUnsafe() == nullptr) {
         indent.Print("RefDerefExpr: <NULL EXPR>\n");
         return;
     }
 
     indent.Print("RefDerefExpr", pos);
 
-    printf("[%s]\n", GetType()->GetString().c_str());
+    printf("[%s]\n", GetTypeUnsafe()->GetString().c_str());
     indent.pushSingle();
     expr->Print(indent);
 
@@ -8511,7 +8512,7 @@ std::string AddressOfExpr::GetString() const {
 }
 
 void AddressOfExpr::Print(Indent &indent) const {
-    if (expr == nullptr || GetType() == nullptr) {
+    if (expr == nullptr || GetTypeUnsafe() == nullptr) {
         indent.Print("AddressOfExpr: <NULL EXPR>\n");
         indent.Done();
         return;
@@ -8519,7 +8520,7 @@ void AddressOfExpr::Print(Indent &indent) const {
 
     indent.Print("AddressOfExpr", pos);
 
-    printf("[%s]\n", GetType()->GetString().c_str());
+    printf("[%s]\n", GetTypeUnsafe()->GetString().c_str());
     indent.pushSingle();
     expr->Print(indent);
 
@@ -8879,7 +8880,7 @@ std::string SymbolExpr::GetString() const {
 }
 
 void SymbolExpr::Print(Indent &indent) const {
-    if (symbol == nullptr || GetType() == nullptr) {
+    if (symbol == nullptr || GetTypeUnsafe() == nullptr) {
         indent.Print("SymbolExpr: <NULL EXPR>\n");
         indent.Done();
         return;
@@ -8887,7 +8888,7 @@ void SymbolExpr::Print(Indent &indent) const {
 
     indent.Print("SymbolExpr", pos);
 
-    printf("[%s] symbol name: %s\n", GetType()->GetString().c_str(), symbol->name.c_str());
+    printf("[%s] symbol name: %s\n", GetTypeUnsafe()->GetString().c_str(), symbol->name.c_str());
 
     indent.Done();
 }
@@ -8965,7 +8966,7 @@ std::string FunctionSymbolExpr::GetString() const {
 }
 
 void FunctionSymbolExpr::Print(Indent &indent) const {
-    const Type *type = GetType();
+    const Type *type = GetTypeUnsafe();
 
     indent.Print("FunctionSymbolExpr", pos);
 
