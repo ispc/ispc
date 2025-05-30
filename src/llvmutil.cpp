@@ -1184,8 +1184,21 @@ bool IsOrEquivalentToAdd(llvm::Value *op) {
         // We need to prove that A|B == A+B
         llvm::Module *module = bop->getParent()->getParent()->getParent();
         llvm::Value *op0 = bop->getOperand(0), *op1 = bop->getOperand(1);
-        if (!haveNoCommonBitsSet(op0, op1, module->getDataLayout()) == false) {
-            // Fallback to A+B case
+        // First try bit analysis
+        bool noCommonBits = haveNoCommonBitsSet(op0, op1, module->getDataLayout());
+
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
+        // LLVM disjoint attribute was introduced in LLVM 18
+        // If bit analysis fails, check if compiler marked this as disjoint
+        if (!noCommonBits) {
+            if (llvm::PossiblyDisjointInst *disjointInst = llvm::dyn_cast<llvm::PossiblyDisjointInst>(bop)) {
+                if (disjointInst->isDisjoint()) {
+                    noCommonBits = true;
+                }
+            }
+        }
+#endif
+        if (noCommonBits) {
             isEq = true;
         }
     }
