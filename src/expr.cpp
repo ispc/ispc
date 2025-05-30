@@ -51,6 +51,16 @@ using namespace ispc;
 /////////////////////////////////////////////////////////////////////////////////////
 // Expr
 
+const Type *Expr::GetType() const {
+    // TODO: uncomment this when ready
+    /*if (!IsTypeChecked()) {
+        Assert(IsTypeChecked() == true);
+    }*/
+    return GetTypeImpl();
+}
+
+const Type *Expr::GetTypeUnsafe() const { return GetTypeImpl(); }
+
 llvm::Value *Expr::GetLValue(FunctionEmitContext *ctx) const {
     // Expressions that can't provide an lvalue can just return nullptr
     return nullptr;
@@ -1209,7 +1219,7 @@ llvm::Value *UnaryExpr::GetValue(FunctionEmitContext *ctx) const {
     }
 }
 
-const Type *UnaryExpr::GetType() const {
+const Type *UnaryExpr::GetTypeImpl() const {
     if (expr == nullptr) {
         return nullptr;
     }
@@ -1849,6 +1859,7 @@ bool lCreateBinaryOperatorCall(const BinaryExpr::Op bop, Expr *a0, Expr *a1, Exp
     }
     Expr *arg0 = a0;
     Expr *arg1 = a1;
+
     const Type *type0 = arg0->GetType();
     const Type *type1 = arg1->GetType();
 
@@ -2267,7 +2278,7 @@ llvm::Value *BinaryExpr::GetValue(FunctionEmitContext *ctx) const {
     }
 }
 
-const Type *BinaryExpr::GetType() const {
+const Type *BinaryExpr::GetTypeImpl() const {
     if (arg0 == nullptr || arg1 == nullptr) {
         return nullptr;
     }
@@ -2352,7 +2363,7 @@ const Type *BinaryExpr::GetType() const {
     case Comma:
         // handled above, so fall through here just in case
     default:
-        FATAL("logic error in BinaryExpr::GetType()");
+        FATAL("logic error in BinaryExpr::GetTypeImpl()");
         return nullptr;
     }
 }
@@ -3427,7 +3438,7 @@ Expr *AssignExpr::Optimize() {
     return this;
 }
 
-const Type *AssignExpr::GetType() const {
+const Type *AssignExpr::GetTypeImpl() const {
     if (lvalue) {
         const Type *ltype = lvalue->GetType();
         if (ltype && ltype->IsDependent()) {
@@ -3806,7 +3817,7 @@ llvm::Value *SelectExpr::GetValue(FunctionEmitContext *ctx) const {
     }
 }
 
-const Type *SelectExpr::GetType() const {
+const Type *SelectExpr::GetTypeImpl() const {
     if (!test || !expr1 || !expr2) {
         return nullptr;
     }
@@ -4231,7 +4242,7 @@ static bool lFullResolveOverloads(Expr *func, ExprList *args, std::vector<const 
     return true;
 }
 
-const Type *FunctionCallExpr::GetType() const {
+const Type *FunctionCallExpr::GetTypeImpl() const {
     std::vector<const Type *> argTypes;
     std::vector<bool> argCouldBeNULL, argIsConstant;
     if (func == nullptr || args == nullptr) {
@@ -4516,8 +4527,8 @@ llvm::Value *ExprList::GetValue(FunctionEmitContext *ctx) const {
     return nullptr;
 }
 
-const Type *ExprList::GetType() const {
-    FATAL("ExprList::GetType() should never be called");
+const Type *ExprList::GetTypeImpl() const {
+    FATAL("ExprList::GetTypeImpl() should never be called");
     return nullptr;
 }
 
@@ -4923,7 +4934,7 @@ llvm::Value *IndexExpr::GetValue(FunctionEmitContext *ctx) const {
     return ctx->LoadInst(ptr, mask, lvType);
 }
 
-const Type *IndexExpr::GetType() const {
+const Type *IndexExpr::GetTypeImpl() const {
     if (type != nullptr) {
         return type;
     }
@@ -5341,7 +5352,7 @@ static int lIdentifierToVectorElement(char id) {
 StructMemberExpr::StructMemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos, bool derefLValue)
     : MemberExpr(e, id, p, idpos, derefLValue, StructMemberExprID) {}
 
-const Type *StructMemberExpr::GetType() const {
+const Type *StructMemberExpr::GetTypeImpl() const {
     if (type != nullptr) {
         return type;
     }
@@ -5494,7 +5505,7 @@ VectorMemberExpr::VectorMemberExpr(Expr *e, const char *id, SourcePos p, SourceP
     memberType = new VectorType(exprVectorType->GetElementType(), identifier.length());
 }
 
-const Type *VectorMemberExpr::GetType() const {
+const Type *VectorMemberExpr::GetTypeImpl() const {
     if (type != nullptr) {
         return type;
     }
@@ -5672,7 +5683,7 @@ DependentMemberExpr::DependentMemberExpr(Expr *e, const char *id, SourcePos p, S
     Assert(id != nullptr);
 }
 
-const Type *DependentMemberExpr::GetType() const { return AtomicType::Dependent; }
+const Type *DependentMemberExpr::GetTypeImpl() const { return AtomicType::Dependent; }
 const Type *DependentMemberExpr::GetLValueType() const { return AtomicType::Dependent; }
 int DependentMemberExpr::getElementNumber() const { UNREACHABLE(); };
 const Type *DependentMemberExpr::getElementType() const { UNREACHABLE(); };
@@ -5821,7 +5832,7 @@ llvm::Value *MemberExpr::GetValue(FunctionEmitContext *ctx) const {
     return ctx->LoadInst(lvalue, mask, lvalueType, llvm::Twine(lvalue->getName()) + suffix);
 }
 
-const Type *MemberExpr::GetType() const { return nullptr; }
+const Type *MemberExpr::GetTypeImpl() const { return nullptr; }
 
 Symbol *MemberExpr::GetBaseSymbol() const { return expr ? expr->GetBaseSymbol() : nullptr; }
 
@@ -6172,7 +6183,7 @@ AtomicType::BasicType ConstExpr::getBasicType() const {
     }
 }
 
-const Type *ConstExpr::GetType() const { return type; }
+const Type *ConstExpr::GetTypeImpl() const { return type; }
 
 llvm::Value *ConstExpr::GetValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
@@ -7770,7 +7781,7 @@ llvm::Value *TypeCastExpr::GetLValue(FunctionEmitContext *ctx) const {
     }
 }
 
-const Type *TypeCastExpr::GetType() const {
+const Type *TypeCastExpr::GetTypeImpl() const {
     // Here we try to resolve situation where (base_type) can be treated as
     // (uniform base_type) of (varying base_type). This is a part of function
     // TypeCastExpr::TypeCheck. After implementation of operators we
@@ -8136,7 +8147,7 @@ llvm::Value *ReferenceExpr::GetValue(FunctionEmitContext *ctx) const {
 
 Symbol *ReferenceExpr::GetBaseSymbol() const { return expr ? expr->GetBaseSymbol() : nullptr; }
 
-const Type *ReferenceExpr::GetType() const {
+const Type *ReferenceExpr::GetTypeImpl() const {
     if (!expr) {
         return nullptr;
     }
@@ -8270,7 +8281,7 @@ Expr *DerefExpr::Optimize() {
 
 PtrDerefExpr::PtrDerefExpr(Expr *e, SourcePos p) : DerefExpr(e, p, PtrDerefExprID) {}
 
-const Type *PtrDerefExpr::GetType() const {
+const Type *PtrDerefExpr::GetTypeImpl() const {
     const Type *type = nullptr;
     if (expr == nullptr || (type = expr->GetType()) == nullptr) {
         AssertPos(pos, m->errorCount > 0);
@@ -8362,7 +8373,7 @@ void PtrDerefExpr::Print(Indent &indent) const {
 
 RefDerefExpr::RefDerefExpr(Expr *e, SourcePos p) : DerefExpr(e, p, RefDerefExprID) {}
 
-const Type *RefDerefExpr::GetType() const {
+const Type *RefDerefExpr::GetTypeImpl() const {
     const Type *type = nullptr;
     if (expr == nullptr || (type = expr->GetType()) == nullptr) {
         AssertPos(pos, m->errorCount > 0);
@@ -8450,7 +8461,7 @@ llvm::Value *AddressOfExpr::GetValue(FunctionEmitContext *ctx) const {
     }
 }
 
-const Type *AddressOfExpr::GetType() const {
+const Type *AddressOfExpr::GetTypeImpl() const {
     if (expr == nullptr) {
         return nullptr;
     }
@@ -8630,7 +8641,7 @@ llvm::Value *SizeOfExpr::GetValue(FunctionEmitContext *ctx) const {
     return g->target->SizeOf(llvmType, ctx->GetCurrentBasicBlock());
 }
 
-const Type *SizeOfExpr::GetType() const {
+const Type *SizeOfExpr::GetTypeImpl() const {
     return (g->target->is32Bit() || g->opt.force32BitAddressing) ? AtomicType::UniformUInt32
                                                                  : AtomicType::UniformUInt64;
 }
@@ -8731,7 +8742,7 @@ llvm::Value *AllocaExpr::GetValue(FunctionEmitContext *ctx) const {
     return resultPtr;
 }
 
-const Type *AllocaExpr::GetType() const { return PointerType::Void; }
+const Type *AllocaExpr::GetTypeImpl() const { return PointerType::Void; }
 
 std::string AllocaExpr::GetString() const {
     if (!expr) {
@@ -8834,7 +8845,7 @@ const Type *SymbolExpr::GetLValueType() const {
 
 Symbol *SymbolExpr::GetBaseSymbol() const { return symbol; }
 
-const Type *SymbolExpr::GetType() const { return symbol ? symbol->type : nullptr; }
+const Type *SymbolExpr::GetTypeImpl() const { return symbol ? symbol->type : nullptr; }
 
 Expr *SymbolExpr::TypeCheck() { return this; }
 
@@ -8910,7 +8921,7 @@ void FunctionSymbolExpr::normalizeTemplateArgs() {
         }
     }
 }
-const Type *FunctionSymbolExpr::GetType() const {
+const Type *FunctionSymbolExpr::GetTypeImpl() const {
     if (unresolvedButDependent) {
         return AtomicType::Dependent;
     }
@@ -9829,7 +9840,7 @@ bool FunctionSymbolExpr::ResolveOverloads(SourcePos argPos, const std::vector<co
 ///////////////////////////////////////////////////////////////////////////
 // SyncExpr
 
-const Type *SyncExpr::GetType() const { return AtomicType::Void; }
+const Type *SyncExpr::GetTypeImpl() const { return AtomicType::Void; }
 
 llvm::Value *SyncExpr::GetValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
@@ -9859,7 +9870,7 @@ llvm::Value *NullPointerExpr::GetValue(FunctionEmitContext *ctx) const {
     return llvm::ConstantPointerNull::get(LLVMTypes::VoidPointerType);
 }
 
-const Type *NullPointerExpr::GetType() const { return PointerType::Void; }
+const Type *NullPointerExpr::GetTypeImpl() const { return PointerType::Void; }
 
 Expr *NullPointerExpr::TypeCheck() { return this; }
 
@@ -10053,7 +10064,7 @@ llvm::Value *NewExpr::GetValue(FunctionEmitContext *ctx) const {
     }
 }
 
-const Type *NewExpr::GetType() const {
+const Type *NewExpr::GetTypeImpl() const {
     if (allocType == nullptr) {
         return nullptr;
     }

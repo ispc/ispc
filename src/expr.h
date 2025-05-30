@@ -28,6 +28,14 @@ class Expr : public ASTNode {
     static inline bool classof(Expr const *) { return true; }
     static inline bool classof(ASTNode const *N) { return N->getValueID() < MaxExprID; }
 
+    /** Returns the Type of the expression.
+        For general use, ensures type-checking has been performed.*/
+    virtual const Type *GetType() const;
+
+    /** Returns the Type of the expression.
+        For debugging/AST print, no type-checking guarantee.*/
+    virtual const Type *GetTypeUnsafe() const;
+
     /** This is the main method for Expr implementations to implement.  It
         should call methods in the FunctionEmitContext to emit LLVM IR
         instructions to the current basic block in order to generate an
@@ -40,9 +48,6 @@ class Expr : public ASTNode {
         provide an lvalue should leave this unimplemented; the default
         implementation returns nullptr.  */
     virtual llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
-
-    /** Returns the Type of the expression. */
-    virtual const Type *GetType() const = 0;
 
     /** Returns the type of the value returned by GetLValueType(); this
         should be a pointer type of some sort (uniform or varying). */
@@ -83,6 +88,10 @@ class Expr : public ASTNode {
     virtual Expr *Instantiate(TemplateInstantiation &templInst) const = 0;
 
     virtual bool HasAmbiguousVariability(std::vector<const Expr *> &warn) const;
+
+  protected:
+    /** Returns the Type of the expression. */
+    virtual const Type *GetTypeImpl() const = 0;
 };
 
 /** @brief Unary expression */
@@ -104,7 +113,7 @@ class UnaryExpr : public Expr {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == UnaryExprID; }
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
-    const Type *GetType() const;
+    const Type *GetTypeImpl() const;
     std::string GetString() const;
     void Print(Indent &indent) const;
     Expr *Optimize();
@@ -150,7 +159,7 @@ class BinaryExpr : public Expr {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == BinaryExprID; }
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
-    const Type *GetType() const;
+    const Type *GetTypeImpl() const;
     const Type *GetLValueType() const;
     std::string GetString() const;
     void Print(Indent &indent) const;
@@ -190,7 +199,7 @@ class AssignExpr : public Expr {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == AssignExprID; }
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
-    const Type *GetType() const;
+    const Type *GetTypeImpl() const;
     std::string GetString() const;
     void Print(Indent &indent) const;
 
@@ -215,7 +224,7 @@ class SelectExpr : public Expr {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == SelectExprID; }
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
-    const Type *GetType() const;
+    const Type *GetTypeImpl() const;
     const Type *GetLValueType() const;
     std::string GetString() const;
     void Print(Indent &indent) const;
@@ -244,7 +253,7 @@ class ExprList : public Expr {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == ExprListID; }
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
-    const Type *GetType() const;
+    const Type *GetTypeImpl() const;
     std::string GetString() const;
     void Print(Indent &indent) const;
     std::pair<llvm::Constant *, bool> GetStorageConstant(const Type *type) const;
@@ -291,7 +300,7 @@ class FunctionCallExpr : public Expr {
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
-    const Type *GetType() const;
+    const Type *GetTypeImpl() const;
     const Type *GetLValueType() const;
     std::string GetString() const;
     void Print(Indent &indent) const;
@@ -322,7 +331,7 @@ class IndexExpr : public Expr {
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
-    const Type *GetType() const;
+    const Type *GetTypeImpl() const;
     const Type *GetLValueType() const;
     Symbol *GetBaseSymbol() const;
     std::string GetString() const;
@@ -357,7 +366,7 @@ class MemberExpr : public Expr {
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
-    const Type *GetType() const;
+    const Type *GetTypeImpl() const;
     Symbol *GetBaseSymbol() const;
     std::string GetString() const;
     void Print(Indent &indent) const;
@@ -393,7 +402,7 @@ class StructMemberExpr : public MemberExpr {
     static inline bool classof(StructMemberExpr const *) { return true; }
     static inline bool classof(ASTNode const *N) { return N->getValueID() == StructMemberExprID; }
 
-    const Type *GetType() const;
+    const Type *GetTypeImpl() const;
     const Type *GetLValueType() const;
     int getElementNumber() const;
     const Type *getElementType() const;
@@ -411,7 +420,7 @@ class VectorMemberExpr : public MemberExpr {
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
-    const Type *GetType() const;
+    const Type *GetTypeImpl() const;
     const Type *GetLValueType() const;
 
     int getElementNumber() const;
@@ -429,7 +438,7 @@ class DependentMemberExpr : public MemberExpr {
     static inline bool classof(DependentMemberExpr const *) { return true; }
     static inline bool classof(ASTNode const *N) { return N->getValueID() == DependentMemberExprID; }
 
-    const Type *GetType() const;
+    const Type *GetTypeImpl() const;
     const Type *GetLValueType() const;
 
     int getElementNumber() const;
@@ -499,7 +508,7 @@ class ConstExpr : public Expr {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == ConstExprID; }
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
-    const Type *GetType() const;
+    const Type *GetTypeImpl() const;
     std::string GetString() const;
     void Print(Indent &indent) const;
     std::pair<llvm::Constant *, bool> GetStorageConstant(const Type *type) const;
@@ -568,7 +577,7 @@ class TypeCastExpr : public Expr {
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
-    const Type *GetType() const;
+    const Type *GetTypeImpl() const;
     const Type *GetLValueType() const;
     std::string GetString() const;
     void Print(Indent &indent) const;
@@ -596,7 +605,7 @@ class ReferenceExpr : public Expr {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == ReferenceExprID; }
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
-    const Type *GetType() const;
+    const Type *GetTypeImpl() const;
     const Type *GetLValueType() const;
     Symbol *GetBaseSymbol() const;
     std::string GetString() const;
@@ -639,7 +648,7 @@ class PtrDerefExpr : public DerefExpr {
     static inline bool classof(PtrDerefExpr const *) { return true; }
     static inline bool classof(ASTNode const *N) { return N->getValueID() == PtrDerefExprID; }
 
-    const Type *GetType() const;
+    const Type *GetTypeImpl() const;
     std::string GetString() const;
     void Print(Indent &indent) const;
     Expr *TypeCheck();
@@ -656,7 +665,7 @@ class RefDerefExpr : public DerefExpr {
     static inline bool classof(RefDerefExpr const *) { return true; }
     static inline bool classof(ASTNode const *N) { return N->getValueID() == RefDerefExprID; }
 
-    const Type *GetType() const;
+    const Type *GetTypeImpl() const;
     std::string GetString() const;
     void Print(Indent &indent) const;
     Expr *TypeCheck();
@@ -673,7 +682,7 @@ class AddressOfExpr : public Expr {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == AddressOfExprID; }
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
-    const Type *GetType() const;
+    const Type *GetTypeImpl() const;
     const Type *GetLValueType() const;
     Symbol *GetBaseSymbol() const;
     std::string GetString() const;
@@ -698,7 +707,7 @@ class SizeOfExpr : public Expr {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == SizeOfExprID; }
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
-    const Type *GetType() const;
+    const Type *GetTypeImpl() const;
     std::string GetString() const;
     void Print(Indent &indent) const;
     Expr *TypeCheck();
@@ -723,7 +732,7 @@ class AllocaExpr : public Expr {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == AllocaExprID; }
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
-    const Type *GetType() const;
+    const Type *GetTypeImpl() const;
     std::string GetString() const;
     void Print(Indent &indent) const;
     Expr *TypeCheck();
@@ -746,7 +755,7 @@ class SymbolExpr : public Expr {
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
-    const Type *GetType() const;
+    const Type *GetTypeImpl() const;
     const Type *GetLValueType() const;
     Symbol *GetBaseSymbol() const;
     Expr *TypeCheck();
@@ -773,7 +782,7 @@ class FunctionSymbolExpr : public Expr {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == FunctionSymbolExprID; }
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
-    const Type *GetType() const;
+    const Type *GetTypeImpl() const;
     Symbol *GetBaseSymbol() const;
     Expr *TypeCheck();
     Expr *Optimize();
@@ -855,7 +864,7 @@ class SyncExpr : public Expr {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == SyncExprID; }
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
-    const Type *GetType() const;
+    const Type *GetTypeImpl() const;
     Expr *TypeCheck();
     Expr *Optimize();
     std::string GetString() const;
@@ -873,7 +882,7 @@ class NullPointerExpr : public Expr {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == NullPointerExprID; }
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
-    const Type *GetType() const;
+    const Type *GetTypeImpl() const;
     Expr *TypeCheck();
     Expr *Optimize();
     std::pair<llvm::Constant *, bool> GetConstant(const Type *type) const;
@@ -894,7 +903,7 @@ class NewExpr : public Expr {
     static inline bool classof(ASTNode const *N) { return N->getValueID() == NewExprID; }
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
-    const Type *GetType() const;
+    const Type *GetTypeImpl() const;
     Expr *TypeCheck();
     Expr *Optimize();
     std::string GetString() const;
