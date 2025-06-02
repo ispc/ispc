@@ -108,7 +108,7 @@ jobs:
         PATH=$(pwd)/build/bin:$PATH ./scripts/run_tests.py --verbose --compiler=cc --target=${{ matrix.target }} --arch=${{ matrix.arch }}
 
   windows:
-    runs-on: windows-2019
+    runs-on: windows-2022
     env:
       LLVM_VERSION: "20.1"
       LLVM_TAR: llvm-20.1.4-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z

@@ -44,7 +44,7 @@ on:
         description: Visual Studio version ('vs2019' or 'vs2022').
         required: false
         type: string
-        default: 'vs2019'
+        default: 'vs2022'
   workflow_dispatch:
     inputs:
       version:
@@ -147,7 +147,7 @@ jobs:
         path: ${{ env.DOCKER_DIR }}/${{ env.TAR_NAME }}
 
   win-build:
-    runs-on: windows-2019
+    runs-on: windows-2022
     if: inputs.arch != 'aarch64'
     env:
       TAR_BASE_NAME: llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version }}-Release${{ inputs.asserts == 'ON' && '+Asserts' || '' }}${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm

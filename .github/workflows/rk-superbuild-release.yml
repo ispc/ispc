@@ -56,7 +56,7 @@ jobs:
         cmake --build .
 
   build-ospray-superbuild-windows:
-    runs-on: windows-2019
+    runs-on: windows-2022
     # Disabling this workflow for non ispc/ispc repo as it needs to run on releases only.
     if: github.repository == 'ispc/ispc'
     steps:
@@ -82,5 +82,5 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake -G "Visual Studio 16 2019" -A x64 ../scripts/superbuild -DDOWNLOAD_ISPC=OFF -DCMAKE_BUILD_TYPE=Release -DDEPENDENCIES_BUILD_TYPE=Release
+        cmake -G "Visual Studio 17 2022" -A x64 ../scripts/superbuild -DDOWNLOAD_ISPC=OFF -DCMAKE_BUILD_TYPE=Release -DDEPENDENCIES_BUILD_TYPE=Release
         cmake --build . --config Release
