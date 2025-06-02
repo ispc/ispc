@@ -76,7 +76,7 @@ jobs:
     runs-on: windows-2022
     env:
       LLVM_VERSION: "20.1"
-      LLVM_TAR: llvm-20.1.4-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      LLVM_TAR: llvm-20.1.4-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z
       LLVM_HOME: "C:\\projects\\llvm"
       CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       BUILD_TYPE: "Release"

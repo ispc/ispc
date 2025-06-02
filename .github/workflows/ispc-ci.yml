@@ -382,22 +382,26 @@ jobs:
           - version: "17.0"
             full_version: "17.0.6"
             short_version: 17
+            vs_version: "vs2019"
           - version: "18.1"
             full_version: "18.1.8"
             short_version: 18
+            vs_version: "vs2022"
           - version: "19.1"
             full_version: "19.1.7"
             short_version: 19
+            vs_version: "vs2022"
           - version: "20.1"
             full_version: "20.1.4"
             short_version: 20
+            vs_version: "vs2022"
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: windows
       artifact_name: ispc_llvm${{ matrix.llvm.short_version }}_win
       runner: windows-2022
       llvm_version: ${{ matrix.llvm.version }}
-      llvm_tar: llvm-${{ matrix.llvm.full_version }}-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      llvm_tar: llvm-${{ matrix.llvm.full_version }}-win.${{ matrix.llvm.vs_version }}-Release+Asserts-x86.arm.wasm.tar.7z
 
   win-build-ispc-llvm20-lto:
     needs: [define-flow]
@@ -407,7 +411,7 @@ jobs:
       artifact_name: ispc_llvm20_lto_win
       runner: windows-2022
       llvm_version: 20.1
-      llvm_tar: llvm-20.1.4-win.vs2019-Release+Asserts-lto-x86.arm.wasm.tar.7z
+      llvm_tar: llvm-20.1.4-win.vs2022-Release+Asserts-lto-x86.arm.wasm.tar.7z
       enable_lto: true
 
   win-build-ispc-xe-llvm20-release:
@@ -418,7 +422,7 @@ jobs:
       artifact_name: ispc_xe_llvm20rel_win
       runner: windows-2022
       llvm_version: 20.1
-      llvm_tar: llvm-20.1.4-win.vs2019-Release-x86.arm.wasm.tar.7z
+      llvm_tar: llvm-20.1.4-win.vs2022-Release-x86.arm.wasm.tar.7z
       enable_xe: true
 
   win-build-ispc-wasm:
@@ -429,7 +433,7 @@ jobs:
       artifact_name: ispc-wasm-windows
       runner: windows-2022
       llvm_version: 20.1
-      llvm_tar: llvm-20.1.4-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      llvm_tar: llvm-20.1.4-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z
       enable_wasm: true
 
   win-test:
@@ -505,7 +509,7 @@ jobs:
     runs-on: windows-2022
     env:
       LLVM_VERSION: "20.1"
-      LLVM_TAR: llvm-20.1.4-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      LLVM_TAR: llvm-20.1.4-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z
       LLVM_HOME: "C:\\projects\\llvm"
       CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       BUILD_TYPE: "Release"
