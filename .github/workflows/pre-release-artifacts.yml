@@ -18,7 +18,6 @@ permissions:
   contents: read
 
 env:
-  LLVM_REPO: https://github.com/ispc/ispc.dependencies
   ISPC_HOME: ${{ github.workspace }}
   LLVM_HOME: ${{ github.workspace }}
   LLVM_VERSION: "20.1"
@@ -83,7 +82,6 @@ jobs:
       contents: write  # Needed for release creation/update
 
     env:
-      CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       LLVM_TAR: llvm-20.1.4-win.vs2022-Release+Asserts-lto-x86.arm.wasm.tar.7z
 
     steps:

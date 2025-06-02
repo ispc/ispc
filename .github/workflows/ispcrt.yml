@@ -13,11 +13,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  LLVM_REPO: https://github.com/ispc/ispc.dependencies
-  LLVM_VERSION: "20.1"
-  LLVM_TAR: llvm-20.1.4-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
-
 jobs:
   # Build ISPC Runtime separately from ISPC with support of different task systems
   build-linux-ispcrt:

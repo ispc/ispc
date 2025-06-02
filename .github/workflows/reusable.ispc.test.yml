@@ -52,9 +52,6 @@ on:
         default: ''
 
 env:
-  SDE_MIRROR_ID: 843185
-  SDE_TAR_NAME: sde-external-9.48.0-2024-11-25
-  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
   LLVM_HOME: ${{ inputs.platform == 'windows' && 'C:\\projects\\llvm' || github.workspace }}
   ISPC_HOME: ${{ github.workspace }}
   INSTALL_COMPUTE_RUNTIME: ${{ inputs.enable_xe && '1' || '' }}

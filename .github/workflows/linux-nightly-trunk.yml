@@ -20,11 +20,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  SDE_MIRROR_ID: 843185
-  SDE_TAR_NAME: sde-external-9.48.0-2024-11-25
-  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
-
 jobs:
   define-targets:
     runs-on: ubuntu-latest
@@ -83,9 +78,6 @@ jobs:
   linux-build-ispc-llvm-trunk:
     needs: [linux-build-llvm-trunk]
     runs-on: ubuntu-22.04
-    env:
-      LLVM_VERSION: "trunk"
-      LLVM_TAR: llvm-trunk-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.gz
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1

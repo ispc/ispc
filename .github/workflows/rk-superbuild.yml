@@ -14,15 +14,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  LLVM_REPO: https://github.com/ispc/ispc.dependencies
-
 jobs:
   linux-build-ispc:
     runs-on: ubuntu-22.04
-    env:
-      LLVM_VERSION: "20.1"
-      LLVM_TAR: llvm-20.1.4-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -50,12 +44,6 @@ jobs:
 
   win-build-ispc:
     runs-on: windows-2022
-    env:
-      LLVM_VERSION: "20.1"
-      LLVM_TAR: llvm-20.1.4-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z
-      LLVM_HOME: "C:\\projects\\llvm"
-      CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
-      BUILD_TYPE: "Release"
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
