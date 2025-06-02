@@ -1,4 +1,8 @@
 #!/bin/bash -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${SCRIPT_DIR}/init-env.sh"
+
 echo "APT::Acquire::Retries \"3\";" | sudo tee -a /etc/apt/apt.conf.d/80-retries
 
 # SVML requires installing Intel Compiler

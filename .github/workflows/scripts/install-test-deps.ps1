@@ -1,6 +1,10 @@
 # Install-ChocoPackage is GH Actions wrappers around choco, which does retries
 Install-ChocoPackage wget
 
+# Source the init-env.ps1 script from the same directory as this script
+$SCRIPT_DIR = Split-Path -Parent $MyInvocation.MyCommand.Path
+. (Join-Path $SCRIPT_DIR "init-env.ps1")
+
 # Install nanobind for examples build
 pip install nanobind
 

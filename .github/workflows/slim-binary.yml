@@ -13,18 +13,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  SDE_MIRROR_ID: 843185
-  SDE_TAR_NAME: sde-external-9.48.0-2024-11-25
-  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
-  LLVM_REPO: https://github.com/ispc/ispc.dependencies
-
 jobs:
   linux:
     runs-on: ubuntu-22.04
-    env:
-      LLVM_VERSION: "20.1"
-      LLVM_TAR: llvm-20.1.4-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -64,9 +55,6 @@ jobs:
           - runner: macos-14
             target: neon-i32x8
             arch: aarch64
-    env:
-      LLVM_VERSION: "20.1"
-      LLVM_TAR: llvm-20.1.4-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -75,19 +63,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        ls -al /Library/Developer/CommandLineTools/SDKs/
-        xcrun --show-sdk-path
-        [ -n "$LLVM_REPO" ] && wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 --no-verbose "$LLVM_REPO/releases/download/llvm-${LLVM_VERSION}-ispc-dev/${LLVM_TAR}"
-        tar xf "$LLVM_TAR"
-        echo "${GITHUB_WORKSPACE}/bin-${LLVM_VERSION}/bin" >> "$GITHUB_PATH"
-        brew install bison flex
-        if [ "${{ matrix.runner }}" == "macos-14" ]; then
-          echo "/opt/homebrew/opt/bison/bin" >> "$GITHUB_PATH"
-          echo "/opt/homebrew/opt/flex/bin" >> "$GITHUB_PATH"
-        else
-          echo "/usr/local/opt/bison/bin" >> "$GITHUB_PATH"
-          echo "/usr/local/opt/flex/bin" >> "$GITHUB_PATH"
-        fi
+        .github/workflows/scripts/install-build-deps.sh ${{ matrix.runner }}
 
     - name: Check environment
       run: |
@@ -110,10 +86,6 @@ jobs:
   windows:
     runs-on: windows-2022
     env:
-      LLVM_VERSION: "20.1"
-      LLVM_TAR: llvm-20.1.4-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z
-      LLVM_HOME: "C:\\projects\\llvm"
-      CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
       BUILD_TYPE: "Release"
 
     steps:

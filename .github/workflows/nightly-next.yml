@@ -41,13 +41,6 @@ jobs:
 
   linux-build-ispc-llvm:
     runs-on: ubuntu-22.04
-    env:
-      LLVM_VERSION: "20.1"
-      LLVM_TAR: llvm-20.1.4-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
-      SDE_MIRROR_ID: 843185
-      SDE_TAR_NAME: sde-external-9.48.0-2024-11-25
-      USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
-      LLVM_REPO: https://github.com/ispc/ispc.dependencies
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -93,16 +86,6 @@ jobs:
 
   win-build-ispc-llvm:
     runs-on: windows-2022
-    env:
-      LLVM_VERSION: "20.1"
-      LLVM_TAR: llvm-20.1.4-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z
-      LLVM_HOME: "C:\\projects\\llvm"
-      CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
-      BUILD_TYPE: "Release"
-      SDE_MIRROR_ID: 843185
-      SDE_TAR_NAME: sde-external-9.48.0-2024-11-25
-      USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
-      LLVM_REPO: https://github.com/ispc/ispc.dependencies
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
