@@ -9088,6 +9088,8 @@ static bool lIsMatchWithTypeWidening(const Type *callType, const Type *funcArgTy
         return (funcAt->basicType == AtomicType::TYPE_INT64 || funcAt->basicType == AtomicType::TYPE_UINT64);
     case AtomicType::TYPE_DOUBLE:
         return false;
+    case AtomicType::TYPE_VOID:
+        return false;
     default:
         FATAL("Unhandled atomic type");
         return false;
