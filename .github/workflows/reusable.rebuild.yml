@@ -150,7 +150,7 @@ jobs:
     runs-on: windows-2019
     if: inputs.arch != 'aarch64'
     env:
-      TAR_BASE_NAME: llvm-${{ inputs.full_version }}-win.vs2019-Release${{ inputs.asserts == 'ON' && '+Asserts' || '' }}${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm
+      TAR_BASE_NAME: llvm-${{ inputs.full_version }}-win.${{ inputs.vs_version }}-Release${{ inputs.asserts == 'ON' && '+Asserts' || '' }}${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm
       ARTIFACT_NAME: llvm${{ inputs.asserts == 'OFF' && 'rel' || '' }}_win_x86_lto_${{ inputs.lto }}
 
     steps:
