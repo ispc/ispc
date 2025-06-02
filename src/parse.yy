@@ -3620,10 +3620,7 @@ static bool
 lGetConstantIntOrSymbol(Expr *expr, std::variant<std::monostate, int, Symbol*> *value, SourcePos pos, const char *usage) {
     if (expr == nullptr)
         return false;
-    expr = TypeCheck(expr);
-    if (expr == nullptr)
-        return false;
-    expr = Optimize(expr);
+    expr = TypeCheckAndOptimize(expr);
     if (expr == nullptr)
         return false;
     const SymbolExpr* se= llvm::dyn_cast<SymbolExpr>(expr);
@@ -3735,7 +3732,11 @@ lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
                us end up with a ConstExpr with the desired EnumType... */
             Expr *castExpr = new TypeCastExpr(constUniformType, enums[i]->constValue,
                                               enums[i]->pos);
-            castExpr = Optimize(castExpr);
+            castExpr = TypeCheckAndOptimize(castExpr);
+            if (castExpr == nullptr) {
+                AssertPos(enums[i]->pos, m->errorCount > 0);
+                continue;
+            }
             enums[i]->constValue = llvm::dyn_cast<ConstExpr>(castExpr);
             AssertPos(enums[i]->pos, enums[i]->constValue != nullptr);
         }

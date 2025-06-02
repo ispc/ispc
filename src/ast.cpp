@@ -364,16 +364,7 @@ static ASTNode *lOptimizeNode(ASTNode *node, void *) {
         return node;
     }
 
-    // TODO: Uncomment this if you want to enforce type checking before optimization
-    // Note: This is commented out because causes some lit tests failing
-    // Eventually we should ensure that all nodes are type-checked before optimization.
-    /*if (!node->IsTypeChecked()) {
-        node = lTypeCheckNode(node, nullptr);
-        if (!node) {
-            return nullptr;
-        }
-    }
-    Assert(node->IsTypeChecked() && "Node must be type-checked before optimization");*/
+    Assert(node->IsTypeChecked() && "Node must be type-checked before optimization");
 
     // Mark that we're starting the optimization process for this node
     node->StartOptimize();
@@ -401,6 +392,35 @@ ASTNode *ispc::TypeCheck(ASTNode *root) { return WalkAST(root, nullptr, lTypeChe
 Expr *ispc::TypeCheck(Expr *expr) { return (Expr *)TypeCheck((ASTNode *)expr); }
 
 Stmt *ispc::TypeCheck(Stmt *stmt) { return (Stmt *)TypeCheck((ASTNode *)stmt); }
+
+/**
+ * Performs type checking followed by optimization on the given node.
+ * This encapsulates the common pattern of calling TypeCheck() followed by Optimize().
+ */
+ASTNode *ispc::TypeCheckAndOptimize(ASTNode *root) {
+    if (root == nullptr) {
+        return nullptr;
+    }
+
+    // First type check
+    ASTNode *result = TypeCheck(root);
+    if (result == nullptr) {
+        return nullptr;
+    }
+
+    // Then optimize
+    return Optimize(result);
+}
+
+/**
+ * Convenience version of TypeCheckAndOptimize() for Expr *s
+ */
+Expr *ispc::TypeCheckAndOptimize(Expr *expr) { return (Expr *)TypeCheckAndOptimize((ASTNode *)expr); }
+
+/**
+ * Convenience version of TypeCheckAndOptimize() for Stmt *s
+ */
+Stmt *ispc::TypeCheckAndOptimize(Stmt *stmt) { return (Stmt *)TypeCheckAndOptimize((ASTNode *)stmt); }
 
 struct CostData {
     CostData() { cost = foreachDepth = 0; }

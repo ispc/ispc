@@ -465,7 +465,7 @@ Expr *lCreateConstExpr(ExprList *exprList, const AtomicType::BasicType basicType
 
     int i = 0;
     for (Expr *expr : exprList->exprs) {
-        const ConstExpr *ce = llvm::dyn_cast<ConstExpr>(Optimize(expr));
+        const ConstExpr *ce = llvm::dyn_cast<ConstExpr>(TypeCheckAndOptimize(expr));
         // ConstExpr of length 1 implies that it contains uniform value
         if (!ce || ce->Count() != 1) {
             canConstructConstExpr = false;
@@ -652,7 +652,11 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
                 }
 
                 if (initExpr != nullptr) {
-                    initExpr = Optimize(initExpr);
+                    initExpr = TypeCheckAndOptimize(initExpr);
+                    if (initExpr == nullptr) {
+                        Error(pos, "Initialization of global variable \"%s\" was unsuccessful.", name.c_str());
+                        return;
+                    }
                     // Fingers crossed, now let's see if we've got a
                     // constant value..
                     std::pair<llvm::Constant *, bool> initPair = initExpr->GetStorageConstant(type);

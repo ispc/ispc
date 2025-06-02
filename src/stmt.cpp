@@ -215,14 +215,14 @@ void DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
                     // FIXME: and this is only needed to re-establish
                     // constant-ness so that GetConstant below works for
                     // constant artithmetic expressions...
-                    initExpr = ::Optimize(initExpr);
+                    initExpr = ::TypeCheckAndOptimize(initExpr);
                 }
 
                 std::pair<llvm::Constant *, bool> cinitPair = initExpr->GetStorageConstant(sym->type);
                 cinit = cinitPair.first;
                 if (cinit == nullptr) {
                     Error(initExpr->pos,
-                          "Initializer for static variable "
+                          "InitializWer for static variable "
                           "\"%s\" must be a constant.",
                           sym->name.c_str());
                 }
