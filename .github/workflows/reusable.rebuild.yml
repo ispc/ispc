@@ -90,6 +90,7 @@ on:
 
 jobs:
   linux-build:
+    if: false
     runs-on: ${{ inputs.arch == 'aarch64' && 'ubuntu-22.04-arm' || 'ubuntu-latest' }}
     env:
       TAR_NAME: llvm-${{ inputs.full_version }}-ubuntu${{ inputs.ubuntu }}${{ inputs.arch == 'aarch64' && 'aarch64' || '' }}-Release${{ inputs.asserts == 'ON' && '+Asserts' || '' }}${{ inputs.lto == 'ON' && '-lto' || '' }}-x86.arm.wasm.tar.xz
@@ -225,7 +226,7 @@ jobs:
   mac-build:
     # This job is not capable to build on a shared runner with LTO=on, so need to use self-hosted macOS runner.
     runs-on: ${{ inputs.lto == 'ON' && 'macOS' || 'macos-14' }}
-    if: inputs.arch != 'aarch64'
+    if: false
 
     env:
       TAR_NAME: llvm-${{ inputs.full_version }}-macos-Release${{ inputs.asserts == 'ON' && '+Asserts' || '' }}${{ inputs.lto == 'ON' && '-lto' || '' }}-universal-x86.arm.wasm.tar.xz
