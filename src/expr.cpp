@@ -126,9 +126,7 @@ static Expr *lArrayToPointer(Expr *expr) {
     Expr *zero = new ConstExpr(AtomicType::UniformInt32, 0, expr->pos);
     Expr *index = new IndexExpr(expr, zero, expr->pos);
     Expr *addr = new AddressOfExpr(index, expr->pos);
-    addr = TypeCheck(addr);
-    Assert(addr != nullptr);
-    addr = Optimize(addr);
+    addr = TypeCheckAndOptimize(addr);
     Assert(addr != nullptr);
     return addr;
 }
@@ -2683,11 +2681,7 @@ Expr *BinaryExpr::Optimize() {
                 }
                 Expr *einv = new ConstExpr(type1, inv, constArg1->pos);
                 Expr *e = new BinaryExpr(Mul, arg0, einv, pos);
-                e = ::TypeCheck(e);
-                if (e == nullptr) {
-                    return nullptr;
-                }
-                return ::Optimize(e);
+                return ::TypeCheckAndOptimize(e);
             }
         }
 
@@ -2707,25 +2701,18 @@ Expr *BinaryExpr::Optimize() {
                     Expr *rcpSymExpr = new FunctionSymbolExpr("rcp", rcpFuns, {}, TemplateArgs(), pos);
                     ExprList *args = new ExprList(arg1, arg1->pos);
                     Expr *rcpCall = new FunctionCallExpr(rcpSymExpr, args, arg1->pos);
-                    rcpCall = ::TypeCheck(rcpCall);
+                    rcpCall = ::TypeCheckAndOptimize(rcpCall);
                     if (rcpCall != nullptr) {
-                        rcpCall = ::Optimize(rcpCall);
-                        if (rcpCall != nullptr) {
-                            Expr *ret = new BinaryExpr(Mul, arg0, rcpCall, pos);
-                            ret = ::TypeCheck(ret);
-                            if (ret == nullptr) {
-                                return nullptr;
-                            }
-                            return ::Optimize(ret);
-                        }
+                        Expr *ret = new BinaryExpr(Mul, arg0, rcpCall, pos);
+                        return ::TypeCheckAndOptimize(ret);
                     }
                 }
-
-                Warning(pos,
-                        "rcp(%s) not found from stdlib.  Can't apply "
-                        "fast-math rcp optimization.",
-                        type1->GetString().c_str());
             }
+
+            Warning(pos,
+                    "rcp(%s) not found from stdlib.  Can't apply "
+                    "fast-math rcp optimization.",
+                    type1->GetString().c_str());
         }
     }
 
@@ -4640,7 +4627,7 @@ static std::pair<llvm::Constant *, bool> lGetExprListConstant(const Type *type, 
                 return std::pair<llvm::Constant *, bool>(nullptr, false);
             }
             // Re-establish const-ness if possible
-            expr = ::Optimize(expr);
+            expr = ::TypeCheckAndOptimize(expr);
         }
         std::pair<llvm::Constant *, bool> cPair;
         if (isStorageType) {
@@ -7620,9 +7607,7 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             AssertPos(pos, PointerType::IsVoidPointer(toPointerType) ||
                                Type::EqualIgnoringConst(arrayType->GetAsVaryingType(), toPointerType) == true);
             arrayAsPtr = new TypeCastExpr(toPointerType, arrayAsPtr, pos);
-            arrayAsPtr = ::TypeCheck(arrayAsPtr);
-            AssertPos(pos, arrayAsPtr != nullptr);
-            arrayAsPtr = ::Optimize(arrayAsPtr);
+            arrayAsPtr = ::TypeCheckAndOptimize(arrayAsPtr);
             AssertPos(pos, arrayAsPtr != nullptr);
             arrayType = arrayAsPtr->GetType();
         }

@@ -275,6 +275,16 @@ extern Expr *TypeCheck(Expr *);
 /** Convenience version of TypeCheck() for Stmt *s that returns an Stmt *. */
 extern Stmt *TypeCheck(Stmt *);
 
+/** Performs both type checking and optimization on the given AST (or portion of one) in a single call.
+    Returns a pointer to the root of the resulting AST. */
+extern ASTNode *TypeCheckAndOptimize(ASTNode *root);
+
+/** Convenience version of TypeCheckAndOptimize() for Expr *s that returns an Expr *. */
+extern Expr *TypeCheckAndOptimize(Expr *);
+
+/** Convenience version of TypeCheckAndOptimize() for Stmt *s that returns a Stmt *. */
+extern Stmt *TypeCheckAndOptimize(Stmt *);
+
 /** Returns an estimate of the execution cost of the tree starting at
     the given root. */
 extern int EstimateCost(ASTNode *root);

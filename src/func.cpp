@@ -1268,8 +1268,7 @@ Symbol *TemplateInstantiation::InstantiateSymbol(Symbol *sym) {
         Expr *convertedExpr =
             ::TypeConvertExpr(const_cast<ConstExpr *>(ce), sym->type, "template parameter instantiation");
         if (convertedExpr) {
-            convertedExpr = ::TypeCheck(convertedExpr);
-            convertedExpr = ::Optimize(convertedExpr);
+            convertedExpr = ::TypeCheckAndOptimize(convertedExpr);
             ce = llvm::dyn_cast<ConstExpr>(convertedExpr);
         }
         instSym->constValue = ce ? ce->Instantiate(*this) : nullptr;

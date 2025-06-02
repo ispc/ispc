@@ -1016,8 +1016,7 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             // Try to find an initializer expression.
             while (decl != nullptr) {
                 if (decl->initExpr != nullptr) {
-                    decl->initExpr = TypeCheck(decl->initExpr);
-                    decl->initExpr = Optimize(decl->initExpr);
+                    decl->initExpr = TypeCheckAndOptimize(decl->initExpr);
                     if (decl->initExpr != nullptr) {
                         init = llvm::dyn_cast<ConstExpr>(decl->initExpr);
                         if (init == nullptr) {
