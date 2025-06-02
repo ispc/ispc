@@ -38,6 +38,8 @@ for i in {1..5}
 do
   sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y && sudo apt-get -y update | tee log${i}.txt
   sudo apt-get install ninja-build bison flex libtbb-dev libstdc++6 "${CROSS_LIBS[@]}" | tee -a log${i}.txt
+  sudo apt install python3-pip python3-dev
+  pip3 install nanobind numpy
   if [[ ! `grep "^Err: " log${i}.txt` && ! `grep "^E: " log${i}.txt` ]]; then
     echo "APT packages installation was successful"
     break
