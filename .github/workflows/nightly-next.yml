@@ -92,7 +92,7 @@ jobs:
       optsets: -O0 -O1 -O2
 
   win-build-ispc-llvm:
-    runs-on: windows-2019
+    runs-on: windows-2022
     env:
       LLVM_VERSION: "20.1"
       LLVM_TAR: llvm-20.1.4-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
