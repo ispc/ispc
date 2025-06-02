@@ -1265,11 +1265,12 @@ Symbol *TemplateInstantiation::InstantiateSymbol(Symbol *sym) {
         const TemplateArg *arg = argsMap[sym->name];
         Assert(arg != nullptr);
         const ConstExpr *ce = arg->GetAsConstExpr();
-        if (ce != nullptr) {
-            // Do a little type cast to the actual template parameter type here and optimize it
-            Expr *castExpr = new TypeCastExpr(sym->type, const_cast<ConstExpr *>(ce), sym->pos);
-            castExpr = Optimize(castExpr);
-            ce = llvm::dyn_cast<ConstExpr>(castExpr);
+        Expr *convertedExpr =
+            ::TypeConvertExpr(const_cast<ConstExpr *>(ce), sym->type, "template parameter instantiation");
+        if (convertedExpr) {
+            convertedExpr = ::TypeCheck(convertedExpr);
+            convertedExpr = ::Optimize(convertedExpr);
+            ce = llvm::dyn_cast<ConstExpr>(convertedExpr);
         }
         instSym->constValue = ce ? ce->Instantiate(*this) : nullptr;
     } else {
