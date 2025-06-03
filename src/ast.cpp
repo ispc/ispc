@@ -332,7 +332,20 @@ static ASTNode *lTypeCheckNode(ASTNode *node, void *) {
         return node;
     }
 
+    if (node->IsTypeCheckInProgress()) {
+        // It should not happen but if it did return node without marking it as type-checked to avoid recursion
+        Assert(node->IsTypeCheckInProgress());
+        return node;
+    }
+
+    // Mark that we're starting the type check process for this node
+    node->StartTypeCheck();
+
     ASTNode *result = node->TypeCheck();
+
+    // Mark that we're finished with type checking this node
+    node->FinishTypeCheck();
+
     if (result) {
         // Mark result as type-checked too
         result->SetTypeChecked();
@@ -343,6 +356,11 @@ static ASTNode *lTypeCheckNode(ASTNode *node, void *) {
 static ASTNode *lOptimizeNode(ASTNode *node, void *) {
     // Skip if already optimized
     if (node->IsOptimized()) {
+        return node;
+    }
+
+    if (node->IsOptimizeInProgress()) {
+        // It should not happen but if it did return node without marking it as optimized to avoid recursion
         return node;
     }
 
@@ -357,8 +375,15 @@ static ASTNode *lOptimizeNode(ASTNode *node, void *) {
     }
     Assert(node->IsTypeChecked() && "Node must be type-checked before optimization");*/
 
+    // Mark that we're starting the optimization process for this node
+    node->StartOptimize();
+
     // Now proceed with optimization
     ASTNode *result = node->Optimize();
+
+    // Mark that we're finished with optimizing this node
+    node->FinishOptimize();
+
     if (result) {
         result->SetOptimized();
     }
