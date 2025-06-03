@@ -52,11 +52,27 @@ using namespace ispc;
 // Expr
 
 const Type *Expr::GetType() const {
-    // TODO: uncomment this when ready
-    /*if (!IsTypeChecked()) {
-        Assert(IsTypeChecked() == true);
-    }*/
-    return GetTypeImpl();
+    const Expr *node = this;
+    if (!IsTypeChecked()) {
+        // It should not happen but if we're currently in the process of type checking this node,
+        // use GetTypeUnsafe to avoid infinite recursion
+        if (IsTypeCheckInProgress()) {
+            Assert(node->IsTypeCheckInProgress());
+            return GetTypeUnsafe();
+        }
+
+        Expr *mutableThis = const_cast<Expr *>(this);
+        Expr *result = ::TypeCheck(mutableThis);
+
+        if (result) {
+            node = result;
+        } else {
+            return node->GetTypeImpl();
+        }
+    }
+
+    Assert(node->IsTypeChecked());
+    return node->GetTypeImpl();
 }
 
 const Type *Expr::GetTypeUnsafe() const { return GetTypeImpl(); }
@@ -105,7 +121,7 @@ static llvm::APFloat lCreateAPFloat(double value, llvm::Type *type) {
 
 static Expr *lArrayToPointer(Expr *expr) {
     Assert(expr != nullptr);
-    AssertPos(expr->pos, CastType<ArrayType>(expr->GetType()));
+    AssertPos(expr->pos, CastType<ArrayType>(expr->GetTypeUnsafe()));
 
     Expr *zero = new ConstExpr(AtomicType::UniformInt32, 0, expr->pos);
     Expr *index = new IndexExpr(expr, zero, expr->pos);
@@ -118,7 +134,7 @@ static Expr *lArrayToPointer(Expr *expr) {
 }
 
 static bool lIsAllIntZeros(Expr *expr) {
-    const Type *type = expr->GetType();
+    const Type *type = expr->GetTypeUnsafe();
     if (type == nullptr || type->IsIntType() == false) {
         return false;
     }
@@ -145,6 +161,9 @@ static bool lIsAllIntZeros(Expr *expr) {
 static bool lTypeCastOk(Expr **expr, const Type *toType, SourcePos pos) {
     if (expr != nullptr) {
         *expr = new TypeCastExpr(toType, *expr, pos);
+        // Mark as type checked here since lTypeCastOk is used in type conversion
+        // logic where the type is already known to be correct.
+        (*expr)->SetTypeChecked();
     }
     return true;
 }
@@ -593,7 +612,7 @@ Expr *ispc::TypeConvertExpr(Expr *expr, const Type *toType, const char *errorMsg
         return nullptr;
     }
 
-    const Type *fromType = expr->GetType();
+    const Type *fromType = expr->GetTypeUnsafe();
     Expr *e = expr;
     if (lDoTypeConv(fromType, toType, &e, false, errorMsgBase, expr->pos)) {
         return e;
@@ -605,6 +624,7 @@ Expr *ispc::TypeConvertExpr(Expr *expr, const Type *toType, const char *errorMsg
 bool ispc::PossiblyResolveFunctionOverloads(Expr *expr, const Type *type) {
     FunctionSymbolExpr *fse = nullptr;
     const FunctionType *funcType = nullptr;
+
     if (CastType<PointerType>(type) != nullptr && (funcType = CastType<FunctionType>(type->GetBaseType())) &&
         (fse = llvm::dyn_cast<FunctionSymbolExpr>(expr)) != nullptr) {
         // We're initializing a function pointer with a function symbol,
@@ -1381,7 +1401,7 @@ Expr *UnaryExpr::Optimize() {
 
 Expr *UnaryExpr::TypeCheck() {
     const Type *type = nullptr;
-    if (expr == nullptr || (type = expr->GetType()) == nullptr) {
+    if (expr == nullptr || (type = expr->GetTypeUnsafe()) == nullptr) {
         // something went wrong in type checking...
         return nullptr;
     }
@@ -2763,7 +2783,7 @@ Expr *BinaryExpr::TypeCheck() {
         return nullptr;
     }
 
-    const Type *type0 = arg0->GetType(), *type1 = arg1->GetType();
+    const Type *type0 = arg0->GetTypeUnsafe(), *type1 = arg1->GetTypeUnsafe();
     if (type0 == nullptr || type1 == nullptr) {
         return nullptr;
     }
@@ -3487,8 +3507,8 @@ Expr *AssignExpr::TypeCheck() {
         return nullptr;
     }
 
-    const Type *ltype = lvalue->GetType();
-    const Type *rtype = rvalue->GetType();
+    const Type *ltype = lvalue->GetTypeUnsafe();
+    const Type *rtype = rvalue->GetTypeUnsafe();
     if ((ltype && ltype->IsDependent()) || (rtype && rtype->IsDependent())) {
         return this;
     }
@@ -3964,7 +3984,7 @@ Expr *SelectExpr::TypeCheck() {
         return nullptr;
     }
 
-    const Type *type1 = expr1->GetType(), *type2 = expr2->GetType(), *testType = test->GetType();
+    const Type *type1 = expr1->GetTypeUnsafe(), *type2 = expr2->GetTypeUnsafe(), *testType = test->GetTypeUnsafe();
     if (!type1 || !type2 || !testType) {
         return nullptr;
     }
@@ -4235,7 +4255,7 @@ static bool lFullResolveOverloads(Expr *func, ExprList *args, std::vector<const 
         if (expr == nullptr) {
             return false;
         }
-        const Type *t = expr->GetType();
+        const Type *t = expr->GetTypeUnsafe();
         if (t == nullptr) {
             return false;
         }
@@ -5204,12 +5224,12 @@ Expr *IndexExpr::Optimize() {
 
 Expr *IndexExpr::TypeCheck() {
     const Type *indexType = nullptr;
-    if (baseExpr == nullptr || index == nullptr || ((indexType = index->GetType()) == nullptr)) {
+    if (baseExpr == nullptr || index == nullptr || ((indexType = index->GetTypeUnsafe()) == nullptr)) {
         AssertPos(pos, m->errorCount > 0);
         return nullptr;
     }
 
-    const Type *baseExprType = baseExpr->GetType();
+    const Type *baseExprType = baseExpr->GetTypeUnsafe();
     if (baseExprType == nullptr) {
         AssertPos(pos, m->errorCount > 0);
         return nullptr;
@@ -7840,7 +7860,7 @@ Expr *TypeCastExpr::TypeCheck() {
         return nullptr;
     }
 
-    const Type *toType = type, *fromType = expr->GetType();
+    const Type *toType = type, *fromType = expr->GetTypeUnsafe();
     if (toType == nullptr || fromType == nullptr) {
         return nullptr;
     }

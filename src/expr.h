@@ -33,7 +33,7 @@ class Expr : public ASTNode {
     virtual const Type *GetType() const;
 
     /** Returns the Type of the expression.
-        For debugging/AST print, no type-checking guarantee.*/
+        For debugging/AST print, calls from TypeCheck itself, no type-checking guarantee.*/
     virtual const Type *GetTypeUnsafe() const;
 
     /** This is the main method for Expr implementations to implement.  It
