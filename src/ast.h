@@ -170,8 +170,10 @@ class ASTNode : public Traceable {
     };
 
     enum StateFlag : uint32_t {
-        OPTIMIZED_FLAG = 1 << 0,  // 0x01
-        TYPECHECKED_FLAG = 1 << 1 // 0x02
+        OPTIMIZED_FLAG = 1 << 0,              // 0x01
+        TYPECHECKED_FLAG = 1 << 1,            // 0x02
+        TYPE_CHECK_IN_PROGRESS_FLAG = 1 << 2, // 0x04
+        OPTIMIZE_IN_PROGRESS_FLAG = 1 << 3    // 0x08
     };
     /** Return an ID for the concrete type of this object. This is used to
         implement the classof checks.  This should not be used for any
@@ -192,8 +194,18 @@ class ASTNode : public Traceable {
     // State methods
     bool IsOptimized() const { return StateFlags & OPTIMIZED_FLAG; }
     bool IsTypeChecked() const { return StateFlags & TYPECHECKED_FLAG; }
+    bool IsTypeCheckInProgress() const { return StateFlags & TYPE_CHECK_IN_PROGRESS_FLAG; }
+    bool IsOptimizeInProgress() const { return StateFlags & OPTIMIZE_IN_PROGRESS_FLAG; }
     void SetOptimized() const { StateFlags |= OPTIMIZED_FLAG; }
     void SetTypeChecked() const { StateFlags |= TYPECHECKED_FLAG; }
+    // The method below prevent recursive type checking (when we call GetType() from TypeCheck())
+    // and must always be paired with a corresponding FinishTypeCheck() call.
+    void StartTypeCheck() { StateFlags |= TYPE_CHECK_IN_PROGRESS_FLAG; }
+    void FinishTypeCheck() { StateFlags &= ~TYPE_CHECK_IN_PROGRESS_FLAG; }
+    // The method below prevent recursive optimization (when we call GetType() from Optimize())
+    // and must always be paired with a corresponding FinishTypeCheck() call.
+    void StartOptimize() { StateFlags |= OPTIMIZE_IN_PROGRESS_FLAG; }
+    void FinishOptimize() { StateFlags &= ~OPTIMIZE_IN_PROGRESS_FLAG; }
 
     // State transfer helper for when nodes are replaced
     void CopyStateTo(ASTNode *other) const { other->StateFlags = this->StateFlags; }
