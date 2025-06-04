@@ -1,52 +1,72 @@
-;;  Copyright (c) 2013-2023, Intel Corporation
+;;  Copyright (c) 2013-2025, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
 define(`HAVE_GATHER', `1')
 define(`ISA',`AVX2')
+define(`WIDTH',`4')
+define(`MASK',`i64')
+include(`util.m4')
 
-include(`target-avx1-i64x4base.ll')
+declare void @__masked_store_blend_i32(<4 x i32>* nocapture, <4 x i32>, 
+                                      <4 x i64>) nounwind alwaysinline
+declare void @__masked_store_blend_i64(<4 x i64>* nocapture , <4 x i64>,
+                                      <4 x i64>) nounwind alwaysinline
+declare i64 @__movmsk(<4 x i64>) nounwind readnone alwaysinline
+
+declare i1 @__is_compile_time_constant_mask(<WIDTH x MASK> %mask)
+declare i1 @__is_compile_time_constant_uniform_int32(i32)
+declare i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32>)
 
 rdrand_definition()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; svml
+;; switch macro
+;; This is required to ensure that gather intrinsics are used with constant scale value.
+;; This particular implementation of the routine is used by non-avx512 targets currently(avx2-i64x4, avx2-i32x8, avx2-i32x16).
+;; $1: Return value
+;; $2: funcName
+;; $3: Width
+;; $4: scalar type of array
+;; $5: ptr
+;; $6: offset
+;; $7: scalar type of offset
+;; $8: vecMask
+;; $9: scalar type of vecMask
+;; $10: scale
+;; $11: scale type
 
-include(`svml.m4')
-svml(ISA)
+define(`convert_scale_to_const', `
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; int min/max
 
-;; declare <4 x i32> @llvm.x86.sse41.pminsd(<4 x i32>, <4 x i32>) nounwind readnone
-;; declare <4 x i32> @llvm.x86.sse41.pmaxsd(<4 x i32>, <4 x i32>) nounwind readonly
+ switch i32 %argn(`10',$@), label %default_$1 [ i32 1, label %on_one_$1
+                                                i32 2, label %on_two_$1
+                                                i32 4, label %on_four_$1
+                                                i32 8, label %on_eight_$1]
 
-define <4 x i32> @__min_varying_int32(<4 x i32>, <4 x i32>) nounwind readonly alwaysinline {
-  %m = call <4 x i32> @llvm.x86.sse41.pminsd(<4 x i32> %0, <4 x i32> %1)
-  ret <4 x i32> %m
-}
+on_one_$1:
+  %$1_1 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 1)
+  br label %end_bb_$1
 
-define <4 x i32> @__max_varying_int32(<4 x i32>, <4 x i32>) nounwind readonly alwaysinline {
-  %m = call <4 x i32> @llvm.x86.sse41.pmaxsd(<4 x i32> %0, <4 x i32> %1)
-  ret <4 x i32> %m
-}
+on_two_$1:
+  %$1_2 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 2)
+  br label %end_bb_$1
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; unsigned int min/max
+on_four_$1:
+  %$1_4 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 4)
+  br label %end_bb_$1
 
-;; declare <4 x i32> @llvm.x86.sse41.pminud(<4 x i32>, <4 x i32>) nounwind readonly
-;; declare <4 x i32> @llvm.x86.sse41.pmaxud(<4 x i32>, <4 x i32>) nounwind readonly
+on_eight_$1:
+  %$1_8 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 8)
+  br label %end_bb_$1
 
-define <4 x i32> @__min_varying_uint32(<4 x i32>, <4 x i32>) nounwind readonly alwaysinline {
-  %m = call <4 x i32> @llvm.x86.sse41.pminud(<4 x i32> %0, <4 x i32> %1)
-  ret <4 x i32> %m
-}
+default_$1:
+  unreachable
 
-define <4 x i32> @__max_varying_uint32(<4 x i32>, <4 x i32>) nounwind readonly alwaysinline {
-  %m = call <4 x i32> @llvm.x86.sse41.pmaxud(<4 x i32> %0, <4 x i32> %1)
-  ret <4 x i32> %m
-}
-
+end_bb_$1:
+  %$1 = phi <$3 x $4> [ %$1_1, %on_one_$1 ], [ %$1_2, %on_two_$1 ], [ %$1_4, %on_four_$1 ], [ %$1_8, %on_eight_$1 ]
+'
+)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float/half conversions
