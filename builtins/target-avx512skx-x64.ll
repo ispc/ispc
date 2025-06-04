@@ -330,12 +330,6 @@ define <WIDTH x float> @__max_varying_float(<WIDTH x float>,
 ;; sqrt/rsqrt/rcp
 
 ;; implementation note: sqrt uses native LLVM intrinsics
-declare float @llvm.sqrt.f32(float %Val)
-define float @__sqrt_uniform_float(float) nounwind readonly alwaysinline {
-  %ret = call float @llvm.sqrt.f32(float %0)
-  ret float %ret
-}
-
 declare <16 x float> @llvm.sqrt.v16f32(<16 x float> %Val)
 define <64 x float> @__sqrt_varying_float(<64 x float> %v) nounwind readnone alwaysinline {
   v64tov16(float, %v, %v0, %v1, %v2, %v3)
