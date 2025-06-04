@@ -55,29 +55,10 @@ fastMathFTZDAZ_x86()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int64/uint64 min/max
-define i64 @__max_uniform_int64(i64, i64) nounwind readonly alwaysinline {
-  %c = icmp sgt i64 %0, %1
-  %r = select i1 %c, i64 %0, i64 %1
-  ret i64 %r
-}
-
-define i64 @__max_uniform_uint64(i64, i64) nounwind readonly alwaysinline {
-  %c = icmp ugt i64 %0, %1
-  %r = select i1 %c, i64 %0, i64 %1
-  ret i64 %r
-}
-
-define i64 @__min_uniform_int64(i64, i64) nounwind readonly alwaysinline {
-  %c = icmp slt i64 %0, %1
-  %r = select i1 %c, i64 %0, i64 %1
-  ret i64 %r
-}
-
-define i64 @__min_uniform_uint64(i64, i64) nounwind readonly alwaysinline {
-  %c = icmp ult i64 %0, %1
-  %r = select i1 %c, i64 %0, i64 %1
-  ret i64 %r
-}
+declare i64 @__max_uniform_int64(i64, i64) nounwind readonly alwaysinline
+declare i64 @__max_uniform_uint64(i64, i64) nounwind readonly alwaysinline
+declare i64 @__min_uniform_int64(i64, i64) nounwind readonly alwaysinline
+declare i64 @__min_uniform_uint64(i64, i64) nounwind readonly alwaysinline
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max
@@ -97,32 +78,14 @@ define float @__min_uniform_float(float, float) nounwind readonly alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int min/max
 
-define i32 @__min_uniform_int32(i32, i32) nounwind readonly alwaysinline {
-  %cmp = icmp sgt i32 %1, %0
-  %ret = select i1 %cmp, i32 %0, i32 %1
-  ret i32 %ret
-}
-
-define i32 @__max_uniform_int32(i32, i32) nounwind readonly alwaysinline {
-  %cmp = icmp sgt i32 %1, %0
-  %ret = select i1 %cmp, i32 %1, i32 %0
-  ret i32 %ret
-}
+declare i32 @__min_uniform_int32(i32, i32) nounwind readonly alwaysinline
+declare i32 @__max_uniform_int32(i32, i32) nounwind readonly alwaysinline
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unsigned int min/max
 
-define i32 @__min_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
-  %cmp = icmp ugt i32 %1, %0
-  %ret = select i1 %cmp, i32 %0, i32 %1
-  ret i32 %ret
-}
-
-define i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
-  %cmp = icmp ugt i32 %1, %0
-  %ret = select i1 %cmp, i32 %1, i32 %0
-  ret i32 %ret
-}
+declare i32 @__min_uniform_uint32(i32, i32) nounwind readonly alwaysinline
+declare i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision min/max
