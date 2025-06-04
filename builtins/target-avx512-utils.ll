@@ -211,16 +211,6 @@ define double @__rcp_uniform_double(double %v) nounwind readonly alwaysinline {
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; sqrt
-
-declare <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float>) nounwind readnone
-
-define float @__sqrt_uniform_float(float) nounwind readonly alwaysinline {
-  sse_unary_scalar(ret, 4, float, @llvm.x86.sse.sqrt.ss, %0)
-  ret float %ret
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; switch macro
 ;; This is required to ensure that gather intrinsics are used with constant scale value.
 ;; This particular implementation of the routine is used by avx512 targets only.
