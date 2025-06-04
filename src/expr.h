@@ -947,8 +947,6 @@ bool CanConvertTypes(const Type *fromType, const Type *toType, const char *error
  */
 Expr *TypeConvertExpr(Expr *expr, const Type *toType, const char *errorMsgBase);
 
-Expr *MakeBinaryExpr(BinaryExpr::Op o, Expr *a, Expr *b, SourcePos p);
-
 /** Utility routine that emits code to initialize a symbol given an
     initializer expression.
 
@@ -962,4 +960,11 @@ Expr *MakeBinaryExpr(BinaryExpr::Op o, Expr *a, Expr *b, SourcePos p);
 void InitSymbol(AddressInfo *lvalue, const Type *symType, Expr *initExpr, FunctionEmitContext *ctx, SourcePos pos);
 
 bool PossiblyResolveFunctionOverloads(Expr *expr, const Type *type);
+
+/** This function encapsulates the common logic for looking up and calling
+    overloaded operators when at least one of the operands is a struct type.
+    It supports assign, unary and binary operators.
+*/
+Expr *PossiblyResolveStructOperatorOverloads(const char *baseOpName, const std::vector<Expr *> &args, SourcePos pos,
+                                             bool isPostfix = false);
 } // namespace ispc

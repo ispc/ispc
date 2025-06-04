@@ -641,6 +641,90 @@ bool ispc::PossiblyResolveFunctionOverloads(Expr *expr, const Type *type) {
     return true;
 }
 
+// Helper function to handle operator overloading for struct types
+Expr *ispc::PossiblyResolveStructOperatorOverloads(const char *baseOpName, const std::vector<Expr *> &args,
+                                                   SourcePos pos, bool isPostfix) {
+    // Create a vector to store the "effective" types (dereferenced if they're references)
+    std::vector<const Type *> effectiveTypes;
+    effectiveTypes.reserve(args.size());
+
+    // Check if any of the argument types are struct types (directly or via references)
+    bool hasStructType = false;
+    for (const auto &a : args) {
+        const Type *type = a->GetType();
+        // Get the actual type if it's a reference
+        const ReferenceType *refType = CastType<ReferenceType>(type);
+        const Type *effectiveType = (refType != nullptr) ? refType->GetReferenceTarget() : type;
+
+        // Store the effective type for later use
+        effectiveTypes.push_back(effectiveType);
+
+        // Check if it's a struct type
+        if (CastType<StructType>(effectiveType) != nullptr) {
+            hasStructType = true;
+        }
+    }
+
+    if (!hasStructType) {
+        return nullptr; // No struct types, so no operator overloading needed
+    }
+
+    // Construct operator name (e.g., "operator+")
+    std::string opName = std::string("operator") + baseOpName;
+
+    // Look up operator overloads
+    std::vector<Symbol *> funcs;
+    std::vector<TemplateSymbol *> funcTempls;
+
+    bool foundAnyFunction = m->symbolTable->LookupFunction(opName.c_str(), &funcs);
+    bool foundAnyTemplate = m->symbolTable->LookupFunctionTemplate(opName.c_str(), &funcTempls);
+
+    if (foundAnyFunction || foundAnyTemplate) {
+        // Create function symbol expression
+        FunctionSymbolExpr *functionSymbolExpr =
+            new FunctionSymbolExpr(opName.c_str(), funcs, funcTempls, TemplateArgs(), pos);
+        Assert(functionSymbolExpr != nullptr);
+
+        // Create argument list
+        ExprList *exprList = new ExprList(pos);
+        for (const auto &arg : args) {
+            exprList->exprs.push_back(arg);
+        }
+
+        // For postfix operators, add dummy int argument if not already added
+        if (isPostfix && args.size() == 1) {
+            ConstExpr *dummyInt = new ConstExpr(AtomicType::UniformInt32, 1, pos);
+            exprList->exprs.push_back(dummyInt);
+        }
+
+        // Create and type-check function call
+        Expr *functionCallExpr = new FunctionCallExpr(functionSymbolExpr, exprList, pos);
+        functionCallExpr = ::TypeCheckAndOptimize(functionCallExpr);
+
+        return functionCallExpr;
+    }
+
+    // Error handling - if we were looking for functions but didn't find any
+    if (hasStructType && funcs.size() == 0 && funcTempls.size() == 0) {
+        if (opName == "operator=") {
+            // Special case for operator=: if no overloads found, return nullptr
+            // to indicate that it's standard structure assignment, not operator overloading
+            return nullptr;
+        }
+
+        // Format error message based on number of arguments
+        if (args.size() == 1) {
+            Error(pos, "operator %s(%s) is not defined.", opName.c_str(), effectiveTypes[0]->GetString().c_str());
+        } else if (args.size() == 2) {
+            Error(pos, "operator %s(%s, %s) is not defined.", opName.c_str(), effectiveTypes[0]->GetString().c_str(),
+                  effectiveTypes[1]->GetString().c_str());
+        }
+        return nullptr;
+    }
+
+    return nullptr;
+}
+
 static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llvm::Value *exprVal, const Type *toType,
                                                    const Type *fromType, SourcePos pos);
 /** Utility routine that emits code to initialize a symbol given an
@@ -1205,6 +1289,28 @@ static llvm::Value *lEmitNegate(Expr *arg, SourcePos pos, FunctionEmitContext *c
     }
 }
 
+static const char *lOpString(UnaryExpr::Op op) {
+    switch (op) {
+    case UnaryExpr::PreInc:
+        return "++";
+    case UnaryExpr::PreDec:
+        return "--";
+    case UnaryExpr::PostInc:
+        return "++";
+    case UnaryExpr::PostDec:
+        return "--";
+    case UnaryExpr::Negate:
+        return "-";
+    case UnaryExpr::LogicalNot:
+        return "!";
+    case UnaryExpr::BitNot:
+        return "~";
+    default:
+        FATAL("unimplemented case in lOpString()");
+        return "";
+    }
+}
+
 UnaryExpr::UnaryExpr(Op o, Expr *e, SourcePos p) : Expr(p, UnaryExprID), op(o) { expr = e; }
 
 llvm::Value *UnaryExpr::GetValue(FunctionEmitContext *ctx) const {
@@ -1413,6 +1519,9 @@ Expr *UnaryExpr::TypeCheck() {
         return nullptr;
     }
 
+    bool postFix = (op == PostInc || op == PostDec);
+    Expr *opExpr = nullptr;
+
     if (op == PreInc || op == PreDec || op == PostInc || op == PostDec) {
         if (type->IsConstType()) {
             Error(pos,
@@ -1424,6 +1533,11 @@ Expr *UnaryExpr::TypeCheck() {
 
         if (type->IsNumericType()) {
             return this;
+        }
+        // Resolve expression to operator overload if necessary
+        opExpr = PossiblyResolveStructOperatorOverloads(lOpString(op), std::vector<Expr *>{expr}, pos, postFix);
+        if (opExpr != nullptr) {
+            return opExpr;
         }
 
         const PointerType *pt = CastType<PointerType>(type);
@@ -1450,7 +1564,11 @@ Expr *UnaryExpr::TypeCheck() {
         return this;
     }
 
-    // don't do this for pre/post increment/decrement
+    opExpr = PossiblyResolveStructOperatorOverloads(lOpString(op), std::vector<Expr *>{expr}, pos, postFix);
+    if (opExpr != nullptr) {
+        return opExpr;
+    }
+
     if (CastType<ReferenceType>(type)) {
         expr = new RefDerefExpr(expr, pos);
         type = expr->GetType();
@@ -1868,81 +1986,6 @@ static llvm::Value *lEmitBinaryCmp(BinaryExpr::Op op, llvm::Value *e0Val, llvm::
 BinaryExpr::BinaryExpr(Op o, Expr *a, Expr *b, SourcePos p) : Expr(p, BinaryExprID), op(o) {
     arg0 = a;
     arg1 = b;
-}
-
-bool lCreateBinaryOperatorCall(const BinaryExpr::Op bop, Expr *a0, Expr *a1, Expr *&op, const SourcePos &sp) {
-    bool abort = false;
-    if ((a0 == nullptr) || (a1 == nullptr)) {
-        return abort;
-    }
-    Expr *arg0 = TypeCheck(a0);
-    Expr *arg1 = TypeCheck(a1);
-
-    if ((arg0 == nullptr) || (arg1 == nullptr)) {
-        return false;
-    }
-
-    const Type *type0 = arg0->GetType();
-    const Type *type1 = arg1->GetType();
-
-    // If either operand is a reference, dereference it before we move
-    // forward
-    if (CastType<ReferenceType>(type0) != nullptr) {
-        arg0 = new RefDerefExpr(arg0, arg0->pos);
-        type0 = arg0->GetType();
-    }
-    if (CastType<ReferenceType>(type1) != nullptr) {
-        arg1 = new RefDerefExpr(arg1, arg1->pos);
-        type1 = arg1->GetType();
-    }
-    if ((type0 == nullptr) || (type1 == nullptr)) {
-        return abort;
-    }
-    if (CastType<StructType>(type0) != nullptr || CastType<StructType>(type1) != nullptr) {
-        std::string opName = std::string("operator") + lOpString(bop);
-        std::vector<Symbol *> funcs;
-        bool foundAnyFunction = m->symbolTable->LookupFunction(opName.c_str(), &funcs);
-        std::vector<TemplateSymbol *> funcTempls;
-        bool foundAnyTemplate = m->symbolTable->LookupFunctionTemplate(opName.c_str(), &funcTempls);
-        if (foundAnyFunction || foundAnyTemplate) {
-            FunctionSymbolExpr *functionSymbolExpr =
-                new FunctionSymbolExpr(opName.c_str(), funcs, funcTempls, TemplateArgs(), sp);
-            Assert(functionSymbolExpr != nullptr);
-            ExprList *args = new ExprList(sp);
-            args->exprs.push_back(arg0);
-            args->exprs.push_back(arg1);
-            op = new FunctionCallExpr(functionSymbolExpr, args, sp);
-            return abort;
-        }
-        if (funcs.size() == 0 && funcTempls.size() == 0) {
-            Error(sp, "operator %s(%s, %s) is not defined.", opName.c_str(), (type0->GetString()).c_str(),
-                  (type1->GetString()).c_str());
-            abort = true;
-            return abort;
-        }
-
-        return abort;
-    }
-    return abort;
-}
-
-Expr *ispc::MakeBinaryExpr(BinaryExpr::Op o, Expr *a, Expr *b, SourcePos p) {
-    Expr *op = nullptr;
-    bool abort = lCreateBinaryOperatorCall(o, a, b, op, p);
-    if (op != nullptr) {
-        return op;
-    }
-
-    // lCreateBinaryOperatorCall can return nullptr for 2 cases:
-    // 1. When there is an error.
-    // 2. We have to create a new BinaryExpr.
-    if (abort) {
-        AssertPos(p, m->errorCount > 0);
-        return nullptr;
-    }
-
-    op = new BinaryExpr(o, a, b, p);
-    return op;
 }
 
 /** Emit code for a && or || logical operator.  In particular, the code
@@ -2779,6 +2822,13 @@ Expr *BinaryExpr::TypeCheck() {
         return this;
     }
 
+    // Resolve expression to operator overload if necessary
+    const std::vector<Expr *> args = {arg0, arg1};
+    Expr *opExpr = PossiblyResolveStructOperatorOverloads(lOpString(op), args, pos, false);
+    if (opExpr != nullptr) {
+        return opExpr;
+    }
+
     // If either operand is a reference, dereference it before we move
     // forward
     if (CastType<ReferenceType>(type0) != nullptr) {
@@ -3117,7 +3167,7 @@ int BinaryExpr::EstimateCost() const {
 Expr *BinaryExpr::Instantiate(TemplateInstantiation &templInst) const {
     Expr *instArg0 = arg0 ? arg0->Instantiate(templInst) : nullptr;
     Expr *instArg1 = arg1 ? arg1->Instantiate(templInst) : nullptr;
-    return MakeBinaryExpr(op, instArg0, instArg1, pos);
+    return new BinaryExpr(op, instArg0, instArg1, pos);
 }
 
 std::string BinaryExpr::GetString() const {
@@ -3498,6 +3548,13 @@ Expr *AssignExpr::TypeCheck() {
     const Type *rtype = rvalue->GetTypeUnsafe();
     if ((ltype && ltype->IsDependent()) || (rtype && rtype->IsDependent())) {
         return this;
+    }
+
+    // Resolve expression to operator overload if necessary
+    const std::vector<Expr *> args = {lvalue, rvalue};
+    Expr *opExpr = PossiblyResolveStructOperatorOverloads(lOpString(op), args, pos, false);
+    if (opExpr != nullptr) {
+        return opExpr;
     }
 
     bool lvalueIsReference = CastType<ReferenceType>(lvalue->GetType()) != nullptr;
