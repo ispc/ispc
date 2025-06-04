@@ -788,6 +788,11 @@ lightweight integration of ISPC code with Python. The generated wrappers can be
 built into native Python modules and imported into Python code. The
 ``--nanobind-wrapper=<filename>`` command-line option enables this feature.
 
+The struct operators overloading feature has been extended to support
+overloading of the unary, assignment and the whole set of binary
+operators.
+
+
 Getting Started with ISPC
 =========================
 
@@ -2894,12 +2899,20 @@ indexing operation in the last line results in an error.
 Operators Overloading
 ---------------------
 
-ISPC has limited support for overloaded operators for ``struct`` types. Only
-binary operators are supported currently, namely they are: ``*, /, %, +, -, >>
-and <<``. Operators overloading support is similar to the one in C++ language.
-To overload an operator for ``struct S``, you need to declare and implement a
-function using keyword ``operator``, which accepts two parameters of type
-``struct S`` or ``struct S&`` and returns either of these types. For example:
+ISPC has support for overloaded operators for ``struct`` types. This allows you
+to define custom behavior when operators are used with your ``struct`` types.
+
+Binary Operators
+----------------
+
+Binary operators that can be overloaded include: ``*, /, %, +, -, >>, <<, ==,
+!=, <, >, <=, >=, &, |, ^, &&, and ||``. Operators overloading support is
+similar to the one in C++ language.
+
+To overload a binary operator for ``struct S``, you need to declare and
+implement a function using keyword ``operator``, which accepts two parameters of
+type ``struct S`` or ``struct S&`` and returns either of these types or another
+appropriate type. For example:
 
 ::
 
@@ -2916,6 +2929,98 @@ function using keyword ``operator``, which accepts two parameters of type
         print("a.re:   %\na.im:   %\n", a.re, a.im);
         print("b.re:   %\nb.im:   %\n", b.re, b.im);
         print("mul.re: %\nmul.im: %\n", mul.re, mul.im);
+    }
+
+Unary Operators
+----------------
+
+ISPC also supports overloading unary operators: ``++, --, -, !, and ~``. For
+unary operators, the implementation depends on the operator type:
+
+1. **Prefix Increment/Decrement (``++x``, ``--x``)**: Define a function that
+   takes a reference to your struct and returns the modified struct.
+
+::
+
+    struct S operator++(struct S &s) {
+        // Increment logic here
+        s.value++;
+        return s;
+    }
+
+2. **Postfix Increment/Decrement (``x++``, ``x--``)**: Define a function that
+   takes a reference to your struct and an additional dummy int parameter,
+   returning the original value before modification.
+
+::
+
+    struct S operator++(struct S &s, int) {
+        struct S temp = s;  // Save original value
+        s.value++;          // Modify the original
+        return temp;        // Return saved original
+    }
+
+3. **Unary Minus, Logical NOT, Bitwise NOT (``-x``, ``!x``, ``~x``)**: Define a
+   function that takes your struct by value and returns an appropriate result.
+
+::
+
+    struct S operator-(struct S s) {
+        struct S result;
+        result.value = -s.value;
+        return result;
+    }
+
+    bool operator!(struct S s) {
+        return s.value == 0;  // Return true if "empty" or "zero"
+    }
+
+Assignment Operators
+--------------------
+
+ISPC also supports overloading assignment operators for ``struct`` types. The assignment
+operators include: ``=, +=, -=, *=, /=, %=, <<=, >>=, &=, |=, and ^=``. This allows for
+more intuitive operations with custom data types.
+
+1. **Basic Assignment (``=``)**: Define a function that takes a reference to your struct
+   as the left-hand side and a value (or reference) of another type as the right-hand side,
+   returning a reference to the modified struct.
+
+::
+
+    struct Matrix {
+        float elements[16];
+    };
+
+    struct Matrix& operator=(struct Matrix &A, const struct FloatMatrix &B) {
+        // Copy elements with possible type conversion
+        for (uniform int i = 0; i < 16; i++) {
+            A.elements[i] = B.elements[i];  // Implicit float to double conversion
+        }
+        return A;
+    }
+
+2. **Compound Assignment (``+=``, ``-=``, etc.)**: Define a function that takes a reference
+   to your struct as the left-hand side and a value (or reference) as the right-hand side,
+   returning a reference to the modified struct.
+
+::
+
+    struct Vector2 {
+        float x, y;
+    };
+
+    struct Vector2& operator+=(struct Vector2 &v, const struct Vector2 &other) {
+        v.x += other.x;
+        v.y += other.y;
+        return v;
+    }
+
+    void foo() {
+        struct Vector2 v = {1.0f, 2.0f};
+        struct Vector2 u = {3.0f, 4.0f};
+
+        v += u;  // v now contains {4.0f, 6.0f}
     }
 
 
