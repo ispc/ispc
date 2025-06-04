@@ -194,11 +194,17 @@ truncate()
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; min/max
 
-;; TODO: these are from neon-common, need to make all of them standard utils.
-;; TODO: remove int64-minmax from utils
-;; TODO: ogt vs ugt?
-;; TODO: do uint32/int32 versions through comparison
+declare i64 @__max_uniform_int64(i64, i64) nounwind readonly alwaysinline
+declare i64 @__max_uniform_uint64(i64, i64) nounwind readonly alwaysinline
+declare i64 @__min_uniform_int64(i64, i64) nounwind readonly alwaysinline
+declare i64 @__min_uniform_uint64(i64, i64) nounwind readonly alwaysinline
+declare i32 @__min_uniform_int32(i32, i32) nounwind readonly alwaysinline
+declare i32 @__max_uniform_int32(i32, i32) nounwind readonly alwaysinline
+declare i32 @__min_uniform_uint32(i32, i32) nounwind readonly alwaysinline
+declare i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline
 
+;; TODO: these are from neon-common, need to make all of them standard utils.
+;; TODO: ogt vs ugt?
 define float @__max_uniform_float(float, float) nounwind readnone alwaysinline {
   %cmp = fcmp ugt float %0, %1
   %r = select i1 %cmp, float %0, float %1
@@ -209,54 +215,6 @@ define float @__min_uniform_float(float, float) nounwind readnone alwaysinline {
   %cmp = fcmp ult float %0, %1
   %r = select i1 %cmp, float %0, float %1
   ret float %r
-}
-
-define i32 @__min_uniform_int32(i32, i32) nounwind readnone alwaysinline {
-  %cmp = icmp slt i32 %0, %1
-  %r = select i1 %cmp, i32 %0, i32 %1
-  ret i32 %r
-}
-
-define i32 @__max_uniform_int32(i32, i32) nounwind readnone alwaysinline {
-  %cmp = icmp sgt i32 %0, %1
-  %r = select i1 %cmp, i32 %0, i32 %1
-  ret i32 %r
-}
-
-define i32 @__min_uniform_uint32(i32, i32) nounwind readnone alwaysinline {
-  %cmp = icmp ult i32 %0, %1
-  %r = select i1 %cmp, i32 %0, i32 %1
-  ret i32 %r
-}
-
-define i32 @__max_uniform_uint32(i32, i32) nounwind readnone alwaysinline {
-  %cmp = icmp ugt i32 %0, %1
-  %r = select i1 %cmp, i32 %0, i32 %1
-  ret i32 %r
-}
-
-define i64 @__min_uniform_int64(i64, i64) nounwind readnone alwaysinline {
-  %cmp = icmp slt i64 %0, %1
-  %r = select i1 %cmp, i64 %0, i64 %1
-  ret i64 %r
-}
-
-define i64 @__max_uniform_int64(i64, i64) nounwind readnone alwaysinline {
-  %cmp = icmp sgt i64 %0, %1
-  %r = select i1 %cmp, i64 %0, i64 %1
-  ret i64 %r
-}
-
-define i64 @__min_uniform_uint64(i64, i64) nounwind readnone alwaysinline {
-  %cmp = icmp ult i64 %0, %1
-  %r = select i1 %cmp, i64 %0, i64 %1
-  ret i64 %r
-}
-
-define i64 @__max_uniform_uint64(i64, i64) nounwind readnone alwaysinline {
-  %cmp = icmp ugt i64 %0, %1
-  %r = select i1 %cmp, i64 %0, i64 %1
-  ret i64 %r
 }
 
 define double @__min_uniform_double(double, double) nounwind readnone alwaysinline {
