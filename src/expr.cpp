@@ -1289,6 +1289,28 @@ static llvm::Value *lEmitNegate(Expr *arg, SourcePos pos, FunctionEmitContext *c
     }
 }
 
+static const char *lOpString(UnaryExpr::Op op) {
+    switch (op) {
+    case UnaryExpr::PreInc:
+        return "++";
+    case UnaryExpr::PreDec:
+        return "--";
+    case UnaryExpr::PostInc:
+        return "++";
+    case UnaryExpr::PostDec:
+        return "--";
+    case UnaryExpr::Negate:
+        return "-";
+    case UnaryExpr::LogicalNot:
+        return "!";
+    case UnaryExpr::BitNot:
+        return "~";
+    default:
+        FATAL("unimplemented case in lOpString()");
+        return "";
+    }
+}
+
 UnaryExpr::UnaryExpr(Op o, Expr *e, SourcePos p) : Expr(p, UnaryExprID), op(o) { expr = e; }
 
 llvm::Value *UnaryExpr::GetValue(FunctionEmitContext *ctx) const {
@@ -1497,6 +1519,9 @@ Expr *UnaryExpr::TypeCheck() {
         return nullptr;
     }
 
+    bool postFix = (op == PostInc || op == PostDec);
+    Expr *opExpr = nullptr;
+
     if (op == PreInc || op == PreDec || op == PostInc || op == PostDec) {
         if (type->IsConstType()) {
             Error(pos,
@@ -1508,6 +1533,11 @@ Expr *UnaryExpr::TypeCheck() {
 
         if (type->IsNumericType()) {
             return this;
+        }
+        // Resolve expression to operator overload if necessary
+        opExpr = PossiblyResolveStructOperatorOverloads(lOpString(op), std::vector<Expr *>{expr}, pos, postFix);
+        if (opExpr != nullptr) {
+            return opExpr;
         }
 
         const PointerType *pt = CastType<PointerType>(type);
@@ -1534,7 +1564,11 @@ Expr *UnaryExpr::TypeCheck() {
         return this;
     }
 
-    // don't do this for pre/post increment/decrement
+    opExpr = PossiblyResolveStructOperatorOverloads(lOpString(op), std::vector<Expr *>{expr}, pos, postFix);
+    if (opExpr != nullptr) {
+        return opExpr;
+    }
+
     if (CastType<ReferenceType>(type)) {
         expr = new RefDerefExpr(expr, pos);
         type = expr->GetType();
