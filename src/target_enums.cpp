@@ -52,7 +52,9 @@ Arch operator++(Arch &arch, int dummy) {
                   "Enum Arch is not sequential");
     static_assert(static_cast<underlying>(Arch::aarch64) == static_cast<underlying>(Arch::arm) + 1,
                   "Enum Arch is not sequential");
-    static_assert(static_cast<underlying>(Arch::wasm32) == static_cast<underlying>(Arch::aarch64) + 1,
+    static_assert(static_cast<underlying>(Arch::riscv64) == static_cast<underlying>(Arch::aarch64) + 1,
+                  "Enum Arch is not sequential");
+    static_assert(static_cast<underlying>(Arch::wasm32) == static_cast<underlying>(Arch::riscv64) + 1,
                   "Enum Arch is not sequential");
     static_assert(static_cast<underlying>(Arch::wasm64) == static_cast<underlying>(Arch::wasm32) + 1,
                   "Enum Arch is not sequential");
@@ -213,8 +215,9 @@ ISPCTarget operator++(ISPCTarget &target, int dummy) {
     static_assert(static_cast<underlying>(ISPCTarget::neon_i32x8) ==
                       static_cast<underlying>(ISPCTarget::neon_i32x4) + 1,
                   "Enum ISPCTarget is not sequential");
-    static_assert(static_cast<underlying>(ISPCTarget::wasm_i32x4) ==
-                      static_cast<underlying>(ISPCTarget::neon_i32x8) + 1,
+    static_assert(static_cast<underlying>(ISPCTarget::rvv_x4) == static_cast<underlying>(ISPCTarget::neon_i32x8) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::wasm_i32x4) == static_cast<underlying>(ISPCTarget::rvv_x4) + 1,
                   "Enum ISPCTarget is not sequential");
     static_assert(static_cast<underlying>(ISPCTarget::gen9_x8) == static_cast<underlying>(ISPCTarget::wasm_i32x4) + 1,
                   "Enum ISPCTarget is not sequential");
@@ -300,6 +303,8 @@ Arch ParseArch(std::string arch) {
         return Arch::arm;
     } else if (arch == "aarch64") {
         return Arch::aarch64;
+    } else if (arch == "riscv64") {
+        return Arch::riscv64;
     } else if (arch == "wasm32") {
         return Arch::wasm32;
     } else if (arch == "wasm64") {
@@ -322,6 +327,8 @@ std::string ArchToString(Arch arch) {
         return "arm";
     case Arch::aarch64:
         return "aarch64";
+    case Arch::riscv64:
+        return "riscv64";
     case Arch::wasm32:
         return "wasm32";
     case Arch::wasm64:
@@ -445,6 +452,8 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::neon_i32x4;
     } else if (target == "neon-i32x8") {
         return ISPCTarget::neon_i32x8;
+    } else if (target == "rvv-x4") {
+        return ISPCTarget::rvv_x4;
     } else if (target == "wasm-i32x4") {
         return ISPCTarget::wasm_i32x4;
     } else if (target == "gen9-x8") {
@@ -638,6 +647,8 @@ std::string ISPCTargetToString(ISPCTarget target) {
         return "neon-i32x4";
     case ISPCTarget::neon_i32x8:
         return "neon-i32x8";
+    case ISPCTarget::rvv_x4:
+        return "rvv-x4";
     case ISPCTarget::wasm_i32x4:
         return "wasm-i32x4";
     case ISPCTarget::gen9_x8:
@@ -763,6 +774,15 @@ bool ISPCTargetIsNeon(ISPCTarget target) {
     case ISPCTarget::neon_i16x16:
     case ISPCTarget::neon_i32x4:
     case ISPCTarget::neon_i32x8:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool ISPCTargetIsRiscV(ISPCTarget target) {
+    switch (target) {
+    case ISPCTarget::rvv_x4:
         return true;
     default:
         return false;

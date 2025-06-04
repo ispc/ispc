@@ -63,6 +63,8 @@ Module *ispc::m;
 #define ISPC_HOST_IS_AARCH64
 #elif defined(__arm__)
 #define ISPC_HOST_IS_ARM
+#elif defined(__riscv)
+#define ISPC_HOST_IS_RISCV
 #elif defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
 #define ISPC_HOST_IS_X86
 #endif
@@ -220,6 +222,8 @@ static ISPCTarget lGetARMSystemISA() {
 static ISPCTarget lGetSystemISA() {
 #if defined(ISPC_HOST_IS_ARM) || defined(ISPC_HOST_IS_AARCH64)
     return lGetARMSystemISA();
+#elif defined(ISPC_HOST_IS_RISCV)
+    return ISPCTarget::rvv_x4;
 #elif defined(ISPC_HOST_IS_X86)
     enum Target::ISA isa = (enum Target::ISA)dispatch::get_x86_isa();
     switch (isa) {
@@ -384,6 +388,15 @@ typedef enum {
     CPU_AppleA16,
     CPU_AppleA17,
 #endif
+#ifdef ISPC_RISCV_ENABLED
+    // Not a real CPU, but a special identifier representing -march=rv64gcv:
+    // RV64GCV = RV64 base + G (General: IMAFD extensions) + C (Compressed) + V (Vector extension 1.0)
+    // Used as default for rvv-x4 target when no specific CPU is provided
+    CPU_Generic_RV64GCV,
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_19_0
+    CPU_SpacemiT_X60,
+#endif // ISPC_LLVM_VERSION
+#endif // ISPC_RISCV_ENABLED
 #ifdef ISPC_XE_ENABLED
     GPU_SKL,
     GPU_TGLLP,
@@ -485,6 +498,12 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {CPU_AppleA16, {}},
     {CPU_AppleA17, {}},
 #endif
+#ifdef ISPC_RISCV_ENABLED
+    {CPU_Generic_RV64GCV, {}},
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_19_0
+    {CPU_SpacemiT_X60, {}},
+#endif // ISPC_LLVM_VERSION
+#endif // ISPC_RISCV_ENABLED
 #ifdef ISPC_XE_ENABLED
     {GPU_SKL, {}},
     {GPU_TGLLP, {}},
@@ -609,6 +628,13 @@ class AllCPUs {
         names[CPU_AppleA17].push_back("apple-a17");
 #endif
 
+#ifdef ISPC_RISCV_ENABLED
+        names[CPU_Generic_RV64GCV].push_back("generic-rv64gcv");
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_19_0
+        names[CPU_SpacemiT_X60].push_back("spacemit-x60");
+#endif // ISPC_LLVM_VERSION
+#endif // ISPC_RISCV_ENABLED
+
 #ifdef ISPC_XE_ENABLED
         names[GPU_SKL].push_back("skl");
         names[GPU_TGLLP].push_back("tgllp");
@@ -722,6 +748,13 @@ class AllCPUs {
         compat[CPU_AppleA17] = Set(CPU_AppleA17, CPU_None);
 #endif
 
+#ifdef ISPC_RISCV_ENABLED
+        compat[CPU_Generic_RV64GCV] = Set(CPU_Generic_RV64GCV, CPU_None);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_19_0
+        compat[CPU_SpacemiT_X60] = Set(CPU_SpacemiT_X60, CPU_Generic_RV64GCV, CPU_None);
+#endif // ISPC_LLVM_VERSION
+#endif // ISPC_RISCV_ENABLED
+
 #ifdef ISPC_XE_ENABLED
         compat[GPU_SKL] = Set(GPU_SKL, CPU_None);
         compat[GPU_TGLLP] = Set(GPU_TGLLP, GPU_SKL, CPU_None);
@@ -798,6 +831,11 @@ Arch lGetArchFromTarget(ISPCTarget target) {
 #else
         return Arch::aarch64;
 #endif
+    }
+#endif
+#ifdef ISPC_RISCV_ENABLED
+    if (ISPCTargetIsRiscV(target)) {
+        return Arch::riscv64;
     }
 #endif
 #if ISPC_XE_ENABLED
@@ -958,6 +996,15 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             m_ispc_target = ISPCTarget::neon_i32x4;
             break;
 #endif
+
+#ifdef ISPC_RISCV_ENABLED
+        case CPU_Generic_RV64GCV:
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_19_0
+        case CPU_SpacemiT_X60:
+#endif // ISPC_LLVM_VERSION
+            m_ispc_target = ISPCTarget::rvv_x4;
+            break;
+#endif // ISPC_RISCV_ENABLED
 
 #ifdef ISPC_XE_ENABLED
         case GPU_SKL:
@@ -1877,6 +1924,31 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         unsupported_target = true;
         break;
 #endif
+#ifdef ISPC_RISCV_ENABLED
+    case ISPCTarget::rvv_x4:
+        this->m_isa = Target::RV64GCV;
+        this->m_nativeVectorWidth = 4;
+        this->m_nativeVectorAlignment = 16;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 4;
+        this->m_hasHalfConverts = false;
+        this->m_hasHalfFullSupport = false;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 1;
+        this->m_hasTranscendentals = false;
+        this->m_hasTrigonometry = false;
+        this->m_hasRcpd = false;
+        this->m_hasRsqrtd = false;
+        this->m_hasScatter = false;
+        this->m_hasGather = false;
+        this->m_hasVecPrefetch = false;
+        CPUfromISA = CPU_Generic_RV64GCV;
+        break;
+#else
+    case ISPCTarget::rvv_x4:
+        unsupported_target = true;
+        break;
+#endif
 #ifdef ISPC_WASM_ENABLED
     case ISPCTarget::wasm_i32x4:
         this->m_isa = Target::WASM;
@@ -2277,6 +2349,25 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
             this->m_funcAttributes.push_back(std::make_pair("target-features", featuresString));
         }
 #endif
+#ifdef ISPC_RISCV_ENABLED
+        if (arch == Arch::riscv64) {
+            // For generic-rv64gcv, use empty CPU string and specify -march=rv64gcv via LLVM features.
+            // This is not a real CPU but a virtual identifier representing the RV64GCV ISA profile:
+            // - RV64: 64-bit RISC-V base
+            // - G: General (shorthand for IMAFD extensions):
+            //   * I: Base integer instruction set
+            //   * M: Integer multiplication and division
+            //   * A: Atomic instructions
+            //   * F: Single-precision floating-point
+            //   * D: Double-precision floating-point
+            // - C: Compressed instructions (16-bit instruction encoding)
+            // - V: Vector extension 1.0
+            if (m_cpu == "generic-rv64gcv") {
+                featuresString = "+m,+a,+f,+d,+c,+v,+zvl128b";
+                m_cpu = "";
+            }
+        }
+#endif
         // Support 'i64' and 'double' types in cm
         if (isXeTarget()) {
             featuresString += "+longlong";
@@ -2515,6 +2606,8 @@ llvm::Triple Target::GetTriple() const {
             triple.setArchName("armv8a");
         } else if (m_arch == Arch::aarch64) {
             triple.setArchName("aarch64");
+        } else if (m_arch == Arch::riscv64) {
+            triple.setArchName("riscv64");
         } else if (m_arch == Arch::xe64) {
             triple.setArchName("spir64");
         } else {
@@ -2535,6 +2628,8 @@ llvm::Triple Target::GetTriple() const {
             triple.setEnvironment(llvm::Triple::EnvironmentType::GNU);
         } else if (m_arch == Arch::arm) {
             triple.setEnvironment(llvm::Triple::EnvironmentType::GNUEABIHF);
+        } else if (m_arch == Arch::riscv64) {
+            triple.setEnvironment(llvm::Triple::EnvironmentType::GNU);
         } else {
             Error(SourcePos(), "Unknown arch.");
             exit(1);
@@ -2671,6 +2766,10 @@ const char *Target::ISAToString(ISA isa) {
 #ifdef ISPC_ARM_ENABLED
     case Target::NEON:
         return "neon";
+#endif
+#ifdef ISPC_RISCV_ENABLED
+    case Target::RV64GCV:
+        return "rv64gcv";
 #endif
 #ifdef ISPC_WASM_ENABLED
     case Target::WASM:
@@ -2850,6 +2949,13 @@ Target::ISA Target::TargetToISA(ISPCTarget target) {
     case ISPCTarget::neon_i32x8:
         return Target::ISA::NUM_ISAS;
 #endif // ISPC_ARM_ENABLED
+#ifdef ISPC_RISCV_ENABLED
+    case ISPCTarget::rvv_x4:
+        return Target::ISA::RV64GCV;
+#else  // ISPC_RISCV_ENABLED
+    case ISPCTarget::rvv_x4:
+        return Target::ISA::NUM_ISAS;
+#endif // ISPC_RISCV_ENABLED
 #ifdef ISPC_WASM_ENABLED
     case ISPCTarget::wasm_i32x4:
         return Target::ISA::WASM;
