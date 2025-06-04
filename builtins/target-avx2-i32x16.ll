@@ -7,16 +7,69 @@
 
 define(`HAVE_GATHER', `1')
 define(`ISA',`AVX2')
+define(`WIDTH',`16')
+define(`MASK',`i32')
+include(`util.m4')
 
-include(`target-avx-common-16.ll')
+declare void @__masked_store_blend_i32(<16 x i32>* nocapture, <16 x i32>, 
+                                      <16 x i32>) nounwind alwaysinline
+declare void @__masked_store_blend_i64(<16 x i64>* nocapture %ptr, <16 x i64> %newi64, 
+                                      <16 x i32> %mask) nounwind alwaysinline
+declare i64 @__movmsk(<16 x i32>) nounwind readnone alwaysinline
+
+declare i1 @__is_compile_time_constant_mask(<WIDTH x MASK> %mask)
+declare i1 @__is_compile_time_constant_uniform_int32(i32)
+declare i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32>)
 
 rdrand_definition()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; svml
+;; switch macro
+;; This is required to ensure that gather intrinsics are used with constant scale value.
+;; This particular implementation of the routine is used by non-avx512 targets currently(avx2-i64x4, avx2-i32x8, avx2-i32x16).
+;; $1: Return value
+;; $2: funcName
+;; $3: Width
+;; $4: scalar type of array
+;; $5: ptr
+;; $6: offset
+;; $7: scalar type of offset
+;; $8: vecMask
+;; $9: scalar type of vecMask
+;; $10: scale
+;; $11: scale type
 
-include(`svml.m4')
-svml(ISA)
+define(`convert_scale_to_const', `
+
+
+ switch i32 %argn(`10',$@), label %default_$1 [ i32 1, label %on_one_$1
+                                                i32 2, label %on_two_$1
+                                                i32 4, label %on_four_$1
+                                                i32 8, label %on_eight_$1]
+
+on_one_$1:
+  %$1_1 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 1)
+  br label %end_bb_$1
+
+on_two_$1:
+  %$1_2 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 2)
+  br label %end_bb_$1
+
+on_four_$1:
+  %$1_4 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 4)
+  br label %end_bb_$1
+
+on_eight_$1:
+  %$1_8 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 8)
+  br label %end_bb_$1
+
+default_$1:
+  unreachable
+
+end_bb_$1:
+  %$1 = phi <$3 x $4> [ %$1_1, %on_one_$1 ], [ %$1_2, %on_two_$1 ], [ %$1_4, %on_four_$1 ], [ %$1_8, %on_eight_$1 ]
+'
+)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int min/max
