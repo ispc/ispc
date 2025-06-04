@@ -257,6 +257,9 @@ class Target {
 #ifdef ISPC_ARM_ENABLED
         NEON,
 #endif
+#ifdef ISPC_RISCV_ENABLED
+        RISCV,
+#endif
 #ifdef ISPC_WASM_ENABLED
         WASM,
 #endif

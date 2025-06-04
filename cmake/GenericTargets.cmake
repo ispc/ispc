@@ -75,6 +75,12 @@ function (generate_generic_builtins ispc_name)
         )
     endif()
 
+    if (RISCV_ENABLED)
+        list(APPEND ARCH_LIST
+            "riscv64,64"
+        )
+    endif()
+
     foreach(os ${os_list})
         foreach(target ${TARGET_LIST})
             foreach(pair ${ARCH_LIST})
