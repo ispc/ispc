@@ -1954,81 +1954,6 @@ BinaryExpr::BinaryExpr(Op o, Expr *a, Expr *b, SourcePos p) : Expr(p, BinaryExpr
     arg1 = b;
 }
 
-bool lCreateBinaryOperatorCall(const BinaryExpr::Op bop, Expr *a0, Expr *a1, Expr *&op, const SourcePos &sp) {
-    bool abort = false;
-    if ((a0 == nullptr) || (a1 == nullptr)) {
-        return abort;
-    }
-    Expr *arg0 = TypeCheck(a0);
-    Expr *arg1 = TypeCheck(a1);
-
-    if ((arg0 == nullptr) || (arg1 == nullptr)) {
-        return false;
-    }
-
-    const Type *type0 = arg0->GetType();
-    const Type *type1 = arg1->GetType();
-
-    // If either operand is a reference, dereference it before we move
-    // forward
-    if (CastType<ReferenceType>(type0) != nullptr) {
-        arg0 = new RefDerefExpr(arg0, arg0->pos);
-        type0 = arg0->GetType();
-    }
-    if (CastType<ReferenceType>(type1) != nullptr) {
-        arg1 = new RefDerefExpr(arg1, arg1->pos);
-        type1 = arg1->GetType();
-    }
-    if ((type0 == nullptr) || (type1 == nullptr)) {
-        return abort;
-    }
-    if (CastType<StructType>(type0) != nullptr || CastType<StructType>(type1) != nullptr) {
-        std::string opName = std::string("operator") + lOpString(bop);
-        std::vector<Symbol *> funcs;
-        bool foundAnyFunction = m->symbolTable->LookupFunction(opName.c_str(), &funcs);
-        std::vector<TemplateSymbol *> funcTempls;
-        bool foundAnyTemplate = m->symbolTable->LookupFunctionTemplate(opName.c_str(), &funcTempls);
-        if (foundAnyFunction || foundAnyTemplate) {
-            FunctionSymbolExpr *functionSymbolExpr =
-                new FunctionSymbolExpr(opName.c_str(), funcs, funcTempls, TemplateArgs(), sp);
-            Assert(functionSymbolExpr != nullptr);
-            ExprList *args = new ExprList(sp);
-            args->exprs.push_back(arg0);
-            args->exprs.push_back(arg1);
-            op = new FunctionCallExpr(functionSymbolExpr, args, sp);
-            return abort;
-        }
-        if (funcs.size() == 0 && funcTempls.size() == 0) {
-            Error(sp, "operator %s(%s, %s) is not defined.", opName.c_str(), (type0->GetString()).c_str(),
-                  (type1->GetString()).c_str());
-            abort = true;
-            return abort;
-        }
-
-        return abort;
-    }
-    return abort;
-}
-
-Expr *ispc::MakeBinaryExpr(BinaryExpr::Op o, Expr *a, Expr *b, SourcePos p) {
-    Expr *op = nullptr;
-    bool abort = lCreateBinaryOperatorCall(o, a, b, op, p);
-    if (op != nullptr) {
-        return op;
-    }
-
-    // lCreateBinaryOperatorCall can return nullptr for 2 cases:
-    // 1. When there is an error.
-    // 2. We have to create a new BinaryExpr.
-    if (abort) {
-        AssertPos(p, m->errorCount > 0);
-        return nullptr;
-    }
-
-    op = new BinaryExpr(o, a, b, p);
-    return op;
-}
-
 /** Emit code for a && or || logical operator.  In particular, the code
     here handles "short-circuit" evaluation, where the second expression
     isn't evaluated if the value of the first one determines the value of
@@ -2863,6 +2788,13 @@ Expr *BinaryExpr::TypeCheck() {
         return this;
     }
 
+    // Resolve expression to operator overload if necessary
+    const std::vector<Expr *> args = {arg0, arg1};
+    Expr *opExpr = PossiblyResolveStructOperatorOverloads(lOpString(op), args, pos, false);
+    if (opExpr != nullptr) {
+        return opExpr;
+    }
+
     // If either operand is a reference, dereference it before we move
     // forward
     if (CastType<ReferenceType>(type0) != nullptr) {
@@ -3201,7 +3133,7 @@ int BinaryExpr::EstimateCost() const {
 Expr *BinaryExpr::Instantiate(TemplateInstantiation &templInst) const {
     Expr *instArg0 = arg0 ? arg0->Instantiate(templInst) : nullptr;
     Expr *instArg1 = arg1 ? arg1->Instantiate(templInst) : nullptr;
-    return MakeBinaryExpr(op, instArg0, instArg1, pos);
+    return new BinaryExpr(op, instArg0, instArg1, pos);
 }
 
 std::string BinaryExpr::GetString() const {
