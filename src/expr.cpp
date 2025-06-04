@@ -3550,6 +3550,13 @@ Expr *AssignExpr::TypeCheck() {
         return this;
     }
 
+    // Resolve expression to operator overload if necessary
+    const std::vector<Expr *> args = {lvalue, rvalue};
+    Expr *opExpr = PossiblyResolveStructOperatorOverloads(lOpString(op), args, pos, false);
+    if (opExpr != nullptr) {
+        return opExpr;
+    }
+
     bool lvalueIsReference = CastType<ReferenceType>(lvalue->GetType()) != nullptr;
     if (lvalueIsReference) {
         lvalue = new RefDerefExpr(lvalue, lvalue->pos);
