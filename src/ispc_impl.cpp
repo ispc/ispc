@@ -500,6 +500,15 @@ bool Initialize() {
     LLVMInitializeAArch64TargetMC();
 #endif
 
+#ifdef ISPC_RISCV_ENABLED
+    LLVMInitializeRISCVTargetInfo();
+    LLVMInitializeRISCVTarget();
+    LLVMInitializeRISCVAsmPrinter();
+    LLVMInitializeRISCVAsmParser();
+    LLVMInitializeRISCVDisassembler();
+    LLVMInitializeRISCVTargetMC();
+#endif
+
 #ifdef ISPC_WASM_ENABLED
     LLVMInitializeWebAssemblyAsmParser();
     LLVMInitializeWebAssemblyAsmPrinter();

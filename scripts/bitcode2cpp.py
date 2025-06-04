@@ -40,7 +40,7 @@ def bundle_header(src, output):
             outfile.write("0x00 };\n\n")
             outfile.write(f"int {name}_length = {length};\n")
 
-ARCH_CHOICES = ['i686', 'x86', 'x86_64', 'arm', 'armv8a', 'arm64', 'aarch64', 'wasm32', 'wasm64', 'xe64']
+ARCH_CHOICES = ['i686', 'x86', 'x86_64', 'arm', 'armv8a', 'arm64', 'riscv64', 'aarch64', 'wasm32', 'wasm64', 'xe64']
 
 parser = argparse.ArgumentParser()
 parser.add_argument("src", help="Source file to process")
@@ -104,6 +104,8 @@ if args[0].arch in ARCH_CHOICES:
         ispc_arch = "arm"
     elif args[0].arch == "arm64" or args[0].arch == "aarch64":
         ispc_arch = "aarch64"
+    elif args[0].arch == "riscv64":
+        ispc_arch = "riscv64"
     elif args[0].arch == "wasm32":
         ispc_arch = "wasm32"
     elif args[0].arch == "wasm64":
@@ -145,6 +147,8 @@ with NamedTemporaryFile(mode='w', dir=dirname(output), delete=False) as outfile:
             arch = "x86" if args[0].runtime == "32" else "x86_64" if args[0].runtime == "64" else "error"
         elif "neon" in target:
             arch = "arm" if args[0].runtime == "32" else "aarch64" if args[0].runtime == "64" else "error"
+        elif "rvv" in target:
+            arch = "riscv64"
         elif "wasm" in target and not "generic" in target:
             arch = "wasm32" if args[0].runtime == "32" else "wasm64" if args[0].runtime == "64" else "error"
         elif ("gen9" in target) or ("xe" in target):

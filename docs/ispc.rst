@@ -880,6 +880,11 @@ These flags enable developers to collect profile data from representative progra
 runs and use it to guide compiler optimizations, potentially improving
 performance.
 
+New Architecture Support:
+
+* Added experimental RISC-V 64-bit (riscv64) architecture support with RISC-V
+  Vector Extension (RVV) ISA. The new ``rvv-x4`` target provides 4-wide
+  vectorization for RISC-V processors with vector extensions.
 
 Getting Started with ISPC
 =========================

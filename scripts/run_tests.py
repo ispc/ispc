@@ -655,6 +655,10 @@ def run_test(testname, host, target, jit_lib_path=None):
                     gcc_arch = '-m32'
                 elif target.arch == 'aarch64':
                     gcc_arch = '-march=armv8-a'
+                elif target.arch == 'riscv64':
+                    gcc_arch = '-march=rv64gcv'
+                    if options.wrapexe and options.wrapexe.startswith('qemu'):
+                        gcc_arch += ' -static'
                 elif target.arch == 'wasm64':
                     gcc_arch = '-sMEMORY64'
                 else:
