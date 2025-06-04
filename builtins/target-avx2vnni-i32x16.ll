@@ -2,9 +2,11 @@
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Same target as target-avx2-i32x16 but with native VNNI
-include(`target-avx2-common-i32x16.ll')
+define(`HAVE_GATHER', `1')
+define(`WIDTH',`16')
+define(`MASK',`i32')
+define(`ISA',`AVX2')
+include(`util.m4')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; dot product
