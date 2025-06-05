@@ -2461,6 +2461,22 @@ for_init_statement
     | declaration_statement
     ;
 
+while_scope
+    : TOKEN_WHILE { m->symbolTable->PushScope(); }
+    ;
+
+cwhile_scope
+    : TOKEN_CWHILE { m->symbolTable->PushScope(); }
+    ;
+
+do_scope
+    : TOKEN_DO { m->symbolTable->PushScope(); }
+    ;
+
+cdo_scope
+    : TOKEN_CDO { m->symbolTable->PushScope(); }
+    ;
+
 for_scope
     : TOKEN_FOR { m->symbolTable->PushScope(); }
     ;
@@ -2559,14 +2575,22 @@ foreach_unique_identifier
     ;
 
 iteration_statement
-    : TOKEN_WHILE '(' expression ')' attributed_statement
-      { $$ = new ForStmt(nullptr, $3, nullptr, $5, false, @1); }
-    | TOKEN_CWHILE '(' expression ')' attributed_statement
-      { $$ = new ForStmt(nullptr, $3, nullptr, $5, true, @1); }
-    | TOKEN_DO attributed_statement TOKEN_WHILE '(' expression ')' ';'
-      { $$ = new DoStmt($5, $2, false, @1); }
-    | TOKEN_CDO attributed_statement TOKEN_WHILE '(' expression ')' ';'
-      { $$ = new DoStmt($5, $2, true, @1); }
+    : while_scope '(' expression ')' attributed_statement
+      { $$ = new ForStmt(nullptr, $3, nullptr, $5, false, @1);
+        m->symbolTable->PopScope();
+      }
+    | cwhile_scope '(' expression ')' attributed_statement
+      { $$ = new ForStmt(nullptr, $3, nullptr, $5, true, @1);
+        m->symbolTable->PopScope();
+      }
+    | do_scope attributed_statement TOKEN_WHILE '(' expression ')' ';'
+      { $$ = new DoStmt($5, $2, false, @1);
+        m->symbolTable->PopScope();
+      }
+    | cdo_scope attributed_statement TOKEN_WHILE '(' expression ')' ';'
+      { $$ = new DoStmt($5, $2, true, @1);
+        m->symbolTable->PopScope();
+      }
     | for_scope '(' for_init_statement for_test ')' attributed_statement
       { $$ = new ForStmt($3, $4, nullptr, $6, false, @1);
         m->symbolTable->PopScope();
