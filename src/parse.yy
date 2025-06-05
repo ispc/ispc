@@ -1959,7 +1959,7 @@ direct_declarator
                 d->child = $1;
                 $$ = d;
             } else {
-                $$ = nullptr;    
+                $$ = nullptr;
             }
         }
         else {
@@ -2189,7 +2189,7 @@ direct_abstract_declarator
                 d->arraySize = symbolValuePtr;
                 $$ = d;
             } else {
-                $$ = nullptr;    
+                $$ = nullptr;
             }
         }
         else {
@@ -2231,7 +2231,7 @@ direct_abstract_declarator
                   d->child = $1;
                   $$ = d;
               } else {
-                  $$ = nullptr;  
+                  $$ = nullptr;
               }
           }
           else {
@@ -2406,15 +2406,45 @@ expression_statement
     | expression ';' { $$ = $1 ? new ExprStmt($1, @1) : nullptr; }
     ;
 
+if_scope
+    : TOKEN_IF { m->symbolTable->PushScope(); }
+    ;
+
+cif_scope
+    : TOKEN_CIF { m->symbolTable->PushScope(); }
+    ;
+
 selection_statement
-    : TOKEN_IF '(' expression ')' attributed_statement
-      { $$ = new IfStmt($3, $5, nullptr, false, @1); }
-    | TOKEN_IF '(' expression ')' attributed_statement TOKEN_ELSE attributed_statement
-      { $$ = new IfStmt($3, $5, $7, false, @1); }
-    | TOKEN_CIF '(' expression ')' attributed_statement
-      { $$ = new IfStmt($3, $5, nullptr, true, @1); }
-    | TOKEN_CIF '(' expression ')' attributed_statement TOKEN_ELSE attributed_statement
-      { $$ = new IfStmt($3, $5, $7, true, @1); }
+    : if_scope '(' expression ')' attributed_statement
+      {
+        $$ = new IfStmt($3, $5, nullptr, false, @1);
+        m->symbolTable->PopScope();
+      }
+    | if_scope '(' expression ')' attributed_statement TOKEN_ELSE
+      {
+        m->symbolTable->PopScope();
+        m->symbolTable->PushScope();
+      }
+      attributed_statement
+      {
+        $$ = new IfStmt($3, $5, $8, false, @1);
+        m->symbolTable->PopScope();
+      }
+    | cif_scope '(' expression ')' attributed_statement
+      {
+        $$ = new IfStmt($3, $5, nullptr, true, @1);
+        m->symbolTable->PopScope();
+      }
+    | cif_scope '(' expression ')' attributed_statement TOKEN_ELSE
+      {
+        m->symbolTable->PopScope();
+        m->symbolTable->PushScope();
+      }
+      attributed_statement
+      {
+        $$ = new IfStmt($3, $5, $8, true, @1);
+        m->symbolTable->PopScope();
+      }
     | TOKEN_SWITCH '(' expression ')' attributed_statement
       { $$ = new SwitchStmt($3, $5, @1); }
     ;
