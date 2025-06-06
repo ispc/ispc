@@ -1620,6 +1620,7 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *sv = startExprs[i]->GetValue(ctx);
         llvm::Value *ev = endExprs[i]->GetValue(ctx);
         if (sv == nullptr || ev == nullptr) {
+            ctx->EndScope();
             return;
         }
         startVals.push_back(sv);
@@ -2068,8 +2069,10 @@ void ForeachStmt::EmitCodeForXe(FunctionEmitContext *ctx) const {
 
         llvm::Value *sv = startExprs[i]->GetValue(ctx);
         llvm::Value *ev = endExprs[i]->GetValue(ctx);
-        if (sv == nullptr || ev == nullptr)
+        if (sv == nullptr || ev == nullptr) {
+            ctx->EndScope();
             return;
+        }
 
         // Store varying start
         sv = ctx->BroadcastValue(sv, LLVMTypes::Int32VectorType, "start_broadcast");
@@ -2641,6 +2644,8 @@ void ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (exprValue == nullptr || (exprType = expr->GetType()) == nullptr ||
         llvm::dyn_cast<llvm::VectorType>(exprValue->getType()) == nullptr) {
         Assert(m->errorCount > 0);
+        ctx->EndForeach();
+        ctx->EndScope();
         return;
     }
     ctx->SetDebugPos(pos);
