@@ -950,17 +950,25 @@ void Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
 
             AssertPos(pos, d->declarators.size() == 1);
             Declarator *decl = d->declarators[0];
+
+            char anonDeclName[32];
+            if (decl == nullptr || decl->name == "") {
+                // Give a name to any anonymous parameter declarations
+                snprintf(anonDeclName, sizeof(anonDeclName), "__anon_parameter_%d", i);
+                if (decl != nullptr && decl->name == "") {
+                    decl->name = anonDeclName;
+                }
+            }
+
             if (decl == nullptr || decl->type == nullptr) {
+                args.push_back(nullptr);
+                argNames.push_back(decl != nullptr ? decl->name : anonDeclName);
+                argPos.push_back(decl != nullptr ? decl->pos : pos);
+                argDefaults.push_back(nullptr);
                 AssertPos(pos, m->errorCount > 0);
                 continue;
             }
 
-            if (decl->name == "") {
-                // Give a name to any anonymous parameter declarations
-                char buf[32];
-                snprintf(buf, sizeof(buf), "__anon_parameter_%d", i);
-                decl->name = buf;
-            }
             if (!decl->type->IsTypeDependent()) {
                 decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
             }
