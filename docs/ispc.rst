@@ -4945,6 +4945,36 @@ The ``isnan()`` functions test whether the given value is a floating-point
     bool isnan(double v)
     uniform bool isnan(uniform double v)
 
+The ``isinf()`` and ``isfinite()`` functions test whether the given value is
+a floating-point infinity (please note that a "not a number" value is neither 
+considered finite nor infinite):
+
+::
+
+    bool isinf(float16 v)
+    uniform bool isinf(uniform float16 v)
+    bool isinf(float v)
+    uniform bool isinf(uniform float v)
+    bool isinf(double v)
+    uniform bool isinf(uniform double v)
+
+::
+
+    bool isfinite(float16 v)
+    uniform bool isfinite(uniform float16 v)
+    bool isfinite(float v)
+    uniform bool isfinite(uniform float v)
+    bool isfinite(double v)
+    uniform bool isfinite(uniform double v)
+
+The isinf and isfinite functions also support short vector types with the
+basic types listed above.
+
+::
+
+    template <typename T, uint N> T<N> isinf(T<N> v)
+    template <typename T, uint N> T<N> isfinite(T<N> v)
+
 
 A number of functions are also available for performing operations on 8- and
 16-bit quantities; these map to specialized instructions that perform these

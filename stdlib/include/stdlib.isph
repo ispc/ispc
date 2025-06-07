@@ -527,6 +527,20 @@ __declspec(safe, cost1) inline bool isnan(float v);
 __declspec(safe, cost1) inline uniform bool isnan(uniform double v);
 __declspec(safe, cost1) inline bool isnan(double v);
 
+__declspec(safe, cost1) inline uniform bool isinf(uniform float16 v);
+__declspec(safe, cost1) inline bool isinf(float16 v);
+__declspec(safe, cost1) inline uniform bool isinf(uniform float v);
+__declspec(safe, cost1) inline bool isinf(float v);
+__declspec(safe, cost1) inline uniform bool isinf(uniform double v);
+__declspec(safe, cost1) inline bool isinf(double v);
+
+__declspec(safe, cost1) inline uniform bool isfinite(uniform float16 v);
+__declspec(safe, cost1) inline bool isfinite(float16 v);
+__declspec(safe, cost1) inline uniform bool isfinite(uniform float v);
+__declspec(safe, cost1) inline bool isfinite(float v);
+__declspec(safe, cost1) inline uniform bool isfinite(uniform double v);
+__declspec(safe, cost1) inline bool isfinite(double v);
+
 __declspec(safe, cost1) inline int8 abs(int8 a);
 __declspec(safe, cost1) inline uniform int8 abs(uniform int8 a);
 __declspec(safe, cost1) inline int16 abs(int16 a);
@@ -1337,9 +1351,13 @@ __declspec(safe) static inline varying int32 dot2add_u16i16packed_sat(varying ui
     SHORT_VEC_VARYING_ARG2(FUNC)
 
 // Generate the template functions for short vectors
+
 SHORT_VEC_ARG1(abs)
 SHORT_VEC_ARG2(max)
 SHORT_VEC_ARG2(min)
+
+SHORT_VEC_ARG1(isinf)
+SHORT_VEC_ARG1(isfinite)
 
 SHORT_VEC_ARG1(round)
 SHORT_VEC_ARG1(floor)
