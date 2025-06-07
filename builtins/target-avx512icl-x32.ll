@@ -10,6 +10,16 @@ define(`ISA',`AVX512SKX')
 
 include(`util.m4')
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; shuffle
+
+declare <32 x i8> @llvm.x86.avx512.mask.permvar.qi.256(<32 x i8>, <32 x i8>, <32 x i8>, i32)
+define <32 x i8> @__shuffle_i8(<32 x i8> %v, <32 x i32> %perm) nounwind readnone alwaysinline {
+  %ind = trunc <32 x i32> %perm to <32 x i8>
+  %res = call <32 x i8> @llvm.x86.avx512.mask.permvar.qi.256(<32 x i8> %v, <32 x i8> %ind, <32 x i8> zeroinitializer, i32 -1)
+  ret <32 x i8> %res
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; dot product 
 declare <16 x i32> @llvm.x86.avx512.vpdpbusd.512(<16 x i32>, <16 x i32>, <16 x i32>) nounwind readnone

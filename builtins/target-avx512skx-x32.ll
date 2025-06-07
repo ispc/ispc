@@ -56,7 +56,100 @@ define i1 @__none(<WIDTH x MASK> %mask) nounwind readnone alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; broadcast/rotate/shift/shuffle
 
-define_shuffles()
+; Use vpermw for 16-bit shuffles.
+declare <WIDTH x i16> @llvm.x86.avx512.mask.permvar.hi.512(<WIDTH x i16>, <WIDTH x i16>, <WIDTH x i16>, i16)
+define <WIDTH x i16> @__shuffle_i16(<WIDTH x i16>, <WIDTH x i32>) nounwind readnone alwaysinline {
+  %ind = trunc <WIDTH x i32> %1 to <WIDTH x i16>
+  %res = call <WIDTH x i16> @llvm.x86.avx512.mask.permvar.hi.512(<WIDTH x i16> %0, <WIDTH x i16> %ind, <WIDTH x i16> zeroinitializer, i16 -1)
+  ret <WIDTH x i16> %res
+}
+
+define <WIDTH x i8> @__shuffle_i8(<WIDTH x i8>, <WIDTH x i32>) nounwind readnone alwaysinline {
+  %vals = zext <WIDTH x i8> %0 to <WIDTH x i16>
+  %res = call <WIDTH x i16> @__shuffle_i16(<WIDTH x i16> %vals, <WIDTH x i32> %1)
+  %res_i8 = trunc <WIDTH x i16> %res to <WIDTH x i8>
+  ret <WIDTH x i8> %res_i8
+}
+
+define <WIDTH x half> @__shuffle_half(<WIDTH x half>, <WIDTH x i32>) nounwind readnone alwaysinline {
+  %vals = bitcast <WIDTH x half> %0 to <WIDTH x i16>
+  %res = call <WIDTH x i16> @__shuffle_i16(<WIDTH x i16> %vals, <WIDTH x i32> %1)
+  %res_half = bitcast <WIDTH x i16> %res to <WIDTH x half>
+  ret <WIDTH x half> %res_half
+}
+
+declare <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32> %a, <16 x i32> %idx, <16 x i32> %b)
+define <32 x i32> @__shuffle_i32(<32 x i32> %input, <32 x i32> %perm) {
+    ; Split input into two 512-bit halves (16 x i32 each)
+    %low = shufflevector <32 x i32> %input, <32 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+    %high = shufflevector <32 x i32> %input, <32 x i32> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+
+    ; Get first 16 and second 16 indices
+    %perm_low = shufflevector <32 x i32> %perm, <32 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+    %perm_high = shufflevector <32 x i32> %perm, <32 x i32> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+
+    ; Two 512-bit VPERMI2D operations
+    %result1 = call <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32> %low, <16 x i32> %perm_low, <16 x i32> %high)
+    %result2 = call <16 x i32> @llvm.x86.avx512.vpermi2var.d.512(<16 x i32> %low, <16 x i32> %perm_high, <16 x i32> %high)
+
+    ; Concatenate results
+    %final = shufflevector <16 x i32> %result1, <16 x i32> %result2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+    ret <32 x i32> %final
+}
+
+declare <16 x float> @llvm.x86.avx512.vpermi2var.ps.512(<16 x float> %a, <16 x i32> %idx, <16 x float> %b)
+define <32 x float> @__shuffle_float(<32 x float> %input, <32 x i32> %perm) {
+    ; Split input into two 512-bit halves (16 x float each)
+    %low = shufflevector <32 x float> %input, <32 x float> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+    %high = shufflevector <32 x float> %input, <32 x float> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+
+    ; Get first 16 and second 16 indices
+    %perm_low = shufflevector <32 x i32> %perm, <32 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+    %perm_high = shufflevector <32 x i32> %perm, <32 x i32> undef, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+
+    ; Two 512-bit VPERMI2PS operations
+    %result1 = call <16 x float> @llvm.x86.avx512.vpermi2var.ps.512(<16 x float> %low, <16 x i32> %perm_low, <16 x float> %high)
+    %result2 = call <16 x float> @llvm.x86.avx512.vpermi2var.ps.512(<16 x float> %low, <16 x i32> %perm_high, <16 x float> %high)
+
+    ; Concatenate results
+    %final = shufflevector <16 x float> %result1, <16 x float> %result2, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+    ret <32 x float> %final
+}
+
+declare <32 x i64> @llvm.masked.gather.v32i64.v32p0i64(<32 x i64*>, i32, <32 x i1>, <32 x i64>)
+define <32 x i64> @__shuffle_i64(<32 x i64> %input, <32 x i32> %perm) nounwind readnone alwaysinline {
+  ; Store input vector to memory so we can gather from it
+  %input_alloca = alloca [32 x i64], align 64
+  %input_vec_ptr = bitcast [32 x i64]* %input_alloca to <32 x i64>*
+  store <32 x i64> %input, <32 x i64>* %input_vec_ptr, align 64
+
+  ; Create base pointer vector for gather operation
+  %base_ptr_scalar = bitcast [32 x i64]* %input_alloca to i64*
+  %base_ptr_vec = insertelement <32 x i64*> undef, i64* %base_ptr_scalar, i32 0
+  %base_ptr_broadcast = shufflevector <32 x i64*> %base_ptr_vec, <32 x i64*> zeroinitializer, <32 x i32> zeroinitializer
+
+  ; Create pointer vector
+  %perm_i64 = sext <32 x i32> %perm to <32 x i64>
+  %ptrs = getelementptr i64, <32 x i64*> %base_ptr_broadcast, <32 x i64> %perm_i64
+
+  ; Create mask for gather (all true)
+  %true_val = insertelement <32 x i1> undef, i1 true, i32 0
+  %mask_all = shufflevector <32 x i1> %true_val, <32 x i1> zeroinitializer, <32 x i32> zeroinitializer
+
+  ; Perform the single gather operation
+  %result = call <32 x i64> @llvm.masked.gather.v32i64.v32p0i64(<32 x i64*> %ptrs, i32 8, <32 x i1> %mask_all, <32 x i64> zeroinitializer)
+  ret <32 x i64> %result
+}
+
+define <WIDTH x double> @__shuffle_double(<WIDTH x double> %input, <WIDTH x i32> %perm) nounwind readnone alwaysinline {
+  %input_i64 = bitcast <WIDTH x double> %input to <WIDTH x i64>
+  %res_i64 = call <WIDTH x i64> @__shuffle_i64(<WIDTH x i64> %input_i64, <WIDTH x i32> %perm)
+  %res_double = bitcast <WIDTH x i64> %res_i64 to <WIDTH x double>
+  ret <WIDTH x double> %res_double
+}
+
+define_shuffle2_const()
+define_shuffle2()
 define_vector_permutations()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
