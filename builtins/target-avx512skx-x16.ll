@@ -19,9 +19,26 @@ include(`target-avx512-utils.ll')
 ;; @llvm.x86.avx512.vpermi2var.hi.256 is not available for KNL.
 ;; Look for definitions in particular target files.
 
-shuffle1(half)
-shuffle1(double)
-shuffle1(i64)
+declare <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8>, <16 x i8>)
+define <16 x i8> @__shuffle_i8(<16 x i8> %data, <16 x i32> %shuffle_mask) nounwind readnone alwaysinline {
+  %mask = trunc <16 x i32> %shuffle_mask to <16 x i8>
+  %result = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %data, <16 x i8> %mask)
+  ret <16 x i8> %result
+}
+
+declare <16 x i16> @llvm.x86.avx512.mask.permvar.hi.256(<16 x i16>, <16 x i16>, <16 x i16>, i16)
+define <16 x i16> @__shuffle_i16(<16 x i16>, <16 x i32>) nounwind readnone alwaysinline {
+  %ind = trunc <16 x i32> %1 to <16 x i16>
+  %res = call <16 x i16> @llvm.x86.avx512.mask.permvar.hi.256(<16 x i16> %0, <16 x i16> %ind, <16 x i16> zeroinitializer, i16 -1)
+  ret <16 x i16> %res
+}
+
+define <16 x half> @__shuffle_half(<16 x half> %v, <16 x i32> %perm) nounwind readnone alwaysinline {
+  %vals = bitcast <16 x half> %v to <16 x i16>
+  %res = call <16 x i16> @__shuffle_i16(<16 x i16> %vals, <16 x i32> %perm)
+  %res_half = bitcast <16 x i16> %res to <16 x half>
+  ret <16 x half> %res_half
+}
 
 declare <WIDTH x i32> @llvm.x86.avx512.permvar.si.512(<WIDTH x i32>, <WIDTH x i32>)
 define <WIDTH x i32> @__shuffle_i32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone alwaysinline {
@@ -35,8 +52,43 @@ define <WIDTH x float> @__shuffle_float(<WIDTH x float>, <WIDTH x i32>) nounwind
   ret <WIDTH x float> %res
 }
 
+declare <8 x double> @llvm.x86.avx512.mask.vpermi2var.pd.512(<8 x double> %a, <8 x i64> %idx, <8 x double> %b, i8 %mask)
+define <16 x double> @__shuffle_double(<16 x double> %input, <16 x i32> %perm) {
+    ; Split input into two 512-bit halves
+    v16tov8(double, %input, %low, %high)
+    v16tov8(i32, %perm, %perm_low, %perm_high)
+
+    ; Two 512-bit VPERMI2PD operations
+    %indices1 = zext <8 x i32> %perm_low to <8 x i64>
+    %indices2 = zext <8 x i32> %perm_high to <8 x i64>
+    %result1 = call <8 x double> @llvm.x86.avx512.mask.vpermi2var.pd.512(<8 x double> %low, <8 x i64> %indices1, <8 x double> %high, i8 255)
+    %result2 = call <8 x double> @llvm.x86.avx512.mask.vpermi2var.pd.512(<8 x double> %low, <8 x i64> %indices2, <8 x double> %high, i8 255)
+
+    ; Concatenate results
+    v8tov16(double, %result1, %result2, %final)
+    ret <16 x double> %final
+}
+
+declare <8 x i64> @llvm.x86.avx512.mask.vpermi2var.q.512(<8 x i64> %a, <8 x i64> %idx, <8 x i64> %b, i8 %mask)
+define <16 x i64> @__shuffle_i64(<16 x i64> %input, <16 x i32> %perm) {
+    ; Split input into two 512-bit halves
+    v16tov8(i64, %input, %low, %high)
+    v16tov8(i32, %perm, %perm_low, %perm_high)
+
+    ; Two 512-bit VPERMI2Q operations (Q = quadword = 64-bit integers)
+    %indices1 = zext <8 x i32> %perm_low to <8 x i64>
+    %indices2 = zext <8 x i32> %perm_high to <8 x i64>
+    %result1 = call <8 x i64> @llvm.x86.avx512.mask.vpermi2var.q.512(<8 x i64> %low, <8 x i64> %indices1, <8 x i64> %high, i8 255)
+    %result2 = call <8 x i64> @llvm.x86.avx512.mask.vpermi2var.q.512(<8 x i64> %low, <8 x i64> %indices2, <8 x i64> %high, i8 255)
+
+    ; Concatenate results
+    v8tov16(i64, %result1, %result2, %final)
+    ret <16 x i64> %final
+}
+
 define_shuffle2_const()
 
+shuffle2(i8)
 shuffle2(half)
 shuffle2(i64)
 shuffle2(double)
@@ -67,6 +119,22 @@ is_const:
 not_const:
   %res = call <WIDTH x float> @llvm.x86.avx512.vpermi2var.ps.512(<WIDTH x float> %0, <WIDTH x i32> %2, <WIDTH x float> %1)
   ret <WIDTH x float> %res
+}
+
+
+declare <WIDTH x i16> @llvm.x86.avx512.vpermi2var.hi.256(<WIDTH x i16>, <WIDTH x i16>, <WIDTH x i16>)
+define <WIDTH x i16> @__shuffle2_i16(<WIDTH x i16>, <WIDTH x i16>, <WIDTH x i32>) nounwind readnone alwaysinline {
+  %isc = call i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32> %2)
+  br i1 %isc, label %is_const, label %not_const
+
+is_const:
+  %res_const = tail call <WIDTH x i16> @__shuffle2_const_i16(<WIDTH x i16> %0, <WIDTH x i16> %1, <WIDTH x i32> %2)
+  ret <WIDTH x i16> %res_const
+
+not_const:
+  %ind = trunc <WIDTH x i32> %2 to <WIDTH x i16>
+  %res = call <WIDTH x i16> @llvm.x86.avx512.vpermi2var.hi.256(<WIDTH x i16> %0, <WIDTH x i16> %ind, <WIDTH x i16> %1)
+  ret <WIDTH x i16> %res
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1140,34 +1208,6 @@ define_avgs()
 ;; these functions happens in stdlib.ispc.
 
 ;; Trigonometry
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; shuffles
-
-shuffle1(i8)
-shuffle2(i8)
-
-declare <WIDTH x i16> @llvm.x86.avx512.mask.permvar.hi.256(<WIDTH x i16>, <WIDTH x i16>, <WIDTH x i16>, i16)
-define <WIDTH x i16> @__shuffle_i16(<WIDTH x i16>, <WIDTH x i32>) nounwind readnone alwaysinline {
-  %ind = trunc <WIDTH x i32> %1 to <WIDTH x i16>
-  %res = call <WIDTH x i16> @llvm.x86.avx512.mask.permvar.hi.256(<WIDTH x i16> %0, <WIDTH x i16> %ind, <WIDTH x i16> zeroinitializer, i16 -1)
-  ret <WIDTH x i16> %res
-}
-
-declare <WIDTH x i16> @llvm.x86.avx512.vpermi2var.hi.256(<WIDTH x i16>, <WIDTH x i16>, <WIDTH x i16>)
-define <WIDTH x i16> @__shuffle2_i16(<WIDTH x i16>, <WIDTH x i16>, <WIDTH x i32>) nounwind readnone alwaysinline {
-  %isc = call i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32> %2)
-  br i1 %isc, label %is_const, label %not_const
-
-is_const:
-  %res_const = tail call <WIDTH x i16> @__shuffle2_const_i16(<WIDTH x i16> %0, <WIDTH x i16> %1, <WIDTH x i32> %2)
-  ret <WIDTH x i16> %res_const
-
-not_const:
-  %ind = trunc <WIDTH x i32> %2 to <WIDTH x i16>
-  %res = call <WIDTH x i16> @llvm.x86.avx512.vpermi2var.hi.256(<WIDTH x i16> %0, <WIDTH x i16> %ind, <WIDTH x i16> %1)
-  ret <WIDTH x i16> %res
-}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp/rsqrt declarations for half

@@ -55,7 +55,103 @@ define i1 @__none(<WIDTH x MASK> %mask) nounwind readnone alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; broadcast/rotate/shift/shuffle
 
-define_shuffles()
+declare <32 x i16> @llvm.x86.avx512.vpermi2var.hi.512(<32 x i16> %a, <32 x i16> %idx, <32 x i16> %b)
+define <64 x i16> @__shuffle_i16(<64 x i16> %input, <64 x i32> %perm) nounwind readnone alwaysinline {
+  ; Split input into two 512-bit halves (32 x i16 each)
+  %perm16 = trunc <64 x i32> %perm to <64 x i16>
+  v64tov32(i16, %input, %low, %high)
+  v64tov32(i16, %perm16, %perm_low, %perm_high)
+
+  ; Two 512-bit VPERMI2W operations
+  %result1 = call <32 x i16> @llvm.x86.avx512.vpermi2var.hi.512(<32 x i16> %low, <32 x i16> %perm_low, <32 x i16> %high)
+  %result2 = call <32 x i16> @llvm.x86.avx512.vpermi2var.hi.512(<32 x i16> %low, <32 x i16> %perm_high, <32 x i16> %high)
+
+  ; Concatenate results
+  v32tov64(i16, %result1, %result2, %final)
+  ret <64 x i16> %final
+}
+
+define <64 x i8> @__shuffle_i8(<64 x i8>, <64 x i32>) nounwind readnone alwaysinline {
+  %vals = zext <64 x i8> %0 to <64 x i16>
+  %res = call <64 x i16> @__shuffle_i16(<64 x i16> %vals, <64 x i32> %1)
+  %res_i8 = trunc <64 x i16> %res to <64 x i8>
+  ret <64 x i8> %res_i8
+}
+
+define <64 x half> @__shuffle_half(<64 x half>, <64 x i32>) nounwind readnone alwaysinline {
+  %vals = bitcast <64 x half> %0 to <64 x i16>
+  %res = call <64 x i16> @__shuffle_i16(<64 x i16> %vals, <64 x i32> %1)
+  %res_half = bitcast <64 x i16> %res to <64 x half>
+  ret <64 x half> %res_half
+}
+
+declare <64 x i32> @llvm.masked.gather.v64i32.v64p0(<64 x i32*>, i32, <64 x i1>, <64 x i32>)
+define <64 x i32> @__shuffle_i32(<64 x i32> %input, <64 x i32> %perm) nounwind readnone alwaysinline {
+  ; Store input vector to memory so we can gather from it
+  %input_alloca = alloca [64 x i32], align 64
+  %input_vec_ptr = bitcast [64 x i32]* %input_alloca to <64 x i32>*
+  store <64 x i32> %input, <64 x i32>* %input_vec_ptr, align 64
+
+  ; Create base pointer vector for gather operation
+  %base_ptr_scalar = bitcast [64 x i32]* %input_alloca to i32*
+  %base_ptr_vec = insertelement <64 x i32*> undef, i32* %base_ptr_scalar, i32 0
+  %base_ptr_broadcast = shufflevector <64 x i32*> %base_ptr_vec, <64 x i32*> zeroinitializer, <64 x i32> zeroinitializer
+
+  ; Create pointer vector
+  %ptrs = getelementptr i32, <64 x i32*> %base_ptr_broadcast, <64 x i32> %perm
+
+  ; Create mask for gather (all true)
+  %true_val = insertelement <64 x i1> undef, i1 true, i32 0
+  %mask_all = shufflevector <64 x i1> %true_val, <64 x i1> zeroinitializer, <64 x i32> zeroinitializer
+
+  ; Perform the single gather operation
+  %result = call <64 x i32> @llvm.masked.gather.v64i32.v64p0(<64 x i32*> %ptrs, i32 4, <64 x i1> %mask_all, <64 x i32> zeroinitializer)
+
+  ret <64 x i32> %result
+}
+
+define <64 x float> @__shuffle_float(<64 x float> %input, <64 x i32> %perm) nounwind readnone alwaysinline {
+  %input_i32 = bitcast <64 x float> %input to <64 x i32>
+  %res_i32 = call <64 x i32> @__shuffle_i32(<64 x i32> %input_i32, <64 x i32> %perm)
+  %res_float = bitcast <64 x i32> %res_i32 to <64 x float>
+  ret <64 x float> %res_float
+}
+
+declare <64 x i64> @llvm.masked.gather.v64i64.v64p0(<64 x i64*>, i32, <64 x i1>, <64 x i64>)
+define <64 x i64> @__shuffle_i64(<64 x i64> %input, <64 x i32> %perm) nounwind readnone alwaysinline {
+  ; Store input vector to memory so we can gather from it
+  %input_alloca = alloca [64 x i64], align 64
+  %input_vec_ptr = bitcast [64 x i64]* %input_alloca to <64 x i64>*
+  store <64 x i64> %input, <64 x i64>* %input_vec_ptr, align 64
+
+  ; Create base pointer vector for gather operation
+  %base_ptr_scalar = bitcast [64 x i64]* %input_alloca to i64*
+  %base_ptr_vec = insertelement <64 x i64*> undef, i64* %base_ptr_scalar, i32 0
+  %base_ptr_broadcast = shufflevector <64 x i64*> %base_ptr_vec, <64 x i64*> zeroinitializer, <64 x i32> zeroinitializer
+
+  ; Create pointer vector
+  %perm_i64 = sext <64 x i32> %perm to <64 x i64>
+  %ptrs = getelementptr i64, <64 x i64*> %base_ptr_broadcast, <64 x i64> %perm_i64
+
+  ; Create mask for gather (all true)
+  %true_val = insertelement <64 x i1> undef, i1 true, i32 0
+  %mask_all = shufflevector <64 x i1> %true_val, <64 x i1> zeroinitializer, <64 x i32> zeroinitializer
+
+  ; Perform the single gather operation
+  %result = call <64 x i64> @llvm.masked.gather.v64i64.v64p0(<64 x i64*> %ptrs, i32 8, <64 x i1> %mask_all, <64 x i64> zeroinitializer)
+
+  ret <64 x i64> %result
+}
+
+define <64 x double> @__shuffle_double(<64 x double> %input, <64 x i32> %perm) nounwind readnone alwaysinline {
+  %input_i64 = bitcast <64 x double> %input to <64 x i64>
+  %res_i64 = call <64 x i64> @__shuffle_i64(<64 x i64> %input_i64, <64 x i32> %perm)
+  %res_double = bitcast <64 x i64> %res_i64 to <64 x double>
+  ret <64 x double> %res_double
+}
+
+define_shuffle2_const()
+define_shuffle2()
 define_vector_permutations()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

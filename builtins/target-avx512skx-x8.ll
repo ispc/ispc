@@ -13,10 +13,20 @@ include(`target-avx512-utils.ll')
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; shuffles
 
-shuffle1(i8)
-shuffle1(half)
-shuffle1(double)
-shuffle1(i64)
+declare <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8>, <16 x i8>)
+define <8 x i8> @__shuffle_i8(<8 x i8> %data, <8 x i32> %shuffle_mask) nounwind readnone alwaysinline {
+  convert8to16(i8, %data, %data16)
+
+  ; Create mask (indices with high bit clear, 0x80 for zero)
+  %shuffle_mask2 = trunc <8 x i32> %shuffle_mask to <8 x i8>
+  %mask16 = shufflevector <8 x i8> %shuffle_mask2, <8 x i8> <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>,
+                         <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                                    i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+
+  %result16 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %data16, <16 x i8> %mask16)
+  convert16to8(i8, %result16, %result)
+  ret <8 x i8> %result
+}
 
 declare <WIDTH x i16> @llvm.x86.avx512.mask.permvar.hi.128(<WIDTH x i16>, <WIDTH x i16>, <WIDTH x i16>, i8)
 define <WIDTH x i16> @__shuffle_i16(<WIDTH x i16>, <WIDTH x i32>) nounwind readnone alwaysinline {
@@ -25,6 +35,14 @@ define <WIDTH x i16> @__shuffle_i16(<WIDTH x i16>, <WIDTH x i32>) nounwind readn
   ret <WIDTH x i16> %res
 }
 
+define <8 x half> @__shuffle_half(<8 x half> %v, <8 x i32> %perm) nounwind readnone alwaysinline {
+  %vals = bitcast <8 x half> %v to <8 x i16>
+  %res = call <8 x i16> @__shuffle_i16(<8 x i16> %vals, <8 x i32> %perm)
+  %res_half = bitcast <8 x i16> %res to <8 x half>
+  ret <8 x half> %res_half
+}
+
+; Use vpermps for shuffling i32 and float types
 declare <WIDTH x i32> @llvm.x86.avx512.mask.permvar.si.256(<WIDTH x i32>, <WIDTH x i32>, <WIDTH x i32>, i8)
 define <WIDTH x i32> @__shuffle_i32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone alwaysinline {
   %res = call <WIDTH x i32>@llvm.x86.avx512.mask.permvar.si.256(<WIDTH x i32> %0, <WIDTH x i32> %1, <WIDTH x i32> zeroinitializer, i8 -1)
@@ -35,6 +53,40 @@ declare <WIDTH x float> @llvm.x86.avx512.mask.permvar.sf.256(<WIDTH x float>, <W
 define <WIDTH x float> @__shuffle_float(<WIDTH x float>, <WIDTH x i32>) nounwind readnone alwaysinline {
   %res = call <WIDTH x float> @llvm.x86.avx512.mask.permvar.sf.256(<WIDTH x float> %0, <WIDTH x i32> %1, <WIDTH x float> zeroinitializer, i8 -1)
   ret <WIDTH x float> %res
+}
+
+declare <4 x double> @llvm.x86.avx512.mask.vpermi2var.pd.256(<4 x double> %a, <4 x i64> %idx, <4 x double> %b, i8 %mask)
+define <8 x double> @__shuffle_double(<8 x double> %input, <8 x i32> %perm) {
+    ; Split input into two halves
+    v8tov4(double, %input, %low, %high)
+    v8tov4(i32, %perm, %perm_low, %perm_high)
+
+    ; Two VPERMI2PD using corresponding indices  (0-3 = low, 4-7 = high)
+    %indices1 = zext <4 x i32> %perm_low to <4 x i64>
+    %indices2 = zext <4 x i32> %perm_high to <4 x i64>
+    %result1 = call <4 x double> @llvm.x86.avx512.mask.vpermi2var.pd.256(<4 x double> %low, <4 x i64> %indices1, <4 x double> %high, i8 15)
+    %result2 = call <4 x double> @llvm.x86.avx512.mask.vpermi2var.pd.256(<4 x double> %low, <4 x i64> %indices2, <4 x double> %high, i8 15)
+
+    ; Concatenate results
+    v4tov8(double, %result1, %result2, %final)
+    ret <8 x double> %final
+}
+
+declare <4 x i64> @llvm.x86.avx512.mask.vpermi2var.q.256(<4 x i64> %a, <4 x i64> %idx, <4 x i64> %b, i8 %mask)
+define <8 x i64> @__shuffle_i64(<8 x i64> %input, <8 x i32> %perm) {
+    ; Split input into two halves
+    v8tov4(i64, %input, %low, %high)
+    v8tov4(i32, %perm, %perm_low, %perm_high)
+
+    ; Two VPERMI2Q using corresponding indices  (0-3 = low, 4-7 = high)
+    %indices1 = zext <4 x i32> %perm_low to <4 x i64>
+    %indices2 = zext <4 x i32> %perm_high to <4 x i64>
+    %result1 = call <4 x i64> @llvm.x86.avx512.mask.vpermi2var.q.256(<4 x i64> %low, <4 x i64> %indices1, <4 x i64> %high, i8 15)
+    %result2 = call <4 x i64> @llvm.x86.avx512.mask.vpermi2var.q.256(<4 x i64> %low, <4 x i64> %indices2, <4 x i64> %high, i8 15)
+
+    ; Concatenate results
+    v4tov8(i64, %result1, %result2, %final)
+    ret <8 x i64> %final
 }
 
 define_shuffle2_const()

@@ -12,9 +12,42 @@ include(`target-avx512-utils.ll')
 
 ;; shuffles
 
-shuffle1(i8)
-shuffle1(i16)
-shuffle1(half)
+declare <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8>, <16 x i8>)
+define <4 x i8> @__shuffle_i8(<4 x i8> %data, <4 x i32> %shuffle_mask) nounwind readnone alwaysinline {
+  convert4to16(i8, %data, %data16)
+
+  ; Create mask (indices with high bit clear, 0x80 for zero)
+  %shuffle_mask2 = trunc <4 x i32> %shuffle_mask to <4 x i8>
+  %mask8 = shufflevector <4 x i8> %shuffle_mask2, <4 x i8> <i8 -128, i8 -128, i8 -128, i8 -128>,
+                         <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %mask16 = shufflevector <8 x i8> %mask8, <8 x i8> <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>,
+                         <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                                    i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+
+  ; Use vpshufb to perform the shuffle
+  %result16 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %data16, <16 x i8> %mask16)
+
+  convert16to4(i8, %result16, %result)
+  ret <4 x i8> %result
+}
+
+; Use vpermw to perform the shuffle of i16 vectors.
+declare <8 x i16> @llvm.x86.avx512.mask.permvar.hi.128(<8 x i16>, <8 x i16>, <8 x i16>, i8)
+define <4 x i16> @__shuffle_i16(<4 x i16> %src, <4 x i32> %indices) nounwind readnone alwaysinline {
+  convert4to8(i16, %src, %src_ext)
+  convert4to8(i32, %indices, %indices_ext)
+  %ind = trunc <8 x i32> %indices_ext to <8 x i16>
+  %res_ext = call <8 x i16> @llvm.x86.avx512.mask.permvar.hi.128(<8 x i16> %src_ext, <8 x i16> %ind, <8 x i16> zeroinitializer, i8 -1)
+  convert8to4(i16, %res_ext, %result)
+  ret <4 x i16> %result
+}
+
+define <4 x half> @__shuffle_half(<4 x half> %v, <4 x i32> %perm) nounwind readnone alwaysinline {
+  %vals = bitcast <4 x half> %v to <4 x i16>
+  %res = call <4 x i16> @__shuffle_i16(<4 x i16> %vals, <4 x i32> %perm)
+  %res_half = bitcast <4 x i16> %res to <4 x half>
+  ret <4 x half> %res_half
+}
 
 declare <WIDTH x float> @llvm.x86.avx512.mask.vpermilvar.ps.128(<WIDTH x float>, <WIDTH x i32>, <WIDTH x float>, i8)
 define <WIDTH x float> @__shuffle_float(<WIDTH x float>, <WIDTH x i32>) nounwind readnone alwaysinline {
@@ -29,6 +62,7 @@ define <WIDTH x i32> @__shuffle_i32(<WIDTH x i32>, <WIDTH x i32>) nounwind readn
   ret <WIDTH x i32> %res
 }
 
+; Use vpermq to perform the shuffle of i64 vectors.
 declare <WIDTH x i64> @llvm.x86.avx512.mask.permvar.di.256(<WIDTH x i64>, <WIDTH x i64>, <WIDTH x i64>, i8)
 define <WIDTH x i64> @__shuffle_i64(<WIDTH x i64>, <WIDTH x i32>) nounwind readnone alwaysinline {
   %ind = zext <WIDTH x i32> %1 to <WIDTH x i64>
