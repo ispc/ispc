@@ -75,6 +75,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.25.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.26.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.27.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.28.0`_
 
 * `Getting Started with ISPC`_
 
@@ -779,6 +780,14 @@ Compiler flags changes:
 * The ``-dD`` and ``-dM`` flag have been supported. They are useful to debug the
   preprocessor and to check the macros defined by the compiler.
 
+Updating ISPC Programs For Changes In ISPC 1.28.0
+-------------------------------------------------
+
+ISPC can now generate nanobind wrappers for ISPC modules. This allows easy and
+lightweight integration of ISPC code with Python. The generated wrappers can be
+built into native Python modules and imported into Python code. The
+``--nanobind-wrapper=<filename>`` command-line option enables this feature.
+
 Getting Started with ISPC
 =========================
 
@@ -1005,6 +1014,23 @@ target version for macOS and iOS applications addressing the new linker
 introduced in Xcode 15.0 that issues a warning when no version is provided.
 The version should be specified in the format ``[major.minor]``. When an empty
 string ("") is passed, no minimum version will be specified in the output binary.
+
+The ``--nanobind-wrapper=<filename>`` option can be used to generate a
+``nanobind`` wrapper for the ISPC module. This allows easy and lightweight
+integration of ISPC code into Python. The generated wrapper can be built into a
+native Python module and imported into Python code. During wrapper generation,
+we assume the following:
+
+* All pointer types are treated as numpy arrays: both ``TYPE*`` and ``TYPE[]``
+  map to ``nb::ndarray``
+* .data() method returns compatible pointer
+* ``nanobind`` headers and library are required to build the wrapper.
+
+See `nanobind`_ and `numpy`_ documentation for more details.
+
+.. _nanobind: https://nanobind.readthedocs.io/en/latest/
+
+.. _numpy: https://numpy.org/doc/stable/
 
 Selecting The Compilation Target
 --------------------------------

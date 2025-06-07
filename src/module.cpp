@@ -2289,6 +2289,9 @@ int Module::WriteOutputFiles() {
     if (!output.header.empty() && !writeHeader()) {
         return 1;
     }
+    if (!output.nbWrap.empty() && !writeNanobindWrapper()) {
+        return 1;
+    }
     if (!output.deps.empty() || output.flags.isDepsToStdout()) {
         if (!writeDeps(output)) {
             return 1;
