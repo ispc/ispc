@@ -330,34 +330,6 @@ define <WIDTH x float> @__max_varying_float(<WIDTH x float>,
 ;; sqrt/rsqrt/rcp
 
 ;; implementation note: sqrt uses native LLVM intrinsics
-declare <16 x float> @llvm.sqrt.v16f32(<16 x float> %Val)
-define <64 x float> @__sqrt_varying_float(<64 x float> %v) nounwind readnone alwaysinline {
-  v64tov16(float, %v, %v0, %v1, %v2, %v3)
-  %r0 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %v0)
-  %r1 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %v1)
-  %r2 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %v2)
-  %r3 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %v3)
-  v16tov64(float, %r0, %r1, %r2, %r3, %r)
-  ret <64 x float> %r
-}
-
-declare double @llvm.sqrt.f64(double %Val)
-define double @__sqrt_uniform_double(double) nounwind readonly alwaysinline {
-  %ret = call double @llvm.sqrt.f64(double %0)
-  ret double %ret
-}
-
-declare <16 x double> @llvm.sqrt.v16f64(<16 x double> %Val)
-define <64 x double> @__sqrt_varying_double(<64 x double> %v) nounwind readnone alwaysinline {
-  v64tov16(double, %v, %v0, %v1, %v2, %v3)
-  %r0 = call <16 x double> @llvm.sqrt.v16f64(<16 x double> %v0)
-  %r1 = call <16 x double> @llvm.sqrt.v16f64(<16 x double> %v1)
-  %r2 = call <16 x double> @llvm.sqrt.v16f64(<16 x double> %v2)
-  %r3 = call <16 x double> @llvm.sqrt.v16f64(<16 x double> %v3)
-  v16tov64(double, %r0, %r1, %r2, %r3, %r)
-  ret <64 x double> %r
-}
-
 ;; TODO: need to use intrinsics and N-R approximation.
 define float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
   %s = call float @llvm.sqrt.f32(float %0)
