@@ -307,59 +307,7 @@ define <WIDTH x float> @__max_varying_float(<WIDTH x float>,
 }
 
 ;; sqrt/rsqrt/rcp
-
-;; implementation note: sqrt uses native LLVM intrinsics
 ;; TODO: need to use intrinsics and N-R approximation.
-define float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
-  %s = call float @llvm.sqrt.f32(float %0)
-  %ret = fdiv float 1., %s
-  ret float %ret
-}
-
-define <32 x float> @__rsqrt_varying_float(<32 x float> %v) nounwind readnone alwaysinline {
-  v32tov16(float, %v, %v0, %v1)
-  %r0 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %v0)
-  %r0r = fdiv <16 x float> <float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1.>, %r0
-  %r1 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %v1)
-  %r1r = fdiv <16 x float> <float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1.>, %r1
-  v16tov32(float, %r0r, %r1r, %r)
-  ret <32 x float> %r
-}
-
-;; TODO: need to use intrinsics
-define float @__rsqrt_fast_uniform_float(float) nounwind readonly alwaysinline {
-  %ret = call float @__rsqrt_uniform_float(float %0)
-  ret float %ret
-}
-
-define <32 x float> @__rsqrt_fast_varying_float(<32 x float> %v) nounwind readnone alwaysinline {
-  %ret = call <32 x float> @__rsqrt_varying_float(<32 x float> %v)
-  ret <32 x float> %ret
-}
-
-;; TODO: need to use intrinsics and N-R approximation.
-define float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
-  %ret = fdiv float 1., %0
-  ret float %ret
-}
-
-define <32 x float> @__rcp_varying_float(<32 x float> %v) nounwind readnone alwaysinline {
-  %ret = fdiv <32 x float> <float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1.,
-                            float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1.>,
-                            %v
-  ret <32 x float> %ret
-}
-
-;; TODO: need to use intrinsics
-define float @__rcp_fast_uniform_float(float) nounwind readonly alwaysinline {
-  %ret = call float @__rcp_uniform_float(float %0)
-  ret float %ret
-}
-
-define <32 x float> @__rcp_fast_varying_float(<32 x float> %v) nounwind readnone alwaysinline {
-  %ret = call <32 x float> @__rcp_varying_float(<32 x float> %v)
-  ret <32 x float> %ret
-}
 
 ;; bit ops
 
