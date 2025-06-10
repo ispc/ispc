@@ -157,88 +157,63 @@ def canonicalize_filename(filename):
 
     return canonicalized
 
-def call_test_function(module_name, test_sig, func_sig, width):
-    import numpy
-    import importlib.util
-    import importlib.machinery
+def call_test_function(module_name, test_sig, func_sig, width, verbose=False):
+    """
+    Call the test function in a subprocess for better isolation.
 
-    # func_sig is 'f_v(', so substitite ( to _cpu_entry_point
-    # because f_v_cpu_entry_point is the entry point
-    function = func_sig.replace('(', '_cpu_entry_point')
+    Args:
+        module_name: Name of the compiled module
+        test_sig: Test signature identifier
+        func_sig: Function signature string
+        width: Vector width for the test
+        verbose: Enable verbose output
 
-    # Create a FileFinder for the current directory as we suppose that the
-    # script is run from the root project directory.
-    finder = importlib.machinery.FileFinder(
-        './',
-        (importlib.machinery.ExtensionFileLoader, importlib.machinery.EXTENSION_SUFFIXES),
-    )
+    Returns:
+        Status enum value indicating test result
+    """
 
-    spec = finder.find_spec(module_name)
-    module = importlib.util.module_from_spec(spec)
-    entry_func = getattr(module, function, None)
+    # Get the directory where the main script is located
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    test_runner_path = os.path.join(script_dir, 'nanobind_runner.py')
 
-    # Check if the functions are found in the loaded module
-    if test_sig != 7:
-        if entry_func is None:
-            raise ImportError(f"Function '{function}' not found in module '{module_name}'")
+    # Prepare command arguments using the same Python interpreter
+    cmd = [
+        sys.executable,
+        test_runner_path,
+        module_name,
+        str(test_sig),
+        func_sig,
+        str(width)
+    ]
 
-    # Prepare input data
-    ARRAY_SIZE = 256
-    res = numpy.zeros(ARRAY_SIZE, dtype=numpy.float32)
+    if verbose:
+        cmd.append('true')
 
-    dst = numpy.zeros(ARRAY_SIZE, dtype=numpy.float32)
-    vfloat = numpy.arange(1, ARRAY_SIZE + 1, dtype=numpy.float32)
-    vdouble = numpy.arange(1, ARRAY_SIZE + 1, dtype=numpy.float64)
-    vint = numpy.array([2 * (i + 1) for i in range(ARRAY_SIZE)], dtype=numpy.int32)
-    vint2 = numpy.array([i + 5 for i in range(ARRAY_SIZE)], dtype=numpy.int32)
-    b = 5.0
+    try:
+        # Run the test in a subprocess with a timeout
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=os.getcwd()
+        )
 
-    # Call corresponding TEST_SIG functions, it should correspond to test_static.cpp
-    if test_sig == 0:
-        entry_func(dst)
-    elif test_sig == 1:
-        entry_func(dst, vfloat)
-    elif test_sig == 2:
-        entry_func(dst, vfloat, b)
-    elif test_sig == 3:
-        entry_func(dst, vfloat, vint)
-    elif test_sig == 4:
-        entry_func(dst, vdouble, b)
-    elif test_sig == 5:
-        entry_func(dst, vdouble, b)
-    elif test_sig == 6:
-        entry_func(dst, vdouble, vint2)
-    elif test_sig == 7:
-        struct = getattr(module, f"v{width}_varying_f_sz")
-        # TODO: python object has different size than ISPC struct, so just
-        # check that we have expected class
-        instance = struct()
-        return Status.Success
-    elif test_sig == 32:
-        entry_func(b)
-    elif test_sig == 33:
-        entry_func(vfloat)
-    elif test_sig == 34:
-        entry_func(vfloat, b)
+        # Print any output from the subprocess if verbose
+        if verbose and result.stdout:
+            print_debug(f"Test output: {result.stdout}", s, run_tests_log)
+        if verbose and result.stderr:
+            print_debug(f"Test stderr: {result.stderr}", s, run_tests_log)
 
-    if test_sig < 32:
-        result_func = getattr(module, 'result_cpu_entry_point', None)
-        if result_func is None:
-            raise ImportError(f"Function 'result_cpu_entry_point' not found in module '{module_name}'")
-
-        result_func(res)
-        if numpy.array_equal(dst[:width], res[:width]):
+        # Convert exit code back to Status enum
+        if result.returncode == 0:
             return Status.Success
         else:
-            print_debug(f"Test {module_name} failed: expected {res}, got {dst}", s, run_tests_log)
             return Status.Runfail
-    else:
-        print_func = getattr(module, 'print_result_cpu_entry_point', None)
 
-        if print_func is None:
-            raise ImportError(f"Function 'print_result_cpu_entry_point' not found in module '{module_name}'")
-        print_func()
-        return Status.Success
+    except Exception as e:
+        print_debug(f"Unexpected error running test {module_name}: {e}", s, run_tests_log)
+        return Status.Runfail
 
 def build_ispc_extension(module_name, ispc_object, nb_wrapper, header, test_sig, width):
     """
@@ -733,7 +708,7 @@ def run_test(testname, host, target):
             ext_soname = build_ispc_extension(module_name, obj_name, nb_wrapper, header, match, width)
 
             # Import the freshly built module and call the test function from it
-            status = call_test_function(module_name, match, def2sig[match], width)
+            status = call_test_function(module_name, match, def2sig[match], width, options.verbose)
         else:
             status = run_cmds([ispc_cmd, cc_cmd], options.wrapexe + " " + exe_name,
                               testname, should_fail, match, exe_wd=exe_wd)
