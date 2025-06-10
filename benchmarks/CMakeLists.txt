@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2020-2023, Intel Corporation
+#  Copyright (c) 2020-2025, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -46,6 +46,26 @@ else()
 endif()
 
 ####################### Configure and add benchmarks  ########################
+
+# Test for __fp16 support
+include(CheckCXXSourceCompiles)
+check_cxx_source_compiles("
+int main() {
+    __fp16 a = 1.0;
+    __fp16 b = 2.0;
+    __fp16 c = a + b;
+    return 0;
+}
+" HAS_FP16_SUPPORT)
+
+# Generate config header
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/config.h.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/config.h"
+)
+
+# Make build directory available for config.h inclusion
+include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
 # Meta target for benchmarks
 add_custom_target(${BENCHMARKS_PROJECT_NAME})

@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2024, Intel Corporation
+// Copyright (c) 2021-2025, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include <cassert>
@@ -10,6 +10,8 @@
 #else
 #include <cstdlib>
 #endif
+
+#include "config.h"
 
 // Set maximum alignment for existing ISPC targets.
 #define ALIGNMENT 64
