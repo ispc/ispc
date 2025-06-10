@@ -1159,8 +1159,12 @@ std::string lGetCallArguments(const FunctionType *ftype) {
 void lEmitNanobindWrapper(FILE *f, const Symbol *sym) {
     std::string fname = sym->name;
     const FunctionType *ftype = CastType<FunctionType>(sym->type);
-    const Type *returnType = ftype->GetReturnType();
+    if (!ftype) {
+        Error(sym->pos, "Symbol %s is not a function type", fname.c_str());
+        return;
+    }
 
+    const Type *returnType = ftype->GetReturnType();
     std::string nbWrapper = lGetNanobindType(returnType) + " " + fname + "(" + lGetParameters(ftype) + ")";
     std::string callArgs = lGetCallArguments(ftype);
     fprintf(f, "%s {\n", nbWrapper.c_str());
