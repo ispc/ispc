@@ -128,11 +128,12 @@ function(add_ispc_to_target)
         else()
             set(ISPC_FP16_FLAG "")
         endif()
+        set(INTRINSICS_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../../stdlib/include)
 
         add_custom_command(
             OUTPUT ${ISPC_TARGET_OBJS} ${ISPC_TARGET_HEADERS}
             COMMENT "Compiling ${ISPC_SRC_FILE} for ${BENCHMARKS_ISPC_TARGETS} target(s)"
-            COMMAND           ${ISPC_EXECUTABLE} ${SRC_LOCATION} -o ${ISPC_OBJ} -h ${ISPC_HEADER} --arch=${ISPC_ARCH} --target=${BENCHMARKS_ISPC_TARGETS} ${ISPC_PIC} ${ISPC_FP16_FLAG} "$<JOIN:${FLAGS},;>"
+            COMMAND           ${ISPC_EXECUTABLE} ${SRC_LOCATION} -o ${ISPC_OBJ} -h ${ISPC_HEADER} --arch=${ISPC_ARCH} --target=${BENCHMARKS_ISPC_TARGETS} ${ISPC_PIC} ${ISPC_FP16_FLAG} -I${INTRINSICS_HEADERS} "$<JOIN:${FLAGS},;>"
             DEPENDS ${ISPC_EXECUTABLE} ${ISPC_DEPS}
             DEPENDS ${ISPC_SRC_FILE}
             COMMAND_EXPAND_LISTS
@@ -154,6 +155,9 @@ function(add_ispc_to_target)
 
     set_property (SOURCE ${ADD_ISPC_CPP_MAIN_FILE} PROPERTY OBJECT_DEPENDS ${ISPC_HEADERS_LIST})
     target_include_directories(${ADD_ISPC_TARGET} PRIVATE ${ISPC_DST_DIR})
+    if (X86_HOST)
+        target_compile_definitions(${ADD_ISPC_TARGET} PRIVATE IS_X86_ARCH)
+    endif()
     target_compile_definitions(${ADD_ISPC_TARGET} PRIVATE ISPC_ENABLED)
     target_link_libraries(${ADD_ISPC_TARGET} PRIVATE ${ISPC_OBJS_LIST})
 endfunction()
