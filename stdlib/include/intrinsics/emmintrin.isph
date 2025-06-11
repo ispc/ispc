@@ -1,0 +1,1678 @@
+/*
+  Copyright (c) 2010-2025, Intel Corporation
+
+  SPDX-License-Identifier: BSD-3-Clause
+*/
+
+/** @file emmintrin.h
+    @brief Principal header file for Willamette New Instruction (SSE2) intrinsics
+*/
+
+#ifndef _INCLUDED_EMM
+#define _INCLUDED_EMM
+
+/*
+ * the __m128 & __m64 types are required for the intrinsics
+ */
+#include "xmmintrin.isph"
+
+typedef struct {
+    uniform int32<4> m128i_i32;
+} __m128i;
+typedef struct {
+    uniform double<2> m128d_f64;
+} __m128d;
+
+#if DEBUG
+typedef __m128i __m128i_unaligned;
+typedef __m128d __m128d_unaligned;
+#else
+typedef struct {
+    uniform int32 m128i_i32[4];
+} __m128i_unaligned;
+typedef struct {
+    uniform double m128d_f64[2];
+} __m128d_unaligned;
+#endif
+
+#if 0
+typedef union __declspec(intrin_type) __declspec(align(16)) __m128i {
+    __int8              m128i_i8[16];
+    __int16             m128i_i16[8];
+    __int32             m128i_i32[4];
+    __int64             m128i_i64[2];
+    unsigned __int8     m128i_u8[16];
+    unsigned __int16    m128i_u16[8];
+    unsigned __int32    m128i_u32[4];
+    unsigned __int64    m128i_u64[2];
+} __m128i;
+
+typedef struct __declspec(intrin_type) __declspec(align(16)) __m128d {
+    double              m128d_f64[2];
+} __m128d;
+#endif
+
+/*
+ * Macro function for shuffle
+ */
+#define _MM_SHUFFLE2(x, y) (((x) << 1) | (y))
+
+/*****************************************************/
+/*     INTRINSICS FUNCTION PROTOTYPES START HERE     */
+/*****************************************************/
+
+/*
+ * DP, arithmetic
+ */
+
+static inline unmasked uniform __m128d _mm_add_sd(uniform __m128d _A, uniform __m128d _B) {
+    _A.m128d_f64[0] += _B.m128d_f64[0];
+    return _A;
+}
+
+static inline unmasked uniform __m128d _mm_add_pd(uniform __m128d _A, uniform __m128d _B) {
+    uniform __m128d Result;
+    foreach (i = 0 ... 2) {
+        Result.m128d_f64[i] = _A.m128d_f64[i] + _B.m128d_f64[i];
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128d _mm_sub_sd(uniform __m128d _A, uniform __m128d _B) {
+    _A.m128d_f64[0] -= _B.m128d_f64[0];
+    return _A;
+}
+
+static inline unmasked uniform __m128d _mm_sub_pd(uniform __m128d _A, uniform __m128d _B) {
+    uniform __m128d Result;
+    foreach (i = 0 ... 2) {
+        Result.m128d_f64[i] = _A.m128d_f64[i] - _B.m128d_f64[i];
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128d _mm_mul_sd(uniform __m128d _A, uniform __m128d _B) {
+    _A.m128d_f64[0] *= _B.m128d_f64[0];
+    return _A;
+}
+
+static inline unmasked uniform __m128d _mm_mul_pd(uniform __m128d _A, uniform __m128d _B) {
+    uniform __m128d Result;
+    foreach (i = 0 ... 2) {
+        Result.m128d_f64[i] = _A.m128d_f64[i] * _B.m128d_f64[i];
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128d _mm_sqrt_sd(uniform __m128d _A, uniform __m128d _B) {
+    _A.m128d_f64[0] = sqrt(_B.m128d_f64[0]);
+    return _A;
+}
+
+static inline unmasked uniform __m128d _mm_sqrt_pd(uniform __m128d _A) {
+    uniform __m128d Result;
+    foreach (i = 0 ... 2) {
+        Result.m128d_f64[i] = sqrt(_A.m128d_f64[i]);
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128d _mm_div_pd(uniform __m128d _A, uniform __m128d _B) {
+    uniform __m128d Result;
+    foreach (i = 0 ... 2) {
+        Result.m128d_f64[i] = _A.m128d_f64[i] / _B.m128d_f64[i];
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128d _mm_div_sd(uniform __m128d _A, uniform __m128d _B) {
+    _A.m128d_f64[0] /= _B.m128d_f64[0];
+    return _A;
+}
+
+static inline unmasked uniform __m128d _mm_min_sd(uniform __m128d _A, uniform __m128d _B) {
+    _A.m128d_f64[0] = min(_A.m128d_f64[0], _B.m128d_f64[0]);
+    return _A;
+}
+
+static inline unmasked uniform __m128d _mm_min_pd(const uniform __m128d _A, uniform __m128d _B) {
+    uniform __m128d Result;
+    foreach (i = 0 ... 2) {
+        Result.m128d_f64[i] = min(_A.m128d_f64[i], _B.m128d_f64[i]);
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128d _mm_max_sd(uniform __m128d _A, uniform __m128d _B) {
+    _A.m128d_f64[0] = max(_A.m128d_f64[0], _B.m128d_f64[0]);
+    return _A;
+}
+
+static inline unmasked uniform __m128d _mm_max_pd(uniform __m128d _A, uniform __m128d _B) {
+    uniform __m128d Result;
+    foreach (i = 0 ... 2) {
+        Result.m128d_f64[i] = max(_A.m128d_f64[i], _B.m128d_f64[i]);
+    }
+    return Result;
+}
+
+/*
+ * DP, logicals
+ */
+
+static inline unmasked uniform __m128d _mm_and_pd(uniform __m128d _A, uniform __m128d _B) {
+    uniform __m128d Result;
+    foreach (i = 0 ... 2) {
+        Result.m128d_f64[i] = doublebits(intbits(_A.m128d_f64[i]) & intbits(_B.m128d_f64[i]));
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128d _mm_andnot_pd(uniform __m128d _A, uniform __m128d _B) {
+    uniform __m128d Result;
+    foreach (i = 0 ... 2) {
+        Result.m128d_f64[i] = doublebits((~(intbits(_A.m128d_f64[i]))) & intbits(_B.m128d_f64[i]));
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128d _mm_or_pd(uniform __m128d _A, uniform __m128d _B) {
+    uniform __m128d Result;
+    foreach (i = 0 ... 2) {
+        Result.m128d_f64[i] = doublebits(intbits(_A.m128d_f64[i]) | intbits(_B.m128d_f64[i]));
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128d _mm_xor_pd(uniform __m128d _A, uniform __m128d _B) {
+    uniform __m128d Result;
+    foreach (i = 0 ... 2) {
+        Result.m128d_f64[i] = doublebits(intbits(_A.m128d_f64[i]) ^ intbits(_B.m128d_f64[i]));
+    }
+    return Result;
+}
+
+/*
+ * DP, comparisons
+ */
+
+static inline unmasked uniform __m128d _mm_cmpeq_sd(uniform __m128d _A, uniform __m128d _B) {
+    _A.m128d_f64[0] = _A.m128d_f64[0] == _B.m128d_f64[0] ? doublebits(0xFFFFFFFFFFFFFFFF) : 0.0d;
+    return _A;
+}
+
+static inline unmasked uniform __m128d _mm_cmpeq_pd(uniform __m128d _A, uniform __m128d _B) {
+    uniform __m128d Result;
+    foreach (i = 0 ... 2) {
+        Result.m128d_f64[i] = _A.m128d_f64[i] == _B.m128d_f64[i] ? doublebits(0xFFFFFFFFFFFFFFFF) : 0.0d;
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128d _mm_cmplt_sd(uniform __m128d _A, uniform __m128d _B) {
+    _A.m128d_f64[0] = _A.m128d_f64[0] < _B.m128d_f64[0] ? doublebits(0xFFFFFFFFFFFFFFFF) : 0.0d;
+    return _A;
+}
+
+static inline unmasked uniform __m128d _mm_cmplt_pd(uniform __m128d _A, uniform __m128d _B) {
+    uniform __m128d Result;
+    foreach (i = 0 ... 2) {
+        Result.m128d_f64[i] = _A.m128d_f64[i] < _B.m128d_f64[i] ? doublebits(0xFFFFFFFFFFFFFFFF) : 0.0d;
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128d _mm_cmple_sd(uniform __m128d _A, uniform __m128d _B) {
+    _A.m128d_f64[0] = _A.m128d_f64[0] <= _B.m128d_f64[0] ? doublebits(0xFFFFFFFFFFFFFFFF) : 0.0d;
+    return _A;
+}
+
+static inline unmasked uniform __m128d _mm_cmple_pd(uniform __m128d _A, uniform __m128d _B) {
+    uniform __m128d Result;
+    foreach (i = 0 ... 2) {
+        Result.m128d_f64[i] = _A.m128d_f64[i] <= _B.m128d_f64[i] ? doublebits(0xFFFFFFFFFFFFFFFF) : 0.0d;
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128d _mm_cmpgt_sd(uniform __m128d _A, uniform __m128d _B) {
+    _A.m128d_f64[0] = _A.m128d_f64[0] > _B.m128d_f64[0] ? doublebits(0xFFFFFFFFFFFFFFFF) : 0.0d;
+    return _A;
+}
+
+static inline unmasked uniform __m128d _mm_cmpgt_pd(uniform __m128d _A, uniform __m128d _B) {
+    uniform __m128d Result;
+    foreach (i = 0 ... 2) {
+        Result.m128d_f64[i] = _A.m128d_f64[i] > _B.m128d_f64[i] ? doublebits(0xFFFFFFFFFFFFFFFF) : 0.0d;
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128d _mm_cmpge_sd(uniform __m128d _A, uniform __m128d _B) {
+    _A.m128d_f64[0] = _A.m128d_f64[0] >= _B.m128d_f64[0] ? doublebits(0xFFFFFFFFFFFFFFFF) : 0.0d;
+    return _A;
+}
+
+static inline unmasked uniform __m128d _mm_cmpge_pd(uniform __m128d _A, uniform __m128d _B) {
+    uniform __m128d Result;
+    foreach (i = 0 ... 2) {
+        Result.m128d_f64[i] = _A.m128d_f64[i] >= _B.m128d_f64[i] ? doublebits(0xFFFFFFFFFFFFFFFF) : 0.0d;
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128d _mm_cmpneq_sd(uniform __m128d _A, uniform __m128d _B) {
+    _A.m128d_f64[0] = _A.m128d_f64[0] != _B.m128d_f64[0] ? doublebits(0xFFFFFFFFFFFFFFFF) : 0.0d;
+    return _A;
+}
+
+static inline unmasked uniform __m128d _mm_cmpneq_pd(uniform __m128d _A, uniform __m128d _B) {
+    uniform __m128d Result;
+    foreach (i = 0 ... 2) {
+        Result.m128d_f64[i] = _A.m128d_f64[i] != _B.m128d_f64[i] ? doublebits(0xFFFFFFFFFFFFFFFF) : 0.0d;
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128d _mm_cmpnlt_sd(uniform __m128d _A, uniform __m128d _B) {
+    _A.m128d_f64[0] = !(_A.m128d_f64[0] < _B.m128d_f64[0]) ? doublebits(0xFFFFFFFFFFFFFFFF) : 0.0d;
+    return _A;
+}
+
+static inline unmasked uniform __m128d _mm_cmpnlt_pd(uniform __m128d _A, uniform __m128d _B) {
+    uniform __m128d Result;
+    foreach (i = 0 ... 2) {
+        Result.m128d_f64[i] = !(_A.m128d_f64[i] < _B.m128d_f64[i]) ? doublebits(0xFFFFFFFFFFFFFFFF) : 0.0d;
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128d _mm_cmpnle_sd(uniform __m128d _A, uniform __m128d _B) {
+    _A.m128d_f64[0] = !(_A.m128d_f64[0] <= _B.m128d_f64[0]) ? doublebits(0xFFFFFFFFFFFFFFFF) : 0.0d;
+    return _A;
+}
+
+static inline unmasked uniform __m128d _mm_cmpnle_pd(uniform __m128d _A, uniform __m128d _B) {
+    uniform __m128d Result;
+    foreach (i = 0 ... 2) {
+        Result.m128d_f64[i] = !(_A.m128d_f64[i] <= _B.m128d_f64[i]) ? doublebits(0xFFFFFFFFFFFFFFFF) : 0.0d;
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128d _mm_cmpngt_sd(uniform __m128d _A, uniform __m128d _B) {
+    _A.m128d_f64[0] = !(_A.m128d_f64[0] > _B.m128d_f64[0]) ? doublebits(0xFFFFFFFFFFFFFFFF) : 0.0d;
+    return _A;
+}
+
+static inline unmasked uniform __m128d _mm_cmpngt_pd(uniform __m128d _A, uniform __m128d _B) {
+    uniform __m128d Result;
+    foreach (i = 0 ... 2) {
+        Result.m128d_f64[i] = !(_A.m128d_f64[i] > _B.m128d_f64[i]) ? doublebits(0xFFFFFFFFFFFFFFFF) : 0.0d;
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128d _mm_cmpnge_sd(uniform __m128d _A, uniform __m128d _B) {
+    _A.m128d_f64[0] = !(_A.m128d_f64[0] >= _B.m128d_f64[0]) ? doublebits(0xFFFFFFFFFFFFFFFF) : 0.0d;
+    return _A;
+}
+
+static inline unmasked uniform __m128d _mm_cmpnge_pd(uniform __m128d _A, uniform __m128d _B) {
+    uniform __m128d Result;
+    foreach (i = 0 ... 2) {
+        Result.m128d_f64[i] = !(_A.m128d_f64[i] >= _B.m128d_f64[i]) ? doublebits(0xFFFFFFFFFFFFFFFF) : 0.0d;
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128d _mm_cmpord_sd(uniform __m128d _A, uniform __m128d _B) {
+    _A.m128d_f64[0] = (!isnan(_A.m128d_f64[0]) && !isnan(_B.m128d_f64[0])) ? doublebits(0xFFFFFFFFFFFFFFFF) : 0.0d;
+    return _A;
+}
+
+static inline unmasked uniform __m128d _mm_cmpord_pd(uniform __m128d _A, uniform __m128d _B) {
+    uniform __m128d Result;
+    foreach (i = 0 ... 2) {
+        bool isnanA = isnan(_A.m128d_f64[i]);
+        bool isnanB = isnan(_B.m128d_f64[i]);
+        Result.m128d_f64[i] = (!isnanA && !isnanB) ? doublebits(0xFFFFFFFFFFFFFFFF) : 0.0d;
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128d _mm_cmpunord_sd(uniform __m128d _A, uniform __m128d _B) {
+    _A.m128d_f64[0] = (isnan(_A.m128d_f64[0]) || isnan(_B.m128d_f64[0])) ? doublebits(0xFFFFFFFFFFFFFFFF) : 0.0d;
+    return _A;
+}
+
+static inline unmasked uniform __m128d _mm_cmpunord_pd(uniform __m128d _A, uniform __m128d _B) {
+    uniform __m128d Result;
+    foreach (i = 0 ... 2) {
+        bool isnanA = isnan(_A.m128d_f64[i]);
+        bool isnanB = isnan(_B.m128d_f64[i]);
+        Result.m128d_f64[i] = (isnanA && isnanB) ? doublebits(0xFFFFFFFFFFFFFFFF) : 0.0d;
+    }
+    return Result;
+}
+
+// TODO: Check QNaN on non u versions
+static inline unmasked uniform int _mm_comieq_sd(uniform __m128d _A, uniform __m128d _B) {
+    return (!isnan(_A.m128d_f64[0]) && !isnan(_B.m128d_f64[0]) && (_A.m128d_f64[0] == _B.m128d_f64[0])) ? 1 : 0;
+}
+
+static inline unmasked uniform int _mm_comilt_sd(uniform __m128d _A, uniform __m128d _B) {
+    return (!isnan(_A.m128d_f64[0]) && !isnan(_B.m128d_f64[0]) && (_A.m128d_f64[0] < _B.m128d_f64[0])) ? 1 : 0;
+}
+
+static inline unmasked uniform int _mm_comile_sd(uniform __m128d _A, uniform __m128d _B) {
+    return (!isnan(_A.m128d_f64[0]) && !isnan(_B.m128d_f64[0]) && (_A.m128d_f64[0] <= _B.m128d_f64[0])) ? 1 : 0;
+}
+
+static inline unmasked uniform int _mm_comigt_sd(uniform __m128d _A, uniform __m128d _B) {
+    return (!isnan(_A.m128d_f64[0]) && !isnan(_B.m128d_f64[0]) && (_A.m128d_f64[0] > _B.m128d_f64[0])) ? 1 : 0;
+}
+
+static inline unmasked uniform int _mm_comige_sd(uniform __m128d _A, uniform __m128d _B) {
+    return (!isnan(_A.m128d_f64[0]) && !isnan(_B.m128d_f64[0]) && (_A.m128d_f64[0] >= _B.m128d_f64[0])) ? 1 : 0;
+}
+
+static inline unmasked uniform int _mm_comineq_sd(uniform __m128d _A, uniform __m128d _B) {
+    return (isnan(_A.m128d_f64[0]) || isnan(_B.m128d_f64[0]) || (_A.m128d_f64[0] != _B.m128d_f64[0])) ? 1 : 0;
+}
+
+static inline unmasked uniform int _mm_ucomieq_sd(uniform __m128d _A, uniform __m128d _B) {
+    return (!isnan(_A.m128d_f64[0]) && !isnan(_B.m128d_f64[0]) && (_A.m128d_f64[0] == _B.m128d_f64[0])) ? 1 : 0;
+}
+
+static inline unmasked uniform int _mm_ucomilt_sd(uniform __m128d _A, uniform __m128d _B) {
+    return (!isnan(_A.m128d_f64[0]) && !isnan(_B.m128d_f64[0]) && (_A.m128d_f64[0] < _B.m128d_f64[0])) ? 1 : 0;
+}
+
+static inline unmasked uniform int _mm_ucomile_sd(uniform __m128d _A, uniform __m128d _B) {
+    return (!isnan(_A.m128d_f64[0]) && !isnan(_B.m128d_f64[0]) && (_A.m128d_f64[0] <= _B.m128d_f64[0])) ? 1 : 0;
+}
+
+static inline unmasked uniform int _mm_ucomigt_sd(uniform __m128d _A, uniform __m128d _B) {
+    return (!isnan(_A.m128d_f64[0]) && !isnan(_B.m128d_f64[0]) && (_A.m128d_f64[0] > _B.m128d_f64[0])) ? 1 : 0;
+}
+
+static inline unmasked uniform int _mm_ucomige_sd(uniform __m128d _A, uniform __m128d _B) {
+    return (!isnan(_A.m128d_f64[0]) && !isnan(_B.m128d_f64[0]) && (_A.m128d_f64[0] >= _B.m128d_f64[0])) ? 1 : 0;
+}
+
+static inline unmasked uniform int _mm_ucomineq_sd(uniform __m128d _A, uniform __m128d _B) {
+    return (isnan(_A.m128d_f64[0]) || isnan(_B.m128d_f64[0]) || (_A.m128d_f64[0] != _B.m128d_f64[0])) ? 1 : 0;
+}
+
+/*
+ * DP, converts
+ */
+
+static inline unmasked uniform __m128d _mm_cvtepi32_pd(uniform __m128i _A) {
+    uniform __m128d Result;
+    foreach (i = 0 ... 2) {
+        Result.m128d_f64[i] = (double)_A.m128i_i32[i];
+    }
+    return Result;
+}
+
+static inline unmasked varying double _round_varying_double(varying double x) {
+    // Temporary since round on SSE2 is broken. From
+    // https://github.com/simonbyrne/apple-libm/blob/master/Source/ARM/rint.c
+    varying uint64 uu = intbits(x);
+    varying uint64 absux = uu & 0x7fffffffffffffffULL;
+    // Check for large int, Inf, NaN, 0
+    varying bool special = (absux - 1LL >= 0x4330000000000000ULL - 1LL);
+
+    varying uint64 ix = signbits(x) | 0x4330000000000000ULL;
+    varying double dx = doublebits(ix);
+    varying double xx = x;
+    xx += dx;
+    xx -= dx;
+    return select(special, x, xx);
+}
+
+static inline unmasked uniform __m128i _mm_cvtpd_epi32(uniform __m128d _A) {
+#if ISPC_TARGET_SSE2
+    varying double S0;
+    *((uniform double<2> *uniform) & S0) = *((uniform double<2> *uniform) & _A);
+    const varying int32 Result = (varying int32)(_round_varying_double(S0));
+    return *((uniform __m128i * uniform) & Result);
+#else
+    uniform __m128i Result;
+    // Convert only the first two doubles to integers
+    foreach (i = 0 ... 2) {
+        Result.m128i_i32[i] = (int32)round(_A.m128d_f64[i]);
+    }
+    return Result;
+#endif
+}
+
+static inline unmasked uniform __m128i _mm_cvttpd_epi32(uniform __m128d _A) {
+    uniform __m128i Result;
+    // Truncate conversion of the first two doubles to integers
+    foreach (i = 0 ... 2) {
+        Result.m128i_i32[i] = (int32)_A.m128d_f64[i];
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128 _mm_cvtepi32_ps(uniform __m128i _A) {
+    uniform __m128 Result;
+    foreach (i = 0 ... 4) {
+        Result.m128_f32[i] = (float)_A.m128i_i32[i];
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128i _mm_cvtps_epi32(uniform __m128 _A) {
+    uniform __m128i Result;
+    foreach (i = 0 ... 4) {
+        Result.m128i_i32[i] = (int32)round(_A.m128_f32[i]);
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128i _mm_cvttps_epi32(uniform __m128 _A) {
+    uniform __m128i Result;
+    foreach (i = 0 ... 4) {
+        Result.m128i_i32[i] = (int32)_A.m128_f32[i];
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128 _mm_cvtpd_ps(uniform __m128d _A) {
+    uniform __m128 Result;
+    // Convert only the first two doubles to floats
+    foreach (i = 0 ... 2) {
+        Result.m128_f32[i] = (float)_A.m128d_f64[i];
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128d _mm_cvtps_pd(uniform __m128 _A) {
+    uniform __m128d Result;
+    // Convert only the first two floats to doubles
+    foreach (i = 0 ... 2) {
+        Result.m128d_f64[i] = (double)_A.m128_f32[i];
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128 _mm_cvtsd_ss(uniform __m128 _A, uniform __m128d _B) {
+    _A.m128_f32[0] = (uniform float)_B.m128d_f64[0];
+    return _A;
+}
+
+static inline unmasked uniform __m128d _mm_cvtss_sd(uniform __m128d _A, uniform __m128 _B) {
+    _A.m128d_f64[0] = (uniform double)_B.m128_f32[0];
+    return _A;
+}
+
+static inline unmasked uniform double _round_uniform_double(uniform double x) {
+    // Temporary since round on SSE2 is broken. From
+    // https://github.com/simonbyrne/apple-libm/blob/master/Source/ARM/rint.c
+    uniform uint64 uu = intbits(x);
+    uniform uint64 absux = uu & 0x7fffffffffffffffULL;
+    // Check for large int, Inf, NaN, 0
+    uniform bool special = (absux - 1LL >= 0x4330000000000000ULL - 1LL);
+
+    uniform uint64 ix = signbits(x) | 0x4330000000000000ULL;
+    uniform double dx = doublebits(ix);
+    uniform double xx = x;
+    xx += dx;
+    xx -= dx;
+    return select(special, x, xx);
+}
+
+static inline unmasked uniform int _mm_cvtsd_si32(uniform __m128d _A) {
+#if ISPC_TARGET_SSE2
+    return (uniform int)(_round_uniform_double(_A.m128d_f64[0]));
+#else
+    return (uniform int)(round(_A.m128d_f64[0]));
+#endif
+}
+
+static inline unmasked uniform int _mm_cvttsd_si32(uniform __m128d _A) { return (uniform int)_A.m128d_f64[0]; }
+
+static inline unmasked uniform __m128d _mm_cvtsi32_sd(uniform __m128d _A, uniform int _B) {
+    _A.m128d_f64[0] = (uniform double)_B;
+    return _A;
+}
+
+#if defined(_M_IX86)
+NOT_IMPLEMENTED(extern __m64 _mm_cvtpd_pi32(__m128d _A));
+NOT_IMPLEMENTED(extern __m64 _mm_cvttpd_pi32(__m128d _A));
+NOT_IMPLEMENTED(extern __m128d _mm_cvtpi32_pd(__m64 _A));
+#endif
+
+/*
+ * DP, misc
+ */
+
+static inline unmasked uniform __m128d _mm_unpackhi_pd(uniform __m128d _A, uniform __m128d _B) {
+    const uniform double<2> _R = {_A.m128d_f64[1], _B.m128d_f64[1]};
+    return *((uniform __m128d * uniform) & _R);
+}
+
+static inline unmasked uniform __m128d _mm_unpacklo_pd(uniform __m128d _A, uniform __m128d _B) {
+    const uniform double<2> _R = {_A.m128d_f64[0], _B.m128d_f64[0]};
+    return *((uniform __m128d * uniform) & _R);
+}
+
+static inline unmasked uniform int _mm_movemask_pd(uniform __m128d _A) {
+    varying double S0 = 0;
+    *((uniform __m128d_unaligned * uniform) & S0) = *((uniform __m128d_unaligned * uniform) & _A);
+    return packmask(signbits(S0));
+}
+
+static inline unmasked uniform __m128d _mm_shuffle_pd(uniform __m128d _A, uniform __m128d _B, uniform unsigned int _I) {
+    uniform double<2> _R;
+    _R[0] = _A.m128d_f64[_I & 0x3];
+    _R[1] = _B.m128d_f64[(_I >> 2) & 0x3];
+    return *((uniform __m128d * uniform) & _R);
+}
+
+/*
+ * DP, loads
+ */
+
+static inline unmasked uniform __m128d _mm_load_pd(uniform double const *uniform _Dp) {
+    const uniform float<4> _R = *((uniform float<4> *uniform) & _Dp[0]);
+    return *((uniform __m128d * uniform) & _R);
+}
+
+static inline unmasked uniform __m128d _mm_load1_pd(uniform double const *uniform _Dp) {
+    const uniform double<2> _R = {_Dp[0], _Dp[0]};
+    return *((uniform __m128d * uniform) & _R);
+}
+
+static inline unmasked uniform __m128d _mm_loadr_pd(uniform double const *uniform _Dp) {
+    const uniform double<2> _R = {_Dp[1], _Dp[0]};
+    return *((uniform __m128d * uniform) & _R);
+}
+
+static inline unmasked uniform __m128d _mm_loadu_pd(uniform double const *uniform _Dp) {
+    const uniform __m128d_unaligned R = *((uniform __m128d_unaligned * uniform) & _Dp[0]);
+    return *((uniform __m128d * uniform) & R);
+}
+
+static inline unmasked uniform __m128d _mm_load_sd(uniform double const *uniform _Dp) {
+    uniform __m128d _R;
+    _R.m128d_f64[0] = _Dp[0];
+    return _R;
+}
+
+static inline unmasked uniform __m128d _mm_loadh_pd(uniform __m128d _A, uniform double const *uniform _Dp) {
+    const uniform double<2> _R = {_A.m128d_f64[0], _Dp[0]};
+    return *((uniform __m128d * uniform) & _R);
+}
+
+static inline unmasked uniform __m128d _mm_loadl_pd(uniform __m128d _A, uniform double const *uniform _Dp) {
+    const uniform double<2> _R = {_Dp[0], _A.m128d_f64[1]};
+    return *((uniform __m128d * uniform) & _R);
+}
+
+/*
+ * DP, sets
+ */
+
+static inline unmasked uniform __m128d _mm_set_sd(uniform double _W) {
+    const uniform double<2> _R = {_W, 0.0};
+    return *((uniform __m128d * uniform) & _R);
+}
+
+static inline unmasked uniform __m128d _mm_set1_pd(uniform double _A) {
+    const uniform double<2> _R = {_A, _A};
+    return *((uniform __m128d * uniform) & _R);
+}
+
+static inline unmasked uniform __m128d _mm_set_pd(uniform double _Z, uniform double _Y) {
+    const uniform double<2> _R = {_Y, _Z};
+    return *((uniform __m128d * uniform) & _R);
+}
+
+static inline unmasked uniform __m128d _mm_setr_pd(uniform double _Y, uniform double _Z) {
+    const uniform double<2> _R = {_Y, _Z};
+    return *((uniform __m128d * uniform) & _R);
+}
+
+static inline unmasked uniform __m128d _mm_setzero_pd() {
+    const uniform double<2> _R = {0, 0};
+    return *((uniform __m128d * uniform) & _R);
+}
+
+static inline unmasked uniform __m128d _mm_move_sd(uniform __m128d _A, uniform __m128d _B) {
+    const uniform double<2> _R = {_B.m128d_f64[0], _A.m128d_f64[1]};
+    return *((uniform __m128d * uniform) & _R);
+}
+
+/*
+ * DP, stores
+ */
+
+static inline unmasked void _mm_store_sd(uniform double *uniform _Dp, uniform __m128d _A) { _Dp[0] = _A.m128d_f64[0]; }
+
+static inline unmasked void _mm_store1_pd(uniform double *uniform _V, uniform __m128d _A) {
+    const uniform double<2> _R = {_A.m128d_f64[0], _A.m128d_f64[0]};
+    *((uniform float<4> *uniform) & _V[0]) = *((uniform float<4> *uniform) & _R[0]);
+}
+
+static inline unmasked void _mm_store_pd(uniform double *uniform _Dp, uniform __m128d _A) {
+    *((uniform float<4> *uniform) & _Dp[0]) = *((uniform float<4> *uniform) & _A.m128d_f64[0]);
+}
+
+static inline unmasked void _mm_storeu_pd(uniform double *uniform _Dp, const uniform __m128d _A) {
+    *((uniform __m128d_unaligned * uniform) & _Dp[0]) = *((uniform __m128d_unaligned * uniform) & _A.m128d_f64[0]);
+}
+
+static inline unmasked void _mm_storer_pd(uniform double *uniform _Dp, uniform __m128d _A) {
+    const uniform double<2> _R = {_A.m128d_f64[1], _A.m128d_f64[0]};
+    *((uniform float<4> *uniform) & _Dp[0]) = *((uniform float<4> *uniform) & _R[0]);
+}
+
+static inline unmasked void _mm_storeh_pd(uniform double *uniform _Dp, uniform __m128d _A) { _Dp[0] = _A.m128d_f64[1]; }
+
+static inline unmasked void _mm_storel_pd(uniform double *uniform _Dp, uniform __m128d _A) { _Dp[0] = _A.m128d_f64[0]; }
+
+/* Alternate intrinsic names definition */
+#define _mm_set_pd1(a) _mm_set1_pd(a)
+#define _mm_load_pd1(p) _mm_load1_pd(p)
+#define _mm_store_pd1(p, a) _mm_store1_pd((p), (a))
+
+/*
+ * Integer, arithmetic
+ */
+
+static inline unmasked uniform __m128i _mm_add_epi8(uniform __m128i _A, uniform __m128i _B) {
+    uniform __m128i Result;
+    foreach (i = 0 ... 16) {
+        ((uniform int8 *)&Result.m128i_i32)[i] =
+            ((uniform int8 *)&_A.m128i_i32)[i] + ((uniform int8 *)&_B.m128i_i32)[i];
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128i _mm_add_epi16(uniform __m128i _A, uniform __m128i _B) {
+    uniform __m128i Result;
+    foreach (i = 0 ... 8) {
+        ((uniform int16 *)&Result.m128i_i32)[i] =
+            ((uniform int16 *)&_A.m128i_i32)[i] + ((uniform int16 *)&_B.m128i_i32)[i];
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128i _mm_add_epi32(uniform __m128i _A, uniform __m128i _B) {
+    uniform __m128i Result;
+    foreach (i = 0 ... 4) {
+        Result.m128i_i32[i] = _A.m128i_i32[i] + _B.m128i_i32[i];
+    }
+    return Result;
+}
+
+#if defined(_M_IX86)
+NOT_IMPLEMENTED(extern __m64 _mm_add_si64(__m64 _A, __m64 _B));
+#endif
+
+static inline unmasked uniform __m128i _mm_add_epi64(uniform __m128i _A, uniform __m128i _B) {
+    uniform __m128i Result;
+    foreach (i = 0 ... 2) {
+        ((uniform int64 *)&Result.m128i_i32)[i] =
+            ((uniform int64 *)&_A.m128i_i32)[i] + ((uniform int64 *)&_B.m128i_i32)[i];
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128i _mm_adds_epi8(uniform __m128i _A, uniform __m128i _B) {
+    uniform int8<16> S0, S1, Result;
+    *((uniform int8<16> * uniform) & S0) = *((uniform int8<16> * uniform) & _A);
+    *((uniform int8<16> * uniform) & S1) = *((uniform int8<16> * uniform) & _B);
+    foreach (i = 0 ... 16) {
+        Result[i] = saturating_add(S0[i], S1[i]);
+    }
+    return *((uniform __m128i * uniform) & Result);
+}
+
+static inline unmasked uniform __m128i _mm_adds_epi16(uniform __m128i _A, uniform __m128i _B) {
+    uniform int16<8> S0, S1, Result;
+    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
+    *((uniform int16<8> * uniform) & S1) = *((uniform int16<8> * uniform) & _B);
+    foreach (i = 0 ... 8) {
+        Result[i] = saturating_add(S0[i], S1[i]);
+    }
+    return *((uniform __m128i * uniform) & Result);
+}
+
+static inline unmasked uniform __m128i _mm_adds_epu8(uniform __m128i _A, uniform __m128i _B) {
+    uniform unsigned int8<16> S0, S1, Result;
+    *((uniform unsigned int8<16> *uniform) & S0) = *((uniform unsigned int8<16> *uniform) & _A);
+    *((uniform unsigned int8<16> *uniform) & S1) = *((uniform unsigned int8<16> *uniform) & _B);
+    foreach (i = 0 ... 16) {
+        Result[i] = saturating_add(S0[i], S1[i]);
+    }
+    return *((uniform __m128i * uniform) & Result);
+}
+
+static inline unmasked uniform __m128i _mm_adds_epu16(uniform __m128i _A, uniform __m128i _B) {
+    uniform unsigned int16<8> S0, S1, Result;
+    *((uniform unsigned int16<8> *uniform) & S0) = *((uniform unsigned int16<8> *uniform) & _A);
+    *((uniform unsigned int16<8> *uniform) & S1) = *((uniform unsigned int16<8> *uniform) & _B);
+    foreach (i = 0 ... 8) {
+        Result[i] = saturating_add(S0[i], S1[i]);
+    }
+    return *((uniform __m128i * uniform) & Result);
+}
+
+static inline unmasked uniform __m128i _mm_avg_epu8(uniform __m128i _A, uniform __m128i _B) {
+    uniform unsigned int8<16> S0, S1, Result;
+    *((uniform unsigned int8<16> *uniform) & S0) = *((uniform unsigned int8<16> *uniform) & _A);
+    *((uniform unsigned int8<16> *uniform) & S1) = *((uniform unsigned int8<16> *uniform) & _B);
+    foreach (i = 0 ... 16) {
+        Result[i] = avg_up(S0[i], S1[i]);
+    }
+    return *((uniform __m128i * uniform) & Result);
+}
+
+static inline unmasked uniform __m128i _mm_avg_epu16(uniform __m128i _A, uniform __m128i _B) {
+    uniform unsigned int16<8> S0, S1, Result;
+    *((uniform unsigned int16<8> *uniform) & S0) = *((uniform unsigned int16<8> *uniform) & _A);
+    *((uniform unsigned int16<8> *uniform) & S1) = *((uniform unsigned int16<8> *uniform) & _B);
+    foreach (i = 0 ... 8) {
+        Result[i] = avg_up(S0[i], S1[i]);
+    }
+    return *((uniform __m128i * uniform) & Result);
+}
+
+static inline unmasked uniform __m128i _mm_madd_epi16(uniform __m128i _A, uniform __m128i _B) {
+    uniform int16<8> S0, S1;
+    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
+    *((uniform int16<8> * uniform) & S1) = *((uniform int16<8> * uniform) & _B);
+    const uniform int32<4> S00 = {S0[0], S0[2], S0[4], S0[6]};
+    const uniform int32<4> S01 = {S0[1], S0[3], S0[5], S0[7]};
+    const uniform int32<4> S10 = {S1[0], S1[2], S1[4], S1[6]};
+    const uniform int32<4> S11 = {S1[1], S1[3], S1[5], S1[7]};
+    const uniform int32<4> Result = S00 * S10 + S01 * S11;
+    return *((uniform __m128i * uniform) & Result);
+}
+
+static inline unmasked uniform __m128i _mm_max_epi16(uniform __m128i _A, uniform __m128i _B) {
+    uniform int16<8> S0, S1, Result;
+    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
+    *((uniform int16<8> * uniform) & S1) = *((uniform int16<8> * uniform) & _B);
+    foreach (i = 0 ... 8) {
+        Result[i] = max(S0[i], S1[i]);
+    }
+    return *((uniform __m128i * uniform) & Result);
+}
+
+static inline unmasked uniform __m128i _mm_max_epu8(uniform __m128i _A, uniform __m128i _B) {
+    uniform unsigned int8<16> S0, S1, Result;
+    *((uniform unsigned int8<16> *uniform) & S0) = *((uniform unsigned int8<16> *uniform) & _A);
+    *((uniform unsigned int8<16> *uniform) & S1) = *((uniform unsigned int8<16> *uniform) & _B);
+    foreach (i = 0 ... 16) {
+        Result[i] = max(S0[i], S1[i]);
+    }
+    return *((uniform __m128i * uniform) & Result);
+}
+
+static inline unmasked uniform __m128i _mm_min_epi16(uniform __m128i _A, uniform __m128i _B) {
+    uniform int16<8> S0, S1, Result;
+    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
+    *((uniform int16<8> * uniform) & S1) = *((uniform int16<8> * uniform) & _B);
+    foreach (i = 0 ... 8) {
+        Result[i] = min(S0[i], S1[i]);
+    }
+    return *((uniform __m128i * uniform) & Result);
+}
+
+static inline unmasked uniform __m128i _mm_min_epu8(uniform __m128i _A, uniform __m128i _B) {
+    uniform unsigned int8<16> S0, S1, Result;
+    *((uniform unsigned int8<16> *uniform) & S0) = *((uniform unsigned int8<16> *uniform) & _A);
+    *((uniform unsigned int8<16> *uniform) & S1) = *((uniform unsigned int8<16> *uniform) & _B);
+    foreach (i = 0 ... 16) {
+        Result[i] = min(S0[i], S1[i]);
+    }
+    return *((uniform __m128i * uniform) & Result);
+}
+
+static inline unmasked uniform __m128i _mm_mulhi_epi16(uniform __m128i _A, uniform __m128i _B) {
+    uniform int16<8> S0, S1, Result;
+    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
+    *((uniform int16<8> * uniform) & S1) = *((uniform int16<8> * uniform) & _B);
+    foreach (i = 0 ... 8) {
+        Result[i] = (int16)(((int32)S0[i] * (int32)S1[i]) >> 16);
+    }
+    return *((uniform __m128i * uniform) & Result);
+}
+
+static inline unmasked uniform __m128i _mm_mulhi_epu16(uniform __m128i _A, uniform __m128i _B) {
+    uniform uint16<8> S0, S1, Result;
+    *((uniform uint16<8> * uniform) & S0) = *((uniform uint16<8> * uniform) & _A);
+    *((uniform uint16<8> * uniform) & S1) = *((uniform uint16<8> * uniform) & _B);
+    foreach (i = 0 ... 8) {
+        Result[i] = (uint16)(((uint32)S0[i] * (uint32)S1[i]) >> 16);
+    }
+    return *((uniform __m128i * uniform) & Result);
+}
+
+static inline unmasked uniform __m128i _mm_mullo_epi16(uniform __m128i _A, uniform __m128i _B) {
+    uniform int16<8> S0, S1, Result;
+    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
+    *((uniform int16<8> * uniform) & S1) = *((uniform int16<8> * uniform) & _B);
+    foreach (i = 0 ... 8) {
+        Result[i] = (int16)((int32)S0[i] * (int32)S1[i]);
+    }
+    return *((uniform __m128i * uniform) & Result);
+}
+
+#if defined(_M_IX86)
+NOT_IMPLEMENTED(extern __m64 _mm_mul_su32(__m64 _A, __m64 _B));
+#endif
+
+static inline unmasked uniform __m128i _mm_mul_epu32(uniform __m128i _A, uniform __m128i _B) {
+    uniform uint32<2> S0, S1;
+    *((uniform uint32<2> * uniform) & S0) = *((uniform uint32<2> * uniform) & _A);
+    *((uniform uint32<2> * uniform) & S1) = *((uniform uint32<2> * uniform) & _B);
+    const uniform uint64<2> Result = (uniform uint64<2>)S0 * (uniform uint64<2>)S1;
+    return *((uniform __m128i * uniform) & Result);
+}
+
+static inline unmasked uniform __m128i _mm_sad_epu8(uniform __m128i _A, uniform __m128i _B) {
+    uniform uint8<16> S0, S1, Int;
+    *((uniform uint8<16> * uniform) & S0) = *((uniform uint8<16> * uniform) & _A);
+    *((uniform uint8<16> * uniform) & S1) = *((uniform uint8<16> * uniform) & _B);
+    uniform uint16<8> Result = {0, 0, 0, 0, 0, 0, 0, 0};
+    foreach (i = 0 ... 16) {
+        Int[i] = max(S0[i], S1[i]) - min(S0[i], S1[i]);
+    }
+    Result[0] = (uniform uint16)Int[0] + (uniform uint16)Int[1] + (uniform uint16)Int[2] + (uniform uint16)Int[3] +
+                (uniform uint16)Int[4] + (uniform uint16)Int[5] + (uniform uint16)Int[6] + (uniform uint16)Int[7];
+    Result[4] = (uniform uint16)Int[8] + (uniform uint16)Int[9] + (uniform uint16)Int[10] + (uniform uint16)Int[11] +
+                (uniform uint16)Int[12] + (uniform uint16)Int[13] + (uniform uint16)Int[14] + (uniform uint16)Int[15];
+    return *((uniform __m128i * uniform) & Result);
+}
+
+static inline unmasked uniform __m128i _mm_sub_epi8(uniform __m128i _A, uniform __m128i _B) {
+    uniform int8<16> S0, S1, Result;
+    *((uniform int8<16> * uniform) & S0) = *((uniform int8<16> * uniform) & _A);
+    *((uniform int8<16> * uniform) & S1) = *((uniform int8<16> * uniform) & _B);
+    Result = S0 - S1;
+    return *((uniform __m128i * uniform) & Result);
+}
+
+static inline unmasked uniform __m128i _mm_sub_epi16(uniform __m128i _A, uniform __m128i _B) {
+    uniform int16<8> S0, S1, Result;
+    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
+    *((uniform int16<8> * uniform) & S1) = *((uniform int16<8> * uniform) & _B);
+    Result = S0 - S1;
+    return *((uniform __m128i * uniform) & Result);
+}
+
+static inline unmasked uniform __m128i _mm_sub_epi32(uniform __m128i _A, uniform __m128i _B) {
+    uniform int32<4> S0, S1, Result;
+    *((uniform int32<4> * uniform) & S0) = *((uniform int32<4> * uniform) & _A);
+    *((uniform int32<4> * uniform) & S1) = *((uniform int32<4> * uniform) & _B);
+    Result = S0 - S1;
+    return *((uniform __m128i * uniform) & Result);
+}
+
+#if defined(_M_IX86)
+NOT_IMPLEMENTED(extern __m64 _mm_sub_si64(__m64 _A, __m64 _B));
+#endif
+
+static inline unmasked uniform __m128i _mm_sub_epi64(uniform __m128i _A, uniform __m128i _B) {
+    uniform int64<2> S0, S1, Result;
+    *((uniform int64<2> * uniform) & S0) = *((uniform int64<2> * uniform) & _A);
+    *((uniform int64<2> * uniform) & S1) = *((uniform int64<2> * uniform) & _B);
+    Result = S0 - S1;
+    return *((uniform __m128i * uniform) & Result);
+}
+
+static inline unmasked uniform __m128i _mm_subs_epi8(uniform __m128i _A, uniform __m128i _B) {
+    uniform int8<16> S0, S1, Result;
+    *((uniform int8<16> * uniform) & S0) = *((uniform int8<16> * uniform) & _A);
+    *((uniform int8<16> * uniform) & S1) = *((uniform int8<16> * uniform) & _B);
+    foreach (i = 0 ... 16) {
+        Result[i] = saturating_sub(S0[i], S1[i]);
+    }
+    return *((uniform __m128i * uniform) & Result);
+}
+
+static inline unmasked uniform __m128i _mm_subs_epi16(uniform __m128i _A, uniform __m128i _B) {
+    uniform int16<8> S0, S1, Result;
+    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
+    *((uniform int16<8> * uniform) & S1) = *((uniform int16<8> * uniform) & _B);
+    foreach (i = 0 ... 8) {
+        Result[i] = saturating_sub(S0[i], S1[i]);
+    }
+    return *((uniform __m128i * uniform) & Result);
+}
+
+static inline unmasked uniform __m128i _mm_subs_epu8(uniform __m128i _A, uniform __m128i _B) {
+    uniform unsigned int8<16> S0, S1, Result;
+    *((uniform unsigned int8<16> *uniform) & S0) = *((uniform unsigned int8<16> *uniform) & _A);
+    *((uniform unsigned int8<16> *uniform) & S1) = *((uniform unsigned int8<16> *uniform) & _B);
+    foreach (i = 0 ... 16) {
+        Result[i] = saturating_sub(S0[i], S1[i]);
+    }
+    return *((uniform __m128i * uniform) & Result);
+}
+
+static inline unmasked uniform __m128i _mm_subs_epu16(uniform __m128i _A, uniform __m128i _B) {
+    uniform unsigned int16<8> S0, S1, Result;
+    *((uniform unsigned int16<8> *uniform) & S0) = *((uniform unsigned int16<8> *uniform) & _A);
+    *((uniform unsigned int16<8> *uniform) & S1) = *((uniform unsigned int16<8> *uniform) & _B);
+    foreach (i = 0 ... 8) {
+        Result[i] = saturating_sub(S0[i], S1[i]);
+    }
+    return *((uniform __m128i * uniform) & Result);
+}
+
+/*
+ * Integer, logicals
+ */
+
+static inline unmasked uniform __m128i _mm_and_si128(uniform __m128i _A, uniform __m128i _B) {
+    uniform __m128i Result;
+    foreach (i = 0 ... 4) {
+        Result.m128i_i32[i] = _A.m128i_i32[i] & _B.m128i_i32[i];
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128i _mm_andnot_si128(uniform __m128i _A, uniform __m128i _B) {
+    uniform __m128i Result;
+    foreach (i = 0 ... 4) {
+        Result.m128i_i32[i] = (~_A.m128i_i32[i]) & _B.m128i_i32[i];
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128i _mm_or_si128(uniform __m128i _A, uniform __m128i _B) {
+    uniform __m128i Result;
+    foreach (i = 0 ... 4) {
+        Result.m128i_i32[i] = _A.m128i_i32[i] | _B.m128i_i32[i];
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128i _mm_xor_si128(uniform __m128i _A, uniform __m128i _B) {
+    uniform __m128i Result;
+    foreach (i = 0 ... 4) {
+        Result.m128i_i32[i] = _A.m128i_i32[i] ^ _B.m128i_i32[i];
+    }
+    return Result;
+}
+
+/*
+ * Integer, shifts
+ */
+
+static inline unmasked uniform __m128i _mm_slli_si128(uniform __m128i _A, uniform int _Imm) {
+    uniform uint8<16> S0, Result;
+    *((uniform uint8<16> * uniform) & S0) = *((uniform uint8<16> * uniform) & _A);
+    _Imm &= 0xF;
+    foreach (i = 0 ... 16) {
+        Result[i] = i < (_Imm) ? 0 : S0[i - _Imm];
+    }
+    return *((uniform __m128i * uniform) & Result);
+}
+
+#define _mm_bslli_si128 _mm_slli_si128
+
+static inline unmasked uniform __m128i _mm_slli_epi16(uniform __m128i _A, uniform int _Count) {
+    uniform int16<8> S0, Result;
+    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
+    _Count &= 0xFF;
+    S0 = (_Count > 15) ? 0 : S0 << _Count;
+    return *((uniform __m128i * uniform) & S0);
+}
+
+static inline unmasked uniform __m128i _mm_sll_epi16(uniform __m128i _A, uniform __m128i _Count) {
+    uniform int16<8> S0, Result;
+    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
+    const uniform uint64 _Imm = *((uniform uint64 * uniform) & _Count);
+    S0 = (_Imm > 15) ? 0 : S0 << _Imm;
+    return *((uniform __m128i * uniform) & S0);
+}
+
+static inline unmasked uniform __m128i _mm_slli_epi32(uniform __m128i _A, uniform int _Count) {
+    uniform int32<4> S0, Result;
+    *((uniform int32<4> * uniform) & S0) = *((uniform int32<4> * uniform) & _A);
+    _Count &= 0xFF;
+    S0 = (_Count > 31) ? 0 : S0 << _Count;
+    return *((uniform __m128i * uniform) & S0);
+}
+
+static inline unmasked uniform __m128i _mm_sll_epi32(uniform __m128i _A, uniform __m128i _Count) {
+    uniform int32<4> S0, Result;
+    *((uniform int32<4> * uniform) & S0) = *((uniform int32<4> * uniform) & _A);
+    const uniform uint64 _Imm = *((uniform uint64 * uniform) & _Count);
+    S0 = (_Imm > 31) ? 0 : S0 << _Imm;
+    return *((uniform __m128i * uniform) & S0);
+}
+
+static inline unmasked uniform __m128i _mm_slli_epi64(uniform __m128i _A, uniform int _Count) {
+    uniform int64<2> S0, Result;
+    *((uniform int64<2> * uniform) & S0) = *((uniform int64<2> * uniform) & _A);
+    _Count &= 0xFF;
+    S0 = (_Count > 63) ? 0 : S0 << _Count;
+    return *((uniform __m128i * uniform) & S0);
+}
+
+static inline unmasked uniform __m128i _mm_sll_epi64(uniform __m128i _A, uniform __m128i _Count) {
+    uniform int64<2> S0, Result;
+    *((uniform int64<2> * uniform) & S0) = *((uniform int64<2> * uniform) & _A);
+    const uniform uint64 _Imm = *((uniform uint64 * uniform) & _Count);
+    S0 = (_Imm > 63) ? 0 : S0 << _Imm;
+    return *((uniform __m128i * uniform) & S0);
+}
+
+static inline unmasked uniform __m128i _mm_srai_epi16(uniform __m128i _A, uniform int _Count) {
+    uniform int16<8> S0, Result;
+    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
+    _Count &= 0xFF;
+    S0 = (_Count > 15) ? (S0 ? 0xFFFF : 0) : S0 >> _Count;
+    return *((uniform __m128i * uniform) & S0);
+}
+
+static inline unmasked uniform __m128i _mm_sra_epi16(uniform __m128i _A, uniform __m128i _Count) {
+    uniform int16<8> S0, Result;
+    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
+    const uniform uint64 _Imm = *((uniform uint64 * uniform) & _Count);
+    S0 = (_Imm > 15) ? (S0 ? 0xFFFF : 0) : S0 >> _Imm;
+    return *((uniform __m128i * uniform) & S0);
+}
+
+static inline unmasked uniform __m128i _mm_srai_epi32(uniform __m128i _A, uniform int _Count) {
+    uniform int32<4> S0, Result;
+    *((uniform int32<4> * uniform) & S0) = *((uniform int32<4> * uniform) & _A);
+    _Count &= 0xFF;
+    S0 = (_Count > 31) ? (S0 ? 0xFFFFFFFF : 0) : S0 >> _Count;
+    return *((uniform __m128i * uniform) & S0);
+}
+
+static inline unmasked uniform __m128i _mm_sra_epi32(uniform __m128i _A, uniform __m128i _Count) {
+    uniform int32<4> S0, Result;
+    *((uniform int32<4> * uniform) & S0) = *((uniform int32<4> * uniform) & _A);
+    const uniform uint64 _Imm = *((uniform uint64 * uniform) & _Count);
+    S0 = (_Imm > 31) ? (S0 ? 0xFFFFFFFF : 0) : S0 >> _Imm;
+    return *((uniform __m128i * uniform) & S0);
+}
+
+static inline unmasked uniform __m128i _mm_srli_si128(uniform __m128i _A, uniform int _Imm) {
+    uniform uint8<16> S0, Result;
+    *((uniform uint8<16> * uniform) & S0) = *((uniform uint8<16> * uniform) & _A);
+    _Imm &= 0xF;
+    foreach (i = 0 ... 16) {
+        Result[i] = 16 - i > (_Imm) ? S0[i + _Imm] : 0;
+    }
+    return *((uniform __m128i * uniform) & Result);
+}
+
+#define _mm_bsrli_si128 _mm_srli_si128
+
+static inline unmasked uniform __m128i _mm_srli_epi16(uniform __m128i _A, uniform int _Count) {
+    uniform uint16<8> S0, Result;
+    *((uniform uint16<8> * uniform) & S0) = *((uniform uint16<8> * uniform) & _A);
+    _Count &= 0xFF;
+    S0 = (_Count > 15) ? (S0 ? 0xFFFF : 0) : S0 >> _Count;
+    return *((uniform __m128i * uniform) & S0);
+}
+
+static inline unmasked uniform __m128i _mm_srl_epi16(uniform __m128i _A, uniform __m128i _Count) {
+    uniform uint16<8> S0, Result;
+    *((uniform uint16<8> * uniform) & S0) = *((uniform uint16<8> * uniform) & _A);
+    const uniform uint64 _Imm = *((uniform uint64 * uniform) & _Count);
+    S0 = (_Imm > 15) ? (S0 ? 0xFFFF : 0) : S0 >> _Imm;
+    return *((uniform __m128i * uniform) & S0);
+}
+
+static inline unmasked uniform __m128i _mm_srli_epi32(uniform __m128i _A, uniform int _Count) {
+    uniform uint32<4> S0, Result;
+    *((uniform uint32<4> * uniform) & S0) = *((uniform uint32<4> * uniform) & _A);
+    _Count &= 0xFF;
+    S0 = (_Count > 31) ? (S0 ? 0xFFFFFFFF : 0) : S0 >> _Count;
+    return *((uniform __m128i * uniform) & S0);
+}
+
+static inline unmasked uniform __m128i _mm_srl_epi32(uniform __m128i _A, uniform __m128i _Count) {
+    uniform uint32<4> S0, Result;
+    *((uniform uint32<4> * uniform) & S0) = *((uniform uint32<4> * uniform) & _A);
+    const uniform uint64 _Imm = *((uniform uint64 * uniform) & _Count);
+    S0 = (_Imm > 31) ? (S0 ? 0xFFFFFFFF : 0) : S0 >> _Imm;
+    return *((uniform __m128i * uniform) & S0);
+}
+
+static inline unmasked uniform __m128i _mm_srli_epi64(uniform __m128i _A, uniform int _Count) {
+    uniform uint64<2> S0, Result;
+    *((uniform uint64<2> * uniform) & S0) = *((uniform uint64<2> * uniform) & _A);
+    _Count &= 0xFF;
+    S0 = (_Count > 63) ? (S0 ? 0xFFFFFFFFFFFFFFFF : 0) : S0 >> _Count;
+    return *((uniform __m128i * uniform) & S0);
+}
+
+static inline unmasked uniform __m128i _mm_srl_epi64(uniform __m128i _A, uniform __m128i _Count) {
+    uniform uint64<4> S0, Result;
+    *((uniform uint64<2> * uniform) & S0) = *((uniform uint64<2> * uniform) & _A);
+    const uniform uint64 _Imm = *((uniform uint64 * uniform) & _Count);
+    S0 = (_Imm > 63) ? (S0 ? 0xFFFFFFFFFFFFFFFF : 0) : S0 >> _Imm;
+    return *((uniform __m128i * uniform) & S0);
+}
+
+/*
+ * Integer, comparisons
+ */
+
+static inline unmasked uniform __m128i _mm_cmpeq_epi8(uniform __m128i _A, uniform __m128i _B) {
+    uniform int8<16> S0, S1;
+    *((uniform int8<16> * uniform) & S0) = *((uniform int8<16> * uniform) & _A);
+    *((uniform int8<16> * uniform) & S1) = *((uniform int8<16> * uniform) & _B);
+    foreach (i = 0 ... 16) {
+        S0[i] = (S0[i] == S1[i]) ? 0xFF : 0;
+    }
+    return *((uniform __m128i * uniform) & S0);
+}
+
+static inline unmasked uniform __m128i _mm_cmpeq_epi16(uniform __m128i _A, uniform __m128i _B) {
+    uniform int16<8> S0, S1;
+    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
+    *((uniform int16<8> * uniform) & S1) = *((uniform int16<8> * uniform) & _B);
+    foreach (i = 0 ... 8) {
+        S0[i] = (S0[i] == S1[i]) ? 0xFFFF : 0;
+    }
+    return *((uniform __m128i * uniform) & S0);
+}
+
+static inline unmasked uniform __m128i _mm_cmpeq_epi32(uniform __m128i _A, uniform __m128i _B) {
+    uniform __m128i Result;
+    foreach (i = 0 ... 4) {
+        Result.m128i_i32[i] = (_A.m128i_i32[i] == _B.m128i_i32[i]) ? 0xFFFFFFFF : 0;
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128i _mm_cmpgt_epi8(uniform __m128i _A, uniform __m128i _B) {
+    uniform int8<16> S0, S1;
+    *((uniform int8<16> * uniform) & S0) = *((uniform int8<16> * uniform) & _A);
+    *((uniform int8<16> * uniform) & S1) = *((uniform int8<16> * uniform) & _B);
+    foreach (i = 0 ... 16) {
+        S0[i] = (S0[i] > S1[i]) ? 0xFF : 0;
+    }
+    return *((uniform __m128i * uniform) & S0);
+}
+
+static inline unmasked uniform __m128i _mm_cmpgt_epi16(uniform __m128i _A, uniform __m128i _B) {
+    uniform int16<8> S0, S1;
+    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
+    *((uniform int16<8> * uniform) & S1) = *((uniform int16<8> * uniform) & _B);
+    foreach (i = 0 ... 8) {
+        S0[i] = (S0[i] > S1[i]) ? 0xFFFF : 0;
+    }
+    return *((uniform __m128i * uniform) & S0);
+}
+
+static inline unmasked uniform __m128i _mm_cmpgt_epi32(uniform __m128i _A, uniform __m128i _B) {
+    uniform __m128i Result;
+    foreach (i = 0 ... 4) {
+        Result.m128i_i32[i] = (_A.m128i_i32[i] > _B.m128i_i32[i]) ? 0xFFFFFFFF : 0;
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128i _mm_cmplt_epi8(uniform __m128i _A, uniform __m128i _B) {
+    uniform int8<16> S0, S1;
+    *((uniform int8<16> * uniform) & S0) = *((uniform int8<16> * uniform) & _A);
+    *((uniform int8<16> * uniform) & S1) = *((uniform int8<16> * uniform) & _B);
+    foreach (i = 0 ... 16) {
+        S0[i] = (S0[i] < S1[i]) ? 0xFF : 0;
+    }
+    return *((uniform __m128i * uniform) & S0);
+}
+
+static inline unmasked uniform __m128i _mm_cmplt_epi16(uniform __m128i _A, uniform __m128i _B) {
+    uniform int16<8> S0, S1;
+    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
+    *((uniform int16<8> * uniform) & S1) = *((uniform int16<8> * uniform) & _B);
+    foreach (i = 0 ... 8) {
+        S0[i] = (S0[i] < S1[i]) ? 0xFFFF : 0;
+    }
+    return *((uniform __m128i * uniform) & S0);
+}
+
+static inline unmasked uniform __m128i _mm_cmplt_epi32(uniform __m128i _A, uniform __m128i _B) {
+    uniform __m128i Result;
+    foreach (i = 0 ... 4) {
+        Result.m128i_i32[i] = (_A.m128i_i32[i] < _B.m128i_i32[i]) ? 0xFFFFFFFF : 0;
+    }
+    return Result;
+}
+
+/*
+ * Integer, converts
+ */
+
+static inline unmasked uniform __m128i _mm_cvtsi32_si128(uniform int _A) {
+    const uniform int<4> _R = {_A, 0, 0, 0};
+    return *((uniform __m128i * uniform) & _R);
+}
+
+static inline unmasked uniform int _mm_cvtsi128_si32(uniform __m128i _A) { return _A.m128i_i32[0]; }
+
+/*
+ * Integer, misc
+ */
+
+static inline unmasked uniform __m128i _mm_packs_epi16(uniform __m128i _A, uniform __m128i _B) {
+    uniform int8<16> R;
+    uniform int16<16> S0;
+    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
+    *((uniform int16<8> * uniform) & S0[8]) = *((uniform int16<8> * uniform) & _B);
+    foreach (i = 0 ... 16) {
+        R[i] = clamp(S0[i], (uniform int16)-128, (uniform int16)127);
+    }
+    return *((uniform __m128i * uniform) & R);
+}
+
+static inline unmasked uniform __m128i _mm_packs_epi32(uniform __m128i _A, uniform __m128i _B) {
+    uniform int16<8> R;
+    uniform int32<8> S0;
+    *((uniform int32<4> * uniform) & S0) = *((uniform int32<4> * uniform) & _A);
+    *((uniform int32<4> * uniform) & S0[4]) = *((uniform int32<4> * uniform) & _B);
+    foreach (i = 0 ... 8) {
+        R[i] = clamp(S0[i], (uniform int32)-32768, (uniform int32)32767);
+    }
+    return *((uniform __m128i * uniform) & R);
+}
+
+static inline unmasked uniform __m128i _mm_packus_epi16(uniform __m128i _A, uniform __m128i _B) {
+    uniform uint8<16> R;
+    uniform int16<16> S0;
+    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
+    *((uniform int16<8> * uniform) & S0[8]) = *((uniform int16<8> * uniform) & _B);
+    foreach (i = 0 ... 16) {
+        R[i] = clamp(S0[i], (uniform int16)0, (uniform int16)255);
+    }
+    return *((uniform __m128i * uniform) & R);
+}
+
+static inline unmasked uniform int _mm_extract_epi16(uniform __m128i _A, uniform int _Imm) {
+    const uniform int16 *uniform _APtr = (const uniform int16 *uniform) & _A;
+    return (uniform int)_APtr[_Imm];
+}
+
+static inline unmasked uniform __m128i _mm_insert_epi16(uniform __m128i _A, uniform int _B, uniform int _Imm) {
+    uniform int16<8> S0;
+    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
+    S0[_Imm] = (uniform int16)_B;
+    return *((uniform __m128i * uniform) & S0);
+}
+
+static inline unmasked uniform int _mm_movemask_epi8(uniform __m128i _A) {
+    uniform int8<16> S0;
+    *((uniform int8<16> * uniform) & S0) = *((uniform int8<16> * uniform) & _A);
+    uniform int Result = 0;
+    foreach (i = 0 ... 16) {
+        uniform int Pack = packmask(S0[i] & 0x80);
+        Result |= (Pack << extract(i, 0));
+    }
+    return Result;
+}
+
+static inline unmasked uniform __m128i _mm_shuffle_epi32(uniform __m128i _A, uniform unsigned int _Imm8) {
+    uniform int<4> R;
+    R[0] = _A.m128i_i32[_Imm8 & 0x3];
+    R[1] = _A.m128i_i32[(_Imm8 >> 2) & 0x3];
+    R[2] = _A.m128i_i32[(_Imm8 >> 4) & 0x3];
+    R[3] = _A.m128i_i32[(_Imm8 >> 6) & 0x3];
+    return *((uniform __m128i * uniform) & R);
+}
+
+static inline unmasked uniform __m128i _mm_shufflehi_epi16(uniform __m128i _A, uniform unsigned int _Imm8) {
+    uniform int16<8> S0, S1;
+    *((uniform int16<8> * uniform) & S1) = *((uniform int16<8> * uniform) & _A);
+    *((uniform int16<4> * uniform) & S0) = *((uniform int16<4> * uniform) & _A.m128i_i32[2]);
+    S0[0] = S0[_Imm8 & 0x3];
+    S0[1] = S0[(_Imm8 >> 2) & 0x3];
+    S0[2] = S0[(_Imm8 >> 4) & 0x3];
+    S0[3] = S0[(_Imm8 >> 6) & 0x3];
+    *((uniform int16<4> * uniform) & S1[4]) = *((uniform int16<4> * uniform) & S0);
+    return *((uniform __m128i * uniform) & S1);
+}
+
+static inline unmasked uniform __m128i _mm_shufflelo_epi16(uniform __m128i _A, uniform unsigned int _Imm8) {
+    uniform int16<8> S0;
+    *((uniform int16<8> * uniform) & S0) = *((uniform int16<8> * uniform) & _A);
+    S0[0] = S0[_Imm8 & 0x3];
+    S0[1] = S0[(_Imm8 >> 2) & 0x3];
+    S0[2] = S0[(_Imm8 >> 4) & 0x3];
+    S0[3] = S0[(_Imm8 >> 6) & 0x3];
+    return *((uniform __m128i * uniform) & S0);
+}
+
+static inline unmasked uniform __m128i _mm_unpackhi_epi8(uniform __m128i _A, uniform __m128i _B) {
+    uniform int8<8> S0, S1;
+    uniform int8<16> R;
+    *((uniform int8<8> * uniform) & S0) = *((uniform int8<8> * uniform) & _A.m128i_i32[2]);
+    *((uniform int8<8> * uniform) & S1) = *((uniform int8<8> * uniform) & _B.m128i_i32[2]);
+    foreach (i = 0 ... 16) {
+#pragma ignore warning(perf)
+        R[i] = select(i & 1, S1[(i >> 1)], S0[(i >> 1)]);
+    }
+    return *((uniform __m128i * uniform) & R);
+}
+
+static inline unmasked uniform __m128i _mm_unpackhi_epi16(uniform __m128i _A, uniform __m128i _B) {
+    uniform int16<4> S0, S1;
+    uniform int16<8> R;
+    *((uniform int16<4> * uniform) & S0) = *((uniform int16<4> * uniform) & _A.m128i_i32[2]);
+    *((uniform int16<4> * uniform) & S1) = *((uniform int16<4> * uniform) & _B.m128i_i32[2]);
+    foreach (i = 0 ... 8) {
+#pragma ignore warning(perf)
+        R[i] = select(i & 1, S1[(i >> 1)], S0[(i >> 1)]);
+    }
+    return *((uniform __m128i * uniform) & R);
+}
+
+static inline unmasked uniform __m128i _mm_unpackhi_epi32(uniform __m128i _A, uniform __m128i _B) {
+    const uniform int<4> R = {_A.m128i_i32[2], _B.m128i_i32[2], _A.m128i_i32[3], _B.m128i_i32[3]};
+    return *((uniform __m128i * uniform) & R);
+}
+
+static inline unmasked uniform __m128i _mm_unpackhi_epi64(uniform __m128i _A, uniform __m128i _B) {
+    uniform int64 *uniform S0 = (uniform int64 * uniform) & _A;
+    uniform int64 *uniform S1 = (uniform int64 * uniform) & _B;
+    const uniform int64<2> R = {S0[1], S1[1]};
+    return *((uniform __m128i * uniform) & R);
+}
+
+static inline unmasked uniform __m128i _mm_unpacklo_epi8(uniform __m128i _A, uniform __m128i _B) {
+    uniform int8<8> S0, S1;
+    uniform int8<16> R;
+    *((uniform int8<8> * uniform) & S0) = *((uniform int8<8> * uniform) & _A);
+    *((uniform int8<8> * uniform) & S1) = *((uniform int8<8> * uniform) & _B);
+    foreach (i = 0 ... 16) {
+#pragma ignore warning(perf)
+        R[i] = select(i & 1, S1[(i >> 1)], S0[(i >> 1)]);
+    }
+    return *((uniform __m128i * uniform) & R);
+}
+
+static inline unmasked uniform __m128i _mm_unpacklo_epi16(uniform __m128i _A, uniform __m128i _B) {
+    uniform int16<4> S0, S1;
+    uniform int16<8> R;
+    *((uniform int16<4> * uniform) & S0) = *((uniform int16<4> * uniform) & _A);
+    *((uniform int16<4> * uniform) & S1) = *((uniform int16<4> * uniform) & _B);
+    foreach (i = 0 ... 8) {
+#pragma ignore warning(perf)
+        R[i] = select(i & 1, S1[(i >> 1)], S0[(i >> 1)]);
+    }
+    return *((uniform __m128i * uniform) & R);
+}
+
+static inline unmasked uniform __m128i _mm_unpacklo_epi32(uniform __m128i _A, uniform __m128i _B) {
+    const uniform int<4> R = {_A.m128i_i32[0], _B.m128i_i32[0], _A.m128i_i32[1], _B.m128i_i32[1]};
+    return *((uniform __m128i * uniform) & R);
+}
+
+static inline unmasked uniform __m128i _mm_unpacklo_epi64(uniform __m128i _A, uniform __m128i _B) {
+    uniform int64 *uniform S0 = (uniform int64 * uniform) & _A;
+    uniform int64 *uniform S1 = (uniform int64 * uniform) & _B;
+    const uniform int64<2> R = {S0[0], S1[0]};
+    return *((uniform __m128i * uniform) & R);
+}
+
+/*
+ * Integer, loads
+ */
+
+static inline unmasked uniform __m128i _mm_load_si128(uniform __m128i const *uniform _P) {
+    const uniform int32<4> _R = *((uniform int32<4> * uniform) & _P[0]);
+    return *((uniform __m128i * uniform) & _R);
+}
+
+static inline unmasked uniform __m128i _mm_loadu_si128(uniform __m128i const *uniform _P) {
+    const uniform __m128i_unaligned R = *((uniform __m128i_unaligned * uniform) & _P[0]);
+    return *((uniform __m128i * uniform) & R);
+}
+
+static inline unmasked uniform __m128i _mm_loadl_epi64(uniform __m128i const *uniform _P) {
+    uniform int64 *uniform S0 = (uniform int64 * uniform) & _P;
+    const uniform int64<2> _R = {S0[0], 0};
+    return *((uniform __m128i * uniform) & _R);
+}
+
+/*
+ * Integer, sets
+ */
+
+#if defined(_M_IX86)
+NOT_IMPLEMENTED(extern __m128i _mm_set_epi64(__m64 _Q1, __m64 _Q0));
+#endif
+
+static inline unmasked uniform __m128i _mm_set_epi64x(uniform int64 _I1, uniform int64 _I0) {
+    const uniform int64<2> _R = {_I0, _I1};
+    return *((uniform __m128i * uniform) & _R);
+}
+
+static inline unmasked uniform __m128i _mm_set_epi32(uniform int32 _I3, uniform int32 _I2, uniform int32 _I1,
+                                                     uniform int32 _I0) {
+    const uniform int32<4> _R = {_I0, _I1, _I2, _I3};
+    return *((uniform __m128i * uniform) & _R);
+}
+
+static inline unmasked uniform __m128i _mm_set_epi16(uniform int16 _W7, uniform int16 _W6, uniform int16 _W5,
+                                                     uniform int16 _W4, uniform int16 _W3, uniform int16 _W2,
+                                                     uniform int16 _W1, uniform int16 _W0) {
+    const uniform int16<8> _R = {_W0, _W1, _W2, _W3, _W4, _W5, _W6, _W7};
+    return *((uniform __m128i * uniform) & _R);
+}
+
+static inline unmasked uniform __m128i _mm_set_epi8(uniform int8 _B15, uniform int8 _B14, uniform int8 _B13,
+                                                    uniform int8 _B12, uniform int8 _B11, uniform int8 _B10,
+                                                    uniform int8 _B9, uniform int8 _B8, uniform int8 _B7,
+                                                    uniform int8 _B6, uniform int8 _B5, uniform int8 _B4,
+                                                    uniform int8 _B3, uniform int8 _B2, uniform int8 _B1,
+                                                    uniform int8 _B0) {
+    const uniform int8<16> _R = {_B0, _B1, _B2, _B3, _B4, _B5, _B6, _B7, _B8, _B9, _B10, _B11, _B12, _B13, _B14, _B15};
+    return *((uniform __m128i * uniform) & _R);
+}
+
+#if defined(_M_IX86)
+NOT_IMPLEMENTED(extern __m128i _mm_set1_epi64(__m64 _Q));
+#endif
+
+static inline unmasked uniform __m128i _mm_set1_epi64x(uniform int64 i) {
+    const uniform int64<2> _R = {i, i};
+    return *((uniform __m128i * uniform) & _R);
+}
+
+static inline unmasked uniform __m128i _mm_set1_epi32(uniform int32 _I) {
+    const uniform int32<4> _R = {_I, _I, _I, _I};
+    return *((uniform __m128i * uniform) & _R);
+}
+
+static inline unmasked uniform __m128i _mm_set1_epi16(uniform int16 _W) {
+    const uniform int16<8> _R = {_W, _W, _W, _W, _W, _W, _W, _W};
+    return *((uniform __m128i * uniform) & _R);
+}
+
+static inline unmasked uniform __m128i _mm_set1_epi8(uniform int8 _B) {
+    const uniform int8<16> _R = {_B, _B, _B, _B, _B, _B, _B, _B, _B, _B, _B, _B, _B, _B, _B, _B};
+    return *((uniform __m128i * uniform) & _R);
+}
+
+NOT_IMPLEMENTED(extern __m128i _mm_setl_epi64(__m128i _Q));
+#if defined(_M_IX86)
+NOT_IMPLEMENTED(extern __m128i _mm_setr_epi64(__m64 _Q0, __m64 _Q1));
+#endif
+
+static inline unmasked uniform __m128i _mm_setr_epi32(uniform int32 _I0, uniform int32 _I1, uniform int32 _I2,
+                                                      uniform int32 _I3) {
+    const uniform int32<4> _R = {_I0, _I1, _I2, _I3};
+    return *((uniform __m128i * uniform) & _R);
+}
+
+static inline unmasked uniform __m128i _mm_setr_epi16(uniform int16 _W0, uniform int16 _W1, uniform int16 _W2,
+                                                      uniform int16 _W3, uniform int16 _W4, uniform int16 _W5,
+                                                      uniform int16 _W6, uniform int16 _W7) {
+    const uniform int16<8> _R = {_W0, _W1, _W2, _W3, _W4, _W5, _W6, _W7};
+    return *((uniform __m128i * uniform) & _R);
+}
+
+static inline unmasked uniform __m128i _mm_setr_epi8(uniform int8 _B15, uniform int8 _B14, uniform int8 _B13,
+                                                     uniform int8 _B12, uniform int8 _B11, uniform int8 _B10,
+                                                     uniform int8 _B9, uniform int8 _B8, uniform int8 _B7,
+                                                     uniform int8 _B6, uniform int8 _B5, uniform int8 _B4,
+                                                     uniform int8 _B3, uniform int8 _B2, uniform int8 _B1,
+                                                     uniform int8 _B0) {
+    const uniform int8<16> _R = {_B15, _B14, _B13, _B12, _B11, _B10, _B9, _B8, _B7, _B6, _B5, _B4, _B3, _B2, _B1, _B0};
+    return *((uniform __m128i * uniform) & _R);
+}
+
+static inline unmasked uniform __m128i _mm_setzero_si128() {
+    const uniform int<4> _R = {0, 0, 0, 0};
+    return *((uniform __m128i * uniform) & _R);
+}
+
+/*
+ * Integer, stores
+ */
+
+static inline unmasked void _mm_store_si128(uniform __m128i *uniform _P, uniform __m128i _B) {
+    *((uniform int32<4> * uniform) & _P[0]) = *((uniform int32<4> * uniform) & _B);
+}
+
+static inline unmasked void _mm_storeu_si128(uniform __m128i *uniform _P, uniform __m128i _B) {
+    *((uniform __m128i_unaligned * uniform) & _P[0]) = *((uniform __m128i_unaligned * uniform) & _B);
+}
+
+static inline unmasked void _mm_storel_epi64(uniform __m128i *uniform _P, uniform __m128i _Q) {
+    *((uniform int64 * uniform) & _P[0]) = *((uniform int64 * uniform) & _Q);
+}
+
+static inline unmasked void _mm_maskmoveu_si128(uniform __m128i _D, uniform __m128i _N, uniform int8 *uniform _P) {
+    uniform int8<16> S0, Mask;
+    *((uniform int8<16> * uniform) & S0) = *((uniform int8<16> * uniform) & _D);
+    *((uniform int8<16> * uniform) & Mask) = *((uniform int8<16> * uniform) & _N);
+    foreach (i = 0 ... 16) {
+        if (Mask[i] & 1 << 7) {
+            streaming_store(&_P[extract(i, 0)], S0[i]);
+        }
+    }
+}
+
+/*
+ * Integer, moves
+ */
+
+static inline unmasked uniform __m128i _mm_move_epi64(uniform __m128i _Q) {
+    uniform int64 *uniform S0 = (uniform int64 * uniform) & _Q;
+    const uniform int64<2> _R = {S0[0], 0};
+    return *((uniform __m128i * uniform) & _R);
+}
+
+#if defined(_M_IX86)
+NOT_IMPLEMENTED(extern __m128i _mm_movpi64_epi64(__m64 _Q));
+NOT_IMPLEMENTED(extern __m64 _mm_movepi64_pi64(__m128i _Q));
+#endif
+
+/*
+ * Cacheability support
+ */
+
+static inline unmasked void _mm_stream_pd(uniform double *uniform _Dp, uniform __m128d _A) {
+    // No movntsd in most cases, go with float instead
+    uniform float *uniform _Df = (uniform float *uniform)_Dp;
+    uniform float *uniform S0 = (uniform float *uniform) & _A;
+    streaming_store(&_Df[0], S0[0]);
+    streaming_store(&_Df[1], S0[1]);
+    streaming_store(&_Df[2], S0[2]);
+    streaming_store(&_Df[3], S0[3]);
+}
+
+static inline unmasked void _mm_stream_si128(uniform __m128i *uniform _P, uniform __m128i _A) {
+#if TARGET_WIDTH == 4
+    varying int S0;
+    *((uniform int<4> *uniform) & S0) = *((uniform int<4> *uniform) & _A);
+    uniform int32 *uniform P = (uniform int32 * uniform) _P;
+    streaming_store(P, S0);
+#else
+    // Can't guarantee we won't store using wider regs so need to do uniform streaming stores
+    uniform int32 *uniform P = (uniform int32 * uniform) _P;
+    streaming_store(&P[0], _A.m128i_i32[0]);
+    streaming_store(&P[1], _A.m128i_i32[1]);
+    streaming_store(&P[2], _A.m128i_i32[2]);
+    streaming_store(&P[3], _A.m128i_i32[3]);
+#endif
+}
+
+NOT_IMPLEMENTED(extern void _mm_clflush(void const *_P)); // Unsupported in ISPC
+NOT_IMPLEMENTED(extern void _mm_lfence(void));            // Unsupported in ISPC
+NOT_IMPLEMENTED(extern void _mm_mfence(void));            // Unsupported in ISPC
+
+static inline unmasked void _mm_stream_si32(uniform int32 *uniform _P, uniform int32 _I) {
+    streaming_store(&_P[0], _I);
+}
+
+NOT_IMPLEMENTED(extern void _mm_pause(void)); // Unsupported in ISPC
+
+/*
+ * New convert to float
+ */
+
+static inline unmasked uniform double _mm_cvtsd_f64(uniform __m128d _A) { return _A.m128d_f64[0]; }
+
+/*
+ * Support for casting between various SP, DP, INT vector types.
+ * Note that these do no conversion of values, they just change
+ * the type.
+ */
+
+static inline unmasked uniform __m128 _mm_castpd_ps(uniform __m128d _A) { return *((uniform __m128 * uniform) & _A); }
+
+static inline unmasked uniform __m128i _mm_castpd_si128(uniform __m128d _A) {
+    return *((uniform __m128i * uniform) & _A);
+}
+
+static inline unmasked uniform __m128d _mm_castps_pd(uniform __m128 _A) { return *((uniform __m128d * uniform) & _A); }
+
+static inline unmasked uniform __m128i _mm_castps_si128(uniform __m128 _A) {
+    return *((uniform __m128i * uniform) & _A);
+}
+
+static inline unmasked uniform __m128 _mm_castsi128_ps(uniform __m128i _A) {
+    return *((uniform __m128 * uniform) & _A);
+}
+
+static inline unmasked uniform __m128d _mm_castsi128_pd(uniform __m128i _A) {
+    return *((uniform __m128d * uniform) & _A);
+}
+
+/*
+ * Support for 64-bit extension intrinsics
+ */
+
+static inline unmasked uniform int64 _mm_cvtsd_si64(uniform __m128d _A) {
+    return (uniform int64)(round(_A.m128d_f64[0]));
+}
+
+static inline unmasked uniform int _mm_cvttsd_si64(uniform __m128d _A) { return (uniform int64)_A.m128d_f64[0]; }
+
+static inline unmasked uniform __m128d _mm_cvtsi64_sd(uniform __m128d _A, uniform int64 _B) {
+    _A.m128d_f64[0] = (uniform double)_B;
+    return _A;
+}
+
+static inline unmasked uniform __m128i _mm_cvtsi64_si128(uniform int64 _A) {
+    const uniform int64<2> _R = {_A, 0};
+    return *((uniform __m128i * uniform) & _R);
+}
+
+static inline unmasked uniform int64 _mm_cvtsi128_si64(uniform __m128i _A) { return *((uniform int64 * uniform) & _A); }
+
+/* Alternate intrinsic name definitions */
+#define _mm_stream_si64 _mm_stream_si64x
+
+#endif /* _INCLUDED_EMM */
