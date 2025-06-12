@@ -39,47 +39,50 @@ endif()
 set(ISPC_SRC ${CMAKE_CURRENT_SOURCE_DIR}/attention.ispc)
 set(ISPC_OBJ ${CMAKE_CURRENT_BINARY_DIR}/attention.o)
 set(ISPC_HEADER ${CMAKE_CURRENT_BINARY_DIR}/attention_ispc.h)
+set(ISPC_NANOBIND_WRAPPER ${CMAKE_CURRENT_BINARY_DIR}/attention.cpp)
 
 # Set ISPC flags
 set(ISPC_FLAGS -O2 --target=host -DISPC_TASKED_LOOP2 -DGOTO_IMPL)
-if (NOT WIN32)
+if (WIN32)
+    set(ISPC_FLAGS ${ISPC_FLAGS} --dllexport)
+else()
     set(ISPC_FLAGS ${ISPC_FLAGS} --pic)
 endif()
 
 # Add custom command to compile ISPC file
 add_custom_command(
-    OUTPUT ${ISPC_OBJ} ${ISPC_HEADER}
-    COMMAND ${ISPC_EXECUTABLE} ${ISPC_FLAGS} ${ISPC_SRC} -o ${ISPC_OBJ} -h ${ISPC_HEADER}
+    OUTPUT ${ISPC_OBJ} ${ISPC_NANOBIND_WRAPPER}
+    COMMAND ${ISPC_EXECUTABLE} ${ISPC_FLAGS} ${ISPC_SRC} -o ${ISPC_OBJ} -h ${ISPC_HEADER} --nanobind-wrapper=${ISPC_NANOBIND_WRAPPER}
     DEPENDS ${ISPC_SRC}
     COMMENT "Compiling ISPC file: ${ISPC_SRC}"
 )
 
 # Make sure the ISPC header file is created before it's needed
-add_custom_target(generate_ispc_attention
-    DEPENDS ${ISPC_OBJ} ${ISPC_HEADER}
+add_custom_target(generate_attention
+    DEPENDS ${ISPC_OBJ} ${ISPC_NANOBIND_WRAPPER}
 )
 
 # Add nanobind extension module
 nanobind_add_module(
-    ispc_attention
-    nanobind_wrapper.cpp
+    attention
+    ${ISPC_NANOBIND_WRAPPER}
 )
 
 # Make sure the ISPC files are generated before building the module
-add_dependencies(ispc_attention generate_ispc_attention)
+add_dependencies(attention generate_attention)
 
 # Link with the ISPC object file
-target_link_libraries(ispc_attention PRIVATE ${ISPC_OBJ})
+target_link_libraries(attention PRIVATE ${ISPC_OBJ})
 
 # Add include directories to find the ISPC header
-target_include_directories(ispc_attention PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(attention PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
-target_sources(ispc_attention PRIVATE ${EXAMPLES_ROOT}/common/tasksys.cpp)
+target_sources(attention PRIVATE ${EXAMPLES_ROOT}/common/tasksys.cpp)
 find_package(TBB QUIET COMPONENTS tbb)
 if (TBB_FOUND)
     # TBB package does not produce any info when found, so print it here.
     message(STATUS "Found TBB: ${TBB_VERSION} at ${TBB_DIR}")
-    target_link_libraries(ispc_attention PRIVATE TBB::tbb)
+    target_link_libraries(attention PRIVATE TBB::tbb)
 else()
     # On some OS (Ubuntu 18.04, CentOS) TBB is installed without CMake support
     # Try to find TBB library and header files
@@ -90,16 +93,33 @@ else()
     if (TBB_LIB AND TBB_INCLUDE_DIR)
         message(STATUS "Found TBB: ${TBB_LIB}")
         message(STATUS "TBB_INCLUDE_DIR is ${TBB_INCLUDE_DIR}")
-        target_link_libraries(ispc_attention PRIVATE ${TBB_LIB})
-        target_include_directories(ispc_attention PRIVATE ${TBB_INCLUDE_DIR})
+        target_link_libraries(attention PRIVATE ${TBB_LIB})
+        target_include_directories(attention PRIVATE ${TBB_INCLUDE_DIR})
         set (TBB_FOUND TRUE)
     endif()
 endif()
 if (NOT TBB_FOUND)
 message(FATAL_ERROR "TBB is not found! Please install TBB or set the TBB_ROOT pointing to TBB location")
 endif()
-target_compile_definitions(ispc_attention PRIVATE ISPC_USE_TBB_PARALLEL_FOR)
+target_compile_definitions(attention PRIVATE ISPC_USE_TBB_PARALLEL_FOR)
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/attention)
+# On Windows, link with appropriate libraries to provide DLL entry point
+if(WIN32)
+    target_link_libraries(attention PRIVATE msvcrt)
+    set_target_properties(attention PROPERTIES
+        LINKER_LANGUAGE CXX
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    )
+    if (MSVC)
+        add_custom_command(TARGET attention POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy
+                $<TARGET_FILE:attention>
+                ${CMAKE_BINARY_DIR}/point_transform_nanobind/$<TARGET_FILE_NAME:attention>
+            COMMENT "Copying attention DLL to build directory"
+    )
+    endif()
+endif()
 
 # Add a target to copy Python file
 add_custom_target(attention_py
@@ -108,10 +128,10 @@ add_custom_target(attention_py
         ${CMAKE_BINARY_DIR}/attention/attention.py
     COMMENT "Copying attention.py example to build directory"
 )
-add_dependencies(ispc_attention attention_py)
+add_dependencies(attention attention_py)
 
 # Installation targets
 if (NOT ISPC_PREPARE_PACKAGE)
-    install(TARGETS ispc_attention LIBRARY DESTINATION examples/attention)
+    install(TARGETS attention LIBRARY DESTINATION examples/attention)
     install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/attention.py DESTINATION examples/attention)
 endif()
