@@ -36,211 +36,210 @@
 #define M_R 8
 #endif
 
+// Define enum for matrix multiplication implementations
+enum MatmulImpl {
+    GOTO_MATMUL = 0, // Use gemm implementation
+    TILED_MATMUL = 1 // Use tiled matmul with tasks
+};
+
 // A matrix is stored in column-major order
-void loop_0(uniform int M, uniform int N, uniform int K,
-                          uniform float A[], uniform int lda, uniform float B[],
-                          uniform int ldb, uniform float C[], uniform int ldc) {
+void loop_0(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda, uniform float B[],
+            uniform int ldb, uniform float C[], uniform int ldc) {
 
-  // assert(M == M_R);
-  // assert(N == N_R);
-  // assert(K == K_C);
-  // assert(lda == M_R);
-  // assert(ldb == N_R);
+    // assert(M == M_R);
+    // assert(N == N_R);
+    // assert(K == K_C);
+    // assert(lda == M_R);
+    // assert(ldb == N_R);
 
-  uniform float sumTile[M_R][N_R] = { { 0 } };
-  uniform float oneAVal[M_R] = { 0 };
+    uniform float sumTile[M_R][N_R] = {{0}};
+    uniform float oneAVal[M_R] = {0};
 
-  for (uniform int k = 0; k < K; k++) {
-    for (uniform int m = 0; m < M_R; m++) {
-      oneAVal[m] = A[m + k * lda];
+    for (uniform int k = 0; k < K; k++) {
+        for (uniform int m = 0; m < M_R; m++) {
+            oneAVal[m] = A[m + k * lda];
+        }
+
+        foreach (vn = 0 ... N_R) {
+            varying float matB1 = B[k * ldb + vn];
+            for (uniform int m = 0; m < M_R; m++) {
+                sumTile[m][vn] += oneAVal[m] * matB1;
+            }
+        }
     }
 
     foreach (vn = 0 ... N_R) {
-      varying float matB1 = B[k * ldb + vn];
-      for (uniform int m = 0; m < M_R; m++) {
-        sumTile[m][vn] += oneAVal[m] * matB1;
-      }
+        for (uniform int m = 0; m < M_R; m++) {
+            C[m * ldc + vn] += sumTile[m][vn];
+        }
     }
-  }
-
-  foreach (vn = 0 ... N_R) {
-    for (uniform int m = 0; m < M_R; m++) {
-      C[m * ldc + vn] += sumTile[m][vn];
-    }
-  }
-
 }
 
 // A matrix is stored in column-major order
 // It is different from loop_0 as tile is M x N_R
-void loop_0_r(uniform int M, uniform int N, uniform int K,
-                          uniform float A[], uniform int lda, uniform float B[],
-                          uniform int ldb, uniform float C[], uniform int ldc) {
+void loop_0_r(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda, uniform float B[],
+              uniform int ldb, uniform float C[], uniform int ldc) {
 
-  uniform float sumTile[M_R][N_R] = { { 0 } };
-  uniform float oneAVal[M_R] = { 0 };
+    uniform float sumTile[M_R][N_R] = {{0}};
+    uniform float oneAVal[M_R] = {0};
 
-  for (uniform int k = 0; k < K; k++) {
-    for (uniform int m = 0; m < M; m++) {
-      oneAVal[m] = A[m + k * lda];
+    for (uniform int k = 0; k < K; k++) {
+        for (uniform int m = 0; m < M; m++) {
+            oneAVal[m] = A[m + k * lda];
+        }
+
+        foreach (vn = 0 ... N_R) {
+            varying float matB1 = B[k * ldb + vn];
+            for (uniform int m = 0; m < M; m++) {
+                sumTile[m][vn] += oneAVal[m] * matB1;
+            }
+        }
     }
 
     foreach (vn = 0 ... N_R) {
-      varying float matB1 = B[k * ldb + vn];
-      for (uniform int m = 0; m < M; m++) {
-        sumTile[m][vn] += oneAVal[m] * matB1;
-      }
+        for (uniform int m = 0; m < M; m++) {
+            C[m * ldc + vn] += sumTile[m][vn];
+        }
     }
-  }
-
-  foreach (vn = 0 ... N_R) {
-    for (uniform int m = 0; m < M; m++) {
-      C[m * ldc + vn] += sumTile[m][vn];
-    }
-  }
-
 }
 
 // A matrix is stored in column-major order
-void loop_0_naive(uniform int M, uniform int N, uniform int K,
-                  uniform float A[], uniform int lda, uniform float B[],
+void loop_0_naive(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda, uniform float B[],
                   uniform int ldb, uniform float C[], uniform int ldc) {
-  for (uniform int m = 0; m < M; m++) {
-    for (uniform int n = 0; n < N; n++) {
-      for (uniform int k = 0; k < K; k++) {
-        C[m * ldc + n] += A[m + k * lda] * B[k * ldb + n];
-      }
+    for (uniform int m = 0; m < M; m++) {
+        for (uniform int n = 0; n < N; n++) {
+            for (uniform int k = 0; k < K; k++) {
+                C[m * ldc + n] += A[m + k * lda] * B[k * ldb + n];
+            }
+        }
     }
-  }
 }
 
-task void loop_1_task(uniform int M, uniform int N, uniform int K,
-                          uniform float A[], uniform int lda, uniform float B[],
-                          uniform int ldb, uniform float C[], uniform int ldc) {
-  uniform int R = M % M_R;
-  if (R > 0) {
-    loop_0_r(R, N, K, &A[(M - R) * lda], R, B, ldb, &C[(M - R) * ldc], ldc);
-  } else {
-    uniform int ir = taskIndex * M_R;
-    loop_0(M_R, N, K, &A[ir * lda], M_R, B, ldb, &C[ir * ldc], ldc);
-  }
+task void loop_1_task(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda,
+                      uniform float B[], uniform int ldb, uniform float C[], uniform int ldc) {
+    uniform int R = M % M_R;
+    if (R > 0) {
+        loop_0_r(R, N, K, &A[(M - R) * lda], R, B, ldb, &C[(M - R) * ldc], ldc);
+    } else {
+        uniform int ir = taskIndex * M_R;
+        loop_0(M_R, N, K, &A[ir * lda], M_R, B, ldb, &C[ir * ldc], ldc);
+    }
 }
 
-void loop_1(uniform int M, uniform int N, uniform int K,
-                          uniform float A[], uniform int lda, uniform float B[],
-                          uniform int ldb, uniform float C[], uniform int ldc) {
+void loop_1(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda, uniform float B[],
+            uniform int ldb, uniform float C[], uniform int ldc) {
 #ifndef ISPC_TASKED_LOOP1
-  for (uniform int ir = 0; (ir < M) && !(ir + M_R > M); ir += M_R) {
-    loop_0(M_R, N, K, &A[ir * lda], M_R, B, ldb, &C[ir * ldc], ldc);
-  }
+    for (uniform int ir = 0; (ir < M) && !(ir + M_R > M); ir += M_R) {
+        loop_0(M_R, N, K, &A[ir * lda], M_R, B, ldb, &C[ir * ldc], ldc);
+    }
 
-  uniform int R = M % M_R;
-  if (R > 0) {
-    loop_0_r(R, N, K, &A[(M - R) * lda], R, B, ldb, &C[(M - R) * ldc], ldc);
-  }
+    uniform int R = M % M_R;
+    if (R > 0) {
+        loop_0_r(R, N, K, &A[(M - R) * lda], R, B, ldb, &C[(M - R) * ldc], ldc);
+    }
 #else
-  uniform int numTasks = M / M_R;
-  launch[numTasks] loop_1_task(M, N, K, A, lda, B, ldb, C, ldc);
-  sync;
+#ifndef ONE_THREAD
+    uniform int numTasks = M / M_R;
+#else
+    uniform int numTasks = 1; // Single-threaded execution
+#endif // ONE_THREAD
+    launch[numTasks] loop_1_task(M, N, K, A, lda, B, ldb, C, ldc);
+    sync;
 #endif // ISPC_TASKED_LOOP1
 }
 
-task void loop_2_task(uniform int M, uniform int N, uniform int K,
-                          uniform float A[], uniform int lda, uniform float B[],
-                          uniform int ldb, uniform float C[], uniform int ldc) {
-  uniform int jr = taskIndex * N_R;
-  loop_1(M, N_R, K, A, lda, &B[jr * K], N_R, &C[jr], ldc);
+task void loop_2_task(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda,
+                      uniform float B[], uniform int ldb, uniform float C[], uniform int ldc) {
+    uniform int jr = taskIndex * N_R;
+    loop_1(M, N_R, K, A, lda, &B[jr * K], N_R, &C[jr], ldc);
 }
 
-void loop_2(uniform int M, uniform int N, uniform int K,
-                          uniform float A[], uniform int lda, uniform float B[],
-                          uniform int ldb, uniform float C[], uniform int ldc) {
-  // assert(N % N_R == 0);
+void loop_2(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda, uniform float B[],
+            uniform int ldb, uniform float C[], uniform int ldc) {
+    // assert(N % N_R == 0);
 #ifndef ISPC_TASKED_LOOP2
-  for (uniform int jr = 0; jr < N; jr += N_R) {
-    loop_1(M, N_R, K, A, lda, &B[jr * K], N_R, &C[jr], ldc);
-  }
+    for (uniform int jr = 0; jr < N; jr += N_R) {
+        loop_1(M, N_R, K, A, lda, &B[jr * K], N_R, &C[jr], ldc);
+    }
 #else
-  uniform int numTasks = N / N_R;
-  launch[numTasks] loop_2_task(M, N, K, A, lda, B, ldb, C, ldc);
-  sync;
+#ifndef ONE_THREAD
+    uniform int numTasks = N / N_R;
+#else
+    uniform int numTasks = 1; // Single-threaded execution
+#endif // ONE_THREAD
+    launch[numTasks] loop_2_task(M, N, K, A, lda, B, ldb, C, ldc);
+    sync;
 #endif // ISPC_TASKED_LOOP2
 }
 
-void pack_A(uniform int M, uniform int K, uniform float A[],
-                          uniform int lda, uniform float A_packed[]) {
-  // assert(M % M_R == 0);
-  for (uniform int r = 0; (r < M) && !(r + M_R > M); r += M_R) {
-    for (uniform int k = 0; k < K; k++) {
-      for (uniform int mr = 0; mr < M_R; mr++) {
-        A_packed[r * K + mr + k * M_R] = A[(r + mr) * lda + k];
-      }
+void pack_A(uniform int M, uniform int K, uniform float A[], uniform int lda, uniform float A_packed[]) {
+    // assert(M % M_R == 0);
+    for (uniform int r = 0; (r < M) && !(r + M_R > M); r += M_R) {
+        for (uniform int k = 0; k < K; k++) {
+            for (uniform int mr = 0; mr < M_R; mr++) {
+                A_packed[r * K + mr + k * M_R] = A[(r + mr) * lda + k];
+            }
+        }
     }
-  }
-  uniform int R = M % M_R;
-  if (R > 0) {
-    for (uniform int k = 0; k < K; k++) {
-      for (uniform int mr = 0; mr < R; mr++) {
-        A_packed[(M - R) * K + mr + k * R] = A[(M - R + mr) * lda + k];
-      }
+    uniform int R = M % M_R;
+    if (R > 0) {
+        for (uniform int k = 0; k < K; k++) {
+            for (uniform int mr = 0; mr < R; mr++) {
+                A_packed[(M - R) * K + mr + k * R] = A[(M - R + mr) * lda + k];
+            }
+        }
     }
-  }
 }
 
-void loop_3(uniform int M, uniform int N, uniform int K,
-                          uniform float A[], uniform int lda, uniform float B[],
-                          uniform int ldb, uniform float C[], uniform int ldc) {
-  // assert(M % M_C == 0);
-  uniform float A_data[M_C][K_C] = { { 0 } };
-  uniform float *uniform A_packed = (uniform float *uniform) &A_data[0][0];
-  for (uniform int i = 0; i < M; i += M_C) {
-    pack_A(M_C, K, &A[i * lda], lda, A_packed);
-    // leading dimension of A_packed is somewhat confusing here
-    loop_2(M_C, N, K, A_packed, K, B, ldb, &C[i * ldc], ldc);
-  }
-}
-
-void pack_B(uniform int K, uniform int N, uniform float B[],
-                          uniform int ldb, uniform float B_packed[]) {
-  // assert(N % N_R == 0);
-  for (uniform int r = 0; r < N; r += N_R) {
-    for (uniform int k = 0; k < K; k++) {
-      foreach (nr = 0 ... N_R) {
-        B_packed[r * K + k * N_R + nr] = B[k * ldb + (r + nr)];
-      }
+void loop_3(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda, uniform float B[],
+            uniform int ldb, uniform float C[], uniform int ldc) {
+    // assert(M % M_C == 0);
+    uniform float A_data[M_C][K_C] = {{0}};
+    uniform float *uniform A_packed = (uniform float *uniform) & A_data[0][0];
+    for (uniform int i = 0; i < M; i += M_C) {
+        pack_A(M_C, K, &A[i * lda], lda, A_packed);
+        // leading dimension of A_packed is somewhat confusing here
+        loop_2(M_C, N, K, A_packed, K, B, ldb, &C[i * ldc], ldc);
     }
-  }
 }
 
-void loop_4(uniform int M, uniform int N, uniform int K,
-                          uniform float A[], uniform int lda, uniform float B[],
-                          uniform int ldb, uniform float C[], uniform int ldc) {
-  // assert(K % K_C == 0);
-  uniform float B_data[K_C][N_C] = { { 0 } };
-  uniform float *uniform B_packed = (uniform float *uniform) &B_data[0][0];
-  for (uniform int p = 0; p < K; p += K_C) {
-    pack_B(K_C, N, &B[p * ldb], ldb, B_packed);
-    // leading dimension of B_packed is somewhat confusing here
-    loop_3(M, N, K_C, &A[p], lda, B_packed, N, C, ldc);
-  }
+void pack_B(uniform int K, uniform int N, uniform float B[], uniform int ldb, uniform float B_packed[]) {
+    // assert(N % N_R == 0);
+    for (uniform int r = 0; r < N; r += N_R) {
+        for (uniform int k = 0; k < K; k++) {
+            foreach (nr = 0 ... N_R) {
+                B_packed[r * K + k * N_R + nr] = B[k * ldb + (r + nr)];
+            }
+        }
+    }
 }
 
-void loop_5(uniform int M, uniform int N, uniform int K,
-                          uniform float A[], uniform int lda, uniform float B[],
-                          uniform int ldb, uniform float C[], uniform int ldc) {
-  // assert(N % N_C == 0);
-  for (uniform int j = 0; j < N; j += N_C) {
-    loop_4(M, N_C, K, A, lda, &B[j], ldb, &C[j], ldc);
-  }
+void loop_4(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda, uniform float B[],
+            uniform int ldb, uniform float C[], uniform int ldc) {
+    // assert(K % K_C == 0);
+    uniform float B_data[K_C][N_C] = {{0}};
+    uniform float *uniform B_packed = (uniform float *uniform) & B_data[0][0];
+    for (uniform int p = 0; p < K; p += K_C) {
+        pack_B(K_C, N, &B[p * ldb], ldb, B_packed);
+        // leading dimension of B_packed is somewhat confusing here
+        loop_3(M, N, K_C, &A[p], lda, B_packed, N, C, ldc);
+    }
 }
 
-void gemm(uniform float A[], uniform float B[], uniform float C[],
-          uniform int M_0, uniform int N_0, uniform int K_0) {
-  uniform int lda = K_0;
-  uniform int ldb = N_0;
-  uniform int ldc = N_0;
+void loop_5(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda, uniform float B[],
+            uniform int ldb, uniform float C[], uniform int ldc) {
+    // assert(N % N_C == 0);
+    for (uniform int j = 0; j < N; j += N_C) {
+        loop_4(M, N_C, K, A, lda, &B[j], ldb, &C[j], ldc);
+    }
+}
 
-  loop_5(M_0, N_0, K_0, A, lda, B, ldb, C, ldc);
+void gemm(uniform float A[], uniform float B[], uniform float C[], uniform int M_0, uniform int N_0, uniform int K_0) {
+    uniform int lda = K_0;
+    uniform int ldb = N_0;
+    uniform int ldc = N_0;
+
+    loop_5(M_0, N_0, K_0, A, lda, B, ldb, C, ldc);
 }
 
 #if TARGET_WIDTH == 8
@@ -438,8 +437,9 @@ task void softmax_task(uniform float matrix[], uniform float scale, uniform int 
     }
 }
 
-export void single_head_attention(uniform float Q[], uniform float K[], uniform float V[], uniform float output[],
-                                  uniform int seq_len, uniform int d_model) {
+// Common implementation of single head attention with configurable matrix multiplication method
+void single_head_attention_impl(uniform float Q[], uniform float K[], uniform float V[], uniform float output[],
+                                uniform int seq_len, uniform int d_model, uniform bool use_tiled_matmul) {
     uniform float scale = rsqrt((uniform float)d_model);
 
     // Calculate total memory needed, use a single memory pool
@@ -456,47 +456,48 @@ export void single_head_attention(uniform float Q[], uniform float K[], uniform 
     uniform float *uniform attention_scores = memory_pool;
     uniform float *uniform K_transposed = memory_pool + seq_len * seq_len;
 
-    uniform int numTasks = seq_len / programCount;
-    // Transpose K for QK^T calculation
 #ifndef ONE_THREAD
+    uniform int numTasks = seq_len / programCount;
+#else
+    uniform int numTasks = 1; // Single-threaded execution
+#endif // ONE_THREAD
+
+    // Transpose K for QK^T calculation
     launch[numTasks] transpose_matrix_task(K, K_transposed, d_model, seq_len);
     sync;
-#else
-    transpose_matrix(K, K_transposed, d_model, seq_len);
-#endif // ONE_THREAD
 
     // Compute QK^T using matmul: (seq_len x d_model) * (d_model x seq_len) = (seq_len x seq_len)
-#ifdef GOTO_IMPL
-    gemm(Q, K_transposed, attention_scores, seq_len, seq_len, d_model);
-#else
-#ifndef ONE_THREAD
-    launch[numTasks] matmul_task(Q, K_transposed, attention_scores, seq_len, d_model, seq_len);
-    sync;
-#else
-    matmul(Q, K_transposed, attention_scores, seq_len, d_model, seq_len);
-#endif // ONE_THREAD
-#endif // GOTO_IMPL
+    if (use_tiled_matmul) {
+        launch[numTasks] matmul_task(Q, K_transposed, attention_scores, seq_len, d_model, seq_len);
+        sync;
+    } else {
+        gemm(Q, K_transposed, attention_scores, seq_len, seq_len, d_model);
+    }
 
     // Apply softmax to each row of attention_scores
-#ifndef ONE_THREAD
     launch[numTasks] softmax_task(attention_scores, scale, seq_len);
     sync;
-#else
-    softmax(attention_scores, scale, seq_len);
-#endif // ONE_THREAD
 
     // Compute attention_scores * V using matmul: (seq_len x seq_len) * (seq_len x d_model) = (seq_len x d_model)
-#ifdef GOTO_IMPL
-    gemm(attention_scores, V, output, seq_len, d_model, seq_len);
-#else
-#ifndef ONE_THREAD
-    launch[numTasks] matmul_task(attention_scores, V, output, seq_len, seq_len, d_model);
-    sync;
-#else
-    matmul(attention_scores, V, output, seq_len, seq_len, d_model);
-#endif // ONE_THREAD
-#endif // GOTO_IMPL
+    if (use_tiled_matmul) {
+        launch[numTasks] matmul_task(attention_scores, V, output, seq_len, seq_len, d_model);
+        sync;
+    } else {
+        gemm(attention_scores, V, output, seq_len, d_model, seq_len);
+    }
 
     // Free allocated memory
     delete[] memory_pool;
+}
+
+export void single_head_attention_goto_matmul(uniform float Q[], uniform float K[], uniform float V[],
+                                              uniform float output[], uniform int seq_len, uniform int d_model) {
+    // Call the common implementation with use_tiled_matmul = false (use gemm)
+    single_head_attention_impl(Q, K, V, output, seq_len, d_model, GOTO_MATMUL);
+}
+
+export void single_head_attention_tiled_matmul(uniform float Q[], uniform float K[], uniform float V[],
+                                               uniform float output[], uniform int seq_len, uniform int d_model) {
+    // Call the common implementation with use_tiled_matmul = true (use matmul_task)
+    single_head_attention_impl(Q, K, V, output, seq_len, d_model, TILED_MATMUL);
 }
