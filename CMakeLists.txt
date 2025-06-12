@@ -536,6 +536,10 @@ set(ALL_STDLIB_HEADERS
   svml.isph
   target.isph
 )
+set(INTRINSICS_HEADERS
+  intrinsics/emmintrin.isph
+  intrinsics/xmmintrin.isph
+)
 set(STDLIB_ISPC_FILES stdlib/stdlib.ispc)
 foreach (header ${ALL_STDLIB_HEADERS})
     list(APPEND STDLIB_ISPC_FILES stdlib/include/${header})
@@ -918,6 +922,11 @@ if (ISPC_SLIM_BINARY)
     endforeach()
     install(DIRECTORY ${BITCODE_FOLDER} DESTINATION share)
 endif()
+
+# Install intrinsics headers
+foreach (header ${INTRINSICS_HEADERS})
+    install (FILES "stdlib/include/${header}" DESTINATION include/intrinsics)
+endforeach()
 
 set(ISPC_DEPS generic-target-bc stdlibs-bc stdlib-headers)
 

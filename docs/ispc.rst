@@ -792,6 +792,10 @@ The struct operators overloading feature has been extended to support
 overloading of the unary, assignment and the whole set of binary
 operators.
 
+ISPC now includes a new ``include/intrinsics`` directory containing header
+files that implement selected SSE intrinsics in ISPC. If you're porting
+existing code from intrinsics to ISPC, you can use these headers as a reference.
+
 
 Getting Started with ISPC
 =========================
