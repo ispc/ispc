@@ -230,3 +230,25 @@ Advantages over ctypes:
 * Native Python Integration: The Transform struct is exposed as a proper Python class with attributes, making it more intuitive and Pythonic to use.
 * Better Error Handling: C++ exceptions are properly translated to Python exceptions, with meaningful error messages.
 * Simplified Array Handling: No need to manually extract pointers from NumPy arrays or manage strides - nanobind handles this transparently.
+
+Attention
+=========
+
+This example demonstrates efficient implementation of the single-head attention mechanism commonly used in transformer-based neural networks. It showcases advanced ISPC techniques including:
+
+* Multiple matrix multiplication implementations (GOTO-based and tiled)
+* Memory pool management for efficient intermediate tensor storage
+* Task-based parallelism for scaling across CPU cores
+* Softmax implementation with optimized memory access patterns
+
+The example includes:
+
+* ISPC implementations of attention with two different algorithms:
+  - GOTO-matmul: Uses the GEMM implementation optimized with blocking and vectorization
+  - Tiled-matmul: Uses task-based parallelism with tiled execution for better cache locality
+
+* A Python benchmark using nanobind that:
+  - Compares performance of both ISPC implementations against PyTorch
+  - Validates numerical correctness of the results
+  - Reports detailed performance metrics (GFLOPS, speedup ratios)
+  - Analyzes execution time variability
