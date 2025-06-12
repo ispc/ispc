@@ -49,6 +49,7 @@ set (EXAMPLES_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 add_subdirectory(aobench)
 add_subdirectory(aobench_instrumented)
+add_subdirectory(attention)
 add_subdirectory(deferred)
 add_subdirectory(gmres)
 add_subdirectory(mandelbrot)

@@ -9,7 +9,7 @@ echo "APT::Acquire::Retries \"3\";" | sudo tee -a /etc/apt/apt.conf.d/80-retries
 for i in {1..5}
 do
   sudo apt-get update | tee log${i}.txt
-  sudo apt-get install libc6-dev-i386 g++-multilib lib32stdc++6 | tee -a log${i}.txt
+  sudo apt-get install libc6-dev-i386 g++-multilib lib32stdc++6 libtbb2-dev | tee -a log${i}.txt
   if [[ ! `grep "^Err: " log${i}.txt` && ! `grep "^E: " log${i}.txt` ]]; then
     echo "APT packages installation was successful"
     break
