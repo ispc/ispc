@@ -505,7 +505,9 @@ class ConstExpr : public Expr {
     ConstExpr(const ConstExpr *old, SourcePos pos);
 
     static inline bool classof(ConstExpr const *) { return true; }
-    static inline bool classof(ASTNode const *N) { return N->getValueID() == ConstExprID; }
+    static inline bool classof(ASTNode const *N) {
+        return N->getValueID() == ConstExprID || N->getValueID() == ConstSymbolExprID;
+    }
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetTypeImpl() const;
@@ -547,7 +549,11 @@ class ConstExpr : public Expr {
     /** Return true if the type and values of two ConstExpr are the same. */
     bool IsEqual(const ConstExpr *ce) const;
 
+  protected:
+    ConstExpr(const Symbol *s, SourcePos pos);
+
   private:
+    ConstExpr(const ConstExpr *old, SourcePos pos, unsigned scid);
     AtomicType::BasicType getBasicType() const;
 
     const Type *type;
@@ -563,6 +569,30 @@ class ConstExpr : public Expr {
         uint64_t uint64Val[ISPC_MAX_NVEC];
     };
     std::vector<llvm::APFloat> fpVal;
+};
+
+/** @brief Expression representing a reference to a symbol being also a compile-time constant value. */
+class ConstSymbolExpr : public ConstExpr {
+  public:
+    /** Create ConstExpr with the same type, values and symbol as the given one, but at the given position. */
+    ConstSymbolExpr(const ConstSymbolExpr *old, SourcePos pos);
+
+    /** Create ConstSymbolExpr from a symbol holding a constant */
+    ConstSymbolExpr(Symbol *s, SourcePos pos);
+
+    static inline bool classof(ConstSymbolExpr const *) { return true; }
+    static inline bool classof(ASTNode const *N) { return N->getValueID() == ConstSymbolExprID; }
+
+    llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
+    const Type *GetLValueType() const;
+
+    ConstSymbolExpr *Instantiate(TemplateInstantiation &templInst) const;
+    Symbol *GetBaseSymbol() const;
+
+    void Print(Indent &indent) const;
+
+  private:
+    Symbol *symbol;
 };
 
 /** @brief Expression representing a type cast of the given expression to a

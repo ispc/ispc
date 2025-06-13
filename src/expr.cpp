@@ -6201,7 +6201,7 @@ ConstExpr::ConstExpr(const Type *t, bool *b, SourcePos p) : Expr(p, ConstExprID)
     }
 }
 
-ConstExpr::ConstExpr(const ConstExpr *old, SourcePos p) : Expr(p, ConstExprID) {
+ConstExpr::ConstExpr(const ConstExpr *old, SourcePos p, unsigned scid) : Expr(p, scid) {
     type = old->type;
 
     AtomicType::BasicType basicType = getBasicType();
@@ -6244,6 +6244,10 @@ ConstExpr::ConstExpr(const ConstExpr *old, SourcePos p) : Expr(p, ConstExprID) {
         FATAL("unimplemented const type");
     }
 }
+
+ConstExpr::ConstExpr(const ConstExpr *old, SourcePos p) : ConstExpr(old, p, ConstExprID) {}
+
+ConstExpr::ConstExpr(const Symbol *s, SourcePos p) : ConstExpr(s->constValue, p, ConstSymbolExprID) {}
 
 AtomicType::BasicType ConstExpr::getBasicType() const {
     const AtomicType *at = CastType<AtomicType>(type);
@@ -6775,6 +6779,48 @@ std::string ConstExpr::GetString() const { return GetValuesAsStr(", "); }
 
 void ConstExpr::Print(Indent &indent) const {
     indent.Print("ConstExpr", pos);
+
+    printf("[%s] (", GetTypeUnsafe()->GetString().c_str());
+    printf("%s", GetValuesAsStr((char *)", ").c_str());
+    printf(")\n");
+
+    indent.Done();
+}
+
+///////////////////////////////////////////////////////////////////////////
+// ConstSymbolExpr
+
+ConstSymbolExpr::ConstSymbolExpr(const ConstSymbolExpr *old, SourcePos p)
+    : ConstExpr(old->symbol, p), symbol(old->symbol) {}
+
+ConstSymbolExpr::ConstSymbolExpr(Symbol *s, SourcePos p) : ConstExpr(s, p), symbol(s) {}
+
+llvm::Value *ConstSymbolExpr::GetLValue(FunctionEmitContext *ctx) const {
+    if (symbol->storageInfo == nullptr) {
+        return nullptr;
+    }
+    ctx->SetDebugPos(pos);
+    return symbol->storageInfo->getPointer();
+}
+
+const Type *ConstSymbolExpr::GetLValueType() const {
+    if (CastType<ReferenceType>(symbol->type) != nullptr) {
+        return PointerType::GetUniform(symbol->type->GetReferenceTarget());
+    } else {
+        return PointerType::GetUniform(symbol->type);
+    }
+}
+
+ConstSymbolExpr *ConstSymbolExpr::Instantiate(TemplateInstantiation &templInst) const {
+    Symbol *resolvedSymbol = templInst.InstantiateSymbol(symbol);
+    AssertPos(pos, resolvedSymbol != nullptr);
+    return new ConstSymbolExpr(resolvedSymbol, pos);
+}
+
+Symbol *ConstSymbolExpr::GetBaseSymbol() const { return symbol; }
+
+void ConstSymbolExpr::Print(Indent &indent) const {
+    indent.Print("ConstSymbolExpr", pos);
 
     printf("[%s] (", GetTypeUnsafe()->GetString().c_str());
     printf("%s", GetValuesAsStr((char *)", ").c_str());
@@ -8928,7 +8974,7 @@ Expr *SymbolExpr::Optimize() {
         return nullptr;
     } else if (symbol->constValue != nullptr) {
         AssertPos(pos, GetType()->IsConstType());
-        return new ConstExpr(symbol->constValue, pos);
+        return new ConstSymbolExpr(symbol, pos);
     } else {
         return this;
     }
