@@ -124,6 +124,7 @@ class ASTNode : public Traceable {
         AssignExprID,
         BinaryExprID,
         ConstExprID,
+        ConstSymbolExprID,
         DerefExprID,
         PtrDerefExprID,
         RefDerefExprID,
