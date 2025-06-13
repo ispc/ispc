@@ -122,10 +122,17 @@ function(add_ispc_to_target)
         # So convert to a list and then use generator expression, i.e. "$<JOIN:${FLAGS},;>"
         separate_arguments(FLAGS NATIVE_COMMAND ${BENCHMARKS_ISPC_FLAGS})
 
+        # Pass HAS_FP16 definition to ISPC compiler
+        if(HAS_FP16_SUPPORT)
+            set(ISPC_FP16_FLAG "-DHAS_FP16")
+        else()
+            set(ISPC_FP16_FLAG "")
+        endif()
+
         add_custom_command(
             OUTPUT ${ISPC_TARGET_OBJS} ${ISPC_TARGET_HEADERS}
             COMMENT "Compiling ${ISPC_SRC_FILE} for ${BENCHMARKS_ISPC_TARGETS} target(s)"
-            COMMAND           ${ISPC_EXECUTABLE} ${SRC_LOCATION} -o ${ISPC_OBJ} -h ${ISPC_HEADER} --arch=${ISPC_ARCH} --target=${BENCHMARKS_ISPC_TARGETS} ${ISPC_PIC} "$<JOIN:${FLAGS},;>"
+            COMMAND           ${ISPC_EXECUTABLE} ${SRC_LOCATION} -o ${ISPC_OBJ} -h ${ISPC_HEADER} --arch=${ISPC_ARCH} --target=${BENCHMARKS_ISPC_TARGETS} ${ISPC_PIC} ${ISPC_FP16_FLAG} "$<JOIN:${FLAGS},;>"
             DEPENDS ${ISPC_EXECUTABLE} ${ISPC_DEPS}
             DEPENDS ${ISPC_SRC_FILE}
             COMMAND_EXPAND_LISTS

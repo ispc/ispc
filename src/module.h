@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <stdio.h>
 #include <string>
 #include <vector>
 
@@ -35,8 +36,6 @@ class raw_string_ostream;
 
 namespace ispc {
 
-struct DispatchHeaderInfo;
-
 #ifdef ISPC_XE_ENABLED
 // Derived from ocloc_api.h
 using invokePtr = int (*)(unsigned, const char **, const uint32_t, const uint8_t **, const uint64_t *, const char **,
@@ -44,6 +43,14 @@ using invokePtr = int (*)(unsigned, const char **, const uint32_t, const uint8_t
                           uint64_t **, char ***);
 using freeOutputPtr = int (*)(uint32_t *, uint8_t ***, uint64_t **, char ***);
 #endif
+
+// Definition and member object capturing preprocessing stream during Module lifetime.
+struct CPPBuffer {
+    CPPBuffer() : str{}, os{std::make_unique<llvm::raw_string_ostream>(str)} {}
+    ~CPPBuffer() = default;
+    std::string str;
+    std::unique_ptr<llvm::raw_string_ostream> os;
+};
 
 /**
  * @class Module
@@ -128,17 +135,18 @@ class Module {
     /** After a source file has been compiled, output can be generated in a
         number of different formats. */
     enum OutputType {
-        Asm = 0,     /** Generate text assembly language output */
-        Bitcode,     /** Generate LLVM IR bitcode output */
-        BitcodeText, /** Generate LLVM IR Text output */
-        Object,      /** Generate a native object file */
-        Header,      /** Generate a C/C++ header file with
-                         declarations of 'export'ed functions, global
-                         variables, and the types used by them. */
-        Deps,        /** generate dependencies */
-        DevStub,     /** generate device-side offload stubs */
-        HostStub,    /** generate host-side offload stubs */
-        CPPStub,     /** generate preprocessed stubs (-E/-dD/-dM mode) */
+        Asm = 0,         /** Generate text assembly language output */
+        Bitcode,         /** Generate LLVM IR bitcode output */
+        BitcodeText,     /** Generate LLVM IR Text output */
+        Object,          /** Generate a native object file */
+        Header,          /** Generate a C/C++ header file with
+                             declarations of 'export'ed functions, global
+                             variables, and the types used by them. */
+        NanobindWrapper, /** Generate a C++ wrapper file for nanobind */
+        Deps,            /** generate dependencies */
+        DevStub,         /** generate device-side offload stubs */
+        HostStub,        /** generate host-side offload stubs */
+        CPPStub,         /** generate preprocessed stubs (-E/-dD/-dM mode) */
 #ifdef ISPC_XE_ENABLED
         ZEBIN, /** generate L0 binary file */
         SPIRV, /** generate spir-v file */
@@ -236,18 +244,19 @@ class Module {
          * @param outputFlags       Flags controlling output generation
          * @param outFileName       Main output file name
          * @param headerFileName    Header file name
+         * @param nbWrapFileName    Nanobind wrapper file name
          * @param depsFileName      Dependencies file name
          * @param hostStubFileName  Host stub file name
          * @param devStubFileName   Device stub file name
          * @param depsTargetName     Dependencies target name
          */
         Output(OutputType outputType, OutputFlags outputFlags, const char *outFileName, const char *headerFileName,
-               const char *depsFileName, const char *hostStubFileName, const char *devStubFileName,
-               const char *depsTargetName)
+               const char *nbWrapFileName, const char *depsFileName, const char *hostStubFileName,
+               const char *devStubFileName, const char *depsTargetName)
             : type(outputType), flags(outputFlags), depsTarget(depsTargetName ? depsTargetName : ""),
               out(outFileName ? outFileName : ""), header(headerFileName ? headerFileName : ""),
-              deps(depsFileName ? depsFileName : ""), hostStub(hostStubFileName ? hostStubFileName : ""),
-              devStub(devStubFileName ? devStubFileName : "") {}
+              nbWrap(nbWrapFileName ? nbWrapFileName : ""), deps(depsFileName ? depsFileName : ""),
+              hostStub(hostStubFileName ? hostStubFileName : ""), devStub(devStubFileName ? devStubFileName : "") {}
 
         OutputType type{};
         OutputFlags flags{};
@@ -257,6 +266,7 @@ class Module {
         // Output file names
         std::string out{};      /**< Main output file name */
         std::string header{};   /**< Header file name */
+        std::string nbWrap{};   /**< Nanobind wrapper file name */
         std::string deps{};     /**< Dependencies file name */
         std::string hostStub{}; /**< Host stub file name */
         std::string devStub{};  /**< Device stub file name */
@@ -288,6 +298,29 @@ class Module {
          * @return The header file name for the target
          */
         std::string HeaderFileNameTarget(Target *target) const;
+    };
+
+    /**
+     * @struct DispatchHeaderInfo
+     * Information for generating dispatch headers
+     */
+    struct DispatchHeaderInfo {
+        bool EmitUnifs = false;
+        bool EmitFuncs = false;
+        bool EmitFrontMatter = false;
+        bool EmitBackMatter = false;
+        bool Emit4 = false;
+        bool Emit8 = false;
+        bool Emit16 = false;
+        FILE *file = nullptr;
+        const char *fn = nullptr;
+        std::string header{};
+
+        bool initialize(std::string headerFileName);
+
+        void closeFile();
+
+        ~DispatchHeaderInfo() { closeFile(); }
     };
 
     /**
@@ -335,6 +368,8 @@ class Module {
 
     static int LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputType, std::string outFileName);
 
+    const char *RegisterDependency(const std::string &fileName);
+
     /** Total number of errors encountered during compilation. */
     int errorCount{0};
 
@@ -367,17 +402,35 @@ class Module {
     Output output{};
     CompilationMode m_compilationMode{};
 
-    // Definition and member object capturing preprocessing stream during Module lifetime.
-    struct CPPBuffer {
-        CPPBuffer() : str{}, os{std::make_unique<llvm::raw_string_ostream>(str)} {}
-        ~CPPBuffer() = default;
-        std::string str;
-        std::unique_ptr<llvm::raw_string_ostream> os;
-    };
-
     std::unique_ptr<CPPBuffer> bufferCPP{nullptr};
 
     std::vector<std::pair<const Type *, SourcePos>> exportedTypes;
+
+    const std::vector<OutputTypeInfo> outputTypeInfos = {
+        /* Asm         */ {"assembly", {"s"}},
+        /* Bitcode     */ {"LLVM bitcode", {"bc"}},
+        /* BitcodeText */ {"LLVM assembly", {"ll"}},
+        /* Object      */ {"object", {"o", "obj"}},
+        /* Header      */ {"header", {"h", "hh", "hpp"}},
+        /* Nanobind    */ {"nanobind wrapper", {"cpp", "cxx", "cc"}},
+        /* Deps        */ {"dependencies", {}}, // No suffix
+        /* DevStub     */ {"dev-side offload stub", {"c", "cc", "c++", "cxx", "cpp"}},
+        /* HostStub    */ {"host-side offload stub", {"c", "cc", "c++", "cxx", "cpp"}},
+        /* CPPStub     */ {"preprocessed stub", {"ispi", "i"}},
+#ifdef ISPC_XE_ENABLED
+        /* ZEBIN       */ {"L0 binary", {"bin"}},
+        /* SPIRV       */ {"SPIR-V", {"spv"}},
+#endif
+        // Deps and other types that don't require warnings can be omitted
+    };
+
+    /*! list of files encountered by the parser. this allows emitting of
+        the module file's dependencies via the -MMM option */
+    std::set<std::string> registeredDependencies;
+
+    /* This set is used to store strings that is referenced in yylloc (SourcePos)
+       in lexer once and not to lost memory via just strduping them. */
+    std::set<std::string> pseudoDependencies;
 
     /**
      * Compiles the module for a single target architecture.
@@ -438,6 +491,11 @@ class Module {
      */
     int WriteOutputFiles();
 
+    /** Check if the given output type is valid for the specified file name
+      suffix. If not, print a warning message. Correct suffixes are defined in
+      outputTypeInfos. */
+    void reportInvalidSuffixWarning(std::string filename, OutputType outputType);
+
     /** Write the corresponding output type to the given file.  Returns
         true on success, false if there has been an error.  The given
         filename may be nullptr, indicating that output should go to standard
@@ -445,6 +503,8 @@ class Module {
     bool writeOutput();
 
     bool writeHeader();
+    void writeHeader(FILE *f);
+    bool writeNanobindWrapper();
     bool writeDispatchHeader(DispatchHeaderInfo *DHI);
 
     /**
@@ -469,20 +529,6 @@ class Module {
 
     int preprocessAndParse();
     int parse();
-
-    /** Run the preprocessor on the given file, writing to the output stream.
-        Returns the number of diagnostic errors encountered. */
-    int execPreprocessor(const char *filename, llvm::raw_string_ostream *ostream,
-                         Globals::PreprocessorOutputType type = Globals::PreprocessorOutputType::Cpp) const;
-
-    /** Helper function to initialize the internal CPP buffer. **/
-    void initCPPBuffer();
-
-    /** Helper function to parse internal CPP buffer. **/
-    void parseCPPBuffer();
-
-    /** Helper function to clean internal CPP buffer. **/
-    void clearCPPBuffer();
 };
 
 } // namespace ispc

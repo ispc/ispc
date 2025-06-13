@@ -48,9 +48,6 @@ list(APPEND M4_IMPLICIT_DEPENDENCIES
     builtins/target-avx-common-8.ll
     builtins/target-avx-common-16.ll
     builtins/target-avx1-i64x4base.ll
-    builtins/target-avx512-common-4.ll
-    builtins/target-avx512-common-8.ll
-    builtins/target-avx512-common-16.ll
     builtins/target-avx512-utils.ll
     builtins/target-neon-common.ll
     builtins/target-sse2-common.ll

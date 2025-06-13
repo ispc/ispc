@@ -400,6 +400,35 @@ while { return TOKEN_WHILE; }
 "operator>>" { return lParseOperator(yytext); }
 "operator/"  { return lParseOperator(yytext); }
 "operator%"  { return lParseOperator(yytext); }
+"operator==" { return lParseOperator(yytext); }
+"operator!=" { return lParseOperator(yytext); }
+"operator>" { return lParseOperator(yytext); }
+"operator<" { return lParseOperator(yytext); }
+"operator>=" { return lParseOperator(yytext); }
+"operator<=" { return lParseOperator(yytext); }
+"operator&" { return lParseOperator(yytext); }
+"operator^" { return lParseOperator(yytext); }
+"operator|" { return lParseOperator(yytext); }
+"operator&&" { return lParseOperator(yytext); }
+"operator||" { return lParseOperator(yytext); }
+
+"operator++" { return lParseOperator(yytext); }
+"operator--" { return lParseOperator(yytext); }
+"operator~" { return lParseOperator(yytext); }
+"operator!" { return lParseOperator(yytext); }
+
+"operator*=" { return lParseOperator(yytext); }
+"operator/=" { return lParseOperator(yytext); }
+"operator%=" { return lParseOperator(yytext); }
+"operator+=" { return lParseOperator(yytext); }
+"operator-=" { return lParseOperator(yytext); }
+"operator<<=" { return lParseOperator(yytext); }
+"operator>>=" { return lParseOperator(yytext); }
+"operator&=" { return lParseOperator(yytext); }
+"operator|=" { return lParseOperator(yytext); }
+"operator^=" { return lParseOperator(yytext); }
+"operator=" { return lParseOperator(yytext); }
+
 
 L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERAL; }
 
@@ -937,7 +966,7 @@ static void lHandleCppHash(SourcePos *pos) {
         filename.push_back(*src);
         ++src;
     }
-    pos->name = RegisterDependency(filename);
+    pos->name = m->RegisterDependency(filename);
 }
 
 

@@ -117,87 +117,6 @@ define <32 x i16> @__float_to_half_varying(<32 x float> %v) nounwind readnone al
 ;; fast math mode
 fastMathFTZDAZ_x86()
 
-;; round/floor/ceil
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; round/floor/ceil uniform float
-
-;; TODO implement through native LLVM intrinsics for round/floor/ceil float/double
-
-declare <4 x float> @llvm.x86.sse41.round.ss(<4 x float>, <4 x float>, i32) nounwind readnone
-
-define float @__round_uniform_float(float) nounwind readonly alwaysinline {
-  ; roundss, round mode nearest 0b00 | don't signal precision exceptions 0b1000 = 8
-  ; the roundss intrinsic is a total mess--docs say:
-  ;
-  ;  __m128 _mm_round_ss (__m128 a, __m128 b, const int c)
-  ;
-  ;  b is a 128-bit parameter. The lowest 32 bits are the result of the rounding function
-  ;  on b0. The higher order 96 bits are copied directly from input parameter a. The
-  ;  return value is described by the following equations:
-  ;
-  ;  r0 = RND(b0)
-  ;  r1 = a1
-  ;  r2 = a2
-  ;  r3 = a3
-  ;
-  ;  It doesn't matter what we pass as a, since we only need the r0 value
-  ;  here.  So we pass the same register for both.  Further, only the 0th
-  ;  element of the b parameter matters
-  %xi = insertelement <4 x float> undef, float %0, i32 0
-  %xr = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %xi, <4 x float> %xi, i32 8)
-  %rs = extractelement <4 x float> %xr, i32 0
-  ret float %rs
-}
-
-define float @__floor_uniform_float(float) nounwind readonly alwaysinline {
-  ; see above for round_ss instrinsic discussion...
-  %xi = insertelement <4 x float> undef, float %0, i32 0
-  ; roundps, round down 0b01 | don't signal precision exceptions 0b1001 = 9
-  %xr = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %xi, <4 x float> %xi, i32 9)
-  %rs = extractelement <4 x float> %xr, i32 0
-  ret float %rs
-}
-
-define float @__ceil_uniform_float(float) nounwind readonly alwaysinline {
-  ; see above for round_ss instrinsic discussion...
-  %xi = insertelement <4 x float> undef, float %0, i32 0
-  ; roundps, round up 0b10 | don't signal precision exceptions 0b1010 = 10
-  %xr = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %xi, <4 x float> %xi, i32 10)
-  %rs = extractelement <4 x float> %xr, i32 0
-  ret float %rs
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; round/floor/ceil uniform doubles
-
-declare <2 x double> @llvm.x86.sse41.round.sd(<2 x double>, <2 x double>, i32) nounwind readnone
-
-define double @__round_uniform_double(double) nounwind readonly alwaysinline {
-  %xi = insertelement <2 x double> undef, double %0, i32 0
-  %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 8)
-  %rs = extractelement <2 x double> %xr, i32 0
-  ret double %rs
-}
-
-define double @__floor_uniform_double(double) nounwind readonly alwaysinline {
-  ; see above for round_ss instrinsic discussion...
-  %xi = insertelement <2 x double> undef, double %0, i32 0
-  ; roundsd, round down 0b01 | don't signal precision exceptions 0b1001 = 9
-  %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 9)
-  %rs = extractelement <2 x double> %xr, i32 0
-  ret double %rs
-}
-
-define double @__ceil_uniform_double(double) nounwind readonly alwaysinline {
-  ; see above for round_ss instrinsic discussion...
-  %xi = insertelement <2 x double> undef, double %0, i32 0
-  ; roundsd, round up 0b10 | don't signal precision exceptions 0b1010 = 10
-  %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 10)
-  %rs = extractelement <2 x double> %xr, i32 0
-  ret double %rs
-}
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; round/floor/ceil varying float/doubles
 
@@ -275,11 +194,17 @@ truncate()
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; min/max
 
-;; TODO: these are from neon-common, need to make all of them standard utils.
-;; TODO: remove int64-minmax from utils
-;; TODO: ogt vs ugt?
-;; TODO: do uint32/int32 versions through comparison
+declare i64 @__max_uniform_int64(i64, i64) nounwind readonly alwaysinline
+declare i64 @__max_uniform_uint64(i64, i64) nounwind readonly alwaysinline
+declare i64 @__min_uniform_int64(i64, i64) nounwind readonly alwaysinline
+declare i64 @__min_uniform_uint64(i64, i64) nounwind readonly alwaysinline
+declare i32 @__min_uniform_int32(i32, i32) nounwind readonly alwaysinline
+declare i32 @__max_uniform_int32(i32, i32) nounwind readonly alwaysinline
+declare i32 @__min_uniform_uint32(i32, i32) nounwind readonly alwaysinline
+declare i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline
 
+;; TODO: these are from neon-common, need to make all of them standard utils.
+;; TODO: ogt vs ugt?
 define float @__max_uniform_float(float, float) nounwind readnone alwaysinline {
   %cmp = fcmp ugt float %0, %1
   %r = select i1 %cmp, float %0, float %1
@@ -290,54 +215,6 @@ define float @__min_uniform_float(float, float) nounwind readnone alwaysinline {
   %cmp = fcmp ult float %0, %1
   %r = select i1 %cmp, float %0, float %1
   ret float %r
-}
-
-define i32 @__min_uniform_int32(i32, i32) nounwind readnone alwaysinline {
-  %cmp = icmp slt i32 %0, %1
-  %r = select i1 %cmp, i32 %0, i32 %1
-  ret i32 %r
-}
-
-define i32 @__max_uniform_int32(i32, i32) nounwind readnone alwaysinline {
-  %cmp = icmp sgt i32 %0, %1
-  %r = select i1 %cmp, i32 %0, i32 %1
-  ret i32 %r
-}
-
-define i32 @__min_uniform_uint32(i32, i32) nounwind readnone alwaysinline {
-  %cmp = icmp ult i32 %0, %1
-  %r = select i1 %cmp, i32 %0, i32 %1
-  ret i32 %r
-}
-
-define i32 @__max_uniform_uint32(i32, i32) nounwind readnone alwaysinline {
-  %cmp = icmp ugt i32 %0, %1
-  %r = select i1 %cmp, i32 %0, i32 %1
-  ret i32 %r
-}
-
-define i64 @__min_uniform_int64(i64, i64) nounwind readnone alwaysinline {
-  %cmp = icmp slt i64 %0, %1
-  %r = select i1 %cmp, i64 %0, i64 %1
-  ret i64 %r
-}
-
-define i64 @__max_uniform_int64(i64, i64) nounwind readnone alwaysinline {
-  %cmp = icmp sgt i64 %0, %1
-  %r = select i1 %cmp, i64 %0, i64 %1
-  ret i64 %r
-}
-
-define i64 @__min_uniform_uint64(i64, i64) nounwind readnone alwaysinline {
-  %cmp = icmp ult i64 %0, %1
-  %r = select i1 %cmp, i64 %0, i64 %1
-  ret i64 %r
-}
-
-define i64 @__max_uniform_uint64(i64, i64) nounwind readnone alwaysinline {
-  %cmp = icmp ugt i64 %0, %1
-  %r = select i1 %cmp, i64 %0, i64 %1
-  ret i64 %r
 }
 
 define double @__min_uniform_double(double, double) nounwind readnone alwaysinline {
@@ -430,89 +307,7 @@ define <WIDTH x float> @__max_varying_float(<WIDTH x float>,
 }
 
 ;; sqrt/rsqrt/rcp
-
-;; implementation note: sqrt uses native LLVM intrinsics
-declare float @llvm.sqrt.f32(float %Val)
-define float @__sqrt_uniform_float(float) nounwind readonly alwaysinline {
-  %ret = call float @llvm.sqrt.f32(float %0)
-  ret float %ret
-}
-
-declare <16 x float> @llvm.sqrt.v16f32(<16 x float> %Val)
-define <32 x float> @__sqrt_varying_float(<32 x float> %v) nounwind readnone alwaysinline {
-  v32tov16(float, %v, %v0, %v1)
-  %r0 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %v0)
-  %r1 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %v1)
-  v16tov32(float, %r0, %r1, %r)
-  ret <32 x float> %r
-}
-
-declare double @llvm.sqrt.f64(double %Val)
-define double @__sqrt_uniform_double(double) nounwind readonly alwaysinline {
-  %ret = call double @llvm.sqrt.f64(double %0)
-  ret double %ret
-}
-
-declare <16 x double> @llvm.sqrt.v16f64(<16 x double> %Val)
-define <32 x double> @__sqrt_varying_double(<32 x double> %v) nounwind readnone alwaysinline {
-  v32tov16(double, %v, %v0, %v1)
-  %r0 = call <16 x double> @llvm.sqrt.v16f64(<16 x double> %v0)
-  %r1 = call <16 x double> @llvm.sqrt.v16f64(<16 x double> %v1)
-  v16tov32(double, %r0, %r1, %r)
-  ret <32 x double> %r
-}
-
 ;; TODO: need to use intrinsics and N-R approximation.
-define float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
-  %s = call float @llvm.sqrt.f32(float %0)
-  %ret = fdiv float 1., %s
-  ret float %ret
-}
-
-define <32 x float> @__rsqrt_varying_float(<32 x float> %v) nounwind readnone alwaysinline {
-  v32tov16(float, %v, %v0, %v1)
-  %r0 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %v0)
-  %r0r = fdiv <16 x float> <float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1.>, %r0
-  %r1 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %v1)
-  %r1r = fdiv <16 x float> <float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1.>, %r1
-  v16tov32(float, %r0r, %r1r, %r)
-  ret <32 x float> %r
-}
-
-;; TODO: need to use intrinsics
-define float @__rsqrt_fast_uniform_float(float) nounwind readonly alwaysinline {
-  %ret = call float @__rsqrt_uniform_float(float %0)
-  ret float %ret
-}
-
-define <32 x float> @__rsqrt_fast_varying_float(<32 x float> %v) nounwind readnone alwaysinline {
-  %ret = call <32 x float> @__rsqrt_varying_float(<32 x float> %v)
-  ret <32 x float> %ret
-}
-
-;; TODO: need to use intrinsics and N-R approximation.
-define float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
-  %ret = fdiv float 1., %0
-  ret float %ret
-}
-
-define <32 x float> @__rcp_varying_float(<32 x float> %v) nounwind readnone alwaysinline {
-  %ret = fdiv <32 x float> <float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1.,
-                            float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1., float 1.>,
-                            %v
-  ret <32 x float> %ret
-}
-
-;; TODO: need to use intrinsics
-define float @__rcp_fast_uniform_float(float) nounwind readonly alwaysinline {
-  %ret = call float @__rcp_uniform_float(float %0)
-  ret float %ret
-}
-
-define <32 x float> @__rcp_fast_varying_float(<32 x float> %v) nounwind readnone alwaysinline {
-  %ret = call <32 x float> @__rcp_varying_float(<32 x float> %v)
-  ret <32 x float> %ret
-}
 
 ;; bit ops
 

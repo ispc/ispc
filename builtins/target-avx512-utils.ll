@@ -1,4 +1,4 @@
-;;  Copyright (c) 2015-2024, Intel Corporation
+;;  Copyright (c) 2015-2025, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -51,110 +51,14 @@ define i16 @__float_to_half_uniform(float %v) nounwind readnone {
 fastMathFTZDAZ_x86()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; round/floor/ceil
-
-declare <4 x float> @llvm.x86.sse41.round.ss(<4 x float>, <4 x float>, i32) nounwind readnone
-
-define float @__round_uniform_float(float) nounwind readonly alwaysinline {
-  ; roundss, round mode nearest 0b00 | don't signal precision exceptions 0b1000 = 8
-  ; the roundss intrinsic is a total mess--docs say:
-  ;
-  ;  __m128 _mm_round_ss (__m128 a, __m128 b, const int c)
-  ;       
-  ;  b is a 128-bit parameter. The lowest 32 bits are the result of the rounding function
-  ;  on b0. The higher order 96 bits are copied directly from input parameter a. The
-  ;  return value is described by the following equations:
-  ;
-  ;  r0 = RND(b0)
-  ;  r1 = a1
-  ;  r2 = a2
-  ;  r3 = a3
-  ;
-  ;  It doesn't matter what we pass as a, since we only need the r0 value
-  ;  here.  So we pass the same register for both.  Further, only the 0th
-  ;  element of the b parameter matters
-  %xi = insertelement <4 x float> undef, float %0, i32 0
-  %xr = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %xi, <4 x float> %xi, i32 8)
-  %rs = extractelement <4 x float> %xr, i32 0
-  ret float %rs
-}
-
-define float @__floor_uniform_float(float) nounwind readonly alwaysinline {
-  ; see above for round_ss instrinsic discussion...
-  %xi = insertelement <4 x float> undef, float %0, i32 0
-  ; roundps, round down 0b01 | don't signal precision exceptions 0b1001 = 9
-  %xr = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %xi, <4 x float> %xi, i32 9)
-  %rs = extractelement <4 x float> %xr, i32 0
-  ret float %rs
-}
-
-define float @__ceil_uniform_float(float) nounwind readonly alwaysinline {
-  ; see above for round_ss instrinsic discussion...
-  %xi = insertelement <4 x float> undef, float %0, i32 0
-  ; roundps, round up 0b10 | don't signal precision exceptions 0b1010 = 10
-  %xr = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %xi, <4 x float> %xi, i32 10)
-  %rs = extractelement <4 x float> %xr, i32 0
-  ret float %rs
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; rounding doubles
-
-declare <2 x double> @llvm.x86.sse41.round.sd(<2 x double>, <2 x double>, i32) nounwind readnone
-
-define double @__round_uniform_double(double) nounwind readonly alwaysinline {
-  %xi = insertelement <2 x double> undef, double %0, i32 0
-  %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 8)
-  %rs = extractelement <2 x double> %xr, i32 0
-  ret double %rs
-}
-
-define double @__floor_uniform_double(double) nounwind readonly alwaysinline {
-  ; see above for round_ss instrinsic discussion...
-  %xi = insertelement <2 x double> undef, double %0, i32 0
-  ; roundsd, round down 0b01 | don't signal precision exceptions 0b1001 = 9
-  %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 9)
-  %rs = extractelement <2 x double> %xr, i32 0
-  ret double %rs
-}
-
-define double @__ceil_uniform_double(double) nounwind readonly alwaysinline {
-  ; see above for round_ss instrinsic discussion...
-  %xi = insertelement <2 x double> undef, double %0, i32 0
-  ; roundsd, round up 0b10 | don't signal precision exceptions 0b1010 = 10
-  %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 10)
-  %rs = extractelement <2 x double> %xr, i32 0
-  ret double %rs
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; min/max
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int64/uint64 min/max
-define i64 @__max_uniform_int64(i64, i64) nounwind readonly alwaysinline {
-  %c = icmp sgt i64 %0, %1
-  %r = select i1 %c, i64 %0, i64 %1
-  ret i64 %r
-}
-
-define i64 @__max_uniform_uint64(i64, i64) nounwind readonly alwaysinline {
-  %c = icmp ugt i64 %0, %1
-  %r = select i1 %c, i64 %0, i64 %1
-  ret i64 %r
-}
-
-define i64 @__min_uniform_int64(i64, i64) nounwind readonly alwaysinline {
-  %c = icmp slt i64 %0, %1
-  %r = select i1 %c, i64 %0, i64 %1
-  ret i64 %r
-}
-
-define i64 @__min_uniform_uint64(i64, i64) nounwind readonly alwaysinline {
-  %c = icmp ult i64 %0, %1
-  %r = select i1 %c, i64 %0, i64 %1
-  ret i64 %r
-}
+declare i64 @__max_uniform_int64(i64, i64) nounwind readonly alwaysinline
+declare i64 @__max_uniform_uint64(i64, i64) nounwind readonly alwaysinline
+declare i64 @__min_uniform_int64(i64, i64) nounwind readonly alwaysinline
+declare i64 @__min_uniform_uint64(i64, i64) nounwind readonly alwaysinline
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max
@@ -174,32 +78,14 @@ define float @__min_uniform_float(float, float) nounwind readonly alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int min/max
 
-define i32 @__min_uniform_int32(i32, i32) nounwind readonly alwaysinline {
-  %cmp = icmp sgt i32 %1, %0
-  %ret = select i1 %cmp, i32 %0, i32 %1
-  ret i32 %ret
-}
-
-define i32 @__max_uniform_int32(i32, i32) nounwind readonly alwaysinline {
-  %cmp = icmp sgt i32 %1, %0
-  %ret = select i1 %cmp, i32 %1, i32 %0
-  ret i32 %ret
-}
+declare i32 @__min_uniform_int32(i32, i32) nounwind readonly alwaysinline
+declare i32 @__max_uniform_int32(i32, i32) nounwind readonly alwaysinline
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unsigned int min/max
 
-define i32 @__min_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
-  %cmp = icmp ugt i32 %1, %0
-  %ret = select i1 %cmp, i32 %0, i32 %1
-  ret i32 %ret
-}
-
-define i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
-  %cmp = icmp ugt i32 %1, %0
-  %ret = select i1 %cmp, i32 %1, i32 %0
-  ret i32 %ret
-}
+declare i32 @__min_uniform_uint32(i32, i32) nounwind readonly alwaysinline
+declare i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision min/max
@@ -323,16 +209,6 @@ define double @__rcp_uniform_double(double %v) nounwind readonly alwaysinline {
   ret double %iv_mul
 }
 ')
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; sqrt
-
-declare <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float>) nounwind readnone
-
-define float @__sqrt_uniform_float(float) nounwind readonly alwaysinline {
-  sse_unary_scalar(ret, 4, float, @llvm.x86.sse.sqrt.ss, %0)
-  ret float %ret
-}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; switch macro

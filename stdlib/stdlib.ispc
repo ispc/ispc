@@ -1728,6 +1728,40 @@ __declspec(safe, cost1) static inline uniform bool isnan(uniform double v) { ret
 
 __declspec(safe, cost1) static inline bool isnan(double v) { return v != v; }
 
+__declspec(safe, cost1) static inline uniform bool isinf(uniform float16 v) { return intbits(abs(v)) == 0x7C00; }
+
+__declspec(safe, cost1) static inline bool isinf(float16 v) { return intbits(abs(v)) == 0x7C00; }
+
+__declspec(safe, cost1) static inline uniform bool isinf(uniform float v) { return intbits(abs(v)) == 0x7F800000; }
+
+__declspec(safe, cost1) static inline bool isinf(float v) { return intbits(abs(v)) == 0x7F800000; }
+
+__declspec(safe, cost1) static inline uniform bool isinf(uniform double v) {
+    return intbits(abs(v)) == 0x7FF0000000000000;
+}
+
+__declspec(safe, cost1) static inline bool isinf(double v) { return intbits(abs(v)) == 0x7FF0000000000000; }
+
+__declspec(safe, cost1) static inline uniform bool isfinite(uniform float16 v) {
+    return (intbits(v) & 0x7C00) != 0x7C00;
+}
+
+__declspec(safe, cost1) static inline bool isfinite(float16 v) { return (intbits(v) & 0x7C00) != 0x7C00; }
+
+__declspec(safe, cost1) static inline uniform bool isfinite(uniform float v) {
+    return (intbits(v) & 0x7F800000) != 0x7F800000;
+}
+
+__declspec(safe, cost1) static inline bool isfinite(float v) { return (intbits(v) & 0x7F800000) != 0x7F800000; }
+
+__declspec(safe, cost1) static inline uniform bool isfinite(uniform double v) {
+    return (intbits(v) & 0x7FF0000000000000) != 0x7FF0000000000000;
+}
+
+__declspec(safe, cost1) static inline bool isfinite(double v) {
+    return (intbits(v) & 0x7FF0000000000000) != 0x7FF0000000000000;
+}
+
 __declspec(safe, cost1) static inline int8 abs(int8 a) { return a > 0 ? a : -a; }
 
 __declspec(safe, cost1) static inline uniform int8 abs(uniform int8 a) { return a > 0 ? a : -a; }

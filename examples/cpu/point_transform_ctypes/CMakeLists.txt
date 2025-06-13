@@ -13,7 +13,9 @@ set(ISPC_HEADER ${CMAKE_CURRENT_BINARY_DIR}/point_transform_ispc.h)
 
 # Set ISPC flags
 set(ISPC_FLAGS -O2 --target=host)
-if (NOT WIN32)
+if (WIN32)
+    set(ISPC_FLAGS ${ISPC_FLAGS} --dllexport)
+else()
     set(ISPC_FLAGS ${ISPC_FLAGS} --pic)
 endif()
 
@@ -39,15 +41,28 @@ add_custom_target(point_transform_ctypes_py
 
 add_dependencies(${example_name} point_transform_ctypes_py)
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/point_transform_ctypes)
 # On Windows, link with appropriate libraries to provide DLL entry point
 if(WIN32)
     target_link_libraries(${example_name} PRIVATE msvcrt)
+    set_target_properties(${example_name} PROPERTIES
+        LINKER_LANGUAGE CXX
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    )
+    if (MSVC)
+        add_custom_command(TARGET ${example_name} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy
+                $<TARGET_FILE:${example_name}>
+                ${CMAKE_BINARY_DIR}/${example_name}/$<TARGET_FILE_NAME:${example_name}>
+            COMMENT "Copying ${example_name} DLL to build directory"
+    )
+    endif()
 endif()
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/point_transform_ctypes)
 # Installation targets
 if (NOT ISPC_PREPARE_PACKAGE)
-    install(TARGETS ${example_name} LIBRARY DESTINATION examples/${example_name})
+    install(TARGETS ${example_name} LIBRARY DESTINATION examples/${example_name}
+                                    RUNTIME DESTINATION examples/${example_name})
     install(FILES ${ISPC_HEADER} DESTINATION examples/${example_name})
     install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/point_transform.py DESTINATION examples/${example_name})
 endif()

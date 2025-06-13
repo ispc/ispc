@@ -18,7 +18,6 @@ permissions:
   contents: read
 
 env:
-  LLVM_REPO: https://github.com/ispc/ispc.dependencies
   ISPC_HOME: ${{ github.workspace }}
   LLVM_HOME: ${{ github.workspace }}
   LLVM_VERSION: "20.1"
@@ -32,7 +31,7 @@ jobs:
       contents: write  # Needed for release creation/update
 
     env:
-      LLVM_TAR: llvm-20.1.2-ubuntu22.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-20.1.4-ubuntu22.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -76,15 +75,14 @@ jobs:
         append_body: false
 
   windows:
-    runs-on: windows-2019
+    runs-on: windows-2022
     # Disabling this rebuild for non ispc/ispc repo
     if: github.repository == 'ispc/ispc'
     permissions:
       contents: write  # Needed for release creation/update
 
     env:
-      CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
-      LLVM_TAR: llvm-20.1.2-win.vs2019-Release+Asserts-lto-x86.arm.wasm.tar.7z
+      LLVM_TAR: llvm-20.1.4-win.vs2022-Release+Asserts-lto-x86.arm.wasm.tar.7z
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -99,7 +97,7 @@ jobs:
       shell: cmd
       run: |
         call scripts\install_emscripten.bat
-        set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        set VSVARS="C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
         call %VSVARS%
         cmake -B build superbuild --preset os -G "NMake Makefiles" -DLTO=ON -DPREBUILT_STAGE2_PATH=%LLVM_HOME%\bin-%LLVM_VERSION% -DCMAKE_INSTALL_PREFIX=%GITHUB_WORKSPACE%\ispc-xe -DEXPLICIT_ENV_PATH=OFF -DINSTALL_WITH_XE_DEPS=ON -DGNUWIN32=%CROSS_TOOLS_GNUWIN32%
         cmake --build build

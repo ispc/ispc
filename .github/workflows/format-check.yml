@@ -11,9 +11,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  LLVM_REPO: https://github.com/ispc/ispc.dependencies
-
 jobs:
   check-format:
     runs-on: ubuntu-24.04

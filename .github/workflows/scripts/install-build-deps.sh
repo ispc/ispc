@@ -1,4 +1,29 @@
 #!/bin/bash -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${SCRIPT_DIR}/init-env.sh"
+
+OS=$(uname -s)
+case "$OS" in
+  Darwin*)
+    RUNNER=${1:-"macos-13"}
+    ls -al /Library/Developer/CommandLineTools/SDKs/
+    xcrun --show-sdk-path
+    [ -n "$LLVM_REPO" ] && wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 --no-verbose "$LLVM_REPO/releases/download/llvm-${LLVM_VERSION}-ispc-dev/${LLVM_TAR}"
+    tar xf "$LLVM_TAR"
+    echo "${GITHUB_WORKSPACE}/bin-${LLVM_VERSION}/bin" >> "$GITHUB_PATH"
+    brew install bison flex
+    if [ "$RUNNER" == "macos-14" ]; then
+      echo "/opt/homebrew/opt/bison/bin" >> "$GITHUB_PATH"
+      echo "/opt/homebrew/opt/flex/bin" >> "$GITHUB_PATH"
+    else
+      echo "/usr/local/opt/bison/bin" >> "$GITHUB_PATH"
+      echo "/usr/local/opt/flex/bin" >> "$GITHUB_PATH"
+    fi
+    exit 0
+    ;;
+esac
+
 echo "APT::Acquire::Retries \"3\";" | sudo tee -a /etc/apt/apt.conf.d/80-retries
 
 # Detect system architecture
@@ -13,6 +38,8 @@ for i in {1..5}
 do
   sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y && sudo apt-get -y update | tee log${i}.txt
   sudo apt-get install ninja-build bison flex libtbb-dev libstdc++6 "${CROSS_LIBS[@]}" | tee -a log${i}.txt
+  sudo apt install python3-pip python3-dev
+  pip3 install nanobind numpy
   if [[ ! `grep "^Err: " log${i}.txt` && ! `grep "^E: " log${i}.txt` ]]; then
     echo "APT packages installation was successful"
     break

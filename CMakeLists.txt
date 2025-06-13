@@ -472,6 +472,7 @@ list(APPEND FRONTEND_SOURCES
     src/ctx.h
     src/decl.cpp
     src/decl.h
+    src/header.cpp
     src/expr.cpp
     src/expr.h
     src/func.cpp
@@ -479,6 +480,7 @@ list(APPEND FRONTEND_SOURCES
     src/intrinsics.cpp
     src/module.cpp
     src/module.h
+    src/preprocessor.cpp
     src/stmt.cpp
     src/stmt.h
     src/sym.cpp
@@ -559,9 +561,11 @@ if (UNIX)
     endif()
 else()
     list(APPEND COMPILE_DEFINITIONS NOMINMAX)
-    if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-        list(APPEND COMPILE_DEFINITIONS NDEBUG)
-    endif()
+endif()
+
+# Pass NDEBUG for non-debug builds on all platforms
+if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+    list(APPEND COMPILE_DEFINITIONS NDEBUG)
 endif()
 
 # TODO: It may be confusing that some CMake variables start with ISPC but some

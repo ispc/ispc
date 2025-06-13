@@ -326,7 +326,60 @@ ASTNode *ispc::WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBac
     }
 }
 
-static ASTNode *lOptimizeNode(ASTNode *node, void *) { return node->Optimize(); }
+static ASTNode *lTypeCheckNode(ASTNode *node, void *) {
+    // Skip if already type-checked
+    if (node->IsTypeChecked()) {
+        return node;
+    }
+
+    if (node->IsTypeCheckInProgress()) {
+        // It should not happen but if it did return node without marking it as type-checked to avoid recursion
+        Assert(node->IsTypeCheckInProgress());
+        return node;
+    }
+
+    // Mark that we're starting the type check process for this node
+    node->StartTypeCheck();
+
+    ASTNode *result = node->TypeCheck();
+
+    // Mark that we're finished with type checking this node
+    node->FinishTypeCheck();
+
+    if (result) {
+        // Mark result as type-checked too
+        result->SetTypeChecked();
+    }
+    return result;
+}
+
+static ASTNode *lOptimizeNode(ASTNode *node, void *) {
+    // Skip if already optimized
+    if (node->IsOptimized()) {
+        return node;
+    }
+
+    if (node->IsOptimizeInProgress()) {
+        // It should not happen but if it did return node without marking it as optimized to avoid recursion
+        return node;
+    }
+
+    Assert(node->IsTypeChecked() && "Node must be type-checked before optimization");
+
+    // Mark that we're starting the optimization process for this node
+    node->StartOptimize();
+
+    // Now proceed with optimization
+    ASTNode *result = node->Optimize();
+
+    // Mark that we're finished with optimizing this node
+    node->FinishOptimize();
+
+    if (result) {
+        result->SetOptimized();
+    }
+    return result;
+}
 
 ASTNode *ispc::Optimize(ASTNode *root) { return WalkAST(root, nullptr, lOptimizeNode, nullptr); }
 
@@ -334,13 +387,40 @@ Expr *ispc::Optimize(Expr *expr) { return (Expr *)Optimize((ASTNode *)expr); }
 
 Stmt *ispc::Optimize(Stmt *stmt) { return (Stmt *)Optimize((ASTNode *)stmt); }
 
-static ASTNode *lTypeCheckNode(ASTNode *node, void *) { return node->TypeCheck(); }
-
 ASTNode *ispc::TypeCheck(ASTNode *root) { return WalkAST(root, nullptr, lTypeCheckNode, nullptr); }
 
 Expr *ispc::TypeCheck(Expr *expr) { return (Expr *)TypeCheck((ASTNode *)expr); }
 
 Stmt *ispc::TypeCheck(Stmt *stmt) { return (Stmt *)TypeCheck((ASTNode *)stmt); }
+
+/**
+ * Performs type checking followed by optimization on the given node.
+ * This encapsulates the common pattern of calling TypeCheck() followed by Optimize().
+ */
+ASTNode *ispc::TypeCheckAndOptimize(ASTNode *root) {
+    if (root == nullptr) {
+        return nullptr;
+    }
+
+    // First type check
+    ASTNode *result = TypeCheck(root);
+    if (result == nullptr) {
+        return nullptr;
+    }
+
+    // Then optimize
+    return Optimize(result);
+}
+
+/**
+ * Convenience version of TypeCheckAndOptimize() for Expr *s
+ */
+Expr *ispc::TypeCheckAndOptimize(Expr *expr) { return (Expr *)TypeCheckAndOptimize((ASTNode *)expr); }
+
+/**
+ * Convenience version of TypeCheckAndOptimize() for Stmt *s
+ */
+Stmt *ispc::TypeCheckAndOptimize(Stmt *stmt) { return (Stmt *)TypeCheckAndOptimize((ASTNode *)stmt); }
 
 struct CostData {
     CostData() { cost = foreachDepth = 0; }

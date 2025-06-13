@@ -18,10 +18,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  SDE_MIRROR_ID: 843185
-  SDE_TAR_NAME: sde-external-9.48.0-2024-11-25
-  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
-  LLVM_REPO: https://github.com/ispc/ispc.dependencies
   TARGETS_SMOKE: '["avx2-i32x8"]'
   OPTSETS_SMOKE: "-O2"
   TARGETS_FULL:  '["sse2-i32x4", "sse2-i32x8",
@@ -78,12 +74,9 @@ jobs:
           echo "optsets=${OPTSETS_FULL}" >> "$GITHUB_OUTPUT"
         fi
 
-  linux-build-ispc-llvm20:
+  linux-build-ispc-llvm:
     needs: [define-flow]
     runs-on: ubuntu-latest
-    env:
-      LLVM_VERSION: "20.1"
-      LLVM_TAR: llvm-20.1.2-ubuntu18.04-Release+Asserts-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -110,12 +103,12 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
-        name: ispc_llvm20_linux
+        name: ispc_llvm_linux
         path: build/ispc-trunk-linux.tar.gz
 
 
-  linux-test-llvm20:
-    needs: [define-flow, linux-build-ispc-llvm20]
+  linux-test-llvm:
+    needs: [define-flow, linux-build-ispc-llvm]
     runs-on: ubuntu-latest
     continue-on-error: false
     strategy:
@@ -127,7 +120,7 @@ jobs:
     - name: Download package
       uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
       with:
-        name: ispc_llvm20_linux
+        name: ispc_llvm_linux
 
     - name: Install dependencies and unpack artifacts
       run: |

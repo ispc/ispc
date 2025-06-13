@@ -26,10 +26,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  SDE_MIRROR_ID: 843185
-  SDE_TAR_NAME: sde-external-9.48.0-2024-11-25
-  USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36"
-  LLVM_REPO: https://github.com/ispc/ispc.dependencies
   TARGETS_SMOKE_X86: '["avx2-i32x8", "generic-i32x4"]'
   TARGETS_SMOKE_ARM: '["neon-i32x4"]'
   OPTSETS_SMOKE: "-O2"
@@ -107,7 +103,7 @@ jobs:
       matrix:
         llvm:
           - version: "20.1"
-            full_version: "20.1.2"
+            full_version: "20.1.4"
             short_version: 20
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
@@ -133,7 +129,7 @@ jobs:
             full_version: "19.1.7"
             short_version: 19
           - version: "20.1"
-            full_version: "20.1.2"
+            full_version: "20.1.4"
             short_version: 20
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
@@ -151,7 +147,7 @@ jobs:
       artifact_name: ispc_llvm20_lto_linux
       runner: ubuntu-22.04
       llvm_version: "20.1"
-      llvm_tar: llvm-20.1.2-ubuntu22.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
+      llvm_tar: llvm-20.1.4-ubuntu22.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
       enable_lto: true
 
   linux-build-ispc-llvm20-release:
@@ -162,7 +158,7 @@ jobs:
         artifact_name: ispc_llvm20rel_linux
         runner: ubuntu-22.04
         llvm_version: "20.1"
-        llvm_tar: llvm-20.1.2-ubuntu22.04-Release-x86.arm.wasm.tar.xz
+        llvm_tar: llvm-20.1.4-ubuntu22.04-Release-x86.arm.wasm.tar.xz
         enable_cross: true
 
   linux-build-ispc-xe-llvm20-release:
@@ -173,7 +169,7 @@ jobs:
       artifact_name: ispc_xe_llvm20rel_linux
       runner: ubuntu-22.04
       llvm_version: "20.1"
-      llvm_tar: llvm-20.1.2-ubuntu22.04-Release-x86.arm.wasm.tar.xz
+      llvm_tar: llvm-20.1.4-ubuntu22.04-Release-x86.arm.wasm.tar.xz
       enable_xe: true
 
   linux-build-ispc-wasm:
@@ -184,7 +180,7 @@ jobs:
       artifact_name: ispc-wasm-linux
       runner: ubuntu-22.04
       llvm_version: "20.1"
-      llvm_tar: llvm-20.1.2-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      llvm_tar: llvm-20.1.4-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
       enable_wasm: true
 
   linux-test:
@@ -315,7 +311,7 @@ jobs:
             full_version: "19.1.7"
             short_version: 19
           - version: "20.1"
-            full_version: "20.1.2"
+            full_version: "20.1.4"
             short_version: 20
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
@@ -325,17 +321,15 @@ jobs:
       llvm_version: ${{ matrix.llvm.version }}
       llvm_tar: llvm-${{ matrix.llvm.full_version }}-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
 
-  # Build of LLVM 20 with LTO takes more than 6 hours so we don't have
-  # llvm-20-lto-macos at the moment.
-  macos-build-ispc-llvm18-lto:
+  macos-build-ispc-llvm20-lto:
     needs: [define-flow]
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: macos
-      artifact_name: ispc_llvm18_lto_macos
+      artifact_name: ispc_llvm20_lto_macos
       runner: macos-13
-      llvm_version: 18.1
-      llvm_tar: llvm-18.1.8-macos-Release+Asserts-lto-universal-x86.arm.wasm.tar.xz
+      llvm_version: 20.1
+      llvm_tar: llvm-20.1.4-macos-Release-lto-universal-x86.arm.wasm.tar.xz
       enable_lto: true
 
   macos-test-ispc:
@@ -352,13 +346,13 @@ jobs:
       targets: '["sse4-i32x4"]'
       optsets: -O0 -O2
 
-  macos-test-ispc-llvm18-lto:
-    needs: [define-flow, macos-build-ispc-llvm18-lto]
+  macos-test-ispc-llvm20-lto:
+    needs: [define-flow, macos-build-ispc-llvm20-lto]
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
       platform: macos
       architecture: x86-64
-      artifact_name: ispc_llvm18_lto_macos
+      artifact_name: ispc_llvm20_lto_macos
       targets: '["sse4-i32x4"]'
       optsets: -O0 -O2
       enable_lto: true
@@ -384,22 +378,26 @@ jobs:
           - version: "17.0"
             full_version: "17.0.6"
             short_version: 17
+            vs_version: "vs2019"
           - version: "18.1"
             full_version: "18.1.8"
             short_version: 18
+            vs_version: "vs2022"
           - version: "19.1"
             full_version: "19.1.7"
             short_version: 19
+            vs_version: "vs2022"
           - version: "20.1"
-            full_version: "20.1.2"
+            full_version: "20.1.4"
             short_version: 20
+            vs_version: "vs2022"
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: windows
       artifact_name: ispc_llvm${{ matrix.llvm.short_version }}_win
-      runner: windows-2019
+      runner: windows-2022
       llvm_version: ${{ matrix.llvm.version }}
-      llvm_tar: llvm-${{ matrix.llvm.full_version }}-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      llvm_tar: llvm-${{ matrix.llvm.full_version }}-win.${{ matrix.llvm.vs_version }}-Release+Asserts-x86.arm.wasm.tar.7z
 
   win-build-ispc-llvm20-lto:
     needs: [define-flow]
@@ -407,9 +405,9 @@ jobs:
     with:
       platform: windows
       artifact_name: ispc_llvm20_lto_win
-      runner: windows-2019
+      runner: windows-2022
       llvm_version: 20.1
-      llvm_tar: llvm-20.1.2-win.vs2019-Release+Asserts-lto-x86.arm.wasm.tar.7z
+      llvm_tar: llvm-20.1.4-win.vs2022-Release+Asserts-lto-x86.arm.wasm.tar.7z
       enable_lto: true
 
   win-build-ispc-xe-llvm20-release:
@@ -418,9 +416,9 @@ jobs:
     with:
       platform: windows
       artifact_name: ispc_xe_llvm20rel_win
-      runner: windows-2019
+      runner: windows-2022
       llvm_version: 20.1
-      llvm_tar: llvm-20.1.2-win.vs2019-Release-x86.arm.wasm.tar.7z
+      llvm_tar: llvm-20.1.4-win.vs2022-Release-x86.arm.wasm.tar.7z
       enable_xe: true
 
   win-build-ispc-wasm:
@@ -429,9 +427,9 @@ jobs:
     with:
       platform: windows
       artifact_name: ispc-wasm-windows
-      runner: windows-2019
+      runner: windows-2022
       llvm_version: 20.1
-      llvm_tar: llvm-20.1.2-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
+      llvm_tar: llvm-20.1.4-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z
       enable_wasm: true
 
   win-test:
@@ -504,13 +502,7 @@ jobs:
 
   win-package-examples:
     needs: [define-flow]
-    runs-on: windows-2019
-    env:
-      LLVM_VERSION: "20.1"
-      LLVM_TAR: llvm-20.1.2-win.vs2019-Release+Asserts-x86.arm.wasm.tar.7z
-      LLVM_HOME: "C:\\projects\\llvm"
-      CROSS_TOOLS_GNUWIN32: "C:\\projects\\cross\\gnuwin32"
-      BUILD_TYPE: "Release"
+    runs-on: windows-2022
 
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -538,9 +530,6 @@ jobs:
   linux-package-examples:
     needs: [define-flow]
     runs-on: ubuntu-22.04
-    env:
-      LLVM_VERSION: "20.1"
-      LLVM_TAR: llvm-20.1.2-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
       with:
@@ -563,7 +552,7 @@ jobs:
 
   win-build-examples:
     needs: [win-package-examples, win-build-ispc]
-    runs-on: windows-2019
+    runs-on: windows-2022
     steps:
     - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
       with:
@@ -595,15 +584,15 @@ jobs:
     - name: Run performance tests
       shell: cmd
       run: |
-        set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        set VSVARS="C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
         call %VSVARS%
         set PATH=%GITHUB_WORKSPACE%\ispc-trunk-windows\bin;%PATH%
-        python scripts\perf.py -n 1 -g "Visual Studio 16"
+        python scripts\perf.py -n 1 -g "Visual Studio 17 2022"
 
     - name: Build examples
       run: |
         mkdir examples-build
-        cmake -DCMAKE_C_FLAGS="/WX" -DCMAKE_CXX_FLAGS="/WX" examples-package\examples\cpu -B examples-build -Thost=x64 -G "Visual Studio 16"
+        cmake -DCMAKE_C_FLAGS="/WX" -DCMAKE_CXX_FLAGS="/WX" examples-package\examples\cpu -B examples-build -Thost=x64 -G "Visual Studio 17 2022"
         cmake --build examples-build --target ALL_BUILD --config Release
       shell: cmd
 

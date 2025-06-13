@@ -75,6 +75,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.25.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.26.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.27.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.28.0`_
 
 * `Getting Started with ISPC`_
 
@@ -142,6 +143,9 @@ Contents:
     * `noescape`_
     * `address_space`_
     * `unmangled`_
+    * `external_only`_
+    * `deprecated`_
+    * `aligned`_
 
   + `Expressions`_
 
@@ -713,8 +717,31 @@ removes the dispatcher's reliance on the C standard library.
 Updating ISPC Programs For Changes In ISPC 1.27.0
 -------------------------------------------------
 
-Added cross lane operations for unsigned types: ``broadcast``, ``rotate``, ``shift``,
-and ``shuffle``.
+New targets:
+
+New targets have been added for platforms supporting Intel® Advanced Vector
+Extensions 10.2: ``avx10.2-x4``, ``avx10.2-x8``, ``avx10.2-x16``,
+``avx10.2-x32``, and ``avx10.2-x64``.  Additionally, a new macro
+``ISPC_TARGET_AVX10_2`` has been introduced.
+
+Standard library:
+
+* Cross-lane operations - ``broadcast``, ``rotate``, ``shift``, and
+  ``shuffle`` - are now supported for unsigned types.
+* ISPC's data handling capabilities have been extended to include signed and
+  unsigned ``int8`` and ``int16`` types in the reduction functions.
+* Support for ``packed_load`` and ``packed_store`` operations has also been
+  expanded to include: ``int8``, ``int16`` (signed/unsigned), ``float16``,
+  ``float``, and ``double``.
+* The cube root function ``cbrt`` has been added to the standard library for
+  ``float`` and ``double`` types.
+* Dot product functionality has been enhanced with mixed signedness support for
+  16-bit integers. The following input combinations are now supported: u16 x u16
+  (unsigned x unsigned), i16 x i16 (signed x signed), u16 x i16 (mixed
+  signedness). For consistency with other naming conventions, the function
+  ``dot2add_i16_packed`` has been renamed to ``dot2add_i16i16_packed``.
+
+New standard library functions for short vectors:
 
 The ``max``, ``min`` and ``abs`` functions for short vectors of basic types
 have been added to the standard library. They support both uniform and varying
@@ -736,25 +763,35 @@ vectors:
 The support for short vector types has been added also for the following
 floating-point element wise functions: ``round``, ``floor``, ``ceil``,
 ``trunc``, ``rcp``, ``rcp_fast``, ``sqrt``, ``rsqrt``, ``sin``, ``asin``,
-``cos``, ``acos``, ``tan``, ``atan``, ``exp``, ``log``, ``atan2`` and ``pow``.
+``cos``, ``acos``, ``tan``, ``atan``, ``exp``, ``log``, ``atan2``, ``pow`` and
+``cbrt``.
 
-The cube root function ``cbrt`` has been added to the standard library for
-``float`` and ``double`` types, as well as for short vector types of these
-types.
+Language changes:
 
-Attribute ``aligned(N)`` was added to specify alignment of variables and struct
-types.
+* The ``aligned(N)`` attribute is now available to specify the alignment of
+  variables and struct types.
+* A bug was fixed where unsigned array indices or pointer arithmetic with
+  unsigned offsets could result in overflow due to sign extension when promoting
+  to pointer size. This issue is now resolved, and the compiler correctly
+  handles unsigned integer indexing and pointer arithmetic.
 
-Accessing an array using an unsigned index and pointer arithmetic with unsigned
-offsets was flawed due to overflow caused by sign extension when promoting the
-index to pointer size. This issue has been resolved, and the compiler now
-generates correct code for such cases involving unsigned integer types.
+Compiler flags changes:
 
-Enhanced dot product functionality with mixed signedness support for 16-bit integers.
-Now supporting three input combinations: unsignedxunsigned (u16xu16),
-signedxsigned (i16xi16), and mixed signedness (u16xi16) operations.
-Note that ``dot2add_i16_packed`` was renamed to ``dot2add_i16i16_packed`` for consistency
-with the ``dot4add_*`` functions naming.
+* The ``-dD`` and ``-dM`` flag have been supported. They are useful to debug the
+  preprocessor and to check the macros defined by the compiler.
+
+Updating ISPC Programs For Changes In ISPC 1.28.0
+-------------------------------------------------
+
+ISPC can now generate nanobind wrappers for ISPC modules. This allows easy and
+lightweight integration of ISPC code with Python. The generated wrappers can be
+built into native Python modules and imported into Python code. The
+``--nanobind-wrapper=<filename>`` command-line option enables this feature.
+
+The struct operators overloading feature has been extended to support
+overloading of the unary, assignment and the whole set of binary
+operators.
+
 
 Getting Started with ISPC
 =========================
@@ -932,6 +969,12 @@ By default the compilation will fail if preprocessor encountered an error.
 To ignore the preprocessor errors and proceed with normal compilation flow,
 ``--ignore-preprocessor-errors`` switch may be used.
 
+To debug preprocessor, use ``-dD`` or ``-dM`` flags. The ``-dM`` flag lists
+``#define`` directives for all the macros during the execution of the
+preprocessor, including predefined macros, instead of the normal output. The
+``-dD`` flag lists both the ``#define`` directives and the result of
+preprocessing.
+
 Optimizations are on by default; they can be turned off with ``-O0``:
 
 ::
@@ -976,6 +1019,23 @@ target version for macOS and iOS applications addressing the new linker
 introduced in Xcode 15.0 that issues a warning when no version is provided.
 The version should be specified in the format ``[major.minor]``. When an empty
 string ("") is passed, no minimum version will be specified in the output binary.
+
+The ``--nanobind-wrapper=<filename>`` option can be used to generate a
+``nanobind`` wrapper for the ISPC module. This allows easy and lightweight
+integration of ISPC code into Python. The generated wrapper can be built into a
+native Python module and imported into Python code. During wrapper generation,
+we assume the following:
+
+* All pointer types are treated as numpy arrays: both ``TYPE*`` and ``TYPE[]``
+  map to ``nb::ndarray``
+* .data() method returns compatible pointer
+* ``nanobind`` headers and library are required to build the wrapper.
+
+See `nanobind`_ and `numpy`_ documentation for more details.
+
+.. _nanobind: https://nanobind.readthedocs.io/en/latest/
+
+.. _numpy: https://numpy.org/doc/stable/
 
 Selecting The Compilation Target
 --------------------------------
@@ -1168,7 +1228,7 @@ preprocessor runs:
   * - ISPC
     - 1
     - Enables detecting that the ``ispc`` compiler is processing the file
-  * - ISPC_TARGET_{NEON, SSE2, SSE4, AVX, AVX2, AVX512SKX, AVX512ICL, AVX512SPR}
+  * - ISPC_TARGET_{NEON, SSE2, SSE4, AVX, AVX2, AVX512SKX, AVX512ICL, AVX512SPR, AVX10_2}
     - 1
     - One of these will be set, depending on the compilation target
   * - ISPC_POINTER_SIZE
@@ -2839,12 +2899,20 @@ indexing operation in the last line results in an error.
 Operators Overloading
 ---------------------
 
-ISPC has limited support for overloaded operators for ``struct`` types. Only
-binary operators are supported currently, namely they are: ``*, /, %, +, -, >>
-and <<``. Operators overloading support is similar to the one in C++ language.
-To overload an operator for ``struct S``, you need to declare and implement a
-function using keyword ``operator``, which accepts two parameters of type
-``struct S`` or ``struct S&`` and returns either of these types. For example:
+ISPC has support for overloaded operators for ``struct`` types. This allows you
+to define custom behavior when operators are used with your ``struct`` types.
+
+Binary Operators
+----------------
+
+Binary operators that can be overloaded include: ``*, /, %, +, -, >>, <<, ==,
+!=, <, >, <=, >=, &, |, ^, &&, and ||``. Operators overloading support is
+similar to the one in C++ language.
+
+To overload a binary operator for ``struct S``, you need to declare and
+implement a function using keyword ``operator``, which accepts two parameters of
+type ``struct S`` or ``struct S&`` and returns either of these types or another
+appropriate type. For example:
 
 ::
 
@@ -2861,6 +2929,98 @@ function using keyword ``operator``, which accepts two parameters of type
         print("a.re:   %\na.im:   %\n", a.re, a.im);
         print("b.re:   %\nb.im:   %\n", b.re, b.im);
         print("mul.re: %\nmul.im: %\n", mul.re, mul.im);
+    }
+
+Unary Operators
+----------------
+
+ISPC also supports overloading unary operators: ``++, --, -, !, and ~``. For
+unary operators, the implementation depends on the operator type:
+
+1. **Prefix Increment/Decrement (``++x``, ``--x``)**: Define a function that
+   takes a reference to your struct and returns the modified struct.
+
+::
+
+    struct S operator++(struct S &s) {
+        // Increment logic here
+        s.value++;
+        return s;
+    }
+
+2. **Postfix Increment/Decrement (``x++``, ``x--``)**: Define a function that
+   takes a reference to your struct and an additional dummy int parameter,
+   returning the original value before modification.
+
+::
+
+    struct S operator++(struct S &s, int) {
+        struct S temp = s;  // Save original value
+        s.value++;          // Modify the original
+        return temp;        // Return saved original
+    }
+
+3. **Unary Minus, Logical NOT, Bitwise NOT (``-x``, ``!x``, ``~x``)**: Define a
+   function that takes your struct by value and returns an appropriate result.
+
+::
+
+    struct S operator-(struct S s) {
+        struct S result;
+        result.value = -s.value;
+        return result;
+    }
+
+    bool operator!(struct S s) {
+        return s.value == 0;  // Return true if "empty" or "zero"
+    }
+
+Assignment Operators
+--------------------
+
+ISPC also supports overloading assignment operators for ``struct`` types. The assignment
+operators include: ``=, +=, -=, *=, /=, %=, <<=, >>=, &=, |=, and ^=``. This allows for
+more intuitive operations with custom data types.
+
+1. **Basic Assignment (``=``)**: Define a function that takes a reference to your struct
+   as the left-hand side and a value (or reference) of another type as the right-hand side,
+   returning a reference to the modified struct.
+
+::
+
+    struct Matrix {
+        float elements[16];
+    };
+
+    struct Matrix& operator=(struct Matrix &A, const struct FloatMatrix &B) {
+        // Copy elements with possible type conversion
+        for (uniform int i = 0; i < 16; i++) {
+            A.elements[i] = B.elements[i];  // Implicit float to double conversion
+        }
+        return A;
+    }
+
+2. **Compound Assignment (``+=``, ``-=``, etc.)**: Define a function that takes a reference
+   to your struct as the left-hand side and a value (or reference) as the right-hand side,
+   returning a reference to the modified struct.
+
+::
+
+    struct Vector2 {
+        float x, y;
+    };
+
+    struct Vector2& operator+=(struct Vector2 &v, const struct Vector2 &other) {
+        v.x += other.x;
+        v.y += other.y;
+        return v;
+    }
+
+    void foo() {
+        struct Vector2 v = {1.0f, 2.0f};
+        struct Vector2 u = {3.0f, 4.0f};
+
+        v += u;  // v now contains {4.0f, 6.0f}
     }
 
 
@@ -4784,6 +4944,36 @@ The ``isnan()`` functions test whether the given value is a floating-point
     uniform bool isnan(uniform float v)
     bool isnan(double v)
     uniform bool isnan(uniform double v)
+
+The ``isinf()`` and ``isfinite()`` functions test whether the given value is
+a floating-point infinity (please note that a "not a number" value is neither 
+considered finite nor infinite):
+
+::
+
+    bool isinf(float16 v)
+    uniform bool isinf(uniform float16 v)
+    bool isinf(float v)
+    uniform bool isinf(uniform float v)
+    bool isinf(double v)
+    uniform bool isinf(uniform double v)
+
+::
+
+    bool isfinite(float16 v)
+    uniform bool isfinite(uniform float16 v)
+    bool isfinite(float v)
+    uniform bool isfinite(uniform float v)
+    bool isfinite(double v)
+    uniform bool isfinite(uniform double v)
+
+The isinf and isfinite functions also support short vector types with the
+basic types listed above.
+
+::
+
+    template <typename T, uint N> T<N> isinf(T<N> v)
+    template <typename T, uint N> T<N> isfinite(T<N> v)
 
 
 A number of functions are also available for performing operations on 8- and

@@ -1,0 +1,14 @@
+// Copyright (c) 2025, Intel Corporation
+// SPDX-License-Identifier: BSD-3-Clause
+
+#ifndef BENCHMARKS_CONFIG_H
+#define BENCHMARKS_CONFIG_H
+
+// Define to 1 if the compiler supports __fp16 type
+#cmakedefine HAS_FP16_SUPPORT 1
+
+#ifdef HAS_FP16_SUPPORT
+    #define HAS_FP16
+#endif
+
+#endif // BENCHMARKS_CONFIG_H

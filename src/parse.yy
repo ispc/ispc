@@ -863,27 +863,27 @@ cast_expression
 multiplicative_expression
     : cast_expression
     | multiplicative_expression '*' cast_expression
-      { $$ = MakeBinaryExpr(BinaryExpr::Mul, $1, $3, Union(@1, @3)); }
+      { $$ = new BinaryExpr(BinaryExpr::Mul, $1, $3, Union(@1, @3)); }
     | multiplicative_expression '/' cast_expression
-      { $$ = MakeBinaryExpr(BinaryExpr::Div, $1, $3, Union(@1, @3)); }
+      { $$ = new BinaryExpr(BinaryExpr::Div, $1, $3, Union(@1, @3)); }
     | multiplicative_expression '%' cast_expression
-      { $$ = MakeBinaryExpr(BinaryExpr::Mod, $1, $3, Union(@1, @3)); }
+      { $$ = new BinaryExpr(BinaryExpr::Mod, $1, $3, Union(@1, @3)); }
     ;
 
 additive_expression
     : multiplicative_expression
     | additive_expression '+' multiplicative_expression
-      { $$ = MakeBinaryExpr(BinaryExpr::Add, $1, $3, Union(@1, @3)); }
+      { $$ = new BinaryExpr(BinaryExpr::Add, $1, $3, Union(@1, @3)); }
     | additive_expression '-' multiplicative_expression
-      { $$ = MakeBinaryExpr(BinaryExpr::Sub, $1, $3, Union(@1, @3)); }
+      { $$ = new BinaryExpr(BinaryExpr::Sub, $1, $3, Union(@1, @3)); }
     ;
 
 shift_expression
     : additive_expression
     | shift_expression TOKEN_LEFT_OP additive_expression
-      { $$ = MakeBinaryExpr(BinaryExpr::Shl, $1, $3, Union(@1, @3)); }
+      { $$ = new BinaryExpr(BinaryExpr::Shl, $1, $3, Union(@1, @3)); }
     | shift_expression TOKEN_RIGHT_OP additive_expression
-      { $$ = MakeBinaryExpr(BinaryExpr::Shr, $1, $3, Union(@1, @3)); }
+      { $$ = new BinaryExpr(BinaryExpr::Shr, $1, $3, Union(@1, @3)); }
     ;
 
 relational_expression
@@ -1959,7 +1959,7 @@ direct_declarator
                 d->child = $1;
                 $$ = d;
             } else {
-                $$ = nullptr;    
+                $$ = nullptr;
             }
         }
         else {
@@ -2189,7 +2189,7 @@ direct_abstract_declarator
                 d->arraySize = symbolValuePtr;
                 $$ = d;
             } else {
-                $$ = nullptr;    
+                $$ = nullptr;
             }
         }
         else {
@@ -2231,7 +2231,7 @@ direct_abstract_declarator
                   d->child = $1;
                   $$ = d;
               } else {
-                  $$ = nullptr;  
+                  $$ = nullptr;
               }
           }
           else {
@@ -2406,15 +2406,45 @@ expression_statement
     | expression ';' { $$ = $1 ? new ExprStmt($1, @1) : nullptr; }
     ;
 
+if_scope
+    : TOKEN_IF { m->symbolTable->PushScope(); }
+    ;
+
+cif_scope
+    : TOKEN_CIF { m->symbolTable->PushScope(); }
+    ;
+
 selection_statement
-    : TOKEN_IF '(' expression ')' attributed_statement
-      { $$ = new IfStmt($3, $5, nullptr, false, @1); }
-    | TOKEN_IF '(' expression ')' attributed_statement TOKEN_ELSE attributed_statement
-      { $$ = new IfStmt($3, $5, $7, false, @1); }
-    | TOKEN_CIF '(' expression ')' attributed_statement
-      { $$ = new IfStmt($3, $5, nullptr, true, @1); }
-    | TOKEN_CIF '(' expression ')' attributed_statement TOKEN_ELSE attributed_statement
-      { $$ = new IfStmt($3, $5, $7, true, @1); }
+    : if_scope '(' expression ')' attributed_statement
+      {
+        $$ = new IfStmt($3, $5, nullptr, false, @1);
+        m->symbolTable->PopScope();
+      }
+    | if_scope '(' expression ')' attributed_statement TOKEN_ELSE
+      {
+        m->symbolTable->PopScope();
+        m->symbolTable->PushScope();
+      }
+      attributed_statement
+      {
+        $$ = new IfStmt($3, $5, $8, false, @1);
+        m->symbolTable->PopScope();
+      }
+    | cif_scope '(' expression ')' attributed_statement
+      {
+        $$ = new IfStmt($3, $5, nullptr, true, @1);
+        m->symbolTable->PopScope();
+      }
+    | cif_scope '(' expression ')' attributed_statement TOKEN_ELSE
+      {
+        m->symbolTable->PopScope();
+        m->symbolTable->PushScope();
+      }
+      attributed_statement
+      {
+        $$ = new IfStmt($3, $5, $8, true, @1);
+        m->symbolTable->PopScope();
+      }
     | TOKEN_SWITCH '(' expression ')' attributed_statement
       { $$ = new SwitchStmt($3, $5, @1); }
     ;
@@ -2429,6 +2459,22 @@ for_test
 for_init_statement
     : expression_statement
     | declaration_statement
+    ;
+
+while_scope
+    : TOKEN_WHILE { m->symbolTable->PushScope(); }
+    ;
+
+cwhile_scope
+    : TOKEN_CWHILE { m->symbolTable->PushScope(); }
+    ;
+
+do_scope
+    : TOKEN_DO { m->symbolTable->PushScope(); }
+    ;
+
+cdo_scope
+    : TOKEN_CDO { m->symbolTable->PushScope(); }
     ;
 
 for_scope
@@ -2529,14 +2575,22 @@ foreach_unique_identifier
     ;
 
 iteration_statement
-    : TOKEN_WHILE '(' expression ')' attributed_statement
-      { $$ = new ForStmt(nullptr, $3, nullptr, $5, false, @1); }
-    | TOKEN_CWHILE '(' expression ')' attributed_statement
-      { $$ = new ForStmt(nullptr, $3, nullptr, $5, true, @1); }
-    | TOKEN_DO attributed_statement TOKEN_WHILE '(' expression ')' ';'
-      { $$ = new DoStmt($5, $2, false, @1); }
-    | TOKEN_CDO attributed_statement TOKEN_WHILE '(' expression ')' ';'
-      { $$ = new DoStmt($5, $2, true, @1); }
+    : while_scope '(' expression ')' attributed_statement
+      { $$ = new ForStmt(nullptr, $3, nullptr, $5, false, @1);
+        m->symbolTable->PopScope();
+      }
+    | cwhile_scope '(' expression ')' attributed_statement
+      { $$ = new ForStmt(nullptr, $3, nullptr, $5, true, @1);
+        m->symbolTable->PopScope();
+      }
+    | do_scope attributed_statement TOKEN_WHILE '(' expression ')' ';'
+      { $$ = new DoStmt($5, $2, false, @1);
+        m->symbolTable->PopScope();
+      }
+    | cdo_scope attributed_statement TOKEN_WHILE '(' expression ')' ';'
+      { $$ = new DoStmt($5, $2, true, @1);
+        m->symbolTable->PopScope();
+      }
     | for_scope '(' for_init_statement for_test ')' attributed_statement
       { $$ = new ForStmt($3, $4, nullptr, $6, false, @1);
         m->symbolTable->PopScope();
@@ -3620,10 +3674,7 @@ static bool
 lGetConstantIntOrSymbol(Expr *expr, std::variant<std::monostate, int, Symbol*> *value, SourcePos pos, const char *usage) {
     if (expr == nullptr)
         return false;
-    expr = TypeCheck(expr);
-    if (expr == nullptr)
-        return false;
-    expr = Optimize(expr);
+    expr = TypeCheckAndOptimize(expr);
     if (expr == nullptr)
         return false;
     const SymbolExpr* se= llvm::dyn_cast<SymbolExpr>(expr);
@@ -3735,7 +3786,11 @@ lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
                us end up with a ConstExpr with the desired EnumType... */
             Expr *castExpr = new TypeCastExpr(constUniformType, enums[i]->constValue,
                                               enums[i]->pos);
-            castExpr = Optimize(castExpr);
+            castExpr = TypeCheckAndOptimize(castExpr);
+            if (castExpr == nullptr) {
+                AssertPos(enums[i]->pos, m->errorCount > 0);
+                continue;
+            }
             enums[i]->constValue = llvm::dyn_cast<ConstExpr>(castExpr);
             AssertPos(enums[i]->pos, enums[i]->constValue != nullptr);
         }

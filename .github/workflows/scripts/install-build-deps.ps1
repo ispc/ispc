@@ -5,6 +5,10 @@ Install-ChocoPackage 7zip
 Install-ChocoPackage gnuwin32-m4
 Install-ChocoPackage ninja
 
+# Source the init-env.ps1 script from the same directory as this script
+$SCRIPT_DIR = Split-Path -Parent $MyInvocation.MyCommand.Path
+. (Join-Path $SCRIPT_DIR "init-env.ps1")
+
 # Download and unpack llvm
 if ( !(Test-Path ${env:LLVM_HOME}) ) { mkdir ${env:LLVM_HOME} }
 cd ${env:LLVM_HOME}

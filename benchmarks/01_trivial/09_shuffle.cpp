@@ -1,4 +1,4 @@
-// Copyright (c) 2024, Intel Corporation
+// Copyright (c) 2024-2025, Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "../common.h"
@@ -54,6 +54,10 @@ template <typename T> static void check1(T *src_a, T *dst, int count) {
                           std::is_same<T, int32_t>::value || std::is_same<T, int64_t>::value) {
                 printf("Error at i=%d: dst[%i]=%lld, but expected: %lld\n", i, i, (long long)dst[i],
                        (long long)src_a[i]);
+#ifdef HAS_FP16
+            } else if constexpr (std::is_same<T, __fp16>::value) {
+                printf("Error at i=%d: dst[%i]=%f, but expected: %f\n", i, i, (float)dst[i], (float)src_a[i]);
+#endif
             } else if constexpr (std::is_same<T, float>::value) {
                 printf("Error at i=%d: dst[%i]=%f, but expected: %f\n", i, i, dst[i], src_a[i]);
             } else if constexpr (std::is_same<T, double>::value) {
@@ -72,6 +76,10 @@ template <typename T> static void check2(T *src_a, T *src_b, T *dst, int count) 
                           std::is_same<T, int32_t>::value || std::is_same<T, int64_t>::value) {
                 printf("Error at i=%d: dst[%i]=%lld, but expected: %lld\n", i, i, (long long)dst[i],
                        (long long)src_a[i]);
+#ifdef HAS_FP16
+            } else if constexpr (std::is_same<T, __fp16>::value) {
+                printf("Error at i=%d: dst[%i]=%f, but expected: %f\n", i, i, (float)dst[i], (float)src_a[i]);
+#endif
             } else if constexpr (std::is_same<T, float>::value) {
                 printf("Error at i=%d: dst[%i]=%f, but expected: %f\n", i, i, dst[i], src_a[i]);
             } else if constexpr (std::is_same<T, double>::value) {
@@ -102,6 +110,9 @@ template <typename T> static void check2(T *src_a, T *src_b, T *dst, int count) 
 SHUFFLE_1(int8_t, int8)
 SHUFFLE_1(int16_t, int16)
 SHUFFLE_1(int, int)
+#ifdef HAS_FP16
+SHUFFLE_1(__fp16, float16)
+#endif
 SHUFFLE_1(float, float)
 SHUFFLE_1(double, double)
 SHUFFLE_1(int64_t, int64)
@@ -128,6 +139,9 @@ SHUFFLE_1(int64_t, int64)
 SHUFFLE_2(int8_t, int8)
 SHUFFLE_2(int16_t, int16)
 SHUFFLE_2(int, int)
+#ifdef HAS_FP16
+SHUFFLE_2(__fp16, float16)
+#endif
 SHUFFLE_2(float, float)
 SHUFFLE_2(double, double)
 SHUFFLE_2(int64_t, int64)

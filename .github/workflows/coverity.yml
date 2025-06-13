@@ -29,8 +29,6 @@ jobs:
       COVERITY_SCAN_NOTIFICATION_EMAIL: ${{ secrets.COVERITY_SCAN_NOTIFICATION_EMAIL }}
       COVERITY_SCAN_PROJECT_NAME: ${{ secrets.COVERITY_SCAN_PROJECT_NAME }}
       COVERITY_SCAN_TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
-      LLVM_VERSION: "20.1"
-      LLVM_TAR: llvm-20.1.2-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
 
     # Disabling this workflow for non ispc/ispc repo, since number of build submissions is limited.
     if: github.repository == 'ispc/ispc'

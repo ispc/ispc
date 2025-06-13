@@ -51,6 +51,32 @@ using namespace ispc;
 /////////////////////////////////////////////////////////////////////////////////////
 // Expr
 
+const Type *Expr::GetType() const {
+    const Expr *node = this;
+    if (!IsTypeChecked()) {
+        // It should not happen but if we're currently in the process of type checking this node,
+        // use GetTypeUnsafe to avoid infinite recursion
+        if (IsTypeCheckInProgress()) {
+            Assert(node->IsTypeCheckInProgress());
+            return GetTypeUnsafe();
+        }
+
+        Expr *mutableThis = const_cast<Expr *>(this);
+        Expr *result = ::TypeCheck(mutableThis);
+
+        if (result) {
+            node = result;
+        } else {
+            return node->GetTypeImpl();
+        }
+    }
+
+    Assert(node->IsTypeChecked());
+    return node->GetTypeImpl();
+}
+
+const Type *Expr::GetTypeUnsafe() const { return GetTypeImpl(); }
+
 llvm::Value *Expr::GetLValue(FunctionEmitContext *ctx) const {
     // Expressions that can't provide an lvalue can just return nullptr
     return nullptr;
@@ -95,20 +121,18 @@ static llvm::APFloat lCreateAPFloat(double value, llvm::Type *type) {
 
 static Expr *lArrayToPointer(Expr *expr) {
     Assert(expr != nullptr);
-    AssertPos(expr->pos, CastType<ArrayType>(expr->GetType()));
+    AssertPos(expr->pos, CastType<ArrayType>(expr->GetTypeUnsafe()));
 
     Expr *zero = new ConstExpr(AtomicType::UniformInt32, 0, expr->pos);
     Expr *index = new IndexExpr(expr, zero, expr->pos);
     Expr *addr = new AddressOfExpr(index, expr->pos);
-    addr = TypeCheck(addr);
-    Assert(addr != nullptr);
-    addr = Optimize(addr);
+    addr = TypeCheckAndOptimize(addr);
     Assert(addr != nullptr);
     return addr;
 }
 
 static bool lIsAllIntZeros(Expr *expr) {
-    const Type *type = expr->GetType();
+    const Type *type = expr->GetTypeUnsafe();
     if (type == nullptr || type->IsIntType() == false) {
         return false;
     }
@@ -135,6 +159,9 @@ static bool lIsAllIntZeros(Expr *expr) {
 static bool lTypeCastOk(Expr **expr, const Type *toType, SourcePos pos) {
     if (expr != nullptr) {
         *expr = new TypeCastExpr(toType, *expr, pos);
+        // Mark as type checked here since lTypeCastOk is used in type conversion
+        // logic where the type is already known to be correct.
+        (*expr)->SetTypeChecked();
     }
     return true;
 }
@@ -583,7 +610,7 @@ Expr *ispc::TypeConvertExpr(Expr *expr, const Type *toType, const char *errorMsg
         return nullptr;
     }
 
-    const Type *fromType = expr->GetType();
+    const Type *fromType = expr->GetTypeUnsafe();
     Expr *e = expr;
     if (lDoTypeConv(fromType, toType, &e, false, errorMsgBase, expr->pos)) {
         return e;
@@ -595,6 +622,7 @@ Expr *ispc::TypeConvertExpr(Expr *expr, const Type *toType, const char *errorMsg
 bool ispc::PossiblyResolveFunctionOverloads(Expr *expr, const Type *type) {
     FunctionSymbolExpr *fse = nullptr;
     const FunctionType *funcType = nullptr;
+
     if (CastType<PointerType>(type) != nullptr && (funcType = CastType<FunctionType>(type->GetBaseType())) &&
         (fse = llvm::dyn_cast<FunctionSymbolExpr>(expr)) != nullptr) {
         // We're initializing a function pointer with a function symbol,
@@ -611,6 +639,90 @@ bool ispc::PossiblyResolveFunctionOverloads(Expr *expr, const Type *type) {
         }
     }
     return true;
+}
+
+// Helper function to handle operator overloading for struct types
+Expr *ispc::PossiblyResolveStructOperatorOverloads(const char *baseOpName, const std::vector<Expr *> &args,
+                                                   SourcePos pos, bool isPostfix) {
+    // Create a vector to store the "effective" types (dereferenced if they're references)
+    std::vector<const Type *> effectiveTypes;
+    effectiveTypes.reserve(args.size());
+
+    // Check if any of the argument types are struct types (directly or via references)
+    bool hasStructType = false;
+    for (const auto &a : args) {
+        const Type *type = a->GetType();
+        // Get the actual type if it's a reference
+        const ReferenceType *refType = CastType<ReferenceType>(type);
+        const Type *effectiveType = (refType != nullptr) ? refType->GetReferenceTarget() : type;
+
+        // Store the effective type for later use
+        effectiveTypes.push_back(effectiveType);
+
+        // Check if it's a struct type
+        if (CastType<StructType>(effectiveType) != nullptr) {
+            hasStructType = true;
+        }
+    }
+
+    if (!hasStructType) {
+        return nullptr; // No struct types, so no operator overloading needed
+    }
+
+    // Construct operator name (e.g., "operator+")
+    std::string opName = std::string("operator") + baseOpName;
+
+    // Look up operator overloads
+    std::vector<Symbol *> funcs;
+    std::vector<TemplateSymbol *> funcTempls;
+
+    bool foundAnyFunction = m->symbolTable->LookupFunction(opName.c_str(), &funcs);
+    bool foundAnyTemplate = m->symbolTable->LookupFunctionTemplate(opName.c_str(), &funcTempls);
+
+    if (foundAnyFunction || foundAnyTemplate) {
+        // Create function symbol expression
+        FunctionSymbolExpr *functionSymbolExpr =
+            new FunctionSymbolExpr(opName.c_str(), funcs, funcTempls, TemplateArgs(), pos);
+        Assert(functionSymbolExpr != nullptr);
+
+        // Create argument list
+        ExprList *exprList = new ExprList(pos);
+        for (const auto &arg : args) {
+            exprList->exprs.push_back(arg);
+        }
+
+        // For postfix operators, add dummy int argument if not already added
+        if (isPostfix && args.size() == 1) {
+            ConstExpr *dummyInt = new ConstExpr(AtomicType::UniformInt32, 1, pos);
+            exprList->exprs.push_back(dummyInt);
+        }
+
+        // Create and type-check function call
+        Expr *functionCallExpr = new FunctionCallExpr(functionSymbolExpr, exprList, pos);
+        functionCallExpr = ::TypeCheckAndOptimize(functionCallExpr);
+
+        return functionCallExpr;
+    }
+
+    // Error handling - if we were looking for functions but didn't find any
+    if (hasStructType && funcs.size() == 0 && funcTempls.size() == 0) {
+        if (opName == "operator=") {
+            // Special case for operator=: if no overloads found, return nullptr
+            // to indicate that it's standard structure assignment, not operator overloading
+            return nullptr;
+        }
+
+        // Format error message based on number of arguments
+        if (args.size() == 1) {
+            Error(pos, "operator %s(%s) is not defined.", opName.c_str(), effectiveTypes[0]->GetString().c_str());
+        } else if (args.size() == 2) {
+            Error(pos, "operator %s(%s, %s) is not defined.", opName.c_str(), effectiveTypes[0]->GetString().c_str(),
+                  effectiveTypes[1]->GetString().c_str());
+        }
+        return nullptr;
+    }
+
+    return nullptr;
 }
 
 static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llvm::Value *exprVal, const Type *toType,
@@ -1177,6 +1289,28 @@ static llvm::Value *lEmitNegate(Expr *arg, SourcePos pos, FunctionEmitContext *c
     }
 }
 
+static const char *lOpString(UnaryExpr::Op op) {
+    switch (op) {
+    case UnaryExpr::PreInc:
+        return "++";
+    case UnaryExpr::PreDec:
+        return "--";
+    case UnaryExpr::PostInc:
+        return "++";
+    case UnaryExpr::PostDec:
+        return "--";
+    case UnaryExpr::Negate:
+        return "-";
+    case UnaryExpr::LogicalNot:
+        return "!";
+    case UnaryExpr::BitNot:
+        return "~";
+    default:
+        FATAL("unimplemented case in lOpString()");
+        return "";
+    }
+}
+
 UnaryExpr::UnaryExpr(Op o, Expr *e, SourcePos p) : Expr(p, UnaryExprID), op(o) { expr = e; }
 
 llvm::Value *UnaryExpr::GetValue(FunctionEmitContext *ctx) const {
@@ -1209,7 +1343,7 @@ llvm::Value *UnaryExpr::GetValue(FunctionEmitContext *ctx) const {
     }
 }
 
-const Type *UnaryExpr::GetType() const {
+const Type *UnaryExpr::GetTypeImpl() const {
     if (expr == nullptr) {
         return nullptr;
     }
@@ -1371,7 +1505,7 @@ Expr *UnaryExpr::Optimize() {
 
 Expr *UnaryExpr::TypeCheck() {
     const Type *type = nullptr;
-    if (expr == nullptr || (type = expr->GetType()) == nullptr) {
+    if (expr == nullptr || (type = expr->GetTypeUnsafe()) == nullptr) {
         // something went wrong in type checking...
         return nullptr;
     }
@@ -1385,6 +1519,9 @@ Expr *UnaryExpr::TypeCheck() {
         return nullptr;
     }
 
+    bool postFix = (op == PostInc || op == PostDec);
+    Expr *opExpr = nullptr;
+
     if (op == PreInc || op == PreDec || op == PostInc || op == PostDec) {
         if (type->IsConstType()) {
             Error(pos,
@@ -1396,6 +1533,11 @@ Expr *UnaryExpr::TypeCheck() {
 
         if (type->IsNumericType()) {
             return this;
+        }
+        // Resolve expression to operator overload if necessary
+        opExpr = PossiblyResolveStructOperatorOverloads(lOpString(op), std::vector<Expr *>{expr}, pos, postFix);
+        if (opExpr != nullptr) {
+            return opExpr;
         }
 
         const PointerType *pt = CastType<PointerType>(type);
@@ -1422,7 +1564,11 @@ Expr *UnaryExpr::TypeCheck() {
         return this;
     }
 
-    // don't do this for pre/post increment/decrement
+    opExpr = PossiblyResolveStructOperatorOverloads(lOpString(op), std::vector<Expr *>{expr}, pos, postFix);
+    if (opExpr != nullptr) {
+        return opExpr;
+    }
+
     if (CastType<ReferenceType>(type)) {
         expr = new RefDerefExpr(expr, pos);
         type = expr->GetType();
@@ -1494,7 +1640,7 @@ std::string UnaryExpr::GetString() const {
 }
 
 void UnaryExpr::Print(Indent &indent) const {
-    if (!expr || !GetType()) {
+    if (!expr || !GetTypeUnsafe()) {
         indent.Print("UnaryExpr: <NULL EXPR>\n");
         indent.Done();
         return;
@@ -1502,7 +1648,7 @@ void UnaryExpr::Print(Indent &indent) const {
 
     indent.Print("UnaryExpr", pos);
 
-    printf("[ %s ] ", GetType()->GetString().c_str());
+    printf("[ %s ] ", GetTypeUnsafe()->GetString().c_str());
     switch (op) {
     case PreInc: ///< Pre-increment
         printf("prefix '++'");
@@ -1840,76 +1986,6 @@ static llvm::Value *lEmitBinaryCmp(BinaryExpr::Op op, llvm::Value *e0Val, llvm::
 BinaryExpr::BinaryExpr(Op o, Expr *a, Expr *b, SourcePos p) : Expr(p, BinaryExprID), op(o) {
     arg0 = a;
     arg1 = b;
-}
-
-bool lCreateBinaryOperatorCall(const BinaryExpr::Op bop, Expr *a0, Expr *a1, Expr *&op, const SourcePos &sp) {
-    bool abort = false;
-    if ((a0 == nullptr) || (a1 == nullptr)) {
-        return abort;
-    }
-    Expr *arg0 = a0;
-    Expr *arg1 = a1;
-    const Type *type0 = arg0->GetType();
-    const Type *type1 = arg1->GetType();
-
-    // If either operand is a reference, dereference it before we move
-    // forward
-    if (CastType<ReferenceType>(type0) != nullptr) {
-        arg0 = new RefDerefExpr(arg0, arg0->pos);
-        type0 = arg0->GetType();
-    }
-    if (CastType<ReferenceType>(type1) != nullptr) {
-        arg1 = new RefDerefExpr(arg1, arg1->pos);
-        type1 = arg1->GetType();
-    }
-    if ((type0 == nullptr) || (type1 == nullptr)) {
-        return abort;
-    }
-    if (CastType<StructType>(type0) != nullptr || CastType<StructType>(type1) != nullptr) {
-        std::string opName = std::string("operator") + lOpString(bop);
-        std::vector<Symbol *> funcs;
-        bool foundAnyFunction = m->symbolTable->LookupFunction(opName.c_str(), &funcs);
-        std::vector<TemplateSymbol *> funcTempls;
-        bool foundAnyTemplate = m->symbolTable->LookupFunctionTemplate(opName.c_str(), &funcTempls);
-        if (foundAnyFunction || foundAnyTemplate) {
-            FunctionSymbolExpr *functionSymbolExpr =
-                new FunctionSymbolExpr(opName.c_str(), funcs, funcTempls, TemplateArgs(), sp);
-            Assert(functionSymbolExpr != nullptr);
-            ExprList *args = new ExprList(sp);
-            args->exprs.push_back(arg0);
-            args->exprs.push_back(arg1);
-            op = new FunctionCallExpr(functionSymbolExpr, args, sp);
-            return abort;
-        }
-        if (funcs.size() == 0 && funcTempls.size() == 0) {
-            Error(sp, "operator %s(%s, %s) is not defined.", opName.c_str(), (type0->GetString()).c_str(),
-                  (type1->GetString()).c_str());
-            abort = true;
-            return abort;
-        }
-
-        return abort;
-    }
-    return abort;
-}
-
-Expr *ispc::MakeBinaryExpr(BinaryExpr::Op o, Expr *a, Expr *b, SourcePos p) {
-    Expr *op = nullptr;
-    bool abort = lCreateBinaryOperatorCall(o, a, b, op, p);
-    if (op != nullptr) {
-        return op;
-    }
-
-    // lCreateBinaryOperatorCall can return nullptr for 2 cases:
-    // 1. When there is an error.
-    // 2. We have to create a new BinaryExpr.
-    if (abort) {
-        AssertPos(p, m->errorCount > 0);
-        return nullptr;
-    }
-
-    op = new BinaryExpr(o, a, b, p);
-    return op;
 }
 
 /** Emit code for a && or || logical operator.  In particular, the code
@@ -2267,7 +2343,7 @@ llvm::Value *BinaryExpr::GetValue(FunctionEmitContext *ctx) const {
     }
 }
 
-const Type *BinaryExpr::GetType() const {
+const Type *BinaryExpr::GetTypeImpl() const {
     if (arg0 == nullptr || arg1 == nullptr) {
         return nullptr;
     }
@@ -2352,7 +2428,7 @@ const Type *BinaryExpr::GetType() const {
     case Comma:
         // handled above, so fall through here just in case
     default:
-        FATAL("logic error in BinaryExpr::GetType()");
+        FATAL("logic error in BinaryExpr::GetTypeImpl()");
         return nullptr;
     }
 }
@@ -2648,11 +2724,7 @@ Expr *BinaryExpr::Optimize() {
                 }
                 Expr *einv = new ConstExpr(type1, inv, constArg1->pos);
                 Expr *e = new BinaryExpr(Mul, arg0, einv, pos);
-                e = ::TypeCheck(e);
-                if (e == nullptr) {
-                    return nullptr;
-                }
-                return ::Optimize(e);
+                return ::TypeCheckAndOptimize(e);
             }
         }
 
@@ -2672,25 +2744,18 @@ Expr *BinaryExpr::Optimize() {
                     Expr *rcpSymExpr = new FunctionSymbolExpr("rcp", rcpFuns, {}, TemplateArgs(), pos);
                     ExprList *args = new ExprList(arg1, arg1->pos);
                     Expr *rcpCall = new FunctionCallExpr(rcpSymExpr, args, arg1->pos);
-                    rcpCall = ::TypeCheck(rcpCall);
+                    rcpCall = ::TypeCheckAndOptimize(rcpCall);
                     if (rcpCall != nullptr) {
-                        rcpCall = ::Optimize(rcpCall);
-                        if (rcpCall != nullptr) {
-                            Expr *ret = new BinaryExpr(Mul, arg0, rcpCall, pos);
-                            ret = ::TypeCheck(ret);
-                            if (ret == nullptr) {
-                                return nullptr;
-                            }
-                            return ::Optimize(ret);
-                        }
+                        Expr *ret = new BinaryExpr(Mul, arg0, rcpCall, pos);
+                        return ::TypeCheckAndOptimize(ret);
                     }
                 }
-
-                Warning(pos,
-                        "rcp(%s) not found from stdlib.  Can't apply "
-                        "fast-math rcp optimization.",
-                        type1->GetString().c_str());
             }
+
+            Warning(pos,
+                    "rcp(%s) not found from stdlib.  Can't apply "
+                    "fast-math rcp optimization.",
+                    type1->GetString().c_str());
         }
     }
 
@@ -2748,13 +2813,20 @@ Expr *BinaryExpr::TypeCheck() {
         return nullptr;
     }
 
-    const Type *type0 = arg0->GetType(), *type1 = arg1->GetType();
+    const Type *type0 = arg0->GetTypeUnsafe(), *type1 = arg1->GetTypeUnsafe();
     if (type0 == nullptr || type1 == nullptr) {
         return nullptr;
     }
 
     if (type0->IsDependent() || type1->IsDependent()) {
         return this;
+    }
+
+    // Resolve expression to operator overload if necessary
+    const std::vector<Expr *> args = {arg0, arg1};
+    Expr *opExpr = PossiblyResolveStructOperatorOverloads(lOpString(op), args, pos, false);
+    if (opExpr != nullptr) {
+        return opExpr;
     }
 
     // If either operand is a reference, dereference it before we move
@@ -3095,7 +3167,7 @@ int BinaryExpr::EstimateCost() const {
 Expr *BinaryExpr::Instantiate(TemplateInstantiation &templInst) const {
     Expr *instArg0 = arg0 ? arg0->Instantiate(templInst) : nullptr;
     Expr *instArg1 = arg1 ? arg1->Instantiate(templInst) : nullptr;
-    return MakeBinaryExpr(op, instArg0, instArg1, pos);
+    return new BinaryExpr(op, instArg0, instArg1, pos);
 }
 
 std::string BinaryExpr::GetString() const {
@@ -3106,7 +3178,7 @@ std::string BinaryExpr::GetString() const {
 }
 
 void BinaryExpr::Print(Indent &indent) const {
-    if (!arg0 || !arg1 || !GetType()) {
+    if (!arg0 || !arg1 || !GetTypeUnsafe()) {
         indent.Print("BinaryExpr: <NULL EXPR>\n");
         indent.Done();
         return;
@@ -3114,7 +3186,7 @@ void BinaryExpr::Print(Indent &indent) const {
 
     indent.Print("BinaryExpr", pos);
 
-    printf("[ %s ], '%s'\n", GetType()->GetString().c_str(), lOpString(op));
+    printf("[ %s ], '%s'\n", GetTypeUnsafe()->GetString().c_str(), lOpString(op));
     indent.pushList(2);
     arg0->Print(indent);
     arg1->Print(indent);
@@ -3427,7 +3499,7 @@ Expr *AssignExpr::Optimize() {
     return this;
 }
 
-const Type *AssignExpr::GetType() const {
+const Type *AssignExpr::GetTypeImpl() const {
     if (lvalue) {
         const Type *ltype = lvalue->GetType();
         if (ltype && ltype->IsDependent()) {
@@ -3472,10 +3544,17 @@ Expr *AssignExpr::TypeCheck() {
         return nullptr;
     }
 
-    const Type *ltype = lvalue->GetType();
-    const Type *rtype = rvalue->GetType();
+    const Type *ltype = lvalue->GetTypeUnsafe();
+    const Type *rtype = rvalue->GetTypeUnsafe();
     if ((ltype && ltype->IsDependent()) || (rtype && rtype->IsDependent())) {
         return this;
+    }
+
+    // Resolve expression to operator overload if necessary
+    const std::vector<Expr *> args = {lvalue, rvalue};
+    Expr *opExpr = PossiblyResolveStructOperatorOverloads(lOpString(op), args, pos, false);
+    if (opExpr != nullptr) {
+        return opExpr;
     }
 
     bool lvalueIsReference = CastType<ReferenceType>(lvalue->GetType()) != nullptr;
@@ -3587,7 +3666,7 @@ std::string AssignExpr::GetString() const {
 }
 
 void AssignExpr::Print(Indent &indent) const {
-    if (!lvalue || !rvalue || !GetType()) {
+    if (!lvalue || !rvalue || !GetTypeUnsafe()) {
         indent.Print("AssignExpr: <NULL EXPR>\n");
         indent.Done();
         return;
@@ -3595,7 +3674,7 @@ void AssignExpr::Print(Indent &indent) const {
 
     indent.Print("AssignExpr", pos);
 
-    printf("[%s], '%s'\n", GetType()->GetString().c_str(), lOpString(op));
+    printf("[%s], '%s'\n", GetTypeUnsafe()->GetString().c_str(), lOpString(op));
     indent.pushList(2);
     lvalue->Print(indent);
     rvalue->Print(indent);
@@ -3806,7 +3885,7 @@ llvm::Value *SelectExpr::GetValue(FunctionEmitContext *ctx) const {
     }
 }
 
-const Type *SelectExpr::GetType() const {
+const Type *SelectExpr::GetTypeImpl() const {
     if (!test || !expr1 || !expr2) {
         return nullptr;
     }
@@ -3949,7 +4028,7 @@ Expr *SelectExpr::TypeCheck() {
         return nullptr;
     }
 
-    const Type *type1 = expr1->GetType(), *type2 = expr2->GetType(), *testType = test->GetType();
+    const Type *type1 = expr1->GetTypeUnsafe(), *type2 = expr2->GetTypeUnsafe(), *testType = test->GetTypeUnsafe();
     if (!type1 || !type2 || !testType) {
         return nullptr;
     }
@@ -4019,7 +4098,7 @@ std::string SelectExpr::GetString() const {
 }
 
 void SelectExpr::Print(Indent &indent) const {
-    if (!test || !expr1 || !expr2 || !GetType()) {
+    if (!test || !expr1 || !expr2 || !GetTypeUnsafe()) {
         indent.Print("SelectExpr: <NULL EXPR>\n");
         indent.Done();
         return;
@@ -4027,7 +4106,7 @@ void SelectExpr::Print(Indent &indent) const {
 
     indent.Print("SelectExpr", pos);
 
-    printf("[%s]\n", GetType()->GetString().c_str());
+    printf("[%s]\n", GetTypeUnsafe()->GetString().c_str());
     indent.pushList(3);
     test->Print(indent);
     expr1->Print(indent);
@@ -4043,13 +4122,7 @@ FunctionCallExpr::FunctionCallExpr(Expr *f, ExprList *a, SourcePos p, bool il, E
     : Expr(p, FunctionCallExprID), isLaunch(il), isInvoke(iis) {
     func = f;
     args = a;
-    std::vector<const Expr *> warn;
-    if (a && a->HasAmbiguousVariability(warn)) {
-        for (auto w : warn) {
-            const TypeCastExpr *tExpr = llvm::dyn_cast<TypeCastExpr>(w);
-            tExpr->PrintAmbiguousVariability();
-        }
-    }
+
     if (lce != nullptr) {
         launchCountExpr[0] = lce[0];
         launchCountExpr[1] = lce[1];
@@ -4226,7 +4299,7 @@ static bool lFullResolveOverloads(Expr *func, ExprList *args, std::vector<const 
         if (expr == nullptr) {
             return false;
         }
-        const Type *t = expr->GetType();
+        const Type *t = expr->GetTypeUnsafe();
         if (t == nullptr) {
             return false;
         }
@@ -4237,7 +4310,7 @@ static bool lFullResolveOverloads(Expr *func, ExprList *args, std::vector<const 
     return true;
 }
 
-const Type *FunctionCallExpr::GetType() const {
+const Type *FunctionCallExpr::GetTypeImpl() const {
     std::vector<const Type *> argTypes;
     std::vector<bool> argCouldBeNULL, argIsConstant;
     if (func == nullptr || args == nullptr) {
@@ -4285,6 +4358,14 @@ Expr *FunctionCallExpr::TypeCheck() {
         return nullptr;
     }
 
+    std::vector<const Expr *> warn;
+    if (args && args->HasAmbiguousVariability(warn)) {
+        for (auto w : warn) {
+            const TypeCastExpr *tExpr = llvm::dyn_cast<TypeCastExpr>(w);
+            tExpr->PrintAmbiguousVariability();
+        }
+    }
+
     std::vector<const Type *> argTypes;
     std::vector<bool> argCouldBeNULL, argIsConstant;
 
@@ -4305,6 +4386,9 @@ Expr *FunctionCallExpr::TypeCheck() {
             return nullptr;
         }
 
+        if (func->GetType() != nullptr && func->GetType()->IsDependent()) {
+            return this;
+        }
         funcType = CastType<FunctionType>(func->GetType());
         if (funcType == nullptr) {
             const PointerType *pt = CastType<PointerType>(func->GetType());
@@ -4479,14 +4563,15 @@ std::string FunctionCallExpr::GetString() const {
 }
 
 void FunctionCallExpr::Print(Indent &indent) const {
-    if (!func || !args || !GetType()) {
+    if (!func || !args || !GetTypeUnsafe()) {
         indent.Print("FunctionCallExpr: <NULL EXPR>\n");
         indent.Done();
         return;
     }
     indent.Print("FunctionCallExpr", pos);
 
-    printf("[%s] %s %s\n", GetType()->GetString().c_str(), isLaunch ? "launch" : "", isInvoke ? "invoke_sycl" : "");
+    printf("[%s] %s %s\n", GetTypeUnsafe()->GetString().c_str(), isLaunch ? "launch" : "",
+           isInvoke ? "invoke_sycl" : "");
     indent.pushList(2);
     indent.setNextLabel("func");
     func->Print(indent);
@@ -4514,8 +4599,8 @@ llvm::Value *ExprList::GetValue(FunctionEmitContext *ctx) const {
     return nullptr;
 }
 
-const Type *ExprList::GetType() const {
-    FATAL("ExprList::GetType() should never be called");
+const Type *ExprList::GetTypeImpl() const {
+    FATAL("ExprList::GetTypeImpl() should never be called");
     return nullptr;
 }
 
@@ -4531,6 +4616,9 @@ static std::pair<llvm::Constant *, bool> lGetExprListConstant(const Type *type, 
     bool isNotValidForMultiTargetGlobal = false;
     if (exprs.size() == 1 && (CastType<AtomicType>(type) != nullptr || CastType<EnumType>(type) != nullptr ||
                               CastType<PointerType>(type) != nullptr)) {
+        if (exprs[0] == nullptr) {
+            return std::pair<llvm::Constant *, bool>(nullptr, false);
+        }
         if (isStorageType) {
             return exprs[0]->GetStorageConstant(type);
         } else {
@@ -4596,7 +4684,7 @@ static std::pair<llvm::Constant *, bool> lGetExprListConstant(const Type *type, 
                 return std::pair<llvm::Constant *, bool>(nullptr, false);
             }
             // Re-establish const-ness if possible
-            expr = ::Optimize(expr);
+            expr = ::TypeCheckAndOptimize(expr);
         }
         std::pair<llvm::Constant *, bool> cPair;
         if (isStorageType) {
@@ -4918,7 +5006,7 @@ llvm::Value *IndexExpr::GetValue(FunctionEmitContext *ctx) const {
     return ctx->LoadInst(ptr, mask, lvType);
 }
 
-const Type *IndexExpr::GetType() const {
+const Type *IndexExpr::GetTypeImpl() const {
     if (type != nullptr) {
         return type;
     }
@@ -5180,12 +5268,12 @@ Expr *IndexExpr::Optimize() {
 
 Expr *IndexExpr::TypeCheck() {
     const Type *indexType = nullptr;
-    if (baseExpr == nullptr || index == nullptr || ((indexType = index->GetType()) == nullptr)) {
+    if (baseExpr == nullptr || index == nullptr || ((indexType = index->GetTypeUnsafe()) == nullptr)) {
         AssertPos(pos, m->errorCount > 0);
         return nullptr;
     }
 
-    const Type *baseExprType = baseExpr->GetType();
+    const Type *baseExprType = baseExpr->GetTypeUnsafe();
     if (baseExprType == nullptr) {
         AssertPos(pos, m->errorCount > 0);
         return nullptr;
@@ -5287,7 +5375,7 @@ std::string IndexExpr::GetString() const {
 }
 
 void IndexExpr::Print(Indent &indent) const {
-    if (!baseExpr || !index || !GetType()) {
+    if (!baseExpr || !index || !GetTypeUnsafe()) {
         indent.Print("IndexExpr: <NULL EXPR>\n");
         indent.Done();
         return;
@@ -5295,7 +5383,7 @@ void IndexExpr::Print(Indent &indent) const {
 
     indent.Print("IndexExpr", pos);
 
-    printf("[%s]\n", GetType()->GetString().c_str());
+    printf("[%s]\n", GetTypeUnsafe()->GetString().c_str());
     indent.pushList(2);
     baseExpr->Print(indent);
     index->Print(indent);
@@ -5336,7 +5424,7 @@ static int lIdentifierToVectorElement(char id) {
 StructMemberExpr::StructMemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos, bool derefLValue)
     : MemberExpr(e, id, p, idpos, derefLValue, StructMemberExprID) {}
 
-const Type *StructMemberExpr::GetType() const {
+const Type *StructMemberExpr::GetTypeImpl() const {
     if (type != nullptr) {
         return type;
     }
@@ -5489,7 +5577,7 @@ VectorMemberExpr::VectorMemberExpr(Expr *e, const char *id, SourcePos p, SourceP
     memberType = new VectorType(exprVectorType->GetElementType(), identifier.length());
 }
 
-const Type *VectorMemberExpr::GetType() const {
+const Type *VectorMemberExpr::GetTypeImpl() const {
     if (type != nullptr) {
         return type;
     }
@@ -5667,7 +5755,7 @@ DependentMemberExpr::DependentMemberExpr(Expr *e, const char *id, SourcePos p, S
     Assert(id != nullptr);
 }
 
-const Type *DependentMemberExpr::GetType() const { return AtomicType::Dependent; }
+const Type *DependentMemberExpr::GetTypeImpl() const { return AtomicType::Dependent; }
 const Type *DependentMemberExpr::GetLValueType() const { return AtomicType::Dependent; }
 int DependentMemberExpr::getElementNumber() const { UNREACHABLE(); };
 const Type *DependentMemberExpr::getElementType() const { UNREACHABLE(); };
@@ -5816,7 +5904,7 @@ llvm::Value *MemberExpr::GetValue(FunctionEmitContext *ctx) const {
     return ctx->LoadInst(lvalue, mask, lvalueType, llvm::Twine(lvalue->getName()) + suffix);
 }
 
-const Type *MemberExpr::GetType() const { return nullptr; }
+const Type *MemberExpr::GetTypeImpl() const { return nullptr; }
 
 Symbol *MemberExpr::GetBaseSymbol() const { return expr ? expr->GetBaseSymbol() : nullptr; }
 
@@ -5889,13 +5977,13 @@ void MemberExpr::Print(Indent &indent) const {
         indent.Print("MemberExpr", pos);
     }
 
-    if (!expr || !GetType()) {
+    if (!expr || !GetTypeUnsafe()) {
         indent.Print(" <NULL EXPR>\n");
         indent.Done();
         return;
     }
 
-    printf("[%s] %s %s\n", GetType()->GetString().c_str(), dereferenceExpr ? "->" : ".", identifier.c_str());
+    printf("[%s] %s %s\n", GetTypeUnsafe()->GetString().c_str(), dereferenceExpr ? "->" : ".", identifier.c_str());
     indent.pushSingle();
     expr->Print(indent);
 
@@ -6167,7 +6255,7 @@ AtomicType::BasicType ConstExpr::getBasicType() const {
     }
 }
 
-const Type *ConstExpr::GetType() const { return type; }
+const Type *ConstExpr::GetTypeImpl() const { return type; }
 
 llvm::Value *ConstExpr::GetValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
@@ -6688,7 +6776,7 @@ std::string ConstExpr::GetString() const { return GetValuesAsStr(", "); }
 void ConstExpr::Print(Indent &indent) const {
     indent.Print("ConstExpr", pos);
 
-    printf("[%s] (", GetType()->GetString().c_str());
+    printf("[%s] (", GetTypeUnsafe()->GetString().c_str());
     printf("%s", GetValuesAsStr((char *)", ").c_str());
     printf(")\n");
 
@@ -6701,8 +6789,13 @@ void ConstExpr::Print(Indent &indent) const {
 TypeCastExpr::TypeCastExpr(const Type *t, Expr *e, SourcePos p) : Expr(p, TypeCastExprID) {
     type = t;
     expr = e;
+    preCheckType = t;
 }
-
+TypeCastExpr::TypeCastExpr(const Type *t, const Type *prechecked, Expr *e, SourcePos p) : Expr(p, TypeCastExprID) {
+    type = t;
+    expr = e;
+    preCheckType = prechecked;
+}
 /** Handle all the grungy details of type conversion between atomic types and uniform vector types.
     Given an input value in exprVal of type fromType, convert it to the
     llvm::Value with type toType.
@@ -7409,8 +7502,8 @@ bool TypeCastExpr::HasAmbiguousVariability(std::vector<const Expr *> &warn) cons
     if (expr == nullptr) {
         return false;
     }
-
-    const Type *toType = type, *fromType = expr->GetType();
+    // Check the type that was specified before the TypeCheck call.
+    const Type *toType = preCheckType, *fromType = expr->GetType();
     if (toType == nullptr || fromType == nullptr) {
         return false;
     }
@@ -7431,8 +7524,8 @@ void TypeCastExpr::PrintAmbiguousVariability() const {
             "from \"uniform\" type \"%s\" results in \"uniform\" variability.\n"
             "In the context of function argument it may lead to unexpected behavior. "
             "Casting to \"%s\" is recommended.",
-            (type->GetString()).c_str(), (exprType->GetString()).c_str(),
-            (type->GetAsUniformType()->GetString()).c_str());
+            (preCheckType->GetString()).c_str(), (exprType->GetString()).c_str(),
+            (preCheckType->GetAsUniformType()->GetString()).c_str());
 }
 
 llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
@@ -7571,9 +7664,7 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             AssertPos(pos, PointerType::IsVoidPointer(toPointerType) ||
                                Type::EqualIgnoringConst(arrayType->GetAsVaryingType(), toPointerType) == true);
             arrayAsPtr = new TypeCastExpr(toPointerType, arrayAsPtr, pos);
-            arrayAsPtr = ::TypeCheck(arrayAsPtr);
-            AssertPos(pos, arrayAsPtr != nullptr);
-            arrayAsPtr = ::Optimize(arrayAsPtr);
+            arrayAsPtr = ::TypeCheckAndOptimize(arrayAsPtr);
             AssertPos(pos, arrayAsPtr != nullptr);
             arrayType = arrayAsPtr->GetType();
         }
@@ -7760,7 +7851,7 @@ llvm::Value *TypeCastExpr::GetLValue(FunctionEmitContext *ctx) const {
     }
 }
 
-const Type *TypeCastExpr::GetType() const {
+const Type *TypeCastExpr::GetTypeImpl() const {
     // Here we try to resolve situation where (base_type) can be treated as
     // (uniform base_type) of (varying base_type). This is a part of function
     // TypeCastExpr::TypeCheck. After implementation of operators we
@@ -7811,7 +7902,7 @@ Expr *TypeCastExpr::TypeCheck() {
         return nullptr;
     }
 
-    const Type *toType = type, *fromType = expr->GetType();
+    const Type *toType = type, *fromType = expr->GetTypeUnsafe();
     if (toType == nullptr || fromType == nullptr) {
         return nullptr;
     }
@@ -7821,7 +7912,7 @@ Expr *TypeCastExpr::TypeCheck() {
     }
 
     if (toType->HasUnboundVariability() && fromType->IsUniformType()) {
-        TypeCastExpr *tce = new TypeCastExpr(toType->GetAsUniformType(), expr, pos);
+        TypeCastExpr *tce = new TypeCastExpr(toType->GetAsUniformType(), toType, expr, pos);
         return ::TypeCheck(tce);
     }
     type = toType = type->ResolveUnboundVariability(Variability::Varying);
@@ -8012,7 +8103,7 @@ std::string TypeCastExpr::GetString() const {
 
 void TypeCastExpr::Print(Indent &indent) const {
     indent.Print("TypeCastExpr", pos);
-    printf("[%s]\n", GetType()->GetString().c_str());
+    printf("[%s]\n", GetTypeUnsafe()->GetString().c_str());
     indent.pushSingle();
     expr->Print(indent);
     indent.Done();
@@ -8126,7 +8217,7 @@ llvm::Value *ReferenceExpr::GetValue(FunctionEmitContext *ctx) const {
 
 Symbol *ReferenceExpr::GetBaseSymbol() const { return expr ? expr->GetBaseSymbol() : nullptr; }
 
-const Type *ReferenceExpr::GetType() const {
+const Type *ReferenceExpr::GetTypeImpl() const {
     if (!expr) {
         return nullptr;
     }
@@ -8185,7 +8276,7 @@ std::string ReferenceExpr::GetString() const {
 }
 
 void ReferenceExpr::Print(Indent &indent) const {
-    if (expr == nullptr || GetType() == nullptr) {
+    if (expr == nullptr || GetTypeUnsafe() == nullptr) {
         indent.Print("ReferenceExpr: <NULL EXPR>\n");
         indent.Done();
         return;
@@ -8193,7 +8284,7 @@ void ReferenceExpr::Print(Indent &indent) const {
 
     indent.Print("ReferenceExpr", pos);
 
-    printf("[%s]\n", GetType()->GetString().c_str());
+    printf("[%s]\n", GetTypeUnsafe()->GetString().c_str());
     indent.pushSingle();
     expr->Print(indent);
 
@@ -8260,7 +8351,7 @@ Expr *DerefExpr::Optimize() {
 
 PtrDerefExpr::PtrDerefExpr(Expr *e, SourcePos p) : DerefExpr(e, p, PtrDerefExprID) {}
 
-const Type *PtrDerefExpr::GetType() const {
+const Type *PtrDerefExpr::GetTypeImpl() const {
     const Type *type = nullptr;
     if (expr == nullptr || (type = expr->GetType()) == nullptr) {
         AssertPos(pos, m->errorCount > 0);
@@ -8332,7 +8423,7 @@ std::string PtrDerefExpr::GetString() const {
 }
 
 void PtrDerefExpr::Print(Indent &indent) const {
-    if (expr == nullptr || GetType() == nullptr) {
+    if (expr == nullptr || GetTypeUnsafe() == nullptr) {
         indent.Print("PtrDerefExpr: <NULL EXPR>\n");
         indent.Done();
         return;
@@ -8340,7 +8431,7 @@ void PtrDerefExpr::Print(Indent &indent) const {
 
     indent.Print("PtrDerefExpr", pos);
 
-    printf("[%s]\n", GetType()->GetString().c_str());
+    printf("[%s]\n", GetTypeUnsafe()->GetString().c_str());
     indent.pushSingle();
     expr->Print(indent);
 
@@ -8352,7 +8443,7 @@ void PtrDerefExpr::Print(Indent &indent) const {
 
 RefDerefExpr::RefDerefExpr(Expr *e, SourcePos p) : DerefExpr(e, p, RefDerefExprID) {}
 
-const Type *RefDerefExpr::GetType() const {
+const Type *RefDerefExpr::GetTypeImpl() const {
     const Type *type = nullptr;
     if (expr == nullptr || (type = expr->GetType()) == nullptr) {
         AssertPos(pos, m->errorCount > 0);
@@ -8407,14 +8498,14 @@ std::string RefDerefExpr::GetString() const {
 }
 
 void RefDerefExpr::Print(Indent &indent) const {
-    if (expr == nullptr || GetType() == nullptr) {
+    if (expr == nullptr || GetTypeUnsafe() == nullptr) {
         indent.Print("RefDerefExpr: <NULL EXPR>\n");
         return;
     }
 
     indent.Print("RefDerefExpr", pos);
 
-    printf("[%s]\n", GetType()->GetString().c_str());
+    printf("[%s]\n", GetTypeUnsafe()->GetString().c_str());
     indent.pushSingle();
     expr->Print(indent);
 
@@ -8440,7 +8531,7 @@ llvm::Value *AddressOfExpr::GetValue(FunctionEmitContext *ctx) const {
     }
 }
 
-const Type *AddressOfExpr::GetType() const {
+const Type *AddressOfExpr::GetTypeImpl() const {
     if (expr == nullptr) {
         return nullptr;
     }
@@ -8490,7 +8581,7 @@ std::string AddressOfExpr::GetString() const {
 }
 
 void AddressOfExpr::Print(Indent &indent) const {
-    if (expr == nullptr || GetType() == nullptr) {
+    if (expr == nullptr || GetTypeUnsafe() == nullptr) {
         indent.Print("AddressOfExpr: <NULL EXPR>\n");
         indent.Done();
         return;
@@ -8498,7 +8589,7 @@ void AddressOfExpr::Print(Indent &indent) const {
 
     indent.Print("AddressOfExpr", pos);
 
-    printf("[%s]\n", GetType()->GetString().c_str());
+    printf("[%s]\n", GetTypeUnsafe()->GetString().c_str());
     indent.pushSingle();
     expr->Print(indent);
 
@@ -8620,7 +8711,7 @@ llvm::Value *SizeOfExpr::GetValue(FunctionEmitContext *ctx) const {
     return g->target->SizeOf(llvmType, ctx->GetCurrentBasicBlock());
 }
 
-const Type *SizeOfExpr::GetType() const {
+const Type *SizeOfExpr::GetTypeImpl() const {
     return (g->target->is32Bit() || g->opt.force32BitAddressing) ? AtomicType::UniformUInt32
                                                                  : AtomicType::UniformUInt64;
 }
@@ -8721,7 +8812,7 @@ llvm::Value *AllocaExpr::GetValue(FunctionEmitContext *ctx) const {
     return resultPtr;
 }
 
-const Type *AllocaExpr::GetType() const { return PointerType::Void; }
+const Type *AllocaExpr::GetTypeImpl() const { return PointerType::Void; }
 
 std::string AllocaExpr::GetString() const {
     if (!expr) {
@@ -8824,7 +8915,7 @@ const Type *SymbolExpr::GetLValueType() const {
 
 Symbol *SymbolExpr::GetBaseSymbol() const { return symbol; }
 
-const Type *SymbolExpr::GetType() const { return symbol ? symbol->type : nullptr; }
+const Type *SymbolExpr::GetTypeImpl() const { return symbol ? symbol->type : nullptr; }
 
 Expr *SymbolExpr::TypeCheck() { return this; }
 
@@ -8858,7 +8949,7 @@ std::string SymbolExpr::GetString() const {
 }
 
 void SymbolExpr::Print(Indent &indent) const {
-    if (symbol == nullptr || GetType() == nullptr) {
+    if (symbol == nullptr || GetTypeUnsafe() == nullptr) {
         indent.Print("SymbolExpr: <NULL EXPR>\n");
         indent.Done();
         return;
@@ -8866,7 +8957,7 @@ void SymbolExpr::Print(Indent &indent) const {
 
     indent.Print("SymbolExpr", pos);
 
-    printf("[%s] symbol name: %s\n", GetType()->GetString().c_str(), symbol->name.c_str());
+    printf("[%s] symbol name: %s\n", GetTypeUnsafe()->GetString().c_str(), symbol->name.c_str());
 
     indent.Done();
 }
@@ -8900,7 +8991,7 @@ void FunctionSymbolExpr::normalizeTemplateArgs() {
         }
     }
 }
-const Type *FunctionSymbolExpr::GetType() const {
+const Type *FunctionSymbolExpr::GetTypeImpl() const {
     if (unresolvedButDependent) {
         return AtomicType::Dependent;
     }
@@ -8944,7 +9035,7 @@ std::string FunctionSymbolExpr::GetString() const {
 }
 
 void FunctionSymbolExpr::Print(Indent &indent) const {
-    const Type *type = GetType();
+    const Type *type = GetTypeUnsafe();
 
     indent.Print("FunctionSymbolExpr", pos);
 
@@ -9077,6 +9168,8 @@ static bool lIsMatchWithTypeWidening(const Type *callType, const Type *funcArgTy
     case AtomicType::TYPE_UINT64:
         return (funcAt->basicType == AtomicType::TYPE_INT64 || funcAt->basicType == AtomicType::TYPE_UINT64);
     case AtomicType::TYPE_DOUBLE:
+        return false;
+    case AtomicType::TYPE_VOID:
         return false;
     default:
         FATAL("Unhandled atomic type");
@@ -9817,7 +9910,7 @@ bool FunctionSymbolExpr::ResolveOverloads(SourcePos argPos, const std::vector<co
 ///////////////////////////////////////////////////////////////////////////
 // SyncExpr
 
-const Type *SyncExpr::GetType() const { return AtomicType::Void; }
+const Type *SyncExpr::GetTypeImpl() const { return AtomicType::Void; }
 
 llvm::Value *SyncExpr::GetValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
@@ -9847,7 +9940,7 @@ llvm::Value *NullPointerExpr::GetValue(FunctionEmitContext *ctx) const {
     return llvm::ConstantPointerNull::get(LLVMTypes::VoidPointerType);
 }
 
-const Type *NullPointerExpr::GetType() const { return PointerType::Void; }
+const Type *NullPointerExpr::GetTypeImpl() const { return PointerType::Void; }
 
 Expr *NullPointerExpr::TypeCheck() { return this; }
 
@@ -10041,7 +10134,7 @@ llvm::Value *NewExpr::GetValue(FunctionEmitContext *ctx) const {
     }
 }
 
-const Type *NewExpr::GetType() const {
+const Type *NewExpr::GetTypeImpl() const {
     if (allocType == nullptr) {
         return nullptr;
     }
