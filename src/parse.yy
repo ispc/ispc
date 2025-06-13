@@ -11,7 +11,22 @@
 /* We expect these conflicts and accept the default resolution (shift). It means
 that for the example 'if (a) if (b) c; else d;' the else will be associated
 with the nearest if. Same happens for 'if (a) cif (b) c; else d;'.  */
-%expect 2
+
+/* suppress 5 shift-reduces conflict messages for postfix and funccall expressions */
+/* Both postfix_expression and funcall_expression define the same postfix
+operators ([, ., ->, ++, --).
+For an input like "func().member", the parser encounters ambiguity:
+Path 1 (via postfix_expression):
+  postfix_expression -> postfix_expression '.' TOKEN_IDENTIFIER
+  where postfix_expression = func()
+
+Path 2 (via funcall_expression):
+  unary_expression -> funcall_expression -> funcall_expression '.' TOKEN_IDENTIFIER
+  where funcall_expression = func()
+
+We can safely suppress these conflicts since both paths produce identical ASTs */
+
+%expect 7
 
 %define parse.error verbose
 
@@ -805,6 +820,42 @@ funcall_expression
           // deallocate SimpleTemplateIDType returned by simple_template_id
           lFreeSimpleTemplateID($1);
       }
+    | funcall_expression '[' expression ']'
+      { $$ = new IndexExpr($1, $3, Union(@1,@4)); }
+    | funcall_expression '.' TOKEN_IDENTIFIER
+      {
+          $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, false);
+          lCleanUpString($3);
+      }
+    | funcall_expression '.' TOKEN_TYPE_NAME
+      {
+          $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, false);
+          lCleanUpString($3);
+      }
+    | funcall_expression '.' TOKEN_TEMPLATE_NAME
+      {
+          $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, false);
+          lCleanUpString($3);
+      }
+    | funcall_expression TOKEN_PTR_OP TOKEN_IDENTIFIER
+      {
+          $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, true);
+          lCleanUpString($3);
+      }
+    | funcall_expression TOKEN_PTR_OP TOKEN_TYPE_NAME
+      {
+          $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, true);
+          lCleanUpString($3);
+      }
+    | funcall_expression TOKEN_PTR_OP TOKEN_TEMPLATE_NAME
+      {
+          $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, true);
+          lCleanUpString($3);
+      }
+    | funcall_expression TOKEN_INC_OP
+      { $$ = new UnaryExpr(UnaryExpr::PostInc, $1, Union(@1,@2)); }
+    | funcall_expression TOKEN_DEC_OP
+      { $$ = new UnaryExpr(UnaryExpr::PostDec, $1, Union(@1,@2)); }
     ;
 
 argument_expression_list
