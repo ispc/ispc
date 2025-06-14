@@ -2,6 +2,7 @@
 
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=sse2-i32x4 --cpu=dmr
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=sse2-i32x4 --cpu=diamondrapids
+//; RUN: %{ispc} %s -o %t.o --nostdlib --target=sse2-i32x4 --cpu=znver5
 
 // REQUIRES: X86_ENABLED && LLVM_20_0+
 
