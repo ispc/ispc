@@ -4763,25 +4763,30 @@ is on (i.e. the value is negative) and zero if it is off.
 
 ::
 
-    float16 abs(float a)
-    uniform float16 abs(uniform float a)
+    float16 abs(float16 a)
     float abs(float a)
-    uniform float abs(uniform float a)
     double abs(double a)
-    uniform double abs(uniform double a)
     int8 abs(int8 a)
-    uniform int8 abs(uniform int8 a)
     int16 abs(int16 a)
-    uniform int16 abs(uniform int16 a)
     int abs(int a)
-    uniform int abs(uniform int a)
     int64 abs(int64 a)
+
+    uniform float16 abs(uniform float16 a)
+    uniform float abs(uniform float a)
+    uniform double abs(uniform double a)
+    uniform int8 abs(uniform int8 a)
+    uniform int16 abs(uniform int16 a)
+    uniform int abs(uniform int a)
     uniform int64 abs(uniform int64 a)
+
+::
+
     unsigned int16 signbits(float16 x)
-    uniform unsigned int16 signbits(uniform float16 x)
     unsigned int signbits(float x)
-    uniform unsigned int signbits(uniform float x)
     unsigned int64 signbits(double x)
+
+    uniform unsigned int16 signbits(uniform float16 x)
+    uniform unsigned int signbits(uniform float x)
     uniform unsigned int64 signbits(uniform double x)
 
 The ``abs`` functions also supports short vector types with the basic types
@@ -4804,14 +4809,31 @@ rounding mode and do not signal precision exceptions.
 
 ::
 
+    float16 round(float16 x)
     float round(float x)
-    uniform float round(uniform float x)
+    double round(double x)
+    float16 floor(float16 x)
     float floor(float x)
-    uniform float floor(uniform float x)
+    double floor(double x)
+    float16 ceil(float16 x)
     float ceil(float x)
-    uniform float ceil(uniform float x)
+    double ceil(double x)
+    float16 trunc(float16 x)
     float trunc(float x)
+    double trunc(double x)
+
+    uniform float16 round(uniform float16 x)
+    uniform float round(uniform float x)
+    uniform double round(uniform double x)
+    uniform float16 floor(uniform float16 x)
+    uniform float floor(uniform float x)
+    uniform double floor(uniform double x)
+    uniform float16 ceil(uniform float16 x)
+    uniform float ceil(uniform float x)
+    uniform double ceil(uniform double x)
+    uniform float16 trunc(uniform float16 x)
     uniform float trunc(uniform float x)
+    uniform double trunc(uniform double x)
 
 These functions also support short vector types with the basic types listed
 above.
@@ -4828,18 +4850,24 @@ different on different architectures.
 
 ::
 
+    float16 rcp(float16 v)
+    uniform float16 rcp(uniform float16 v)
     float rcp(float v)
     uniform float rcp(uniform float v)
+    double rcp(double v)
+    uniform double rcp(uniform double v)
 
-ISPC also provides a version of ``rcp()`` for float with less precision which doesn't
+ISPC also provides a version of ``rcp()`` with less precision which doesn't
 use Newton-Raphson.
 
 ::
 
     float rcp_fast(float v)
     uniform float rcp_fast(uniform float v)
+    double rcp_fast(double v)
+    uniform double rcp_fast(uniform double v)
 
-``rcp`` and ``rcp_fast`` functions also support short vector types with the
+``rcp()`` and ``rcp_fast()`` functions also support short vector types with the
 basic types listed above.
 
 ::
@@ -4858,6 +4886,12 @@ operation x/y. It's semantics is equivalent to C/C++ lib functions.
     uniform float fmod(uniform float x, uniform float y)
     double fmod(double x, double y)
     uniform double fmod(uniform double x, uniform double y)
+
+``fmod()`` also support short vector types with the basic types listed above.
+
+::
+
+    template <typename T, uint N> T<N> fmod(T<N> x, T<N> y)
 
 A standard set of minimum and maximum functions is available for all ispc
 standard types.  These functions also map to corresponding intrinsic functions.
@@ -4928,14 +4962,39 @@ quite efficient.)
 
 ::
 
+    float16 clamp(float16 v, float16 low, float16 high)
     float clamp(float v, float low, float high)
-    uniform float clamp(uniform float v, uniform float low,
-                        uniform float high)
-    unsigned int clamp(unsigned int v, unsigned int low,
-                       unsigned int high)
-    uniform unsigned int clamp(uniform unsigned int v,
-                               uniform unsigned int low,
+    double clamp(double v, double low, double high)
+    unsigned int8 clamp(unsigned int8 v, unsigned int8 low, unsigned int8 high)
+    int8 clamp(int8 v, int8 low, int8 high)
+    unsigned int16 clamp(unsigned int16 v, unsigned int16 low, unsigned int16 high)
+    int16 clamp(int16 v, int16 low, int16 high)
+    unsigned int clamp(unsigned int v, unsigned int low, unsigned int high)
+    int clamp(int v, int low, int high)
+    unsigned int64 clamp(unsigned int64 v, unsigned int64 low, unsigned int64 high)
+    int64 clamp(int64 v, int64 low, int64 high)
+
+    uniform float16 clamp(uniform float16 v, uniform float16 low, uniform float16 high)
+    uniform float clamp(uniform float v, uniform float low, uniform float high)
+    uniform double clamp(uniform double v, uniform double low, uniform double high)
+    uniform unsigned int8 clamp(uniform unsigned int8 v, uniform unsigned int8 low, 
+                                uniform unsigned int8 high)
+    uniform int8 clamp(uniform int8 v, uniform int8 low, uniform int8 high)
+    uniform unsigned int16 clamp(uniform unsigned int16 v, uniform unsigned int16 low, 
+                                 uniform unsigned int16 high)
+    uniform int16 clamp(uniform int16 v, uniform int16 low, uniform int16 high)
+    uniform unsigned int clamp(uniform unsigned int v, uniform unsigned int low, 
                                uniform unsigned int high)
+    uniform int clamp(uniform int v, uniform int low, uniform int high)
+    uniform unsigned int64 clamp(uniform unsigned int64 v, uniform unsigned int64 low, 
+                                 uniform unsigned int64 high)
+    uniform int64 clamp(uniform int64 v, uniform int64 low, uniform int64 high)
+
+``clamp()`` also support short vector types with the basic types listed above.
+
+::
+
+    template <typename T, uint N> T<N> clamp(T<N> v, T<N> low, T<N> high)
 
 The ``isnan()`` functions test whether the given value is a floating-point
 "not a number" value:
@@ -4948,6 +5007,13 @@ The ``isnan()`` functions test whether the given value is a floating-point
     uniform bool isnan(uniform float v)
     bool isnan(double v)
     uniform bool isnan(uniform double v)
+
+``isnan()`` also support short vector types with the basic types listed above.
+
+::
+
+    template <typename T, uint N> uniform bool<N> isnan(uniform T<N> v)
+    template <typename T, uint N> varying bool<N> isnan(varying T<N> v)
 
 The ``isinf()`` and ``isfinite()`` functions test whether the given value is
 a floating-point infinity (please note that a "not a number" value is neither 
@@ -4971,13 +5037,15 @@ considered finite nor infinite):
     bool isfinite(double v)
     uniform bool isfinite(uniform double v)
 
-The isinf and isfinite functions also support short vector types with the
-basic types listed above.
+The ``isinf()`` and ``isfinite()`` functions also support short vector types 
+with the basic types listed above.
 
 ::
 
-    template <typename T, uint N> T<N> isinf(T<N> v)
-    template <typename T, uint N> T<N> isfinite(T<N> v)
+    template <typename T, uint N> uniform bool<N> isinf(uniform T<N> v)
+    template <typename T, uint N> varying bool<N> isinf(varying T<N> v)
+    template <typename T, uint N> uniform bool<N> isfinite(uniform T<N> v)
+    template <typename T, uint N> varying bool<N> isfinite(varying T<N> v)
 
 
 A number of functions are also available for performing operations on 8- and
@@ -5016,37 +5084,75 @@ architectures.
 
 ::
 
+    float16 sqrt(float16 v)
+    uniform float16 sqrt(uniform float16 v)
     float sqrt(float v)
     uniform float sqrt(uniform float v)
-    float rsqrt(float v)
-    uniform float rsqrt(uniform float v)
-
-``rsqrt`` and ``sqrt`` also supports short vector types with the basic types
-listed above:
+    double sqrt(double v)
+    uniform double sqrt(uniform double v)
 
 ::
 
-    template <typename T, uint N> T<N> rsqrt(T<N> a)
-    template <typename T, uint N> T<N> sqrt(T<N> a)
+    float16 rsqrt(float16 v)
+    uniform float16 rsqrt(uniform float16 v)
+    float rsqrt(float v)
+    uniform float rsqrt(uniform float v)
+    double rsqrt(double v)
+    uniform double rsqrt(uniform double v)
 
-ISPC also provides a version of ``rsqrt()`` for float with less precision which doesn't
+``sqrt()`` and ``rsqrt()`` also supports short vector types with the basic
+types listed above:
+
+::
+
+    template <typename T, uint N> T<N> sqrt(T<N> a)
+    template <typename T, uint N> T<N> rsqrt(T<N> a)
+
+ISPC also provides a version of ``rsqrt()`` with less precision which doesn't
 use Newton-Raphson.
 
 ::
 
     float rsqrt_fast(float v)
     uniform float rsqrt_fast(uniform float v)
+    double rsqrt_fast(double v)
+    uniform double rsqrt_fast(uniform double v)
+
+``rsqrt_fast()`` also supports short vector types with the basic types listed
+above:
+
+::
+
+    template <typename T, uint N> T<N> rsqrt_fast(T<N> v)
 
 ``ispc`` provides a standard variety of calls for trigonometric functions:
 
 ::
 
+    float16 sin(float16 x)
+    uniform float16 sin(uniform float16 x)
     float sin(float x)
     uniform float sin(uniform float x)
+    double sin(double x)
+    uniform double sin(uniform double x)
+
+::
+
+    float16 cos(float16 x)
+    uniform float16 cos(uniform float16 x)
     float cos(float x)
     uniform float cos(uniform float x)
+    double cos(double x)
+    uniform double cos(uniform double x)
+
+::
+
+    float16 tan(float16 x)
+    uniform float16 tan(uniform float16 x)
     float tan(float x)
     uniform float tan(uniform float x)
+    double tan(double x)
+    uniform double tan(uniform double x)
 
 These functions also supports short vector types with the basic types listed
 above:
@@ -5061,14 +5167,39 @@ The corresponding inverse functions are also available:
 
 ::
 
-   float asin(float x)
-   uniform float asin(uniform float x)
-   float acos(float x)
-   uniform float acos(uniform float x)
-   float atan(float x)
-   uniform float atan(uniform float x)
-   float atan2(float y, float x)
-   uniform float atan2(uniform float y, uniform float x)
+    float16 asin(float16 x)
+    uniform float16 asin(uniform float16 x)
+    float asin(float x)
+    uniform float asin(uniform float x)
+    double asin(const double x)
+    uniform double asin(uniform double x)
+
+::
+
+    float16 acos(float16 x)
+    uniform float16 acos(uniform float16 x)
+    float acos(float x)
+    uniform float acos(uniform float x)
+    double acos(const double x)
+    uniform double acos(const uniform double x)
+
+::
+
+    float16 atan(float16 x)
+    uniform float16 atan(uniform float16 x)
+    float atan(float x)
+    uniform float atan(uniform float x)
+    double atan(double x)
+    uniform double atan(uniform double x)
+
+::
+
+    float16 atan2(float16 y, float16 x)
+    uniform float16 atan2(uniform float16 y, uniform float16 x)
+    float atan2(float y, float x)
+    uniform float atan2(uniform float y, uniform float x)
+    double atan2(double y, double x)
+    uniform double atan2(uniform double y, uniform double x)
 
 The inverse functions also support short vector types with the basic types
 listed above:
@@ -5086,21 +5217,45 @@ functions:
 
 ::
 
+    void sincos(float16 x, varying float16 * uniform s, varying float16 * uniform c)
+    void sincos(uniform float16 x, uniform float16 * uniform s,
+                uniform float16 * uniform c)
     void sincos(float x, varying float * uniform s, varying float * uniform c)
     void sincos(uniform float x, uniform float * uniform s,
                 uniform float * uniform c)
+    void sincos(double x, varying double * uniform s, varying double * uniform c)
+    void sincos(uniform double x, uniform double * uniform s,
+                uniform double * uniform c)
 
 
 The usual exponential and logarithmic functions are provided.
 
 ::
 
+    float16 exp(float16 x)
+    uniform float16 exp(uniform float16 x)
     float exp(float x)
     uniform float exp(uniform float x)
+    double exp(double x)
+    uniform double exp(uniform double x)
+
+::
+
+    float16 log(float16 x)
+    uniform float16 log(uniform float16 x)
     float log(float x)
     uniform float log(uniform float x)
+    double log(double x)
+    uniform double log(uniform double x)
+
+::
+
+    float16 pow(float16 a, float16 b)
+    uniform float16 pow(uniform float16 a, uniform float16 b)
     float pow(float a, float b)
     uniform float pow(uniform float a, uniform float b)
+    double pow(double a, double b)
+    uniform double pow(uniform double a, uniform double b)
 
 These functions also support short vector types with the basic types listed
 above:
@@ -5130,15 +5285,22 @@ normalized exponent as a power of two in the ``pw2`` parameter.
 
 ::
 
+    float16 ldexp(float16 x, int n)
+    uniform float16 ldexp(uniform float16 x, uniform int n)
     float ldexp(float x, int n)
     uniform float ldexp(uniform float x, uniform int n)
-    float frexp(float x, varying int * uniform pw2)
-    uniform float frexp(uniform float x,
-                        uniform int * uniform pw2)
+    double ldexp(double x, int n)
+    uniform double ldexp(uniform double x, uniform int n)
 
+::
 
-All transcendental functions are provided for ``float16``, ``float`` and
-``double`` types.
+    float16 frexp(float16 x, varying int *uniform pw2)
+    uniform float16 frexp(uniform float16 x, uniform int *uniform pw2)
+    float frexp(float x, varying int *uniform pw2)
+    uniform float frexp(uniform float x, uniform int *uniform pw2)
+    double frexp(double x, varying int *uniform pw2)
+    uniform double frexp(uniform double x, uniform int *uniform pw2)
+
 
 Saturating Arithmetic
 ---------------------
