@@ -22,6 +22,7 @@
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=sse2-i32x4 --cpu=znver1
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=sse2-i32x4 --cpu=znver2
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=sse2-i32x4 --cpu=znver3
+//; RUN: %{ispc} %s -o %t.o --nostdlib --target=sse2-i32x4 --cpu=znver4
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=sse2-i32x4 --cpu=ps5
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=sse2-i32x4 --cpu=skx
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=sse2-i32x4 --cpu=icelake-client
