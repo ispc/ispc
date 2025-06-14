@@ -1306,6 +1306,7 @@ __declspec(safe) static inline varying int32 dot2add_u16i16packed_sat(varying ui
 // versions of the macro: one for uniform and one for varying short vectors.
 // The number of function arguments in the macros depends on their suffix,
 // e.g., ARG2 indicates that the function takes two arguments.
+
 #define SHORT_VEC_UNIFORM_ARG1(FUNC)                                                                                   \
     template <typename T, uint N> uniform T<N> FUNC(uniform T<N> a) {                                                  \
         uniform T<N> result;                                                                                           \
@@ -1318,6 +1319,24 @@ __declspec(safe) static inline varying int32 dot2add_u16i16packed_sat(varying ui
 #define SHORT_VEC_VARYING_ARG1(FUNC)                                                                                   \
     template <typename T, uint N> varying T<N> FUNC(varying T<N> a) {                                                  \
         varying T<N> result;                                                                                           \
+        for (uniform int i = 0; i < N; i++) {                                                                          \
+            result[i] = FUNC(a[i]);                                                                                    \
+        }                                                                                                              \
+        return result;                                                                                                 \
+    }
+
+#define SHORT_VEC_UNIFORM_ARG1_BOOLRET(FUNC)                                                                           \
+    template <typename T, uint N> uniform bool<N> FUNC(uniform T<N> a) {                                               \
+        uniform bool<N> result;                                                                                        \
+        foreach (i = 0 ... N) {                                                                                        \
+            result[i] = FUNC(a[i]);                                                                                    \
+        }                                                                                                              \
+        return result;                                                                                                 \
+    }
+
+#define SHORT_VEC_VARYING_ARG1_BOOLRET(FUNC)                                                                           \
+    template <typename T, uint N> varying bool<N> FUNC(varying T<N> a) {                                               \
+        varying bool<N> result;                                                                                        \
         for (uniform int i = 0; i < N; i++) {                                                                          \
             result[i] = FUNC(a[i]);                                                                                    \
         }                                                                                                              \
@@ -1342,22 +1361,51 @@ __declspec(safe) static inline varying int32 dot2add_u16i16packed_sat(varying ui
         return result;                                                                                                 \
     }
 
+#define SHORT_VEC_UNIFORM_ARG3(FUNC)                                                                                   \
+    template <typename T, uint N> uniform T<N> FUNC(uniform T<N> a, uniform T<N> b, uniform T<N> c) {                  \
+        uniform T<N> result;                                                                                           \
+        foreach (i = 0 ... N) {                                                                                        \
+            result[i] = FUNC(a[i], b[i], c[i]);                                                                        \
+        }                                                                                                              \
+        return result;                                                                                                 \
+    }
+
+#define SHORT_VEC_VARYING_ARG3(FUNC)                                                                                   \
+    template <typename T, uint N> varying T<N> FUNC(varying T<N> a, varying T<N> b, varying T<N> c) {                  \
+        varying T<N> result;                                                                                           \
+        for (uniform int i = 0; i < N; i++) {                                                                          \
+            result[i] = FUNC(a[i], b[i], c[i]);                                                                        \
+        }                                                                                                              \
+        return result;                                                                                                 \
+    }
+
 #define SHORT_VEC_ARG1(FUNC)                                                                                           \
     SHORT_VEC_UNIFORM_ARG1(FUNC)                                                                                       \
     SHORT_VEC_VARYING_ARG1(FUNC)
+
+#define SHORT_VEC_ARG1_BOOLRET(FUNC)                                                                                   \
+    SHORT_VEC_UNIFORM_ARG1_BOOLRET(FUNC)                                                                               \
+    SHORT_VEC_VARYING_ARG1_BOOLRET(FUNC)
 
 #define SHORT_VEC_ARG2(FUNC)                                                                                           \
     SHORT_VEC_UNIFORM_ARG2(FUNC)                                                                                       \
     SHORT_VEC_VARYING_ARG2(FUNC)
 
+#define SHORT_VEC_ARG3(FUNC)                                                                                           \
+    SHORT_VEC_UNIFORM_ARG3(FUNC)                                                                                       \
+    SHORT_VEC_VARYING_ARG3(FUNC)
+
 // Generate the template functions for short vectors
 
 SHORT_VEC_ARG1(abs)
-SHORT_VEC_ARG2(max)
 SHORT_VEC_ARG2(min)
+SHORT_VEC_ARG2(max)
 
-SHORT_VEC_ARG1(isinf)
-SHORT_VEC_ARG1(isfinite)
+SHORT_VEC_ARG3(clamp)
+
+SHORT_VEC_ARG1_BOOLRET(isnan)
+SHORT_VEC_ARG1_BOOLRET(isinf)
+SHORT_VEC_ARG1_BOOLRET(isfinite)
 
 SHORT_VEC_ARG1(round)
 SHORT_VEC_ARG1(floor)
@@ -1368,6 +1416,7 @@ SHORT_VEC_ARG1(rcp_fast)
 
 SHORT_VEC_ARG1(sqrt)
 SHORT_VEC_ARG1(rsqrt)
+SHORT_VEC_ARG1(rsqrt_fast)
 SHORT_VEC_ARG1(sin)
 SHORT_VEC_ARG1(asin)
 SHORT_VEC_ARG1(cos)
@@ -1380,3 +1429,4 @@ SHORT_VEC_ARG1(cbrt)
 
 SHORT_VEC_ARG2(atan2)
 SHORT_VEC_ARG2(pow)
+SHORT_VEC_ARG2(fmod)
