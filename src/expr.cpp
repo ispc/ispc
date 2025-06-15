@@ -8703,6 +8703,10 @@ llvm::Value *SizeOfExpr::GetValue(FunctionEmitContext *ctx) const {
         return nullptr;
     }
 
+    if (CastType<ReferenceType>(t) != nullptr) {
+        t = t->GetReferenceTarget();
+    }
+
     llvm::Type *llvmType = t->LLVMType(g->ctx);
     if (llvmType == nullptr) {
         return nullptr;
