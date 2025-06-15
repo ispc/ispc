@@ -1283,7 +1283,15 @@ void FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck
         if (expr != nullptr) {
             const Type *exprType = expr->GetType();
             Assert(exprType);
-            Error(expr->pos, "Can't return non-void type \"%s\" from void function.", exprType->GetString().c_str());
+
+            if (exprType->IsVoidType()) {
+                // Force function calls instructions to be emitted even though
+                // the llvm::Value result is unused.
+                expr->GetValue(this);
+            } else {
+                Error(expr->pos, "Can't return an expression of type \"%s\" in a function returning void.",
+                      exprType->GetString().c_str());
+            }
         }
     } else {
         if (expr == nullptr) {
