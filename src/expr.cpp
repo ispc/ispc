@@ -5674,6 +5674,9 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
             int idx = lIdentifierToVectorElement(identifier[i]);
             if (idx == -1) {
                 Error(pos, "Invalid swizzle character '%c' in swizzle \"%s\".", identifier[i], identifier.c_str());
+            } else if (exprVectorType != nullptr && idx >= exprVectorType->GetElementCount()) {
+                Error(pos, "Invalid swizzle character '%c' for type \"%s\" (out of bounds).", identifier[i],
+                      exprVectorType->GetString().c_str());
             }
 
             indices.push_back(idx);
@@ -5737,11 +5740,14 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
 }
 
 int VectorMemberExpr::getElementNumber() const {
-    int elementNumber = lIdentifierToVectorElement(identifier[0]);
-    if (elementNumber == -1) {
+    int idx = lIdentifierToVectorElement(identifier[0]);
+    if (idx == -1) {
         Error(pos, "Vector element identifier \"%s\" unknown.", identifier.c_str());
+    } else if (exprVectorType != nullptr && idx >= exprVectorType->GetElementCount()) {
+        Error(pos, "Vector element identifier \"%s\" is invalid for type \"%s\" (out of bounds).", identifier.c_str(),
+              exprVectorType->GetString().c_str());
     }
-    return elementNumber;
+    return idx;
 }
 
 const Type *VectorMemberExpr::getElementType() const { return memberType; }
