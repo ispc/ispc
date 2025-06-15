@@ -1283,7 +1283,14 @@ void FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck
         if (expr != nullptr) {
             const Type *exprType = expr->GetType();
             Assert(exprType);
-            Error(expr->pos, "Can't return non-void type \"%s\" from void function.", exprType->GetString().c_str());
+
+            std::string errorSuffix = "";
+
+            if (exprType->IsVoidType()) {
+                errorSuffix = " (even void typed expressions)";
+            }
+
+            Error(expr->pos, "Can't return any expression from void function%s.", errorSuffix.c_str());
         }
     } else {
         if (expr == nullptr) {
