@@ -228,7 +228,7 @@ Module::Module(const char *fn) : srcFile(fn) {
     lSetCodeModel(module);
     lSetPICLevel(module);
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_19_0
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_19_0 && ISPC_LLVM_VERSION < ISPC_LLVM_21_0
     // LLVM is transitioning to new debug info representation, use "old" style for now.
     module->setIsNewDbgInfoFormat(false);
 #endif
@@ -2075,7 +2075,7 @@ static llvm::Module *lInitDispatchModule() {
     lSetCodeModel(module);
     lSetPICLevel(module);
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_19_0
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_19_0 && ISPC_LLVM_VERSION < ISPC_LLVM_21_0
     // LLVM is transitioning to new debug info representation, use "old" style for now.
     module->setIsNewDbgInfoFormat(false);
 #endif
