@@ -6,13 +6,13 @@ struct S {
 
 // Prefix increment (++x)
 struct S& operator++(struct S &rs) {
-    rs.a = rs.a + 1;
+    rs.a = rs.a + 2;
     return rs;
 }
 
 // Prefix decrement (--x)
 struct S& operator--(struct S &rs) {
-    rs.a = rs.a - 1;
+    rs.a = rs.a - 4;
     return rs;
 }
 
@@ -39,13 +39,14 @@ task void f_f(uniform float RET[], uniform float aFOO[]) {
     a.a = aFOO[programIndex];
     c.a = aFOO[programIndex];
 
+    // Not using overloaded operator
+    RET[programIndex] = ++a.a;
+
     // Test prefix increment
-    ++a;
-    RET[programIndex] = a.a;
+    RET[programIndex] += (++a).a;
 
     // Test prefix decrement
-    --a;
-    RET[programIndex] += a.a;
+    RET[programIndex] += (--a).a;
 
     // Test postfix increment
     c = a++;
@@ -56,4 +57,4 @@ task void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] += c.a - a.a; // 1
 }
 
-task void result(uniform float RET[16]) { RET[programIndex] = programIndex * 2 + 5; }
+task void result(uniform float RET[16]) { RET[programIndex] = programIndex * 3 + 8; }
