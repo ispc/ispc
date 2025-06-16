@@ -2,17 +2,17 @@
 //  SPDX-License-Identifier: BSD-3-Clause
 
 #if TARGET_WIDTH == 8
-#define K_C 512
-#define N_C 512
-#define M_C 32
+#define K_C 256
+#define N_C 352
+#define M_C 64
 #define N_R 8
-#define M_R 12
+#define M_R 8
 #elif TARGET_WIDTH == 16
 #define K_C 256
-#define N_C 1024
-#define M_C 256
-#define N_R 32
-#define M_R 8
+#define N_C 448
+#define M_C 32
+#define N_R 64
+#define M_R 4
 #endif
 
 // assume K % K_C == 0
@@ -43,15 +43,8 @@ enum MatmulImpl {
 };
 
 // A matrix is stored in column-major order
-void loop_0(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda, uniform float B[],
-            uniform int ldb, uniform float C[], uniform int ldc) {
-
-    // assert(M == M_R);
-    // assert(N == N_R);
-    // assert(K == K_C);
-    // assert(lda == M_R);
-    // assert(ldb == N_R);
-
+static inline void loop_0(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda,
+                          uniform float B[], uniform int ldb, uniform float C[], uniform int ldc) {
     uniform float sumTile[M_R][N_R] = {{0}};
     uniform float oneAVal[M_R] = {0};
 
@@ -76,10 +69,8 @@ void loop_0(uniform int M, uniform int N, uniform int K, uniform float A[], unif
 }
 
 // A matrix is stored in column-major order
-// It is different from loop_0 as tile is M x N_R
-void loop_0_r(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda, uniform float B[],
-              uniform int ldb, uniform float C[], uniform int ldc) {
-
+static inline void loop_0_r(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda,
+                            uniform float B[], uniform int ldb, uniform float C[], uniform int ldc) {
     uniform float sumTile[M_R][N_R] = {{0}};
     uniform float oneAVal[M_R] = {0};
 
@@ -103,18 +94,33 @@ void loop_0_r(uniform int M, uniform int N, uniform int K, uniform float A[], un
     }
 }
 
-// A matrix is stored in column-major order
-void loop_0_naive(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda, uniform float B[],
-                  uniform int ldb, uniform float C[], uniform int ldc) {
-    for (uniform int m = 0; m < M; m++) {
-        for (uniform int n = 0; n < N; n++) {
-            for (uniform int k = 0; k < K; k++) {
-                C[m * ldc + n] += A[m + k * lda] * B[k * ldb + n];
+// A matrix is stored in column-major order - relaxed version of loop_0_r with arbitrary N
+static inline void loop_0_rr(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda,
+                             uniform float B[], uniform int ldb, uniform float C[], uniform int ldc) {
+    uniform float sumTile[M_R][N_R] = {{0}};
+    uniform float oneAVal[M_R] = {0};
+
+    for (uniform int k = 0; k < K; k++) {
+        for (uniform int m = 0; m < M; m++) {
+            oneAVal[m] = A[m + k * lda];
+        }
+
+        foreach (vn = 0 ... N) {
+            varying float matB1 = B[k * ldb + vn];
+            for (uniform int m = 0; m < M; m++) {
+                sumTile[m][vn] += oneAVal[m] * matB1;
             }
+        }
+    }
+
+    foreach (vn = 0 ... N) {
+        for (uniform int m = 0; m < M; m++) {
+            C[m * ldc + vn] += sumTile[m][vn];
         }
     }
 }
 
+#ifdef ISPC_TASKED_LOOP1
 task void loop_1_task(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda,
                       uniform float B[], uniform int ldb, uniform float C[], uniform int ldc) {
     uniform int R = M % M_R;
@@ -125,55 +131,67 @@ task void loop_1_task(uniform int M, uniform int N, uniform int K, uniform float
         loop_0(M_R, N, K, &A[ir * lda], M_R, B, ldb, &C[ir * ldc], ldc);
     }
 }
+#endif // ISPC_TASKED_LOOP1
 
-void loop_1(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda, uniform float B[],
-            uniform int ldb, uniform float C[], uniform int ldc) {
+static inline void loop_1(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda,
+                          uniform float B[], uniform int ldb, uniform float C[], uniform int ldc) {
 #ifndef ISPC_TASKED_LOOP1
     for (uniform int ir = 0; (ir < M) && !(ir + M_R > M); ir += M_R) {
-        loop_0(M_R, N, K, &A[ir * lda], M_R, B, ldb, &C[ir * ldc], ldc);
+        if (N == N_R) {
+            loop_0(M_R, N, K, &A[ir * lda], M_R, B, ldb, &C[ir * ldc], ldc);
+        } else {
+            loop_0_rr(M_R, N, K, &A[ir * lda], M_R, B, ldb, &C[ir * ldc], ldc);
+        }
     }
 
     uniform int R = M % M_R;
     if (R > 0) {
-        loop_0_r(R, N, K, &A[(M - R) * lda], R, B, ldb, &C[(M - R) * ldc], ldc);
+        loop_0_rr(R, N, K, &A[(M - R) * lda], R, B, ldb, &C[(M - R) * ldc], ldc);
     }
-#else
-#ifndef ONE_THREAD
+#else  // ISPC_TASKED_LOOP1
     uniform int numTasks = M / M_R;
-#else
-    uniform int numTasks = 1; // Single-threaded execution
-#endif // ONE_THREAD
     launch[numTasks] loop_1_task(M, N, K, A, lda, B, ldb, C, ldc);
     sync;
 #endif // ISPC_TASKED_LOOP1
 }
 
+#ifdef ISPC_TASKED_LOOP2
 task void loop_2_task(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda,
                       uniform float B[], uniform int ldb, uniform float C[], uniform int ldc) {
     uniform int jr = taskIndex * N_R;
     loop_1(M, N_R, K, A, lda, &B[jr * K], N_R, &C[jr], ldc);
 }
+#endif // ISPC_TASKED_LOOP2
 
-void loop_2(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda, uniform float B[],
-            uniform int ldb, uniform float C[], uniform int ldc) {
-    // assert(N % N_R == 0);
+static inline void loop_2(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda,
+                          uniform float B[], uniform int ldb, uniform float C[], uniform int ldc) {
 #ifndef ISPC_TASKED_LOOP2
-    for (uniform int jr = 0; jr < N; jr += N_R) {
+    // Handle full N_R blocks
+    for (uniform int jr = 0; (jr < N) && !(jr + N_R > N); jr += N_R) {
         loop_1(M, N_R, K, A, lda, &B[jr * K], N_R, &C[jr], ldc);
     }
-#else
-#ifndef ONE_THREAD
+
+    // Handle remainder columns if N % N_R != 0
+    uniform int R = N % N_R;
+    if (R > 0) {
+        uniform int jr = N - R;
+        loop_1(M, R, K, A, lda, &B[jr * K], R, &C[jr], ldc);
+    }
+#else  // ISPC_TASKED_LOOP2
     uniform int numTasks = N / N_R;
-#else
-    uniform int numTasks = 1; // Single-threaded execution
-#endif // ONE_THREAD
     launch[numTasks] loop_2_task(M, N, K, A, lda, B, ldb, C, ldc);
     sync;
+
+    // Handle remainder columns if N % N_R != 0
+    uniform int R = N % N_R;
+    if (R > 0) {
+        uniform int jr = N - R;
+        loop_1(M, R, K, A, lda, &B[jr * K], R, &C[jr], ldc);
+    }
 #endif // ISPC_TASKED_LOOP2
 }
 
-void pack_A(uniform int M, uniform int K, uniform float A[], uniform int lda, uniform float A_packed[]) {
-    // assert(M % M_R == 0);
+static inline void pack_A(uniform int M, uniform int K, uniform float A[], uniform int lda, uniform float A_packed[]) {
     for (uniform int r = 0; (r < M) && !(r + M_R > M); r += M_R) {
         for (uniform int k = 0; k < K; k++) {
             for (uniform int mr = 0; mr < M_R; mr++) {
@@ -191,32 +209,77 @@ void pack_A(uniform int M, uniform int K, uniform float A[], uniform int lda, un
     }
 }
 
-void loop_3(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda, uniform float B[],
-            uniform int ldb, uniform float C[], uniform int ldc) {
-    // assert(M % M_C == 0);
+#ifdef ISPC_TASKED_LOOP3
+task void loop_3_task(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda,
+                      uniform float B[], uniform int ldb, uniform float C[], uniform int ldc) {
+    uniform int ir = taskIndex * M_C;
     uniform float A_data[M_C][K_C] = {{0}};
     uniform float *uniform A_packed = (uniform float *uniform) & A_data[0][0];
-    for (uniform int i = 0; i < M; i += M_C) {
+
+    pack_A(M_C, K, &A[ir * lda], lda, A_packed);
+    loop_2(M_C, N, K, A_packed, K, B, ldb, &C[ir * ldc], ldc);
+}
+#endif // ISPC_TASKED_LOOP3
+
+static inline void loop_3(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda,
+                          uniform float B[], uniform int ldb, uniform float C[], uniform int ldc) {
+#ifndef ISPC_TASKED_LOOP3
+    uniform float A_data[M_C][K_C] = {{0}};
+    uniform float *uniform A_packed = (uniform float *uniform) & A_data[0][0];
+
+    // Handle full M_C blocks
+    for (uniform int i = 0; (i < M) && !(i + M_C > M); i += M_C) {
         pack_A(M_C, K, &A[i * lda], lda, A_packed);
         // leading dimension of A_packed is somewhat confusing here
         loop_2(M_C, N, K, A_packed, K, B, ldb, &C[i * ldc], ldc);
     }
+
+    // Handle remaining rows if M % M_C != 0
+    uniform int R = M % M_C;
+    if (R > 0) {
+        pack_A(R, K, &A[(M - R) * lda], lda, A_packed);
+        loop_2(R, N, K, A_packed, K, B, ldb, &C[(M - R) * ldc], ldc);
+    }
+#else  // ISPC_TASKED_LOOP3
+    uniform int numTasks = M / M_C;
+    launch[numTasks] loop_3_task(M, N, K, A, lda, B, ldb, C, ldc);
+    sync;
+
+    // Handle remaining rows if M % M_C != 0
+    uniform int R = M % M_C;
+    if (R > 0) {
+        uniform float A_data[M_C][K_C] = {{0}};
+        uniform float *uniform A_packed = (uniform float *uniform) & A_data[0][0];
+        pack_A(R, K, &A[(M - R) * lda], lda, A_packed);
+        loop_2(R, N, K, A_packed, K, B, ldb, &C[(M - R) * ldc], ldc);
+    }
+#endif // ISPC_TASKED_LOOP3
 }
 
-void pack_B(uniform int K, uniform int N, uniform float B[], uniform int ldb, uniform float B_packed[]) {
-    // assert(N % N_R == 0);
-    for (uniform int r = 0; r < N; r += N_R) {
+static inline void pack_B(uniform int K, uniform int N, uniform float B[], uniform int ldb, uniform float B_packed[]) {
+    // Handle full N_R blocks
+    for (uniform int r = 0; (r < N) && !(r + N_R > N); r += N_R) {
         for (uniform int k = 0; k < K; k++) {
             foreach (nr = 0 ... N_R) {
                 B_packed[r * K + k * N_R + nr] = B[k * ldb + (r + nr)];
             }
         }
     }
+
+    // Handle remainder columns if N % N_R != 0
+    uniform int R = N % N_R;
+    if (R > 0) {
+        uniform int r = N - R;
+        for (uniform int k = 0; k < K; k++) {
+            for (uniform int nr = 0; nr < R; nr++) {
+                B_packed[r * K + k * R + nr] = B[k * ldb + (r + nr)];
+            }
+        }
+    }
 }
 
-void loop_4(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda, uniform float B[],
-            uniform int ldb, uniform float C[], uniform int ldc) {
-    // assert(K % K_C == 0);
+static inline void loop_4(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda,
+                          uniform float B[], uniform int ldb, uniform float C[], uniform int ldc) {
     uniform float B_data[K_C][N_C] = {{0}};
     uniform float *uniform B_packed = (uniform float *uniform) & B_data[0][0];
     for (uniform int p = 0; p < K; p += K_C) {
@@ -226,11 +289,18 @@ void loop_4(uniform int M, uniform int N, uniform int K, uniform float A[], unif
     }
 }
 
-void loop_5(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda, uniform float B[],
-            uniform int ldb, uniform float C[], uniform int ldc) {
-    // assert(N % N_C == 0);
-    for (uniform int j = 0; j < N; j += N_C) {
+static inline void loop_5(uniform int M, uniform int N, uniform int K, uniform float A[], uniform int lda,
+                          uniform float B[], uniform int ldb, uniform float C[], uniform int ldc) {
+    // Handle full N_C blocks
+    for (uniform int j = 0; (j < N) && !(j + N_C > N); j += N_C) {
         loop_4(M, N_C, K, A, lda, &B[j], ldb, &C[j], ldc);
+    }
+
+    // Handle remainder columns if N % N_C != 0
+    uniform int R = N % N_C;
+    if (R > 0) {
+        uniform int j = N - R;
+        loop_4(M, R, K, A, lda, &B[j], ldb, &C[j], ldc);
     }
 }
 

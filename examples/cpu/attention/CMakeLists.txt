@@ -42,7 +42,7 @@ set(ISPC_HEADER ${CMAKE_CURRENT_BINARY_DIR}/attention_ispc.h)
 set(ISPC_NANOBIND_WRAPPER ${CMAKE_CURRENT_BINARY_DIR}/attention.cpp)
 
 # Set ISPC flags
-set(ISPC_FLAGS -O2 --target=host -DISPC_TASKED_LOOP2 -DGOTO_IMPL)
+set(ISPC_FLAGS -O2 --target=host -DISPC_TASKED_LOOP3 -DGOTO_IMPL)
 if (WIN32)
     set(ISPC_FLAGS ${ISPC_FLAGS} --dllexport)
 else()
