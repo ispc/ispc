@@ -1,50 +1,60 @@
-%(head_prefix)s
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Intel® ISPC User's Guide - Complete documentation for the high-performance SIMD compiler">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="stylesheet" href="css/style.css">
 %(head)s
-%(stylesheet)s
-%(body_prefix)s
-<div id="wrap">
-  <div id="wrap2">
-    <div id="header">
-      <h1 id="logo">Intel® Implicit SPMD Program Compiler</h1>
-      <div id="slogan">An open-source compiler for high-performance SIMD programming on
-      the CPU and GPU</div>
-    </div>
-    <div id="nav">
-      <div id="nbar">
-        <ul>
-          <li><a href="index.html">Overview</a></li>
-          <li><a href="features.html">Features</a></li>
-          <li><a href="downloads.html">Downloads</a></li>
-          <li id="selected"><a href="documentation.html">Documentation</a></li>
-          <li><a href="perf.html">Performance</a></li>
-          <li><a href="contrib.html">Contributors</a></li>
-        </ul>
+</head>
+<body>
+<div class="container">
+  <header class="site-header">
+    <nav class="main-nav">
+      <div class="nav-brand">
+        <h1>Intel® ISPC</h1>
       </div>
-    </div>
-    <div id="content-wrap">
-      <div id="sidebar">
-          <div class="widgetspace">
-            <h1>Resources</h1>
-            <ul class="menu">
-              <li><a href="http://github.com/ispc/ispc">GitHub page</a></li>
-              <li><a href="https://github.com/ispc/ispc/discussions">Discussions on GitHub</a></li>
-              <li><a href="http://github.com/ispc/ispc/issues">Issues on Github</a></li>
-              <li><a href="https://github.com/orgs/ispc/projects/1">Release planning board</a></li>
-              <li><a href="https://github.com/ispc/ispc/blob/main/CONTRIBUTING.md">Contributing guide</a></li>
-              <li><a href="http://github.com/ispc/ispc/wiki">Wiki on Github</a></li>
-            </ul>
-        </div>
-      </div>
+      <ul class="nav-menu">
+        <li class="nav-item"><a href="index.html">Overview</a></li>
+        <li class="nav-item"><a href="features.html">Features</a></li>
+        <li class="nav-item"><a href="downloads.html">Downloads</a></li>
+        <li class="nav-item active"><a href="documentation.html">Documentation</a></li>
+        <li class="nav-item"><a href="perf.html">Performance</a></li>
+        <li class="nav-item"><a href="contrib.html">Contributors</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="main-content">
+    <div class="content-grid">
+      <article class="content-main">
 %(body_pre_docinfo)s
 %(docinfo)s
-<div id="content">
 %(body)s
+      </article>
+
+      <aside class="sidebar">
+        <div class="sidebar-section">
+          <h3>Resources</h3>
+          <ul class="resource-links">
+            <li><a href="http://github.com/ispc/ispc">GitHub Repository</a></li>
+            <li><a href="https://github.com/ispc/ispc/discussions">Community Discussions</a></li>
+            <li><a href="http://github.com/ispc/ispc/issues">Report Issues</a></li>
+            <li><a href="https://github.com/orgs/ispc/projects/1">Release Planning</a></li>
+            <li><a href="https://github.com/ispc/ispc/blob/main/CONTRIBUTING.md">Contributing Guide</a></li>
+            <li><a href="http://github.com/ispc/ispc/wiki">Documentation Wiki</a></li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-content">
+      <p>&copy; <strong>Intel Corporation</strong> | <a href="http://validator.w3.org/check?uri=referer">Valid HTML</a> | <a href="http://jigsaw.w3.org/css-validator/check/referer">Valid CSS</a></p>
+    </div>
+  </footer>
 </div>
-    <div class="clearfix"></div>
-    <div id="footer"> &copy; <strong>Intel Corporation</strong> | Valid <a href="http://validator.w3.org/check?uri=referer">XHTML</a> | <a href="http://jigsaw.w3.org/css-validator/check/referer">CSS</a> | ClearBlue  by: <a href="http://www.themebin.com/">ThemeBin</a>
-      <!-- Please Do Not remove this link, thank u -->
-      </div>
-      </div>
-      </div>
-      </div>
-%(body_suffix)s
+</body>
+</html>
