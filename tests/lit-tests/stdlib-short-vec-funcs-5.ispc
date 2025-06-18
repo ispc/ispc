@@ -1,5 +1,5 @@
-// This test just checks that abs and similar functions with short vectors are
-// compiled without errors for all types and reasonalbe vector sizes.
+// This test just checks that the target math functions with short vectors are
+// compiled without errors for all types and reasonable vector sizes.
 
 // RUN: %{ispc} --target=host -o %t.o %s 2>&1
 
