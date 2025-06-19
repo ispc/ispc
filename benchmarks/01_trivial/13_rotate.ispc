@@ -3,15 +3,6 @@
 
 export uniform int width() { return programCount; }
 
-// Simple rotate test - rotate value with offset -1
-export void rotate_const_id(uniform int *uniform input, uniform int *uniform output, uniform int n) {
-    foreach (i = 0 ... n) {
-        int value = input[i];
-        int rotated = rotate(value, -1);
-        output[i] = rotated;
-    }
-}
-
 // Macro for rotate functions with different data types
 #define ROTATE_FUNC(TYPE)                                                                                              \
     export void rotate_##TYPE(uniform TYPE *uniform input, uniform TYPE *uniform output, uniform int n,                \
@@ -23,18 +14,31 @@ export void rotate_const_id(uniform int *uniform input, uniform int *uniform out
         }                                                                                                              \
     }
 
+// Macro for const rotate functions with different data types
+#define ROTATE_CONST_FUNC(TYPE)                                                                                        \
+    export void rotate_const_##TYPE(uniform TYPE *uniform input, uniform TYPE *uniform output, uniform int n) {        \
+        foreach (i = 0 ... n) {                                                                                        \
+            TYPE value = input[i];                                                                                     \
+            TYPE rotated = rotate(value, -1);                                                                          \
+            output[i] = rotated;                                                                                       \
+        }                                                                                                              \
+    }
+
 // Test rotating different data types
 #ifdef HAS_FP16
 ROTATE_FUNC(float16)
+ROTATE_CONST_FUNC(float16)
 #endif
 
 ROTATE_FUNC(float)
+ROTATE_CONST_FUNC(float)
 ROTATE_FUNC(double)
+ROTATE_CONST_FUNC(double)
 ROTATE_FUNC(int8)
+ROTATE_CONST_FUNC(int8)
 ROTATE_FUNC(int16)
+ROTATE_CONST_FUNC(int16)
 ROTATE_FUNC(int32)
+ROTATE_CONST_FUNC(int32)
 ROTATE_FUNC(int64)
-ROTATE_FUNC(uint8)
-ROTATE_FUNC(uint16)
-ROTATE_FUNC(uint32)
-ROTATE_FUNC(uint64)
+ROTATE_CONST_FUNC(int64)
