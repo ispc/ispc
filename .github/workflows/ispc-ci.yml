@@ -198,6 +198,25 @@ jobs:
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86 }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
 
+  linux-test-flags:
+    needs: [define-flow, linux-build-ispc]
+    strategy:
+      fail-fast: false
+      matrix:
+        llvm: [18]
+        arch: [x86, x86-64]
+        extra_flags: ["--opt=disable-zmm", "--addressing=64", "-g", "--math-lib=fast",
+                      "--math-lib=system", "--mcmodel=large", "--pic",
+                      "--no-wrap-signed-int",  "--opt=disable-fma", "--opt=fast-math"]
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: linux
+      architecture: ${{ matrix.arch }}
+      artifact_name: ispc_llvm${{ matrix.llvm }}_linux
+      targets: '["avx2-i32x8"]'
+      optsets: ${{ needs.define-flow.outputs.tests_optsets }}
+      ispc_extra_flags: ${{ matrix.extra_flags }}
+
   linux-test-llvm20-lto:
     needs: [define-flow, linux-build-ispc-llvm20-lto]
     strategy:
@@ -369,6 +388,24 @@ jobs:
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_arm }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
 
+  macos-test-flags:
+    needs: [define-flow, macos-build-ispc]
+    strategy:
+      fail-fast: false
+      matrix:
+        # --math-lib=fast is not tested because of #3442
+        extra_flags: ["--opt=disable-zmm", "--addressing=64", "-g",
+                      "--math-lib=system", "--mcmodel=large", "--pic",
+                      "--no-wrap-signed-int",  "--opt=disable-fma", "--opt=fast-math"]
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: macos
+      architecture: aarch64
+      artifact_name: ispc_llvm18_macos-14
+      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_arm }}
+      optsets: ${{ needs.define-flow.outputs.tests_optsets }}
+      ispc_extra_flags: ${{ matrix.extra_flags }}
+
   win-build-ispc:
     needs: [define-flow]
     strategy:
@@ -446,6 +483,25 @@ jobs:
       artifact_name: ispc_llvm${{matrix.llvm}}_win
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86 }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
+
+  win-test-flags:
+    needs: [define-flow, win-build-ispc]
+    strategy:
+      fail-fast: false
+      matrix:
+        llvm: [18]
+        arch: [x86, x86-64]
+        extra_flags: ["--opt=disable-zmm", "--addressing=64", "-g", "--math-lib=fast",
+                      "--math-lib=system", "--mcmodel=large", "--pic",
+                      "--no-wrap-signed-int",  "--opt=disable-fma", "--opt=fast-math"]
+    uses: ./.github/workflows/reusable.ispc.test.yml
+    with:
+      platform: windows
+      architecture: ${{ matrix.arch }}
+      artifact_name: ispc_llvm${{matrix.llvm}}_win
+      targets: '["avx2-i32x8"]'
+      optsets: ${{ needs.define-flow.outputs.tests_optsets }}
+      ispc_extra_flags: ${{ matrix.extra_flags }}
 
   win-test-llvm20-lto:
     needs: [define-flow, win-build-ispc-llvm20-lto]
