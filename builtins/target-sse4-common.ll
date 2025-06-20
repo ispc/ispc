@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2024, Intel Corporation
+;;  Copyright (c) 2010-2025, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -238,51 +238,3 @@ define i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
   sse_binary_scalar(ret, 4, i32, @llvm.x86.sse41.pmaxud, %0, %1)
   ret i32 %ret
 }
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; switch macro
-;; This is required to ensure that gather intrinsics are used with constant scale value.
-;; This particular implementation of the routine is used by non-avx512 targets currently(avx2-i64x4, avx2-i32x8, avx2-i32x16).
-;; $1: Return value
-;; $2: funcName
-;; $3: Width
-;; $4: scalar type of array
-;; $5: ptr
-;; $6: offset
-;; $7: scalar type of offset
-;; $8: vecMask
-;; $9: scalar type of vecMask
-;; $10: scale
-;; $11: scale type
-
-define(`convert_scale_to_const', `
-
-
- switch i32 %argn(`10',$@), label %default_$1 [ i32 1, label %on_one_$1
-                                                i32 2, label %on_two_$1
-                                                i32 4, label %on_four_$1
-                                                i32 8, label %on_eight_$1]
-
-on_one_$1:
-  %$1_1 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 1)
-  br label %end_bb_$1
-
-on_two_$1:
-  %$1_2 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 2)
-  br label %end_bb_$1
-
-on_four_$1:
-  %$1_4 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 4)
-  br label %end_bb_$1
-
-on_eight_$1:
-  %$1_8 = call <$3 x $4> @$2(<$3 x $4> undef, i8 * %$5, <$3 x $7> %$6, <$3 x $9> %$8, argn(`11',$@) 8)
-  br label %end_bb_$1
-
-default_$1:
-  unreachable
-
-end_bb_$1:
-  %$1 = phi <$3 x $4> [ %$1_1, %on_one_$1 ], [ %$1_2, %on_two_$1 ], [ %$1_4, %on_four_$1 ], [ %$1_8, %on_eight_$1 ]
-'
-)
