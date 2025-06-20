@@ -50,6 +50,11 @@ on:
         required: false
         type: string
         default: ''
+      ispc_extra_flags:
+        description: 'Additional ISPC flags to pass'
+        required: false
+        type: string
+        default: ''
 
 env:
   LLVM_HOME: ${{ inputs.platform == 'windows' && 'C:\\projects\\llvm' || github.workspace }}
@@ -102,9 +107,9 @@ jobs:
       run: |
         echo "PATH=${PATH}"
         if [ "${{ inputs.enable_debug }}" = "true" ]; then
-          ./scripts/alloy.py -r --only="stability ${{ inputs.architecture }} current debug ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+          ./scripts/alloy.py -r --only="stability ${{ inputs.architecture }} current debug ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP --ispc-flags="${{ inputs.ispc_extra_flags }}"
         else
-          ./scripts/alloy.py -r --only="stability ${{ inputs.architecture }} current ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+          ./scripts/alloy.py -r --only="stability ${{ inputs.architecture }} current ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP --ispc-flags="${{ inputs.ispc_extra_flags }}"
         fi
 
     - name: Running tests on Linux/macOS (run_tests mode)
@@ -122,7 +127,7 @@ jobs:
           # Remove dashes from each option
           opt_no_dash="${opt//-/}"
           echo "About to execute run_tests.py with opt: $opt_no_dash"
-          ./scripts/run_tests.py -t "${{ matrix.target }}" -a "${{ inputs.architecture }}" -o "$opt_no_dash" --time --update-errors=FP
+          ./scripts/run_tests.py -t "${{ matrix.target }}" -a "${{ inputs.architecture }}" -o "$opt_no_dash" --time --update-errors=FP --ispc-flags="${{ inputs.ispc_extra_flags }}"
           echo "Finished executing run_tests.py with opt: $opt_no_dash"
         done
 
@@ -132,9 +137,9 @@ jobs:
         $env:ISPC_HOME = "$pwd"
         .github/workflows/scripts/load-vs-env.ps1 "${{ inputs.architecture }}"
         if ("${{ inputs.enable_debug }}" -eq "true") {
-          python .\scripts\alloy.py -r --only="stability ${{ inputs.architecture }} current debug ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+          python .\scripts\alloy.py -r --only="stability ${{ inputs.architecture }} current debug ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP --ispc-flags="${{ inputs.ispc_extra_flags }}"
         } else {
-          python .\scripts\alloy.py -r --only="stability ${{ inputs.architecture }} current ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP
+          python .\scripts\alloy.py -r --only="stability ${{ inputs.architecture }} current ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP --ispc-flags="${{ inputs.ispc_extra_flags }}"
         }
         Write-Host "Finished executing alloy.py"
       shell: pwsh
@@ -153,9 +158,9 @@ jobs:
           $optNoDash = $opt -replace "-", ""
           Write-Host "About to execute run_tests.py with opt: $optNoDash"
           if ("${{ inputs.calling_conv }}" -ne "" -and "${{ inputs.architecture }}" -ne "aarch64") {
-            python .\scripts\run_tests.py --calling_conv=${{ inputs.calling_conv }} --target=${{ matrix.target }} --arch=${{ inputs.architecture }} --opt=$optNoDash
+            python .\scripts\run_tests.py --calling_conv=${{ inputs.calling_conv }} --target=${{ matrix.target }} --arch=${{ inputs.architecture }} --opt=$optNoDash --ispc-flags="${{ inputs.ispc_extra_flags }}"
           } else {
-            python .\scripts\run_tests.py --target=${{ matrix.target }} --arch=${{ inputs.architecture }} --opt=$optNoDash
+            python .\scripts\run_tests.py --target=${{ matrix.target }} --arch=${{ inputs.architecture }} --opt=$optNoDash --ispc-flags="${{ inputs.ispc_extra_flags }}"
           }
           Write-Host "Finished executing run_tests.py with opt: $optNoDash"
         }
