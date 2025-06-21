@@ -12,9 +12,47 @@ include(`target-avx512-utils.ll')
 
 ;; shuffles
 
-shuffle1(i8)
-shuffle1(i16)
-shuffle1(half)
+declare <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8>, <16 x i8>)
+define <4 x i8> @__shuffle_i8(<4 x i8> %data, <4 x i32> %shuffle_mask) nounwind readnone alwaysinline {
+  %data8 = shufflevector <4 x i8> %data, <4 x i8> undef,
+                         <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %data16 = shufflevector <8 x i8> %data8, <8 x i8> undef,
+                         <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                                    i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+
+  ; Create mask (indices with high bit clear, 0x80 for zero)
+  %shuffle_mask2 = trunc <4 x i32> %shuffle_mask to <4 x i8>
+  %mask8 = shufflevector <4 x i8> %shuffle_mask2, <4 x i8> <i8 -128, i8 -128, i8 -128, i8 -128>,
+                         <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %mask16 = shufflevector <8 x i8> %mask8, <8 x i8> <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>,
+                         <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                                    i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+
+  ; Use vpshufb to perform the shuffle
+  %result16 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %data16, <16 x i8> %mask16)
+
+  %result8 = shufflevector <16 x i8> %result16, <16 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %result = shufflevector <8 x i8> %result8, <8 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i8> %result
+}
+
+; Use vpermw to perform the shuffle of i16 vectors.
+declare <WIDTH x i16> @llvm.x86.avx512.mask.permvar.hi.128(<WIDTH x i16>, <WIDTH x i16>, <WIDTH x i16>, i8)
+define <4 x i16> @__shuffle_i16(<4 x i16> %src, <4 x i32> %indices) nounwind readnone alwaysinline {
+  %src_ext = shufflevector <4 x i16> %src, <4 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %indices_ext = shufflevector <4 x i32> %indices, <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %ind = trunc <8 x i32> %indices_ext to <8 x i16>
+  %res_ext = call <8 x i16> @llvm.x86.avx512.mask.permvar.hi.128(<8 x i16> %src_ext, <8 x i16> %ind, <8 x i16> zeroinitializer, i8 15)
+  %result = shufflevector <8 x i16> %res_ext, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i16> %result
+}
+
+define <WIDTH x half> @__shuffle_half(<WIDTH x half> %v, <WIDTH x i32> %perm) nounwind readnone alwaysinline {
+  %vals = bitcast <WIDTH x half> %v to <WIDTH x i16>
+  %res = call <WIDTH x i16> @__shuffle_i16(<WIDTH x i16> %vals, <WIDTH x i32> %perm)
+  %res_half = bitcast <WIDTH x i16> %res to <WIDTH x half>
+  ret <WIDTH x half> %res_half
+}
 
 declare <WIDTH x float> @llvm.x86.avx512.mask.vpermilvar.ps.128(<WIDTH x float>, <WIDTH x i32>, <WIDTH x float>, i8)
 define <WIDTH x float> @__shuffle_float(<WIDTH x float>, <WIDTH x i32>) nounwind readnone alwaysinline {
@@ -29,6 +67,7 @@ define <WIDTH x i32> @__shuffle_i32(<WIDTH x i32>, <WIDTH x i32>) nounwind readn
   ret <WIDTH x i32> %res
 }
 
+; Use vpermq to perform the shuffle of i64 vectors.
 declare <WIDTH x i64> @llvm.x86.avx512.mask.permvar.di.256(<WIDTH x i64>, <WIDTH x i64>, <WIDTH x i64>, i8)
 define <WIDTH x i64> @__shuffle_i64(<WIDTH x i64>, <WIDTH x i32>) nounwind readnone alwaysinline {
   %ind = zext <WIDTH x i32> %1 to <WIDTH x i64>

@@ -21,6 +21,13 @@
 // RUN: %{ispc} --target=avx512skx-x8 --nowrap -O2 --emit-llvm-text %s -o - | FileCheck %s
 // RUN: %{ispc} --target=avx512skx-x16 --nowrap -O2 --emit-llvm-text %s -o - | FileCheck %s
 // RUN: %{ispc} --target=avx512skx-x32 --nowrap -O2 --emit-llvm-text %s -o - | FileCheck %s
+// RUN: %{ispc} --target=avx512skx-x64 --nowrap -O2 --emit-llvm-text %s -o - | FileCheck %s
+
+// RUN: %{ispc} --target=avx512icl-x4 --nowrap -O2 --emit-llvm-text %s -o - | FileCheck %s
+// RUN: %{ispc} --target=avx512icl-x8 --nowrap -O2 --emit-llvm-text %s -o - | FileCheck %s
+// RUN: %{ispc} --target=avx512icl-x16 --nowrap -O2 --emit-llvm-text %s -o - | FileCheck %s
+// RUN: %{ispc} --target=avx512icl-x32 --nowrap -O2 --emit-llvm-text %s -o - | FileCheck %s
+// RUN: %{ispc} --target=avx512icl-x64 --nowrap -O2 --emit-llvm-text %s -o - | FileCheck %s
 
 
 // REQUIRES: X86_ENABLED
