@@ -7567,7 +7567,7 @@ class mm_mul_epu32 : public TestBase {
         switch (TestNumber) {
         case 0:
             for (int k = 0; k < Iterations; k++) {
-                Result[k] = Source1[k] * Source2[k];
+                Result[k] = static_cast<uint64>(Source1[k]) * static_cast<uint64>(Source2[k]);
             }
             break;
 #ifdef IS_X86_ARCH
@@ -7588,7 +7588,7 @@ class mm_mul_epu32 : public TestBase {
 
     virtual bool ResultsCorrect(const ::benchmark::State &state, const unsigned int TestNumber) {
         for (int k = 0; k < Iterations; k += 2) {
-            if (Result[k] != Source1[k] * Source2[k]) {
+            if (Result[k] != static_cast<uint64>(Source1[k]) * static_cast<uint64>(Source2[k])) {
                 return false;
             }
         }
