@@ -1261,8 +1261,7 @@ class mm_or_pd : public TestBase {
         for (int k = 0; k < Iterations; k++) {
             int64 *S1 = reinterpret_cast<int64 *>(&Source1[k]);
             int64 *S2 = reinterpret_cast<int64 *>(&Source2[k]);
-            int64 R = ((*S1) | (*S2));
-            if (Result[k] != *reinterpret_cast<double *>(&R)) {
+            if (*reinterpret_cast<int64 *>(&Result[k]) != ((*S1) | (*S2))) {
                 return false;
             }
         }
