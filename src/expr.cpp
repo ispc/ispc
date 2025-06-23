@@ -5733,7 +5733,10 @@ llvm::Value *VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
 
             indices.push_back(idx);
         }
-
+        if (exprVectorType == nullptr) {
+            AssertPos(pos, m->errorCount > 0);
+            return nullptr;
+        }
         llvm::Value *basePtr = nullptr;
         AddressInfo *basePtrInfo = nullptr;
         const Type *basePtrType = nullptr;
