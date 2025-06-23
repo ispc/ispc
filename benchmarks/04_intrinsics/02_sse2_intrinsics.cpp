@@ -5373,7 +5373,7 @@ class mm_set1_pd : public TestBase {
 
     virtual bool ResultsCorrect(const ::benchmark::State &state, const unsigned int TestNumber) {
         for (int k = 0; k < Iterations; k += 2) {
-            if (Result[k] != Source1[k] && Result[k] != Source1[k]) {
+            if (Result[k] != Source1[k] && Result[k + 1] != Source1[k]) {
                 return false;
             }
         }
