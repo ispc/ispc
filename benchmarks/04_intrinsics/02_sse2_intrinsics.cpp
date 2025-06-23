@@ -2465,6 +2465,10 @@ class mm_cmpord_sd : public TestBase {
                 Value = 0.0f;
             }
 
+            if (IS_NAN(Value) && IS_NAN(Result[k])) {
+                continue; // Both are NaN, considered equal for this test
+            }
+
             if (Result[k] != Value) {
                 return false;
             }
@@ -2553,6 +2557,9 @@ class mm_cmpord_pd : public TestBase {
                 Value = 0.0f;
             }
 
+            if (IS_NAN(Value) && IS_NAN(Result[k])) {
+                continue; // Both are NaN, considered equal for this test
+            }
             if (Result[k] != Value) {
                 return false;
             }
