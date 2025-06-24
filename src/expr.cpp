@@ -4286,8 +4286,7 @@ llvm::Value *FunctionCallExpr::GetLValue(FunctionEmitContext *ctx) const {
     if (GetLValueType() != nullptr) {
         return GetValue(ctx);
     } else {
-        // Only be a valid LValue type if the function
-        // returns a pointer or reference.
+        // Only be a valid LValue type if the function returns a reference
         return nullptr;
     }
 }
@@ -4337,11 +4336,10 @@ const Type *FunctionCallExpr::GetLValueType() const {
         return nullptr;
     }
     const FunctionType *ftype = CastType<FunctionType>(type);
-    if (ftype && (ftype->GetReturnType()->IsPointerType() || ftype->GetReturnType()->IsReferenceType())) {
+    if (ftype && ftype->GetReturnType()->IsReferenceType()) {
         return ftype->GetReturnType();
     } else {
-        // Only be a valid LValue type if the function
-        // returns a pointer or reference.
+        // Only be a valid LValue type if the function returns a reference
         return nullptr;
     }
 }
