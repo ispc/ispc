@@ -2460,9 +2460,9 @@ changing values in memory with pointers, and so forth is supported as in C.
 As with other basic types, pointers can be both ``uniform`` and
 ``varying``.
 
-**Like other types in ``ispc``, pointers are ``varying`` by default, if an
-explicit ``uniform`` qualifier isn't provided.  However, the default
-variability of the pointed-to type is uniform.** This rule will be
+**Like other types in ispc, pointers are** ``varying`` **by default, if an
+explicit** ``uniform`` **qualifier isn't provided. However, the default
+variability of the pointed-to type is** ``uniform``. This rule will be
 illustrated and explained in examples below.
 
 For example, the ``ptr`` variable in the code below is a varying pointer to
