@@ -2941,7 +2941,7 @@ Unary Operators
 ISPC also supports overloading unary operators: ``++, --, -, !, and ~``. For
 unary operators, the implementation depends on the operator type:
 
-1. **Prefix Increment/Decrement (``++x``, ``--x``)**: Define a function that
+1. **Prefix Increment/Decrement (** ``++x`` **,** ``--x`` **)**: Define a function that
    takes a reference to your struct and returns the modified struct.
 
 ::
@@ -2952,7 +2952,7 @@ unary operators, the implementation depends on the operator type:
         return s;
     }
 
-2. **Postfix Increment/Decrement (``x++``, ``x--``)**: Define a function that
+2. **Postfix Increment/Decrement (** ``x++`` **,** ``x--`` **)**: Define a function that
    takes a reference to your struct and an additional dummy int parameter,
    returning the original value before modification.
 
@@ -2964,7 +2964,7 @@ unary operators, the implementation depends on the operator type:
         return temp;        // Return saved original
     }
 
-3. **Unary Minus, Logical NOT, Bitwise NOT (``-x``, ``!x``, ``~x``)**: Define a
+3. **Unary Minus, Logical NOT, Bitwise NOT (** ``-x`` **,** ``!x`` **,** ``~x`` **)**: Define a
    function that takes your struct by value and returns an appropriate result.
 
 ::
@@ -2986,7 +2986,7 @@ ISPC also supports overloading assignment operators for ``struct`` types. The as
 operators include: ``=, +=, -=, *=, /=, %=, <<=, >>=, &=, |=, and ^=``. This allows for
 more intuitive operations with custom data types.
 
-1. **Basic Assignment (``=``)**: Define a function that takes a reference to your struct
+1. **Basic Assignment (** ``=`` **)**: Define a function that takes a reference to your struct
    as the left-hand side and a value (or reference) of another type as the right-hand side,
    returning a reference to the modified struct.
 
@@ -3004,7 +3004,7 @@ more intuitive operations with custom data types.
         return A;
     }
 
-2. **Compound Assignment (``+=``, ``-=``, etc.)**: Define a function that takes a reference
+2. **Compound Assignment (** ``+=`` **,** ``-=`` **, etc.)**: Define a function that takes a reference
    to your struct as the left-hand side and a value (or reference) as the right-hand side,
    returning a reference to the modified struct.
 
