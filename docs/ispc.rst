@@ -2076,12 +2076,13 @@ The following reserved words from C89 are also reserved in ``ispc``:
 
 ``ispc`` additionally reserves the following words:
 
-``bool``, ``delete``, ``export``, ``cdo``, ``cfor``, ``cif``, ``cwhile``,
+``bool``, ``cdo``, ``cfor``, ``cif``, ``cwhile``, ``delete``, ``export``,
 ``false``, ``float16``, ``foreach``, ``foreach_active``, ``foreach_tiled``,
-``foreach_unique``, ``in``, ``inline``, ``noinline``, ``__regcall``,
-``__vectorcall``, ``int8``, ``int16``, ``int32``, ``int64``, ``launch``,
-``new``, ``print``, ``uint8``, ``uint16``, ``uint32``, ``uint64``, ``soa``,
-``__attribute__``, ``sync``, ``task``, ``true``, ``uniform``, and ``varying``.
+``foreach_unique``, ``in``, ``inline``, ``int8``, ``int16``, ``int32``,
+``int64``, ``invoke_sycl``, ``launch``, ``new``, ``noinline``, ``print``,
+``soa``, ``sync``, ``task``, ``template``, ``true``, ``typename``, ``uint8``,
+``uint16``, ``uint32``, ``uint64``, ``uint``, ``uniform``, ``unmasked``,
+``varying``, ``__attribute__``, ``__regcall``, ``__vectorcall``.
 
 
 Lexical Structure
@@ -2236,17 +2237,17 @@ as the first argument to the ``print()`` statement, however.  ``ispc`` also
 doesn't support character constants.
 
 The following identifiers are reserved as language keywords: ``bool``,
-``break``, ``case``, ``cdo``, ``cfor``, ``char``, ``cif``, ``cwhile``,
-``const``, ``continue``, ``default``, ``do``, ``double``, ``else``,
-``enum``, ``export``, ``extern``, ``false``, ``float``, ``float16``, ``for``,
+``break``, ``case``, ``cdo``, ``cfor``, ``cif``, ``const``, ``continue``,
+``cwhile``, ``default``, ``delete``, ``do``, ``double``, ``else``, ``enum``,
+``export``, ``extern``, ``false``, ``float16``, ``float``, ``for``,
 ``foreach``, ``foreach_active``, ``foreach_tiled``, ``foreach_unique``,
-``goto``, ``if``, ``in``, ``inline``, ``noinline``, ``int``, ``int8``,
-``int16``, ``int32``, ``int64``, ``invoke_sycl``, ``launch``, ``NULL``,
-``print``, ``return``, ``signed``, ``sizeof``, ``soa``, ``static``, ``struct``,
-``switch``, ``sync``, ``task``, ``template``, ``true``, ``typedef``,
-``typename``, ``uint``, ``uint8``, ``uint16``, ``uint32``, ``uint64``,
-``uniform``, ``union``, ``unsigned``, ``varying``, ``__regcall``,
-``__vectorcall``, ``__attribute__``, ``void``, ``volatile``, ``while``.
+``goto``, ``if``, ``in``, ``inline``, ``int8``, ``int16``, ``int32``,
+``int64``, ``int``, ``invoke_sycl``, ``launch``, ``new``, ``noinline``,
+``NULL``, ``print``, ``return``, ``signed``, ``sizeof``, ``soa``, ``static``,
+``struct``, ``switch``, ``sync``, ``task``, ``template``, ``true``,
+``typedef``, ``typename``, ``uint8``, ``uint16``, ``uint32``, ``uint64``,
+``uint``, ``uniform``, ``unmasked``, ``unsigned``, ``varying``, ``void``,
+``while``, ``__attribute__``, ``__regcall``, ``__vectorcall``.
 
 ``ispc`` defines the following operators and punctuation:
 
