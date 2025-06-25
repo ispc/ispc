@@ -2218,14 +2218,16 @@ forloop(i, 1, eval(WIDTH-1), `
 ;; $1: type
 ;; $1: type size
 
-define(`vector_permutations', `
+define(`vector_broadcast', `
 define <WIDTH x $1> @__broadcast_$1(<WIDTH x $1>, i32) nounwind readnone alwaysinline {
   %v = extractelement <WIDTH x $1> %0, i32 %1
   %broadcast_init = insertelement <WIDTH x $1> undef, $1 %v, i32 0
   %broadcast = shufflevector <WIDTH x $1> %broadcast_init, <WIDTH x $1> undef, <WIDTH x i32> zeroinitializer
   ret <WIDTH x $1> %broadcast
 }
+')
 
+define(`vector_rotate', `
 define <WIDTH x $1> @__rotate_$1(<WIDTH x $1>, i32) nounwind readnone alwaysinline {
   %isc = call i1 @__is_compile_time_constant_uniform_int32(i32 %1)
   br i1 %isc, label %is_const, label %not_const
@@ -2258,7 +2260,9 @@ not_const:
   %result = load PTR_OP_ARGS(`<WIDTH x $1> ')  %load_ptr_vec, align $2
   ret <WIDTH x $1> %result
 }
+')
 
+define(`vector_shift', `
 define <WIDTH x $1> @__shift_$1(<WIDTH x $1>, i32) nounwind readnone alwaysinline {
   %ptr = alloca <WIDTH x $1>, i32 3
   %ptr0 = getelementptr PTR_OP_ARGS(`<WIDTH x $1>') %ptr, i32 0
@@ -2275,6 +2279,48 @@ define <WIDTH x $1> @__shift_$1(<WIDTH x $1>, i32) nounwind readnone alwaysinlin
   %result = load PTR_OP_ARGS(`<WIDTH x $1> ')  %load_ptr_vec, align $2
   ret <WIDTH x $1> %result
 }
+')
+
+define(`vector_permutations', `
+vector_broadcast($1, $2)
+vector_rotate($1, $2)
+vector_shift($1, $2)
+')
+
+define(`define_vector_broadcasts',`
+vector_broadcast(i8, 1)
+vector_broadcast(i16, 2)
+vector_broadcast(half, 2)
+vector_broadcast(float, 4)
+vector_broadcast(i32, 4)
+vector_broadcast(double, 8)
+vector_broadcast(i64, 8)
+')
+
+define(`define_vector_rotates',`
+vector_rotate(i8, 1)
+vector_rotate(i16, 2)
+vector_rotate(half, 2)
+vector_rotate(float, 4)
+vector_rotate(i32, 4)
+vector_rotate(double, 8)
+vector_rotate(i64, 8)
+')
+
+define(`define_vector_shifts',`
+vector_shift(i8, 1)
+vector_shift(i16, 2)
+vector_shift(half, 2)
+vector_shift(float, 4)
+vector_shift(i32, 4)
+vector_shift(double, 8)
+vector_shift(i64, 8)
+')
+
+define(`define_vector_permutations',`
+define_vector_broadcasts()
+define_vector_rotates()
+define_vector_shifts()
 ')
 
 
@@ -2312,16 +2358,6 @@ define(`define_shuffles',`
 define_shuffle1()
 define_shuffle2_const()
 define_shuffle2()
-')
-
-define(`define_vector_permutations',`
-vector_permutations(i8, 1)
-vector_permutations(i16, 2)
-vector_permutations(half, 2)
-vector_permutations(float, 4)
-vector_permutations(i32, 4)
-vector_permutations(double, 8)
-vector_permutations(i64, 8)
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
