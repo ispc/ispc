@@ -772,6 +772,7 @@ struct Opt {
   */
 struct Globals {
     Globals();
+    ~Globals();
 
     /** TargetRegistry holding all stdlib bitcode. */
     TargetLibRegistry *target_registry;
