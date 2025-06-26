@@ -3179,6 +3179,13 @@ Globals::Globals() {
     calling_conv = CallingConv::uninitialized;
 }
 
+Globals::~Globals() {
+    if (ctx) {
+        delete ctx;
+        ctx = nullptr;
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // StorageClass
 
