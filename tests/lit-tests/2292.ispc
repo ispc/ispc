@@ -23,4 +23,5 @@ export void test(){
 
 extern "C" uniform int main() {
     test();
+    return 0;
 }

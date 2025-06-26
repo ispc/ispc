@@ -36,4 +36,5 @@ export void test(uniform int nb)
 
 extern "C" uniform int main() {
     test(12);
+    return 0;
 }
