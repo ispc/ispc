@@ -506,70 +506,142 @@ __declspec(safe) static inline unsigned int64 rotate(unsigned int64 v, uniform i
 #endif
 }
 
+template <typename T> unmasked varying T __shift_via_shuffle(varying T v, uniform int32 i) {
+    // Unlike circular shift (rotate), this is a linear shift that nullifies
+    // out-of-bounds elements (not wrapping around).
+    // Calling here shuffle with sourceIndex containing the out-of-bounds
+    // indexes is fine until shuffle is implemented with on-registers shuffles.
+    // When it is implemented via gather/scatter, it really should not be used,
+    // so we don't defined USE_SHIFT_VIA_SHUFFLE_64 for avx512-x32/x64 and
+    // USE_SHIFT_VIA_SHUFFLE_32 for avx512-x64.
+    varying int32 sourceIndex = programIndex + i;
+    varying T shuffled = shuffle(v, sourceIndex);
+    varying bool inBounds = (sourceIndex >= 0) & (sourceIndex < TARGET_WIDTH);
+    return select(inBounds, shuffled, (varying T)0);
+}
+
+#if defined(ISPC_TARGET_AVX512SKX) || defined(ISPC_TARGET_AVX512ICL) || defined(ISPC_TARGET_AVX512SPR) ||              \
+    defined(ISPC_TARGET_AVX10_2)
+#define USE_SHIFT_VIA_SHUFFLE_8
+#define USE_SHIFT_VIA_SHUFFLE_16
+
+#if TARGET_WIDTH < 64
+#define USE_SHIFT_VIA_SHUFFLE_32
+#endif
+
+#if TARGET_WIDTH < 32
+#define USE_SHIFT_VIA_SHUFFLE_64
+#endif
+#endif // avx512 or avx10
+
 __declspec(safe) static inline float shift(float v, uniform int i) {
+#ifdef USE_SHIFT_VIA_SHUFFLE_32
+    return __shift_via_shuffle(v, i);
+#else
     varying float result;
     unmasked { result = __shift_float(v, i); }
     return result;
+#endif
 }
 
 __declspec(safe) static inline int8 shift(int8 v, uniform int i) {
+#ifdef USE_SHIFT_VIA_SHUFFLE_8
+    return __shift_via_shuffle(v, i);
+#else
     varying int8 result;
     unmasked { result = __shift_i8(v, i); }
     return result;
+#endif
 }
 
 __declspec(safe) static inline unsigned int8 shift(unsigned int8 v, uniform int i) {
+#ifdef USE_SHIFT_VIA_SHUFFLE_8
+    return __shift_via_shuffle(v, i);
+#else
     varying unsigned int8 result;
     unmasked { result = __shift_i8(v, i); }
     return result;
+#endif
 }
 
 __declspec(safe) static inline int16 shift(int16 v, uniform int i) {
+#ifdef USE_SHIFT_VIA_SHUFFLE_16
+    return __shift_via_shuffle(v, i);
+#else
     varying int16 result;
     unmasked { result = __shift_i16(v, i); }
     return result;
+#endif
 }
 
 __declspec(safe) static inline unsigned int16 shift(unsigned int16 v, uniform int i) {
+#ifdef USE_SHIFT_VIA_SHUFFLE_16
+    return __shift_via_shuffle(v, i);
+#else
     varying unsigned int16 result;
     unmasked { result = __shift_i16(v, i); }
     return result;
+#endif
 }
 
 __declspec(safe) static inline float16 shift(float16 v, uniform int i) {
-    varying int16 result;
+#ifdef USE_SHIFT_VIA_SHUFFLE_16
+    return __shift_via_shuffle(v, i);
+#else
+    varying float16 result;
     unmasked { result = __shift_half(v, i); }
     return result;
+#endif
 }
 
 __declspec(safe) static inline int32 shift(int32 v, uniform int i) {
+#ifdef USE_SHIFT_VIA_SHUFFLE_32
+    return __shift_via_shuffle(v, i);
+#else
     varying int32 result;
     unmasked { result = __shift_i32(v, i); }
     return result;
+#endif
 }
 
 __declspec(safe) static inline unsigned int32 shift(unsigned int32 v, uniform int i) {
+#ifdef USE_SHIFT_VIA_SHUFFLE_32
+    return __shift_via_shuffle(v, i);
+#else
     varying unsigned int32 result;
     unmasked { result = __shift_i32(v, i); }
     return result;
+#endif
 }
 
 __declspec(safe) static inline double shift(double v, uniform int i) {
+#ifdef USE_SHIFT_VIA_SHUFFLE_64
+    return __shift_via_shuffle(v, i);
+#else
     varying double result;
     unmasked { result = __shift_double(v, i); }
     return result;
+#endif
 }
 
 __declspec(safe) static inline int64 shift(int64 v, uniform int i) {
+#ifdef USE_SHIFT_VIA_SHUFFLE_64
+    return __shift_via_shuffle(v, i);
+#else
     varying int64 result;
     unmasked { result = __shift_i64(v, i); }
     return result;
+#endif
 }
 
 __declspec(safe) static inline unsigned int64 shift(unsigned int64 v, uniform int i) {
+#ifdef USE_SHIFT_VIA_SHUFFLE_64
+    return __shift_via_shuffle(v, i);
+#else
     varying unsigned int64 result;
     unmasked { result = __shift_i64(v, i); }
     return result;
+#endif
 }
 
 __declspec(safe) static inline float shuffle(float v, int i) { return __shuffle_float(v, i); }
