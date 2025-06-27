@@ -704,7 +704,7 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
     }
 
     Symbol *sym = symbolTable->LookupVariable(name.c_str());
-    llvm::GlobalVariable *oldGV = nullptr;
+
     if (sym != nullptr) {
         // We've already seen either a declaration or a definition of this
         // global.
@@ -726,14 +726,27 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
             return;
         }
 
-        // Now, we either have a redeclaration of a global, or a definition
-        // of a previously-declared global.  First, save the pointer to the
-        // previous llvm::GlobalVariable
-        oldGV = gv;
-    } else {
-        sym = new Symbol(name, pos, Symbol::SymbolKind::Variable, type, storageClass);
-        symbolTable->AddVariable(sym);
+        // Update existing global variable
+        if (!gv->hasInitializer() && llvmInitializer) {
+            gv->setInitializer(llvmInitializer);
+        }
+
+        // Update other properties
+        gv->setConstant(isConst);
+
+        // Apply alignment if specified
+        if (alignment > 0) {
+            gv->setAlignment(llvm::Align(alignment));
+        }
+
+        // Update the symbol's constValue
+        sym->constValue = constValue;
+
+        return;
     }
+    sym = new Symbol(name, pos, Symbol::SymbolKind::Variable, type, storageClass);
+    symbolTable->AddVariable(sym);
+
     sym->constValue = constValue;
 
     llvm::GlobalValue::LinkageTypes linkage =
@@ -742,6 +755,7 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
     // Note that the nullptr llvmInitializer is what leads to "extern"
     // declarations coming up extern and not defining storage (a bit
     // subtle)...
+    // Create new GlobalVariable only for new symbols
     sym->storageInfo = new AddressInfo(
         new llvm::GlobalVariable(*module, llvmType, isConst, linkage, llvmInitializer, sym->name.c_str()), llvmType);
 
@@ -749,14 +763,6 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
     if (alignment > 0) {
         llvm::GlobalVariable *gv = llvm::cast<llvm::GlobalVariable>(sym->storageInfo->getPointer());
         gv->setAlignment(llvm::Align(alignment));
-    }
-
-    // Patch up any references to the previous GlobalVariable (e.g. from a
-    // declaration of a global that was later defined.)
-    if (oldGV != nullptr) {
-        oldGV->replaceAllUsesWith(sym->storageInfo->getPointer());
-        oldGV->removeFromParent();
-        sym->storageInfo->getPointer()->setName(sym->name.c_str());
     }
 
     if (diBuilder) {
@@ -768,11 +774,6 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst) {
         llvm::DIGlobalVariableExpression *var = diBuilder->createGlobalVariableExpression(
             diSpace, name, name, file, pos.first_line, sym->type->GetDIType(diSpace), sym->storageClass.IsStatic());
         sym_GV_storagePtr->addDebugInfo(var);
-        /*#if ISPC_LLVM_VERSION <= ISPC_LLVM_3_6
-                Assert(var.Verify());
-        #else // LLVM 3.7+
-              // comming soon
-        #endif*/
     }
 }
 
