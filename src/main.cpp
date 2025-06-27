@@ -37,6 +37,19 @@
 
 using namespace ispc;
 
+enum class ArgsParseResult : int { success = 0, failure = 1, help_requested = 2 };
+
+static int toExitCode(ArgsParseResult code) {
+    switch (code) {
+    case ArgsParseResult::success:
+    case ArgsParseResult::help_requested:
+        return 0;
+    case ArgsParseResult::failure:
+        return 1;
+    }
+    return 1; // Default to failure
+}
+
 #ifdef ISPC_HOST_IS_WINDOWS
 #define strcasecmp stricmp
 #ifndef BUILD_DATE
@@ -56,7 +69,7 @@ static void lPrintVersion() {
 #endif
 }
 
-[[noreturn]] static void usage(int ret) {
+static ArgsParseResult usage() {
     lPrintVersion();
     printf("\nusage: ispc\n");
     printf("    [--addressing={32,64}]\t\tSelect 32- or 64-bit addressing. (Note that 32-bit addressing calculations "
@@ -182,10 +195,10 @@ static void lPrintVersion() {
 #endif
     printf("    [@<filename>]\t\t\tRead additional arguments from the given file\n");
     printf("    <file to compile or \"-\" for stdin>\n");
-    exit(ret);
+    return ArgsParseResult::help_requested;
 }
 
-[[noreturn]] static void linkUsage(int ret) {
+static ArgsParseResult linkUsage() {
     lPrintVersion();
     printf("\nusage: ispc link\n");
     printf("\nLink several IR or SPIR-V files to selected output format: LLVM BC (default), LLVM text or SPIR-V\n");
@@ -201,10 +214,10 @@ static void lPrintVersion() {
     printf("        ispc link test_a.spv test_b.spv --emit-llvm -o test.bc\n");
     printf("    Link LLVM bitcode files to SPIR-V output:\n");
     printf("        ispc link test_a.bc test_b.bc --emit-spirv -o test.spv\n");
-    exit(ret);
+    return ArgsParseResult::help_requested;
 }
 
-[[noreturn]] static void devUsage(int ret) {
+static ArgsParseResult devUsage() {
     lPrintVersion();
     printf("\nusage (developer options): ispc\n");
     printf("    [--ast-dump]\t\tDump AST.\n");
@@ -250,7 +263,7 @@ static void lPrintVersion() {
     printf("    [--time-trace-pm]\t\t\tPrint time tracing information from ispc pass manager\n");
     printf("    [--print-target]\t\t\tPrint target's information\n");
     printf("    [--yydebug]\t\t\t\tPrint debugging information during parsing\n");
-    exit(ret);
+    return ArgsParseResult::help_requested;
 }
 
 /** Define an abstract base-class that implements the parsing of an character source and
@@ -426,13 +439,18 @@ static void lSignal(void *) { FATAL("Unhandled signal sent to process; terminati
 // into account such options as --quite, --nowrap --werror, which affects how
 // errors and warnings are treated and printed.
 class ArgErrors {
+    bool m_memoryError = false;
     enum class MsgType { warning, error };
     std::vector<std::pair<MsgType, std::string>> m_messages;
     void AddMessage(MsgType msg_type, const char *format, va_list args) {
+        if (m_memoryError) {
+            return; // Already in fallback mode
+        }
         char *messageBuf = nullptr;
         if (vasprintf(&messageBuf, format, args) == -1) {
             fprintf(stderr, "vasprintf() unable to allocate memory!\n");
-            exit(-1);
+            m_memoryError = true;
+            return;
         }
 
         m_messages.push_back(std::make_pair(msg_type, messageBuf));
@@ -454,7 +472,7 @@ class ArgErrors {
         AddMessage(MsgType::warning, format, args);
         va_end(args);
     }
-    void Emit() {
+    ArgsParseResult Emit() {
         bool errors = false;
         for (auto &message : m_messages) {
             if (message.first == MsgType::error || g->warningsAsErrors) {
@@ -465,8 +483,9 @@ class ArgErrors {
             }
         }
         if (errors) {
-            exit(-1);
+            return ArgsParseResult::failure;
         }
+        return ArgsParseResult::success;
     }
 };
 
@@ -663,11 +682,12 @@ int main(int Argc, char *Argv[]) {
 
         if (argc < 2) {
             // Not sufficient number of arguments
-            linkUsage(-1);
+            linkUsage();
+            return toExitCode(ArgsParseResult::failure);
         }
         for (int i = 2; i < argc; ++i) {
             if (!strcmp(argv[i], "--help")) {
-                linkUsage(0);
+                return toExitCode(linkUsage());
             } else if (!strcmp(argv[i], "-o")) {
                 if (++i != argc) {
                     outFileName = argv[i];
@@ -692,11 +712,13 @@ int main(int Argc, char *Argv[]) {
             }
         }
         // Emit accumulted errors and warnings, if any.
-        errorHandler.Emit();
+        if (auto result = errorHandler.Emit(); result != ArgsParseResult::success) {
+            return toExitCode(result);
+        }
 
         if (linkFileNames.size() == 0) {
             Error(SourcePos(), "No input files were specified.");
-            exit(1);
+            return toExitCode(ArgsParseResult::failure);
         }
 
         if (outFileName == nullptr) {
@@ -713,15 +735,15 @@ int main(int Argc, char *Argv[]) {
 
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--help")) {
-            usage(0);
+            return toExitCode(usage());
         } else if (!strcmp(argv[i], "--help-dev")) {
-            devUsage(0);
+            return toExitCode(devUsage());
         } else if (!strncmp(argv[i], "link", 4)) {
             errorHandler.AddError(
                 "Option \"link\" can't be used in compilation mode. Use \"ispc link --help\" for details");
         } else if (!strcmp(argv[i], "--support-matrix")) {
             g->target_registry->printSupportMatrix();
-            exit(0);
+            return toExitCode(ArgsParseResult::help_requested);
         } else if (!strncmp(argv[i], "-D", 2)) {
             g->cppArgs.push_back(argv[i]);
         } else if (!strncmp(argv[i], "--addressing=", 13)) {
@@ -755,7 +777,7 @@ int main(int Argc, char *Argv[]) {
             g->astDump = Globals::ASTDumpKind::All;
         } else if (!strcmp(argv[i], "--binary-type")) {
             printBinaryType();
-            exit(0);
+            return toExitCode(ArgsParseResult::help_requested);
         } else if (!strncmp(argv[i], "--x86-asm-syntax=", 17)) {
             intelAsmSyntax = argv[i] + 17;
             if (!((std::string(intelAsmSyntax) == "intel") || (std::string(intelAsmSyntax) == "att"))) {
@@ -1120,7 +1142,7 @@ int main(int Argc, char *Argv[]) {
                 errorHandler.AddError("Missed builtins/stdlib library: \"%s\"", name.c_str());
             }
             errorHandler.Emit();
-            exit(0);
+            return toExitCode(ArgsParseResult::help_requested);
         } else if (strncmp(argv[i], "--off-phase=", 12) == 0) {
             g->off_stages = ParsingPhases(argv[i] + strlen("--off-phase="), errorHandler);
 #ifdef ISPC_XE_ENABLED
@@ -1133,7 +1155,7 @@ int main(int Argc, char *Argv[]) {
         } else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--version")) {
             lPrintVersion();
             lFreeArgv(argv);
-            return 0;
+            return toExitCode(ArgsParseResult::help_requested);
         } else if (argv[i][0] == '-') {
             errorHandler.AddError("Unknown option \"%s\".", argv[i]);
         } else {
@@ -1149,11 +1171,13 @@ int main(int Argc, char *Argv[]) {
 
     // Emit accumulted errors and warnings, if any.
     // All the rest of errors and warnigns will be processed in regullar way.
-    errorHandler.Emit();
+    if (auto result = errorHandler.Emit(); result != ArgsParseResult::success) {
+        return toExitCode(result);
+    }
 
     if (file == nullptr) {
         Error(SourcePos(), "No input file were specified. To read text from stdin use \"-\" as file name.");
-        exit(1);
+        return (toExitCode(ArgsParseResult::failure));
     }
 
     if (strcmp(file, "-") != 0) {
@@ -1161,12 +1185,12 @@ int main(int Argc, char *Argv[]) {
         // not a directory.
         if (!llvm::sys::fs::exists(file)) {
             Error(SourcePos(), "File \"%s\" does not exist.", file);
-            exit(1);
+            return (toExitCode(ArgsParseResult::failure));
         }
 
         if (llvm::sys::fs::is_directory(file)) {
             Error(SourcePos(), "File \"%s\" is a directory.", file);
-            exit(1);
+            return (toExitCode(ArgsParseResult::failure));
         }
     }
 
@@ -1175,7 +1199,7 @@ int main(int Argc, char *Argv[]) {
         std::string generic = "builtins/generic.ispc";
         if (stdlib != file && generic != file) {
             Error(SourcePos(), "The --gen-stdlib option can be used only with stdlib.ispc or builtins/generic.ispc.");
-            exit(1);
+            return (toExitCode(ArgsParseResult::failure));
         }
     }
 
