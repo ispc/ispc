@@ -597,97 +597,35 @@ void lFreeArgv(std::vector<char *> &argv) {
 
 extern int yydebug;
 
-int main(int Argc, char *Argv[]) {
-    std::vector<char *> argv;
-    lGetAllArgs(Argc, Argv, argv);
-    int argc = argv.size();
-#ifdef ISPC_HOST_IS_WINDOWS
-    // While ispc doesn't load any libraries explicitly using LoadLibrary API (or alternatives), it uses vcruntime that
-    // loads vcruntime140.dll and msvcp140.dll. Moreover LLVM loads dbghelp.dll.
-    // There is no way to modify DLL search order for vcruntime140.dll and msvcp140.dll but we
-    // can prevent searching in CWD while loading dbghelp.dll.
-    // So before initiating any LLVM call, remove CWD from the search path to reduce the risk of DLL injection
-    // when Safe DLL search mode is OFF.
-    // https://learn.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-search-order
-    SetDllDirectory("");
-#endif
-    llvm::sys::AddSignalHandler(lSignal, nullptr);
-    // initialize available LLVM targets
-#ifdef ISPC_X86_ENABLED
-    LLVMInitializeX86TargetInfo();
-    LLVMInitializeX86Target();
-    LLVMInitializeX86AsmPrinter();
-    LLVMInitializeX86AsmParser();
-    LLVMInitializeX86Disassembler();
-    LLVMInitializeX86TargetMC();
-#endif
-
-#ifdef ISPC_ARM_ENABLED
-    LLVMInitializeARMTargetInfo();
-    LLVMInitializeARMTarget();
-    LLVMInitializeARMAsmPrinter();
-    LLVMInitializeARMAsmParser();
-    LLVMInitializeARMDisassembler();
-    LLVMInitializeARMTargetMC();
-
-    LLVMInitializeAArch64TargetInfo();
-    LLVMInitializeAArch64Target();
-    LLVMInitializeAArch64AsmPrinter();
-    LLVMInitializeAArch64AsmParser();
-    LLVMInitializeAArch64Disassembler();
-    LLVMInitializeAArch64TargetMC();
-#endif
-
-#ifdef ISPC_WASM_ENABLED
-    LLVMInitializeWebAssemblyAsmParser();
-    LLVMInitializeWebAssemblyAsmPrinter();
-    LLVMInitializeWebAssemblyDisassembler();
-    LLVMInitializeWebAssemblyTarget();
-    LLVMInitializeWebAssemblyTargetInfo();
-    LLVMInitializeWebAssemblyTargetMC();
-#endif
-    char *file = nullptr;
-    const char *headerFileName = nullptr;
-    const char *nanobindWrapperFileName = nullptr;
-    const char *outFileName = nullptr;
-    const char *depsFileName = nullptr;
-    const char *depsTargetName = nullptr;
-    const char *hostStubFileName = nullptr;
-    const char *devStubFileName = nullptr;
-
-    std::vector<std::string> linkFileNames;
-    // Initiailize globals early so that we can set various option values
-    // as we're parsing below
-    g = new Globals;
-
-    Module::OutputType ot = Module::Object;
-    Module::OutputFlags flags;
-    Arch arch = Arch::none;
-    std::vector<ISPCTarget> targets;
-    const char *cpu = nullptr, *intelAsmSyntax = nullptr;
+static ArgsParseResult ParseCommandLineArgs(int argc, char *argv[], char *&file, Arch &arch, const char *&cpu,
+                                            std::vector<ISPCTarget> &targets, Module::OutputType &ot,
+                                            Module::OutputFlags &flags, const char *&outFileName,
+                                            const char *&headerFileName, const char *&nanobindWrapperFileName,
+                                            const char *&depsFileName, const char *&hostStubFileName,
+                                            const char *&devStubFileName, const char *&depsTargetName,
+                                            std::vector<std::string> &linkFileNames, bool &isLinkMode) {
     BooleanOptValue vectorCall = BooleanOptValue::none;
     BooleanOptValue discardValueNames = BooleanOptValue::none;
     BooleanOptValue wrapSignedInt = BooleanOptValue::none;
 
-    std::string ISPCAbsPath = llvm::sys::fs::getMainExecutable(argv[0], (void *)(intptr_t)main);
-    initializeBinaryType(ISPCAbsPath.c_str());
-
+    const char *intelAsmSyntax = nullptr;
     ArgErrors errorHandler;
 
     // If the first argument is "link"
     // ISPC will be used in a linkage mode
     if (argc > 1 && !strncmp(argv[1], "link", 4)) {
+        isLinkMode = true;
         // Use bitcode format by default
         ot = Module::Bitcode;
 
         if (argc < 2) {
             // Not sufficient number of arguments
             linkUsage();
-            return toExitCode(ArgsParseResult::failure);
+            return ArgsParseResult::failure;
         }
         for (int i = 2; i < argc; ++i) {
             if (!strcmp(argv[i], "--help")) {
-                return toExitCode(linkUsage());
+                return linkUsage();
             } else if (!strcmp(argv[i], "-o")) {
                 if (++i != argc) {
                     outFileName = argv[i];
@@ -713,12 +651,12 @@ int main(int Argc, char *Argv[]) {
         }
         // Emit accumulted errors and warnings, if any.
         if (auto result = errorHandler.Emit(); result != ArgsParseResult::success) {
-            return toExitCode(result);
+            return result;
         }
 
         if (linkFileNames.size() == 0) {
             Error(SourcePos(), "No input files were specified.");
-            return toExitCode(ArgsParseResult::failure);
+            return ArgsParseResult::failure;
         }
 
         if (outFileName == nullptr) {
@@ -727,23 +665,20 @@ int main(int Argc, char *Argv[]) {
                                  "be issued, but no output will be generated.");
         }
 
-        std::string filename = outFileName ? outFileName : "";
-        int ret = Module::LinkAndOutput(linkFileNames, ot, filename);
-        lFreeArgv(argv);
-        return ret;
+        return ArgsParseResult::success;
     }
 
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--help")) {
-            return toExitCode(usage());
+            return usage();
         } else if (!strcmp(argv[i], "--help-dev")) {
-            return toExitCode(devUsage());
+            return devUsage();
         } else if (!strncmp(argv[i], "link", 4)) {
             errorHandler.AddError(
                 "Option \"link\" can't be used in compilation mode. Use \"ispc link --help\" for details");
         } else if (!strcmp(argv[i], "--support-matrix")) {
             g->target_registry->printSupportMatrix();
-            return toExitCode(ArgsParseResult::help_requested);
+            return ArgsParseResult::help_requested;
         } else if (!strncmp(argv[i], "-D", 2)) {
             g->cppArgs.push_back(argv[i]);
         } else if (!strncmp(argv[i], "--addressing=", 13)) {
@@ -777,7 +712,7 @@ int main(int Argc, char *Argv[]) {
             g->astDump = Globals::ASTDumpKind::All;
         } else if (!strcmp(argv[i], "--binary-type")) {
             printBinaryType();
-            return toExitCode(ArgsParseResult::help_requested);
+            return ArgsParseResult::help_requested;
         } else if (!strncmp(argv[i], "--x86-asm-syntax=", 17)) {
             intelAsmSyntax = argv[i] + 17;
             if (!((std::string(intelAsmSyntax) == "intel") || (std::string(intelAsmSyntax) == "att"))) {
@@ -1142,7 +1077,7 @@ int main(int Argc, char *Argv[]) {
                 errorHandler.AddError("Missed builtins/stdlib library: \"%s\"", name.c_str());
             }
             errorHandler.Emit();
-            return toExitCode(ArgsParseResult::help_requested);
+            return ArgsParseResult::help_requested;
         } else if (strncmp(argv[i], "--off-phase=", 12) == 0) {
             g->off_stages = ParsingPhases(argv[i] + strlen("--off-phase="), errorHandler);
 #ifdef ISPC_XE_ENABLED
@@ -1154,8 +1089,7 @@ int main(int Argc, char *Argv[]) {
 #endif
         } else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--version")) {
             lPrintVersion();
-            lFreeArgv(argv);
-            return toExitCode(ArgsParseResult::help_requested);
+            return ArgsParseResult::help_requested;
         } else if (argv[i][0] == '-') {
             errorHandler.AddError("Unknown option \"%s\".", argv[i]);
         } else {
@@ -1172,12 +1106,12 @@ int main(int Argc, char *Argv[]) {
     // Emit accumulted errors and warnings, if any.
     // All the rest of errors and warnigns will be processed in regullar way.
     if (auto result = errorHandler.Emit(); result != ArgsParseResult::success) {
-        return toExitCode(result);
+        return result;
     }
 
     if (file == nullptr) {
         Error(SourcePos(), "No input file were specified. To read text from stdin use \"-\" as file name.");
-        return (toExitCode(ArgsParseResult::failure));
+        return ArgsParseResult::failure;
     }
 
     if (strcmp(file, "-") != 0) {
@@ -1185,12 +1119,12 @@ int main(int Argc, char *Argv[]) {
         // not a directory.
         if (!llvm::sys::fs::exists(file)) {
             Error(SourcePos(), "File \"%s\" does not exist.", file);
-            return (toExitCode(ArgsParseResult::failure));
+            return ArgsParseResult::failure;
         }
 
         if (llvm::sys::fs::is_directory(file)) {
             Error(SourcePos(), "File \"%s\" is a directory.", file);
-            return (toExitCode(ArgsParseResult::failure));
+            return ArgsParseResult::failure;
         }
     }
 
@@ -1199,7 +1133,7 @@ int main(int Argc, char *Argv[]) {
         std::string generic = "builtins/generic.ispc";
         if (stdlib != file && generic != file) {
             Error(SourcePos(), "The --gen-stdlib option can be used only with stdlib.ispc or builtins/generic.ispc.");
-            return (toExitCode(ArgsParseResult::failure));
+            return ArgsParseResult::failure;
         }
     }
 
@@ -1371,23 +1305,118 @@ int main(int Argc, char *Argv[]) {
 
     // This needs to happen after the TargetOS is decided.
     setCallingConv(vectorCall, arch);
-    if (g->enableTimeTrace) {
-        llvm::timeTraceProfilerInitialize(g->timeTraceGranularity, "ispc");
-    }
-    int ret = 0;
-    {
-        llvm::TimeTraceScope TimeScope("ExecuteCompiler");
-        Module::Output output = Module::Output(ot, flags, outFileName, headerFileName, nanobindWrapperFileName,
-                                               depsFileName, hostStubFileName, devStubFileName, depsTargetName);
-        ret = Module::CompileAndOutput(file, arch, cpu, targets, output);
+    return ArgsParseResult::success;
+}
+
+int main(int Argc, char *Argv[]) {
+    std::vector<char *> argv;
+    lGetAllArgs(Argc, Argv, argv);
+    int argc = argv.size();
+#ifdef ISPC_HOST_IS_WINDOWS
+    // While ispc doesn't load any libraries explicitly using LoadLibrary API (or alternatives), it uses vcruntime that
+    // loads vcruntime140.dll and msvcp140.dll. Moreover LLVM loads dbghelp.dll.
+    // There is no way to modify DLL search order for vcruntime140.dll and msvcp140.dll but we
+    // can prevent searching in CWD while loading dbghelp.dll.
+    // So before initiating any LLVM call, remove CWD from the search path to reduce the risk of DLL injection
+    // when Safe DLL search mode is OFF.
+    // https://learn.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-search-order
+    SetDllDirectory("");
+#endif
+    llvm::sys::AddSignalHandler(lSignal, nullptr);
+    // initialize available LLVM targets
+#ifdef ISPC_X86_ENABLED
+    LLVMInitializeX86TargetInfo();
+    LLVMInitializeX86Target();
+    LLVMInitializeX86AsmPrinter();
+    LLVMInitializeX86AsmParser();
+    LLVMInitializeX86Disassembler();
+    LLVMInitializeX86TargetMC();
+#endif
+
+#ifdef ISPC_ARM_ENABLED
+    LLVMInitializeARMTargetInfo();
+    LLVMInitializeARMTarget();
+    LLVMInitializeARMAsmPrinter();
+    LLVMInitializeARMAsmParser();
+    LLVMInitializeARMDisassembler();
+    LLVMInitializeARMTargetMC();
+
+    LLVMInitializeAArch64TargetInfo();
+    LLVMInitializeAArch64Target();
+    LLVMInitializeAArch64AsmPrinter();
+    LLVMInitializeAArch64AsmParser();
+    LLVMInitializeAArch64Disassembler();
+    LLVMInitializeAArch64TargetMC();
+#endif
+
+#ifdef ISPC_WASM_ENABLED
+    LLVMInitializeWebAssemblyAsmParser();
+    LLVMInitializeWebAssemblyAsmPrinter();
+    LLVMInitializeWebAssemblyDisassembler();
+    LLVMInitializeWebAssemblyTarget();
+    LLVMInitializeWebAssemblyTargetInfo();
+    LLVMInitializeWebAssemblyTargetMC();
+#endif
+    char *file = nullptr;
+    const char *headerFileName = nullptr;
+    const char *nanobindWrapperFileName = nullptr;
+    const char *outFileName = nullptr;
+    const char *depsFileName = nullptr;
+    const char *depsTargetName = nullptr;
+    const char *hostStubFileName = nullptr;
+    const char *devStubFileName = nullptr;
+
+    std::vector<std::string> linkFileNames;
+    // Initiailize globals early so that we can set various option values
+    // as we're parsing below
+    g = new Globals;
+
+    Module::OutputType ot = Module::Object;
+    Module::OutputFlags flags;
+    Arch arch = Arch::none;
+    std::vector<ISPCTarget> targets;
+    const char *cpu = nullptr;
+
+    std::string ISPCAbsPath = llvm::sys::fs::getMainExecutable(argv[0], (void *)(intptr_t)main);
+    initializeBinaryType(ISPCAbsPath.c_str());
+
+    // Parse command line optionsAdd commentMore actions
+    bool isLinkMode = false;
+    ArgsParseResult parseResult = ParseCommandLineArgs(
+        argc, argv.data(), file, arch, cpu, targets, ot, flags, outFileName, headerFileName, nanobindWrapperFileName,
+        depsFileName, hostStubFileName, devStubFileName, depsTargetName, linkFileNames, isLinkMode);
+
+    if (parseResult != ArgsParseResult::success) {
+        // Print help and exit.
+        lFreeArgv(argv);
+        delete g;
+        return toExitCode(parseResult);
     }
 
-    if (g->enableTimeTrace) {
-        // Write to file only if compilation is successfull.
-        if ((ret == 0) && (outFileName != nullptr)) {
-            writeCompileTimeFile(outFileName);
+    int ret = 0;
+
+    if (isLinkMode) {
+        // Handle link mode
+        std::string filename = outFileName ? outFileName : "";
+        ret = Module::LinkAndOutput(linkFileNames, ot, filename);
+    } else {
+        if (g->enableTimeTrace) {
+            llvm::timeTraceProfilerInitialize(g->timeTraceGranularity, "ispc");
         }
-        llvm::timeTraceProfilerCleanup();
+        {
+            llvm::TimeTraceScope TimeScope("ExecuteCompiler");
+            Module::Output output = Module::Output(ot, flags, outFileName, headerFileName, nanobindWrapperFileName,
+                                                   depsFileName, hostStubFileName, devStubFileName, depsTargetName);
+            ret = Module::CompileAndOutput(file, arch, cpu, targets, output);
+        }
+
+        if (g->enableTimeTrace) {
+            // Write to file only if compilation is successfull.
+            if ((ret == 0) && (outFileName != nullptr)) {
+                writeCompileTimeFile(outFileName);
+            }
+            llvm::timeTraceProfilerCleanup();
+        }
     }
 
     // Free all bookkeeped objects.
