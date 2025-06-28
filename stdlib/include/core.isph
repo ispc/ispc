@@ -39,6 +39,8 @@
 #define assert(x) __assert(#x, x)
 #endif
 
+#define alloca(x) __alloca(x)
+
 static const uniform int32 programCount = TARGET_WIDTH;
 
 #if TARGET_WIDTH == 2
