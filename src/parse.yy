@@ -156,7 +156,7 @@ static void lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
                                        const EnumType *enumType);
 
 static const char *lBuiltinTokens[] = {
-    "assert", "bool", "break", "case", "cdo",
+    "assert", "alloca", "bool", "break", "case", "cdo",
     "cfor", "cif", "cwhile", "const", "continue", "default",
     "do", "delete", "double", "else", "enum", "export", "extern", "false",
     "float16", "float", "for", "foreach", "foreach_active", "foreach_tiled",

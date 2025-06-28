@@ -373,7 +373,7 @@ return { return TOKEN_RETURN; }
 soa { return TOKEN_SOA; }
 signed { return TOKEN_SIGNED; }
 sizeof { return TOKEN_SIZEOF; }
-alloca { return TOKEN_ALLOCA; }
+__alloca { return TOKEN_ALLOCA; }
 static { return TOKEN_STATIC; }
 struct { return TOKEN_STRUCT; }
 switch { return TOKEN_SWITCH; }
