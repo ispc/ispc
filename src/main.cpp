@@ -598,11 +598,7 @@ void lFreeArgv(std::vector<char *> &argv) {
 extern int yydebug;
 
 static ArgsParseResult ParseCommandLineArgs(int argc, char *argv[], char *&file, Arch &arch, const char *&cpu,
-                                            std::vector<ISPCTarget> &targets, Module::OutputType &ot,
-                                            Module::OutputFlags &flags, const char *&outFileName,
-                                            const char *&headerFileName, const char *&nanobindWrapperFileName,
-                                            const char *&depsFileName, const char *&hostStubFileName,
-                                            const char *&devStubFileName, const char *&depsTargetName,
+                                            std::vector<ISPCTarget> &targets, Module::Output &output,
                                             std::vector<std::string> &linkFileNames, bool &isLinkMode) {
     BooleanOptValue vectorCall = BooleanOptValue::none;
     BooleanOptValue discardValueNames = BooleanOptValue::none;
@@ -616,7 +612,7 @@ static ArgsParseResult ParseCommandLineArgs(int argc, char *argv[], char *&file,
     if (argc > 1 && !strncmp(argv[1], "link", 4)) {
         isLinkMode = true;
         // Use bitcode format by default
-        ot = Module::Bitcode;
+        output.type = Module::Bitcode;
 
         if (argc < 2) {
             // Not sufficient number of arguments
@@ -628,20 +624,20 @@ static ArgsParseResult ParseCommandLineArgs(int argc, char *argv[], char *&file,
                 return linkUsage();
             } else if (!strcmp(argv[i], "-o")) {
                 if (++i != argc) {
-                    outFileName = argv[i];
+                    output.out = argv[i];
                 } else {
                     errorHandler.AddError("No output file specified after -o option.");
                 }
             } else if (!strncmp(argv[i], "--outfile=", 10)) {
-                outFileName = argv[i] + strlen("--outfile=");
+                output.out = argv[i] + strlen("--outfile=");
 #ifdef ISPC_XE_ENABLED
             } else if (!strcmp(argv[i], "--emit-spirv")) {
-                ot = Module::SPIRV;
+                output.type = Module::SPIRV;
 #endif
             } else if (!strcmp(argv[i], "--emit-llvm")) {
-                ot = Module::Bitcode;
+                output.type = Module::Bitcode;
             } else if (!strcmp(argv[i], "--emit-llvm-text")) {
-                ot = Module::BitcodeText;
+                output.type = Module::BitcodeText;
             } else if (argv[i][0] == '-') {
                 errorHandler.AddError("Unknown option \"%s\".", argv[i]);
             } else {
@@ -659,7 +655,7 @@ static ArgsParseResult ParseCommandLineArgs(int argc, char *argv[], char *&file,
             return ArgsParseResult::failure;
         }
 
-        if (outFileName == nullptr) {
+        if (output.out.empty()) {
             Warning(SourcePos(), "No output file name specified. "
                                  "The inputs will be linked and warnings/errors will "
                                  "be issued, but no output will be generated.");
@@ -782,30 +778,30 @@ static ArgsParseResult ParseCommandLineArgs(int argc, char *argv[], char *&file,
             g->generateDebuggingSymbols = true;
         } else if (!strcmp(argv[i], "-E")) {
             g->onlyCPP = true;
-            ot = Module::CPPStub;
+            output.type = Module::CPPStub;
             // g->preprocessorOutputType is initialized as "Cpp" automatically
         } else if (!strcmp(argv[i], "-dM")) {
             g->onlyCPP = true;
-            ot = Module::CPPStub;
+            output.type = Module::CPPStub;
             g->preprocessorOutputType = Globals::PreprocessorOutputType::MacrosOnly;
         } else if (!strcmp(argv[i], "-dD")) {
             g->onlyCPP = true;
-            ot = Module::CPPStub;
+            output.type = Module::CPPStub;
             g->preprocessorOutputType = Globals::PreprocessorOutputType::WithMacros;
         } else if (!strcmp(argv[i], "--emit-asm")) {
-            ot = Module::Asm;
+            output.type = Module::Asm;
         } else if (!strcmp(argv[i], "--emit-llvm")) {
-            ot = Module::Bitcode;
+            output.type = Module::Bitcode;
         } else if (!strcmp(argv[i], "--emit-llvm-text")) {
-            ot = Module::BitcodeText;
+            output.type = Module::BitcodeText;
         } else if (!strcmp(argv[i], "--emit-obj")) {
-            ot = Module::Object;
+            output.type = Module::Object;
         }
 #ifdef ISPC_XE_ENABLED
         else if (!strcmp(argv[i], "--emit-spirv")) {
-            ot = Module::SPIRV;
+            output.type = Module::SPIRV;
         } else if (!strcmp(argv[i], "--emit-zebin")) {
-            ot = Module::ZEBIN;
+            output.type = Module::ZEBIN;
         }
 #endif
         else if (!strcmp(argv[i], "--enable-llvm-intrinsics")) {
@@ -963,22 +959,22 @@ static ArgsParseResult ParseCommandLineArgs(int argc, char *argv[], char *&file,
             g->emitPerfWarnings = false;
         } else if (!strcmp(argv[i], "-o")) {
             if (++i != argc) {
-                outFileName = argv[i];
+                output.out = argv[i];
             } else {
                 errorHandler.AddError("No output file specified after -o option.");
             }
         } else if (!strncmp(argv[i], "--outfile=", 10)) {
-            outFileName = argv[i] + strlen("--outfile=");
+            output.out = argv[i] + strlen("--outfile=");
         } else if (!strcmp(argv[i], "-h")) {
             if (++i != argc) {
-                headerFileName = argv[i];
+                output.header = argv[i];
             } else {
                 errorHandler.AddError("No header file name specified after -h option.");
             }
         } else if (!strncmp(argv[i], "--header-outfile=", 17)) {
-            headerFileName = argv[i] + strlen("--header-outfile=");
+            output.header = argv[i] + strlen("--header-outfile=");
         } else if (!strncmp(argv[i], "--nanobind-wrapper=", 19)) {
-            nanobindWrapperFileName = argv[i] + strlen("--nanobind-wrapper=");
+            output.nbWrap = argv[i] + strlen("--nanobind-wrapper=");
         } else if (!strcmp(argv[i], "-O0")) {
             g->opt.level = 0;
             g->codegenOptLevel = Globals::CodegenOptLevel::None;
@@ -1003,17 +999,17 @@ static ArgsParseResult ParseCommandLineArgs(int argc, char *argv[], char *&file,
         } else if (!strncmp(argv[i], "--mcmodel=", 10)) {
             const char *value = argv[i] + 10;
             if (!strcmp(value, "small")) {
-                flags.setMCModel(MCModel::Small);
+                output.flags.setMCModel(MCModel::Small);
             } else if (!strcmp(value, "large")) {
-                flags.setMCModel(MCModel::Large);
+                output.flags.setMCModel(MCModel::Large);
             } else {
                 errorHandler.AddError("Unsupported code model \"%s\". Only small and large models are supported.",
                                       value);
             }
         } else if (!strcmp(argv[i], "--pic")) {
-            flags.setPICLevel(PICLevel::SmallPIC);
+            output.flags.setPICLevel(PICLevel::SmallPIC);
         } else if (!strcmp(argv[i], "--PIC")) {
-            flags.setPICLevel(PICLevel::BigPIC);
+            output.flags.setPICLevel(PICLevel::BigPIC);
         }
 #ifndef ISPC_IS_HOST_WINDOWS
         else if (!strcmp(argv[i], "--colored-output")) {
@@ -1026,37 +1022,35 @@ static ArgsParseResult ParseCommandLineArgs(int argc, char *argv[], char *&file,
             yydebug = 1;
         } else if (!strcmp(argv[i], "-MMM")) {
             if (++i != argc) {
-                depsFileName = argv[i];
-                flags.setFlatDeps();
+                output.deps = argv[i];
+                output.flags.setFlatDeps();
             } else {
                 errorHandler.AddError("No output file name specified after -MMM option.");
             }
         } else if (!strcmp(argv[i], "-M")) {
-            flags.setMakeRuleDeps();
-            flags.setDepsToStdout();
+            output.flags.setMakeRuleDeps();
+            output.flags.setDepsToStdout();
         } else if (!strcmp(argv[i], "-MF")) {
-            depsFileName = nullptr;
             if (++i != argc) {
-                depsFileName = argv[i];
+                output.deps = argv[i];
             } else {
                 errorHandler.AddError("No output file name specified after -MF option.");
             }
         } else if (!strcmp(argv[i], "-MT")) {
-            depsTargetName = nullptr;
             if (++i != argc) {
-                depsTargetName = argv[i];
+                output.depsTarget = argv[i];
             } else {
                 errorHandler.AddError("No target name specified after -MT option.");
             }
         } else if (!strcmp(argv[i], "--dev-stub")) {
             if (++i != argc) {
-                devStubFileName = argv[i];
+                output.devStub = argv[i];
             } else {
                 errorHandler.AddError("No output file name specified after --dev-stub option.");
             }
         } else if (!strcmp(argv[i], "--host-stub")) {
             if (++i != argc) {
-                hostStubFileName = argv[i];
+                output.hostStub = argv[i];
             } else {
                 errorHandler.AddError("No output file name specified after --host-stub option.");
             }
@@ -1145,7 +1139,7 @@ static ArgsParseResult ParseCommandLineArgs(int argc, char *argv[], char *&file,
     } else if (discardValueNames == BooleanOptValue::disabled) {
         g->ctx->setDiscardValueNames(false);
     } else {
-        if (ot == Module::Bitcode || ot == Module::BitcodeText) {
+        if (output.type == Module::Bitcode || output.type == Module::BitcodeText) {
             g->ctx->setDiscardValueNames(false);
         } else {
             g->ctx->setDiscardValueNames(true);
@@ -1154,7 +1148,7 @@ static ArgsParseResult ParseCommandLineArgs(int argc, char *argv[], char *&file,
 
     // Default settings for PS4
     if (g->target_os == TargetOS::ps4 || g->target_os == TargetOS::ps5) {
-        flags.setPICLevel(PICLevel::BigPIC);
+        output.flags.setPICLevel(PICLevel::BigPIC);
         if (!cpu) {
             if (g->target_os == TargetOS::ps4) {
                 // Default for PS4 is btver2, but do not enforce it.
@@ -1172,7 +1166,7 @@ static ArgsParseResult ParseCommandLineArgs(int argc, char *argv[], char *&file,
 
     // Default setting for "custom_linux"
     if (g->target_os == TargetOS::custom_linux) {
-        flags.setPICLevel();
+        output.flags.setPICLevel();
         if (!cpu) {
             cpu = "cortex-a57";
         }
@@ -1210,35 +1204,35 @@ static ArgsParseResult ParseCommandLineArgs(int argc, char *argv[], char *&file,
     }
 #endif
 
-    if (depsFileName != nullptr) {
-        flags.setDepsToStdout(false);
+    if (!output.deps.empty()) {
+        output.flags.setDepsToStdout(false);
     }
 
-    if (depsFileName != nullptr && !flags.isFlatDeps() && !flags.isMakeRuleDeps()) {
+    if (!output.deps.empty() && !output.flags.isFlatDeps() && !output.flags.isMakeRuleDeps()) {
         Warning(SourcePos(), "Dependency file name specified with -MF, but no "
                              "mode specified; did you forget to specify -M or -MMM? "
                              "No dependency output will be generated.");
-        depsFileName = nullptr;
+        output.deps.clear();
     }
 
-    if (flags.isFlatDeps() && flags.isMakeRuleDeps()) {
+    if (output.flags.isFlatDeps() && output.flags.isMakeRuleDeps()) {
         Warning(SourcePos(), "Both -M and -MMM specified on the command line. "
                              "-MMM takes precedence.");
-        flags.setFlatDeps(false);
+        output.flags.setFlatDeps(false);
     }
 
-    if (g->onlyCPP && outFileName == nullptr) {
-        outFileName = "-"; // Assume stdout by default (-E mode)
+    if (g->onlyCPP && output.out.empty()) {
+        output.out = "-"; // Assume stdout by default (-E mode)
     }
 
-    if (outFileName == nullptr && headerFileName == nullptr && (depsFileName == nullptr && !flags.isDepsToStdout()) &&
-        hostStubFileName == nullptr && devStubFileName == nullptr && nanobindWrapperFileName == nullptr) {
+    if (output.out.empty() && output.header.empty() && (output.deps.empty() && !output.flags.isDepsToStdout()) &&
+        output.hostStub.empty() && output.devStub.empty() && output.nbWrap.empty()) {
         Warning(SourcePos(), "No output file or header file name specified. "
                              "Program will be compiled and warnings/errors will "
                              "be issued, but no output will be generated.");
     }
 
-    if (g->target_os == TargetOS::windows && flags.isPIC()) {
+    if (g->target_os == TargetOS::windows && output.flags.isPIC()) {
         Warning(SourcePos(), "--pic|--PIC switches for Windows target will be ignored.");
     }
 
@@ -1258,7 +1252,7 @@ static ArgsParseResult ParseCommandLineArgs(int argc, char *argv[], char *&file,
         g->isMultiTargetCompilation = true;
     }
 
-    if ((ot == Module::Asm) && (intelAsmSyntax != nullptr)) {
+    if ((output.type == Module::Asm) && (intelAsmSyntax != nullptr)) {
         std::vector<const char *> Args(3);
         Args[0] = "ispc (LLVM option parsing)";
         Args[2] = nullptr;
@@ -1277,9 +1271,9 @@ static ArgsParseResult ParseCommandLineArgs(int argc, char *argv[], char *&file,
             targetIsGen = true;
             Assert(targets.size() == 1 && "multi-target is not supported for Xe targets yet.");
             // Generate .spv for Xe target instead of object by default.
-            if (ot == Module::Object) {
+            if (output.type == Module::Object) {
                 Warning(SourcePos(), "Emitting spir-v file for Xe targets.");
-                ot = Module::SPIRV;
+                output.type = Module::SPIRV;
             }
         }
 
@@ -1358,21 +1352,14 @@ int main(int Argc, char *Argv[]) {
     LLVMInitializeWebAssemblyTargetMC();
 #endif
     char *file = nullptr;
-    const char *headerFileName = nullptr;
-    const char *nanobindWrapperFileName = nullptr;
-    const char *outFileName = nullptr;
-    const char *depsFileName = nullptr;
-    const char *depsTargetName = nullptr;
-    const char *hostStubFileName = nullptr;
-    const char *devStubFileName = nullptr;
 
     std::vector<std::string> linkFileNames;
     // Initiailize globals early so that we can set various option values
     // as we're parsing below
     g = new Globals;
 
-    Module::OutputType ot = Module::Object;
-    Module::OutputFlags flags;
+    Module::Output output;
+    output.type = Module::Object; // Default output type
     Arch arch = Arch::none;
     std::vector<ISPCTarget> targets;
     const char *cpu = nullptr;
@@ -1382,9 +1369,8 @@ int main(int Argc, char *Argv[]) {
 
     // Parse command line optionsAdd commentMore actions
     bool isLinkMode = false;
-    ArgsParseResult parseResult = ParseCommandLineArgs(
-        argc, argv.data(), file, arch, cpu, targets, ot, flags, outFileName, headerFileName, nanobindWrapperFileName,
-        depsFileName, hostStubFileName, devStubFileName, depsTargetName, linkFileNames, isLinkMode);
+    ArgsParseResult parseResult =
+        ParseCommandLineArgs(argc, argv.data(), file, arch, cpu, targets, output, linkFileNames, isLinkMode);
 
     if (parseResult != ArgsParseResult::success) {
         // Print help and exit.
@@ -1397,23 +1383,21 @@ int main(int Argc, char *Argv[]) {
 
     if (isLinkMode) {
         // Handle link mode
-        std::string filename = outFileName ? outFileName : "";
-        ret = Module::LinkAndOutput(linkFileNames, ot, filename);
+        std::string filename = !output.out.empty() ? output.out : "";
+        ret = Module::LinkAndOutput(linkFileNames, output.type, filename);
     } else {
         if (g->enableTimeTrace) {
             llvm::timeTraceProfilerInitialize(g->timeTraceGranularity, "ispc");
         }
         {
             llvm::TimeTraceScope TimeScope("ExecuteCompiler");
-            Module::Output output = Module::Output(ot, flags, outFileName, headerFileName, nanobindWrapperFileName,
-                                                   depsFileName, hostStubFileName, devStubFileName, depsTargetName);
             ret = Module::CompileAndOutput(file, arch, cpu, targets, output);
         }
 
         if (g->enableTimeTrace) {
             // Write to file only if compilation is successfull.
-            if ((ret == 0) && (outFileName != nullptr)) {
-                writeCompileTimeFile(outFileName);
+            if ((ret == 0) && (!output.out.empty())) {
+                writeCompileTimeFile(output.out.c_str());
             }
             llvm::timeTraceProfilerCleanup();
         }
