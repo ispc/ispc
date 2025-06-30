@@ -3444,7 +3444,7 @@ void FunctionEmitContext::setLoopUnrollMetadata(llvm::Instruction *inst,
     }
 
     llvm::SmallVector<llvm::Metadata *, 4> Args;
-    llvm::TempMDTuple TempNode = llvm::MDNode::getTemporary(*g->ctx, std::nullopt);
+    llvm::TempMDTuple TempNode = llvm::MDNode::getTemporary(*g->ctx, {});
     Args.push_back(TempNode.get());
     if (loopAttribute.first == Globals::pragmaUnrollType::count) {
         llvm::Metadata *Vals[] = {llvm::MDString::get(*g->ctx, "llvm.loop.unroll.count"),
