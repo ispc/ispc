@@ -2355,9 +2355,10 @@ llvm::DIType *UndefinedStructType::GetDIType(llvm::DIScope *scope) const {
     llvm::DIFile *diFile = pos.GetDIFile();
     llvm::DINamespace *diSpace = pos.GetDINamespace();
     llvm::DINodeArray elements;
+    uint64_t sizeInBits = 0;
     return m->diBuilder->createStructType(diSpace, GetString(), diFile,
                                           pos.first_line,         // Line number
-                                          0,                      // Size
+                                          sizeInBits,             // Size
                                           0,                      // Align
                                           llvm::DINode::FlagZero, // Flags
                                           nullptr, elements);
