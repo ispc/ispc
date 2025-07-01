@@ -26,10 +26,10 @@ enum class ArgsParseResult : int { success = 0, failure = 1, help_requested = 2 
  *  additional arguments using @<filename>. This function returns a new set of
  *  arguments representing the ones from all these sources merged together.
  */
-void lGetAllArgs(int Argc, char *Argv[], std::vector<char *> &argv);
+void GetAllArgs(int Argc, char *Argv[], std::vector<char *> &argv);
 
 /** Free all dynamically allocated argument strings */
-void lFreeArgv(std::vector<char *> &argv);
+void FreeArgv(std::vector<char *> &argv);
 
 /** Parse command line arguments and populate configuration
  *  @param argc Number of command line arguments

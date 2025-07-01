@@ -198,7 +198,7 @@ static void lAddSingleArg(char *arg, std::vector<char *> &argv, bool duplicate) 
  *  additional arguments using @<filename>. This function returns a new set of
  *  arguments representing the ones from all these sources merged together.
  */
-void ispc::lGetAllArgs(int Argc, char *Argv[], std::vector<char *> &argv) {
+void ispc::GetAllArgs(int Argc, char *Argv[], std::vector<char *> &argv) {
     // Copy over the command line arguments (passed in)
     for (int i = 0; i < Argc; ++i) {
         lAddSingleArg(Argv[i], argv, true);
@@ -211,7 +211,7 @@ void ispc::lGetAllArgs(int Argc, char *Argv[], std::vector<char *> &argv) {
     }
 }
 
-void ispc::lFreeArgv(std::vector<char *> &argv) {
+void ispc::FreeArgv(std::vector<char *> &argv) {
     // argv vector consists of pointers to arguments as C strings alloced on
     // heap and collected form three source:  environment variable ISPC_ARGS,
     // @filename, inputs argv. They are needed to be deallocated.
