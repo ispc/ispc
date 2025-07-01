@@ -1372,7 +1372,11 @@ __declspec(safe, cost1) static inline uniform bool or (uniform bool a, uniform b
 
 __declspec(safe, cost1) static inline int8 select(bool cond, int8 t, int8 f) { return cond ? t : f; }
 
+__declspec(safe, cost1) static inline uint8 select(bool cond, uint8 t, uint8 f) { return cond ? t : f; }
+
 __declspec(safe, cost1) static inline int8 select(uniform bool cond, int8 t, int8 f) { return cond ? t : f; }
+
+__declspec(safe, cost1) static inline uint8 select(uniform bool cond, uint8 t, uint8 f) { return cond ? t : f; }
 
 __declspec(safe, cost1) static inline uniform int8 select(uniform bool cond, uniform int8 t, uniform int8 f) {
     return cond ? t : f;
@@ -1380,7 +1384,11 @@ __declspec(safe, cost1) static inline uniform int8 select(uniform bool cond, uni
 
 __declspec(safe, cost1) static inline int16 select(bool cond, int16 t, int16 f) { return cond ? t : f; }
 
+__declspec(safe, cost1) static inline uint16 select(bool cond, uint16 t, uint16 f) { return cond ? t : f; }
+
 __declspec(safe, cost1) static inline int16 select(uniform bool cond, int16 t, int16 f) { return cond ? t : f; }
+
+__declspec(safe, cost1) static inline uint16 select(uniform bool cond, uint16 t, uint16 f) { return cond ? t : f; }
 
 __declspec(safe, cost1) static inline uniform int16 select(uniform bool cond, uniform int16 t, uniform int16 f) {
     return cond ? t : f;
@@ -1396,7 +1404,11 @@ __declspec(safe, cost1) static inline uniform float16 select(uniform bool cond, 
 
 __declspec(safe, cost1) static inline int32 select(bool cond, int32 t, int32 f) { return cond ? t : f; }
 
+__declspec(safe, cost1) static inline uint32 select(bool cond, uint32 t, uint32 f) { return cond ? t : f; }
+
 __declspec(safe, cost1) static inline int32 select(uniform bool cond, int32 t, int32 f) { return cond ? t : f; }
+
+__declspec(safe, cost1) static inline uint32 select(uniform bool cond, uint32 t, uint32 f) { return cond ? t : f; }
 
 __declspec(safe, cost1) static inline uniform int32 select(uniform bool cond, uniform int32 t, uniform int32 f) {
     return cond ? t : f;
@@ -1404,7 +1416,11 @@ __declspec(safe, cost1) static inline uniform int32 select(uniform bool cond, un
 
 __declspec(safe, cost1) static inline int64 select(bool cond, int64 t, int64 f) { return cond ? t : f; }
 
+__declspec(safe, cost1) static inline uint64 select(bool cond, uint64 t, uint64 f) { return cond ? t : f; }
+
 __declspec(safe, cost1) static inline int64 select(uniform bool cond, int64 t, int64 f) { return cond ? t : f; }
+
+__declspec(safe, cost1) static inline uint64 select(uniform bool cond, uint64 t, uint64 f) { return cond ? t : f; }
 
 __declspec(safe, cost1) static inline uniform int64 select(uniform bool cond, uniform int64 t, uniform int64 f) {
     return cond ? t : f;
