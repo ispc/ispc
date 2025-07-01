@@ -796,6 +796,9 @@ ISPC now includes a new ``include/intrinsics`` directory containing header
 files that implement selected SSE intrinsics in ISPC. If you're porting
 existing code from intrinsics to ISPC, you can use these headers as a reference.
 
+The standard library ``select`` functions now support unsigned integer types
+``uint8``, ``uint16``, ``uint32``, and ``uint64``.
+
 
 Getting Started with ISPC
 =========================
@@ -4636,8 +4639,8 @@ otherwise ``f``. These are the variants of ``select()`` for the ``int8`` type:
     int8 select(uniform bool cond, int8 t, int8 f)
     uniform int8 select(uniform bool cond, uniform int8 t, uniform int8 f)
 
-There are also variants for ``int16``, ``int32``, ``int64``, ``float``, ``float16``
-and ``double`` types.
+There are also variants for ``int16``, ``int32``, ``int64``, ``uint8``,
+``uint16``, ``uint32``, ``uint64``, ``float``, ``float16`` and ``double`` types.
 
 Bit Operations
 --------------
