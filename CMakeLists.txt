@@ -463,6 +463,8 @@ list(APPEND FRONTEND_SOURCES
     ${BISON_CPP_OUTPUT}
     ${FLEX_OUTPUT}
     ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/stdlib.ispc
+    src/args.cpp
+    src/args.h
     src/ast.cpp
     src/ast.h
     src/builtins.cpp

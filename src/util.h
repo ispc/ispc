@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2024, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -190,3 +190,8 @@ int TerminalWidth();
  */
 bool IsStdin(const char *);
 } // namespace ispc
+
+/** Global variable for yacc/bison parser debugging.
+ *  Defined in the generated parser for main builds.
+ */
+extern int yydebug;
