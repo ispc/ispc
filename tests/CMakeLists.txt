@@ -12,8 +12,6 @@ set(LIT_COMMAND "${Python3_EXECUTABLE};${CMAKE_SOURCE_DIR}/utils/lit/lit.py")
 list(APPEND LIT_ARGS "--path=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}")
 # Path to LLVM utils
 list(APPEND LIT_ARGS "--path=${LLVM_TOOLS_BINARY_DIR}")
-# Path to llvm lit tests
-list(APPEND LIT_ARGS "${CMAKE_CURRENT_SOURCE_DIR}/lit-tests")
 # Path to tests execution directory
 list(APPEND LIT_ARGS "-Dispc_test_exec_root=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/tests")
 # LLVM version used to build ISPC
@@ -31,9 +29,21 @@ list(APPEND LIT_ARGS "-Dmacos_arm_enabled=$<IF:$<BOOL:${ISPC_MACOS_ARM_TARGET}>,
 list(APPEND LIT_ARGS "-Dmacos_ios_enabled=$<IF:$<BOOL:${ISPC_IOS_ARM_TARGET}>,ON,OFF>")
 # TODO! generic target bc?
 add_custom_target(check-all DEPENDS ispc ispc-opt ${ISPC_DEPS}
-    COMMAND ${LIT_COMMAND} ${LIT_ARGS} "--verbose"
+    COMMAND ${LIT_COMMAND} ${LIT_ARGS} "${CMAKE_CURRENT_SOURCE_DIR}/lit-tests" "--verbose"
     COMMENT "Running lit tests"
     USES_TERMINAL
     )
 set_target_properties(check-all PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD ON)
 set_target_properties(check-all PROPERTIES FOLDER "Tests")
+
+string(REPLACE ";" " " LIT_ARGS_STR "${LIT_ARGS}")
+string(REPLACE ";" " " LIT_COMMAND_STR "${LIT_COMMAND}")
+
+add_custom_target(check-one DEPENDS ispc ispc-opt ${ISPC_DEPS}
+    COMMAND bash -c "${LIT_COMMAND_STR} ${LIT_ARGS_STR} \$TEST --verbose"
+    COMMENT "Running lit test from $TEST"
+    USES_TERMINAL
+    VERBATIM
+)
+set_target_properties(check-one PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD ON)
+set_target_properties(check-one PROPERTIES FOLDER "Tests")
