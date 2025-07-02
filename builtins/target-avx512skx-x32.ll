@@ -141,7 +141,43 @@ define <32 x double> @__shuffle_double(<32 x double> %input, <32 x i32> %perm) n
 }
 
 define_shuffle2_const()
-define_shuffle2()
+
+declare <32 x i16> @llvm.x86.avx512.vpermi2var.hi.512(<32 x i16>, <32 x i16>, <32 x i16>)
+define <32 x i16> @__shuffle2_i16(<32 x i16> %v1, <32 x i16> %v2, <32 x i32> %perm) nounwind readnone alwaysinline {
+  %isc = call i1 @__is_compile_time_constant_varying_int32(<32 x i32> %perm)
+  br i1 %isc, label %is_const, label %not_const
+
+is_const:
+  %res_const = tail call <32 x i16> @__shuffle2_const_i16(<32 x i16> %v1, <32 x i16> %v2, <32 x i32> %perm)
+  ret <32 x i16> %res_const
+
+not_const:
+  %perm16 = trunc <32 x i32> %perm to <32 x i16>
+  %result = call <32 x i16> @llvm.x86.avx512.vpermi2var.hi.512(<32 x i16> %v1, <32 x i16> %perm16, <32 x i16> %v2)
+  ret <32 x i16> %result
+}
+
+define <32 x half> @__shuffle2_half(<32 x half> %v1, <32 x half> %v2, <32 x i32> %perm) nounwind readnone alwaysinline {
+  %v1_i16 = bitcast <32 x half> %v1 to <32 x i16>
+  %v2_i16 = bitcast <32 x half> %v2 to <32 x i16>
+  %res_i16 = call <32 x i16> @__shuffle2_i16(<32 x i16> %v1_i16, <32 x i16> %v2_i16, <32 x i32> %perm)
+  %res_half = bitcast <32 x i16> %res_i16 to <32 x half>
+  ret <32 x half> %res_half
+}
+
+define <32 x i8> @__shuffle2_i8(<32 x i8> %v1, <32 x i8> %v2, <32 x i32> %perm) nounwind readnone alwaysinline {
+  %v1_i16 = zext <32 x i8> %v1 to <32 x i16>
+  %v2_i16 = zext <32 x i8> %v2 to <32 x i16>
+  %res_i16 = call <32 x i16> @__shuffle2_i16(<32 x i16> %v1_i16, <32 x i16> %v2_i16, <32 x i32> %perm)
+  %res_i8 = trunc <32 x i16> %res_i16 to <32 x i8>
+  ret <32 x i8> %res_i8
+}
+
+shuffle2(float)
+shuffle2(i32)
+shuffle2(double)
+shuffle2(i64)
+
 define_vector_permutations()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

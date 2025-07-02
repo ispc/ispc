@@ -20,6 +20,26 @@ define <64 x i8> @__shuffle_i8(<64 x i8>, <64 x i32>) nounwind readnone alwaysin
   ret <64 x i8> %res
 }
 
+define_shuffle2_const()
+
+declare <64 x i8> @llvm.x86.avx512.vpermi2var.qi.512(<64 x i8>, <64 x i8>, <64 x i8>)
+declare i1 @__is_compile_time_constant_varying_int32(<64 x i32>)
+define <64 x i8> @__shuffle2_i8(<64 x i8> %v1, <64 x i8> %v2, <64 x i32> %perm) nounwind readnone alwaysinline {
+  %isc = call i1 @__is_compile_time_constant_varying_int32(<64 x i32> %perm)
+  br i1 %isc, label %is_const, label %not_const
+
+  ;; Note: it looks like is_const path is only needed for LLVM <= 18. Newer LLVM
+  ;; can substitute permutation intrinsics with constant values with shufflvector.
+is_const:
+  %res_const = tail call <64 x i8> @__shuffle2_const_i8(<64 x i8> %v1, <64 x i8> %v2, <64 x i32> %perm)
+  ret <64 x i8> %res_const
+
+not_const:
+  %ind = trunc <64 x i32> %perm to <64 x i8>
+  %res = call <64 x i8> @llvm.x86.avx512.vpermi2var.qi.512(<64 x i8> %v1, <64 x i8> %ind, <64 x i8> %v2)
+  ret <64 x i8> %res
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; dot product
 declare <16 x i32> @llvm.x86.avx512.vpdpbusd.512(<16 x i32>, <16 x i32>, <16 x i32>) nounwind readnone

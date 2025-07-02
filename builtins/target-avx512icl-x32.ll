@@ -20,6 +20,24 @@ define <32 x i8> @__shuffle_i8(<32 x i8> %v, <32 x i32> %perm) nounwind readnone
   ret <32 x i8> %res
 }
 
+define_shuffle2_const()
+
+declare <32 x i8> @llvm.x86.avx512.vpermi2var.qi.256(<32 x i8>, <32 x i8>, <32 x i8>)
+declare i1 @__is_compile_time_constant_varying_int32(<32 x i32>)
+define <32 x i8> @__shuffle2_i8(<32 x i8> %v1, <32 x i8> %v2, <32 x i32> %perm) nounwind readnone alwaysinline {
+  %isc = call i1 @__is_compile_time_constant_varying_int32(<32 x i32> %perm)
+  br i1 %isc, label %is_const, label %not_const
+
+is_const:
+  %res_const = tail call <32 x i8> @__shuffle2_const_i8(<32 x i8> %v1, <32 x i8> %v2, <32 x i32> %perm)
+  ret <32 x i8> %res_const
+
+not_const:
+  %ind = trunc <32 x i32> %perm to <32 x i8>
+  %res = call <32 x i8> @llvm.x86.avx512.vpermi2var.qi.256(<32 x i8> %v1, <32 x i8> %ind, <32 x i8> %v2)
+  ret <32 x i8> %res
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; dot product 
 declare <16 x i32> @llvm.x86.avx512.vpdpbusd.512(<16 x i32>, <16 x i32>, <16 x i32>) nounwind readnone
