@@ -174,12 +174,16 @@ define(`convert32to4', `
 
 define(`convert32to8', `
   $3 = shufflevector <32 x $1> $2, <32 x $1> undef,
-    <8 x i32> <i32 0, i32 1, i32 2, i32 3>
+    <8 x i32> <i32 0, i32 1, i32 2, i32 3,
+               i32 4, i32 5, i32 6, i32 7>
 ')
 
 define(`convert32to16', `
   $3 = shufflevector <32 x $1> $2, <32 x $1> undef,
-    <16 x i32> <i32 0, i32 1, i32 2, i32 3>
+    <16 x i32> <i32  0, i32 1,  i32  2, i32  3,
+                i32  4, i32 5,  i32  6, i32  7,
+                i32  8, i32 9,  i32 10, i32 11,
+                i32 12, i32 13, i32 14, i32 15>
 ')
 
 ;; create vector constant. Used by saturation_arithmetic_novec_universal below.
