@@ -968,6 +968,9 @@ foreach (header ${INTRINSICS_HEADERS})
     install (FILES "stdlib/include/${header}" DESTINATION include/intrinsics)
 endforeach()
 
+# Install main header file for library usage
+install(FILES "src/driver.h" DESTINATION include)
+
 set(ISPC_DEPS generic-target-bc stdlibs-bc stdlib-headers)
 
 
