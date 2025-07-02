@@ -10,17 +10,17 @@
 
 namespace ispc {
 
-class Driver {
+class Compiler {
   public:
     /**
-     * @brief Factory method to create a Driver instance from command-line arguments.
+     * @brief Factory method to create a Compiler instance from command-line arguments.
      * This method encapsulates LLVM initialization, creation of globals, and argument parsing.
      *
      * @param argc Argument count.
      * @param argv Argument vector.
-     * @return A unique_ptr to a Driver instance, or nullptr on failure (excluding --help).
+     * @return A unique_ptr to a Compiler instance, or nullptr on failure (excluding --help).
      */
-    static std::unique_ptr<Driver> CreateFromArgs(int argc, char *argv[]);
+    static std::unique_ptr<Compiler> CreateFromArgs(int argc, char *argv[]);
 
     /**
      * @brief Shuts down the driver and releases global resources.
@@ -51,10 +51,10 @@ class Driver {
      */
     int Execute();
 
-    ~Driver();
+    ~Compiler();
 
   private:
-    Driver();
+    Compiler();
 
     class Impl;
     std::unique_ptr<Impl> pImpl;

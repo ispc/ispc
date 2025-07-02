@@ -4,7 +4,7 @@
   SPDX-License-Identifier: BSD-3-Clause
 */
 
-#include "driver.h"
+#include "ispc_compiler.h"
 #include "args.h"
 #include "binary_type.h"
 #include "ispc.h"
@@ -20,7 +20,7 @@
 
 namespace ispc {
 
-class Driver::Impl {
+class Compiler::Impl {
   public:
     Impl() : m_arch(Arch::none), m_cpu(nullptr), m_isHelpMode(false), m_isLinkMode(false) {
         m_output.type = Module::OutputType::Object; // Default output type
@@ -54,8 +54,8 @@ class Driver::Impl {
     }
 };
 
-std::unique_ptr<Driver> Driver::CreateFromArgs(int argc, char *argv[]) {
-    auto driver = std::unique_ptr<Driver>(new Driver());
+std::unique_ptr<Compiler> Compiler::CreateFromArgs(int argc, char *argv[]) {
+    auto driver = std::unique_ptr<Compiler>(new Compiler());
 
     // Initialize available LLVM targets
 #ifdef ISPC_X86_ENABLED
@@ -111,23 +111,23 @@ std::unique_ptr<Driver> Driver::CreateFromArgs(int argc, char *argv[]) {
     return driver;
 }
 
-Driver::Driver() : pImpl(std::make_unique<Impl>()) {}
+Compiler::Compiler() : pImpl(std::make_unique<Impl>()) {}
 
-Driver::~Driver() {
+Compiler::~Compiler() {
     if (g != nullptr) {
         delete g;
         g = nullptr;
     }
 }
 
-void Driver::Shutdown() {
+void Compiler::Shutdown() {
     // Free all bookkept objects.
     BookKeeper::in().freeAll();
 }
 
-bool Driver::IsLinkMode() const { return pImpl->m_isLinkMode; }
+bool Compiler::IsLinkMode() const { return pImpl->m_isLinkMode; }
 
-int Driver::Compile() {
+int Compiler::Compile() {
     if (g->enableTimeTrace) {
         llvm::timeTraceProfilerInitialize(g->timeTraceGranularity, "ispc");
     }
@@ -148,12 +148,12 @@ int Driver::Compile() {
     return ret;
 }
 
-int Driver::Link() {
+int Compiler::Link() {
     std::string filename = !pImpl->m_output.out.empty() ? pImpl->m_output.out : "";
     return Module::LinkAndOutput(pImpl->m_linkFileNames, pImpl->m_output.type, filename);
 }
 
-int Driver::Execute() {
+int Compiler::Execute() {
     if (pImpl->m_isLinkMode) {
         return Link();
     } else if (pImpl->m_isHelpMode) {

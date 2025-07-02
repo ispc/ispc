@@ -477,9 +477,9 @@ list(APPEND FRONTEND_SOURCES
     src/ctx.h
     src/decl.cpp
     src/decl.h
-    src/driver.cpp
-    src/driver.h
     src/header.cpp
+    src/ispc_compiler.cpp
+    src/ispc_compiler.h
     src/expr.cpp
     src/expr.h
     src/func.cpp
@@ -983,7 +983,7 @@ foreach (header ${INTRINSICS_HEADERS})
 endforeach()
 
 # Install main header file for library usage
-install(FILES "src/driver.h" DESTINATION include)
+install(FILES "src/ispc_compiler.h" DESTINATION include)
 
 set(ISPC_DEPS generic-target-bc stdlibs-bc stdlib-headers)
 

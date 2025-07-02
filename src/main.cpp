@@ -10,7 +10,7 @@
 
 #include "args.h"
 #include "binary_type.h"
-#include "driver.h"
+#include "ispc_compiler.h"
 #include "util.h"
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/Signals.h>
@@ -40,15 +40,15 @@ int main(int Argc, char *Argv[]) {
 
     int ret = 1; // Default to failure
 
-    // The unique_ptr will ensure the Driver's destructor is called, cleaning up the Globals
-    if (std::unique_ptr<ispc::Driver> driver = ispc::Driver::CreateFromArgs(argc, argv.data())) {
+    // The unique_ptr will ensure the Compiler's destructor is called, cleaning up the Globals
+    if (std::unique_ptr<ispc::Compiler> driver = ispc::Compiler::CreateFromArgs(argc, argv.data())) {
         std::string ISPCAbsPath = llvm::sys::fs::getMainExecutable(argv[0], (void *)(intptr_t)main);
         initializeBinaryType(ISPCAbsPath.c_str());
         ret = driver->Execute();
     }
 
     // Perform final global cleanup
-    ispc::Driver::Shutdown();
+    ispc::Compiler::Shutdown();
     FreeArgv(argv);
 
     return ret;
