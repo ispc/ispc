@@ -40,6 +40,12 @@ int main(int Argc, char *Argv[]) {
 
     int ret = 1; // Default to failure
 
+    // Initialize the ISPC library
+    if (!ispc::Compiler::Initialize()) {
+        FreeArgv(argv);
+        return ret;
+    }
+
     // The unique_ptr will ensure the Compiler's destructor is called, cleaning up the Globals
     if (std::unique_ptr<ispc::Compiler> driver = ispc::Compiler::CreateFromArgs(argc, argv.data())) {
         std::string ISPCAbsPath = llvm::sys::fs::getMainExecutable(argv[0], (void *)(intptr_t)main);

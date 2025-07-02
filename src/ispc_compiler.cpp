@@ -54,8 +54,11 @@ class Compiler::Impl {
     }
 };
 
-std::unique_ptr<Compiler> Compiler::CreateFromArgs(int argc, char *argv[]) {
-    auto driver = std::unique_ptr<Compiler>(new Compiler());
+bool Compiler::Initialize() {
+    // Check if already initialized
+    if (g != nullptr) {
+        return true;
+    }
 
     // Initialize available LLVM targets
 #ifdef ISPC_X86_ENABLED
@@ -91,8 +94,19 @@ std::unique_ptr<Compiler> Compiler::CreateFromArgs(int argc, char *argv[]) {
     LLVMInitializeWebAssemblyTargetInfo();
     LLVMInitializeWebAssemblyTargetMC();
 #endif
-    // Initialize globals early so we can set option values during parsing.
+
+    // Initialize globals
     g = new Globals;
+    return true;
+}
+
+std::unique_ptr<Compiler> Compiler::CreateFromArgs(int argc, char *argv[]) {
+    // Check if library is initialized
+    if (g == nullptr) {
+        return nullptr;
+    }
+
+    auto driver = std::unique_ptr<Compiler>(new Compiler());
 
     // Parse command line options
     ArgsParseResult parseResult = ParseCommandLineArgs(
@@ -100,9 +114,6 @@ std::unique_ptr<Compiler> Compiler::CreateFromArgs(int argc, char *argv[]) {
         driver->pImpl->m_output, driver->pImpl->m_linkFileNames, driver->pImpl->m_isLinkMode);
 
     if (parseResult == ArgsParseResult::failure) {
-        // Clean up global state on failure
-        delete g;
-        g = nullptr;
         return nullptr;
     }
 
@@ -114,15 +125,18 @@ std::unique_ptr<Compiler> Compiler::CreateFromArgs(int argc, char *argv[]) {
 Compiler::Compiler() : pImpl(std::make_unique<Impl>()) {}
 
 Compiler::~Compiler() {
-    if (g != nullptr) {
-        delete g;
-        g = nullptr;
-    }
+    // Individual instances no longer manage global state
 }
 
 void Compiler::Shutdown() {
     // Free all bookkept objects.
     BookKeeper::in().freeAll();
+
+    // Clean up global state
+    if (g != nullptr) {
+        delete g;
+        g = nullptr;
+    }
 }
 
 bool Compiler::IsLinkMode() const { return pImpl->m_isLinkMode; }

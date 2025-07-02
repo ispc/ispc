@@ -13,20 +13,30 @@ namespace ispc {
 class Compiler {
   public:
     /**
+     * @brief Initializes the ISPC library.
+     * This must be called once before creating any Compiler instances.
+     * Initializes LLVM targets and creates global state.
+     *
+     * @return true on success, false on failure.
+     */
+    static bool Initialize();
+
+    /**
+     * @brief Shuts down the ISPC library and releases global resources.
+     * This should be called once when the consumer is finished using the library.
+     * After calling this, Initialize() must be called again before creating new instances.
+     */
+    static void Shutdown();
+
+    /**
      * @brief Factory method to create a Compiler instance from command-line arguments.
-     * This method encapsulates LLVM initialization, creation of globals, and argument parsing.
+     * Initialize() must be called successfully before using this method.
      *
      * @param argc Argument count.
      * @param argv Argument vector.
-     * @return A unique_ptr to a Compiler instance, or nullptr on failure (excluding --help).
+     * @return A unique_ptr to a Compiler instance, or nullptr on failure.
      */
     static std::unique_ptr<Compiler> CreateFromArgs(int argc, char *argv[]);
-
-    /**
-     * @brief Shuts down the driver and releases global resources.
-     * This should be called once when the consumer is finished using the library.
-     */
-    static void Shutdown();
 
     /**
      * @brief Checks if the link mode was requested.
