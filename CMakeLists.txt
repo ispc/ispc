@@ -955,6 +955,20 @@ if (ISPC_LIBRARY)
     )
 endif()
 
+# Configure the version file
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/ispcConfigVersion.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake/ispcConfigVersion.cmake"
+    @ONLY
+)
+
+# Install the package configuration files
+install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/ispcConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake/ispcConfigVersion.cmake"
+    DESTINATION lib/cmake/ispc
+)
+
 install (TARGETS ispc DESTINATION bin)
 if (ISPC_SLIM_BINARY)
     foreach (header ${STDLIB_HEADERS})

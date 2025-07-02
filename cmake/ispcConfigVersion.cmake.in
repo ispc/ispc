@@ -1,0 +1,19 @@
+#
+#  Copyright (c) 2025, Intel Corporation
+#
+#  SPDX-License-Identifier: BSD-3-Clause
+
+# ispcConfigVersion.cmake
+
+# Version information - update these values during your build/install process
+set(PACKAGE_VERSION "@ISPC_VERSION@")  # This should be substituted during install
+
+# Check whether the requested PACKAGE_FIND_VERSION is compatible
+if("${PACKAGE_VERSION}" VERSION_LESS "${PACKAGE_FIND_VERSION}")
+    set(PACKAGE_VERSION_COMPATIBLE FALSE)
+else()
+    set(PACKAGE_VERSION_COMPATIBLE TRUE)
+    if("${PACKAGE_VERSION}" VERSION_EQUAL "${PACKAGE_FIND_VERSION}")
+        set(PACKAGE_VERSION_EXACT TRUE)
+    endif()
+endif()
