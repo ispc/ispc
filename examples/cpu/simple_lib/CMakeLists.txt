@@ -10,10 +10,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(ispc REQUIRED)
 
 # Create the executable
-add_executable(simple simple.cpp)
+add_executable(simple_lib simple.cpp)
 
 # Link against ISPC library using the imported target
-target_link_libraries(simple ispc::lib)
+target_link_libraries(simple_lib ispc::lib)
 
 # Copy simple.ispc to build directory so the example can find it
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/simple.ispc ${CMAKE_CURRENT_BINARY_DIR}/simple.ispc COPYONLY)

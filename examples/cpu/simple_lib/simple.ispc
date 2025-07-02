@@ -1,8 +1,8 @@
 /*
-  Copyright (c) 2010-2023, Intel Corporation
-
+  Copyright (c) 2025, Intel Corporation
   SPDX-License-Identifier: BSD-3-Clause
 */
+
 
 
 export void simple(uniform float vin[], uniform float vout[],
