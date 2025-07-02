@@ -103,6 +103,7 @@ option(ISPC_INCLUDE_UTILS_ONLY "Generate build targets only for the utils." OFF)
 option(ISPC_PREPARE_PACKAGE "Generate build targets for ispc package" OFF)
 option(ISPC_PACKAGE_EXAMPLES "Pack examples into the ISPC package" ON)
 option(ISPC_SLIM_BINARY "Build ISPC as slim binary" OFF)
+option(ISPC_LIBRARY "Build ISPC as a library" ON)
 
 # Build target for utility checking host ISA
 # This target should be defined before the inclusion of FindLLVM.cmake because
@@ -296,6 +297,9 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Version.cmake)
 # Get ispc version
 get_ispc_version("${CMAKE_CURRENT_SOURCE_DIR}/common/version.h")
 
+# Construct full version string
+set(ISPC_VERSION "${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}.${ISPC_VERSION_PATCH}${ISPC_VERSION_SUFFIX}")
+
 find_package(Python3 REQUIRED)
     if (NOT Python3_Interpreter_FOUND)
         message(FATAL_ERROR "Python interpreter is not found")
@@ -473,8 +477,8 @@ list(APPEND FRONTEND_SOURCES
     src/ctx.h
     src/decl.cpp
     src/decl.h
-    src/engine.cpp
-    src/engine.h
+    src/driver.cpp
+    src/driver.h
     src/header.cpp
     src/expr.cpp
     src/expr.h
@@ -860,6 +864,17 @@ function(configure_ispc_exe TARGET)
     target_link_options(${TARGET} PUBLIC ${LINK_OPTIONS_PUBLIC})
 endfunction()
 
+# This function configures library targets.
+function(configure_ispc_lib TARGET)
+    configure_ispc_obj(${TARGET})
+    target_link_options(${TARGET} PRIVATE ${LINK_OPTIONS_PRIVATE})
+    target_link_options(${TARGET} PUBLIC ${LINK_OPTIONS_PUBLIC})
+    set_target_properties(${TARGET} PROPERTIES
+        OUTPUT_NAME "ispc"
+        VERSION ${ISPC_VERSION}
+        SOVERSION ${ISPC_VERSION_MAJOR})
+endfunction()
+
 # This function creates and configures ispc-slim executable target under the given NAME.
 function(add_ispc_slim NAME)
     # Defines stdlib target
@@ -917,6 +932,27 @@ else()
     target_link_libraries(ispc ${LINK_LIBRARIES} builtin stdlib optimization common frontend generic-target)
     add_dependencies(ispc ispc-slim)
     message(STATUS "ISPC will be built as a composite binary")
+endif()
+
+if (ISPC_LIBRARY)
+    # Add libispc library target
+    add_library(libispc SHARED src/binary_composite.cpp)
+    configure_ispc_lib(libispc)
+
+    # Include all the same object libraries that the main ispc executable uses
+    target_link_libraries(libispc ${LINK_LIBRARIES} builtin stdlib optimization common frontend generic-target)
+
+    # Add dependencies to ensure generated files are built first
+    add_dependencies(libispc generic-target-bc stdlibs-bc)
+
+    # Install libispc
+    # On Windows, DLLs go to bin, import libraries (.lib) go to lib
+    # On Unix, shared libraries (.so) go to lib
+    install(TARGETS libispc
+        RUNTIME DESTINATION bin      # .dll files on Windows
+        LIBRARY DESTINATION lib      # .so files on Unix
+        ARCHIVE DESTINATION lib      # .lib files on Windows
+    )
 endif()
 
 install (TARGETS ispc DESTINATION bin)
