@@ -88,8 +88,6 @@ define <16 x i64> @__shuffle_i64(<16 x i64> %input, <16 x i32> %perm) {
 
 define_shuffle2_const()
 
-shuffle2(i8)
-shuffle2(half)
 shuffle2(i64)
 shuffle2(double)
 
@@ -135,6 +133,22 @@ not_const:
   %ind = trunc <WIDTH x i32> %2 to <WIDTH x i16>
   %res = call <WIDTH x i16> @llvm.x86.avx512.vpermi2var.hi.256(<WIDTH x i16> %0, <WIDTH x i16> %ind, <WIDTH x i16> %1)
   ret <WIDTH x i16> %res
+}
+
+define <16 x half> @__shuffle2_half(<16 x half> %v1, <16 x half> %v2, <16 x i32> %perm) nounwind readnone alwaysinline {
+  %vals1 = bitcast <16 x half> %v1 to <16 x i16>
+  %vals2 = bitcast <16 x half> %v2 to <16 x i16>
+  %res = call <16 x i16> @__shuffle2_i16(<16 x i16> %vals1, <16 x i16> %vals2, <16 x i32> %perm)
+  %res_half = bitcast <16 x i16> %res to <16 x half>
+  ret <16 x half> %res_half
+}
+
+define <16 x i8> @__shuffle2_i8(<16 x i8> %v1, <16 x i8> %v2, <16 x i32> %perm) nounwind readnone alwaysinline {
+  %vals1 = zext <16 x i8> %v1 to <16 x i16>
+  %vals2 = zext <16 x i8> %v2 to <16 x i16>
+  %res = call <16 x i16> @__shuffle2_i16(<16 x i16> %vals1, <16 x i16> %vals2, <16 x i32> %perm)
+  %res_i8 = trunc <16 x i16> %res to <16 x i8>
+  ret <16 x i8> %res_i8
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

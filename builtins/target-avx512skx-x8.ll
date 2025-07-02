@@ -90,8 +90,29 @@ define <8 x i64> @__shuffle_i64(<8 x i64> %input, <8 x i32> %perm) {
 }
 
 define_shuffle2_const()
-shuffle2(i8)
-shuffle2(half)
+
+define <8 x i8> @__shuffle2_i8(<8 x i8> %v1, <8 x i8> %v2, <8 x i32> %shuffle_mask) nounwind readnone alwaysinline {
+  %isc = call i1 @__is_compile_time_constant_varying_int32(<8 x i32> %shuffle_mask)
+  br i1 %isc, label %is_const, label %not_const
+
+is_const:
+  %res_const = tail call <8 x i8> @__shuffle2_const_i8(<8 x i8> %v1, <8 x i8> %v2, <8 x i32> %shuffle_mask)
+  ret <8 x i8> %res_const
+
+not_const:
+  v8tov16(i8, %v1, %v2, %data16)
+
+  %shuffle_mask2 = trunc <8 x i32> %shuffle_mask to <8 x i8>
+  %mask16 = shufflevector <8 x i8> %shuffle_mask2, <8 x i8> <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>,
+                         <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                                    i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+
+  ; Use vpshufb to perform the shuffle
+  %result16 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %data16, <16 x i8> %mask16)
+  convert16to8(i8, %result16, %result)
+  ret <8 x i8> %result
+}
+
 shuffle2(double)
 shuffle2(i64)
 
@@ -108,6 +129,14 @@ not_const:
   %ind = trunc <WIDTH x i32> %2 to <WIDTH x i16>
   %res = call <WIDTH x i16> @llvm.x86.avx512.vpermi2var.hi.128(<WIDTH x i16> %0, <WIDTH x i16> %ind, <WIDTH x i16> %1)
   ret <WIDTH x i16> %res
+}
+
+define <8 x half> @__shuffle2_half(<8 x half> %v1, <8 x half> %v2, <8 x i32> %shuffle_mask) nounwind readnone alwaysinline {
+  %v1_i16 = bitcast <8 x half> %v1 to <8 x i16>
+  %v2_i16 = bitcast <8 x half> %v2 to <8 x i16>
+  %res_i16 = call <8 x i16> @__shuffle2_i16(<8 x i16> %v1_i16, <8 x i16> %v2_i16, <8 x i32> %shuffle_mask)
+  %res_half = bitcast <8 x i16> %res_i16 to <8 x half>
+  ret <8 x half> %res_half
 }
 
 declare <WIDTH x i32> @llvm.x86.avx512.vpermi2var.d.256(<WIDTH x i32>, <WIDTH x i32>, <WIDTH x i32>)

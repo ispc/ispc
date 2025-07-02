@@ -1,19 +1,25 @@
-// The test is checking that vperm<type> instruction is generated for shuffle(T, T, int) on avx512 targets.
+// The test is checking that vpshufb or vperm<type> instruction is generated for shuffle(T, T, int) on avx512 targets.
 
-// RUN: %{ispc} --target=avx512skx-x4 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT32,CHECK_FLOAT,CHECK_DOUBLE,CHECK_INT64
-// RUN: %{ispc} --target=avx512icl-x4 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT32,CHECK_FLOAT,CHECK_DOUBLE,CHECK_INT64
-// RUN: %{ispc} --target=avx512spr-x4 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT32,CHECK_FLOAT,CHECK_DOUBLE,CHECK_INT64
-// RUN: %{ispc} --target=avx512skx-x8 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT16,CHECK_INT32,CHECK_FLOAT
-// RUN: %{ispc} --target=avx512icl-x8 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT16,CHECK_INT32,CHECK_FLOAT
-// RUN: %{ispc} --target=avx512spr-x8 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT16,CHECK_INT32,CHECK_FLOAT
-// RUN: %{ispc} --target=avx512skx-x16 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT16,CHECK_INT32,CHECK_FLOAT
+// RUN: %{ispc} --target=avx512skx-x4 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o -  | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_SKX_INT8,CHECK_INT16,CHECK_INT32,CHECK_FLOAT,CHECK_DOUBLE,CHECK_INT64
+// RUN: %{ispc} --target=avx512icl-x4 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o -  | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_SKX_INT8,CHECK_INT16,CHECK_INT32,CHECK_FLOAT,CHECK_DOUBLE,CHECK_INT64
+// RUN: %{ispc} --target=avx512spr-x4 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o -  | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_SKX_INT8,CHECK_INT16,CHECK_INT32,CHECK_FLOAT,CHECK_DOUBLE,CHECK_INT64
+// RUN: %{ispc} --target=avx512skx-x8 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o -  | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_SKX_INT8,CHECK_INT16,CHECK_INT32,CHECK_FLOAT
+// RUN: %{ispc} --target=avx512icl-x8 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o -  | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_SKX_INT8,CHECK_INT16,CHECK_INT32,CHECK_FLOAT
+// RUN: %{ispc} --target=avx512spr-x8 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o -  | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_SKX_INT8,CHECK_INT16,CHECK_INT32,CHECK_FLOAT
+// RUN: %{ispc} --target=avx512skx-x16 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT8,CHECK_INT16,CHECK_INT32,CHECK_FLOAT
 // RUN: %{ispc} --target=avx512icl-x16 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT8,CHECK_INT16,CHECK_INT32,CHECK_FLOAT
 // RUN: %{ispc} --target=avx512spr-x16 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT8,CHECK_INT16,CHECK_INT32,CHECK_FLOAT
+// RUN: %{ispc} --target=avx512skx-x32 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT8
+// RUN: %{ispc} --target=avx512icl-x32 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT8
+// RUN: %{ispc} --target=avx512spr-x32 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT8
+// RUN: %{ispc} --target=avx512icl-x64 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT8
+// RUN: %{ispc} --target=avx512spr-x64 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT8
 
 // REQUIRES: X86_ENABLED && !MACOS_HOST
 
 // CHECK_ALL-LABEL: Shuffle_i8___
 // CHECK_INT8: vperm
+// CHECK_SKX_INT8: vpshufb
 unmasked varying int8 Shuffle_i8(varying int8 a, varying int8 b, varying int32 perm) {
     return shuffle(a, b, perm);
 }

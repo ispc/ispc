@@ -79,9 +79,55 @@ define <WIDTH x double> @__shuffle_double(<WIDTH x double>, <WIDTH x i32>) nounw
 
 define_shuffle2_const()
 
-shuffle2(i8)
-shuffle2(i16)
-shuffle2(half)
+define <4 x i8> @__shuffle2_i8(<4 x i8> %v1, <4 x i8> %v2, <4 x i32> %shuffle_mask) nounwind readnone alwaysinline {
+  %isc = call i1 @__is_compile_time_constant_varying_int32(<4 x i32> %shuffle_mask)
+  br i1 %isc, label %is_const, label %not_const
+
+is_const:
+  %res_const = tail call <4 x i8> @__shuffle2_const_i8(<4 x i8> %v1, <4 x i8> %v2, <4 x i32> %shuffle_mask)
+  ret <4 x i8> %res_const
+
+not_const:
+  v4tov8(i8, %v1, %v2, %data8)
+  convert8to16(i8, %data8, %data16)
+
+  %shuffle_mask2 = trunc <4 x i32> %shuffle_mask to <4 x i8>
+  %mask8 = shufflevector <4 x i8> %shuffle_mask2, <4 x i8> <i8 -128, i8 -128, i8 -128, i8 -128>,
+                         <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %mask16 = shufflevector <8 x i8> %mask8, <8 x i8> <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>,
+                         <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                                    i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+
+  ; Use vpshufb to perform the shuffle
+  %result16 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %data16, <16 x i8> %mask16)
+  convert16to4(i8, %result16, %result)
+  ret <4 x i8> %result
+}
+
+define <4 x i16> @__shuffle2_i16(<4 x i16> %v1, <4 x i16> %v2, <4 x i32> %shuffle_mask) nounwind readnone alwaysinline {
+  %isc = call i1 @__is_compile_time_constant_varying_int32(<4 x i32> %shuffle_mask)
+  br i1 %isc, label %is_const, label %not_const
+
+is_const:
+  %res_const = tail call <4 x i16> @__shuffle2_const_i16(<4 x i16> %v1, <4 x i16> %v2, <4 x i32> %shuffle_mask)
+  ret <4 x i16> %res_const
+
+not_const:
+  v4tov8(i16, %v1, %v2, %data8)
+  convert4to8(i32, %shuffle_mask, %mask8)
+  %mask = trunc <8 x i32> %mask8 to <8 x i16>
+  %result8 = call <8 x i16> @llvm.x86.avx512.mask.permvar.hi.128(<8 x i16> %data8, <8 x i16> %mask, <8 x i16> zeroinitializer, i8 -1)
+  convert8to4(i16, %result8, %result)
+  ret <4 x i16> %result
+}
+
+define <4 x half> @__shuffle2_half(<4 x half> %v1, <4 x half> %v2, <4 x i32> %shuffle_mask) nounwind readnone alwaysinline {
+  %v1_i16 = bitcast <4 x half> %v1 to <4 x i16>
+  %v2_i16 = bitcast <4 x half> %v2 to <4 x i16>
+  %res_i16 = call <4 x i16> @__shuffle2_i16(<4 x i16> %v1_i16, <4 x i16> %v2_i16, <4 x i32> %shuffle_mask)
+  %res_half = bitcast <4 x i16> %res_i16 to <4 x half>
+  ret <4 x half> %res_half
+}
 
 declare <4 x i32> @llvm.x86.avx512.vpermi2var.d.128(<4 x i32>, <4 x i32>, <4 x i32>)
 define <WIDTH x i32> @__shuffle2_i32(<WIDTH x i32>, <WIDTH x i32>, <WIDTH x i32>) nounwind readnone alwaysinline {
