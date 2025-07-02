@@ -934,7 +934,7 @@ else()
     message(STATUS "ISPC will be built as a composite binary")
 endif()
 
-if (ISPC_LIBRARY)
+if (ISPC_LIBRARY AND NOT ISPC_SLIM_BINARY)
     # Add libispc library target
     add_library(libispc SHARED src/binary_composite.cpp)
     configure_ispc_lib(libispc)
@@ -942,8 +942,8 @@ if (ISPC_LIBRARY)
     # Include all the same object libraries that the main ispc executable uses
     target_link_libraries(libispc ${LINK_LIBRARIES} builtin stdlib optimization common frontend generic-target)
 
-    # Add dependencies to ensure generated files are built first
-    add_dependencies(libispc generic-target-bc stdlibs-bc)
+    # TODO: temporary add dep from ispc here to make sure everything is built in the right order
+    add_dependencies(libispc ispc)
 
     # Install libispc
     # On Windows, DLLs go to bin, import libraries (.lib) go to lib
