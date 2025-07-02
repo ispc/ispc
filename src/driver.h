@@ -1,18 +1,12 @@
 /*
-  Copyright (c) 2025, Intel Corporation
+  Copyright (c) 2010-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
 
 #pragma once
 
-#include "ispc.h"
-#include "module.h"
-#include "target_registry.h"
-#include "util.h"
 #include <memory>
-#include <string>
-#include <vector>
 
 namespace ispc {
 
@@ -62,17 +56,8 @@ class Driver {
   private:
     Driver();
 
-    static void writeCompileTimeFile(const char *outFileName);
-
-    // Fields populated by ParseCommandLineArgs
-    char *m_file = nullptr;
-    Arch m_arch;
-    const char *m_cpu;
-    std::vector<ISPCTarget> m_targets;
-    Module::Output m_output;
-    std::vector<std::string> m_linkFileNames;
-    bool m_isHelpMode;
-    bool m_isLinkMode;
+    class Impl;
+    std::unique_ptr<Impl> pImpl;
 };
 
 } // namespace ispc
