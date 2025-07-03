@@ -103,6 +103,7 @@ option(ISPC_INCLUDE_UTILS_ONLY "Generate build targets only for the utils." OFF)
 option(ISPC_PREPARE_PACKAGE "Generate build targets for ispc package" OFF)
 option(ISPC_PACKAGE_EXAMPLES "Pack examples into the ISPC package" ON)
 option(ISPC_SLIM_BINARY "Build ISPC as slim binary" OFF)
+option(ISPC_LIBRARY "Build ISPC as a library" ON)
 
 # Build target for utility checking host ISA
 # This target should be defined before the inclusion of FindLLVM.cmake because
@@ -296,6 +297,9 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Version.cmake)
 # Get ispc version
 get_ispc_version("${CMAKE_CURRENT_SOURCE_DIR}/common/version.h")
 
+# Construct full version string
+set(ISPC_VERSION "${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}.${ISPC_VERSION_PATCH}${ISPC_VERSION_SUFFIX}")
+
 find_package(Python3 REQUIRED)
     if (NOT Python3_Interpreter_FOUND)
         message(FATAL_ERROR "Python interpreter is not found")
@@ -463,15 +467,19 @@ list(APPEND FRONTEND_SOURCES
     ${BISON_CPP_OUTPUT}
     ${FLEX_OUTPUT}
     ${CMAKE_CURRENT_SOURCE_DIR}/stdlib/stdlib.ispc
+    src/args.cpp
+    src/args.h
     src/ast.cpp
     src/ast.h
     src/builtins.cpp
     src/builtins.h
+    src/compiler.cpp
     src/ctx.cpp
     src/ctx.h
     src/decl.cpp
     src/decl.h
     src/header.cpp
+    src/include/ispc/compiler.h
     src/expr.cpp
     src/expr.h
     src/func.cpp
@@ -639,6 +647,7 @@ list(APPEND INCLUDE_DIRECTORIES
     ${LLVM_INCLUDE_DIRS}
     ${XE_DEPS_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/include
     ${CMAKE_CURRENT_SOURCE_DIR}/common
     ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}
     ${CMAKE_BINARY_DIR}
@@ -856,6 +865,17 @@ function(configure_ispc_exe TARGET)
     target_link_options(${TARGET} PUBLIC ${LINK_OPTIONS_PUBLIC})
 endfunction()
 
+# This function configures library targets.
+function(configure_ispc_lib TARGET)
+    configure_ispc_obj(${TARGET})
+    target_link_options(${TARGET} PRIVATE ${LINK_OPTIONS_PRIVATE})
+    target_link_options(${TARGET} PUBLIC ${LINK_OPTIONS_PUBLIC})
+    set_target_properties(${TARGET} PROPERTIES
+        OUTPUT_NAME "ispc"
+        VERSION ${ISPC_VERSION}
+        SOVERSION ${ISPC_VERSION_MAJOR})
+endfunction()
+
 # This function creates and configures ispc-slim executable target under the given NAME.
 function(add_ispc_slim NAME)
     # Defines stdlib target
@@ -915,6 +935,41 @@ else()
     message(STATUS "ISPC will be built as a composite binary")
 endif()
 
+if (ISPC_LIBRARY AND NOT ISPC_SLIM_BINARY)
+    # Add libispc library target
+    add_library(libispc SHARED src/binary_composite.cpp)
+    configure_ispc_lib(libispc)
+
+    # Include all the same object libraries that the main ispc executable uses
+    target_link_libraries(libispc ${LINK_LIBRARIES} builtin stdlib optimization common frontend generic-target)
+
+    # TODO: temporary add dep from ispc here to make sure everything is built in the right order
+    add_dependencies(libispc ispc)
+
+    # Install libispc
+    # On Windows, DLLs go to bin, import libraries (.lib) go to lib
+    # On Unix, shared libraries (.so) go to lib
+    install(TARGETS libispc
+        RUNTIME DESTINATION bin      # .dll files on Windows
+        LIBRARY DESTINATION lib      # .so files on Unix
+        ARCHIVE DESTINATION lib      # .lib files on Windows
+    )
+endif()
+
+# Configure the version file
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/ispcConfigVersion.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake/ispcConfigVersion.cmake"
+    @ONLY
+)
+
+# Install the package configuration files
+install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/ispcConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake/ispcConfigVersion.cmake"
+    DESTINATION lib/cmake/ispc
+)
+
 install (TARGETS ispc DESTINATION bin)
 if (ISPC_SLIM_BINARY)
     foreach (header ${STDLIB_HEADERS})
@@ -927,6 +982,12 @@ endif()
 foreach (header ${INTRINSICS_HEADERS})
     install (FILES "stdlib/include/${header}" DESTINATION include/intrinsics)
 endforeach()
+
+ # Install public headers
+ install(DIRECTORY src/include/ispc
+          DESTINATION include
+          FILES_MATCHING PATTERN "*.h")
+
 
 set(ISPC_DEPS generic-target-bc stdlibs-bc stdlib-headers)
 
