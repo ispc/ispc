@@ -473,13 +473,13 @@ list(APPEND FRONTEND_SOURCES
     src/ast.h
     src/builtins.cpp
     src/builtins.h
+    src/compiler.cpp
     src/ctx.cpp
     src/ctx.h
     src/decl.cpp
     src/decl.h
     src/header.cpp
-    src/ispc_compiler.cpp
-    src/ispc_compiler.h
+    src/include/ispc/compiler.h
     src/expr.cpp
     src/expr.h
     src/func.cpp
@@ -647,6 +647,7 @@ list(APPEND INCLUDE_DIRECTORIES
     ${LLVM_INCLUDE_DIRS}
     ${XE_DEPS_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/include
     ${CMAKE_CURRENT_SOURCE_DIR}/common
     ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}
     ${CMAKE_BINARY_DIR}
@@ -982,8 +983,11 @@ foreach (header ${INTRINSICS_HEADERS})
     install (FILES "stdlib/include/${header}" DESTINATION include/intrinsics)
 endforeach()
 
-# Install main header file for library usage
-install(FILES "src/ispc_compiler.h" DESTINATION include)
+ # Install public headers
+ install(DIRECTORY src/include/ispc
+          DESTINATION include
+          FILES_MATCHING PATTERN "*.h")
+
 
 set(ISPC_DEPS generic-target-bc stdlibs-bc stdlib-headers)
 

@@ -30,7 +30,7 @@ set(ISPC_LIBRARY "${ISPC_LIBRARIES}/${ISPC_LIBRARY_NAME}")
 # Verify that the files exist
 set(_ispc_required_files 
     "${ISPC_EXECUTABLE}"
-    "${ISPC_INCLUDE_DIRS}/ispc_compiler.h"
+    "${ISPC_INCLUDE_DIRS}/ispc/compiler.h"
     "${ISPC_LIBRARY}"
 )
 

@@ -10,17 +10,17 @@
 #include <string>
 #include <vector>
 
-#include "ispc_compiler.h"
+#include "ispc/compiler.h"
 
 int main() {
     // Initialize the ISPC library
     std::cout << "Initializing ISPC library...\n";
-    if (!ispc::Compiler::Initialize()) {
+    if (!ispc::Initialize()) {
         std::cerr << "Error: Failed to initialize ISPC library\n";
         return 1;
     }
 
-    // Compile the ISPC file using the ispc::Compiler class
+    // Compile the ISPC file using the simplified CompileFromArgs API
     std::cout << "Compiling simple.ispc using library mode...\n";
 
     std::vector<const char *> args = {
@@ -34,30 +34,21 @@ int main() {
         "simple_ispc.h" // Generate header file
     };
 
-    // Create ispc::Compiler instance from command line arguments
-    auto instance = ispc::Compiler::CreateFromArgs(static_cast<int>(args.size()), const_cast<char **>(args.data()));
-
-    if (!instance) {
-        std::cerr << "Error: Failed to create ispc::Compiler instance\n";
-        ispc::Compiler::Shutdown();
-        return 1;
-    }
-
-    // Execute the compilation
-    int result = instance->Execute();
+    // Compile using the simplified API
+    int result = ispc::CompileFromArgs(static_cast<int>(args.size()), const_cast<char **>(args.data()));
 
     if (result == 0) {
         std::cout << "ISPC compilation successful!\n";
     } else {
         std::cerr << "ISPC compilation failed with code: " << result << "\n";
-        ispc::Compiler::Shutdown();
+        ispc::Shutdown();
         return result;
     }
 
-    // Demonstrate that multiple instances can be created safely
-    std::cout << "\nDemonstrating multiple compiler instances with different settings...\n";
+    // Demonstrate that multiple compilations can be run with different settings
+    std::cout << "\nDemonstrating multiple compilations with different settings...\n";
 
-    // Create a second compiler instance with DIFFERENT settings to prove isolation
+    // Set up a second compilation with DIFFERENT settings
     std::vector<const char *> args2 = {
         "ispc",          // Program name
         "simple.ispc",   // Input file
@@ -71,31 +62,22 @@ int main() {
         "-g"              // DIFFERENT: Debug info (not in first)
     };
 
-    auto instance2 = ispc::Compiler::CreateFromArgs(static_cast<int>(args2.size()), const_cast<char **>(args2.data()));
+    std::cout << "Compiling again with different settings:\n";
+    std::cout << "  - First compilation:  -O2, object output, no debug\n";
+    std::cout << "  - Second compilation: -O0, assembly output, with debug\n";
 
-    if (!instance2) {
-        std::cerr << "Error: Failed to create second ispc::Compiler instance\n";
-        ispc::Compiler::Shutdown();
-        return 1;
-    }
-
-    std::cout << "Second compiler instance created with different settings:\n";
-    std::cout << "  - First instance:  -O2, object output, no debug\n";
-    std::cout << "  - Second instance: -O0, assembly output, with debug\n";
-    std::cout << "First instance still valid: " << (instance ? "Yes" : "No") << "\n";
-
-    // Execute second instance (should produce .s file instead of .o)
-    int result2 = instance2->Execute();
+    // Execute second compilation (should produce .s file instead of .o)
+    int result2 = ispc::CompileFromArgs(static_cast<int>(args2.size()), const_cast<char **>(args2.data()));
 
     if (result2 == 0) {
         std::cout << "Second compilation successful with DIFFERENT settings!\n";
 
         // Verify that files with different extensions were created
         if (std::filesystem::exists("simple_ispc.o") && std::filesystem::exists("simple_debug.s")) {
-            std::cout << "SUCCESS: Both instances produced different output files:\n";
-            std::cout << "  - First instance:  simple_ispc.o (object file)\n";
-            std::cout << "  - Second instance: simple_debug.s (assembly file)\n";
-            std::cout << "This proves instances don't interfere with each other!\n";
+            std::cout << "SUCCESS: Both compilations produced different output files:\n";
+            std::cout << "  - First compilation:  simple_ispc.o (object file)\n";
+            std::cout << "  - Second compilation: simple_debug.s (assembly file)\n";
+            std::cout << "This proves the API handles different settings correctly!\n";
         } else {
             std::cout << "Note: Output files may not be visible in current directory\n";
         }
@@ -104,8 +86,8 @@ int main() {
     }
 
     std::cout << "\nCleaning up...\n";
-    ispc::Compiler::Shutdown();
-    std::cout << "ispc::Compiler shutdown complete\n";
+    ispc::Shutdown();
+    std::cout << "ISPC shutdown complete\n";
 
     return 0;
 }
