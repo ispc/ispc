@@ -11,6 +11,14 @@
 ;; on the GNU extension of multi-digit arguments.
 define(`argn', `ifelse(`$1', 1, ``$2'', `argn(decr(`$1'), shift(shift($@)))')')
 
+;; Helper macro to generate the element list recursively
+define(`_VECTOR_ELEMENTS', `ifelse($3, $1, `$2 0', `$2 $3, _VECTOR_ELEMENTS($1, $2, eval($3 + 1))')')
+
+;; M4 macro to generate LLVM IR vector constant with pattern <1, 2, 3, ..., WIDTH-1, 0>
+;; Usage: ROTATE_1_CONST(width, type)
+;; Example: ROTATE_1_CONST(8, i32) generates <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0>
+define(`ROTATE_1_CONST', `<$1 x $2> <ifelse($1, 1, `$2 0', `_VECTOR_ELEMENTS($1, $2, 1)')>')
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; It is a bit of a pain to compute this in m4 for 32 and 64-wide targets...
@@ -6874,7 +6882,7 @@ check_neighbors:
   ; up comparing each element to its neighbor on the right.  Then see if
   ; all of those values are true; if so, then all of the elements are equal..
   %castvec = bitcast <$1 x $2> %vec to <$1 x $4>
-  %castvr = call <$1 x $4> @__rotate_i$6(<$1 x $4> %castvec, i32 1)
+  %castvr = call <$1 x $4> @__shuffle_i$6(<$1 x $4> %castvec, ROTATE_1_CONST(WIDTH, i32))
   %vr = bitcast <$1 x $4> %castvr to <$1 x $2>
   %eq = $5 $7 <$1 x $2> %vec, %vr
   ifelse(MASK,i1, `
