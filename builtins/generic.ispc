@@ -1003,17 +1003,11 @@ EXT READNONE varying double __rotate_double(varying double v, uniform int32 i) {
 
 // shift
 template <typename T> unmasked varying T __shift(varying T v, uniform int32 i) {
-    uniform T<DOUBLE_WIDTH> dbl;
-    uniform T zero = 0;
-    uniform int32 start_pos = i;
-    if (i < 0) {
-        start_pos = TARGET_WIDTH + i;
-        dbl = __concat(zero, v);
-    } else {
-        dbl = __concat(v, zero);
-    }
-    varying T *uniform ptr = (varying T * uniform) & dbl[start_pos];
-    return *ptr;
+    varying T<3> trp = {0, v, 0};
+    uniform int32 start_pos = i + TARGET_WIDTH;
+    uniform T *uniform ptr = (uniform T * uniform) & trp;
+    varying T *uniform res_ptr = (varying T * uniform) & ptr[start_pos];
+    return *res_ptr;
 }
 EXT READNONE varying int8 __shift_i8(varying int8 v, uniform int32 i) { return __shift<int8>(v, i); }
 EXT READNONE varying int16 __shift_i16(varying int16 v, uniform int32 i) { return __shift<int16>(v, i); }
