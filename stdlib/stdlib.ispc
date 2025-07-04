@@ -506,70 +506,142 @@ __declspec(safe) static inline unsigned int64 rotate(unsigned int64 v, uniform i
 #endif
 }
 
+template <typename T> unmasked varying T __shift_via_shuffle(varying T v, uniform int32 i) {
+    // Unlike circular shift (rotate), this is a linear shift that nullifies
+    // out-of-bounds elements (not wrapping around).
+    // Calling here shuffle with sourceIndex containing the out-of-bounds
+    // indexes is fine until shuffle is implemented with on-registers shuffles.
+    // When it is implemented via gather/scatter, it really should not be used,
+    // so we don't defined USE_SHIFT_VIA_SHUFFLE_64 for avx512-x32/x64 and
+    // USE_SHIFT_VIA_SHUFFLE_32 for avx512-x64.
+    varying int32 sourceIndex = programIndex + i;
+    varying T shuffled = shuffle(v, sourceIndex);
+    varying bool inBounds = (sourceIndex >= 0) & (sourceIndex < TARGET_WIDTH);
+    return select(inBounds, shuffled, (varying T)0);
+}
+
+#if defined(ISPC_TARGET_AVX512SKX) || defined(ISPC_TARGET_AVX512ICL) || defined(ISPC_TARGET_AVX512SPR) ||              \
+    defined(ISPC_TARGET_AVX10_2)
+#define USE_SHIFT_VIA_SHUFFLE_8
+#define USE_SHIFT_VIA_SHUFFLE_16
+
+#if TARGET_WIDTH < 64
+#define USE_SHIFT_VIA_SHUFFLE_32
+#endif
+
+#if TARGET_WIDTH < 32
+#define USE_SHIFT_VIA_SHUFFLE_64
+#endif
+#endif // avx512 or avx10
+
 __declspec(safe) static inline float shift(float v, uniform int i) {
+#ifdef USE_SHIFT_VIA_SHUFFLE_32
+    return __shift_via_shuffle(v, i);
+#else
     varying float result;
     unmasked { result = __shift_float(v, i); }
     return result;
+#endif
 }
 
 __declspec(safe) static inline int8 shift(int8 v, uniform int i) {
+#ifdef USE_SHIFT_VIA_SHUFFLE_8
+    return __shift_via_shuffle(v, i);
+#else
     varying int8 result;
     unmasked { result = __shift_i8(v, i); }
     return result;
+#endif
 }
 
 __declspec(safe) static inline unsigned int8 shift(unsigned int8 v, uniform int i) {
+#ifdef USE_SHIFT_VIA_SHUFFLE_8
+    return __shift_via_shuffle(v, i);
+#else
     varying unsigned int8 result;
     unmasked { result = __shift_i8(v, i); }
     return result;
+#endif
 }
 
 __declspec(safe) static inline int16 shift(int16 v, uniform int i) {
+#ifdef USE_SHIFT_VIA_SHUFFLE_16
+    return __shift_via_shuffle(v, i);
+#else
     varying int16 result;
     unmasked { result = __shift_i16(v, i); }
     return result;
+#endif
 }
 
 __declspec(safe) static inline unsigned int16 shift(unsigned int16 v, uniform int i) {
+#ifdef USE_SHIFT_VIA_SHUFFLE_16
+    return __shift_via_shuffle(v, i);
+#else
     varying unsigned int16 result;
     unmasked { result = __shift_i16(v, i); }
     return result;
+#endif
 }
 
 __declspec(safe) static inline float16 shift(float16 v, uniform int i) {
-    varying int16 result;
+#ifdef USE_SHIFT_VIA_SHUFFLE_16
+    return __shift_via_shuffle(v, i);
+#else
+    varying float16 result;
     unmasked { result = __shift_half(v, i); }
     return result;
+#endif
 }
 
 __declspec(safe) static inline int32 shift(int32 v, uniform int i) {
+#ifdef USE_SHIFT_VIA_SHUFFLE_32
+    return __shift_via_shuffle(v, i);
+#else
     varying int32 result;
     unmasked { result = __shift_i32(v, i); }
     return result;
+#endif
 }
 
 __declspec(safe) static inline unsigned int32 shift(unsigned int32 v, uniform int i) {
+#ifdef USE_SHIFT_VIA_SHUFFLE_32
+    return __shift_via_shuffle(v, i);
+#else
     varying unsigned int32 result;
     unmasked { result = __shift_i32(v, i); }
     return result;
+#endif
 }
 
 __declspec(safe) static inline double shift(double v, uniform int i) {
+#ifdef USE_SHIFT_VIA_SHUFFLE_64
+    return __shift_via_shuffle(v, i);
+#else
     varying double result;
     unmasked { result = __shift_double(v, i); }
     return result;
+#endif
 }
 
 __declspec(safe) static inline int64 shift(int64 v, uniform int i) {
+#ifdef USE_SHIFT_VIA_SHUFFLE_64
+    return __shift_via_shuffle(v, i);
+#else
     varying int64 result;
     unmasked { result = __shift_i64(v, i); }
     return result;
+#endif
 }
 
 __declspec(safe) static inline unsigned int64 shift(unsigned int64 v, uniform int i) {
+#ifdef USE_SHIFT_VIA_SHUFFLE_64
+    return __shift_via_shuffle(v, i);
+#else
     varying unsigned int64 result;
     unmasked { result = __shift_i64(v, i); }
     return result;
+#endif
 }
 
 __declspec(safe) static inline float shuffle(float v, int i) { return __shuffle_float(v, i); }
@@ -1372,7 +1444,11 @@ __declspec(safe, cost1) static inline uniform bool or (uniform bool a, uniform b
 
 __declspec(safe, cost1) static inline int8 select(bool cond, int8 t, int8 f) { return cond ? t : f; }
 
+__declspec(safe, cost1) static inline uint8 select(bool cond, uint8 t, uint8 f) { return cond ? t : f; }
+
 __declspec(safe, cost1) static inline int8 select(uniform bool cond, int8 t, int8 f) { return cond ? t : f; }
+
+__declspec(safe, cost1) static inline uint8 select(uniform bool cond, uint8 t, uint8 f) { return cond ? t : f; }
 
 __declspec(safe, cost1) static inline uniform int8 select(uniform bool cond, uniform int8 t, uniform int8 f) {
     return cond ? t : f;
@@ -1380,7 +1456,11 @@ __declspec(safe, cost1) static inline uniform int8 select(uniform bool cond, uni
 
 __declspec(safe, cost1) static inline int16 select(bool cond, int16 t, int16 f) { return cond ? t : f; }
 
+__declspec(safe, cost1) static inline uint16 select(bool cond, uint16 t, uint16 f) { return cond ? t : f; }
+
 __declspec(safe, cost1) static inline int16 select(uniform bool cond, int16 t, int16 f) { return cond ? t : f; }
+
+__declspec(safe, cost1) static inline uint16 select(uniform bool cond, uint16 t, uint16 f) { return cond ? t : f; }
 
 __declspec(safe, cost1) static inline uniform int16 select(uniform bool cond, uniform int16 t, uniform int16 f) {
     return cond ? t : f;
@@ -1396,7 +1476,11 @@ __declspec(safe, cost1) static inline uniform float16 select(uniform bool cond, 
 
 __declspec(safe, cost1) static inline int32 select(bool cond, int32 t, int32 f) { return cond ? t : f; }
 
+__declspec(safe, cost1) static inline uint32 select(bool cond, uint32 t, uint32 f) { return cond ? t : f; }
+
 __declspec(safe, cost1) static inline int32 select(uniform bool cond, int32 t, int32 f) { return cond ? t : f; }
+
+__declspec(safe, cost1) static inline uint32 select(uniform bool cond, uint32 t, uint32 f) { return cond ? t : f; }
 
 __declspec(safe, cost1) static inline uniform int32 select(uniform bool cond, uniform int32 t, uniform int32 f) {
     return cond ? t : f;
@@ -1404,7 +1488,11 @@ __declspec(safe, cost1) static inline uniform int32 select(uniform bool cond, un
 
 __declspec(safe, cost1) static inline int64 select(bool cond, int64 t, int64 f) { return cond ? t : f; }
 
+__declspec(safe, cost1) static inline uint64 select(bool cond, uint64 t, uint64 f) { return cond ? t : f; }
+
 __declspec(safe, cost1) static inline int64 select(uniform bool cond, int64 t, int64 f) { return cond ? t : f; }
+
+__declspec(safe, cost1) static inline uint64 select(uniform bool cond, uint64 t, uint64 f) { return cond ? t : f; }
 
 __declspec(safe, cost1) static inline uniform int64 select(uniform bool cond, uniform int64 t, uniform int64 f) {
     return cond ? t : f;
