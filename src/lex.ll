@@ -290,8 +290,8 @@ void ParserInit() {
 %option nounistd
 
 WHITESPACE [ \t\r]+
-INT_NUMBER (([0-9]+)|(0[xX][0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*
-INT_NUMBER_DOTDOTDOT (([0-9]+)|(0[xX][0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*\.\.\.
+INT_NUMBER (([0-9]+)|(0[xX][0-9a-fA-F]+)|(0b[01]+))[kMG]?([uU][lL]{0,2}|[lL]{1,2}[uU]?)?
+INT_NUMBER_DOTDOTDOT (([0-9]+)|(0[xX][0-9a-fA-F]+)|(0b[01]+))[kMG]?([uU][lL]{0,2}|[lL]{1,2}[uU]?)?\.\.\.
 FLOAT_NUMBER_DECIMAL ((([0-9]+\.[0-9]*)|(\.[0-9]+))([dD]|[fF]|[fF]16)?)
 FLOAT_NUMBER_DECIMAL_DEPRECATED ([0-9]+[fF])
 FLOAT_NUMBER_DECIMAL_ILLEGAL ([0-9]+([dD]|[fF]16))
