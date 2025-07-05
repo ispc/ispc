@@ -799,6 +799,15 @@ existing code from intrinsics to ISPC, you can use these headers as a reference.
 The standard library ``select`` functions now support unsigned integer types
 ``uint8``, ``uint16``, ``uint32``, and ``uint64``.
 
+Integer literals are now stricter:
+
+* It now limits the number of occurrences of [uUlL] symbols (i.e. "ulll", 
+  "uul" and "lulu" are not valid anymore).
+* The value modification suffix (i.e. [kMG]) must preceed the type 
+  modification suffix (i.e. [uUlL] symbols).
+* Like C/C++, "lL" and "Ll" suffixes is not allowed anymore (i.e. the mix of 
+  lower and upper case "L" to form a "LL" suffix).
+
 
 Getting Started with ISPC
 =========================
@@ -2122,15 +2131,22 @@ Here are three ways of specifying the integer value "15":
 
 A number of suffixes can be provided with integer numeric constants.
 First, "u" denotes that the constant is unsigned, and "ll" denotes a 64-bit
-integer constant (while "l" denotes a 32-bit integer constant).  It is also
-possible to denote units of 1024, 1024*1024, or 1024*1024*1024 with the
-SI-inspired suffixes "k", "M", and "G" respectively:
+integer constant (while "l" denotes a 32-bit integer constant). The 
+aforementioned suffixes can also be written in uppercase. However, like in C, 
+you cannot mix uppercase and lowercase in a given suffix (e.g. uLl or ulL).
+It is also possible to denote units of 1024, 1024*1024, or 1024*1024*1024 with
+the SI-inspired suffixes "k", "M", and "G" respectively. Note that the later 
+suffixes must preceed the type-related suffixes. Here is an example:
 
 ::
 
-   int two_kb = 2k;   // 2048
-   int two_megs = 2M; // 2 * 1024 * 1024
-   int one_gig = 1G;  // 1024 * 1024 * 1024
+   uint three = 3ul;
+   int two_kb = 2k;         // 2048
+   int two_megs = 2M;       // 2 * 1024 * 1024
+   int one_gig = 1G;        // 1024 * 1024 * 1024
+   uint three_gig = 3Gu;    // 3 * 1024 * 1024 * 1024
+   uint64 six_gig = 6GuLL;  // 6 * 1024 * 1024 * 1024
+   int64 ten_gig = 10Gll;   // 10 * 1024 * 1024 * 1024
 
 Floating Point Literals
 -----------------------
