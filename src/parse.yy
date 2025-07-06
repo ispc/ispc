@@ -1687,7 +1687,10 @@ specifier_qualifier_list
             else if ($1 == TYPEQUAL_CONST)
                 $$ = $2->GetAsConstType();
             else if ($1 == TYPEQUAL_SIGNED) {
-                if ($2->IsIntType() == false) {
+                const Type *t = $2->GetAsSignedType();
+                if (t)
+                    $$ = t;
+                else {
                     Error(@1, "Can't apply \"signed\" qualifier to \"%s\" type.",
                           $2->ResolveUnboundVariability(Variability::Varying)->GetString().c_str());
                     $$ = $2;
