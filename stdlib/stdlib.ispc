@@ -5613,6 +5613,42 @@ __declspec(safe) static inline uniform int float_to_srgb8(uniform float inval) {
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// srgb8 -> float
+//
+// It uses a polynomial approximation of (x/255+0.055)/1.055)^2.4 for the range
+// [9.384;265.71]. The relative error is 5e-4.
+// This should be enough since the input is a 8-bit integer anyway.
+// Coefficients are from sollya (with some fine-tunning so 0 <= r <= 1.0).
+//
+// For more precise results a (1KiB) LUT can be used instead.
+// Using a LUT is generally (1~2 times) slower on AVX2/AVX-512 targets.
+// However, using a LUT might be faster on SSE/Neon with a warm cache.
+
+__declspec(safe) static inline float srgb8_to_float(int inval) {
+    const float x = clamp(inval, (uniform int)0, (uniform int)255);
+    float r = 1.0489326014e-13;
+    r = r * x - 8.6331650162e-11;
+    r = r * x + 4.2816203915e-8;
+    r = r * x + 7.7981030699e-6;
+    r = r * x + 1.3343113823e-4;
+    r = r * x + 8.7884825188e-4;
+    const float scale = 1.0 / 255 / 12.92;
+    return select(x < 10.31475, x * scale, r);
+}
+
+__declspec(safe) static inline uniform float srgb8_to_float(uniform int inval) {
+    const uniform float x = clamp(inval, (uniform int)0, (uniform int)255);
+    uniform float r = 1.0489326014e-13;
+    r = r * x - 8.6331650162e-11;
+    r = r * x + 4.2816203915e-8;
+    r = r * x + 7.7981030699e-6;
+    r = r * x + 1.3343113823e-4;
+    r = r * x + 8.7884825188e-4;
+    const uniform float scale = 1.0 / 255 / 12.92;
+    return select(x < 10.31475, x * scale, r);
+}
+
+///////////////////////////////////////////////////////////////////////////
 // RNG stuff
 
 static inline unsigned int random(varying RNGState *uniform state) {

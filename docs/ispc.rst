@@ -214,7 +214,7 @@ Contents:
 
     * `Converting Between Array-of-Structures and Structure-of-Arrays Layout`_
     * `Conversions To and From Half-Precision Floats`_
-    * `Converting to sRGB8`_
+    * `Converting from/to sRGB8`_
 
   + `Systems Programming Support`_
 
@@ -6414,13 +6414,14 @@ precise.
     uniform int16 float_to_half_fast(uniform float f)
 
 
-Converting to sRGB8
--------------------
+Converting from/to sRGB8
+------------------------
 
 The sRGB color space is used in many applications in graphics and imaging;
 see the `Wikipedia page on sRGB`_ for more information.  The ``ispc``
-standard library provides two functions for converting floating-point color
-values to 8-bit values in the sRGB space.
+standard library provides four conversions functions: two for converting
+floating-point color values to 8-bit values in the sRGB space, and 2 for the
+reverse operation.
 
 .. _Wikipedia page on sRGB: http://en.wikipedia.org/wiki/SRGB
 
@@ -6428,6 +6429,11 @@ values to 8-bit values in the sRGB space.
 
     int float_to_srgb8(float v)
     uniform int float_to_srgb8(uniform float v)
+
+::
+
+    float srgb8_to_float(int v)
+    uniform float srgb8_to_float(uniform int v)
 
 
 Systems Programming Support
