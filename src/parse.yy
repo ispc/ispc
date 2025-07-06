@@ -1000,30 +1000,19 @@ rate_qualified_new
     ;
 
 rate_qualified_type_specifier
-    : type_specifier { $$ = $1; }
-    | TOKEN_UNIFORM type_specifier
+    : specifier_qualifier_list
     {
-        if ($2 == nullptr)
-            $$ = nullptr;
-        else if ($2->IsVoidType()) {
-            Error(@1, "\"uniform\" qualifier is illegal with \"void\" type.");
+        const VectorType *vt = CastType<VectorType>($1);
+        if (vt != nullptr) {
+            Error(@1, "\"%s\" vector type not supported here yet.",
+                  $1->GetString().c_str());
             $$ = nullptr;
         }
-        else
-            $$ = $2->GetAsUniformType();
-    }
-    | TOKEN_VARYING type_specifier
-    {
-        if ($2 == nullptr)
-            $$ = nullptr;
-        else if ($2->IsVoidType()) {
-            Error(@1, "\"varying\" qualifier is illegal with \"void\" type.");
-            $$ = nullptr;
+        else {
+            $$ = $1;
         }
-        else
-            $$ = $2->GetAsVaryingType();
     }
-    | soa_width_specifier type_specifier
+    | soa_width_specifier specifier_qualifier_list
     {
         if ($2 == nullptr)
             $$ = nullptr;
