@@ -1101,33 +1101,14 @@ __declspec(safe) inline int16 float_to_half_fast(float f);
 ///////////////////////////////////////////////////////////////////////////
 // float -> srgb8
 
-// https://gist.github.com/2246678, from Fabian "rygorous" Giesen.
-//
-// The basic ideas are still the same, only this time, we squeeze
-// everything into the table, even the linear part of the range; since we
-// are approximating the function as piecewise linear anyway, this is
-// fairly easy.
-//
-// In the exact version of the conversion, any value that produces an
-// output float less than 0.5 will be rounded to an integer of
-// zero. Inverting the linear part of the transform, we get:
-//
-//   log2(0.5 / (255 * 12.92)) =~ -12.686
-//
-// which in turn means that any value smaller than about 2^(-12.687) will
-// return 0.  What this means is that we can adapt the clamping code to
-// just clamp to [2^(-13), 1-eps] and we're covered. This means our table
-// needs to cover a range of 13 different exponents from -13 to -1.
-//
-// The table lookup, storage and interpolation works exactly the same way
-// as in the code above.
-//
-// Max error for the whole function (integer-rounded result minus "exact"
-// value, as computed in floats using the official formula): 0.544403 at
-// 0x3e9f8000
-
 __declspec(safe) inline int float_to_srgb8(float inval);
 __declspec(safe) inline uniform int float_to_srgb8(uniform float inval);
+
+///////////////////////////////////////////////////////////////////////////
+// srgb8 -> float
+
+__declspec(safe) inline float srgb8_to_float(int inval);
+__declspec(safe) inline uniform float srgb8_to_float(uniform int inval);
 
 ///////////////////////////////////////////////////////////////////////////
 // RNG stuff
