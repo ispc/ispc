@@ -60,6 +60,8 @@ add_subdirectory(perfbench)
 add_subdirectory(rt)
 add_subdirectory(sgemm)
 add_subdirectory(simple)
+# This example requires full ISPC installation, it's not supported as part of ISPC build
+# add_subdirectory(simple_lib)
 add_subdirectory(sort)
 add_subdirectory(stencil)
 add_subdirectory(volume_rendering)
