@@ -307,6 +307,7 @@ find_package(Python3 REQUIRED)
     endif()
 
 include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 find_package(BISON 3.0 REQUIRED)
     if (BISON_FOUND)
@@ -880,7 +881,7 @@ function(configure_ispc_lib TARGET)
         SOVERSION ${ISPC_VERSION_MAJOR})
 endfunction()
 
-# This function creates and configures an ISPC library target (static or shared)
+# This function creates and configures an ISPC library target (shared for now)
 function(add_ispc_library TARGET_NAME LIBRARY_TYPE OUTPUT_NAME_OVERRIDE)
     # Define the common source files and object libraries
     set(ISPC_LIB_SOURCES
@@ -974,6 +975,7 @@ else()
     message(STATUS "ISPC will be built as a composite binary")
 endif()
 
+set(ISPC_SHARED_LIBRARY_AVAILABLE FALSE)
 if (ISPC_LIBRARY AND NOT ISPC_SLIM_BINARY)
     # Add libispc shared library target with default output name "ispc"
     add_ispc_library(libispc_shared SHARED "")
@@ -984,10 +986,42 @@ if (ISPC_LIBRARY AND NOT ISPC_SLIM_BINARY)
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
+
     # Install public headers
     install(DIRECTORY src/include/ispc
         DESTINATION include
         FILES_MATCHING PATTERN "*.h")
+    set(ISPC_SHARED_LIBRARY_AVAILABLE TRUE)
+endif()
+
+# Configure the package config file
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/ispcConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake/ispcConfig.cmake"
+INSTALL_DESTINATION
+    ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+)
+
+# Configure the version file
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake/ispcConfigVersion.cmake"
+    VERSION ${ISPC_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+# Install the package configuration files
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake/ispcConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake/ispcConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+)
+
+# Install the export set only if library targets exist
+if (ISPC_LIBRARY AND NOT ISPC_SLIM_BINARY)
+    install(EXPORT ${PROJECT_NAME}_Exports
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+        NAMESPACE ${PROJECT_NAME}::
+    )
 endif()
 
 install (TARGETS ispc DESTINATION bin)
