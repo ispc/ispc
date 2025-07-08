@@ -478,7 +478,9 @@ list(APPEND FRONTEND_SOURCES
     src/expr.h
     src/func.cpp
     src/func.h
+    src/include/ispc/ispc.h
     src/intrinsics.cpp
+    src/ispc_impl.cpp
     src/module.cpp
     src/module.h
     src/preprocessor.cpp
@@ -642,6 +644,7 @@ list(APPEND INCLUDE_DIRECTORIES
     ${LLVM_INCLUDE_DIRS}
     ${XE_DEPS_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/include
     ${CMAKE_CURRENT_SOURCE_DIR}/common
     ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}
     ${CMAKE_BINARY_DIR}
