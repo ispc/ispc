@@ -382,13 +382,13 @@ Updating ISPC Programs For Changes In ISPC 1.9.0
 ------------------------------------------------
 
 The release doesn't contains language changes, which may affect compatibility with
-older versions. It introduces new AVX512 target: avx512knl-i32x16.
+older versions. It introduces new AVX-512 target: avx512knl-i32x16.
 
 Updating ISPC Programs For Changes In ISPC 1.9.1
 ------------------------------------------------
 
 The release doesn't contains language changes, which may affect compatibility with
-older versions. It introduces new AVX512 target: avx512skx-i32x16.
+older versions. It introduces new AVX-512 target: avx512skx-i32x16.
 
 Updating ISPC Programs For Changes In ISPC 1.9.2
 ------------------------------------------------
@@ -417,7 +417,7 @@ Starting 1.11.0 version auto-generated headers use ``#pragma once``. In the unli
 case when your C/C++ compiler is not supporting that, please use ``--no-pragma-once``
 ``ispc`` switch.
 
-This release also introduces new AVX512 target avx512skx-i32x8. It produces code,
+This release also introduces new AVX-512 target avx512skx-i32x8. It produces code,
 which doesn't use ZMM registers.
 
 Updating ISPC Programs For Changes In ISPC 1.12.0
@@ -516,13 +516,13 @@ Standard library library got new ``prefetchw_{l1,l2,l3}()`` intrinsics for
 prefetching in anticipation of write.
 
 The algorithms used for implementation of ``rsqrt(double)`` and ``rcp(double)``
-standard library functions have changed on AVX512 and may affect the existing
+standard library functions have changed on AVX-512 and may affect the existing
 code.
 
 Updating ISPC Programs For Changes In ISPC 1.18.0
 -------------------------------------------------
 
-AVX512 targets were renamed to drop "base type" (or "mask size"), old naming is accepted for
+AVX-512 targets were renamed to drop "base type" (or "mask size"), old naming is accepted for
 compatibility. New names are avx512skx-x4, avx512skx-x8, avx512skx-x16,
 avx512skx-x32, avx512skx-x64, and avx512knl-x16.
 
@@ -547,7 +547,7 @@ New targets were added:
 
 * avx512spr-x4, avx512spr-x8, avx512spr-x16, avx512spr-x32, avx512spr-x64 for
   4th generation Intel® Xeon® Scalable (codename Sapphire Rapids) CPUs. A macro
-  ISPC_TARGET_AVX512SPR was added.
+  ``ISPC_TARGET_AVX512SPR`` was added.
 * xehpc-x16 and xehpc-x32 for Intel® Data Center GPU Max (codename Ponte Vecchio).
 
 Function templates were introduces to the language, please refer to `Function
@@ -639,7 +639,7 @@ older versions:
 * The implementation of ``round`` standard library function was aligned across
   all targets. It may potentially affect the results of the code that uses this
   function for the following targets: ``avx2-i16x16``, ``avx2-i8x32`` and all
-  ``avx512`` targets. Please, refer to `Basic Math Functions`_ for more details.
+  AVX-512 targets. Please, refer to `Basic Math Functions`_ for more details.
 
 Updating ISPC Programs For Changes In ISPC 1.25.0
 -------------------------------------------------
@@ -796,9 +796,6 @@ ISPC now includes a new ``include/intrinsics`` directory containing header
 files that implement selected SSE intrinsics in ISPC. If you're porting
 existing code from intrinsics to ISPC, you can use these headers as a reference.
 
-The standard library ``select`` functions now support unsigned integer types
-``uint8``, ``uint16``, ``uint32``, and ``uint64``.
-
 Integer literals are now stricter:
 
 * It now limits the number of occurrences of [uUlL] symbols (i.e. "ulll", 
@@ -807,6 +804,17 @@ Integer literals are now stricter:
   modification suffix (i.e. [uUlL] symbols).
 * Like C/C++, "lL" and "Ll" suffixes is not allowed anymore (i.e. the mix of 
   lower and upper case "L" to form a "LL" suffix).
+
+Standard library:
+
+The ``select`` functions now support unsigned integer types ``uint8``, 
+``uint16``, ``uint32``, and ``uint64``.
+
+The ``isinf``, ``isfinite``, and ``srgb8_to_float`` functions have been added
+to the standard library.
+
+The support for short vector types has been added also for the following
+element wise functions: ``fmod``, ``isnan``, ``rsqrt_fast`` and ``clamp``.
 
 
 Getting Started with ISPC
@@ -1094,7 +1102,7 @@ Next, ``--target`` selects the target instruction set.  For targets without
 hardware support for masking, the target string is of the form ``[ISA]-i[mask size]x[gang size]``.
 For example, ``--target=avx2-i32x16`` specifies a target with the AVX2 instruction set,
 a mask size of 32 bits, and a gang size of 16.  For targets with hardware masking support,
-which are AVX512 and GPU targets, the target string is of the form
+which are AVX-512 and GPU targets, the target string is of the form
 ``[ISA]-x[gang size]``.  For example, ``--target=xehpg-x16`` specifies Intel XeHPG
 as a target ISA and defines a gang size of 16.
 
@@ -1108,24 +1116,52 @@ and note the list in the description of ``--target``, or use ``--support-matrix`
 switch, which will give the complete information of supported combinations
 of target, arch and target OS.
 
-The following target ISAs are supported:
+The following CPU targets are supported:
 
-============ =========================================================
-Target       Description
------------- ---------------------------------------------------------
-avx, avx1    AVX (2010-2011 era Intel CPUs)
-avx2         AVX 2 target (2013- Intel codename Haswell CPUs)
-avx512skx    AVX 512 target (Skylake Xeon CPUs)
-avx512spr    AVX 512 target (Sapphire Rapids Xeon CPUs, 4th generation Xeon Scalable)
-neon         ARM NEON
-sse2         SSE2 (early 2000s era x86 CPUs)
-sse4.1       SSE4.1 (2007 Intel codename Penryn CPUs)
-sse4.2       SSE4.2 (2008-2010 Intel codename Nehalem CPUs)
-gen9         Intel Gen9 GPU
-xelp         Intel XeLP GPU
-xehpg        Intel Arc GPU
-xehpc        Intel Ponte Vecchio GPU
-============ =========================================================
+============= ========================= ===========================================================
+CPU target    SIMD instruction set      First-CPU codename to support the target
+============= ========================= ===========================================================
+sse2          SSE2                      Intel Pentium 4 (2001), AMD Athlon 64 (2003)
+sse4.1        SSE4.1                    Intel Penryn (2007), AMD Bulldozer/Jaguar (2011/2013)
+sse4.2        SSE4.2                    Intel Nehalem (2008), AMD Bulldozer/Jaguar (2011/2013)
+avx, avx1     AVX                       Intel Sandy Bridge (2011), AMD Bulldozer/Jaguar (2011/2013)
+avx2          AVX2                      Intel Haswell (2013) [#]_, AMD Excavator (2015)
+avx2vnni      AVX2                      Intel Alder Lake (2021), AMD Zen5 (2024)
+avx512skx     AVX-512                   Intel Skylake Xeon (2017), AMD Zen4 (2022)
+avx512icl     AVX-512                   Intel Icelake (2019), AMD Zen4 (2022)
+avx512spr     AVX-512                   Intel Sapphire Rapids (2023)
+avx10.2       AVX10.2                   Intel Diamond Rapids (2026+)
+neon          ARMv8 NEON                ARM Cortex-A35/A53/A57 (2012-2015)
+============= ========================= ===========================================================
+
+.. [#] This exclude models branded as Celeron and Pentium (starting with 
+       Tiger Lake 2020 CPUs and newer).
+
+For more information about the AVX-512 targets, please read this `AVX-512 CPU compatibility table`_
+
+.. _AVX-512 CPU compatibility table: https://en.wikipedia.org/wiki/Advanced_Vector_Extensions#AVX-512_CPU_compatibility_table
+
+The following GPU targets are supported:
+
+============= ========================= ===========================================================
+GPU target    GPU microarchitecture     First-GPU codename to support the target
+============= ========================= ===========================================================
+gen9          Intel Gen9                Intel Skylake iGPU (2015)
+xelp          Intel XeLP                Intel Tiger Lake LP iGPU (2020)
+xehpg         Intel XeHPG               Intel Arc Alchemist GPU (2022)
+xehpc         Intel XeHPC               Intel Ponte Vecchio GPU (2022)
+xelpg         Intel XeLPG               Intel Meteor Lake iGPU (2023)
+xe2hpg        Intel Xe2HPG              Intel Battlemage GPU (2024)
+xe2lpg        Intel Xe2LPG              Intel Lunar Lake iGPU (2024)
+============= ========================= ===========================================================
+
+The other following targets are supported:
+
+============= ========================= ===========================================================
+Target        Description               Hardware to support the target
+============= ========================= ===========================================================
+generic       Platform-agnostic         Any compatible CPU/GPU
+============= ========================= ===========================================================
 
 Consult your CPU's manual for specifics on which vector instruction set it
 supports.
@@ -1434,7 +1470,7 @@ Available options:
 
 - ``disable-zmm``
 
-  Disable the use of ZMM registers for AVX512 targets in favor of YMM registers.
+  Disable the use of ZMM registers for AVX-512 targets in favor of YMM registers.
   This also affects the ABI. ZMM registers are 512-bit wide, while YMM registers
   are 256-bit wide.
 
@@ -1542,7 +1578,7 @@ The number of program instances in a gang is relatively small; in practice,
 it's no more than 2-4x the native SIMD width of the hardware it is
 executing on.  Thus, four or eight program instances in a gang on a CPU
 using the 4-wide SSE instruction set, eight or sixteen on a CPU
-using 8-wide AVX/AVX2, eight, sixteen, thirty two, or sixty four on AVX512 CPU,
+using 8-wide AVX/AVX2, eight, sixteen, thirty two, or sixty four on AVX-512 CPU,
 and eight or sixteen on a Intel GPU.
 
 Control Flow Within A Gang
@@ -5366,8 +5402,8 @@ native dot product capabilities.
 
 Please note that not all combinations of signed and unsigned data types are supported on these
 targets. For instance, some versions of ARMv8 natively supports only signed/signed and
-unsigned/unsigned int8 dot product operations, while AVX2VNNI and AVX512 provide support solely for
-mixed-sign int8 operations.
+unsigned/unsigned int8 dot product operations, while AVX2-VNNI and AVX512-VNNI provide support 
+solely for mixed-sign int8 operations.
 
 If the selected target or platform lacks native dot product support, these operations are emulated.
 
