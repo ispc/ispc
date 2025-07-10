@@ -6,13 +6,9 @@
 
 import sys
 import re
-# Subprocess is used with default shell which is False, it's safe and doesn't allow shell injection
-# so it's safe to ignore Bandit warning.
-import subprocess #nosec
-import platform
 import argparse
 from os.path import basename, dirname
-from os import rename, replace
+from os import replace
 from tempfile import NamedTemporaryFile
 
 
