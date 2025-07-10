@@ -10,7 +10,6 @@ include(`util.m4')
 
 stdlib_core()
 scans()
-reduce_equal(WIDTH)
 rdrand_definition()
 popcnt()
 ctlztz()
