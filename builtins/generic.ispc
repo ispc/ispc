@@ -758,58 +758,51 @@ EXT READNONE uniform uint64 __reduce_min_uint64(varying uint64 x) { return @llvm
 EXT READNONE uniform uint64 __reduce_max_uint64(varying uint64 x) { return @llvm.vector.reduce.umax(x); }
 
 // horizontal equality ops
-template <typename T> uniform bool __reduce_equal(varying T x, uniform T *uniform ret) {
-    uniform T first;
-    uniform int j = 0;
-    uniform bool res = false;
-    foreach_active(i) {
-        if (j == 0) {
-            first = __extract(x, i);
-            res = true;
-            j++;
-        } else {
-            if (first != __extract(x, i)) {
-                res = false;
-            }
-        }
+template <typename T> unmasked uniform bool __reduce_equal(varying T x, uniform T *uniform ret, UIntMaskType mask) {
+    uniform int first_active = __count_trailing_zeros_uniform_i64(__movmsk(mask));
+    uniform T first_val = __extract(x, first_active);
+    varying T all_equal = first_val;
+    // Only compare active lanes
+    varying bool matches = (x == all_equal);
+    // True if matches OR lane is inactive
+    if (__all(matches || !mask)) {
+        *ret = first_val;
+        return true;
     }
-    if (res) {
-        *ret = first;
-    }
-    return res;
+    return false;
 }
-UNMANGLED CDECL uniform bool __reduce_equal_int8(varying int8 val, uniform int8 *uniform ret) {
-    return __reduce_equal<int8>(val, ret);
+EXT uniform bool __reduce_equal_int8(varying int8 val, uniform int8 *uniform ret, UIntMaskType mask) {
+    return __reduce_equal<int8>(val, ret, mask);
 }
-UNMANGLED CDECL uniform bool __reduce_equal_uint8(varying uint8 val, uniform uint8 *uniform ret) {
-    return __reduce_equal<uint8>(val, ret);
+EXT uniform bool __reduce_equal_uint8(varying uint8 val, uniform uint8 *uniform ret, UIntMaskType mask) {
+    return __reduce_equal<uint8>(val, ret, mask);
 }
-UNMANGLED CDECL uniform bool __reduce_equal_int16(varying int16 val, uniform int16 *uniform ret) {
-    return __reduce_equal<int16>(val, ret);
+EXT uniform bool __reduce_equal_int16(varying int16 val, uniform int16 *uniform ret, UIntMaskType mask) {
+    return __reduce_equal<int16>(val, ret, mask);
 }
-UNMANGLED CDECL uniform bool __reduce_equal_uint16(varying uint16 val, uniform uint16 *uniform ret) {
-    return __reduce_equal<uint16>(val, ret);
+EXT uniform bool __reduce_equal_uint16(varying uint16 val, uniform uint16 *uniform ret, UIntMaskType mask) {
+    return __reduce_equal<uint16>(val, ret, mask);
 }
-UNMANGLED CDECL uniform bool __reduce_equal_int32(varying int32 val, uniform int32 *uniform ret) {
-    return __reduce_equal<int32>(val, ret);
+EXT uniform bool __reduce_equal_int32(varying int32 val, uniform int32 *uniform ret, UIntMaskType mask) {
+    return __reduce_equal<int32>(val, ret, mask);
 }
-UNMANGLED CDECL uniform bool __reduce_equal_uint32(varying uint32 val, uniform uint32 *uniform ret) {
-    return __reduce_equal<uint32>(val, ret);
+EXT uniform bool __reduce_equal_uint32(varying uint32 val, uniform uint32 *uniform ret, UIntMaskType mask) {
+    return __reduce_equal<uint32>(val, ret, mask);
 }
-UNMANGLED CDECL uniform bool __reduce_equal_int64(varying int64 val, uniform int64 *uniform ret) {
-    return __reduce_equal<int64>(val, ret);
+EXT uniform bool __reduce_equal_int64(varying int64 val, uniform int64 *uniform ret, UIntMaskType mask) {
+    return __reduce_equal<int64>(val, ret, mask);
 }
-UNMANGLED CDECL uniform bool __reduce_equal_uint64(varying uint64 val, uniform uint64 *uniform ret) {
-    return __reduce_equal<uint64>(val, ret);
+EXT uniform bool __reduce_equal_uint64(varying uint64 val, uniform uint64 *uniform ret, UIntMaskType mask) {
+    return __reduce_equal<uint64>(val, ret, mask);
 }
-UNMANGLED CDECL uniform bool __reduce_equal_half(varying float16 val, uniform float16 *uniform ret) {
-    return __reduce_equal<float16>(val, ret);
+EXT uniform bool __reduce_equal_half(varying float16 val, uniform float16 *uniform ret, UIntMaskType mask) {
+    return __reduce_equal<float16>(val, ret, mask);
 }
-UNMANGLED CDECL uniform bool __reduce_equal_float(varying float val, uniform float *uniform ret) {
-    return __reduce_equal<float>(val, ret);
+EXT uniform bool __reduce_equal_float(varying float val, uniform float *uniform ret, UIntMaskType mask) {
+    return __reduce_equal<float>(val, ret, mask);
 }
-UNMANGLED CDECL uniform bool __reduce_equal_double(varying double val, uniform double *uniform ret) {
-    return __reduce_equal<double>(val, ret);
+EXT uniform bool __reduce_equal_double(varying double val, uniform double *uniform ret, UIntMaskType mask) {
+    return __reduce_equal<double>(val, ret, mask);
 }
 
 // 64-bit integer min and max functions
