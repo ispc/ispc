@@ -93,6 +93,18 @@ Contents:
   + `Optimization Settings`_
   + `Other ways of passing arguments to ISPC`_
 
+* `Using ISPC as a Library`_
+
+  + `Library Initialization`_
+  + `Simple Compilation Interface`_
+  + `Advanced Interface with ISPCEngine`_
+  + `Compatibility`_
+  + `CMake Integration`_
+
+    * `Basic Usage`_
+    * `CMake Variables`_
+    * `CMake Example`_
+
 * `The ISPC Parallel Execution Model`_
 
   + `Basic Concepts: Program Instances and Gangs of Program Instances`_
@@ -821,6 +833,11 @@ include this file with ``#include "short_vec.isph"``.
 The support for short vector types has been added also for the following
 element wise functions: ``fmod``, ``isnan``, ``rsqrt_fast`` and ``clamp``.
 
+ISPC can now be used as a C++ library (``libispc``) for embedding ISPC
+compilation directly into applications. It also now provides CMake
+configuration files for easy integration into other CMake projects.
+See the section `Using ISPC as a Library`_ for more details.
+
 
 Getting Started with ISPC
 =========================
@@ -1517,6 +1534,155 @@ Where a file or environment variable is split into arguments, this is done based
 the arguments being separated by one or more whitespace characters, including tabs
 and newlines. There is no means of escaping or quoting a character to allow an
 argument to contain a whitespace character.
+
+Using ISPC as a Library
+========================
+
+Starting with ISPC 1.28.0, ISPC can be used as a C++ library (``libispc``)
+to embed ISPC compilation directly into applications. This allows you to
+compile ISPC code programmatically.
+
+Library Initialization
+-----------------------
+
+Before using any ISPC library functions, you must initialize the library::
+
+    #include "ispc/ispc.h"
+
+    int main() {
+        // Initialize ISPC library - call once at startup
+        if (!ispc::Initialize()) {
+            std::cerr << "Failed to initialize ISPC library\n";
+            return 1;
+        }
+
+        // Use ISPC library functions...
+
+        // Shutdown ISPC library - call once at exit
+        ispc::Shutdown();
+        return 0;
+    }
+
+The ``Initialize()`` function inits the LLVM targets and creates global state.
+The ``Shutdown()`` function releases all global resources.
+
+Simple Compilation Interface
+-----------------------------
+
+The simplest way to compile ISPC code is using ``CompileFromArgs()``::
+
+    #include "ispc/ispc.h"
+    #include <vector>
+    #include <string>
+
+    std::vector<std::string> args = {
+        "ispc",                    // Program name (ignored)
+        "my_program.ispc",         // Input file
+        "--target=host",           // Target specification
+        "-O2",                     // Optimization level
+        "-o", "my_program.o",      // Output object file
+        "-h", "my_program.h"       // Output header file
+    };
+
+    int result = ispc::CompileFromArgs(args);
+    if (result == 0) {
+        std::cout << "Compilation successful\n";
+    } else {
+        std::cerr << "Compilation failed\n";
+    }
+
+The first argument should be a program name or dummy string (it will be
+ignored). All standard ISPC command-line options are supported.
+
+Advanced Interface with ISPCEngine
+-----------------------------------
+
+For more control over the compilation process, use the ``ISPCEngine`` class::
+
+    #include "ispc/ispc.h"
+
+    std::vector<std::string> args = {
+        "ispc", "my_program.ispc", "--target=host", "-O2"
+    };
+
+    auto engine = ispc::ISPCEngine::CreateFromArgs(args);
+    if (!engine) {
+        std::cerr << "Failed to create ISPC engine\n";
+        return 1;
+    }
+    int result = engine->Execute();
+    if (result == 0) {
+        std::cout << "Compilation successful\n";
+    }
+
+The ``ISPCEngine`` allows you to separate argument parsing from execution,
+which can be useful for more complex compilation workflows.
+
+Compatibility
+-------------
+
+For compatibility with C-style interfaces, the library also provides
+``argc``/``argv`` variants:
+
+* ``ispc::CompileFromCArgs(int argc, char* argv[])``
+* ``ispc::ISPCEngine::CreateFromCArgs(int argc, char* argv[])``
+
+These functions have the same behavior as their vector counterparts.
+
+CMake Integration
+-----------------
+
+ISPC provides CMake configuration files (``ispcConfig.cmake``) for easy
+integration into CMake projects.
+
+Basic Usage
+^^^^^^^^^^^
+
+After installing ISPC, you can use ``find_package()``::
+
+    find_package(ispc REQUIRED)
+
+    # Link against the ISPC shared library
+    target_link_libraries(my_target ispc::lib)
+
+The ``find_package()`` command locates the ISPC installation and imports
+the shared library target. The configuration files are installed to
+``<install_prefix>/lib/cmake/ispc/``.
+
+CMake Variables
+^^^^^^^^^^^^^^^
+
+The CMake configuration provides these variables:
+
+* ``ISPC_FOUND`` - True if ISPC was found
+* ``ISPC_INCLUDE_DIRS`` - Path to ISPC headers (``include/``)
+* ``ISPC_LIBRARY`` - Path to ISPC shared library
+* ``ISPC_EXECUTABLE`` - Path to ISPC compiler executable
+
+CMake Example
+^^^^^^^^^^^^^
+
+Here's a complete ``CMakeLists.txt`` for a project using ISPC as a library::
+
+    cmake_minimum_required(VERSION 3.15)
+    project(MyISPCApp)
+
+    set(CMAKE_CXX_STANDARD 17)
+
+    # Find ISPC library
+    find_package(ispc REQUIRED)
+
+    # Create executable
+    add_executable(my_app main.cpp)
+
+    # Link ISPC library
+    target_link_libraries(my_app ispc::lib)
+
+    # Optional: Print found information
+    message(STATUS "ISPC found: ${ISPC_FOUND}")
+    message(STATUS "ISPC executable: ${ISPC_EXECUTABLE}")
+    message(STATUS "ISPC include dirs: ${ISPC_INCLUDE_DIRS}")
+
 
 The ISPC Parallel Execution Model
 =================================
