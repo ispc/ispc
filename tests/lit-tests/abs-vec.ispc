@@ -4,6 +4,8 @@
 
 // REQUIRES: X86_ENABLED
 
+#include <short_vec.isph>
+
 // CHECK-LABEL: uniform_abs_4___uni_3C_4_3E_
 // CHECK-DAG: vpabsd xmm0, xmm0
 // CHECK-NEXT: ret

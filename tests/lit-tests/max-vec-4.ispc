@@ -2,6 +2,8 @@
 
 // RUN: not %{ispc} --nowrap --target=host -o %t.o 2>&1 %s | FileCheck %s
 
+#include <short_vec.isph>
+
 // CHECK: Error: Multiple overloaded functions matched call to function "max". 
 // CHECK-NEXT: Passed types: (varying bool, varying bool) 
 bool<3> foo(bool<3> a, bool<3> b) {

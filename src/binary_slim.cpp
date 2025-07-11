@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2024, Intel Corporation
+  Copyright (c) 2024-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -23,7 +23,7 @@ void initializeBinaryType(const char *ISPCExecutableAbsPath) {
     llvm::sys::path::remove_filename(includeDir);
     llvm::sys::path::remove_filename(includeDir);
     llvm::SmallString<128> shareDir(includeDir);
-    llvm::sys::path::append(includeDir, "include");
+    llvm::sys::path::append(includeDir, "include", "stdlib");
     g->includePath.push_back(std::string(includeDir.c_str()));
     llvm::sys::path::append(shareDir, "share", "ispc");
     g->shareDirPath = std::string(shareDir.str());

@@ -813,6 +813,11 @@ The ``select`` functions now support unsigned integer types ``uint8``,
 The ``isinf``, ``isfinite``, and ``srgb8_to_float`` functions have been added
 to the standard library.
 
+Standard library functions for short vectors have been moved to a separate
+header file ``short_vec.isph``. They are no longer defined implicitly for every
+file compiled with ISPC. This means that code using such functions should now
+include this file with ``#include "short_vec.isph"``.
+
 The support for short vector types has been added also for the following
 element wise functions: ``fmod``, ``isnan``, ``rsqrt_fast`` and ``clamp``.
 

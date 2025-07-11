@@ -530,10 +530,11 @@ list(APPEND OPT_SOURCES
     src/opt/XeReplaceLLVMIntrinsics.h
 )
 
-set(STDLIB_HEADERS core.isph stdlib.isph)
+set(STDLIB_HEADERS core.isph short_vec.isph stdlib.isph)
 set(ALL_STDLIB_HEADERS
   builtins.isph
   core.isph
+  short_vec.isph
   stdlib.isph
   svml.isph
   target.isph
@@ -920,9 +921,12 @@ endif()
 install (TARGETS ispc DESTINATION bin)
 if (ISPC_SLIM_BINARY)
     foreach (header ${STDLIB_HEADERS})
-        install (FILES "stdlib/include/${header}" DESTINATION include)
+        install (FILES "stdlib/include/${header}" DESTINATION include/stdlib)
     endforeach()
     install(DIRECTORY ${BITCODE_FOLDER} DESTINATION share)
+else()
+    # Install short_vec.isph for composite binary
+    install (FILES "stdlib/include/short_vec.isph" DESTINATION include/stdlib)
 endif()
 
 # Install intrinsics headers
