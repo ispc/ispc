@@ -18,15 +18,15 @@ distribution.
 
   + `What is the difference between "int *foo" and "int foo[]"?`_
   + `Why are pointed-to types "uniform" by default?`_
-  + `What am I getting an error about assigning a varying lvalue to a reference type?`_ 
-  
+  + `Why am I getting an error about assigning a varying lvalue to a reference type?`_
+
 * Interoperability
 
   + `How can I supply an initial execution mask in the call from the application?`_
   + `How can I generate a single binary executable with support for multiple instruction sets?`_
   + `How can I determine at run-time which vector instruction set's instructions were selected to execute?`_
   + `Is it possible to inline ispc functions in C/C++ code?`_
-  + `Why is it illegal to pass "varying" values from C/C++ to ispc functions?`_ 
+  + `Why is it illegal to pass "varying" values from C/C++ to ispc functions?`_
 
 * Programming Techniques
 
@@ -243,7 +243,7 @@ types without rate qualifiers are ``uniform`` by default.  (This second
 rule is discussed further below, in `Why are pointed-to types "uniform" by
 default?`_.)  The type of ``int *foo`` follows from these.
 
-.. _discussion of pointer types in the ispc User's Guide: ispc.html#pointer-types 
+.. _discussion of pointer types in the ispc User's Guide: ispc.html#pointer-types
 
 Conversely, in a function body, ``int foo[10]`` represents a declaration of
 a 10-element array of varying ``int`` values.  In that we'd certainly like
@@ -301,8 +301,8 @@ functions.  Thus, making the pointed-to type uniform by default leads to
 more concise code for the most common cases.
 
 
-What am I getting an error about assigning a varying lvalue to a reference type?
---------------------------------------------------------------------------------
+Why am I getting an error about assigning a varying lvalue to a reference type?
+-------------------------------------------------------------------------------
 
 Given code like the following:
 
@@ -403,7 +403,7 @@ Then four object files will be generated: ``foo_sse2.o``, ``foo_sse4.o``,
 when you call a function in ``foo.ispc`` from your application code,
 ``ispc`` will determine which instruction sets are supported by the CPU the
 code is running on and will call the most appropriate version of the
-function available.  
+function available.
 
 .. [#] Similarly, if you choose to generate assembly language output or
    LLVM bitcode output, multiple versions of those files will be created.
@@ -503,7 +503,7 @@ Next, link the two IR files into a single file and run the LLVM optimizer
 on the result:
 
 ::
-  
+
     llvm-link foo_ispc.bc foo_cpp.bc -o - | opt -O3 -o foo_opt.bc
 
 And finally, generate a native object file:
@@ -512,12 +512,12 @@ And finally, generate a native object file:
 
    llc -filetype=obj foo_opt.bc -o foo.o
 
-This file can in turn be linked in with the rest of your object files when
-linking your applicaiton.
+This file can then be linked with the rest of your object files when
+linking your application.
 
 (Note that if you're using the AVX instruction set, you must provide the
 ``-mattr=+avx`` flag to ``llc``.)
-    
+
 
 Why is it illegal to pass "varying" values from C/C++ to ispc functions?
 ------------------------------------------------------------------------
@@ -529,8 +529,8 @@ then ``ispc`` will issue an error and refuse to compile the function:
 ::
 
     % echo "export int add(int x) { return ++x; }" | ispc
-    <stdin>:1:12: Error: Illegal to return a "varying" type from exported function "foo" 
-    <stdin>:1:20: Error: Varying parameter "x" is illegal in an exported function. 
+    <stdin>:1:12: Error: Illegal to return a "varying" type from exported function "foo"
+    <stdin>:1:20: Error: Varying parameter "x" is illegal in an exported function.
 
 While there's no fundamental reason why this isn't possible, recall the
 definition of "varying" variables: they have one value for each program
@@ -606,7 +606,7 @@ output, and has stored them in the ``outLocal`` array.  Assume that four
 program instances are running and that the first one wants to output one
 value, the second two values, and the third and fourth three values each.
 In this case, ``exclusive_scan_add()`` will return the values (0, 1, 3, 6)
-to the four program instances, respectively.  
+to the four program instances, respectively.
 
 The first program instance will then write its one result to
 ``outArray[0]``, the second will write its two values to ``outArray[1]``
@@ -670,7 +670,7 @@ memory after it has been freed, accessing memory beyond the end of an
 array, accessing uninitialized stack variables, and so forth.
 In general, applications that use ``ispc`` code run with ``valgrind``
 without modification and ``valgrind`` will detect the same range of memory
-errors in ``ispc`` code that it does in C/C++ code.  
+errors in ``ispc`` code that it does in C/C++ code.
 
 .. _valgrind: http://valgrind.org
 
@@ -794,11 +794,11 @@ that an item they are responsible for requires additional processing.
     bool itemNeedsMoreProcessing(int);
     int itemNum = ...;
     if (itemNeedsMoreProcessing(itemNum)) {
-        // do additional work 
+        // do additional work
     }
 
 For performance reasons, it may be desirable to apply an entire gang's
-worth of comptuation to each item that needs additional processing; 
+worth of computation to each item that needs additional processing;
 there may be available parallelism in this computation such that we'd like
 to process each of the items with SPMD computation.
 
@@ -807,11 +807,11 @@ applied together to accomplish this goal.
 
 ::
 
-    // do additional work 
+    // do additional work
     task void doWork(uniform int index);
     foreach_active (index) {
         unmasked {
-            launch doWork(extract(itemNum, index)); 
+            launch doWork(extract(itemNum, index));
         }
     }
 

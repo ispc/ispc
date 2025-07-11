@@ -2,7 +2,7 @@
 Performance
 ===========
 
-The SPMD programming model that ``ispc`` makes it easy to harness the
+The SPMD programming model that ``ispc`` provides makes it easy to harness the
 computational power available in SIMD vector units on modern CPUs, while
 its basis in C makes it easy for programmers to adopt and use
 productively.  This page summarizes the performance of ``ispc`` with the
@@ -15,7 +15,7 @@ the version distributed with OS X 10.7.2.  (The reference implementation is
 also included in the ``examples/`` directory.)
 
 .. list-table:: Performance of ``ispc`` with a variety of the workloads
-   from the ``examples/`` directory of the ``ispc`` distribution, compared
+   from the ``examples/`` directory of the ``ispc`` distribution, compared to
    a reference C++ implementation compiled with gcc 4.2.1.
 
   * - Workload
