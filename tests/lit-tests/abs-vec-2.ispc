@@ -2,6 +2,8 @@
 
 // RUN: %{ispc} --ast-dump --target=host --nowrap %s -o %t.o --debug-phase=10:10 2>&1 | FileCheck %s
 
+#include <short_vec.isph>
+
 // CHECK-LABEL: Function{{.*}}foo
 // CHECK-NEXT:  |-(param 0) [uniform int32<4>] foo_a
 // CHECK-NEXT:  `-(body) StmtList {{.*}}

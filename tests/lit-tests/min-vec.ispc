@@ -2,6 +2,8 @@
 
 // RUN: %{ispc} -O2 --vectorcall --target=avx512icl-x4 --emit-asm --x86-asm-syntax=intel %s -o - 2>&1 | FileCheck %s
 
+#include <short_vec.isph>
+
 // REQUIRES: X86_ENABLED
 
 // Note: current codegeneration is not ideal due to size rounding up to the

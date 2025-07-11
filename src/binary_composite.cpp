@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2024, Intel Corporation
+  Copyright (c) 2024-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -7,13 +7,21 @@
 #include <memory>
 #include <stdio.h>
 
+#include "ispc.h"
+
 #include <clang/Frontend/FrontendOptions.h>
+#include <llvm/ADT/SmallString.h>
 #include <llvm/Support/MemoryBufferRef.h>
+#include <llvm/Support/Path.h>
 
 void printBinaryType() { printf("composite\n"); }
 
-void initializeBinaryType(const char *) {
-    // do nothing
+void initializeBinaryType(const char *ISPCExecutableAbsPath) {
+    llvm::SmallString<128> includeDir(ISPCExecutableAbsPath);
+    llvm::sys::path::remove_filename(includeDir);
+    llvm::sys::path::remove_filename(includeDir);
+    llvm::sys::path::append(includeDir, "include", "stdlib");
+    ispc::g->includePath.push_back(std::string(includeDir.c_str()));
 }
 
 extern const char core_isph_cpp_header[];

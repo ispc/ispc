@@ -4,6 +4,8 @@
 
 // REQUIRES: X86_ENABLED
 
+#include <short_vec.isph>
+
 // Note: current codegeneration is not ideal due to size rounding up to the
 // next power of 2. See issue #3106 for more details.
 // CHECK-LABEL: uniform_max___uni_3C_3_3E_uni_3C_3_3E_

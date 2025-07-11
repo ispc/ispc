@@ -3,6 +3,8 @@
 
 // RUN: %{ispc} --target=host -o %t.o %s 2>&1
 
+#include <short_vec.isph>
+
 #define VARYING(NAME, TYPE, N)                                                                                         \
     varying TYPE<N> varying_##NAME(varying TYPE<N> a, varying TYPE<N> b, varying TYPE<N> c) { return NAME<TYPE, N>(a, b, c); }
 
