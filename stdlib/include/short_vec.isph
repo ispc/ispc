@@ -159,3 +159,194 @@ SHORT_VEC_ARG2(fmod)
 #undef SHORT_VEC_ARG1_BOOLRET
 #undef SHORT_VEC_ARG2
 #undef SHORT_VEC_ARG3
+
+// Short vector functions with a custom implementation
+
+template <typename T, uint N>
+uniform T<N> shuffle(uniform T<N> v, uniform int<N> perm) {
+    if(N <= programCount) {
+        varying T var_v;
+        varying int var_perm;
+
+        foreach(i = 0 ... N) {
+            var_v = v[i];
+            var_perm = perm[i];
+        }
+
+        // NOTE:
+        // Using a mask here can make the resulting assembly code slighly less
+        // efficient. That being said, this is certainly needed for generic 
+        // targets or possibly with double pumping.
+        // We should be careful about possible out-of-bounds acesses.
+        // Technically, this is AFAIK undefined behavior independently of the target.
+        if(programIndex < N) {
+            var_v = shuffle(var_v, var_perm);
+        }
+
+        foreach(i = 0 ... N) {
+            v[i] = var_v;
+        }
+        
+        return v;
+    }
+    else if(N <= 2 * programCount) {
+        varying T var1_v;
+        varying T var2_v;
+        varying int var1_perm;
+        varying int var2_perm;
+
+        foreach(i = 0 ... programCount) {
+            var1_v = v[i];
+            var1_perm = perm[i];
+        }
+
+        foreach(i = programCount ... N) {
+            var2_v = v[i];
+            var2_perm = perm[i];
+        }
+
+        varying T res_var1_v;
+        varying T res_var2_v;
+
+        res_var1_v = shuffle(var1_v, var2_v, var1_perm);
+
+        // See the note above about out-of-bounds accesses
+        if(programCount + programIndex < N) {
+            res_var2_v = shuffle(var1_v, var2_v, var2_perm);
+        }
+
+        foreach(i = 0 ... programCount) {
+            v[i] = res_var1_v;
+        }
+
+        foreach(i = programCount ... N) {
+            v[i] = res_var2_v;
+        }
+
+        return v;
+    }
+    else
+    {
+        uniform T<N> result;
+
+        // NOTE: slow implementation
+        foreach (i = 0 ... N) {
+            result[i] = v[perm[i]];
+        }
+
+        return result;
+    }
+}
+
+// TODO: to be check further
+template <typename T, uint N>
+uniform T<N> shuffle(uniform T<N> v1, uniform T<N> v2, uniform int<N> perm) {
+    if(N <= programCount) {
+        uniform T<N> result;
+        varying T var_v1;
+        varying T var_v2;
+        varying T var_result;
+        varying int var_perm;
+
+        foreach(i = 0 ... N) {
+            var_v1 = v1[i];
+            var_v2 = v2[i];
+            var_perm = perm[i];
+        }
+
+        // NOTE: see the above note about out-of-bound.
+        if(programIndex < N) {
+            var_result = shuffle(var_v1, var_v2, var_perm);
+        }
+
+        foreach(i = 0 ... N) {
+            result[i] = var_result;
+        }
+        
+        return result;
+    }
+    else
+    {
+        uniform int<N> perm1;
+        uniform int<N> perm2;
+
+        foreach (i = 0 ... N) {
+            // NOTE: `select` is only meant to avoid out-of-bounds. See the above note about it.
+            perm1[i] = select(perm[i] < N, perm[i], 0);
+            perm2[i] = select(perm[i] >= N, perm[i], 0);
+        }
+
+        const uniform T<N> res1 = shuffle(v1, perm1);
+        const uniform T<N> res2 = shuffle(v2, perm2);
+        return select(perm < N, res1, res2);
+    }
+}
+
+template <typename T, uint N>
+uniform T<N> rotate(uniform T<N> v, uniform int offset)
+{
+    uniform T<N> result;
+    uniform int<N> perm;
+
+    // NOTE: 
+    // The modulus is meant to support an extended range (i.e. beyond the ]-N;N[ interval),
+    // but this is expensive when `offset` is not a compile-time constant.
+    // Thus, should we use it or tell users this is not supported?
+    // `assume` can be used to reduce the overhead of this modulus.
+    offset = offset % N;
+    offset += select(offset < 0, (uniform int)N, 0);
+
+    foreach (i = 0 ... N) {
+        varying int var_offset = offset + i;
+        var_offset -= select(var_offset >= (uniform int)N, (uniform int)N, 0);
+        perm[i] = var_offset;
+    }
+
+    return shuffle<T, N>(v, perm);
+}
+
+// TODO: to be check further
+template <typename T, uint N>
+uniform T<N> shift(uniform T<N> v, uniform int offset) {
+    uniform T<N> result;
+    uniform int<N> perm;
+
+    // NOTE: using a the shift built-in is surprisingly quite inefficient for constant offsets
+#if 0 // TODO
+    if(N <= programCount)
+    {
+        uniform T<N> result;
+
+        varying T var_v;
+
+        foreach(i = 0 ... N) {
+            var_v = v[i];
+        }
+
+        var_v = shift(var_v, offset);
+
+        foreach(i = 0 ... N) {
+            result[i] = var_v;
+        }
+
+        return result;
+    }
+#endif
+
+    foreach (i = 0 ... N) {
+        // NOTE: `clamp` is only meant to avoid out-of-bounds. See the above note about it.
+        perm[i] = clamp(offset + i, (int)0, (int)(N-1));
+    }
+
+    // NOTE: this approach is fast for constant offsets on small vectors, but slow for variables offsets
+    const uniform T<N> shifted = shuffle<T, N>(v, perm);
+
+    // NOTE: we can specialize the loop so to consider either a positive offset, 
+    // or negative one, in order to avoid a cmp+and SIMD instructions.
+    // However, this does not seems much more efficient with this at first glance.
+    foreach (i = 0 ... N) {
+        result[i] = select(i >= -offset && i < N-offset, shifted[i], (varying T)0);
+    }
+
+    return result;
+}
