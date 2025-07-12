@@ -159,3 +159,25 @@ SHORT_VEC_ARG2(fmod)
 #undef SHORT_VEC_ARG1_BOOLRET
 #undef SHORT_VEC_ARG2
 #undef SHORT_VEC_ARG3
+
+// Short vector functions with a custom implementation
+
+template <typename T, uint N> inline uniform T<N> select(uniform bool cond, uniform T<N> t, uniform T<N> f) {
+    uniform T<N> result;
+
+    foreach (i = 0 ... N) {
+        result[i] = select(cond, t[i], f[i]);
+    }
+
+    return result;
+}
+
+template <typename T, uint N> inline uniform T<N> select(uniform bool<N> cond, uniform T<N> t, uniform T<N> f) {
+    uniform T<N> result;
+
+    foreach (i = 0 ... N) {
+        result[i] = select(cond[i], t[i], f[i]);
+    }
+
+    return result;
+}
