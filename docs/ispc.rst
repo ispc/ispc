@@ -820,7 +820,7 @@ Integer literals are now stricter:
 Standard library:
 
 The ``select`` functions now support unsigned integer types ``uint8``, 
-``uint16``, ``uint32``, and ``uint64``.
+``uint16``, ``uint32``, and ``uint64`` as well as uniform short vectors.
 
 The ``isinf``, ``isfinite``, and ``srgb8_to_float`` functions have been added
 to the standard library.
@@ -4864,6 +4864,15 @@ otherwise ``f``. These are the variants of ``select()`` for the ``int8`` type:
 
 There are also variants for ``int16``, ``int32``, ``int64``, ``uint8``,
 ``uint16``, ``uint32``, ``uint64``, ``float``, ``float16`` and ``double`` types.
+Uniform short vector types are also supported with the basic types listed above:
+
+::
+
+    template <typename T, uint N>
+    uniform T<N> select(uniform bool cond, uniform T<N> t, uniform T<N> f)
+
+    template <typename T, uint N>
+    uniform T<N> select(uniform bool<N> cond, uniform T<N> t, uniform T<N> f)
 
 Bit Operations
 --------------
