@@ -1102,15 +1102,15 @@ static llvm::Constant *lLLVMConstantValue(const Type *type, llvm::LLVMContext *c
         }
         case AtomicType::TYPE_FLOAT16: {
             llvm::APFloat apf16 = lCreateAPFloat(value, LLVMTypes::Float16Type);
-            return isUniform ? LLVMFloat16(apf16) : LLVMFloat16Vector(apf16);
+            return isUniform ? LLVMFloat16(std::move(apf16)) : LLVMFloat16Vector(std::move(apf16));
         }
         case AtomicType::TYPE_FLOAT: {
             llvm::APFloat apf = lCreateAPFloat(value, LLVMTypes::FloatType);
-            return isUniform ? LLVMFloat(apf) : LLVMFloatVector(apf);
+            return isUniform ? LLVMFloat(std::move(apf)) : LLVMFloatVector(std::move(apf));
         }
         case AtomicType::TYPE_DOUBLE: {
             llvm::APFloat apd = lCreateAPFloat(value, LLVMTypes::DoubleType);
-            return isUniform ? LLVMDouble(apd) : LLVMDoubleVector(apd);
+            return isUniform ? LLVMDouble(std::move(apd)) : LLVMDoubleVector(std::move(apd));
         }
         default:
             FATAL("logic error in lLLVMConstantValue");
@@ -2445,7 +2445,7 @@ const Type *BinaryExpr::GetTypeImpl() const {
             llvm::APFloat temp(v0[i]);                                                                                 \
             llvm::APFloatBase::opStatus status = temp.E(v1[i], llvm::APFloat::rmNearestTiesToEven);                    \
             lPrintConstFoldBinaryArithFPWarning(carg0, status, pos);                                                   \
-            result.push_back(temp);                                                                                    \
+            result.push_back(std::move(temp));                                                                         \
         }                                                                                                              \
         break
 
@@ -2720,7 +2720,7 @@ Expr *BinaryExpr::Optimize() {
                 for (int i = 0; i < count; ++i) {
                     llvm::APFloat reciprocal = lCreateAPFloat(1.0, eltType);
                     reciprocal.divide(constVal[i], llvm::APFloat::rmNearestTiesToEven);
-                    inv.push_back(reciprocal);
+                    inv.push_back(std::move(reciprocal));
                 }
                 Expr *einv = new ConstExpr(type1, inv, constArg1->pos);
                 Expr *e = new BinaryExpr(Mul, arg0, einv, pos);
@@ -6469,8 +6469,7 @@ template <typename To> static inline void lConvertElement(llvm::APFloat from, To
 /** When converting numeric types to floating types, create new APFloat. */
 template <typename From>
 static inline void lConvertElement(From from, std::vector<llvm::APFloat> &to, llvm::Type *type) {
-    llvm::APFloat apf = lCreateAPFloat((double)from, type);
-    to.push_back(apf);
+    to.emplace_back(lCreateAPFloat((double)from, type));
 }
 
 /** floating types -> floating types requires conversion. */
@@ -6478,7 +6477,7 @@ static inline void lConvertElement(llvm::APFloat from, std::vector<llvm::APFloat
     const llvm::fltSemantics &FS = type->getFltSemantics();
     bool ignored = false;
     from.convert(FS, llvm::APFloat::rmNearestTiesToEven, &ignored);
-    to.push_back(from);
+    to.push_back(std::move(from));
 }
 
 /** floating types -> bool is a special case. */
@@ -6486,8 +6485,7 @@ static inline void lConvertElement(llvm::APFloat from, bool *to) { *to = from.is
 
 /** bool -> floating types is also a special case. */
 static inline void lConvertElement(bool from, std::vector<llvm::APFloat> &to, llvm::Type *type) {
-    llvm::APFloat apf = lCreateAPFloat(from ? (double)1 : (double)0, type);
-    to.push_back(apf);
+    to.emplace_back(lCreateAPFloat(from ? (double)1 : (double)0, type));
 }
 
 /** Type conversion utility function

@@ -229,7 +229,7 @@ void AttrArgument::Print() const {
 }
 
 Attribute::Attribute(const std::string &n) : name(n), arg() {}
-Attribute::Attribute(const std::string &n, AttrArgument a) : name(n), arg(a) {}
+Attribute::Attribute(const std::string &n, AttrArgument a) : name(n), arg(std::move(a)) {}
 Attribute::Attribute(const Attribute &a) : name(a.name), arg(a.arg) {}
 
 bool Attribute::IsKnownAttribute() const {
