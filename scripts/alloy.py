@@ -96,7 +96,7 @@ def checkout_LLVM(component, version_LLVM, target_dir, from_validation, verbose)
     elif  version_LLVM == "21_1":
         GIT_TAG="release/21.x"
     elif  version_LLVM == "20_1":
-        GIT_TAG="llvmorg-20.1.4"
+        GIT_TAG="llvmorg-20.1.8"
     elif  version_LLVM == "19_1":
         GIT_TAG="llvmorg-19.1.7"
     elif  version_LLVM == "18_1":
