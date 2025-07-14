@@ -37,7 +37,7 @@ void Indent::pushList(int i) {
     }
 }
 
-void Indent::setNextLabel(std::string s) { label = s; }
+void Indent::setNextLabel(std::string s) { label = std::move(s); }
 
 // Print indent and an optional string
 void Indent::Print(const char *title) {

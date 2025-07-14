@@ -302,7 +302,7 @@ class ArgFactory {
             c = GetNextChar();
         }
 
-        return AllocateString(arg);
+        return AllocateString(std::move(arg));
     }
 };
 
