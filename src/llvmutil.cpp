@@ -340,7 +340,7 @@ llvm::Constant *LLVMUInt32Vector(const uint32_t *ivec) {
 }
 
 llvm::Constant *LLVMFloat16Vector(llvm::APFloat fval) {
-    llvm::Constant *v = LLVMFloat16(fval);
+    llvm::Constant *v = LLVMFloat16(std::move(fval));
     std::vector<llvm::Constant *> vals;
     for (int i = 0; i < g->target->getVectorWidth(); ++i) {
         vals.push_back(v);
@@ -357,7 +357,7 @@ llvm::Constant *LLVMFloat16Vector(const std::vector<llvm::APFloat> &fvec) {
 }
 
 llvm::Constant *LLVMFloatVector(llvm::APFloat fval) {
-    llvm::Constant *v = LLVMFloat(fval);
+    llvm::Constant *v = LLVMFloat(std::move(fval));
     std::vector<llvm::Constant *> vals;
     for (int i = 0; i < g->target->getVectorWidth(); ++i) {
         vals.push_back(v);
@@ -374,7 +374,7 @@ llvm::Constant *LLVMFloatVector(const std::vector<llvm::APFloat> &fvec) {
 }
 
 llvm::Constant *LLVMDoubleVector(llvm::APFloat dval) {
-    llvm::Constant *v = LLVMDouble(dval);
+    llvm::Constant *v = LLVMDouble(std::move(dval));
     std::vector<llvm::Constant *> vals;
     for (int i = 0; i < g->target->getVectorWidth(); ++i) {
         vals.push_back(v);

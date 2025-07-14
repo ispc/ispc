@@ -184,7 +184,7 @@ DebugModulePassManager::DebugModulePassManager(llvm::Module &M, int optLevel) : 
         if (targetMachine) {
             targetMachine->registerDefaultAliasAnalyses(aam);
         }
-        fam.registerPass([aam] { return std::move(aam); });
+        fam.registerPass([aam = std::move(aam)] { return std::move(aam); });
     }
 }
 

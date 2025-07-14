@@ -252,16 +252,6 @@ static ArgsParseResult devUsage() {
  */
 class ArgFactory {
   private:
-    char *AllocateString(std::string string) {
-        int len = string.length();
-        // We use malloc here because of strdup in lAddSingleArg
-        char *ptr = (char *)malloc(len + 1);
-        memset(ptr, 0, len + 1);
-        strncpy(ptr, string.c_str(), len);
-        ptr[len] = '\0';
-        return ptr;
-    }
-
     /** Method provided by the derived classes to retrieve the next character from the stream.
      */
     virtual char GetNextChar() = 0;
@@ -302,7 +292,7 @@ class ArgFactory {
             c = GetNextChar();
         }
 
-        return AllocateString(arg);
+        return strdup(arg.c_str());
     }
 };
 

@@ -1120,7 +1120,7 @@ void FunctionTemplate::Print(Indent &indent) const {
             }
         }
         argsStr = "instantiation <" + argsStr + ">";
-        indent.setNextLabel(argsStr);
+        indent.setNextLabel(std::move(argsStr));
         symbol->parentFunction->Print(indent);
     }
 
