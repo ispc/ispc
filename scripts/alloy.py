@@ -599,6 +599,7 @@ def validation_run(only, only_targets, reference_branch, number, update, speed_n
         stability.device = None
         stability.ispc_output = None
         stability.debug_check = False
+        stability.nanobind = False
 # stability varying options
         stability.target = ""
         stability.arch = ""
