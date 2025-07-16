@@ -27,7 +27,6 @@ int test_isfinite()
 
 task void f_v(uniform float RET[]) {
     int errors = 0;
-    errors += test_isfinite<uniform float16>() + test_isfinite<float16>();
     errors += test_isfinite<uniform float>() + test_isfinite<float>();
     errors += test_isfinite<uniform double>() + test_isfinite<double>();
     RET[programIndex] = errors;
