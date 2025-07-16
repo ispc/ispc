@@ -170,10 +170,11 @@ jobs:
       id: set-artifact-name
       shell: bash
       run: |
+        TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
         if [ "${{ inputs.enable_debug }}" == "true" ]; then
-          echo "name_prefix=${{ inputs.artifact_name }}.debug.${{ inputs.architecture }}.${{ matrix.target }}" >> "$GITHUB_ENV"
+          echo "name_prefix=${{ inputs.artifact_name }}.debug.${{ inputs.architecture }}.${{ matrix.target }}.${TIMESTAMP}" >> "$GITHUB_ENV"
         else
-          echo "name_prefix=${{ inputs.artifact_name }}.${{ inputs.architecture }}.${{ matrix.target }}" >> "$GITHUB_OUTPUT"
+          echo "name_prefix=${{ inputs.artifact_name }}.${{ inputs.architecture }}.${{ matrix.target }}.${TIMESTAMP}" >> "$GITHUB_OUTPUT"
         fi
     - name: Check
       run: |
