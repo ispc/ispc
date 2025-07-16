@@ -7857,9 +7857,6 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             if (!conv) {
                 return nullptr;
             }
-            if ((toVector->GetElementType()->IsBoolType())) {
-                conv = ctx->SwitchBoolToStorageType(conv, toVector->LLVMStorageType(g->ctx));
-            }
             return conv;
         } else {
             // Emit instructions to do type conversion of each of the elements
