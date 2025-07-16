@@ -1163,6 +1163,13 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], char *&file, 
     }
 #endif
 
+    // Validate mcmodel and architecture combination
+    if (output.flags.getMCModel() == MCModel::Large && arch == Arch::x86) {
+        Error(SourcePos(), "--mcmodel=large is not supported for x86 architecture. "
+                           "Use x86-64 architecture instead.");
+        return ArgsParseResult::failure;
+    }
+
     if (!output.deps.empty()) {
         output.flags.setDepsToStdout(false);
     }
