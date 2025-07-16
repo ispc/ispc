@@ -208,6 +208,9 @@ jobs:
         extra_flags: ["--opt=disable-zmm", "--addressing=64", "-g", "--math-lib=fast",
                       "--math-lib=system", "--mcmodel=large", "--pic",
                       "--no-wrap-signed-int",  "--opt=disable-fma", "--opt=fast-math"]
+        exclude:
+          - arch: x86
+            extra_flags: "--mcmodel=large"
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
       platform: linux
@@ -494,6 +497,9 @@ jobs:
         extra_flags: ["--opt=disable-zmm", "--addressing=64", "-g", "--math-lib=fast",
                       "--math-lib=system", "--mcmodel=large", "--pic",
                       "--no-wrap-signed-int",  "--opt=disable-fma", "--opt=fast-math"]
+        exclude:
+          - arch: x86
+            extra_flags: "--mcmodel=large"
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
       platform: windows
