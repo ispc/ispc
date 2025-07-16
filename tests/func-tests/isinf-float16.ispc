@@ -1,6 +1,8 @@
 #include "test_static.isph"
 // rule: skip on cpu=tgllp
 // rule: skip on cpu=dg2
+// rule: skip on arch=x86
+// rule: skip on arch=x86-64
 
 template <typename T>
 int test_isinf()
@@ -27,8 +29,7 @@ int test_isinf()
 
 task void f_v(uniform float RET[]) {
     int errors = 0;
-    errors += test_isinf<uniform float>() + test_isinf<float>();
-    errors += test_isinf<uniform double>() + test_isinf<double>();
+    errors += test_isinf<uniform float16>() + test_isinf<float16>();
     RET[programIndex] = errors;
 }
 
