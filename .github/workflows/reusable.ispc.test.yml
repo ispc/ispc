@@ -175,7 +175,10 @@ jobs:
         else
           echo "name_prefix=${{ inputs.artifact_name }}.${{ inputs.architecture }}.${{ matrix.target }}" >> "$GITHUB_OUTPUT"
         fi
-
+    - name: Check
+      run: |
+        # Print fails to the log.
+        git diff --exit-code
     - name: Upload fail_db.txt
       uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       if: failure()
