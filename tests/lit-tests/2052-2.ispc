@@ -12,11 +12,15 @@ struct FMatrix {
 };
 FMatrix VectorMatrixMultiply(const FMatrix &A, const uniform FMatrix &B) {
     FMatrix Result;
-
+    // Do not unroll loops to be independent on more aggressive unrolling introduced in LLVM 21:
+    // https://github.com/llvm/llvm-project/pull/147420
+    #pragma nounroll
     for (uniform unsigned int m = 0; m < 4; m++) {
         varying float Sum;
+        #pragma nounroll
         for (uniform unsigned int k = 0; k < 4; k++) {
             Sum = 0.0f;
+            #pragma nounroll
             for (uniform unsigned int n = 0; n < 4; n++) {
                 Sum += A.M[m * 4 + n] * B.M[n * 4 + k];
             }
