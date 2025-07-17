@@ -20,15 +20,15 @@
 // RUN: %{ispc} --target=avx512skx-x4 --nowrap -O2 --emit-llvm-text %s -o - | FileCheck %s
 // RUN: %{ispc} --target=avx512skx-x8 --nowrap -O2 --emit-llvm-text %s -o - | FileCheck %s
 // RUN: %{ispc} --target=avx512skx-x16 --nowrap -O2 --emit-llvm-text %s -o - | FileCheck %s
-// RUN: %{ispc} --target=avx512skx-x32 --nowrap -O2 --emit-llvm-text %s -o - | FileCheck %s
-// RUN: %{ispc} --target=avx512skx-x64 --nowrap -O2 --emit-llvm-text %s -o - | FileCheck %s
+// RUN: %{ispc} --target=avx512skx-x32 --nowrap -O2 --emit-llvm-text %s -o - | FileCheck %s --check-prefix=CHECK-AVX512-32
 
 // RUN: %{ispc} --target=avx512icl-x4 --nowrap -O2 --emit-llvm-text %s -o - | FileCheck %s
 // RUN: %{ispc} --target=avx512icl-x8 --nowrap -O2 --emit-llvm-text %s -o - | FileCheck %s
 // RUN: %{ispc} --target=avx512icl-x16 --nowrap -O2 --emit-llvm-text %s -o - | FileCheck %s
-// RUN: %{ispc} --target=avx512icl-x32 --nowrap -O2 --emit-llvm-text %s -o - | FileCheck %s
+// RUN: %{ispc} --target=avx512icl-x32 --nowrap -O2 --emit-llvm-text %s -o - | FileCheck %s --check-prefix=CHECK-AVX512-32
 
-
+// For avx512-x32/x64 targets shuf1_int64 and shuf1_double uses implementation based on masked.gather.
+// Optimizer can eliminate shufflevector completely and use GEP+gather so we're not checking it here.
 // REQUIRES: X86_ENABLED
 
 template <typename T>
@@ -38,30 +38,40 @@ unmasked void shuf1(uniform T a[], uniform T ret[], int perm) {
 
 // CHECK-LABEL: shuf1_int8
 // CHECK: shufflevector
+// CHECK-AVX512-32-LABEL: shuf1_int8
+// CHECK-AVX512-32: shufflevector
 unmasked void shuf1_int8(uniform int8 a[], uniform int8 ret[]) {
     shuf1(a, ret, programCount - 1 - programIndex);
 }
 
 // CHECK-LABEL: shuf1_int16
 // CHECK: shufflevector
+// CHECK-AVX512-32-LABEL: shuf1_int16
+// CHECK-AVX512-32: shufflevector
 unmasked void shuf1_int16(uniform int16 a[], uniform int16 ret[]) {
     shuf1(a, ret, programCount - 1 - programIndex);
 }
 
 // CHECK-LABEL: shuf1_float16
 // CHECK: shufflevector
+// CHECK-AVX512-32-LABEL: shuf1_float16
+// CHECK-AVX512-32: shufflevector
 unmasked void shuf1_float16(uniform float16 a[], uniform float16 ret[]) {
     shuf1(a, ret, programCount - 1 - programIndex);
 }
 
 // CHECK-LABEL: shuf1_int
 // CHECK: shufflevector
+// CHECK-AVX512-32-LABEL: shuf1_int
+// CHECK-AVX512-32: shufflevector
 unmasked void shuf1_int(uniform int a[], uniform int ret[]) {
     shuf1(a, ret, programCount - 1 - programIndex);
 }
 
 // CHECK-LABEL: shuf1_float
 // CHECK: shufflevector
+// CHECK-AVX512-32-LABEL: shuf1_float
+// CHECK-AVX512-32: shufflevector
 unmasked void shuf1_float(uniform float a[], uniform float ret[]) {
     shuf1(a, ret, programCount - 1 - programIndex);
 }
@@ -87,30 +97,40 @@ unmasked void shuf2(uniform T a[], uniform T ret[], int perm) {
 
 // CHECK-LABEL: shuf2_int8
 // CHECK: shufflevector
+// CHECK-AVX512-32-LABEL: shuf2_int8
+// CHECK-AVX512-32: shufflevector
 unmasked void shuf2_int8(uniform int8 a[], uniform int8 ret[]) {
     shuf2(a, ret, programCount + 1);
 }
 
 // CHECK-LABEL: shuf2_int16
 // CHECK: shufflevector
+// CHECK-AVX512-32-LABEL: shuf2_int16
+// CHECK-AVX512-32: shufflevector
 unmasked void shuf2_int16(uniform int16 a[], uniform int16 ret[]) {
     shuf2(a, ret, programCount + 1);
 }
 
 // CHECK-LABEL: shuf2_float16
 // CHECK: shufflevector
+// CHECK-AVX512-32-LABEL: shuf2_float16
+// CHECK-AVX512-32: shufflevector
 unmasked void shuf2_float16(uniform float16 a[], uniform float16 ret[]) {
     shuf2(a, ret, programCount + 1);
 }
 
 // CHECK-LABEL: shuf2_int
 // CHECK: shufflevector
+// CHECK-AVX512-32-LABEL: shuf2_int
+// CHECK-AVX512-32: shufflevector
 unmasked void shuf2_int(uniform int a[], uniform int ret[]) {
     shuf2(a, ret, programCount + 1);
 }
 
 // CHECK-LABEL: shuf2_float
 // CHECK: shufflevector
+// CHECK-AVX512-32-LABEL: shuf2_float
+// CHECK-AVX512-32: shufflevector
 unmasked void shuf2_float(uniform float a[], uniform float ret[]) {
     shuf2(a, ret, programCount + 1);
 }
