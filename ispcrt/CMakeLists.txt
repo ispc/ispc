@@ -45,6 +45,10 @@ else()
   option(ISPCRT_BUILD_GPU "Enable Level0 GPU support in ispcrt" OFF)
 endif()
 
+if (APPLE)
+  option(ISPCRT_FRAMEWORK "Build as Apple Frameworks" OFF)
+endif()
+
 if (ISPCRT_BUILD_GPU)
   if (WIN32)
     option(ISPCRT_BUILD_TESTS "Enable ispcrt tests" OFF)
@@ -119,6 +123,29 @@ else()
     endif()
 endif()
 
+# This function sets the framework properties for Apple platforms compilations
+function(configure_ispcrt_framework TARGET)
+    if (ISPCRT_FRAMEWORK)
+        message(STATUS "configure_ispcrt_framework called for ${TARGET}!\n")
+        set_target_properties(TARGET PROPERTIES
+            FRAMEWORK TRUE
+            FRAMEWORK_VERSION "${ISPC_VERSION_FULL}"
+            PRODUCT_BUNDLE_IDENTIFIER "github.com/ispc/ispc/${TARGET}"
+            XCODE_ATTRIBUTE_INSTALL_PATH "@rpath"
+            # PUBLIC_HEADER "${PublicHeaders}"
+            OUTPUT_NAME "${TARGET}"
+            XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY ""
+            XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO"
+            XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO"
+            MACOSX_FRAMEWORK_IDENTIFIER "github.com/ispc/ispc/${TARGET}"
+            MACOSX_FRAMEWORK_BUNDLE_VERSION "${ISPC_VERSION_FULL}"
+            MACOSX_FRAMEWORK_SHORT_VERSION_STRING "${ISPC_VERSION_MAJOR}.${ISPC_VERSION_MINOR}"
+            MACOSX_RPATH TRUE
+            # RESOURCE ${PublicHeaders}
+        )
+    endif()
+endfunction()
+
 install(TARGETS ispcrt_interface_lib EXPORT ${PROJECT_NAME}_Exports)
 
 
@@ -164,9 +191,11 @@ foreach(PRNAME ${LIB_LIST})
 
     ## Install targets + exports ##
     set_target_properties(${PRNAME} PROPERTIES
-        VERSION ${PROJECT_VERSION}
-        SOVERSION ${PROJECT_VERSION_MAJOR}
-        )
+      VERSION ${PROJECT_VERSION}
+      SOVERSION ${PROJECT_VERSION_MAJOR}
+    )
+
+    configure_ispc_framework(${PRNAME})
 
     install(TARGETS ${PRNAME}
       EXPORT ${PROJECT_NAME}_Exports
@@ -180,9 +209,12 @@ foreach(PRNAME ${LIB_LIST})
 
     install(TARGETS ${PRNAME}
       LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        NAMELINK_ONLY
+      NAMELINK_ONLY
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
       ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      FRAMEWORK DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime OPTIONAL
+      INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+      PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     )
 endforeach()
 
