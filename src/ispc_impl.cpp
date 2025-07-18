@@ -28,9 +28,9 @@ class ISPCEngine::Impl {
     }
 
     // Fields populated by ParseCommandLineArgs
-    char *m_file = nullptr;
+    std::string m_file;
     Arch m_arch{Arch::none};
-    const char *m_cpu{nullptr};
+    std::string m_cpu;
     std::vector<ISPCTarget> m_targets;
     Module::Output m_output;
     std::vector<std::string> m_linkFileNames;
@@ -47,7 +47,8 @@ class ISPCEngine::Impl {
         int ret = 0;
         {
             llvm::TimeTraceScope TimeScope("ExecuteISPCEngine");
-            ret = Module::CompileAndOutput(m_file, m_arch, m_cpu, m_targets, m_output);
+            ret = Module::CompileAndOutput(m_file.c_str(), m_arch, m_cpu.empty() ? nullptr : m_cpu.c_str(), m_targets,
+                                           m_output);
         }
 
         if (g->enableTimeTrace) {

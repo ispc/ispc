@@ -546,7 +546,7 @@ static void lParseInclude(const char *path) {
 // Forward declarations for functions used in ParseCommandLineArgs
 extern void printBinaryType();
 
-ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], char *&file, Arch &arch, const char *&cpu,
+ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &file, Arch &arch, std::string &cpu,
                                            std::vector<ISPCTarget> &targets, Module::Output &output,
                                            std::vector<std::string> &linkFileNames, bool &isLinkMode) {
     BooleanOptValue vectorCall = BooleanOptValue::none;
@@ -1036,10 +1036,10 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], char *&file, 
         } else if (argv[i][0] == '-') {
             errorHandler.AddError("Unknown option \"%s\".", argv[i]);
         } else {
-            if (file != nullptr) {
+            if (!file.empty()) {
                 errorHandler.AddError("Multiple input files specified on command "
                                       "line: \"%s\" and \"%s\".",
-                                      file, argv[i]);
+                                      file.c_str(), argv[i]);
             } else {
                 file = argv[i];
             }
@@ -1052,21 +1052,21 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], char *&file, 
         return result;
     }
 
-    if (file == nullptr) {
+    if (file.empty()) {
         Error(SourcePos(), "No input file were specified. To read text from stdin use \"-\" as file name.");
         return ArgsParseResult::failure;
     }
 
-    if (strcmp(file, "-") != 0) {
+    if (file != "-") {
         // If the input is not stdin then check that the file exists and it is
         // not a directory.
         if (!llvm::sys::fs::exists(file)) {
-            Error(SourcePos(), "File \"%s\" does not exist.", file);
+            Error(SourcePos(), "File \"%s\" does not exist.", file.c_str());
             return ArgsParseResult::failure;
         }
 
         if (llvm::sys::fs::is_directory(file)) {
-            Error(SourcePos(), "File \"%s\" is a directory.", file);
+            Error(SourcePos(), "File \"%s\" is a directory.", file.c_str());
             return ArgsParseResult::failure;
         }
     }
@@ -1098,7 +1098,7 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], char *&file, 
     // Default settings for PS4
     if (g->target_os == TargetOS::ps4 || g->target_os == TargetOS::ps5) {
         output.flags.setPICLevel(PICLevel::BigPIC);
-        if (!cpu) {
+        if (cpu.empty()) {
             if (g->target_os == TargetOS::ps4) {
                 // Default for PS4 is btver2, but do not enforce it.
                 cpu = "btver2";
@@ -1116,7 +1116,7 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], char *&file, 
     // Default setting for "custom_linux"
     if (g->target_os == TargetOS::custom_linux) {
         output.flags.setPICLevel();
-        if (!cpu) {
+        if (cpu.empty()) {
             cpu = "cortex-a57";
         }
         if (targets.empty()) {
