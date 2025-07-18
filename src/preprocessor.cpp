@@ -88,10 +88,12 @@ static void lInitializeSourceManager(clang::FrontendInputFile &input, clang::Dia
     if (!fileOrError) {
         // FIXME: include the error in the diagnostic even when it's not stdin.
         auto errCode = llvm::errorToErrorCode(fileOrError.takeError());
+
+        // Use a direct error reporting to avoid corrupted diagnostic state
         if (inputFile != "-") {
-            diag.Report(clang::diag::err_fe_error_reading) << inputFile;
+            llvm::errs() << "ISPC: error reading file '" << inputFile << "'\n";
         } else {
-            diag.Report(clang::diag::err_fe_error_reading_stdin) << errCode.message();
+            llvm::errs() << "ISPC: error reading stdin: " << errCode.message() << "\n";
         }
         return;
     }
@@ -415,15 +417,19 @@ static void lSetLangOptions(clang::LangOptions *opts) { opts->LineComment = 1; }
 static int lExecPreprocessor(llvm::Module *module, const char *infilename, llvm::raw_string_ostream *ostream,
                              Globals::PreprocessorOutputType preprocessorOutputType) {
     clang::FrontendInputFile inputFile(infilename, clang::InputKind());
-    llvm::raw_fd_ostream stderrRaw(2, false);
 
-    // Create Diagnostic engine
+    // Create completely isolated diagnostic infrastructure
+    // Use a separate error stream for each invocation to avoid shared state
+    std::string errorBuffer;
+    llvm::raw_string_ostream errorStream(errorBuffer);
+
+    // Create Diagnostic engine with isolated components
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
     clang::DiagnosticOptions diagOptions;
-    clang::TextDiagnosticPrinter diagPrinter(stderrRaw, diagOptions, false);
+    clang::TextDiagnosticPrinter diagPrinter(errorStream, diagOptions, false);
 #else
     llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> diagOptions(new clang::DiagnosticOptions);
-    clang::TextDiagnosticPrinter diagPrinter(stderrRaw, diagOptions.get(), false);
+    clang::TextDiagnosticPrinter diagPrinter(errorStream, diagOptions.get(), false);
 #endif
     llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagIDs(new clang::DiagnosticIDs);
     clang::DiagnosticsEngine diagEng(diagIDs, diagOptions, &diagPrinter, false);
@@ -490,6 +496,11 @@ static int lExecPreprocessor(llvm::Module *module, const char *infilename, llvm:
     diagPrinter.BeginSourceFile(langOpts, &prep);
     clang::DoPrintPreprocessedInput(prep, ostream, preProcOutOpts);
     diagPrinter.EndSourceFile();
+
+    // Output any collected diagnostic messages to stderr
+    if (!errorBuffer.empty()) {
+        llvm::errs() << errorBuffer;
+    }
 
     // deallocate some objects
     diagIDs.reset();
