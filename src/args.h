@@ -43,7 +43,7 @@ void FreeArgv(std::vector<char *> &argv);
  *  @param isLinkMode Output parameter indicating if in link mode
  *  @return ArgsParseResult indicating success, failure, or help requested
  */
-ArgsParseResult ParseCommandLineArgs(int argc, char *argv[], char *&file, Arch &arch, const char *&cpu,
+ArgsParseResult ParseCommandLineArgs(int argc, char *argv[], std::string &file, Arch &arch, std::string &cpu,
                                      std::vector<ISPCTarget> &targets, struct Module::Output &output,
                                      std::vector<std::string> &linkFileNames, bool &isLinkMode);
 
