@@ -3226,7 +3226,7 @@ bool StorageClass::IsAnyExtern() const { return IsExtern() || IsExternC() || IsE
 SourcePos::SourcePos(const char *n, int fl, int fc, int ll, int lc) {
     name = n;
     if (name == nullptr) {
-        if (m != nullptr) {
+        if (m != nullptr && m->module != nullptr) {
             name = m->module->getModuleIdentifier().c_str();
         } else {
             name = "(unknown)";
