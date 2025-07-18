@@ -62,7 +62,7 @@ class ISPCEngine::Impl {
 
     int Link() {
         std::string filename = !m_output.out.empty() ? m_output.out : "";
-        return Module::LinkAndOutput(m_linkFileNames, m_output.type, filename);
+        return Module::LinkAndOutput(m_linkFileNames, m_output.type, std::move(filename));
     }
 
     int Execute() {

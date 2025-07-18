@@ -767,7 +767,7 @@ llvm::DIType *AtomicType::GetDIType(llvm::DIScope *scope) const {
 // TemplateTypeParmType
 
 TemplateTypeParmType::TemplateTypeParmType(std::string n, Variability v, bool ic, SourcePos p)
-    : Type(TEMPLATE_TYPE_PARM_TYPE, v, ic, p), name(n) {
+    : Type(TEMPLATE_TYPE_PARM_TYPE, v, ic, p), name(std::move(n)) {
     asOtherConstType = nullptr;
     asUniformType = asVaryingType = nullptr;
 }
@@ -3064,7 +3064,7 @@ llvm::FunctionType *FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool 
         callTypes.push_back(LLVMTypes::Int32Type); // taskCount2
     } else {
         // Otherwise we already have the types of the arguments
-        callTypes = llvmArgTypes;
+        callTypes = std::move(llvmArgTypes);
     }
 
     if (returnType == nullptr) {

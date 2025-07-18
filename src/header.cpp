@@ -960,7 +960,7 @@ bool Module::DispatchHeaderInfo::initialize(std::string headerFileName) {
     Emit4 = true;
     Emit8 = true;
     Emit16 = true;
-    header = headerFileName;
+    header = std::move(headerFileName);
     fn = header.c_str();
 
     if (!header.empty()) {
