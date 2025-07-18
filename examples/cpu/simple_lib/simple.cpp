@@ -59,9 +59,53 @@ int main() {
         std::cerr << "Second ISPC compilation failed with code: " << result2 << "\n";
     }
 
+    std::cout << "\nTesting multiple engines...\n";
+
+    // Create multiple engines with different targets that would conflict
+    std::vector<std::string> engineArgs1 = {"ispc", "simple.ispc", "--target=sse2-i32x4", "-O2", "-o",
+                                            "simple_sse2.o", "-h", "simple_sse2.h"};
+
+    std::vector<std::string> engineArgs2 = {"ispc", "simple.ispc", "--target=avx2-i32x8", "-O0", "-o",
+                                            "simple_avx2.o", "-h", "simple_avx2.h"};
+
+    std::vector<std::string> engineArgs3 = {"ispc", "simple.ispc", "--target=host", "--emit-asm", "-o",
+                                            "simple_host.s", "-h", "simple_host.h"};
+
+    // Create engines but don't execute yet - this tests target state isolation
+    auto engine1 = ispc::ISPCEngine::CreateFromArgs(engineArgs1);
+    auto engine2 = ispc::ISPCEngine::CreateFromArgs(engineArgs2);
+    auto engine3 = ispc::ISPCEngine::CreateFromArgs(engineArgs3);
+
+    if (!engine1 || !engine2 || !engine3) {
+        std::cerr << "Failed to create one or more ISPC engines\n";
+    } else {
+        std::cout << "Created 3 engines with different targets\n";
+
+        // Execute engines in sequence
+        std::cout << "Executing engine 1 (SSE2)...\n";
+        int result1 = engine1->Execute();
+
+        std::cout << "Executing engine 2 (AVX2)...\n";
+        int result2 = engine2->Execute();
+
+        std::cout << "Executing engine 3 (Host ASM)...\n";
+        int result3 = engine3->Execute();
+
+        if (result1 == 0 && result2 == 0 && result3 == 0) {
+            std::cout << "SUCCESS\n";
+            std::cout << "  - SSE2 compilation: simple_sse2.o\n";
+            std::cout << "  - AVX2 compilation: simple_avx2.o\n";
+            std::cout << "  - Host ASM compilation: simple_host.s\n";
+        } else {
+            std::cerr << "FAILURE\n";
+            std::cerr << "  Engine 1 result: " << result1 << "\n";
+            std::cerr << "  Engine 2 result: " << result2 << "\n";
+            std::cerr << "  Engine 3 result: " << result3 << "\n";
+        }
+    }
+
     std::cout << "\nCleaning up...\n";
     ispc::Shutdown();
     std::cout << "ISPC shutdown complete\n";
-
     return 0;
 }
