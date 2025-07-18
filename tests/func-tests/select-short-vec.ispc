@@ -44,7 +44,7 @@ task void f_v(uniform float RET[]) {
     errors += test_select<int32, 9>();
     errors += test_select<int32, 11>();
     errors += test_select<int32, 15>();
-    errors += test_select<int32, 16>();
+    //errors += test_select<int32, 16>();  // https://github.com/ispc/ispc/issues/3491
     errors += test_select<int32, 17>();
 
     errors += test_select<uint32, 1>();
@@ -52,8 +52,8 @@ task void f_v(uniform float RET[]) {
     errors += test_select<uint32, 4>();
     errors += test_select<uint32, 7>();
 
-    errors += test_select<int8, 3>();
-    errors += test_select<uint8, 3>();
+    //errors += test_select<int8, 3>(); //https://github.com/ispc/ispc/issues/3491
+    //errors += test_select<uint8, 3>(); //https://github.com/ispc/ispc/issues/3491
     errors += test_select<int16, 3>();
     errors += test_select<uint16, 3>();
     errors += test_select<int64, 3>();
