@@ -21,6 +21,22 @@
 
 namespace ispc {
 
+// Class for managing global state during compilation
+class GlobalStateGuard {
+  public:
+    GlobalStateGuard() : savedModule(m), savedTarget(g->target) {}
+
+    ~GlobalStateGuard() {
+        // Restore global state
+        m = savedModule;
+        g->target = savedTarget;
+    }
+
+  private:
+    Module *savedModule;
+    Target *savedTarget;
+};
+
 class ISPCEngine::Impl {
   public:
     Impl() {
@@ -67,6 +83,9 @@ class ISPCEngine::Impl {
     }
 
     int Execute() {
+        // TODO!: remove the global state.
+        GlobalStateGuard guard; // The guard to protect global state
+
         if (m_isLinkMode) {
             return Link();
         } else if (m_isHelpMode) {
