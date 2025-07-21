@@ -12,6 +12,8 @@ set(LIT_COMMAND "${Python3_EXECUTABLE};${CMAKE_SOURCE_DIR}/utils/lit/lit.py")
 list(APPEND LIT_ARGS "--path=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}")
 # Path to LLVM utils
 list(APPEND LIT_ARGS "--path=${LLVM_TOOLS_BINARY_DIR}")
+# Path to ispc root directory
+list(APPEND LIT_ARGS "-Dispc_build_dir=${CMAKE_BINARY_DIR}")
 # Path to tests execution directory
 list(APPEND LIT_ARGS "-Dispc_test_exec_root=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/tests")
 # LLVM version used to build ISPC
@@ -27,8 +29,14 @@ list(APPEND LIT_ARGS "-Dlinux_enabled=$<IF:$<BOOL:${ISPC_LINUX_TARGET}>,ON,OFF>"
 list(APPEND LIT_ARGS "-Dps_enabled=$<IF:$<BOOL:${ISPC_PS_TARGET}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Dmacos_arm_enabled=$<IF:$<BOOL:${ISPC_MACOS_ARM_TARGET}>,ON,OFF>")
 list(APPEND LIT_ARGS "-Dmacos_ios_enabled=$<IF:$<BOOL:${ISPC_IOS_ARM_TARGET}>,ON,OFF>")
+# ISPC library is enabled
+list(APPEND LIT_ARGS "-Dispc_lib_enabled=$<IF:$<BOOL:${ISPC_LIBRARY}>,ON,OFF>")
 # TODO! generic target bc?
-add_custom_target(check-all DEPENDS ispc ispc-opt ${ISPC_DEPS}
+set(CHECK_ALL_DEPS ispc ispc-opt ${ISPC_DEPS})
+if(TARGET libispc_shared)
+    list(APPEND CHECK_ALL_DEPS libispc_shared)
+endif()
+add_custom_target(check-all DEPENDS ${CHECK_ALL_DEPS}
     COMMAND ${LIT_COMMAND} ${LIT_ARGS} "${CMAKE_CURRENT_SOURCE_DIR}/lit-tests" "--verbose"
     COMMENT "Running lit tests"
     USES_TERMINAL
