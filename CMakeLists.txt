@@ -940,6 +940,7 @@ function(add_ispc_slim NAME)
     endif()
 endfunction()
 
+################################################################################
 # Define libraries that are built in the project. Some of them are shared across multiple executable targets.
 add_library(optimization OBJECT EXCLUDE_FROM_ALL ${OPT_SOURCES})
 configure_ispc_obj(optimization)
@@ -975,6 +976,34 @@ else()
     message(STATUS "ISPC will be built as a composite binary")
 endif()
 
+install (TARGETS ispc DESTINATION bin)
+if (ISPC_SLIM_BINARY)
+    foreach (header ${STDLIB_HEADERS})
+        install (FILES "stdlib/include/${header}" DESTINATION include/stdlib)
+    endforeach()
+    install(DIRECTORY ${BITCODE_FOLDER} DESTINATION share)
+else()
+    # Install short_vec.isph for composite binary
+    install (FILES "stdlib/include/short_vec.isph" DESTINATION include/stdlib)
+endif()
+
+################################################################################
+# ISPC Library and Headers Section
+
+# ISPC header copying setup
+file(MAKE_DIRECTORY ${INCLUDE_FOLDER})
+set(ISPC_HEADER_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/include/ispc)
+set(ISPC_HEADER_DEST ${INCLUDE_FOLDER}/ispc)
+
+# Create a target for copying ISPC headers
+add_custom_target(copy-ispc-headers ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${ISPC_HEADER_SRC} ${ISPC_HEADER_DEST}
+    DEPENDS ${ISPC_HEADER_SRC}
+    COMMENT "Copying src/include/ispc to build/include/ispc/"
+    VERBATIM
+)
+
+# ISPC shared library creation and installation
 set(ISPC_SHARED_LIBRARY_AVAILABLE FALSE)
 if (ISPC_LIBRARY AND NOT ISPC_SLIM_BINARY)
     # Add libispc shared library target with default output name "ispc"
@@ -1018,21 +1047,11 @@ install(FILES
 
 # Install the export set only if library targets exist
 if (ISPC_LIBRARY AND NOT ISPC_SLIM_BINARY)
+    add_dependencies(libispc_shared copy-ispc-headers)
     install(EXPORT ${PROJECT_NAME}_Exports
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
         NAMESPACE ${PROJECT_NAME}::
     )
-endif()
-
-install (TARGETS ispc DESTINATION bin)
-if (ISPC_SLIM_BINARY)
-    foreach (header ${STDLIB_HEADERS})
-        install (FILES "stdlib/include/${header}" DESTINATION include/stdlib)
-    endforeach()
-    install(DIRECTORY ${BITCODE_FOLDER} DESTINATION share)
-else()
-    # Install short_vec.isph for composite binary
-    install (FILES "stdlib/include/short_vec.isph" DESTINATION include/stdlib)
 endif()
 
 # Install intrinsics headers
