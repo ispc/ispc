@@ -106,6 +106,14 @@ option(ISPC_PREPARE_PACKAGE "Generate build targets for ispc package" OFF)
 option(ISPC_PACKAGE_EXAMPLES "Pack examples into the ISPC package" ON)
 option(ISPC_SLIM_BINARY "Build ISPC as slim binary" OFF)
 
+# Ensure ISPC_LIBRARY is OFF when ISPC_SLIM_BINARY is ON
+if (ISPC_SLIM_BINARY)
+    if (ISPC_LIBRARY)
+        message(WARNING "ISPC_LIBRARY is being forced to OFF because ISPC_SLIM_BINARY is ON")
+    endif()
+    set(ISPC_LIBRARY OFF CACHE BOOL "Build ISPC as a library" FORCE)
+endif()
+
 # Build target for utility checking host ISA
 # This target should be defined before the inclusion of FindLLVM.cmake because
 # we want to build check_isa without LLVM installed.
