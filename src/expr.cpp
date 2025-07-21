@@ -2699,66 +2699,6 @@ Expr *BinaryExpr::Optimize() {
     ConstExpr *constArg0 = llvm::dyn_cast<ConstExpr>(arg0);
     ConstExpr *constArg1 = llvm::dyn_cast<ConstExpr>(arg1);
 
-    if (g->opt.fastMath) {
-        // TODO: consider moving fast-math optimizations to backend
-
-        // optimizations related to division by floats..
-
-        // transform x / const -> x * (1/const)
-        if (op == Div && constArg1 != nullptr) {
-            const Type *type1 = constArg1->GetType();
-            if (Type::EqualIgnoringConst(type1, AtomicType::UniformFloat16) ||
-                Type::EqualIgnoringConst(type1, AtomicType::VaryingFloat16) ||
-                Type::EqualIgnoringConst(type1, AtomicType::UniformFloat) ||
-                Type::EqualIgnoringConst(type1, AtomicType::VaryingFloat) ||
-                Type::EqualIgnoringConst(type1, AtomicType::UniformDouble) ||
-                Type::EqualIgnoringConst(type1, AtomicType::VaryingDouble)) {
-                llvm::Type *eltType = type1->GetAsUniformType()->LLVMType(g->ctx);
-                std::vector<llvm::APFloat> constVal;
-                int count = constArg1->GetValues(constVal, eltType);
-                std::vector<llvm::APFloat> inv;
-                for (int i = 0; i < count; ++i) {
-                    llvm::APFloat reciprocal = lCreateAPFloat(1.0, eltType);
-                    reciprocal.divide(constVal[i], llvm::APFloat::rmNearestTiesToEven);
-                    inv.push_back(reciprocal);
-                }
-                Expr *einv = new ConstExpr(type1, inv, constArg1->pos);
-                Expr *e = new BinaryExpr(Mul, arg0, einv, pos);
-                return ::TypeCheckAndOptimize(e);
-            }
-        }
-
-        // transform x / y -> x * rcp(y)
-        if (op == Div) {
-            const Type *type1 = arg1->GetType();
-            if (Type::EqualIgnoringConst(type1, AtomicType::UniformFloat16) ||
-                Type::EqualIgnoringConst(type1, AtomicType::VaryingFloat16) ||
-                Type::EqualIgnoringConst(type1, AtomicType::UniformFloat) ||
-                Type::EqualIgnoringConst(type1, AtomicType::VaryingFloat) ||
-                Type::EqualIgnoringConst(type1, AtomicType::UniformDouble) ||
-                Type::EqualIgnoringConst(type1, AtomicType::VaryingDouble)) {
-                // Get the symbol for the appropriate builtin
-                std::vector<Symbol *> rcpFuns;
-                m->symbolTable->LookupFunction("rcp", &rcpFuns);
-                if (rcpFuns.size() > 0) {
-                    Expr *rcpSymExpr = new FunctionSymbolExpr("rcp", rcpFuns, {}, TemplateArgs(), pos);
-                    ExprList *args = new ExprList(arg1, arg1->pos);
-                    Expr *rcpCall = new FunctionCallExpr(rcpSymExpr, args, arg1->pos);
-                    rcpCall = ::TypeCheckAndOptimize(rcpCall);
-                    if (rcpCall != nullptr) {
-                        Expr *ret = new BinaryExpr(Mul, arg0, rcpCall, pos);
-                        return ::TypeCheckAndOptimize(ret);
-                    }
-                }
-            }
-
-            Warning(pos,
-                    "rcp(%s) not found from stdlib.  Can't apply "
-                    "fast-math rcp optimization.",
-                    type1->GetString().c_str());
-        }
-    }
-
     // From here on out, we're just doing constant folding, so if both args
     // aren't constants then we're done...
     if (constArg0 == nullptr || constArg1 == nullptr) {
