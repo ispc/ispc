@@ -203,7 +203,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        llvm: [18]
+        llvm: [20]
         arch: [x86, x86-64]
         extra_flags: ["--opt=disable-zmm", "--addressing=64", "-g", "--math-lib=fast",
                       "--math-lib=system", "--mcmodel=large", "--pic",
@@ -396,6 +396,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        llvm: [20]
         # --math-lib=fast is not tested because of #3442
         extra_flags: ["--opt=disable-zmm", "--addressing=64", "-g",
                       "--math-lib=system", "--mcmodel=large", "--pic",
@@ -404,7 +405,7 @@ jobs:
     with:
       platform: macos
       architecture: aarch64
-      artifact_name: ispc_llvm18_macos-14
+      artifact_name: ispc_llvm${{ matrix.llvm }}_macos-14
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_arm }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
       ispc_extra_flags: ${{ matrix.extra_flags }}
@@ -492,7 +493,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        llvm: [18]
+        llvm: [20]
         arch: [x86, x86-64]
         extra_flags: ["--opt=disable-zmm", "--addressing=64", "-g", "--math-lib=fast",
                       "--math-lib=system", "--mcmodel=large", "--pic",
