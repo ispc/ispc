@@ -4996,7 +4996,12 @@ llvm::Value *IndexExpr::GetValue(FunctionEmitContext *ctx) const {
             Assert(m->errorCount > 0);
             return nullptr;
         }
-        lvType = PointerType::GetUniform(st->GetElementType());
+        // Use varying pointer type if the index is varying, uniform otherwise
+        if (indexType->IsVaryingType()) {
+            lvType = PointerType::GetVarying(st->GetElementType());
+        } else {
+            lvType = PointerType::GetUniform(st->GetElementType());
+        }
 
         // And do the indexing calculation into the temporary array in memory
         ptr = ctx->GetElementPtrInst(tmpPtrInfo->getPointer(), LLVMInt32(0), index->GetValue(ctx),
