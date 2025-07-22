@@ -211,6 +211,14 @@ jobs:
         exclude:
           - arch: x86
             extra_flags: "--mcmodel=large"
+          - arch: x86
+            extra_flags: "--opt=fast-math"
+          - arch: x86
+            extra_flags: "--math-lib=fast"
+          - arch: x86-64
+            extra_flags: "--opt=fast-math"
+          - arch: x86-64
+            extra_flags: "--math-lib=fast"
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
       platform: linux
@@ -501,6 +509,16 @@ jobs:
         exclude:
           - arch: x86
             extra_flags: "--mcmodel=large"
+          - arch: x86
+            extra_flags: "--opt=fast-math"
+          - arch: x86
+            extra_flags: "--math-lib=fast"
+          - arch: x86
+            extra_flags: "--math-lib=system"
+          - arch: x86-64
+            extra_flags: "--opt=fast-math"
+          - arch: x86-64
+            extra_flags: "--math-lib=fast"
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
       platform: windows
