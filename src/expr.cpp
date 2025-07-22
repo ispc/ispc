@@ -909,8 +909,7 @@ void ispc::InitSymbol(AddressInfo *ptrInfo, const Type *symType, Expr *initExpr,
                     // i32 6, i32 3>
 
                     // Our final vector which will be used for initialization
-                    llvm::Value *initListVector = llvm::UndefValue::get(
-                        llvm::FixedVectorType::get(symVectorType->GetElementType()->LLVMType(g->ctx), nVectorElements));
+                    llvm::Value *initListVector = llvm::UndefValue::get(symVectorType->LLVMType(g->ctx));
                     for (const auto &[type, expr_map] : exprPerType) {
                         // There is no good way to construct AtomicType from AtomicType::BasicType,
                         // just use the first one
@@ -924,8 +923,7 @@ void ispc::InitSymbol(AddressInfo *ptrInfo, const Type *symType, Expr *initExpr,
                             // Construct ISPC vector type for resulting "initializer" vector for this type
                             const VectorType *vResType = new VectorType(aType, nVectorElements);
                             // Resulting LLVM vector for this type
-                            llvm::Value *initListVectorPerType = llvm::UndefValue::get(
-                                llvm::FixedVectorType::get(aType->LLVMType(g->ctx), nVectorElements));
+                            llvm::Value *initListVectorPerType = llvm::UndefValue::get(vResType->LLVMType(g->ctx));
                             // Create a linear vector that will be used as a shuffle mask for
                             // shufflevector with initListVector.
                             std::vector<uint32_t> linearVector(nVectorElements);
@@ -941,6 +939,11 @@ void ispc::InitSymbol(AddressInfo *ptrInfo, const Type *symType, Expr *initExpr,
 
                             // Make type conversion
                             if (!Type::EqualIgnoringConst(symType, vResType)) {
+                                // Early return for unsupported conversions (e.g., varying to uniform)
+                                if (symVectorType->IsUniformType() && vResType->IsVaryingType()) {
+                                    return;
+                                }
+
                                 initListVectorPerType =
                                     lTypeConvAtomicOrUniformVector(ctx, initListVectorPerType, symType, vResType, pos);
                             }
@@ -4811,6 +4814,12 @@ bool ExprList::HasAtomicInitializerList(std::map<AtomicType::BasicType, std::vec
 
     // Go through all initializer expressions and check if they are atomic
     for (int i = 0; i < exprs.size(); ++i) {
+        // Check for null expressions in the list. This can occur if the list contains
+        // invalid or uninitialized expressions due to errors in earlier processing.
+        if (exprs[i] == nullptr) {
+            isAtomicInit = false;
+            break;
+        }
         const AtomicType *at = CastType<AtomicType>(exprs[i]->GetType());
         if (at) {
             map[at->basicType].push_back({exprs[i], i});
