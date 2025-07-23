@@ -611,6 +611,9 @@ def run_test(testname, host, target):
 
                 cc_cmd = "%s /Itests /Zi /nologo /DTEST_SIG=%d /DTEST_WIDTH=%d %s %s /Fe%s" % \
                          (options.compiler_exe, match, width, add_prefix("tests\\test_static.cpp", host, target), obj_name, exe_name)
+                # Increase the stack size for Windows up to 8MB because some
+                # tests for -O0/x86 can generate quite large stack frames.
+                cc_cmd += " /F8388608"
                 if target.is_xe():
                     cc_cmd = "%s /Itests /I%s\\include /nologo /DTEST_SIG=%d /DTEST_WIDTH=%d %s %s /Fe%s ze_loader.lib /link /LIBPATH:%s\\lib" % \
                          (options.compiler_exe, options.l0loader, match, width, " /DTEST_ZEBIN" if options.ispc_output == "ze" else " /DTEST_SPV", \
