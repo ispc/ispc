@@ -205,16 +205,16 @@ static void lEmitStructDecls(std::vector<const StructType *> &structTypes, FILE 
                   "/* Unknown compiler/standard - alignment not supported */\n"
                   "#define __ISPC_ALIGN__(x)\n"
                   "#warning \"Alignment not supported on this compiler\"\n"
-                  "#endif\n"
+                  "#endif // defined(__cplusplus) && __cplusplus >= 201103L\n"
                   "#ifndef __ISPC_ALIGNED_STRUCT__\n"
-                  "#if defined(_MSC_VER)\n"
-                  "// Visual Studio\n"
-                  "#define __ISPC_ALIGNED_STRUCT__(s) __ISPC_ALIGN__(s) struct\n"
-                  "#else\n"
+                  "#if defined(__clang__) || !defined(_MSC_VER)\n"
                   "// Clang, GCC, ICC\n"
                   "#define __ISPC_ALIGNED_STRUCT__(s) struct __ISPC_ALIGN__(s)\n"
-                  "#endif\n"
-                  "#endif\n\n");
+                  "#else\n"
+                  "// Visual Studio\n"
+                  "#define __ISPC_ALIGNED_STRUCT__(s) __ISPC_ALIGN__(s) struct\n"
+                  "#endif // defined(__clang__) || !defined(_MSC_VER)\n"
+                  "#endif // __ISPC_ALIGNED_STRUCT__\n\n");
 
     for (unsigned int i = 0; i < structTypes.size(); ++i) {
         lEmitStructDecl(structTypes[i], &emittedStructs, file, emitUnifs);
