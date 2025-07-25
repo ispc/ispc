@@ -112,10 +112,7 @@ void Function::Print(Indent &indent) const {
 
     indent.pushList(args.size() + 1);
     for (size_t i = 0; i < args.size(); i++) {
-        static constexpr std::size_t BUFSIZE{15};
-        char buffer[BUFSIZE];
-        snprintf(buffer, BUFSIZE, "param %zu", i);
-        indent.setNextLabel(buffer);
+        indent.setNextLabel("param " + std::to_string(i));
         if (args[i]) {
             indent.Print();
             if (args[i]->type != nullptr) {
@@ -1087,10 +1084,7 @@ void FunctionTemplate::Print(Indent &indent) const {
     indent.pushList(itemsToPrint);
     if (typenames->GetCount() > 0) {
         for (size_t i = 0; i < typenames->GetCount(); i++) {
-            static constexpr std::size_t BUFSIZE{25};
-            char buffer[BUFSIZE];
-            snprintf(buffer, BUFSIZE, "template param %zu", i);
-            indent.setNextLabel(buffer);
+            indent.setNextLabel("template param " + std::to_string(i));
             if ((*typenames)[i]) {
                 indent.Print((*typenames)[i]->IsTypeParam()
                                  ? "TemplateTypeParmType"
