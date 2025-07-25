@@ -102,7 +102,7 @@ static int __os_has_avx512_support() {
 
 // Return of the x86 ISA enumerant values that gives the most capable ISA that
 // the current system can run.
-static enum ISA get_x86_isa() {
+UNUSED_ATTR static enum ISA get_x86_isa() {
     int info[4];
     __cpuid(info, 1);
     UNUSED_ATTR int max_level = info[0];
@@ -262,7 +262,7 @@ static enum ISA get_x86_isa() {
 #else
 
 // For non-x86 platforms, define a function with trivial implementation.
-static enum ISA get_x86_isa() { return INVALID; }
+UNUSED_ATTR static enum ISA get_x86_isa() { return INVALID; }
 
 #endif // defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
 
