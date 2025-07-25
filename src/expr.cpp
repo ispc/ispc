@@ -104,13 +104,6 @@ bool Expr::HasAmbiguousVariability(std::vector<const Expr *> &warn) const { retu
 
 ///////////////////////////////////////////////////////////////////////////
 
-static llvm::APFloat lCreateAPFloat(llvm::APFloat f, llvm::Type *type) {
-    const llvm::fltSemantics &FS = type->getFltSemantics();
-    bool ignored = false;
-    f.convert(FS, llvm::APFloat::rmNearestTiesToEven, &ignored);
-    return f;
-}
-
 static llvm::APFloat lCreateAPFloat(double value, llvm::Type *type) {
     llvm::APFloat f(value);
     const llvm::fltSemantics &FS = type->getFltSemantics();
