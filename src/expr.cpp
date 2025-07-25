@@ -2456,9 +2456,9 @@ const Type *BinaryExpr::GetTypeImpl() const {
         }                                                                                                              \
         break
 
-template <typename T> static int countLeadingZeros(T val) {
+template <typename T> static unsigned int countLeadingZeros(T val) {
 
-    int leadingZeros = 0;
+    unsigned int leadingZeros = 0;
     size_t size = sizeof(T) * CHAR_BIT;
     T msb = (T)(T(1) << (size - 1));
 
@@ -2489,7 +2489,16 @@ static ConstExpr *lConstFoldBinaryIntOp(BinaryExpr::Op op, const T *v0, const T 
     case BinaryExpr::Shl:
         for (int i = 0; i < count; ++i) {
             result[i] = (T(v0[i]) << v1[i]);
-            if (v1[i] > countLeadingZeros(v0[i])) {
+            // Check for negative shift amounts in signed types to avoid undefined behavior
+            if constexpr (std::is_signed<T>::value) {
+                if (v1[i] < 0) {
+                    Warning(pos, "Negative shift amount in binary expression with type \"%s\".",
+                            carg0->GetType()->GetString().c_str());
+                    continue;
+                }
+            }
+            // Check for shift overflow - cast to unsigned to avoid sign comparison warnings
+            if (static_cast<unsigned int>(v1[i]) > countLeadingZeros(v0[i])) {
                 Warning(pos, "Binary expression with type \"%s\" can't represent value.",
                         carg0->GetType()->GetString().c_str());
             }
