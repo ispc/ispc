@@ -147,9 +147,11 @@ enum class AddressSpace {
 };
 
 namespace dispatch {
-// This would create an unnecessary unused copies of functions defined in isa.h
+// This would create unnecessary unused copies of functions defined in isa.h
 // in each translation unit that includes the current header (ispc.h). However,
-// all unused ones will be removed by the compiler, because they are static.
+// all unused ones will be removed by the compiler because they are static.
+// We need to include this header here because we use the `dispatch::ISA` enum
+// later in the current header.
 #include "isa.h"
 } // namespace dispatch
 
