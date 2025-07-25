@@ -4815,7 +4815,7 @@ bool ExprList::HasAtomicInitializerList(std::map<AtomicType::BasicType, std::vec
     bool isAtomicInit = true;
 
     // Go through all initializer expressions and check if they are atomic
-    for (int i = 0; i < exprs.size(); ++i) {
+    for (size_t i = 0; i < exprs.size(); ++i) {
         // Check for null expressions in the list. This can occur if the list contains
         // invalid or uninitialized expressions due to errors in earlier processing.
         if (exprs[i] == nullptr) {
@@ -4824,7 +4824,7 @@ bool ExprList::HasAtomicInitializerList(std::map<AtomicType::BasicType, std::vec
         }
         const AtomicType *at = CastType<AtomicType>(exprs[i]->GetType());
         if (at) {
-            map[at->basicType].push_back({exprs[i], i});
+            map[at->basicType].push_back({exprs[i], static_cast<int>(i)});
         } else {
             isAtomicInit = false;
             break;
@@ -9493,12 +9493,13 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
 
         // There's no way to match if the caller is passing more arguments
         // than this function instance takes.
-        if (argTypes.size() > ft->GetNumParameters()) {
+        if (argTypes.size() > static_cast<size_t>(ft->GetNumParameters())) {
             continue;
         }
 
         // Not enough arguments, and no default argument value to save us
-        if (argTypes.size() < ft->GetNumParameters() && ft->GetParameterDefault(argTypes.size()) == nullptr) {
+        if (argTypes.size() < static_cast<size_t>(ft->GetNumParameters()) &&
+            ft->GetParameterDefault(argTypes.size()) == nullptr) {
             continue;
         }
 
@@ -9539,7 +9540,7 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
             // First, check types of non-type parameters (non-type parameters can't be used in partially specified
             // template instantiations)
             bool argsMatchingPassed = true;
-            for (int i = 0; i < templateParms->GetCount(); ++i) {
+            for (size_t i = 0; i < templateParms->GetCount(); ++i) {
                 if ((*templateParms)[i]->IsNonTypeParam()) {
                     const Type *argType = templateArgs[i].GetAsType();
                     const Type *paramType = (*templateParms)[i]->GetNonTypeParam()->type;
@@ -9579,7 +9580,7 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
 
         // Deduce template parameters from function arguments. Trying to follow C++ template argument deduction
         // algorithm.
-        for (int i = 0; i < substitutedParamTypes.size(); ++i) {
+        for (size_t i = 0; i < substitutedParamTypes.size(); ++i) {
             const Type *paramType = substitutedParamTypes[i];
             if (paramType->IsDependent()) {
                 // Try to deduce
@@ -9651,7 +9652,7 @@ FunctionSymbolExpr::getCandidateTemplateFunctions(const std::vector<const Type *
 
         // Build a complete vector of deduced template arguments.
         TemplateArgs deducedArgs;
-        for (int i = 0; i < templateParms->GetCount(); ++i) {
+        for (size_t i = 0; i < templateParms->GetCount(); ++i) {
             if (i < templateArgs.size()) {
                 deducedArgs.push_back(templateArgs[i]);
             } else {
@@ -9892,7 +9893,7 @@ int FunctionSymbolExpr::FindBestMatchCost(const std::vector<Symbol *> &actualCan
     for (int i = 0; i < (int)candidateCosts.size(); ++i) {
         if (candidateCosts[i] == bestMatchCost) {
             for (int j = 0; j < (int)candidateCosts.size(); ++j) {
-                for (int k = 0; k < argTypes.size(); k++) {
+                for (size_t k = 0; k < argTypes.size(); k++) {
                     if (candidateCosts[j] != -1 && candidateExpandCosts[j][k] < candidateExpandCosts[i][k]) {
                         std::vector<Symbol *> temp;
                         temp.push_back(actualCandidates[i]);

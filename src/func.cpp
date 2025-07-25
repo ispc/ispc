@@ -111,10 +111,10 @@ void Function::Print(Indent &indent) const {
     }
 
     indent.pushList(args.size() + 1);
-    for (int i = 0; i < args.size(); i++) {
+    for (size_t i = 0; i < args.size(); i++) {
         static constexpr std::size_t BUFSIZE{15};
         char buffer[BUFSIZE];
-        snprintf(buffer, BUFSIZE, "param %d", i);
+        snprintf(buffer, BUFSIZE, "param %zu", i);
         indent.setNextLabel(buffer);
         if (args[i]) {
             indent.Print();
@@ -761,7 +761,7 @@ void Function::GenerateIR() const {
             }
 
             if (function->getFunctionType()->getNumParams() > 0) {
-                for (int i = 0; i < function->getFunctionType()->getNumParams() - 1; i++) {
+                for (unsigned i = 0; i < function->getFunctionType()->getNumParams() - 1; i++) {
                     if (function->hasParamAttribute(i, llvm::Attribute::NoAlias)) {
                         appFunction->addParamAttr(i, llvm::Attribute::NoAlias);
                     }
@@ -1086,10 +1086,10 @@ void FunctionTemplate::Print(Indent &indent) const {
 
     indent.pushList(itemsToPrint);
     if (typenames->GetCount() > 0) {
-        for (int i = 0; i < typenames->GetCount(); i++) {
+        for (size_t i = 0; i < typenames->GetCount(); i++) {
             static constexpr std::size_t BUFSIZE{25};
             char buffer[BUFSIZE];
-            snprintf(buffer, BUFSIZE, "template param %d", i);
+            snprintf(buffer, BUFSIZE, "template param %zu", i);
             indent.setNextLabel(buffer);
             if ((*typenames)[i]) {
                 indent.Print((*typenames)[i]->IsTypeParam()
@@ -1208,7 +1208,7 @@ TemplateInstantiation::TemplateInstantiation(const TemplateParms &typeParms, con
     // Note we do that for all specified templates arguments, which number may be less than a number of template
     // parameters. In this case the rest of template parameters will be deduced later during template argumnet
     // deduction.
-    for (int i = 0; i < tArgs.size(); i++) {
+    for (size_t i = 0; i < tArgs.size(); i++) {
         std::string name = typeParms[i]->GetName();
         const TemplateArg *arg = new TemplateArg(tArgs[i]);
         argsMap[name] = arg;
