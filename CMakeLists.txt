@@ -691,7 +691,6 @@ else()
         -Wextra
         -Wno-unused-parameter
         -Wno-sign-compare
-        -Wno-unused-function
         ${LLVM_CPP_FLAGS}
     )
     # Disable warnings coming from LLVM headers
