@@ -105,9 +105,11 @@ static bool lIsLlvmBitcode(std::ifstream &is) {
     return lHasSameMagic(llvmBcMagic, is) || lHasSameMagic(llvmBcMagicWrapper, is);
 }
 
+#ifdef ISPC_XE_ENABLED
 static bool lIsSpirVBitcode(std::ifstream &is) {
     return lHasSameMagic(spirvMagic, is) || lHasSameMagic(spirvMagicInv, is);
 }
+#endif
 
 static bool lIsStdlibPseudoFile(const std::string &name) {
     // This needs to correspond to lAddImplicitInclude
