@@ -29,7 +29,7 @@ bool lCheckMask(llvm::Value *mask, unsigned &TrueSubmaskLength) {
         }
 
         unsigned TruePrefixLength = 0;
-        for (auto i = 0; i < N; i++) {
+        for (unsigned i = 0; i < N; i++) {
             llvm::Constant *E = CV->getAggregateElement(i);
             if (auto *C = llvm::dyn_cast<llvm::ConstantInt>(E)) {
                 if (C->isOne()) {

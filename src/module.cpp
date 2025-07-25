@@ -105,9 +105,11 @@ static bool lIsLlvmBitcode(std::ifstream &is) {
     return lHasSameMagic(llvmBcMagic, is) || lHasSameMagic(llvmBcMagicWrapper, is);
 }
 
+#ifdef ISPC_XE_ENABLED
 static bool lIsSpirVBitcode(std::ifstream &is) {
     return lHasSameMagic(spirvMagic, is) || lHasSameMagic(spirvMagicInv, is);
 }
+#endif
 
 static bool lIsStdlibPseudoFile(const std::string &name) {
     // This needs to correspond to lAddImplicitInclude
@@ -431,7 +433,7 @@ Expr *lCreateConstExpr(ExprList *exprList, const AtomicType::BasicType basicType
     const int N = g->target->getVectorWidth();
     bool canConstructConstExpr = true;
     // Exit early if the number of initializers is more than N
-    if (exprList->exprs.size() > N) {
+    if (exprList->exprs.size() > static_cast<size_t>(N)) {
         return nullptr;
     }
     using ManagedType =
@@ -1155,7 +1157,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
             function->addParamAttr(i, llvm::Attribute::NoAlias);
         }
 
-        Assert(decl && decl->functionParams.size() == nArgs);
+        Assert(decl && decl->functionParams.size() == static_cast<size_t>(nArgs));
         DeclSpecs *declSpecs = decl->functionParams[i]->declSpecs;
         AttributeList *attrList = declSpecs ? declSpecs->attributeList : nullptr;
         if (attrList) {

@@ -46,7 +46,7 @@ void Indent::Print(const char *title) {
     int &top = stack.back();
     Assert(top > 0);
 
-    for (int i = 0; i < (stack.size() - 1); i++) {
+    for (size_t i = 0; i < (stack.size() - 1); i++) {
         if (stack[i] == 0) {
             printf("  ");
         } else {
