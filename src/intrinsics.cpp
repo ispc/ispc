@@ -248,7 +248,7 @@ static const Type *lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) 
     else if (const llvm::VectorType *vt = llvm::dyn_cast<llvm::VectorType>(t)) {
         // check if vector length is equal to TARGET_WIDTH
         unsigned int vectorWidth = vt->getElementCount().getKnownMinValue();
-        if (vectorWidth == g->target->getVectorWidth()) {
+        if (vectorWidth == static_cast<unsigned int>(g->target->getVectorWidth())) {
             // we should never hit this case, because it should be handled by the cases above
             return nullptr;
         } else {
@@ -468,7 +468,7 @@ size_t lNextIITDescs(const IITDesc &D) {
 // The function analyzes an LLVM intrinsic (identified by its ID) and finds
 // which argument positions can accept any type. It returns these
 // positions in the provided result vector.
-void lGetOverloadedArgumentIndices(llvm::Intrinsic::ID ID, std::vector<unsigned> &result, SourcePos pos) {
+void lGetOverloadedArgumentIndices(llvm::Intrinsic::ID ID, std::vector<size_t> &result, SourcePos pos) {
     // The LLVM Intrinsic Information Table (IIT) is a data structure that
     // describes the type system and constraints for LLVM's built-in functions
     // (intrinsics). The table contains a series of descriptors, where the
@@ -494,7 +494,7 @@ void lGetOverloadedArgumentIndices(llvm::Intrinsic::ID ID, std::vector<unsigned>
     // The trick part is that return type often is any. However in ISPC, we
     // have no return type information, so we need to find the argument with
     // the same type as return value.
-    unsigned argIndex = 0;
+    size_t argIndex = 0;
     size_t i = lNextIITDescs(Table[0]);
     if (lIsAnyArgumentKind(Table[0])) {
         while (i < Table.size()) {
@@ -534,11 +534,11 @@ static std::vector<llvm::Type *> lDeductArgTypes(llvm::Module *module, llvm::Int
     if (llvm::Intrinsic::isOverloaded(ID)) {
         Assert(args);
 
-        std::vector<unsigned> nInits;
+        std::vector<size_t> nInits;
         lGetOverloadedArgumentIndices(ID, nInits, pos);
 
         Assert(nInits.size() > 0);
-        for (int i : nInits) {
+        for (size_t i : nInits) {
             Assert(i < args->exprs.size());
             const Type *argType = (args->exprs[i])->GetType();
             Assert(argType);

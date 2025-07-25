@@ -282,18 +282,18 @@ void TargetLibRegistry::printSupportMatrix() const {
     }
 
     // Collect maximum sizes for all columns
-    std::vector<int> column_sizes(table[0].size(), 7);
+    std::vector<size_t> column_sizes(table[0].size(), 7);
     for (auto &row : table) {
-        for (int i = 0; i < row.size(); i++) {
+        for (size_t i = 0; i < row.size(); i++) {
             column_sizes[i] = column_sizes[i] > row[i].size() ? column_sizes[i] : row[i].size();
         }
     }
-    int width = std::accumulate(column_sizes.begin(), column_sizes.end(), 0) + (column_sizes.size() - 1) * 3;
+    size_t width = std::accumulate(column_sizes.begin(), column_sizes.end(), (column_sizes.size() - 1) * 3);
 
     // Print the table
-    for (int i = 0; i < table.size(); i++) {
+    for (size_t i = 0; i < table.size(); i++) {
         auto row = table[i];
-        for (int j = 0; j < row.size(); j++) {
+        for (size_t j = 0; j < row.size(); j++) {
             auto align = std::string(column_sizes[j] - row[j].size(), ' ');
             printf("%s%s", row[j].c_str(), align.c_str());
             if (j + 1 != row.size()) {

@@ -342,8 +342,10 @@ static bool lCheckInit(const Type *type, Expr **init, const std::string &name) {
     } else if (CastType<StructType>(type) != nullptr && llvm::dyn_cast<ExprList>(*init) != nullptr) {
         const StructType *st = CastType<StructType>(type);
         ExprList *el = llvm::dyn_cast<ExprList>(*init);
-        int elt_count = st->GetElementCount() < el->exprs.size() ? st->GetElementCount() : el->exprs.size();
-        for (int i = 0; i < elt_count; i++) {
+        size_t elt_count = static_cast<size_t>(st->GetElementCount()) < el->exprs.size()
+                               ? static_cast<size_t>(st->GetElementCount())
+                               : el->exprs.size();
+        for (size_t i = 0; i < elt_count; i++) {
             encounteredError |= lCheckInit(st->GetElementType(i), &(el->exprs[i]), name);
         }
     } else if (CastType<UndefinedStructType>(type)) {

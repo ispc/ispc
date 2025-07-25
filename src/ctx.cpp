@@ -242,7 +242,7 @@ FunctionEmitContext::FunctionEmitContext(const Function *func, Symbol *funSym, l
     // If the function doesn't have __mask in parameters, there is no need to
     // have function mask
     if (((func->GetType()->IsExported() || func->GetType()->IsISPCExternal()) &&
-         (lf->getFunctionType()->getNumParams() == func->GetType()->GetNumParameters())) ||
+         (lf->getFunctionType()->getNumParams() == static_cast<unsigned int>(func->GetType()->GetNumParameters()))) ||
         (func->GetType()->IsUnmasked()) || func->GetType()->IsTask()) {
         functionMaskValue = nullptr;
         fullMaskAddressInfo = nullptr;
@@ -348,7 +348,7 @@ FunctionEmitContext::FunctionEmitContext(const Function *func, Symbol *funSym, l
         // The condition below checks that the function doesn't have additional `__mask` parameter.
         // If it has `__mask`, it's an internal version of export function and we don't need to set
         // FTZ/DAZ flags there.
-        (lf->getFunctionType()->getNumParams() == func->GetType()->GetNumParameters())) {
+        (lf->getFunctionType()->getNumParams() == static_cast<unsigned int>(func->GetType()->GetNumParameters()))) {
         // On ARM the size of register with FTZ/DAZ flags is platform dependent,
         // on other platforms it's always i32.
         functionFTZ_DAZValue = AllocaInst(
@@ -4293,7 +4293,7 @@ llvm::Value *FunctionEmitContext::InvokeSyclInst(llvm::Value *func, const Functi
     // Broadcast uniform function arguments to varying to match IGC signature by vISA level
     // for extern "SYCL" functions on Xe targets
     std::vector<llvm::Value *> argsFinal;
-    for (int i = 0; i < args.size(); i++) {
+    for (size_t i = 0; i < args.size(); i++) {
         llvm::Value *argCast = args[i];
         if (g->target->isXeTarget() && funcType->IsExternSYCL() && funcType->GetParameterType(i)->IsUniformType()) {
             if (!llvm::isa<llvm::VectorType>(argCast->getType())) {

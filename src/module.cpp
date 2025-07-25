@@ -433,7 +433,7 @@ Expr *lCreateConstExpr(ExprList *exprList, const AtomicType::BasicType basicType
     const int N = g->target->getVectorWidth();
     bool canConstructConstExpr = true;
     // Exit early if the number of initializers is more than N
-    if (exprList->exprs.size() > N) {
+    if (exprList->exprs.size() > static_cast<size_t>(N)) {
         return nullptr;
     }
     using ManagedType =
@@ -1157,7 +1157,7 @@ void Module::AddFunctionDeclaration(const std::string &name, const FunctionType 
             function->addParamAttr(i, llvm::Attribute::NoAlias);
         }
 
-        Assert(decl && decl->functionParams.size() == nArgs);
+        Assert(decl && decl->functionParams.size() == static_cast<size_t>(nArgs));
         DeclSpecs *declSpecs = decl->functionParams[i]->declSpecs;
         AttributeList *attrList = declSpecs ? declSpecs->attributeList : nullptr;
         if (attrList) {
