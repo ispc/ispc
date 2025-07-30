@@ -2036,4 +2036,26 @@ void FixFunctionAttribute(llvm::Function &Fn, llvm::Attribute::AttrKind attr, ll
 }
 
 #endif
+
+#ifndef NDEBUG
+// Debug wrapper functions for GDB/LLDB (Debug builds only)
+extern "C" {
+void dv(llvm::Value *v) {
+    if (v) {
+        v->dump();
+    } else {
+        fprintf(stderr, "NULL value\n");
+    }
+}
+
+void dt(llvm::Type *t) {
+    if (t) {
+        t->dump();
+    } else {
+        fprintf(stderr, "NULL type\n");
+    }
+}
+}
+#endif
+
 } // namespace ispc
