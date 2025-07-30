@@ -2,24 +2,24 @@
 // RUN: %{ispc}  %s --emit-llvm-text --target=host --nostdlib -o - | FileCheck %s
 
 // Multiplication operator checks
-// CHECK: define %v{{[0-9]*}}_varying_FMatrix @"operator*___s_5B_vyFMatrixF_5D____REFs_5B__c_vyFMatrix_5D_REFs_5B__c_vyFMatrixF_5D_"({{.*}} %A, {{.*}} %B, <{{[0-9]*}} x i32> %__mask)
+// CHECK: define %v{{[0-9]*}}_varying_FMatrix @"operator*___s_5B_vyFMatrixF_5D____REFs_5B__c_vyFMatrix_5D_REFs_5B__c_vyFMatrixF_5D_"({{.*}} %A, {{.*}} %B, <{{[0-9]*}} x i{{[0-9]*}}> %__mask)
 
 // Prefix increment operator checks
-// CHECK: define %v{{[0-9]*}}_varying_FMatrixF @"operator++___s_5B_vyFMatrixF_5D____REFs_5B_vyFMatrixF_5D_"({{.*}} %A, <{{[0-9]*}} x i32> %__mask)
+// CHECK: define %v{{[0-9]*}}_varying_FMatrixF @"operator++___s_5B_vyFMatrixF_5D____REFs_5B_vyFMatrixF_5D_"({{.*}} %A, <{{[0-9]*}} x i{{[0-9]*}}> %__mask)
 
 // Postfix increment operator checks
-// CHECK: define %v{{[0-9]*}}_varying_FMatrixF @"operator++___s_5B_vyFMatrixF_5D____REFs_5B_vyFMatrixF_5D_vyi"({{.*}} %A, <{{[0-9]*}} x i32> %__anon_parameter_1, <{{[0-9]*}} x i32> %__mask)
+// CHECK: define %v{{[0-9]*}}_varying_FMatrixF @"operator++___s_5B_vyFMatrixF_5D____REFs_5B_vyFMatrixF_5D_vyi"({{.*}} %A, <{{[0-9]*}} x i32> %__anon_parameter_1, <{{[0-9]*}} x i{{[0-9]*}}> %__mask)
 
 // Assignment operator checks
-// CHECK: define %v{{[0-9]*}}_varying_FMatrix @"operator=___s_5B_vyFMatrixF_5D____REFs_5B_vyFMatrix_5D_REFs_5B__c_vyFMatrixF_5D_"({{.*}} %A, {{.*}} %B, <{{[0-9]*}} x i32> %__mask)
+// CHECK: define %v{{[0-9]*}}_varying_FMatrix @"operator=___s_5B_vyFMatrixF_5D____REFs_5B_vyFMatrix_5D_REFs_5B__c_vyFMatrixF_5D_"({{.*}} %A, {{.*}} %B, <{{[0-9]*}} x i{{[0-9]*}}> %__mask)
 
 // CHECK-LABEL: define <{{[0-9]*}} x double> @DoMath___
-// CHECK: call %v{{[0-9]*}}_varying_FMatrix @"operator*___{{.*}}"({{.*}} %A, {{.*}} %B, <{{[0-9]*}} x i32> %__mask)
+// CHECK: call %v{{[0-9]*}}_varying_FMatrix @"operator*___{{.*}}"({{.*}} %A, {{.*}} %B, <{{[0-9]*}} x i{{[0-9]*}}> %__mask)
 
 // CHECK-LABEL: define <{{[0-9]*}} x double> @TestIncrementOperators___
-// CHECK: call %v{{[0-9]*}}_varying_FMatrixF @"operator++___s_5B_vyFMatrixF_5D____REFs_5B_vyFMatrixF_5D_"({{.*}} %A, <{{[0-9]*}} x i32>
-// CHECK: call %v{{[0-9]*}}_varying_FMatrixF @"operator++___s_5B_vyFMatrixF_5D____REFs_5B_vyFMatrixF_5D_vyi"({{.*}} %A, <{{[0-9]*}} x i32> poison, <{{[0-9]*}} x i32>
-// CHECK: call %v{{[0-9]*}}_varying_FMatrix @"operator=___s_5B_vyFMatrixF_5D____REFs_5B_vyFMatrix_5D_REFs_5B__c_vyFMatrixF_5D_"({{.*}} %D, {{.*}} %A, <{{[0-9]*}} x i32>
+// CHECK: call %v{{[0-9]*}}_varying_FMatrixF @"operator++___s_5B_vyFMatrixF_5D____REFs_5B_vyFMatrixF_5D_"({{.*}} %A, <{{[0-9]*}} x i{{[0-9]*}}>
+// CHECK: call %v{{[0-9]*}}_varying_FMatrixF @"operator++___s_5B_vyFMatrixF_5D____REFs_5B_vyFMatrixF_5D_vyi"({{.*}} %A, <{{[0-9]*}} x i32> {{.*}}, <{{[0-9]*}} x i{{[0-9]*}}>
+// CHECK: call %v{{[0-9]*}}_varying_FMatrix @"operator=___s_5B_vyFMatrixF_5D____REFs_5B_vyFMatrix_5D_REFs_5B__c_vyFMatrixF_5D_"({{.*}} %D, {{.*}} %A, <{{[0-9]*}} x i{{[0-9]*}}>
 
 struct FMatrix {
     double M[16];
