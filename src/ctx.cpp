@@ -3178,7 +3178,10 @@ void FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr, cons
         maskedStoreFunc = m->module->getFunction(builtin::__pseudo_masked_store_i16);
     } else if (llvmValueStorageType == LLVMTypes::Int8VectorType) {
         maskedStoreFunc = m->module->getFunction(builtin::__pseudo_masked_store_i8);
-        value = SwitchBoolToStorageType(value, llvmValueStorageType);
+        // Do not mix i8 types with bool type, only bool type requires the special handling.
+        if (valueType->IsBoolType()) {
+            value = SwitchBoolToStorageType(value, llvmValueStorageType);
+        }
     }
     AssertPos(currentPos, maskedStoreFunc != nullptr);
 
