@@ -166,7 +166,7 @@ template <typename T, uint N> inline uniform T<N> select(uniform bool cond, unif
     uniform T<N> result;
 
     foreach (i = 0 ... N) {
-        result[i] = select((UIntMaskType)cond, t[i], f[i]);
+        result[i] = select(cond, t[i], f[i]);
     }
 
     return result;
@@ -176,7 +176,7 @@ template <typename T, uint N> inline uniform T<N> select(uniform bool<N> cond, u
     uniform T<N> result;
 
     foreach (i = 0 ... N) {
-        result[i] = select((UIntMaskType)cond[i], t[i], f[i]);
+        result[i] = select(cond[i], t[i], f[i]);
     }
 
     return result;
