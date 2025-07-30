@@ -2525,8 +2525,11 @@ llvm::Value *FunctionEmitContext::lSwitchBoolSize_2(llvm::Value *value, llvm::Ty
     llvm::Type *fromType = value->getType();
 
     if (fromType == toType) {
-        // No cast is needed
-        return value;
+        // if mask size and bool size is equal then cast is needed (for the proper sign extension)
+        if (g->target->getMaskBitCount() != 8) {
+            // No cast is needed
+            return value;
+        }
     }
 
     // Internal representation of bool matches mask behaviour that requires
@@ -2903,6 +2906,7 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
 
     // bool type is stored as i8. So, it requires some processing.
     if (returnType->IsBoolType()) {
+        // TODO!: should we just call SwitchBoolToStorageType here unconditionally?
         if (g->target->getDataLayout()->getTypeSizeInBits(returnType->LLVMStorageType(g->ctx)) <
             g->target->getDataLayout()->getTypeSizeInBits(llvmReturnType)) {
             // This is needed when array of bool is passed in from cpp side
@@ -2920,6 +2924,9 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
         } else if (g->target->getDataLayout()->getTypeSizeInBits(returnType->LLVMStorageType(g->ctx)) >
                    g->target->getDataLayout()->getTypeSizeInBits(llvmReturnType)) {
             gatherCall = TruncInst(gatherCall, llvmReturnType);
+        } else {
+            gatherCall =
+                SwitchBoolToMaskType(gatherCall, llvmReturnType, llvm::Twine(gatherCall->getName()) + "_bool_to_mask");
         }
     }
     return gatherCall;
