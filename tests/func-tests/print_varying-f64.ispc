@@ -1,7 +1,7 @@
 #include "test_static.isph"
 // rule: skip on cpu=tgllp
 // rule: skip on cpu=dg2
-
+// rule: skip on jit=true
 task void print_f(uniform float aFOO[]) {
     double a = aFOO[programIndex];
     int intA = a;

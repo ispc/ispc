@@ -1,7 +1,7 @@
 #include "test_static.isph"
 // rule: skip on cpu=tgllp
 // rule: skip on cpu=dg2
-
+// rule: skip on jit=true
 task void print_uf(uniform float a) {
     uniform int intA = (int)a;
     uniform double uniDoubleVal  =  a + 13.25;

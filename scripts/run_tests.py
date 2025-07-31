@@ -405,7 +405,10 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure, sig, exe_wd="."):
 
 
 def add_prefix(path, host, target):
-    if host.is_windows():
+    # In JIT mode, we don't use temp directories, so no prefix needed
+    if hasattr(options, 'jit_mode') and options.jit_mode:
+        input_prefix = ""
+    elif host.is_windows():
     # On Windows we run tests in tmp dir, so the root is one level up.
         input_prefix = "..\\"
     else:
@@ -519,7 +522,7 @@ def check_if_skip_test(filename, host, target):
     return skip
 
 
-def run_test(testname, host, target):
+def run_test(testname, host, target, jit_lib_path=None):
     # testname is a path to the test from the root of ispc dir
     # filename is a path to the test from the current dir
     # ispc_exe_rel is a relative path to ispc
@@ -609,15 +612,25 @@ def run_test(testname, host, target):
                 else:
                     exe_name = "%s.exe" % os.path.basename(filename)
 
-                cc_cmd = "%s /Itests /Zi /nologo /DTEST_SIG=%d /DTEST_WIDTH=%d %s %s /Fe%s" % \
-                         (options.compiler_exe, match, width, add_prefix("tests\\test_static.cpp", host, target), obj_name, exe_name)
+                test_file = "tests\\test_static_jit.cpp" if options.jit_mode else "tests\\test_static.cpp"
+                if options.jit_mode:
+                    # For JIT mode, we need to link against the ISPC library and don't use object files
+                    include_path = "src\\include"
+                    # Use unique object file name to avoid conflicts in parallel execution
+                    obj_file = "%s.obj" % os.path.basename(filename)
+                    cc_cmd = "%s /Itests /I%s /nologo /DTEST_SIG=%d /DTEST_WIDTH=%d %s ispc.lib /Fo%s /Fe%s /link /LIBPATH:%s" % \
+                             (options.compiler_exe, include_path, match, width, add_prefix(test_file, host, target), obj_file, exe_name, jit_lib_path)
+                else:
+                    cc_cmd = "%s /Itests /Zi /nologo /DTEST_SIG=%d /DTEST_WIDTH=%d %s %s /Fe%s" % \
+                             (options.compiler_exe, match, width, add_prefix(test_file, host, target), obj_name, exe_name)
                 # Increase the stack size for Windows up to 8MB because some
                 # tests for -O0/x86 can generate quite large stack frames.
                 cc_cmd += " /F8388608"
                 if target.is_xe():
+                    l0_test_file = "tests\\test_static_l0.cpp"
                     cc_cmd = "%s /Itests /I%s\\include /nologo /DTEST_SIG=%d /DTEST_WIDTH=%d %s %s /Fe%s ze_loader.lib /link /LIBPATH:%s\\lib" % \
                          (options.compiler_exe, options.l0loader, match, width, " /DTEST_ZEBIN" if options.ispc_output == "ze" else " /DTEST_SPV", \
-                         add_prefix("tests\\test_static_l0.cpp", host, target), exe_name, options.l0loader)
+                         add_prefix(l0_test_file, host, target), exe_name, options.l0loader)
                 if options.calling_conv == "vectorcall":
                     cc_cmd += " /DVECTORCALL_CONV"
                 if should_fail:
@@ -644,8 +657,14 @@ def run_test(testname, host, target):
                 else:
                     gcc_arch = '-m64'
 
-                cc_cmd = "%s -O2 -I tests/ %s tests/test_static.cpp -DTEST_SIG=%d -DTEST_WIDTH=%d %s -o %s" % \
-                    (options.compiler_exe, gcc_arch, match, width, obj_name, exe_name)
+                test_file = "tests/test_static_jit.cpp" if options.jit_mode else "tests/test_static.cpp"
+                if options.jit_mode:
+                    # For JIT mode, we need to link against the ISPC library and don't use object files
+                    cc_cmd = "%s -O2 -I tests/ -I src/include %s %s -DTEST_SIG=%d -DTEST_WIDTH=%d -lispc -L%s -Wl,-rpath,%s -o %s" % \
+                        (options.compiler_exe, gcc_arch, test_file, match, width, jit_lib_path, jit_lib_path, exe_name)
+                else:
+                    cc_cmd = "%s -O2 -I tests/ %s %s -DTEST_SIG=%d -DTEST_WIDTH=%d %s -o %s" % \
+                        (options.compiler_exe, gcc_arch, test_file, match, width, obj_name, exe_name)
 
                 # Produce position independent code for both c++ and ispc compilations.
                 # The motivation for this is that Clang 15 changed default
@@ -657,14 +676,20 @@ def run_test(testname, host, target):
 
                 if target.is_xe():
                     exe_name = "%s.run" % os.path.basename(testname)
+                    l0_test_file = "tests/test_static_l0.cpp"
                     cc_cmd = "%s -O0 -I tests -I %s/include -lze_loader -L %s/lib \
                             %s %s -DTEST_SIG=%d -DTEST_WIDTH=%d -o %s" % \
-                            (options.compiler_exe, options.l0loader, options.l0loader, gcc_arch, add_prefix("tests/test_static_l0.cpp", host, target),
+                            (options.compiler_exe, options.l0loader, options.l0loader, gcc_arch, add_prefix(l0_test_file, host, target),
                              match, width, exe_name)
                     exe_name = "./" + exe_name
                     cc_cmd += " -DTEST_ZEBIN" if options.ispc_output == "ze" else " -DTEST_SPV"
-            ispc_cmd = ispc_exe_rel + " -I %s --pic --woff %s -o %s --arch=%s --target=%s -DTEST_SIG=%d" % \
-                        (test_dir, filename, obj_name, options.arch, xe_target if target.is_xe() else options.target, match)
+            if options.jit_mode:
+                # In JIT mode, we don't need to pre-compile ISPC files as they're compiled at runtime
+                # We just need to ensure the test file is available
+                ispc_cmd = "echo JIT mode: ISPC file will be compiled at runtime"
+            else:
+                ispc_cmd = ispc_exe_rel + " -I %s --pic --woff %s -o %s --arch=%s --target=%s -DTEST_SIG=%d" % \
+                            (test_dir, filename, obj_name, options.arch, xe_target if target.is_xe() else options.target, match)
 
             if target.is_xe():
                 ispc_cmd += " --emit-zebin" if options.ispc_output == "ze" else " --emit-spirv"
@@ -694,9 +719,10 @@ def run_test(testname, host, target):
                 options.wrapexe += " --experimental-wasm-memory64"
             exe_wd = os.path.realpath("./tests")
         # compile the ispc code, make the executable, and run it...
-        header = f"{filename}.h"
-        ispc_cmd += " -h " + header
-        cc_cmd += f" -DTEST_HEADER=\"<{header}>\""
+        if not options.jit_mode:
+            header = f"{filename}.h"
+            ispc_cmd += " -h " + header
+            cc_cmd += f" -DTEST_HEADER=\"<{header}>\""
 
         if options.nanobind:
             module_name = canonicalize_filename(filename)
@@ -717,12 +743,18 @@ def run_test(testname, host, target):
             # Import the freshly built module and call the test function from it
             status = call_test_function(module_name, match, def2sig[match], width, options.verbose)
         else:
-            status = run_cmds([ispc_cmd, cc_cmd], options.wrapexe + " " + exe_name,
-                              testname, should_fail, match, exe_wd=exe_wd)
+            if options.jit_mode:
+                # In JIT mode, pass the ISPC file and target to the test executable
+                run_cmd = options.wrapexe + " " + exe_name + " " + filename + " " + (xe_target if target.is_xe() else options.target)
+                status = run_cmds([ispc_cmd, cc_cmd], run_cmd, testname, should_fail, match, exe_wd=exe_wd)
+            else:
+                status = run_cmds([ispc_cmd, cc_cmd], options.wrapexe + " " + exe_name,
+                                  testname, should_fail, match, exe_wd=exe_wd)
 
         # clean up after running the test
         try:
-            os.unlink(header)
+            if not options.jit_mode:
+                os.unlink(header)
             if options.nanobind:
                 os.unlink(nb_wrapper)
                 if not options.save_bin:
@@ -734,12 +766,22 @@ def run_test(testname, host, target):
                         basename = os.path.basename(filename)
                         os.unlink("%s.pdb" % basename)
                         os.unlink("%s.ilk" % basename)
-                os.unlink(obj_name)
+                if not options.jit_mode:
+                    os.unlink(obj_name)
                 os.unlink(filename + ".wasm")
                 os.unlink(filename + ".js")
                 os.unlink(filename + ".html")
         except:
             None
+
+        # Clean up JIT mode object file on Windows (outside try/except to avoid silent failures)
+        if options.jit_mode and host.is_windows() and not options.save_bin:
+            try:
+                obj_file = "%s.obj" % os.path.basename(filename)
+                if os.path.exists(obj_file):
+                    os.unlink(obj_file)
+            except Exception as e:
+                print(f"Warning: Failed to clean up JIT object file {obj_file}: {e}")
 
         return status
 
@@ -756,8 +798,9 @@ def run_tasks_from_queue(queue, queue_ret, total_tests_arg, max_test_length_arg,
     target = glob_var[3]
     global run_tests_log
     run_tests_log = glob_var[4]
+    jit_lib_path = glob_var[5]
 
-    if host.is_windows() or target.is_xe():
+    if (host.is_windows() or target.is_xe()) and not options.jit_mode:
         tmpdir = "tmp%d" % os.getpid()
         while os.access(tmpdir, os.F_OK):
             tmpdir = "%sx" % tmpdir
@@ -770,7 +813,7 @@ def run_tasks_from_queue(queue, queue_ret, total_tests_arg, max_test_length_arg,
         status = Status.Skip
         if not check_if_skip_test(filename, host, target):
             try:
-                status = run_test(filename, host, target)
+                status = run_test(filename, host, target, jit_lib_path)
             except:
                 # This is in case the child has unexpectedly died or some other exception happened
                 # Count it as runfail and continue with next test.
@@ -1040,6 +1083,56 @@ def check_compiler_exists(compiler_exe):
             return
     error("missing the required compiler: %s \n" % compiler_exe, 1)
 
+# determine the ISPC library path for JIT mode
+def get_jit_library_path(host, options):
+    if options.jit_lib_path:
+        lib_path = options.jit_lib_path
+    else:
+        # Auto-discover library path
+        ispc_dir = os.path.dirname(os.path.abspath(host.ispc_exe))
+
+        if host.is_windows():
+            # On Windows: ispc.exe is in build/bin/Release, ispc.lib is in build/Release
+            # So from build/bin/Release, go up to build, then check Release/Debug
+            build_dir = os.path.dirname(os.path.dirname(ispc_dir))  # build/bin/Release -> build
+            release_lib_path = os.path.join(build_dir, "Release")
+            debug_lib_path = os.path.join(build_dir, "Debug")
+            if os.path.exists(release_lib_path):
+                lib_path = release_lib_path
+            elif os.path.exists(debug_lib_path):
+                lib_path = debug_lib_path
+            else:
+                # Fallback to build/lib
+                lib_path = os.path.join(build_dir, "lib")
+        else:
+            # For all other platforms: <path_to_ispc>/../lib
+            lib_path = os.path.join(os.path.dirname(ispc_dir), "lib")
+
+    # Validate library path exists
+    if not os.path.exists(lib_path):
+        error("ISPC library directory not found: %s\n" % lib_path, 1)
+
+    # Check for library file existence
+    if host.is_windows():
+        # Check for import library (for linking)
+        lib_file = os.path.join(lib_path, "ispc.lib")
+        if not os.path.exists(lib_file):
+            error("ISPC import library not found: %s\n" % lib_file, 1)
+
+        # Also check that DLL exists in bin directory (for runtime)
+        ispc_dir = os.path.dirname(os.path.abspath(host.ispc_exe))
+        dll_file = os.path.join(ispc_dir, "ispc.dll")
+        if not os.path.exists(dll_file):
+            error("ISPC runtime library not found: %s\n" % dll_file, 1)
+    else:
+        # On Unix systems, check for both static and shared libraries
+        macos_lib = os.path.join(lib_path, "libispc.dylib")
+        linux_lib = os.path.join(lib_path, "libispc.so")
+        if not os.path.exists(macos_lib) and not os.path.exists(linux_lib):
+            error("ISPC library file not found. Checked:\n  %s\n  %s\n" % (macos_lib, linux_lib), 1)
+
+    return lib_path
+
 def print_result(status, results, s, run_tests_log, csv):
     title = StatusStr[status]
     file_list = [fname for fname, fstatus in results if status == fstatus]
@@ -1091,6 +1184,16 @@ def run_tests(options1, args, print_version):
         exit_code = 1
         return 0
 
+    if options.jit_mode and options.nanobind:
+        print("--jit mode is not compatible with --nanobind mode")
+        exit_code = 1
+        return 0
+
+    if options.jit_mode and target.is_xe():
+        print("--jit mode is not yet supported for xe targets")
+        exit_code = 1
+        return 0
+
     print_debug("Testing ISPC compiler: " + host.ispc_exe + "\n", s, run_tests_log)
     print_debug("Testing ISPC target: %s\n" % options.target, s, run_tests_log)
     print_debug("Testing ISPC arch: %s\n" % options.arch, s, run_tests_log)
@@ -1098,6 +1201,11 @@ def run_tests(options1, args, print_version):
 
     set_compiler_exe(host, options)
     set_ispc_output(target, options)
+
+    # Get JIT library path if JIT mode is enabled
+    if options.jit_mode:
+        jit_lib_path = get_jit_library_path(host, options)
+        print_debug("JIT library path: %s\n" % jit_lib_path, s, run_tests_log)
 
     # print compilers versions
     if print_version > 0:
@@ -1144,7 +1252,8 @@ def run_tests(options1, args, print_version):
 
     start_time = time.time()
     # launch jobs to run tests
-    glob_var = [host, options, s, target, run_tests_log]
+    jit_lib_path_for_workers = jit_lib_path if options.jit_mode else None
+    glob_var = [host, options, s, target, run_tests_log, jit_lib_path_for_workers]
     # task_threads has to be global as it is used in sigint handler
     global task_threads
     task_threads = [0] * nthreads
@@ -1288,6 +1397,8 @@ if __name__ == "__main__":
     parser.add_option('--test_time', dest="test_time", help="time needed for each test", default=600, type="int", action="store")
     parser.add_option('--calling_conv', dest="calling_conv", help="Specify the calling convention to use", default=None, type="str", action="store")
     parser.add_option("--nanobind", dest='nanobind', help='Enable nanobind compilation mode', default=False, action="store_true")
+    parser.add_option("--jit", dest='jit_mode', help='Enable JIT compilation mode', default=False, action="store_true")
+    parser.add_option("--jit-lib-path", dest='jit_lib_path', help='Path to ISPC library directory for JIT mode', default=None)
 
     (options, args) = parser.parse_args()
     L = run_tests(options, args, 1)
