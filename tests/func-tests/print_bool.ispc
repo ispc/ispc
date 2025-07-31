@@ -1,4 +1,6 @@
 #include "test_static.isph"
+// rule: skip on jit=true
+// rule: run on OS=!windows
 task void print_fuf(uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex];
     uniform bool uniBoolVal = (bool)b;

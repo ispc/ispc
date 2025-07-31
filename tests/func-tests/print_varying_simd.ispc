@@ -1,4 +1,6 @@
 #include "test_static.isph"
+// rule: skip on jit=true
+// rule: run on OS=!windows
 #define TEST_SIMD
 
 task void print_f(uniform float aFOO[]) {

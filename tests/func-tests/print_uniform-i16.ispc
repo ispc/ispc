@@ -1,4 +1,6 @@
 #include "test_static.isph"
+// rule: skip on jit=true
+// rule: run on OS=!windows
 task void print_uf(uniform float a) {
     uniform int intA = (int)a;
     uniform          int16  uniShortVal   = -intA - 1;

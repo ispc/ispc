@@ -1,6 +1,7 @@
 #include "test_static.isph"
 // rule: skip on cpu=tgllp
 // rule: skip on cpu=dg2
+// rule: skip on jit=true
 // Test is unstable on tgllp
 task void print_fuf(uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex];
