@@ -56,6 +56,12 @@ class ISPCEngine::Impl {
     bool IsLinkMode() const { return m_isLinkMode; }
 
     int Compile() {
+        // Validate input file
+        if (!ValidateInput(m_file)) {
+            return 1;
+        }
+        // Validate output files
+        ValidateOutput(m_output);
         if (g->enableTimeTrace) {
             llvm::timeTraceProfilerInitialize(g->timeTraceGranularity, "ispc");
         }
