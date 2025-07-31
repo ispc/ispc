@@ -1056,25 +1056,6 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
         return result;
     }
 
-    if (file.empty()) {
-        Error(SourcePos(), "No input file were specified. To read text from stdin use \"-\" as file name.");
-        return ArgsParseResult::failure;
-    }
-
-    if (file != "-") {
-        // If the input is not stdin then check that the file exists and it is
-        // not a directory.
-        if (!llvm::sys::fs::exists(file)) {
-            Error(SourcePos(), "File \"%s\" does not exist.", file.c_str());
-            return ArgsParseResult::failure;
-        }
-
-        if (llvm::sys::fs::is_directory(file)) {
-            Error(SourcePos(), "File \"%s\" is a directory.", file.c_str());
-            return ArgsParseResult::failure;
-        }
-    }
-
     if (g->genStdlib) {
         std::string stdlib = "stdlib/stdlib.ispc";
         std::string generic = "builtins/generic.ispc";
@@ -1185,13 +1166,6 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
         output.out = "-"; // Assume stdout by default (-E mode)
     }
 
-    if (output.out.empty() && output.header.empty() && (output.deps.empty() && !output.flags.isDepsToStdout()) &&
-        output.hostStub.empty() && output.devStub.empty() && output.nbWrap.empty()) {
-        Warning(SourcePos(), "No output file or header file name specified. "
-                             "Program will be compiled and warnings/errors will "
-                             "be issued, but no output will be generated.");
-    }
-
     if (g->target_os == TargetOS::windows && output.flags.isPIC()) {
         Warning(SourcePos(), "--pic|--PIC switches for Windows target will be ignored.");
     }
@@ -1260,4 +1234,39 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
     // This needs to happen after the TargetOS is decided.
     setCallingConv(vectorCall, arch);
     return ArgsParseResult::success;
+}
+
+bool ispc::ValidateInput(const std::string &filename, bool allowStdin) {
+    if (filename.empty()) {
+        if (allowStdin) {
+            Error(SourcePos(), "No input file were specified. To read text from stdin use \"-\" as file name.");
+        } else {
+            Error(SourcePos(), "No input file specified.");
+        }
+        return false;
+    }
+
+    if (filename != "-") {
+        // If the input is not stdin then check that the file exists and it is
+        // not a directory.
+        if (!llvm::sys::fs::exists(filename)) {
+            Error(SourcePos(), "File \"%s\" does not exist.", filename.c_str());
+            return false;
+        }
+
+        if (llvm::sys::fs::is_directory(filename)) {
+            Error(SourcePos(), "File \"%s\" is a directory.", filename.c_str());
+            return false;
+        }
+    }
+    return true;
+}
+
+void ispc::ValidateOutput(const Module::Output &output) {
+    if (output.out.empty() && output.header.empty() && (output.deps.empty() && !output.flags.isDepsToStdout()) &&
+        output.hostStub.empty() && output.devStub.empty() && output.nbWrap.empty()) {
+        Warning(SourcePos(), "No output file or header file name specified. "
+                             "Program will be compiled and warnings/errors will "
+                             "be issued, but no output will be generated.");
+    }
 }

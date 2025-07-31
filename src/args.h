@@ -47,4 +47,16 @@ ArgsParseResult ParseCommandLineArgs(int argc, char *argv[], std::string &file, 
                                      std::vector<ISPCTarget> &targets, struct Module::Output &output,
                                      std::vector<std::string> &linkFileNames, bool &isLinkMode);
 
+/** Validate input file name
+ *  @param filename Input file name to validate
+ *  @param allowStdin Whether to allow stdin ("-") as input (default: true)
+ *  @return true if input is valid, false otherwise
+ */
+bool ValidateInput(const std::string &filename, bool allowStdin = true);
+
+/** Validate output configuration and warn if no output specified
+ *  @param output Output configuration to validate
+ */
+void ValidateOutput(const Module::Output &output);
+
 } // namespace ispc
