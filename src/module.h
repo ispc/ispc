@@ -366,6 +366,9 @@ class Module {
     static int CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, std::vector<ISPCTarget> &targets,
                                 Output &output);
 
+    static std::unique_ptr<llvm::Module> CompileToLLVMModule(const char *srcFile, Arch arch, const char *cpu,
+                                                             std::vector<ISPCTarget> &targets);
+
     static int LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputType, std::string outFileName);
 
     const char *RegisterDependency(const std::string &fileName);
