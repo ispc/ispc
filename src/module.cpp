@@ -2682,6 +2682,57 @@ int Module::CompileAndOutput(const char *srcFile, Arch arch, const char *cpu, st
     }
 }
 
+std::unique_ptr<llvm::Module> Module::CompileToLLVMModule(const char *srcFile, Arch arch, const char *cpu,
+                                                          std::vector<ISPCTarget> &targets) {
+    // We need to ensure we have a proper target set up
+    if (!g->target) {
+        // Create a default target for JIT compilation
+        Module::OutputFlags defaultFlags;
+        ISPCTarget target = targets.empty() ? ISPCTarget::host : targets[0];
+        auto targetPtr =
+            Target::Create(arch, cpu, target, defaultFlags.getPICLevel(), defaultFlags.getMCModel(), false);
+        if (!targetPtr) {
+            Error(SourcePos(), "Failed to create target for JIT compilation");
+            return nullptr;
+        }
+        // Set global target (this will be cleaned up by Target destructor)
+        g->target = targetPtr.release();
+    }
+
+    // Save the current global module pointer
+    Module *savedModule = m;
+
+    // Create a temporary ISPC module for compilation
+    auto tempModule = std::make_unique<Module>(srcFile);
+
+    // Set the global module pointer for the duration of compilation
+    m = tempModule.get();
+
+    // Compile the file
+    int compileResult = tempModule->CompileFile();
+
+    // Restore the original global module pointer
+    m = savedModule;
+
+    if (compileResult != 0) {
+        Error(SourcePos(), "Failed to compile ISPC code: %d errors", compileResult);
+        return nullptr;
+    }
+
+    // Extract the LLVM module
+    llvm::Module *llvmModule = tempModule->module;
+    if (!llvmModule) {
+        Error(SourcePos(), "No LLVM module generated from ISPC compilation");
+        return nullptr;
+    }
+
+    // Transfer ownership of the module from the ISPC Module to our JIT
+    // Release it from the ISPC Module to avoid double deletion
+    tempModule->module = nullptr;
+
+    return std::unique_ptr<llvm::Module>(llvmModule);
+}
+
 int Module::LinkAndOutput(std::vector<std::string> linkFiles, OutputType outputType, std::string outFileName) {
     auto llvmLink = std::make_unique<llvm::Module>("llvm-link", *g->ctx);
     llvm::Linker linker(*llvmLink);

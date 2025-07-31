@@ -77,11 +77,57 @@ class ISPCEngine {
      */
     int Execute();
 
+    /**
+     * @brief Compiles ISPC code from a file using JIT compilation.
+     * @param filename Path to the ISPC source file.
+     * @return 0 on success, non-zero on failure.
+     */
+    int CompileFromFileToJit(const std::string &filename);
+
+    /**
+     * @brief Retrieves a function pointer from JIT-compiled code.
+     * @param functionName Name of the exported function.
+     * @return Function pointer or nullptr if not found.
+     */
+    void *GetJitFunction(const std::string &functionName);
+
+    /**
+     * @brief Sets a user-provided runtime function for JIT compilation.
+     * Runtime functions must be provided before calling CompileFromFileToJit().
+     * @param functionName Name of the runtime function (e.g., "ISPCLaunch", "ISPCSync", "ISPCAlloc")
+     * @param functionPtr Pointer to the user-provided function implementation
+     * @return true on success, false if functionName is invalid or functionPtr is null
+     */
+    bool SetJitRuntimeFunction(const std::string &functionName, void *functionPtr);
+
+    /**
+     * @brief Clears a specific runtime function.
+     * @param functionName Name of the function to clear
+     */
+    void ClearJitRuntimeFunction(const std::string &functionName);
+
+    /**
+     * @brief Clears all runtime functions.
+     */
+    void ClearJitRuntimeFunctions();
+
+    /**
+     * @brief Clears all JIT-compiled code.
+     */
+    void ClearJitCode();
+
     ~ISPCEngine();
 
   private:
     ISPCEngine();
 
+    /**
+     * @brief Checks if the engine is in JIT mode.
+     * @return true if JIT mode is active, false otherwise.
+     */
+    bool IsJitMode() const;
+
+  private:
     class Impl;
     std::unique_ptr<Impl> pImpl;
 };

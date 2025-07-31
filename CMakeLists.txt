@@ -102,6 +102,7 @@ option(ISPC_INCLUDE_RT "Generate build targets for ISPC runtime." ON)
 option(ISPC_INCLUDE_UTILS "Generate build targets for the utils." ON)
 option(ISPC_INCLUDE_UTILS_ONLY "Generate build targets only for the utils." OFF)
 option(ISPC_LIBRARY "Build ISPC as a library" ON)
+option(ISPC_LIBRARY_JIT "Build ISPC as a library with JIT capabilities" ON)
 option(ISPC_PREPARE_PACKAGE "Generate build targets for ispc package" OFF)
 option(ISPC_PACKAGE_EXAMPLES "Pack examples into the ISPC package" ON)
 option(ISPC_SLIM_BINARY "Build ISPC as slim binary" OFF)
@@ -111,7 +112,11 @@ if (ISPC_SLIM_BINARY)
     if (ISPC_LIBRARY)
         message(WARNING "ISPC_LIBRARY is being forced to OFF because ISPC_SLIM_BINARY is ON")
     endif()
+    if (ISPC_LIBRARY_JIT)
+        message(WARNING "ISPC_LIBRARY_JIT is being forced to OFF because ISPC_SLIM_BINARY is ON")
+    endif()
     set(ISPC_LIBRARY OFF CACHE BOOL "Build ISPC as a library" FORCE)
+    set(ISPC_LIBRARY_JIT OFF CACHE BOOL "Build ISPC as a library with JIT capabilities" FORCE)
 endif()
 
 # Build target for utility checking host ISA
@@ -406,6 +411,9 @@ endif()
 set(CLANG_LIBRARY_LIST clangFrontend clangBasic clangEdit clangLex clangSupport clangASTMatchers)
 
 set(LLVM_COMPONENTS engine ipo bitreader bitwriter instrumentation linker option frontendopenmp passes)
+if (ISPC_LIBRARY_JIT)
+    list(APPEND LLVM_COMPONENTS orcjit)
+endif()
 
 # windowsdriver is a small library introduced in LLVM 15. While it's targeted at Windows only,
 # it's used in the LLVM code without any ifdef and is needed on all platforms.
@@ -653,7 +661,14 @@ if (ISPC_UNIX_TARGET)
 else()
     list(APPEND COMPILE_DEFINITIONS ISPC_UNIX_TARGET_OFF)
 endif()
-
+if (ISPC_LIBRARY_JIT)
+    list(APPEND COMPILE_DEFINITIONS ISPC_JIT_ON)
+else()
+    list(APPEND COMPILE_DEFINITIONS ISPC_JIT_OFF)
+endif()
+if (ISPC_LIBRARY)
+    list(APPEND COMPILE_DEFINITIONS ISPC_IS_LIBRARY)
+endif()
 
 # Include directories
 list(APPEND INCLUDE_DIRECTORIES
@@ -877,6 +892,7 @@ endfunction()
 # This function configures library target.
 function(configure_ispc_lib TARGET)
     configure_ispc_obj(${TARGET})
+    target_compile_definitions(${TARGET} PRIVATE ${ISPC_IS_LIBRARY})
     target_link_options(${TARGET} PRIVATE ${LINK_OPTIONS_PRIVATE})
     target_link_options(${TARGET} PUBLIC ${LINK_OPTIONS_PUBLIC})
     set_target_properties(${TARGET} PROPERTIES
