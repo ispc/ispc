@@ -70,6 +70,7 @@
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
 #include <llvm/Transforms/Scalar/InferAlignment.h>
 #endif
+#include <llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h>
 #include <llvm/Transforms/Scalar/InstSimplifyPass.h>
 #include <llvm/Transforms/Scalar/JumpThreading.h>
 #include <llvm/Transforms/Scalar/LICM.h>
@@ -653,6 +654,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addFunctionPass(llvm::InferAlignmentPass());
 #endif
         optPM.addFunctionPass(llvm::InstCombinePass());
+        optPM.addFunctionPass(llvm::AggressiveInstCombinePass());
         optPM.addFunctionPass(InstructionSimplifyPass());
 #ifdef ISPC_XE_ENABLED
         if (g->target->isXeTarget()) {
