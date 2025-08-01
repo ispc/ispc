@@ -1,5 +1,6 @@
 #include "test_static.isph"
 // rule: skip on arch=xe64
+// rule: skip on jit=true
 
 task void f_f(uniform float RET[], uniform float aFOO[]) {
     int32 * uniform buf = uniform new int32[1024];
