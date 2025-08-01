@@ -119,9 +119,6 @@ jobs:
       fail-fast: false
       matrix:
         llvm:
-          - version: "17.0"
-            full_version: "17.0.6"
-            short_version: 17
           - version: "18.1"
             full_version: "18.1.8"
             short_version: 18
@@ -188,7 +185,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        llvm: [17, 18, 19, 20]
+        llvm: [18, 19, 20]
         arch: [x86, x86-64]
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
@@ -331,9 +328,6 @@ jobs:
       matrix:
         runner: [macos-13, macos-14]
         llvm:
-          - version: "17.0"
-            full_version: "17.0.6"
-            short_version: 17
           - version: "18.1"
             full_version: "18.1.8"
             short_version: 18
@@ -367,7 +361,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        llvm: [17, 18, 19, 20]
+        llvm: [18, 19, 20]
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
       platform: macos
@@ -424,10 +418,6 @@ jobs:
       fail-fast: false
       matrix:
         llvm:
-          - version: "17.0"
-            full_version: "17.0.6"
-            short_version: 17
-            vs_version: "vs2019"
           - version: "18.1"
             full_version: "18.1.8"
             short_version: 18
@@ -486,7 +476,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        llvm: [17, 18, 19, 20]
+        llvm: [18, 19, 20]
         arch: [x86, x86-64]
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
