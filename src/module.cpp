@@ -1772,15 +1772,9 @@ bool Module::writeObjectFileOrAssembly(llvm::Module *M, Output &CO) {
 
     // Figure out if we're generating object file or assembly output, and
     // set binary output for object files
-#if ISPC_LLVM_VERSION > ISPC_LLVM_17_0
     llvm::CodeGenFileType fileType =
         (CO.type == Object) ? llvm::CodeGenFileType::ObjectFile : llvm::CodeGenFileType::AssemblyFile;
     bool binary = (fileType == llvm::CodeGenFileType::ObjectFile);
-#else
-    llvm::CodeGenFileType fileType = (CO.type == Object) ? llvm::CGFT_ObjectFile : llvm::CGFT_AssemblyFile;
-    bool binary = (fileType == llvm::CGFT_ObjectFile);
-
-#endif
     llvm::sys::fs::OpenFlags flags = binary ? llvm::sys::fs::OF_None : llvm::sys::fs::OF_Text;
 
     std::error_code error;
