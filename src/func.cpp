@@ -313,13 +313,8 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
 
     // This attribute is required for LoopUnroll passes when -O1
     if (g->opt.level == 1) {
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
         if ((!function->hasFnAttribute(llvm::Attribute::OptimizeNone)) &&
-            (!function->hasFnAttribute(llvm::Attribute::OptimizeForDebugging)))
-#else
-        if (!function->hasFnAttribute(llvm::Attribute::OptimizeNone))
-#endif
-        {
+            (!function->hasFnAttribute(llvm::Attribute::OptimizeForDebugging))) {
             function->addFnAttr(llvm::Attribute::OptimizeForSize);
         }
     }

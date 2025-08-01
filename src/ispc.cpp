@@ -48,11 +48,7 @@
 #include <llvm/TargetParser/ARMTargetParser.h>
 #endif // ISPC_ARM_ENABLED
 
-#if ISPC_LLVM_VERSION > ISPC_LLVM_17_0
 using CodegenOptLevel = llvm::CodeGenOptLevel;
-#else
-using CodegenOptLevel = llvm::CodeGenOpt::Level;
-#endif
 
 using namespace ispc;
 
@@ -153,11 +149,7 @@ static std::vector<llvm::StringRef> lGetARMTargetFeatures(Arch arch, const std::
                 Error(SourcePos(), "Invalid CPU name for AArch64 architecture: %s", cpu.c_str());
                 return {};
             }
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
             using CpuExtensionsType = llvm::AArch64::ExtensionBitset;
-#else
-            using CpuExtensionsType = uint64_t;
-#endif
             CpuExtensionsType cpuExtensions = cpuInfo->getImpliedExtensions();
             llvm::AArch64::getExtensionFeatures(cpuExtensions, targetFeatures);
         } else {
@@ -350,10 +342,8 @@ typedef enum {
     CPU_MTL,
     CPU_SPR,
     CPU_GNR,
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
     CPU_ARL,
     CPU_LNL,
-#endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
     CPU_DMR,
 #endif
@@ -381,9 +371,7 @@ typedef enum {
 
     // ARM Cortex A510, A520. Supports Armv9-A + SVE/SVE2.
     CPU_CortexA510,
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
     CPU_CortexA520,
-#endif
     // Apple CPUs.
     CPU_AppleA7,
     CPU_AppleA10,
@@ -393,9 +381,7 @@ typedef enum {
     CPU_AppleA14,
     CPU_AppleA15,
     CPU_AppleA16,
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
     CPU_AppleA17,
-#endif
 #endif
 #ifdef ISPC_XE_ENABLED
     GPU_SKL,
@@ -440,10 +426,8 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {CPU_MTL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
     {CPU_SPR, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx_vnni", "avx512_vnni"}},
     {CPU_GNR, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx_vnni", "avx512_vnni"}},
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
     {CPU_ARL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
     {CPU_LNL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
-#endif
     {CPU_ZNVER1, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
     {CPU_ZNVER2, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
     {CPU_ZNVER3, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
@@ -459,9 +443,7 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {CPU_CortexA55, {}},
     {CPU_CortexA78, {}},
     {CPU_CortexA510, {}},
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
     {CPU_CortexA520, {}},
-#endif
     {CPU_AppleA7, {}},
     {CPU_AppleA10, {}},
     {CPU_AppleA11, {}},
@@ -470,9 +452,7 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {CPU_AppleA14, {}},
     {CPU_AppleA15, {}},
     {CPU_AppleA16, {}},
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
     {CPU_AppleA17, {}},
-#endif
 #endif
 #ifdef ISPC_XE_ENABLED
     {GPU_SKL, {}},
@@ -562,12 +542,10 @@ class AllCPUs {
         names[CPU_SPR].push_back("spr");
         names[CPU_GNR].push_back("graniterapids");
         names[CPU_GNR].push_back("gnr");
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
         names[CPU_ARL].push_back("arrowlake");
         names[CPU_ARL].push_back("arl");
         names[CPU_LNL].push_back("lunarlake");
         names[CPU_LNL].push_back("lnl");
-#endif
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
         names[CPU_DMR].push_back("diamondrapids");
         names[CPU_DMR].push_back("dmr");
@@ -588,9 +566,7 @@ class AllCPUs {
         names[CPU_CortexA55].push_back("cortex-a55");
         names[CPU_CortexA78].push_back("cortex-a78");
         names[CPU_CortexA510].push_back("cortex-a510");
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
         names[CPU_CortexA520].push_back("cortex-a520");
-#endif
         names[CPU_AppleA7].push_back("apple-a7");
         names[CPU_AppleA10].push_back("apple-a10");
         names[CPU_AppleA11].push_back("apple-a11");
@@ -599,9 +575,7 @@ class AllCPUs {
         names[CPU_AppleA14].push_back("apple-a14");
         names[CPU_AppleA15].push_back("apple-a15");
         names[CPU_AppleA16].push_back("apple-a16");
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
         names[CPU_AppleA17].push_back("apple-a17");
-#endif
 #endif
 
 #ifdef ISPC_XE_ENABLED
@@ -644,14 +618,12 @@ class AllCPUs {
                 CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_ADL, CPU_None);
         compat[CPU_ADL] = Set(CPU_ADL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont,
                               CPU_SandyBridge, CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_None);
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
         compat[CPU_ARL] =
             Set(CPU_ARL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
                 CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_ADL, CPU_LNL, CPU_None);
         compat[CPU_LNL] =
             Set(CPU_LNL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
                 CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_ADL, CPU_ARL, CPU_None);
-#endif
         compat[CPU_TGL] =
             Set(CPU_TGL, CPU_x86_64, CPU_Bonnell, CPU_Penryn, CPU_Core2, CPU_Nehalem, CPU_Silvermont, CPU_SandyBridge,
                 CPU_IvyBridge, CPU_Haswell, CPU_Broadwell, CPU_Skylake, CPU_SKX, CPU_ICL, CPU_ICX, CPU_None);
@@ -707,9 +679,7 @@ class AllCPUs {
         compat[CPU_CortexA55] = Set(CPU_CortexA55, CPU_None);
         compat[CPU_CortexA78] = Set(CPU_CortexA78, CPU_None);
         compat[CPU_CortexA510] = Set(CPU_CortexA510, CPU_None);
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
         compat[CPU_CortexA520] = Set(CPU_CortexA520, CPU_None);
-#endif
         compat[CPU_AppleA7] = Set(CPU_AppleA7, CPU_None);
         compat[CPU_AppleA10] = Set(CPU_AppleA10, CPU_None);
         compat[CPU_AppleA11] = Set(CPU_AppleA11, CPU_None);
@@ -718,9 +688,7 @@ class AllCPUs {
         compat[CPU_AppleA14] = Set(CPU_AppleA14, CPU_None);
         compat[CPU_AppleA15] = Set(CPU_AppleA15, CPU_None);
         compat[CPU_AppleA16] = Set(CPU_AppleA16, CPU_None);
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
         compat[CPU_AppleA17] = Set(CPU_AppleA17, CPU_None);
-#endif
 #endif
 
 #ifdef ISPC_XE_ENABLED
@@ -946,9 +914,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         case CPU_CortexA55:
         case CPU_CortexA78:
         case CPU_CortexA510:
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
         case CPU_CortexA520:
-#endif
         case CPU_AppleA7:
         case CPU_AppleA10:
         case CPU_AppleA11:
@@ -957,9 +923,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         case CPU_AppleA14:
         case CPU_AppleA15:
         case CPU_AppleA16:
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
         case CPU_AppleA17:
-#endif
             m_ispc_target = ISPCTarget::neon_i32x4;
             break;
 #endif
@@ -1012,10 +976,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 
         case CPU_ADL:
         case CPU_MTL:
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
         case CPU_ARL:
         case CPU_LNL:
-#endif
             m_ispc_target = ISPCTarget::avx2vnni_i32x8;
             break;
 
