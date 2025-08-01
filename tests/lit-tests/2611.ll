@@ -1,7 +1,5 @@
 ; RUN: %{ispc-opt} --passes=replace-masked-memory-ops %s -o - | FileCheck %s
 
-; REQUIRES: LLVM_17_0+
-
 declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32, <4 x i1>, <4 x i32>)
 declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32, <4 x i1>)
 

@@ -1,7 +1,5 @@
 ; RUN: %{ispc-opt} --passes=replace-masked-memory-ops %s -o - | FileCheck %s
 
-; REQUIRES: LLVM_17_0+
-
 declare <8 x float> @llvm.masked.load.v8f32.p0(ptr nocapture, i32 immarg, <8 x i1>, <8 x float>) #1
 declare void @llvm.masked.store.v8f32.p0(<8 x float>, ptr nocapture, i32 immarg, <8 x i1>) #2
 

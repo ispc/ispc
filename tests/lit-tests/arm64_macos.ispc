@@ -8,9 +8,9 @@
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --cpu=apple-a14 --print-target | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_ARM64_APPLE_A14
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --cpu=apple-a15 --print-target | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_ARM64_APPLE_A15
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --cpu=apple-a16 --print-target | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_ARM64_APPLE_A16
+// RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --cpu=apple-a17 --print-target | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_ARM64_APPLE_A17
 
-// There are slightly different features before LLVM 17.0
-// REQUIRES: ARM_ENABLED && MACOS_ARM_ENABLED && LLVM_17_0+
+// REQUIRES: ARM_ENABLED && MACOS_ARM_ENABLED
 
 // CHECK_ALL: Triple: arm64-apple-macosx
 
@@ -109,6 +109,22 @@
 // CHECK_ARM64_APPLE_A16-SAME: +rcpc
 // CHECK_ARM64_APPLE_A16-SAME: +sha2
 // CHECK_ARM64_APPLE_A16-SAME: +sha3
+
+// CHECK_ARM64_APPLE_A17: CPU: apple-a17
+// CHECK_ARM64_APPLE_A17-NEXT: Feature String
+// CHECK_ARM64_APPLE_A17-SAME: +aes
+// CHECK_ARM64_APPLE_A17-SAME: +bf16
+// CHECK_ARM64_APPLE_A17-SAME: +crc
+// CHECK_ARM64_APPLE_A17-SAME: +dotprod
+// CHECK_ARM64_APPLE_A17-SAME: +fp-armv8
+// CHECK_ARM64_APPLE_A17-SAME: +fp16fml
+// CHECK_ARM64_APPLE_A17-SAME: +fullfp16
+// CHECK_ARM64_APPLE_A17-SAME: +i8mm
+// CHECK_ARM64_APPLE_A17-SAME: +lse
+// CHECK_ARM64_APPLE_A17-SAME: +neon
+// CHECK_ARM64_APPLE_A17-SAME: +rcpc
+// CHECK_ARM64_APPLE_A17-SAME: +sha2
+// CHECK_ARM64_APPLE_A17-SAME: +sha3
 
 
 uniform int i;
