@@ -399,8 +399,8 @@ if (WASM_ENABLED)
     message(STATUS "EMCC_EXECUTABLE: ${EMCC_EXECUTABLE}")
 endif()
 
-if (${LLVM_VERSION_NUMBER} VERSION_LESS "17.0.0")
-    message(FATAL_ERROR "ISPC requires LLVM 17.0.0 or later")
+if (${LLVM_VERSION_NUMBER} VERSION_LESS "18.0.0")
+    message(FATAL_ERROR "ISPC requires LLVM 18.0.0 or later")
 endif()
 
 set(CLANG_LIBRARY_LIST clangFrontend clangBasic clangEdit clangLex clangSupport clangASTMatchers)
@@ -830,9 +830,7 @@ endif()
 if (WIN32)
     list(APPEND LINK_LIBRARIES version.lib shlwapi.lib odbc32.lib odbccp32.lib)
     # Required after LLVM commit a5ffabc
-    if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "18.1.0")
-        list(APPEND LINK_LIBRARIES ws2_32.lib)
-    endif()
+    list(APPEND LINK_LIBRARIES ws2_32.lib)
     # Required after LLVM commit cb7690a
     if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "19.1.0")
         list(APPEND LINK_LIBRARIES ntdll.lib)
