@@ -434,7 +434,7 @@ def add_prefix(path, host, target):
 # //rule: skip on <key>=<value>
 #
 # Currently supported keys are:
-# [arch, OS, cpu, target].
+# [arch, OS, cpu, target, jit].
 #
 # * (asterisk) represent any value.
 # Proper regexps can also be used.
@@ -473,7 +473,10 @@ def check_if_skip_test(filename, host, target):
 
     target_cpu = target.cpu
 
-    rule_values = {"arch": target.arch, "OS": oss, "cpu": target_cpu, "target": target.target}
+    # Determine JIT mode status
+    jit_mode = "true" if options.jit_mode else "false"
+
+    rule_values = {"arch": target.arch, "OS": oss, "cpu": target_cpu, "target": target.target, "jit": jit_mode}
 
     test_file_path = add_prefix(filename, host, target)
     with open(test_file_path) as test_file:
@@ -483,7 +486,7 @@ def check_if_skip_test(filename, host, target):
             # EOF
             if not test_line:
                 break;
-            rule = re.search('// *rule: (run|skip) on (arch|OS|cpu|target)=(.*)', test_line)
+            rule = re.search('// *rule: (run|skip) on (arch|OS|cpu|target|jit)=(.*)', test_line)
             # no match for this line -> look at next line
             if rule == None:
                 if "rule:" in test_line:
