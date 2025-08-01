@@ -3843,8 +3843,8 @@ class mm_cvtepi32_ps : public TestBase {
             break;
 #ifdef IS_X86_ARCH
         case 1:
-            for (int k = 0; k < Iterations; k += 2) {
-                const __m128i S1 = _mm_load_si128((__m128i *)&Source1[k]);
+            for (int k = 0; k < Iterations; k += 4) {
+                const __m128i S1 = _mm_loadu_si128((__m128i *)&Source1[k]);
                 const __m128 R = _mm_cvtepi32_ps(S1);
                 _mm_storeu_ps(&Result[k], R);
             }
