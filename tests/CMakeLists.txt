@@ -31,6 +31,7 @@ list(APPEND LIT_ARGS "-Dmacos_arm_enabled=$<IF:$<BOOL:${ISPC_MACOS_ARM_TARGET}>,
 list(APPEND LIT_ARGS "-Dmacos_ios_enabled=$<IF:$<BOOL:${ISPC_IOS_ARM_TARGET}>,ON,OFF>")
 # ISPC library is enabled
 list(APPEND LIT_ARGS "-Dispc_lib_enabled=$<IF:$<BOOL:${ISPC_LIBRARY}>,ON,OFF>")
+list(APPEND LIT_ARGS "-Dispc_lib_jit_enabled=$<IF:$<BOOL:${ISPC_LIBRARY_JIT}>,ON,OFF>")
 # TODO! generic target bc?
 set(CHECK_ALL_DEPS ispc ispc-opt ${ISPC_DEPS})
 if(TARGET libispc_shared)
