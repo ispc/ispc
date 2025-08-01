@@ -5,7 +5,7 @@ if (-not $env:SDE_MIRROR_ID) {
   echo "SDE_MIRROR_ID=$env:SDE_MIRROR_ID" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 }
 if (-not $env:SDE_TAR_NAME) {
-  $env:SDE_TAR_NAME = "sde-external-9.48.0-2024-11-25"
+  $env:SDE_TAR_NAME = "sde-external-9.58.0-2025-06-16"
   echo "SDE_TAR_NAME=$env:SDE_TAR_NAME" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 }
 if (-not $env:USER_AGENT) {
