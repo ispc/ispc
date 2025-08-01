@@ -5,8 +5,7 @@
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --arch=arm --target-os=linux --print-target 2>&1 | FileCheck %s -check-prefix=CHECK_ARM_LINUX
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --arch=arm --target-os=custom_linux --print-target 2>&1 | FileCheck %s -check-prefix=CHECK_ARM_CUSTOM_LINUX
 
-// There are slightly different features before LLVM 17.0
-// REQUIRES: ARM_ENABLED && WINDOWS_HOST && LINUX_ENABLED && LLVM_17_0+
+// REQUIRES: ARM_ENABLED && WINDOWS_HOST && LINUX_ENABLED
 
 // CHECK_AARCH64_LINUX: Triple: aarch64-unknown-linux-gnu
 // CHECK_AARCH64_LINUX-NEXT: CPU: cortex-a35

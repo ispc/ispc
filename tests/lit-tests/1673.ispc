@@ -1,5 +1,5 @@
 // RUN: %{ispc}  %s --emit-asm --target=sse4-i32x4 -o - | FileCheck %s
-// REQUIRES: X86_ENABLED && LLVM_17_0+
+// REQUIRES: X86_ENABLED
 // The main loop should be something like:
 // movups  (%r9,%rcx), %xmm0
 // movups  (%r8,%rcx), %xmm1

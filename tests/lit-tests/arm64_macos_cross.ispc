@@ -6,8 +6,7 @@
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --arch=arm --target-os=linux --print-target  | FileCheck %s -check-prefixes=CHECK_ARM_LINUX
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --arch=arm --target-os=custom_linux --print-target  | FileCheck %s -check-prefixes=CHECK_ARM_CUSTOM_LINUX
 
-// There are slightly different features before LLVM 17.0
-// REQUIRES: ARM_ENABLED && MACOS_ARM_ENABLED && LINUX_ENABLED && LLVM_17_0+
+// REQUIRES: ARM_ENABLED && MACOS_ARM_ENABLED && LINUX_ENABLED
 
 // CHECK_ARM64_IOS: Triple: arm64-apple-ios
 // CHECK_ARM64_IOS-NEXT: CPU: apple-a7

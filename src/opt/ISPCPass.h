@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2024, Intel Corporation
+  Copyright (c) 2022-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -41,9 +41,7 @@
 #endif
 #include <llvm/Transforms/Utils.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
-#if ISPC_LLVM_VERSION > ISPC_LLVM_17_0
 #include <llvm/Transforms/Vectorize/LoadStoreVectorizer.h>
-#endif
 
 #ifdef ISPC_XE_ENABLED
 #include <llvm/GenXIntrinsics/GenXIntrOpts.h>

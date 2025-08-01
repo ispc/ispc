@@ -61,16 +61,13 @@ jobs:
         gcc-13 -v
 
     - name: Build ISPC with gcc in -Werror mode
-      # Disable attribute-related warnings
-      # LLVM 16.0-17.0 causes error here because of incorrect visibility in SROAPass:
-      # error: 'llvm::SROAPass' declared with greater visibility than the type of its field 'llvm::SROAPass::SelectsToRewrite'
       run: |
           cmake \
             -B build \
             -DCMAKE_C_COMPILER=gcc-13 \
             -DCMAKE_CXX_COMPILER=g++-13 \
-            -DCMAKE_C_FLAGS="-Werror -Wno-attributes" \
-            -DCMAKE_CXX_FLAGS="-Werror -Wno-attributes"
+            -DCMAKE_C_FLAGS="-Werror" \
+            -DCMAKE_CXX_FLAGS="-Werror"
           cmake --build build --target all -j4
 
   msvc-2022:

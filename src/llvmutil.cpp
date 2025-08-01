@@ -1187,7 +1187,6 @@ bool IsOrEquivalentToAdd(llvm::Value *op) {
         // First try bit analysis
         bool noCommonBits = haveNoCommonBitsSet(op0, op1, module->getDataLayout());
 
-#if ISPC_LLVM_VERSION >= ISPC_LLVM_18_1
         // LLVM disjoint attribute was introduced in LLVM 18
         // If bit analysis fails, check if compiler marked this as disjoint
         if (!noCommonBits) {
@@ -1197,7 +1196,6 @@ bool IsOrEquivalentToAdd(llvm::Value *op) {
                 }
             }
         }
-#endif
         if (noCommonBits) {
             isEq = true;
         }

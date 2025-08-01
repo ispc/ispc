@@ -4,7 +4,6 @@
 // RUN: %{ispc} --target=avx512skx-x16 --nowrap --x86-asm-syntax=intel --emit-asm -o - %s 2>&1 | FileCheck %s
 
 // REQUIRES: X86_ENABLED
-// REQUIRES: LLVM_17_0+
 
 struct vec4 {
     double V[4];

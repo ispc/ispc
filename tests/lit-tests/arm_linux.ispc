@@ -5,12 +5,14 @@
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --arch=aarch64 --cpu=cortex-a55 --print-target | FileCheck %s -check-prefix=CHECK_AARCH64_A55
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --arch=aarch64 --cpu=cortex-a78 --print-target | FileCheck %s -check-prefix=CHECK_AARCH64_A78
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --arch=aarch64 --cpu=cortex-a510 --print-target | FileCheck %s -check-prefix=CHECK_AARCH64_A510
+// RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --arch=aarch64 --cpu=cortex-a520 --print-target | FileCheck %s -check-prefix=CHECK_AARCH64_A520
+
 
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --arch=arm --print-target | FileCheck %s -check-prefix=CHECK_ARM
 // RUN: %{ispc} %s -o %t.o --nostdlib --target=neon-i32x4 --nowrap --arch=arm --cpu=cortex-a57 --print-target | FileCheck %s -check-prefix=CHECK_ARM_A57
 
 // arm supported on Linux only
-// REQUIRES: ARM_ENABLED && LINUX_HOST && LLVM_17_0+
+// REQUIRES: ARM_ENABLED && LINUX_HOST
 
 // CHECK_DEFAULT: Triple: aarch64-unknown-linux-gnu
 // CHECK_DEFAULT: CPU: {{cortex-a*}}
@@ -88,6 +90,21 @@
 // CHECK_AARCH64_A510-SAME: +rcpc
 // CHECK_AARCH64_A510-SAME: +sve
 // CHECK_AARCH64_A510-SAME: +sve2
+
+// CHECK_AARCH64_A520: Triple: aarch64-unknown-linux-gnu
+// CHECK_AARCH64_A520-NEXT: CPU: cortex-a520
+// CHECK_AARCH64_A520-NEXT: Feature String:
+// CHECK_AARCH64_A520-SAME: +crc
+// CHECK_AARCH64_A520-SAME: +dotprod
+// CHECK_AARCH64_A520-SAME: +fp-armv8
+// CHECK_AARCH64_A520-SAME: +fp16fml
+// CHECK_AARCH64_A520-SAME: +fullfp16
+// CHECK_AARCH64_A520-SAME: +i8mm
+// CHECK_AARCH64_A520-SAME: +lse
+// CHECK_AARCH64_A520-SAME: +neon
+// CHECK_AARCH64_A520-SAME: +rcpc
+// CHECK_AARCH64_A520-SAME: +sve
+// CHECK_AARCH64_A520-SAME: +sve2
 
 // CHECK_ARM: Triple: armv8a-unknown-linux-gnueabihf
 // CHECK_ARM: CPU: {{cortex-a*}}

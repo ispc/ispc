@@ -973,11 +973,7 @@ llvm::DIType *EnumType::GetDIType(llvm::DIScope *scope) const {
     llvm::DIType *underlyingType = AtomicType::UniformInt32->GetDIType(scope);
     llvm::DIType *diType =
         m->diBuilder->createEnumerationType(diSpace, GetString(), diFile, pos.first_line, 32 /* size in bits */,
-                                            32 /* align in bits */, elementArray, underlyingType,
-#if ISPC_LLVM_VERSION > ISPC_LLVM_17_0
-                                            0,
-#endif
-                                            name);
+                                            32 /* align in bits */, elementArray, underlyingType, 0, name);
     switch (variability.type) {
     case Variability::Uniform:
         return diType;
