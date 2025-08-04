@@ -1,7 +1,4 @@
-// RUN: %{ispc} --pic --target=avx512skx-x8 -h %t.h %s -o %t.o
-// RUN: %{cc} -x c -c %s -o %t.c.o --include %t.h
-// RUN: %{cc} %t.o %t.c.o -o %t.c.bin
-// RUN: %t.c.bin | FileCheck %s
+// RUN: %{cc_ispc_run} avx512skx-x8 test | FileCheck %s
 
 // REQUIRES: !MACOS_HOST && X86_ENABLED
 

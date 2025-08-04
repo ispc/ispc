@@ -1,10 +1,5 @@
-// RUN: %{ispc} --pic --target=host -h %t.h %s -o %t.o
-// RUN: %{cc} -x c -c %s -o %t.c.o --include %t.h
-// RUN: %{cc} %t.o %t.c.o -o %t.c.bin
-// RUN: %t.c.bin | FileCheck %s
-// RUN: %{cc} -x c++ -c %s -o %t.cpp.o --include %t.h
-// RUN: %{cxx} %t.o %t.cpp.o -o %t.cpp.bin
-// RUN: %t.cpp.bin | FileCheck %s
+// RUN: %{cc_ispc_run} host test | FileCheck %s
+// RUN: %{cxx_ispc_run} host test | FileCheck %s
 
 // REQUIRES: !MACOS_HOST
 
