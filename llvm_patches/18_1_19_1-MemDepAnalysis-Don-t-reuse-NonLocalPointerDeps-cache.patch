@@ -1,0 +1,77 @@
+From 17263537faabe074bf4b11470fac8b5fbcfccfc7 Mon Sep 17 00:00:00 2001
+From: Arthur Eubanks <aeubanks@google.com>
+Date: Thu, 21 Nov 2024 09:25:10 -0800
+Subject: [PATCH] [MemDepAnalysis] Don't reuse NonLocalPointerDeps cache if
+ memory location size differs (#116936)
+
+As seen in #111585, we can end up using a previous cache entry where the
+size was too large and was UB.
+
+Compile time impact:
+https://llvm-compile-time-tracker.com/compare.php?from=6a863f7e2679a60f2f38ae6a920d0b6e1a2c1690&to=faccf4e1f47fcd5360a438de2a56d02b770ad498&stat=instructions:u.
+
+Fixes #111585.
+---
+ .../lib/Analysis/MemoryDependenceAnalysis.cpp | 46 +++++--------------
+ 1 file changed, 12 insertions(+), 34 deletions(-)
+
+diff --git a/llvm/lib/Analysis/MemoryDependenceAnalysis.cpp b/llvm/lib/Analysis/MemoryDependenceAnalysis.cpp
+index 9f7baa983f12..fd55af31cb9a 100644
+--- a/llvm/lib/Analysis/MemoryDependenceAnalysis.cpp
++++ b/llvm/lib/Analysis/MemoryDependenceAnalysis.cpp
+@@ -1095,40 +1095,18 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
+   // Invariant loads don't participate in caching. Thus no need to reconcile.
+   if (!isInvariantLoad && !Pair.second) {
+     if (CacheInfo->Size != Loc.Size) {
+-      bool ThrowOutEverything;
+-      if (CacheInfo->Size.hasValue() && Loc.Size.hasValue()) {
+-        // FIXME: We may be able to do better in the face of results with mixed
+-        // precision. We don't appear to get them in practice, though, so just
+-        // be conservative.
+-        ThrowOutEverything =
+-            CacheInfo->Size.isPrecise() != Loc.Size.isPrecise() ||
+-            !TypeSize::isKnownGE(CacheInfo->Size.getValue(),
+-                                 Loc.Size.getValue());
+-      } else {
+-        // For our purposes, unknown size > all others.
+-        ThrowOutEverything = !Loc.Size.hasValue();
+-      }
+-
+-      if (ThrowOutEverything) {
+-        // The query's Size is greater than the cached one. Throw out the
+-        // cached data and proceed with the query at the greater size.
+-        CacheInfo->Pair = BBSkipFirstBlockPair();
+-        CacheInfo->Size = Loc.Size;
+-        for (auto &Entry : CacheInfo->NonLocalDeps)
+-          if (Instruction *Inst = Entry.getResult().getInst())
+-            RemoveFromReverseMap(ReverseNonLocalPtrDeps, Inst, CacheKey);
+-        CacheInfo->NonLocalDeps.clear();
+-        // The cache is cleared (in the above line) so we will have lost
+-        // information about blocks we have already visited. We therefore must
+-        // assume that the cache information is incomplete.
+-        IsIncomplete = true;
+-      } else {
+-        // This query's Size is less than the cached one. Conservatively restart
+-        // the query using the greater size.
+-        return getNonLocalPointerDepFromBB(
+-            QueryInst, Pointer, Loc.getWithNewSize(CacheInfo->Size), isLoad,
+-            StartBB, Result, Visited, SkipFirstBlock, IsIncomplete);
+-      }
++      // The query's Size is not equal to the cached one. Throw out the cached
++      // data and proceed with the query with the new size.
++      CacheInfo->Pair = BBSkipFirstBlockPair();
++      CacheInfo->Size = Loc.Size;
++      for (auto &Entry : CacheInfo->NonLocalDeps)
++        if (Instruction *Inst = Entry.getResult().getInst())
++          RemoveFromReverseMap(ReverseNonLocalPtrDeps, Inst, CacheKey);
++      CacheInfo->NonLocalDeps.clear();
++      // The cache is cleared (in the above line) so we will have lost
++      // information about blocks we have already visited. We therefore must
++      // assume that the cache information is incomplete.
++      IsIncomplete = true;
+     }
+ 
+     // If the query's AATags are inconsistent with the cached one,
+-- 
+2.25.1
+
