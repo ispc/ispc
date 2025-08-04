@@ -898,7 +898,8 @@ function(configure_ispc_lib TARGET)
     set_target_properties(${TARGET} PROPERTIES
         OUTPUT_NAME "ispc"
         VERSION ${ISPC_VERSION}
-        SOVERSION ${ISPC_VERSION_MAJOR})
+        SOVERSION ${ISPC_VERSION_MAJOR}
+        WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endfunction()
 
 # This function creates and configures an ISPC library target (shared for now)
@@ -1034,6 +1035,7 @@ if (ISPC_LIBRARY AND NOT ISPC_SLIM_BINARY)
         EXPORT ${PROJECT_NAME}_Exports
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
 
     # Install public headers
