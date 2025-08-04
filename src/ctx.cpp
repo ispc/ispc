@@ -2548,6 +2548,8 @@ llvm::Value *FunctionEmitContext::lSwitchBoolSize_2(llvm::Value *value, llvm::Ty
     // To support all cases with less code do bool casting in two stages:
     // 1) truncate to LLVM IR native bool types i1 or <N x i1>
     // 2) zero or sign extend from native bool types to storage or internal correspondingly.
+    // Varying bool in ispc is '-1'. The most significant bit being set to 1
+    // is important for blendv operations to work as expected.
     llvm::Value *i1Bool = value;
     llvm::Twine newName = name.isTriviallyEmpty() ? (llvm::Twine(value->getName()) + "_toi1") : name;
     if (llvm::dyn_cast<llvm::FixedVectorType>(fromType)) {
@@ -2906,28 +2908,8 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
 
     // bool type is stored as i8. So, it requires some processing.
     if (returnType->IsBoolType()) {
-        // TODO!: should we just call SwitchBoolToStorageType here unconditionally?
-        if (g->target->getDataLayout()->getTypeSizeInBits(returnType->LLVMStorageType(g->ctx)) <
-            g->target->getDataLayout()->getTypeSizeInBits(llvmReturnType)) {
-            // This is needed when array of bool is passed in from cpp side
-            // TRUE in clang is '1'. This is zero extended to i8.
-            // In ispc, this is uniform * varying which after gather becomes
-            // varying bool. Varying bool in ispc is '-1'. The most
-            // significant bit being set to 1 is important for blendv
-            // operations to work as expected.
-            if (ptrType->GetBaseType()->IsUniformType()) {
-                gatherCall = TruncInst(gatherCall, LLVMTypes::Int1VectorType);
-                gatherCall = SExtInst(gatherCall, llvmReturnType);
-            } else {
-                gatherCall = SExtInst(gatherCall, llvmReturnType);
-            }
-        } else if (g->target->getDataLayout()->getTypeSizeInBits(returnType->LLVMStorageType(g->ctx)) >
-                   g->target->getDataLayout()->getTypeSizeInBits(llvmReturnType)) {
-            gatherCall = TruncInst(gatherCall, llvmReturnType);
-        } else {
-            gatherCall =
-                SwitchBoolToMaskType(gatherCall, llvmReturnType, llvm::Twine(gatherCall->getName()) + "_bool_to_mask");
-        }
+        gatherCall =
+            SwitchBoolToMaskType(gatherCall, llvmReturnType, llvm::Twine(gatherCall->getName()) + "_switch_bool");
     }
     return gatherCall;
 }
