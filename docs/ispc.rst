@@ -98,6 +98,7 @@ Contents:
   + `Library Initialization`_
   + `Simple Compilation Interface`_
   + `Advanced Interface with ISPCEngine`_
+  + `Just-In-Time (JIT) Compilation Interface`_
   + `Compatibility`_
   + `CMake Integration`_
 
@@ -842,6 +843,8 @@ element wise functions: ``fmod``, ``isnan``, ``rsqrt_fast`` and ``clamp``.
 ISPC can now be used as a C++ library (``libispc``) for embedding ISPC
 compilation directly into applications. It also now provides CMake
 configuration files for easy integration into other CMake projects.
+The library also includes experimental Just-In-Time (JIT) compilation
+capabilities for runtime code generation and execution.
 See the section `Using ISPC as a Library`_ for more details.
 
 
@@ -1621,6 +1624,131 @@ For more control over the compilation process, use the ``ISPCEngine`` class::
 
 The ``ISPCEngine`` allows you to separate argument parsing from execution,
 which can be useful for more complex compilation workflows.
+
+Just-In-Time (JIT) Compilation Interface
+-----------------------------------------
+
+ISPC provides Just-In-Time (JIT) compilation capabilities that allow you to
+compile ISPC code at runtime and execute it directly in memory without
+generating intermediate files. This is useful for applications that need
+dynamic code generation or runtime optimization.
+
+Basic JIT Usage
+^^^^^^^^^^^^^^^
+
+Here's a simple example of JIT compilation::
+
+    #include "ispc/ispc.h"
+
+    // Function pointer type for your ISPC function
+    typedef void (*simple_func_t)(float input[], float output[], int count);
+
+    // Initialize ISPC
+    if (!ispc::Initialize()) {
+        std::cerr << "Failed to initialize ISPC\n";
+        return 1;
+    }
+
+    // Create an engine for JIT compilation
+    std::vector<std::string> args = {"--target=host", "-O2"};
+    auto engine = ispc::ISPCEngine::CreateFromArgs(args);
+
+    if (!engine) {
+        std::cerr << "Failed to create ISPC engine\n";
+        return 1;
+    }
+
+    // Compile ISPC file to JIT
+    int result = engine->CompileFromFileToJit("my_program.ispc");
+    if (result != 0) {
+        std::cerr << "JIT compilation failed\n";
+        return 1;
+    }
+
+    // Get function pointer from JIT-compiled code
+    auto func_ptr = engine->GetJitFunction("my_function");
+    if (!func_ptr) {
+        std::cerr << "Function not found in JIT code\n";
+        return 1;
+    }
+
+    // Cast and call the function
+    simple_func_t my_function = reinterpret_cast<simple_func_t>(func_ptr);
+
+    // Use the function
+    float input[4] = {1.0f, 2.0f, 3.0f, 4.0f};
+    float output[4];
+    my_function(input, output, 4);
+
+    // Clean up
+    ispc::Shutdown();
+
+Runtime Function Registration
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+JIT-compiled ISPC code may need access to runtime functions (like ``ISPCLaunch``,
+``ISPCSync``, ``ISPCAlloc``) for task-based parallel execution. You must register
+these functions before compilation::
+
+    // Define runtime function implementations
+    void ISPCLaunch(void **handlePtr, void *f, void *d, int count0, int count1, int count2) {
+        // Your implementation
+    }
+
+    void ISPCSync(void *handle) {
+        // Your implementation
+    }
+
+    void *ISPCAlloc(void **handlePtr, int64_t size, int32_t alignment) {
+        // Your implementation
+        return aligned_alloc(alignment, size);
+    }
+
+    // Register runtime functions with the JIT engine
+    if (!engine->SetJitRuntimeFunction("ISPCLaunch", (void*)ISPCLaunch) ||
+        !engine->SetJitRuntimeFunction("ISPCSync", (void*)ISPCSync) ||
+        !engine->SetJitRuntimeFunction("ISPCAlloc", (void*)ISPCAlloc)) {
+        std::cerr << "Failed to set runtime functions\n";
+        return 1;
+    }
+
+    // Now compile - the JIT code can call these runtime functions
+    engine->CompileFromFileToJit("parallel_program.ispc");
+
+JIT Management Functions
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``ISPCEngine`` provides several functions for managing JIT-compiled code:
+
+* ``CompileFromFileToJit(filename)`` - Compile an ISPC file to JIT
+* ``GetJitFunction(name)`` - Retrieve a function pointer by name
+* ``SetJitRuntimeFunction(name, ptr)`` - Register a runtime function
+* ``ClearJitRuntimeFunction(name)`` - Remove a specific runtime function
+* ``ClearJitRuntimeFunctions()`` - Remove all runtime functions
+* ``ClearJitCode()`` - Clear all JIT-compiled code
+
+JIT Limitations and Considerations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* **Single Target Only**: JIT compilation only supports single target compilation.
+  Multi-target compilation will result in an error.
+
+* **Thread Safety**: JIT compilation is not thread-safe. Use JIT functionality
+  from a single thread only.
+
+* **Function Lifetime**: JIT-compiled function pointers remain valid only as long
+  as the ``ISPCEngine`` instance exists. Do not use function pointers after the
+  engine is destroyed.
+
+* **Error Handling**: Always check return values and function pointers for null.
+  JIT compilation can fail for various reasons (syntax errors, missing files, etc.).
+  Errors and warnings from JIT compilation will be sent to stderr.
+
+* **Memory Management**: JIT-compiled code uses internal memory management.
+  Calling ``ClearJitCode()`` will invalidate all previously obtained function pointers.
+
+* **Platform Support**: JIT compilation requires LLVM JIT support and may not be
+  available on all platforms or build configurations.
 
 Compatibility
 -------------
