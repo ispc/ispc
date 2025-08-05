@@ -1,13 +1,89 @@
 // This test checks whether ISPC produces correct representation of bool type
 // on ABI boundary for targets with i8 masks.
 
-// RUN: %{ispc} --pic --target=sse4.1-i8x16 -h %t.h %s -o %t.o
-// RUN: %{cc} -O2 -x c -c %s -o %t.c.o --include %t.h
-// RUN: %{cc} %t.o %t.c.o -o %t.c.bin
-// RUN: %t.c.bin | FileCheck %s
-// RUN: %{cc} -O2 -x c++ -c %s -o %t.cpp.o --include %t.h
-// RUN: %{cc} %t.o %t.cpp.o -o %t.cpp.bin
-// RUN: %t.cpp.bin | FileCheck %s
+// RUN: %{ispc} --pic --target=avx2-i16x16 -h %t-avx2-i16x16.h %s -o %t-avx2-i16x16.o
+// RUN: %{cc} -O2 -x c -c %s -o %t-avx2-i16x16.c.o --include %t-avx2-i16x16.h
+// RUN: %{cc} %t-avx2-i16x16.o %t-avx2-i16x16.c.o -o %t-avx2-i16x16.c.bin
+// RUN: %t-avx2-i16x16.c.bin | FileCheck %s
+// RUN: %{cc} -O2 -x c++ -c %s -o %t-avx2-i16x16.cpp.o --include %t-avx2-i16x16.h
+// RUN: %{cc} %t-avx2-i16x16.o %t-avx2-i16x16.cpp.o -o %t-avx2-i16x16.cpp.bin
+// RUN: %t-avx2-i16x16.cpp.bin | FileCheck %s
+
+// RUN: %{ispc} --pic --target=avx2-i32x16 -h %t-avx2-i32x16.h %s -o %t-avx2-i32x16.o
+// RUN: %{cc} -O2 -x c -c %s -o %t-avx2-i32x16.c.o --include %t-avx2-i32x16.h
+// RUN: %{cc} %t-avx2-i32x16.o %t-avx2-i32x16.c.o -o %t-avx2-i32x16.c.bin
+// RUN: %t-avx2-i32x16.c.bin | FileCheck %s
+// RUN: %{cc} -O2 -x c++ -c %s -o %t-avx2-i32x16.cpp.o --include %t-avx2-i32x16.h
+// RUN: %{cc} %t-avx2-i32x16.o %t-avx2-i32x16.cpp.o -o %t-avx2-i32x16.cpp.bin
+// RUN: %t-avx2-i32x16.cpp.bin | FileCheck %s
+
+// RUN: %{ispc} --pic --target=avx2-i32x4 -h %t-avx2-i32x4.h %s -o %t-avx2-i32x4.o
+// RUN: %{cc} -O2 -x c -c %s -o %t-avx2-i32x4.c.o --include %t-avx2-i32x4.h
+// RUN: %{cc} %t-avx2-i32x4.o %t-avx2-i32x4.c.o -o %t-avx2-i32x4.c.bin
+// RUN: %t-avx2-i32x4.c.bin | FileCheck %s
+// RUN: %{cc} -O2 -x c++ -c %s -o %t-avx2-i32x4.cpp.o --include %t-avx2-i32x4.h
+// RUN: %{cc} %t-avx2-i32x4.o %t-avx2-i32x4.cpp.o -o %t-avx2-i32x4.cpp.bin
+// RUN: %t-avx2-i32x4.cpp.bin | FileCheck %s
+
+// RUN: %{ispc} --pic --target=avx2-i32x8 -h %t-avx2-i32x8.h %s -o %t-avx2-i32x8.o
+// RUN: %{cc} -O2 -x c -c %s -o %t-avx2-i32x8.c.o --include %t-avx2-i32x8.h
+// RUN: %{cc} %t-avx2-i32x8.o %t-avx2-i32x8.c.o -o %t-avx2-i32x8.c.bin
+// RUN: %t-avx2-i32x8.c.bin | FileCheck %s
+// RUN: %{cc} -O2 -x c++ -c %s -o %t-avx2-i32x8.cpp.o --include %t-avx2-i32x8.h
+// RUN: %{cc} %t-avx2-i32x8.o %t-avx2-i32x8.cpp.o -o %t-avx2-i32x8.cpp.bin
+// RUN: %t-avx2-i32x8.cpp.bin | FileCheck %s
+
+// RUN: %{ispc} --pic --target=avx2-i64x4 -h %t-avx2-i64x4.h %s -o %t-avx2-i64x4.o
+// RUN: %{cc} -O2 -x c -c %s -o %t-avx2-i64x4.c.o --include %t-avx2-i64x4.h
+// RUN: %{cc} %t-avx2-i64x4.o %t-avx2-i64x4.c.o -o %t-avx2-i64x4.c.bin
+// RUN: %t-avx2-i64x4.c.bin | FileCheck %s
+// RUN: %{cc} -O2 -x c++ -c %s -o %t-avx2-i64x4.cpp.o --include %t-avx2-i64x4.h
+// RUN: %{cc} %t-avx2-i64x4.o %t-avx2-i64x4.cpp.o -o %t-avx2-i64x4.cpp.bin
+// RUN: %t-avx2-i64x4.cpp.bin | FileCheck %s
+
+// RUN: %{ispc} --pic --target=avx2-i8x32 -h %t-avx2-i8x32.h %s -o %t-avx2-i8x32.o
+// RUN: %{cc} -O2 -x c -c %s -o %t-avx2-i8x32.c.o --include %t-avx2-i8x32.h
+// RUN: %{cc} %t-avx2-i8x32.o %t-avx2-i8x32.c.o -o %t-avx2-i8x32.c.bin
+// RUN: %t-avx2-i8x32.c.bin | FileCheck %s
+// RUN: %{cc} -O2 -x c++ -c %s -o %t-avx2-i8x32.cpp.o --include %t-avx2-i8x32.h
+// RUN: %{cc} %t-avx2-i8x32.o %t-avx2-i8x32.cpp.o -o %t-avx2-i8x32.cpp.bin
+// RUN: %t-avx2-i8x32.cpp.bin | FileCheck %s
+
+// RUN: %{ispc} --pic --target=sse4.1-i16x8 -h %t-sse4.1-i16x8.h %s -o %t-sse4.1-i16x8.o
+// RUN: %{cc} -O2 -x c -c %s -o %t-sse4.1-i16x8.c.o --include %t-sse4.1-i16x8.h
+// RUN: %{cc} %t-sse4.1-i16x8.o %t-sse4.1-i16x8.c.o -o %t-sse4.1-i16x8.c.bin
+// RUN: %t-sse4.1-i16x8.c.bin | FileCheck %s
+// RUN: %{cc} -O2 -x c++ -c %s -o %t-sse4.1-i16x8.cpp.o --include %t-sse4.1-i16x8.h
+// RUN: %{cc} %t-sse4.1-i16x8.o %t-sse4.1-i16x8.cpp.o -o %t-sse4.1-i16x8.cpp.bin
+// RUN: %t-sse4.1-i16x8.cpp.bin | FileCheck %s
+
+// RUN: %{ispc} --pic --target=sse4.1-i32x4 -h %t-sse4.1-i32x4.h %s -o %t-sse4.1-i32x4.o
+// RUN: %{cc} -O2 -x c -c %s -o %t-sse4.1-i32x4.c.o --include %t-sse4.1-i32x4.h
+// RUN: %{cc} %t-sse4.1-i32x4.o %t-sse4.1-i32x4.c.o -o %t-sse4.1-i32x4.c.bin
+// RUN: %t-sse4.1-i32x4.c.bin | FileCheck %s
+// RUN: %{cc} -O2 -x c++ -c %s -o %t-sse4.1-i32x4.cpp.o --include %t-sse4.1-i32x4.h
+// RUN: %{cc} %t-sse4.1-i32x4.o %t-sse4.1-i32x4.cpp.o -o %t-sse4.1-i32x4.cpp.bin
+// RUN: %t-sse4.1-i32x4.cpp.bin | FileCheck %s
+
+// RUN: %{ispc} --pic --target=sse4.1-i32x8 -h %t-sse4.1-i32x8.h %s -o %t-sse4.1-i32x8.o
+// RUN: %{cc} -O2 -x c -c %s -o %t-sse4.1-i32x8.c.o --include %t-sse4.1-i32x8.h
+// RUN: %{cc} %t-sse4.1-i32x8.o %t-sse4.1-i32x8.c.o -o %t-sse4.1-i32x8.c.bin
+// RUN: %t-sse4.1-i32x8.c.bin | FileCheck %s
+// RUN: %{cc} -O2 -x c++ -c %s -o %t-sse4.1-i32x8.cpp.o --include %t-sse4.1-i32x8.h
+// RUN: %{cc} %t-sse4.1-i32x8.o %t-sse4.1-i32x8.cpp.o -o %t-sse4.1-i32x8.cpp.bin
+// RUN: %t-sse4.1-i32x8.cpp.bin | FileCheck %s
+
+// RUN: %{ispc} --pic --target=sse4.1-i8x16 -h %t-sse4.1-i8x16.h %s -o %t-sse4.1-i8x16.o
+// RUN: %{cc} -O2 -x c -c %s -o %t-sse4.1-i8x16.c.o --include %t-sse4.1-i8x16.h
+// RUN: %{cc} %t-sse4.1-i8x16.o %t-sse4.1-i8x16.c.o -o %t-sse4.1-i8x16.c.bin
+// RUN: %t-sse4.1-i8x16.c.bin | FileCheck %s
+// RUN: %{cc} -O2 -x c++ -c %s -o %t-sse4.1-i8x16.cpp.o --include %t-sse4.1-i8x16.h
+// RUN: %{cc} %t-sse4.1-i8x16.o %t-sse4.1-i8x16.cpp.o -o %t-sse4.1-i8x16.cpp.bin
+// RUN: %t-sse4.1-i8x16.cpp.bin | FileCheck %s
+
+// TODO: ideally we need to introduce AVX2_HOST and similar features to
+// reliably test tests like this but for now assume that AVX2 is always
+// available practically on any x86_64 hosts
 
 // REQUIRES: !MACOS_HOST && X86_ENABLED && X86_64_HOST
 
