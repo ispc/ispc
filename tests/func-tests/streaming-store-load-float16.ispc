@@ -1,6 +1,4 @@
 #include "test_static.isph"
-// rule: skip on arch=x86
-// rule: skip on arch=x86-64
 void var_store(uniform float16 a[], varying float x) {
     streaming_store(a, x);
 }

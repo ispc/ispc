@@ -1,6 +1,4 @@
 #include "test_static.isph"
-// rule: skip on arch=x86
-// rule: skip on arch=x86-64
 task void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = 0.0f;
     float16 testVal = ldexp(aFOO[0]-1, -2);

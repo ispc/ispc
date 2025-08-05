@@ -1,8 +1,6 @@
 #include "test_static.isph"
 // rule: skip on cpu=tgllp
 // rule: skip on cpu=dg2
-// rule: skip on arch=x86
-// rule: skip on arch=x86-64
 
 template <typename T>
 int test_isfinite()
