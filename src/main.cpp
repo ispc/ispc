@@ -67,7 +67,8 @@ int main(int Argc, char *Argv[]) {
     initializeBinaryType(ISPCAbsPath.c_str());
 
     // Execute the compilation process using C-style interface
-    ret = ispc::CompileFromCArgs(argv.size(), argv.data());
+    // Skip the program name (argv[0]) since the interface no longer requires it
+    ret = ispc::CompileFromCArgs(argv.size() - 1, argv.data() + 1);
 
     // Perform final global cleanup
     ispc::Shutdown();

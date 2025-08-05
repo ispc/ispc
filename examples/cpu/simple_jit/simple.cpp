@@ -29,7 +29,7 @@ int main() {
     {
         std::cout << "\n=== Test 1: Basic JIT compilation ===\n";
         
-        std::vector<std::string> args = {"ispc", "-O2"};
+        std::vector<std::string> args = {"-O2"};
         auto engine = ispc::ISPCEngine::CreateFromArgs(args);
 
         if (!engine) {
@@ -92,8 +92,8 @@ int main() {
     {
         std::cout << "\n=== Test 2: Multiple JIT engines ===\n";
         
-        std::vector<std::string> args_o2 = {"ispc", "-O2"};
-        std::vector<std::string> args_o0 = {"ispc", "-O0"};
+        std::vector<std::string> args_o2 = {"-O2"};
+        std::vector<std::string> args_o0 = {"-O0"};
         
         auto engine_o2 = ispc::ISPCEngine::CreateFromArgs(args_o2);
         auto engine_o0 = ispc::ISPCEngine::CreateFromArgs(args_o0);
@@ -158,7 +158,7 @@ int main() {
     {
         std::cout << "\n=== Test 3: Engine cleanup ===\n";
         
-        std::vector<std::string> args = {"ispc", "--target=host"};
+        std::vector<std::string> args = {"--target=host"};
         auto engine = ispc::ISPCEngine::CreateFromArgs(args);
         
         if (engine) {

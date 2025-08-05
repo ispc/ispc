@@ -44,7 +44,7 @@ int main() {
         test_file << "}\n";
         test_file.close();
 
-        std::vector<std::string> args = {"ispc", "simple_test.ispc", "--target=host", "-o", "test1.o"};
+        std::vector<std::string> args = {"simple_test.ispc", "--target=host", "-o", "test1.o"};
         int result = ispc::CompileFromArgs(args);
         if (result == 0) {
             std::cout << "Basic compilation test: SUCCESS\n";
@@ -56,8 +56,8 @@ int main() {
 
     // Test 2: Multiple compilations with different options
     {
-        std::vector<std::string> args1 = {"ispc", "simple_test.ispc", "--target=host", "-O2", "-o", "test2a.o"};
-        std::vector<std::string> args2 = {"ispc", "simple_test.ispc", "--target=host", "-O0", "--emit-asm", "-o", "test2b.s"};
+        std::vector<std::string> args1 = {"simple_test.ispc", "--target=host", "-O2", "-o", "test2a.o"};
+        std::vector<std::string> args2 = {"simple_test.ispc", "--target=host", "-O0", "--emit-asm", "-o", "test2b.s"};
 
         int result1 = ispc::CompileFromArgs(args1);
         int result2 = ispc::CompileFromArgs(args2);
@@ -72,9 +72,9 @@ int main() {
 
     // Test 3: Engine isolation test
     {
-        std::vector<std::string> engine_args1 = {"ispc", "simple_test.ispc", "--target=host", "-O2", "-o", "engine1.o"};
-        std::vector<std::string> engine_args2 = {"ispc", "simple_test.ispc", "--target=host", "-O0", "-o", "engine2.o"};
-        std::vector<std::string> engine_args3 = {"ispc", "simple_test.ispc", "--target=host", "--emit-asm", "-o", "engine3.s"};
+        std::vector<std::string> engine_args1 = {"simple_test.ispc", "--target=host", "-O2", "-o", "engine1.o"};
+        std::vector<std::string> engine_args2 = {"simple_test.ispc", "--target=host", "-O0", "-o", "engine2.o"};
+        std::vector<std::string> engine_args3 = {"simple_test.ispc", "--target=host", "--emit-asm", "-o", "engine3.s"};
 
         auto engine1 = ispc::ISPCEngine::CreateFromArgs(engine_args1);
         auto engine2 = ispc::ISPCEngine::CreateFromArgs(engine_args2);
