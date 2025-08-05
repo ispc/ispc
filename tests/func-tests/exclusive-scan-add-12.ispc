@@ -1,6 +1,4 @@
 #include "test_static.isph"
-// rule: skip on arch=x86
-// rule: skip on arch=x86-64
 task void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = exclusive_scan_add((float16)programIndex);
 }

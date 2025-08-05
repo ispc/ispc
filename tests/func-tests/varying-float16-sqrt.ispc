@@ -1,6 +1,4 @@
 #include "test_static.isph"
-// rule: skip on arch=x86
-// rule: skip on arch=x86-64
 task void f_f(uniform float RET[], uniform float aFOO[]) {
     varying float16 f = programIndex/4;
     varying float16 calc = sqrt(f) * sqrt(f) - programIndex/4;

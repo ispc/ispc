@@ -1,6 +1,4 @@
 #include "test_static.isph"
-// rule: skip on arch=x86
-// rule: skip on arch=x86-64
 static float float4(uniform float16 a, uniform float16 b, uniform float16 c, uniform float16 d) {
     float ret = 0;
     for (uniform int i = 0; i < programCount; i += 4) {

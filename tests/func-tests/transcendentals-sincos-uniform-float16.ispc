@@ -2,8 +2,6 @@
 // sincos() function is available only on Linux.
 // rule: skip on OS=*
 // rule: run on OS=linux
-// rule: skip on arch=x86
-// rule: skip on arch=x86-64
 // rule: skip on arch=wasm32
 // rule: skip on arch=wasm64
 uniform bool ok(uniform float16 x, uniform float16 ref) { return (abs(x - ref) < 1e-4) || abs((x-ref)/ref) < 1e-3; }
