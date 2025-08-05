@@ -73,7 +73,7 @@ int main() {
 
         // Test 1a: Empty filename
         {
-            std::vector<std::string> args = {"ispc", "--target=host"};
+            std::vector<std::string> args = {"--target=host"};
             auto engine = ispc::ISPCEngine::CreateFromArgs(args);
 
             if (engine) {
@@ -93,7 +93,7 @@ int main() {
 
         // Test 1b: Non-existent file
         {
-            std::vector<std::string> args = {"ispc", "--target=host"};
+            std::vector<std::string> args = {"--target=host"};
             auto engine = ispc::ISPCEngine::CreateFromArgs(args);
 
             if (engine) {
@@ -116,7 +116,7 @@ int main() {
             // Create a directory
             system("mkdir -p test_dir_for_jit");
 
-            std::vector<std::string> args = {"ispc", "--target=host"};
+            std::vector<std::string> args = {"--target=host"};
             auto engine = ispc::ISPCEngine::CreateFromArgs(args);
 
             if (engine) {
@@ -148,7 +148,7 @@ int main() {
     {
         bool test_passed = false;
 
-        std::vector<std::string> args = {"ispc", "--target=sse4-i32x4,avx2-i32x8"};
+        std::vector<std::string> args = {"--target=sse4-i32x4,avx2-i32x8"};
         auto engine = ispc::ISPCEngine::CreateFromArgs(args);
 
         if (engine) {
@@ -180,7 +180,7 @@ int main() {
     {
         bool test_passed = false;
 
-        std::vector<std::string> args = {"ispc", "--target=host"};
+        std::vector<std::string> args = {"--target=host"};
         auto engine = ispc::ISPCEngine::CreateFromArgs(args);
 
         if (engine) {
@@ -212,7 +212,7 @@ int main() {
     {
         bool test_passed = true;
 
-        std::vector<std::string> args = {"ispc", "--target=host"};
+        std::vector<std::string> args = {"--target=host"};
         auto engine = ispc::ISPCEngine::CreateFromArgs(args);
 
         if (engine) {
@@ -281,7 +281,7 @@ int main() {
     {
         bool test_passed = true;
 
-        std::vector<std::string> args = {"ispc", "--target=host"};
+        std::vector<std::string> args = {"--target=host"};
         auto engine = ispc::ISPCEngine::CreateFromArgs(args);
 
         if (engine) {

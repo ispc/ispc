@@ -46,7 +46,7 @@ int main() {
         test_file << "}\n";
         test_file.close();
 
-        std::vector<std::string> args = {"ispc", "jit_test.ispc"};
+        std::vector<std::string> args = {"jit_test.ispc"};
         auto engine = ispc::ISPCEngine::CreateFromArgs(args);
 
         if (engine) {
@@ -65,7 +65,7 @@ int main() {
 
     // Test 2: JIT function execution - compile and execute a function
     {
-        std::vector<std::string> args = {"ispc", "jit_test.ispc"};
+        std::vector<std::string> args = {"jit_test.ispc"};
         auto engine = ispc::ISPCEngine::CreateFromArgs(args);
 
         if (engine && engine->CompileFromFileToJit("jit_test.ispc") == 0) {
@@ -120,7 +120,7 @@ int main() {
         test_file2 << "}\n";
         test_file2.close();
 
-        std::vector<std::string> args = {"ispc"};
+        std::vector<std::string> args = {};
         auto engine = ispc::ISPCEngine::CreateFromArgs(args);
 
         if (engine) {

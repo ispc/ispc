@@ -164,7 +164,7 @@ int main(int argc, char *argv[]) {
 
     // Create ISPC engine with include path for test_static.isph and TEST_SIG definition
     std::string test_sig_def = "-DTEST_SIG=" + std::to_string(TEST_SIG);
-    std::vector<std::string> args = {"ispc", "--target=" + target, "-I", "tests", test_sig_def, "--woff"};
+    std::vector<std::string> args = {"--target=" + target, "-I", "tests", test_sig_def, "--woff"};
     auto engine = ispc::ISPCEngine::CreateFromArgs(args);
 
     if (!engine) {

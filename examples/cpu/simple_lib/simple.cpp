@@ -22,7 +22,7 @@ int main() {
 
     std::cout << "Compiling simple.ispc using library mode...\n";
 
-    std::vector<std::string> args1 = {"ispc", "simple.ispc", "--target=host", "-O2", "-o",
+    std::vector<std::string> args1 = {"simple.ispc", "--target=host", "-O2", "-o",
                                       "simple_ispc.o", "-h", "simple_ispc.h"};
 
     int result = ispc::CompileFromArgs(args1);
@@ -38,7 +38,7 @@ int main() {
     std::cout << "Compiling simple.ispc using library mode with different options...\n";
 
     // Set up a second compilation with different options
-    std::vector<std::string> args2 = {"ispc", "simple.ispc", "--target=host",  "-O0", "--emit-asm", "-o",
+    std::vector<std::string> args2 = {"simple.ispc", "--target=host",  "-O0", "--emit-asm", "-o",
                                       "simple_debug.s", "-h", "simple_debug.h", "-g"};
 
     // Execute second compilation
@@ -62,13 +62,13 @@ int main() {
     std::cout << "\nTesting multiple engines...\n";
 
     // Create multiple engines with different targets that would conflict
-    std::vector<std::string> engineArgs1 = {"ispc", "simple.ispc", "--target=sse2-i32x4", "-O2", "-o",
+    std::vector<std::string> engineArgs1 = {"simple.ispc", "--target=sse2-i32x4", "-O2", "-o",
                                             "simple_sse2.o", "-h", "simple_sse2.h"};
 
-    std::vector<std::string> engineArgs2 = {"ispc", "simple.ispc", "--target=avx2-i32x8", "-O0", "-o",
+    std::vector<std::string> engineArgs2 = {"simple.ispc", "--target=avx2-i32x8", "-O0", "-o",
                                             "simple_avx2.o", "-h", "simple_avx2.h"};
 
-    std::vector<std::string> engineArgs3 = {"ispc", "simple.ispc", "--target=host", "--emit-asm", "-o",
+    std::vector<std::string> engineArgs3 = {"simple.ispc", "--target=host", "--emit-asm", "-o",
                                             "simple_host.s", "-h", "simple_host.h"};
 
     // Create engines but don't execute yet - this tests target state isolation

@@ -524,11 +524,19 @@ std::unique_ptr<ISPCEngine> ISPCEngine::CreateFromCArgs(int argc, char *argv[]) 
 
     auto instance = std::unique_ptr<ISPCEngine>(new ISPCEngine());
 
+    // Create argv array with dummy program name as first argument
+    std::vector<char *> argvWithProgName(argc + 1);
+    const char dummyProgName[] = "ispc";
+    argvWithProgName[0] = const_cast<char *>(dummyProgName);
+    for (int i = 0; i < argc; ++i) {
+        argvWithProgName[i + 1] = argv[i];
+    }
+
     // Parse command line options
     ArgsParseResult parseResult =
-        ParseCommandLineArgs(argc, argv, instance->pImpl->m_file, instance->pImpl->m_arch, instance->pImpl->m_cpu,
-                             instance->pImpl->m_targets, instance->pImpl->m_output, instance->pImpl->m_linkFileNames,
-                             instance->pImpl->m_isLinkMode);
+        ParseCommandLineArgs(argc + 1, argvWithProgName.data(), instance->pImpl->m_file, instance->pImpl->m_arch,
+                             instance->pImpl->m_cpu, instance->pImpl->m_targets, instance->pImpl->m_output,
+                             instance->pImpl->m_linkFileNames, instance->pImpl->m_isLinkMode);
 
     if (parseResult == ArgsParseResult::failure) {
         return nullptr;
@@ -540,10 +548,6 @@ std::unique_ptr<ISPCEngine> ISPCEngine::CreateFromCArgs(int argc, char *argv[]) 
 }
 
 std::unique_ptr<ISPCEngine> ISPCEngine::CreateFromArgs(const std::vector<std::string> &args) {
-    if (args.empty()) {
-        return nullptr;
-    }
-
     // Convert vector to argc/argv format
     int argc = args.size();
     std::vector<std::string> argsCopy(args); // Keep a copy to ensure lifetime
@@ -611,10 +615,6 @@ int CompileFromCArgs(int argc, char *argv[]) {
 }
 
 int CompileFromArgs(const std::vector<std::string> &args) {
-    if (args.empty()) {
-        return 1;
-    }
-
     // Convert vector to argc/argv format
     int argc = args.size();
     std::vector<std::string> argsCopy(args); // Keep a copy to ensure lifetime
