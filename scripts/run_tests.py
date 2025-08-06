@@ -682,6 +682,10 @@ def run_test(testname, host, target):
             if options.calling_conv == "vectorcall" and host.is_windows():
                 ispc_cmd += " --vectorcall"
 
+            # we enabled float16 tests which requires this flag on windows
+            if host.is_windows():
+                ispc_cmd += " --include-float16-conversions"
+
         exe_wd = "."
         if target.arch == "wasm32" or target.arch == "wasm64":
             cc_cmd += " -D__WASM__"
