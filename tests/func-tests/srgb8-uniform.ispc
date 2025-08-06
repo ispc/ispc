@@ -20,12 +20,6 @@ int clamp_test() {
 task void f_v(uniform float RET[]) {
     int errorCount = 0;
 
-    foreach(i = 0...256)
-        if(float_to_srgb8(srgb8_to_float(i)) != i)
-            errorCount++;
-
-    errorCount += clamp_test<int>();
-
     for(uniform int i = 0; i < 256; ++i)
         if(float_to_srgb8(srgb8_to_float(i)) != i)
             errorCount++;
