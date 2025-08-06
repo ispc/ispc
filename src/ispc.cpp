@@ -3106,6 +3106,7 @@ Globals::Globals() {
     isMultiTargetCompilation = false;
     darwinVersionMin = llvm::VersionTuple();
     errorLimit = -1;
+    includeFloat16Conversions = false;
 
     enableTimeTrace = false;
     // set default granularity to 500.

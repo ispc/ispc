@@ -362,11 +362,15 @@ DECL_BUILTIN_NAME(__task_index0);
 DECL_BUILTIN_NAME(__task_index1);
 DECL_BUILTIN_NAME(__task_index2);
 DECL_BUILTIN_NAME(__terminate_now);
+DECL_BUILTIN_NAME(__truncdfhf2);
+DECL_BUILTIN_NAME(__truncsfhf2);
 DECL_BUILTIN_NAME(__udiv_i8);
 DECL_BUILTIN_NAME(__udiv_i16);
 DECL_BUILTIN_NAME(__udiv_i32);
 DECL_BUILTIN_NAME(__udiv_i64);
 DECL_BUILTIN_NAME(__urem_i8);
+DECL_BUILTIN_NAME(__extendhfdf2);
+DECL_BUILTIN_NAME(__extendhfsf2);
 DECL_BUILTIN_NAME(__urem_i16);
 DECL_BUILTIN_NAME(__urem_i32);
 DECL_BUILTIN_NAME(__urem_i64);
@@ -717,6 +721,13 @@ std::unordered_map<PersistentGroup, std::vector<const char *>> persistentGroups 
 std::unordered_map<std::string, int> persistentFuncs = {
     {__avg_up_uint8, 1},   {__avg_up_int8, 1},   {__avg_up_uint16, 1},   {__avg_up_int16, 1},
     {__avg_down_uint8, 1}, {__avg_down_int8, 1}, {__avg_down_uint16, 1}, {__avg_down_int16, 1},
+};
+
+std::unordered_map<std::string, int> float16ConversionFuncs = {
+    {__truncsfhf2, 1},
+    {__extendhfsf2, 1},
+    {__truncdfhf2, 1},
+    {__extendhfdf2, 1},
 };
 
 } // namespace builtin

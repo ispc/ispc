@@ -53,6 +53,10 @@ enum class PersistentGroup {
 // Functions that should be preserved across optimization pipeline unconditionally.
 extern std::unordered_map<std::string, int> persistentFuncs;
 
+// float16 conversion functions that should be preserved when
+// --include-float16-conversions is specified.
+extern std::unordered_map<std::string, int> float16ConversionFuncs;
+
 // Groups of function that should be preserved across optimization pipeline.
 // The logic is following: the whole group is to be preserved if any of
 // function from the group is actually used.
@@ -410,11 +414,15 @@ extern const char *const __task_index0;
 extern const char *const __task_index1;
 extern const char *const __task_index2;
 extern const char *const __terminate_now;
+extern const char *const __truncdfhf2;
+extern const char *const __truncsfhf2;
 extern const char *const __udiv_i8;
 extern const char *const __udiv_i16;
 extern const char *const __udiv_i32;
 extern const char *const __udiv_i64;
 extern const char *const __urem_i8;
+extern const char *const __extendhfdf2;
+extern const char *const __extendhfsf2;
 extern const char *const __urem_i16;
 extern const char *const __urem_i32;
 extern const char *const __urem_i64;
