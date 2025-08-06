@@ -1098,6 +1098,21 @@ __declspec(safe) inline float half_to_float_fast(unsigned int16 h);
 __declspec(safe) inline uniform int16 float_to_half_fast(uniform float f);
 __declspec(safe) inline int16 float_to_half_fast(float f);
 
+// For targets without native instructions for half-precision conversions, LLVM
+// generates calls to these functions. They are supposed to be provided by the
+// compiler runtimes: libgcc for GCC and Clang, and compiler-rt for LLVM.
+// libgcc provides them starting from GCC 12 version, LLVM provides them with
+// float16 types starting from LLVM 15. MSVC does not provide these functions.
+// LLVM backend generates calls to these functions during ISEL, so we need to
+// preserve them until it by adding them to llvm.used if
+// --include-float16-conversions is provided. To remove them if they are not
+// used we need to modify machine optimization pipeline, that is not
+// implemented yet.
+__attribute__((unmangled)) unmasked uniform float16 __truncsfhf2(uniform float x);
+__attribute__((unmangled)) unmasked uniform float __extendhfsf2(uniform float16 x);
+__attribute__((unmangled)) unmasked uniform float16 __truncdfhf2(uniform double x);
+__attribute__((unmangled)) unmasked uniform double __extendhfdf2(uniform float16 x);
+
 ///////////////////////////////////////////////////////////////////////////
 // float -> srgb8
 

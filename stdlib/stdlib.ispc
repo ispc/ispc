@@ -5518,6 +5518,17 @@ __declspec(safe) static inline int16 float_to_half_fast(float f) {
     }
 }
 
+__attribute__((unmangled)) unmasked uniform float16 __truncsfhf2(uniform float x) {
+    return float16bits(float_to_half(x));
+}
+__attribute__((unmangled)) unmasked uniform float __extendhfsf2(uniform float16 x) { return half_to_float(intbits(x)); }
+__attribute__((unmangled)) unmasked uniform float16 __truncdfhf2(uniform double x) {
+    return float16bits(float_to_half((uniform float)x));
+}
+__attribute__((unmangled)) unmasked uniform double __extendhfdf2(uniform float16 x) {
+    return (uniform double)half_to_float(intbits(x));
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // float -> srgb8
 

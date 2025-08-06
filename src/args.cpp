@@ -98,6 +98,8 @@ static ArgsParseResult usage() {
     printf("    [--host-stub <filename>]\t\tEmit host-side offload stub functions to file\n");
     printf("    [-h <name>/--header-outfile=<name>]\tOutput filename for header\n");
     printf("    [-I <path>]\t\t\t\tAdd <path> to #include file search path\n");
+    printf(
+        "    [--include-float16-conversions]\tAdd float16 conversion functions permanently to the compiled module\n");
     printf("    [--ignore-preprocessor-errors]\tSuppress errors from the preprocessor\n");
     printf("    [--instrument]\t\t\tEmit instrumentation to gather performance data\n");
     printf("    [--math-lib=<option>]\t\tSelect math library\n");
@@ -938,6 +940,8 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
             file = argv[i];
         } else if (!strcmp(argv[i], "--nostdlib")) {
             g->includeStdlib = false;
+        } else if (!strcmp(argv[i], "--include-float16-conversions")) {
+            g->includeFloat16Conversions = true;
         } else if (!strcmp(argv[i], "--nocpp")) {
             g->runCPP = false;
             Warning(SourcePos(), "--nocpp is deprecated and will be removed in the future. ");

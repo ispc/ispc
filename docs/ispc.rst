@@ -795,6 +795,12 @@ Compiler flags changes:
 Updating ISPC Programs For Changes In ISPC 1.28.0
 -------------------------------------------------
 
+A new command-line option ``--include-float16-conversions`` was added. This
+option makes the compiler include float16 conversion functions in the compiled
+module. This is useful for targets that do not have native instructions for
+float16 conversions, which are x86 targets prior to AVX2. This option is
+disabled by default.
+
 ISPC can now generate nanobind wrappers for ISPC modules. This allows easy and
 lightweight integration of ISPC code with Python. The generated wrappers can be
 built into native Python modules and imported into Python code. The

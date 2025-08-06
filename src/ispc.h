@@ -986,6 +986,9 @@ struct Globals {
        This address the new linker introduced in Xcode 15 that issues a warning if version when no version is provided.
        https://github.com/ispc/ispc/issues/3143  */
     llvm::VersionTuple darwinVersionMin;
+
+    /** When true, include float16 conversion functions permanently to the compiled module */
+    bool includeFloat16Conversions;
 };
 
 // This is used when empty string is used for "--darwin-version-min"
