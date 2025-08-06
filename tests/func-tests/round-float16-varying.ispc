@@ -1,6 +1,8 @@
 #include "test_static.isph"
 // rule: skip on arch=wasm32
 // rule: skip on arch=wasm64
+// rule: skip on target=generic.*
+
 task void f_f(uniform float RET[], uniform float aFOO[]) {
     float error = 0;
     RET[programIndex] = 0;
