@@ -112,6 +112,11 @@ static void initializePaths(const char *ISPCLibraryPath) {
 
 namespace ispc {
 
+#ifdef ISPC_IS_LIBRARY
+// Cache the library path
+static std::string g_libPath;
+#endif
+
 // Class for managing global state during compilation
 class GlobalStateGuard {
   public:
@@ -508,9 +513,7 @@ bool Initialize() {
     g = new Globals;
 
 #ifdef ISPC_IS_LIBRARY
-    // Initialize library-specific paths when built as a library
-    std::string libPath = getISPCLibraryPath();
-    initializePaths(libPath.c_str());
+    g_libPath = getISPCLibraryPath();
 #endif
 
     return true;
@@ -523,6 +526,16 @@ std::unique_ptr<ISPCEngine> ISPCEngine::CreateFromCArgs(int argc, char *argv[]) 
     }
 
     auto instance = std::unique_ptr<ISPCEngine>(new ISPCEngine());
+
+#ifdef ISPC_IS_LIBRARY
+    // When used as a library, create a fresh Globals instance for each engine
+    // to ensure complete state isolation.
+    delete g;
+    g = new Globals();
+
+    // Initialize library-specific paths for the fresh globals instance
+    initializePaths(g_libPath.c_str());
+#endif
 
     // Create argv array with dummy program name as first argument
     std::vector<char *> argvWithProgName(argc + 1);
