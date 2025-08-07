@@ -666,9 +666,6 @@ if (ISPC_LIBRARY_JIT)
 else()
     list(APPEND COMPILE_DEFINITIONS ISPC_JIT_OFF)
 endif()
-if (ISPC_LIBRARY)
-    list(APPEND COMPILE_DEFINITIONS ISPC_IS_LIBRARY)
-endif()
 
 # Include directories
 list(APPEND INCLUDE_DIRECTORIES
@@ -896,7 +893,6 @@ endfunction()
 # This function configures library target.
 function(configure_ispc_lib TARGET)
     configure_ispc_obj(${TARGET})
-    target_compile_definitions(${TARGET} PRIVATE ${ISPC_IS_LIBRARY})
     target_link_options(${TARGET} PRIVATE ${LINK_OPTIONS_PRIVATE})
     target_link_options(${TARGET} PUBLIC ${LINK_OPTIONS_PUBLIC})
     set_target_properties(${TARGET} PROPERTIES
@@ -915,7 +911,7 @@ function(add_ispc_library TARGET_NAME LIBRARY_TYPE OUTPUT_NAME_OVERRIDE)
         $<TARGET_OBJECTS:stdlib>
         $<TARGET_OBJECTS:optimization>
         $<TARGET_OBJECTS:common>
-        $<TARGET_OBJECTS:frontend>
+        $<TARGET_OBJECTS:frontend-lib>
         $<TARGET_OBJECTS:generic-target>
     )
 
@@ -975,6 +971,12 @@ configure_ispc_obj(common)
 
 add_library(frontend OBJECT EXCLUDE_FROM_ALL ${FRONTEND_SOURCES})
 configure_ispc_obj(frontend)
+
+if (ISPC_LIBRARY)
+    add_library(frontend-lib OBJECT EXCLUDE_FROM_ALL ${FRONTEND_SOURCES})
+    configure_ispc_obj(frontend-lib)
+    target_compile_definitions(frontend-lib PRIVATE ISPC_IS_LIBRARY)
+endif()
 
 # builtin target is created in GenerateBuiltins.cmake
 configure_ispc_obj(builtin)
