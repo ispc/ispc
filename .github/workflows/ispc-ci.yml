@@ -399,10 +399,10 @@ jobs:
       fail-fast: false
       matrix:
         llvm: [20]
-        # --math-lib=fast is not tested because of #3442
+        # --math-lib=fast and --opt=fast-math are not tested because of #3442
         extra_flags: ["--opt=disable-zmm", "--addressing=64", "-g",
                       "--math-lib=system", "--mcmodel=large", "--pic",
-                      "--no-wrap-signed-int",  "--opt=disable-fma", "--opt=fast-math"]
+                      "--no-wrap-signed-int",  "--opt=disable-fma"]
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
       platform: macos
