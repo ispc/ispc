@@ -7519,17 +7519,17 @@ static llvm::Value *lTypeConvAtomicOrUniformVector(FunctionEmitContext *ctx, llv
         }
         case AtomicType::TYPE_FLOAT16: {
             llvm::Value *zero = LLVMFPZeroAsType(fromType->LLVMType(g->ctx));
-            cast = ctx->CmpInst(llvm::Instruction::FCmp, llvm::CmpInst::FCMP_ONE, exprVal, zero, cOpName);
+            cast = ctx->CmpInst(llvm::Instruction::FCmp, llvm::CmpInst::FCMP_UNE, exprVal, zero, cOpName);
             break;
         }
         case AtomicType::TYPE_FLOAT: {
             llvm::Value *zero = LLVMFPZeroAsType(fromType->LLVMType(g->ctx));
-            cast = ctx->CmpInst(llvm::Instruction::FCmp, llvm::CmpInst::FCMP_ONE, exprVal, zero, cOpName);
+            cast = ctx->CmpInst(llvm::Instruction::FCmp, llvm::CmpInst::FCMP_UNE, exprVal, zero, cOpName);
             break;
         }
         case AtomicType::TYPE_DOUBLE: {
             llvm::Value *zero = LLVMFPZeroAsType(fromType->LLVMType(g->ctx));
-            cast = ctx->CmpInst(llvm::Instruction::FCmp, llvm::CmpInst::FCMP_ONE, exprVal, zero, cOpName);
+            cast = ctx->CmpInst(llvm::Instruction::FCmp, llvm::CmpInst::FCMP_UNE, exprVal, zero, cOpName);
             break;
         }
         default:

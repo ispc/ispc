@@ -13,7 +13,7 @@
 // CHECK: icmp ne <4 x i32> %cond, zeroinitializer
 
 // CHECK-LABEL: @test_float_cond___unf_3C_4_3E_uni_3C_4_3E_uni_3C_4_3E_(
-// CHECK: fcmp one <4 x float> %cond, zeroinitializer
+// CHECK: fcmp une <4 x float> %cond, zeroinitializer
 
 // CHECK-LABEL: @test_int8_cond___unt_3C_4_3E_uni_3C_4_3E_uni_3C_4_3E_(
 // CHECK: icmp ne <4 x i8> %cond, zeroinitializer
