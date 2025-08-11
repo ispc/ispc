@@ -252,3 +252,23 @@ The example includes:
   - Validates numerical correctness of the results
   - Reports detailed performance metrics (GFLOPS, speedup ratios)
   - Analyzes execution time variability
+
+Simple_lib
+==========
+
+This example demonstrates how to use ISPC as a library to compile ISPC code at runtime using the C++ API. It shows how to:
+
+* Initialize and shutdown the ISPC library
+* Compile ISPC source files with different options using ispc::CompileFromArgs()
+* Create multiple ISPC engines with different targets (SSE2, AVX2, host)
+* Generate different output formats (object files, assembly, headers)
+
+Simple_jit
+==========
+
+This example demonstrates JIT (Just-In-Time) compilation where ISPC code is compiled to executable machine code at runtime and called directly via function pointers. It shows how to:
+
+* Create ISPC engines with different optimization levels (-O0, -O2)
+* Compile ISPC source to JIT using CompileFromFileToJit()
+* Retrieve function pointers from the JIT-compiled code using GetJitFunction()
+* Execute the JIT-compiled functions directly from C++
