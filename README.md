@@ -6,7 +6,6 @@
 [![Bandit](https://github.com/ispc/ispc/actions/workflows/bandit.yml/badge.svg)](https://github.com/ispc/ispc/actions/workflows/bandit.yml)
 [![Coverity](https://scan.coverity.com/projects/30508/badge.svg)](https://scan.coverity.com/projects/intel-ispc)
 [![Trivy](https://github.com/ispc/ispc/actions/workflows/trivy.yml/badge.svg)](https://github.com/ispc/ispc/actions/workflows/trivy.yml)
-[![Cve-bin](https://github.com/ispc/ispc/actions/workflows/cve-bin.yml/badge.svg)](https://github.com/ispc/ispc/actions/workflows/cve-bin.yml)
 [![ClamAV](https://github.com/ispc/ispc/actions/workflows/clamav.yml/badge.svg)](https://github.com/ispc/ispc/actions/workflows/clamav.yml)
 [![Hardening Checks](https://github.com/ispc/ispc/actions/workflows/hardening-check.yml/badge.svg)](https://github.com/ispc/ispc/actions/workflows/hardening-check.yml)
 
