@@ -1,3 +1,143 @@
+=== v1.28.0 === (13 August 2025)
+
+ISPC release with enhanced struct operator support, the ability to use ISPC as
+a library with JIT support, simplified integration with Python via nanobind
+wrappers, enhanced standard library functions, and numerous stability and
+performance improvements. Based on a patched LLVM 20.1.8.
+
+Language Changes:
+* Struct operator overloading has been extended. Added support for overloading
+  unary (`++`, `--`, `-`, `!`, `~`), binary (`*`, `/`, `%`, `+`, `-`, `>>`,
+  `<<`, `==`, `!=`, `<`, `>`, `<=`, `>=`, `&`, `|`, `^`, `&&`, `||`), and
+  assignment (`=`, `+=`, `-=`, `*=`, `/=`, `%=`, `<<=`, `>>=`, `&=`, `|=`,
+  `^=`) operators for struct types.
+
+* Integer literal rules are now stricter:
+  * Limits the number of `[uUlL]` symbols (e.g., `ulll`, `uul`, `lulu` are no
+    longer valid).
+  * The value modification suffix (`[kMG]`) must precede the type modification
+    suffix (`[uUlL]`).
+  * Like C/C++, `lL` and `Ll` suffixes are no longer allowed (mixing cases to
+    form `LL`).
+
+* NaN to `bool` conversion now matches C/C++ behavior.
+
+ISPC as a Library:
+* ISPC can now be used as a C++ library (`libispc`) for embedding ISPC
+  compilation directly into applications. It also provides CMake configuration
+  files for easy integration into other CMake projects. The library includes
+  experimental Just-In-Time (JIT) compilation for runtime code generation and
+  execution. See the documentation and the new `simple_lib` and `simple_jit`
+  examples demonstrating the `ISPCEngine` API.
+
+Python Integration and Nanobind Support:
+* ISPC can now generate nanobind wrappers for ISPC modules, enabling easy and
+  lightweight integration with Python. The generated wrappers can be built
+  into native Python modules and imported into Python code. The
+  `--nanobind-wrapper=<filename>` option enables this feature.
+
+* Three new examples show ISPC integration with Python:
+  * **point_transform_ctypes** - calling an ISPC function via ctypes with
+    three different input types.
+  * **point_transform_nanobind** - using nanobind to wrap an ISPC function for
+    geometric transformations on 2D points, integrating with NumPy for
+    high-performance vectorized processing.
+  * **attention** - single-head attention as used in transformer networks,
+    featuring:
+    * Multiple matrix multiplication methods (GOTO-based, tiled)
+    * Memory pool management for efficient intermediate storage
+    * Task-based parallelism for multi-core scaling
+    * Softmax with optimized memory access patterns
+
+Float16:
+* Added a new command-line option `--include-float16-conversions` to include
+  float16 conversion functions in the compiled module. Useful for targets
+  without native float16 conversion instructions, such as x86 prior to AVX2.
+  Disabled by default.
+
+Standard Library Changes:
+* `select` now supports unsigned integer types `uint8`, `uint16`, `uint32`,
+  and `uint64`, as well as uniform short vectors.
+
+* Added new functions: `isinf`, `isfinite`, `srgb8_to_float`.
+
+* Short vector standard library functions have been moved to
+  `short_vec.isph`. They are no longer implicitly available and must be
+  included explicitly.
+
+* Added short vector type support for: `fmod`, `isnan`, `rsqrt_fast`, `clamp`.
+
+* Added an `include/intrinsics` directory with SSE intrinsic headers, useful
+  for porting intrinsics-based code to ISPC.
+
+Performance:
+* Optimized `shuffle`/`shift`/`rotate` and `reduce_equal` on AVX-512 targets,
+  with up to 90% speedup.
+
+New Targets:
+* Added CPU targets for AMD Zen4 and Zen5 architectures.
+
+Crash Fixes:
+* Fixed crashes related to atomic type handling.
+* Resolved nested `foreach` assertion failures.
+* Fixed variable scoping crashes in single-statement blocks.
+* Addressed unhandled atomic type crashes.
+* Fixed crashes related to `signed` keyword usage.
+* Resolved crash from extra index access in aggregate initialization.
+* Fixed crashes from templates without arguments.
+* Fixed crashes in short vector initialization and indexing.
+* Fixed type signature mismatch crash with `uniform bool<N>` parameters.
+
+Function Call Enhancements:
+* Added struct access support on function call returns.
+* Improved handling of functions returning pointer types.
+* Enhanced lvalue handling for function return expressions.
+
+Ecosystem Improvements and Community Engagement:
+* Modernized the ISPC website with a refreshed look and structure.
+
+* Open-sourced the ISPC VS Code plugin
+  (https://github.com/ispc/vscode-ispc).
+  Though it has not been maintained for some time, we are committed to
+  improving it and releasing a new version. Community contributions are
+  welcome.
+
+* We have set up a Discord server to better connect with our community
+  and make it easier for ISPC users to support one another.
+  Join the ISPC Discord server: https://discord.gg/WnMqNPgs
+
+Recommended versions of Runtime Dependencies when targeting GPU:
+
+Linux:
+
+ - Intel(R) Graphics Compute Runtime
+   https://github.com/intel/compute-runtime/releases/tag/25.13.33276.16
+ - Level Zero Loader
+   https://github.com/oneapi-src/level-zero/releases/tag/v1.20.2
+ - Threading Building Blocks (TBB)
+
+Alternatively, you can use a validated gfx driver stack supporting Intel® Arc™
+available at https://dgpu-docs.intel.com/driver/installation.html
+
+Windows:
+
+ - Intel(R) Graphics Windows(R) DCH Drivers 32.0.101.6083
+   https://www.intel.com/content/www/us/en/download/785597/intel-arc-iris-xe-graphics-windows.html
+ - Level Zero Loader
+   https://github.com/oneapi-src/level-zero/releases/tag/v1.20.2
+ - OpenCL™ Offline Compiler (OCLOC)
+   https://www.intel.com/content/www/us/en/developer/articles/tool/oneapi-standalone-components.html
+   (this is needed for AoT compilation on Windows only)
+ - Supported GPU platforms: Intel(R) Arc Graphics, 11th-13th Gen Intel(R) Core
+   processor graphics
+
+Components revisions used in GPU-enabled build:
+ - https://github.com/KhronosGroup/SPIRV-LLVM-Translator/commit/6dd8f2a1
+ - https://github.com/intel/vc-intrinsics/commit/b980474c
+ - https://github.com/oneapi-src/level-zero/commit/d7a44e0 (v1.20.2)
+ - https://github.com/llvm/llvm-project/commit/87f0227 (llvmorg-20.1.8) +
+   patches from llvm_patches folder
+
 === v1.27.0 === (15 May 2025)
 
 This release introduces AVX10.2 support, extended standard library coverage for
