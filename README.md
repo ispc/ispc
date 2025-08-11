@@ -147,7 +147,12 @@ the Github release page for
 and
 [Windows](https://github.com/ispc/ispc/releases/download/trunk-artifacts/ispc-trunk-windows.zip)
 See also additional [documentation](https://ispc.github.io/documentation.html)
-and additional [performance information](https://ispc.github.io/perf.html).  If
-you have a bug report and have a question, you are welcome to open an
+and additional [performance information](https://ispc.github.io/perf.html).
+
+## Contact Us
+If you have a bug report and have a question, you are welcome to open an
 [issue](https://github.com/ispc/ispc/issues) or start a
 [discussion](https://github.com/ispc/ispc/discussions) on GitHub.
+
+Join the [ISPC Discord server](https://discord.gg/WnMqNPgs) to connect with
+ISPC community and developers.
