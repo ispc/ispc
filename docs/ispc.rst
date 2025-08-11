@@ -796,56 +796,66 @@ Compiler flags changes:
 Updating ISPC Programs For Changes In ISPC 1.28.0
 -------------------------------------------------
 
-A new command-line option ``--include-float16-conversions`` was added. This
-option makes the compiler include float16 conversion functions in the compiled
-module. This is useful for targets that do not have native instructions for
-float16 conversions, which are x86 targets prior to AVX2. This option is
-disabled by default.
+New Features:
 
-ISPC can now generate nanobind wrappers for ISPC modules. This allows easy and
-lightweight integration of ISPC code with Python. The generated wrappers can be
-built into native Python modules and imported into Python code. The
-``--nanobind-wrapper=<filename>`` command-line option enables this feature.
+* Added a new command-line option ``--include-float16-conversions``. This
+  option makes the compiler include float16 conversion functions in the
+  compiled module. This is useful for targets that do not have native
+  instructions for float16 conversions, such as x86 targets prior to AVX2.
+  This option is disabled by default.
 
-The struct operator overloading feature has been extended to support
-overloading of unary, assignment, and the complete set of binary
-operators.
+* ISPC can now generate nanobind wrappers for ISPC modules, allowing easy
+  and lightweight integration of ISPC code with Python. The generated wrappers
+  can be built into native Python modules and imported into Python code. The
+  ``--nanobind-wrapper=<filename>`` command-line option enables this feature.
 
-ISPC now includes a new ``include/intrinsics`` directory containing header
-files that implement selected SSE intrinsics in ISPC. If you're porting
-existing code from intrinsics to ISPC, you can use these headers as a reference.
+* Struct operator overloading has been extended. Extended support for
+  overloading unary (``++``, ``--``, ``-``, ``!``, ``~``), binary (``*``,
+  ``/``, ``%``, ``+``, ``-``, ``>>``, ``<<``, ``==``, ``!=``, ``<``, ``>``,
+  ``<=``, ``>=``, ``&``, ``|``, ``^``, ``&&``, ``||``), and assignment
+  (``=``, ``+=``, ``-=`` , ``*=``, ``/=``, ``%=``, ``<<=``, ``>>=``, ``&=``,
+  ``|=``, ``^=``) operators for struct types.
 
-Integer literals are now stricter:
+* ISPC can now be used as a C++ library (``libispc``) for embedding ISPC
+  compilation directly into applications. It now also provides CMake
+  configuration files for easy integration into other CMake projects. The
+  library includes experimental Just-In-Time (JIT) compilation capabilities
+  for runtime code generation and execution. See the section
+  `Using ISPC as a Library`_ for more details.
 
-* It now limits the number of occurrences of [uUlL] symbols (i.e. "ulll",
-  "uul" and "lulu" are not valid anymore).
-* The value modification suffix (i.e., [kMG]) must precede the type
-  modification suffix (i.e., [uUlL] symbols).
-* Like C/C++, "lL" and "Ll" suffixes are not allowed anymore (i.e., the mix of
-  lower and upper case "L" to form a "LL" suffix).
+* Added a new ``include/intrinsics`` directory containing header files that
+  implement selected SSE intrinsics in ISPC. If you're porting existing code
+  from intrinsics to ISPC, you can use these headers as a reference.
 
-Standard library:
+Language and Syntax Changes:
 
-The ``select`` functions now support unsigned integer types ``uint8``,
-``uint16``, ``uint32``, and ``uint64`` as well as uniform short vectors.
+* Integer literals are now stricter:
 
-The ``isinf``, ``isfinite``, and ``srgb8_to_float`` functions have been added
-to the standard library.
+  * Limits the number of occurrences of ``[uUlL]`` symbols (e.g., ``ulll``,
+    ``uul``, and ``lulu`` are not valid anymore).
+  * The value modification suffix (i.e., ``[kMG]``) must precede the type
+    modification suffix (i.e., ``[uUlL]`` symbols).
+  * Like C/C++, ``lL`` and ``Ll`` suffixes are no longer allowed (i.e., mixing
+    lower- and upper-case ``L`` to form a ``LL`` suffix).
 
-Standard library functions for short vectors have been moved to a separate
-header file ``short_vec.isph``. They are no longer defined implicitly for every
-file compiled with ISPC. This means that code using such functions should now
-include this file with ``#include "short_vec.isph"``.
+Standard Library Changes:
 
-The support for short vector types has been added also for the following
-element wise functions: ``fmod``, ``isnan``, ``rsqrt_fast`` and ``clamp``.
+* ``select`` functions now support unsigned integer types ``uint8``,
+  ``uint16``, ``uint32``, and ``uint64`` as well as uniform short vectors.
 
-ISPC can now be used as a C++ library (``libispc``) for embedding ISPC
-compilation directly into applications. It also now provides CMake
-configuration files for easy integration into other CMake projects.
-The library also includes experimental Just-In-Time (JIT) compilation
-capabilities for runtime code generation and execution.
-See the section `Using ISPC as a Library`_ for more details.
+* Added new functions: ``isinf``, ``isfinite``, and ``srgb8_to_float``.
+
+* Standard library functions for short vectors have been moved to a separate
+  header file ``short_vec.isph``. They are no longer defined implicitly for
+  every file compiled with ISPC. Code using such functions should now include
+  this file with:
+
+  ::
+
+     #include "short_vec.isph"
+
+* Support for short vector types has been added to the following element-wise
+  functions: ``fmod``, ``isnan``, ``rsqrt_fast``, and ``clamp``.
 
 
 Getting Started with ISPC
