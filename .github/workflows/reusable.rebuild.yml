@@ -109,7 +109,7 @@ jobs:
         echo "DOCKER_DIR: ${{ env.DOCKER_DIR }}"
         echo "ARTIFACT_NAME: ${{ env.ARTIFACT_NAME }}"
 
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       with:
         submodules: true
 
@@ -167,7 +167,7 @@ jobs:
         echo "DOCKER_DIR: ${{ env.DOCKER_DIR }}"
         echo "ARTIFACT_NAME: ${{ env.ARTIFACT_NAME }}"
 
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       with:
         submodules: true
 
@@ -243,7 +243,7 @@ jobs:
         echo "DOCKER_DIR: ${{ env.DOCKER_DIR }}"
         echo "ARTIFACT_NAME: ${{ env.ARTIFACT_NAME }}"
 
-    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       with:
         submodules: true
 
