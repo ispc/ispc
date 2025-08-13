@@ -9,8 +9,6 @@
 
 declare i1 @__is_compile_time_constant_mask(<WIDTH x MASK> %mask)
 
-declare i64 @__movmsk(<WIDTH x MASK>) nounwind readnone alwaysinline
-
 declare i32 @llvm.ctpop.i32(i32) nounwind readnone
 declare i64 @llvm.ctpop.i64(i64) nounwind readnone
 
@@ -45,6 +43,10 @@ define(`NEON_PREFIX_SDOT',
 define(`NEON_PREFIX_USDOT',
 `ifelse(RUNTIME, `64', `llvm.aarch64.neon.usdot',
         RUNTIME, `32', `llvm.arm.neon.usdot')')
+
+define(`NEON_PREFIX_PADDLU',
+`ifelse(RUNTIME, `64', `llvm.aarch64.neon.uaddlp',
+        RUNTIME, `32', `llvm.arm.neon.vpaddlu')')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; half conversion routines

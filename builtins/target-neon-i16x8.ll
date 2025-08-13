@@ -13,6 +13,57 @@ define(`ISA',`NEON')
 include(`util.m4')
 include(`target-neon-common.ll')
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; mask operations
+
+declare <2 x i32> @NEON_PREFIX_PADDLU.v2i32.v4i16(<4 x i16>) nounwind readnone
+declare <4 x i32> @NEON_PREFIX_PADDLU.v4i32.v8i16(<WIDTH x i16>)
+
+define i64 @__movmsk(<WIDTH x MASK>) nounwind readnone alwaysinline {
+  %and_mask = and <WIDTH x i16> %0,
+    <i16 1, i16 2, i16 4, i16 8, i16 16, i16 32, i16 64, i16 128>
+  %v4 = call <4 x i32> @NEON_PREFIX_PADDLU.v4i32.v8i16(<8 x i16> %and_mask)
+  %v2 = call <2 x i64> @NEON_PREFIX_PADDLU.v2i64.v4i32(<4 x i32> %v4)
+  %va = extractelement <2 x i64> %v2, i32 0
+  %vb = extractelement <2 x i64> %v2, i32 1
+  %v = or i64 %va, %vb
+  ret i64 %v
+}
+
+define i1 @__any(<WIDTH x MASK>) nounwind readnone alwaysinline {
+  v8tov4(MASK, %0, %v0123, %v4567)
+  %vor = or <4 x MASK> %v0123, %v4567
+  %v0 = extractelement <4 x MASK> %vor, i32 0
+  %v1 = extractelement <4 x MASK> %vor, i32 1
+  %v2 = extractelement <4 x MASK> %vor, i32 2
+  %v3 = extractelement <4 x MASK> %vor, i32 3
+  %v01 = or MASK %v0, %v1
+  %v23 = or MASK %v2, %v3
+  %v = or MASK %v01, %v23
+  %cmp = icmp ne MASK %v, 0
+  ret i1 %cmp
+}
+
+define i1 @__all(<WIDTH x MASK>) nounwind readnone alwaysinline {
+  v8tov4(MASK, %0, %v0123, %v4567)
+  %vand = and <4 x MASK> %v0123, %v4567
+  %v0 = extractelement <4 x MASK> %vand, i32 0
+  %v1 = extractelement <4 x MASK> %vand, i32 1
+  %v2 = extractelement <4 x MASK> %vand, i32 2
+  %v3 = extractelement <4 x MASK> %vand, i32 3
+  %v01 = and MASK %v0, %v1
+  %v23 = and MASK %v2, %v3
+  %v = and MASK %v01, %v23
+  %cmp = icmp ne MASK %v, 0
+  ret i1 %cmp
+}
+
+define i1 @__none(<WIDTH x MASK>) nounwind readnone alwaysinline {
+  %any = call i1 @__any(<WIDTH x MASK> %0)
+  %none = icmp eq i1 %any, 0
+  ret i1 %none
+}
+
 ;; rsqrt/rcp
 
 declare <4 x float> @NEON_PREFIX_RECPEQ.v4f32(<4 x float>) nounwind readnone
