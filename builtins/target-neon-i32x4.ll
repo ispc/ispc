@@ -15,6 +15,44 @@ include(`util.m4')
 include(`target-neon-common.ll')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; mask operations
+
+ifelse(
+RUNTIME, `64', `
+declare i32 @llvm.aarch64.neon.saddv.i32.v4i32(<4 x i32>)
+declare i32 @llvm.aarch64.neon.umaxv.i32.v4i32(<4 x i32>)
+declare i32 @llvm.aarch64.neon.uminv.i32.v4i32(<4 x i32>)
+
+define i64 @__movmsk(<4 x i32>) nounwind readnone alwaysinline {
+  %and_mask = and <4 x i32> %0, <i32 1, i32 2, i32 4, i32 8>
+  %v = call i32 @llvm.aarch64.neon.saddv.i32.v4i32(<4 x i32> %and_mask)
+  %mask64 = zext i32 %v to i64
+  ret i64 %mask64
+}
+
+define i1 @__any(<4 x i32>) nounwind readnone alwaysinline {
+  %v = call i32 @llvm.aarch64.neon.umaxv.i32.v4i32(<4 x i32> %0)
+  %cmp = icmp ne i32 %v, 0
+  ret i1 %cmp
+}
+
+define i1 @__all(<4 x i32>) nounwind readnone alwaysinline {
+  %v = call i32 @llvm.aarch64.neon.uminv.i32.v4i32(<4 x i32> %0)
+  %cmp = icmp ne i32 %v, 0
+  ret i1 %cmp
+}
+
+define i1 @__none(<4 x i32>) nounwind readnone alwaysinline {
+  %any = call i1 @__any(<4 x i32> %0)
+  %none = icmp eq i1 %any, 0
+  ret i1 %none
+}
+',
+RUNTIME, `32',`
+declare i64 @__movmsk(<WIDTH x MASK>) nounwind readnone alwaysinline
+')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rsqrt/rcp
 
 declare <4 x float> @NEON_PREFIX_RECPEQ.v4f32(<4 x float>) nounwind readnone

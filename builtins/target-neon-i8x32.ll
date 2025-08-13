@@ -9,6 +9,8 @@ define(`ISA',`NEON')
 include(`util.m4')
 include(`target-neon-common.ll')
 
+declare i64 @__movmsk(<WIDTH x MASK>) nounwind readnone alwaysinline
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; half conversion routines
 
