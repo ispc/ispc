@@ -41,6 +41,7 @@ jobs:
         # Find the actual directory name that was created
         ISPC_DIR=$(find . -type d -name "ispc*" -maxdepth 1)
         hardening-check "${ISPC_DIR}/bin/ispc" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
+        hardening-check "${ISPC_DIR}/lib/libispc.so" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
         hardening-check "${ISPC_DIR}/lib/libispcrt.so" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
         hardening-check "${ISPC_DIR}/lib/libispcrt_device_gpu.so" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
         hardening-check "${ISPC_DIR}/lib/libispcrt_device_cpu.so" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
@@ -75,6 +76,7 @@ jobs:
         7z.exe x ispc*
         cd ispc-*
         winchecksec.exe bin\ispc.exe >> ..\winchecksec-report-${{ inputs.release_tag }}.txt
+        winchecksec.exe bin\ispc.dll >> ..\winchecksec-report-${{ inputs.release_tag }}.txt
         winchecksec.exe bin\ispcrt.dll >> ..\winchecksec-report-${{ inputs.release_tag }}.txt
         winchecksec.exe bin\ispcrt_device_cpu.dll >> ..\winchecksec-report-${{ inputs.release_tag }}.txt
         winchecksec.exe bin\ispcrt_device_gpu.dll >> ..\winchecksec-report-${{ inputs.release_tag }}.txt

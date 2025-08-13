@@ -40,6 +40,7 @@ jobs:
         ISPC_DIR=$(find . -type d -name "ispc*" -maxdepth 1)
 
         hardening-check "${ISPC_DIR}/bin/ispc" | tee -a "./hardening-check-trunk.txt"
+        hardening-check "${ISPC_DIR}/lib/libispc.so" | tee -a "./hardening-check-trunk.txt"
         hardening-check "${ISPC_DIR}/lib/libispcrt.so" | tee -a "./hardening-check-trunk.txt"
         hardening-check "${ISPC_DIR}/lib/libispcrt_device_gpu.so" | tee -a "./hardening-check-trunk.txt"
         hardening-check "${ISPC_DIR}/lib/libispcrt_device_cpu.so" | tee -a "./hardening-check-trunk.txt"
@@ -73,6 +74,7 @@ jobs:
         7z.exe x archive.zip
         cd ispc-*
         winchecksec.exe bin\ispc.exe >> ..\winchecksec-report-trunk.txt
+        winchecksec.exe bin\ispc.dll >> ..\winchecksec-report-trunk.txt
         winchecksec.exe bin\ispcrt.dll >> ..\winchecksec-report-trunk.txt
         winchecksec.exe bin\ispcrt_device_cpu.dll >> ..\winchecksec-report-trunk.txt
         # Not GPU device is built in trunk Windows build
