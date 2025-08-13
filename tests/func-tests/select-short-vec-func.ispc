@@ -1,3 +1,5 @@
+// rule: skip on cpu=tgllp
+// rule: skip on cpu=dg2
 #include "test_static.isph"
 #include "short_vec.isph"
 
