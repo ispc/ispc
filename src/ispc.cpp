@@ -426,6 +426,9 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {CPU_MTL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
     {CPU_SPR, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx_vnni", "avx512_vnni"}},
     {CPU_GNR, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx_vnni", "avx512_vnni"}},
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
+    {CPU_DMR, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx_vnni", "avx512_vnni"}},
+#endif
     {CPU_ARL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
     {CPU_LNL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
     {CPU_ZNVER1, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2"}},
