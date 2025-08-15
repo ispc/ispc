@@ -16,6 +16,7 @@
 #include <sstream>
 #include <stdarg.h> /* va_list, va_start, va_arg, va_end */
 #include <stdio.h>
+#include <unordered_map>
 #ifdef ISPC_HOST_IS_WINDOWS
 #include <direct.h>
 #include <windows.h>
@@ -398,6 +399,27 @@ typedef enum {
     sizeofDeviceType
 } DeviceType;
 
+// X86 intrinsic to feature mapping for intrinsics that need special validation
+// (includes AMX, VNNI, and other x86 intrinsics that don't follow simple name mapping)
+std::unordered_map<std::string, std::string> X86IntrinsicToFeature = {
+    // amxtile
+    {"ldtilecfg", "amxtile"},
+    {"sttilecfg", "amxtile"},
+    {"tilerelease", "amxtile"},
+    {"tilezero", "amxtile"},
+    {"tileloadd64", "amxtile"},
+    {"tileloaddt164", "amxtile"},
+    {"tilestored64", "amxtile"},
+    // amxfp16
+    {"tdpfp16ps", "amxfp16"},
+    // amxint8
+    {"tdpbssd", "amxint8"},
+    {"tdpbsud", "amxint8"},
+    {"tdpbusd", "amxint8"},
+    {"tdpbuud", "amxint8"}
+    // TODO: Add VNNI and other x86 intrinsics that need special feature validation
+};
+
 // This map is used to verify features available for supported CPUs
 // and is used to filter target dependent intrisics and report an error.
 // This mechanism is not precise and doesn't take into account flavors
@@ -424,10 +446,16 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
     {CPU_TGL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx512_vnni"}},
     {CPU_ADL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
     {CPU_MTL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
-    {CPU_SPR, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx_vnni", "avx512_vnni"}},
-    {CPU_GNR, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx_vnni", "avx512_vnni"}},
+    {CPU_SPR,
+     {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx_vnni", "avx512_vnni", "amxtile",
+      "amxint8"}},
+    {CPU_GNR,
+     {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx_vnni", "avx512_vnni", "amxtile",
+      "amxint8", "amxfp16"}},
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
-    {CPU_DMR, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx_vnni", "avx512_vnni"}},
+    {CPU_DMR,
+     {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx512", "avx_vnni", "avx512_vnni", "amxtile",
+      "amxint8", "amxfp16"}},
 #endif
     {CPU_ARL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
     {CPU_LNL, {"mmx", "sse", "sse2", "ssse3", "sse41", "sse42", "avx", "avx2", "avx_vnni"}},
@@ -2395,10 +2423,28 @@ bool Target::checkIntrinsticSupport(llvm::StringRef name, SourcePos pos) {
         }
         AllCPUs a;
         std::string featureName = name.substr(0, name.find('.')).str();
-        if (CPUFeatures[a.GetTypeFromName(this->getCPU())].count(featureName) == 0) {
-            Error(pos, "Target specific LLVM intrinsic \"%s\" not supported on \"%s\" CPU.", name.data(),
-                  this->getCPU().c_str());
-            return false;
+        auto cpuFeatures = CPUFeatures[a.GetTypeFromName(this->getCPU())];
+
+        // First try normal feature validation
+        if (cpuFeatures.count(featureName) == 0) {
+            // If normal validation fails, check if this intrinsic needs special feature validation
+            auto intrinsicIt = X86IntrinsicToFeature.find(featureName);
+            if (intrinsicIt != X86IntrinsicToFeature.end()) {
+                // This intrinsic has special feature requirements, check it
+                std::string requiredFeatures = intrinsicIt->second;
+                if (cpuFeatures.count(requiredFeatures) == 0) {
+                    Error(pos,
+                          "Target specific LLVM intrinsic \"%s\" requires feature \"%s\" not supported on \"%s\" "
+                          "CPU.",
+                          name.data(), requiredFeatures.c_str(), this->getCPU().c_str());
+                    return false;
+                }
+            } else {
+                // Not an X86 intrinsic, use original error message
+                Error(pos, "Target specific LLVM intrinsic \"%s\" not supported on \"%s\" CPU.", name.data(),
+                      this->getCPU().c_str());
+                return false;
+            }
         }
     } else if (name.consume_front("arm.") == true) {
         if (m_arch != Arch::arm) {
