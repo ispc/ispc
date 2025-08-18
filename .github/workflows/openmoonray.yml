@@ -1,0 +1,102 @@
+# Copyright 2025, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: Build OpenMoonRay
+
+permissions: read-all
+
+on:
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - 'snap/**'
+      - 'benchmarks/**'
+      - 'tests/**'
+      - 'examples/**'
+      - 'tools/**'
+      - 'utils/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-ispc:
+    name: Build ISPC
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        submodules: true
+
+    - name: Install ISPC build dependencies
+      run: .github/workflows/scripts/install-build-deps.sh
+
+    - name: Build ISPC
+      run: .github/workflows/scripts/build-ispc.sh
+
+    - name: Upload ISPC artifact
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+      with:
+        name: ispc-fresh-build
+        path: build/ispc-trunk-linux.tar.gz
+
+  build-openmoonray:
+    name: Build OpenMoonRay AUR package
+    needs: build-ispc
+    runs-on: ubuntu-22.04
+    container:
+      image: archlinux:latest
+      options: --privileged
+
+    steps:
+    - name: Setup Arch Linux
+      run: |
+        pacman -Syu --noconfirm
+        pacman -S --needed --noconfirm base-devel git sudo
+        # AUR PKBUILD misses these dependencies for OpenMoonRay
+        pacman -S --noconfirm libmicrohttpd cppunit qt5-base qt5-script openimagedenoise usd
+
+    - name: Create build user
+      run: |
+        useradd -m -G wheel -s /bin/bash builder
+        echo 'builder ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+
+    - name: Download fresh ISPC
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+      with:
+        name: ispc-fresh-build
+        path: /tmp/ispc-build
+
+    - name: Install fresh ISPC
+      run: |
+        cd /tmp/ispc-build
+        tar -xzf ispc-trunk-linux.tar.gz
+        cp -r ispc-trunk-linux/bin/* /usr/local/bin/
+        chmod +x /usr/local/bin/ispc
+        ispc --version
+
+    # Build and install the required dependency for OpenMoonRay from AUR
+    - name: Build and install random123
+      run: |
+        su - builder -c "
+          git clone https://aur.archlinux.org/random123.git
+          cd random123
+          makepkg -si --noconfirm
+        "
+
+    - name: Build OpenMoonRay
+      run: |
+        su - builder -c "
+          git clone https://aur.archlinux.org/openmoonray.git
+          cd openmoonray
+
+          # Remove ispc dependency since we have fresh build
+          sed -i '/ispc/d' PKGBUILD
+
+          # Build with automatic dependency resolution
+          makepkg -s --noconfirm
+        "
