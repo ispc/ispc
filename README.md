@@ -154,5 +154,5 @@ If you have a bug report and have a question, you are welcome to open an
 [issue](https://github.com/ispc/ispc/issues) or start a
 [discussion](https://github.com/ispc/ispc/discussions) on GitHub.
 
-Join the [ISPC Discord server](https://discord.gg/WnMqNPgs) to connect with
+Join the [ISPC Discord server](https://discord.com/invite/9e7E7sFe2D) to connect with
 ISPC community and developers.
