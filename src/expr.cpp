@@ -150,11 +150,17 @@ static bool lIsAllIntZeros(Expr *expr) {
 }
 
 static bool lTypeCastOk(Expr **expr, const Type *toType, SourcePos pos) {
+    // Create TypeCastExpr to convert the expression to the desired type. Mark
+    // both the result and the wrapped expression as type-checked since
+    // lTypeCastOk is used in type conversion logic where the type is already
+    // known to be correct.
     if (expr != nullptr) {
-        *expr = new TypeCastExpr(toType, *expr, pos);
-        // Mark as type checked here since lTypeCastOk is used in type conversion
-        // logic where the type is already known to be correct.
-        (*expr)->SetTypeChecked();
+        TypeCastExpr *castExpr = new TypeCastExpr(toType, *expr, pos);
+        castExpr->SetTypeChecked();
+        if (castExpr->expr != nullptr) {
+            castExpr->expr->SetTypeChecked();
+        }
+        *expr = castExpr;
     }
     return true;
 }
