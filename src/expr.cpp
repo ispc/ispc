@@ -5223,10 +5223,21 @@ const Type *IndexExpr::GetLValueType() const {
         return lvalueType;
     }
 
-    const Type *baseExprType = nullptr, *baseExprLValueType = nullptr, *indexType = nullptr;
+    const Type *baseExprType = nullptr, *indexType = nullptr;
     if (baseExpr == nullptr || index == nullptr || ((baseExprType = baseExpr->GetType()) == nullptr) ||
-        ((baseExprLValueType = baseExpr->GetLValueType()) == nullptr) || ((indexType = index->GetType()) == nullptr)) {
+        ((indexType = index->GetType()) == nullptr)) {
         return nullptr;
+    }
+
+    // If baseExpr->GetLValueType() is null but baseExpr->GetType() is a pointer,
+    // use the pointer type directly (e.g., function calls returning pointers)
+    const Type *baseExprLValueType = baseExpr->GetLValueType();
+    if (baseExprLValueType == nullptr) {
+        if (baseExprType->IsPointerType()) {
+            baseExprLValueType = baseExprType;
+        } else {
+            return nullptr;
+        }
     }
 
     // regularize to a PointerType
