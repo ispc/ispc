@@ -1,0 +1,192 @@
+# Copyright 2025, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: Build opensource projects
+
+permissions: read-all
+
+on:
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - 'snap/**'
+      - 'benchmarks/**'
+      - 'tests/**'
+      - 'examples/**'
+      - 'tools/**'
+      - 'utils/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-ispc:
+    name: Build ISPC
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        submodules: true
+
+    - name: Install ISPC build dependencies
+      run: .github/workflows/scripts/install-build-deps.sh
+
+    - name: Build ISPC
+      run: .github/workflows/scripts/build-ispc.sh
+
+    - name: Upload ISPC artifact
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+      with:
+        name: ispc-archive
+        path: build/ispc-trunk-linux.tar.gz
+
+  build-projects:
+    name: Build ${{ matrix.project.name }}
+    needs: build-ispc
+    runs-on: ubuntu-22.04
+    container:
+      image: archlinux:latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - name: hfisher/nbody
+            extra_packages: mercurial glfw
+            build_cmd: |
+              hg clone https://hg.sr.ht/~hfisher/nbody
+              cd nbody
+              sed -i 's/BUILD_ISPC 0/BUILD_ISPC 1/' CMakeLists.txt
+              hg diff
+              cmake -S ./ -B build -G Ninja
+              cmake --build build
+
+          - name: ISPCTextureCompressor
+            build_cmd: |
+              git clone https://github.com/GameTechDev/ISPCTextureCompressor.git
+              cd ISPCTextureCompressor/
+              make -f Makefile.linux ISPC_ARCH=x86_64 ISPC_TARGETS=sse2,avx2,avx512skx-x16 ISPC=/usr/local/bin/ispc
+
+          - name: GPSnoopy/RayTracingInOneWeekend
+            build_cmd: |
+              git clone https://github.com/GPSnoopy/RayTracingInOneWeekend.git
+              cmake -G Ninja -B build -S RayTracingInOneWeekend/ispc
+              cmake --build build --verbose
+
+          - name: ispc-upwind
+            build_cmd: |
+              git clone https://gitlab.com/rossinelli/ispc-upwind.git
+              cd ispc-upwind/
+              make TARGET=sse4,avx2,avx512skx-x16
+
+          - name: FlashAttentionGPTonCPU
+            build_cmd: |
+              git clone https://github.com/ZipXuan/FlashAttentionGPTonCPU.git
+              cd FlashAttentionGPTonCPU/
+              ispc -O3 --target=avx2-i32x8 --arch=x86-64 --pic module.ispc -h module_ispc.h -o module_ispc.o
+
+          - name: merle
+            extra_packages: libx11 libxext
+            build_cmd: |
+              git clone --recursive https://github.com/chinmaygarde/merle.git
+              cd merle/
+              sed -i '/add_custom_command(/,/DEPENDS src\/texture.ispc/ s/--werror/--werror\n --pic/' CMakeLists.txt
+              git diff
+              cmake -B build -S ./ -G Ninja
+              cmake --build build
+
+    steps:
+    - name: Setup Arch Linux
+      run: |
+        pacman -Syu --noconfirm
+        pacman -S --needed --noconfirm base-devel git sudo cmake ninja ${{ matrix.project.extra_packages }}
+
+    - name: Download ISPC artifact
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+      with:
+        name: ispc-archive
+        path: /tmp/ispc-build
+
+    - name: Install ISPC
+      run: |
+        cd /tmp/ispc-build
+        tar -xzf ispc-trunk-linux.tar.gz
+        cp -r ispc-trunk-linux/* /usr/local/
+        chmod +x /usr/local/bin/ispc
+        ispc --version
+
+    - name: Build ${{ matrix.project.name }}
+      run: ${{ matrix.project.build_cmd }}
+
+  build-projects-with-builder:
+    name: Build ${{ matrix.project.name }}
+    needs: build-ispc
+    runs-on: ubuntu-22.04
+    container:
+      image: archlinux:latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - name: Leela Chess lc0
+            extra_packages: gtest
+            build_cmd: |
+              su - builder -c "
+                git clone https://aur.archlinux.org/lc0.git
+                cd lc0
+                makepkg -s --noconfirm
+              "
+
+          # Open3D disabled because open-source default runners don't have enough disk space
+          # - name: Open3D
+          #   extra_packages: minizip
+          #   build_cmd: |
+          #     # Build and install the required dependency for Open3D from AUR
+          #     su - builder -c "
+          #       git clone https://aur.archlinux.org/python-dash.git
+          #       cd python-dash/
+          #       makepkg -si --noconfirm
+          #
+          #       git clone https://aur.archlinux.org/nanoflann.git
+          #       cd nanoflann
+          #       makepkg -si --noconfirm
+          #
+          #       git clone https://aur.archlinux.org/open3d.git
+          #       cd open3d
+          #       sed -i 's|-DUSE_SYSTEM_VTK=ON|-DUSE_SYSTEM_VTK=OFF -DISPC_USE_LEGACY_EMULATION=ON -DBUILD_ISPC_MODULE=ON -DCMAKE_ISPC_COMPILER=/usr/local/bin/ispc -DCMAKE_ISPC_INSTRUCTION_SETS=host|' PKGBUILD
+          #       git diff
+          #       makepkg -s --noconfirm
+          #     "
+
+    steps:
+    - name: Setup Arch Linux
+      run: |
+        pacman -Syu --noconfirm
+        pacman -S --needed --noconfirm base-devel git sudo cmake ninja ${{ matrix.project.extra_packages }}
+
+    - name: Create build user
+      run: |
+        useradd -m -G wheel -s /bin/bash builder
+        echo 'builder ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+
+    - name: Download ISPC artifact
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+      with:
+        name: ispc-archive
+        path: /tmp/ispc-build
+
+    - name: Install ISPC
+      run: |
+        cd /tmp/ispc-build
+        tar -xzf ispc-trunk-linux.tar.gz
+        cp -r ispc-trunk-linux/* /usr/local/
+        chmod +x /usr/local/bin/ispc
+        ispc --version
+
+    - name: Build ${{ matrix.project.name }}
+      run: ${{ matrix.project.build_cmd }}
