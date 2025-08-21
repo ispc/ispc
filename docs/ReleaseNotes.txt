@@ -1,3 +1,10 @@
+=== v1.28.1 === (21 August 2025)
+
+A minor ISPC update with bug fixes:
+
+ - Fixed compiler crash when indexing with pointers returned by function calls
+ - Fixed compiler crash when assigning null pointers to struct members
+
 === v1.28.0 === (13 August 2025)
 
 ISPC release with enhanced struct operator support, the ability to use ISPC as
