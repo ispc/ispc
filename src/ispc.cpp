@@ -3082,7 +3082,7 @@ bool Target::hasXePrefetch() const {
 
 Opt::Opt() {
     level = 2;
-    fastMath = false;
+    fastMath = FastMathMode::None;
     fastMaskedVload = false;
     force32BitAddressing = true;
     unrollLoops = true;
