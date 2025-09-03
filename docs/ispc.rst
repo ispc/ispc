@@ -1303,6 +1303,18 @@ compiled with the default ``--addressing=32`` and others were compiled with
 ``--addressing=64``.
 
 
+Stack smash protection (SSP)
+----------------------------
+
+``ispc`` can generate code to guard against stack smashing by enabling
+the LLVM functionality. The ``--stack-protector`` command-line argument
+enables stack protectors for some functions vulnerable to stack smashing,
+whereas ``stack-protector=strong`` enables it for functions that contain
+arrays of any size, as well as for functions that take the arguments of
+local variables. ``stack-protector=all`` enables stack protectors for
+all functions.
+
+
 The Preprocessor
 ----------------
 

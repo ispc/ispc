@@ -147,6 +147,11 @@ static ArgsParseResult usage() {
     printf("    [--PIC]\t\t\t\tGenerate position-independent code avoiding any limit on the size of the global offset "
            "table. Ignored for Windows target\n");
     printf("    [--quiet]\t\t\t\tSuppress all output\n");
+    printf("    [--stack-protector]\t\tEnable stack protectors for some functions vulnerable to stack smashing.\n");
+    printf("    [--stack-protector=<option>]\t\tEnable stack protectors\n");
+    printf("        all\t\t\tfor all functions.\n");
+    printf(
+        "        strong\t\t\tfor functions containing arrays of any size and taking addresses of local variables.\n");
     printf("    [--support-matrix]\t\t\tPrint full matrix of supported targets, architectures and OSes\n");
     printf("    ");
     char targetHelp[2048];
@@ -908,6 +913,16 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
             g->disableLineWrap = true;
         } else if (!strcmp(argv[i], "--wno-perf") || !strcmp(argv[i], "-wno-perf")) {
             g->emitPerfWarnings = false;
+        } else if (!strcmp(argv[i], "--stack-protector")) {
+            g->SSPLevel = SSPOn;
+        } else if (!strncmp(argv[i], "--stack-protector=", 18)) {
+            const char *level = argv[i] + strlen("--stack-protector=");
+            if (!strcmp(level, "strong"))
+                g->SSPLevel = SSPStrong;
+            else if (!strcmp(level, "all"))
+                g->SSPLevel = SSPReq;
+            else
+                errorHandler.AddError("Unknown --stack-protector= option \"%s\".", level);
         } else if (!strcmp(argv[i], "-o")) {
             if (++i != argc) {
                 output.out = argv[i];
