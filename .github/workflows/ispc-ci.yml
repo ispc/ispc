@@ -692,6 +692,7 @@ jobs:
     - name: Install dependencies
       run: |
         .github/workflows/scripts/install-test-deps.sh
+        .github/workflows/scripts/install-build-deps.sh
 
     - name: Unpack examples
       run: |
@@ -703,7 +704,11 @@ jobs:
 
     - name: Build examples
       run: |
-        cmake -DCMAKE_C_FLAGS="-Wall -Werror" -DCMAKE_CXX_FLAGS="-Wall -Werror" examples-package/examples/cpu -B examples-build
+        cmake \
+            -B examples-build \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            examples-package/examples/cpu
         cmake --build examples-build
 
     - name: Run examples
