@@ -21,4 +21,5 @@ add_ispc_example(NAME "volume_rendering"
               TARGET_SOURCES ${TARGET_SOURCES}
               USE_COMMON_SETTINGS
               DATA_FILES ${DATA_FILES}
+              RUN_ARGS "${CMAKE_CURRENT_SOURCE_DIR}/camera.dat" "${CMAKE_CURRENT_SOURCE_DIR}/density_lowres.vol"
               )
