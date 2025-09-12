@@ -57,6 +57,7 @@ add_custom_target(run-cpu-examples
 # Enable ctest support
 enable_testing()
 
+add_subdirectory(amx)
 add_subdirectory(aobench)
 add_subdirectory(aobench_instrumented)
 add_subdirectory(attention)
