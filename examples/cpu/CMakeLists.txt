@@ -47,6 +47,16 @@ endif()
 
 set (EXAMPLES_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
+# Create run-cpu-examples target that runs all CPU examples via ctest
+add_custom_target(run-cpu-examples
+    COMMAND ${CMAKE_CTEST_COMMAND} -L cpu_example
+    COMMENT "Running all CPU examples via ctest"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+# Enable ctest support
+enable_testing()
+
 add_subdirectory(aobench)
 add_subdirectory(aobench_instrumented)
 add_subdirectory(attention)

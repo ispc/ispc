@@ -24,4 +24,5 @@ add_ispc_example(NAME "gmres"
               ISPC_SRC_NAME ${ISPC_SRC_NAME}
               TARGET_SOURCES ${TARGET_SOURCES}
               USE_COMMON_SETTINGS
-              DATA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/data)
+              DATA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/data
+              RUN_ARGS "${CMAKE_CURRENT_SOURCE_DIR}/data/c-18/c-18.mtx" "${CMAKE_CURRENT_SOURCE_DIR}/data/c-18/c-18_b.mtx" "output.txt")
