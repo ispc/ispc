@@ -31,7 +31,7 @@ uniform double retNegD() {
 }
 
 // CHECK: @retFastMathD
-// CHECK: fmul double %{{[a-zA-Z_][a-zA-Z0-9_]*}}, 5.000000e-01
+// CHECK: fmul {{((contract|reassoc|arcp|nsz|nnan|ninf|afn|fast) )*}}double %{{[a-zA-Z_][a-zA-Z0-9_]*}}, 5.000000e-01
 uniform double retFastMathD(uniform double arg) {
     return arg / 2.d;
 }
