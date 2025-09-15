@@ -621,7 +621,7 @@ jobs:
         name: examples_tgz
         path: build/ispc-examples-trunk.tar.gz
 
-  win-build-examples:
+  win-examples:
     needs: [win-package-examples, win-build-ispc]
     runs-on: windows-2022
     steps:
@@ -662,12 +662,16 @@ jobs:
 
     - name: Build examples
       run: |
-        mkdir examples-build
         cmake -DCMAKE_C_FLAGS="/WX" -DCMAKE_CXX_FLAGS="/WX" examples-package\examples\cpu -B examples-build -Thost=x64 -G "Visual Studio 17 2022"
         cmake --build examples-build --target ALL_BUILD --config Release
       shell: cmd
 
-  linux-build-examples:
+    - name: Run examples
+      shell: cmd
+      run: |
+        ctest --test-dir examples-build -C Release
+
+  linux-examples:
     needs: [linux-package-examples, linux-build-ispc]
     runs-on: ubuntu-22.04
     steps:
@@ -699,11 +703,14 @@ jobs:
 
     - name: Build examples
       run: |
-        mkdir examples-build
         cmake -DCMAKE_C_FLAGS="-Wall -Werror" -DCMAKE_CXX_FLAGS="-Wall -Werror" examples-package/examples/cpu -B examples-build
         cmake --build examples-build
 
-  macos-build-examples:
+    - name: Run examples
+      run: |
+        ctest --test-dir examples-build -C Release
+
+  macos-examples:
     needs: [linux-package-examples, macos-build-ispc]
     runs-on: macos-14
     steps:
@@ -735,6 +742,9 @@ jobs:
 
     - name: Build examples
       run: |
-        mkdir examples-build
         cmake -DCMAKE_C_FLAGS="-Wall -Werror" -DCMAKE_CXX_FLAGS="-Wall -Werror" examples-package/examples/cpu -B examples-build
         cmake --build examples-build
+
+    - name: Run examples
+      run: |
+        ctest --test-dir examples-build -C Release
