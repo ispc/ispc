@@ -120,14 +120,33 @@ int main(int argc, char *argv[]) {
 
     // Check for agreement
     int offset = 0;
+    int error_count = 0;
+    int errors_shown = 0;
+    const int max_errors_to_show = 10;
+
     for (int z = 0; z < Nz; ++z)
         for (int y = 0; y < Ny; ++y)
             for (int x = 0; x < Nx; ++x, ++offset) {
                 float error = fabsf((Aserial[1][offset] - Aispc[1][offset]) / Aserial[1][offset]);
-                if (error > 1e-4)
-                    printf("Error @ (%d,%d,%d): ispc = %f, serial = %f\n", x, y, z, Aispc[1][offset],
-                           Aserial[1][offset]);
+                if (error > 1e-4) {
+                    error_count++;
+                    if (errors_shown < max_errors_to_show) {
+                        printf("Error @ (%d,%d,%d): ispc = %f, serial = %f\n", x, y, z, Aispc[1][offset],
+                               Aserial[1][offset]);
+                        errors_shown++;
+                    }
+                }
             }
+
+    if (error_count > 0) {
+        if (error_count > max_errors_to_show) {
+            printf("... and %d more errors (showing only first %d)\n",
+                   error_count - max_errors_to_show, max_errors_to_show);
+        }
+        printf("Total numerical errors: %d (threshold: 1e-4)\n", error_count);
+    } else {
+        printf("All results match within tolerance (1e-4)\n");
+    }
 
     return 0;
 }
