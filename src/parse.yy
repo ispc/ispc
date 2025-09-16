@@ -3761,10 +3761,10 @@ lCreateEnumType(const char *name, std::vector<Symbol *> *enums, SourcePos pos) {
     if (name != nullptr)
         m->symbolTable->AddType(name, enumType, pos);
 
+    enumType->SetEnumerators(*enums);
     lFinalizeEnumeratorSymbols(*enums, enumType);
     for (unsigned int i = 0; i < enums->size(); ++i)
         m->symbolTable->AddVariable((*enums)[i]);
-    enumType->SetEnumerators(*enums);
     return enumType;
 }
 
