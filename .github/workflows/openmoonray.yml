@@ -95,6 +95,14 @@ jobs:
           # Remove ispc dependency since we have fresh build
           sed -i '/ispc/d' PKGBUILD
 
+          # Enable testing in CMAKE configuration
+          sed -i 's/-DMOONRAY_BUILD_TESTING=OFF/-DMOONRAY_BUILD_TESTING=ON/' PKGBUILD
+          sed -i 's/-DBUILD_TESTING=OFF/-DBUILD_TESTING=ON/' PKGBUILD
+
           # Build with automatic dependency resolution
           makepkg -s --noconfirm
+
+          # Run tests
+          cd src/build
+          ctest -L unit -E scenerdl2_render_util_tests --output-on-failure
         "
