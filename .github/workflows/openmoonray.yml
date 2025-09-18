@@ -81,7 +81,7 @@ jobs:
     - name: Build and install random123
       run: |
         su - builder -c "
-          git clone https://aur.archlinux.org/random123.git
+          git clone --branch random123 --single-branch https://github.com/archlinux/aur.git random123
           cd random123
           makepkg -si --noconfirm
         "
@@ -89,7 +89,7 @@ jobs:
     - name: Build OpenMoonRay
       run: |
         su - builder -c "
-          git clone https://aur.archlinux.org/openmoonray.git
+          git clone --branch openmoonray --single-branch https://github.com/archlinux/aur.git openmoonray
           cd openmoonray
 
           # Remove ispc dependency since we have fresh build

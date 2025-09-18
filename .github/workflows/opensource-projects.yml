@@ -137,7 +137,7 @@ jobs:
             extra_packages: gtest
             build_cmd: |
               su - builder -c "
-                git clone https://aur.archlinux.org/lc0.git
+                git clone --branch lc0 --single-branch https://github.com/archlinux/aur.git lc0
                 cd lc0
                 makepkg -s --noconfirm
               "
