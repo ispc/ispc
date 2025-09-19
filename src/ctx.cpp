@@ -2555,9 +2555,10 @@ llvm::Value *FunctionEmitContext::lSwitchBoolSize_2(llvm::Value *value, llvm::Ty
     if (llvm::dyn_cast<llvm::FixedVectorType>(fromType)) {
         llvm::VectorType *i1VecType = LLVMVECTOR::get(
             llvm::Type::getInt1Ty(*g->ctx), llvm::dyn_cast<llvm::FixedVectorType>(fromType)->getNumElements());
-        // trunc only if needed
+        // Use icmp ne instead of trunc for proper bool conversion
         if (fromType != i1VecType) {
-            i1Bool = TruncInst(value, i1VecType, newName);
+            llvm::Value *zeroVec = llvm::Constant::getNullValue(fromType);
+            i1Bool = CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, value, zeroVec, newName);
         }
         // return if we already have requested type
         if (toType == i1VecType) {
@@ -2566,7 +2567,8 @@ llvm::Value *FunctionEmitContext::lSwitchBoolSize_2(llvm::Value *value, llvm::Ty
     } else {
         llvm::Type *i1Type = llvm::Type::getInt1Ty(*g->ctx);
         if (fromType != i1Type) {
-            i1Bool = TruncInst(value, i1Type, newName);
+            llvm::Value *zero = llvm::Constant::getNullValue(fromType);
+            i1Bool = CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, value, zero, newName);
         }
         if (toType == i1Type) {
             return i1Bool;
