@@ -669,9 +669,7 @@ jobs:
     - name: Run examples
       shell: cmd
       run: |
-        # Rebuild with Ninja to avoid strange issue when msbuild reports error for gmres
-        cmake examples-package\examples\cpu -B examples-build-run -G Ninja
-        cmake --build examples-build-run --target run-cpu-examples --config Release
+        cmake --build examples-build --target run-cpu-examples --config Release
 
   linux-examples:
     needs: [linux-package-examples, linux-build-ispc]
