@@ -6,7 +6,15 @@
 
 // REQUIRES: X86_ENABLED
 
-// CHECK: sext
+// CHECK-LABEL: define <16 x i8> @embedded_select___unb_3C_3_3E_unT_3C_3_3E_unT_3C_3_3E_(
+// CHECK-NEXT: allocas:
+// CHECK-NEXT:   [[COND_STORAGE:%.*]] = zext <16 x i1> %cond to <16 x i8>
+// CHECK-NEXT:   [[SHUFFLE1:%.*]] = shufflevector <16 x i8> [[COND_STORAGE]], <16 x i8> {{.*}}, <16 x i32> {{.*}}
+// CHECK-NEXT:   [[CMP:%.*]] = icmp eq <16 x i8> [[SHUFFLE1]], zeroinitializer
+// CHECK-NEXT:   [[SELECT:%.*]] = select <16 x i1> [[CMP]], <16 x i8> %f, <16 x i8> %t
+// CHECK-NEXT:   [[RESULT:%.*]] = shufflevector <16 x i8> [[SELECT]], <16 x i8> {{.*}}, <16 x i32> {{.*}}
+// CHECK-NEXT:   ret <16 x i8> [[RESULT]]
+// CHECK-NEXT: }
 
 #define N 3
 
