@@ -669,7 +669,7 @@ jobs:
     - name: Run examples
       shell: cmd
       run: |
-        cmake --build examples-build --target run-cpu-examples --config Release
+        ctest --test-dir examples-build -C Release
 
   linux-examples:
     needs: [linux-package-examples, linux-build-ispc]
@@ -708,7 +708,7 @@ jobs:
 
     - name: Run examples
       run: |
-        cmake --build examples-build --target run-cpu-examples
+        ctest --test-dir examples-build -C Release
 
   macos-examples:
     needs: [linux-package-examples, macos-build-ispc]
@@ -747,4 +747,4 @@ jobs:
 
     - name: Run examples
       run: |
-        cmake --build examples-build --target run-cpu-examples
+        ctest --test-dir examples-build -C Release
