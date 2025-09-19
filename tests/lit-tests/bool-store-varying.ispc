@@ -36,8 +36,8 @@ void foo(uint8 a, uint8 b)
 // src/llvmutil.cpp BoolVectoType).
 // AVX2: define void @boo___vyb(<[[WIDTH]] x [[RTYPE:i[0-9]+]]> %a, <[[WIDTH]] x [[RTYPE]]> %__mask)
 // AVX2-NEXT: allocas:
-// AVX2-NEXT: [[TRUNC:%.*]] = trunc <[[WIDTH]] x [[RTYPE]]> %a to <[[WIDTH]] x i8>
-// AVX2-NEXT: [[CAST:%.*]] = and <[[WIDTH]] x i8> [[TRUNC]], {{(splat \(i8 1\)|<i8 1, i8 1, i8 1, i8 1>)}}
+// AVX2-NEXT: [[CMP:%.*]] = icmp ne <[[WIDTH]] x [[RTYPE]]> %a, zeroinitializer
+// AVX2-NEXT: [[CAST:%.*]] = zext <[[WIDTH]] x i1> [[CMP]] to <[[WIDTH]] x i8>
 // AVX2-NEXT: store <[[WIDTH]] x i8> [[CAST]], {{.*}} @y
 // AVX2-NEXT: ret void
 

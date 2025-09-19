@@ -6,7 +6,8 @@
 
 // REQUIRES: X86_ENABLED
 
-// CHECK: sext
+// CHECK: zext <16 x i1> %cond to <16 x i8>
+// CHECK: icmp eq <16 x i8>
 
 #define N 3
 
