@@ -104,5 +104,5 @@ jobs:
 
           # Run tests
           cd src/build
-          ctest -L unit
+          ctest -L unit --output-on-failure
         "
