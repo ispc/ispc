@@ -20,3 +20,6 @@ examples/*/test
 check_isa.exe
 build*
 
+# Claude Code settings
+.claude/settings.local.json
+
