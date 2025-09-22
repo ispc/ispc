@@ -246,7 +246,7 @@ Module::Module(const char *fn) : srcFile(fn) {
     llvm::Metadata *identNode2[] = {llvm::MDString::get(*g->ctx, llvmVersion)};
     identMetadata->addOperand(llvm::MDNode::get(*g->ctx, identNode2));
 
-    if (g->generateDebuggingSymbols) {
+    if (g->generateDebuggingSymbols || g->sampleProfilingDebugInfo) {
         llvm::TimeTraceScope TimeScope("Create Debug Data");
         // To enable debug information on Windows, we have to let llvm know, that
         // debug information should be emitted in CodeView format.
@@ -262,6 +262,7 @@ Module::Module(const char *fn) : srcFile(fn) {
             FATAL("Incorrect debugInfoType");
             break;
         }
+
         diBuilder = new llvm::DIBuilder(*module);
 
         // Let the DIBuilder know that we're starting a new compilation
@@ -281,12 +282,20 @@ Module::Module(const char *fn) : srcFile(fn) {
             // The kernel name is one of these read symbols. ISPC produces namespace
             // for example "ispc::simple_ispc". Matching the breakpoint location
             // "simple_ispc" with the symbol name fails if module language is C and not C++.
+            // Configure debug emission kind based on sample profiling setting
+            llvm::DICompileUnit::DebugEmissionKind debugKind =
+                g->sampleProfilingDebugInfo ? llvm::DICompileUnit::LineTablesOnly : llvm::DICompileUnit::FullDebug;
+
             diCompileUnit =
-                diBuilder->createCompileUnit(llvm::dwarf::DW_LANG_C_plus_plus,          /* lang */
-                                             srcFile,                                   /* filename */
-                                             ispcVersion.c_str(),                       /* producer */
-                                             g->opt.level > 0 /* is optimized */, "-g", /* command line args */
-                                             0 /* run time version */);
+                diBuilder->createCompileUnit(llvm::dwarf::DW_LANG_C_plus_plus,            /* lang */
+                                             srcFile,                                     /* filename */
+                                             ispcVersion.c_str(),                         /* producer */
+                                             g->opt.level > 0 /* is optimized */, "-g",   /* command line args */
+                                             0 /* run time version */, llvm::StringRef(), /* SplitName */
+                                             debugKind,                                   /* DebugEmissionKind */
+                                             0,                                           /* DWOId */
+                                             true,                                        /* SplitDebugInlining */
+                                             g->sampleProfilingDebugInfo /* DebugInfoForProfiling */);
         }
     }
 }

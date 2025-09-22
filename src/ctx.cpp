@@ -1581,6 +1581,11 @@ void FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
         return;
     }
 
+    // Skip variable debug info in LineTablesOnly mode (for sample profiling)
+    if (g->sampleProfilingDebugInfo) {
+        return;
+    }
+
     llvm::DIScope *scope = GetDIScope();
     llvm::DIType *diType = sym->type->GetDIType(scope);
     llvm::DILocalVariable *var = m->diBuilder->createAutoVariable(
@@ -1605,6 +1610,11 @@ void FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
 
 void FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum) {
     if (m->diBuilder == nullptr) {
+        return;
+    }
+
+    // Skip parameter debug info in LineTablesOnly mode (for sample profiling)
+    if (g->sampleProfilingDebugInfo) {
         return;
     }
 

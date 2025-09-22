@@ -934,6 +934,9 @@ struct Globals {
     // xcrun dwarfdump -r0 object.o
     int generateDWARFVersion;
 
+    /** Enable sample-based profiling debug info generation. */
+    bool sampleProfilingDebugInfo;
+
     /** If true, function names are mangled by appending the target ISA and
         vector width to them. */
     bool mangleFunctionsWithTarget;
