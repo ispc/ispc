@@ -1,3 +1,10 @@
+=== v1.28.2 === (24 September 2025)
+
+A minor ISPC update with bug fixes:
+
+ - Fixed enum fields missing from generated headers.
+ - Fixed boolean return value representation in exported functions.
+
 === v1.28.1 === (21 August 2025)
 
 A minor ISPC update with bug fixes:
