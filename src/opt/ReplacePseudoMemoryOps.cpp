@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2024, Intel Corporation
+  Copyright (c) 2022-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -13,6 +13,53 @@ namespace ispc {
 
 using namespace builtin;
 
+/** Helper function to check if a type (after unwrapping arrays) is a vector
+    matching the target vector width.
+*/
+static bool lIsVectorMatchingTargetWidth(llvm::Type *type) {
+    // First unwrap arrays
+    llvm::ArrayType *at = nullptr;
+    while ((at = llvm::dyn_cast<llvm::ArrayType>(type))) {
+        type = at->getElementType();
+    }
+
+    // Check if it's a vector of the right width
+    llvm::FixedVectorType *vt = llvm::dyn_cast<llvm::FixedVectorType>(type);
+    if (vt != nullptr) {
+        return ((int)vt->getNumElements() == g->target->getVectorWidth());
+    }
+    return false;
+}
+
+/** Helper function to recursively analyze struct field access at a given offset */
+static bool lCheckStructFieldAtOffset(llvm::StructType *st, uint64_t targetOffset, const llvm::DataLayout &DL) {
+    const llvm::StructLayout *SL = DL.getStructLayout(st);
+    uint64_t structSize = SL->getSizeInBytes().getFixedValue();
+
+    // Check bounds
+    if (targetOffset >= structSize) {
+        return false;
+    }
+
+    // Find containing field
+    unsigned fieldIndex = SL->getElementContainingOffset(targetOffset);
+    if (fieldIndex >= st->getNumElements()) {
+        return false;
+    }
+
+    llvm::Type *fieldType = st->getElementType(fieldIndex);
+
+    // If this field is a nested struct, recurse
+    if (llvm::StructType *nestedSt = llvm::dyn_cast<llvm::StructType>(fieldType)) {
+        uint64_t fieldOffset = SL->getElementOffset(fieldIndex).getFixedValue();
+        uint64_t offsetWithinField = targetOffset - fieldOffset;
+        return lCheckStructFieldAtOffset(nestedSt, offsetWithinField, DL);
+    }
+
+    // Leaf field - check if it contains matching vectors
+    return lIsVectorMatchingTargetWidth(fieldType);
+}
+
 /** This routine attempts to determine if the given pointer in lvalue is
     pointing to stack-allocated memory.  It's conservative in that it
     should never return true for non-stack allocated memory, but may return
@@ -21,28 +68,58 @@ using namespace builtin;
     comes from an AllocaInst.
 */
 static bool lIsSafeToBlend(llvm::Value *lvalue) {
-    llvm::BitCastInst *bc = llvm::dyn_cast<llvm::BitCastInst>(lvalue);
-    if (bc != nullptr) {
+    // Handle bitcast by recursing to operand
+    if (llvm::BitCastInst *bc = llvm::dyn_cast<llvm::BitCastInst>(lvalue)) {
         return lIsSafeToBlend(bc->getOperand(0));
-    } else {
-        llvm::AllocaInst *ai = llvm::dyn_cast<llvm::AllocaInst>(lvalue);
-        if (ai) {
-            llvm::Type *type = ai->getAllocatedType();
-            llvm::ArrayType *at = nullptr;
-            while ((at = llvm::dyn_cast<llvm::ArrayType>(type))) {
-                type = at->getElementType();
-            }
-            llvm::FixedVectorType *vt = llvm::dyn_cast<llvm::FixedVectorType>(type);
-            return (vt != nullptr && (int)vt->getNumElements() == g->target->getVectorWidth());
+    }
+
+    // Handle direct alloca access
+    if (llvm::AllocaInst *ai = llvm::dyn_cast<llvm::AllocaInst>(lvalue)) {
+        llvm::Type *allocatedType = ai->getAllocatedType();
+
+        if (llvm::StructType *st = llvm::dyn_cast<llvm::StructType>(allocatedType)) {
+            llvm::Module *M = ai->getModule();
+            const llvm::DataLayout &DL = M->getDataLayout();
+            return lCheckStructFieldAtOffset(st, 0, DL);
         } else {
-            llvm::GetElementPtrInst *gep = llvm::dyn_cast<llvm::GetElementPtrInst>(lvalue);
-            if (gep != nullptr) {
-                return lIsSafeToBlend(gep->getOperand(0));
-            } else {
-                return false;
-            }
+            // For non-struct types, use the existing logic
+            return lIsVectorMatchingTargetWidth(allocatedType);
         }
     }
+
+    // Handle GEP instruction
+    if (llvm::GetElementPtrInst *gep = llvm::dyn_cast<llvm::GetElementPtrInst>(lvalue)) {
+        // Must have constant indices for analysis
+        if (!gep->hasAllConstantIndices()) {
+            return lIsSafeToBlend(gep->getOperand(0));
+        }
+
+        // Must be based on a struct alloca
+        llvm::Value *basePtr = gep->getOperand(0);
+        llvm::AllocaInst *ai = llvm::dyn_cast<llvm::AllocaInst>(basePtr);
+        if (!ai) {
+            return lIsSafeToBlend(basePtr);
+        }
+
+        llvm::StructType *st = llvm::dyn_cast<llvm::StructType>(ai->getAllocatedType());
+        if (!st) {
+            return lIsSafeToBlend(basePtr);
+        }
+
+        // Calculate offset and recursively analyze struct
+        llvm::Module *M = ai->getModule();
+        const llvm::DataLayout &DL = M->getDataLayout();
+        llvm::APInt offset(DL.getIndexSizeInBits(gep->getPointerAddressSpace()), 0);
+
+        if (!gep->accumulateConstantOffset(DL, offset)) {
+            return false;
+        }
+
+        uint64_t targetOffset = offset.getZExtValue();
+        return lCheckStructFieldAtOffset(st, targetOffset, DL);
+    }
+
+    return false;
 }
 
 struct LMSInfo {
