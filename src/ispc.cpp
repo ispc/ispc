@@ -3152,6 +3152,7 @@ Globals::Globals() {
     debugInfoType = Globals::DebugInfoType::None;
     generateDWARFVersion = 3;
     sampleProfilingDebugInfo = false;
+    profileSampleUse = "";
     enableLLVMIntrinsics = false;
     mangleFunctionsWithTarget = false;
     isMultiTargetCompilation = false;

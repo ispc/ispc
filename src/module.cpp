@@ -411,6 +411,15 @@ int Module::CompileFile() {
         LinkStandardLibraries(module, pre_stage);
     }
 
+    // Add use-sample-profile attribute if sample profiling is enabled
+    if (!g->profileSampleUse.empty()) {
+        for (llvm::Function &f : *module) {
+            if (!f.isDeclaration()) {
+                f.addFnAttr("use-sample-profile");
+            }
+        }
+    }
+
     for (llvm::Function &f : *module) {
         g->target->markFuncWithTargetAttr(&f);
     }

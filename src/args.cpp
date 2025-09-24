@@ -94,6 +94,7 @@ static ArgsParseResult usage() {
     printf("    [--force-alignment=<value>]\t\tForce alignment in memory allocations routine to be <value>\n");
     printf("    [-g]\t\t\t\tGenerate source-level debug information\n");
     printf("    [--sample-profiling-debug-info]\tGenerate debug info optimized for sample-based profiling\n");
+    printf("    [--profile-sample-use=<file>]\t\tUse sample profile data for optimization\n");
     printf("    [--help]\t\t\t\tPrint help\n");
     printf("    [--help-dev]\t\t\tPrint help for developer options\n");
     printf("    [--host-stub <filename>]\t\tEmit host-side offload stub functions to file\n");
@@ -737,6 +738,8 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
             g->generateDebuggingSymbols = true;
         } else if (!strcmp(argv[i], "--sample-profiling-debug-info")) {
             g->sampleProfilingDebugInfo = true;
+        } else if (!strncmp(argv[i], "--profile-sample-use=", 21)) {
+            g->profileSampleUse = argv[i] + 21;
         } else if (!strcmp(argv[i], "-E")) {
             g->onlyCPP = true;
             output.type = Module::CPPStub;

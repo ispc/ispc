@@ -30,6 +30,7 @@
 #include <llvm/Analysis/GlobalsModRef.h>
 #include <llvm/Analysis/OptimizationRemarkEmitter.h>
 #include <llvm/Analysis/Passes.h>
+#include <llvm/Analysis/ProfileSummaryInfo.h>
 #include <llvm/Analysis/ScopedNoAliasAA.h>
 #include <llvm/Analysis/TargetLibraryInfo.h>
 #include <llvm/Analysis/TargetTransformInfo.h>
@@ -42,6 +43,7 @@
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/Passes/StandardInstrumentations.h>
 #include <llvm/Support/Path.h>
+#include <llvm/Support/VirtualFileSystem.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/TargetParser/Triple.h>
@@ -52,6 +54,7 @@
 #include <llvm/Transforms/IPO/GlobalOpt.h>
 #include <llvm/Transforms/IPO/Inliner.h>
 #include <llvm/Transforms/IPO/SCCP.h>
+#include <llvm/Transforms/IPO/SampleProfile.h>
 #include <llvm/Transforms/IPO/StripDeadPrototypes.h>
 #include <llvm/Transforms/InstCombine/InstCombine.h>
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
@@ -478,6 +481,19 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
             }
         }
         optPM.commitFunctionToModulePassManager();
+
+        // Add sample profile loader pass after ISPC transformations and basic cleanup
+        // This ensures debug info correlates with the final IR structure
+        // Note: it is earliest point where this pass doesn't produce on real
+        // world problems with metadata that drifts to invalid instructions
+        // during optimizations. This could be caused by ISPC specific
+        // transformations.
+        if (!g->profileSampleUse.empty()) {
+            optPM.addModulePass(llvm::SampleProfileLoaderPass(g->profileSampleUse));
+            // Cache ProfileSummaryAnalysis as LLVM standard pipeline does
+            optPM.addModulePass(llvm::RequireAnalysisPass<llvm::ProfileSummaryAnalysis, llvm::Module>());
+        }
+
         optPM.addModulePass(llvm::ModuleInlinerWrapperPass(IP), 265);
         // If we didn't decide to inline a function, check to see if we can
         // transform it to pass arguments by value instead of by reference.
