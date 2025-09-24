@@ -937,6 +937,11 @@ struct Globals {
     /** Enable sample-based profiling debug info generation. */
     bool sampleProfilingDebugInfo;
 
+    /** Path to sample profile data file for profile-guided optimization.
+        When provided, enables sample-based profile-guided optimization using
+        the specified profile data to guide optimization decisions. */
+    std::string profileSampleUse;
+
     /** If true, function names are mangled by appending the target ISA and
         vector width to them. */
     bool mangleFunctionsWithTarget;
