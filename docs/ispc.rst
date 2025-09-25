@@ -76,6 +76,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.26.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.27.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.28.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.29.0`_
 
 * `Getting Started with ISPC`_
 
@@ -92,6 +93,7 @@ Contents:
   + `Debugging`_
   + `Optimization Settings`_
   + `Other ways of passing arguments to ISPC`_
+  + `Sample-Based Profile-Guided Optimization`_
 
 * `Using ISPC as a Library`_
 
@@ -858,6 +860,27 @@ Standard Library Changes:
   functions: ``fmod``, ``isnan``, ``rsqrt_fast``, and ``clamp``.
 
 
+Updating ISPC Programs For Changes In ISPC 1.29.0
+-------------------------------------------------
+
+New Features:
+
+* Enabled profile-guided optimization (PGO) support with sample profiling. Two
+  new command-line flags were introduced:
+
+  * ``--profile-sample-use=<file>`` enables profile-guided optimization using
+    sample profile data. When provided, the ISPC compiler loads the specified
+    sample profile data file and uses it to guide optimization decisions during
+    compilation.
+
+  * ``--sample-profiling-debug-info`` enables the generation of debug information
+    optimized for sample-based profiling.
+
+These flags enable developers to collect profile data from representative program
+runs and use it to guide compiler optimizations, potentially improving
+performance.
+
+
 Getting Started with ISPC
 =========================
 
@@ -1567,6 +1590,65 @@ Where a file or environment variable is split into arguments, this is done based
 the arguments being separated by one or more whitespace characters, including tabs
 and newlines. There is no means of escaping or quoting a character to allow an
 argument to contain a whitespace character.
+
+Sample-Based Profile-Guided Optimization
+-----------------------------------------
+
+ISPC supports sample-based profile-guided optimization (PGO) to improve performance
+by using profile data collected from representative program runs. This allows the
+compiler to make better optimization decisions based on actual runtime behavior.
+
+The sample-based PGO workflow consists of three main steps:
+
+1. **Generate optimized debug information for profiling**:
+   Compile your ISPC program with the ``--sample-profiling-debug-info`` flag to
+   generate debug information optimized for sample-based profiling::
+
+     ispc --sample-profiling-debug-info -O2 -o program.o program.ispc
+
+2. **Collect profile data**:
+
+   a. **General Case**:
+
+      Run the executable under a sampling profiler. The Linux Perf profiler is
+      commonly used for this purpose. The LLVM tool ``llvm-profgen`` can convert
+      Perf output.
+
+      **When using Perf**::
+
+        perf record -b -e BR_INST_RETIRED.NEAR_TAKEN:uppp ./code
+
+      If the event above is unavailable, ``branches:u`` is probably next-best.
+
+      Note the use of the ``-b`` flag. This tells Perf to use the Last Branch Record
+      (LBR) to record call chains. While this is not strictly required, it provides
+      better call information, which improves the accuracy of the profile data.
+
+      **Converting profile data to LLVM format**:
+
+      The LLVM tool ``llvm-profgen`` can be used to generate the LLVM sample profile::
+
+        llvm-profgen --binary=./code --output=code.prof --perfdata=perf.data
+
+      Please note, ``perf.data`` must be collected with ``-b`` flag to Linux perf for
+      the above step to work.
+
+   b. **Intel hardware (HWPGO)**:
+
+      On Intel CPUs, profile data can be collected using Hardware Profile Guided
+      Optimization (HWPGO), which uses Performance Monitoring Counters (PMCs) to
+      generate optimization profiles with very low overhead. This results in a lower
+      overhead, faster, and more efficient way to establish a performance optimization
+      profile for your primary workload execution path. For more details, see
+      https://www.intel.com/content/www/us/en/developer/articles/technical/hwpgo.html
+
+3. **Recompile with profile data**:
+   Use the collected profile data to guide optimizations in a second compilation::
+
+     ispc --profile-sample-use=code.prof -O2 -o program_optimized.o program.ispc
+
+   The ``--profile-sample-use`` flag instructs the compiler to load the sample
+   profile data and use it to guide optimization decisions during compilation.
 
 Using ISPC as a Library
 ========================
