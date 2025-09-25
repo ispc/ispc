@@ -669,7 +669,7 @@ jobs:
     - name: Run examples
       shell: cmd
       run: |
-        ctest --test-dir examples-build -C Release
+        ctest --test-dir examples-build -C Release --output-on-failure
 
   linux-examples:
     needs: [linux-package-examples, linux-build-ispc]
@@ -713,7 +713,7 @@ jobs:
 
     - name: Run examples
       run: |
-        ctest --test-dir examples-build -C Release
+        ctest --test-dir examples-build -C Release --output-on-failure
 
   macos-examples:
     needs: [linux-package-examples, macos-build-ispc]
@@ -752,4 +752,4 @@ jobs:
 
     - name: Run examples
       run: |
-        ctest --test-dir examples-build -C Release
+        ctest --test-dir examples-build -C Release --output-on-failure
