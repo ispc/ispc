@@ -223,7 +223,7 @@ static ISPCTarget lGetSystemISA() {
 #if defined(ISPC_HOST_IS_ARM) || defined(ISPC_HOST_IS_AARCH64)
     return lGetARMSystemISA();
 #elif defined(ISPC_HOST_IS_RISCV)
-    return ISPCTarget::riscv_x4;
+    return ISPCTarget::rvv_x4;
 #elif defined(ISPC_HOST_IS_X86)
     enum Target::ISA isa = (enum Target::ISA)dispatch::get_x86_isa();
     switch (isa) {
@@ -994,7 +994,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_19_0
         case CPU_SpacemiT_X60:
 #endif // ISPC_LLVM_VERSION
-            m_ispc_target = ISPCTarget::riscv_x4;
+            m_ispc_target = ISPCTarget::rvv_x4;
             break;
 #endif // ISPC_RISCV_ENABLED
 
@@ -1917,8 +1917,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         break;
 #endif
 #ifdef ISPC_RISCV_ENABLED
-    case ISPCTarget::riscv_x4:
-        this->m_isa = Target::RISCV;
+    case ISPCTarget::rvv_x4:
+        this->m_isa = Target::RV64GCV;
         this->m_nativeVectorWidth = 4;
         this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 32;
@@ -1936,7 +1936,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasVecPrefetch = false;
         break;
 #else
-    case ISPCTarget::riscv_x4:
+    case ISPCTarget::rvv_x4:
         unsupported_target = true;
         break;
 #endif
@@ -2740,8 +2740,8 @@ const char *Target::ISAToString(ISA isa) {
         return "neon";
 #endif
 #ifdef ISPC_RISCV_ENABLED
-    case Target::RISCV:
-        return "riscv";
+    case Target::RV64GCV:
+        return "rv64gcv";
 #endif
 #ifdef ISPC_WASM_ENABLED
     case Target::WASM:
@@ -2922,10 +2922,10 @@ Target::ISA Target::TargetToISA(ISPCTarget target) {
         return Target::ISA::NUM_ISAS;
 #endif // ISPC_ARM_ENABLED
 #ifdef ISPC_RISCV_ENABLED
-    case ISPCTarget::riscv_x4:
-        return Target::ISA::RISCV;
+    case ISPCTarget::rvv_x4:
+        return Target::ISA::RV64GCV;
 #else  // ISPC_RISCV_ENABLED
-    case ISPCTarget::riscv_x4:
+    case ISPCTarget::rvv_x4:
         return Target::ISA::NUM_ISAS;
 #endif // ISPC_RISCV_ENABLED
 #ifdef ISPC_WASM_ENABLED
