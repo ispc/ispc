@@ -70,6 +70,8 @@ static const char *lGetSystemISA() {
         }
     }
     return isa;
+#elif defined(__riscv)
+    return "RISC-V";
 #else
 #error "Unsupported host CPU architecture."
 #endif

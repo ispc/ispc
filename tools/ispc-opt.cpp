@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2024, Intel Corporation
+  Copyright (c) 2024-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -106,6 +106,15 @@ int main(int argc, char **argv) {
     LLVMInitializeAArch64AsmParser();
     LLVMInitializeAArch64Disassembler();
     LLVMInitializeAArch64TargetMC();
+#endif
+
+#ifdef ISPC_RISCV_ENABLED
+    LLVMInitializeRISCVTargetInfo();
+    LLVMInitializeRISCVTarget();
+    LLVMInitializeRISCVAsmPrinter();
+    LLVMInitializeRISCVAsmParser();
+    LLVMInitializeRISCVDisassembler();
+    LLVMInitializeRISCVTargetMC();
 #endif
 
 #ifdef ISPC_WASM_ENABLED
