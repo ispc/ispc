@@ -1,0 +1,68 @@
+# Copyright 2025, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: RISC-V Tests
+
+permissions: read-all
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'builtins/**'
+      - 'cmake/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/riscv.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  riscv-test:
+    name: RISC-V rvv-x4 test
+    runs-on: ubuntu-22.04
+    container:
+      image: archlinux:latest
+      options: --privileged
+
+    steps:
+    - name: Setup Arch Linux
+      run: |
+        pacman -Syu --noconfirm
+        pacman -S --needed --noconfirm git cmake make gcc-libs glibc lib32-glibc gcc m4 flex bison python onetbb
+        pacman -S --needed --noconfirm riscv64-linux-gnu-gcc qemu-user
+        pacman -S --needed --noconfirm llvm clang
+
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        submodules: true
+
+    - name: Check tools
+      run: |
+        cmake --version
+        riscv64-linux-gnu-gcc --version
+        qemu-riscv64 --version
+        llvm-config --version
+        clang --version
+
+    - name: Build ISPC with RISC-V support
+      run: |
+        cmake -B build-llvm-20-riscv -DRISCV_ENABLED=ON
+        cmake --build build-llvm-20-riscv -j"$(nproc)"
+
+    - name: Run lit tests
+      run: |
+        cmake --build build-llvm-20-riscv --target check-all
+
+    - name: Run RISC-V tests
+      run: |
+        PATH="$PWD"/build-llvm-20-riscv/bin:"$PATH" \
+        python scripts/run_tests.py \
+          --target=rvv-x4 \
+          --arch=riscv64 \
+          -f "--cpu=spacemit-x60" \
+          --wrap-exe="qemu-riscv64 -cpu max,v=true,g=true,vlen=256" \
+          --compiler=riscv64-linux-gnu-g++ \
+          -o O2
