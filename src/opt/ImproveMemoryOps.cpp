@@ -621,6 +621,14 @@ static bool lOffsets32BitSafe(llvm::Value **variableOffsetPtr, llvm::Value **con
     llvm::Value *variableOffset = *variableOffsetPtr;
     llvm::Value *constOffset = *constOffsetPtr;
 
+    // Retain offset computation in 64-bit values for 64-bit targets.
+    if (g->target->is32Bit() == false && g->opt.force32BitAddressing == true) {
+        if (variableOffset->getType() == LLVMTypes::Int64VectorType &&
+            constOffset->getType() == LLVMTypes::Int64VectorType) {
+            return false;
+        }
+    }
+
     if (variableOffset->getType() != LLVMTypes::Int32VectorType) {
         if (auto *castInst = llvm::dyn_cast<llvm::CastInst>(variableOffset)) {
             auto opcode = castInst->getOpcode();
@@ -698,6 +706,12 @@ static bool lOffsets32BitSafe(llvm::Value **offsetPtr, llvm::Instruction *insert
 
     if (offset->getType() == LLVMTypes::Int32VectorType) {
         return true;
+    }
+
+    // Retain offset computation in 64-bit values for 64-bit targets.
+    if (g->target->is32Bit() == false && g->opt.force32BitAddressing == true &&
+        offset->getType() == LLVMTypes::Int64VectorType) {
+        return false;
     }
 
     llvm::SExtInst *sext = llvm::dyn_cast<llvm::SExtInst>(offset);
