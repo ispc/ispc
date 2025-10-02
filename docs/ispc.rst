@@ -886,6 +886,15 @@ New Architecture Support:
   Vector Extension (RVV) ISA. The new ``rvv-x4`` target provides 4-wide
   vectorization for RISC-V processors with vector extensions.
 
+Languages Changes:
+
+The compiler now assumes that all loops with non-constant conditions will make
+forward progress and eventually terminate. This enables optimizations based
+on the assumption that loops will not execute indefinitely. Infinite loops
+with constant conditions like ``for (;;)`` or ``while (1)`` are treated
+specially and do not have this assumption applied.
+
+
 Getting Started with ISPC
 =========================
 
@@ -2126,6 +2135,19 @@ or by jumping to the loop step statement, if all program instances are
 disabled after the ``continue`` has executed.  ``break`` statements are
 handled in a similar fashion.
 
+The compiler assumes that all loops with non-constant conditions will make
+forward progress and eventually terminate. This enables optimizations based
+on the assumption that loops will not execute indefinitely. A loop has a
+non-constant condition when the condition expression depends on runtime values
+(e.g., ``while (i < count)`` or ``for (int i = 0; i < n; i++)``). For such
+loops, the compiler can apply optimizations like loop unrolling and
+vectorization more aggressively, since it knows the loop will eventually exit.
+
+In contrast, infinite loops with constant conditions like ``for (;;)`` or
+``while (1)`` (or ``while (true)``) are treated specially and do not have
+this forward progress assumption applied. These are loops where the condition
+is a compile-time constant that evaluates to true, indicating an intentionally
+infinite loop.
 
 Gang Convergence Guarantees
 ---------------------------

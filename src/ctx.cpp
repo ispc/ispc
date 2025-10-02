@@ -3436,20 +3436,26 @@ void FunctionEmitContext::MemcpyInst(llvm::Value *dest, llvm::Value *src, llvm::
 #endif
 }
 
-void FunctionEmitContext::setLoopUnrollMetadata(llvm::Instruction *inst,
-                                                std::pair<Globals::pragmaUnrollType, int> loopAttribute,
-                                                SourcePos pos) {
+void FunctionEmitContext::setLoopMetadata(llvm::Instruction *inst,
+                                          std::pair<Globals::pragmaUnrollType, int> loopAttribute, SourcePos pos,
+                                          bool hasConstantCondition) {
     if (inst == nullptr) {
         return;
     }
 
-    if (loopAttribute.first == Globals::pragmaUnrollType::none) {
+    // Always create metadata if we need to add mustprogress, even if there's no unroll pragma
+    bool noUnrollMetadata = (loopAttribute.first == Globals::pragmaUnrollType::none);
+    bool needMustProgress = !hasConstantCondition;
+
+    if (noUnrollMetadata && !needMustProgress) {
         return;
     }
 
     llvm::SmallVector<llvm::Metadata *, 4> Args;
     llvm::TempMDTuple TempNode = llvm::MDNode::getTemporary(*g->ctx, {});
     Args.push_back(TempNode.get());
+
+    // Add unroll metadata if specified
     if (loopAttribute.first == Globals::pragmaUnrollType::count) {
         llvm::Metadata *Vals[] = {llvm::MDString::get(*g->ctx, "llvm.loop.unroll.count"),
                                   llvm::ConstantAsMetadata::get(LLVMInt32(loopAttribute.second))};
@@ -3461,6 +3467,13 @@ void FunctionEmitContext::setLoopUnrollMetadata(llvm::Instruction *inst,
         llvm::Metadata *Vals[] = {llvm::MDString::get(*g->ctx, "llvm.loop.unroll.disable")};
         Args.push_back(llvm::MDNode::get(*g->ctx, Vals));
     }
+
+    // Add mustprogress metadata for non-constant condition loops
+    if (needMustProgress) {
+        llvm::Metadata *Vals[] = {llvm::MDString::get(*g->ctx, "llvm.loop.mustprogress")};
+        Args.push_back(llvm::MDNode::get(*g->ctx, Vals));
+    }
+
     llvm::MDNode *LoopID = llvm::MDNode::getDistinct(*g->ctx, Args);
     LoopID->replaceOperandWith(0, LoopID);
     inst->setMetadata("llvm.loop", LoopID);

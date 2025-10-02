@@ -566,8 +566,8 @@ class FunctionEmitContext {
         overlapping.) */
     void MemcpyInst(llvm::Value *dest, llvm::Value *src, llvm::Value *count);
 
-    void setLoopUnrollMetadata(llvm::Instruction *inst, std::pair<Globals::pragmaUnrollType, int> loopAttribute,
-                               SourcePos pos);
+    void setLoopMetadata(llvm::Instruction *inst, std::pair<Globals::pragmaUnrollType, int> loopAttribute,
+                         SourcePos pos, bool hasConstantCondition);
     llvm::Instruction *BranchInst(llvm::BasicBlock *block);
     llvm::Instruction *BranchInst(llvm::BasicBlock *trueBlock, llvm::BasicBlock *falseBlock, llvm::Value *test);
 

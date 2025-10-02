@@ -1045,20 +1045,22 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
         return;
     }
 
+    // Check if the loop condition is a constant (e.g., while(1) or for(;;))
+    bool hasConstantCondition = llvm::isa<llvm::Constant>(testValue);
+
     if (uniformTest) {
         // For the uniform case, just jump to the top of the loop or the
         // exit basic block depending on the value of the test.
         branchInst = ctx->BranchInst(bloop, bexit, testValue);
-        ctx->setLoopUnrollMetadata(branchInst, loopAttribute, pos);
     } else {
         // For the varying case, update the mask based on the value of the
         // test.  If any program instances still want to be running, jump
         // to the top of the loop.  Otherwise, jump out.
         llvm::Value *mask = ctx->GetInternalMask();
         ctx->SetInternalMaskAnd(mask, testValue);
-        ctx->BranchIfMaskAny(bloop, bexit);
+        branchInst = ctx->BranchIfMaskAny(bloop, bexit);
     }
-
+    ctx->setLoopMetadata(branchInst, loopAttribute, pos, hasConstantCondition);
     // ...and we're done.  Set things up for subsequent code to be emitted
     // in the right basic block.
     ctx->SetCurrentBasicBlock(bexit);
@@ -1307,8 +1309,11 @@ void ForStmt::EmitCode(FunctionEmitContext *ctx) const {
         step->EmitCode(ctx);
     }
 
+    // Check if the loop condition is a constant (e.g., for(;;) or while(1))
+    bool hasConstantCondition = (ltest && llvm::isa<llvm::Constant>(ltest));
+
     llvm::Instruction *branchInst = ctx->BranchInst(btest);
-    ctx->setLoopUnrollMetadata(branchInst, loopAttribute, pos);
+    ctx->setLoopMetadata(branchInst, loopAttribute, pos, hasConstantCondition);
 
     // Set the current emission basic block to the loop exit basic block
     ctx->SetCurrentBasicBlock(bexit);
@@ -1670,7 +1675,8 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     // On to the outermost loop's test
     llvm::Instruction *bbBIOuter = ctx->BranchInst(bbTest[0]);
-    ctx->setLoopUnrollMetadata(bbBIOuter, loopAttribute, pos);
+    // foreach loops never have constant conditions
+    ctx->setLoopMetadata(bbBIOuter, loopAttribute, pos, false);
 
     ///////////////////////////////////////////////////////////////////////////
     // foreach_reset: this code runs when we need to reset the counter for
@@ -1904,7 +1910,8 @@ void ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *beforeAlignedEnd = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT, counter,
                                                      alignedEnd[nDims - 1], "before_aligned_end");
         llvm::Instruction *bbBIOuterNotInExtras = ctx->BranchInst(bbFullBody, bbPartialInnerAllOuter, beforeAlignedEnd);
-        ctx->setLoopUnrollMetadata(bbBIOuterNotInExtras, loopAttribute, pos);
+        // foreach loops never have constant conditions
+        ctx->setLoopMetadata(bbBIOuterNotInExtras, loopAttribute, pos, false);
     }
 
     ///////////////////////////////////////////////////////////////////////////
