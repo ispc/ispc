@@ -1,8 +1,9 @@
 // RUN: %{ispc} --emit-spirv --target=xehpg-x8 --device=acm-g10 %s -o %t.spv
+// RUN: %{ispc} --emit-llvm-text --target=xehpg-x8 --device=acm-g10 %s -o %t.ll
 // RUN: ocloc compile -file %t.spv -spirv_input -options "-vc-codegen -Xfinalizer -output" -device acm-g10 -output %t.bin -output_no_suffix
 // RUN: FileCheck %s -check-prefix=CHECK_FOO1 -input-file=foo1_kernel.asm
 // RUN: FileCheck %s -check-prefix=CHECK_FOO2 -input-file=foo2_kernel.asm
-// RUN: FileCheck %s -check-prefix=CHECK_FOO3 -input-file=foo3_kernel.asm
+// RUN: FileCheck %s -check-prefix=CHECK_FOO3 -input-file=%t.ll
 
 // REQUIRES: XE_ENABLED
 // REQUIRES: OCLOC_INSTALLED
@@ -39,8 +40,9 @@ task void foo2_kernel(uniform int a[]) {
     bar2(a);
 }
 
-// CHECK_FOO3-COUNT-1: _foo3_kernel
-// CHECK_FOO3-NOT: _foo3_kernel
+// CHECK_FOO3-LABEL: @foo3_kernel
+// CHECK_FOO3: foreach_full_body
+// CHECK_FOO3-NOT: partial_inner_only
 
 // Case 3 : loop : remove remainder loop.
 task void foo3_kernel(uniform int a[], uniform int res[], uniform int count) {
