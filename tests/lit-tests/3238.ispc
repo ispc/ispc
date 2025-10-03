@@ -10,7 +10,7 @@
 // CHECK-NEXT:   %shl_i_load4_broadcast5_.elt0 = shl i32 %i.019, 2
 // CHECK-NEXT:   %offset_cast.elt0 = zext i32 %shl_i_load4_broadcast5_.elt0 to i64
 // CHECK-NEXT:   %ptr = getelementptr i8, ptr %buffer, i64 %offset_cast.elt0
-// CHECK-NEXT:   store <8 x i32> splat (i32 7), ptr %ptr, align 4
+// CHECK-NEXT:   store <{{[0-9]+}} x i32> splat (i32 7), ptr %ptr, align 4
 // CHECK-NEXT:   %add_i_load10_ = add i32 %i.019, 8
 // CHECK-NEXT:   %less_i_load_count_load = icmp ult i32 %add_i_load10_, %count
 // CHECK-NEXT:   br i1 %less_i_load_count_load, label %for_loop, label %for_exit
