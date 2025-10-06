@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2024, Intel Corporation
+;;  Copyright (c) 2010-2025, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -66,6 +66,19 @@ define float @__rsqrt_fast_uniform_float(float) nounwind readonly alwaysinline {
   ret float %is
 }
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; masked store
+
+gen_masked_store(i8)
+gen_masked_store(i16)
+gen_masked_store(i32)
+gen_masked_store(i64)
+
+;; Use generic implementation of masked_store_blend for i32 and i64.
+declare void @__masked_store_blend_i32(<WIDTH x i32>* nocapture, <WIDTH x i32>, <WIDTH x i32> %mask) nounwind alwaysinline
+declare void @__masked_store_blend_i64(<WIDTH x i64>* nocapture %ptr, <WIDTH x i64> %new, <WIDTH x i32> %mask) nounwind alwaysinline
+
+masked_store_float_double()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; sqrt
@@ -98,6 +111,20 @@ define float @__min_uniform_float(float, float) nounwind readonly alwaysinline {
   sse_binary_scalar(ret, 4, float, @llvm.x86.sse.min.ss, %0, %1)
   ret float %ret
 }
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; int32/int64 min/max
+
+;; Use generic implementations for max/min for int/int64/uint/uint64.
+;; The declarations are needed here since they are used in reductions below.
+declare <WIDTH x i32> @__min_varying_int32(<WIDTH x i32>, <WIDTH x i32>) nounwind readonly alwaysinline
+declare i32 @__min_uniform_int32(i32, i32) nounwind readonly alwaysinline
+declare <WIDTH x i32> @__max_varying_int32(<WIDTH x i32>, <WIDTH x i32>) nounwind readonly alwaysinline
+declare i32 @__max_uniform_int32(i32, i32) nounwind readonly alwaysinline
+declare <WIDTH x i32> @__min_varying_uint32(<WIDTH x i32>, <WIDTH x i32>) nounwind readonly alwaysinline
+declare i32 @__min_uniform_uint32(i32, i32) nounwind readonly alwaysinline
+declare <WIDTH x i32> @__max_varying_uint32(<WIDTH x i32>, <WIDTH x i32>) nounwind readonly alwaysinline
+declare i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision sqrt
