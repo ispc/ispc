@@ -17,7 +17,7 @@ on:
          required: true
          type: string
       runner:
-         description: 'Github runner (ubuntu-22.04, ubuntu-22.04-arm, macos-13, windows-2019)'
+         description: 'Github runner (ubuntu-22.04, ubuntu-22.04-arm, macos-15-intel, windows-2019)'
          required: true
          type: string
       llvm_version:
