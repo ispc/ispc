@@ -6,7 +6,7 @@ source "${SCRIPT_DIR}/init-env.sh"
 OS=$(uname -s)
 case "$OS" in
   Darwin*)
-    RUNNER=${1:-"macos-13"}
+    RUNNER=${1:-"macos-15-intel"}
     ls -al /Library/Developer/CommandLineTools/SDKs/
     xcrun --show-sdk-path
     [ -n "$LLVM_REPO" ] && wget --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 --no-verbose "$LLVM_REPO/releases/download/llvm-${LLVM_VERSION}-ispc-dev/${LLVM_TAR}"
