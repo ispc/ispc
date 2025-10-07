@@ -553,7 +553,7 @@ endif()
 # Targets to build.
 # It is possible to build for stage1 only X86 if we build only on x86 platforms.
 list(APPEND LLVM_COMMON_CMAKE_ARGS
-    -DLLVM_TARGETS_TO_BUILD=X86$<SEMICOLON>AArch64$<SEMICOLON>ARM
+    -DLLVM_TARGETS_TO_BUILD=X86$<SEMICOLON>AArch64$<SEMICOLON>ARM<SEMICOLON>RISCV
     -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly
     )
 
