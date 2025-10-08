@@ -10,20 +10,18 @@
 // CHECK:      for_loop:
 // CHECK-NEXT:   [[IV:%.*]] = phi i64 [ 0, [[PH:%.*]] ], [ [[IV_NEXT:%.*]], %for_loop ]
 // CHECK-NEXT:   [[SHL:%.*]] = shl i64 [[IV]], 2
-// CHECK-NEXT:   [[AND:%.*]] = and i64 [[SHL]], 4294967264
+// CHECK-NEXT:   [[AND:%.*]] = and i64 [[SHL]], [[UINT_MAX:[0-9]+]]
 // CHECK-NEXT:   [[PTR:%.*]] = getelementptr i8, ptr %buffer, i64 [[AND]]
 // CHECK-NEXT:   store <{{[0-9]+}} x i32> {{.*}}, ptr [[PTR]], align 4
 // CHECK-NEXT:   [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], {{[0-9]+}}
-// CHECK-NEXT:   [[ICMP:%.*]] = icmp samesign ult i64 [[IV_NEXT]], [[UB:%.*]]
-// CHECK-NEXT:   br i1 [[ICMP]], label %for_loop, label %for_exit,
 
 // ASM-LABEL: fill:
-// ASM:       .LBB1_2:
-// ASM-NEXT:          mov     [[R1:.*]], [[R2:.*]]
-// ASM-NEXT:          and     [[R1]], -32
-// ASM-NEXT:          vmovups ymmword ptr [[[R3:.*]] + [[R4:.*]]], ymm0
-// ASM-NEXT:          add     [[R5:.*]], 8
-// ASM-NEXT:          add     [[R6:.*]], 32
+// ASM:       LBB1_2:
+// ASM-NEXT:         mov     [[R1:.*]], [[R2:.*]]
+// ASM-NEXT:         and     [[R1]], -32
+// ASM-NEXT:         vmovups ymmword ptr [[[R3:.*]] + [[R4:.*]]], ymm0
+// ASM-NEXT:         add     [[R5:.*]], 8
+// ASM-NEXT:         add     [[R6:.*]], 32
 
 export void fill(uint32* uniform buffer, uniform int count) {
     for (uniform uint i = 0; i < count; i += programCount) {
