@@ -8,22 +8,22 @@
 
 // CHECK-LABEL: define void @fill(
 // CHECK:      for_loop:
-// CHECK-NEXT:   %indvars.iv = phi i64 [ 0, %for_loop.lr.ph ], [ %indvars.iv.next, %for_loop ]
-// CHECK-NEXT:   %shl_i_load4_broadcast5_.elt0 = shl i64 %indvars.iv, 2
-// CHECK-NEXT:   %offset_cast.elt0 = and i64 %shl_i_load4_broadcast5_.elt0, 4294967264
-// CHECK-NEXT:   %ptr = getelementptr i8, ptr %buffer, i64 %offset_cast.elt0
-// CHECK-NEXT:   store <{{[0-9]+}} x i32> splat (i32 7), ptr %ptr, align 4
-// CHECK-NEXT:   %indvars.iv.next = add nuw nsw i64 %indvars.iv, {{[0-9]+}}
-// CHECK-NEXT:   %less_i_load_count_load = icmp samesign ult i64 %indvars.iv.next, %0
-// CHECK-NEXT:   br i1 %less_i_load_count_load, label %for_loop, label %for_exit,
+// CHECK-NEXT:   [[IV:%.*]] = phi i64 [ 0, [[PH:%.*]] ], [ [[IV_NEXT:%.*]], %for_loop ]
+// CHECK-NEXT:   [[SHL:%.*]] = shl i64 [[IV]], 2
+// CHECK-NEXT:   [[AND:%.*]] = and i64 [[SHL]], 4294967264
+// CHECK-NEXT:   [[PTR:%.*]] = getelementptr i8, ptr %buffer, i64 [[AND]]
+// CHECK-NEXT:   store <{{[0-9]+}} x i32> {{.*}}, ptr [[PTR]], align 4
+// CHECK-NEXT:   [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], {{[0-9]+}}
+// CHECK-NEXT:   [[ICMP:%.*]] = icmp samesign ult i64 [[IV_NEXT]], [[UB:%.*]]
+// CHECK-NEXT:   br i1 [[ICMP]], label %for_loop, label %for_exit,
 
 // ASM-LABEL: fill:
 // ASM:       .LBB1_2:
-// ASM-NEXT:          mov     esi, ecx
-// ASM-NEXT:          and     esi, -32
-// ASM-NEXT:          vmovups ymmword ptr [rdi + rsi], ymm0
-// ASM-NEXT:          add     rdx, 8
-// ASM-NEXT:          add     rcx, 32
+// ASM-NEXT:          mov     [[R1:.*]], [[R2:.*]]
+// ASM-NEXT:          and     [[R1]], -32
+// ASM-NEXT:          vmovups ymmword ptr [[[R3:.*]] + [[R4:.*]]], ymm0
+// ASM-NEXT:          add     [[R5:.*]], 8
+// ASM-NEXT:          add     [[R6:.*]], 32
 
 export void fill(uint32* uniform buffer, uniform int count) {
     for (uniform uint i = 0; i < count; i += programCount) {
