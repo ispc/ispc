@@ -15,7 +15,7 @@ include(`target-avx512-utils.ll')
 
 ;; Implementation for i8 and i16 types is different across avx512 targets.
 ;; There is no @llvm.x86.avx512.mask.permvar.qi.128 and @llvm.x86.avx512.vpermi2var.qi.128
-;; before icl. 
+;; before icl.
 ;; @llvm.x86.avx512.vpermi2var.hi.256 is not available for KNL.
 ;; Look for definitions in particular target files.
 
@@ -161,7 +161,7 @@ define i16 @__cast_mask_to_i16 (<WIDTH x MASK> %mask) alwaysinline {
 
 define i8 @__extract_mask_low (<WIDTH x MASK> %mask) alwaysinline {
   %mask_i16 = call i16 @__cast_mask_to_i16 (<WIDTH x MASK> %mask)
-  %mask_low = trunc i16 %mask_i16 to i8 
+  %mask_low = trunc i16 %mask_i16 to i8
   ret i8 %mask_low
 }
 
@@ -204,73 +204,6 @@ define <16 x i16> @__float_to_half_varying(<16 x float> %v) nounwind readnone {
   ret <16 x i16> %r
 }
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; rounding floats
-
-declare <16 x float> @llvm.roundeven.v16f32(<16 x float> %p)
-declare <16 x float> @llvm.floor.v16f32(<16 x float> %p)
-declare <16 x float> @llvm.ceil.v16f32(<16 x float> %p)
-
-define <16 x float> @__round_varying_float(<16 x float>) nounwind readonly alwaysinline {
-  %res = call <16 x float> @llvm.roundeven.v16f32(<16 x float> %0)
-  ret <16 x float> %res
-}
-
-define <16 x float> @__floor_varying_float(<16 x float>) nounwind readonly alwaysinline {
-  %res = call <16 x float> @llvm.floor.v16f32(<16 x float> %0)
-  ret <16 x float> %res
-}
-
-define <16 x float> @__ceil_varying_float(<16 x float>) nounwind readonly alwaysinline {
-  %res = call <16 x float> @llvm.ceil.v16f32(<16 x float> %0)
-  ret <16 x float> %res
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; rounding doubles
-
-declare <8 x double> @llvm.roundeven.v8f64(<8 x double> %p)
-declare <8 x double> @llvm.floor.v8f64(<8 x double> %p)
-declare <8 x double> @llvm.ceil.v8f64(<8 x double> %p)
-
-define <16 x double> @__round_varying_double(<16 x double>) nounwind readonly alwaysinline {
-  %v0 = shufflevector <16 x double> %0, <16 x double> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %v1 = shufflevector <16 x double> %0, <16 x double> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %r0 = call <8 x double> @llvm.roundeven.v8f64(<8 x double> %v0)
-  %r1 = call <8 x double> @llvm.roundeven.v8f64(<8 x double> %v1)
-  %res = shufflevector <8 x double> %r0, <8 x double> %r1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
-                                                                       i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  ret <16 x double> %res
-}
-
-define <16 x double> @__floor_varying_double(<16 x double>) nounwind readonly alwaysinline {
-  %v0 = shufflevector <16 x double> %0, <16 x double> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %v1 = shufflevector <16 x double> %0, <16 x double> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %r0 = call <8 x double> @llvm.floor.v8f64(<8 x double> %v0)
-  %r1 = call <8 x double> @llvm.floor.v8f64(<8 x double> %v1)
-  %res = shufflevector <8 x double> %r0, <8 x double> %r1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
-                                                                       i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  ret <16 x double> %res
-}
-
-define <16 x double> @__ceil_varying_double(<16 x double>) nounwind readonly alwaysinline {
-  %v0 = shufflevector <16 x double> %0, <16 x double> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %v1 = shufflevector <16 x double> %0, <16 x double> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %r0 = call <8 x double> @llvm.ceil.v8f64(<8 x double> %v0)
-  %r1 = call <8 x double> @llvm.ceil.v8f64(<8 x double> %v1)
-  %res = shufflevector <8 x double> %r0, <8 x double> %r1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
-                                                                       i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  ret <16 x double> %res
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; trunc float and double
-
-truncate()
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; min/max
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int64/uint64 min/max
@@ -354,7 +287,7 @@ declare <16 x i32> @llvm.x86.avx512.mask.pmins.d.512(<16 x i32>, <16 x i32>, <16
 declare <16 x i32> @llvm.x86.avx512.mask.pmaxs.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
 
 define <16 x i32> @__min_varying_int32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
-  %ret = call <16 x i32> @llvm.x86.avx512.mask.pmins.d.512(<16 x i32> %0, <16 x i32> %1, 
+  %ret = call <16 x i32> @llvm.x86.avx512.mask.pmins.d.512(<16 x i32> %0, <16 x i32> %1,
                                                            <16 x i32> zeroinitializer, i16 -1)
   ret <16 x i32> %ret
 }
@@ -404,7 +337,7 @@ define <16 x double> @__min_varying_double(<16 x double>, <16 x double>) nounwin
   %res = shufflevector <8 x double> %res_a, <8 x double> %res_b,
                        <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                                    i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  ret <16 x double> %res                       
+  ret <16 x double> %res
 }
 
 define <16 x double> @__max_varying_double(<16 x double>, <16 x double>) nounwind readnone alwaysinline {
@@ -449,13 +382,13 @@ define double @__sqrt_uniform_double(double) nounwind alwaysinline {
 declare <8 x double> @llvm.x86.avx512.mask.sqrt.pd.512(<8 x double>, <8 x double>, i8, i32) nounwind readnone
 
 define <16 x double> @__sqrt_varying_double(<16 x double>) nounwind alwaysinline {
-  %v0 = shufflevector <16 x double> %0, <16 x double> undef, 
+  %v0 = shufflevector <16 x double> %0, <16 x double> undef,
                       <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %v1 = shufflevector <16 x double> %0, <16 x double> undef, 
+  %v1 = shufflevector <16 x double> %0, <16 x double> undef,
                       <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %r0 = call <8 x double> @llvm.x86.avx512.mask.sqrt.pd.512(<8 x double> %v0,  <8 x double> zeroinitializer, i8 -1, i32 4)
   %r1 = call <8 x double> @llvm.x86.avx512.mask.sqrt.pd.512(<8 x double> %v1,  <8 x double> zeroinitializer, i8 -1, i32 4)
-  %res = shufflevector <8 x double> %r0, <8 x double> %r1, 
+  %res = shufflevector <8 x double> %r0, <8 x double> %r1,
                        <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                                    i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x double> %res
@@ -680,16 +613,16 @@ define <16 x i32> @__masked_load_i32(i8 * %ptr, <WIDTH x MASK> %mask) nounwind a
 
 declare <8 x i64> @llvm.x86.avx512.mask.loadu.q.512(i8*, <8 x i64>, i8)
 define <16 x i64> @__masked_load_i64(i8 * %ptr, <WIDTH x MASK> %mask) nounwind alwaysinline {
-  %mask_lo_i8 = call i8 @__extract_mask_low (<WIDTH x MASK> %mask) 
+  %mask_lo_i8 = call i8 @__extract_mask_low (<WIDTH x MASK> %mask)
   %mask_hi_i8 = call i8 @__extract_mask_hi (<WIDTH x MASK> %mask)
-  
+
   %ptr_d = bitcast i8* %ptr to <16 x i64>*
   %ptr_hi = getelementptr PTR_OP_ARGS(`<16 x i64>') %ptr_d, i32 0, i32 8
   %ptr_hi_i8 = bitcast i64* %ptr_hi to i8*
 
   %r0 = call <8 x i64> @llvm.x86.avx512.mask.loadu.q.512(i8* %ptr, <8 x i64> zeroinitializer, i8 %mask_lo_i8)
   %r1 = call <8 x i64> @llvm.x86.avx512.mask.loadu.q.512(i8* %ptr_hi_i8, <8 x i64> zeroinitializer, i8 %mask_hi_i8)
-  
+
   %res = shufflevector <8 x i64> %r0, <8 x i64> %r1,
                        <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                                    i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -715,8 +648,8 @@ define <16 x double> @__masked_load_double(i8 * %ptr, <WIDTH x MASK> %mask) read
 
   %r0 = call <8 x double> @llvm.x86.avx512.mask.loadu.pd.512(i8* %ptr, <8 x double> zeroinitializer, i8 %mask_lo_i8)
   %r1 = call <8 x double> @llvm.x86.avx512.mask.loadu.pd.512(i8* %ptr_hi_i8, <8 x double> zeroinitializer, i8 %mask_hi_i8)
-  
-  %res = shufflevector <8 x double> %r0, <8 x double> %r1, 
+
+  %res = shufflevector <8 x double> %r0, <8 x double> %r1,
                        <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                                    i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x double> %res
@@ -796,61 +729,10 @@ define void @__masked_store_double(<16 x double>* nocapture, <16 x double> %v, <
   ret void
 }
 
-define void @__masked_store_blend_i8(<16 x i8>* nocapture, <16 x i8>, 
-                                     <WIDTH x MASK>) nounwind alwaysinline {
-  %v = load PTR_OP_ARGS(`<16 x i8> ')  %0
-  %v1 = select <WIDTH x i1> %2, <16 x i8> %1, <16 x i8> %v
-  store <16 x i8> %v1, <16 x i8> * %0
-  ret void
-}
-
-define void @__masked_store_blend_i16(<16 x i16>* nocapture, <16 x i16>, 
-                                      <WIDTH x MASK>) nounwind alwaysinline {
-  %v = load PTR_OP_ARGS(`<16 x i16> ')  %0
-  %v1 = select <WIDTH x i1> %2, <16 x i16> %1, <16 x i16> %v
-  store <16 x i16> %v1, <16 x i16> * %0
-  ret void
-}
-
-define void @__masked_store_blend_half(<16 x half>* nocapture,
-                            <16 x half>, <WIDTH x MASK>) nounwind alwaysinline {
-  %v = load PTR_OP_ARGS(`<16 x half> ')  %0
-  %v1 = select <WIDTH x i1> %2, <16 x half> %1, <16 x half> %v
-  store <16 x half> %v1, <16 x half> * %0
-  ret void
-}
-
-define void @__masked_store_blend_i32(<16 x i32>* nocapture, <16 x i32>, 
-                                      <WIDTH x MASK>) nounwind alwaysinline {
-  %v = load PTR_OP_ARGS(`<16 x i32> ')  %0
-  %v1 = select <WIDTH x i1> %2, <16 x i32> %1, <16 x i32> %v
-  store <16 x i32> %v1, <16 x i32> * %0
-  ret void
-}
-
-define void @__masked_store_blend_float(<16 x float>* nocapture, <16 x float>, 
-                                        <WIDTH x MASK>) nounwind alwaysinline {
-  %v = load PTR_OP_ARGS(`<16 x float> ')  %0
-  %v1 = select <WIDTH x i1> %2, <16 x float> %1, <16 x float> %v
-  store <16 x float> %v1, <16 x float> * %0
-  ret void
-}
-
-define void @__masked_store_blend_i64(<16 x i64>* nocapture,
-                            <16 x i64>, <WIDTH x MASK>) nounwind alwaysinline {
-  %v = load PTR_OP_ARGS(`<16 x i64> ')  %0
-  %v1 = select <WIDTH x i1> %2, <16 x i64> %1, <16 x i64> %v
-  store <16 x i64> %v1, <16 x i64> * %0
-  ret void
-}
-
-define void @__masked_store_blend_double(<16 x double>* nocapture,
-                            <16 x double>, <WIDTH x MASK>) nounwind alwaysinline {
-  %v = load PTR_OP_ARGS(`<16 x double> ')  %0
-  %v1 = select <WIDTH x i1> %2, <16 x double> %1, <16 x double> %v
-  store <16 x double> %v1, <16 x double> * %0
-  ret void
-}
+declare void @__masked_store_blend_i8(<16 x i8>* nocapture, <16 x i8>, <WIDTH x MASK>) nounwind alwaysinline
+declare void @__masked_store_blend_i16(<16 x i16>* nocapture, <16 x i16>, <WIDTH x MASK>) nounwind alwaysinline
+declare void @__masked_store_blend_i32(<16 x i32>* nocapture, <16 x i32>, <WIDTH x MASK>) nounwind alwaysinline
+declare void @__masked_store_blend_i64(<16 x i64>* nocapture, <16 x i64>, <WIDTH x MASK>) nounwind alwaysinline
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter
