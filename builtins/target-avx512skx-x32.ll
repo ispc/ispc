@@ -238,80 +238,6 @@ define <32 x i16> @__float_to_half_varying(<32 x float> %v) nounwind readnone al
 fastMathFTZDAZ_x86()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; round/floor/ceil varying float/doubles
-
-declare <16 x float> @llvm.roundeven.v16f32(<16 x float> %p)
-declare <16 x float> @llvm.floor.v16f32(<16 x float> %p)
-declare <16 x float> @llvm.ceil.v16f32(<16 x float> %p)
-
-define <32 x float> @__round_varying_float(<32 x float> %v) nounwind readonly alwaysinline {
-  v32tov16(float, %v, %v0, %v1)
-  %r0 = call <16 x float> @llvm.roundeven.v16f32(<16 x float> %v0)
-  %r1 = call <16 x float> @llvm.roundeven.v16f32(<16 x float> %v1)
-  v16tov32(float, %r0, %r1, %r)
-  ret <32 x float> %r
-}
-
-define <32 x float> @__floor_varying_float(<32 x float> %v) nounwind readonly alwaysinline {
-  v32tov16(float, %v, %v0, %v1)
-  %r0 = call <16 x float> @llvm.floor.v16f32(<16 x float> %v0)
-  %r1 = call <16 x float> @llvm.floor.v16f32(<16 x float> %v1)
-  v16tov32(float, %r0, %r1, %r)
-  ret <32 x float> %r
-}
-
-define <32 x float> @__ceil_varying_float(<32 x float> %v) nounwind readonly alwaysinline {
-  v32tov16(float, %v, %v0, %v1)
-  %r0 = call <16 x float> @llvm.ceil.v16f32(<16 x float> %v0)
-  %r1 = call <16 x float> @llvm.ceil.v16f32(<16 x float> %v1)
-  v16tov32(float, %r0, %r1, %r)
-  ret <32 x float> %r
-}
-
-declare <8 x double> @llvm.roundeven.v8f64(<8 x double> %p)
-declare <8 x double> @llvm.floor.v8f64(<8 x double> %p)
-declare <8 x double> @llvm.ceil.v8f64(<8 x double> %p)
-
-define <32 x double> @__round_varying_double(<32 x double> %v) nounwind readonly alwaysinline {
-  v32tov8(double, %v, %v0, %v1, %v2, %v3)
-  %r0 = call <8 x double> @llvm.roundeven.v8f64(<8 x double> %v0)
-  %r1 = call <8 x double> @llvm.roundeven.v8f64(<8 x double> %v1)
-  %r2 = call <8 x double> @llvm.roundeven.v8f64(<8 x double> %v2)
-  %r3 = call <8 x double> @llvm.roundeven.v8f64(<8 x double> %v3)
-  v8tov32(double, %r0, %r1, %r2, %r3, %r)
-  ret <32 x double> %r
-}
-
-define <32 x double> @__floor_varying_double(<32 x double> %v) nounwind readonly alwaysinline {
-  v32tov8(double, %v, %v0, %v1, %v2, %v3)
-  %r0 = call <8 x double> @llvm.floor.v8f64(<8 x double> %v0)
-  %r1 = call <8 x double> @llvm.floor.v8f64(<8 x double> %v1)
-  %r2 = call <8 x double> @llvm.floor.v8f64(<8 x double> %v2)
-  %r3 = call <8 x double> @llvm.floor.v8f64(<8 x double> %v3)
-  v8tov32(double, %r0, %r1, %r2, %r3, %r)
-  ret <32 x double> %r
-}
-
-define <32 x double> @__ceil_varying_double(<32 x double> %v) nounwind readonly alwaysinline {
-  v32tov8(double, %v, %v0, %v1, %v2, %v3)
-  %r0 = call <8 x double> @llvm.ceil.v8f64(<8 x double> %v0)
-  %r1 = call <8 x double> @llvm.ceil.v8f64(<8 x double> %v1)
-  %r2 = call <8 x double> @llvm.ceil.v8f64(<8 x double> %v2)
-  %r3 = call <8 x double> @llvm.ceil.v8f64(<8 x double> %v3)
-  v8tov32(double, %r0, %r1, %r2, %r3, %r)
-  ret <32 x double> %r
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; trunc float and double
-
-truncate()
-
-;; min/max
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; float min/max
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; min/max
 
 declare i64 @__max_uniform_int64(i64, i64) nounwind readonly alwaysinline
@@ -428,11 +354,6 @@ define <WIDTH x float> @__max_varying_float(<WIDTH x float>,
 
 ;; sqrt/rsqrt/rcp
 ;; TODO: need to use intrinsics and N-R approximation.
-
-;; bit ops
-
-popcnt()
-ctlztz()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; svml
@@ -663,4 +584,4 @@ define_avgs()
 saturation_arithmetic_novec()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; dot product 
+;; dot product

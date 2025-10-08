@@ -218,58 +218,6 @@ define <4 x i16> @__float_to_half_varying(<4 x float> %v) nounwind readnone {
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; rounding floats
-
-declare <4 x float> @llvm.roundeven.v4f32(<4 x float> %p)
-declare <4 x float> @llvm.floor.v4f32(<4 x float> %p)
-declare <4 x float> @llvm.ceil.v4f32(<4 x float> %p)
-
-define <4 x float> @__round_varying_float(<4 x float>) nounwind readonly alwaysinline {
-  %res = call <4 x float> @llvm.roundeven.v4f32(<4 x float> %0)
-  ret <4 x float> %res
-}
-
-define <4 x float> @__floor_varying_float(<4 x float>) nounwind readonly alwaysinline {
-  %res = call <4 x float> @llvm.floor.v4f32(<4 x float> %0)
-  ret <4 x float> %res
-}
-
-define <4 x float> @__ceil_varying_float(<4 x float>) nounwind readonly alwaysinline {
-  %res = call <4 x float> @llvm.ceil.v4f32(<4 x float> %0)
-  ret <4 x float> %res
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; rounding doubles
-
-declare <4 x double> @llvm.roundeven.v4f64(<4 x double> %p)
-declare <4 x double> @llvm.floor.v4f64(<4 x double> %p)
-declare <4 x double> @llvm.ceil.v4f64(<4 x double> %p)
-
-define <4 x double> @__round_varying_double(<4 x double>) nounwind readonly alwaysinline {
-  %res = call <4 x double> @llvm.roundeven.v4f64(<4 x double> %0)
-  ret <4 x double> %res
-}
-
-define <4 x double> @__floor_varying_double(<4 x double>) nounwind readonly alwaysinline {
-  %res = call <4 x double> @llvm.floor.v4f64(<4 x double> %0)
-  ret <4 x double> %res
-}
-
-define <4 x double> @__ceil_varying_double(<4 x double>) nounwind readonly alwaysinline {
-  %res = call <4 x double> @llvm.ceil.v4f64(<4 x double> %0)
-  ret <4 x double> %res
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; trunc float and double
-
-truncate()
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; min/max
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int64/uint64 min/max
 
 declare <4 x i64> @llvm.x86.avx512.mask.pmaxs.q.256(<4 x i64>, <4 x i64>, <4 x i64>, i8)
@@ -639,61 +587,10 @@ define void @__masked_store_double(<4 x double>* nocapture, <4 x double> %v, <WI
   ret void
 }
 
-define void @__masked_store_blend_i8(<4 x i8>* nocapture, <4 x i8>,
-                                     <WIDTH x MASK>) nounwind alwaysinline {
-  %v = load PTR_OP_ARGS(`<4 x i8> ')  %0
-  %v1 = select <WIDTH x i1> %2, <4 x i8> %1, <4 x i8> %v
-  store <4 x i8> %v1, <4 x i8> * %0
-  ret void
-}
-
-define void @__masked_store_blend_i16(<4 x i16>* nocapture, <4 x i16>,
-                                      <WIDTH x MASK>) nounwind alwaysinline {
-  %v = load PTR_OP_ARGS(`<4 x i16> ')  %0
-  %v1 = select <WIDTH x i1> %2, <4 x i16> %1, <4 x i16> %v
-  store <4 x i16> %v1, <4 x i16> * %0
-  ret void
-}
-
-define void @__masked_store_blend_half(<4 x half>* nocapture, <4 x half>,
-                                        <WIDTH x MASK>) nounwind alwaysinline {
-  %v = load PTR_OP_ARGS(`<4 x half> ')  %0
-  %v1 = select <WIDTH x i1> %2, <4 x half> %1, <4 x half> %v
-  store <4 x half> %v1, <4 x half> * %0
-  ret void
-}
-
-define void @__masked_store_blend_i32(<4 x i32>* nocapture, <4 x i32>,
-                                      <WIDTH x MASK>) nounwind alwaysinline {
-  %v = load PTR_OP_ARGS(`<4 x i32> ')  %0
-  %v1 = select <WIDTH x i1> %2, <4 x i32> %1, <4 x i32> %v
-  store <4 x i32> %v1, <4 x i32> * %0
-  ret void
-}
-
-define void @__masked_store_blend_float(<4 x float>* nocapture, <4 x float>, 
-                                        <WIDTH x MASK>) nounwind alwaysinline {
-  %v = load PTR_OP_ARGS(`<4 x float> ')  %0
-  %v1 = select <WIDTH x i1> %2, <4 x float> %1, <4 x float> %v
-  store <4 x float> %v1, <4 x float> * %0
-  ret void
-}
-
-define void @__masked_store_blend_i64(<4 x i64>* nocapture,
-                            <4 x i64>, <WIDTH x MASK>) nounwind alwaysinline {
-  %v = load PTR_OP_ARGS(`<4 x i64> ')  %0
-  %v1 = select <WIDTH x i1> %2, <4 x i64> %1, <4 x i64> %v
-  store <4 x i64> %v1, <4 x i64> * %0
-  ret void
-}
-
-define void @__masked_store_blend_double(<4 x double>* nocapture,
-                            <4 x double>, <WIDTH x MASK>) nounwind alwaysinline {
-  %v = load PTR_OP_ARGS(`<4 x double> ')  %0
-  %v1 = select <WIDTH x i1> %2, <4 x double> %1, <4 x double> %v
-  store <4 x double> %v1, <4 x double> * %0
-  ret void
-}
+declare void @__masked_store_blend_i8(<4 x i8>* nocapture, <4 x i8>, <WIDTH x MASK>) nounwind alwaysinline
+declare void @__masked_store_blend_i16(<4 x i16>* nocapture, <4 x i16>, <WIDTH x MASK>) nounwind alwaysinline
+declare void @__masked_store_blend_i32(<4 x i32>* nocapture, <4 x i32>, <WIDTH x MASK>) nounwind alwaysinline
+declare void @__masked_store_blend_i64(<4 x i64>* nocapture, <4 x i64>, <WIDTH x MASK>) nounwind alwaysinline
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter
