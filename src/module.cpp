@@ -1946,19 +1946,17 @@ static llvm::FunctionType *lGetVaryingDispatchType(FunctionTargetVariants &funcs
     variant that was generated at compile time.
 
     @param module      Module in which to create the dispatch function.
-    @param setISAFunc  Pointer to the __set_system_isa() function defined
-                       in builtins-dispatch.ll (which is linked into the
-                       given module before we get here.)
-    @param systemBestISAPtr  Pointer to the module-local __system_best_isa
-                             variable, which holds a value of the Target::ISA
-                             enumerant giving the most capable ISA that the
-                             system supports.
+    @param getBestISAFunc  Pointer to the __get_system_best_isa() function defined
+                           in builtins-dispatch.ll (which is linked into the
+                           given module before we get here.) This function returns
+                           a value of the Target::ISA enumerant giving the most
+                           capable ISA that the system supports.
     @param name        Name of the function for which we're generating a
                        dispatch function
     @param funcs       Target-specific variants of the exported function.
 */
-static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISAFunc, llvm::Value *systemBestISAPtr,
-                                    const std::string &name, FunctionTargetVariants &funcs) {
+static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *getBestISAFunc, const std::string &name,
+                                    FunctionTargetVariants &funcs) {
     // The llvm::Function pointers in funcs are pointers to functions in
     // different llvm::Modules, so we can't call them directly.  Therefore,
     // we'll start by generating an 'extern' declaration of each one that
@@ -2009,12 +2007,41 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
     }
     llvm::BasicBlock *bblock = llvm::BasicBlock::Create(*g->ctx, "entry", dispatchFunc);
 
-    // Start by calling out to the function that determines the system's
-    // ISA and sets __system_best_isa, if it hasn't been set yet.
-    llvm::CallInst::Create(setISAFunc, "", bblock);
+    // Create a global variable to cache the chosen function pointer.
+    auto *ptrTy = llvm::PointerType::getUnqual(*g->ctx);
+    auto *nullPtr = llvm::Constant::getNullValue(ptrTy);
+    auto *funcPtrCache = new llvm::GlobalVariable(*module, ptrTy, false, llvm::GlobalValue::InternalLinkage, nullPtr,
+                                                  "__system_func_ptr_cache_" + name);
+
+    // At the beginning, check whether we already have a callee address in cache.
+    llvm::IRBuilder builder(bblock);
+    auto *ptrF = builder.CreateLoad(ptrTy, funcPtrCache);
+    auto *cond = builder.CreateCmp(llvm::CmpInst::ICMP_NE, ptrF, nullPtr);
+
+    // Two successor basic blocks: make indirect call on cached value or determine the desired variant.
+    auto *bbCall = llvm::BasicBlock::Create(*g->ctx, "skip_init", dispatchFunc);
+    auto *bbInit = llvm::BasicBlock::Create(*g->ctx, "do_init", dispatchFunc);
+    builder.CreateCondBr(cond, bbCall, bbInit);
+
+    // Reload the value from cache in case it was originally zero and then updated.
+    builder.SetInsertPoint(bbCall);
+    ptrF = builder.CreateLoad(ptrTy, funcPtrCache);
+
+    // Prepare arguments for the call. Just pass through all of the args from the dispatch function to the
+    // target-specific function.
+    llvm::SmallVector<llvm::Value *> args(dispatchFunc->arg_size());
+    llvm::copy(llvm::map_range(dispatchFunc->args(), [](llvm::Argument &arg) { return &arg; }), args.begin());
+
+    // Emit the code to make the indirect call.
+    auto *callInst = builder.CreateCall(ftype, ptrF, args);
+    callInst->setCallingConv(dispatchFunc->getCallingConv());
+    voidReturn ? builder.CreateRetVoid() : builder.CreateRet(callInst);
+
+    // Continue with code in initialization block.
+    bblock = bbInit;
 
     // Now we can load the system's ISA enumerant
-    llvm::Value *systemISA = new llvm::LoadInst(LLVMTypes::Int32Type, systemBestISAPtr, "system_isa", bblock);
+    llvm::Value *systemISA = llvm::CallInst::Create(getBestISAFunc, "system_isa", bblock);
 
     // Now emit code that works backwards though the available variants of
     // the function.  We'll call out to the first one we find that will run
@@ -2037,32 +2064,10 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
         llvm::BasicBlock *nextBBlock = llvm::BasicBlock::Create(*g->ctx, "next_try", dispatchFunc);
         llvm::BranchInst::Create(callBBlock, nextBBlock, ok, bblock);
 
-        // Emit the code to make the call call in callBBlock.
-        // Just pass through all of the args from the dispatch function to
-        // the target-specific function.
-        std::vector<llvm::Value *> args;
-        llvm::Function::arg_iterator argIter = dispatchFunc->arg_begin();
-        llvm::Function::arg_iterator targsIter = targetFuncs[i]->arg_begin();
-        for (; argIter != dispatchFunc->arg_end(); ++argIter, ++targsIter) {
-            // Check to see if we rewrote any types in the dispatch function.
-            // If so, create bitcasts for the appropriate pointer types.
-            if (argIter->getType() == targsIter->getType()) {
-                args.push_back(&*argIter);
-            } else {
-                llvm::CastInst *argCast = llvm::CastInst::CreatePointerCast(&*argIter, targsIter->getType(),
-                                                                            "dpatch_arg_bitcast", callBBlock);
-                args.push_back(argCast);
-            }
-        }
-        if (voidReturn) {
-            llvm::CallInst *callInst = llvm::CallInst::Create(targetFuncs[i], args, "", callBBlock);
-            callInst->setCallingConv(targetFuncs[i]->getCallingConv());
-            llvm::ReturnInst::Create(*g->ctx, callBBlock);
-        } else {
-            llvm::CallInst *callInst = llvm::CallInst::Create(targetFuncs[i], args, "ret_value", callBBlock);
-            callInst->setCallingConv(targetFuncs[i]->getCallingConv());
-            llvm::ReturnInst::Create(*g->ctx, callInst, callBBlock);
-        }
+        // Store the chosen variant in the cache.
+        builder.SetInsertPoint(callBBlock);
+        builder.CreateStore(targetFuncs[i], funcPtrCache);
+        builder.CreateBr(bbCall);
 
         // Otherwise we'll go on to the next candidate and see about that
         // one...
@@ -2079,15 +2084,9 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISA
     Assert(abortFunc);
     llvm::CallInst::Create(abortFunc, "", bblock);
 
-    // Return an undef value from the function here; we won't get to this
-    // point at runtime, but LLVM needs all of the basic blocks to be
-    // terminated...
-    if (voidReturn) {
-        llvm::ReturnInst::Create(*g->ctx, bblock);
-    } else {
-        llvm::Value *undefRet = llvm::UndefValue::get(ftype->getReturnType());
-        llvm::ReturnInst::Create(*g->ctx, undefRet, bblock);
-    }
+    // Never return from this call.
+    builder.SetInsertPoint(bblock);
+    builder.CreateUnreachable();
 }
 
 // Initialize a dispatch module
@@ -2127,15 +2126,13 @@ static llvm::Module *lInitDispatchModule() {
 // appropriate compiled variant of the function.
 static void lEmitDispatchModule(llvm::Module *module, std::map<std::string, FunctionTargetVariants> &functions) {
     // Get pointers to things we need below
-    llvm::Function *setFunc = module->getFunction(builtin::__set_system_isa);
-    Assert(setFunc != nullptr);
-    llvm::Value *systemBestISAPtr = module->getGlobalVariable("__system_best_isa", true);
-    Assert(systemBestISAPtr != nullptr);
+    llvm::Function *getFunc = module->getFunction(builtin::__get_system_best_isa);
+    Assert(getFunc != nullptr);
 
     // For each exported function, create the dispatch function
     std::map<std::string, FunctionTargetVariants>::iterator iter;
     for (iter = functions.begin(); iter != functions.end(); ++iter) {
-        lCreateDispatchFunction(module, setFunc, systemBestISAPtr, iter->first, iter->second);
+        lCreateDispatchFunction(module, getFunc, iter->first, iter->second);
     }
 
     // Do some rudimentary cleanup of the final result and make sure that
@@ -2590,6 +2587,9 @@ int Module::GenerateDispatch(const char *srcFile, std::vector<ISPCTarget> &targe
 
     // Create the dispatch functions and emit the dispatch module
     lEmitDispatchModule(dispatchModule, exportedFunctions);
+
+    // Run optimization passes on the dispatch module.
+    Optimize(dispatchModule, g->opt.level);
 
     return WriteDispatchOutputFiles(dispatchModule, output);
 }
