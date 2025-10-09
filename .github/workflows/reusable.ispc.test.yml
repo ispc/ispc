@@ -99,6 +99,20 @@ jobs:
           pwsh .github/workflows/scripts/install-test-deps.ps1
         fi
 
+    - name: Check environment
+      run: |
+        if [ "${{ inputs.platform }}" == "windows" ]; then
+          wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+        elif [ "${{ inputs.platform }}" == "linux" ]; then
+          which -a clang
+          cat /proc/cpuinfo
+        elif [ "${{ inputs.platform }}" == "macos" ]; then
+          which -a clang
+          llvm-config --system-libs
+          sysctl -n machdep.cpu.brand_string
+        fi
+      shell: bash
+
     - name: Running tests on Linux/macOS (alloy mode)
       # See issue #2818 for more details about skipping avx512, avx10 and avx2vnni targets. It's SDE problem running on AMD runner.
       # Unfortunately it's not possible to do this on job level, so we need to do it on step level.
