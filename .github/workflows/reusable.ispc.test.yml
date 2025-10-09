@@ -101,6 +101,19 @@ jobs:
       env:
         INPUTS_PLATFORM: ${{ inputs.platform }}
 
+    - name: Check environment
+      run: |
+        if [ "$INPUTS_PLATFORM" == "windows" ]; then
+          pwsh -Command "Get-CimInstance -ClassName Win32_Processor | Select-Object Caption, DeviceID, Name, NumberOfCores, MaxClockSpeed, Status | Format-Table -AutoSize"
+        elif [ "$INPUTS_PLATFORM" == "linux" ]; then
+          cat /proc/cpuinfo
+        elif [ "$INPUTS_PLATFORM" == "macos" ]; then
+          sysctl -n machdep.cpu.brand_string
+        fi
+      shell: bash
+      env:
+        INPUTS_PLATFORM: ${{ inputs.platform }}
+
     - name: Running tests on Linux/macOS (alloy mode)
       # See issue #2818 for more details about skipping avx512, avx10 and avx2vnni targets. It's SDE problem running on AMD runner.
       # Unfortunately it's not possible to do this on job level, so we need to do it on step level.
