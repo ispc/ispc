@@ -77,28 +77,33 @@ jobs:
 
     - name: Install dependencies
       run: |
-        if [ "${{ inputs.platform }}" == "windows" ]; then
+        if [ "${INPUTS_PLATFORM}" == "windows" ]; then
           pwsh .github/workflows/scripts/install-build-deps.ps1
-        elif [ "${{ inputs.platform }}" == "linux" ]; then
+        elif [ "${INPUTS_PLATFORM}" == "linux" ]; then
           bash .github/workflows/scripts/install-build-deps.sh
-        elif [ "${{ inputs.platform }}" == "macos" ]; then
-          bash .github/workflows/scripts/install-build-deps.sh "${{ inputs.runner }}"
+        elif [ "${INPUTS_PLATFORM}" == "macos" ]; then
+          bash .github/workflows/scripts/install-build-deps.sh "${INPUTS_RUNNER}"
         fi
       shell: bash
+      env:
+        INPUTS_PLATFORM: ${{ inputs.platform }}
+        INPUTS_RUNNER: ${{ inputs.runner }}
 
     - name: Check environment
       run: |
-        if [ "${{ inputs.platform }}" == "windows" ]; then
+        if [ "${INPUTS_PLATFORM}" == "windows" ]; then
           wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
-        elif [ "${{ inputs.platform }}" == "linux" ]; then
+        elif [ "${INPUTS_PLATFORM}" == "linux" ]; then
           which -a clang
           cat /proc/cpuinfo
-        elif [ "${{ inputs.platform }}" == "macos" ]; then
+        elif [ "${INPUTS_PLATFORM}" == "macos" ]; then
           which -a clang
           llvm-config --system-libs
           sysctl -n machdep.cpu.brand_string
         fi
       shell: bash
+      env:
+        INPUTS_PLATFORM: ${{ inputs.platform }}
 
     # Build commands based on platform and options
     - name: Build ISPC on Linux

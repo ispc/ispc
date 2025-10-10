@@ -36,3 +36,4 @@ jobs:
           inputs: |
             .github/workflows/
           advanced-security: false
+          min-confidence: medium

@@ -94,7 +94,9 @@ jobs:
 
       - name: Set timeout for dispatched run
         if: github.event_name == 'workflow_dispatch'
-        run: echo "TIMEOUT=${{ github.event.inputs.timeout }}" >> "$GITHUB_ENV"
+        run: echo "TIMEOUT=${GITHUB_EVENT_INPUTS_TIMEOUT}" >> "$GITHUB_ENV"
+        env:
+          GITHUB_EVENT_INPUTS_TIMEOUT: ${{ github.event.inputs.timeout }}
 
       - name: Set timeout for scheduled run
         if: github.event_name == 'schedule'

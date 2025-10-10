@@ -36,15 +36,17 @@ jobs:
     - name: Download and check Linux artifacts
       run: |
         echo "Download artifact ${LINK}" >> "$GITHUB_STEP_SUMMARY"
-        wget --quiet -O "ispc.tar.gz" "${{ env.LINK }}"
+        wget --quiet -O "ispc.tar.gz" "${LINK}"
         tar xf "ispc.tar.gz"
         # Find the actual directory name that was created
         ISPC_DIR=$(find . -type d -name "ispc*" -maxdepth 1)
-        hardening-check "${ISPC_DIR}/bin/ispc" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
-        hardening-check "${ISPC_DIR}/lib/libispc.so" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
-        hardening-check "${ISPC_DIR}/lib/libispcrt.so" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
-        hardening-check "${ISPC_DIR}/lib/libispcrt_device_gpu.so" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
-        hardening-check "${ISPC_DIR}/lib/libispcrt_device_cpu.so" | tee -a "./hardening-check-${{ inputs.release_tag }}.txt"
+        hardening-check "${ISPC_DIR}/bin/ispc" | tee -a "./hardening-check-${INPUTS_RELEASE_TAG}.txt"
+        hardening-check "${ISPC_DIR}/lib/libispc.so" | tee -a "./hardening-check-${INPUTS_RELEASE_TAG}.txt"
+        hardening-check "${ISPC_DIR}/lib/libispcrt.so" | tee -a "./hardening-check-${INPUTS_RELEASE_TAG}.txt"
+        hardening-check "${ISPC_DIR}/lib/libispcrt_device_gpu.so" | tee -a "./hardening-check-${INPUTS_RELEASE_TAG}.txt"
+        hardening-check "${ISPC_DIR}/lib/libispcrt_device_cpu.so" | tee -a "./hardening-check-${INPUTS_RELEASE_TAG}.txt"
+      env:
+        INPUTS_RELEASE_TAG: ${{ inputs.release_tag }}
 
     - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:
@@ -75,11 +77,13 @@ jobs:
         wget -q $env:LINK
         7z.exe x ispc*
         cd ispc-*
-        winchecksec.exe bin\ispc.exe >> ..\winchecksec-report-${{ inputs.release_tag }}.txt
-        winchecksec.exe bin\ispc.dll >> ..\winchecksec-report-${{ inputs.release_tag }}.txt
-        winchecksec.exe bin\ispcrt.dll >> ..\winchecksec-report-${{ inputs.release_tag }}.txt
-        winchecksec.exe bin\ispcrt_device_cpu.dll >> ..\winchecksec-report-${{ inputs.release_tag }}.txt
-        winchecksec.exe bin\ispcrt_device_gpu.dll >> ..\winchecksec-report-${{ inputs.release_tag }}.txt
+        winchecksec.exe bin\ispc.exe >> ..\winchecksec-report-$env:INPUTS_RELEASE_TAG.txt
+        winchecksec.exe bin\ispc.dll >> ..\winchecksec-report-$env:INPUTS_RELEASE_TAG.txt
+        winchecksec.exe bin\ispcrt.dll >> ..\winchecksec-report-$env:INPUTS_RELEASE_TAG.txt
+        winchecksec.exe bin\ispcrt_device_cpu.dll >> ..\winchecksec-report-$env:INPUTS_RELEASE_TAG.txt
+        winchecksec.exe bin\ispcrt_device_gpu.dll >> ..\winchecksec-report-$env:INPUTS_RELEASE_TAG.txt
+      env:
+        INPUTS_RELEASE_TAG: ${{ inputs.release_tag }}
 
     - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
       with:

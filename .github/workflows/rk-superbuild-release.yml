@@ -42,18 +42,21 @@ jobs:
     - name: Download ISPC release archives
       env:
         LINK: https://github.com/ispc/ispc/releases/download/v${{ inputs.version }}/ispc-v${{ inputs.version }}-linux.tar.gz
+        INPUTS_VERSION: ${{ inputs.version }}
       run: |
         echo "Download artifact ${LINK}" >> "$GITHUB_STEP_SUMMARY"
-        wget "${{ env.LINK }}"
-        tar xf "ispc-v${{ inputs.version }}-linux.tar.gz"
+        wget "${LINK}"
+        tar xf "ispc-v${INPUTS_VERSION}-linux.tar.gz"
       shell: bash
 
     - name: Build
       run: |
         mkdir build
         cd build
-        cmake -DISPC_URL="${GITHUB_WORKSPACE}/ispc-v${{ inputs.version }}-linux.tar.gz" -DISPC_VERSION=${{ inputs.version }} ../
+        cmake -DISPC_URL="${GITHUB_WORKSPACE}/ispc-v${INPUTS_VERSION}-linux.tar.gz" -DISPC_VERSION=${INPUTS_VERSION} ../
         cmake --build .
+      env:
+        INPUTS_VERSION: ${{ inputs.version }}
 
   build-ospray-superbuild-windows:
     runs-on: windows-2022
@@ -75,8 +78,10 @@ jobs:
 
     - name: Add ISPC to the PATH
       run: |
-        Expand-Archive $pwd\ispc-v${{ inputs.version }}-windows.zip -DestinationPath $pwd
-        echo "$pwd\ispc-v${{ inputs.version }}-windows\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        Expand-Archive $pwd\ispc-v$env:INPUTS_VERSION-windows.zip -DestinationPath $pwd
+        echo "$pwd\ispc-v$env:INPUTS_VERSION-windows\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      env:
+        INPUTS_VERSION: ${{ inputs.version }}
 
     - name: Build ospray superbuild
       run: |
