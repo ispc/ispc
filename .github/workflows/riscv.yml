@@ -24,7 +24,7 @@ jobs:
     name: RISC-V rvv-x4 test
     runs-on: ubuntu-22.04
     container:
-      image: archlinux:latest
+      image: archlinux@sha256:2fcdd55448255f87dd337ef5c0fdbd5e4fec432345db1aa5faea4bf2764b4ca8
       options: --privileged
 
     steps:

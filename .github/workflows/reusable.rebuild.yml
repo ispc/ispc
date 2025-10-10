@@ -99,15 +99,22 @@ jobs:
     steps:
     - name: Print inputs and environment
       run: |
-        echo "version: ${{ inputs.version }}"
-        echo "full_version: ${{ inputs.full_version }}"
-        echo "lto: ${{ inputs.lto }}"
-        echo "asserts: ${{ inputs.asserts }}"
-        echo "arch: ${{ inputs.arch }}"
-        echo "ubuntu: ${{ inputs.ubuntu }}"
-        echo "TAR_NAME: ${{ env.TAR_NAME }}"
-        echo "DOCKER_DIR: ${{ env.DOCKER_DIR }}"
-        echo "ARTIFACT_NAME: ${{ env.ARTIFACT_NAME }}"
+        echo "version: $env:INPUTS_VERSION"
+        echo "full_version: $env:INPUTS_FULL_VERSION"
+        echo "lto: $env:INPUTS_LTO"
+        echo "asserts: $env:INPUTS_ASSERTS"
+        echo "arch: $env:INPUTS_ARCH"
+        echo "ubuntu: $env:INPUTS_UBUNTU"
+        echo "TAR_NAME: $env:TAR_NAME"
+        echo "DOCKER_DIR: $env:DOCKER_DIR"
+        echo "ARTIFACT_NAME: $env:ARTIFACT_NAME"
+      env:
+        INPUTS_VERSION: ${{ inputs.version }}
+        INPUTS_FULL_VERSION: ${{ inputs.full_version }}
+        INPUTS_LTO: ${{ inputs.lto }}
+        INPUTS_ASSERTS: ${{ inputs.asserts }}
+        INPUTS_ARCH: ${{ inputs.arch }}
+        INPUTS_UBUNTU: ${{ inputs.ubuntu }}
 
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       with:
@@ -119,26 +126,32 @@ jobs:
 
     - name: Build LLVM
       run: |
-        cd ${{ env.DOCKER_DIR }}
+        cd ${env:DOCKER_DIR}
         docker buildx create --use
         docker buildx build \
-          --tag ispc/ubuntu${{ inputs.ubuntu }} \
+          --tag ispc/ubuntu${INPUTS_UBUNTU} \
           --target=llvm_build \
           --build-arg REPO="${GITHUB_REPOSITORY}" \
           --build-arg SHA="${GITHUB_SHA}" \
-          --build-arg LTO="${{ inputs.lto }}" \
-          --build-arg LLVM_VERSION="${{ inputs.version }}" \
+          --build-arg LTO="${INPUTS_LTO}" \
+          --build-arg LLVM_VERSION="${INPUTS_VERSION}" \
           --build-arg LLVM_DISABLE_ASSERTIONS=${{ inputs.asserts == 'ON' && 'OFF' || 'ON' }} \
           --output=type=tar,dest=result.tar .
+      env:
+        INPUTS_UBUNTU: ${{ inputs.ubuntu }}
+        INPUTS_LTO: ${{ inputs.lto }}
+        INPUTS_VERSION: ${{ inputs.version }}
 
     - name: Pack LLVM
       run: |
-        cd ${{ env.DOCKER_DIR }}
+        cd ${env:DOCKER_DIR}
         rm -rf cache.local
         tar xvf result.tar usr/local/src/llvm
-        mv usr/local/src/llvm/bin-${{ inputs.version }} .
+        mv usr/local/src/llvm/bin-${env:INPUTS_VERSION} .
         export XZ_DEFAULTS="-T0" # run zx in all threads
-        tar cJvf ${{ env.TAR_NAME }} bin-${{ inputs.version }}
+        tar cJvf ${env:TAR_NAME} bin-${env:INPUTS_VERSION}
+      env:
+        INPUTS_VERSION: ${{ inputs.version }}
 
     - name: Upload package
       uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
@@ -156,16 +169,24 @@ jobs:
     steps:
     - name: Print inputs and environment
       run: |
-        echo "version: ${{ inputs.version }}"
-        echo "full_version: ${{ inputs.full_version }}"
-        echo "lto: ${{ inputs.lto }}"
-        echo "asserts: ${{ inputs.asserts }}"
-        echo "arch: ${{ inputs.arch }}"
-        echo "win_sdk: ${{ inputs.win_sdk }}"
-        echo "vs_version: ${{ inputs.vs_version }}"
-        echo "TAR_BASE_NAME: ${{ env.TAR_BASE_NAME }}"
-        echo "DOCKER_DIR: ${{ env.DOCKER_DIR }}"
-        echo "ARTIFACT_NAME: ${{ env.ARTIFACT_NAME }}"
+        echo "version: $env:INPUTS_VERSION"
+        echo "full_version: $env:INPUTS_FULL_VERSION"
+        echo "lto: $env:INPUTS_LTO"
+        echo "asserts: $env:INPUTS_ASSERTS"
+        echo "arch: $env:INPUTS_ARCH"
+        echo "win_sdk: $env:INPUTS_WIN_SDK"
+        echo "vs_version: $env:INPUTS_VS_VERSION"
+        echo "TAR_BASE_NAME: $env:TAR_BASE_NAME"
+        echo "DOCKER_DIR: $env:DOCKER_DIR"
+        echo "ARTIFACT_NAME: $env:ARTIFACT_NAME"
+      env:
+        INPUTS_VERSION: ${{ inputs.version }}
+        INPUTS_FULL_VERSION: ${{ inputs.full_version }}
+        INPUTS_LTO: ${{ inputs.lto }}
+        INPUTS_ASSERTS: ${{ inputs.asserts }}
+        INPUTS_ARCH: ${{ inputs.arch }}
+        INPUTS_WIN_SDK: ${{ inputs.win_sdk }}
+        INPUTS_VS_VERSION: ${{ inputs.vs_version }}
 
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       with:
@@ -187,9 +208,9 @@ jobs:
     - name: Build LLVM
       shell: cmd
       run: |
-        if "${{ inputs.vs_version }}" == "vs2019" (
+        if "%INPUTS_VS_VERSION%" == "vs2019" (
           set VSVARS="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-        ) else if "${{ inputs.vs_version }}" == "vs2022" (
+        ) else if "%INPUTS_VS_VERSION%" == "vs2022" (
           set VSVARS="C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
         ) else (
           echo "Unknown VS version"
@@ -197,24 +218,31 @@ jobs:
         )
         call %VSVARS%
         cmake %ISPC_HOME%\superbuild ^
-          -B build-${{ inputs.version }} ^
+          -B build-%INPUTS_VERSION% ^
           --preset os ^
-          -DLTO="${{ inputs.lto }}" ^
-          -DLLVM_VERSION="${{ inputs.version }}" ^
-          -DCMAKE_SYSTEM_VERSION="${{ inputs.win_sdk }}" ^
-          -DCMAKE_INSTALL_PREFIX=%LLVM_HOME%\bin-${{ inputs.version }} ^
+          -DLTO="%INPUTS_LTO%" ^
+          -DLLVM_VERSION="%INPUTS_VERSION%" ^
+          -DCMAKE_SYSTEM_VERSION="%INPUTS_WIN_SDK%" ^
+          -DCMAKE_INSTALL_PREFIX=%LLVM_HOME%\bin-%INPUTS_VERSION% ^
           -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON ^
           -DXE_DEPS=OFF ^
           -DLLVM_DISABLE_ASSERTIONS=${{ inputs.asserts == 'ON' && 'OFF' || 'ON' }}
-        cmake --build build-${{ inputs.version }}
-        rmdir /s /q build-${{ inputs.version }}
+        cmake --build build-%INPUTS_VERSION%
+        rmdir /s /q build-%INPUTS_VERSION%
+      env:
+        INPUTS_VS_VERSION: ${{ inputs.vs_version }}
+        INPUTS_VERSION: ${{ inputs.version }}
+        INPUTS_LTO: ${{ inputs.lto }}
+        INPUTS_WIN_SDK: ${{ inputs.win_sdk }}
 
     - name: Pack LLVM
       shell: cmd
       run: |
         cd llvm
-        7z.exe a -ttar -snl ${{ env.TAR_BASE_NAME }}.tar bin-${{ inputs.version }}
-        7z.exe a -t7z ${{ env.TAR_BASE_NAME }}.tar.7z ${{ env.TAR_BASE_NAME }}.tar
+        7z.exe a -ttar -snl %TAR_BASE_NAME%.tar bin-%INPUTS_VERSION%
+        7z.exe a -t7z %TAR_BASE_NAME%.tar.7z %TAR_BASE_NAME%.tar
+      env:
+        INPUTS_VERSION: ${{ inputs.version }}
 
     - name: Upload package
       uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
@@ -234,14 +262,20 @@ jobs:
     steps:
     - name: Print inputs and environment
       run: |
-        echo "version: ${{ inputs.version }}"
-        echo "full_version: ${{ inputs.full_version }}"
-        echo "lto: ${{ inputs.lto }}"
-        echo "asserts: ${{ inputs.asserts }}"
-        echo "arch: ${{ inputs.arch }}"
-        echo "TAR_NAME: ${{ env.TAR_NAME }}"
-        echo "DOCKER_DIR: ${{ env.DOCKER_DIR }}"
-        echo "ARTIFACT_NAME: ${{ env.ARTIFACT_NAME }}"
+        echo "version: $env:INPUTS_VERSION"
+        echo "full_version: $env:INPUTS_FULL_VERSION"
+        echo "lto: $env:INPUTS_LTO"
+        echo "asserts: $env:INPUTS_ASSERTS"
+        echo "arch: $env:INPUTS_ARCH"
+        echo "TAR_NAME: $env:TAR_NAME"
+        echo "DOCKER_DIR: $env:DOCKER_DIR"
+        echo "ARTIFACT_NAME: $env:ARTIFACT_NAME"
+      env:
+        INPUTS_VERSION: ${{ inputs.version }}
+        INPUTS_FULL_VERSION: ${{ inputs.full_version }}
+        INPUTS_LTO: ${{ inputs.lto }}
+        INPUTS_ASSERTS: ${{ inputs.asserts }}
+        INPUTS_ARCH: ${{ inputs.arch }}
 
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       with:
@@ -260,23 +294,28 @@ jobs:
     - name: Build LLVM
       run: |
         cmake "$ISPC_HOME/superbuild" \
-          -B "build-${{ inputs.version }}" \
+          -B "build-${INPUTS_VERSION}" \
           --preset os \
-          -DLTO="${{ inputs.lto }}" \
-          -DLLVM_VERSION="${{ inputs.version }}" \
-          -DCMAKE_INSTALL_PREFIX="$LLVM_HOME/bin-${{ inputs.version }}" \
+          -DLTO="${INPUTS_LTO}" \
+          -DLLVM_VERSION="${INPUTS_VERSION}" \
+          -DCMAKE_INSTALL_PREFIX="$LLVM_HOME/bin-${INPUTS_VERSION}" \
           -DBUILD_STAGE2_TOOLCHAIN_ONLY=ON \
           -DXE_DEPS=OFF \
           -DMACOS_UNIVERSAL_BIN=ON \
           -DLLVM_DISABLE_ASSERTIONS=${{ inputs.asserts == 'ON' && 'OFF' || 'ON' }} \
           -DISPC_ANDROID_NDK_PATH="/Users/Shared/android-ndk-r20b"
-        cmake --build "build-${{ inputs.version }}"
-        rm -rf "build-${{ inputs.version }}"
+        cmake --build "build-${INPUTS_VERSION}"
+        rm -rf "build-${INPUTS_VERSION}"
+      env:
+        INPUTS_VERSION: ${{ inputs.version }}
+        INPUTS_LTO: ${{ inputs.lto }}
 
     - name: Pack LLVM
       run: |
         cd llvm
-        tar cJvf ${{ env.TAR_NAME }} bin-${{ inputs.version }}
+        tar cJvf ${env:TAR_NAME} bin-${INPUTS_VERSION}
+      env:
+        INPUTS_VERSION: ${{ inputs.version }}
 
     - name: Upload package
       uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0

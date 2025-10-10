@@ -83,9 +83,9 @@ jobs:
     - name: Install dependencies and unpack artifacts
       shell: bash
       run: |
-        if [ "${{ inputs.platform }}" == "linux" ]; then
+        if [ "${INPUTS_PLATFORM}" == "linux" ]; then
           bash .github/workflows/scripts/install-test-deps.sh
-        elif [ "${{ inputs.platform }}" == "macos" ]; then
+        elif [ "${INPUTS_PLATFORM}" == "macos" ]; then
           if [[ "${{ inputs.enable_lto }}" == "true" ]]; then
             tar xf ispc-trunk-macOS.universal.tar.gz
             echo "$GITHUB_WORKSPACE/ispc-trunk-macOS.universal/bin" >> "$GITHUB_PATH"
@@ -98,6 +98,8 @@ jobs:
         else
           pwsh .github/workflows/scripts/install-test-deps.ps1
         fi
+      env:
+        INPUTS_PLATFORM: ${{ inputs.platform }}
 
     - name: Running tests on Linux/macOS (alloy mode)
       # See issue #2818 for more details about skipping avx512, avx10 and avx2vnni targets. It's SDE problem running on AMD runner.
@@ -107,64 +109,85 @@ jobs:
       run: |
         echo "PATH=${PATH}"
         if [ "${{ inputs.enable_debug }}" = "true" ]; then
-          ./scripts/alloy.py -r --only="stability ${{ inputs.architecture }} current debug ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP --ispc-flags="${{ inputs.ispc_extra_flags }}"
+          ./scripts/alloy.py -r --only="stability ${INPUTS_ARCHITECTURE} current debug ${INPUTS_OPTSETS}" --only-targets="${MATRIX_TARGET}" --time --update-errors=FP --ispc-flags="${INPUTS_ISPC_EXTRA_FLAGS}"
         else
-          ./scripts/alloy.py -r --only="stability ${{ inputs.architecture }} current ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP --ispc-flags="${{ inputs.ispc_extra_flags }}"
+          ./scripts/alloy.py -r --only="stability ${INPUTS_ARCHITECTURE} current ${INPUTS_OPTSETS}" --only-targets="${MATRIX_TARGET}" --time --update-errors=FP --ispc-flags="${INPUTS_ISPC_EXTRA_FLAGS}"
         fi
+      env:
+        INPUTS_ARCHITECTURE: ${{ inputs.architecture }}
+        INPUTS_OPTSETS: ${{ inputs.optsets }}
+        MATRIX_TARGET: ${{ matrix.target }}
+        INPUTS_ISPC_EXTRA_FLAGS: ${{ inputs.ispc_extra_flags }}
 
     - name: Running tests on Linux/macOS (run_tests mode)
       if: (inputs.platform == 'linux' || inputs.platform == 'macos') && (inputs.architecture == 'aarch64' || inputs.architecture == 'wasm32' || inputs.architecture == 'wasm64')
       shell: bash
       run: |
-        if [ "${{ inputs.architecture }}" == "wasm32" ] || [ "${{ inputs.architecture }}" == "wasm64" ]; then
+        if [ "${INPUTS_ARCHITECTURE}" == "wasm32" ] || [ "${INPUTS_ARCHITECTURE}" == "wasm64" ]; then
           source scripts/install_emscripten.sh && emcc --version
         fi
 
         echo "PATH=${PATH}"
-        IFS=' ' read -ra OPT_LEVELS <<< "${{ inputs.optsets }}"
+        IFS=' ' read -ra OPT_LEVELS <<< "${INPUTS_OPTSETS}"
 
         for opt in "${OPT_LEVELS[@]}"; do
           # Remove dashes from each option
           opt_no_dash="${opt//-/}"
           echo "About to execute run_tests.py with opt: $opt_no_dash"
-          ./scripts/run_tests.py -t "${{ matrix.target }}" -a "${{ inputs.architecture }}" -o "$opt_no_dash" --time --update-errors=FP --ispc-flags="${{ inputs.ispc_extra_flags }}"
+          ./scripts/run_tests.py -t "${MATRIX_TARGET}" -a "${INPUTS_ARCHITECTURE}" -o "$opt_no_dash" --time --update-errors=FP --ispc-flags="${INPUTS_ISPC_EXTRA_FLAGS}"
           echo "Finished executing run_tests.py with opt: $opt_no_dash"
         done
+      env:
+        INPUTS_ARCHITECTURE: ${{ inputs.architecture }}
+        INPUTS_OPTSETS: ${{ inputs.optsets }}
+        MATRIX_TARGET: ${{ matrix.target }}
+        INPUTS_ISPC_EXTRA_FLAGS: ${{ inputs.ispc_extra_flags }}
 
     - name: Running tests on Windows (alloy mode)
       if: inputs.platform == 'windows' && inputs.calling_conv == '' && inputs.architecture != 'aarch64'
       run: |
         $env:ISPC_HOME = "$pwd"
-        .github/workflows/scripts/load-vs-env.ps1 "${{ inputs.architecture }}"
+        .github/workflows/scripts/load-vs-env.ps1 "$env:INPUTS_ARCHITECTURE"
         if ("${{ inputs.enable_debug }}" -eq "true") {
-          python .\scripts\alloy.py -r --only="stability ${{ inputs.architecture }} current debug ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP --ispc-flags="${{ inputs.ispc_extra_flags }}"
+          python .\scripts\alloy.py -r --only="stability $env:INPUTS_ARCHITECTURE current debug $env:INPUTS_OPTSETS" --only-targets="$env:MATRIX_TARGET" --time --update-errors=FP --ispc-flags="$env:INPUTS_ISPC_EXTRA_FLAGS"
         } else {
-          python .\scripts\alloy.py -r --only="stability ${{ inputs.architecture }} current ${{ inputs.optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP --ispc-flags="${{ inputs.ispc_extra_flags }}"
+          python .\scripts\alloy.py -r --only="stability $env:INPUTS_ARCHITECTURE current $env:INPUTS_OPTSETS" --only-targets="$env:MATRIX_TARGET" --time --update-errors=FP --ispc-flags="$env:INPUTS_ISPC_EXTRA_FLAGS"
         }
         Write-Host "Finished executing alloy.py"
       shell: pwsh
+      env:
+        INPUTS_ARCHITECTURE: ${{ inputs.architecture }}
+        INPUTS_OPTSETS: ${{ inputs.optsets }}
+        MATRIX_TARGET: ${{ matrix.target }}
+        INPUTS_ISPC_EXTRA_FLAGS: ${{ inputs.ispc_extra_flags }}
 
     - name: Running tests on Windows (run_tests mode)
       if: inputs.platform == 'windows' && (inputs.calling_conv != '' || inputs.architecture == 'aarch64')
       run: |
         $env:ISPC_HOME = "$pwd"
-        .github/workflows/scripts/load-vs-env.ps1 "${{ inputs.architecture }}"
+        .github/workflows/scripts/load-vs-env.ps1 "$env:INPUTS_ARCHITECTURE"
 
         # Split optsets and run tests for each optimization level
-        $optLevels = "${{ inputs.optsets }}".Split(" ", [System.StringSplitOptions]::RemoveEmptyEntries)
+        $optLevels = "$env:INPUTS_OPTSETS".Split(" ", [System.StringSplitOptions]::RemoveEmptyEntries)
         Write-Host "optLevels array created: $($optLevels -join ', ')"
 
         foreach ($opt in $optLevels) {
           $optNoDash = $opt -replace "-", ""
           Write-Host "About to execute run_tests.py with opt: $optNoDash"
-          if ("${{ inputs.calling_conv }}" -ne "" -and "${{ inputs.architecture }}" -ne "aarch64") {
-            python .\scripts\run_tests.py --calling_conv=${{ inputs.calling_conv }} --target=${{ matrix.target }} --arch=${{ inputs.architecture }} --opt=$optNoDash --ispc-flags="${{ inputs.ispc_extra_flags }}"
+          if ("$env:INPUTS_CALLING_CONV" -ne "" -and "$env:INPUTS_ARCHITECTURE" -ne "aarch64") {
+            python .\scripts\run_tests.py --calling_conv=$env:INPUTS_CALLING_CONV --target=$env:MATRIX_TARGET --arch=$env:INPUTS_ARCHITECTURE --opt=$optNoDash --ispc-flags="$env:INPUTS_ISPC_EXTRA_FLAGS"
           } else {
-            python .\scripts\run_tests.py --target=${{ matrix.target }} --arch=${{ inputs.architecture }} --opt=$optNoDash --ispc-flags="${{ inputs.ispc_extra_flags }}"
+            python .\scripts\run_tests.py --target=$env:MATRIX_TARGET --arch=$env:INPUTS_ARCHITECTURE --opt=$optNoDash --ispc-flags="$env:INPUTS_ISPC_EXTRA_FLAGS"
           }
           Write-Host "Finished executing run_tests.py with opt: $optNoDash"
         }
       shell: pwsh
+      env:
+        INPUTS_ARCHITECTURE: ${{ inputs.architecture }}
+        INPUTS_OPTSETS: ${{ inputs.optsets }}
+        INPUTS_CALLING_CONV: ${{ inputs.calling_conv }}
+        MATRIX_TARGET: ${{ matrix.target }}
+        INPUTS_ISPC_EXTRA_FLAGS: ${{ inputs.ispc_extra_flags }}
 
     - name: Set artifact name prefix
       id: set-artifact-name
@@ -172,10 +195,14 @@ jobs:
       run: |
         TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
         if [ "${{ inputs.enable_debug }}" == "true" ]; then
-          echo "name_prefix=${{ inputs.artifact_name }}.debug.${{ inputs.architecture }}.${{ matrix.target }}.${TIMESTAMP}" >> "$GITHUB_ENV"
+          echo "name_prefix=${INPUTS_ARTIFACT_NAME}.debug.${INPUTS_ARCHITECTURE}.${MATRIX_TARGET}.${TIMESTAMP}" >> "$GITHUB_ENV"
         else
-          echo "name_prefix=${{ inputs.artifact_name }}.${{ inputs.architecture }}.${{ matrix.target }}.${TIMESTAMP}" >> "$GITHUB_OUTPUT"
+          echo "name_prefix=${INPUTS_ARTIFACT_NAME}.${INPUTS_ARCHITECTURE}.${MATRIX_TARGET}.${TIMESTAMP}" >> "$GITHUB_OUTPUT"
         fi
+      env:
+        INPUTS_ARTIFACT_NAME: ${{ inputs.artifact_name }}
+        INPUTS_ARCHITECTURE: ${{ inputs.architecture }}
+        MATRIX_TARGET: ${{ matrix.target }}
     - name: Check
       run: |
         # Print fails to the log.
