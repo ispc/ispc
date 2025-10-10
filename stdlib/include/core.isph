@@ -831,7 +831,7 @@ ISPC_BUILTINS_ATTRS void __do_print(uniform int8 *uniform, uniform int8 *uniform
                                     uniform int8 *uniform *uniform);
 ISPC_BUILTINS_ATTRS uniform int32 __num_cores();
 
-ISPC_BUILTINS_ATTRS void __set_system_isa();
+ISPC_BUILTINS_ATTRS int __get_system_best_isa();
 
 ISPC_BUILTINS_ATTRS_MASKED int8 __sdiv_i8(int8 a, int8 b);
 ISPC_BUILTINS_ATTRS_MASKED int16 __sdiv_i16(int16 a, int16 b);

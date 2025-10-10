@@ -4,7 +4,7 @@
   SPDX-License-Identifier: BSD-3-Clause
 */
 
-// This is the source code of __get_system_isa and __set_system_isa functions
+// This is the source code of __get_system_isa and __get_system_best_isa functions
 // for dispatch built-in module.
 //
 // This file is compiled with clang during ISPC build in the following way:
@@ -63,8 +63,9 @@ static int __get_system_isa() {
     return isa;
 }
 
-void __set_system_isa() {
+int __get_system_best_isa() {
     if (__system_best_isa == -1) {
         __system_best_isa = __get_system_isa();
     }
+    return __system_best_isa;
 }
