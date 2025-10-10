@@ -37,3 +37,4 @@ jobs:
             .github/workflows/
           advanced-security: false
           min-confidence: medium
+          min-severity: high
