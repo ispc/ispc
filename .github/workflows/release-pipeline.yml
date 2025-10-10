@@ -71,8 +71,10 @@ jobs:
           docker build --no-cache \
             --build-arg XE_DEPS=OFF \
             --build-arg LTO=ON \
-            --build-arg SHA=${{ inputs.ref }} \
+            --build-arg SHA=${INPUTS_REF} \
             -t ispc-release .
+        env:
+          INPUTS_REF: ${{ inputs.ref }}
 
       - name: Extract tarball from container
         run: |
@@ -103,8 +105,10 @@ jobs:
         run: |
           docker build --no-cache \
             --build-arg LTO=ON \
-            --build-arg SHA=${{ inputs.ref }} \
+            --build-arg SHA=${INPUTS_REF} \
             -t ispc-release .
+        env:
+          INPUTS_REF: ${{ inputs.ref }}
 
       - name: Extract tarball from container
         run: |

@@ -134,7 +134,9 @@ jobs:
       run: |
         echo "PATH=$PATH"
         . /opt/intel/oneapi/setvars.sh
-        ./scripts/alloy.py -r --only="stability current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${{ matrix.target }}" --time --update-errors=FP --ispc-flags="--math-lib=svml" --compiler=icx
+        ./scripts/alloy.py -r --only="stability current ${{ needs.define-flow.outputs.tests_optsets }}" --only-targets="${MATRIX_TARGET}" --time --update-errors=FP --ispc-flags="--math-lib=svml" --compiler=icx
+      env:
+        MATRIX_TARGET: ${{ matrix.target }}
 
     - name: Check
       run: |
