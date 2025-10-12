@@ -1012,27 +1012,6 @@ rate_qualified_type_specifier
             $$ = $1;
         }
     }
-    | soa_width_specifier specifier_qualifier_list
-    {
-        if ($2 == nullptr)
-            $$ = nullptr;
-        else {
-            int soaWidth = (int)$1;
-            const StructType *st = CastType<StructType>($2);
-            if (st == nullptr) {
-                Error(@1, "\"soa\" qualifier is illegal with non-struct type \"%s\".",
-                      $2->GetString().c_str());
-                $$ = nullptr;
-            }
-            else if (soaWidth <= 0 || (soaWidth & (soaWidth - 1)) != 0) {
-                Error(@1, "soa<%d> width illegal. Value must be positive power "
-                      "of two.", soaWidth);
-                $$ = nullptr;
-            }
-            else
-                $$ = st->GetAsSOAType(soaWidth);
-        }
-    }
     ;
 
 new_expression
@@ -1737,6 +1716,27 @@ specifier_qualifier_list
             if (m->errorCount == 0)
                 Error(@1, "Lost type qualifier in parser.");
             $$ = nullptr;
+        }
+    }
+    | soa_width_specifier specifier_qualifier_list
+    {
+        if ($2 == nullptr)
+            $$ = nullptr;
+        else {
+            int soaWidth = (int)$1;
+            const StructType *st = CastType<StructType>($2);
+            if (st == nullptr) {
+                Error(@1, "\"soa\" qualifier is illegal with non-struct type \"%s\".",
+                      $2->GetString().c_str());
+                $$ = nullptr;
+            }
+            else if (soaWidth <= 0 || (soaWidth & (soaWidth - 1)) != 0) {
+                Error(@1, "soa<%d> width illegal. Value must be positive power "
+                      "of two.", soaWidth);
+                $$ = nullptr;
+            }
+            else
+                $$ = st->GetAsSOAType(soaWidth);
         }
     }
     ;
