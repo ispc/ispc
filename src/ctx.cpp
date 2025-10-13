@@ -1593,6 +1593,10 @@ void FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
 
     llvm::DebugLoc diLoc =
         llvm::DILocation::get(scope->getContext(), sym->pos.first_line, sym->pos.first_column, scope, nullptr, false);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
+    // In LLVM 21+, insertDeclare returns DbgRecord* with DebugLoc already set during construction
+    m->diBuilder->insertDeclare(sym->storageInfo->getPointer(), var, m->diBuilder->createExpression(), diLoc, bblock);
+#else
     llvm::Instruction *declareInst =
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
         llvm::cast<llvm::Instruction *>(m->diBuilder->insertDeclare(sym->storageInfo->getPointer(), var,
@@ -1606,6 +1610,7 @@ void FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
                                     bblock);
 #endif
     AddDebugPos(declareInst, &sym->pos, scope);
+#endif
 }
 
 void FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum) {
@@ -1627,6 +1632,10 @@ void FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum
 
     llvm::DebugLoc diLoc =
         llvm::DILocation::get(scope->getContext(), sym->pos.first_line, sym->pos.first_column, scope, nullptr, false);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_21_0
+    // In LLVM 21+, insertDeclare returns DbgRecord* with DebugLoc already set during construction
+    m->diBuilder->insertDeclare(sym->storageInfo->getPointer(), var, m->diBuilder->createExpression(), diLoc, bblock);
+#else
     llvm::Instruction *declareInst =
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_19_0
         llvm::cast<llvm::Instruction *>(m->diBuilder->insertDeclare(sym->storageInfo->getPointer(), var,
@@ -1636,6 +1645,7 @@ void FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum
                                     bblock);
 #endif
     AddDebugPos(declareInst, &sym->pos, scope);
+#endif
 }
 
 /** If the given type is an array of vector types, then it's the
