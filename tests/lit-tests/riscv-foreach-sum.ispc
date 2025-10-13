@@ -1,10 +1,10 @@
 // Test basic foreach loop with array addition for RISC-V target
 
-// RUN: %{ispc} --target=rvv-x4 --arch=riscv64 --cpu=spacemit-x60 --emit-asm %s -o - | FileCheck %s
-// RUN: %{ispc} --target=rvv-x4 --arch=riscv64 --cpu=generic-rv64gcv --emit-asm %s -o - | FileCheck %s
-// RUN: %{ispc} --target=rvv-x4 --arch=riscv64 --emit-asm %s -o - | FileCheck %s
+// RUN: %{ispc} --target=rvv-x4 --arch=riscv64 --target-os=linux --cpu=spacemit-x60 --emit-asm %s -o - | FileCheck %s
+// RUN: %{ispc} --target=rvv-x4 --arch=riscv64 --target-os=linux --cpu=generic-rv64gcv --emit-asm %s -o - | FileCheck %s
+// RUN: %{ispc} --target=rvv-x4 --arch=riscv64 --target-os=linux --emit-asm %s -o - | FileCheck %s
 
-// REQUIRES: RISCV_ENABLED && LLVM_19_0+
+// REQUIRES: RISCV_ENABLED && LLVM_19_0+ && LINUX_ENABLED
 
 // CHECK-LABEL: simple_sum___un_3C_unf_3E_un_3C_unf_3E_un_3C_unf_3E_uni:
 // CHECK: vsetivli
