@@ -88,7 +88,7 @@ function (generate_generic_builtins ispc_name)
                 list(GET pair_split 0 arch)
                 list(GET pair_split 1 bit)
                 # Skip unsupported cases, see Target::GetTripleString for more details.
-                if (${os} STREQUAL "windows" AND ${arch} STREQUAL "arm")
+                if (${os} STREQUAL "windows" AND (${arch} STREQUAL "arm" OR ${arch} STREQUAL "riscv64"))
                     continue()
                 endif()
                 generate_generic_target_builtin(${ispc_name} ${target} ${arch} ${bit} ${os})
