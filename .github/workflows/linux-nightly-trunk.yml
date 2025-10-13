@@ -90,6 +90,9 @@ jobs:
         name: llvm_trunk_linux
 
     - name: Install dependencies
+      env:
+        LLVM_TAR: llvm-trunk-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.gz
+        LLVM_VERSION: trunk
       run: |
         .github/workflows/scripts/install-build-deps.sh
 
