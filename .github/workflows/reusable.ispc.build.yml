@@ -216,9 +216,9 @@ jobs:
           cmake --build build
         ) else (
           if "${{ inputs.enable_cross }}" == "true" (
-              powershell -File .github/workflows/scripts/build-ispc.ps1 -DISPC_CROSS=ON
+              pwsh -File .github/workflows/scripts/build-ispc.ps1 -DISPC_CROSS=ON
             ) else (
-              powershell -File .github/workflows/scripts/build-ispc.ps1
+              pwsh -File .github/workflows/scripts/build-ispc.ps1
             )
         )
 
@@ -262,7 +262,7 @@ jobs:
           cmake --build build --target ispc-stage2-check-all
         ) else (
           REM Standard tests
-          powershell -File .github/workflows/scripts/check-ispc.ps1
+          pwsh -File .github/workflows/scripts/check-ispc.ps1
         )
 
     - name: Upload artifacts

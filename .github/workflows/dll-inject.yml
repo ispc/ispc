@@ -30,7 +30,7 @@ jobs:
         Install-ChocoPackage procmon
         Install-ChocoPackage 7zip
         pip install defusedxml
-      shell: powershell
+      shell: pwsh
 
     - name: Download ISPC trunk archives
       env:
