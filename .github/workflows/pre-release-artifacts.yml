@@ -62,7 +62,7 @@ jobs:
         path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-linux.tar.gz
       
     - name: Release
-      uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8 # 2.3.2
+      uses: softprops/action-gh-release@6da8fa9354ddfdc4aeace5fc48d7f679b5214090 # 2.4.1
       with:
         name: trunk-artifacts
         tag_name: trunk-artifacts
@@ -109,7 +109,7 @@ jobs:
         path: build/build-ispc-stage2/src/ispc-stage2-build/ispc-trunk-windows.zip
 
     - name: Release
-      uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8 # 2.3.2
+      uses: softprops/action-gh-release@6da8fa9354ddfdc4aeace5fc48d7f679b5214090 # 2.4.1
       with:
         name: trunk-artifacts
         tag_name: trunk-artifacts
