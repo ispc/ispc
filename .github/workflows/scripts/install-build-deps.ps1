@@ -12,9 +12,11 @@ $SCRIPT_DIR = Split-Path -Parent $MyInvocation.MyCommand.Path
 # Download and unpack llvm
 if ( !(Test-Path ${env:LLVM_HOME}) ) { mkdir ${env:LLVM_HOME} }
 cd ${env:LLVM_HOME}
-if ( Test-Path env:LLVM_REPO ) { wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 ${env:LLVM_REPO}/releases/download/llvm-${env:LLVM_VERSION}-ispc-dev/${env:LLVM_TAR} }
+if ( Test-Path env:LLVM_REPO ) { wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 ${env:LLVM_REPO}/releases/download/llvm-${env:LLVM_VERSION}-ispc-dev/${env:LLVM_TAR}; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }
 7z.exe x -t7z ${env:LLVM_TAR}
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 7z.exe x -ttar llvm*tar
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 echo "${env:LLVM_HOME}\bin-${env:LLVM_VERSION}\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
 # Download and unpack gnuwin32
@@ -23,4 +25,6 @@ cd ${env:CROSS_TOOLS_GNUWIN32}
 # The following line is needed to enable all TLS versions. The server appears to require different TLS version depending on the specific redirect.
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls, [Net.SecurityProtocolType]::Tls11, [Net.SecurityProtocolType]::Tls12
 wget -q --retry-connrefused --waitretry=10 --read-timeout=20 --timeout=15 -t 5 -O libgw32c-0.4-lib.zip 'https://github.com/ispc/ispc.dependencies/releases/download/gnuwin32-mirror/libgw32c-0.4-lib.zip'
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 7z.exe x libgw32c-0.4-lib.zip
+exit $LASTEXITCODE
