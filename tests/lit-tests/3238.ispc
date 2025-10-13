@@ -9,7 +9,7 @@
 // CHECK-LABEL: define void @fill(
 // CHECK:      for_loop:
 // CHECK-NEXT:   [[IV:%.*]] = phi i64 [ 0, [[PH:%.*]] ], [ [[IV_NEXT:%.*]], %for_loop ]
-// CHECK-NEXT:   [[SHL:%.*]] = shl i64 [[IV]], 2
+// CHECK-NEXT:   [[SHL:%.*]] = shl{{( nuw)?}}{{( nsw)?}} i64 [[IV]], 2
 // CHECK-NEXT:   [[AND:%.*]] = and i64 [[SHL]], [[UINT_MAX:[0-9]+]]
 // CHECK-NEXT:   [[PTR:%.*]] = getelementptr i8, ptr %buffer, i64 [[AND]]
 // CHECK-NEXT:   store <{{[0-9]+}} x i32> {{.*}}, ptr [[PTR]], align 4

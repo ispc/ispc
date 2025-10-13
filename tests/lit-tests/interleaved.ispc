@@ -2,7 +2,8 @@
 // RUN: %{ispc} %s --target=avx1-i32x4 -O2 --opt=fast-math  -h %t.h --emit-asm -o - | FileCheck %s -check-prefix=CHECK_AVX
 // RUN: %{ispc} %s --target=sse4 -O2 --opt=fast-math  -h %t.h --emit-asm -o - | FileCheck %s -check-prefix=CHECK_SSE4
 // RUN: %{ispc} %s --target=sse2 -O2 --opt=fast-math  -h %t.h --emit-asm -o - | FileCheck %s -check-prefix=CHECK_SSE2
-// REQUIRES: X86_ENABLED
+// The test is temporarily disabled on LLVM 21.0+ due to https://github.com/llvm/llvm-project/issues/161904
+// REQUIRES: X86_ENABLED && !LLVM_21_0+
 export void test_interleaved(const uniform float xin[],
                              const uniform float yin[],
                              const uniform float zin[],
