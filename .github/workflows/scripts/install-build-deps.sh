@@ -84,7 +84,9 @@ if [ -n "$INSTALL_COMPUTE_RUNTIME" ]; then
     fi
 fi
 
-[ -n "$LLVM_REPO" ] && wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
+if [ "$LLVM_VERSION" != "trunk" ]; then
+  [ -n "$LLVM_REPO" ] && wget -q --retry-connrefused --waitretry=5 --read-timeout=20 --timeout=15 -t 5 $LLVM_REPO/releases/download/llvm-$LLVM_VERSION-ispc-dev/$LLVM_TAR
+fi
 tar xf $LLVM_TAR
 if [ -n "$SDE_MIRROR_ID" ] && [ -n "$USER_AGENT" ]; then
   echo "${GITHUB_WORKSPACE}/$SDE_TAR_NAME-lin" >> $GITHUB_PATH
