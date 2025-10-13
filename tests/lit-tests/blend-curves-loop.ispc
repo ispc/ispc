@@ -2,9 +2,9 @@
 
 // CHECK-LABEL: @foo(
 // CHECK: foreach_full_body.lr.ph:
-// CHECK: br i1 [[TMP:%.*]], label %[[FOREACH_SPLIT_US:.*]], label %[[FOREACH_SPLIT:.*]]
-// CHECK: [[FOREACH_SPLIT_US]]:
-// CHECK: [[FOREACH_SPLIT]]:
+// CHECK: br i1 {{%.*}}, label %foreach_full_body{{.*}}, label %foreach_full_body{{.*}}
+// CHECK: foreach_full_body.us:
+// CHECK: foreach_full_body:
 // CHECK: foreach_reset:
 export void foo(const uniform uint32 input[], uniform uint32 output[],
                 const uniform int index, const uniform int n)
