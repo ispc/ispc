@@ -1544,14 +1544,18 @@ bool Module::writeOutput() {
     }
 
     if (g->functionSections) {
-        module->addModuleFlag(llvm::Module::Warning, "function-sections", 1);
+        if (!module->getModuleFlag("function-sections")) {
+            module->addModuleFlag(llvm::Module::Warning, "function-sections", 1);
+        }
     }
 
     // In LLVM_3_4 after r195494 and r195504 revisions we should pass
     // "Debug Info Version" constant to the module. LLVM will ignore
     // our Debug Info metadata without it.
     if (g->generateDebuggingSymbols == true) {
-        module->addModuleFlag(llvm::Module::Warning, "Debug Info Version", llvm::DEBUG_METADATA_VERSION);
+        if (!module->getModuleFlag("Debug Info Version")) {
+            module->addModuleFlag(llvm::Module::Warning, "Debug Info Version", llvm::DEBUG_METADATA_VERSION);
+        }
     }
 
     // SIC! (verifyModule() == TRUE) means "failed", see llvm-link code.
