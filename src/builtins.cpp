@@ -155,6 +155,14 @@ void lAddBitcodeToModule(llvm::Module *bcModule, llvm::Module *module) {
         if (identMD) {
             identMD->eraseFromParent();
         }
+        // Remove debug compile unit metadata if debug info is not enabled in ISPC compilation.
+        // This prevents llvm.dbg.cu metadata from being added when linking builtins-c bitcode.
+        if (!g->generateDebuggingSymbols) {
+            llvm::NamedMDNode *cuMD = bcModule->getNamedMetadata("llvm.dbg.cu");
+            if (cuMD) {
+                cuMD->eraseFromParent();
+            }
+        }
 
         std::unique_ptr<llvm::Module> M(bcModule);
         if (llvm::Linker::linkModules(*module, std::move(M), llvm::Linker::Flags::LinkOnlyNeeded)) {
