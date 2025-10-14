@@ -13,9 +13,8 @@ name: Codex PR Review
 
 # zizmor is not wrong, but we need to access token in the target repo for the PR to make it work.
 # The token is created with minimal scope possible.
-# zizmor: ignore[dangerous-triggers]
 on:
-  pull_request_target:
+  pull_request_target:  # zizmor: ignore[dangerous-triggers]
     types: [opened, reopened]
   workflow_dispatch:  # Manual trigger
     inputs:
