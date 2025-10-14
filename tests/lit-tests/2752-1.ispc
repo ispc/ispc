@@ -6,7 +6,7 @@
 // RUN: %{cxx} %t.o %t.cpp.o -o %t.cpp.bin
 // RUN: %t.cpp.bin | FileCheck %s
 
-// REQUIRES: !MACOS_HOST
+// REQUIRES: !MACOS_HOST && LLVM_19_0+
 
 // CHECK: b=1, b==true is 1
 

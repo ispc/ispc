@@ -11,9 +11,7 @@
 // CHECK: asCppBool result: 1 (as int)
 // CHECK: asCppBool result: 1 (as bool)
 
-// REQUIRES: X86_ENABLED && !MACOS_HOST
-
-// FAIL: LLVM_20_0+
+// REQUIRES: X86_ENABLED && !MACOS_HOST && LLVM_19_0+
 
 #ifdef ISPC
 export uniform bool foo(uniform float scl, uniform uint32 &isectsEqual) {
