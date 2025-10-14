@@ -11,6 +11,9 @@ name: Codex PR Review
 # Pull Request and Issues "read and write" permissions and store that token in
 # CODEX_TOKEN ispc github org secrets.
 
+# zizmor is not wrong, but we need to access token in the target repo for the PR to make it work.
+# The token is created with minimal scope possible.
+# zizmor: ignore[dangerous-triggers]
 on:
   pull_request_target:
     types: [opened, reopened]
