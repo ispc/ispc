@@ -23,6 +23,9 @@ on:
         required: true
         type: number
 
+permissions:
+  contents: read
+
 jobs:
   comment:
     runs-on: ubuntu-latest
