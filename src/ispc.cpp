@@ -1528,6 +1528,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
         break;
     case ISPCTarget::avx512skx_x16:
+    case ISPCTarget::avx512skx_x16_nozmm:
     case ISPCTarget::avx512icl_x16:
         this->m_isa = (m_ispc_target == ISPCTarget::avx512icl_x16) ? Target::ICL_AVX512 : Target::SKX_AVX512;
         this->m_nativeVectorWidth = 16;
@@ -1546,7 +1547,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasIntelVNNI = (m_ispc_target == ISPCTarget::avx512icl_x16) ? true : false;
         this->m_hasConflictDetection = true;
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x16) ? CPU_ICL : CPU_SKX;
-        if (g->opt.disableZMM) {
+        if (g->opt.disableZMM || m_ispc_target == ISPCTarget::avx512skx_x16_nozmm) {
             this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
             this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
         } else {
@@ -2911,6 +2912,7 @@ Target::ISA Target::TargetToISA(ISPCTarget target) {
     case ISPCTarget::avx512skx_x4:
     case ISPCTarget::avx512skx_x8:
     case ISPCTarget::avx512skx_x16:
+    case ISPCTarget::avx512skx_x16_nozmm:
     case ISPCTarget::avx512skx_x32:
     case ISPCTarget::avx512skx_x64:
         return Target::ISA::SKX_AVX512;
