@@ -4,12 +4,16 @@
 //; RUN: %{ispc} %s --target=avx512skx-x4 --emit-asm -o - 2>&1 | FileCheck %s --implicit-check-not "zmm"
 // Case 2b: Checks avx512skx-x8 assembly output to ensure there are no zmm registers.
 //; RUN: %{ispc} %s --target=avx512skx-x8 --emit-asm -o - 2>&1 | FileCheck %s --implicit-check-not "zmm"
+// Case 2c: Checks avx512skx-x16 with disable-zmm assembly output to ensure there are no zmm registers.
+//; RUN: %{ispc} %s --target=avx512skx-x16 --opt=disable-zmm --emit-asm -o - 2>&1 | FileCheck %s --implicit-check-not "zmm"
 // Case 3: Checks avx512skx-x16 LLVM IR to ensure avx512skx-x8 func attributes are not present.
 //; RUN: %{ispc} %s --target=avx512skx-x16 --emit-llvm-text -o - 2>&1 | FileCheck %s --implicit-check-not ""min-legal-vector-width"="256"" --implicit-check-not ""prefer-vector-width"="256""
 // Case 4a: Checks avx512skx-x4 LLVM IR to ensure avx512skx-x4 func attributes are present (same as for x8).
 //; RUN: %{ispc} %s --target=avx512skx-x4 --emit-llvm-text -o - 2>&1 | FileCheck %s -check-prefix=CHECK_ATTR_8
 // Case 4b: Checks avx512skx-x8 LLVM IR to ensure avx512skx-x8 func attributes are present.
 //; RUN: %{ispc} %s --target=avx512skx-x8 --emit-llvm-text -o - 2>&1 | FileCheck %s -check-prefix=CHECK_ATTR_8
+// Case 4c: Checks avx512skx-x16 with --opt=disable-zmm LLVM IR to ensure avx512skx-x8 func attributes are present.
+//; RUN: %{ispc} %s --target=avx512skx-x16 --opt=disable-zmm --emit-llvm-text -o - 2>&1 | FileCheck %s -check-prefix=CHECK_ATTR_8
 
 // REQUIRES: X86_ENABLED
 
