@@ -200,28 +200,70 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        llvm: [20]
-        arch: [x86, x86-64]
-        extra_flags: ["--opt=disable-zmm", "--addressing=64", "-g", "--math-lib=fast",
-                      "--math-lib=system", "--mcmodel=large", "--pic",
-                      "--no-wrap-signed-int",  "--opt=disable-fma", "--opt=fast-math"]
-        exclude:
-          - arch: x86
+        # --math-lib=fast and --opt=fast-math are not tested because of #3442
+        include:
+          - llvm: 20
+            arch: x86-64
+            extra_flags: "--opt=disable-zmm"
+            targets: '["avx512skx-x16"]'
+          - llvm: 20
+            arch: x86-64
+            extra_flags: "--addressing=64"
+            targets: '["avx2-i32x8"]'
+          - llvm: 20
+            arch: x86
+            extra_flags: "--addressing=64"
+            targets: '["avx2-i32x8"]'
+          - llvm: 20
+            arch: x86-64
+            extra_flags: "-g"
+            targets: '["avx2-i32x8"]'
+          - llvm: 20
+            arch: x86
+            extra_flags: "-g"
+            targets: '["avx2-i32x8"]'
+          - llvm: 20
+            arch: x86
+            extra_flags: "--math-lib=system"
+            targets: '["avx2-i32x8"]'
+          - llvm: 20
+            arch: x86-64
+            extra_flags: "--math-lib=system"
+            targets: '["avx2-i32x8"]'
+          - llvm: 20
+            arch: x86
+            extra_flags: "--pic"
+            targets: '["avx2-i32x8"]'
+          - llvm: 20
+            arch: x86-64
+            extra_flags: "--pic"
+            targets: '["avx2-i32x8"]'
+          - llvm: 20
+            arch: x86-64
             extra_flags: "--mcmodel=large"
-          - arch: x86
-            extra_flags: "--opt=fast-math"
-          - arch: x86
-            extra_flags: "--math-lib=fast"
-          - arch: x86-64
-            extra_flags: "--opt=fast-math"
-          - arch: x86-64
-            extra_flags: "--math-lib=fast"
+            targets: '["avx2-i32x8"]'
+          - llvm: 20
+            arch: x86
+            extra_flags: "--no-wrap-signed-int"
+            targets: '["avx2-i32x8"]'
+          - llvm: 20
+            arch: x86-64
+            extra_flags: "--no-wrap-signed-int"
+            targets: '["avx2-i32x8"]'
+          - llvm: 20
+            arch: x86
+            extra_flags: "--opt=disable-fma"
+            targets: '["avx2-i32x8"]'
+          - llvm: 20
+            arch: x86-64
+            extra_flags: "--opt=disable-fma"
+            targets: '["avx2-i32x8"]'
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
       platform: linux
       architecture: ${{ matrix.arch }}
       artifact_name: ispc_llvm${{ matrix.llvm }}_linux
-      targets: '["avx2-i32x8"]'
+      targets: ${{ matrix.targets }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
       ispc_extra_flags: ${{ matrix.extra_flags }}
 
@@ -400,7 +442,8 @@ jobs:
       matrix:
         llvm: [20]
         # --math-lib=fast and --opt=fast-math are not tested because of #3442
-        extra_flags: ["--opt=disable-zmm", "--addressing=64", "-g",
+        # --opt=disable-zmm is not applicable for ARM targets
+        extra_flags: ["--addressing=64", "-g",
                       "--math-lib=system", "--mcmodel=large", "--pic",
                       "--no-wrap-signed-int",  "--opt=disable-fma"]
     uses: ./.github/workflows/reusable.ispc.test.yml
@@ -491,30 +534,66 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        llvm: [20]
-        arch: [x86, x86-64]
-        extra_flags: ["--opt=disable-zmm", "--addressing=64", "-g", "--math-lib=fast",
-                      "--math-lib=system", "--mcmodel=large", "--pic",
-                      "--no-wrap-signed-int",  "--opt=disable-fma", "--opt=fast-math"]
-        exclude:
-          - arch: x86
-            extra_flags: "--mcmodel=large"
-          - arch: x86
-            extra_flags: "--opt=fast-math"
-          - arch: x86
-            extra_flags: "--math-lib=fast"
-          - arch: x86
+        # --math-lib=fast and --opt=fast-math are not tested because of #3442
+        include:
+          - llvm: 20
+            arch: x86-64
+            extra_flags: "--opt=disable-zmm"
+            targets: '["avx512skx-x16"]'
+          - llvm: 20
+            arch: x86-64
+            extra_flags: "--addressing=64"
+            targets: '["avx2-i32x8"]'
+          - llvm: 20
+            arch: x86
+            extra_flags: "--addressing=64"
+            targets: '["avx2-i32x8"]'
+          - llvm: 20
+            arch: x86-64
+            extra_flags: "-g"
+            targets: '["avx2-i32x8"]'
+          - llvm: 20
+            arch: x86
+            extra_flags: "-g"
+            targets: '["avx2-i32x8"]'
+          - llvm: 20
+            arch: x86-64
             extra_flags: "--math-lib=system"
-          - arch: x86-64
-            extra_flags: "--opt=fast-math"
-          - arch: x86-64
-            extra_flags: "--math-lib=fast"
+            targets: '["avx2-i32x8"]'
+          - llvm: 20
+            arch: x86
+            extra_flags: "--pic"
+            targets: '["avx2-i32x8"]'
+          - llvm: 20
+            arch: x86-64
+            extra_flags: "--pic"
+            targets: '["avx2-i32x8"]'
+          - llvm: 20
+            arch: x86-64
+            extra_flags: "--mcmodel=large"
+            targets: '["avx2-i32x8"]'
+          - llvm: 20
+            arch: x86
+            extra_flags: "--no-wrap-signed-int"
+            targets: '["avx2-i32x8"]'
+          - llvm: 20
+            arch: x86-64
+            extra_flags: "--no-wrap-signed-int"
+            targets: '["avx2-i32x8"]'
+          - llvm: 20
+            arch: x86
+            extra_flags: "--opt=disable-fma"
+            targets: '["avx2-i32x8"]'
+          - llvm: 20
+            arch: x86-64
+            extra_flags: "--opt=disable-fma"
+            targets: '["avx2-i32x8"]'
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
       platform: windows
       architecture: ${{ matrix.arch }}
       artifact_name: ispc_llvm${{matrix.llvm}}_win
-      targets: '["avx2-i32x8"]'
+      targets: ${{ matrix.targets }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
       ispc_extra_flags: ${{ matrix.extra_flags }}
 
