@@ -153,6 +153,9 @@ static const BitcodeLib *lGetTargetLib(const std::map<uint32_t, const BitcodeLib
     if (target == ISPCTarget::avx512skx_x16 && g->opt.disableZMM) {
         target = ISPCTarget::avx512skx_x16_nozmm;
     }
+    if (target == ISPCTarget::avx512icl_x16 && g->opt.disableZMM) {
+        target = ISPCTarget::avx512icl_x16_nozmm;
+    }
 
     // sse41 is an alias for sse4
     switch (target) {
