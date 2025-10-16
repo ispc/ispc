@@ -1677,13 +1677,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasIntelVNNI = true;
         this->m_hasConflictDetection = true;
         CPUfromISA = CPU_SPR;
-        if (g->opt.disableZMM) {
-            this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
-            this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
-        } else {
-            this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "512"));
-            this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "512"));
-        }
+        this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "512"));
+        this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "512"));
         break;
     case ISPCTarget::avx512spr_x64:
         this->m_isa = Target::SPR_AVX512;
@@ -1791,13 +1786,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasConflictDetection = true;
         this->m_hasRsqrtd = this->m_hasRcpd = true;
         CPUfromISA = CPU_DMR;
-        if (g->opt.disableZMM) {
-            this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
-            this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
-        } else {
-            this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "512"));
-            this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "512"));
-        }
+        this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "512"));
+        this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "512"));
         break;
     case ISPCTarget::avx10_2_x32:
         this->m_isa = Target::AVX10_2;

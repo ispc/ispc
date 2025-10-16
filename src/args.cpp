@@ -135,8 +135,8 @@ static ArgsParseResult usage() {
     printf("        disable-gathers\t\t\tDisable gathers generation on targets that support them\n");
     printf("        disable-scatters\t\tDisable scatters generation on targets that support them\n");
     printf("        disable-loop-unroll\t\tDisable loop unrolling\n");
-    printf("        disable-zmm\t\t\tDisable using zmm registers for avx512 targets in favor of ymm. This also affects "
-           "ABI\n");
+    printf("        disable-zmm\t\t\tDisable using zmm registers for avx512skx-x16, avx512icl-x16 targets in favor of "
+           "ymm. This also affects ABI\n");
 #ifdef ISPC_XE_ENABLED
     printf("        emit-xe-hardware-mask\t\tEnable emitting of Xe implicit hardware mask\n");
     printf("        enable-xe-foreach-varying\t\tEnable experimental foreach support inside varying control flow\n");
@@ -1212,6 +1212,19 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
 
     if (targets.size() > 1) {
         g->isMultiTargetCompilation = true;
+    }
+
+    // Validate --opt=disable-zmm usage
+    if (g->opt.disableZMM) {
+        for (auto target : targets) {
+            if (target != ISPCTarget::avx512skx_x16 && target != ISPCTarget::avx512icl_x16 &&
+                target != ISPCTarget::generic_i32x16 && target != ISPCTarget::generic_i1x16 &&
+                target != ISPCTarget::generic_i1x32 && target != ISPCTarget::generic_i1x64) {
+                Warning(SourcePos(),
+                        "--opt=disable-zmm can only be used with avx512skx-x16, avx512icl-x16 or generic-i32x16, "
+                        "generic-i1x16, generic-i1x32, generic-i1x64 targets.");
+            }
+        }
     }
 
     if ((output.type == Module::Asm) && (intelAsmSyntax != nullptr)) {
