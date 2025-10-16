@@ -376,7 +376,7 @@ list(APPEND X86_TARGETS
     avx2vnni-i32x4 avx2vnni-i32x8 avx2vnni-i32x16
     avx512skx-x4 avx512skx-x8 avx512skx-x16 avx512skx-x16-nozmm
     avx512skx-x32 avx512skx-x64
-    avx512icl-x4 avx512icl-x8 avx512icl-x16
+    avx512icl-x4 avx512icl-x8 avx512icl-x16 avx512icl-x16-nozmm
     avx512icl-x32 avx512icl-x64
     avx512spr-x4 avx512spr-x8 avx512spr-x16 avx512spr-x32 avx512spr-x64)
 
