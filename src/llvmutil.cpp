@@ -607,15 +607,6 @@ static bool lValuesAreEqual(llvm::Value *v0, llvm::Value *v1, std::vector<llvm::
     return false;
 }
 
-/** Given an llvm::Value known to be an integer, return its value as
-    an int64_t.
-*/
-static int64_t lGetIntValue(llvm::Value *offset) {
-    llvm::ConstantInt *intOffset = llvm::dyn_cast<llvm::ConstantInt>(offset);
-    Assert(intOffset && (intOffset->getBitWidth() == 32 || intOffset->getBitWidth() == 64));
-    return intOffset->getSExtValue();
-}
-
 /**  Recognizes constant vector with undef operands except the first one:
  *   <i64 4, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef>
  */
@@ -656,7 +647,13 @@ llvm::Value *LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth, bool com
     if (llvm::InsertElementInst *ie = llvm::dyn_cast<llvm::InsertElementInst>(inst)) {
         // Gather elements of vector
         while (ie != nullptr) {
-            int64_t iOffset = lGetIntValue(ie->getOperand(2));
+            // Check if the index is a constant
+            llvm::ConstantInt *constIndex = llvm::dyn_cast<llvm::ConstantInt>(ie->getOperand(2));
+            if (!constIndex) {
+                // Non-constant index, cannot flatten this chain
+                return nullptr;
+            }
+            int64_t iOffset = constIndex->getSExtValue();
             Assert(iOffset >= 0 && iOffset < vectorWidth);
 
             // Get the scalar value from this insert
