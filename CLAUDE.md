@@ -20,12 +20,12 @@ cmake --build build -j $(nproc)
 **Test commands:**
 Lit tests:
 ```bash
-cmake --build build --target check-all
+cmake --build build --target check-all -j $(nproc)
 ```
 
 To test the specific test, run:
 ```bash
-TEST=/full/path/test.ispc cmake --build build --target check-one
+TEST=/full/path/test.ispc cmake --build build --target check-one -j $(nproc)
 ```
 
 Functional tests:
@@ -61,7 +61,7 @@ functional tests for runtime behavior changes.
 ## Common Workflows
 
 **Debugging a test failure:**
-1. Run the specific test: `TEST=/full/path/test.ispc cmake --build build --target check-one`
+1. Run the specific test: `TEST=/full/path/test.ispc cmake --build build --target check-one -j $(nproc)`
 2. Examine generated IR: `build/bin/ispc test.ispc -o test.ll --emit-llvm-text`
 3. Check assembly: `build/bin/ispc test.ispc -o test.s --emit-asm`
 
