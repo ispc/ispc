@@ -7,7 +7,7 @@
 
 // CHECK_ALL-LABEL:       @test
 
-#ifdef ISPC_FP64_SUPPORTED
+#ifdef ISPC_TARGET_HAS_FP64_SUPPORT
 
 // CHECK_FP64_SUPPORTED:  store <16 x double> %a_load_broadcast{{[0-9]*}}
 export void test(uniform double out[], uniform double a) {

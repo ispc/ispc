@@ -894,6 +894,16 @@ on the assumption that loops will not execute indefinitely. Infinite loops
 with constant conditions like ``for (;;)`` or ``while (1)`` are treated
 specially and do not have this assumption applied.
 
+Predefined Macros:
+
+* New predefined macros ``ISPC_TARGET_HAS_FP16_SUPPORT`` and
+  ``ISPC_TARGET_HAS_FP64_SUPPORT`` have been added to follow the consistent
+  naming convention used by other target capability macros.
+
+* The old macro names ``ISPC_FP16_SUPPORTED`` and ``ISPC_FP64_SUPPORTED`` are
+  still defined for backward compatibility but are now considered deprecated
+  aliases. New code should use the ``ISPC_TARGET_HAS_*`` names.
+
 
 Getting Started with ISPC
 =========================
@@ -1405,13 +1415,19 @@ preprocessor runs:
   * - ISPC_ATTRIBUTE_SUPPORTED
     - 1
     - The macro is defined if the ``ispc`` compiler supports ``__attribute__(())`` syntax.
-  * - ISPC_FP16_SUPPORTED
+  * - ISPC_TARGET_HAS_FP16_SUPPORT
     - 1
     - The macro is defined if float16 type is supported by the ``ispc`` target.
       The implementation may rely either on native hardware support or emulation.
+  * - ISPC_FP16_SUPPORTED
+    - 1
+    - Deprecated alias for ISPC_TARGET_HAS_FP16_SUPPORT, kept for backward compatibility.
+  * - ISPC_TARGET_HAS_FP64_SUPPORT
+    - 1
+    - The macro is defined if double type is supported by the target.
   * - ISPC_FP64_SUPPORTED
     - 1
-    - The macro is defined if double type is supported by the target
+    - Deprecated alias for ISPC_TARGET_HAS_FP64_SUPPORT, kept for backward compatibility.
   * - ISPC_LLVM_INTRINSICS_ENABLED
     - 1
     - The macro is defined if LLVM intrinsics support is enabled
@@ -1424,10 +1440,10 @@ preprocessor runs:
   * - UINT8_MAX, UINT16_MAX, UINT32_MAX, UINT64_MAX
     -
     - Maximum value of unsigned integer types of the corresponding size
-  * - FLT16_MIN, FLT_MIN, DBL_MIN
+  * - F16_MIN, FLT_MIN, DBL_MIN
     -
     - Smallest positive normal number of the corresponding floating-point type
-  * - FLT16_MAX, FLT_MAX, DBL_MAX
+  * - F16_MAX, FLT_MAX, DBL_MAX
     -
     - Largest normal number of the corresponding floating-point type
 

@@ -267,6 +267,15 @@ static void lSetTargetSpecificMacroDefinitions(const std::shared_ptr<clang::Prep
             opts->addMacroDef(cm.macroName);
         }
     }
+    if (g->target->hasCapability(TargetCapability::Fp16Support)) {
+        // Keep old name for backward compatibility
+        opts->addMacroDef("ISPC_FP16_SUPPORTED");
+    }
+
+    if (g->target->hasCapability(TargetCapability::Fp64Support)) {
+        // Keep old name for backward compatibility
+        opts->addMacroDef("ISPC_FP64_SUPPORTED");
+    }
 
     // Define mask bits
     std::string ispc_mask_bits = "ISPC_MASK_BITS=" + std::to_string(g->target->getMaskBitCount());

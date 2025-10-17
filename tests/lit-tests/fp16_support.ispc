@@ -1,4 +1,4 @@
-// This test checks that ISPC_FP16_SUPPORTED macro is ON for XE and ARM platforms only.
+// This test checks that ISPC_TARGET_HAS_FP16_SUPPORT macro is ON for XE and ARM platforms only.
 
 // RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 --emit-llvm-text -o - | FileCheck %s --check-prefixes=CHECK_FP_16,CHECK
 // RUN: %{ispc} %s --target=neon-i8x16 --arch=arm --emit-llvm-text -o - | FileCheck %s --check-prefixes=CHECK_FP_16,CHECK
@@ -16,7 +16,7 @@
 // CHECK_FP_16: void @test_fp16_only(
 // CHECK_FP_NO_16-NOT: void @test_fp16_only(
 // CHECK: void @test(
-#ifdef ISPC_FP16_SUPPORTED
+#ifdef ISPC_TARGET_HAS_FP16_SUPPORT
 export void test_fp16_only(uniform float16 out[], uniform float16 a) {
   out[programIndex] = a;
 }
