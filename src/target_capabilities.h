@@ -98,9 +98,8 @@ static constexpr CapabilityMetadata g_capabilityMetadata[] = {
     {TargetCapability::ArmDotProduct, "ISPC_TARGET_HAS_ARM_DOT_PRODUCT", "__have_arm_dot_product"},
     {TargetCapability::ArmI8MM, "ISPC_TARGET_HAS_ARM_I8MM", "__have_arm_i8mm"},
     {TargetCapability::ConflictDetection, "ISPC_TARGET_HAS_CONFLICT_DETECTION", "__have_conflict_detection"},
-    // TODO: Rename/alias these to ISPC_TARGET_HAS_FP16_SUPPORT and ISPC_TARGET_HAS_FP64_SUPPORT
-    {TargetCapability::Fp16Support, "ISPC_FP16_SUPPORTED", nullptr},
-    {TargetCapability::Fp64Support, "ISPC_FP64_SUPPORTED", nullptr},
+    {TargetCapability::Fp16Support, "ISPC_TARGET_HAS_FP16_SUPPORT", nullptr},
+    {TargetCapability::Fp64Support, "ISPC_TARGET_HAS_FP64_SUPPORT", nullptr},
     {TargetCapability::HalfConverts, "ISPC_TARGET_HAS_HALF", "__have_native_half_converts"},
     {TargetCapability::HalfFullSupport, "ISPC_TARGET_HAS_HALF_FULL_SUPPORT", "__have_native_half_full_support"},
     {TargetCapability::IntelVNNI, "ISPC_TARGET_HAS_INTEL_VNNI", "__have_intel_vnni"},
