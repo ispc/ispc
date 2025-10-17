@@ -79,6 +79,18 @@ set(BENCHMARKS_ISPC_FLAGS "-O3 --woff" CACHE STRING "Flags to pass to ISPC compi
 message(STATUS "Using BENCHMARKS_ISPC_TARGETS: ${BENCHMARKS_ISPC_TARGETS}")
 message(STATUS "Using BENCHMARKS_ISPC_FLAGS: ${BENCHMARKS_ISPC_FLAGS}")
 
+# Warn if incompatible targets are used (SSE or AVX1)
+# The C++ portion of benchmarks is compiled with -mavx2 which generates AVX2 instructions
+# that are not available on SSE or AVX1 targets
+if (X86_HOST)
+    string(TOLOWER "${BENCHMARKS_ISPC_TARGETS}" TARGETS_LOWER)
+    if (TARGETS_LOWER MATCHES "sse[0-9]*" OR TARGETS_LOWER MATCHES "avx1")
+        message(WARNING "Benchmarks use AVX2 instructions in C++ code and may produce illegal instructions for SSE or AVX1 targets.\n"
+                        "BENCHMARKS_ISPC_TARGETS contains: ${BENCHMARKS_ISPC_TARGETS}\n"
+                        "Please use AVX2 or later targets (e.g., avx2-i32x8) for benchmarks to ensure compatibility.")
+    endif()
+endif()
+
 include(cmake/AddBenchmark.cmake)
 
 add_subdirectory(01_trivial)
