@@ -1,0 +1,78 @@
+# Copyright 2025, Intel Corporation
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: Build Windows cross-compile
+
+permissions: read-all
+
+on:
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - 'snap/**'
+      - 'benchmarks/**'
+      - 'tests/**'
+      - 'examples/**'
+      - 'tools/**'
+      - 'utils/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-ispc-linux-wincross:
+    name: Build ISPC Linux wincross
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        submodules: true
+
+    - name: Install ISPC build dependencies
+      run: .github/workflows/scripts/install-build-deps.sh
+
+    - name: Install xwin for windows sdk and vctools
+      run: .github/workflows/scripts/install-xwin-winsdk-vctools.sh
+
+    - name: Build ISPC wincross
+      run: .github/workflows/scripts/build-ispc-wincross.sh
+
+    - name: Upload ISPC artifact
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+      with:
+        name: build-ispc-linux-wincross
+        path: build/ispc-trunk-linux-wincross.tar.gz
+
+    - name: Sanity testing (make check-all, make test)
+      run: .github/workflows/scripts/check-ispc.sh
+
+  build-ispc-macos-wincross:
+    name: Build ISPC macOS wincross
+    runs-on: macos-14
+
+    steps:
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        submodules: true
+
+    - name: Install ISPC build dependencies
+      run: .github/workflows/scripts/install-build-deps.sh macos-14
+
+    - name: Install xwin for windows sdk and vctools
+      run: .github/workflows/scripts/install-xwin-winsdk-vctools.sh
+
+    - name: Build ISPC wincross
+      run: .github/workflows/scripts/build-ispc-wincross.sh
+
+    - name: Upload ISPC artifact
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+      with:
+        name: build-ispc-macos-wincross
+        path: build/ispc-trunk-macos-wincross.tar.gz
+
+    - name: Sanity testing (make check-all, make test)
+      run: .github/workflows/scripts/check-ispc.sh
