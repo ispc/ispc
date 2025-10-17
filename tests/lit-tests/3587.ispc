@@ -9,14 +9,16 @@
 // CHECK: @__system_func_ptr_cache_foo = internal global ptr null
 
 // CHECK: define internal i32 @__get_system_best_isa()
+// CHECK: load atomic i32, ptr @__system_best_isa seq_cst, align 4
+// CHECK: store atomic i32 {{.*}}, ptr @__system_best_isa seq_cst, align 4
 
 // CHECK:      define i32 @bar(i32 %0)
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %1 = load ptr, ptr @__system_func_ptr_cache_bar, align 8
+// CHECK-NEXT:   %1 = load atomic ptr, ptr @__system_func_ptr_cache_bar unordered, align 8
 // CHECK-NEXT:   %2 = icmp ne ptr %1, null
 // CHECK-NEXT:   br i1 %2, label %skip_init, label %do_init
 // CHECK:      skip_init:
-// CHECK-NEXT:   %3 = load ptr, ptr @__system_func_ptr_cache_bar, align 8
+// CHECK-NEXT:   %3 = load atomic ptr, ptr @__system_func_ptr_cache_bar unordered, align 8
 // CHECK-NEXT:   %4 = call i32 %3(i32 %0)
 // CHECK-NEXT:   ret i32 %4
 // CHECK:      do_init:
@@ -24,19 +26,19 @@
 // CHECK-NEXT:   %isa_ok = icmp sge i32 %system_isa, 5
 // CHECK-NEXT:   br i1 %isa_ok, label %do_call, label %next_try
 // CHECK:      do_call:
-// CHECK-NEXT:   store ptr @bar_avx2, ptr @__system_func_ptr_cache_bar, align 8
+// CHECK-NEXT:   store atomic ptr @bar_avx2, ptr @__system_func_ptr_cache_bar unordered, align 8
 // CHECK-NEXT:   br label %skip_init
 // CHECK:      next_try:
 // CHECK-NEXT:   %isa_ok1 = icmp sge i32 %system_isa, 3
 // CHECK-NEXT:   br i1 %isa_ok1, label %do_call2, label %next_try3
 // CHECK:      do_call2:
-// CHECK-NEXT:   store ptr @bar_avx, ptr @__system_func_ptr_cache_bar, align 8
+// CHECK-NEXT:   store atomic ptr @bar_avx, ptr @__system_func_ptr_cache_bar unordered, align 8
 // CHECK-NEXT:   br label %skip_init
 // CHECK:        next_try3:
 // SSE4-NEXT:     %isa_ok4 = icmp sge i32 %system_isa, 2
 // SSE4-NEXT:     br i1 %isa_ok4, label %do_call5, label %next_try6
 // SSE4:        do_call5:
-// SSE4-NEXT:     store ptr @bar_sse4, ptr @__system_func_ptr_cache_bar, align 8
+// SSE4-NEXT:     store atomic ptr @bar_sse4, ptr @__system_func_ptr_cache_bar unordered, align 8
 // SSE4-NEXT:     br label %skip_init
 // SSE4:        next_try6:
 // CHECK-NEXT:   call void asm sideeffect "ud2", "~{dirflag},~{fpsr},~{flags}"()
@@ -44,11 +46,11 @@
 
 // CHECK:      define void @foo()
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   %0 = load ptr, ptr @__system_func_ptr_cache_foo, align 8
+// CHECK-NEXT:   %0 = load atomic ptr, ptr @__system_func_ptr_cache_foo unordered, align 8
 // CHECK-NEXT:   %1 = icmp ne ptr %0, null
 // CHECK-NEXT:   br i1 %1, label %skip_init, label %do_init
 // CHECK:      skip_init:
-// CHECK-NEXT:   %2 = load ptr, ptr @__system_func_ptr_cache_foo, align 8
+// CHECK-NEXT:   %2 = load atomic ptr, ptr @__system_func_ptr_cache_foo unordered, align 8
 // CHECK-NEXT:   call void %2()
 // CHECK-NEXT:   ret void
 // CHECK:      do_init:
@@ -56,19 +58,19 @@
 // CHECK-NEXT:   %isa_ok = icmp sge i32 %system_isa, 5
 // CHECK-NEXT:   br i1 %isa_ok, label %do_call, label %next_try
 // CHECK:      do_call:
-// CHECK-NEXT:   store ptr @foo_avx2, ptr @__system_func_ptr_cache_foo, align 8
+// CHECK-NEXT:   store atomic ptr @foo_avx2, ptr @__system_func_ptr_cache_foo unordered, align 8
 // CHECK-NEXT:   br label %skip_init
 // CHECK:      next_try:
 // CHECK-NEXT:   %isa_ok1 = icmp sge i32 %system_isa, 3
 // CHECK-NEXT:   br i1 %isa_ok1, label %do_call2, label %next_try3
 // CHECK:      do_call2:
-// CHECK-NEXT:   store ptr @foo_avx, ptr @__system_func_ptr_cache_foo, align 8
+// CHECK-NEXT:   store atomic ptr @foo_avx, ptr @__system_func_ptr_cache_foo unordered, align 8
 // CHECK-NEXT:   br label %skip_init
 // CHECK:      next_try3:
 // SSE4-NEXT:     %isa_ok4 = icmp sge i32 %system_isa, 2
 // SSE4-NEXT:     br i1 %isa_ok4, label %do_call5, label %next_try6
 // SSE4:        do_call5:
-// SSE4-NEXT:     store ptr @foo_sse4, ptr @__system_func_ptr_cache_foo, align 8
+// SSE4-NEXT:     store atomic ptr @foo_sse4, ptr @__system_func_ptr_cache_foo unordered, align 8
 // SSE4-NEXT:     br label %skip_init
 // SSE4:        next_try6:
 // CHECK-NEXT:   call void asm sideeffect "ud2", "~{dirflag},~{fpsr},~{flags}"()
