@@ -1564,7 +1564,9 @@ Available options:
 
   Disable the use of ZMM registers for AVX-512 targets in favor of YMM registers.
   This also affects the ABI. ZMM registers are 512-bit wide, while YMM registers
-  are 256-bit wide.
+  are 256-bit wide. This option is only supported for the ``avx512skx-x16`` and
+  ``avx512icl-x16`` targets, and the following generic targets: ``generic-i32x16``,
+  ``generic-i1x16``, ``generic-i1x32``, ``generic-i1x64``.
 
 - ``fast-masked-vload``
 

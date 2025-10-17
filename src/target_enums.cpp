@@ -146,8 +146,11 @@ ISPCTarget operator++(ISPCTarget &target, int dummy) {
     static_assert(static_cast<underlying>(ISPCTarget::avx512skx_x16) ==
                       static_cast<underlying>(ISPCTarget::avx512skx_x8) + 1,
                   "Enum ISPCTarget is not sequential");
-    static_assert(static_cast<underlying>(ISPCTarget::avx512skx_x32) ==
+    static_assert(static_cast<underlying>(ISPCTarget::avx512skx_x16_nozmm) ==
                       static_cast<underlying>(ISPCTarget::avx512skx_x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx512skx_x32) ==
+                      static_cast<underlying>(ISPCTarget::avx512skx_x16_nozmm) + 1,
                   "Enum ISPCTarget is not sequential");
     static_assert(static_cast<underlying>(ISPCTarget::avx512skx_x64) ==
                       static_cast<underlying>(ISPCTarget::avx512skx_x32) + 1,
@@ -161,8 +164,11 @@ ISPCTarget operator++(ISPCTarget &target, int dummy) {
     static_assert(static_cast<underlying>(ISPCTarget::avx512icl_x16) ==
                       static_cast<underlying>(ISPCTarget::avx512icl_x8) + 1,
                   "Enum ISPCTarget is not sequential");
-    static_assert(static_cast<underlying>(ISPCTarget::avx512icl_x32) ==
+    static_assert(static_cast<underlying>(ISPCTarget::avx512icl_x16_nozmm) ==
                       static_cast<underlying>(ISPCTarget::avx512icl_x16) + 1,
+                  "Enum ISPCTarget is not sequential");
+    static_assert(static_cast<underlying>(ISPCTarget::avx512icl_x32) ==
+                      static_cast<underlying>(ISPCTarget::avx512icl_x16_nozmm) + 1,
                   "Enum ISPCTarget is not sequential");
     static_assert(static_cast<underlying>(ISPCTarget::avx512icl_x64) ==
                       static_cast<underlying>(ISPCTarget::avx512icl_x32) + 1,
@@ -404,6 +410,8 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::avx512skx_x8;
     } else if (target == "avx512skx-x16" || target == "avx512skx-i32x16") {
         return ISPCTarget::avx512skx_x16;
+    } else if (target == "avx512skx-x16-nozmm") {
+        return ISPCTarget::avx512skx_x16_nozmm;
     } else if (target == "avx512skx-x32" || target == "avx512skx-i16x32") {
         return ISPCTarget::avx512skx_x32;
     } else if (target == "avx512skx-x64" || target == "avx512skx-i8x64") {
@@ -414,6 +422,8 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::avx512icl_x8;
     } else if (target == "avx512icl-x16") {
         return ISPCTarget::avx512icl_x16;
+    } else if (target == "avx512icl-x16-nozmm") {
+        return ISPCTarget::avx512icl_x16_nozmm;
     } else if (target == "avx512icl-x32") {
         return ISPCTarget::avx512icl_x32;
     } else if (target == "avx512icl-x64") {
@@ -600,6 +610,7 @@ std::string ISPCTargetToString(ISPCTarget target) {
     case ISPCTarget::avx512skx_x8:
         return "avx512skx-x8";
     case ISPCTarget::avx512skx_x16:
+    case ISPCTarget::avx512skx_x16_nozmm:
         return "avx512skx-x16";
     case ISPCTarget::avx512skx_x32:
         return "avx512skx-x32";
@@ -610,6 +621,7 @@ std::string ISPCTargetToString(ISPCTarget target) {
     case ISPCTarget::avx512icl_x8:
         return "avx512icl-x8";
     case ISPCTarget::avx512icl_x16:
+    case ISPCTarget::avx512icl_x16_nozmm:
         return "avx512icl-x16";
     case ISPCTarget::avx512icl_x32:
         return "avx512icl-x32";
@@ -743,11 +755,13 @@ bool ISPCTargetIsX86(ISPCTarget target) {
     case ISPCTarget::avx512skx_x4:
     case ISPCTarget::avx512skx_x8:
     case ISPCTarget::avx512skx_x16:
+    case ISPCTarget::avx512skx_x16_nozmm:
     case ISPCTarget::avx512skx_x32:
     case ISPCTarget::avx512skx_x64:
     case ISPCTarget::avx512icl_x4:
     case ISPCTarget::avx512icl_x8:
     case ISPCTarget::avx512icl_x16:
+    case ISPCTarget::avx512icl_x16_nozmm:
     case ISPCTarget::avx512icl_x32:
     case ISPCTarget::avx512icl_x64:
     case ISPCTarget::avx512spr_x4:

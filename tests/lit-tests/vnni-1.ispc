@@ -10,6 +10,7 @@
 // RUN: %{ispc} %s --target=avx512spr-x8 --emit-asm -o - | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_YMM
 
 // RUN: %{ispc} %s --target=avx512icl-x16 --emit-asm -o - | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_ZMM
+// RUN: %{ispc} %s --target=avx512icl-x16 --opt=disable-zmm --emit-asm -o - | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_YMM
 // RUN: %{ispc} %s --target=avx512spr-x16 --emit-asm -o - | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_ZMM
 
 // REQUIRES: X86_ENABLED && !MACOS_HOST
