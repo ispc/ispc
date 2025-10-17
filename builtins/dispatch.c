@@ -27,8 +27,9 @@
 // via llvm-link. However, this approach requires llvm-link as a dependency
 // during ISPC build time.
 #include "isa.h"
+#include <stdatomic.h>
 
-static int __system_best_isa = -1;
+static atomic_int __system_best_isa = -1;
 
 // For function definitions, we need to use static keyword. This is because
 // because users can compile several translation units in multi-target mode and
@@ -64,8 +65,12 @@ static int __get_system_isa() {
 }
 
 int __get_system_best_isa() {
-    if (__system_best_isa == -1) {
-        __system_best_isa = __get_system_isa();
+
+    int isa = atomic_load(&__system_best_isa);
+    if (isa == -1) {
+        isa = __get_system_isa();
+        atomic_store(&__system_best_isa, isa);
     }
-    return __system_best_isa;
+
+    return isa;
 }

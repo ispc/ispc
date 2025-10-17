@@ -2016,6 +2016,7 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *getBes
     // At the beginning, check whether we already have a callee address in cache.
     llvm::IRBuilder builder(bblock);
     auto *ptrF = builder.CreateLoad(ptrTy, funcPtrCache);
+    ptrF->setAtomic(llvm::AtomicOrdering::Unordered);
     auto *cond = builder.CreateCmp(llvm::CmpInst::ICMP_NE, ptrF, nullPtr);
 
     // Two successor basic blocks: make indirect call on cached value or determine the desired variant.
@@ -2026,6 +2027,7 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *getBes
     // Reload the value from cache in case it was originally zero and then updated.
     builder.SetInsertPoint(bbCall);
     ptrF = builder.CreateLoad(ptrTy, funcPtrCache);
+    ptrF->setAtomic(llvm::AtomicOrdering::Unordered);
 
     // Prepare arguments for the call. Just pass through all of the args from the dispatch function to the
     // target-specific function.
@@ -2066,7 +2068,8 @@ static void lCreateDispatchFunction(llvm::Module *module, llvm::Function *getBes
 
         // Store the chosen variant in the cache.
         builder.SetInsertPoint(callBBlock);
-        builder.CreateStore(targetFuncs[i], funcPtrCache);
+        auto *store = builder.CreateStore(targetFuncs[i], funcPtrCache);
+        store->setAtomic(llvm::AtomicOrdering::Unordered);
         builder.CreateBr(bbCall);
 
         // Otherwise we'll go on to the next candidate and see about that

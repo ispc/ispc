@@ -4,6 +4,7 @@
 #include <benchmark/benchmark.h>
 #include <cstdint>
 #include <stdio.h>
+#include <thread>
 
 #include "../common.h"
 #include "16_dispatcher_overhead_ispc.h"
@@ -54,6 +55,23 @@ static void dispatcher_overhead_test(benchmark::State &state) {
     state.SetComplexityN(state.range(0));
 }
 
+static void dispatcher_overhead_test_multithread(benchmark::State &state) {
+
+    int count = static_cast<int>(state.range(0));
+    for (auto _ : state) {
+
+        std::vector<std::thread> v;
+        for (int i = 0; i < count; i++)
+            v.emplace_back(ispc::dispatcher_overhead_test);
+
+        for (auto &t : v)
+            t.join();
+    }
+
+    state.SetComplexityN(state.range(0));
+}
+
 BENCHMARK(dispatcher_overhead_test)->ARGS;
+BENCHMARK(dispatcher_overhead_test_multithread)->Arg(100)->Arg(1000)->Arg(10000);
 
 BENCHMARK_MAIN();
