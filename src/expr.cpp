@@ -8025,10 +8025,21 @@ const Type *TypeCastExpr::GetLValueType() const {
     }
 }
 
+// Special helper to remove const from both pointer and pointee type recursively.
+// We can't directly use PointerType::GetAsNonConstType() here since
+// it does not recursively deconstify the base type - It only removes const from
+// the pointer itself, not from nested pointer types.
+// For example:
+//   Input: const int * const *
+//   GetAsNonConstType() gives: const int * * (only outer const removed)
+//   lDeconstifyType() should give: int * * (all const removed)
 static const Type *lDeconstifyType(const Type *t) {
     const PointerType *pt = CastType<PointerType>(t);
     if (pt != nullptr) {
-        return new PointerType(lDeconstifyType(pt->GetBaseType()), pt->GetVariability(), false);
+        // Preserve slice property when removing constness
+        unsigned int prop = pt->IsSlice() ? PointerType::SLICE : PointerType::NONE;
+        return new PointerType(lDeconstifyType(pt->GetBaseType()), pt->GetVariability(), false, prop,
+                               pt->GetAddressSpace());
     } else {
         return t->GetAsNonConstType();
     }
@@ -8072,6 +8083,14 @@ Expr *TypeCastExpr::TypeCheck() {
     const PointerType *fromPtr = CastType<PointerType>(fromType);
     const PointerType *toPtr = CastType<PointerType>(toType);
     if (fromPtr != nullptr && toPtr != nullptr) {
+        // Check for slice to non-slice pointer casts
+        if (fromPtr->IsSlice() && !toPtr->IsSlice()) {
+            Error(pos,
+                  "Can't cast from pointer to SOA type \"%s\" to "
+                  "pointer to non-SOA type \"%s\". This would discard slice offset information.",
+                  fromType->GetString().c_str(), toType->GetString().c_str());
+            return nullptr;
+        }
         // allow explicit typecasts between any two different pointer types
         return this;
     }
