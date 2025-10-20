@@ -1,8 +1,8 @@
 // RUN: %{ispc} %s --target=avx2-i32x8 --arch=x86-64 --nostdlib --emit-asm -o - | FileCheck %s
 
-// Test produces different IR/ASM with LLVM_21_0+ due to SROA improvements. Check
-// the LIT test 1678_unroll_llvm_21.ll for more details.
-// REQUIRES: X86_ENABLED && !LLVM_21_0+
+// Test produces different IR/ASM with LLVM_21_0+ due to SROA improvements. Multiple stores
+// filling same alloca are tree-optimized - https://github.com/llvm/llvm-project/pull/152793
+// REQUIRES: X86_ENABLED && LLVM_21_0+
 
 // The goal of this test is to check that code generation for both versions is the same.
 
@@ -31,12 +31,11 @@ unmasked inline void StoreWideFVector4(uniform FVector4 *uniform DstPtr, const u
 }
 
 // CHECK-LABEL: AddWide___
-// CHECK-COUNT-1: vmovups
+// CHECK-COUNT-2: vmovaps
 // CHECK-NOT: vmovups
-// CHECK-COUNT-1: vaddps
-// CHECK-COUNT-1: vmovups
-// CHECK-NOT: vmovups
-// CHECK-COUNT-1: vzeroupper
+// CHECK-COUNT-2: vaddps
+// CHECK-COUNT-2: vmovaps
+// CHECK-NOT: vmovaps
 unmasked void AddWide(uniform FVector4 Result[], uniform FVector4 Source1[], uniform FVector4 Source2[]) {
     uniform int Index = 0;
     uniform WideFVector4 S1, S2;
@@ -60,12 +59,11 @@ unmasked inline void StoreWideFVector4_2(uniform FVector4 *uniform DstPtr, const
 }
 
 // CHECK-LABEL: AddWide_2___
-// CHECK-COUNT-1: vmovups
+// CHECK-COUNT-2: vmovaps
 // CHECK-NOT: vmovups
-// CHECK-COUNT-1: vaddps
-// CHECK-COUNT-1: vmovups
-// CHECK-NOT: vmovups
-// CHECK-COUNT-1: vzeroupper
+// CHECK-COUNT-2: vaddps
+// CHECK-COUNT-2: vmovaps
+// CHECK-NOT: vmovaps
 unmasked void AddWide_2(uniform FVector4 Result[], uniform FVector4 Source1[], uniform FVector4 Source2[]) {
     uniform int Index = 0;
     uniform WideFVector4 S1, S2;
