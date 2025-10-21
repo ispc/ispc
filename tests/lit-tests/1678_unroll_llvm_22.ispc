@@ -1,8 +1,8 @@
 // RUN: %{ispc} %s --target=avx2-i32x8 --arch=x86-64 --nostdlib --emit-asm -o - | FileCheck %s
 
-// Test produces different IR/ASM with LLVM_21_0+ due to SROA improvements. Multiple stores
+// Test produces different IR/ASM with LLVM_22_0+ due to SROA improvements. Multiple stores
 // filling same alloca are tree-optimized - https://github.com/llvm/llvm-project/pull/152793
-// REQUIRES: X86_ENABLED && LLVM_21_0+
+// REQUIRES: X86_ENABLED && LLVM_22_0+
 
 // The goal of this test is to check that code generation for both versions is the same.
 
