@@ -1,8 +1,8 @@
 // RUN: %{ispc} %s --target=avx2-i32x8 --arch=x86-64 --nostdlib --emit-asm -o - | FileCheck %s
 
-// Test produces different IR/ASM with LLVM_21_0+ due to SROA improvements. Check
-// the LIT test 1678_unroll_llvm_21.ll for more details.
-// REQUIRES: X86_ENABLED && !LLVM_21_0+
+// Test produces different IR/ASM with LLVM_22_0+ due to SROA improvements. Check
+// the LIT test 1678_unroll_llvm_22.ll for more details.
+// REQUIRES: X86_ENABLED && !LLVM_22_0+
 
 // The goal of this test is to check that code generation for both versions is the same.
 
