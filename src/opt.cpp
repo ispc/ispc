@@ -276,7 +276,12 @@ void DebugModulePassManager::commitLoopToFunctionPassManager() {
     }
     // Get the last element of lpmVec
     llvm::LoopPassManager *lastLPM = lpmVec.back().get();
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_22_0
+    // LLVM 22+ removed the BlockFrequencyInfo parameter
+    fpmVec.back()->addPass(llvm::createFunctionToLoopPassAdaptor(std::move(*lastLPM), m_memorySSA));
+#else
     fpmVec.back()->addPass(llvm::createFunctionToLoopPassAdaptor(std::move(*lastLPM), m_memorySSA, m_blocksFreq));
+#endif
     m_isLPMOpen = false;
 }
 
