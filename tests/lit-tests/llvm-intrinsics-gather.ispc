@@ -22,30 +22,46 @@
 void mask_type() {}
 
 // CHECK-LABEL: @masked_load_i8
-// CHECK-DAG: %calltmp = tail call <[[WIDTH]] x i8> @llvm.masked.load.v[[WIDTH]]i8.[[P0:(p0|p0i8)]]([[PTR:(ptr|i8*)]] %ptr, i32 1, <[[WIDTH]] x i1> {{%.*}}, <[[WIDTH]] x i8> %passthru)
+// CHECK-DAG: %calltmp = tail call <[[WIDTH]] x i8> @llvm.masked.load.v[[WIDTH]]i8.[[P0:(p0|p0i8)]]([[PTR:(ptr|i8*)]]{{( align 1)?}} %ptr, {{(i32 1, )?}}<[[WIDTH]] x i1> {{%.*}}, <[[WIDTH]] x i8> %passthru)
 unmangled int8 masked_load_i8(int8 *uniform ptr, int8 passthru) {
+#if LLVM_VERSION_MAJOR >= 22
+    return @llvm.masked.load((uniform int8 * uniform) ptr, __mask, passthru);
+#else
     // 1l forces integral literals to be int32
     return @llvm.masked.load((uniform int8 * uniform) ptr, 1l, __mask, passthru);
+#endif
 }
 
 // CHECK-LABEL: @gather
 // CHECK-DAG: [[PTR_VEC:%.*]] = inttoptr <[[WIDTH]] x [[ADDR_SIZE:(i64|i32)]]> {{%.*}} to <[[WIDTH]] x ptr>
-// CHECK-DAGL %calltmp = tail call <[[WIDTH]] x i32> @llvm.masked.gather.v[[WIDTH]]i32.v[[WIDTH]][[P0]](<[[WIDTH]] x ptr> [[PTR_VEC]], i32 1, <[[WIDTH]] x i1> {{%.*}}, <[[WIDTH]] x i32> %passthru)
+// CHECK-DAGL %calltmp = tail call <[[WIDTH]] x i32> @llvm.masked.gather.v[[WIDTH]]i32.v[[WIDTH]][[P0]](<[[WIDTH]] x ptr> [[PTR_VEC]], {{(i32 1, )?}}<[[WIDTH]] x i1> {{%.*}}, <[[WIDTH]] x i32> %passthru)
 unmangled int32 gather(uint64 addrs, int32 passthru) {
+#if LLVM_VERSION_MAJOR >= 22
+    return @llvm.masked.gather(addrs, __mask, passthru);
+#else
     return @llvm.masked.gather(addrs, 1l, __mask, passthru);
+#endif
 }
 
 // CHECK-LABEL: @masked_store_float
-// CHECK-DAG: tail call void @llvm.masked.store.v[[WIDTH]]f32.[[P0]](<[[WIDTH]] x float> %val, [[PTR]] %ptr, i32 1, <[[WIDTH]] x i1> {{%.*}})
+// CHECK-DAG: tail call void @llvm.masked.store.v[[WIDTH]]f32.[[P0]](<[[WIDTH]] x float> %val, [[PTR]]{{( align 1)?}} %ptr, {{(i32 1, )?}}<[[WIDTH]] x i1> {{%.*}})
 unmangled void masked_store_float(varying float *uniform ptr, varying float val) {
+#if LLVM_VERSION_MAJOR >= 22
+    @llvm.masked.store(val, (uniform int8 * uniform) ptr, __mask);
+#else
     @llvm.masked.store(val, (uniform int8 * uniform) ptr, 1l, __mask);
+#endif
 }
 
 // CHECK-LABEL: @scatter
 // CHECK-DAG:  [[VPTR:%.*]] = inttoptr <[[WIDTH]] x [[ADDR_SIZE]]> {{%.*}} to <[[WIDTH]] x ptr>
-// CHECK-DAG:  tail call void @llvm.masked.scatter.v[[WIDTH]]i8.v[[WIDTH]][[P0]](<[[WIDTH]] x i8> %val, <[[WIDTH]] x ptr> [[VPTR]], i32 1, <[[WIDTH]] x i1> {{%.*}})
+// CHECK-DAG:  tail call void @llvm.masked.scatter.v[[WIDTH]]i8.v[[WIDTH]][[P0]](<[[WIDTH]] x i8> %val, <[[WIDTH]] x ptr> [[VPTR]], {{(i32 1, )?}}<[[WIDTH]] x i1> {{%.*}})
 unmangled void scatter(varying uint64 addr, varying int8 val) {
+#if LLVM_VERSION_MAJOR >= 22
+    @llvm.masked.scatter(val, addr, __mask);
+#else
     @llvm.masked.scatter(val, addr, 1l, __mask);
+#endif
 }
 
 // CHECK-LABEL: @reduce_add_float

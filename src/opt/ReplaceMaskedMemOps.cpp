@@ -176,9 +176,14 @@ llvm::Value *lBitcastPointerType(llvm::IRBuilder<> &B, llvm::Value *ptr, llvm::V
 void lReplaceMaskedStore(llvm::IRBuilder<> &B, llvm::CallInst *CI, unsigned SubVectorLength) {
     llvm::Value *origVec = CI->getOperand(0);
     llvm::Value *ptr = CI->getOperand(1);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_22_0
+    // In LLVM 22+, alignment is on the pointer, not a separate parameter
+    int alignment = CI->getParamAlign(1).valueOrOne().value();
+#else
     llvm::ConstantInt *alignmentCI = llvm::dyn_cast<llvm::ConstantInt>(CI->getOperand(2));
     Assert(alignmentCI);
     int alignment = alignmentCI->getZExtValue();
+#endif
 
     B.SetInsertPoint(CI);
 
@@ -197,10 +202,19 @@ void lReplaceMaskedStore(llvm::IRBuilder<> &B, llvm::CallInst *CI, unsigned SubV
 // the result of the unmasked load with the rest part of the passthrough value.
 void lReplaceMaskedLoad(llvm::IRBuilder<> &B, llvm::CallInst *CI, unsigned SubVectorLength) {
     llvm::Value *ptr = CI->getOperand(0);
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_22_0
+    // In LLVM 22+: masked.load(ptr, mask, passthru)
+    llvm::Constant *passthrough = llvm::dyn_cast<llvm::Constant>(CI->getOperand(2));
+    Assert(passthrough);
+    // Extract alignment from pointer attributes
+    int alignment = CI->getParamAlign(0).valueOrOne().value();
+#else
+    // In LLVM 21 and earlier: masked.load(ptr, alignment, mask, passthru)
     llvm::ConstantInt *alignmentCI = llvm::dyn_cast<llvm::ConstantInt>(CI->getOperand(1));
     llvm::Constant *passthrough = llvm::dyn_cast<llvm::Constant>(CI->getOperand(3));
     Assert(alignmentCI && passthrough);
     int alignment = alignmentCI->getZExtValue();
+#endif
 
     B.SetInsertPoint(CI);
 
@@ -245,15 +259,28 @@ llvm::PreservedAnalyses ReplaceMaskedMemOpsPass::run(llvm::Function &F, llvm::Fu
 
             unsigned SubVectorLength = 0;
             if (CF->getIntrinsicID() == llvm::Intrinsic::masked_store) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_22_0
+                // In LLVM 22+: masked.store(value, ptr, mask)
+                llvm::Value *mask = CI->getOperand(2);
+#else
+                // In LLVM 21 and earlier: masked.store(value, ptr, alignment, mask)
                 llvm::Value *mask = CI->getOperand(3);
+#endif
                 if (lCheckMask(mask, SubVectorLength)) {
                     storesToReplace[CI] = SubVectorLength;
                 }
             }
 
             if (CF->getIntrinsicID() == llvm::Intrinsic::masked_load) {
+#if ISPC_LLVM_VERSION >= ISPC_LLVM_22_0
+                // In LLVM 22+: masked.load(ptr, mask, passthru)
+                llvm::Value *mask = CI->getOperand(1);
+                llvm::Value *passthrough = CI->getOperand(2);
+#else
+                // In LLVM 21 and earlier: masked.load(ptr, alignment, mask, passthru)
                 llvm::Value *mask = CI->getOperand(2);
                 llvm::Value *passthrough = CI->getOperand(3);
+#endif
                 if (llvm::isa<llvm::Constant>(passthrough) && lCheckMask(mask, SubVectorLength)) {
                     loadsToReplace[CI] = SubVectorLength;
                 }
