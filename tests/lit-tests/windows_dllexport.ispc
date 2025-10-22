@@ -7,7 +7,7 @@
 // RUN: %{ispc} %s  --target=sse2 --target-os=windows --emit-llvm-text -o - | FileCheck %s --check-prefix=CHECK_NODLLEXPORT
 // RUN: %{ispc} %s  --target=sse2 --target-os=windows --emit-llvm-text -o - | FileCheck %s --check-prefix=CHECK_NODLLEXPORT
 
-// REQUIRES: WINDOWS_ENABLED
+// REQUIRES: WINDOWS_ENABLED && X86_ENABLED
 
 // CHECK_DLLEXPORT_SINGLE_TARGET: define dllexport float @foo_extern___
 // CHECK_DLLEXPORT_SINGLE_TARGET: define dllexport float @foo_export___
