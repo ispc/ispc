@@ -1,8 +1,8 @@
 ; RUN: %{ispc-opt} --passes=replace-masked-memory-ops %s -o - | FileCheck %s
-; UNSUPPORTED: LLVM_22_0+
+; REQUIRES: LLVM_22_0+
 
-declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32, <4 x i1>, <4 x i32>)
-declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32, <4 x i1>)
+declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, <4 x i1>, <4 x i32>)
+declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, <4 x i1>)
 
 ; CHECK-LABEL: @foo
 ; CHECK-NEXT: [[HL:%.*]] = load <2 x i32>, ptr %a, align 16
@@ -10,12 +10,12 @@ declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32, <4 x i
 ; CHECK-NEXT: [[HS:%.*]] = shufflevector <4 x i32> [[VEC]], <4 x i32> undef, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT: store <2 x i32> [[HS]], ptr %b, align 16
 ; CHECK-NEXT: ret void
-define void @foo(<4 x i32>* %a, <4 x i32>* %b) {
-  %vec = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %a, i32 16,
-                                                        <4 x i1> <i1 true, i1 true, i1 false, i1 false>,
-                                                        <4 x i32> <i32 poison, i32 poison, i32 0, i32 0>)
-  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vec, <4 x i32>* %b, i32 16,
-                                             <4 x i1> <i1 true, i1 true, i1 false, i1 false>)
+define void @foo(ptr %a, ptr %b) {
+  %vec = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 16 %a,
+                                                    <4 x i1> <i1 true, i1 true, i1 false, i1 false>,
+                                                    <4 x i32> <i32 poison, i32 poison, i32 0, i32 0>)
+  call void @llvm.masked.store.v4i32.p0(<4 x i32> %vec, ptr align 16 %b,
+                                        <4 x i1> <i1 true, i1 true, i1 false, i1 false>)
   ret void
 }
 
@@ -23,10 +23,10 @@ define void @foo(<4 x i32>* %a, <4 x i32>* %b) {
 ; CHECK-NEXT  [[HL:%.*]] = load <3 x i32>, ptr %a, align 1
 ; CHECK-NEXT  [[VEC:%.*]] = shufflevector <3 x i32> [[HL]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT ret void
-define void @mask3(<4 x i32>* %a) {
-  %vec1 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %a, i32 1,
-                                                        <4 x i1> <i1 true, i1 true, i1 true, i1 false>,
-                                                        <4 x i32> <i32 poison, i32 poison, i32 0, i32 0>)
+define void @mask3(ptr %a) {
+  %vec1 = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 1 %a,
+                                                     <4 x i1> <i1 true, i1 true, i1 true, i1 false>,
+                                                     <4 x i32> <i32 poison, i32 poison, i32 0, i32 0>)
 
   ret void
 }
@@ -36,10 +36,10 @@ define void @mask3(<4 x i32>* %a) {
 ; CHECK-NEXT: [[V2:%.*]] = shufflevector <1 x i32> [[V1]], <1 x i32> zeroinitializer, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT: {{%.*}} = shufflevector <2 x i32> [[V2]], <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT: ret void
-define void@oneelemmask(<4 x i32>* %a) {
-  %vec2 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %a, i32 1,
-                                                        <4 x i1> <i1 true, i1 false, i1 false, i1 false>,
-                                                        <4 x i32> <i32 poison, i32 0, i32 0, i32 0>)
+define void@oneelemmask(ptr %a) {
+  %vec2 = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 1 %a,
+                                                     <4 x i1> <i1 true, i1 false, i1 false, i1 false>,
+                                                     <4 x i32> <i32 poison, i32 0, i32 0, i32 0>)
   ret void
 }
 
@@ -47,10 +47,10 @@ define void@oneelemmask(<4 x i32>* %a) {
 ; CHECK-NEXT: [[V1:%.*]] = load <2 x i32>, ptr %a, align 8
 ; CHECK-NEXT: {{.*}} = shufflevector <2 x i32> [[V1]], <2 x i32> <i32 42, i32 43>, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT: ret void
-define void @passthrough(<4 x i32>* %a, <4 x i32>* %b) {
-  %vec = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %a, i32 8,
-                                                        <4 x i1> <i1 true, i1 true, i1 false, i1 false>,
-                                                        <4 x i32> <i32 poison, i32 poison, i32 42, i32 43>)
+define void @passthrough(ptr %a, ptr %b) {
+  %vec = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 8 %a,
+                                                    <4 x i1> <i1 true, i1 true, i1 false, i1 false>,
+                                                    <4 x i32> <i32 poison, i32 poison, i32 42, i32 43>)
   ret void
 }
 
@@ -60,9 +60,9 @@ define void @passthrough(<4 x i32>* %a, <4 x i32>* %b) {
 ; CHECK-NEXT: @llvm.masked.store
 ; CHECK-NEXT: ret void
 define void @notconstmaskargs(ptr %a, <4 x i1> %m) {
-  %vec = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr %a, i32 8, <4 x i1> %m,
-                                                        <4 x i32> <i32 poison, i32 poison, i32 42, i32 43>)
-  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vec, ptr %a, i32 16, <4 x i1> %m)
+  %vec = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 8 %a, <4 x i1> %m,
+                                                    <4 x i32> <i32 poison, i32 poison, i32 42, i32 43>)
+  call void @llvm.masked.store.v4i32.p0(<4 x i32> %vec, ptr align 16 %a, <4 x i1> %m)
   ret void
 }
 
@@ -71,12 +71,12 @@ define void @notconstmaskargs(ptr %a, <4 x i1> %m) {
 ; CHECK-NEXT: @llvm.masked.load
 ; CHECK-NEXT: ret void
 define void @notconstpassthrough(ptr %a, <4 x i32> %b) {
-  %vec = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr %a, i32 8,
-                                                        <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x i32> %b)
+  %vec = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 8 %a,
+                                                    <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x i32> %b)
   ret void
 }
 
-declare <8 x float> @llvm.masked.load.v8f32.p0v8f32(ptr, i32, <8 x i1>, <8 x float>)
+declare <8 x float> @llvm.masked.load.v8f32.p0(ptr, <8 x i1>, <8 x float>)
 ; Reducing to quarters is not supported at the moment or lesser parts are
 ; useful for x16 and wider targets.
 ; CHECK-LABEL: @quarter
@@ -84,7 +84,7 @@ declare <8 x float> @llvm.masked.load.v8f32.p0v8f32(ptr, i32, <8 x i1>, <8 x flo
 ; CHECK-NEXT: [[V2:%.*]] = shufflevector <2 x float> [[V1]], <2 x float> <float 1.000000e+00, float 0.000000e+00>, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT: [[V:%.*]] = shufflevector <4 x float> [[V2]], <4 x float> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 define void @quarter(ptr %a) {
-  %vec1 = call <8 x float> @llvm.masked.load.v8f32.p0v8f32(ptr %a, i32 1,
+  %vec1 = call <8 x float> @llvm.masked.load.v8f32.p0(ptr align 1 %a,
                     <8 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>,
                     <8 x float> <float poison, float poison, float 1.0, float 0.0, float 0.0, float 0.0, float 0.0, float 0.0>)
   ret void
@@ -94,9 +94,9 @@ define void @quarter(ptr %a) {
 ; CHECK-LABEL: @allzeromask
 ; CHECK-NEXT: @llvm.masked.load
 ; CHECK-NEXT: ret <4 x i32> %vec
-define <4 x i32> @allzeromask(<4 x i32>* %a, <4 x i32>* %b) {
-  %vec = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %a, i32 8,
-                                                        <4 x i1> <i1 false, i1 false, i1 false, i1 false>,
-                                                        <4 x i32> <i32 poison, i32 poison, i32 42, i32 43>)
+define <4 x i32> @allzeromask(ptr %a, ptr %b) {
+  %vec = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 8 %a,
+                                                    <4 x i1> <i1 false, i1 false, i1 false, i1 false>,
+                                                    <4 x i32> <i32 poison, i32 poison, i32 42, i32 43>)
   ret <4 x i32> %vec
 }

@@ -1,8 +1,8 @@
 ; RUN: %{ispc-opt} --passes=replace-masked-memory-ops %s -o - | FileCheck %s
-; UNSUPPORTED: LLVM_22_0+
+; REQUIRES: LLVM_22_0+
 
-declare <8 x float> @llvm.masked.load.v8f32.p0(ptr nocapture, i32 immarg, <8 x i1>, <8 x float>) #1
-declare void @llvm.masked.store.v8f32.p0(<8 x float>, ptr nocapture, i32 immarg, <8 x i1>) #2
+declare <8 x float> @llvm.masked.load.v8f32.p0(ptr nocapture, <8 x i1>, <8 x float>) #1
+declare void @llvm.masked.store.v8f32.p0(<8 x float>, ptr nocapture, <8 x i1>) #2
 
 ; CHECK-LABEL: @foo
 ; CHECK-NEXT:  [[HL:%.*]] = load <3 x float>, ptr %0, align 1
@@ -13,7 +13,7 @@ declare void @llvm.masked.store.v8f32.p0(<8 x float>, ptr nocapture, i32 immarg,
 ; CHECK-NEXT:  ret void
 
 define void @foo(ptr noalias %0, ptr noalias %1) local_unnamed_addr {
-  %x = tail call <8 x float> @llvm.masked.load.v8f32.p0(ptr %0, i32 1, <8 x i1> <i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>, <8 x float> poison)
-  call void @llvm.masked.store.v8f32.p0(<8 x float> %x, ptr %1, i32 1, <8 x i1> <i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>)
+  %x = tail call <8 x float> @llvm.masked.load.v8f32.p0(ptr align 1 %0, <8 x i1> <i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>, <8 x float> poison)
+  call void @llvm.masked.store.v8f32.p0(<8 x float> %x, ptr align 1 %1, <8 x i1> <i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>)
   ret void
 }
