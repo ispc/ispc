@@ -85,9 +85,8 @@ message(STATUS "Using BENCHMARKS_ISPC_FLAGS: ${BENCHMARKS_ISPC_FLAGS}")
 if (X86_HOST)
     string(TOLOWER "${BENCHMARKS_ISPC_TARGETS}" TARGETS_LOWER)
     if (TARGETS_LOWER MATCHES "sse[0-9]*" OR TARGETS_LOWER MATCHES "avx1")
-        message(WARNING "Benchmarks use AVX2 instructions in C++ code and may produce illegal instructions for SSE or AVX1 targets.\n"
-                        "BENCHMARKS_ISPC_TARGETS contains: ${BENCHMARKS_ISPC_TARGETS}\n"
-                        "Please use AVX2 or later targets (e.g., avx2-i32x8) for benchmarks to ensure compatibility.")
+        message(WARNING "he C++ portion of benchmarks is compiled with -mavx2 which may produce illegal instructions for SSE or AVX1 targets.\n"
+                        "BENCHMARKS_ISPC_TARGETS contains: ${BENCHMARKS_ISPC_TARGETS}\n")
     endif()
 endif()
 
