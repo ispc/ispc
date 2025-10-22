@@ -13,6 +13,7 @@
 // CHECK-DAG: #define ISPC_TARGET_{{(NEON|SSE2|SSE4|AVX|AVX2|AVX512SKX|AVX512ICL|AVX512SPR|AVX10_2)}}
 
 // Additional ISPC_TARGET_HAS_* feature detection macros
+// Note: ISPC_TARGET_HAS_HALF is also defined (along with ISPC_FP16_SUPPORTED)
 // CHECK-DAG: #define ISPC_TARGET_HAS_HALF
 // CHECK-DAG: #define ISPC_TARGET_HAS_RAND
 
@@ -39,6 +40,7 @@
 // FP64 support (should be defined for most targets)
 // CHECK-DAG: #define ISPC_FP64_SUPPORTED
 
+// NOTE: ISPC_FP16_SUPPORTED is only defined for targets with full FP16 support (e.g., avx512spr)
 // NOTE: ISPC_LLVM_INTRINSICS_ENABLED is only defined when --enable-llvm-intrinsics is used
 
 // Signed integer min/max macros

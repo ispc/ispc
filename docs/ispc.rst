@@ -1405,7 +1405,7 @@ preprocessor runs:
   * - ISPC_ATTRIBUTE_SUPPORTED
     - 1
     - The macro is defined if the ``ispc`` compiler supports ``__attribute__(())`` syntax.
-  * - ISPC_TARGET_HAS_HALF
+  * - ISPC_FP16_SUPPORTED
     - 1
     - The macro is defined if float16 type is supported by the ``ispc`` target.
       The implementation may rely either on native hardware support or emulation.
