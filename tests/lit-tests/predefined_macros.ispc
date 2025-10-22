@@ -12,6 +12,10 @@
 // Target-specific macros (at least one should be defined for each compilation)
 // CHECK-DAG: #define ISPC_TARGET_{{(NEON|SSE2|SSE4|AVX|AVX2|AVX512SKX|AVX512ICL|AVX512SPR|AVX10_2)}}
 
+// Additional ISPC_TARGET_HAS_* feature detection macros
+// CHECK-DAG: #define ISPC_TARGET_HAS_HALF
+// CHECK-DAG: #define ISPC_TARGET_HAS_RAND
+
 // Pointer size (should be either 32 or 64)
 // CHECK-DAG: #define ISPC_POINTER_SIZE {{(32|64)}}
 
@@ -35,7 +39,6 @@
 // FP64 support (should be defined for most targets)
 // CHECK-DAG: #define ISPC_FP64_SUPPORTED
 
-// NOTE: ISPC_FP16_SUPPORTED is not defined as a macro, but ISPC_TARGET_HAS_HALF is used instead
 // NOTE: ISPC_LLVM_INTRINSICS_ENABLED is only defined when --enable-llvm-intrinsics is used
 
 // Signed integer min/max macros
@@ -55,7 +58,6 @@
 // CHECK-DAG: #define UINT64_MAX
 
 // Floating point min/max macros
-// Note: The actual macros are F16_MIN/F16_MAX, not FLT16_MIN/FLT16_MAX
 // CHECK-DAG: #define F16_MIN
 // CHECK-DAG: #define FLT_MIN
 // CHECK-DAG: #define DBL_MIN

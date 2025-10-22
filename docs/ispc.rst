@@ -1405,7 +1405,7 @@ preprocessor runs:
   * - ISPC_ATTRIBUTE_SUPPORTED
     - 1
     - The macro is defined if the ``ispc`` compiler supports ``__attribute__(())`` syntax.
-  * - ISPC_FP16_SUPPORTED
+  * - ISPC_TARGET_HAS_HALF
     - 1
     - The macro is defined if float16 type is supported by the ``ispc`` target.
       The implementation may rely either on native hardware support or emulation.
@@ -1424,10 +1424,10 @@ preprocessor runs:
   * - UINT8_MAX, UINT16_MAX, UINT32_MAX, UINT64_MAX
     -
     - Maximum value of unsigned integer types of the corresponding size
-  * - FLT16_MIN, FLT_MIN, DBL_MIN
+  * - F16_MIN, FLT_MIN, DBL_MIN
     -
     - Smallest positive normal number of the corresponding floating-point type
-  * - FLT16_MAX, FLT_MAX, DBL_MAX
+  * - F16_MAX, FLT_MAX, DBL_MAX
     -
     - Largest normal number of the corresponding floating-point type
 
