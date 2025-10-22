@@ -1409,6 +1409,9 @@ preprocessor runs:
     - 1
     - The macro is defined if float16 type is supported by the ``ispc`` target.
       The implementation may rely either on native hardware support or emulation.
+  * - ISPC_TARGET_HAS_RAND
+    - 1
+    - The macro is defined if the target supports the ``rand()`` function.
   * - ISPC_FP64_SUPPORTED
     - 1
     - The macro is defined if double type is supported by the target
