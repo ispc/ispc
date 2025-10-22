@@ -1,15 +1,15 @@
 // RUN: %{ispc} %s --cpu=icelake-client --target=avx512skx-x8 --emit-llvm-text --enable-llvm-intrinsics -o - | FileCheck %s
 
-// REQUIRES: X86_ENABLED
-// UNSUPPORTED: LLVM_22_0+
+// REQUIRES: X86_ENABLED && LLVM_22_0+
+
 // CHECK: declare <8 x i32> @llvm.x86.avx512.vpdpbusd.256(
-int foo_busd(int arg0, int arg1, int arg2) {
+int foo_busd(int arg0, uniform int8<32> arg1, uniform int8<32> arg2) {
     int ret = @llvm.x86.avx512.vpdpbusd.256(arg0, arg1, arg2);
     return ret;
 }
 
 // CHECK: declare <8 x i32> @llvm.x86.avx512.vpdpbusds.256(
-int foo_busds(int arg0, int arg1, int arg2) {
+int foo_busds(int arg0, uniform int8<32> arg1, uniform int8<32> arg2) {
     int ret = @llvm.x86.avx512.vpdpbusds.256(arg0, arg1, arg2);
     return ret;
 }
