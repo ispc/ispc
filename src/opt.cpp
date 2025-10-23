@@ -425,6 +425,12 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addModulePass(llvm::IPSCCPPass());
         optPM.addModulePass(llvm::DeadArgumentEliminationPass());
 
+        if (!g->profileSampleUse.empty()) {
+            optPM.addModulePass(llvm::SampleProfileLoaderPass(g->profileSampleUse));
+            // Cache ProfileSummaryAnalysis as LLVM standard pipeline does
+            optPM.addModulePass(llvm::RequireAnalysisPass<llvm::ProfileSummaryAnalysis, llvm::Module>());
+        }
+
         //  No such pass with new PM
         //  https://reviews.llvm.org/D44415
         //  optPM.add(llvm::createPruneEHPass());
@@ -486,18 +492,6 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
             }
         }
         optPM.commitFunctionToModulePassManager();
-
-        // Add sample profile loader pass after ISPC transformations and basic cleanup
-        // This ensures debug info correlates with the final IR structure
-        // Note: it is earliest point where this pass doesn't produce on real
-        // world problems with metadata that drifts to invalid instructions
-        // during optimizations. This could be caused by ISPC specific
-        // transformations.
-        if (!g->profileSampleUse.empty()) {
-            optPM.addModulePass(llvm::SampleProfileLoaderPass(g->profileSampleUse));
-            // Cache ProfileSummaryAnalysis as LLVM standard pipeline does
-            optPM.addModulePass(llvm::RequireAnalysisPass<llvm::ProfileSummaryAnalysis, llvm::Module>());
-        }
 
         optPM.addModulePass(llvm::ModuleInlinerWrapperPass(IP), 265);
         // If we didn't decide to inline a function, check to see if we can
