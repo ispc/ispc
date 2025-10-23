@@ -1687,7 +1687,18 @@ void LLVMCopyMetadata(llvm::Value *vto, const llvm::Instruction *from) {
     llvm::SmallVector<std::pair<unsigned int, llvm::MDNode *>, 8> metadata;
 
     from->getAllMetadata(metadata);
+
+    // Check if destination instruction can accept !prof metadata with branch_weights
+    // Only terminators (br, switch) and call/invoke instructions can have !prof metadata
+    bool canHaveProf = to->isTerminator() || llvm::isa<llvm::CallBase>(to);
+
+    unsigned profKindID = to->getContext().getMDKindID("prof");
+
     for (unsigned int i = 0; i < metadata.size(); ++i) {
+        // Skip !prof metadata if the destination instruction cannot have it
+        if (!canHaveProf && metadata[i].first == profKindID) {
+            continue;
+        }
         to->setMetadata(metadata[i].first, metadata[i].second);
     }
 }
