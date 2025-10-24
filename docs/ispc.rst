@@ -1409,6 +1409,9 @@ preprocessor runs:
     - 1
     - The macro is defined if float16 type is supported by the ``ispc`` target.
       The implementation may rely either on native hardware support or emulation.
+  * - ISPC_TARGET_HAS_RAND
+    - 1
+    - The macro is defined if the target supports the ``rand()`` function.
   * - ISPC_FP64_SUPPORTED
     - 1
     - The macro is defined if double type is supported by the target
@@ -1424,10 +1427,10 @@ preprocessor runs:
   * - UINT8_MAX, UINT16_MAX, UINT32_MAX, UINT64_MAX
     -
     - Maximum value of unsigned integer types of the corresponding size
-  * - FLT16_MIN, FLT_MIN, DBL_MIN
+  * - F16_MIN, FLT_MIN, DBL_MIN
     -
     - Smallest positive normal number of the corresponding floating-point type
-  * - FLT16_MAX, FLT_MAX, DBL_MAX
+  * - F16_MAX, FLT_MAX, DBL_MAX
     -
     - Largest normal number of the corresponding floating-point type
 
