@@ -139,6 +139,14 @@ void lSetInternalLinkageGlobals(llvm::Module *module) {
     lSetInternalLinkageGlobal(module, "__have_conflict_detection");
     lSetInternalLinkageGlobal(module, "__have_xe_prefetch");
     lSetInternalLinkageGlobal(module, "__is_xe_target");
+    lSetInternalLinkageGlobal(module, "__have_rotate_via_shuffle_8");
+    lSetInternalLinkageGlobal(module, "__have_rotate_via_shuffle_16");
+    lSetInternalLinkageGlobal(module, "__have_rotate_via_shuffle_32");
+    lSetInternalLinkageGlobal(module, "__have_rotate_via_shuffle_64");
+    lSetInternalLinkageGlobal(module, "__have_shift_via_shuffle_8");
+    lSetInternalLinkageGlobal(module, "__have_shift_via_shuffle_16");
+    lSetInternalLinkageGlobal(module, "__have_shift_via_shuffle_32");
+    lSetInternalLinkageGlobal(module, "__have_shift_via_shuffle_64");
 }
 
 void lAddBitcodeToModule(llvm::Module *bcModule, llvm::Module *module) {

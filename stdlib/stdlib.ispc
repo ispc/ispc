@@ -404,106 +404,92 @@ template <typename T> unmasked varying T __rotate_via_shuffle(varying T v, unifo
     return shuffle(v, masks[i]);
 }
 
-#if defined(ISPC_TARGET_AVX512SKX) || defined(ISPC_TARGET_AVX512ICL) || defined(ISPC_TARGET_AVX512SPR) ||              \
-    defined(ISPC_TARGET_AVX10_2)
-#define USE_ROTATE_VIA_SHUFFLE_8
-#define USE_ROTATE_VIA_SHUFFLE_16
-
-#if TARGET_WIDTH <= 32
-#define USE_ROTATE_VIA_SHUFFLE_32
-#endif
-
-#if TARGET_WIDTH <= 16
-#define USE_ROTATE_VIA_SHUFFLE_64
-#endif
-#endif // avx512 or avx10
-
 __declspec(safe) static inline int8 rotate(int8 v, uniform int i) {
-#ifdef USE_ROTATE_VIA_SHUFFLE_8
-    return __rotate_via_shuffle(v, i);
-#else
-    return __rotate_i8(v, i);
-#endif
+    if (__have_rotate_via_shuffle_8) {
+        return __rotate_via_shuffle(v, i);
+    } else {
+        return __rotate_i8(v, i);
+    }
 }
 
 __declspec(safe) static inline unsigned int8 rotate(unsigned int8 v, uniform int i) {
-#ifdef USE_ROTATE_VIA_SHUFFLE_8
-    return __rotate_via_shuffle(v, i);
-#else
-    return __rotate_i8(v, i);
-#endif
+    if (__have_rotate_via_shuffle_8) {
+        return __rotate_via_shuffle(v, i);
+    } else {
+        return __rotate_i8(v, i);
+    }
 }
 
 __declspec(safe) static inline float16 rotate(float16 v, uniform int i) {
-#ifdef USE_ROTATE_VIA_SHUFFLE_16
-    return __rotate_via_shuffle(v, i);
-#else
-    return __rotate_half(v, i);
-#endif
+    if (__have_rotate_via_shuffle_16) {
+        return __rotate_via_shuffle(v, i);
+    } else {
+        return __rotate_half(v, i);
+    }
 }
 
 __declspec(safe) static inline int16 rotate(int16 v, uniform int i) {
-#ifdef USE_ROTATE_VIA_SHUFFLE_16
-    return __rotate_via_shuffle(v, i);
-#else
-    return __rotate_i16(v, i);
-#endif
+    if (__have_rotate_via_shuffle_16) {
+        return __rotate_via_shuffle(v, i);
+    } else {
+        return __rotate_i16(v, i);
+    }
 }
 
 __declspec(safe) static inline unsigned int16 rotate(unsigned int16 v, uniform int i) {
-#ifdef USE_ROTATE_VIA_SHUFFLE_16
-    return __rotate_via_shuffle(v, i);
-#else
-    return __rotate_i16(v, i);
-#endif
+    if (__have_rotate_via_shuffle_16) {
+        return __rotate_via_shuffle(v, i);
+    } else {
+        return __rotate_i16(v, i);
+    }
 }
 
 __declspec(safe) static inline float rotate(float v, uniform int i) {
-#ifdef USE_ROTATE_VIA_SHUFFLE_32
-    return __rotate_via_shuffle(v, i);
-#else
-    return __rotate_float(v, i);
-#endif
+    if (__have_rotate_via_shuffle_32) {
+        return __rotate_via_shuffle(v, i);
+    } else {
+        return __rotate_float(v, i);
+    }
 }
 
 __declspec(safe) static inline int32 rotate(int32 v, uniform int i) {
-#ifdef USE_ROTATE_VIA_SHUFFLE_32
-    return __rotate_via_shuffle(v, i);
-#else
-    return __rotate_i32(v, i);
-#endif
+    if (__have_rotate_via_shuffle_32) {
+        return __rotate_via_shuffle(v, i);
+    } else {
+        return __rotate_i32(v, i);
+    }
 }
 
 __declspec(safe) static inline unsigned int32 rotate(unsigned int32 v, uniform int i) {
-#ifdef USE_ROTATE_VIA_SHUFFLE_32
-    return __rotate_via_shuffle(v, i);
-#else
-    return __rotate_i32(v, i);
-#endif
+    if (__have_rotate_via_shuffle_32) {
+        return __rotate_via_shuffle(v, i);
+    } else {
+        return __rotate_i32(v, i);
+    }
 }
 
 __declspec(safe) static inline double rotate(double v, uniform int i) {
-#ifdef USE_ROTATE_VIA_SHUFFLE_64
-    return __rotate_via_shuffle(v, i);
-#else
-    return __rotate_double(v, i);
-#endif
+    if (__have_rotate_via_shuffle_64) {
+        return __rotate_via_shuffle(v, i);
+    } else {
+        return __rotate_double(v, i);
+    }
 }
 
 __declspec(safe) static inline int64 rotate(int64 v, uniform int i) {
-#ifdef USE_ROTATE_VIA_SHUFFLE_64
-    return __rotate_via_shuffle(v, i);
-#else
-    return __rotate_i64(v, i);
-#endif
+    if (__have_rotate_via_shuffle_64) {
+        return __rotate_via_shuffle(v, i);
+    } else {
+        return __rotate_i64(v, i);
+    }
 }
 
 __declspec(safe) static inline unsigned int64 rotate(unsigned int64 v, uniform int i) {
-#ifdef USE_ROTATE_VIA_SHUFFLE_64
-    return __rotate_via_shuffle(v, i);
-#else
-    return __rotate_i64(v, i);
-#endif
+    if (__have_rotate_via_shuffle_64) {
+        return __rotate_via_shuffle(v, i);
+    } else {
+        return __rotate_i64(v, i);
+    }
 }
 
 template <typename T> unmasked varying T __shift_via_shuffle(varying T v, uniform int32 i) {
@@ -520,128 +506,114 @@ template <typename T> unmasked varying T __shift_via_shuffle(varying T v, unifor
     return select(inBounds, shuffled, (varying T)0);
 }
 
-#if defined(ISPC_TARGET_AVX512SKX) || defined(ISPC_TARGET_AVX512ICL) || defined(ISPC_TARGET_AVX512SPR) ||              \
-    defined(ISPC_TARGET_AVX10_2)
-#define USE_SHIFT_VIA_SHUFFLE_8
-#define USE_SHIFT_VIA_SHUFFLE_16
-
-#if TARGET_WIDTH < 64
-#define USE_SHIFT_VIA_SHUFFLE_32
-#endif
-
-#if TARGET_WIDTH < 32
-#define USE_SHIFT_VIA_SHUFFLE_64
-#endif
-#endif // avx512 or avx10
-
 __declspec(safe) static inline float shift(float v, uniform int i) {
-#ifdef USE_SHIFT_VIA_SHUFFLE_32
-    return __shift_via_shuffle(v, i);
-#else
-    varying float result;
-    unmasked { result = __shift_float(v, i); }
-    return result;
-#endif
+    if (__have_shift_via_shuffle_32) {
+        return __shift_via_shuffle(v, i);
+    } else {
+        varying float result;
+        unmasked { result = __shift_float(v, i); }
+        return result;
+    }
 }
 
 __declspec(safe) static inline int8 shift(int8 v, uniform int i) {
-#ifdef USE_SHIFT_VIA_SHUFFLE_8
-    return __shift_via_shuffle(v, i);
-#else
-    varying int8 result;
-    unmasked { result = __shift_i8(v, i); }
-    return result;
-#endif
+    if (__have_shift_via_shuffle_8) {
+        return __shift_via_shuffle(v, i);
+    } else {
+        varying int8 result;
+        unmasked { result = __shift_i8(v, i); }
+        return result;
+    }
 }
 
 __declspec(safe) static inline unsigned int8 shift(unsigned int8 v, uniform int i) {
-#ifdef USE_SHIFT_VIA_SHUFFLE_8
-    return __shift_via_shuffle(v, i);
-#else
-    varying unsigned int8 result;
-    unmasked { result = __shift_i8(v, i); }
-    return result;
-#endif
+    if (__have_shift_via_shuffle_8) {
+        return __shift_via_shuffle(v, i);
+    } else {
+        varying unsigned int8 result;
+        unmasked { result = __shift_i8(v, i); }
+        return result;
+    }
 }
 
 __declspec(safe) static inline int16 shift(int16 v, uniform int i) {
-#ifdef USE_SHIFT_VIA_SHUFFLE_16
-    return __shift_via_shuffle(v, i);
-#else
-    varying int16 result;
-    unmasked { result = __shift_i16(v, i); }
-    return result;
-#endif
+    if (__have_shift_via_shuffle_16) {
+        return __shift_via_shuffle(v, i);
+    } else {
+        varying int16 result;
+        unmasked { result = __shift_i16(v, i); }
+        return result;
+    }
 }
 
 __declspec(safe) static inline unsigned int16 shift(unsigned int16 v, uniform int i) {
-#ifdef USE_SHIFT_VIA_SHUFFLE_16
-    return __shift_via_shuffle(v, i);
-#else
-    varying unsigned int16 result;
-    unmasked { result = __shift_i16(v, i); }
-    return result;
-#endif
+    if (__have_shift_via_shuffle_16) {
+        return __shift_via_shuffle(v, i);
+    } else {
+        varying unsigned int16 result;
+        unmasked { result = __shift_i16(v, i); }
+        return result;
+    }
 }
 
 __declspec(safe) static inline float16 shift(float16 v, uniform int i) {
-#ifdef USE_SHIFT_VIA_SHUFFLE_16
-    return __shift_via_shuffle(v, i);
-#else
-    varying float16 result;
-    unmasked { result = __shift_half(v, i); }
-    return result;
-#endif
+    if (__have_shift_via_shuffle_16) {
+        return __shift_via_shuffle(v, i);
+    } else {
+        varying float16 result;
+        unmasked { result = __shift_half(v, i); }
+        return result;
+    }
 }
 
 __declspec(safe) static inline int32 shift(int32 v, uniform int i) {
-#ifdef USE_SHIFT_VIA_SHUFFLE_32
-    return __shift_via_shuffle(v, i);
-#else
-    varying int32 result;
-    unmasked { result = __shift_i32(v, i); }
-    return result;
-#endif
+    if (__have_shift_via_shuffle_32) {
+        return __shift_via_shuffle(v, i);
+    } else {
+        varying int32 result;
+        unmasked { result = __shift_i32(v, i); }
+        return result;
+    }
 }
 
 __declspec(safe) static inline unsigned int32 shift(unsigned int32 v, uniform int i) {
-#ifdef USE_SHIFT_VIA_SHUFFLE_32
-    return __shift_via_shuffle(v, i);
-#else
-    varying unsigned int32 result;
-    unmasked { result = __shift_i32(v, i); }
-    return result;
-#endif
+    if (__have_shift_via_shuffle_32) {
+        return __shift_via_shuffle(v, i);
+    } else {
+        varying unsigned int32 result;
+        unmasked { result = __shift_i32(v, i); }
+        return result;
+    }
 }
 
 __declspec(safe) static inline double shift(double v, uniform int i) {
-#ifdef USE_SHIFT_VIA_SHUFFLE_64
-    return __shift_via_shuffle(v, i);
-#else
-    varying double result;
-    unmasked { result = __shift_double(v, i); }
-    return result;
-#endif
+    if (__have_shift_via_shuffle_64) {
+        return __shift_via_shuffle(v, i);
+    } else {
+        varying double result;
+        unmasked { result = __shift_double(v, i); }
+        return result;
+    }
 }
 
 __declspec(safe) static inline int64 shift(int64 v, uniform int i) {
-#ifdef USE_SHIFT_VIA_SHUFFLE_64
-    return __shift_via_shuffle(v, i);
-#else
-    varying int64 result;
-    unmasked { result = __shift_i64(v, i); }
-    return result;
-#endif
+    if (__have_shift_via_shuffle_64) {
+        return __shift_via_shuffle(v, i);
+    } else {
+        varying int64 result;
+        unmasked { result = __shift_i64(v, i); }
+        return result;
+    }
 }
 
 __declspec(safe) static inline unsigned int64 shift(unsigned int64 v, uniform int i) {
-#ifdef USE_SHIFT_VIA_SHUFFLE_64
-    return __shift_via_shuffle(v, i);
-#else
-    varying unsigned int64 result;
-    unmasked { result = __shift_i64(v, i); }
-    return result;
-#endif
+    if (__have_shift_via_shuffle_64) {
+        return __shift_via_shuffle(v, i);
+    } else {
+        varying unsigned int64 result;
+        unmasked { result = __shift_i64(v, i); }
+        return result;
+    }
 }
 
 __declspec(safe) static inline float shuffle(float v, int i) { return __shuffle_float(v, i); }
@@ -3118,11 +3090,11 @@ ATOMIC_DECL_CMPXCHG(double, double, IntMaskType, int64)
 // void * variants of swap and compare exchange
 
 static inline void *atomic_swap_global(void **uniform ptr, void *value) {
-    return (void *)atomic_swap_global((uniform intptr_t * uniform) ptr, (intptr_t)value);
+    return (void *)atomic_swap_global((uniform intptr_t *uniform)ptr, (intptr_t)value);
 }
 
 static inline void *uniform atomic_swap_global(void **uniform ptr, void *uniform value) {
-    return (void *uniform)atomic_swap_global((uniform intptr_t * uniform) ptr, (uniform intptr_t)value);
+    return (void *uniform)atomic_swap_global((uniform intptr_t *uniform)ptr, (uniform intptr_t)value);
 }
 
 static inline void *atomic_swap_global(void **ptr, void *value) {
@@ -3130,12 +3102,12 @@ static inline void *atomic_swap_global(void **ptr, void *value) {
 }
 
 static inline void *atomic_compare_exchange_global(void **uniform ptr, void *oldval, void *newval) {
-    return (void *)atomic_compare_exchange_global((uniform intptr_t * uniform) ptr, (intptr_t)oldval, (intptr_t)newval);
+    return (void *)atomic_compare_exchange_global((uniform intptr_t *uniform)ptr, (intptr_t)oldval, (intptr_t)newval);
 }
 
 static inline void *uniform atomic_compare_exchange_global(void **uniform ptr, void *uniform oldval,
                                                            void *uniform newval) {
-    return (void *uniform)atomic_compare_exchange_global((uniform intptr_t * uniform) ptr, (uniform intptr_t)oldval,
+    return (void *uniform)atomic_compare_exchange_global((uniform intptr_t *uniform)ptr, (uniform intptr_t)oldval,
                                                          (uniform intptr_t)newval);
 }
 
@@ -3300,11 +3272,11 @@ LOCAL_CMPXCHG(double)
 // void * variants of swap and compare exchange
 
 static inline void *atomic_swap_local(void **uniform ptr, void *value) {
-    return (void *)atomic_swap_local((uniform intptr_t * uniform) ptr, (intptr_t)value);
+    return (void *)atomic_swap_local((uniform intptr_t *uniform)ptr, (intptr_t)value);
 }
 
 static inline void *uniform atomic_swap_local(void **uniform ptr, void *uniform value) {
-    return (void *uniform)atomic_swap_local((uniform intptr_t * uniform) ptr, (uniform intptr_t)value);
+    return (void *uniform)atomic_swap_local((uniform intptr_t *uniform)ptr, (uniform intptr_t)value);
 }
 
 static inline void *atomic_swap_local(void **ptr, void *value) {
@@ -3312,12 +3284,12 @@ static inline void *atomic_swap_local(void **ptr, void *value) {
 }
 
 static inline void *atomic_compare_exchange_local(void **uniform ptr, void *oldval, void *newval) {
-    return (void *)atomic_compare_exchange_local((uniform intptr_t * uniform) ptr, (intptr_t)oldval, (intptr_t)newval);
+    return (void *)atomic_compare_exchange_local((uniform intptr_t *uniform)ptr, (intptr_t)oldval, (intptr_t)newval);
 }
 
 static inline void *uniform atomic_compare_exchange_local(void **uniform ptr, void *uniform oldval,
                                                           void *uniform newval) {
-    return (void *uniform)atomic_compare_exchange_local((uniform intptr_t * uniform) ptr, (uniform intptr_t)oldval,
+    return (void *uniform)atomic_compare_exchange_local((uniform intptr_t *uniform)ptr, (uniform intptr_t)oldval,
                                                         (uniform intptr_t)newval);
 }
 

@@ -172,6 +172,48 @@ static const int32 programIndex = {ISPC_PROGRAM_INDEX_INITIALIZER};
 #define ISPC_IS_XE_TARGET_VAL 0
 #endif
 
+#if defined(ISPC_TARGET_AVX512SKX) || defined(ISPC_TARGET_AVX512ICL) || defined(ISPC_TARGET_AVX512SPR) ||              \
+    defined(ISPC_TARGET_AVX10_2)
+#define ISPC_TARGET_HAS_ROTATE_VIA_SHUFFLE_8_VAL 1
+#define ISPC_TARGET_HAS_ROTATE_VIA_SHUFFLE_16_VAL 1
+#if TARGET_WIDTH <= 32
+#define ISPC_TARGET_HAS_ROTATE_VIA_SHUFFLE_32_VAL 1
+#else
+#define ISPC_TARGET_HAS_ROTATE_VIA_SHUFFLE_32_VAL 0
+#endif
+#if TARGET_WIDTH <= 16
+#define ISPC_TARGET_HAS_ROTATE_VIA_SHUFFLE_64_VAL 1
+#else
+#define ISPC_TARGET_HAS_ROTATE_VIA_SHUFFLE_64_VAL 0
+#endif
+#else
+#define ISPC_TARGET_HAS_ROTATE_VIA_SHUFFLE_8_VAL 0
+#define ISPC_TARGET_HAS_ROTATE_VIA_SHUFFLE_16_VAL 0
+#define ISPC_TARGET_HAS_ROTATE_VIA_SHUFFLE_32_VAL 0
+#define ISPC_TARGET_HAS_ROTATE_VIA_SHUFFLE_64_VAL 0
+#endif
+
+#if defined(ISPC_TARGET_AVX512SKX) || defined(ISPC_TARGET_AVX512ICL) || defined(ISPC_TARGET_AVX512SPR) ||              \
+    defined(ISPC_TARGET_AVX10_2)
+#define ISPC_TARGET_HAS_SHIFT_VIA_SHUFFLE_8_VAL 1
+#define ISPC_TARGET_HAS_SHIFT_VIA_SHUFFLE_16_VAL 1
+#if TARGET_WIDTH < 64
+#define ISPC_TARGET_HAS_SHIFT_VIA_SHUFFLE_32_VAL 1
+#else
+#define ISPC_TARGET_HAS_SHIFT_VIA_SHUFFLE_32_VAL 0
+#endif
+#if TARGET_WIDTH < 32
+#define ISPC_TARGET_HAS_SHIFT_VIA_SHUFFLE_64_VAL 1
+#else
+#define ISPC_TARGET_HAS_SHIFT_VIA_SHUFFLE_64_VAL 0
+#endif
+#else
+#define ISPC_TARGET_HAS_SHIFT_VIA_SHUFFLE_8_VAL 0
+#define ISPC_TARGET_HAS_SHIFT_VIA_SHUFFLE_16_VAL 0
+#define ISPC_TARGET_HAS_SHIFT_VIA_SHUFFLE_32_VAL 0
+#define ISPC_TARGET_HAS_SHIFT_VIA_SHUFFLE_64_VAL 0
+#endif
+
 #ifdef ISPC_INTERNAL_STDLIB_COMPILATION
 // Compilation of stdlib.ispc, no real values supplied to avoid irreversible
 // optimizations.
@@ -213,6 +255,22 @@ const uniform int32 __have_xe_prefetch;
 
 const uniform int32 __is_xe_target;
 
+const uniform int32 __have_rotate_via_shuffle_8;
+
+const uniform int32 __have_rotate_via_shuffle_16;
+
+const uniform int32 __have_rotate_via_shuffle_32;
+
+const uniform int32 __have_rotate_via_shuffle_64;
+
+const uniform int32 __have_shift_via_shuffle_8;
+
+const uniform int32 __have_shift_via_shuffle_16;
+
+const uniform int32 __have_shift_via_shuffle_32;
+
+const uniform int32 __have_shift_via_shuffle_64;
+
 #else
 // Compilation of user code with the actual values provided by user via command
 // line flags.
@@ -253,6 +311,22 @@ const uniform int32 __have_conflict_detection = ISPC_TARGET_HAS_CONFLICT_DETECTI
 const uniform int32 __have_xe_prefetch = ISPC_TARGET_HAS_XE_PREFETCH_VAL;
 
 const uniform int32 __is_xe_target = ISPC_IS_XE_TARGET_VAL;
+
+const uniform int32 __have_rotate_via_shuffle_8 = ISPC_TARGET_HAS_ROTATE_VIA_SHUFFLE_8_VAL;
+
+const uniform int32 __have_rotate_via_shuffle_16 = ISPC_TARGET_HAS_ROTATE_VIA_SHUFFLE_16_VAL;
+
+const uniform int32 __have_rotate_via_shuffle_32 = ISPC_TARGET_HAS_ROTATE_VIA_SHUFFLE_32_VAL;
+
+const uniform int32 __have_rotate_via_shuffle_64 = ISPC_TARGET_HAS_ROTATE_VIA_SHUFFLE_64_VAL;
+
+const uniform int32 __have_shift_via_shuffle_8 = ISPC_TARGET_HAS_SHIFT_VIA_SHUFFLE_8_VAL;
+
+const uniform int32 __have_shift_via_shuffle_16 = ISPC_TARGET_HAS_SHIFT_VIA_SHUFFLE_16_VAL;
+
+const uniform int32 __have_shift_via_shuffle_32 = ISPC_TARGET_HAS_SHIFT_VIA_SHUFFLE_32_VAL;
+
+const uniform int32 __have_shift_via_shuffle_64 = ISPC_TARGET_HAS_SHIFT_VIA_SHUFFLE_64_VAL;
 
 #endif
 
