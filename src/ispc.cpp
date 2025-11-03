@@ -939,12 +939,10 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
     : m_target(nullptr), m_targetMachine(nullptr), m_dataLayout(nullptr), m_valid(false), m_ispc_target(ispc_target),
       m_isa(SSE2), m_arch(Arch::none), m_is32Bit(true), m_cpu(""), m_attributes(""), m_tf_attributes(nullptr),
       m_nativeVectorWidth(-1), m_nativeVectorAlignment(-1), m_dataTypeWidth(-1), m_vectorWidth(-1),
-      m_picLevel(picLevel), m_codeModel(code_model), m_maskingIsFree(false), m_maskBitCount(-1), m_hasIntelVNNI(false),
-      m_hasIntelVNNI_Int8(false), m_hasIntelVNNI_Int16(false), m_hasArmDotProduct(false), m_hasArmI8MM(false),
-      m_hasHalfConverts(false), m_hasHalfFullSupport(false), m_hasRand(false), m_hasGather(false), m_hasScatter(false),
-      m_hasTranscendentals(false), m_hasTrigonometry(false), m_hasRsqrtd(false), m_hasRcpd(false),
-      m_hasVecPrefetch(false), m_hasSaturatingArithmetic(false), m_hasFp16Support(false), m_hasFp64Support(true),
-      m_hasConflictDetection(false), m_warnings(0) {
+      m_picLevel(picLevel), m_codeModel(code_model), m_maskingIsFree(false), m_maskBitCount(-1), m_capabilities(),
+      m_hasGather(false), m_hasScatter(false), m_hasVecPrefetch(false), m_warnings(0) {
+    // Set Fp64Support to true by default
+    setCapability(TargetCapability::Fp64Support, true);
     DeviceType CPUID = CPU_None, CPUfromISA = CPU_None;
     AllCPUs a;
     std::string featuresString;
@@ -1154,13 +1152,13 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 
     // FP16 support for Xe and Arm. For x86 set is individually for appropriate targets.
     if (ISPCTargetIsGen(m_ispc_target) || ISPCTargetIsNeon(m_ispc_target)) {
-        m_hasFp16Support = true;
+        setCapability(TargetCapability::Fp16Support);
     }
 
 #ifdef ISPC_XE_ENABLED
     if ((ISPCTargetIsGen(m_ispc_target)) &&
         (CPUID == GPU_TGLLP || CPUID == GPU_ACM_G10 || CPUID == GPU_ACM_G11 || CPUID == GPU_ACM_G12)) {
-        m_hasFp64Support = false;
+        setCapability(TargetCapability::Fp64Support, false);
     }
 
     // In case of Xe target addressing should correspond to host addressing. Otherwise pointers will not work.
@@ -1407,9 +1405,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 32;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 8;
-        this->m_hasHalfConverts = true;
-        this->m_hasRand = true;
         this->m_hasGather = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::Rand});
         CPUfromISA = CPU_Haswell;
         break;
     case ISPCTarget::avx2_i16x16:
@@ -1420,9 +1417,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 16;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 16;
-        this->m_hasHalfConverts = true;
-        this->m_hasRand = true;
         this->m_hasGather = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::Rand});
         CPUfromISA = CPU_Haswell;
         break;
     case ISPCTarget::avx2_i32x4:
@@ -1434,10 +1430,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 4;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        this->m_hasHalfConverts = true;
-        this->m_hasRand = true;
         this->m_hasGather = true;
-        this->m_hasIntelVNNI = (m_ispc_target == ISPCTarget::avx2vnni_i32x4) ? true : false;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::Rand});
+        setCapability(TargetCapability::IntelVNNI, (m_ispc_target == ISPCTarget::avx2vnni_i32x4));
         CPUfromISA = (m_ispc_target == ISPCTarget::avx2vnni_i32x4) ? CPU_ADL : CPU_Haswell;
         break;
     case ISPCTarget::avx2_i32x8:
@@ -1449,10 +1444,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 8;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        this->m_hasHalfConverts = true;
-        this->m_hasRand = true;
         this->m_hasGather = true;
-        this->m_hasIntelVNNI = (m_ispc_target == ISPCTarget::avx2vnni_i32x8) ? true : false;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::Rand});
+        setCapability(TargetCapability::IntelVNNI, (m_ispc_target == ISPCTarget::avx2vnni_i32x8));
         CPUfromISA = (m_ispc_target == ISPCTarget::avx2vnni_i32x8) ? CPU_ADL : CPU_Haswell;
         break;
     case ISPCTarget::avx2_i32x16:
@@ -1464,10 +1458,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 16;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
-        this->m_hasHalfConverts = true;
-        this->m_hasRand = true;
         this->m_hasGather = true;
-        this->m_hasIntelVNNI = (m_ispc_target == ISPCTarget::avx2vnni_i32x16) ? true : false;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::Rand});
+        setCapability(TargetCapability::IntelVNNI, (m_ispc_target == ISPCTarget::avx2vnni_i32x16));
         CPUfromISA = (m_ispc_target == ISPCTarget::avx2vnni_i32x16) ? CPU_ADL : CPU_Haswell;
         break;
     case ISPCTarget::avx2_i64x4:
@@ -1478,9 +1471,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 4;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 64;
-        this->m_hasHalfConverts = true;
-        this->m_hasRand = true;
         this->m_hasGather = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::Rand});
         CPUfromISA = CPU_Haswell;
         break;
     case ISPCTarget::avx512skx_x4:
@@ -1492,15 +1484,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 4;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalfConverts = true;
-        this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasTranscendentals = false;
-        this->m_hasTrigonometry = false;
-        this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
-        this->m_hasIntelVNNI = (m_ispc_target == ISPCTarget::avx512icl_x4) ? true : false;
-        this->m_hasConflictDetection = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::Rand, TargetCapability::Rsqrtd,
+                         TargetCapability::Rcpd, TargetCapability::ConflictDetection});
+        setCapability(TargetCapability::IntelVNNI, (m_ispc_target == ISPCTarget::avx512icl_x4));
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x4) ? CPU_ICL : CPU_SKX;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1514,15 +1502,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 8;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalfConverts = true;
-        this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasTranscendentals = false;
-        this->m_hasTrigonometry = false;
-        this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
-        this->m_hasIntelVNNI = (m_ispc_target == ISPCTarget::avx512icl_x8) ? true : false;
-        this->m_hasConflictDetection = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::Rand, TargetCapability::Rsqrtd,
+                         TargetCapability::Rcpd, TargetCapability::ConflictDetection});
+        setCapability(TargetCapability::IntelVNNI, (m_ispc_target == ISPCTarget::avx512icl_x8));
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x8) ? CPU_ICL : CPU_SKX;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1540,17 +1524,12 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 16;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalfConverts = true;
-        this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasTranscendentals = false;
-        this->m_hasTrigonometry = false;
-        this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
-        this->m_hasIntelVNNI =
-            (m_ispc_target == ISPCTarget::avx512icl_x16 || m_ispc_target == ISPCTarget::avx512icl_x16_nozmm) ? true
-                                                                                                             : false;
-        this->m_hasConflictDetection = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::Rand, TargetCapability::Rsqrtd,
+                         TargetCapability::Rcpd, TargetCapability::ConflictDetection});
+        setCapability(TargetCapability::IntelVNNI,
+                      (m_ispc_target == ISPCTarget::avx512icl_x16 || m_ispc_target == ISPCTarget::avx512icl_x16_nozmm));
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x16 || m_ispc_target == ISPCTarget::avx512icl_x16_nozmm)
                          ? CPU_ICL
                          : CPU_SKX;
@@ -1576,15 +1555,10 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 64;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalfConverts = true;
-        this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasTranscendentals = false;
-        this->m_hasTrigonometry = false;
-        this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
-        this->m_hasIntelVNNI = (m_ispc_target == ISPCTarget::avx512icl_x64) ? true : false;
-        this->m_hasConflictDetection = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::Rand, TargetCapability::ConflictDetection});
+        setCapability(TargetCapability::IntelVNNI, (m_ispc_target == ISPCTarget::avx512icl_x64));
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x64) ? CPU_ICL : CPU_SKX;
         break;
     case ISPCTarget::avx512skx_x32:
@@ -1600,15 +1574,10 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 32;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalfConverts = true;
-        this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasTranscendentals = false;
-        this->m_hasTrigonometry = false;
-        this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
-        this->m_hasIntelVNNI = (m_ispc_target == ISPCTarget::avx512icl_x32) ? true : false;
-        this->m_hasConflictDetection = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::Rand, TargetCapability::ConflictDetection});
+        setCapability(TargetCapability::IntelVNNI, (m_ispc_target == ISPCTarget::avx512icl_x32));
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x32) ? CPU_ICL : CPU_SKX;
         break;
     case ISPCTarget::avx512spr_x4:
@@ -1619,17 +1588,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 4;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
-        this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasTranscendentals = false;
-        this->m_hasTrigonometry = false;
-        this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
-        this->m_hasFp16Support = true;
-        this->m_hasIntelVNNI = true;
-        this->m_hasConflictDetection = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
+                         TargetCapability::Rsqrtd, TargetCapability::Rcpd, TargetCapability::Fp16Support,
+                         TargetCapability::IntelVNNI, TargetCapability::ConflictDetection});
         CPUfromISA = CPU_SPR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1642,17 +1605,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 8;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
-        this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasTranscendentals = false;
-        this->m_hasTrigonometry = false;
-        this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
-        this->m_hasFp16Support = true;
-        this->m_hasIntelVNNI = true;
-        this->m_hasConflictDetection = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
+                         TargetCapability::Rsqrtd, TargetCapability::Rcpd, TargetCapability::Fp16Support,
+                         TargetCapability::IntelVNNI, TargetCapability::ConflictDetection});
         CPUfromISA = CPU_SPR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1665,17 +1622,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 16;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
-        this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasTranscendentals = false;
-        this->m_hasTrigonometry = false;
-        this->m_hasRsqrtd = this->m_hasRcpd = true;
         this->m_hasVecPrefetch = false;
-        this->m_hasFp16Support = true;
-        this->m_hasIntelVNNI = true;
-        this->m_hasConflictDetection = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
+                         TargetCapability::Rsqrtd, TargetCapability::Rcpd, TargetCapability::Fp16Support,
+                         TargetCapability::IntelVNNI, TargetCapability::ConflictDetection});
         CPUfromISA = CPU_SPR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "512"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "512"));
@@ -1688,17 +1639,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 64;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
-        this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasTranscendentals = false;
-        this->m_hasTrigonometry = false;
-        this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
-        this->m_hasFp16Support = true;
-        this->m_hasIntelVNNI = true;
-        this->m_hasConflictDetection = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
+                         TargetCapability::Fp16Support, TargetCapability::IntelVNNI,
+                         TargetCapability::ConflictDetection});
         CPUfromISA = CPU_SPR;
         break;
     case ISPCTarget::avx512spr_x32:
@@ -1709,17 +1654,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 32;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
-        this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasTranscendentals = false;
-        this->m_hasTrigonometry = false;
-        this->m_hasRsqrtd = this->m_hasRcpd = false;
         this->m_hasVecPrefetch = false;
-        this->m_hasFp16Support = true;
-        this->m_hasIntelVNNI = true;
-        this->m_hasConflictDetection = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
+                         TargetCapability::Fp16Support, TargetCapability::IntelVNNI,
+                         TargetCapability::ConflictDetection});
         CPUfromISA = CPU_SPR;
         break;
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
@@ -1731,16 +1670,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 4;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
-        this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasFp16Support = true;
-        this->m_hasIntelVNNI = true;
-        this->m_hasIntelVNNI_Int8 = true;
-        this->m_hasIntelVNNI_Int16 = true;
-        this->m_hasConflictDetection = true;
-        this->m_hasRsqrtd = this->m_hasRcpd = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
+                         TargetCapability::Fp16Support, TargetCapability::IntelVNNI, TargetCapability::IntelVNNI_Int8,
+                         TargetCapability::IntelVNNI_Int16, TargetCapability::ConflictDetection,
+                         TargetCapability::Rsqrtd, TargetCapability::Rcpd});
         CPUfromISA = CPU_DMR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1753,16 +1687,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 8;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
-        this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasFp16Support = true;
-        this->m_hasIntelVNNI = true;
-        this->m_hasIntelVNNI_Int8 = true;
-        this->m_hasIntelVNNI_Int16 = true;
-        this->m_hasConflictDetection = true;
-        this->m_hasRsqrtd = this->m_hasRcpd = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
+                         TargetCapability::Fp16Support, TargetCapability::IntelVNNI, TargetCapability::IntelVNNI_Int8,
+                         TargetCapability::IntelVNNI_Int16, TargetCapability::ConflictDetection,
+                         TargetCapability::Rsqrtd, TargetCapability::Rcpd});
         CPUfromISA = CPU_DMR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1775,16 +1704,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 16;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
-        this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasFp16Support = true;
-        this->m_hasIntelVNNI = true;
-        this->m_hasIntelVNNI_Int8 = true;
-        this->m_hasIntelVNNI_Int16 = true;
-        this->m_hasConflictDetection = true;
-        this->m_hasRsqrtd = this->m_hasRcpd = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
+                         TargetCapability::Fp16Support, TargetCapability::IntelVNNI, TargetCapability::IntelVNNI_Int8,
+                         TargetCapability::IntelVNNI_Int16, TargetCapability::ConflictDetection,
+                         TargetCapability::Rsqrtd, TargetCapability::Rcpd});
         CPUfromISA = CPU_DMR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "512"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "512"));
@@ -1797,16 +1721,10 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 32;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
-        this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasFp16Support = true;
-        this->m_hasIntelVNNI = true;
-        this->m_hasIntelVNNI_Int8 = true;
-        this->m_hasIntelVNNI_Int16 = true;
-        this->m_hasConflictDetection = true;
-        this->m_hasRsqrtd = this->m_hasRcpd = false;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
+                         TargetCapability::Fp16Support, TargetCapability::IntelVNNI, TargetCapability::IntelVNNI_Int8,
+                         TargetCapability::IntelVNNI_Int16, TargetCapability::ConflictDetection});
         CPUfromISA = CPU_DMR;
         break;
     case ISPCTarget::avx10_2_x64:
@@ -1817,16 +1735,10 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_vectorWidth = 64;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
-        this->m_hasRand = true;
         this->m_hasGather = this->m_hasScatter = true;
-        this->m_hasFp16Support = true;
-        this->m_hasIntelVNNI = true;
-        this->m_hasIntelVNNI_Int8 = true;
-        this->m_hasIntelVNNI_Int16 = true;
-        this->m_hasConflictDetection = true;
-        this->m_hasRsqrtd = this->m_hasRcpd = false;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
+                         TargetCapability::Fp16Support, TargetCapability::IntelVNNI, TargetCapability::IntelVNNI_Int8,
+                         TargetCapability::IntelVNNI_Int16, TargetCapability::ConflictDetection});
         CPUfromISA = CPU_DMR;
         break;
 #else
@@ -1845,7 +1757,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 8;
         this->m_vectorWidth = 16;
-        this->m_hasHalfConverts = true; // ??
         // https://github.com/ispc/ispc/issues/2052
         // AArch64 disables Coherent Control Flow optimization because of a bug in
         // LLVM aarch64 back-end that reduces the efficiency of simplifyCFG.
@@ -1857,6 +1768,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         // This note applies to all NEON targets below.
         this->m_maskingIsFree = (arch == Arch::aarch64);
         this->m_maskBitCount = 8;
+        setCapability(TargetCapability::HalfConverts); // ??
         break;
     case ISPCTarget::neon_i8x32:
         this->m_isa = Target::NEON;
@@ -1865,11 +1777,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_dataTypeWidth = 8;
         this->m_vectorWidth = 32;
         this->m_maskingIsFree = (arch == Arch::aarch64);
-        this->m_hasHalfConverts = true;
-        this->m_maskBitCount = 8;
         // TODO: this is a workaround for the bug in GatherCoalescePass for x32 targets.
         // see issue #3153
         this->m_hasGather = true;
+        this->m_maskBitCount = 8;
+        setCapability(TargetCapability::HalfConverts);
         break;
     case ISPCTarget::neon_i16x8:
         this->m_isa = Target::NEON;
@@ -1877,9 +1789,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 16;
         this->m_vectorWidth = 8;
-        this->m_hasHalfConverts = true; // ??
         this->m_maskingIsFree = (arch == Arch::aarch64);
         this->m_maskBitCount = 16;
+        setCapability(TargetCapability::HalfConverts); // ??
         break;
     case ISPCTarget::neon_i16x16:
         this->m_isa = Target::NEON;
@@ -1888,8 +1800,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_dataTypeWidth = 16;
         this->m_vectorWidth = 16;
         this->m_maskingIsFree = (arch == Arch::aarch64);
-        this->m_hasHalfConverts = true;
         this->m_maskBitCount = 16;
+        setCapability(TargetCapability::HalfConverts);
         break;
     case ISPCTarget::neon_i32x4:
         this->m_isa = Target::NEON;
@@ -1897,11 +1809,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 4;
-        this->m_hasHalfConverts = true; // ??
-        // TODO: m_hasHalfFullSupport is not enabled here, as it's only supported starting from ARMv8.2 / Cortex A75
-        // We nned to defferentiate ARM target with and without float16 support.
         this->m_maskingIsFree = (arch == Arch::aarch64);
         this->m_maskBitCount = 32;
+        setCapability(TargetCapability::HalfConverts); // ??
+        // TODO: m_hasHalfFullSupport is not enabled here, as it's only supported starting from ARMv8.2 / Cortex A75
+        // We nned to defferentiate ARM target with and without float16 support.
         break;
     case ISPCTarget::neon_i32x8:
         this->m_isa = Target::NEON;
@@ -1909,9 +1821,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 8;
-        this->m_hasHalfConverts = true; // ??
         this->m_maskingIsFree = (arch == Arch::aarch64);
         this->m_maskBitCount = 32;
+        setCapability(TargetCapability::HalfConverts); // ??
         break;
 #else
     case ISPCTarget::neon_i8x16:
@@ -1930,17 +1842,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 4;
-        this->m_hasHalfConverts = false;
-        this->m_hasHalfFullSupport = false;
-        this->m_maskingIsFree = false;
-        this->m_maskBitCount = 1;
-        this->m_hasTranscendentals = false;
-        this->m_hasTrigonometry = false;
-        this->m_hasRcpd = false;
-        this->m_hasRsqrtd = false;
         this->m_hasScatter = false;
         this->m_hasGather = false;
         this->m_hasVecPrefetch = false;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 1;
         CPUfromISA = CPU_Generic_RV64GCV;
         break;
 #else
@@ -1955,17 +1861,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 4;
-        this->m_hasHalfConverts = false;
-        this->m_hasHalfFullSupport = false;
-        this->m_maskingIsFree = false;
-        this->m_maskBitCount = 32;
-        this->m_hasTranscendentals = false;
-        this->m_hasTrigonometry = false;
-        this->m_hasRcpd = false;
-        this->m_hasRsqrtd = false;
         this->m_hasScatter = false;
         this->m_hasGather = false;
         this->m_hasVecPrefetch = false;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
         break;
 #else
     case ISPCTarget::wasm_i32x4:
@@ -1979,14 +1879,12 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 8;
         this->m_dataTypeWidth = 32;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
+        this->m_hasGather = this->m_hasScatter = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasSaturatingArithmetic = true;
-        this->m_hasTranscendentals = true;
-        this->m_hasTrigonometry = true;
-        this->m_hasGather = this->m_hasScatter = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport,
+                         TargetCapability::SaturatingArithmetic, TargetCapability::Transcendentals,
+                         TargetCapability::Trigonometry});
         CPUfromISA = GPU_SKL;
         break;
     case ISPCTarget::xelp_x8:
@@ -1995,14 +1893,12 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 8;
         this->m_dataTypeWidth = 32;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
+        this->m_hasGather = this->m_hasScatter = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasSaturatingArithmetic = true;
-        this->m_hasTranscendentals = true;
-        this->m_hasTrigonometry = true;
-        this->m_hasGather = this->m_hasScatter = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport,
+                         TargetCapability::SaturatingArithmetic, TargetCapability::Transcendentals,
+                         TargetCapability::Trigonometry});
         CPUfromISA = GPU_TGLLP;
         break;
     case ISPCTarget::gen9_x16:
@@ -2011,14 +1907,12 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 16;
         this->m_dataTypeWidth = 32;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
+        this->m_hasGather = this->m_hasScatter = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasSaturatingArithmetic = true;
-        this->m_hasTranscendentals = true;
-        this->m_hasTrigonometry = true;
-        this->m_hasGather = this->m_hasScatter = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport,
+                         TargetCapability::SaturatingArithmetic, TargetCapability::Transcendentals,
+                         TargetCapability::Trigonometry});
         CPUfromISA = GPU_SKL;
         break;
     case ISPCTarget::xelp_x16:
@@ -2027,14 +1921,12 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 16;
         this->m_dataTypeWidth = 32;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
+        this->m_hasGather = this->m_hasScatter = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasSaturatingArithmetic = true;
-        this->m_hasTranscendentals = true;
-        this->m_hasTrigonometry = true;
-        this->m_hasGather = this->m_hasScatter = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport,
+                         TargetCapability::SaturatingArithmetic, TargetCapability::Transcendentals,
+                         TargetCapability::Trigonometry});
         CPUfromISA = GPU_TGLLP;
         break;
     case ISPCTarget::xehpg_x8:
@@ -2043,14 +1935,12 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 8;
         this->m_dataTypeWidth = 32;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
+        this->m_hasGather = this->m_hasScatter = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasSaturatingArithmetic = true;
-        this->m_hasTranscendentals = true;
-        this->m_hasTrigonometry = true;
-        this->m_hasGather = this->m_hasScatter = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport,
+                         TargetCapability::SaturatingArithmetic, TargetCapability::Transcendentals,
+                         TargetCapability::Trigonometry, TargetCapability::XePrefetch});
         CPUfromISA = GPU_ACM_G11;
         break;
     case ISPCTarget::xehpg_x16:
@@ -2059,14 +1949,12 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 16;
         this->m_dataTypeWidth = 32;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
+        this->m_hasGather = this->m_hasScatter = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasSaturatingArithmetic = true;
-        this->m_hasTranscendentals = true;
-        this->m_hasTrigonometry = true;
-        this->m_hasGather = this->m_hasScatter = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport,
+                         TargetCapability::SaturatingArithmetic, TargetCapability::Transcendentals,
+                         TargetCapability::Trigonometry, TargetCapability::XePrefetch});
         CPUfromISA = GPU_ACM_G11;
         break;
     case ISPCTarget::xehpc_x16:
@@ -2075,14 +1963,12 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 16;
         this->m_dataTypeWidth = 32;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
+        this->m_hasGather = this->m_hasScatter = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasSaturatingArithmetic = true;
-        this->m_hasTranscendentals = true;
-        this->m_hasTrigonometry = true;
-        this->m_hasGather = this->m_hasScatter = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport,
+                         TargetCapability::SaturatingArithmetic, TargetCapability::Transcendentals,
+                         TargetCapability::Trigonometry, TargetCapability::XePrefetch});
         CPUfromISA = GPU_PVC;
         break;
     case ISPCTarget::xehpc_x32:
@@ -2091,14 +1977,12 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 32;
         this->m_dataTypeWidth = 32;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
+        this->m_hasGather = this->m_hasScatter = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasSaturatingArithmetic = true;
-        this->m_hasTranscendentals = true;
-        this->m_hasTrigonometry = true;
-        this->m_hasGather = this->m_hasScatter = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport,
+                         TargetCapability::SaturatingArithmetic, TargetCapability::Transcendentals,
+                         TargetCapability::Trigonometry, TargetCapability::XePrefetch});
         CPUfromISA = GPU_PVC;
         break;
     case ISPCTarget::xelpg_x8:
@@ -2107,14 +1991,12 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 8;
         this->m_dataTypeWidth = 32;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
+        this->m_hasGather = this->m_hasScatter = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasSaturatingArithmetic = true;
-        this->m_hasTranscendentals = true;
-        this->m_hasTrigonometry = true;
-        this->m_hasGather = this->m_hasScatter = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport,
+                         TargetCapability::SaturatingArithmetic, TargetCapability::Transcendentals,
+                         TargetCapability::Trigonometry, TargetCapability::XePrefetch});
         CPUfromISA = GPU_MTL_H;
         break;
     case ISPCTarget::xelpg_x16:
@@ -2123,14 +2005,12 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 16;
         this->m_dataTypeWidth = 32;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
+        this->m_hasGather = this->m_hasScatter = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasSaturatingArithmetic = true;
-        this->m_hasTranscendentals = true;
-        this->m_hasTrigonometry = true;
-        this->m_hasGather = this->m_hasScatter = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport,
+                         TargetCapability::SaturatingArithmetic, TargetCapability::Transcendentals,
+                         TargetCapability::Trigonometry, TargetCapability::XePrefetch});
         CPUfromISA = GPU_MTL_H;
         break;
     case ISPCTarget::xe2hpg_x16:
@@ -2139,14 +2019,12 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 16;
         this->m_dataTypeWidth = 32;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
+        this->m_hasGather = this->m_hasScatter = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasSaturatingArithmetic = true;
-        this->m_hasTranscendentals = true;
-        this->m_hasTrigonometry = true;
-        this->m_hasGather = this->m_hasScatter = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport,
+                         TargetCapability::SaturatingArithmetic, TargetCapability::Transcendentals,
+                         TargetCapability::Trigonometry, TargetCapability::XePrefetch});
         CPUfromISA = GPU_BMG_G21;
         break;
     case ISPCTarget::xe2hpg_x32:
@@ -2155,14 +2033,12 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 32;
         this->m_dataTypeWidth = 32;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
+        this->m_hasGather = this->m_hasScatter = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasSaturatingArithmetic = true;
-        this->m_hasTranscendentals = true;
-        this->m_hasTrigonometry = true;
-        this->m_hasGather = this->m_hasScatter = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport,
+                         TargetCapability::SaturatingArithmetic, TargetCapability::Transcendentals,
+                         TargetCapability::Trigonometry, TargetCapability::XePrefetch});
         CPUfromISA = GPU_BMG_G21;
         break;
     case ISPCTarget::xe2lpg_x16:
@@ -2171,14 +2047,12 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 16;
         this->m_dataTypeWidth = 32;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
+        this->m_hasGather = this->m_hasScatter = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasSaturatingArithmetic = true;
-        this->m_hasTranscendentals = true;
-        this->m_hasTrigonometry = true;
-        this->m_hasGather = this->m_hasScatter = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport,
+                         TargetCapability::SaturatingArithmetic, TargetCapability::Transcendentals,
+                         TargetCapability::Trigonometry, TargetCapability::XePrefetch});
         CPUfromISA = GPU_LNL_M;
         break;
     case ISPCTarget::xe2lpg_x32:
@@ -2187,14 +2061,12 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 32;
         this->m_dataTypeWidth = 32;
-        this->m_hasHalfConverts = true;
-        this->m_hasHalfFullSupport = true;
+        this->m_hasGather = this->m_hasScatter = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasSaturatingArithmetic = true;
-        this->m_hasTranscendentals = true;
-        this->m_hasTrigonometry = true;
-        this->m_hasGather = this->m_hasScatter = true;
+        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport,
+                         TargetCapability::SaturatingArithmetic, TargetCapability::Transcendentals,
+                         TargetCapability::Trigonometry, TargetCapability::XePrefetch});
         CPUfromISA = GPU_LNL_M;
         break;
 #else
@@ -2342,8 +2214,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         if (arch == Arch::arm || arch == Arch::aarch64) {
             // Set the supported features for ARM target
             std::vector<llvm::StringRef> armFeatures = lGetARMTargetFeatures(arch, m_cpu);
-            m_hasArmDotProduct = lIsARMFeatureSupported("dotprod", armFeatures);
-            m_hasArmI8MM = lIsARMFeatureSupported("i8mm", armFeatures);
+            setCapability(TargetCapability::ArmDotProduct, lIsARMFeatureSupported("dotprod", armFeatures));
+            setCapability(TargetCapability::ArmI8MM, lIsARMFeatureSupported("i8mm", armFeatures));
             featuresString = llvm::join(armFeatures, ",");
             this->m_funcAttributes.push_back(std::make_pair("target-features", featuresString));
         }

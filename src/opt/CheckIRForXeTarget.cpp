@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2024, Intel Corporation
+  Copyright (c) 2022-2025, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -67,7 +67,7 @@ bool CheckIRForXeTarget::checkAndFixIRForXe(llvm::BasicBlock &bb) {
             }
         }
         // Report error if double type is not supported by the target
-        if (!g->target->hasFp64Support()) {
+        if (!g->target->hasCapability(TargetCapability::Fp64Support)) {
             for (int i = 0; i < (int)inst->getNumOperands(); ++i) {
                 llvm::Type *t = inst->getOperand(i)->getType();
                 // No need to check for double pointer types in opaque pointers mode.

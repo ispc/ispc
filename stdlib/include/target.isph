@@ -31,4 +31,3 @@ static const uniform int32 __math_lib_svml = ISPC_MATH_LIB_SVML_VAL;
 #endif
 
 static const uniform int32 __math_lib_system = ISPC_MATH_LIB_SYSTEM_VAL;
-

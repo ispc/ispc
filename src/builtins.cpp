@@ -15,6 +15,7 @@
 #include "llvmutil.h"
 #include "module.h"
 #include "sym.h"
+#include "target_capabilities.h"
 #include "type.h"
 #include "util.h"
 
@@ -120,33 +121,19 @@ void lSetInternalLinkageGlobal(llvm::Module *module, const char *name) {
 }
 
 void lSetInternalLinkageGlobals(llvm::Module *module) {
-    lSetInternalLinkageGlobal(module, "__fast_masked_vload");
-    lSetInternalLinkageGlobal(module, "__math_lib");
-    lSetInternalLinkageGlobal(module, "__memory_alignment");
-    lSetInternalLinkageGlobal(module, "__have_arm_dot_product");
-    lSetInternalLinkageGlobal(module, "__have_arm_i8mm");
-    lSetInternalLinkageGlobal(module, "__have_native_half_converts");
-    lSetInternalLinkageGlobal(module, "__have_native_half_full_support");
-    lSetInternalLinkageGlobal(module, "__have_native_rand");
-    lSetInternalLinkageGlobal(module, "__have_native_transcendentals");
-    lSetInternalLinkageGlobal(module, "__have_native_trigonometry");
-    lSetInternalLinkageGlobal(module, "__have_native_rsqrtd");
-    lSetInternalLinkageGlobal(module, "__have_native_rcpd");
-    lSetInternalLinkageGlobal(module, "__have_saturating_arithmetic");
-    lSetInternalLinkageGlobal(module, "__have_intel_vnni");
-    lSetInternalLinkageGlobal(module, "__have_intel_vnni_int8");
-    lSetInternalLinkageGlobal(module, "__have_intel_vnni_int16");
-    lSetInternalLinkageGlobal(module, "__have_conflict_detection");
-    lSetInternalLinkageGlobal(module, "__have_xe_prefetch");
-    lSetInternalLinkageGlobal(module, "__is_xe_target");
-    lSetInternalLinkageGlobal(module, "__have_rotate_via_shuffle_8");
-    lSetInternalLinkageGlobal(module, "__have_rotate_via_shuffle_16");
-    lSetInternalLinkageGlobal(module, "__have_rotate_via_shuffle_32");
-    lSetInternalLinkageGlobal(module, "__have_rotate_via_shuffle_64");
-    lSetInternalLinkageGlobal(module, "__have_shift_via_shuffle_8");
-    lSetInternalLinkageGlobal(module, "__have_shift_via_shuffle_16");
-    lSetInternalLinkageGlobal(module, "__have_shift_via_shuffle_32");
-    lSetInternalLinkageGlobal(module, "__have_shift_via_shuffle_64");
+    // Set internal linkage for configuration globals using centralized list from target_capabilities.h
+    // This corresponds to ISPC_CONFIG_CONSTANTS in stdlib/include/core.isph
+    for (const char *name : g_configGlobalNames) {
+        lSetInternalLinkageGlobal(module, name);
+    }
+
+    // Set internal linkage for capability-related globals using centralized metadata
+    // This corresponds to ISPC_CAPABILITY_CONSTANTS in stdlib/include/core.isph
+    for (const auto &cm : g_capabilityMetadata) {
+        if (cm.globalVarName != nullptr) {
+            lSetInternalLinkageGlobal(module, cm.globalVarName);
+        }
+    }
 }
 
 void lAddBitcodeToModule(llvm::Module *bcModule, llvm::Module *module) {
