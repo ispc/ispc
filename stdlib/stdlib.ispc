@@ -3090,11 +3090,11 @@ ATOMIC_DECL_CMPXCHG(double, double, IntMaskType, int64)
 // void * variants of swap and compare exchange
 
 static inline void *atomic_swap_global(void **uniform ptr, void *value) {
-    return (void *)atomic_swap_global((uniform intptr_t *uniform)ptr, (intptr_t)value);
+    return (void *)atomic_swap_global((uniform intptr_t * uniform) ptr, (intptr_t)value);
 }
 
 static inline void *uniform atomic_swap_global(void **uniform ptr, void *uniform value) {
-    return (void *uniform)atomic_swap_global((uniform intptr_t *uniform)ptr, (uniform intptr_t)value);
+    return (void *uniform)atomic_swap_global((uniform intptr_t * uniform) ptr, (uniform intptr_t)value);
 }
 
 static inline void *atomic_swap_global(void **ptr, void *value) {
@@ -3102,12 +3102,12 @@ static inline void *atomic_swap_global(void **ptr, void *value) {
 }
 
 static inline void *atomic_compare_exchange_global(void **uniform ptr, void *oldval, void *newval) {
-    return (void *)atomic_compare_exchange_global((uniform intptr_t *uniform)ptr, (intptr_t)oldval, (intptr_t)newval);
+    return (void *)atomic_compare_exchange_global((uniform intptr_t * uniform) ptr, (intptr_t)oldval, (intptr_t)newval);
 }
 
 static inline void *uniform atomic_compare_exchange_global(void **uniform ptr, void *uniform oldval,
                                                            void *uniform newval) {
-    return (void *uniform)atomic_compare_exchange_global((uniform intptr_t *uniform)ptr, (uniform intptr_t)oldval,
+    return (void *uniform)atomic_compare_exchange_global((uniform intptr_t * uniform) ptr, (uniform intptr_t)oldval,
                                                          (uniform intptr_t)newval);
 }
 
@@ -3272,11 +3272,11 @@ LOCAL_CMPXCHG(double)
 // void * variants of swap and compare exchange
 
 static inline void *atomic_swap_local(void **uniform ptr, void *value) {
-    return (void *)atomic_swap_local((uniform intptr_t *uniform)ptr, (intptr_t)value);
+    return (void *)atomic_swap_local((uniform intptr_t * uniform) ptr, (intptr_t)value);
 }
 
 static inline void *uniform atomic_swap_local(void **uniform ptr, void *uniform value) {
-    return (void *uniform)atomic_swap_local((uniform intptr_t *uniform)ptr, (uniform intptr_t)value);
+    return (void *uniform)atomic_swap_local((uniform intptr_t * uniform) ptr, (uniform intptr_t)value);
 }
 
 static inline void *atomic_swap_local(void **ptr, void *value) {
@@ -3284,12 +3284,12 @@ static inline void *atomic_swap_local(void **ptr, void *value) {
 }
 
 static inline void *atomic_compare_exchange_local(void **uniform ptr, void *oldval, void *newval) {
-    return (void *)atomic_compare_exchange_local((uniform intptr_t *uniform)ptr, (intptr_t)oldval, (intptr_t)newval);
+    return (void *)atomic_compare_exchange_local((uniform intptr_t * uniform) ptr, (intptr_t)oldval, (intptr_t)newval);
 }
 
 static inline void *uniform atomic_compare_exchange_local(void **uniform ptr, void *uniform oldval,
                                                           void *uniform newval) {
-    return (void *uniform)atomic_compare_exchange_local((uniform intptr_t *uniform)ptr, (uniform intptr_t)oldval,
+    return (void *uniform)atomic_compare_exchange_local((uniform intptr_t * uniform) ptr, (uniform intptr_t)oldval,
                                                         (uniform intptr_t)newval);
 }
 

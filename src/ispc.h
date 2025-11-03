@@ -11,6 +11,7 @@
 #pragma once
 
 #include "ispc_version.h"
+#include "target_capabilities.h"
 #include "target_enums.h"
 #include "target_registry.h"
 
@@ -24,6 +25,7 @@
 #define ISPC_HOST_IS_APPLE
 #endif
 
+#include <bitset>
 #include <map>
 #include <memory>
 #include <set>
@@ -407,22 +409,6 @@ class Target {
 
     int getMaskBitCount() const { return m_maskBitCount; }
 
-    bool hasIntelVNNI() const { return m_hasIntelVNNI; }
-
-    bool hasIntelVNNI_Int8() const { return m_hasIntelVNNI_Int8; }
-
-    bool hasIntelVNNI_Int16() const { return m_hasIntelVNNI_Int16; }
-
-    bool hasArmDotProduct() const { return m_hasArmDotProduct; }
-
-    bool hasArmI8MM() const { return m_hasArmI8MM; }
-
-    bool hasHalfConverts() const { return m_hasHalfConverts; }
-
-    bool hasHalfFullSupport() const { return m_hasHalfFullSupport; }
-
-    bool hasRand() const { return m_hasRand; }
-
     bool hasGather() const { return m_hasGather; }
 
     bool useGather() const;
@@ -431,23 +417,20 @@ class Target {
 
     bool useScatter() const;
 
-    bool hasTranscendentals() const { return m_hasTranscendentals; }
-
-    bool hasTrigonometry() const { return m_hasTrigonometry; }
-
-    bool hasRsqrtd() const { return m_hasRsqrtd; }
-
-    bool hasRcpd() const { return m_hasRcpd; }
-
     bool hasVecPrefetch() const { return m_hasVecPrefetch; }
 
-    bool hasSatArith() const { return m_hasSaturatingArithmetic; }
+    /** Check if target has a specific capability */
+    bool hasCapability(TargetCapability cap) const { return m_capabilities[static_cast<size_t>(cap)]; }
 
-    bool hasFp16Support() const { return m_hasFp16Support; }
+    /** Set a specific capability (default is to enable it) */
+    void setCapability(TargetCapability cap, bool value = true) { m_capabilities[static_cast<size_t>(cap)] = value; }
 
-    bool hasFp64Support() const { return m_hasFp64Support; }
-
-    bool hasConflictDetection() const { return m_hasConflictDetection; }
+    /** Set multiple capabilities at once */
+    void setCapabilities(std::initializer_list<TargetCapability> caps) {
+        for (auto cap : caps) {
+            setCapability(cap);
+        }
+    }
 
     void setWarning(PerfWarningType warningType) { m_warnings |= static_cast<unsigned int>(warningType); }
 
@@ -529,49 +512,10 @@ class Target {
         is 32 on SSE/AVX, since that matches the HW better. */
     int m_maskBitCount;
 
-    /** Indicates whether the CPU has Intel VNNI (Vector Neural Network Instructions) support.
-     *  Enables accelerated dot product operations on:
-     *  - 8-bit integers (mixed sign only)
-     *  - 16-bit integers (mixed sign only)
-     *  - With optional saturation arithmetic
+    /** Bitset storing target capabilities for efficient querying.
+     *  Use hasCapability()/setCapability() to access/modify capabilities.
      */
-    bool m_hasIntelVNNI;
-
-    /** Indicates whether the CPU supports 8-bit integer VNNI operations specifically.
-     *  Enables all combinations of signed/unsigned int8 dot products with optional saturation.
-     */
-    bool m_hasIntelVNNI_Int8;
-
-    /** Indicates whether the CPU supports 16-bit integer VNNI operations specifically.
-     *  Enables all combinations of signed/unsigned int16 dot products with optional saturation.
-     */
-    bool m_hasIntelVNNI_Int16;
-
-    /** Indicates whether the CPU has ARM dot product instructions (SDOT/UDOT).
-     *  Enables accelerated dot product operations on:
-     *  - signedxsigned 8-bit integers operations only (SDOT)
-     *  - unsignedxunsigned 8-bit integers operations only (UDOT)
-     *  - No support for mixed sign operations
-     */
-    bool m_hasArmDotProduct;
-
-    /** Indicates whether the CPU supports ARM I8MM instructions for 8-bit integers matrix multiplication.
-     *  Provides capability for mixed-sign int8 operations not covered by basic ARM dot product.
-     */
-    bool m_hasArmI8MM;
-
-    /** Indicates whether the target has native support for float/half conversions. */
-    bool m_hasHalfConverts;
-
-    /** Indicates whether the target has full native support for float16 type, i.e.
-        arithmetic operations, rsqrt, rcp, etc.
-        TODO: this needs to be merged with m_hasFp16Support eventually, but we need to
-              define proper ARM targets with and without FP16 support first.
-    */
-    bool m_hasHalfFullSupport;
-
-    /** Indicates whether there is an ISA random number instruction. */
-    bool m_hasRand;
+    std::bitset<static_cast<size_t>(TargetCapability::COUNT)> m_capabilities;
 
     /** Indicates whether the target has a native gather instruction */
     bool m_hasGather;
@@ -579,33 +523,8 @@ class Target {
     /** Indicates whether the target has a native scatter instruction */
     bool m_hasScatter;
 
-    /** Indicates whether the target has support for transcendentals (beyond
-        sqrt, which we assume that all of them handle). */
-    bool m_hasTranscendentals;
-
-    /** Indicates whether the target has ISA support for trigonometry */
-    bool m_hasTrigonometry;
-
-    /** Indicates whether there is an ISA double precision rsqrt. */
-    bool m_hasRsqrtd;
-
-    /** Indicates whether there is an ISA double precision rcp. */
-    bool m_hasRcpd;
-
     /** Indicates whether the target has hardware instruction for vector prefetch. */
     bool m_hasVecPrefetch;
-
-    /** Indicates whether the target has special saturating arithmetic instructions. */
-    bool m_hasSaturatingArithmetic;
-
-    /** Indicates whether the target has FP16 support. */
-    bool m_hasFp16Support;
-
-    /** Indicates whether the target has FP64 support. */
-    bool m_hasFp64Support;
-
-    /** Indicates whether the target has conflict detection-based run-Length encoding (avx512cd). */
-    bool m_hasConflictDetection;
 
     /** A bitset of PerfWarningType values indicating the warnings that are relevant for the target. */
     PerfWarningTypeUnderlyingType m_warnings;

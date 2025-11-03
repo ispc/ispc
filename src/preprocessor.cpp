@@ -12,6 +12,7 @@
 #include "ispc.h"
 #include "ispc_version.h"
 #include "module.h"
+#include "target_capabilities.h"
 #include "util.h"
 #include "version.h"
 
@@ -260,48 +261,12 @@ static void lSetTargetSpecificMacroDefinitions(const std::shared_ptr<clang::Prep
     std::string target_element_width = "TARGET_ELEMENT_WIDTH=" + std::to_string(g->target->getDataTypeWidth() / 8);
     opts->addMacroDef(target_element_width);
 
-    if (g->target->hasHalfConverts()) {
-        opts->addMacroDef("ISPC_TARGET_HAS_HALF");
+    // Define macros for all target capabilities using centralized metadata table
+    for (const auto &cm : g_capabilityMetadata) {
+        if (g->target->hasCapability(cm.capability)) {
+            opts->addMacroDef(cm.macroName);
+        }
     }
-    if (g->target->hasHalfFullSupport()) {
-        opts->addMacroDef("ISPC_TARGET_HAS_HALF_FULL_SUPPORT");
-    }
-    if (g->target->hasRand()) {
-        opts->addMacroDef("ISPC_TARGET_HAS_RAND");
-    }
-    if (g->target->hasTranscendentals()) {
-        opts->addMacroDef("ISPC_TARGET_HAS_TRANSCENDENTALS");
-    }
-    if (g->target->hasTrigonometry()) {
-        opts->addMacroDef("ISPC_TARGET_HAS_TRIGONOMETRY");
-    }
-    if (g->target->hasRsqrtd()) {
-        opts->addMacroDef("ISPC_TARGET_HAS_RSQRTD");
-    }
-    if (g->target->hasRcpd()) {
-        opts->addMacroDef("ISPC_TARGET_HAS_RCPD");
-    }
-    if (g->target->hasSatArith()) {
-        opts->addMacroDef("ISPC_TARGET_HAS_SATURATING_ARITHMETIC");
-    }
-    if (g->target->hasIntelVNNI()) {
-        opts->addMacroDef("ISPC_TARGET_HAS_INTEL_VNNI");
-    }
-    if (g->target->hasIntelVNNI_Int8()) {
-        opts->addMacroDef("ISPC_TARGET_HAS_INTEL_VNNI_INT8");
-    }
-    if (g->target->hasIntelVNNI_Int16()) {
-        opts->addMacroDef("ISPC_TARGET_HAS_INTEL_VNNI_INT16");
-    }
-    if (g->target->hasConflictDetection()) {
-        opts->addMacroDef("ISPC_TARGET_HAS_CONFLICT_DETECTION");
-    }
-    // TODO! what is the problem to have g->target->hasXePrefetch function returning bool for non XE_ENABLED builds??
-#ifdef ISPC_XE_ENABLED
-    if (g->target->hasXePrefetch()) {
-        opts->addMacroDef("ISPC_TARGET_HAS_XE_PREFETCH");
-    }
-#endif
 
     // Define mask bits
     std::string ispc_mask_bits = "ISPC_MASK_BITS=" + std::to_string(g->target->getMaskBitCount());
@@ -311,16 +276,6 @@ static void lSetTargetSpecificMacroDefinitions(const std::shared_ptr<clang::Prep
         opts->addMacroDef("ISPC_POINTER_SIZE=32");
     } else {
         opts->addMacroDef("ISPC_POINTER_SIZE=64");
-    }
-
-    if (g->target->hasFp16Support()) {
-        // TODO! rename/alias to ISPC_TARGET_HAS_FP16_SUPPORT
-        opts->addMacroDef("ISPC_FP16_SUPPORTED");
-    }
-
-    if (g->target->hasFp64Support()) {
-        // TODO! rename/alias to ISPC_TARGET_HAS_FP64_SUPPORT
-        opts->addMacroDef("ISPC_FP64_SUPPORTED");
     }
 }
 
@@ -359,13 +314,6 @@ static void lSetCmdlineDependentMacroDefinitions(const std::shared_ptr<clang::Pr
         }
     }
     opts->addMacroDef(memory_alignment);
-
-    if (g->target->hasArmDotProduct()) {
-        opts->addMacroDef("ISPC_TARGET_HAS_ARM_DOT_PRODUCT");
-    }
-    if (g->target->hasArmI8MM()) {
-        opts->addMacroDef("ISPC_TARGET_HAS_ARM_I8MM");
-    }
 }
 
 static void lSetPreprocessorOptions(const std::shared_ptr<clang::PreprocessorOptions> opts) {
