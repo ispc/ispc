@@ -30,6 +30,12 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "Suppressing benchmark's tests" FORCE)
 # Do not install benchmarking lib, we don't need it, as we link statically..
 set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "Suppressing benchmark's install" FORCE)
+
+# Suppress C2y extension warnings from LLVM trunk before including Google Benchmark
+if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "22.0.0")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-c2y-extensions")
+endif()
+
 add_subdirectory(vendor/google/benchmark)
 
 # Suppress warnings, as benchmarks are built with -Werror and trunk version of clang may trigger
