@@ -2682,11 +2682,11 @@ llvm::Value *FunctionEmitContext::LoadInst(AddressInfo *ptrInfo, const Type *typ
     pointer, or enum type), use the slice offset to compute pointer(s) to
     the appropriate individual data element(s).
  */
-static llvm::Value *lFinalSliceOffset(FunctionEmitContext *ctx, llvm::Value *ptr, const PointerType **ptrType) {
+llvm::Value *FunctionEmitContext::ApplySliceOffset(llvm::Value *ptr, const PointerType **ptrType) {
     Assert(CastType<PointerType>(*ptrType) != nullptr);
 
-    llvm::Value *slicePtr = ctx->ExtractInst(ptr, 0, llvm::Twine(ptr->getName()) + "_ptr");
-    llvm::Value *sliceOffset = ctx->ExtractInst(ptr, 1, llvm::Twine(ptr->getName()) + "_offset");
+    llvm::Value *slicePtr = ExtractInst(ptr, 0, llvm::Twine(ptr->getName()) + "_ptr");
+    llvm::Value *sliceOffset = ExtractInst(ptr, 1, llvm::Twine(ptr->getName()) + "_offset");
 
     // slicePtr should be a pointer to an soa-width wide array of the
     // final atomic/enum/pointer type
@@ -2702,14 +2702,14 @@ static llvm::Value *lFinalSliceOffset(FunctionEmitContext *ctx, llvm::Value *ptr
     // For uniform pointers, bitcast to a pointer to the uniform element
     // type, so that the GEP below does the desired indexing
     if ((*ptrType)->IsUniformType()) {
-        slicePtr = ctx->BitCastInst(slicePtr, (*ptrType)->LLVMType(g->ctx));
+        slicePtr = BitCastInst(slicePtr, (*ptrType)->LLVMType(g->ctx));
     }
 
     // And finally index based on the slice offset
     const Type *sliceOffsetType =
         (*ptrType)->GetVariability().type == Variability::Uniform ? AtomicType::UniformInt32 : AtomicType::VaryingInt32;
-    return ctx->GetElementPtrInst(slicePtr, sliceOffset, *ptrType, sliceOffsetType,
-                                  llvm::Twine(slicePtr->getName()) + "_final_gep");
+    return GetElementPtrInst(slicePtr, sliceOffset, *ptrType, sliceOffsetType,
+                             llvm::Twine(slicePtr->getName()) + "_final_gep");
 }
 
 /** Utility routine that loads from a uniform pointer to soa<> data,
@@ -2739,7 +2739,7 @@ llvm::Value *FunctionEmitContext::loadUniformFromSOA(llvm::Value *ptr, llvm::Val
         // Otherwise we've made our way to a slice pointer to a basic type;
         // we need to apply the slice offset into this terminal SOA array
         // and then perform the final load
-        ptr = lFinalSliceOffset(this, ptr, &ptrType);
+        ptr = ApplySliceOffset(ptr, &ptrType);
         return LoadInst(ptr, mask, ptrType, name);
     }
 }
@@ -2878,7 +2878,7 @@ llvm::Value *FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *pt
         //
         // FIXME: would it be better to do the corresponding same thing for
         // all of the varying offsets stuff here (and in scatter)?
-        ptr = lFinalSliceOffset(this, ptr, &ptrType);
+        ptr = ApplySliceOffset(ptr, &ptrType);
     }
 
     // Otherwise we should just have a basic scalar or pointer type and we
@@ -3267,7 +3267,7 @@ void FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr, const Ty
     } else if (ptrType->IsSlice()) {
         // As with gather, we need to add the final slice offset finally
         // once we get to a terminal SOA array of basic types..
-        ptr = lFinalSliceOffset(this, ptr, &ptrType);
+        ptr = ApplySliceOffset(ptr, &ptrType);
     }
 
     const PointerType *pt = CastType<PointerType>(valueType);
@@ -3414,7 +3414,7 @@ void FunctionEmitContext::storeUniformToSOA(llvm::Value *value, llvm::Value *ptr
         // We're finally at a leaf SOA array; apply the slice offset and
         // then we can do a final regular store
         AssertPos(currentPos, Type::IsBasicType(valueType));
-        ptr = lFinalSliceOffset(this, ptr, &ptrType);
+        ptr = ApplySliceOffset(ptr, &ptrType);
         StoreInst(value, new AddressInfo(ptr, ptrType), valueType);
     }
 }
