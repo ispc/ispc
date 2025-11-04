@@ -7776,14 +7776,31 @@ llvm::Value *TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
                     return nullptr;
                 }
 
-                if (toType->IsVaryingType() && fromType->IsUniformType()) {
-                    value = ctx->SmearUniform(value);
-                }
-
                 llvm::Type *llvmToType = toType->LLVMType(g->ctx);
                 if (llvmToType == nullptr) {
                     return nullptr;
                 }
+
+                if (fromPointerType->IsSlice()) {
+                    // For slice pointers, apply the slice offset to get the actual pointer,
+                    // then convert to integer. ApplySliceOffset uses GEP to properly scale
+                    // the offset by element size.
+                    const PointerType *ptrType = fromPointerType;
+                    llvm::Value *actualPtr = ctx->ApplySliceOffset(value, &ptrType);
+
+                    // If converting to varying integer, smear the pointer first
+                    if (toType->IsVaryingType() && fromType->IsUniformType()) {
+                        actualPtr = ctx->SmearUniform(actualPtr);
+                    }
+
+                    // Convert the actual pointer to integer
+                    return ctx->PtrToIntInst(actualPtr, llvmToType, "ptr_to_int");
+                }
+
+                if (toType->IsVaryingType() && fromType->IsUniformType()) {
+                    value = ctx->SmearUniform(value);
+                }
+
                 return ctx->PtrToIntInst(value, llvmToType, "ptr_typecast");
             }
         }

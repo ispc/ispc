@@ -468,6 +468,10 @@ class FunctionEmitContext {
         and an integer offset to a slice within that type. */
     llvm::Value *MakeSlicePointer(llvm::Value *ptr, llvm::Value *offset);
 
+    /** Given a slice pointer to soa'd data, apply the slice offset to compute
+        the actual pointer. Updates ptrType to reflect the resulting pointer type. */
+    llvm::Value *ApplySliceOffset(llvm::Value *ptr, const PointerType **ptrType);
+
     /* Regularize to a standard pointer type.
        May return nullptr if type is not PointerType or ReferenceType */
     const PointerType *RegularizePointer(const Type *ptrRefType);
