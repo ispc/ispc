@@ -60,6 +60,14 @@ functional tests for runtime behavior changes.
 
 ## Common Workflows
 
+**Implementing a new feature or fixing a bug:**
+1. Explain the given problem
+2. Search codebase for relevant files
+3. **Create fix plan and get user approval**
+4. Write regression tests in `tests/lit-tests/` and/or function tests in `tests/func-tests`
+5. Verify the fix
+6. Run `agent-code-review` when you've completed implementing a feature or bug fix and address its feedback
+
 **Debugging a test failure:**
 1. Run the specific test: `TEST=/full/path/test.ispc cmake --build build --target check-one -j $(nproc)`
 2. Examine generated IR: `build/bin/ispc test.ispc -o test.ll --emit-llvm-text`
@@ -67,6 +75,11 @@ functional tests for runtime behavior changes.
 
 **Investigating codegen/optimization issues:**
 - Use `--debug-phase=first:last --dump-file=dbg` to dump IR after each phase to `dbg` folder
+
+## Precommit Rules
+- Check that the year is up-to-date in copyright string
+- Run `clang-format -i` on modified C/C++/header files
+- Make sure that lit and functional tests are passing
 
 ## Important Instructions
 - Do only what is asked; nothing more, nothing less
