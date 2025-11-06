@@ -1,6 +1,8 @@
 #include "test_static.isph"
 
 // See issue #3529
+// rule: run on OS=!darwin
+// rule: run on arch!=x86_64
 // rule: skip on OS=windows
 
 task void f_f(uniform float RET[], uniform float aFOO[]) {
