@@ -99,15 +99,15 @@ jobs:
     steps:
     - name: Print inputs and environment
       run: |
-        echo "version: $env:INPUTS_VERSION"
-        echo "full_version: $env:INPUTS_FULL_VERSION"
-        echo "lto: $env:INPUTS_LTO"
-        echo "asserts: $env:INPUTS_ASSERTS"
-        echo "arch: $env:INPUTS_ARCH"
-        echo "ubuntu: $env:INPUTS_UBUNTU"
-        echo "TAR_NAME: $env:TAR_NAME"
-        echo "DOCKER_DIR: $env:DOCKER_DIR"
-        echo "ARTIFACT_NAME: $env:ARTIFACT_NAME"
+        echo "version: $INPUTS_VERSION"
+        echo "full_version: $INPUTS_FULL_VERSION"
+        echo "lto: $INPUTS_LTO"
+        echo "asserts: $INPUTS_ASSERTS"
+        echo "arch: $INPUTS_ARCH"
+        echo "ubuntu: $INPUTS_UBUNTU"
+        echo "TAR_NAME: $TAR_NAME"
+        echo "DOCKER_DIR: $DOCKER_DIR"
+        echo "ARTIFACT_NAME: $ARTIFACT_NAME"
       env:
         INPUTS_VERSION: ${{ inputs.version }}
         INPUTS_FULL_VERSION: ${{ inputs.full_version }}
@@ -126,7 +126,7 @@ jobs:
 
     - name: Build LLVM
       run: |
-        cd ${env:DOCKER_DIR}
+        cd $DOCKER_DIR
         docker buildx create --use
         docker buildx build \
           --tag ispc/ubuntu${INPUTS_UBUNTU} \
@@ -144,12 +144,12 @@ jobs:
 
     - name: Pack LLVM
       run: |
-        cd ${env:DOCKER_DIR}
+        cd $DOCKER_DIR
         rm -rf cache.local
         tar xvf result.tar usr/local/src/llvm
-        mv usr/local/src/llvm/bin-${env:INPUTS_VERSION} .
+        mv usr/local/src/llvm/bin-$INPUTS_VERSION .
         export XZ_DEFAULTS="-T0" # run zx in all threads
-        tar cJvf ${env:TAR_NAME} bin-${env:INPUTS_VERSION}
+        tar cJvf $TAR_NAME bin-$INPUTS_VERSION
       env:
         INPUTS_VERSION: ${{ inputs.version }}
 
@@ -262,14 +262,14 @@ jobs:
     steps:
     - name: Print inputs and environment
       run: |
-        echo "version: $env:INPUTS_VERSION"
-        echo "full_version: $env:INPUTS_FULL_VERSION"
-        echo "lto: $env:INPUTS_LTO"
-        echo "asserts: $env:INPUTS_ASSERTS"
-        echo "arch: $env:INPUTS_ARCH"
-        echo "TAR_NAME: $env:TAR_NAME"
-        echo "DOCKER_DIR: $env:DOCKER_DIR"
-        echo "ARTIFACT_NAME: $env:ARTIFACT_NAME"
+        echo "version: $INPUTS_VERSION"
+        echo "full_version: $INPUTS_FULL_VERSION"
+        echo "lto: $INPUTS_LTO"
+        echo "asserts: $INPUTS_ASSERTS"
+        echo "arch: $INPUTS_ARCH"
+        echo "TAR_NAME: $TAR_NAME"
+        echo "DOCKER_DIR: $DOCKER_DIR"
+        echo "ARTIFACT_NAME: $ARTIFACT_NAME"
       env:
         INPUTS_VERSION: ${{ inputs.version }}
         INPUTS_FULL_VERSION: ${{ inputs.full_version }}
@@ -313,7 +313,7 @@ jobs:
     - name: Pack LLVM
       run: |
         cd llvm
-        tar cJvf ${env:TAR_NAME} bin-${INPUTS_VERSION}
+        tar cJvf $TAR_NAME bin-$INPUTS_VERSION
       env:
         INPUTS_VERSION: ${{ inputs.version }}
 
