@@ -215,56 +215,55 @@ static const int32 programIndex = {ISPC_PROGRAM_INDEX_INITIALIZER};
 
 // X-Macro for defining target capability constants
 // These correspond to hardware/ISA capabilities defined in src/target_capabilities.h
-#define ISPC_CAPABILITY_CONSTANTS                                                                                      \
-    ISPC_CAPABILITY_CONSTANT(__have_arm_dot_product, ISPC_TARGET_HAS_ARM_DOT_PRODUCT_VAL)                              \
-    ISPC_CAPABILITY_CONSTANT(__have_arm_i8mm, ISPC_TARGET_HAS_ARM_I8MM_VAL)                                            \
-    ISPC_CAPABILITY_CONSTANT(__have_conflict_detection, ISPC_TARGET_HAS_CONFLICT_DETECTION_VAL)                        \
-    ISPC_CAPABILITY_CONSTANT(__have_intel_vnni, ISPC_TARGET_HAS_INTEL_VNNI_VAL)                                        \
-    ISPC_CAPABILITY_CONSTANT(__have_intel_vnni_int16, ISPC_TARGET_HAS_INTEL_VNNI_INT16_VAL)                            \
-    ISPC_CAPABILITY_CONSTANT(__have_intel_vnni_int8, ISPC_TARGET_HAS_INTEL_VNNI_INT8_VAL)                              \
-    ISPC_CAPABILITY_CONSTANT(__have_native_half_converts, ISPC_TARGET_HAS_HALF_VAL)                                    \
-    ISPC_CAPABILITY_CONSTANT(__have_native_half_full_support, ISPC_TARGET_HAS_HALF_FULL_SUPPORT_VAL)                   \
-    ISPC_CAPABILITY_CONSTANT(__have_native_rand, ISPC_TARGET_HAS_RAND_VAL)                                             \
-    ISPC_CAPABILITY_CONSTANT(__have_native_rcpd, ISPC_TARGET_HAS_RCPD_VAL)                                             \
-    ISPC_CAPABILITY_CONSTANT(__have_native_rsqrtd, ISPC_TARGET_HAS_RSQRTD_VAL)                                         \
-    ISPC_CAPABILITY_CONSTANT(__have_native_transcendentals, ISPC_TARGET_HAS_TRANSCENDENTALS_VAL)                       \
-    ISPC_CAPABILITY_CONSTANT(__have_native_trigonometry, ISPC_TARGET_HAS_TRIGONOMETRY_VAL)                             \
-    ISPC_CAPABILITY_CONSTANT(__have_saturating_arithmetic, ISPC_TARGET_HAS_SATURATING_ARITHMETIC_VAL)                  \
-    ISPC_CAPABILITY_CONSTANT(__have_xe_prefetch, ISPC_TARGET_HAS_XE_PREFETCH_VAL)
+#define ISPC_CAPABILITY_CONSTANTS(MACRO)                                                                               \
+    MACRO(__have_arm_dot_product, ISPC_TARGET_HAS_ARM_DOT_PRODUCT_VAL)                                                 \
+    MACRO(__have_arm_i8mm, ISPC_TARGET_HAS_ARM_I8MM_VAL)                                                               \
+    MACRO(__have_conflict_detection, ISPC_TARGET_HAS_CONFLICT_DETECTION_VAL)                                           \
+    MACRO(__have_intel_vnni, ISPC_TARGET_HAS_INTEL_VNNI_VAL)                                                           \
+    MACRO(__have_intel_vnni_int16, ISPC_TARGET_HAS_INTEL_VNNI_INT16_VAL)                                               \
+    MACRO(__have_intel_vnni_int8, ISPC_TARGET_HAS_INTEL_VNNI_INT8_VAL)                                                 \
+    MACRO(__have_native_half_converts, ISPC_TARGET_HAS_HALF_VAL)                                                       \
+    MACRO(__have_native_half_full_support, ISPC_TARGET_HAS_HALF_FULL_SUPPORT_VAL)                                      \
+    MACRO(__have_native_rand, ISPC_TARGET_HAS_RAND_VAL)                                                                \
+    MACRO(__have_native_rcpd, ISPC_TARGET_HAS_RCPD_VAL)                                                                \
+    MACRO(__have_native_rsqrtd, ISPC_TARGET_HAS_RSQRTD_VAL)                                                            \
+    MACRO(__have_native_transcendentals, ISPC_TARGET_HAS_TRANSCENDENTALS_VAL)                                          \
+    MACRO(__have_native_trigonometry, ISPC_TARGET_HAS_TRIGONOMETRY_VAL)                                                \
+    MACRO(__have_saturating_arithmetic, ISPC_TARGET_HAS_SATURATING_ARITHMETIC_VAL)                                     \
+    MACRO(__have_xe_prefetch, ISPC_TARGET_HAS_XE_PREFETCH_VAL)
 
 // X-Macro for defining configuration and target-specific constants
 // These are not hardware capabilities but compiler/target configuration settings
-#define ISPC_CONFIG_CONSTANTS                                                                                          \
-    ISPC_CONFIG_CONSTANT(__fast_masked_vload, ISPC_FAST_MASKED_VLOAD_VAL)                                              \
-    ISPC_CONFIG_CONSTANT(__have_rotate_via_shuffle_16, ISPC_TARGET_HAS_ROTATE_VIA_SHUFFLE_16_VAL)                      \
-    ISPC_CONFIG_CONSTANT(__have_rotate_via_shuffle_32, ISPC_TARGET_HAS_ROTATE_VIA_SHUFFLE_32_VAL)                      \
-    ISPC_CONFIG_CONSTANT(__have_rotate_via_shuffle_64, ISPC_TARGET_HAS_ROTATE_VIA_SHUFFLE_64_VAL)                      \
-    ISPC_CONFIG_CONSTANT(__have_rotate_via_shuffle_8, ISPC_TARGET_HAS_ROTATE_VIA_SHUFFLE_8_VAL)                        \
-    ISPC_CONFIG_CONSTANT(__have_shift_via_shuffle_16, ISPC_TARGET_HAS_SHIFT_VIA_SHUFFLE_16_VAL)                        \
-    ISPC_CONFIG_CONSTANT(__have_shift_via_shuffle_32, ISPC_TARGET_HAS_SHIFT_VIA_SHUFFLE_32_VAL)                        \
-    ISPC_CONFIG_CONSTANT(__have_shift_via_shuffle_64, ISPC_TARGET_HAS_SHIFT_VIA_SHUFFLE_64_VAL)                        \
-    ISPC_CONFIG_CONSTANT(__have_shift_via_shuffle_8, ISPC_TARGET_HAS_SHIFT_VIA_SHUFFLE_8_VAL)                          \
-    ISPC_CONFIG_CONSTANT(__is_xe_target, ISPC_IS_XE_TARGET_VAL)                                                        \
-    ISPC_CONFIG_CONSTANT(__math_lib, ISPC_MATH_LIB_VAL)                                                                \
-    ISPC_CONFIG_CONSTANT(__memory_alignment, ISPC_MEMORY_ALIGNMENT_VAL)
+#define ISPC_CONFIG_CONSTANTS(MACRO)                                                                                   \
+    MACRO(__fast_masked_vload, ISPC_FAST_MASKED_VLOAD_VAL)                                                             \
+    MACRO(__have_rotate_via_shuffle_16, ISPC_TARGET_HAS_ROTATE_VIA_SHUFFLE_16_VAL)                                     \
+    MACRO(__have_rotate_via_shuffle_32, ISPC_TARGET_HAS_ROTATE_VIA_SHUFFLE_32_VAL)                                     \
+    MACRO(__have_rotate_via_shuffle_64, ISPC_TARGET_HAS_ROTATE_VIA_SHUFFLE_64_VAL)                                     \
+    MACRO(__have_rotate_via_shuffle_8, ISPC_TARGET_HAS_ROTATE_VIA_SHUFFLE_8_VAL)                                       \
+    MACRO(__have_shift_via_shuffle_16, ISPC_TARGET_HAS_SHIFT_VIA_SHUFFLE_16_VAL)                                       \
+    MACRO(__have_shift_via_shuffle_32, ISPC_TARGET_HAS_SHIFT_VIA_SHUFFLE_32_VAL)                                       \
+    MACRO(__have_shift_via_shuffle_64, ISPC_TARGET_HAS_SHIFT_VIA_SHUFFLE_64_VAL)                                       \
+    MACRO(__have_shift_via_shuffle_8, ISPC_TARGET_HAS_SHIFT_VIA_SHUFFLE_8_VAL)                                         \
+    MACRO(__is_xe_target, ISPC_IS_XE_TARGET_VAL)                                                                       \
+    MACRO(__math_lib, ISPC_MATH_LIB_VAL)                                                                               \
+    MACRO(__memory_alignment, ISPC_MEMORY_ALIGNMENT_VAL)
+
+// Helper macros for generating constant declarations
+#define ISPC_DECLARE_CONSTANT(name, value) const uniform int32 name;
+#define ISPC_DEFINE_CONSTANT(name, value) const uniform int32 name = value;
 
 #ifdef ISPC_INTERNAL_STDLIB_COMPILATION
 // Compilation of stdlib.ispc, no real values supplied to avoid irreversible optimizations.
-#define ISPC_CAPABILITY_CONSTANT(name, value) const uniform int32 name;
-#define ISPC_CONFIG_CONSTANT(name, value) const uniform int32 name;
-ISPC_CAPABILITY_CONSTANTS
-ISPC_CONFIG_CONSTANTS
-#undef ISPC_CAPABILITY_CONSTANT
-#undef ISPC_CONFIG_CONSTANT
+ISPC_CAPABILITY_CONSTANTS(ISPC_DECLARE_CONSTANT)
+ISPC_CONFIG_CONSTANTS(ISPC_DECLARE_CONSTANT)
 #else
 // Compilation of user code with the actual values provided by user via command line flags.
-#define ISPC_CAPABILITY_CONSTANT(name, value) const uniform int32 name = value;
-#define ISPC_CONFIG_CONSTANT(name, value) const uniform int32 name = value;
-ISPC_CAPABILITY_CONSTANTS
-ISPC_CONFIG_CONSTANTS
-#undef ISPC_CAPABILITY_CONSTANT
-#undef ISPC_CONFIG_CONSTANT
+ISPC_CAPABILITY_CONSTANTS(ISPC_DEFINE_CONSTANT)
+ISPC_CONFIG_CONSTANTS(ISPC_DEFINE_CONSTANT)
 #endif
+
+#undef ISPC_DECLARE_CONSTANT
+#undef ISPC_DEFINE_CONSTANT
 
 #undef ISPC_CAPABILITY_CONSTANTS
 #undef ISPC_CONFIG_CONSTANTS
