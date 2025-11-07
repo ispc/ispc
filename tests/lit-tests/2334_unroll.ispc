@@ -1,7 +1,5 @@
 // RUN: %{ispc} %s --target=avx2-i32x8 --arch=x86-64 --addressing=64 --emit-asm -o - | FileCheck %s
 
-// XFAIL: *
-
 // UNSUPPORTED: !LLVM_20_0+
 
 // REQUIRES: X86_ENABLED
