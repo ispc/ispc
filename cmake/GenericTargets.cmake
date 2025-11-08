@@ -75,7 +75,7 @@ function (generate_generic_builtins ispc_name)
         )
     endif()
 
-    if (RISCV_ENABLED)
+    if (RISCV_ENABLED AND ISPC_LINUX_TARGET)
         list(APPEND ARCH_LIST
             "riscv64,64"
         )

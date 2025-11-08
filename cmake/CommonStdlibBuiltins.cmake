@@ -133,8 +133,8 @@ function (generate_stdlib_or_target_builtins func ispc_name CPP_LIST BC_LIST)
         endforeach()
     endif()
 
-    # RISC-V targets
-    if (RISCV_ENABLED)
+    # RISC-V targets (Linux only)
+    if (RISCV_ENABLED AND ISPC_LINUX_TARGET)
         foreach (target ${RISCV_TARGETS})
             disp_target_stdlib(${func} ${ispc_name} ${target} 64 unix ${CPP_LIST} ${BC_LIST})
         endforeach()
