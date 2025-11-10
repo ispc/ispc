@@ -294,6 +294,12 @@ jobs:
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_arm }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
 
+  linux-test-riscv:
+    needs: [define-flow, linux-build-ispc]
+    uses: ./.github/workflows/riscv.yml
+    with:
+      artifact_name: ispc_llvm20_linux
+
   # Test release version
   linux-test-llvm20-release:
     needs: [define-flow, linux-build-ispc-llvm20-release]
