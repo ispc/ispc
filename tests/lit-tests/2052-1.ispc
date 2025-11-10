@@ -10,9 +10,9 @@
 // CHECK-DAG: ldp
 // CHECK-DAG: fmla
 
-// CHECK-NOT: add
-// CHECK-NOT: ldp
-// CHECK-NOT: ldr
+// CHECK-NOT: {{^[[:space:]]+add[[:space:]]}}
+// CHECK-NOT: {{^[[:space:]]+ldp[[:space:]]}}
+// CHECK-NOT: {{^[[:space:]]+ldr[[:space:]]}}
 struct FVector4 {
     float<4> V;
 };

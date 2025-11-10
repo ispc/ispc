@@ -6,7 +6,7 @@
 // CHECK-COUNT: 1 str
 // CHECK-COUNT: 3 ldr
 // CHECK-COUNT: 3 ldr
-// CHECK-NOT: add
+// CHECK-NOT: {{^[[:space:]]+add[[:space:]]}}
 uniform int foo(uniform float v1[], uniform float v2[], uniform float v3[], uniform float result[]) {
     uniform float invArea = 1.f / ((v3[0] - v1[0]) * (v2[1] - v1[1]) - ((v3[1] - v1[1]) * (v2[0] - v1[0])));
     result[0] = invArea;
