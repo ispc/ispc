@@ -26,18 +26,37 @@ esac
 
 echo "APT::Acquire::Retries \"3\";" | sudo tee -a /etc/apt/apt.conf.d/80-retries
 
+# Detect Ubuntu codename and select RISC-V GCC major (jammy=12, noble=14)
+UBUNTU_CODENAME="$(. /etc/os-release && echo "${UBUNTU_CODENAME:-}")"
+if [[ -z "$UBUNTU_CODENAME" ]]; then
+  UBUNTU_CODENAME="$(lsb_release -sc 2>/dev/null || true)"
+fi
+case "$UBUNTU_CODENAME" in
+  jammy) RISCV_GCC_MAJOR=12 ;;
+  noble) RISCV_GCC_MAJOR=14 ;;
+  *)     RISCV_GCC_MAJOR=12 ;;
+esac
+
 # Detect system architecture
 if [[ $(uname -m) =~ "x86" ]]; then
-    CROSS_LIBS=("libc6-dev-i386" "g++-multilib" "lib32stdc++6")
+    # Use versioned, matched toolchain; avoid unversioned metas
+    CROSS_LIBS_BASE=("libc6-dev-i386" "g++-multilib" "lib32stdc++6" "binutils-riscv64-linux-gnu" "gcc-${RISCV_GCC_MAJOR}-cross-base")
+    CROSS_LIBS_RISCV=("gcc-${RISCV_GCC_MAJOR}-riscv64-linux-gnu" "g++-${RISCV_GCC_MAJOR}-riscv64-linux-gnu")
 else
-    CROSS_LIBS=("libc6-dev-armhf-cross")
+    CROSS_LIBS_BASE=("libc6-dev-armhf-cross")
+    CROSS_LIBS_RISCV=()
 fi
 
 # if apt-get fails, retry several time.
 for i in {1..5}
 do
-  sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y && sudo apt-get -y update | tee log${i}.txt
-  sudo apt-get install ninja-build bison flex libtbb-dev libstdc++6 "${CROSS_LIBS[@]}" | tee -a log${i}.txt
+  sudo add-apt-repository universe -y && sudo apt-get -y update | tee log${i}.txt
+  # Install base packages + base cross deps
+  sudo apt-get install -y --no-install-recommends ninja-build bison flex libtbb-dev libstdc++6 "${CROSS_LIBS_BASE[@]}" | tee -a log${i}.txt
+  # Install the versioned RISC-V pair from <codename>-updates so APT doesn't fall back to older metas
+  if [[ ${#CROSS_LIBS_RISCV[@]} -gt 0 ]]; then
+    sudo apt-get install -y -t "${UBUNTU_CODENAME}-updates" --no-install-recommends "${CROSS_LIBS_RISCV[@]}" | tee -a log${i}.txt
+  fi
   sudo apt install python3-pip python3-dev
   pip3 install nanobind numpy
   if [[ ! `grep "^Err: " log${i}.txt` && ! `grep "^E: " log${i}.txt` ]]; then
