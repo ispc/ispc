@@ -18,6 +18,7 @@ jobs:
     name: RISC-V rvv-x4 test
     runs-on: ubuntu-22.04
     container:
+      # archlinux allows to use qemu 10.1.2 which has support of float16 in RISC-V
       image: archlinux@sha256:2fcdd55448255f87dd337ef5c0fdbd5e4fec432345db1aa5faea4bf2764b4ca8
       options: --privileged
 
@@ -27,7 +28,6 @@ jobs:
         pacman -Syu --noconfirm
         pacman -S --needed --noconfirm git cmake make gcc-libs glibc lib32-glibc gcc m4 flex bison python onetbb
         pacman -S --needed --noconfirm riscv64-linux-gnu-gcc qemu-user
-        pacman -S --needed --noconfirm llvm clang
 
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
@@ -45,7 +45,6 @@ jobs:
       run: |
         riscv64-linux-gnu-gcc --version
         qemu-riscv64 --version
-        clang --version
 
     - name: Run RISC-V tests
       run: |
