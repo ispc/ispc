@@ -8,7 +8,7 @@ define_prefetches()
 define_shuffles()
 define_vector_permutations()
 aossoa()
-halfTypeGenericImplementation()
+halfTypeGenericImplementationPreSSE4()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp
