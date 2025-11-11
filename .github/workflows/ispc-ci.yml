@@ -415,7 +415,7 @@ jobs:
       platform: macos
       architecture: x86-64
       artifact_name: ispc_llvm${{matrix.llvm}}_macos-15-intel
-      targets: '["sse4-i32x4"]'
+      targets: '["sse2-i32x4", "sse4-i32x4"]'
       optsets: -O0 -O2
 
   macos-test-ispc-llvm20-lto:
