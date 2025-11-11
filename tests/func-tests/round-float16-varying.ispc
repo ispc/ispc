@@ -1,9 +1,7 @@
 #include "test_static.isph"
+// rule: run on OS=!windows
 // rule: skip on arch=wasm32
 // rule: skip on arch=wasm64
-
-// See issue #3529
-// rule: skip on OS=windows
 
 task void f_f(uniform float RET[], uniform float aFOO[]) {
     float error = 0;

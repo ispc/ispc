@@ -1,7 +1,6 @@
 #include "test_static.isph"
-
-// See issue #3529
-// rule: skip on OS=windows
+// rule: skip on target=generic.*
+// rule: run on OS=!windows
 
 task void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform float error = 0;

@@ -6256,9 +6256,10 @@ define void @__restore_ftz_daz_flags(i32 %oldVal) nounwind alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; 16-bit float math functions
 
+;; Round using LLVM intrinsic (for SSE4 and later targets)
 ;; $1: target vector width
 
-define(`halfMath', `
+define(`halfMathRound', `
 declare half @llvm.roundeven.f16(half)
 define half @__round_uniform_half(half %Val) nounwind readnone alwaysinline {
   %retVal = call half @llvm.roundeven.f16(half %Val)
@@ -6270,7 +6271,69 @@ define <$1 x half> @__round_varying_half(<$1 x half> %Val) nounwind readnone alw
   %retVal = call <$1 x half> @llvm.roundeven.v$1f16(<$1 x half> %Val)
   ret <$1 x half> %retVal
 }
+')
 
+;; Emulate round for float16 (for pre-SSE4 targets on Windows/macOS
+;; where llvm.roundeven.f16 may lower to unavailable roundevenf runtime function)
+;; Based on the algorithm used for float32 in SSE2 targets.
+;; $1: target vector width
+
+define(`halfMathRoundPreSSE4', `
+define half @__round_uniform_half(half %x) nounwind readonly alwaysinline {
+  ; Extract sign bit
+  %x_as_i16 = bitcast half %x to i16
+  %sign = and i16 %x_as_i16, -32768
+  ; Clear sign bit to get absolute value
+  %abs_bits = xor i16 %x_as_i16, %sign
+  %abs_x = bitcast i16 %abs_bits to half
+  ; Short-circuit: if |x| >= 1024.0, x is already integral (no fractional bits)
+  ; This also prevents overflow when adding the magic constant
+  %is_large = fcmp oge half %abs_x, 0xH6400
+  br i1 %is_large, label %return_x, label %do_round
+
+do_round:
+  ; Add and subtract 0x1.0p10h (1024.0) to round to nearest
+  ; (float16 has 10 mantissa bits, so 2^10 is the magic constant)
+  %add = fadd half %abs_x, 0xH6400
+  %sub = fadd half %add, 0xHE400
+  ; Restore sign bit
+  %result_bits = bitcast half %sub to i16
+  %result_with_sign = xor i16 %result_bits, %sign
+  %result = bitcast i16 %result_with_sign to half
+  br label %return_x
+
+return_x:
+  %final = phi half [ %x, %0 ], [ %result, %do_round ]
+  ret half %final
+}
+
+define <$1 x half> @__round_varying_half(<$1 x half> %x) nounwind readonly alwaysinline {
+  ; Extract sign bits
+  %x_as_i16 = bitcast <$1 x half> %x to <$1 x i16>
+  %sign = and <$1 x i16> %x_as_i16, <forloop(i, 1, eval($1-1), `i16 -32768, ')i16 -32768>
+  ; Clear sign bits to get absolute values
+  %abs_bits = xor <$1 x i16> %x_as_i16, %sign
+  %abs_x = bitcast <$1 x i16> %abs_bits to <$1 x half>
+  ; Check if |x| >= 1024.0 (already integral, no rounding needed)
+  %is_large = fcmp oge <$1 x half> %abs_x, <forloop(i, 1, eval($1-1), `half 0xH6400, ')half 0xH6400>
+  ; Mask large values to zero to prevent overflow in the add/subtract sequence
+  %abs_x_masked = select <$1 x i1> %is_large, <$1 x half> zeroinitializer, <$1 x half> %abs_x
+  ; Add and subtract 0x1.0p10h (1024.0) to round to nearest
+  %add = fadd <$1 x half> %abs_x_masked, <forloop(i, 1, eval($1-1), `half 0xH6400, ')half 0xH6400>
+  %sub = fadd <$1 x half> %add, <forloop(i, 1, eval($1-1), `half 0xHE400, ')half 0xHE400>
+  ; Restore sign bits
+  %result_bits = bitcast <$1 x half> %sub to <$1 x i16>
+  %result_with_sign = xor <$1 x i16> %result_bits, %sign
+  %rounded = bitcast <$1 x i16> %result_with_sign to <$1 x half>
+  ; Select original value if already integral, rounded value otherwise
+  %result = select <$1 x i1> %is_large, <$1 x half> %x, <$1 x half> %rounded
+  ret <$1 x half> %result
+}
+')
+
+;; $1: target vector width
+
+define(`halfMath', `
 declare half @llvm.floor.f16(half)
 define half @__floor_uniform_half(half %Val) nounwind readnone alwaysinline {
   %retVal = call half @llvm.floor.f16(half %Val)
@@ -6388,6 +6451,16 @@ define half @__reduce_max_half(<WIDTH x half>) nounwind readnone {
 define(`halfTypeGenericImplementation', `
 halfminmax(WIDTH,min,olt)
 halfminmax(WIDTH,max,ogt)
+halfMathRound(WIDTH)
+halfMath(WIDTH)
+halfReduce(WIDTH)
+')
+
+;; For pre-SSE4 targets on Windows/macOS where llvm.roundeven may not be available
+define(`halfTypeGenericImplementationPreSSE4', `
+halfminmax(WIDTH,min,olt)
+halfminmax(WIDTH,max,ogt)
+halfMathRoundPreSSE4(WIDTH)
 halfMath(WIDTH)
 halfReduce(WIDTH)
 ')
