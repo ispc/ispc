@@ -122,6 +122,42 @@ task void f_f(uniform float RET[], uniform float aFOO[]) {
         error++;
     }
 
+    // Case 15: Large value near max half (65000.0) - already integral, no rounding needed.
+    // This tests the overflow prevention fix where adding magic constant would overflow.
+    testVal = 65000.0f16;
+    resVal = round(testVal);
+    if (testVal != resVal) {
+        error++;
+    }
+
+    // Case 16: Negative large value near min half (-65000.0).
+    testVal = -65000.0f16;
+    resVal = round(testVal);
+    if (testVal != resVal) {
+        error++;
+    }
+
+    // Case 17: Value exactly at the boundary (1024.0) - already integral.
+    testVal = 1024.0f16;
+    resVal = round(testVal);
+    if (testVal != resVal) {
+        error++;
+    }
+
+    // Case 18: Value just below boundary with fractional part (1023.5).
+    testVal = 1023.5f16;
+    resVal = round(testVal);
+    if (1024.0f16 != resVal) {
+        error++;
+    }
+
+    // Case 19: Large integral value (32768.0 = 2^15).
+    testVal = 32768.0f16;
+    resVal = round(testVal);
+    if (testVal != resVal) {
+        error++;
+    }
+
     // Check if any case fails.
     RET[0] = error;
 }
