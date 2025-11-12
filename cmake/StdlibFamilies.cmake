@@ -73,7 +73,7 @@ function(define_stdlib_families)
         )
     endif()
 
-    # Parsing lop
+    # Parsing loop
     foreach(family_def ${FAMILY_DEFINITIONS})
         # Parse: family_name:base:members
         string(REPLACE ":" ";" parts ${family_def})

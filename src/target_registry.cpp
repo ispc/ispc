@@ -14,6 +14,7 @@
 #include <numeric>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -141,14 +142,46 @@ const BitcodeLib *TargetLibRegistry::getBuiltinsCLib(TargetOS os, Arch arch) con
     }
     return nullptr;
 }
-static const BitcodeLib *lGetTargetLib(const std::map<uint32_t, const BitcodeLib *> &libs, ISPCTarget target,
-                                       TargetOS os, Arch arch) {
-    // TODO: validate parameters not to be errors or forbidden values.
 
-    // This is an alias. It might be a good idea generalize this.
-    if (target == ISPCTarget::avx1_i32x4) {
-        target = ISPCTarget::sse4_i32x4;
+// Stdlib parent map for alias resolution
+// Alias targets like avx1-i32x4 or sse41-* don't have their own stdlib
+// They use their parent target's stdlib through this hierarchy
+// clang-format off
+static std::unordered_map<ISPCTarget, ISPCTarget> aliasParentMap = {
+    // avx1-i32x4 is an alias (not in X86_TARGETS) that uses sse4-i32x4's stdlib
+    {ISPCTarget::avx1_i32x4, ISPCTarget::sse4_i32x4},
+    // sse41-* are aliases for sse4-*
+    {ISPCTarget::sse41_i32x4, ISPCTarget::sse4_i32x4},
+    {ISPCTarget::sse41_i32x8, ISPCTarget::sse4_i32x8},
+    {ISPCTarget::sse41_i8x16, ISPCTarget::sse4_i8x16},
+    {ISPCTarget::sse41_i16x8, ISPCTarget::sse4_i16x8},
+};
+// clang-format on
+
+static ISPCTarget lGetAliasTarget(ISPCTarget target) {
+    auto it = aliasParentMap.find(target);
+    if (it != aliasParentMap.end()) {
+        return it->second;
     }
+    return ISPCTarget::none;
+}
+
+// Canonicalize target: check for unsupported targets, apply nozmm transforms, and optionally resolve aliases
+// Returns ISPCTarget::none if target is unsupported on the given OS
+// Otherwise returns the canonicalized target
+static ISPCTarget lCanonicalizeTarget(ISPCTarget target, TargetOS os, bool applyAliases) {
+    // Check if target is unsupported on this OS
+    // There's no Mac that supports SPR, so the decision is not support these targets when targeting macOS.
+    // If these targets are linked in, then we still can use them for cross compilation, for example for Linux.
+    if (os == TargetOS::macos &&
+        (target == ISPCTarget::avx512spr_x4 || target == ISPCTarget::avx512spr_x8 ||
+         target == ISPCTarget::avx512spr_x16 || target == ISPCTarget::avx512spr_x32 ||
+         target == ISPCTarget::avx512spr_x64 || target == ISPCTarget::avx10_2_x4 || target == ISPCTarget::avx10_2_x8 ||
+         target == ISPCTarget::avx10_2_x16 || target == ISPCTarget::avx10_2_x32 || target == ISPCTarget::avx10_2_x64)) {
+        return ISPCTarget::none;
+    }
+
+    // Apply nozmm transformation when ZMM is disabled
     // nozmm target is not explicitly visible for user but should be used when ZMM is disabled.
     if (target == ISPCTarget::avx512skx_x16 && g->opt.disableZMM) {
         target = ISPCTarget::avx512skx_x16_nozmm;
@@ -157,32 +190,24 @@ static const BitcodeLib *lGetTargetLib(const std::map<uint32_t, const BitcodeLib
         target = ISPCTarget::avx512icl_x16_nozmm;
     }
 
-    // sse41 is an alias for sse4
-    switch (target) {
-    case ISPCTarget::sse41_i8x16:
-        target = ISPCTarget::sse4_i8x16;
-        break;
-    case ISPCTarget::sse41_i16x8:
-        target = ISPCTarget::sse4_i16x8;
-        break;
-    case ISPCTarget::sse41_i32x4:
-        target = ISPCTarget::sse4_i32x4;
-        break;
-    case ISPCTarget::sse41_i32x8:
-        target = ISPCTarget::sse4_i32x8;
-        break;
-    default:
-        // Fall through
-        ;
+    // Canonicalize aliases if requested
+    if (applyAliases) {
+        auto it = aliasParentMap.find(target);
+        if (it != aliasParentMap.end()) {
+            target = it->second;
+        }
     }
 
-    // There's no Mac that supports SPR, so the decision is not support these targets when targeting macOS.
-    // If these targets are linked in, then we still can use them for cross compilation, for example for Linux.
-    if (os == TargetOS::macos &&
-        (target == ISPCTarget::avx512spr_x4 || target == ISPCTarget::avx512spr_x8 ||
-         target == ISPCTarget::avx512spr_x16 || target == ISPCTarget::avx512spr_x32 ||
-         target == ISPCTarget::avx512spr_x64 || target == ISPCTarget::avx10_2_x4 || target == ISPCTarget::avx10_2_x8 ||
-         target == ISPCTarget::avx10_2_x16 || target == ISPCTarget::avx10_2_x32 || target == ISPCTarget::avx10_2_x64)) {
+    return target;
+}
+
+static const BitcodeLib *lGetTargetLib(const std::map<uint32_t, const BitcodeLib *> &libs, ISPCTarget target,
+                                       TargetOS os, Arch arch) {
+    // TODO: validate parameters not to be errors or forbidden values.
+
+    // Canonicalize target: check unsupported, apply nozmm, resolve aliases
+    target = lCanonicalizeTarget(target, os, true);
+    if (target == ISPCTarget::none) {
         return nullptr;
     }
 
@@ -217,8 +242,45 @@ const BitcodeLib *TargetLibRegistry::getISPCTargetLib(ISPCTarget target, TargetO
     return lGetTargetLib(m_targets, target, os, arch);
 }
 
+// Include auto-generated stdlib target map from CMake
+// This map is generated by cmake/StdlibFamilies.cmake based on X86_TARGETS
+// to ensure consistency between build system and runtime lookup
+#include "stdlib_target_map_generated.h"
+
+static ISPCTarget mapToStdlibTarget(ISPCTarget target) {
+    // Look up in the map
+    auto it = stdlibTargetMap.find(target);
+    if (it != stdlibTargetMap.end()) {
+        return it->second;
+    }
+
+    // If no mapping found, check if this is an alias target (not in X86_TARGETS)
+    // For alias targets like avx1-i32x4 or sse41-*, follow the target parent hierarchy
+    // to find a target that has a stdlib mapping
+    // This handles targets that are defined in target_enums but not compiled separately
+    ISPCTarget parent = lGetAliasTarget(target);
+    if (parent != ISPCTarget::none) {
+        // Recursively map the parent target
+        return mapToStdlibTarget(parent);
+    }
+
+    // If no mapping found and no parent, return the target itself (for targets not in a width family)
+    return target;
+}
+
 const BitcodeLib *TargetLibRegistry::getISPCStdLib(ISPCTarget target, TargetOS os, Arch arch) const {
-    return lGetTargetLib(m_stdlibs, target, os, arch);
+    // Apply target canonicalizations
+    // Note: Don't apply alias resolution here (false) - aliases are resolved by mapToStdlibTarget
+    // nozmm canonicalization must happen BEFORE stdlib mapping because nozmm targets have separate
+    // stdlib bitcode files that avoid ZMM instructions.
+    target = lCanonicalizeTarget(target, os, false);
+    if (target == ISPCTarget::none) {
+        return nullptr;
+    }
+
+    // Map target to its stdlib representative target
+    ISPCTarget stdlibTarget = mapToStdlibTarget(target);
+    return lGetTargetLib(m_stdlibs, stdlibTarget, os, arch);
 }
 
 std::vector<std::string> TargetLibRegistry::checkBitcodeLibs() const {
