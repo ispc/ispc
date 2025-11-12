@@ -7,6 +7,25 @@
 # ispc CommonStdlibBuiltins.cmake
 #
 
+# Check if target should be skipped for the given OS/bit combination
+# Sets out_skip to TRUE if target should be skipped, FALSE otherwise
+function(should_skip_target_for_os target os bit out_skip)
+    set(skip FALSE)
+
+    if ("${os}" STREQUAL "unix" AND APPLE AND NOT ISPC_LINUX_TARGET)
+        # macOS target supports only x86_64 and aarch64
+        if ("${bit}" STREQUAL "32")
+            set(skip TRUE)
+        endif()
+        # ISPC doesn't support avx512spr targets on macOS
+        if ("${target}" MATCHES "avx512spr" OR "${target}" MATCHES "avx10")
+            set(skip TRUE)
+        endif()
+    endif()
+
+    set(${out_skip} ${skip} PARENT_SCOPE)
+endfunction()
+
 # Common function to determine architecture and OS
 function(determine_arch_and_os target bit os out_arch out_os)
     set(arch "error")
@@ -88,13 +107,34 @@ function (generate_stdlib_or_target_builtins func ispc_name CPP_LIST BC_LIST)
 
     # "Regular" targets, targeting specific real ISA: sse/avx
     if (X86_ENABLED)
-        foreach (target ${X86_TARGETS})
+        if (${func} STREQUAL "stdlib_to_cpp")
+            # Stdlib families are defined in cmake/StdlibFamilies.cmake
             foreach (bit 32 64)
                 foreach (os ${os_list})
-                    disp_target_stdlib(${func} ${ispc_name} ${target} ${bit} ${os} ${CPP_LIST} ${BC_LIST})
+                    foreach (family ${STDLIB_FAMILIES})
+                        process_stdlib_family(${family} ${ispc_name} ${bit} ${os} ${CPP_LIST} ${BC_LIST})
+                    endforeach()
+
+                    # Process remaining x86 targets not in any family (e.g., nozmm variants)
+                    foreach (target ${X86_TARGETS})
+                        list(FIND STDLIB_FAMILY_ALL_MEMBERS ${target} idx)
+                        if(idx EQUAL -1)
+                            # Target not in any family, compile stdlib separately
+                            disp_target_stdlib(${func} ${ispc_name} ${target} ${bit} ${os} ${CPP_LIST} ${BC_LIST})
+                        endif()
+                    endforeach()
                 endforeach()
             endforeach()
-        endforeach()
+        else()
+            # For target builtins, compile for each target individually
+            foreach (target ${X86_TARGETS})
+                foreach (bit 32 64)
+                    foreach (os ${os_list})
+                        disp_target_stdlib(${func} ${ispc_name} ${target} ${bit} ${os} ${CPP_LIST} ${BC_LIST})
+                    endforeach()
+                endforeach()
+            endforeach()
+        endif()
     endif()
 
     # XE targets
