@@ -2213,7 +2213,7 @@ forloop(i, 0, eval(WIDTH-1), `
 forloop(i, 0, eval(WIDTH-1), `
   %v_`'i = extractelement <eval(2*WIDTH) x $1> %v2, i32 %index_`'i')
 
-  %ret_0 = insertelement <WIDTH x $1> undef, $1 %v_0, i32 0
+  %ret_0 = insertelement <WIDTH x $1> poison, $1 %v_0, i32 0
 forloop(i, 1, eval(WIDTH-1), `  %ret_`'i = insertelement <WIDTH x $1> %ret_`'eval(i-1), $1 %v_`'i, i32 i
 ')
   ret <WIDTH x $1> %ret_`'eval(WIDTH-1)
