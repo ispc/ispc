@@ -4408,6 +4408,15 @@ Expr *FunctionCallExpr::TypeCheck() {
             Error(pos, "Valid function name must be used for function call.");
             return nullptr;
         }
+
+        // Warn if calling an exported function from ISPC code, as future versions
+        // will generate only external versions by default
+        if (funcType->IsExported() && !funcType->IsExternalOnly()) {
+            Warning(pos, "Calling exported function from ISPC code. In a future ISPC release, "
+                         "exported functions will only generate external versions by default. "
+                         "Consider using a non-exported function for ISPC-to-ISPC calls, or "
+                         "add the \"external_only\" attribute if you want the new behavior now.");
+        }
     } else {
         // Call through a function pointer
         const Type *fptrType = func->GetType();
