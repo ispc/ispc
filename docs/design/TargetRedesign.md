@@ -83,6 +83,52 @@ The compilation process for ISPC programs, as outlined, necessitates adjustments
 
 It's important to highlight that ISPC currently employs a similar strategy, utilizing manually written m4-based macro templates. However, this method necessitates that developers fully define all target-specific built-in libraries, which can be time-consuming and prone to errors. This issue is likely pronounced for fragmented, feature-based ISAs like RISC-V.
 
+## Standard Library Optimization through Width Families
+
+To reduce stdlib bitcode duplication and binary size, ISPC implements a width family system. Targets with the same vector width that produce identical stdlib bitcode are grouped into families and share a single stdlib.
+
+### Family Types
+
+1. **Generic Width Families**: Targets that produce stdlib identical to the generic implementation.
+   - Example: `avx512skx-x16`, `avx512icl-x16`, `avx512spr-x16` -> all use `generic-i1x16` stdlib
+   - Applicable to: AVX512/AVX10 families (i1x4, i1x8, i1x16, i1x32, i1x64) and many SSE/AVX widths
+
+2. **Inheritance Families**: Child ISAs that produce stdlib identical to their parent ISA (but different from generic usually due to alignment).
+   - Example: `avx2-i32x8`, `avx2vnni-i32x8` -> both use `avx1-i32x8` stdlib
+   - These ISAs have architectural differences from generic but inherit stdlib from parent
+
+### Implementation
+
+Width families are defined declaratively in `cmake/StdlibFamilies.cmake`:
+
+```cmake
+set(FAMILY_DEFINITIONS
+    # Generic width families
+    "i1x16:generic-i1x16:avx512skx-x16,avx512icl-x16,avx512spr-x16,avx10_2-x16"
+
+    # Inheritance families (use parent ISA, not generic)
+    "avx_i32x8:avx1-i32x8:avx2-i32x8,avx2vnni-i32x8"
+)
+```
+
+The system automatically:
+- Compiles stdlib once per representative target (generic or parent ISA)
+- Generates C++ mapping code for runtime stdlib lookup
+- Validates family membership against X86_TARGETS
+
+### Benefits
+
+- **Reduced Binary Size**: ~40% reduction in stdlib bitcode files (334mb -> 250mb)
+- **Faster Build Times**: Fewer stdlib compilations during ISPC build
+- **Maintainability**: Single source of truth for family definitions
+- **Correctness**: Automated validation ensures family members are consistent
+
+### Key Design Principle
+
+Stdlib must be capability-neutral. All target-specific capability constants (`__have_intel_vnni`, `__have_native_half_converts`, etc.) are declared without initialization during stdlib compilation via `ISPC_INTERNAL_STDLIB_COMPILATION`. This ensures all targets in the same width family produce identical stdlib bitcode, regardless of their ISA-specific capabilities. The capabilities are resolved later during user code compilation.
+
+Ideally, capabilities should be completely eliminated from stdlib. This can be achieved by moving generic implementations from `stdlib.ispc` into dedicated builtins in `generic.ispc`. With this approach, targets with ISA-specific capabilities will use their optimized target-specific builtins, while targets without those capabilities will fall back to the generic builtin implementation.
+
 ## Performance
 
 Due to changes in the user code compilation process, the performance of ISPC increases. This happens due to two factors:
