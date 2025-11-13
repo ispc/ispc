@@ -2395,11 +2395,21 @@ bool Target::checkIntrinsticSupport(llvm::StringRef name, SourcePos pos) {
 
         // Check if this intrinsic needs special feature validation beyond the base feature
         // For example, avx512.vpdpbusd requires avx512_vnni, not just avx512
-        // Extract the second-level feature name (e.g., "vpdpbusd" from "avx512.vpdpbusd.256")
-        size_t secondDot = name.find('.', featureName.length() + 1);
-        std::string intrinsicName = name.substr(featureName.length() + 1,
-                                                secondDot == llvm::StringRef::npos ? llvm::StringRef::npos
-                                                                                   : secondDot - featureName.length() - 1).str();
+        // Extract the intrinsic name for lookup in X86IntrinsicToFeature map
+        std::string intrinsicName;
+        size_t firstDot = name.find('.');
+        if (firstDot == llvm::StringRef::npos) {
+            // No dot in name (e.g., "tdpbssd" from "llvm.x86.tdpbssd")
+            // Use the entire name as the intrinsic name
+            intrinsicName = featureName;
+        } else {
+            // Has dots (e.g., "avx512.vpdpbusd.256" from "llvm.x86.avx512.vpdpbusd.256")
+            // Extract the second-level name (e.g., "vpdpbusd" from "avx512.vpdpbusd.256")
+            size_t secondDot = name.find('.', featureName.length() + 1);
+            intrinsicName = name.substr(featureName.length() + 1,
+                                       secondDot == llvm::StringRef::npos ? llvm::StringRef::npos
+                                                                          : secondDot - featureName.length() - 1).str();
+        }
 
         auto intrinsicIt = X86IntrinsicToFeature.find(intrinsicName);
         if (intrinsicIt != X86IntrinsicToFeature.end()) {
