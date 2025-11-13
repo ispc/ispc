@@ -428,9 +428,12 @@ std::unordered_map<std::string, std::string> X86IntrinsicToFeature = {
     {"tdpbssd", "amxint8"},
     {"tdpbsud", "amxint8"},
     {"tdpbusd", "amxint8"},
-    {"tdpbuud", "amxint8"}
-    // TODO: Add VNNI and other x86 intrinsics that need special feature validation
-};
+    {"tdpbuud", "amxint8"},
+    // VNNI (llvm.x86.avx512.vpdp*) - these work with both avx512_vnni and avx_vnni
+    {"vpdpbusd", "avx512_vnni"},
+    {"vpdpbusds", "avx512_vnni"},
+    {"vpdpwssd", "avx512_vnni"},
+    {"vpdpwssds", "avx512_vnni"}};
 
 // This map is used to verify features available for supported CPUs
 // and is used to filter target dependent intrisics and report an error.
@@ -2348,29 +2351,72 @@ bool Target::checkIntrinsticSupport(llvm::StringRef name, SourcePos pos) {
             return false;
         }
         AllCPUs a;
-        std::string featureName = name.substr(0, name.find('.')).str();
+        // Extract the first segment (prefix/namespace) from the intrinsic name
+        // E.g., "llvm.x86.avx512.vpdpbusd.256" -> "avx512"
+        std::string intrinsicPrefix = name.substr(0, name.find('.')).str();
         auto cpuFeatures = CPUFeatures[a.GetTypeFromName(this->getCPU())];
 
-        // First try normal feature validation
-        if (cpuFeatures.count(featureName) == 0) {
-            // If normal validation fails, check if this intrinsic needs special feature validation
-            auto intrinsicIt = X86IntrinsicToFeature.find(featureName);
-            if (intrinsicIt != X86IntrinsicToFeature.end()) {
-                // This intrinsic has special feature requirements, check it
-                std::string requiredFeatures = intrinsicIt->second;
-                if (cpuFeatures.count(requiredFeatures) == 0) {
+        // Extract the second segment (actual intrinsic name), skipping "mask." or "maskz." if present
+        // This is used for intrinsics that require specific CPU features beyond their prefix.
+        // Examples:
+        //   "avx512.vpdpbusd.256" -> "vpdpbusd" (VNNI intrinsic, requires avx512_vnni or avx_vnni)
+        //   "avx512.mask.vpdpbusd.512" -> "vpdpbusd" (hypothetical masked variant)
+        //   "avx512.mask.permvar.qi.128" -> "permvar" (actual masked intrinsic)
+        std::string intrinsicName;
+        if (name.size() > intrinsicPrefix.size() + 1) {
+            llvm::StringRef remainder = name.substr(intrinsicPrefix.length() + 1);
+            remainder.consume_front("mask.");
+            remainder.consume_front("maskz.");
+            intrinsicName = remainder.substr(0, remainder.find('.')).str();
+        }
+
+        // Check if this intrinsic has special feature requirements in X86IntrinsicToFeature map
+        // Try prefix first (e.g., "amx" for AMX intrinsics), then intrinsic name (e.g., "vpdpbusd" for VNNI)
+        auto intrinsicIt = X86IntrinsicToFeature.find(intrinsicPrefix);
+        if (intrinsicIt == X86IntrinsicToFeature.end() && !intrinsicName.empty()) {
+            intrinsicIt = X86IntrinsicToFeature.find(intrinsicName);
+        }
+
+        // If found in map, validate the required feature
+        if (intrinsicIt != X86IntrinsicToFeature.end()) {
+            std::string requiredFeature = intrinsicIt->second;
+            // Special case: avx512_vnni intrinsics also work with avx_vnni (AVX2-VNNI)
+            if (requiredFeature == "avx512_vnni") {
+                bool hasAvx512Vnni = cpuFeatures.count("avx512_vnni") > 0;
+                bool hasAvxVnni = cpuFeatures.count("avx_vnni") > 0;
+
+                if (!hasAvx512Vnni && !hasAvxVnni) {
                     Error(pos,
-                          "Target specific LLVM intrinsic \"%s\" requires feature \"%s\" not supported on \"%s\" "
-                          "CPU.",
-                          name.data(), requiredFeatures.c_str(), this->getCPU().c_str());
+                          "Target specific LLVM intrinsic \"%s\" requires feature \"avx512_vnni\" or \"avx_vnni\" "
+                          "not supported on \"%s\" CPU.",
+                          name.data(), this->getCPU().c_str());
                     return false;
                 }
-            } else {
-                // Not an X86 intrinsic, use original error message
-                Error(pos, "Target specific LLVM intrinsic \"%s\" not supported on \"%s\" CPU.", name.data(),
-                      this->getCPU().c_str());
+
+                // AVX2-VNNI (avx_vnni only) supports 128/256-bit widths but not 512-bit
+                if (hasAvxVnni && !hasAvx512Vnni) {
+                    size_t lastDot = name.rfind('.');
+                    if (lastDot != llvm::StringRef::npos && name.substr(lastDot + 1) == "512") {
+                        Error(pos,
+                              "Target specific LLVM intrinsic \"%s\" requires 512-bit AVX-512 support not "
+                              "available on \"%s\" CPU (only AVX2-VNNI available).",
+                              name.data(), this->getCPU().c_str());
+                        return false;
+                    }
+                }
+            } else if (cpuFeatures.count(requiredFeature) == 0) {
+                Error(pos,
+                      "Target specific LLVM intrinsic \"%s\" requires feature \"%s\" not supported on \"%s\" "
+                      "CPU.",
+                      name.data(), requiredFeature.c_str(), this->getCPU().c_str());
                 return false;
             }
+        }
+        // Otherwise, validate that the CPU supports the base feature (prefix)
+        else if (cpuFeatures.count(intrinsicPrefix) == 0) {
+            Error(pos, "Target specific LLVM intrinsic \"%s\" not supported on \"%s\" CPU.", name.data(),
+                  this->getCPU().c_str());
+            return false;
         }
     } else if (name.consume_front("arm.") == true) {
         if (m_arch != Arch::arm) {
