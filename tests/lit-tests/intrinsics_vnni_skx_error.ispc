@@ -2,6 +2,7 @@
 // RUN: not %{ispc} %s --cpu=skx --target=avx512skx-x8 --emit-llvm-text --enable-llvm-intrinsics -o - 2>&1 | FileCheck %s
 
 // REQUIRES: X86_ENABLED
+// UNSUPPORTED: LLVM_22_0+
 
 // CHECK: requires feature "avx512_vnni" not supported on "skx" CPU
 int foo_busd(int arg0, int arg1, int arg2) {
