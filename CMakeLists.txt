@@ -349,6 +349,8 @@ find_package(BISON 3.0 REQUIRED)
             COMMENT "Generating parse.cc"
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
+        # Create explicit target to ensure parser generation completes before compilation
+        add_custom_target(generate-parser DEPENDS ${BISON_CPP_OUTPUT} ${BISON_OUTPUT})
     endif()
 
 find_package(FLEX 2.6 REQUIRED)
@@ -994,11 +996,13 @@ configure_ispc_obj(common)
 
 add_library(frontend OBJECT EXCLUDE_FROM_ALL ${FRONTEND_SOURCES})
 configure_ispc_obj(frontend)
+add_dependencies(frontend generate-parser)
 
 if (ISPC_LIBRARY)
     add_library(frontend-lib OBJECT EXCLUDE_FROM_ALL ${FRONTEND_SOURCES})
     configure_ispc_obj(frontend-lib)
     target_compile_definitions(frontend-lib PRIVATE ISPC_IS_LIBRARY)
+    add_dependencies(frontend-lib generate-parser)
 endif()
 
 # builtin target is created in GenerateBuiltins.cmake
