@@ -4411,7 +4411,7 @@ Expr *FunctionCallExpr::TypeCheck() {
 
         // Warn if calling an exported function from ISPC code, as future versions
         // will generate only external versions by default
-        if (funcType->IsExported() && !funcType->IsExternalOnly()) {
+        if (funcType->IsExported() && !funcType->IsExternalOnly() && g->generateInternalExportFunctions) {
             Warning(pos, "Calling exported function from ISPC code. In a future ISPC release, "
                          "exported functions will only generate external versions by default. "
                          "Consider using a non-exported function for ISPC-to-ISPC calls, or "
