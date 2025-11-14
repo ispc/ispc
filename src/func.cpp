@@ -691,11 +691,13 @@ void Function::GenerateIR() const {
         }
     }
     // And we can now go ahead and emit the code
+    // Skip internal version if: external_only OR (exported AND --no-internal-export-functions flag is set)
+    bool skipInternalVersion = type->IsExternalOnly() || (type->IsExported() && !g->generateInternalExportFunctions);
+
     if (g->target->isXeTarget()) {
         // For Xe target we do not emit code for masked version of a function
         // if it is a kernel
-        const FunctionType *type = CastType<FunctionType>(sym->type);
-        if (!type->IsISPCKernel()) {
+        if (!type->IsISPCKernel() && !skipInternalVersion) {
             llvm::TimeTraceScope TimeScope("emitCode", llvm::StringRef(sym->name));
             FunctionEmitContext ec(this, sym, function, firstStmtPos);
             emitCode(&ec, function, firstStmtPos);
@@ -710,7 +712,7 @@ void Function::GenerateIR() const {
         // function which will resolve to particular implementation. The condition below ensures that in case of
         // multi-target compilation we will emit only one-per-target definition of extern "C" function mangled with
         // <target> suffix.
-        if (!type->IsExternalOnly() && !((type->IsExternC() || type->IsExternSYCL()) && g->mangleFunctionsWithTarget)) {
+        if (!skipInternalVersion && !((type->IsExternC() || type->IsExternSYCL()) && g->mangleFunctionsWithTarget)) {
             llvm::TimeTraceScope TimeScope("emitCode", llvm::StringRef(sym->name));
             FunctionEmitContext ec(this, sym, function, firstStmtPos);
             emitCode(&ec, function, firstStmtPos);
