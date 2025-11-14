@@ -61,7 +61,10 @@ function (generate_generic_builtins ispc_name)
         list(APPEND ARCH_LIST
             "x86_64,64"
         )
-        if (NOT APPLE)
+        # Generate 32-bit x86 generic stdlib/builtins when:
+        # - Not on Apple (native Linux/Windows), OR
+        # - On Apple with cross-compilation enabled (ISPC_LINUX_TARGET or ISPC_WINDOWS_TARGET)
+        if (NOT APPLE OR ISPC_LINUX_TARGET OR ISPC_WINDOWS_TARGET)
             list(APPEND ARCH_LIST
                 "x86,32"
             )
