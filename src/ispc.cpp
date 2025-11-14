@@ -429,8 +429,13 @@ std::unordered_map<std::string, std::string> X86IntrinsicToFeature = {
     {"tdpbssd", "amxint8"},
     {"tdpbsud", "amxint8"},
     {"tdpbusd", "amxint8"},
-    {"tdpbuud", "amxint8"}
-    // TODO: Add VNNI and other x86 intrinsics that need special feature validation
+    {"tdpbuud", "amxint8"},
+    // avx512_vnni - AVX-512 VNNI intrinsics (vpdp* family)
+    // These intrinsics start with "avx512" but require the "avx512_vnni" feature
+    {"vpdpbusd", "avx512_vnni"},
+    {"vpdpbusds", "avx512_vnni"},
+    {"vpdpwssd", "avx512_vnni"},
+    {"vpdpwssds", "avx512_vnni"}
 };
 
 // This map is used to verify features available for supported CPUs
@@ -2388,26 +2393,42 @@ bool Target::checkIntrinsticSupport(llvm::StringRef name, SourcePos pos) {
         std::string featureName = name.substr(0, name.find('.')).str();
         auto cpuFeatures = CPUFeatures[a.GetTypeFromName(this->getCPU())];
 
-        // First try normal feature validation
-        if (cpuFeatures.count(featureName) == 0) {
-            // If normal validation fails, check if this intrinsic needs special feature validation
-            auto intrinsicIt = X86IntrinsicToFeature.find(featureName);
-            if (intrinsicIt != X86IntrinsicToFeature.end()) {
-                // This intrinsic has special feature requirements, check it
-                std::string requiredFeatures = intrinsicIt->second;
-                if (cpuFeatures.count(requiredFeatures) == 0) {
-                    Error(pos,
-                          "Target specific LLVM intrinsic \"%s\" requires feature \"%s\" not supported on \"%s\" "
-                          "CPU.",
-                          name.data(), requiredFeatures.c_str(), this->getCPU().c_str());
-                    return false;
-                }
-            } else {
-                // Not an X86 intrinsic, use original error message
-                Error(pos, "Target specific LLVM intrinsic \"%s\" not supported on \"%s\" CPU.", name.data(),
-                      this->getCPU().c_str());
+        // Check if this intrinsic needs special feature validation beyond the base feature
+        // For example, avx512.vpdpbusd requires avx512_vnni, not just avx512
+        // Extract the intrinsic name for lookup in X86IntrinsicToFeature map
+        std::string intrinsicName;
+        size_t firstDot = name.find('.');
+        if (firstDot == llvm::StringRef::npos) {
+            // No dot in name (e.g., "tdpbssd" from "llvm.x86.tdpbssd")
+            // Use the entire name as the intrinsic name
+            intrinsicName = featureName;
+        } else {
+            // Has dots (e.g., "avx512.vpdpbusd.256" from "llvm.x86.avx512.vpdpbusd.256")
+            // Extract the second-level name (e.g., "vpdpbusd" from "avx512.vpdpbusd.256")
+            size_t secondDot = name.find('.', featureName.length() + 1);
+            intrinsicName = name.substr(featureName.length() + 1,
+                                       secondDot == llvm::StringRef::npos ? llvm::StringRef::npos
+                                                                          : secondDot - featureName.length() - 1).str();
+        }
+
+        auto intrinsicIt = X86IntrinsicToFeature.find(intrinsicName);
+        if (intrinsicIt != X86IntrinsicToFeature.end()) {
+            // This intrinsic has special feature requirements, check it
+            std::string requiredFeatures = intrinsicIt->second;
+            if (cpuFeatures.count(requiredFeatures) == 0) {
+                Error(pos,
+                      "Target specific LLVM intrinsic \"%s\" requires feature \"%s\" not supported on \"%s\" "
+                      "CPU.",
+                      name.data(), requiredFeatures.c_str(), this->getCPU().c_str());
                 return false;
             }
+        }
+        // If no special requirements, try normal feature validation
+        else if (cpuFeatures.count(featureName) == 0) {
+            // Feature not supported
+            Error(pos, "Target specific LLVM intrinsic \"%s\" not supported on \"%s\" CPU.", name.data(),
+                  this->getCPU().c_str());
+            return false;
         }
     } else if (name.consume_front("arm.") == true) {
         if (m_arch != Arch::arm) {
