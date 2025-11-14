@@ -4409,14 +4409,22 @@ Expr *FunctionCallExpr::TypeCheck() {
             return nullptr;
         }
 
-        // Warn if calling an exported function from ISPC code, as future versions
-        // will generate only external versions by default
-        if (funcType->IsExported() && !funcType->IsExternalOnly() && g->generateInternalExportFunctions) {
-            Warning(pos, "Calling exported function from ISPC code. In a future ISPC release, "
-                         "exported functions will only generate external versions by default. "
-                         "Consider using a non-exported function for ISPC-to-ISPC calls, "
-                         "add the \"external_only\" attribute, or use --no-internal-export-functions "
-                         "to adopt the new behavior now.");
+        // Warn if calling an exported function from ISPC code
+        if (funcType->IsExported()) {
+            if (funcType->IsExternalOnly() || !g->generateInternalExportFunctions) {
+                // Function has no internal version - this will create undefined symbols
+                Error(pos, "Calling exported function with no internal version from ISPC code. "
+                             "This function cannot be called from ISPC because it only has an external "
+                             "(C/C++-callable) version. Consider using a non-exported function for "
+                             "ISPC-to-ISPC calls.");
+            } else if (g->generateInternalExportFunctions) {
+                // Future behavior change warning
+                Warning(pos, "Calling exported function from ISPC code. In a future ISPC release, "
+                             "exported functions will only generate external versions by default. "
+                             "Consider using a non-exported function for ISPC-to-ISPC calls, "
+                             "add the \"external_only\" attribute, or use --no-internal-export-functions "
+                             "to adopt the new behavior now.");
+            }
         }
     } else {
         // Call through a function pointer
