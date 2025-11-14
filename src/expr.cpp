@@ -4414,8 +4414,9 @@ Expr *FunctionCallExpr::TypeCheck() {
         if (funcType->IsExported() && !funcType->IsExternalOnly() && g->generateInternalExportFunctions) {
             Warning(pos, "Calling exported function from ISPC code. In a future ISPC release, "
                          "exported functions will only generate external versions by default. "
-                         "Consider using a non-exported function for ISPC-to-ISPC calls, or "
-                         "add the \"external_only\" attribute if you want the new behavior now.");
+                         "Consider using a non-exported function for ISPC-to-ISPC calls, "
+                         "add the \"external_only\" attribute, or use --no-internal-export-functions "
+                         "to adopt the new behavior now.");
         }
     } else {
         // Call through a function pointer
