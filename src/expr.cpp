@@ -4362,6 +4362,32 @@ Expr *FunctionCallExpr::Optimize() {
     return this;
 }
 
+/** Helper function to check if calling an exported function from ISPC code
+    and emit appropriate warning/error. Returns true if an error was emitted
+    and the call should be rejected. */
+static bool lCheckExportedFunctionCall(SourcePos pos, const FunctionType *funcType) {
+    if (!funcType->IsExported()) {
+        return false;
+    }
+
+    if (funcType->IsExternalOnly() || !g->generateInternalExportFunctions) {
+        // Function has no internal version - this will create undefined symbols
+        Error(pos, "Calling exported function with no internal version from ISPC code. "
+                   "This function cannot be called from ISPC because it only has an external "
+                   "(C/C++-callable) version. Consider using a non-exported function for "
+                   "ISPC-to-ISPC calls.");
+        return true;
+    } else if (g->generateInternalExportFunctions) {
+        // Future behavior change warning
+        Warning(pos, "Calling exported function from ISPC code. In a future ISPC release, "
+                     "exported functions will only generate external versions by default. "
+                     "Consider using a non-exported function for ISPC-to-ISPC calls, "
+                     "add the \"external_only\" attribute, or use --no-internal-export-functions "
+                     "to adopt the new behavior now.");
+    }
+    return false;
+}
+
 Expr *FunctionCallExpr::TypeCheck() {
     if (func == nullptr || args == nullptr) {
         return nullptr;
@@ -4409,22 +4435,9 @@ Expr *FunctionCallExpr::TypeCheck() {
             return nullptr;
         }
 
-        // Warn if calling an exported function from ISPC code
-        if (funcType->IsExported()) {
-            if (funcType->IsExternalOnly() || !g->generateInternalExportFunctions) {
-                // Function has no internal version - this will create undefined symbols
-                Error(pos, "Calling exported function with no internal version from ISPC code. "
-                             "This function cannot be called from ISPC because it only has an external "
-                             "(C/C++-callable) version. Consider using a non-exported function for "
-                             "ISPC-to-ISPC calls.");
-            } else if (g->generateInternalExportFunctions) {
-                // Future behavior change warning
-                Warning(pos, "Calling exported function from ISPC code. In a future ISPC release, "
-                             "exported functions will only generate external versions by default. "
-                             "Consider using a non-exported function for ISPC-to-ISPC calls, "
-                             "add the \"external_only\" attribute, or use --no-internal-export-functions "
-                             "to adopt the new behavior now.");
-            }
+        // Check for exported function calls from ISPC code
+        if (lCheckExportedFunctionCall(pos, funcType)) {
+            return nullptr;
         }
     } else {
         // Call through a function pointer
@@ -4438,6 +4451,11 @@ Expr *FunctionCallExpr::TypeCheck() {
             (funcType = CastType<FunctionType>(fptrType->GetBaseType())) == nullptr) {
             Error(func->pos, "Must provide function name or function pointer for "
                              "function call expression.");
+            return nullptr;
+        }
+
+        // Check for exported function calls from ISPC code (function pointers)
+        if (lCheckExportedFunctionCall(pos, funcType)) {
             return nullptr;
         }
 
