@@ -3134,6 +3134,7 @@ Globals::Globals() {
     profileSampleUse = "";
     enableLLVMIntrinsics = false;
     mangleFunctionsWithTarget = false;
+    generateInternalExportFunctions = true;
     isMultiTargetCompilation = false;
     darwinVersionMin = llvm::VersionTuple();
     errorLimit = -1;

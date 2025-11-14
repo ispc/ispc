@@ -868,6 +868,13 @@ struct Globals {
         vector width to them. */
     bool mangleFunctionsWithTarget;
 
+    /** Indicates whether to generate internal (ISPC-callable) versions of
+        exported functions. When true (default), both internal and external
+        versions are generated. When false, only external (C/C++-callable)
+        versions are generated, matching the behavior of the external_only
+        attribute. */
+    bool generateInternalExportFunctions;
+
     /* If enabled, allows the user to directly call LLVM intrinsics. */
     bool enableLLVMIntrinsics;
 

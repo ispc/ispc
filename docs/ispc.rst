@@ -904,6 +904,35 @@ Predefined Macros:
   still defined for backward compatibility but are now considered deprecated
   aliases. New code should use the ``ISPC_TARGET_HAS_*`` names.
 
+Warning for Exported Function Calls:
+
+A new warning has been introduced to prepare for an upcoming behavior change in
+exported functions. Currently, ``export`` functions generate both internal
+(ISPC-callable) and external (C/C++-callable) versions. Starting in ISPC 1.30,
+the default behavior will change to generate only external versions, matching
+the behavior of the ``external_only`` attribute.
+
+In ISPC 1.29, the compiler now issues a warning when an exported function
+without the ``external_only`` attribute is called from ISPC code. This warning
+helps identify code that may be affected by the upcoming change. To address
+this warning, you can:
+
+* Use a non-exported function for ISPC-to-ISPC calls
+* Add the ``external_only`` attribute (see `external_only`_) to adopt the new
+  behavior immediately
+* Use the ``--no-internal-export-functions`` command-line flag to adopt the
+  new behavior for all exported functions in the compilation unit
+
+Additionally, a new ``--[no-]internal-export-functions`` command-line flag has
+been added to control the generation of internal (ISPC-callable) versions of
+exported functions. The flag is enabled by default (``--internal-export-functions``),
+maintaining the current behavior. When disabled (``--no-internal-export-functions``),
+only external versions are generated, matching the behavior of the ``external_only``
+attribute.
+
+Note: Cross-module calls to exported functions cannot be detected, so only
+calls within the same module will trigger this warning.
+
 
 Getting Started with ISPC
 =========================
@@ -3800,6 +3829,11 @@ from C/C++ in case when the user wants to reduce the size of the generated
 code. The same effect can be achieved by using the ``-ffunction-sections`` compiler
 option but not in all cases (e.g., shared libraries with ISPC code), so this
 attribute is provided as more fine-grained control.
+
+The ``--no-internal-export-functions`` command-line flag can be used to apply
+this behavior to all exported functions in the compilation unit, without having
+to annotate each function individually. This flag is enabled by default
+(``--internal-export-functions``) to maintain backward compatibility.
 
 deprecated
 ----------

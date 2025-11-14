@@ -170,6 +170,9 @@ static ArgsParseResult usage() {
     PrintWithWordBreaks(targetHelp, 24, TerminalWidth(), stdout);
     printf("    [--vectorcall/--no-vectorcall]\tEnable/disable vectorcall calling convention on Windows (x64 only). "
            "Disabled by default\n");
+    printf("    [--internal-export-functions/--no-internal-export-functions]\n");
+    printf("                                \tGenerate internal ISPC-callable versions of exported functions. "
+           "Enabled by default\n");
     printf("    [--version]\t\t\t\tPrint ispc version\n");
 #ifdef ISPC_XE_ENABLED
     printf("    [--vc-options=<\"-option1 -option2...\">]\t\t\t\tPass additional options to Vector Compiler backend\n");
@@ -813,6 +816,10 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
             vectorCall = BooleanOptValue::disabled;
         } else if (!strcmp(argv[i], "--vectorcall")) {
             vectorCall = BooleanOptValue::enabled;
+        } else if (!strcmp(argv[i], "--no-internal-export-functions")) {
+            g->generateInternalExportFunctions = false;
+        } else if (!strcmp(argv[i], "--internal-export-functions")) {
+            g->generateInternalExportFunctions = true;
         } else if (!strncmp(argv[i], "--math-lib=", 11)) {
             const char *lib = argv[i] + 11;
             if (!strcmp(lib, "default")) {
