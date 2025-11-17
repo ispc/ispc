@@ -912,26 +912,28 @@ exported functions. Currently, ``export`` functions generate both internal
 the default behavior will change to generate only external versions, matching
 the behavior of the ``external_only`` attribute.
 
-In ISPC 1.29, the compiler now issues a warning when an exported function
+In ISPC 1.29, the compiler issues a **warning** when an exported function
 without the ``external_only`` attribute is called from ISPC code. This warning
 helps identify code that may be affected by the upcoming change. To address
 this warning, you can:
 
 * Use a non-exported function for ISPC-to-ISPC calls
-* Add the ``external_only`` attribute (see `external_only`_) to adopt the new
-  behavior immediately
-* Use the ``--no-internal-export-functions`` command-line flag to adopt the
-  new behavior for all exported functions in the compilation unit
+* Add the ``external_only`` attribute (see `external_only`_) to the function
+  (note: this will generate an **error** instead of a warning)
+* Use the ``--no-internal-export-functions`` command-line flag to suppress
+  internal version generation (note: this will generate **errors** instead of
+  warnings for all exported function calls)
 
-Additionally, a new ``--[no-]internal-export-functions`` command-line flag has
-been added to control the generation of internal (ISPC-callable) versions of
-exported functions. The flag is enabled by default (``--internal-export-functions``),
-maintaining the current behavior. When disabled (``--no-internal-export-functions``),
-only external versions are generated, matching the behavior of the ``external_only``
-attribute.
+A new ``--[no-]internal-export-functions`` command-line flag has been added to
+control the generation of internal (ISPC-callable) versions of exported
+functions. The flag is enabled by default (``--internal-export-functions``),
+maintaining the current behavior. When disabled
+(``--no-internal-export-functions``), only external versions are generated,
+matching the behavior of the ``external_only`` attribute, and calling exported
+functions from ISPC code will result in a **compilation error**.
 
-Note: Cross-module calls to exported functions cannot be detected, so only
-calls within the same module will trigger this warning.
+Note: The compiler can only detect calls to exported functions within the same
+compilation unit. Cross-module calls to exported functions cannot be detected.
 
 
 Getting Started with ISPC
