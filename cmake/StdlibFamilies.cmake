@@ -28,15 +28,30 @@ function(define_stdlib_families)
     set(all_families "")
     set(all_members "")
 
+    # Define AVX10 target suffixes if LLVM supports them (>= 20.1.2)
+    if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "20.1.2")
+        set(AVX10_X4 ",avx10_2-x4")
+        set(AVX10_X8 ",avx10_2-x8")
+        set(AVX10_X16 ",avx10_2-x16")
+        set(AVX10_X32 ",avx10_2-x32")
+        set(AVX10_X64 ",avx10_2-x64")
+    else()
+        set(AVX10_X4 "")
+        set(AVX10_X8 "")
+        set(AVX10_X16 "")
+        set(AVX10_X32 "")
+        set(AVX10_X64 "")
+    endif()
+
     # Single declarative list of all families
     # Note: nozmm targets are excluded - they produce different stdlib that avoids ZMM instructions
     set(FAMILY_DEFINITIONS
         # AVX512 families - use generic targets
-        "i1x4:generic-i1x4:avx512skx-x4,avx512icl-x4,avx512spr-x4"
-        "i1x8:generic-i1x8:avx512skx-x8,avx512icl-x8,avx512spr-x8"
-        "i1x16:generic-i1x16:avx512skx-x16,avx512icl-x16,avx512spr-x16"
-        "i1x32:generic-i1x32:avx512skx-x32,avx512icl-x32,avx512spr-x32"
-        "i1x64:generic-i1x64:avx512skx-x64,avx512icl-x64,avx512spr-x64"
+        "i1x4:generic-i1x4:avx512skx-x4,avx512icl-x4,avx512spr-x4${AVX10_X4}"
+        "i1x8:generic-i1x8:avx512skx-x8,avx512icl-x8,avx512spr-x8${AVX10_X8}"
+        "i1x16:generic-i1x16:avx512skx-x16,avx512icl-x16,avx512spr-x16${AVX10_X16}"
+        "i1x32:generic-i1x32:avx512skx-x32,avx512icl-x32,avx512spr-x32${AVX10_X32}"
+        "i1x64:generic-i1x64:avx512skx-x64,avx512icl-x64,avx512spr-x64${AVX10_X64}"
 
         # SSE/AVX families that match generic implementation
         "i32x4:generic-i32x4:sse2-i32x4,sse4-i32x4"
@@ -53,25 +68,6 @@ function(define_stdlib_families)
         "avx_i32x8:avx1-i32x8:avx2-i32x8,avx2vnni-i32x8"
         "avx_i32x4:avx2-i32x4:avx2vnni-i32x4"
     )
-
-    # Add AVX10 targets to families if LLVM supports them (>= 20.1.2)
-    # Note: We create separate family definitions (i1x4_avx10 vs i1x4) instead of modifying
-    # the existing FAMILY_DEFINITIONS entries directly because:
-    # 1. CMake doesn't support string manipulation within list items in-place
-    # 2. We'd need to parse each definition, check if it matches, append the AVX10 target,
-    #    and reconstruct the string - much more complex than simply appending new entries
-    # 3. The separate family names (i1x4_avx10) are internal implementation details that
-    #    don't affect the generated code - both i1x4 and i1x4_avx10 map to generic-i1x4
-    if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "20.1.2")
-        # Append AVX10 targets to existing AVX512 families
-        list(APPEND FAMILY_DEFINITIONS
-            "i1x4_avx10:generic-i1x4:avx10_2-x4"
-            "i1x8_avx10:generic-i1x8:avx10_2-x8"
-            "i1x16_avx10:generic-i1x16:avx10_2-x16"
-            "i1x32_avx10:generic-i1x32:avx10_2-x32"
-            "i1x64_avx10:generic-i1x64:avx10_2-x64"
-        )
-    endif()
 
     # Parsing loop
     foreach(family_def ${FAMILY_DEFINITIONS})
