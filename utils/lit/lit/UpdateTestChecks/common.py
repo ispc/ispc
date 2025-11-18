@@ -5,7 +5,7 @@ import copy
 import glob
 import os
 import re
-import subprocess
+import subprocess # nosec B404
 import sys
 import shlex
 
