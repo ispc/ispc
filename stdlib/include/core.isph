@@ -173,6 +173,13 @@ static const int32 programIndex = {ISPC_PROGRAM_INDEX_INITIALIZER};
 
 #if defined(ISPC_TARGET_AVX512SKX) || defined(ISPC_TARGET_AVX512ICL) || defined(ISPC_TARGET_AVX512SPR) ||              \
     defined(ISPC_TARGET_AVX10_2)
+#define ISPC_IS_AVX512_TARGET_VAL 1
+#else
+#define ISPC_IS_AVX512_TARGET_VAL 0
+#endif
+
+#if defined(ISPC_TARGET_AVX512SKX) || defined(ISPC_TARGET_AVX512ICL) || defined(ISPC_TARGET_AVX512SPR) ||              \
+    defined(ISPC_TARGET_AVX10_2)
 #define ISPC_TARGET_HAS_ROTATE_VIA_SHUFFLE_8_VAL 1
 #define ISPC_TARGET_HAS_ROTATE_VIA_SHUFFLE_16_VAL 1
 #if TARGET_WIDTH <= 32
@@ -245,6 +252,7 @@ static const int32 programIndex = {ISPC_PROGRAM_INDEX_INITIALIZER};
     MACRO(__have_shift_via_shuffle_64, ISPC_TARGET_HAS_SHIFT_VIA_SHUFFLE_64_VAL)                                       \
     MACRO(__have_shift_via_shuffle_8, ISPC_TARGET_HAS_SHIFT_VIA_SHUFFLE_8_VAL)                                         \
     MACRO(__is_xe_target, ISPC_IS_XE_TARGET_VAL)                                                                       \
+    MACRO(__is_avx512_target, ISPC_IS_AVX512_TARGET_VAL)                                                               \
     MACRO(__math_lib, ISPC_MATH_LIB_VAL)                                                                               \
     MACRO(__memory_alignment, ISPC_MEMORY_ALIGNMENT_VAL)
 
@@ -973,9 +981,9 @@ ISPC_BUILTINS_ATTRS varying int64 __count_trailing_zeros_varying_i64(varying int
 
 // Looks unnecessary, however trailing/leading zeros are implemented here
 //  ISPC_BUILTINS_ATTRS uniform int32 __popcnt_int32_uniform(uniform int32);
-//  ISPC_BUILTINS_ATTRS uniform int64 __popcnt_int64_uniform(uniform int64);
+//  ISPC_BUILTINS_ATTRS uniform int32 __popcnt_int64_uniform(uniform int64);
 //  ISPC_BUILTINS_ATTRS varying int32 __popcnt_int32_varying(varying int32);
-//  ISPC_BUILTINS_ATTRS varying int64 __popcnt_int64_varying(varying int64);
+//  ISPC_BUILTINS_ATTRS varying int32 __popcnt_int64_varying(varying int64);
 
 ISPC_BUILTINS_ATTRS uniform int64 __movmsk(UIntMaskType);
 ISPC_BUILTINS_ATTRS uniform bool __any(UIntMaskType);

@@ -134,6 +134,7 @@ static constexpr const char *g_configGlobalNames[] = {
     "__have_shift_via_shuffle_64",
     "__have_shift_via_shuffle_8",
     "__is_xe_target",
+    "__is_avx512_target",
     "__math_lib",
     "__memory_alignment",
 };
