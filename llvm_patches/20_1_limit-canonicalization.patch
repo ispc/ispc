@@ -1,0 +1,18 @@
+diff --git a/llvm/lib/Transforms/InstCombine/InstCombineVectorOps.cpp b/llvm/lib/Transforms/InstCombine/InstCombineVectorOps.cpp
+index 20e0dcc376f3..86a130ea1a55 100644
+--- a/llvm/lib/Transforms/InstCombine/InstCombineVectorOps.cpp
++++ b/llvm/lib/Transforms/InstCombine/InstCombineVectorOps.cpp
+@@ -670,8 +670,11 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
+       // Bitcasts can change the number of vector elements, and they cost
+       // nothing.
+       if (CI->hasOneUse() && (CI->getOpcode() != Instruction::BitCast)) {
+-        Value *EE = Builder.CreateExtractElement(CI->getOperand(0), Index);
+-        return CastInst::Create(CI->getOpcode(), EE, EI.getType());
++        Instruction *U = cast<Instruction>(*CI->user_begin());
++        if (U->getParent() == CI->getParent() || isa<ConstantInt>(Index)) {
++          Value *EE = Builder.CreateExtractElement(CI->getOperand(0), Index);
++          return CastInst::Create(CI->getOpcode(), EE, EI.getType());
++        }
+       }
+     }
+   }
