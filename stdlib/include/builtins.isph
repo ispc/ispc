@@ -280,8 +280,10 @@ EXT inline READNONE varying double __trunc_varying_double(varying double);
 EXT inline READNONE varying float __trunc_varying_float(varying float);
 EXT inline READNONE varying float16 __trunc_varying_half(varying float16);
 
-EXT uniform int32 __popcnt_int32(uniform int32);
-EXT uniform int64 __popcnt_int64(uniform int64);
+EXT uniform int32 __popcnt_int32_uniform(uniform int32);
+EXT uniform int64 __popcnt_int64_uniform(uniform int64);
+EXT varying int32 __popcnt_int32_varying(varying int32);
+EXT varying int64 __popcnt_int64_varying(varying int64);
 
 // read hw clock
 EXT uniform int64 __clock();
