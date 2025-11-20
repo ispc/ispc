@@ -7,13 +7,13 @@
 // be the same for CPU and Xe targets.
 
 // RUN: not %{ispc} %s -o %t.o --nowrap -DEXPORT_FUNC 2>&1 | FileCheck %s -check-prefix=CHECK-EXPORT_EXTERN_FUNC
-// RUN: not %{ispc} %s -o %t.o --target=gen9-x8 --nowrap -DEXPORT_FUNC 2>&1 | FileCheck %s -check-prefix=CHECK-EXPORT_EXTERN_FUNC
+// RUN: not %{ispc} %s -o %t.o --target=xehpg-x8 --nowrap -DEXPORT_FUNC 2>&1 | FileCheck %s -check-prefix=CHECK-EXPORT_EXTERN_FUNC
 
 // RUN: not %{ispc} %s -o %t.o --nowrap -DTASK_FUNC 2>&1 | FileCheck %s -check-prefix=CHECK-TASK_FUNC
-// RUN: not %{ispc} %s -o %t.o --target=gen9-x8 --nowrap -DTASK_FUNC 2>&1 | FileCheck %s -check-prefix=CHECK-TASK_FUNC
+// RUN: not %{ispc} %s -o %t.o --target=xehpg-x8 --nowrap -DTASK_FUNC 2>&1 | FileCheck %s -check-prefix=CHECK-TASK_FUNC
 
 // RUN: not %{ispc} %s -o %t.o --nowrap 2>&1 | FileCheck %s -check-prefix=CHECK-EXPORT_EXTERN_FUNC
-// RUN: not %{ispc} %s -o %t.o --target=gen9-x8 --nowrap 2>&1 | FileCheck %s -check-prefix=CHECK-EXPORT_EXTERN_FUNC
+// RUN: not %{ispc} %s -o %t.o --target=xehpg-x8 --nowrap 2>&1 | FileCheck %s -check-prefix=CHECK-EXPORT_EXTERN_FUNC
 
 // CHECK-EXPORT_EXTERN_FUNC: Error: Undeclared symbol "taskIndex0".
 // CHECK-EXPORT_EXTERN_FUNC: Error: Undeclared symbol "taskIndex1".

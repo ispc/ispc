@@ -547,9 +547,7 @@ std::unordered_map<ISPCTarget, ISPCTarget> targetParentMap = {
 
     {ISPCTarget::wasm_i32x4, ISPCTarget::generic_i32x4}
 
-    /*{ISPCTarget::gen9_x8, ISPCTarget::generic_i1x8},
-    {ISPCTarget::gen9_x16, ISPCTarget::generic_i1x16},
-    {ISPCTarget::xelp_x8, ISPCTarget::generic_i1x8},
+    /*{ISPCTarget::xelp_x8, ISPCTarget::generic_i1x8},
     {ISPCTarget::xelp_x16, ISPCTarget::generic_i1x16},
     {ISPCTarget::xehpg_x8, ISPCTarget::generic_i1x8},
     {ISPCTarget::xehpg_x16, ISPCTarget::generic_i1x16},

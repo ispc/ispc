@@ -940,8 +940,12 @@ functions from ISPC code will result in a **compilation error**.
 Note: The compiler can only detect calls to exported functions within the same
 compilation unit. Cross-module calls to exported functions cannot be detected.
 
-``sse2-i32x4`` and ``sse2-i32x8`` targets are deprecated and will be removed in
-future releases.
+ISPC Targets:
+
+* ``sse2-i32x4`` and ``sse2-i32x8`` targets are deprecated and will be removed in
+  future releases.
+* ``gen9-x8``, and ``gen9-x16`` targets have been removed.
+
 
 Getting Started with ISPC
 =========================
@@ -1272,7 +1276,6 @@ The following GPU targets are supported:
 ============= ========================= ===========================================================
 GPU target    GPU microarchitecture     First-GPU codename to support the target
 ============= ========================= ===========================================================
-gen9          Intel Gen9                Intel Skylake iGPU (2015)
 xelp          Intel XeLP                Intel Tiger Lake LP iGPU (2020)
 xehpg         Intel XeHPG               Intel Arc Alchemist GPU (2022)
 xehpc         Intel XeHPC               Intel Ponte Vecchio GPU (2022)
@@ -1348,7 +1351,7 @@ to ARMv8 (32-bit) when ``--arch=arm`` is used.
 
 Xe targets:
 
-``gen9-x8``, ``gen9-x16``, ``xelp-x8``, ``xelp-x16``, ``xehpg-x8``, ``xehpg-x16``, ``xehpc-x16``, ``xehpc-x32``.
+``xelp-x8``, ``xelp-x16``, ``xehpg-x8``, ``xehpg-x16``, ``xehpc-x16``, ``xehpc-x32``.
 
 Note that ``sse4.1`` and ``sse4.2`` targets may not be used together in
 multi-target compilation. While the auto-dispatch code will correctly detect

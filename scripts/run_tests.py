@@ -88,7 +88,7 @@ class TargetConfig(object):
         else:
             self.arch = arch
         self.target = target
-        self.xe = target.find("gen9") != -1 or target.find("xe") != -1
+        self.xe = target.find("xe") != -1
         self.set_cpu(cpu)
         self.set_target()
 

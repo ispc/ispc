@@ -102,7 +102,7 @@ Defined in `tests/lit-tests/lit.cfg`:
 Use `--debug-phase` to capture output of specific optimization passes:
 
 ```ispc
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 --emit-llvm-text \
+// RUN: %{ispc} %s --target=avx2 --emit-llvm-text \
 // RUN:   --debug-phase=325:325 --dump-file=%t -o /dev/null
 // RUN: FileCheck --input-file %t/ir_325_LoadStoreVectorizerPass.ll %s
 ```

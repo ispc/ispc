@@ -9,7 +9,7 @@
 // RUN: FileCheck %s -check-prefix=CHECK_MULTI_CPU2 --input-file=%t_avx2.ll
 
 // Check GPU:
-// RUN: %{ispc} %s --target=gen9-x8 --emit-llvm-text --nowrap -o - | FileCheck %s -check-prefix=CHECK_GPU
+// RUN: %{ispc} %s --target=xehpg-x8 --emit-llvm-text --nowrap -o - | FileCheck %s -check-prefix=CHECK_GPU
 
 // Check errors
 // RUN: not %{ispc} %s --target=avx2-i32x8 -DINVOKE_SYCL_NOT_EXTERN --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_INVOKE_SYCL_NOT_EXTERN_SYCL
@@ -17,10 +17,10 @@
 // RUN: not %{ispc} %s --target=avx2-i32x8 -DSYCL_NO_INVOKE --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=SYCL_NO_INVOKE
 // RUN: not %{ispc} %s --target=avx2-i32x8 -DINVOKE_SYCL_NO_REGCALL --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=INVOKE_SYCL_NO_REGCALL
 
-// RUN: not %{ispc} %s --target=gen9-x8 -DINVOKE_SYCL_NOT_EXTERN --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_INVOKE_SYCL_NOT_EXTERN_SYCL
-// RUN: not %{ispc} %s --target=gen9-x8 -DCHECK_EXTERN_SYCL_DEF --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_EXTERN_SYCL_DEF
-// RUN: not %{ispc} %s --target=gen9-x8 -DSYCL_NO_INVOKE --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=SYCL_NO_INVOKE
-// RUN: not %{ispc} %s --target=gen9-x8 -DINVOKE_SYCL_NO_REGCALL --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=INVOKE_SYCL_NO_REGCALL
+// RUN: not %{ispc} %s --target=xehpg-x8 -DINVOKE_SYCL_NOT_EXTERN --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_INVOKE_SYCL_NOT_EXTERN_SYCL
+// RUN: not %{ispc} %s --target=xehpg-x8 -DCHECK_EXTERN_SYCL_DEF --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=CHECK_EXTERN_SYCL_DEF
+// RUN: not %{ispc} %s --target=xehpg-x8 -DSYCL_NO_INVOKE --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=SYCL_NO_INVOKE
+// RUN: not %{ispc} %s --target=xehpg-x8 -DINVOKE_SYCL_NO_REGCALL --emit-llvm-text --nowrap -o %t.ll 2>&1 | FileCheck %s -check-prefix=INVOKE_SYCL_NO_REGCALL
 
 // CHECK_INVOKE_SYCL_NOT_EXTERN_SYCL-COUNT-2: "invoke_sycl" expression illegal with non-'extern "SYCL"'-qualified function.
 // CHECK_EXTERN_SYCL_DEF: 'extern "SYCL"' function "extern_sycl_func_def" cannot be defined in ISPC

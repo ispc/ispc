@@ -1,7 +1,7 @@
 // The test checks code generation for extern "C" function definitions on GPU.
 
 // Check GPU:
-// RUN: %{ispc} %s --target=gen9-x8 --emit-llvm-text --nowrap -o - | FileCheck %s -check-prefix=CHECK_GPU
+// RUN: %{ispc} %s --target=xehpg-x8 --emit-llvm-text --nowrap -o - | FileCheck %s -check-prefix=CHECK_GPU
 
 // REQUIRES: XE_ENABLED
 

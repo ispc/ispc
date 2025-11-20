@@ -1,6 +1,6 @@
 // This test checks that ISPC correctly mangles SPIR-V builtins.
 
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 --emit-llvm-text --nowrap -o - | FileCheck %s
+// RUN: %{ispc} %s --target=xehpc-x16 --arch=xe64 --emit-llvm-text --nowrap -o - | FileCheck %s
 // REQUIRES: XE_ENABLED && !WINDOWS_HOST
 
 // CHECK-LABEL: @kernel_double

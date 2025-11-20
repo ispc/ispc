@@ -1,5 +1,5 @@
 // This tests checks that EEI is used (instead of GEP) to get unique value in foreach_unique statement for Xe target.
-// RUN: %{ispc} %s --target=gen9-x8 -O0  --emit-llvm-text --no-discard-value-names --nowrap -o - | FileCheck %s
+// RUN: %{ispc} %s --target=xehpg-x8 -O0  --emit-llvm-text --no-discard-value-names --nowrap -o - | FileCheck %s
 
 // REQUIRES: XE_ENABLED
 

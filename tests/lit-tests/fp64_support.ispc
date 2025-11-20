@@ -1,4 +1,4 @@
-// RUN: %{ispc} %s --target=gen9-x16 --device=skl -h %t.h --emit-llvm-text -o %t.ll
+// RUN: %{ispc} %s --target=xehpc-x16 --device=pvc -h %t.h --emit-llvm-text -o %t.ll
 // RUN: FileCheck --input-file=%t.ll -check-prefixes=CHECK_ALL,CHECK_FP64_SUPPORTED %s
 // RUN: %{ispc} %s --target=xelp-x16 --device=tgllp -h %t.h --emit-llvm-text -o %t.ll
 // RUN: FileCheck --input-file=%t.ll -check-prefixes=CHECK_ALL,CHECK_FP64_NOT_SUPPORTED %s

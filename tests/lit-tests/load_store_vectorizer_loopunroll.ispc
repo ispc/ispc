@@ -8,9 +8,9 @@
 //   for resulting vector and "poison" starting from LLVM 14.0 (llvm/llvm-project@cf284f6)
 //   It's safe transformation since poison values will be always overwriten with a different value.
 
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -h %t.h --emit-llvm-text --debug-phase=325:325 --dump-file=%t -o /dev/null
+// RUN: %{ispc} %s --target=xehpg-x16 --arch=xe64 -h %t.h --emit-llvm-text --debug-phase=325:325 --dump-file=%t -o /dev/null
 // RUN: FileCheck --input-file %t/ir_325_LoadStoreVectorizerPass.ll %s --check-prefixes CHECK_ALL,CHECK
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -h %t.h --emit-llvm-text --debug-phase=325:325 --dump-file=%t -o /dev/null
+// RUN: %{ispc} %s --target=xehpg-x8 --arch=xe64 -h %t.h --emit-llvm-text --debug-phase=325:325 --dump-file=%t -o /dev/null
 // RUN: FileCheck --input-file %t/ir_325_LoadStoreVectorizerPass.ll %s --check-prefixes CHECK_ALL,CHECK
 
 // REQUIRES: XE_ENABLED

@@ -45,11 +45,11 @@ Using The ISPC Compiler
 =======================
 
 The output from ``ispc`` for Xe targets is SPIR-V file by default. It is used
-when either ``gen9`` or ``xe`` target is selected:
+when ``xe`` target is selected:
 
 .. code-block:: console
 
-   ispc foo.ispc --target=gen9-x8 -o foo.spv
+   ispc foo.ispc --target=xehpg-x8 -o foo.spv
 
 The SPIR-V file is consumed by the runtime for further compilation and execution
 on GPU.
@@ -82,16 +82,15 @@ installation of TBB runtime instructions.
 Basic Command-line Options
 --------------------------
 
-A bunch of new targets were introduced for GPU support: ``gen9-x8``,
-``gen9-x16``, ``xelp-x8``, ``xelp-x16``, ``xehpg-x8``, ``xehpg-x16``,
-``xehpc-x16`` and ``xehpc-x32``.
+A bunch of new targets were introduced for GPU support: ``xelp-x8``, ``xelp-x16``,
+``xehpg-x8``, ``xehpg-x16``, ``xehpc-x16`` and ``xehpc-x32``.
 
 If the ``-o`` flag is given, ``ispc`` will generate a SPIR-V output file.
 Optionally you can use ``--emit-spirv`` flag:
 
 .. code-block:: console
 
-   ispc --target=gen9-x8 --emit-spirv foo.ispc -o foo.spv
+   ispc --target=xehpg-x8 --emit-spirv foo.ispc -o foo.spv
 
 To generate L0 binary, use ``--emit-zebin`` flag. When you use L0 binary you may
 want to pass some additional options to the vector backend. You can do this
@@ -495,7 +494,7 @@ are example commands for Linux:
 
   .. code-block:: console
 
-    ispc -I /home/ispc_package/include/ispcrt -DISPC_GPU --target=gen9-x8 --woff
+    ispc -I /home/ispc_package/include/ispcrt -DISPC_GPU --target=xehpg-x8 --woff
     -o /home/ispc_package/examples/xpu/simple/xe_simple.spv
     /home/ispc_package/examples/xpu/simple/simple.ispc
 
@@ -657,7 +656,7 @@ To reduce number of local variables you can follow these simple rules:
 
 * Use SIMD-8 where it is impossible to fit in the available register number.  If
   you see the warning message below during runtime, consider compiling your code
-  for SIMD-8 target (``--target=gen9-x8``).
+  for SIMD-8 target (``--target=xehpg-x8``).
 
   .. code-block:: console
 

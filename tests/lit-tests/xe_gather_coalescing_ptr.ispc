@@ -11,9 +11,9 @@
 // %vectorized_extr_elem222 = extractelement <3 x float> %vectorized_ld, i64 2
 // %vectorized_extr_elem221 = extractelement <3 x float> %vectorized_ld, i64 3
 
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 --emit-llvm-text -o %t.ll
+// RUN: %{ispc} %s --target=xehpg-x16 --arch=xe64 --emit-llvm-text -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 --emit-llvm-text -o %t.ll
+// RUN: %{ispc} %s --target=xehpg-x8 --arch=xe64 --emit-llvm-text -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s
 
 // REQUIRES: XE_ENABLED

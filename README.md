@@ -56,7 +56,7 @@ and optimization and is [hosted on github](http://github.com/ispc/ispc). It
 supports Windows, macOS, and Linux as a host operating system and also capable
 to target Android, iOS, and PS4/PS5.  It currently supports multiple flavours
 of x86 (SSE2, SSE4, AVX, AVX2, and AVX512), ARM (NEON), and Intel® GPU
-architectures (Gen9 and Xe family).
+architectures (Xe family).
 
 ## Features
 

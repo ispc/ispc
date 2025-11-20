@@ -1,5 +1,4 @@
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 --emit-spirv --nowrap -o %t.spv
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 --device=skl --emit-spirv --nowrap -o %t.spv
+// RUN: %{ispc} %s --target=xehpc-x16 --arch=xe64 --emit-spirv --nowrap -o %t.spv
 // RUN: not %{ispc} %s --target=xelp-x16 --arch=xe64 --device=tgllp --emit-spirv --nowrap -o %t.spv 2>&1 | FileCheck %s -check-prefix=CHECK_DOUBLE_ERROR
 // RUN: not %{ispc} %s --target=xelp-x16 --arch=xe64 --device=dg1 --emit-spirv --nowrap -o %t.spv 2>&1 | FileCheck %s -check-prefix=CHECK_DOUBLE_ERROR
 // RUN: not %{ispc} %s --target=xehpg-x16 --arch=xe64 --device=acm-g11 --emit-spirv --nowrap -o %t.spv 2>&1 | FileCheck %s -check-prefix=CHECK_DOUBLE_ERROR
