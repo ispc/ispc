@@ -238,7 +238,7 @@ void MemoryCoalescing::applyOptimization() {
             // Apply dangling GEP
             if (auto *GEP = llvm::dyn_cast<llvm::GetElementPtrInst>(PD.first))
                 if (!GEP->getParent())
-                    GEP->insertBefore(PD.second.InsertPoint);
+                    GEP->insertBefore(PD.second.InsertPoint->getIterator());
             // Run optimization
             optimizePtr(PD.first, PD.second, PD.second.InsertPoint);
         }
@@ -264,7 +264,7 @@ bool MemoryCoalescing::stopsOptimization(llvm::Instruction *Inst) const {
         }
     } else if (OptType == MemType::OPT_STORE) {
         // For store coalescing, both loads and stores can introduce problems.
-        if (auto CI = llvm::dyn_cast<llvm::CallInst>(Inst)) {
+        if (llvm::isa<llvm::CallInst>(Inst)) {
             // Such call may introduce store-load/store-store sequence
             for (unsigned i = 0; i < Inst->getNumOperands(); ++i) {
                 if (GetAddressSpace(Inst->getOperand(i)) == AddrSpace)
@@ -348,7 +348,7 @@ llvm::Value *MemoryCoalescing::buildIEI(llvm::Value *InsertTo, llvm::Value *Val,
             // Need to create eei-cast-iei-cast chain.
             // Extract scalar type value
             auto *EEI = llvm::ExtractElementInst::Create(InsertTo, llvm::ConstantInt::get(LLVMTypes::Int64Type, Idx),
-                                                         "mem_coal_diff_ty_eei", InsertBefore);
+                                                         "mem_coal_diff_ty_eei", InsertBefore->getIterator());
             // Cast it to vector of smaller types
             auto *Cast = buildCast(EEI, llvm::FixedVectorType::get(ValTy, ScalarTypeBytes / ValTyBytes), InsertBefore);
             // Insert value into casted type. Do it via this builder so we don't duplicate logic of offset calculations.
@@ -358,8 +358,9 @@ llvm::Value *MemoryCoalescing::buildIEI(llvm::Value *InsertTo, llvm::Value *Val,
         }
     }
 
-    return llvm::InsertElementInst::Create(
-        InsertTo, FinalInsertElement, llvm::ConstantInt::get(LLVMTypes::Int64Type, Idx), "mem_coal_iei", InsertBefore);
+    return llvm::InsertElementInst::Create(InsertTo, FinalInsertElement,
+                                           llvm::ConstantInt::get(LLVMTypes::Int64Type, Idx), "mem_coal_iei",
+                                           InsertBefore->getIterator());
 }
 
 llvm::Value *MemoryCoalescing::buildCast(llvm::Value *Val, llvm::Type *DstTy, llvm::Instruction *InsertBefore) const {
@@ -368,13 +369,13 @@ llvm::Value *MemoryCoalescing::buildCast(llvm::Value *Val, llvm::Type *DstTy, ll
         return Val;
 
     if (DstTy->isPointerTy() && !Val->getType()->isPointerTy()) {
-        return new llvm::IntToPtrInst(Val, DstTy, "coal_diff_ty_ptr_cast", InsertBefore);
+        return new llvm::IntToPtrInst(Val, DstTy, "coal_diff_ty_ptr_cast", InsertBefore->getIterator());
     } else if (!DstTy->isPointerTy() && Val->getType()->isPointerTy()) {
         auto *PtrToInt = new llvm::PtrToIntInst(Val, g->target->is32Bit() ? LLVMTypes::Int32Type : LLVMTypes::Int64Type,
-                                                "coal_diff_ty_ptr_cast", InsertBefore);
+                                                "coal_diff_ty_ptr_cast", InsertBefore->getIterator());
         return buildCast(PtrToInt, DstTy, InsertBefore);
     } else {
-        return new llvm::BitCastInst(Val, DstTy, "coal_diff_ty_cast", InsertBefore);
+        return new llvm::BitCastInst(Val, DstTy, "coal_diff_ty_cast", InsertBefore->getIterator());
     }
 }
 
@@ -413,7 +414,7 @@ llvm::Value *MemoryCoalescing::buildEEI(llvm::Value *ExtractFrom, MemoryCoalesci
         // Extract bytes via shuffle vector
         Res = new llvm::ShuffleVectorInst(Res, llvm::UndefValue::get(Res->getType()),
                                           llvm::ConstantDataVector::get(*g->ctx, ByteIdxsArg), "coal_unaligned_loader",
-                                          InsertBefore);
+                                          InsertBefore->getIterator());
         // Cast byte vector to scalar value
         Res = buildCast(Res, llvm::IntegerType::get(*g->ctx, /* NumBits */ DstTyBytes << 3), InsertBefore);
         // Cast to actual DstTy
@@ -421,7 +422,7 @@ llvm::Value *MemoryCoalescing::buildEEI(llvm::Value *ExtractFrom, MemoryCoalesci
     }
 
     Res = llvm::ExtractElementInst::Create(ExtractFrom, llvm::ConstantInt::get(LLVMTypes::Int64Type, Idx),
-                                           "mem_coal_eei", InsertBefore);
+                                           "mem_coal_eei", InsertBefore->getIterator());
     if (DstTy == ScalarType) {
         // Done here
         return Res;
@@ -535,13 +536,14 @@ void XeGatherCoalescing::optimizePtr(llvm::Value *Ptr, PtrData &PD, llvm::Instru
     for (unsigned i = 0; i < MemInstsNeeded; ++i) {
         llvm::Constant *Offset = llvm::ConstantInt::get(LLVMTypes::Int64Type, MinIdx + i * ReqSize);
         llvm::PtrToIntInst *PtrToInt =
-            new llvm::PtrToIntInst(Ptr, LLVMTypes::Int64Type, "vectorized_ptrtoint", InsertPoint);
+            new llvm::PtrToIntInst(Ptr, LLVMTypes::Int64Type, "vectorized_ptrtoint", InsertPoint->getIterator());
 
-        llvm::Instruction *Addr = llvm::BinaryOperator::CreateAdd(PtrToInt, Offset, "vectorized_address", InsertPoint);
+        llvm::Instruction *Addr =
+            llvm::BinaryOperator::CreateAdd(PtrToInt, Offset, "vectorized_address", InsertPoint->getIterator());
         llvm::Type *RetType = llvm::FixedVectorType::get(LargestType, ReqSize / LargestTypeSize);
         llvm::IntToPtrInst *PtrForLd =
-            new llvm::IntToPtrInst(Addr, LLVMTypes::PtrType, "vectorized_address_ptr", InsertPoint);
-        llvm::LoadInst *LD = new llvm::LoadInst(RetType, PtrForLd, "vectorized_ld_exp", InsertPoint);
+            new llvm::IntToPtrInst(Addr, LLVMTypes::PtrType, "vectorized_address_ptr", InsertPoint->getIterator());
+        llvm::LoadInst *LD = new llvm::LoadInst(RetType, PtrForLd, "vectorized_ld_exp", InsertPoint->getIterator());
 
         //  If the Offset is zero, we generate a LD with default alignment for the target.
         //  If the Offset is non-zero, we should re-align the LD based on its value.
@@ -571,7 +573,7 @@ void XeGatherCoalescing::optimizePtr(llvm::Value *Ptr, PtrData &PD, llvm::Instru
                     extractValueFromBlock(BlockLDs, AdjOffset, Gather->getType()->getScalarType(), InsertPoint);
                 NewVal = llvm::InsertElementInst::Create(NewVal, ExtractedValue,
                                                          llvm::ConstantInt::get(LLVMTypes::Int64Type, CurrElem),
-                                                         "gather_coal_iei", InsertPoint);
+                                                         "gather_coal_iei", InsertPoint->getIterator());
                 ++CurrElem;
             }
             Gather->replaceAllUsesWith(NewVal);
