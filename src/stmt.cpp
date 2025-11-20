@@ -3696,8 +3696,8 @@ class PrintArgsBuilder {
     // Returns new args builder with subset of original args.
     // Subset is defined with pair of indexes, element with \p end index is not included.
     PrintArgsBuilder extract(int beg, int end) const {
-        Assert(beg >= 0 && beg <= argExprs.size() && end >= 0 && end <= argExprs.size() &&
-               "wrong argument: index is out of bound");
+        Assert(beg >= 0 && static_cast<size_t>(beg) <= argExprs.size() && end >= 0 &&
+               static_cast<size_t>(end) <= argExprs.size() && "wrong argument: index is out of bound");
         Assert(beg <= end && "wrong arguments: beg must preceed end");
         PrintArgsBuilder extraction(ctx, data);
         std::copy(std::next(argExprs.begin(), beg), std::next(argExprs.begin(), end),

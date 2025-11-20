@@ -604,7 +604,7 @@ void Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, Sour
         enum { IK_NORMAL, IK_INPUT, IK_OUTPUT, IK_INPUT_OUTPUT };
         unsigned int offset = 32;
         unsigned int grf_size = g->target->getXeGrfSize();
-        for (int i = 0; i < args.size(); i++) {
+        for (size_t i = 0; i < args.size(); i++) {
             const Type *T = args[i]->type;
             argKinds.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, AK_NORMAL)));
             argInOutKinds.push_back(llvm::ValueAsMetadata::get(llvm::ConstantInt::get(i32Type, IK_NORMAL)));
