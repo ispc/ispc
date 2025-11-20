@@ -3663,7 +3663,7 @@ llvm::Value *FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType
 #ifdef ISPC_XE_ENABLED
         llvm::FunctionType *llvmFuncType = funcType->LLVMFunctionType(g->ctx, disableMask);
         Assert(args.size() <= llvmFuncType->getFunctionNumParams());
-        for (int i = 0; i < args.size(); i++) {
+        for (size_t i = 0; i < args.size(); i++) {
             llvm::Value *adrCast = args[i];
             // Update addrspace of passed argument if needed for Xe target
             adrCast = XeUpdateAddrSpaceForParam(adrCast, llvmFuncType, i);
