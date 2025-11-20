@@ -299,3 +299,9 @@ end_bb_$3:
 '
 )
 
+declare <WIDTH x i32> @llvm.ctpop.TYPE_SUFFIX(i32)(<WIDTH x i32>) nounwind readnone
+define <WIDTH x i32> @__popcnt_int32_varying(<WIDTH x i32>) nounwind readonly alwaysinline {
+  %call = call <WIDTH x i32> @llvm.ctpop.TYPE_SUFFIX(i32)(<WIDTH x i32> %0)
+  ret <WIDTH x i32> %call
+}
+
