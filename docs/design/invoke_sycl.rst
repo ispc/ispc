@@ -21,7 +21,7 @@ Overview
 The ``invoke_sycl`` adds support for an execution model in which SPMD functions are called from SIMD context. In
 particular, below we will consider calling SYCL functions from ISPC. A similar approach may be applied to call between
 other languages like call SYCL from ESIMD or call OpenCL from ISPC. ISPC execution model defines an execution width,
-which is mapped to subgroup size in SYCL execution model.  For example, ``gen9-x16`` target has an execution width 16,
+which is mapped to subgroup size in SYCL execution model.  For example, ``xehpg-x16`` target has an execution width 16,
 so SYCL subgroup size will be 16 to match it. The invocation may be in both convergent and non-convergent contexts.
 
 Defining SYCL function
@@ -96,7 +96,7 @@ Here is an example of calling SYCL function used in the examples above:
 
 .. code-block:: cpp
 
-    // ispc --target=gen9-x16 simple.ispc
+    // ispc --target=xehpg-x16 simple.ispc
     struct Parameters {
         float *vin;
         float *vout;

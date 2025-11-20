@@ -59,7 +59,7 @@ function(determine_arch_and_os target bit os out_arch out_os)
         else()
             set(arch "error")
         endif()
-    elseif ("${target}" MATCHES "gen9|xe")
+    elseif ("${target}" MATCHES "xe")
         set(arch "xe64")
     endif()
 

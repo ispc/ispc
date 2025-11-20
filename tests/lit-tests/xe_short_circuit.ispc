@@ -1,4 +1,4 @@
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 --emit-llvm-text --nowrap -o %t.ll
+// RUN: %{ispc} %s --target=xehpg-x16 --arch=xe64 --emit-llvm-text --nowrap -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s
 
 // REQUIRES: XE_ENABLED

@@ -1,5 +1,5 @@
 // This test checks that dwarfAddressSpace attribute is present in DIDerivedType metadata for Xe targets.
-// RUN: %{ispc} %s --target=gen9-x8 -g --emit-llvm-text -o - | FileCheck %s
+// RUN: %{ispc} %s --target=xehpg-x8 -g --emit-llvm-text -o - | FileCheck %s
 
 // REQUIRES: XE_ENABLED
 

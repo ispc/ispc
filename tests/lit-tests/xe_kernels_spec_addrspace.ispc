@@ -1,5 +1,5 @@
 // This test checks calls of export and extern "C" functions on CPU and GPU based on close to real-life example.
-// RUN: %{ispc} %s --target=gen9-x8 --emit-llvm-text --nowrap --no-discard-value-names -O0 -o %t.ll
+// RUN: %{ispc} %s --target=xehpg-x8 --emit-llvm-text --nowrap --no-discard-value-names -O0 -o %t.ll
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK-XE %s
 
 // RUN: %{ispc} %s --target=avx2 --emit-llvm-text --nowrap --no-discard-value-names -O0 -o %t.ll

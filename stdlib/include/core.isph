@@ -27,9 +27,8 @@
 // This lets the user know __attribute__ is part of language.
 #define ISPC_ATTRIBUTE_SUPPORTED 1
 
-#if defined(ISPC_TARGET_GEN9) || defined(ISPC_TARGET_XELP) || defined(ISPC_TARGET_XEHPG) ||                            \
-    defined(ISPC_TARGET_XEHPC) || defined(ISPC_TARGET_XELPG) || defined(ISPC_TARGET_XE2HPG) ||                         \
-    defined(ISPC_TARGET_XE2LPG)
+#if defined(ISPC_TARGET_XELP) || defined(ISPC_TARGET_XEHPG) || defined(ISPC_TARGET_XEHPC) ||                           \
+    defined(ISPC_TARGET_XELPG) || defined(ISPC_TARGET_XE2HPG) || defined(ISPC_TARGET_XE2LPG)
 #define ISPC_TARGET_XE
 #endif
 

@@ -151,7 +151,7 @@ with NamedTemporaryFile(mode='w', dir=dirname(output), delete=False) as outfile:
             arch = "riscv64"
         elif "wasm" in target and not "generic" in target:
             arch = "wasm32" if args[0].runtime == "32" else "wasm64" if args[0].runtime == "64" else "error"
-        elif ("gen9" in target) or ("xe" in target):
+        elif "xe" in target:
             arch = "xe64"
         elif ("generic" in target):
             arch = args[0].arch

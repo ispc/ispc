@@ -398,7 +398,6 @@ typedef enum {
 #endif // ISPC_LLVM_VERSION
 #endif // ISPC_RISCV_ENABLED
 #ifdef ISPC_XE_ENABLED
-    GPU_SKL,
     GPU_TGLLP,
     GPU_ACM_G10,
     GPU_ACM_G11,
@@ -505,7 +504,6 @@ std::map<DeviceType, std::set<std::string>> CPUFeatures = {
 #endif // ISPC_LLVM_VERSION
 #endif // ISPC_RISCV_ENABLED
 #ifdef ISPC_XE_ENABLED
-    {GPU_SKL, {}},
     {GPU_TGLLP, {}},
     {GPU_ACM_G10, {}},
     {GPU_ACM_G11, {}},
@@ -636,7 +634,6 @@ class AllCPUs {
 #endif // ISPC_RISCV_ENABLED
 
 #ifdef ISPC_XE_ENABLED
-        names[GPU_SKL].push_back("skl");
         names[GPU_TGLLP].push_back("tgllp");
         names[GPU_TGLLP].push_back("dg1");
         // ACM 512EU version
@@ -756,20 +753,19 @@ class AllCPUs {
 #endif // ISPC_RISCV_ENABLED
 
 #ifdef ISPC_XE_ENABLED
-        compat[GPU_SKL] = Set(GPU_SKL, CPU_None);
-        compat[GPU_TGLLP] = Set(GPU_TGLLP, GPU_SKL, CPU_None);
-        compat[GPU_ACM_G10] = Set(GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_TGLLP, GPU_SKL, CPU_None);
-        compat[GPU_ACM_G11] = Set(GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_TGLLP, GPU_SKL, CPU_None);
-        compat[GPU_ACM_G12] = Set(GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_TGLLP, GPU_SKL, CPU_None);
-        compat[GPU_PVC] = Set(GPU_PVC, GPU_SKL, CPU_None);
+        compat[GPU_TGLLP] = Set(GPU_TGLLP, CPU_None);
+        compat[GPU_ACM_G10] = Set(GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_TGLLP, CPU_None);
+        compat[GPU_ACM_G11] = Set(GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_TGLLP, CPU_None);
+        compat[GPU_ACM_G12] = Set(GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_TGLLP, CPU_None);
+        compat[GPU_PVC] = Set(GPU_PVC, CPU_None);
         compat[GPU_MTL_U] =
-            Set(GPU_MTL_U, GPU_MTL_H, GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_ACM_G11, GPU_TGLLP, GPU_SKL, CPU_None);
+            Set(GPU_MTL_U, GPU_MTL_H, GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_ACM_G11, GPU_TGLLP, CPU_None);
         compat[GPU_MTL_H] =
-            Set(GPU_MTL_U, GPU_MTL_H, GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_ACM_G11, GPU_TGLLP, GPU_SKL, CPU_None);
+            Set(GPU_MTL_U, GPU_MTL_H, GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_ACM_G11, GPU_TGLLP, CPU_None);
         compat[GPU_BMG_G21] =
-            Set(GPU_BMG_G21, GPU_MTL_U, GPU_MTL_H, GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_TGLLP, GPU_SKL, CPU_None);
+            Set(GPU_BMG_G21, GPU_MTL_U, GPU_MTL_H, GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_TGLLP, CPU_None);
         compat[GPU_LNL_M] =
-            Set(GPU_LNL_M, GPU_MTL_U, GPU_MTL_H, GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_TGLLP, GPU_SKL, CPU_None);
+            Set(GPU_LNL_M, GPU_MTL_U, GPU_MTL_H, GPU_ACM_G10, GPU_ACM_G11, GPU_ACM_G12, GPU_TGLLP, CPU_None);
 #endif
     }
 
@@ -1005,9 +1001,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 #endif // ISPC_RISCV_ENABLED
 
 #ifdef ISPC_XE_ENABLED
-        case GPU_SKL:
-            m_ispc_target = ISPCTarget::gen9_x16;
-            break;
         case GPU_TGLLP:
             m_ispc_target = ISPCTarget::xelp_x16;
             break;
@@ -1873,20 +1866,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         break;
 #endif
 #ifdef ISPC_XE_ENABLED
-    case ISPCTarget::gen9_x8:
-        this->m_isa = Target::GEN9;
-        this->m_nativeVectorWidth = 8;
-        this->m_nativeVectorAlignment = 64;
-        this->m_vectorWidth = 8;
-        this->m_dataTypeWidth = 32;
-        this->m_hasGather = this->m_hasScatter = true;
-        this->m_maskingIsFree = true;
-        this->m_maskBitCount = 1;
-        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport,
-                         TargetCapability::SaturatingArithmetic, TargetCapability::Transcendentals,
-                         TargetCapability::Trigonometry});
-        CPUfromISA = GPU_SKL;
-        break;
     case ISPCTarget::xelp_x8:
         this->m_isa = Target::XELP;
         this->m_nativeVectorWidth = 8;
@@ -1900,20 +1879,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
                          TargetCapability::SaturatingArithmetic, TargetCapability::Transcendentals,
                          TargetCapability::Trigonometry});
         CPUfromISA = GPU_TGLLP;
-        break;
-    case ISPCTarget::gen9_x16:
-        this->m_isa = Target::GEN9;
-        this->m_nativeVectorWidth = 16;
-        this->m_nativeVectorAlignment = 64;
-        this->m_vectorWidth = 16;
-        this->m_dataTypeWidth = 32;
-        this->m_hasGather = this->m_hasScatter = true;
-        this->m_maskingIsFree = true;
-        this->m_maskBitCount = 1;
-        setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport,
-                         TargetCapability::SaturatingArithmetic, TargetCapability::Transcendentals,
-                         TargetCapability::Trigonometry});
-        CPUfromISA = GPU_SKL;
         break;
     case ISPCTarget::xelp_x16:
         this->m_isa = Target::XELP;
@@ -2070,8 +2035,6 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         CPUfromISA = GPU_LNL_M;
         break;
 #else
-    case ISPCTarget::gen9_x8:
-    case ISPCTarget::gen9_x16:
     case ISPCTarget::xelp_x8:
     case ISPCTarget::xelp_x16:
     case ISPCTarget::xehpg_x8:
@@ -2668,8 +2631,6 @@ const char *Target::ISAToString(ISA isa) {
         return "avx10.2";
 #endif
 #ifdef ISPC_XE_ENABLED
-    case Target::GEN9:
-        return "gen9";
     case Target::XELP:
         return "xelp";
     case Target::XEHPG:
@@ -2705,8 +2666,6 @@ const char *Target::ISAToTargetString(ISA isa) {
         return "wasm-i32x4";
 #endif
 #ifdef ISPC_XE_ENABLED
-    case Target::GEN9:
-        return "gen9-x16";
     case Target::XELP:
         return "xelp-x16";
     case Target::XEHPG:
@@ -2837,9 +2796,6 @@ Target::ISA Target::TargetToISA(ISPCTarget target) {
         return Target::ISA::NUM_ISAS;
 #endif // ISPC_WASM_ENABLED
 #ifdef ISPC_XE_ENABLED
-    case ISPCTarget::gen9_x8:
-    case ISPCTarget::gen9_x16:
-        return Target::ISA::GEN9;
     case ISPCTarget::xelp_x8:
     case ISPCTarget::xelp_x16:
         return Target::ISA::XELP;
@@ -2859,8 +2815,6 @@ Target::ISA Target::TargetToISA(ISPCTarget target) {
     case ISPCTarget::xe2lpg_x32:
         return Target::ISA::XE2LPG;
 #else  // ISPC_XE_ENABLED
-    case ISPCTarget::gen9_x8:
-    case ISPCTarget::gen9_x16:
     case ISPCTarget::xelp_x8:
     case ISPCTarget::xelp_x16:
     case ISPCTarget::xehpg_x8:
@@ -3004,8 +2958,6 @@ void Target::markFuncWithCallingConv(llvm::Function *func) {
 Target::XePlatform Target::getXePlatform() const {
     AllCPUs a;
     switch (a.GetTypeFromName(m_cpu)) {
-    case GPU_SKL:
-        return XePlatform::gen9;
     case GPU_TGLLP:
         return XePlatform::xe_lp;
     case GPU_ACM_G10:
@@ -3022,14 +2974,13 @@ Target::XePlatform Target::getXePlatform() const {
     case GPU_LNL_M:
         return XePlatform::xe2_lpg;
     default:
-        return XePlatform::gen9;
+        return XePlatform::xe_hpg;
     }
-    return XePlatform::gen9;
+    return XePlatform::xe_hpg;
 }
 
 uint32_t Target::getXeGrfSize() const {
     switch (getXePlatform()) {
-    case XePlatform::gen9:
     case XePlatform::xe_lp:
     case XePlatform::xe_hpg:
         return 32;
@@ -3047,7 +2998,6 @@ uint32_t Target::getXeGrfSize() const {
 
 bool Target::hasXePrefetch() const {
     switch (getXePlatform()) {
-    case XePlatform::gen9:
     case XePlatform::xe_lp:
         return false;
     default:

@@ -225,11 +225,7 @@ ISPCTarget operator++(ISPCTarget &target, int dummy) {
                   "Enum ISPCTarget is not sequential");
     static_assert(static_cast<underlying>(ISPCTarget::wasm_i32x4) == static_cast<underlying>(ISPCTarget::rvv_x4) + 1,
                   "Enum ISPCTarget is not sequential");
-    static_assert(static_cast<underlying>(ISPCTarget::gen9_x8) == static_cast<underlying>(ISPCTarget::wasm_i32x4) + 1,
-                  "Enum ISPCTarget is not sequential");
-    static_assert(static_cast<underlying>(ISPCTarget::gen9_x16) == static_cast<underlying>(ISPCTarget::gen9_x8) + 1,
-                  "Enum ISPCTarget is not sequential");
-    static_assert(static_cast<underlying>(ISPCTarget::xelp_x8) == static_cast<underlying>(ISPCTarget::gen9_x16) + 1,
+    static_assert(static_cast<underlying>(ISPCTarget::xelp_x8) == static_cast<underlying>(ISPCTarget::wasm_i32x4) + 1,
                   "Enum ISPCTarget is not sequential");
     static_assert(static_cast<underlying>(ISPCTarget::xelp_x16) == static_cast<underlying>(ISPCTarget::xelp_x8) + 1,
                   "Enum ISPCTarget is not sequential");
@@ -466,10 +462,6 @@ ISPCTarget ParseISPCTarget(std::string target) {
         return ISPCTarget::rvv_x4;
     } else if (target == "wasm-i32x4") {
         return ISPCTarget::wasm_i32x4;
-    } else if (target == "gen9-x8") {
-        return ISPCTarget::gen9_x8;
-    } else if (target == "gen9-x16" || target == "gen9") {
-        return ISPCTarget::gen9_x16;
     } else if (target == "xelp-x8") {
         return ISPCTarget::xelp_x8;
     } else if (target == "xelp-x16" || target == "xelp") {
@@ -663,10 +655,6 @@ std::string ISPCTargetToString(ISPCTarget target) {
         return "rvv-x4";
     case ISPCTarget::wasm_i32x4:
         return "wasm-i32x4";
-    case ISPCTarget::gen9_x8:
-        return "gen9-x8";
-    case ISPCTarget::gen9_x16:
-        return "gen9-x16";
     case ISPCTarget::xelp_x8:
         return "xelp-x8";
     case ISPCTarget::xelp_x16:
@@ -814,8 +802,6 @@ bool ISPCTargetIsWasm(ISPCTarget target) {
 
 bool ISPCTargetIsGen(ISPCTarget target) {
     switch (target) {
-    case ISPCTarget::gen9_x8:
-    case ISPCTarget::gen9_x16:
     case ISPCTarget::xelp_x8:
     case ISPCTarget::xelp_x16:
     case ISPCTarget::xehpg_x8:

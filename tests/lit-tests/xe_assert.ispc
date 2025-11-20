@@ -1,7 +1,7 @@
 // This test checks correct LLVM IR generation when assert is used on Xe target.
 // TODO: add test case with assert inside exported function when support is added to VC backend.
 
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 --emit-llvm-text --nowrap -o - | FileCheck %s
+// RUN: %{ispc} %s --target=xehpg-x16 --arch=xe64 --emit-llvm-text --nowrap -o - | FileCheck %s
 // REQUIRES: XE_ENABLED
 
 //CHECK: @lz_format_str = internal unnamed_addr addrspace(2) constant [{{.*}} x i8] c"{{.*}}xe_assert.ispc:13:3: Assertion failed: a > 0 \0A\00", align 1

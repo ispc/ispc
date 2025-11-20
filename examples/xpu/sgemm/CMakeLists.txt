@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2019-2023, Intel Corporation
+#  Copyright (c) 2019-2025, Intel Corporation
 #
 #  SPDX-License-Identifier: BSD-3-Clause
 
@@ -11,7 +11,7 @@ cmake_minimum_required(VERSION 3.13)
 
 set(TEST_NAME "sgemm")
 set(ISPC_SRC_NAME "naive_sgemm.ispc")
-set(ISPC_TARGET_XE "gen9-x16")
+set(ISPC_TARGET_XE "xehpg-x16")
 set(HOST_SOURCES sgemm.cpp main.cpp)
 
 add_perf_example(

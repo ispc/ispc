@@ -266,7 +266,6 @@ class Target {
         WASM,
 #endif
 #ifdef ISPC_XE_ENABLED
-        GEN9,
         XELP,
         XEHPG,
         XEHPC,
@@ -279,7 +278,6 @@ class Target {
 
 #ifdef ISPC_XE_ENABLED
     enum class XePlatform {
-        gen9,
         xe_lp,
         xe_hpg,
         xe_lpg,
@@ -374,8 +372,8 @@ class Target {
 
     bool isXeTarget() {
 #ifdef ISPC_XE_ENABLED
-        return m_isa == Target::GEN9 || m_isa == Target::XELP || m_isa == Target::XEHPG || m_isa == Target::XEHPC ||
-               m_isa == Target::XELPG || m_isa == Target::XE2HPG || m_isa == Target::XE2LPG;
+        return m_isa == Target::XELP || m_isa == Target::XEHPG || m_isa == Target::XEHPC || m_isa == Target::XELPG ||
+               m_isa == Target::XE2HPG || m_isa == Target::XE2LPG;
 #else
         return false;
 #endif

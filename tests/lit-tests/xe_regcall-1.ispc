@@ -3,7 +3,7 @@
 // in most cases. ISPC follows this convention by default so the same code
 // generation will happen for the functions not marked with __regcall keyword as well.
 
-// RUN: %{ispc} %s --target=gen9-x16 --emit-llvm-text --no-discard-value-names --nowrap -o - | FileCheck %s
+// RUN: %{ispc} %s --target=xehpg-x16 --emit-llvm-text --no-discard-value-names --nowrap -o - | FileCheck %s
 
 // REQUIRES: XE_ENABLED
 

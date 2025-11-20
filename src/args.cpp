@@ -1266,11 +1266,6 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
                 output.type = Module::SPIRV;
             }
         }
-
-        if (target == ISPCTarget::gen9_x8 || target == ISPCTarget::gen9_x16) {
-            Warning(SourcePos(), "The target %s is deprecated and will be removed in the future.",
-                    ISPCTargetToString(target).c_str());
-        }
     }
 #endif
 

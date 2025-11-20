@@ -273,14 +273,14 @@ endmacro()
 ## GPU specific macros/options ################################################
 ###############################################################################
 
-define_ispc_isa_options(XE gen9-x8 gen9-x16 xelp-x8 xelp-x16 xehpc-x16 xehpc-x32 xehpg-x8 xehpg-x16)
+define_ispc_isa_options(XE xelp-x8 xelp-x16 xehpc-x16 xehpc-x32 xehpg-x8 xehpg-x16)
 
 set(ISPC_XE_ADDITIONAL_ARGS "" CACHE STRING "extra arguments to pass to ISPC for Xe targets")
 
 function(ispc_gpu_target_add_sources TARGET_NAME PARENT_TARGET_NAME)
   # Check If GPU target is passed externally
   if (NOT ISPC_TARGET_XE)
-    set(ISPC_TARGET_XE "gen9-x8")
+    set(ISPC_TARGET_XE "xehpg-x8")
   endif()
 
   if (NOT ISPC_TARGET_DIR)
@@ -288,7 +288,7 @@ function(ispc_gpu_target_add_sources TARGET_NAME PARENT_TARGET_NAME)
   endif()
 
   set(ISPC_PROGRAM_COUNT 16)
-  if ("${ISPC_TARGET_XE}" STREQUAL "gen9-x8" OR
+  if ("${ISPC_TARGET_XE}" STREQUAL "xehpg-x8" OR
       "${ISPC_TARGET_XE}" STREQUAL "xelp-x8")
     set(ISPC_PROGRAM_COUNT 8)
   endif()

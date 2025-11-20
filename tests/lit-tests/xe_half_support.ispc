@@ -1,7 +1,7 @@
 // COM: Xe Gather Coalescing is disabled to not perform redundant optimizations on gathers.
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -DUNIFORM --emit-llvm-text --nowrap -o %t.ll --opt=disable-xe-gather-coalescing
+// RUN: %{ispc} %s --target=xehpg-x16 --arch=xe64 -DUNIFORM --emit-llvm-text --nowrap -o %t.ll --opt=disable-xe-gather-coalescing
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_XE_16 %s
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -DUNIFORM --emit-llvm-text --nowrap -o %t.ll --opt=disable-xe-gather-coalescing
+// RUN: %{ispc} %s --target=xehpg-x8 --arch=xe64 -DUNIFORM --emit-llvm-text --nowrap -o %t.ll --opt=disable-xe-gather-coalescing
 // RUN: FileCheck --input-file=%t.ll -check-prefix=CHECK_XE_8 %s
 
 // REQUIRES: XE_ENABLED

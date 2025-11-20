@@ -18,9 +18,9 @@
 // %vectorized_extr_elem222 = extractelement <3 x float> %vectorized_ld, i64 2
 // %vectorized_extr_elem221 = extractelement <3 x float> %vectorized_ld, i64 3
 
-// RUN: %{ispc} %s --target=gen9-x16 --arch=xe64 -h %t.h --emit-llvm-text --debug-phase=321:321 --dump-file=%t -o /dev/null
+// RUN: %{ispc} %s --target=xehpg-x16 --arch=xe64 -h %t.h --emit-llvm-text --debug-phase=321:321 --dump-file=%t -o /dev/null
 // RUN: FileCheck --input-file %t/ir_321_ispcMemoryCoalescing.ll %s --check-prefixes CHECK_ALL,CHECK_LOAD,CHECK_VARYING
-// RUN: %{ispc} %s --target=gen9-x8 --arch=xe64 -h %t.h --emit-llvm-text --debug-phase=321:321 --dump-file=%t -o /dev/null
+// RUN: %{ispc} %s --target=xehpg-x8 --arch=xe64 -h %t.h --emit-llvm-text --debug-phase=321:321 --dump-file=%t -o /dev/null
 // RUN: FileCheck --input-file %t/ir_321_ispcMemoryCoalescing.ll %s --check-prefixes CHECK_ALL,CHECK_LOAD,CHECK_VARYING
 
 // REQUIRES: XE_ENABLED

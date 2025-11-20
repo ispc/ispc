@@ -88,8 +88,6 @@ enum class ISPCTarget {
     neon_i32x8,
     rvv_x4,
     wasm_i32x4,
-    gen9_x8,
-    gen9_x16,
     xelp_x8,
     xelp_x16,
     xehpg_x8,
