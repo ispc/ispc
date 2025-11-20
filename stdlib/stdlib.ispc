@@ -797,29 +797,11 @@ __declspec(safe) static inline uniform bool none(bool v) {
 
 __declspec(safe) static inline uniform int32 popcnt(uniform int32 v) { return __popcnt_int32_uniform(v); }
 
-__declspec(safe) static inline uniform int32 popcnt(uniform int64 v) { return (int32)__popcnt_int64_uniform(v); }
+__declspec(safe) static inline uniform int64 popcnt(uniform int64 v) { return __popcnt_int64_uniform(v); }
 
-__declspec(safe) static inline varying int32 popcnt(varying int32 v) {
-    if (__is_avx512_target) {
-        return __popcnt_int32_varying(v);
-    } else {
-        int r;
-        for (uniform int i = 0; i < programCount; ++i)
-            r = insert(r, i, popcnt(extract(v, i)));
-        return __mask ? r : 0;
-    }
-}
+__declspec(safe) static inline varying int32 popcnt(varying int32 v) { return __popcnt_int32_varying(v); }
 
-__declspec(safe) static inline varying int32 popcnt(varying int64 v) {
-    if (__is_avx512_target) {
-        return (int32)__popcnt_int64_varying(v);
-    } else {
-        int r;
-        for (uniform int i = 0; i < programCount; ++i)
-            r = insert(r, i, popcnt(extract(v, i)));
-        return __mask ? r : 0;
-    }
-}
+__declspec(safe) static inline varying int64 popcnt(varying int64 v) { return __popcnt_int64_varying(v); }
 
 __declspec(safe) static inline uniform int popcnt(bool v) {
     // As with any() and all(), only count across the active lanes
