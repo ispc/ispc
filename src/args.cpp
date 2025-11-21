@@ -1234,6 +1234,14 @@ ArgsParseResult ispc::ParseCommandLineArgs(int argc, char *argv[], std::string &
         }
     }
 
+    // Check for deprecated targets
+    for (auto target : targets) {
+        if (target == ISPCTarget::sse2_i32x4 || target == ISPCTarget::sse2_i32x8) {
+            Warning(SourcePos(), "The target %s is deprecated and will be removed in the future.",
+                    ISPCTargetToString(target).c_str());
+        }
+    }
+
     if ((output.type == Module::Asm) && (intelAsmSyntax != nullptr)) {
         std::vector<const char *> Args(3);
         Args[0] = "ispc (LLVM option parsing)";
