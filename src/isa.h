@@ -21,7 +21,7 @@ enum ISA {
     SKX_AVX512 = 8,
     ICL_AVX512 = 9,
     SPR_AVX512 = 10,
-    AVX10_2 = 11,
+    DMR_AVX10_2 = 11,
 
     COUNT
 };
@@ -217,7 +217,7 @@ UNUSED_ATTR static enum ISA get_x86_isa() {
                       amxcomplex && sha512 && sm3 && sm4;
 
             if (dmr) {
-                return AVX10_2;
+                return DMR_AVX10_2;
             }
         }
         if (spr) {

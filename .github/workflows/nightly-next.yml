@@ -35,7 +35,7 @@ jobs:
          "avx512skx-x4", "avx512skx-x8", "avx512skx-x16", "avx512skx-x64", "avx512skx-x32",
          "avx512icl-x4", "avx512icl-x8", "avx512icl-x16", "avx512icl-x64", "avx512icl-x32",
          "avx512spr-x4", "avx512spr-x8", "avx512spr-x16", "avx512spr-x64", "avx512spr-x32",
-         "avx10.2-x4", "avx10.2-x8", "avx10.2-x16", "avx10.2-x64", "avx10.2-x32"]
+         "avx10.2dmr-x4", "avx10.2dmr-x8", "avx10.2dmr-x16", "avx10.2dmr-x64", "avx10.2dmr-x32"]
     steps:
       - run: echo "Defining targets"
 

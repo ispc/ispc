@@ -2,9 +2,6 @@
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
-define(`WIDTH',`8')
-define(`ISA',`AVX10_2')
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; dot product
 declare <8 x i32> @llvm.x86.avx2.vpdpbssd.256(<8 x i32>, <8 x i32>, <8 x i32>) nounwind readnone

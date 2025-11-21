@@ -104,7 +104,7 @@ Width families are defined declaratively in `cmake/StdlibFamilies.cmake`:
 ```cmake
 set(FAMILY_DEFINITIONS
     # Generic width families
-    "i1x16:generic-i1x16:avx512skx-x16,avx512icl-x16,avx512spr-x16,avx10_2-x16"
+    "i1x16:generic-i1x16:avx512skx-x16,avx512icl-x16,avx512spr-x16,avx10_2dmr-x16"
 
     # Inheritance families (use parent ISA, not generic)
     "avx_i32x8:avx1-i32x8:avx2-i32x8,avx2vnni-i32x8"

@@ -32,7 +32,7 @@ int main() {
       printf("AVX512SPR\n");
       break;
     case 10:
-      printf("AVX10_2\n");
+      printf("AVX10_2DMR\n");
       break;
     default:
       printf("Unknown ISA\n");
