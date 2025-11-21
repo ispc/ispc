@@ -6,6 +6,8 @@ on:
   issues:
     types: [opened]
 
+permissions: {}
+
 jobs:
   deduplicate:
     runs-on: ubuntu-latest
@@ -44,8 +46,9 @@ jobs:
             If you find duplicates:
             - Add a comment on the new issue linking to the original issue(s)
             - Apply a "duplicate" label to the new issue
-            - Be polite and explain why it's a duplicate
+            - Be polite and add a comment explaining why it's a duplicate
             - Suggest the user follow the original issue for updates
+            - Don't close the issue automatically; just label and comment
 
             If it's NOT a duplicate:
             - Don't add any comments
