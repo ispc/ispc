@@ -3129,7 +3129,7 @@ Globals::Globals() {
     noPragmaOnce = false;
     generateDebuggingSymbols = false;
     debugInfoType = Globals::DebugInfoType::None;
-    generateDWARFVersion = 3;
+    generateDWARFVersion = 5;
     sampleProfilingDebugInfo = false;
     profileSampleUse = "";
     enableLLVMIntrinsics = false;
