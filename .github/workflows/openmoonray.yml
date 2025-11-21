@@ -104,5 +104,5 @@ jobs:
 
           # Run tests
           cd src/build
-          ctest -L unit -E scenerdl2_render_util_tests --output-on-failure
+          ctest -L unit -E 'scenerdl2_render_util_tests|scenerdl2_common_grid_util_tests' --output-on-failure
         "
