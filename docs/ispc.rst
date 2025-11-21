@@ -935,6 +935,8 @@ functions from ISPC code will result in a **compilation error**.
 Note: The compiler can only detect calls to exported functions within the same
 compilation unit. Cross-module calls to exported functions cannot be detected.
 
+``sse2-i32x4`` and ``sse2-i32x8`` targets are deprecated and will be removed in
+future releases.
 
 Getting Started with ISPC
 =========================
