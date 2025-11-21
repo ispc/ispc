@@ -403,7 +403,7 @@ def check_targets():
                      ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI", "SKX", "ICL"], "-icl", False]),
       ("SPR",        [["avx512spr-x16", "avx512spr-x8", "avx512spr-x4", "avx512spr-x64", "avx512spr-x32"],
                      ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI", "SKX", "ICL", "SPR"], "-spr", False]),
-      ("DMR",        [["avx10.2-x16", "avx10.2-x8", "avx10.2-x4", "avx10.2-x64", "avx10.2-x32"],
+      ("DMR",        [["avx10.2dmr-x16", "avx10.2dmr-x8", "avx10.2dmr-x4", "avx10.2dmr-x64", "avx10.2dmr-x32"],
                      ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI", "SKX", "ICL", "SPR", "DMR"], "-dmr", False])
     ])
 

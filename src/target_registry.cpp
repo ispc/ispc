@@ -173,11 +173,11 @@ static ISPCTarget lCanonicalizeTarget(ISPCTarget target, TargetOS os, bool apply
     // Check if target is unsupported on this OS
     // There's no Mac that supports SPR, so the decision is not support these targets when targeting macOS.
     // If these targets are linked in, then we still can use them for cross compilation, for example for Linux.
-    if (os == TargetOS::macos &&
-        (target == ISPCTarget::avx512spr_x4 || target == ISPCTarget::avx512spr_x8 ||
-         target == ISPCTarget::avx512spr_x16 || target == ISPCTarget::avx512spr_x32 ||
-         target == ISPCTarget::avx512spr_x64 || target == ISPCTarget::avx10_2_x4 || target == ISPCTarget::avx10_2_x8 ||
-         target == ISPCTarget::avx10_2_x16 || target == ISPCTarget::avx10_2_x32 || target == ISPCTarget::avx10_2_x64)) {
+    if (os == TargetOS::macos && (target == ISPCTarget::avx512spr_x4 || target == ISPCTarget::avx512spr_x8 ||
+                                  target == ISPCTarget::avx512spr_x16 || target == ISPCTarget::avx512spr_x32 ||
+                                  target == ISPCTarget::avx512spr_x64 || target == ISPCTarget::avx10_2dmr_x4 ||
+                                  target == ISPCTarget::avx10_2dmr_x8 || target == ISPCTarget::avx10_2dmr_x16 ||
+                                  target == ISPCTarget::avx10_2dmr_x32 || target == ISPCTarget::avx10_2dmr_x64)) {
         return ISPCTarget::none;
     }
 

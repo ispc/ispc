@@ -164,11 +164,11 @@ class ISPCTarget:
         'neon-i32x8': 'generic-i32x8',
 
         # AVX10.2 targets
-        'avx10.2-x4': 'avx512spr-x4',
-        'avx10.2-x8': 'avx512spr-x8',
-        'avx10.2-x16': 'avx512spr-x16',
-        'avx10.2-x32': 'avx512spr-x32',
-        'avx10.2-x64': 'avx512spr-x64',
+        'avx10.2dmr-x4': 'avx512spr-x4',
+        'avx10.2dmr-x8': 'avx512spr-x8',
+        'avx10.2dmr-x16': 'avx512spr-x16',
+        'avx10.2dmr-x32': 'avx512spr-x32',
+        'avx10.2dmr-x64': 'avx512spr-x64',
 
         # AVX512 hierarchy
         'avx512spr-x4': 'avx512icl-x4',
@@ -233,7 +233,7 @@ class ISPCTarget:
 
     @classmethod
     def normalize_target_name(cls, target: str) -> str:
-        """Normalize target name format (e.g., avx512spr-x4 -> avx512spr_x4, avx10.2-x4 -> avx10_2_x4)"""
+        """Normalize target name format (e.g., avx512spr-x4 -> avx512spr_x4, avx10.2dmr-x4 -> avx10_2dmr_x4)"""
         return target.replace('-', '_').replace('.', '_')
 
     @classmethod

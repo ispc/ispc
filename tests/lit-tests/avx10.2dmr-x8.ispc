@@ -1,17 +1,17 @@
-// Case 1: Checks avx10.2-x16 assembly output for zmm registers.
-//; RUN: %{ispc} %s --target=avx10.2-x16 --emit-asm -o - | FileCheck %s -check-prefix=CHECK_ZMM_32x16
-// Case 2a: Checks avx10.2-x4 assembly output to ensure there are no zmm registers.
-//; RUN: %{ispc} %s --target=avx10.2-x4 --emit-asm -o - | FileCheck %s --implicit-check-not "zmm"
-// Case 2b: Checks avx10.2-x8 assembly output to ensure there are no zmm registers.
-//; RUN: %{ispc} %s --target=avx10.2-x8 --emit-asm -o - | FileCheck %s --implicit-check-not "zmm"
-// Case 3: Checks avx10.2-x16 LLVM IR to ensure avx10.2-x8 func attributes are not present.
-//; RUN: %{ispc} %s --target=avx10.2-x16 --emit-llvm -o %t_8.bc
+// Case 1: Checks avx10.2dmr-x16 assembly output for zmm registers.
+//; RUN: %{ispc} %s --target=avx10.2dmr-x16 --emit-asm -o - | FileCheck %s -check-prefix=CHECK_ZMM_32x16
+// Case 2a: Checks avx10.2dmr-x4 assembly output to ensure there are no zmm registers.
+//; RUN: %{ispc} %s --target=avx10.2dmr-x4 --emit-asm -o - | FileCheck %s --implicit-check-not "zmm"
+// Case 2b: Checks avx10.2dmr-x8 assembly output to ensure there are no zmm registers.
+//; RUN: %{ispc} %s --target=avx10.2dmr-x8 --emit-asm -o - | FileCheck %s --implicit-check-not "zmm"
+// Case 3: Checks avx10.2dmr-x16 LLVM IR to ensure avx10.2dmr-x8 func attributes are not present.
+//; RUN: %{ispc} %s --target=avx10.2dmr-x16 --emit-llvm -o %t_8.bc
 //; RUN: llvm-dis %t_8.bc -o - | FileCheck %s --implicit-check-not ""min-legal-vector-width"="256"" --implicit-check-not ""prefer-vector-width"="256""
-// Case 4a: Checks avx10.2-x4 LLVM IR to ensure avx10.2-x4 func attributes are present (same as for x8).
-//; RUN: %{ispc} %s --target=avx10.2-x4 --emit-llvm -o %t_4.bc
+// Case 4a: Checks avx10.2dmr-x4 LLVM IR to ensure avx10.2dmr-x4 func attributes are present (same as for x8).
+//; RUN: %{ispc} %s --target=avx10.2dmr-x4 --emit-llvm -o %t_4.bc
 //; RUN: llvm-dis %t_4.bc -o - | FileCheck %s -check-prefix=CHECK_ATTR_8
-// Case 4b: Checks avx10.2-x8 LLVM IR to ensure avx10.2-x8 func attributes are present.
-//; RUN: %{ispc} %s --target=avx10.2-x8 --emit-llvm -o %t_8.bc
+// Case 4b: Checks avx10.2dmr-x8 LLVM IR to ensure avx10.2dmr-x8 func attributes are present.
+//; RUN: %{ispc} %s --target=avx10.2dmr-x8 --emit-llvm -o %t_8.bc
 //; RUN: llvm-dis %t_8.bc -o - | FileCheck %s -check-prefix=CHECK_ATTR_8
 
 // REQUIRES: X86_ENABLED && !MACOS_HOST && LLVM_20_0+

@@ -251,10 +251,10 @@ static ISPCTarget lGetSystemISA() {
         return ISPCTarget::avx512icl_x16;
     case Target::ISA::SPR_AVX512:
         return ISPCTarget::avx512spr_x16;
-    case Target::ISA::AVX10_2:
+    case Target::ISA::DMR_AVX10_2:
         // Return SPR target for LLVM versions < 20.0
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
-        return ISPCTarget::avx10_2_x16;
+        return ISPCTarget::avx10_2dmr_x16;
 #else
         return ISPCTarget::avx512spr_x16;
 #endif
@@ -1052,7 +1052,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
         case CPU_DMR:
-            m_ispc_target = ISPCTarget::avx10_2_x16;
+            m_ispc_target = ISPCTarget::avx10_2dmr_x16;
             break;
 #endif
 
@@ -1655,8 +1655,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         CPUfromISA = CPU_SPR;
         break;
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
-    case ISPCTarget::avx10_2_x4:
-        this->m_isa = Target::AVX10_2;
+    case ISPCTarget::avx10_2dmr_x4:
+        this->m_isa = Target::DMR_AVX10_2;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
         this->m_dataTypeWidth = 32;
@@ -1672,8 +1672,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
         break;
-    case ISPCTarget::avx10_2_x8:
-        this->m_isa = Target::AVX10_2;
+    case ISPCTarget::avx10_2dmr_x8:
+        this->m_isa = Target::DMR_AVX10_2;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
         this->m_dataTypeWidth = 32;
@@ -1689,8 +1689,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
         break;
-    case ISPCTarget::avx10_2_x16:
-        this->m_isa = Target::AVX10_2;
+    case ISPCTarget::avx10_2dmr_x16:
+        this->m_isa = Target::DMR_AVX10_2;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
         this->m_dataTypeWidth = 32;
@@ -1706,8 +1706,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "512"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "512"));
         break;
-    case ISPCTarget::avx10_2_x32:
-        this->m_isa = Target::AVX10_2;
+    case ISPCTarget::avx10_2dmr_x32:
+        this->m_isa = Target::DMR_AVX10_2;
         this->m_nativeVectorWidth = 64;
         this->m_nativeVectorAlignment = 64;
         this->m_dataTypeWidth = 16;
@@ -1720,8 +1720,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
                          TargetCapability::IntelVNNI_Int16, TargetCapability::ConflictDetection});
         CPUfromISA = CPU_DMR;
         break;
-    case ISPCTarget::avx10_2_x64:
-        this->m_isa = Target::AVX10_2;
+    case ISPCTarget::avx10_2dmr_x64:
+        this->m_isa = Target::DMR_AVX10_2;
         this->m_nativeVectorWidth = 64;
         this->m_nativeVectorAlignment = 64;
         this->m_dataTypeWidth = 8;
@@ -1735,11 +1735,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         CPUfromISA = CPU_DMR;
         break;
 #else
-    case ISPCTarget::avx10_2_x4:
-    case ISPCTarget::avx10_2_x8:
-    case ISPCTarget::avx10_2_x16:
-    case ISPCTarget::avx10_2_x32:
-    case ISPCTarget::avx10_2_x64:
+    case ISPCTarget::avx10_2dmr_x4:
+    case ISPCTarget::avx10_2dmr_x8:
+    case ISPCTarget::avx10_2dmr_x16:
+    case ISPCTarget::avx10_2dmr_x32:
+    case ISPCTarget::avx10_2dmr_x64:
         unsupported_target = true;
         break;
 #endif
@@ -2627,8 +2627,8 @@ const char *Target::ISAToString(ISA isa) {
     case Target::SPR_AVX512:
         return "avx512spr";
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
-    case Target::AVX10_2:
-        return "avx10.2";
+    case Target::DMR_AVX10_2:
+        return "avx10.2dmr";
 #endif
 #ifdef ISPC_XE_ENABLED
     case Target::XELP:
@@ -2696,8 +2696,8 @@ const char *Target::ISAToTargetString(ISA isa) {
     case Target::SPR_AVX512:
         return "avx512spr-x16";
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
-    case Target::AVX10_2:
-        return "avx10.2-x16";
+    case Target::DMR_AVX10_2:
+        return "avx10.2dmr-x16";
 #endif
     default:
         FATAL("Unhandled target in ISAToTargetString()");
@@ -2758,12 +2758,12 @@ Target::ISA Target::TargetToISA(ISPCTarget target) {
     case ISPCTarget::avx512spr_x32:
     case ISPCTarget::avx512spr_x64:
         return Target::ISA::SPR_AVX512;
-    case ISPCTarget::avx10_2_x4:
-    case ISPCTarget::avx10_2_x8:
-    case ISPCTarget::avx10_2_x16:
-    case ISPCTarget::avx10_2_x32:
-    case ISPCTarget::avx10_2_x64:
-        return Target::ISA::AVX10_2;
+    case ISPCTarget::avx10_2dmr_x4:
+    case ISPCTarget::avx10_2dmr_x8:
+    case ISPCTarget::avx10_2dmr_x16:
+    case ISPCTarget::avx10_2dmr_x32:
+    case ISPCTarget::avx10_2dmr_x64:
+        return Target::ISA::DMR_AVX10_2;
 #ifdef ISPC_ARM_ENABLED
     case ISPCTarget::neon_i8x16:
     case ISPCTarget::neon_i8x32:
