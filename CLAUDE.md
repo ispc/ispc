@@ -64,7 +64,7 @@ functional tests for runtime behavior changes.
 1. Explain the given problem
 2. Search codebase for relevant files
 3. **Create fix plan and get user approval**
-4. Write regression tests in `tests/lit-tests/` and/or function tests in `tests/func-tests`
+4. Write regression tests in `tests/lit-tests/` (use `ispc-lit-tests` skill) and/or function tests in `tests/func-tests`
 5. Verify the fix
 6. Run `agent-code-review` when you've completed implementing a feature or bug fix and address its feedback
 
