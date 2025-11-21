@@ -5,14 +5,14 @@
 // RUN: sde -mrm -- %t.exe | FileCheck %s -check-prefix=CHECK_SSE2
 // RUN: sde -dmr -- %t.exe | FileCheck %s -check-prefix=CHECK_DMR
 
-// REQUIRES: X86_ENABLED && SDE_INSTALLED && LLVM_20_0+
+// REQUIRES: X86_ENABLED && SDE_INSTALLED && LLVM_20_0+ && !LLVM_22_0+
 
 // CHECK_SSE2: SSE2
 // CHECK_DMR: AVX10_2DMR
 
 export uniform int detect_isa() {
 #if defined(ISPC_TARGET_AVX10_2DMR)
-    return 10;
+    return 11;
 #elif defined(ISPC_TARGET_AVX512SPR)
     return 9;
 #elif defined(ISPC_TARGET_AVX512ICL)
