@@ -1,10 +1,10 @@
 // The test checks that target definitions (including all synonyms) are successfully consumed by compiler.
 
-//; RUN: %{ispc} %s -o %t.o --nostdlib --target=avx10.2-x4
-//; RUN: %{ispc} %s -o %t.o --nostdlib --target=avx10.2-x8
-//; RUN: %{ispc} %s -o %t.o --nostdlib --target=avx10.2-x16
-//; RUN: %{ispc} %s -o %t.o --nostdlib --target=avx10.2-x32
-//; RUN: %{ispc} %s -o %t.o --nostdlib --target=avx10.2-x64
+//; RUN: %{ispc} %s -o %t.o --nostdlib --target=avx10.2dmr-x4
+//; RUN: %{ispc} %s -o %t.o --nostdlib --target=avx10.2dmr-x8
+//; RUN: %{ispc} %s -o %t.o --nostdlib --target=avx10.2dmr-x16
+//; RUN: %{ispc} %s -o %t.o --nostdlib --target=avx10.2dmr-x32
+//; RUN: %{ispc} %s -o %t.o --nostdlib --target=avx10.2dmr-x64
 
 // REQUIRES: X86_ENABLED && !MACOS_HOST && LLVM_20_0+
 

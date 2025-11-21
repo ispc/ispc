@@ -255,7 +255,7 @@ class Target {
         SKX_AVX512 = dispatch::ISA::SKX_AVX512,
         ICL_AVX512 = dispatch::ISA::ICL_AVX512,
         SPR_AVX512 = dispatch::ISA::SPR_AVX512,
-        AVX10_2 = dispatch::ISA::AVX10_2,
+        DMR_AVX10_2 = dispatch::ISA::DMR_AVX10_2,
 #ifdef ISPC_ARM_ENABLED
         NEON,
 #endif

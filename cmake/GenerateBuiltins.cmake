@@ -53,6 +53,15 @@ list(APPEND M4_IMPLICIT_DEPENDENCIES
     builtins/util-xe.m4
     builtins/util.m4)
 
+if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "20.1.2")
+    list(APPEND M4_IMPLICIT_DEPENDENCIES
+        builtins/target-avx10_2-x4-common.ll
+        builtins/target-avx10_2-x8-common.ll
+        builtins/target-avx10_2-x16-common.ll
+        builtins/target-avx10_2-x32-common.ll
+        builtins/target-avx10_2-x64-common.ll)
+endif()
+
 function(target_ll_to_cpp target bit os CPP_LIST BC_LIST)
     set(input builtins/target-${target}.ll)
     set(include builtins)
