@@ -23,7 +23,7 @@ jobs:
       ARCHIVE_URL: https://github.com/ispc/ispc.dependencies/releases/download/llvm-20.1-ispc-dev/llvm-20.1.8-ubuntu22.04-Release-x86.arm.wasm.tar.xz
 
     steps:
-    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
     - name: Install prerequisites
       run: |
@@ -43,7 +43,7 @@ jobs:
       ARCHIVE_URL: https://github.com/ispc/ispc.dependencies/releases/download/llvm-20.1-ispc-dev/llvm-20.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
 
     steps:
-    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
     - name: Install prerequisites
       run: |
@@ -59,7 +59,7 @@ jobs:
       ARCHIVE_URL: https://github.com/ispc/ispc.dependencies/releases/download/llvm-20.1-ispc-dev/llvm-20.1.8-macos-Release-universal-x86.arm.wasm.tar.xz
 
     steps:
-    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
     - name: Install prerequisites
       run: |
@@ -76,7 +76,7 @@ jobs:
       ARCHIVE_URL: https://github.com/ispc/ispc.dependencies/releases/download/llvm-20.1-ispc-dev/llvm-20.1.8-win.vs2022-Release-x86.arm.wasm.tar.7z
 
     steps:
-    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
     - name: Install prerequisites
       run: |
