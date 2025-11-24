@@ -116,7 +116,7 @@ jobs:
         INPUTS_ARCH: ${{ inputs.arch }}
         INPUTS_UBUNTU: ${{ inputs.ubuntu }}
 
-    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       with:
         submodules: true
 
@@ -188,7 +188,7 @@ jobs:
         INPUTS_WIN_SDK: ${{ inputs.win_sdk }}
         INPUTS_VS_VERSION: ${{ inputs.vs_version }}
 
-    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       with:
         submodules: true
 
@@ -277,7 +277,7 @@ jobs:
         INPUTS_ASSERTS: ${{ inputs.asserts }}
         INPUTS_ARCH: ${{ inputs.arch }}
 
-    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       with:
         submodules: true
 
