@@ -37,6 +37,9 @@ int main() {
     case 11:
       printf("AVX10_2DMR\n");
       break;
+    case 12:
+      printf("AVX10_2NVL\n");
+      break;
     default:
       printf("Unknown ISA\n");
       break;

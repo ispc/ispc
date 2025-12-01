@@ -48,6 +48,7 @@ const char *const isa_strings[] = {
     "ICL",
     "SPR",
     "GNR",
+    "NVL",
     "DMR",
 };
 

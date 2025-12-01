@@ -1,12 +1,12 @@
 // Test checks emitted code for VNNI dot product instructions.
 
-// RUN: %{ispc} %s --target=avx10.2dmr-x4 --emit-asm -o - | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_XMM
-// RUN: %{ispc} %s --target=avx10.2dmr-x8 --emit-asm -o - | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_YMM
-// RUN: %{ispc} %s --target=avx10.2dmr-x16 --emit-asm -o - | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_ZMM
-// RUN: %{ispc} %s --target=avx10.2dmr-x32 --emit-asm -o - | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_ZMMX2
-// RUN: %{ispc} %s --target=avx10.2dmr-x64 --emit-asm -o - | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_ZMMX4
+// RUN: %{ispc} %s --target=avx10.2nvl-x4 --emit-asm -o - | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_XMM
+// RUN: %{ispc} %s --target=avx10.2nvl-x8 --emit-asm -o - | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_YMM
+// RUN: %{ispc} %s --target=avx10.2nvl-x16 --emit-asm -o - | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_ZMM
+// RUN: %{ispc} %s --target=avx10.2nvl-x32 --emit-asm -o - | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_ZMMX2
+// RUN: %{ispc} %s --target=avx10.2nvl-x64 --emit-asm -o - | FileCheck %s -check-prefixes=CHECK_ALL,CHECK_ZMMX4
 
-// REQUIRES: X86_ENABLED && !MACOS_HOST && LLVM_20_0+
+// REQUIRES: X86_ENABLED && !MACOS_HOST && LLVM_22_0+
 
 // CHECK_ALL-LABEL: dot4add_i8i8
 // CHECK_XMM: vpdpbssd	{{.*}} %xmm

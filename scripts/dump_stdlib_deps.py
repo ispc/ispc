@@ -163,12 +163,19 @@ class ISPCTarget:
         'neon-i32x4': 'generic-i32x4',
         'neon-i32x8': 'generic-i32x8',
 
-        # AVX10.2 targets
+        # AVX10.2 DMR targets
         'avx10.2dmr-x4': 'avx512gnr-x4',
         'avx10.2dmr-x8': 'avx512gnr-x8',
         'avx10.2dmr-x16': 'avx512gnr-x16',
         'avx10.2dmr-x32': 'avx512gnr-x32',
         'avx10.2dmr-x64': 'avx512gnr-x64',
+
+        # AVX10.2 NVL targets
+        'avx10.2nvl-x4': 'avx10.2dmr-x4',
+        'avx10.2nvl-x8': 'avx10.2dmr-x8',
+        'avx10.2nvl-x16': 'avx10.2dmr-x16',
+        'avx10.2nvl-x32': 'avx10.2dmr-x32',
+        'avx10.2nvl-x64': 'avx10.2dmr-x64',
 
         # AVX512 hierarchy
         'avx512gnr-x4': 'avx512spr-x4',
@@ -238,7 +245,7 @@ class ISPCTarget:
 
     @classmethod
     def normalize_target_name(cls, target: str) -> str:
-        """Normalize target name format (e.g., avx512spr-x4 -> avx512spr_x4, avx10.2dmr-x4 -> avx10_2dmr_x4)"""
+        """Normalize target name format (e.g., avx512spr-x4 -> avx512spr_x4, avx10.2dmr-x4 -> avx10_2dmr_x4, avx10.2nvl-x4 -> avx10_2nvl_x4)"""
         return target.replace('-', '_').replace('.', '_')
 
     @classmethod
