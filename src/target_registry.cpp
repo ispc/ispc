@@ -180,7 +180,9 @@ static ISPCTarget lCanonicalizeTarget(ISPCTarget target, TargetOS os, bool apply
                                   target == ISPCTarget::avx512gnr_x32 || target == ISPCTarget::avx512gnr_x64 ||
                                   target == ISPCTarget::avx10_2dmr_x4 || target == ISPCTarget::avx10_2dmr_x8 ||
                                   target == ISPCTarget::avx10_2dmr_x16 || target == ISPCTarget::avx10_2dmr_x32 ||
-                                  target == ISPCTarget::avx10_2dmr_x64)) {
+                                  target == ISPCTarget::avx10_2dmr_x64 || target == ISPCTarget::avx10_2nvl_x4 ||
+                                  target == ISPCTarget::avx10_2nvl_x8 || target == ISPCTarget::avx10_2nvl_x16 ||
+                                  target == ISPCTarget::avx10_2nvl_x32 || target == ISPCTarget::avx10_2nvl_x64)) {
         return ISPCTarget::none;
     }
 
