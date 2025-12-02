@@ -82,11 +82,6 @@ extern const char *const __count_leading_zeros_varying_i32;
 extern const char *const __count_leading_zeros_varying_i64;
 extern const char *const __count_trailing_zeros_varying_i32;
 extern const char *const __count_trailing_zeros_varying_i64;
-// Looks unnecessary, however trailing/leading zeros are implemented here
-//  extern const char *const __popcnt_int32_uniform;
-//  extern const char *const __popcnt_int64_uniform;
-//  extern const char *const __popcnt_int32_varying;
-//  extern const char *const __popcnt_int64_varying;
 extern const char *const __delete_uniform_32rt;
 extern const char *const __delete_uniform_64rt;
 extern const char *const __delete_varying_32rt;
