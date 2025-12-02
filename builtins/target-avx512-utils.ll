@@ -11,7 +11,6 @@ include(`util.m4')
 stdlib_core()
 scans()
 rdrand_definition()
-popcnt()
 ctlztz()
 halfTypeGenericImplementation()
 

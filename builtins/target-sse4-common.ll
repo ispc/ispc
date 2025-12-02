@@ -6,7 +6,6 @@
 ;; SSE4 target implementation.
 
 ctlztz()
-popcnt()
 define_prefetches()
 aossoa()
 halfTypeGenericImplementation()
