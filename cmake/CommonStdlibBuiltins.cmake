@@ -109,9 +109,10 @@ function (generate_stdlib_or_target_builtins func ispc_name CPP_LIST BC_LIST)
     if (X86_ENABLED)
         if (${func} STREQUAL "stdlib_to_cpp")
             # Stdlib families are defined in cmake/StdlibFamilies.cmake
+            # Use pre-filtered x86 families for efficiency
             foreach (bit 32 64)
                 foreach (os ${os_list})
-                    foreach (family ${STDLIB_FAMILIES})
+                    foreach (family ${STDLIB_X86_FAMILIES})
                         process_stdlib_family(${family} ${ispc_name} ${bit} ${os} ${CPP_LIST} ${BC_LIST})
                     endforeach()
 
@@ -161,16 +162,44 @@ function (generate_stdlib_or_target_builtins func ispc_name CPP_LIST BC_LIST)
 
     # ARM targets
     if (ARM_ENABLED)
-        foreach (os ${os_list})
-            foreach (target ${ARM_TARGETS})
-                disp_target_stdlib(${func} ${ispc_name} ${target} 64 ${os} ${CPP_LIST} ${BC_LIST})
-                # On windows only 64-bit neon targets is supported
-                if (${os} STREQUAL "windows")
-                    continue()
-                endif()
-                disp_target_stdlib(${func} ${ispc_name} ${target} 32 ${os} ${CPP_LIST} ${BC_LIST})
+        if (${func} STREQUAL "stdlib_to_cpp")
+            # Stdlib families are defined in cmake/StdlibFamilies.cmake
+            # Use pre-filtered ARM families for efficiency
+            # Loop order matches x86 section for consistency
+            foreach (bit 32 64)
+                foreach (os ${os_list})
+                    # On Windows only 64-bit neon targets are supported
+                    if (${os} STREQUAL "windows" AND ${bit} EQUAL 32)
+                        continue()
+                    endif()
+
+                    foreach (family ${STDLIB_ARM_FAMILIES})
+                        process_stdlib_family(${family} ${ispc_name} ${bit} ${os} ${CPP_LIST} ${BC_LIST})
+                    endforeach()
+
+                    # Process remaining ARM targets not in any family
+                    foreach (target ${ARM_TARGETS})
+                        list(FIND STDLIB_FAMILY_ALL_MEMBERS ${target} idx)
+                        if(idx EQUAL -1)
+                            # Target not in any family, compile stdlib separately
+                            disp_target_stdlib(${func} ${ispc_name} ${target} ${bit} ${os} ${CPP_LIST} ${BC_LIST})
+                        endif()
+                    endforeach()
+                endforeach()
             endforeach()
-        endforeach()
+        else()
+            # For target builtins, compile for each target individually
+            foreach (os ${os_list})
+                foreach (target ${ARM_TARGETS})
+                    disp_target_stdlib(${func} ${ispc_name} ${target} 64 ${os} ${CPP_LIST} ${BC_LIST})
+                    # On Windows only 64-bit neon targets are supported
+                    if (${os} STREQUAL "windows")
+                        continue()
+                    endif()
+                    disp_target_stdlib(${func} ${ispc_name} ${target} 32 ${os} ${CPP_LIST} ${BC_LIST})
+                endforeach()
+            endforeach()
+        endif()
     endif()
 
     # RISC-V targets (Linux only)
