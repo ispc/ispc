@@ -478,8 +478,8 @@ endif()
 message(STATUS "BITCODE_FOLDER is ${BITCODE_FOLDER}")
 file(MAKE_DIRECTORY ${BITCODE_FOLDER})
 
-# Generate stdlib width families from X86_TARGETS and C++ code for stdlib target mapping
-# TODO: extend to ARM targets
+# Generate stdlib width families from X86_TARGETS and ARM_TARGETS
+# and C++ code for stdlib target mapping
 define_stdlib_families()
 # Generate C++ code for stdlib target mapping (used by src/target_registry.cpp)
 generate_stdlib_target_map_cpp()

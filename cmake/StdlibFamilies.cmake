@@ -73,9 +73,22 @@ function(define_stdlib_families)
         # These produce stdlib different from generic but identical to parent ISA
         "avx_i32x8:avx1-i32x8:avx2-i32x8,avx2vnni-i32x8"
         "avx_i32x4:avx2-i32x4:avx2vnni-i32x4"
+
+        # NEON families - use generic targets
+        # NEON stdlib is identical to generic except for target-cpu attribute
+        "neon_i8x16:generic-i8x16:neon-i8x16"
+        "neon_i16x8:generic-i16x8:neon-i16x8"
+        "neon_i16x16:generic-i16x16:neon-i16x16"
+        "neon_i32x4:generic-i32x4:neon-i32x4"
+        "neon_i32x8:generic-i32x8:neon-i32x8"
+        "neon_i8x32:generic-i8x32:neon-i8x32"
     )
 
-    # Parsing loop
+    # Separate families by architecture for efficient filtering
+    set(x86_families "")
+    set(arm_families "")
+
+    # Parsing loop - store family info locally and classify by architecture
     foreach(family_def ${FAMILY_DEFINITIONS})
         # Parse: family_name:base:members
         string(REPLACE ":" ";" parts ${family_def})
@@ -92,11 +105,28 @@ function(define_stdlib_families)
         # Convert comma-separated members to CMake list
         string(REPLACE "," ";" members "${members_str}")
 
+        # Store family info locally for architecture classification
+        set(local_family_${family_name}_members "${members}")
+        set(local_family_${family_name}_base "${base}")
+
         # Export to parent scope
         set(STDLIB_FAMILY_${family_name} "${members}" PARENT_SCOPE)
         set(STDLIB_FAMILY_BASE_${family_name} "${base}" PARENT_SCOPE)
         list(APPEND all_families ${family_name})
         list(APPEND all_members ${members})
+
+        # Classify family by architecture based on first member
+        list(GET members 0 first_member)
+        list(FIND X86_TARGETS ${first_member} is_x86)
+        list(FIND ARM_TARGETS ${first_member} is_arm)
+
+        if(is_x86 GREATER -1)
+            list(APPEND x86_families ${family_name})
+        elseif(is_arm GREATER -1)
+            list(APPEND arm_families ${family_name})
+        else()
+            message(WARNING "Family ${family_name} doesn't match any known architecture")
+        endif()
 
         # Display what we registered if needed
         if(ISPC_STDLIB_DEBUG_PRINT)
@@ -111,8 +141,10 @@ function(define_stdlib_families)
     list(REMOVE_DUPLICATES all_members)
     set(STDLIB_FAMILIES "${all_families}" PARENT_SCOPE)
     set(STDLIB_FAMILY_ALL_MEMBERS "${all_members}" PARENT_SCOPE)
+    set(STDLIB_X86_FAMILIES "${x86_families}" PARENT_SCOPE)
+    set(STDLIB_ARM_FAMILIES "${arm_families}" PARENT_SCOPE)
 
-    validate_stdlib_families()    
+    validate_stdlib_families()
 endfunction()
 
 # Generate C++ code for stdlib target map
@@ -124,7 +156,7 @@ function(generate_stdlib_target_map_cpp)
         "// Auto-generated from cmake/StdlibFamilies.cmake\n"
         "// DO NOT EDIT MANUALLY - regenerated on each CMake run\n"
         "//\n"
-        "// This file contains the mapping from specific x86 targets\n"
+        "// This file contains the mapping from specific targets\n"
         "// to their corresponding generic stdlib targets.\n"
         "\n"
         "#pragma once\n"
@@ -137,7 +169,7 @@ function(generate_stdlib_target_map_cpp)
         "// Mapping from each target to its stdlib base target\n"
         "// Since we've made stdlib capability-neutral, targets in the same width family\n"
         "// produce identical stdlib bitcode. We compile stdlib once with a generic target\n"
-        "// and reuse it for all x86 targets in the family.\n"
+        "// and reuse it for all targets in the family (x86, ARM, etc.).\n"
         "inline const std::unordered_map<ISPCTarget, ISPCTarget> stdlibTargetMap = {\n"
     )
 
@@ -169,15 +201,34 @@ function(generate_stdlib_target_map_cpp)
     message(STATUS "Generated stdlib target map: ${output_file}")
 endfunction()
 
-# Validation: Ensure all targets referenced in families exist in X86_TARGETS
+# Validation: Ensure all targets referenced in families exist and belong to same architecture
 function(validate_stdlib_families)
     foreach(family ${STDLIB_FAMILIES})
+        set(family_arch "")
         foreach(target ${STDLIB_FAMILY_${family}})
-            list(FIND X86_TARGETS ${target} idx)
-            if(idx EQUAL -1)
+            list(FIND X86_TARGETS ${target} x86_idx)
+            list(FIND ARM_TARGETS ${target} arm_idx)
+
+            if(x86_idx EQUAL -1 AND arm_idx EQUAL -1)
                 message(FATAL_ERROR
                     "Width family ${family} references non-existent target: ${target}\n"
-                    "This target is not in X86_TARGETS list.")
+                    "This target is not in X86_TARGETS or ARM_TARGETS list.")
+            endif()
+
+            # Verify family members are from same architecture
+            if(x86_idx GREATER -1)
+                set(target_arch "x86")
+            else()
+                set(target_arch "arm")
+            endif()
+
+            if(family_arch STREQUAL "")
+                set(family_arch ${target_arch})
+            elseif(NOT family_arch STREQUAL target_arch)
+                message(FATAL_ERROR
+                    "Width family ${family} mixes different architectures!\n"
+                    "Target ${target} is ${target_arch} but family was ${family_arch}.\n"
+                    "All family members must be from the same architecture.")
             endif()
         endforeach()
     endforeach()
