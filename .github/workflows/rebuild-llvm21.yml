@@ -19,7 +19,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  llvm20:
+  llvm21:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.lto }}-${{ matrix.asserts }}-${{ matrix.arch }}
       cancel-in-progress: true
