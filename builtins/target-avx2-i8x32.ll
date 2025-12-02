@@ -527,7 +527,6 @@ define <32 x float> @__rcp_fast_varying_float(<32 x float> %v) nounwind readnone
 
 ;; bit ops
 
-popcnt()
 ctlztz()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -3,7 +3,6 @@
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
 ctlztz()
-popcnt()
 define_prefetches()
 define_shuffles()
 define_vector_permutations()
