@@ -896,9 +896,19 @@ EXT READNONE varying int64 __count_leading_zeros_varying_i64(varying int64 x) {
 
 // population count
 EXT uniform int32 __popcnt_int32_uniform(uniform int32 x) { return @llvm.ctpop(x); }
-EXT uniform int64 __popcnt_int64_uniform(uniform int64 x) { return @llvm.ctpop(x); }
-EXT varying int32 __popcnt_int32_varying(varying int32 x) { return @llvm.ctpop(x); }
-EXT varying int64 __popcnt_int64_varying(varying int64 x) { return @llvm.ctpop(x); }
+EXT uniform int32 __popcnt_int64_uniform(uniform int64 x) { return (int32)@llvm.ctpop(x); }
+EXT varying int32 __popcnt_int32_varying(varying int32 x, UIntMaskType mask) {
+    int r;
+    for (uniform int i = 0; i < programCount; ++i)
+        r = __insert(r, i, __popcnt_int32_uniform(__extract(x, i)));
+    return mask ? r : 0;
+}
+EXT varying int32 __popcnt_int64_varying(varying int64 x, UIntMaskType mask) {
+    int r;
+    for (uniform int i = 0; i < programCount; ++i)
+        r = __insert(r, i, __popcnt_int64_uniform(__extract(x, i)));
+    return mask ? r : 0;
+}
 
 // various bitcasts from one type to another
 EXT READNONE uniform double __doublebits_uniform_int64(uniform int64 x) {
