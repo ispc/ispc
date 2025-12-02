@@ -9,7 +9,6 @@
 ;; instructions, so it doesn't makes sense to change this implemenation.
 
 ctlztz()
-popcnt()
 define_prefetches()
 aossoa()
 halfTypeGenericImplementation()
