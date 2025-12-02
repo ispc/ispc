@@ -253,6 +253,7 @@ jobs:
   mac-build:
     # This job is not capable to build on a shared runner with LTO=on, so need to use self-hosted macOS runner.
     runs-on: ${{ inputs.lto == 'ON' && 'macOS' || 'macos-14' }}
+    timeout-minutes: 7200
     if: inputs.arch != 'aarch64'
 
     env:
