@@ -92,8 +92,13 @@ jobs:
           - name: merle
             extra_packages: libx11 libxext
             build_cmd: |
+              # Pinned to commit before VCPKG migration (fbfbdb7f12fb79a3280c45ea12ea81fa824a682f)
+              # VCPKG builds are too complex/fragile for CI (deep dependency chains, libsystemd build failures)
+              # This version uses git submodules and builds reliably
               git clone --recursive https://github.com/chinmaygarde/merle.git
               cd merle/
+              git checkout 3eecb311ac8862c41f0c53a5d9b360be923142bb
+              git submodule update --init --recursive
               sed -i '/add_custom_command(/,/DEPENDS src\/texture.ispc/ s/--werror/--werror\n --pic/' CMakeLists.txt
               git diff
               cmake -B build -S ./ -G Ninja
