@@ -446,6 +446,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addFunctionPass(llvm::SimplifyCFGPass(simplifyCFGopt));
         optPM.addFunctionPass(llvm::ADCEPass());
         optPM.addFunctionPass(llvm::InferAlignmentPass());
+        optPM.addFunctionPass(ReplaceMaskedMemOpsPass());
         optPM.addFunctionPass(llvm::InstCombinePass(), 241);
         optPM.addFunctionPass(llvm::JumpThreadingPass());
         optPM.addFunctionPass(llvm::SimplifyCFGPass(simplifyCFGopt));
