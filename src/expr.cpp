@@ -1431,7 +1431,7 @@ Expr *UnaryExpr::Optimize() {
                    Type::EqualIgnoringConst(type, AtomicType::VaryingInt32)) {
             return lOptimizeNegate<int32_t>(constExpr, type, pos);
         } else if (Type::EqualIgnoringConst(type, AtomicType::UniformUInt32) ||
-                   Type::EqualIgnoringConst(type, AtomicType::VaryingUInt32)) {
+                   Type::EqualIgnoringConst(type, AtomicType::VaryingUInt32) || isEnumType == true) {
             return lOptimizeNegate<uint32_t>(constExpr, type, pos);
         } else if (Type::EqualIgnoringConst(type, AtomicType::UniformInt16) ||
                    Type::EqualIgnoringConst(type, AtomicType::VaryingInt16)) {
