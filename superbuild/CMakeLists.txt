@@ -458,10 +458,8 @@ if (APPLE)
     # Starting from MacOS 10.9 Maverics which is Darwin 13.0, C and C++ library
     # headers are part of the SDK, not the OS itself. System root must be
     # specified during the compiler build, so the compiler knows the default
-    # location to search for headers. C headers are located at system root
-    # location, while C++ headers are part of the toolchain. I.e. specifying
-    # system root solved C header problem. For C++ headers we enable libc++
-    # build as part of clang build (our own toolchain).
+    # location to search for headers. Both C and C++ (libc++) headers are
+    # located in the SDK at the system root location.
     # Note that on Sierra there's an issue with using C headers from High
     # Sierra SDK, which instantiates as compile error:
     #     error: 'utimensat' is only available on macOS 10.13 or newer
@@ -597,23 +595,18 @@ if (APPLE AND CMAKE_SYSTEM_VERSION VERSION_GREATER_EQUAL 13)
         -DDEFAULT_SYSROOT=${MAC_SYSTEM_ROOT}
         )
     # Starting with MacOS 10.9 Maverics, the system doesn't contain headers for
-    # standard C++ library and the default library is libc++, bit libstdc++. The
-    # headers are part of XCode now. But we are checking out headers as part of
-    # LLVM source tree, so they will be installed in clang location and clang
-    # will be able to find them. Though they may not match to the library
-    # installed in the system, but seems that this should not happen.  Note, that
-    # we can also build a libc++ library, but it must be on system default
-    # location or should be passed to the linker explicitly (either through
-    # command line or environment variables). So we are not doing it currently to
-    # make the build process easier.
+    # standard C++ library and the default library is libc++, not libstdc++. The
+    # headers are part of XCode SDK.
 
-    # We either need to explicitly opt-out from using libcxxabi from this repo,
-    # or build and use it, otherwise a build error will occure (attempt to use
-    # just built libcxxabi, which was not built).  An option to build seems to be
-    # a better one.
-    set(LLVM_RUNTIMES
-        ${LLVM_RUNTIMES}$<SEMICOLON>libcxx$<SEMICOLON>libcxxabi
-        )
+    # For LLVM < 21, build libcxx and libcxxabi as before.
+    # For LLVM >= 21, use system libc++ from Xcode SDK to avoid incompatibility
+    # between LLVM version of libc++ and the system one.
+    # Consistently use system version - for both headers and dynamic linking.
+    if (${LLVM_VERSION_MAJOR} VERSION_LESS 21)
+        set(LLVM_RUNTIMES
+            ${LLVM_RUNTIMES}$<SEMICOLON>libcxx$<SEMICOLON>libcxxabi
+            )
+    endif()
 
     if (${LLVM_VERSION_MAJOR} VERSION_GREATER_EQUAL 18)
         set(LLVM_RUNTIMES
