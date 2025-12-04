@@ -43,6 +43,7 @@
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/Path.h>
 
+#if ISPC_LLVM_VERSION < ISPC_LLVM_21_0
 #ifdef _LIBCPP_VERSION
 // Provide own definition of std::__libcpp_verbose_abort to avoid missing symbols error on macOS with old
 // system libc++.1.dylib. The symbol is there for macOS 13 Ventura and later, but not macOS 12 and earlier.
@@ -60,6 +61,7 @@ void std::__libcpp_verbose_abort(char const *format, ...)
     abort();
 }
 #endif // _LIBCPP_VERSION
+#endif // ISPC_LLVM_VERSION < ISPC_LLVM_21_0
 
 using namespace ispc;
 
