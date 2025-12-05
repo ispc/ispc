@@ -9,7 +9,7 @@
 // the alloca/store/load instruction sequence into more efficient
 // insertelement instructions.
 
-// CHECK: define void @foo___REFs_5B_unData_5D_(ptr noalias nocapture %D
+// CHECK: define void @foo___REFs_5B_unData_5D_(ptr noalias {{(nocapture|captures\(none\))}} %D
 // CHECK-NEXT: allocas:
 // CHECK-NOT:    alloca
 // CHECK-NOT:    store

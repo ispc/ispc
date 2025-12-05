@@ -8,16 +8,11 @@
 
 // CHECK-LABEL: define <16 x i8> @embedded_select___unb_3C_3_3E_unT_3C_3_3E_unT_3C_3_3E_(
 // CHECK-NEXT: allocas:
-// CHECK-NEXT:   [[COND_STORAGE:%.*]] = zext <16 x i1> %cond to <16 x i8>
-// CHECK-NEXT:   [[SHUFFLE4:%.*]] = shufflevector <16 x i8> [[COND_STORAGE]], <16 x i8> {{.*}}, <3 x i32> {{.*}}
-// CHECK-NEXT:   [[SHUFFLE3:%.*]] = shufflevector <3 x i8> [[SHUFFLE4]], <3 x i8> {{.*}}, <4 x i32> {{.*}}
-// CHECK-NEXT:   [[SHUFFLE2:%.*]] = shufflevector <4 x i8> [[SHUFFLE3]], <4 x i8> {{.*}}, <8 x i32> {{.*}}
-// CHECK-NEXT:   [[SHUFFLE1:%.*]] = shufflevector <8 x i8> [[SHUFFLE2]], <8 x i8> {{.*}}, <16 x i32> {{.*}}
-// CHECK-NEXT:   [[CMP:%.*]] = icmp eq <16 x i8> [[SHUFFLE1]], zeroinitializer
+// CHECK:   {{%.*}} = {{shufflevector <16 x i1>|zext <16 x i1>}}
+// CHECK:   {{%.*}} = {{zext <3 x i1>|shufflevector <16 x i8>}}
+// CHECK:   [[CMP:%.*]] = icmp eq <16 x i8> {{%.*}}, zeroinitializer
 // CHECK-NEXT:   [[SELECT:%.*]] = select <16 x i1> [[CMP]], <16 x i8> %f, <16 x i8> %t
-// CHECK-NEXT:   [[RESULT:%.*]] = shufflevector <16 x i8> [[SELECT]], <16 x i8> {{.*}}, <16 x i32> {{.*}}
-// CHECK-NEXT:   ret <16 x i8> [[RESULT]]
-// CHECK-NEXT: }
+// CHECK:   ret <16 x i8>
 
 #define N 3
 
