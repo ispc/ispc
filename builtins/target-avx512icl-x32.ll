@@ -83,3 +83,21 @@ define <32 x i32> @__dot2add_i16i16packed_sat(<32 x i32> %a, <32 x i32> %b, <32 
   v16tov32(i32, %ret0, %ret1, %ret)
   ret <32 x i32> %ret
 }
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; popcnt
+declare <WIDTH x i32> @llvm.ctpop.v`'WIDTH`'i32(<WIDTH x i32>) nounwind readnone
+declare <WIDTH x i64> @llvm.ctpop.v`'WIDTH`'i64(<WIDTH x i64>) nounwind readnone
+
+define <WIDTH x i32> @__popcnt_int32_varying(<WIDTH x i32>, <WIDTH x MASK>) nounwind readonly alwaysinline {
+  %call = call <WIDTH x i32> @llvm.ctpop.v`'WIDTH`'i32(<WIDTH x i32> %0)
+  %result = select <WIDTH x MASK> %1, <WIDTH x i32> %call, <WIDTH x i32> zeroinitializer
+  ret <WIDTH x i32> %result
+}
+
+define <WIDTH x i32> @__popcnt_int64_varying(<WIDTH x i64>, <WIDTH x MASK>) nounwind readonly alwaysinline {
+  %call = call <WIDTH x i64> @llvm.ctpop.v`'WIDTH`'i64(<WIDTH x i64> %0)
+  %trunc = trunc <WIDTH x i64> %call to <WIDTH x i32>
+  %result = select <WIDTH x MASK> %1, <WIDTH x i32> %trunc, <WIDTH x i32> zeroinitializer
+  ret <WIDTH x i32> %result
+}

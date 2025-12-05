@@ -388,7 +388,8 @@ declare <WIDTH x i32> @llvm.genx.cbit.XE_SUFFIX(i32) (<WIDTH x i32>)
 
 define <WIDTH x i32> @__popcnt_int32_varying(<WIDTH x i32>, <WIDTH x MASK>) nounwind readonly alwaysinline {
   %c = call <WIDTH x i32> @llvm.genx.cbit.XE_SUFFIX(i32) (<WIDTH x i32> %0)
-  ret <WIDTH x i32> %c
+  %result = select <WIDTH x MASK> %1, <WIDTH x i32> %c, <WIDTH x i32> zeroinitializer
+  ret <WIDTH x i32> %result
 }
 
 define <WIDTH x i32> @__popcnt_int64_varying(<WIDTH x i64>, <WIDTH x MASK>) nounwind readonly alwaysinline {
@@ -398,7 +399,8 @@ define <WIDTH x i32> @__popcnt_int64_varying(<WIDTH x i64>, <WIDTH x MASK>) noun
   %lo.cbit = call <WIDTH x i32> @llvm.genx.cbit.XE_SUFFIX(i32) (<WIDTH x i32> %lo)
   %hi.cbit = call <WIDTH x i32> @llvm.genx.cbit.XE_SUFFIX(i32) (<WIDTH x i32> %hi)
   %res = add <WIDTH x i32> %lo.cbit, %hi.cbit
-  ret <WIDTH x i32> %res
+  %result = select <WIDTH x MASK> %1, <WIDTH x i32> %res, <WIDTH x i32> zeroinitializer
+  ret <WIDTH x i32> %result
 }
 
 declare i64 @__spirv_BuiltInWorkgroupId(i32 %dim)

@@ -3,6 +3,7 @@
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
 define(`WIDTH',`8')
+define(`MASK',`i1')
 define(`ISA',`AVX512SKX')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -27,4 +28,22 @@ declare <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32>, <8 x i32>, <8 x i32>
 define <8 x i32> @__dot2add_i16i16packed_sat(<8 x i32> %a, <8 x i32> %b, <8 x i32> %acc) nounwind readnone alwaysinline {
   %ret = call <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32> %acc, <8 x i32> %a, <8 x i32> %b)
   ret <8 x i32> %ret
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; popcnt
+declare <WIDTH x i32> @llvm.ctpop.v`'WIDTH`'i32(<WIDTH x i32>) nounwind readnone
+declare <WIDTH x i64> @llvm.ctpop.v`'WIDTH`'i64(<WIDTH x i64>) nounwind readnone
+
+define <WIDTH x i32> @__popcnt_int32_varying(<WIDTH x i32>, <WIDTH x MASK>) nounwind readonly alwaysinline {
+  %call = call <WIDTH x i32> @llvm.ctpop.v`'WIDTH`'i32(<WIDTH x i32> %0)
+  %result = select <WIDTH x MASK> %1, <WIDTH x i32> %call, <WIDTH x i32> zeroinitializer
+  ret <WIDTH x i32> %result
+}
+
+define <WIDTH x i32> @__popcnt_int64_varying(<WIDTH x i64>, <WIDTH x MASK>) nounwind readonly alwaysinline {
+  %call = call <WIDTH x i64> @llvm.ctpop.v`'WIDTH`'i64(<WIDTH x i64> %0)
+  %trunc = trunc <WIDTH x i64> %call to <WIDTH x i32>
+  %result = select <WIDTH x MASK> %1, <WIDTH x i32> %trunc, <WIDTH x i32> zeroinitializer
+  ret <WIDTH x i32> %result
 }
