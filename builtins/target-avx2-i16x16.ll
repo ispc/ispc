@@ -1,4 +1,4 @@
-;;  Copyright (c) 2020-2024, Intel Corporation
+;;  Copyright (c) 2020-2025, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
@@ -504,7 +504,6 @@ define <16 x float> @__rcp_fast_varying_float(<16 x float> %v) nounwind readnone
 
 ;; bit ops
 
-popcnt()
 ctlztz()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
