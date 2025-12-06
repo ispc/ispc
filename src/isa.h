@@ -21,7 +21,8 @@ enum ISA {
     SKX_AVX512 = 8,
     ICL_AVX512 = 9,
     SPR_AVX512 = 10,
-    DMR_AVX10_2 = 11,
+    NVL_AVX10_2 = 11,
+    DMR_AVX10_2 = 12,
 
     COUNT
 };
@@ -192,10 +193,14 @@ UNUSED_ATTR static enum ISA get_x86_isa() {
         UNUSED_ATTR int cpx = clx && avx512_bf16;
         int icl =
             clx && avx512_vbmi2 && avx512_gfni && avx512_vaes && avx512_vpclmulqdq && avx512_bitalg && avx512_vpopcntdq;
+        // Server platforms
         UNUSED_ATTR int tgl = icl && avx512_vp2intersect;
         int spr =
             icl && avx512_bf16 && avx512_amx_bf16 && avx512_amx_tile && avx512_amx_int8 && avx_vnni && avx512_fp16;
         UNUSED_ATTR int gnr = spr && amxfp16 && prefetchi;
+        // Client platforms
+        UNUSED_ATTR int arl =
+            icl && avxvnniint8 && avxvnniint16 && avxneconvert && sha512 && sm3 && sm4 && avxifma && cmpccxadd;
 
         int avx10 = (info3[3] & (1 << 19)) != 0;
 
@@ -211,13 +216,15 @@ UNUSED_ATTR static enum ISA get_x86_isa() {
             // clang-format on
 
             // Diamond Rapids:         DMR = GNR + AVX10_2 + APX + ... (For the whole list see x86TargetParser.cpp)
-            // TODO: according to spec the presence of avx10.2 should cover the whole set of features, but let's keep it
-            // now aligned with LLVM logic
             int dmr = gnr && avx10_2 && apx && cmpccxadd && avxneconvert && avxifma && avxvnniint8 && avxvnniint16 &&
                       amxcomplex && sha512 && sm3 && sm4;
+            // Nova Lake:              NVL = ARL + AVX10_2 + APX + ...
+            int nvl = arl && avx10_2 && apx && prefetchi && avx512_fp16;
 
             if (dmr) {
                 return DMR_AVX10_2;
+            } else if (nvl) {
+                return NVL_AVX10_2;
             }
         }
         if (spr) {
