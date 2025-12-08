@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2025, Intel Corporation
+# Copyright (c) 2025-2026, Intel Corporation
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
@@ -340,7 +340,7 @@ def main():
 
     Command Line Args:
         llvm_version (str, optional): LLVM version to use.
-            Default: "20"
+            Default: "21"
 
     Directory Structure Created/Used:
         Working Directory (LLVM_HOME)/
@@ -361,7 +361,7 @@ def main():
         None
 
     Examples:
-        # Build with default LLVM 20
+        # Build with default LLVM 21
         $ python quick-start-build.py
 
         # Build with specific LLVM version
@@ -414,11 +414,11 @@ Environment Variables:
   ARCHIVE_URL    Direct download URL for LLVM package (only if automatic detection fails)
 
 Examples:
-  # Build with default LLVM 20
+  # Build with default LLVM 21
   $ python quick-start-build.py
 
   # Build with specific LLVM version
-  $ python quick-start-build.py 17
+  $ python quick-start-build.py 19
 
   # Build with custom LLVM location
   $ LLVM_HOME=/path/to/llvm python quick-start-build.py
@@ -431,8 +431,8 @@ Examples:
         """
     )
 
-    parser.add_argument("llvm_version", type=str, nargs="?", default="20",
-                        help="LLVM version to use (default: 20)")
+    parser.add_argument("llvm_version", type=str, nargs="?", default="21",
+                        help="LLVM version to use (default: 21)")
     args = parser.parse_args()
 
     # Set up default values and paths
