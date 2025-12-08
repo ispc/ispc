@@ -103,9 +103,9 @@ jobs:
       fail-fast: false
       matrix:
         llvm:
-          - version: "20.1"
-            full_version: "20.1.8"
-            short_version: 20
+          - version: "21.1"
+            full_version: "21.1.7"
+            short_version: 21
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: linux
@@ -129,6 +129,9 @@ jobs:
           - version: "20.1"
             full_version: "20.1.8"
             short_version: 20
+          - version: "21.1"
+            full_version: "21.1.7"
+            short_version: 21
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: linux
@@ -137,37 +140,37 @@ jobs:
       llvm_version: ${{ matrix.llvm.version }}
       llvm_tar: llvm-${{ matrix.llvm.full_version }}-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
 
-  linux-build-ispc-llvm20-lto:
+  linux-build-ispc-llvm21-lto:
     needs: [define-flow]
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: linux
-      artifact_name: ispc_llvm20_lto_linux
+      artifact_name: ispc_llvm21_lto_linux
       runner: ubuntu-22.04
-      llvm_version: "20.1"
-      llvm_tar: llvm-20.1.8-ubuntu22.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
+      llvm_version: "21.1"
+      llvm_tar: llvm-21.1.7-ubuntu22.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
       enable_lto: true
 
-  linux-build-ispc-llvm20-release:
+  linux-build-ispc-llvm21-release:
       needs: [define-flow]
       uses: ./.github/workflows/reusable.ispc.build.yml
       with:
         platform: linux
-        artifact_name: ispc_llvm20rel_linux
+        artifact_name: ispc_llvm21rel_linux
         runner: ubuntu-22.04
-        llvm_version: "20.1"
-        llvm_tar: llvm-20.1.8-ubuntu22.04-Release-x86.arm.wasm.tar.xz
+        llvm_version: "21.1"
+        llvm_tar: llvm-21.1.7-ubuntu22.04-Release-x86.arm.wasm.tar.xz
         enable_cross: true
 
-  linux-build-ispc-xe-llvm20-release:
+  linux-build-ispc-xe-llvm21-release:
     needs: [define-flow]
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: linux
-      artifact_name: ispc_xe_llvm20rel_linux
+      artifact_name: ispc_xe_llvm21rel_linux
       runner: ubuntu-22.04
-      llvm_version: "20.1"
-      llvm_tar: llvm-20.1.8-ubuntu22.04-Release-x86.arm.wasm.tar.xz
+      llvm_version: "21.1"
+      llvm_tar: llvm-21.1.7-ubuntu22.04-Release-x86.arm.wasm.tar.xz
       enable_xe: true
 
   linux-build-ispc-wasm:
@@ -177,8 +180,8 @@ jobs:
       platform: linux
       artifact_name: ispc-wasm-linux
       runner: ubuntu-22.04
-      llvm_version: "20.1"
-      llvm_tar: llvm-20.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      llvm_version: "21.1"
+      llvm_tar: llvm-21.1.7-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
       enable_wasm: true
 
   linux-build-ispc-riscv:
@@ -197,7 +200,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        llvm: [18, 19, 20]
+        llvm: [18, 19, 20, 21]
         arch: [x86, x86-64]
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
@@ -214,59 +217,59 @@ jobs:
       matrix:
         # --math-lib=fast and --opt=fast-math are not tested because of #3442
         include:
-          - llvm: 20
+          - llvm: 21
             arch: x86-64
             extra_flags: "--opt=disable-zmm"
             targets: '["avx512skx-x16"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86-64
             extra_flags: "--addressing=64"
             targets: '["avx2-i32x8"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86
             extra_flags: "--addressing=64"
             targets: '["avx2-i32x8"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86-64
             extra_flags: "-g"
             targets: '["avx2-i32x8"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86
             extra_flags: "-g"
             targets: '["avx2-i32x8"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86
             extra_flags: "--math-lib=system"
             targets: '["avx2-i32x8"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86-64
             extra_flags: "--math-lib=system"
             targets: '["avx2-i32x8"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86
             extra_flags: "--pic"
             targets: '["avx2-i32x8"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86-64
             extra_flags: "--pic"
             targets: '["avx2-i32x8"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86-64
             extra_flags: "--mcmodel=large"
             targets: '["avx2-i32x8"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86
             extra_flags: "--no-wrap-signed-int"
             targets: '["avx2-i32x8"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86-64
             extra_flags: "--no-wrap-signed-int"
             targets: '["avx2-i32x8"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86
             extra_flags: "--opt=disable-fma"
             targets: '["avx2-i32x8"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86-64
             extra_flags: "--opt=disable-fma"
             targets: '["avx2-i32x8"]'
@@ -279,8 +282,8 @@ jobs:
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
       ispc_extra_flags: ${{ matrix.extra_flags }}
 
-  linux-test-llvm20-lto:
-    needs: [define-flow, linux-build-ispc-llvm20-lto]
+  linux-test-llvm21-lto:
+    needs: [define-flow, linux-build-ispc-llvm21-lto]
     strategy:
       fail-fast: false
       matrix:
@@ -289,12 +292,12 @@ jobs:
     with:
       platform: linux
       architecture: ${{ matrix.arch }}
-      artifact_name: ispc_llvm20_lto_linux
+      artifact_name: ispc_llvm21_lto_linux
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86 }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
       enable_lto: true
 
-  linux-test-llvm20-aarch64:
+  linux-test-llvm21-aarch64:
     needs: [define-flow, linux-build-ispc-aarch64]
     strategy:
       fail-fast: false
@@ -302,7 +305,7 @@ jobs:
     with:
       platform: linux
       architecture: aarch64
-      artifact_name: ispc_llvm20_linux.aarch64
+      artifact_name: ispc_llvm21_linux.aarch64
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_arm }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
 
@@ -313,8 +316,8 @@ jobs:
       artifact_name: ispc-riscv-linux
 
   # Test release version
-  linux-test-llvm20-release:
-    needs: [define-flow, linux-build-ispc-llvm20-release]
+  linux-test-llvm21-release:
+    needs: [define-flow, linux-build-ispc-llvm21-release]
     strategy:
       fail-fast: false
       matrix:
@@ -323,14 +326,14 @@ jobs:
     with:
       platform: linux
       architecture: ${{ matrix.arch }}
-      artifact_name: ispc_llvm20rel_linux
+      artifact_name: ispc_llvm21rel_linux
       targets: '["avx2-i32x8"]'
       optsets: -O0 -O2
 
   # Debug run is experimental with the purpose to see if it's capable to catch anything.
   # So it's running in "full" mode only for now.
   # Single target, as it should be representative enough.
-  linux-test-debug-llvm20:
+  linux-test-debug-llvm21:
     needs: [define-flow, linux-build-ispc]
     if: ${{ needs.define-flow.outputs.flow_type == 'full' }}
     strategy:
@@ -341,14 +344,14 @@ jobs:
     with:
       platform: linux
       architecture: ${{ matrix.arch }}
-      artifact_name: ispc_llvm20_linux
+      artifact_name: ispc_llvm21_linux
       targets: '["avx2-i32x8"]'
       optsets: -O0 -O2
       enable_debug: true
 
   # Test xe release version
-  linux-test-xe-llvm20-release:
-    needs: [define-flow, linux-build-ispc-xe-llvm20-release]
+  linux-test-xe-llvm21-release:
+    needs: [define-flow, linux-build-ispc-xe-llvm21-release]
     if: ${{ needs.define-flow.outputs.flow_type == 'smoke' }}
     strategy:
       fail-fast: false
@@ -358,7 +361,7 @@ jobs:
     with:
       platform: linux
       architecture: ${{ matrix.arch }}
-      artifact_name: ispc_xe_llvm20rel_linux
+      artifact_name: ispc_xe_llvm21rel_linux
       targets: '["avx2-i32x8"]'
       optsets: -O0 -O2
       enable_xe: true
@@ -397,6 +400,9 @@ jobs:
           - version: "20.1"
             full_version: "20.1.8"
             short_version: 20
+          - version: "21.1"
+            full_version: "21.1.7"
+            short_version: 21
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: macos
@@ -405,15 +411,15 @@ jobs:
       llvm_version: ${{ matrix.llvm.version }}
       llvm_tar: llvm-${{ matrix.llvm.full_version }}-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz
 
-  macos-build-ispc-llvm20-lto:
+  macos-build-ispc-llvm21-lto:
     needs: [define-flow]
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: macos
-      artifact_name: ispc_llvm20_lto_macos
+      artifact_name: ispc_llvm21_lto_macos
       runner: macos-15-intel
-      llvm_version: 20.1
-      llvm_tar: llvm-20.1.8-macos-Release-lto-universal-x86.arm.wasm.tar.xz
+      llvm_version: 21.1
+      llvm_tar: llvm-21.1.7-macos-Release-lto-universal-x86.arm.wasm.tar.xz
       enable_lto: true
 
   macos-test-ispc:
@@ -421,7 +427,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        llvm: [18, 19, 20]
+        llvm: [18, 19, 20, 21]
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
       platform: macos
@@ -430,18 +436,18 @@ jobs:
       targets: '["sse2-i32x4", "sse4-i32x4"]'
       optsets: -O0 -O2
 
-  macos-test-ispc-llvm20-lto:
-    needs: [define-flow, macos-build-ispc-llvm20-lto]
+  macos-test-ispc-llvm21-lto:
+    needs: [define-flow, macos-build-ispc-llvm21-lto]
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
       platform: macos
       architecture: x86-64
-      artifact_name: ispc_llvm20_lto_macos
+      artifact_name: ispc_llvm21_lto_macos
       targets: '["sse4-i32x4"]'
       optsets: -O0 -O2
       enable_lto: true
 
-  macos-test-ispc-llvm20-arm64:
+  macos-test-ispc-llvm21-arm64:
     needs: [define-flow, macos-build-ispc]
     strategy:
       fail-fast: false
@@ -449,7 +455,7 @@ jobs:
     with:
       platform: macos
       architecture: aarch64
-      artifact_name: ispc_llvm20_macos-14
+      artifact_name: ispc_llvm21_macos-14
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_arm }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
 
@@ -458,7 +464,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        llvm: [20]
+        llvm: [21]
         # --math-lib=fast and --opt=fast-math are not tested because of #3442
         # --opt=disable-zmm is not applicable for ARM targets
         extra_flags: ["--addressing=64", "-g",
@@ -491,6 +497,10 @@ jobs:
             full_version: "20.1.8"
             short_version: 20
             vs_version: "vs2022"
+          - version: "21.1"
+            full_version: "21.1.7"
+            short_version: 21
+            vs_version: "vs2022"
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: windows
@@ -499,26 +509,26 @@ jobs:
       llvm_version: ${{ matrix.llvm.version }}
       llvm_tar: llvm-${{ matrix.llvm.full_version }}-win.${{ matrix.llvm.vs_version }}-Release+Asserts-x86.arm.wasm.tar.7z
 
-  win-build-ispc-llvm20-lto:
+  win-build-ispc-llvm21-lto:
     needs: [define-flow]
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: windows
-      artifact_name: ispc_llvm20_lto_win
+      artifact_name: ispc_llvm21_lto_win
       runner: windows-2022
-      llvm_version: 20.1
-      llvm_tar: llvm-20.1.8-win.vs2022-Release+Asserts-lto-x86.arm.wasm.tar.7z
+      llvm_version: 21.1
+      llvm_tar: llvm-21.1.7-win.vs2022-Release+Asserts-lto-x86.arm.wasm.tar.7z
       enable_lto: true
 
-  win-build-ispc-xe-llvm20-release:
+  win-build-ispc-xe-llvm21-release:
     needs: [define-flow]
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
       platform: windows
-      artifact_name: ispc_xe_llvm20rel_win
+      artifact_name: ispc_xe_llvm21rel_win
       runner: windows-2022
-      llvm_version: 20.1
-      llvm_tar: llvm-20.1.8-win.vs2022-Release-x86.arm.wasm.tar.7z
+      llvm_version: 21.1
+      llvm_tar: llvm-21.1.7-win.vs2022-Release-x86.arm.wasm.tar.7z
       enable_xe: true
 
   win-build-ispc-wasm:
@@ -528,8 +538,8 @@ jobs:
       platform: windows
       artifact_name: ispc-wasm-windows
       runner: windows-2022
-      llvm_version: 20.1
-      llvm_tar: llvm-20.1.8-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z
+      llvm_version: 21.1
+      llvm_tar: llvm-21.1.7-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z
       enable_wasm: true
 
   win-test:
@@ -537,7 +547,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        llvm: [18, 19, 20]
+        llvm: [18, 19, 20, 21]
         arch: [x86, x86-64]
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
@@ -554,55 +564,55 @@ jobs:
       matrix:
         # --math-lib=fast and --opt=fast-math are not tested because of #3442
         include:
-          - llvm: 20
+          - llvm: 21
             arch: x86-64
             extra_flags: "--opt=disable-zmm"
             targets: '["avx512skx-x16"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86-64
             extra_flags: "--addressing=64"
             targets: '["avx2-i32x8"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86
             extra_flags: "--addressing=64"
             targets: '["avx2-i32x8"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86-64
             extra_flags: "-g"
             targets: '["avx2-i32x8"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86
             extra_flags: "-g"
             targets: '["avx2-i32x8"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86-64
             extra_flags: "--math-lib=system"
             targets: '["avx2-i32x8"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86
             extra_flags: "--pic"
             targets: '["avx2-i32x8"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86-64
             extra_flags: "--pic"
             targets: '["avx2-i32x8"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86-64
             extra_flags: "--mcmodel=large"
             targets: '["avx2-i32x8"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86
             extra_flags: "--no-wrap-signed-int"
             targets: '["avx2-i32x8"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86-64
             extra_flags: "--no-wrap-signed-int"
             targets: '["avx2-i32x8"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86
             extra_flags: "--opt=disable-fma"
             targets: '["avx2-i32x8"]'
-          - llvm: 20
+          - llvm: 21
             arch: x86-64
             extra_flags: "--opt=disable-fma"
             targets: '["avx2-i32x8"]'
@@ -615,8 +625,8 @@ jobs:
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
       ispc_extra_flags: ${{ matrix.extra_flags }}
 
-  win-test-llvm20-lto:
-    needs: [define-flow, win-build-ispc-llvm20-lto]
+  win-test-llvm21-lto:
+    needs: [define-flow, win-build-ispc-llvm21-lto]
     strategy:
       fail-fast: false
       matrix:
@@ -625,14 +635,14 @@ jobs:
     with:
       platform: windows
       architecture: ${{ matrix.arch }}
-      artifact_name: ispc_llvm20_lto_win
+      artifact_name: ispc_llvm21_lto_win
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_x86 }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
       enable_lto: true
 
   # Test xe release version
-  win-test-xe-llvm20-release:
-    needs: [define-flow, win-build-ispc-xe-llvm20-release]
+  win-test-xe-llvm21-release:
+    needs: [define-flow, win-build-ispc-xe-llvm21-release]
     if: ${{ needs.define-flow.outputs.flow_type == 'smoke' }}
     strategy:
       fail-fast: false
@@ -642,28 +652,28 @@ jobs:
     with:
       platform: windows
       architecture: ${{ matrix.arch }}
-      artifact_name: ispc_xe_llvm20rel_win
+      artifact_name: ispc_xe_llvm21rel_win
       targets: '["avx2-i32x8"]'
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
       enable_xe: true
 
-  win-test-llvm20-aarch64:
+  win-test-llvm21-aarch64:
     needs: [define-flow, win-build-ispc]
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
       platform: windows
       architecture: aarch64
-      artifact_name: ispc_llvm20_win
+      artifact_name: ispc_llvm21_win
       targets: ${{ needs.define-flow.outputs.tests_matrix_targets_arm }}
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
 
-  win-test-llvm20-vectorcall:
-    needs: [define-flow, win-build-ispc-xe-llvm20-release]
+  win-test-llvm21-vectorcall:
+    needs: [define-flow, win-build-ispc-xe-llvm21-release]
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
       platform: windows
       architecture: x86-64
-      artifact_name: ispc_xe_llvm20rel_win
+      artifact_name: ispc_xe_llvm21rel_win
       targets: '["avx2-i32x8"]'
       optsets: O2
       calling_conv: vectorcall
@@ -728,7 +738,7 @@ jobs:
     - name: Download ispc package
       uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
       with:
-        name: ispc_llvm20_win
+        name: ispc_llvm21_win
 
     - name: Download examples package
       uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
@@ -778,7 +788,7 @@ jobs:
     - name: Download ispc package
       uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
       with:
-        name: ispc_llvm20_linux
+        name: ispc_llvm21_linux
 
     - name: Download examples package
       uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
@@ -822,7 +832,7 @@ jobs:
     - name: Download ispc package
       uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
       with:
-        name: ispc_llvm20_macos-14
+        name: ispc_llvm21_macos-14
 
     - name: Download examples package
       uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
