@@ -7,7 +7,7 @@
 
 // REQUIRES: MACOS_HOST && X86_ENABLED
 
-// CHECK-MACOS-DEFAULT: target triple = "x86_64-apple-macosx10.12"
+// CHECK-MACOS-DEFAULT: target triple = "x86_64-apple-macosx10.13"
 // CHECK-MACOS-VER: target triple = "x86_64-apple-macosx15.0"
 // CHECK-MACOS-VER-UNSET: target triple = "x86_64-apple-macosx"
 
