@@ -147,6 +147,6 @@ jobs:
       uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       if: failure()
       with:
-        name: fail_db.llvm20.${{matrix.target}}.txt
+        name: fail_db.llvm21.${{matrix.target}}.txt
         path: fail_db.txt
 
