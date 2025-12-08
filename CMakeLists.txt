@@ -51,8 +51,8 @@ if (APPLE)
     # so we do this hack to detect the platform. It's not perfect, but good enough.
     execute_process(COMMAND uname -m OUTPUT_VARIABLE UNAME)
     if (UNAME MATCHES "x86_64" OR CMAKE_OSX_ARCHITECTURES MATCHES "x86_64")
-        # Note: it's ok to have 10.12 for Universal Binaries.
-        set(CMAKE_OSX_DEPLOYMENT_TARGET "10.12" CACHE STRING "Minimum macOS version to support")
+        # Note: it's ok to have 10.13 for Universal Binaries.
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS version to support")
     else()
         set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version to support")
     endif()
