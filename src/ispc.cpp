@@ -2555,7 +2555,7 @@ llvm::Triple Target::GetTriple() const {
         triple.setVendor(llvm::Triple::VendorType::Apple);
         // If nothing is specified in command line - set default
         if (darwinVersionMin.empty()) {
-            darwinVersionMin = (m_arch == Arch::x86_64) ? llvm::VersionTuple(10, 12) : llvm::VersionTuple(11, 0);
+            darwinVersionMin = (m_arch == Arch::x86_64) ? llvm::VersionTuple(10, 13) : llvm::VersionTuple(11, 0);
         }
         if (darwinVersionMin != darwinUnspecifiedVersion) {
             triple.setOSName(llvm::Triple::getOSTypeName(llvm::Triple::OSType::MacOSX).str() +

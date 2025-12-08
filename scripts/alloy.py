@@ -992,7 +992,7 @@ if __name__ == '__main__':
     llvm_group.add_option('--llvm-disable-assertions', dest='llvm_disable_assertions',
         help='build LLVM with assertions disabled', default=False, action="store_true")
     llvm_group.add_option('--macos-version-min', dest='macos_version_min',
-        help='Minimal macOS version to target with this LLVM build (ignored on other OSes)', default="10.12" if platform.machine() == 'x86_64' else "11.0")
+        help='Minimal macOS version to target with this LLVM build (ignored on other OSes)', default="10.13" if platform.machine() == 'x86_64' else "11.0")
     llvm_group.add_option('--macos-universal-binary', dest='macos_universal_bin',
         help='Build Universal Binaries (x86_64+arm64) on macOS', default=False, action='store_true')
     llvm_group.add_option('--force', dest='force',
