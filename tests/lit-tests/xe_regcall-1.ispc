@@ -103,7 +103,7 @@ extern "C" __regcall uniform EndsWithFlexArray foo7(uniform int b) {
   return f;
 }
 
-// CHECK: define x86_regcallcc <16 x float> @__regcall3__foo8({{(float addrspace\(4\)\*)|(ptr addrspace\(4\))}} noalias nocapture {{(readonly)?}} %A, <16 x float> %b, i32 %I, <16 x i1> %mask)
+// CHECK: define x86_regcallcc <16 x float> @__regcall3__foo8({{(float addrspace\(4\)\*)|(ptr addrspace\(4\))}} noalias {{(nocapture readonly|readonly captures\(none\))}} %A, <16 x float> %b, i32 %I, <16 x i1> %mask)
 extern "C" __regcall float foo8(uniform float A[], float b, uniform int I, bool mask) {
   return A[programIndex+I];
 }
@@ -112,11 +112,11 @@ struct Callback {
  float (*uniform callback)(float, float, uniform float);
 };
 
-// CHECK: define x86_regcallcc <16 x float> @__regcall3__foo9({{(%v16_uniform_Callback addrspace\(4\)\*)|(ptr addrspace\(4\))}} noalias nocapture readnone %callback)
+// CHECK: define x86_regcallcc <16 x float> @__regcall3__foo9({{(%v16_uniform_Callback addrspace\(4\)\*)|(ptr addrspace\(4\))}} noalias {{(nocapture readnone|readnone captures\(none\))}} %callback)
 extern "C" __regcall float foo9(Callback * uniform callback) {}
 
 // CHECK: define x86_regcallcc <16 x float> @__regcall3__foo10(<16 x i64> %ptr)
 extern "C" __regcall float foo10(uniform float* ptr) {}
 
-// CHECK: define x86_regcallcc <16 x float> @__regcall3__foo11({{(float addrspace\(4\)\*)|(ptr addrspace\(4\))}} noalias nocapture readnone %ptr)
+// CHECK: define x86_regcallcc <16 x float> @__regcall3__foo11({{(float addrspace\(4\)\*)|(ptr addrspace\(4\))}} noalias {{(nocapture readnone|readnone captures\(none\))}} %ptr)
 extern "C" __regcall float foo11(uniform float* uniform ptr) {}

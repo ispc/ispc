@@ -865,7 +865,7 @@ list(APPEND LINK_LIBRARIES ${LLVM_LIBRARY_LIST} ${CMAKE_DL_LIBS})
 if (XE_ENABLED)
     # Link against Xe libraries
     foreach(xeLib ${XE_LIBRARY_LIST})
-        find_library(${xeLib}Path NAMES ${xeLib} HINTS ${XE_DEPS_DIR}/lib)
+        find_library(${xeLib}Path NAMES ${xeLib} HINTS ${XE_DEPS_DIR}/lib ${XE_DEPS_DIR}/lib/${CMAKE_LIBRARY_ARCHITECTURE})
         list(APPEND XE_LIBRARY_FULL_PATH_LIST ${${xeLib}Path})
     endforeach()
     list(APPEND LINK_LIBRARIES ${XE_LIBRARY_FULL_PATH_LIST})
