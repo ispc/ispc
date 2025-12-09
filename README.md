@@ -13,6 +13,9 @@
 
 # Intel® Implicit SPMD Program Compiler (Intel® ISPC)
 
+[![Run in Smithery](https://smithery.ai/badge/skills/ispc)](https://smithery.ai/skills?ns=ispc&utm_source=github&utm_medium=badge)
+
+
 `ispc` is a compiler for a variant of the C programming language, with
 extensions for [single program, multiple
 data](http://en.wikipedia.org/wiki/SPMD) programming.  Under the SPMD model,
