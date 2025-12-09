@@ -64,9 +64,9 @@ static inline vec3f get_color(const uniform Linear *uniform self, int index) {
 // CHECK_LOAD:      %vectorized_address = add i64 %vectorized_ptrtoint, 0
 // CHECK_LOAD:      %vectorized_address_ptr = inttoptr i64 %vectorized_address to {{(<4 x float>\*)|ptr}}
 // CHECK_LOAD:      %vectorized_ld_exp = load <4 x float>, {{(<4 x float>\*)|ptr}} %vectorized_address_ptr
-// CHECK_LOAD:      %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 0
-// CHECK_LOAD:      %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 1
-// CHECK_LOAD:      %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 2
+// CHECK_LOAD-DAG:  %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 0
+// CHECK_LOAD-DAG:  %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 1
+// CHECK_LOAD-DAG:  %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 2
 
 task void gather_coalescing_i(uniform float _out[], uniform float _in[], uniform Linear *uniform _self) {
     vec3f v0 = {_in[0], _in[1], _in[2]};
@@ -83,12 +83,12 @@ task void gather_coalescing_i(uniform float _out[], uniform float _in[], uniform
 // CHECK_LOAD:      %vectorized_address = add i64 %vectorized_ptrtoint, 0
 // CHECK_LOAD:      %vectorized_address_ptr = inttoptr i64 %vectorized_address to {{(<4 x float>\*)|ptr}}
 // CHECK_LOAD:      %vectorized_ld_exp = load <4 x float>, {{(<4 x float>\*)|ptr}} %vectorized_address_ptr
-// CHECK_LOAD:      %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 0
-// CHECK_LOAD:      %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 1
-// CHECK_LOAD:      %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 2
+// CHECK_LOAD-DAG:  %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 0
+// CHECK_LOAD-DAG:  %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 1
+// CHECK_LOAD-DAG:  %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 2
 
 task void gather_coalescing_inogetter(uniform float _out[], uniform float _in[], uniform Linear *uniform _self) {
-    uniform uint8 color[1024];
+    uniform uint8 color[1024] = {0};
     vec3f v0 = {_in[0], _in[1], _in[2]};
 
     for (uniform int i = 0; i < NUM; i++)
@@ -103,9 +103,9 @@ task void gather_coalescing_inogetter(uniform float _out[], uniform float _in[],
 // CHECK_LOAD:      %vectorized_address = add i64 %vectorized_ptrtoint, 0
 // CHECK_LOAD:      %vectorized_address_ptr = inttoptr i64 %vectorized_address to {{(<4 x float>\*)|ptr}}
 // CHECK_LOAD:      %vectorized_ld_exp = load <4 x float>, {{(<4 x float>\*)|ptr}} %vectorized_address_ptr
-// CHECK_LOAD:      %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 0
-// CHECK_LOAD:      %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 1
-// CHECK_LOAD:      %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 2
+// CHECK_LOAD-DAG:  %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 0
+// CHECK_LOAD-DAG:  %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 1
+// CHECK_LOAD-DAG:  %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 2
 
 task void gather_coalescing_ivarying(uniform float _out[], uniform float _in[], uniform Linear *uniform _self) {
     vec3f v0 = {_in[0], _in[1], _in[2]};
@@ -122,12 +122,12 @@ task void gather_coalescing_ivarying(uniform float _out[], uniform float _in[], 
 // CHECK_LOAD:      %vectorized_address = add i64 %vectorized_ptrtoint, 0
 // CHECK_LOAD:      %vectorized_address_ptr = inttoptr i64 %vectorized_address to {{(<4 x float>\*)|ptr}}
 // CHECK_LOAD:      %vectorized_ld_exp = load <4 x float>, {{(<4 x float>\*)|ptr}} %vectorized_address_ptr
-// CHECK_LOAD:      %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 0
-// CHECK_LOAD:      %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 1
-// CHECK_LOAD:      %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 2
+// CHECK_LOAD-DAG:  %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 0
+// CHECK_LOAD-DAG:  %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 1
+// CHECK_LOAD-DAG:  %mem_coal_eei{{[0-9]*}} = extractelement <4 x float> %vectorized_ld_exp, i64 2
 
 task void gather_coalescing_ivaryingnogetter(uniform float _out[], uniform float _in[], uniform Linear *uniform _self) {
-    uniform uint8 color[1024];
+    uniform uint8 color[1024] = {0};
     vec3f v0 = {_in[0], _in[1], _in[2]};
 
     for (varying int i = programIndex; i < NUM; i += programCount)

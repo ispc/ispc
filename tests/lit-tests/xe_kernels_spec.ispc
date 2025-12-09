@@ -46,69 +46,69 @@
 // CHECK_DATALAYOUT: target datalayout = "e-p:64:64-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64"
 // CHECK_DATALAYOUT: target triple = "spir64-unknown-unknown"
 
-// CHECK_EXPORT_F1_GPU: void @f1__{{.*}}({{(float\*)|ptr}} noalias nocapture %RET, <16 x {{.*}}> %__mask)
-// CHECK_EXPORT_F1_GPU: spir_func void @f1({{(float addrspace\(4\)\*)|(ptr addrspace\(4\))}} noalias nocapture %RET) {{.*}}
-// CHECK_EXPORT_F1_GPU-NOT: spir_kernel void @f1({{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} noalias nocapture "VCArgumentIOKind"="0" %RET)
-// CHECK_EXPORT_F1_CPU: void @f1__{{.*}}({{(float\*)|ptr}} noalias nocapture %RET, <16 x {{.*}}> %__mask)
-// CHECK_EXPORT_F1_CPU: void @f1({{(float\*)|ptr}} noalias nocapture %RET)
+// CHECK_EXPORT_F1_GPU: void @f1__{{.*}}({{(float\*)|ptr}} noalias {{(nocapture|readnone captures\(none\))}} %RET, <16 x {{.*}}> %__mask)
+// CHECK_EXPORT_F1_GPU: spir_func void @f1({{(float addrspace\(4\)\*)|(ptr addrspace\(4\))}} noalias {{(nocapture|readnone captures\(none\))}} %RET) {{.*}}
+// CHECK_EXPORT_F1_GPU-NOT: spir_kernel void @f1({{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} noalias {{(nocapture|readnone captures\(none\))}} "VCArgumentIOKind"="0" %RET)
+// CHECK_EXPORT_F1_CPU: void @f1__{{.*}}({{(float\*)|ptr}} noalias {{(nocapture|readnone captures\(none\))}} %RET, <16 x {{.*}}> %__mask)
+// CHECK_EXPORT_F1_CPU: void @f1({{(float\*)|ptr}} noalias {{(nocapture|readnone captures\(none\))}} %RET)
 export void f1(uniform float RET[]) {}
 
 // CHECK_TASK_F1_GPU: dllexport spir_kernel void @f1_task({{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} {{.*}} "VCArgumentIOKind"="0" %RET) {{.*}}
 // CHECK_TASK_F1_GPU-NOT: void @f1_task__
 // CHECK_TASK_F1_CPU: void @f1_task__{{.*}} noalias {{.*}} %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9, i32 %10)
-// CHECK_TASK_F1_CPU-NOT: void @f1_task({{(float\*)|ptr}} noalias nocapture %RET)
+// CHECK_TASK_F1_CPU-NOT: void @f1_task({{(float\*)|ptr}} noalias {{(nocapture|readnone captures\(none\))}} %RET)
 task void f1_task(uniform float RET[]) {}
 
-// CHECK_EXPORT_F2_GPU: void @f2__{{.*}}({{(float\*)|ptr}} noalias nocapture %aF, {{(double\*)|ptr}} noalias nocapture %aD, {{(i32\*)|ptr}} noalias nocapture %aI, <16 x {{.*}}> %__mask)
-// CHECK_EXPORT_F2_GPU: spir_func void @f2({{(float addrspace\(4\)\*)|(ptr addrspace\(4\))}} noalias nocapture %aF, {{(double addrspace\(4\)\*)|(ptr addrspace\(4\))}} noalias nocapture %aD, {{(i32 addrspace\(4\)\*)|(ptr addrspace\(4\))}} noalias nocapture %aI) {{.*}}
-// CHECK_EXPORT_F2_GPU-NOT: spir_kernel void @f2({{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} noalias nocapture "VCArgumentIOKind"="0" %aF, {{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} noalias nocapture "VCArgumentIOKind"="0" %aD, {{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} noalias nocapture "VCArgumentIOKind"="0" %aI)
-// CHECK_EXPORT_F2_CPU: void @f2__{{.*}}({{(float\*)|ptr}} noalias nocapture %aF, {{(double\*)|ptr}} noalias nocapture %aD, {{(i32\*)|ptr}} noalias nocapture %aI, <16 x {{.*}}> %__mask)
-// CHECK_EXPORT_F2_CPU: void @f2({{(float\*)|ptr}} noalias nocapture %aF, {{(double\*)|ptr}} noalias nocapture %aD, {{(i32\*)|ptr}} noalias nocapture %aI)
+// CHECK_EXPORT_F2_GPU: void @f2__{{.*}}({{(float\*)|ptr}} noalias {{(nocapture|readnone captures\(none\))}} %aF, {{(double\*)|ptr}} noalias {{(nocapture|readnone captures\(none\))}} %aD, {{(i32\*)|ptr}} noalias {{(nocapture|readnone captures\(none\))}} %aI, <16 x {{.*}}> %__mask)
+// CHECK_EXPORT_F2_GPU: spir_func void @f2({{(float addrspace\(4\)\*)|(ptr addrspace\(4\))}} noalias {{(nocapture|readnone captures\(none\))}} %aF, {{(double addrspace\(4\)\*)|(ptr addrspace\(4\))}} noalias {{(nocapture|readnone captures\(none\))}} %aD, {{(i32 addrspace\(4\)\*)|(ptr addrspace\(4\))}} noalias {{(nocapture|readnone captures\(none\))}} %aI) {{.*}}
+// CHECK_EXPORT_F2_GPU-NOT: spir_kernel void @f2({{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} noalias {{(nocapture|readnone captures\(none\))}} "VCArgumentIOKind"="0" %aF, {{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} noalias {{(nocapture|readnone captures\(none\))}} "VCArgumentIOKind"="0" %aD, {{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} noalias {{(nocapture|readnone captures\(none\))}} "VCArgumentIOKind"="0" %aI)
+// CHECK_EXPORT_F2_CPU: void @f2__{{.*}}({{(float\*)|ptr}} noalias {{(nocapture|readnone captures\(none\))}} %aF, {{(double\*)|ptr}} noalias {{(nocapture|readnone captures\(none\))}} %aD, {{(i32\*)|ptr}} noalias {{(nocapture|readnone captures\(none\))}} %aI, <16 x {{.*}}> %__mask)
+// CHECK_EXPORT_F2_CPU: void @f2({{(float\*)|ptr}} noalias {{(nocapture|readnone captures\(none\))}} %aF, {{(double\*)|ptr}} noalias {{(nocapture|readnone captures\(none\))}} %aD, {{(i32\*)|ptr}} noalias {{(nocapture|readnone captures\(none\))}} %aI)
 export void f2(uniform float aF[], uniform double aD[], uniform int aI[]) {}
 
 // CHECK_TASK_F2_GPU: dllexport spir_kernel void @f2_task({{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} {{.*}} "VCArgumentIOKind"="0" %aF, {{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} {{.*}} "VCArgumentIOKind"="0" %aD, {{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} {{.*}} "VCArgumentIOKind"="0" %aI)  {{.*}}
 // CHECK_TASK_F2_GPU-NOT: void @f2_task__
 // CHECK_TASK_F2_CPU: void @f2_task__{{.*}} noalias {{.*}} %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9, i32 %10)
-// CHECK_TASK_F2_CPU-NOT: void @f2_task({{(float\*)|ptr}} noalias nocapture %aF, {{(double\*)|ptr}} noalias nocapture %aD, {{(i32\*)|ptr}} noalias nocapture %aI)
+// CHECK_TASK_F2_CPU-NOT: void @f2_task({{(float\*)|ptr}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %aF, {{(double\*)|ptr}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %aD, {{(i32\*)|ptr}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %aI)
 task void f2_task(uniform float aF[], uniform double aD[], uniform int aI[]) {}
 
-// CHECK_EXPORT_F3_GPU: void @f3__{{.*}}({{(float\*)|ptr}} noalias nocapture %aF1, {{(float\*)|ptr}} noalias nocapture %aF2, float %a, <16 x {{.*}}> %__mask)
-// CHECK_EXPORT_F3_GPU: spir_func void @f3({{(float addrspace\(4\)\*)|(ptr addrspace\(4\))}} noalias nocapture %aF1, {{(float addrspace\(4\)\*)|(ptr addrspace\(4\))}} noalias nocapture %aF2, float %a) {{.*}}
-// CHECK_EXPORT_F3_GPU-NOT: spir_kernel void @f3({{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} noalias nocapture "VCArgumentIOKind"="0" %aF1, {{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} noalias nocapture "VCArgumentIOKind"="0" %aF2, float "VCArgumentIOKind"="0" %a)
-// CHECK_EXPORT_F3_CPU: void @f3__{{.*}}({{(float\*)|ptr}} noalias nocapture %aF1, {{(float\*)|ptr}} noalias nocapture %aF2, float %a, <16 x {{.*}}> %__mask)
-// CHECK_EXPORT_F3_CPU: void @f3({{(float\*)|ptr}} noalias nocapture %aF1, {{(float\*)|ptr}} noalias nocapture %aF2, float %a)
+// CHECK_EXPORT_F3_GPU: void @f3__{{.*}}({{(float\*)|ptr}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %aF1, {{(float\*)|ptr}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %aF2, float %a, <16 x {{.*}}> %__mask)
+// CHECK_EXPORT_F3_GPU: spir_func void @f3({{(float addrspace\(4\)\*)|(ptr addrspace\(4\))}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %aF1, {{(float addrspace\(4\)\*)|(ptr addrspace\(4\))}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %aF2, float %a) {{.*}}
+// CHECK_EXPORT_F3_GPU-NOT: spir_kernel void @f3({{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} "VCArgumentIOKind"="0" %aF1, {{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} "VCArgumentIOKind"="0" %aF2, float "VCArgumentIOKind"="0" %a)
+// CHECK_EXPORT_F3_CPU: void @f3__{{.*}}({{(float\*)|ptr}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %aF1, {{(float\*)|ptr}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %aF2, float %a, <16 x {{.*}}> %__mask)
+// CHECK_EXPORT_F3_CPU: void @f3({{(float\*)|ptr}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %aF1, {{(float\*)|ptr}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %aF2, float %a)
 export void f3(uniform float aF1[], uniform float aF2[], uniform float a) {}
 
 // CHECK_TASK_F3_GPU: dllexport spir_kernel void @f3_task({{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} {{.*}} "VCArgumentIOKind"="0" %aF1, {{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} {{.*}} "VCArgumentIOKind"="0" %aF2, float "VCArgumentIOKind"="0" %a)  {{.*}}
 // CHECK_TASK_F3_GPU-NOT: void @f3_task__
 // CHECK_TASK_F3_CPU: void @f3_task__{{.*}} noalias {{.*}} %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9, i32 %10)
-// CHECK_TASK_F3_CPU-NOT: void @f3_task({{(float\*)|ptr}} noalias nocapture %aF1, {{(float\*)|ptr}} noalias nocapture %aF2, float %a)
+// CHECK_TASK_F3_CPU-NOT: void @f3_task({{(float\*)|ptr}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %aF1, {{(float\*)|ptr}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %aF2, float %a)
 task void f3_task(uniform float aF1[], uniform float aF2[], uniform float a) {}
 
-// CHECK_EXPORT_F4_GPU: void @f4__{{.*}}({{(float\*)|ptr}} noalias nocapture %aF1, {{(double\*)|ptr}} noalias nocapture %aF2, float %a, <16 x {{.*}}> %__mask)
-// CHECK_EXPORT_F4_GPU: spir_func void @f4({{(float addrspace\(4\)\*)|(ptr addrspace\(4\))}} noalias nocapture %aF1, {{(double addrspace\(4\)\*)|(ptr addrspace\(4\))}} noalias nocapture %aF2, float %a) {{.*}}
-// CHECK_EXPORT_F4_GPU-NOT: spir_kernel void @f4({{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} noalias nocapture "VCArgumentIOKind"="0" %aF1, {{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} noalias nocapture "VCArgumentIOKind"="0" %aF2, float "VCArgumentIOKind"="0" %a)
-// CHECK_EXPORT_F4_CPU: void @f4__{{.*}}({{(float\*)|ptr}} noalias nocapture %aF1, {{(double\*)|ptr}} noalias nocapture %aF2, float %a, <16 x {{.*}}> %__mask)
-// CHECK_EXPORT_F4_CPU: void @f4({{(float\*)|ptr}} noalias nocapture %aF1, {{(double\*)|ptr}} noalias nocapture %aF2, float %a)
+// CHECK_EXPORT_F4_GPU: void @f4__{{.*}}({{(float\*)|ptr}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %aF1, {{(double\*)|ptr}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %aF2, float %a, <16 x {{.*}}> %__mask)
+// CHECK_EXPORT_F4_GPU: spir_func void @f4({{(float addrspace\(4\)\*)|(ptr addrspace\(4\))}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %aF1, {{(double addrspace\(4\)\*)|(ptr addrspace\(4\))}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %aF2, float %a) {{.*}}
+// CHECK_EXPORT_F4_GPU-NOT: spir_kernel void @f4({{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} "VCArgumentIOKind"="0" %aF1, {{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} "VCArgumentIOKind"="0" %aF2, float "VCArgumentIOKind"="0" %a)
+// CHECK_EXPORT_F4_CPU: void @f4__{{.*}}({{(float\*)|ptr}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %aF1, {{(double\*)|ptr}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %aF2, float %a, <16 x {{.*}}> %__mask)
+// CHECK_EXPORT_F4_CPU: void @f4({{(float\*)|ptr}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %aF1, {{(double\*)|ptr}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %aF2, float %a)
 export void f4(uniform float aF1[], double *uniform aF2, uniform float a) {}
 
 // CHECK_TASK_F4_GPU: dllexport spir_kernel void @f4_task({{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} {{.*}} "VCArgumentIOKind"="0" %aF1, {{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} {{.*}} "VCArgumentIOKind"="0" %aF2, float "VCArgumentIOKind"="0" %a)  {{.*}}
 // CHECK_TASK_F4_GPU-NOT: void @f4_task__
 // CHECK_TASK_F4_CPU: void @f4_task__{{.*}} noalias {{.*}} %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9, i32 %10)
-// CHECK_TASK_F4_CPU-NOT: void @f4_task({{(float\*)|ptr}} noalias nocapture %aF1, {{(float\*)|ptr}} noalias nocapture %aF2, float %a)
+// CHECK_TASK_F4_CPU-NOT: void @f4_task({{(float\*)|ptr}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %aF1, {{(float\*)|ptr}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %aF2, float %a)
 task void f4_task(uniform float aF1[], double *uniform aF2, uniform float a) {}
 
-// CHECK_EXPORT_F5_GPU: void @f5__{{.*}}({{(i8\*)|ptr}} noalias nocapture %_p, <16 x {{.*}}> %__mask)
-// CHECK_EXPORT_F5_GPU: spir_func void @f5({{(i8 addrspace\(4\)\*|ptr addrspace\(4\))}} noalias nocapture %_p) {{.*}}
-// CHECK_EXPORT_F5_GPU-NOT: spir_kernel void @f5({{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} noalias nocapture "VCArgumentIOKind"="0" %_p)
-// CHECK_EXPORT_F5_CPU: void @f5__{{.*}}({{(i8\*)|ptr}} noalias nocapture %_p, <16 x {{.*}}> %__mask)
-// CHECK_EXPORT_F5_CPU: void @f5({{(i8\*)|ptr}} noalias nocapture %_p)
+// CHECK_EXPORT_F5_GPU: void @f5__{{.*}}({{(i8\*)|ptr}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %_p, <16 x {{.*}}> %__mask)
+// CHECK_EXPORT_F5_GPU: spir_func void @f5({{(i8 addrspace\(4\)\*|ptr addrspace\(4\))}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %_p) {{.*}}
+// CHECK_EXPORT_F5_GPU-NOT: spir_kernel void @f5({{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} "VCArgumentIOKind"="0" %_p)
+// CHECK_EXPORT_F5_CPU: void @f5__{{.*}}({{(i8\*)|ptr}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %_p, <16 x {{.*}}> %__mask)
+// CHECK_EXPORT_F5_CPU: void @f5({{(i8\*)|ptr}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %_p)
 export void f5(void *uniform _p) {}
 
 // CHECK_TASK_F5_GPU: dllexport spir_kernel void @f5_task({{(i8 addrspace\(1\)\*|ptr addrspace\(1\))}} {{.*}} "VCArgumentIOKind"="0" %_p)  {{.*}}
 // CHECK_TASK_F5_GPU-NOT: void @f5_task__
 // CHECK_TASK_F5_CPU: void @f5_task__{{.*}} noalias {{.*}} %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9, i32 %10)
-// CHECK_TASK_F5_CPU-NOT: void @f5_task({{(i8\*)|ptr}} noalias nocapture %_p)
+// CHECK_TASK_F5_CPU-NOT: void @f5_task({{(i8\*)|ptr}} noalias {{(nocapture|readnone captures\(none\)|readonly captures\(none\))}} %_p)
 task void f5_task(void *uniform _p) {}
 
 // CHECK_EXPORT_F6_GPU: void @f6__{{.*}}(float %a, <16 x {{.*}}> %__mask)
