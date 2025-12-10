@@ -38,6 +38,11 @@ on:
         required: false
         type: boolean
         default: false
+      enable_riscv:
+        description: 'Build with RISC-V support'
+        required: false
+        type: boolean
+        default: false
       enable_xe:
         description: 'Build with Xe support (enables cross compilation)'
         required: false
@@ -145,6 +150,8 @@ jobs:
           # Standard build
           if [[ "${{ inputs.enable_cross }}" == "true" ]]; then
             .github/workflows/scripts/build-ispc.sh -DISPC_CROSS=ON
+          elif [[ "${{ inputs.enable_riscv }}" == "true" ]]; then
+            .github/workflows/scripts/build-ispc.sh -DRISCV_ENABLED=ON
           else
             .github/workflows/scripts/build-ispc.sh
           fi

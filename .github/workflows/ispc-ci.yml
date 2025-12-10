@@ -180,6 +180,17 @@ jobs:
       llvm_tar: llvm-20.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
       enable_wasm: true
 
+  linux-build-ispc-riscv:
+    needs: [define-flow]
+    uses: ./.github/workflows/reusable.ispc.build.yml
+    with:
+      platform: linux
+      artifact_name: ispc-riscv-linux
+      runner: ubuntu-22.04
+      llvm_version: "20.1"
+      llvm_tar: llvm-20.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      enable_riscv: true
+
   linux-test:
     needs: [define-flow, linux-build-ispc]
     strategy:
@@ -295,10 +306,10 @@ jobs:
       optsets: ${{ needs.define-flow.outputs.tests_optsets }}
 
   linux-test-riscv:
-    needs: [define-flow, linux-build-ispc]
+    needs: [define-flow, linux-build-ispc-riscv]
     uses: ./.github/workflows/riscv.yml
     with:
-      artifact_name: ispc_llvm20_linux
+      artifact_name: ispc-riscv-linux
 
   # Test release version
   linux-test-llvm20-release:
