@@ -157,7 +157,8 @@ endif()
 
 option(X86_ENABLED "Enable x86 support" ${X86_HOST})
 option(ARM_ENABLED "Enable ARM support" ${LLVM_SUPPORTS_ARM})
-option(RISCV_ENABLED "Enable RISC-V support" ${LLVM_SUPPORTS_RISCV})
+# Turn off RISC-V support by default. Later we can use ${LLVM_SUPPORTS_RISCV} for default option value.
+option(RISCV_ENABLED "Enable RISC-V support" OFF)
 option(WASM_ENABLED "Enable experimental Web Assembly support" OFF)
 option(XE_ENABLED "Enable Intel Xe support" OFF)
 
