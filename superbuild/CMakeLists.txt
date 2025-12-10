@@ -1037,14 +1037,62 @@ else()
 endif()
 ]] @ONLY)
 
-# Special toolchain file for building level-zero.
+# Special LTO toolchain file for building Xe dependencies.
 # Primarily needed because if warning suppression for windows.
-# https://github.com/oneapi-src/level-zero/issues/83
-file(CONFIGURE OUTPUT stage2-l0-toolchain.cmake CONTENT [[
+file(CONFIGURE OUTPUT stage2-lto-xe-toolchain.cmake CONTENT [[
 @CCACHE_LAUNCHER_ACTION@(CMAKE_C_COMPILER_LAUNCHER   @CCACHE_EXE@)
 @CCACHE_LAUNCHER_ACTION@(CMAKE_CXX_COMPILER_LAUNCHER @CCACHE_EXE@)
 set(ENV{PATH} "@ENV_PATH_STAGE2@")
-set(WIN_C_FLAGS "-Wno-error=unused-command-line-argument -Wno-error=unused-but-set-variable")
+set(COMMON_FLAGS    "-flto=thin @PGO_FLAGS@")
+set(COMMON_C_FLAGS  "@CMAKE_C_FLAGS@")
+# Note: -O3 --lto-O3 --icf=...  that these flags lld specific
+set(COMMON_LD_FLAGS "-Wl,-O3 -Wl,--lto-O3 -Wl,--icf=all")
+set(WIN_C_FLAGS     "-fuse-ld=lld-link -Wno-error=unused-command-line-argument -Wno-error=unused-but-set-variable -Wno-c++11-narrowing")
+set(WIN_LD_FLAGS    "@CLANG_RT_PROFLIB@")
+set(APPLE_C_FLAGS   "-fuse-ld=lld")
+if (WIN32)
+    set(CMAKE_C_COMPILER   clang-cl)
+    set(CMAKE_CXX_COMPILER clang-cl)
+    set(CMAKE_LINKER       lld-link)
+    set(CMAKE_AR           llvm-lib)
+    set(CMAKE_RC_COMPILER  llvm-rc)
+    set(CMAKE_MT           mt)
+    set(CMAKE_C_FLAGS             "${COMMON_FLAGS} ${COMMON_C_FLAGS} ${WIN_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS           "@CMAKE_CXX_FLAGS@ ${COMMON_FLAGS} ${COMMON_C_FLAGS} ${WIN_C_FLAGS}")
+    set(CMAKE_MODULE_LINKER_FLAGS "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${WIN_LD_FLAGS}")
+    set(CMAKE_SHARED_LINKER_FLAGS "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${WIN_LD_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS    "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${WIN_LD_FLAGS}")
+elseif(APPLE)
+    set(CMAKE_C_COMPILER   clang)
+    set(CMAKE_CXX_COMPILER clang++)
+    set(CMAKE_LINKER       ld64.lld)
+    set(CMAKE_LIBTOOL      llvm-libtool-darwin)
+    set(CMAKE_RANLIB       llvm-ranlib)
+    set(CMAKE_C_FLAGS             "${COMMON_FLAGS} ${COMMON_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS           "@CMAKE_CXX_FLAGS@ ${COMMON_FLAGS} ${COMMON_C_FLAGS}")
+    set(CMAKE_MODULE_LINKER_FLAGS "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${APPLE_C_FLAGS}")
+    set(CMAKE_SHARED_LINKER_FLAGS "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${APPLE_C_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS    "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${APPLE_C_FLAGS}")
+else()
+    set(CMAKE_C_COMPILER   clang)
+    set(CMAKE_CXX_COMPILER clang++)
+    set(CMAKE_LINKER       lld)
+    set(CMAKE_C_FLAGS             "${COMMON_FLAGS} ${COMMON_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS           "@CMAKE_CXX_FLAGS@ ${COMMON_FLAGS} ${COMMON_C_FLAGS}")
+    set(CMAKE_MODULE_LINKER_FLAGS "${COMMON_FLAGS} ${COMMON_LD_FLAGS}")
+    set(CMAKE_SHARED_LINKER_FLAGS "${COMMON_FLAGS} ${COMMON_LD_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS    "${COMMON_FLAGS} ${COMMON_LD_FLAGS}")
+endif()
+]] @ONLY)
+
+# Special toolchain file for building Xe dependencies.
+# Primarily needed because if warning suppression for windows.
+# https://github.com/oneapi-src/level-zero/issues/83
+file(CONFIGURE OUTPUT stage2-xe-toolchain.cmake CONTENT [[
+@CCACHE_LAUNCHER_ACTION@(CMAKE_C_COMPILER_LAUNCHER   @CCACHE_EXE@)
+@CCACHE_LAUNCHER_ACTION@(CMAKE_CXX_COMPILER_LAUNCHER @CCACHE_EXE@)
+set(ENV{PATH} "@ENV_PATH_STAGE2@")
+set(WIN_C_FLAGS "-fuse-ld=lld-link -Wno-error=unused-command-line-argument -Wno-error=unused-but-set-variable -Wno-c++11-narrowing")
 set(APPLE_C_FLAGS   "-fuse-ld=lld")
 if (WIN32)
     set(CMAKE_C_COMPILER   clang-cl)
@@ -1066,9 +1114,9 @@ elseif(APPLE)
     set(CMAKE_RANLIB       llvm-ranlib)
     set(CMAKE_C_FLAGS      "@CMAKE_C_FLAGS@")
     set(CMAKE_CXX_FLAGS    "@CMAKE_CXX_FLAGS@")
-    set(CMAKE_MODULE_LINKER_FLAGS "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${APPLE_C_FLAGS}")
-    set(CMAKE_SHARED_LINKER_FLAGS "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${APPLE_C_FLAGS}")
-    set(CMAKE_EXE_LINKER_FLAGS    "${COMMON_FLAGS} ${COMMON_LD_FLAGS} ${APPLE_C_FLAGS}")
+    set(CMAKE_MODULE_LINKER_FLAGS "${APPLE_C_FLAGS}")
+    set(CMAKE_SHARED_LINKER_FLAGS "${APPLE_C_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS    "${APPLE_C_FLAGS}")
 else()
     set(CMAKE_C_COMPILER   clang)
     set(CMAKE_CXX_COMPILER clang++)
@@ -1253,9 +1301,9 @@ message(STATUS "NINJA_COMMAND_WITH_ENV_STAGE1 is ${NINJA_COMMAND_WITH_ENV_STAGE1
 message(STATUS "NINJA_COMMAND_WITH_ENV_STAGE2 is ${NINJA_COMMAND_WITH_ENV_STAGE2}")
 message(STATUS "NINJA_COMMAND_WITH_ENV_STAGE3 is ${NINJA_COMMAND_WITH_ENV_STAGE3}")
 
-set(XE_DEPS_TOOLCHAIN_FILE ${CMAKE_BINARY_DIR}/stage2-toolchain.cmake)
+set(XE_DEPS_TOOLCHAIN_FILE ${CMAKE_BINARY_DIR}/stage2-xe-toolchain.cmake)
 if (LTO)
-    set(XE_DEPS_TOOLCHAIN_FILE ${CMAKE_BINARY_DIR}/stage2-lto-toolchain.cmake)
+    set(XE_DEPS_TOOLCHAIN_FILE ${CMAKE_BINARY_DIR}/stage2-lto-xe-toolchain.cmake)
 endif()
 message(STATUS "XE_DEPS_TOOLCHAIN_FILE is ${XE_DEPS_TOOLCHAIN_FILE}")
 
@@ -1328,7 +1376,7 @@ if (BUILD_L0_LOADER_STANDALONE)
         INSTALL_DIR ${CMAKE_INSTALL_PREFIX}
         CMAKE_GENERATOR Ninja
         CMAKE_ARGS
-            -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/stage2-l0-toolchain.cmake
+            -DCMAKE_TOOLCHAIN_FILE=${XE_DEPS_TOOLCHAIN_FILE}
             -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
             -DCMAKE_BUILD_TYPE=${BUILD_TYPE_L0}
         BUILD_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE2}
@@ -1417,7 +1465,7 @@ if (PGO OR NOT SKIP_STAGE2)
             DOWNLOAD_COMMAND ""
             CMAKE_GENERATOR Ninja
             CMAKE_ARGS
-                -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/stage2-l0-toolchain.cmake
+                -DCMAKE_TOOLCHAIN_FILE=${CMAKE_BINARY_DIR}/stage2-xe-toolchain.cmake
                 -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_STAGE2_INSTALL_PREFIX}
                 -DCMAKE_BUILD_TYPE=${BUILD_TYPE_L0}
             SOURCE_DIR l0-source
