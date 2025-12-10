@@ -386,19 +386,21 @@ define i32 @__popcnt_int64_uniform(i64) nounwind readonly alwaysinline {
 
 declare <WIDTH x i32> @llvm.genx.cbit.XE_SUFFIX(i32) (<WIDTH x i32>)
 
-define <WIDTH x i32> @__popcnt_int32_varying(<WIDTH x i32>, <WIDTH x MASK>) nounwind readonly alwaysinline {
-  %c = call <WIDTH x i32> @llvm.genx.cbit.XE_SUFFIX(i32) (<WIDTH x i32> %0)
-  ret <WIDTH x i32> %c
+define <WIDTH x i32> @__popcnt_int32_varying(<WIDTH x i32> %0, <WIDTH x MASK> %mask) nounwind readnone alwaysinline {
+  %call = call <WIDTH x i32> @llvm.genx.cbit.XE_SUFFIX(i32) (<WIDTH x i32> %0)
+  %masked = select <WIDTH x i1> %mask, <WIDTH x i32> %call, <WIDTH x i32> zeroinitializer
+  ret <WIDTH x i32> %masked
 }
 
-define <WIDTH x i32> @__popcnt_int64_varying(<WIDTH x i64>, <WIDTH x MASK>) nounwind readonly alwaysinline {
+define <WIDTH x i32> @__popcnt_int64_varying(<WIDTH x i64> %0, <WIDTH x MASK> %mask) nounwind readnone alwaysinline {
   %lo = trunc <WIDTH x i64> %0 to <WIDTH x i32>
   %hi.init = lshr <WIDTH x i64> %0, splat (i64 32)
   %hi = trunc <WIDTH x i64> %hi.init to <WIDTH x i32>
   %lo.cbit = call <WIDTH x i32> @llvm.genx.cbit.XE_SUFFIX(i32) (<WIDTH x i32> %lo)
   %hi.cbit = call <WIDTH x i32> @llvm.genx.cbit.XE_SUFFIX(i32) (<WIDTH x i32> %hi)
   %res = add <WIDTH x i32> %lo.cbit, %hi.cbit
-  ret <WIDTH x i32> %res
+  %masked = select <WIDTH x i1> %mask, <WIDTH x i32> %res, <WIDTH x i32> zeroinitializer
+  ret <WIDTH x i32> %masked
 }
 
 declare i64 @__spirv_BuiltInWorkgroupId(i32 %dim)
