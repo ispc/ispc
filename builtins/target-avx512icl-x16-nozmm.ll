@@ -81,3 +81,19 @@ define <16 x i32> @__dot2add_i16i16packed_sat(<16 x i32> %a, <16 x i32> %b, <16 
   v8tov16(i32, %ret_lo, %ret_hi, %ret)
   ret <16 x i32> %ret
 }
+
+declare <WIDTH x i32> @llvm.ctpop.TYPE_SUFFIX(i32)(<WIDTH x i32>) nounwind readnone
+declare <WIDTH x i64> @llvm.ctpop.TYPE_SUFFIX(i64)(<WIDTH x i64>) nounwind readnone
+
+define <WIDTH x i32> @__popcnt_int32_varying(<WIDTH x i32> %0, <WIDTH x MASK> %mask) nounwind readnone alwaysinline {
+  %call = call <WIDTH x i32> @llvm.ctpop.TYPE_SUFFIX(i32)(<WIDTH x i32> %0)
+  %masked = select <WIDTH x i1> %mask, <WIDTH x i32> %call, <WIDTH x i32> zeroinitializer
+  ret <WIDTH x i32> %masked
+}
+
+define <WIDTH x i32> @__popcnt_int64_varying(<WIDTH x i64> %0, <WIDTH x MASK> %mask)  nounwind readnone alwaysinline {
+  %call = call <WIDTH x i64> @llvm.ctpop.TYPE_SUFFIX(i64)(<WIDTH x i64> %0)
+  %trunc = trunc <WIDTH x i64> %call to <WIDTH x i32>
+  %masked = select <WIDTH x i1> %mask, <WIDTH x i32> %trunc, <WIDTH x i32> zeroinitializer
+  ret <WIDTH x i32> %masked
+}
