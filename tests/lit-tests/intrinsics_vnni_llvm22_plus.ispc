@@ -15,13 +15,13 @@ int foo_busds(int arg0, uniform int8<32> arg1, uniform int8<32> arg2) {
 }
 
 // CHECK: declare <8 x i32> @llvm.x86.avx512.vpdpwssd.256(
-int foo_wssd(int arg0, int arg1, int arg2) {
+int foo_wssd(int arg0, uniform int16<16> arg1, uniform int16<16> arg2) {
     int ret = @llvm.x86.avx512.vpdpwssd.256(arg0, arg1, arg2);
     return ret;
 }
 
 // CHECK: declare <8 x i32> @llvm.x86.avx512.vpdpwssds.256(
-int foo_wssds(int arg0, int arg1, int arg2) {
+int foo_wssds(int arg0, uniform int16<16> arg1, uniform int16<16> arg2) {
     int ret = @llvm.x86.avx512.vpdpwssds.256(arg0, arg1, arg2);
     return ret;
 }
