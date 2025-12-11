@@ -135,6 +135,23 @@ cmake_path(CONVERT "${STAGE2_PATH}/bin/llvm-libtool-darwin${CMAKE_EXECUTABLE_SUF
 cmake_path(CONVERT "${STAGE2_PATH}/bin/llvm-ranlib${CMAKE_EXECUTABLE_SUFFIX}" TO_CMAKE_PATH_LIST STAGE2_LLVM_RANLIB_CMAKE)
 set(STAGE3_PATH "${CMAKE_BINARY_DIR}/stage3")
 
+# Diagnostic: Check where llvm-lib is found and warn if there's a conflict
+if (WIN32)
+    find_program(LLVM_LIB_FROM_PATH llvm-lib)
+    if (LLVM_LIB_FROM_PATH)
+        message(STATUS "llvm-lib found in PATH: ${LLVM_LIB_FROM_PATH}")
+        if (NOT LLVM_LIB_FROM_PATH STREQUAL STAGE2_LLVM_LIB_CMAKE)
+            message(WARNING "llvm-lib in PATH (${LLVM_LIB_FROM_PATH}) differs from expected toolchain path (${STAGE2_LLVM_LIB_CMAKE}). This may cause version mismatch issues!")
+        endif()
+    else()
+        message(STATUS "llvm-lib not found in PATH, will use: ${STAGE2_LLVM_LIB_CMAKE}")
+    endif()
+    # Also check if the expected llvm-lib exists
+    if (NOT EXISTS "${STAGE2_LLVM_LIB_CMAKE}")
+        message(WARNING "Expected llvm-lib does not exist: ${STAGE2_LLVM_LIB_CMAKE}")
+    endif()
+endif()
+
 if (NOT PREBUILT_STAGE1_PATH STREQUAL "NO" AND NOT PREBUILT_STAGE2_PATH STREQUAL "NO")
     message(FATAL_ERROR "PREBUILT_STAGE1_PATH and PREBUILT_STAGE2_PATH is incompatible together.")
 endif()
