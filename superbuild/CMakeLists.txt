@@ -1395,6 +1395,8 @@ endif()
 
 if (BUILD_L0_LOADER_STANDALONE)
     # Level-zero
+    message(STATUS "L0: CMAKE_INSTALL_PREFIX = ${CMAKE_INSTALL_PREFIX}")
+    message(STATUS "L0: XE_DEPS_TOOLCHAIN_FILE = ${XE_DEPS_TOOLCHAIN_FILE}")
     ExternalProject_Add(l0
         DOWNLOAD_COMMAND ""
         SOURCE_DIR l0-source
@@ -1411,6 +1413,13 @@ if (BUILD_L0_LOADER_STANDALONE)
             -DCMAKE_BUILD_TYPE=${BUILD_TYPE_L0}
         BUILD_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE2}
         INSTALL_COMMAND ${NINJA_COMMAND_WITH_ENV_STAGE2} install
+        )
+    # Add a step to list what was installed
+    ExternalProject_Add_Step(l0 list_install
+        DEPENDEES install
+        COMMAND ${CMAKE_COMMAND} -E echo "L0 install directory contents:"
+        COMMAND ${CMAKE_COMMAND} -E env cmd /c "dir /s ${CMAKE_INSTALL_PREFIX}"
+        ALWAYS 0
         )
     if (BUILD_L0_LOADER_ONLY)
         message(STATUS "BUILD l0 loader only")
