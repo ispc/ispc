@@ -795,30 +795,20 @@ __declspec(safe) static inline uniform bool none(bool v) {
 #endif
 }
 
-__declspec(safe) static inline uniform int32 popcnt(uniform int32 v) { return __popcnt_int32(v); }
+__declspec(safe) static inline uniform int32 popcnt(uniform int32 v) { return __popcnt_int32_uniform(v); }
 
-__declspec(safe) static inline uniform int popcnt(uniform int64 v) { return (int32)__popcnt_int64(v); }
+__declspec(safe) static inline uniform int32 popcnt(uniform int64 v) { return __popcnt_int64_uniform(v); }
 
-__declspec(safe) static inline int popcnt(int v) {
-    int r;
-    for (uniform int i = 0; i < programCount; ++i)
-        r = insert(r, i, popcnt(extract(v, i)));
-    return __mask ? r : 0;
-}
+__declspec(safe) static inline varying int32 popcnt(varying int32 v) { return __popcnt_int32_varying(v, __mask); }
 
-__declspec(safe) static inline int popcnt(int64 v) {
-    int r;
-    for (uniform int i = 0; i < programCount; ++i)
-        r = insert(r, i, popcnt(extract(v, i)));
-    return __mask ? r : 0;
-}
+__declspec(safe) static inline varying int32 popcnt(varying int64 v) { return __popcnt_int64_varying(v, __mask); }
 
 __declspec(safe) static inline uniform int popcnt(bool v) {
     // As with any() and all(), only count across the active lanes
 #if (ISPC_MASK_BITS == 1)
-    return __popcnt_int64(__movmsk(v & __mask));
+    return __popcnt_int64_uniform(__movmsk(v & __mask));
 #else
-    return __popcnt_int64(__movmsk((UIntMaskType)__sext_varying_bool(v) & __mask));
+    return __popcnt_int64_uniform(__movmsk((UIntMaskType)__sext_varying_bool(v) & __mask));
 #endif
 }
 

@@ -660,7 +660,6 @@ gen_scatter(double)
 
 packed_load_and_store(FALSE)
 define_prefetches()
-popcnt()
 
 define i16 @__reduce_add_int8(<4 x i8> %v) {
 entry:
