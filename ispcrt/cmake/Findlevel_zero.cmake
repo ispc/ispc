@@ -1,4 +1,4 @@
-## Copyright 2020-2023, Intel Corporation
+## Copyright 2020-2025, Intel Corporation
 ## SPDX-License-Identifier: BSD-3-Clause
 
 find_path(LEVEL_ZERO_ROOT include/level_zero/ze_api.h

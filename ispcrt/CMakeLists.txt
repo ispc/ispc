@@ -132,6 +132,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_DL_LIBS})
 
 # We need to find level_zero before the first usage that can happen under ISPCRT_BUILD_STATIC
 if (ISPCRT_BUILD_GPU)
+    # CMake 3.27+ requires CMP0144 to use upper-case <PACKAGENAME>_ROOT variables
+    if(POLICY CMP0144)
+        cmake_policy(SET CMP0144 NEW)
+    endif()
     find_package(level_zero REQUIRED)
 endif()
 
