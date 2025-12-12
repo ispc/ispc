@@ -46,37 +46,37 @@ Contents:
 
 * `Recent Changes to ISPC`_
 
-  + `Updating ISPC Programs For Changes In ISPC 1.1`_
-  + `Updating ISPC Programs For Changes In ISPC 1.2`_
-  + `Updating ISPC Programs For Changes In ISPC 1.3`_
-  + `Updating ISPC Programs For Changes In ISPC 1.5.0`_
-  + `Updating ISPC Programs For Changes In ISPC 1.6.0`_
-  + `Updating ISPC Programs For Changes In ISPC 1.7.0`_
-  + `Updating ISPC Programs For Changes In ISPC 1.8.2`_
-  + `Updating ISPC Programs For Changes In ISPC 1.9.0`_
-  + `Updating ISPC Programs For Changes In ISPC 1.9.1`_
-  + `Updating ISPC Programs For Changes In ISPC 1.9.2`_
-  + `Updating ISPC Programs For Changes In ISPC 1.10.0`_
-  + `Updating ISPC Programs For Changes In ISPC 1.11.0`_
-  + `Updating ISPC Programs For Changes In ISPC 1.12.0`_
-  + `Updating ISPC Programs For Changes In ISPC 1.13.0`_
-  + `Updating ISPC Programs For Changes In ISPC 1.14.0`_
-  + `Updating ISPC Programs For Changes In ISPC 1.14.1`_
-  + `Updating ISPC Programs For Changes In ISPC 1.15.0`_
-  + `Updating ISPC Programs For Changes In ISPC 1.16.0`_
-  + `Updating ISPC Programs For Changes In ISPC 1.17.0`_
-  + `Updating ISPC Programs For Changes In ISPC 1.18.0`_
-  + `Updating ISPC Programs For Changes In ISPC 1.19.0`_
-  + `Updating ISPC Programs For Changes In ISPC 1.20.0`_
-  + `Updating ISPC Programs For Changes In ISPC 1.21.0`_
-  + `Updating ISPC Programs For Changes In ISPC 1.22.0`_
-  + `Updating ISPC Programs For Changes In ISPC 1.23.0`_
-  + `Updating ISPC Programs For Changes In ISPC 1.24.0`_
-  + `Updating ISPC Programs For Changes In ISPC 1.25.0`_
-  + `Updating ISPC Programs For Changes In ISPC 1.26.0`_
-  + `Updating ISPC Programs For Changes In ISPC 1.27.0`_
-  + `Updating ISPC Programs For Changes In ISPC 1.28.0`_
   + `Updating ISPC Programs For Changes In ISPC 1.29.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.28.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.27.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.26.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.25.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.24.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.23.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.22.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.21.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.20.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.19.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.18.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.17.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.16.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.15.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.14.1`_
+  + `Updating ISPC Programs For Changes In ISPC 1.14.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.13.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.12.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.11.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.10.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.9.2`_
+  + `Updating ISPC Programs For Changes In ISPC 1.9.1`_
+  + `Updating ISPC Programs For Changes In ISPC 1.9.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.8.2`_
+  + `Updating ISPC Programs For Changes In ISPC 1.7.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.6.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.5.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.3`_
+  + `Updating ISPC Programs For Changes In ISPC 1.2`_
+  + `Updating ISPC Programs For Changes In ISPC 1.1`_
 
 * `Getting Started with ISPC`_
 
@@ -254,616 +254,6 @@ of recent changes to the compiler.
 
 .. _ReleaseNotes.txt: https://raw.github.com/ispc/ispc/main/docs/ReleaseNotes.txt
 
-Updating ISPC Programs For Changes In ISPC 1.1
-----------------------------------------------
-
-The major changes introduced in the 1.1 release of ``ispc`` are first-class
-support for pointers in the language and new parallel loop constructs.
-Adding this functionality required a number of syntactic changes to the
-language.  These changes should generally lead to straightforward minor
-modifications of existing ``ispc`` programs.
-
-These are the relevant changes to the language:
-
-* The syntax for reference types has been changed to match C++'s syntax for
-  references and the ``reference`` keyword has been removed.  (A diagnostic
-  message is issued if ``reference`` is used.)
-
-  + Declarations like ``reference float foo`` should be changed to ``float &foo``.
-
-  + Any array parameters in function declaration with a ``reference``
-    qualifier should just have ``reference`` removed: ``void foo(reference
-    float bar[])`` can just be ``void foo(float bar[])``.
-
-* It is now a compile-time error to assign an entire array to another
-  array.
-
-* A number of standard library routines have been updated to take
-  pointer-typed parameters, rather than references or arrays an index
-  offsets, as appropriate.  For example, the ``atomic_add_global()``
-  function previously took a reference to the variable to be updated
-  atomically but now takes a pointer.  In a similar fashion,
-  ``packed_store_active()`` takes a pointer to a ``uniform unsigned int``
-  as its first parameter rather than taking a ``uniform unsigned int[]`` as
-  its first parameter and a ``uniform int`` offset as its second parameter.
-
-* It is no longer legal to pass a varying lvalue to a function that takes a
-  reference parameter; references can only be to uniform lvalue types.  In
-  this case, the function should be rewritten to take a varying pointer
-  parameter.
-
-* There are new iteration constructs for looping over computation domains,
-  ``foreach`` and ``foreach_tiled``.  In addition to being syntactically
-  cleaner than regular ``for`` loops, these can provide performance
-  benefits in many cases when iterating over data and mapping it to program
-  instances.  See the Section `Parallel Iteration Statements: "foreach" and
-  "foreach_tiled"`_ for more information about these.
-
-Updating ISPC Programs For Changes In ISPC 1.2
-----------------------------------------------
-
-The following changes were made to the language syntax and semantics for
-the ``ispc`` 1.2 release:
-
-* Syntax for the "launch" keyword has been cleaned up; it's now no longer
-  necessary to bracket the launched function call with angle brackets. (In
-  other words, now use ``launch foo();``, rather than ``launch < foo() >;``.)
-
-* When using pointers, the pointed-to data type is now "uniform" by
-  default.  Use the varying keyword to specify varying pointed-to types
-  when needed.  (i.e. ``float *ptr`` is a varying pointer to uniform float
-  data, whereas previously it was a varying pointer to varying float
-  values.) Use ``varying float *`` to specify a varying pointer to varying
-  float data, and so forth.
-
-* The details of "uniform" and "varying" and how they interact with struct
-  types have been cleaned up.  Now, when a struct type is declared, if the
-  struct elements don't have explicit "uniform" or "varying" qualifiers,
-  they are said to have "unbound" variability.  When a struct type is
-  instantiated, any unbound variability elements inherit the variability of
-  the parent struct type. See `Struct Types`_ for more details.
-
-* ``ispc`` has a new language feature that makes it much easier to use the
-  efficient "(array of) structure of arrays" (AoSoA, or SoA) memory layout
-  of data.  A new ``soa<n>`` qualifier can be applied to structure types to
-  specify an n-wide SoA version of the corresponding type.  Array indexing
-  and pointer operations with arrays SoA types automatically handles the
-  two-stage indexing calculation to access the data.  See `Structure of
-  Array Types`_ for more details.
-
-
-Updating ISPC Programs For Changes In ISPC 1.3
-----------------------------------------------
-
-This release adds a number of new iteration constructs, which in turn use
-new reserved words: ``unmasked``, ``foreach_unique``, ``foreach_active``,
-and ``in``.  Any program that happens to have a variable or function with
-one of these names must be modified to rename that symbol.
-
-Updating ISPC Programs For Changes In ISPC 1.5.0
-------------------------------------------------
-
-This release adds support for double precision floating point constants.
-Double precision floating point constants are floating point number with
-``d`` suffix and optional exponent part. Here are some examples: 3.14d,
-31.4d-1, 1.d, 1.0d, 1d-2. Note that floating point number without suffix is
-treated as single precision constant.
-
-Updating ISPC Programs For Changes In ISPC 1.6.0
-------------------------------------------------
-
-This release adds support for `Operators Overloading`_, so a word ``operator``
-becomes a keyword and it potentially creates a conflict with existing user
-function. Also a new library function packed_store_active2() was introduced,
-which also may create a conflict with existing user functions.
-
-Updating ISPC Programs For Changes In ISPC 1.7.0
-------------------------------------------------
-
-This release contains several changes that may affect compatibility with
-older versions:
-
-* The algorithm for selecting overloaded functions was extended to cover more
-  types of overloading, and handling of reference types was fixed. At the same
-  time the old scheme, which blindly used the function with "the best score"
-  summed for all arguments, was switched to the C++ approach, which requires
-  "the best score" for each argument. If the best function doesn't exist, a
-  warning is issued in this version. It will be turned into an error in the
-  next version. A simple example: Suppose we have two functions: max(int, int)
-  and max(unsigned int, unsigned int). The new rules lead to an error when
-  calling max(int, unsigned int), as the best choice is ambiguous.
-
-* Implicit cast of pointer to const type to void* was disallowed. Use explicit
-  cast if needed.
-
-* A bug which prevented "const" qualifiers from appearing in emitted .h files
-  was fixed. Consequently, "const" qualifiers now properly appearing in emitted
-  .h files may cause compile errors in pre-existing codes.
-
-* get_ProgramCount() was moved from stdlib to examples/util/util.isph file. You
-  need to include this file to be able to use this function.
-
-Updating ISPC Programs For Changes In ISPC 1.8.2
-------------------------------------------------
-
-The release doesn't contain language changes, which may affect compatibility with
-older versions. Though you may want to be aware of the following:
-
-* Mangling of uniform types was changed to not include varying width, so now you
-  may use uniform structures and pointers to uniform types as return types in
-  export functions in multi-target compilation.
-
-Updating ISPC Programs For Changes In ISPC 1.9.0
-------------------------------------------------
-
-The release doesn't contain language changes, which may affect compatibility with
-older versions. It introduces new AVX-512 target: avx512knl-i32x16.
-
-Updating ISPC Programs For Changes In ISPC 1.9.1
-------------------------------------------------
-
-The release doesn't contain language changes, which may affect compatibility with
-older versions. It introduces new AVX-512 target: avx512skx-i32x16.
-
-Updating ISPC Programs For Changes In ISPC 1.9.2
-------------------------------------------------
-
-The release doesn't contain language changes, which may affect compatibility with
-older versions.
-
-Updating ISPC Programs For Changes In ISPC 1.10.0
--------------------------------------------------
-
-The release has several new language features, which do not affect compatibility.
-Namely, new streaming stores, aos_to_soa/soa_to_aos intrinsics for 64 bit types,
-and a "#pragma ignore".
-
-One change that may potentially affect compatibility is the changed size of short vector
-types. If you use short vector types for data passed between C/C++ and ISPC, you
-may want to pay attention to it.
-
-Updating ISPC Programs For Changes In ISPC 1.11.0
--------------------------------------------------
-
-This release redefined the -O1 compiler option to optimize for size, so it may require
-adjusting your build system accordingly.
-
-Starting with version 1.11.0, auto-generated headers use ``#pragma once``. In the unlikely
-case that your C/C++ compiler does not support that, please use the ``--no-pragma-once``
-``ispc`` switch.
-
-This release also introduces a new AVX-512 target avx512skx-i32x8. It produces code,
-which doesn't use ZMM registers.
-
-Updating ISPC Programs For Changes In ISPC 1.12.0
--------------------------------------------------
-
-This release contains the following changes that may affect compatibility with
-older versions:
-
-* ``noinline`` keyword was added.
-
-* Standard library functions ``rsqrt_fast()`` and ``rcp_fast()`` were added.
-
-* AVX1.1 (IvyBridge) targets and generic KNC and KNL targets were removed.
-  Note that KNL is still supported through avx512knl-i32x16.
-
-The release also introduces static initialization for varying variables, which
-should not affect compatibility.
-
-This release introduces experimental cross OS compilation support and ARM/AARCH64
-support. It also contains a new 128-bit AVX2 target (avx2-i32x4) and a CPU
-definition for Ice Lake client (--device=icl).
-
-Updating ISPC Programs For Changes In ISPC 1.13.0
--------------------------------------------------
-
-This release contains the following changes that may affect compatibility with
-older versions:
-
-* Representation of ``bool`` type in storage was changed from target-specific to
-  one byte per boolean value.  So size of ``varying bool`` is target width (in
-  bytes), and size of ``uniform bool`` is one.  This definition is compatible
-  with C/C++, hence improves interoperability.
-
-* type aliases for unsigned types were added: ``uint8``, ``uint16``, ``uint32``,
-  ``uint64``, and ``uint``.  To detect if these types are supported you can
-  check if ISPC_UINT_IS_DEFINED macro is defined, this is handy for writing code
-  which works with older versions of ``ispc``.
-
-* ``extract()``/``insert()`` for boolean arguments, and ``abs()`` for all integer and
-  FP types were added to standard library.
-
-Updating ISPC Programs For Changes In ISPC 1.14.0
--------------------------------------------------
-
-This release contains the following changes that may affect compatibility with
-older versions:
-
-* "generic" targets were removed. Please use native targets instead.
-
-New i8 and i16 targets were introduced: avx2-i8x32, avx2-i16x16, avx512skx-i8x64,
-and avx512skx-i16x32.
-
-Windows x86_64 target now supports ``__vectorcall`` calling convention.
-It's off by default, can be enabled by ``--vectorcall`` command line switch.
-
-Updating ISPC Programs For Changes In ISPC 1.14.1
--------------------------------------------------
-
-The release doesn't contain language changes, which may affect compatibility with
-older versions.
-
-Updating ISPC Programs For Changes In ISPC 1.15.0
--------------------------------------------------
-
-The release has several new language features, which do not affect compatibility.
-Namely, packed_[load|store]_active() stdlib functions for 64 bit types, and loop
-unroll pragmas: "#pragma unroll" and "#pragma nounroll".
-
-Updating ISPC Programs For Changes In ISPC 1.16.0
--------------------------------------------------
-
-The release has several new functions in the standard library that may
-affect compatibility:
-
-* ``alloca()`` - refer to `Stack Memory Allocation`_ for more details.
-* ``assume()`` - refer to `Compiler Optimization Hints`_ for more details.
-* ``trunc()`` - refer to `Basic Math Functions`_ for more details.
-
-The language got experimental feature for calling LLVM intrinsics. This
-should not affect compatibility with existing programs.
-See `LLVM Intrinsic Functions`_ for more details.
-
-Updating ISPC Programs For Changes In ISPC 1.17.0
--------------------------------------------------
-
-The release introduces new data type ``float16`` and floating point literals
-with ``f16`` suffix.
-
-For the sake of unification with C/C++, capital letter X may be used in
-hexadecimal prefix (``0X``) and capital letter P as a separator for exponent in
-hexadecimal floating point. For example: ``0X1P16``.
-
-The naming of Xe targets, architectures, device names has changed.
-
-The standard library got new ``prefetchw_{l1,l2,l3}()`` intrinsics for
-prefetching in anticipation of a write.
-
-The algorithms used for implementation of ``rsqrt(double)`` and ``rcp(double)``
-standard library functions have changed on AVX-512 and may affect the existing
-code.
-
-Updating ISPC Programs For Changes In ISPC 1.18.0
--------------------------------------------------
-
-AVX-512 targets were renamed to drop "base type" (or "mask size"), old naming is accepted for
-compatibility. New names are avx512skx-x4, avx512skx-x8, avx512skx-x16,
-avx512skx-x32, avx512skx-x64, and avx512knl-x16.
-
-Standard library gained full support for ``float16`` type.  Note that it is
-fully supported only on the targets with native hardware support.
-On the other targets emulation is still not guaranteed, but may work in some cases.
-
-The compiler gained support for ``-E`` switch for running preprocessor only,
-which is similar to the switch of C/C++ compilers.  Also, as a result of bug fix,
-in case of preprocessor error, the compiler will crash now.  It used not to crash and
-produced some output (sometimes correct!).  As it was a convenient feature for some
-users running experiments in isolated environment (like ignoring missing includes
-when compiling on `Compiler Explorer`_), the ``--ignore-preprocessor-errors`` switch
-was added to preserve this behavior.
-
-.. _Compiler Explorer: https://godbolt.org/
-
-Updating ISPC Programs For Changes In ISPC 1.19.0
--------------------------------------------------
-
-New targets were added:
-
-* avx512spr-x4, avx512spr-x8, avx512spr-x16, avx512spr-x32, avx512spr-x64 for
-  4th generation Intel® Xeon® Scalable (codename Sapphire Rapids) CPUs. A macro
-  ``ISPC_TARGET_AVX512SPR`` was added.
-* xehpc-x16 and xehpc-x32 for Intel® Data Center GPU Max (codename Ponte Vecchio).
-
-Function templates were introduced to the language, please refer to the `Function
-Templates`_ section for more details. Two new keywords were introduced: ``template``
-and ``typename``.
-
-``ISPC_FP16_SUPPORTED`` macro was introduced for the targets supporting FP16.
-
-Updating ISPC Programs For Changes In ISPC 1.20.0
--------------------------------------------------
-
-New version of `sse4` targets were added, now you can specify either `sse4.1`
-or `sse4.2`, for example `sse4.2-i32x4`. The changes are fully backward
-compatible, meaning that `sse4` versions are still accepted and aliased to
-`sse4.2`. Multi-target compilation accepts only one of `sse4`/`sse4.1`/`sse4.2`
-targets. All of these targets will produce an object file with `sse4` suffix in
-multi-target compilation.
-
-Updating ISPC Programs For Changes In ISPC 1.21.0
--------------------------------------------------
-
-Now, in case of signed integer overflow, `ispc` will assume undefined behavior similar to
-C and C++. This change may cause compatibility issues. You can manage this behavior by
-using the `--[no-]wrap-signed-int` compiler switch. The default behavior (before version
-1.21.0) can be preserved by using `--wrap-signed-int`, which maintains defined wraparound
-behavior for signed integers, though it may limit some compiler optimizations.
-
-Template function specializations with explicit template arguments were introduced to the
-language, please refer to `Function Templates`_ section for more details.
-
-Updating ISPC Programs For Changes In ISPC 1.22.0
--------------------------------------------------
-
-Template operators with explicit specializations and instantiations were introduced to
-the language. The usage of different function specifiers with templates were fixed and
-aligned, please refer to `Function Templates`_ section for more details.
-
-Now, command-line switch `--dwarf-version=<n>` forces DWARF format debug info generation
-on Windows. It allows to debug ISPC code linked with MinGW generated code.
-
-Updating ISPC Programs For Changes In ISPC 1.23.0
--------------------------------------------------
-
-This release contains the following changes that may affect compatibility with
-older versions:
-
-* `true` `bool` values in storage were changed from `-1` to `1` to match C/C++ ABI.
-  Previously, ISPC treated `bool` values similarly to C/C++ in terms of size, but
-  incorrectly interpreted their actual values. This meant that `true` in ISPC
-  might not have translated correctly to true in C/C++. This issue was introduced
-  in version 1.13.0. Starting now, ISPC correctly stores and interprets `true`
-  values in a way that aligns with C/C++ expectations.
-
-A couple of improvements have been made to variables initialization:
-
-* Variables with const qualifiers can be initialized using the values of
-  previously initialized const variables including arithmetic operations above
-  them. It now works also with varying types.
-* Enumeration type values can be used as constants.
-
-The result of selection operator can now be used as lvalue if it has suitable
-type.
-
-Updating ISPC Programs For Changes In ISPC 1.24.0
--------------------------------------------------
-
-This release extends the standard library with new functions performing dot
-product operations. These functions utilize specific hardware instructions from
-AVX-VNNI and AVX512-VNNI. The ISPC targets that support native VNNI
-instructions are ``avx2vnni-i32x*``, ``avx512icl-*`` and ``avx512spr-*``. The
-first two targets (``avx2vnni-*`` and ``avx512icl-*``) were introduced in this
-release. Please refer to `Dot product`_ for more details.
-
-Now, uniform integers and enums can be used as non-type template parameters.
-Please refer to `Function Templates`_ for more details.
-
-The release contains the following changes that may affect compatibility with
-older versions:
-
-* ``--pic`` command line flag now corresponds to the ``-fpic`` flag of Clang
-  and GCC, whereas the newly introduced ``--PIC`` corresponds to ``-fPIC``.
-  The previous behavior of ``--pic`` flag corresponded to ``-fPIC`` flag. In
-  some cases, to preserve previous behavior, users may need to switch to
-  ``--PIC``.
-* Newly introduced macro definitions for numeric limits can cause conflicts
-  with user-defined macros with same names. When this happens, ISPC emits
-  warnings about macro redefinition. Please, refer to `The Preprocessor`_ for
-  the full list of macro definitions.
-* The implementation of ``round`` standard library function was aligned across
-  all targets. It may potentially affect the results of the code that uses this
-  function for the following targets: ``avx2-i16x16``, ``avx2-i8x32`` and all
-  AVX-512 targets. Please, refer to `Basic Math Functions`_ for more details.
-
-Updating ISPC Programs For Changes In ISPC 1.25.0
--------------------------------------------------
-
-The ISPC language has been extended to support the ``__attribute__(())`` syntax
-for variable and function declarations. The following attributes are now
-supported: ``noescape``, ``address_space(N)``, ``external_only``, and
-``unmangled``. The macro ``ISPC_ATTRIBUTE_SUPPORTED`` is defined if the ISPC
-compiler supports attribute syntax. Please refer to the `Attributes`_ section
-for more details and the full list of supported attributes.
-
-This release introduces support for the ``-ffunction-sections`` command-line
-flag, which generates each function in a separate section. This flag is useful
-for reducing the size of the final executable by removing unused functions.
-Please refer to the `Basic Command-line Options`_ section for more details.
-
-In some cases, such as shared libraries, the ``-ffunction-sections`` flag alone
-may not be sufficient to remove unused ISPC copies of exported functions.  To
-address this, you can use the ``external_only`` function attribute.  This
-attribute can only be applied to exported functions and instructs the compiler
-to remove the ISPC version of the function.  For more information, please refer
-to the `Attributes`_ and `Functions and Function Calls`_ sections.
-
-Template support for short vectors and array declarations has been extended.
-You can now use both type and non-type parameters to specify the type and
-dimensions of these types.
-
-For ARM targets, IEEE 754-compliant instructions (``fminnm`` and ``vminnm``) are
-now generated for min/max operations, replacing the previous use of ``fmin`` and
-``vmin``.
-
-The ``avx512knl-x16``, ``gen9-x8``, and ``gen9-x16`` targets are deprecated and
-will be removed in future releases.
-
-Updating ISPC Programs For Changes In ISPC 1.26.0
--------------------------------------------------
-
-There are breaking changes to ARM support:
-
-* The ``--arch=arm`` flag, which previously mapped to ARMv7 (32-bit), now maps
-  to ARMv8 (32-bit). There are no changes to ``--arch=aarch64``, which continues
-  to map to ARMv8 (64-bit).
-* The CPU definitions for the ARMv7 architecture have been removed:
-  ``cortex-a9`` and ``cortex-a15``.
-* New CPU definitions have been introduced, including ``cortex-a55``,
-  ``cortex-a78``, ``cortex-a510``, and ``cortex-a520``, along with support for
-  new Apple devices.
-* New double-pumped targets have been introduced: ``neon-i16x16`` and
-  ``neon-i8x32``.
-
-Language Updates:
-
-* Macro definitions for the LLVM version that ISPC is based on have been added.
-  Please refer to `The Preprocessor`_ for more details.
-* The ``__attribute__((deprecated))`` attribute can now be applied to a function
-  to mark it as deprecated, generating a warning when the function is called.
-
-Compiler flags changes:
-
-* The ``--nocpp`` command-line flag is deprecated and will be removed in a
-  future release.
-* The target ``avx512knl-x16`` has been removed.
-* The ``--darwin-version-min`` option has been added to specify the minimum
-  deployment target version for macOS and iOS applications. This addresses a new
-  linker behavior introduced in Xcode 15.0, which issues a warning when no
-  version is provided.
-
-The behavior of user programs when no supported ISA is detected in the
-auto-dispatch code has changed. Instead of raising the ``SIGABRT`` signal, the
-system will now raise ``SIGILL``.  This affects users who rely on ``SIGABRT`` in
-their signal handlers for error handling or recovery.  Such users must update
-their code to handle ``SIGILL`` instead. This change improves predictability and
-removes the dispatcher's reliance on the C standard library.
-
-Updating ISPC Programs For Changes In ISPC 1.27.0
--------------------------------------------------
-
-New targets:
-
-New targets have been added for platforms supporting Intel® Advanced Vector
-Extensions 10.2: ``avx10.2-x4``, ``avx10.2-x8``, ``avx10.2-x16``,
-``avx10.2-x32``, and ``avx10.2-x64``.  Additionally, a new macro
-``ISPC_TARGET_AVX10_2`` has been introduced.
-
-Standard library:
-
-* Cross-lane operations - ``broadcast``, ``rotate``, ``shift``, and
-  ``shuffle`` - are now supported for unsigned types.
-* ISPC's data handling capabilities have been extended to include signed and
-  unsigned ``int8`` and ``int16`` types in the reduction functions.
-* Support for ``packed_load`` and ``packed_store`` operations has also been
-  expanded to include: ``int8``, ``int16`` (signed/unsigned), ``float16``,
-  ``float``, and ``double``.
-* The cube root function ``cbrt`` has been added to the standard library for
-  ``float`` and ``double`` types.
-* Dot product functionality has been enhanced with mixed signedness support for
-  16-bit integers. The following input combinations are now supported: u16 x u16
-  (unsigned x unsigned), i16 x i16 (signed x signed), u16 x i16 (mixed
-  signedness). For consistency with other naming conventions, the function
-  ``dot2add_i16_packed`` has been renamed to ``dot2add_i16i16_packed``.
-
-New standard library functions for short vectors:
-
-The ``max``, ``min`` and ``abs`` functions for short vectors of basic types
-have been added to the standard library. They support both uniform and varying
-short vector types for all basic types supported by the corresponding standard
-functions, i.e., signed and unsigned integer types and floating-point types.
-
-It makes it possible, for example, to find the maximum value between two short
-vectors:
-
-::
-
-    uniform int<3> a = {1, 2, 3};
-    uniform int<3> b = {3, -2, 1};
-    uniform int<3> c = max(a, b); // c = {3, 2, 3}
-
-    varying float<4> x, y;
-    varying float<4> z = max(x, y);
-
-Support for short vector types has also been added for the following
-floating-point element-wise functions: ``round``, ``floor``, ``ceil``,
-``trunc``, ``rcp``, ``rcp_fast``, ``sqrt``, ``rsqrt``, ``sin``, ``asin``,
-``cos``, ``acos``, ``tan``, ``atan``, ``exp``, ``log``, ``atan2``, ``pow`` and
-``cbrt``.
-
-Language changes:
-
-* The ``aligned(N)`` attribute is now available to specify the alignment of
-  variables and struct types.
-* A bug was fixed where unsigned array indices or pointer arithmetic with
-  unsigned offsets could result in overflow due to sign extension when promoting
-  to pointer size. This issue is now resolved, and the compiler correctly
-  handles unsigned integer indexing and pointer arithmetic.
-
-Compiler flags changes:
-
-* The ``-dD`` and ``-dM`` flags are now supported. They are useful for debugging the
-  preprocessor and checking the macros defined by the compiler.
-
-Updating ISPC Programs For Changes In ISPC 1.28.0
--------------------------------------------------
-
-New Features:
-
-* Added a new command-line option ``--include-float16-conversions``. This
-  option makes the compiler include float16 conversion functions in the
-  compiled module. This is useful for targets that do not have native
-  instructions for float16 conversions, such as x86 targets prior to AVX2.
-  This option is disabled by default.
-
-* ISPC can now generate nanobind wrappers for ISPC modules, allowing easy
-  and lightweight integration of ISPC code with Python. The generated wrappers
-  can be built into native Python modules and imported into Python code. The
-  ``--nanobind-wrapper=<filename>`` command-line option enables this feature.
-
-* Struct operator overloading has been extended. Extended support for
-  overloading unary (``++``, ``--``, ``-``, ``!``, ``~``), binary (``*``,
-  ``/``, ``%``, ``+``, ``-``, ``>>``, ``<<``, ``==``, ``!=``, ``<``, ``>``,
-  ``<=``, ``>=``, ``&``, ``|``, ``^``, ``&&``, ``||``), and assignment
-  (``=``, ``+=``, ``-=`` , ``*=``, ``/=``, ``%=``, ``<<=``, ``>>=``, ``&=``,
-  ``|=``, ``^=``) operators for struct types.
-
-* ISPC can now be used as a C++ library (``libispc``) for embedding ISPC
-  compilation directly into applications. It now also provides CMake
-  configuration files for easy integration into other CMake projects. The
-  library includes experimental Just-In-Time (JIT) compilation capabilities
-  for runtime code generation and execution. See the section
-  `Using ISPC as a Library`_ for more details.
-
-* Added a new ``include/intrinsics`` directory containing header files that
-  implement selected SSE intrinsics in ISPC. If you're porting existing code
-  from intrinsics to ISPC, you can use these headers as a reference.
-
-Language and Syntax Changes:
-
-* Integer literals are now stricter:
-
-  * Limits the number of occurrences of ``[uUlL]`` symbols (e.g., ``ulll``,
-    ``uul``, and ``lulu`` are not valid anymore).
-  * The value modification suffix (i.e., ``[kMG]``) must precede the type
-    modification suffix (i.e., ``[uUlL]`` symbols).
-  * Like C/C++, ``lL`` and ``Ll`` suffixes are no longer allowed (i.e., mixing
-    lower- and upper-case ``L`` to form a ``LL`` suffix).
-
-Standard Library Changes:
-
-* ``select`` functions now support unsigned integer types ``uint8``,
-  ``uint16``, ``uint32``, and ``uint64`` as well as uniform short vectors.
-
-* Added new functions: ``isinf``, ``isfinite``, and ``srgb8_to_float``.
-
-* Standard library functions for short vectors have been moved to a separate
-  header file ``short_vec.isph``. They are no longer defined implicitly for
-  every file compiled with ISPC. Code using such functions should now include
-  this file with:
-
-  ::
-
-     #include "short_vec.isph"
-
-* Support for short vector types has been added to the following element-wise
-  functions: ``fmod``, ``isnan``, ``rsqrt_fast``, and ``clamp``.
-
-Debugging:
-
-The default DWARF version was updated to DWARF 5. You can still
-specify any supported DWARF version with the ``--dwarf-version=`` switch.
-
 
 Updating ISPC Programs For Changes In ISPC 1.29.0
 -------------------------------------------------
@@ -936,11 +326,623 @@ compilation unit. Cross-module calls to exported functions cannot be detected.
 
 ISPC Targets:
 
+* New ``avx512gnr-x4``, ``avx512gnr-x8``, ``avx512gnr-x16``, ``avx512gnr-x32``,
+  and ``avx512gnr-x64`` targets have been added for Intel Granite Rapids processors.
+  These targets support AVX-512 with AMX-FP16 capabilities.
+* ``avx10.2`` family of targets has been renamed to ``avx10.2dmr``. The macro
+  ``ISPC_TARGET_AVX10_2`` has been replaced with ``ISPC_TARGET_AVX10_2DMR``.
 * ``sse2-i32x4`` and ``sse2-i32x8`` targets are deprecated and will be removed in
   future releases.
 * ``gen9-x8``, and ``gen9-x16`` targets have been removed.
-* ``avx10.2`` family of targets has been renamed to ``avx10.2dmr``. The macro
-  ``ISPC_TARGET_AVX10_2`` has been replaced with ``ISPC_TARGET_AVX10_2DMR``.
+
+Updating ISPC Programs For Changes In ISPC 1.28.0
+-------------------------------------------------
+
+New Features:
+
+* Added a new command-line option ``--include-float16-conversions``. This
+  option makes the compiler include float16 conversion functions in the
+  compiled module. This is useful for targets that do not have native
+  instructions for float16 conversions, such as x86 targets prior to AVX2.
+  This option is disabled by default.
+
+* ISPC can now generate nanobind wrappers for ISPC modules, allowing easy
+  and lightweight integration of ISPC code with Python. The generated wrappers
+  can be built into native Python modules and imported into Python code. The
+  ``--nanobind-wrapper=<filename>`` command-line option enables this feature.
+
+* Struct operator overloading has been extended. Extended support for
+  overloading unary (``++``, ``--``, ``-``, ``!``, ``~``), binary (``*``,
+  ``/``, ``%``, ``+``, ``-``, ``>>``, ``<<``, ``==``, ``!=``, ``<``, ``>``,
+  ``<=``, ``>=``, ``&``, ``|``, ``^``, ``&&``, ``||``), and assignment
+  (``=``, ``+=``, ``-=`` , ``*=``, ``/=``, ``%=``, ``<<=``, ``>>=``, ``&=``,
+  ``|=``, ``^=``) operators for struct types.
+
+* ISPC can now be used as a C++ library (``libispc``) for embedding ISPC
+  compilation directly into applications. It now also provides CMake
+  configuration files for easy integration into other CMake projects. The
+  library includes experimental Just-In-Time (JIT) compilation capabilities
+  for runtime code generation and execution. See the section
+  `Using ISPC as a Library`_ for more details.
+
+* Added a new ``include/intrinsics`` directory containing header files that
+  implement selected SSE intrinsics in ISPC. If you're porting existing code
+  from intrinsics to ISPC, you can use these headers as a reference.
+
+Language and Syntax Changes:
+
+* Integer literals are now stricter:
+
+  * Limits the number of occurrences of ``[uUlL]`` symbols (e.g., ``ulll``,
+    ``uul``, and ``lulu`` are not valid anymore).
+  * The value modification suffix (i.e., ``[kMG]``) must precede the type
+    modification suffix (i.e., ``[uUlL]`` symbols).
+  * Like C/C++, ``lL`` and ``Ll`` suffixes are no longer allowed (i.e., mixing
+    lower- and upper-case ``L`` to form a ``LL`` suffix).
+
+Standard Library Changes:
+
+* ``select`` functions now support unsigned integer types ``uint8``,
+  ``uint16``, ``uint32``, and ``uint64`` as well as uniform short vectors.
+
+* Added new functions: ``isinf``, ``isfinite``, and ``srgb8_to_float``.
+
+* Standard library functions for short vectors have been moved to a separate
+  header file ``short_vec.isph``. They are no longer defined implicitly for
+  every file compiled with ISPC. Code using such functions should now include
+  this file with:
+
+  ::
+
+     #include "short_vec.isph"
+
+* Support for short vector types has been added to the following element-wise
+  functions: ``fmod``, ``isnan``, ``rsqrt_fast``, and ``clamp``.
+
+Debugging:
+
+The default DWARF version was updated to DWARF 5. You can still
+specify any supported DWARF version with the ``--dwarf-version=`` switch.
+
+Updating ISPC Programs For Changes In ISPC 1.27.0
+-------------------------------------------------
+
+New targets:
+
+New targets have been added for platforms supporting Intel® Advanced Vector
+Extensions 10.2: ``avx10.2-x4``, ``avx10.2-x8``, ``avx10.2-x16``,
+``avx10.2-x32``, and ``avx10.2-x64``.  Additionally, a new macro
+``ISPC_TARGET_AVX10_2`` has been introduced.
+
+Standard library:
+
+* Cross-lane operations - ``broadcast``, ``rotate``, ``shift``, and
+  ``shuffle`` - are now supported for unsigned types.
+* ISPC's data handling capabilities have been extended to include signed and
+  unsigned ``int8`` and ``int16`` types in the reduction functions.
+* Support for ``packed_load`` and ``packed_store`` operations has also been
+  expanded to include: ``int8``, ``int16`` (signed/unsigned), ``float16``,
+  ``float``, and ``double``.
+* The cube root function ``cbrt`` has been added to the standard library for
+  ``float`` and ``double`` types.
+* Dot product functionality has been enhanced with mixed signedness support for
+  16-bit integers. The following input combinations are now supported: u16 x u16
+  (unsigned x unsigned), i16 x i16 (signed x signed), u16 x i16 (mixed
+  signedness). For consistency with other naming conventions, the function
+  ``dot2add_i16_packed`` has been renamed to ``dot2add_i16i16_packed``.
+
+New standard library functions for short vectors:
+
+The ``max``, ``min`` and ``abs`` functions for short vectors of basic types
+have been added to the standard library. They support both uniform and varying
+short vector types for all basic types supported by the corresponding standard
+functions, i.e., signed and unsigned integer types and floating-point types.
+
+It makes it possible, for example, to find the maximum value between two short
+vectors:
+
+::
+
+    uniform int<3> a = {1, 2, 3};
+    uniform int<3> b = {3, -2, 1};
+    uniform int<3> c = max(a, b); // c = {3, 2, 3}
+
+    varying float<4> x, y;
+    varying float<4> z = max(x, y);
+
+Support for short vector types has also been added for the following
+floating-point element-wise functions: ``round``, ``floor``, ``ceil``,
+``trunc``, ``rcp``, ``rcp_fast``, ``sqrt``, ``rsqrt``, ``sin``, ``asin``,
+``cos``, ``acos``, ``tan``, ``atan``, ``exp``, ``log``, ``atan2``, ``pow`` and
+``cbrt``.
+
+Language changes:
+
+* The ``aligned(N)`` attribute is now available to specify the alignment of
+  variables and struct types.
+* A bug was fixed where unsigned array indices or pointer arithmetic with
+  unsigned offsets could result in overflow due to sign extension when promoting
+  to pointer size. This issue is now resolved, and the compiler correctly
+  handles unsigned integer indexing and pointer arithmetic.
+
+Compiler flags changes:
+
+* The ``-dD`` and ``-dM`` flags are now supported. They are useful for debugging the
+  preprocessor and checking the macros defined by the compiler.
+
+Updating ISPC Programs For Changes In ISPC 1.26.0
+-------------------------------------------------
+
+There are breaking changes to ARM support:
+
+* The ``--arch=arm`` flag, which previously mapped to ARMv7 (32-bit), now maps
+  to ARMv8 (32-bit). There are no changes to ``--arch=aarch64``, which continues
+  to map to ARMv8 (64-bit).
+* The CPU definitions for the ARMv7 architecture have been removed:
+  ``cortex-a9`` and ``cortex-a15``.
+* New CPU definitions have been introduced, including ``cortex-a55``,
+  ``cortex-a78``, ``cortex-a510``, and ``cortex-a520``, along with support for
+  new Apple devices.
+* New double-pumped targets have been introduced: ``neon-i16x16`` and
+  ``neon-i8x32``.
+
+Language Updates:
+
+* Macro definitions for the LLVM version that ISPC is based on have been added.
+  Please refer to `The Preprocessor`_ for more details.
+* The ``__attribute__((deprecated))`` attribute can now be applied to a function
+  to mark it as deprecated, generating a warning when the function is called.
+
+Compiler flags changes:
+
+* The ``--nocpp`` command-line flag is deprecated and will be removed in a
+  future release.
+* The target ``avx512knl-x16`` has been removed.
+* The ``--darwin-version-min`` option has been added to specify the minimum
+  deployment target version for macOS and iOS applications. This addresses a new
+  linker behavior introduced in Xcode 15.0, which issues a warning when no
+  version is provided.
+
+The behavior of user programs when no supported ISA is detected in the
+auto-dispatch code has changed. Instead of raising the ``SIGABRT`` signal, the
+system will now raise ``SIGILL``.  This affects users who rely on ``SIGABRT`` in
+their signal handlers for error handling or recovery.  Such users must update
+their code to handle ``SIGILL`` instead. This change improves predictability and
+removes the dispatcher's reliance on the C standard library.
+
+Updating ISPC Programs For Changes In ISPC 1.25.0
+-------------------------------------------------
+
+The ISPC language has been extended to support the ``__attribute__(())`` syntax
+for variable and function declarations. The following attributes are now
+supported: ``noescape``, ``address_space(N)``, ``external_only``, and
+``unmangled``. The macro ``ISPC_ATTRIBUTE_SUPPORTED`` is defined if the ISPC
+compiler supports attribute syntax. Please refer to the `Attributes`_ section
+for more details and the full list of supported attributes.
+
+This release introduces support for the ``-ffunction-sections`` command-line
+flag, which generates each function in a separate section. This flag is useful
+for reducing the size of the final executable by removing unused functions.
+Please refer to the `Basic Command-line Options`_ section for more details.
+
+In some cases, such as shared libraries, the ``-ffunction-sections`` flag alone
+may not be sufficient to remove unused ISPC copies of exported functions.  To
+address this, you can use the ``external_only`` function attribute.  This
+attribute can only be applied to exported functions and instructs the compiler
+to remove the ISPC version of the function.  For more information, please refer
+to the `Attributes`_ and `Functions and Function Calls`_ sections.
+
+Template support for short vectors and array declarations has been extended.
+You can now use both type and non-type parameters to specify the type and
+dimensions of these types.
+
+For ARM targets, IEEE 754-compliant instructions (``fminnm`` and ``vminnm``) are
+now generated for min/max operations, replacing the previous use of ``fmin`` and
+``vmin``.
+
+The ``avx512knl-x16``, ``gen9-x8``, and ``gen9-x16`` targets are deprecated and
+will be removed in future releases.
+
+Updating ISPC Programs For Changes In ISPC 1.24.0
+-------------------------------------------------
+
+This release extends the standard library with new functions performing dot
+product operations. These functions utilize specific hardware instructions from
+AVX-VNNI and AVX512-VNNI. The ISPC targets that support native VNNI
+instructions are ``avx2vnni-i32x*``, ``avx512icl-*`` and ``avx512spr-*``. The
+first two targets (``avx2vnni-*`` and ``avx512icl-*``) were introduced in this
+release. Please refer to `Dot product`_ for more details.
+
+Now, uniform integers and enums can be used as non-type template parameters.
+Please refer to `Function Templates`_ for more details.
+
+The release contains the following changes that may affect compatibility with
+older versions:
+
+* ``--pic`` command line flag now corresponds to the ``-fpic`` flag of Clang
+  and GCC, whereas the newly introduced ``--PIC`` corresponds to ``-fPIC``.
+  The previous behavior of ``--pic`` flag corresponded to ``-fPIC`` flag. In
+  some cases, to preserve previous behavior, users may need to switch to
+  ``--PIC``.
+* Newly introduced macro definitions for numeric limits can cause conflicts
+  with user-defined macros with same names. When this happens, ISPC emits
+  warnings about macro redefinition. Please, refer to `The Preprocessor`_ for
+  the full list of macro definitions.
+* The implementation of ``round`` standard library function was aligned across
+  all targets. It may potentially affect the results of the code that uses this
+  function for the following targets: ``avx2-i16x16``, ``avx2-i8x32`` and all
+  AVX-512 targets. Please, refer to `Basic Math Functions`_ for more details.
+
+Updating ISPC Programs For Changes In ISPC 1.23.0
+-------------------------------------------------
+
+This release contains the following changes that may affect compatibility with
+older versions:
+
+* `true` `bool` values in storage were changed from `-1` to `1` to match C/C++ ABI.
+  Previously, ISPC treated `bool` values similarly to C/C++ in terms of size, but
+  incorrectly interpreted their actual values. This meant that `true` in ISPC
+  might not have translated correctly to true in C/C++. This issue was introduced
+  in version 1.13.0. Starting now, ISPC correctly stores and interprets `true`
+  values in a way that aligns with C/C++ expectations.
+
+A couple of improvements have been made to variables initialization:
+
+* Variables with const qualifiers can be initialized using the values of
+  previously initialized const variables including arithmetic operations above
+  them. It now works also with varying types.
+* Enumeration type values can be used as constants.
+
+The result of selection operator can now be used as lvalue if it has suitable
+type.
+
+Updating ISPC Programs For Changes In ISPC 1.22.0
+-------------------------------------------------
+
+Template operators with explicit specializations and instantiations were introduced to
+the language. The usage of different function specifiers with templates were fixed and
+aligned, please refer to `Function Templates`_ section for more details.
+
+Now, command-line switch `--dwarf-version=<n>` forces DWARF format debug info generation
+on Windows. It allows to debug ISPC code linked with MinGW generated code.
+
+Updating ISPC Programs For Changes In ISPC 1.21.0
+-------------------------------------------------
+
+Now, in case of signed integer overflow, `ispc` will assume undefined behavior similar to
+C and C++. This change may cause compatibility issues. You can manage this behavior by
+using the `--[no-]wrap-signed-int` compiler switch. The default behavior (before version
+1.21.0) can be preserved by using `--wrap-signed-int`, which maintains defined wraparound
+behavior for signed integers, though it may limit some compiler optimizations.
+
+Template function specializations with explicit template arguments were introduced to the
+language, please refer to `Function Templates`_ section for more details.
+
+Updating ISPC Programs For Changes In ISPC 1.20.0
+-------------------------------------------------
+
+New version of `sse4` targets were added, now you can specify either `sse4.1`
+or `sse4.2`, for example `sse4.2-i32x4`. The changes are fully backward
+compatible, meaning that `sse4` versions are still accepted and aliased to
+`sse4.2`. Multi-target compilation accepts only one of `sse4`/`sse4.1`/`sse4.2`
+targets. All of these targets will produce an object file with `sse4` suffix in
+multi-target compilation.
+
+Updating ISPC Programs For Changes In ISPC 1.19.0
+-------------------------------------------------
+
+New targets were added:
+
+* avx512spr-x4, avx512spr-x8, avx512spr-x16, avx512spr-x32, avx512spr-x64 for
+  4th generation Intel® Xeon® Scalable (codename Sapphire Rapids) CPUs. A macro
+  ``ISPC_TARGET_AVX512SPR`` was added.
+* xehpc-x16 and xehpc-x32 for Intel® Data Center GPU Max (codename Ponte Vecchio).
+
+Function templates were introduced to the language, please refer to the `Function
+Templates`_ section for more details. Two new keywords were introduced: ``template``
+and ``typename``.
+
+``ISPC_FP16_SUPPORTED`` macro was introduced for the targets supporting FP16.
+
+Updating ISPC Programs For Changes In ISPC 1.18.0
+-------------------------------------------------
+
+AVX-512 targets were renamed to drop "base type" (or "mask size"), old naming is accepted for
+compatibility. New names are avx512skx-x4, avx512skx-x8, avx512skx-x16,
+avx512skx-x32, avx512skx-x64, and avx512knl-x16.
+
+Standard library gained full support for ``float16`` type.  Note that it is
+fully supported only on the targets with native hardware support.
+On the other targets emulation is still not guaranteed, but may work in some cases.
+
+The compiler gained support for ``-E`` switch for running preprocessor only,
+which is similar to the switch of C/C++ compilers.  Also, as a result of bug fix,
+in case of preprocessor error, the compiler will crash now.  It used not to crash and
+produced some output (sometimes correct!).  As it was a convenient feature for some
+users running experiments in isolated environment (like ignoring missing includes
+when compiling on `Compiler Explorer`_), the ``--ignore-preprocessor-errors`` switch
+was added to preserve this behavior.
+
+.. _Compiler Explorer: https://godbolt.org/
+
+Updating ISPC Programs For Changes In ISPC 1.17.0
+-------------------------------------------------
+
+The release introduces new data type ``float16`` and floating point literals
+with ``f16`` suffix.
+
+For the sake of unification with C/C++, capital letter X may be used in
+hexadecimal prefix (``0X``) and capital letter P as a separator for exponent in
+hexadecimal floating point. For example: ``0X1P16``.
+
+The naming of Xe targets, architectures, device names has changed.
+
+The standard library got new ``prefetchw_{l1,l2,l3}()`` intrinsics for
+prefetching in anticipation of a write.
+
+The algorithms used for implementation of ``rsqrt(double)`` and ``rcp(double)``
+standard library functions have changed on AVX-512 and may affect the existing
+code.
+
+Updating ISPC Programs For Changes In ISPC 1.16.0
+-------------------------------------------------
+
+The release has several new functions in the standard library that may
+affect compatibility:
+
+* ``alloca()`` - refer to `Stack Memory Allocation`_ for more details.
+* ``assume()`` - refer to `Compiler Optimization Hints`_ for more details.
+* ``trunc()`` - refer to `Basic Math Functions`_ for more details.
+
+The language got experimental feature for calling LLVM intrinsics. This
+should not affect compatibility with existing programs.
+See `LLVM Intrinsic Functions`_ for more details.
+
+Updating ISPC Programs For Changes In ISPC 1.15.0
+-------------------------------------------------
+
+The release has several new language features, which do not affect compatibility.
+Namely, packed_[load|store]_active() stdlib functions for 64 bit types, and loop
+unroll pragmas: "#pragma unroll" and "#pragma nounroll".
+
+Updating ISPC Programs For Changes In ISPC 1.14.1
+-------------------------------------------------
+
+The release doesn't contain language changes, which may affect compatibility with
+older versions.
+
+Updating ISPC Programs For Changes In ISPC 1.14.0
+-------------------------------------------------
+
+This release contains the following changes that may affect compatibility with
+older versions:
+
+* "generic" targets were removed. Please use native targets instead.
+
+New i8 and i16 targets were introduced: avx2-i8x32, avx2-i16x16, avx512skx-i8x64,
+and avx512skx-i16x32.
+
+Windows x86_64 target now supports ``__vectorcall`` calling convention.
+It's off by default, can be enabled by ``--vectorcall`` command line switch.
+
+Updating ISPC Programs For Changes In ISPC 1.13.0
+-------------------------------------------------
+
+This release contains the following changes that may affect compatibility with
+older versions:
+
+* Representation of ``bool`` type in storage was changed from target-specific to
+  one byte per boolean value.  So size of ``varying bool`` is target width (in
+  bytes), and size of ``uniform bool`` is one.  This definition is compatible
+  with C/C++, hence improves interoperability.
+
+* type aliases for unsigned types were added: ``uint8``, ``uint16``, ``uint32``,
+  ``uint64``, and ``uint``.  To detect if these types are supported you can
+  check if ISPC_UINT_IS_DEFINED macro is defined, this is handy for writing code
+  which works with older versions of ``ispc``.
+
+* ``extract()``/``insert()`` for boolean arguments, and ``abs()`` for all integer and
+  FP types were added to standard library.
+
+Updating ISPC Programs For Changes In ISPC 1.12.0
+-------------------------------------------------
+
+This release contains the following changes that may affect compatibility with
+older versions:
+
+* ``noinline`` keyword was added.
+
+* Standard library functions ``rsqrt_fast()`` and ``rcp_fast()`` were added.
+
+* AVX1.1 (IvyBridge) targets and generic KNC and KNL targets were removed.
+  Note that KNL is still supported through avx512knl-i32x16.
+
+The release also introduces static initialization for varying variables, which
+should not affect compatibility.
+
+This release introduces experimental cross OS compilation support and ARM/AARCH64
+support. It also contains a new 128-bit AVX2 target (avx2-i32x4) and a CPU
+definition for Ice Lake client (--device=icl).
+
+Updating ISPC Programs For Changes In ISPC 1.11.0
+-------------------------------------------------
+
+This release redefined the -O1 compiler option to optimize for size, so it may require
+adjusting your build system accordingly.
+
+Starting with version 1.11.0, auto-generated headers use ``#pragma once``. In the unlikely
+case that your C/C++ compiler does not support that, please use the ``--no-pragma-once``
+``ispc`` switch.
+
+This release also introduces a new AVX-512 target avx512skx-i32x8. It produces code,
+which doesn't use ZMM registers.
+
+Updating ISPC Programs For Changes In ISPC 1.10.0
+-------------------------------------------------
+
+The release has several new language features, which do not affect compatibility.
+Namely, new streaming stores, aos_to_soa/soa_to_aos intrinsics for 64 bit types,
+and a "#pragma ignore".
+
+One change that may potentially affect compatibility is the changed size of short vector
+types. If you use short vector types for data passed between C/C++ and ISPC, you
+may want to pay attention to it.
+
+Updating ISPC Programs For Changes In ISPC 1.9.2
+------------------------------------------------
+
+The release doesn't contain language changes, which may affect compatibility with
+older versions.
+
+Updating ISPC Programs For Changes In ISPC 1.9.1
+------------------------------------------------
+
+The release doesn't contain language changes, which may affect compatibility with
+older versions. It introduces new AVX-512 target: avx512skx-i32x16.
+
+Updating ISPC Programs For Changes In ISPC 1.9.0
+------------------------------------------------
+
+The release doesn't contain language changes, which may affect compatibility with
+older versions. It introduces new AVX-512 target: avx512knl-i32x16.
+
+Updating ISPC Programs For Changes In ISPC 1.8.2
+------------------------------------------------
+
+The release doesn't contain language changes, which may affect compatibility with
+older versions. Though you may want to be aware of the following:
+
+* Mangling of uniform types was changed to not include varying width, so now you
+  may use uniform structures and pointers to uniform types as return types in
+  export functions in multi-target compilation.
+
+Updating ISPC Programs For Changes In ISPC 1.7.0
+------------------------------------------------
+
+This release contains several changes that may affect compatibility with
+older versions:
+
+* The algorithm for selecting overloaded functions was extended to cover more
+  types of overloading, and handling of reference types was fixed. At the same
+  time the old scheme, which blindly used the function with "the best score"
+  summed for all arguments, was switched to the C++ approach, which requires
+  "the best score" for each argument. If the best function doesn't exist, a
+  warning is issued in this version. It will be turned into an error in the
+  next version. A simple example: Suppose we have two functions: max(int, int)
+  and max(unsigned int, unsigned int). The new rules lead to an error when
+  calling max(int, unsigned int), as the best choice is ambiguous.
+
+* Implicit cast of pointer to const type to void* was disallowed. Use explicit
+  cast if needed.
+
+* A bug which prevented "const" qualifiers from appearing in emitted .h files
+  was fixed. Consequently, "const" qualifiers now properly appearing in emitted
+  .h files may cause compile errors in pre-existing codes.
+
+* get_ProgramCount() was moved from stdlib to examples/util/util.isph file. You
+  need to include this file to be able to use this function.
+
+Updating ISPC Programs For Changes In ISPC 1.6.0
+------------------------------------------------
+
+This release adds support for `Operators Overloading`_, so a word ``operator``
+becomes a keyword and it potentially creates a conflict with existing user
+function. Also a new library function packed_store_active2() was introduced,
+which also may create a conflict with existing user functions.
+
+Updating ISPC Programs For Changes In ISPC 1.5.0
+------------------------------------------------
+
+This release adds support for double precision floating point constants.
+Double precision floating point constants are floating point number with
+``d`` suffix and optional exponent part. Here are some examples: 3.14d,
+31.4d-1, 1.d, 1.0d, 1d-2. Note that floating point number without suffix is
+treated as single precision constant.
+
+Updating ISPC Programs For Changes In ISPC 1.3
+----------------------------------------------
+
+This release adds a number of new iteration constructs, which in turn use
+new reserved words: ``unmasked``, ``foreach_unique``, ``foreach_active``,
+and ``in``.  Any program that happens to have a variable or function with
+one of these names must be modified to rename that symbol.
+
+Updating ISPC Programs For Changes In ISPC 1.2
+----------------------------------------------
+
+The following changes were made to the language syntax and semantics for
+the ``ispc`` 1.2 release:
+
+* Syntax for the "launch" keyword has been cleaned up; it's now no longer
+  necessary to bracket the launched function call with angle brackets. (In
+  other words, now use ``launch foo();``, rather than ``launch < foo() >;``.)
+
+* When using pointers, the pointed-to data type is now "uniform" by
+  default.  Use the varying keyword to specify varying pointed-to types
+  when needed.  (i.e. ``float *ptr`` is a varying pointer to uniform float
+  data, whereas previously it was a varying pointer to varying float
+  values.) Use ``varying float *`` to specify a varying pointer to varying
+  float data, and so forth.
+
+* The details of "uniform" and "varying" and how they interact with struct
+  types have been cleaned up.  Now, when a struct type is declared, if the
+  struct elements don't have explicit "uniform" or "varying" qualifiers,
+  they are said to have "unbound" variability.  When a struct type is
+  instantiated, any unbound variability elements inherit the variability of
+  the parent struct type. See `Struct Types`_ for more details.
+
+* ``ispc`` has a new language feature that makes it much easier to use the
+  efficient "(array of) structure of arrays" (AoSoA, or SoA) memory layout
+  of data.  A new ``soa<n>`` qualifier can be applied to structure types to
+  specify an n-wide SoA version of the corresponding type.  Array indexing
+  and pointer operations with arrays SoA types automatically handles the
+  two-stage indexing calculation to access the data.  See `Structure of
+  Array Types`_ for more details.
+
+Updating ISPC Programs For Changes In ISPC 1.1
+----------------------------------------------
+
+The major changes introduced in the 1.1 release of ``ispc`` are first-class
+support for pointers in the language and new parallel loop constructs.
+Adding this functionality required a number of syntactic changes to the
+language.  These changes should generally lead to straightforward minor
+modifications of existing ``ispc`` programs.
+
+These are the relevant changes to the language:
+
+* The syntax for reference types has been changed to match C++'s syntax for
+  references and the ``reference`` keyword has been removed.  (A diagnostic
+  message is issued if ``reference`` is used.)
+
+  + Declarations like ``reference float foo`` should be changed to ``float &foo``.
+
+  + Any array parameters in function declaration with a ``reference``
+    qualifier should just have ``reference`` removed: ``void foo(reference
+    float bar[])`` can just be ``void foo(float bar[])``.
+
+* It is now a compile-time error to assign an entire array to another
+  array.
+
+* A number of standard library routines have been updated to take
+  pointer-typed parameters, rather than references or arrays an index
+  offsets, as appropriate.  For example, the ``atomic_add_global()``
+  function previously took a reference to the variable to be updated
+  atomically but now takes a pointer.  In a similar fashion,
+  ``packed_store_active()`` takes a pointer to a ``uniform unsigned int``
+  as its first parameter rather than taking a ``uniform unsigned int[]`` as
+  its first parameter and a ``uniform int`` offset as its second parameter.
+
+* It is no longer legal to pass a varying lvalue to a function that takes a
+  reference parameter; references can only be to uniform lvalue types.  In
+  this case, the function should be rewritten to take a varying pointer
+  parameter.
+
+* There are new iteration constructs for looping over computation domains,
+  ``foreach`` and ``foreach_tiled``.  In addition to being syntactically
+  cleaner than regular ``for`` loops, these can provide performance
+  benefits in many cases when iterating over data and mapping it to program
+  instances.  See the Section `Parallel Iteration Statements: "foreach" and
+  "foreach_tiled"`_ for more information about these.
 
 
 Getting Started with ISPC
