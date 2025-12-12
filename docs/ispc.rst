@@ -258,24 +258,7 @@ of recent changes to the compiler.
 Updating ISPC Programs For Changes In ISPC 1.29.0
 -------------------------------------------------
 
-New Features:
-
-* Enabled profile-guided optimization (PGO) support with sample profiling. Two
-  new command-line flags were introduced:
-
-  * ``--profile-sample-use=<file>`` enables profile-guided optimization using
-    sample profile data. When provided, the ISPC compiler loads the specified
-    sample profile data file and uses it to guide optimization decisions during
-    compilation.
-
-  * ``--sample-profiling-debug-info`` enables the generation of debug information
-    optimized for sample-based profiling.
-
-These flags enable developers to collect profile data from representative program
-runs and use it to guide compiler optimizations, potentially improving
-performance.
-
-Languages Changes:
+Language Changes:
 
 The compiler now assumes that all loops with non-constant conditions will make
 forward progress and eventually terminate. This enables optimizations based
@@ -283,15 +266,31 @@ on the assumption that loops will not execute indefinitely. Infinite loops
 with constant conditions like ``for (;;)`` or ``while (1)`` are treated
 specially and do not have this assumption applied.
 
-Predefined Macros:
+Compiler Switches:
 
-* New predefined macros ``ISPC_TARGET_HAS_FP16_SUPPORT`` and
-  ``ISPC_TARGET_HAS_FP64_SUPPORT`` have been added to follow the consistent
-  naming convention used by other target capability macros.
+* Added ``--profile-sample-use=<file>`` to enable profile-guided optimization
+  using sample profile data. When provided, the ISPC compiler loads the
+  specified sample profile data file and uses it to guide optimization decisions
+  during compilation. Use with ``--sample-profiling-debug-info`` to generate
+  debug information optimized for sample-based profiling.
 
-* The old macro names ``ISPC_FP16_SUPPORTED`` and ``ISPC_FP64_SUPPORTED`` are
-  still defined for backward compatibility but are now considered deprecated
-  aliases. New code should use the ``ISPC_TARGET_HAS_*`` names.
+* Added ``--[no-]internal-export-functions`` to control generation of internal
+  (ISPC-callable) versions of exported functions. The flag is enabled by default.
+  When disabled (``--no-internal-export-functions``), only external versions are
+  generated and calling exported functions from ISPC code will result in a
+  compilation error.
+
+* Added ``--stack-protector[=<level>]`` flag to enable Stack Smash Protection (SSP)
+  for ISPC functions, providing runtime detection of stack buffer overflows.
+  ``--stack-protector`` (equivalent to ``--stack-protector=on``) enables stack
+  protectors for functions vulnerable to stack smashing. ``--stack-protector=strong``
+  enables stack protectors for functions that contain arrays of any size or take
+  addresses of local variables. ``--stack-protector=all`` enables stack protectors
+  for all functions. ``--stack-protector=none`` disables stack protectors (default).
+
+* The default DWARF version has been updated to DWARF 5, matching the LLVM
+  default. If your debugging tools do not support DWARF 5, you can use the
+  ``--dwarf-version=<N>`` flag to specify an earlier version.
 
 Warning for Exported Function Calls:
 
@@ -313,14 +312,6 @@ this warning, you can:
   internal version generation (note: this will generate **errors** instead of
   warnings for all exported function calls)
 
-A new ``--[no-]internal-export-functions`` command-line flag has been added to
-control the generation of internal (ISPC-callable) versions of exported
-functions. The flag is enabled by default (``--internal-export-functions``),
-maintaining the current behavior. When disabled
-(``--no-internal-export-functions``), only external versions are generated,
-matching the behavior of the ``external_only`` attribute, and calling exported
-functions from ISPC code will result in a **compilation error**.
-
 Note: The compiler can only detect calls to exported functions within the same
 compilation unit. Cross-module calls to exported functions cannot be detected.
 
@@ -334,6 +325,20 @@ ISPC Targets:
 * ``sse2-i32x4`` and ``sse2-i32x8`` targets are deprecated and will be removed in
   future releases.
 * ``gen9-x8``, and ``gen9-x16`` targets have been removed.
+
+Predefined Macros:
+
+* New predefined macros ``ISPC_TARGET_HAS_FP16_SUPPORT`` and
+  ``ISPC_TARGET_HAS_FP64_SUPPORT`` have been added following the consistent
+  naming convention used by other target capability macros. The old macro names
+  ``ISPC_FP16_SUPPORTED`` and ``ISPC_FP64_SUPPORTED`` remain available for
+  backward compatibility but are now deprecated.
+
+* The ``ISPC_TARGET_AVX512GNR`` macro has been added.
+
+* The ``ISPC_TARGET_AVX10_2`` macro has been replaced with
+  ``ISPC_TARGET_AVX10_2DMR`` to match the target renaming.
+
 
 Updating ISPC Programs For Changes In ISPC 1.28.0
 -------------------------------------------------
