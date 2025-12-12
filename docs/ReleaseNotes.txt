@@ -1,3 +1,189 @@
+=== v1.29.0 === (17 December 2025)
+
+ISPC release featuring sample-based profile-guided optimization, optimized dispatcher,
+new avx512gnr targets for Intel Granite Rapids, and numerous bug fixes and performance
+improvements. Based on a patched LLVM 20.1.8.
+
+Compiler Switches:
+
+* Added `--profile-sample-use=<file>` flag to enable sample-based profile-guided
+  optimization (PGO). When provided, the ISPC compiler loads sample profile
+  data to guide optimization decisions during compilation. Use in conjunction
+  with `--sample-profiling-debug-info` flag that enables debug info suitable
+  for sample-based profiling. Sample-based PGO can provide up to 30% performance
+  gains thanks to aggressive loop unrolling, optimized memory access patterns,
+  and specialized hot code paths guided by actual branch frequencies.
+
+* Added ``--[no-]internal-export-functions`` to control generation of internal
+  (ISPC-callable) versions of exported functions. The flag is enabled by default.
+  When disabled (``--no-internal-export-functions``), only external versions are
+  generated and calling exported functions from ISPC code will result in a
+  compilation error.
+
+* Added `--stack-protector[=<level>]` flag to enable Stack Smash Protection (SSP)
+  for ISPC functions, providing runtime detection of stack buffer overflows.
+  `--stack-protector` (equivalent to `--stack-protector=on`) enables stack
+  protectors for functions vulnerable to stack smashing. `--stack-protector=strong`
+  enables stack protectors for functions that contain arrays of any size or take
+  addresses of local variables. `--stack-protector=all` enables stack protectors
+  for all functions. `--stack-protector=none` disables stack protectors (default).
+
+* The default DWARF version has been updated to match the LLVM default (DWARF 5
+  on most platforms).
+
+Behavioral Changes:
+
+* A new warning has been introduced when an exported function without the
+  `external_only` attribute is called from ISPC code. This warning prepares for
+  an upcoming behavior change in ISPC 1.30, where `export` functions will by
+  default generate only external (C/C++-callable) versions instead of both
+  internal and external versions. To address this warning, use a non-exported
+  function for ISPC-to-ISPC calls, add the `external_only` attribute, or use
+  the `--no-internal-export-functions` flag.
+
+Language Changes:
+
+* `soa<>` types can now be used as struct members. Previously, `soa<>` members
+  in structs were not supported by the grammar.
+
+* The compiler now assumes that all loops with non-constant conditions will make
+  forward progress and eventually terminate. This enables additional
+  optimizations. Infinite loops with constant conditions like `for (;;)` or
+  `while (1)` are treated specially and do not have this assumption applied.
+
+Dispatcher:
+
+* The dispatcher has been made more efficient with a caching mechanism and
+  enabling LLVM optimization passes, resulting in approximately 50% faster
+  dispatch overhead.
+
+Targets:
+
+* New ``avx512gnr-x4``, ``avx512gnr-x8``, ``avx512gnr-x16``, ``avx512gnr-x32``,
+  and ``avx512gnr-x64`` targets have been added for Intel Granite Rapids processors.
+  These targets support AVX-512 with AMX-FP16 capabilities.
+
+* The `avx10.2` targets have been renamed to `avx10.2dmr` to reflect Diamond
+  Rapids (DMR) codename alignment.
+
+* Fixed `--opt=disable-zmm` option to work correctly on `avx512skx-x16` and
+  `avx512icl-x16` targets. This option avoids ZMM registers, which can be
+  beneficial for workloads sensitive to frequency throttling on some processors.
+
+Removed Targets:
+
+* The `gen9-x8` and `gen9-x16` GPU targets have been removed.
+
+Deprecated Targets:
+
+* The `sse2-i32x4` and `sse2-i32x8` targets are now deprecated and will be
+  removed in a future release.
+
+Predefined Macros:
+
+* New predefined macros `ISPC_TARGET_HAS_FP16_SUPPORT` and
+  `ISPC_TARGET_HAS_FP64_SUPPORT` have been added following the consistent naming
+  convention used by other target capability macros. The old macro names
+  `ISPC_FP16_SUPPORTED` and `ISPC_FP64_SUPPORTED` remain available for backward
+  compatibility but are now deprecated.
+
+* The `ISPC_TARGET_AVX10_2` macro has been replaced with `ISPC_TARGET_AVX10_2DMR`
+  to match the target renaming.
+
+Performance:
+
+* Optimized `popcnt` (population count) implementation for AVX512ICL and newer
+  targets, achieving up to 3.5x speedup.
+
+* Improved code generation for `avx512-x16` and `avx10.2-x16` targets with ~10%
+  improvement in geomean on benchmarks. This includes better shuffle instruction
+  generation and improved optimization pass ordering that prevents suboptimal
+  masked load transformations blocking SROA registerization.
+
+* Improved masked store promotion to blend stores for structures, providing up
+  to 53% improvement on targets without hardware masked stores (such as NEON
+  and SSE4).
+
+* Fixed inefficient loop code generation when using unsigned loop counters.
+
+* Fixed incorrect loop full unroll behavior that caused partial unrolling for
+  loops with unknown trip counts.
+
+Build System:
+
+* Optimized stdlib compilation by implementing a width family system that
+  reduces bitcode duplication, reducing ISPC binary size by approximately 30%.
+  This also allows adding new targets to ISPC with minimal increase in binary
+  size.
+
+Bug Fixes:
+
+* Fixed crashes when casting SOA (slice) pointers to non-SOA pointer types.
+
+* Fixed handling of enum negation in constant folding.
+
+* Fixed slice pointer handling in pointer-to-integer casts.
+
+* Fixed type checking of expressions wrapped by TypeCastExpr.
+
+* Fixed indexing into function call results that return pointer types.
+
+* Fixed uniform bool return values that could incorrectly return 255 instead
+  of 1 on LLVM 19+.
+
+* Fixed shuffle-related optimization issues.
+
+* Fixed enum fields missing from generated C/C++ headers.
+
+* Fixed VNNI intrinsic validation on SKX target.
+
+* Fixed rounding operations for float16 on SSE2 targets by adding emulation.
+
+New Example:
+
+* Added an AMX (Advanced Matrix Extensions) example demonstrating tile matrix
+  operations.
+
+Experimental RISC-V Support:
+
+* Initial support for the RISC-V 64-bit (riscv64) architecture has been added
+  with RISC-V Vector Extension (RVV) ISA, introducing the `rvv-x4` target for
+  4-wide vectorization. This support is experimental and not included in official
+  ISPC binaries. To use it, build ISPC from source with the `RISCV_ENABLED=ON`
+  CMake option or use pre-release binaries. Feedback and contributions are welcome.
+
+Recommended versions of Runtime Dependencies when targeting GPU:
+
+Linux:
+
+ - Intel(R) Graphics Compute Runtime
+   https://github.com/intel/compute-runtime/releases/tag/25.13.33276.16
+ - Level Zero Loader
+   https://github.com/oneapi-src/level-zero/releases/tag/v1.20.2
+ - Threading Building Blocks (TBB)
+
+Alternatively, you can use a validated gfx driver stack supporting Intel Arc(TM)
+available at https://dgpu-docs.intel.com/driver/installation.html
+
+Windows:
+
+ - Intel(R) Graphics Windows(R) DCH Drivers 32.0.101.8250
+   https://www.intel.com/content/www/us/en/download/785597/869290/intel-arc-graphics-windows.html
+ - Level Zero Loader
+   https://github.com/oneapi-src/level-zero/releases/tag/v1.20.2
+ - OpenCL(TM) Offline Compiler (OCLOC)
+   https://www.intel.com/content/www/us/en/developer/articles/tool/oneapi-standalone-components.html
+   (this is needed for AoT compilation on Windows only)
+ - Supported GPU platforms: Intel(R) Arc Graphics, 11th-13th Gen Intel(R) Core
+   processor graphics
+
+Components revisions used in GPU-enabled build:
+ - https://github.com/KhronosGroup/SPIRV-LLVM-Translator/commit/6dd8f2a
+ - https://github.com/intel/vc-intrinsics/commit/b980474
+ - https://github.com/oneapi-src/level-zero/commit/v1.20.2
+ - https://github.com/llvm/llvm-project/commit/87f0227 (llvmorg-20.1.8) +
+   patches from llvm_patches folder
+
 === v1.28.0 === (13 August 2025)
 
 ISPC release with enhanced struct operator support, the ability to use ISPC as
