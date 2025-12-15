@@ -6,6 +6,12 @@
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=avx512spr-x32
 //; RUN: %{ispc} %s -o %t.o --nostdlib --target=avx512spr-x64
 
+//; RUN: %{ispc} %s -o %t.o --nostdlib --target=avx512gnr-x4
+//; RUN: %{ispc} %s -o %t.o --nostdlib --target=avx512gnr-x8
+//; RUN: %{ispc} %s -o %t.o --nostdlib --target=avx512gnr-x16
+//; RUN: %{ispc} %s -o %t.o --nostdlib --target=avx512gnr-x32
+//; RUN: %{ispc} %s -o %t.o --nostdlib --target=avx512gnr-x64
+
 // REQUIRES: X86_ENABLED && !MACOS_HOST
 
 uniform int j;

@@ -164,29 +164,34 @@ class ISPCTarget:
         'neon-i32x8': 'generic-i32x8',
 
         # AVX10.2 targets
-        'avx10.2dmr-x4': 'avx512spr-x4',
-        'avx10.2dmr-x8': 'avx512spr-x8',
-        'avx10.2dmr-x16': 'avx512spr-x16',
-        'avx10.2dmr-x32': 'avx512spr-x32',
-        'avx10.2dmr-x64': 'avx512spr-x64',
+        'avx10.2dmr-x4': 'avx512gnr-x4',
+        'avx10.2dmr-x8': 'avx512gnr-x8',
+        'avx10.2dmr-x16': 'avx512gnr-x16',
+        'avx10.2dmr-x32': 'avx512gnr-x32',
+        'avx10.2dmr-x64': 'avx512gnr-x64',
 
         # AVX512 hierarchy
+        'avx512gnr-x4': 'avx512spr-x4',
         'avx512spr-x4': 'avx512icl-x4',
         'avx512icl-x4': 'avx512skx-x4',
         'avx512skx-x4': 'generic-i1x4',
 
+        'avx512gnr-x8': 'avx512spr-x8',
         'avx512spr-x8': 'avx512icl-x8',
         'avx512icl-x8': 'avx512skx-x8',
         'avx512skx-x8': 'generic-i1x8',
 
+        'avx512gnr-x16': 'avx512spr-x16',
         'avx512spr-x16': 'avx512icl-x16',
         'avx512icl-x16': 'avx512skx-x16',
         'avx512skx-x16': 'generic-i1x16',
 
+        'avx512gnr-x32': 'avx512spr-x32',
         'avx512spr-x32': 'avx512icl-x32',
         'avx512icl-x32': 'avx512skx-x32',
         'avx512skx-x32': 'generic-i1x32',
 
+        'avx512gnr-x64': 'avx512spr-x64',
         'avx512spr-x64': 'avx512icl-x64',
         'avx512icl-x64': 'avx512skx-x64',
         'avx512skx-x64': 'generic-i1x64',

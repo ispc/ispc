@@ -17,8 +17,8 @@ function(should_skip_target_for_os target os bit out_skip)
         if ("${bit}" STREQUAL "32")
             set(skip TRUE)
         endif()
-        # ISPC doesn't support avx512spr targets on macOS
-        if ("${target}" MATCHES "avx512spr" OR "${target}" MATCHES "avx10")
+        # ISPC doesn't support avx512spr/avx512gnr targets on macOS
+        if ("${target}" MATCHES "avx512spr" OR "${target}" MATCHES "avx512gnr" OR "${target}" MATCHES "avx10")
             set(skip TRUE)
         endif()
     endif()

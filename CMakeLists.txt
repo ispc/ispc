@@ -388,7 +388,8 @@ list(APPEND X86_TARGETS
     avx512skx-x32 avx512skx-x64
     avx512icl-x4 avx512icl-x8 avx512icl-x16 avx512icl-x16-nozmm
     avx512icl-x32 avx512icl-x64
-    avx512spr-x4 avx512spr-x8 avx512spr-x16 avx512spr-x32 avx512spr-x64)
+    avx512spr-x4 avx512spr-x8 avx512spr-x16 avx512spr-x32 avx512spr-x64
+    avx512gnr-x4 avx512gnr-x8 avx512gnr-x16 avx512gnr-x32 avx512gnr-x64)
 
 if (${LLVM_VERSION_NUMBER} VERSION_GREATER_EQUAL "20.1.2")
     list(APPEND X86_TARGETS avx10_2dmr-x4 avx10_2dmr-x8 avx10_2dmr-x16 avx10_2dmr-x32 avx10_2dmr-x64)

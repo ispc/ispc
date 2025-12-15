@@ -32,8 +32,13 @@
 // RUN: %{ispc} %s --nostdlib --nowrap --target=avx512spr-x16 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_AVX512
 // RUN: %{ispc} %s --nostdlib --nowrap --target=avx512spr-x32 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_AVX512
 // RUN: %{ispc} %s --nostdlib --nowrap --target=avx512spr-x64 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_AVX512
+// RUN: %{ispc} %s --nostdlib --nowrap --target=avx512gnr-x4 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_AVX512
+// RUN: %{ispc} %s --nostdlib --nowrap --target=avx512gnr-x8 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_AVX512
+// RUN: %{ispc} %s --nostdlib --nowrap --target=avx512gnr-x16 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_AVX512
+// RUN: %{ispc} %s --nostdlib --nowrap --target=avx512gnr-x32 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_AVX512
+// RUN: %{ispc} %s --nostdlib --nowrap --target=avx512gnr-x64 -o %t.o 2>&1 | FileCheck %s -check-prefix=CHECK_AVX512
 
-// A note about notrunning on macOS - it's because of SPR not being supported there.
+// A note about not running on macOS - it's because of SPR/GNR not being supported there.
 // It should be sufficient to run this test on other platforms and not to complicate
 // with splitting it to SPR and non-SPR versions.
 // REQUIRES: X86_ENABLED && !MACOS_HOST

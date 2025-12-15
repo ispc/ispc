@@ -2,8 +2,8 @@
 
 // RUN: not %{ispc} --nowrap %s --target=avx512icl-x4 --enable-llvm-intrinsics --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_ICL_ERROR
 // RUN: %{ispc} --nowrap %s --target=avx512spr-x4 --enable-llvm-intrinsics --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_SPR_SUCCESS
-// RUN: %{ispc} --nowrap %s --target=avx512spr-x4 --cpu=gnr --enable-llvm-intrinsics --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_GNR_SUCCESS
-// RUN: %{ispc} --nowrap %s --target=avx10.2dmr-x4 --cpu=dmr --enable-llvm-intrinsics --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_DMR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx512gnr-x4 --enable-llvm-intrinsics --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_GNR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx10.2dmr-x4 --enable-llvm-intrinsics --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_DMR_SUCCESS
 
 // REQUIRES: X86_ENABLED && LLVM_20_0+ && !MACOS_HOST
 

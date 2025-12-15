@@ -55,6 +55,16 @@
 // RUN: %{ispc} %s -O2 --woff --target=avx512spr-x32 --addressing=64 --nostdlib --emit-llvm-text --opt=disable-gathers --opt=disable-scatters -o - | FileCheck %s
 // RUN: %{ispc} %s -O2 --woff --target=avx512spr-x64 --addressing=32 --nostdlib --emit-llvm-text --opt=disable-gathers --opt=disable-scatters -o - | FileCheck %s
 // RUN: %{ispc} %s -O2 --woff --target=avx512spr-x64 --addressing=64 --nostdlib --emit-llvm-text --opt=disable-gathers --opt=disable-scatters -o - | FileCheck %s
+// RUN: %{ispc} %s -O2 --woff --target=avx512gnr-x4 --addressing=32 --nostdlib --emit-llvm-text --opt=disable-gathers --opt=disable-scatters -o - | FileCheck %s
+// RUN: %{ispc} %s -O2 --woff --target=avx512gnr-x4 --addressing=64 --nostdlib --emit-llvm-text --opt=disable-gathers --opt=disable-scatters -o - | FileCheck %s
+// RUN: %{ispc} %s -O2 --woff --target=avx512gnr-x8 --addressing=32 --nostdlib --emit-llvm-text --opt=disable-gathers --opt=disable-scatters -o - | FileCheck %s
+// RUN: %{ispc} %s -O2 --woff --target=avx512gnr-x8 --addressing=64 --nostdlib --emit-llvm-text --opt=disable-gathers --opt=disable-scatters -o - | FileCheck %s
+// RUN: %{ispc} %s -O2 --woff --target=avx512gnr-x16 --addressing=32 --nostdlib --emit-llvm-text --opt=disable-gathers --opt=disable-scatters -o - | FileCheck %s
+// RUN: %{ispc} %s -O2 --woff --target=avx512gnr-x16 --addressing=64 --nostdlib --emit-llvm-text --opt=disable-gathers --opt=disable-scatters -o - | FileCheck %s
+// RUN: %{ispc} %s -O2 --woff --target=avx512gnr-x32 --addressing=32 --nostdlib --emit-llvm-text --opt=disable-gathers --opt=disable-scatters -o - | FileCheck %s
+// RUN: %{ispc} %s -O2 --woff --target=avx512gnr-x32 --addressing=64 --nostdlib --emit-llvm-text --opt=disable-gathers --opt=disable-scatters -o - | FileCheck %s
+// RUN: %{ispc} %s -O2 --woff --target=avx512gnr-x64 --addressing=32 --nostdlib --emit-llvm-text --opt=disable-gathers --opt=disable-scatters -o - | FileCheck %s
+// RUN: %{ispc} %s -O2 --woff --target=avx512gnr-x64 --addressing=64 --nostdlib --emit-llvm-text --opt=disable-gathers --opt=disable-scatters -o - | FileCheck %s
 
 // REQUIRES: X86_ENABLED && !MACOS_HOST
 

@@ -1,6 +1,6 @@
-// RUN: %{ispc} --pic --target=sse2-i32x4,sse4.1-i32x4,avx1-i32x4,avx2-i32x4,avx2vnni-i32x4,avx512icl-x4,avx512skx-x4,avx512spr-x4 -h %t.h %s -o %t.o -g
+// RUN: %{ispc} --pic --target=sse2-i32x4,sse4.1-i32x4,avx1-i32x4,avx2-i32x4,avx2vnni-i32x4,avx512icl-x4,avx512skx-x4,avx512spr-x4,avx512gnr-x4 -h %t.h %s -o %t.o -g
 // RUN: %{cc} -x c -c %s -o %t.c.o --include %t.h -g
-// RUN: %{cc} %t.c.o -o %t.c.bin -g -rdynamic %t.o %t_sse2.o %t_sse4.o %t_avx.o %t_avx2.o %t_avx2vnni.o %t_avx512icl.o %t_avx512skx.o %t_avx512spr.o
+// RUN: %{cc} %t.c.o -o %t.c.bin -g -rdynamic %t.o %t_sse2.o %t_sse4.o %t_avx.o %t_avx2.o %t_avx2vnni.o %t_avx512icl.o %t_avx512skx.o %t_avx512spr.o %t_avx512gnr.o
 
 // RUN: sde -mrm -- %t.c.bin | FileCheck %s --check-prefix=CHECK-SSE2
 // RUN: sde -pnr -- %t.c.bin | FileCheck %s --check-prefix=CHECK-SSE4
@@ -10,6 +10,7 @@
 // RUN: sde -skx -- %t.c.bin | FileCheck %s --check-prefix=CHECK-SKX
 // RUN: sde -icl -- %t.c.bin | FileCheck %s --check-prefix=CHECK-ICL
 // RUN: sde -spr -- %t.c.bin | FileCheck %s --check-prefix=CHECK-SPR
+// RUN: sde -gnr -- %t.c.bin | FileCheck %s --check-prefix=CHECK-GNR
 
 // REQUIRES: LINUX_HOST && X86_ENABLED && SDE_INSTALLED
 
@@ -21,6 +22,7 @@
 // CHECK-SKX: ispc_foo_avx512skx
 // CHECK-ICL: ispc_foo_avx512icl
 // CHECK-SPR: ispc_foo_avx512spr
+// CHECK-GNR: ispc_foo_avx512gnr
 
 #ifdef ISPC
 extern "C" void print_stack_trace();

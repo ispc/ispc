@@ -47,13 +47,12 @@ const char *const isa_strings[] = {
     "SKX",
     "ICL",
     "SPR",
+    "GNR",
     "DMR",
 };
 
-static const char *spr_amx_on = "SPR (AMX on)";
-static const char *spr_amx_off = "SPR (AMX off)";
-
 static const char *lGetSystemISA() {
+    static char amx_isa_string[32];
 #if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64)
     return "ARM NEON";
 #elif defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
@@ -62,12 +61,10 @@ static const char *lGetSystemISA() {
         return "Unknown x86 ISA";
     }
     const char *isa = isa_strings[isa_id];
-    if (isa_id == SPR_AVX512) {
-        if (__os_enabled_amx_support()) {
-            return spr_amx_on;
-        } else {
-            return spr_amx_off;
-        }
+    if (isa_id >= SPR_AVX512) {
+        snprintf(amx_isa_string, sizeof(amx_isa_string), "%s (AMX %s)", isa,
+                 __os_enabled_amx_support() ? "on" : "off");
+        return amx_isa_string;
     }
     return isa;
 #elif defined(__riscv)

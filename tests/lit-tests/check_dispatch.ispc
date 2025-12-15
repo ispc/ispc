@@ -1,6 +1,6 @@
 // Compile the test for different x86 targets with auto-dispatch enabled and run the test under SDE to verify that correct platform was picked in runtime.
 
-// RUN: %{ispc} %s --target=sse2-i32x4,sse4-i32x4,avx1-i32x8,avx2-i32x8,avx2vnni-i32x8,avx512skx-x16,avx512icl-x16,avx512spr-x16 -o %t_ispc0.o --nostdlib
+// RUN: %{ispc} %s --target=sse2-i32x4,sse4-i32x4,avx1-i32x8,avx2-i32x8,avx2vnni-i32x8,avx512skx-x16,avx512icl-x16,avx512spr-x16,avx512gnr-x16 -o %t_ispc0.o --nostdlib
 // RUN: %{cc} -O2 %S/check_dispatch.c %t_ispc0*.o -o %t.exe
 // RUN: sde -mrm -- %t.exe | FileCheck %s -check-prefix=CHECK_SSE2
 // Note sse4-i32x4 implies SSE4.2 ISA, while Penryn is SSE4.1, so should fall back to SSE2.
@@ -12,15 +12,16 @@
 // RUN: sde -skx -- %t.exe | FileCheck %s -check-prefix=CHECK_SKX
 // RUN: sde -icl -- %t.exe | FileCheck %s -check-prefix=CHECK_ICL
 // RUN: sde -spr -- %t.exe | FileCheck %s -check-prefix=CHECK_SPR
+// RUN: sde -gnr -- %t.exe | FileCheck %s -check-prefix=CHECK_GNR
 
-// RUN: %{ispc} %s --target=sse2-i32x4,sse4.1-i32x4,avx1-i32x8,avx2-i32x8,avx512skx-x16,avx512spr-x16 -o %t_ispc2.o --nostdlib
+// RUN: %{ispc} %s --target=sse2-i32x4,sse4.1-i32x4,avx1-i32x8,avx2-i32x8,avx512skx-x16,avx512spr-x16,avx512gnr-x16 -o %t_ispc2.o --nostdlib
 // RUN: %{cc} -O2 %S/check_dispatch.c %t_ispc2*.o -o %t2.exe
 // RUN: sde -mrm -- %t2.exe | FileCheck %s -check-prefix=CHECK_SSE2
 // sse4.1-i32x4 is specified, so both Penryn and Nehalem should use it.
 // RUN: sde -pnr -- %t2.exe | FileCheck %s -check-prefix=CHECK_SSE4
 // RUN: sde -nhm -- %t2.exe | FileCheck %s -check-prefix=CHECK_SSE4
 
-// RUN: %{ispc} %s --target=sse2-i32x4,sse4.2-i32x4,avx1-i32x8,avx2-i32x8,avx512skx-x16,avx512spr-x16 -o %t_ispc3.o --nostdlib
+// RUN: %{ispc} %s --target=sse2-i32x4,sse4.2-i32x4,avx1-i32x8,avx2-i32x8,avx512skx-x16,avx512spr-x16,avx512gnr-x16 -o %t_ispc3.o --nostdlib
 // RUN: %{cc} -O2 %S/check_dispatch.c %t_ispc3*.o -o %t3.exe
 // RUN: sde -mrm -- %t3.exe | FileCheck %s -check-prefix=CHECK_SSE2
 // sse4.2-i32x4 is specified, so Penryn should fall back to SSE2.
@@ -37,9 +38,12 @@
 // CHECK_SKX: AVX512SKX
 // CHECK_ICL: AVX512ICL
 // CHECK_SPR: AVX512SPR
+// CHECK_GNR: AVX512GNR
 
 export uniform int detect_isa() {
-#if defined(ISPC_TARGET_AVX512SPR)
+#if defined(ISPC_TARGET_AVX512GNR)
+    return 10;
+#elif defined(ISPC_TARGET_AVX512SPR)
     return 9;
 #elif defined(ISPC_TARGET_AVX512ICL)
     return 8;
