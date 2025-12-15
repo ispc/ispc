@@ -10,6 +10,12 @@
 // RUN: %{ispc} --target=avx512spr-x32 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s
 // RUN: %{ispc} --target=avx512spr-x64 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s
 
+// RUN: %{ispc} --target=avx512gnr-x4 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s
+// RUN: %{ispc} --target=avx512gnr-x8 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s
+// RUN: %{ispc} --target=avx512gnr-x16 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s
+// RUN: %{ispc} --target=avx512gnr-x32 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s
+// RUN: %{ispc} --target=avx512gnr-x64 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s
+
 // REQUIRES: X86_ENABLED && !MACOS_HOST
 
 // CHECK-LABEL: clz___vyi

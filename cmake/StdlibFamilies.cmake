@@ -53,11 +53,11 @@ function(define_stdlib_families)
     # Note: nozmm targets are excluded - they produce different stdlib that avoids ZMM instructions
     set(FAMILY_DEFINITIONS
         # AVX512 families - use generic targets
-        "i1x4:generic-i1x4:avx512skx-x4,avx512icl-x4,avx512spr-x4${AVX10_X4}"
-        "i1x8:generic-i1x8:avx512skx-x8,avx512icl-x8,avx512spr-x8${AVX10_X8}"
-        "i1x16:generic-i1x16:avx512skx-x16,avx512icl-x16,avx512spr-x16${AVX10_X16}"
-        "i1x32:generic-i1x32:avx512skx-x32,avx512icl-x32,avx512spr-x32${AVX10_X32}"
-        "i1x64:generic-i1x64:avx512skx-x64,avx512icl-x64,avx512spr-x64${AVX10_X64}"
+        "i1x4:generic-i1x4:avx512skx-x4,avx512icl-x4,avx512spr-x4,avx512gnr-x4${AVX10_X4}"
+        "i1x8:generic-i1x8:avx512skx-x8,avx512icl-x8,avx512spr-x8,avx512gnr-x8${AVX10_X8}"
+        "i1x16:generic-i1x16:avx512skx-x16,avx512icl-x16,avx512spr-x16,avx512gnr-x16${AVX10_X16}"
+        "i1x32:generic-i1x32:avx512skx-x32,avx512icl-x32,avx512spr-x32,avx512gnr-x32${AVX10_X32}"
+        "i1x64:generic-i1x64:avx512skx-x64,avx512icl-x64,avx512spr-x64,avx512gnr-x64${AVX10_X64}"
 
         # SSE/AVX families that match generic implementation
         "i32x4:generic-i32x4:sse2-i32x4,sse4-i32x4"

@@ -32,6 +32,9 @@ int main() {
       printf("AVX512SPR\n");
       break;
     case 10:
+      printf("AVX512GNR\n");
+      break;
+    case 11:
       printf("AVX10_2DMR\n");
       break;
     default:

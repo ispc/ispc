@@ -3,17 +3,22 @@
 // RUN: %{ispc} --target=avx512skx-x4 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o -  | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_SKX_INT8,CHECK_INT16,CHECK_INT32,CHECK_FLOAT,CHECK_DOUBLE,CHECK_INT64
 // RUN: %{ispc} --target=avx512icl-x4 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o -  | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_SKX_INT8,CHECK_INT16,CHECK_INT32,CHECK_FLOAT,CHECK_DOUBLE,CHECK_INT64
 // RUN: %{ispc} --target=avx512spr-x4 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o -  | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_SKX_INT8,CHECK_INT16,CHECK_INT32,CHECK_FLOAT,CHECK_DOUBLE,CHECK_INT64
+// RUN: %{ispc} --target=avx512gnr-x4 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o -  | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_SKX_INT8,CHECK_INT16,CHECK_INT32,CHECK_FLOAT,CHECK_DOUBLE,CHECK_INT64
 // RUN: %{ispc} --target=avx512skx-x8 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o -  | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_SKX_INT8,CHECK_INT16,CHECK_INT32,CHECK_FLOAT
 // RUN: %{ispc} --target=avx512icl-x8 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o -  | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_SKX_INT8,CHECK_INT16,CHECK_INT32,CHECK_FLOAT
 // RUN: %{ispc} --target=avx512spr-x8 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o -  | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_SKX_INT8,CHECK_INT16,CHECK_INT32,CHECK_FLOAT
+// RUN: %{ispc} --target=avx512gnr-x8 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o -  | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_SKX_INT8,CHECK_INT16,CHECK_INT32,CHECK_FLOAT
 // RUN: %{ispc} --target=avx512skx-x16 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT8,CHECK_INT16,CHECK_INT32,CHECK_FLOAT
 // RUN: %{ispc} --target=avx512icl-x16 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT8,CHECK_INT16,CHECK_INT32,CHECK_FLOAT
 // RUN: %{ispc} --target=avx512spr-x16 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT8,CHECK_INT16,CHECK_INT32,CHECK_FLOAT
+// RUN: %{ispc} --target=avx512gnr-x16 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT8,CHECK_INT16,CHECK_INT32,CHECK_FLOAT
 // RUN: %{ispc} --target=avx512skx-x32 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT8
 // RUN: %{ispc} --target=avx512icl-x32 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT8
 // RUN: %{ispc} --target=avx512spr-x32 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT8
+// RUN: %{ispc} --target=avx512gnr-x32 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT8
 // RUN: %{ispc} --target=avx512icl-x64 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT8
 // RUN: %{ispc} --target=avx512spr-x64 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT8
+// RUN: %{ispc} --target=avx512gnr-x64 --nowrap -O2 --emit-asm --x86-asm-syntax=intel %s -o - | FileCheck %s --check-prefixes=CHECK_ALL,CHECK_INT8
 
 // REQUIRES: X86_ENABLED && !MACOS_HOST
 

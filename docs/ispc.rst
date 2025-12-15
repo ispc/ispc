@@ -1255,7 +1255,8 @@ avx2          AVX2                      Intel Haswell (2013) [#]_, AMD Excavator
 avx2vnni      AVX2                      Intel Alder Lake (2021), AMD Zen5 (2024)
 avx512skx     AVX-512                   Intel Skylake Xeon (2017), AMD Zen4 (2022)
 avx512icl     AVX-512                   Intel Icelake (2019), AMD Zen4 (2022)
-avx512spr     AVX-512                   Intel Sapphire Rapids (2023)
+avx512spr     AVX-512 + AMX             Intel Sapphire Rapids (2023)
+avx512gnr     AVX-512 + AMX FP16        Intel Granite Rapids (2024)
 avx10.2dmr    AVX10.2 + AMX             Intel Diamond Rapids (2026+)
 neon          ARMv8 NEON                ARM Cortex-A35/A53/A57 (2012-2015)
 ============= ========================= ===========================================================
@@ -1336,7 +1337,8 @@ x86 targets:
 ``avx512skx-x4``, ``avx512skx-x8``, ``avx512skx-x16``, ``avx512skx-x32``,
 ``avx512skx-x64``, ``avx512icl-x4``, ``avx512icl-x8``, ``avx512icl-x16``, ``avx512icl-x32``,
 ``avx512icl-x64``, ``avx512spr-x4``, ``avx512spr-x8``, ``avx512spr-x16``, ``avx512spr-x32``,
-``avx512spr-x64``.
+``avx512spr-x64``, ``avx512gnr-x4``, ``avx512gnr-x8``, ``avx512gnr-x16``, ``avx512gnr-x32``,
+``avx512gnr-x64``.
 
 Neon targets:
 
@@ -1419,7 +1421,7 @@ preprocessor runs:
   * - ISPC
     - 1
     - Enables detecting that the ``ispc`` compiler is processing the file
-  * - ISPC_TARGET_{NEON, SSE2, SSE4, AVX, AVX2, AVX512SKX, AVX512ICL, AVX512SPR, AVX10_2}
+  * - ISPC_TARGET_{NEON, SSE2, SSE4, AVX, AVX2, AVX512SKX, AVX512ICL, AVX512SPR, AVX512GNR, AVX10_2DMR}
     - 1
     - One of these will be set, depending on the compilation target
   * - ISPC_POINTER_SIZE

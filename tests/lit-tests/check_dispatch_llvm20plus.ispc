@@ -12,6 +12,8 @@
 
 export uniform int detect_isa() {
 #if defined(ISPC_TARGET_AVX10_2DMR)
+    return 11;
+#elif defined(ISPC_TARGET_AVX512GNR)
     return 10;
 #elif defined(ISPC_TARGET_AVX512SPR)
     return 9;

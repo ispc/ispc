@@ -251,12 +251,14 @@ static ISPCTarget lGetSystemISA() {
         return ISPCTarget::avx512icl_x16;
     case Target::ISA::SPR_AVX512:
         return ISPCTarget::avx512spr_x16;
+    case Target::ISA::GNR_AVX512:
+        return ISPCTarget::avx512gnr_x16;
     case Target::ISA::DMR_AVX10_2:
         // Return SPR target for LLVM versions < 20.0
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
         return ISPCTarget::avx10_2dmr_x16;
 #else
-        return ISPCTarget::avx512spr_x16;
+        return ISPCTarget::avx512gnr_x16;
 #endif
     default:
         Error(SourcePos(), "Detected unsupported x86 ISA. Exiting.");
@@ -1028,8 +1030,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 #endif
 
         case CPU_SPR:
-        case CPU_GNR:
             m_ispc_target = ISPCTarget::avx512spr_x16;
+            break;
+
+        case CPU_GNR:
+            m_ispc_target = ISPCTarget::avx512gnr_x16;
             break;
 
         case CPU_ZNVER4:
@@ -1577,7 +1582,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512icl_x32) ? CPU_ICL : CPU_SKX;
         break;
     case ISPCTarget::avx512spr_x4:
-        this->m_isa = Target::SPR_AVX512;
+    case ISPCTarget::avx512gnr_x4:
+        this->m_isa = (m_ispc_target == ISPCTarget::avx512gnr_x4) ? Target::GNR_AVX512 : Target::SPR_AVX512;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
         this->m_dataTypeWidth = 32;
@@ -1589,12 +1595,13 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
                          TargetCapability::Rsqrtd, TargetCapability::Rcpd, TargetCapability::Fp16Support,
                          TargetCapability::IntelVNNI, TargetCapability::ConflictDetection});
-        CPUfromISA = CPU_SPR;
+        CPUfromISA = (m_ispc_target == ISPCTarget::avx512gnr_x4) ? CPU_GNR : CPU_SPR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
         break;
     case ISPCTarget::avx512spr_x8:
-        this->m_isa = Target::SPR_AVX512;
+    case ISPCTarget::avx512gnr_x8:
+        this->m_isa = (m_ispc_target == ISPCTarget::avx512gnr_x8) ? Target::GNR_AVX512 : Target::SPR_AVX512;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
         this->m_dataTypeWidth = 32;
@@ -1606,12 +1613,13 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
                          TargetCapability::Rsqrtd, TargetCapability::Rcpd, TargetCapability::Fp16Support,
                          TargetCapability::IntelVNNI, TargetCapability::ConflictDetection});
-        CPUfromISA = CPU_SPR;
+        CPUfromISA = (m_ispc_target == ISPCTarget::avx512gnr_x8) ? CPU_GNR : CPU_SPR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
         break;
     case ISPCTarget::avx512spr_x16:
-        this->m_isa = Target::SPR_AVX512;
+    case ISPCTarget::avx512gnr_x16:
+        this->m_isa = (m_ispc_target == ISPCTarget::avx512gnr_x16) ? Target::GNR_AVX512 : Target::SPR_AVX512;
         this->m_nativeVectorWidth = 16;
         this->m_nativeVectorAlignment = 64;
         this->m_dataTypeWidth = 32;
@@ -1623,12 +1631,13 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
                          TargetCapability::Rsqrtd, TargetCapability::Rcpd, TargetCapability::Fp16Support,
                          TargetCapability::IntelVNNI, TargetCapability::ConflictDetection});
-        CPUfromISA = CPU_SPR;
+        CPUfromISA = (m_ispc_target == ISPCTarget::avx512gnr_x16) ? CPU_GNR : CPU_SPR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "512"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "512"));
         break;
     case ISPCTarget::avx512spr_x64:
-        this->m_isa = Target::SPR_AVX512;
+    case ISPCTarget::avx512gnr_x64:
+        this->m_isa = (m_ispc_target == ISPCTarget::avx512gnr_x64) ? Target::GNR_AVX512 : Target::SPR_AVX512;
         this->m_nativeVectorWidth = 64;
         this->m_nativeVectorAlignment = 64;
         this->m_dataTypeWidth = 8;
@@ -1640,10 +1649,11 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
                          TargetCapability::Fp16Support, TargetCapability::IntelVNNI,
                          TargetCapability::ConflictDetection});
-        CPUfromISA = CPU_SPR;
+        CPUfromISA = (m_ispc_target == ISPCTarget::avx512gnr_x64) ? CPU_GNR : CPU_SPR;
         break;
     case ISPCTarget::avx512spr_x32:
-        this->m_isa = Target::SPR_AVX512;
+    case ISPCTarget::avx512gnr_x32:
+        this->m_isa = (m_ispc_target == ISPCTarget::avx512gnr_x32) ? Target::GNR_AVX512 : Target::SPR_AVX512;
         this->m_nativeVectorWidth = 64;
         this->m_nativeVectorAlignment = 64;
         this->m_dataTypeWidth = 16;
@@ -1655,7 +1665,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
                          TargetCapability::Fp16Support, TargetCapability::IntelVNNI,
                          TargetCapability::ConflictDetection});
-        CPUfromISA = CPU_SPR;
+        CPUfromISA = (m_ispc_target == ISPCTarget::avx512gnr_x32) ? CPU_GNR : CPU_SPR;
         break;
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
     case ISPCTarget::avx10_2dmr_x4:
@@ -2086,6 +2096,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
     case Target::SKX_AVX512:
     case Target::ICL_AVX512:
     case Target::SPR_AVX512:
+    case Target::GNR_AVX512:
         this->setWarning(PerfWarningType::DIVModInt);
         break;
     // TODO: Add warnings for AVX10
@@ -2127,7 +2138,7 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
 
     if ((m_ispc_target == ISPCTarget::generic_i32x16 || m_ispc_target == ISPCTarget::generic_i1x16 ||
          m_ispc_target == ISPCTarget::generic_i1x32 || m_ispc_target == ISPCTarget::generic_i1x64) &&
-        (CPUID == CPU_SKX || CPUID == CPU_ICL || CPUID == CPU_SPR
+        (CPUID == CPU_SKX || CPUID == CPU_ICL || CPUID == CPU_SPR || CPUID == CPU_GNR
 #if LLVM_VERSION >= ISPC_LLVM_20_0
          || CPUID == CPU_DMR
 #endif
@@ -2672,6 +2683,8 @@ const char *Target::ISAToString(ISA isa) {
         return "avx512icl";
     case Target::SPR_AVX512:
         return "avx512spr";
+    case Target::GNR_AVX512:
+        return "avx512gnr";
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
     case Target::DMR_AVX10_2:
         return "avx10.2dmr";
@@ -2741,6 +2754,8 @@ const char *Target::ISAToTargetString(ISA isa) {
         return "avx512icl-x16";
     case Target::SPR_AVX512:
         return "avx512spr-x16";
+    case Target::GNR_AVX512:
+        return "avx512gnr-x16";
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
     case Target::DMR_AVX10_2:
         return "avx10.2dmr-x16";
@@ -2804,6 +2819,12 @@ Target::ISA Target::TargetToISA(ISPCTarget target) {
     case ISPCTarget::avx512spr_x32:
     case ISPCTarget::avx512spr_x64:
         return Target::ISA::SPR_AVX512;
+    case ISPCTarget::avx512gnr_x4:
+    case ISPCTarget::avx512gnr_x8:
+    case ISPCTarget::avx512gnr_x16:
+    case ISPCTarget::avx512gnr_x32:
+    case ISPCTarget::avx512gnr_x64:
+        return Target::ISA::GNR_AVX512;
     case ISPCTarget::avx10_2dmr_x4:
     case ISPCTarget::avx10_2dmr_x8:
     case ISPCTarget::avx10_2dmr_x16:

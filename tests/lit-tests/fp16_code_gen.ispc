@@ -8,6 +8,11 @@
 // RUN: %{ispc} %s --target=avx512spr-x32 --emit-asm -o - | FileCheck %s -check-prefix=CHECK_SPR
 // RUN: %{ispc} %s --target=avx512spr-x64 --emit-asm -o - | FileCheck %s -check-prefix=CHECK_SPR
 
+// RUN: %{ispc} %s --target=avx512gnr-x4 --emit-asm -o - | FileCheck %s -check-prefix=CHECK_SPR
+// RUN: %{ispc} %s --target=avx512gnr-x8 --emit-asm -o - | FileCheck %s -check-prefix=CHECK_SPR
+// RUN: %{ispc} %s --target=avx512gnr-x32 --emit-asm -o - | FileCheck %s -check-prefix=CHECK_SPR
+// RUN: %{ispc} %s --target=avx512gnr-x64 --emit-asm -o - | FileCheck %s -check-prefix=CHECK_SPR
+
 // REQUIRES: X86_ENABLED && !MACOS_HOST
 
 // CHECK_SPR-LABEL: fp16_add

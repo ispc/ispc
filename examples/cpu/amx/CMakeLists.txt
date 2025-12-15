@@ -100,8 +100,8 @@ message(STATUS "AMX support detected via: ${AMX_DETECTION_METHOD}")
 if(AMX_SUPPORTED)
     set (ISPC_SRC_NAME "amx_matmul")
     set (TARGET_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/amx_matmul.cpp)
-    set (ISPC_FLAGS -O2 --target=avx512spr-x32 --cpu=gnr --enable-llvm-intrinsics --pic)
-    set (ISPC_IA_TARGETS "avx512spr-x32")
+    set (ISPC_FLAGS -O2 --target=avx512gnr-x32 --enable-llvm-intrinsics --pic)
+    set (ISPC_IA_TARGETS "avx512gnr-x32")
 
     add_ispc_example(NAME "amx"
                   ISPC_IA_TARGETS ${ISPC_IA_TARGETS}
