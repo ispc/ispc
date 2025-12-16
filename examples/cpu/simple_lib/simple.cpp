@@ -62,8 +62,8 @@ int main() {
     std::cout << "\nTesting multiple engines...\n";
 
     // Create multiple engines with different targets that would conflict
-    std::vector<std::string> engineArgs1 = {"simple.ispc", "--target=sse2-i32x4", "-O2", "-o",
-                                            "simple_sse2.o", "-h", "simple_sse2.h"};
+    std::vector<std::string> engineArgs1 = {"simple.ispc", "--target=sse4-i32x4", "-O2", "-o",
+                                            "simple_sse4.o", "-h", "simple_sse4.h"};
 
     std::vector<std::string> engineArgs2 = {"simple.ispc", "--target=avx2-i32x8", "-O0", "-o",
                                             "simple_avx2.o", "-h", "simple_avx2.h"};
@@ -82,7 +82,7 @@ int main() {
         std::cout << "Created 3 engines with different targets\n";
 
         // Execute engines in sequence
-        std::cout << "Executing engine 1 (SSE2)...\n";
+        std::cout << "Executing engine 1 (SSE4)...\n";
         int result1 = engine1->Execute();
 
         std::cout << "Executing engine 2 (AVX2)...\n";
@@ -93,7 +93,7 @@ int main() {
 
         if (result1 == 0 && result2 == 0 && result3 == 0) {
             std::cout << "SUCCESS\n";
-            std::cout << "  - SSE2 compilation: simple_sse2.o\n";
+            std::cout << "  - SSE4 compilation: simple_sse4.o\n";
             std::cout << "  - AVX2 compilation: simple_avx2.o\n";
             std::cout << "  - Host ASM compilation: simple_host.s\n";
         } else {
