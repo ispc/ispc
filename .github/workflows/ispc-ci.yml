@@ -690,7 +690,7 @@ jobs:
         cmake --build build --target package-examples
 
     - name: Upload examples package
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: examples_zip
         path: build/ispc-examples-trunk.zip
@@ -713,7 +713,7 @@ jobs:
         cmake --build build --target package-examples
 
     - name: Upload package
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: examples_tgz
         path: build/ispc-examples-trunk.tar.gz
@@ -726,12 +726,12 @@ jobs:
       with:
         submodules: true
     - name: Download ispc package
-      uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
       with:
         name: ispc_llvm20_win
 
     - name: Download examples package
-      uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
       with:
         name: examples_zip
         path: examples-package
@@ -776,12 +776,12 @@ jobs:
       with:
         submodules: true
     - name: Download ispc package
-      uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
       with:
         name: ispc_llvm20_linux
 
     - name: Download examples package
-      uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
       with:
         name: examples_tgz
         path: examples-package
@@ -820,12 +820,12 @@ jobs:
       with:
         submodules: true
     - name: Download ispc package
-      uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
       with:
         name: ispc_llvm20_macos-14
 
     - name: Download examples package
-      uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
       with:
         name: examples_tgz
         path: examples-package
