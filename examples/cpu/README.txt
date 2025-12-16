@@ -260,7 +260,7 @@ This example demonstrates how to use ISPC as a library to compile ISPC code at r
 
 * Initialize and shutdown the ISPC library
 * Compile ISPC source files with different options using ispc::CompileFromArgs()
-* Create multiple ISPC engines with different targets (SSE2, AVX2, host)
+* Create multiple ISPC engines with different targets (SSE4, AVX2, host)
 * Generate different output formats (object files, assembly, headers)
 
 Simple_jit

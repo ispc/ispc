@@ -13,7 +13,7 @@ set (TARGET_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/ao.cpp
                     ${EXAMPLES_ROOT}/common/timing.h
                     ${EXAMPLES_ROOT}/common/tasksys.cpp)
 set (ISPC_FLAGS -O2 --instrument)
-set (ISPC_IA_TARGETS "sse2")
+set (ISPC_IA_TARGETS "sse4")
 set (ISPC_ARM_TARGETS "neon")
 if (WIN32)
     set (LIBRARIES)
