@@ -1,3 +1,8 @@
+=== v1.29.1 === (19 December 2025)
+
+A minor ISPC update with reverted support of blend stores for structures
+causing a stability regression on SSE2/SSE4/PS4 targets.
+
 === v1.29.0 === (17 December 2025)
 
 ISPC release featuring sample-based profile-guided optimization, optimized dispatcher,
