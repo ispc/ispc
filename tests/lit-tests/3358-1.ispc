@@ -2,7 +2,8 @@
 //
 // RUN: %{ispc} --target=sse2-i32x8 --emit-llvm-text --nowrap %s -o - | FileCheck %s
 // REQUIRES: X86_ENABLED
-
+// The fix for the issue was reverted, see ReleaseNotes v1.29.1
+// XFAIL: *
 struct Foo {
     varying float y;
 };
