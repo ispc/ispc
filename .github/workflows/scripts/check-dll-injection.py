@@ -1,4 +1,4 @@
-# Copyright 2024, Intel Corporation
+# Copyright 2024-2025, Intel Corporation
 # SPDX-License-Identifier: BSD-3-Clause
 
 # This script performs DLL injection checks by creating an empty DLL,
@@ -43,7 +43,8 @@ def start_procmon(logfile):
 def run_ispc(times=3):
     for i in range(times):
         print(f"Running ispc.exe... (Attempt {i + 1})")
-        process = subprocess.Popen(["ispc.exe"])
+        # Suppress stdout/stderr since we only care about DLL loading behavior, not ispc output
+        process = subprocess.Popen(["ispc.exe"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         time.sleep(2)
         print("Terminating ispc.exe...")
         process.terminate()  # Terminate the process if it's still alive
