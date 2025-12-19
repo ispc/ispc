@@ -89,8 +89,8 @@ jobs:
       - name: Set up PATH
         run: |
           echo "YARPGEN_HOME=$GITHUB_WORKSPACE/yarpgen" >> "$GITHUB_ENV"
-          echo "$GITHUB_WORKSPACE/scripts" >> "$GITHUB_PATH"
-          echo "$GITHUB_WORKSPACE/build" >> "$GITHUB_PATH"
+          echo "$GITHUB_WORKSPACE/yarpgen/scripts" >> "$GITHUB_PATH"
+          echo "$GITHUB_WORKSPACE/yarpgen/build" >> "$GITHUB_PATH"
 
       - name: Set timeout for dispatched run
         if: github.event_name == 'workflow_dispatch'
