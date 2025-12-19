@@ -469,8 +469,8 @@ jobs:
       platform: macos
       architecture: aarch64
       artifact_name: ispc_llvm${{ matrix.llvm }}_macos-14
-      targets: ${{ needs.define-flow.outputs.tests_matrix_targets_arm }}
-      optsets: ${{ needs.define-flow.outputs.tests_optsets }}
+      targets: '["neon-i32x4"]'
+      optsets: -O0 -O2
       ispc_extra_flags: ${{ matrix.extra_flags }}
 
   win-build-ispc:
