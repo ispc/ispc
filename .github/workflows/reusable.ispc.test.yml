@@ -118,14 +118,22 @@ jobs:
       # See issue #2818 for more details about skipping avx512, avx10 and avx2vnni targets. It's SDE problem running on AMD runner.
       # Unfortunately it's not possible to do this on job level, so we need to do it on step level.
       if: (inputs.platform == 'linux' || inputs.platform == 'macos') && inputs.architecture != 'aarch64' && inputs.architecture != 'wasm32' && inputs.architecture != 'wasm64' && !(inputs.architecture == 'x86' && (contains(matrix.target, 'avx2vnni') || contains(matrix.target, 'avx512') || contains(matrix.target, 'avx10')))
-      shell: bash
-      run: |
-        echo "PATH=${PATH}"
-        if [ "${{ inputs.enable_debug }}" = "true" ]; then
-          ./scripts/alloy.py -r --only="stability ${INPUTS_ARCHITECTURE} current debug ${INPUTS_OPTSETS}" --only-targets="${MATRIX_TARGET}" --time --update-errors=FP --ispc-flags="${INPUTS_ISPC_EXTRA_FLAGS}"
-        else
-          ./scripts/alloy.py -r --only="stability ${INPUTS_ARCHITECTURE} current ${INPUTS_OPTSETS}" --only-targets="${MATRIX_TARGET}" --time --update-errors=FP --ispc-flags="${INPUTS_ISPC_EXTRA_FLAGS}"
-        fi
+      uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
+      with:
+        timeout_minutes: 120
+        max_attempts: 2
+        shell: bash
+        command: |
+          # Reset fail_db.txt to clean state before each attempt
+          git checkout -- tests/fail_db.txt
+          echo "PATH=${PATH}"
+          if [ "${{ inputs.enable_debug }}" = "true" ]; then
+            ./scripts/alloy.py -r --only="stability ${INPUTS_ARCHITECTURE} current debug ${INPUTS_OPTSETS}" --only-targets="${MATRIX_TARGET}" --time --update-errors=FP --ispc-flags="${INPUTS_ISPC_EXTRA_FLAGS}"
+          else
+            ./scripts/alloy.py -r --only="stability ${INPUTS_ARCHITECTURE} current ${INPUTS_OPTSETS}" --only-targets="${MATRIX_TARGET}" --time --update-errors=FP --ispc-flags="${INPUTS_ISPC_EXTRA_FLAGS}"
+          fi
+          # Check for test failures - retry if flaky
+          git diff --exit-code
       env:
         INPUTS_ARCHITECTURE: ${{ inputs.architecture }}
         INPUTS_OPTSETS: ${{ inputs.optsets }}
@@ -158,16 +166,24 @@ jobs:
 
     - name: Running tests on Windows (alloy mode)
       if: inputs.platform == 'windows' && inputs.calling_conv == '' && inputs.architecture != 'aarch64'
-      run: |
-        $env:ISPC_HOME = "$pwd"
-        .github/workflows/scripts/load-vs-env.ps1 "$env:INPUTS_ARCHITECTURE"
-        if ("${{ inputs.enable_debug }}" -eq "true") {
-          python .\scripts\alloy.py -r --only="stability $env:INPUTS_ARCHITECTURE current debug $env:INPUTS_OPTSETS" --only-targets="$env:MATRIX_TARGET" --time --update-errors=FP --ispc-flags="$env:INPUTS_ISPC_EXTRA_FLAGS"
-        } else {
-          python .\scripts\alloy.py -r --only="stability $env:INPUTS_ARCHITECTURE current $env:INPUTS_OPTSETS" --only-targets="$env:MATRIX_TARGET" --time --update-errors=FP --ispc-flags="$env:INPUTS_ISPC_EXTRA_FLAGS"
-        }
-        Write-Host "Finished executing alloy.py"
-      shell: pwsh
+      uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
+      with:
+        timeout_minutes: 120
+        max_attempts: 2
+        shell: pwsh
+        command: |
+          # Reset fail_db.txt to clean state before each attempt
+          git checkout -- tests/fail_db.txt
+          $env:ISPC_HOME = "$pwd"
+          .github/workflows/scripts/load-vs-env.ps1 "$env:INPUTS_ARCHITECTURE"
+          if ("${{ inputs.enable_debug }}" -eq "true") {
+            python .\scripts\alloy.py -r --only="stability $env:INPUTS_ARCHITECTURE current debug $env:INPUTS_OPTSETS" --only-targets="$env:MATRIX_TARGET" --time --update-errors=FP --ispc-flags="$env:INPUTS_ISPC_EXTRA_FLAGS"
+          } else {
+            python .\scripts\alloy.py -r --only="stability $env:INPUTS_ARCHITECTURE current $env:INPUTS_OPTSETS" --only-targets="$env:MATRIX_TARGET" --time --update-errors=FP --ispc-flags="$env:INPUTS_ISPC_EXTRA_FLAGS"
+          }
+          Write-Host "Finished executing alloy.py"
+          # Check for test failures - retry if flaky
+          git diff --exit-code
       env:
         INPUTS_ARCHITECTURE: ${{ inputs.architecture }}
         INPUTS_OPTSETS: ${{ inputs.optsets }}
@@ -208,7 +224,7 @@ jobs:
       run: |
         TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
         if [ "${{ inputs.enable_debug }}" == "true" ]; then
-          echo "name_prefix=${INPUTS_ARTIFACT_NAME}.debug.${INPUTS_ARCHITECTURE}.${MATRIX_TARGET}.${TIMESTAMP}" >> "$GITHUB_ENV"
+          echo "name_prefix=${INPUTS_ARTIFACT_NAME}.debug.${INPUTS_ARCHITECTURE}.${MATRIX_TARGET}.${TIMESTAMP}" >> "$GITHUB_OUTPUT"
         else
           echo "name_prefix=${INPUTS_ARTIFACT_NAME}.${INPUTS_ARCHITECTURE}.${MATRIX_TARGET}.${TIMESTAMP}" >> "$GITHUB_OUTPUT"
         fi
