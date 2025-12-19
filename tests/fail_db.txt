@@ -43,3 +43,15 @@
 ./tests/func-tests/cbrt-double.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 20.1 clang++20.1 O2 spv *
 ./tests/func-tests/cbrt-float.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 20.1 clang++20.1 O2 spv *
 ./tests/func-tests/cbrt-double.ispc runfail    xe64      xehpc-x16 pvc   Linux LLVM 20.1 clang++20.1 O2 spv *
+.\tests\func-tests\select-short-vec-func.ispc runfail     x86    avx1-i32x16 unspec Windows LLVM 18.1         cl O1 obj *
+.\tests\func-tests\select-short-vec.ispc runfail     x86    avx1-i32x16 unspec Windows LLVM 18.1         cl O1 obj *
+.\tests\func-tests\select-short-vec-func.ispc runfail     x86    avx2-i32x16 unspec Windows LLVM 18.1         cl O1 obj *
+.\tests\func-tests\select-short-vec.ispc runfail     x86    avx2-i32x16 unspec Windows LLVM 18.1         cl O1 obj *
+.\tests\func-tests\select-short-vec-func.ispc runfail     x86 avx2vnni-i32x16 unspec Windows LLVM 18.1         cl O1 obj *
+.\tests\func-tests\select-short-vec.ispc runfail     x86 avx2vnni-i32x16 unspec Windows LLVM 18.1         cl O1 obj *
+.\tests\func-tests\select-short-vec-func.ispc runfail  x86-64    avx1-i32x16 unspec Windows LLVM 18.1         cl O1 obj *
+.\tests\func-tests\select-short-vec.ispc runfail  x86-64    avx1-i32x16 unspec Windows LLVM 18.1         cl O1 obj *
+.\tests\func-tests\select-short-vec-func.ispc runfail  x86-64    avx2-i32x16 unspec Windows LLVM 18.1         cl O1 obj *
+.\tests\func-tests\select-short-vec.ispc runfail  x86-64    avx2-i32x16 unspec Windows LLVM 18.1         cl O1 obj *
+.\tests\func-tests\select-short-vec-func.ispc runfail  x86-64 avx2vnni-i32x16 unspec Windows LLVM 18.1         cl O1 obj *
+.\tests\func-tests\select-short-vec.ispc runfail  x86-64 avx2vnni-i32x16 unspec Windows LLVM 18.1         cl O1 obj *
