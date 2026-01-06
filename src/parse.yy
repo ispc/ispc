@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -291,7 +291,7 @@ struct ForeachDimension {
 %type <structDeclarationList> struct_declaration_list
 
 %type <symbolList> enumerator_list
-%type <symbol> enumerator foreach_identifier foreach_active_identifier template_int_parameter template_enum_parameter
+%type <symbol> enumerator foreach_identifier foreach_active_identifier template_int_parameter template_typename_parameter
 %type <enumType> enum_specifier
 
 %type <type> specifier_qualifier_list struct_or_union_specifier
@@ -2934,15 +2934,23 @@ template_int_parameter
       }
     ;
 
-template_enum_parameter
+template_typename_parameter
     : TOKEN_TYPE_NAME TOKEN_IDENTIFIER
       {
           const Type *type = m->symbolTable->LookupType($1->c_str());
-          const EnumType *enumType = CastType<EnumType>(type);
-          if (enumType == nullptr) {
-            Error(@1, "Only enum types and integral types are allowed as non-type template parameters.");
+          const Type *paramType = nullptr;
+          if (const EnumType *enumType = CastType<EnumType>(type)) {
+              paramType = enumType->GetAsConstType()->GetAsUniformType();
+          } else if (type != nullptr && type->IsIntType()) {
+              paramType = type->GetAsConstType()->GetAsUniformType();
+          } else {
+              Error(@1, "Only enum types and integral types are allowed as non-type template parameters.");
           }
-          $$ = new Symbol(*$<stringVal>2, Union(@1, @2), Symbol::SymbolKind::TemplateNonTypeParm, enumType->GetAsConstType()->GetAsUniformType());
+          if (paramType != nullptr) {
+              $$ = new Symbol(*$<stringVal>2, Union(@1, @2), Symbol::SymbolKind::TemplateNonTypeParm, paramType);
+          } else {
+              $$ = nullptr;
+          }
           lCleanUpString($1);
           lCleanUpString($2);
       }
@@ -2960,7 +2968,7 @@ template_parameter
             $$ = new TemplateParam($1);
         }
     }
-    | template_enum_parameter
+    | template_typename_parameter
     {
         if ($1 != nullptr) {
             $$ = new TemplateParam($1);
