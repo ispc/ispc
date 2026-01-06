@@ -1142,6 +1142,40 @@ static llvm::Value *lComputeCommonPointer(llvm::Value *base, llvm::Type *baseTyp
     return LLVMGEPInst(base, baseType, firstOffset, "ptr", insertBefore);
 }
 
+/** For negative stride access patterns (e.g., dst[size-1-i]), we need to compute
+    the pointer from the last element of the offset vector (which has the lowest address).
+ */
+static llvm::Value *lComputeCommonPointerForNegativeStride(llvm::Value *base, llvm::Type *baseType,
+                                                           llvm::Value *offsets, llvm::Instruction *insertBefore) {
+    llvm::FixedVectorType *vt = llvm::dyn_cast<llvm::FixedVectorType>(offsets->getType());
+    Assert(vt != nullptr);
+    int lastIdx = vt->getNumElements() - 1;
+
+    llvm::Value *lastOffset = llvm::ExtractElementInst::Create(offsets, LLVMInt32(lastIdx), "last_offset",
+                                                               ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
+
+    return LLVMGEPInst(base, baseType, lastOffset, "ptr_backward", insertBefore);
+}
+
+/** Create a reversed vector using shuffle. For a vector {a,b,c,d,e,f,g,h},
+    returns {h,g,f,e,d,c,b,a}. This is used to transform backward memory
+    access patterns into contiguous accesses.
+ */
+static llvm::Instruction *lReverseVector(llvm::Value *v, llvm::Instruction *insertBefore) {
+    llvm::FixedVectorType *vt = llvm::dyn_cast<llvm::FixedVectorType>(v->getType());
+    Assert(vt != nullptr);
+    int numElems = vt->getNumElements();
+
+    // Create reverse shuffle mask: {n-1, n-2, ..., 1, 0}
+    llvm::SmallVector<int, ISPC_MAX_NVEC> reverseMask;
+    for (int i = numElems - 1; i >= 0; --i) {
+        reverseMask.push_back(i);
+    }
+
+    return new llvm::ShuffleVectorInst(v, llvm::PoisonValue::get(vt), reverseMask, "reversed",
+                                       ISPC_INSERTION_POINT_INSTRUCTION(insertBefore));
+}
+
 static llvm::Constant *lGetOffsetScaleVec(llvm::Value *offsetScale, llvm::Type *vecType) {
     llvm::ConstantInt *offsetScaleInt = llvm::dyn_cast<llvm::ConstantInt>(offsetScale);
     Assert(offsetScaleInt != nullptr);
@@ -1362,10 +1396,16 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
 
         llvm::Value *offsetScale = callInst->getArgOperand(1);
         llvm::Value *offsets = callInst->getArgOperand(2);
-        llvm::Value *offsetScaleVec = lGetOffsetScaleVec(offsetScale, offsets->getType());
 
-        fullOffsets = llvm::BinaryOperator::Create(llvm::Instruction::Mul, offsetScaleVec, offsets, "scaled_offsets",
-                                                   ISPC_INSERTION_POINT_INSTRUCTION(callInst));
+        // When offsetScale is 1, skip the multiplication to preserve linearity detection
+        llvm::ConstantInt *offsetScaleInt = llvm::dyn_cast<llvm::ConstantInt>(offsetScale);
+        if (offsetScaleInt != nullptr && offsetScaleInt->isOne()) {
+            fullOffsets = offsets;
+        } else {
+            llvm::Value *offsetScaleVec = lGetOffsetScaleVec(offsetScale, offsets->getType());
+            fullOffsets = llvm::BinaryOperator::Create(llvm::Instruction::Mul, offsetScaleVec, offsets,
+                                                       "scaled_offsets", ISPC_INSERTION_POINT_INSTRUCTION(callInst));
+        }
     }
 
     Debug(SourcePos(), "GSToLoadStore: %s.", fullOffsets->getName().str().c_str());
@@ -1428,6 +1468,8 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
         }
     } else {
         int step = gatherInfo ? gatherInfo->align() : scatterInfo->align();
+
+        // Check for positive stride (forward access pattern)
         if (step > 0 && LLVMVectorIsLinear(fullOffsets, step)) {
             // We have a linear sequence of memory locations being accessed
             // starting with the location given by the offset from
@@ -1455,6 +1497,68 @@ static llvm::Instruction *lGSToLoadStore(llvm::CallInst *callInst) {
             llvm::ReplaceInstWithInst(callInst, newCall);
             return newCall;
         }
+
+        // Check for negative stride (backward access pattern like dst[size-1-i])
+        // This transforms scatter to: reverse data + contiguous store
+        // And gather to: contiguous load + reverse result
+        if (step > 0 && LLVMVectorIsLinear(fullOffsets, -step)) {
+            // Phase 1 safety check: Only optimize when mask is all-on to avoid
+            // partial mask complexity. For partial masks, the base pointer
+            // calculation becomes complex since we'd need to find the last
+            // active lane dynamically.
+            MaskStatus maskStatus = GetMaskStatusFromValue(mask);
+            if (maskStatus != MaskStatus::all_on) {
+                return nullptr; // Fall back to scatter for non-all-on masks
+            }
+
+#ifdef ISPC_XE_ENABLED
+            // Skip Xe targets until we verify shuffle support
+            if (g->target->isXeTarget()) {
+                return nullptr;
+            }
+#endif
+
+            llvm::Instruction *newCall = nullptr;
+            llvm::Module *M = callInst->getModule();
+
+            if (gatherInfo != nullptr) {
+                // For backward gather: load from lowest address, then reverse
+                llvm::Value *ptr =
+                    lComputeCommonPointerForNegativeStride(base, gatherInfo->baseType(), fullOffsets, callInst);
+                LLVMCopyMetadata(ptr, callInst);
+                Debug(pos, "Transformed backward gather to load + reverse!");
+
+                newCall = LLVMCallInst(gatherInfo->loadMaskedFunc(M), ptr, mask,
+                                       llvm::Twine(ptr->getName()) + "_masked_load");
+                newCall->insertBefore(ISPC_INSERTION_POINT_INSTRUCTION(callInst));
+                LLVMCopyMetadata(newCall, callInst);
+
+                // Reverse the loaded vector to restore correct lane order.
+                // Insert after newCall, replace uses, then erase callInst.
+                llvm::Instruction *reversed = lReverseVector(newCall, callInst);
+                LLVMCopyMetadata(reversed, callInst);
+                callInst->replaceAllUsesWith(reversed);
+                callInst->eraseFromParent();
+                return reversed;
+            } else {
+                // For backward scatter: reverse data, then store to lowest address
+                Debug(pos, "Transformed backward scatter to reverse + store!");
+
+                llvm::Value *ptr =
+                    lComputeCommonPointerForNegativeStride(base, scatterInfo->baseType(), fullOffsets, callInst);
+                LLVMCopyMetadata(ptr, callInst);
+
+                // Reverse the data vector before storing
+                llvm::Value *reversedData = lReverseVector(storeValue, callInst);
+                LLVMCopyMetadata(reversedData, callInst);
+
+                newCall = LLVMCallInst(scatterInfo->maskedStoreFunc(M), ptr, reversedData, mask, "");
+                LLVMCopyMetadata(newCall, callInst);
+                llvm::ReplaceInstWithInst(callInst, newCall);
+                return newCall;
+            }
+        }
+
         return nullptr;
     }
 }
