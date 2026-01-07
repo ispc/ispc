@@ -395,8 +395,9 @@ def check_targets():
                      ["SSE2", "SSE4.1", "SSE4.2", "AVX"], "-snb", False]),
       ("AVX2",       [["avx2-i32x4", "avx2-i32x8",  "avx2-i32x16",  "avx2-i64x4", "avx2-i8x32", "avx2-i16x16"],
                      ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2"], "-hsw", False]),
+      # Use gnr device for AVX2VNNI to WA SDE problem
       ("AVX2VNNI",   [["avx2vnni-i32x4", "avx2vnni-i32x8",  "avx2vnni-i32x16"],
-                     ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI"], "-adl", False]),
+                     ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI"], "-gnr", False]),
       ("SKX",        [["avx512skx-x16", "avx512skx-x8", "avx512skx-x4", "avx512skx-x64", "avx512skx-x32"],
                      ["SSE2", "SSE4.1", "SSE4.2", "AVX", "AVX1.1", "AVX2", "AVX2VNNI", "SKX"], "-skx", False]),
       ("ICL",        [["avx512icl-x16", "avx512icl-x8", "avx512icl-x4", "avx512icl-x64", "avx512icl-x32"],
