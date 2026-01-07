@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -614,10 +614,10 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         // elements are often extracted and processed individually using scalar operations.
         // To vectorize these scalar operations, SLP vectorizer is used.
         // Enabling it on other targets may be beneficial but require extensive testing.
-        if (ISPCTargetIsNeon(g->target->getISPCTarget()) || g->opt.enableLoadStoreVectorizer) {
+        if (g->opt.enableLoadStoreVectorizer) {
             optPM.addFunctionPass(llvm::LoadStoreVectorizerPass());
         }
-        if (ISPCTargetIsNeon(g->target->getISPCTarget()) || g->opt.enableSLPVectorizer) {
+        if (g->opt.enableSLPVectorizer) {
             optPM.addFunctionPass(llvm::SLPVectorizerPass());
         }
         // Currently VC BE does not support memset/memcpy
