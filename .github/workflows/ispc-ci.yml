@@ -296,8 +296,6 @@ jobs:
 
   linux-test-llvm20-aarch64:
     needs: [define-flow, linux-build-ispc-aarch64]
-    strategy:
-      fail-fast: false
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
       platform: linux
@@ -443,8 +441,6 @@ jobs:
 
   macos-test-ispc-llvm20-arm64:
     needs: [define-flow, macos-build-ispc]
-    strategy:
-      fail-fast: false
     uses: ./.github/workflows/reusable.ispc.test.yml
     with:
       platform: macos
