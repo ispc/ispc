@@ -219,6 +219,7 @@ jobs:
         INPUTS_ISPC_EXTRA_FLAGS: ${{ inputs.ispc_extra_flags }}
 
     - name: Set artifact name prefix
+      if: always()
       id: set-artifact-name
       shell: bash
       run: |
