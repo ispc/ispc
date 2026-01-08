@@ -24,7 +24,7 @@ jobs:
   define-targets:
     runs-on: ubuntu-latest
     outputs:
-      # TODO: restore avx2vnni targets when fixed problem with SDE
+      # TODO: restore avx2vnni targets when SDE problem is fixed
       targets: >-
         ["generic-i1x4", "generic-i1x8", "generic-i1x16", "generic-i1x32",
          "generic-i8x16", "generic-i8x32",
