@@ -256,6 +256,11 @@ else()
     set(LLVM_VERSION_PATCH ${CMAKE_MATCH_3})
 endif()
 
+# LLVM 21+ has stricter warnings about C2y extensions (__COUNTER__ in benchmark library)
+if (${LLVM_VERSION_MAJOR} VERSION_GREATER_EQUAL 21 OR ${LLVM_VERSION} STREQUAL "trunk")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-c2y-extensions")
+endif()
+
 set(EXTERNAL_VERBOSE_FLAG "")
 if (EXTERNAL_VERBOSE)
     set(EXTERNAL_VERBOSE_FLAG "-v")
