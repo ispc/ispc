@@ -1,4 +1,4 @@
-# This patch reverts the changes causing this issue: https://github.com/llvm/llvm-project/issues/171908
+# Ths patch reverts the changes causing this issue: https://github.com/llvm/llvm-project/issues/171908
 
 diff --git a/llvm/lib/CodeGen/SelectionDAG/LegalizeVectorTypes.cpp b/llvm/lib/CodeGen/SelectionDAG/LegalizeVectorTypes.cpp
 --- a/llvm/lib/CodeGen/SelectionDAG/LegalizeVectorTypes.cpp
@@ -17,7 +17,7 @@ diff --git a/llvm/lib/CodeGen/SelectionDAG/LegalizeVectorTypes.cpp b/llvm/lib/Co
 
    if (Opc == ISD::SETCC) {
      LoRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Lo0, Lo1, N->getOperand(2));
-@@ -4448,6 +4451,10 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
+@@ -4448,8 +4451,12 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
      HiRes = DAG.getNode(ISD::VP_SETCC, DL, PartResVT, Hi0, Hi1,
                          N->getOperand(2), MaskHi, EVLHi);
    }
@@ -29,3 +29,5 @@ diff --git a/llvm/lib/CodeGen/SelectionDAG/LegalizeVectorTypes.cpp b/llvm/lib/Co
 +      TargetLowering::getExtendForContent(TLI.getBooleanContents(OpVT));
 +  return DAG.getNode(ExtendCode, DL, N->getValueType(0), Con);
  }
+
+
