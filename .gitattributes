@@ -1,0 +1,2 @@
+# Ensure patch files always use LF line endings (required for git apply)
+*.patch text eol=lf
