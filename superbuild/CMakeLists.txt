@@ -243,6 +243,12 @@ else()
     message(FATAL_ERROR "Incorrect LLVM version")
 endif()
 
+# Allow overriding LLVM_TAG with a specific commit SHA
+if (DEFINED LLVM_SHA AND NOT "${LLVM_SHA}" STREQUAL "")
+    message(STATUS "Overriding LLVM_TAG with LLVM_SHA: ${LLVM_SHA}")
+    set(LLVM_TAG ${LLVM_SHA})
+endif()
+
 if (${LLVM_VERSION} STREQUAL trunk)
     set(LLVM_VERSION_DOTTED main)
     set(LLVM_VERSION_MAJOR 0)
