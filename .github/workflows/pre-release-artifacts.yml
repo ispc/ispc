@@ -30,7 +30,7 @@ jobs:
       contents: write  # Needed for release creation/update
 
     env:
-      LLVM_TAR: llvm-21.1.7-ubuntu22.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
+      LLVM_TAR: llvm-21.1.8-ubuntu22.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
 
     steps:
     - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -81,7 +81,7 @@ jobs:
       contents: write  # Needed for release creation/update
 
     env:
-      LLVM_TAR: llvm-21.1.7-win.vs2022-Release+Asserts-lto-x86.arm.wasm.tar.7z
+      LLVM_TAR: llvm-21.1.8-win.vs2022-Release+Asserts-lto-x86.arm.wasm.tar.7z
 
     steps:
     - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0

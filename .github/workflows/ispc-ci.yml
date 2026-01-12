@@ -104,7 +104,7 @@ jobs:
       matrix:
         llvm:
           - version: "21.1"
-            full_version: "21.1.7"
+            full_version: "21.1.8"
             short_version: 21
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
@@ -130,7 +130,7 @@ jobs:
             full_version: "20.1.8"
             short_version: 20
           - version: "21.1"
-            full_version: "21.1.7"
+            full_version: "21.1.8"
             short_version: 21
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
@@ -148,7 +148,7 @@ jobs:
       artifact_name: ispc_llvm21_lto_linux
       runner: ubuntu-22.04
       llvm_version: "21.1"
-      llvm_tar: llvm-21.1.7-ubuntu22.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
+      llvm_tar: llvm-21.1.8-ubuntu22.04-Release+Asserts-lto-x86.arm.wasm.tar.xz
       enable_lto: true
 
   linux-build-ispc-llvm21-release:
@@ -159,7 +159,7 @@ jobs:
         artifact_name: ispc_llvm21rel_linux
         runner: ubuntu-22.04
         llvm_version: "21.1"
-        llvm_tar: llvm-21.1.7-ubuntu22.04-Release-x86.arm.wasm.tar.xz
+        llvm_tar: llvm-21.1.8-ubuntu22.04-Release-x86.arm.wasm.tar.xz
         enable_cross: true
 
   linux-build-ispc-xe-llvm21-release:
@@ -170,7 +170,7 @@ jobs:
       artifact_name: ispc_xe_llvm21rel_linux
       runner: ubuntu-22.04
       llvm_version: "21.1"
-      llvm_tar: llvm-21.1.7-ubuntu22.04-Release-x86.arm.wasm.tar.xz
+      llvm_tar: llvm-21.1.8-ubuntu22.04-Release-x86.arm.wasm.tar.xz
       enable_xe: true
 
   linux-build-ispc-wasm:
@@ -181,7 +181,7 @@ jobs:
       artifact_name: ispc-wasm-linux
       runner: ubuntu-22.04
       llvm_version: "21.1"
-      llvm_tar: llvm-21.1.7-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
+      llvm_tar: llvm-21.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz
       enable_wasm: true
 
   linux-build-ispc-riscv:
@@ -399,7 +399,7 @@ jobs:
             full_version: "20.1.8"
             short_version: 20
           - version: "21.1"
-            full_version: "21.1.7"
+            full_version: "21.1.8"
             short_version: 21
     uses: ./.github/workflows/reusable.ispc.build.yml
     with:
@@ -417,7 +417,7 @@ jobs:
       artifact_name: ispc_llvm21_lto_macos
       runner: macos-15-intel
       llvm_version: 21.1
-      llvm_tar: llvm-21.1.7-macos-Release-lto-universal-x86.arm.wasm.tar.xz
+      llvm_tar: llvm-21.1.8-macos-Release-lto-universal-x86.arm.wasm.tar.xz
       enable_lto: true
 
   macos-test-ispc:
@@ -494,7 +494,7 @@ jobs:
             short_version: 20
             vs_version: "vs2022"
           - version: "21.1"
-            full_version: "21.1.7"
+            full_version: "21.1.8"
             short_version: 21
             vs_version: "vs2022"
     uses: ./.github/workflows/reusable.ispc.build.yml
@@ -513,7 +513,7 @@ jobs:
       artifact_name: ispc_llvm21_lto_win
       runner: windows-2022
       llvm_version: 21.1
-      llvm_tar: llvm-21.1.7-win.vs2022-Release+Asserts-lto-x86.arm.wasm.tar.7z
+      llvm_tar: llvm-21.1.8-win.vs2022-Release+Asserts-lto-x86.arm.wasm.tar.7z
       enable_lto: true
 
   win-build-ispc-xe-llvm21-release:
@@ -524,7 +524,7 @@ jobs:
       artifact_name: ispc_xe_llvm21rel_win
       runner: windows-2022
       llvm_version: 21.1
-      llvm_tar: llvm-21.1.7-win.vs2022-Release-x86.arm.wasm.tar.7z
+      llvm_tar: llvm-21.1.8-win.vs2022-Release-x86.arm.wasm.tar.7z
       enable_xe: true
 
   win-build-ispc-wasm:
@@ -535,7 +535,7 @@ jobs:
       artifact_name: ispc-wasm-windows
       runner: windows-2022
       llvm_version: 21.1
-      llvm_tar: llvm-21.1.7-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z
+      llvm_tar: llvm-21.1.8-win.vs2022-Release+Asserts-x86.arm.wasm.tar.7z
       enable_wasm: true
 
   win-test:

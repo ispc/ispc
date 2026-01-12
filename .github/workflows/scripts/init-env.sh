@@ -12,10 +12,10 @@ echo "LLVM_VERSION=${LLVM_VERSION}" >> "${GITHUB_ENV}"
 OS=$(uname -s)
 case "$OS" in
     Linux*)
-      LLVM_TAR=${LLVM_TAR:-"llvm-21.1.7-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz"}
+      LLVM_TAR=${LLVM_TAR:-"llvm-21.1.8-ubuntu22.04-Release+Asserts-x86.arm.wasm.tar.xz"}
       ;;
     Darwin*)
-      LLVM_TAR=${LLVM_TAR:-"llvm-21.1.7-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz"}
+      LLVM_TAR=${LLVM_TAR:-"llvm-21.1.8-macos-Release+Asserts-universal-x86.arm.wasm.tar.xz"}
       ;;
     *)
       echo "Unsupported OS: $OS"
