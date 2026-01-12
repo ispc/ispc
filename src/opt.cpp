@@ -339,6 +339,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
 
         optPM.addFunctionPass(IntrinsicsOpt(), 102);
         optPM.addFunctionPass(IsCompileTimeConstantPass(true));
+        optPM.addFunctionPass(LowerAMXBuiltinsPass());
         optPM.commitFunctionToModulePassManager();
 
         optPM.addModulePass(llvm::ModuleInlinerWrapperPass(IP));
@@ -594,6 +595,7 @@ void ispc::Optimize(llvm::Module *module, int optLevel) {
         optPM.addFunctionPass(llvm::InferAlignmentPass());
         optPM.addFunctionPass(llvm::InstCombinePass());
         optPM.addFunctionPass(IsCompileTimeConstantPass(true));
+        optPM.addFunctionPass(LowerAMXBuiltinsPass());
         optPM.addFunctionPass(IntrinsicsOpt());
         optPM.addFunctionPass(InstructionSimplifyPass());
 

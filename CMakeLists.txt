@@ -565,6 +565,8 @@ list(APPEND OPT_SOURCES
     src/opt/IntrinsicsOptPass.h
     src/opt/LowerISPCIntrinsics.cpp
     src/opt/LowerISPCIntrinsics.h
+    src/opt/LowerAMXBuiltinsPass.cpp
+    src/opt/LowerAMXBuiltinsPass.h
     src/opt/MangleOpenCLBuiltins.cpp
     src/opt/MangleOpenCLBuiltins.h
     src/opt/PeepholePass.cpp
@@ -585,8 +587,9 @@ list(APPEND OPT_SOURCES
     src/opt/XeReplaceLLVMIntrinsics.h
 )
 
-set(STDLIB_HEADERS core.isph short_vec.isph stdlib.isph)
+set(STDLIB_HEADERS amx.isph core.isph short_vec.isph stdlib.isph)
 set(ALL_STDLIB_HEADERS
+  amx.isph
   builtins.isph
   core.isph
   short_vec.isph

@@ -1,0 +1,153 @@
+// -*- mode: c++ -*-
+// Copyright (c) 2026, Intel Corporation
+// SPDX-License-Identifier: BSD-3-Clause
+//
+// @file amx.isph
+// @brief Intel AMX (Advanced Matrix Extensions) functions.
+//
+// This header provides access to Intel AMX instructions for matrix operations.
+// AMX is supported on different targets with varying feature sets:
+//
+//   Target      | amx-tile | amx-int8 | amx-fp16
+//   ------------|----------|----------|----------
+//   avx512spr   |   Yes    |   Yes    |    No
+//   avx512gnr   |   Yes    |   Yes    |   Yes
+//   avx10.2dmr  |   Yes    |   Yes    |   Yes
+//
+// Using these functions on unsupported targets will result in a runtime error.
+
+#pragma once
+
+#define EXT __attribute__((unmangled)) __attribute__((cdecl)) unmasked
+
+// AMX Tile Configuration (amx-tile)
+EXT void __amx_loadconfig(uniform int8 *uniform config);
+EXT void __amx_storeconfig(uniform int8 *uniform config);
+EXT void __amx_release();
+EXT void __amx_zero(uniform int8 tile);
+EXT void __amx_load(uniform int8 tile, uniform int8 *uniform data, uniform int64 stride);
+EXT void __amx_load_t1(uniform int8 tile, uniform int8 *uniform data, uniform int64 stride);
+EXT void __amx_store(uniform int8 tile, uniform int8 *uniform data, uniform int64 stride);
+
+// AMX INT8 Dot Products (amx-int8)
+EXT void __amx_dpbssd(uniform int8 dst, uniform int8 src1, uniform int8 src2);
+EXT void __amx_dpbsud(uniform int8 dst, uniform int8 src1, uniform int8 src2);
+EXT void __amx_dpbusd(uniform int8 dst, uniform int8 src1, uniform int8 src2);
+EXT void __amx_dpbuud(uniform int8 dst, uniform int8 src1, uniform int8 src2);
+
+// AMX FP16 Dot Product (amx-fp16)
+EXT void __amx_dpfp16ps(uniform int8 dst, uniform int8 src1, uniform int8 src2);
+
+// AMX BF16 Dot Product (amx-bf16)
+EXT void __amx_dpbf16ps(uniform int8 dst, uniform int8 src1, uniform int8 src2);
+
+///////////////////////////////////////////////////////////////////////////////
+// AMX Tile Configuration and Control
+///////////////////////////////////////////////////////////////////////////////
+
+/// Load AMX tile configuration from memory.
+/// @param config Pointer to 64-byte tile configuration structure.
+inline void amx_loadconfig(uniform int8 *uniform config) {
+    __amx_loadconfig(config);
+}
+
+/// Store AMX tile configuration to memory.
+/// @param config Pointer to 64-byte tile configuration structure.
+inline void amx_storeconfig(uniform int8 *uniform config) {
+    __amx_storeconfig(config);
+}
+
+/// Release AMX tile resources and set AMX state to INIT.
+inline void amx_release() {
+    __amx_release();
+}
+
+/// Zero an AMX tile.
+/// @param tile Tile number (0-7).
+inline void amx_zero(uniform int8 tile) {
+    __amx_zero(tile);
+}
+
+/// Load data from memory into an AMX tile.
+/// @param tile Tile number (0-7).
+/// @param data Pointer to source data.
+/// @param stride Stride in bytes between rows.
+inline void amx_load(uniform int8 tile, uniform int8 *uniform data, uniform int64 stride) {
+    __amx_load(tile, data, stride);
+}
+
+/// Load data from memory into an AMX tile with T1 transposition.
+/// @param tile Tile number (0-7).
+/// @param data Pointer to source data.
+/// @param stride Stride in bytes between rows.
+inline void amx_load_t1(uniform int8 tile, uniform int8 *uniform data, uniform int64 stride) {
+    __amx_load_t1(tile, data, stride);
+}
+
+/// Store an AMX tile to memory.
+/// @param tile Tile number (0-7).
+/// @param data Pointer to destination data.
+/// @param stride Stride in bytes between rows.
+inline void amx_store(uniform int8 tile, uniform int8 *uniform data, uniform int64 stride) {
+    __amx_store(tile, data, stride);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// AMX INT8 Dot Products (requires amx-int8)
+///////////////////////////////////////////////////////////////////////////////
+
+/// INT8 dot product: dst += src1 (signed int8) x src2 (signed int8).
+/// @param dst Destination tile number (0-7).
+/// @param src1 Source tile 1 number (0-7).
+/// @param src2 Source tile 2 number (0-7).
+inline void amx_dpbssd(uniform int8 dst, uniform int8 src1, uniform int8 src2) {
+    __amx_dpbssd(dst, src1, src2);
+}
+
+/// INT8 dot product: dst += src1 (signed int8) x src2 (unsigned int8).
+/// @param dst Destination tile number (0-7).
+/// @param src1 Source tile 1 number (0-7).
+/// @param src2 Source tile 2 number (0-7).
+inline void amx_dpbsud(uniform int8 dst, uniform int8 src1, uniform int8 src2) {
+    __amx_dpbsud(dst, src1, src2);
+}
+
+/// INT8 dot product: dst += src1 (unsigned int8) x src2 (signed int8).
+/// @param dst Destination tile number (0-7).
+/// @param src1 Source tile 1 number (0-7).
+/// @param src2 Source tile 2 number (0-7).
+inline void amx_dpbusd(uniform int8 dst, uniform int8 src1, uniform int8 src2) {
+    __amx_dpbusd(dst, src1, src2);
+}
+
+/// INT8 dot product: dst += src1 (unsigned int8) x src2 (unsigned int8).
+/// @param dst Destination tile number (0-7).
+/// @param src1 Source tile 1 number (0-7).
+/// @param src2 Source tile 2 number (0-7).
+inline void amx_dpbuud(uniform int8 dst, uniform int8 src1, uniform int8 src2) {
+    __amx_dpbuud(dst, src1, src2);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// AMX FP16 Dot Product (requires amx-fp16)
+///////////////////////////////////////////////////////////////////////////////
+
+/// FP16 dot product: dst += src1 (float16) x src2 (float16).
+/// @param dst Destination tile number (0-7).
+/// @param src1 Source tile 1 number (0-7).
+/// @param src2 Source tile 2 number (0-7).
+inline void amx_dpfp16ps(uniform int8 dst, uniform int8 src1, uniform int8 src2) {
+    __amx_dpfp16ps(dst, src1, src2);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// AMX BF16 Dot Product (requires amx-bf16)
+///////////////////////////////////////////////////////////////////////////////
+
+/// BF16 dot product: dst += src1 (bf16) x src2 (bf16).
+/// @param dst Destination tile number (0-7).
+/// @param src1 Source tile 1 number (0-7).
+/// @param src2 Source tile 2 number (0-7).
+inline void amx_dpbf16ps(uniform int8 dst, uniform int8 src1, uniform int8 src2) {
+    __amx_dpbf16ps(dst, src1, src2);
+}
