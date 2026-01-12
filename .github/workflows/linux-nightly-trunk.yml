@@ -15,6 +15,11 @@ on:
     branches:
       - '**test_nightly**'
   workflow_dispatch:
+    inputs:
+      llvm_sha:
+        description: 'Specific LLVM commit SHA to build (leave empty for trunk HEAD)'
+        required: false
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -40,10 +45,31 @@ jobs:
          "avx512spr-x4", "avx512spr-x8", "avx512spr-x16", "avx512spr-x64", "avx512spr-x32",
          "avx512gnr-x4", "avx512gnr-x8", "avx512gnr-x16", "avx512gnr-x64", "avx512gnr-x32",
          "avx10.2dmr-x4", "avx10.2dmr-x8", "avx10.2dmr-x16", "avx10.2dmr-x64", "avx10.2dmr-x32"]
+      llvm_sha: ${{ steps.get-llvm-sha.outputs.llvm_sha }}
     steps:
-      - run: echo "Defining targets"
+      - name: Get LLVM SHA
+        id: get-llvm-sha
+        env:
+          INPUT_LLVM_SHA: ${{ inputs.llvm_sha }}
+        run: |
+          if [ -n "$INPUT_LLVM_SHA" ]; then
+            LLVM_SHA="$INPUT_LLVM_SHA"
+            echo "Using provided LLVM SHA: $LLVM_SHA"
+          else
+            LLVM_SHA=$(git ls-remote https://github.com/llvm/llvm-project.git refs/heads/main | cut -f1)
+            echo "Fetched LLVM main HEAD: $LLVM_SHA"
+          fi
+          echo "llvm_sha=$LLVM_SHA" >> "$GITHUB_OUTPUT"
+          echo "$LLVM_SHA" > llvm-commit-sha.txt
+
+      - name: Upload LLVM SHA artifact
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: llvm_commit_sha
+          path: llvm-commit-sha.txt
 
   linux-build-llvm-trunk:
+    needs: [define-targets]
     runs-on: ubuntu-22.04
 
     steps:
@@ -71,7 +97,7 @@ jobs:
         cd docker/ubuntu/22.04/cpu_ispc_build
         ls -al
         docker buildx create --use
-        docker buildx build --tag ispc/ubuntu22.04 --target=llvm_build --build-arg REPO="${GITHUB_REPOSITORY}" --build-arg SHA="${GITHUB_SHA}" --build-arg LLVM_VERSION=trunk --output=type=tar,dest=result.tar .
+        docker buildx build --tag ispc/ubuntu22.04 --target=llvm_build --build-arg REPO="${GITHUB_REPOSITORY}" --build-arg SHA="${GITHUB_SHA}" --build-arg LLVM_VERSION=trunk --build-arg LLVM_SHA="${{ needs.define-targets.outputs.llvm_sha }}" --output=type=tar,dest=result.tar .
 
     - name: Pack LLVM
       run: |
