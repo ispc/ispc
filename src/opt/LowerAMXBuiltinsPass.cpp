@@ -23,7 +23,7 @@ static llvm::ConstantInt *validateAMXTileArgument(llvm::CallInst *CI, llvm::Valu
 
     uint64_t TileID = ConstIntV->getZExtValue();
 
-    if (TileID < 0 && TileID > 7) {
+    if (TileID > 7) {
         SourcePos pos;
         LLVMGetSourcePosFromMetadata(CI, &pos);
         Error(pos, "AMX tile argument value must be between 0-7.");
@@ -41,7 +41,7 @@ static llvm::CallInst *lLowerAMXTileZeroBuiltin(llvm::CallInst *CI) {
 
     if (auto *CTile = validateAMXTileArgument(CI, TileOp)) {
         llvm::SmallVector<llvm::Value *, 1> Ops({CTile});
-        return builder.CreateIntrinsic(llvm::Intrinsic::x86_tilezero, Ops);
+        return builder.CreateIntrinsic(llvm::Type::getVoidTy(builder.getContext()), llvm::Intrinsic::x86_tilezero, Ops);
     } else {
         return nullptr;
     }
@@ -67,7 +67,7 @@ static llvm::CallInst *lLowerAMXLoadStoreBuiltin(llvm::CallInst *CI) {
         Assert(false);
 
     llvm::SmallVector<llvm::Value *, 3> Ops({CTile, CI->getArgOperand(1), CI->getArgOperand(2)});
-    return builder.CreateIntrinsic(LoadStoreID, Ops);
+    return builder.CreateIntrinsic(llvm::Type::getVoidTy(builder.getContext()), LoadStoreID, Ops);
 }
 
 static llvm::CallInst *lLowerAMXDotProductBuiltin(llvm::CallInst *CI) {
@@ -99,10 +99,11 @@ static llvm::CallInst *lLowerAMXDotProductBuiltin(llvm::CallInst *CI) {
         Assert(false);
 
     llvm::SmallVector<llvm::Value *, 3> Ops({DstTile, Src1Tile, Src2Tile});
-    return builder.CreateIntrinsic(DotProdID, Ops);
+    return builder.CreateIntrinsic(llvm::Type::getVoidTy(builder.getContext()), DotProdID, Ops);
 }
 
 static bool lRunOnBasicBlock(llvm::BasicBlock &BB) {
+    bool Modified = false;
     for (llvm::BasicBlock::iterator iter = BB.begin(), e = BB.end(); iter != e;) {
         if (llvm::CallInst *CI = llvm::dyn_cast<llvm::CallInst>(&*(iter++))) {
             llvm::Function *Callee = CI->getCalledFunction();
@@ -121,11 +122,12 @@ static bool lRunOnBasicBlock(llvm::BasicBlock &BB) {
                 if (D) {
                     CI->replaceAllUsesWith(D);
                     CI->eraseFromParent();
+                    Modified = true;
                 }
             }
         }
     }
-    return false;
+    return Modified;
 }
 
 llvm::PreservedAnalyses LowerAMXBuiltinsPass::run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM) {

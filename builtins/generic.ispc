@@ -1,4 +1,4 @@
-// Copyright (c) 2025, Intel Corporation
+// Copyright (c) 2025-2026, Intel Corporation
 //
 // SPDX-License-Identifier: BSD-3-Clause
 
@@ -620,8 +620,12 @@ EXT READNONE void __amx_storeconfig(uniform int8 *uniform config) { __not_suppor
 EXT READNONE void __amx_release() { __not_supported(); }
 EXT READNONE void __amx_zero(uniform int8 tile) { __not_supported(); }
 EXT READNONE void __amx_load(uniform int8 tile, uniform int8 *uniform data, uniform int64 stride) { __not_supported(); }
-EXT READNONE void __amx_load_t1(uniform int8 tile, uniform int8 *uniform data, uniform int64 stride) { __not_supported(); }
-EXT READNONE void __amx_store(uniform int8 tile, uniform int8 *uniform data, uniform int64 stride) { __not_supported(); }
+EXT READNONE void __amx_load_t1(uniform int8 tile, uniform int8 *uniform data, uniform int64 stride) {
+    __not_supported();
+}
+EXT READNONE void __amx_store(uniform int8 tile, uniform int8 *uniform data, uniform int64 stride) {
+    __not_supported();
+}
 
 // AMX INT8 Dot Products - not supported on generic target
 EXT READNONE void __amx_dpbssd(uniform int8 dst, uniform int8 src1, uniform int8 src2) { __not_supported(); }
