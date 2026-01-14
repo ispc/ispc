@@ -1,12 +1,14 @@
 /*
-  Copyright (c) 2025, Intel Corporation
+  Copyright (c) 2025-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
 
-// ISPC AMX-FP16 Matrix Multiplication using LLVM intrinsics
+// ISPC AMX-FP16 Matrix Multiplication using ISPC stdlib
 // Demonstrates Intel AMX-FP16 usage through ISPC with tiling for 128x128
 // matrices
+
+#include <amx.isph>
 
 // AMX tile configuration structure (64 bytes total)
 struct TileConfig {
@@ -66,11 +68,11 @@ export void init_amx_config(uniform TileConfig config[]) {
   config->rows[2] = TILE_K / 2;  // TILE_K/2 rows
 
   // Load the tile configuration
-  @llvm.x86.ldtilecfg((uniform int8 * uniform) config);
+  amx_loadconfig((uniform int8 * uniform) config);
 }
 
 // Release AMX tiles
-export void release_amx() { @llvm.x86.tilerelease(); }
+export void release_amx() { amx_release(); }
 
 // Simple B tile conversion using direct interleaving
 void convert_b_tile(uniform float16 b_src[], uniform float16 b_amx[],
@@ -104,7 +106,7 @@ export void amx_matmul_fp16_ispc(uniform float16 a[], uniform float16 b[],
     for (uniform int tile_j = 0; tile_j < TILES_N; ++tile_j) {
 
       // Zero C tile directly in AMX register
-      @llvm.x86.tilezero(TMM_C);
+      amx_zero(TMM_C);
 
       // Accumulate across K dimension
       for (uniform int tile_k = 0; tile_k < TILES_K; ++tile_k) {
@@ -123,18 +125,18 @@ export void amx_matmul_fp16_ispc(uniform float16 a[], uniform float16 b[],
         convert_b_tile(b, b_amx, b_offset, stride_b);
 
         // Load A and B tiles, then perform multiply-accumulate
-        @llvm.x86.tileloadd64(TMM_A, (uniform int8 * uniform) & a[a_offset],
-                              a_byte_stride);
-        @llvm.x86.tileloadd64(TMM_B, (uniform int8 * uniform) & b_amx[0],
-                              (uniform int64)(TILE_N * 4));
-        @llvm.x86.tdpfp16ps(TMM_C, TMM_A, TMM_B);
+        amx_load(TMM_A, (uniform int8 * uniform) & a[a_offset],
+                 a_byte_stride);
+        amx_load(TMM_B, (uniform int8 * uniform) & b_amx[0],
+                 (uniform int64)(TILE_N * 4));
+        amx_dpfp16ps(TMM_C, TMM_A, TMM_B);
       }
 
       // Store final C tile result to destination matrix
       uniform int c_offset = (tile_i * TILE_M) * stride_c + (tile_j * TILE_N);
       uniform int64 c_byte_stride = stride_c * 4;
-      @llvm.x86.tilestored64(TMM_C, (uniform int8 * uniform) & c[c_offset],
-                             c_byte_stride);
+      amx_store(TMM_C, (uniform int8 * uniform) & c[c_offset],
+                c_byte_stride);
     }
   }
 }

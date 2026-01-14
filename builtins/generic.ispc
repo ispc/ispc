@@ -1,4 +1,4 @@
-// Copyright (c) 2025, Intel Corporation
+// Copyright (c) 2025-2026, Intel Corporation
 //
 // SPDX-License-Identifier: BSD-3-Clause
 
@@ -613,6 +613,31 @@ EXT void __restore_ftz_daz_flags(uniform int32) { __not_supported(); }
 EXT uniform bool __rdrand_i16(uniform int8 *uniform) { __not_supported(); }
 EXT uniform bool __rdrand_i32(uniform int8 *uniform) { __not_supported(); }
 EXT uniform bool __rdrand_i64(uniform int8 *uniform) { __not_supported(); }
+
+// AMX Tile Configuration - not supported on generic target
+EXT READNONE void __amx_loadconfig(uniform int8 *uniform config) { __not_supported(); }
+EXT READNONE void __amx_storeconfig(uniform int8 *uniform config) { __not_supported(); }
+EXT READNONE void __amx_release() { __not_supported(); }
+EXT READNONE void __amx_zero(uniform int8 tile) { __not_supported(); }
+EXT READNONE void __amx_load(uniform int8 tile, uniform int8 *uniform data, uniform int64 stride) { __not_supported(); }
+EXT READNONE void __amx_load_t1(uniform int8 tile, uniform int8 *uniform data, uniform int64 stride) {
+    __not_supported();
+}
+EXT READNONE void __amx_store(uniform int8 tile, uniform int8 *uniform data, uniform int64 stride) {
+    __not_supported();
+}
+
+// AMX INT8 Dot Products - not supported on generic target
+EXT READNONE void __amx_dpbssd(uniform int8 dst, uniform int8 src1, uniform int8 src2) { __not_supported(); }
+EXT READNONE void __amx_dpbsud(uniform int8 dst, uniform int8 src1, uniform int8 src2) { __not_supported(); }
+EXT READNONE void __amx_dpbusd(uniform int8 dst, uniform int8 src1, uniform int8 src2) { __not_supported(); }
+EXT READNONE void __amx_dpbuud(uniform int8 dst, uniform int8 src1, uniform int8 src2) { __not_supported(); }
+
+// AMX FP16 Dot Product - not supported on generic target
+EXT READNONE void __amx_dpfp16ps(uniform int8 dst, uniform int8 src1, uniform int8 src2) { __not_supported(); }
+
+// AMX BF16 Dot Product - not supported on generic target
+EXT READNONE void __amx_dpbf16ps(uniform int8 dst, uniform int8 src1, uniform int8 src2) { __not_supported(); }
 
 // sign extension
 EXT READNONE uniform int32 __sext_uniform_bool(uniform bool x) { return x ? -1 : 0; }

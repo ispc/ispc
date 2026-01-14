@@ -1,0 +1,20 @@
+// This test checks that AMX FP16 (amxfp16) builtins are correctly handled by ISPC
+
+// RUN: %{ispc} --nowrap %s --target=avx512spr-x4 --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_SPR_ERROR
+// RUN: %{ispc} --nowrap %s --target=avx512gnr-x4 --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_GNR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx10.2dmr-x4 --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_DMR_SUCCESS
+
+// REQUIRES: X86_ENABLED && LLVM_20_0+ && !MACOS_HOST
+
+// CHECK_SPR_ERROR: @__not_supported()
+// CHECK_GNR_SUCCESS: call void @llvm.x86.tdpfp16ps
+// CHECK_DMR_SUCCESS: call void @llvm.x86.tdpfp16ps
+
+#include <amx.isph>
+
+__attribute__((external_only))
+export void test_amx_fp16() {
+    // require amxfp16 feature (GNR+)
+    amx_dpfp16ps((uniform int8)2, (uniform int8)0, (uniform int8)1);
+}
+
