@@ -1,9 +1,52 @@
 // This test checks that AMX INT8 (amxint8) and BF16 builtins are correctly handled by ISPC
 
 // RUN: %{ispc} --nowrap %s --target=avx512icl-x4 --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_ICL_ERROR
+// RUN: %{ispc} --nowrap %s --target=avx512icl-x8 --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_ICL_ERROR
+// RUN: %{ispc} --nowrap %s --target=avx512icl-x16 --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_ICL_ERROR
+// RUN: %{ispc} --nowrap %s --target=avx512icl-x32 --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_ICL_ERROR
+// RUN: %{ispc} --nowrap %s --target=avx512icl-x64 --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_ICL_ERROR
+
 // RUN: %{ispc} --nowrap %s --target=avx512spr-x4 --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_SPR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx512spr-x8 --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_SPR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx512spr-x16 --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_SPR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx512spr-x32 --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_SPR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx512spr-x64 --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_SPR_SUCCESS
+
 // RUN: %{ispc} --nowrap %s --target=avx512gnr-x4 --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_GNR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx512gnr-x8 --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_GNR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx512gnr-x16 --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_GNR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx512gnr-x32 --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_GNR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx512gnr-x64 --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_GNR_SUCCESS
+
 // RUN: %{ispc} --nowrap %s --target=avx10.2dmr-x4 --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_DMR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx10.2dmr-x8 --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_DMR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx10.2dmr-x16 --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_DMR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx10.2dmr-x32 --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_DMR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx10.2dmr-x64 --emit-llvm-text -O2 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_DMR_SUCCESS
+
+// RUN: %{ispc} --nowrap %s --target=avx512icl-x4 --emit-llvm-text -O0 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_ICL_ERROR
+// RUN: %{ispc} --nowrap %s --target=avx512icl-x8 --emit-llvm-text -O0 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_ICL_ERROR
+// RUN: %{ispc} --nowrap %s --target=avx512icl-x16 --emit-llvm-text -O0 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_ICL_ERROR
+// RUN: %{ispc} --nowrap %s --target=avx512icl-x32 --emit-llvm-text -O0 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_ICL_ERROR
+// RUN: %{ispc} --nowrap %s --target=avx512icl-x64 --emit-llvm-text -O0 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_ICL_ERROR
+
+// RUN: %{ispc} --nowrap %s --target=avx512spr-x4 --emit-llvm-text -O0 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_SPR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx512spr-x8 --emit-llvm-text -O0 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_SPR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx512spr-x16 --emit-llvm-text -O0 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_SPR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx512spr-x32 --emit-llvm-text -O0 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_SPR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx512spr-x64 --emit-llvm-text -O0 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_SPR_SUCCESS
+
+// RUN: %{ispc} --nowrap %s --target=avx512gnr-x4 --emit-llvm-text -O0 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_GNR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx512gnr-x8 --emit-llvm-text -O0 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_GNR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx512gnr-x16 --emit-llvm-text -O0 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_GNR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx512gnr-x32 --emit-llvm-text -O0 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_GNR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx512gnr-x64 --emit-llvm-text -O0 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_GNR_SUCCESS
+
+// RUN: %{ispc} --nowrap %s --target=avx10.2dmr-x4 --emit-llvm-text -O0 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_DMR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx10.2dmr-x8 --emit-llvm-text -O0 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_DMR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx10.2dmr-x16 --emit-llvm-text -O0 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_DMR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx10.2dmr-x32 --emit-llvm-text -O0 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_DMR_SUCCESS
+// RUN: %{ispc} --nowrap %s --target=avx10.2dmr-x64 --emit-llvm-text -O0 -o - 2>&1 | FileCheck %s -check-prefix=CHECK_DMR_SUCCESS
 
 // REQUIRES: X86_ENABLED && LLVM_20_0+ && !MACOS_HOST
 
