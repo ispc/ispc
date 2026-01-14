@@ -5,7 +5,7 @@
 define(`WIDTH',`4')
 define(`ISA',`AVX512SKX')
 
-include(`target-spr-amx-utils.ll')
+include(`target-avx512spr-amx-utils.ll')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; half precision rcp and rsqrt using native SPR instriuctions
