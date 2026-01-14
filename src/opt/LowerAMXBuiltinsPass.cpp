@@ -8,6 +8,7 @@
 */
 
 #include "LowerAMXBuiltinsPass.h"
+#include "builtins-decl.h"
 
 namespace ispc {
 
@@ -84,11 +85,11 @@ static llvm::CallInst *lLowerAMXLoadStoreBuiltin(llvm::CallInst *CI) {
 
     llvm::Intrinsic::ID LoadStoreID = 0;
     llvm::StringRef FnName = CI->getCalledFunction()->getName();
-    if (FnName.equals_insensitive("__ispc_amx_load"))
+    if (FnName == builtin::__ispc_amx_tile_load)
         LoadStoreID = llvm::Intrinsic::x86_tileloadd64;
-    else if (FnName.equals_insensitive("__ispc_amx_load_t1"))
+    else if (FnName == builtin::__ispc_amx_tile_load_t1)
         LoadStoreID = llvm::Intrinsic::x86_tileloaddt164;
-    else if (FnName.equals_insensitive("__ispc_amx_store"))
+    else if (FnName == builtin::__ispc_amx_tile_store)
         LoadStoreID = llvm::Intrinsic::x86_tilestored64;
     else
         Assert(false);
@@ -110,17 +111,17 @@ static llvm::CallInst *lLowerAMXDotProductBuiltin(llvm::CallInst *CI) {
 
     llvm::Intrinsic::ID DotProdID = 0;
     llvm::StringRef FnName = CI->getCalledFunction()->getName();
-    if (FnName.equals_insensitive("__ispc_amx_dpbssd"))
+    if (FnName == builtin::__ispc_amx_dpbssd)
         DotProdID = llvm::Intrinsic::x86_tdpbssd;
-    else if (FnName.equals_insensitive("__ispc_amx_dpbsud"))
+    else if (FnName == builtin::__ispc_amx_dpbsud)
         DotProdID = llvm::Intrinsic::x86_tdpbsud;
-    else if (FnName.equals_insensitive("__ispc_amx_dpbusd"))
+    else if (FnName == builtin::__ispc_amx_dpbusd)
         DotProdID = llvm::Intrinsic::x86_tdpbusd;
-    else if (FnName.equals_insensitive("__ispc_amx_dpbuud"))
+    else if (FnName == builtin::__ispc_amx_dpbuud)
         DotProdID = llvm::Intrinsic::x86_tdpbuud;
-    else if (FnName.equals_insensitive("__ispc_amx_dpbf16ps"))
+    else if (FnName == builtin::__ispc_amx_dpbf16ps)
         DotProdID = llvm::Intrinsic::x86_tdpbf16ps;
-    else if (FnName.equals_insensitive("__ispc_amx_dpfp16ps"))
+    else if (FnName == builtin::__ispc_amx_dpfp16ps)
         DotProdID = llvm::Intrinsic::x86_tdpfp16ps;
     else
         Assert(false);
@@ -136,13 +137,14 @@ static bool lRunOnBasicBlock(llvm::BasicBlock &BB) {
             llvm::Function *Callee = CI->getCalledFunction();
             if (Callee && Callee->getName().starts_with("__ispc_amx")) {
                 llvm::CallInst *D = nullptr;
-                if (Callee->getName().starts_with("__ispc_amx_zero")) {
+                llvm::StringRef FnName = Callee->getName();
+                if (FnName == builtin::__ispc_amx_tile_zero) {
                     D = lLowerAMXTileZeroBuiltin(CI);
-                } else if (Callee->getName().starts_with("__ispc_amx_load")) {
+                } else if (FnName == builtin::__ispc_amx_tile_load || FnName == builtin::__ispc_amx_tile_load_t1) {
                     D = lLowerAMXLoadStoreBuiltin(CI);
-                } else if (Callee->getName().starts_with("__ispc_amx_store")) {
+                } else if (FnName == builtin::__ispc_amx_tile_store) {
                     D = lLowerAMXLoadStoreBuiltin(CI);
-                } else if (Callee->getName().starts_with("__ispc_amx_dp")) {
+                } else if (FnName.starts_with("__ispc_amx_dp")) {
                     D = lLowerAMXDotProductBuiltin(CI);
                 }
 

@@ -6,44 +6,44 @@
 ;; AMX-TILE intrinsics
 
 declare void @llvm.x86.ldtilecfg(i8*)
-define void @__amx_loadconfig(i8* %config) nounwind alwaysinline {
+define void @__amx_tile_loadconfig(i8* nocapture readonly %config) nounwind alwaysinline {
   call void @llvm.x86.ldtilecfg(i8* %config)
   ret void
 }
 
 declare void @llvm.x86.sttilecfg(i8*)
-define void @__amx_storeconfig(i8* %config) nounwind alwaysinline {
+define void @__amx_tile_storeconfig(i8* nocapture writeonly %config) nounwind alwaysinline {
   call void @llvm.x86.sttilecfg(i8* %config)
   ret void
 }
 
 declare void @llvm.x86.tilerelease()
-define void @__amx_release() nounwind alwaysinline {
+define void @__amx_tile_release() nounwind alwaysinline {
   call void @llvm.x86.tilerelease()
   ret void
 }
 
-declare void @__ispc_amx_zero(i8)
-define void @__amx_zero(i8 %tile) nounwind alwaysinline {
-  call void @__ispc_amx_zero(i8 %tile)
+declare void @__ispc_amx_tile_zero(i8)
+define void @__amx_tile_zero(i8 %tile) nounwind alwaysinline {
+  call void @__ispc_amx_tile_zero(i8 %tile)
   ret void
 }
 
-declare void @__ispc_amx_load(i8, i8*, i64)
-define void @__amx_load(i8 %tile, i8* %data, i64 %stride) nounwind alwaysinline {
-  call void @__ispc_amx_load(i8 %tile, i8* %data, i64 %stride)
+declare void @__ispc_amx_tile_load(i8, i8*, i64)
+define void @__amx_tile_load(i8 %tile, i8* nocapture readonly %data, i64 %stride) nounwind alwaysinline {
+  call void @__ispc_amx_tile_load(i8 %tile, i8* %data, i64 %stride)
   ret void
 }
 
-declare void @__ispc_amx_load_t1(i8, i8*, i64)
-define void @__amx_load_t1(i8 %tile, i8* %data, i64 %stride) nounwind alwaysinline {
-  call void @__ispc_amx_load_t1(i8 %tile, i8* %data, i64 %stride)
+declare void @__ispc_amx_tile_load_t1(i8, i8*, i64)
+define void @__amx_tile_load_t1(i8 %tile, i8* nocapture readonly %data, i64 %stride) nounwind alwaysinline {
+  call void @__ispc_amx_tile_load_t1(i8 %tile, i8* %data, i64 %stride)
   ret void
 }
 
-declare void @__ispc_amx_store(i8, i8*, i64)
-define void @__amx_store(i8 %tile, i8* %data, i64 %stride) nounwind alwaysinline {
-  call void @__ispc_amx_store(i8 %tile, i8* %data, i64 %stride)
+declare void @__ispc_amx_tile_store(i8, i8*, i64)
+define void @__amx_tile_store(i8 %tile, i8* nocapture writeonly %data, i64 %stride) nounwind alwaysinline {
+  call void @__ispc_amx_tile_store(i8 %tile, i8* %data, i64 %stride)
   ret void
 }
 
