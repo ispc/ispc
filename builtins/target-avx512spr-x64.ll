@@ -1,9 +1,11 @@
-;;  Copyright (c) 2020-2025, Intel Corporation
+;;  Copyright (c) 2020-2026, Intel Corporation
 ;;
 ;;  SPDX-License-Identifier: BSD-3-Clause
 
 define(`WIDTH',`64')
 define(`ISA',`AVX512SKX')
+
+include(`target-spr-amx-utils.ll')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; half precision rcp and rsqrt using native SPR instriuctions

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2024, Intel Corporation
+  Copyright (c) 2022-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -16,6 +16,7 @@
 #include "InstructionSimplify.h"
 #include "IntrinsicsOptPass.h"
 #include "IsCompileTimeConstant.h"
+#include "LowerAMXBuiltinsPass.h"
 #include "LowerISPCIntrinsics.h"
 #include "MangleOpenCLBuiltins.h"
 #include "PeepholePass.h"
