@@ -47,6 +47,9 @@ jobs:
 
     - name: Install prerequisites
       run: |
+        pacman-key --init
+        pacman-key --populate archlinux
+        pacman -Sy --noconfirm archlinux-keyring
         pacman -Syu --noconfirm
         pacman -S --noconfirm git cmake make gcc-libs glibc lib32-glibc gcc m4 flex bison python onetbb
 
