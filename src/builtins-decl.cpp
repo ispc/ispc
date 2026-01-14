@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2024-2025, Intel Corporation
+  Copyright (c) 2024-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -99,6 +99,16 @@ DECL_BUILTIN_NAME(__get_system_best_isa);
 DECL_BUILTIN_NAME(__is_compile_time_constant_mask);
 DECL_BUILTIN_NAME(__is_compile_time_constant_uniform_int32);
 DECL_BUILTIN_NAME(__is_compile_time_constant_varying_int32);
+DECL_BUILTIN_NAME(__ispc_amx_dpbf16ps);
+DECL_BUILTIN_NAME(__ispc_amx_dpbssd);
+DECL_BUILTIN_NAME(__ispc_amx_dpbsud);
+DECL_BUILTIN_NAME(__ispc_amx_dpbusd);
+DECL_BUILTIN_NAME(__ispc_amx_dpbuud);
+DECL_BUILTIN_NAME(__ispc_amx_dpfp16ps);
+DECL_BUILTIN_NAME(__ispc_amx_tile_load);
+DECL_BUILTIN_NAME(__ispc_amx_tile_load_t1);
+DECL_BUILTIN_NAME(__ispc_amx_tile_store);
+DECL_BUILTIN_NAME(__ispc_amx_tile_zero);
 DECL_BUILTIN_NAME(ISPCAlloc);
 DECL_BUILTIN_NAME(ISPCLaunch);
 DECL_BUILTIN_NAME(ISPCSync);

@@ -68,11 +68,11 @@ export void init_amx_config(uniform TileConfig config[]) {
   config->rows[2] = TILE_K / 2;  // TILE_K/2 rows
 
   // Load the tile configuration
-  amx_loadconfig((uniform int8 * uniform) config);
+  amx_tile_loadconfig((uniform int8 * uniform) config);
 }
 
 // Release AMX tiles
-export void release_amx() { amx_release(); }
+export void release_amx() { amx_tile_release(); }
 
 // Simple B tile conversion using direct interleaving
 void convert_b_tile(uniform float16 b_src[], uniform float16 b_amx[],
@@ -106,7 +106,7 @@ export void amx_matmul_fp16_ispc(uniform float16 a[], uniform float16 b[],
     for (uniform int tile_j = 0; tile_j < TILES_N; ++tile_j) {
 
       // Zero C tile directly in AMX register
-      amx_zero(TMM_C);
+      amx_tile_zero(TMM_C);
 
       // Accumulate across K dimension
       for (uniform int tile_k = 0; tile_k < TILES_K; ++tile_k) {
@@ -125,9 +125,9 @@ export void amx_matmul_fp16_ispc(uniform float16 a[], uniform float16 b[],
         convert_b_tile(b, b_amx, b_offset, stride_b);
 
         // Load A and B tiles, then perform multiply-accumulate
-        amx_load(TMM_A, (uniform int8 * uniform) & a[a_offset],
+        amx_tile_load(TMM_A, (uniform int8 * uniform) & a[a_offset],
                  a_byte_stride);
-        amx_load(TMM_B, (uniform int8 * uniform) & b_amx[0],
+        amx_tile_load(TMM_B, (uniform int8 * uniform) & b_amx[0],
                  (uniform int64)(TILE_N * 4));
         amx_dpfp16ps(TMM_C, TMM_A, TMM_B);
       }
@@ -135,7 +135,7 @@ export void amx_matmul_fp16_ispc(uniform float16 a[], uniform float16 b[],
       // Store final C tile result to destination matrix
       uniform int c_offset = (tile_i * TILE_M) * stride_c + (tile_j * TILE_N);
       uniform int64 c_byte_stride = stride_c * 4;
-      amx_store(TMM_C, (uniform int8 * uniform) & c[c_offset],
+      amx_tile_store(TMM_C, (uniform int8 * uniform) & c[c_offset],
                 c_byte_stride);
     }
   }
