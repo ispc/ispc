@@ -11,8 +11,35 @@
 
 namespace ispc {
 
+// Helper to trace through a load instruction to find a constant value.
+// This handles the O0 pattern where constants are stored to allocas and then loaded.
+static llvm::ConstantInt *lGetConstantThroughLoad(llvm::Value *V) {
+    auto *LI = llvm::dyn_cast<llvm::LoadInst>(V);
+    if (!LI)
+        return nullptr;
+
+    llvm::Value *Ptr = LI->getPointerOperand()->stripPointerCasts();
+    auto *AI = llvm::dyn_cast<llvm::AllocaInst>(Ptr);
+    if (!AI)
+        return nullptr;
+
+    // Scan backward in the same basic block for a store to this alloca.
+    for (auto It = LI->getReverseIterator(); It != LI->getParent()->rend(); ++It) {
+        if (auto *SI = llvm::dyn_cast<llvm::StoreInst>(&*It)) {
+            if (SI->getPointerOperand()->stripPointerCasts() == AI) {
+                return llvm::dyn_cast<llvm::ConstantInt>(SI->getValueOperand());
+            }
+        }
+    }
+    return nullptr;
+}
+
 static llvm::ConstantInt *validateAMXTileArgument(llvm::CallInst *CI, llvm::Value *V) {
     auto *ConstIntV = llvm::dyn_cast<llvm::ConstantInt>(V);
+
+    // If not directly a constant, try to trace through load from alloca (O0 pattern).
+    if (!ConstIntV)
+        ConstIntV = lGetConstantThroughLoad(V);
 
     if (!ConstIntV) {
         SourcePos pos;
