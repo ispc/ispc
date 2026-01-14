@@ -107,6 +107,9 @@ jobs:
     steps:
     - name: Setup Arch Linux
       run: |
+        pacman-key --init
+        pacman-key --populate archlinux
+        pacman -Sy --noconfirm archlinux-keyring
         pacman -Syu --noconfirm
         pacman -S --needed --noconfirm base-devel git sudo cmake ninja ${{ matrix.project.extra_packages }}
 
@@ -171,6 +174,9 @@ jobs:
     steps:
     - name: Setup Arch Linux
       run: |
+        pacman-key --init
+        pacman-key --populate archlinux
+        pacman -Sy --noconfirm archlinux-keyring
         pacman -Syu --noconfirm
         pacman -S --needed --noconfirm base-devel git sudo cmake ninja ${{ matrix.project.extra_packages }}
 
