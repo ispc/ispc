@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2025, Intel Corporation
+  Copyright (c) 2025-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -20,6 +20,18 @@ namespace ispc {
  *
  */
 enum class TargetCapability {
+    // Indicates whether the CPU supports AMX BF16 instructions (amx-bf16).
+    // Enables BF16 dot product operations on AMX tiles.
+    AmxBf16,
+    // Indicates whether the CPU supports AMX FP16 instructions (amx-fp16).
+    // Enables FP16 dot product operations on AMX tiles.
+    AmxFp16,
+    // Indicates whether the CPU supports AMX INT8 instructions (amx-int8).
+    // Enables INT8 dot product operations on AMX tiles.
+    AmxInt8,
+    // Indicates whether the CPU supports AMX tile instructions (amx-tile).
+    // Enables basic AMX tile configuration and data movement operations.
+    AmxTile,
     // Indicates whether the CPU has ARM dot product instructions (SDOT/UDOT).
     // Enables accelerated dot product operations on:
     //  - signedxsigned 8-bit integers operations only (SDOT)
@@ -95,6 +107,10 @@ struct CapabilityMetadata {
  *
  */
 static constexpr CapabilityMetadata g_capabilityMetadata[] = {
+    {TargetCapability::AmxBf16, "ISPC_TARGET_HAS_AMX_BF16", nullptr},
+    {TargetCapability::AmxFp16, "ISPC_TARGET_HAS_AMX_FP16", nullptr},
+    {TargetCapability::AmxInt8, "ISPC_TARGET_HAS_AMX_INT8", nullptr},
+    {TargetCapability::AmxTile, "ISPC_TARGET_HAS_AMX_TILE", nullptr},
     {TargetCapability::ArmDotProduct, "ISPC_TARGET_HAS_ARM_DOT_PRODUCT", "__have_arm_dot_product"},
     {TargetCapability::ArmI8MM, "ISPC_TARGET_HAS_ARM_I8MM", "__have_arm_i8mm"},
     {TargetCapability::ConflictDetection, "ISPC_TARGET_HAS_CONFLICT_DETECTION", "__have_conflict_detection"},

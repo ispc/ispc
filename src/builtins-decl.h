@@ -157,6 +157,7 @@ extern const char *const __ispc_amx_dpbsud;
 extern const char *const __ispc_amx_dpbusd;
 extern const char *const __ispc_amx_dpbuud;
 extern const char *const __ispc_amx_dpfp16ps;
+extern const char *const __ispc_amx_not_supported;
 extern const char *const __ispc_amx_tile_load;
 extern const char *const __ispc_amx_tile_load_t1;
 extern const char *const __ispc_amx_tile_store;
