@@ -38,7 +38,7 @@
 
 // REQUIRES: X86_ENABLED && LLVM_20_0+ && !MACOS_HOST
 
-// CHECK_SPR_ERROR: Error: AMX functions are not supported on the current target
+// CHECK_SPR_ERROR: Error: Some AMX functions used in the source are not supported on the current target
 // CHECK_GNR_SUCCESS: call void @llvm.x86.tdpfp16ps
 // CHECK_DMR_SUCCESS: call void @llvm.x86.tdpfp16ps
 
