@@ -9,38 +9,91 @@
 
 #include "LowerAMXBuiltinsPass.h"
 #include "builtins-decl.h"
+#include "target_enums.h"
 
 namespace ispc {
 
 // Helper to trace through a load instruction to find a constant value.
 // This handles the O0 pattern where constants are stored to allocas and then loaded.
+// It also follows single-predecessor chains to find stores in predecessor blocks.
 static llvm::ConstantInt *lGetConstantThroughLoad(llvm::Value *V) {
     auto *LI = llvm::dyn_cast<llvm::LoadInst>(V);
-    if (!LI)
+    if (!LI) {
         return nullptr;
+    }
 
     llvm::Value *Ptr = LI->getPointerOperand()->stripPointerCasts();
     auto *AI = llvm::dyn_cast<llvm::AllocaInst>(Ptr);
-    if (!AI)
+    if (!AI) {
         return nullptr;
+    }
 
-    // Scan backward in the same basic block for a store to this alloca.
-    for (auto It = LI->getReverseIterator(); It != LI->getParent()->rend(); ++It) {
-        if (auto *SI = llvm::dyn_cast<llvm::StoreInst>(&*It)) {
-            if (SI->getPointerOperand()->stripPointerCasts() == AI) {
-                return llvm::dyn_cast<llvm::ConstantInt>(SI->getValueOperand());
+    // Helper to extract constant from a store instruction.
+    auto extractConstant = [](llvm::StoreInst *SI) -> llvm::ConstantInt * {
+        llvm::Value *StoredVal = SI->getValueOperand();
+        llvm::Type *TargetType = StoredVal->getType();
+
+        // Trace through cast instructions (trunc, zext, sext) to find the constant.
+        while (auto *Cast = llvm::dyn_cast<llvm::CastInst>(StoredVal)) {
+            StoredVal = Cast->getOperand(0);
+        }
+
+        auto *CI = llvm::dyn_cast<llvm::ConstantInt>(StoredVal);
+        if (!CI) {
+            return nullptr;
+        }
+
+        // Return constant with the correct target type (e.g., i8 for tile IDs).
+        return llvm::ConstantInt::get(llvm::cast<llvm::IntegerType>(TargetType), CI->getZExtValue());
+    };
+
+    // Search backward in a range for a store to our alloca.
+    auto findStoreInRange = [AI](llvm::BasicBlock::reverse_iterator Begin,
+                                 llvm::BasicBlock::reverse_iterator End) -> llvm::StoreInst * {
+        for (auto It = Begin; It != End; ++It) {
+            if (auto *SI = llvm::dyn_cast<llvm::StoreInst>(&*It)) {
+                if (SI->getPointerOperand()->stripPointerCasts() == AI) {
+                    return SI;
+                }
             }
         }
+        return nullptr;
+    };
+
+    // First, search in the same basic block (starting from the load going backward).
+    llvm::BasicBlock *CurrentBB = LI->getParent();
+    if (auto *SI = findStoreInRange(LI->getReverseIterator(), CurrentBB->rend())) {
+        return extractConstant(SI);
     }
+
+    // Not found in same block - follow single-predecessor chain.
+    llvm::SmallPtrSet<llvm::BasicBlock *, 8> Visited;
+    Visited.insert(CurrentBB);
+
+    while (llvm::BasicBlock *PredBB = CurrentBB->getSinglePredecessor()) {
+        if (!Visited.insert(PredBB).second) {
+            // Already visited - loop detected.
+            break;
+        }
+
+        // Search the entire predecessor block from end to beginning.
+        if (auto *SI = findStoreInRange(PredBB->rbegin(), PredBB->rend())) {
+            return extractConstant(SI);
+        }
+
+        CurrentBB = PredBB;
+    }
+
     return nullptr;
 }
 
-static llvm::ConstantInt *validateAMXTileArgument(llvm::CallInst *CI, llvm::Value *V) {
+static llvm::ConstantInt *lValidateAMXTileArgument(llvm::CallInst *CI, llvm::Value *V) {
     auto *ConstIntV = llvm::dyn_cast<llvm::ConstantInt>(V);
 
     // If not directly a constant, try to trace through load from alloca (O0 pattern).
-    if (!ConstIntV)
+    if (!ConstIntV) {
         ConstIntV = lGetConstantThroughLoad(V);
+    }
 
     if (!ConstIntV) {
         SourcePos pos;
@@ -67,7 +120,7 @@ static llvm::CallInst *lLowerAMXTileZeroBuiltin(llvm::CallInst *CI) {
 
     llvm::Value *TileOp = CI->getArgOperand(0);
 
-    if (auto *CTile = validateAMXTileArgument(CI, TileOp)) {
+    if (auto *CTile = lValidateAMXTileArgument(CI, TileOp)) {
         llvm::SmallVector<llvm::Value *, 1> Ops({CTile});
         return builder.CreateIntrinsic(llvm::Type::getVoidTy(builder.getContext()), llvm::Intrinsic::x86_tilezero, Ops);
     } else {
@@ -79,9 +132,10 @@ static llvm::CallInst *lLowerAMXLoadStoreBuiltin(llvm::CallInst *CI) {
     llvm::IRBuilder<> builder(CI);
     Assert(CI->arg_size() == 3);
 
-    auto *CTile = validateAMXTileArgument(CI, CI->getArgOperand(0));
-    if (!CTile)
+    auto *CTile = lValidateAMXTileArgument(CI, CI->getArgOperand(0));
+    if (!CTile) {
         return nullptr;
+    }
 
     llvm::Intrinsic::ID LoadStoreID = 0;
     llvm::StringRef FnName = CI->getCalledFunction()->getName();
@@ -103,12 +157,13 @@ static llvm::CallInst *lLowerAMXDotProductBuiltin(llvm::CallInst *CI) {
     llvm::IRBuilder<> builder(CI);
     Assert(CI->arg_size() == 3);
 
-    auto *DstTile = validateAMXTileArgument(CI, CI->getArgOperand(0));
-    auto *Src1Tile = validateAMXTileArgument(CI, CI->getArgOperand(1));
-    auto *Src2Tile = validateAMXTileArgument(CI, CI->getArgOperand(2));
+    auto *DstTile = lValidateAMXTileArgument(CI, CI->getArgOperand(0));
+    auto *Src1Tile = lValidateAMXTileArgument(CI, CI->getArgOperand(1));
+    auto *Src2Tile = lValidateAMXTileArgument(CI, CI->getArgOperand(2));
 
-    if (!DstTile || !Src1Tile || !Src2Tile)
+    if (!DstTile || !Src1Tile || !Src2Tile) {
         return nullptr;
+    }
 
     llvm::Intrinsic::ID DotProdID = 0;
     llvm::StringRef FnName = CI->getCalledFunction()->getName();
@@ -137,8 +192,9 @@ static bool lRunOnBasicBlock(llvm::BasicBlock &BB) {
     for (llvm::BasicBlock::iterator iter = BB.begin(), e = BB.end(); iter != e;) {
         if (llvm::CallInst *CI = llvm::dyn_cast<llvm::CallInst>(&*(iter++))) {
             llvm::Function *Callee = CI->getCalledFunction();
-            if (!Callee)
+            if (!Callee) {
                 continue;
+            }
 
             llvm::StringRef FnName = Callee->getName();
 
@@ -146,10 +202,10 @@ static bool lRunOnBasicBlock(llvm::BasicBlock &BB) {
             if (FnName == builtin::__ispc_amx_not_supported) {
                 SourcePos pos;
                 LLVMGetSourcePosFromMetadata(CI, &pos);
-                Error(pos,
-                      "AMX functions are not supported on the current target \"%s\". "
-                      "Use avx512spr, avx512gnr, or avx10.2dmr targets for AMX support.",
-                      g->target->GetISATargetString());
+                Error(pos, "Some AMX functions used in the source are not supported on the current target \"%s\".",
+                      ISPCTargetToString(g->target->getISPCTarget()).c_str());
+                CI->eraseFromParent();
+                Modified = true;
                 continue;
             }
 
@@ -158,15 +214,15 @@ static bool lRunOnBasicBlock(llvm::BasicBlock &BB) {
                 llvm::CallInst *D = nullptr;
                 if (FnName == builtin::__ispc_amx_tile_zero) {
                     D = lLowerAMXTileZeroBuiltin(CI);
-                } else if (FnName == builtin::__ispc_amx_tile_load || FnName == builtin::__ispc_amx_tile_load_t1) {
-                    D = lLowerAMXLoadStoreBuiltin(CI);
-                } else if (FnName == builtin::__ispc_amx_tile_store) {
+                } else if (FnName == builtin::__ispc_amx_tile_load || FnName == builtin::__ispc_amx_tile_load_t1 ||
+                           FnName == builtin::__ispc_amx_tile_store) {
                     D = lLowerAMXLoadStoreBuiltin(CI);
                 } else if (FnName.starts_with("__ispc_amx_dp")) {
                     D = lLowerAMXDotProductBuiltin(CI);
                 }
 
                 if (D) {
+                    D->setDebugLoc(CI->getDebugLoc());
                     CI->replaceAllUsesWith(D);
                     CI->eraseFromParent();
                     Modified = true;
