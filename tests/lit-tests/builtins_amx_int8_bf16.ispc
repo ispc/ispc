@@ -50,7 +50,7 @@
 
 // REQUIRES: X86_ENABLED && LLVM_20_0+ && !MACOS_HOST
 
-// CHECK_ICL_ERROR: Error: AMX functions are not supported on the current target
+// CHECK_ICL_ERROR: Error: Some AMX functions used in the source are not supported on the current target
 
 // CHECK_SPR_SUCCESS: call void @llvm.x86.tdpbssd
 // CHECK_SPR_SUCCESS: call void @llvm.x86.tdpbsud
