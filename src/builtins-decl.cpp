@@ -105,6 +105,7 @@ DECL_BUILTIN_NAME(__ispc_amx_dpbsud);
 DECL_BUILTIN_NAME(__ispc_amx_dpbusd);
 DECL_BUILTIN_NAME(__ispc_amx_dpbuud);
 DECL_BUILTIN_NAME(__ispc_amx_dpfp16ps);
+DECL_BUILTIN_NAME(__ispc_amx_not_supported);
 DECL_BUILTIN_NAME(__ispc_amx_tile_load);
 DECL_BUILTIN_NAME(__ispc_amx_tile_load_t1);
 DECL_BUILTIN_NAME(__ispc_amx_tile_store);

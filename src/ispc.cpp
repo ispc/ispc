@@ -1594,7 +1594,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasVecPrefetch = false;
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
                          TargetCapability::Rsqrtd, TargetCapability::Rcpd, TargetCapability::Fp16Support,
-                         TargetCapability::IntelVNNI, TargetCapability::ConflictDetection});
+                         TargetCapability::IntelVNNI, TargetCapability::ConflictDetection, TargetCapability::AmxTile,
+                         TargetCapability::AmxInt8, TargetCapability::AmxBf16});
+        setCapability(TargetCapability::AmxFp16, (m_ispc_target == ISPCTarget::avx512gnr_x4));
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512gnr_x4) ? CPU_GNR : CPU_SPR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1612,7 +1614,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasVecPrefetch = false;
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
                          TargetCapability::Rsqrtd, TargetCapability::Rcpd, TargetCapability::Fp16Support,
-                         TargetCapability::IntelVNNI, TargetCapability::ConflictDetection});
+                         TargetCapability::IntelVNNI, TargetCapability::ConflictDetection, TargetCapability::AmxTile,
+                         TargetCapability::AmxInt8, TargetCapability::AmxBf16});
+        setCapability(TargetCapability::AmxFp16, (m_ispc_target == ISPCTarget::avx512gnr_x8));
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512gnr_x8) ? CPU_GNR : CPU_SPR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1630,7 +1634,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasVecPrefetch = false;
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
                          TargetCapability::Rsqrtd, TargetCapability::Rcpd, TargetCapability::Fp16Support,
-                         TargetCapability::IntelVNNI, TargetCapability::ConflictDetection});
+                         TargetCapability::IntelVNNI, TargetCapability::ConflictDetection, TargetCapability::AmxTile,
+                         TargetCapability::AmxInt8, TargetCapability::AmxBf16});
+        setCapability(TargetCapability::AmxFp16, (m_ispc_target == ISPCTarget::avx512gnr_x16));
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512gnr_x16) ? CPU_GNR : CPU_SPR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "512"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "512"));
@@ -1648,7 +1654,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasVecPrefetch = false;
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
                          TargetCapability::Fp16Support, TargetCapability::IntelVNNI,
-                         TargetCapability::ConflictDetection});
+                         TargetCapability::ConflictDetection, TargetCapability::AmxTile, TargetCapability::AmxInt8,
+                         TargetCapability::AmxBf16});
+        setCapability(TargetCapability::AmxFp16, (m_ispc_target == ISPCTarget::avx512gnr_x64));
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512gnr_x64) ? CPU_GNR : CPU_SPR;
         break;
     case ISPCTarget::avx512spr_x32:
@@ -1664,7 +1672,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasVecPrefetch = false;
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
                          TargetCapability::Fp16Support, TargetCapability::IntelVNNI,
-                         TargetCapability::ConflictDetection});
+                         TargetCapability::ConflictDetection, TargetCapability::AmxTile, TargetCapability::AmxInt8,
+                         TargetCapability::AmxBf16});
+        setCapability(TargetCapability::AmxFp16, (m_ispc_target == ISPCTarget::avx512gnr_x32));
         CPUfromISA = (m_ispc_target == ISPCTarget::avx512gnr_x32) ? CPU_GNR : CPU_SPR;
         break;
 #if ISPC_LLVM_VERSION >= ISPC_LLVM_20_0
@@ -1680,7 +1690,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
                          TargetCapability::Fp16Support, TargetCapability::IntelVNNI, TargetCapability::IntelVNNI_Int8,
                          TargetCapability::IntelVNNI_Int16, TargetCapability::ConflictDetection,
-                         TargetCapability::Rsqrtd, TargetCapability::Rcpd});
+                         TargetCapability::Rsqrtd, TargetCapability::Rcpd, TargetCapability::AmxTile,
+                         TargetCapability::AmxInt8, TargetCapability::AmxBf16, TargetCapability::AmxFp16});
         CPUfromISA = CPU_DMR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1697,7 +1708,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
                          TargetCapability::Fp16Support, TargetCapability::IntelVNNI, TargetCapability::IntelVNNI_Int8,
                          TargetCapability::IntelVNNI_Int16, TargetCapability::ConflictDetection,
-                         TargetCapability::Rsqrtd, TargetCapability::Rcpd});
+                         TargetCapability::Rsqrtd, TargetCapability::Rcpd, TargetCapability::AmxTile,
+                         TargetCapability::AmxInt8, TargetCapability::AmxBf16, TargetCapability::AmxFp16});
         CPUfromISA = CPU_DMR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "256"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "256"));
@@ -1714,7 +1726,8 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
                          TargetCapability::Fp16Support, TargetCapability::IntelVNNI, TargetCapability::IntelVNNI_Int8,
                          TargetCapability::IntelVNNI_Int16, TargetCapability::ConflictDetection,
-                         TargetCapability::Rsqrtd, TargetCapability::Rcpd});
+                         TargetCapability::Rsqrtd, TargetCapability::Rcpd, TargetCapability::AmxTile,
+                         TargetCapability::AmxInt8, TargetCapability::AmxBf16, TargetCapability::AmxFp16});
         CPUfromISA = CPU_DMR;
         this->m_funcAttributes.push_back(std::make_pair("prefer-vector-width", "512"));
         this->m_funcAttributes.push_back(std::make_pair("min-legal-vector-width", "512"));
@@ -1730,7 +1743,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasGather = this->m_hasScatter = true;
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
                          TargetCapability::Fp16Support, TargetCapability::IntelVNNI, TargetCapability::IntelVNNI_Int8,
-                         TargetCapability::IntelVNNI_Int16, TargetCapability::ConflictDetection});
+                         TargetCapability::IntelVNNI_Int16, TargetCapability::ConflictDetection,
+                         TargetCapability::AmxTile, TargetCapability::AmxInt8, TargetCapability::AmxBf16,
+                         TargetCapability::AmxFp16});
         CPUfromISA = CPU_DMR;
         break;
     case ISPCTarget::avx10_2dmr_x64:
@@ -1744,7 +1759,9 @@ Target::Target(Arch arch, const char *cpu, ISPCTarget ispc_target, PICLevel picL
         this->m_hasGather = this->m_hasScatter = true;
         setCapabilities({TargetCapability::HalfConverts, TargetCapability::HalfFullSupport, TargetCapability::Rand,
                          TargetCapability::Fp16Support, TargetCapability::IntelVNNI, TargetCapability::IntelVNNI_Int8,
-                         TargetCapability::IntelVNNI_Int16, TargetCapability::ConflictDetection});
+                         TargetCapability::IntelVNNI_Int16, TargetCapability::ConflictDetection,
+                         TargetCapability::AmxTile, TargetCapability::AmxInt8, TargetCapability::AmxBf16,
+                         TargetCapability::AmxFp16});
         CPUfromISA = CPU_DMR;
         break;
 #else

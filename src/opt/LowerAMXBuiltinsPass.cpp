@@ -85,14 +85,15 @@ static llvm::CallInst *lLowerAMXLoadStoreBuiltin(llvm::CallInst *CI) {
 
     llvm::Intrinsic::ID LoadStoreID = 0;
     llvm::StringRef FnName = CI->getCalledFunction()->getName();
-    if (FnName == builtin::__ispc_amx_tile_load)
+    if (FnName == builtin::__ispc_amx_tile_load) {
         LoadStoreID = llvm::Intrinsic::x86_tileloadd64;
-    else if (FnName == builtin::__ispc_amx_tile_load_t1)
+    } else if (FnName == builtin::__ispc_amx_tile_load_t1) {
         LoadStoreID = llvm::Intrinsic::x86_tileloaddt164;
-    else if (FnName == builtin::__ispc_amx_tile_store)
+    } else if (FnName == builtin::__ispc_amx_tile_store) {
         LoadStoreID = llvm::Intrinsic::x86_tilestored64;
-    else
+    } else {
         Assert(false);
+    }
 
     llvm::SmallVector<llvm::Value *, 3> Ops({CTile, CI->getArgOperand(1), CI->getArgOperand(2)});
     return builder.CreateIntrinsic(llvm::Type::getVoidTy(builder.getContext()), LoadStoreID, Ops);
@@ -111,20 +112,21 @@ static llvm::CallInst *lLowerAMXDotProductBuiltin(llvm::CallInst *CI) {
 
     llvm::Intrinsic::ID DotProdID = 0;
     llvm::StringRef FnName = CI->getCalledFunction()->getName();
-    if (FnName == builtin::__ispc_amx_dpbssd)
+    if (FnName == builtin::__ispc_amx_dpbssd) {
         DotProdID = llvm::Intrinsic::x86_tdpbssd;
-    else if (FnName == builtin::__ispc_amx_dpbsud)
+    } else if (FnName == builtin::__ispc_amx_dpbsud) {
         DotProdID = llvm::Intrinsic::x86_tdpbsud;
-    else if (FnName == builtin::__ispc_amx_dpbusd)
+    } else if (FnName == builtin::__ispc_amx_dpbusd) {
         DotProdID = llvm::Intrinsic::x86_tdpbusd;
-    else if (FnName == builtin::__ispc_amx_dpbuud)
+    } else if (FnName == builtin::__ispc_amx_dpbuud) {
         DotProdID = llvm::Intrinsic::x86_tdpbuud;
-    else if (FnName == builtin::__ispc_amx_dpbf16ps)
+    } else if (FnName == builtin::__ispc_amx_dpbf16ps) {
         DotProdID = llvm::Intrinsic::x86_tdpbf16ps;
-    else if (FnName == builtin::__ispc_amx_dpfp16ps)
+    } else if (FnName == builtin::__ispc_amx_dpfp16ps) {
         DotProdID = llvm::Intrinsic::x86_tdpfp16ps;
-    else
+    } else {
         Assert(false);
+    }
 
     llvm::SmallVector<llvm::Value *, 3> Ops({DstTile, Src1Tile, Src2Tile});
     return builder.CreateIntrinsic(llvm::Type::getVoidTy(builder.getContext()), DotProdID, Ops);
@@ -135,9 +137,25 @@ static bool lRunOnBasicBlock(llvm::BasicBlock &BB) {
     for (llvm::BasicBlock::iterator iter = BB.begin(), e = BB.end(); iter != e;) {
         if (llvm::CallInst *CI = llvm::dyn_cast<llvm::CallInst>(&*(iter++))) {
             llvm::Function *Callee = CI->getCalledFunction();
-            if (Callee && Callee->getName().starts_with("__ispc_amx")) {
+            if (!Callee)
+                continue;
+
+            llvm::StringRef FnName = Callee->getName();
+
+            // Check for __ispc_amx_not_supported marker - emit error for unsupported AMX on this target
+            if (FnName == builtin::__ispc_amx_not_supported) {
+                SourcePos pos;
+                LLVMGetSourcePosFromMetadata(CI, &pos);
+                Error(pos,
+                      "AMX functions are not supported on the current target \"%s\". "
+                      "Use avx512spr, avx512gnr, or avx10.2dmr targets for AMX support.",
+                      g->target->GetISATargetString());
+                continue;
+            }
+
+            // Handle AMX builtins that need lowering
+            if (FnName.starts_with("__ispc_amx")) {
                 llvm::CallInst *D = nullptr;
-                llvm::StringRef FnName = Callee->getName();
                 if (FnName == builtin::__ispc_amx_tile_zero) {
                     D = lLowerAMXTileZeroBuiltin(CI);
                 } else if (FnName == builtin::__ispc_amx_tile_load || FnName == builtin::__ispc_amx_tile_load_t1) {
