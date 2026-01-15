@@ -83,10 +83,10 @@ export void test_amx_tile(uniform int8* uniform config, uniform int8* uniform da
     // Base AMX tile operations - require amxtile feature
     amx_tile_loadconfig(config);
     amx_tile_storeconfig(config);
-    amx_tile_zero((uniform int8)2);
-    amx_tile_load((uniform int8)0, data, (uniform int64)64);
-    amx_tile_load_t1((uniform int8)1, data, (uniform int64)64);
-    amx_tile_store((uniform int8)0, data, (uniform int64)64);
+    amx_tile_zero(2);
+    amx_tile_load(0, data, (uniform int64)64);
+    amx_tile_load_t1(1, data, (uniform int64)64);
+    amx_tile_store(0, data, (uniform int64)64);
     amx_tile_release();
 }
 

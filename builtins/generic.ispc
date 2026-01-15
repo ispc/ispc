@@ -622,28 +622,28 @@ extern "C" void __ispc_amx_not_supported();
 EXT void __amx_tile_loadconfig(const uniform int8 *uniform config) { __ispc_amx_not_supported(); }
 EXT void __amx_tile_storeconfig(uniform int8 *uniform config) { __ispc_amx_not_supported(); }
 EXT void __amx_tile_release() { __ispc_amx_not_supported(); }
-EXT void __amx_tile_zero(uniform int8 tile) { __ispc_amx_not_supported(); }
-EXT void __amx_tile_load(uniform int8 tile, const uniform int8 *uniform data, uniform int64 stride) {
+EXT void __amx_tile_zero(uniform uint8 tile) { __ispc_amx_not_supported(); }
+EXT void __amx_tile_load(uniform uint8 tile, const uniform int8 *uniform data, uniform int64 stride) {
     __ispc_amx_not_supported();
 }
-EXT void __amx_tile_load_t1(uniform int8 tile, const uniform int8 *uniform data, uniform int64 stride) {
+EXT void __amx_tile_load_t1(uniform uint8 tile, const uniform int8 *uniform data, uniform int64 stride) {
     __ispc_amx_not_supported();
 }
-EXT void __amx_tile_store(uniform int8 tile, uniform int8 *uniform data, uniform int64 stride) {
+EXT void __amx_tile_store(uniform uint8 tile, uniform int8 *uniform data, uniform int64 stride) {
     __ispc_amx_not_supported();
 }
 
 // AMX INT8 Dot Products - not supported on generic target
-EXT void __amx_dpbssd(uniform int8 dst, uniform int8 src1, uniform int8 src2) { __ispc_amx_not_supported(); }
-EXT void __amx_dpbsud(uniform int8 dst, uniform int8 src1, uniform int8 src2) { __ispc_amx_not_supported(); }
-EXT void __amx_dpbusd(uniform int8 dst, uniform int8 src1, uniform int8 src2) { __ispc_amx_not_supported(); }
-EXT void __amx_dpbuud(uniform int8 dst, uniform int8 src1, uniform int8 src2) { __ispc_amx_not_supported(); }
+EXT void __amx_dpbssd(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2) { __ispc_amx_not_supported(); }
+EXT void __amx_dpbsud(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2) { __ispc_amx_not_supported(); }
+EXT void __amx_dpbusd(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2) { __ispc_amx_not_supported(); }
+EXT void __amx_dpbuud(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2) { __ispc_amx_not_supported(); }
 
 // AMX FP16 Dot Product - not supported on generic target
-EXT void __amx_dpfp16ps(uniform int8 dst, uniform int8 src1, uniform int8 src2) { __ispc_amx_not_supported(); }
+EXT void __amx_dpfp16ps(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2) { __ispc_amx_not_supported(); }
 
 // AMX BF16 Dot Product - not supported on generic target
-EXT void __amx_dpbf16ps(uniform int8 dst, uniform int8 src1, uniform int8 src2) { __ispc_amx_not_supported(); }
+EXT void __amx_dpbf16ps(uniform uint8 dst, uniform uint8 src1, uniform uint8 src2) { __ispc_amx_not_supported(); }
 
 // sign extension
 EXT READNONE uniform int32 __sext_uniform_bool(uniform bool x) { return x ? -1 : 0; }
