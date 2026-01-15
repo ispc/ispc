@@ -10,7 +10,7 @@
 #include <amx.isph>
 
 __attribute__((external_only))
-export void test_amx_non_const_tile(uniform int8 tile_id, uniform int8* uniform data) {
+export void test_amx_non_const_tile(uniform uint8 tile_id, uniform int8* uniform data) {
     // tile_id is a runtime value, not a compile-time constant
     amx_tile_zero(tile_id);
 }

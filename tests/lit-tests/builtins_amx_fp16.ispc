@@ -47,6 +47,6 @@
 __attribute__((external_only))
 export void test_amx_fp16() {
     // require amxfp16 feature (GNR+)
-    amx_dpfp16ps((uniform int8)2, (uniform int8)0, (uniform int8)1);
+    amx_dpfp16ps(2, 0, 1);
 }
 
