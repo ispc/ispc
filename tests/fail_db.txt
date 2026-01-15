@@ -68,6 +68,7 @@
 ./tests/func-tests/cbrt-double.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 21.1 clang++21.1 O2 spv *
 ./tests/func-tests/cbrt-float.ispc runfail    xe64      xehpc-x32 pvc   Linux LLVM 21.1 clang++21.1 O2 spv *
 ./tests/func-tests/cbrt-double.ispc runfail    xe64      xehpc-x16 pvc   Linux LLVM 21.1 clang++21.1 O2 spv *
+./tests/func-tests/switch-15.ispc compfail  wasm32     wasm-i32x4 unspec   Linux LLVM 21.1    emcc4.0 O0 obj *
 .\tests\func-tests\select-short-vec-func.ispc runfail     x86    avx1-i32x16 unspec Windows LLVM 18.1         cl O1 obj *
 .\tests\func-tests\select-short-vec.ispc runfail     x86    avx1-i32x16 unspec Windows LLVM 18.1         cl O1 obj *
 .\tests\func-tests\select-short-vec-func.ispc runfail     x86    avx2-i32x16 unspec Windows LLVM 18.1         cl O1 obj *
