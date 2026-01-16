@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022-2025, Intel Corporation
+  Copyright (c) 2022-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -13,38 +13,37 @@ namespace ispc {
 
 using namespace builtin;
 
-/** Helper function to check if a type (after unwrapping arrays) is a vector
-    matching the target vector width.
+/** Helper function to return a FixedVectorType if the type (after unwrapping arrays)
+    is a vector, or nullptr otherwise.
 */
-static bool lIsVectorMatchingTargetWidth(llvm::Type *type) {
+static llvm::FixedVectorType *lIsVectorMatchingTargetWidth(llvm::Type *type) {
     // First unwrap arrays
     llvm::ArrayType *at = nullptr;
     while ((at = llvm::dyn_cast<llvm::ArrayType>(type))) {
         type = at->getElementType();
     }
 
-    // Check if it's a vector of the right width
-    llvm::FixedVectorType *vt = llvm::dyn_cast<llvm::FixedVectorType>(type);
-    if (vt != nullptr) {
-        return ((int)vt->getNumElements() == g->target->getVectorWidth());
-    }
-    return false;
+    // Return the type if it's a FixedVectorType, nullptr otherwise
+    return llvm::dyn_cast<llvm::FixedVectorType>(type);
 }
 
-/** Helper function to recursively analyze struct field access at a given offset */
-static bool lCheckStructFieldAtOffset(llvm::StructType *st, uint64_t targetOffset, const llvm::DataLayout &DL) {
+/** Helper function to recursively analyze struct field access at a given offset.
+    Returns the FixedVectorType if found, or nullptr otherwise.
+*/
+static llvm::FixedVectorType *lCheckStructFieldAtOffset(llvm::StructType *st, uint64_t targetOffset,
+                                                        const llvm::DataLayout &DL) {
     const llvm::StructLayout *SL = DL.getStructLayout(st);
     uint64_t structSize = SL->getSizeInBytes().getFixedValue();
 
     // Check bounds
     if (targetOffset >= structSize) {
-        return false;
+        return nullptr;
     }
 
     // Find containing field
     unsigned fieldIndex = SL->getElementContainingOffset(targetOffset);
     if (fieldIndex >= st->getNumElements()) {
-        return false;
+        return nullptr;
     }
 
     llvm::Type *fieldType = st->getElementType(fieldIndex);
@@ -60,14 +59,14 @@ static bool lCheckStructFieldAtOffset(llvm::StructType *st, uint64_t targetOffse
     return lIsVectorMatchingTargetWidth(fieldType);
 }
 
-/** This routine attempts to determine if the given pointer in lvalue is
-    pointing to stack-allocated memory.  It's conservative in that it
-    should never return true for non-stack allocated memory, but may return
-    false for memory that actually is stack allocated.  The basic strategy
-    is to traverse through the operands and see if the pointer originally
-    comes from an AllocaInst.
+/** This routine attempts to find the target vector type for blend operations
+    on the given pointer. Returns the FixedVectorType if the pointer points to
+    stack-allocated memory suitable for blending, or nullptr otherwise.
+    It's conservative and may return nullptr for memory that could actually
+    support blending. The basic strategy is to traverse through the operands
+    and analyze the underlying allocated type.
 */
-static bool lIsSafeToBlend(llvm::Value *lvalue) {
+static llvm::FixedVectorType *lIsSafeToBlend(llvm::Value *lvalue) {
     // Handle bitcast by recursing to operand
     if (llvm::BitCastInst *bc = llvm::dyn_cast<llvm::BitCastInst>(lvalue)) {
         return lIsSafeToBlend(bc->getOperand(0));
@@ -112,14 +111,14 @@ static bool lIsSafeToBlend(llvm::Value *lvalue) {
         llvm::APInt offset(DL.getIndexSizeInBits(gep->getPointerAddressSpace()), 0);
 
         if (!gep->accumulateConstantOffset(DL, offset)) {
-            return false;
+            return nullptr;
         }
 
         uint64_t targetOffset = offset.getZExtValue();
         return lCheckStructFieldAtOffset(st, targetOffset, DL);
     }
 
-    return false;
+    return nullptr;
 }
 
 struct LMSInfo {
@@ -156,10 +155,16 @@ static bool lReplacePseudoMaskedStore(llvm::CallInst *callInst) {
     llvm::Value *mask = callInst->getArgOperand(2);
 
     // We need to choose between doing the load + blend + store trick,
-    // or serializing the masked store.  Even on targets with a native
+    // or serializing the masked store. Even on targets with a native
     // masked store instruction, this is preferable since it lets us
     // keep values in registers rather than going out to the stack.
-    bool doBlend = (!g->opt.disableBlendedMaskedStores && lIsSafeToBlend(lvalue));
+    bool doBlend = false;
+    if (!g->opt.disableBlendedMaskedStores) {
+        if (llvm::FixedVectorType *vt = lIsSafeToBlend(lvalue)) {
+            auto &DL = callInst->getModule()->getDataLayout();
+            doBlend = DL.getTypeSizeInBits(vt) >= DL.getTypeSizeInBits(rvalue->getType());
+        }
+    }
 
     // Generate the call to the appropriate masked store function and
     // replace the __pseudo_* one with it.
