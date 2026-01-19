@@ -446,7 +446,7 @@ def check_targets():
             "To test all platforms please set SDE_HOME to path containing SDE.\n" +
             "Please refer to http://www.intel.com/software/sde for SDE download information.", 2)
 
-    return [result, result_sde]
+    return [result, result_sde, hw_arch]
 
 def build_ispc(version_LLVM, make):
     current_path = os.getcwd()
@@ -614,7 +614,7 @@ def validation_run(only, only_targets, reference_branch, number, update, speed_n
         stability.wrapexe = ""
         stability.calling_conv = None
 # prepare parameters of run
-        [targets_t, sde_targets_t] = check_targets()
+        [targets_t, sde_targets_t, hw_arch] = check_targets()
         rebuild = True
         opts = []
         archs = []
@@ -703,7 +703,7 @@ def validation_run(only, only_targets, reference_branch, number, update, speed_n
                 if (stability.target in unsupported_llvm_targets(LLVM[i])):
                     print_debug("Warning: target " + stability.target + " is not supported in LLVM " + LLVM[i] + "\n", False, stability_log)
                     continue
-
+                print_debug("Running native - " + hw_arch + "\n", False, "")
                 # now set archs for targets
                 arch = archs
                 for i1 in range(0,len(arch)):
@@ -722,8 +722,9 @@ def validation_run(only, only_targets, reference_branch, number, update, speed_n
                 if (stability.target in unsupported_llvm_targets(LLVM[i])):
                     print_debug("Warning: target " + stability.target + " is not supported in LLVM " + LLVM[i] + "\n", False, stability_log)
                     continue
-
-                stability.wrapexe = get_sde() + " " + sde_targets[j][0] + " -- "
+                sde_flag = sde_targets[j][0]
+                stability.wrapexe = get_sde() + " " + sde_flag + " -- "
+                print_debug("Running SDE " + sde_flag + "\n", False, "")
                 arch = archs
                 for i1 in range(0,len(arch)):
                     for i2 in range(0,len(opts)):
