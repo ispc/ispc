@@ -122,14 +122,6 @@ if (NOT PREBUILT_STAGE2_PATH STREQUAL "NO")
     set(STAGE2_PATH "${PREBUILT_STAGE2_PATH}")
 endif()
 
-# Set up full paths to stage2 clang tools for usage in toolchain files to avoid issues on open source Github runners like
-# lib\SPIRV\LLVMSPIRVLib.lib: 'CMakeFiles/LLVMSPIRVLib.dir/libSPIRV/SPIRVFnVar.cpp.obj': Unknown attribute kind (102) (Producer: 'LLVM21.1.8' Reader: 'LLVM 19.1.5')
-# CMAKE_EXECUTABLE_SUFFIX is .exe on Windows, empty on other platforms
-cmake_path(CONVERT "${STAGE2_PATH}/bin/clang-cl${CMAKE_EXECUTABLE_SUFFIX}" TO_CMAKE_PATH_LIST STAGE2_CLANG_CL_CMAKE)
-cmake_path(CONVERT "${STAGE2_PATH}/bin/lld-link${CMAKE_EXECUTABLE_SUFFIX}" TO_CMAKE_PATH_LIST STAGE2_LLD_LINK_CMAKE)
-cmake_path(CONVERT "${STAGE2_PATH}/bin/llvm-lib${CMAKE_EXECUTABLE_SUFFIX}" TO_CMAKE_PATH_LIST STAGE2_LLVM_LIB_CMAKE)
-cmake_path(CONVERT "${STAGE2_PATH}/bin/llvm-rc${CMAKE_EXECUTABLE_SUFFIX}" TO_CMAKE_PATH_LIST STAGE2_LLVM_RC_CMAKE)
-
 set(STAGE3_PATH "${CMAKE_BINARY_DIR}/stage3")
 
 if (NOT PREBUILT_STAGE1_PATH STREQUAL "NO" AND NOT PREBUILT_STAGE2_PATH STREQUAL "NO")
@@ -148,6 +140,16 @@ if (BUILD_STAGE2_TOOLCHAIN_ONLY OR INSTALL_TOOLCHAIN)
     set(TOOLCHAIN_STAGE1_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
     set(TOOLCHAIN_STAGE2_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
 endif()
+
+# Set up full paths to stage2 clang tools for usage in toolchain files to avoid issues on open source Github runners like
+# lib\SPIRV\LLVMSPIRVLib.lib: 'CMakeFiles/LLVMSPIRVLib.dir/libSPIRV/SPIRVFnVar.cpp.obj': Unknown attribute kind (102) (Producer: 'LLVM21.1.8' Reader: 'LLVM 19.1.5')
+# CMAKE_EXECUTABLE_SUFFIX is .exe on Windows, empty on other platforms
+# NOTE: These must be computed AFTER the BUILD_STAGE2_TOOLCHAIN_ONLY check above which may update STAGE2_PATH
+cmake_path(CONVERT "${STAGE2_PATH}/bin/clang-cl${CMAKE_EXECUTABLE_SUFFIX}" TO_CMAKE_PATH_LIST STAGE2_CLANG_CL_CMAKE)
+cmake_path(CONVERT "${STAGE2_PATH}/bin/lld-link${CMAKE_EXECUTABLE_SUFFIX}" TO_CMAKE_PATH_LIST STAGE2_LLD_LINK_CMAKE)
+cmake_path(CONVERT "${STAGE2_PATH}/bin/llvm-lib${CMAKE_EXECUTABLE_SUFFIX}" TO_CMAKE_PATH_LIST STAGE2_LLVM_LIB_CMAKE)
+cmake_path(CONVERT "${STAGE2_PATH}/bin/llvm-rc${CMAKE_EXECUTABLE_SUFFIX}" TO_CMAKE_PATH_LIST STAGE2_LLVM_RC_CMAKE)
+
 message(STATUS "TOOLCHAIN_STAGE1_INSTALL_PREFIX is ${TOOLCHAIN_STAGE1_INSTALL_PREFIX}")
 message(STATUS "TOOLCHAIN_STAGE2_INSTALL_PREFIX is ${TOOLCHAIN_STAGE2_INSTALL_PREFIX}")
 
