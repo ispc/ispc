@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -10,8 +10,8 @@
 */
 
 #include "module.h"
-#include "constexpr.h"
 #include "builtins.h"
+#include "constexpr.h"
 #include "ctx.h"
 #include "expr.h"
 #include "func.h"
@@ -769,8 +769,7 @@ void Module::AddGlobalVariable(Declarator *decl, bool isConst, bool isConstexpr)
     }
 
     if (isConstexpr && !IsConstexprTypeAllowed(type)) {
-        Error(pos,
-              "constexpr variable \"%s\" must have an atomic, enum, pointer, short vector, array, or struct type",
+        Error(pos, "constexpr variable \"%s\" must have an atomic, enum, pointer, short vector, array, or struct type",
               name.c_str());
         return;
     }

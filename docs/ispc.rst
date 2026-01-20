@@ -3797,15 +3797,14 @@ them:
     const varying int y = x * 2;
 
 Constexpr
-~~~~~~~~~
+^^^^^^^^^
 
 ``constexpr`` declares variables and functions that can be evaluated at
 compile time. ``constexpr`` values can be used in constant-expression
 contexts such as array sizes, short vector lengths, ``switch`` case labels,
 enumerator values, non-type template arguments, and default parameter values.
 
-``constexpr`` variables
-^^^^^^^^^^^^^^^^^^^^^^^
+**Constexpr variables**
 
 - ``constexpr`` implies ``const``.
 - The initializer must be a constant expression.
@@ -3834,8 +3833,7 @@ Examples:
     constexpr varying int lane = programIndex;
     constexpr varying int off = lane * 4;
 
-``constexpr`` functions
-^^^^^^^^^^^^^^^^^^^^^^^
+**Constexpr functions**
 
 ``constexpr`` functions can be evaluated at compile time when called in a
 constant-expression context. The function is still generated as normal code
@@ -3866,8 +3864,7 @@ Example:
 
     uniform int buf[gcd(48, 18)];
 
-Forward references
-^^^^^^^^^^^^^^^^^^
+**Forward references**
 
 Global initializers and default parameter values may call ``constexpr``
 functions defined later in the same file. Other constant-expression contexts
