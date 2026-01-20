@@ -10,6 +10,8 @@ permissions: {}
 
 jobs:
   deduplicate:
+    # Only run in the main ispc/ispc repo where the secret is available.
+    if: github.repository == 'ispc/ispc'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
