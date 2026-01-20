@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -9,9 +9,9 @@
 */
 
 #include "stmt.h"
-#include "constexpr.h"
 #include "builtins-decl.h"
 #include "builtins-info.h"
+#include "constexpr.h"
 #include "ctx.h"
 #include "expr.h"
 #include "func.h"
@@ -429,8 +429,7 @@ Stmt *DeclStmt::TypeCheck() {
             }
             ConstExpr *ce = ConstexprEvaluate(vars[i].init, type);
             if (ce == nullptr) {
-                Error(vars[i].sym->pos,
-                      "Initializer for constexpr variable \"%s\" must be a compile-time constant.",
+                Error(vars[i].sym->pos, "Initializer for constexpr variable \"%s\" must be a compile-time constant.",
                       name.c_str());
                 encounteredError = true;
             } else {

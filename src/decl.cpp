@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2025, Intel Corporation
+  Copyright (c) 2010-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -1183,8 +1183,7 @@ std::vector<VariableDeclaration> Declaration::GetVariableDeclarations() const {
 
             Symbol *sym =
                 new Symbol(decl->name, decl->pos, Symbol::SymbolKind::Variable, decl->type, decl->storageClass, AL);
-            sym->isConstexpr =
-                ((declSpecs->typeQualifiers | decl->typeQualifiers) & TYPEQUAL_CONSTEXPR) != 0;
+            sym->isConstexpr = ((declSpecs->typeQualifiers | decl->typeQualifiers) & TYPEQUAL_CONSTEXPR) != 0;
             m->symbolTable->AddVariable(sym);
             vars.push_back(VariableDeclaration(sym, decl->initExpr));
         } else {

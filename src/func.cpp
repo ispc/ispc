@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2025, Intel Corporation
+  Copyright (c) 2011-2026, Intel Corporation
 
   SPDX-License-Identifier: BSD-3-Clause
 */
@@ -9,8 +9,8 @@
 */
 
 #include "func.h"
-#include "constexpr.h"
 #include "builtins-decl.h"
+#include "constexpr.h"
 #include "ctx.h"
 #include "expr.h"
 #include "llvmutil.h"
