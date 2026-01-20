@@ -14,7 +14,7 @@ concurrency:
   group: pre-release
   cancel-in-progress: true
 
-permissions: read-all
+permissions: {}
 
 env:
   ISPC_HOME: ${{ github.workspace }}

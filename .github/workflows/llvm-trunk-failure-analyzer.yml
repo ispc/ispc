@@ -18,6 +18,8 @@ on:
         required: false
         type: string
 
+permissions: {}
+
 jobs:
   analyze-failure:
     # Disabling this workflow for non ispc/ispc repo, since number of build submissions is limited.
