@@ -845,6 +845,8 @@ define(`v8tov64', `
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; switch macro
 ;; This is required to ensure that gather intrinsics are used with constant scale value.
+;; TODO: Replace with constexpr-driven immediate selection once front-end can
+;;       lower constant scales directly to target intrinsics.
 ;; This particular implementation of the routine is used by non-avx512 targets currently(avx2-i64x4, avx2-i32x8, avx2-i32x16).
 ;; $1: Return value
 ;; $2: funcName
